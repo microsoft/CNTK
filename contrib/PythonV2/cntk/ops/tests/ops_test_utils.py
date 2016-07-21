@@ -28,7 +28,7 @@ def left_matrix_type(request):
 def right_matrix_type(request):
     return request.param
 
-def test_unary_op(ctx, op_func,
+def _test_unary_op(ctx, op_func,
         operand, expected_forward, expected_backward_all):
     
     value = AA(operand, dtype=ctx.precision_numpy) 
@@ -50,7 +50,7 @@ def test_unary_op(ctx, op_func,
             backward_input, expected_backward,
             device_id=ctx.device, precision=ctx.precision, clean_up=True)
    
-def test_binary_op(ctx, op_func,
+def _test_binary_op(ctx, op_func,
         left_operand, right_operand, 
         expected_forward, expected_backward_all):
     

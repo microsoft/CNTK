@@ -79,8 +79,8 @@ def train_eval_logistic_regression_with_numpy(criterion_name=None,
         result = ctx.test(root_nodes=[ce,eval])
         return result
 
-
-def test_logistic_regression_with_numpy(device_id):
+#TODO: port to v2
+def _test_logistic_regression_with_numpy(device_id):
     result = train_eval_logistic_regression_with_numpy('crit_node',
             'eval_node', device_id)
 

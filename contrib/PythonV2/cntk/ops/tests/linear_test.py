@@ -12,7 +12,7 @@ the forward and the backward pass
 from __future__ import division
 import numpy as np
 import pytest
-from .ops_test_utils import unittest_helper, test_unary_op, test_binary_op, AA, I, precision, PRECISION_TO_TYPE, batch_dense_to_sparse, left_matrix_type, right_matrix_type
+from .ops_test_utils import unittest_helper, _test_unary_op, _test_binary_op, AA, I, precision, PRECISION_TO_TYPE, batch_dense_to_sparse, left_matrix_type, right_matrix_type
 from ...context import get_context
 
 # TODO: Test plus(), times(), etc, not only the overloaded opeartors (+,
@@ -47,11 +47,11 @@ def test_op_plus(left_operand, right_operand, device_id, precision):
             'right_arg': [[[np.ones_like(x, dtype=ctx.precision_numpy) for x in right_operand]]]
             }
     from .. import plus
-    test_binary_op(ctx, plus,
+    _test_binary_op(ctx, plus,
             left_operand, right_operand, 
             expected_forward, expected_backward)
 
-    test_binary_op(ctx, '+',
+    _test_binary_op(ctx, '+',
             left_operand, right_operand, 
             expected_forward, expected_backward)
 
@@ -71,10 +71,10 @@ def _test_op_minus(left_operand, right_operand, device_id, precision):
             }
 
     from .. import minus
-    test_binary_op(ctx, minus,
+    _test_binary_op(ctx, minus,
             left_operand, right_operand, 
             expected_forward, expected_backward)
-    test_binary_op(ctx, '-',
+    _test_binary_op(ctx, '-',
             left_operand, right_operand, 
             expected_forward, expected_backward)
 
@@ -94,10 +94,10 @@ def test_op_element_times(left_operand, right_operand, device_id, precision):
             }
     
     from .. import element_times
-    test_binary_op(ctx, element_times,
+    _test_binary_op(ctx, element_times,
             left_operand, right_operand, 
             expected_forward, expected_backward)
-    test_binary_op(ctx, '*',
+    _test_binary_op(ctx, '*',
             left_operand, right_operand, 
             expected_forward, expected_backward)
 
@@ -118,10 +118,10 @@ def _test_op_element_divide(left_operand, right_operand, device_id, precision):
             }
 
     from .. import element_divide
-    test_binary_op(ctx, element_divide,
+    _test_binary_op(ctx, element_divide,
             left_operand, right_operand, 
             expected_forward, expected_backward)
-    test_binary_op(ctx, '/',
+    _test_binary_op(ctx, '/',
             left_operand, right_operand, 
             expected_forward, expected_backward)
 
@@ -229,5 +229,5 @@ def _test_op_identity(tensor, device_id, precision):
             'arg': np.ones_like(expected_forward),            
             }
 
-    test_unary_op(ctx, identity,
+    _test_unary_op(ctx, identity,
             tensor, expected_forward, expected_backward)

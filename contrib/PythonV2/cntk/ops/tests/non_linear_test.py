@@ -12,7 +12,7 @@ the forward and the backward pass
 from __future__ import division
 import numpy as np
 import pytest
-from .ops_test_utils import unittest_helper, test_unary_op, test_binary_op, AA, I, precision, PRECISION_TO_TYPE, batch_dense_to_sparse, left_matrix_type, right_matrix_type
+from .ops_test_utils import unittest_helper, _test_unary_op, _test_binary_op, AA, I, precision, PRECISION_TO_TYPE, batch_dense_to_sparse, left_matrix_type, right_matrix_type
 from ...context import get_context
 
 EPS_IN_LOG = 1e-37        # 1e-37 is the highest guaranteed precision
@@ -39,7 +39,7 @@ def test_op_sigmoid(tensor, device_id, precision):
             'arg': [[s * (1 - s)]],            
             }
 
-    test_unary_op(ctx, sigmoid,
+    _test_unary_op(ctx, sigmoid,
             tensor, expected_forward, expected_backward)
 
 @pytest.mark.parametrize("tensor", TENSORS)
@@ -56,7 +56,7 @@ def test_op_exp(tensor, device_id, precision):
             'arg': expected_forward,            
             }
 
-    test_unary_op(ctx, exp,
+    _test_unary_op(ctx, exp,
             tensor, expected_forward, expected_backward)
 
 @pytest.mark.parametrize("tensor", TENSORS)
@@ -75,11 +75,12 @@ def test_op_tanh(tensor, device_id, precision):
             'arg': [[1 - t**2]],
             }
 
-    test_unary_op(ctx, tanh,
+    _test_unary_op(ctx, tanh,
             tensor, expected_forward, expected_backward)
 
+#TODO: port to v2
 @pytest.mark.parametrize("tensor", TENSORS)
-def test_op_log(tensor, device_id, precision):
+def _test_op_log(tensor, device_id, precision):
 
     from .. import log
 
@@ -127,8 +128,9 @@ def test_op_log(tensor, device_id, precision):
                     precision=precision, clean_up=True, backward_pass=True,
                     input_node=input_node)
 
+#TODO: port to v2
 @pytest.mark.parametrize("tensor", TENSORS)
-def test_op_sqrt(tensor, device_id, precision):
+def _test_op_sqrt(tensor, device_id, precision):
     from .. import sqrt
 
     def numpy_op(x):
@@ -168,8 +170,9 @@ def test_op_sqrt(tensor, device_id, precision):
                     precision=precision, clean_up=True, backward_pass=True,
                     input_node=input_node)
 
+#TODO: port to v2
 @pytest.mark.parametrize("tensor", TENSORS)
-def test_op_square(tensor, device_id, precision):
+def _test_op_square(tensor, device_id, precision):
     from .. import square
 
     def numpy_op(x):
@@ -205,8 +208,9 @@ def test_op_square(tensor, device_id, precision):
                     precision=precision, clean_up=True, backward_pass=True,
                     input_node=input_node)
 
+#TODO: port to v2
 @pytest.mark.parametrize("tensor", TENSORS)
-def test_op_relu(tensor, device_id, precision):
+def _test_op_relu(tensor, device_id, precision):
 
     from .. import relu
 
@@ -246,8 +250,9 @@ def test_op_relu(tensor, device_id, precision):
                     input_node=input_node)
 
 
+#TODO: port to v2_
 @pytest.mark.parametrize("tensor", TENSORS)
-def test_op_abs(tensor, device_id, precision):
+def _test_op_abs(tensor, device_id, precision):
     from .. import abs
     np_tensor = AA(tensor, dtype=PRECISION_TO_TYPE[precision])
 
@@ -281,6 +286,7 @@ def test_op_abs(tensor, device_id, precision):
                     precision=precision, clean_up=True, backward_pass=True,
                     input_node=input_node)
 
+#TODO: port to v2
 @pytest.mark.parametrize("batch",
                          [
                              [  # 2 samples having 4 classes
@@ -288,7 +294,7 @@ def test_op_abs(tensor, device_id, precision):
                                  [0, 0, 0, 0]
                              ],
                          ])
-def test_op_softmax(batch, device_id, precision):
+def _test_op_softmax(batch, device_id, precision):
     from .. import softmax
     
     def numpy_op(x):

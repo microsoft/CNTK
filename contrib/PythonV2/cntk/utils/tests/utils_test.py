@@ -15,6 +15,7 @@ from cntk.utils import *
 AA = np.asarray
 C = constant
 
+#TOOD: adapt to v2 when needed
 
 @pytest.mark.parametrize("idx, alias_tensor_map, expected", [
     (0, {'A': [object()]}, ValueError),
