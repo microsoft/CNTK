@@ -13,9 +13,6 @@
 #define static_assert(condition, message)
 #endif
 
-#include <map>
-#include <set>
-
 #include "CNTKLibraryInternals.h"
 
 #include <memory>
@@ -1065,45 +1062,45 @@ namespace CNTK
 }
 
 namespace std {
-	template <> struct hash<CNTK::Axis>
-	{
-		size_t operator()(const CNTK::Axis& x) const
-		{
-			return std::hash<std::wstring>()(x.Name());
-		}
-	};
+    template <> struct hash<CNTK::Axis>
+    {
+        size_t operator()(const CNTK::Axis& x) const
+        {
+            return std::hash<std::wstring>()(x.Name());
+        }
+    };
+    
+    template <> struct hash<CNTK::Variable>
+    {
+        size_t operator()(const CNTK::Variable& x) const
+        {
+            return std::hash<const void*>()(x.m_dataFields.get());
+        }
+    };
 
-	template <> struct hash<CNTK::Variable>
-	{
-		size_t operator()(const CNTK::Variable& x) const
-		{
-			return std::hash<const void*>()(x.m_dataFields.get());
-		}
-	};
+    template <> struct hash<CNTK::Parameter>
+    {
+        size_t operator()(const CNTK::Parameter& x) const
+        {
+            return std::hash<CNTK::Variable>()(x);
+        }
+    };
 
-	template <> struct hash<CNTK::Parameter>
-	{
-		size_t operator()(const CNTK::Parameter& x) const
-		{
-			return std::hash<CNTK::Variable>()(x);
-		}
-	};
+    template <> struct hash<CNTK::Constant>
+    {
+        size_t operator()(const CNTK::Constant& x) const
+        {
+            return std::hash<CNTK::Variable>()(x);
+        }
+    };
 
-	template <> struct hash<CNTK::Constant>
-	{
-		size_t operator()(const CNTK::Constant& x) const
-		{
-			return std::hash<CNTK::Variable>()(x);
-		}
-	};
-
-	template <> struct hash<CNTK::Placeholder>
-	{
-		size_t operator()(const CNTK::Placeholder& x) const
-		{
-			return std::hash<CNTK::Variable>()(x);
-		}
-	};
+    template <> struct hash<CNTK::Placeholder>
+    {
+        size_t operator()(const CNTK::Placeholder& x) const
+        {
+            return std::hash<CNTK::Variable>()(x);
+        }
+    };
 }
 
 namespace CNTK

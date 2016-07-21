@@ -588,12 +588,12 @@ namespace CNTK
         auto functionArguments = this->Arguments();
         std::vector<ComputationNodeBasePtr> inputNodes;
 
-		for (auto argument : arguments)
-		{
-			// Ensure we have only values that are required as function arguments
-			if (functionArguments.find(argument.first) == functionArguments.end())
-				InvalidArgument("Value specified for not required function argument");
-		}
+        for (auto argument : arguments)
+        {
+            // Ensure we have only values that are required as function arguments
+            if (functionArguments.find(argument.first) == functionArguments.end())
+                InvalidArgument("Value specified for not required function argument");
+        }
 
         for (auto argument : functionArguments)
         {
@@ -822,14 +822,14 @@ namespace CNTK
         GetNetworkOutputs(outputs);
 
         // TODO: How to deal with the specified 'computeDevice'
-		// TODO: How to deal with the specified 'computeDevice'
-		auto first = this->shared_from_this();
-		auto second_a = arguments.begin()->first;
-		auto node = m_variableToNodeMap[arguments.begin()->first];
-		auto second_b = node->GetEvalTimeStamp();
-		auto second = std::make_pair(second_a, second_b);
+        // TODO: How to deal with the specified 'computeDevice'
+        auto first = this->shared_from_this();
+        auto second_a = arguments.begin()->first;
+        auto node = m_variableToNodeMap[arguments.begin()->first];
+        auto second_b = node->GetEvalTimeStamp();
+        auto second = std::make_pair(second_a, second_b);
 
-		return (outputsToRetainBackwardStateFor.size() > 0) ? MakeSharedObject<CNTKBackPropState>(first, second) : nullptr;
+        return (outputsToRetainBackwardStateFor.size() > 0) ? MakeSharedObject<CNTKBackPropState>(first, second) : nullptr;
     }
 
     /*virtual*/ void CompositeFunction::Backward(const BackPropStatePtr& state,
