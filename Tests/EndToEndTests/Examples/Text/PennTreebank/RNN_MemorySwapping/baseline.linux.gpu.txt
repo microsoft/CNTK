@@ -1,30 +1,48 @@
-=== Running /home/tim/git/cntk_dev/build/debug/bin/cntk configFile=/home/tim/git/cntk_dev/Tests/EndToEndTests/Examples/Text/PennTreebank/RNN_MemorySwapping/../../../../../../Examples/Text/PennTreebank/Config/rnn.cntk currentDirectory=/home/tim/git/cntk_dev/Examples/Text/PennTreebank/Data RunDir=/tmp/cntk-test-20160720165340.944634/Examples/Text/PennTreebank_RNN_MemorySwapping@debug_gpu DataDir=/home/tim/git/cntk_dev/Examples/Text/PennTreebank/Data ConfigDir=/home/tim/git/cntk_dev/Tests/EndToEndTests/Examples/Text/PennTreebank/RNN_MemorySwapping/../../../../../../Examples/Text/PennTreebank/Config OutputDir=/tmp/cntk-test-20160720165340.944634/Examples/Text/PennTreebank_RNN_MemorySwapping@debug_gpu DeviceId=0 timestamping=true useMemorySwapping=true initOnCPUOnly=true command=writeWordAndClassInfo:train:test train=[SGD=[maxEpochs=3]] train=[epochSize=2048]] test=[SGD=[maxEpochs=3]] train=[epochSize=2048]]
-07/20/2016 16:47:26: -------------------------------------------------------------------
-07/20/2016 16:47:26: Build info: 
+=== Running /home/tim/git/cntk_dev/build/debug/bin/cntk configFile=/home/tim/git/cntk_dev/Tests/EndToEndTests/Examples/Text/PennTreebank/RNN_MemorySwapping/../../../../../../Examples/Text/PennTreebank/Config/rnn.cntk currentDirectory=/home/tim/git/cntk_dev/Examples/Text/PennTreebank/Data RunDir=/tmp/cntk-test-20160721121216.198065/Examples/Text/PennTreebank_RNN_MemorySwapping@debug_gpu DataDir=/home/tim/git/cntk_dev/Examples/Text/PennTreebank/Data ConfigDir=/home/tim/git/cntk_dev/Tests/EndToEndTests/Examples/Text/PennTreebank/RNN_MemorySwapping/../../../../../../Examples/Text/PennTreebank/Config OutputDir=/tmp/cntk-test-20160721121216.198065/Examples/Text/PennTreebank_RNN_MemorySwapping@debug_gpu DeviceId=0 timestamping=true useMemorySwapping=true initOnCPUOnly=true command=writeWordAndClassInfo:train:test train=[SGD=[maxEpochs=3]] train=[epochSize=2048]] test=[SGD=[maxEpochs=3]] train=[epochSize=2048]]
+-------------------------------------------------------------------
+Build info: 
 
-07/20/2016 16:47:26: 		Built time: Jul 20 2016 16:11:38
-07/20/2016 16:47:26: 		Last modified date: Wed Jul 20 16:11:11 2016
-07/20/2016 16:47:26: 		Build type: debug
-07/20/2016 16:47:26: 		Build target: GPU
-07/20/2016 16:47:26: 		With 1bit-SGD: yes
-07/20/2016 16:47:26: 		Math lib: acml
-07/20/2016 16:47:26: 		CUDA_PATH: /usr/local/cuda-7.5
-07/20/2016 16:47:26: 		CUB_PATH: /usr/local/cub-1.4.1
-07/20/2016 16:47:26: 		CUDNN_PATH: /usr/local/cudnn-4.0
-07/20/2016 16:47:26: 		Build Branch: t-tidett/memoryswapping
-07/20/2016 16:47:26: 		Build SHA1: e6043b78c343c3065c6c86847d433df91f2dcfb2 (modified)
-07/20/2016 16:47:26: 		Built by tim on tim
-07/20/2016 16:47:26: 		Build Path: /home/tim/git/cntk_dev
-07/20/2016 16:47:26: -------------------------------------------------------------------
+		Built time: Jul 21 2016 11:46:07
+		Last modified date: Wed Jul 20 17:25:59 2016
+		Build type: debug
+		Build target: GPU
+		With 1bit-SGD: yes
+		Math lib: acml
+		CUDA_PATH: /usr/local/cuda-7.5
+		CUB_PATH: /usr/local/cub-1.4.1
+		CUDNN_PATH: /usr/local/cudnn-4.0
+		Build Branch: t-tidett/memoryswapping
+		Build SHA1: 41c73aa94ec96c8f0639a328d4888e1d82751ac9 (modified)
+		Built by tim on tim
+		Build Path: /home/tim/git/cntk_dev
+-------------------------------------------------------------------
+Changed current directory to /home/tim/git/cntk_dev/Examples/Text/PennTreebank/Data
+07/21/2016 12:12:16: -------------------------------------------------------------------
+07/21/2016 12:12:16: Build info: 
 
-07/20/2016 16:47:26: Running on localhost at 2016/07/20 16:47:26
-07/20/2016 16:47:26: Command line: 
-/home/tim/git/cntk_dev/build/debug/bin/cntk  configFile=/home/tim/git/cntk_dev/Tests/EndToEndTests/Examples/Text/PennTreebank/RNN_MemorySwapping/../../../../../../Examples/Text/PennTreebank/Config/rnn.cntk  currentDirectory=/home/tim/git/cntk_dev/Examples/Text/PennTreebank/Data  RunDir=/tmp/cntk-test-20160720163117.807681/Examples/Text/PennTreebank_RNN_MemorySwapping@debug_gpu  DataDir=/home/tim/git/cntk_dev/Examples/Text/PennTreebank/Data  ConfigDir=/home/tim/git/cntk_dev/Tests/EndToEndTests/Examples/Text/PennTreebank/RNN_MemorySwapping/../../../../../../Examples/Text/PennTreebank/Config  OutputDir=/home/tim/PennTreebank_RNN_MemorySwapping@debug_gpu  DeviceId=0  timestamping=true  useMemorySwapping=true  initOnCPUOnly=true  command=writeWordAndClassInfo:train:test  train=[SGD=[maxEpochs=3]]  train=[epochSize=2048]]  test=[SGD=[maxEpochs=3]]  train=[epochSize=2048]]
+07/21/2016 12:12:16: 		Built time: Jul 21 2016 11:46:07
+07/21/2016 12:12:16: 		Last modified date: Wed Jul 20 17:25:59 2016
+07/21/2016 12:12:16: 		Build type: debug
+07/21/2016 12:12:16: 		Build target: GPU
+07/21/2016 12:12:16: 		With 1bit-SGD: yes
+07/21/2016 12:12:16: 		Math lib: acml
+07/21/2016 12:12:16: 		CUDA_PATH: /usr/local/cuda-7.5
+07/21/2016 12:12:16: 		CUB_PATH: /usr/local/cub-1.4.1
+07/21/2016 12:12:16: 		CUDNN_PATH: /usr/local/cudnn-4.0
+07/21/2016 12:12:16: 		Build Branch: t-tidett/memoryswapping
+07/21/2016 12:12:16: 		Build SHA1: 41c73aa94ec96c8f0639a328d4888e1d82751ac9 (modified)
+07/21/2016 12:12:16: 		Built by tim on tim
+07/21/2016 12:12:16: 		Build Path: /home/tim/git/cntk_dev
+07/21/2016 12:12:16: -------------------------------------------------------------------
+
+07/21/2016 12:12:16: Running on localhost at 2016/07/21 12:12:16
+07/21/2016 12:12:16: Command line: 
+/home/tim/git/cntk_dev/build/debug/bin/cntk  configFile=/home/tim/git/cntk_dev/Tests/EndToEndTests/Examples/Text/PennTreebank/RNN_MemorySwapping/../../../../../../Examples/Text/PennTreebank/Config/rnn.cntk  currentDirectory=/home/tim/git/cntk_dev/Examples/Text/PennTreebank/Data  RunDir=/tmp/cntk-test-20160721121216.198065/Examples/Text/PennTreebank_RNN_MemorySwapping@debug_gpu  DataDir=/home/tim/git/cntk_dev/Examples/Text/PennTreebank/Data  ConfigDir=/home/tim/git/cntk_dev/Tests/EndToEndTests/Examples/Text/PennTreebank/RNN_MemorySwapping/../../../../../../Examples/Text/PennTreebank/Config  OutputDir=/tmp/cntk-test-20160721121216.198065/Examples/Text/PennTreebank_RNN_MemorySwapping@debug_gpu  DeviceId=0  timestamping=true  useMemorySwapping=true  initOnCPUOnly=true  command=writeWordAndClassInfo:train:test  train=[SGD=[maxEpochs=3]]  train=[epochSize=2048]]  test=[SGD=[maxEpochs=3]]  train=[epochSize=2048]]
 
 
 
-07/20/2016 16:47:26: >>>>>>>>>>>>>>>>>>>> RAW CONFIG (VARIABLES NOT RESOLVED) >>>>>>>>>>>>>>>>>>>>
-07/20/2016 16:47:26: RootDir = ".."
+07/21/2016 12:12:16: >>>>>>>>>>>>>>>>>>>> RAW CONFIG (VARIABLES NOT RESOLVED) >>>>>>>>>>>>>>>>>>>>
+07/21/2016 12:12:16: RootDir = ".."
 ConfigDir = "$RootDir$/Config"
 DataDir   = "$RootDir$/Data"
 OutputDir = "$RootDir$/Output"
@@ -34,7 +52,6 @@ command = writeWordAndClassInfo:train:test:write
 precision  = "float"
 traceLevel = 1
 modelPath  = "$ModelDir$/rnn.dnn"
-stderr=$OutputDir$/rnnOutput
 numCPUThreads = 1
 confVocabSize = 10000
 confClassSize = 50
@@ -333,10 +350,10 @@ cacheBlockSize = 1
     ]
 ]
 currentDirectory=/home/tim/git/cntk_dev/Examples/Text/PennTreebank/Data
-RunDir=/tmp/cntk-test-20160720163117.807681/Examples/Text/PennTreebank_RNN_MemorySwapping@debug_gpu
+RunDir=/tmp/cntk-test-20160721121216.198065/Examples/Text/PennTreebank_RNN_MemorySwapping@debug_gpu
 DataDir=/home/tim/git/cntk_dev/Examples/Text/PennTreebank/Data
 ConfigDir=/home/tim/git/cntk_dev/Tests/EndToEndTests/Examples/Text/PennTreebank/RNN_MemorySwapping/../../../../../../Examples/Text/PennTreebank/Config
-OutputDir=/home/tim/PennTreebank_RNN_MemorySwapping@debug_gpu
+OutputDir=/tmp/cntk-test-20160721121216.198065/Examples/Text/PennTreebank_RNN_MemorySwapping@debug_gpu
 DeviceId=0
 timestamping=true
 useMemorySwapping=true
@@ -347,20 +364,19 @@ train=[epochSize=2048]]
 test=[SGD=[maxEpochs=3]]
 train=[epochSize=2048]]
 
-07/20/2016 16:47:26: <<<<<<<<<<<<<<<<<<<< RAW CONFIG (VARIABLES NOT RESOLVED)  <<<<<<<<<<<<<<<<<<<<
+07/21/2016 12:12:16: <<<<<<<<<<<<<<<<<<<< RAW CONFIG (VARIABLES NOT RESOLVED)  <<<<<<<<<<<<<<<<<<<<
 
-07/20/2016 16:47:26: >>>>>>>>>>>>>>>>>>>> RAW CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
-07/20/2016 16:47:26: RootDir = ".."
+07/21/2016 12:12:16: >>>>>>>>>>>>>>>>>>>> RAW CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
+07/21/2016 12:12:16: RootDir = ".."
 ConfigDir = "../Config"
 DataDir   = "../Data"
 OutputDir = "../Output"
-ModelDir  = "/home/tim/PennTreebank_RNN_MemorySwapping@debug_gpu/Models"
+ModelDir  = "/tmp/cntk-test-20160721121216.198065/Examples/Text/PennTreebank_RNN_MemorySwapping@debug_gpu/Models"
 deviceId = "auto"
 command = writeWordAndClassInfo:train:test:write
 precision  = "float"
 traceLevel = 1
-modelPath  = "/home/tim/PennTreebank_RNN_MemorySwapping@debug_gpu/Models/rnn.dnn"
-stderr=/home/tim/PennTreebank_RNN_MemorySwapping@debug_gpu/rnnOutput
+modelPath  = "/tmp/cntk-test-20160721121216.198065/Examples/Text/PennTreebank_RNN_MemorySwapping@debug_gpu/Models/rnn.dnn"
 numCPUThreads = 1
 confVocabSize = 10000
 confClassSize = 50
@@ -372,9 +388,9 @@ writeWordAndClassInfo = [
     inputFile = "/home/tim/git/cntk_dev/Examples/Text/PennTreebank/Data/ptb.train.txt"
     beginSequence = "</s>"
     endSequence   = "</s>"
-    outputVocabFile = "/home/tim/PennTreebank_RNN_MemorySwapping@debug_gpu/Models/vocab.txt"
-    outputWord2Cls  = "/home/tim/PennTreebank_RNN_MemorySwapping@debug_gpu/Models/word2cls.txt"
-    outputCls2Index = "/home/tim/PennTreebank_RNN_MemorySwapping@debug_gpu/Models/cls2idx.txt"
+    outputVocabFile = "/tmp/cntk-test-20160721121216.198065/Examples/Text/PennTreebank_RNN_MemorySwapping@debug_gpu/Models/vocab.txt"
+    outputWord2Cls  = "/tmp/cntk-test-20160721121216.198065/Examples/Text/PennTreebank_RNN_MemorySwapping@debug_gpu/Models/word2cls.txt"
+    outputCls2Index = "/tmp/cntk-test-20160721121216.198065/Examples/Text/PennTreebank_RNN_MemorySwapping@debug_gpu/Models/cls2idx.txt"
     vocabSize = "10000"
     nbrClass = "50"
     cutoff = 0
@@ -428,8 +444,8 @@ lookupTableOrder = 1
 randomize = "none"              
 nbruttsineachrecurrentiter = 0  
 cacheBlockSize = 2000000        
-        wordclass = "/home/tim/PennTreebank_RNN_MemorySwapping@debug_gpu/Models/vocab.txt"
-        wfile = "/home/tim/PennTreebank_RNN_MemorySwapping@debug_gpu/sequenceSentence.bin"
+        wordclass = "/tmp/cntk-test-20160721121216.198065/Examples/Text/PennTreebank_RNN_MemorySwapping@debug_gpu/Models/vocab.txt"
+        wfile = "/tmp/cntk-test-20160721121216.198065/Examples/Text/PennTreebank_RNN_MemorySwapping@debug_gpu/sequenceSentence.bin"
         wsize = 256
         wrecords = 1000
         windowSize = "10000"
@@ -444,7 +460,7 @@ cacheBlockSize = 2000000
             beginSequence = "</s>"
             endSequence = "</s>"
             labelDim = "10000"
-            labelMappingFile = "/home/tim/PennTreebank_RNN_MemorySwapping@debug_gpu/sentenceLabels.txt"
+            labelMappingFile = "/tmp/cntk-test-20160721121216.198065/Examples/Text/PennTreebank_RNN_MemorySwapping@debug_gpu/sentenceLabels.txt"
             elementSize = 4
             sectionType = "labels"
             mapping = [
@@ -463,7 +479,7 @@ cacheBlockSize = 2000000
             beginSequence = "O"
             endSequence = "O"
             labelDim = "10000"
-            labelMappingFile = "/home/tim/PennTreebank_RNN_MemorySwapping@debug_gpu/sentenceLabels.out.txt"
+            labelMappingFile = "/tmp/cntk-test-20160721121216.198065/Examples/Text/PennTreebank_RNN_MemorySwapping@debug_gpu/sentenceLabels.out.txt"
             elementSize = 4
             sectionType = "labels"
             mapping = [
@@ -482,8 +498,8 @@ cacheBlockSize = 2000000
         randomize = "none"
 nbruttsineachrecurrentiter = 0  
 cacheBlockSize = 2000000        
-        wordclass = "/home/tim/PennTreebank_RNN_MemorySwapping@debug_gpu/Models/vocab.txt"
-        wfile = "/home/tim/PennTreebank_RNN_MemorySwapping@debug_gpu/sequenceSentence.valid.bin"
+        wordclass = "/tmp/cntk-test-20160721121216.198065/Examples/Text/PennTreebank_RNN_MemorySwapping@debug_gpu/Models/vocab.txt"
+        wfile = "/tmp/cntk-test-20160721121216.198065/Examples/Text/PennTreebank_RNN_MemorySwapping@debug_gpu/sequenceSentence.valid.bin"
         wsize = 256
         wrecords = 1000
         windowSize = "10000"
@@ -495,7 +511,7 @@ cacheBlockSize = 2000000
         labelIn = [
             dim = 1
             labelDim = "10000"
-            labelMappingFile = "/home/tim/PennTreebank_RNN_MemorySwapping@debug_gpu/sentenceLabels.out.txt"
+            labelMappingFile = "/tmp/cntk-test-20160721121216.198065/Examples/Text/PennTreebank_RNN_MemorySwapping@debug_gpu/sentenceLabels.out.txt"
             labelType = "Category"
             beginSequence = "</s>"
             endSequence = "</s>"
@@ -517,7 +533,7 @@ cacheBlockSize = 2000000
             beginSequence = "O"
             endSequence = "O"
             labelDim = "10000"
-            labelMappingFile = "/home/tim/PennTreebank_RNN_MemorySwapping@debug_gpu/sentenceLabels.out.txt"
+            labelMappingFile = "/tmp/cntk-test-20160721121216.198065/Examples/Text/PennTreebank_RNN_MemorySwapping@debug_gpu/sentenceLabels.out.txt"
             elementSize = 4
             sectionType = "labels"
             mapping = [
@@ -542,8 +558,8 @@ minibatchSize = 8192
         randomize = "none"
 nbruttsineachrecurrentiter = 0  
 cacheBlockSize = 2000000        
-        wordclass = "/home/tim/PennTreebank_RNN_MemorySwapping@debug_gpu/Models/vocab.txt"
-        wfile = "/home/tim/PennTreebank_RNN_MemorySwapping@debug_gpu/sequenceSentence.bin"
+        wordclass = "/tmp/cntk-test-20160721121216.198065/Examples/Text/PennTreebank_RNN_MemorySwapping@debug_gpu/Models/vocab.txt"
+        wfile = "/tmp/cntk-test-20160721121216.198065/Examples/Text/PennTreebank_RNN_MemorySwapping@debug_gpu/sequenceSentence.bin"
         wsize = 256
         wrecords = 1000
         windowSize = "10000"
@@ -555,7 +571,7 @@ cacheBlockSize = 2000000
         labelIn = [
             dim = 1
             labelDim = "10000"
-            labelMappingFile = "/home/tim/PennTreebank_RNN_MemorySwapping@debug_gpu/sentenceLabels.txt"
+            labelMappingFile = "/tmp/cntk-test-20160721121216.198065/Examples/Text/PennTreebank_RNN_MemorySwapping@debug_gpu/sentenceLabels.txt"
             labelType = "Category"
             beginSequence = "</s>"
             endSequence = "</s>"
@@ -577,7 +593,7 @@ cacheBlockSize = 2000000
             beginSequence = "O"
             endSequence = "O"
             labelDim = "10000"
-            labelMappingFile = "/home/tim/PennTreebank_RNN_MemorySwapping@debug_gpu/sentenceLabels.out.txt"
+            labelMappingFile = "/tmp/cntk-test-20160721121216.198065/Examples/Text/PennTreebank_RNN_MemorySwapping@debug_gpu/sentenceLabels.out.txt"
             elementSize = 4
             sectionType = "labels"
             mapping = [
@@ -594,7 +610,7 @@ cacheBlockSize = 2000000
 ]
 write = [
     action = "write"
-    outputPath = "/home/tim/PennTreebank_RNN_MemorySwapping@debug_gpu/Write"
+    outputPath = "/tmp/cntk-test-20160721121216.198065/Examples/Text/PennTreebank_RNN_MemorySwapping@debug_gpu/Write"
 outputNodeNames = TrainNodeClassBasedCrossEntropy 
     format = [
 sequencePrologue = "log P(W)="    
@@ -608,8 +624,8 @@ minibatchSize = 8192
 randomize = "none"              
 nbruttsineachrecurrentiter = 1  
 cacheBlockSize = 1              
-        wordclass = "/home/tim/PennTreebank_RNN_MemorySwapping@debug_gpu/Models/vocab.txt"
-        wfile = "/home/tim/PennTreebank_RNN_MemorySwapping@debug_gpu/sequenceSentence.bin"
+        wordclass = "/tmp/cntk-test-20160721121216.198065/Examples/Text/PennTreebank_RNN_MemorySwapping@debug_gpu/Models/vocab.txt"
+        wfile = "/tmp/cntk-test-20160721121216.198065/Examples/Text/PennTreebank_RNN_MemorySwapping@debug_gpu/sequenceSentence.bin"
         wsize = 256
         wrecords = 1000
         windowSize = "10000"
@@ -621,7 +637,7 @@ cacheBlockSize = 1
         labelIn = [
             dim = 1
             labelDim = "10000"
-            labelMappingFile = "/home/tim/PennTreebank_RNN_MemorySwapping@debug_gpu/sentenceLabels.txt"
+            labelMappingFile = "/tmp/cntk-test-20160721121216.198065/Examples/Text/PennTreebank_RNN_MemorySwapping@debug_gpu/sentenceLabels.txt"
             labelType = "Category"
             beginSequence = "</s>"
             endSequence = "</s>"
@@ -643,7 +659,7 @@ cacheBlockSize = 1
             beginSequence = "O"
             endSequence = "O"
             labelDim = "10000"
-            labelMappingFile = "/home/tim/PennTreebank_RNN_MemorySwapping@debug_gpu/sentenceLabels.out.txt"
+            labelMappingFile = "/tmp/cntk-test-20160721121216.198065/Examples/Text/PennTreebank_RNN_MemorySwapping@debug_gpu/sentenceLabels.out.txt"
             elementSize = 4
             sectionType = "labels"
             mapping = [
@@ -659,10 +675,10 @@ cacheBlockSize = 1
     ]
 ]
 currentDirectory=/home/tim/git/cntk_dev/Examples/Text/PennTreebank/Data
-RunDir=/tmp/cntk-test-20160720163117.807681/Examples/Text/PennTreebank_RNN_MemorySwapping@debug_gpu
+RunDir=/tmp/cntk-test-20160721121216.198065/Examples/Text/PennTreebank_RNN_MemorySwapping@debug_gpu
 DataDir=/home/tim/git/cntk_dev/Examples/Text/PennTreebank/Data
 ConfigDir=/home/tim/git/cntk_dev/Tests/EndToEndTests/Examples/Text/PennTreebank/RNN_MemorySwapping/../../../../../../Examples/Text/PennTreebank/Config
-OutputDir=/home/tim/PennTreebank_RNN_MemorySwapping@debug_gpu
+OutputDir=/tmp/cntk-test-20160721121216.198065/Examples/Text/PennTreebank_RNN_MemorySwapping@debug_gpu
 DeviceId=0
 timestamping=true
 useMemorySwapping=true
@@ -673,9 +689,9 @@ train=[epochSize=2048]]
 test=[SGD=[maxEpochs=3]]
 train=[epochSize=2048]]
 
-07/20/2016 16:47:26: <<<<<<<<<<<<<<<<<<<< RAW CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
+07/21/2016 12:12:16: <<<<<<<<<<<<<<<<<<<< RAW CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
 
-07/20/2016 16:47:26: >>>>>>>>>>>>>>>>>>>> PROCESSED CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
+07/21/2016 12:12:16: >>>>>>>>>>>>>>>>>>>> PROCESSED CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
 configparameters: rnn.cntk:]=true
 configparameters: rnn.cntk:command=writeWordAndClassInfo:train:test
 configparameters: rnn.cntk:confClassSize=50
@@ -685,14 +701,13 @@ configparameters: rnn.cntk:currentDirectory=/home/tim/git/cntk_dev/Examples/Text
 configparameters: rnn.cntk:DataDir=/home/tim/git/cntk_dev/Examples/Text/PennTreebank/Data
 configparameters: rnn.cntk:deviceId=0
 configparameters: rnn.cntk:initOnCPUOnly=true
-configparameters: rnn.cntk:ModelDir=/home/tim/PennTreebank_RNN_MemorySwapping@debug_gpu/Models
-configparameters: rnn.cntk:modelPath=/home/tim/PennTreebank_RNN_MemorySwapping@debug_gpu/Models/rnn.dnn
+configparameters: rnn.cntk:ModelDir=/tmp/cntk-test-20160721121216.198065/Examples/Text/PennTreebank_RNN_MemorySwapping@debug_gpu/Models
+configparameters: rnn.cntk:modelPath=/tmp/cntk-test-20160721121216.198065/Examples/Text/PennTreebank_RNN_MemorySwapping@debug_gpu/Models/rnn.dnn
 configparameters: rnn.cntk:numCPUThreads=1
-configparameters: rnn.cntk:OutputDir=/home/tim/PennTreebank_RNN_MemorySwapping@debug_gpu
+configparameters: rnn.cntk:OutputDir=/tmp/cntk-test-20160721121216.198065/Examples/Text/PennTreebank_RNN_MemorySwapping@debug_gpu
 configparameters: rnn.cntk:precision=float
 configparameters: rnn.cntk:RootDir=..
-configparameters: rnn.cntk:RunDir=/tmp/cntk-test-20160720163117.807681/Examples/Text/PennTreebank_RNN_MemorySwapping@debug_gpu
-configparameters: rnn.cntk:stderr=/home/tim/PennTreebank_RNN_MemorySwapping@debug_gpu/rnnOutput
+configparameters: rnn.cntk:RunDir=/tmp/cntk-test-20160721121216.198065/Examples/Text/PennTreebank_RNN_MemorySwapping@debug_gpu
 configparameters: rnn.cntk:test=[
     action = "eval"
 minibatchSize = 8192                
@@ -703,8 +718,8 @@ minibatchSize = 8192
         randomize = "none"
 nbruttsineachrecurrentiter = 0  
 cacheBlockSize = 2000000        
-        wordclass = "/home/tim/PennTreebank_RNN_MemorySwapping@debug_gpu/Models/vocab.txt"
-        wfile = "/home/tim/PennTreebank_RNN_MemorySwapping@debug_gpu/sequenceSentence.bin"
+        wordclass = "/tmp/cntk-test-20160721121216.198065/Examples/Text/PennTreebank_RNN_MemorySwapping@debug_gpu/Models/vocab.txt"
+        wfile = "/tmp/cntk-test-20160721121216.198065/Examples/Text/PennTreebank_RNN_MemorySwapping@debug_gpu/sequenceSentence.bin"
         wsize = 256
         wrecords = 1000
         windowSize = "10000"
@@ -716,7 +731,7 @@ cacheBlockSize = 2000000
         labelIn = [
             dim = 1
             labelDim = "10000"
-            labelMappingFile = "/home/tim/PennTreebank_RNN_MemorySwapping@debug_gpu/sentenceLabels.txt"
+            labelMappingFile = "/tmp/cntk-test-20160721121216.198065/Examples/Text/PennTreebank_RNN_MemorySwapping@debug_gpu/sentenceLabels.txt"
             labelType = "Category"
             beginSequence = "</s>"
             endSequence = "</s>"
@@ -738,7 +753,7 @@ cacheBlockSize = 2000000
             beginSequence = "O"
             endSequence = "O"
             labelDim = "10000"
-            labelMappingFile = "/home/tim/PennTreebank_RNN_MemorySwapping@debug_gpu/sentenceLabels.out.txt"
+            labelMappingFile = "/tmp/cntk-test-20160721121216.198065/Examples/Text/PennTreebank_RNN_MemorySwapping@debug_gpu/sentenceLabels.out.txt"
             elementSize = 4
             sectionType = "labels"
             mapping = [
@@ -805,8 +820,8 @@ lookupTableOrder = 1
 randomize = "none"              
 nbruttsineachrecurrentiter = 0  
 cacheBlockSize = 2000000        
-        wordclass = "/home/tim/PennTreebank_RNN_MemorySwapping@debug_gpu/Models/vocab.txt"
-        wfile = "/home/tim/PennTreebank_RNN_MemorySwapping@debug_gpu/sequenceSentence.bin"
+        wordclass = "/tmp/cntk-test-20160721121216.198065/Examples/Text/PennTreebank_RNN_MemorySwapping@debug_gpu/Models/vocab.txt"
+        wfile = "/tmp/cntk-test-20160721121216.198065/Examples/Text/PennTreebank_RNN_MemorySwapping@debug_gpu/sequenceSentence.bin"
         wsize = 256
         wrecords = 1000
         windowSize = "10000"
@@ -821,7 +836,7 @@ cacheBlockSize = 2000000
             beginSequence = "</s>"
             endSequence = "</s>"
             labelDim = "10000"
-            labelMappingFile = "/home/tim/PennTreebank_RNN_MemorySwapping@debug_gpu/sentenceLabels.txt"
+            labelMappingFile = "/tmp/cntk-test-20160721121216.198065/Examples/Text/PennTreebank_RNN_MemorySwapping@debug_gpu/sentenceLabels.txt"
             elementSize = 4
             sectionType = "labels"
             mapping = [
@@ -840,7 +855,7 @@ cacheBlockSize = 2000000
             beginSequence = "O"
             endSequence = "O"
             labelDim = "10000"
-            labelMappingFile = "/home/tim/PennTreebank_RNN_MemorySwapping@debug_gpu/sentenceLabels.out.txt"
+            labelMappingFile = "/tmp/cntk-test-20160721121216.198065/Examples/Text/PennTreebank_RNN_MemorySwapping@debug_gpu/sentenceLabels.out.txt"
             elementSize = 4
             sectionType = "labels"
             mapping = [
@@ -859,8 +874,8 @@ cacheBlockSize = 2000000
         randomize = "none"
 nbruttsineachrecurrentiter = 0  
 cacheBlockSize = 2000000        
-        wordclass = "/home/tim/PennTreebank_RNN_MemorySwapping@debug_gpu/Models/vocab.txt"
-        wfile = "/home/tim/PennTreebank_RNN_MemorySwapping@debug_gpu/sequenceSentence.valid.bin"
+        wordclass = "/tmp/cntk-test-20160721121216.198065/Examples/Text/PennTreebank_RNN_MemorySwapping@debug_gpu/Models/vocab.txt"
+        wfile = "/tmp/cntk-test-20160721121216.198065/Examples/Text/PennTreebank_RNN_MemorySwapping@debug_gpu/sequenceSentence.valid.bin"
         wsize = 256
         wrecords = 1000
         windowSize = "10000"
@@ -872,7 +887,7 @@ cacheBlockSize = 2000000
         labelIn = [
             dim = 1
             labelDim = "10000"
-            labelMappingFile = "/home/tim/PennTreebank_RNN_MemorySwapping@debug_gpu/sentenceLabels.out.txt"
+            labelMappingFile = "/tmp/cntk-test-20160721121216.198065/Examples/Text/PennTreebank_RNN_MemorySwapping@debug_gpu/sentenceLabels.out.txt"
             labelType = "Category"
             beginSequence = "</s>"
             endSequence = "</s>"
@@ -894,7 +909,7 @@ cacheBlockSize = 2000000
             beginSequence = "O"
             endSequence = "O"
             labelDim = "10000"
-            labelMappingFile = "/home/tim/PennTreebank_RNN_MemorySwapping@debug_gpu/sentenceLabels.out.txt"
+            labelMappingFile = "/tmp/cntk-test-20160721121216.198065/Examples/Text/PennTreebank_RNN_MemorySwapping@debug_gpu/sentenceLabels.out.txt"
             elementSize = 4
             sectionType = "labels"
             mapping = [
@@ -915,7 +930,7 @@ configparameters: rnn.cntk:useMemorySwapping=true
 configparameters: rnn.cntk:validFile=ptb.valid.txt
 configparameters: rnn.cntk:write=[
     action = "write"
-    outputPath = "/home/tim/PennTreebank_RNN_MemorySwapping@debug_gpu/Write"
+    outputPath = "/tmp/cntk-test-20160721121216.198065/Examples/Text/PennTreebank_RNN_MemorySwapping@debug_gpu/Write"
 outputNodeNames = TrainNodeClassBasedCrossEntropy 
     format = [
 sequencePrologue = "log P(W)="    
@@ -929,8 +944,8 @@ minibatchSize = 8192
 randomize = "none"              
 nbruttsineachrecurrentiter = 1  
 cacheBlockSize = 1              
-        wordclass = "/home/tim/PennTreebank_RNN_MemorySwapping@debug_gpu/Models/vocab.txt"
-        wfile = "/home/tim/PennTreebank_RNN_MemorySwapping@debug_gpu/sequenceSentence.bin"
+        wordclass = "/tmp/cntk-test-20160721121216.198065/Examples/Text/PennTreebank_RNN_MemorySwapping@debug_gpu/Models/vocab.txt"
+        wfile = "/tmp/cntk-test-20160721121216.198065/Examples/Text/PennTreebank_RNN_MemorySwapping@debug_gpu/sequenceSentence.bin"
         wsize = 256
         wrecords = 1000
         windowSize = "10000"
@@ -942,7 +957,7 @@ cacheBlockSize = 1
         labelIn = [
             dim = 1
             labelDim = "10000"
-            labelMappingFile = "/home/tim/PennTreebank_RNN_MemorySwapping@debug_gpu/sentenceLabels.txt"
+            labelMappingFile = "/tmp/cntk-test-20160721121216.198065/Examples/Text/PennTreebank_RNN_MemorySwapping@debug_gpu/sentenceLabels.txt"
             labelType = "Category"
             beginSequence = "</s>"
             endSequence = "</s>"
@@ -964,7 +979,7 @@ cacheBlockSize = 1
             beginSequence = "O"
             endSequence = "O"
             labelDim = "10000"
-            labelMappingFile = "/home/tim/PennTreebank_RNN_MemorySwapping@debug_gpu/sentenceLabels.out.txt"
+            labelMappingFile = "/tmp/cntk-test-20160721121216.198065/Examples/Text/PennTreebank_RNN_MemorySwapping@debug_gpu/sentenceLabels.out.txt"
             elementSize = 4
             sectionType = "labels"
             mapping = [
@@ -985,32 +1000,32 @@ configparameters: rnn.cntk:writeWordAndClassInfo=[
     inputFile = "/home/tim/git/cntk_dev/Examples/Text/PennTreebank/Data/ptb.train.txt"
     beginSequence = "</s>"
     endSequence   = "</s>"
-    outputVocabFile = "/home/tim/PennTreebank_RNN_MemorySwapping@debug_gpu/Models/vocab.txt"
-    outputWord2Cls  = "/home/tim/PennTreebank_RNN_MemorySwapping@debug_gpu/Models/word2cls.txt"
-    outputCls2Index = "/home/tim/PennTreebank_RNN_MemorySwapping@debug_gpu/Models/cls2idx.txt"
+    outputVocabFile = "/tmp/cntk-test-20160721121216.198065/Examples/Text/PennTreebank_RNN_MemorySwapping@debug_gpu/Models/vocab.txt"
+    outputWord2Cls  = "/tmp/cntk-test-20160721121216.198065/Examples/Text/PennTreebank_RNN_MemorySwapping@debug_gpu/Models/word2cls.txt"
+    outputCls2Index = "/tmp/cntk-test-20160721121216.198065/Examples/Text/PennTreebank_RNN_MemorySwapping@debug_gpu/Models/cls2idx.txt"
     vocabSize = "10000"
     nbrClass = "50"
     cutoff = 0
     printValues = true
 ]
 
-07/20/2016 16:47:26: <<<<<<<<<<<<<<<<<<<< PROCESSED CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
-07/20/2016 16:47:26: Commands: writeWordAndClassInfo train test
-07/20/2016 16:47:26: Precision = "float"
-07/20/2016 16:47:26: Using 1 CPU threads.
-07/20/2016 16:47:26: CNTKModelPath: /home/tim/PennTreebank_RNN_MemorySwapping@debug_gpu/Models/rnn.dnn
-07/20/2016 16:47:26: CNTKCommandTrainInfo: train : 3
-07/20/2016 16:47:26: CNTKCommandTrainInfo: CNTKNoMoreCommands_Total : 3
+07/21/2016 12:12:16: <<<<<<<<<<<<<<<<<<<< PROCESSED CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
+07/21/2016 12:12:16: Commands: writeWordAndClassInfo train test
+07/21/2016 12:12:16: Precision = "float"
+07/21/2016 12:12:16: Using 1 CPU threads.
+07/21/2016 12:12:16: CNTKModelPath: /tmp/cntk-test-20160721121216.198065/Examples/Text/PennTreebank_RNN_MemorySwapping@debug_gpu/Models/rnn.dnn
+07/21/2016 12:12:16: CNTKCommandTrainInfo: train : 3
+07/21/2016 12:12:16: CNTKCommandTrainInfo: CNTKNoMoreCommands_Total : 3
 
-07/20/2016 16:47:26: ##############################################################################
-07/20/2016 16:47:26: #                                                                            #
-07/20/2016 16:47:26: # Action "writeWordAndClass"                                                 #
-07/20/2016 16:47:26: #                                                                            #
-07/20/2016 16:47:26: ##############################################################################
+07/21/2016 12:12:16: ##############################################################################
+07/21/2016 12:12:16: #                                                                            #
+07/21/2016 12:12:16: # Action "writeWordAndClass"                                                 #
+07/21/2016 12:12:16: #                                                                            #
+07/21/2016 12:12:16: ##############################################################################
 
-Vocabulary file    --> /home/tim/PennTreebank_RNN_MemorySwapping@debug_gpu/Models/vocab.txt
-Word-to-class map  --> /home/tim/PennTreebank_RNN_MemorySwapping@debug_gpu/Models/word2cls.txt
-Class-to-index map --> /home/tim/PennTreebank_RNN_MemorySwapping@debug_gpu/Models/cls2idx.txt
+Vocabulary file    --> /tmp/cntk-test-20160721121216.198065/Examples/Text/PennTreebank_RNN_MemorySwapping@debug_gpu/Models/vocab.txt
+Word-to-class map  --> /tmp/cntk-test-20160721121216.198065/Examples/Text/PennTreebank_RNN_MemorySwapping@debug_gpu/Models/word2cls.txt
+Class-to-index map --> /tmp/cntk-test-20160721121216.198065/Examples/Text/PennTreebank_RNN_MemorySwapping@debug_gpu/Models/cls2idx.txt
 
 Reading input file inputFile: /home/tim/git/cntk_dev/Examples/Text/PennTreebank/Data/ptb.train.txt
 Vocabulary size 10000.
@@ -1018,23 +1033,23 @@ Created vocabulary file with 10000 entries.
 Created word-to-class map with 10000 entries.
 Created class-to-index map with 50 entries.
 
-07/20/2016 16:47:27: Action "writeWordAndClass" complete.
+07/21/2016 12:12:17: Action "writeWordAndClass" complete.
 
 
-07/20/2016 16:47:27: ##############################################################################
-07/20/2016 16:47:27: #                                                                            #
-07/20/2016 16:47:27: # Action "train"                                                             #
-07/20/2016 16:47:27: #                                                                            #
-07/20/2016 16:47:27: ##############################################################################
+07/21/2016 12:12:17: ##############################################################################
+07/21/2016 12:12:17: #                                                                            #
+07/21/2016 12:12:17: # Action "train"                                                             #
+07/21/2016 12:12:17: #                                                                            #
+07/21/2016 12:12:17: ##############################################################################
 
-07/20/2016 16:47:27: CNTKCommandTrainBegin: train
+07/21/2016 12:12:17: CNTKCommandTrainBegin: train
 SimpleNetworkBuilder Using GPU 0
-LMSequenceReader: Label mapping will be created internally on the fly because the labelMappingFile was not found: /home/tim/PennTreebank_RNN_MemorySwapping@debug_gpu/sentenceLabels.txt
-LMSequenceReader: Label mapping will be created internally on the fly because the labelMappingFile was not found: /home/tim/PennTreebank_RNN_MemorySwapping@debug_gpu/sentenceLabels.out.txt
-LMSequenceReader: Label mapping will be created internally on the fly because the labelMappingFile was not found: /home/tim/PennTreebank_RNN_MemorySwapping@debug_gpu/sentenceLabels.out.txt
-LMSequenceReader: Label mapping will be created internally on the fly because the labelMappingFile was not found: /home/tim/PennTreebank_RNN_MemorySwapping@debug_gpu/sentenceLabels.out.txt
+LMSequenceReader: Label mapping will be created internally on the fly because the labelMappingFile was not found: /tmp/cntk-test-20160721121216.198065/Examples/Text/PennTreebank_RNN_MemorySwapping@debug_gpu/sentenceLabels.txt
+LMSequenceReader: Label mapping will be created internally on the fly because the labelMappingFile was not found: /tmp/cntk-test-20160721121216.198065/Examples/Text/PennTreebank_RNN_MemorySwapping@debug_gpu/sentenceLabels.out.txt
+LMSequenceReader: Label mapping will be created internally on the fly because the labelMappingFile was not found: /tmp/cntk-test-20160721121216.198065/Examples/Text/PennTreebank_RNN_MemorySwapping@debug_gpu/sentenceLabels.out.txt
+LMSequenceReader: Label mapping will be created internally on the fly because the labelMappingFile was not found: /tmp/cntk-test-20160721121216.198065/Examples/Text/PennTreebank_RNN_MemorySwapping@debug_gpu/sentenceLabels.out.txt
 
-07/20/2016 16:47:27: Creating virgin network.
+07/21/2016 12:12:18: Creating virgin network.
 SetUniformRandomValue (GPU): creating curand object with seed 1, sizeof(ElemType)==4
 
 Post-processing network...
@@ -1145,10 +1160,10 @@ Validating network, final pass.
 
 Post-processing network complete.
 
-07/20/2016 16:47:28: Created model with 63 nodes on GPU 0.
+07/21/2016 12:12:18: Created model with 63 nodes on GPU 0.
 
-07/20/2016 16:47:28: Training criterion node(s):
-07/20/2016 16:47:28: 	TrainNodeClassBasedCrossEntropy = ClassBasedCrossEntropyWithSoftmax
+07/21/2016 12:12:18: Training criterion node(s):
+07/21/2016 12:12:18: 	TrainNodeClassBasedCrossEntropy = ClassBasedCrossEntropyWithSoftmax
 
 
 Allocating matrices for forward and/or backward propagation.
@@ -1156,289 +1171,290 @@ Allocating matrices for forward and/or backward propagation.
 Memory Sharing Structure:
 
 (nil): {[PosteriorProb Gradient[10000 x 1 x *]] [PosteriorProb Value[10000 x 1 x *]] [features Gradient[10000 x *]] [labels Gradient[4 x *]] [outputs Gradient[10000 x 1 x *]] }
-0x396ac98: {[features Value[10000 x *]] }
-0x4ec22d8: {[E0 Value[150 x 10000]] }
-0x58f3978: {[WXI0 Value[200 x 150]] }
-0x58f4138: {[WXF0 Value[200 x 150]] }
-0x58f4ad8: {[WXC0 Value[200 x 150]] }
-0x58f55a8: {[bo0 Value[200 x 1]] }
-0x58f62e8: {[bc0 Value[200 x 1]] }
-0x58f6c48: {[bi0 Value[200 x 1]] }
-0x58f7598: {[bf0 Value[200 x 1]] }
-0x58f7f38: {[WHI0 Value[200 x 200]] }
-0x58f8b38: {[WCI0 Value[200 x 1]] }
-0x58f94b8: {[WHF0 Value[200 x 200]] }
-0x58fa3a8: {[WCF0 Value[200 x 1]] }
-0x58fadb8: {[WHO0 Value[200 x 200]] }
-0x58fb7c8: {[WCO0 Value[200 x 1]] }
-0x58fc1d8: {[WHC0 Value[200 x 200]] }
-0x58fc8d8: {[AutoName0 Value[200 x 1 x *]] }
-0x58fd1c8: {[AutoName1 Value[200 x 1 x *]] }
-0x58fd7c8: {[AutoName2 Value[200 x 1 x *]] [WXC0 Gradient[200 x 150]] }
-0x58fde28: {[AutoName3 Value[200 x 1 x *]] }
-0x58fe588: {[AutoName4 Value[200 x 1 x *]] }
-0x58fea68: {[AutoName5 Value[200 x 1 x *]] }
-0x58ff0e8: {[AutoName6 Value[200 x 1 x *]] }
-0x59049d8: {[WXO0 Value[200 x 150]] }
-0x5c49148: {[W2 Value[200 x 10000]] }
-0x5c49db8: {[labels Value[4 x *]] }
-0x5c4aa48: {[WeightForClassPostProb Value[50 x 200]] }
-0x5c50788: {[AutoName22 Value[200 x *]] [AutoName31 Gradient[200 x *]] }
-0x5c50ba8: {[AutoName23 Value[200 x 1 x *]] [WXF0 Gradient[200 x 150]] }
-0x5c50fe8: {[outputs Value[10000 x 1 x *]] }
-0x5c51988: {[TrainNodeClassBasedCrossEntropy Value[1]] }
-0x5c52b58: {[AutoName32 Value[200 x 1 x *]] [WXO0 Gradient[200 x 150]] }
-0x5c538e8: {[AutoName22 Gradient[200 x *]] [AutoName9 Value[200 x *]] [bo0 Gradient[200 x 1]] }
-0x5c58a28: {[LookupTable Value[150 x *]] }
-0x5c58e18: {[AutoName31 Value[200 x *]] [E0 Gradient[150 x 10000]] }
-0x5c59688: {[AutoName10 Value[200 x 1 x *]] [WXI0 Gradient[200 x 150]] }
-0x5c59848: {[AutoName16 Value[200 x *]] [AutoName9 Gradient[200 x *]] [bf0 Gradient[200 x 1]] }
-0x5c59948: {[AutoName30 Value[200 x 1 x *]] }
-0x5c5a0a8: {[AutoName33 Value[200 x 1 x *]] }
-0x5c5a208: {[AutoName21 Value[200 x 1 x *]] }
-0x5c5a368: {[AutoName24 Value[200 x 1 x *]] }
-0x5c5a4c8: {[AutoName20 Value[200 x 1 x *]] }
-0x5c5a628: {[AutoName25 Value[200 x 1 x *]] }
-0x5c5a788: {[AutoName26 Value[200 x 1 x *]] }
-0x5c5a8e8: {[AutoName27 Value[200 x 1 x *]] }
-0x5c5aa48: {[AutoName8 Value[200 x 1 x *]] }
-0x5c5aba8: {[AutoName11 Value[200 x 1 x *]] }
-0x5c5ad08: {[AutoName7 Value[200 x 1 x *]] }
-0x5c5aec8: {[AutoName12 Value[200 x 1 x *]] }
-0x5c5b088: {[AutoName13 Value[200 x 1 x *]] }
-0x5c5b248: {[AutoName14 Value[200 x 1 x *]] }
-0x5c5b408: {[AutoName15 Value[200 x 1 x *]] }
-0x5c5b5c8: {[AutoName17 Value[200 x 1 x *]] }
-0x5c5b788: {[AutoName18 Value[200 x 1 x *]] }
-0x5c5b948: {[AutoName19 Value[200 x 1 x *]] }
-0x5c5bb08: {[AutoName28 Value[200 x 1 x *]] }
-0x5c5bcc8: {[AutoName29 Value[200 x 1 x *]] }
-0x5c5be88: {[AutoName34 Value[200 x 1 x *]] }
-0x5c5c048: {[AutoName35 Value[200 x 1 x *]] }
-0x5c5c208: {[AutoName36 Value[200 x 1 x *]] }
-0x5c5c3c8: {[AutoName37 Value[200 x 1 x *]] }
-0x5c5c588: {[AutoName35 Gradient[200 x 1 x *]] [ClassPostProb Value[50 x 1 x *]] }
-0x5c5c748: {[TrainNodeClassBasedCrossEntropy Gradient[1]] }
-0x5c5c908: {[AutoName37 Gradient[200 x 1 x *]] }
-0x5c5cac8: {[W2 Gradient[200 x 10000]] }
-0x5c5cc88: {[AutoName36 Gradient[200 x 1 x *]] [ClassPostProb Gradient[50 x 1 x *]] }
-0x5c5ce48: {[WeightForClassPostProb Gradient[50 x 200]] }
-0x5c5d008: {[AutoName28 Gradient[200 x 1 x *]] }
-0x5c5d1c8: {[AutoName34 Gradient[200 x 1 x *]] }
-0x5c5d388: {[AutoName33 Gradient[200 x 1 x *]] }
-0x5c5d548: {[AutoName29 Gradient[200 x 1 x *]] }
-0x5c5da88: {[WCO0 Gradient[200 x 1]] }
-0x5c5dc48: {[AutoName27 Gradient[200 x 1 x *]] }
-0x5c5de08: {[AutoName19 Gradient[200 x 1 x *]] }
-0x5c5dfc8: {[AutoName13 Gradient[200 x 1 x *]] }
-0x5c5e188: {[AutoName18 Gradient[200 x 1 x *]] }
-0x5c5e348: {[AutoName17 Gradient[200 x 1 x *]] }
-0x5c5e508: {[AutoName16 Gradient[200 x *]] [bi0 Gradient[200 x 1]] }
-0x5c5e6c8: {[AutoName15 Gradient[200 x 1 x *]] }
-0x5c5e888: {[AutoName14 Gradient[200 x 1 x *]] }
-0x5c5ea48: {[bc0 Gradient[200 x 1]] }
-0x5c5ec08: {[WHC0 Gradient[200 x 200]] }
-0x5c5edc8: {[AutoName3 Gradient[200 x 1 x *]] }
-0x5c5ef88: {[AutoName12 Gradient[200 x 1 x *]] }
-0x5c5f148: {[AutoName11 Gradient[200 x 1 x *]] }
-0x5c5f308: {[AutoName7 Gradient[200 x 1 x *]] }
-0x5c5f848: {[WCI0 Gradient[200 x 1]] }
-0x5c5fa08: {[AutoName4 Gradient[200 x 1 x *]] }
-0x5c5fbc8: {[AutoName10 Gradient[200 x 1 x *]] }
-0x5c5fd88: {[AutoName8 Gradient[200 x 1 x *]] }
-0x5c5ff48: {[WHI0 Gradient[200 x 200]] }
-0x5c60108: {[AutoName0 Gradient[200 x 1 x *]] }
-0x5c602c8: {[AutoName26 Gradient[200 x 1 x *]] }
-0x5c60488: {[AutoName6 Gradient[200 x 1 x *]] }
-0x5c60648: {[AutoName25 Gradient[200 x 1 x *]] }
-0x5c60808: {[AutoName24 Gradient[200 x 1 x *]] }
-0x5c609c8: {[AutoName20 Gradient[200 x 1 x *]] }
-0x5c60f08: {[WCF0 Gradient[200 x 1]] }
-0x5c610c8: {[AutoName5 Gradient[200 x 1 x *]] }
-0x5c61288: {[AutoName23 Gradient[200 x 1 x *]] }
-0x5c61448: {[AutoName21 Gradient[200 x 1 x *]] }
-0x5c61608: {[WHF0 Gradient[200 x 200]] }
-0x5c617c8: {[AutoName1 Gradient[200 x 1 x *]] }
-0x5c61988: {[AutoName32 Gradient[200 x 1 x *]] }
-0x5c61b48: {[AutoName30 Gradient[200 x 1 x *]] }
-0x5c61d08: {[WHO0 Gradient[200 x 200]] }
-0x5c61ec8: {[AutoName2 Gradient[200 x 1 x *]] [LookupTable Gradient[150 x *]] }
+0x2a86fb8: {[features Value[10000 x *]] }
+0x3bcf158: {[E0 Value[150 x 10000]] }
+0x42444a8: {[WXO0 Value[200 x 150]] }
+0x4245928: {[WXI0 Value[200 x 150]] }
+0x42460a8: {[WXF0 Value[200 x 150]] }
+0x48e7d68: {[WXC0 Value[200 x 150]] }
+0x48e8628: {[bo0 Value[200 x 1]] }
+0x48e9468: {[bc0 Value[200 x 1]] }
+0x48e9dc8: {[bi0 Value[200 x 1]] }
+0x48ea758: {[bf0 Value[200 x 1]] }
+0x48eb0f8: {[WHI0 Value[200 x 200]] }
+0x48ebc28: {[WCI0 Value[200 x 1]] }
+0x48ec568: {[WHF0 Value[200 x 200]] }
+0x48ed408: {[WCF0 Value[200 x 1]] }
+0x48edda8: {[WHO0 Value[200 x 200]] }
+0x48ee748: {[WCO0 Value[200 x 1]] }
+0x48ef0e8: {[WHC0 Value[200 x 200]] }
+0x48efd58: {[AutoName0 Value[200 x 1 x *]] }
+0x48f03c8: {[AutoName1 Value[200 x 1 x *]] }
+0x48f0b28: {[AutoName2 Value[200 x 1 x *]] [WXC0 Gradient[200 x 150]] }
+0x48f1148: {[AutoName3 Value[200 x 1 x *]] }
+0x48f18a8: {[AutoName4 Value[200 x 1 x *]] }
+0x48f1f08: {[AutoName5 Value[200 x 1 x *]] }
+0x48f2668: {[AutoName6 Value[200 x 1 x *]] }
+0x48f8c18: {[W2 Value[200 x 10000]] }
+0x48f9888: {[labels Value[4 x *]] }
+0x48fa558: {[WeightForClassPostProb Value[50 x 200]] }
+0x48fcdd8: {[outputs Value[10000 x 1 x *]] }
+0x48fda48: {[AutoName22 Value[200 x *]] [AutoName31 Gradient[200 x *]] }
+0x4900728: {[AutoName32 Value[200 x 1 x *]] [WXO0 Gradient[200 x 150]] }
+0x4901578: {[TrainNodeClassBasedCrossEntropy Value[1]] }
+0x49033d8: {[AutoName10 Value[200 x 1 x *]] [WXI0 Gradient[200 x 150]] }
+0x4903598: {[AutoName16 Value[200 x *]] [AutoName9 Gradient[200 x *]] [bf0 Gradient[200 x 1]] }
+0x4903758: {[AutoName30 Value[200 x 1 x *]] }
+0x4908818: {[LookupTable Value[150 x *]] }
+0x4908c08: {[AutoName31 Value[200 x *]] [E0 Gradient[150 x 10000]] }
+0x4909538: {[AutoName23 Value[200 x 1 x *]] [WXF0 Gradient[200 x 150]] }
+0x49096f8: {[AutoName22 Gradient[200 x *]] [AutoName9 Value[200 x *]] [bo0 Gradient[200 x 1]] }
+0x4909d18: {[AutoName33 Value[200 x 1 x *]] }
+0x4909e78: {[AutoName21 Value[200 x 1 x *]] }
+0x4909fd8: {[AutoName24 Value[200 x 1 x *]] }
+0x490a138: {[AutoName20 Value[200 x 1 x *]] }
+0x490a298: {[AutoName25 Value[200 x 1 x *]] }
+0x490a3f8: {[AutoName26 Value[200 x 1 x *]] }
+0x490a558: {[AutoName27 Value[200 x 1 x *]] }
+0x490a6b8: {[AutoName8 Value[200 x 1 x *]] }
+0x490a818: {[AutoName11 Value[200 x 1 x *]] }
+0x490a978: {[AutoName7 Value[200 x 1 x *]] }
+0x490aad8: {[AutoName12 Value[200 x 1 x *]] }
+0x490ac38: {[AutoName13 Value[200 x 1 x *]] }
+0x490adf8: {[AutoName14 Value[200 x 1 x *]] }
+0x490afb8: {[AutoName15 Value[200 x 1 x *]] }
+0x490b178: {[AutoName17 Value[200 x 1 x *]] }
+0x490b338: {[AutoName18 Value[200 x 1 x *]] }
+0x490b4f8: {[AutoName19 Value[200 x 1 x *]] }
+0x490b6b8: {[AutoName28 Value[200 x 1 x *]] }
+0x490b878: {[AutoName29 Value[200 x 1 x *]] }
+0x490ba38: {[AutoName34 Value[200 x 1 x *]] }
+0x490bbf8: {[AutoName35 Value[200 x 1 x *]] }
+0x490bdb8: {[AutoName36 Value[200 x 1 x *]] }
+0x490bf78: {[AutoName37 Value[200 x 1 x *]] }
+0x490c138: {[AutoName35 Gradient[200 x 1 x *]] [ClassPostProb Value[50 x 1 x *]] }
+0x490c2f8: {[TrainNodeClassBasedCrossEntropy Gradient[1]] }
+0x490c4b8: {[AutoName37 Gradient[200 x 1 x *]] }
+0x490c678: {[W2 Gradient[200 x 10000]] }
+0x490c838: {[AutoName36 Gradient[200 x 1 x *]] [ClassPostProb Gradient[50 x 1 x *]] }
+0x490c9f8: {[WeightForClassPostProb Gradient[50 x 200]] }
+0x490cbb8: {[AutoName28 Gradient[200 x 1 x *]] }
+0x490cd78: {[AutoName34 Gradient[200 x 1 x *]] }
+0x490cf38: {[AutoName33 Gradient[200 x 1 x *]] }
+0x490d0f8: {[AutoName29 Gradient[200 x 1 x *]] }
+0x490d638: {[WCO0 Gradient[200 x 1]] }
+0x490d7f8: {[AutoName27 Gradient[200 x 1 x *]] }
+0x490d9b8: {[AutoName19 Gradient[200 x 1 x *]] }
+0x490db78: {[AutoName13 Gradient[200 x 1 x *]] }
+0x490dd38: {[AutoName18 Gradient[200 x 1 x *]] }
+0x490def8: {[AutoName17 Gradient[200 x 1 x *]] }
+0x490e0b8: {[AutoName16 Gradient[200 x *]] [bi0 Gradient[200 x 1]] }
+0x490e278: {[AutoName15 Gradient[200 x 1 x *]] }
+0x490e438: {[AutoName14 Gradient[200 x 1 x *]] }
+0x490e5f8: {[bc0 Gradient[200 x 1]] }
+0x490e7b8: {[WHC0 Gradient[200 x 200]] }
+0x490e978: {[AutoName3 Gradient[200 x 1 x *]] }
+0x490eb38: {[AutoName12 Gradient[200 x 1 x *]] }
+0x490ecf8: {[AutoName11 Gradient[200 x 1 x *]] }
+0x490eeb8: {[AutoName7 Gradient[200 x 1 x *]] }
+0x490f3f8: {[WCI0 Gradient[200 x 1]] }
+0x490f5b8: {[AutoName4 Gradient[200 x 1 x *]] }
+0x490f778: {[AutoName10 Gradient[200 x 1 x *]] }
+0x490f938: {[AutoName8 Gradient[200 x 1 x *]] }
+0x490faf8: {[WHI0 Gradient[200 x 200]] }
+0x490fcb8: {[AutoName0 Gradient[200 x 1 x *]] }
+0x490fe78: {[AutoName26 Gradient[200 x 1 x *]] }
+0x4910038: {[AutoName6 Gradient[200 x 1 x *]] }
+0x49101f8: {[AutoName25 Gradient[200 x 1 x *]] }
+0x49103b8: {[AutoName24 Gradient[200 x 1 x *]] }
+0x4910578: {[AutoName20 Gradient[200 x 1 x *]] }
+0x4910ab8: {[WCF0 Gradient[200 x 1]] }
+0x4910c78: {[AutoName5 Gradient[200 x 1 x *]] }
+0x4910e38: {[AutoName23 Gradient[200 x 1 x *]] }
+0x4910ff8: {[AutoName21 Gradient[200 x 1 x *]] }
+0x49111b8: {[WHF0 Gradient[200 x 200]] }
+0x4911378: {[AutoName1 Gradient[200 x 1 x *]] }
+0x4911538: {[AutoName32 Gradient[200 x 1 x *]] }
+0x49116f8: {[AutoName30 Gradient[200 x 1 x *]] }
+0x49118b8: {[WHO0 Gradient[200 x 200]] }
+0x4911a78: {[AutoName2 Gradient[200 x 1 x *]] [LookupTable Gradient[150 x *]] }
 
-07/20/2016 16:47:28: No PreCompute nodes found, skipping PreCompute step.
+07/21/2016 12:12:18: No PreCompute nodes found, skipping PreCompute step.
 
-07/20/2016 16:47:28: Starting Epoch 1: learning rate per sample = 0.100000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+07/21/2016 12:12:18: Starting Epoch 1: learning rate per sample = 0.100000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
 
-07/20/2016 16:47:28: Starting minibatch loop.
+07/21/2016 12:12:18: Starting minibatch loop.
 LMSequenceReader: Reading epoch data... 42068 sequences read.
 Begin benchmarking for memory swapping...
-Step number: 1 step name: LookupTable_forward
-Step number: 2 step name: AutoName31_forward
-Step number: 3 step name: AutoName32_forward
-Step number: 4 step name: AutoName22_forward
-Step number: 5 step name: AutoName23_forward
-Step number: 6 step name: AutoName9_forward
-Step number: 7 step name: AutoName10_forward
-Step number: 8 step name: AutoName16_forward
-Step number: 10 step name: AutoName2_forward
-Step number: 11 step name: AutoName30_forward
-Step number: 12 step name: AutoName33_forward
-Step number: 13 step name: AutoName1_forward
-Step number: 14 step name: AutoName21_forward
-Step number: 15 step name: AutoName24_forward
-Step number: 16 step name: AutoName5_forward
-Step number: 17 step name: AutoName20_forward
-Step number: 18 step name: AutoName25_forward
-Step number: 19 step name: AutoName26_forward
-Step number: 20 step name: AutoName6_forward
-Step number: 21 step name: AutoName27_forward
-Step number: 22 step name: AutoName0_forward
-Step number: 23 step name: AutoName8_forward
-Step number: 24 step name: AutoName11_forward
-Step number: 25 step name: AutoName4_forward
-Step number: 26 step name: AutoName7_forward
-Step number: 27 step name: AutoName12_forward
-Step number: 28 step name: AutoName13_forward
-Step number: 29 step name: AutoName3_forward
-Step number: 30 step name: AutoName14_forward
-Step number: 31 step name: AutoName15_forward
-Step number: 32 step name: AutoName17_forward
-Step number: 33 step name: AutoName18_forward
-Step number: 34 step name: AutoName19_forward
-Step number: 35 step name: AutoName28_forward
-Step number: 36 step name: AutoName29_forward
-Step number: 37 step name: AutoName34_forward
-Step number: 38 step name: AutoName35_forward
-Step number: 39 step name: AutoName36_forward
-Step number: 40 step name: AutoName37_forward
-Step number: 41 step name: ClassPostProb_forward
-Step number: 42 step name: TrainNodeClassBasedCrossEntropy_forward
-Step number: 43 step name: TrainNodeClassBasedCrossEntropy_backprop
-Step number: 44 step name: ClassPostProb_backprop
-Step number: 45 step name: AutoName37_backprop
-Step number: 46 step name: AutoName36_backprop
-Step number: 47 step name: AutoName35_backprop
-Step number: 48 step name: AutoName34_backprop
-Step number: 49 step name: AutoName29_backprop
-Step number: 50 step name: AutoName28_backprop
-Step number: 51 step name: AutoName19_backprop
-Step number: 52 step name: AutoName18_backprop
-Step number: 53 step name: AutoName17_backprop
-Step number: 54 step name: AutoName15_backprop
-Step number: 55 step name: AutoName14_backprop
-Step number: 56 step name: AutoName3_backprop
-Step number: 57 step name: AutoName13_backprop
-Step number: 58 step name: AutoName12_backprop
-Step number: 59 step name: AutoName7_backprop
-Step number: 60 step name: AutoName4_backprop
-Step number: 61 step name: AutoName11_backprop
-Step number: 62 step name: AutoName8_backprop
-Step number: 63 step name: AutoName0_backprop
-Step number: 64 step name: AutoName27_backprop
-Step number: 65 step name: AutoName6_backprop
-Step number: 66 step name: AutoName26_backprop
-Step number: 67 step name: AutoName25_backprop
-Step number: 68 step name: AutoName20_backprop
-Step number: 69 step name: AutoName5_backprop
-Step number: 70 step name: AutoName24_backprop
-Step number: 71 step name: AutoName21_backprop
-Step number: 72 step name: AutoName1_backprop
-Step number: 73 step name: AutoName33_backprop
-Step number: 74 step name: AutoName30_backprop
-Step number: 75 step name: AutoName2_backprop
-Step number: 76 step name: AutoName16_backprop
-Step number: 77 step name: AutoName10_backprop
-Step number: 78 step name: AutoName9_backprop
-Step number: 79 step name: AutoName23_backprop
-Step number: 80 step name: AutoName22_backprop
-Step number: 81 step name: AutoName32_backprop
-Step number: 82 step name: AutoName31_backprop
-Step number: 83 step name: LookupTable_backprop
-Memory swapping benchmarking complete!Swapping buffer: 0x58f3978 with dim 200x150 out at step 6 and in at step 76
-Swapping buffer: 0x58f4138 with dim 200x150 out at step 4 and in at step 78
-Swapping buffer: 0x58f4ad8 with dim 200x150 out at step 8 and in at step 74
-Swapping buffer: 0x58f55a8 with dim 200x1 out at step 3 and in at step 80
-Swapping buffer: 0x58f62e8 with dim 200x1 out at step 31 and in at step 53
-Swapping buffer: 0x58f6c48 with dim 200x1 out at step 7 and in at step 73
-Swapping buffer: 0x58f7598 with dim 200x1 out at step 5 and in at step 77
-Swapping buffer: 0x58f7f38 with dim 200x200 out at step 23 and in at step 59
-Swapping buffer: 0x58f8b38 with dim 200x1 out at step 26 and in at step 58
-Swapping buffer: 0x58f94b8 with dim 200x200 out at step 14 and in at step 68
-Swapping buffer: 0x58fa3a8 with dim 200x1 out at step 17 and in at step 67
-Swapping buffer: 0x58fadb8 with dim 200x200 out at step 11 and in at step 71
-Swapping buffer: 0x58fb7c8 with dim 200x1 out at step 36 and in at step 48
-Swapping buffer: 0x58fc1d8 with dim 200x200 out at step 30 and in at step 49
-Swapping buffer: 0x59049d8 with dim 200x150 out at step 2 and in at step 62
-Swapping buffer: 0x5c4aa48 with dim 50x200 out at step 41 and in at step 43
+Step number: 0 step name: LookupTable_forward
+Step number: 1 step name: AutoName31_forward
+Step number: 2 step name: AutoName32_forward
+Step number: 3 step name: AutoName22_forward
+Step number: 4 step name: AutoName23_forward
+Step number: 5 step name: AutoName9_forward
+Step number: 6 step name: AutoName10_forward
+Step number: 7 step name: AutoName16_forward
+Step number: 8 step name: AutoName2_forward
+Step number: 9 step name: AutoName30_forward
+Step number: 10 step name: AutoName33_forward
+Step number: 11 step name: AutoName1_forward
+Step number: 12 step name: AutoName21_forward
+Step number: 13 step name: AutoName24_forward
+Step number: 14 step name: AutoName5_forward
+Step number: 15 step name: AutoName20_forward
+Step number: 16 step name: AutoName25_forward
+Step number: 17 step name: AutoName26_forward
+Step number: 18 step name: AutoName6_forward
+Step number: 19 step name: AutoName27_forward
+Step number: 20 step name: AutoName0_forward
+Step number: 21 step name: AutoName8_forward
+Step number: 22 step name: AutoName11_forward
+Step number: 23 step name: AutoName4_forward
+Step number: 24 step name: AutoName7_forward
+Step number: 25 step name: AutoName12_forward
+Step number: 26 step name: AutoName13_forward
+Step number: 27 step name: AutoName3_forward
+Step number: 28 step name: AutoName14_forward
+Step number: 29 step name: AutoName15_forward
+Step number: 30 step name: AutoName17_forward
+Step number: 31 step name: AutoName18_forward
+Step number: 32 step name: AutoName19_forward
+Step number: 33 step name: AutoName28_forward
+Step number: 34 step name: AutoName29_forward
+Step number: 35 step name: AutoName34_forward
+Step number: 36 step name: AutoName35_forward
+Step number: 37 step name: AutoName36_forward
+Step number: 38 step name: AutoName37_forward
+Step number: 39 step name: ClassPostProb_forward
+Step number: 40 step name: TrainNodeClassBasedCrossEntropy_forward
+Step number: 41 step name: TrainNodeClassBasedCrossEntropy_backprop
+Step number: 42 step name: ClassPostProb_backprop
+Step number: 43 step name: AutoName37_backprop
+Step number: 44 step name: AutoName36_backprop
+Step number: 45 step name: AutoName35_backprop
+Step number: 46 step name: AutoName34_backprop
+Step number: 47 step name: AutoName29_backprop
+Step number: 48 step name: AutoName28_backprop
+Step number: 49 step name: AutoName19_backprop
+Step number: 50 step name: AutoName18_backprop
+Step number: 51 step name: AutoName17_backprop
+Step number: 52 step name: AutoName15_backprop
+Step number: 53 step name: AutoName14_backprop
+Step number: 54 step name: AutoName3_backprop
+Step number: 55 step name: AutoName13_backprop
+Step number: 56 step name: AutoName12_backprop
+Step number: 57 step name: AutoName7_backprop
+Step number: 58 step name: AutoName4_backprop
+Step number: 59 step name: AutoName11_backprop
+Step number: 60 step name: AutoName8_backprop
+Step number: 61 step name: AutoName0_backprop
+Step number: 62 step name: AutoName27_backprop
+Step number: 63 step name: AutoName6_backprop
+Step number: 64 step name: AutoName26_backprop
+Step number: 65 step name: AutoName25_backprop
+Step number: 66 step name: AutoName20_backprop
+Step number: 67 step name: AutoName5_backprop
+Step number: 68 step name: AutoName24_backprop
+Step number: 69 step name: AutoName21_backprop
+Step number: 70 step name: AutoName1_backprop
+Step number: 71 step name: AutoName33_backprop
+Step number: 72 step name: AutoName30_backprop
+Step number: 73 step name: AutoName2_backprop
+Step number: 74 step name: AutoName16_backprop
+Step number: 75 step name: AutoName10_backprop
+Step number: 76 step name: AutoName9_backprop
+Step number: 77 step name: AutoName23_backprop
+Step number: 78 step name: AutoName22_backprop
+Step number: 79 step name: AutoName32_backprop
+Step number: 80 step name: AutoName31_backprop
+Step number: 81 step name: LookupTable_backprop
+Memory swapping benchmarking complete!
+Swapping buffer: 0x42444a8 with dim 200x150 out at step 1 and in at step 78
+Swapping buffer: 0x4245928 with dim 200x150 out at step 5 and in at step 74
+Swapping buffer: 0x42460a8 with dim 200x150 out at step 3 and in at step 76
+Swapping buffer: 0x48e7d68 with dim 200x150 out at step 7 and in at step 72
+Swapping buffer: 0x48e8628 with dim 200x1 out at step 2 and in at step 77
+Swapping buffer: 0x48e9468 with dim 200x1 out at step 29 and in at step 51
+Swapping buffer: 0x48e9dc8 with dim 200x1 out at step 6 and in at step 71
+Swapping buffer: 0x48ea758 with dim 200x1 out at step 4 and in at step 75
+Swapping buffer: 0x48eb0f8 with dim 200x200 out at step 21 and in at step 57
+Swapping buffer: 0x48ebc28 with dim 200x1 out at step 24 and in at step 56
+Swapping buffer: 0x48ec568 with dim 200x200 out at step 12 and in at step 66
+Swapping buffer: 0x48ed408 with dim 200x1 out at step 15 and in at step 65
+Swapping buffer: 0x48edda8 with dim 200x200 out at step 9 and in at step 69
+Swapping buffer: 0x48ee748 with dim 200x1 out at step 34 and in at step 46
+Swapping buffer: 0x48ef0e8 with dim 200x200 out at step 28 and in at step 47
+Swapping buffer: 0x48fa558 with dim 50x200 out at step 39 and in at step 41
 Total swapped memory: 1.111603MB
 Total swappable memory: 14.464859MB
 WARNING: The same matrix with dim [4, 108] has been transferred between different devices for 20 times.
-07/20/2016 16:49:22: Finished Epoch[ 1 of 3]: [Training] TrainNodeClassBasedCrossEntropy = 6.46830734 * 2087; totalSamplesSeen = 2087; learningRatePerSample = 0.1; epochTime=113.927s
+07/21/2016 12:13:05: Finished Epoch[ 1 of 3]: [Training] TrainNodeClassBasedCrossEntropy = 6.46830734 * 2087; totalSamplesSeen = 2087; learningRatePerSample = 0.1; epochTime=46.369s
 LMSequenceReader: Reading epoch data... 3370 sequences read.
 LMSequenceReader: Reading epoch data... 0 sequences read.
-07/20/2016 16:50:13: Final Results: Minibatch[1-704]: TrainNodeClassBasedCrossEntropy = 6.55080699 * 73760; perplexity = 699.80868136
-07/20/2016 16:50:13: Finished Epoch[ 1 of 3]: [Validate] TrainNodeClassBasedCrossEntropy = 6.55080699 * 73760
-07/20/2016 16:50:13: SGD: Saving checkpoint model '/home/tim/PennTreebank_RNN_MemorySwapping@debug_gpu/Models/rnn.dnn.1'
+07/21/2016 12:13:57: Final Results: Minibatch[1-704]: TrainNodeClassBasedCrossEntropy = 6.55080699 * 73760; perplexity = 699.80868136
+07/21/2016 12:13:57: Finished Epoch[ 1 of 3]: [Validate] TrainNodeClassBasedCrossEntropy = 6.55080699 * 73760
+07/21/2016 12:13:57: SGD: Saving checkpoint model '/tmp/cntk-test-20160721121216.198065/Examples/Text/PennTreebank_RNN_MemorySwapping@debug_gpu/Models/rnn.dnn.1'
 
-07/20/2016 16:50:14: Starting Epoch 2: learning rate per sample = 0.100000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+07/21/2016 12:13:57: Starting Epoch 2: learning rate per sample = 0.100000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
 
-07/20/2016 16:50:14: Starting minibatch loop.
+07/21/2016 12:13:57: Starting minibatch loop.
 LMSequenceReader: Reading epoch data... 42068 sequences read.
-07/20/2016 16:50:17: Finished Epoch[ 2 of 3]: [Training] TrainNodeClassBasedCrossEntropy = 6.58921659 * 2099; totalSamplesSeen = 4186; learningRatePerSample = 0.1; epochTime=2.84064s
+07/21/2016 12:14:00: Finished Epoch[ 2 of 3]: [Training] TrainNodeClassBasedCrossEntropy = 6.58921659 * 2099; totalSamplesSeen = 4186; learningRatePerSample = 0.1; epochTime=2.98334s
 LMSequenceReader: Reading epoch data... 3370 sequences read.
 LMSequenceReader: Reading epoch data... 0 sequences read.
-07/20/2016 16:50:54: Final Results: Minibatch[1-353]: TrainNodeClassBasedCrossEntropy = 6.47190087 * 73760; perplexity = 646.71187213
-07/20/2016 16:50:54: Finished Epoch[ 2 of 3]: [Validate] TrainNodeClassBasedCrossEntropy = 6.47190087 * 73760
-07/20/2016 16:50:54: SGD: Saving checkpoint model '/home/tim/PennTreebank_RNN_MemorySwapping@debug_gpu/Models/rnn.dnn.2'
+07/21/2016 12:14:35: Final Results: Minibatch[1-353]: TrainNodeClassBasedCrossEntropy = 6.47190087 * 73760; perplexity = 646.71187213
+07/21/2016 12:14:35: Finished Epoch[ 2 of 3]: [Validate] TrainNodeClassBasedCrossEntropy = 6.47190087 * 73760
+07/21/2016 12:14:36: SGD: Saving checkpoint model '/tmp/cntk-test-20160721121216.198065/Examples/Text/PennTreebank_RNN_MemorySwapping@debug_gpu/Models/rnn.dnn.2'
 
-07/20/2016 16:50:54: Starting Epoch 3: learning rate per sample = 0.100000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+07/21/2016 12:14:36: Starting Epoch 3: learning rate per sample = 0.100000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
 
-07/20/2016 16:50:54: Starting minibatch loop.
+07/21/2016 12:14:36: Starting minibatch loop.
 LMSequenceReader: Reading epoch data... 42068 sequences read.
-07/20/2016 16:50:57: Finished Epoch[ 3 of 3]: [Training] TrainNodeClassBasedCrossEntropy = 7.17825183 * 2276; totalSamplesSeen = 6462; learningRatePerSample = 0.1; epochTime=2.49039s
+07/21/2016 12:14:40: Finished Epoch[ 3 of 3]: [Training] TrainNodeClassBasedCrossEntropy = 7.17825183 * 2276; totalSamplesSeen = 6462; learningRatePerSample = 0.1; epochTime=3.79828s
 LMSequenceReader: Reading epoch data... 3370 sequences read.
 LMSequenceReader: Reading epoch data... 0 sequences read.
-07/20/2016 16:51:25: Final Results: Minibatch[1-193]: TrainNodeClassBasedCrossEntropy = 11.34215436 * 73760; perplexity = 84301.45140267
-07/20/2016 16:51:25: Finished Epoch[ 3 of 3]: [Validate] TrainNodeClassBasedCrossEntropy = 11.34215436 * 73760
-07/20/2016 16:51:25: Loading (rolling back to) previous model with best training-criterion value: /home/tim/PennTreebank_RNN_MemorySwapping@debug_gpu/Models/rnn.dnn.2.
-07/20/2016 16:51:25: learnRatePerSample reduced to 0.050000001
-07/20/2016 16:51:25: SGD: revoke back to and update checkpoint file for epoch 2
+07/21/2016 12:15:06: Final Results: Minibatch[1-193]: TrainNodeClassBasedCrossEntropy = 11.34215436 * 73760; perplexity = 84301.45140267
+07/21/2016 12:15:06: Finished Epoch[ 3 of 3]: [Validate] TrainNodeClassBasedCrossEntropy = 11.34215436 * 73760
+07/21/2016 12:15:06: Loading (rolling back to) previous model with best training-criterion value: /tmp/cntk-test-20160721121216.198065/Examples/Text/PennTreebank_RNN_MemorySwapping@debug_gpu/Models/rnn.dnn.2.
+07/21/2016 12:15:07: learnRatePerSample reduced to 0.050000001
+07/21/2016 12:15:07: SGD: revoke back to and update checkpoint file for epoch 2
 
-07/20/2016 16:51:26: Starting Epoch 3: learning rate per sample = 0.050000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+07/21/2016 12:15:07: Starting Epoch 3: learning rate per sample = 0.050000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
 
-07/20/2016 16:51:26: Starting minibatch loop.
+07/21/2016 12:15:07: Starting minibatch loop.
 LMSequenceReader: Reading epoch data... 42068 sequences read.
-07/20/2016 16:51:28: Finished Epoch[ 3 of 3]: [Training] TrainNodeClassBasedCrossEntropy = 6.47460508 * 2276; totalSamplesSeen = 6462; learningRatePerSample = 0.050000001; epochTime=2.22204s
+07/21/2016 12:15:09: Finished Epoch[ 3 of 3]: [Training] TrainNodeClassBasedCrossEntropy = 6.47460508 * 2276; totalSamplesSeen = 6462; learningRatePerSample = 0.050000001; epochTime=2.19471s
 LMSequenceReader: Reading epoch data... 3370 sequences read.
 LMSequenceReader: Reading epoch data... 0 sequences read.
-07/20/2016 16:51:52: Final Results: Minibatch[1-193]: TrainNodeClassBasedCrossEntropy = 6.71366701 * 73760; perplexity = 823.58520584
-07/20/2016 16:51:52: Finished Epoch[ 3 of 3]: [Validate] TrainNodeClassBasedCrossEntropy = 6.71366701 * 73760
-07/20/2016 16:51:52: Loading (rolling back to) previous model with best training-criterion value: /home/tim/PennTreebank_RNN_MemorySwapping@debug_gpu/Models/rnn.dnn.2.
-07/20/2016 16:51:52: learnRatePerSample reduced to 0.025
-07/20/2016 16:51:52: SGD: revoke back to and update checkpoint file for epoch 2
+07/21/2016 12:15:36: Final Results: Minibatch[1-193]: TrainNodeClassBasedCrossEntropy = 6.71366701 * 73760; perplexity = 823.58520584
+07/21/2016 12:15:36: Finished Epoch[ 3 of 3]: [Validate] TrainNodeClassBasedCrossEntropy = 6.71366701 * 73760
+07/21/2016 12:15:36: Loading (rolling back to) previous model with best training-criterion value: /tmp/cntk-test-20160721121216.198065/Examples/Text/PennTreebank_RNN_MemorySwapping@debug_gpu/Models/rnn.dnn.2.
+07/21/2016 12:15:36: learnRatePerSample reduced to 0.025
+07/21/2016 12:15:36: SGD: revoke back to and update checkpoint file for epoch 2
 
-07/20/2016 16:51:53: Starting Epoch 3: learning rate per sample = 0.025000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+07/21/2016 12:15:37: Starting Epoch 3: learning rate per sample = 0.025000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
 
-07/20/2016 16:51:53: Starting minibatch loop.
+07/21/2016 12:15:37: Starting minibatch loop.
 LMSequenceReader: Reading epoch data... 42068 sequences read.
-07/20/2016 16:51:55: Finished Epoch[ 3 of 3]: [Training] TrainNodeClassBasedCrossEntropy = 6.24824768 * 2276; totalSamplesSeen = 6462; learningRatePerSample = 0.025; epochTime=2.46854s
+07/21/2016 12:15:39: Finished Epoch[ 3 of 3]: [Training] TrainNodeClassBasedCrossEntropy = 6.24824768 * 2276; totalSamplesSeen = 6462; learningRatePerSample = 0.025; epochTime=2.61889s
 LMSequenceReader: Reading epoch data... 3370 sequences read.
 LMSequenceReader: Reading epoch data... 0 sequences read.
-07/20/2016 16:52:20: Final Results: Minibatch[1-193]: TrainNodeClassBasedCrossEntropy = 6.43806506 * 73760; perplexity = 625.19591502
-07/20/2016 16:52:20: Finished Epoch[ 3 of 3]: [Validate] TrainNodeClassBasedCrossEntropy = 6.43806506 * 73760
-07/20/2016 16:52:21: SGD: Saving checkpoint model '/home/tim/PennTreebank_RNN_MemorySwapping@debug_gpu/Models/rnn.dnn'
-07/20/2016 16:52:21: CNTKCommandTrainEnd: train
+07/21/2016 12:16:05: Final Results: Minibatch[1-193]: TrainNodeClassBasedCrossEntropy = 6.43806506 * 73760; perplexity = 625.19591502
+07/21/2016 12:16:05: Finished Epoch[ 3 of 3]: [Validate] TrainNodeClassBasedCrossEntropy = 6.43806506 * 73760
+07/21/2016 12:16:06: SGD: Saving checkpoint model '/tmp/cntk-test-20160721121216.198065/Examples/Text/PennTreebank_RNN_MemorySwapping@debug_gpu/Models/rnn.dnn'
+07/21/2016 12:16:06: CNTKCommandTrainEnd: train
 
-07/20/2016 16:52:21: Action "train" complete.
+07/21/2016 12:16:06: Action "train" complete.
 
 
-07/20/2016 16:52:21: ##############################################################################
-07/20/2016 16:52:21: #                                                                            #
-07/20/2016 16:52:21: # Action "eval"                                                              #
-07/20/2016 16:52:21: #                                                                            #
-07/20/2016 16:52:21: ##############################################################################
+07/21/2016 12:16:06: ##############################################################################
+07/21/2016 12:16:06: #                                                                            #
+07/21/2016 12:16:06: # Action "eval"                                                              #
+07/21/2016 12:16:06: #                                                                            #
+07/21/2016 12:16:06: ##############################################################################
 
-LMSequenceReader: Label mapping will be created internally on the fly because the labelMappingFile was not found: /home/tim/PennTreebank_RNN_MemorySwapping@debug_gpu/sentenceLabels.txt
-LMSequenceReader: Label mapping will be created internally on the fly because the labelMappingFile was not found: /home/tim/PennTreebank_RNN_MemorySwapping@debug_gpu/sentenceLabels.out.txt
+LMSequenceReader: Label mapping will be created internally on the fly because the labelMappingFile was not found: /tmp/cntk-test-20160721121216.198065/Examples/Text/PennTreebank_RNN_MemorySwapping@debug_gpu/sentenceLabels.txt
+LMSequenceReader: Label mapping will be created internally on the fly because the labelMappingFile was not found: /tmp/cntk-test-20160721121216.198065/Examples/Text/PennTreebank_RNN_MemorySwapping@debug_gpu/sentenceLabels.out.txt
 
 Post-processing network...
 
@@ -1556,74 +1572,117 @@ Allocating matrices for forward and/or backward propagation.
 Memory Sharing Structure:
 
 (nil): {[AutoName0 Gradient[200 x 1 x *1]] [AutoName1 Gradient[200 x 1 x *1]] [AutoName10 Gradient[200 x 1 x *1]] [AutoName11 Gradient[200 x 1 x *1]] [AutoName12 Gradient[200 x 1 x *1]] [AutoName13 Gradient[200 x 1 x *1]] [AutoName14 Gradient[200 x 1 x *1]] [AutoName15 Gradient[200 x 1 x *1]] [AutoName16 Gradient[200 x *1]] [AutoName17 Gradient[200 x 1 x *1]] [AutoName18 Gradient[200 x 1 x *1]] [AutoName19 Gradient[200 x 1 x *1]] [AutoName2 Gradient[200 x 1 x *1]] [AutoName20 Gradient[200 x 1 x *1]] [AutoName21 Gradient[200 x 1 x *1]] [AutoName22 Gradient[200 x *1]] [AutoName23 Gradient[200 x 1 x *1]] [AutoName24 Gradient[200 x 1 x *1]] [AutoName25 Gradient[200 x 1 x *1]] [AutoName26 Gradient[200 x 1 x *1]] [AutoName27 Gradient[200 x 1 x *1]] [AutoName28 Gradient[200 x 1 x *1]] [AutoName29 Gradient[200 x 1 x *1]] [AutoName3 Gradient[200 x 1 x *1]] [AutoName30 Gradient[200 x 1 x *1]] [AutoName31 Gradient[200 x *1]] [AutoName32 Gradient[200 x 1 x *1]] [AutoName33 Gradient[200 x 1 x *1]] [AutoName34 Gradient[200 x 1 x *1]] [AutoName35 Gradient[200 x 1 x *1]] [AutoName36 Gradient[200 x 1 x *1]] [AutoName37 Gradient[200 x 1 x *1]] [AutoName4 Gradient[200 x 1 x *1]] [AutoName5 Gradient[200 x 1 x *1]] [AutoName6 Gradient[200 x 1 x *1]] [AutoName7 Gradient[200 x 1 x *1]] [AutoName8 Gradient[200 x 1 x *1]] [AutoName9 Gradient[200 x *1]] [ClassPostProb Gradient[50 x 1 x *1]] [E0 Gradient[150 x 10000]] [LookupTable Gradient[150 x *1]] [PosteriorProb Gradient[10000 x 1 x *1]] [PosteriorProb Value[10000 x 1 x *1]] [TrainNodeClassBasedCrossEntropy Gradient[1]] [W2 Gradient[200 x 10000]] [WCF0 Gradient[200 x 1]] [WCI0 Gradient[200 x 1]] [WCO0 Gradient[200 x 1]] [WHC0 Gradient[200 x 200]] [WHF0 Gradient[200 x 200]] [WHI0 Gradient[200 x 200]] [WHO0 Gradient[200 x 200]] [WXC0 Gradient[200 x 150]] [WXF0 Gradient[200 x 150]] [WXI0 Gradient[200 x 150]] [WXO0 Gradient[200 x 150]] [WeightForClassPostProb Gradient[50 x 200]] [bc0 Gradient[200 x 1]] [bf0 Gradient[200 x 1]] [bi0 Gradient[200 x 1]] [bo0 Gradient[200 x 1]] [features Gradient[10000 x *1]] [labels Gradient[4 x *1]] [outputs Gradient[10000 x 1 x *1]] [outputs Value[10000 x 1 x *1]] }
-0x694c458: {[labels Value[4 x *1]] }
-0x6a26758: {[WCI0 Value[200 x 1]] }
-0x6b5dfd8: {[features Value[10000 x *1]] }
-0x6d16ee8: {[bo0 Value[200 x 1]] }
-0x6dd67b8: {[ClassPostProb Value[50 x 1 x *1]] }
-0x6df8658: {[AutoName36 Value[200 x 1 x *1]] }
-0x6df8818: {[AutoName37 Value[200 x 1 x *1]] }
-0x6e0fc58: {[WCF0 Value[200 x 1]] }
-0x6e16d38: {[AutoName34 Value[200 x 1 x *1]] }
-0x6e16ef8: {[AutoName35 Value[200 x 1 x *1]] }
-0x6e50fd8: {[AutoName28 Value[200 x 1 x *1]] }
-0x6e51198: {[AutoName29 Value[200 x 1 x *1]] }
-0x6e87ca8: {[AutoName20 Value[200 x 1 x *1]] }
-0x6e87e68: {[AutoName25 Value[200 x 1 x *1]] }
-0x6eb2e08: {[AutoName18 Value[200 x 1 x *1]] }
-0x6eb2fc8: {[AutoName19 Value[200 x 1 x *1]] }
-0x6eb5658: {[AutoName6 Value[200 x 1 x *1]] }
-0x6ebe7e8: {[AutoName15 Value[200 x 1 x *1]] }
-0x6ebe9a8: {[AutoName17 Value[200 x 1 x *1]] }
-0x6ee5318: {[AutoName13 Value[200 x 1 x *1]] }
-0x6ee54d8: {[AutoName14 Value[200 x 1 x *1]] }
-0x6f1c378: {[AutoName7 Value[200 x 1 x *1]] }
-0x6f1c538: {[AutoName12 Value[200 x 1 x *1]] }
-0x6f49908: {[AutoName8 Value[200 x 1 x *1]] }
-0x6f49ac8: {[AutoName11 Value[200 x 1 x *1]] }
-0x6f68748: {[AutoName26 Value[200 x 1 x *1]] }
-0x6f68908: {[AutoName27 Value[200 x 1 x *1]] }
-0x6fcd698: {[bi0 Value[200 x 1]] }
-0x7138c48: {[AutoName5 Value[200 x 1 x *1]] }
-0x714cc48: {[AutoName2 Value[200 x 1 x *1]] }
-0x71c7178: {[bf0 Value[200 x 1]] }
-0x73aec68: {[bc0 Value[200 x 1]] }
-0x74fde88: {[AutoName32 Value[200 x 1 x *1]] }
-0x74fe048: {[AutoName22 Value[200 x *1]] }
-0x7513ce8: {[AutoName33 Value[200 x 1 x *1]] }
-0x7516198: {[W2 Value[200 x 10000]] }
-0x752fd68: {[AutoName16 Value[200 x *1]] }
-0x752ff28: {[AutoName30 Value[200 x 1 x *1]] }
-0x7672688: {[AutoName0 Value[200 x 1 x *1]] }
-0x7672918: {[AutoName1 Value[200 x 1 x *1]] }
-0x7711548: {[AutoName23 Value[200 x 1 x *1]] }
-0x7a05fb8: {[AutoName21 Value[200 x 1 x *1]] }
-0x7a06118: {[AutoName24 Value[200 x 1 x *1]] }
-0x7b25358: {[AutoName9 Value[200 x *1]] }
-0x7b25518: {[AutoName10 Value[200 x 1 x *1]] }
-0x7b85998: {[AutoName4 Value[200 x 1 x *1]] }
-0x8027488: {[AutoName3 Value[200 x 1 x *1]] }
-0x81066b8: {[TrainNodeClassBasedCrossEntropy Value[1]] }
-0x8da69a8: {[LookupTable Value[150 x *1]] }
-0x8dc77a8: {[AutoName31 Value[200 x *1]] }
-0x8ead5b8: {[WCO0 Value[200 x 1]] }
-0x8ed7ca8: {[E0 Value[150 x 10000]] }
-0x9573758: {[WXO0 Value[200 x 150]] }
-0x96316e8: {[WXI0 Value[200 x 150]] }
-0x96bbef8: {[WXF0 Value[200 x 150]] }
-0x983c008: {[WXC0 Value[200 x 150]] }
-0x98e1548: {[WHO0 Value[200 x 200]] }
-0x9933df8: {[WHI0 Value[200 x 200]] }
-0x9a97d68: {[WHF0 Value[200 x 200]] }
-0x9bdd838: {[WHC0 Value[200 x 200]] }
-0x9c6cd48: {[WeightForClassPostProb Value[50 x 200]] }
+0x52f1808: {[AutoName16 Value[200 x *1]] }
+0x546c058: {[labels Value[4 x *1]] }
+0x5496978: {[WCI0 Value[200 x 1]] }
+0x54fd608: {[E0 Value[150 x 10000]] }
+0x5665fd8: {[features Value[10000 x *1]] }
+0x574b808: {[bf0 Value[200 x 1]] }
+0x58db0f8: {[bi0 Value[200 x 1]] }
+0x58e04e8: {[bo0 Value[200 x 1]] }
+0x5a52d08: {[AutoName6 Value[200 x 1 x *1]] }
+0x5a6f938: {[AutoName22 Value[200 x *1]] }
+0x5a6fa88: {[TrainNodeClassBasedCrossEntropy Value[1]] }
+0x5b65468: {[AutoName36 Value[200 x 1 x *1]] }
+0x5b65628: {[AutoName37 Value[200 x 1 x *1]] }
+0x5c802e8: {[bc0 Value[200 x 1]] }
+0x5deb138: {[AutoName23 Value[200 x 1 x *1]] }
+0x5deb238: {[AutoName10 Value[200 x 1 x *1]] }
+0x614d888: {[ClassPostProb Value[50 x 1 x *1]] }
+0x61a4d78: {[AutoName13 Value[200 x 1 x *1]] }
+0x61a4f38: {[AutoName14 Value[200 x 1 x *1]] }
+0x620cf68: {[AutoName3 Value[200 x 1 x *1]] }
+0x6248df8: {[AutoName30 Value[200 x 1 x *1]] }
+0x6248fb8: {[AutoName33 Value[200 x 1 x *1]] }
+0x64028e8: {[AutoName7 Value[200 x 1 x *1]] }
+0x6402aa8: {[AutoName12 Value[200 x 1 x *1]] }
+0x64b99b8: {[AutoName0 Value[200 x 1 x *1]] }
+0x64b9a58: {[AutoName2 Value[200 x 1 x *1]] }
+0x6505e98: {[LookupTable Value[150 x *1]] }
+0x66ef508: {[WCF0 Value[200 x 1]] }
+0x6735318: {[AutoName9 Value[200 x *1]] }
+0x68dda58: {[AutoName34 Value[200 x 1 x *1]] }
+0x68ddc18: {[AutoName35 Value[200 x 1 x *1]] }
+0x68f9a08: {[AutoName5 Value[200 x 1 x *1]] }
+0x6941198: {[AutoName26 Value[200 x 1 x *1]] }
+0x6941358: {[AutoName27 Value[200 x 1 x *1]] }
+0x6a15278: {[AutoName28 Value[200 x 1 x *1]] }
+0x6a15438: {[AutoName29 Value[200 x 1 x *1]] }
+0x6bc3ad8: {[AutoName4 Value[200 x 1 x *1]] }
+0x6c8a758: {[AutoName31 Value[200 x *1]] }
+0x6d5d258: {[AutoName18 Value[200 x 1 x *1]] }
+0x6d5d418: {[AutoName19 Value[200 x 1 x *1]] }
+0x6e13fa8: {[AutoName15 Value[200 x 1 x *1]] }
+0x6e14168: {[AutoName17 Value[200 x 1 x *1]] }
+0x784a758: {[AutoName32 Value[200 x 1 x *1]] }
+0x784a9e8: {[AutoName1 Value[200 x 1 x *1]] }
+0x7caafd8: {[AutoName8 Value[200 x 1 x *1]] }
+0x7cab198: {[AutoName11 Value[200 x 1 x *1]] }
+0x8151b18: {[WXO0 Value[200 x 150]] }
+0x821f318: {[WXI0 Value[200 x 150]] }
+0x825d898: {[W2 Value[200 x 10000]] }
+0x8284ca8: {[AutoName20 Value[200 x 1 x *1]] }
+0x8284e68: {[AutoName25 Value[200 x 1 x *1]] }
+0x82e6d38: {[WXF0 Value[200 x 150]] }
+0x8451268: {[WXC0 Value[200 x 150]] }
+0x84b0eb8: {[WHO0 Value[200 x 200]] }
+0x8577328: {[WHI0 Value[200 x 200]] }
+0x872b788: {[WHF0 Value[200 x 200]] }
+0x8855c88: {[WHC0 Value[200 x 200]] }
+0x88f1658: {[WeightForClassPostProb Value[50 x 200]] }
+0x89b17b8: {[AutoName21 Value[200 x 1 x *1]] }
+0x89b1978: {[AutoName24 Value[200 x 1 x *1]] }
+0x89bd838: {[WCO0 Value[200 x 1]] }
 
 LMSequenceReader: Reading epoch data... 3760 sequences read.
+Step number: 0 step name: LookupTable_forward
+Step number: 1 step name: AutoName31_forward
+Step number: 2 step name: AutoName32_forward
+Step number: 3 step name: AutoName22_forward
+Step number: 4 step name: AutoName23_forward
+Step number: 5 step name: AutoName9_forward
+Step number: 6 step name: AutoName10_forward
+Step number: 7 step name: AutoName16_forward
+Step number: 8 step name: AutoName2_forward
+Step number: 9 step name: AutoName30_forward
+Step number: 10 step name: AutoName33_forward
+Step number: 11 step name: AutoName1_forward
+Step number: 12 step name: AutoName21_forward
+Step number: 13 step name: AutoName24_forward
+Step number: 14 step name: AutoName5_forward
+Step number: 15 step name: AutoName20_forward
+Step number: 16 step name: AutoName25_forward
+Step number: 17 step name: AutoName26_forward
+Step number: 18 step name: AutoName6_forward
+Step number: 19 step name: AutoName27_forward
+Step number: 20 step name: AutoName0_forward
+Step number: 21 step name: AutoName8_forward
+Step number: 22 step name: AutoName11_forward
+Step number: 23 step name: AutoName4_forward
+Step number: 24 step name: AutoName7_forward
+Step number: 25 step name: AutoName12_forward
+Step number: 26 step name: AutoName13_forward
+Step number: 27 step name: AutoName3_forward
+Step number: 28 step name: AutoName14_forward
+Step number: 29 step name: AutoName15_forward
+Step number: 30 step name: AutoName17_forward
+Step number: 31 step name: AutoName18_forward
+Step number: 32 step name: AutoName19_forward
+Step number: 33 step name: AutoName28_forward
+Step number: 34 step name: AutoName29_forward
+Step number: 35 step name: AutoName34_forward
+Step number: 36 step name: AutoName35_forward
+Step number: 37 step name: AutoName36_forward
+Step number: 38 step name: AutoName37_forward
+Step number: 39 step name: ClassPostProb_forward
+Step number: 40 step name: TrainNodeClassBasedCrossEntropy_forward
+Total swapped memory: 0.000000MB
+Total swappable memory: 14.515686MB
 WARNING: The same matrix with dim [4, 1872] has been transferred between different devices for 20 times.
 LMSequenceReader: Reading epoch data... 0 sequences read.
-07/20/2016 16:52:42: Minibatch[1-60]: TrainNodeClassBasedCrossEntropy = 6.38698049 * 82402
-07/20/2016 16:52:42: Final Results: Minibatch[1-60]: TrainNodeClassBasedCrossEntropy = 6.38698049 * 82402; perplexity = 594.06009555
+07/21/2016 12:19:32: Minibatch[1-60]: TrainNodeClassBasedCrossEntropy = 6.42073109 * 82402
+07/21/2016 12:19:32: Final Results: Minibatch[1-60]: TrainNodeClassBasedCrossEntropy = 6.42073109 * 82402; perplexity = 614.45216869
 
-07/20/2016 16:52:42: Action "eval" complete.
+07/21/2016 12:19:32: Action "eval" complete.
 
-07/20/2016 16:52:42: __COMPLETED__
+07/21/2016 12:19:32: __COMPLETED__
