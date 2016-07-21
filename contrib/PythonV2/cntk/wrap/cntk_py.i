@@ -388,6 +388,8 @@
 
 %template(NDArrayViewFloat) CNTK::NDArrayView::NDArrayView<float>;
 %template(NDArrayViewDouble) CNTK::NDArrayView::NDArrayView<double>;
+%template(ConstantFloat) CNTK::Constant::Constant<float>;
+%template(ConstantDouble) CNTK::Constant::Constant<double>;
 %template(RandomUniformFloat) CNTK::NDArrayView::RandomUniform<float>;
 %template(RandomUniformDouble) CNTK::NDArrayView::RandomUniform<double>;
 
