@@ -64,13 +64,13 @@ struct ReaderFixture
                     if (!envVariableErrorMessage.empty())
                     {
                         BOOST_TEST_MESSAGE(envVariableErrorMessage);
-                        fprintf(stderr, envVariableErrorMessage.c_str());
+                        fprintf(stderr, "%s\n", envVariableErrorMessage.c_str());
                     }
 
                     newCurrentPath = m_testDataPath;
                 }
             }
-            else if ((subPath[0] == '/' && subPath[1] == '//') || (subPath[0] == '\\' && subPath[1] == '\\'))
+            else if ((subPath[0] == '/' && subPath[1] == '/') || (subPath[0] == '\\' && subPath[1] == '\\'))
             {
                 newCurrentPath = subPath;
             }
@@ -295,16 +295,22 @@ struct ReaderFixture
     // readerSectionName    : the reader field name in the test section
 
     shared_ptr<DataReader> GetDataReader(
-        const string configFileName,
-        const string testSectionName,
-        const string readerSectionName)
+        const std::string& configFileName,
+        const std::string& testSectionName,
+        const std::string& readerSectionName,
+        std::vector<std::wstring> additionalConfigParameters)
     {
         std::wstring configFN(configFileName.begin(), configFileName.end());
         std::wstring configFileCommand(L"configFile=" + configFN);
+        std::wstring cntk(L"CNTK");
+        std::vector<wchar_t*> arg{ &cntk[0], &configFileCommand[0] };
+        for(auto& p : additionalConfigParameters)
+        {
+            arg.push_back(&p[0]);
+        }
 
-        wchar_t* arg[2]{L"CNTK", &configFileCommand[0]};
         ConfigParameters config;
-        const std::string rawConfigString = ConfigParameters::ParseCommandLine(2, arg, config);
+        const std::string rawConfigString = ConfigParameters::ParseCommandLine((int)arg.size(), &arg[0], config);
 
         config.ResolveVariables(rawConfigString);
         const ConfigParameters simpleDemoConfig = config(testSectionName);
@@ -344,14 +350,15 @@ struct ReaderFixture
         size_t numSubsets,
         bool sparseFeatures = false,
         bool sparseLabels = false,
-        bool useSharedLayout = true)
+        bool useSharedLayout = true,
+        std::vector<std::wstring> additionalConfigParameters = {})
     {
         shared_ptr<StreamMinibatchInputs> inputsPtr =
             CreateStreamMinibatchInputs<ElemType>(numFeatureFiles, numLabelFiles,
             sparseFeatures, sparseLabels, useSharedLayout);
 
         shared_ptr<DataReader> readerPtr = GetDataReader(configFileName,
-            testSectionName, readerSectionName);
+            testSectionName, readerSectionName, additionalConfigParameters);
 
         // Perform the data reading
         HelperWriteReaderContentToFile<ElemType>(testDataFilePath, *readerPtr, *inputsPtr,
@@ -391,11 +398,12 @@ struct ReaderFixture
         size_t numSubsets,
         bool sparseFeatures = false,
         bool sparseLabels = false,
-        bool useSharedLayout = true)
+        bool useSharedLayout = true,
+        std::vector<std::wstring> additionalConfigParameters = {})
     {
         HelperReadInAndWriteOut<ElemType>(configFileName, testDataFilePath, testSectionName, readerSectionName,
             epochSize, mbSize, epochs, numFeatureFiles, numLabelFiles, subsetNum,numSubsets,
-            sparseFeatures, sparseLabels, useSharedLayout);
+            sparseFeatures, sparseLabels, useSharedLayout, additionalConfigParameters);
 
         CheckFilesEquivalent(controlDataFilePath, testDataFilePath);
     }
@@ -408,10 +416,11 @@ struct ReaderFixture
     void HelperRunReaderTestWithException(
         string configFileName,
         string testSectionName,
-        string readerSectionName)
+        string readerSectionName,
+        std::vector<std::wstring> additionalConfigParameters = {})
     {
         BOOST_CHECK_THROW(
-            GetDataReader(configFileName,testSectionName, readerSectionName),
+            GetDataReader(configFileName, testSectionName, readerSectionName, additionalConfigParameters),
             ExceptionType);
     }
 };

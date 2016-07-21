@@ -26,9 +26,8 @@ Train = [
         featDim = inputDim*3   # contextual words are used as features: previous word, current word, next word.
         embDim = 150
         hiddenDim = 300
-        maxLayer = 0
+        maxLayer = 1
         initScale = 6
-        initBias = -1.0
         featuresPW = Input(inputDim)    # the previous word
         featuresCW = Input(inputDim)    # the current word
         featuresNW = Input(inputDim)    # the next word
@@ -37,11 +36,11 @@ Train = [
         labels = Input(labelDim, tag = "label")
         
         # embedding layer
-        emb = LearnableParameter(embDim, featDim)
-        featEmbedded = Times(emb, features)
+        emb = Parameter(embDim, featDim)
+        featEmbedded = emb * features
         
         # build the LSTM stack
-        lstmDims[i:0..maxLayer] = hiddenDim
+        lstmDims[i:0..maxLayer-1] = hiddenDim
         NoAuxInputHook (input, lstmState) = BS.Constants.None
         lstmStack = BS.RNNs.RecurrentLSTMPStack (lstmDims, 
             cellDims=lstmDims,
@@ -104,8 +103,6 @@ Train = [
     reader = [
         readerType = "CNTKTextFormatReader" 
         file = "$DataDir$/ATIS.train.cntk.sparse" 
-
-        miniBatchMode = "partial" 
         randomize = true
         input = [ 
             featuresPW = [ 
@@ -153,7 +150,6 @@ Output = [
         readerType = "CNTKTextFormatReader" 
         file = "$DataDir$/ATIS.test.cntk.sparse" 
 
-        miniBatchMode = "partial" 
         randomize = false
         input = [ 
             featuresPW = [ 
@@ -202,7 +198,6 @@ Test = [
         readerType = "CNTKTextFormatReader" 
         file = "$DataDir$/ATIS.test.cntk.sparse" 
 
-        miniBatchMode = "partial" 
         randomize = false
         input = [ 
             featuresPW = [ 

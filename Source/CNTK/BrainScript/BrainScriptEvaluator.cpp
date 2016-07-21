@@ -53,7 +53,6 @@ public:
 
 __declspec_noreturn static inline void EvaluationError(const wstring &msg, TextLocation where)
 {
-    //Microsoft::MSR::CNTK::DebugUtil::PrintCallStack();
     throw EvaluationException(msg, where);
 }
 

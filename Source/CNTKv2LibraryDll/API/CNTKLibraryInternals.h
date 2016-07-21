@@ -51,11 +51,11 @@ namespace Microsoft {
 			template <typename ElemType>
 			class ComputationNetworkBuilder;
 
-			template <typename ElementType>
-			class ComputationNode;
-		}
-	}
-}
+    template <typename ElementType>
+    class ComputationNode;
+
+    class File;
+}}}
 
 // TODO: The following should be reconciled with the equivalent code in the CNTK implementation
 
@@ -140,30 +140,33 @@ namespace CNTK
 
 namespace CNTK
 {
-	// Forward declarations
-	class CompositeFunction;
-	class Function;
-	class Variable;
+    // Forward declarations
+    class CompositeFunction;
+    class Function;
+    class Variable;
 
-	// Similar to make_shared except that it associates a custom deleter with the shared_ptr to ensure
-	// that objects are deleted on the same side of the library DLL where they are allocated
-	template <typename T, typename ...CtorArgTypes>
-	 std::shared_ptr<T> MakeSharedObject(CtorArgTypes&& ...ctorArgs)
-	{
-		auto objPtr = new T(std::forward<CtorArgTypes>(ctorArgs)...);
-		return std::shared_ptr<T>(objPtr, [](T* ptr) { delete ptr; });
-	}
+    // Similar to make_shared except that it associates a custom deleter with the shared_ptr to ensure
+    // that objects are deleted on the same side of the library DLL where they are allocated
+    template <typename T, typename ...CtorArgTypes>
+    inline std::shared_ptr<T> MakeSharedObject(CtorArgTypes&& ...ctorArgs)
+    {
+        auto objPtr = new T(std::forward<CtorArgTypes>(ctorArgs)...);
+        return std::shared_ptr<T>(objPtr, [](T* ptr) { delete ptr; });
+    }
 
-	// Forward declarations
-	class NDArrayView;
-	typedef std::shared_ptr<NDArrayView> NDArrayViewPtr;
+    // Forward declarations
+    class NDArrayView;
+    typedef std::shared_ptr<NDArrayView> NDArrayViewPtr;
 
-	class NDMask;
-	typedef std::shared_ptr<NDMask> NDMaskPtr;
+    class NDMask;
+    typedef std::shared_ptr<NDMask> NDMaskPtr;
 
-	class Value;
-	typedef std::shared_ptr<Value> ValuePtr;
+    class Value;
+    typedef std::shared_ptr<Value> ValuePtr;
 
-	class Function;
-	typedef std::shared_ptr<Function> FunctionPtr;
+    class Function;
+    typedef std::shared_ptr<Function> FunctionPtr;
+
+    class Learner;
+    typedef std::shared_ptr<Learner> LearnerPtr;
 }
