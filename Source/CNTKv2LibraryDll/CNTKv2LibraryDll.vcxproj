@@ -128,6 +128,7 @@
     <ClInclude Include="API\CNTKLibrary.h" />
     <ClInclude Include="API\CNTKLibraryInternals.h" />
     <ClInclude Include="Function.h" />
+    <ClInclude Include="Learner.h" />
     <ClInclude Include="Utils.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
@@ -140,6 +141,7 @@
       </PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="Function.cpp" />
+    <ClCompile Include="Learner.cpp" />
     <ClCompile Include="NDArrayView.cpp" />
     <ClCompile Include="NDMask.cpp" />
     <ClCompile Include="stdafx.cpp">
