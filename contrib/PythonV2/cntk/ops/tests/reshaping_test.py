@@ -23,8 +23,9 @@ RESHAPE_TEST_CASES = [
     ([2, 3, 5], [5, 0], [5, 6]),
 ]
 
+#TODO: port to v2
 @pytest.mark.parametrize("input_shape, output_shape, expected_output_shape", RESHAPE_TEST_CASES)
-def test_op_reshape(input_shape, output_shape, expected_output_shape, device_id, precision):
+def _test_op_reshape(input_shape, output_shape, expected_output_shape, device_id, precision):
     # Forward pass test
     #==================
     # we compute the expected output for the forward pass
@@ -70,8 +71,10 @@ SLICE_TEST_CASES = [
     ([[1,2],[-3,4]], (1,2,0), [[-3,4]]),
     ([[1,2],[-3,4]], (1,2,1), [[2],[4]]),
 ]
+
+#TODO: port to v2
 @pytest.mark.parametrize("input_data, slice_params, expected_result", SLICE_TEST_CASES)
-def test_op_slice(input_data, slice_params, expected_result, device_id, precision):
+def _test_op_slice(input_data, slice_params, expected_result, device_id, precision):
     # Forward pass test
     #==================
     # We compute the expected output for the forward pass.
@@ -135,8 +138,10 @@ SLICE_SEQ_TEST_CASES = [
     ([[[1,2,3],[11,12,13]],[[-4,5,6],[-14,15,16]],[[7,8,9],[17,18,19]]], 
         (1,2), [[[-4,5,6],[-14,15,16]]]),
 ]
+
+#TODO: port to v2
 @pytest.mark.parametrize("input_data, slice_params, expected_result", SLICE_SEQ_TEST_CASES)
-def test_op_slice_sequence(input_data, slice_params, expected_result, device_id, precision):
+def _test_op_slice_sequence(input_data, slice_params, expected_result, device_id, precision):
     # Forward pass test
     #==================
     # We compute the expected output for the forward pass.
@@ -172,7 +177,8 @@ def test_op_slice_sequence(input_data, slice_params, expected_result, device_id,
     unittest_helper(result, None, [expected_gradient], device_id = device_id,
                     precision=precision, clean_up=True, backward_pass=True, input_node=a)
 
-def test_op_slice_overload(device_id, precision):
+#TODO: port to v2
+def _test_op_slice_overload(device_id, precision):
     # Testing ComputationNode's __getitem__ more thoroughly
 
     input_data = np.arange(12).reshape(2,3,2)
@@ -240,8 +246,10 @@ SPLICE_TEST_CASES = [
     ([[[1,2],[3,4]],[[5,6],[7,8]]], [[10,20],[30,40]], 0, 
      [[[1,2],[3,4]],[[5,6],[7,8]],[[10,20],[30,40]]]),    
 ]
+
+#TODO: port to v2
 @pytest.mark.parametrize("input_data1, input_data2, axis, expected_result", SPLICE_TEST_CASES)
-def test_op_splice(input_data1, input_data2, axis, expected_result, device_id, precision):
+def _test_op_splice(input_data1, input_data2, axis, expected_result, device_id, precision):
     # Forward pass test
     #==================
     # We compute the expected output for the forward pass.
@@ -283,8 +291,9 @@ TRANSPOSE_DIMS_TEST_CASES = [
     ([2, 2, 2], 0, 1, [2, 2, 2]),
 ]
 
+#TODO: port to v2
 @pytest.mark.parametrize("input_shape, axis1, axis2, expected_output_shape", TRANSPOSE_DIMS_TEST_CASES)
-def test_op_transpose_dimensions(input_shape, axis1, axis2, expected_output_shape, device_id, precision):
+def _test_op_transpose_dimensions(input_shape, axis1, axis2, expected_output_shape, device_id, precision):
     # Forward pass test
     #==================
     # we compute the expected output for the forward pass

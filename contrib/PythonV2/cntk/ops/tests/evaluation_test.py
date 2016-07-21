@@ -23,8 +23,9 @@ TARGET_OUT_PAIRS = [
     ]
 
 # -- CrossEntropy with softmax operation tests --
+#TODO: port to v2
 @pytest.mark.parametrize("target_vector, output_vector", TARGET_OUT_PAIRS)
-def test_op_crossentropywithsoftmax(target_vector, output_vector, device_id, precision):
+def _test_op_crossentropywithsoftmax(target_vector, output_vector, device_id, precision):
     
     from .. import cross_entropy_with_softmax
 
@@ -68,8 +69,9 @@ def test_op_crossentropywithsoftmax(target_vector, output_vector, device_id, pre
             input_node=output)
 
 # -- SquareError with softmax operation tests --
+#TODO: port to v2
 @pytest.mark.parametrize("target_matrix, output_matrix", TARGET_OUT_PAIRS)
-def test_op_square_error(target_matrix, output_matrix, device_id, precision):
+def _test_op_square_error(target_matrix, output_matrix, device_id, precision):
     
     from .. import square_error
 
@@ -119,8 +121,9 @@ TARGET_OUT_PAIRS_EP = [
     ]
 
 # -- ErrorPrediction with softmax operation tests --
+#TODO: port to v2
 @pytest.mark.parametrize("target_vector, output_vector", TARGET_OUT_PAIRS_EP)
-def test_op_error_prediction(target_vector, output_vector, device_id, precision):
+def _test_op_error_prediction(target_vector, output_vector, device_id, precision):
     
     from .. import error_prediction
 

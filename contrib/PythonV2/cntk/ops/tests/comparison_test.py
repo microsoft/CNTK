@@ -18,6 +18,7 @@ from ...reader import *
 import numpy as np
 
 # we reuse same code for all comparsion functions 
+#TODO: port to v2
 def compasion_test_helper(left_operand, right_operand, func_to_test, func_computing_expected, device_id, precision):
     # Forward pass test
     #==================
@@ -55,26 +56,32 @@ TENSOR_PAIRS = [
 
 
 # test for all comparison operations
+#TODO: port to v2
 @pytest.mark.parametrize("left_operand, right_operand", TENSOR_PAIRS)
-def test_op_less(left_operand, right_operand, device_id, precision):
+def _test_op_less(left_operand, right_operand, device_id, precision):
     compasion_test_helper(left_operand, right_operand, less, np.less, device_id, precision)
 
+#TODO: port to v2
 @pytest.mark.parametrize("left_operand, right_operand", TENSOR_PAIRS)
-def test_op_equal(left_operand, right_operand, device_id, precision):
+def _test_op_equal(left_operand, right_operand, device_id, precision):
     compasion_test_helper(left_operand, right_operand, equal, np.equal, device_id, precision)
 
+#TODO: port to v2
 @pytest.mark.parametrize("left_operand, right_operand", TENSOR_PAIRS)
-def test_op_greater(left_operand, right_operand, device_id, precision):
+def _test_op_greater(left_operand, right_operand, device_id, precision):
     compasion_test_helper(left_operand, right_operand, greater, np.greater, device_id, precision)
 
+#TODO: port to v2
 @pytest.mark.parametrize("left_operand, right_operand", TENSOR_PAIRS)
-def test_op_greater_equal(left_operand, right_operand, device_id, precision):
+def _test_op_greater_equal(left_operand, right_operand, device_id, precision):
     compasion_test_helper(left_operand, right_operand, greater_equal, np.greater_equal, device_id, precision)
 
+#TODO: port to v2
 @pytest.mark.parametrize("left_operand, right_operand", TENSOR_PAIRS)
-def test_op_not_equal(left_operand, right_operand, device_id, precision):
+def _test_op_not_equal(left_operand, right_operand, device_id, precision):
     compasion_test_helper(left_operand, right_operand, not_equal, np.not_equal, device_id, precision)
 
+#TODO: port to v2
 @pytest.mark.parametrize("left_operand, right_operand", TENSOR_PAIRS)
-def test_op_less_equal(left_operand, right_operand, device_id, precision):
+def _test_op_less_equal(left_operand, right_operand, device_id, precision):
     compasion_test_helper(left_operand, right_operand, less_equal, np.less_equal, device_id, precision)
