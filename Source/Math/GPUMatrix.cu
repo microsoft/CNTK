@@ -3155,7 +3155,7 @@ void GPUMatrix<ElemType>::BatchNormalizationForward(const GPUMatrix<ElemType>& s
             // REVIEW alexeyk: can be rolled into NormalizeBatchTraining to save bandwidth.
             // TODO: add a 'beta' parameter to ScaleAndAdd()
             Scale((ElemType)(1 - blendFactor), saveMean);
-            ScaleAndAdd((ElemType)blendFactor, runMean, saveMean);
+            ScaleAndAdd((ElemType)blendFactor, /*in*/ runMean, /*in/out*/ saveMean);
             Scale((ElemType)(1 - blendFactor), saveInvStdDev);
             ScaleAndAdd((ElemType)blendFactor, runInvStdDev, saveInvStdDev);
         }

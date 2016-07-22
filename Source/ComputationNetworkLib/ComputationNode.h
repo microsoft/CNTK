@@ -1897,11 +1897,11 @@ public:
 struct IRecurrentNode { virtual int GetRecurrenceSteppingDirection() const = 0; };
 
 // =======================================================================
-// IParameterNode -- interface implemented by ComputationNodes that are parameters
-// Note: There is possibly code that identifies parameters by the type name instead. Should be unified.
+// IFreezable -- nodes that have parameters that can be frozen
+// e.g. if a trained model is to be used as a fixed feature extractor for another
 // =======================================================================
 
-struct IParameterNode { virtual ~IParameterNode() { } };
+struct IFreezable { virtual void FreezeParameters() { } };
 
 // =======================================================================
 // PreComputedNodeBase -- interface implemented by ComputationNodes that precompute

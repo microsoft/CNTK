@@ -1534,8 +1534,8 @@ template class DropoutNode<float>;
 template class DropoutNode<double>;
 
 // -----------------------------------------------------------------------
-// BatchNormalizationNode (input, scale, bias, runMean, runInvStdDev, spatial,
-//                         normalizationTimeConstant = 0, blendTimeConstant = 0,
+// BatchNormalizationNode (input, scale, bias, runMean, runInvStdDev,
+//                         spatial, normalizationTimeConstant = 0, blendTimeConstant = 0,
 //                         epsilon = 0.00001,
 //                         useCntkEngine = true, imageLayout = 'cudnn')
 //
@@ -1573,7 +1573,7 @@ template class DropoutNode<double>;
 // * imageLayout is the image layout. Only cudnn is supported at present.
 // -----------------------------------------------------------------------
 template <class ElemType>
-class BatchNormalizationNode : public ComputationNode<ElemType>, public NumInputs<5>
+class BatchNormalizationNode : public ComputationNode<ElemType>, public NumInputs<5>, public IFreezable
 {
     typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
     static const std::wstring TypeName() { return L"BatchNormalization"; }
@@ -1745,52 +1745,50 @@ public:
 
         Matrix<ElemType> sliceOutputValue = ValueFor(fr);
 
-        // are we training or in inference mode?
-        // In inference mode, running estimates are used as the sole estimates, while the MB values are not used at all.
-        if (Input(3)->IsParameterUpdateRequired() ^ Input(4)->IsParameterUpdateRequired())
-            InvalidArgument("BatchNormalization: Either both or none of %ls and %ls must be enabled for model update.",
-            Input(3)->NodeDescription().c_str(), Input(4)->NodeDescription().c_str());
-        bool inferenceMode =
-            !Environment().IsTraining() ||          // we are actually inferring
-            !Input(3)->IsParameterUpdateRequired(); // we are training, but this piece of network has been frozen (e.g. as a fixed feature extractor)
-
         // determine the factors from the time constants
-        double expAvgFactor;
-        double blendFactor;
-        if (inferenceMode) // in inference mode, only use long-term mean and do not update running estimates
+        double expAvgFactor; // weight for the new MB statistics in the running estimate. The previous value of the running statistics is kept with weight (1-this)
+        double blendFactor;  // interpolation weight for the running statistics (the current MB statistics are weighted with 1-this)
+        if (!Environment().IsTraining()) // in inference mode, only use long-term mean and do not update running estimates
         {
-            expAvgFactor = 0;  // no new contribution from current minibatch
-            blendFactor = 1.0; // estimate is taken 100% from the long-term running estimate
+            expAvgFactor = 0;   //  (m_normTimeConst == infinity) no new contribution from current minibatch
+            blendFactor  = 1.0; // (m_blendTimeConst == infinity) estimate is taken 100% from the long-term running estimate
         }
         else
         {
+            // (both time constants have edge cases of 0 and infinity which are special-cased below for numerical reasons)
             double numSamples = (double)GetMBLayout()->GetActualNumSamples();
             if (m_normTimeConst > 0)
             {
                 // Convert to per-minibatch factor. Treat positivie infinity as if running mean/var parameters are "frozen"
                 // that is, do not require updates.
-                expAvgFactor = !isfinite(m_normTimeConst) ? 0 : (1.0 - exp(-numSamples / m_normTimeConst));
+                expAvgFactor = isfinite(m_normTimeConst)
+                               ? (1.0 - exp(-numSamples / m_normTimeConst))
+                               : 0;                                         // (same; special-cased for numerical reasons only)
             }
             else
             {
                 // REVIEW alexeyk: hack, m_normTimeConst < 0 is used to compute CMA.
-                expAvgFactor = (m_normTimeConst < 0) ? (1.0 / (1.0 + m_mbCount)) : 1.0;
+                expAvgFactor = (m_normTimeConst < 0)
+                               ? (1.0 / (1.0 + m_mbCount)) // (this is the hack case)
+                               : 1.0;                      // (same as 'then' branch above; special-cased for numerical reasons only)
             }
 
-            if (!isfinite(m_blendTimeConst))
-                blendFactor = 1.0;
+            if (isfinite(m_blendTimeConst))
+                blendFactor = m_blendTimeConst > 0
+                              ? (m_blendTimeConst / (m_blendTimeConst + numSamples)) // interpolate
+                              : 0;                                                   // (same; special-casing for 0 only for numerical reasons)
             else
-                blendFactor = m_blendTimeConst > 0 ? (m_blendTimeConst / (m_blendTimeConst + numSamples)) : 0;
+                blendFactor = 1.0;                                                   // (same; special-casing for 0 only for numerical reasons)
         }
 
         // TODO: These Resize() operations belong INSIDE Forward().
         //       Specifically, for blendFactor=1, they must come back resized to (0,0). This is how Backward() will know & use running ones instead.
         //       I am not fixing this now because I don't know how to identify all variants of Forward(), across engines, CPU/GPU etc.
         if (blendFactor == 1.0)
-            fprintf(stderr, "WARNING WARNING WARNING: blendFactor=1\n")
+            fprintf(stderr, "WARNING WARNING WARNING: blendFactor=1\n");
         if (blendFactor == 1.0
-#if 1   // otherwise this crashes--due to cuDNN?
-            && inferenceMode
+#if 1   // otherwise this crashes--seems cuDNN still needs these?
+            && !Environment().IsTraining()
 #endif
             )
         {
@@ -1880,6 +1878,14 @@ public:
             m_blendTimeConst = blendTimeConstant;
     }
 
+    // called from CloneFunction(..., parameters="constant")
+    // Once called, this node is put into inference mode.
+    virtual void FreezeParameters() override // from IFreezable
+    {
+        m_normTimeConst  = std::numeric_limits<double>::infinity();
+        m_blendTimeConst = std::numeric_limits<double>::infinity();
+    }
+
 private:
     // Old versioning - do not use. Do not remove until we're sure there are no old models around.
     struct VersionInfo
@@ -1894,26 +1900,42 @@ private:
     VersionInfo m_version;
 
 private:
+    // --- configuration parameters
+
     // Determines whether to use per-activation (used after non-convolutional layers like fully connected)
     // or spatial (used after convolutional layers).
+    // TODO: This should not be a config option, but rather inferred from dimensions of the Parameters.
     bool m_spatial;
-    // Time constant for running mean and variance.
+
+    // Time constant for estimating the running mean and variance.
+    // This is the time constant of a low-pass filter.
+    // If 0, running mean and variance just remember the last minibatch.
+    // If infinity, running mean and variance are not updated, like in inference mode.
     double m_normTimeConst;
-    // Time constant for blending running mean/var and current minibatch mean/var.
-    // The main idea is to represent current minibatch statistics as MAP estimate, linear interpolation
-    // of smoothed and minibatch statistics. 
+
+    // Equivalent sample count for blending running mean/var and current minibatch mean/var.
+    // Roughly, this specifies how many samples "worth" is the running statistics,
+    // relative to the current minibatch statistics.
+    // If 0, only use the current MB statistics. If infinity, use only the running mean, like in inference mode.
+    // The main idea is to estimate the mean/variance as a MAP estimate using the running mean/var as a prrior.
+    // This should make the method more robust to the case of very small minibatches,
+    // and also provides a meaningful interpretation of inference mode, where only the prior is used.
+    // Effectively, this ends up in a linear interpolation of running and minibatch statistics.
     // The idea is due to Frank Seide et al.
-    // It should also work well in data parallelism scenario
-    // as opposed to plain vanilla BN implementation which would require aggregation of statistics
-    // from all nodes.
+    // It should also work well in data parallelism scenario, as opposed to plain vanilla BN implementation
+    // which would require aggregation of statistics from all nodes.
     // REVIEW alexeyk: if this works, document it properly in Wiki.
     double m_blendTimeConst;
+
     // Epsilon used to compute inverse std deviation.
     double m_epsilon;
     // Whether to use CNTK or cuDNN BN implementation.
     bool m_useCntkEngine;
     // Layout (e.g. CHW).
     ImageLayoutKind m_imageLayoutKind;
+
+    // --- working variables
+
     // Minibatch count, used to compute cumulative moving average.
     size_t m_mbCount;
 
@@ -1921,7 +1943,7 @@ private:
     shared_ptr<Matrix<ElemType>> m_saveMean;
     shared_ptr<Matrix<ElemType>> m_saveInvStdDev;
     // Temp buffer for scale and bias derivatives. Only used in BackpropTo(), carrying info from first call to subsequent calls.
-    // Not used for blendFactor=1.
+    // Not used for blendFactor=1 in CNTK engine.
     shared_ptr<Matrix<ElemType>> m_dScale;
     shared_ptr<Matrix<ElemType>> m_dBias;
 

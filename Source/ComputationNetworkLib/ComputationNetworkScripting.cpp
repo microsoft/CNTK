@@ -511,7 +511,7 @@ public:
         for (let& node : allInputs)
         {
             // add parameters that are to be cloned to dependent set
-            if (parameterTreatment != ParameterTreatment::shared && node->Is<IParameterNode>())
+            if (parameterTreatment != ParameterTreatment::shared && node->Is<IFreezable>())
                 dependentSet.insert(node);
             // if at least one input is in the dependent set then this node is, too
             else
@@ -603,8 +603,8 @@ private:
             let newName = exprName + L"." + node->GetName();
             newNode = node->Duplicate(newName, CopyNodeFlags::copyNodeAll);
             // make it read-only if desired
-            if (parameterTreatment == ParameterTreatment::constant)
-                newNode->SetLearningRateMultiplier(0);
+            if (parameterTreatment == ParameterTreatment::constant && newNode->Is<IFreezable>())
+                newNode->As<IFreezable>()->FreezeParameters();
             // and that's our cloned node
             clonedNodes[node] = newNode;
             numCloned++;
