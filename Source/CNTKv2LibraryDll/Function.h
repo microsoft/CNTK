@@ -13,51 +13,89 @@
 
 namespace CNTK
 {
-    enum class PrimitiveOpType
+    enum class PrimitiveOpType : unsigned int
     {
-        Plus,
-        Times,
+        Negate,
         Sigmoid,
         Tanh,
-        Combine,
+        ReLU,
+        Exp,
+        Log,
+        Sqrt,
+        Floor,
+        Abs,
+        Reciprocal,
+        Softmax,
+        Plus,
+        Minus,
+        ElementTimes,
+        Equal,
+        NotEqual,
+        Less,
+        LessEqual,
+        Greater,
+        GreaterEqual,
+        Times,
+        SquaredError,
         CrossEntropyWithSoftmax,
         ClassificationError,
-        Exp,
         PastValue,
         FutureValue,
-        ElementTimes,
-        ReduceSum
+        ReduceSum,
+        Combine,
     };
+}
 
+namespace std
+{
+    template <> struct hash<CNTK::PrimitiveOpType>
+    {
+        size_t operator()(const CNTK::PrimitiveOpType& x) const
+        {
+            return std::hash<unsigned int>()((unsigned int)x);
+        }
+    };
+}
+
+namespace CNTK
+{
     inline const char* PrimitiveOpTypeName(PrimitiveOpType opType)
     {
-        // TODO: Put these in table form
-        if (opType == PrimitiveOpType::Plus)
-            return "Plus";
-        else if (opType == PrimitiveOpType::Times)
-            return "Times";
-        else if (opType == PrimitiveOpType::Sigmoid)
-            return "Sigmoid";
-        else if (opType == PrimitiveOpType::Tanh)
-            return "Tanh";
-        else if (opType == PrimitiveOpType::Combine)
-            return "Combine";
-        else if (opType == PrimitiveOpType::CrossEntropyWithSoftmax)
-            return "CrossEntropyWithSoftmax";
-        else if (opType == PrimitiveOpType::ClassificationError)
-            return "ClassificationError";
-        else if (opType == PrimitiveOpType::Exp)
-            return "Exp";
-        else if (opType == PrimitiveOpType::PastValue)
-            return "PastValue";
-        else if (opType == PrimitiveOpType::FutureValue)
-            return "FutureValue";
-        else if (opType == PrimitiveOpType::ElementTimes)
-            return "ElementTimes";
-        else if (opType == PrimitiveOpType::ReduceSum)
-            return "ReduceSum";
-        else
+        static std::unordered_map<PrimitiveOpType, const char*> primitiveOpNames = {
+            { PrimitiveOpType::Negate, "Negate" },
+            { PrimitiveOpType::Sigmoid, "Sigmoid" },
+            { PrimitiveOpType::Tanh, "Tanh" },
+            { PrimitiveOpType::ReLU, "ReLU" },
+            { PrimitiveOpType::Exp, "Exp" },
+            { PrimitiveOpType::Log, "Log" },
+            { PrimitiveOpType::Sqrt, "Sqrt" },
+            { PrimitiveOpType::Floor, "Floor" },
+            { PrimitiveOpType::Abs, "Abs" },
+            { PrimitiveOpType::Reciprocal, "Reciprocal" },
+            { PrimitiveOpType::Softmax, "Softmax" },
+            { PrimitiveOpType::Plus, "Plus" },
+            { PrimitiveOpType::Minus, "Minus" },
+            { PrimitiveOpType::ElementTimes, "ElementTimes" },
+            { PrimitiveOpType::Equal, "Equal" },
+            { PrimitiveOpType::NotEqual, "NotEqual" },
+            { PrimitiveOpType::Less, "Less" },
+            { PrimitiveOpType::LessEqual, "LessEqual" },
+            { PrimitiveOpType::Greater, "Greater" },
+            { PrimitiveOpType::GreaterEqual, "GreaterEqual" },
+            { PrimitiveOpType::Times, "Times" },
+            { PrimitiveOpType::SquaredError, "SquaredError" },
+            { PrimitiveOpType::CrossEntropyWithSoftmax, "CrossEntropyWithSoftmax" },
+            { PrimitiveOpType::ClassificationError, "ClassificationError" },
+            { PrimitiveOpType::PastValue, "PastValue" },
+            { PrimitiveOpType::FutureValue, "FutureValue" },
+            { PrimitiveOpType::ReduceSum, "ReduceSum" },
+            { PrimitiveOpType::Combine, "Combine" }
+        };
+
+        if (primitiveOpNames.find(opType) == primitiveOpNames.end())
             LogicError("Unknown PrimitiveOpType");
+
+        return primitiveOpNames.find(opType)->second;
     }
 
     class PrimitiveFunction final : public Function
@@ -195,19 +233,29 @@ namespace CNTK
 
             switch (op)
             {
+            case PrimitiveOpType::Negate:
             case PrimitiveOpType::Sigmoid:
             case PrimitiveOpType::Tanh:
+            case PrimitiveOpType::ReLU:
             case PrimitiveOpType::Exp:
+            case PrimitiveOpType::Log:
+            case PrimitiveOpType::Sqrt:
+            case PrimitiveOpType::Floor:
+            case PrimitiveOpType::Abs:
+            case PrimitiveOpType::Reciprocal:
+            case PrimitiveOpType::Softmax:
                 assert(inputs.size() == 1);
                 outputs.push_back(Variable(UnaryElementwiseOpOutputShape(inputs[0].Shape()), outputDataType, owner, outputDynamicAxes));
                 break;
-            case PrimitiveOpType::PastValue:
-            case PrimitiveOpType::FutureValue:
-                assert(inputs.size() == 2);
-                outputs.push_back(Variable(UnaryElementwiseOpOutputShape(inputs[1].Shape()), outputDataType, owner, outputDynamicAxes));
-                break;
             case PrimitiveOpType::Plus:
+            case PrimitiveOpType::Minus:
             case PrimitiveOpType::ElementTimes:
+            case PrimitiveOpType::Equal:
+            case PrimitiveOpType::NotEqual:
+            case PrimitiveOpType::Less:
+            case PrimitiveOpType::LessEqual:
+            case PrimitiveOpType::Greater:
+            case PrimitiveOpType::GreaterEqual:
                 assert(inputs.size() == 2);
                 outputs.push_back(Variable(BinaryElementwiseOpOutputShape(op, inputs[0].Shape(), inputs[1].Shape()), outputDataType, owner, outputDynamicAxes));
                 break;
@@ -215,6 +263,7 @@ namespace CNTK
                 assert(inputs.size() == 2);
                 outputs.push_back(Variable(TimesOpOutputShape(inputs[0].Shape(), inputs[1].Shape()), outputDataType, owner, outputDynamicAxes));
                 break;
+            case PrimitiveOpType::SquaredError:
             case PrimitiveOpType::CrossEntropyWithSoftmax:
             case PrimitiveOpType::ClassificationError:
             {
@@ -235,6 +284,11 @@ namespace CNTK
                 outputs.push_back(Variable(ReductionOpOutputShape(op, predictionShape, reductionAxes), outputDataType, owner, {}));
                 break;
             }
+            case PrimitiveOpType::PastValue:
+            case PrimitiveOpType::FutureValue:
+                assert(inputs.size() == 2);
+                outputs.push_back(Variable(UnaryElementwiseOpOutputShape(inputs[1].Shape()), outputDataType, owner, outputDynamicAxes));
+                break;
             case PrimitiveOpType::ReduceSum:
             {
                 assert(inputs.size() == 1);

@@ -1331,10 +1331,74 @@ namespace CNTK
     };
 
     ///
-    /// Create an instance of the CNTK built-in matrix multiplication operation with the specified input operands.
-    /// TODO: Specify the constraints on the shapes of the operands.
+    /// Create an instance of the CNTK built-in elementwise negate operation with the specified input operand.
     ///
-    CNTK_API FunctionPtr Times(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name = L"");
+    CNTK_API FunctionPtr Negate(const Variable& operand, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in elementwise sigmoid operation with the specified input operand.
+    ///
+    CNTK_API FunctionPtr Sigmoid(const Variable& operand, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in elementwise tanh operation with the specified input operand.
+    ///
+    CNTK_API FunctionPtr Tanh(const Variable& operand, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in elementwise linear rectifier operation with the specified input operand.
+    ///
+    CNTK_API FunctionPtr ReLU(const Variable& operand, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in elementwise exp operation with the specified input operand.
+    ///
+    CNTK_API FunctionPtr Exp(const Variable& operand, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in elementwise log operation with the specified input operand.
+    ///
+    CNTK_API FunctionPtr Log(const Variable& operand, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in elementwise square operation with the specified input operand.
+    ///
+    CNTK_API FunctionPtr Square(const Variable& operand, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in elementwise square-root operation with the specified input operand.
+    ///
+    CNTK_API FunctionPtr Sqrt(const Variable& operand, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in elementwise round operation with the specified input operand.
+    ///
+    CNTK_API FunctionPtr Round(const Variable& operand, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in elementwise floor operation with the specified input operand.
+    ///
+    CNTK_API FunctionPtr Floor(const Variable& operand, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in elementwise ceil operation with the specified input operand.
+    ///
+    CNTK_API FunctionPtr Ceil(const Variable& operand, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in elementwise abs operation with the specified input operand.
+    ///
+    CNTK_API FunctionPtr Abs(const Variable& operand, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in elementwise reciprocal operation with the specified input operand.
+    ///
+    CNTK_API FunctionPtr Reciprocal(const Variable& operand, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in softmax operation on specified tensor input operand
+    ///
+    CNTK_API FunctionPtr Softmax(const Variable& operand, const std::wstring& name = L"");
 
     ///
     /// Create an instance of the CNTK built-in elementwise tensor addition operation with the specified input operands.
@@ -1342,29 +1406,70 @@ namespace CNTK
     CNTK_API FunctionPtr Plus(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name = L"");
 
     ///
-    /// Create an instance of the CNTK built-in elementwise sigmoid operation with the specified input operand.
+    /// Create an instance of the CNTK built-in elementwise tensor subtraction operation with the specified input operands.
     ///
-    CNTK_API FunctionPtr Sigmoid(const Variable& operand, const std::wstring& name = L"");
-    
+    CNTK_API FunctionPtr Minus(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name = L"");
+
     ///
-    /// Create an instance of the CNTK built-in elementwise tanh operation with the specified input operand.
+    /// Create an instance of the CNTK built-in elementwise multiplication operation on specified tensor input operands.
     ///
-    CNTK_API FunctionPtr Tanh(const Variable& operand, const std::wstring& name = L"");
+    CNTK_API FunctionPtr ElementTimes(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in elementwise division operation on specified tensor input operands.
+    ///
+    CNTK_API FunctionPtr ElementDivide(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in elementwise equality comparison operation on specified tensor input operands.
+    ///
+    CNTK_API FunctionPtr Equal(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in elementwise not-equal comparison operation on specified tensor input operands.
+    ///
+    CNTK_API FunctionPtr NotEqual(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in elementwise less than comparison operation on specified tensor input operands.
+    ///
+    CNTK_API FunctionPtr Less(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in elementwise less than or equal to comparison operation on specified tensor input operands.
+    ///
+    CNTK_API FunctionPtr LessEqual(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in elementwise greater than comparison operation on specified tensor input operands.
+    ///
+    CNTK_API FunctionPtr Greater(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in elementwise greater than or equal to comparison operation on specified tensor input operands.
+    ///
+    CNTK_API FunctionPtr GreaterEqual(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in matrix multiplication operation with the specified input operands.
+    /// TODO: Specify the constraints on the shapes of the operands.
+    ///
+    CNTK_API FunctionPtr Times(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in operation to compute squared-error for specified input operands.
+    ///
+    CNTK_API FunctionPtr SquaredError(const Variable& prediction, const Variable& targets, const std::wstring& name = L"");
 
     ///
     /// Create an instance of the CNTK built-in operation to compute cross-entropy with softmax for specified input operands.
     ///
-    CNTK_API FunctionPtr CrossEntropyWithSoftmax(const Variable& output, const Variable& labels, const std::wstring& name = L"");
+    CNTK_API FunctionPtr CrossEntropyWithSoftmax(const Variable& prediction, const Variable& labels, const std::wstring& name = L"");
 
     ///
     /// Create an instance of the CNTK built-in operation for computing the classification prediction error for specified operands.
     ///
     CNTK_API FunctionPtr ClassificationError(const Variable& prediction, const Variable& labels, const std::wstring& name = L"");
-
-    ///
-    /// Create an instance of the CNTK built-in elementwise exp operation with the specified input operand.
-    ///
-    CNTK_API FunctionPtr Exp(const Variable& operand, const std::wstring& name = L"");
 
     ///
     /// Create an instance of the CNTK built-in operation for getting the past value along the lone dynamic axis of the specified operand.
@@ -1379,11 +1484,6 @@ namespace CNTK
     /// Throws an exception of the operand has more than one dynamic axis.
     ///
     CNTK_API FunctionPtr FutureValue(const Variable& initialState, const Variable& operand, size_t stepSize, const std::wstring& name = L"");
-
-    ///
-    /// Create an instance of the CNTK built-in elementwise multiplication operation on specified tensor input operands.
-    ///
-    CNTK_API FunctionPtr ElementTimes(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name = L"");
 
     ///
     /// Create an instance of the CNTK built-in sum reduction operation on specified tensor input operand along all the axes
