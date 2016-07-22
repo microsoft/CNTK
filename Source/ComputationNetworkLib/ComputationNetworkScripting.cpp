@@ -466,14 +466,16 @@ public:
         // input nodes
         inputNodes = GetInputNodes(config);
         // output nodes
-        let outputNodesParam = config[L"outputNodes"];     // can be a node or a record
+        let outputNodesParam = config[L"outputNodes"];  // can be a node or a record
         if (outputNodesParam.Is<ComputationNodeBase>()) // scalar case: result is a single node
             outputNodes[L""] = outputNodesParam.AsPtr<ComputationNodeBase>(); // indicated by a "" node name in outputNodes[]
-        else                                               // multi-valued case: result is a record of nodes
+        else                                            // multi-valued case: result is a record of nodes
         {
             let& outputNodesRecord = outputNodesParam.AsRef<IConfigRecord>();
             for (let& nodeName : outputNodesRecord.GetMemberIds())
                 outputNodes[nodeName] = outputNodesRecord[nodeName].AsPtr<ComputationNodeBase>();
+            if (outputNodes.empty())
+                InvalidArgument("CloneFunction: At least one output nodes must be specified.");
         }
         // treatment of parameters
         wstring parametersOption = config[L"parameters"];
@@ -488,7 +490,7 @@ public:
         //     - all dependents of leaves
         //  - where leaves are:
         //     - specified inputs
-        //     - unless parameters="shared": all parameters
+        //     - unless parameters="shared": all parameters the specified outputs depend on
 
         // determine all indirect inputs of the specified outputs
         vector<ComputationNodeBasePtr> roots;
@@ -496,8 +498,16 @@ public:
             roots.push_back(outputNodeKV.second);
         let allInputs = ComputationNodeBase::EnumerateNodes(roots);
 
+        // take the chance to validate inputNodes
+        let allInputsSet = set<ComputationNodeBasePtr>(allInputs.begin(), allInputs.end());
+        for (let& input : inputNodes)
+            if (allInputsSet.find(input) == allInputsSet.end())
+                InvalidArgument("CloneFunction: No specified output depends on the specified input %ls.", input->NodeDescription().c_str());
+        // TODO: Is this really always an error? Are there valid cases where one would over-specify possible input nodes, even if they are not used/needed?
+
         // determine all leaves and their dependents
         dependentSet = set<ComputationNodeBasePtr>(inputNodes.begin(), inputNodes.end()); // start with the specified inputs
+        // determine all leaves and their dependents
         for (let& node : allInputs)
         {
             // add parameters that are to be cloned to dependent set
@@ -510,7 +520,7 @@ public:
                         dependentSet.insert(node);
         }
 
-#if 1
+#if 0
         for (let& node : dependentSet)
             fprintf(stderr, "CloneFunction: cloning %ls\n", node->NodeDescription().c_str());
 #endif
@@ -558,12 +568,29 @@ private:
             inputs.push_back(inputValue.ResolveValue());
         assert(inputValues.size() == inputNodes.size()); // (this should have been checked by BrainScript)
 
+        // do some logging
+        fprintf(stderr, "CloneFunction: ");
+        for (size_t i = 0; i < inputs.size(); i++)
+            fprintf(stderr, "%s%ls : %ls", i == 0 ? "(" : ", ", inputs[i]->NodeName().c_str(), inputs[i]->OperationName().c_str());
+        fprintf(stderr, ") -> ");
+        let singleOutput = outputNodes.size() == 1 && outputNodes.begin()->first.empty();
+        if (singleOutput)
+            fprintf(stderr, "%ls\n", outputNodes.begin()->second->NodeDescription().c_str());
+        else
+        {
+            fprintf(stderr, "[\n");
+            for (let& outputNodesKV : outputNodes)
+                fprintf(stderr, "    %ls = %ls : %ls\n", outputNodesKV.first.c_str(), outputNodesKV.second->NodeName().c_str(), outputNodesKV.second->OperationName().c_str());
+            fprintf(stderr, "]\n");
+        }
+
         // clone everything in the dependent set
         //  - specified inputs get mapped to actual parameters
         //  - all others get duplicated
         // Note that at this point, the "shared" option has already been considered,
         // and is reflected in whether parameters are included or not in 'dependentSet'.
         map<ComputationNodeBasePtr, ComputationNodeBasePtr> clonedNodes;
+        size_t numCloned = 0;
         for (size_t i = 0; i < inputNodes.size(); i++)
             clonedNodes[inputNodes[i]] = inputs[i];
         for (let& node : dependentSet)
@@ -580,9 +607,11 @@ private:
                 newNode->SetLearningRateMultiplier(0);
             // and that's our cloned node
             clonedNodes[node] = newNode;
+            numCloned++;
         }
 
         // all cloned nodes' inputs must be redirected if they reference a node that has been cloned as well
+        size_t numRelinks = 0; // (statistics: how many inputs have we relinked?)
         for (let& clonedNodesKV : clonedNodes)
         {
             let& node = clonedNodesKV.second;
@@ -590,12 +619,28 @@ private:
             for (size_t i = 0; i < inputs.size(); i++)
             {
                 let iter = clonedNodes.find(inputs[i]);
-                if (iter != clonedNodes.end()) // input is also a cloned node
-                    node->SetInput(i, iter->second);
+                if (iter == clonedNodes.end())
+                    continue;
+                // input is also a cloned node: relink
+                node->SetInput(i, iter->second);
+                numRelinks++;
             }
         }
 
-        return ConfigValuePtr();
+        fprintf(stderr, "CloneFunction: Cloned %d nodes and relinked %d inputs.\n", (int)numCloned, (int)numRelinks);
+
+        // return the result
+        //  - if outputNodes was specified as a single node, return a single node
+        //  - if specified as a record, then return a record with the specified names
+
+        if (singleOutput)
+        {
+            return ConfigValuePtr();
+        }
+        else
+        {
+            return ConfigValuePtr();
+        }
     }
 
 private:
