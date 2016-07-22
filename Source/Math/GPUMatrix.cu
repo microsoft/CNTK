@@ -3144,9 +3144,9 @@ void GPUMatrix<ElemType>::BatchNormalizationForward(const GPUMatrix<ElemType>& s
 
     // --- apply MAP estimates of mean/stddev (interpolation of data and running mean/stddev) to data
     // When:
-    //     blendFactor == 1 - use running mean/var instead of the current minibatch mean/var.
+    //     blendFactor == 1 - use running mean/var instead of the current minibatch mean/var. Note: saveMean/saveInvStdDev are NOT updated.
     // 0 < blendFactor <  1 - blend running mean/var with mean/var of the current minibatch: saveMean = (1 - blendFactor) * saveMean + blendFactor * runMean
-    //     blendFactor == 0 - use mean/var of the current minibatch. Note: saveMean/saveInvStdDev are NOT updated.
+    //     blendFactor == 0 - use mean/var of the current minibatch.
     if (blendFactor < 1)
     {
         // non-zero blendFactor: interpolate minibatch mean/stddev in-place with running mean/stddev
@@ -3168,8 +3168,9 @@ void GPUMatrix<ElemType>::BatchNormalizationForward(const GPUMatrix<ElemType>& s
     }
     else // blendFactor == 1: use running mean/stddev only
     {
+#if 0
         assert(saveMean.IsEmpty() && saveInvStdDev.IsEmpty()); // TODO: We should rather Resize() them in here.
-        // TODO: require saveMean/saveInvStdDev to be passed in as empty matrices, to clarify/enforce the semantics
+#endif
         Call<NormalizeBatchTraining, ElemType>(spatial ? spatialSize : vectorSize, vectorSize, spatialSize, batchSize, spatial,
                                                Data(), out.Data(),
                                                scale.Data(), bias.Data(),

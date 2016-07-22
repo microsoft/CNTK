@@ -1787,6 +1787,12 @@ public:
         //       Specifically, for blendFactor=1, they must come back resized to (0,0). This is how Backward() will know & use running ones instead.
         //       I am not fixing this now because I don't know how to identify all variants of Forward(), across engines, CPU/GPU etc.
         if (blendFactor == 1.0)
+            fprintf(stderr, "WARNING WARNING WARNING: blendFactor=1\n")
+        if (blendFactor == 1.0
+#if 1   // otherwise this crashes--due to cuDNN?
+            && inferenceMode
+#endif
+            )
         {
             m_saveMean->Resize(0, 0);
             m_saveInvStdDev->Resize(0, 0);
