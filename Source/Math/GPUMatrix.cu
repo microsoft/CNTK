@@ -3128,8 +3128,8 @@ void GPUMatrix<ElemType>::BatchNormalizationForward(const GPUMatrix<ElemType>& s
     // If expAvgFactor == 0 && blendFactor == 1 then we don't need to compute current minibatch statistics.
     if (expAvgFactor > 0 || blendFactor < 1)
     {
-        saveMean->RequireSize(runMean);
-        saveInvStdDev->RequireSize(runMean);
+        saveMean.RequireSize(runMean);
+        saveInvStdDev.RequireSize(runMean);
         if (spatial)
         {
             Call<ComputeSpatialBatchMeanAndInvStdDev, ElemType>(spatialSize, vectorSize, spatialSize, batchSize, Data(),
@@ -3145,8 +3145,8 @@ void GPUMatrix<ElemType>::BatchNormalizationForward(const GPUMatrix<ElemType>& s
     }
     else // not computing new statistics
     {
-        saveMean->RequireSize(0, 0);
-        saveInvStdDev->RequireSize(0, 0);
+        saveMean.RequireSize(0, 0);
+        saveInvStdDev.RequireSize(0, 0);
     }
 
     // --- apply MAP estimates of mean/stddev (interpolation of data and running mean/stddev) to data
