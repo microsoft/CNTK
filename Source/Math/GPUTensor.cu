@@ -267,8 +267,9 @@ struct TensorOps
 template <class ElemType> class BinaryOpConstants
 {
 public:
-    __device__ static ElemType NeutralValue(ElementWiseOperator op) {
-        return 0; //error, only the explicit instantiations below should be used.
+    __device__ static ElemType NeutralValue(ElementWiseOperator op)
+    {
+        return 0; // error, only the explicit instantiations below should be used.
     }
 };
 
@@ -278,14 +279,10 @@ public:
     __device__ static float NeutralValue(ElementWiseOperator op) {
         switch (op)
         {
-        case ElementWiseOperator::opMax:
-            return FLT_MIN;
-        case ElementWiseOperator::opMin:
-            return FLT_MAX;
-        case ElementWiseOperator::opSum:
-            return 0;
-        default:
-            return 0; // error
+        case ElementWiseOperator::opMax: return FLT_MIN;
+        case ElementWiseOperator::opMin: return FLT_MAX;
+        case ElementWiseOperator::opSum: return 0;
+        default:                         return 0; // error
         }
     }
 };
@@ -296,14 +293,10 @@ public:
     __device__ static double NeutralValue(ElementWiseOperator op) {
         switch (op)
         {
-        case ElementWiseOperator::opMax:
-            return DBL_MIN;
-        case ElementWiseOperator::opMin:
-            return DBL_MAX;
-        case ElementWiseOperator::opSum:
-            return 0;
-        default:
-            return 0; // error
+        case ElementWiseOperator::opMax: return DBL_MIN;
+        case ElementWiseOperator::opMin: return DBL_MAX;
+        case ElementWiseOperator::opSum: return 0;
+        default:                         return 0; // error
         }
     }
 };
@@ -534,9 +527,8 @@ struct TensorOpElement<ElemType, N, M, K, /*parallelReduce=*/true, /*k=*/-1>
         for (CUDA_LONG i = 256; i; i >>= 1)
         {
             if (tid < i && tid + i < tids)
-            {
                 AggregationOp<volatile ReduceElemType, volatile ReduceElemType>::Update(accumulators[tid], accumulators[tid + i], reductionOp);
-            }
+
             if (0 + i < tids)
                 __syncthreads(); // sync if condition true for at least one thread
             // TODO: use volatile* and then we can skip the __syncthreads() for the last 32 values. See Amit's allreduce() function implementation in MatrixQuantizer_kernel.cu.
@@ -765,7 +757,7 @@ static void LaunchTensorOpWithReduction(ElemType beta, array<ElemType*, N> point
             _launchTensorOpWithReduction<ElemType, N, M, K><<<dim3(numBlocksX, numBlocksY, numBlocksZ), numThreadsX, numThreadsX * sizeof(ReduceElemType), t_stream>>>(
                 beta, pointers, alpha, op, reductionOp,
                 regularOpStrides, regularStrides, NN,
-                reducingOpDims, reducingStrides,/*reductionBegin*/ 0, reductionChunkSize);
+                reducingOpDims, reducingStrides, /*reductionBegin*/ 0, reductionChunkSize);
         }
         // --- case (b)
         // Reduction across blocks. This is the difficult one.
