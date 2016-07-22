@@ -1642,6 +1642,8 @@ shared_ptr<ComputationNode<ElemType>> SimpleNetworkBuilder<ElemType>::ApplyNonli
         output = builder.Sigmoid(input, nodeName);
     else if (nonLinearFunction == OperationNameOf(RectifiedLinearNode))
         output = builder.RectifiedLinear(input, nodeName);
+    else if (nonLinearFunction == OperationNameOf(LeakyRectifiedLinearNode))
+        output = builder.LeakyRectifiedLinear(input, nodeName);
     else if (nonLinearFunction == OperationNameOf(TanhNode))
         output = builder.Tanh(input, nodeName);
     else if (nonLinearFunction == L"None" || nonLinearFunction == L"none" || nonLinearFunction == L"")

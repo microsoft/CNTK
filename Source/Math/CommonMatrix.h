@@ -77,7 +77,7 @@ enum ElementWiseOperator
     // unary (or binary with constant parameter)
     opCopy,
     opNegate, opNot, opAbs, opFloor, opReciprocal,
-    opSigmoid, opTanh, opSqr, opSqrt, opExp, opLog, opLinearRectifier, opCosine, opSin,
+    opSigmoid, opTanh, opSqr, opSqrt, opExp, opLog, opLinearRectifier, opLeakyLinearRectifier, opCosine, opSin,
     // unary ops for use by Matrix class only (there is no TensorView implementation)
     opSigmoidDerivative, opLinearRectifierDerivative, opNegativeSine,
     // binary
@@ -90,6 +90,7 @@ enum ElementWiseOperator
     opElementwiseProductWithCosDerivative, opElementwiseProductWithSinDerivative,
     opElementwiseProductWithAbsDerivative, opElementwiseProductWithSqrtDerivative,
     opElementwiseProductWithReciprocalDerivative, opSqrOfDifference,
+    opElementwiseProductWithLeakyLinearRectifierDerivativeFromOutput,
     // binary ops for indexing
     // opIndex,
     // ternary
@@ -151,13 +152,15 @@ enum ElementWiseOperator
     Macro(ElementwiseProductWithReciprocalDerivative);                \
     Macro(ElementwiseProductWithSqrtDerivative);                      \
     Macro(SqrOfDifference);                                           \
+    Macro(LeakyLinearRectifier);                                      \
     //Macro(Index);
 
 #define ForAllTernaryOps(Macro)                         \
     Macro(Cond);                                        \
     Macro(CopyIfEqual);                                 \
     Macro(Clip);                                        \
-    Macro(ElementwiseProductWithLogSumDerivative);      
+    Macro(ElementwiseProductWithLogSumDerivative);      \
+    Macro(ElementwiseProductWithLeakyLinearRectifierDerivativeFromOutput);   
 
 // -----------------------------------------------------------------------
 // various enums to describe

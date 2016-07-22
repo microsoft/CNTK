@@ -647,4 +647,70 @@ DefineComparisonNode(GreaterNode,       1, 0)
 DefineComparisonNode(GreaterEqualNode, -1, 1)
 DefineComparisonNode(NotEqualNode,      0, 1)
 DefineComparisonNode(LessEqualNode,     1, 1)
+
+
+// -----------------------------------------------------------------------
+// LeakyRectifiedLinearNode (input, leakyWeight)
+// -----------------------------------------------------------------------
+// yi = (xi >= 0) ? xi : (xi * leakyWeight); // leakyWeight in [0, 1)
+template <class ElemType>
+class LeakyRectifiedLinearNode : public ComputationNode<ElemType>, public NumInputs<2>
+{
+    typedef ComputationNode<ElemType> Base;
+    UsingComputationNodeMembersBoilerplate;
+
+    static const std::wstring TypeName()
+    {
+        return L"LeakyRectifiedLinear";
+    }
+
+public:
+    // virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) = 0;
+    DeclareConstructorFromConfigWithNumInputs(LeakyRectifiedLinearNode);
+    LeakyRectifiedLinearNode(DEVICEID_TYPE deviceId, const wstring& name)
+        : Base(deviceId, name)
+    {
+    }
+
+    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
+    {
+        size_t rank = DetermineElementwiseTensorRank();
+        auto result = ValueTensorFor(rank, fr);
+        auto input = Input(0)->ValueTensorFor(rank, fr);
+        auto leakyWeight = Input(1)->ValueTensorFor(rank, fr.AllowBroadcast());
+        result.DoBinaryOpOf(0, input, leakyWeight, 1, opLeakyLinearRectifier, opSum);
+    }
+
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
+    {
+        assert(inputIndex == 0), inputIndex;
+
+        // get the args
+        size_t rank = DetermineElementwiseTensorRank();
+        auto sliceOutputGrad = GradientTensorFor(rank, fr); // propagate from this one...
+        auto sliceInputGrad = Input(0)->GradientTensorFor(rank, fr); // ...to this one
+        auto leakyWeight = Input(1)->ValueTensorFor(rank, fr.AllowBroadcast());
+
+        auto sliceValue = ValueTensorFor(rank, fr);
+        sliceInputGrad.DoTernaryOpOf(1, sliceOutputGrad, sliceValue, leakyWeight, 1, opElementwiseProductWithLeakyLinearRectifierDerivativeFromOutput, opSum);
+    }
+
+    virtual bool OutputUsedInComputingInputNodesGradients() const override
+    {
+        return true;
+    }
+
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override
+    {
+        return true;
+    }
+
+    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
+    {
+        ValidateBinaryZip(isFinalValidationPass, true);
+    }
+};
+
+template class LeakyRectifiedLinearNode<float>;
+template class LeakyRectifiedLinearNode<double>;
 }}}
