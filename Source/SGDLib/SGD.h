@@ -248,6 +248,8 @@ protected:
 
     bool m_useAllDataForPreComputedNode;
 
+    int m_perfTraceLevel;
+
     // Parallel training
     MPIWrapperPtr m_mpi;
 

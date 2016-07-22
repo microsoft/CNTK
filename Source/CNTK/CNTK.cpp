@@ -18,6 +18,7 @@
 #include "NDLNetworkBuilder.h"
 #include "ModelEditLanguage.h"
 #include "CPUMatrix.h" // used for SetNumThreads()
+#include "GPUMatrix.h" // used for SyncGuard::EnableSync()
 #include "CommonMatrix.h"
 #include "SGD.h"
 #include "MPIWrapper.h"
@@ -537,6 +538,10 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
     g_shareNodeValueMatrices = config(L"shareNodeValueMatrices", false);
 
     TracingGPUMemoryAllocator::SetTraceLevel(config(L"traceGPUMemoryAllocations", 0));
+
+    bool synchronizeCUDAKernelExecutions = config(L"synchronizeCUDAKernelExecutions", false);
+    if (synchronizeCUDAKernelExecutions)
+        SyncGuard::EnableSync();
 
     // logging
     wstring logpath = config(L"stderr", L"");

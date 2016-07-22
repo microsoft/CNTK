@@ -116,6 +116,44 @@ const char* CudaErrString<curandStatus>(curandStatus)
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+/*static*/ bool SyncGuard::s_isSyncEnabled = false;
+
+/*static*/ void SyncGuard::EnableSync()
+{
+    s_isSyncEnabled = true;
+}
+
+SyncGuard::SyncGuard(bool forceSync /*= false*/)
+    : m_forceSync(forceSync)
+{
+    m_done = nullptr;
+    if (m_forceSync || s_isSyncEnabled)
+    {
+        CUDA_CALL(cudaGetLastError());
+        CUDA_CALL(cudaEventCreate(&m_done));
+    }
+}
+
+SyncGuard::~SyncGuard()
+{
+    if (m_forceSync || s_isSyncEnabled)
+    {
+        // The regular use of this destructor is to synchronize the GPU, but also
+        // to check for errors. So this destructor is where CUDA errors would be thrown.
+        // If this destructor runs during stack unwinding, then a different error has
+        // already happened that should be reported; so we only clean up the resource.
+        if (std::uncaught_exception())
+            cudaEventDestroy(m_done);
+        else
+        {
+            // failures in a prior launch might be reported here
+            CUDA_CALL(cudaEventRecord(m_done));
+            CUDA_CALL(cudaEventSynchronize(m_done));
+            CUDA_CALL(cudaEventDestroy(m_done));
+        }
+    }
+}
+
 template <typename AllocatedElemType>
 AllocatedElemType* TracingGPUMemoryAllocator::Allocate(int deviceId, size_t numRows, size_t numCols)
 {
