@@ -1697,17 +1697,19 @@ public:
             auto sliceInputValue = Input(0)->ValueFor(fr);
             const Matrix<ElemType>& scale = Input(1)->Value();
             const Matrix<ElemType>& bias = Input(2)->Value();
+            const Matrix<ElemType>& runMean = Input(3)->Value();
+            const Matrix<ElemType>& runInvStdDev = Input(4)->Value();
 
             auto sliceInputGrad = Input(0)->GradientFor(fr);
-            assert(!m_saveMean->IsEmpty() && !m_saveInvStdDev->IsEmpty());
-            // BUGBUG: ^^ For blendFactor=1, saveMean/saveInvStdDev are uninitialized; and the running mean/stddev should be passed instead
+            let& actualMean      = !m_saveMean->IsEmpty()      ? *m_saveMean      : runMean;      // empty if only the running mean is used
+            let& actualInvStdDev = !m_saveInvStdDev->IsEmpty() ? *m_saveInvStdDev : runInvStdDev;
             m_dScale->Resize(scale);
             m_dBias->Resize(bias);
             // Compute all derivatives in one step. Save derivatives with respect to scale and bias in temp matrices.
             m_bnEng->Backward(sliceInputValue, sliceOutputGrad, // (in)  input from below, gradient from above
                               sliceInputGrad,                   // (out) gradient for data input goes here
-                              scale,                            // (in)  scaling is needed in gradient propagation
-                              *m_saveMean, *m_saveInvStdDev,    // (in)  actual interpolated mean/stddev values from ForwardProp()
+                              scale,                            // (in)  out of scale and bias, only scale is needed in gradient propagation
+                              actualMean, actualInvStdDev,      // (in)  actual mean/stddev values used in ForwardProp()
                               *m_dScale, *m_dBias);             // (out) gradients for scale and bias
         }
         else if (inputIndex == 1) // derivative with respect to the scale
