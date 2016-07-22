@@ -207,18 +207,14 @@ public:
     // multiple views, RequireSize will first check to see if Resize is required. If it is not, then it short-circuits and is a noop. Otherwise, RequireSize
     // will call Resize, which may fail if the matrix has multiple views.
     void RequireSize(const size_t numRows, const size_t numCols, bool growOnly = true); // by default we only reallocate if need to grow
+    void RequireSize(const GPUMatrix<ElemType>& like, bool growOnly = true) { RequireSize(like.GetNumRows(), like.GetNumCols(), growOnly); }
+
     // Resize first checks to ensure that the caller has the authority to call Resize (i.e., it checks to ensure the underlying data is owned by only this matrix), and then
     // actually resizes the underlying matrix, doing any allocation as required.
     void Resize(const size_t numRows, const size_t numCols, bool growOnly = true); // by default we only reallocate if need to grow
 
-    ElemType& operator()(const size_t /*row*/, const size_t /*col*/)
-    {
-        LogicError("GPUMatrix doesn't support this");
-    }
-    const ElemType& operator()(const size_t /*row*/, const size_t /*col*/) const
-    {
-        LogicError("GPUMatrix doesn't support this");
-    }
+    ElemType&       operator()(const size_t /*row*/, const size_t /*col*/)       { LogicError("GPUMatrix doesn't support operator(,) on the CPU."); }
+    const ElemType& operator()(const size_t /*row*/, const size_t /*col*/) const { LogicError("GPUMatrix doesn't support operator(,) on the CPU."); }
     ElemType Get00Element() const;
 
     void SetValue(const ElemType v);

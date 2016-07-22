@@ -3107,7 +3107,7 @@ void GPUMatrix<ElemType>::AveragePoolingBackward(const GPUMatrix<int>& mpRowCol,
                                                                 Data(), (int)GetNumRows(), grad.Data(), (int)grad.GetNumRows());
 }
 
-// returns saveMean/saveInvStdDev which are the actual values used to perform the normalization, except for blendFactor 1, in which case they are unused and untouched
+// returns saveMean/saveInvStdDev which are the actual values used to perform the normalization, except for blendFactor 1, in which case they are unused and set to empty
 template <class ElemType>
 void GPUMatrix<ElemType>::BatchNormalizationForward(const GPUMatrix<ElemType>& scale, const GPUMatrix<ElemType>& bias, double expAvgFactor, double blendFactor,
                                                     GPUMatrix<ElemType>& runMean, GPUMatrix<ElemType>& runInvStdDev, GPUMatrix<ElemType>& out, double epsilon,
@@ -3128,6 +3128,8 @@ void GPUMatrix<ElemType>::BatchNormalizationForward(const GPUMatrix<ElemType>& s
     // If expAvgFactor == 0 && blendFactor == 1 then we don't need to compute current minibatch statistics.
     if (expAvgFactor > 0 || blendFactor < 1)
     {
+        saveMean->RequireSize(runMean);
+        saveInvStdDev->RequireSize(runMean);
         if (spatial)
         {
             Call<ComputeSpatialBatchMeanAndInvStdDev, ElemType>(spatialSize, vectorSize, spatialSize, batchSize, Data(),
@@ -3141,10 +3143,15 @@ void GPUMatrix<ElemType>::BatchNormalizationForward(const GPUMatrix<ElemType>& s
                                                          saveMean.Data(), saveInvStdDev.Data(), GetStream());
         }
     }
+    else // not computing new statistics
+    {
+        saveMean->RequireSize(0, 0);
+        saveInvStdDev->RequireSize(0, 0);
+    }
 
     // --- apply MAP estimates of mean/stddev (interpolation of data and running mean/stddev) to data
     // When:
-    //     blendFactor == 1 - use running mean/var instead of the current minibatch mean/var. Note: saveMean/saveInvStdDev are NOT updated.
+    //     blendFactor == 1 - use running mean/var instead of the current minibatch mean/var. Note: saveMean/saveInvStdDev are NOT produced.
     // 0 < blendFactor <  1 - blend running mean/var with mean/var of the current minibatch: saveMean = (1 - blendFactor) * saveMean + blendFactor * runMean
     //     blendFactor == 0 - use mean/var of the current minibatch.
     if (blendFactor < 1)
@@ -3168,18 +3175,16 @@ void GPUMatrix<ElemType>::BatchNormalizationForward(const GPUMatrix<ElemType>& s
     }
     else // blendFactor == 1: use running mean/stddev only
     {
-#if 0
-        assert(saveMean.IsEmpty() && saveInvStdDev.IsEmpty()); // TODO: We should rather Resize() them in here.
-#endif
         Call<NormalizeBatchTraining, ElemType>(spatial ? spatialSize : vectorSize, vectorSize, spatialSize, batchSize, spatial,
                                                Data(), out.Data(),
                                                scale.Data(), bias.Data(),
                                                runMean.Data(), runInvStdDev.Data(), GetStream());
+        assert(saveMean.IsEmpty() && saveInvStdDev.IsEmpty()); // (these are not produced in this case)
     }
 }
 
 // saveMean/saveInvStdDev are the interpolated mean/stddev as used in ForwardProp().
-// BUGBUG (in call site): For blendFactor=1, they are uninitialized. Caller must pass running mean/stddev instead in that case.
+// BUGBUG (in call site): For blendFactor=1, they are empty. Caller must pass running mean/stddev instead in that case.
 template <class ElemType>
 void GPUMatrix<ElemType>::BatchNormalizationBackward(const GPUMatrix<ElemType>& in, GPUMatrix<ElemType>& grad, const GPUMatrix<ElemType>& scale, 
                                                      const GPUMatrix<ElemType>& saveMean, const GPUMatrix<ElemType>& saveInvStdDev,

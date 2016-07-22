@@ -1699,14 +1699,15 @@ public:
             const Matrix<ElemType>& bias = Input(2)->Value();
 
             auto sliceInputGrad = Input(0)->GradientFor(fr);
+            assert(!m_saveMean->IsEmpty() && !m_saveInvStdDev->IsEmpty());
+            // BUGBUG: ^^ For blendFactor=1, saveMean/saveInvStdDev are uninitialized; and the running mean/stddev should be passed instead
             m_dScale->Resize(scale);
             m_dBias->Resize(bias);
             // Compute all derivatives in one step. Save derivatives with respect to scale and bias in temp matrices.
             m_bnEng->Backward(sliceInputValue, sliceOutputGrad, // (in)  input from below, gradient from above
                               sliceInputGrad,                   // (out) gradient for data input goes here
                               scale,                            // (in)  scaling is needed in gradient propagation
-                              *m_saveMean, *m_saveInvStdDev,    // (in)  actual interpolated mean/stddev values from ForwardProp(). Note: unused/uninitialized for blendFactor=1.
-                              // BUGBUG: ^^ For blendFactor=1, saveMean/saveInvStdDev are uninitialized; and the running mean/stddev should be passed instead
+                              *m_saveMean, *m_saveInvStdDev,    // (in)  actual interpolated mean/stddev values from ForwardProp()
                               *m_dScale, *m_dBias);             // (out) gradients for scale and bias
         }
         else if (inputIndex == 1) // derivative with respect to the scale
@@ -1779,26 +1780,6 @@ public:
                               : 0;                                                   // (same; special-casing for 0 only for numerical reasons)
             else
                 blendFactor = 1.0;                                                   // (same; special-casing for 0 only for numerical reasons)
-        }
-
-        // TODO: These Resize() operations belong INSIDE Forward().
-        //       Specifically, for blendFactor=1, they must come back resized to (0,0). This is how Backward() will know & use running ones instead.
-        //       I am not fixing this now because I don't know how to identify all variants of Forward(), across engines, CPU/GPU etc.
-        if (blendFactor == 1.0)
-            fprintf(stderr, "WARNING WARNING WARNING: blendFactor=1\n");
-        if (blendFactor == 1.0
-#if 1   // otherwise this crashes--seems cuDNN still needs these?
-            && !Environment().IsTraining()
-#endif
-            )
-        {
-            m_saveMean->Resize(0, 0);
-            m_saveInvStdDev->Resize(0, 0);
-        }
-        else
-        {
-            m_saveMean->Resize(runMean);
-            m_saveInvStdDev->Resize(runMean);
         }
 
         m_bnEng->Forward(/*in=*/ sliceInputValue, scale, bias, // (in)
