@@ -296,26 +296,21 @@ template<> __device__ double NeutralValue<double>(ElementWiseOperator op)
 // Function to update an aggregate value for the specifed reduction operation
 // ----------------------------------------------------------------------------
 
-template<typename ReductionType, class ElemType> struct AggregationOp
+template<typename ReductionType, class ElemType> __device__ void UpdateAggregate(ReductionType& aggregate, ElemType val, ElementWiseOperator reductionOp)
 {
-public:
-    // update the 'aggregate' using 'val' witht the specified op.
-    __device__ static void Update(ReductionType& aggregate, ElemType val, ElementWiseOperator reductionOp)
+    switch (reductionOp)
     {
-        switch (reductionOp)
-        {
-        case ElementWiseOperator::opSum:
-            aggregate += val;
-            break;
-        case ElementWiseOperator::opMin:
-            if (val < aggregate)
-                aggregate = val;
-            break;
-        case ElementWiseOperator::opMax:
-            if (val > aggregate)
-                aggregate = val;
-            break;
-        }
+    case ElementWiseOperator::opSum:
+        aggregate += val;
+        break;
+    case ElementWiseOperator::opMin:
+        if (val < aggregate)
+            aggregate = val;
+        break;
+    case ElementWiseOperator::opMax:
+        if (val > aggregate)
+            aggregate = val;
+        break;
     }
 };
 
@@ -345,7 +340,7 @@ struct TensorOpReduce
             for (C_size_t i = 0; i < N - 1; i++) // N-1 because output is not used here
                 pointers[i] += reducingStrides(i, (C_size_t) m);
             ElemType val = TensorOpReduce<ElemType, N, M, m - 1>::Compute(pointers, op, reductionOp, reducingOpDims, reducingStrides);
-            AggregationOp<ReduceElemType, ElemType>::Update(aggregate, val, reductionOp);
+            UpdateAggregate<ReduceElemType, ElemType>(aggregate, val, reductionOp);
         }
         return (ElemType) aggregate;
     }
@@ -506,7 +501,7 @@ struct TensorOpElement<ElemType, N, M, K, /*parallelReduce=*/true, /*k=*/-1>
         for (CUDA_LONG redId = reductionBegin + tid; redId < reductionEnd; redId += tids)
         {
             auto val = TensorOpParallelReduce<ElemType, N, M, M - 1>::Compute(redId, pointers, op, reducingOpDims, reducingStrides);
-            AggregationOp<ReduceElemType, ElemType>::Update(aggregate, val, reductionOp);
+            UpdateAggregate<ReduceElemType, ElemType>(aggregate, val, reductionOp);
         }
 
         // reduce    --cf https://docs.nvidia.com/cuda/samples/6_Advanced/reduction/doc/reduction.pdf
@@ -517,7 +512,7 @@ struct TensorOpElement<ElemType, N, M, K, /*parallelReduce=*/true, /*k=*/-1>
         for (CUDA_LONG i = 256; i; i >>= 1)
         {
             if (tid < i && tid + i < tids)
-                AggregationOp<volatile ReduceElemType, volatile ReduceElemType>::Update(accumulators[tid], accumulators[tid + i], reductionOp);
+                UpdateAggregate<volatile ReduceElemType, volatile ReduceElemType>(accumulators[tid], accumulators[tid + i], reductionOp);
 
             if (0 + i < tids)
                 __syncthreads(); // sync if condition true for at least one thread
