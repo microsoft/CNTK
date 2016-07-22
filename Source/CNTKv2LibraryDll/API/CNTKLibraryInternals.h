@@ -163,4 +163,9 @@ namespace CNTK
 
     class Learner;
     typedef std::shared_ptr<Learner> LearnerPtr;
+
+    class Dictionary;
+
+    class MinibatchSource;
+    typedef std::shared_ptr<MinibatchSource> MinibatchSourcePtr;
 }

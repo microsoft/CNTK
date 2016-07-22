@@ -154,6 +154,11 @@ namespace CNTK
 
     public:
         ///
+        /// Construct a NDShape with 0 axes, which denotes a scalar.
+        ///
+        NDShape() {}
+
+        ///
         /// Contruct a NDShape instance with the specified number of axes and dimensionality in each axis.
         ///
         explicit NDShape(size_t numAxes, size_t dimension = InferredDimension)
@@ -430,6 +435,17 @@ namespace CNTK
         ///
         bool IsReadOnly() const { return m_isReadOnly; }
 
+        // TODO: The set methods should be offered in template from
+        ///
+        /// Fill 'this' NDArrayView with the specified value. The underlying DataType of 'this' view should be DataType::Float.
+        ///
+        CNTK_API void SetValue(float value);
+
+        ///
+        /// Fill 'this' NDArrayView with the specified value. The underlying DataType of 'this' view should be DataType::Double.
+        ///
+        CNTK_API void SetValue(double value);
+
         ///
         /// Creates a new NDArrayView with newly allocated storage on the same device as 'this' view and copies 'this' view's contents into the newly allocated view.
         ///
@@ -467,9 +483,6 @@ namespace CNTK
 
     private:
         CNTK_API NDArrayView(CNTK::DataType dataType, const DeviceDescriptor& device, CNTK::StorageFormat storageType, const NDShape& viewShape, bool readOnly, void* tensorView);
-
-        CNTK_API void SetValue(float value);
-        CNTK_API void SetValue(double value);
 
         template <typename ElementType>
         static std::shared_ptr<Microsoft::MSR::CNTK::Matrix<ElementType>> GetMatrixImpl(const Microsoft::MSR::CNTK::TensorView<ElementType>* tensorView, size_t rowColSplitPoint);
@@ -526,6 +539,11 @@ namespace CNTK
         /// Clear the mask; i.e. unmask all currently masked values
         ///
         CNTK_API void Clear();
+
+        ///
+        /// Returns the number of masked/invalid values
+        ///
+        CNTK_API size_t MaskedCount() const;
 
         ///
         /// Returns the descriptor of the device that 'this' mask resides on
@@ -1159,10 +1177,10 @@ namespace CNTK
         /// and the user is responsible for ensuring that the contents of the inputs and outputs are unchanged until after any uses of the BackPropState instance
         /// for backpropagating gradients through this function.
         ///
-        CNTK_API virtual BackPropStatePtr Forward(const std::unordered_map<Variable, const ValuePtr>& arguments,
-                                                  std::unordered_map<Variable, ValuePtr>& outputs,
-                                                  const DeviceDescriptor& computeDevice = DeviceDescriptor::DefaultDevice(),
-                                                  const std::unordered_set<Variable>& outputsToRetainBackwardStateFor = {}) = 0;
+        CNTK_API virtual BackPropStatePtr Forward(const std::unordered_map<Variable, ValuePtr>& arguments,
+            std::unordered_map<Variable, ValuePtr>& outputs,
+            const DeviceDescriptor& computeDevice = DeviceDescriptor::DefaultDevice(),
+            const std::unordered_set<Variable>& outputsToRetainBackwardStateFor = {}) = 0;
 
         ///
         /// Backpropagates supplied 'rootGradientValues' for one or more of the output variables of the Function, to produce gradient Values
@@ -1174,8 +1192,8 @@ namespace CNTK
         /// computation that this gradient backpropagation corresponds to.
         ///
         CNTK_API virtual void Backward(const BackPropStatePtr& state,
-                                       const std::unordered_map<Variable, const ValuePtr>& rootGradientValues,
-                                       std::unordered_map<Variable, ValuePtr>& backPropagatedGradientValuesForInputs) = 0;
+            const std::unordered_map<Variable, ValuePtr>& rootGradientValues,
+            std::unordered_map<Variable, ValuePtr>& backPropagatedGradientValuesForInputs) = 0;
 
     public:
 
@@ -1287,8 +1305,8 @@ namespace CNTK
         CNTK_API std::shared_ptr<std::vector<Variable>> InputsImpl() const;
 
         virtual void ReplacePlaceholders(const std::unordered_map<Placeholder, Variable>& placeholderReplacements,
-                                         std::unordered_set<const Function*>& visitedFunctions,
-                                         std::unordered_set<Placeholder>& replacedPlaceholders);
+            std::unordered_set<const Function*>& visitedFunctions,
+            std::unordered_set<Placeholder>& replacedPlaceholders);
 
         // Disallow copy and move construction and assignment
         Function(const Function&) = delete; Function(Function&&) = delete; Function& operator=(const Function&) = delete; Function& operator=(Function&&) = delete;
@@ -1357,7 +1375,7 @@ namespace CNTK
     /// Create an instance of the CNTK built-in elementwise sigmoid operation with the specified input operand.
     ///
     CNTK_API FunctionPtr Sigmoid(const Variable& operand, const std::wstring& name = L"");
-    
+
     ///
     /// Create an instance of the CNTK built-in elementwise tanh operation with the specified input operand.
     ///
@@ -1421,6 +1439,7 @@ namespace CNTK
     ///
     template <typename ElementType>
     CNTK_API void SaveAsLegacyModel(const FunctionPtr& rootFunction, const std::wstring& modelFile);
+
     ///
     /// A serializable value represents one of:
     /// a) Boolean
@@ -1429,8 +1448,8 @@ namespace CNTK
     /// d) NDShape
     /// e) vector<DictionaryValue>
     ///
-    /// TODO:  we need to have native support for DictionaryValue<vector> and DictionaryValue<NDArrayView>.
-    class CNTK_API DictionaryValue final
+    /// TODO: We need to have native support for DictionaryValue<vector> and DictionaryValue<NDArrayView>.
+    class DictionaryValue final
     {
     public:
         enum class Type : unsigned int
@@ -1440,8 +1459,10 @@ namespace CNTK
             SizeT,
             Float,
             Double,
+            String,
             NDShape,
-            Vector
+            Vector,
+            Dictionary,
         };
 
         static const char* TypeName(Type type)
@@ -1458,10 +1479,14 @@ namespace CNTK
                 return "Float";
             case Type::Double:
                 return "Double";
+            case Type::String:
+                return "String";
             case Type::NDShape:
                 return "NDShape";
             case Type::Vector:
                 return "Vector";
+            case Type::Dictionary:
+                return "Dictionary";
             default:
                 LogicError("Unknown DictionaryValue::Type");
             }
@@ -1492,12 +1517,18 @@ namespace CNTK
             m_data.m_double = value;
         }
 
+        DictionaryValue(const wchar_t* value) 
+            : DictionaryValue(std::wstring(value))
+        {}
+
         template <typename T>
         DictionaryValue(const T& value) : m_valueType(GetValueType<T>())
         {
             static_assert(std::is_same<T, NDShape>::value ||
-                          std::is_same<T, std::vector<DictionaryValue>>::value,
-                          "Unsupported ValueType");
+                std::is_same<T, std::wstring>::value ||
+                std::is_same<T, std::vector<DictionaryValue>>::value ||
+                std::is_same<T, Dictionary>::value,
+                "Unsupported ValueType");
 
             AllocateDataPtr(value);
         }
@@ -1518,10 +1549,14 @@ namespace CNTK
                 m_valueType = other.m_valueType;
                 m_data = other.m_data;
 
-                if (other.m_valueType == Type::NDShape)
+                if (other.m_valueType == Type::String)
+                    AllocateDataPtr(other.GetValue<std::wstring>());
+                else if (other.m_valueType == Type::NDShape)
                     AllocateDataPtr(other.GetValue<NDShape>());
                 else if (other.m_valueType == Type::Vector)
                     AllocateDataPtr(other.GetValue<std::vector<DictionaryValue>>());
+                else if (other.m_valueType == Type::Dictionary)
+                    AllocateDataPtr(other.GetValue<Dictionary>());
             }
 
             return *this;
@@ -1560,8 +1595,11 @@ namespace CNTK
             return m_data.m_double;
         }
 
-        template <typename T, typename std::enable_if<std::is_same<T, NDShape>::value || std::is_same<T, std::vector<DictionaryValue>>::value>::type* = nullptr>
-        const T& GetValue() const
+        template <typename T, typename std::enable_if<std::is_same<T, NDShape>::value ||
+            std::is_same<T, std::wstring>::value ||
+            std::is_same<T, std::vector<DictionaryValue>>::value ||
+            std::is_same<T, Dictionary>::value>::type* = nullptr>
+            const T& GetValue() const
         {
             VerifyType<T>();
             return *(reinterpret_cast<T*>(m_data.m_ptr));
@@ -1585,19 +1623,23 @@ namespace CNTK
         static Type GetValueType()
         {
             static_assert(std::is_same<T, bool>::value ||
-                          std::is_same<T, size_t>::value ||
-                          std::is_same<T, float>::value ||
-                          std::is_same<T, double>::value ||
-                          std::is_same<T, NDShape>::value ||
-                          std::is_same<T, std::vector<DictionaryValue>>::value,
-                          "Unsupported ValueType");
+                std::is_same<T, size_t>::value ||
+                std::is_same<T, float>::value ||
+                std::is_same<T, double>::value ||
+                std::is_same<T, std::wstring>::value ||
+                std::is_same<T, NDShape>::value ||
+                std::is_same<T, std::vector<DictionaryValue>>::value ||
+                std::is_same<T, Dictionary>::value,
+                "Unsupported ValueType");
 
             if (std::is_same<T, bool>::value)                                      return Type::Bool;
             if (std::is_same<T, size_t>::value)                                    return Type::SizeT;
             if (std::is_same<T, float>::value)                                     return Type::Float;
             if (std::is_same<T, double>::value)                                    return Type::Double;
+            if (std::is_same<T, std::wstring>::value)                              return Type::String;
             if (std::is_same<T, NDShape>::value)                                   return Type::NDShape;
             if (std::is_same<T, std::vector<DictionaryValue>>::value)              return Type::Vector;
+            if (std::is_same<T, Dictionary>::value)                                return Type::Dictionary;
         }
 
         template <typename T>
@@ -1608,12 +1650,22 @@ namespace CNTK
         }
 
         template <typename T>
-        void AllocateDataPtr(const T& value);
+        CNTK_API void AllocateDataPtr(const T& value);
 
         template <typename T>
-        void FreePtrAsType();
+        CNTK_API void FreePtrAsType();
 
-        void FreeDataPtr();
+        CNTK_API void FreeDataPtr()
+        {
+            if (m_valueType == Type::String)
+                FreePtrAsType<std::wstring>();
+            else if (m_valueType == Type::NDShape)
+                FreePtrAsType<NDShape>();
+            else if (m_valueType == Type::Vector)
+                FreePtrAsType<std::vector<DictionaryValue>>();
+            else if (m_valueType == Type::Dictionary)
+                FreePtrAsType<Dictionary>();
+        }
 
         Type m_valueType;
 
@@ -1632,44 +1684,44 @@ namespace CNTK
     ///
     /// A type denoting a dictionary (keyed by Unicode strings) of serializable values (dynamically typed).
     ///
-    class CNTK_API Dictionary final
+    class Dictionary final
     {
+        friend inline void AddConfigString(std::wstringstream& s, const DictionaryValue& value, size_t numIndentationSpaces);
+        friend class CompositeMinibatchSource;
+
     public:
-        Dictionary();
-        ~Dictionary();
+        CNTK_API Dictionary();
+        CNTK_API ~Dictionary();
 
-        // Disallow copy construction and assignment
-        Dictionary(const Dictionary&) = delete; Dictionary& operator=(const Dictionary&) = delete;
+        CNTK_API Dictionary(const Dictionary&);
+        CNTK_API Dictionary& operator=(const Dictionary&);
 
-        Dictionary(Dictionary&& other);
-        Dictionary& operator=(Dictionary&& other);
+        CNTK_API Dictionary(Dictionary&& other);
+        CNTK_API Dictionary& operator=(Dictionary&& other);
 
+        CNTK_API DictionaryValue& operator[](const wchar_t* key);
         DictionaryValue& operator[](const std::wstring& key)
         {
             return operator[](key.c_str());
         }
 
-        DictionaryValue& operator[](const wchar_t* key);
-
+        CNTK_API DictionaryValue operator[](const wchar_t* key) const;
         DictionaryValue operator[](const std::wstring& key) const
         {
             return operator[](key.c_str());
         }
 
-        DictionaryValue operator[](const wchar_t* key) const;
-
+        CNTK_API bool Contains(const wchar_t* key) const;
         bool Contains(const std::wstring& key) const
         {
             return Contains(key.c_str());
         }
 
-        bool Contains(const wchar_t* key) const;
-
         friend CNTK_API Microsoft::MSR::CNTK::File& operator>>(Microsoft::MSR::CNTK::File& stream, Dictionary& us);
         friend CNTK_API Microsoft::MSR::CNTK::File& operator<<(Microsoft::MSR::CNTK::File& stream, const Dictionary& us);
 
     private:
-        std::unordered_map<std::wstring, DictionaryValue>* m_dictionaryData;
+        std::shared_ptr<std::unordered_map<std::wstring, DictionaryValue>> m_dictionaryData;
         const size_t version = 1;
     };
 
@@ -1685,77 +1737,180 @@ namespace CNTK
         // Method to update the parameters associated with this learner. By returning false, this method indicates that
         // learning has stopped for all of the parameters associated with this learner
         //
-        CNTK_API virtual bool Update(const std::unordered_map<Variable, ValuePtr>& parameterValues,
-                                     const std::unordered_map<Variable, const ValuePtr>& gradientValues,
-                                     size_t trainingSampleCount) = 0;
+        CNTK_API virtual bool Update(const std::unordered_map<Parameter, NDArrayViewPtr>& gradientValues, size_t trainingSampleCount) = 0;
 
         ///
         /// Returns the set of parameters associated with this learner.
         ///
-        const std::unordered_set<Variable>& Parameters() const { return m_parameters; }
+        const std::unordered_set<Parameter>& Parameters() const { return m_parameters; }
 
-        // TODO: move the following two methods into ISerializable interface, make 
-        // Learner (and all other entities that need checkpointing capability) implement it.
         ///
         /// Optionally overridable method to checkpoint the learner's state.
         ///
-        CNTK_API virtual Dictionary GetCheckpointState() const = 0;
+        // TODO: move the following two methods into ISerializable interface, make 
+        // Learner (and all other entities that need checkpointing capability) implement it.
+        CNTK_API virtual Dictionary GetCheckpointState() const { return Dictionary(); }
 
         ///
         /// Optionally overridable method to restore the learner's state from a previous checkpoint.
         ///
-        CNTK_API virtual void RestoreFromCheckpoint(const Dictionary& checkpoint) = 0;
+        CNTK_API virtual void RestoreFromCheckpoint(const Dictionary& /*checkpoint*/) {}
 
-        virtual ~Learner()
-        {
-        }
+        virtual ~Learner() {}
 
     protected:
-        Learner(const std::unordered_set<Variable>& parameters)
+        Learner(const std::unordered_set<Parameter>& parameters)
             : m_parameters(parameters)
-        {
-        }
+        {}
 
-        std::unordered_set<Variable> m_parameters;
-
+        std::unordered_set<Parameter> m_parameters;
     };
 
     ///
     /// Create an instance of the CNTK built-in SGD learner.
     ///
     /// TODO: add additional SGD parameters here (a collection of learning rate values)
-    CNTK_API LearnerPtr SGDLearner(const std::unordered_set<Variable>& parameters,
-                                   const DeviceDescriptor& device = DeviceDescriptor::DefaultDevice());
+    CNTK_API LearnerPtr SGDLearner(const std::unordered_set<Parameter>& parameters, double learningRatePerSample);
 
     ///
     /// Create an instance of the CNTK built-in Momentum SGD learner.
     ///
     /// TODO: add additional Momentum parameters here (a collection of momentum rate values)
-    CNTK_API LearnerPtr MomentumSGDLearner(const std::unordered_set<Variable>& parameters,
-                                           const DeviceDescriptor& device = DeviceDescriptor::DefaultDevice());
+    CNTK_API LearnerPtr MomentumSGDLearner(const std::unordered_set<Parameter>& parameters);
 
     ///
     /// Create an instance of the CNTK built-in Nesterov's accelerated SGD learner.
     ///
-    CNTK_API LearnerPtr NesterovLearner(const std::unordered_set<Variable>& parameters,
-                                        const DeviceDescriptor& device = DeviceDescriptor::DefaultDevice());
+    CNTK_API LearnerPtr NesterovLearner(const std::unordered_set<Parameter>& parameters);
 
     ///
     /// Create an instance of the CNTK built-in AdaGrad learner.
     ///
-    CNTK_API LearnerPtr AdaGradLearner(const std::unordered_set<Variable>& parameters, bool needAveMultiplier = true,
-                                       const DeviceDescriptor& device = DeviceDescriptor::DefaultDevice());
+    CNTK_API LearnerPtr AdaGradLearner(const std::unordered_set<Parameter>& parameters, bool needAveMultiplier = true);
 
     ///
     /// Create an instance of the CNTK built-in FSAdaGrad (improved AdaGrad) learner.
     ///
-    CNTK_API LearnerPtr FSAdaGradLearner(const std::unordered_set<Variable>& parameters,
-                                         const DeviceDescriptor& device = DeviceDescriptor::DefaultDevice());
+    CNTK_API LearnerPtr FSAdaGradLearner(const std::unordered_set<Parameter>& parameters);
 
     ///
     /// Create an instance of the CNTK built-in RMSProp learner.
     ///
-    CNTK_API LearnerPtr RMSPropLearner(const std::unordered_set<Variable>& parameters,
-                                       double gamma, double inc, double dec, double max, double min, bool needAveMultiplier = true,
-                                       const DeviceDescriptor& device = DeviceDescriptor::DefaultDevice());
+    CNTK_API LearnerPtr RMSPropLearner(const std::unordered_set<Parameter>& parameters,
+                                       double gamma,
+                                       double inc,
+                                       double dec,
+                                       double max,
+                                       double min,
+                                       bool needAveMultiplier = true);
+
+    ///
+    /// Trainer is the top-level abstraction responsible for the orchestration of the training of a model
+    /// using the specified learners and training data either explicilty supplied as Value objects or from
+    /// a MinibatchSource object.
+    ///
+    class Trainer
+    {
+    public:
+        ///
+        /// Construct a Trainer to train the specified 'model' with the specified 'trainingLoss' Variable as the training criterion
+        /// and using the specified set of 'parameterLearners' for updating the model's parameters using computed gradients.
+        ///
+        CNTK_API Trainer(const FunctionPtr& model, const Variable& trainingLoss, const std::unordered_set<LearnerPtr>& parameterLearners);
+
+        ///
+        /// Optimize model parameters using the specified 'arguments' minibatch of training samples.
+        /// Returns false if all parameter learners indicate end of learning (through their Update method's return value).
+        ///
+        CNTK_API bool TrainMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, const DeviceDescriptor& computeDevice = DeviceDescriptor::DefaultDevice());
+
+        ///
+        /// Model being trained by 'this' Trainer.
+        ///
+        FunctionPtr Model() const { return m_model; }
+
+        ///
+        /// Variable of the Trainer's model representing the training loss that is used as the optimization 
+        /// criterion for learning the model's parameters.
+        ///
+        Variable TrainingLossVariable() const { return m_trainingLossVar; }
+
+        ///
+        /// Returns the Value of the training loss variable of the model corresponding to the last minibatch trained with
+        ///
+        ValuePtr PreviousMinibatchTrainingLossValue() const { return m_prevMinibatchTrainingLossValue; }
+
+        ///
+        /// Learners associated with this Trainer for updating the model's parameters using computed gradients.
+        ///
+        const std::unordered_set<LearnerPtr>& ParameterLearners() const { return m_parameterLearners; }
+
+    private:
+        FunctionPtr m_model;
+        Variable m_trainingLossVar;
+        ValuePtr m_prevMinibatchTrainingLossValue;
+        std::unordered_set<LearnerPtr> m_parameterLearners;
+    };
+
+    ///
+    /// Describes an input stream: its name, element type, storage, etc.
+    ///
+    struct StreamInfo
+    {
+        std::wstring m_name;           // Unique name of the stream
+        size_t m_id;                   // Unique identifier of the stream
+        StorageFormat m_storageFormat; // Storage format of the stream
+        DataType m_elementType;        // Element type of the stream
+        NDShape m_sampleLayout;        // Layout of the sample for the stream
+    };
+
+    inline bool operator==(const StreamInfo& left, const StreamInfo& right)
+    {
+        return (left.m_id == right.m_id);
+    }
+}
+
+namespace std {
+    template <> struct hash<CNTK::StreamInfo>
+    {
+        size_t operator()(const CNTK::StreamInfo& x) const
+        {
+            return std::hash<size_t>()(x.m_id);
+        }
+    };
+}
+
+namespace CNTK
+{
+    ///
+    /// Abstraction for generating minbatches of samples for training/evaluation.
+    ///
+    class MinibatchSource : public std::enable_shared_from_this<MinibatchSource>
+    {
+    public:
+        ///
+        /// Describes the streams 'this' MinibatchSource produces.
+        ///
+        virtual const std::unordered_set<StreamInfo>& StreamInfos() = 0;
+
+        ///
+        /// Reads a minibatch that contains data across all input streams.
+        /// The minibatchData argument specifies the desired minibatch size for each stream of the reader and the actual returned size is the min across all streams.
+        /// The return value of false indciates that the reader will no longer return any further data.
+        ///
+        virtual bool GetNextMinibatch(std::unordered_map<StreamInfo, std::pair<size_t, ValuePtr>>& minibatchData) = 0;
+
+        // TODO: Methods to save and restore from checkpoints
+
+        // Disallow copy and move construction and assignment
+        MinibatchSource(const MinibatchSource&) = delete; MinibatchSource(MinibatchSource&&) = delete; MinibatchSource& operator=(const MinibatchSource&) = delete; MinibatchSource& operator=(MinibatchSource&&) = delete;
+
+    protected:
+        MinibatchSource() {}
+    };
+
+    ///
+    /// Instantiate the CNTK built-in composite minibatch source.
+    ///
+    CNTK_API MinibatchSourcePtr CreateCompositeMinibatchSource(const Dictionary& configuration);
 }

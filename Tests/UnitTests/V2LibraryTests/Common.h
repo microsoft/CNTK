@@ -3,6 +3,7 @@
 #include <exception>
 #include <algorithm>
 #include "CNTKLibrary.h"
+#include <functional>
 
 static const double relativeTolerance = 0.001f;
 static const double absoluteTolerance = 0.000001f;
@@ -67,5 +68,20 @@ inline void SaveAndReloadModel(CNTK::FunctionPtr& functionPtr, const std::vector
         *(outputVarInfo.second) = newOutputVar;
     }
 }
+
+inline CNTK::FunctionPtr FullyConnectedDNNLayer(CNTK::Variable input, size_t outputDim, const CNTK::DeviceDescriptor& device, const std::function<CNTK::FunctionPtr(const CNTK::FunctionPtr&)>& nonLinearity)
+{
+    assert(input.Shape().NumAxes() == 1);
+    size_t inputDim = input.Shape()[0];
+
+    auto timesParam = CNTK::Parameter(CNTK::NDArrayView::RandomUniform<float>({ outputDim, inputDim }, -0.05, 0.05, 1, device));
+    auto timesFunction = CNTK::Times(timesParam, input);
+
+    auto plusParam = CNTK::Parameter(CNTK::NDArrayView::RandomUniform<float>({ outputDim }, -0.05, 0.05, 1, device));
+    auto plusFunction = CNTK::Plus(plusParam, timesFunction);
+
+    return nonLinearity(plusFunction);
+}
+
 
 #pragma warning(pop)

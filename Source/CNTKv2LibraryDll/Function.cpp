@@ -493,18 +493,9 @@ namespace CNTK
     }
 
     template <typename ElementType>
-    /*static*/ ValuePtr CompositeFunction::GetValueObjectFromCNTKImplMatrixAndMBLayout(Variable var, const Matrix<ElementType>& matrix, const MBLayoutPtr& layout)
+    /*static*/ ValuePtr CompositeFunction::GetValueObjectFromCNTKImplMatrixAndMBLayout(const NDShape& sampleShape, const Matrix<ElementType>& matrix, const MBLayoutPtr& layout, bool readOnly /*= true*/)
     {
-        if (var.DynamicAxes().size() > 1)
-            LogicError("More than one dynamic axis for a variable is currently unsupported");
-
-        if (AsDataType<ElementType>() != var.GetDataType())
-            LogicError("The specified ElementType %s does not match the DataType %s", typeid(ElementType).name(), DataTypeName(var.GetDataType()));
-
-        if ((layout != nullptr) && (matrix.GetNumRows() != var.Shape().TotalSize()))
-            LogicError("Unexpected matrix layout: The number of rows in the matrix does not match the sample size of the Variable");
-
-        NDShape valueDataShape = var.Shape();
+        NDShape valueDataShape = sampleShape;
         if (layout != nullptr)
             valueDataShape = valueDataShape.AppendShape({ layout->GetNumTimeSteps(), layout->GetNumSequences() });
 
@@ -513,7 +504,7 @@ namespace CNTK
         {
             // Just create a view over the existing matrix itself
             auto tensorView = new TensorView<ElementType>(std::make_shared<Matrix<ElementType>>(matrix.AsReference()), AsTensorShape(valueDataShape));
-            auto data = MakeSharedObject<NDArrayView>(AsDataType<ElementType>(), AsDeviceDescriptor(matrix.GetDeviceId()), AsStorageFormat(matrix.GetFormat()), valueDataShape, true, tensorView);
+            auto data = MakeSharedObject<NDArrayView>(AsDataType<ElementType>(), AsDeviceDescriptor(matrix.GetDeviceId()), AsStorageFormat(matrix.GetFormat()), valueDataShape, readOnly, tensorView);
             return MakeSharedObject<Value>(data);
         }
 
@@ -572,8 +563,23 @@ namespace CNTK
         }
 
         auto tensorView = new TensorView<ElementType>(shuffledMatrixData, AsTensorShape(valueDataShape));
-        auto data = MakeSharedObject<NDArrayView>(AsDataType<ElementType>(), AsDeviceDescriptor(matrix.GetDeviceId()), StorageFormat::Dense, valueDataShape, true, tensorView);
+        auto data = MakeSharedObject<NDArrayView>(AsDataType<ElementType>(), AsDeviceDescriptor(matrix.GetDeviceId()), StorageFormat::Dense, valueDataShape, readOnly, tensorView);
         return MakeSharedObject<Value>(data, mask);
+    }
+
+    template <typename ElementType>
+    /*static*/ ValuePtr CompositeFunction::GetValueObjectFromCNTKImplMatrixAndMBLayout(Variable var, const Matrix<ElementType>& matrix, const MBLayoutPtr& layout, bool readOnly /*= true*/)
+    {
+        if (var.DynamicAxes().size() > 1)
+            LogicError("More than one dynamic axis for a variable is currently unsupported");
+
+        if (AsDataType<ElementType>() != var.GetDataType())
+            LogicError("The specified ElementType %s does not match the DataType %s", typeid(ElementType).name(), DataTypeName(var.GetDataType()));
+
+        if ((layout != nullptr) && (matrix.GetNumRows() != var.Shape().TotalSize()))
+            LogicError("Unexpected matrix layout: The number of rows in the matrix does not match the sample size of the Variable");
+
+        return GetValueObjectFromCNTKImplMatrixAndMBLayout(var.Shape(), matrix, layout, readOnly);
     }
 
     template <typename ElementType>
@@ -590,7 +596,7 @@ namespace CNTK
         computationNode->GetMBLayout()->CopyFrom(layout);
     }
 
-    void CompositeFunction::PopulateNetworkInputs(const std::unordered_map<Variable, const ValuePtr>& arguments)
+    void CompositeFunction::PopulateNetworkInputs(const std::unordered_map<Variable, ValuePtr>& arguments)
     {
         auto functionArguments = this->Arguments();
         std::vector<ComputationNodeBasePtr> inputNodes;
@@ -635,7 +641,7 @@ namespace CNTK
     }
 
     // Assign the supplied gradients corresponding to the root(s) of the network to be backpropagated through the graph
-    void CompositeFunction::PopulateNetworkGradients(const std::unordered_map<Variable, const ValuePtr>& gradients)
+    void CompositeFunction::PopulateNetworkGradients(const std::unordered_map<Variable, ValuePtr>& gradients)
     {
         auto functionOutputs = this->Outputs();
         for (auto gradientVarValuePair : gradients)
@@ -778,7 +784,7 @@ namespace CNTK
         }
     }
 
-    /*virtual*/ BackPropStatePtr CompositeFunction::Forward(const std::unordered_map<Variable, const ValuePtr>& arguments,
+    /*virtual*/ BackPropStatePtr CompositeFunction::Forward(const std::unordered_map<Variable, ValuePtr>& arguments,
                                                             std::unordered_map<Variable, ValuePtr>& outputs,
                                                             const DeviceDescriptor& computeDevice,
                                                             const std::unordered_set<Variable>& outputsToRetainBackwardStateFor)
@@ -826,7 +832,7 @@ namespace CNTK
     }
 
     /*virtual*/ void CompositeFunction::Backward(const BackPropStatePtr& state,
-                                                 const std::unordered_map<Variable, const ValuePtr>& rootGradientValues,
+                                                 const std::unordered_map<Variable, ValuePtr>& rootGradientValues,
                                                  std::unordered_map<Variable, ValuePtr>& backPropagatedGradientValuesForInputs)
     {
         auto backpropState = dynamic_cast<const CNTKBackPropState*>(state.get());

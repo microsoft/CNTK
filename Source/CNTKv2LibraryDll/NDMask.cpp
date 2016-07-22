@@ -81,6 +81,15 @@ namespace CNTK
         GetMatrix()->SetValue(1);
     }
 
+    size_t NDMask::MaskedCount() const
+    {
+        auto maskMatrix = GetMatrix();
+        std::unique_ptr<char[]> maskData(maskMatrix->CopyToArray());
+        return std::count_if(maskData.get(), maskData.get() + maskMatrix->GetNumElements(), [](const char& val) {
+            return val == 0;
+        });
+    }
+
     Matrix<char>* NDMask::GetMatrix() const
     {
         return m_matrixView.get();

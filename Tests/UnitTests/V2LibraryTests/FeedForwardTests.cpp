@@ -4,20 +4,6 @@
 
 using namespace CNTK;
 
-FunctionPtr FullyConnectedDNNLayer(Variable input, size_t outputDim, const DeviceDescriptor& device, const std::function<FunctionPtr(const FunctionPtr&)>& nonLinearity)
-{
-    assert(input.Shape().NumAxes() == 1);
-    size_t inputDim = input.Shape()[0];
-
-    auto timesParam = Parameter(NDArrayView::RandomUniform<float>({ outputDim, inputDim }, -0.5, 0.5, 1, device));
-    auto timesFunction = Times(timesParam, input);
-
-    auto plusParam = Parameter({ outputDim }, 0.0f, device);
-    auto plusFunction = Plus(plusParam, timesFunction);
-
-    return nonLinearity(plusFunction);
-}
-
 FunctionPtr FullyConnectedFeedForwardClassifierNet(Variable input,
                                                    size_t numOutputClasses,
                                                    size_t hiddenLayerDim,
