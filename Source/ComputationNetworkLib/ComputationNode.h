@@ -184,7 +184,7 @@ protected:                // TODO: should be fully encapsulated here
     bool m_needsGradient; // true if this node or any children need a gradient to be computed (for own consumption or propagation to somewhere in the child tree)
 
     bool m_valueSharable; // a flag is needed for memory share.
-                          // If it is false (e.g., learnableParameters/InputValue and those nodes are solely induced by learnableParameters),
+                          // If it is false (e.g., LearnableParameters/InputValue and those nodes are solely induced by LearnableParameters),
                           // it will never be released to memory pool
 private:
     bool m_isPartOfLoop; // true if this loop is part of a recurrent loop
@@ -1890,6 +1890,13 @@ public:
 // =======================================================================
 
 struct IRecurrentNode { virtual int GetRecurrenceSteppingDirection() const = 0; };
+
+// =======================================================================
+// IParameterNode -- interface implemented by ComputationNodes that are parameters
+// Note: There is possibly code that identifies parameters by the type name instead. Should be unified.
+// =======================================================================
+
+struct IParameterNode { virtual ~IParameterNode() { } };
 
 // =======================================================================
 // PreComputedNodeBase -- interface implemented by ComputationNodes that precompute

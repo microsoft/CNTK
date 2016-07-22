@@ -21,7 +21,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 // -----------------------------------------------------------------------
 
 template <class ElemType>
-class LearnableParameter : public ComputationNode<ElemType>, public NumInputs<0>
+class LearnableParameter : public ComputationNode<ElemType>, public NumInputs<0>, public IParameterNode
 {
     typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
     static const std::wstring TypeName() { return L"LearnableParameter"; }

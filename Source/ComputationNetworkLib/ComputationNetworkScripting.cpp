@@ -390,7 +390,7 @@ ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<ComputationNetworkWithEd
 //     - Input() nodes not listed as `inputNodes` are always shared
 //  - the source network may be a different network, e.g. loaded with BS.Network.Load()
 //  - a deep copy can be read-only (parameters="constant")
-//     - multiple uses of the lambda will share read-only parameters
+//     - Note: multiple uses of the lambda will not share read-only parameters. This is trickier to implement that one might expect.
 //  - example use cases:
 //     - adaptation (KL): a frozen read-only copy of the starting model is used as a KL-regularizer
 //     - adaptation (DLR): an injected input transform is trained while the network is fixed
@@ -481,6 +481,49 @@ public:
         else if (parametersOption == L"constant")  parameterTreatment = ParameterTreatment::constant;
         else if (parametersOption == L"shared")    parameterTreatment = ParameterTreatment::shared;
         else InvalidArgument("CloneFunction: 'parameters' option must be 'learnable', 'constant', or 'shared'.");
+
+        // determine which nodes must be cloned
+        //  - intersection of:
+        //     - all indirect inputs of the specified outputs
+        //     - all dependents of leaves
+        //  - where leaves are:
+        //     - specified inputs
+        //     - unless parameters="shared": all parameters
+
+        // determine all indirect inputs of the specified outputs
+        vector<ComputationNodeBasePtr> roots;
+        for (let& outputNodeKV : outputNodes)
+            roots.push_back(outputNodeKV.second);
+        let allInputs = ComputationNodeBase::EnumerateNodes(roots);
+
+        // determine all leaves and their dependents
+        dependentSet = set<ComputationNodeBasePtr>(inputNodes.begin(), inputNodes.end()); // start with the specified inputs
+        for (let& node : allInputs)
+        {
+            // add parameters that are to be cloned to dependent set
+            if (parameterTreatment != ParameterTreatment::shared && node->Is<IParameterNode>())
+                dependentSet.insert(node);
+            // if at least one input is in the dependent set then this node is, too
+            else
+                for (let& input : node->GetInputs())
+                    if (dependentSet.find(input) != dependentSet.end())
+                        dependentSet.insert(node);
+        }
+
+#if 1
+        for (let& node : dependentSet)
+            fprintf(stderr, "CloneFunction: cloning %ls\n", node->NodeDescription().c_str());
+#endif
+
+        // ensure none of the specified inputs reference back into the cloned set
+        // The function we extract must be separable.
+        for (let& input : inputNodes)
+            for (let& node : ComputationNodeBase::EnumerateNodes(vector<ComputationNodeBasePtr>{input})) // check all indirect inputs of each specified input
+            {
+                let iter = dependentSet.find(input);
+                if (iter != dependentSet.end() && *iter != input)
+                    InvalidArgument("CloneFunction: specified function input %ls recursively depends on %ls inside the function.", input->NodeDescription().c_str(), node->NodeDescription().c_str());
+            }
     }
 
 private:
@@ -509,9 +552,49 @@ private:
     // This will clone all nodes that the outputNodes depend on, and rewire inputs matching inputNodes to inputArgs.
     ConfigValuePtr DoClone(const vector<ConfigValuePtr>& inputValues, const std::wstring& exprName)
     {
+        // resolve the input arguments
         vector<ComputationNodeBasePtr> inputs;
         for (let& inputValue : inputValues)
-            inputs.push_back(inputValue.ResolveValue()); // .AsPtr<ComputationNodeBase>());
+            inputs.push_back(inputValue.ResolveValue());
+        assert(inputValues.size() == inputNodes.size()); // (this should have been checked by BrainScript)
+
+        // clone everything in the dependent set
+        //  - specified inputs get mapped to actual parameters
+        //  - all others get duplicated
+        // Note that at this point, the "shared" option has already been considered,
+        // and is reflected in whether parameters are included or not in 'dependentSet'.
+        map<ComputationNodeBasePtr, ComputationNodeBasePtr> clonedNodes;
+        for (size_t i = 0; i < inputNodes.size(); i++)
+            clonedNodes[inputNodes[i]] = inputs[i];
+        for (let& node : dependentSet)
+        {
+            // if already there then it's an input that we just mapped above
+            if (clonedNodes.find(node) != clonedNodes.end())
+                continue;
+            // clone
+            ComputationNodeBasePtr newNode;
+            let newName = exprName + L"." + node->GetName();
+            newNode = node->Duplicate(newName, CopyNodeFlags::copyNodeAll);
+            // make it read-only if desired
+            if (parameterTreatment == ParameterTreatment::constant)
+                newNode->SetLearningRateMultiplier(0);
+            // and that's our cloned node
+            clonedNodes[node] = newNode;
+        }
+
+        // all cloned nodes' inputs must be redirected if they reference a node that has been cloned as well
+        for (let& clonedNodesKV : clonedNodes)
+        {
+            let& node = clonedNodesKV.second;
+            let& inputs = node->GetInputs();
+            for (size_t i = 0; i < inputs.size(); i++)
+            {
+                let iter = clonedNodes.find(inputs[i]);
+                if (iter != clonedNodes.end()) // input is also a cloned node
+                    node->SetInput(i, iter->second);
+            }
+        }
+
         return ConfigValuePtr();
     }
 
@@ -521,7 +604,7 @@ private:
     map<wstring, ComputationNodeBasePtr> outputNodes;
     ParameterTreatment parameterTreatment;
     // other
-    map<ComputationNodeBasePtr, ComputationNodeBasePtr> clonedReadOnlyParameters; // if we clone 'constant' multiple times, we can share readOnly parameters
+    set<ComputationNodeBasePtr> dependentSet;                                     // set of nodes that outputNodes depend on
 };
 
 ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<CloneFunctionConfigLambda> registerCloneFunctionConfigLambda(L"CloneFunctionConfigLambda");
