@@ -264,42 +264,36 @@ struct TensorOps
 //----------------------------------------------------------------------------
 // For reductions we need the neutral elements of the corresponding binary ops
 //----------------------------------------------------------------------------
-template <class ElemType> class BinaryOpConstants
+class BinaryOpConstants
 {
 public:
-    __device__ static ElemType NeutralValue(ElementWiseOperator op)
+    template <typename ElemType> __device__ static ElemType NeutralValue(ElementWiseOperator op)
     {
         return 0; // error, only the explicit instantiations below should be used.
     }
 };
 
-template <> class BinaryOpConstants <float>
+template<> __device__ static float BinaryOpConstants::NeutralValue<float>(ElementWiseOperator op)
 {
-public:
-    __device__ static float NeutralValue(ElementWiseOperator op) {
-        switch (op)
-        {
-        case ElementWiseOperator::opMax: return FLT_MIN;
-        case ElementWiseOperator::opMin: return FLT_MAX;
-        case ElementWiseOperator::opSum: return 0;
-        default:                         return 0; // error
-        }
+    switch (op)
+    {
+    case ElementWiseOperator::opMax: return FLT_MIN;
+    case ElementWiseOperator::opMin: return FLT_MAX;
+    case ElementWiseOperator::opSum: return 0;
+    default:                         return 0; // error
     }
-};
+}
 
-template <> class BinaryOpConstants <double>
+template<> __device__ static double BinaryOpConstants::NeutralValue<double>(ElementWiseOperator op)
 {
-public:
-    __device__ static double NeutralValue(ElementWiseOperator op) {
-        switch (op)
-        {
-        case ElementWiseOperator::opMax: return DBL_MIN;
-        case ElementWiseOperator::opMin: return DBL_MAX;
-        case ElementWiseOperator::opSum: return 0;
-        default:                         return 0; // error
-        }
+    switch (op)
+    {
+    case ElementWiseOperator::opMax: return DBL_MIN;
+    case ElementWiseOperator::opMin: return DBL_MAX;
+    case ElementWiseOperator::opSum: return 0;
+    default:                         return 0; // error
     }
-};
+}
 
 
 // ----------------------------------------------------------------------------
@@ -511,7 +505,7 @@ struct TensorOpElement<ElemType, N, M, K, /*parallelReduce=*/true, /*k=*/-1>
         CUDA_LONG reductionEnd = min(reductionBegin + reductionChunkSize, reductionDim);
 
         // compute the operation for this input coordinate
-        ReduceElemType aggregate = BinaryOpConstants<ReduceElemType>::NeutralValue(reductionOp);
+        ReduceElemType aggregate = BinaryOpConstants::NeutralValue<ReduceElemType>(reductionOp);
 
         for (CUDA_LONG redId = reductionBegin + tid; redId < reductionEnd; redId += tids)
         {
