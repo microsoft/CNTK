@@ -609,6 +609,10 @@ private:
             clonedNodes[node] = newNode;
             numCloned++;
         }
+#if 1
+        for (let& nodeKV : clonedNodes)
+            fprintf(stderr, "CloneFunction: cloning %ls -> %ls (%d -> %d)\n", nodeKV.first->NodeDescription().c_str(), nodeKV.second->NodeDescription().c_str(), (int)nodeKV.first->m_uniqueNumericId, (int)nodeKV.second->m_uniqueNumericId);
+#endif
 
         // all cloned nodes' inputs must be redirected if they reference a node that has been cloned as well
         size_t numRelinks = 0; // (statistics: how many inputs have we relinked?)
@@ -618,11 +622,13 @@ private:
             let& inputs = node->GetInputs();
             for (size_t i = 0; i < inputs.size(); i++)
             {
+                fprintf(stderr, "%ls.inputs[%d] = %ls (%d)", node->NodeName().c_str(), (int)i, inputs[i]->NodeName().c_str(), (int)inputs[i]->m_uniqueNumericId);
                 let iter = clonedNodes.find(inputs[i]);
                 if (iter == clonedNodes.end())
                     continue;
                 // input is also a cloned node: relink
                 node->SetInput(i, iter->second);
+                fprintf(stderr, " ==>  %ls (%d)\n", inputs[i]->NodeName().c_str(), (int)inputs[i]->m_uniqueNumericId);
                 numRelinks++;
             }
         }
@@ -635,12 +641,22 @@ private:
 
         if (singleOutput)
         {
-            return ConfigValuePtr();
+            return NodeToConfigValuePtr(outputNodes.begin()->second);
         }
         else
         {
-            return ConfigValuePtr();
+            auto record = make_shared<ConfigRecord>(nullptr, [](const std::wstring & msg){ RuntimeError("CloneFunction: %ls", msg.c_str()); });
+            for (let& outputNodesKV : outputNodes)
+                record->Add(outputNodesKV.first, [](const wstring&){}, move(NodeToConfigValuePtr(outputNodesKV.second)));
+            auto valuep = ConfigValuePtr(record, [](const std::wstring &) { LogicError("CloneFunction: Unexpected failure."); }, exprName);
+            return valuep;
         }
+    }
+
+    static ConfigValuePtr NodeToConfigValuePtr(ComputationNodeBasePtr node)
+    {
+        auto valuep = ConfigValuePtr(node, [](const std::wstring &) { LogicError("CloneFunction: Unexpected failure."); }, node->NodeName());
+        return valuep;
     }
 
 private:

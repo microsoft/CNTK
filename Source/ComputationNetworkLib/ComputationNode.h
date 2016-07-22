@@ -289,6 +289,9 @@ public:
         m_gradientInitialized(false), m_nodeName(name == L"" ? CreateUniqNodeName() : name)
     {
         // TODO: should m_learningRateMultiplier be set to 0? Or should every node have a way to add its own say on the learning rate for all its inputs?
+        // we store a unique numeric number for every node that is constructed, as a debugging aid
+        static size_t uniqueNumericId = 0;
+        m_uniqueNumericId = uniqueNumericId++;
     }
     virtual ~ComputationNodeBase()
     {
@@ -833,6 +836,8 @@ public:
     // Helper that returns [a x b x c], including dynamic axes.
     const std::string ShapeDescription() const;
 
+    // debugging helper
+    size_t m_uniqueNumericId; // (a unique handle for debugging)
 protected:
 
     // -----------------------------------------------------------------------
