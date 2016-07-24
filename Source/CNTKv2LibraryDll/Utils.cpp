@@ -308,4 +308,11 @@ namespace CNTK
      
     template void DictionaryValue::AllocateDataPtr<NDShape>(const NDShape& value);
     template void DictionaryValue::AllocateDataPtr<vector<DictionaryValue>>(const vector<DictionaryValue>& value);
+    template void DictionaryValue::AllocateDataPtr<wstring>(const wstring& value);
+    template void DictionaryValue::AllocateDataPtr<Dictionary>(const Dictionary& value);
+
+    template void DictionaryValue::FreePtrAsType<NDShape>();
+    template void DictionaryValue::FreePtrAsType<vector<DictionaryValue>>();
+    template void DictionaryValue::FreePtrAsType<wstring>();
+    template void DictionaryValue::FreePtrAsType<Dictionary>();
 }

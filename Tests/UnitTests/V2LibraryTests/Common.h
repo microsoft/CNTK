@@ -24,34 +24,52 @@ inline void FloatingPointVectorCompare(const std::vector<ElementType>& first, co
 #pragma warning(push)
 #pragma warning(disable: 4996)
 
+#ifndef _MSC_VER
+#include <unistd.h>
+static inline std::string wtocharpath(const wchar_t *p)
+{
+    size_t len = wcslen(p);
+    std::string buf;
+    buf.resize(2 * len + 1);            // max: 1 wchar => 2 mb chars
+    ::wcstombs(&buf[0], p, buf.size()); // note: technically it is forbidden to stomp over std::strings 0 terminator, but it is known to work in all implementations
+    buf.resize(strlen(&buf[0]));        // set size correctly for shorter strings
+    return buf;
+}
+
+static inline int _wunlink(const wchar_t *p)
+{
+    return unlink(wtocharpath(p).c_str());
+}
+#endif
+
 template <typename ElementType>
 inline void SaveAndReloadModel(CNTK::FunctionPtr& functionPtr, const std::vector<CNTK::Variable*>& variables, const CNTK::DeviceDescriptor& device)
 {
     static std::wstring s_tempModelPath = L"feedForward.net";
 
     if ((_wunlink(s_tempModelPath.c_str()) != 0) && (errno != ENOENT))
-        RuntimeError("Error deleting file '%ls': %s", s_tempModelPath.c_str(), strerror(errno));
+        std::runtime_error("Error deleting temp model file 'feedForward.net'");
 
-    std::unordered_map<std::wstring, Variable*> inputVarNames;
-    std::unordered_map<std::wstring, Variable*> outputVarNames;
+    std::unordered_map<std::wstring, CNTK::Variable*> inputVarNames;
+    std::unordered_map<std::wstring, CNTK::Variable*> outputVarNames;
 
     for (auto varPtr : variables)
     {
         auto retVal = varPtr->IsOutput() ? outputVarNames.insert({ varPtr->Owner()->Name(), varPtr }) : inputVarNames.insert({ varPtr->Name(), varPtr });
         if (!retVal.second)
-            RuntimeError("SaveAndReloadModel: Multiple variables having same name cannot be restored after save and reload");
+            std::runtime_error("SaveAndReloadModel: Multiple variables having same name cannot be restored after save and reload");
     }
 
-    SaveAsLegacyModel<ElementType>(functionPtr, s_tempModelPath);
-    functionPtr = LoadLegacyModel<ElementType>(s_tempModelPath, device);
+    CNTK::SaveAsLegacyModel<ElementType>(functionPtr, s_tempModelPath);
+    functionPtr = CNTK::LoadLegacyModel<ElementType>(s_tempModelPath, device);
 
     if (_wunlink(s_tempModelPath.c_str()) != 0)
-        RuntimeError("Error deleting file '%ls': %s", s_tempModelPath.c_str(), strerror(errno));
+         std::runtime_error("Error deleting temp model file 'feedForward.net'");
 
     auto inputs = functionPtr->Inputs();
     for (auto inputVarInfo : inputVarNames)
     {
-        auto newInputVar = *(std::find_if(inputs.begin(), inputs.end(), [inputVarInfo](const Variable& var) {
+        auto newInputVar = *(std::find_if(inputs.begin(), inputs.end(), [inputVarInfo](const CNTK::Variable& var) {
             return (var.Name() == inputVarInfo.first);
         }));
 
@@ -61,7 +79,7 @@ inline void SaveAndReloadModel(CNTK::FunctionPtr& functionPtr, const std::vector
     auto outputs = functionPtr->Outputs();
     for (auto outputVarInfo : outputVarNames)
     {
-        auto newOutputVar = *(std::find_if(outputs.begin(), outputs.end(), [outputVarInfo](const Variable& var) {
+        auto newOutputVar = *(std::find_if(outputs.begin(), outputs.end(), [outputVarInfo](const CNTK::Variable& var) {
             return (var.Owner()->Name() == outputVarInfo.first);
         }));
 

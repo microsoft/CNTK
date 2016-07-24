@@ -8,7 +8,7 @@
 #include "stdafx.h"
 #include "CNTKLibrary.h"
 #include "Utils.h"
-#include "CompositeDataReader.h"
+#include "Reader.h"
 
 namespace CNTK
 {
@@ -23,7 +23,7 @@ namespace CNTK
 
     private: 
         std::unordered_set<StreamInfo> m_streamInfos;
-        std::shared_ptr<Microsoft::MSR::CNTK::CompositeDataReader> m_compositeDataReader;
+        std::shared_ptr<Microsoft::MSR::CNTK::Reader> m_compositeDataReader;
         bool m_startNewEpoch;
         size_t m_nextEpochIndex;
         size_t m_prevMinibatchSize;

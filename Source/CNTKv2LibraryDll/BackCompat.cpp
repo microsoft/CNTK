@@ -59,7 +59,7 @@ namespace CNTK
                     // TODO: Currently only default dynamic axis is supported
                     const std::wstring defaultCNTKDynamicAxisName = L"";
                     if (inputNode->GetRequestedDynamicAxis() != defaultCNTKDynamicAxisName)
-                        LogicError("Found dynamic axis named '%S' while currently only default dynamic axis named '%S' is supported!", node->GetMBLayout()->GetAxisName(), defaultCNTKDynamicAxisName);
+                        LogicError("Found dynamic axis named '%S' while currently only default dynamic axis named '%S' is supported!", node->GetMBLayout()->GetAxisName(), defaultCNTKDynamicAxisName.c_str());
 
                     var = Variable(varShape, isSparse, AsDataType<ElementType>(), node->GetLearningRateMultiplier() != 0, node->GetName());
                 }

@@ -8,7 +8,6 @@
 #include "Utils.h"
 #include "Config.h"
 #include "MinibatchSource.h"
-#include "CompositeDataReader.h"
 #include "HeapMemoryProvider.h"
 #include "ReaderShim.h"
 #include "Function.h"
@@ -39,7 +38,9 @@ namespace CNTK
 
         m_epochSize = configuration[epochSizeConfigurationKey].GetValue<size_t>();
 
-        m_compositeDataReader.reset(new CompositeDataReader(config, std::make_shared<HeapMemoryProvider>()));
+        typedef Reader*(*CreateCompositeDataReaderProc)(const ConfigParameters* parameters);
+        CreateCompositeDataReaderProc createReaderProc = (CreateCompositeDataReaderProc)Plugin().Load(L"CompositeDataReader", "CreateCompositeDataReader");
+        m_compositeDataReader.reset(createReaderProc(&config));
 
         auto compositeDataReaderStreamDescs = m_compositeDataReader->GetStreamDescriptions();
         for (auto streamDesc : compositeDataReaderStreamDescs)

@@ -102,9 +102,15 @@ namespace CNTK
 
     // RuntimeError - throw a std::runtime_error with a formatted error string
 #ifndef _MSC_VER // gcc __attribute__((format(printf())) does not percolate through variadic templates; so must go the macro route
+#ifndef RuntimeError
 #define RuntimeError ThrowFormatted<std::runtime_error>
+#endif
+#ifndef LogicError
 #define LogicError ThrowFormatted<std::logic_error>
+#endif
+#ifndef InvalidArgument
 #define InvalidArgument ThrowFormatted<std::invalid_argument>
+#endif
 #else
     template <class... _Types>
     __declspec_noreturn inline void RuntimeError(const char* format, _Types&&... _Args)

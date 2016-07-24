@@ -8,7 +8,6 @@
 #include <map>
 #include <string>
 #include <future>
-#define DATAREADER_EXPORTS
 #include "DataReader.h"
 #include "Reader.h"
 #include "Transformer.h"
@@ -56,7 +55,7 @@ struct Minibatch;
 class CompositeDataReader : public Reader, protected Plugin
 {
 public:
-    DATAREADER_API CompositeDataReader(const ConfigParameters& parameters, MemoryProviderPtr provider);
+    CompositeDataReader(const ConfigParameters& parameters, MemoryProviderPtr provider);
 
     // Describes the streams this reader produces.
     std::vector<StreamDescriptionPtr> GetStreamDescriptions() override;

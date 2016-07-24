@@ -21,7 +21,7 @@ namespace CNTK
             {
                 auto insertRetVal = learnerParameters.insert(parameter);
                 if (!insertRetVal.second)
-                    InvalidArgument("Trainer::Trainer: Parameter named %S is covered by 2 different learners", parameter.Name());
+                    InvalidArgument("Trainer::Trainer: Parameter named %S is covered by 2 different learners", parameter.Name().c_str());
             }
         }
 

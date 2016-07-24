@@ -6,6 +6,43 @@ using namespace CNTK;
 
 using namespace std::placeholders;
 
+MinibatchSourcePtr CreateTextMinibatchSource(const std::wstring& filePath, size_t featureDim, size_t labelDim, size_t epochSize)
+{
+    Dictionary featuresStreamConfig;
+    featuresStreamConfig[L"dim"] = featureDim;
+    featuresStreamConfig[L"format"] = L"dense";
+
+    Dictionary labelsStreamConfig;
+    labelsStreamConfig[L"dim"] = labelDim;
+    labelsStreamConfig[L"format"] = L"dense";
+
+    Dictionary inputStreamsConfig;
+    inputStreamsConfig[L"features"] = featuresStreamConfig;
+    inputStreamsConfig[L"labels"] = labelsStreamConfig;
+
+    Dictionary deserializerConfiguration;
+    deserializerConfiguration[L"type"] = L"CNTKTextFormatDeserializer";
+    deserializerConfiguration[L"module"] = L"CNTKTextFormatReader";
+    deserializerConfiguration[L"file"] = filePath;
+    deserializerConfiguration[L"input"] = inputStreamsConfig;
+
+    Dictionary minibatchSourceConfiguration;
+    minibatchSourceConfiguration[L"epochSize"] = epochSize;
+    minibatchSourceConfiguration[L"deserializers"] = std::vector<DictionaryValue>({ deserializerConfiguration });
+
+    return CreateCompositeMinibatchSource(minibatchSourceConfiguration);
+}
+
+float PrevMinibatchTrainingLossValue(const Trainer& trainer)
+{
+    float trainLossValue = 0.0;
+    auto prevMBTrainingLossValue = trainer.PreviousMinibatchTrainingLossValue()->Data();
+    NDArrayView cpuTrainLossValue(prevMBTrainingLossValue->Shape(), &trainLossValue, 1, DeviceDescriptor::CPUDevice());
+    cpuTrainLossValue.CopyFrom(*prevMBTrainingLossValue);
+
+    return trainLossValue;
+}
+
 void TrainSimpleFeedForwardClassifer(const DeviceDescriptor& device)
 {
     const size_t inputDim = 2;
@@ -34,51 +71,27 @@ void TrainSimpleFeedForwardClassifer(const DeviceDescriptor& device)
     const size_t numSweepsToTrainWith = 2;
     const size_t numMinibatchesToTrain = (numSamplesPerSweep * numSweepsToTrainWith) / minibatchSize;
 
-    Dictionary featuresStreamConfig;
-    featuresStreamConfig[L"dim"] = 2ULL;
-    featuresStreamConfig[L"format"] = L"dense";
-
-    Dictionary labelsStreamConfig;
-    labelsStreamConfig[L"dim"] = 2ULL;
-    labelsStreamConfig[L"format"] = L"dense";
-
-    Dictionary inputStreamsConfig;
-    inputStreamsConfig[L"features"] = featuresStreamConfig;
-    inputStreamsConfig[L"labels"] = labelsStreamConfig;
-
-    Dictionary deserializerConfiguration;
-    deserializerConfiguration[L"type"] = L"CNTKTextFormatDeserializer";
-    deserializerConfiguration[L"module"] = L"CNTKTextFormatReader";
-    deserializerConfiguration[L"file"] = L"SimpleDataTrain_cntk_text.txt";
-    deserializerConfiguration[L"input"] = inputStreamsConfig;
-
-    Dictionary minibatchSourceConfiguration;
-    minibatchSourceConfiguration[L"epochSize"] = numSamplesPerSweep;
-    minibatchSourceConfiguration[L"deserializers"] = std::vector<DictionaryValue>({ deserializerConfiguration });
-
-    auto minibatchSource = CreateCompositeMinibatchSource(minibatchSourceConfiguration);
+    auto minibatchSource = CreateTextMinibatchSource(L"SimpleDataTrain_cntk_text.txt", (size_t)2, (size_t)2, numSamplesPerSweep);
 
     auto streamInfos = minibatchSource->StreamInfos();
-    auto featureStreamInfo = std::find_if(streamInfos.begin(), streamInfos.end(), [](const StreamInfo& streamInfo) {
-        return (streamInfo.m_name == L"features");
-    });
-    auto labelStreamInfo = std::find_if(streamInfos.begin(), streamInfos.end(), [](const StreamInfo& streamInfo) {
-        return (streamInfo.m_name == L"labels");
-    });
+    auto featureStreamInfo = std::find_if(streamInfos.begin(), streamInfos.end(), [](const StreamInfo& streamInfo) { return (streamInfo.m_name == L"features"); });
+    auto labelStreamInfo = std::find_if(streamInfos.begin(), streamInfos.end(), [](const StreamInfo& streamInfo) { return (streamInfo.m_name == L"labels"); });
 
     double learningRatePerSample = 0.02;
     Trainer trainer(oneHiddenLayerClassifier, trainingLoss, { SGDLearner(oneHiddenLayerClassifier->Parameters(), learningRatePerSample) });
     std::unordered_map<StreamInfo, std::pair<size_t, ValuePtr>> minibatchData = { { *featureStreamInfo, { minibatchSize, nullptr } }, { *labelStreamInfo, { minibatchSize, nullptr } } };
+    size_t outputFrequencyInMinibatches = 20;
     for (size_t i = 0; i < numMinibatchesToTrain; ++i)
     {
         minibatchSource->GetNextMinibatch(minibatchData);
         trainer.TrainMinibatch({ { input, minibatchData[*featureStreamInfo].second }, { labels, minibatchData[*labelStreamInfo].second } }, device);
-        float trainLossValue = 0.0;
-        auto prevMBTrainingLossValue = trainer.PreviousMinibatchTrainingLossValue()->Data();
-        NDArrayView cpuTrainLossValue(prevMBTrainingLossValue->Shape(), &trainLossValue, 1, DeviceDescriptor::CPUDevice());
-        cpuTrainLossValue.CopyFrom(*prevMBTrainingLossValue);
-        printf("Minibatch %d: CrossEntropy loss = %.8g\n", i, trainLossValue);
+
+        if ((i % outputFrequencyInMinibatches) == 0)
+        {
+            float trainLossValue = PrevMinibatchTrainingLossValue(trainer);
+        printf("Minibatch %d: CrossEntropy loss = %.8g\n", (int)i, trainLossValue);
     }
+}
 }
 
 void TrainMNISTClassifier(const DeviceDescriptor& device)
@@ -105,30 +118,7 @@ void TrainMNISTClassifier(const DeviceDescriptor& device)
     const size_t numSweepsToTrainWith = 3;
     const size_t numMinibatchesToTrain = (numSamplesPerSweep * numSweepsToTrainWith) / minibatchSize;
 
-    Dictionary featuresStreamConfig;
-    featuresStreamConfig[L"dim"] = 784ULL;
-    featuresStreamConfig[L"format"] = L"dense";
-
-    Dictionary labelsStreamConfig;
-    labelsStreamConfig[L"dim"] = 10ULL;
-    labelsStreamConfig[L"format"] = L"dense";
-
-    Dictionary inputStreamsConfig;
-    inputStreamsConfig[L"features"] = featuresStreamConfig;
-    inputStreamsConfig[L"labels"] = labelsStreamConfig;
-
-    Dictionary deserializerConfiguration;
-    deserializerConfiguration[L"type"] = L"CNTKTextFormatDeserializer";
-    deserializerConfiguration[L"module"] = L"CNTKTextFormatReader";
-    deserializerConfiguration[L"file"] = L"Train-28x28_cntk_text.txt";
-    deserializerConfiguration[L"input"] = inputStreamsConfig;
-
-    Dictionary minibatchSourceConfiguration;
-    minibatchSourceConfiguration[L"randomize"] = true;
-    minibatchSourceConfiguration[L"epochSize"] = numSamplesPerSweep;
-    minibatchSourceConfiguration[L"deserializers"] = std::vector<DictionaryValue>({ deserializerConfiguration });
-
-    auto minibatchSource = CreateCompositeMinibatchSource(minibatchSourceConfiguration);
+    auto minibatchSource = CreateTextMinibatchSource(L"Train-28x28_cntk_text.txt", (size_t)784, (size_t)10, numSamplesPerSweep);
 
     auto streamInfos = minibatchSource->StreamInfos();
     auto featureStreamInfo = std::find_if(streamInfos.begin(), streamInfos.end(), [](const StreamInfo& streamInfo) {
@@ -141,15 +131,17 @@ void TrainMNISTClassifier(const DeviceDescriptor& device)
     double learningRatePerSample = 0.003125;
     Trainer trainer(oneHiddenLayerClassifier, trainingLoss, { SGDLearner(oneHiddenLayerClassifier->Parameters(), learningRatePerSample) });
     std::unordered_map<StreamInfo, std::pair<size_t, ValuePtr>> minibatchData = { { *featureStreamInfo, { minibatchSize, nullptr } }, { *labelStreamInfo, { minibatchSize, nullptr } } };
+    size_t outputFrequencyInMinibatches = 20;
     for (size_t i = 0; i < numMinibatchesToTrain; ++i)
     {
         minibatchSource->GetNextMinibatch(minibatchData);
         trainer.TrainMinibatch({ { input, minibatchData[*featureStreamInfo].second }, { labels, minibatchData[*labelStreamInfo].second } }, device);
-        float trainLossValue = 0.0;
-        auto prevMBTrainingLossValue = trainer.PreviousMinibatchTrainingLossValue()->Data();
-        NDArrayView cpuTrainLossValue(prevMBTrainingLossValue->Shape(), &trainLossValue, 1, DeviceDescriptor::CPUDevice());
-        cpuTrainLossValue.CopyFrom(*prevMBTrainingLossValue);
-        printf("Minibatch %d: CrossEntropy loss = %.8g\n", i, trainLossValue);
+
+        if ((i % outputFrequencyInMinibatches) == 0)
+        {
+            float trainLossValue = PrevMinibatchTrainingLossValue(trainer);
+        printf("Minibatch %d: CrossEntropy loss = %.8g\n", (int)i, trainLossValue);
+        }
     }
 }
 
