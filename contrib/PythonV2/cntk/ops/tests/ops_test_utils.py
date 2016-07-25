@@ -125,7 +125,7 @@ def unittest_helper(root_node,
             assert np.allclose(res, exp, atol=TOLERANCE_ABSOLUTE)
             assert res.shape == AA(exp).shape
 
-        if not backward_input:                                
+        if backward_input:                                
             for key in expected_backward:
                 res, exp = backward[key], expected_backward[key]
                 assert np.allclose(res, exp, atol=TOLERANCE_ABSOLUTE)
