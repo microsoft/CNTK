@@ -34,7 +34,8 @@
 
 #pragma warning(disable : 4100) // unreferenced formal parameter; "struct TensorOpReduction<ElemType, OPFN, typename ReductionOp, N, -1>" trigger this
 #pragma warning(disable : 4127) // conditional expression is constant; "if (sizeof(ElemType)==sizeof(float))" triggers this
-#pragma warning(disable : 4702) // unreachable code; triggered for unknown reasons
+#pragma warning(disable : 4244) // unreachable code; triggered for unknown reasons
+#pragma warning(disable : 4702) // conversion from 'double' to 'float'
 
 #ifdef USE_ACML
 // Download ACML 5.3.1 (e.g., acml5.3.1-ifort64.exe) or above
@@ -6054,7 +6055,7 @@ struct TensorOpReduction
         for (size_t i = 0; i < N - 1; i++) // N = a small constant, this will be unrolled
             strides[i] = reducingStrides[i][(size_t) m];
 
-        ElemType aggregate = TensorOpReduction<ElemType, OPFN, ReductionOp, N, m - 1>::Loop(pointers, opfn, reductionOp, reducingOpDims, reducingStrides);
+        double aggregate = TensorOpReduction<ElemType, OPFN, ReductionOp, N, m - 1>::Loop(pointers, opfn, reductionOp, reducingOpDims, reducingStrides);
         for (size_t dim = reducingOpDims[(size_t)m] - 1; dim-- > 0;)
         {
             // advance the pointers
@@ -6064,7 +6065,8 @@ struct TensorOpReduction
             // need to descend into one loop deeper
             aggregate = reductionOp(aggregate, TensorOpReduction<ElemType, OPFN, ReductionOp, N, m - 1>::Loop(pointers, opfn, reductionOp, reducingOpDims, reducingStrides));
         }
-        return aggregate;
+        // Actually it would be nicer to return double but we keep ElementType so that test don't return different numbers than previous implementation.
+        return static_cast<double>(aggregate);
     }
 };
 
@@ -6257,7 +6259,7 @@ static void TensorOpWithFn(ElemType beta, array<ElemType*, N> pointers, ElemType
 {
 #define CaseTensorOpWithFnAndReduction(oper)                                                  \
     case ElementWiseOperator::op##oper:                                                       \
-    return TensorOpWithFnAndReduction(beta, pointers, alpha, opfn, [](ElemType a, ElemType b) \
+    return TensorOpWithFnAndReduction(beta, pointers, alpha, opfn, [](double a, double b)     \
                                     {                                                         \
                                     return Op##oper(a, b);                                    \
                                     },                                                        \
