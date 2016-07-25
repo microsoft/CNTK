@@ -51,8 +51,8 @@ namespace CNTK
     // Placeholders can be replaced incrementally - i.e. not all placeholders need to replaced in one go.
     // The only requirement is that they must all be replaced before making any 'Forward' calls on the Function instance.
     /*virtual*/ void Function::ReplacePlaceholders(const std::unordered_map<Placeholder, Variable>& placeholderReplacements,
-        std::unordered_set<const Function*>& visitedFunctions,
-        std::unordered_set<Placeholder>& replacedPlaceholders)
+                                                   std::unordered_set<const Function*>& visitedFunctions,
+                                                   std::unordered_set<Placeholder>& replacedPlaceholders)
     {
         visitedFunctions.insert(this);
 
@@ -75,8 +75,8 @@ namespace CNTK
     // Replace any PlaceHolder Variables in the graph of Functions underlying 'this' CompositeFunction. All PlaceHolder variables
     // should have been replaced before performing any Forward compute of 'this' Function.
     /*virtual*/ void CompositeFunction::ReplacePlaceholders(const std::unordered_map<Placeholder, Variable>& placeholderReplacements,
-        std::unordered_set<const Function*>& visitedFunctions,
-        std::unordered_set<Placeholder>& replacedPlaceholders)
+                                                            std::unordered_set<const Function*>& visitedFunctions,
+                                                            std::unordered_set<Placeholder>& replacedPlaceholders)
     {
         RootFunction()->ReplacePlaceholders(placeholderReplacements, visitedFunctions, replacedPlaceholders);
 
@@ -101,10 +101,10 @@ namespace CNTK
     // top level 'variable'
     template <typename ElementType>
     /*static*/ ComputationNodeBasePtr CompositeFunction::GetNode(const Variable& variable,
-        Microsoft::MSR::CNTK::ComputationNetworkPtr& network,
-        ComputationNetworkBuilder<ElementType>& builder,
-        std::unordered_map<Variable, ComputationNodeBasePtr>& variableToNodeMap,
-        std::unordered_map<Variable, bool>& isVariableRootMap)
+                                                                 Microsoft::MSR::CNTK::ComputationNetworkPtr& network,
+                                                                 ComputationNetworkBuilder<ElementType>& builder,
+                                                                 std::unordered_map<Variable, ComputationNodeBasePtr>& variableToNodeMap,
+                                                                 std::unordered_map<Variable, bool>& isVariableRootMap)
     {
         auto iter = variableToNodeMap.find(variable);
         if (iter != variableToNodeMap.end())
@@ -126,7 +126,13 @@ namespace CNTK
         }
         else if (variable.IsInput())
         {
-            // TODO: Specify dynamic axis
+            // TODO: Support inputs with > 1 dynamic axes
+            if (variable.DynamicAxes().size() != 1)
+                LogicError("Currently only Input variables with one dynamic axis are supported");
+
+            auto dynamicAxis = variable.DynamicAxes()[0];
+            if (dynamicAxis != Axis::DefaultDynamicAxis())
+                LogicError("Currently only Input variables with DefaultDynamicAxis are supported");
             if (IsSparseInput(variable))
                 computationNodePtr = builder.CreateSparseInputNode(variable.Name(), AsTensorShape(variable.Shape()));
             else
@@ -152,10 +158,10 @@ namespace CNTK
 
     template <typename ElementType>
     /*static*/ ComputationNodeBasePtr CompositeFunction::GetOutputVariableNode(const Variable& variable,
-        Microsoft::MSR::CNTK::ComputationNetworkPtr& network,
-        ComputationNetworkBuilder<ElementType>& builder,
-        std::unordered_map<Variable, ComputationNodeBasePtr>& variableToNodeMap,
-        std::unordered_map<Variable, bool>& isVariableRootMap)
+                                                                               Microsoft::MSR::CNTK::ComputationNetworkPtr& network,
+                                                                               ComputationNetworkBuilder<ElementType>& builder,
+                                                                               std::unordered_map<Variable, ComputationNodeBasePtr>& variableToNodeMap,
+                                                                               std::unordered_map<Variable, bool>& isVariableRootMap)
     {
         assert(variable.IsOutput());
 
@@ -460,7 +466,7 @@ namespace CNTK
                 layout->AddSequence(0, 0, 0, maxNumTimeSteps);
             }
 
-            return{ matrixData, layout };
+            return{ matrixData , layout};
         }
         else
         {
@@ -495,7 +501,7 @@ namespace CNTK
             // The data needs to be rearranged since CNTK requires sequences to be interleaved across timesteps
             std::vector<MBLayout::SequenceInfo> sequences;
             for (size_t i = 0; i < numSequences; ++i)
-                sequences.push_back({ i, SIZE_MAX, 0, sequenceLengths[i] });
+                sequences.push_back({ i, SIZE_MAX, 0, sequenceLengths[i]});
 
             auto layout = std::make_shared<MBLayout>();
             std::vector<std::pair<size_t, size_t>> placement;
@@ -509,10 +515,10 @@ namespace CNTK
 
             // Now generate the gather indices
             auto matrixData = std::make_shared<Matrix<ElementType>>(var.Shape().TotalSize(),
-                layout->GetNumCols(),
-                AsCNTKImplDeviceId(value->Data()->Device()),
-                value->Data()->IsSparse() ? MatrixType::SPARSE : MatrixType::DENSE,
-                AsCNTKImplMatrixFormat(value->Data()->GetStorageFormat()));
+                                                                    layout->GetNumCols(),
+                                                                    AsCNTKImplDeviceId(value->Data()->Device()),
+                                                                    value->Data()->IsSparse() ? MatrixType::SPARSE : MatrixType::DENSE,
+                                                                    AsCNTKImplMatrixFormat(value->Data()->GetStorageFormat()));
 
             std::vector<size_t> sequencesShorterThanLongestSequence;
             for (size_t i = 0; i < numSequences; ++i)
@@ -537,18 +543,9 @@ namespace CNTK
     }
 
     template <typename ElementType>
-    /*static*/ ValuePtr CompositeFunction::GetValueObjectFromCNTKImplMatrixAndMBLayout(Variable var, const Matrix<ElementType>& matrix, const MBLayoutPtr& layout)
+    /*static*/ ValuePtr CompositeFunction::GetValueObjectFromCNTKImplMatrixAndMBLayout(const NDShape& sampleShape, const Matrix<ElementType>& matrix, const MBLayoutPtr& layout, bool readOnly /*= true*/)
     {
-        if (var.DynamicAxes().size() > 1)
-            LogicError("More than one dynamic axis for a variable is currently unsupported");
-
-        if (AsDataType<ElementType>() != var.GetDataType())
-            LogicError("The specified ElementType %s does not match the DataType %s", typeid(ElementType).name(), DataTypeName(var.GetDataType()));
-
-        if ((layout != nullptr) && (matrix.GetNumRows() != var.Shape().TotalSize()))
-            LogicError("Unexpected matrix layout: The number of rows in the matrix does not match the sample size of the Variable");
-
-        NDShape valueDataShape = var.Shape();
+        NDShape valueDataShape = sampleShape;
         if (layout != nullptr)
             valueDataShape = valueDataShape.AppendShape({ layout->GetNumTimeSteps(), layout->GetNumSequences() });
 
@@ -557,7 +554,7 @@ namespace CNTK
         {
             // Just create a view over the existing matrix itself
             auto tensorView = new TensorView<ElementType>(std::make_shared<Matrix<ElementType>>(matrix.AsReference()), AsTensorShape(valueDataShape));
-            auto data = MakeSharedObject<NDArrayView>(AsDataType<ElementType>(), AsDeviceDescriptor(matrix.GetDeviceId()), AsStorageFormat(matrix.GetFormat()), valueDataShape, true, tensorView);
+            auto data = MakeSharedObject<NDArrayView>(AsDataType<ElementType>(), AsDeviceDescriptor(matrix.GetDeviceId()), AsStorageFormat(matrix.GetFormat()), valueDataShape, readOnly, tensorView);
             return MakeSharedObject<Value>(data);
         }
 
@@ -616,8 +613,23 @@ namespace CNTK
         }
 
         auto tensorView = new TensorView<ElementType>(shuffledMatrixData, AsTensorShape(valueDataShape));
-        auto data = MakeSharedObject<NDArrayView>(AsDataType<ElementType>(), AsDeviceDescriptor(matrix.GetDeviceId()), StorageFormat::Dense, valueDataShape, true, tensorView);
+        auto data = MakeSharedObject<NDArrayView>(AsDataType<ElementType>(), AsDeviceDescriptor(matrix.GetDeviceId()), StorageFormat::Dense, valueDataShape, readOnly, tensorView);
         return MakeSharedObject<Value>(data, mask);
+    }
+
+    template <typename ElementType>
+    /*static*/ ValuePtr CompositeFunction::GetValueObjectFromCNTKImplMatrixAndMBLayout(Variable var, const Matrix<ElementType>& matrix, const MBLayoutPtr& layout, bool readOnly /*= true*/)
+    {
+        if (var.DynamicAxes().size() > 1)
+            LogicError("More than one dynamic axis for a variable is currently unsupported");
+
+        if (AsDataType<ElementType>() != var.GetDataType())
+            LogicError("The specified ElementType %s does not match the DataType %s", typeid(ElementType).name(), DataTypeName(var.GetDataType()));
+
+        if ((layout != nullptr) && (matrix.GetNumRows() != var.Shape().TotalSize()))
+            LogicError("Unexpected matrix layout: The number of rows in the matrix does not match the sample size of the Variable");
+
+        return GetValueObjectFromCNTKImplMatrixAndMBLayout(var.Shape(), matrix, layout, readOnly);
     }
 
     template <typename ElementType>
@@ -634,7 +646,7 @@ namespace CNTK
         computationNode->GetMBLayout()->CopyFrom(layout);
     }
 
-    void CompositeFunction::PopulateNetworkInputs(const std::unordered_map<Variable, const ValuePtr>& arguments)
+    void CompositeFunction::PopulateNetworkInputs(const std::unordered_map<Variable, ValuePtr>& arguments)
     {
         auto functionArguments = this->Arguments();
         std::vector<ComputationNodeBasePtr> inputNodes;
@@ -679,7 +691,7 @@ namespace CNTK
     }
 
     // Assign the supplied gradients corresponding to the root(s) of the network to be backpropagated through the graph
-    void CompositeFunction::PopulateNetworkGradients(const std::unordered_map<Variable, const ValuePtr>& gradients)
+    void CompositeFunction::PopulateNetworkGradients(const std::unordered_map<Variable, ValuePtr>& gradients)
     {
         auto functionOutputs = this->Outputs();
         for (auto gradientVarValuePair : gradients)
@@ -822,10 +834,10 @@ namespace CNTK
         }
     }
 
-    /*virtual*/ BackPropStatePtr CompositeFunction::Forward(const std::unordered_map<Variable, const ValuePtr>& arguments,
-        std::unordered_map<Variable, ValuePtr>& outputs,
-        const DeviceDescriptor& computeDevice,
-        const std::unordered_set<Variable>& outputsToRetainBackwardStateFor)
+    /*virtual*/ BackPropStatePtr CompositeFunction::Forward(const std::unordered_map<Variable, ValuePtr>& arguments,
+                                                            std::unordered_map<Variable, ValuePtr>& outputs,
+                                                            const DeviceDescriptor& computeDevice,
+                                                            const std::unordered_set<Variable>& outputsToRetainBackwardStateFor)
     {
         // TODO: How about zero argument functions?
         // TODO: We need a better way to determine the ElementType for the network
@@ -870,8 +882,8 @@ namespace CNTK
     }
 
     /*virtual*/ void CompositeFunction::Backward(const BackPropStatePtr& state,
-        const std::unordered_map<Variable, const ValuePtr>& rootGradientValues,
-        std::unordered_map<Variable, ValuePtr>& backPropagatedGradientValuesForInputs)
+                                                 const std::unordered_map<Variable, ValuePtr>& rootGradientValues,
+                                                 std::unordered_map<Variable, ValuePtr>& backPropagatedGradientValuesForInputs)
     {
         auto backpropState = dynamic_cast<const CNTKBackPropState*>(state.get());
         if (backpropState == nullptr)
@@ -880,7 +892,7 @@ namespace CNTK
         // TODO: Support multiple concurrent backprop states
         if (backpropState->EvalTimeStamp().second != m_variableToNodeMap[backpropState->EvalTimeStamp().first]->GetEvalTimeStamp())
             LogicError("The specified backprop state specified cannot be used for backpropagation as the Function's internal state was modified by subsequent Forward calls to the function."
-            "This is not a user error but a shortcoming of the current implementation where multiple independent backprop states are not simultaneously supported");
+                       "This is not a user error but a shortcoming of the current implementation where multiple independent backprop states are not simultaneously supported");
 
         if (rootGradientValues.size() > 1)
             LogicError("Currently gradient backprop from only one of the Function Outputs is supported");
@@ -929,14 +941,14 @@ namespace CNTK
     }
 
     FunctionPtr Exp(const Variable& operand, const std::wstring& name/* = L""*/)
-    {
+        {
         return UnaryOp(PrimitiveOpType::Exp, operand, Dictionary(), name);
     }
 
     FunctionPtr Log(const Variable& operand, const std::wstring& name/* = L""*/)
     {
         return UnaryOp(PrimitiveOpType::Log, operand, Dictionary(), name);
-    }
+        }
 
     FunctionPtr Square(const Variable& operand, const std::wstring& name/* = L""*/)
     {
@@ -1078,7 +1090,7 @@ namespace CNTK
         return UnaryOp(PrimitiveOpType::ReduceSum, operand, Dictionary(), name);
     }
 
-    FunctionPtr Combine(const std::initializer_list<FunctionPtr>& operands, const std::wstring& name/* = L""*/)
+    FunctionPtr Combine(const std::vector<FunctionPtr>& operands, const std::wstring& name/* = L""*/)
     {
         std::unordered_set<FunctionPtr> uniqueOperands;
         std::vector<Variable> inputs;

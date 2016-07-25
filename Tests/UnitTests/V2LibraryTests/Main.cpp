@@ -5,6 +5,7 @@ void NDArrayViewTests();
 void TensorTests();
 void FeedForwardTests();
 void RecurrentFunctionTests();
+void TrainerTests();
 
 int main()
 {
@@ -12,6 +13,7 @@ int main()
     TensorTests();
     FeedForwardTests();
     RecurrentFunctionTests();
+    TrainerTests();
 
     fprintf(stderr, "\nCNTKv2Library tests: Passed\n");
     fflush(stderr);

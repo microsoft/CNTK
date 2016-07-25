@@ -106,7 +106,7 @@ namespace CNTK
         {
         }
 
-        virtual BackPropStatePtr Forward(const std::unordered_map<Variable, const ValuePtr>& /*arguments*/,
+        virtual BackPropStatePtr Forward(const std::unordered_map<Variable, ValuePtr>& /*arguments*/,
                                          std::unordered_map<Variable, ValuePtr>& /*outputs*/,
                                          const DeviceDescriptor& /*computeDevice*/,
                                          const std::unordered_set<Variable>& /*outputsToRetainBackwardStateFor*/) override
@@ -115,7 +115,7 @@ namespace CNTK
         }
 
         virtual void Backward(const BackPropStatePtr& /*state*/,
-                              const std::unordered_map<Variable, const ValuePtr>& /*rootGradientValues*/,
+                              const std::unordered_map<Variable, ValuePtr>& /*rootGradientValues*/,
                               std::unordered_map<Variable, ValuePtr>& /*backPropagatedGradientValuesForInputs*/) override
         {
             NOT_IMPLEMENTED;
@@ -269,7 +269,7 @@ namespace CNTK
             {
                 assert(inputs.size() == 2);
 
-                if (inputs[0].Shape().NumAxes() > 1)
+                if ((inputs[0].Shape().NumAxes() > 2) || ((inputs[0].Shape().NumAxes() > 1) && (inputs[0].Shape()[1] != 1)))
                     InvalidArgument("The shape of input operands for the %s operation should have at most one axis", PrimitiveOpTypeName(op));
 
                 auto predictionShape = inputs[0].Shape();
@@ -342,9 +342,13 @@ namespace CNTK
     class CompositeFunction final : public Function
     {
         friend class Function;
+        friend class CompositeMinibatchSource;
 
         template <typename T, typename ...CtorArgTypes>
         friend inline std::shared_ptr<T> MakeSharedObject(CtorArgTypes&& ...ctorArgs);
+
+        template <typename ElementType>
+        friend void SaveAsLegacyModel(const FunctionPtr& rootFunction, const std::wstring& modelFile);
 
     public:
         static CompositeFunctionPtr Create(const FunctionPtr& rootFunction, const std::wstring& name = L"")
@@ -357,13 +361,13 @@ namespace CNTK
             return MakeSharedObject<CompositeFunction>(rootFunction, std::move(visitedFunctions), name);
         }
 
-        virtual BackPropStatePtr Forward(const std::unordered_map<Variable, const ValuePtr>& arguments,
+        virtual BackPropStatePtr Forward(const std::unordered_map<Variable, ValuePtr>& arguments,
                                          std::unordered_map<Variable, ValuePtr>& outputs,
                                          const DeviceDescriptor& computeDevice,
                                          const std::unordered_set<Variable>& outputsToRetainBackwardStateFor) override;
 
         virtual void Backward(const BackPropStatePtr& state,
-                              const std::unordered_map<Variable, const ValuePtr>& rootGradientValues,
+                              const std::unordered_map<Variable, ValuePtr>& rootGradientValues,
                               std::unordered_map<Variable, ValuePtr>& backPropagatedGradientValuesForInputs) override;
 
     private:
@@ -415,11 +419,11 @@ namespace CNTK
 
         template <typename ElementType>
         static void PopulateComputationNodeValue(const std::pair<Variable, ValuePtr>& variableValue, Microsoft::MSR::CNTK::ComputationNodeBasePtr& computationNode);
-        void PopulateNetworkInputs(const std::unordered_map<Variable, const ValuePtr>& arguments);
+        void PopulateNetworkInputs(const std::unordered_map<Variable, ValuePtr>& arguments);
 
         template <typename ElementType>
         static void PopulateComputationNodeGradient(const std::pair<Variable, ValuePtr>& variableGradient, Microsoft::MSR::CNTK::ComputationNodeBasePtr& computationNode);
-        void PopulateNetworkGradients(const std::unordered_map<Variable, const ValuePtr>& gradients);
+        void PopulateNetworkGradients(const std::unordered_map<Variable, ValuePtr>& gradients);
 
         void GetNetworkOutputs(std::unordered_map<Variable, ValuePtr>& outputs);
         void GetNetworkGradients(std::unordered_map<Variable, ValuePtr>& gradients);
@@ -428,7 +432,9 @@ namespace CNTK
         static std::pair<std::shared_ptr<const Microsoft::MSR::CNTK::Matrix<ElementType>>, Microsoft::MSR::CNTK::MBLayoutPtr> GetCNTKImplMatrixAndMBLayoutFromValueObject(Variable var, const ValuePtr& value);
 
         template <typename ElementType>
-        static ValuePtr GetValueObjectFromCNTKImplMatrixAndMBLayout(Variable var, const Microsoft::MSR::CNTK::Matrix<ElementType>& matrix, const Microsoft::MSR::CNTK::MBLayoutPtr& layout);
+        static ValuePtr GetValueObjectFromCNTKImplMatrixAndMBLayout(const NDShape& sampleShape, const Microsoft::MSR::CNTK::Matrix<ElementType>& matrix, const Microsoft::MSR::CNTK::MBLayoutPtr& layout, bool readOnly = true);
+        template <typename ElementType>
+        static ValuePtr GetValueObjectFromCNTKImplMatrixAndMBLayout(Variable var, const Microsoft::MSR::CNTK::Matrix<ElementType>& matrix, const Microsoft::MSR::CNTK::MBLayoutPtr& layout, bool readOnly = true);
 
     private:
 
