@@ -248,7 +248,7 @@ class LocalExecutionContext(AbstractContext):
     def eval(self, op, input_map=None, gradient_map=None):
         '''
         It evaluates `op` on the data provided by the reader. This is useful
-        mainly to explore the operators and for unit testing. 
+        mainly to explore the operators and for convenient unit testing. 
         
         Args:
             op (:class:`Function`): operation to evaluate
@@ -269,25 +269,30 @@ class LocalExecutionContext(AbstractContext):
         forward_out_var_map =  {}
         forward_retain = set()
         for v in op.Outputs():
-            forward_out_var_map[v] = create_Value_for_Variable(v, 
-                    shape=v.Shape().Dimensions()+(1,1))
+            forward_out_var_map[v] = None # will be populated in Forward()
             forward_retain.add(v)
 
         state = op.Forward(forward_in_var_map, forward_out_var_map, self.device, forward_retain)
 
         forward_output = {}
+        forward_output_mask = {}
         for v in op.Outputs():
-            np_data = forward_out_var_map[v].Data().ToNumPy() 
+            value = forward_out_var_map[v]
+            np_data = value.Data().ToNumPy() 
+            # FIXME for var-length sequences we now need to pull in the NDMask,
+            # which is currently not possible. Waiting for C++ fix.
             np_data = np_data.reshape(tuple(reversed(np_data.shape)))
             forward_output[v] = np_data
+            forward_output_mask[v] = value.Mask()
 
         if gradient_map:
             root_gradients = {} 
             for v, o in forward_output.items():
                 ones_grad = np.ones(o.shape, dtype=self.precision_numpy)
-                root_grad_val = create_Value_from_NumPy(ones_grad,
-                        self.device)
+                root_grad_val = create_Value_from_NumPy(ones_grad, self.device)
                 root_gradients[v] = root_grad_val
+                #root_gradients[v] = ones_grad
+
             backward_var_map = sanitize_var_map(gradient_map, self)
 
             op.Backward(state, root_gradients, backward_var_map)

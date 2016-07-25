@@ -17634,27 +17634,31 @@ SWIGINTERN PyObject *_wrap_Function_Forward__SWIG_0(PyObject *SWIGUNUSEDPARM(sel
       Py_ssize_t pos = 0;
       
       while (PyDict_Next(obj1, &pos, &key, &value)) {
-        void *argp1 = 0 ;
-        int res1 = SWIG_ConvertPtr(key, &argp1, SWIGTYPE_p_CNTK__Variable,  0);
+        void *raw_var = 0 ;
+        int res1 = SWIG_ConvertPtr(key, &raw_var, SWIGTYPE_p_CNTK__Variable,  0);
         if (!SWIG_IsOK(res1)) {
           SWIG_exception_fail(SWIG_ArgError(res1), "cannot convert key of dictionary to CNTK::Variable"); 
         }
-        if (!argp1) {
+        if (!raw_var) {
           SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting key of dictionary to CNTK::Variable");
         }
         
-        CNTK::Variable* var = reinterpret_cast<CNTK::Variable*>(argp1);
+        CNTK::Variable* var = reinterpret_cast<CNTK::Variable*>(raw_var);
         
-        void *argp2 = 0;
-        int res2 = SWIG_ConvertPtr(value, &argp2, SWIGTYPE_p_std__shared_ptrT_CNTK__Value_t,  0);
+        void *raw_value = 0;
+        int res2 = SWIG_ConvertPtr(value, &raw_value, SWIGTYPE_p_std__shared_ptrT_CNTK__Value_t,  0);
         if (!SWIG_IsOK(res2)) {
           SWIG_exception_fail(SWIG_ArgError(res2), "cannot convert key of dictionary to CNTK::ValuePtr"); 
         }
-        if (!argp2) {
-          SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting value of dictionary to CNTK::ValuePtr");
+        
+        CNTK::ValuePtr* value;
+        if (raw_value) {
+          value = reinterpret_cast<CNTK::ValuePtr*>(raw_value);
+        } else {
+          // We got an empty ValuePtr, which carries a nullptr.
+          value = new CNTK::ValuePtr();
         }
         
-        CNTK::ValuePtr* value = reinterpret_cast<CNTK::ValuePtr*>(argp2);
         args_map->insert(std::make_pair(*var, *value));
       }
       
@@ -17671,28 +17675,32 @@ SWIGINTERN PyObject *_wrap_Function_Forward__SWIG_0(PyObject *SWIGUNUSEDPARM(sel
       Py_ssize_t pos = 0;
       
       while (PyDict_Next(obj2, &pos, &key, &value)) {
-        void *argp1 = 0 ;
-        int res1 = SWIG_ConvertPtr(key, &argp1, SWIGTYPE_p_CNTK__Variable,  0);
+        void *raw_var = 0 ;
+        int res1 = SWIG_ConvertPtr(key, &raw_var, SWIGTYPE_p_CNTK__Variable,  0);
         if (!SWIG_IsOK(res1)) {
           SWIG_exception_fail(SWIG_ArgError(res1), "cannot convert key of dictionary to CNTK::Variable"); 
         }
-        if (!argp1) {
+        if (!raw_var) {
           SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting key of dictionary to CNTK::Variable");
         }
         
-        CNTK::Variable* var = reinterpret_cast<CNTK::Variable*>(argp1);
+        CNTK::Variable* var = reinterpret_cast<CNTK::Variable*>(raw_var);
         
-        void *argp2 = 0;
-        int res2 = SWIG_ConvertPtr(value, &argp2, SWIGTYPE_p_std__shared_ptrT_CNTK__Value_t,  0);
+        void *raw_value = 0;
+        int res2 = SWIG_ConvertPtr(value, &raw_value, SWIGTYPE_p_std__shared_ptrT_CNTK__Value_t,  0);
         if (!SWIG_IsOK(res2)) {
           SWIG_exception_fail(SWIG_ArgError(res2), "cannot convert key of dictionary to CNTK::ValuePtr"); 
         }
-        if (!argp2) {
-          SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting value of dictionary to CNTK::ValuePtr");
+        
+        CNTK::ValuePtr* value;
+        if (raw_value) {
+          value = reinterpret_cast<CNTK::ValuePtr*>(raw_value);
+        } else {
+          // We got an empty ValuePtr, which carries a nullptr.
+          value = new CNTK::ValuePtr();
         }
         
-        CNTK::ValuePtr* value = reinterpret_cast<CNTK::ValuePtr*>(argp2);
-        (*args_map)[*var] = *value;
+        args_map->insert(std::make_pair(*var, *value));
       }
       
       arg3 = args_map;
@@ -17721,16 +17729,16 @@ SWIGINTERN PyObject *_wrap_Function_Forward__SWIG_0(PyObject *SWIGUNUSEDPARM(sel
       }
       
       while (item = PyIter_Next(iterator)) {
-        void *argp1 = 0 ;
-        int res1 = SWIG_ConvertPtr(item, &argp1, SWIGTYPE_p_CNTK__Variable,  0);
+        void *raw_var = 0 ;
+        int res1 = SWIG_ConvertPtr(item, &raw_var, SWIGTYPE_p_CNTK__Variable,  0);
         if (!SWIG_IsOK(res1)) {
           SWIG_exception_fail(SWIG_ArgError(res1), "cannot convert key of dictionary to CNTK::Variable"); 
         }
-        if (!argp1) {
+        if (!raw_var) {
           SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting key of dictionary to CNTK::Variable");
         }
         
-        CNTK::Variable* var = reinterpret_cast<CNTK::Variable*>(argp1);
+        CNTK::Variable* var = reinterpret_cast<CNTK::Variable*>(raw_var);
         
         args_set->insert(*var);
         
@@ -17772,6 +17780,57 @@ SWIGINTERN PyObject *_wrap_Function_Forward__SWIG_0(PyObject *SWIGUNUSEDPARM(sel
   {
     std::shared_ptr<  CNTK::BackPropState > *smartresult = result ? new std::shared_ptr<  CNTK::BackPropState >(result) : 0;
     resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(smartresult), SWIGTYPE_p_std__shared_ptrT_CNTK__BackPropState_t, SWIG_POINTER_OWN);
+  }
+  {
+    if (!PyDict_Check(obj2)) {
+      SWIG_exception(SWIG_TypeError, "dictionary expected");
+    }
+    
+    for (auto it: *arg3)
+    {
+      // Convert ValuePtr to PyObject
+      PyObject *returned_var = SWIG_NewPointerObj(SWIG_as_voidptr(&it.first), SWIGTYPE_p_CNTK__Variable, SWIG_POINTER_NOSHADOW);
+      
+      // Push the ValuePtr onto the heap so that it survives
+      std::shared_ptr<CNTK::Value> *smartresult = it.second ? new std::shared_ptr<CNTK::Value>(it.second) : 0;
+      PyObject *returned_val = SWIG_NewPointerObj(SWIG_as_voidptr(smartresult), SWIGTYPE_p_std__shared_ptrT_CNTK__Value_t, SWIG_POINTER_OWN);
+      
+      // Find the corresponding Variable instance in the Python dictionary
+      // and set its value to the new ValuePtr
+      
+      /* FIXME We would love to do the following, but the hashing does not
+               * correctly work here, which is why we never find the keys. Instead,
+               * we will for now loop over the dictionary and use C++ comparison.
+               * Although not beautiful, there should not be a lot of overhead since
+               * the dictionary usually contains only a handful of variables as keys.
+              if (PyDict_Contains(obj2, returned_var))
+              {
+                  SWIG_exception_fail(SWIG_ValueError, "returned output map contains unknown key");
+              }
+               */
+      
+      PyObject *py_key, *py_value;
+      Py_ssize_t pos = 0;
+      
+      while (PyDict_Next(obj2, &pos, &py_key, &py_value)) {
+        void *cntk_key = 0 ;
+        int res = SWIG_ConvertPtr(py_key, &cntk_key, SWIGTYPE_p_CNTK__Variable,  0);
+        if (!SWIG_IsOK(res)) {
+          SWIG_exception_fail(SWIG_ArgError(res), "cannot convert key of dictionary to CNTK::Variable"); 
+        }
+        if (!cntk_key) {
+          SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting key of dictionary to CNTK::Variable");
+        }
+        
+        CNTK::Variable* cntk_var = reinterpret_cast<CNTK::Variable*>(cntk_key);
+        if (*cntk_var == *&it.first)
+        {
+          PyDict_SetItem(obj2, py_key, returned_val);
+          // FIXME is this necessary?
+          Py_INCREF(returned_val);
+        }
+      }
+    }
   }
   return resultobj;
 fail:
@@ -17821,27 +17880,31 @@ SWIGINTERN PyObject *_wrap_Function_Forward__SWIG_1(PyObject *SWIGUNUSEDPARM(sel
       Py_ssize_t pos = 0;
       
       while (PyDict_Next(obj1, &pos, &key, &value)) {
-        void *argp1 = 0 ;
-        int res1 = SWIG_ConvertPtr(key, &argp1, SWIGTYPE_p_CNTK__Variable,  0);
+        void *raw_var = 0 ;
+        int res1 = SWIG_ConvertPtr(key, &raw_var, SWIGTYPE_p_CNTK__Variable,  0);
         if (!SWIG_IsOK(res1)) {
           SWIG_exception_fail(SWIG_ArgError(res1), "cannot convert key of dictionary to CNTK::Variable"); 
         }
-        if (!argp1) {
+        if (!raw_var) {
           SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting key of dictionary to CNTK::Variable");
         }
         
-        CNTK::Variable* var = reinterpret_cast<CNTK::Variable*>(argp1);
+        CNTK::Variable* var = reinterpret_cast<CNTK::Variable*>(raw_var);
         
-        void *argp2 = 0;
-        int res2 = SWIG_ConvertPtr(value, &argp2, SWIGTYPE_p_std__shared_ptrT_CNTK__Value_t,  0);
+        void *raw_value = 0;
+        int res2 = SWIG_ConvertPtr(value, &raw_value, SWIGTYPE_p_std__shared_ptrT_CNTK__Value_t,  0);
         if (!SWIG_IsOK(res2)) {
           SWIG_exception_fail(SWIG_ArgError(res2), "cannot convert key of dictionary to CNTK::ValuePtr"); 
         }
-        if (!argp2) {
-          SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting value of dictionary to CNTK::ValuePtr");
+        
+        CNTK::ValuePtr* value;
+        if (raw_value) {
+          value = reinterpret_cast<CNTK::ValuePtr*>(raw_value);
+        } else {
+          // We got an empty ValuePtr, which carries a nullptr.
+          value = new CNTK::ValuePtr();
         }
         
-        CNTK::ValuePtr* value = reinterpret_cast<CNTK::ValuePtr*>(argp2);
         args_map->insert(std::make_pair(*var, *value));
       }
       
@@ -17858,28 +17921,32 @@ SWIGINTERN PyObject *_wrap_Function_Forward__SWIG_1(PyObject *SWIGUNUSEDPARM(sel
       Py_ssize_t pos = 0;
       
       while (PyDict_Next(obj2, &pos, &key, &value)) {
-        void *argp1 = 0 ;
-        int res1 = SWIG_ConvertPtr(key, &argp1, SWIGTYPE_p_CNTK__Variable,  0);
+        void *raw_var = 0 ;
+        int res1 = SWIG_ConvertPtr(key, &raw_var, SWIGTYPE_p_CNTK__Variable,  0);
         if (!SWIG_IsOK(res1)) {
           SWIG_exception_fail(SWIG_ArgError(res1), "cannot convert key of dictionary to CNTK::Variable"); 
         }
-        if (!argp1) {
+        if (!raw_var) {
           SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting key of dictionary to CNTK::Variable");
         }
         
-        CNTK::Variable* var = reinterpret_cast<CNTK::Variable*>(argp1);
+        CNTK::Variable* var = reinterpret_cast<CNTK::Variable*>(raw_var);
         
-        void *argp2 = 0;
-        int res2 = SWIG_ConvertPtr(value, &argp2, SWIGTYPE_p_std__shared_ptrT_CNTK__Value_t,  0);
+        void *raw_value = 0;
+        int res2 = SWIG_ConvertPtr(value, &raw_value, SWIGTYPE_p_std__shared_ptrT_CNTK__Value_t,  0);
         if (!SWIG_IsOK(res2)) {
           SWIG_exception_fail(SWIG_ArgError(res2), "cannot convert key of dictionary to CNTK::ValuePtr"); 
         }
-        if (!argp2) {
-          SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting value of dictionary to CNTK::ValuePtr");
+        
+        CNTK::ValuePtr* value;
+        if (raw_value) {
+          value = reinterpret_cast<CNTK::ValuePtr*>(raw_value);
+        } else {
+          // We got an empty ValuePtr, which carries a nullptr.
+          value = new CNTK::ValuePtr();
         }
         
-        CNTK::ValuePtr* value = reinterpret_cast<CNTK::ValuePtr*>(argp2);
-        (*args_map)[*var] = *value;
+        args_map->insert(std::make_pair(*var, *value));
       }
       
       arg3 = args_map;
@@ -17918,6 +17985,57 @@ SWIGINTERN PyObject *_wrap_Function_Forward__SWIG_1(PyObject *SWIGUNUSEDPARM(sel
   {
     std::shared_ptr<  CNTK::BackPropState > *smartresult = result ? new std::shared_ptr<  CNTK::BackPropState >(result) : 0;
     resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(smartresult), SWIGTYPE_p_std__shared_ptrT_CNTK__BackPropState_t, SWIG_POINTER_OWN);
+  }
+  {
+    if (!PyDict_Check(obj2)) {
+      SWIG_exception(SWIG_TypeError, "dictionary expected");
+    }
+    
+    for (auto it: *arg3)
+    {
+      // Convert ValuePtr to PyObject
+      PyObject *returned_var = SWIG_NewPointerObj(SWIG_as_voidptr(&it.first), SWIGTYPE_p_CNTK__Variable, SWIG_POINTER_NOSHADOW);
+      
+      // Push the ValuePtr onto the heap so that it survives
+      std::shared_ptr<CNTK::Value> *smartresult = it.second ? new std::shared_ptr<CNTK::Value>(it.second) : 0;
+      PyObject *returned_val = SWIG_NewPointerObj(SWIG_as_voidptr(smartresult), SWIGTYPE_p_std__shared_ptrT_CNTK__Value_t, SWIG_POINTER_OWN);
+      
+      // Find the corresponding Variable instance in the Python dictionary
+      // and set its value to the new ValuePtr
+      
+      /* FIXME We would love to do the following, but the hashing does not
+               * correctly work here, which is why we never find the keys. Instead,
+               * we will for now loop over the dictionary and use C++ comparison.
+               * Although not beautiful, there should not be a lot of overhead since
+               * the dictionary usually contains only a handful of variables as keys.
+              if (PyDict_Contains(obj2, returned_var))
+              {
+                  SWIG_exception_fail(SWIG_ValueError, "returned output map contains unknown key");
+              }
+               */
+      
+      PyObject *py_key, *py_value;
+      Py_ssize_t pos = 0;
+      
+      while (PyDict_Next(obj2, &pos, &py_key, &py_value)) {
+        void *cntk_key = 0 ;
+        int res = SWIG_ConvertPtr(py_key, &cntk_key, SWIGTYPE_p_CNTK__Variable,  0);
+        if (!SWIG_IsOK(res)) {
+          SWIG_exception_fail(SWIG_ArgError(res), "cannot convert key of dictionary to CNTK::Variable"); 
+        }
+        if (!cntk_key) {
+          SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting key of dictionary to CNTK::Variable");
+        }
+        
+        CNTK::Variable* cntk_var = reinterpret_cast<CNTK::Variable*>(cntk_key);
+        if (*cntk_var == *&it.first)
+        {
+          PyDict_SetItem(obj2, py_key, returned_val);
+          // FIXME is this necessary?
+          Py_INCREF(returned_val);
+        }
+      }
+    }
   }
   return resultobj;
 fail:
@@ -17963,27 +18081,31 @@ SWIGINTERN PyObject *_wrap_Function_Forward__SWIG_2(PyObject *SWIGUNUSEDPARM(sel
       Py_ssize_t pos = 0;
       
       while (PyDict_Next(obj1, &pos, &key, &value)) {
-        void *argp1 = 0 ;
-        int res1 = SWIG_ConvertPtr(key, &argp1, SWIGTYPE_p_CNTK__Variable,  0);
+        void *raw_var = 0 ;
+        int res1 = SWIG_ConvertPtr(key, &raw_var, SWIGTYPE_p_CNTK__Variable,  0);
         if (!SWIG_IsOK(res1)) {
           SWIG_exception_fail(SWIG_ArgError(res1), "cannot convert key of dictionary to CNTK::Variable"); 
         }
-        if (!argp1) {
+        if (!raw_var) {
           SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting key of dictionary to CNTK::Variable");
         }
         
-        CNTK::Variable* var = reinterpret_cast<CNTK::Variable*>(argp1);
+        CNTK::Variable* var = reinterpret_cast<CNTK::Variable*>(raw_var);
         
-        void *argp2 = 0;
-        int res2 = SWIG_ConvertPtr(value, &argp2, SWIGTYPE_p_std__shared_ptrT_CNTK__Value_t,  0);
+        void *raw_value = 0;
+        int res2 = SWIG_ConvertPtr(value, &raw_value, SWIGTYPE_p_std__shared_ptrT_CNTK__Value_t,  0);
         if (!SWIG_IsOK(res2)) {
           SWIG_exception_fail(SWIG_ArgError(res2), "cannot convert key of dictionary to CNTK::ValuePtr"); 
         }
-        if (!argp2) {
-          SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting value of dictionary to CNTK::ValuePtr");
+        
+        CNTK::ValuePtr* value;
+        if (raw_value) {
+          value = reinterpret_cast<CNTK::ValuePtr*>(raw_value);
+        } else {
+          // We got an empty ValuePtr, which carries a nullptr.
+          value = new CNTK::ValuePtr();
         }
         
-        CNTK::ValuePtr* value = reinterpret_cast<CNTK::ValuePtr*>(argp2);
         args_map->insert(std::make_pair(*var, *value));
       }
       
@@ -18000,28 +18122,32 @@ SWIGINTERN PyObject *_wrap_Function_Forward__SWIG_2(PyObject *SWIGUNUSEDPARM(sel
       Py_ssize_t pos = 0;
       
       while (PyDict_Next(obj2, &pos, &key, &value)) {
-        void *argp1 = 0 ;
-        int res1 = SWIG_ConvertPtr(key, &argp1, SWIGTYPE_p_CNTK__Variable,  0);
+        void *raw_var = 0 ;
+        int res1 = SWIG_ConvertPtr(key, &raw_var, SWIGTYPE_p_CNTK__Variable,  0);
         if (!SWIG_IsOK(res1)) {
           SWIG_exception_fail(SWIG_ArgError(res1), "cannot convert key of dictionary to CNTK::Variable"); 
         }
-        if (!argp1) {
+        if (!raw_var) {
           SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting key of dictionary to CNTK::Variable");
         }
         
-        CNTK::Variable* var = reinterpret_cast<CNTK::Variable*>(argp1);
+        CNTK::Variable* var = reinterpret_cast<CNTK::Variable*>(raw_var);
         
-        void *argp2 = 0;
-        int res2 = SWIG_ConvertPtr(value, &argp2, SWIGTYPE_p_std__shared_ptrT_CNTK__Value_t,  0);
+        void *raw_value = 0;
+        int res2 = SWIG_ConvertPtr(value, &raw_value, SWIGTYPE_p_std__shared_ptrT_CNTK__Value_t,  0);
         if (!SWIG_IsOK(res2)) {
           SWIG_exception_fail(SWIG_ArgError(res2), "cannot convert key of dictionary to CNTK::ValuePtr"); 
         }
-        if (!argp2) {
-          SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting value of dictionary to CNTK::ValuePtr");
+        
+        CNTK::ValuePtr* value;
+        if (raw_value) {
+          value = reinterpret_cast<CNTK::ValuePtr*>(raw_value);
+        } else {
+          // We got an empty ValuePtr, which carries a nullptr.
+          value = new CNTK::ValuePtr();
         }
         
-        CNTK::ValuePtr* value = reinterpret_cast<CNTK::ValuePtr*>(argp2);
-        (*args_map)[*var] = *value;
+        args_map->insert(std::make_pair(*var, *value));
       }
       
       arg3 = args_map;
@@ -18052,6 +18178,57 @@ SWIGINTERN PyObject *_wrap_Function_Forward__SWIG_2(PyObject *SWIGUNUSEDPARM(sel
   {
     std::shared_ptr<  CNTK::BackPropState > *smartresult = result ? new std::shared_ptr<  CNTK::BackPropState >(result) : 0;
     resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(smartresult), SWIGTYPE_p_std__shared_ptrT_CNTK__BackPropState_t, SWIG_POINTER_OWN);
+  }
+  {
+    if (!PyDict_Check(obj2)) {
+      SWIG_exception(SWIG_TypeError, "dictionary expected");
+    }
+    
+    for (auto it: *arg3)
+    {
+      // Convert ValuePtr to PyObject
+      PyObject *returned_var = SWIG_NewPointerObj(SWIG_as_voidptr(&it.first), SWIGTYPE_p_CNTK__Variable, SWIG_POINTER_NOSHADOW);
+      
+      // Push the ValuePtr onto the heap so that it survives
+      std::shared_ptr<CNTK::Value> *smartresult = it.second ? new std::shared_ptr<CNTK::Value>(it.second) : 0;
+      PyObject *returned_val = SWIG_NewPointerObj(SWIG_as_voidptr(smartresult), SWIGTYPE_p_std__shared_ptrT_CNTK__Value_t, SWIG_POINTER_OWN);
+      
+      // Find the corresponding Variable instance in the Python dictionary
+      // and set its value to the new ValuePtr
+      
+      /* FIXME We would love to do the following, but the hashing does not
+               * correctly work here, which is why we never find the keys. Instead,
+               * we will for now loop over the dictionary and use C++ comparison.
+               * Although not beautiful, there should not be a lot of overhead since
+               * the dictionary usually contains only a handful of variables as keys.
+              if (PyDict_Contains(obj2, returned_var))
+              {
+                  SWIG_exception_fail(SWIG_ValueError, "returned output map contains unknown key");
+              }
+               */
+      
+      PyObject *py_key, *py_value;
+      Py_ssize_t pos = 0;
+      
+      while (PyDict_Next(obj2, &pos, &py_key, &py_value)) {
+        void *cntk_key = 0 ;
+        int res = SWIG_ConvertPtr(py_key, &cntk_key, SWIGTYPE_p_CNTK__Variable,  0);
+        if (!SWIG_IsOK(res)) {
+          SWIG_exception_fail(SWIG_ArgError(res), "cannot convert key of dictionary to CNTK::Variable"); 
+        }
+        if (!cntk_key) {
+          SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting key of dictionary to CNTK::Variable");
+        }
+        
+        CNTK::Variable* cntk_var = reinterpret_cast<CNTK::Variable*>(cntk_key);
+        if (*cntk_var == *&it.first)
+        {
+          PyDict_SetItem(obj2, py_key, returned_val);
+          // FIXME is this necessary?
+          Py_INCREF(returned_val);
+        }
+      }
+    }
   }
   return resultobj;
 fail:
@@ -18219,27 +18396,31 @@ SWIGINTERN PyObject *_wrap_Function_Backward(PyObject *SWIGUNUSEDPARM(self), PyO
       Py_ssize_t pos = 0;
       
       while (PyDict_Next(obj2, &pos, &key, &value)) {
-        void *argp1 = 0 ;
-        int res1 = SWIG_ConvertPtr(key, &argp1, SWIGTYPE_p_CNTK__Variable,  0);
+        void *raw_var = 0 ;
+        int res1 = SWIG_ConvertPtr(key, &raw_var, SWIGTYPE_p_CNTK__Variable,  0);
         if (!SWIG_IsOK(res1)) {
           SWIG_exception_fail(SWIG_ArgError(res1), "cannot convert key of dictionary to CNTK::Variable"); 
         }
-        if (!argp1) {
+        if (!raw_var) {
           SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting key of dictionary to CNTK::Variable");
         }
         
-        CNTK::Variable* var = reinterpret_cast<CNTK::Variable*>(argp1);
+        CNTK::Variable* var = reinterpret_cast<CNTK::Variable*>(raw_var);
         
-        void *argp2 = 0;
-        int res2 = SWIG_ConvertPtr(value, &argp2, SWIGTYPE_p_std__shared_ptrT_CNTK__Value_t,  0);
+        void *raw_value = 0;
+        int res2 = SWIG_ConvertPtr(value, &raw_value, SWIGTYPE_p_std__shared_ptrT_CNTK__Value_t,  0);
         if (!SWIG_IsOK(res2)) {
           SWIG_exception_fail(SWIG_ArgError(res2), "cannot convert key of dictionary to CNTK::ValuePtr"); 
         }
-        if (!argp2) {
-          SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting value of dictionary to CNTK::ValuePtr");
+        
+        CNTK::ValuePtr* value;
+        if (raw_value) {
+          value = reinterpret_cast<CNTK::ValuePtr*>(raw_value);
+        } else {
+          // We got an empty ValuePtr, which carries a nullptr.
+          value = new CNTK::ValuePtr();
         }
         
-        CNTK::ValuePtr* value = reinterpret_cast<CNTK::ValuePtr*>(argp2);
         args_map->insert(std::make_pair(*var, *value));
       }
       
@@ -18256,28 +18437,32 @@ SWIGINTERN PyObject *_wrap_Function_Backward(PyObject *SWIGUNUSEDPARM(self), PyO
       Py_ssize_t pos = 0;
       
       while (PyDict_Next(obj3, &pos, &key, &value)) {
-        void *argp1 = 0 ;
-        int res1 = SWIG_ConvertPtr(key, &argp1, SWIGTYPE_p_CNTK__Variable,  0);
+        void *raw_var = 0 ;
+        int res1 = SWIG_ConvertPtr(key, &raw_var, SWIGTYPE_p_CNTK__Variable,  0);
         if (!SWIG_IsOK(res1)) {
           SWIG_exception_fail(SWIG_ArgError(res1), "cannot convert key of dictionary to CNTK::Variable"); 
         }
-        if (!argp1) {
+        if (!raw_var) {
           SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting key of dictionary to CNTK::Variable");
         }
         
-        CNTK::Variable* var = reinterpret_cast<CNTK::Variable*>(argp1);
+        CNTK::Variable* var = reinterpret_cast<CNTK::Variable*>(raw_var);
         
-        void *argp2 = 0;
-        int res2 = SWIG_ConvertPtr(value, &argp2, SWIGTYPE_p_std__shared_ptrT_CNTK__Value_t,  0);
+        void *raw_value = 0;
+        int res2 = SWIG_ConvertPtr(value, &raw_value, SWIGTYPE_p_std__shared_ptrT_CNTK__Value_t,  0);
         if (!SWIG_IsOK(res2)) {
           SWIG_exception_fail(SWIG_ArgError(res2), "cannot convert key of dictionary to CNTK::ValuePtr"); 
         }
-        if (!argp2) {
-          SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting value of dictionary to CNTK::ValuePtr");
+        
+        CNTK::ValuePtr* value;
+        if (raw_value) {
+          value = reinterpret_cast<CNTK::ValuePtr*>(raw_value);
+        } else {
+          // We got an empty ValuePtr, which carries a nullptr.
+          value = new CNTK::ValuePtr();
         }
         
-        CNTK::ValuePtr* value = reinterpret_cast<CNTK::ValuePtr*>(argp2);
-        (*args_map)[*var] = *value;
+        args_map->insert(std::make_pair(*var, *value));
       }
       
       arg4 = args_map;
@@ -18306,6 +18491,57 @@ SWIGINTERN PyObject *_wrap_Function_Backward(PyObject *SWIGUNUSEDPARM(self), PyO
     }
   }
   resultobj = SWIG_Py_Void();
+  {
+    if (!PyDict_Check(obj3)) {
+      SWIG_exception(SWIG_TypeError, "dictionary expected");
+    }
+    
+    for (auto it: *arg4)
+    {
+      // Convert ValuePtr to PyObject
+      PyObject *returned_var = SWIG_NewPointerObj(SWIG_as_voidptr(&it.first), SWIGTYPE_p_CNTK__Variable, SWIG_POINTER_NOSHADOW);
+      
+      // Push the ValuePtr onto the heap so that it survives
+      std::shared_ptr<CNTK::Value> *smartresult = it.second ? new std::shared_ptr<CNTK::Value>(it.second) : 0;
+      PyObject *returned_val = SWIG_NewPointerObj(SWIG_as_voidptr(smartresult), SWIGTYPE_p_std__shared_ptrT_CNTK__Value_t, SWIG_POINTER_OWN);
+      
+      // Find the corresponding Variable instance in the Python dictionary
+      // and set its value to the new ValuePtr
+      
+      /* FIXME We would love to do the following, but the hashing does not
+               * correctly work here, which is why we never find the keys. Instead,
+               * we will for now loop over the dictionary and use C++ comparison.
+               * Although not beautiful, there should not be a lot of overhead since
+               * the dictionary usually contains only a handful of variables as keys.
+              if (PyDict_Contains(obj3, returned_var))
+              {
+                  SWIG_exception_fail(SWIG_ValueError, "returned output map contains unknown key");
+              }
+               */
+      
+      PyObject *py_key, *py_value;
+      Py_ssize_t pos = 0;
+      
+      while (PyDict_Next(obj3, &pos, &py_key, &py_value)) {
+        void *cntk_key = 0 ;
+        int res = SWIG_ConvertPtr(py_key, &cntk_key, SWIGTYPE_p_CNTK__Variable,  0);
+        if (!SWIG_IsOK(res)) {
+          SWIG_exception_fail(SWIG_ArgError(res), "cannot convert key of dictionary to CNTK::Variable"); 
+        }
+        if (!cntk_key) {
+          SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting key of dictionary to CNTK::Variable");
+        }
+        
+        CNTK::Variable* cntk_var = reinterpret_cast<CNTK::Variable*>(cntk_key);
+        if (*cntk_var == *&it.first)
+        {
+          PyDict_SetItem(obj3, py_key, returned_val);
+          // FIXME is this necessary?
+          Py_INCREF(returned_val);
+        }
+      }
+    }
+  }
   return resultobj;
 fail:
   return NULL;
@@ -21939,28 +22175,32 @@ SWIGINTERN PyObject *_wrap_Learner_Update(PyObject *SWIGUNUSEDPARM(self), PyObje
       Py_ssize_t pos = 0;
       
       while (PyDict_Next(obj1, &pos, &key, &value)) {
-        void *argp1 = 0 ;
-        int res1 = SWIG_ConvertPtr(key, &argp1, SWIGTYPE_p_CNTK__Variable,  0);
+        void *raw_var = 0 ;
+        int res1 = SWIG_ConvertPtr(key, &raw_var, SWIGTYPE_p_CNTK__Variable,  0);
         if (!SWIG_IsOK(res1)) {
           SWIG_exception_fail(SWIG_ArgError(res1), "cannot convert key of dictionary to CNTK::Variable"); 
         }
-        if (!argp1) {
+        if (!raw_var) {
           SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting key of dictionary to CNTK::Variable");
         }
         
-        CNTK::Variable* var = reinterpret_cast<CNTK::Variable*>(argp1);
+        CNTK::Variable* var = reinterpret_cast<CNTK::Variable*>(raw_var);
         
-        void *argp2 = 0;
-        int res2 = SWIG_ConvertPtr(value, &argp2, SWIGTYPE_p_std__shared_ptrT_CNTK__Value_t,  0);
+        void *raw_value = 0;
+        int res2 = SWIG_ConvertPtr(value, &raw_value, SWIGTYPE_p_std__shared_ptrT_CNTK__Value_t,  0);
         if (!SWIG_IsOK(res2)) {
           SWIG_exception_fail(SWIG_ArgError(res2), "cannot convert key of dictionary to CNTK::ValuePtr"); 
         }
-        if (!argp2) {
-          SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting value of dictionary to CNTK::ValuePtr");
+        
+        CNTK::ValuePtr* value;
+        if (raw_value) {
+          value = reinterpret_cast<CNTK::ValuePtr*>(raw_value);
+        } else {
+          // We got an empty ValuePtr, which carries a nullptr.
+          value = new CNTK::ValuePtr();
         }
         
-        CNTK::ValuePtr* value = reinterpret_cast<CNTK::ValuePtr*>(argp2);
-        (*args_map)[*var] = *value;
+        args_map->insert(std::make_pair(*var, *value));
       }
       
       arg2 = args_map;
@@ -21976,27 +22216,31 @@ SWIGINTERN PyObject *_wrap_Learner_Update(PyObject *SWIGUNUSEDPARM(self), PyObje
       Py_ssize_t pos = 0;
       
       while (PyDict_Next(obj2, &pos, &key, &value)) {
-        void *argp1 = 0 ;
-        int res1 = SWIG_ConvertPtr(key, &argp1, SWIGTYPE_p_CNTK__Variable,  0);
+        void *raw_var = 0 ;
+        int res1 = SWIG_ConvertPtr(key, &raw_var, SWIGTYPE_p_CNTK__Variable,  0);
         if (!SWIG_IsOK(res1)) {
           SWIG_exception_fail(SWIG_ArgError(res1), "cannot convert key of dictionary to CNTK::Variable"); 
         }
-        if (!argp1) {
+        if (!raw_var) {
           SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting key of dictionary to CNTK::Variable");
         }
         
-        CNTK::Variable* var = reinterpret_cast<CNTK::Variable*>(argp1);
+        CNTK::Variable* var = reinterpret_cast<CNTK::Variable*>(raw_var);
         
-        void *argp2 = 0;
-        int res2 = SWIG_ConvertPtr(value, &argp2, SWIGTYPE_p_std__shared_ptrT_CNTK__Value_t,  0);
+        void *raw_value = 0;
+        int res2 = SWIG_ConvertPtr(value, &raw_value, SWIGTYPE_p_std__shared_ptrT_CNTK__Value_t,  0);
         if (!SWIG_IsOK(res2)) {
           SWIG_exception_fail(SWIG_ArgError(res2), "cannot convert key of dictionary to CNTK::ValuePtr"); 
         }
-        if (!argp2) {
-          SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting value of dictionary to CNTK::ValuePtr");
+        
+        CNTK::ValuePtr* value;
+        if (raw_value) {
+          value = reinterpret_cast<CNTK::ValuePtr*>(raw_value);
+        } else {
+          // We got an empty ValuePtr, which carries a nullptr.
+          value = new CNTK::ValuePtr();
         }
         
-        CNTK::ValuePtr* value = reinterpret_cast<CNTK::ValuePtr*>(argp2);
         args_map->insert(std::make_pair(*var, *value));
       }
       
@@ -22031,6 +22275,57 @@ SWIGINTERN PyObject *_wrap_Learner_Update(PyObject *SWIGUNUSEDPARM(self), PyObje
     }
   }
   resultobj = SWIG_From_bool(static_cast< bool >(result));
+  {
+    if (!PyDict_Check(obj1)) {
+      SWIG_exception(SWIG_TypeError, "dictionary expected");
+    }
+    
+    for (auto it: *arg2)
+    {
+      // Convert ValuePtr to PyObject
+      PyObject *returned_var = SWIG_NewPointerObj(SWIG_as_voidptr(&it.first), SWIGTYPE_p_CNTK__Variable, SWIG_POINTER_NOSHADOW);
+      
+      // Push the ValuePtr onto the heap so that it survives
+      std::shared_ptr<CNTK::Value> *smartresult = it.second ? new std::shared_ptr<CNTK::Value>(it.second) : 0;
+      PyObject *returned_val = SWIG_NewPointerObj(SWIG_as_voidptr(smartresult), SWIGTYPE_p_std__shared_ptrT_CNTK__Value_t, SWIG_POINTER_OWN);
+      
+      // Find the corresponding Variable instance in the Python dictionary
+      // and set its value to the new ValuePtr
+      
+      /* FIXME We would love to do the following, but the hashing does not
+               * correctly work here, which is why we never find the keys. Instead,
+               * we will for now loop over the dictionary and use C++ comparison.
+               * Although not beautiful, there should not be a lot of overhead since
+               * the dictionary usually contains only a handful of variables as keys.
+              if (PyDict_Contains(obj1, returned_var))
+              {
+                  SWIG_exception_fail(SWIG_ValueError, "returned output map contains unknown key");
+              }
+               */
+      
+      PyObject *py_key, *py_value;
+      Py_ssize_t pos = 0;
+      
+      while (PyDict_Next(obj1, &pos, &py_key, &py_value)) {
+        void *cntk_key = 0 ;
+        int res = SWIG_ConvertPtr(py_key, &cntk_key, SWIGTYPE_p_CNTK__Variable,  0);
+        if (!SWIG_IsOK(res)) {
+          SWIG_exception_fail(SWIG_ArgError(res), "cannot convert key of dictionary to CNTK::Variable"); 
+        }
+        if (!cntk_key) {
+          SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting key of dictionary to CNTK::Variable");
+        }
+        
+        CNTK::Variable* cntk_var = reinterpret_cast<CNTK::Variable*>(cntk_key);
+        if (*cntk_var == *&it.first)
+        {
+          PyDict_SetItem(obj1, py_key, returned_val);
+          // FIXME is this necessary?
+          Py_INCREF(returned_val);
+        }
+      }
+    }
+  }
   return resultobj;
 fail:
   return NULL;
@@ -22242,16 +22537,16 @@ SWIGINTERN PyObject *_wrap_SGDLearner__SWIG_0(PyObject *SWIGUNUSEDPARM(self), Py
       }
       
       while (item = PyIter_Next(iterator)) {
-        void *argp1 = 0 ;
-        int res1 = SWIG_ConvertPtr(item, &argp1, SWIGTYPE_p_CNTK__Variable,  0);
+        void *raw_var = 0 ;
+        int res1 = SWIG_ConvertPtr(item, &raw_var, SWIGTYPE_p_CNTK__Variable,  0);
         if (!SWIG_IsOK(res1)) {
           SWIG_exception_fail(SWIG_ArgError(res1), "cannot convert key of dictionary to CNTK::Variable"); 
         }
-        if (!argp1) {
+        if (!raw_var) {
           SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting key of dictionary to CNTK::Variable");
         }
         
-        CNTK::Variable* var = reinterpret_cast<CNTK::Variable*>(argp1);
+        CNTK::Variable* var = reinterpret_cast<CNTK::Variable*>(raw_var);
         
         args_set->insert(*var);
         
@@ -22325,16 +22620,16 @@ SWIGINTERN PyObject *_wrap_SGDLearner__SWIG_1(PyObject *SWIGUNUSEDPARM(self), Py
       }
       
       while (item = PyIter_Next(iterator)) {
-        void *argp1 = 0 ;
-        int res1 = SWIG_ConvertPtr(item, &argp1, SWIGTYPE_p_CNTK__Variable,  0);
+        void *raw_var = 0 ;
+        int res1 = SWIG_ConvertPtr(item, &raw_var, SWIGTYPE_p_CNTK__Variable,  0);
         if (!SWIG_IsOK(res1)) {
           SWIG_exception_fail(SWIG_ArgError(res1), "cannot convert key of dictionary to CNTK::Variable"); 
         }
-        if (!argp1) {
+        if (!raw_var) {
           SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting key of dictionary to CNTK::Variable");
         }
         
-        CNTK::Variable* var = reinterpret_cast<CNTK::Variable*>(argp1);
+        CNTK::Variable* var = reinterpret_cast<CNTK::Variable*>(raw_var);
         
         args_set->insert(*var);
         
@@ -22452,16 +22747,16 @@ SWIGINTERN PyObject *_wrap_MomentumSGDLearner__SWIG_0(PyObject *SWIGUNUSEDPARM(s
       }
       
       while (item = PyIter_Next(iterator)) {
-        void *argp1 = 0 ;
-        int res1 = SWIG_ConvertPtr(item, &argp1, SWIGTYPE_p_CNTK__Variable,  0);
+        void *raw_var = 0 ;
+        int res1 = SWIG_ConvertPtr(item, &raw_var, SWIGTYPE_p_CNTK__Variable,  0);
         if (!SWIG_IsOK(res1)) {
           SWIG_exception_fail(SWIG_ArgError(res1), "cannot convert key of dictionary to CNTK::Variable"); 
         }
-        if (!argp1) {
+        if (!raw_var) {
           SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting key of dictionary to CNTK::Variable");
         }
         
-        CNTK::Variable* var = reinterpret_cast<CNTK::Variable*>(argp1);
+        CNTK::Variable* var = reinterpret_cast<CNTK::Variable*>(raw_var);
         
         args_set->insert(*var);
         
@@ -22535,16 +22830,16 @@ SWIGINTERN PyObject *_wrap_MomentumSGDLearner__SWIG_1(PyObject *SWIGUNUSEDPARM(s
       }
       
       while (item = PyIter_Next(iterator)) {
-        void *argp1 = 0 ;
-        int res1 = SWIG_ConvertPtr(item, &argp1, SWIGTYPE_p_CNTK__Variable,  0);
+        void *raw_var = 0 ;
+        int res1 = SWIG_ConvertPtr(item, &raw_var, SWIGTYPE_p_CNTK__Variable,  0);
         if (!SWIG_IsOK(res1)) {
           SWIG_exception_fail(SWIG_ArgError(res1), "cannot convert key of dictionary to CNTK::Variable"); 
         }
-        if (!argp1) {
+        if (!raw_var) {
           SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting key of dictionary to CNTK::Variable");
         }
         
-        CNTK::Variable* var = reinterpret_cast<CNTK::Variable*>(argp1);
+        CNTK::Variable* var = reinterpret_cast<CNTK::Variable*>(raw_var);
         
         args_set->insert(*var);
         
@@ -22662,16 +22957,16 @@ SWIGINTERN PyObject *_wrap_NesterovLearner__SWIG_0(PyObject *SWIGUNUSEDPARM(self
       }
       
       while (item = PyIter_Next(iterator)) {
-        void *argp1 = 0 ;
-        int res1 = SWIG_ConvertPtr(item, &argp1, SWIGTYPE_p_CNTK__Variable,  0);
+        void *raw_var = 0 ;
+        int res1 = SWIG_ConvertPtr(item, &raw_var, SWIGTYPE_p_CNTK__Variable,  0);
         if (!SWIG_IsOK(res1)) {
           SWIG_exception_fail(SWIG_ArgError(res1), "cannot convert key of dictionary to CNTK::Variable"); 
         }
-        if (!argp1) {
+        if (!raw_var) {
           SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting key of dictionary to CNTK::Variable");
         }
         
-        CNTK::Variable* var = reinterpret_cast<CNTK::Variable*>(argp1);
+        CNTK::Variable* var = reinterpret_cast<CNTK::Variable*>(raw_var);
         
         args_set->insert(*var);
         
@@ -22745,16 +23040,16 @@ SWIGINTERN PyObject *_wrap_NesterovLearner__SWIG_1(PyObject *SWIGUNUSEDPARM(self
       }
       
       while (item = PyIter_Next(iterator)) {
-        void *argp1 = 0 ;
-        int res1 = SWIG_ConvertPtr(item, &argp1, SWIGTYPE_p_CNTK__Variable,  0);
+        void *raw_var = 0 ;
+        int res1 = SWIG_ConvertPtr(item, &raw_var, SWIGTYPE_p_CNTK__Variable,  0);
         if (!SWIG_IsOK(res1)) {
           SWIG_exception_fail(SWIG_ArgError(res1), "cannot convert key of dictionary to CNTK::Variable"); 
         }
-        if (!argp1) {
+        if (!raw_var) {
           SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting key of dictionary to CNTK::Variable");
         }
         
-        CNTK::Variable* var = reinterpret_cast<CNTK::Variable*>(argp1);
+        CNTK::Variable* var = reinterpret_cast<CNTK::Variable*>(raw_var);
         
         args_set->insert(*var);
         
@@ -22876,16 +23171,16 @@ SWIGINTERN PyObject *_wrap_AdaGradLearner__SWIG_0(PyObject *SWIGUNUSEDPARM(self)
       }
       
       while (item = PyIter_Next(iterator)) {
-        void *argp1 = 0 ;
-        int res1 = SWIG_ConvertPtr(item, &argp1, SWIGTYPE_p_CNTK__Variable,  0);
+        void *raw_var = 0 ;
+        int res1 = SWIG_ConvertPtr(item, &raw_var, SWIGTYPE_p_CNTK__Variable,  0);
         if (!SWIG_IsOK(res1)) {
           SWIG_exception_fail(SWIG_ArgError(res1), "cannot convert key of dictionary to CNTK::Variable"); 
         }
-        if (!argp1) {
+        if (!raw_var) {
           SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting key of dictionary to CNTK::Variable");
         }
         
-        CNTK::Variable* var = reinterpret_cast<CNTK::Variable*>(argp1);
+        CNTK::Variable* var = reinterpret_cast<CNTK::Variable*>(raw_var);
         
         args_set->insert(*var);
         
@@ -22968,16 +23263,16 @@ SWIGINTERN PyObject *_wrap_AdaGradLearner__SWIG_1(PyObject *SWIGUNUSEDPARM(self)
       }
       
       while (item = PyIter_Next(iterator)) {
-        void *argp1 = 0 ;
-        int res1 = SWIG_ConvertPtr(item, &argp1, SWIGTYPE_p_CNTK__Variable,  0);
+        void *raw_var = 0 ;
+        int res1 = SWIG_ConvertPtr(item, &raw_var, SWIGTYPE_p_CNTK__Variable,  0);
         if (!SWIG_IsOK(res1)) {
           SWIG_exception_fail(SWIG_ArgError(res1), "cannot convert key of dictionary to CNTK::Variable"); 
         }
-        if (!argp1) {
+        if (!raw_var) {
           SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting key of dictionary to CNTK::Variable");
         }
         
-        CNTK::Variable* var = reinterpret_cast<CNTK::Variable*>(argp1);
+        CNTK::Variable* var = reinterpret_cast<CNTK::Variable*>(raw_var);
         
         args_set->insert(*var);
         
@@ -23048,16 +23343,16 @@ SWIGINTERN PyObject *_wrap_AdaGradLearner__SWIG_2(PyObject *SWIGUNUSEDPARM(self)
       }
       
       while (item = PyIter_Next(iterator)) {
-        void *argp1 = 0 ;
-        int res1 = SWIG_ConvertPtr(item, &argp1, SWIGTYPE_p_CNTK__Variable,  0);
+        void *raw_var = 0 ;
+        int res1 = SWIG_ConvertPtr(item, &raw_var, SWIGTYPE_p_CNTK__Variable,  0);
         if (!SWIG_IsOK(res1)) {
           SWIG_exception_fail(SWIG_ArgError(res1), "cannot convert key of dictionary to CNTK::Variable"); 
         }
-        if (!argp1) {
+        if (!raw_var) {
           SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting key of dictionary to CNTK::Variable");
         }
         
-        CNTK::Variable* var = reinterpret_cast<CNTK::Variable*>(argp1);
+        CNTK::Variable* var = reinterpret_cast<CNTK::Variable*>(raw_var);
         
         args_set->insert(*var);
         
@@ -23199,16 +23494,16 @@ SWIGINTERN PyObject *_wrap_FSAdaGradLearner__SWIG_0(PyObject *SWIGUNUSEDPARM(sel
       }
       
       while (item = PyIter_Next(iterator)) {
-        void *argp1 = 0 ;
-        int res1 = SWIG_ConvertPtr(item, &argp1, SWIGTYPE_p_CNTK__Variable,  0);
+        void *raw_var = 0 ;
+        int res1 = SWIG_ConvertPtr(item, &raw_var, SWIGTYPE_p_CNTK__Variable,  0);
         if (!SWIG_IsOK(res1)) {
           SWIG_exception_fail(SWIG_ArgError(res1), "cannot convert key of dictionary to CNTK::Variable"); 
         }
-        if (!argp1) {
+        if (!raw_var) {
           SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting key of dictionary to CNTK::Variable");
         }
         
-        CNTK::Variable* var = reinterpret_cast<CNTK::Variable*>(argp1);
+        CNTK::Variable* var = reinterpret_cast<CNTK::Variable*>(raw_var);
         
         args_set->insert(*var);
         
@@ -23282,16 +23577,16 @@ SWIGINTERN PyObject *_wrap_FSAdaGradLearner__SWIG_1(PyObject *SWIGUNUSEDPARM(sel
       }
       
       while (item = PyIter_Next(iterator)) {
-        void *argp1 = 0 ;
-        int res1 = SWIG_ConvertPtr(item, &argp1, SWIGTYPE_p_CNTK__Variable,  0);
+        void *raw_var = 0 ;
+        int res1 = SWIG_ConvertPtr(item, &raw_var, SWIGTYPE_p_CNTK__Variable,  0);
         if (!SWIG_IsOK(res1)) {
           SWIG_exception_fail(SWIG_ArgError(res1), "cannot convert key of dictionary to CNTK::Variable"); 
         }
-        if (!argp1) {
+        if (!raw_var) {
           SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting key of dictionary to CNTK::Variable");
         }
         
-        CNTK::Variable* var = reinterpret_cast<CNTK::Variable*>(argp1);
+        CNTK::Variable* var = reinterpret_cast<CNTK::Variable*>(raw_var);
         
         args_set->insert(*var);
         
@@ -23433,16 +23728,16 @@ SWIGINTERN PyObject *_wrap_RMSPropLearner__SWIG_0(PyObject *SWIGUNUSEDPARM(self)
       }
       
       while (item = PyIter_Next(iterator)) {
-        void *argp1 = 0 ;
-        int res1 = SWIG_ConvertPtr(item, &argp1, SWIGTYPE_p_CNTK__Variable,  0);
+        void *raw_var = 0 ;
+        int res1 = SWIG_ConvertPtr(item, &raw_var, SWIGTYPE_p_CNTK__Variable,  0);
         if (!SWIG_IsOK(res1)) {
           SWIG_exception_fail(SWIG_ArgError(res1), "cannot convert key of dictionary to CNTK::Variable"); 
         }
-        if (!argp1) {
+        if (!raw_var) {
           SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting key of dictionary to CNTK::Variable");
         }
         
-        CNTK::Variable* var = reinterpret_cast<CNTK::Variable*>(argp1);
+        CNTK::Variable* var = reinterpret_cast<CNTK::Variable*>(raw_var);
         
         args_set->insert(*var);
         
@@ -23570,16 +23865,16 @@ SWIGINTERN PyObject *_wrap_RMSPropLearner__SWIG_1(PyObject *SWIGUNUSEDPARM(self)
       }
       
       while (item = PyIter_Next(iterator)) {
-        void *argp1 = 0 ;
-        int res1 = SWIG_ConvertPtr(item, &argp1, SWIGTYPE_p_CNTK__Variable,  0);
+        void *raw_var = 0 ;
+        int res1 = SWIG_ConvertPtr(item, &raw_var, SWIGTYPE_p_CNTK__Variable,  0);
         if (!SWIG_IsOK(res1)) {
           SWIG_exception_fail(SWIG_ArgError(res1), "cannot convert key of dictionary to CNTK::Variable"); 
         }
-        if (!argp1) {
+        if (!raw_var) {
           SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting key of dictionary to CNTK::Variable");
         }
         
-        CNTK::Variable* var = reinterpret_cast<CNTK::Variable*>(argp1);
+        CNTK::Variable* var = reinterpret_cast<CNTK::Variable*>(raw_var);
         
         args_set->insert(*var);
         
@@ -23695,16 +23990,16 @@ SWIGINTERN PyObject *_wrap_RMSPropLearner__SWIG_2(PyObject *SWIGUNUSEDPARM(self)
       }
       
       while (item = PyIter_Next(iterator)) {
-        void *argp1 = 0 ;
-        int res1 = SWIG_ConvertPtr(item, &argp1, SWIGTYPE_p_CNTK__Variable,  0);
+        void *raw_var = 0 ;
+        int res1 = SWIG_ConvertPtr(item, &raw_var, SWIGTYPE_p_CNTK__Variable,  0);
         if (!SWIG_IsOK(res1)) {
           SWIG_exception_fail(SWIG_ArgError(res1), "cannot convert key of dictionary to CNTK::Variable"); 
         }
-        if (!argp1) {
+        if (!raw_var) {
           SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting key of dictionary to CNTK::Variable");
         }
         
-        CNTK::Variable* var = reinterpret_cast<CNTK::Variable*>(argp1);
+        CNTK::Variable* var = reinterpret_cast<CNTK::Variable*>(raw_var);
         
         args_set->insert(*var);
         

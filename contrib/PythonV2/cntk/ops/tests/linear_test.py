@@ -13,6 +13,7 @@ from __future__ import division
 import numpy as np
 import pytest
 from .ops_test_utils import unittest_helper, _test_unary_op, _test_binary_op, AA, I, precision, PRECISION_TO_TYPE, batch_dense_to_sparse, left_matrix_type, right_matrix_type
+from ...utils import sanitize_dtype_cntk
 from ...context import get_context
 
 # TODO: Test plus(), times(), etc, not only the overloaded opeartors (+,
@@ -54,6 +55,58 @@ def test_op_plus(left_operand, right_operand, device_id, precision):
     _test_binary_op(ctx, '+',
             left_operand, right_operand, 
             expected_forward, expected_backward)
+
+SEQ_TENSOR_PAIRS = [
+    # two inputs each having sequences of length 1 and 2
+    ([[[30.]], [[40], [50]]],  # first batch with two sequences
+     [[[ 3.]], [[ 4], [ 5]]]), # second batch with two sequences
+
+    ([[[30.,   0]], [[40,   1], [50,   2]]],  # first batch with two sequences
+     [[[ 3., -10]], [[ 4, -20], [ 5, -30]]]), # second batch with two sequences
+]
+@pytest.mark.parametrize("left_batch, right_batch", SEQ_TENSOR_PAIRS)
+def _test_op_plus_var_sequences_input_input(left_batch, right_batch, device_id, precision):
+    ctx = get_context()
+    ctx.precision = precision
+    ctx.device = device_id
+
+    assert len(left_batch) == len(right_batch)
+    expected_forward = [AA([left_batch[i]]) + AA([right_batch[i]]) \
+            for i in range(len(left_batch))]
+
+    def ones_like(batch):
+        expected_backward = []
+        for sample in batch:
+            seq = [np.ones_like(elem, dtype=ctx.precision_numpy) for elem in sample]
+            expected_backward.append(seq)
+        return expected_backward
+
+    expected_backward = { 'left': ones_like(left_batch), 'right': ones_like(right_batch) }
+
+    left_value = [AA(sample, dtype=ctx.precision_numpy) for sample in left_batch]
+    left_shape = left_value[0][0].shape
+    right_value = [AA(sample, dtype=ctx.precision_numpy) for sample in right_batch]
+    right_shape = right_value[0][0].shape
+
+    a = I(shape=left_shape,
+            data_type=sanitize_dtype_cntk(ctx.precision_numpy),
+            needs_gradient=True,
+            name='a')
+
+    b = I(shape=right_shape,
+            data_type=sanitize_dtype_cntk(ctx.precision_numpy),
+            needs_gradient=True,
+            name='b')
+
+    input_op_input = a + b
+    forward_input = {a:left_value, b:right_value}
+    output_shape = input_op_input.Output().Shape().Dimensions()
+    backward_input = { a: expected_backward['left'], b: expected_backward['right'], }
+    expected_backward = { a: expected_backward['left'], b: expected_backward['right'], }
+    unittest_helper(input_op_input, 
+        forward_input, expected_forward, 
+        backward_input, expected_backward,
+        device_id=ctx.device, precision=ctx.precision, clean_up=True)
 
 # -- minus operation tests --
 #TODO: enable once the function is exposed

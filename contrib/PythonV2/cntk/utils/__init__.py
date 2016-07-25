@@ -263,9 +263,8 @@ def sanitize_input(arg):
         # no function or function with more then one output
         pass
     
-    if isinstance(arg, list):
-        if not arg:
-            raise ValueError('input is empty')
+    if isinstance(arg, list) and not arg:
+        raise ValueError('input is empty')
 
     if not isinstance(arg, np.ndarray):
         arg = np.asarray(arg, dtype=np.float32)
@@ -285,51 +284,64 @@ def pad_to_dense(batch):
 
     Returns:
         Padded NumPy array
-    
     """
 
     max_seq_len = max(len(r) for r in batch)
 
-    sample = np.asarray(batch[0][0])
+    # Assuming all sequences elements in all samples have the same shape
+    data_point = np.asarray(batch[0][0])
 
-    Z = np.zeros((len(batch), max_seq_len)+(sample.shape), dtype=sample.dtype)
+    # FIXME
+    # This is not the most efficient way of dealing with variable length
+    # sequences, but so far the only one supported. Once, ragged arrays are
+    # natively supported in CNTK, this will change.
+    Z = np.zeros((len(batch), max_seq_len)+(data_point.shape), dtype=data_point.dtype)
     for idx, seq in enumerate(batch):
+        if seq[0].shape != data_point.shape:
+            raise ValueError('shape mismatch: expected %s but got '
+                    ' %s'%(str(data_point.shape), str(seq[0].shape)))
         Z[idx, :len(seq)] += seq 
     return Z
 
 def sanitize_batch(batch, data_type, dev):
     """
-    Convert to Value with mask.
+    Convert to Value with `data_type`. If the samples in `batch` have different
+    sequence lengths, pad them to max sequence length and create a mask.
 
     Args:
         batch (list of NumPy arrays): input
 
     Returns:
-        Value
+        converted batch
     """
     from ..cntk_py import Value
 
     if isinstance(batch, Value):
         return batch
 
-    '''
     num_seq = len(batch)
-    seq_lens = [len(seq) for seq in batch]
+    try:
+        seq_lens = [len(seq) for seq in batch]
+    except:
+        import ipdb;ipdb.set_trace()
 
-    # First we create the mask 
-    from cntk.cntk_py import NDMask
-    mask = NDMask((max(seq_lens), num_seq), dev)
-    for idx, seq_len in enumerate(seq_lens):
-        mask.MaskSection((seq_len, idx), (cntk_py.InferredDimension, 1)) 
+    use_mask = set(seq_lens)!=1
 
-    # Then we pad the batch to rectangular shape
-    if isinstance(batch, list):
-        if len(batch)==0:
-            raise ValueError('batch is empty')
+    if use_mask:
+        # If not all sequences are of the same length, we have to pad them to
+        # the same length and create a mask over the original data.
+        from cntk.cntk_py import NDMask
+        mask = NDMask((max(seq_lens), num_seq), dev)
+        for idx, seq_len in enumerate(seq_lens):
+            mask.MaskSection((seq_len, idx), (cntk_py.InferredDimension, 1)) 
 
-        batch = pad_to_dense(batch)
+        # Then we pad the batch to rectangular shape
+        if isinstance(batch, list):
+            if len(batch)==0:
+                raise ValueError('batch is empty')
 
-    '''
+            batch = pad_to_dense(batch)
+
     # If it still is not an NumPy array, try brute force...
     if not isinstance(batch, np.ndarray) or batch.dtype != data_type:
         batch = np.asarray(batch, dtype=data_type)
@@ -347,7 +359,11 @@ def sanitize_batch(batch, data_type, dev):
     '''
             
     ndav = create_NDArrayView_from_NumPy(batch, dev)
-    value = Value(ndav)#, mask)
+
+    if use_mask:
+        value = Value(ndav, mask)
+    else:
+        value = Value(ndav)
 
     return value
 
@@ -361,29 +377,28 @@ def sanitize_var_map(input_map, ctx):
         ctx (`Context`): `Context` from which to tak ethe precision and device information
 
     Returns:
-        `dict`
+        `dict` that maps variables to sanitized batches
     '''
     var_map = {}
     if input_map:
-        for var, val in input_map.items():
-            if isinstance(val, np.ndarray):
-                if val.dtype not in (np.float32, np.float64):
+        for var, batch in input_map.items():
+            if isinstance(batch, np.ndarray):
+                if batch.dtype not in (np.float32, np.float64):
                     raise ValueError('only float32 and float64 are supported')
-                val = sanitize_batch(val, ctx.precision_numpy, ctx.device)
+                batch = sanitize_batch(batch, ctx.precision_numpy, ctx.device)
             else:
-                if is_tensor(val):
-                    val = np.asarray(val, dtype=ctx.precision_numpy)
-                    val = create_Value_from_NumPy(val, ctx.device)
-                elif is_tensor_list(val):
-                    val = sanitize_batch(val, ctx.precision_numpy, ctx.device)
+                if is_tensor(batch):
+                    batch = np.asarray(batch, dtype=ctx.precision_numpy)
+                    batch = create_Value_from_NumPy(batch, ctx.device)
                 else:
-                    raise ValueError('values of input_map need to be NumPy arrays, lists of lists or list of NumPy arrays, but you gave a "%s"'%type(val))
+                    batch = sanitize_batch(batch, ctx.precision_numpy, ctx.device)
 
-            var_map[var] = val
+            var_map[var] = batch
 
     return var_map
 
 def create_NDArrayView(shape, data_type, dev):
+    # FIXME only dense supported so far
     view = cntk_py.NDArrayView(data_type, cntk_py.StorageFormat_Dense, shape, dev)
     return view
 
@@ -393,14 +408,17 @@ def create_NDArrayView_from_NumPy(nd, dev):
     view = cntk_py.NDArrayView(nd, dev, False)
     return view
 
-def create_Value_for_Variable(var, shape=None, dev=None):
+def create_Value_for_Variable(var, shape=None, dev=None, mask=None):
     if not dev:
         dev = cntk_py.DeviceDescriptor_CPUDevice()
 
     if shape is None:
         shape = var.Shape().Dimensions()
     view = cntk_py.NDArrayView(var.GetDataType(), cntk_py.StorageFormat_Dense, shape, dev)
-    value = cntk_py.Value(view)
+    if mask:
+        value = cntk_py.Value(view, mask)
+    else:
+        value = cntk_py.Value(view)
     return value
 
 def create_Value(shape, data_type, dev):
