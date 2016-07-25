@@ -6071,7 +6071,7 @@ struct TensorOpReduction
 // perform loop over reduction index m
 // This is the specialized version for m = -1, which terminates the recursion.
 template <class ElemType, typename OPFN, typename ReductionOp, size_t N>
-struct TensorOpReduction<ElemType, OPFN, typename ReductionOp, N, -1>
+struct TensorOpReduction<ElemType, OPFN, ReductionOp, N, -1>
 {
     static inline ElemType Loop(array<ElemType*, N> pointers, const OPFN& opfn, const ReductionOp& reductionOp,
                                 const SmallVector<size_t>&, const array<SmallVector<ptrdiff_t>, N>&)
