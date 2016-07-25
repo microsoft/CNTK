@@ -6255,8 +6255,8 @@ static void TensorOpWithFn(ElemType beta, array<ElemType*, N> pointers, ElemType
     const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, N>& regularStrides,
     const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, N>& reducingStrides)
 {
-#define CaseTensorOpWithFnAndReduction(oper)                                                                                                              \
-    case ElementWiseOperator::op##oper:                                                                                                      \
+#define CaseTensorOpWithFnAndReduction(oper)                                                  \
+    case ElementWiseOperator::op##oper:                                                       \
     return TensorOpWithFnAndReduction(beta, pointers, alpha, opfn, [](ElemType a, ElemType b) \
                                     {                                                         \
                                     return Op##oper(a, b);                                    \

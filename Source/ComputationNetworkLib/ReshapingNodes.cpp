@@ -91,18 +91,18 @@ template <class ElemType>
         auto input = Input(inputIndex)->ValueTensorFor(rank, fr);
         auto output = ValueTensorFor(rank, fr.AllowBroadcast());
 
-        // POTENETIAL PROBLEM:
+        // POTENTIAL PROBLEM:
         // For ReduceMin/Max there are combinations of input values where the gradient is not defined because the function has an edge at these points.
         // E.g. for ReduceMin this is the case when the minimum input value is attained by several inputs at the same time.
         // In these cases there is no correct gradient.The question is if this could lead to any problems.
         // Let's look at two scenarios where this might happen:
         //
         // * Scenario 1: The input comes from a layer of nodes like e.g. ReLU and some of them might operate in the regime where they clip to a constant value.
-        //   In this case it's not a problem of the input gradient is kind of bad as the derivative of the concerning input nodes will be zero.
+        //   In this case it's not a problem that the input gradient is kind of bad as the derivative of the concerning input nodes will be zero anyway.
         //
-        // * Scenario 2: The input data is directly coming from training data. Here bad gradients don't matter as would wouldn't wan't to propagate gradients to the training data.
+        // * Scenario 2: The input data is directly coming from training data. Here bad gradients don't matter as we wouldn't wan't to propagate gradients to the training data.
         //
-        // So as we don't have a better solution yet and it probably doesn't have impact lets stay with the current solution.
+        // So as we don't have a better solution yet and it probably doesn't have impact let's stay with the current solution.
         // Also note that for Clip , Min, Max and ReLU we have the same kind of problem.
         sliceInputGrad.AddCopyIfEqualOf(input, output, sliceOutputGrad);
         break;
