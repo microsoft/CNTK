@@ -32,6 +32,7 @@ class NDRMReader : public DataReaderBase
     size_t m_numWordsPerQuery;
     size_t m_numWordsPerDoc;
     size_t m_vocabSize;
+    size_t m_idfVocabSize;
     size_t m_vectorSize;
     size_t m_miniBatchSize;
     size_t m_bytesPerSample;

@@ -125,6 +125,7 @@ void NDRMReader<ElemType>::InitFromConfig(const ConfigRecordType& readerConfig)
     m_numWordsPerQuery = readerConfig(L"numWordsPerQuery", (size_t)10);
     m_numWordsPerDoc = readerConfig(L"numWordsPerDoc", (size_t)2000);
     m_vocabSize = readerConfig(L"vocabSize", (size_t)2748230);
+    m_idfVocabSize = readerConfig(L"idfVocabSize", (size_t)2500415);
     m_vectorSize = readerConfig(L"vectorSize", (size_t)200);
     m_bytesPerSample = sizeof(int32_t) * (m_numWordsPerQuery + m_numDocs * m_numWordsPerDoc);
     m_bytesPerVector = sizeof(ElemType) * m_vectorSize;
@@ -361,7 +362,7 @@ bool NDRMReader<ElemType>::TryGetMinibatch(StreamMinibatchInputs& matrices)
 
                         if (wordId == qWordId)
                         {
-                            if (wordId < m_vocabSize)
+                            if (wordId < m_idfVocabSize)
                                 tgtIdAddr[l] = *(ElemType*)((char*)m_idfDataBuffer + (wordId - 1) * sizeof(ElemType));
                             else
                                 tgtIdAddr[l] = (ElemType)1;
