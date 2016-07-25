@@ -429,16 +429,16 @@ bool NDRMReader<ElemType>::TryGetMinibatch(StreamMinibatchInputs& matrices)
 
         if (inclEmbeddingFeature)
         {
-            Matrix<ElemType>& featuresEmbeddingX = matrices.GetInputMatrix<ElemType>(featureNameEmbeddingX);
-            featuresEmbeddingX.Resize(m_numWordsPerQuery * m_numWordsPerDoc * 2, actualMiniBatchSize);
-            featuresEmbeddingX.SetValue(m_numWordsPerQuery * m_numWordsPerDoc * 2, actualMiniBatchSize, featuresEmbeddingX.GetDeviceId(), (ElemType*)m_embXValues, matrixFlagNormal);
+            Matrix<ElemType>& featuresEmbedding = matrices.GetInputMatrix<ElemType>(featureNameEmbedding);
+            featuresEmbedding.Resize(numRows, actualMiniBatchSize);
+            featuresEmbedding.SetValue(numRows, actualMiniBatchSize, featuresEmbedding.GetDeviceId(), (ElemType*)tgtAddrBase, matrixFlagNormal);
         }
 
         if (inclEmbeddingXFeature)
         {
-            Matrix<ElemType>& featuresIdentity = matrices.GetInputMatrix<ElemType>(featureNameIdentity);
-            featuresIdentity.Resize(m_numWordsPerQuery * m_numWordsPerDoc, actualMiniBatchSize);
-            featuresIdentity.SetValue(m_numWordsPerQuery * m_numWordsPerDoc, actualMiniBatchSize, featuresIdentity.GetDeviceId(), (ElemType*)m_dIdValues, matrixFlagNormal);
+            Matrix<ElemType>& featuresEmbeddingX = matrices.GetInputMatrix<ElemType>(featureNameEmbeddingX);
+            featuresEmbeddingX.Resize(m_numWordsPerQuery * m_numWordsPerDoc * 2, actualMiniBatchSize);
+            featuresEmbeddingX.SetValue(m_numWordsPerQuery * m_numWordsPerDoc * 2, actualMiniBatchSize, featuresEmbeddingX.GetDeviceId(), (ElemType*)m_embXValues, matrixFlagNormal);
         }
     }
 
