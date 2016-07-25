@@ -1133,6 +1133,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Scripts", "Scripts", "{6826
 	ProjectSection(SolutionItems) = preProject
 		Scripts\pytest.ini = Scripts\pytest.ini
 		Scripts\txt2ctf.py = Scripts\txt2ctf.py
+		Scripts\uci2ctf.py = Scripts\uci2ctf.py
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ManagedEvalTests", "Tests\UnitTests\ManagedEvalTests\ManagedEvalTests.csproj", "{CC8DDDCB-D53A-4B30-8596-AEF1C493DB31}"
@@ -1142,6 +1143,9 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CSEvalClient", "Examples\Evaluation\CSEvalClient\CSEvalClient.csproj", "{1C6E6C53-1AA7-4B69-913E-B97BB5A872CF}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CPPEvalClient", "Examples\Evaluation\CPPEvalClient\CPPEvalClient.vcxproj", "{CCC07E8E-F33A-4AF7-9F60-93E2AA61C75E}"
+	ProjectSection(ProjectDependencies) = postProject
+		{482999D1-B7E2-466E-9F8D-2119F93EAFD9} = {482999D1-B7E2-466E-9F8D-2119F93EAFD9}
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

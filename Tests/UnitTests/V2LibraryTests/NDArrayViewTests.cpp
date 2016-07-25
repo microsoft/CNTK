@@ -16,8 +16,8 @@ void TestNDArrayView(size_t numAxes, const DeviceDescriptor& device)
 
     // Create a NDArrayView over a std::array
     std::array<ElementType, 1> arrayData = { 3 };
-    auto arrayDataView = new NDArrayView({}, arrayData);
-    if (arrayDataView->DataBuffer<ElementType>() != arrayData.data())
+    auto arrayDataView = MakeSharedObject<NDArrayView>(NDShape({}), arrayData);
+    if (arrayDataView->template DataBuffer<ElementType>() != arrayData.data())
         throw std::runtime_error("The DataBuffer of the NDArrayView does not match the original buffer it was created over");
 
     std::vector<ElementType> data(viewShape.TotalSize());
@@ -26,8 +26,8 @@ void TestNDArrayView(size_t numAxes, const DeviceDescriptor& device)
     for (size_t i = 0; i < viewShape.TotalSize(); ++i)
         data[i] = offset + ((((ElementType)rand()) / RAND_MAX) * scale);
 
-    auto cpuDataView = new NDArrayView(viewShape, data);
-    if (cpuDataView->DataBuffer<ElementType>() != data.data())
+    auto cpuDataView = MakeSharedObject<NDArrayView>(viewShape, data);
+    if (cpuDataView->template DataBuffer<ElementType>() != data.data())
         throw std::runtime_error("The DataBuffer of the NDArrayView does not match the original buffer it was created over");
 
     NDArrayViewPtr dataView;
@@ -35,7 +35,7 @@ void TestNDArrayView(size_t numAxes, const DeviceDescriptor& device)
         dataView = cpuDataView;
     else
     {
-        dataView = new NDArrayView(AsDataType<ElementType>(), viewShape, device);
+        dataView = MakeSharedObject<NDArrayView>(AsDataType<ElementType>(), viewShape, device);
         dataView->CopyFrom(*cpuDataView);
     }
 
@@ -45,7 +45,7 @@ void TestNDArrayView(size_t numAxes, const DeviceDescriptor& device)
     // Test clone
     auto clonedView = dataView->DeepClone(false);
     ElementType* first = nullptr;
-    const ElementType* second = cpuDataView->DataBuffer<ElementType>();
+    const ElementType* second = cpuDataView->template DataBuffer<ElementType>();
     NDArrayViewPtr temp1CpuDataView, temp2CpuDataView;
     if ((device.Type() == DeviceKind::CPU))
     {
@@ -56,7 +56,7 @@ void TestNDArrayView(size_t numAxes, const DeviceDescriptor& device)
     }
     else
     {
-        temp1CpuDataView = new NDArrayView(AsDataType<ElementType>(), viewShape, DeviceDescriptor::CPUDevice());
+        temp1CpuDataView = MakeSharedObject<NDArrayView>(AsDataType<ElementType>(), viewShape, DeviceDescriptor::CPUDevice());
         temp1CpuDataView->CopyFrom(*clonedView);
 
         first = temp1CpuDataView->WritableDataBuffer<ElementType>();
@@ -79,11 +79,11 @@ void TestNDArrayView(size_t numAxes, const DeviceDescriptor& device)
     }
     else
     {
-        temp1CpuDataView = new NDArrayView(AsDataType<ElementType>(), viewShape, DeviceDescriptor::CPUDevice());
+        temp1CpuDataView = MakeSharedObject<NDArrayView>(AsDataType<ElementType>(), viewShape, DeviceDescriptor::CPUDevice());
         temp1CpuDataView->CopyFrom(*clonedView);
         first = temp1CpuDataView->WritableDataBuffer<ElementType>();
 
-        temp2CpuDataView = new NDArrayView(AsDataType<ElementType>(), viewShape, DeviceDescriptor::CPUDevice());
+        temp2CpuDataView = MakeSharedObject<NDArrayView>(AsDataType<ElementType>(), viewShape, DeviceDescriptor::CPUDevice());
         temp2CpuDataView->CopyFrom(*dataView);
         second = temp2CpuDataView->DataBuffer<ElementType>();
     }
