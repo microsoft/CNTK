@@ -38,6 +38,7 @@ class NDRMReader : public DataReaderBase
     size_t m_bytesPerSample;
     size_t m_bytesPerVector;
     char* m_dIdValues;
+    char* m_embXValues;
     char* m_qEmbValues;
     char* m_dEmbValues;
     char* m_labels;
