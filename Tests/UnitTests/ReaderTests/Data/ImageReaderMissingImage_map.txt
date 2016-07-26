@@ -1,0 +1,4 @@
+imageDoesNotExists\black.jpg	0
+images\blue.jpg	1
+images\green.jpg	2
+images\red.jpg	3

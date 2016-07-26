@@ -20,6 +20,17 @@ struct AN4ReaderFixture : ReaderFixture
     }
 };
 
+struct iVectorFixture : ReaderFixture
+{
+    iVectorFixture()
+        : ReaderFixture(
+        "%CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY%/iVector",
+        "This test uses external data that is not part of the CNTK repository. Environment variable CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY must be set to point to the external test data location. \n Refer to the 'Setting up CNTK on Windows' documentation.)")
+    {
+    }
+};
+
+
 // Use SpeechReaderFixture for most tests
 // Some of them (e.g. 10, will use different data, thus a different fixture)
 BOOST_FIXTURE_TEST_SUITE(ReaderTestSuite, AN4ReaderFixture)
@@ -585,7 +596,153 @@ BOOST_AUTO_TEST_CASE(HTKDeserializers_NonExistingScpFile)
         "reader");
 };
 
+BOOST_AUTO_TEST_CASE(HTKDeserializersSimpleDataLoop2)
+{
+    HelperRunReaderTest<float>(
+        testDataPath() + "/Config/HTKDeserializersSimpleDataLoop2_Config.cntk",
+        testDataPath() + "/Control/HTKMLFReaderSimpleDataLoop2_12_Control.txt",
+        testDataPath() + "/Control/HTKMLFReaderSimpleDataLoop2_Output.txt",
+        "Simple_Test",
+        "reader",
+        500,
+        250,
+        2,
+        1,
+        1,
+        0,
+        1);
+};
+
+BOOST_AUTO_TEST_CASE(HTKDeserializersSimpleDataLoop12)
+{
+    HelperRunReaderTest<double>(
+        testDataPath() + "/Config/HTKDeserializersSimpleDataLoop12_Config.cntk",
+        testDataPath() + "/Control/HTKMLFReaderSimpleDataLoop2_12_Control.txt",
+        testDataPath() + "/Control/HTKMLFReaderSimpleDataLoop12_Output.txt",
+        "Simple_Test",
+        "reader",
+        500,
+        250,
+        2,
+        1,
+        1,
+        0,
+        1);
+};
+
 BOOST_AUTO_TEST_SUITE_END()
+
+BOOST_FIXTURE_TEST_SUITE(ReaderIVectorTestSuite, iVectorFixture)
+
+BOOST_AUTO_TEST_CASE(HTKNoIVector)
+{
+    auto test = [this](std::vector<std::wstring> additionalParameters)
+    {
+        HelperRunReaderTest<double>(
+            testDataPath() + "/Config/HTKMLFReaderNoIVectorSimple_Config.cntk",
+            testDataPath() + "/Control/HTKMLFReaderNoIVectorSimple_Control.txt",
+            testDataPath() + "/Control/HTKMLFReaderNoIVectorSimple_Output.txt",
+            "Simple_Test",
+            "reader",
+            400,
+            30,
+            1,
+            1,
+            1,
+            0,
+            1,
+            false,
+            false,
+            true,
+            additionalParameters);
+    };
+
+    test({});
+    test({ L"Simple_Test=[reader=[readerType=HTKDeserializers]]" });
+};
+
+BOOST_AUTO_TEST_CASE(HTKIVectorFrame)
+{
+    auto test = [this](std::vector<std::wstring> additionalParameters)
+    {
+        HelperRunReaderTest<double>(
+            testDataPath() + "/Config/HTKMLFReaderIVectorSimple_Config.cntk",
+            testDataPath() + "/Control/HTKMLFReaderIVectorSimple_Control.txt",
+            testDataPath() + "/Control/HTKMLFReaderIVectorSimple_Output.txt",
+            "Simple_Test",
+            "reader",
+            400,
+            30,
+            1,
+            2,
+            1,
+            0,
+            1,
+            false,
+            false,
+            true,
+            additionalParameters);
+    };
+
+    test({});
+    test({ L"Simple_Test=[reader=[readerType=HTKDeserializers]]" });
+};
+
+BOOST_AUTO_TEST_CASE(HTKIVectorSequence)
+{
+    auto test = [this](std::vector<std::wstring> additionalParameters)
+    {
+        HelperRunReaderTest<float>(
+            testDataPath() + "/Config/HTKMLFReaderIVectorSimple_Config.cntk",
+            testDataPath() + "/Control/HTKMLFReaderIVectorSequenceSimple_Control.txt",
+            testDataPath() + "/Control/HTKMLFReaderIVectorSequenceSimple_Output.txt",
+            "Simple_Test",
+            "reader",
+            200,
+            30,
+            1,
+            2,
+            1,
+            0,
+            1,
+            false,
+            false,
+            true,
+            additionalParameters);
+    };
+
+    test({ L"frameMode=false", L"precision=float" });
+    test({ L"frameMode=false", L"precision=float", L"Simple_Test=[reader=[readerType=HTKDeserializers]]" });
+};
+
+BOOST_AUTO_TEST_CASE(HTKIVectorBptt)
+{
+    auto test = [this](std::vector<std::wstring> additionalParameters)
+    {
+        HelperRunReaderTest<double>(
+            testDataPath() + "/Config/HTKMLFReaderIVectorSimple_Config.cntk",
+            testDataPath() + "/Control/HTKMLFReaderIVectorBpttSimple_Control.txt",
+            testDataPath() + "/Control/HTKMLFReaderIVectorBpttSimple_Output.txt",
+            "Simple_Test",
+            "reader",
+            400,
+            30,
+            1,
+            2,
+            1,
+            0,
+            1,
+            false,
+            false,
+            true,
+            additionalParameters);
+    };
+    test({ L"frameMode=false", L"truncated=true" });
+    test({ L"frameMode=false", L"truncated=true", L"Simple_Test=[reader=[readerType=HTKDeserializers]]" });
+};
+
+BOOST_AUTO_TEST_SUITE_END()
+
 }
 
 }}}

@@ -78,6 +78,12 @@ public:
         return &m_utterances[index];
     }
 
+    // Get utterance description by its index.
+    UtteranceDescription* GetUtterance(size_t index)
+    {
+        return &m_utterances[index];
+    }
+
     // Get start frame index inside chunk.
     size_t GetStartFrameIndexInsideChunk(size_t index) const
     {
@@ -105,7 +111,7 @@ public:
         }
 
         const size_t ts = m_firstFrames[index];
-        const size_t n = GetUtterance(index)->GetNumberOfFrames();
+        const size_t n = m_utterances[index].GetNumberOfFrames();
         return msra::dbn::matrixstripe(m_frames, ts, n);
     }
 
