@@ -879,11 +879,8 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
     }
     fprintf(stderr, ".\n");
 
-    double readTime = 0, computeTime = 0, commTime = 0;
-    Timer timer, readTimer, computeTimer, commTimer;
-
+    Timer timer;
     timer.Start();
-    readTimer.Start();
 
     // NOTE: the following two local matrices are not used in distGradAgg path
     // assume only one training criterion node for each epoch.
@@ -929,9 +926,6 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         if (!wasDataRead)
             actualMBSize = 0; // (undefined if !wasDataRead)
 
-        readTimer.Stop();
-        readTime += readTimer.ElapsedSeconds();
-        computeTimer.Start();
         nSamplesSinceLastModelSync += actualMBSize;
 
         // Dropout nodes have an implicit input in the form of the random mask that is applied to its explicit input
@@ -1090,8 +1084,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             for (size_t i = 0; i < epochEvalErrors.size(); i++)
                 epochEvalErrors[i] += m_gradHeader->evalErrors[i];
         }
-        computeTimer.Stop();
-        computeTime += computeTimer.ElapsedSeconds();
+
         // update model parameters
         if ((aggregateNumSamples > 0) && (learnRatePerSample > m_minLearnRate * 0.01))
         {
@@ -1140,7 +1133,6 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             fprintf(stderr, "Perf trace: Read = %.5gs; Compute = %.5gs; Parameter update = %.5gs\n", readTime, computeTime, parameterUpdateTime);
         }
 
-        commTimer.Start();
         // aggregation by model averaging or block momentum 
         if (useModelAggregation)
         {
