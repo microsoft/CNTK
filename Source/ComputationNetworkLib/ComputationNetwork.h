@@ -522,6 +522,8 @@ public:
     }
 
 
+    const std::vector<ComputationNodeBasePtr>& RootNodes()           const { return m_allRoots; }
+
     // these are specified as such by the user
     const std::vector<ComputationNodeBasePtr>& FeatureNodes()        const { return m_featureNodes   ; }
     const std::vector<ComputationNodeBasePtr>& LabelNodes()          const { return m_labelNodes     ; }

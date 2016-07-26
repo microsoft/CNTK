@@ -114,6 +114,7 @@
     <ClCompile Include="NDArrayViewTests.cpp" />
     <ClCompile Include="RecurrentFunctionTests.cpp" />
     <ClCompile Include="TensorTests.cpp" />
+    <ClCompile Include="TrainerTests.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Common.h" />

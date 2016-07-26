@@ -165,7 +165,7 @@ class InputValueBase : public ComputationNode<ElemType>, public NumInputs<0>, pu
     typedef ComputationNode<ElemType> Base;
     UsingComputationNodeMembers;
 
-    void Init(const TensorShape& sampleLayout, bool isSparse, const std::wstring axisName)
+    void Init(const TensorShape& sampleLayout, bool isSparse, const std::wstring axisName, float learningRateMultiplier = 0)
     {
         m_isSparse = isSparse;
         MarkValueNonSharable();
@@ -174,7 +174,7 @@ class InputValueBase : public ComputationNode<ElemType>, public NumInputs<0>, pu
 
         SetDims(sampleLayout, HasMBLayout()); // also called when reloading a file. Then we have an MBLayout, otherwise not yet
         UpdateFunctionValuesSize();           // we must allocate the matrix so that the readers get objects with valid row dimensions (some readers expect that)
-        SetLearningRateMultiplier(0);
+        SetLearningRateMultiplier(learningRateMultiplier);
         m_dynamicAxisNodeName = axisName;
     }
 
@@ -228,9 +228,9 @@ protected:
             Init(ImageDimensions::AsTensorShape(configp->Get(L"imageWidth"), configp->Get(L"imageHeight"), configp->Get(L"imageChannels"), ImageLayoutKindFrom(configp->Get(L"imageLayout"))), isSparse, axisName);
     }
 
+public:
     virtual const std::wstring GetRequestedDynamicAxis() const { return m_dynamicAxisNodeName; }
 
-public:
     virtual void Save(File& fstream) const override
     {
         Base::Save(fstream);
@@ -242,6 +242,8 @@ public:
         unsigned int nrAxes = 1;
         fstream << nrAxes;
         fstream << m_dynamicAxisNodeName;
+
+        fstream << m_learningRateMultiplier;
     }
 
     virtual void Load(File& fstream, size_t modelVersion) override
@@ -271,7 +273,12 @@ public:
         }
         else
             m_dynamicAxisNodeName = L""; // Use default
-        Init(sampleLayout, m_isSparse, m_dynamicAxisNodeName);
+
+        float learningRateMultiplier = 0;
+        if (modelVersion >= CNTK_MODEL_VERSION_10)
+            fstream >> learningRateMultiplier;
+
+        Init(sampleLayout, m_isSparse, m_dynamicAxisNodeName, learningRateMultiplier);
     }
 
     // InputValue must not resize its inputs because that might destroy it. It should already have the correct size.

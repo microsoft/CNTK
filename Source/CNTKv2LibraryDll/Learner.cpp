@@ -8,13 +8,13 @@
 #include "Utils.h"
 
 #define UPDATE_FUNCTION                                                                                       \
-    switch (smoothedGradientValue->Data()->GetDataType())                                                     \
+    switch (smoothedGradientValue->GetDataType())                                                     \
     {                                                                                                         \
     case DataType::Float:                                                                                     \
-        Update<float>(parameter, smoothedGradientValue, gradientValue, parameterValue, trainingSampleCount);  \
+        Update<float>(parameter, gradientValue, smoothedGradientValue, trainingSampleCount);  \
         break;                                                                                                \
     case DataType::Double:                                                                                    \
-        Update<double>(parameter, smoothedGradientValue, gradientValue, parameterValue, trainingSampleCount); \
+        Update<double>(parameter, gradientValue, smoothedGradientValue, trainingSampleCount); \
         break;                                                                                                \
     default:                                                                                                  \
         NOT_IMPLEMENTED;                                                                                      \
@@ -27,50 +27,48 @@ using namespace std;
 namespace CNTK
 {
     template <typename ElementType>
-    /*static*/ shared_ptr<const Matrix<ElementType>> LearnerBase::GetMatrix(const NDArrayViewPtr arrayView)
+    /*static*/ shared_ptr<const Matrix<ElementType>> LearnerBase::GetMatrix(const NDArrayViewPtr& arrayView)
     {
         return arrayView->GetMatrix<ElementType>();
     }
 
     template <typename ElementType>
-    /*static*/ shared_ptr<Matrix<ElementType>> LearnerBase::GetWritableMatrix(NDArrayViewPtr arrayView)
+    /*static*/ shared_ptr<Matrix<ElementType>> LearnerBase::GetWritableMatrix(const NDArrayViewPtr& arrayView)
     {
         return arrayView->GetWritableMatrix<ElementType>();
     }
 
     template <typename ElementType>
-    /*static*/ const TensorView<ElementType>* LearnerBase::GetTensorView(const NDArrayViewPtr arrayView)
+    /*static*/ const TensorView<ElementType>* LearnerBase::GetTensorView(const NDArrayViewPtr& arrayView)
     {
         return arrayView->GetTensorView<ElementType>();
     }
 
-    /*static*/ bool LearnerBase::HasNan(const ValuePtr& value, const char* name)
+    /*static*/ bool LearnerBase::HasNan(const NDArrayViewPtr& value, const char* name)
     {
-        const auto& data = value->Data();
-        switch (data->GetDataType())
+        switch (value->GetDataType())
         {
         case DataType::Float:
-            return data->GetMatrix<float>()->HasNan(name);
+            return value->GetMatrix<float>()->HasNan(name);
         case DataType::Double:
-            return data->GetMatrix<double>()->HasNan(name);
+            return value->GetMatrix<double>()->HasNan(name);
         default:
-            LogicError("Unsupported DataType %s", DataTypeName(data->GetDataType()));
+            LogicError("Unsupported DataType %s", DataTypeName(value->GetDataType()));
         }
     }
 
-    /*static*/ void LearnerBase::Print(const ValuePtr& value, const char* msg)
+    /*static*/ void LearnerBase::Print(const NDArrayViewPtr& value, const char* msg)
     {
-        const auto& data = value->Data();
-        switch (data->GetDataType())
+        switch (value->GetDataType())
         {
         case DataType::Float:
-            data->GetMatrix<float>()->Print(msg);
+            value->GetMatrix<float>()->Print(msg);
             break;
         case DataType::Double:
-            data->GetMatrix<double>()->Print(msg);
+            value->GetMatrix<double>()->Print(msg);
             break;
         default:
-            LogicError("Unsupported DataType %s", DataTypeName(data->GetDataType()));
+            LogicError("Unsupported DataType %s", DataTypeName(value->GetDataType()));
         }
     }
 
@@ -99,9 +97,9 @@ namespace CNTK
     // Performs additional preprocessing before calling the update method 
     // (gradient clipping and L2 regularization depending on the additional learning parameters).
     template <typename ElementType>
-    void LearnerBase::PreProcess(const ValuePtr& gradientValue,const ValuePtr& parameterValue, size_t actualMBSize) const
+    void LearnerBase::PreProcess(const NDArrayViewPtr& parameterValue, const NDArrayViewPtr& gradientValue, size_t actualMBSize) const
     {
-        const auto& gradientMatrix = gradientValue->Data()->GetWritableMatrix<ElementType>();
+        const auto& gradientMatrix = gradientValue->GetWritableMatrix<ElementType>();
 
         // clipping gradients to prevent outliers
         ClipGradient<ElementType>(*gradientMatrix, actualMBSize);
@@ -111,7 +109,7 @@ namespace CNTK
         {
             // multiply by actualMBSize so that it's invariant to minibatch size since learning rate is per sample
             auto weight = ElementType(m_additionalOptions.l2RegularizationWeight * actualMBSize);
-            const auto& parameterMatrix = parameterValue->Data()->GetWritableMatrix<ElementType>();
+            const auto& parameterMatrix = parameterValue->GetWritableMatrix<ElementType>();
             Matrix<ElementType>::ScaleAndAdd(weight, *parameterMatrix, *gradientMatrix);
         }
     }
@@ -119,13 +117,13 @@ namespace CNTK
     // Performs additional postprocessing after the update method has been executed
     // (noise injection and L1 regularization specified by the additional learning parameters).
     template <typename ElementType>
-    void LearnerBase::PostProcess(const Variable& parameter, const ValuePtr& gradientValue,
-                                    const ValuePtr& parameterValue, size_t actualMBSize) const
+    void LearnerBase::PostProcess(const Parameter& parameter, const NDArrayViewPtr& gradientValue, size_t actualMBSize) const
     {
-        const auto& parameterMatrix = parameterValue->Data()->GetWritableMatrix<ElementType>();
+        const auto& parameterValue = parameter.Value();
+        const auto& parameterMatrix = parameterValue->GetWritableMatrix<ElementType>();
         if (m_additionalOptions.gaussianNoiseInjectionStdDev > 0)
         {
-            const auto& gradientMatrix = gradientValue->Data()->GetWritableMatrix<ElementType>();
+            const auto& gradientMatrix = gradientValue->GetWritableMatrix<ElementType>();
 
             Matrix<ElementType> sgdUpdateNoise((DEVICEID_TYPE)parameterMatrix->GetDeviceId());
 
@@ -146,22 +144,22 @@ namespace CNTK
             auto learningRate = ElementType(ParameterDependentLearningRate(parameter));
             // multiply by actualMBSize so that it's invariant to minibatch size since learning rate is per sample
             auto weight = ElementType(learningRate * m_additionalOptions.l1RegularizationWeight * actualMBSize);
-            parameterValue->Data()->GetWritableMatrix<ElementType>()->InplaceSoftThreshold(weight);
+            parameterValue->GetWritableMatrix<ElementType>()->InplaceSoftThreshold(weight);
         }
     }
 
     template <typename ElementType>
-    /*static*/ TensorView<ElementType>* LearnerBase::GetWritableTensorView(NDArrayViewPtr arrayView)
+    /*static*/ TensorView<ElementType>* LearnerBase::GetWritableTensorView(const NDArrayViewPtr& arrayView)
     {
         return arrayView->GetWritableTensorView<ElementType>();
     }
 
-    LearnerBase::LearnerBase(const unordered_set<Variable>& parameters, const DeviceDescriptor& device)
+    LearnerBase::LearnerBase(const unordered_set<Parameter>& parameters)
         : Learner(parameters),
         m_learningRatePerSample(0.0),
         m_sampleCount(0)
     {
-        const unordered_set<Variable>& parameterSet = parameters;
+        const unordered_set<Parameter>& parameterSet = parameters;
         for (const auto& parameter : parameterSet)
         {
             // TODO: using the same device to allocate data for all smoothed gradients. Is this correct?
@@ -169,14 +167,14 @@ namespace CNTK
             NDArrayViewPtr view;
             if (parameter.GetDataType() == DataType::Float)
             {
-                view = MakeSharedObject<NDArrayView>(0.0f, parameter.Shape(), device);
+                view = MakeSharedObject<NDArrayView>(0.0f, parameter.Shape(), parameter.Value()->Device());
             }
             else
             {
-                view = MakeSharedObject<NDArrayView>(0.0, parameter.Shape(), device);
+                view = MakeSharedObject<NDArrayView>(0.0, parameter.Shape(), parameter.Value()->Device());
             }
 
-            m_smoothedGradientValues.insert(make_pair(parameter, MakeSharedObject<Value>(view)));
+            m_smoothedGradientValues.insert(make_pair(parameter, view));
             m_additionalOptions.learningRateMultipliers.insert(make_pair(parameter, 1.0));
         }
     }
@@ -186,7 +184,7 @@ namespace CNTK
         for (const auto& parameter : Parameters())
         {
             const auto& smoothedGradientValue = m_smoothedGradientValues.at(parameter);
-            const auto& data = smoothedGradientValue->Data();
+            const auto& data = smoothedGradientValue;
             switch (data->GetDataType())
             {
             case DataType::Float:
@@ -201,9 +199,7 @@ namespace CNTK
         }
     }
 
-    /*virtual*/ bool LearnerBase::Update(const unordered_map<Variable, ValuePtr>& parameterValues,
-                                            const unordered_map<Variable, const ValuePtr>& gradientValues,
-                                            size_t trainingSampleCount) /*override*/
+    /*virtual*/ bool LearnerBase::Update(const unordered_map<Parameter, NDArrayViewPtr>& gradientValues, size_t trainingSampleCount) /*override*/
     {
         // make sure trainingSampleCount is a valid value
         assert(trainingSampleCount > 0);
@@ -212,8 +208,6 @@ namespace CNTK
         {
             const auto& smoothedGradientValue = m_smoothedGradientValues.at(parameter);
             const auto& gradientValue = gradientValues.at(parameter);
-            const auto& parameterValue = parameterValues.at(parameter);
-
 // TODO: make this a runtime parameter.
 #if DUMPOUTPUT
             LOGPRINTF(stderr, "Update_%ls\n", parameter.Name().c_str());
@@ -239,6 +233,7 @@ namespace CNTK
 #endif
 
 #ifdef _DEBUG
+            const auto& parameterValue = parameter.Value();
             if (HasNan(parameterValue, "TrainOneEpoch/UpdateWeights/Learner::Update(): "))
                 LogicError("%ls has NaNs in parameter values after parameter update.", parameter.Name().c_str());
 #endif
@@ -248,12 +243,12 @@ namespace CNTK
     }
 
     template <typename ElementType>
-    void LearnerBase::Update(const Variable& parameter, const ValuePtr& smoothedGradientValue,
-                             const ValuePtr& gradientValue, const ValuePtr& parameterValue, size_t trainingSampleCount) const
+    void LearnerBase::Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const
     {
-        PreProcess<ElementType>(gradientValue, parameterValue, trainingSampleCount);
-        Update(parameter, smoothedGradientValue, gradientValue, parameterValue, trainingSampleCount);
-        PostProcess<ElementType>(parameter, gradientValue, parameterValue, trainingSampleCount);
+        const auto& parameterValue = parameter.Value();
+        PreProcess<ElementType>(parameterValue, gradientValue, trainingSampleCount);
+        Update(parameter, gradientValue, smoothedGradientValue, trainingSampleCount);
+        PostProcess<ElementType>(parameter, gradientValue, trainingSampleCount);
     }
 
     string LearnerBase::LearnerType() const
@@ -286,7 +281,7 @@ namespace CNTK
 
             // Potentially, could store things like dimensions, element size, format, etc., but
             // that seems to be redundant, since all of that is passed in the constructor.
-            checkpoint[parameter.Name()] = SerializeToVector(smoothedGradientValue->Data());
+            checkpoint[parameter.Name()] = SerializeToVector(smoothedGradientValue);
         }
         return checkpoint;
     }
@@ -304,27 +299,26 @@ namespace CNTK
 
             const DictionaryValue& state = checkpoint[parameter.Name()];
 
-            const auto& data = smoothedGradientValue->Data();
+            const auto& data = smoothedGradientValue;
 
             DeserializeFromVector(data, state.GetValue<vector<DictionaryValue>>());
         }
     }
 
-    /*virtual*/ void LearnerSGD::Update(const Variable& parameter, const ValuePtr& smoothedGradientValue,
-                                        const ValuePtr& gradientValue, const ValuePtr& parameterValue, size_t trainingSampleCount) const /*override*/
+    /*virtual*/ void LearnerSGD::Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const /*override*/
     {
         UPDATE_FUNCTION;
     }
 
     template <typename ElementType>
-    void LearnerSGD::Update(const Variable& parameter, const ValuePtr& smoothedGradientValue,
-                            const ValuePtr& gradientValue, const ValuePtr& parameterValue, size_t trainingSampleCount) const
+    void LearnerSGD::Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const
     {
         UNUSED(trainingSampleCount);
 
-        const auto& smoothedGradientMatrix = GetWritableMatrix<ElementType>(smoothedGradientValue->Data());
-        const auto& gradientMatrix = GetWritableMatrix<ElementType>(gradientValue->Data());
-        const auto& parameterMatrix = GetWritableMatrix<ElementType>(parameterValue->Data());
+        const auto& parameterValue = parameter.Value();
+        const auto& smoothedGradientMatrix = GetWritableMatrix<ElementType>(smoothedGradientValue);
+        const auto& gradientMatrix = GetWritableMatrix<ElementType>(gradientValue);
+        const auto& parameterMatrix = GetWritableMatrix<ElementType>(parameterValue);
 
         const auto& learningRate = ElementType(ParameterDependentLearningRate(parameter));
 
@@ -334,27 +328,25 @@ namespace CNTK
                                             learningRate, ElementType(m_momentumPerSample), m_useNesterovAcceleration);
     }
 
-    LearnerAdaGrad::LearnerAdaGrad(const unordered_set<Variable>& parameters, bool needAveMultiplier, const DeviceDescriptor& device)
-        : LearnerBase(parameters, device),
-        m_needAveMultiplier(needAveMultiplier)
+    LearnerAdaGrad::LearnerAdaGrad(const unordered_set<Parameter>& parameters, bool needAveMultiplier)
+        : LearnerBase(parameters), m_needAveMultiplier(needAveMultiplier)
     {
     }
 
-    /*virtual*/ void LearnerAdaGrad::Update(const Variable& parameter, const ValuePtr& smoothedGradientValue,
-                                            const ValuePtr& gradientValue, const ValuePtr& parameterValue, size_t trainingSampleCount) const /*override*/
+    /*virtual*/ void LearnerAdaGrad::Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const /*override*/
     {
         UPDATE_FUNCTION;
     }
 
     template <typename ElementType>
-    void LearnerAdaGrad::Update(const Variable& parameter, const ValuePtr& smoothedGradientValue,
-                                const ValuePtr& gradientValue, const ValuePtr& parameterValue, size_t trainingSampleCount) const
+    void LearnerAdaGrad::Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const
     {
         UNUSED(trainingSampleCount);
 
-        const auto& smoothedGradientMatrix = GetWritableMatrix<ElementType>(smoothedGradientValue->Data());
-        const auto& gradientMatrix = GetWritableMatrix<ElementType>(gradientValue->Data());
-        const auto& parameterMatrix = GetWritableMatrix<ElementType>(parameterValue->Data());
+        const auto& parameterValue = parameter.Value();
+        const auto& smoothedGradientMatrix = GetWritableMatrix<ElementType>(smoothedGradientValue);
+        const auto& gradientMatrix = GetWritableMatrix<ElementType>(gradientValue);
+        const auto& parameterMatrix = GetWritableMatrix<ElementType>(parameterValue);
 
         auto learningRate = ElementType(ParameterDependentLearningRate(parameter));
 
@@ -362,26 +354,25 @@ namespace CNTK
         Matrix<ElementType>::ScaleAndAdd(ElementType(-learningRate / aveMultiplier), *gradientMatrix, *parameterMatrix);
     }
 
-    LearnerFSAdaGrad::LearnerFSAdaGrad(const unordered_set<Variable>& parameters, const DeviceDescriptor& device)
-        : LearnerMomentumSGD(parameters, device)
+    LearnerFSAdaGrad::LearnerFSAdaGrad(const unordered_set<Parameter>& parameters)
+        : LearnerMomentumSGD(parameters)
     {
     }
 
-    /*virtual*/ void LearnerFSAdaGrad::Update(const Variable& parameter, const ValuePtr& smoothedGradientValue,
-                                                const ValuePtr& gradientValue, const ValuePtr& parameterValue, size_t trainingSampleCount) const /*override*/
+    /*virtual*/ void LearnerFSAdaGrad::Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const /*override*/
     {
         UPDATE_FUNCTION;
     }
 
     template <typename ElementType>
-    void LearnerFSAdaGrad::Update(const Variable& parameter, const ValuePtr& smoothedGradientValue,
-                                  const ValuePtr& gradientValue, const ValuePtr& parameterValue, size_t trainingSampleCount) const
+    void LearnerFSAdaGrad::Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const
     {
         UNUSED(trainingSampleCount);
 
-        const auto& smoothedGradientMatrix = GetWritableMatrix<ElementType>(smoothedGradientValue->Data());
-        const auto& gradientMatrix = GetWritableMatrix<ElementType>(gradientValue->Data());
-        const auto& parameterMatrix = GetWritableMatrix<ElementType>(parameterValue->Data());
+        const auto& parameterValue = parameter.Value();
+        const auto& smoothedGradientMatrix = GetWritableMatrix<ElementType>(smoothedGradientValue);
+        const auto& gradientMatrix = GetWritableMatrix<ElementType>(gradientValue);
+        const auto& parameterMatrix = GetWritableMatrix<ElementType>(parameterValue);
 
         //const double momentum = MomentumPerMB(m_momentumPerSample, trainingSampleCount);
 
@@ -391,30 +382,28 @@ namespace CNTK
                                             learningRate, ElementType(m_momentumPerSample));
     }
 
-    LearnerRMSProp::LearnerRMSProp(const unordered_set<Variable>& parameters,
-                                    double gamma, double inc, double dec, double max, double min,
-                                    bool needAveMultiplier, const DeviceDescriptor& device)
-                                    : LearnerBase(parameters, device),
+    LearnerRMSProp::LearnerRMSProp(const unordered_set<Parameter>& parameters,
+                                    double gamma, double inc, double dec, double max, double min, bool needAveMultiplier)
+                                    : LearnerBase(parameters),
                                     m_gamma(gamma), m_inc(inc), m_dec(dec), m_max(max), m_min(min),
                                     m_needAveMultiplier(needAveMultiplier)
     {
     }
 
-    /*virtual*/ void LearnerRMSProp::Update(const Variable& parameter, const ValuePtr& smoothedGradientValue,
-                                            const ValuePtr& gradientValue, const ValuePtr& parameterValue, size_t trainingSampleCount) const /*override*/
+    /*virtual*/ void LearnerRMSProp::Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const /*override*/
     {
         UPDATE_FUNCTION;
     }
 
     template <typename ElementType>
-    void LearnerRMSProp::Update(const Variable& parameter, const ValuePtr& smoothedGradientValue,
-                                const ValuePtr& gradientValue, const ValuePtr& parameterValue, size_t trainingSampleCount) const
+    void LearnerRMSProp::Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const
     {
         UNUSED(trainingSampleCount);
 
-        const auto& smoothedGradientMatrix = GetWritableMatrix<ElementType>(smoothedGradientValue->Data());
-        const auto& gradientMatrix = GetWritableMatrix<ElementType>(gradientValue->Data());
-        const auto& parameterMatrix = GetWritableMatrix<ElementType>(parameterValue->Data());
+        const auto& parameterValue = parameter.Value();
+        const auto& smoothedGradientMatrix = GetWritableMatrix<ElementType>(smoothedGradientValue);
+        const auto& gradientMatrix = GetWritableMatrix<ElementType>(gradientValue);
+        const auto& parameterMatrix = GetWritableMatrix<ElementType>(parameterValue);
 
         auto learningRate = ElementType(ParameterDependentLearningRate(parameter));
 
@@ -426,39 +415,37 @@ namespace CNTK
     }
 
     // Explicit template instantiations
-    template shared_ptr<Matrix<float>> LearnerBase::GetWritableMatrix<float>(const NDArrayViewPtr arrayView);
-    template shared_ptr<Matrix<double>> LearnerBase::GetWritableMatrix<double>(const NDArrayViewPtr arrayView);
+    template shared_ptr<Matrix<float>> LearnerBase::GetWritableMatrix<float>(const NDArrayViewPtr& arrayView);
+    template shared_ptr<Matrix<double>> LearnerBase::GetWritableMatrix<double>(const NDArrayViewPtr& arrayView);
     
-    LearnerPtr SGDLearner(const unordered_set<Variable>& parameters, const DeviceDescriptor& device)
+    LearnerPtr SGDLearner(const unordered_set<Parameter>& parameters, double learningRatePerSample)
     {
-        return MakeSharedObject<LearnerSGD>(parameters, device);
+        return MakeSharedObject<LearnerSGD>(parameters, learningRatePerSample);
     }
 
-    LearnerPtr MomentumSGDLearner(const unordered_set<Variable>& parameters, const DeviceDescriptor& device)
+    LearnerPtr MomentumSGDLearner(const unordered_set<Parameter>& parameters)
     {
-        return MakeSharedObject<LearnerMomentumSGD>(parameters, device);
+        return MakeSharedObject<LearnerMomentumSGD>(parameters);
     }
 
-    LearnerPtr NesterovLearner(const unordered_set<Variable>& parameters, const DeviceDescriptor& device)
+    LearnerPtr NesterovLearner(const unordered_set<Parameter>& parameters)
     {
-        return MakeSharedObject<LearnerNesterov>(parameters, device);
+        return MakeSharedObject<LearnerNesterov>(parameters);
     }
 
-    LearnerPtr AdaGradLearner(const unordered_set<Variable>& parameters, bool needAveMultiplier, const DeviceDescriptor& device)
+    LearnerPtr AdaGradLearner(const unordered_set<Parameter>& parameters, bool needAveMultiplier)
     {
-        return MakeSharedObject<LearnerAdaGrad>(parameters, needAveMultiplier, device);
+        return MakeSharedObject<LearnerAdaGrad>(parameters, needAveMultiplier);
     }
 
-    LearnerPtr FSAdaGradLearner(const unordered_set<Variable>& parameters, const DeviceDescriptor& device)
+    LearnerPtr FSAdaGradLearner(const unordered_set<Parameter>& parameters)
     {
-        return MakeSharedObject<LearnerFSAdaGrad>(parameters, device);
+        return MakeSharedObject<LearnerFSAdaGrad>(parameters);
     }
 
-    LearnerPtr RMSPropLearner(const unordered_set<Variable>& parameters,
-                                double gamma, double inc, double dec, double max, double min, bool needAveMultiplier,
-                                const DeviceDescriptor& device)
+    LearnerPtr RMSPropLearner(const unordered_set<Parameter>& parameters,
+                                double gamma, double inc, double dec, double max, double min, bool needAveMultiplier)
     {
-        return MakeSharedObject<LearnerRMSProp>(parameters, gamma, inc, dec, max, min, needAveMultiplier, device);
+        return MakeSharedObject<LearnerRMSProp>(parameters, gamma, inc, dec, max, min, needAveMultiplier);
     }
-
 }

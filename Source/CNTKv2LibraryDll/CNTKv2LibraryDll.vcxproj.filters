@@ -11,6 +11,9 @@
     <ClCompile Include="Utils.cpp" />
     <ClCompile Include="NDMask.cpp" />
     <ClCompile Include="Learner.cpp" />
+    <ClCompile Include="BackCompat.cpp" />
+    <ClCompile Include="Trainer.cpp" />
+    <ClCompile Include="MinibatchSource.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h" />
@@ -24,6 +27,7 @@
     </ClInclude>
     <ClInclude Include="Function.h" />
     <ClInclude Include="Learner.h" />
+    <ClInclude Include="MinibatchSource.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="API">

@@ -251,7 +251,7 @@ void CompositeDataReader::StartEpoch(const EpochConfiguration& cfg)
 
     if (config.m_totalEpochSizeInSamples <= 0)
     {
-        RuntimeError("Unsupported minibatch size '%d'.", (int)config.m_totalEpochSizeInSamples);
+        RuntimeError("Unsupported epoch size '%d'.", (int)config.m_totalEpochSizeInSamples);
     }
 
     m_sequenceEnumerator->StartEpoch(config);

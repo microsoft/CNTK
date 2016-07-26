@@ -1106,7 +1106,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             parameterUpdateTime = fineGrainedPerfMeasurementTimer.ElapsedSeconds();
 
             PREPENDTS(stderr);
-            fprintf(stderr, "Perf trace: Read = %.5gs; Compute = %.5gs; Parameter update = %.5gs\n", readTime, computeTime, parameterUpdateTime);
+            fprintf(stderr, "Perf trace: Worker MB size = %d, Read = %.5gs; Compute = %.5gs; Parameter update = %.5gs, Aggregate MB size = %d\n", (int)actualMBSize, readTime, computeTime, parameterUpdateTime, (int)aggregateNumSamples);
         }
 
         // aggregation by model averaging or block momentum 
