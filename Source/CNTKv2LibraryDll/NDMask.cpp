@@ -90,6 +90,15 @@ namespace CNTK
         });
     }
 
+    // TODO: This could actually be strided?
+    const char* NDMask::DataBuffer() const
+    {
+        // First make sure that the underlying matrix is on the right device
+        auto matrix = GetMatrix();
+        matrix->TransferToDeviceIfNotThere(AsCNTKImplDeviceId(m_device), true);
+        return matrix->Data();
+    }
+
     Matrix<char>* NDMask::GetMatrix() const
     {
         return m_matrixView.get();

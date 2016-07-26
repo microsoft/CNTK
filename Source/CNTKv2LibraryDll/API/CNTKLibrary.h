@@ -556,6 +556,11 @@ namespace CNTK
         const NDShape& Shape() const { return m_maskShape; }
 
         ///
+        /// Returns a read-only pointer to the data buffer underlying 'this' Mask object
+        /// 
+        CNTK_API const char* DataBuffer() const;
+
+        ///
         /// Creates a new NDMask with newly allocated storage on the same device as 'this' mask and copies 'this' mask's contents into the newly allocated mask.
         ///
         CNTK_API NDMaskPtr DeepClone() const;
