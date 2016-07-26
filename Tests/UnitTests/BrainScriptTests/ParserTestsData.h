@@ -1,9 +1,15 @@
+//
+// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
+//
+
 #pragma once
 
 #include <iostream>
 #include <vector>
 #include <utility>
 
+// first string in the pair corresponds to BrainScript line to be parsed, second string is the expected tree string after parsed
 extern const std::vector<std::pair<std::wstring, std::wstring>> parserTestVector{
     std::make_pair(// #0
     L"do = Parameter(13,42) * Input(42) + Parameter(13,1)",

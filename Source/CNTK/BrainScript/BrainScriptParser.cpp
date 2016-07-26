@@ -570,41 +570,6 @@ public:
 // ---------------------------------------------------------------------------
 
 // diagnostics helper: print the content
-void Expression::Dump(int indent) const
-{
-    fprintf(stderr, "%*s", indent, "");
-    if (op == L"s")
-        fprintf(stderr, "'%ls' ", s.c_str());
-    else if (op == L"d")
-        fprintf(stderr, "%.f ", d);
-    else if (op == L"b")
-        fprintf(stderr, "%s ", b ? "true" : "false");
-    else if (op == L"id")
-        fprintf(stderr, "%ls ", id.c_str());
-    else if (op == L"new" || op == L"array" || op == L".")
-        fprintf(stderr, "%ls %ls ", op.c_str(), id.c_str());
-    else
-        fprintf(stderr, "%ls ", op.c_str());
-    if (!args.empty())
-    {
-        fprintf(stderr, "\n");
-        for (const auto& arg : args)
-        {
-            arg->Dump(indent + 2);
-        }
-    }
-    if (!namedArgs.empty())
-    {
-        fprintf(stderr, "\n");
-        for (const auto& arg : namedArgs)
-        {
-            fprintf(stderr, "%*s%ls =\n", indent + 2, "", arg.first.c_str());
-            arg.second.second->Dump(indent + 4);
-        }
-    }
-    fprintf(stderr, "\n");
-}
-
 void Expression::DumpToStream(wstringstream & treeStream, int indent)
 {
     treeStream << std::setfill(L' ') << std::setw(indent) << L" ";
@@ -997,7 +962,9 @@ public:
     static void Test()
     {
         let parserTest = L"a=1\na1_=13;b=2 // cmt\ndo = (print\n:train:eval) ; x = array[1..13] (i=>1+i*print.message==13*42) ; print = new PrintAction [ message = 'Hello World' ]";
-        ParseConfigDictFromString(parserTest, L"Test", vector<wstring>())->Dump();
+        wstringstream expressionStream;
+        ParseConfigDictFromString(parserTest, L"Test", vector<wstring>())->DumpToStream(expressionStream);
+        fprintf(stderr, "%ls\n", expressionStream.str());
     }
 };
 
