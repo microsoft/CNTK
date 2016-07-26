@@ -52,7 +52,7 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="$(DebugBuild)">
     <CudaCodeGen>$(CNTK_CUDA_CODEGEN_DEBUG)</CudaCodeGen>
-    <CudaCodeGen Condition="'$(CudaCodeGen)'==''">compute_20,sm_20;compute_30,sm_30</CudaCodeGen>
+    <CudaCodeGen Condition="'$(CudaCodeGen)'==''">compute_30,sm_30</CudaCodeGen>
   </PropertyGroup>
   <PropertyGroup Condition="$(ReleaseBuild)">
     <CudaCodeGen>$(CNTK_CUDA_CODEGEN_RELEASE)</CudaCodeGen>

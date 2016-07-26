@@ -1701,6 +1701,9 @@ public:
             const Matrix<ElemType>& runInvStdDev = Input(4)->Value();
 
             auto sliceInputGrad = Input(0)->GradientFor(fr);
+            // The mean used in Forward() are either saveMean or runMean.
+            // This is decided by the engine, which communicates back the decision by returning
+            // an empty saveMean in case runMean should be used. Likewise for stddev.
             let& actualMean      = !m_saveMean->IsEmpty()      ? *m_saveMean      : runMean;      // empty if only the running mean is used
             let& actualInvStdDev = !m_saveInvStdDev->IsEmpty() ? *m_saveInvStdDev : runInvStdDev;
             m_dScale->Resize(scale);

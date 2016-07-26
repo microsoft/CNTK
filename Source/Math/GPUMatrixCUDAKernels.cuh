@@ -95,8 +95,8 @@ static INT CeilDiv(INT a, INT2 b) // ceil(a/b)
 
 struct GridDim
 {
-    static const CUDA_LONG maxThreadsPerBlock = 512; // use this many threads per block
-    static const CUDA_LONG maxWarpsPerBlock = 16;    // use this many warps per block. This means 512 threads for warpSize=32
+    static const CUDA_LONG maxThreadsPerBlock = 1024; // use this many threads per block
+    static const CUDA_LONG maxWarpsPerBlock = 32;     // use this many warps per block. This means 1024 threads for warpSize=32
 
     // use these for launching
     //   GridDim grid(NN);
@@ -127,7 +127,7 @@ struct GridDim
         }
 
         // put it back together
-        m_threadsPerBlock = warpsPerProc * warpSize;        // =a multiple of 32 that is as close to 512 as makes sense given NN
+        m_threadsPerBlock = warpsPerProc * warpSize;        // =a multiple of 32 that is as close to 1024 as makes sense given NN
         m_blocksPerGrid = CeilDiv(N, m_threadsPerBlock);
         if (m_blocksPerGrid == 1)
             m_threadsPerBlock = N; // don't launch more than necessary  --TODO: Does this make a difference at all?
