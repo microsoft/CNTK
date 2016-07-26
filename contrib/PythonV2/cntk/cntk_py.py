@@ -366,6 +366,9 @@ class NDMask(_object):
     def Shape(self):
         return _cntk_py.NDMask_Shape(self)
 
+    def DataBuffer(self):
+        return _cntk_py.NDMask_DataBuffer(self)
+
     def DeepClone(self):
         return _cntk_py.NDMask_DeepClone(self)
 
@@ -374,6 +377,9 @@ class NDMask(_object):
 
     def CopyFrom(self, source):
         return _cntk_py.NDMask_CopyFrom(self, source)
+
+    def ToNumPy(self):
+        return _cntk_py.NDMask_ToNumPy(self)
 NDMask_swigregister = _cntk_py.NDMask_swigregister
 NDMask_swigregister(NDMask)
 

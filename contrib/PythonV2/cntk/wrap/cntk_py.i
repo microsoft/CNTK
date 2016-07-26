@@ -367,6 +367,29 @@
 %template() std::vector<CNTK::Variable>;
 
 //
+// NDMask
+//
+// FIXME ignore is ignored
+%ignore CNTK::NDMask::DataBuffer();
+%extend CNTK::NDMask {
+    PyObject* ToNumPy() {
+        std::vector<size_t> cntk_dims = (*self).Shape().Dimensions();
+        static_assert(dims.size()==2, "mask requires exactly two dimensions");
+        std::vector<size_t> dimensions = {cntk_dims[1], cntk_dims[0]};
+
+        npy_intp* shape = reinterpret_cast<npy_intp*>(&dimensions[0]);
+
+        void* buffer = const_cast<void*>(reinterpret_cast<const void*>((*self).DataBuffer()));
+        
+        PyObject* ndarray = PyArray_SimpleNewFromData(dimensions.size(), shape, NPY_UBYTE, buffer);
+
+        return ndarray;
+    }
+}
+
+// end NDMask
+
+//
 // NDArrayView
 //
 %extend CNTK::NDArrayView {

@@ -5560,6 +5560,68 @@ SWIG_AsVal_float (PyObject * obj, float *val)
 }
 
 
+SWIGINTERN swig_type_info*
+SWIG_pchar_descriptor(void)
+{
+  static int init = 0;
+  static swig_type_info* info = 0;
+  if (!init) {
+    info = SWIG_TypeQuery("_p_char");
+    init = 1;
+  }
+  return info;
+}
+
+
+SWIGINTERNINLINE PyObject *
+SWIG_FromCharPtrAndSize(const char* carray, size_t size)
+{
+  if (carray) {
+    if (size > INT_MAX) {
+      swig_type_info* pchar_descriptor = SWIG_pchar_descriptor();
+      return pchar_descriptor ? 
+	SWIG_InternalNewPointerObj(const_cast< char * >(carray), pchar_descriptor, 0) : SWIG_Py_Void();
+    } else {
+#if PY_VERSION_HEX >= 0x03000000
+#if defined(SWIG_PYTHON_STRICT_BYTE_CHAR)
+      return PyBytes_FromStringAndSize(carray, static_cast< Py_ssize_t >(size));
+#else
+#if PY_VERSION_HEX >= 0x03010000
+      return PyUnicode_DecodeUTF8(carray, static_cast< Py_ssize_t >(size), "surrogateescape");
+#else
+      return PyUnicode_FromStringAndSize(carray, static_cast< Py_ssize_t >(size));
+#endif
+#endif
+#else
+      return PyString_FromStringAndSize(carray, static_cast< Py_ssize_t >(size));
+#endif
+    }
+  } else {
+    return SWIG_Py_Void();
+  }
+}
+
+
+SWIGINTERNINLINE PyObject * 
+SWIG_FromCharPtr(const char *cptr)
+{ 
+  return SWIG_FromCharPtrAndSize(cptr, (cptr ? strlen(cptr) : 0));
+}
+
+SWIGINTERN PyObject *CNTK_NDMask_ToNumPy(CNTK::NDMask *self){
+        std::vector<size_t> cntk_dims = (*self).Shape().Dimensions();
+        ;
+        std::vector<size_t> dimensions = {cntk_dims[1], cntk_dims[0]};
+
+        npy_intp* shape = reinterpret_cast<npy_intp*>(&dimensions[0]);
+
+        void* buffer = const_cast<void*>(reinterpret_cast<const void*>((*self).DataBuffer()));
+        
+        PyObject* ndarray = PyArray_SimpleNewFromData(dimensions.size(), shape, NPY_UBYTE, buffer);
+
+        return ndarray;
+    }
+
 SWIGINTERN int
 SWIG_AsWCharPtrAndSize(PyObject *obj, wchar_t **cptr, size_t *psize, int *alloc)
 {
@@ -5657,55 +5719,6 @@ SWIGINTERN size_t const CNTK_Placeholder___hash__(CNTK::Placeholder *self){
 	};
       }
     
-
-SWIGINTERN swig_type_info*
-SWIG_pchar_descriptor(void)
-{
-  static int init = 0;
-  static swig_type_info* info = 0;
-  if (!init) {
-    info = SWIG_TypeQuery("_p_char");
-    init = 1;
-  }
-  return info;
-}
-
-
-SWIGINTERNINLINE PyObject *
-SWIG_FromCharPtrAndSize(const char* carray, size_t size)
-{
-  if (carray) {
-    if (size > INT_MAX) {
-      swig_type_info* pchar_descriptor = SWIG_pchar_descriptor();
-      return pchar_descriptor ? 
-	SWIG_InternalNewPointerObj(const_cast< char * >(carray), pchar_descriptor, 0) : SWIG_Py_Void();
-    } else {
-#if PY_VERSION_HEX >= 0x03000000
-#if defined(SWIG_PYTHON_STRICT_BYTE_CHAR)
-      return PyBytes_FromStringAndSize(carray, static_cast< Py_ssize_t >(size));
-#else
-#if PY_VERSION_HEX >= 0x03010000
-      return PyUnicode_DecodeUTF8(carray, static_cast< Py_ssize_t >(size), "surrogateescape");
-#else
-      return PyUnicode_FromStringAndSize(carray, static_cast< Py_ssize_t >(size));
-#endif
-#endif
-#else
-      return PyString_FromStringAndSize(carray, static_cast< Py_ssize_t >(size));
-#endif
-    }
-  } else {
-    return SWIG_Py_Void();
-  }
-}
-
-
-SWIGINTERNINLINE PyObject * 
-SWIG_FromCharPtr(const char *cptr)
-{ 
-  return SWIG_FromCharPtrAndSize(cptr, (cptr ? strlen(cptr) : 0));
-}
-
 
 
 
@@ -12529,6 +12542,59 @@ fail:
 }
 
 
+SWIGINTERN PyObject *_wrap_NDMask_DataBuffer(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  CNTK::NDMask *arg1 = (CNTK::NDMask *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  std::shared_ptr< CNTK::NDMask const > tempshared1 ;
+  std::shared_ptr< CNTK::NDMask const > *smartarg1 = 0 ;
+  PyObject * obj0 = 0 ;
+  char *result = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:NDMask_DataBuffer",&obj0)) SWIG_fail;
+  {
+    int newmem = 0;
+    res1 = SWIG_ConvertPtrAndOwn(obj0, &argp1, SWIGTYPE_p_std__shared_ptrT_CNTK__NDMask_t, 0 |  0 , &newmem);
+    if (!SWIG_IsOK(res1)) {
+      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDMask_DataBuffer" "', argument " "1"" of type '" "CNTK::NDMask const *""'"); 
+    }
+    if (newmem & SWIG_CAST_NEW_MEMORY) {
+      tempshared1 = *reinterpret_cast< std::shared_ptr< const CNTK::NDMask > * >(argp1);
+      delete reinterpret_cast< std::shared_ptr< const CNTK::NDMask > * >(argp1);
+      arg1 = const_cast< CNTK::NDMask * >(tempshared1.get());
+    } else {
+      smartarg1 = reinterpret_cast< std::shared_ptr< const CNTK::NDMask > * >(argp1);
+      arg1 = const_cast< CNTK::NDMask * >((smartarg1 ? smartarg1->get() : 0));
+    }
+  }
+  {
+    try {
+      result = (char *)((CNTK::NDMask const *)arg1)->DataBuffer(); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  resultobj = SWIG_FromCharPtr((const char *)result);
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
 SWIGINTERN PyObject *_wrap_NDMask_DeepClone(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::NDMask *arg1 = (CNTK::NDMask *) 0 ;
@@ -12709,6 +12775,59 @@ SWIGINTERN PyObject *_wrap_NDMask_CopyFrom(PyObject *SWIGUNUSEDPARM(self), PyObj
     }
   }
   resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_NDMask_ToNumPy(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  CNTK::NDMask *arg1 = (CNTK::NDMask *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  std::shared_ptr< CNTK::NDMask > tempshared1 ;
+  std::shared_ptr< CNTK::NDMask > *smartarg1 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject *result = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:NDMask_ToNumPy",&obj0)) SWIG_fail;
+  {
+    int newmem = 0;
+    res1 = SWIG_ConvertPtrAndOwn(obj0, &argp1, SWIGTYPE_p_std__shared_ptrT_CNTK__NDMask_t, 0 |  0 , &newmem);
+    if (!SWIG_IsOK(res1)) {
+      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDMask_ToNumPy" "', argument " "1"" of type '" "CNTK::NDMask *""'"); 
+    }
+    if (newmem & SWIG_CAST_NEW_MEMORY) {
+      tempshared1 = *reinterpret_cast< std::shared_ptr<  CNTK::NDMask > * >(argp1);
+      delete reinterpret_cast< std::shared_ptr<  CNTK::NDMask > * >(argp1);
+      arg1 = const_cast< CNTK::NDMask * >(tempshared1.get());
+    } else {
+      smartarg1 = reinterpret_cast< std::shared_ptr<  CNTK::NDMask > * >(argp1);
+      arg1 = const_cast< CNTK::NDMask * >((smartarg1 ? smartarg1->get() : 0));
+    }
+  }
+  {
+    try {
+      result = (PyObject *)CNTK_NDMask_ToNumPy(arg1); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  resultobj = result;
   return resultobj;
 fail:
   return NULL;
@@ -24743,9 +24862,11 @@ static PyMethodDef SwigMethods[] = {
 	 { (char *)"NDMask_Clear", _wrap_NDMask_Clear, METH_VARARGS, NULL},
 	 { (char *)"NDMask_Device", _wrap_NDMask_Device, METH_VARARGS, NULL},
 	 { (char *)"NDMask_Shape", _wrap_NDMask_Shape, METH_VARARGS, NULL},
+	 { (char *)"NDMask_DataBuffer", _wrap_NDMask_DataBuffer, METH_VARARGS, NULL},
 	 { (char *)"NDMask_DeepClone", _wrap_NDMask_DeepClone, METH_VARARGS, NULL},
 	 { (char *)"NDMask_Alias", _wrap_NDMask_Alias, METH_VARARGS, NULL},
 	 { (char *)"NDMask_CopyFrom", _wrap_NDMask_CopyFrom, METH_VARARGS, NULL},
+	 { (char *)"NDMask_ToNumPy", _wrap_NDMask_ToNumPy, METH_VARARGS, NULL},
 	 { (char *)"NDMask_swigregister", NDMask_swigregister, METH_VARARGS, NULL},
 	 { (char *)"new_Value", _wrap_new_Value, METH_VARARGS, NULL},
 	 { (char *)"delete_Value", _wrap_delete_Value, METH_VARARGS, NULL},

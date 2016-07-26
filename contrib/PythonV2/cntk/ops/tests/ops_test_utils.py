@@ -67,7 +67,8 @@ def _test_binary_op(ctx, op_func,
             needs_gradient=True,
             name='b')
 
-    # create batch
+    # create batch by wrapping the data point into a sequence of length one and
+    # putting it into a batch of one sample
     left_value.shape = (1,1) + left_value.shape
     right_value.shape = (1,1) + right_value.shape
     
@@ -115,7 +116,8 @@ def unittest_helper(root_node,
         ctx.device_id = device_id
         ctx.precision = precision
         assert not ctx.input_nodes
-        forward, backward = ctx.eval(root_node, forward_input, backward_input)
+        backward_pass = expected_backward is not None
+        forward, backward = ctx.eval(root_node, forward_input, backward_pass)
 
         # for forward we always expect only one result
         assert len(forward)==1
@@ -125,11 +127,18 @@ def unittest_helper(root_node,
             assert np.allclose(res, exp, atol=TOLERANCE_ABSOLUTE)
             assert res.shape == AA(exp).shape
 
-        if backward_input:                                
+        if expected_backward:                                
             for key in expected_backward:
                 res, exp = backward[key], expected_backward[key]
-                assert np.allclose(res, exp, atol=TOLERANCE_ABSOLUTE)
-                assert res.shape == AA(exp).shape
+                if isinstance(res, list):
+                    assert len(res) == len(exp)
+                    for res_seq, exp_seq in zip (res, exp):
+                        assert np.allclose(res_seq, exp_seq, atol=TOLERANCE_ABSOLUTE)
+                        assert res_seq.shape == AA(exp_seq).shape
+
+                elif isinstance(res, np.ndarray):
+                    assert np.allclose(res, exp, atol=TOLERANCE_ABSOLUTE)
+                    assert res.shape == AA(exp).shape
 
 def batch_dense_to_sparse(batch, dynamic_axis=''):
     '''

@@ -397,6 +397,30 @@ def sanitize_var_map(input_map, ctx):
 
     return var_map
 
+def remove_masked_elements(batch, mask):
+    '''
+    From a zero-padded `batch`, remove those entries that have a 0 in the
+    `mask`. 
+
+    Args:
+        batch (`ndarray`): batch of samples that are variable length sequences padded by zeros to the max sequence length
+        mask (`ndarray`): 2D matrix. Every row represents one sample. The columns have a `1` if the element is valid and `0` otherwise.
+
+    Returns:
+        a list of ndarrays
+    '''
+    return [seq[mask[idx]==1] for idx,seq in enumerate(batch)]
+
+def ones_like(batch, ctx):
+    '''
+    Returns a new batch, which has the same format as `batch` but all values
+    set to 1.
+
+    Args:
+        batch (list of NumPy arrays): a list of sequences, which are NumPy arrays
+    '''
+    return [np.ones_like(sample, dtype=ctx.precision_numpy) for sample in batch]
+
 def create_NDArrayView(shape, data_type, dev):
     # FIXME only dense supported so far
     view = cntk_py.NDArrayView(data_type, cntk_py.StorageFormat_Dense, shape, dev)
