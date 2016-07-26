@@ -6257,6 +6257,12 @@ static void TensorOpWithFn(ElemType beta, array<ElemType*, N> pointers, ElemType
     const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, N>& regularStrides,
     const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, N>& reducingStrides)
 {
+// BUGBUG: Using always 'double' as type of aggregator even for ElemType==float. Reason: otherwise some e2e test would fail as historically we 
+// used double for aggregator of sum. But:
+// * for min and max reductions this is meaningless.
+// * It is not consitent with what we do on GPU, there we aggregate on ElemType.
+// * It costs performance.
+// TODO: apdapt e2e tests to run with aggregator of type ElemType.
 #define CaseTensorOpWithFnAndReduction(oper)                                                  \
     case ElementWiseOperator::op##oper:                                                       \
     return TensorOpWithFnAndReduction(beta, pointers, alpha, opfn, [](double a, double b)     \
