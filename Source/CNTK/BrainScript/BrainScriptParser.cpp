@@ -611,7 +611,7 @@ void Expression::DumpToStream(wstringstream & treeStream, int indent)
     treeStream << std::setw(0);
 
     if (op == L"s")
-        treeStream << "'" << s.c_str() << "' ";
+        treeStream << "'" << s.c_str() << "'";
     else if (op == L"d")
         treeStream << std::setprecision(0) << d;
     else if (op == L"b")
@@ -636,7 +636,7 @@ void Expression::DumpToStream(wstringstream & treeStream, int indent)
         treeStream << std::endl;
         for (const auto& arg : namedArgs)
         {
-            treeStream << std::setfill(L' ') << std::setw(indent + 1) << L" ";
+            treeStream << std::setfill(L' ') << std::setw(indent + 1) << L"";
             treeStream << arg.first.c_str() << L" =" << std::endl;
             arg.second.second->DumpToStream(treeStream, indent + 2);
         }
