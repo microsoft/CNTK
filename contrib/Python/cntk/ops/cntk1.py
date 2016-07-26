@@ -643,6 +643,22 @@ class ReduceSum(ComputationNode):
         self.params_with_defaults = ['axis']
         self.inputs = ['z']
 
+class ReduceMax(ComputationNode):
+    def __init__(self, z, axis=0, op_name='ReduceMax', name=None):
+        super(ReduceMax, self).__init__(params=['z', 'axis'], op_name=op_name, name=name)
+        self.z = z
+        self.axis = axis
+        self.params_with_defaults = ['axis']
+        self.inputs = ['z']
+
+class ReduceMin(ComputationNode):
+    def __init__(self, z, axis=0, op_name='ReduceMin', name=None):
+        super(ReduceMin, self).__init__(params=['z', 'axis'], op_name=op_name, name=name)
+        self.z = z
+        self.axis = axis
+        self.params_with_defaults = ['axis']
+        self.inputs = ['z']
+
 class Scale(ComputationNode):
     def __init__(self, scalarScalingFactor, matrix, op_name='Scale', name=None):
         super(Scale, self).__init__(params=['scalarScalingFactor', 'matrix'], op_name=op_name, name=name)
