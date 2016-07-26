@@ -1,10 +1,12 @@
 #ifndef MULTIVERSO_MATRIX_TABLE_H_
 #define MULTIVERSO_MATRIX_TABLE_H_
 
+
 #include "multiverso/multiverso.h"
 #include "multiverso/table_interface.h"
 
 #include <vector>
+#include <random>
 
 namespace multiverso {
 
@@ -46,6 +48,32 @@ public:
   void Add(T* data, size_t size, integer_t* row_ids, integer_t row_ids_size,
            const AddOption* option = nullptr);
 
+  // Async version API
+  int GetAsync(T* data, size_t size);
+
+  // data is user-allocated memory
+  int GetAsync(integer_t row_id, T* data, size_t size);
+
+  int GetAsync(const std::vector<integer_t>& row_ids,
+    const std::vector<T*>& data_vec, size_t size);
+
+  // Get specific rows.
+  int GetAsync(T* data, size_t size, integer_t* row_ids, integer_t row_ids_size);
+
+  // Add whole table
+  int AddAsync(T* data, size_t size, const AddOption* option = nullptr);
+
+  int AddAsync(integer_t row_id, T* data, size_t size,
+    const AddOption* option = nullptr);
+
+  int AddAsync(const std::vector<integer_t>& row_ids,
+    const std::vector<T*>& data_vec, size_t size,
+    const AddOption* option = nullptr);
+
+  // Add specific rows.
+  int AddAsync(T* data, size_t size, integer_t* row_ids, integer_t row_ids_size,
+    const AddOption* option = nullptr);
+
   int Partition(const std::vector<Blob>& kv,
     MsgType partition_type,
     std::unordered_map<int, std::vector<Blob>>* out) override;
@@ -71,6 +99,7 @@ public:
   explicit MatrixServerTable(const MatrixTableOption<T>& option);
 
   MatrixServerTable(integer_t num_row, integer_t num_col);
+  MatrixServerTable(integer_t num_row, integer_t num_col, float min_value, float max_value);
 
   void ProcessAdd(const std::vector<Blob>& data) override;
 
@@ -91,6 +120,7 @@ protected:
 
 template <typename T>
 struct MatrixTableOption {
+  MatrixTableOption(integer_t num_row, integer_t num_col):num_row(num_row), num_col(num_col){}
   integer_t num_row;
   integer_t num_col;
   DEFINE_TABLE_TYPE(T, MatrixWorkerTable, MatrixServerTable);

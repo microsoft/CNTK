@@ -80,7 +80,10 @@ public:
 enum class FileOpenMode :int {
   Write = 0,
   Read = 1,
-  Append = 2
+  Append = 2,
+  BinaryWrite = 3,
+  BinaryRead = 4,
+  BinaryAppend = 5
 };
 
 class StreamFactory {

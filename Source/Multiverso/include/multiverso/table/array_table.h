@@ -17,18 +17,21 @@ public:
   explicit ArrayWorker(const ArrayTableOption<T> &option);
   // std::vector<T>& raw() { return table_; }
 
-  // Get all element, data is user-allocated memory
+  // Get all element, data is user-allocated memory, Blocking IO
   void Get(T* data, size_t size);
+  // Non-blocking IO
+  int GetAsync(T* data, size_t size);
 
   // Add all element
   void Add(T* data, size_t size, const AddOption* option = nullptr);
+  int AddAsync(T* data, size_t, const AddOption* option = nullptr);
 
   int Partition(const std::vector<Blob>& kv,
     MsgType partition_type,
     std::unordered_map<int, std::vector<Blob> >* out) override;
 
   void ProcessReplyGet(std::vector<Blob>& reply_data) override;
-  
+
 private:
   T* data_; // not owned
   size_t size_;

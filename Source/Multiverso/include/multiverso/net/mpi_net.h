@@ -16,6 +16,10 @@
 
 #include <mpi.h>
 
+#ifndef _WIN32
+#include <dlfcn.h>
+#endif
+
 
 #ifdef _MSC_VER
 #undef max
@@ -30,6 +34,25 @@ namespace {
   static MPI_Datatype GetDataType(int*)    { return MPI_INT; }
   static MPI_Datatype GetDataType(float*)  { return MPI_FLOAT; }
   static MPI_Datatype GetDataType(double*) { return MPI_DOUBLE; }
+
+  static void dlopen_libmpi()
+  {
+  #ifndef _WIN32
+    void *handle = 0;
+    int mode = RTLD_NOW | RTLD_GLOBAL;
+  #if defined(__CYGWIN__)
+    /* TODO: Windows */
+  #elif defined(__APPLE__)
+    /* TODO: Mac OS X */
+  #elif defined(__linux__)
+    /* GNU/Linux and others */
+    #ifdef RTLD_NOLOAD
+    mode |= RTLD_NOLOAD;
+    #endif
+    if (!handle) handle = dlopen("libmpi_cxx.so",   mode);
+  #endif
+  #endif
+}
 }
 
 class MPINetWrapper : public NetInterface {
@@ -76,7 +99,15 @@ public:
     // MPI_Init(argc, &argv);
     MV_MPI_CALL(MPI_Initialized(&inited_));
     if (!inited_) {
-      MV_MPI_CALL(MPI_Init_thread(argc, &argv, MPI_THREAD_SERIALIZED, &thread_provided_));
+      // NOTICE: Preload libmpi with the right mode. Otherwise python will load it in 
+      // a private which will cause errors
+      dlopen_libmpi();
+      if (argc && *argc == 0) {
+        // When using multithread, giving MPI_Init_thread argv with zero length will cause errors.
+        MV_MPI_CALL(MPI_Init_thread(NULL, NULL, MPI_THREAD_SERIALIZED, &thread_provided_));
+      } else {
+        MV_MPI_CALL(MPI_Init_thread(argc, &argv, MPI_THREAD_SERIALIZED, &thread_provided_));
+      }
       MV_MPI_CALL(MPI_Initialized(&inited_));
     }
     MV_MPI_CALL(MPI_Query_thread(&thread_provided_));
@@ -108,6 +139,10 @@ public:
 	return -1;
   }
   
+  void Close(const char*) override {
+    Log::Fatal("Shouldn't call this in MPI Net\n");
+  }
+
   bool active() const { return inited_ != 0; }
   int rank() const override { return rank_; }
   int size() const override { return size_; }

@@ -26,6 +26,8 @@ public:
   // Connect with other endpoints
   virtual int  Connect(int* rank, char* endpoints[], int size) = 0;
 
+  virtual void Close(const char* endpoint) = 0;
+
   virtual bool active() const = 0;
 
   virtual std::string name() const = 0;

@@ -1,8 +1,8 @@
 #ifndef  MULTIVERSO_UTIL_ASYNC_BUFFER_H_
 #define  MULTIVERSO_UTIL_ASYNC_BUFFER_H_
 
-#include <multiverso\table_interface.h>
-#include <multiverso\util\waiter.h>
+#include <multiverso/table_interface.h>
+#include <multiverso/util/waiter.h>
 #include <thread>
 
 namespace multiverso {
