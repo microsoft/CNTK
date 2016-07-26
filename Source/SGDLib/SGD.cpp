@@ -902,6 +902,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         double readTime = 0;
         double computeTime = 0;
         double parameterUpdateTime = 0;
+        double parameterSyncTime = 0;
         if (m_perfTraceLevel > 0)
             fineGrainedPerfMeasurementTimer.Start();
 
@@ -1133,6 +1134,8 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             fprintf(stderr, "Perf trace: Read = %.5gs; Compute = %.5gs; Parameter update = %.5gs\n", readTime, computeTime, parameterUpdateTime);
         }
 
+        if (m_perfTraceLevel > 0)
+            fineGrainedPerfMeasurementTimer.Start();
         // aggregation by model averaging or block momentum 
         if (useModelAggregation)
         {
@@ -1167,9 +1170,12 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             }
         }
 
-        commTimer.Stop();
-        commTime += commTimer.ElapsedSeconds();
 
+        if (m_perfTraceLevel > 0)
+        {
+            fineGrainedPerfMeasurementTimer.Stop();
+            parameterSyncTime = fineGrainedPerfMeasurementTimer.ElapsedSeconds();
+        }
         timer.Stop();
         numMBsRun++;
 
@@ -1235,11 +1241,12 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                 fprintf(stderr, ("time = " + GeneratePaddedFloatOrExpFormat(0, 4, totalTimeInMBs) + "s; samplesPerSecond = %.1f\n").c_str(),
                         totalTimeInMBs, trainSamplesSinceLastLogged / totalTimeInMBs);
             }
-            if (m_traceLevel > 2)
+            if (m_perfTraceLevel > 0)
             {
                 fprintf(stderr, ("\t\t ----ReadTime = " + GeneratePaddedFloatOrExpFormat(0, 5, readTime) + "s; ComputeTime = " +
-                    GeneratePaddedFloatOrExpFormat(0, 5, computeTime) + "s; CommunicationTime = " +
-                    GeneratePaddedFloatOrExpFormat(0, 5, commTime) + "s;\n").c_str(), readTime, computeTime, commTime);
+                    GeneratePaddedFloatOrExpFormat(0, 5, computeTime) + "s; ParameterUpdateTime = " +
+                    GeneratePaddedFloatOrExpFormat(0, 5, parameterUpdateTime) + "s; ParameterSyncTime = " +
+                    GeneratePaddedFloatOrExpFormat(0, 5, parameterSyncTime) + "s;\n").c_str(), readTime, computeTime, parameterUpdateTime, parameterSyncTime);
             }
 
             // progress tracing for compute cluster management
@@ -1256,16 +1263,12 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             epochCriterionLastLogged  = epochCriterion;
             epochEvalErrorsLastLogged = epochEvalErrors;
 
-            // reset timer statistics
-            readTime = 0; computeTime = 0; commTime = 0;
-
             totalTimeInMBs = 0;
         }
 
         timer.Restart();
         totalEpochSamples += aggregateNumSamplesWithLabel;
 
-        readTimer.Restart();
         // call DataEnd function
         // This signals something from SGD to the reader.
         // DataEnd does reader specific process if sentence ending is reached
