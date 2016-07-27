@@ -3502,17 +3502,16 @@ namespace Swig {
 #define SWIGTYPE_p_std__unordered_setT_CNTK__StreamInfo_t swig_types[47]
 #define SWIGTYPE_p_std__unordered_setT_std__shared_ptrT_CNTK__Learner_t_t swig_types[48]
 #define SWIGTYPE_p_std__vectorT_CNTK__Axis_std__allocatorT_CNTK__Axis_t_t swig_types[49]
-#define SWIGTYPE_p_std__vectorT_std__shared_ptrT_CNTK__Function_t_std__allocatorT_std__shared_ptrT_CNTK__Function_t_t_t swig_types[50]
-#define SWIGTYPE_p_swig__SwigPyIterator swig_types[51]
-#define SWIGTYPE_p_unsigned___int64 swig_types[52]
-#define SWIGTYPE_p_unsigned_char swig_types[53]
-#define SWIGTYPE_p_unsigned_int swig_types[54]
-#define SWIGTYPE_p_unsigned_long swig_types[55]
-#define SWIGTYPE_p_unsigned_short swig_types[56]
-#define SWIGTYPE_p_value_type swig_types[57]
-#define SWIGTYPE_p_wchar_t swig_types[58]
-static swig_type_info *swig_types[60];
-static swig_module_info swig_module = {swig_types, 59, 0, 0, 0, 0};
+#define SWIGTYPE_p_swig__SwigPyIterator swig_types[50]
+#define SWIGTYPE_p_unsigned___int64 swig_types[51]
+#define SWIGTYPE_p_unsigned_char swig_types[52]
+#define SWIGTYPE_p_unsigned_int swig_types[53]
+#define SWIGTYPE_p_unsigned_long swig_types[54]
+#define SWIGTYPE_p_unsigned_short swig_types[55]
+#define SWIGTYPE_p_value_type swig_types[56]
+#define SWIGTYPE_p_wchar_t swig_types[57]
+static swig_type_info *swig_types[59];
+static swig_module_info swig_module = {swig_types, 58, 0, 0, 0, 0};
 #define SWIG_TypeQuery(name) SWIG_TypeQueryModule(&swig_module, &swig_module, name)
 #define SWIG_MangledTypeQuery(name) SWIG_MangledTypeQueryModule(&swig_module, &swig_module, name)
 
@@ -25110,6 +25109,7 @@ SWIGINTERN PyObject *_wrap_Combine__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObj
   PyObject *resultobj = 0;
   std::vector< CNTK::FunctionPtr,std::allocator< CNTK::FunctionPtr > > *arg1 = 0 ;
   std::wstring *arg2 = 0 ;
+  int res1 = 0 ;
   int res2 = SWIG_OLDOBJ ;
   PyObject * obj0 = 0 ;
   PyObject * obj1 = 0 ;
@@ -25117,7 +25117,7 @@ SWIGINTERN PyObject *_wrap_Combine__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObj
   
   if (!PyArg_ParseTuple(args,(char *)"OO:Combine",&obj0,&obj1)) SWIG_fail;
   {
-    if (PySet_Check(obj0)) {
+    if (PyList_Check(obj0)) {
       std::vector<CNTK::FunctionPtr>* args_set = new std::vector<CNTK::FunctionPtr>();
       
       PyObject *item;
@@ -25192,9 +25192,11 @@ SWIGINTERN PyObject *_wrap_Combine__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObj
     std::shared_ptr<  CNTK::Function > *smartresult = result ? new std::shared_ptr<  CNTK::Function >(result) : 0;
     resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(smartresult), SWIGTYPE_p_std__shared_ptrT_CNTK__Function_t, SWIG_POINTER_OWN);
   }
+  if (SWIG_IsNewObj(res1)) delete arg1;
   if (SWIG_IsNewObj(res2)) delete arg2;
   return resultobj;
 fail:
+  if (SWIG_IsNewObj(res1)) delete arg1;
   if (SWIG_IsNewObj(res2)) delete arg2;
   return NULL;
 }
@@ -25203,12 +25205,13 @@ fail:
 SWIGINTERN PyObject *_wrap_Combine__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   std::vector< CNTK::FunctionPtr,std::allocator< CNTK::FunctionPtr > > *arg1 = 0 ;
+  int res1 = 0 ;
   PyObject * obj0 = 0 ;
   CNTK::FunctionPtr result;
   
   if (!PyArg_ParseTuple(args,(char *)"O:Combine",&obj0)) SWIG_fail;
   {
-    if (PySet_Check(obj0)) {
+    if (PyList_Check(obj0)) {
       std::vector<CNTK::FunctionPtr>* args_set = new std::vector<CNTK::FunctionPtr>();
       
       PyObject *item;
@@ -25272,8 +25275,10 @@ SWIGINTERN PyObject *_wrap_Combine__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObj
     std::shared_ptr<  CNTK::Function > *smartresult = result ? new std::shared_ptr<  CNTK::Function >(result) : 0;
     resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(smartresult), SWIGTYPE_p_std__shared_ptrT_CNTK__Function_t, SWIG_POINTER_OWN);
   }
+  if (SWIG_IsNewObj(res1)) delete arg1;
   return resultobj;
 fail:
+  if (SWIG_IsNewObj(res1)) delete arg1;
   return NULL;
 }
 
@@ -25292,16 +25297,22 @@ SWIGINTERN PyObject *_wrap_Combine(PyObject *self, PyObject *args) {
   }
   if (argc == 1) {
     int _v;
-    int res = SWIG_ConvertPtr(argv[0], 0, SWIGTYPE_p_std__vectorT_std__shared_ptrT_CNTK__Function_t_std__allocatorT_std__shared_ptrT_CNTK__Function_t_t_t, 0);
-    _v = SWIG_CheckState(res);
+    {
+      // '1000' is the typecheck precedence code. It means: check after basic
+      // types, but before arrays. See: http://www.swig.org/Doc1.3/Typemaps.html#Typemaps_overloading
+      _v = PyList_Check(argv[0]) ? 1 : 0;
+    }
     if (_v) {
       return _wrap_Combine__SWIG_1(self, args);
     }
   }
   if (argc == 2) {
     int _v;
-    int res = SWIG_ConvertPtr(argv[0], 0, SWIGTYPE_p_std__vectorT_std__shared_ptrT_CNTK__Function_t_std__allocatorT_std__shared_ptrT_CNTK__Function_t_t_t, 0);
-    _v = SWIG_CheckState(res);
+    {
+      // '1000' is the typecheck precedence code. It means: check after basic
+      // types, but before arrays. See: http://www.swig.org/Doc1.3/Typemaps.html#Typemaps_overloading
+      _v = PyList_Check(argv[0]) ? 1 : 0;
+    }
     if (_v) {
       int res = SWIG_AsPtr_std_wstring(argv[1], (std::wstring**)(0));
       _v = SWIG_CheckState(res);
@@ -29079,7 +29090,6 @@ static swig_type_info _swigt__p_std__unordered_setT_CNTK__Parameter_t = {"_p_std
 static swig_type_info _swigt__p_std__unordered_setT_CNTK__StreamInfo_t = {"_p_std__unordered_setT_CNTK__StreamInfo_t", "std::unordered_set< CNTK::StreamInfo > *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_std__unordered_setT_std__shared_ptrT_CNTK__Learner_t_t = {"_p_std__unordered_setT_std__shared_ptrT_CNTK__Learner_t_t", "std::unordered_set< CNTK::LearnerPtr > *|std::unordered_set< std::shared_ptr< CNTK::Learner > > *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_std__vectorT_CNTK__Axis_std__allocatorT_CNTK__Axis_t_t = {"_p_std__vectorT_CNTK__Axis_std__allocatorT_CNTK__Axis_t_t", "std::vector< CNTK::Axis,std::allocator< CNTK::Axis > > *", 0, 0, (void*)0, 0};
-static swig_type_info _swigt__p_std__vectorT_std__shared_ptrT_CNTK__Function_t_std__allocatorT_std__shared_ptrT_CNTK__Function_t_t_t = {"_p_std__vectorT_std__shared_ptrT_CNTK__Function_t_std__allocatorT_std__shared_ptrT_CNTK__Function_t_t_t", "std::vector< std::shared_ptr< CNTK::Function >,std::allocator< std::shared_ptr< CNTK::Function > > > *|std::vector< CNTK::FunctionPtr,std::allocator< CNTK::FunctionPtr > > *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_swig__SwigPyIterator = {"_p_swig__SwigPyIterator", "swig::SwigPyIterator *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_unsigned___int64 = {"_p_unsigned___int64", "UINT64 *|DWORD64 *|unsigned __int64 *|DWORDLONG *|ULONGLONG *|ULONG64 *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_unsigned_char = {"_p_unsigned_char", "FCHAR *|unsigned char *|UCHAR *|BYTE *|TBYTE *|UINT8 *|BOOLEAN *", 0, 0, (void*)0, 0};
@@ -29140,7 +29150,6 @@ static swig_type_info *swig_type_initial[] = {
   &_swigt__p_std__unordered_setT_CNTK__StreamInfo_t,
   &_swigt__p_std__unordered_setT_std__shared_ptrT_CNTK__Learner_t_t,
   &_swigt__p_std__vectorT_CNTK__Axis_std__allocatorT_CNTK__Axis_t_t,
-  &_swigt__p_std__vectorT_std__shared_ptrT_CNTK__Function_t_std__allocatorT_std__shared_ptrT_CNTK__Function_t_t_t,
   &_swigt__p_swig__SwigPyIterator,
   &_swigt__p_unsigned___int64,
   &_swigt__p_unsigned_char,
@@ -29201,7 +29210,6 @@ static swig_cast_info _swigc__p_std__unordered_setT_CNTK__Parameter_t[] = {  {&_
 static swig_cast_info _swigc__p_std__unordered_setT_CNTK__StreamInfo_t[] = {  {&_swigt__p_std__unordered_setT_CNTK__StreamInfo_t, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_std__unordered_setT_std__shared_ptrT_CNTK__Learner_t_t[] = {  {&_swigt__p_std__unordered_setT_std__shared_ptrT_CNTK__Learner_t_t, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_std__vectorT_CNTK__Axis_std__allocatorT_CNTK__Axis_t_t[] = {  {&_swigt__p_std__vectorT_CNTK__Axis_std__allocatorT_CNTK__Axis_t_t, 0, 0, 0},{0, 0, 0, 0}};
-static swig_cast_info _swigc__p_std__vectorT_std__shared_ptrT_CNTK__Function_t_std__allocatorT_std__shared_ptrT_CNTK__Function_t_t_t[] = {  {&_swigt__p_std__vectorT_std__shared_ptrT_CNTK__Function_t_std__allocatorT_std__shared_ptrT_CNTK__Function_t_t_t, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_swig__SwigPyIterator[] = {  {&_swigt__p_swig__SwigPyIterator, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_unsigned___int64[] = {  {&_swigt__p_unsigned___int64, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_unsigned_char[] = {  {&_swigt__p_unsigned_char, 0, 0, 0},{0, 0, 0, 0}};
@@ -29262,7 +29270,6 @@ static swig_cast_info *swig_cast_initial[] = {
   _swigc__p_std__unordered_setT_CNTK__StreamInfo_t,
   _swigc__p_std__unordered_setT_std__shared_ptrT_CNTK__Learner_t_t,
   _swigc__p_std__vectorT_CNTK__Axis_std__allocatorT_CNTK__Axis_t_t,
-  _swigc__p_std__vectorT_std__shared_ptrT_CNTK__Function_t_std__allocatorT_std__shared_ptrT_CNTK__Function_t_t_t,
   _swigc__p_swig__SwigPyIterator,
   _swigc__p_unsigned___int64,
   _swigc__p_unsigned_char,

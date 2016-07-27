@@ -12,6 +12,7 @@
 
 %template() std::vector<size_t>;
 %template() std::vector<CNTK::Variable>;
+%template() std::vector<CNTK::FunctionPtr>;
 
 %{
 #define SWIG_FILE_WITH_INIT
@@ -324,14 +325,14 @@
 //
 // Converting Python list {Function} to std::vector<CNTK::Function>&
 //
-//%typecheck(1000) const std::vector<CNTK::FunctionPtr>& {
+%typecheck(1000) std::vector<CNTK::FunctionPtr>& {
     // '1000' is the typecheck precedence code. It means: check after basic
     // types, but before arrays. See: http://www.swig.org/Doc1.3/Typemaps.html#Typemaps_overloading
-//    $1 = PySet_Check($input) ? 1 : 0;
-//}
+    $1 = PyList_Check($input) ? 1 : 0;
+}
 
-%typemap(in) std::vector<CNTK::FunctionPtr>& {
-     if (PySet_Check($input)) {
+%typemap(in) std::vector<CNTK::FunctionPtr>& (int res = 0){    
+     if (PyList_Check($input)) {
         std::vector<CNTK::FunctionPtr>* args_set = new std::vector<CNTK::FunctionPtr>();
 
         PyObject *item;
