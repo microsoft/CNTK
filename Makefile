@@ -368,15 +368,17 @@ SEQUENCE_TRAINING_LIB_SRC +=\
 endif
 
 CNTKLIBRARY_SRC =\
+	$(SOURCEDIR)/CNTKv2LibraryDll/BackCompat.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/Common.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/Function.cpp \
+	$(SOURCEDIR)/CNTKv2LibraryDll/MinibatchSource.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/NDArrayView.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/NDMask.cpp \
+	$(SOURCEDIR)/CNTKv2LibraryDll/Trainer.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/Utils.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/Value.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/Variable.cpp \
-    $(SOURCEDIR)/CNTKv2LibraryDll/Learner.cpp \
-
+	$(SOURCEDIR)/CNTKv2LibraryDll/Learner.cpp \
 
 CNTKLIBRARY_SRC+=$(CNTK_COMMON_SRC)
 CNTKLIBRARY_SRC+=$(COMPUTATION_NETWORK_LIB_SRC)
@@ -407,6 +409,7 @@ CNTKLIBRARY_TESTS_SRC =\
 	Tests/UnitTests/V2LibraryTests/NDArrayViewTests.cpp \
 	Tests/UnitTests/V2LibraryTests/RecurrentFunctionTests.cpp \
 	Tests/UnitTests/V2LibraryTests/TensorTests.cpp \
+	Tests/UnitTests/V2LibraryTests/TrainerTests.cpp \
 
 CNTKLIBRARY_TESTS:=$(BINDIR)/v2librarytests
 CNTKLIBRARY_TESTS_OBJ := $(patsubst %.cu, $(OBJDIR)/%.o, $(patsubst %.cpp, $(OBJDIR)/%.o, $(CNTKLIBRARY_TESTS_SRC)))
@@ -475,7 +478,7 @@ $(EVAL_SAMPLE_CLIENT): $(EVAL_SAMPLE_CLIENT_OBJ) | $(EVAL_LIB) $(CNTKMATH_LIB)
 	@echo $(SEPARATOR)
 	@mkdir -p $(dir $@)
 	@echo building $(EVAL_SAMPLE_CLIENT) for $(ARCH) with build type $(BUILDTYPE)
-	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR)) $(patsubst %,$(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH)) -o $@ $^ -l$(EVAL) -l$(CNTKMATH)
+	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(NVMLLIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -l$(EVAL) -l$(CNTKMATH)
 
 ########################################
 # BinaryReader plugin

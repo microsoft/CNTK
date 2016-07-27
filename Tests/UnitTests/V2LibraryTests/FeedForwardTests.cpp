@@ -4,21 +4,13 @@
 
 using namespace CNTK;
 
-FunctionPtr FullyConnectedDNNLayer(Variable input, size_t outputDim, const DeviceDescriptor& device, const std::function<FunctionPtr(const FunctionPtr&)>& nonLinearity)
-{
-    assert(input.Shape().NumAxes() == 1);
-    size_t inputDim = input.Shape()[0];
-
-    auto timesParam = Parameter(NDArrayView::RandomUniform<float>({ outputDim, inputDim }, -0.5, 0.5, 1, device));
-    auto timesFunction = Times(timesParam, input);
-
-    auto plusParam = Parameter({ outputDim }, 0.0f, device);
-    auto plusFunction = Plus(plusParam, timesFunction);
-
-    return nonLinearity(plusFunction);
-}
-
-FunctionPtr FullyConnectedFeedForwardClassifierNet(Variable input, size_t numOutputClasses, size_t hiddenLayerDim, size_t numHiddenLayers, const DeviceDescriptor& device, const std::function<FunctionPtr(const FunctionPtr&)>& nonLinearity)
+FunctionPtr FullyConnectedFeedForwardClassifierNet(Variable input,
+                                                   size_t numOutputClasses,
+                                                   size_t hiddenLayerDim,
+                                                   size_t numHiddenLayers,
+                                                   const DeviceDescriptor& device,
+                                                   const std::function<FunctionPtr(const FunctionPtr&)>& nonLinearity,
+                                                   const std::wstring& outputName)
 {
     assert(numHiddenLayers >= 1);
     auto classifierRoot = FullyConnectedDNNLayer(input, hiddenLayerDim, device, nonLinearity);
@@ -26,11 +18,12 @@ FunctionPtr FullyConnectedFeedForwardClassifierNet(Variable input, size_t numOut
         classifierRoot = FullyConnectedDNNLayer(classifierRoot, hiddenLayerDim, device, nonLinearity);
 
     auto outputTimesParam = Parameter(NDArrayView::RandomUniform<float>({ numOutputClasses, hiddenLayerDim }, -0.5, 0.5, 1, device));
-    classifierRoot = Times(outputTimesParam, classifierRoot);
-    return classifierRoot;
+    return Times(outputTimesParam, classifierRoot, outputName);
 }
 
-void TestFeedForwardNetworkCreation(const DeviceDescriptor& device)
+std::wstring s_tempModelPath = L"feedForward.net";
+
+void TestFeedForwardNetworkCreation(const DeviceDescriptor& device, bool testSaveAndReLoad)
 {
     using namespace std::placeholders;
 
@@ -39,14 +32,17 @@ void TestFeedForwardNetworkCreation(const DeviceDescriptor& device)
     const size_t numHiddenLayers = 6;
     const size_t hiddenLayersDim = 2048;
 
-    Variable inputVar({ inputDim }, DataType::Float, L"Features");
-    auto classifierOutputFunction = FullyConnectedFeedForwardClassifierNet(inputVar, numOutputClasses, hiddenLayersDim, numHiddenLayers, device, std::bind(Sigmoid, _1, L""));
+    Variable inputVar({ inputDim }, DataType::Float, L"features");
+    auto classifierOutputFunction = FullyConnectedFeedForwardClassifierNet(inputVar, numOutputClasses, hiddenLayersDim, numHiddenLayers, device, std::bind(Sigmoid, _1, L""), L"classifierOutput");
+    Variable classifierOutput = classifierOutputFunction;
 
     Variable labelsVar({ numOutputClasses }, DataType::Float, L"Labels");
-    auto trainingLossFunction = CNTK::CrossEntropyWithSoftmax(classifierOutputFunction, labelsVar, L"LossFunction");
-    auto predictionFunction = CNTK::ClassificationError(classifierOutputFunction, labelsVar, L"ClassificationError");
+    auto trainingLossFunction = CNTK::CrossEntropyWithSoftmax(classifierOutput, labelsVar, L"LossFunction");
+    Variable trainingLoss = trainingLossFunction;
+    auto predictionFunction = CNTK::ClassificationError(classifierOutput, labelsVar, L"ClassificationError");
+    Variable prediction = predictionFunction;
 
-    auto ffNet = CNTK::Combine({ trainingLossFunction, predictionFunction, classifierOutputFunction }, L"ClassifierModel");
+    auto ffNet = CNTK::Combine({ trainingLoss.Owner(), prediction.Owner(), classifierOutput.Owner() }, L"ClassifierModel");
 
     // Now test the structure
     if (ffNet->Parameters().size() != ((numHiddenLayers * 2) + 1))
@@ -57,6 +53,9 @@ void TestFeedForwardNetworkCreation(const DeviceDescriptor& device)
 
     if (ffNet->Outputs().size() != 3)
         throw std::runtime_error("TestFeedForwardNetworkCreation: Function does not have expected Output count");
+
+    if (testSaveAndReLoad)
+        SaveAndReloadModel<float>(ffNet, { &inputVar, &labelsVar, &trainingLoss, &prediction, &classifierOutput }, device);
 
     // Run Forward and backward a few times
     size_t iterationCount = 4;
@@ -69,22 +68,22 @@ void TestFeedForwardNetworkCreation(const DeviceDescriptor& device)
         for (size_t i = 0; i < inputData.size(); ++i)
             inputData[i] = ((float)rand()) / RAND_MAX;
 
-        NDShape inputShape = { inputDim, 1, numSamples };
+        NDShape inputShape = inputVar.Shape().AppendShape({ 1, numSamples });
         ValuePtr inputValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(inputShape, inputData.data(), inputData.size(), DeviceDescriptor::CPUDevice(), true));
 
         std::vector<float> labelData(numOutputClasses * numSamples, 0);
         for (size_t i = 0; i < numSamples; ++i)
             labelData[(i*numOutputClasses) + (rand() % numOutputClasses)] = 1;
 
-        NDShape labelShape = { numOutputClasses, 1, numSamples };
+        NDShape labelShape = labelsVar.Shape().AppendShape({ 1, numSamples });
         ValuePtr labelValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(labelShape, labelData.data(), labelData.size(), DeviceDescriptor::CPUDevice(), true));
 
         ValuePtr outputValue, predictionErrorValue;
-        std::unordered_map<Variable, ValuePtr> outputs = { { classifierOutputFunction->Output(), outputValue }, { predictionFunction->Output(), predictionErrorValue } };
-        auto backpropState = ffNet->Forward({ { inputVar, inputValue }, { labelsVar, labelValue } }, outputs, device, { trainingLossFunction->Output() });
+        std::unordered_map<Variable, ValuePtr> outputs = { { classifierOutput, outputValue }, { prediction, predictionErrorValue } };
+        auto backpropState = ffNet->Forward({ { inputVar, inputValue }, { labelsVar, labelValue } }, outputs, device, { trainingLoss });
 
         // Perform backprop
-        NDShape outputShape = trainingLossFunction->Output().Shape();
+        NDShape outputShape = trainingLoss.Shape();
         std::vector<float> rootGradientsData(outputShape.TotalSize(), 1);
         ValuePtr rootGradientValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(outputShape, rootGradientsData.data(), rootGradientsData.size(), DeviceDescriptor::CPUDevice(), true));
         std::unordered_map<Variable, ValuePtr> paramGradients;
@@ -92,7 +91,7 @@ void TestFeedForwardNetworkCreation(const DeviceDescriptor& device)
         for (auto iter = allParams.begin(); iter != allParams.end(); ++iter)
             paramGradients[*iter] = nullptr;
         
-        ffNet->Backward(backpropState, { { trainingLossFunction->Output(), rootGradientValue } }, paramGradients);
+        ffNet->Backward(backpropState, { { trainingLoss, rootGradientValue } }, paramGradients);
     }
 }
 
@@ -103,14 +102,18 @@ void TestTimesAndPlus(size_t inputDim,
                       const DeviceDescriptor& device,
                       size_t numIterations,
                       bool usePreAllocatedOutputs,
-                      bool outputOnSpecifiedDevice = false,
+                      bool outputOnSpecifiedDevice,
+                      bool testSaveAndReLoad,
                       unsigned int seed = 1)
 {
-    Parameter timesParam(MakeSharedObject<NDArrayView>((ElementType)0.5, NDShape({ outputDim, inputDim }), device));
-    Parameter plusParam(MakeSharedObject<NDArrayView>((ElementType)1.2, std::initializer_list<size_t>({ outputDim }), device));
+    Parameter timesParam(MakeSharedObject<NDArrayView>((ElementType)0.5, NDShape({ outputDim, inputDim }), device), L"timesParameters");
+    Parameter plusParam(MakeSharedObject<NDArrayView>((ElementType)1.2, std::initializer_list<size_t>({ outputDim }), device), L"plusParameters");
 
     Variable inputVar({ inputDim }, AsDataType<ElementType>(), L"input");
     auto timesAndPlusFunc = Plus(plusParam, Times(timesParam, inputVar));
+
+    if (testSaveAndReLoad)
+        SaveAndReloadModel<ElementType>(timesAndPlusFunc, { &inputVar, &timesParam, &plusParam }, device);
 
     srand(seed);
     for (size_t iterIdx = 0; iterIdx < numIterations; ++iterIdx)
@@ -119,10 +122,10 @@ void TestTimesAndPlus(size_t inputDim,
         for (size_t i = 0; i < inputData.size(); ++i)
             inputData[i] = ((ElementType)rand()) / RAND_MAX;
 
-        NDShape inputShape = { inputDim, 1, numSamples };
+        NDShape inputShape = inputVar.Shape().AppendShape({ 1, numSamples });
         ValuePtr inputValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(inputShape, inputData.data(), inputData.size(), DeviceDescriptor::CPUDevice(), true));
 
-        NDShape outputShape = { outputDim, 1, numSamples };
+        NDShape outputShape = timesAndPlusFunc->Output().Shape().AppendShape({ 1, numSamples });
         std::vector<ElementType> outputData(outputShape.TotalSize());
         ValuePtr outputValue;
         if (usePreAllocatedOutputs)
@@ -235,12 +238,14 @@ void TestTimesAndPlus(size_t inputDim,
 
 void FeedForwardTests()
 {
-    TestTimesAndPlus<double>(4, 2, 5, DeviceDescriptor::CPUDevice(), 3, true, true);
+    TestTimesAndPlus<double>(4, 2, 5, DeviceDescriptor::CPUDevice(), 3, true, true, true);
 #ifndef CPUONLY
-    TestTimesAndPlus<float>(145, 32, 2, DeviceDescriptor::GPUDevice(0), 10, true, false);
-    TestTimesAndPlus<double>(145, 15, 200, DeviceDescriptor::GPUDevice(0), 21, false);
+    TestTimesAndPlus<float>(145, 32, 2, DeviceDescriptor::GPUDevice(0), 10, true, false, true);
+    TestTimesAndPlus<double>(145, 15, 200, DeviceDescriptor::GPUDevice(0), 21, false, false, false);
 
-    TestFeedForwardNetworkCreation(DeviceDescriptor::GPUDevice(0));
+    TestFeedForwardNetworkCreation(DeviceDescriptor::GPUDevice(0), true);
+    TestFeedForwardNetworkCreation(DeviceDescriptor::GPUDevice(0), false);
 #endif
-    TestFeedForwardNetworkCreation(DeviceDescriptor::CPUDevice());
+    TestFeedForwardNetworkCreation(DeviceDescriptor::CPUDevice(), false);
+    TestFeedForwardNetworkCreation(DeviceDescriptor::CPUDevice(), true);
 }

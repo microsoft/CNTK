@@ -873,6 +873,14 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
     bool noMoreSamplesToProcess = false;
     for (;;)
     {
+        // Per-minibatch performance measurements; only enabled when perfTraceLevel > 0
+        Timer fineGrainedPerfMeasurementTimer;
+        double readTime = 0;
+        double computeTime = 0;
+        double parameterUpdateTime = 0;
+        if (m_perfTraceLevel > 0)
+            fineGrainedPerfMeasurementTimer.Start();
+
         // get minibatch
         // TODO: is it guaranteed that the GPU is already completed at this point, is it safe to overwrite the buffers?
         size_t actualMBSize = 0;
@@ -880,6 +888,13 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                                                                                 useDistributedMBReading, useParallelTrain, *inputMatrices, actualMBSize, m_mpi);
         if (!wasDataRead && (!useDistributedMBReading || noMoreSamplesToProcess)) // in case of distributed reading, we do a few more loops until all ranks have completed
             break;                                                                // end of epoch
+
+        if (m_perfTraceLevel > 0)
+        {
+            fineGrainedPerfMeasurementTimer.Stop();
+            readTime = fineGrainedPerfMeasurementTimer.ElapsedSeconds();
+            fineGrainedPerfMeasurementTimer.Start();
+        }
 
         // Note: If !wasDataRead then the data that GetMinibatchIntoNetwork() was supposed to full in are undefined.
         // Must not touch them.
@@ -967,6 +982,15 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             if (actualNumSubminibatches > 1)
                 smbDispatcher.DoneWithCurrentMinibatch();
         } // if (actualMBSize > 0)
+
+        if (m_perfTraceLevel > 0)
+        {
+            std::unique_ptr<MatrixComputeStreamEvent> mainStreamSyncEvent(MatrixComputeStreamEvent::Create(net->GetDeviceId()));
+            mainStreamSyncEvent->SynchronizeEvent();
+            fineGrainedPerfMeasurementTimer.Stop();
+            computeTime = fineGrainedPerfMeasurementTimer.ElapsedSeconds();
+            fineGrainedPerfMeasurementTimer.Start();
+        }
 
         // for momentum/clipping/regularization/etc., as well as for progress and statistics, we should only count frames that are not gaps
         // #samples according to the default dynamic axis, for use with criterion nodes that do not have an MBLayout
@@ -1072,6 +1096,17 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 #endif
                 }
             }
+        }
+
+        if (m_perfTraceLevel > 0)
+        {
+            std::unique_ptr<MatrixComputeStreamEvent> mainStreamSyncEvent(MatrixComputeStreamEvent::Create(net->GetDeviceId()));
+            mainStreamSyncEvent->SynchronizeEvent();
+            fineGrainedPerfMeasurementTimer.Stop();
+            parameterUpdateTime = fineGrainedPerfMeasurementTimer.ElapsedSeconds();
+
+            PREPENDTS(stderr);
+            fprintf(stderr, "Perf trace: Worker MB size = %d, Read = %.5gs; Compute = %.5gs; Parameter update = %.5gs, Aggregate MB size = %d\n", (int)actualMBSize, readTime, computeTime, parameterUpdateTime, (int)aggregateNumSamples);
         }
 
         // aggregation by model averaging or block momentum 
@@ -2552,6 +2587,8 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
 
     // BUGBUG: these are not passed to Init()
     m_doUnitTest = configSGD(L"unitTest", false);
+
+    m_perfTraceLevel = configSGD(L"perfTraceLevel", (int)0);
 
     // parallel training
     m_parallelizationMethod = ParallelizationMethod::none;
