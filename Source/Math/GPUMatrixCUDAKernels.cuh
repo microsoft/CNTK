@@ -3410,7 +3410,7 @@ __global__ void computeNCEForwardProp512Threads(
 #endif
 
 template <class ElemType>
-__global__ void _computeNceOutput512Threads(
+__global__ void _computeNceOutputMax512Threads(
     const ElemType* col,
     int numRows,
     int sampleCount,
@@ -3479,7 +3479,7 @@ __global__ void _computeNceOutput512Threads(
 }
 
 template <class ElemType>
-__global__ void _assignSoftmaxSum512Threads(
+__global__ void _assignSoftmaxSumMax512Threads(
     const ElemType* softmax,
     int sampleCount,
     const ElemType* a,
@@ -3491,7 +3491,7 @@ __global__ void _assignSoftmaxSum512Threads(
     // col is an array contains index of the word samples
     // a is a matrix in column major format contains output from hidden layer
     // b is the weight matrix for output layer
-    // tmp is the buffer that stores NCE output calculated from _computeNceOutput512Threads
+    // tmp is the buffer that stores NCE output calculated from _computeNceOutputMax512Threads
     // c is the matrix to store objective
 
     __shared__ ElemType partials[512];
@@ -3531,7 +3531,7 @@ __global__ void _assignSoftmaxSum512Threads(
 }
 
 template <class ElemType>
-__global__ void _assignNoiseContrastiveEstimation512Threads(
+__global__ void _assignNoiseContrastiveEstimationMax512Threads(
     const ElemType* val,
     int numRows,
     int sampleCount,
@@ -3547,7 +3547,7 @@ __global__ void _assignNoiseContrastiveEstimation512Threads(
     // col is an array contains index of the word samples
     // a is a matrix in column major format contains output from hidden layer
     // b is the weight matrix for output layer
-    // tmp is the buffer that stores NCE output calculated from _computeNceOutput512Threads
+    // tmp is the buffer that stores NCE output calculated from _computeNceOutputMax512Threads
     // c is the matrix to store objective
 
     __shared__ ElemType partials[512];
@@ -4742,7 +4742,7 @@ __global__ void _rcrfBackwardComputeZeta1024Threads(
 
 /// $\zeta_t(j) = {\sum_k exp(\delta_{t-1}(k) + a_{kj}(t))}$.
 template <class ElemType>
-__global__ void _rcrfTransGrdComputeZeta(
+__global__ void _rcrfTransGrdComputeZeta1024Threads(
     const int t, // time position
     const size_t iNumPos,
     const ElemType* galpha, // column slice at current time t

@@ -1950,7 +1950,7 @@ void GPUMatrix<ElemType>::AssignNoiseContrastiveEstimation(const GPUMatrix<ElemT
         p = p / 2;
 
     // note: kernel has hard-coded dimension of 512
-    _computeNceOutput512Threads<ElemType> << <GetNumElements() / 2, p >> >(
+    _computeNceOutputMax512Threads<ElemType> << <GetNumElements() / 2, p >> >(
         Data(),
         sampleCount,
         m_numRows / 2,
@@ -1965,7 +1965,7 @@ void GPUMatrix<ElemType>::AssignNoiseContrastiveEstimation(const GPUMatrix<ElemT
         p = p / 2;
     // summing up objective must be done in one block
     // note: kernel has hard-coded dimension of 512
-    _assignNoiseContrastiveEstimation512Threads<ElemType> << <1, p >> >(
+    _assignNoiseContrastiveEstimationMax512Threads<ElemType> << <1, p >> >(
         Data(),
         sampleCount,
         m_numRows / 2,
@@ -2011,7 +2011,7 @@ void GPUMatrix<ElemType>::AssignSoftmaxSum(const GPUMatrix<ElemType>& a, GPUMatr
         p = p / 2;
 
     // note: kernel has hard-coded dimension of 512
-    _assignSoftmaxSum512Threads<ElemType> << <1, p >> >(
+    _assignSoftmaxSumMax512Threads<ElemType> << <1, p >> >(
         my_a.Data(),
         width,
         Data(),
@@ -4293,11 +4293,11 @@ void GPUMatrix<ElemType>::RCRFBackwardCompute(
     {
         szMemSize = sizeof(ElemType) * iNumLab;
         // note: kernel has hard-coded dimension of 1024
-        _rcrfBackwardComputeZeta1024Threads<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock, szMemSize >> >(t, iNumPos, alpha.Data(), d_zeta, pair_scores.Data(), iNumLab, shift);
+        _rcrfBackwardComputeZeta1024Threads<ElemType> << <blocksPerGrid, 1024, szMemSize >> >(t, iNumPos, alpha.Data(), d_zeta, pair_scores.Data(), iNumLab, shift);
         szMemSize = iNumLab * 3;
         szMemSize *= sizeof(ElemType);
         // note: kernel has hard-coded dimension of 1024
-        _rcrfBackwardCompute1024Threads<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock, szMemSize >> >(t, iNumPos, alpha.Data(), beta.Data(),
+        _rcrfBackwardCompute1024Threads<ElemType> << <blocksPerGrid, 1024, szMemSize >> >(t, iNumPos, alpha.Data(), beta.Data(),
                                                                                                   d_zeta, pair_scores.Data(), iNumLab, shift);
     }
     /*
@@ -4336,12 +4336,12 @@ void GPUMatrix<ElemType>::RCRFTransGrdCompute(const GPUMatrix<ElemType>& lbls,
     {
         szMemSize = sizeof(ElemType) * iNumLab;
         // note: kernel has hard-coded dimension of 1024
-        _rcrfTransGrdComputeZeta<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock, szMemSize >> >(t - 1, iNumPos, alpha.Data(), d_zeta, pair_scores.Data(), iNumLab, startLbl, shift);
+        _rcrfTransGrdComputeZeta1024Threads<ElemType> << <blocksPerGrid, 1024, szMemSize >> >(t - 1, iNumPos, alpha.Data(), d_zeta, pair_scores.Data(), iNumLab, startLbl, shift);
         szMemSize = iNumLab * 3;
         szMemSize *= sizeof(ElemType);
         // note: kernel has hard-coded dimension of 1024
-        _rcrfTransGrdCompute1024Threads<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock, szMemSize >> >(t, startLbl, alpha.Data(), beta.Data(),
-                                                                                                  d_zeta, pair_scores.Data(), lbls.Data(), grd.Data(), iNumPos, iNumLab, shift);
+        _rcrfTransGrdCompute1024Threads<ElemType> << <blocksPerGrid, 1024, szMemSize >> >(t, startLbl, alpha.Data(), beta.Data(),
+                                                                                          d_zeta, pair_scores.Data(), lbls.Data(), grd.Data(), iNumPos, iNumLab, shift);
     }
     TracingGPUMemoryAllocator::Free<ElemType>(alpha.GetComputeDeviceId(), d_zeta);
 };
