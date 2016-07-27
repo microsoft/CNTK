@@ -39,7 +39,7 @@ ImageReader::ImageReader(MemoryProviderPtr provider,
         omp_set_num_threads(threadCount);
     }
 
-    auto deserializer = createImageDataDeserializer(config, configHelper);
+    auto deserializer = std::shared_ptr<IDataDeserializer>(createImageDataDeserializer(config));
 
     SequenceEnumeratorPtr randomizer;
     // Request multi-threaded randomizer operation to speed up CPU-intensive image-decoding and transformations.

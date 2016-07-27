@@ -271,7 +271,7 @@ private:
         errno = 0;
         description.m_classId = strtoull(label.c_str(), &eptr, 10);
         if (label.c_str() == eptr || errno == ERANGE)
-            RuntimeError("Cannot parse label value on line %" PRIu64 ", second column, in file %s.", lineIndex, mapPath.c_str());
+            RuntimeError("Invalid map file format, must contain 2 or 3 tab-delimited columns, line %" PRIu64 " in file %s.", lineIndex, mapPath.c_str());
 
         if (description.m_classId >= m_labelDimension)
         {
@@ -488,10 +488,8 @@ private:
 };
 
 // Non-template factory functions for C ABI and for convenience
-// A new configHelper will be constructed if none not provided (may be slow due to file I/O)
-IDataDeserializerPtr createImageDataDeserializer(CorpusDescriptorPtr corpus, const ConfigParameters& config, const ImageConfigHelper& configHelper);
-IDataDeserializerPtr createImageDataDeserializer(CorpusDescriptorPtr corpus, const ConfigParameters& config);
-IDataDeserializerPtr createImageDataDeserializer(const ConfigParameters& config, const ImageConfigHelper& configHelper);
-IDataDeserializerPtr createImageDataDeserializer(const ConfigParameters& config);
+// LabelType and ElementType will be automatically deduced from the config
+std::unique_ptr<IDataDeserializer> createImageDataDeserializer(CorpusDescriptorPtr corpus, const ConfigParameters& config);
+std::unique_ptr<IDataDeserializer> createImageDataDeserializer(const ConfigParameters& config); // will be deprecated
 
 }}}

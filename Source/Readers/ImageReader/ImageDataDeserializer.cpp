@@ -11,26 +11,26 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-IDataDeserializerPtr createImageDataDeserializer(CorpusDescriptorPtr corpus, const ConfigParameters& config, const ImageConfigHelper& configHelper)
-{
-    IDataDeserializerPtr deserializer;
-    const LabelType labelType = configHelper.GetLabelType();
-    const ElementType elementType = configHelper.GetElementType();
+// "private" helper functions
+namespace {
 
+std::unique_ptr<IDataDeserializer> createImageDataDeserializer(CorpusDescriptorPtr corpus, const ConfigParameters& config, const LabelType& labelType, const ElementType& elementType)
+{
+    std::unique_ptr<IDataDeserializer> deserializer;
     switch (labelType)
     {
     case LabelType::Classification:
         switch (elementType)
         {
-        case ElementType::tfloat: deserializer = std::make_shared<ImageDataDeserializer<LabelType::Classification, float>>(corpus, config); break;
-        case ElementType::tdouble: deserializer = std::make_shared<ImageDataDeserializer<LabelType::Classification, double>>(corpus, config); break;
+        case ElementType::tfloat: deserializer = std::make_unique<ImageDataDeserializer<LabelType::Classification, float>>(corpus, config); break;
+        case ElementType::tdouble: deserializer = std::make_unique<ImageDataDeserializer<LabelType::Classification, double>>(corpus, config); break;
         }
         break;
     case LabelType::Regression:
         switch (elementType)
         {
-        case ElementType::tfloat: deserializer = std::make_shared<ImageDataDeserializer<LabelType::Regression, float>>(corpus, config); break;
-        case ElementType::tdouble: deserializer = std::make_shared<ImageDataDeserializer<LabelType::Regression, double>>(corpus, config); break;
+        case ElementType::tfloat: deserializer = std::make_unique<ImageDataDeserializer<LabelType::Regression, float>>(corpus, config); break;
+        case ElementType::tdouble: deserializer = std::make_unique<ImageDataDeserializer<LabelType::Regression, double>>(corpus, config); break;
         }
         break;
     default:
@@ -39,32 +39,24 @@ IDataDeserializerPtr createImageDataDeserializer(CorpusDescriptorPtr corpus, con
     return deserializer;
 }
 
-IDataDeserializerPtr createImageDataDeserializer(CorpusDescriptorPtr corpus, const ConfigParameters& config)
+// (soon to be) deprecated version
+std::unique_ptr<IDataDeserializer> createImageDataDeserializer(const ConfigParameters& config, const LabelType& labelType, const ElementType& elementType)
 {
-    ImageConfigHelper configHelper(config);
-    return createImageDataDeserializer(corpus, config, configHelper);
-}
-
-IDataDeserializerPtr createImageDataDeserializer(const ConfigParameters& config, const ImageConfigHelper& configHelper)
-{
-    IDataDeserializerPtr deserializer;
-    const LabelType labelType = configHelper.GetLabelType();
-    const ElementType elementType = configHelper.GetElementType();
-
+    std::unique_ptr<IDataDeserializer> deserializer;
     switch (labelType)
     {
     case LabelType::Classification:
         switch (elementType)
         {
-        case ElementType::tfloat: deserializer = std::make_shared<ImageDataDeserializer<LabelType::Classification, float>>(config); break;
-        case ElementType::tdouble: deserializer = std::make_shared<ImageDataDeserializer<LabelType::Classification, double>>(config); break;
+        case ElementType::tfloat: deserializer = std::make_unique<ImageDataDeserializer<LabelType::Classification, float>>(config); break;
+        case ElementType::tdouble: deserializer = std::make_unique<ImageDataDeserializer<LabelType::Classification, double>>(config); break;
         }
         break;
     case LabelType::Regression:
         switch (elementType)
         {
-        case ElementType::tfloat: deserializer = std::make_shared<ImageDataDeserializer<LabelType::Regression, float>>(config); break;
-        case ElementType::tdouble: deserializer = std::make_shared<ImageDataDeserializer<LabelType::Regression, double>>(config); break;
+        case ElementType::tfloat: deserializer = std::make_unique<ImageDataDeserializer<LabelType::Regression, float>>(config); break;
+        case ElementType::tdouble: deserializer = std::make_unique<ImageDataDeserializer<LabelType::Regression, double>>(config); break;
         }
         break;
     default:
@@ -73,10 +65,25 @@ IDataDeserializerPtr createImageDataDeserializer(const ConfigParameters& config,
     return deserializer;
 }
 
-IDataDeserializerPtr createImageDataDeserializer(const ConfigParameters& config)
+}
+
+std::unique_ptr<IDataDeserializer> createImageDataDeserializer(CorpusDescriptorPtr corpus, const ConfigParameters& config)
 {
-    ImageConfigHelper configHelper(config);
-    return createImageDataDeserializer(config, configHelper);
+    auto dbg = std::string(config(L"labelType", "classification")); UNUSED(dbg);
+    auto dbg2 = std::string(config(L"precision", "float")); UNUSED(dbg2);
+    const LabelType labelType = AreEqualIgnoreCase(std::string(config(L"labelType", "classification")), "classification") ? LabelType::Classification : LabelType::Regression;
+    const ElementType elementType = AreEqualIgnoreCase(std::string(config(L"precision", "float")), "float") ? ElementType::tfloat : ElementType::tdouble;
+    return createImageDataDeserializer(corpus, config, labelType, elementType);
+}
+
+// (soon to be) deprecated version
+std::unique_ptr<IDataDeserializer> createImageDataDeserializer(const ConfigParameters& config)
+{
+    auto dbg = std::string(config(L"labelType", "classification")); UNUSED(dbg);
+    auto dbg2 = std::string(config(L"precision", "float")); UNUSED(dbg2);
+    const LabelType labelType = AreEqualIgnoreCase(std::string(config(L"labelType", "classification")), "classification") ? LabelType::Classification : LabelType::Regression;
+    const ElementType elementType = AreEqualIgnoreCase(std::string(config(L"precision", "float")), "float") ? ElementType::tfloat : ElementType::tdouble;
+    return createImageDataDeserializer(config, labelType, elementType);
 }
 
 cv::Mat FileByteReader::Read(size_t, const std::string& path, bool grayscale)
