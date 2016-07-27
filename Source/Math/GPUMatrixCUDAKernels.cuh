@@ -4574,83 +4574,11 @@ __global__ void _minusOneAt(
         c[id] = c[id] - 1.0;
 }
 
-// the kernel function for RCRF backward computation
+// the kernel function for CRFLSTMNetwork  backward computation
 // assume a column slice of input and output
+// This function assumes iNumLab <= 1024 and that shared memory == total (!) number of threads == 3 * iNumLab.
 template <class ElemType>
-__global__ void _rcrfBackwardCompute1024Threads(
-    const size_t iNumPos,
-    const ElemType* galpha, // column slice at current time t
-    ElemType* gbeta,        // column slices with [row, 2] at current time t for [
-    const ElemType* gpair_scores,
-    const size_t iNumLab, const int shift)
-{
-    int id = blockDim.x * blockIdx.x + threadIdx.x;
-
-    extern __shared__ double sh_alpha_and_beta[]; // intersting, has to use [], instead of *
-    // need bye size = (iNumPos * iNumLab * 2 + iNumLab * iNumLab) * sizeof(ElemType)
-
-    ElemType* alpha = (ElemType*) (sh_alpha_and_beta);
-    ElemType* pair_scores = alpha + iNumPos * iNumLab;
-    ElemType* beta = alpha + iNumPos * iNumLab + iNumLab * iNumLab;
-
-    if (id < 0 || id >= iNumLab)
-        return;
-
-    // copy global memory to shared memory to save time
-    for (int t = iNumPos - 1; t >= 0; t--)
-    {
-        alpha[IDX2C(id, t, iNumLab)] = galpha[IDX2C(id, t, iNumLab)];
-    }
-
-    for (int j = 0; j < iNumLab; j++)
-        pair_scores[IDX2C(id, j, iNumLab)] = gpair_scores[IDX2C(id, j, iNumLab)];
-
-    __syncthreads();
-
-    for (int t = iNumPos - 1; t >= 0; t--)
-    {
-        ElemType fSum;
-        ElemType fTmp = LZERO;
-        if (t == iNumPos - 1)
-        {
-            fSum = LZERO;
-            for (int j = 0; j < iNumLab; j++)
-            {
-                fSum = logaddk(fSum, alpha[IDX2C(j, t, iNumLab)]);
-            }
-
-            fTmp = alpha[IDX2C(id, t, iNumLab)] - fSum;
-        }
-        else
-        {
-            for (int j = 0; j < iNumLab; j++)
-            {
-                fSum = LZERO;
-                for (int m = 0; m < iNumLab; m++)
-                {
-                    fSum = logaddk(fSum, alpha[IDX2C(m, t, iNumLab)] + pair_scores[IDX2C(j, m, iNumLab)]);
-                }
-
-                fTmp = logaddk(fTmp, beta[IDX2C(j, t + 1, iNumLab)] + alpha[IDX2C(id, t, iNumLab)] + pair_scores[IDX2C(j, id, iNumLab)] - fSum);
-            }
-        }
-
-        beta[IDX2C(id, t, iNumLab)] = fTmp;
-        __syncthreads();
-    }
-
-    // copy from shared memory to global memory to pass values
-    for (int t = iNumPos - 1; t >= 0; t--)
-    {
-        gbeta[IDX2C(id, t, iNumLab)] = beta[IDX2C(id, t, iNumLab)];
-    }
-    //    __syncthreads();
-}
-
-/// the kernel function for CRFLSTMNetwork  backward computation
-/// assume a column slice of input and output
-template <class ElemType>
-__global__ void _rcrfBackwardCompute1024Threads(
+__global__ void _rcrfBackwardComputeMax1024Labels(
     const size_t t, // time position
     const size_t iNumPos,
     const ElemType* galpha,       // column slice at current time t
@@ -4661,13 +4589,13 @@ __global__ void _rcrfBackwardCompute1024Threads(
 {
     int id = blockDim.x * blockIdx.x + threadIdx.x;
 
-    extern __shared__ double sh_alpha_and_beta[]; // intersting, has to use [], instead of *
-    // need bye size = (iNumPos * iNumLab * 2 + iNumLab * iNumLab) * sizeof(ElemType)
+    extern __shared__ double sh_alpha_and_beta[]; // [id] or [id + iNumLab] or [id + 2 * iNumLab)]
+    // need byte size = (iNumPos * iNumLab * 2 + iNumLab * iNumLab) * sizeof(ElemType)
 
     ElemType* alpha = (ElemType*) (sh_alpha_and_beta);
     ElemType* beta_t1 = (ElemType*) (alpha + iNumLab);
     ElemType* zeta = (ElemType*) (beta_t1 + iNumLab);
-    ElemType pair_scores[1024];
+    ElemType pair_scores[1024];  // [j=0..iNumLab-1]
 
     if (id < 0 || id >= iNumLab)
         return;
@@ -4699,9 +4627,10 @@ __global__ void _rcrfBackwardCompute1024Threads(
     gbeta[IDX2C(id, t, iNumLab)] = fTmp;
 }
 
-/// $\zeta_t(j) = {\sum_k exp(\delta_{t-1}(k) + a_{kj}(t))}$.
+// $\zeta_t(j) = {\sum_k exp(\delta_{t-1}(k) + a_{kj}(t))}$.
+// This function assumes iNumLab <= 1024 and that shared memory == total (!) number of threads == iNumLab.
 template <class ElemType>
-__global__ void _rcrfBackwardComputeZeta1024Threads(
+__global__ void _rcrfBackwardComputeZetaMax1024Labels(
     const size_t t, // time position
     const size_t iNumPos,
     const ElemType* galpha, // column slice at current time t
@@ -4711,11 +4640,11 @@ __global__ void _rcrfBackwardComputeZeta1024Threads(
 {
     int id = blockDim.x * blockIdx.x + threadIdx.x;
 
-    extern __shared__ double sh_alpha_and_beta[]; // intersting, has to use [], instead of *
-    // need bye size = (iNumPos * iNumLab * 2 + iNumLab * iNumLab) * sizeof(ElemType)
+    extern __shared__ double sh_alpha_and_beta[]; // [id]
+    // need byte size = (iNumPos * iNumLab * 2 + iNumLab * iNumLab) * sizeof(ElemType)
 
     ElemType* alpha = (ElemType*) (sh_alpha_and_beta);
-    ElemType pair_scores[1024];
+    ElemType pair_scores[1024]; // [j=0..iNumLab-1]
 
     if (id < 0 || id >= iNumLab)
         return;
@@ -4741,8 +4670,9 @@ __global__ void _rcrfBackwardComputeZeta1024Threads(
 }
 
 /// $\zeta_t(j) = {\sum_k exp(\delta_{t-1}(k) + a_{kj}(t))}$.
+// This function assumes iNumLab <= 1024 and that shared memory == total (!) number of threads == iNumLab.
 template <class ElemType>
-__global__ void _rcrfTransGrdComputeZeta1024Threads(
+__global__ void _rcrfTransGrdComputeZetaMax1024Labels(
     const int t, // time position
     const size_t iNumPos,
     const ElemType* galpha, // column slice at current time t
@@ -4754,11 +4684,11 @@ __global__ void _rcrfTransGrdComputeZeta1024Threads(
 {
     int id = blockDim.x * blockIdx.x + threadIdx.x;
 
-    extern __shared__ double sh_alpha_and_beta[]; // intersting, has to use [], instead of *
-    // need bye size = (iNumPos * iNumLab * 2 + iNumLab * iNumLab) * sizeof(ElemType)
+    extern __shared__ double sh_alpha_and_beta[]; // [id]
+    // need byte size = (iNumPos * iNumLab * 2 + iNumLab * iNumLab) * sizeof(ElemType)
 
     ElemType* alpha = (ElemType*) (sh_alpha_and_beta);
-    ElemType pair_scores[1024];
+    ElemType pair_scores[1024]; // [j=0..iNumLab-1]
 
     if (id < 0 || id >= iNumLab)
         return;
@@ -4792,8 +4722,9 @@ __global__ void _rcrfTransGrdComputeZeta1024Threads(
     gzeta[id] = fSum;
 }
 
+// This function assumes iNumLab <= 1024 and that shared memory == total (!) number of threads == iNumLab.
 template <class ElemType>
-__global__ void _rcrfTransGrdCompute1024Threads(
+__global__ void _rcrfTransGrdComputeMax1024Labels(
     int t,
     const size_t start_lbl,
     const ElemType* galpha,
@@ -4808,13 +4739,13 @@ __global__ void _rcrfTransGrdCompute1024Threads(
 {
     int id = blockDim.x * blockIdx.x + threadIdx.x;
 
-    extern __shared__ double sh_alpha_and_beta[]; // intersting, has to use [], instead of *
-    // need bye size = (iNumPos * iNumLab * 2 + iNumLab * iNumLab) * sizeof(ElemType)
+    extern __shared__ double sh_alpha_and_beta[]; // [id]
+    // need byte size = (iNumPos * iNumLab * 2 + iNumLab * iNumLab) * sizeof(ElemType)
 
     ElemType* alpha = (ElemType*) (sh_alpha_and_beta);
     ElemType* beta = (ElemType*) (alpha + iNumLab);
     ElemType* zeta = (ElemType*) (beta + iNumLab);
-    ElemType pair_scores[1024];
+    ElemType pair_scores[1024]; // [j=0..iNumLab-1]
 
     if (id < 0 || id >= iNumLab)
         return;

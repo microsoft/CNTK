@@ -4287,18 +4287,21 @@ void GPUMatrix<ElemType>::RCRFBackwardCompute(
     ElemType* d_zeta = TracingGPUMemoryAllocator::Allocate<ElemType>(alpha.GetComputeDeviceId(), iNumLab);
 
     CUDA_LONG N = iNumLab;
-    int blocksPerGrid = (int) ceil(1.0 * N / GridDim::maxThreadsPerBlock);
+    // TODO: change all three '512' to 'GridDim::maxThreadsPerBlock' (not doing this now since I cannot test it)
+    int blocksPerGrid = (int) ceil(1.0 * N / 512);
     size_t szMemSize;
     for (int t = iNumPos - 1; t >= 0; t--)
     {
         szMemSize = sizeof(ElemType) * iNumLab;
-        // note: kernel has hard-coded dimension of 1024
-        _rcrfBackwardComputeZeta1024Threads<ElemType> << <blocksPerGrid, 1024, szMemSize >> >(t, iNumPos, alpha.Data(), d_zeta, pair_scores.Data(), iNumLab, shift);
+        // This function assumes iNumLab <= 1024 and that shared memory == total (!) number of threads == iNumLab.
+        assert(iNumLab <= 1024);
+        _rcrfBackwardComputeZetaMax1024Labels<ElemType> << <blocksPerGrid, 512, szMemSize >> >(t, iNumPos, alpha.Data(), d_zeta, pair_scores.Data(), iNumLab, shift);
         szMemSize = iNumLab * 3;
         szMemSize *= sizeof(ElemType);
-        // note: kernel has hard-coded dimension of 1024
-        _rcrfBackwardCompute1024Threads<ElemType> << <blocksPerGrid, 1024, szMemSize >> >(t, iNumPos, alpha.Data(), beta.Data(),
-                                                                                                  d_zeta, pair_scores.Data(), iNumLab, shift);
+        // This function assumes iNumLab <= 1024 and that shared memory == total (!) number of threads == 3 * iNumLab.
+        assert(iNumLab <= 1024);
+        _rcrfBackwardComputeMax1024Labels<ElemType> << <blocksPerGrid, 512, szMemSize >> >(t, iNumPos, alpha.Data(), beta.Data(),
+                                                                                           d_zeta, pair_scores.Data(), iNumLab, shift);
     }
     /*
         error = cudaGetErrorString(cudaPeekAtLastError());
@@ -4330,18 +4333,22 @@ void GPUMatrix<ElemType>::RCRFTransGrdCompute(const GPUMatrix<ElemType>& lbls,
     ElemType* d_zeta = TracingGPUMemoryAllocator::Allocate<ElemType>(alpha.GetComputeDeviceId(), iNumLab);
 
     CUDA_LONG N = iNumLab;
-    int blocksPerGrid = (int) ceil(1.0 * N / GridDim::maxThreadsPerBlock);
+    // TODO: change all three '512' to 'GridDim::maxThreadsPerBlock' (not doing this now since I cannot test it)
+    int blocksPerGrid = (int)ceil(1.0 * N / 512);
     size_t szMemSize;
     for (int t = 0; t < iNumPos; t++)
     {
         szMemSize = sizeof(ElemType) * iNumLab;
-        // note: kernel has hard-coded dimension of 1024
-        _rcrfTransGrdComputeZeta1024Threads<ElemType> << <blocksPerGrid, 1024, szMemSize >> >(t - 1, iNumPos, alpha.Data(), d_zeta, pair_scores.Data(), iNumLab, startLbl, shift);
+        // This function assumes iNumLab <= 1024 and that shared memory == total (!) number of threads == iNumLab.
+        assert(iNumLab <= 1024);
+        // BUGBUG: This is launched with 512 threads per block, but allocates shared mem as if there is only one block. Likewise for all 4 of these functions.
+        _rcrfTransGrdComputeZetaMax1024Labels<ElemType> << <blocksPerGrid, 512, szMemSize >> >(t - 1, iNumPos, alpha.Data(), d_zeta, pair_scores.Data(), iNumLab, startLbl, shift);
         szMemSize = iNumLab * 3;
         szMemSize *= sizeof(ElemType);
-        // note: kernel has hard-coded dimension of 1024
-        _rcrfTransGrdCompute1024Threads<ElemType> << <blocksPerGrid, 1024, szMemSize >> >(t, startLbl, alpha.Data(), beta.Data(),
-                                                                                          d_zeta, pair_scores.Data(), lbls.Data(), grd.Data(), iNumPos, iNumLab, shift);
+        // This function assumes iNumLab <= 1024 and that shared memory == total (!) number of threads == iNumLab.
+        assert(iNumLab <= 1024);
+        _rcrfTransGrdComputeMax1024Labels<ElemType> << <blocksPerGrid, 512, szMemSize >> >(t, startLbl, alpha.Data(), beta.Data(),
+                                                                                           d_zeta, pair_scores.Data(), lbls.Data(), grd.Data(), iNumPos, iNumLab, shift);
     }
     TracingGPUMemoryAllocator::Free<ElemType>(alpha.GetComputeDeviceId(), d_zeta);
 };
