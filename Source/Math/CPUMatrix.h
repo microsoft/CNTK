@@ -486,7 +486,7 @@ public:
     static void RCRFBackwardCompute(const CPUMatrix<ElemType>& alpha, CPUMatrix<ElemType>& beta,
                                     const CPUMatrix<ElemType>& lbls,
                                     const CPUMatrix<ElemType>& pair_scores);
-    static void _rcrfBackwardCompute(size_t t, size_t k, const CPUMatrix<ElemType>& alpha,
+    static void _rcrfBackwardCompute1024Threads(size_t t, size_t k, const CPUMatrix<ElemType>& alpha,
                                      CPUMatrix<ElemType>& beta,
                                      const CPUMatrix<ElemType>& pair_scores);
 
@@ -496,7 +496,7 @@ public:
                                     const CPUMatrix<ElemType>& pair_scores,
                                     CPUMatrix<ElemType>& grd);
 
-    static void _rcrfTransGrdCompute(size_t i,
+    static void _rcrfTransGrdCompute1024Threads(size_t i,
                                      const CPUMatrix<ElemType>& lbls,
                                      const CPUMatrix<ElemType>& alpha,
                                      const CPUMatrix<ElemType>& beta,

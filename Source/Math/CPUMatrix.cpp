@@ -5788,14 +5788,14 @@ void CPUMatrix<ElemType>::RCRFBackwardCompute(const CPUMatrix<ElemType>& alpha, 
 #pragma omp parallel for
         for (int k = 0; k < iNumLab; k++)
         {
-            _rcrfBackwardCompute(t, k, alpha, beta, pair_scores);
+            _rcrfBackwardCompute1024Threads(t, k, alpha, beta, pair_scores);
         }
     }
 };
 
 /// the kernel function for RCRF backward computation
 template <class ElemType>
-void CPUMatrix<ElemType>::_rcrfBackwardCompute(size_t t, size_t k, const CPUMatrix<ElemType>& alpha,
+void CPUMatrix<ElemType>::_rcrfBackwardCompute1024Threads(size_t t, size_t k, const CPUMatrix<ElemType>& alpha,
                                                CPUMatrix<ElemType>& beta,
                                                const CPUMatrix<ElemType>& pair_scores)
 {
@@ -5859,7 +5859,7 @@ void CPUMatrix<ElemType>::RCRFTransGrdCompute(const CPUMatrix<ElemType>& lbls,
 #pragma omp parallel for
         for (int i = 0; i < iNumLab; i++)
         {
-            _rcrfTransGrdCompute(i, lbls, alpha, beta, pair_scores, grd, tPos);
+            _rcrfTransGrdCompute1024Threads(i, lbls, alpha, beta, pair_scores, grd, tPos);
         }
 
         // transition score
@@ -5891,7 +5891,7 @@ void CPUMatrix<ElemType>::RCRFTransGrdCompute(const CPUMatrix<ElemType>& lbls,
 };
 
 template <class ElemType>
-void CPUMatrix<ElemType>::_rcrfTransGrdCompute(size_t i,
+void CPUMatrix<ElemType>::_rcrfTransGrdCompute1024Threads(size_t i,
                                                const CPUMatrix<ElemType>& lbls,
                                                const CPUMatrix<ElemType>& alpha,
                                                const CPUMatrix<ElemType>& beta,

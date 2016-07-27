@@ -847,7 +847,7 @@ __global__ void _logSoftMaxColWise(
 
 // each block processes one column. There must be 512 threads in a block
 template <class ElemType>
-__global__ void _assignColumnwiseLogSoftmaxOf(
+__global__ void _assignColumnwiseLogSoftmaxOf512Threads(
     const ElemType* a,
     ElemType* us,
     const CUDA_LONG m_numCols,
@@ -1015,7 +1015,7 @@ __global__ void _logSoftMaxRowWise(
 
 // each block processes one column. There must be 512 threads in a block
 template <class ElemType>
-__global__ void _assignColumnwiseHardmaxOf(
+__global__ void _assignColumnwiseHardmaxOf512Threads(
     const ElemType* a,
     ElemType* us,
     const CUDA_LONG m_numCols,
@@ -2198,7 +2198,7 @@ __global__ void _addSignOf(
 
 // This function processes 1 column per block. this function needs 512 threads
 template <class ElemType, bool IsMax>
-__global__ void _vectorMaxMinReduce(
+__global__ void _vectorMaxMinReduce512Threads(
     const ElemType* us,
     ElemType* Indexes,
     ElemType* Values,
@@ -2585,7 +2585,7 @@ __global__ void _addElementToElement(
 }
 
 template <class ElemType>
-__global__ void _assignNumOfDiff(
+__global__ void _assignNumOfDiff1024Threads(
     const ElemType* a,
     const ElemType* b,
     ElemType* c,
@@ -2664,7 +2664,7 @@ __global__ void _assignNumOfDiff(
 }
 
 /*template<class ElemType>
-__global__ void _assignNumOfDiff(
+__global__ void _assignNumOfDiff1024Threads(
 ElemType *a,
 ElemType *b,
 ElemType *c,
@@ -3343,8 +3343,9 @@ __global__ void _computeGradientOfInput(
 }
 #endif
 
+#if 0
 template <class ElemType>
-__global__ void computeNCEForwardProp(
+__global__ void computeNCEForwardProp512Threads(
     const ElemType* val,
     const int* col,
     int numRows,
@@ -3406,9 +3407,10 @@ __global__ void computeNCEForwardProp(
             res[i] = partials[0];
     }
 }
+#endif
 
 template <class ElemType>
-__global__ void _computeNceOutput(
+__global__ void _computeNceOutput512Threads(
     const ElemType* col,
     int numRows,
     int sampleCount,
@@ -3477,7 +3479,7 @@ __global__ void _computeNceOutput(
 }
 
 template <class ElemType>
-__global__ void _assignSoftmaxSum(
+__global__ void _assignSoftmaxSum512Threads(
     const ElemType* softmax,
     int sampleCount,
     const ElemType* a,
@@ -3489,7 +3491,7 @@ __global__ void _assignSoftmaxSum(
     // col is an array contains index of the word samples
     // a is a matrix in column major format contains output from hidden layer
     // b is the weight matrix for output layer
-    // tmp is the buffer that stores NCE output calculated from _computeNceOutput
+    // tmp is the buffer that stores NCE output calculated from _computeNceOutput512Threads
     // c is the matrix to store objective
 
     __shared__ ElemType partials[512];
@@ -3529,7 +3531,7 @@ __global__ void _assignSoftmaxSum(
 }
 
 template <class ElemType>
-__global__ void _assignNoiseContrastiveEstimation(
+__global__ void _assignNoiseContrastiveEstimation512Threads(
     const ElemType* val,
     int numRows,
     int sampleCount,
@@ -3545,7 +3547,7 @@ __global__ void _assignNoiseContrastiveEstimation(
     // col is an array contains index of the word samples
     // a is a matrix in column major format contains output from hidden layer
     // b is the weight matrix for output layer
-    // tmp is the buffer that stores NCE output calculated from _computeNceOutput
+    // tmp is the buffer that stores NCE output calculated from _computeNceOutput512Threads
     // c is the matrix to store objective
 
     __shared__ ElemType partials[512];
@@ -3863,7 +3865,7 @@ __global__ void _normalGradForSparseBlock(
 //This function should be called with 1024 threads per block and 1 block
 //THIS IS NOT THE MOST EFFICIENT IMPLEMENTATION!!!
 template <class ElemType>
-__global__ void _reductionSum(
+__global__ void _reductionSum1024Threads(
     const ElemType* data,
     ElemType* sum,
     CUDA_LONG N)
@@ -3944,7 +3946,7 @@ __global__ void _reductionSum(
 //This function should be called with 1024 threads per block and 1 block
 //THIS IS NOT THE MOST EFFICIENT IMPLEMENTATION!!!
 template <class ElemType>
-__global__ void _reductionSumAndAssign(
+__global__ void _reductionSumAndAssign1024Threads(
     ElemType* toAssign,
     const ElemType* data,
     CUDA_LONG N, // length of data
@@ -4028,7 +4030,7 @@ __global__ void _reductionSumAndAssign(
 //This function should be called with 1024 threads per block and 1 block
 //THIS IS NOT THE MOST EFFICIENT IMPLEMENTATION!!!
 template <class ElemType>
-__global__ void _reductionSum2(
+__global__ void _reductionSum21024Threads(
     const ElemType* data,
     ElemType* sum,
     CUDA_LONG N,
@@ -4118,7 +4120,7 @@ __global__ void _reductionSum2(
 //This function should be called with 1024 threads per block and 1 block
 //THIS IS NOT THE MOST EFFICIENT IMPLEMENTATION!!!
 template <class ElemType>
-__global__ void _reductionMatrixNormInf(
+__global__ void _reductionMatrixNormInf1024Threads(
     const ElemType* data,
     ElemType* maxAbs,
     CUDA_LONG N)
@@ -4206,7 +4208,7 @@ __global__ void _reductionMatrixNormInf(
 //This function should be called with 1024 threads per block and 1 block
 //THIS IS NOT THE MOST EFFICIENT IMPLEMENTATION!!!
 template <class ElemType>
-__global__ void _reductionMatrixNorm0(
+__global__ void _reductionMatrixNorm01024Threads(
     const ElemType* data,
     ElemType* nz,
     CUDA_LONG N)
@@ -4306,7 +4308,7 @@ __global__ void _getSparseVectorRepresntationForCSCMatrix(
 }
 
 template <class ElemType>
-__global__ void _lrHelper(
+__global__ void _lrHelper512Threads(
     const ElemType* data1,
     const ElemType* data2,
     const CUDA_LONG N,
@@ -4408,7 +4410,7 @@ __global__ void _lrHelper(
 
 /*
 template<class ElemType>
-__global__ void _lrHelper(
+__global__ void _lrHelper512Threads(
 ElemType* d_tmp)
 {
 if (sizeof(ElemType)==sizeof(float))
@@ -4575,7 +4577,7 @@ __global__ void _minusOneAt(
 // the kernel function for RCRF backward computation
 // assume a column slice of input and output
 template <class ElemType>
-__global__ void _rcrfBackwardCompute(
+__global__ void _rcrfBackwardCompute1024Threads(
     const size_t iNumPos,
     const ElemType* galpha, // column slice at current time t
     ElemType* gbeta,        // column slices with [row, 2] at current time t for [
@@ -4648,7 +4650,7 @@ __global__ void _rcrfBackwardCompute(
 /// the kernel function for CRFLSTMNetwork  backward computation
 /// assume a column slice of input and output
 template <class ElemType>
-__global__ void _rcrfBackwardCompute(
+__global__ void _rcrfBackwardCompute1024Threads(
     const size_t t, // time position
     const size_t iNumPos,
     const ElemType* galpha,       // column slice at current time t
@@ -4699,7 +4701,7 @@ __global__ void _rcrfBackwardCompute(
 
 /// $\zeta_t(j) = {\sum_k exp(\delta_{t-1}(k) + a_{kj}(t))}$.
 template <class ElemType>
-__global__ void _rcrfBackwardComputeZeta(
+__global__ void _rcrfBackwardComputeZeta1024Threads(
     const size_t t, // time position
     const size_t iNumPos,
     const ElemType* galpha, // column slice at current time t
@@ -4791,7 +4793,7 @@ __global__ void _rcrfTransGrdComputeZeta(
 }
 
 template <class ElemType>
-__global__ void _rcrfTransGrdCompute(
+__global__ void _rcrfTransGrdCompute1024Threads(
     int t,
     const size_t start_lbl,
     const ElemType* galpha,
