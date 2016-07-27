@@ -585,6 +585,60 @@ struct nocase_compare
 // random collection of stuff we needed at some place
 // ----------------------------------------------------------------------------
 
+// Array class
+template <class T>
+class ArrayRef
+{
+    T* elements; // Array of type T
+    size_t count;
+
+public:
+
+    ArrayRef(T* elementsIn, size_t sizeIn)
+    {
+        elements = elementsIn;
+        count = sizeIn;
+    }
+
+    // TODO: Copy Constructor
+    ArrayRef(const ArrayRef& other) = delete;
+
+    // TODO: Move Constructor
+    ArrayRef(ArrayRef&& other) = delete;
+
+    // TODO: Assignment operator
+    ArrayRef& operator=(const ArrayRef& rhs) = delete;
+
+    // TODO: Move assignment operator
+    ArrayRef& operator=(ArrayRef&& rhs) = delete;
+
+    size_t size() const { return count; }
+    T* data() const { return elements; }
+
+    T operator[](size_t i) const
+    {
+        if (i >= size())
+            LogicError("ArrayRef: index overflow");
+        return elements[i];
+    }
+
+    T& operator[](size_t i)
+    {
+        if (i >= count)
+            LogicError("ArrayRef: index overflow");
+        return elements[i];
+    }
+
+    const T* begin() const
+    {
+        return data();
+    }
+    const T* end() const
+    {
+        return data() + size();
+    }
+};
+
 // TODO: maybe change to type id of an actual thing we pass in
 // TODO: is this header appropriate?
 template <class C>

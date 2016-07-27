@@ -1139,12 +1139,12 @@ template <>
 /*static*/ char Matrix<char>::MakeNan(size_t)
 {
     return 0;
-} // (needed for completeness)
+} // (needed for completeness and to pass unit tests)
 template <>
 /*static*/ short Matrix<short>::MakeNan(size_t)
 {
     return 0;
-} // (needed for completeness)
+} // (needed for completeness and to pass unit tests)
 
 template <class ElemType>
 void Matrix<ElemType>::MaskColumnsValue(const Matrix<char>& columnsMask, ElemType val)
