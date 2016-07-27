@@ -766,7 +766,7 @@ endif
 
   INCLUDEPATH += $(SOURCEDIR)/Multiverso/include
   LIBPATH += $(SOURCEDIR)/Multiverso/x64/$(BUILDTYPE)
-  LIBS += -lmultiverso
+  LIBS += -lmultiverso -ldl
 
   COMMON_FLAGS += -DMULTIVERSO_SUPPORT
 endif
