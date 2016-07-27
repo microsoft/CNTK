@@ -55,11 +55,8 @@ def fully_connected_classifier_net(input, num_output_classes, hidden_layer_dim, 
     return classifier_root;
 
 
-if __name__=='__main__':
-    
-    #import time;time.sleep(15)
-    dev = cntk_py.DeviceDescriptor.CPUDevice()   
-    #import time;time.sleep(40)
+if __name__=='__main__':      
+    dev = cntk_py.DeviceDescriptor.CPUDevice()       
     input_dim = 937;
     num_output_classes = 9304;
     num_hidden_layers = 12;
@@ -79,9 +76,6 @@ if __name__=='__main__':
     
     for i in range(0,1):
         nd = np.random.rand(input_dim,1,num_samples)        
-        #nd = np.ones((input_dim,1,num_samples))
-        #ndav = cntk_py.NDArrayView(nd, dev, False)        
-        #input_value_ptr = create_ValuePtr_from_NumPy2(ndav)
         input_value_ptr = create_ValuePtr_from_NumPy(nd.astype(np.float32), dev)
               
         label_data = np.zeros(num_output_classes*num_samples)
