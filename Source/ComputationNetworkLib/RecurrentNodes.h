@@ -464,6 +464,9 @@ public:
             LogicError("Unrecognized direction in DelayedValueNodeBase");
     }
 
+    int TimeStep() const { return m_timeStep; }
+    ElemType InitialActivationValue() const { return m_initialActivationValue; }
+
 protected:
     ElemType m_initialActivationValue;       // starting value for hidden activation vector at boundary
     Matrix<ElemType> m_delayedValue;         // saves the activation of the previous step that this node points to
