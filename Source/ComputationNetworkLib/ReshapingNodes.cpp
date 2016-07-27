@@ -122,7 +122,8 @@ template <class ElemType>
 {
     switch (m_reductionOp)
     {
-    case ElementWiseOperator::opMax: return true;
+	case ElementWiseOperator::opLogSum: return true;
+	case ElementWiseOperator::opMax: return true;
     case ElementWiseOperator::opMin: return true;
     case ElementWiseOperator::opSum: return false;
     }
@@ -134,7 +135,8 @@ template <class ElemType>
 {
     switch (m_reductionOp)
     {
-    case ElementWiseOperator::opMax: return true;
+	case ElementWiseOperator::opLogSum: return true;
+	case ElementWiseOperator::opMax: return true;
     case ElementWiseOperator::opMin: return true;
     case ElementWiseOperator::opSum: return false;
     }
@@ -149,9 +151,10 @@ void ReduceElementsNode<ElemType>::ValidateOp()
     if (m_operation == L"Plus") m_reductionOp = ElementWiseOperator::opSum;
     else
 #endif
-    if (m_operation == L"Sum"     ) m_reductionOp = ElementWiseOperator::opSum;
-    else if (m_operation == L"Max") m_reductionOp = ElementWiseOperator::opMax;
-    else if (m_operation == L"Min") m_reductionOp = ElementWiseOperator::opMin;
+    if      (m_operation == L"Sum")    m_reductionOp = ElementWiseOperator::opSum;
+	else if (m_operation == L"LogSum") m_reductionOp = ElementWiseOperator::opLogSum;
+	else if (m_operation == L"Max")    m_reductionOp = ElementWiseOperator::opMax;
+	else if (m_operation == L"Min")    m_reductionOp = ElementWiseOperator::opMin;
 
     // more here
     else InvalidArgument("%ls was given an invalid operation code '%ls'. Allowed are: 'Sum', 'Max', 'Min'.", NodeDescription().c_str(), m_operation.c_str());

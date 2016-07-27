@@ -6273,10 +6273,11 @@ static void TensorOpWithFn(ElemType beta, array<ElemType*, N> pointers, ElemType
 
     switch (reductionOp)
     {
-        CaseTensorOpWithFnAndReduction(Sum);
-        CaseTensorOpWithFnAndReduction(Max);
-        CaseTensorOpWithFnAndReduction(Min);
-    default:
+		CaseTensorOpWithFnAndReduction(LogSum);
+		CaseTensorOpWithFnAndReduction(Max);
+		CaseTensorOpWithFnAndReduction(Min);
+		CaseTensorOpWithFnAndReduction(Sum);
+	default:
         LogicError("Specified ElementWiseOperator op %d not suported as reduction operation.", (int)reductionOp);
     }
 }
