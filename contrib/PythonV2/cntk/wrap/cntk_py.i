@@ -320,6 +320,58 @@
      }
 }
 
+
+//
+// Converting Python list {Function} to std::vector<CNTK::Function>&
+//
+//%typecheck(1000) const std::vector<CNTK::FunctionPtr>& {
+    // '1000' is the typecheck precedence code. It means: check after basic
+    // types, but before arrays. See: http://www.swig.org/Doc1.3/Typemaps.html#Typemaps_overloading
+//    $1 = PySet_Check($input) ? 1 : 0;
+//}
+
+%typemap(in) std::vector<CNTK::FunctionPtr>& {
+     if (PySet_Check($input)) {
+        std::vector<CNTK::FunctionPtr>* args_set = new std::vector<CNTK::FunctionPtr>();
+
+        PyObject *item;
+        Py_ssize_t pos = 0;
+
+        PyObject *iterator = PyObject_GetIter($input);
+        if (iterator == NULL) {
+            SWIG_exception_fail(SWIG_ValueError, "cannot convert key of dictionary to CNTK::FunctionPtr"); 
+        }
+
+        while (item = PyIter_Next(iterator)) {
+            void *raw_var = 0 ;            
+            int res1 = SWIG_ConvertPtr(item, &raw_var, SWIGTYPE_p_std__shared_ptrT_CNTK__Function_t,  0);
+            if (!SWIG_IsOK(res1)) {
+                SWIG_exception_fail(SWIG_ArgError(res1), "cannot convert key of dictionary to CNTK::FunctionPtr"); 
+            }
+            if (!raw_var) {
+                SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting key of dictionary to CNTK::FunctionPtr");
+            }
+
+            CNTK::FunctionPtr* var = reinterpret_cast<CNTK::FunctionPtr*>(raw_var);
+            
+            args_set->push_back(*var);
+
+            Py_DECREF(item);
+        }
+
+        Py_DECREF(iterator);
+
+        if (PyErr_Occurred()) {
+            SWIG_exception_fail(SWIG_ValueError, "cannot convert key of dictionary to CNTK::FunctionPtr"); 
+        }
+
+        $1 = args_set;
+
+     } else {
+         SWIG_exception(SWIG_ValueError, "set expected");
+     }
+}
+
 //
 // Converting std::unordered_set to Python list.
 // TOOD: figure out how to return a Python set instead of a list. For this,

@@ -57,7 +57,7 @@ def fully_connected_classifier_net(input, num_output_classes, hidden_layer_dim, 
 
 if __name__=='__main__':
     
-    #import time;time.sleep(40)
+    #import time;time.sleep(15)
     dev = cntk_py.DeviceDescriptor.CPUDevice()   
     #import time;time.sleep(40)
     input_dim = 937;
@@ -75,7 +75,7 @@ if __name__=='__main__':
         
     ce = cntk_py.CrossEntropyWithSoftmax(netout.Output(), label)
     pe = cntk_py.ClassificationError(netout.Output(), label)
-    ffnet = cntk_py.Combine(ce, pe, netout, "aa")
+    ffnet = cntk_py.Combine([ce, pe, netout], "aa")
     
     for i in range(0,1):
         nd = np.random.rand(input_dim,1,num_samples)        

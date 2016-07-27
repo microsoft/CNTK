@@ -790,9 +790,9 @@ namespace CNTK
         ///
         /// Create an 'Input' Variable.
         ///
-        Variable(const NDShape& shape, CNTK::DataType dataType, const wchar_t* name = L"")
-            : Variable(shape, dataType, std::wstring(name))
-        {}
+        //Variable(const NDShape& shape, CNTK::DataType dataType, const wchar_t* name = L"")
+        //    : Variable(shape, dataType, std::wstring(name))
+        //{}
 
         ///
         /// Create an 'Input' Variable.
