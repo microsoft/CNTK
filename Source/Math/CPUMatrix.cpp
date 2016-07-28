@@ -4420,12 +4420,15 @@ void CPUMatrix<ElemType>::BatchNormalizationForward(const CPUMatrix<ElemType>& s
                                                     CPUMatrix<ElemType>& runMean, CPUMatrix<ElemType>& runInvStdDev, CPUMatrix<ElemType>& out, double epsilon,
                                                     CPUMatrix<ElemType>& saveMean, CPUMatrix<ElemType>& saveInvStdDev) const
 {
-    UNUSED(epsilon); UNUSED(saveMean); UNUSED(saveInvStdDev);
+    UNUSED(epsilon);
 
     assert((GetNumRows() % scale.GetNumRows()) == 0);
 
     if (expAvgFactor != 0 || blendFactor != 1)
         RuntimeError("Batch normalization training on CPU is not yet implemented.");
+
+    saveMean.Resize(0, 0); // only doing inference: these two are not produced
+    saveInvStdDev.Resize(0, 0);
 
     bool spatial = GetNumRows() != scale.GetNumRows();
     if (spatial)

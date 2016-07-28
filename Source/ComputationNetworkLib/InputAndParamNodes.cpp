@@ -286,6 +286,12 @@ template <class ElemType>
     PrintNodeValuesToFile(printValues, printMetadata, fstream);
 }
 
+template <class ElemType>
+/*virtual*/ void LearnableParameter<ElemType>::FreezeParameters() /*override*/ // from IFreezable
+{
+    SetLearningRateMultiplier(0);
+}
+
 template class LearnableParameter<float>;
 template class LearnableParameter<double>;
 
