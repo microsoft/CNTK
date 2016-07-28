@@ -15,11 +15,11 @@
 #include <string>
 
 
-class SwigDirector_Callback : public Callback, public Swig::Director {
+class SwigDirector_callback : public Callback, public Swig::Director {
 
 public:
-    SwigDirector_Callback(PyObject *self);
-    virtual ~SwigDirector_Callback();
+    SwigDirector_callback(PyObject *self);
+    virtual ~SwigDirector_callback();
     virtual void forward();
     virtual void backward();
 
@@ -43,7 +43,7 @@ private:
         swig::SwigVar_PyObject name = SWIG_Python_str_FromChar(method_name);
         method = PyObject_GetAttr(swig_get_self(), name);
         if (!method) {
-          std::string msg = "Method in class Callback doesn't exist, undefined ";
+          std::string msg = "Method in class callback doesn't exist, undefined ";
           msg += method_name;
           Swig::DirectorMethodException::raise(msg.c_str());
         }

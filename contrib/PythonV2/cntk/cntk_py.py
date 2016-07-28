@@ -170,373 +170,349 @@ SwigPyIterator_swigregister = _cntk_py.SwigPyIterator_swigregister
 SwigPyIterator_swigregister(SwigPyIterator)
 
 SHARED_PTR_DISOWN = _cntk_py.SHARED_PTR_DISOWN
-InferredDimension = _cntk_py.InferredDimension
-DataType_Unknown = _cntk_py.DataType_Unknown
-DataType_Float = _cntk_py.DataType_Float
-DataType_Double = _cntk_py.DataType_Double
-StorageFormat_Dense = _cntk_py.StorageFormat_Dense
-StorageFormat_SparseCSC = _cntk_py.StorageFormat_SparseCSC
-StorageFormat_SparseBlockCol = _cntk_py.StorageFormat_SparseBlockCol
+inferred_dimension = _cntk_py.inferred_dimension
+data_type_unknown = _cntk_py.data_type_unknown
+data_type_float = _cntk_py.data_type_float
+data_type_double = _cntk_py.data_type_double
+storage_format_dense = _cntk_py.storage_format_dense
+storage_format_sparse_csc = _cntk_py.storage_format_sparse_csc
+storage_format_sparse_block_col = _cntk_py.storage_format_sparse_block_col
 
-def IsSparseStorageFormat(storageFormat):
-    return _cntk_py.IsSparseStorageFormat(storageFormat)
-IsSparseStorageFormat = _cntk_py.IsSparseStorageFormat
-DeviceKind_CPU = _cntk_py.DeviceKind_CPU
-DeviceKind_GPU = _cntk_py.DeviceKind_GPU
-class DeviceDescriptor(_object):
+def is_sparse_storage_format(storageFormat):
+    return _cntk_py.is_sparse_storage_format(storageFormat)
+is_sparse_storage_format = _cntk_py.is_sparse_storage_format
+device_kind_cpu = _cntk_py.device_kind_cpu
+device_kind_gpu = _cntk_py.device_kind_gpu
+class device_descriptor(_object):
     __swig_setmethods__ = {}
-    __setattr__ = lambda self, name, value: _swig_setattr(self, DeviceDescriptor, name, value)
+    __setattr__ = lambda self, name, value: _swig_setattr(self, device_descriptor, name, value)
     __swig_getmethods__ = {}
-    __getattr__ = lambda self, name: _swig_getattr(self, DeviceDescriptor, name)
+    __getattr__ = lambda self, name: _swig_getattr(self, device_descriptor, name)
 
     def __init__(self, *args, **kwargs):
         raise AttributeError("No constructor defined")
     __repr__ = _swig_repr
 
-    def Id(self):
-        return _cntk_py.DeviceDescriptor_Id(self)
+    def id(self):
+        return _cntk_py.device_descriptor_id(self)
 
-    def Type(self):
-        return _cntk_py.DeviceDescriptor_Type(self)
+    def type(self):
+        return _cntk_py.device_descriptor_type(self)
     if _newclass:
-        CPUDevice = staticmethod(_cntk_py.DeviceDescriptor_CPUDevice)
+        cpudevice = staticmethod(_cntk_py.device_descriptor_cpudevice)
     else:
-        CPUDevice = _cntk_py.DeviceDescriptor_CPUDevice
+        cpudevice = _cntk_py.device_descriptor_cpudevice
     if _newclass:
-        GPUDevice = staticmethod(_cntk_py.DeviceDescriptor_GPUDevice)
+        gpudevice = staticmethod(_cntk_py.device_descriptor_gpudevice)
     else:
-        GPUDevice = _cntk_py.DeviceDescriptor_GPUDevice
+        gpudevice = _cntk_py.device_descriptor_gpudevice
     if _newclass:
-        DefaultDevice = staticmethod(_cntk_py.DeviceDescriptor_DefaultDevice)
+        default_device = staticmethod(_cntk_py.device_descriptor_default_device)
     else:
-        DefaultDevice = _cntk_py.DeviceDescriptor_DefaultDevice
-    __swig_destroy__ = _cntk_py.delete_DeviceDescriptor
+        default_device = _cntk_py.device_descriptor_default_device
+    __swig_destroy__ = _cntk_py.delete_device_descriptor
     __del__ = lambda self: None
-DeviceDescriptor_swigregister = _cntk_py.DeviceDescriptor_swigregister
-DeviceDescriptor_swigregister(DeviceDescriptor)
+device_descriptor_swigregister = _cntk_py.device_descriptor_swigregister
+device_descriptor_swigregister(device_descriptor)
 
-def DeviceDescriptor_CPUDevice():
-    return _cntk_py.DeviceDescriptor_CPUDevice()
-DeviceDescriptor_CPUDevice = _cntk_py.DeviceDescriptor_CPUDevice
+def device_descriptor_cpudevice():
+    return _cntk_py.device_descriptor_cpudevice()
+device_descriptor_cpudevice = _cntk_py.device_descriptor_cpudevice
 
-def DeviceDescriptor_GPUDevice(deviceId):
-    return _cntk_py.DeviceDescriptor_GPUDevice(deviceId)
-DeviceDescriptor_GPUDevice = _cntk_py.DeviceDescriptor_GPUDevice
+def device_descriptor_gpudevice(deviceId):
+    return _cntk_py.device_descriptor_gpudevice(deviceId)
+device_descriptor_gpudevice = _cntk_py.device_descriptor_gpudevice
 
-def DeviceDescriptor_DefaultDevice():
-    return _cntk_py.DeviceDescriptor_DefaultDevice()
-DeviceDescriptor_DefaultDevice = _cntk_py.DeviceDescriptor_DefaultDevice
+def device_descriptor_default_device():
+    return _cntk_py.device_descriptor_default_device()
+device_descriptor_default_device = _cntk_py.device_descriptor_default_device
 
-class NDShape(_object):
+class ndshape(_object):
     __swig_setmethods__ = {}
-    __setattr__ = lambda self, name, value: _swig_setattr(self, NDShape, name, value)
+    __setattr__ = lambda self, name, value: _swig_setattr(self, ndshape, name, value)
     __swig_getmethods__ = {}
-    __getattr__ = lambda self, name: _swig_getattr(self, NDShape, name)
+    __getattr__ = lambda self, name: _swig_getattr(self, ndshape, name)
     __repr__ = _swig_repr
 
     def __init__(self, *args):
-        this = _cntk_py.new_NDShape(*args)
+        this = _cntk_py.new_ndshape(*args)
         try:
             self.this.append(this)
         except __builtin__.Exception:
             self.this = this
 
-    def Dimensions(self):
-        return _cntk_py.NDShape_Dimensions(self)
+    def dimensions(self):
+        return _cntk_py.ndshape_dimensions(self)
 
-    def NumAxes(self):
-        return _cntk_py.NDShape_NumAxes(self)
+    def num_axes(self):
+        return _cntk_py.ndshape_num_axes(self)
 
-    def SubShape(self, *args):
-        return _cntk_py.NDShape_SubShape(self, *args)
+    def sub_shape(self, *args):
+        return _cntk_py.ndshape_sub_shape(self, *args)
 
-    def HasInferredDimension(self):
-        return _cntk_py.NDShape_HasInferredDimension(self)
+    def has_inferred_dimension(self):
+        return _cntk_py.ndshape_has_inferred_dimension(self)
 
-    def TotalSize(self):
-        return _cntk_py.NDShape_TotalSize(self)
+    def total_size(self):
+        return _cntk_py.ndshape_total_size(self)
 
-    def AsString(self):
-        return _cntk_py.NDShape_AsString(self)
+    def as_string(self):
+        return _cntk_py.ndshape_as_string(self)
 
     def __getitem__(self, i):
-        return _cntk_py.NDShape___getitem__(self, i)
-    __swig_destroy__ = _cntk_py.delete_NDShape
+        return _cntk_py.ndshape___getitem__(self, i)
+    __swig_destroy__ = _cntk_py.delete_ndshape
     __del__ = lambda self: None
-NDShape_swigregister = _cntk_py.NDShape_swigregister
-NDShape_swigregister(NDShape)
+ndshape_swigregister = _cntk_py.ndshape_swigregister
+ndshape_swigregister(ndshape)
 
-class NDArrayView(_object):
+class ndarray_view(_object):
     __swig_setmethods__ = {}
-    __setattr__ = lambda self, name, value: _swig_setattr(self, NDArrayView, name, value)
+    __setattr__ = lambda self, name, value: _swig_setattr(self, ndarray_view, name, value)
     __swig_getmethods__ = {}
-    __getattr__ = lambda self, name: _swig_getattr(self, NDArrayView, name)
+    __getattr__ = lambda self, name: _swig_getattr(self, ndarray_view, name)
     __repr__ = _swig_repr
-    __swig_destroy__ = _cntk_py.delete_NDArrayView
+    __swig_destroy__ = _cntk_py.delete_ndarray_view
     __del__ = lambda self: None
 
-    def Device(self):
-        return _cntk_py.NDArrayView_Device(self)
+    def device(self):
+        return _cntk_py.ndarray_view_device(self)
 
-    def GetDataType(self):
-        return _cntk_py.NDArrayView_GetDataType(self)
+    def get_data_type(self):
+        return _cntk_py.ndarray_view_get_data_type(self)
 
-    def GetStorageFormat(self):
-        return _cntk_py.NDArrayView_GetStorageFormat(self)
+    def get_storage_format(self):
+        return _cntk_py.ndarray_view_get_storage_format(self)
 
-    def Shape(self):
-        return _cntk_py.NDArrayView_Shape(self)
+    def shape(self):
+        return _cntk_py.ndarray_view_shape(self)
 
-    def IsSparse(self):
-        return _cntk_py.NDArrayView_IsSparse(self)
+    def is_sparse(self):
+        return _cntk_py.ndarray_view_is_sparse(self)
 
-    def IsReadOnly(self):
-        return _cntk_py.NDArrayView_IsReadOnly(self)
+    def is_read_only(self):
+        return _cntk_py.ndarray_view_is_read_only(self)
 
-    def SetValue(self, *args):
-        return _cntk_py.NDArrayView_SetValue(self, *args)
+    def set_value(self, *args):
+        return _cntk_py.ndarray_view_set_value(self, *args)
 
-    def DeepClone(self, readOnly=False):
-        return _cntk_py.NDArrayView_DeepClone(self, readOnly)
+    def deep_clone(self, readOnly=False):
+        return _cntk_py.ndarray_view_deep_clone(self, readOnly)
 
-    def Alias(self, readOnly=False):
-        return _cntk_py.NDArrayView_Alias(self, readOnly)
+    def alias(self, readOnly=False):
+        return _cntk_py.ndarray_view_alias(self, readOnly)
 
-    def CopyFrom(self, source):
-        return _cntk_py.NDArrayView_CopyFrom(self, source)
+    def copy_from(self, source):
+        return _cntk_py.ndarray_view_copy_from(self, source)
+
+    def to_num_py(self):
+        return _cntk_py.ndarray_view_to_num_py(self)
 
     def __init__(self, *args):
-        this = _cntk_py.new_NDArrayView(*args)
+        this = _cntk_py.new_ndarray_view(*args)
+        try:
+            self.this.append(this)
+        except __builtin__.Exception:
+            self.this = this
+ndarray_view_swigregister = _cntk_py.ndarray_view_swigregister
+ndarray_view_swigregister(ndarray_view)
+
+class ndmask(_object):
+    __swig_setmethods__ = {}
+    __setattr__ = lambda self, name, value: _swig_setattr(self, ndmask, name, value)
+    __swig_getmethods__ = {}
+    __getattr__ = lambda self, name: _swig_getattr(self, ndmask, name)
+    __repr__ = _swig_repr
+
+    def __init__(self, *args):
+        this = _cntk_py.new_ndmask(*args)
+        try:
+            self.this.append(this)
+        except __builtin__.Exception:
+            self.this = this
+    __swig_destroy__ = _cntk_py.delete_ndmask
+    __del__ = lambda self: None
+
+    def mask_section(self, sectionOffset, sectionShape):
+        return _cntk_py.ndmask_mask_section(self, sectionOffset, sectionShape)
+
+    def clear(self):
+        return _cntk_py.ndmask_clear(self)
+
+    def masked_count(self):
+        return _cntk_py.ndmask_masked_count(self)
+
+    def device(self):
+        return _cntk_py.ndmask_device(self)
+
+    def shape(self):
+        return _cntk_py.ndmask_shape(self)
+
+    def data_buffer(self):
+        return _cntk_py.ndmask_data_buffer(self)
+
+    def deep_clone(self):
+        return _cntk_py.ndmask_deep_clone(self)
+
+    def alias(self):
+        return _cntk_py.ndmask_alias(self)
+
+    def copy_from(self, source):
+        return _cntk_py.ndmask_copy_from(self, source)
+
+    def to_num_py(self):
+        return _cntk_py.ndmask_to_num_py(self)
+ndmask_swigregister = _cntk_py.ndmask_swigregister
+ndmask_swigregister(ndmask)
+
+class value(_object):
+    __swig_setmethods__ = {}
+    __setattr__ = lambda self, name, value: _swig_setattr(self, value, name, value)
+    __swig_getmethods__ = {}
+    __getattr__ = lambda self, name: _swig_getattr(self, value, name)
+    __repr__ = _swig_repr
+
+    def __init__(self, *args):
+        this = _cntk_py.new_value(*args)
+        try:
+            self.this.append(this)
+        except __builtin__.Exception:
+            self.this = this
+    __swig_destroy__ = _cntk_py.delete_value
+    __del__ = lambda self: None
+
+    def data(self):
+        return _cntk_py.value_data(self)
+
+    def mask(self):
+        return _cntk_py.value_mask(self)
+
+    def deep_clone(self, readOnly=False):
+        return _cntk_py.value_deep_clone(self, readOnly)
+
+    def alias(self, readOnly=False):
+        return _cntk_py.value_alias(self, readOnly)
+
+    def copy_from(self, source):
+        return _cntk_py.value_copy_from(self, source)
+value_swigregister = _cntk_py.value_swigregister
+value_swigregister(value)
+
+class axis(_object):
+    __swig_setmethods__ = {}
+    __setattr__ = lambda self, name, value: _swig_setattr(self, axis, name, value)
+    __swig_getmethods__ = {}
+    __getattr__ = lambda self, name: _swig_getattr(self, axis, name)
+    __repr__ = _swig_repr
+
+    def is_static_axis(self):
+        return _cntk_py.axis_is_static_axis(self)
+
+    def static_axis_index(self):
+        return _cntk_py.axis_static_axis_index(self)
+    if _newclass:
+        default_dynamic_axis = staticmethod(_cntk_py.axis_default_dynamic_axis)
+    else:
+        default_dynamic_axis = _cntk_py.axis_default_dynamic_axis
+    if _newclass:
+        batch_axis = staticmethod(_cntk_py.axis_batch_axis)
+    else:
+        batch_axis = _cntk_py.axis_batch_axis
+    if _newclass:
+        all_axes = staticmethod(_cntk_py.axis_all_axes)
+    else:
+        all_axes = _cntk_py.axis_all_axes
+
+    def name(self):
+        return _cntk_py.axis_name(self)
+
+    def __init__(self, *args):
+        this = _cntk_py.new_axis(*args)
+        try:
+            self.this.append(this)
+        except __builtin__.Exception:
+            self.this = this
+    __swig_destroy__ = _cntk_py.delete_axis
+    __del__ = lambda self: None
+axis_swigregister = _cntk_py.axis_swigregister
+axis_swigregister(axis)
+
+def axis_default_dynamic_axis():
+    return _cntk_py.axis_default_dynamic_axis()
+axis_default_dynamic_axis = _cntk_py.axis_default_dynamic_axis
+
+def axis_batch_axis():
+    return _cntk_py.axis_batch_axis()
+axis_batch_axis = _cntk_py.axis_batch_axis
+
+def axis_all_axes():
+    return _cntk_py.axis_all_axes()
+axis_all_axes = _cntk_py.axis_all_axes
+
+variable_kind_input = _cntk_py.variable_kind_input
+variable_kind_output = _cntk_py.variable_kind_output
+variable_kind_parameter = _cntk_py.variable_kind_parameter
+variable_kind_constant = _cntk_py.variable_kind_constant
+variable_kind_placeholder = _cntk_py.variable_kind_placeholder
+class variable(_object):
+    __swig_setmethods__ = {}
+    __setattr__ = lambda self, name, value: _swig_setattr(self, variable, name, value)
+    __swig_getmethods__ = {}
+    __getattr__ = lambda self, name: _swig_getattr(self, variable, name)
+    __repr__ = _swig_repr
+
+    def __init__(self, *args):
+        this = _cntk_py.new_variable(*args)
         try:
             self.this.append(this)
         except __builtin__.Exception:
             self.this = this
 
-    def ToNumPy(self):
-        return _cntk_py.NDArrayView_ToNumPy(self)
-    if _newclass:
-        RandomUniformFloat = staticmethod(_cntk_py.NDArrayView_RandomUniformFloat)
-    else:
-        RandomUniformFloat = _cntk_py.NDArrayView_RandomUniformFloat
-    if _newclass:
-        RandomUniformDouble = staticmethod(_cntk_py.NDArrayView_RandomUniformDouble)
-    else:
-        RandomUniformDouble = _cntk_py.NDArrayView_RandomUniformDouble
-NDArrayView_swigregister = _cntk_py.NDArrayView_swigregister
-NDArrayView_swigregister(NDArrayView)
+    def shape(self):
+        return _cntk_py.variable_shape(self)
 
-def NDArrayViewFloat(*args):
-    val = _cntk_py.new_NDArrayViewFloat(*args)
-    return val
+    def dynamic_axes(self):
+        return _cntk_py.variable_dynamic_axes(self)
 
-def NDArrayViewDouble(*args):
-    val = _cntk_py.new_NDArrayViewDouble(*args)
-    return val
+    def kind(self):
+        return _cntk_py.variable_kind(self)
 
-def NDArrayView_RandomUniformFloat(*args):
-    return _cntk_py.NDArrayView_RandomUniformFloat(*args)
-NDArrayView_RandomUniformFloat = _cntk_py.NDArrayView_RandomUniformFloat
+    def is_sparse(self):
+        return _cntk_py.variable_is_sparse(self)
 
-def NDArrayView_RandomUniformDouble(*args):
-    return _cntk_py.NDArrayView_RandomUniformDouble(*args)
-NDArrayView_RandomUniformDouble = _cntk_py.NDArrayView_RandomUniformDouble
+    def is_input(self):
+        return _cntk_py.variable_is_input(self)
 
-class NDMask(_object):
-    __swig_setmethods__ = {}
-    __setattr__ = lambda self, name, value: _swig_setattr(self, NDMask, name, value)
-    __swig_getmethods__ = {}
-    __getattr__ = lambda self, name: _swig_getattr(self, NDMask, name)
-    __repr__ = _swig_repr
+    def is_output(self):
+        return _cntk_py.variable_is_output(self)
 
-    def __init__(self, *args):
-        this = _cntk_py.new_NDMask(*args)
-        try:
-            self.this.append(this)
-        except __builtin__.Exception:
-            self.this = this
-    __swig_destroy__ = _cntk_py.delete_NDMask
-    __del__ = lambda self: None
+    def is_parameter(self):
+        return _cntk_py.variable_is_parameter(self)
 
-    def MaskSection(self, sectionOffset, sectionShape):
-        return _cntk_py.NDMask_MaskSection(self, sectionOffset, sectionShape)
+    def is_constant(self):
+        return _cntk_py.variable_is_constant(self)
 
-    def Clear(self):
-        return _cntk_py.NDMask_Clear(self)
+    def is_placeholder(self):
+        return _cntk_py.variable_is_placeholder(self)
 
-    def MaskedCount(self):
-        return _cntk_py.NDMask_MaskedCount(self)
+    def name(self):
+        return _cntk_py.variable_name(self)
 
-    def Device(self):
-        return _cntk_py.NDMask_Device(self)
+    def owner(self):
+        return _cntk_py.variable_owner(self)
 
-    def Shape(self):
-        return _cntk_py.NDMask_Shape(self)
+    def get_data_type(self):
+        return _cntk_py.variable_get_data_type(self)
 
-    def DataBuffer(self):
-        return _cntk_py.NDMask_DataBuffer(self)
-
-    def DeepClone(self):
-        return _cntk_py.NDMask_DeepClone(self)
-
-    def Alias(self):
-        return _cntk_py.NDMask_Alias(self)
-
-    def CopyFrom(self, source):
-        return _cntk_py.NDMask_CopyFrom(self, source)
-
-    def ToNumPy(self):
-        return _cntk_py.NDMask_ToNumPy(self)
-NDMask_swigregister = _cntk_py.NDMask_swigregister
-NDMask_swigregister(NDMask)
-
-class Value(_object):
-    __swig_setmethods__ = {}
-    __setattr__ = lambda self, name, value: _swig_setattr(self, Value, name, value)
-    __swig_getmethods__ = {}
-    __getattr__ = lambda self, name: _swig_getattr(self, Value, name)
-    __repr__ = _swig_repr
-
-    def __init__(self, *args):
-        this = _cntk_py.new_Value(*args)
-        try:
-            self.this.append(this)
-        except __builtin__.Exception:
-            self.this = this
-    __swig_destroy__ = _cntk_py.delete_Value
-    __del__ = lambda self: None
-
-    def Data(self):
-        return _cntk_py.Value_Data(self)
-
-    def Mask(self):
-        return _cntk_py.Value_Mask(self)
-
-    def DeepClone(self, readOnly=False):
-        return _cntk_py.Value_DeepClone(self, readOnly)
-
-    def Alias(self, readOnly=False):
-        return _cntk_py.Value_Alias(self, readOnly)
-
-    def CopyFrom(self, source):
-        return _cntk_py.Value_CopyFrom(self, source)
-Value_swigregister = _cntk_py.Value_swigregister
-Value_swigregister(Value)
-
-class Axis(_object):
-    __swig_setmethods__ = {}
-    __setattr__ = lambda self, name, value: _swig_setattr(self, Axis, name, value)
-    __swig_getmethods__ = {}
-    __getattr__ = lambda self, name: _swig_getattr(self, Axis, name)
-    __repr__ = _swig_repr
-
-    def IsStaticAxis(self):
-        return _cntk_py.Axis_IsStaticAxis(self)
-
-    def StaticAxisIndex(self):
-        return _cntk_py.Axis_StaticAxisIndex(self)
-    if _newclass:
-        DefaultDynamicAxis = staticmethod(_cntk_py.Axis_DefaultDynamicAxis)
-    else:
-        DefaultDynamicAxis = _cntk_py.Axis_DefaultDynamicAxis
-    if _newclass:
-        BatchAxis = staticmethod(_cntk_py.Axis_BatchAxis)
-    else:
-        BatchAxis = _cntk_py.Axis_BatchAxis
-    if _newclass:
-        AllAxes = staticmethod(_cntk_py.Axis_AllAxes)
-    else:
-        AllAxes = _cntk_py.Axis_AllAxes
-
-    def Name(self):
-        return _cntk_py.Axis_Name(self)
-
-    def __init__(self, *args):
-        this = _cntk_py.new_Axis(*args)
-        try:
-            self.this.append(this)
-        except __builtin__.Exception:
-            self.this = this
-    __swig_destroy__ = _cntk_py.delete_Axis
-    __del__ = lambda self: None
-Axis_swigregister = _cntk_py.Axis_swigregister
-Axis_swigregister(Axis)
-
-def Axis_DefaultDynamicAxis():
-    return _cntk_py.Axis_DefaultDynamicAxis()
-Axis_DefaultDynamicAxis = _cntk_py.Axis_DefaultDynamicAxis
-
-def Axis_BatchAxis():
-    return _cntk_py.Axis_BatchAxis()
-Axis_BatchAxis = _cntk_py.Axis_BatchAxis
-
-def Axis_AllAxes():
-    return _cntk_py.Axis_AllAxes()
-Axis_AllAxes = _cntk_py.Axis_AllAxes
-
-VariableKind_Input = _cntk_py.VariableKind_Input
-VariableKind_Output = _cntk_py.VariableKind_Output
-VariableKind_Parameter = _cntk_py.VariableKind_Parameter
-VariableKind_Constant = _cntk_py.VariableKind_Constant
-VariableKind_Placeholder = _cntk_py.VariableKind_Placeholder
-class Variable(_object):
-    __swig_setmethods__ = {}
-    __setattr__ = lambda self, name, value: _swig_setattr(self, Variable, name, value)
-    __swig_getmethods__ = {}
-    __getattr__ = lambda self, name: _swig_getattr(self, Variable, name)
-    __repr__ = _swig_repr
-
-    def __init__(self, *args):
-        this = _cntk_py.new_Variable(*args)
-        try:
-            self.this.append(this)
-        except __builtin__.Exception:
-            self.this = this
-
-    def Shape(self):
-        return _cntk_py.Variable_Shape(self)
-
-    def DynamicAxes(self):
-        return _cntk_py.Variable_DynamicAxes(self)
-
-    def Kind(self):
-        return _cntk_py.Variable_Kind(self)
-
-    def IsSparse(self):
-        return _cntk_py.Variable_IsSparse(self)
-
-    def IsInput(self):
-        return _cntk_py.Variable_IsInput(self)
-
-    def IsOutput(self):
-        return _cntk_py.Variable_IsOutput(self)
-
-    def IsParameter(self):
-        return _cntk_py.Variable_IsParameter(self)
-
-    def IsConstant(self):
-        return _cntk_py.Variable_IsConstant(self)
-
-    def IsPlaceholder(self):
-        return _cntk_py.Variable_IsPlaceholder(self)
-
-    def Name(self):
-        return _cntk_py.Variable_Name(self)
-
-    def Owner(self):
-        return _cntk_py.Variable_Owner(self)
-
-    def GetDataType(self):
-        return _cntk_py.Variable_GetDataType(self)
-
-    def NeedsGradient(self):
-        return _cntk_py.Variable_NeedsGradient(self)
+    def needs_gradient(self):
+        return _cntk_py.variable_needs_gradient(self)
 
     def __hash__(self):
-        return _cntk_py.Variable___hash__(self)
-    __swig_destroy__ = _cntk_py.delete_Variable
+        return _cntk_py.variable___hash__(self)
+    __swig_destroy__ = _cntk_py.delete_variable
     __del__ = lambda self: None
-Variable_swigregister = _cntk_py.Variable_swigregister
-Variable_swigregister(Variable)
+variable_swigregister = _cntk_py.variable_swigregister
+variable_swigregister(variable)
 
 def Variable_eq(first, second):
     return _cntk_py.Variable_eq(first, second)
@@ -546,562 +522,554 @@ Variable_eq = _cntk_py.Variable_eq
 def __ne__(*args):
     return _cntk_py.__ne__(*args)
 __ne__ = _cntk_py.__ne__
-class Parameter(Variable):
+class parameter(variable):
     __swig_setmethods__ = {}
-    for _s in [Variable]:
+    for _s in [variable]:
         __swig_setmethods__.update(getattr(_s, '__swig_setmethods__', {}))
-    __setattr__ = lambda self, name, value: _swig_setattr(self, Parameter, name, value)
+    __setattr__ = lambda self, name, value: _swig_setattr(self, parameter, name, value)
     __swig_getmethods__ = {}
-    for _s in [Variable]:
+    for _s in [variable]:
         __swig_getmethods__.update(getattr(_s, '__swig_getmethods__', {}))
-    __getattr__ = lambda self, name: _swig_getattr(self, Parameter, name)
+    __getattr__ = lambda self, name: _swig_getattr(self, parameter, name)
     __repr__ = _swig_repr
 
     def __init__(self, *args):
-        this = _cntk_py.new_Parameter(*args)
+        this = _cntk_py.new_parameter(*args)
         try:
             self.this.append(this)
         except __builtin__.Exception:
             self.this = this
 
-    def Value(self):
-        return _cntk_py.Parameter_Value(self)
+    def value(self):
+        return _cntk_py.parameter_value(self)
 
     def __hash__(self):
-        return _cntk_py.Parameter___hash__(self)
-    __swig_destroy__ = _cntk_py.delete_Parameter
+        return _cntk_py.parameter___hash__(self)
+    __swig_destroy__ = _cntk_py.delete_parameter
     __del__ = lambda self: None
-Parameter_swigregister = _cntk_py.Parameter_swigregister
-Parameter_swigregister(Parameter)
+parameter_swigregister = _cntk_py.parameter_swigregister
+parameter_swigregister(parameter)
 
-class Constant(Variable):
+class constant(variable):
     __swig_setmethods__ = {}
-    for _s in [Variable]:
+    for _s in [variable]:
         __swig_setmethods__.update(getattr(_s, '__swig_setmethods__', {}))
-    __setattr__ = lambda self, name, value: _swig_setattr(self, Constant, name, value)
+    __setattr__ = lambda self, name, value: _swig_setattr(self, constant, name, value)
     __swig_getmethods__ = {}
-    for _s in [Variable]:
+    for _s in [variable]:
         __swig_getmethods__.update(getattr(_s, '__swig_getmethods__', {}))
-    __getattr__ = lambda self, name: _swig_getattr(self, Constant, name)
+    __getattr__ = lambda self, name: _swig_getattr(self, constant, name)
     __repr__ = _swig_repr
 
-    def __init__(self, *args):
-        this = _cntk_py.new_Constant(*args)
-        try:
-            self.this.append(this)
-        except __builtin__.Exception:
-            self.this = this
-
-    def Value(self):
-        return _cntk_py.Constant_Value(self)
-
-    def __hash__(self):
-        return _cntk_py.Constant___hash__(self)
-    __swig_destroy__ = _cntk_py.delete_Constant
-    __del__ = lambda self: None
-Constant_swigregister = _cntk_py.Constant_swigregister
-Constant_swigregister(Constant)
-
-def ConstantFloat(*args):
-    val = _cntk_py.new_ConstantFloat(*args)
-    return val
-
-def ConstantDouble(*args):
-    val = _cntk_py.new_ConstantDouble(*args)
-    return val
-
-class Placeholder(Variable):
-    __swig_setmethods__ = {}
-    for _s in [Variable]:
-        __swig_setmethods__.update(getattr(_s, '__swig_setmethods__', {}))
-    __setattr__ = lambda self, name, value: _swig_setattr(self, Placeholder, name, value)
-    __swig_getmethods__ = {}
-    for _s in [Variable]:
-        __swig_getmethods__.update(getattr(_s, '__swig_getmethods__', {}))
-    __getattr__ = lambda self, name: _swig_getattr(self, Placeholder, name)
-    __repr__ = _swig_repr
+    def value(self):
+        return _cntk_py.constant_value(self)
 
     def __init__(self, *args):
-        this = _cntk_py.new_Placeholder(*args)
+        this = _cntk_py.new_constant(*args)
         try:
             self.this.append(this)
         except __builtin__.Exception:
             self.this = this
 
     def __hash__(self):
-        return _cntk_py.Placeholder___hash__(self)
-    __swig_destroy__ = _cntk_py.delete_Placeholder
+        return _cntk_py.constant___hash__(self)
+    __swig_destroy__ = _cntk_py.delete_constant
     __del__ = lambda self: None
-Placeholder_swigregister = _cntk_py.Placeholder_swigregister
-Placeholder_swigregister(Placeholder)
+constant_swigregister = _cntk_py.constant_swigregister
+constant_swigregister(constant)
 
-class BackPropState(_object):
+class placeholder(variable):
     __swig_setmethods__ = {}
-    __setattr__ = lambda self, name, value: _swig_setattr(self, BackPropState, name, value)
+    for _s in [variable]:
+        __swig_setmethods__.update(getattr(_s, '__swig_setmethods__', {}))
+    __setattr__ = lambda self, name, value: _swig_setattr(self, placeholder, name, value)
     __swig_getmethods__ = {}
-    __getattr__ = lambda self, name: _swig_getattr(self, BackPropState, name)
+    for _s in [variable]:
+        __swig_getmethods__.update(getattr(_s, '__swig_getmethods__', {}))
+    __getattr__ = lambda self, name: _swig_getattr(self, placeholder, name)
+    __repr__ = _swig_repr
+
+    def __init__(self, *args):
+        this = _cntk_py.new_placeholder(*args)
+        try:
+            self.this.append(this)
+        except __builtin__.Exception:
+            self.this = this
+
+    def __hash__(self):
+        return _cntk_py.placeholder___hash__(self)
+    __swig_destroy__ = _cntk_py.delete_placeholder
+    __del__ = lambda self: None
+placeholder_swigregister = _cntk_py.placeholder_swigregister
+placeholder_swigregister(placeholder)
+
+class back_prop_state(_object):
+    __swig_setmethods__ = {}
+    __setattr__ = lambda self, name, value: _swig_setattr(self, back_prop_state, name, value)
+    __swig_getmethods__ = {}
+    __getattr__ = lambda self, name: _swig_getattr(self, back_prop_state, name)
 
     def __init__(self, *args, **kwargs):
         raise AttributeError("No constructor defined")
     __repr__ = _swig_repr
 
-    def Function(self):
-        return _cntk_py.BackPropState_Function(self)
-    __swig_destroy__ = _cntk_py.delete_BackPropState
+    def function(self):
+        return _cntk_py.back_prop_state_function(self)
+    __swig_destroy__ = _cntk_py.delete_back_prop_state
     __del__ = lambda self: None
-BackPropState_swigregister = _cntk_py.BackPropState_swigregister
-BackPropState_swigregister(BackPropState)
+back_prop_state_swigregister = _cntk_py.back_prop_state_swigregister
+back_prop_state_swigregister(back_prop_state)
 
-class Function(_object):
+class function(_object):
     __swig_setmethods__ = {}
-    __setattr__ = lambda self, name, value: _swig_setattr(self, Function, name, value)
+    __setattr__ = lambda self, name, value: _swig_setattr(self, function, name, value)
     __swig_getmethods__ = {}
-    __getattr__ = lambda self, name: _swig_getattr(self, Function, name)
+    __getattr__ = lambda self, name: _swig_getattr(self, function, name)
 
     def __init__(self, *args, **kwargs):
         raise AttributeError("No constructor defined - class is abstract")
     __repr__ = _swig_repr
 
-    def Forward(self, *args):
-        return _cntk_py.Function_Forward(self, *args)
+    def forward(self, *args):
+        return _cntk_py.function_forward(self, *args)
 
-    def Backward(self, state, rootGradientValues, backPropagatedGradientValuesForInputs):
-        return _cntk_py.Function_Backward(self, state, rootGradientValues, backPropagatedGradientValuesForInputs)
-    __swig_destroy__ = _cntk_py.delete_Function
+    def backward(self, state, rootGradientValues, backPropagatedGradientValuesForInputs):
+        return _cntk_py.function_backward(self, state, rootGradientValues, backPropagatedGradientValuesForInputs)
+    __swig_destroy__ = _cntk_py.delete_function
     __del__ = lambda self: None
 
-    def Name(self):
-        return _cntk_py.Function_Name(self)
+    def name(self):
+        return _cntk_py.function_name(self)
 
-    def RootFunction(self):
-        return _cntk_py.Function_RootFunction(self)
+    def root_function(self):
+        return _cntk_py.function_root_function(self)
 
-    def Inputs(self):
-        return _cntk_py.Function_Inputs(self)
+    def inputs(self):
+        return _cntk_py.function_inputs(self)
 
-    def Output(self):
-        return _cntk_py.Function_Output(self)
+    def output(self):
+        return _cntk_py.function_output(self)
 
-    def Outputs(self):
-        return _cntk_py.Function_Outputs(self)
+    def outputs(self):
+        return _cntk_py.function_outputs(self)
 
-    def Arguments(self):
-        return _cntk_py.Function_Arguments(self)
+    def arguments(self):
+        return _cntk_py.function_arguments(self)
 
-    def Parameters(self):
-        return _cntk_py.Function_Parameters(self)
+    def parameters(self):
+        return _cntk_py.function_parameters(self)
 
-    def Constants(self):
-        return _cntk_py.Function_Constants(self)
+    def constants(self):
+        return _cntk_py.function_constants(self)
 
-    def Placeholders(self):
-        return _cntk_py.Function_Placeholders(self)
+    def placeholders(self):
+        return _cntk_py.function_placeholders(self)
 
-    def ReplacePlaceholders(self, placeholderReplacements):
-        return _cntk_py.Function_ReplacePlaceholders(self, placeholderReplacements)
-Function_swigregister = _cntk_py.Function_swigregister
-Function_swigregister(Function)
+    def replace_placeholders(self, placeholderReplacements):
+        return _cntk_py.function_replace_placeholders(self, placeholderReplacements)
+function_swigregister = _cntk_py.function_swigregister
+function_swigregister(function)
 
 
-def Negate(*args):
-    return _cntk_py.Negate(*args)
-Negate = _cntk_py.Negate
+def negate(*args):
+    return _cntk_py.negate(*args)
+negate = _cntk_py.negate
 
-def Sigmoid(*args):
-    return _cntk_py.Sigmoid(*args)
-Sigmoid = _cntk_py.Sigmoid
+def sigmoid(*args):
+    return _cntk_py.sigmoid(*args)
+sigmoid = _cntk_py.sigmoid
 
-def Tanh(*args):
-    return _cntk_py.Tanh(*args)
-Tanh = _cntk_py.Tanh
+def tanh(*args):
+    return _cntk_py.tanh(*args)
+tanh = _cntk_py.tanh
 
-def ReLU(*args):
-    return _cntk_py.ReLU(*args)
-ReLU = _cntk_py.ReLU
+def re_lu(*args):
+    return _cntk_py.re_lu(*args)
+re_lu = _cntk_py.re_lu
 
-def Exp(*args):
-    return _cntk_py.Exp(*args)
-Exp = _cntk_py.Exp
+def exp(*args):
+    return _cntk_py.exp(*args)
+exp = _cntk_py.exp
 
-def Log(*args):
-    return _cntk_py.Log(*args)
-Log = _cntk_py.Log
+def log(*args):
+    return _cntk_py.log(*args)
+log = _cntk_py.log
 
-def Square(*args):
-    return _cntk_py.Square(*args)
-Square = _cntk_py.Square
+def square(*args):
+    return _cntk_py.square(*args)
+square = _cntk_py.square
 
-def Sqrt(*args):
-    return _cntk_py.Sqrt(*args)
-Sqrt = _cntk_py.Sqrt
+def sqrt(*args):
+    return _cntk_py.sqrt(*args)
+sqrt = _cntk_py.sqrt
 
-def Round(*args):
-    return _cntk_py.Round(*args)
-Round = _cntk_py.Round
+def round(*args):
+    return _cntk_py.round(*args)
+round = _cntk_py.round
 
-def Floor(*args):
-    return _cntk_py.Floor(*args)
-Floor = _cntk_py.Floor
+def floor(*args):
+    return _cntk_py.floor(*args)
+floor = _cntk_py.floor
 
-def Ceil(*args):
-    return _cntk_py.Ceil(*args)
-Ceil = _cntk_py.Ceil
+def ceil(*args):
+    return _cntk_py.ceil(*args)
+ceil = _cntk_py.ceil
 
-def Abs(*args):
-    return _cntk_py.Abs(*args)
-Abs = _cntk_py.Abs
+def abs(*args):
+    return _cntk_py.abs(*args)
+abs = _cntk_py.abs
 
-def Reciprocal(*args):
-    return _cntk_py.Reciprocal(*args)
-Reciprocal = _cntk_py.Reciprocal
+def reciprocal(*args):
+    return _cntk_py.reciprocal(*args)
+reciprocal = _cntk_py.reciprocal
 
-def Softmax(*args):
-    return _cntk_py.Softmax(*args)
-Softmax = _cntk_py.Softmax
+def softmax(*args):
+    return _cntk_py.softmax(*args)
+softmax = _cntk_py.softmax
 
-def Plus(*args):
-    return _cntk_py.Plus(*args)
-Plus = _cntk_py.Plus
+def plus(*args):
+    return _cntk_py.plus(*args)
+plus = _cntk_py.plus
 
-def Minus(*args):
-    return _cntk_py.Minus(*args)
-Minus = _cntk_py.Minus
+def minus(*args):
+    return _cntk_py.minus(*args)
+minus = _cntk_py.minus
 
-def ElementTimes(*args):
-    return _cntk_py.ElementTimes(*args)
-ElementTimes = _cntk_py.ElementTimes
+def element_times(*args):
+    return _cntk_py.element_times(*args)
+element_times = _cntk_py.element_times
 
-def ElementDivide(*args):
-    return _cntk_py.ElementDivide(*args)
-ElementDivide = _cntk_py.ElementDivide
+def element_divide(*args):
+    return _cntk_py.element_divide(*args)
+element_divide = _cntk_py.element_divide
 
-def Equal(*args):
-    return _cntk_py.Equal(*args)
-Equal = _cntk_py.Equal
+def equal(*args):
+    return _cntk_py.equal(*args)
+equal = _cntk_py.equal
 
-def NotEqual(*args):
-    return _cntk_py.NotEqual(*args)
-NotEqual = _cntk_py.NotEqual
+def not_equal(*args):
+    return _cntk_py.not_equal(*args)
+not_equal = _cntk_py.not_equal
 
-def Less(*args):
-    return _cntk_py.Less(*args)
-Less = _cntk_py.Less
+def less(*args):
+    return _cntk_py.less(*args)
+less = _cntk_py.less
 
-def LessEqual(*args):
-    return _cntk_py.LessEqual(*args)
-LessEqual = _cntk_py.LessEqual
+def less_equal(*args):
+    return _cntk_py.less_equal(*args)
+less_equal = _cntk_py.less_equal
 
-def Greater(*args):
-    return _cntk_py.Greater(*args)
-Greater = _cntk_py.Greater
+def greater(*args):
+    return _cntk_py.greater(*args)
+greater = _cntk_py.greater
 
-def GreaterEqual(*args):
-    return _cntk_py.GreaterEqual(*args)
-GreaterEqual = _cntk_py.GreaterEqual
+def greater_equal(*args):
+    return _cntk_py.greater_equal(*args)
+greater_equal = _cntk_py.greater_equal
 
-def Times(*args):
-    return _cntk_py.Times(*args)
-Times = _cntk_py.Times
+def times(*args):
+    return _cntk_py.times(*args)
+times = _cntk_py.times
 
-def SquaredError(*args):
-    return _cntk_py.SquaredError(*args)
-SquaredError = _cntk_py.SquaredError
+def squared_error(*args):
+    return _cntk_py.squared_error(*args)
+squared_error = _cntk_py.squared_error
 
-def CrossEntropyWithSoftmax(*args):
-    return _cntk_py.CrossEntropyWithSoftmax(*args)
-CrossEntropyWithSoftmax = _cntk_py.CrossEntropyWithSoftmax
+def cross_entropy_with_softmax(*args):
+    return _cntk_py.cross_entropy_with_softmax(*args)
+cross_entropy_with_softmax = _cntk_py.cross_entropy_with_softmax
 
-def ClassificationError(*args):
-    return _cntk_py.ClassificationError(*args)
-ClassificationError = _cntk_py.ClassificationError
+def classification_error(*args):
+    return _cntk_py.classification_error(*args)
+classification_error = _cntk_py.classification_error
 
-def PastValue(*args):
-    return _cntk_py.PastValue(*args)
-PastValue = _cntk_py.PastValue
+def past_value(*args):
+    return _cntk_py.past_value(*args)
+past_value = _cntk_py.past_value
 
-def FutureValue(*args):
-    return _cntk_py.FutureValue(*args)
-FutureValue = _cntk_py.FutureValue
+def future_value(*args):
+    return _cntk_py.future_value(*args)
+future_value = _cntk_py.future_value
 
-def ReduceSum(*args):
-    return _cntk_py.ReduceSum(*args)
-ReduceSum = _cntk_py.ReduceSum
+def reduce_sum(*args):
+    return _cntk_py.reduce_sum(*args)
+reduce_sum = _cntk_py.reduce_sum
 
-def Combine(*args):
-    return _cntk_py.Combine(*args)
-Combine = _cntk_py.Combine
-class DictionaryValue(_object):
+def combine(*args):
+    return _cntk_py.combine(*args)
+combine = _cntk_py.combine
+class dictionary_value(_object):
     __swig_setmethods__ = {}
-    __setattr__ = lambda self, name, value: _swig_setattr(self, DictionaryValue, name, value)
+    __setattr__ = lambda self, name, value: _swig_setattr(self, dictionary_value, name, value)
     __swig_getmethods__ = {}
-    __getattr__ = lambda self, name: _swig_getattr(self, DictionaryValue, name)
+    __getattr__ = lambda self, name: _swig_getattr(self, dictionary_value, name)
     __repr__ = _swig_repr
-    Type__None = _cntk_py.DictionaryValue_Type__None
-    Type_Bool = _cntk_py.DictionaryValue_Type_Bool
-    Type_SizeT = _cntk_py.DictionaryValue_Type_SizeT
-    Type_Float = _cntk_py.DictionaryValue_Type_Float
-    Type_Double = _cntk_py.DictionaryValue_Type_Double
-    Type_String = _cntk_py.DictionaryValue_Type_String
-    Type_NDShape = _cntk_py.DictionaryValue_Type_NDShape
-    Type_Vector = _cntk_py.DictionaryValue_Type_Vector
-    Type_Dictionary = _cntk_py.DictionaryValue_Type_Dictionary
+    type_none = _cntk_py.dictionary_value_type_none
+    type_bool = _cntk_py.dictionary_value_type_bool
+    type_size_t = _cntk_py.dictionary_value_type_size_t
+    type_float = _cntk_py.dictionary_value_type_float
+    type_double = _cntk_py.dictionary_value_type_double
+    type_string = _cntk_py.dictionary_value_type_string
+    type_ndshape = _cntk_py.dictionary_value_type_ndshape
+    type_vector = _cntk_py.dictionary_value_type_vector
+    type_dictionary = _cntk_py.dictionary_value_type_dictionary
     if _newclass:
-        TypeName = staticmethod(_cntk_py.DictionaryValue_TypeName)
+        type_name = staticmethod(_cntk_py.dictionary_value_type_name)
     else:
-        TypeName = _cntk_py.DictionaryValue_TypeName
+        type_name = _cntk_py.dictionary_value_type_name
 
     def __init__(self, *args):
-        this = _cntk_py.new_DictionaryValue(*args)
+        this = _cntk_py.new_dictionary_value(*args)
         try:
             self.this.append(this)
         except __builtin__.Exception:
             self.this = this
-    __swig_destroy__ = _cntk_py.delete_DictionaryValue
+    __swig_destroy__ = _cntk_py.delete_dictionary_value
     __del__ = lambda self: None
 
-    def HasValue(self):
-        return _cntk_py.DictionaryValue_HasValue(self)
+    def has_value(self):
+        return _cntk_py.dictionary_value_has_value(self)
 
-    def ValueType(self):
-        return _cntk_py.DictionaryValue_ValueType(self)
-DictionaryValue_swigregister = _cntk_py.DictionaryValue_swigregister
-DictionaryValue_swigregister(DictionaryValue)
+    def value_type(self):
+        return _cntk_py.dictionary_value_value_type(self)
+dictionary_value_swigregister = _cntk_py.dictionary_value_swigregister
+dictionary_value_swigregister(dictionary_value)
 
-def DictionaryValue_TypeName(type):
-    return _cntk_py.DictionaryValue_TypeName(type)
-DictionaryValue_TypeName = _cntk_py.DictionaryValue_TypeName
+def dictionary_value_type_name(type):
+    return _cntk_py.dictionary_value_type_name(type)
+dictionary_value_type_name = _cntk_py.dictionary_value_type_name
 
-class Dictionary(_object):
+class dictionary(_object):
     __swig_setmethods__ = {}
-    __setattr__ = lambda self, name, value: _swig_setattr(self, Dictionary, name, value)
+    __setattr__ = lambda self, name, value: _swig_setattr(self, dictionary, name, value)
     __swig_getmethods__ = {}
-    __getattr__ = lambda self, name: _swig_getattr(self, Dictionary, name)
+    __getattr__ = lambda self, name: _swig_getattr(self, dictionary, name)
     __repr__ = _swig_repr
-    __swig_destroy__ = _cntk_py.delete_Dictionary
+    __swig_destroy__ = _cntk_py.delete_dictionary
     __del__ = lambda self: None
 
     def __init__(self, *args):
-        this = _cntk_py.new_Dictionary(*args)
+        this = _cntk_py.new_dictionary(*args)
         try:
             self.this.append(this)
         except __builtin__.Exception:
             self.this = this
 
-    def Contains(self, *args):
-        return _cntk_py.Dictionary_Contains(self, *args)
-Dictionary_swigregister = _cntk_py.Dictionary_swigregister
-Dictionary_swigregister(Dictionary)
+    def contains(self, *args):
+        return _cntk_py.dictionary_contains(self, *args)
+dictionary_swigregister = _cntk_py.dictionary_swigregister
+dictionary_swigregister(dictionary)
 
-class Learner(_object):
+class learner(_object):
     __swig_setmethods__ = {}
-    __setattr__ = lambda self, name, value: _swig_setattr(self, Learner, name, value)
+    __setattr__ = lambda self, name, value: _swig_setattr(self, learner, name, value)
     __swig_getmethods__ = {}
-    __getattr__ = lambda self, name: _swig_getattr(self, Learner, name)
+    __getattr__ = lambda self, name: _swig_getattr(self, learner, name)
 
     def __init__(self, *args, **kwargs):
         raise AttributeError("No constructor defined - class is abstract")
     __repr__ = _swig_repr
 
-    def Update(self, gradientValues, trainingSampleCount):
-        return _cntk_py.Learner_Update(self, gradientValues, trainingSampleCount)
+    def update(self, gradientValues, trainingSampleCount):
+        return _cntk_py.learner_update(self, gradientValues, trainingSampleCount)
 
-    def Parameters(self):
-        return _cntk_py.Learner_Parameters(self)
+    def parameters(self):
+        return _cntk_py.learner_parameters(self)
 
-    def GetCheckpointState(self):
-        return _cntk_py.Learner_GetCheckpointState(self)
+    def get_checkpoint_state(self):
+        return _cntk_py.learner_get_checkpoint_state(self)
 
-    def RestoreFromCheckpoint(self, arg2):
-        return _cntk_py.Learner_RestoreFromCheckpoint(self, arg2)
-    __swig_destroy__ = _cntk_py.delete_Learner
+    def restore_from_checkpoint(self, arg2):
+        return _cntk_py.learner_restore_from_checkpoint(self, arg2)
+    __swig_destroy__ = _cntk_py.delete_learner
     __del__ = lambda self: None
-Learner_swigregister = _cntk_py.Learner_swigregister
-Learner_swigregister(Learner)
+learner_swigregister = _cntk_py.learner_swigregister
+learner_swigregister(learner)
 
 
-def SGDLearner(parameters, learningRatePerSample):
-    return _cntk_py.SGDLearner(parameters, learningRatePerSample)
-SGDLearner = _cntk_py.SGDLearner
+def sgdlearner(parameters, learningRatePerSample):
+    return _cntk_py.sgdlearner(parameters, learningRatePerSample)
+sgdlearner = _cntk_py.sgdlearner
 
-def MomentumSGDLearner(parameters):
-    return _cntk_py.MomentumSGDLearner(parameters)
-MomentumSGDLearner = _cntk_py.MomentumSGDLearner
+def momentum_sgdlearner(parameters):
+    return _cntk_py.momentum_sgdlearner(parameters)
+momentum_sgdlearner = _cntk_py.momentum_sgdlearner
 
-def NesterovLearner(parameters):
-    return _cntk_py.NesterovLearner(parameters)
-NesterovLearner = _cntk_py.NesterovLearner
+def nesterov_learner(parameters):
+    return _cntk_py.nesterov_learner(parameters)
+nesterov_learner = _cntk_py.nesterov_learner
 
-def AdaGradLearner(parameters, needAveMultiplier=True):
-    return _cntk_py.AdaGradLearner(parameters, needAveMultiplier)
-AdaGradLearner = _cntk_py.AdaGradLearner
+def ada_grad_learner(parameters, needAveMultiplier=True):
+    return _cntk_py.ada_grad_learner(parameters, needAveMultiplier)
+ada_grad_learner = _cntk_py.ada_grad_learner
 
-def FSAdaGradLearner(parameters):
-    return _cntk_py.FSAdaGradLearner(parameters)
-FSAdaGradLearner = _cntk_py.FSAdaGradLearner
+def fsada_grad_learner(parameters):
+    return _cntk_py.fsada_grad_learner(parameters)
+fsada_grad_learner = _cntk_py.fsada_grad_learner
 
-def RMSPropLearner(parameters, gamma, inc, dec, max, min, needAveMultiplier=True):
-    return _cntk_py.RMSPropLearner(parameters, gamma, inc, dec, max, min, needAveMultiplier)
-RMSPropLearner = _cntk_py.RMSPropLearner
-class Trainer(_object):
+def rmsprop_learner(parameters, gamma, inc, dec, max, min, needAveMultiplier=True):
+    return _cntk_py.rmsprop_learner(parameters, gamma, inc, dec, max, min, needAveMultiplier)
+rmsprop_learner = _cntk_py.rmsprop_learner
+class trainer(_object):
     __swig_setmethods__ = {}
-    __setattr__ = lambda self, name, value: _swig_setattr(self, Trainer, name, value)
+    __setattr__ = lambda self, name, value: _swig_setattr(self, trainer, name, value)
     __swig_getmethods__ = {}
-    __getattr__ = lambda self, name: _swig_getattr(self, Trainer, name)
+    __getattr__ = lambda self, name: _swig_getattr(self, trainer, name)
     __repr__ = _swig_repr
 
     def __init__(self, model, trainingLoss, parameterLearners):
-        this = _cntk_py.new_Trainer(model, trainingLoss, parameterLearners)
+        this = _cntk_py.new_trainer(model, trainingLoss, parameterLearners)
         try:
             self.this.append(this)
         except __builtin__.Exception:
             self.this = this
 
-    def TrainMinibatch(self, *args):
-        return _cntk_py.Trainer_TrainMinibatch(self, *args)
+    def train_minibatch(self, *args):
+        return _cntk_py.trainer_train_minibatch(self, *args)
 
-    def Model(self):
-        return _cntk_py.Trainer_Model(self)
+    def model(self):
+        return _cntk_py.trainer_model(self)
 
-    def TrainingLossVariable(self):
-        return _cntk_py.Trainer_TrainingLossVariable(self)
+    def training_loss_variable(self):
+        return _cntk_py.trainer_training_loss_variable(self)
 
-    def PreviousMinibatchTrainingLossValue(self):
-        return _cntk_py.Trainer_PreviousMinibatchTrainingLossValue(self)
+    def previous_minibatch_training_loss_value(self):
+        return _cntk_py.trainer_previous_minibatch_training_loss_value(self)
 
-    def ParameterLearners(self):
-        return _cntk_py.Trainer_ParameterLearners(self)
-    __swig_destroy__ = _cntk_py.delete_Trainer
+    def parameter_learners(self):
+        return _cntk_py.trainer_parameter_learners(self)
+    __swig_destroy__ = _cntk_py.delete_trainer
     __del__ = lambda self: None
-Trainer_swigregister = _cntk_py.Trainer_swigregister
-Trainer_swigregister(Trainer)
+trainer_swigregister = _cntk_py.trainer_swigregister
+trainer_swigregister(trainer)
 
-class StreamInfo(_object):
+class stream_info(_object):
     __swig_setmethods__ = {}
-    __setattr__ = lambda self, name, value: _swig_setattr(self, StreamInfo, name, value)
+    __setattr__ = lambda self, name, value: _swig_setattr(self, stream_info, name, value)
     __swig_getmethods__ = {}
-    __getattr__ = lambda self, name: _swig_getattr(self, StreamInfo, name)
+    __getattr__ = lambda self, name: _swig_getattr(self, stream_info, name)
     __repr__ = _swig_repr
-    __swig_setmethods__["m_name"] = _cntk_py.StreamInfo_m_name_set
-    __swig_getmethods__["m_name"] = _cntk_py.StreamInfo_m_name_get
+    __swig_setmethods__["m_name"] = _cntk_py.stream_info_m_name_set
+    __swig_getmethods__["m_name"] = _cntk_py.stream_info_m_name_get
     if _newclass:
-        m_name = _swig_property(_cntk_py.StreamInfo_m_name_get, _cntk_py.StreamInfo_m_name_set)
-    __swig_setmethods__["m_id"] = _cntk_py.StreamInfo_m_id_set
-    __swig_getmethods__["m_id"] = _cntk_py.StreamInfo_m_id_get
+        m_name = _swig_property(_cntk_py.stream_info_m_name_get, _cntk_py.stream_info_m_name_set)
+    __swig_setmethods__["m_id"] = _cntk_py.stream_info_m_id_set
+    __swig_getmethods__["m_id"] = _cntk_py.stream_info_m_id_get
     if _newclass:
-        m_id = _swig_property(_cntk_py.StreamInfo_m_id_get, _cntk_py.StreamInfo_m_id_set)
-    __swig_setmethods__["m_storageFormat"] = _cntk_py.StreamInfo_m_storageFormat_set
-    __swig_getmethods__["m_storageFormat"] = _cntk_py.StreamInfo_m_storageFormat_get
+        m_id = _swig_property(_cntk_py.stream_info_m_id_get, _cntk_py.stream_info_m_id_set)
+    __swig_setmethods__["m_storage_format"] = _cntk_py.stream_info_m_storage_format_set
+    __swig_getmethods__["m_storage_format"] = _cntk_py.stream_info_m_storage_format_get
     if _newclass:
-        m_storageFormat = _swig_property(_cntk_py.StreamInfo_m_storageFormat_get, _cntk_py.StreamInfo_m_storageFormat_set)
-    __swig_setmethods__["m_elementType"] = _cntk_py.StreamInfo_m_elementType_set
-    __swig_getmethods__["m_elementType"] = _cntk_py.StreamInfo_m_elementType_get
+        m_storage_format = _swig_property(_cntk_py.stream_info_m_storage_format_get, _cntk_py.stream_info_m_storage_format_set)
+    __swig_setmethods__["m_element_type"] = _cntk_py.stream_info_m_element_type_set
+    __swig_getmethods__["m_element_type"] = _cntk_py.stream_info_m_element_type_get
     if _newclass:
-        m_elementType = _swig_property(_cntk_py.StreamInfo_m_elementType_get, _cntk_py.StreamInfo_m_elementType_set)
-    __swig_setmethods__["m_sampleLayout"] = _cntk_py.StreamInfo_m_sampleLayout_set
-    __swig_getmethods__["m_sampleLayout"] = _cntk_py.StreamInfo_m_sampleLayout_get
+        m_element_type = _swig_property(_cntk_py.stream_info_m_element_type_get, _cntk_py.stream_info_m_element_type_set)
+    __swig_setmethods__["m_sample_layout"] = _cntk_py.stream_info_m_sample_layout_set
+    __swig_getmethods__["m_sample_layout"] = _cntk_py.stream_info_m_sample_layout_get
     if _newclass:
-        m_sampleLayout = _swig_property(_cntk_py.StreamInfo_m_sampleLayout_get, _cntk_py.StreamInfo_m_sampleLayout_set)
+        m_sample_layout = _swig_property(_cntk_py.stream_info_m_sample_layout_get, _cntk_py.stream_info_m_sample_layout_set)
 
     def __init__(self):
-        this = _cntk_py.new_StreamInfo()
+        this = _cntk_py.new_stream_info()
         try:
             self.this.append(this)
         except __builtin__.Exception:
             self.this = this
-    __swig_destroy__ = _cntk_py.delete_StreamInfo
+    __swig_destroy__ = _cntk_py.delete_stream_info
     __del__ = lambda self: None
-StreamInfo_swigregister = _cntk_py.StreamInfo_swigregister
-StreamInfo_swigregister(StreamInfo)
+stream_info_swigregister = _cntk_py.stream_info_swigregister
+stream_info_swigregister(stream_info)
 
 
 def __eq__(*args):
     return _cntk_py.__eq__(*args)
 __eq__ = _cntk_py.__eq__
-class MinibatchSource(_object):
+class minibatch_source(_object):
     __swig_setmethods__ = {}
-    __setattr__ = lambda self, name, value: _swig_setattr(self, MinibatchSource, name, value)
+    __setattr__ = lambda self, name, value: _swig_setattr(self, minibatch_source, name, value)
     __swig_getmethods__ = {}
-    __getattr__ = lambda self, name: _swig_getattr(self, MinibatchSource, name)
+    __getattr__ = lambda self, name: _swig_getattr(self, minibatch_source, name)
 
     def __init__(self, *args, **kwargs):
         raise AttributeError("No constructor defined - class is abstract")
     __repr__ = _swig_repr
 
-    def StreamInfos(self):
-        return _cntk_py.MinibatchSource_StreamInfos(self)
+    def stream_infos(self):
+        return _cntk_py.minibatch_source_stream_infos(self)
 
-    def GetNextMinibatch(self, minibatchData):
-        return _cntk_py.MinibatchSource_GetNextMinibatch(self, minibatchData)
-    __swig_destroy__ = _cntk_py.delete_MinibatchSource
+    def get_next_minibatch(self, minibatchData):
+        return _cntk_py.minibatch_source_get_next_minibatch(self, minibatchData)
+    __swig_destroy__ = _cntk_py.delete_minibatch_source
     __del__ = lambda self: None
-MinibatchSource_swigregister = _cntk_py.MinibatchSource_swigregister
-MinibatchSource_swigregister(MinibatchSource)
+minibatch_source_swigregister = _cntk_py.minibatch_source_swigregister
+minibatch_source_swigregister(minibatch_source)
 
 
-def CreateCompositeMinibatchSource(configuration):
-    return _cntk_py.CreateCompositeMinibatchSource(configuration)
-CreateCompositeMinibatchSource = _cntk_py.CreateCompositeMinibatchSource
-class Callback(_object):
+def create_composite_minibatch_source(configuration):
+    return _cntk_py.create_composite_minibatch_source(configuration)
+create_composite_minibatch_source = _cntk_py.create_composite_minibatch_source
+class callback(_object):
     __swig_setmethods__ = {}
-    __setattr__ = lambda self, name, value: _swig_setattr(self, Callback, name, value)
+    __setattr__ = lambda self, name, value: _swig_setattr(self, callback, name, value)
     __swig_getmethods__ = {}
-    __getattr__ = lambda self, name: _swig_getattr(self, Callback, name)
+    __getattr__ = lambda self, name: _swig_getattr(self, callback, name)
     __repr__ = _swig_repr
-    __swig_destroy__ = _cntk_py.delete_Callback
+    __swig_destroy__ = _cntk_py.delete_callback
     __del__ = lambda self: None
 
     def forward(self):
-        return _cntk_py.Callback_forward(self)
+        return _cntk_py.callback_forward(self)
 
     def backward(self):
-        return _cntk_py.Callback_backward(self)
+        return _cntk_py.callback_backward(self)
 
     def __init__(self):
-        if self.__class__ == Callback:
+        if self.__class__ == callback:
             _self = None
         else:
             _self = self
-        this = _cntk_py.new_Callback(_self, )
+        this = _cntk_py.new_callback(_self, )
         try:
             self.this.append(this)
         except __builtin__.Exception:
             self.this = this
     def __disown__(self):
         self.this.disown()
-        _cntk_py.disown_Callback(self)
+        _cntk_py.disown_callback(self)
         return weakref_proxy(self)
-Callback_swigregister = _cntk_py.Callback_swigregister
-Callback_swigregister(Callback)
+callback_swigregister = _cntk_py.callback_swigregister
+callback_swigregister(callback)
 
-class FunctionInCNTK(_object):
+class function_in_cntk(_object):
     __swig_setmethods__ = {}
-    __setattr__ = lambda self, name, value: _swig_setattr(self, FunctionInCNTK, name, value)
+    __setattr__ = lambda self, name, value: _swig_setattr(self, function_in_cntk, name, value)
     __swig_getmethods__ = {}
-    __getattr__ = lambda self, name: _swig_getattr(self, FunctionInCNTK, name)
+    __getattr__ = lambda self, name: _swig_getattr(self, function_in_cntk, name)
     __repr__ = _swig_repr
 
     def __init__(self):
-        this = _cntk_py.new_FunctionInCNTK()
+        this = _cntk_py.new_function_in_cntk()
         try:
             self.this.append(this)
         except __builtin__.Exception:
             self.this = this
-    __swig_destroy__ = _cntk_py.delete_FunctionInCNTK
+    __swig_destroy__ = _cntk_py.delete_function_in_cntk
     __del__ = lambda self: None
 
-    def delCallback(self):
-        return _cntk_py.FunctionInCNTK_delCallback(self)
+    def del_callback(self):
+        return _cntk_py.function_in_cntk_del_callback(self)
 
-    def setCallback(self, cb):
-        return _cntk_py.FunctionInCNTK_setCallback(self, cb)
+    def set_callback(self, cb):
+        return _cntk_py.function_in_cntk_set_callback(self, cb)
 
     def forward(self):
-        return _cntk_py.FunctionInCNTK_forward(self)
+        return _cntk_py.function_in_cntk_forward(self)
 
     def backward(self):
-        return _cntk_py.FunctionInCNTK_backward(self)
-FunctionInCNTK_swigregister = _cntk_py.FunctionInCNTK_swigregister
-FunctionInCNTK_swigregister(FunctionInCNTK)
+        return _cntk_py.function_in_cntk_backward(self)
+function_in_cntk_swigregister = _cntk_py.function_in_cntk_swigregister
+function_in_cntk_swigregister(function_in_cntk)
 
 
 Variable.__eq__ = lambda a,b: Variable_eq(a,b)
