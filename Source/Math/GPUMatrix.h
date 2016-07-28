@@ -62,27 +62,6 @@ cudaStream_t MATH_API GetStream();
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 // -----------------------------------------------------------------------
-// SyncGuard -- synchronize around CUDA calls
-// -----------------------------------------------------------------------
-
-class SyncGuard
-{
-private:
-    static bool s_isSyncEnabled;
-
-    bool m_forceSync;
-#ifndef CPUONLY
-    cudaEvent_t m_done;
-#endif
-
-public:
-    static MATH_API void EnableSync();
-
-    SyncGuard(bool forceSync = false);
-    ~SyncGuard();
-};
-
-// -----------------------------------------------------------------------
 // DeviceBoundNumber -- This class represents a number which resides on a particular device. Use it to avoid unnecessary transfers between CPU and GPU
 // -----------------------------------------------------------------------
 
@@ -648,7 +627,6 @@ class SyncGuard
 {
     static bool DoSync()
     {
-#undef NO_SYNC
 #ifdef NO_SYNC // this strange way of writing it allows modifying this variable at runtime in the debugger
         static bool do_sync = false;
 #else
