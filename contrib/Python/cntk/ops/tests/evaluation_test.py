@@ -17,8 +17,8 @@ from ...reader import *
 from .. import dynamic_axis
 
 TARGET_OUT_PAIRS = [
-    ([[0., 0., 0., 1]], [[1., 2., 3., 4.]]),
-    ([[0., 0., 0.5, 0.5]], [[1., 2., 3., 4.]]),
+    #([[0., 0., 0., 1]], [[1., 2., 3., 4.]]),
+    #([[0., 0., 0.5, 0.5]], [[1., 2., 3., 4.]]),
     ([[0., 0.4, 0.3, 0.3]], [[2., 1., 1., 4.]])
     ]
 
@@ -51,7 +51,7 @@ def test_op_crossentropywithsoftmax(target_vector, output_vector, device_id, pre
     unittest_helper(op_node, None, expected,
                 device_id=device_id,
                 precision=precision,
-                clean_up=True, backward_pass=False)
+                clean_up=False, backward_pass=False)
                 
                 
     def numpy_grad(softmax, target):
@@ -64,7 +64,7 @@ def test_op_crossentropywithsoftmax(target_vector, output_vector, device_id, pre
     expected = [numpy_grad(numpy_softmax(output_vector), AA(target_vector, dtype=PRECISION_TO_TYPE[precision]))]
     unittest_helper(op_node, None, expected,
             device_id=device_id,
-            precision=precision, clean_up=True, backward_pass=True,
+            precision=precision, clean_up=False, backward_pass=True,
             input_node=output)
 
 # -- SquareError with softmax operation tests --

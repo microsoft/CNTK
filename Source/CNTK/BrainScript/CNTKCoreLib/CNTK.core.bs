@@ -59,6 +59,7 @@ ReduceMin               = CNTK2.ReduceMin
 
 Round                   = CNTK2.Round
 Sigmoid                 = CNTK2.Sigmoid
+Softmax                 = CNTK2.Softmax
 
 ##############################################################################
 # ComputationNodes
@@ -146,10 +147,10 @@ CNTK2 = [
 
     // 6. Reductions    
     # the following is a temporary workaround until we have the C++ version
-    ReduceLogSum (z, axis=0, tag='')  = new ComputationNode [ operation = 'ReduceElements' ; inputs = z ; reductionOp = "LogSum" /*plus the function args*/ ]
-    #ReduceMean (z, axis=0, tag='')    = new ComputationNode [ operation = 'ReduceElements' ; inputs = z ; reductionOp = "Mean"    /*plus the function args*/ ]
-    ReduceMax (z, axis=0, tag='')     = new ComputationNode [ operation = 'ReduceElements' ; inputs = z ; reductionOp = "Max"     /*plus the function args*/ ]
-    ReduceMin (z, axis=0, tag='')     = new ComputationNode [ operation = 'ReduceElements' ; inputs = z ; reductionOp = "Min"     /*plus the function args*/ ]
+    ReduceLogSum(z, axis=0, tag='')  = new ComputationNode [ operation = 'ReduceElements' ; inputs = z ; reductionOp = "LogSum" /*plus the function args*/ ]
+    #ReduceMean(z, axis=0, tag='')    = new ComputationNode [ operation = 'ReduceElements' ; inputs = z ; reductionOp = "Mean"    /*plus the function args*/ ]
+    ReduceMax(z, axis=0, tag='')     = new ComputationNode [ operation = 'ReduceElements' ; inputs = z ; reductionOp = "Max"     /*plus the function args*/ ]
+    ReduceMin(z, axis=0, tag='')     = new ComputationNode [ operation = 'ReduceElements' ; inputs = z ; reductionOp = "Min"     /*plus the function args*/ ]
 
     ReduceSum (_, axis=0, tag='')     = new ComputationNode [ operation = 'ReduceElements' ; inputs = _ ; reductionOp = "Sum"    /*plus the function args*/ ]
     // 7. Control flow (if, composite etc.)
@@ -167,13 +168,19 @@ CNTK2 = [
     // Changes: input -> _, RectifiedLinear -> Relu. [Use Relu to arrive at relu() in snake_case]
     Relu(_, tag='') = new ComputationNode [ operation = 'RectifiedLinear' ; inputs = _ /*plus the function args*/ ]
     Sigmoid(_, tag='') = new ComputationNode [ operation = 'Sigmoid' ; inputs = _ /*plus the function args*/ ]
-    Softmax(_, tag='') = new ComputationNode [ operation = 'Softmax' ; inputs = _ /*plus the function args*/ ]
+    Softmax (z, axis=0, tag='') =
+    [
+		axis1=axis
+        Z = ReduceLogSum (axis=axis1, z) # reduce along axis
+        P = Exp (z - Z)
+    ].P
+	CrossEntropyWithSoftmax (labelSequence, z, tag='') = [ tag1 = tag; out = Minus (ReduceLogSum (z), ReduceSum (labelSequence .* z), tag=tag1) ].out
+
     Dropout(_, tag='') = new ComputationNode [ operation = 'Dropout' ; inputs = _ /*plus the function args*/ ]
 
     // 11. Criterion nodes
     // No changes here - we said the default input would be the label sequence here, against which the 
     // empirical sequence is compared to. Keeping this for now.
-    CrossEntropyWithSoftmax(_, outProbVectorSequence, tag='') = new ComputationNode [ operation = 'CrossEntropyWithSoftmax' ; inputs = (_ : outProbVectorSequence) /*plus the function args*/ ]
     ErrorPrediction(_, outVectorSequence, topN=1, tag='') = new ComputationNode [ operation = 'ErrorPrediction' ; inputs = if topN == 1 then (_ : outVectorSequence) else  (_ : outVectorSequence : Constant (topN)) /*plus the function args*/ ]
 
     // 12. Comparison nodes
@@ -252,9 +259,6 @@ ColumnElementTimes(aVectorSequence, anotherVectorSequence, tag='') = new Computa
 CosDistance(aVectorSequence, anotherVectorSequence, tag='') = new ComputationNode [ operation = 'CosDistance' ; inputs = (aVectorSequence : anotherVectorSequence) /*plus the function args*/ ]
 CosDistanceWithNegativeSamples(aVectorSequence, anotherVectorSequence, numShifts, numNegSamples, tag='') = new ComputationNode [ operation = 'CosDistanceWithNegativeSamples' ; inputs = (aVectorSequence : anotherVectorSequence : numShifts : numNegSamples) /*plus the function args*/ ]
 Cosine(x, tag='') = new ComputationNode [ operation = 'Cosine' ; inputs = x /*plus the function args*/ ]
-CrossEntropy(refProbVectorSequence, outProbVectorSequence, tag='') = new ComputationNode [ operation = 'CrossEntropy' ; inputs = (refProbVectorSequence : outProbVectorSequence) /*plus the function args*/ ]
-# once ReduceLogSum becomes proper C++, CrossEntropyWithSoftmax() will become this:
-NewCrossEntropyWithSoftmax (labelSequence, z, tag='') = [ tag1 = tag; out = Minus (ReduceLogSum (z), ReduceSum (labelSequence .* z), tag=tag1) ].out
 DiagTimes(diagonalMatrixAsColumnVector, matrix, tag='') = new ComputationNode [ operation = 'DiagTimes' ; inputs = (diagonalMatrixAsColumnVector : matrix) /*plus the function args*/ ]
 // TODO: DiagTimes = ElementTimes
 GatherPacked(indexSequence, sourceData, tag='') = new ComputationNode [ operation = 'GatherPacked' ; inputs = (indexSequence : sourceData) /*plus the function args*/ ]
@@ -277,13 +281,6 @@ Scale(scalarScalingFactor, matrix, tag='') = new ComputationNode [ operation = '
 # TODO: Scale = ElementTimes
 ScatterPacked(cond, indexSequence, sourceData, tag='') = new ComputationNode [ operation = 'ScatterPacked' ; inputs = (cond : indexSequence : sourceData) /*plus the function args*/ ]
 Sin(z, tag='') = new ComputationNode [ operation = 'Sin' ; inputs = z /*plus the function args*/ ]
-Softmax (z, axis=0, tag='') =
-    if axis == 0 then new ComputationNode [ operation = 'Softmax' ; inputs = z /*plus the function args*/ ]
-    else
-    [
-        Z = ReduceLogSum (axis=axis0, z) # reduce along axis
-        P = Exp (z - Z)
-    ].P
 Hardmax(z, tag='') = new ComputationNode [ operation = 'Hardmax' ; inputs = z /*plus the function args*/ ]
 Sqrt(z, tag='') = new ComputationNode [ operation = 'Sqrt' ; inputs = z /*plus the function args*/ ]
 SquareError(aMatrix, anotherMatrix, tag='') = new ComputationNode [ operation = 'SquareError' ; inputs = (aMatrix : anotherMatrix) /*plus the function args*/ ]

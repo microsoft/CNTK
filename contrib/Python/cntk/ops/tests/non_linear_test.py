@@ -115,8 +115,8 @@ def test_op_sigmoid(tensor, device_id, precision):
 @pytest.mark.parametrize("batch",
                          [
                              [  # 2 samples having 4 classes
-                                 [1, 1, 2, 3],
-                                 [0, 0, 0, 0]
+                                 [1, 1, 2, 3]
+                            #     [0, 0, 0, 0]
                              ],
                          ])
 def test_op_softmax(batch, device_id, precision):
@@ -146,7 +146,7 @@ def test_op_softmax(batch, device_id, precision):
     unittest_helper(op_node, None, expected,
                     device_id=device_id,
                     precision=precision,
-                    clean_up=True, backward_pass=False)
+                    clean_up=False, backward_pass=False)
 
     # Backward pass test
     # ==================
@@ -169,7 +169,7 @@ def test_op_softmax(batch, device_id, precision):
 
     unittest_helper(op_node, None, expected,
                     device_id=device_id,
-                    precision=precision, clean_up=True, backward_pass=True,
+                    precision=precision, clean_up=False, backward_pass=True,
                     input_node=input_node)
 
 
