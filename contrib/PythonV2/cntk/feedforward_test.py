@@ -62,9 +62,7 @@ if __name__=='__main__':
     num_hidden_layers = 12;
     hidden_layers_dim = 2048;
     num_samples = 5000;
-    
-    
-    
+           
     input = create_variable((input_dim,), needs_gradient=True, name="input")
     label = create_variable((num_output_classes,), needs_gradient=True, name="label")
     
@@ -72,8 +70,10 @@ if __name__=='__main__':
         
     ce = cntk_py.CrossEntropyWithSoftmax(netout.Output(), label)
     pe = cntk_py.ClassificationError(netout.Output(), label)
-    ffnet = cntk_py.Combine([ce, pe, netout], "aa")
+    ffnet = cntk_py.Combine([ce, pe, netout], "aa")      
     
+    trainer = cntk_py.Trainer(ffnet, ce.Output(), [cntk_py.SGDLearner(ffnet.Parameters(), 0.2)])
+
     for i in range(0,1):
         nd = np.random.rand(input_dim,1,num_samples)        
         input_value_ptr = create_ValuePtr_from_NumPy(nd.astype(np.float32), dev)
@@ -87,12 +87,15 @@ if __name__=='__main__':
         arguments = dict()
         arguments[input] = input_value_ptr
         arguments[label] = label_value_ptr
+        
+        trainer.TrainMinibatch(arguments, dev)
+        trainer.PreviousMinibatchTrainingLossValue().Data()
 
+        """
         netout_variable = netout.Output()
         prediction_err_var = pe.Output()
         output_variable = ce.Output()
-
-        
+                
         output_shape = (1,)
         output_value_ptr = create_ValuePtr((), cntk_py.DataType_Float, dev) 
         prediction_err__value_ptr = create_ValuePtr((), cntk_py.DataType_Float, dev) 
@@ -123,7 +126,7 @@ if __name__=='__main__':
      
         ffnet.Backward(backpropstate, rootGradients, gradients)
         input_grad_data = grad_input_value_ptr.Data().ToNumPy()
-        
+        """
 
         
 

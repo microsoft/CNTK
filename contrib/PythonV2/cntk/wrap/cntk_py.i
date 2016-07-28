@@ -274,6 +274,8 @@
 
 // end of map conversion
 
+// TODO: Parametrize the following three typemaps
+
 //
 // Converting Python set {Variable} to std::unordered_set
 //
@@ -326,6 +328,108 @@
 }
 
 
+//
+// Converting Python set {Parameter} to std::unordered_set
+//
+%typecheck(1000) std::unordered_set<CNTK::Parameter>& {
+    // '1000' is the typecheck precedence code. It means: check after basic
+    // types, but before arrays. See: http://www.swig.org/Doc1.3/Typemaps.html#Typemaps_overloading
+    $1 = PyList_Check($input) ? 1 : 0;
+}
+
+%typemap(in) std::unordered_set<CNTK::Parameter>& {
+     if (PyList_Check($input)) {
+        std::unordered_set<CNTK::Parameter>* args_set = new std::unordered_set<CNTK::Parameter>();
+
+        PyObject *item;
+        Py_ssize_t pos = 0;
+
+        PyObject *iterator = PyObject_GetIter($input);
+        if (iterator == NULL) {
+            SWIG_exception_fail(SWIG_ValueError, "cannot convert key of dictionary to CNTK::Parameter"); 
+        }
+
+        while (item = PyIter_Next(iterator)) {
+            void *raw_var = 0 ;
+            int res1 = SWIG_ConvertPtr(item, &raw_var, SWIGTYPE_p_CNTK__Parameter,  0);
+            if (!SWIG_IsOK(res1)) {
+                SWIG_exception_fail(SWIG_ArgError(res1), "cannot convert key of dictionary to CNTK::Parameter"); 
+            }
+            if (!raw_var) {
+                SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting key of dictionary to CNTK::Parameter");
+            }
+
+            CNTK::Parameter* var = reinterpret_cast<CNTK::Parameter*>(raw_var);
+
+            args_set->insert(*var);
+
+            Py_DECREF(item);
+        }
+
+        Py_DECREF(iterator);
+
+        if (PyErr_Occurred()) {
+            SWIG_exception_fail(SWIG_ValueError, "cannot convert key of dictionary to CNTK::Parameter"); 
+        }
+
+        $1 = args_set;
+
+     } else {
+         SWIG_exception(SWIG_ValueError, "list expected");
+     }
+}
+
+
+//
+// Converting Python set {LearnerPtr} to std::unordered_set
+//
+%typecheck(1000) std::unordered_set<CNTK::LearnerPtr>& {
+    // '1000' is the typecheck precedence code. It means: check after basic
+    // types, but before arrays. See: http://www.swig.org/Doc1.3/Typemaps.html#Typemaps_overloading
+    $1 = PyList_Check($input) ? 1 : 0;
+}
+
+%typemap(in) std::unordered_set<CNTK::LearnerPtr>& {
+     if (PyList_Check($input)) {
+        std::unordered_set<CNTK::LearnerPtr>* args_set = new std::unordered_set<CNTK::LearnerPtr>();
+
+        PyObject *item;
+        Py_ssize_t pos = 0;
+
+        PyObject *iterator = PyObject_GetIter($input);
+        if (iterator == NULL) {
+            SWIG_exception_fail(SWIG_ValueError, "cannot convert key of dictionary to CNTK::LearnerPtr"); 
+        }
+
+        while (item = PyIter_Next(iterator)) {
+            void *raw_var = 0 ;
+            int res1 = SWIG_ConvertPtr(item, &raw_var, SWIGTYPE_p_std__shared_ptrT_CNTK__Learner_t,  0);
+            if (!SWIG_IsOK(res1)) {
+                SWIG_exception_fail(SWIG_ArgError(res1), "cannot convert key of dictionary to CNTK::LearnerPtr"); 
+            }
+            if (!raw_var) {
+                SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting key of dictionary to CNTK::LearnerPtr");
+            }
+
+            CNTK::LearnerPtr* var = reinterpret_cast<CNTK::LearnerPtr*>(raw_var);
+
+            args_set->insert(*var);
+
+            Py_DECREF(item);
+        }
+
+        Py_DECREF(iterator);
+
+        if (PyErr_Occurred()) {
+            SWIG_exception_fail(SWIG_ValueError, "cannot convert key of dictionary to CNTK::LearnerPtr"); 
+        }
+
+        $1 = args_set;
+
+     } else {
+         SWIG_exception(SWIG_ValueError, "list expected");
+     }
+}
 
 //
 // Converting std::unordered_set to Python list.
@@ -368,6 +472,7 @@
 %shared_ptr(CNTK::Value)
 %shared_ptr(CNTK::NDMask)
 %shared_ptr(CNTK::BackPropState)
+%shared_ptr(CNTK::Learner)
 
 %include "CNTKLibraryInternals.h"
 %include "CNTKLibrary.h"
