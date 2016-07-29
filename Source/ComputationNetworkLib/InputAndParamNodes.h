@@ -21,7 +21,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 // -----------------------------------------------------------------------
 
 template <class ElemType>
-class LearnableParameter : public ComputationNode<ElemType>, public NumInputs<0>
+class LearnableParameter : public ComputationNode<ElemType>, public NumInputs<0>, public IFreezable
 {
     typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
     static const std::wstring TypeName() { return L"LearnableParameter"; }
@@ -106,6 +106,9 @@ public:
     void InferInputDimsFrom(const TensorShape& otherShape);
 
     virtual void DumpNodeInfo(const bool printValues, const bool printMetadata, File& fstream) const override;
+
+    // called from CloneFunction(..., parameters="constant")
+    virtual void FreezeParameters() override; // from IFreezable
 };
 
 // -----------------------------------------------------------------------

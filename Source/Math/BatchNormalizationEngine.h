@@ -55,6 +55,7 @@ protected:
 
     virtual void EnsureCompatible() = 0;
 
+    // saveMean/saveInvStdDev return the actual mean/stddev used for normalization, except for blendFactor=1, these are unused and untouched
     virtual void ForwardCore(const Mat& in, const Mat& scale, const Mat& bias, double expAvgFactor, double blendFactor, Mat& runMean, Mat& runInvStdDev,
                  Mat& out, double epsilon, Mat& saveMean, Mat& saveInvStdDev) = 0;
 
@@ -70,4 +71,4 @@ protected:
 
 #pragma warning(pop)
 
-} } }
+}}}
