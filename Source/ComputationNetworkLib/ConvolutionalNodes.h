@@ -148,7 +148,7 @@ protected:
     TensorShape m_lowerPad;
     TensorShape m_upperPad;
     PoolKind m_poolKind;
-    bool m_transpose;
+    bool m_transpose; // means de-convolution ...I think
     ImageLayoutKind m_imageLayout;
 
     size_t m_maxTempMemSizeInSamples;
