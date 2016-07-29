@@ -77,22 +77,22 @@ RUN mkdir -p /usr/local/cudnn/cuda/include && \
     mkdir -p /usr/local/cudnn/cuda/lib64 && \
     ln -s /etc/alternatives/libcudnn_so /usr/local/cudnn/cuda/lib64/libcudnn.so
 
-RUN wget -O gdk.run -q http://developer.download.nvidia.com/compute/cuda/7_0/Prod/local_installers/cuda_346.46_gdk_linux.run && \
-    chmod +x gdk.run && \
-    ./gdk.run --silent && \
-    rm gdk.run
-
 WORKDIR /cntk
 
 RUN git clone --depth=1 -b master https://github.com/Microsoft/CNTK.git . && \
+    CONFIGURE_OPTS="\
+      --with-cuda=/usr/local/cuda \
+      --with-gdk-include=/usr/local/cuda/include \
+      --with-gdk-nvml-lib=/usr/local/cuda/lib64/stubs \
+      --with-cudnn=/usr/local/cudnn" && \
     mkdir -p build/gpu/release && \
     cd build/gpu/release && \
-    ../../../configure --with-cuda=/usr/local/cuda --with-cudnn=/usr/local/cudnn --with-openblas=/usr/local/openblas && \
+    ../../../configure $CONFIGURE_OPTS --with-openblas=/usr/local/openblas && \
     make -j"$(nproc)" all && \
     cd ../../.. && \
     mkdir -p build-mkl/gpu/release && \
     cd build-mkl/gpu/release && \
-    ../../../configure --with-cuda=/usr/local/cuda --with-cudnn=/usr/local/cudnn --with-mkl=/usr/local/CNTKCustomMKL && \
+    ../../../configure $CONFIGURE_OPTS --with-mkl=/usr/local/CNTKCustomMKL && \
     make -j"$(nproc)" all
 
 ENV PATH=/cntk/build/gpu/release/bin:$PATH
