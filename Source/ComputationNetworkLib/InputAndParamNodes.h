@@ -50,7 +50,7 @@ public:
 
     // initialize with random numbers
     // if 'initOnCPUOnly' then always init on CPU, making initialization consistent across both (for testing)
-    void InitRandom(const bool uniformInit, const unsigned long randomSeed, const ElemType initValueScale, bool initOnCPUOnly);
+    void InitRandom(const bool uniformInit, const unsigned long randomSeed, const ElemType initValueScale, const ElemType initValueOffset, bool initOnCPUOnly);
 
     // initialize by reading a matrix from a text file
     void InitFromFile(const std::wstring& initFromFilePath);

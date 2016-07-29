@@ -339,6 +339,7 @@ public:
                                  const bool uniformInit,
                                  const unsigned long randomSeed,
                                  const ElemType initValueScale,
+                                 const ElemType initValueOffset = 0,
                                  bool initOnCPUOnly = false);
 
     template <typename N>

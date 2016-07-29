@@ -105,7 +105,8 @@ public:
               const stringargvector nonLinearFunctions = L"Sigmoid",
               const bool addDropoutNodes = false,
               const bool uniformInit = true, const ElemType initValueScale = 1.0f,
-              const bool applyMeanVarNorm = false, bool needPrior = false)
+              const ElemType initValueOffset = 0.0f, const bool applyMeanVarNorm = false,
+              bool needPrior = false)
     {
         m_deviceId = deviceId;
         m_net = make_shared<ComputationNetwork>(m_deviceId);
@@ -125,6 +126,7 @@ public:
         m_nonLinearFunctions = nonLinearFunctions;
         m_uniformInit = uniformInit;
         m_initValueScale = initValueScale;
+        m_initValueOffset = initValueOffset;
         if (m_layerSizes.size() < 2)
             InvalidArgument("A network should have at least two layers (one input and one output)");
     }
@@ -196,6 +198,7 @@ public:
         DEVICEID_TYPE deviceId = DeviceFromConfig(config);
 
         ElemType initValueScale = config("initValueScale", "1.0");
+        ElemType initValueOffset = config("initValueOffset", "0.0");
 
         ConfigArray layerTypes = config("layerTypes", L"Sigmoid"); // TODO: camelCase
         stringargvector nonlinearFunctions = layerTypes;
@@ -229,7 +232,7 @@ public:
 
         Init(layers, trainingCriterion, evalCriterion, deviceId, outputLayerSize,
              nonlinearFunctions, addDropoutNodes,
-             uniformInit, initValueScale, applyMeanVarNorm, needPrior);
+             uniformInit, initValueScale, initValueOffset, applyMeanVarNorm, needPrior);
 
         InitRecurrentConfig(config);
 
@@ -324,6 +327,7 @@ protected:
     bool m_uniformInit;
 
     ElemType m_initValueScale;
+    ElemType m_initValueOffset;
     bool m_addDropoutNodes;
 
     stringargvector m_nonLinearFunctions;

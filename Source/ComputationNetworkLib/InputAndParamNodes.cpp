@@ -35,7 +35,7 @@ LearnableParameter<ElemType>::LearnableParameter(const ScriptableObjects::IConfi
 {
     // TODO: Change dimensions to take a generic tensor instead. That will be a (minor) breaking change that will require fix-ups when converting from NDL to BrainScript.
     AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
-    // parameters[rows, [cols=1]] plus other optional parameters (learningRateMultiplier=[1|0|float], init=[uniform|gaussian|fixedvalue], initValueScale=[1|float], value=[0|float])
+    // parameters[rows, [cols=1]] plus other optional parameters (learningRateMultiplier=[1|0|float], init=[uniform|gaussian|fixedvalue], initValueScale=[1|float], initValueOffset=[0|float], value=[0|float])
     if (configp->Exists(L"learningRateMultiplier"))
         SetLearningRateMultiplier(configp->Get(L"learningRateMultiplier"));
     else if (configp->Exists(L"needsGradient") || configp->Exists(L"needGradient") || configp->Exists(L"computeGradient"))
@@ -49,7 +49,7 @@ LearnableParameter<ElemType>::LearnableParameter(const ScriptableObjects::IConfi
         // TODO: add these options also to old NDL
         static unsigned long randomSeed = 1;
         int forcedRandomSeed = configp->Get(L"randomSeed"); // forcing a specific random seed is useful for testing to get repeatable initialization independent of evaluation order
-        InitRandom((initString == L"uniform"), forcedRandomSeed < 0 ? randomSeed++ : (unsigned long) forcedRandomSeed, configp->Get(L"initValueScale"), configp->Get(L"initOnCPUOnly"));
+        InitRandom((initString == L"uniform"), forcedRandomSeed < 0 ? randomSeed++ : (unsigned long) forcedRandomSeed, configp->Get(L"initValueScale"), configp->Get(L"initValueOffset"), configp->Get(L"initOnCPUOnly"));
     }
     else if (initString == L"fromFile")
     {
@@ -77,6 +77,7 @@ template <class ElemType>
 void LearnableParameter<ElemType>::InitRandom(const bool uniformInit,
                                                 const unsigned long randomSeed,
                                                 const ElemType initValueScale,
+                                                const ElemType initValueOffset,
                                                 bool initOnCPUOnly)
 {
     // fprintf(stderr, "%d x %d: %d  %ls\n", (int)GetNumRows(), (int)GetNumCols(), (int)randomSeed, NodeName().c_str());
@@ -92,14 +93,16 @@ void LearnableParameter<ElemType>::InitRandom(const bool uniformInit,
     if (uniformInit)
     {
         // TODO: move these hidden extra factors out from here and into NDL, and make them visible in BS
-        ElemType randRange = 0.05f * initValueScale;
-        value.SetUniformRandomValue(-randRange, randRange, randomSeed);
+        ElemType randRangeLow = 0.05f * (initValueOffset - initValueScale);
+        ElemType randRangeHigh = 0.05f * (initValueOffset + initValueScale);
+        value.SetUniformRandomValue(-randRangeLow, randRangeHigh, randomSeed);
     }
     else
     {
         size_t inputSize = value.GetNumCols();
-        ElemType randInitstd = 0.2f * initValueScale / sqrt(ElemType(inputSize));
-        value.SetGaussianRandomValue(0, randInitstd, randomSeed);
+        ElemType randInitStd = 0.2f * initValueScale / sqrt(ElemType(inputSize));
+        ElemType randInitMean = 0.2f * initValueOffset / sqrt(ElemType(inputSize));
+        value.SetGaussianRandomValue(randInitMean, randInitStd, randomSeed);
     }
     if (initOnCPUOnly)
         Value().TransferToDeviceIfNotThere(m_deviceId, true);

@@ -95,7 +95,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildFFDNNFromDescription(
         if (numHiddenLayers > 0)
         {
             w = builder.CreateLearnableParameter(L"W0", m_layerSizes[1], m_layerSizes[0]);
-            m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale);
+            m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale, m_initValueOffset);
             b = builder.CreateLearnableParameter(L"B0", m_layerSizes[1], 1);
             output = ApplyNonlinearFunction(builder.Plus(builder.Times(w, input, 1, L"W0*features"), b, L"W0*features+B0"), 0, L"H1");
 
@@ -114,7 +114,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildFFDNNFromDescription(
                 wstring nameOfH = msra::strfun::wstrprintf(L"H%d", i + 1);
 
                 w = builder.CreateLearnableParameter(nameOfW, m_layerSizes[i + 1], m_layerSizes[i]);
-                m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale);
+                m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale, m_initValueOffset);
                 b = builder.CreateLearnableParameter(nameOfB, m_layerSizes[i + 1], 1);
                 output = ApplyNonlinearFunction(builder.Plus(builder.Times(w, input, 1, nameOfTimes), b, nameOfPlus), i, nameOfH);
 
@@ -132,7 +132,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildFFDNNFromDescription(
         wstring nameOfPlus = nameOfTimes + L"+" + nameOfB;
 
         w = builder.CreateLearnableParameter(nameOfW, m_layerSizes[numHiddenLayers + 1], m_layerSizes[numHiddenLayers]);
-        m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale);
+        m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale, m_initValueOffset);
         b = builder.CreateLearnableParameter(nameOfB, m_layerSizes[numHiddenLayers + 1], 1);
         output = builder.Plus(builder.Times(w, input, 1, nameOfTimes), b, nameOfPlus);
         m_net->RenameNode(output, L"HLast");
@@ -198,12 +198,12 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildRNNFromDescription()
         {
             // TODO: to figure out sparse matrix size
             u = builder.CreateLearnableParameter(L"U0", m_layerSizes[1], m_layerSizes[0]);
-            m_net->InitLearnableParameters(u, m_uniformInit, randomSeed++, m_initValueScale);
+            m_net->InitLearnableParameters(u, m_uniformInit, randomSeed++, m_initValueScale, m_initValueOffset);
 
             if (m_recurrentLayers.size() > 0 && m_recurrentLayers[recur_idx] == 1)
             {
                 w = builder.CreateLearnableParameter(L"W0", m_layerSizes[1], m_layerSizes[1]);
-                m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale);
+                m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale, m_initValueOffset);
 
                 pastValue = builder.PastValue(NULL, m_defaultHiddenActivity, m_layerSizes[1], 1);
                 // unless there is a good algorithm to detect loops, use this explicit setup
@@ -230,12 +230,12 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildRNNFromDescription()
             {
                 // TODO: to figure out sparse matrix size
                 u = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"U%d", i), m_layerSizes[i + 1], m_layerSizes[i]);
-                m_net->InitLearnableParameters(u, m_uniformInit, randomSeed++, m_initValueScale);
+                m_net->InitLearnableParameters(u, m_uniformInit, randomSeed++, m_initValueScale, m_initValueOffset);
 
                 if (m_recurrentLayers.size() > 0 && m_recurrentLayers[recur_idx] == i + 1)
                 {
                     w = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"W%d", i), m_layerSizes[i + 1], m_layerSizes[i + 1]);
-                    m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale);
+                    m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale, m_initValueOffset);
 
                     pastValue = builder.PastValue(NULL, m_defaultHiddenActivity, (size_t) m_layerSizes[i + 1], 1);
                     // unless there is a good algorithm to detect loops, use this explicit setup
@@ -259,7 +259,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildRNNFromDescription()
         }
 
         w = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"W%d", numHiddenLayers), m_layerSizes[numHiddenLayers + 1], m_layerSizes[numHiddenLayers]);
-        m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale);
+        m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale, m_initValueOffset);
         /*m_net->MatrixL2Reg(w , L"L1w");*/
 
         label = builder.CreateInputNode(L"labels", m_layerSizes[numHiddenLayers + 1]);
@@ -311,12 +311,12 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildClassEntropyRNNFromDe
         if (numHiddenLayers > 0)
         {
             u = builder.CreateLearnableParameter(L"U0", m_layerSizes[1], m_layerSizes[0]);
-            m_net->InitLearnableParameters(u, m_uniformInit, randomSeed++, m_initValueScale);
+            m_net->InitLearnableParameters(u, m_uniformInit, randomSeed++, m_initValueScale, m_initValueOffset);
 
             if (m_recurrentLayers.size() > 0 && m_recurrentLayers[recur_idx] == 1)
             {
                 w = builder.CreateLearnableParameter(L"W0", m_layerSizes[1], m_layerSizes[1]);
-                m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale);
+                m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale, m_initValueOffset);
 
                 pastValue = builder.PastValue(NULL, m_defaultHiddenActivity, m_layerSizes[1], 1);
                 // unless there is a good algorithm to detect loops, use this explicit setup
@@ -330,7 +330,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildClassEntropyRNNFromDe
             else
             {
                 b = builder.CreateLearnableParameter(L"B0", m_layerSizes[1], 1);
-                m_net->InitLearnableParameters(b, m_uniformInit, randomSeed++, m_initValueScale);
+                m_net->InitLearnableParameters(b, m_uniformInit, randomSeed++, m_initValueScale, m_initValueOffset);
                 output = SimpleNetworkBuilder<ElemType>::ApplyNonlinearFunction(builder.Plus(builder.Times(u, input), b), 0);
             }
 
@@ -342,11 +342,11 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildClassEntropyRNNFromDe
             for (int i = 1; i < numHiddenLayers; i++)
             {
                 u = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"U%d", i), m_layerSizes[i + 1], m_layerSizes[i]);
-                m_net->InitLearnableParameters(u, m_uniformInit, randomSeed++, m_initValueScale);
+                m_net->InitLearnableParameters(u, m_uniformInit, randomSeed++, m_initValueScale, m_initValueOffset);
                 if (m_recurrentLayers.size() > 0 && m_recurrentLayers[recur_idx] == i + 1)
                 {
                     w = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"W%d", i), m_layerSizes[i + 1], m_layerSizes[i + 1]);
-                    m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale);
+                    m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale, m_initValueOffset);
 
                     pastValue = builder.PastValue(NULL, m_defaultHiddenActivity, (size_t) m_layerSizes[i + 1], 1);
                     // unless there is a good algorithm to detect loops, use this explicit setup
@@ -373,13 +373,13 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildClassEntropyRNNFromDe
         // e.g., [200 x 10000], where 10000 is the vocabulary size
         // this is for speed-up issue as per word matrix can be simply obtained using column slice
         w = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"W%d", numHiddenLayers), m_layerSizes[numHiddenLayers], m_layerSizes[numHiddenLayers + 1]);
-        m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale);
+        m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale, m_initValueOffset);
 
         // the label is a dense matrix. each element is the word index
         label = builder.CreateInputNode(L"labels", 4);
 
         clsweight = builder.CreateLearnableParameter(L"WeightForClassPostProb", m_nbrCls, m_layerSizes[numHiddenLayers]);
-        m_net->InitLearnableParameters(clsweight, m_uniformInit, randomSeed++, m_initValueScale);
+        m_net->InitLearnableParameters(clsweight, m_uniformInit, randomSeed++, m_initValueScale, m_initValueOffset);
         clslogpostprob = builder.Times(clsweight, input, 1, L"ClassPostProb");
 
         output = AddTrainAndEvalCriterionNodes(input, label, w, L"TrainNodeClassBasedCrossEntropy", L"EvalNodeClassBasedCrossEntrpy",
@@ -428,7 +428,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildConditionalLSTMNetwor
         if (m_lookupTableOrder > 0)
         {
             e = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"E%d", 0), m_layerSizes[1], m_layerSizes[0] / m_lookupTableOrder);
-            m_net->InitLearnableParameters(e, m_uniformInit, randomSeed++, m_initValueScale);
+            m_net->InitLearnableParameters(e, m_uniformInit, randomSeed++, m_initValueScale, m_initValueOffset);
             output = builder.LookupTable(e, input, L"LookupTable");
 
             if (m_addDropoutNodes)
@@ -466,7 +466,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildConditionalLSTMNetwor
         m_net->AddToNodeGroup(L"feature", gt);
         e = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"AuxTrans%d", 0),
                                              m_layerSizes[numHiddenLayers], m_auxFeatDim);
-        m_net->InitLearnableParameters(e, m_uniformInit, randomSeed++, m_initValueScale);
+        m_net->InitLearnableParameters(e, m_uniformInit, randomSeed++, m_initValueScale, m_initValueOffset);
         u = ApplyNonlinearFunction(builder.Times(e, gt), numHiddenLayers, L"TimesToGetGlobalBias");
         output = builder.Plus(input, u, L"PlusGlobalBias");
         input = output;
@@ -475,13 +475,13 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildConditionalLSTMNetwor
         // e.g., [200 x 10000], where 10000 is the vocabulary size
         // this is for speed-up issue as per word matrix can be simply obtained using column slice
         w = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"W%d", numHiddenLayers), m_layerSizes[numHiddenLayers], m_layerSizes[numHiddenLayers + 1]);
-        m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale);
+        m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale, m_initValueOffset);
 
         // the label is a dense matrix. each element is the word index
         label = builder.CreateInputNode(L"labels", 4);
 
         clsweight = builder.CreateLearnableParameter(L"WeightForClassPostProb", m_nbrCls, m_layerSizes[numHiddenLayers]);
-        m_net->InitLearnableParameters(clsweight, m_uniformInit, randomSeed++, m_initValueScale);
+        m_net->InitLearnableParameters(clsweight, m_uniformInit, randomSeed++, m_initValueScale, m_initValueOffset);
         clslogpostprob = builder.Times(clsweight, input, 1, L"ClassPostProb");
 
         output = AddTrainAndEvalCriterionNodes(input, label, w, L"TrainNodeClassBasedCrossEntropy", L"EvalNodeClassBasedCrossEntrpy",
@@ -535,7 +535,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildLogBilinearNetworkFro
         if (m_lookupTableOrder > 0)
         {
             e = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"E%d", 0), m_layerSizes[1], m_layerSizes[0] / m_lookupTableOrder);
-            m_net->InitLearnableParameters(e, m_uniformInit, randomSeed++, m_initValueScale);
+            m_net->InitLearnableParameters(e, m_uniformInit, randomSeed++, m_initValueScale, m_initValueOffset);
             output = builder.LookupTable(e, input, L"Lookuptatble");
 
             if (m_addDropoutNodes)
@@ -556,7 +556,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildLogBilinearNetworkFro
             pastValueXI->AttachInputs({ input });
             // TODO: to figure out sparse matrix size
             Wxi = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"DD%d", ik), m_layerSizes[0], m_layerSizes[0]);
-            m_net->InitLearnableParameters(Wxi, m_uniformInit, randomSeed++, m_initValueScale);
+            m_net->InitLearnableParameters(Wxi, m_uniformInit, randomSeed++, m_initValueScale, m_initValueOffset);
 
             it = builder.Plus(output, builder.Times(Wxi, pastValueXI));
             output = it;
@@ -572,13 +572,13 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildLogBilinearNetworkFro
         for (int i = m_lookupTableOrder > 0 ? 1 : 0; i < numHiddenLayers; i++)
         {
             u = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"U%d", i), m_layerSizes[i + 1], m_layerSizes[i] * (m_lookupTableOrder > 0 ? m_lookupTableOrder : 1));
-            m_net->InitLearnableParameters(u, m_uniformInit, randomSeed++, m_initValueScale);
+            m_net->InitLearnableParameters(u, m_uniformInit, randomSeed++, m_initValueScale, m_initValueOffset);
             output = builder.Times(u, input);
             input = output;
             if (m_recurrentLayers.size() > 0 && m_recurrentLayers[recur_idx] == i + 1)
             {
                 w = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"R%d", i + 1), m_layerSizes[i + 1], m_layerSizes[i + 1]);
-                m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale);
+                m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale, m_initValueOffset);
                 pastValue = builder.PastValue(NULL, m_defaultHiddenActivity, m_layerSizes[i + 1], 1);
                 output = builder.Plus(builder.Times(w, pastValue), input);
 
@@ -597,7 +597,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildLogBilinearNetworkFro
         }
 
         w = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"W%d", numHiddenLayers), m_layerSizes[numHiddenLayers + 1], m_layerSizes[numHiddenLayers]);
-        m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale);
+        m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale, m_initValueOffset);
 
         label = builder.CreateInputNode(L"labels", m_layerSizes[numHiddenLayers + 1]);
         AddTrainAndEvalCriterionNodes(input, label, w);
@@ -664,19 +664,19 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildDNNLMNetworkFromDescr
             {
                 // TODO: to figure out sparse matrix size
                 Wxi2 = builder.CreateLearnableParameter(L"WXI2", m_layerSizes[1], m_layerSizes[0]);
-                m_net->InitLearnableParameters(Wxi2, m_uniformInit, randomSeed++, m_initValueScale);
+                m_net->InitLearnableParameters(Wxi2, m_uniformInit, randomSeed++, m_initValueScale, m_initValueOffset);
                 // TODO: to figure out sparse matrix size
                 Wxi3 = builder.CreateLearnableParameter(L"WXI3", m_layerSizes[1], m_layerSizes[0]);
-                m_net->InitLearnableParameters(Wxi3, m_uniformInit, randomSeed++, m_initValueScale);
+                m_net->InitLearnableParameters(Wxi3, m_uniformInit, randomSeed++, m_initValueScale, m_initValueOffset);
                 // TODO: to figure out sparse matrix size
                 Wxi4 = builder.CreateLearnableParameter(L"WXI4", m_layerSizes[1], m_layerSizes[0]);
-                m_net->InitLearnableParameters(Wxi4, m_uniformInit, randomSeed++, m_initValueScale);
+                m_net->InitLearnableParameters(Wxi4, m_uniformInit, randomSeed++, m_initValueScale, m_initValueOffset);
                 // TODO: to figure out sparse matrix size
                 Wxi1 = builder.CreateLearnableParameter(L"WXI1", m_layerSizes[1], m_layerSizes[0]);
-                m_net->InitLearnableParameters(Wxi1, m_uniformInit, randomSeed++, m_initValueScale);
+                m_net->InitLearnableParameters(Wxi1, m_uniformInit, randomSeed++, m_initValueScale, m_initValueOffset);
                 // TODO: to figure out sparse matrix size
                 Wxi = builder.CreateLearnableParameter(L"WXI", m_layerSizes[1], m_layerSizes[0]);
-                m_net->InitLearnableParameters(Wxi, m_uniformInit, randomSeed++, m_initValueScale);
+                m_net->InitLearnableParameters(Wxi, m_uniformInit, randomSeed++, m_initValueScale, m_initValueOffset);
 
                 // unless there is a good algorithm to detect loops, use this explicit setup
                 it = builder.Plus(
@@ -711,11 +711,11 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildDNNLMNetworkFromDescr
             for (int i = 1; i < numHiddenLayers; i++)
             {
                 u = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"U%d", i), m_layerSizes[i + 1], m_layerSizes[i]);
-                m_net->InitLearnableParameters(u, m_uniformInit, randomSeed++, m_initValueScale);
+                m_net->InitLearnableParameters(u, m_uniformInit, randomSeed++, m_initValueScale, m_initValueOffset);
                 if (m_recurrentLayers.size() > 0 && m_recurrentLayers[recur_idx] == i + 1)
                 {
                     w = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"W%d", i), m_layerSizes[i + 1], m_layerSizes[i + 1]);
-                    m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale);
+                    m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale, m_initValueOffset);
                     std::list<ComputationNodeBasePtr> recurrent_loop;
                     pastValue = builder.PastValue(NULL, m_defaultHiddenActivity, m_layerSizes[i + 1], 1);
                     output = SimpleNetworkBuilder<ElemType>::ApplyNonlinearFunction(builder.Plus(builder.Times(u, input), builder.Times(w, pastValue)), i);
@@ -736,7 +736,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildDNNLMNetworkFromDescr
 
         // TODO: to figure out sparse matrix size
         w = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"W%d", numHiddenLayers), m_layerSizes[numHiddenLayers + 1], m_layerSizes[numHiddenLayers]);
-        m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale);
+        m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale, m_initValueOffset);
         //                b = builder.CreateLearnableParameter(msra::strfun::wstrprintf (L"B%d", numHiddenLayers), m_layerSizes[numHiddenLayers+1], 1);
         label = builder.CreateSparseInputNode(L"labels", m_layerSizes[numHiddenLayers + 1]);
         AddTrainAndEvalCriterionNodes(input, label, w);
@@ -766,7 +766,7 @@ shared_ptr<ComputationNode<ElemType>> /*ComputationNodePtr*/ SimpleNetworkBuilde
         if (m_directConnect[i] == iLayer)
         {
             ComputationNodePtr directWIO = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"D%d", i), outputDim, inputDim);
-            m_net->InitLearnableParameters(directWIO, m_uniformInit, randomSeed++, m_initValueScale);
+            m_net->InitLearnableParameters(directWIO, m_uniformInit, randomSeed++, m_initValueScale, m_initValueOffset);
             directOutput = ApplyNonlinearFunction(builder.Times(directWIO, input), i);
 
             ComputationNodePtr scalar = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"SV%d", i), 1, 1);
@@ -801,10 +801,10 @@ shared_ptr<ComputationNode<ElemType>> /*ComputationNodePtr*/ SimpleNetworkBuilde
     Wxf = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"WXF%d", iLayer), outputDim, inputDim);
     Wxc = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"WXC%d", iLayer), outputDim, inputDim);
 
-    m_net->InitLearnableParameters(Wxo, m_uniformInit, randomSeed++, m_initValueScale);
-    m_net->InitLearnableParameters(Wxi, m_uniformInit, randomSeed++, m_initValueScale);
-    m_net->InitLearnableParameters(Wxf, m_uniformInit, randomSeed++, m_initValueScale);
-    m_net->InitLearnableParameters(Wxc, m_uniformInit, randomSeed++, m_initValueScale);
+    m_net->InitLearnableParameters(Wxo, m_uniformInit, randomSeed++, m_initValueScale, m_initValueOffset);
+    m_net->InitLearnableParameters(Wxi, m_uniformInit, randomSeed++, m_initValueScale, m_initValueOffset);
+    m_net->InitLearnableParameters(Wxf, m_uniformInit, randomSeed++, m_initValueScale, m_initValueOffset);
+    m_net->InitLearnableParameters(Wxc, m_uniformInit, randomSeed++, m_initValueScale, m_initValueOffset);
 
     bo = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"bo%d", iLayer), outputDim, 1);
     bc = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"bc%d", iLayer), outputDim, 1);
@@ -818,22 +818,22 @@ shared_ptr<ComputationNode<ElemType>> /*ComputationNodePtr*/ SimpleNetworkBuilde
     bo->Value().SetValue(m_outputGateInitVal);
 
     Whi = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"WHI%d", iLayer), outputDim, outputDim);
-    m_net->InitLearnableParameters(Whi, m_uniformInit, randomSeed++, m_initValueScale);
+    m_net->InitLearnableParameters(Whi, m_uniformInit, randomSeed++, m_initValueScale, m_initValueOffset);
     Wci = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"WCI%d", iLayer), outputDim, 1);
-    m_net->InitLearnableParameters(Wci, m_uniformInit, randomSeed++, m_initValueScale);
+    m_net->InitLearnableParameters(Wci, m_uniformInit, randomSeed++, m_initValueScale, m_initValueOffset);
 
     Whf = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"WHF%d", iLayer), outputDim, outputDim);
-    m_net->InitLearnableParameters(Whf, m_uniformInit, randomSeed++, m_initValueScale);
+    m_net->InitLearnableParameters(Whf, m_uniformInit, randomSeed++, m_initValueScale, m_initValueOffset);
     Wcf = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"WCF%d", iLayer), outputDim, 1);
-    m_net->InitLearnableParameters(Wcf, m_uniformInit, randomSeed++, m_initValueScale);
+    m_net->InitLearnableParameters(Wcf, m_uniformInit, randomSeed++, m_initValueScale, m_initValueOffset);
 
     Who = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"WHO%d", iLayer), outputDim, outputDim);
-    m_net->InitLearnableParameters(Who, m_uniformInit, randomSeed++, m_initValueScale);
+    m_net->InitLearnableParameters(Who, m_uniformInit, randomSeed++, m_initValueScale, m_initValueOffset);
     Wco = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"WCO%d", iLayer), outputDim, 1);
-    m_net->InitLearnableParameters(Wco, m_uniformInit, randomSeed++, m_initValueScale);
+    m_net->InitLearnableParameters(Wco, m_uniformInit, randomSeed++, m_initValueScale, m_initValueOffset);
 
     Whc = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"WHC%d", iLayer), outputDim, outputDim);
-    m_net->InitLearnableParameters(Whc, m_uniformInit, randomSeed++, m_initValueScale);
+    m_net->InitLearnableParameters(Whc, m_uniformInit, randomSeed++, m_initValueScale, m_initValueOffset);
 
     size_t layer1 = outputDim;
 
@@ -988,7 +988,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildCRFLSTMNetworkFromDes
         if (m_lookupTableOrder > 0)
         {
             e = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"E%d", 0), m_layerSizes[1], m_layerSizes[0] / m_lookupTableOrder);
-            m_net->InitLearnableParameters(e, m_uniformInit, randomSeed++, m_initValueScale);
+            m_net->InitLearnableParameters(e, m_uniformInit, randomSeed++, m_initValueScale, m_initValueOffset);
             output = builder.LookupTable(e, input, L"LookupTable");
 
             if (m_addDropoutNodes)
@@ -1017,7 +1017,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildCRFLSTMNetworkFromDes
                 else
                 {
                     u = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"U%d", i), m_layerSizes[i + 1], m_layerSizes[i] * (offset ? m_lookupTableOrder : 1));
-                    m_net->InitLearnableParameters(u, m_uniformInit, randomSeed++, m_initValueScale);
+                    m_net->InitLearnableParameters(u, m_uniformInit, randomSeed++, m_initValueScale, m_initValueOffset);
                     b = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"B%d", i), m_layerSizes[i + 1], 1);
                     output = ApplyNonlinearFunction(builder.Plus(builder.Times(u, input), b), i);
                 }
@@ -1030,13 +1030,13 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildCRFLSTMNetworkFromDes
         }
 
         w = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"TimesBeforeSoftMax%d", numHiddenLayers), m_layerSizes[numHiddenLayers + 1], m_layerSizes[numHiddenLayers]);
-        m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale);
+        m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale, m_initValueOffset);
 
         output = builder.Times(w, input, L"outputsBeforeSoftmax");
 
         trans = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"TransProb%d", numHiddenLayers), m_layerSizes[numHiddenLayers + 1], m_layerSizes[numHiddenLayers + 1]);
         trans->Value().SetValue((ElemType) 1.0 / m_layerSizes[numHiddenLayers + 1]);
-        //          m_net->InitLearnableParameters(trans, m_uniformInit, randomSeed++, m_initValueScale);
+        //          m_net->InitLearnableParameters(trans, m_uniformInit, randomSeed++, m_initValueScale, m_initValueOffset);
         trans->SetLearningRateMultiplier(1.0f);
         label = builder.CreateInputNode(L"labels", m_layerSizes[numHiddenLayers + 1]);
         AddTrainAndEvalCriterionNodes(output, label, nullptr, L"CRFTrainCriterion", L"CRFEvalCriterion", nullptr, trans);
@@ -1085,7 +1085,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildClassLSTMNetworkFromD
         if (m_lookupTableOrder > 0)
         {
             e = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"E%d", 0), m_layerSizes[1], m_layerSizes[0] / m_lookupTableOrder);
-            m_net->InitLearnableParameters(e, m_uniformInit, randomSeed++, m_initValueScale);
+            m_net->InitLearnableParameters(e, m_uniformInit, randomSeed++, m_initValueScale, m_initValueOffset);
             output = builder.LookupTable(e, input, L"LookupTable");
 
             if (m_addDropoutNodes)
@@ -1122,13 +1122,13 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildClassLSTMNetworkFromD
         // e.g., [200 x 10000], where 10000 is the vocabulary size
         // this is for speed-up issue as per word matrix can be simply obtained using column slice
         w = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"W%d", numHiddenLayers), m_layerSizes[numHiddenLayers], m_layerSizes[numHiddenLayers + 1]);
-        m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale);
+        m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale, m_initValueOffset);
 
         // the label is a dense matrix. each element is the word index
         label = builder.CreateInputNode(L"labels", 4);
 
         clsweight = builder.CreateLearnableParameter(L"WeightForClassPostProb", m_nbrCls, m_layerSizes[numHiddenLayers]);
-        m_net->InitLearnableParameters(clsweight, m_uniformInit, randomSeed++, m_initValueScale);
+        m_net->InitLearnableParameters(clsweight, m_uniformInit, randomSeed++, m_initValueScale, m_initValueOffset);
         clslogpostprob = builder.Times(clsweight, input, 1, L"ClassPostProb");
 
         output = AddTrainAndEvalCriterionNodes(input, label, w, L"TrainNodeClassBasedCrossEntropy", L"EvalNodeClassBasedCrossEntrpy",
@@ -1164,16 +1164,16 @@ shared_ptr<ComputationNode<ElemType>> /*ComputationNodePtr*/ SimpleNetworkBuilde
     input = inputObs;
     size_t nDim = inputDim + outputDim + 2;
     wInputGate = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"WINPUTGATE%d", iLayer), outputDim, nDim);
-    m_net->InitLearnableParameters(wInputGate, m_uniformInit, randomSeed++, m_initValueScale);
+    m_net->InitLearnableParameters(wInputGate, m_uniformInit, randomSeed++, m_initValueScale, m_initValueOffset);
     wInputGate->Value().ColumnSlice(0, 1).SetValue(m_inputGateInitVal); // init to input gate bias
     wForgetGate = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"WFORGETGATE%d", iLayer), outputDim, nDim);
-    m_net->InitLearnableParameters(wForgetGate, m_uniformInit, randomSeed++, m_initValueScale);
+    m_net->InitLearnableParameters(wForgetGate, m_uniformInit, randomSeed++, m_initValueScale, m_initValueOffset);
     wForgetGate->Value().ColumnSlice(0, 1).SetValue(m_forgetGateInitVal); // init to forget gate bias
     wOutputGate = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"WOUTPUTGATE%d", iLayer), outputDim, nDim);
-    m_net->InitLearnableParameters(wOutputGate, m_uniformInit, randomSeed++, m_initValueScale);
+    m_net->InitLearnableParameters(wOutputGate, m_uniformInit, randomSeed++, m_initValueScale, m_initValueOffset);
     wOutputGate->Value().ColumnSlice(0, 1).SetValue(m_outputGateInitVal); // init to output gate bias
     wMemoryCellMatrix = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"WMEMORYCELLWEIGHT%d", iLayer), outputDim, inputDim + outputDim + 1);
-    m_net->InitLearnableParameters(wMemoryCellMatrix, m_uniformInit, randomSeed++, m_initValueScale);
+    m_net->InitLearnableParameters(wMemoryCellMatrix, m_uniformInit, randomSeed++, m_initValueScale, m_initValueOffset);
     wMemoryCellMatrix->Value().ColumnSlice(0, 1).SetValue(0); // init to memory cell bias
 
     output = builder.LSTM(inputObs, wInputGate, wForgetGate, wOutputGate, wMemoryCellMatrix, msra::strfun::wstrprintf(L"LSTM%d", iLayer));
@@ -1234,7 +1234,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildLSTMNetworkFromDescri
         if (m_lookupTableOrder > 0)
         {
             e = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"E%d", 0), m_layerSizes[1], m_layerSizes[0] / m_lookupTableOrder);
-            m_net->InitLearnableParameters(e, m_uniformInit, randomSeed++, m_initValueScale);
+            m_net->InitLearnableParameters(e, m_uniformInit, randomSeed++, m_initValueScale, m_initValueOffset);
             output = builder.LookupTable(e, input, L"LookupTable");
 #ifdef DEBUG_DECODER
             e->Value().SetValue((ElemType) 0.01);
@@ -1275,7 +1275,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildLSTMNetworkFromDescri
                 else
                 {
                     u = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"U%d", i), m_layerSizes[i + 1], m_layerSizes[i]);
-                    m_net->InitLearnableParameters(u, m_uniformInit, randomSeed++, m_initValueScale);
+                    m_net->InitLearnableParameters(u, m_uniformInit, randomSeed++, m_initValueScale, m_initValueOffset);
                     b = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"B%d", i), m_layerSizes[i + 1], 1);
                     output = ApplyNonlinearFunction(builder.Plus(builder.Times(u, input), b), i);
                 }
@@ -1290,7 +1290,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildLSTMNetworkFromDescri
         }
 
         w = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"W%d", numHiddenLayers), m_layerSizes[numHiddenLayers + 1], m_layerSizes[numHiddenLayers]);
-        m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale);
+        m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale, m_initValueOffset);
 #ifdef DEBUG_DECODER
         w->Value().SetValue((ElemType) 0.01);
 #endif
@@ -1349,7 +1349,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildNCELSTMNetworkFromDes
         if (m_lookupTableOrder > 0)
         {
             e = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"E%d", 0), m_layerSizes[1], m_layerSizes[0] / m_lookupTableOrder);
-            m_net->InitLearnableParameters(e, m_uniformInit, randomSeed++, m_initValueScale);
+            m_net->InitLearnableParameters(e, m_uniformInit, randomSeed++, m_initValueScale, m_initValueOffset);
             output = builder.LookupTable(e, input, L"LookupTable");
 
             if (m_addDropoutNodes)
@@ -1381,7 +1381,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildNCELSTMNetworkFromDes
                 else
                 {
                     u = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"U%d", i), m_layerSizes[i + 1], m_layerSizes[i]);
-                    m_net->InitLearnableParameters(u, m_uniformInit, randomSeed++, m_initValueScale);
+                    m_net->InitLearnableParameters(u, m_uniformInit, randomSeed++, m_initValueScale, m_initValueOffset);
                     b = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"B%d", i), m_layerSizes[i + 1], 1);
                     output = ApplyNonlinearFunction(builder.Plus(builder.Times(u, input), b), i);
                 }
@@ -1407,7 +1407,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildNCELSTMNetworkFromDes
         // e.g., [200 x 10000], where 10000 is the vocabulary size
         // this is for speed-up issue as per word matrix can be simply obtained using column slice
         w = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"W%d", numHiddenLayers), m_layerSizes[numHiddenLayers], m_layerSizes[numHiddenLayers + 1]);
-        m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale);
+        m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale, m_initValueOffset);
 
         // the label is a dense matrix. each element is the word index
         label = builder.CreateInputNode(L"labels", 2 * (this->nce_noises + 1));
@@ -1588,7 +1588,7 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildNetworkFromDbnFile(co
         wstring nameOfH = msra::strfun::wstrprintf(L"H%d", i + 1);
 
         w = builder.CreateLearnableParameter(nameOfW, outputLayerSize, penultimateSize);
-        m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale);
+        m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale, m_initValueOffset);
         b = builder.CreateLearnableParameter(nameOfB, outputLayerSize, 1);
         output = builder.Plus(builder.Times(w, input, 1, nameOfTimes), b, nameOfPlus);
         m_net->RenameNode(output, L"HLast");
