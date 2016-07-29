@@ -57,11 +57,11 @@ def fully_connected_classifier_net(input, num_output_classes, hidden_layer_dim, 
 
 if __name__=='__main__':      
     dev = cntk_py.DeviceDescriptor.CPUDevice()       
-    input_dim = 937;
-    num_output_classes = 9304;
-    num_hidden_layers = 12;
-    hidden_layers_dim = 2048;
-    num_samples = 5000;
+    input_dim = 1;
+    num_output_classes = 2;
+    num_hidden_layers = 2;
+    hidden_layers_dim = 50;
+    num_samples = 25;
            
     input = create_variable((input_dim,), needs_gradient=True, name="input")
     label = create_variable((num_output_classes,), needs_gradient=True, name="label")
@@ -72,16 +72,22 @@ if __name__=='__main__':
     pe = cntk_py.ClassificationError(netout.Output(), label)
     ffnet = cntk_py.Combine([ce, pe, netout], "aa")      
     
-    trainer = cntk_py.Trainer(ffnet, ce.Output(), [cntk_py.SGDLearner(ffnet.Parameters(), 0.2)])
-
-    for i in range(0,1):
+    trainer = cntk_py.Trainer(ffnet, ce.Output(), [cntk_py.SGDLearner(ffnet.Parameters(), 0.2)])    
+    for i in range(0,10):
         nd = np.random.rand(input_dim,1,num_samples)        
+        
         input_value_ptr = create_ValuePtr_from_NumPy(nd.astype(np.float32), dev)
               
         label_data = np.zeros(num_output_classes*num_samples)
-        for j in range(0, num_samples):
-            label_data[(j*num_output_classes)+np.random.randint(0,num_output_classes)] = 1
         label_data = label_data.reshape((num_output_classes,)+(1,num_samples)).astype(np.float32)
+        for j in range(0, num_samples):           
+            if nd[0][0][j] < 0.5:
+                label_data[0][0][j] = 1
+            else:
+                label_data[1][0][j] = 1
+        
+
+        
         label_value_ptr = create_ValuePtr_from_NumPy(label_data, dev)
 
         arguments = dict()
@@ -89,44 +95,4 @@ if __name__=='__main__':
         arguments[label] = label_value_ptr
         
         trainer.TrainMinibatch(arguments, dev)
-        trainer.PreviousMinibatchTrainingLossValue().Data()
-
-        """
-        netout_variable = netout.Output()
-        prediction_err_var = pe.Output()
-        output_variable = ce.Output()
-                
-        output_shape = (1,)
-        output_value_ptr = create_ValuePtr((), cntk_py.DataType_Float, dev) 
-        prediction_err__value_ptr = create_ValuePtr((), cntk_py.DataType_Float, dev) 
-        netout_value_ptr = create_ValuePtr((num_output_classes,)+(1,num_samples), cntk_py.DataType_Float, dev) 
-
-        outputs = dict()
-        outputs[netout_variable] = netout_value_ptr
-        outputs[prediction_err_var] = prediction_err__value_ptr        
-        outputs_retain = set([output_variable])     
-
-        #
-        # Forward
-        #
-        
-        backpropstate = ffnet.Forward(arguments, outputs, dev, outputs_retain)
-                       
-        forward_data = output_value_ptr.Data().ToNumPy().reshape(output_shape)
-
-        grad_input_value_ptr = create_ValuePtr((input_dim,)+(1,num_samples), cntk_py.DataType_Float, dev)
-        
-        gradients = dict()
-        gradients[input] = grad_input_value_ptr
-        
-        rootGradients = dict()
-
-        rootGradientValuePtr = create_ValuePtr_with_value((), cntk_py.DataType_Float, 1, dev) 
-        rootGradients[output_variable] = rootGradientValuePtr
-     
-        ffnet.Backward(backpropstate, rootGradients, gradients)
-        input_grad_data = grad_input_value_ptr.Data().ToNumPy()
-        """
-
-        
-
+        print(trainer.PreviousMinibatchTrainingLossValue().Data().ToNumPy())
