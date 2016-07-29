@@ -181,7 +181,6 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         {
             fprintf(stderr, "\n");
             LOGPRINTF(stderr, "Evaluation criterion node(s):\n");
-            fprintf(stderr, "\n");
             for (const auto& node : evaluationNodes)
             {
                 LOGPRINTF(stderr, "\t%ls = %ls\n", node->NodeName().c_str(), node->OperationName().c_str());
@@ -251,17 +250,27 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
     // initializing weights and gradient holder
     // only one criterion so far TODO: support multiple ones?
     auto& learnableNodes = net->LearnableParameterNodes(criterionNodes[0]);
-    std::list<Matrix<ElemType>> smoothedGradients;
+    list<Matrix<ElemType>> smoothedGradients;
 
-    for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
+	vector<wstring> nodesToUpdateDescriptions; // for logging only
+	for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
     {
-        ComputationNodePtr node = dynamic_pointer_cast<ComputationNode<ElemType>>(*nodeIter);
+		ComputationNodePtr node = dynamic_pointer_cast<ComputationNode<ElemType>>(*nodeIter);
+		// BUGBUG: Do we need the smoothedGradients if !IsParameterUpdateRequired()? Seems to waste memory.
+		//         Note that lots of code assumes smoothedGradients to be in the same order as learnableNodes.
         smoothedGradients.push_back(Matrix<ElemType>(node->Value().GetNumRows(),
                                                      node->Value().GetNumCols(),
                                                      net->GetDeviceId()));
+		if (node->IsParameterUpdateRequired())
+			nodesToUpdateDescriptions.push_back(node->NodeDescription());
     }
+	fprintf(stderr, "\n");
+	LOGPRINTF(stderr, "Training %d out of %d parameters:\n", (int)nodesToUpdateDescriptions.size(), (int)learnableNodes.size());
+	for (let nodeDescription : nodesToUpdateDescriptions)
+		LOGPRINTF(stderr, "\t%ls\n", nodeDescription.c_str());
+	fprintf(stderr, "\n");
 
-    double avgCriterion, lrControlCriterion;
+	double avgCriterion, lrControlCriterion;
     lrControlCriterion = avgCriterion = numeric_limits<double>::infinity();
     size_t epochsNotCountedInAvgCriterion = startEpoch % m_learnRateAdjustInterval;
 
