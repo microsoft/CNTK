@@ -22,7 +22,69 @@ speechTrain = [
         needPrior = true
     ]
 
+    # NOTE: Delete or rename SimpleNetworkBuilder above to enable this BrainScript version
     BrainScriptNetworkBuilder = [    // the same as above but with BS. Currently not used. Enable by removing the SimpleNetworkBuilder above.
+        // note: this does not produce identical results because of different initialization order of random-initialized LearnableParameters
+
+        # ---- BEGIN STUFF FOR STD LIB ----
+        Dense (dim, inputDim=0, fNonLinearity) = [
+            initValueScale = 1.0
+            uniformInit = true
+            # parameters for this layer
+            B = Parameter(dim, 1, init = 'fixedValue', value = 0)
+            W = Parameter(dim, inputDim, init = if uniformInit then 'uniform' else 'gaussian'/*, initValueScale from outer scope*/)
+            # the function of this layer
+            f(in) = fNonLinearity (W*in+B)
+        ].f
+
+        Identity(x) = x
+
+        # returns a function that applies all functions in arrayOfFunctions to an input (like Keras)
+        Sequential (arrayOfFunctions) = [
+            Apply (in, N) = if N == 0 then in else arrayOfFunctions[N-1](Apply (in, N-1)) # we do that recursively
+            f(in) = Apply (in, Length (arrayOfFunctions))
+        ].f
+
+        # combine two models (like Keras); TODO: extend to >2 inputs
+        Merge (arrayOfTwoFunctions, op) = [
+            f (in1, in2) = op (arrayOfTwoFunctions[0] (in1), arrayOfTwoFunctions[1] (in2))
+        ].f
+        # ---- END STUFF FOR STD LIB ----
+
+        M = 363
+        H = 512
+        J = 132
+
+        # define the model
+        model = Sequential (
+            MeanVarNorm :
+            Dense (H, inputDim=M, Sigmoid) :
+            Dense (H, inputDim=H, Sigmoid) :
+            Dense (J, inputDim=H, Identity)
+        )
+
+        # define criterion and connect inputs to readers
+        features = Input (M) # inputs
+        labels   = Input (J)
+
+        z = model (features)  # apply the model function
+        z2 = model (features) # apply the model function again for testing
+
+        ce   = CrossEntropyWithSoftmax (labels, z) # compute criteria
+        errs = ErrorPrediction         (labels, z) # note: same numerical result if replacing z with z2
+
+        # connect to SGD and eval
+        featureNodes = (features)
+        labelNodes = (labels)
+        criterionNodes  = (ce)
+        evaluationNodes = (errs)
+
+        # BUGBUG: are scaled LLs part of the model() function? Should be, right?
+        scaledLogLikelihood = z - LogPrior(labels)
+        outputNodes = (scaledLogLikelihood)
+    ]
+
+    BrainScriptNetworkBuilder_plain = [    // the same as above but with BS. Currently not used. Enable by removing the SimpleNetworkBuilder above.
         // note: this does not produce identical results because of different initialization order of random-initialized LearnableParameters
         layerSizes=363:512:512:132  // [0..]
         trainingCriterion=CrossEntropyWithSoftmax
@@ -32,19 +94,23 @@ speechTrain = [
         initValueScale=1.0
         uniformInit=true
 
-        BFF(in, rows, cols) = [ B = Parameter(rows, 1, init = 'fixedValue', value = 0) ; W = Parameter(rows, cols, init = if uniformInit then 'uniform' else 'gaussian'/*, initValueScale from outer scope*/) ; z = W*in+B ]
-        GBFF(f, in, rows, cols) = [ Eh = rows,f(BFF(in, rows, cols).z) ]
+        BFF(in, rows, cols) = [
+           B = Parameter(rows, 1, init = 'fixedValue', value = 0)
+           W = Parameter(rows, cols, init = if uniformInit then 'uniform' else 'gaussian'/*, initValueScale from outer scope*/)
+           z = W*in+B
+        ].z
+        GBFF(f, in, rows, cols) = f(BFF(in, rows, cols))
 
         L = Length(layerSizes)-1    // number of model layers
-        features = Input(layerSizes[0], 1, tag='feature') ; labels = Input(layerSizes[Length(layerSizes)-1], 1, tag='label')
+        features = Input(layerSizes[0], tag='feature') ; labels = Input(layerSizes[Length(layerSizes)-1], tag='label')
         featNorm = if applyMeanVarNorm
                    then MeanVarNorm(features)
                    else features
         layers[layer:1..L-1] = if layer > 1
-                               then GBFF(layerTypes[layer], layers[layer-1].Eh, layerSizes[layer], layerSizes[layer-1])
+                               then GBFF(layerTypes[layer], layers[layer-1], layerSizes[layer], layerSizes[layer-1])
                                else GBFF(layerTypes[layer], featNorm, layerSizes[layer], layerSizes[layer-1])
-        outLayer = BFF(layers[L-1].Eh, layerSizes[L], layerSizes[L-1])
-        outZ = outLayer.z        // + PastValue(layerSizes[L], 1, outLayer.z)
+        outLayer = BFF(layers[L-1], layerSizes[L], layerSizes[L-1])
+        outZ = outLayer
         CE = trainingCriterion(labels, outZ, tag='criterion')
         Err = evalCriterion(labels, outZ, tag='evaluation')
         logPrior = LogPrior(labels)

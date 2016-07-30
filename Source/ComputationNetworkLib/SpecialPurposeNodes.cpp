@@ -123,7 +123,7 @@ template <class ElemType>
             fprintf(stderr, "%d", (int)timeRange.first);
         else if (timeRange.second == timeRange.first + 1)
             fprintf(stderr, "%d..%d", (int)timeRange.first, (int)timeRange.second-1);
-		fprintf(stderr, "] %ls %s--> %s\n", logGradientInstead ? "(gradient) " : "", m_message.c_str(), Input(0)->FormatOperationPrototype("").c_str());
+        fprintf(stderr, "] %ls %s--> %s\n", m_message.c_str(), logGradientInstead ? "(gradient) " : "", Input(0)->FormatOperationPrototype("").c_str());
         Input(0)->WriteMinibatchWithFormatting(stderr, fr, m_onlyUpToRow, m_onlyUpToT, m_formattingOptions.transpose, m_formattingOptions.isCategoryLabel, m_formattingOptions.isSparse, m_labelMapping,
                                                sequenceSeparator, sequencePrologue, sequenceEpilogue, elementSeparator, sampleSeparator,
 											   valueFormatString, logGradientInstead);
