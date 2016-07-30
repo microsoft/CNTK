@@ -196,7 +196,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
     additionalNodesToEvaluate.insert(additionalNodesToEvaluate.end(), preComputeNodesList.cbegin(), preComputeNodesList.cend());
 
     // allocate memory for forward and backward computation
-    net->AllocateAllMatrices(evaluationNodes, additionalNodesToEvaluate, criterionNodes[0]);
+    net->AllocateAllMatrices(evaluationNodes, additionalNodesToEvaluate, criterionNodes[0]); // TODO: use criterionNodes.front() throughout
 
     // get feature and label nodes into an array of matrices that will be passed to GetMinibatch()
     // TODO: instead, remember the nodes directly, to be able to handle both float and double nodes; current version will crash for mixed networks
@@ -264,10 +264,16 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
 		if (node->IsParameterUpdateRequired())
 			nodesToUpdateDescriptions.push_back(node->NodeDescription());
     }
+	size_t numNeedsGradient = 0;
+	for (let node : net->GetEvalOrder(criterionNodes[0]))
+		if (node->NeedsGradient())
+			numNeedsGradient++;
 	fprintf(stderr, "\n");
-	LOGPRINTF(stderr, "Training %d out of %d parameters:\n", (int)nodesToUpdateDescriptions.size(), (int)learnableNodes.size());
+	LOGPRINTF(stderr, "Training %d out of %d parameters and %d nodes with gradient:\n", (int)nodesToUpdateDescriptions.size(), (int)learnableNodes.size(), (int)numNeedsGradient);
 	for (let nodeDescription : nodesToUpdateDescriptions)
+	{
 		LOGPRINTF(stderr, "\t%ls\n", nodeDescription.c_str());
+	}
 	fprintf(stderr, "\n");
 
 	double avgCriterion, lrControlCriterion;
