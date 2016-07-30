@@ -23,7 +23,7 @@ speechTrain = [
     ]
 
     # NOTE: Delete or rename SimpleNetworkBuilder above to enable this BrainScript version
-    BrainScriptNetworkBuilder = [    // the same as above but with BS. Currently not used. Enable by removing the SimpleNetworkBuilder above.
+    BrainScriptNetworkBuilder = (new ComputationNetwork ([    // the same as above but with BS. Currently not used. Enable by removing the SimpleNetworkBuilder above.
         // note: this does not produce identical results because of different initialization order of random-initialized LearnableParameters
 
         # ---- BEGIN STUFF FOR STD LIB ----
@@ -49,13 +49,26 @@ speechTrain = [
         Merge (arrayOfTwoFunctions, op) = [
             f (in1, in2) = op (arrayOfTwoFunctions[0] (in1), arrayOfTwoFunctions[1] (in2))
         ].f
+
+        Fit (features, labels, model, loss, metric) = [
+            z  = model (features)  # apply the model function
+
+            ce   = loss   (labels, z, tag='criterion')  # compute criteria
+            errs = metric (labels, z, tag='evaluation') # note: same numerical result if replacing z with z2
+
+            #z2 = model (features)      # note: can apply the model function again for testing
+            #errs = metric (labels, z2) # will give same numerical result
+
+            # BUGBUG: This does not seem to fit.
+            scaledLogLikelihood = Pass (z - LogPrior (labels), tag='output')
+        ]
         # ---- END STUFF FOR STD LIB ----
 
         M = 363
         H = 512
         J = 132
 
-        # define the model
+        # --- define the model
         model = Sequential (
             MeanVarNorm :
             Dense (H, inputDim=M, Sigmoid) :
@@ -63,26 +76,13 @@ speechTrain = [
             Dense (J, inputDim=H, Identity)
         )
 
-        # define criterion and connect inputs to readers
+        # --- define inputs
         features = Input (M) # inputs
         labels   = Input (J)
 
-        z = model (features)  # apply the model function
-        z2 = model (features) # apply the model function again for testing
-
-        ce   = CrossEntropyWithSoftmax (labels, z) # compute criteria
-        errs = ErrorPrediction         (labels, z) # note: same numerical result if replacing z with z2
-
-        # connect to SGD and eval
-        featureNodes = (features)
-        labelNodes = (labels)
-        criterionNodes  = (ce)
-        evaluationNodes = (errs)
-
-        # BUGBUG: are scaled LLs part of the model() function? Should be, right?
-        scaledLogLikelihood = z - LogPrior(labels)
-        outputNodes = (scaledLogLikelihood)
-    ]
+        # --- define fitting function. This binds everything together for purpose of training.
+        fit = Fit (features, labels, model, CrossEntropyWithSoftmax, ErrorPrediction)
+    ].fit))
 
     BrainScriptNetworkBuilder_plain = [    // the same as above but with BS. Currently not used. Enable by removing the SimpleNetworkBuilder above.
         // note: this does not produce identical results because of different initialization order of random-initialized LearnableParameters
