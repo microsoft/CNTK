@@ -272,6 +272,8 @@ void LearnableParameter<ElemType>::Load(File& fstream, size_t modelVersion) /*ov
 template <class ElemType>
 /*virtual*/ void LearnableParameter<ElemType>::UpdateFunctionMBSize() /*override*/
 {
+    if (!m_initString.empty())
+        LogicError("LearnableParameter: Deferred initialization has not been completed until first call to UpdateFunctionMBSize().");
 }
 
 template <class ElemType>
@@ -296,14 +298,14 @@ template <class ElemType>
     // This is only possible for initialization methods that do not come with their own dimensions
     // (such as initialization from an array literal). These initializations are deferred until
     // the final validation, when the size is actually known.
-    if (isFinalValidationPass)
+    if (isFinalValidationPass && !m_initString.empty())
     {
         if (m_initString == L"fromValue")
             Value().SetValue(m_initValue);
         else if (m_initString == L"uniform" || m_initString == L"gaussian")
             InitRandom((m_initString == L"uniform"), m_randomSeed, m_initValueScale, m_initOnCPUOnly);
         else
-            LogicError("LearnableParameter: Invalid value of m_initString for deferred initialization.");
+            LogicError("LearnableParameter: Invalid value of m_initString '%ls' for deferred initialization.", m_initString.c_str());
         m_initString.clear(); // and remember that we are done
     }
 }
