@@ -1348,7 +1348,7 @@ bool SGD<ElemType>::PreCompute(ComputationNetworkPtr net,
 
     if (nodes.size() == 0)
     {
-        LOGPRINTF(stderr, "No PreCompute nodes found, skipping PreCompute step.\n");
+        LOGPRINTF(stderr, "No PreCompute nodes found, or all already computed. Skipping pre-computation step.\n");
         return false;
     }
 

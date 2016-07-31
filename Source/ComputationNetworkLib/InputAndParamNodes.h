@@ -109,6 +109,14 @@ public:
 
     // called from CloneFunction(..., parameters="constant")
     virtual void FreezeParameters() override; // from IFreezable
+
+private:
+    // init parameters for deferred initialization (which happens in Validate())
+    std::wstring m_initString; // if non-empty then deferred initialization is needed. Gets cleared upon completion of deferred init.
+    unsigned long m_randomSeed;
+    ElemType m_initValueScale;
+    bool m_initOnCPUOnly;
+    ElemType m_initValue;
 };
 
 // -----------------------------------------------------------------------

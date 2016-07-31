@@ -28,10 +28,10 @@ speechTrain = [
         // note: this does not produce identical results because of different initialization order of random-initialized LearnableParameters
 
         # ---- BEGIN STUFF FOR STD LIB ----
-        Dense {dim, inputDim=0, fNonLinearity} = [
+        Dense {dim, fNonLinearity} = [
             # parameters for this layer
-            B = Parameter{dim, 1,       initValue = 0}
-            W = Parameter{dim, inputDim}
+            B = Parameter {dim, 1,initValue = 0}
+            W = Parameter {dim, 0} // the input dimension is "learned" (inferred) during training
             # the function of this layer
             f(in) = fNonLinearity (W*in+B)
         ].f
@@ -70,9 +70,9 @@ speechTrain = [
         # --- define the model
         model = Sequential ({
             MeanVarNorm,
-            Dense {H, inputDim=M, Sigmoid},
-            Dense {H, inputDim=H, Sigmoid},
-            Dense {J, inputDim=H, Identity}
+            Dense {H, Sigmoid},
+            Dense {H, Sigmoid},
+            Dense {J, Identity}
         })
 
         # --- define inputs

@@ -28,15 +28,15 @@ train = [
         ]
 
         DNNSigmoidLayer(inDim, outDim, x, parmScale) = [        // Sigmoid non-linearity
-            W = ParameterTensor((outDim : inDim), init="uniform", initValueScale=parmScale, initOnCPUOnly=true) 
-            b = ParameterTensor( outDim,          init="uniform", initValueScale=parmScale, initOnCPUOnly=true) 
+            W = ParameterTensor((outDim : 0/*inDim, gets inferred*/), init="uniform", initValueScale=parmScale, initOnCPUOnly=true) 
+            b = ParameterTensor( outDim,                              init="uniform", initValueScale=parmScale, initOnCPUOnly=true) 
             z = W * x + b
             out = Sigmoid(z)
         ]
 
         DNNLayer(inDim, outDim, x, parmScale) = [               // no non-linearity, as input for SoftMax
-            W = Parameter(outDim, inDim, init="uniform", initValueScale=parmScale, initOnCPUOnly=true)
-            b = Parameter(outDim, 1,     init="uniform", initValueScale=parmScale, initOnCPUOnly=true)
+            W = Parameter(outDim, 0/*inDim, gets inferred*/), init="uniform", initValueScale=parmScale, initOnCPUOnly=true)
+            b = Parameter(outDim, 1,                          init="uniform", initValueScale=parmScale, initOnCPUOnly=true)
             out = W * x + b
         ]
 

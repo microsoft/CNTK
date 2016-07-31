@@ -42,6 +42,8 @@ void LearnableParameter<ElemType>::InitShape(const TensorShape& shape)
 //  - init="fromFile",    value from 'initFromFilePath' --deprecated in favor of just specifying 'initFromFilePath'
 //  - init="fromLiteral", value from 'initFromLiteral'  --deprecated in favor of initValue=array expression
 // The forms that infer the dimensions have different BrainScript names. TODO: need one for fromFile
+// TODO: All forms that require specified dimensions but contain zeroes (to be updated by graph)
+//       will need to do deferred initialization, or have a way to repeat it.
 template <class ElemType>
 LearnableParameter<ElemType>::LearnableParameter(const ScriptableObjects::IConfigRecordPtr configp) :
     LearnableParameter(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"shape"))
@@ -65,30 +67,46 @@ LearnableParameter<ElemType>::LearnableParameter(const ScriptableObjects::IConfi
         if (!initFromFilePath.empty())                       // 'initFromFilePath' given --> initialize from file
             initString = L"fromFile"; // (note: this is only used internally; external use is deprecated)
         else if (!initValue.Is<ScriptableObjects::String>()) // 'initValue' given (not an empty string) --> initialize from value
-            initString = L"fromValue"; // (note: this is only used internally)
+        {
+            if (initValue.Is<ScriptableObjects::Double>())
+                initString = L"fromValue"; // (note: this is only used internally)
+            else if (initValue.Is<ScriptableObjects::ConfigArray>())
+                initString = L"fromValueArray"; // (note: this is only used internally)
+            else
+                InvalidArgument("'initValue' must be numerical");
+        }
         else if (!initValue.AsRef<ScriptableObjects::String>().empty()) // it's a string: must be empty
             InvalidArgument("LearnableParameter: 'initValue' must be an empty string or not a string.");
         else  // no pertinent optional arguments given: default to 'uniform'
             initString = L"uniform"; // default is uniform
     }
+    // deferred variants
+    // Deferred means that this kind of initialization is allowed when some dimensions are unspecified, and thus happens during Validate().
     if (initString == L"uniform" || initString == L"gaussian") // random init
     {
+        m_initString = initString;
         // TODO: add more randomization types, and use a more meaningful scaling
+        // Keras uses "normal" instead of "gaussian". We can use that here too to denote the one with sane scaling, and deprecate "gaussian" with a warning.
         static unsigned long randomSeed = 1;
         int forcedRandomSeed = configp->Get(L"randomSeed"); // forcing a specific random seed is useful for testing to get repeatable initialization independent of evaluation order
-        InitRandom((initString == L"uniform"), forcedRandomSeed < 0 ? randomSeed++ : (unsigned long) forcedRandomSeed, configp->Get(L"initValueScale"), configp->Get(L"initOnCPUOnly"));
+        m_randomSeed = forcedRandomSeed < 0 ? randomSeed++ : (unsigned long)forcedRandomSeed;
+        m_initValueScale = configp->Get(L"initValueScale");
+        m_initOnCPUOnly = configp->Get(L"initOnCPUOnly");
     }
     else if (initString == L"zero")
-        Value().SetValue(0);
+    {
+        m_initString = L"fromValue";
+        m_initValue = 0;
+    }
     else if (initString == L"fromValue") // from 'initValue'
     {
-        if (initValue.Is<ScriptableObjects::Double>())
-            Value().SetValue((ElemType)initValue);
-        else if (initValue.Is<ScriptableObjects::ConfigArray>())
-            InvalidArgument("'initValue' for arrays not yet implemented"); // array not yet implemented
-        else
-            InvalidArgument("'initValue' must be numerical");
+        m_initString = initString;
+        m_initValue = initValue;
     }
+    // non-deferred variants
+    // For the dimensions are always known at this point, so we don't need/want to have to save all those parameters.
+    else if (initString == L"fromValueArray") // from 'initValue' which has array form
+        InvalidArgument("'initValue' for arrays not yet implemented"); // array not yet implemented
     else if (initString == L"fromFile") // load from 'iniFromFilePath'
     {
         if (initFromFilePath.empty())
@@ -205,6 +223,8 @@ void LearnableParameter<ElemType>::InitFromArray(const std::vector<ElemType>& ar
 template <class ElemType>
 void LearnableParameter<ElemType>::Save(File& fstream) const /*override*/
 {
+    if (!m_initString.empty())
+        LogicError("LearnableParameter: Cannot Save() before deferred initialization has completed.");
     Base::Save(fstream);
     fstream << m_learningRateMultiplier;
     m_sampleLayout.Save(fstream);
@@ -244,6 +264,8 @@ void LearnableParameter<ElemType>::Load(File& fstream, size_t modelVersion) /*ov
     LoadValue(fstream);
     SetDims(sampleLayout, false); // note: call this after LoadValue() since LoadValue() overwrites m_sampleLayout
     VerifyDataSize(Value());      // sanity check
+
+    m_initString.clear(); // deferred initialization not possible after loading
 }
 
 // computation functions don't do anything for parameter nodes
@@ -268,6 +290,22 @@ template <class ElemType>
 {
     Base::Validate(isFinalValidationPass);
     m_pMBLayout = nullptr; // this node does not hold mini-batch data
+
+    // deferred initialization
+    // We support this feature that some dimensions can be specified as 0, and get inferred.
+    // This is only possible for initialization methods that do not come with their own dimensions
+    // (such as initialization from an array literal). These initializations are deferred until
+    // the final validation, when the size is actually known.
+    if (isFinalValidationPass)
+    {
+        if (m_initString == L"fromValue")
+            Value().SetValue(m_initValue);
+        else if (m_initString == L"uniform" || m_initString == L"gaussian")
+            InitRandom((m_initString == L"uniform"), m_randomSeed, m_initValueScale, m_initOnCPUOnly);
+        else
+            LogicError("LearnableParameter: Invalid value of m_initString for deferred initialization.");
+        m_initString.clear(); // and remember that we are done
+    }
 }
 
 // called from ComputationNode::ValidateInferInputDimsFrom()
@@ -288,6 +326,9 @@ void LearnableParameter<ElemType>::InferInputDimsFrom(const TensorShape& otherSh
     // infer at least one dimension
     if (otherShape.GetRank() == 0 || otherShape.GetNumElements() == 0)
         return; // LogicError("ValidateInferInputDimsFrom: Inferred dimensions must not be empty.");
+
+    if (m_initString.empty())
+        LogicError("InferInputDimsFrom: Attempted to infer dimensions, with no deferred initialization pending.");
     
     // if no dimensions have been set at all, copy otherShape
     // Don't verify dimensions in this case, because the node may have explicitly been defined as a vector of 0 elements.
