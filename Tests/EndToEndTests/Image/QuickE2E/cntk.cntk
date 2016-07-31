@@ -82,7 +82,7 @@ train = [
         pool2 = AveragePooling(conv2_act, pool2W, pool2H, pool2hStride, pool2vStride, imageLayout="cudnn")
 
         h1Dim = 128
-        h1 = DNNSigmoidLayer((4 : 4 : cMap2/*cudnn: CHW*/), h1Dim, pool2, 1).out
+        h1 = DNNSigmoidLayer(4 * 4 * cMap2, h1Dim, FlattenDimensions (pool2, 1, 3), 1).out
         # Note: 'CHW' and 'HWC' refer to row-major representations, while CNTK uses column-major, so must specify the values in reverse order
         ol = DNNLayer(h1Dim, labelDim, h1, 1).out
 
