@@ -298,7 +298,7 @@ public:
         };
         punctuations = set<wstring>{
             L"=", L";", L",", L"\n",
-            L"[", L"]", L"(", L")",
+            L"[", L"]", L"(", L")", L"{", L"}",
             L"+", L"-", L"*", L"/", L"**", L".*", L"%", L"||", L"&&", L"^",
             L"!",
             L"==", L"!=", L"<", L"<=", L">", L">=",
@@ -665,7 +665,7 @@ public:
         : Lexer(move(includePaths))
     {
         infixPrecedence = map<wstring, int>{
-            {L".", 99}, {L"[", 99}, {L"(",   99}, // also sort-of infix operands...
+            {L".", 99}, {L"[", 99}, {L"(",   99}, {L"{",   99}, // (with LHS) these are also sort-of infix operands...
             {L"*", 10}, {L"/", 10}, {L".*",  10}, {L"**", 10}, {L"%", 10},
             {L"+",  9}, {L"-",  9}, {L"with", 9}, {L"==",  8},
             {L"!=", 8}, {L"<",  8}, {L"<=",   8}, {L">",   8}, {L">=", 8},
@@ -792,18 +792,18 @@ public:
                 if (left->op != L"id") // currently only allow for a single argument
                     Expected(L"identifier");
                 ConsumeToken();
-                let macroArgs = make_shared<Expression>(left->location, L"()", left); // wrap identifier in a '()' macro-args expression
+                let macroArgs = make_shared<Expression>(left->location, L"()", left); // wrap identifier in a "()" macro-args expression
                 // TODO: test parsing of i => j => i*j
                 let body = ParseExpression(opPrecedence, stopAtNewline); // pass same precedence; this makes '=>' right-associative  e.g.i=>j=>i*j
                 operation->args[0] = macroArgs;                          // [0]: parameter list
                 operation->args.push_back(body);                         // [1]: right operand
             }
-            else if (op == L"(") // === macro application
+            else if (op == L"(" || op == L"{") // === macro application
             {
-                // op = "("   means 'apply'
+                // op = "(" and "{"   mean 'apply', where {} refers to experimental constructor syntax
                 // args[0] = lambda expression (lambda: op="=>", args[0] = param list, args[1] = expression with unbound vars)
-                // args[1] = arguments    (arguments: op="(), args=vector of expressions, one per arg; and namedArgs)
-                operation->args.push_back(ParseMacroArgs(false)); // [1]: all arguments
+                // args[1] = arguments    (arguments: op="()", args=vector of expressions, one per arg; and namedArgs)
+                operation->args.push_back(ParseMacroArgs(false, op)); // [1]: all arguments
             }
             else if (op == L"[") // === array index
             {
@@ -841,11 +841,12 @@ public:
     //         In case of macro definition, all arguments must be of type "id". Pass 'defining' to check for that.
     //  namedArgs = dictionary of optional args
     //         In case of macro definition, dictionary values are default values that are used if the argument is not given
-    ExpressionPtr ParseMacroArgs(bool defining)
+    ExpressionPtr ParseMacroArgs(bool defining, wstring openSymbol)
     {
-        ConsumePunctuation(L"(");
+        ConsumePunctuation(openSymbol.c_str());
         auto macroArgs = make_shared<Expression>(GotToken().beginLocation, L"()");
-        if (GotToken().symbol != L")") // x() defines an empty argument list
+        let* closeSymbol = openSymbol == L"(" ? L")" : L"}";
+        if (GotToken().symbol != closeSymbol) // x() defines an empty argument list
         {
             for (;;)
             {
@@ -868,7 +869,7 @@ public:
                 ConsumeToken();
             }
         }
-        ConsumePunctuation(L")");
+        ConsumePunctuation(closeSymbol);
         return macroArgs;
     }
     map<wstring, pair<TextLocation, ExpressionPtr>> ParseRecordMembers()
@@ -877,7 +878,7 @@ public:
         //  member identifier -> expression
         // Macro declarations are translated into lambdas, e.g.
         //  F(A,B) = expr(A,B)
-        // gets represented in the dictionary as
+        // (and likewise F{A,B}) gets represented in the dictionary as
         //  F = (A,B) => expr(A,B)
         // where a lambda expression has this structure:
         //  op="=>"
@@ -909,7 +910,8 @@ public:
                 ConsumePunctuation(L"]");
             }
             // optional macro args
-            let parameters = (GotToken().symbol == L"(") ? ParseMacroArgs(true /*defining*/) : ExpressionPtr(); // optionally, macro arguments
+            let& openParen = GotToken().symbol;
+            let parameters = (openParen == L"(" || openParen == L"{") ? ParseMacroArgs(true /*defining*/, openParen) : ExpressionPtr(); // optionally, macro arguments
             ConsumePunctuation(L"=");
             auto rhs = ParseExpression(0, true /*can end at newline*/); // and the right-hand side
             // if macro then rewrite it as an assignment of a lambda expression
@@ -919,7 +921,8 @@ public:
             if (arrayIndexExpr)
             {
                 // create a lambda expression over the index variable
-                let macroArgs = make_shared<Expression>(arrayIndexExpr->location, L"()", arrayIndexExpr);      // wrap identifier in a '()' macro-args expression
+                // BUGBUG: For {} constructor functions--we cannot declare constructor lambdas for now.
+                let macroArgs = make_shared<Expression>(arrayIndexExpr->location, L"()", arrayIndexExpr);      // wrap identifier in a "()" macro-args expression
                 let initLambdaExpr = make_shared<Expression>(arrayIndexExpr->location, L"=>", macroArgs, rhs); // [0] is id, [1] is body
                 rhs = make_shared<Expression>(location, L"array");
                 rhs->args.push_back(fromExpr);       // [0] first index

@@ -535,8 +535,13 @@ static ConfigValuePtr Evaluate(const ExpressionPtr &e, const IConfigRecordPtr &s
             }
             return ConfigValuePtr(make_shared<ConfigLambda>(move(paramNames), move(namedParams), f), MakeFailFn(e->location), exprPath);
         }
-        else if (e->op == L"(") // === apply a function to its arguments
+        else if (e->op == L"(" || e->op == L"{") // === apply a function to its arguments
         {
+            // Note: "{" is experimental and currently ignored as a distinction. To do it more completely, we need
+            //  - remember how a function was declared (currently not possible for lambdas)
+            //  - make sure the invocation matches declaration
+            //  - disallow calling Parameter() or any other creating functions as "()"
+            //  - disallow calling "{}"-declared functions from inside a "()"
             let &lambdaExpr = e->args[0]; // [0] = function
             let &argsExpr = e->args[1];   // [1] = arguments passed to the function ("()" expression of expressions)
             let lambda = AsPtr<ConfigLambda>(Evaluate(lambdaExpr, scope, exprPath, L"" /*macros are not visible in expression names*/), lambdaExpr, L"function");
