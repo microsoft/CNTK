@@ -29,36 +29,76 @@ void LearnableParameter<ElemType>::InitShape(const TensorShape& shape)
 }
 
 // constructor from config
+// Parameterization is a little wicked. An older version required to specify the type of initialization
+// ("uniform|fixedValue|gaussian|fromFile|fromLiteral") and then a parameter with a matching name.
+// Now, only the matching parameter is sufficient, making it less verbose.
+//  - init="uniform|gaussian" (random init, scaled by arg initValueScale)
+//  - init="zero"
+//  - initValue=scalar --> initialize from this value
+//  - initValue=array or nested array --> initialize from this value, infer dimensions  --TODO: not implemented yet
+//  - initFromFilePath="..." --> read from a data file. This infers the dimensions from the file.
+// deprecated:
+//  - init="fixedValue",  value from 'value'            --deprecated in favor of just specifying initValue
+//  - init="fromFile",    value from 'initFromFilePath' --deprecated in favor of just specifying 'initFromFilePath'
+//  - init="fromLiteral", value from 'initFromLiteral'  --deprecated in favor of initValue=array expression
+// The forms that infer the dimensions have different BrainScript names. TODO: need one for fromFile
 template <class ElemType>
 LearnableParameter<ElemType>::LearnableParameter(const ScriptableObjects::IConfigRecordPtr configp) :
     LearnableParameter(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"shape"))
 {
-    // TODO: Change dimensions to take a generic tensor instead. That will be a (minor) breaking change that will require fix-ups when converting from NDL to BrainScript.
-    AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
-    // parameters[rows, [cols=1]] plus other optional parameters (learningRateMultiplier=[1|0|float], init=[uniform|gaussian|fixedvalue], initValueScale=[1|float], value=[0|float])
+    AttachInputsFromConfig(configp, this->GetExpectedNumInputs()); // (we have none; this checks that none are provided)
+    // Parameter{dims, other optional parameters: learningRateMultiplier=[1|0|float], init=[uniform|gaussian|], initValueScale=[1|float], initValue=[''|float], initFromFilePath=[''|string]}
+
+    // constant vs. parameter (with optional LR scaling)
     if (configp->Exists(L"learningRateMultiplier"))
         SetLearningRateMultiplier(configp->Get(L"learningRateMultiplier"));
     else if (configp->Exists(L"needsGradient") || configp->Exists(L"needGradient") || configp->Exists(L"computeGradient"))
         InvalidArgument("Deprecated parameter names needsGradient|needGradient|computeGradient are not supported in BrainScript. Use learningRateMultiplier instead.");
 
+    // initialization
     wstring initString = configp->Get(L"init");
-    if (initString == L"fixedValue")
-        Value().SetValue((ElemType) configp->Get(L"value"));
-    else if (initString == L"uniform" || initString == L"gaussian")
+    wstring initFromFilePath = configp->Get(L"initFromFilePath");
+    let& initValue = configp->Get(L"initValue");   // may be empty string, scalar, or array
+    // infer the type of the initial value from what other optional args are given
+    if (initString.empty())
     {
-        // TODO: add these options also to old NDL
+        if (!initFromFilePath.empty())                       // 'initFromFilePath' given --> initialize from file
+            initString = L"fromFile"; // (note: this is only used internally; external use is deprecated)
+        else if (!initValue.Is<ScriptableObjects::String>()) // 'initValue' given (not an empty string) --> initialize from value
+            initString = L"fromValue"; // (note: this is only used internally)
+        else if (!initValue.AsRef<ScriptableObjects::String>().empty()) // it's a string: must be empty
+            InvalidArgument("LearnableParameter: 'initValue' must be an empty string or not a string.");
+        else  // no pertinent optional arguments given: default to 'uniform'
+            initString = L"uniform"; // default is uniform
+    }
+    if (initString == L"uniform" || initString == L"gaussian") // random init
+    {
+        // TODO: add more randomization types, and use a more meaningful scaling
         static unsigned long randomSeed = 1;
         int forcedRandomSeed = configp->Get(L"randomSeed"); // forcing a specific random seed is useful for testing to get repeatable initialization independent of evaluation order
         InitRandom((initString == L"uniform"), forcedRandomSeed < 0 ? randomSeed++ : (unsigned long) forcedRandomSeed, configp->Get(L"initValueScale"), configp->Get(L"initOnCPUOnly"));
     }
-    else if (initString == L"fromFile")
+    else if (initString == L"zero")
+        Value().SetValue(0);
+    else if (initString == L"fromValue") // from 'initValue'
     {
-        wstring initFromFilePath = configp->Get(L"initFromFilePath");
+        if (initValue.Is<ScriptableObjects::Double>())
+            Value().SetValue((ElemType)initValue);
+        else if (initValue.Is<ScriptableObjects::ConfigArray>())
+            InvalidArgument("'initValue' for arrays not yet implemented"); // array not yet implemented
+        else
+            InvalidArgument("'initValue' must be numerical");
+    }
+    else if (initString == L"fromFile") // load from 'iniFromFilePath'
+    {
         if (initFromFilePath.empty())
             RuntimeError("initFromFilePath parameter must be provided when using \"fromFile\" initialization method");
         InitFromFile(initFromFilePath);
     }
-    else if (initString == L"fromLiteral")
+    // legacy
+    else if (initString == L"fixedValue") // deprecated. Use initValue=... instead
+        Value().SetValue((ElemType)configp->Get(L"value"));
+    else if (initString == L"fromLiteral") // deprecated. Use initValue=array instead
     {
         wstring initFromLiteral = configp->Get(L"initFromLiteral");
         if (initFromLiteral.empty())

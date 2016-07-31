@@ -89,7 +89,7 @@ CNTK2 = [
     // TODO: The API for Parameter is different in current 2.0 design, getting a constant as input for the initial values. 
     // This needs to be fixed to follow the way the Constant() is exposed in Python
     // Making this an internal node with "_" until we agree on the final interface:
-    _Parameter(shape, value = 0, learningRateMultiplier = 1.0, init = 'uniform'/*|fixedValue|gaussian|fromFile|fromLiteral*/, initValueScale = 1, initFromFilePath = '', initFromLiteral = '', initOnCPUOnly=true, randomSeed=-1, tag='') = new ComputationNode [ operation = 'LearnableParameter' ; shape = new TensorShape [ /*shape */ ] /*plus the function args*/ ]
+    _Parameter(shape, value = 0, initValue = '', learningRateMultiplier = 1.0, init = ''/*|uniform|fixedValue|gaussian|fromFile|fromLiteral*/, initValueScale = 1, initFromFilePath = '', initFromLiteral = '', initOnCPUOnly=true, randomSeed=-1, tag='') = new ComputationNode [ operation = 'LearnableParameter' ; shape = new TensorShape [ /*shape */ ] /*plus the function args*/ ]
 
     // 3. Shape operations
     // Changes: NewReshape -> Reshape, input -> _, dims -> shape
@@ -182,11 +182,21 @@ CNTK2 = [
     Identity(_, tag='') = new ComputationNode [ operation = 'Pass' ; inputs = _ /*plus the function args*/ ]    
 ]
 
-LearnableParameter (outputDim, inputDim, learningRateMultiplier = 1.0, init = 'uniform'/*|fixedValue|gaussian|fromFile|fromLiteral*/, initValueScale = 1, value = 0, initFromFilePath = '', initFromLiteral = '', initOnCPUOnly=true, randomSeed=-1, tag='') = new ComputationNode [ operation = 'LearnableParameter' ; shape = new TensorShape [ dims = (outputDim : inputDim) ] /*plus the function args*/ ]
-Parameter = LearnableParameter // deprecated 
+# Parameter{} can do several forms of initialization. It is no longer required to say 'init="kind"', so we can clean these up a bit.
+#  - initValue=scalar, value=array --> initialize from this value  --array form not implemented yet
+#  - initFromFilePath="..." --> read from a data file
+#  - init="uniform|gaussian" (random init scaled by initValueScale). Warning: This has magic scaling factors. TODO: document them here
+#  - init="zero"
+# deprecated:
+#  - initFromLiteral="..." (deprecated) --> parse a string literal (obsolete with value=array form)
+#  - init="fixedValue", value from 'value'
+# Warning: Current config will behave unexpected if user mistypes 'initValue' as 'value' (which will be ignored, defaulting to "uniform" init)
+Parameter {outputDim, inputDim, learningRateMultiplier = 1.0, init = ''/*|uniform|fixedValue|gaussian|fromFile|fromLiteral*/, initValueScale = 1, value = 0/*deprecated*/, initValue = '', initFromFilePath = '', initFromLiteral = ''/*deprecated*/, initOnCPUOnly=true, randomSeed=-1, tag=''} = new ComputationNode [ operation = 'LearnableParameter' ; shape = new TensorShape [ dims = (outputDim : inputDim) ] /*plus the function args*/ ]
+LearnableParameter = Parameter  // deprecated 
 # TODO: make Parameter take tensor dims?
-ParameterTensor(dims, learningRateMultiplier = 1.0, init = 'uniform'/*|fixedValue|gaussian|fromFile|fromLiteral*/, initValueScale = 1, value = 0, initFromFilePath = '', initFromLiteral = '', initOnCPUOnly=true, randomSeed=-1, tag='') = new ComputationNode [ operation = 'LearnableParameter' ; shape = new TensorShape [ /*dims*/ ] /*plus the function args*/ ]
-ConstantFromString(literal, tag='') = ParameterTensor((0)/*dim, will be inferred*/, init = 'fromLiteral', initFromLiteral = literal, learningRateMultiplier = 0.0)
+ParameterTensor {dims, learningRateMultiplier = 1.0, init = ''/*|uniform|fixedValue|gaussian|fromFile|fromLiteral*/, initValueScale = 1, value = 0, initValue = '', initFromFilePath = '', initFromLiteral = '', initOnCPUOnly=true, randomSeed=-1, tag=''} = new ComputationNode [ operation = 'LearnableParameter' ; shape = new TensorShape [ /*dims*/ ] /*plus the function args*/ ]
+ConstantFromString(literal, tag='') = ParameterTensor((0)/*dim, will be inferred*/, initFromLiteral = literal, learningRateMultiplier = 0.0)
+# TODO: Deprecate ConstantFromString() in favor of Constant(array expression)
 DynamicAxis(tag='') = new ComputationNode [ operation = 'DynamicAxis' ; /*plus the function args*/  ]
 Input(dims, dynamicAxis='', tag='feature') = new ComputationNode [ operation = 'InputValue' ; shape = new TensorShape [ /*dims*/ ] ; isImage = false /*plus the function args*/ ]
 # TODO: change from dynamicAxis by name to dynamicAxis being an actual object
@@ -195,8 +205,8 @@ ImageInput(imageWidth, imageHeight, imageChannels, imageLayout='CHW', dynamicAxi
 SparseImageInput(imageWidth, imageHeight, imageChannels, imageLayout='CHW', dynamicAxis='', tag='feature') = new ComputationNode [ operation = 'SparseInputValue' ; isImage = true /*plus the function args*/ ]
 EnvironmentInput(propertyName, tag='') = new ComputationNode [ operation = 'EnvironmentInput' /*plus the function args*/ ]
 # TODO: make 'dims' the first parameter, think ConstantTensor<dims> (val)
-ConstantTensor(val, dims, tag='') = ParameterTensor(dims, learningRateMultiplier = 0, init = 'fixedValue', value = val) 
-Constant(val, rows = 1, cols = 1, tag='') = Parameter(rows, cols, learningRateMultiplier = 0, init = 'fixedValue', value = val) 
+ConstantTensor(val, dims, tag='') = ParameterTensor(dims, learningRateMultiplier = 0, initValue = val)
+Constant(val, rows = 1, cols = 1, tag='') = Parameter(rows, cols, learningRateMultiplier = 0, initValue = val)
 PastValue(dims, input, timeStep = 1, defaultHiddenActivation = 0.1, tag='') = new ComputationNode [ operation = 'PastValue' ; inputs = input ; shape = new TensorShape [ /*dims*/ ] /*plus the function args*/ ]
 FutureValue(dims, input, timeStep = 1, defaultHiddenActivation = 0.1, tag='') = new ComputationNode [ operation = 'FutureValue' ; inputs = input ; shape = new TensorShape [ /*dims*/ ] /*plus the function args*/ ]
 Shift(input, fromOffset, boundaryValue, boundaryMode=-1/*context*/, dim=-1, tag='') = new ComputationNode [ operation = 'Shift' ; inputs = (input : boundaryValue) /*plus the function args*/ ]
@@ -303,12 +313,15 @@ Where(cond, tag='') = new ComputationNode [ operation = 'Where' ; inputs = cond 
 # common macros
 ##############################################################################
 
-BFF(in, rows, cols) = [ B = Parameter(rows, 1, init = 'fixedValue', value = 0) ; W = Parameter(rows, cols) ; z = W*in+B ] 
+BFF(in, rows, cols) = [ B = Parameter(rows, 1, initValue = 0) ; W = Parameter(rows, cols) ; z = W*in+B ] 
 SBFF(in, rows, cols) = [ Eh = Sigmoid(BFF(in, rows, cols).z) ] 
 MeanVarNorm(feat) = PerDimMeanVarNormalization(feat, Mean(feat), InvStdDev(feat)) 
 LogPrior(labels) = Log(Mean(labels)) 
 
-Embedding (embeddingDim, input, inputDim=input.dim, initFrom='fromFile'/*|gaussian|uniform*/, embeddingPath = '', sparseInput = false, learningRateWeight = 0.0) = [
+# specify one of these two for initialization:
+#  - init = "uniform"|"gaussian"
+#  - embeddingFile = PATHNAME
+Embedding (embeddingDim, input, inputDim=input.dim, initFrom=''/*|fromFile|gaussian|uniform*/, embeddingPath = '', sparseInput = false, learningRateWeight = 0.0) = [
     embedding = Transpose (LearnableParameter (inputDim, embeddingDim, learningRateMultiplier = learningRateWeight, init = initFrom, initFromFilePath = embeddingPath))
     lookup = if sparseInput then embedding * input
              else GatherPacked (input, embedding)
@@ -553,7 +566,7 @@ Parameters =
 [
     WeightParam (outputDim, inputDim) = Parameter (outputDim, inputDim, init='uniform', initValueScale=1, initOnCPUOnly=true, randomSeed=1)
     DiagWeightParam (outputDim)       = ParameterTensor ((outputDim), init='uniform', initValueScale=1, initOnCPUOnly=true, randomSeed=1) # meant to be applied elementwise
-    BiasParam (dim)                   = ParameterTensor ((dim), init='fixedValue', value=0.0)
+    BiasParam (dim)                   = ParameterTensor ((dim), initValue=0.0)
     ScalarParam()                     = BiasParam (1)
 
     # route input through an extra weight, for stabilization
@@ -561,16 +574,16 @@ Parameters =
         if enabled
         then [
             #beta = Exp (BiasParam ((inputDim))) # init value is 0
-            #beta = ParameterTensor ((inputDim), init='fixedValue', value=1.0) # init value is 1
+            #beta = ParameterTensor ((inputDim), initValue=1.0) # init value is 1
             # or SoftPlus: ln(1+e^beta)
-            #beta = Log (Constants.One + Exp (ParameterTensor ((inputDim), init='fixedValue', value=0.54132485/*ln (e-1)*/))) # init value is 1
+            #beta = Log (Constants.One + Exp (ParameterTensor ((inputDim), initValue=0.54132485/*ln (e-1)*/))) # init value is 1
 
             # sharpened Softplus: 1/f ln(1+e^{f*beta})
             # this behaves linear for weights around 1, yet guarantees positiveness
 
             f = ConstantTensor (4, (1))
             fInv = Reciprocal (f)
-            beta = fInv .* Log (Constants.One + Exp (f .* ParameterTensor ((inputDim), init='fixedValue', value=0.99537863/* 1/f*ln (e^f-1) */))) # init value is 1
+            beta = fInv .* Log (Constants.One + Exp (f .* ParameterTensor ((inputDim), initValue=0.99537863/* 1/f*ln (e^f-1) */))) # init value is 1
 
             TraceDense (h, what) = h  # delete h and uncomment Trace to trace the beta values. They are a valuable indicator.
                 //Trace (h, say=what, logFirst=10, logFrequency=100, logGradientToo=false, onlyUpToRow=9, onlyUpToT=25, format=[ type = "real" ; transpose = false ; precisionFormat = ".6" ])
