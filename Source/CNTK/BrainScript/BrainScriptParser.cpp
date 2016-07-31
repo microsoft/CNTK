@@ -712,7 +712,7 @@ public:
         {
             operand = make_shared<Expression>(tok.beginLocation, tok.symbol + L"("); // encoded as +( -( !(
             ConsumeToken();
-            operand->args.push_back(ParseExpression(100, stopAtNewline));
+            operand->args.push_back(ParseExpression(90, stopAtNewline)); // 90 is below x., x[, x(, and x{, but above all others
         }
         else if (tok.symbol == L"new") // === new class instance
         {
@@ -741,6 +741,22 @@ public:
             ConsumeToken();
             operand->namedArgs = ParseRecordMembers();
             ConsumePunctuation(L"]");
+        }
+        else if (tok.symbol == L"{") // === array literal { a, b, c } (same as a:b:c, but also allows for 0- and 1-element arrays)
+        {
+            operand = make_shared<Expression>(tok.beginLocation, L":");
+            ConsumeToken();
+            if (GotToken().symbol != L"}") // {} defines an empty array
+            {
+                for (;;)
+                {
+                    operand->args.push_back(ParseExpression(0, false)); // item. Precedence 0 means go until comma or closing parenthesis.
+                    if (GotToken().symbol != L",")
+                        break;
+                    ConsumeToken();
+                }
+            }
+            ConsumePunctuation(L"}");
         }
         else if (tok.symbol == L"array") // === array constructor
         {

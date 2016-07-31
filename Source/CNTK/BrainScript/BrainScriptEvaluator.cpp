@@ -894,8 +894,8 @@ public:
                 else // otherwise expect an array
                 {
                     let & arr = arg.AsRef<ConfigArray>();
-                    let range = arr.GetIndexRange();
-                    us = (double)(range.second + 1 - range.first);
+                    let range = arr.GetSize(arg.GetFailFn());
+                    us = (double)range;
                 }
             }
         }

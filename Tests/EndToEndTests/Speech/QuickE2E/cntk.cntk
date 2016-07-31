@@ -69,12 +69,12 @@ speechTrain = [
         J = 132
 
         # --- define the model
-        model = Sequential (
-            MeanVarNorm :
-            Dense {H, inputDim=M, Sigmoid} :
-            Dense {H, inputDim=H, Sigmoid} :
+        model = Sequential ({
+            MeanVarNorm,
+            Dense {H, inputDim=M, Sigmoid},
+            Dense {H, inputDim=H, Sigmoid},
             Dense {J, inputDim=H, Identity}
-        )
+        })
 
         # --- define inputs
         features = Input (M) # inputs
