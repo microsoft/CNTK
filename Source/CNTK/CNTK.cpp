@@ -586,13 +586,11 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
     if (actionsVal.Is<ScriptableObjects::ConfigArray>())
     {
         const ScriptableObjects::ConfigArray& actions = actionsVal;
-        for (int i = actions.GetIndexRange().first; i <= actions.GetIndexRange().second; i++)
+        for (int i = actions.GetIndexBeginEnd().first; i < actions.GetIndexBeginEnd().second; i++)
         {
             // TODO: When running in parallel with MPI, only commands in 'commandstoRunOnAllRanks' should
             // be run in parallel across multiple ranks. Others should only run on rank 0
-            actions.At(i, [](const wstring&)
-                       {
-                       }); // this will evaluate and thus execute the action
+            actions.At(i, [](const wstring&){}); // this will evaluate and thus execute the action
         }
     }
     // else action has already been executed, see comment above

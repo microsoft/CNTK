@@ -852,8 +852,8 @@ static wstring FormatConfigValue(ConfigValuePtr arg, const wstring &how)
     {
         let arr = arg.AsPtr<ConfigArray>();
         wstring result;
-        let range = arr->GetIndexRange();
-        for (int i = range.first; i <= range.second; i++)
+        let range = arr->GetIndexBeginEnd();
+        for (int i = range.first; i < range.second; i++)
         {
             if (i > range.first)
                 result.append(L"\n");
@@ -899,15 +899,15 @@ public:
                 }
             }
         }
-        else if (what == L"Mod" || what == L"IntDiv")  //two-arg int functions
+        else if (what == L"Mod" || what == L"IntDiv")  // two-arg int functions
         {
             let argsArg = config[L"args"];
             let& args = argsArg.AsRef<ConfigArray>();
-            auto range = args.GetIndexRange();
-            if (range.second != range.first + 1)
+            auto range = args.GetIndexBeginEnd();
+            if (range.second != range.first + 2)
                 argsArg.Fail(L"Mod/IntDiv expects two arguments");
             let arg1 = (int)args.At(range.first);
-            let arg2 = (int)args.At(range.second);
+            let arg2 = (int)args.At(range.first + 1);
 
             if (what == L"Mod")
                 us = (int)(arg1 % arg2);
@@ -936,11 +936,11 @@ public:
         if (what == L"IsSameObject")
         {
             let& args = argsArg.AsRef<ConfigArray>();
-            auto range = args.GetIndexRange();
-            if (range.second != range.first+1)
+            auto range = args.GetIndexBeginEnd();
+            if (range.second != range.first + 2)
                 argsArg.Fail(L"IsSameObject expects two arguments");
-            let arg1 = args.At(range.first ).AsPtr<Object>();
-            let arg2 = args.At(range.second).AsPtr<Object>();
+            let arg1 = args.At(range.first    ).AsPtr<Object>();
+            let arg2 = args.At(range.first + 1).AsPtr<Object>();
             us = arg1.get() == arg2.get();
         }
         else

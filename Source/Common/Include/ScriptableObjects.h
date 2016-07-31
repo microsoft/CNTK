@@ -620,11 +620,9 @@ public:
     {
     }
     // ConfigArray(ConfigValuePtr && val) : firstIndex(0), values(std::vector<ConfigValuePtr>{ move(val) }) { }
-    pair<int, int> GetIndexRange() const  // BUGBUG: We should define the return value as excluding the end point.
+    pair<int, int> GetIndexBeginEnd() const
     {
-        if (values.empty())
-            LogicError("GetIndexRange() can only be used on arrays that have at least one entry.");
-        return make_pair(firstIndex, firstIndex + (int)values.size() - 1);
+        return make_pair(firstIndex, firstIndex + (int)values.size());
     }
     // for use as a plain array: get size and verify that index range starts with 0
     template <typename FAILFN>

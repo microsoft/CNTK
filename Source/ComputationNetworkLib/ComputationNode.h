@@ -578,8 +578,8 @@ public:
             else // a whole vector
             {
                 ScriptableObjects::ConfigArrayPtr inputsArray = *inputsArg;
-                const auto range = inputsArray->GetIndexRange();
-                for (int i = range.first; i <= range.second; i++) // pull them. This will resolve all of them.
+                const auto range = inputsArray->GetIndexBeginEnd();
+                for (int i = range.first; i < range.second; i++) // pull them. This will resolve all of them.
                     inputs.push_back(inputsArray->At(i, [](const wstring&) { LogicError("GetInputs: out of bounds index while iterating??"); }));
             }
         }
