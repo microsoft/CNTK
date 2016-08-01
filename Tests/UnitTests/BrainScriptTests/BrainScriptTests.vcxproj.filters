@@ -22,7 +22,6 @@
     <ClInclude Include="..\..\..\Source\CNTK\BrainScript\BrainScriptParser.h">
       <Filter>From Brainscript</Filter>
     </ClInclude>
-    <ClInclude Include="ParserTestsData.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="From Brainscript">
