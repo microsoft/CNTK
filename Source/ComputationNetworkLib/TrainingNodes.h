@@ -72,6 +72,11 @@ public:
         ElemType v = m_leftMinusRight->FrobeniusNorm(); // v = sqrt( sum{ (I0[i] - I1[i])^2 } )
         Value().VerifySize(1, 1);
 
+        // Avoid division by zero. Could be checked in the deserializer already, but different 
+        // deserializers could be combined, so we need to check again.
+        if (num_labeled == 0)
+            RuntimeError("Encountered all-NAN label while computing the loss.");
+
         // We scale the loss so that it is still comparable.
         // E.g., if only half of the data was actually labeled, the loss will be doubled
         // If we didn't do that, we would sometimes get very high losses, sometimes very low,

@@ -326,7 +326,7 @@ private:
             value = static_cast<PrecisionType>(strtod(label.c_str(), &eptr));
             if (label.c_str() == eptr || errno == ERANGE)
             {
-                // try to recover to std::nan
+                // try to recover to nan
                 if (AreEqualIgnoreCase(label, "nan"))
                     value = std::numeric_limits<PrecisionType>::lowest();
                 else

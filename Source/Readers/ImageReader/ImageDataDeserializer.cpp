@@ -69,8 +69,6 @@ std::unique_ptr<IDataDeserializer> createImageDataDeserializer(const ConfigParam
 
 std::unique_ptr<IDataDeserializer> createImageDataDeserializer(CorpusDescriptorPtr corpus, const ConfigParameters& config)
 {
-    auto dbg = std::string(config(L"labelType", "classification")); UNUSED(dbg);
-    auto dbg2 = std::string(config(L"precision", "float")); UNUSED(dbg2);
     const LabelType labelType = AreEqualIgnoreCase(std::string(config(L"labelType", "classification")), "classification") ? LabelType::Classification : LabelType::Regression;
     const ElementType elementType = AreEqualIgnoreCase(std::string(config(L"precision", "float")), "float") ? ElementType::tfloat : ElementType::tdouble;
     return createImageDataDeserializer(corpus, config, labelType, elementType);
@@ -79,8 +77,6 @@ std::unique_ptr<IDataDeserializer> createImageDataDeserializer(CorpusDescriptorP
 // (soon to be) deprecated version
 std::unique_ptr<IDataDeserializer> createImageDataDeserializer(const ConfigParameters& config)
 {
-    auto dbg = std::string(config(L"labelType", "classification")); UNUSED(dbg);
-    auto dbg2 = std::string(config(L"precision", "float")); UNUSED(dbg2);
     const LabelType labelType = AreEqualIgnoreCase(std::string(config(L"labelType", "classification")), "classification") ? LabelType::Classification : LabelType::Regression;
     const ElementType elementType = AreEqualIgnoreCase(std::string(config(L"precision", "float")), "float") ? ElementType::tfloat : ElementType::tdouble;
     return createImageDataDeserializer(config, labelType, elementType);
