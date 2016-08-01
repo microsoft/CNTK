@@ -4389,8 +4389,11 @@ void GPUMatrix<ElemType>::TensorOp(ElemType beta, const GPUMatrix<ElemType>& a, 
                                    const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, 2>& regularStrides,
                                    const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, 2>& reducingStrides)
 {
-    if (reductionOp != ElementWiseOperator::opSum && reductionOp != ElementWiseOperator::opMax && reductionOp != ElementWiseOperator::opMin)
-        InvalidArgument("TensorOp: Unary reduction operations other than opMax, opMin, opSum not yet implemented.");
+    if (reductionOp != ElementWiseOperator::opSum &&
+        reductionOp != ElementWiseOperator::opMax &&
+        reductionOp != ElementWiseOperator::opMin &&
+        reductionOp != ElementWiseOperator::opLogSum)
+        InvalidArgument("TensorOp: Unary reduction operations other than opMax, opMin, opSum and opLogSum are not implemented.");
 
     a.PrepareDevice();
     if (a.GetComputeDeviceId() != GetComputeDeviceId())
