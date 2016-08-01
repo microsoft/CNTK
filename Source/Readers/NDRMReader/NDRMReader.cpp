@@ -100,6 +100,14 @@ NDRMReader<ElemType>::~NDRMReader()
     munmap(m_idfDataBuffer, m_idfFilePositionMax);
     close(m_idfHndl);
 #endif
+
+    free(m_dIdValues);
+    free(m_embXValues);
+    free(m_qEmbValues);
+    free(m_dEmbValues);
+    free(m_qStatsValues);
+    free(m_dStatsValues);
+    free(m_labels);
 }
 
 template <class ElemType>
@@ -273,13 +281,17 @@ void NDRMReader<ElemType>::InitFromConfig(const ConfigRecordType& readerConfig)
 template <class ElemType>
 void NDRMReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t /*epoch*/, size_t requestedEpochSamples)
 {
-    if (m_miniBatchSize != mbSize || m_dIdValues == NULL || m_embXValues == NULL || m_qEmbValues == NULL || m_dEmbValues == NULL || m_labels == NULL)
+    if (m_miniBatchSize != mbSize || m_dIdValues == NULL || m_embXValues == NULL
+        || m_qEmbValues == NULL || m_dEmbValues == NULL || m_labels == NULL
+        || m_qStatsValues == NULL || m_dStatsValues == NULL)
     {
         m_miniBatchSize = mbSize;
         m_dIdValues = (char*)malloc(sizeof(ElemType) * m_numWordsPerQuery * m_numWordsPerDoc * m_miniBatchSize);
         m_embXValues = (char*)malloc(sizeof(ElemType) * m_numWordsPerQuery * m_numWordsPerDoc * m_miniBatchSize * 2);
         m_qEmbValues = (char*)malloc(m_bytesPerVector * m_numWordsPerQuery * m_miniBatchSize);
         m_dEmbValues = (char*)malloc(m_bytesPerVector * m_numWordsPerDoc * m_miniBatchSize);
+        m_qStatsValues = (char*)malloc(sizeof(ElemType) * m_numWordsPerQuery * m_miniBatchSize);
+        m_dStatsValues = (char*)malloc(sizeof(ElemType) * m_numWordsPerDoc * m_miniBatchSize);
         m_labels = (char*)malloc(sizeof(ElemType) * m_numDocs * m_miniBatchSize);
 
         memset(m_labels, 0, sizeof(ElemType) * m_numDocs * m_miniBatchSize);
@@ -318,16 +330,19 @@ bool NDRMReader<ElemType>::TryGetMinibatch(StreamMinibatchInputs& matrices)
     {
         char* srcAddrBase = (char*)(i == 0 ? m_qEmbDataBuffer : m_dEmbDataBuffer);
         char* tgtAddrBase = (char*)(i == 0 ? m_qEmbValues : m_dEmbValues);
+        char* statsAddrBase = (char*)(i == 0 ? m_qStatsValues : m_dStatsValues);
         size_t numWordsPerFeatureSample = (i == 0 ? m_numWordsPerQuery : m_numWordsPerDoc);
         size_t numRows = m_vectorSize * numWordsPerFeatureSample;
         std::wstring featureNameIdentity = (i == 0 ? L"Qi" : L"Di" + std::to_wstring(i - 1));
         std::wstring featureNameEmbedding = (i == 0 ? L"Q" : L"D" + std::to_wstring(i - 1));
         std::wstring featureNameEmbeddingX = (i == 0 ? L"Qx" : L"Dx" + std::to_wstring(i - 1));
+        std::wstring featureNameStats = (i == 0 ? L"Qs" : L"Ds" + std::to_wstring(i - 1));
         bool inclIdentityFeature = (i > 0 && matrices.HasInput(featureNameIdentity));
         bool inclEmbeddingFeature = matrices.HasInput(featureNameEmbedding);
         bool inclEmbeddingXFeature = (i > 0 && matrices.HasInput(featureNameEmbeddingX));
+        bool inclStatsFeature = matrices.HasInput(featureNameStats);
 
-        if (!inclIdentityFeature && !inclEmbeddingFeature && !inclEmbeddingXFeature)
+        if (!inclIdentityFeature && !inclEmbeddingFeature && !inclEmbeddingXFeature && !inclStatsFeature)
             continue;
 
         if (inclIdentityFeature)
@@ -345,8 +360,14 @@ bool NDRMReader<ElemType>::TryGetMinibatch(StreamMinibatchInputs& matrices)
             memset(m_embXValues, 0, sizeof(ElemType) * m_numWordsPerQuery * m_numWordsPerDoc * actualMiniBatchSize * 2);
         }
 
+        if (inclStatsFeature)
+        {
+            memset(statsAddrBase, 0, sizeof(ElemType) * numWordsPerFeatureSample * actualMiniBatchSize);
+        }
+
         for (int j = 0; j < actualMiniBatchSize; j++)
         {
+            int wc = -1;
             for (int k = 0; k < numWordsPerFeatureSample; k++)
             {
                 int32_t wordId = *(int32_t*)((char*)m_dataBuffer
@@ -358,6 +379,7 @@ bool NDRMReader<ElemType>::TryGetMinibatch(StreamMinibatchInputs& matrices)
                 if (wordId == 0)
                     continue;
 
+                wc = k;
                 if (inclIdentityFeature)
                 {
                     ElemType* tgtIdAddr = (ElemType*)(m_dIdValues + (j * m_numWordsPerDoc + k) * m_numWordsPerQuery * sizeof(ElemType));
@@ -418,6 +440,12 @@ bool NDRMReader<ElemType>::TryGetMinibatch(StreamMinibatchInputs& matrices)
                     }
                 }
             }
+
+            if (inclStatsFeature && wc >= 0)
+            {
+                ElemType* statAddr = (ElemType*)((char*)statsAddrBase + j * numWordsPerFeatureSample * sizeof(ElemType));
+                statAddr[wc] = (ElemType)1;
+            }
         }
 
         if (inclIdentityFeature)
@@ -439,6 +467,13 @@ bool NDRMReader<ElemType>::TryGetMinibatch(StreamMinibatchInputs& matrices)
             Matrix<ElemType>& featuresEmbeddingX = matrices.GetInputMatrix<ElemType>(featureNameEmbeddingX);
             featuresEmbeddingX.Resize(m_numWordsPerQuery * m_numWordsPerDoc * 2, actualMiniBatchSize);
             featuresEmbeddingX.SetValue(m_numWordsPerQuery * m_numWordsPerDoc * 2, actualMiniBatchSize, featuresEmbeddingX.GetDeviceId(), (ElemType*)m_embXValues, matrixFlagNormal);
+        }
+
+        if (inclStatsFeature)
+        {
+            Matrix<ElemType>& featuresStats = matrices.GetInputMatrix<ElemType>(featureNameStats);
+            featuresStats.Resize(numWordsPerFeatureSample, actualMiniBatchSize);
+            featuresStats.SetValue(numWordsPerFeatureSample, actualMiniBatchSize, featuresStats.GetDeviceId(), (ElemType*)statsAddrBase, matrixFlagNormal);
         }
     }
 

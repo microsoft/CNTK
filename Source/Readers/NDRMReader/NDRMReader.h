@@ -41,6 +41,8 @@ class NDRMReader : public DataReaderBase
     char* m_embXValues;
     char* m_qEmbValues;
     char* m_dEmbValues;
+    char* m_qStatsValues;
+    char* m_dStatsValues;
     char* m_labels;
     MBLayoutPtr m_pMBLayout;
 
