@@ -17,9 +17,6 @@
     <ClCompile Include="BrainScript\BrainScriptParser.cpp">
       <Filter>BrainScript</Filter>
     </ClCompile>
-    <ClCompile Include="BrainScript\BrainScriptTest.cpp">
-      <Filter>BrainScript</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Common\Include\fileutil.h">
@@ -175,6 +172,7 @@
     <ClInclude Include="..\Readers\ReaderLib\Transformer.h">
       <Filter>from ReaderLib</Filter>
     </ClInclude>
+    <ClInclude Include="..\Common\Include\basetypes.h" />
     <ClInclude Include="..\Readers\CompositeDataReader\CompositeDataReader.h" />
   </ItemGroup>
   <ItemGroup>

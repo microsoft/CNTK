@@ -9,9 +9,6 @@
     <ClCompile Include="..\..\..\Source\CNTK\BrainScript\BrainScriptParser.cpp">
       <Filter>From Brainscript</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\Source\CNTK\BrainScript\BrainScriptTest.cpp">
-      <Filter>From Brainscript</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h" />

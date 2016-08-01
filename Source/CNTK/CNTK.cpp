@@ -445,11 +445,6 @@ static wstring PathToBSStringLiteral(const wstring& path) // quote a pathname fo
         return L'"' + path + L'"';
 }
 
-// TODO: decide where these should go. Also, do we need three variables?
-//extern wstring standardFunctions;
-//extern wstring commonMacros;
-//extern wstring computationNodes;
-
 int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapper that catches & reports Win32 exceptions
 {
     vector<wstring> args(argv, argv + argc);
@@ -493,7 +488,6 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
     bs += L"include \'cntk.core.bs'"; // start with including the standard macros
 
     // Note: Using lowercase ^^ here to match the Linux name of the CNTK exe.
-    //bs += standardFunctions + computationNodes + commonMacros + L"\n";
     for (const auto& sourceFile : sourceFiles)
         bs += L"include " + PathToBSStringLiteral(sourceFile) + L"\n";
     bs += L"\n]\n";
