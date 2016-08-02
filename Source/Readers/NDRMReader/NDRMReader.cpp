@@ -363,7 +363,7 @@ bool NDRMReader<ElemType>::TryGetMinibatch(StreamMinibatchInputs& matrices)
 
         if (inclStatsFeature)
         {
-            memset(statsAddrBase, 0, sizeof(ElemType) * numWordsPerFeatureSample * actualMiniBatchSize);
+            memset(statsAddrBase, 0, sizeof(ElemType) * numWordsPerFeatureSample * actualMiniBatchSize / m_docLengthBinSize);
         }
 
         for (int j = 0; j < actualMiniBatchSize; j++)
@@ -477,8 +477,8 @@ bool NDRMReader<ElemType>::TryGetMinibatch(StreamMinibatchInputs& matrices)
         if (inclStatsFeature)
         {
             Matrix<ElemType>& featuresStats = matrices.GetInputMatrix<ElemType>(featureNameStats);
-            featuresStats.Resize(numWordsPerFeatureSample, actualMiniBatchSize);
-            featuresStats.SetValue(numWordsPerFeatureSample, actualMiniBatchSize, featuresStats.GetDeviceId(), (ElemType*)statsAddrBase, matrixFlagNormal);
+            featuresStats.Resize(numWordsPerFeatureSample / m_docLengthBinSize, actualMiniBatchSize);
+            featuresStats.SetValue(numWordsPerFeatureSample / m_docLengthBinSize, actualMiniBatchSize, featuresStats.GetDeviceId(), (ElemType*)statsAddrBase, matrixFlagNormal);
         }
     }
 
