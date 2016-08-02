@@ -107,20 +107,20 @@ def test_op_reduce_loin(input_data, axis_data, expected_result, expected_gradien
                 precision=precision, clean_up=True, backward_pass=True, input_node=a)
 
 
-REDUCE_LOGSUM_TEST_CASES = [
+REDUCE_LOG_SUM_TEST_CASES = [
      ([[1, 2,  3]],   2,  [m.log(m.exp(1) + m.exp(2) + m.exp(3))],  [[m.exp(1-m.log(m.exp(1) + m.exp(2) + m.exp(3))), m.exp(2-m.log(m.exp(1) + m.exp(2) + m.exp(3))), m.exp(3-m.log(m.exp(1) + m.exp(2) + m.exp(3)))]]),
      ([[0,  100000]], 1,  [[100000]],  [[0, 1]]),
      ([[0, -100000]], 1,  [[0]],       [[1, 0]]),
 ]
 
-@pytest.mark.parametrize("input_data, axis_data, expected_result, expected_gradient", REDUCE_LOGSUM_TEST_CASES)
-def test_op_reduce_logsum(input_data, axis_data, expected_result, expected_gradient, device_id, precision):
+@pytest.mark.parametrize("input_data, axis_data, expected_result, expected_gradient", REDUCE_LOG_SUM_TEST_CASES)
+def test_op_reduce_log_sum(input_data, axis_data, expected_result, expected_gradient, device_id, precision):
 
     a = I([input_data])
 
 
     # slice using the operator
-    result = C.reduce_logsum(a, axis = axis_data)
+    result = C.reduce_log_sum(a, axis = axis_data)
 
     unittest_helper(result, None, [[expected_result]], device_id=device_id, 
                 precision=precision, clean_up=True, backward_pass=False)

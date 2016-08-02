@@ -1095,38 +1095,6 @@ def reduce_sum(x, axis=0, name=None):
     op.rank = 0 if op.axis == 0 else op._[0].rank    
     return op
 
-def reduce_log_sum(inputs, name=None): 
-    '''
-    Computes the log sum of the input tensor's elements. The output is a scalar,
-    which is the log sum of tensor's elements.
-
-    Examples:
-        >>> # create 3x2 matrix in a sequence of length 1 in a batch of one sample
-        >>> data = [[10, 20],[30, 40],[50, 60]]        
-        
-        >>> # reduce over the all axes
-        >>> C.eval(C.reduce_sum(data))
-        [array([[ 60.000046]])]       
-
-    Args:
-        x: input tensor        
-        name (str): the name of the node in the network
-
-    Returns:
-        :class:`cntk.graph.ComputationNode`
-    '''
-    from cntk.ops.cntk2 import ReduceLogSum
-    op = ReduceLogSum(inputs, 0, name=name)
-    wrap_numpy_arrays(op)            
-    
-    #TODO: Once axis != 0 is supported, expose it as argument, and compute the 
-    #rank similar to reduce_sum
-    op.rank = 0   
-    #reduce_log_sum is implemented using BrainScript code that results in nested nodes,
-    #We wrap it by Identity to guarantee that the tag 'output' is passed over and with a fixed name.
-    return identity(op) 
-
-
 ################################################################################
 # training ops
 ################################################################################
@@ -1481,7 +1449,7 @@ def reduce_min(value, axis=0, name=None):
     op.rank = 0 if op.axis == 0 else op.z.rank    
     return op
 
-def reduce_logsum(value, axis=0, name=None):
+def reduce_log_sum(value, axis=0, name=None):
     """
     For axis < rank computes the following aggregate along specifed axis:
     :math:`reduce\_log\_sum(value, axis=n) = log({\sum_{i \in \{\hbox{indices of axis} n\}} \exp(value_i) })`
