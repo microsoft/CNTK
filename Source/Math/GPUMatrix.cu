@@ -3233,7 +3233,6 @@ void GPUMatrix<ElemType>::BatchNormalizationForward(const GPUMatrix<ElemType>& s
                                                scale.Data(), bias.Data(),
                                                runMean.Data(), runInvStdDev.Data(), GetStream());
         // CNTK engine returns saveMean and saveInvStdDev empty, but cnDNN engine does not.
-        // assert(saveMean.IsEmpty() && saveInvStdDev.IsEmpty());
     }
 }
 
