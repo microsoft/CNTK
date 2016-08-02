@@ -135,7 +135,7 @@ void NDRMReader<ElemType>::InitFromConfig(const ConfigRecordType& readerConfig)
     m_vocabSize = readerConfig(L"vocabSize", (size_t)2748230);
     m_idfVocabSize = readerConfig(L"idfVocabSize", (size_t)2500415);
     m_vectorSize = readerConfig(L"vectorSize", (size_t)200);
-    m_docLengthBinSize = readerConfig(L"docLengthBinSize", (size_t)100);
+    m_docLengthBinSize = readerConfig(L"docLengthBinSize", (int)100);
     m_bytesPerSample = sizeof(int32_t) * (m_numWordsPerQuery + m_numDocs * m_numWordsPerDoc);
     m_bytesPerVector = sizeof(ElemType) * m_vectorSize;
     m_currOffset = 0;
