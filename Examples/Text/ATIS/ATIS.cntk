@@ -1,0 +1,226 @@
+# The configuration file to build language understanding model with ATIS corpus.
+# An LSTM model is built to tag each word in sentences with its semantic label.
+
+WorkDir = work
+DataDir = data
+
+modelPath = $WorkDir$/ATIS.slot.lstm
+parallelTrain = true
+
+#stderr = $WorkDir$/log
+
+command = Train:Output:Test
+
+precision = "float"
+deviceId = "-1"        # change to "auto" to use GPUs
+
+wordCount = 944    # number of words
+labelCount = 127   # number of labels 
+
+# The command to train the LSTM model
+Train = [
+    action = train
+    BrainScriptNetworkBuilder = [
+        inputDim = $wordCount$
+        labelDim = $labelCount$
+        featDim = inputDim*3   # contextual words are used as features: previous word, current word, next word.
+        embDim = 150
+        hiddenDim = 300
+        maxLayer = 1
+        initScale = 6
+        featuresPW = Input(inputDim)    # the previous word
+        featuresCW = Input(inputDim)    # the current word
+        featuresNW = Input(inputDim)    # the next word
+        features = RowStack(featuresPW : featuresCW : featuresNW)
+        
+        labels = Input(labelDim, tag = "label")
+        
+        # embedding layer
+        emb = Parameter(embDim, featDim)
+        featEmbedded = emb * features
+        
+        # build the LSTM stack
+        lstmDims[i:0..maxLayer-1] = hiddenDim
+        NoAuxInputHook (input, lstmState) = BS.Constants.None
+        lstmStack = BS.RNNs.RecurrentLSTMPStack (lstmDims, 
+            cellDims=lstmDims,
+            featEmbedded, 
+            inputDim=embDim,
+            previousHook=BS.RNNs.PreviousHC,
+            augmentInputHook=BS.RNNs.NoAuxInputHook, 
+            augmentInputDim=0,
+            enableSelfStabilization=false)
+
+        lstmOutputLayer = Length (lstmStack)-1
+        LSTMoutput = lstmStack[lstmOutputLayer].h
+    
+        W = Parameter(labelDim, hiddenDim, init = "uniform", initValueScale=initScale)
+        b = Parameter(labelDim, 1, init = "fixedValue", value=0)
+        outputs = W * LSTMoutput + b
+        
+        cr = CrossEntropyWithSoftmax(labels, outputs)
+
+        criterionNodes = (cr)
+        evaluationNodes = (cr)
+        outputNodes = (outputs)
+    ]
+
+    SGD = [
+        # maximum number of epochs
+        maxEpochs = 1   # set to 1 so this can be added to regression test. Increase to 20 get a good accuracy
+
+        # for each epoch, maximum number of input samples(words) is set below
+        epochSize = 36000   
+
+        # minibatchSize should be larger than the maximum sentence length
+        minibatchSize = 70
+
+        learningRatesPerSample = 0.01*2:0.005*12:0.001
+        gradUpdateType = "FSAdaGrad"
+
+        gradientClippingWithTruncation = true
+        clippingThresholdPerSample = 15.0
+
+        # number of minibatches to report progress
+        numMBsToShowResult = 100
+        
+        firstMBsToShowResult = 10 
+        
+        # if validation shows that the model has no improvement, then do back-up to the previously
+        # estimated model and reduce learning rate
+        loadBestModel = true
+
+        parallelTrain = [
+            parallelizationMethod = "DataParallelSGD"
+            parallelizationStartEpoch = 2
+            distributedMBReading = true
+            dataParallelSGD = [
+                gradientBits = 1
+            ]
+        ]
+    ]
+
+    reader = [
+        readerType = "CNTKTextFormatReader" 
+        file = "$DataDir$/ATIS.train.cntk.sparse" 
+        randomize = true
+        input = [ 
+            featuresPW = [ 
+                alias = "PW"    # previous word
+                dim = $wordCount$ 
+                format = "sparse" 
+            ] 
+            featuresCW = [ 
+                alias = "CW"    # current word
+                dim = $wordCount$ 
+                format = "sparse" 
+            ]
+            featuresNW = [ 
+                alias = "NW"    # next word
+                dim = $wordCount$ 
+                format = "sparse" 
+            ]            
+            
+            labels = [ 
+                alias = "L"     # label
+                dim = $labelCount$        
+                format = "sparse" 
+            ] 
+        ]
+    ]   
+]
+
+# Evaluate the model to predict labels
+Output = [
+    action = "write"
+
+    traceLevel = 1
+    epochSize = 0
+
+    defaultHiddenActivity = 0.1
+    BrainScriptNetworkBuilder = [
+        modelAsTrained = BS.Network.Load ("$modelPath$")
+        final = Hardmax(modelAsTrained.outputs)
+    ]
+    
+    outputPath = $WorkDir$/model.writeaction
+    outputNodeNames = final
+    
+    reader = [
+        readerType = "CNTKTextFormatReader" 
+        file = "$DataDir$/ATIS.test.cntk.sparse" 
+
+        randomize = false
+        input = [ 
+            featuresPW = [ 
+                alias = "PW"    # previous word
+                dim = $wordCount$ 
+                format = "sparse" 
+            ] 
+            featuresCW = [ 
+                alias = "CW"    # current word
+                dim = $wordCount$ 
+                format = "sparse" 
+            ]
+            featuresNW = [ 
+                alias = "NW"    # next word
+                dim = $wordCount$ 
+                format = "sparse" 
+            ]            
+            
+            labels = [ 
+                alias = "L"     # label
+                dim = $labelCount$        
+                format = "sparse" 
+            ] 
+        ]
+    ]
+]
+
+# Evaluate the model's accuracy 
+Test = [
+    action = "test"
+
+    traceLevel = 1
+    epochSize = 0
+
+    defaultHiddenActivity = 0.1
+    BrainScriptNetworkBuilder = [
+        labels = Input($labelCount$, tag = "label")
+        modelAsTrained = BS.Network.Load ("$modelPath$")
+        final = Hardmax(modelAsTrained.outputs)
+        errorRate = ErrorPrediction(labels, final, tag='evaluation')
+    ]
+    
+    evalNodeNames  = errorRate
+    
+    reader = [
+        readerType = "CNTKTextFormatReader" 
+        file = "$DataDir$/ATIS.test.cntk.sparse" 
+
+        randomize = false
+        input = [ 
+            featuresPW = [ 
+                alias = "PW"    # previous word
+                dim = $wordCount$ 
+                format = "sparse" 
+            ] 
+            featuresCW = [ 
+                alias = "CW"    # current word
+                dim = $wordCount$ 
+                format = "sparse" 
+            ]
+            featuresNW = [ 
+                alias = "NW"    # next word
+                dim = $wordCount$ 
+                format = "sparse" 
+            ]            
+            
+            labels = [ 
+                alias = "L"     # label
+                dim = $labelCount$        
+                format = "sparse" 
+            ] 
+        ]
+    ]
+]

@@ -14,6 +14,8 @@ Root Folder - this Read Me and Installation instructions
 license - Licenses for CNTK and related components. By installting CNTK you agree to adhere to these Licenses.
 cntk - CNTK binaries
 Examples - Examples illustrating work with CNTK. See ReadMe file in the folder and https://github.com/Microsoft/CNTK/wiki/Examples
+Include - Contains a header file related to CNTK Model Evaluation. See https://github.com/microsoft/CNTK/wiki/CNTK-Evaluation-Overview 
+Scripts - Different CNTK-related scripts. See README.md inside the folder for the details
 ------------------------------
 Installation.
 

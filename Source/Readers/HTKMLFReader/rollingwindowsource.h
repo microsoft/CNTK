@@ -266,10 +266,10 @@ class minibatchframesource : public minibatchsource
     string featkind;
     size_t featdim;
     // cache
-    biggrowablevectorarray frames;            // [t][i] all features concatenated
-    std::vector<char> boundaryflags;          // [t] -1 for first and +1 for last frame, 0 else (for augmentneighbors())
-    std::vector<CLASSIDTYPE> classids;        // [t] the state that the frame belongs to
-    size_t numframes;                         // total frames (==frames.size()==boundaryflags.size()==classids.size()) unless special modes vdim == 0 and/or no labels
+    biggrowablevectorarray frames;                         // [t][i] all features concatenated
+    std::vector<char> boundaryflags;                       // [t] -1 for first and +1 for last frame, 0 else (for augmentneighbors())
+    std::vector<CLASSIDTYPE> classids;                     // [t] the state that the frame belongs to
+    size_t numframes;                                      // total frames (==frames.size()==boundaryflags.size()==classids.size()) unless special modes vdim == 0 and/or no labels
     Microsoft::MSR::CNTK::RandomOrdering m_randomOrdering; // [t] -> t'
     double timegetbatch;
     int verbosity;

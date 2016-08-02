@@ -321,15 +321,17 @@ void CNTKEvalExtended<ElemType>::ForwardPassT(const std::vector<ValueBuffer<Elem
         RuntimeError("Expected %d outputs, but got %d.", (int)m_outputNodes.size(), (int)outputs.size());
 
     size_t i = 0;
-    for (auto& input : m_inputMatrices)
+    for (auto& inputNode : m_inputNodes)
     {
         // const cast: The matrix class takes this over without copying and could theoretically change the contents,
         // though it doesn't in this case.
         auto& buffer = const_cast<ValueBuffer<ElemType, ValueContainer>&>(inputs[i]);
-        shared_ptr<Matrix<ElemType>> matrix = dynamic_pointer_cast<Matrix<ElemType>>(input.second.matrix);
+        auto matrix = dynamic_pointer_cast<Matrix<ElemType>>(inputNode->ValuePtr());
         auto type = matrix->GetMatrixType();
-        size_t numRows = input.second.sampleLayout.GetNumElements();
+        size_t numRows = inputNode->GetSampleLayout().GetNumElements();
 
+        if (buffer.m_buffer.data() == nullptr)
+            RuntimeError("Input %ls: Buffer is not allocated.", m_inputNodes[i]->GetName().c_str());
         if (type == MatrixType::DENSE)
         {
             if (buffer.m_buffer.size() % numRows != 0)
@@ -340,8 +342,12 @@ void CNTKEvalExtended<ElemType>::ForwardPassT(const std::vector<ValueBuffer<Elem
         }
         else if (type == MatrixType::SPARSE)
         {
+            if (buffer.m_colIndices.data() == nullptr)
+                RuntimeError("Input %ls: Due to sparse input format, expected colIndices array, but was nullptr.", m_inputNodes[i]->GetName().c_str());
+            if (buffer.m_indices.data() == nullptr)
+                RuntimeError("Input %ls: Due to sparse input format, expected Indices array, but was nullptr.", m_inputNodes[i]->GetName().c_str());
             if (buffer.m_colIndices.size() < 2)
-                RuntimeError("Input %ls: Expected at least one element.", m_inputNodes[i]->GetName().c_str());
+                RuntimeError("Input %ls: Expected at least one element (2 entries in colIndices array).", m_inputNodes[i]->GetName().c_str());
             if (buffer.m_colIndices[0] != 0)
                 RuntimeError("Input %ls: First element of column indices must be 0", m_inputNodes[i]->GetName().c_str());
             if (buffer.m_colIndices[buffer.m_colIndices.size() - 1] != buffer.m_indices.size())
@@ -352,8 +358,8 @@ void CNTKEvalExtended<ElemType>::ForwardPassT(const std::vector<ValueBuffer<Elem
 
         int numCols = type == MatrixType::DENSE ? buffer.m_buffer.size() / numRows : buffer.m_colIndices.size() - 1;
         assert(numCols >= 1);
-        input.second.pMBLayout->Init(1, numCols);
-        input.second.pMBLayout->AddSequence(0, 0, 0, numCols);
+        inputNode->GetMBLayout()->Init(1, numCols);
+        inputNode->GetMBLayout()->AddSequence(0, 0, 0, numCols);
 
         if (type == MatrixType::DENSE)
             matrix->SetValue(numRows, numCols, matrix->GetDeviceId(), buffer.m_buffer.data(), matrixFlagNormal);

@@ -522,6 +522,8 @@ public:
     }
 
 
+    const std::vector<ComputationNodeBasePtr>& RootNodes()           const { return m_allRoots; }
+
     // these are specified as such by the user
     const std::vector<ComputationNodeBasePtr>& FeatureNodes()        const { return m_featureNodes   ; }
     const std::vector<ComputationNodeBasePtr>& LabelNodes()          const { return m_labelNodes     ; }
@@ -751,7 +753,7 @@ public:
         while (!result.second/*if already there*/ && result.first->second != node)
         {
             if (!makeUniqueName || node->NodeName().find_first_of(L".[]") == wstring::npos)
-                RuntimeError("AddNodeToNetIfNotYet: Duplicated name for %ls %ls operation.", node->NodeName().c_str(), node->OperationName().c_str());
+                RuntimeError("AddNodeToNetIfNotYet: Duplicated name for %ls %ls operation (%d vs. %d).", node->NodeName().c_str(), node->OperationName().c_str(), (int)node->m_uniqueNumericId, (int)result.first->second->m_uniqueNumericId);
             node->SetName(L"_" + node->NodeName());
             result = m_nameToNodeMap.insert(make_pair(node->NodeName(), node));
         }

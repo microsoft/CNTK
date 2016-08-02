@@ -148,7 +148,7 @@ protected:
     TensorShape m_lowerPad;
     TensorShape m_upperPad;
     PoolKind m_poolKind;
-    bool m_transpose;
+    bool m_transpose; // means de-convolution ...I think
     ImageLayoutKind m_imageLayout;
 
     size_t m_maxTempMemSizeInSamples;
@@ -338,6 +338,10 @@ public:
 
             size_t mapCount = m_mapCount.GetNumElements();
             size_t weightCols = kW * kH * inDims.m_numChannels;
+
+            // if mapCount is 0 then take it from the input matrix
+            if (mapCount == 0)
+                Input(0)->GetAsMatrixNumRows();
 
             // check/infer input [0] (weights)
             // BUGBUG: For now, we treat the weights as a 2D matrix. They should be a tensor proper.

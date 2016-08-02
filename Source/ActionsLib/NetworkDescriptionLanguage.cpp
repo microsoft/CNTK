@@ -158,12 +158,12 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
     else if (EqualInsensitive(nodeType, OperationNameOf(CRFNode), L"CRF")) ret = true;
 #endif
     else if (EqualInsensitive(nodeType, OperationNameOf(ClassBasedCrossEntropyWithSoftmaxNode), L"CBCEWithSM")) ret = true;
-	else if (EqualInsensitive(nodeType, OperationNameOf(EqualNode))) ret = true;
-	else if (EqualInsensitive(nodeType, OperationNameOf(GreaterEqualNode))) ret = true;
-	else if (EqualInsensitive(nodeType, OperationNameOf(GreaterNode))) ret = true;
-	else if (EqualInsensitive(nodeType, OperationNameOf(LessEqualNode))) ret = true;
-	else if (EqualInsensitive(nodeType, OperationNameOf(LessNode))) ret = true;
-	else if (EqualInsensitive(nodeType, OperationNameOf(NotEqualNode))) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(EqualNode))) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(GreaterEqualNode))) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(GreaterNode))) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(LessEqualNode))) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(LessNode))) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(NotEqualNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(ClipNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(ConvolutionNode), L"Convolve")) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(PoolingNode))) ret = true;
@@ -195,6 +195,7 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
 	else if (EqualInsensitive(nodeType, OperationNameOf(KhatriRaoProductNode), L"ColumnwiseCrossProduct")) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(LearnableParameter), L"Parameter")) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(LogNode))) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(LogPlusNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(LogSoftmaxNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(LogisticNode), L"Logistic")) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(LookupTableNode))) ret = true;
@@ -268,4 +269,5 @@ template class NDLNode<double>;
 
 template class NDLScript<float>;
 template class NDLScript<double>;
-} } }
+
+}}}

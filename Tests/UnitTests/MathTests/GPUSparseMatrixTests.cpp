@@ -6,7 +6,9 @@
 //
 #include "stdafx.h"
 #include <math.h>
+#ifdef _WIN32
 #include <crtdefs.h>
+#endif
 #include "../../../Source/Math/GPUSparseMatrix.h"
 
 using namespace Microsoft::MSR::CNTK;

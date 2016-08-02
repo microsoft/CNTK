@@ -282,7 +282,7 @@ class VariableSchema : public std::vector<VariableLayout>
         Values<ElemType> CreateBuffers(const std::vector<size_t>& maxLengths)
         {
             if (maxLengths.size() != size())
-                throw std::exception("Expected max lengths for all variables.");
+                throw std::runtime_error("Expected max lengths for all variables.");
 
             Values<ElemType> buffers(size());
             for (size_t i = 0; i < size(); ++i)

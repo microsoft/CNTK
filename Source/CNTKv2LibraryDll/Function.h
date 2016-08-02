@@ -13,51 +13,89 @@
 
 namespace CNTK
 {
-    enum class PrimitiveOpType
+    enum class PrimitiveOpType : unsigned int
     {
-        Plus,
-        Times,
+        Negate,
         Sigmoid,
         Tanh,
-        Combine,
+        ReLU,
+        Exp,
+        Log,
+        Sqrt,
+        Floor,
+        Abs,
+        Reciprocal,
+        Softmax,
+        Plus,
+        Minus,
+        ElementTimes,
+        Equal,
+        NotEqual,
+        Less,
+        LessEqual,
+        Greater,
+        GreaterEqual,
+        Times,
+        SquaredError,
         CrossEntropyWithSoftmax,
         ClassificationError,
-        Exp,
         PastValue,
         FutureValue,
-        ElementTimes,
-        ReduceSum
+        ReduceSum,
+        Combine,
     };
+}
 
+namespace std
+{
+    template <> struct hash<CNTK::PrimitiveOpType>
+    {
+        size_t operator()(const CNTK::PrimitiveOpType& x) const
+        {
+            return std::hash<unsigned int>()((unsigned int)x);
+        }
+    };
+}
+
+namespace CNTK
+{
     inline const char* PrimitiveOpTypeName(PrimitiveOpType opType)
     {
-        // TODO: Put these in table form
-        if (opType == PrimitiveOpType::Plus)
-            return "Plus";
-        else if (opType == PrimitiveOpType::Times)
-            return "Times";
-        else if (opType == PrimitiveOpType::Sigmoid)
-            return "Sigmoid";
-        else if (opType == PrimitiveOpType::Tanh)
-            return "Tanh";
-        else if (opType == PrimitiveOpType::Combine)
-            return "Combine";
-        else if (opType == PrimitiveOpType::CrossEntropyWithSoftmax)
-            return "CrossEntropyWithSoftmax";
-        else if (opType == PrimitiveOpType::ClassificationError)
-            return "ClassificationError";
-        else if (opType == PrimitiveOpType::Exp)
-            return "Exp";
-        else if (opType == PrimitiveOpType::PastValue)
-            return "PastValue";
-        else if (opType == PrimitiveOpType::FutureValue)
-            return "FutureValue";
-        else if (opType == PrimitiveOpType::ElementTimes)
-            return "ElementTimes";
-        else if (opType == PrimitiveOpType::ReduceSum)
-            return "ReduceSum";
-        else
+        static std::unordered_map<PrimitiveOpType, const char*> primitiveOpNames = {
+            { PrimitiveOpType::Negate, "Negate" },
+            { PrimitiveOpType::Sigmoid, "Sigmoid" },
+            { PrimitiveOpType::Tanh, "Tanh" },
+            { PrimitiveOpType::ReLU, "ReLU" },
+            { PrimitiveOpType::Exp, "Exp" },
+            { PrimitiveOpType::Log, "Log" },
+            { PrimitiveOpType::Sqrt, "Sqrt" },
+            { PrimitiveOpType::Floor, "Floor" },
+            { PrimitiveOpType::Abs, "Abs" },
+            { PrimitiveOpType::Reciprocal, "Reciprocal" },
+            { PrimitiveOpType::Softmax, "Softmax" },
+            { PrimitiveOpType::Plus, "Plus" },
+            { PrimitiveOpType::Minus, "Minus" },
+            { PrimitiveOpType::ElementTimes, "ElementTimes" },
+            { PrimitiveOpType::Equal, "Equal" },
+            { PrimitiveOpType::NotEqual, "NotEqual" },
+            { PrimitiveOpType::Less, "Less" },
+            { PrimitiveOpType::LessEqual, "LessEqual" },
+            { PrimitiveOpType::Greater, "Greater" },
+            { PrimitiveOpType::GreaterEqual, "GreaterEqual" },
+            { PrimitiveOpType::Times, "Times" },
+            { PrimitiveOpType::SquaredError, "SquaredError" },
+            { PrimitiveOpType::CrossEntropyWithSoftmax, "CrossEntropyWithSoftmax" },
+            { PrimitiveOpType::ClassificationError, "ClassificationError" },
+            { PrimitiveOpType::PastValue, "PastValue" },
+            { PrimitiveOpType::FutureValue, "FutureValue" },
+            { PrimitiveOpType::ReduceSum, "ReduceSum" },
+            { PrimitiveOpType::Combine, "Combine" }
+        };
+
+        if (primitiveOpNames.find(opType) == primitiveOpNames.end())
             LogicError("Unknown PrimitiveOpType");
+
+        return primitiveOpNames.find(opType)->second;
     }
 
     class PrimitiveFunction final : public Function
@@ -68,17 +106,17 @@ namespace CNTK
         {
         }
 
-        virtual BackPropStatePtr Forward(const Internal::SimpleMap<Variable, const ValuePtr>& /*arguments*/,
-                                         Internal::SimpleMap<Variable, ValuePtr>& /*outputs*/,
-                                         const Internal::SimpleSet<Variable>& /*outputsToRetainBackwardStateFor*/,
-                                         const DeviceDescriptor& /*computeDevice*/) override
+        virtual BackPropStatePtr Forward(const std::unordered_map<Variable, ValuePtr>& /*arguments*/,
+                                         std::unordered_map<Variable, ValuePtr>& /*outputs*/,
+                                         const DeviceDescriptor& /*computeDevice*/,
+                                         const std::unordered_set<Variable>& /*outputsToRetainBackwardStateFor*/) override
         {
             NOT_IMPLEMENTED;
         }
 
         virtual void Backward(const BackPropStatePtr& /*state*/,
-                              const Internal::SimpleMap<Variable, const ValuePtr>& /*rootGradientValues*/,
-                              Internal::SimpleMap<Variable, ValuePtr>& /*backPropagatedGradientValuesForInputs*/) override
+                              const std::unordered_map<Variable, ValuePtr>& /*rootGradientValues*/,
+                              std::unordered_map<Variable, ValuePtr>& /*backPropagatedGradientValuesForInputs*/) override
         {
             NOT_IMPLEMENTED;
         }
@@ -195,19 +233,29 @@ namespace CNTK
 
             switch (op)
             {
+            case PrimitiveOpType::Negate:
             case PrimitiveOpType::Sigmoid:
             case PrimitiveOpType::Tanh:
+            case PrimitiveOpType::ReLU:
             case PrimitiveOpType::Exp:
+            case PrimitiveOpType::Log:
+            case PrimitiveOpType::Sqrt:
+            case PrimitiveOpType::Floor:
+            case PrimitiveOpType::Abs:
+            case PrimitiveOpType::Reciprocal:
+            case PrimitiveOpType::Softmax:
                 assert(inputs.size() == 1);
                 outputs.push_back(Variable(UnaryElementwiseOpOutputShape(inputs[0].Shape()), outputDataType, owner, outputDynamicAxes));
                 break;
-            case PrimitiveOpType::PastValue:
-            case PrimitiveOpType::FutureValue:
-                assert(inputs.size() == 2);
-                outputs.push_back(Variable(UnaryElementwiseOpOutputShape(inputs[1].Shape()), outputDataType, owner, outputDynamicAxes));
-                break;
             case PrimitiveOpType::Plus:
+            case PrimitiveOpType::Minus:
             case PrimitiveOpType::ElementTimes:
+            case PrimitiveOpType::Equal:
+            case PrimitiveOpType::NotEqual:
+            case PrimitiveOpType::Less:
+            case PrimitiveOpType::LessEqual:
+            case PrimitiveOpType::Greater:
+            case PrimitiveOpType::GreaterEqual:
                 assert(inputs.size() == 2);
                 outputs.push_back(Variable(BinaryElementwiseOpOutputShape(op, inputs[0].Shape(), inputs[1].Shape()), outputDataType, owner, outputDynamicAxes));
                 break;
@@ -215,12 +263,13 @@ namespace CNTK
                 assert(inputs.size() == 2);
                 outputs.push_back(Variable(TimesOpOutputShape(inputs[0].Shape(), inputs[1].Shape()), outputDataType, owner, outputDynamicAxes));
                 break;
+            case PrimitiveOpType::SquaredError:
             case PrimitiveOpType::CrossEntropyWithSoftmax:
             case PrimitiveOpType::ClassificationError:
             {
                 assert(inputs.size() == 2);
 
-                if (inputs[0].Shape().NumAxes() > 1)
+                if ((inputs[0].Shape().NumAxes() > 2) || ((inputs[0].Shape().NumAxes() > 1) && (inputs[0].Shape()[1] != 1)))
                     InvalidArgument("The shape of input operands for the %s operation should have at most one axis", PrimitiveOpTypeName(op));
 
                 auto predictionShape = inputs[0].Shape();
@@ -235,6 +284,11 @@ namespace CNTK
                 outputs.push_back(Variable(ReductionOpOutputShape(op, predictionShape, reductionAxes), outputDataType, owner, {}));
                 break;
             }
+            case PrimitiveOpType::PastValue:
+            case PrimitiveOpType::FutureValue:
+                assert(inputs.size() == 2);
+                outputs.push_back(Variable(UnaryElementwiseOpOutputShape(inputs[1].Shape()), outputDataType, owner, outputDynamicAxes));
+                break;
             case PrimitiveOpType::ReduceSum:
             {
                 assert(inputs.size() == 1);
@@ -280,54 +334,62 @@ namespace CNTK
     private:
         std::pair<Variable, int64_t> m_evalTimeStamp;
     };
-    typedef Internal::ReferenceCountedPtr<CNTKBackPropState> CNTKBackPropStatePtr;
+    typedef std::shared_ptr<CNTKBackPropState> CNTKBackPropStatePtr;
 
     class CompositeFunction;
-    typedef Internal::ReferenceCountedPtr<CompositeFunction> CompositeFunctionPtr;
+    typedef std::shared_ptr<CompositeFunction> CompositeFunctionPtr;
 
     class CompositeFunction final : public Function
     {
         friend class Function;
+        friend class CompositeMinibatchSource;
+
+        template <typename T, typename ...CtorArgTypes>
+        friend inline std::shared_ptr<T> MakeSharedObject(CtorArgTypes&& ...ctorArgs);
+
+        template <typename ElementType>
+        friend void SaveAsLegacyModel(const FunctionPtr& rootFunction, const std::wstring& modelFile);
 
     public:
         static CompositeFunctionPtr Create(const FunctionPtr& rootFunction, const std::wstring& name = L"")
         {
-            Internal::SimpleSet<FunctionPtr> visitedFunctions;
+            std::unordered_set<FunctionPtr> visitedFunctions;
 
             // Call DetermineInputs to get the set of all functions in the graph
             DetermineInputs(rootFunction, visitedFunctions);
 
-            auto func = new CompositeFunction(rootFunction, std::move(visitedFunctions), name);
-            return CompositeFunctionPtr(func, [](ReferenceCount* ptr) { delete ptr; });
+            return MakeSharedObject<CompositeFunction>(rootFunction, std::move(visitedFunctions), name);
         }
 
-        virtual BackPropStatePtr Forward(const Internal::SimpleMap<Variable, const ValuePtr>& arguments,
-                                         Internal::SimpleMap<Variable, ValuePtr>& outputs,
-                                         const Internal::SimpleSet<Variable>& outputsToRetainBackwardStateFor,
-                                         const DeviceDescriptor& computeDevice) override;
+        virtual BackPropStatePtr Forward(const std::unordered_map<Variable, ValuePtr>& arguments,
+                                         std::unordered_map<Variable, ValuePtr>& outputs,
+                                         const DeviceDescriptor& computeDevice,
+                                         const std::unordered_set<Variable>& outputsToRetainBackwardStateFor) override;
 
         virtual void Backward(const BackPropStatePtr& state,
-                              const Internal::SimpleMap<Variable, const ValuePtr>& rootGradientValues,
-                              Internal::SimpleMap<Variable, ValuePtr>& backPropagatedGradientValuesForInputs) override;
+                              const std::unordered_map<Variable, ValuePtr>& rootGradientValues,
+                              std::unordered_map<Variable, ValuePtr>& backPropagatedGradientValuesForInputs) override;
 
     private:
-        virtual void _ReplacePlaceholders(const Internal::SimpleMap<Placeholder, Variable>& placeholderReplacements, Internal::SimpleSet<const Function*>& visitedFunctions, Internal::SimpleSet<Placeholder>& replacedPlaceholders) override;
+        virtual void ReplacePlaceholders(const std::unordered_map<Placeholder, Variable>& placeholderReplacements,
+                                         std::unordered_set<const Function*>& visitedFunctions,
+                                         std::unordered_set<Placeholder>& replacedPlaceholders) override;
 
-        CompositeFunction(const FunctionPtr& rootFunction, Internal::SimpleSet<FunctionPtr>&& allPrimitiveFunctions, const std::wstring& name)
+        CompositeFunction(const FunctionPtr& rootFunction, std::unordered_set<FunctionPtr>&& allPrimitiveFunctions, const std::wstring& name)
             : Function({}, rootFunction->Outputs(), rootFunction, name), m_allPrimitiveFunctions(std::move(allPrimitiveFunctions))
         {
         }
 
         std::vector<Variable> DetermineInputs() const
         {
-            Internal::SimpleSet<FunctionPtr> visitedFunctions;
+            std::unordered_set<FunctionPtr> visitedFunctions;
             return DetermineInputs(RootFunction(), visitedFunctions);
         }
 
         // Recursively traverses the Function graph underlying the 'rootFunction' to determine all the leaves (aka inputs) of the graph
-        static std::vector<Variable> DetermineInputs(const FunctionPtr& rootFunction, Internal::SimpleSet<FunctionPtr>& visitedFunctions)
+        static std::vector<Variable> DetermineInputs(const FunctionPtr& rootFunction, std::unordered_set<FunctionPtr>& visitedFunctions)
         {
-            visitedFunctions.Insert(rootFunction);
+            visitedFunctions.insert(rootFunction);
 
             std::vector<Variable> inputs;
             std::vector<Variable> rootFunctionInputs = rootFunction->Inputs();
@@ -335,7 +397,7 @@ namespace CNTK
             {
                 if (!rootInput.IsOutput())
                     inputs.push_back(rootInput);
-                else if (!visitedFunctions.Contains(rootInput.Owner()))
+                else if (visitedFunctions.find(rootInput.Owner()) == visitedFunctions.end())
                 {
                     FunctionPtr function = rootInput.Owner();
                     std::vector<Variable> functionInputs = DetermineInputs(function, visitedFunctions);
@@ -347,7 +409,7 @@ namespace CNTK
         }
 
         template <typename ElementType>
-        Microsoft::MSR::CNTK::ComputationNetworkPtr GetComputationNetwork(const DeviceDescriptor& device, const Internal::SimpleSet<Variable>& backpropRoots);
+        Microsoft::MSR::CNTK::ComputationNetworkPtr GetComputationNetwork(const DeviceDescriptor& device, const std::unordered_set<Variable>& backpropRoots);
 
         template <typename ElementType>
         static Microsoft::MSR::CNTK::ComputationNodeBasePtr GetOutputVariableNode(const Variable& variable, Microsoft::MSR::CNTK::ComputationNetworkPtr& network, Microsoft::MSR::CNTK::ComputationNetworkBuilder<ElementType>& builder, std::unordered_map<Variable, Microsoft::MSR::CNTK::ComputationNodeBasePtr>& variableToNodeMap, std::unordered_map<Variable, bool>& isVariableRootMap);
@@ -355,8 +417,13 @@ namespace CNTK
         template <typename ElementType>
         static Microsoft::MSR::CNTK::ComputationNodeBasePtr GetNode(const Variable& variable, Microsoft::MSR::CNTK::ComputationNetworkPtr& network, Microsoft::MSR::CNTK::ComputationNetworkBuilder<ElementType>& builder, std::unordered_map<Variable, Microsoft::MSR::CNTK::ComputationNodeBasePtr>& variableToNodeMap, std::unordered_map<Variable, bool>& isVariableRootMap);
 
-        void PopulateNetworkInputs(const Internal::SimpleMap<Variable, const ValuePtr>& arguments);
-        void PopulateNetworkGradients(const Internal::SimpleMap<Variable, const ValuePtr>& gradients);
+        template <typename ElementType>
+        static void PopulateComputationNodeValue(const std::pair<Variable, ValuePtr>& variableValue, Microsoft::MSR::CNTK::ComputationNodeBasePtr& computationNode);
+        void PopulateNetworkInputs(const std::unordered_map<Variable, ValuePtr>& arguments);
+
+        template <typename ElementType>
+        static void PopulateComputationNodeGradient(const std::pair<Variable, ValuePtr>& variableGradient, Microsoft::MSR::CNTK::ComputationNodeBasePtr& computationNode);
+        void PopulateNetworkGradients(const std::unordered_map<Variable, ValuePtr>& gradients);
 
         void GetNetworkOutputs(std::unordered_map<Variable, ValuePtr>& outputs);
         void GetNetworkGradients(std::unordered_map<Variable, ValuePtr>& gradients);
@@ -365,13 +432,15 @@ namespace CNTK
         static std::pair<std::shared_ptr<const Microsoft::MSR::CNTK::Matrix<ElementType>>, Microsoft::MSR::CNTK::MBLayoutPtr> GetCNTKImplMatrixAndMBLayoutFromValueObject(Variable var, const ValuePtr& value);
 
         template <typename ElementType>
-        static ValuePtr GetValueObjectFromCNTKImplMatrixAndMBLayout(Variable var, const Microsoft::MSR::CNTK::Matrix<ElementType>& matrix, const Microsoft::MSR::CNTK::MBLayoutPtr& layout);
+        static ValuePtr GetValueObjectFromCNTKImplMatrixAndMBLayout(const NDShape& sampleShape, const Microsoft::MSR::CNTK::Matrix<ElementType>& matrix, const Microsoft::MSR::CNTK::MBLayoutPtr& layout, bool readOnly = true);
+        template <typename ElementType>
+        static ValuePtr GetValueObjectFromCNTKImplMatrixAndMBLayout(Variable var, const Microsoft::MSR::CNTK::Matrix<ElementType>& matrix, const Microsoft::MSR::CNTK::MBLayoutPtr& layout, bool readOnly = true);
 
     private:
 
         // Set of all primitive functions in the graph underlying 'this' Function. Also keeps the primitive Function objects alive 
         // by holding strong references to them
-        Internal::SimpleSet<FunctionPtr> m_allPrimitiveFunctions;
+        std::unordered_set<FunctionPtr> m_allPrimitiveFunctions;
 
         // A map from Variable objects to ComputationNode objects in the ComputationNetwork instance that implements 'this' Composite Function
         std::unordered_map<Variable, Microsoft::MSR::CNTK::ComputationNodeBasePtr> m_variableToNodeMap;
