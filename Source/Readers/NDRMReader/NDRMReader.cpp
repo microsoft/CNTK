@@ -135,6 +135,7 @@ void NDRMReader<ElemType>::InitFromConfig(const ConfigRecordType& readerConfig)
     m_vocabSize = readerConfig(L"vocabSize", (size_t)2748230);
     m_idfVocabSize = readerConfig(L"idfVocabSize", (size_t)2500415);
     m_vectorSize = readerConfig(L"vectorSize", (size_t)200);
+    m_docLengthBinSize = readerConfig(L"docLengthBinSize", (size_t)100);
     m_bytesPerSample = sizeof(int32_t) * (m_numWordsPerQuery + m_numDocs * m_numWordsPerDoc);
     m_bytesPerVector = sizeof(ElemType) * m_vectorSize;
     m_currOffset = 0;
@@ -291,7 +292,7 @@ void NDRMReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t /*epoch*/, s
         m_qEmbValues = (char*)malloc(m_bytesPerVector * m_numWordsPerQuery * m_miniBatchSize);
         m_dEmbValues = (char*)malloc(m_bytesPerVector * m_numWordsPerDoc * m_miniBatchSize);
         m_qStatsValues = (char*)malloc(sizeof(ElemType) * m_numWordsPerQuery * m_miniBatchSize);
-        m_dStatsValues = (char*)malloc(sizeof(ElemType) * m_numWordsPerDoc * m_miniBatchSize);
+        m_dStatsValues = (char*)malloc(sizeof(ElemType) * m_numWordsPerDoc * m_miniBatchSize / m_docLengthBinSize);
         m_labels = (char*)malloc(sizeof(ElemType) * m_numDocs * m_miniBatchSize);
 
         memset(m_labels, 0, sizeof(ElemType) * m_numDocs * m_miniBatchSize);
@@ -444,7 +445,11 @@ bool NDRMReader<ElemType>::TryGetMinibatch(StreamMinibatchInputs& matrices)
             if (inclStatsFeature && wc >= 0)
             {
                 ElemType* statAddr = (ElemType*)((char*)statsAddrBase + j * numWordsPerFeatureSample * sizeof(ElemType));
-                statAddr[wc] = (ElemType)1;
+
+                if (i == 0)
+                    statAddr[wc] = (ElemType)1;
+                else
+                    statAddr[wc / m_docLengthBinSize] = (ElemType)1;
             }
         }
 
