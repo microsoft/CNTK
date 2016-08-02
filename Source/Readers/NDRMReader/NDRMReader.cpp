@@ -334,6 +334,7 @@ bool NDRMReader<ElemType>::TryGetMinibatch(StreamMinibatchInputs& matrices)
         char* statsAddrBase = (char*)(i == 0 ? m_qStatsValues : m_dStatsValues);
         size_t numWordsPerFeatureSample = (i == 0 ? m_numWordsPerQuery : m_numWordsPerDoc);
         size_t numRows = m_vectorSize * numWordsPerFeatureSample;
+        int lengthBinSize = (i == 0 ? 1 : m_docLengthBinSize);
         std::wstring featureNameIdentity = (i == 0 ? L"Qi" : L"Di" + std::to_wstring(i - 1));
         std::wstring featureNameEmbedding = (i == 0 ? L"Q" : L"D" + std::to_wstring(i - 1));
         std::wstring featureNameEmbeddingX = (i == 0 ? L"Qx" : L"Dx" + std::to_wstring(i - 1));
@@ -363,7 +364,7 @@ bool NDRMReader<ElemType>::TryGetMinibatch(StreamMinibatchInputs& matrices)
 
         if (inclStatsFeature)
         {
-            memset(statsAddrBase, 0, sizeof(ElemType) * numWordsPerFeatureSample * actualMiniBatchSize / m_docLengthBinSize);
+            memset(statsAddrBase, 0, sizeof(ElemType) * numWordsPerFeatureSample * actualMiniBatchSize / lengthBinSize);
         }
 
         for (int j = 0; j < actualMiniBatchSize; j++)
@@ -445,11 +446,7 @@ bool NDRMReader<ElemType>::TryGetMinibatch(StreamMinibatchInputs& matrices)
             if (inclStatsFeature && wc >= 0)
             {
                 ElemType* statAddr = (ElemType*)((char*)statsAddrBase + j * numWordsPerFeatureSample * sizeof(ElemType));
-
-                if (i == 0)
-                    statAddr[wc] = (ElemType)1;
-                else
-                    statAddr[wc / m_docLengthBinSize] = (ElemType)1;
+                statAddr[wc / lengthBinSize] = (ElemType)1;
             }
         }
 
@@ -477,8 +474,8 @@ bool NDRMReader<ElemType>::TryGetMinibatch(StreamMinibatchInputs& matrices)
         if (inclStatsFeature)
         {
             Matrix<ElemType>& featuresStats = matrices.GetInputMatrix<ElemType>(featureNameStats);
-            featuresStats.Resize(numWordsPerFeatureSample / m_docLengthBinSize, actualMiniBatchSize);
-            featuresStats.SetValue(numWordsPerFeatureSample / m_docLengthBinSize, actualMiniBatchSize, featuresStats.GetDeviceId(), (ElemType*)statsAddrBase, matrixFlagNormal);
+            featuresStats.Resize(numWordsPerFeatureSample / lengthBinSize, actualMiniBatchSize);
+            featuresStats.SetValue(numWordsPerFeatureSample / lengthBinSize, actualMiniBatchSize, featuresStats.GetDeviceId(), (ElemType*)statsAddrBase, matrixFlagNormal);
         }
     }
 
