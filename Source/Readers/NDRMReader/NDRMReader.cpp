@@ -445,7 +445,7 @@ bool NDRMReader<ElemType>::TryGetMinibatch(StreamMinibatchInputs& matrices)
 
             if (inclStatsFeature && wc >= 0)
             {
-                ElemType* statAddr = (ElemType*)((char*)statsAddrBase + j * numWordsPerFeatureSample * sizeof(ElemType));
+                ElemType* statAddr = (ElemType*)((char*)statsAddrBase + j * numWordsPerFeatureSample * sizeof(ElemType) / lengthBinSize);
                 statAddr[wc / lengthBinSize] = (ElemType)1;
             }
         }
