@@ -8,7 +8,8 @@
 #define _CRT_NONSTDC_NO_DEPRECATE // make VS accept POSIX functions without _
 
 #include "stdafx.h"
-#include "signal.h"
+#include <crtdbg.h>
+
 #include "Basics.h"
 #include "Actions.h"
 #include "ComputationNetwork.h"
@@ -688,7 +689,6 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
         fprintf(stderr, "%*s%ls", i > 0 ? 2 : 0, "", argv[i]); // use 2 spaces for better visual separability
     fprintf(stderr, "\n\n");
 
-#if 1 //def _DEBUG
     // This simply merges all the different config parameters specified (eg, via config files or via command line directly),
     // and prints it.
     fprintf(stderr, "\n\n");
@@ -709,7 +709,6 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
     LOGPRINTF(stderr, ">>>>>>>>>>>>>>>>>>>> PROCESSED CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>\n");
     config.dumpWithResolvedVariables();
     LOGPRINTF(stderr, "<<<<<<<<<<<<<<<<<<<< PROCESSED CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<\n");
-#endif
 
     LOGPRINTF(stderr, "Commands:");
     for (int i = 0; i < command.size(); i++)
@@ -845,11 +844,18 @@ int wmain(int argc, wchar_t* argv[]) // wmain wrapper that reports Win32 excepti
 {
     set_terminate(TerminateThis);    // insert a termination handler to ensure stderr gets flushed before actually terminating
 
-    _CrtSetReportHook(HandleDebugAssert); // in case of asserts in debug mode, print the message into stderr and throw exception
-
     __try
     {
-        return wmain1(argc, argv);
+        // in case of asserts in debug mode, print the message into stderr and throw exception
+        if (_CrtSetReportHook2(_CRT_RPTHOOK_INSTALL, HandleDebugAssert) == -1) {
+            LOGPRINTF(stderr, "CNTK: _CrtSetReportHook2 failed.\n");
+            return -1;
+        }
+
+        int mainReturn = wmain1(argc, argv);
+        _CrtSetReportHook2(_CRT_RPTHOOK_REMOVE, HandleDebugAssert);
+
+        return mainReturn;
     }
     __except (LogDelayLoadError(GetExceptionInformation()), EXCEPTION_EXECUTE_HANDLER)
     {
