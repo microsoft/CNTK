@@ -52,7 +52,7 @@ private:
     std::set<Matrix<float> *> m_bufferSet; // contains all buffers which have the potential to be swapped (that is they are non-sharable)
     std::unordered_map<int, std::pair<float,float> > m_stepNumber2CumulativeSwapInTime;
 
-
+    // during the dry run only one layer (and its input and output) are active at any time
     void FreeBuffersForDryRun(ComputationNodeBase *node, bool isForward);
     void SwapInFreedBuffers(ComputationNodeBase *node, bool isForward);
     void RegisterBuffers(ComputationNodeBase *node, bool isForward);
@@ -60,7 +60,7 @@ private:
     void FindSwapOrder();
     void CleanUp();
 
-    void MeasureSwapTime(ComputationNodeBase *node, int stepNumber);
+    void MeasureSwapTime(ComputationNodeBase *node, bool isForward);
     std::string GetStepName(ComputationNodeBase *node, bool isForward);
 
 public:

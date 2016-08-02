@@ -25,11 +25,12 @@ public:
 	float tockp();
 	float tockp(std::string name);
 private:
+#ifndef CPUONLY
 	std::unordered_map<std::string,cudaEvent_t*> m_dictTickTock;
-	std::unordered_map<std::string,float> m_dictTickTockCumulative;
-
 	cudaEvent_t* create_tick();
 	float tock(cudaEvent_t* startstop);
+#endif
+	std::unordered_map<std::string,float> m_dictTickTockCumulative;
 };
 
 }}}
