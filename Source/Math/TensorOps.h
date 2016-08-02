@@ -245,6 +245,7 @@ DefBinaryOp(ElementwiseProductWithAbsDerivative, a * Sgn(b)); // note: b = input
 DefBinaryOp(ElementwiseProductWithReciprocalDerivative, a * -Sqr(b)); // b = output
 DefBinaryOp(ElementwiseProductWithSqrtDerivative, a / (2 * b)); // b = output; d/dx sqrt(x) = 1/(2 * sqrt(x)) --> note this is the same as ElementwiseQuotient w a constant; if more show up like this we should add more template params
 DefBinaryOp(SqrOfDifference, Sqr(a - b));
+DefBinaryOp(LeakyLinearRectifier, a >= 0 ? a : (a * b));
 //DefBinaryOp(Index, IndexElement(a, b, i));  // note: this one uses the third argument
 
 #pragma pop_macro("DefBinaryOp")
@@ -261,6 +262,7 @@ DefTernaryOp(Cond, a ? b : c);
 DefTernaryOp(CopyIfEqual, a == b ? c : 0); // CopyIfEqual(a,b)(c) -- if a==b copy c, otherwise 0; used for gradient of clip, min, max, etc.
 DefTernaryOp(Clip, c < a ? a : (c > b ? b : c)); // Clip(min,max)(data) => a=min, b=max, c=data
 DefTernaryOp(ElementwiseProductWithLogSumDerivative, a * Sigmoid(c - b));
+DefTernaryOp(ElementwiseProductWithLeakyLinearRectifierDerivativeFromOutput, b > 0 ? a : a * c);
 
 #pragma pop_macro("DefTernaryOp")
 }}}

@@ -71,6 +71,7 @@ static shared_ptr<ComputationNode<ElemType>> CreateStandardNode(const std::wstri
     else if (nodeType == OperationNameOf(IfNode))                               return New<IfNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(InvStdDevNode))                        return New<InvStdDevNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(KhatriRaoProductNode))                 return New<KhatriRaoProductNode<ElemType>>(forward<_Types>(_Args)...);
+	else if (nodeType == OperationNameOf(LeakyRectifiedLinearNode))             return New<LeakyRectifiedLinearNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(LogNode))                              return New<LogNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(LogPlusNode))                          return New<LogPlusNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(LogSoftmaxNode))                       return New<LogSoftmaxNode<ElemType>>(forward<_Types>(_Args)...);
@@ -518,6 +519,12 @@ template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::RectifiedLinear(const ComputationNodePtr a, const std::wstring nodeName)
 {
     return net.AddNodeToNetAndAttachInputs(New<RectifiedLinearNode<ElemType>>(net.GetDeviceId(), nodeName), { a });
+}
+
+template <class ElemType>
+shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::LeakyRectifiedLinear(const ComputationNodePtr a, const std::wstring nodeName)
+{
+	return net.AddNodeToNetAndAttachInputs(New<LeakyRectifiedLinearNode<ElemType>>(net.GetDeviceId(), nodeName), { a });
 }
 
 template <class ElemType>
