@@ -150,7 +150,7 @@ template <class ElemType>
 CPUMatrix<ElemType>::CPUMatrix(const CPUMatrix<ElemType>& deepCopyFrom)
 {
     ZeroInit();
-	SetValue(deepCopyFrom);
+    SetValue(deepCopyFrom);
 }
 
 //assignment operator, deep copy
@@ -840,7 +840,7 @@ void CPUMatrix<ElemType>::SetValue(const CPUMatrix<ElemType>& deepCopyFrom)
     if (this == &deepCopyFrom)
         return;
 
-	SetValue(deepCopyFrom.GetNumRows(), deepCopyFrom.GetNumCols(), deepCopyFrom.Data(), 0);
+    SetValue(deepCopyFrom.GetNumRows(), deepCopyFrom.GetNumCols(), deepCopyFrom.Data(), 0);
 }
 
 #if 0
@@ -876,7 +876,7 @@ void CPUMatrix<ElemType>::SetValue(const size_t numRows, const size_t numCols, E
     if (matrixFlags & matrixFlagDontOwnBuffer)
     {
         // free previous array allocation if any before overwriting
-		delete[] Buffer();
+        delete[] Buffer();
 
         m_numRows = numRows;
         m_numCols = numCols;
@@ -1359,7 +1359,7 @@ template <class ElemType>
 void CPUMatrix<ElemType>::RequireSize(const size_t numRows, const size_t numCols, bool growOnly /*=true*/)
 {
     if (GetNumRows() != numRows || GetNumCols() != numCols)
-		Resize(numRows, numCols, growOnly);
+        Resize(numRows, numCols, growOnly);
 }
 
 // Resize() -- change matrix size
@@ -2990,7 +2990,7 @@ void CPUMatrix<ElemType>::VectorNorm2(CPUMatrix<ElemType>& c, const bool isColWi
 
     assert(m > 0 && n > 0); // converting from size_t to int may cause overflow
 
-	ElemType* bufPtr = us.Data();
+    ElemType* bufPtr = us.Data();
     if (isColWise) // col-wise
     {
         c.RequireSize(1, n);
@@ -4274,6 +4274,103 @@ void CPUMatrix<ElemType>::MaxPoolingBackward(const CPUMatrix<ElemType>& out, con
 }
 
 template <class ElemType>
+void CPUMatrix<ElemType>::ROIPoolingForward(const int num_rois, const int num_img, const int channels, const int height, const int width,
+    const int pooled_height, const int pooled_width, const CPUMatrix<ElemType>& roi_data, CPUMatrix<ElemType>& output, CPUMatrix<ElemType>& argmax) const
+{
+    int roi_output_size = pooled_height * pooled_width * channels;
+
+#pragma omp parallel for
+    for (int img_idx = 0; img_idx < num_img; img_idx++) {
+        auto img = ColumnSlice(img_idx, 1);
+        auto rois = roi_data.ColumnSlice(img_idx, 1);
+
+#pragma omp parallel for
+        for (int roi_idx = 0; roi_idx < num_rois; roi_idx++) {
+
+            int base = roi_idx * 4;
+
+            // scaled ROI numbers (relative to original image size)
+            // roi points are doubles that represent location relative to image
+            double sc_x = rois(base, 0);
+            double sc_y = rois(base + 1, 0);
+            double sc_w = rois(base + 2, 0);
+            double sc_h = rois(base + 3, 0);
+
+            // compute actual spatial location of the ROI in our featuremap.
+            int x = (int)round(sc_x * width);
+            int y = (int)round(sc_y * height);
+            int roi_w = (int)max(round(sc_w * width), 1.0);
+            int roi_h = (int)max(round(sc_h * height), 1.0);
+
+            const double winW = double(roi_w) / double(pooled_width);
+            const double winH = double(roi_h) / double(pooled_height);
+
+            // from Ross Girshick fast-rcnn caffe cpu:
+            // https://github.com/rbgirshick/fast-rcnn
+            // loop over spatial locations in output.
+#pragma omp parallel for
+            for (int outw = 0; outw < pooled_width; outw++) {
+                for (int outh = 0; outh < pooled_height; outh++) {
+                    // compute the top left corner of the input
+                    // spatial window corresponding to this output unit
+                    int hstart = (int)floor(double(outh)*winH);
+                    int wstart = (int)floor(double(outw)*winW);
+
+                    // compute bottom right corner (not included)
+                    int hend = (int)ceil(double(outh + 1) * winH);
+                    int wend = (int)ceil(double(outw + 1) * winW);
+
+                    // offset window based on ROI top left corner.
+                    // these indices are into the input slice.
+                    hstart = min(max(hstart + y, 0), height);
+                    hend = min(max(hend + y, 0), height);
+                    wstart = min(max(wstart + x, 0), width); 
+                    wend = min(max(wend + x, 0), width);
+
+                    bool isempty = (hend <= hstart) || (wend <= wstart);
+
+                    for (int c = 0; c < channels; c++) {
+                        int output_idx = roi_idx * roi_output_size + outw + outh * pooled_width + c * pooled_height * pooled_width;
+                        output(output_idx, img_idx) = -FLT_MAX;
+
+                        if (isempty)
+                            output(output_idx, img_idx) = 0;
+
+                        for (int h = hstart; h < hend; h++) {
+                            for (int w = wstart; w < wend; w++) {
+                                int data_idx = w + h*width + c*height*width;
+                                if (img(data_idx, 0) > output(output_idx, img_idx)) {
+                                    output(output_idx, img_idx) = img(data_idx, 0);
+                                    argmax(output_idx, img_idx) = (float)data_idx;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+template <class ElemType>
+void CPUMatrix<ElemType>::ROIPoolingBackward(const int num_rois, const int img_count, const int channels, const int height, const int width,
+    const int pooled_height, const int pooled_width, const CPUMatrix<ElemType>& roi_data, CPUMatrix<ElemType>& grad, 
+    CPUMatrix<ElemType>& argmax) const
+{
+    num_rois;
+    img_count;
+    channels;
+    height;
+    width;
+    pooled_height;
+    pooled_width;
+    roi_data;
+    grad;
+    argmax;
+    NOT_IMPLEMENTED;
+}
+
+template <class ElemType>
 void CPUMatrix<ElemType>::MaxUnpooling(const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIndices,
                                        const CPUMatrix<int>& indices, const CPUMatrix<ElemType>& poolInput,
                                        CPUMatrix<ElemType>& input) const
@@ -4867,9 +4964,9 @@ void CPUMatrix<ElemType>::AddScaledDifference(const ElemType alpha, const CPUMat
     if (a.IsEmpty())
         LogicError("AddScaledDifference:  Input matrix a is empty.");
 
-	ElemType* aBufPtr = a.Data();
-	ElemType* bBufPtr = b.Data();
-	ElemType* cBufPtr = c.Data();
+    ElemType* aBufPtr = a.Data();
+    ElemType* bBufPtr = b.Data();
+    ElemType* cBufPtr = c.Data();
     long m = (long) c.GetNumElements();
 #pragma omp parallel for
     // four-way unrolling
@@ -4909,9 +5006,9 @@ void CPUMatrix<ElemType>::AssignScaledDifference(const ElemType alpha, const CPU
     if (&c != &a && &c != &b)
         c.RequireSize(a.GetNumRows(), a.GetNumCols());
 
-	ElemType* aBufPtr = a.Data();
-	ElemType* bBufPtr = b.Data();
-	ElemType* cBufPtr = c.Data();
+    ElemType* aBufPtr = a.Data();
+    ElemType* bBufPtr = b.Data();
+    ElemType* cBufPtr = c.Data();
     long m = (long) c.GetNumElements();
 #pragma omp parallel for
     // four-way unrolling
@@ -5014,8 +5111,8 @@ template <class ElemType>
     assert(m > 0 && n > 0); // converting from size_t to int may cause overflow
     c.RequireSize(m, n);
 
-	ElemType* aBufPtr = a.Data();
-	ElemType* cBufPtr = c.Data();
+    ElemType* aBufPtr = a.Data();
+    ElemType* cBufPtr = c.Data();
 
     if (alpha == 0)
     {
@@ -5108,8 +5205,8 @@ void CPUMatrix<ElemType>::InnerProduct(const CPUMatrix<ElemType>& a, const CPUMa
     {
         c.RequireSize(1, n);
 
-		ElemType* aBufPtr = a.Data();
-		ElemType* bBufPtr = b.Data();
+        ElemType* aBufPtr = a.Data();
+        ElemType* bBufPtr = b.Data();
         if (sizeof(ElemType) == sizeof(double))
         {
 #pragma omp parallel for
@@ -5132,8 +5229,8 @@ void CPUMatrix<ElemType>::InnerProduct(const CPUMatrix<ElemType>& a, const CPUMa
     {
         c.RequireSize(m, 1);
 
-		ElemType* aBufPtr = a.Data();
-		ElemType* bBufPtr = b.Data();
+        ElemType* aBufPtr = a.Data();
+        ElemType* bBufPtr = b.Data();
         if (sizeof(ElemType) == sizeof(double))
         {
 #pragma omp parallel for
@@ -5603,7 +5700,7 @@ template <class ElemType>
 ElemType CPUMatrix<ElemType>::LogSumOfElements() const
 {
     ElemType fAlpha = (ElemType) LZERO;
-	ElemType* bufPtr = Data();
+    ElemType* bufPtr = Data();
     for (int k = 0; k < GetNumElements(); k++)
         fAlpha = (ElemType) LogAddD(fAlpha, bufPtr[k]);
     return fAlpha;

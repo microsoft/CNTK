@@ -1182,7 +1182,7 @@ template <class ElemType>
 void GPUMatrix<ElemType>::SetValue(const size_t numRows, const size_t numCols, int deviceId, ElemType* pArray, size_t matrixFlags)
 {
     // handle externally managed case
-	// BUGBUG: This is super super ugly, and needs to be fixed, but if matrixFlags has the right value, then we can't free anything,
+    // BUGBUG: This is super super ugly, and needs to be fixed, but if matrixFlags has the right value, then we can't free anything,
     // and everything gets wonky. This should be fixed, and would go away if it is made a shared_ptr.
     if (matrixFlags & matrixFlagDontOwnBuffer)
     {
@@ -3126,6 +3126,37 @@ void GPUMatrix<ElemType>::MaxPoolingBackward(const GPUMatrix<ElemType>& out, con
                                                             mpRowCol.Data(), mpRowIndices.Data(), indices.Data(),
                                                             Data(), (int)GetNumRows(), grad.Data(), (int)grad.GetNumRows());
 }
+
+
+
+template <class ElemType>
+void GPUMatrix<ElemType>::ROIPoolingForward(const int num_rois, const int num_img, const int channels, const int height, const int width, 
+    const int pooled_height, const int pooled_width, const GPUMatrix<ElemType>& roi_data, GPUMatrix<ElemType>& output, GPUMatrix<ElemType>& argmax) const
+{	
+    PrepareDevice();
+    SyncGuard syncGuard;
+
+    int count = num_rois * num_img * channels * pooled_height * pooled_width;
+    const int BlockSize = 128;
+    int nthreads = (int)floor((double)(count + BlockSize - 1) / BlockSize);
+    kROIPoolingForward<<<nthreads, BlockSize, 0, t_stream>>>(count, num_rois, num_img, channels, height, 
+        width, pooled_height, pooled_width, Data(), roi_data.Data(), output.Data(), argmax.Data());
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::ROIPoolingBackward(const int num_rois, const int num_img, const int channels, const int height, const int width,
+    const int pooled_height, const int pooled_width, const GPUMatrix<ElemType>& roi_data, GPUMatrix<ElemType>& grad, GPUMatrix<ElemType>& argmax) const
+{
+    PrepareDevice();
+    SyncGuard syncGuard;
+
+    int count = num_img * channels * height * width;
+    const int BlockSize = 128;
+    int nthreads = (int)floor((double)(count + BlockSize - 1) / BlockSize);
+    kROIPoolingBackward<<<nthreads, BlockSize, 0, t_stream>>>(count, num_rois, num_img, channels, height,
+        width, pooled_height, pooled_width, Data(), roi_data.Data(), grad.Data(), argmax.Data());
+}
+
 
 template <class ElemType>
 void GPUMatrix<ElemType>::MaxUnpooling(const GPUMatrix<int>& mpRowCol, const GPUMatrix<int>& mpRowIndices, const GPUMatrix<int>& indices, const GPUMatrix<ElemType>& poolInput, GPUMatrix<ElemType>& input) const

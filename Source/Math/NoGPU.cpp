@@ -1799,6 +1799,18 @@ void GPUMatrix<ElemType>::ConvolutionBackwardKernel(const GPUMatrix<ElemType>& i
 }
 
 template <class ElemType>
+void GPUMatrix<ElemType>::ROIPoolingForward(const int num_rois, const int img_count, const int channels, const int height, const int width, 
+    const int pooled_height, const int pooled_width, const GPUMatrix<ElemType>& roi_data, GPUMatrix<ElemType>& output, GPUMatrix<ElemType>& argmax) const
+{	
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::ROIPoolingBackward(const int num_rois, const int img_count, const int channels, const int height, const int width,
+    const int pooled_height, const int pooled_width, const GPUMatrix<ElemType>& roi_data, GPUMatrix<ElemType>& grad, GPUMatrix<ElemType>& argmax) const
+{
+}
+
+template <class ElemType>
 void GPUMatrix<ElemType>::MaxPoolingForward(const GPUMatrix<int>& mpRowCol, const GPUMatrix<int>& mpRowIndices, const GPUMatrix<int>& indices, GPUMatrix<ElemType>& output) const
 {
 }

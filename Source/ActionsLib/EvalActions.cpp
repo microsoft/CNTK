@@ -213,7 +213,7 @@ template <typename ElemType>
 void DoWriteOutput(const ConfigParameters& config)
 {
     ConfigParameters readerConfig(config(L"reader"));
-    readerConfig.Insert("randomize", "None"); // we don't want randomization when output results
+    readerConfig.Insert("randomize", "False"); // we don't want randomization when output results
 
     DataReader testDataReader(readerConfig);
 
