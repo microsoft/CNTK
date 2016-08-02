@@ -118,8 +118,8 @@ def test_op_reduce_logsum(input_data, axis_data, expected_result, expected_gradi
 
 
     # slice using the operator
-    result = C.reduce_min(a, axis = axis_data)
+    result = C.reduce_logsum(a, axis = axis_data)
 
     unittest_helper(result, None, [[expected_result]], device_id=device_id, 
-                precision=precision, clean_up=True, backward_pass=False)
+                precision=precision, clean_up=False, backward_pass=False)
 

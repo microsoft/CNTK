@@ -661,7 +661,7 @@ class ReduceMin(ComputationNode):
 
 class ReduceLogSum(ComputationNode):
     def __init__(self, z, axis=0, op_name='ReduceLogSum', name=None):
-        super(ReduceMin, self).__init__(params=['z', 'axis'], op_name=op_name, name=name)
+        super(ReduceLogSum, self).__init__(params=['z', 'axis'], op_name=op_name, name=name)
         self.z = z
         self.axis = axis
         self.params_with_defaults = ['axis']
