@@ -17,6 +17,7 @@
 #define DATAREADER_EXPORTS // creating the exports here
 #include "DataReader.h"
 #include "ReaderShim.h"
+#include "TimerUtility.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -122,6 +123,9 @@ bool ReaderShim<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
         return false;
     }
 
+    Timer timer;
+    timer.Start();
+
     // Check that all matrices have the same device id.
     // If not we should inject the IMemoryProvider per stream.
     int deviceId = matrices.begin()->second.matrix->GetDeviceId();
@@ -140,6 +144,10 @@ bool ReaderShim<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
         }
     }
 
+    timer.Stop();
+    double readTime = timer.ElapsedSeconds();
+    fprintf(stderr, "Reading time of the minibatch: %.5gs\n", readTime);
+
     // Reset stale mb layouts.
     // BUGBUG: This seems incorrect. (1) layouts should all be updated below, and (2) some of these layouts are the same, we are resetting them twice.
     for (const auto& iter : matrices)
@@ -147,6 +155,7 @@ bool ReaderShim<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
         iter.second.pMBLayout->Init(1, 0);
     }
 
+    timer.Start();
     // a map to generate error messages when checking layout constraints. 
     map<wstring, wstring> layoutToInputMap;
     if (!minibatch.m_data.empty())
@@ -193,6 +202,9 @@ bool ReaderShim<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
             FillMatrixFromStream(m_streams[streamId]->m_storageType, &matrix, sampleSize, stream);
         }
     }
+    timer.Stop();
+    double copyTime = timer.ElapsedSeconds();
+    fprintf(stderr, "Copy time of the minibatch: %.5gs\n", copyTime);
 
     if (!m_endOfEpoch)
     {
