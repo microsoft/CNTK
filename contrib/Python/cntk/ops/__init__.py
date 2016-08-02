@@ -1442,8 +1442,8 @@ def reconcile_dynamic_axis(data_input, layout_input, name=None):
 
 def reduce_max(value, axis=0, name=None):
     """
-    For axis >= 1 computes the maximum of a tensor along the specifed axis. In the result the corresponding axis is dropped, i.e. the rank of the result tensore is smaller that the rank of the input tensor.
-    If axis == 0 the reduction is taken over all tensor values, and the result is a tensor of rank one with one dimension.
+    For axis < rank computes the maximum of a tensor along the specifed axis. In the result the corresponding axis is dropped, i.e. the rank of the result tensore is smaller that the rank of the input tensor.
+    if axis==rank, then the maximum will be computed over all axes, that is, the output is a scalar.
 
     Args:
         value (list): list of input tensors
@@ -1463,8 +1463,8 @@ def reduce_max(value, axis=0, name=None):
 
 def reduce_min(value, axis=0, name=None):
     """
-    For axis >= 1 computes the minimum of a tensor along the specifed axis. In the result the corresponding axis is dropped, i.e. the rank of the result tensore is smaller that the rank of the input tensor.
-    If axis == 0 the reduction is taken over all tensor values, and the result is a tensor of rank one with one dimension.
+    For axis < rank computes the minimum of a tensor along the specifed axis. In the result the corresponding axis is dropped, i.e. the rank of the result tensore is smaller that the rank of the input tensor.
+    if axis==rank, then the minimum will be computed over all axes, that is, the output is a scalar.
 
     Args:
         value (list): list of input tensors
@@ -1483,8 +1483,11 @@ def reduce_min(value, axis=0, name=None):
 
 def reduce_logsum(value, axis=0, name=None):
     """
-    For axis >= 1 computes the minimum of a tensor along the specifed axis. In the result the corresponding axis is dropped, i.e. the rank of the result tensore is smaller that the rank of the input tensor.
-    If axis == 0 the reduction is taken over all tensor values, and the result is a tensor of rank one with one dimension.
+    For axis < rank computes the following aggregate along specifed axis:
+    :math:`reduce\_log\_sum(value, axis=n) = log({\sum_{i \in \{\hbox{indices of axis} n\}} \exp(value_i) })`
+
+    In the result the corresponding axis is dropped, i.e. the rank of the result tensore is smaller that the rank of the input tensor.
+    if axis==rank, then the aggregate will be computed over all axes, that is, the output is a scalar.
 
     Args:
         value (list): list of input tensors
