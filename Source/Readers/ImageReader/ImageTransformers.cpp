@@ -238,7 +238,89 @@ cv::Rect CropTransformer::GetCropRect(CropType type, int viewIndex, int crow, in
     return cv::Rect(xOff, yOff, cropSizeX, cropSizeY);
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+PadTransformer::PadTransformer(const ConfigParameters& config) : ImageTransformerBase(config)
+{
+    m_targetW = config(L"width");
+    m_targetH = config(L"height");
+    m_channels = config(L"channels");
+    int value = config(L"value", -1);
+
+    m_value = cv::Scalar(value, value, value);
+
+    double mindim = min(m_targetH, m_targetW);
+    double maxdim = max(m_targetH, m_targetW);
+
+    m_borderType = value > 0 ? cv::BORDER_CONSTANT : cv::BORDER_REPLICATE;
+
+    m_targetMax = maxdim;
+    m_aspectRatio = maxdim / mindim;
+
+}
+
+// The method describes how input stream is transformed to the output stream. Called once per applied stream.
+StreamDescription PadTransformer::Transform(const StreamDescription& inputStream)
+{
+    ImageTransformerBase::Transform(inputStream);
+    m_outputStream.m_sampleLayout = std::make_shared<TensorShape>(ImageDimensions((size_t)m_targetW, (size_t)m_targetH, (size_t)m_channels).AsTensorShape(HWC));
+    return m_outputStream;
+}
+
+void PadTransformer::Apply(size_t id, cv::Mat &mat)
+{
+    UNUSED(id);
+    double hdiff = round((m_targetH - mat.rows) / 2.0);
+    double wdiff = round((m_targetW - mat.cols) / 2.0);
+
+    // make sure the padded sizes are actually bigger than the input image sizes.
+    assert(hdiff >= 0);
+    assert(wdiff >= 0);
+
+    int top = (int)hdiff, 
+        bottom = (int)m_targetH - top - mat.rows,
+        left = (int)wdiff,
+        right = (int)m_targetW - left - mat.cols;
+    cv::copyMakeBorder(mat, mat, top, bottom, left, right, m_borderType, m_value);
+}
+
+ScaleSideTransformer::ScaleSideTransformer(const ConfigParameters& config) : ImageTransformerBase(config)
+{
+    m_target = config(L"target");
+    std::string side = config(L"side", "max");
+
+    m_scaleSide = AreEqualIgnoreCase(side, "max") ? Side::MAX : Side::MIN;
+}
+
+void ScaleSideTransformer::Apply(size_t id, cv::Mat &mat)
+{
+    UNUSED(id);
+    
+    int height = mat.rows,
+        width = mat.cols;
+
+    int scaledside;
+    if (m_scaleSide == Side::MAX)
+        scaledside = max(height, width);
+    else
+        scaledside = min(height, width);
+
+    double scale_ratio = m_target / scaledside;
+
+    // which dimension is our scaled one?
+    bool scale_w = width == scaledside;
+
+    int targetW, targetH;
+
+    if (scale_w) {
+        targetW = static_cast<int>(m_target);
+        targetH = static_cast<int>(round(height * scale_ratio));
+    }
+    else {
+        targetH = static_cast<int>(m_target);
+        targetW = static_cast<int>(round(width * scale_ratio));
+    }
+
+    cv::resize(mat, mat, cv::Size(targetW, targetH), 0, 0, cv::INTER_LINEAR);
+}
 
 ScaleTransformer::ScaleTransformer(const ConfigParameters& config) : ImageTransformerBase(config)
 {

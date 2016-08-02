@@ -67,6 +67,10 @@ extern "C" DATAREADER_API bool CreateTransformer(Transformer** transformer, cons
         *transformer = new TransposeTransformer(config);
     else if (type == L"Cast")
         *transformer = new CastTransformer(config);
+    else if (type == L"Pad")
+        *transformer = new PadTransformer(config);
+    else if (type == L"ScaleSide")
+        *transformer = new ScaleSideTransformer(config);
     else
         // Unknown type.
         return false;

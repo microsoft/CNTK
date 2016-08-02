@@ -1030,7 +1030,7 @@ public:
     {
     }
     LegacyReshapeNode(const ScriptableObjects::IConfigRecordPtr configp)
-        : LegacyReshapeNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"numRows"), ImageDimensions::AsTensorShape(configp->Get(L"imageWidth"), configp->Get(L"imageHeight"), configp->Get(L"imageChannels"), ImageLayoutKind::HWC /*legacy*/))
+        : LegacyReshapeNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"numRows"), ImageDimensions::AsTensorShape(configp->Get(L"imageWidth"), configp->Get(L"imageHeight"), configp->Get(L"imageChannels"), ImageLayoutKindFrom(configp->Get(L"imageLayout"))/*legacy*/))
     {
         // BUGBUG: We should not operate on image layouts here, but on a proper tensor layout.
         AttachInputsFromConfig(configp, this->GetExpectedNumInputs());

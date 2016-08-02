@@ -109,6 +109,43 @@ private:
     double m_curAspectRatioRadius;
 };
 
+class PadTransformer : public ImageTransformerBase
+{
+public:
+    explicit PadTransformer(const ConfigParameters& config);
+    StreamDescription Transform(const StreamDescription& inputStream) override;
+
+private:
+    void Apply(size_t id, cv::Mat &mat) override;
+    double m_targetH;
+    double m_targetW;
+    double m_aspectRatio;
+    double m_targetMax;
+    double m_channels;
+    cv::Scalar m_value;
+    int m_borderType;
+};
+
+// scale either the minimum or maximum side to a certain
+// target number and preserve the aspect ratio. good for use
+// before a Pad transform (which makes all images the same size).
+class ScaleSideTransformer : public ImageTransformerBase
+{
+public:
+    explicit ScaleSideTransformer(const ConfigParameters& config);
+
+private:
+
+    enum class Side
+    {
+        MIN = 0,
+        MAX = 1
+    };
+    void Apply(size_t id, cv::Mat &mat) override;
+    double m_target;
+    Side m_scaleSide;
+};
+
 // Scale transformation of the image.
 // Scales the image to the dimensions requested by the network.
 class ScaleTransformer : public ImageTransformerBase

@@ -501,6 +501,13 @@ public:
     void MaxPoolingBackward(const Matrix<ElemType>& out, const Matrix<ElemType>& in,
                             const Matrix<int>& mpRowCol, const Matrix<int>& mpRowIndices, const Matrix<int>& indices,
                             Matrix<ElemType>& grad) const;
+
+    void ROIPoolingForward(const int num_rois, const int num_img, const int channels, const int height, const int width,
+        const int pooled_height, const int pooled_width, const Matrix<ElemType>& roi_data, Matrix<ElemType>& output, Matrix<ElemType>& argmax) const;
+
+    void ROIPoolingBackward(const int num_rois, const int num_img, const int channels, const int height, const int width,
+        const int pooled_height, const int pooled_width, const Matrix<ElemType>& roi_data, Matrix<ElemType>& grad, Matrix<ElemType>& argmax) const;
+
     void MaxUnpooling(const Matrix<int>& mpRowCol, const Matrix<int>& mpRowIndices, const Matrix<int>& indices, const Matrix<ElemType>& poolInput, Matrix<ElemType>& input) const;
 
     void AveragePoolingForward(const Matrix<int>& mpRowCol, const Matrix<int>& mpRowIndices, const Matrix<int>& indices, Matrix<ElemType>& output) const;

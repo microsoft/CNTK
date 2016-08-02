@@ -4245,6 +4245,34 @@ void Matrix<ElemType>::MaxPoolingBackward(const Matrix<ElemType>& out, const Mat
 }
 
 template <class ElemType>
+void Matrix<ElemType>::ROIPoolingForward(const int num_rois, const int num_img, const int channels, const int height, const int width,
+    const int pooled_height, const int pooled_width, const Matrix<ElemType>& roi_data, Matrix<ElemType>& output, Matrix<ElemType>& argmax) const
+{
+    DecideAndMoveToRightDevice(*this, output);
+
+    DISPATCH_MATRIX_ON_FLAG(this,
+        this,
+        m_CPUMatrix->ROIPoolingForward(num_rois, num_img, channels, height, width, pooled_height, pooled_width, *(roi_data.m_CPUMatrix), *(output.m_CPUMatrix), *(argmax.m_CPUMatrix)),
+        m_GPUMatrix->ROIPoolingForward(num_rois, num_img, channels, height, width, pooled_height, pooled_width, *(roi_data.m_GPUMatrix), *(output.m_GPUMatrix), *(argmax.m_GPUMatrix)),
+        NOT_IMPLEMENTED,
+        NOT_IMPLEMENTED);
+}
+
+template <class ElemType>
+void Matrix<ElemType>::ROIPoolingBackward(const int num_rois, const int num_img, const int channels, const int height, const int width,
+    const int pooled_height, const int pooled_width, const Matrix<ElemType>& roi_data, Matrix<ElemType>& grad, Matrix<ElemType>& argmax) const
+{
+    DecideAndMoveToRightDevice(*this, grad);
+
+    DISPATCH_MATRIX_ON_FLAG(this,
+        this,
+        m_CPUMatrix->ROIPoolingBackward(num_rois, num_img, channels, height, width, pooled_height, pooled_width, *(roi_data.m_CPUMatrix), *(grad.m_CPUMatrix), *(argmax.m_CPUMatrix)),
+        m_GPUMatrix->ROIPoolingBackward(num_rois, num_img, channels, height, width, pooled_height, pooled_width, *(roi_data.m_GPUMatrix), *(grad.m_GPUMatrix), *(argmax.m_GPUMatrix)),
+        NOT_IMPLEMENTED,
+        NOT_IMPLEMENTED);
+}
+
+template <class ElemType>
 void Matrix<ElemType>::MaxUnpooling(const Matrix<int>& mpRowCol, const Matrix<int>& mpRowIndices, const Matrix<int>& indices, const Matrix<ElemType>& poolInput, Matrix<ElemType>& input) const
 {
     assert(mpRowCol.GetNumCols() == 1);

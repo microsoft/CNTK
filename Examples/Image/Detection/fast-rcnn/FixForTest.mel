@@ -1,0 +1,18 @@
+m1 = LoadModel("$curModel$", format="cntk")
+SetDefaultModel(m1)
+
+roiDim = $TestROIDim$
+roiLabelDim = $TestROILabelDim$
+
+# replace the input rois
+testrois = Input(roiDim, tag="feature")
+SetInput(roi, 0, testrois)
+DeleteNode(rois)
+Rename(testrois, rois)
+
+# replace the labels--could also delete this node
+testRoiLabels = Input(roiLabelDim, tag="label")
+SetInput(rshpROI, 0, testRoiLabels)
+DeleteNode(roiLabels)
+
+SaveModel(m1, "$newModel$", format="cntk")
