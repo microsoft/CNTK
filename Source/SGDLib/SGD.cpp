@@ -252,31 +252,34 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
     auto& learnableNodes = net->LearnableParameterNodes(criterionNodes[0]);
     list<Matrix<ElemType>> smoothedGradients;
 
-	vector<wstring> nodesToUpdateDescriptions; // for logging only
-	for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
+    vector<wstring> nodesToUpdateDescriptions; // for logging only
+    for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
     {
-		ComputationNodePtr node = dynamic_pointer_cast<ComputationNode<ElemType>>(*nodeIter);
-		// BUGBUG: Do we need the smoothedGradients if !IsParameterUpdateRequired()? Seems to waste memory.
-		//         Note that lots of code assumes smoothedGradients to be in the same order as learnableNodes.
+        ComputationNodePtr node = dynamic_pointer_cast<ComputationNode<ElemType>>(*nodeIter);
+        // Note: We don't actually need the smoothedGradients if !IsParameterUpdateRequired().
+        // However, this is hard to fix since lots of code assumes smoothedGradients to be in the same order as learnableNodes.
+        // V2 API fixes this.
         smoothedGradients.push_back(Matrix<ElemType>(node->Value().GetNumRows(),
                                                      node->Value().GetNumCols(),
                                                      net->GetDeviceId()));
-		if (node->IsParameterUpdateRequired())
-			nodesToUpdateDescriptions.push_back(node->NodeDescription());
+        if (node->IsParameterUpdateRequired())
+            nodesToUpdateDescriptions.push_back(node->NodeDescription());
     }
-	size_t numNeedsGradient = 0;
-	for (let node : net->GetEvalOrder(criterionNodes[0]))
-		if (node->NeedsGradient())
-			numNeedsGradient++;
-	fprintf(stderr, "\n");
-	LOGPRINTF(stderr, "Training %d out of %d parameters and %d nodes with gradient:\n", (int)nodesToUpdateDescriptions.size(), (int)learnableNodes.size(), (int)numNeedsGradient);
-	for (let nodeDescription : nodesToUpdateDescriptions)
-	{
-		LOGPRINTF(stderr, "\t%ls\n", nodeDescription.c_str());
-	}
-	fprintf(stderr, "\n");
+    size_t numNeedsGradient = 0;
+    for (let node : net->GetEvalOrder(criterionNodes[0]))
+    {
+        if (node->NeedsGradient())
+            numNeedsGradient++;
+    }
+    fprintf(stderr, "\n");
+    LOGPRINTF(stderr, "Training %d out of %d parameters and %d nodes with gradient:\n", (int)nodesToUpdateDescriptions.size(), (int)learnableNodes.size(), (int)numNeedsGradient);
+    for (let nodeDescription : nodesToUpdateDescriptions)
+    {
+        LOGPRINTF(stderr, "\t%ls\n", nodeDescription.c_str());
+    }
+    fprintf(stderr, "\n");
 
-	double avgCriterion, lrControlCriterion;
+    double avgCriterion, lrControlCriterion;
     lrControlCriterion = avgCriterion = numeric_limits<double>::infinity();
     size_t epochsNotCountedInAvgCriterion = startEpoch % m_learnRateAdjustInterval;
 
@@ -290,9 +293,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
     vector<double> prevLearnRates;
     prevLearnRates.resize(m_numPrevLearnRates);
     for (int i = 0; i < m_numPrevLearnRates; i++)
-    {
         prevLearnRates[i] = -1.0;
-    }
 
     if (GetParallelizationMethod() == ParallelizationMethod::dataParallelSGD)
     {

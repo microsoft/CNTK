@@ -115,7 +115,10 @@ LearnableParameter<ElemType>::LearnableParameter(const ScriptableObjects::IConfi
     }
     // legacy
     else if (initString == L"fixedValue") // deprecated. Use initValue=... instead
-        Value().SetValue((ElemType)configp->Get(L"value"));
+    {
+        m_initString = L"fromValue";
+        m_initValue = (ElemType)configp->Get(L"value");
+    }
     else if (initString == L"fromLiteral") // deprecated. Use initValue=array instead
     {
         wstring initFromLiteral = configp->Get(L"initFromLiteral");
@@ -127,6 +130,10 @@ LearnableParameter<ElemType>::LearnableParameter(const ScriptableObjects::IConfi
     }
     else
         RuntimeError("init must be one of the values of [ uniform | gaussian | fixedValue | fromFile ]");
+
+    // initialize
+    // This will be repeated if the matrix gets resized due to dimension inference.
+    LazyInitParameters();
 }
 
 // initialize with random numbers
@@ -292,29 +299,40 @@ template <class ElemType>
 {
     Base::Validate(isFinalValidationPass);
     m_pMBLayout = nullptr; // this node does not hold mini-batch data
+}
 
-    // deferred initialization
-    // We support this feature that some dimensions can be specified as 0, and get inferred.
-    // This is only possible for initialization methods that do not come with their own dimensions
-    // (such as initialization from an array literal). These initializations are deferred until
-    // the final validation, when the size is actually known.
-    if (isFinalValidationPass && !m_initString.empty())
-    {
-        if (m_initString == L"fromValue")
-            Value().SetValue(m_initValue);
-        else if (m_initString == L"uniform" || m_initString == L"gaussian")
-            InitRandom((m_initString == L"uniform"), m_randomSeed, m_initValueScale, m_initOnCPUOnly);
-        else
-            LogicError("LearnableParameter: Invalid value of m_initString '%ls' for deferred initialization.", m_initString.c_str());
-        m_initString.clear(); // and remember that we are done
-    }
+// deferred initialization
+// We support a feature that some dimensions can be specified as 0, and get inferred.
+// This is only possible for initialization methods that do not come with their own dimensions
+// (such as initialization from an array literal).
+// When initialization succeeded (all dimensions known), the pending initialization is cleared.
+// This is called from constructor and InferInputDimsFrom().
+// BUGBUG: We cannot really enforce the calling sequence. Save() verifies that this has been cleared.
+//         Note that this may be called AFTER Validate(true) (still during validation, but after final validation of this node).
+template <class ElemType>
+void LearnableParameter<ElemType>::LazyInitParameters()
+{
+    // if no lazy init pending then we are done
+    if (m_initString.empty())
+        return;
+    // if not all dimensions are known yet, we cannot proceed: keep it pending
+    if (GetSampleLayout().GetNumElements() == 0)
+        return;
+    // OK, proceed
+    if (m_initString == L"fromValue")
+        Value().SetValue(m_initValue);
+    else if (m_initString == L"uniform" || m_initString == L"gaussian")
+        InitRandom((m_initString == L"uniform"), m_randomSeed, m_initValueScale, m_initOnCPUOnly);
+    else
+        LogicError("LearnableParameter: Invalid value of m_initString '%ls' for deferred initialization.", m_initString.c_str());
+    // and remember that we are done
+    m_initString.clear();
 }
 
 // called from ComputationNode::ValidateInferInputDimsFrom()
 // In case of an error, this function just backs out without updating.
 // The caller must verify the dimensions.
 // This is a bit weird since it is called after this node has been Validated once.
-// BUGBUG: This will clear out any random initialization to 0. So currently this is not usable for most cases.
 template <class ElemType>
 void LearnableParameter<ElemType>::InferInputDimsFrom(const TensorShape& otherShape)
 {
@@ -330,8 +348,8 @@ void LearnableParameter<ElemType>::InferInputDimsFrom(const TensorShape& otherSh
         return; // LogicError("ValidateInferInputDimsFrom: Inferred dimensions must not be empty.");
 
     if (m_initString.empty())
-        LogicError("InferInputDimsFrom: Attempted to infer dimensions, with no deferred initialization pending.");
-    
+        LogicError("InferInputDimsFrom: Attempted to infer dimensions, with initialization completed or no deferred initialization pending.");
+
     // if no dimensions have been set at all, copy otherShape
     // Don't verify dimensions in this case, because the node may have explicitly been defined as a vector of 0 elements.
     bool hasAnyDim = false;
@@ -350,6 +368,9 @@ void LearnableParameter<ElemType>::InferInputDimsFrom(const TensorShape& otherSh
         InitShape(TensorShape(newDims));
     }
     fprintf(stderr, "%ls %ls operation: Tensor shape was inferred as [%s].\n", NodeName().c_str(), OperationName().c_str(), string(GetSampleLayout()).c_str());
+
+    // now repeat initialization
+    LazyInitParameters();
 }
 
 template <class ElemType>

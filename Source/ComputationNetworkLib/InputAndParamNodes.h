@@ -49,15 +49,21 @@ public:
     LearnableParameter(const ScriptableObjects::IConfigRecordPtr configp);
 
     // initialize with random numbers
-    // if 'initOnCPUOnly' then always init on CPU, making initialization consistent across both (for testing)
+    // If 'initOnCPUOnly' then always init on CPU, making initialization consistent across both (for testing).
+    // This is public because it is also called from NDL.
     void InitRandom(const bool uniformInit, const unsigned long randomSeed, const ElemType initValueScale, bool initOnCPUOnly);
 
     // initialize by reading a matrix from a text file
     void InitFromFile(const std::wstring& initFromFilePath);
 
+private:
     // helper to initialize from a matrix read from a text file or a string literal
     void InitFromArray(const std::vector<ElemType>& array, size_t numRows, size_t numCols);
 
+    // deferred initialization
+    void LazyInitParameters();
+
+public:
     // reload parameters from file
     // This is called from MEL.
     // TODO: Move this error check there, since this is called only from one place.
