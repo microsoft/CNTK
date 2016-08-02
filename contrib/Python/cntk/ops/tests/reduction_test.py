@@ -10,6 +10,7 @@ from .ops_test_utils import unittest_helper, AA, I, precision, PRECISION_TO_TYPE
 from ...graph import *
 from ...reader import *
 import cntk as C
+import math as m
 
 REDUCE_TEST_CASES = [
     #(input_data,  axis)
@@ -92,7 +93,7 @@ REDUCE_MIN_TEST_CASES = [
 ]
 
 @pytest.mark.parametrize("input_data, axis_data, expected_result, expected_gradient", REDUCE_MIN_TEST_CASES)
-def test_op_reduce_min(input_data, axis_data, expected_result, expected_gradient, device_id, precision):
+def test_op_reduce_loin(input_data, axis_data, expected_result, expected_gradient, device_id, precision):
 
     a = I([input_data])
 
@@ -105,4 +106,20 @@ def test_op_reduce_min(input_data, axis_data, expected_result, expected_gradient
     unittest_helper(result, None, [[expected_gradient]], device_id = device_id,
                 precision=precision, clean_up=True, backward_pass=True, input_node=a)
 
+
+REDUCE_LOGSUM_TEST_CASES = [
+     ([[0, 1],[2,  3]], 2,         [m.log(1 + m.exp(1) + m.exp(2) + m.exp(3))],  [[0,0],[1,0]]),
+]
+
+@pytest.mark.parametrize("input_data, axis_data, expected_result, expected_gradient", REDUCE_LOGSUM_TEST_CASES)
+def test_op_reduce_logsum(input_data, axis_data, expected_result, expected_gradient, device_id, precision):
+
+    a = I([input_data])
+
+
+    # slice using the operator
+    result = C.reduce_min(a, axis = axis_data)
+
+    unittest_helper(result, None, [[expected_result]], device_id=device_id, 
+                precision=precision, clean_up=True, backward_pass=False)
 
