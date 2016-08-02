@@ -5747,6 +5747,12 @@ SWIGINTERN size_t const CNTK_Placeholder___hash__(CNTK::Placeholder *self){
 
 
 
+SWIGINTERN CNTK::DictionaryValue CNTK_Dictionary___getitem__(CNTK::Dictionary *self,wchar_t const *key){
+        return (*(self))[key];
+    }
+SWIGINTERN void CNTK_Dictionary___setitem__(CNTK::Dictionary *self,wchar_t const *key,CNTK::DictionaryValue value){
+        (*(self))[key] = value;
+    }
 
 class Callback {
 public:
@@ -18125,7 +18131,7 @@ SWIGINTERN PyObject *_wrap_Function_Forward__SWIG_0(PyObject *SWIGUNUSEDPARM(sel
       
       PyObject *iterator = PyObject_GetIter(obj4);
       if (iterator == NULL) {
-        SWIG_exception_fail(SWIG_ValueError, "cannot convert key of dictionary to CNTK::Variable"); 
+        SWIG_exception_fail(SWIG_ValueError, "cannot convert list element to CNTK::Variable"); 
       }
       
       while (item = PyIter_Next(iterator)) {
@@ -18135,7 +18141,7 @@ SWIGINTERN PyObject *_wrap_Function_Forward__SWIG_0(PyObject *SWIGUNUSEDPARM(sel
           SWIG_exception_fail(SWIG_ArgError(res1), "cannot convert key of dictionary to CNTK::Variable"); 
         }
         if (!raw_var) {
-          SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting key of dictionary to CNTK::Variable");
+          SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting a list element to CNTK::Variable");
         }
         
         CNTK::Variable* var = reinterpret_cast<CNTK::Variable*>(raw_var);
@@ -25564,7 +25570,82 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_new_DictionaryValue__SWIG_7(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_new_DictionaryValue__SWIG_6(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  std::vector< CNTK::DictionaryValue,std::allocator< CNTK::DictionaryValue > > *arg1 = 0 ;
+  PyObject * obj0 = 0 ;
+  CNTK::DictionaryValue *result = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:new_DictionaryValue",&obj0)) SWIG_fail;
+  {
+    if (PyList_Check(obj0)) {
+      std::vector<CNTK::DictionaryValue>* vec = new std::vector<CNTK::DictionaryValue>();
+      
+      PyObject *item;
+      Py_ssize_t pos = 0;
+      
+      PyObject *iterator = PyObject_GetIter(obj0);
+      if (iterator == NULL) {
+        SWIG_exception_fail(SWIG_ValueError, "cannot convert key of dictionary to CNTK::DictionaryValue"); 
+      }
+      
+      while (item = PyIter_Next(iterator)) {
+        void *raw_var = 0 ;
+        int res1 = SWIG_ConvertPtr(item, &raw_var, SWIGTYPE_p_CNTK__DictionaryValue,  0);
+        if (!SWIG_IsOK(res1)) {
+          SWIG_exception_fail(SWIG_ArgError(res1), "cannot convert list element to CNTK::DictionaryValue"); 
+        }
+        if (!raw_var) {
+          SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting a list element to CNTK::DictionaryValue");
+        }
+        
+        CNTK::DictionaryValue* var = reinterpret_cast<CNTK::DictionaryValue*>(raw_var);
+        
+        vec->push_back(*var);
+        
+        Py_DECREF(item);
+      }
+      
+      Py_DECREF(iterator);
+      
+      if (PyErr_Occurred()) {
+        SWIG_exception_fail(SWIG_ValueError, "cannot convert key of dictionary to CNTK::LearnerPtr"); 
+      }
+      
+      arg1 = vec;
+      
+    } else {
+      SWIG_exception(SWIG_ValueError, "list expected");
+    }
+  }
+  {
+    try {
+      result = (CNTK::DictionaryValue *)new CNTK::DictionaryValue((std::vector< CNTK::DictionaryValue,std::allocator< CNTK::DictionaryValue > > const &)*arg1); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__DictionaryValue, SWIG_POINTER_NEW |  0 );
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_new_DictionaryValue__SWIG_8(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::DictionaryValue *arg1 = 0 ;
   void *argp1 = 0 ;
@@ -25628,7 +25709,7 @@ SWIGINTERN PyObject *_wrap_new_DictionaryValue(PyObject *self, PyObject *args) {
     int res = SWIG_ConvertPtr(argv[0], 0, SWIGTYPE_p_CNTK__DictionaryValue, 0);
     _v = SWIG_CheckState(res);
     if (_v) {
-      return _wrap_new_DictionaryValue__SWIG_7(self, args);
+      return _wrap_new_DictionaryValue__SWIG_8(self, args);
     }
   }
   if (argc == 1) {
@@ -25679,6 +25760,17 @@ SWIGINTERN PyObject *_wrap_new_DictionaryValue(PyObject *self, PyObject *args) {
       return _wrap_new_DictionaryValue__SWIG_5(self, args);
     }
   }
+  if (argc == 1) {
+    int _v;
+    {
+      // '1000' is the typecheck precedence code. It means: check after basic
+      // types, but before arrays. See: http://www.swig.org/Doc1.3/Typemaps.html#Typemaps_overloading
+      _v = PyList_Check(argv[0]) ? 1 : 0;
+    }
+    if (_v) {
+      return _wrap_new_DictionaryValue__SWIG_6(self, args);
+    }
+  }
   
 fail:
   SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'new_DictionaryValue'.\n"
@@ -25689,6 +25781,7 @@ fail:
     "    CNTK::DictionaryValue::DictionaryValue(float)\n"
     "    CNTK::DictionaryValue::DictionaryValue(double)\n"
     "    CNTK::DictionaryValue::DictionaryValue(wchar_t const *)\n"
+    "    CNTK::DictionaryValue::DictionaryValue(std::vector< CNTK::DictionaryValue,std::allocator< CNTK::DictionaryValue > > const &)\n"
     "    CNTK::DictionaryValue::DictionaryValue(CNTK::DictionaryValue const &)\n");
   return 0;
 }
@@ -25810,6 +25903,50 @@ SWIGINTERN PyObject *_wrap_DictionaryValue_ValueType(PyObject *SWIGUNUSEDPARM(se
     }
   }
   resultobj = SWIG_From_int(static_cast< int >(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_new_DictionaryValueFromDict(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  CNTK::Dictionary *arg1 = 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  CNTK::DictionaryValue *result = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:new_DictionaryValueFromDict",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Dictionary,  0  | 0);
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "new_DictionaryValueFromDict" "', argument " "1"" of type '" "CNTK::Dictionary const &""'"); 
+  }
+  if (!argp1) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "new_DictionaryValueFromDict" "', argument " "1"" of type '" "CNTK::Dictionary const &""'"); 
+  }
+  arg1 = reinterpret_cast< CNTK::Dictionary * >(argp1);
+  {
+    try {
+      result = (CNTK::DictionaryValue *)new CNTK::DictionaryValue((CNTK::Dictionary const &)*arg1); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__DictionaryValue, SWIG_POINTER_OWN |  0 );
   return resultobj;
 fail:
   return NULL;
@@ -26184,6 +26321,90 @@ fail:
 }
 
 
+SWIGINTERN PyObject *_wrap_Dictionary___getitem__(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  CNTK::Dictionary *arg1 = (CNTK::Dictionary *) 0 ;
+  wchar_t *arg2 = (wchar_t *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int res2 ;
+  wchar_t *buf2 = 0 ;
+  int alloc2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  CNTK::DictionaryValue result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:Dictionary___getitem__",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_CNTK__Dictionary, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Dictionary___getitem__" "', argument " "1"" of type '" "CNTK::Dictionary *""'"); 
+  }
+  arg1 = reinterpret_cast< CNTK::Dictionary * >(argp1);
+  res2 = SWIG_AsWCharPtrAndSize(obj1, &buf2, NULL, &alloc2);
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "Dictionary___getitem__" "', argument " "2"" of type '" "wchar_t const *""'");
+  }
+  arg2 = reinterpret_cast< wchar_t * >(buf2);
+  result = CNTK_Dictionary___getitem__(arg1,(wchar_t const *)arg2);
+  resultobj = SWIG_NewPointerObj((new CNTK::DictionaryValue(static_cast< const CNTK::DictionaryValue& >(result))), SWIGTYPE_p_CNTK__DictionaryValue, SWIG_POINTER_OWN |  0 );
+  if (alloc2 == SWIG_NEWOBJ) delete[] buf2;
+  return resultobj;
+fail:
+  if (alloc2 == SWIG_NEWOBJ) delete[] buf2;
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_Dictionary___setitem__(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  CNTK::Dictionary *arg1 = (CNTK::Dictionary *) 0 ;
+  wchar_t *arg2 = (wchar_t *) 0 ;
+  CNTK::DictionaryValue arg3 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int res2 ;
+  wchar_t *buf2 = 0 ;
+  int alloc2 = 0 ;
+  void *argp3 ;
+  int res3 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  PyObject * obj2 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OOO:Dictionary___setitem__",&obj0,&obj1,&obj2)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_CNTK__Dictionary, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Dictionary___setitem__" "', argument " "1"" of type '" "CNTK::Dictionary *""'"); 
+  }
+  arg1 = reinterpret_cast< CNTK::Dictionary * >(argp1);
+  res2 = SWIG_AsWCharPtrAndSize(obj1, &buf2, NULL, &alloc2);
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "Dictionary___setitem__" "', argument " "2"" of type '" "wchar_t const *""'");
+  }
+  arg2 = reinterpret_cast< wchar_t * >(buf2);
+  {
+    res3 = SWIG_ConvertPtr(obj2, &argp3, SWIGTYPE_p_CNTK__DictionaryValue,  0  | 0);
+    if (!SWIG_IsOK(res3)) {
+      SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "Dictionary___setitem__" "', argument " "3"" of type '" "CNTK::DictionaryValue""'"); 
+    }  
+    if (!argp3) {
+      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Dictionary___setitem__" "', argument " "3"" of type '" "CNTK::DictionaryValue""'");
+    } else {
+      CNTK::DictionaryValue * temp = reinterpret_cast< CNTK::DictionaryValue * >(argp3);
+      arg3 = *temp;
+      if (SWIG_IsNewObj(res3)) delete temp;
+    }
+  }
+  CNTK_Dictionary___setitem__(arg1,(wchar_t const *)arg2,arg3);
+  resultobj = SWIG_Py_Void();
+  if (alloc2 == SWIG_NEWOBJ) delete[] buf2;
+  return resultobj;
+fail:
+  if (alloc2 == SWIG_NEWOBJ) delete[] buf2;
+  return NULL;
+}
+
+
 SWIGINTERN PyObject *Dictionary_swigregister(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *obj;
   if (!PyArg_ParseTuple(args,(char*)"O:swigregister", &obj)) return NULL;
@@ -26514,7 +26735,7 @@ SWIGINTERN PyObject *_wrap_SGDLearner(PyObject *SWIGUNUSEDPARM(self), PyObject *
       
       PyObject *iterator = PyObject_GetIter(obj0);
       if (iterator == NULL) {
-        SWIG_exception_fail(SWIG_ValueError, "cannot convert key of dictionary to CNTK::Parameter"); 
+        SWIG_exception_fail(SWIG_ValueError, "cannot convert list element to CNTK::Parameter"); 
       }
       
       while (item = PyIter_Next(iterator)) {
@@ -26524,7 +26745,7 @@ SWIGINTERN PyObject *_wrap_SGDLearner(PyObject *SWIGUNUSEDPARM(self), PyObject *
           SWIG_exception_fail(SWIG_ArgError(res1), "cannot convert key of dictionary to CNTK::Parameter"); 
         }
         if (!raw_var) {
-          SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting key of dictionary to CNTK::Parameter");
+          SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting a list element to CNTK::Parameter");
         }
         
         CNTK::Parameter* var = reinterpret_cast<CNTK::Parameter*>(raw_var);
@@ -26597,7 +26818,7 @@ SWIGINTERN PyObject *_wrap_MomentumSGDLearner(PyObject *SWIGUNUSEDPARM(self), Py
       
       PyObject *iterator = PyObject_GetIter(obj0);
       if (iterator == NULL) {
-        SWIG_exception_fail(SWIG_ValueError, "cannot convert key of dictionary to CNTK::Parameter"); 
+        SWIG_exception_fail(SWIG_ValueError, "cannot convert list element to CNTK::Parameter"); 
       }
       
       while (item = PyIter_Next(iterator)) {
@@ -26607,7 +26828,7 @@ SWIGINTERN PyObject *_wrap_MomentumSGDLearner(PyObject *SWIGUNUSEDPARM(self), Py
           SWIG_exception_fail(SWIG_ArgError(res1), "cannot convert key of dictionary to CNTK::Parameter"); 
         }
         if (!raw_var) {
-          SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting key of dictionary to CNTK::Parameter");
+          SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting a list element to CNTK::Parameter");
         }
         
         CNTK::Parameter* var = reinterpret_cast<CNTK::Parameter*>(raw_var);
@@ -26675,7 +26896,7 @@ SWIGINTERN PyObject *_wrap_NesterovLearner(PyObject *SWIGUNUSEDPARM(self), PyObj
       
       PyObject *iterator = PyObject_GetIter(obj0);
       if (iterator == NULL) {
-        SWIG_exception_fail(SWIG_ValueError, "cannot convert key of dictionary to CNTK::Parameter"); 
+        SWIG_exception_fail(SWIG_ValueError, "cannot convert list element to CNTK::Parameter"); 
       }
       
       while (item = PyIter_Next(iterator)) {
@@ -26685,7 +26906,7 @@ SWIGINTERN PyObject *_wrap_NesterovLearner(PyObject *SWIGUNUSEDPARM(self), PyObj
           SWIG_exception_fail(SWIG_ArgError(res1), "cannot convert key of dictionary to CNTK::Parameter"); 
         }
         if (!raw_var) {
-          SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting key of dictionary to CNTK::Parameter");
+          SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting a list element to CNTK::Parameter");
         }
         
         CNTK::Parameter* var = reinterpret_cast<CNTK::Parameter*>(raw_var);
@@ -26757,7 +26978,7 @@ SWIGINTERN PyObject *_wrap_AdaGradLearner__SWIG_0(PyObject *SWIGUNUSEDPARM(self)
       
       PyObject *iterator = PyObject_GetIter(obj0);
       if (iterator == NULL) {
-        SWIG_exception_fail(SWIG_ValueError, "cannot convert key of dictionary to CNTK::Parameter"); 
+        SWIG_exception_fail(SWIG_ValueError, "cannot convert list element to CNTK::Parameter"); 
       }
       
       while (item = PyIter_Next(iterator)) {
@@ -26767,7 +26988,7 @@ SWIGINTERN PyObject *_wrap_AdaGradLearner__SWIG_0(PyObject *SWIGUNUSEDPARM(self)
           SWIG_exception_fail(SWIG_ArgError(res1), "cannot convert key of dictionary to CNTK::Parameter"); 
         }
         if (!raw_var) {
-          SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting key of dictionary to CNTK::Parameter");
+          SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting a list element to CNTK::Parameter");
         }
         
         CNTK::Parameter* var = reinterpret_cast<CNTK::Parameter*>(raw_var);
@@ -26840,7 +27061,7 @@ SWIGINTERN PyObject *_wrap_AdaGradLearner__SWIG_1(PyObject *SWIGUNUSEDPARM(self)
       
       PyObject *iterator = PyObject_GetIter(obj0);
       if (iterator == NULL) {
-        SWIG_exception_fail(SWIG_ValueError, "cannot convert key of dictionary to CNTK::Parameter"); 
+        SWIG_exception_fail(SWIG_ValueError, "cannot convert list element to CNTK::Parameter"); 
       }
       
       while (item = PyIter_Next(iterator)) {
@@ -26850,7 +27071,7 @@ SWIGINTERN PyObject *_wrap_AdaGradLearner__SWIG_1(PyObject *SWIGUNUSEDPARM(self)
           SWIG_exception_fail(SWIG_ArgError(res1), "cannot convert key of dictionary to CNTK::Parameter"); 
         }
         if (!raw_var) {
-          SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting key of dictionary to CNTK::Parameter");
+          SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting a list element to CNTK::Parameter");
         }
         
         CNTK::Parameter* var = reinterpret_cast<CNTK::Parameter*>(raw_var);
@@ -26968,7 +27189,7 @@ SWIGINTERN PyObject *_wrap_FSAdaGradLearner(PyObject *SWIGUNUSEDPARM(self), PyOb
       
       PyObject *iterator = PyObject_GetIter(obj0);
       if (iterator == NULL) {
-        SWIG_exception_fail(SWIG_ValueError, "cannot convert key of dictionary to CNTK::Parameter"); 
+        SWIG_exception_fail(SWIG_ValueError, "cannot convert list element to CNTK::Parameter"); 
       }
       
       while (item = PyIter_Next(iterator)) {
@@ -26978,7 +27199,7 @@ SWIGINTERN PyObject *_wrap_FSAdaGradLearner(PyObject *SWIGUNUSEDPARM(self), PyOb
           SWIG_exception_fail(SWIG_ArgError(res1), "cannot convert key of dictionary to CNTK::Parameter"); 
         }
         if (!raw_var) {
-          SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting key of dictionary to CNTK::Parameter");
+          SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting a list element to CNTK::Parameter");
         }
         
         CNTK::Parameter* var = reinterpret_cast<CNTK::Parameter*>(raw_var);
@@ -27070,7 +27291,7 @@ SWIGINTERN PyObject *_wrap_RMSPropLearner__SWIG_0(PyObject *SWIGUNUSEDPARM(self)
       
       PyObject *iterator = PyObject_GetIter(obj0);
       if (iterator == NULL) {
-        SWIG_exception_fail(SWIG_ValueError, "cannot convert key of dictionary to CNTK::Parameter"); 
+        SWIG_exception_fail(SWIG_ValueError, "cannot convert list element to CNTK::Parameter"); 
       }
       
       while (item = PyIter_Next(iterator)) {
@@ -27080,7 +27301,7 @@ SWIGINTERN PyObject *_wrap_RMSPropLearner__SWIG_0(PyObject *SWIGUNUSEDPARM(self)
           SWIG_exception_fail(SWIG_ArgError(res1), "cannot convert key of dictionary to CNTK::Parameter"); 
         }
         if (!raw_var) {
-          SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting key of dictionary to CNTK::Parameter");
+          SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting a list element to CNTK::Parameter");
         }
         
         CNTK::Parameter* var = reinterpret_cast<CNTK::Parameter*>(raw_var);
@@ -27198,7 +27419,7 @@ SWIGINTERN PyObject *_wrap_RMSPropLearner__SWIG_1(PyObject *SWIGUNUSEDPARM(self)
       
       PyObject *iterator = PyObject_GetIter(obj0);
       if (iterator == NULL) {
-        SWIG_exception_fail(SWIG_ValueError, "cannot convert key of dictionary to CNTK::Parameter"); 
+        SWIG_exception_fail(SWIG_ValueError, "cannot convert list element to CNTK::Parameter"); 
       }
       
       while (item = PyIter_Next(iterator)) {
@@ -27208,7 +27429,7 @@ SWIGINTERN PyObject *_wrap_RMSPropLearner__SWIG_1(PyObject *SWIGUNUSEDPARM(self)
           SWIG_exception_fail(SWIG_ArgError(res1), "cannot convert key of dictionary to CNTK::Parameter"); 
         }
         if (!raw_var) {
-          SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting key of dictionary to CNTK::Parameter");
+          SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting a list element to CNTK::Parameter");
         }
         
         CNTK::Parameter* var = reinterpret_cast<CNTK::Parameter*>(raw_var);
@@ -27442,7 +27663,7 @@ SWIGINTERN PyObject *_wrap_new_Trainer(PyObject *SWIGUNUSEDPARM(self), PyObject 
       
       PyObject *iterator = PyObject_GetIter(obj2);
       if (iterator == NULL) {
-        SWIG_exception_fail(SWIG_ValueError, "cannot convert key of dictionary to CNTK::LearnerPtr"); 
+        SWIG_exception_fail(SWIG_ValueError, "cannot convert list element to CNTK::LearnerPtr"); 
       }
       
       while (item = PyIter_Next(iterator)) {
@@ -27452,7 +27673,7 @@ SWIGINTERN PyObject *_wrap_new_Trainer(PyObject *SWIGUNUSEDPARM(self), PyObject 
           SWIG_exception_fail(SWIG_ArgError(res1), "cannot convert key of dictionary to CNTK::LearnerPtr"); 
         }
         if (!raw_var) {
-          SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting key of dictionary to CNTK::LearnerPtr");
+          SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting a list element to CNTK::LearnerPtr");
         }
         
         CNTK::LearnerPtr* var = reinterpret_cast<CNTK::LearnerPtr*>(raw_var);
@@ -29295,10 +29516,13 @@ static PyMethodDef SwigMethods[] = {
 	 { (char *)"delete_DictionaryValue", _wrap_delete_DictionaryValue, METH_VARARGS, NULL},
 	 { (char *)"DictionaryValue_HasValue", _wrap_DictionaryValue_HasValue, METH_VARARGS, NULL},
 	 { (char *)"DictionaryValue_ValueType", _wrap_DictionaryValue_ValueType, METH_VARARGS, NULL},
+	 { (char *)"new_DictionaryValueFromDict", _wrap_new_DictionaryValueFromDict, METH_VARARGS, NULL},
 	 { (char *)"DictionaryValue_swigregister", DictionaryValue_swigregister, METH_VARARGS, NULL},
 	 { (char *)"delete_Dictionary", _wrap_delete_Dictionary, METH_VARARGS, NULL},
 	 { (char *)"new_Dictionary", _wrap_new_Dictionary, METH_VARARGS, NULL},
 	 { (char *)"Dictionary_Contains", _wrap_Dictionary_Contains, METH_VARARGS, NULL},
+	 { (char *)"Dictionary___getitem__", _wrap_Dictionary___getitem__, METH_VARARGS, NULL},
+	 { (char *)"Dictionary___setitem__", _wrap_Dictionary___setitem__, METH_VARARGS, NULL},
 	 { (char *)"Dictionary_swigregister", Dictionary_swigregister, METH_VARARGS, NULL},
 	 { (char *)"Learner_Update", _wrap_Learner_Update, METH_VARARGS, NULL},
 	 { (char *)"Learner_Parameters", _wrap_Learner_Parameters, METH_VARARGS, NULL},

@@ -57,7 +57,7 @@ def fully_connected_classifier_net(input, num_output_classes, hidden_layer_dim, 
 
 if __name__=='__main__':      
     dev = cntk_py.DeviceDescriptor.CPUDevice()       
-    input_dim = 1;
+    input_dim = 2;
     num_output_classes = 2;
     num_hidden_layers = 2;
     hidden_layers_dim = 50;
@@ -72,6 +72,32 @@ if __name__=='__main__':
     pe = cntk_py.ClassificationError(netout.Output(), label)
     ffnet = cntk_py.Combine([ce, pe, netout], "aa")      
     
+    featuresStreamConfig = cntk_py.Dictionary();
+    featuresStreamConfig["dim"] = cntk_py.DictionaryValue(input_dim);       
+    featuresStreamConfig["format"] = cntk_py.DictionaryValue("dense");
+
+    labelsStreamConfig = cntk_py.Dictionary()
+    labelsStreamConfig["dim"] = cntk_py.DictionaryValue(num_output_classes);
+    labelsStreamConfig["format"] = cntk_py.DictionaryValue("dense");
+
+    inputStreamsConfig = cntk_py.Dictionary();
+    inputStreamsConfig["features"] = cntk_py.DictionaryValueFromDict(featuresStreamConfig);
+    inputStreamsConfig["labels"] = cntk_py.DictionaryValueFromDict(labelsStreamConfig);
+
+    deserializerConfiguration = cntk_py.Dictionary();
+    deserializerConfiguration["type"] = cntk_py.DictionaryValue("CNTKTextFormatDeserializer");
+    deserializerConfiguration["module"] = cntk_py.DictionaryValue("CNTKTextFormatReader");
+    deserializerConfiguration["file"] = cntk_py.DictionaryValue("SimpleDataTest_cntk_text.txt");
+    deserializerConfiguration["input"] = cntk_py.DictionaryValueFromDict(inputStreamsConfig);
+
+    minibatchSourceConfiguration = cntk_py.Dictionary();
+    minibatchSourceConfiguration["epochSize"] = cntk_py.DictionaryValue(10);
+    deser = cntk_py.DictionaryValueFromDict(deserializerConfiguration)
+    minibatchSourceConfiguration["deserializers"] = cntk_py.DictionaryValue([aa]);
+
+    cm = cntk_py.CreateCompositeMinibatchSource(minibatchSourceConfiguration);
+    
+
     trainer = cntk_py.Trainer(ffnet, ce.Output(), [cntk_py.SGDLearner(ffnet.Parameters(), 0.2)])    
     for i in range(0,10):
         nd = np.random.rand(input_dim,1,num_samples)        

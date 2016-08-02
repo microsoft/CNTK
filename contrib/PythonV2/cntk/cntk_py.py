@@ -871,6 +871,10 @@ def DictionaryValue_TypeName(type):
     return _cntk_py.DictionaryValue_TypeName(type)
 DictionaryValue_TypeName = _cntk_py.DictionaryValue_TypeName
 
+def DictionaryValueFromDict(value):
+    val = _cntk_py.new_DictionaryValueFromDict(value)
+    return val
+
 class Dictionary(_object):
     __swig_setmethods__ = {}
     __setattr__ = lambda self, name, value: _swig_setattr(self, Dictionary, name, value)
@@ -889,6 +893,12 @@ class Dictionary(_object):
 
     def Contains(self, *args):
         return _cntk_py.Dictionary_Contains(self, *args)
+
+    def __getitem__(self, key):
+        return _cntk_py.Dictionary___getitem__(self, key)
+
+    def __setitem__(self, key, value):
+        return _cntk_py.Dictionary___setitem__(self, key, value)
 Dictionary_swigregister = _cntk_py.Dictionary_swigregister
 Dictionary_swigregister(Dictionary)
 

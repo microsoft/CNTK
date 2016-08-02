@@ -1631,6 +1631,13 @@ namespace CNTK
         DictionaryValue(const wchar_t* value) 
             : DictionaryValue(std::wstring(value))
         {}
+
+        // Due to SWIG we had to flatten this template for vector<DictionaryValue>
+        DictionaryValue(const std::vector<CNTK::DictionaryValue>& value) : m_valueType(GetValueType<std::vector<CNTK::DictionaryValue>>())
+        {
+            AllocateDataPtr(value);
+        }
+
         template <typename T>
         DictionaryValue(const T& value) : m_valueType(GetValueType<T>())
         {

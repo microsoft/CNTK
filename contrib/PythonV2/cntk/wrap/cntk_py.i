@@ -43,6 +43,17 @@
 %eq_for(Parameter, Variable_eq)
 
 
+ %extend CNTK::Dictionary {
+    CNTK::DictionaryValue __getitem__(const wchar_t* key) {
+        return (*($self))[key];
+    }
+
+    void __setitem__(const wchar_t* key, CNTK::DictionaryValue value) {
+        (*($self))[key] = value;
+    }
+}
+
+
 %{
     #include "CNTKLibrary.h"
     using namespace CNTK;
@@ -64,7 +75,6 @@
     catch (...) { SWIG_exception(SWIG_RuntimeError,"Runtime exception"); }
 }
 
-%template() std::vector<CNTK::Variable>;
 
 //%attribute2(CNTK::Variable, CNTK::NDShape, shape, Shape);
 
@@ -272,9 +282,61 @@
     }
 }
 
+
+//
+// Converting Python list {DictionaryValue} to std::vector
+//
+%typecheck(1000) std::vector<CNTK::DictionaryValue>& {
+    // '1000' is the typecheck precedence code. It means: check after basic
+    // types, but before arrays. See: http://www.swig.org/Doc1.3/Typemaps.html#Typemaps_overloading
+    $1 = PyList_Check($input) ? 1 : 0;
+}
+
+%typemap(in) std::vector<CNTK::DictionaryValue>& {
+     if (PyList_Check($input)) {
+        std::vector<CNTK::DictionaryValue>* vec = new std::vector<CNTK::DictionaryValue>();
+
+        PyObject *item;
+        Py_ssize_t pos = 0;
+
+        PyObject *iterator = PyObject_GetIter($input);
+        if (iterator == NULL) {
+            SWIG_exception_fail(SWIG_ValueError, "cannot convert key of dictionary to CNTK::DictionaryValue"); 
+        }
+
+        while (item = PyIter_Next(iterator)) {
+            void *raw_var = 0 ;
+            int res1 = SWIG_ConvertPtr(item, &raw_var, SWIGTYPE_p_CNTK__DictionaryValue,  0);
+            if (!SWIG_IsOK(res1)) {
+                SWIG_exception_fail(SWIG_ArgError(res1), "cannot convert list element to CNTK::DictionaryValue"); 
+            }
+            if (!raw_var) {
+                SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting a list element to CNTK::DictionaryValue");
+            }
+
+            CNTK::DictionaryValue* var = reinterpret_cast<CNTK::DictionaryValue*>(raw_var);
+
+            vec->push_back(*var);
+
+            Py_DECREF(item);
+        }
+
+        Py_DECREF(iterator);
+
+        if (PyErr_Occurred()) {
+            SWIG_exception_fail(SWIG_ValueError, "cannot convert key of dictionary to CNTK::LearnerPtr"); 
+        }
+
+        $1 = vec;
+
+     } else {
+         SWIG_exception(SWIG_ValueError, "list expected");
+     }
+}
+
 // end of map conversion
 
-// TODO: Parametrize the following three typemaps
+// TODO: Parametrize the following three typemaps and unify set/list usage.
 
 //
 // Converting Python set {Variable} to std::unordered_set
@@ -294,7 +356,7 @@
 
         PyObject *iterator = PyObject_GetIter($input);
         if (iterator == NULL) {
-            SWIG_exception_fail(SWIG_ValueError, "cannot convert key of dictionary to CNTK::Variable"); 
+            SWIG_exception_fail(SWIG_ValueError, "cannot convert list element to CNTK::Variable"); 
         }
 
         while (item = PyIter_Next(iterator)) {
@@ -304,7 +366,7 @@
                 SWIG_exception_fail(SWIG_ArgError(res1), "cannot convert key of dictionary to CNTK::Variable"); 
             }
             if (!raw_var) {
-                SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting key of dictionary to CNTK::Variable");
+                SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting a list element to CNTK::Variable");
             }
 
             CNTK::Variable* var = reinterpret_cast<CNTK::Variable*>(raw_var);
@@ -329,7 +391,7 @@
 
 
 //
-// Converting Python set {Parameter} to std::unordered_set
+// Converting Python list {Parameter} to std::unordered_set
 //
 %typecheck(1000) std::unordered_set<CNTK::Parameter>& {
     // '1000' is the typecheck precedence code. It means: check after basic
@@ -346,7 +408,7 @@
 
         PyObject *iterator = PyObject_GetIter($input);
         if (iterator == NULL) {
-            SWIG_exception_fail(SWIG_ValueError, "cannot convert key of dictionary to CNTK::Parameter"); 
+            SWIG_exception_fail(SWIG_ValueError, "cannot convert list element to CNTK::Parameter"); 
         }
 
         while (item = PyIter_Next(iterator)) {
@@ -356,7 +418,7 @@
                 SWIG_exception_fail(SWIG_ArgError(res1), "cannot convert key of dictionary to CNTK::Parameter"); 
             }
             if (!raw_var) {
-                SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting key of dictionary to CNTK::Parameter");
+                SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting a list element to CNTK::Parameter");
             }
 
             CNTK::Parameter* var = reinterpret_cast<CNTK::Parameter*>(raw_var);
@@ -381,7 +443,7 @@
 
 
 //
-// Converting Python set {LearnerPtr} to std::unordered_set
+// Converting Python list {LearnerPtr} to std::unordered_set
 //
 %typecheck(1000) std::unordered_set<CNTK::LearnerPtr>& {
     // '1000' is the typecheck precedence code. It means: check after basic
@@ -398,7 +460,7 @@
 
         PyObject *iterator = PyObject_GetIter($input);
         if (iterator == NULL) {
-            SWIG_exception_fail(SWIG_ValueError, "cannot convert key of dictionary to CNTK::LearnerPtr"); 
+            SWIG_exception_fail(SWIG_ValueError, "cannot convert list element to CNTK::LearnerPtr"); 
         }
 
         while (item = PyIter_Next(iterator)) {
@@ -408,7 +470,7 @@
                 SWIG_exception_fail(SWIG_ArgError(res1), "cannot convert key of dictionary to CNTK::LearnerPtr"); 
             }
             if (!raw_var) {
-                SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting key of dictionary to CNTK::LearnerPtr");
+                SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting a list element to CNTK::LearnerPtr");
             }
 
             CNTK::LearnerPtr* var = reinterpret_cast<CNTK::LearnerPtr*>(raw_var);
@@ -476,7 +538,7 @@
 
 %include "CNTKLibraryInternals.h"
 %include "CNTKLibrary.h"
-%template() std::vector<CNTK::Variable>;
+
 
 //
 // NDMask
@@ -591,6 +653,7 @@
 %template(ConstantDouble) CNTK::Constant::Constant<double>;
 %template(RandomUniformFloat) CNTK::NDArrayView::RandomUniform<float>;
 %template(RandomUniformDouble) CNTK::NDArrayView::RandomUniform<double>;
+%template(DictionaryValueFromDict) CNTK::DictionaryValue::DictionaryValue<CNTK::Dictionary>;
 
 // end of NDArrayView
 
@@ -654,4 +717,5 @@ DATA_TYPE.__eq__ = lambda a,b: EQ(a,b)
 %py_hash_for(Constant, Variable_eq)
 %py_hash_for(Placeholder, Variable_eq)
 %py_hash_for(Parameter, Variable_eq)
+
 
