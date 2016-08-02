@@ -8,7 +8,9 @@
 #define _CRT_NONSTDC_NO_DEPRECATE // make VS accept POSIX functions without _
 
 #include "stdafx.h"
+#ifdef _WIN32
 #include <crtdbg.h>
+#endif 
 
 #include "Basics.h"
 #include "Actions.h"
