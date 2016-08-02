@@ -155,7 +155,7 @@ bool ReaderShim<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
         iter.second.pMBLayout->Init(1, 0);
     }
 
-    timer.Start();
+    timer.Restart();
     // a map to generate error messages when checking layout constraints. 
     map<wstring, wstring> layoutToInputMap;
     if (!minibatch.m_data.empty())
