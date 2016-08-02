@@ -8,6 +8,7 @@
 #define _CRT_NONSTDC_NO_DEPRECATE // make VS accept POSIX functions without _
 
 #include "stdafx.h"
+#include "signal.h"
 #include "Basics.h"
 #include "Actions.h"
 #include "ComputationNetwork.h"
@@ -828,12 +829,24 @@ static void LogDelayLoadError(PEXCEPTION_POINTERS pExcPointers)
     }
 }
 
+#if _DEBUG
+// in case of asserts in debug mode, print the message into stderr and throw exception
+int HandleDebugAssert(int,               // reportType  - ignoring reportType, printing message and aborting for all reportTypes
+                      char *message,     // message     - fully assembled debug user message
+                      int * returnValue) // returnValue - retVal value of zero continues execution
+{
+    *returnValue = 0;
+    fprintf(stderr, "C-Runtime: %s\n", message);
+    throw std::runtime_error(message);
+}
+#endif
+
 int wmain(int argc, wchar_t* argv[]) // wmain wrapper that reports Win32 exceptions
 {
     set_terminate(TerminateThis);    // insert a termination handler to ensure stderr gets flushed before actually terminating
-    _set_error_mode(_OUT_TO_STDERR); // make sure there are no CRT prompts when CNTK is executing
 
-    // Note: this does not seem to work--processes with this seem to just hang instead of terminating
+    _CrtSetReportHook(HandleDebugAssert); // in case of asserts in debug mode, print the message into stderr and throw exception
+
     __try
     {
         return wmain1(argc, argv);
