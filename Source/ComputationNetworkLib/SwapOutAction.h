@@ -8,7 +8,7 @@
 #include "SyncAction.h"
 #include "GPUMatrix.h"
 
-#ifndef ONLYCPU
+#ifndef CPUONLY
     #include <cuda.h>
 #endif
 

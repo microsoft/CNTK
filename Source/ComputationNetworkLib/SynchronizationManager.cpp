@@ -66,6 +66,7 @@ void SynchronizationManager::CleanUp()
 
 void SynchronizationManager::FindSwapOrder()
 {
+#ifndef CPUONLY
     float totalMemorySwappedInMB = 0.0f;
     float totalMemoryInMB  = 0.0f;
     for(Matrix<float>* buffer : m_bufferSet)
@@ -170,10 +171,13 @@ void SynchronizationManager::FindSwapOrder()
 
     fprintf(stderr, "Total swapped memory: %fMB\n", totalMemorySwappedInMB);
     fprintf(stderr, "Total swappable memory: %fMB\n", totalMemoryInMB);
+#endif
 }
 
 void SynchronizationManager::BeginSynchronizeState(ComputationNodeBase *node, const size_t idx, const FrameRange& fr, bool isForward)
 {
+
+#ifndef CPUONLY
 	if(!m_useMemorySwapping){ return; }
 
     if(!m_isExecuting)
@@ -191,6 +195,8 @@ void SynchronizationManager::BeginSynchronizeState(ComputationNodeBase *node, co
             RegisterBuffers(node, isForward);
             SwapInFreedBuffers(node, isForward);
             GatherRuntimeStatistics(node, idx, fr, isForward);
+            CUDA_CALL(cudaDeviceSynchronize());
+            MeasureSwapTime(node, isForward);
         }
         else
         {
@@ -214,10 +220,41 @@ void SynchronizationManager::BeginSynchronizeState(ComputationNodeBase *node, co
         }
 
     }
+#endif
+}
+
+
+void ZeroGradients(ComputationNodeBase *node)
+{
+    if(node->NeedsGradient())
+    {
+        ComputationNode<float> *compNode =(ComputationNode<float>*)node;
+        if(&compNode->Gradient() != NULL)
+        {
+            //Matrix<float> *mat = (Matrix<float>*) node->GradientPtr().get();
+            //compNode->Gradient().SetValue(0.0f);
+            compNode->ResetGradient(0.0f);
+
+            cout << node->GradientPtr() << endl;
+            cout << node->NeedsGradient() << endl;
+            cudaPointerAttributes att;
+            //cudaPointerGetAttributes(&att, mat->Data());
+            cout << "device " << att.devicePointer << endl;
+            cout << "host " << att.hostPointer << endl;
+            cout << "mem " << att.memoryType << endl;
+            cout << "device " << att.device << endl;
+            //cout << mat->BufferSize() << endl;
+           try { 
+            
+               //CUDA_CALL(cudaMemset(node->GradientPtr().get(), 0, ((Matrix<float>*)node->GradientPtr().get())->BufferSize()));
+ } catch(const std::exception& e) { /* */ }
+
+       }     }
 }
 
 void SynchronizationManager::EndSynchronizeState(ComputationNodeBase *node, const size_t idx, const FrameRange& fr, bool isForward)
 {
+#ifndef CPUONLY
 	if(!m_useMemorySwapping){ return; }
 
     if(!m_isExecuting)
@@ -225,6 +262,7 @@ void SynchronizationManager::EndSynchronizeState(ComputationNodeBase *node, cons
         // end synchronize is called after the forward / backward pass, thus we can free
         // the memory now
         FreeBuffersForDryRun(node, isForward);
+        //ZeroGradients(node);
     }
     else
     {
@@ -241,11 +279,12 @@ void SynchronizationManager::EndSynchronizeState(ComputationNodeBase *node, cons
                 actionsToDo[i]->EndAction();
         }
     }
+#endif
 }
 
 void SynchronizationManager::SwapInFreedBuffers(ComputationNodeBase *node, bool isForward)
 {
-    if(node->IsValueSharable()){ return; }
+    //if(node->IsValueSharable()){ return; }
 
     std::string name = GetStepName(node, isForward);
     int stepNumber = m_stepName2StepNumber[name];
@@ -266,6 +305,7 @@ void SynchronizationManager::SwapInFreedBuffers(ComputationNodeBase *node, bool 
 
 void SynchronizationManager::FreeBuffersForDryRun(ComputationNodeBase *node, bool isForward)
 {
+#ifndef CPUONLY
     // if a value is marked as shareable, it will be used right after, thus it makes
     // no sense to swap out these values (it just makes it more complicated), so instead
     // we just swap out the non-sharable ones (used in backprop). This will give us enough
@@ -297,13 +337,14 @@ void SynchronizationManager::FreeBuffersForDryRun(ComputationNodeBase *node, boo
         m_buffer2IsFreed[buffer] = true;
 
     }
+#endif
 }
 
-inline std::string BoolToString(bool b){ return b ? std::string("_forward") : std::string("_backprop"); }
+inline std::string IsForwardToString(bool b){ return b ? std::string("_forward") : std::string("_backprop"); }
 std::string SynchronizationManager::GetStepName(ComputationNodeBase *node, bool isForward)
 {
     std::wstring wname = node->GetName();
-    return std::string(wname.begin(), wname.end()) + BoolToString(isForward);
+    return std::string(wname.begin(), wname.end()) + IsForwardToString(isForward);
 }
 
 
@@ -341,7 +382,7 @@ void SynchronizationManager::RegisterBuffers(ComputationNodeBase *node, bool isF
 
     fprintf(stderr, "Step number: %i step name: %s\n", m_currentStepNumber, name.c_str());
 
-    //TODO: Are these buffers needed?
+    //TODO: Are these buffers needed? -> we have one shared gradient for all nodes
     //m_stepNumber2Buffer[m_currentStepNumber].push_back(node->ValuePtr().get());
     //m_stepNumber2Buffer[m_currentStepNumber].push_back(node->GradientPtr().get());
 
@@ -352,6 +393,7 @@ void SynchronizationManager::RegisterBuffers(ComputationNodeBase *node, bool isF
 
 void SynchronizationManager::GatherRuntimeStatistics(ComputationNodeBase *node, const size_t idx, const FrameRange& fr, bool isForward)
 {
+#ifndef CPUONLY
     //special nodes with no inputs can be ignored
     if(node->GetNumInputs() == 0){ return; }
 
@@ -388,14 +430,15 @@ void SynchronizationManager::GatherRuntimeStatistics(ComputationNodeBase *node, 
 
 
     m_stepNumber2ComputationTime[stepNumber] = t;
-
-    CUDA_CALL(cudaDeviceSynchronize());
-    MeasureSwapTime(node, stepNumber);
+#endif
 }
 
 
-void SynchronizationManager::MeasureSwapTime(ComputationNodeBase *node, int stepNumber)
+void SynchronizationManager::MeasureSwapTime(ComputationNodeBase *node, bool isForward) 
 {
+#ifndef CPUONLY
+    std::string name = GetStepName(node, isForward);
+    int stepNumber = m_stepName2StepNumber[name];
     float t = 0.0f;
     int inputCount = node->GetNumInputs();
     if(inputCount == 0){ return; }
@@ -435,6 +478,7 @@ void SynchronizationManager::MeasureSwapTime(ComputationNodeBase *node, int step
            m_buffer2SwapTime[input] = std::make_pair(swapOutTime, swapInTime);
        }
     }
+#endif
 }
 
 void SynchronizationManager::ClearActionsAndTheirMemory()

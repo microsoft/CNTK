@@ -763,8 +763,8 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
     ScopedNetworkOperationMode modeGuard(net, NetworkOperationMode::training);
 
     SynchronizationManager *sync = SynchronizationManager::GetSynchronizationManager();
+    bool reloadBatch = false;
 
-    double learningRateTemp = learnRatePerSample;
     // bring our 'out' values into consistent state
     epochCriterion = EpochCriterion(0);
     epochEvalErrors.assign(epochEvalErrors.size(), EpochCriterion(0));
@@ -779,6 +779,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
     bool useGradientAggregation = UsingGradientAggregation(epochNumber);
     bool useModelAggregation = UsingModelAggregation(epochNumber);
     bool useParallelTrain = UsingParallelTrain(epochNumber);
+
 
     // MA-related variables
     size_t nSamplesSinceLastModelSync = 0;
@@ -875,13 +876,38 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
     vector<EpochCriterion> epochEvalErrorsLastLogged = epochEvalErrors;
 
     bool noMoreSamplesToProcess = false;
+    bool dryRunCompleted = false;
+    size_t actualMBSize = 0;
     for (;;)
     {
         // get minibatch
         // TODO: is it guaranteed that the GPU is already completed at this point, is it safe to overwrite the buffers?
-        size_t actualMBSize = 0;
-        bool wasDataRead = DataReaderHelpers::GetMinibatchIntoNetwork<ElemType>(*trainSetDataReader, net, criterionNodes[0],
+
+        if(reloadBatch)
+        {
+            // reset parameters to enforce the same cross validation results after the memory swapping dry-run
+            // this is important for reproducibility
+            numMBsRun--;
+            nSamplesSinceLastModelSync-=actualMBSize;
+
+            // reset the dropout seeds to get the same results
+            double prevDropoutRate = 0;
+            for (int i = epochNumber; i < (int) m_maxEpochs; i++) // TODO: why is this an int, and not a size_t?
+            {
+                size_t parallelWorkerIdx = ((m_mpi == nullptr) || !UsingParallelTrain(i)) ? 0 : m_mpi->CurrentNodeRank();
+                size_t dropoutRandSeedBase = (parallelWorkerIdx * m_maxEpochs) + i;
+                ComputationNetwork::SetDropoutRate<ElemType>(net, criterionNodes[0], m_dropoutRates[i], prevDropoutRate, dropoutRandSeedBase);
+            }
+
+        }
+        else
+        	actualMBSize = 0;
+
+        bool wasDataRead = true;
+        if(!reloadBatch)
+            wasDataRead = DataReaderHelpers::GetMinibatchIntoNetwork<ElemType>(*trainSetDataReader, net, criterionNodes[0],
                                                                                 useDistributedMBReading, useParallelTrain, *inputMatrices, actualMBSize, m_mpi);
+
         if (!wasDataRead && (!useDistributedMBReading || noMoreSamplesToProcess)) // in case of distributed reading, we do a few more loops until all ranks have completed
             break;                                                                // end of epoch
 
@@ -943,29 +969,37 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                     ComputationNetwork::BumpEvalTimeStamp(labelNodes);
                 }
 
+
+                double learningRateTemp = learnRatePerSample; // save learning rate temporarily for memory swapping
                 if(ismb == 0 && numMBsRun == 0 && !sync->IsExecuting() && sync->m_useMemorySwapping)
                 {
                 	// we produce 100 gradients during the swap in/out sampling and because we apply gradients via
                 	// learning rate per sample this will move the weights in the wrong direction
                 	// solution: we set the learning rate to 0 for the swapping process and then reset it to its original value
                 	double *ptr = (double*)(&learnRatePerSample);
-                	*ptr = 0.0;
+                    // we produce a lot of gradients in memory swapping,
+                    // by setting the learning rate to zero we ensure that these gradients do not affect the results
+                	*ptr = 0.0; 
 
                     fprintf(stderr, "Begin benchmarking for memory swapping...\n");
-                    for(int i = 0; i < 1; i++)
-                    {
-                        //forward + backward pass for the synchronization manager
-                        net->ForwardProp(evaluationNodes);
-                        net->ForwardProp(criterionNodes[0]);
+
+                    //forward + backward pass for the synchronization manager
+                    net->ForwardProp(evaluationNodes);
+                    net->ForwardProp(criterionNodes[0]);
+                    // swapping in backwards pass only possible, if gradients are computing
+                    if (learnRatePerSample > 0.01 * m_minLearnRate) 
                         net->Backprop(criterionNodes[0]);
-                    }
+
                     fprintf(stderr, "Memory swapping benchmarking complete!\n");
+                    reloadBatch = true;
                 }
                 else
                 {
                 	// reset the learning rate to its original value
                 	double *ptr = (double*)(&learnRatePerSample);
                 	*ptr = learningRateTemp;
+                	reloadBatch = false;
+
                 }
 
                 // ===========================================================
@@ -997,9 +1031,12 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                 smbDispatcher.DoneWithCurrentMinibatch();
         } // if (actualMBSize > 0)
 
+
+
         // for momentum/clipping/regularization/etc., as well as for progress and statistics, we should only count frames that are not gaps
         // #samples according to the default dynamic axis, for use with criterion nodes that do not have an MBLayout
         size_t numSamplesWithLabelOfNetwork = wasDataRead ? net->GetNumSamplesWithLabelOfNetwork(actualMBSize) : 0;
+        if(reloadBatch){ numSamplesWithLabelOfNetwork = 0; }
 
         // Sum of actualMBSize across all nodes when using parallel training
         // 'aggregate' here means accross-worker aggregate for this one minibatch.
@@ -1044,26 +1081,29 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                 }
             }
 
-            // prepare the header
-            m_gradHeader->numEvalNode = evaluationNodes.size();
-            m_gradHeader->numSamples = actualMBSize;
-            // hoist the criterion into CPU space for all-reduce
-            localEpochCriterion.Assign(criterionNodes, 0, numSamplesWithLabelOfNetwork);
-            for (size_t i = 0; i < evaluationNodes.size(); i++)
-                localEpochEvalErrors.Assign(evaluationNodes, i, numSamplesWithLabelOfNetwork);
-            m_gradHeader->numSamplesWithLabel = localEpochCriterion.GetCriterion(0).second;
-            m_gradHeader->criterion           = localEpochCriterion.GetCriterion(0).first;
-            for (size_t i = 0; i < evaluationNodes.size(); i++)
-                m_gradHeader->evalErrors[i] = localEpochEvalErrors.GetCriterion(i);
+            if(!reloadBatch)
+            {
+				// prepare the header
+				m_gradHeader->numEvalNode = evaluationNodes.size();
+				m_gradHeader->numSamples = actualMBSize;
+				// hoist the criterion into CPU space for all-reduce
+				localEpochCriterion.Assign(criterionNodes, 0, numSamplesWithLabelOfNetwork);
+				for (size_t i = 0; i < evaluationNodes.size(); i++)
+					localEpochEvalErrors.Assign(evaluationNodes, i, numSamplesWithLabelOfNetwork);
+				m_gradHeader->numSamplesWithLabel = localEpochCriterion.GetCriterion(0).second;
+				m_gradHeader->criterion           = localEpochCriterion.GetCriterion(0).first;
+				for (size_t i = 0; i < evaluationNodes.size(); i++)
+					m_gradHeader->evalErrors[i] = localEpochEvalErrors.GetCriterion(i);
 
-            bool samplesProcessed = m_distGradAgg->AggregateGradients(learnParamsGradients, m_gradHeader.get(), epochNumber);
-            noMoreSamplesToProcess = !samplesProcessed;
+				bool samplesProcessed = m_distGradAgg->AggregateGradients(learnParamsGradients, m_gradHeader.get(), epochNumber);
+				noMoreSamplesToProcess = !samplesProcessed;
 
-            aggregateNumSamples          = m_gradHeader->numSamples;
-            aggregateNumSamplesWithLabel = m_gradHeader->numSamplesWithLabel;
-            epochCriterion += EpochCriterion(m_gradHeader->criterion, m_gradHeader->numSamplesWithLabel);
-            for (size_t i = 0; i < epochEvalErrors.size(); i++)
-                epochEvalErrors[i] += m_gradHeader->evalErrors[i];
+				aggregateNumSamples          = m_gradHeader->numSamples;
+				aggregateNumSamplesWithLabel = m_gradHeader->numSamplesWithLabel;
+				epochCriterion += EpochCriterion(m_gradHeader->criterion, m_gradHeader->numSamplesWithLabel);
+				for (size_t i = 0; i < epochEvalErrors.size(); i++)
+					epochEvalErrors[i] += m_gradHeader->evalErrors[i];
+            }
         }
 
         // update model parameters
