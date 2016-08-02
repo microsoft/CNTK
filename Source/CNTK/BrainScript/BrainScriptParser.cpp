@@ -578,7 +578,7 @@ void Expression::DumpToStream(wstringstream & treeStream, int indent)
     if (op == L"s")
         treeStream << "'" << s.c_str() << "'";
     else if (op == L"d")
-        treeStream << std::setprecision(0) << d;
+        treeStream << std::fixed << std::setprecision(0) << d;
     else if (op == L"b")
         treeStream << b ? "true" : "false";
     else if (op == L"id")
@@ -957,14 +957,6 @@ public:
         ExpressionPtr topDict = make_shared<Expression>(GetCursor(), L"[]");
         topDict->namedArgs = topMembers;
         return topDict;
-    }
-    // simple test function for use during development
-    static void Test()
-    {
-        let parserTest = L"a=1\na1_=13;b=2 // cmt\ndo = (print\n:train:eval) ; x = array[1..13] (i=>1+i*print.message==13*42) ; print = new PrintAction [ message = 'Hello World' ]";
-        wstringstream expressionStream;
-        ParseConfigDictFromString(parserTest, L"Test", vector<wstring>())->DumpToStream(expressionStream);
-        fprintf(stderr, "%ls\n", expressionStream.str());
     }
 };
 

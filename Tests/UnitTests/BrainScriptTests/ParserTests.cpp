@@ -27,7 +27,14 @@ public:
         boost::filesystem::path path(boost::unit_test::framework::master_test_suite().argv[0]);
         wstring parentPath = boost::filesystem::canonical(path.parent_path()).generic_wstring();
 
+#ifdef _WIN32
+        // The executable path on Windows is e.g. <cntk>/x64/Debug/Unittests/
         m_testDataPath = parentPath + L"/../../../Tests/UnitTests/BrainScriptTests";
+#else
+        // The executable path on Linux is e.g. <cntk>/build/cpu/release/bin/
+        m_testDataPath = parentPath + L"/../../../../Tests/UnitTests/BrainScriptTests";
+#endif
+
         boost::filesystem::path absTestPath(m_testDataPath);
         absTestPath = boost::filesystem::canonical(absTestPath);
         m_testDataPath = absTestPath.generic_wstring();
@@ -43,11 +50,10 @@ private:
 
 namespace Microsoft { namespace MSR { namespace CNTK { namespace Test {
 
-
 BOOST_FIXTURE_TEST_SUITE(ParserTests, ParserTestsFixture)
 
 void parseLine(const wstring & input, const wstring & expectedOutput)
-{        
+{
     let expr = BS::ParseConfigDictFromString(input, L"Test", vector<wstring>());
 
     wstringstream actualStream;
@@ -67,8 +73,19 @@ BOOST_AUTO_TEST_CASE(ParseExpressionsAndCompareTree)
     int testCount = 1;
     while (filesAvailable)
     {
-        wifstream inputFile(dataPath + inputPrefix + to_wstring(testCount) + L".txt");
-        wifstream outputFile(dataPath +outputPrefix + to_wstring(testCount) + L".txt");
+        wstring inputPath(dataPath + inputPrefix + to_wstring(testCount) + L".txt");
+        wstring outputPath(dataPath + outputPrefix + to_wstring(testCount) + L".txt");
+
+        wifstream inputFile;
+        wifstream outputFile;
+
+#ifdef _WIN32
+        inputFile.open(inputPath.c_str(), wifstream::in);
+        outputFile.open(outputPath.c_str(), wifstream::in);
+#else
+        inputFile.open(wtocharpath(inputPath.c_str()).c_str(), wifstream::in);
+        outputFile.open(wtocharpath(outputPath.c_str()).c_str(), wifstream::in);
+#endif
 
         if (!inputFile.is_open()){
             filesAvailable = false;
@@ -77,10 +94,10 @@ BOOST_AUTO_TEST_CASE(ParseExpressionsAndCompareTree)
 
         fprintf(stderr, "Test %d...\n", testCount);
 
-        auto inputStream = std::wostringstream{};
+        std::wostringstream inputStream;
         inputStream << inputFile.rdbuf();
 
-        auto expectedStream = std::wostringstream{};
+        std::wostringstream expectedStream;
         expectedStream << outputFile.rdbuf();
 
         parseLine(inputStream.str().c_str(), expectedStream.str().c_str());
