@@ -353,7 +353,7 @@ template <class ElemType>
 #if 1
     if (isFinalValidationPass && !m_initString.empty())
     {
-        fprintf(stderr, L"InferInputDimsFrom: meant to '%s' but changing to 0, faking old behavior\n", m_initString.c_str());
+        fprintf(stderr, "InferInputDimsFrom: meant to '%ls' but changing to 0, faking old behavior\n", m_initString.c_str());
         m_initString = L"fromValue";
         m_initValue = 0;
     }
@@ -436,7 +436,7 @@ void LearnableParameter<ElemType>::InferInputDimsFrom(const TensorShape& otherSh
 #if 1
     if (!m_initString.empty())
     {
-        fprintf(stderr, L"InferInputDimsFrom: meant to '%s' but changing to 0, faking old behavior\n", m_initString.c_str());
+        fprintf(stderr, "InferInputDimsFrom: meant to '%ls' but changing to 0, faking old behavior\n", m_initString.c_str());
         m_initString = L"fromValue";
         m_initValue = 0;
     }
