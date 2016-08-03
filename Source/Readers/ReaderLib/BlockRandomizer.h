@@ -65,7 +65,7 @@ public:
 
     ~BlockRandomizer()
     {
-        if(m_prefetch.valid())
+        if (m_prefetch.valid())
         {
             m_prefetch.wait();
         }
@@ -86,7 +86,7 @@ private:
     // Prepares a new sweep if needed.
     void PrepareNewSweepIfNeeded(size_t samplePosition);
 
-    // Asynchronously prefetches the chunk.
+    // Performs io prefetch of the specified chunk if needed.
     void Prefetch(ChunkIdType chunkId);
 
     // Returns next candidate for the prefetch in the given range.

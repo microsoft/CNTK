@@ -229,7 +229,7 @@ void BlockRandomizer::Decimate(const std::vector<RandomizedSequenceDescription>&
         }
     }
     // TODO: This mode should go away. Decimation based on chunks only should be sufficient.
-    // Currently this mode is used only for image reader.
+    // Currently this mode is used only for image reader, which uses one chunk for each image.
     else if (m_decimationMode == DecimationMode::sequence)
     {
         size_t strideBegin = all.size() * m_config.m_workerRank / m_config.m_numberOfWorkers;
