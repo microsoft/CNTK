@@ -122,7 +122,7 @@ Sequences BlockRandomizer::GetNextSequences(size_t sampleCount)
         return result;
     }
 
-    // Decimate.
+    // Decimate sequences.
     std::vector<RandomizedSequenceDescription> decimated;
     decimated.reserve(sequences.size());
     Decimate(sequences, decimated);
@@ -130,6 +130,9 @@ Sequences BlockRandomizer::GetNextSequences(size_t sampleCount)
     {
         return result;
     }
+
+    // Retrieve new data chunks if required.
+    ChunkIdType chunkToPrefetchNext = LoadDataChunks();
 
     if (m_verbosity >= Debug)
         fprintf(stderr, "BlockRandomizer::GetNextSequences(): getting %" PRIu64 " out of %" PRIu64 " sequences for %" PRIu64 " requested samples in sweep %" PRIu64 "\n",
@@ -170,7 +173,12 @@ Sequences BlockRandomizer::GetNextSequences(size_t sampleCount)
             process(i);
     }
 
+    // Explicitly release chunks that are not needed anymore.
     m_sequenceRandomizer->ReleaseChunks();
+
+    // Now it is safe to start the new chunk prefetch.
+    Prefetch(chunkToPrefetchNext);
+
     return result;
 }
 
@@ -203,10 +211,6 @@ bool BlockRandomizer::GetNextSequenceDescriptions(size_t sampleCount, std::vecto
 // Decimates sequences and load/unloads chunks using infromation of the SequenceRandomizer.
 void BlockRandomizer::Decimate(const std::vector<RandomizedSequenceDescription>& all, std::vector<RandomizedSequenceDescription>& decimated)
 {
-    // Swap remove all old chunks and add new ones.
-    // Require all data in chunks.
-    RetrieveDataChunks();
-
     // Moving the cursor to the end of read sequences.
     for (const auto& sequence : all)
     {
@@ -239,13 +243,14 @@ void BlockRandomizer::Decimate(const std::vector<RandomizedSequenceDescription>&
 }
 
 // Retrieves chunk data based on the window information provided by SequenceRandomizer
-void BlockRandomizer::RetrieveDataChunks()
+ChunkIdType BlockRandomizer::LoadDataChunks()
 {
     size_t randomizedEnd = 0;
     const auto& window = m_sequenceRandomizer->GetChunkWindow(randomizedEnd);
     if (window[randomizedEnd - 1].m_chunkId == m_lastSeenChunkId)
     {
-        return; // nothing to retrieve.
+        // nothing to prefetch.
+        return CHUNKID_MAX;
     }
 
     m_lastSeenChunkId = window[randomizedEnd - 1].m_chunkId;
@@ -284,9 +289,6 @@ void BlockRandomizer::RetrieveDataChunks()
     // TODO diagnostics for paged out chunks?
     m_chunks.swap(chunks);
 
-    // Identify next chunk to prefetch.
-    ChunkIdType toBePrefetched = GetChunkToPrefetch(window.begin() + randomizedEnd, window.end());
-
     // Adding new ones.
     for (size_t i = 0; i < randomizedEnd; ++i)
     {
@@ -323,13 +325,13 @@ void BlockRandomizer::RetrieveDataChunks()
         }
     }
 
-    Prefetch(toBePrefetched);
-
     if (m_verbosity >= Notification)
         fprintf(stderr, "BlockRandomizer::RetrieveDataChunks: %" PRIu64 " chunks paged-in from chunk window [%u..%u]\n",
                 m_chunks.size(),
                 window.front().m_chunkId,
                 window.back().m_chunkId);
+
+    return GetChunkToPrefetch(window.begin() + randomizedEnd, window.end());
 }
 
 // Identifies chunk id that should be prefetched.

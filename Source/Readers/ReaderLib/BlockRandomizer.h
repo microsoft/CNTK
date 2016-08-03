@@ -72,8 +72,9 @@ public:
     }
 
 private:
-    // Retrieve data for chunks.
-    void RetrieveDataChunks();
+    // Load data for chunks if needed.
+    // Returns the next chunk id to prefetch.
+    ChunkIdType LoadDataChunks();
 
     // Get next sequence descriptions that do not exceed sample count.
     // Returns true if epoch end is reached.
