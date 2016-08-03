@@ -6298,8 +6298,8 @@ void CPUMatrix<ElemType>::TensorOp(ElemType beta, const CPUMatrix<ElemType>& a, 
                                    const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, 2>& reducingStrides)
 {
     if (reductionOp != ElementWiseOperator::opLogSum && 
-		reductionOp != ElementWiseOperator::opMax    && 
-		reductionOp != ElementWiseOperator::opMin    &&
+        reductionOp != ElementWiseOperator::opMax    && 
+        reductionOp != ElementWiseOperator::opMin    &&
           reductionOp != ElementWiseOperator::opSum)
         InvalidArgument("TensorOp: Unary reduction operations other than opMax, opMin, opSum and opLogSum are not implemented.");
 

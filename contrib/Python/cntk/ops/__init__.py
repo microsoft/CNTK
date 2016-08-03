@@ -1408,7 +1408,7 @@ def reconcile_dynamic_axis(data_input, layout_input, name=None):
 # reduction ops
 ################################################################################
 
-def reduce_max(value, axis=0, name=None):
+def reduce_max(value, axis=0, name=None): #BUGBIG for the axis of reduction opeations we should have default 0 (in contrast to brain script) but instead have e.g. 'None'. (see also reduce:im. reduce_sum, reduce_log_sum
     """
     For axis < rank computes the maximum of a tensor along the specifed axis. In the result the corresponding axis is dropped, i.e. the rank of the result tensore is smaller that the rank of the input tensor.
     if axis==rank, then the maximum will be computed over all axes, that is, the output is a scalar.
