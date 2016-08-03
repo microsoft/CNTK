@@ -18,14 +18,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 // TODO: add -Node to the class name
 // -----------------------------------------------------------------------
 
-// BUGBUG: If called after random init, this will reset to 0.
-// TODO: Need to remember the init parameters, and do it here.
 template <class ElemType>
 void LearnableParameter<ElemType>::InitShape(const TensorShape& shape)
 {
     SetDims(shape, false);
     UpdateFunctionValuesSize(); // this allocates the matrix
-    Value().SetValue(0); // TODO: invalidate instead
+    Value().Invalidate();
 }
 
 // constructor from config
@@ -156,7 +154,7 @@ void LearnableParameter<ElemType>::PostInitParameters(const wstring& initString,
         m_initValueScale = initValue;
         m_initOnCPUOnly = initOnCPUOnly;
     }
-    else if (initString == L"fixedValue") // deprecated. Use initValue=... instead
+    else if (initString == L"fixedValue") // from constant value
     {
         m_initString = L"fromValue";
         m_initValue = initValue;
@@ -350,7 +348,9 @@ template <class ElemType>
     Base::Validate(isFinalValidationPass);
     m_pMBLayout = nullptr; // this node does not hold mini-batch data
 
-    if (isFinalValidationPass)  // TRYING THIS AGAIN, maybe it works now
+    // lazy init if we got a dimension now
+    // We call this here and in Validate(true), since we don't know which gets called first.
+    if (isFinalValidationPass)
         LazyInitParameters();
 }
 
@@ -423,7 +423,8 @@ void LearnableParameter<ElemType>::InferInputDimsFrom(const TensorShape& otherSh
     fprintf(stderr, "%ls %ls operation: Tensor shape was inferred as [%s].\n", NodeName().c_str(), OperationName().c_str(), string(GetSampleLayout()).c_str());
 
     // now repeat initialization
-    //LazyInitParameters();
+    // We call this here and in Validate(true), since we don't know which gets called first.
+    LazyInitParameters();
 }
 
 template <class ElemType>

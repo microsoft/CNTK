@@ -332,16 +332,15 @@ public:
     // node construction
     // -----------------------------------------------------------------------
 
-    template <class ElemType>
+    // this function is only for use by NDL (deprecated)
     void InitLearnableParameters(const ComputationNodeBasePtr& node,
                                  const wchar_t* initString, // "uniform"|"gaussian"|"fixedValue"
-                                 ElemType initValue,             //  scale   | scale    | value
+                                 double initValue,          //  scale   | scale    | value
                                  unsigned long randomSeed = 0,
                                  bool initOnCPUOnly = false) const;
     // non-static version needed because it accesses m_randomSeedOffset
     // Legacy version that is for random only.
-    template <class ElemType>
-    void RandomInitLearnableParameters(const ComputationNodeBasePtr& node, const bool uniformInit, const unsigned long randomSeed, const ElemType initValueScale, bool initOnCPUOnly = false) const;
+    void RandomInitLearnableParameters(const ComputationNodeBasePtr& node, const bool uniformInit, const unsigned long randomSeed, const double initValueScale, bool initOnCPUOnly = false) const;
 
     template <typename N>
     static shared_ptr<N> AsNodePtr(const ComputationNodeBasePtr& inode)
