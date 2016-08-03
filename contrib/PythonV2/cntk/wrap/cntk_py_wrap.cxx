@@ -3497,20 +3497,19 @@ namespace Swig {
 #define SWIGTYPE_p_std__shared_ptrT_CNTK__Value_t swig_types[42]
 #define SWIGTYPE_p_std__unordered_mapT_CNTK__Parameter_std__shared_ptrT_CNTK__NDArrayView_t_t swig_types[43]
 #define SWIGTYPE_p_std__unordered_mapT_CNTK__Placeholder_CNTK__Variable_t swig_types[44]
-#define SWIGTYPE_p_std__unordered_mapT_CNTK__StreamInfo_std__pairT_size_t_std__shared_ptrT_CNTK__Value_t_t_t swig_types[45]
-#define SWIGTYPE_p_std__unordered_setT_CNTK__Parameter_t swig_types[46]
-#define SWIGTYPE_p_std__unordered_setT_std__shared_ptrT_CNTK__Learner_t_t swig_types[47]
-#define SWIGTYPE_p_std__vectorT_CNTK__Axis_std__allocatorT_CNTK__Axis_t_t swig_types[48]
-#define SWIGTYPE_p_swig__SwigPyIterator swig_types[49]
-#define SWIGTYPE_p_unsigned___int64 swig_types[50]
-#define SWIGTYPE_p_unsigned_char swig_types[51]
-#define SWIGTYPE_p_unsigned_int swig_types[52]
-#define SWIGTYPE_p_unsigned_long swig_types[53]
-#define SWIGTYPE_p_unsigned_short swig_types[54]
-#define SWIGTYPE_p_value_type swig_types[55]
-#define SWIGTYPE_p_wchar_t swig_types[56]
-static swig_type_info *swig_types[58];
-static swig_module_info swig_module = {swig_types, 57, 0, 0, 0, 0};
+#define SWIGTYPE_p_std__unordered_setT_CNTK__Parameter_t swig_types[45]
+#define SWIGTYPE_p_std__unordered_setT_std__shared_ptrT_CNTK__Learner_t_t swig_types[46]
+#define SWIGTYPE_p_std__vectorT_CNTK__Axis_std__allocatorT_CNTK__Axis_t_t swig_types[47]
+#define SWIGTYPE_p_swig__SwigPyIterator swig_types[48]
+#define SWIGTYPE_p_unsigned___int64 swig_types[49]
+#define SWIGTYPE_p_unsigned_char swig_types[50]
+#define SWIGTYPE_p_unsigned_int swig_types[51]
+#define SWIGTYPE_p_unsigned_long swig_types[52]
+#define SWIGTYPE_p_unsigned_short swig_types[53]
+#define SWIGTYPE_p_value_type swig_types[54]
+#define SWIGTYPE_p_wchar_t swig_types[55]
+static swig_type_info *swig_types[57];
+static swig_module_info swig_module = {swig_types, 56, 0, 0, 0, 0};
 #define SWIG_TypeQuery(name) SWIG_TypeQueryModule(&swig_module, &swig_module, name)
 #define SWIG_MangledTypeQuery(name) SWIG_MangledTypeQueryModule(&swig_module, &swig_module, name)
 
@@ -7887,7 +7886,7 @@ SWIGINTERN PyObject *_wrap___eq____SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObje
   if (!PyArg_ParseTuple(args,(char *)"OO:__eq__",&obj0,&obj1)) SWIG_fail;
   {
     if (PyTuple_Check(obj0)) {
-      std::vector<size_t> dimensions;
+      std::vector<size_t> dimensions;;
       size_t num_axes = PyTuple_Size(obj0);
       for (int i=0; i<num_axes; i++)
       dimensions.push_back(PyLong_AsLong(PyTuple_GET_ITEM(obj0, i)));
@@ -7900,7 +7899,7 @@ SWIGINTERN PyObject *_wrap___eq____SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObje
   }
   {
     if (PyTuple_Check(obj1)) {
-      std::vector<size_t> dimensions;
+      std::vector<size_t> dimensions;;
       size_t num_axes = PyTuple_Size(obj1);
       for (int i=0; i<num_axes; i++)
       dimensions.push_back(PyLong_AsLong(PyTuple_GET_ITEM(obj1, i)));
@@ -7949,7 +7948,7 @@ SWIGINTERN PyObject *_wrap___ne____SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObje
   if (!PyArg_ParseTuple(args,(char *)"OO:__ne__",&obj0,&obj1)) SWIG_fail;
   {
     if (PyTuple_Check(obj0)) {
-      std::vector<size_t> dimensions;
+      std::vector<size_t> dimensions;;
       size_t num_axes = PyTuple_Size(obj0);
       for (int i=0; i<num_axes; i++)
       dimensions.push_back(PyLong_AsLong(PyTuple_GET_ITEM(obj0, i)));
@@ -7962,7 +7961,7 @@ SWIGINTERN PyObject *_wrap___ne____SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObje
   }
   {
     if (PyTuple_Check(obj1)) {
-      std::vector<size_t> dimensions;
+      std::vector<size_t> dimensions;;
       size_t num_axes = PyTuple_Size(obj1);
       for (int i=0; i<num_axes; i++)
       dimensions.push_back(PyLong_AsLong(PyTuple_GET_ITEM(obj1, i)));
@@ -8033,7 +8032,7 @@ SWIGINTERN PyObject *_wrap_new_NDArrayView__SWIG_0(PyObject *SWIGUNUSEDPARM(self
   arg1 = static_cast< CNTK::DataType >(val1);
   {
     if (PyTuple_Check(obj1)) {
-      std::vector<size_t> dimensions;
+      std::vector<size_t> dimensions;;
       size_t num_axes = PyTuple_Size(obj1);
       for (int i=0; i<num_axes; i++)
       dimensions.push_back(PyLong_AsLong(PyTuple_GET_ITEM(obj1, i)));
@@ -8125,7 +8124,7 @@ SWIGINTERN PyObject *_wrap_new_NDArrayView__SWIG_1(PyObject *SWIGUNUSEDPARM(self
   arg1 = static_cast< CNTK::DataType >(val1);
   {
     if (PyTuple_Check(obj1)) {
-      std::vector<size_t> dimensions;
+      std::vector<size_t> dimensions;;
       size_t num_axes = PyTuple_Size(obj1);
       for (int i=0; i<num_axes; i++)
       dimensions.push_back(PyLong_AsLong(PyTuple_GET_ITEM(obj1, i)));
@@ -8212,7 +8211,7 @@ SWIGINTERN PyObject *_wrap_new_NDArrayView__SWIG_2(PyObject *SWIGUNUSEDPARM(self
   arg1 = static_cast< CNTK::DataType >(val1);
   {
     if (PyTuple_Check(obj1)) {
-      std::vector<size_t> dimensions;
+      std::vector<size_t> dimensions;;
       size_t num_axes = PyTuple_Size(obj1);
       for (int i=0; i<num_axes; i++)
       dimensions.push_back(PyLong_AsLong(PyTuple_GET_ITEM(obj1, i)));
@@ -8301,7 +8300,7 @@ SWIGINTERN PyObject *_wrap_new_NDArrayView__SWIG_5(PyObject *SWIGUNUSEDPARM(self
   arg2 = static_cast< CNTK::StorageFormat >(val2);
   {
     if (PyTuple_Check(obj2)) {
-      std::vector<size_t> dimensions;
+      std::vector<size_t> dimensions;;
       size_t num_axes = PyTuple_Size(obj2);
       for (int i=0; i<num_axes; i++)
       dimensions.push_back(PyLong_AsLong(PyTuple_GET_ITEM(obj2, i)));
@@ -8372,7 +8371,7 @@ SWIGINTERN PyObject *_wrap_new_NDArrayView__SWIG_6(PyObject *SWIGUNUSEDPARM(self
   arg1 = static_cast< CNTK::DataType >(val1);
   {
     if (PyTuple_Check(obj1)) {
-      std::vector<size_t> dimensions;
+      std::vector<size_t> dimensions;;
       size_t num_axes = PyTuple_Size(obj1);
       for (int i=0; i<num_axes; i++)
       dimensions.push_back(PyLong_AsLong(PyTuple_GET_ITEM(obj1, i)));
@@ -9705,7 +9704,7 @@ SWIGINTERN PyObject *_wrap_new_NDArrayViewFloat__SWIG_0(PyObject *SWIGUNUSEDPARM
   if (!PyArg_ParseTuple(args,(char *)"OOOOOOO:new_NDArrayViewFloat",&obj0,&obj1,&obj2,&obj3,&obj4,&obj5,&obj6)) SWIG_fail;
   {
     if (PyTuple_Check(obj0)) {
-      std::vector<size_t> dimensions;
+      std::vector<size_t> dimensions;;
       size_t num_axes = PyTuple_Size(obj0);
       for (int i=0; i<num_axes; i++)
       dimensions.push_back(PyLong_AsLong(PyTuple_GET_ITEM(obj0, i)));
@@ -9808,7 +9807,7 @@ SWIGINTERN PyObject *_wrap_new_NDArrayViewFloat__SWIG_1(PyObject *SWIGUNUSEDPARM
   if (!PyArg_ParseTuple(args,(char *)"OOOOOO:new_NDArrayViewFloat",&obj0,&obj1,&obj2,&obj3,&obj4,&obj5)) SWIG_fail;
   {
     if (PyTuple_Check(obj0)) {
-      std::vector<size_t> dimensions;
+      std::vector<size_t> dimensions;;
       size_t num_axes = PyTuple_Size(obj0);
       for (int i=0; i<num_axes; i++)
       dimensions.push_back(PyLong_AsLong(PyTuple_GET_ITEM(obj0, i)));
@@ -9902,7 +9901,7 @@ SWIGINTERN PyObject *_wrap_new_NDArrayViewFloat__SWIG_2(PyObject *SWIGUNUSEDPARM
   if (!PyArg_ParseTuple(args,(char *)"OOOOO:new_NDArrayViewFloat",&obj0,&obj1,&obj2,&obj3,&obj4)) SWIG_fail;
   {
     if (PyTuple_Check(obj0)) {
-      std::vector<size_t> dimensions;
+      std::vector<size_t> dimensions;;
       size_t num_axes = PyTuple_Size(obj0);
       for (int i=0; i<num_axes; i++)
       dimensions.push_back(PyLong_AsLong(PyTuple_GET_ITEM(obj0, i)));
@@ -9987,7 +9986,7 @@ SWIGINTERN PyObject *_wrap_new_NDArrayViewFloat__SWIG_3(PyObject *SWIGUNUSEDPARM
   if (!PyArg_ParseTuple(args,(char *)"OOOO:new_NDArrayViewFloat",&obj0,&obj1,&obj2,&obj3)) SWIG_fail;
   {
     if (PyTuple_Check(obj0)) {
-      std::vector<size_t> dimensions;
+      std::vector<size_t> dimensions;;
       size_t num_axes = PyTuple_Size(obj0);
       for (int i=0; i<num_axes; i++)
       dimensions.push_back(PyLong_AsLong(PyTuple_GET_ITEM(obj0, i)));
@@ -10067,7 +10066,7 @@ SWIGINTERN PyObject *_wrap_new_NDArrayViewFloat__SWIG_4(PyObject *SWIGUNUSEDPARM
   if (!PyArg_ParseTuple(args,(char *)"OOOO:new_NDArrayViewFloat",&obj0,&obj1,&obj2,&obj3)) SWIG_fail;
   {
     if (PyTuple_Check(obj0)) {
-      std::vector<size_t> dimensions;
+      std::vector<size_t> dimensions;;
       size_t num_axes = PyTuple_Size(obj0);
       for (int i=0; i<num_axes; i++)
       dimensions.push_back(PyLong_AsLong(PyTuple_GET_ITEM(obj0, i)));
@@ -10154,7 +10153,7 @@ SWIGINTERN PyObject *_wrap_new_NDArrayViewFloat__SWIG_5(PyObject *SWIGUNUSEDPARM
   arg1 = &temp1;
   {
     if (PyTuple_Check(obj1)) {
-      std::vector<size_t> dimensions;
+      std::vector<size_t> dimensions;;
       size_t num_axes = PyTuple_Size(obj1);
       for (int i=0; i<num_axes; i++)
       dimensions.push_back(PyLong_AsLong(PyTuple_GET_ITEM(obj1, i)));
@@ -10232,7 +10231,7 @@ SWIGINTERN PyObject *_wrap_new_NDArrayViewFloat__SWIG_6(PyObject *SWIGUNUSEDPARM
   arg1 = &temp1;
   {
     if (PyTuple_Check(obj1)) {
-      std::vector<size_t> dimensions;
+      std::vector<size_t> dimensions;;
       size_t num_axes = PyTuple_Size(obj1);
       for (int i=0; i<num_axes; i++)
       dimensions.push_back(PyLong_AsLong(PyTuple_GET_ITEM(obj1, i)));
@@ -10301,7 +10300,7 @@ SWIGINTERN PyObject *_wrap_new_NDArrayViewFloat__SWIG_7(PyObject *SWIGUNUSEDPARM
   arg1 = &temp1;
   {
     if (PyTuple_Check(obj1)) {
-      std::vector<size_t> dimensions;
+      std::vector<size_t> dimensions;;
       size_t num_axes = PyTuple_Size(obj1);
       for (int i=0; i<num_axes; i++)
       dimensions.push_back(PyLong_AsLong(PyTuple_GET_ITEM(obj1, i)));
@@ -10687,7 +10686,7 @@ SWIGINTERN PyObject *_wrap_new_NDArrayViewDouble__SWIG_0(PyObject *SWIGUNUSEDPAR
   if (!PyArg_ParseTuple(args,(char *)"OOOOOOO:new_NDArrayViewDouble",&obj0,&obj1,&obj2,&obj3,&obj4,&obj5,&obj6)) SWIG_fail;
   {
     if (PyTuple_Check(obj0)) {
-      std::vector<size_t> dimensions;
+      std::vector<size_t> dimensions;;
       size_t num_axes = PyTuple_Size(obj0);
       for (int i=0; i<num_axes; i++)
       dimensions.push_back(PyLong_AsLong(PyTuple_GET_ITEM(obj0, i)));
@@ -10790,7 +10789,7 @@ SWIGINTERN PyObject *_wrap_new_NDArrayViewDouble__SWIG_1(PyObject *SWIGUNUSEDPAR
   if (!PyArg_ParseTuple(args,(char *)"OOOOOO:new_NDArrayViewDouble",&obj0,&obj1,&obj2,&obj3,&obj4,&obj5)) SWIG_fail;
   {
     if (PyTuple_Check(obj0)) {
-      std::vector<size_t> dimensions;
+      std::vector<size_t> dimensions;;
       size_t num_axes = PyTuple_Size(obj0);
       for (int i=0; i<num_axes; i++)
       dimensions.push_back(PyLong_AsLong(PyTuple_GET_ITEM(obj0, i)));
@@ -10884,7 +10883,7 @@ SWIGINTERN PyObject *_wrap_new_NDArrayViewDouble__SWIG_2(PyObject *SWIGUNUSEDPAR
   if (!PyArg_ParseTuple(args,(char *)"OOOOO:new_NDArrayViewDouble",&obj0,&obj1,&obj2,&obj3,&obj4)) SWIG_fail;
   {
     if (PyTuple_Check(obj0)) {
-      std::vector<size_t> dimensions;
+      std::vector<size_t> dimensions;;
       size_t num_axes = PyTuple_Size(obj0);
       for (int i=0; i<num_axes; i++)
       dimensions.push_back(PyLong_AsLong(PyTuple_GET_ITEM(obj0, i)));
@@ -10969,7 +10968,7 @@ SWIGINTERN PyObject *_wrap_new_NDArrayViewDouble__SWIG_3(PyObject *SWIGUNUSEDPAR
   if (!PyArg_ParseTuple(args,(char *)"OOOO:new_NDArrayViewDouble",&obj0,&obj1,&obj2,&obj3)) SWIG_fail;
   {
     if (PyTuple_Check(obj0)) {
-      std::vector<size_t> dimensions;
+      std::vector<size_t> dimensions;;
       size_t num_axes = PyTuple_Size(obj0);
       for (int i=0; i<num_axes; i++)
       dimensions.push_back(PyLong_AsLong(PyTuple_GET_ITEM(obj0, i)));
@@ -11049,7 +11048,7 @@ SWIGINTERN PyObject *_wrap_new_NDArrayViewDouble__SWIG_4(PyObject *SWIGUNUSEDPAR
   if (!PyArg_ParseTuple(args,(char *)"OOOO:new_NDArrayViewDouble",&obj0,&obj1,&obj2,&obj3)) SWIG_fail;
   {
     if (PyTuple_Check(obj0)) {
-      std::vector<size_t> dimensions;
+      std::vector<size_t> dimensions;;
       size_t num_axes = PyTuple_Size(obj0);
       for (int i=0; i<num_axes; i++)
       dimensions.push_back(PyLong_AsLong(PyTuple_GET_ITEM(obj0, i)));
@@ -11136,7 +11135,7 @@ SWIGINTERN PyObject *_wrap_new_NDArrayViewDouble__SWIG_5(PyObject *SWIGUNUSEDPAR
   arg1 = &temp1;
   {
     if (PyTuple_Check(obj1)) {
-      std::vector<size_t> dimensions;
+      std::vector<size_t> dimensions;;
       size_t num_axes = PyTuple_Size(obj1);
       for (int i=0; i<num_axes; i++)
       dimensions.push_back(PyLong_AsLong(PyTuple_GET_ITEM(obj1, i)));
@@ -11214,7 +11213,7 @@ SWIGINTERN PyObject *_wrap_new_NDArrayViewDouble__SWIG_6(PyObject *SWIGUNUSEDPAR
   arg1 = &temp1;
   {
     if (PyTuple_Check(obj1)) {
-      std::vector<size_t> dimensions;
+      std::vector<size_t> dimensions;;
       size_t num_axes = PyTuple_Size(obj1);
       for (int i=0; i<num_axes; i++)
       dimensions.push_back(PyLong_AsLong(PyTuple_GET_ITEM(obj1, i)));
@@ -11283,7 +11282,7 @@ SWIGINTERN PyObject *_wrap_new_NDArrayViewDouble__SWIG_7(PyObject *SWIGUNUSEDPAR
   arg1 = &temp1;
   {
     if (PyTuple_Check(obj1)) {
-      std::vector<size_t> dimensions;
+      std::vector<size_t> dimensions;;
       size_t num_axes = PyTuple_Size(obj1);
       for (int i=0; i<num_axes; i++)
       dimensions.push_back(PyLong_AsLong(PyTuple_GET_ITEM(obj1, i)));
@@ -11661,7 +11660,7 @@ SWIGINTERN PyObject *_wrap_NDArrayView_RandomUniformFloat__SWIG_0(PyObject *SWIG
   if (!PyArg_ParseTuple(args,(char *)"OOOOO:NDArrayView_RandomUniformFloat",&obj0,&obj1,&obj2,&obj3,&obj4)) SWIG_fail;
   {
     if (PyTuple_Check(obj0)) {
-      std::vector<size_t> dimensions;
+      std::vector<size_t> dimensions;;
       size_t num_axes = PyTuple_Size(obj0);
       for (int i=0; i<num_axes; i++)
       dimensions.push_back(PyLong_AsLong(PyTuple_GET_ITEM(obj0, i)));
@@ -11746,7 +11745,7 @@ SWIGINTERN PyObject *_wrap_NDArrayView_RandomUniformFloat__SWIG_1(PyObject *SWIG
   if (!PyArg_ParseTuple(args,(char *)"OOOO:NDArrayView_RandomUniformFloat",&obj0,&obj1,&obj2,&obj3)) SWIG_fail;
   {
     if (PyTuple_Check(obj0)) {
-      std::vector<size_t> dimensions;
+      std::vector<size_t> dimensions;;
       size_t num_axes = PyTuple_Size(obj0);
       for (int i=0; i<num_axes; i++)
       dimensions.push_back(PyLong_AsLong(PyTuple_GET_ITEM(obj0, i)));
@@ -11819,7 +11818,7 @@ SWIGINTERN PyObject *_wrap_NDArrayView_RandomUniformFloat__SWIG_2(PyObject *SWIG
   if (!PyArg_ParseTuple(args,(char *)"OOO:NDArrayView_RandomUniformFloat",&obj0,&obj1,&obj2)) SWIG_fail;
   {
     if (PyTuple_Check(obj0)) {
-      std::vector<size_t> dimensions;
+      std::vector<size_t> dimensions;;
       size_t num_axes = PyTuple_Size(obj0);
       for (int i=0; i<num_axes; i++)
       dimensions.push_back(PyLong_AsLong(PyTuple_GET_ITEM(obj0, i)));
@@ -12003,7 +12002,7 @@ SWIGINTERN PyObject *_wrap_NDArrayView_RandomUniformDouble__SWIG_0(PyObject *SWI
   if (!PyArg_ParseTuple(args,(char *)"OOOOO:NDArrayView_RandomUniformDouble",&obj0,&obj1,&obj2,&obj3,&obj4)) SWIG_fail;
   {
     if (PyTuple_Check(obj0)) {
-      std::vector<size_t> dimensions;
+      std::vector<size_t> dimensions;;
       size_t num_axes = PyTuple_Size(obj0);
       for (int i=0; i<num_axes; i++)
       dimensions.push_back(PyLong_AsLong(PyTuple_GET_ITEM(obj0, i)));
@@ -12088,7 +12087,7 @@ SWIGINTERN PyObject *_wrap_NDArrayView_RandomUniformDouble__SWIG_1(PyObject *SWI
   if (!PyArg_ParseTuple(args,(char *)"OOOO:NDArrayView_RandomUniformDouble",&obj0,&obj1,&obj2,&obj3)) SWIG_fail;
   {
     if (PyTuple_Check(obj0)) {
-      std::vector<size_t> dimensions;
+      std::vector<size_t> dimensions;;
       size_t num_axes = PyTuple_Size(obj0);
       for (int i=0; i<num_axes; i++)
       dimensions.push_back(PyLong_AsLong(PyTuple_GET_ITEM(obj0, i)));
@@ -12161,7 +12160,7 @@ SWIGINTERN PyObject *_wrap_NDArrayView_RandomUniformDouble__SWIG_2(PyObject *SWI
   if (!PyArg_ParseTuple(args,(char *)"OOO:NDArrayView_RandomUniformDouble",&obj0,&obj1,&obj2)) SWIG_fail;
   {
     if (PyTuple_Check(obj0)) {
-      std::vector<size_t> dimensions;
+      std::vector<size_t> dimensions;;
       size_t num_axes = PyTuple_Size(obj0);
       for (int i=0; i<num_axes; i++)
       dimensions.push_back(PyLong_AsLong(PyTuple_GET_ITEM(obj0, i)));
@@ -12340,7 +12339,7 @@ SWIGINTERN PyObject *_wrap_new_NDMask__SWIG_0(PyObject *SWIGUNUSEDPARM(self), Py
   if (!PyArg_ParseTuple(args,(char *)"OO:new_NDMask",&obj0,&obj1)) SWIG_fail;
   {
     if (PyTuple_Check(obj0)) {
-      std::vector<size_t> dimensions;
+      std::vector<size_t> dimensions;;
       size_t num_axes = PyTuple_Size(obj0);
       for (int i=0; i<num_axes; i++)
       dimensions.push_back(PyLong_AsLong(PyTuple_GET_ITEM(obj0, i)));
@@ -12398,7 +12397,7 @@ SWIGINTERN PyObject *_wrap_new_NDMask__SWIG_1(PyObject *SWIGUNUSEDPARM(self), Py
   if (!PyArg_ParseTuple(args,(char *)"O:new_NDMask",&obj0)) SWIG_fail;
   {
     if (PyTuple_Check(obj0)) {
-      std::vector<size_t> dimensions;
+      std::vector<size_t> dimensions;;
       size_t num_axes = PyTuple_Size(obj0);
       for (int i=0; i<num_axes; i++)
       dimensions.push_back(PyLong_AsLong(PyTuple_GET_ITEM(obj0, i)));
@@ -12582,7 +12581,7 @@ SWIGINTERN PyObject *_wrap_NDMask_MaskSection(PyObject *SWIGUNUSEDPARM(self), Py
   }
   {
     if (PyTuple_Check(obj2)) {
-      std::vector<size_t> dimensions;
+      std::vector<size_t> dimensions;;
       size_t num_axes = PyTuple_Size(obj2);
       for (int i=0; i<num_axes; i++)
       dimensions.push_back(PyLong_AsLong(PyTuple_GET_ITEM(obj2, i)));
@@ -14476,7 +14475,7 @@ SWIGINTERN PyObject *_wrap_new_Variable__SWIG_0(PyObject *SWIGUNUSEDPARM(self), 
   if (!PyArg_ParseTuple(args,(char *)"OOO:new_Variable",&obj0,&obj1,&obj2)) SWIG_fail;
   {
     if (PyTuple_Check(obj0)) {
-      std::vector<size_t> dimensions;
+      std::vector<size_t> dimensions;;
       size_t num_axes = PyTuple_Size(obj0);
       for (int i=0; i<num_axes; i++)
       dimensions.push_back(PyLong_AsLong(PyTuple_GET_ITEM(obj0, i)));
@@ -14545,7 +14544,7 @@ SWIGINTERN PyObject *_wrap_new_Variable__SWIG_1(PyObject *SWIGUNUSEDPARM(self), 
   if (!PyArg_ParseTuple(args,(char *)"OO:new_Variable",&obj0,&obj1)) SWIG_fail;
   {
     if (PyTuple_Check(obj0)) {
-      std::vector<size_t> dimensions;
+      std::vector<size_t> dimensions;;
       size_t num_axes = PyTuple_Size(obj0);
       for (int i=0; i<num_axes; i++)
       dimensions.push_back(PyLong_AsLong(PyTuple_GET_ITEM(obj0, i)));
@@ -14608,7 +14607,7 @@ SWIGINTERN PyObject *_wrap_new_Variable__SWIG_2(PyObject *SWIGUNUSEDPARM(self), 
   if (!PyArg_ParseTuple(args,(char *)"OOOO:new_Variable",&obj0,&obj1,&obj2,&obj3)) SWIG_fail;
   {
     if (PyTuple_Check(obj0)) {
-      std::vector<size_t> dimensions;
+      std::vector<size_t> dimensions;;
       size_t num_axes = PyTuple_Size(obj0);
       for (int i=0; i<num_axes; i++)
       dimensions.push_back(PyLong_AsLong(PyTuple_GET_ITEM(obj0, i)));
@@ -14686,7 +14685,7 @@ SWIGINTERN PyObject *_wrap_new_Variable__SWIG_3(PyObject *SWIGUNUSEDPARM(self), 
   if (!PyArg_ParseTuple(args,(char *)"OOO:new_Variable",&obj0,&obj1,&obj2)) SWIG_fail;
   {
     if (PyTuple_Check(obj0)) {
-      std::vector<size_t> dimensions;
+      std::vector<size_t> dimensions;;
       size_t num_axes = PyTuple_Size(obj0);
       for (int i=0; i<num_axes; i++)
       dimensions.push_back(PyLong_AsLong(PyTuple_GET_ITEM(obj0, i)));
@@ -14754,7 +14753,7 @@ SWIGINTERN PyObject *_wrap_new_Variable__SWIG_4(PyObject *SWIGUNUSEDPARM(self), 
   if (!PyArg_ParseTuple(args,(char *)"OOOO:new_Variable",&obj0,&obj1,&obj2,&obj3)) SWIG_fail;
   {
     if (PyTuple_Check(obj0)) {
-      std::vector<size_t> dimensions;
+      std::vector<size_t> dimensions;;
       size_t num_axes = PyTuple_Size(obj0);
       for (int i=0; i<num_axes; i++)
       dimensions.push_back(PyLong_AsLong(PyTuple_GET_ITEM(obj0, i)));
@@ -14832,7 +14831,7 @@ SWIGINTERN PyObject *_wrap_new_Variable__SWIG_5(PyObject *SWIGUNUSEDPARM(self), 
   if (!PyArg_ParseTuple(args,(char *)"OOO:new_Variable",&obj0,&obj1,&obj2)) SWIG_fail;
   {
     if (PyTuple_Check(obj0)) {
-      std::vector<size_t> dimensions;
+      std::vector<size_t> dimensions;;
       size_t num_axes = PyTuple_Size(obj0);
       for (int i=0; i<num_axes; i++)
       dimensions.push_back(PyLong_AsLong(PyTuple_GET_ITEM(obj0, i)));
@@ -14904,7 +14903,7 @@ SWIGINTERN PyObject *_wrap_new_Variable__SWIG_6(PyObject *SWIGUNUSEDPARM(self), 
   if (!PyArg_ParseTuple(args,(char *)"OOOOO:new_Variable",&obj0,&obj1,&obj2,&obj3,&obj4)) SWIG_fail;
   {
     if (PyTuple_Check(obj0)) {
-      std::vector<size_t> dimensions;
+      std::vector<size_t> dimensions;;
       size_t num_axes = PyTuple_Size(obj0);
       for (int i=0; i<num_axes; i++)
       dimensions.push_back(PyLong_AsLong(PyTuple_GET_ITEM(obj0, i)));
@@ -14991,7 +14990,7 @@ SWIGINTERN PyObject *_wrap_new_Variable__SWIG_7(PyObject *SWIGUNUSEDPARM(self), 
   if (!PyArg_ParseTuple(args,(char *)"OOOO:new_Variable",&obj0,&obj1,&obj2,&obj3)) SWIG_fail;
   {
     if (PyTuple_Check(obj0)) {
-      std::vector<size_t> dimensions;
+      std::vector<size_t> dimensions;;
       size_t num_axes = PyTuple_Size(obj0);
       for (int i=0; i<num_axes; i++)
       dimensions.push_back(PyLong_AsLong(PyTuple_GET_ITEM(obj0, i)));
@@ -15070,7 +15069,7 @@ SWIGINTERN PyObject *_wrap_new_Variable__SWIG_8(PyObject *SWIGUNUSEDPARM(self), 
   if (!PyArg_ParseTuple(args,(char *)"OOOOO:new_Variable",&obj0,&obj1,&obj2,&obj3,&obj4)) SWIG_fail;
   {
     if (PyTuple_Check(obj0)) {
-      std::vector<size_t> dimensions;
+      std::vector<size_t> dimensions;;
       size_t num_axes = PyTuple_Size(obj0);
       for (int i=0; i<num_axes; i++)
       dimensions.push_back(PyLong_AsLong(PyTuple_GET_ITEM(obj0, i)));
@@ -15172,7 +15171,7 @@ SWIGINTERN PyObject *_wrap_new_Variable__SWIG_9(PyObject *SWIGUNUSEDPARM(self), 
   if (!PyArg_ParseTuple(args,(char *)"OOOO:new_Variable",&obj0,&obj1,&obj2,&obj3)) SWIG_fail;
   {
     if (PyTuple_Check(obj0)) {
-      std::vector<size_t> dimensions;
+      std::vector<size_t> dimensions;;
       size_t num_axes = PyTuple_Size(obj0);
       for (int i=0; i<num_axes; i++)
       dimensions.push_back(PyLong_AsLong(PyTuple_GET_ITEM(obj0, i)));
@@ -16985,7 +16984,7 @@ SWIGINTERN PyObject *_wrap_new_ConstantFloat__SWIG_0(PyObject *SWIGUNUSEDPARM(se
   if (!PyArg_ParseTuple(args,(char *)"OOOO:new_ConstantFloat",&obj0,&obj1,&obj2,&obj3)) SWIG_fail;
   {
     if (PyTuple_Check(obj0)) {
-      std::vector<size_t> dimensions;
+      std::vector<size_t> dimensions;;
       size_t num_axes = PyTuple_Size(obj0);
       for (int i=0; i<num_axes; i++)
       dimensions.push_back(PyLong_AsLong(PyTuple_GET_ITEM(obj0, i)));
@@ -17066,7 +17065,7 @@ SWIGINTERN PyObject *_wrap_new_ConstantFloat__SWIG_1(PyObject *SWIGUNUSEDPARM(se
   if (!PyArg_ParseTuple(args,(char *)"OOO:new_ConstantFloat",&obj0,&obj1,&obj2)) SWIG_fail;
   {
     if (PyTuple_Check(obj0)) {
-      std::vector<size_t> dimensions;
+      std::vector<size_t> dimensions;;
       size_t num_axes = PyTuple_Size(obj0);
       for (int i=0; i<num_axes; i++)
       dimensions.push_back(PyLong_AsLong(PyTuple_GET_ITEM(obj0, i)));
@@ -17130,7 +17129,7 @@ SWIGINTERN PyObject *_wrap_new_ConstantFloat__SWIG_2(PyObject *SWIGUNUSEDPARM(se
   if (!PyArg_ParseTuple(args,(char *)"OO:new_ConstantFloat",&obj0,&obj1)) SWIG_fail;
   {
     if (PyTuple_Check(obj0)) {
-      std::vector<size_t> dimensions;
+      std::vector<size_t> dimensions;;
       size_t num_axes = PyTuple_Size(obj0);
       for (int i=0; i<num_axes; i++)
       dimensions.push_back(PyLong_AsLong(PyTuple_GET_ITEM(obj0, i)));
@@ -17279,7 +17278,7 @@ SWIGINTERN PyObject *_wrap_new_ConstantDouble__SWIG_0(PyObject *SWIGUNUSEDPARM(s
   if (!PyArg_ParseTuple(args,(char *)"OOOO:new_ConstantDouble",&obj0,&obj1,&obj2,&obj3)) SWIG_fail;
   {
     if (PyTuple_Check(obj0)) {
-      std::vector<size_t> dimensions;
+      std::vector<size_t> dimensions;;
       size_t num_axes = PyTuple_Size(obj0);
       for (int i=0; i<num_axes; i++)
       dimensions.push_back(PyLong_AsLong(PyTuple_GET_ITEM(obj0, i)));
@@ -17360,7 +17359,7 @@ SWIGINTERN PyObject *_wrap_new_ConstantDouble__SWIG_1(PyObject *SWIGUNUSEDPARM(s
   if (!PyArg_ParseTuple(args,(char *)"OOO:new_ConstantDouble",&obj0,&obj1,&obj2)) SWIG_fail;
   {
     if (PyTuple_Check(obj0)) {
-      std::vector<size_t> dimensions;
+      std::vector<size_t> dimensions;;
       size_t num_axes = PyTuple_Size(obj0);
       for (int i=0; i<num_axes; i++)
       dimensions.push_back(PyLong_AsLong(PyTuple_GET_ITEM(obj0, i)));
@@ -17424,7 +17423,7 @@ SWIGINTERN PyObject *_wrap_new_ConstantDouble__SWIG_2(PyObject *SWIGUNUSEDPARM(s
   if (!PyArg_ParseTuple(args,(char *)"OO:new_ConstantDouble",&obj0,&obj1)) SWIG_fail;
   {
     if (PyTuple_Check(obj0)) {
-      std::vector<size_t> dimensions;
+      std::vector<size_t> dimensions;;
       size_t num_axes = PyTuple_Size(obj0);
       for (int i=0; i<num_axes; i++)
       dimensions.push_back(PyLong_AsLong(PyTuple_GET_ITEM(obj0, i)));
@@ -17623,7 +17622,7 @@ SWIGINTERN PyObject *_wrap_new_Placeholder__SWIG_0(PyObject *SWIGUNUSEDPARM(self
   if (!PyArg_ParseTuple(args,(char *)"OO:new_Placeholder",&obj0,&obj1)) SWIG_fail;
   {
     if (PyTuple_Check(obj0)) {
-      std::vector<size_t> dimensions;
+      std::vector<size_t> dimensions;;
       size_t num_axes = PyTuple_Size(obj0);
       for (int i=0; i<num_axes; i++)
       dimensions.push_back(PyLong_AsLong(PyTuple_GET_ITEM(obj0, i)));
@@ -17683,7 +17682,7 @@ SWIGINTERN PyObject *_wrap_new_Placeholder__SWIG_1(PyObject *SWIGUNUSEDPARM(self
   if (!PyArg_ParseTuple(args,(char *)"O:new_Placeholder",&obj0)) SWIG_fail;
   {
     if (PyTuple_Check(obj0)) {
-      std::vector<size_t> dimensions;
+      std::vector<size_t> dimensions;;
       size_t num_axes = PyTuple_Size(obj0);
       for (int i=0; i<num_axes; i++)
       dimensions.push_back(PyLong_AsLong(PyTuple_GET_ITEM(obj0, i)));
@@ -18053,7 +18052,7 @@ SWIGINTERN PyObject *_wrap_Function_Forward__SWIG_0(PyObject *SWIGUNUSEDPARM(sel
         void *raw_value = 0;
         int res2 = SWIG_ConvertPtr(value, &raw_value, SWIGTYPE_p_std__shared_ptrT_CNTK__Value_t,  0);
         if (!SWIG_IsOK(res2)) {
-          SWIG_exception_fail(SWIG_ArgError(res2), "cannot convert key of dictionary to CNTK::ValuePtr"); 
+          SWIG_exception_fail(SWIG_ArgError(res2), "cannot convert value of dictionary to CNTK::ValuePtr"); 
         }
         
         CNTK::ValuePtr* value;
@@ -18094,7 +18093,7 @@ SWIGINTERN PyObject *_wrap_Function_Forward__SWIG_0(PyObject *SWIGUNUSEDPARM(sel
         void *raw_value = 0;
         int res2 = SWIG_ConvertPtr(value, &raw_value, SWIGTYPE_p_std__shared_ptrT_CNTK__Value_t,  0);
         if (!SWIG_IsOK(res2)) {
-          SWIG_exception_fail(SWIG_ArgError(res2), "cannot convert key of dictionary to CNTK::ValuePtr"); 
+          SWIG_exception_fail(SWIG_ArgError(res2), "cannot convert value of dictionary to CNTK::ValuePtr"); 
         }
         
         CNTK::ValuePtr* value;
@@ -18137,7 +18136,7 @@ SWIGINTERN PyObject *_wrap_Function_Forward__SWIG_0(PyObject *SWIGUNUSEDPARM(sel
         void *raw_var = 0 ;
         int res1 = SWIG_ConvertPtr(item, &raw_var, SWIGTYPE_p_CNTK__Variable,  0);
         if (!SWIG_IsOK(res1)) {
-          SWIG_exception_fail(SWIG_ArgError(res1), "cannot convert key of dictionary to CNTK::Variable"); 
+          SWIG_exception_fail(SWIG_ArgError(res1), "cannot convert set element to CNTK::Variable"); 
         }
         if (!raw_var) {
           SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting a list element to CNTK::Variable");
@@ -18153,7 +18152,7 @@ SWIGINTERN PyObject *_wrap_Function_Forward__SWIG_0(PyObject *SWIGUNUSEDPARM(sel
       Py_DECREF(iterator);
       
       if (PyErr_Occurred()) {
-        SWIG_exception_fail(SWIG_ValueError, "cannot convert key of dictionary to CNTK::Variable"); 
+        SWIG_exception_fail(SWIG_ValueError, "cannot convert set element to CNTK::Variable"); 
       }
       
       arg5 = args_set;
@@ -18193,7 +18192,7 @@ SWIGINTERN PyObject *_wrap_Function_Forward__SWIG_0(PyObject *SWIGUNUSEDPARM(sel
     
     for (auto it: *arg2)
     {
-      // Convert ValuePtr to PyObject
+      // Convert Variable to PyObject
       PyObject *returned_var = SWIG_NewPointerObj(SWIG_as_voidptr(&it.first), SWIGTYPE_p_CNTK__Variable, SWIG_POINTER_NOSHADOW);
       
       // Push the ValuePtr onto the heap so that it survives
@@ -18244,7 +18243,7 @@ SWIGINTERN PyObject *_wrap_Function_Forward__SWIG_0(PyObject *SWIGUNUSEDPARM(sel
     
     for (auto it: *arg3)
     {
-      // Convert ValuePtr to PyObject
+      // Convert Variable to PyObject
       PyObject *returned_var = SWIG_NewPointerObj(SWIG_as_voidptr(&it.first), SWIGTYPE_p_CNTK__Variable, SWIG_POINTER_NOSHADOW);
       
       // Push the ValuePtr onto the heap so that it survives
@@ -18350,7 +18349,7 @@ SWIGINTERN PyObject *_wrap_Function_Forward__SWIG_1(PyObject *SWIGUNUSEDPARM(sel
         void *raw_value = 0;
         int res2 = SWIG_ConvertPtr(value, &raw_value, SWIGTYPE_p_std__shared_ptrT_CNTK__Value_t,  0);
         if (!SWIG_IsOK(res2)) {
-          SWIG_exception_fail(SWIG_ArgError(res2), "cannot convert key of dictionary to CNTK::ValuePtr"); 
+          SWIG_exception_fail(SWIG_ArgError(res2), "cannot convert value of dictionary to CNTK::ValuePtr"); 
         }
         
         CNTK::ValuePtr* value;
@@ -18391,7 +18390,7 @@ SWIGINTERN PyObject *_wrap_Function_Forward__SWIG_1(PyObject *SWIGUNUSEDPARM(sel
         void *raw_value = 0;
         int res2 = SWIG_ConvertPtr(value, &raw_value, SWIGTYPE_p_std__shared_ptrT_CNTK__Value_t,  0);
         if (!SWIG_IsOK(res2)) {
-          SWIG_exception_fail(SWIG_ArgError(res2), "cannot convert key of dictionary to CNTK::ValuePtr"); 
+          SWIG_exception_fail(SWIG_ArgError(res2), "cannot convert value of dictionary to CNTK::ValuePtr"); 
         }
         
         CNTK::ValuePtr* value;
@@ -18449,7 +18448,7 @@ SWIGINTERN PyObject *_wrap_Function_Forward__SWIG_1(PyObject *SWIGUNUSEDPARM(sel
     
     for (auto it: *arg2)
     {
-      // Convert ValuePtr to PyObject
+      // Convert Variable to PyObject
       PyObject *returned_var = SWIG_NewPointerObj(SWIG_as_voidptr(&it.first), SWIGTYPE_p_CNTK__Variable, SWIG_POINTER_NOSHADOW);
       
       // Push the ValuePtr onto the heap so that it survives
@@ -18500,7 +18499,7 @@ SWIGINTERN PyObject *_wrap_Function_Forward__SWIG_1(PyObject *SWIGUNUSEDPARM(sel
     
     for (auto it: *arg3)
     {
-      // Convert ValuePtr to PyObject
+      // Convert Variable to PyObject
       PyObject *returned_var = SWIG_NewPointerObj(SWIG_as_voidptr(&it.first), SWIGTYPE_p_CNTK__Variable, SWIG_POINTER_NOSHADOW);
       
       // Push the ValuePtr onto the heap so that it survives
@@ -18602,7 +18601,7 @@ SWIGINTERN PyObject *_wrap_Function_Forward__SWIG_2(PyObject *SWIGUNUSEDPARM(sel
         void *raw_value = 0;
         int res2 = SWIG_ConvertPtr(value, &raw_value, SWIGTYPE_p_std__shared_ptrT_CNTK__Value_t,  0);
         if (!SWIG_IsOK(res2)) {
-          SWIG_exception_fail(SWIG_ArgError(res2), "cannot convert key of dictionary to CNTK::ValuePtr"); 
+          SWIG_exception_fail(SWIG_ArgError(res2), "cannot convert value of dictionary to CNTK::ValuePtr"); 
         }
         
         CNTK::ValuePtr* value;
@@ -18643,7 +18642,7 @@ SWIGINTERN PyObject *_wrap_Function_Forward__SWIG_2(PyObject *SWIGUNUSEDPARM(sel
         void *raw_value = 0;
         int res2 = SWIG_ConvertPtr(value, &raw_value, SWIGTYPE_p_std__shared_ptrT_CNTK__Value_t,  0);
         if (!SWIG_IsOK(res2)) {
-          SWIG_exception_fail(SWIG_ArgError(res2), "cannot convert key of dictionary to CNTK::ValuePtr"); 
+          SWIG_exception_fail(SWIG_ArgError(res2), "cannot convert value of dictionary to CNTK::ValuePtr"); 
         }
         
         CNTK::ValuePtr* value;
@@ -18693,7 +18692,7 @@ SWIGINTERN PyObject *_wrap_Function_Forward__SWIG_2(PyObject *SWIGUNUSEDPARM(sel
     
     for (auto it: *arg2)
     {
-      // Convert ValuePtr to PyObject
+      // Convert Variable to PyObject
       PyObject *returned_var = SWIG_NewPointerObj(SWIG_as_voidptr(&it.first), SWIGTYPE_p_CNTK__Variable, SWIG_POINTER_NOSHADOW);
       
       // Push the ValuePtr onto the heap so that it survives
@@ -18744,7 +18743,7 @@ SWIGINTERN PyObject *_wrap_Function_Forward__SWIG_2(PyObject *SWIGUNUSEDPARM(sel
     
     for (auto it: *arg3)
     {
-      // Convert ValuePtr to PyObject
+      // Convert Variable to PyObject
       PyObject *returned_var = SWIG_NewPointerObj(SWIG_as_voidptr(&it.first), SWIGTYPE_p_CNTK__Variable, SWIG_POINTER_NOSHADOW);
       
       // Push the ValuePtr onto the heap so that it survives
@@ -18968,7 +18967,7 @@ SWIGINTERN PyObject *_wrap_Function_Backward(PyObject *SWIGUNUSEDPARM(self), PyO
         void *raw_value = 0;
         int res2 = SWIG_ConvertPtr(value, &raw_value, SWIGTYPE_p_std__shared_ptrT_CNTK__Value_t,  0);
         if (!SWIG_IsOK(res2)) {
-          SWIG_exception_fail(SWIG_ArgError(res2), "cannot convert key of dictionary to CNTK::ValuePtr"); 
+          SWIG_exception_fail(SWIG_ArgError(res2), "cannot convert value of dictionary to CNTK::ValuePtr"); 
         }
         
         CNTK::ValuePtr* value;
@@ -19009,7 +19008,7 @@ SWIGINTERN PyObject *_wrap_Function_Backward(PyObject *SWIGUNUSEDPARM(self), PyO
         void *raw_value = 0;
         int res2 = SWIG_ConvertPtr(value, &raw_value, SWIGTYPE_p_std__shared_ptrT_CNTK__Value_t,  0);
         if (!SWIG_IsOK(res2)) {
-          SWIG_exception_fail(SWIG_ArgError(res2), "cannot convert key of dictionary to CNTK::ValuePtr"); 
+          SWIG_exception_fail(SWIG_ArgError(res2), "cannot convert value of dictionary to CNTK::ValuePtr"); 
         }
         
         CNTK::ValuePtr* value;
@@ -19056,7 +19055,7 @@ SWIGINTERN PyObject *_wrap_Function_Backward(PyObject *SWIGUNUSEDPARM(self), PyO
     
     for (auto it: *arg3)
     {
-      // Convert ValuePtr to PyObject
+      // Convert Variable to PyObject
       PyObject *returned_var = SWIG_NewPointerObj(SWIG_as_voidptr(&it.first), SWIGTYPE_p_CNTK__Variable, SWIG_POINTER_NOSHADOW);
       
       // Push the ValuePtr onto the heap so that it survives
@@ -19107,7 +19106,7 @@ SWIGINTERN PyObject *_wrap_Function_Backward(PyObject *SWIGUNUSEDPARM(self), PyO
     
     for (auto it: *arg4)
     {
-      // Convert ValuePtr to PyObject
+      // Convert Variable to PyObject
       PyObject *returned_var = SWIG_NewPointerObj(SWIG_as_voidptr(&it.first), SWIGTYPE_p_CNTK__Variable, SWIG_POINTER_NOSHADOW);
       
       // Push the ValuePtr onto the heap so that it survives
@@ -25585,7 +25584,7 @@ SWIGINTERN PyObject *_wrap_new_DictionaryValue__SWIG_6(PyObject *SWIGUNUSEDPARM(
       
       PyObject *iterator = PyObject_GetIter(obj0);
       if (iterator == NULL) {
-        SWIG_exception_fail(SWIG_ValueError, "cannot convert key of dictionary to CNTK::DictionaryValue"); 
+        SWIG_exception_fail(SWIG_ValueError, "cannot convert list element to CNTK::DictionaryValue"); 
       }
       
       while (item = PyIter_Next(iterator)) {
@@ -25608,7 +25607,7 @@ SWIGINTERN PyObject *_wrap_new_DictionaryValue__SWIG_6(PyObject *SWIGUNUSEDPARM(
       Py_DECREF(iterator);
       
       if (PyErr_Occurred()) {
-        SWIG_exception_fail(SWIG_ValueError, "cannot convert key of dictionary to CNTK::LearnerPtr"); 
+        SWIG_exception_fail(SWIG_ValueError, "cannot convert list element to CNTK::LearnerPtr"); 
       }
       
       arg1 = vec;
@@ -26741,7 +26740,7 @@ SWIGINTERN PyObject *_wrap_SGDLearner(PyObject *SWIGUNUSEDPARM(self), PyObject *
         void *raw_var = 0 ;
         int res1 = SWIG_ConvertPtr(item, &raw_var, SWIGTYPE_p_CNTK__Parameter,  0);
         if (!SWIG_IsOK(res1)) {
-          SWIG_exception_fail(SWIG_ArgError(res1), "cannot convert key of dictionary to CNTK::Parameter"); 
+          SWIG_exception_fail(SWIG_ArgError(res1), "cannot convert set element to CNTK::Parameter"); 
         }
         if (!raw_var) {
           SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting a list element to CNTK::Parameter");
@@ -26757,7 +26756,7 @@ SWIGINTERN PyObject *_wrap_SGDLearner(PyObject *SWIGUNUSEDPARM(self), PyObject *
       Py_DECREF(iterator);
       
       if (PyErr_Occurred()) {
-        SWIG_exception_fail(SWIG_ValueError, "cannot convert key of dictionary to CNTK::Parameter"); 
+        SWIG_exception_fail(SWIG_ValueError, "cannot convert set element to CNTK::Parameter"); 
       }
       
       arg1 = args_set;
@@ -26824,7 +26823,7 @@ SWIGINTERN PyObject *_wrap_MomentumSGDLearner(PyObject *SWIGUNUSEDPARM(self), Py
         void *raw_var = 0 ;
         int res1 = SWIG_ConvertPtr(item, &raw_var, SWIGTYPE_p_CNTK__Parameter,  0);
         if (!SWIG_IsOK(res1)) {
-          SWIG_exception_fail(SWIG_ArgError(res1), "cannot convert key of dictionary to CNTK::Parameter"); 
+          SWIG_exception_fail(SWIG_ArgError(res1), "cannot convert set element to CNTK::Parameter"); 
         }
         if (!raw_var) {
           SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting a list element to CNTK::Parameter");
@@ -26840,7 +26839,7 @@ SWIGINTERN PyObject *_wrap_MomentumSGDLearner(PyObject *SWIGUNUSEDPARM(self), Py
       Py_DECREF(iterator);
       
       if (PyErr_Occurred()) {
-        SWIG_exception_fail(SWIG_ValueError, "cannot convert key of dictionary to CNTK::Parameter"); 
+        SWIG_exception_fail(SWIG_ValueError, "cannot convert set element to CNTK::Parameter"); 
       }
       
       arg1 = args_set;
@@ -26902,7 +26901,7 @@ SWIGINTERN PyObject *_wrap_NesterovLearner(PyObject *SWIGUNUSEDPARM(self), PyObj
         void *raw_var = 0 ;
         int res1 = SWIG_ConvertPtr(item, &raw_var, SWIGTYPE_p_CNTK__Parameter,  0);
         if (!SWIG_IsOK(res1)) {
-          SWIG_exception_fail(SWIG_ArgError(res1), "cannot convert key of dictionary to CNTK::Parameter"); 
+          SWIG_exception_fail(SWIG_ArgError(res1), "cannot convert set element to CNTK::Parameter"); 
         }
         if (!raw_var) {
           SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting a list element to CNTK::Parameter");
@@ -26918,7 +26917,7 @@ SWIGINTERN PyObject *_wrap_NesterovLearner(PyObject *SWIGUNUSEDPARM(self), PyObj
       Py_DECREF(iterator);
       
       if (PyErr_Occurred()) {
-        SWIG_exception_fail(SWIG_ValueError, "cannot convert key of dictionary to CNTK::Parameter"); 
+        SWIG_exception_fail(SWIG_ValueError, "cannot convert set element to CNTK::Parameter"); 
       }
       
       arg1 = args_set;
@@ -26984,7 +26983,7 @@ SWIGINTERN PyObject *_wrap_AdaGradLearner__SWIG_0(PyObject *SWIGUNUSEDPARM(self)
         void *raw_var = 0 ;
         int res1 = SWIG_ConvertPtr(item, &raw_var, SWIGTYPE_p_CNTK__Parameter,  0);
         if (!SWIG_IsOK(res1)) {
-          SWIG_exception_fail(SWIG_ArgError(res1), "cannot convert key of dictionary to CNTK::Parameter"); 
+          SWIG_exception_fail(SWIG_ArgError(res1), "cannot convert set element to CNTK::Parameter"); 
         }
         if (!raw_var) {
           SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting a list element to CNTK::Parameter");
@@ -27000,7 +26999,7 @@ SWIGINTERN PyObject *_wrap_AdaGradLearner__SWIG_0(PyObject *SWIGUNUSEDPARM(self)
       Py_DECREF(iterator);
       
       if (PyErr_Occurred()) {
-        SWIG_exception_fail(SWIG_ValueError, "cannot convert key of dictionary to CNTK::Parameter"); 
+        SWIG_exception_fail(SWIG_ValueError, "cannot convert set element to CNTK::Parameter"); 
       }
       
       arg1 = args_set;
@@ -27067,7 +27066,7 @@ SWIGINTERN PyObject *_wrap_AdaGradLearner__SWIG_1(PyObject *SWIGUNUSEDPARM(self)
         void *raw_var = 0 ;
         int res1 = SWIG_ConvertPtr(item, &raw_var, SWIGTYPE_p_CNTK__Parameter,  0);
         if (!SWIG_IsOK(res1)) {
-          SWIG_exception_fail(SWIG_ArgError(res1), "cannot convert key of dictionary to CNTK::Parameter"); 
+          SWIG_exception_fail(SWIG_ArgError(res1), "cannot convert set element to CNTK::Parameter"); 
         }
         if (!raw_var) {
           SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting a list element to CNTK::Parameter");
@@ -27083,7 +27082,7 @@ SWIGINTERN PyObject *_wrap_AdaGradLearner__SWIG_1(PyObject *SWIGUNUSEDPARM(self)
       Py_DECREF(iterator);
       
       if (PyErr_Occurred()) {
-        SWIG_exception_fail(SWIG_ValueError, "cannot convert key of dictionary to CNTK::Parameter"); 
+        SWIG_exception_fail(SWIG_ValueError, "cannot convert set element to CNTK::Parameter"); 
       }
       
       arg1 = args_set;
@@ -27195,7 +27194,7 @@ SWIGINTERN PyObject *_wrap_FSAdaGradLearner(PyObject *SWIGUNUSEDPARM(self), PyOb
         void *raw_var = 0 ;
         int res1 = SWIG_ConvertPtr(item, &raw_var, SWIGTYPE_p_CNTK__Parameter,  0);
         if (!SWIG_IsOK(res1)) {
-          SWIG_exception_fail(SWIG_ArgError(res1), "cannot convert key of dictionary to CNTK::Parameter"); 
+          SWIG_exception_fail(SWIG_ArgError(res1), "cannot convert set element to CNTK::Parameter"); 
         }
         if (!raw_var) {
           SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting a list element to CNTK::Parameter");
@@ -27211,7 +27210,7 @@ SWIGINTERN PyObject *_wrap_FSAdaGradLearner(PyObject *SWIGUNUSEDPARM(self), PyOb
       Py_DECREF(iterator);
       
       if (PyErr_Occurred()) {
-        SWIG_exception_fail(SWIG_ValueError, "cannot convert key of dictionary to CNTK::Parameter"); 
+        SWIG_exception_fail(SWIG_ValueError, "cannot convert set element to CNTK::Parameter"); 
       }
       
       arg1 = args_set;
@@ -27297,7 +27296,7 @@ SWIGINTERN PyObject *_wrap_RMSPropLearner__SWIG_0(PyObject *SWIGUNUSEDPARM(self)
         void *raw_var = 0 ;
         int res1 = SWIG_ConvertPtr(item, &raw_var, SWIGTYPE_p_CNTK__Parameter,  0);
         if (!SWIG_IsOK(res1)) {
-          SWIG_exception_fail(SWIG_ArgError(res1), "cannot convert key of dictionary to CNTK::Parameter"); 
+          SWIG_exception_fail(SWIG_ArgError(res1), "cannot convert set element to CNTK::Parameter"); 
         }
         if (!raw_var) {
           SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting a list element to CNTK::Parameter");
@@ -27313,7 +27312,7 @@ SWIGINTERN PyObject *_wrap_RMSPropLearner__SWIG_0(PyObject *SWIGUNUSEDPARM(self)
       Py_DECREF(iterator);
       
       if (PyErr_Occurred()) {
-        SWIG_exception_fail(SWIG_ValueError, "cannot convert key of dictionary to CNTK::Parameter"); 
+        SWIG_exception_fail(SWIG_ValueError, "cannot convert set element to CNTK::Parameter"); 
       }
       
       arg1 = args_set;
@@ -27425,7 +27424,7 @@ SWIGINTERN PyObject *_wrap_RMSPropLearner__SWIG_1(PyObject *SWIGUNUSEDPARM(self)
         void *raw_var = 0 ;
         int res1 = SWIG_ConvertPtr(item, &raw_var, SWIGTYPE_p_CNTK__Parameter,  0);
         if (!SWIG_IsOK(res1)) {
-          SWIG_exception_fail(SWIG_ArgError(res1), "cannot convert key of dictionary to CNTK::Parameter"); 
+          SWIG_exception_fail(SWIG_ArgError(res1), "cannot convert set element to CNTK::Parameter"); 
         }
         if (!raw_var) {
           SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting a list element to CNTK::Parameter");
@@ -27441,7 +27440,7 @@ SWIGINTERN PyObject *_wrap_RMSPropLearner__SWIG_1(PyObject *SWIGUNUSEDPARM(self)
       Py_DECREF(iterator);
       
       if (PyErr_Occurred()) {
-        SWIG_exception_fail(SWIG_ValueError, "cannot convert key of dictionary to CNTK::Parameter"); 
+        SWIG_exception_fail(SWIG_ValueError, "cannot convert set element to CNTK::Parameter"); 
       }
       
       arg1 = args_set;
@@ -27669,7 +27668,7 @@ SWIGINTERN PyObject *_wrap_new_Trainer(PyObject *SWIGUNUSEDPARM(self), PyObject 
         void *raw_var = 0 ;
         int res1 = SWIG_ConvertPtr(item, &raw_var, SWIGTYPE_p_std__shared_ptrT_CNTK__Learner_t,  0);
         if (!SWIG_IsOK(res1)) {
-          SWIG_exception_fail(SWIG_ArgError(res1), "cannot convert key of dictionary to CNTK::LearnerPtr"); 
+          SWIG_exception_fail(SWIG_ArgError(res1), "cannot convert list element to CNTK::LearnerPtr"); 
         }
         if (!raw_var) {
           SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting a list element to CNTK::LearnerPtr");
@@ -27685,7 +27684,7 @@ SWIGINTERN PyObject *_wrap_new_Trainer(PyObject *SWIGUNUSEDPARM(self), PyObject 
       Py_DECREF(iterator);
       
       if (PyErr_Occurred()) {
-        SWIG_exception_fail(SWIG_ValueError, "cannot convert key of dictionary to CNTK::LearnerPtr"); 
+        SWIG_exception_fail(SWIG_ValueError, "cannot convert list element to CNTK::LearnerPtr"); 
       }
       
       arg3 = args_set;
@@ -27763,7 +27762,7 @@ SWIGINTERN PyObject *_wrap_Trainer_TrainMinibatch__SWIG_0(PyObject *SWIGUNUSEDPA
         void *raw_value = 0;
         int res2 = SWIG_ConvertPtr(value, &raw_value, SWIGTYPE_p_std__shared_ptrT_CNTK__Value_t,  0);
         if (!SWIG_IsOK(res2)) {
-          SWIG_exception_fail(SWIG_ArgError(res2), "cannot convert key of dictionary to CNTK::ValuePtr"); 
+          SWIG_exception_fail(SWIG_ArgError(res2), "cannot convert value of dictionary to CNTK::ValuePtr"); 
         }
         
         CNTK::ValuePtr* value;
@@ -27818,7 +27817,7 @@ SWIGINTERN PyObject *_wrap_Trainer_TrainMinibatch__SWIG_0(PyObject *SWIGUNUSEDPA
     
     for (auto it: *arg2)
     {
-      // Convert ValuePtr to PyObject
+      // Convert Variable to PyObject
       PyObject *returned_var = SWIG_NewPointerObj(SWIG_as_voidptr(&it.first), SWIGTYPE_p_CNTK__Variable, SWIG_POINTER_NOSHADOW);
       
       // Push the ValuePtr onto the heap so that it survives
@@ -27906,7 +27905,7 @@ SWIGINTERN PyObject *_wrap_Trainer_TrainMinibatch__SWIG_1(PyObject *SWIGUNUSEDPA
         void *raw_value = 0;
         int res2 = SWIG_ConvertPtr(value, &raw_value, SWIGTYPE_p_std__shared_ptrT_CNTK__Value_t,  0);
         if (!SWIG_IsOK(res2)) {
-          SWIG_exception_fail(SWIG_ArgError(res2), "cannot convert key of dictionary to CNTK::ValuePtr"); 
+          SWIG_exception_fail(SWIG_ArgError(res2), "cannot convert value of dictionary to CNTK::ValuePtr"); 
         }
         
         CNTK::ValuePtr* value;
@@ -27953,7 +27952,7 @@ SWIGINTERN PyObject *_wrap_Trainer_TrainMinibatch__SWIG_1(PyObject *SWIGUNUSEDPA
     
     for (auto it: *arg2)
     {
-      // Convert ValuePtr to PyObject
+      // Convert Variable to PyObject
       PyObject *returned_var = SWIG_NewPointerObj(SWIG_as_voidptr(&it.first), SWIGTYPE_p_CNTK__Variable, SWIG_POINTER_NOSHADOW);
       
       // Push the ValuePtr onto the heap so that it survives
@@ -28798,8 +28797,6 @@ SWIGINTERN PyObject *_wrap_MinibatchSource_GetNextMinibatch(PyObject *SWIGUNUSED
   int res1 = 0 ;
   std::shared_ptr< CNTK::MinibatchSource > tempshared1 ;
   std::shared_ptr< CNTK::MinibatchSource > *smartarg1 = 0 ;
-  void *argp2 = 0 ;
-  int res2 = 0 ;
   PyObject * obj0 = 0 ;
   PyObject * obj1 = 0 ;
   bool result;
@@ -28820,14 +28817,55 @@ SWIGINTERN PyObject *_wrap_MinibatchSource_GetNextMinibatch(PyObject *SWIGUNUSED
       arg1 = const_cast< CNTK::MinibatchSource * >((smartarg1 ? smartarg1->get() : 0));
     }
   }
-  res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_std__unordered_mapT_CNTK__StreamInfo_std__pairT_size_t_std__shared_ptrT_CNTK__Value_t_t_t,  0 );
-  if (!SWIG_IsOK(res2)) {
-    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "MinibatchSource_GetNextMinibatch" "', argument " "2"" of type '" "std::unordered_map< CNTK::StreamInfo,std::pair< size_t,CNTK::ValuePtr > > &""'"); 
+  {
+    if (PyDict_Check(obj1)) {
+      std::unordered_map<CNTK::StreamInfo, std::pair<size_t, CNTK::ValuePtr>>* args_map = new  std::unordered_map<CNTK::StreamInfo, std::pair<size_t, CNTK::ValuePtr>>();
+      
+      PyObject *key, *value;
+      Py_ssize_t pos = 0;
+      
+      while (PyDict_Next(obj1, &pos, &key, &value)) {
+        void *raw_var = 0 ;
+        int res1 = SWIG_ConvertPtr(key, &raw_var, SWIGTYPE_p_CNTK__StreamInfo,  0);
+        if (!SWIG_IsOK(res1)) {
+          SWIG_exception_fail(SWIG_ArgError(res1), "cannot convert key of dictionary to CNTK::StreamInfo"); 
+        }
+        if (!raw_var) {
+          SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting key of dictionary to CNTK::StreamInfo");
+        }
+        
+        CNTK::StreamInfo* var = reinterpret_cast<CNTK::StreamInfo*>(raw_var);
+        
+        void *raw_value = 0;
+        
+        if (PyTuple_Check(value)) {
+          PyObject* first = PyTuple_GET_ITEM(value, 0);
+          size_t first_val = PyLong_AsSize_t(first);                
+          PyObject* second = PyTuple_GET_ITEM(value, 1);        
+          int res2 = SWIG_ConvertPtr(second, &raw_value, SWIGTYPE_p_std__shared_ptrT_CNTK__Value_t,  0);    
+          if (!SWIG_IsOK(res2)) {
+            SWIG_exception_fail(SWIG_ArgError(res2), "cannot convert value of dictionary to CNTK::ValuePtr"); 
+          }   
+          
+          CNTK::ValuePtr* second_val;
+          if (raw_value) {
+            second_val = reinterpret_cast<CNTK::ValuePtr*>(raw_value);
+          } else {
+            // We got an empty ValuePtr, which carries a nullptr.
+            second_val = new CNTK::ValuePtr();
+          }                
+          args_map->insert(std::make_pair(*var, std::make_pair(first_val, *second_val)));
+        } else {
+          SWIG_exception(SWIG_TypeError, "tuple expected");
+        }
+        
+      }
+      
+      arg2 = args_map;
+    } else {
+      SWIG_exception(SWIG_TypeError, "dictionary expected");
+    }
   }
-  if (!argp2) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "MinibatchSource_GetNextMinibatch" "', argument " "2"" of type '" "std::unordered_map< CNTK::StreamInfo,std::pair< size_t,CNTK::ValuePtr > > &""'"); 
-  }
-  arg2 = reinterpret_cast< std::unordered_map< CNTK::StreamInfo,std::pair< size_t,CNTK::ValuePtr > > * >(argp2);
   {
     try {
       result = (bool)(arg1)->GetNextMinibatch(*arg2); 
@@ -28849,6 +28887,61 @@ SWIGINTERN PyObject *_wrap_MinibatchSource_GetNextMinibatch(PyObject *SWIGUNUSED
     }
   }
   resultobj = SWIG_From_bool(static_cast< bool >(result));
+  {
+    if (!PyDict_Check(obj1)) {
+      SWIG_exception(SWIG_TypeError, "dictionary expected");
+    }
+    
+    for (auto it: *arg2)
+    {
+      // Convert StreamInfo to PyObject
+      PyObject *returned_var = SWIG_NewPointerObj(SWIG_as_voidptr(&it.first), SWIGTYPE_p_CNTK__StreamInfo, SWIG_POINTER_NOSHADOW);
+      
+      // Push the ValuePtr onto the heap so that it survives
+      
+      size_t * smartresult1 = it.second.first ? &it.second.first : 0;
+      PyObject *returned_val1 = SWIG_NewPointerObj(SWIG_as_voidptr(smartresult1), SWIGTYPE_p_size_type, 0);
+      
+      std::shared_ptr<CNTK::Value> *smartresult2 = it.second.second ? new std::shared_ptr<CNTK::Value>(it.second.second) : 0;
+      PyObject *returned_val2 = SWIG_NewPointerObj(SWIG_as_voidptr(smartresult2), SWIGTYPE_p_std__shared_ptrT_CNTK__Value_t, SWIG_POINTER_OWN);
+      
+      // Find the corresponding Variable instance in the Python dictionary
+      // and set its value to the new ValuePtr
+      
+      /* FIXME We would love to do the following, but the hashing does not
+               * correctly work here, which is why we never find the keys. Instead,
+               * we will for now loop over the dictionary and use C++ comparison.
+               * Although not beautiful, there should not be a lot of overhead since
+               * the dictionary usually contains only a handful of variables as keys.
+              if (PyDict_Contains(obj1, returned_var))
+              {
+                  SWIG_exception_fail(SWIG_ValueError, "returned output map contains unknown key");
+              }
+               */
+      
+      PyObject *py_key, *py_value;
+      Py_ssize_t pos = 0;
+      
+      while (PyDict_Next(obj1, &pos, &py_key, &py_value)) {
+        void *cntk_key = 0 ;
+        int res = SWIG_ConvertPtr(py_key, &cntk_key, SWIGTYPE_p_CNTK__StreamInfo,  0);
+        if (!SWIG_IsOK(res)) {
+          SWIG_exception_fail(SWIG_ArgError(res), "cannot convert key of dictionary to CNTK::StreamInfo"); 
+        }
+        if (!cntk_key) {
+          SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting key of dictionary to CNTK::StreamInfo");
+        }
+        
+        CNTK::StreamInfo* cntk_var = reinterpret_cast<CNTK::StreamInfo*>(cntk_key);
+        if (*cntk_var == *&it.first)
+        {
+          PyDict_SetItem(obj1, py_key, PyTuple_Pack(2, returned_val1, returned_val2));
+          // FIXME is this necessary?
+          Py_INCREF(returned_val2);
+        }
+      }
+    }
+  }
   return resultobj;
 fail:
   return NULL;
@@ -29691,7 +29784,6 @@ static swig_type_info _swigt__p_std__shared_ptrT_CNTK__NDMask_t = {"_p_std__shar
 static swig_type_info _swigt__p_std__shared_ptrT_CNTK__Value_t = {"_p_std__shared_ptrT_CNTK__Value_t", "std::shared_ptr< CNTK::Value > *|CNTK::ValuePtr *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_std__unordered_mapT_CNTK__Parameter_std__shared_ptrT_CNTK__NDArrayView_t_t = {"_p_std__unordered_mapT_CNTK__Parameter_std__shared_ptrT_CNTK__NDArrayView_t_t", "std::unordered_map< CNTK::Parameter,std::shared_ptr< CNTK::NDArrayView > > *|std::unordered_map< CNTK::Parameter,CNTK::NDArrayViewPtr > *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_std__unordered_mapT_CNTK__Placeholder_CNTK__Variable_t = {"_p_std__unordered_mapT_CNTK__Placeholder_CNTK__Variable_t", "std::unordered_map< CNTK::Placeholder,CNTK::Variable > *", 0, 0, (void*)0, 0};
-static swig_type_info _swigt__p_std__unordered_mapT_CNTK__StreamInfo_std__pairT_size_t_std__shared_ptrT_CNTK__Value_t_t_t = {"_p_std__unordered_mapT_CNTK__StreamInfo_std__pairT_size_t_std__shared_ptrT_CNTK__Value_t_t_t", "std::unordered_map< CNTK::StreamInfo,std::pair< size_t,std::shared_ptr< CNTK::Value > > > *|std::unordered_map< CNTK::StreamInfo,std::pair< size_t,CNTK::ValuePtr > > *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_std__unordered_setT_CNTK__Parameter_t = {"_p_std__unordered_setT_CNTK__Parameter_t", "std::unordered_set< CNTK::Parameter > *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_std__unordered_setT_std__shared_ptrT_CNTK__Learner_t_t = {"_p_std__unordered_setT_std__shared_ptrT_CNTK__Learner_t_t", "std::unordered_set< CNTK::LearnerPtr > *|std::unordered_set< std::shared_ptr< CNTK::Learner > > *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_std__vectorT_CNTK__Axis_std__allocatorT_CNTK__Axis_t_t = {"_p_std__vectorT_CNTK__Axis_std__allocatorT_CNTK__Axis_t_t", "std::vector< CNTK::Axis,std::allocator< CNTK::Axis > > *", 0, 0, (void*)0, 0};
@@ -29750,7 +29842,6 @@ static swig_type_info *swig_type_initial[] = {
   &_swigt__p_std__shared_ptrT_CNTK__Value_t,
   &_swigt__p_std__unordered_mapT_CNTK__Parameter_std__shared_ptrT_CNTK__NDArrayView_t_t,
   &_swigt__p_std__unordered_mapT_CNTK__Placeholder_CNTK__Variable_t,
-  &_swigt__p_std__unordered_mapT_CNTK__StreamInfo_std__pairT_size_t_std__shared_ptrT_CNTK__Value_t_t_t,
   &_swigt__p_std__unordered_setT_CNTK__Parameter_t,
   &_swigt__p_std__unordered_setT_std__shared_ptrT_CNTK__Learner_t_t,
   &_swigt__p_std__vectorT_CNTK__Axis_std__allocatorT_CNTK__Axis_t_t,
@@ -29809,7 +29900,6 @@ static swig_cast_info _swigc__p_std__shared_ptrT_CNTK__NDMask_t[] = {  {&_swigt_
 static swig_cast_info _swigc__p_std__shared_ptrT_CNTK__Value_t[] = {  {&_swigt__p_std__shared_ptrT_CNTK__Value_t, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_std__unordered_mapT_CNTK__Parameter_std__shared_ptrT_CNTK__NDArrayView_t_t[] = {  {&_swigt__p_std__unordered_mapT_CNTK__Parameter_std__shared_ptrT_CNTK__NDArrayView_t_t, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_std__unordered_mapT_CNTK__Placeholder_CNTK__Variable_t[] = {  {&_swigt__p_std__unordered_mapT_CNTK__Placeholder_CNTK__Variable_t, 0, 0, 0},{0, 0, 0, 0}};
-static swig_cast_info _swigc__p_std__unordered_mapT_CNTK__StreamInfo_std__pairT_size_t_std__shared_ptrT_CNTK__Value_t_t_t[] = {  {&_swigt__p_std__unordered_mapT_CNTK__StreamInfo_std__pairT_size_t_std__shared_ptrT_CNTK__Value_t_t_t, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_std__unordered_setT_CNTK__Parameter_t[] = {  {&_swigt__p_std__unordered_setT_CNTK__Parameter_t, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_std__unordered_setT_std__shared_ptrT_CNTK__Learner_t_t[] = {  {&_swigt__p_std__unordered_setT_std__shared_ptrT_CNTK__Learner_t_t, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_std__vectorT_CNTK__Axis_std__allocatorT_CNTK__Axis_t_t[] = {  {&_swigt__p_std__vectorT_CNTK__Axis_std__allocatorT_CNTK__Axis_t_t, 0, 0, 0},{0, 0, 0, 0}};
@@ -29868,7 +29958,6 @@ static swig_cast_info *swig_cast_initial[] = {
   _swigc__p_std__shared_ptrT_CNTK__Value_t,
   _swigc__p_std__unordered_mapT_CNTK__Parameter_std__shared_ptrT_CNTK__NDArrayView_t_t,
   _swigc__p_std__unordered_mapT_CNTK__Placeholder_CNTK__Variable_t,
-  _swigc__p_std__unordered_mapT_CNTK__StreamInfo_std__pairT_size_t_std__shared_ptrT_CNTK__Value_t_t_t,
   _swigc__p_std__unordered_setT_CNTK__Parameter_t,
   _swigc__p_std__unordered_setT_std__shared_ptrT_CNTK__Learner_t_t,
   _swigc__p_std__vectorT_CNTK__Axis_std__allocatorT_CNTK__Axis_t_t,
