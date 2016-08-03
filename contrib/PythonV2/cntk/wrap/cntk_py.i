@@ -336,7 +336,7 @@
 
 // end of map conversion
 
-// TODO: Parametrize the following three typemaps and unify set/list usage.
+// TODO: Parametrize the following four typemaps and unify set/list usage.
 
 //
 // Converting Python set {Variable} to std::unordered_set
@@ -389,6 +389,56 @@
      }
 }
 
+//
+// Converting Python set {StreamInfo} to std::unordered_set
+//
+%typecheck(1000) std::unordered_set<CNTK::StreamInfo>& {
+    // '1000' is the typecheck precedence code. It means: check after basic
+    // types, but before arrays. See: http://www.swig.org/Doc1.3/Typemaps.html#Typemaps_overloading
+    $1 = PySet_Check($input) ? 1 : 0;
+}
+
+%typemap(in) std::unordered_set<CNTK::StreamInfo>& {
+     if (PySet_Check($input)) {
+        std::unordered_set<CNTK::StreamInfo>* args_set = new std::unordered_set<CNTK::StreamInfo>();
+
+        PyObject *item;
+        Py_ssize_t pos = 0;
+
+        PyObject *iterator = PyObject_GetIter($input);
+        if (iterator == NULL) {
+            SWIG_exception_fail(SWIG_ValueError, "cannot convert list element to CNTK::StreamInfo"); 
+        }
+
+        while (item = PyIter_Next(iterator)) {
+            void *raw_var = 0 ;
+            int res1 = SWIG_ConvertPtr(item, &raw_var, SWIGTYPE_p_CNTK__StreamInfo,  0);
+            if (!SWIG_IsOK(res1)) {
+                SWIG_exception_fail(SWIG_ArgError(res1), "cannot convert key of dictionary to CNTK::StreamInfo"); 
+            }
+            if (!raw_var) {
+                SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting a list element to CNTK::StreamInfo");
+            }
+
+            CNTK::StreamInfo* var = reinterpret_cast<CNTK::StreamInfo*>(raw_var);
+
+            args_set->insert(*var);
+
+            Py_DECREF(item);
+        }
+
+        Py_DECREF(iterator);
+
+        if (PyErr_Occurred()) {
+            SWIG_exception_fail(SWIG_ValueError, "cannot convert key of dictionary to CNTK::StreamInfo"); 
+        }
+
+        $1 = args_set;
+
+     } else {
+         SWIG_exception(SWIG_ValueError, "set expected");
+     }
+}
 
 //
 // Converting Python list {Parameter} to std::unordered_set
@@ -513,7 +563,7 @@
     // then access its value using '*'.
     for (auto var : *&$1)
     {
-        PyObject *item = SWIG_NewPointerObj(SWIG_as_voidptr(new CNTK::DATA_TYPE(var)), _SWIG_TYPE, SWIG_POINTER_NEW);
+        PyObject *item = SWIG_NewPointerObj(new CNTK::DATA_TYPE(var), _SWIG_TYPE, SWIG_POINTER_OWN );
         // No error handling here, because the error will be passed directly to Python
         PyList_Append(container, item);
     }
@@ -529,12 +579,37 @@
 %unordered_set_conversion(Placeholder, SWIGTYPE_p_CNTK__Placeholder)
 %unordered_set_conversion(Parameter, SWIGTYPE_p_CNTK__Parameter)
 
+%define %unordered_set_ref_conversion(DATA_TYPE, _SWIG_TYPE)
+
+%typemap(out) std::unordered_set<CNTK::DATA_TYPE>& {
+    PyObject* container = PyList_New(NULL);
+    if (container == NULL)
+    {
+        SWIG_exception(SWIG_RuntimeError, "error passing set to Python");
+    }
+     
+    for (auto var : *$1)
+    {
+        PyObject *item = SWIG_NewPointerObj(new CNTK::DATA_TYPE(var), _SWIG_TYPE, SWIG_POINTER_OWN );
+        // No error handling here, because the error will be passed directly to Python
+        PyList_Append(container, item);
+    }
+
+    Py_INCREF(container);
+
+    $result = container;
+}
+%enddef
+
+%unordered_set_ref_conversion(StreamInfo, SWIGTYPE_p_CNTK__StreamInfo)
+
 %shared_ptr(CNTK::Function)
 %shared_ptr(CNTK::NDArrayView)
 %shared_ptr(CNTK::Value)
 %shared_ptr(CNTK::NDMask)
 %shared_ptr(CNTK::BackPropState)
 %shared_ptr(CNTK::Learner)
+%shared_ptr(CNTK::MinibatchSource)
 
 %include "CNTKLibraryInternals.h"
 %include "CNTKLibrary.h"

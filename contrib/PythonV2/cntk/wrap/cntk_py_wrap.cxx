@@ -3499,19 +3499,18 @@ namespace Swig {
 #define SWIGTYPE_p_std__unordered_mapT_CNTK__Placeholder_CNTK__Variable_t swig_types[44]
 #define SWIGTYPE_p_std__unordered_mapT_CNTK__StreamInfo_std__pairT_size_t_std__shared_ptrT_CNTK__Value_t_t_t swig_types[45]
 #define SWIGTYPE_p_std__unordered_setT_CNTK__Parameter_t swig_types[46]
-#define SWIGTYPE_p_std__unordered_setT_CNTK__StreamInfo_t swig_types[47]
-#define SWIGTYPE_p_std__unordered_setT_std__shared_ptrT_CNTK__Learner_t_t swig_types[48]
-#define SWIGTYPE_p_std__vectorT_CNTK__Axis_std__allocatorT_CNTK__Axis_t_t swig_types[49]
-#define SWIGTYPE_p_swig__SwigPyIterator swig_types[50]
-#define SWIGTYPE_p_unsigned___int64 swig_types[51]
-#define SWIGTYPE_p_unsigned_char swig_types[52]
-#define SWIGTYPE_p_unsigned_int swig_types[53]
-#define SWIGTYPE_p_unsigned_long swig_types[54]
-#define SWIGTYPE_p_unsigned_short swig_types[55]
-#define SWIGTYPE_p_value_type swig_types[56]
-#define SWIGTYPE_p_wchar_t swig_types[57]
-static swig_type_info *swig_types[59];
-static swig_module_info swig_module = {swig_types, 58, 0, 0, 0, 0};
+#define SWIGTYPE_p_std__unordered_setT_std__shared_ptrT_CNTK__Learner_t_t swig_types[47]
+#define SWIGTYPE_p_std__vectorT_CNTK__Axis_std__allocatorT_CNTK__Axis_t_t swig_types[48]
+#define SWIGTYPE_p_swig__SwigPyIterator swig_types[49]
+#define SWIGTYPE_p_unsigned___int64 swig_types[50]
+#define SWIGTYPE_p_unsigned_char swig_types[51]
+#define SWIGTYPE_p_unsigned_int swig_types[52]
+#define SWIGTYPE_p_unsigned_long swig_types[53]
+#define SWIGTYPE_p_unsigned_short swig_types[54]
+#define SWIGTYPE_p_value_type swig_types[55]
+#define SWIGTYPE_p_wchar_t swig_types[56]
+static swig_type_info *swig_types[58];
+static swig_module_info swig_module = {swig_types, 57, 0, 0, 0, 0};
 #define SWIG_TypeQuery(name) SWIG_TypeQueryModule(&swig_module, &swig_module, name)
 #define SWIG_MangledTypeQuery(name) SWIG_MangledTypeQueryModule(&swig_module, &swig_module, name)
 
@@ -19536,7 +19535,7 @@ SWIGINTERN PyObject *_wrap_Function_Arguments(PyObject *SWIGUNUSEDPARM(self), Py
     // then access its value using '*'.
     for (auto var : *&result)
     {
-      PyObject *item = SWIG_NewPointerObj(SWIG_as_voidptr(new CNTK::Variable(var)), SWIGTYPE_p_CNTK__Variable, SWIG_POINTER_NEW);
+      PyObject *item = SWIG_NewPointerObj(new CNTK::Variable(var), SWIGTYPE_p_CNTK__Variable, SWIG_POINTER_OWN );
       // No error handling here, because the error will be passed directly to Python
       PyList_Append(container, item);
     }
@@ -19609,7 +19608,7 @@ SWIGINTERN PyObject *_wrap_Function_Parameters(PyObject *SWIGUNUSEDPARM(self), P
     // then access its value using '*'.
     for (auto var : *&result)
     {
-      PyObject *item = SWIG_NewPointerObj(SWIG_as_voidptr(new CNTK::Parameter(var)), SWIGTYPE_p_CNTK__Parameter, SWIG_POINTER_NEW);
+      PyObject *item = SWIG_NewPointerObj(new CNTK::Parameter(var), SWIGTYPE_p_CNTK__Parameter, SWIG_POINTER_OWN );
       // No error handling here, because the error will be passed directly to Python
       PyList_Append(container, item);
     }
@@ -19682,7 +19681,7 @@ SWIGINTERN PyObject *_wrap_Function_Constants(PyObject *SWIGUNUSEDPARM(self), Py
     // then access its value using '*'.
     for (auto var : *&result)
     {
-      PyObject *item = SWIG_NewPointerObj(SWIG_as_voidptr(new CNTK::Constant(var)), SWIGTYPE_p_CNTK__Constant, SWIG_POINTER_NEW);
+      PyObject *item = SWIG_NewPointerObj(new CNTK::Constant(var), SWIGTYPE_p_CNTK__Constant, SWIG_POINTER_OWN );
       // No error handling here, because the error will be passed directly to Python
       PyList_Append(container, item);
     }
@@ -19755,7 +19754,7 @@ SWIGINTERN PyObject *_wrap_Function_Placeholders(PyObject *SWIGUNUSEDPARM(self),
     // then access its value using '*'.
     for (auto var : *&result)
     {
-      PyObject *item = SWIG_NewPointerObj(SWIG_as_voidptr(new CNTK::Placeholder(var)), SWIGTYPE_p_CNTK__Placeholder, SWIG_POINTER_NEW);
+      PyObject *item = SWIG_NewPointerObj(new CNTK::Placeholder(var), SWIGTYPE_p_CNTK__Placeholder, SWIG_POINTER_OWN );
       // No error handling here, because the error will be passed directly to Python
       PyList_Append(container, item);
     }
@@ -28726,15 +28725,27 @@ SWIGINTERN PyObject *_wrap_MinibatchSource_StreamInfos(PyObject *SWIGUNUSEDPARM(
   CNTK::MinibatchSource *arg1 = (CNTK::MinibatchSource *) 0 ;
   void *argp1 = 0 ;
   int res1 = 0 ;
+  std::shared_ptr< CNTK::MinibatchSource > tempshared1 ;
+  std::shared_ptr< CNTK::MinibatchSource > *smartarg1 = 0 ;
   PyObject * obj0 = 0 ;
   std::unordered_set< CNTK::StreamInfo > *result = 0 ;
   
   if (!PyArg_ParseTuple(args,(char *)"O:MinibatchSource_StreamInfos",&obj0)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_CNTK__MinibatchSource, 0 |  0 );
-  if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MinibatchSource_StreamInfos" "', argument " "1"" of type '" "CNTK::MinibatchSource *""'"); 
+  {
+    int newmem = 0;
+    res1 = SWIG_ConvertPtrAndOwn(obj0, &argp1, SWIGTYPE_p_std__shared_ptrT_CNTK__MinibatchSource_t, 0 |  0 , &newmem);
+    if (!SWIG_IsOK(res1)) {
+      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MinibatchSource_StreamInfos" "', argument " "1"" of type '" "CNTK::MinibatchSource *""'"); 
+    }
+    if (newmem & SWIG_CAST_NEW_MEMORY) {
+      tempshared1 = *reinterpret_cast< std::shared_ptr<  CNTK::MinibatchSource > * >(argp1);
+      delete reinterpret_cast< std::shared_ptr<  CNTK::MinibatchSource > * >(argp1);
+      arg1 = const_cast< CNTK::MinibatchSource * >(tempshared1.get());
+    } else {
+      smartarg1 = reinterpret_cast< std::shared_ptr<  CNTK::MinibatchSource > * >(argp1);
+      arg1 = const_cast< CNTK::MinibatchSource * >((smartarg1 ? smartarg1->get() : 0));
+    }
   }
-  arg1 = reinterpret_cast< CNTK::MinibatchSource * >(argp1);
   {
     try {
       result = (std::unordered_set< CNTK::StreamInfo > *) &(arg1)->StreamInfos(); 
@@ -28755,7 +28766,24 @@ SWIGINTERN PyObject *_wrap_MinibatchSource_StreamInfos(PyObject *SWIGUNUSEDPARM(
       SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
     }
   }
-  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_std__unordered_setT_CNTK__StreamInfo_t, 0 |  0 );
+  {
+    PyObject* container = PyList_New(NULL);
+    if (container == NULL)
+    {
+      SWIG_exception(SWIG_RuntimeError, "error passing set to Python");
+    }
+    
+    for (auto var : *result)
+    {
+      PyObject *item = SWIG_NewPointerObj(new CNTK::StreamInfo(var), SWIGTYPE_p_CNTK__StreamInfo, SWIG_POINTER_OWN );
+      // No error handling here, because the error will be passed directly to Python
+      PyList_Append(container, item);
+    }
+    
+    Py_INCREF(container);
+    
+    resultobj = container;
+  }
   return resultobj;
 fail:
   return NULL;
@@ -28768,6 +28796,8 @@ SWIGINTERN PyObject *_wrap_MinibatchSource_GetNextMinibatch(PyObject *SWIGUNUSED
   std::unordered_map< CNTK::StreamInfo,std::pair< size_t,CNTK::ValuePtr > > *arg2 = 0 ;
   void *argp1 = 0 ;
   int res1 = 0 ;
+  std::shared_ptr< CNTK::MinibatchSource > tempshared1 ;
+  std::shared_ptr< CNTK::MinibatchSource > *smartarg1 = 0 ;
   void *argp2 = 0 ;
   int res2 = 0 ;
   PyObject * obj0 = 0 ;
@@ -28775,11 +28805,21 @@ SWIGINTERN PyObject *_wrap_MinibatchSource_GetNextMinibatch(PyObject *SWIGUNUSED
   bool result;
   
   if (!PyArg_ParseTuple(args,(char *)"OO:MinibatchSource_GetNextMinibatch",&obj0,&obj1)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_CNTK__MinibatchSource, 0 |  0 );
-  if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MinibatchSource_GetNextMinibatch" "', argument " "1"" of type '" "CNTK::MinibatchSource *""'"); 
+  {
+    int newmem = 0;
+    res1 = SWIG_ConvertPtrAndOwn(obj0, &argp1, SWIGTYPE_p_std__shared_ptrT_CNTK__MinibatchSource_t, 0 |  0 , &newmem);
+    if (!SWIG_IsOK(res1)) {
+      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MinibatchSource_GetNextMinibatch" "', argument " "1"" of type '" "CNTK::MinibatchSource *""'"); 
+    }
+    if (newmem & SWIG_CAST_NEW_MEMORY) {
+      tempshared1 = *reinterpret_cast< std::shared_ptr<  CNTK::MinibatchSource > * >(argp1);
+      delete reinterpret_cast< std::shared_ptr<  CNTK::MinibatchSource > * >(argp1);
+      arg1 = const_cast< CNTK::MinibatchSource * >(tempshared1.get());
+    } else {
+      smartarg1 = reinterpret_cast< std::shared_ptr<  CNTK::MinibatchSource > * >(argp1);
+      arg1 = const_cast< CNTK::MinibatchSource * >((smartarg1 ? smartarg1->get() : 0));
+    }
   }
-  arg1 = reinterpret_cast< CNTK::MinibatchSource * >(argp1);
   res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_std__unordered_mapT_CNTK__StreamInfo_std__pairT_size_t_std__shared_ptrT_CNTK__Value_t_t_t,  0 );
   if (!SWIG_IsOK(res2)) {
     SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "MinibatchSource_GetNextMinibatch" "', argument " "2"" of type '" "std::unordered_map< CNTK::StreamInfo,std::pair< size_t,CNTK::ValuePtr > > &""'"); 
@@ -28820,17 +28860,29 @@ SWIGINTERN PyObject *_wrap_delete_MinibatchSource(PyObject *SWIGUNUSEDPARM(self)
   CNTK::MinibatchSource *arg1 = (CNTK::MinibatchSource *) 0 ;
   void *argp1 = 0 ;
   int res1 = 0 ;
+  std::shared_ptr< CNTK::MinibatchSource > tempshared1 ;
+  std::shared_ptr< CNTK::MinibatchSource > *smartarg1 = 0 ;
   PyObject * obj0 = 0 ;
   
   if (!PyArg_ParseTuple(args,(char *)"O:delete_MinibatchSource",&obj0)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_CNTK__MinibatchSource, SWIG_POINTER_DISOWN |  0 );
-  if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_MinibatchSource" "', argument " "1"" of type '" "CNTK::MinibatchSource *""'"); 
+  {
+    int newmem = 0;
+    res1 = SWIG_ConvertPtrAndOwn(obj0, &argp1, SWIGTYPE_p_std__shared_ptrT_CNTK__MinibatchSource_t, 0 |  0 , &newmem);
+    if (!SWIG_IsOK(res1)) {
+      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_MinibatchSource" "', argument " "1"" of type '" "CNTK::MinibatchSource *""'"); 
+    }
+    if (newmem & SWIG_CAST_NEW_MEMORY) {
+      tempshared1 = *reinterpret_cast< std::shared_ptr<  CNTK::MinibatchSource > * >(argp1);
+      delete reinterpret_cast< std::shared_ptr<  CNTK::MinibatchSource > * >(argp1);
+      arg1 = const_cast< CNTK::MinibatchSource * >(tempshared1.get());
+    } else {
+      smartarg1 = reinterpret_cast< std::shared_ptr<  CNTK::MinibatchSource > * >(argp1);
+      arg1 = const_cast< CNTK::MinibatchSource * >((smartarg1 ? smartarg1->get() : 0));
+    }
   }
-  arg1 = reinterpret_cast< CNTK::MinibatchSource * >(argp1);
   {
     Py_BEGIN_ALLOW_THREADS;
-    delete arg1;
+    (void)arg1; delete smartarg1;
     Py_END_ALLOW_THREADS;
   }
   resultobj = SWIG_Py_Void();
@@ -28843,7 +28895,7 @@ fail:
 SWIGINTERN PyObject *MinibatchSource_swigregister(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *obj;
   if (!PyArg_ParseTuple(args,(char*)"O:swigregister", &obj)) return NULL;
-  SWIG_TypeNewClientData(SWIGTYPE_p_CNTK__MinibatchSource, SWIG_NewClientData(obj));
+  SWIG_TypeNewClientData(SWIGTYPE_p_std__shared_ptrT_CNTK__MinibatchSource_t, SWIG_NewClientData(obj));
   return SWIG_Py_Void();
 }
 
@@ -28853,7 +28905,7 @@ SWIGINTERN PyObject *_wrap_CreateCompositeMinibatchSource(PyObject *SWIGUNUSEDPA
   void *argp1 = 0 ;
   int res1 = 0 ;
   PyObject * obj0 = 0 ;
-  SwigValueWrapper< std::shared_ptr< CNTK::MinibatchSource > > result;
+  CNTK::MinibatchSourcePtr result;
   
   if (!PyArg_ParseTuple(args,(char *)"O:CreateCompositeMinibatchSource",&obj0)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Dictionary,  0  | 0);
@@ -28884,7 +28936,10 @@ SWIGINTERN PyObject *_wrap_CreateCompositeMinibatchSource(PyObject *SWIGUNUSEDPA
       SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
     }
   }
-  resultobj = SWIG_NewPointerObj((new CNTK::MinibatchSourcePtr(static_cast< const CNTK::MinibatchSourcePtr& >(result))), SWIGTYPE_p_std__shared_ptrT_CNTK__MinibatchSource_t, SWIG_POINTER_OWN |  0 );
+  {
+    std::shared_ptr<  CNTK::MinibatchSource > *smartresult = result ? new std::shared_ptr<  CNTK::MinibatchSource >(result) : 0;
+    resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(smartresult), SWIGTYPE_p_std__shared_ptrT_CNTK__MinibatchSource_t, SWIG_POINTER_OWN);
+  }
   return resultobj;
 fail:
   return NULL;
@@ -29638,7 +29693,6 @@ static swig_type_info _swigt__p_std__unordered_mapT_CNTK__Parameter_std__shared_
 static swig_type_info _swigt__p_std__unordered_mapT_CNTK__Placeholder_CNTK__Variable_t = {"_p_std__unordered_mapT_CNTK__Placeholder_CNTK__Variable_t", "std::unordered_map< CNTK::Placeholder,CNTK::Variable > *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_std__unordered_mapT_CNTK__StreamInfo_std__pairT_size_t_std__shared_ptrT_CNTK__Value_t_t_t = {"_p_std__unordered_mapT_CNTK__StreamInfo_std__pairT_size_t_std__shared_ptrT_CNTK__Value_t_t_t", "std::unordered_map< CNTK::StreamInfo,std::pair< size_t,std::shared_ptr< CNTK::Value > > > *|std::unordered_map< CNTK::StreamInfo,std::pair< size_t,CNTK::ValuePtr > > *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_std__unordered_setT_CNTK__Parameter_t = {"_p_std__unordered_setT_CNTK__Parameter_t", "std::unordered_set< CNTK::Parameter > *", 0, 0, (void*)0, 0};
-static swig_type_info _swigt__p_std__unordered_setT_CNTK__StreamInfo_t = {"_p_std__unordered_setT_CNTK__StreamInfo_t", "std::unordered_set< CNTK::StreamInfo > *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_std__unordered_setT_std__shared_ptrT_CNTK__Learner_t_t = {"_p_std__unordered_setT_std__shared_ptrT_CNTK__Learner_t_t", "std::unordered_set< CNTK::LearnerPtr > *|std::unordered_set< std::shared_ptr< CNTK::Learner > > *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_std__vectorT_CNTK__Axis_std__allocatorT_CNTK__Axis_t_t = {"_p_std__vectorT_CNTK__Axis_std__allocatorT_CNTK__Axis_t_t", "std::vector< CNTK::Axis,std::allocator< CNTK::Axis > > *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_swig__SwigPyIterator = {"_p_swig__SwigPyIterator", "swig::SwigPyIterator *", 0, 0, (void*)0, 0};
@@ -29698,7 +29752,6 @@ static swig_type_info *swig_type_initial[] = {
   &_swigt__p_std__unordered_mapT_CNTK__Placeholder_CNTK__Variable_t,
   &_swigt__p_std__unordered_mapT_CNTK__StreamInfo_std__pairT_size_t_std__shared_ptrT_CNTK__Value_t_t_t,
   &_swigt__p_std__unordered_setT_CNTK__Parameter_t,
-  &_swigt__p_std__unordered_setT_CNTK__StreamInfo_t,
   &_swigt__p_std__unordered_setT_std__shared_ptrT_CNTK__Learner_t_t,
   &_swigt__p_std__vectorT_CNTK__Axis_std__allocatorT_CNTK__Axis_t_t,
   &_swigt__p_swig__SwigPyIterator,
@@ -29758,7 +29811,6 @@ static swig_cast_info _swigc__p_std__unordered_mapT_CNTK__Parameter_std__shared_
 static swig_cast_info _swigc__p_std__unordered_mapT_CNTK__Placeholder_CNTK__Variable_t[] = {  {&_swigt__p_std__unordered_mapT_CNTK__Placeholder_CNTK__Variable_t, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_std__unordered_mapT_CNTK__StreamInfo_std__pairT_size_t_std__shared_ptrT_CNTK__Value_t_t_t[] = {  {&_swigt__p_std__unordered_mapT_CNTK__StreamInfo_std__pairT_size_t_std__shared_ptrT_CNTK__Value_t_t_t, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_std__unordered_setT_CNTK__Parameter_t[] = {  {&_swigt__p_std__unordered_setT_CNTK__Parameter_t, 0, 0, 0},{0, 0, 0, 0}};
-static swig_cast_info _swigc__p_std__unordered_setT_CNTK__StreamInfo_t[] = {  {&_swigt__p_std__unordered_setT_CNTK__StreamInfo_t, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_std__unordered_setT_std__shared_ptrT_CNTK__Learner_t_t[] = {  {&_swigt__p_std__unordered_setT_std__shared_ptrT_CNTK__Learner_t_t, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_std__vectorT_CNTK__Axis_std__allocatorT_CNTK__Axis_t_t[] = {  {&_swigt__p_std__vectorT_CNTK__Axis_std__allocatorT_CNTK__Axis_t_t, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_swig__SwigPyIterator[] = {  {&_swigt__p_swig__SwigPyIterator, 0, 0, 0},{0, 0, 0, 0}};
@@ -29818,7 +29870,6 @@ static swig_cast_info *swig_cast_initial[] = {
   _swigc__p_std__unordered_mapT_CNTK__Placeholder_CNTK__Variable_t,
   _swigc__p_std__unordered_mapT_CNTK__StreamInfo_std__pairT_size_t_std__shared_ptrT_CNTK__Value_t_t_t,
   _swigc__p_std__unordered_setT_CNTK__Parameter_t,
-  _swigc__p_std__unordered_setT_CNTK__StreamInfo_t,
   _swigc__p_std__unordered_setT_std__shared_ptrT_CNTK__Learner_t_t,
   _swigc__p_std__vectorT_CNTK__Axis_std__allocatorT_CNTK__Axis_t_t,
   _swigc__p_swig__SwigPyIterator,

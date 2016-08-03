@@ -52,6 +52,8 @@ def fully_connected_classifier_net(input, num_output_classes, hidden_layer_dim, 
     v = cntk_py.NDArrayView.RandomUniformFloat((num_output_classes,hidden_layer_dim), -0.5, 0.5, 1, device)    
     output_times_param = cntk_py.Parameter(v)    
     classifier_root = cntk_py.Times(output_times_param, classifier_root.Output());
+    print ('============================')
+    print(classifier_root)
     return classifier_root;
 
 
@@ -87,17 +89,24 @@ if __name__=='__main__':
     deserializerConfiguration = cntk_py.Dictionary();
     deserializerConfiguration["type"] = cntk_py.DictionaryValue("CNTKTextFormatDeserializer");
     deserializerConfiguration["module"] = cntk_py.DictionaryValue("CNTKTextFormatReader");
-    deserializerConfiguration["file"] = cntk_py.DictionaryValue("SimpleDataTest_cntk_text.txt");
+    deserializerConfiguration["file"] = cntk_py.DictionaryValue(r"E:\CNTK\contrib\PythonV2\cntk\SimpleDataTest_cntk_text.txt");
     deserializerConfiguration["input"] = cntk_py.DictionaryValueFromDict(inputStreamsConfig);
 
     minibatchSourceConfiguration = cntk_py.Dictionary();
     minibatchSourceConfiguration["epochSize"] = cntk_py.DictionaryValue(10);
     deser = cntk_py.DictionaryValueFromDict(deserializerConfiguration)
-    minibatchSourceConfiguration["deserializers"] = cntk_py.DictionaryValue([aa]);
+    minibatchSourceConfiguration["deserializers"] = cntk_py.DictionaryValue([deser]);
 
     cm = cntk_py.CreateCompositeMinibatchSource(minibatchSourceConfiguration);
-    
-
+    print ('---------------------------------')
+    print (cm)
+    streamInfos = cm.StreamInfos();
+    print (streamInfos[0].m_name)
+    print (streamInfos[1].m_name)
+    minibatchData = dict()
+    minibatchData[streamInfos[0]] = (10, None)
+    minibatchData[streamInfos[1]] = (10, None)
+    cm.GetNextMinibatch(minibatchData)
     trainer = cntk_py.Trainer(ffnet, ce.Output(), [cntk_py.SGDLearner(ffnet.Parameters(), 0.2)])    
     for i in range(0,10):
         nd = np.random.rand(input_dim,1,num_samples)        
