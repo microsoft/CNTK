@@ -34,12 +34,11 @@ public:
     {
         SetLearningRateMultiplier(1.0f); // enable normal learning by default
         MarkValueNonSharable();
+        m_initString = L"<BUGBUG: not specified>";
     }
     LearnableParameter(DEVICEID_TYPE deviceId, const wstring& name, const TensorShape& shape)
-        : Base(deviceId, name)
+        : LearnableParameter(deviceId, name)
     {
-        SetLearningRateMultiplier(1.0f);
-        MarkValueNonSharable();
         InitShape(shape);
     }
     LearnableParameter(DEVICEID_TYPE deviceId, const wstring& name, size_t rows, size_t cols)
@@ -48,15 +47,20 @@ public:
     }
     LearnableParameter(const ScriptableObjects::IConfigRecordPtr configp);
 
-    // initialize with random numbers
-    // If 'initOnCPUOnly' then always init on CPU, making initialization consistent across both (for testing).
-    // This is public because it is also called from NDL.
-    void InitRandom(const bool uniformInit, const unsigned long randomSeed, const ElemType initValueScale, bool initOnCPUOnly);
+    // initialize after plain constructor; for use by NDL
+    void PostInitParameters(const std::wstring& initString, // "uniform"|"gaussian"|"fixedValue"
+                            ElemType initValue,             //  scale   | scale    | value
+                            unsigned long randomSeed = 0,
+                            bool initOnCPUOnly = false);
 
     // initialize by reading a matrix from a text file
     void InitFromFile(const std::wstring& initFromFilePath);
 
 private:
+    // initialize with random numbers
+    // If 'initOnCPUOnly' then always init on CPU, making initialization consistent across both (for testing).
+    void InitRandom(const bool uniformInit, const unsigned long randomSeed, const ElemType initValueScale, bool initOnCPUOnly);
+
     // helper to initialize from a matrix read from a text file or a string literal
     void InitFromArray(const std::vector<ElemType>& array, size_t numRows, size_t numCols);
 

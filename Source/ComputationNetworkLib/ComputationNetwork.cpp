@@ -392,12 +392,30 @@ void ComputationNetwork::Read(const wstring& fileName)
 // -----------------------------------------------------------------------
 
 // non-static version needed because it accesses m_randomSeedOffset
-// Excessively used by SimpleNetworkBuilder, but always after CreateLearnableParameter(), so we should really absorb it there
 template <class ElemType>
-void ComputationNetwork::InitLearnableParameters(const ComputationNodeBasePtr& node, const bool uniformInit, const unsigned long randomSeed, const ElemType initValueScale, bool initOnCPUOnly)
+void ComputationNetwork::InitLearnableParameters(const ComputationNodeBasePtr& node,
+                                                 const wchar_t* initString, // "uniform"|"gaussian"|"fixedValue"
+                                                 ElemType initValue,        //  scale   | scale    | value
+                                                 unsigned long randomSeed /*= 0*/,
+                                                 bool initOnCPUOnly /*= false*/) const
 {
     auto learnableParameterNode = dynamic_pointer_cast<LearnableParameter<ElemType>>(node);
-    learnableParameterNode->InitRandom(uniformInit, randomSeed + GetRandomSeedOffset(), initValueScale, initOnCPUOnly);
+    learnableParameterNode->PostInitParameters(initString, initValue, randomSeed + GetRandomSeedOffset(), initOnCPUOnly);
+}
+
+// this 'int' version is used by Function.cpp, but LearnableParameter<int> is not yet supported or existent
+template<>
+void ComputationNetwork::InitLearnableParameters<int>(const ComputationNodeBasePtr& node, const wchar_t* initString, int initValue, unsigned long randomSeed, bool initOnCPUOnly) const
+{
+    NOT_IMPLEMENTED;
+}
+
+// non-static version needed because it accesses m_randomSeedOffset
+// Legacy version that is for random only.
+template <class ElemType>
+void ComputationNetwork::RandomInitLearnableParameters(const ComputationNodeBasePtr& node, const bool uniformInit, const unsigned long randomSeed, const ElemType initValueScale, bool initOnCPUOnly) const
+{
+    InitLearnableParameters(node, uniformInit ? L"uniform" : L"gaussian", initValueScale, randomSeed, initOnCPUOnly);
 }
 
 bool ComputationNetwork::IsTypicalCriterionNode(ComputationNodeBasePtr nodePtr)
@@ -1463,7 +1481,8 @@ void ComputationNetwork::SaveToDbnFile(ComputationNetworkPtr net, const std::wst
     PutTag("EDBN");
 }
 
-template void ComputationNetwork::InitLearnableParameters<float>(const ComputationNodeBasePtr& node, const bool uniformInit, const unsigned long randomSeed, const float initValueScale, bool initOnCPUOnly);
+template void ComputationNetwork::InitLearnableParameters<float>(const ComputationNodeBasePtr& node, const wchar_t* initString, float initValue, unsigned long randomSeed, bool initOnCPUOnly) const;
+template void ComputationNetwork::RandomInitLearnableParameters<float>(const ComputationNodeBasePtr& node, const bool uniformInit, const unsigned long randomSeed, const float initValueScale, bool initOnCPUOnly) const;
 template void ComputationNetwork::Read<float>(const wstring& fileName);
 template void ComputationNetwork::ReadPersistableParameters<float>(File& fstream, bool create);
 template void ComputationNetwork::PerformSVDecomposition<float>(const map<wstring, float>& SVDConfig, size_t alignedsize);
@@ -1473,7 +1492,8 @@ template void ComputationNetwork::SetSeqParam<float>(ComputationNetworkPtr net, 
                                                      const double& amf, const double& lmf, const double& wp, const double& bMMIfactor, const bool& sMBR);
 template void ComputationNetwork::SaveToDbnFile<float>(ComputationNetworkPtr net, const std::wstring& fileName) const;
 
-template void ComputationNetwork::InitLearnableParameters<double>(const ComputationNodeBasePtr& node, const bool uniformInit, const unsigned long randomSeed, const double initValueScale, bool initOnCPUOnly);
+template void ComputationNetwork::InitLearnableParameters<double>(const ComputationNodeBasePtr& node, const wchar_t* initString, double initValue, unsigned long randomSeed, bool initOnCPUOnly) const;
+template void ComputationNetwork::RandomInitLearnableParameters<double>(const ComputationNodeBasePtr& node, const bool uniformInit, const unsigned long randomSeed, const double initValueScale, bool initOnCPUOnly) const;
 template void ComputationNetwork::Read<double>(const wstring& fileName);
 template void ComputationNetwork::ReadPersistableParameters<double>(File& fstream, bool create);
 template void ComputationNetwork::PerformSVDecomposition<double>(const map<wstring, float>& SVDConfig, size_t alignedsize);

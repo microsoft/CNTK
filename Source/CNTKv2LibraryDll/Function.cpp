@@ -117,6 +117,7 @@ namespace CNTK
         if (variable.IsParameter() || variable.IsConstant())
         {
             computationNodePtr = builder.CreateLearnableParameter(variable.Name(), AsTensorShape(variable.Shape()));
+            network->InitLearnableParameters(computationNodePtr, L"fixedValue", 0); // must call this to follow protocol; can overwrite later
             if (!variable.NeedsGradient())
                 computationNodePtr->SetLearningRateMultiplier(0.0);
 

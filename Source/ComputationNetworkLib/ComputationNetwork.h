@@ -332,14 +332,16 @@ public:
     // node construction
     // -----------------------------------------------------------------------
 
-    // non-static version needed because it accesses m_randomSeedOffset
-    // Excessively used by SimpleNetworkBuilder, but always after CreateLearnableParameter(), so we should really absorb it there
     template <class ElemType>
     void InitLearnableParameters(const ComputationNodeBasePtr& node,
-                                 const bool uniformInit,
-                                 const unsigned long randomSeed,
-                                 const ElemType initValueScale,
-                                 bool initOnCPUOnly = false);
+                                 const wchar_t* initString, // "uniform"|"gaussian"|"fixedValue"
+                                 ElemType initValue,             //  scale   | scale    | value
+                                 unsigned long randomSeed = 0,
+                                 bool initOnCPUOnly = false) const;
+    // non-static version needed because it accesses m_randomSeedOffset
+    // Legacy version that is for random only.
+    template <class ElemType>
+    void RandomInitLearnableParameters(const ComputationNodeBasePtr& node, const bool uniformInit, const unsigned long randomSeed, const ElemType initValueScale, bool initOnCPUOnly = false) const;
 
     template <typename N>
     static shared_ptr<N> AsNodePtr(const ComputationNodeBasePtr& inode)
@@ -1036,7 +1038,7 @@ public:
     // data members
     // -----------------------------------------------------------------------
 
-    unsigned long GetRandomSeedOffset()
+    unsigned long GetRandomSeedOffset() const
     {
         return m_randomSeedOffset;
     }

@@ -131,7 +131,38 @@ LearnableParameter<ElemType>::LearnableParameter(const ScriptableObjects::IConfi
     else
         RuntimeError("init must be one of the values of [ uniform | gaussian | fixedValue | fromFile ]");
 
-fprintf(stderr, "LearnableParameter: lazy init %ls pending\n", m_initString.c_str());
+fprintf(stderr, "LearnableParameter: lazy init %ls pending\n", m_initString.c_str()); // REMOVE THIS
+
+    // initialize
+    // This will be repeated if the matrix gets resized due to dimension inference.
+    LazyInitParameters();
+}
+
+// variant of above from NDL. Must be called right after plain constructor.
+template <class ElemType>
+void LearnableParameter<ElemType>::PostInitParameters(const wstring& initString, // "uniform"|"gaussian"|"fixedValue"
+                                                      ElemType initValue,        //  scale   | scale    | value
+                                                      unsigned long randomSeed = 0,
+                                                      bool initOnCPUOnly = false)
+{
+    if (initString == L"uniform" || initString == L"gaussian") // random init
+    {
+        m_initString = initString;
+        static unsigned long randomSeed = 1;
+        int forcedRandomSeed = randomSeed;
+        m_randomSeed = forcedRandomSeed < 0 ? randomSeed++ : (unsigned long)forcedRandomSeed;
+        m_initValueScale = initValue;
+        m_initOnCPUOnly = initOnCPUOnly;
+    }
+    else if (initString == L"fixedValue") // deprecated. Use initValue=... instead
+    {
+        m_initString = L"fromValue";
+        m_initValue = initValue;
+    }
+    else
+        LogicError("PostInitParameters: invalid init string '%ls'", m_initString.c_str());
+
+fprintf(stderr, "PostInitParameters: lazy init %ls pending\n", m_initString.c_str()); // REMOVE THIS
 
     // initialize
     // This will be repeated if the matrix gets resized due to dimension inference.
