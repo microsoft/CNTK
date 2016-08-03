@@ -102,6 +102,8 @@ public:
     virtual void Save(File& fstream) const override;
     virtual void Load(File& fstream, size_t modelVersion) override;
 
+    virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override;
+
     // computation functions don't do anything for parameter nodes
     virtual void UpdateFunctionMBSize() override;
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange&) override;

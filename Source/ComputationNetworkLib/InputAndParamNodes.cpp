@@ -112,6 +112,7 @@ LearnableParameter<ElemType>::LearnableParameter(const ScriptableObjects::IConfi
         if (initFromFilePath.empty())
             RuntimeError("initFromFilePath parameter must be provided when using \"fromFile\" initialization method");
         InitFromFile(initFromFilePath);
+        m_initString.clear();
     }
     // legacy
     else if (initString == L"fixedValue") // deprecated. Use initValue=... instead
@@ -127,6 +128,7 @@ LearnableParameter<ElemType>::LearnableParameter(const ScriptableObjects::IConfi
         size_t numRows, numCols;
         auto array = File::LoadMatrixFromStringLiteral<ElemType>(msra::strfun::utf8(initFromLiteral), numRows, numCols);
         InitFromArray(array, numRows, numCols);
+        m_initString.clear();
     }
     else
         RuntimeError("init must be one of the values of [ uniform | gaussian | fixedValue | fromFile ]");
@@ -142,8 +144,8 @@ fprintf(stderr, "LearnableParameter: lazy init %ls pending\n", m_initString.c_st
 template <class ElemType>
 void LearnableParameter<ElemType>::PostInitParameters(const wstring& initString, // "uniform"|"gaussian"|"fixedValue"
                                                       ElemType initValue,        //  scale   | scale    | value
-                                                      unsigned long randomSeed = 0,
-                                                      bool initOnCPUOnly = false)
+                                                      unsigned long randomSeed /*= 0*/,
+                                                      bool initOnCPUOnly /*= false*/)
 {
     if (initString == L"uniform" || initString == L"gaussian") // random init
     {
@@ -306,6 +308,21 @@ void LearnableParameter<ElemType>::Load(File& fstream, size_t modelVersion) /*ov
     VerifyDataSize(Value());      // sanity check
 
     m_initString.clear(); // deferred initialization not possible after loading
+}
+
+template <class ElemType>
+/*virtual*/ void LearnableParameter<ElemType>::CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const /*override*/
+{
+    Base::CopyTo(nodeP, newName, flags);
+    if (flags & CopyNodeFlags::copyNodeValue)
+    {
+        auto node = dynamic_pointer_cast<LearnableParameter<ElemType>>(nodeP);
+        node->m_initString     = m_initString;
+        node->m_randomSeed     = m_randomSeed;
+        node->m_initValueScale = m_initValueScale;
+        node->m_initOnCPUOnly  = m_initOnCPUOnly;
+        node->m_initValue      = m_initValue;
+    }
 }
 
 // computation functions don't do anything for parameter nodes
