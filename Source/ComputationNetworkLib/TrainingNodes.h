@@ -1686,6 +1686,54 @@ public:
         }
     }
 
+private:
+    // time-constant conversions
+    // (both time constants have edge cases of 0 and infinity which are special-cased below for numerical reasons)
+
+    // map time constants to exp avg factor
+    // This is the factor for the current MB's estimate (1-factor is used for the previous value of the running stats).
+    double ComputeExpAvgFactor() const
+    {
+        // in inference mode, only use long-term mean and do not update running estimates
+        if (!Environment().IsTraining())
+            return 0;                                        //  (m_normTimeConst == infinity) no new contribution from current minibatch
+
+        // REVIEW alexeyk: hack, m_normTimeConst < 0 is used to denote corpus-level statistics (without forgetting factor).
+        if (m_normTimeConst < 0)
+            return 1.0 / (1.0 + m_mbCount); // (this is the hack case) TODO: verify this formula; shouldn't we use #samples instead of MB count?
+
+        // Convert to per-minibatch factor. The limit, positivie infinity, means that running mean/var parameters are "frozen"
+        // that is, do not require updates.
+        // The code below special-cases two boundary cases, but those are just the limit cases of the main formula.
+        double numSamples = (double)GetMBLayout()->GetActualNumSamples();
+        if (!isfinite(m_normTimeConst))                      // infinite
+            return 0;                                        // no new contribution from current minibatch (infinitely long memory)
+        else if (m_normTimeConst > 0)                        // not zero
+            return 1.0 - exp(-numSamples / m_normTimeConst); // interpolate expAvgFactor * MB stats + (1-expAvgFactor) * prev running stats
+        else                                                 // zero
+            return 1.0;                                      // don't use running stats at all
+    }
+
+    // map sample count to blend factor
+    // This is the interpolation weight for the running statistics (the current MB statistics are weighted with 1-this).
+    double ComputeBlendFactor() const
+    {
+        // in inference mode, only use long-term mean and do not update running estimates
+        if (!Environment().IsTraining())
+            return 1.0; // (m_blendTimeConst == infinity) estimate is taken 100% from the long-term running estimate
+
+        // convert to blend factor (= weight for running stats)
+        // The code below special-cases two boundary cases, but those are just the limit cases of the main formula.
+        double numSamples = (double)GetMBLayout()->GetActualNumSamples();
+        if (!isfinite(m_blendTimeConst))                               // infinite weight for prior stats
+            return 1.0;                                                // only use running statistics
+        else if (m_blendTimeConst > 0)                                 // not zero
+            return m_blendTimeConst / (m_blendTimeConst + numSamples); // interpolate blendFactor * running stats + (1-blendFactor) * MB stats
+        else                                                           // zero
+            return 0;                                                  // no weight for prior stats, only use MB stats
+    }
+public:
+
     // Note: This function assumes that inputIndex=0 is called before the others.
     // BUGBUG: The node should not make assumptions in which order the inputs' derivates are computed. It currently assumes to start with 0.
     // BUGBUG: If the input has no learnables (e.g. using BN instead of corpus mean/var norm), this will not be called for inputIndex=0 at all.
@@ -1707,11 +1755,16 @@ public:
             let& actualMean      = !m_saveMean->IsEmpty()      ? *m_saveMean      : runMean;      // empty if only the running mean is used
             let& actualInvStdDev = !m_saveInvStdDev->IsEmpty() ? *m_saveInvStdDev : runInvStdDev;
             m_dScale->Resize(scale);
+            m_dScale->Resize(scale); // gradients for scale and bias get stored here
             m_dBias->Resize(bias);
+
+            double blendFactor = ComputeBlendFactor();  // interpolation weight for the running statistics (the current MB statistics are weighted with 1-this)
+
             // Compute all derivatives in one step. Save derivatives with respect to scale and bias in temp matrices.
             m_bnEng->Backward(sliceInputValue, sliceOutputGrad, // (in)  input from below, gradient from above
                               sliceInputGrad,                   // (out) gradient for data input goes here
                               scale,                            // (in)  out of scale and bias, only scale is needed in gradient propagation
+                              blendFactor,                      // (in)  smoothing weight for running stats (1=use only running stats)
                               actualMean, actualInvStdDev,      // (in)  actual mean/stddev values used in ForwardProp()
                               *m_dScale, *m_dBias);             // (out) gradients for scale and bias
         }
@@ -1752,47 +1805,15 @@ public:
         Matrix<ElemType> sliceOutputValue = ValueFor(fr);
 
         // determine the factors from the time constants
-        double expAvgFactor; // weight for the new MB statistics in the running estimate. The previous value of the running statistics is kept with weight (1-this)
-        double blendFactor;  // interpolation weight for the running statistics (the current MB statistics are weighted with 1-this)
-        if (!Environment().IsTraining()) // in inference mode, only use long-term mean and do not update running estimates
-        {
-            expAvgFactor = 0;   //  (m_normTimeConst == infinity) no new contribution from current minibatch
-            blendFactor  = 1.0; // (m_blendTimeConst == infinity) estimate is taken 100% from the long-term running estimate
-        }
-        else
-        {
-            // (both time constants have edge cases of 0 and infinity which are special-cased below for numerical reasons)
-            double numSamples = (double)GetMBLayout()->GetActualNumSamples();
-            if (m_normTimeConst > 0)
-            {
-                // Convert to per-minibatch factor. Treat positivie infinity as if running mean/var parameters are "frozen"
-                // that is, do not require updates.
-                expAvgFactor = isfinite(m_normTimeConst)
-                               ? (1.0 - exp(-numSamples / m_normTimeConst))
-                               : 0;                                         // (same; special-cased for numerical reasons only)
-            }
-            else
-            {
-                // REVIEW alexeyk: hack, m_normTimeConst < 0 is used to compute CMA.
-                expAvgFactor = (m_normTimeConst < 0)
-                               ? (1.0 / (1.0 + m_mbCount)) // (this is the hack case)
-                               : 1.0;                      // (same as 'then' branch above; special-cased for numerical reasons only)
-            }
-
-            if (isfinite(m_blendTimeConst))
-                blendFactor = m_blendTimeConst > 0
-                              ? (m_blendTimeConst / (m_blendTimeConst + numSamples)) // interpolate
-                              : 0;                                                   // (same; special-casing for 0 only for numerical reasons)
-            else
-                blendFactor = 1.0;                                                   // (same; special-casing for 0 only for numerical reasons)
-        }
+        double expAvgFactor = ComputeExpAvgFactor(); // weight for the new MB statistics in the running estimate. The previous value of the running statistics is kept with weight (1-this)
+        double blendFactor  = ComputeBlendFactor();  // interpolation weight for the running statistics (the current MB statistics are weighted with 1-this)
 
         m_bnEng->Forward(/*in=*/ sliceInputValue, scale, bias, // (in)
                          expAvgFactor, blendFactor,
                          runMean, runInvStdDev,                // (in/out) running estimates, updated from the current MB mean/stddev
                          /*out=*/ sliceOutputValue,            // (out) batch-normalized output value
                          m_epsilon,
-                         *m_saveMean, *m_saveInvStdDev);       // (out) actual interpolated mean/stddev values. Note: unused/untouched for blendFactor==1
+                         *m_saveMean, *m_saveInvStdDev);       // (out) actual interpolated mean/stddev values. Note: unused/empty for blendFactor==1 for CNTK engine
 
         m_mbCount++;
     }
