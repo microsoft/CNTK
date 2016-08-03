@@ -22,7 +22,7 @@ testCases:
       - sqErr = {{float,tolerance=.1%}}
       - learningRatePerSample = {{float,tolerance=0.001%}}
 
-  Per-minibatch training results must match:
+  Per-minibatch training and testing results must match:
     patterns:
       - Epoch[{{integer}} of {{integer}}]-Minibatch[{{integer}}-{{integer}}
       - " * {{integer}}; "
