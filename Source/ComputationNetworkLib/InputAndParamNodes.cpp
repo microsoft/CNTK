@@ -350,6 +350,14 @@ template <class ElemType>
 
     // lazy init if we got a dimension now
     // We call this here and in Validate(true), since we don't know which gets called first.
+#if 1
+    if (isFinalValidationPass && !m_initString.empty())
+    {
+        fprintf(stderr, L"InferInputDimsFrom: meant to '%s' but changing to 0, faking old behavior\n", m_initString.c_str());
+        m_initString = L"fromValue";
+        m_initValue = 0;
+    }
+#endif
     if (isFinalValidationPass)
         LazyInitParameters();
 }
@@ -372,6 +380,7 @@ void LearnableParameter<ElemType>::LazyInitParameters()
     if (GetSampleLayout().GetNumElements() == 0)
         return;
     // OK, proceed
+fprintf(stderr, "LazyInitParameters: '%ls'", m_initString.c_str());
     if (m_initString == L"fromValue")
         Value().SetValue(m_initValue);
     else if (m_initString == L"uniform" || m_initString == L"gaussian")
@@ -424,6 +433,14 @@ void LearnableParameter<ElemType>::InferInputDimsFrom(const TensorShape& otherSh
 
     // now repeat initialization
     // We call this here and in Validate(true), since we don't know which gets called first.
+#if 1
+    if (!m_initString.empty())
+    {
+        fprintf(stderr, L"InferInputDimsFrom: meant to '%s' but changing to 0, faking old behavior\n", m_initString.c_str());
+        m_initString = L"fromValue";
+        m_initValue = 0;
+    }
+#endif
     LazyInitParameters();
 }
 
