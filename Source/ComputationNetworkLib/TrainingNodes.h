@@ -1686,9 +1686,7 @@ public:
         }
     }
 
-private:
-    // time-constant conversions
-    // (both time constants have edge cases of 0 and infinity which are special-cased below for numerical reasons)
+private: // time-constant conversions
 
     // map time constants to exp avg factor
     // This is the factor for the current MB's estimate (1-factor is used for the previous value of the running stats).
@@ -1754,7 +1752,6 @@ public:
             // an empty saveMean in case runMean should be used. Likewise for stddev.
             let& actualMean      = !m_saveMean->IsEmpty()      ? *m_saveMean      : runMean;      // empty if only the running mean is used
             let& actualInvStdDev = !m_saveInvStdDev->IsEmpty() ? *m_saveInvStdDev : runInvStdDev;
-            m_dScale->Resize(scale);
             m_dScale->Resize(scale); // gradients for scale and bias get stored here
             m_dBias->Resize(bias);
 

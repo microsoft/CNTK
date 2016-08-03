@@ -131,6 +131,8 @@ LearnableParameter<ElemType>::LearnableParameter(const ScriptableObjects::IConfi
     else
         RuntimeError("init must be one of the values of [ uniform | gaussian | fixedValue | fromFile ]");
 
+fprintf(stderr, "LearnableParameter: lazy init %ls pending\n", m_initString.c_str());
+
     // initialize
     // This will be repeated if the matrix gets resized due to dimension inference.
     LazyInitParameters();
@@ -299,6 +301,9 @@ template <class ElemType>
 {
     Base::Validate(isFinalValidationPass);
     m_pMBLayout = nullptr; // this node does not hold mini-batch data
+
+    if (isFinalValidationPass)  // TRYING THIS AGAIN, maybe it works now
+        LazyInitParameters();
 }
 
 // deferred initialization
@@ -370,7 +375,7 @@ void LearnableParameter<ElemType>::InferInputDimsFrom(const TensorShape& otherSh
     fprintf(stderr, "%ls %ls operation: Tensor shape was inferred as [%s].\n", NodeName().c_str(), OperationName().c_str(), string(GetSampleLayout()).c_str());
 
     // now repeat initialization
-    LazyInitParameters();
+    //LazyInitParameters();
 }
 
 template <class ElemType>

@@ -944,7 +944,8 @@ __global__ void kBackpropagateBatchNormGradients(int vectorSize, int spatialSize
         LoadValues<U>(pdy, dyCur);
         LoadValues<U>(pdx, dxCur);
         // From the BN paper, dL/dxi is a sum of three terms: dL/dxi = t1 + t2 + t3
-        // Leveraging dBias and dScale, this can be simplified to:
+        // The formulas for dBias and dScale happen to occur as subexpressions in this gradient as well.
+        // Leveraging this, this gradient can be simplified to:
         //   t1 = scale * dL/dyi * invStdDev
         //   t2 = mbStatsWeight * (-scale / m) * invStdDev * xHat * dL/dScale
         //   t3 = mbStatsWeight * (-scale / m) * invStdDev * dL/dBias (for this one note that Sum(xHat) == 0)
