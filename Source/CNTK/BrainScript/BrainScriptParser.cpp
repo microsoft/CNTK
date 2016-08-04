@@ -298,7 +298,7 @@ public:
         };
         punctuations = set<wstring>{
             L"=", L";", L",", L"\n",
-            L"[", L"]", L"(", L")", L"{", L"}",
+            L"[", L"]", L"(", L")", L"{", L"}", L"[|", L"|]",
             L"+", L"-", L"*", L"/", L"**", L".*", L"%", L"||", L"&&", L"^",
             L"!",
             L"==", L"!=", L"<", L"<=", L">", L">=",
@@ -735,29 +735,34 @@ public:
             operand = ParseExpression(0, false /*go across newlines*/); // just return the content of the parens (they do not become part of the expression tree)
             ConsumePunctuation(L")");
         }
-        else if (tok.symbol == L"[") // === dictionary constructor
+        else if (tok.symbol == L"{" || tok.symbol == L"["/*soon to be deprecated*/) // === record constructor
         {
+            let* closeSymbol = tok.symbol == L"{" ? L"}" : L"]";
             operand = make_shared<Expression>(tok.beginLocation, L"[]");
             ConsumeToken();
             operand->namedArgs = ParseRecordMembers();
-            ConsumePunctuation(L"]");
+            ConsumePunctuation(closeSymbol);
         }
-        else if (tok.symbol == L"{") // === array literal { a, b, c } (same as a:b:c, but also allows for 0- and 1-element arrays)
+#if 1   // the F# syntax is a stop-gap and meant for experimentation, and we will not recommend to use it
+        // Rather, we must find a way to parse both Python-like array literals and BS dictionaries jointly,
+        // and eventually deprecate [] for records.
+        else if (tok.symbol == L"[|") // === array literal using F# syntax [| a; b; c |] (same as a:b:c, but also allows for 0- and 1-element arrays)
         {
             operand = make_shared<Expression>(tok.beginLocation, L":");
             ConsumeToken();
-            if (GotToken().symbol != L"}") // {} defines an empty array
+            if (GotToken().symbol != L"|]") // {} defines an empty array
             {
                 for (;;)
                 {
                     operand->args.push_back(ParseExpression(0, false)); // item. Precedence 0 means go until comma or closing parenthesis.
-                    if (GotToken().symbol != L",")
+                    if (GotToken().symbol != L";")
                         break;
                     ConsumeToken();
                 }
             }
-            ConsumePunctuation(L"}");
+            ConsumePunctuation(L"|]");
         }
+#endif
         else if (tok.symbol == L"array") // === array constructor
         {
             operand = OperandFromTokenSymbol(tok);

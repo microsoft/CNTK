@@ -1573,9 +1573,9 @@ template class DropoutNode<double>;
 // * imageLayout is the image layout. Only cudnn is supported at present.
 // -----------------------------------------------------------------------
 template <class ElemType>
-class BatchNormalizationNode : public ComputationNode<ElemType>, public NumInputs<5>, public IFreezable
+class BatchNormalizationNode : public ComputationNodeNonLooping<ElemType>, public NumInputs<5>, public IFreezable
 {
-    typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+    typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
     static const std::wstring TypeName() { return L"BatchNormalization"; }
 
 public:
@@ -1735,8 +1735,10 @@ public:
     // Note: This function assumes that inputIndex=0 is called before the others.
     // BUGBUG: The node should not make assumptions in which order the inputs' derivates are computed. It currently assumes to start with 0.
     // BUGBUG: If the input has no learnables (e.g. using BN instead of corpus mean/var norm), this will not be called for inputIndex=0 at all.
-    void BackpropTo(const size_t inputIndex, const FrameRange& fr) override
+    virtual void BackpropToNonLooping(size_t inputIndex) override
     {
+        FrameRange fr(Input(0)->GetMBLayout());
+
         if (inputIndex == 0) // derivative with respect to the input.
         {
             auto sliceOutputGrad = GradientFor(fr);
@@ -1784,8 +1786,10 @@ public:
 
     virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
 
-    void ForwardProp(const FrameRange& fr) override
+    virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
     {
+        FrameRange fr(Input(0)->GetMBLayout());
+
         Matrix<ElemType> sliceInputValue = Input(0)->ValueFor(fr);
 
         const Matrix<ElemType>& scale = Input(1)->Value();

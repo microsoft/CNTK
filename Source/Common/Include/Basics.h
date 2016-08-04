@@ -133,13 +133,11 @@ static inline void Warning(const string& message)
     \
 {                                                                                                                             \
         fprintf(stderr, "Inside File: %s  Line: %d  Function: %s  -> Feature Not Implemented.\n", __FILE__, __LINE__, __FUNCTION__); \
-        LogicError("Inside File: %s  Line: %d  Function: %s  -> Feature Not Implemented.\n", __FILE__, __LINE__, __FUNCTION__);      \
+        LogicError("Inside File: %s  Line: %d  Function: %s  -> Feature Not Implemented.", __FILE__, __LINE__, __FUNCTION__);      \
     \
 }
 #endif
-}
-}
-}
+}}}
 
 #ifndef _MSC_VER
 using Microsoft::MSR::CNTK::ThrowFormatted;

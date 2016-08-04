@@ -131,14 +131,17 @@ LearnableParameter<ElemType>::LearnableParameter(const ScriptableObjects::IConfi
     else
         RuntimeError("init must be one of the values of [ uniform | gaussian | fixedValue | fromFile ]");
 
-fprintf(stderr, "LearnableParameter: lazy init %ls pending\n", m_initString.c_str()); // REMOVE THIS
-
     // initialize
     // This will be repeated if the matrix gets resized due to dimension inference.
     LazyInitParameters();
+
+    if (!m_initString.empty())
+        fprintf(stderr, "LearnableParameter: %ls initialization deferred until dimensions are known.\n", m_initString.c_str());
 }
 
 // variant of above from NDL. Must be called right after plain constructor.
+// This overwrites any pending deferred initialization with a new one.
+// Initialization is done immediately if all dimensions are already known, otherwise kept pending.
 template <class ElemType>
 void LearnableParameter<ElemType>::PostInitParameters(const wstring& initString, // "uniform"|"gaussian"|"fixedValue"
                                                       ElemType initValue,        //  scale   | scale    | value
@@ -162,11 +165,12 @@ void LearnableParameter<ElemType>::PostInitParameters(const wstring& initString,
     else
         LogicError("PostInitParameters: invalid init string '%ls'", m_initString.c_str());
 
-fprintf(stderr, "PostInitParameters: lazy init %ls pending\n", m_initString.c_str()); // REMOVE THIS
-
     // initialize
     // This will be repeated if the matrix gets resized due to dimension inference.
     LazyInitParameters();
+
+    if (!m_initString.empty())
+        fprintf(stderr, "%ls: %ls initialization deferred until dimensions are known.\n", NodeDescription().c_str(), m_initString.c_str());
 }
 
 // initialize with random numbers
@@ -352,9 +356,9 @@ fprintf(stderr, "Validate %ls: called in init state '%ls' with dims [%s]\n", Nod
     // lazy init if we got a dimension now
     // We call this here and in Validate(true), since we don't know which gets called first.
 #if 1
-    if (isFinalValidationPass && !m_initString.empty())
+    if (isFinalValidationPass && !m_initString.empty() && (m_initString != L"fromValue" || m_initValue != 0))
     {
-        fprintf(stderr, "InferInputDimsFrom: meant to '%ls' but changing to 0, faking old behavior\n", m_initString.c_str());
+        fprintf(stderr, "Validate: deferred '%ls' initialization patched to fromValue 0 for back compat\n", m_initString.c_str());
         m_initString = L"fromValue";
         m_initValue = 0;
     }
@@ -374,7 +378,6 @@ fprintf(stderr, "Validate %ls: called in init state '%ls' with dims [%s]\n", Nod
 template <class ElemType>
 void LearnableParameter<ElemType>::LazyInitParameters()
 {
-fprintf(stderr, "LazyInitParameters %ls: called in state '%ls' with dims [%s]\n", NodeDescription().c_str(), m_initString.c_str(), string(GetSampleLayout()).c_str());
     // if no lazy init pending then we are done
     if (m_initString.empty())
         return;
@@ -382,13 +385,13 @@ fprintf(stderr, "LazyInitParameters %ls: called in state '%ls' with dims [%s]\n"
     if (GetSampleLayout().GetNumElements() == 0)
         return;
     // OK, proceed
-fprintf(stderr, "LazyInitParameters: performing '%ls'\n", m_initString.c_str());
+    fprintf(stderr, "%ls: Now doing '%ls' initialization with dims [%s].\n", NodeDescription().c_str(), m_initString.c_str(), string(GetSampleLayout()).c_str());
     if (m_initString == L"fromValue")
         Value().SetValue(m_initValue);
     else if (m_initString == L"uniform" || m_initString == L"gaussian")
         InitRandom((m_initString == L"uniform"), m_randomSeed, m_initValueScale, m_initOnCPUOnly);
     else
-        LogicError("LearnableParameter %ls: Invalid value of m_initString '%ls' for deferred initialization.", NodeDescription().c_str(), m_initString.c_str());
+        LogicError("LearnableParameter: Invalid value of m_initString '%ls' for deferred initialization for %ls.", m_initString.c_str(), NodeDescription().c_str());
     // and remember that we are done
     m_initString.clear();
 }
@@ -400,7 +403,7 @@ fprintf(stderr, "LazyInitParameters: performing '%ls'\n", m_initString.c_str());
 template <class ElemType>
 void LearnableParameter<ElemType>::InferInputDimsFrom(const TensorShape& otherShape)
 {
-fprintf(stderr, "InferInputDimsFrom %ls: called in init state '%ls' with dims [%s], offered new dims [%s]\n", NodeDescription().c_str(), m_initString.c_str(), string(GetSampleLayout()).c_str(), string(otherShape).c_str());
+//fprintf(stderr, "InferInputDimsFrom %ls: called in init state '%ls' with dims [%s], offered new dims [%s]\n", NodeDescription().c_str(), m_initString.c_str(), string(GetSampleLayout()).c_str(), string(otherShape).c_str());
     const auto& thisShape = GetSampleLayout();
 
     // see where we stand with our shape
@@ -412,7 +415,7 @@ fprintf(stderr, "InferInputDimsFrom %ls: called in init state '%ls' with dims [%
     if (otherShape.GetRank() == 0 || otherShape.GetNumElements() == 0)
         return; // LogicError("ValidateInferInputDimsFrom: Inferred dimensions must not be empty.");
 
-fprintf(stderr, "InferInputDimsFrom %ls: inferring in init state '%ls' with dims [%s] and new dims [%s]\n", NodeDescription().c_str(), m_initString.c_str(), string(GetSampleLayout()).c_str(), string(otherShape).c_str());
+fprintf(stderr, "InferInputDimsFrom %ls: inferring in init state '%ls' with dims [%s] and offered dims [%s]\n", NodeDescription().c_str(), m_initString.c_str(), string(GetSampleLayout()).c_str(), string(otherShape).c_str());
     if (m_initString.empty())
         LogicError("InferInputDimsFrom: Attempted to infer dimensions, with initialization completed or no deferred initialization pending.");
 
@@ -439,9 +442,9 @@ fprintf(stderr, "InferInputDimsFrom %ls: inferring in init state '%ls' with dims
     // We call this here and in Validate(true), since we don't know which gets called first.
     // Note: It seems that this is not necessary, and that Validate(true) is only called after inference.
 #if 1
-    if (!m_initString.empty())
+    if (m_initString != L"fromValue" || m_initValue != 0)
     {
-        fprintf(stderr, "InferInputDimsFrom: meant to '%ls' but changing to 0, faking old behavior\n", m_initString.c_str());
+        fprintf(stderr, "InferInputDimsFrom: deferred '%ls' initialization patched to fromValue 0 for back compat\n", m_initString.c_str());
         m_initString = L"fromValue";
         m_initValue = 0;
     }
