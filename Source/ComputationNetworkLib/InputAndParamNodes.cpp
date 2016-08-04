@@ -162,6 +162,20 @@ void LearnableParameter<ElemType>::InitFromArray(const std::vector<ElemType>& ar
     VerifyDataSize(Value());      // sanity check
 }
 
+// TODO: Move this error check there, since this is called only from one place.
+template <class ElemType>
+void LearnableParameter<ElemType>::ReviseFromFile(const std::wstring& reviseFromFilePath)
+{
+    try
+    {
+        InitFromFile(reviseFromFilePath);
+    }
+    catch (const std::exception & e)
+    {
+        RuntimeError("ReviseFromFile: Failed to reload %ls %ls operation from file %ls: %s", NodeName().c_str(), OperationName().c_str(), reviseFromFilePath.c_str(), e.what());
+    }
+}
+
 template <class ElemType>
 void LearnableParameter<ElemType>::Save(File& fstream) const /*override*/
 {
@@ -284,6 +298,12 @@ template <class ElemType>
     }
 
     PrintNodeValuesToFile(printValues, printMetadata, fstream);
+}
+
+template <class ElemType>
+/*virtual*/ void LearnableParameter<ElemType>::FreezeParameters() /*override*/ // from IFreezable
+{
+    SetLearningRateMultiplier(0);
 }
 
 template class LearnableParameter<float>;

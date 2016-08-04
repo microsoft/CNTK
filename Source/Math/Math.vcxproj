@@ -175,6 +175,7 @@
     <ClInclude Include="RNGHandle.h" />	
     <ClInclude Include="TensorOps.h" />
     <ClInclude Include="TensorView.h" />
+    <ClInclude Include="Quantizers.h" />
     <None Include="GPUWatcher.cu" />
     <None Include="GPUWatcher.h">
       <FileType>CppHeader</FileType>

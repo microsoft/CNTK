@@ -508,8 +508,8 @@ struct TensorOpElement<ElemType, N, M, K, /*parallelReduce=*/true, /*k=*/-1>
         __shared__ ReduceElemType volatile accumulators[GridDim::maxThreadsPerBlock /*tids*/];
         accumulators[tid] = aggregate;
         __syncthreads();
-        static_assert(GridDim::maxThreadsPerBlock <= 512, "GridDim::maxThreadsPerBlock too large, need to add manually unrolled steps");
-        for (CUDA_LONG i = 256; i; i >>= 1)
+        static_assert(GridDim::maxThreadsPerBlock <= 1024, "GridDim::maxThreadsPerBlock too large, need to add manually unrolled steps");
+        for (CUDA_LONG i = 512; i; i >>= 1)
         {
             if (tid < i && tid + i < tids)
                 UpdateAggregate<volatile ReduceElemType, volatile ReduceElemType>(accumulators[tid], accumulators[tid + i], reductionOp);

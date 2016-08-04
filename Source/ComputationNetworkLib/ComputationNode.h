@@ -185,7 +185,7 @@ protected:                // TODO: should be fully encapsulated here
     bool m_needsGradient; // true if this node or any children need a gradient to be computed (for own consumption or propagation to somewhere in the child tree)
 
     bool m_valueSharable; // a flag is needed for memory share.
-                          // If it is false (e.g., learnableParameters/InputValue and those nodes are solely induced by learnableParameters),
+                          // If it is false (e.g., LearnableParameters/InputValue and those nodes are solely induced by LearnableParameters),
                           // it will never be released to memory pool
 private:
     bool m_isPartOfLoop; // true if this loop is part of a recurrent loop
@@ -290,6 +290,9 @@ public:
         m_gradientInitialized(false), m_nodeName(name == L"" ? CreateUniqNodeName() : name)
     {
         // TODO: should m_learningRateMultiplier be set to 0? Or should every node have a way to add its own say on the learning rate for all its inputs?
+        // we store a unique numeric number for every node that is constructed, as a debugging aid
+        static size_t uniqueNumericId = 0;
+        m_uniqueNumericId = uniqueNumericId++;
     }
     virtual ~ComputationNodeBase()
     {
@@ -834,6 +837,8 @@ public:
     // Helper that returns [a x b x c], including dynamic axes.
     const std::string ShapeDescription() const;
 
+    // debugging helper
+    size_t m_uniqueNumericId; // (a unique handle for debugging)
 protected:
 
     // -----------------------------------------------------------------------
@@ -1891,6 +1896,13 @@ public:
 // =======================================================================
 
 struct IRecurrentNode { virtual int GetRecurrenceSteppingDirection() const = 0; };
+
+// =======================================================================
+// IFreezable -- nodes that have parameters that can be frozen
+// e.g. if a trained model is to be used as a fixed feature extractor for another
+// =======================================================================
+
+struct IFreezable { virtual void FreezeParameters() { } };
 
 // =======================================================================
 // PreComputedNodeBase -- interface implemented by ComputationNodes that precompute

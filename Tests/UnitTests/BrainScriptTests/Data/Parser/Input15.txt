@@ -1,0 +1,1 @@
+do = Print(fibs(10)) ; fibs(n) = [ vals = array[1..n] (i => if i < 3 then i-1 else vals[i-1]+vals[i-2]) ].vals[n] 

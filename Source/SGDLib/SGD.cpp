@@ -404,7 +404,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
 
         if (learnRatePerSample < m_minLearnRate)
         {
-            LOGPRINTF(stderr, "Learn Rate Per Sample for Epoch[%d] = %.8g is less than minLearnRate %.8g. Training complete.\n",
+            LOGPRINTF(stderr, "Learn Rate Per Sample for Epoch[%d] = %.8g is less than minLearningRatePerSample %.8g. Training complete.\n",
                       i + 1, learnRatePerSample, m_minLearnRate);
             if (m_autoLearnRateSearchType != LearningRateSearchAlgorithm::None)
             {
@@ -2581,7 +2581,7 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
     if (m_adaptationRegWeight > 1 || m_adaptationRegWeight < 0)
         InvalidArgument("adaptationRegWeight must be in [0 1]");
 
-    m_minLearnRate = 1e-9f;
+    m_minLearnRate = configSGD(L"minLearningRatePerSample", 1e-9f);
 
     m_needAdaptRegularization = false;
 
