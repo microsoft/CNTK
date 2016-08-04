@@ -185,7 +185,7 @@ void SynchronizationManager::BeginSynchronizeState(ComputationNodeBase *node, co
         bool allStatsGathered = false;
         std::string name = GetStepName(node, isForward);
 
-        // the stats gathering ends when we are bad at stepNumber 0, that is in the forward pass
+        // the stats gathering ends when we are back at stepNumber 0, that is in the forward pass
         if(m_stepName2StepNumber.count(name) > 0)
             if(m_stepName2StepNumber[name] == 0 && isForward == true)
                 allStatsGathered = true;
@@ -405,6 +405,14 @@ void SynchronizationManager::GatherRuntimeStatistics(ComputationNodeBase *node, 
     CUDA_CALL(cudaDeviceSynchronize());
     for(int i = 0; i < SampleSize(); i++)
     {
+        // CUDA makes sure that calculations are only done once. 
+        // we have to do this, otherwise the calls will be aborted because the values were already
+        // calculated.
+        Matrix<float> *output = (Matrix<float>*)node->ValuePtr().get(); 
+        float *data = output->Data();
+        CUDA_CALL(cudaMemset(data, 0, output->BufferSize()));
+        CUDA_CALL(cudaDeviceSynchronize());
+
         m_timer.tick(name);
         if(isForward)
         {
@@ -416,13 +424,6 @@ void SynchronizationManager::GatherRuntimeStatistics(ComputationNodeBase *node, 
         }
         m_timer.tick(name);
 
-        // CUDA makes sure that calculations are only done once. 
-        // we have to do this, otherwise the calls will be aborted because the values were already
-        // calculated.
-        Matrix<float> *output = (Matrix<float>*)node->ValuePtr().get(); 
-        float *data = output->Data();
-        CUDA_CALL(cudaMemset(data, 0, output->BufferSize()));
-        CUDA_CALL(cudaDeviceSynchronize());
     }
 
     
