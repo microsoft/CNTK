@@ -345,6 +345,7 @@ template <class ElemType>
 template <class ElemType>
 /*virtual*/ void LearnableParameter<ElemType>::Validate(bool isFinalValidationPass) /*override*/
 {
+fprintf(stderr, "Validate %ls: called in init state '%ls' with dims [%s]\n", NodeDescription().c_str(), m_initString.c_str(), string(GetSampleLayout()).c_str());
     Base::Validate(isFinalValidationPass);
     m_pMBLayout = nullptr; // this node does not hold mini-batch data
 
@@ -373,6 +374,7 @@ template <class ElemType>
 template <class ElemType>
 void LearnableParameter<ElemType>::LazyInitParameters()
 {
+fprintf(stderr, "LazyInitParameters %ls: called in state '%ls' with dims [%s]\n", NodeDescription().c_str(), m_initString.c_str(), string(GetSampleLayout()).c_str());
     // if no lazy init pending then we are done
     if (m_initString.empty())
         return;
@@ -380,13 +382,13 @@ void LearnableParameter<ElemType>::LazyInitParameters()
     if (GetSampleLayout().GetNumElements() == 0)
         return;
     // OK, proceed
-fprintf(stderr, "LazyInitParameters: '%ls'", m_initString.c_str());
+fprintf(stderr, "LazyInitParameters: performing '%ls'\n", m_initString.c_str());
     if (m_initString == L"fromValue")
         Value().SetValue(m_initValue);
     else if (m_initString == L"uniform" || m_initString == L"gaussian")
         InitRandom((m_initString == L"uniform"), m_randomSeed, m_initValueScale, m_initOnCPUOnly);
     else
-        LogicError("LearnableParameter: Invalid value of m_initString '%ls' for deferred initialization.", m_initString.c_str());
+        LogicError("LearnableParameter %ls: Invalid value of m_initString '%ls' for deferred initialization.", NodeDescription().c_str(), m_initString.c_str());
     // and remember that we are done
     m_initString.clear();
 }
@@ -398,6 +400,7 @@ fprintf(stderr, "LazyInitParameters: '%ls'", m_initString.c_str());
 template <class ElemType>
 void LearnableParameter<ElemType>::InferInputDimsFrom(const TensorShape& otherShape)
 {
+    fprintf(stderr, "InferInputDimsFrom %ls: called in init state '%ls' with dims [%s] and new dims [%s[\n", NodeDescription().c_str(), m_initString.c_str(), string(GetSampleLayout()).c_str(), string(otherShape).c_str());
     const auto& thisShape = GetSampleLayout();
 
     // see where we stand with our shape
