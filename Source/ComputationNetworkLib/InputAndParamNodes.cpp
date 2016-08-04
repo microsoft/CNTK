@@ -400,7 +400,7 @@ fprintf(stderr, "LazyInitParameters: performing '%ls'\n", m_initString.c_str());
 template <class ElemType>
 void LearnableParameter<ElemType>::InferInputDimsFrom(const TensorShape& otherShape)
 {
-    fprintf(stderr, "InferInputDimsFrom %ls: called in init state '%ls' with dims [%s] and new dims [%s[\n", NodeDescription().c_str(), m_initString.c_str(), string(GetSampleLayout()).c_str(), string(otherShape).c_str());
+fprintf(stderr, "InferInputDimsFrom %ls: called in init state '%ls' with dims [%s], offered new dims [%s]\n", NodeDescription().c_str(), m_initString.c_str(), string(GetSampleLayout()).c_str(), string(otherShape).c_str());
     const auto& thisShape = GetSampleLayout();
 
     // see where we stand with our shape
@@ -412,6 +412,7 @@ void LearnableParameter<ElemType>::InferInputDimsFrom(const TensorShape& otherSh
     if (otherShape.GetRank() == 0 || otherShape.GetNumElements() == 0)
         return; // LogicError("ValidateInferInputDimsFrom: Inferred dimensions must not be empty.");
 
+fprintf(stderr, "InferInputDimsFrom %ls: inferring in init state '%ls' with dims [%s] and new dims [%s]\n", NodeDescription().c_str(), m_initString.c_str(), string(GetSampleLayout()).c_str(), string(otherShape).c_str());
     if (m_initString.empty())
         LogicError("InferInputDimsFrom: Attempted to infer dimensions, with initialization completed or no deferred initialization pending.");
 
@@ -436,6 +437,7 @@ void LearnableParameter<ElemType>::InferInputDimsFrom(const TensorShape& otherSh
 
     // now repeat initialization
     // We call this here and in Validate(true), since we don't know which gets called first.
+    // Note: It seems that this is not necessary, and that Validate(true) is only called after inference.
 #if 1
     if (!m_initString.empty())
     {
