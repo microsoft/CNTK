@@ -391,6 +391,7 @@ void ComputationNetwork::Read(const wstring& fileName)
 // node construction
 // -----------------------------------------------------------------------
 
+// helper of InitLearnableParameters()
 // Note: This should really be done through an interface without <ElemType> that LearnableParameter would derive from.
 // However, this is only for NDL (which is deprecated), so I rather not pollute the code with more interfaces just for a deprecated cause.
 template<class ElemType>

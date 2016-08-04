@@ -151,9 +151,7 @@ void LearnableParameter<ElemType>::PostInitParameters(const wstring& initString,
     if (initString == L"uniform" || initString == L"gaussian") // random init
     {
         m_initString = initString;
-        static unsigned long randomSeed = 1;
-        int forcedRandomSeed = randomSeed;
-        m_randomSeed = forcedRandomSeed < 0 ? randomSeed++ : (unsigned long)forcedRandomSeed;
+        m_randomSeed = randomSeed;
         m_initValueScale = initValue;
         m_initOnCPUOnly = initOnCPUOnly;
     }
@@ -385,11 +383,16 @@ void LearnableParameter<ElemType>::LazyInitParameters()
     if (GetSampleLayout().GetNumElements() == 0)
         return;
     // OK, proceed
-    fprintf(stderr, "%ls: Now doing '%ls' initialization with dims [%s].\n", NodeDescription().c_str(), m_initString.c_str(), string(GetSampleLayout()).c_str());
     if (m_initString == L"fromValue")
+    {
+        fprintf(stderr, "%ls: Initializing Parameter[%s] <- %f.\n", NodeDescription().c_str(), m_initString.c_str(), string(GetSampleLayout()).c_str(), m_initValue);
         Value().SetValue(m_initValue);
+    }
     else if (m_initString == L"uniform" || m_initString == L"gaussian")
+    {
+        fprintf(stderr, "%ls: Initializing Parameter[%s] <- %ls(seed=%d, scale=%f, onCPU=%s).\n", NodeDescription().c_str(), string(GetSampleLayout()).c_str(), m_initString.c_str(), (int)m_randomSeed, m_initValueScale, m_initOnCPUOnly ? "true" : "false");
         InitRandom((m_initString == L"uniform"), m_randomSeed, m_initValueScale, m_initOnCPUOnly);
+    }
     else
         LogicError("LearnableParameter: Invalid value of m_initString '%ls' for deferred initialization for %ls.", m_initString.c_str(), NodeDescription().c_str());
     // and remember that we are done
