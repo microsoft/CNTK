@@ -35,6 +35,8 @@ class NDRMReader : public DataReaderBase
     size_t m_idfVocabSize;
     size_t m_vectorSize;
     int m_docLengthBinSize;
+    int m_numPreTrainEpochs;
+    int m_shift;
     size_t m_miniBatchSize;
     size_t m_bytesPerSample;
     size_t m_bytesPerVector;

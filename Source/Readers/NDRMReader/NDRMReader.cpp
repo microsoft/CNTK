@@ -136,6 +136,7 @@ void NDRMReader<ElemType>::InitFromConfig(const ConfigRecordType& readerConfig)
     m_idfVocabSize = readerConfig(L"idfVocabSize", (size_t)2500415);
     m_vectorSize = readerConfig(L"vectorSize", (size_t)200);
     m_docLengthBinSize = readerConfig(L"docLengthBinSize", (int)100);
+    m_numPreTrainEpochs = readerConfig(L"numPreTrainEpochs", (int)0);
     m_bytesPerSample = sizeof(int32_t) * (m_numWordsPerQuery + m_numDocs * m_numWordsPerDoc);
     m_bytesPerVector = sizeof(ElemType) * m_vectorSize;
     m_currOffset = 0;
@@ -277,10 +278,10 @@ void NDRMReader<ElemType>::InitFromConfig(const ConfigRecordType& readerConfig)
 
 //StartMinibatchLoop - Startup a minibatch loop
 // mbSize - [in] size of the minibatch (number of Samples, etc.)
-// epoch - [in] epoch number for this loop --ignored
+// epoch - [in] epoch number for this loop
 // requestedEpochSamples - [in] number of samples to randomize --ignored
 template <class ElemType>
-void NDRMReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t /*epoch*/, size_t requestedEpochSamples)
+void NDRMReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples)
 {
     if (m_miniBatchSize != mbSize || m_dIdValues == NULL || m_embXValues == NULL
         || m_qEmbValues == NULL || m_dEmbValues == NULL || m_labels == NULL
@@ -294,6 +295,7 @@ void NDRMReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t /*epoch*/, s
         m_qStatsValues = (char*)malloc(sizeof(ElemType) * m_numWordsPerQuery * m_miniBatchSize);
         m_dStatsValues = (char*)malloc(sizeof(ElemType) * m_numWordsPerDoc * m_miniBatchSize / m_docLengthBinSize);
         m_labels = (char*)malloc(sizeof(ElemType) * m_numDocs * m_miniBatchSize);
+        m_shift = (m_numPreTrainEpochs > epoch ? 1 : 0);
 
         memset(m_labels, 0, sizeof(ElemType) * m_numDocs * m_miniBatchSize);
         for (int i = 0; i < m_miniBatchSize; i++)
@@ -374,7 +376,7 @@ bool NDRMReader<ElemType>::TryGetMinibatch(StreamMinibatchInputs& matrices)
             {
                 int32_t wordId = *(int32_t*)((char*)m_dataBuffer
                                                     + m_currOffset
-                                                    + j * m_bytesPerSample
+                                                    + (j + (i > 0 ? m_shift : 0)) * m_bytesPerSample
                                                     + (i > 0 ? m_numWordsPerQuery + (i - 1) * m_numWordsPerDoc : 0) * sizeof(int32_t)
                                                     + k * sizeof(int32_t));
 
