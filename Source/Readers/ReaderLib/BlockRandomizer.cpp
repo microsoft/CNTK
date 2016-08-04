@@ -243,6 +243,7 @@ void BlockRandomizer::Decimate(const std::vector<RandomizedSequenceDescription>&
 }
 
 // Retrieves chunk data based on the window information provided by SequenceRandomizer
+// Returns the next chunk id to prefetch.
 ChunkIdType BlockRandomizer::LoadDataChunks()
 {
     size_t randomizedEnd = 0;
