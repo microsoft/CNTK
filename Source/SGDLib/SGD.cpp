@@ -465,20 +465,22 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                       i + 1, learnRatePerSample, MomentumPerMB(momentumPerSample, actualMinibatchSize), momentumAsTimeConstant);
         }
 
+        EpochCriterion epochCriterion; // criterion values are returned in this
+        std::vector<EpochCriterion> epochEvalErrors(evaluationNodes.size());
         SynchronizationManager *sync = SynchronizationManager::GetSynchronizationManager();
         if(!sync->IsExecuting() && sync->m_useMemorySwapping)
         {
             double prevCriterion = numeric_limits<double>::infinity();
             if ((m_mpi == nullptr) || m_mpi->IsMainNode())
             {
-                net->Save(GetModelNameForEpoch(i - 1));
+                //net->Save(GetModelNameForEpoch(i - 1));
                 SaveCheckPointInfo(i-1, 0, learnRatePerSample, smoothedGradients, prevCriterion, m_mbSize[i]);
             }
             // these two variables are only temporary and are thrown away after the dry-run
-            EpochCriterion epochCriterion; // criterion values are returned in this
-            std::vector<EpochCriterion> epochEvalErrors(evaluationNodes.size());
+            //EpochCriterion epochCriterion; // criterion values are returned in this
+            //std::vector<EpochCriterion> epochEvalErrors(evaluationNodes.size());
             TrainOneMiniEpochAndReloadModel(net, refNet, refNode, i,
-                                        10, trainSetDataReader, learnRatePerSample, m_mbSize[i],
+                                        2, trainSetDataReader, learnRatePerSample, m_mbSize[i],
                                         featureNodes, labelNodes,
                                         criterionNodes, evaluationNodes,
                                         inputMatrices, learnableNodes,
@@ -488,8 +490,6 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         }
 
 
-        EpochCriterion epochCriterion; // criterion values are returned in this
-        std::vector<EpochCriterion> epochEvalErrors(evaluationNodes.size());
         TrainOneEpoch(net,
                       refNet,
                       refNode,
@@ -987,8 +987,6 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                     ComputationNetwork::BumpEvalTimeStamp(labelNodes);
                 }
 
-
-                double learningRateTemp = learnRatePerSample; // save learning rate temporarily for memory swapping
                 // ===========================================================
                 // forward prop for evaluate eval nodes
                 // ===========================================================

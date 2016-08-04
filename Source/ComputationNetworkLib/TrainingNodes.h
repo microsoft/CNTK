@@ -9,8 +9,13 @@
 #include "BatchNormalizationEngine.h"
 #include "RNGHandle.h"
 
+<<<<<<< HEAD
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>
+=======
+#include <iostream>
+
+>>>>>>> Batch normalization with changing constants now passes the tests.
 #include <map>
 #include <string>
 #include <vector>
@@ -1610,6 +1615,19 @@ public:
     {
         Base::Save(fstream);
 
+        //if(m_saveMean != nullptr)
+        //{
+        //    m_saveMean.get()->SetValue(0);
+        //    m_saveInvStdDev.get()->SetValue(0);
+        //}
+
+        //const Matrix<ElemType>& mean = *m_saveMean.get();
+        //const Matrix<ElemType>& invStd = *m_saveInvStdDev.get();
+        //Matrix<ElemType>& mean = Input(3)->Value();
+        //Matrix<ElemType>& invStd = Input(4)->Value();
+
+        //cout << "save: " << mean.GetNumRows() << "x" << mean.GetNumCols() << endl;
+
         fstream << m_spatial;
         fstream << m_normTimeConst;
         fstream << m_blendTimeConst;
@@ -1617,6 +1635,8 @@ public:
         fstream << m_samplesSeen;
         fstream << m_epsilon;
         fstream << m_useCntkEngine;
+        //fstream << mean;
+        //fstream << invStd;
     }
 
     void Load(File& fstream, size_t modelVersion) override
@@ -1626,6 +1646,16 @@ public:
 
         if (modelVersion >= CNTK_MODEL_VERSION_6)
         {
+            //if(m_saveMean != nullptr)
+            //{
+            //	m_saveMean.get()->SetValue(0);
+            //	m_saveInvStdDev.get()->SetValue(0);
+            //}
+            //Matrix<ElemType>& mean = *m_saveMean.get();
+            //Matrix<ElemType>& invStd = *m_saveInvStdDev.get();
+            //Matrix<ElemType>& mean = Input(3)->Value();
+            //Matrix<ElemType>& invStd = Input(4)->Value();
+
             fstream >> m_spatial;
             fstream >> m_normTimeConst;
             fstream >> m_blendTimeConst;
@@ -1636,6 +1666,9 @@ public:
                 fstream >> mbCount; // converted below
             fstream >> m_epsilon;
             fstream >> m_useCntkEngine;
+            //fstream >> mean;
+            //fstream >> invStd;
+
         }
         else
         {
@@ -1826,6 +1859,8 @@ public:
             LogicError("%ls: m_savedInvStdDev cannot be empty", NodeName().c_str());
 
         FrameRange fr(Input(0)->GetMBLayout());
+        SynchronizationManager *sync = SynchronizationManager::GetSynchronizationManager();
+        if(!sync->IsExecuting() && sync->m_useMemorySwapping){ return; }
 
         if (inputIndex == 0) // derivative with respect to the input.
         {
@@ -1880,8 +1915,32 @@ public:
 
     void Validate(bool isFinalValidationPass) override
     {
+<<<<<<< HEAD
         Base::Validate(isFinalValidationPass);
         InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
+=======
+    	if (Environment().IsTraining())
+    	{
+			SynchronizationManager *sync = SynchronizationManager::GetSynchronizationManager();
+			if(!sync->IsExecuting() && sync->m_useMemorySwapping)
+			{
+				return;
+			}
+    	}
+
+        Matrix<ElemType> sliceInputValue = Input(0)->ValueFor(fr);
+
+        const Matrix<ElemType>& scale = Input(1)->Value();
+        const Matrix<ElemType>& bias = Input(2)->Value();
+        Matrix<ElemType>& runMean = Input(3)->Value();
+        Matrix<ElemType>& runInvStdDev = Input(4)->Value();
+        assert(scale.GetNumRows() == bias.GetNumRows());
+        assert(scale.GetNumCols() == bias.GetNumCols());
+        assert(runMean.GetNumRows() == scale.GetNumRows());
+        assert(runMean.GetNumCols() == scale.GetNumCols());
+        assert(runMean.GetNumRows() == runInvStdDev.GetNumRows());
+        assert(runMean.GetNumCols() == runInvStdDev.GetNumCols());
+>>>>>>> Batch normalization with changing constants now passes the tests.
 
         SetDims(Input(0));
 
