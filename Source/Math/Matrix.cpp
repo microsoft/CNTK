@@ -4342,7 +4342,7 @@ void Matrix<ElemType>::SVD(const Matrix<ElemType>& A, Matrix<ElemType>& SIGMA, M
 
 // AssginCopyOf matix b to a
 template <class ElemType>
-/*static*/ void Matrix<ElemType>::AssignCopyOf(Matrix<ElemType>& a, const Matrix<ElemType>& b, size_t* NzOffset, const size_t RowOffset)
+/*static*/ void Matrix<ElemType>::SparseAssignCopyOf(Matrix<ElemType>& a, const Matrix<ElemType>& b, size_t* NzOffset, const size_t RowOffset)
 {
     DecideAndMoveToRightDevice(a, b);
 
@@ -4412,11 +4412,15 @@ template <class ElemType>
 {
     if (a.GetDeviceId() >= 0 /*GPU*/)
     {
-        if (a.GetMatrixType() != MatrixType::SPARSE)
+        if (a.GetMatrixType() != MatrixType::SPARSE && a.GetFormat() != MatrixFormat::matrixFormatSparseCSC)
         {
             a.SwitchToMatrixType(MatrixType::SPARSE, MatrixFormat::matrixFormatSparseCSC, false);
         }
         a.m_GPUSparseMatrix->Resize(numRows, numCols, numNZs);
+    } 
+    else
+    {
+        NOT_IMPLEMENTED;
     }
 }
 

@@ -565,7 +565,7 @@ public:
     static void DoElementMaxOf(Matrix<ElemType>& a, const Matrix<ElemType>& b);
     void AddElementMaxGradient(Matrix<ElemType>& inputValue, Matrix<ElemType>& outputVale, Matrix<ElemType>& outputGradient, Matrix<ElemType>& inputSum, Matrix<ElemType>& randomSplit, size_t numInputs, size_t inputIndex);
 
-    static void AssignCopyOf(Matrix<ElemType>& a, const Matrix<ElemType>& b, size_t* NzOffset, const size_t RowOffset);
+    static void SparseAssignCopyOf(Matrix<ElemType>& a, const Matrix<ElemType>& b, size_t* NzOffset, const size_t RowOffset);
     static void AddSparseNumOfNZs(const Matrix<ElemType>& a, size_t* numNZs);
     static void AddSparseColumnIndex(const Matrix<ElemType>& a, const Matrix<ElemType>& b);
     static void ResizeAsSparseMatrix(Matrix<ElemType>& a, size_t numRows, size_t numCols, size_t numNZs);

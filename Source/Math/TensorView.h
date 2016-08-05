@@ -129,11 +129,6 @@ public:
     void DoBinaryOpOf (ElemType beta, const TensorView& a, const TensorView& b,                      ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp);
     void DoTernaryOpOf(ElemType beta, const TensorView& a, const TensorView& b, const TensorView& c, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp);
 
-    void SparseAssignCopyOf(const TensorView& a, size_t* NzOffset, const size_t RowOffset);
-    static void AddSparseNumOfNZs(const TensorView& a, size_t *numNZs);
-    void AddSparseColumnIndex(const TensorView& a);
-    void ResizeAsSparseMatrix(const size_t numRows, const size_t numCols, const size_t numNZs);
-
     // -------------------------------------------------------------------
     // matrix product -- GEMM for flattened tensors
     // Result goes into 'this', and can optionally be added to the existing value.

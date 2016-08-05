@@ -563,27 +563,28 @@ public:
 
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
-        size_t rank = DetermineElementwiseTensorRank();
-        auto result = ValueTensorFor(rank, fr);
-
+        Matrix<ElemType> result = ValueFor(fr);
         // allocate memory for the output sparse matrix
-        size_t numCols = Input(0)->GetSampleMatrixNumCols();
+        size_t numCols = 0;
         size_t numRows = 0;
         size_t numNZs = 0;
 
         for (size_t inputIndex = 0; inputIndex < GetNumInputs(); inputIndex++)
         {
-            let input = Input(inputIndex)->ValueTensorFor(rank, fr.AllowBroadcast());
-            result.AddSparseNumOfNZs(input, &numNZs);
-            numRows += Input(inputIndex)->GetSampleLayout().GetDims()[0];
+            Matrix<ElemType> input = Input(inputIndex)->ValueFor(fr);
+            Matrix<ElemType>::AddSparseNumOfNZs(input, &numNZs);
+            numRows += input.GetNumRows();
+
+            if (inputIndex == 0)
+                numCols = input.GetNumCols();
         }
 
-        result.ResizeAsSparseMatrix(numRows, numCols, numNZs);
+        Matrix<ElemType>::ResizeAsSparseMatrix(result, numRows, numCols, numNZs);
 
         for (size_t inputIndex = 0; inputIndex < GetNumInputs(); inputIndex++)
         {
-            let input = Input(inputIndex)->ValueTensorFor(rank, fr.AllowBroadcast());
-            result.AddSparseColumnIndex(input);
+            Matrix<ElemType> input = Input(inputIndex)->ValueFor(fr);
+            Matrix<ElemType>::AddSparseColumnIndex(result, input);
         }
 
         size_t *NzOffset = new size_t[numCols]();
@@ -591,9 +592,9 @@ public:
         size_t RowOffset = 0;
         for (size_t inputIndex = 0; inputIndex < GetNumInputs(); inputIndex++)
         {
-            let input = Input(inputIndex)->ValueTensorFor(rank, fr.AllowBroadcast());
-            result.SparseAssignCopyOf(input, NzOffset, RowOffset);
-            RowOffset += Input(inputIndex)->GetSampleLayout().GetDims()[0];
+            Matrix<ElemType> input = Input(inputIndex)->ValueFor(fr);
+            Matrix<ElemType>::SparseAssignCopyOf(result, input, NzOffset, RowOffset);
+            RowOffset += input.GetNumRows();
         }
     }
 
