@@ -17,30 +17,33 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-SwapInAction::SwapInAction(SwapOutAction *swpout, Matrix<float> *GPUBuffer)
+template <typename ElemType>
+SwapInAction<ElemType>::SwapInAction(SwapOutAction<ElemType> *swpout, Matrix<ElemType> *GPUBuffer)
 {
-    m_bufferCPU = swpout->GetCPUMatrix();
-    m_bufferGPU = GPUBuffer;
-    m_swpout = swpout;
+    this->m_bufferCPU = swpout->GetCPUMatrix();
+    this->m_bufferGPU = GPUBuffer;
+    this->m_swpout = swpout;
 
     cudaStream_t stream;
     CUDA_CALL(cudaStreamCreate(&stream));
-    m_swapInStream = stream;
-    m_rows = m_bufferGPU->GetNumRows();
-    m_cols = m_bufferGPU->GetNumCols();
-    m_bytes = m_rows*m_cols*sizeof(float);
+    this->m_swapInStream = stream;
+    this->m_rows = this->m_bufferGPU->GetNumRows();
+    this->m_cols = this->m_bufferGPU->GetNumCols();
+    this->m_bytes = this->m_rows*this->m_cols*sizeof(ElemType);
 }
 
  
 
-void SwapInAction::BeginAction()
+template <typename ElemType>
+void SwapInAction<ElemType>::BeginAction()
 {
-   m_bufferGPU->Resize(m_swpout->GetRows(),m_swpout->GetCols());
-   CUDA_CALL(cudaMemcpyAsync(m_bufferGPU->Data(), m_bufferCPU, m_bytes, cudaMemcpyDefault, m_swapInStream));
+   this->m_bufferGPU->Resize(this->m_swpout->GetRows(),this->m_swpout->GetCols());
+   CUDA_CALL(cudaMemcpyAsync(this->m_bufferGPU->Data(), this->m_bufferCPU, this->m_bytes, cudaMemcpyDefault, this->m_swapInStream));
 }
 
 
-void SwapInAction::EndAction(){ CUDA_CALL(cudaStreamSynchronize(m_swapInStream)); }
+template <typename ElemType>
+void SwapInAction<ElemType>::EndAction(){ CUDA_CALL(cudaStreamSynchronize(this->m_swapInStream)); }
 
 
 }}}

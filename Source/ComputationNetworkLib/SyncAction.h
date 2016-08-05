@@ -10,12 +10,13 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+template <typename ElemType>
 class SyncAction
 {
 
 protected:
-    Matrix<float> *m_bufferGPU;
-    float *m_bufferCPU;
+    Matrix<ElemType> *m_bufferGPU;
+    ElemType *m_bufferCPU;
     int m_rows;
     int m_cols;
     size_t m_bytes;
@@ -25,14 +26,15 @@ public:
     virtual void BeginAction() = 0; // for starting asynchronous actions
     virtual void EndAction() = 0; // for synchronization and cleanup
     virtual void ReleaseMemory() = 0;
-    Matrix<float> *GetGPUMatrix(){ return m_bufferGPU; }
-    float *GetCPUMatrix(){ return m_bufferCPU; }
+    Matrix<ElemType> *GetGPUMatrix(){ return m_bufferGPU; }
+    ElemType *GetCPUMatrix(){ return m_bufferCPU; }
 
     int GetRows(){ return m_rows; };
     int GetCols(){ return m_cols; };
 
 };
 
+template class SyncAction<double>;
+template class SyncAction<float>;
+
 }}}
-
-

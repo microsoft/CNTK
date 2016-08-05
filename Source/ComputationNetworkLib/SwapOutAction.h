@@ -14,12 +14,13 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-class SwapOutAction : public SyncAction
+template <typename ElemType>
+class SwapOutAction : public SyncAction<ElemType>
 {
 
 public:
     ~SwapOutAction();
-    SwapOutAction(Matrix<float> *GPUbuffer);
+    SwapOutAction(Matrix<ElemType> *GPUbuffer);
     
     //implementation of abstract method
     void BeginAction();
@@ -35,4 +36,9 @@ private:
 
 };
 
+template class SwapOutAction<double>;
+template class SwapOutAction<float>;
+
 }}}
+
+

@@ -19,44 +19,50 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 using std::cout;
 using std::endl;
 
-SwapOutAction::SwapOutAction(Matrix<float> *GPUbuffer)
+template <typename ElemType>
+SwapOutAction<ElemType>::SwapOutAction(Matrix<ElemType> *GPUbuffer)
 {
-        m_bufferCPU = NULL;
-        m_bufferGPU = GPUbuffer;
+        this->m_bufferCPU = NULL;
+        this->m_bufferGPU = GPUbuffer;
         cudaStream_t stream;
         CUDA_CALL(cudaStreamCreate(&stream));
-        m_streamAsync = stream;
-        m_rows = m_bufferGPU->GetNumRows();
-        m_cols = m_bufferGPU->GetNumCols();
-        m_bytes = m_rows*m_cols*sizeof(float);
+        this->m_streamAsync = stream;
+        this->m_rows = this->m_bufferGPU->GetNumRows();
+        this->m_cols = this->m_bufferGPU->GetNumCols();
+        this->m_bytes = this->m_rows*this->m_cols*sizeof(ElemType);
 
         // do we already have a pinned, that is page-locked buffer?
-        if (!m_bufferCPU){ allocatePinnedBuffer(); }
+        if (!this->m_bufferCPU){ allocatePinnedBuffer(); }
 }
 
-SwapOutAction::~SwapOutAction(){ ReleaseMemory(); }
+template <typename ElemType>
+SwapOutAction<ElemType>::~SwapOutAction(){ ReleaseMemory(); }
 
-void SwapOutAction::BeginAction()
+template <typename ElemType>
+void SwapOutAction<ElemType>::BeginAction()
 {
     // perform the actual asynchronous copy
-    CUDA_CALL(cudaMemcpyAsync(m_bufferCPU, m_bufferGPU->Data(), m_bytes, cudaMemcpyDefault, m_streamAsync));
+    CUDA_CALL(cudaMemcpyAsync(this->m_bufferCPU, this->m_bufferGPU->Data(), this->m_bytes, cudaMemcpyDefault, this->m_streamAsync));
 }
 
-void SwapOutAction::EndAction()
+template <typename ElemType>
+void SwapOutAction<ElemType>::EndAction()
 {
     CUDA_CALL(cudaStreamSynchronize(m_streamAsync));
-    m_rows = m_bufferGPU->GetNumRows();
-    m_cols = m_bufferGPU->GetNumCols();
+    this->m_rows = this->m_bufferGPU->GetNumRows();
+    this->m_cols = this->m_bufferGPU->GetNumCols();
 }
 
 
-void SwapOutAction::allocatePinnedBuffer()
+template <typename ElemType>
+void SwapOutAction<ElemType>::allocatePinnedBuffer()
 {
     //cudaHostAllocPortable preservse the page-lock even across threads
-    CUDA_CALL(cudaHostAlloc(&m_bufferCPU, m_bytes, cudaHostAllocPortable));
+    CUDA_CALL(cudaHostAlloc(&(this->m_bufferCPU), this->m_bytes, cudaHostAllocPortable));
 }
 
-void SwapOutAction::ReleaseMemory(){ CUDA_CALL(cudaFreeHost(m_bufferCPU)); }
+template <typename ElemType>
+void SwapOutAction<ElemType>::ReleaseMemory(){ CUDA_CALL(cudaFreeHost(this->m_bufferCPU)); }
 
 }}}
 
