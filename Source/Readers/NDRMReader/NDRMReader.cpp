@@ -376,7 +376,7 @@ bool NDRMReader<ElemType>::TryGetMinibatch(StreamMinibatchInputs& matrices)
             {
                 int32_t wordId = *(int32_t*)((char*)m_dataBuffer
                                                     + m_currOffset
-                                                    + ((j + (i > 1 ? m_shift : 0)) % actualMiniBatchSize) * m_bytesPerSample
+                                                    + ((j + (i > 1 ? m_shift * (i - 1) : 0)) % actualMiniBatchSize) * m_bytesPerSample
                                                     + (i > 0 ? m_numWordsPerQuery + (i - 1) * m_numWordsPerDoc : 0) * sizeof(int32_t)
                                                     + k * sizeof(int32_t));
 
