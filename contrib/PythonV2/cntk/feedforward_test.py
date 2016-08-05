@@ -16,12 +16,12 @@ def create_variable(shape, data_type='float', is_sparse=False, needs_gradient=Tr
 def fully_connected_layer(input, output_dim, device_id, nonlinearity):    
     input_dim = input.Shape()[0]    
     #import ipdb;ipdb.set_trace()        
-    v1 = cntk_py.NDArrayView.RandomUniformFloat((output_dim,input_dim), -0.5, 0.5, 1, device_id)    
+    v1 = cntk_py.NDArrayView.RandomUniformFloat((output_dim,input_dim), -0.05, 0.05, 1, device_id)    
     times_param = cntk_py.Parameter(v1)    
     t = cntk_py.Times(times_param, input)    
-    v2 = cntk_py.NDArrayView.RandomUniformFloat((output_dim,), -0.5, 0.5, 1, device_id)       
+    v2 = cntk_py.NDArrayView.RandomUniformFloat((output_dim,), -0.05, 0.05, 1, device_id)       
     plus_param = cntk_py.Parameter(v2)
-    p = cntk_py.Plus(t.Output(), plus_param)    
+    p = cntk_py.Plus(plus_param,t.Output())    
     return nonlinearity(p.Output());
 
 def fully_connected_classifier_net(input, num_output_classes, hidden_layer_dim, num_hidden_layers, device, nonlinearity):
@@ -29,16 +29,17 @@ def fully_connected_classifier_net(input, num_output_classes, hidden_layer_dim, 
     for i in range(1, num_hidden_layers):
         classifier_root = fully_connected_layer(classifier_root.Output(), hidden_layer_dim, device, nonlinearity)
     
-    v1 = cntk_py.NDArrayView.RandomUniformFloat((num_output_classes,hidden_layer_dim), -0.5, 0.5, 1, device)    
+    v1 = cntk_py.NDArrayView.RandomUniformFloat((num_output_classes,hidden_layer_dim), -0.05, 0.05, 1, device)    
     output_times_param = cntk_py.Parameter(v1)    
 
-    v2 = cntk_py.NDArrayView.RandomUniformFloat((num_output_classes,), -0.5, 0.5, 1, device)       
+    v2 = cntk_py.NDArrayView.RandomUniformFloat((num_output_classes,), -0.05, 0.05, 1, device)       
     output_plus_param = cntk_py.Parameter(v2)
     t = cntk_py.Times(output_times_param, classifier_root.Output())
-    classifier_root = cntk_py.Plus(t.Output(), output_plus_param) 
+    classifier_root = cntk_py.Plus(output_plus_param,t.Output()) 
     return classifier_root;
 
 if __name__=='__main__':      
+    import time;time.sleep(1)
     dev = cntk_py.DeviceDescriptor.CPUDevice()       
     input_dim = 2
     num_output_classes = 2
@@ -90,9 +91,9 @@ if __name__=='__main__':
     minibatchData[streamInfos[0]] = (minibatch_size, None)
     minibatchData[streamInfos[1]] = (minibatch_size, None)
                 
-    trainer = cntk_py.Trainer(ffnet, ce.Output(), [cntk_py.SGDLearner(ffnet.Parameters(), 0.02)])    
-    
-    for i in range(0,int(num_minibatches_to_train)):
+    trainer = cntk_py.Trainer(ffnet, ce.Output(), [cntk_py.SGDLearner(ffnet.Parameters(), 0.02)])          
+
+    for i in range(0,int(num_minibatches_to_train)):    
             
         # TODO: Fix this, for some reason we need to reset minibatch_size in the dictionary becuase
         # it is getting messed up by SWIG resulting in the following CNTK error:
@@ -100,12 +101,14 @@ if __name__=='__main__':
         # it should be an easy fix in SWIG
         minibatchData[streamInfos[0]] = (minibatch_size, minibatchData[streamInfos[0]][1])
         minibatchData[streamInfos[1]] = (minibatch_size, minibatchData[streamInfos[1]][1])        
-        cm.GetNextMinibatch(minibatchData)
                 
+        cm.GetNextMinibatch(minibatchData)
         arguments = dict()
         arguments[input] = minibatchData[streamInfos[0]][1]
         arguments[label] = minibatchData[streamInfos[1]][1]
+
         
         trainer.TrainMinibatch(arguments, dev)
-        if i % 20 == 0:
-            print(str(i) + ": " + str(trainer.PreviousMinibatchTrainingLossValue().Data().ToNumPy()))
+        freq = 20
+        if i % freq == 0:
+            print(str(i+freq) + ": " + str(trainer.PreviousMinibatchTrainingLossValue().Data().ToNumPy()))
