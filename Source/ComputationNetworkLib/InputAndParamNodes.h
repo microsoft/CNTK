@@ -34,7 +34,7 @@ public:
     {
         SetLearningRateMultiplier(1.0f); // enable normal learning by default
         MarkValueNonSharable();
-        m_initString = L"fixedValue"; // default init is with 0; typically overwritten
+        m_initString = L"fromValue"; // default init is with 0; typically overwritten
         m_initValue = 0;
     }
     LearnableParameter(DEVICEID_TYPE deviceId, const wstring& name, const TensorShape& shape)
