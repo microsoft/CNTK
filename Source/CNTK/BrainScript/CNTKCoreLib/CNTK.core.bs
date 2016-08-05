@@ -54,8 +54,8 @@ Plus                    = CNTK2.Plus
 RectifiedLinear         = CNTK2.Relu
 ReduceSum               = CNTK2.ReduceSum
 ReduceLogSum            = CNTK2.ReduceLogSum
-ReduceMax               = CNTK2.ReduceMax
 ReduceMin               = CNTK2.ReduceMin
+ReduceMax               = CNTK2.ReduceMax
 
 Round                   = CNTK2.Round
 Sigmoid                 = CNTK2.Sigmoid
@@ -145,13 +145,12 @@ CNTK2 = [
     Tanh(_, tag='') = new ComputationNode [ operation = 'Tanh' ; inputs = _ /*plus the function args*/ ]
 
     // 6. Reductions    
-    # the following is a temporary workaround until we have the C++ version
-    ReduceLogSum(z, axis=0, tag='')  = new ComputationNode [ operation = 'ReduceElements' ; inputs = z ; reductionOp = "LogSum" /*plus the function args*/ ]
-    #ReduceMean(z, axis=0, tag='')    = new ComputationNode [ operation = 'ReduceElements' ; inputs = z ; reductionOp = "Mean"    /*plus the function args*/ ]
-    ReduceMax(z, axis=0, tag='')     = new ComputationNode [ operation = 'ReduceElements' ; inputs = z ; reductionOp = "Max"     /*plus the function args*/ ]
-    ReduceMin(z, axis=0, tag='')     = new ComputationNode [ operation = 'ReduceElements' ; inputs = z ; reductionOp = "Min"     /*plus the function args*/ ]
-
-    ReduceSum (_, axis=0, tag='')     = new ComputationNode [ operation = 'ReduceElements' ; inputs = _ ; reductionOp = "Sum"    /*plus the function args*/ ]
+    ReduceSum   (_, axis=0, tag='') = new ComputationNode [ operation = 'ReduceElements' ; inputs = _ ; reductionOp = "Sum"    /*plus the function args*/ ]
+    ReduceLogSum(_, axis=0, tag='') = new ComputationNode [ operation = 'ReduceElements' ; inputs = _ ; reductionOp = "LogSum" /*plus the function args*/ ]
+    ReduceMin   (_, axis=0, tag='') = new ComputationNode [ operation = 'ReduceElements' ; inputs = _ ; reductionOp = "Min"    /*plus the function args*/ ]
+    ReduceMax   (_, axis=0, tag='') = new ComputationNode [ operation = 'ReduceElements' ; inputs = _ ; reductionOp = "Max"    /*plus the function args*/ ]
+    #ReduceMean (_, axis=0, tag='') = new ComputationNode [ operation = 'ReduceElements' ; inputs = _ ; reductionOp = "Mean"   /*plus the function args*/ ]
+    
     // 7. Control flow (if, composite etc.)
     // None so far
 

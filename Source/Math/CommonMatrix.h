@@ -97,7 +97,7 @@ enum ElementWiseOperator
     opClip, /*clip a within interval b..c*/
     opElementwiseProductWithLogSumDerivative,
     opCopyIfEqual,
-    opElementwiseProductWithExpOffDiff, /* a * exp(b - c) */
+    opElementwiseProductWithExpOfDiff, /* a * exp(b - c) */
     // Note: not all that's implemented in CNTK ComputationNodes has an opcode yet.
 };
 
@@ -159,7 +159,7 @@ enum ElementWiseOperator
     Macro(CopyIfEqual);                                 \
     Macro(Clip);                                        \
     Macro(ElementwiseProductWithLogSumDerivative);      \
-    Macro(ElementwiseProductWithExpOffDiff);
+    Macro(ElementwiseProductWithExpOfDiff);
 
 // -----------------------------------------------------------------------
 // various enums to describe

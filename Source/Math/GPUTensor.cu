@@ -273,10 +273,10 @@ template<> __device__ float NeutralValue<float>(ElementWiseOperator op)
 {
     switch (op)
     {
-    case ElementWiseOperator::opLogSum: return -INFINITY;
-    case ElementWiseOperator::opMax:    return FLT_MIN;
-    case ElementWiseOperator::opMin:    return FLT_MAX;
     case ElementWiseOperator::opSum:    return 0;
+    case ElementWiseOperator::opLogSum: return -INFINITY;
+    case ElementWiseOperator::opMin:    return FLT_MAX;
+    case ElementWiseOperator::opMax:    return FLT_MIN;
     default:                            return 0; // error
     }
 };
@@ -285,10 +285,10 @@ template<> __device__ double NeutralValue<double>(ElementWiseOperator op)
 {
     switch (op)
     {
-    case ElementWiseOperator::opLogSum: return -INFINITY;
-    case ElementWiseOperator::opMax:    return DBL_MIN;
-    case ElementWiseOperator::opMin:    return DBL_MAX;
     case ElementWiseOperator::opSum:    return 0;
+    case ElementWiseOperator::opLogSum: return -INFINITY;
+    case ElementWiseOperator::opMin:    return DBL_MAX;
+    case ElementWiseOperator::opMax:    return DBL_MIN;
     default:                            return 0; // error
     }
 };
@@ -302,11 +302,11 @@ template<typename ReductionType, class ElemType> __device__ void UpdateAggregate
 {
     switch (reductionOp)
     {
-    case ElementWiseOperator::opLogSum:
-        aggregate  = OpLogSum(aggregate, val);
-        break;
     case ElementWiseOperator::opSum:
         aggregate += val;
+        break;
+    case ElementWiseOperator::opLogSum:
+        aggregate = OpLogSum(aggregate, val);
         break;
     case ElementWiseOperator::opMin:
         if (val < aggregate)
