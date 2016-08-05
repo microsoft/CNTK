@@ -29,21 +29,23 @@ class LearnableParameter : public ComputationNode<ElemType>, public NumInputs<0>
     void InitShape(const TensorShape& shape);
 
 public:
-    LearnableParameter(DEVICEID_TYPE deviceId, const wstring& name)
-        : Base(deviceId, name)
+    // this constructor is always run (all other constructors call this one)
+    LearnableParameter(DEVICEID_TYPE deviceId, const wstring& name) :
+        Base(deviceId, name)
     {
         SetLearningRateMultiplier(1.0f); // enable normal learning by default
         MarkValueNonSharable();
         m_initString = L"fromValue"; // default init is with 0; typically overwritten
         m_initValue = 0;
     }
-    LearnableParameter(DEVICEID_TYPE deviceId, const wstring& name, const TensorShape& shape)
-        : LearnableParameter(deviceId, name)
+    LearnableParameter(DEVICEID_TYPE deviceId, const wstring& name, const TensorShape& shape) :
+        LearnableParameter(deviceId, name)
     {
         InitShape(shape);
+        LazyInitParameters();
     }
-    LearnableParameter(DEVICEID_TYPE deviceId, const wstring& name, size_t rows, size_t cols)
-        : LearnableParameter(deviceId, name, TensorShape(rows, cols))
+    LearnableParameter(DEVICEID_TYPE deviceId, const wstring& name, size_t rows, size_t cols) :
+        LearnableParameter(deviceId, name, TensorShape(rows, cols))
     {
     }
     LearnableParameter(const ScriptableObjects::IConfigRecordPtr configp);
