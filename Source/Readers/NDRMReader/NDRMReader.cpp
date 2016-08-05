@@ -295,7 +295,6 @@ void NDRMReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t epoch, size_
         m_qStatsValues = (char*)malloc(sizeof(ElemType) * m_numWordsPerQuery * m_miniBatchSize);
         m_dStatsValues = (char*)malloc(sizeof(ElemType) * m_numWordsPerDoc * m_miniBatchSize / m_docLengthBinSize);
         m_labels = (char*)malloc(sizeof(ElemType) * m_numDocs * m_miniBatchSize);
-        m_shift = (m_numPreTrainEpochs > epoch ? 1 : 0);
 
         memset(m_labels, 0, sizeof(ElemType) * m_numDocs * m_miniBatchSize);
         for (int i = 0; i < m_miniBatchSize; i++)
@@ -304,6 +303,7 @@ void NDRMReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t epoch, size_
         }
     }
 
+    m_shift = (m_numPreTrainEpochs > epoch ? 1 : 0);
     m_numSamplesPerEpoch = requestedEpochSamples;
     m_numSamplesCurrEpoch = 0;
 }
