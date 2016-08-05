@@ -306,7 +306,16 @@ void DoCommands(const ConfigParameters& config, const shared_ptr<MPIWrapper>& mp
             NDLScript<ElemType> ndlScript;
             ndlScript.ClearGlobal(); // clear global macros between commands
 
-            SynchronizationManager::GetSynchronizationManager()->ClearActionsAndTheirMemory();
+            if(std::is_same<ElemType, float>::value)
+            {
+                g_floatSynchronizationManager->ClearActionsAndTheirMemory();
+            }
+            else
+            {
+                g_doubleSynchronizationManager->ClearActionsAndTheirMemory();
+            }
+
+
 
             // Synchronize all ranks before proceeding to next action/command
             if (mpi)
@@ -571,7 +580,6 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
     //  [1/26/2015 erw, add done file so that it can be used on HPC]
     wstring DoneFile = config(L"DoneFile", L"");
     ConfigArray command = config(L"command", "train");
-    SynchronizationManager::GetSynchronizationManager()->m_useMemorySwapping = config(L"useMemorySwapping", "true");
 
     // paralleltrain training
     shared_ptr<Microsoft::MSR::CNTK::MPIWrapper> mpi;
@@ -649,10 +657,18 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
 
     LOGPRINTF(stderr, "Precision = \"%s\"\n", type.c_str());
 
+
     if (type == "float")
+    {
+        //SynchronizationManager<float>::GetSynchronizationManager()->m_useMemorySwapping = config(L"useMemorySwapping", "true");
+        g_floatSynchronizationManager->m_useMemorySwapping = config(L"useMemorySwapping", "true");
         DoCommands<float>(config, mpi);
+    }
     else if (type == "double")
+    {
+        g_doubleSynchronizationManager->m_useMemorySwapping = config(L"useMemorySwapping", "true");
         DoCommands<double>(config, mpi);
+    }
     else
         RuntimeError("CNTK: Invalid precision string: \"%s\", must be \"float\" or \"double\"", type.c_str());
 

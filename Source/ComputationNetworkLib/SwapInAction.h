@@ -9,13 +9,15 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-class SwapOutAction;
-class SwapInAction : public SyncAction
+template <typename ElemType> class SwapOutAction;
+
+template <typename ElemType> 
+class SwapInAction : public SyncAction<ElemType>
 {
 
 public:
     ~SwapInAction(){}
-    SwapInAction(SwapOutAction *swpout, Matrix<float> *GPUBuffer);
+    SwapInAction(SwapOutAction<ElemType> *swpout, Matrix<ElemType> *GPUBuffer);
 
     //implementation of abstract methods
     void BeginAction();
@@ -23,8 +25,12 @@ public:
     void ReleaseMemory(){};
 private:
     cudaStream_t m_swapInStream;
-    SwapOutAction *m_swpout;
+    SwapOutAction<ElemType> *m_swpout;
     int m_batchSize;
 
 };
+
+template class SwapInAction<double>;
+template class SwapInAction<float>;
+
 }}}

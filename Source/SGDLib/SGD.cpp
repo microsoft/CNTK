@@ -23,6 +23,8 @@
 #include <map>
 #include <set>
 
+#include <iostream>
+
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 using namespace std;
@@ -290,6 +292,27 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         InitModelAggregationHandler(m_syncStatsTrace, net->GetDeviceId());
     }
     
+    
+    // set memory swapping temporarily to false, so that it gets triggered after momentum
+    // and batch normalization was set
+    bool useMemorySwapping = false;
+
+    if(std::is_same<ElemType, float>::value)
+    {
+        useMemorySwapping = g_floatSynchronizationManager->m_useMemorySwapping;
+        g_floatSynchronizationManager->m_isInTrainingMode = true;
+        g_floatSynchronizationManager->m_useMemorySwapping = false;
+    }
+    else
+    {
+        useMemorySwapping = g_doubleSynchronizationManager->m_useMemorySwapping;
+        g_doubleSynchronizationManager->m_isInTrainingMode = true;
+        g_doubleSynchronizationManager->m_useMemorySwapping = false;
+    }
+
+
+
+
     // precompute mean and invStdDev nodes and save initial model
     // When no precompute, only save if we did not load the model from a 
     // checkpoint but instead built it from a network description
@@ -460,20 +483,39 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         LOGPRINTF(stderr, "Starting Epoch %d: learning rate per sample = %f  effective momentum = %f  momentum as time constant = %.1f samples\n",
                   i + 1, learnRatePerSample, MomentumPerMB(momentumPerSample, actualMinibatchSize), momentumAsTimeConstant);
 
+        bool isExecuting = false;
+        if(std::is_same<ElemType, float>::value)
+        {
+            isExecuting = g_floatSynchronizationManager->IsExecuting();
+            g_floatSynchronizationManager->m_useMemorySwapping = useMemorySwapping;
+        }
+        else
+        {
+            isExecuting = g_doubleSynchronizationManager->IsExecuting();
+            g_doubleSynchronizationManager->m_useMemorySwapping = useMemorySwapping;
+        }
+
         EpochCriterion epochCriterion; // criterion values are returned in this
         std::vector<EpochCriterion> epochEvalErrors(evaluationNodes.size());
-        SynchronizationManager *sync = SynchronizationManager::GetSynchronizationManager();
-        if(!sync->IsExecuting() && sync->m_useMemorySwapping)
+        std::wstring wname = GetModelNameForEpoch(i-1);
+        std::string name = std::string(wname.begin(), wname.end());
+
+        if(isExecuting && useMemorySwapping)
         {
             double prevCriterion = numeric_limits<double>::infinity();
+            if (m_mpi != nullptr){ m_mpi->WaitAll(); }
             if ((m_mpi == nullptr) || m_mpi->IsMainNode())
             {
-                //net->Save(GetModelNameForEpoch(i - 1));
+                cout << "SAVING NETWORK: Name: " << name << endl;
+                net->Save(GetModelNameForEpoch(i - 1));
                 SaveCheckPointInfo(i-1, 0, learnRatePerSample, smoothedGradients, prevCriterion, m_mbSize[i]);
             }
+
+            if (m_mpi != nullptr){ m_mpi->WaitAll(); }
             // these two variables are only temporary and are thrown away after the dry-run
             //EpochCriterion epochCriterion; // criterion values are returned in this
             //std::vector<EpochCriterion> epochEvalErrors(evaluationNodes.size());
+            cout << "PRE TRAIN" << endl;
             TrainOneMiniEpochAndReloadModel(net, refNet, refNode, i,
                                         2, trainSetDataReader, learnRatePerSample, m_mbSize[i],
                                         featureNodes, labelNodes,
@@ -482,6 +524,8 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                                         smoothedGradients,
                                         /*out*/ epochCriterion, /*out*/ epochEvalErrors,
                                         "Memory swapping dry run:");
+
+            cout << "LOADED NETWORK: Name: " << name << endl;
         }
 
 
@@ -784,6 +828,8 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                                     const std::string& prefixMsg)
 {
     ScopedNetworkOperationMode modeGuard(net, NetworkOperationMode::training);
+    bool reloadBatch = false;
+    double learningRateTemp = learnRatePerSample;
 
     // bring our 'out' values into consistent state
     epochCriterion = EpochCriterion(0);
@@ -965,6 +1011,51 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                     smbDispatcher.GetSubMinibatchToNet(ismb); // get sub-minibatch from full-size one
                     ComputationNetwork::BumpEvalTimeStamp(featureNodes);
                     ComputationNetwork::BumpEvalTimeStamp(labelNodes);
+                }
+
+                bool isExecuting = false;
+                bool useMemorySwapping = false;
+
+                if(std::is_same<ElemType, float>::value)
+                {
+                    isExecuting = g_floatSynchronizationManager->IsExecuting();
+                    useMemorySwapping = g_floatSynchronizationManager->m_useMemorySwapping;
+                }
+                else
+                {
+                    isExecuting = g_doubleSynchronizationManager->IsExecuting();
+                    useMemorySwapping = g_doubleSynchronizationManager->m_useMemorySwapping;
+                }
+
+                if(ismb == 0 && numMBsRun == 0 && !isExecuting && useMemorySwapping)
+                {
+                    // we produce 100 gradients during the swap in/out sampling and because we apply gradients via
+                    // learning rate per sample this will move the weights in the wrong direction
+                    // solution: we set the learning rate to 0 for the swapping process and then reset it to its original value
+                    double *ptr = (double*)(&learnRatePerSample);
+                    // we produce a lot of gradients in memory swapping,
+                    // by setting the learning rate to zero we ensure that these gradients do not affect the results
+                    *ptr = 0.0; 
+
+                    fprintf(stderr, "Begin benchmarking for memory swapping...\n");
+
+                    //forward + backward pass for the synchronization manager
+                    net->ForwardProp(evaluationNodes);
+                    net->ForwardProp(criterionNodes[0]);
+                    // swapping in backwards pass only possible, if gradients are computing
+                    if (learnRatePerSample > 0.01 * m_minLearnRate) 
+                        net->Backprop(criterionNodes[0]);
+
+                    fprintf(stderr, "Memory swapping benchmarking complete!\n");
+                    reloadBatch = true;
+                }
+                else
+                {
+                    // reset the learning rate to its original value
+                    double *ptr = (double*)(&learnRatePerSample);
+                    *ptr = learningRateTemp;
+                    reloadBatch = false;
+
                 }
 
                 // ===========================================================

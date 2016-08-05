@@ -964,6 +964,7 @@ protected:
         virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool);
         virtual bool IsOutOfDateWrtInputs() const override;
 
+
     public:
         ComputationNodeBasePtr m_sourceNode; // one of the nodes of the loop   --TODO: What is the special meaning of this node? It seems to always be a delay node.
         int m_loopId;                        // unique loop id, index in m_allSEQNodes array

@@ -17,6 +17,7 @@
 #include <stdexcept>
 #include <list>
 #include <memory>
+#include <type_traits>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -1722,8 +1723,21 @@ public:
 
     void BackpropToSpecialization(const size_t inputIndex, const FrameRange& fr) override
     {
-        SynchronizationManager *sync = SynchronizationManager::GetSynchronizationManager();
-        if(!sync->IsExecuting() && sync->m_useMemorySwapping){ return; }
+        bool isExecuting = false;
+        bool useMemorySwapping = false;
+
+        if(std::is_same<ElemType, float>::value)
+        {
+            isExecuting = g_floatSynchronizationManager->IsExecuting();
+            useMemorySwapping = g_floatSynchronizationManager->m_useMemorySwapping;
+        }
+        else
+        {
+            isExecuting = g_doubleSynchronizationManager->IsExecuting();
+            useMemorySwapping = g_doubleSynchronizationManager->m_useMemorySwapping;
+        }
+
+        if(!isExecuting && useMemorySwapping){ return; }
 
         if (inputIndex == 0) // derivative with respect to the input.
         {
@@ -1766,8 +1780,23 @@ public:
     {
     	if (Environment().IsTraining())
     	{
-			SynchronizationManager *sync = SynchronizationManager::GetSynchronizationManager();
-			if(!sync->IsExecuting() && sync->m_useMemorySwapping)
+            bool isExecuting = false;
+            bool useMemorySwapping = false;
+            bool isInTrainingMode = false;
+
+            if(std::is_same<ElemType, float>::value)
+            {
+                isExecuting = g_floatSynchronizationManager->IsExecuting();
+                useMemorySwapping = g_floatSynchronizationManager->m_useMemorySwapping;
+                isInTrainingMode = g_floatSynchronizationManager->m_isInTrainingMode;
+            }
+            else
+            {
+                isExecuting = g_doubleSynchronizationManager->IsExecuting();
+                useMemorySwapping = g_doubleSynchronizationManager->m_useMemorySwapping;
+                isInTrainingMode = g_doubleSynchronizationManager->m_isInTrainingMode;
+            }
+			if(isInTrainingMode && !isExecuting && useMemorySwapping)
 			{
 				return;
 			}

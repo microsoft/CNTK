@@ -12,9 +12,12 @@
 #include <iostream>
 #include "SwapInAction.h"
 #include "SwapOutAction.h"
+#include "ComputationNetwork.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+SynchronizationManager<float>* g_floatSynchronizationManager = new SynchronizationManager<float>();
+SynchronizationManager<double>* g_doubleSynchronizationManager = new SynchronizationManager<double>();
 
 using std::cout;
 using std::endl;
@@ -22,31 +25,27 @@ using std::endl;
 inline int SampleSize(){ return 100; }
 inline float MeasurementUncertainty(){ return 1.15f; }
 
-SynchronizationManager* SynchronizationManager::s_synchronizationManager = nullptr;
 
 // this fetches the singleton instance
-SynchronizationManager* SynchronizationManager::GetSynchronizationManager()
+template <typename ElemType>
+SynchronizationManager<ElemType>::SynchronizationManager()
 {
-    if (SynchronizationManager::s_synchronizationManager == NULL)
-    {
-        SynchronizationManager::s_synchronizationManager = new SynchronizationManager();
-        SynchronizationManager::s_synchronizationManager->m_currentStepNumber = 0;
-        SynchronizationManager::s_synchronizationManager->m_timer = CUDATimer();
-        SynchronizationManager::s_synchronizationManager->m_isExecuting = false;
-        SynchronizationManager::s_synchronizationManager->m_useMemorySwapping = false;
-    }
-
-    return SynchronizationManager::s_synchronizationManager;
+    this->m_currentStepNumber = 0;
+    this->m_timer = CUDATimer();
+    this->m_isExecuting = false;
+    this->m_useMemorySwapping = false;
+    this->m_isInTrainingMode = false;
 }
 
-void SynchronizationManager::CleanUp()
+template <typename ElemType>
+void SynchronizationManager<ElemType>::CleanUp()
 {
    // 1. remove all swap actions which are not needed, that is which are too slow
    // 2. remove stats and other temporary structures which are not needed for execution
-    Matrix<float> *buffer;
+    Matrix<ElemType> *buffer;
     for(int i = 0; i < m_stepNumber2Buffer.size(); i++)
     {
-        std::vector<Matrix<float> *> buffers = m_stepNumber2Buffer[i];
+        std::vector<Matrix<ElemType> *> buffers = m_stepNumber2Buffer[i];
 
         for(int j = 0; j < buffers.size(); j++)
         {
@@ -64,14 +63,15 @@ void SynchronizationManager::CleanUp()
     }
 }
 
-void SynchronizationManager::FindSwapOrder()
+template<typename ElemType>
+void SynchronizationManager<ElemType>::FindSwapOrder()
 {
 #ifndef CPUONLY
     float totalMemorySwappedInMB = 0.0f;
     float totalMemoryInMB  = 0.0f;
-    for(Matrix<float>* buffer : m_bufferSet)
+    for(Matrix<ElemType>* buffer : m_bufferSet)
     {
-        totalMemoryInMB += buffer->GetNumRows()*buffer->GetNumCols()*sizeof(float)/1024.0f/1024;
+        totalMemoryInMB += buffer->GetNumRows()*buffer->GetNumCols()*sizeof(ElemType)/1024.0f/1024;
         for(int i = 0; i < m_buffer2StepNumbers[buffer].size(); i++)
         {
             bool isSwappable = true;
@@ -152,8 +152,8 @@ void SynchronizationManager::FindSwapOrder()
             // 1. create swap actions and register them with a step-name (=step-number)
             // 2. add to the cumulative swap time, that is additional swap operations
             //    under the same time steps are more expensive
-            SwapOutAction *swpOut = new SwapOutAction(buffer);
-            SwapInAction *swpIn = new SwapInAction(swpOut, buffer);
+            SwapOutAction<ElemType> *swpOut = new SwapOutAction<ElemType>(buffer);
+            SwapInAction<ElemType> *swpIn = new SwapInAction<ElemType>(swpOut, buffer);
 
             m_stepNumber2Actions[swapOutStepNumber].push_back(swpOut);
             m_stepNumber2Actions[swapInStepNumber].push_back(swpIn);
@@ -174,7 +174,8 @@ void SynchronizationManager::FindSwapOrder()
 #endif
 }
 
-void SynchronizationManager::BeginSynchronizeState(ComputationNodeBase *node, const size_t idx, const FrameRange& fr, bool isForward)
+template<typename ElemType>
+void SynchronizationManager<ElemType>::BeginSynchronizeState(ComputationNodeBase *node, const size_t idx, const FrameRange& fr, bool isForward)
 {
 
 #ifndef CPUONLY
@@ -190,13 +191,17 @@ void SynchronizationManager::BeginSynchronizeState(ComputationNodeBase *node, co
             if(m_stepName2StepNumber[name] == 0 && isForward == true)
                 allStatsGathered = true;
         
+        //if(!allStatsGathered || !m_isInTrainingMode)
         if(!allStatsGathered)
         {
             RegisterBuffers(node, isForward);
             SwapInFreedBuffers(node, isForward);
-            GatherRuntimeStatistics(node, idx, fr, isForward);
-            CUDA_CALL(cudaDeviceSynchronize());
-            MeasureSwapTime(node, isForward);
+            if(m_isInTrainingMode)
+            {
+            	GatherRuntimeStatistics(node, idx, fr, isForward);
+            	CUDA_CALL(cudaDeviceSynchronize());
+            	MeasureSwapTime(node, isForward);
+            }
         }
         else
         {
@@ -210,7 +215,7 @@ void SynchronizationManager::BeginSynchronizeState(ComputationNodeBase *node, co
     {
         std::string name = GetStepName(node, isForward);
         int stepNumber = m_stepName2StepNumber[name];
-        std::vector<SyncAction*> actionsToDo = m_stepNumber2Actions[stepNumber];
+        std::vector<SyncAction<ElemType>*> actionsToDo = m_stepNumber2Actions[stepNumber];
         for (int i = 0; i < actionsToDo.size(); i++)
         {
                // criteron, evaluation and input nodes do not have a MB layout?
@@ -224,35 +229,8 @@ void SynchronizationManager::BeginSynchronizeState(ComputationNodeBase *node, co
 }
 
 
-void ZeroGradients(ComputationNodeBase *node)
-{
-    if(node->NeedsGradient())
-    {
-        ComputationNode<float> *compNode =(ComputationNode<float>*)node;
-        if(&compNode->Gradient() != NULL)
-        {
-            //Matrix<float> *mat = (Matrix<float>*) node->GradientPtr().get();
-            //compNode->Gradient().SetValue(0.0f);
-            compNode->ResetGradient(0.0f);
-
-            cout << node->GradientPtr() << endl;
-            cout << node->NeedsGradient() << endl;
-            cudaPointerAttributes att;
-            //cudaPointerGetAttributes(&att, mat->Data());
-            cout << "device " << att.devicePointer << endl;
-            cout << "host " << att.hostPointer << endl;
-            cout << "mem " << att.memoryType << endl;
-            cout << "device " << att.device << endl;
-            //cout << mat->BufferSize() << endl;
-           try { 
-            
-               //CUDA_CALL(cudaMemset(node->GradientPtr().get(), 0, ((Matrix<float>*)node->GradientPtr().get())->BufferSize()));
- } catch(const std::exception& e) { /* */ }
-
-       }     }
-}
-
-void SynchronizationManager::EndSynchronizeState(ComputationNodeBase *node, const size_t idx, const FrameRange& fr, bool isForward)
+template<typename ElemType>
+void SynchronizationManager<ElemType>::EndSynchronizeState(ComputationNodeBase *node, const size_t idx, const FrameRange& fr, bool isForward)
 {
 #ifndef CPUONLY
 	if(!m_useMemorySwapping){ return; }
@@ -262,13 +240,12 @@ void SynchronizationManager::EndSynchronizeState(ComputationNodeBase *node, cons
         // end synchronize is called after the forward / backward pass, thus we can free
         // the memory now
         FreeBuffersForDryRun(node, isForward);
-        //ZeroGradients(node);
     }
     else
     {
         std::string name = GetStepName(node, isForward);
         int stepNumber = m_stepName2StepNumber[name];
-        std::vector<SyncAction*> actionsToDo = m_stepNumber2Actions[stepNumber];
+        std::vector<SyncAction<ElemType>*> actionsToDo = m_stepNumber2Actions[stepNumber];
         if (actionsToDo.size() == 0){ return; }
 
         for (int i = 0; i < actionsToDo.size(); i++)
@@ -282,7 +259,8 @@ void SynchronizationManager::EndSynchronizeState(ComputationNodeBase *node, cons
 #endif
 }
 
-void SynchronizationManager::SwapInFreedBuffers(ComputationNodeBase *node, bool isForward)
+template<typename ElemType>
+void SynchronizationManager<ElemType>::SwapInFreedBuffers(ComputationNodeBase *node, bool isForward)
 {
     //if(node->IsValueSharable()){ return; }
 
@@ -290,12 +268,12 @@ void SynchronizationManager::SwapInFreedBuffers(ComputationNodeBase *node, bool 
     int stepNumber = m_stepName2StepNumber[name];
     for(int i = 0; i < m_stepNumber2Buffer[stepNumber].size(); i++) 
     {
-        Matrix<float> *buffer = m_stepNumber2Buffer[stepNumber][i]; 
+        Matrix<ElemType> *buffer = m_stepNumber2Buffer[stepNumber][i]; 
 
         if(m_buffer2IsFreed.count(buffer) == 0){ continue; }
         if(m_buffer2IsFreed[buffer])
         {
-            SwapInAction *swp = m_buffer2SwapIn[buffer];
+            SwapInAction<ElemType> *swp = m_buffer2SwapIn[buffer];
             swp->BeginAction(); // begin swap in
             swp->EndAction(); // end swap in
             m_buffer2IsFreed[buffer] = false;
@@ -303,7 +281,8 @@ void SynchronizationManager::SwapInFreedBuffers(ComputationNodeBase *node, bool 
     }
 }
 
-void SynchronizationManager::FreeBuffersForDryRun(ComputationNodeBase *node, bool isForward)
+template<typename ElemType>
+void SynchronizationManager<ElemType>::FreeBuffersForDryRun(ComputationNodeBase *node, bool isForward)
 {
 #ifndef CPUONLY
     // if a value is marked as shareable, it will be used right after, thus it makes
@@ -316,7 +295,7 @@ void SynchronizationManager::FreeBuffersForDryRun(ComputationNodeBase *node, boo
     int stepNumber = m_stepName2StepNumber[name];
     for(int i = 0; i < m_stepNumber2Buffer[stepNumber].size(); i++) 
     {
-        Matrix<float> *buffer = m_stepNumber2Buffer[stepNumber][i];
+        Matrix<ElemType> *buffer = m_stepNumber2Buffer[stepNumber][i];
         if(buffer == NULL){ continue; }
 
         if(m_buffer2IsFreed.count(buffer) > 0)
@@ -326,8 +305,8 @@ void SynchronizationManager::FreeBuffersForDryRun(ComputationNodeBase *node, boo
 
         if(m_buffer2SwapIn.count(buffer) == 0)
         {
-            SwapOutAction *swpOut = new SwapOutAction(buffer);
-            SwapInAction *swpIn = new SwapInAction(swpOut, buffer);
+            SwapOutAction<ElemType> *swpOut = new SwapOutAction<ElemType>(buffer);
+            SwapInAction<ElemType> *swpIn = new SwapInAction<ElemType>(swpOut, buffer);
             m_buffer2SwapOut[buffer] = swpOut;
             m_buffer2SwapIn[buffer] = swpIn;
         }
@@ -341,14 +320,16 @@ void SynchronizationManager::FreeBuffersForDryRun(ComputationNodeBase *node, boo
 }
 
 inline std::string IsForwardToString(bool b){ return b ? std::string("_forward") : std::string("_backprop"); }
-std::string SynchronizationManager::GetStepName(ComputationNodeBase *node, bool isForward)
+template<typename ElemType>
+std::string SynchronizationManager<ElemType>::GetStepName(ComputationNodeBase *node, bool isForward)
 {
     std::wstring wname = node->GetName();
     return std::string(wname.begin(), wname.end()) + IsForwardToString(isForward);
 }
 
 
-void SynchronizationManager::RegisterBuffers(ComputationNodeBase *node, bool isForward)
+template<typename ElemType>
+void SynchronizationManager<ElemType>::RegisterBuffers(ComputationNodeBase *node, bool isForward)
 {
     
     int inputCount = node->GetNumInputs();
@@ -367,7 +348,7 @@ void SynchronizationManager::RegisterBuffers(ComputationNodeBase *node, bool isF
     for(int i = 0; i < inputCount; i++)
     {
        //cout << "IS SHARABLE: " << node->Input(i)->IsValueSharable() << endl;;
-       Matrix<float> *buffer = (Matrix<float>*)node->Input(i)->ValuePtr().get();
+       Matrix<ElemType> *buffer = (Matrix<ElemType>*)node->Input(i)->ValuePtr().get();
        if((buffer->GetDataLocation() != CurrentDataLocation::GPU &&
           buffer->GetDataLocation() != CurrentDataLocation::BOTH) ||
           buffer->GetMatrixType() != MatrixType::DENSE)
@@ -391,7 +372,8 @@ void SynchronizationManager::RegisterBuffers(ComputationNodeBase *node, bool isF
 }  
 
 
-void SynchronizationManager::GatherRuntimeStatistics(ComputationNodeBase *node, const size_t idx, const FrameRange& fr, bool isForward)
+template<typename ElemType>
+void SynchronizationManager<ElemType>::GatherRuntimeStatistics(ComputationNodeBase *node, const size_t idx, const FrameRange& fr, bool isForward)
 {
 #ifndef CPUONLY
     //special nodes with no inputs can be ignored
@@ -407,9 +389,9 @@ void SynchronizationManager::GatherRuntimeStatistics(ComputationNodeBase *node, 
     {
         // CUDA makes sure that calculations are only done once. 
         // we have to do this, otherwise the calls will be aborted because the values were already
-        // calculated.
-        Matrix<float> *output = (Matrix<float>*)node->ValuePtr().get(); 
-        float *data = output->Data();
+        // calculated. This is at least so for GEMM operations.
+        Matrix<ElemType> *output = (Matrix<ElemType>*)node->ValuePtr().get(); 
+        ElemType *data = output->Data();
         CUDA_CALL(cudaMemset(data, 0, output->BufferSize()));
         CUDA_CALL(cudaDeviceSynchronize());
 
@@ -435,7 +417,8 @@ void SynchronizationManager::GatherRuntimeStatistics(ComputationNodeBase *node, 
 }
 
 
-void SynchronizationManager::MeasureSwapTime(ComputationNodeBase *node, bool isForward) 
+template<typename ElemType>
+void SynchronizationManager<ElemType>::MeasureSwapTime(ComputationNodeBase *node, bool isForward) 
 {
 #ifndef CPUONLY
     std::string name = GetStepName(node, isForward);
@@ -445,7 +428,7 @@ void SynchronizationManager::MeasureSwapTime(ComputationNodeBase *node, bool isF
     if(inputCount == 0){ return; }
     for(int i = 0; i < inputCount; i++)
     {
-       Matrix<float> *input = (Matrix<float>*)node->Input(i)->ValuePtr().get();
+       Matrix<ElemType> *input = (Matrix<ElemType>*)node->Input(i)->ValuePtr().get();
        if((input->GetDataLocation() != CurrentDataLocation::GPU &&
           input->GetDataLocation() != CurrentDataLocation::BOTH) ||
           input->GetMatrixType() != MatrixType::DENSE)
@@ -453,8 +436,8 @@ void SynchronizationManager::MeasureSwapTime(ComputationNodeBase *node, bool isF
 
        if(input != NULL)
        {
-           SwapOutAction *out = new SwapOutAction(input);
-           SwapInAction *in =  new SwapInAction(out, out->GetGPUMatrix());
+           SwapOutAction<ElemType> *out = new SwapOutAction<ElemType>(input);
+           SwapInAction<ElemType> *in =  new SwapInAction<ElemType>(out, out->GetGPUMatrix());
            m_buffer2SwapOut[input] = out;
            m_buffer2SwapIn[input] = in;
 
@@ -482,11 +465,12 @@ void SynchronizationManager::MeasureSwapTime(ComputationNodeBase *node, bool isF
 #endif
 }
 
-void SynchronizationManager::ClearActionsAndTheirMemory()
+template<typename ElemType>
+void SynchronizationManager<ElemType>::ClearActionsAndTheirMemory()
 {
-    for(std::pair<int, std::vector<SyncAction*> > pair : m_stepNumber2Actions)
+    for(std::pair<int, std::vector<SyncAction<ElemType>*> > pair : m_stepNumber2Actions)
     {
-       for(SyncAction *action : pair.second)
+       for(SyncAction<ElemType> *action : pair.second)
            action->ReleaseMemory();
        pair.second.clear();
     }
@@ -507,6 +491,7 @@ void SynchronizationManager::ClearActionsAndTheirMemory()
 
     m_currentStepNumber = 0;
     m_isExecuting = false;
+    m_isInTrainingMode = false;
 }
 
 
