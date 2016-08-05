@@ -123,6 +123,7 @@
     <ClInclude Include="BlockMultiplierPlatform.h">
         <Filter>CPU</Filter>
     </ClInclude>
+    <ClInclude Include="Quantizers.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="GPUMatrix.h">
