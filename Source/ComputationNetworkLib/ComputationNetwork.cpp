@@ -1087,10 +1087,12 @@ void ComputationNetwork::PerformSVDecomposition(const map<wstring, float>& SVDCo
             wstring rightChildName = name + L"_V";
             shared_ptr<ComputationNode<ElemType>> pLeft = AddNodeToNetWithElemType(New<LearnableParameter<ElemType>>(m_deviceId, leftChildName, m, r));
             shared_ptr<ComputationNode<ElemType>> pRight = AddNodeToNetWithElemType(New<LearnableParameter<ElemType>>(m_deviceId, rightChildName, r, n));
+            InitLearnableParameters(pLeft,  L"fixedValue", 0); // follow the protocol; otherwise deferred initialization will overwrite the SVD values in validation
+            InitLearnableParameters(pRight, L"fixedValue", 0);
 
             // TODO: We should be able to move instead of copy but it currently isn't straightforward
             // due to redU and redVT being slices
-            pLeft->ValueAsMatrix() = redU.DeepClone();
+            pLeft->ValueAsMatrix()  = redU.DeepClone();
             pRight->ValueAsMatrix() = redVT.DeepClone();
 
             // Step 3. Change the network hierachy to include the SVD nodes
