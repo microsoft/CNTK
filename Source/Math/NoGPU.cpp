@@ -708,6 +708,7 @@ void GPUSparseMatrix<ElemType>::ConvertBuffer(OutType* outBuffer, const InType* 
 
 #pragma endregion Helper Functions
 
+template class MATH_API GPUSparseMatrix<short>;
 template class MATH_API GPUSparseMatrix<char>;
 template class MATH_API GPUSparseMatrix<float>;
 template class MATH_API GPUSparseMatrix<double>;
@@ -2216,6 +2217,7 @@ GPURNGHandle::GPURNGHandle(int deviceId, unsigned long seed)
 
 #pragma endregion GPURNGHandle functions
 
+template class GPUMatrix<short>;
 template class GPUMatrix<char>;
 template class GPUMatrix<float>;
 template class GPUMatrix<double>;

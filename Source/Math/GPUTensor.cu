@@ -49,7 +49,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 //  - input broadcasting is supported by stride=0
 //  - the operation is denoted by an opCode
 //  - reduction is supported, including summation, min, max (dual to broadcasting when computing gradients)
-//  - reduction operation is given by an opCode: opSum, opMin, opMax.
+//  - reduction operation is given by an opCode: opSum, opMin, opMax and opLogSum.
 //
 // This library makes extensive use of templates and macros.
 // Specifically, templates are used recursively to recurse over tensor dimensions.
@@ -273,10 +273,11 @@ template<> __device__ float NeutralValue<float>(ElementWiseOperator op)
 {
     switch (op)
     {
-    case ElementWiseOperator::opMax: return FLT_MIN;
-    case ElementWiseOperator::opMin: return FLT_MAX;
-    case ElementWiseOperator::opSum: return 0;
-    default:                         return 0; // error
+    case ElementWiseOperator::opSum:    return 0;
+    case ElementWiseOperator::opLogSum: return -INFINITY;
+    case ElementWiseOperator::opMin:    return FLT_MAX;
+    case ElementWiseOperator::opMax:    return FLT_MIN;
+    default:                            return 0; // error
     }
 };
 
@@ -284,10 +285,11 @@ template<> __device__ double NeutralValue<double>(ElementWiseOperator op)
 {
     switch (op)
     {
-    case ElementWiseOperator::opMax: return DBL_MIN;
-    case ElementWiseOperator::opMin: return DBL_MAX;
-    case ElementWiseOperator::opSum: return 0;
-    default:                         return 0; // error
+    case ElementWiseOperator::opSum:    return 0;
+    case ElementWiseOperator::opLogSum: return -INFINITY;
+    case ElementWiseOperator::opMin:    return DBL_MAX;
+    case ElementWiseOperator::opMax:    return DBL_MIN;
+    default:                            return 0; // error
     }
 };
 
@@ -302,6 +304,9 @@ template<typename ReductionType, class ElemType> __device__ void UpdateAggregate
     {
     case ElementWiseOperator::opSum:
         aggregate += val;
+        break;
+    case ElementWiseOperator::opLogSum:
+        aggregate = OpLogSum(aggregate, val);
         break;
     case ElementWiseOperator::opMin:
         if (val < aggregate)

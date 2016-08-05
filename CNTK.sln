@@ -1148,6 +1148,11 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CPPEvalClient", "Examples\E
 		{482999D1-B7E2-466E-9F8D-2119F93EAFD9} = {482999D1-B7E2-466E-9F8D-2119F93EAFD9}
 	EndProjectSection
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "BrainScriptTests", "Tests\UnitTests\BrainScriptTests\BrainScriptTests.vcxproj", "{9F999212-AFC5-4EAC-AA78-F7247D46C456}"
+	ProjectSection(ProjectDependencies) = postProject
+		{86883653-8A61-4038-81A0-2379FAE4200A} = {86883653-8A61-4038-81A0-2379FAE4200A}
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug_CpuOnly|x64 = Debug_CpuOnly|x64
@@ -1426,6 +1431,14 @@ Global
 		{CCC07E8E-F33A-4AF7-9F60-93E2AA61C75E}.Release_CpuOnly|x64.Build.0 = Release_CpuOnly|x64
 		{CCC07E8E-F33A-4AF7-9F60-93E2AA61C75E}.Release|x64.ActiveCfg = Release|x64
 		{CCC07E8E-F33A-4AF7-9F60-93E2AA61C75E}.Release|x64.Build.0 = Release|x64
+		{9F999212-AFC5-4EAC-AA78-F7247D46C456}.Debug_CpuOnly|x64.ActiveCfg = Debug_CpuOnly|x64
+		{9F999212-AFC5-4EAC-AA78-F7247D46C456}.Debug_CpuOnly|x64.Build.0 = Debug_CpuOnly|x64
+		{9F999212-AFC5-4EAC-AA78-F7247D46C456}.Debug|x64.ActiveCfg = Debug|x64
+		{9F999212-AFC5-4EAC-AA78-F7247D46C456}.Debug|x64.Build.0 = Debug|x64
+		{9F999212-AFC5-4EAC-AA78-F7247D46C456}.Release_CpuOnly|x64.ActiveCfg = Release_CpuOnly|x64
+		{9F999212-AFC5-4EAC-AA78-F7247D46C456}.Release_CpuOnly|x64.Build.0 = Release_CpuOnly|x64
+		{9F999212-AFC5-4EAC-AA78-F7247D46C456}.Release|x64.ActiveCfg = Release|x64
+		{9F999212-AFC5-4EAC-AA78-F7247D46C456}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -1584,5 +1597,6 @@ Global
 		{3385EBEA-5F97-4B2B-9F30-0E6D7F91B9CA} = {47755F2E-D674-4175-9E38-8EA053455072}
 		{1C6E6C53-1AA7-4B69-913E-B97BB5A872CF} = {3385EBEA-5F97-4B2B-9F30-0E6D7F91B9CA}
 		{CCC07E8E-F33A-4AF7-9F60-93E2AA61C75E} = {3385EBEA-5F97-4B2B-9F30-0E6D7F91B9CA}
+		{9F999212-AFC5-4EAC-AA78-F7247D46C456} = {6F19321A-65E7-4829-B00C-3886CD6C6EDE}
 	EndGlobalSection
 EndGlobal

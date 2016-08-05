@@ -13,6 +13,7 @@
 #include <set>
 #include <stdexcept>
 #include <algorithm>
+#include <iomanip>
 
 #ifndef let
 #define let const auto
@@ -569,37 +570,43 @@ public:
 // ---------------------------------------------------------------------------
 
 // diagnostics helper: print the content
-void Expression::Dump(int indent) const
+void Expression::DumpToStream(wstringstream & treeStream, int indent)
 {
-    fprintf(stderr, "%*s", indent, "");
+    treeStream << std::setfill(L' ') << std::setw(indent) << L" ";
+    treeStream << std::setw(0);
+
     if (op == L"s")
-        fprintf(stderr, "'%ls' ", s.c_str());
+        treeStream << "'" << s.c_str() << "'";
     else if (op == L"d")
-        fprintf(stderr, "%.f ", d);
+        treeStream << std::fixed << std::setprecision(0) << d;
     else if (op == L"b")
-        fprintf(stderr, "%s ", b ? "true" : "false");
+        treeStream << b ? "true" : "false";
     else if (op == L"id")
-        fprintf(stderr, "%ls ", id.c_str());
+        treeStream << id.c_str();
     else if (op == L"new" || op == L"array" || op == L".")
-        fprintf(stderr, "%ls %ls ", op.c_str(), id.c_str());
+        treeStream << op.c_str() << " " << id.c_str();
     else
-        fprintf(stderr, "%ls ", op.c_str());
+        treeStream << op.c_str();
+
     if (!args.empty())
     {
-        fprintf(stderr, "\n");
+        treeStream << std::endl;
         for (const auto& arg : args)
-            arg->Dump(indent + 2);
+        {
+            arg->DumpToStream(treeStream, indent + 1);
+        }
     }
     if (!namedArgs.empty())
     {
-        fprintf(stderr, "\n");
+        treeStream << std::endl;
         for (const auto& arg : namedArgs)
         {
-            fprintf(stderr, "%*s%ls =\n", indent + 2, "", arg.first.c_str());
-            arg.second.second->Dump(indent + 4);
+            treeStream << std::setfill(L' ') << std::setw(indent + 1) << L"";
+            treeStream << arg.first.c_str() << L" =" << std::endl;
+            arg.second.second->DumpToStream(treeStream, indent + 2);
         }
     }
-    fprintf(stderr, "\n");
+    treeStream << std::endl;
 }
 
 class Parser : public Lexer
@@ -974,12 +981,6 @@ public:
         ExpressionPtr topDict = make_shared<Expression>(GetCursor(), L"[]");
         topDict->namedArgs = topMembers;
         return topDict;
-    }
-    // simple test function for use during development
-    static void Test()
-    {
-        let parserTest = L"a=1\na1_=13;b=2 // cmt\ndo = (print\n:train:eval) ; x = array[1..13] (i=>1+i*print.message==13*42) ; print = new PrintAction [ message = 'Hello World' ]";
-        ParseConfigDictFromString(parserTest, L"Test", vector<wstring>())->Dump();
     }
 };
 

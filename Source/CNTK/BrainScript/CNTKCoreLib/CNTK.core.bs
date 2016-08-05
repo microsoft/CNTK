@@ -54,6 +54,9 @@ Plus                    = CNTK2.Plus
 RectifiedLinear         = CNTK2.Relu
 ReduceSum               = CNTK2.ReduceSum
 ReduceLogSum            = CNTK2.ReduceLogSum
+ReduceMin               = CNTK2.ReduceMin
+ReduceMax               = CNTK2.ReduceMax
+
 Round                   = CNTK2.Round
 Sigmoid                 = CNTK2.Sigmoid
 
@@ -142,10 +145,12 @@ CNTK2 = [
     Tanh(_, tag='') = new ComputationNode [ operation = 'Tanh' ; inputs = _ /*plus the function args*/ ]
 
     // 6. Reductions    
-    # the following is a temporary workaround until we have the C++ version
-    ReduceLogSum (_, axis=0, tag='')  = if axis != 0 then Fail("ReduceLogSum for now only supports axis=0.")
-    else [ tag1=tag ; axis1=axis ; out = RowSlice (0, 1, _ - LogSoftmax (_), tag=tag1) ].out
-    ReduceSum (_, axis=0, tag='')     = new ComputationNode [ operation = 'ReduceElements' ; inputs = _ ; reductionOp = "Sum"    /*plus the function args*/ ]
+    ReduceSum   (_, axis=0, tag='') = new ComputationNode [ operation = 'ReduceElements' ; inputs = _ ; reductionOp = "Sum"    /*plus the function args*/ ]
+    ReduceLogSum(_, axis=0, tag='') = new ComputationNode [ operation = 'ReduceElements' ; inputs = _ ; reductionOp = "LogSum" /*plus the function args*/ ]
+    ReduceMin   (_, axis=0, tag='') = new ComputationNode [ operation = 'ReduceElements' ; inputs = _ ; reductionOp = "Min"    /*plus the function args*/ ]
+    ReduceMax   (_, axis=0, tag='') = new ComputationNode [ operation = 'ReduceElements' ; inputs = _ ; reductionOp = "Max"    /*plus the function args*/ ]
+    #ReduceMean (_, axis=0, tag='') = new ComputationNode [ operation = 'ReduceElements' ; inputs = _ ; reductionOp = "Mean"   /*plus the function args*/ ]
+    
     // 7. Control flow (if, composite etc.)
     // None so far
 
@@ -277,10 +282,6 @@ PerDimMeanVarDeNormalization(dataVectorSequence, meanVector, invStdDevVector, ta
 PerDimMeanVarNormalization(dataVectorSequence, meanVector, invStdDevVector, tag='') = new ComputationNode [ operation = 'PerDimMeanVarNormalization' ; inputs = (dataVectorSequence : meanVector : invStdDevVector) /*plus the function args*/ ]
 Reciprocal(z, tag='') = new ComputationNode [ operation = 'Reciprocal' ; inputs = z /*plus the function args*/ ]
 //# the following is a temporary workaround until we have the C++ version
-#ReduceLogSum (z, axis=0, tag='')  = new ComputationNode [ operation = 'ReduceElements' ; inputs = z ; reductionOp = "LogSum" /*plus the function args*/ ]
-#ReduceMean (z, axis=0, tag='')    = new ComputationNode [ operation = 'ReduceElements' ; inputs = z ; reductionOp = "Mean"    /*plus the function args*/ ]
-ReduceMax (z, axis=0, tag='')     = new ComputationNode [ operation = 'ReduceElements' ; inputs = z ; reductionOp = "Max"     /*plus the function args*/ ]
-ReduceMin (z, axis=0, tag='')     = new ComputationNode [ operation = 'ReduceElements' ; inputs = z ; reductionOp = "Min"     /*plus the function args*/ ]
 Scale(scalarScalingFactor, matrix, tag='') = new ComputationNode [ operation = 'Scale' ; inputs = (scalarScalingFactor : matrix) /*plus the function args*/ ]
 # TODO: Scale = ElementTimes
 ScatterPacked(cond, indexSequence, sourceData, tag='') = new ComputationNode [ operation = 'ScatterPacked' ; inputs = (cond : indexSequence : sourceData) /*plus the function args*/ ]

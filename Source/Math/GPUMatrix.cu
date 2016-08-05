@@ -3232,7 +3232,7 @@ void GPUMatrix<ElemType>::BatchNormalizationForward(const GPUMatrix<ElemType>& s
                                                Data(), out.Data(),
                                                scale.Data(), bias.Data(),
                                                runMean.Data(), runInvStdDev.Data(), GetStream());
-        assert(saveMean.IsEmpty() && saveInvStdDev.IsEmpty()); // (these are not produced in this case)
+        // CNTK engine returns saveMean and saveInvStdDev empty, but cnDNN engine does not.
     }
 }
 
@@ -4390,8 +4390,11 @@ void GPUMatrix<ElemType>::TensorOp(ElemType beta, const GPUMatrix<ElemType>& a, 
                                    const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, 2>& regularStrides,
                                    const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, 2>& reducingStrides)
 {
-    if (reductionOp != ElementWiseOperator::opSum && reductionOp != ElementWiseOperator::opMax && reductionOp != ElementWiseOperator::opMin)
-        InvalidArgument("TensorOp: Unary reduction operations other than opMax, opMin, opSum not yet implemented.");
+    if (reductionOp != ElementWiseOperator::opSum    &&
+        reductionOp != ElementWiseOperator::opLogSum &&
+        reductionOp != ElementWiseOperator::opMin    &&
+        reductionOp != ElementWiseOperator::opMax)
+        InvalidArgument("TensorOp: Unary reduction operations other than opMax, opMin, opSum, and opLogSum are not implemented.");
 
     a.PrepareDevice();
     if (a.GetComputeDeviceId() != GetComputeDeviceId())
@@ -4511,11 +4514,35 @@ template void GPUMatrix<char>::SetValue(const size_t numRows, const size_t numCo
 template void GPUMatrix<char>::SetValue(GPUMatrix<char> const&);
 //template void GPUMatrix<char>::SetValue(CPUSparseMatrix<char> const&);
 //template void GPUMatrix<char>::SetValue(GPUSparseMatrix<char> const&);
-
 template void GPUMatrix<char>::CopySection(size_t numRows, size_t numCols, char* dst, size_t colStride) const;
 template void GPUMatrix<char>::Reshape(const size_t, const size_t);
 template GPUMatrix<char>& GPUMatrix<char>::operator*=(char);
 template DEVICEID_TYPE GPUMatrix<char>::PrepareDevice(DEVICEID_TYPE deviceId) const;
+
+// Support <short>
+template GPUMatrix<short>::GPUMatrix(const size_t numRows, const size_t numCols, int deviceId);
+template GPUMatrix<short>::GPUMatrix(const size_t numRows, const size_t numCols, int deviceId, short* pArray, const size_t matrixFlags);
+template GPUMatrix<short>::GPUMatrix(const GPUMatrix<short>&);
+template GPUMatrix<short>::GPUMatrix(GPUMatrix<short>&&);
+template short* GPUMatrix<short>::CopyToArray() const;
+template void GPUMatrix<short>::ChangeDeviceTo(int);
+template void GPUMatrix<short>::Resize(size_t, size_t, bool);
+template void GPUMatrix<short>::RequireSize(size_t, size_t, bool);
+
+template GPUMatrix<short>::~GPUMatrix();
+template GPUMatrix<short> GPUMatrix<short>::ColumnSlice(size_t startColumn, size_t numCols) const;
+template GPUMatrix<short>& GPUMatrix<short>::operator=(GPUMatrix<short>&&);
+template GPUMatrix<short>::GPUMatrix(int);
+template void GPUMatrix<short>::SetValue(const short);
+template void GPUMatrix<short>::SetValue(const size_t numRows, const size_t numCols, int deviceId, short* pArray, size_t matrixFlags);
+//template void GPUMatrix<short>::SetValue(CPUMatrix<short> const&);
+template void GPUMatrix<short>::SetValue(GPUMatrix<short> const&);
+//template void GPUMatrix<short>::SetValue(CPUSparseMatrix<short> const&);
+//template void GPUMatrix<short>::SetValue(GPUSparseMatrix<short> const&);
+template void GPUMatrix<short>::CopySection(size_t numRows, size_t numCols, short* dst, size_t colStride) const;
+template void GPUMatrix<short>::Reshape(const size_t, const size_t);
+template GPUMatrix<short>& GPUMatrix<short>::operator*=(short);
+template DEVICEID_TYPE GPUMatrix<short>::PrepareDevice(DEVICEID_TYPE deviceId) const;
 
 template GPUMatrix<int>::GPUMatrix(const size_t, const size_t, int, int*, const size_t);
 template GPUMatrix<int>::~GPUMatrix();
@@ -4523,12 +4550,14 @@ template GPUMatrix<int>::~GPUMatrix();
 template int* TracingGPUMemoryAllocator::Allocate<int>(int, size_t);
 template size_t* TracingGPUMemoryAllocator::Allocate<size_t>(int, size_t);
 template long* TracingGPUMemoryAllocator::Allocate<long>(int, size_t);
+template short* TracingGPUMemoryAllocator::Allocate<short>(int, size_t);
 template char* TracingGPUMemoryAllocator::Allocate<char>(int, size_t);
 template float* TracingGPUMemoryAllocator::Allocate<float>(int, size_t);
 template double* TracingGPUMemoryAllocator::Allocate<double>(int, size_t);
 
 template void TracingGPUMemoryAllocator::Free<int>(int, int*, bool);
 template void TracingGPUMemoryAllocator::Free<size_t>(int, size_t*, bool);
+template void TracingGPUMemoryAllocator::Free<short>(int, short*, bool);
 template void TracingGPUMemoryAllocator::Free<char>(int, char*, bool);
 template void TracingGPUMemoryAllocator::Free<float>(int, float*, bool);
 template void TracingGPUMemoryAllocator::Free<double>(int, double*, bool);
