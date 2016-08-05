@@ -93,7 +93,7 @@ REDUCE_MIN_TEST_CASES = [
 ]
 
 @pytest.mark.parametrize("input_data, axis_data, expected_result, expected_gradient", REDUCE_MIN_TEST_CASES)
-def test_op_reduce_loin(input_data, axis_data, expected_result, expected_gradient, device_id, precision):
+def test_op_reduce_min(input_data, axis_data, expected_result, expected_gradient, device_id, precision):
 
     a = I([input_data])
 

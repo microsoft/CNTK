@@ -6278,8 +6278,8 @@ static void TensorOpWithFn(ElemType beta, array<ElemType*, N> pointers, ElemType
     {
         CaseTensorOpWithFnAndReduction(Sum);
         CaseTensorOpWithFnAndReduction(LogSum);
-        CaseTensorOpWithFnAndReduction(Max);
         CaseTensorOpWithFnAndReduction(Min);
+        CaseTensorOpWithFnAndReduction(Max);
     default:
         LogicError("Specified ElementWiseOperator op %d not suported as reduction operation.", (int)reductionOp);
     }
