@@ -352,8 +352,7 @@ template <class ElemType>
     m_pMBLayout = nullptr; // this node does not hold mini-batch data
 
     // lazy init if we got a dimension now
-    // We call this here and in Validate(true), since we don't know which gets called first.
-#if 0
+#if 0 // fake old buggy behavior before deferred initialization
     if (isFinalValidationPass && !m_initString.empty() && (m_initString != L"fromValue" || m_initValue != 0))
     {
         fprintf(stderr, "Validate: deferred '%ls' initialization patched to fromValue 0 for back compat\n", m_initString.c_str());
@@ -361,8 +360,13 @@ template <class ElemType>
         m_initValue = 0;
     }
 #endif
+#if 0
+    // We call this here and in Validate(true), since we don't know which gets called first.
+    // TODO: Actually this should never be needed, because each time dimensions change, we init.
+    //       So if we get here without fully-known dimensions, this call won't do anything either.
     if (isFinalValidationPass)
         LazyInitParameters();
+#endif
 }
 
 // deferred initialization
@@ -440,10 +444,10 @@ void LearnableParameter<ElemType>::InferInputDimsFrom(const TensorShape& otherSh
     }
     fprintf(stderr, "%ls operation: Tensor shape was inferred as [%s].\n", NodeDescription().c_str(), string(GetSampleLayout()).c_str());
 
-    // now repeat initialization
+    // initialize the values
     // We call this here and in Validate(true), since we don't know which gets called first.
     // Note: It seems that this is not necessary, and that Validate(true) is only called after inference.
-#if 0
+#if 0 // fake old buggy behavior before deferred initialization
     if (m_initString != L"fromValue" || m_initValue != 0)
     {
         fprintf(stderr, "InferInputDimsFrom: deferred '%ls' initialization patched to fromValue 0 for back compat\n", m_initString.c_str());
