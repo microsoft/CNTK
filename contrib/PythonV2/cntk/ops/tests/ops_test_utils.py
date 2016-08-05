@@ -14,7 +14,6 @@ import pytest
 from cntk.tests.test_utils import *
 
 from ...context import get_new_context
-from ...reader import *
 from ...utils import sanitize_dtype_cntk
 from .. import constant, input
 

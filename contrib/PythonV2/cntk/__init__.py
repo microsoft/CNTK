@@ -13,10 +13,8 @@ os.environ['PATH'] += ';'+os.path.abspath(__file__)
 from .context import *
 from .graph import *
 from . import ops
-from .sgd import *
-from .reader import UCIFastReader, CNTKTextFormatReader
 from .ops import *
-from .utils.eval import eval
+
 
 import numpy as np
 

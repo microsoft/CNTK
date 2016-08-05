@@ -1,7 +1,8 @@
 import numpy as np
 import sys
 import os
-import cntk_py
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..'))
+import cntk.cntk_py as cntk_py
 
 def create_variable(shape, data_type='float', is_sparse=False, needs_gradient=True, name=""):
     if data_type == 'float':
@@ -75,7 +76,7 @@ if __name__=='__main__':
     deserializerConfiguration = cntk_py.Dictionary()
     deserializerConfiguration["type"] = cntk_py.DictionaryValue("CNTKTextFormatDeserializer")
     deserializerConfiguration["module"] = cntk_py.DictionaryValue("CNTKTextFormatReader")
-    deserializerConfiguration["file"] = cntk_py.DictionaryValue("SimpleDataTrain_cntk_text.txt")
+    deserializerConfiguration["file"] = cntk_py.DictionaryValue(r"../../../../../Examples/Other/Simple2d/Data/SimpleDataTrain_cntk_text.txt")
     deserializerConfiguration["input"] = cntk_py.DictionaryValueFromDict(inputStreamsConfig)
 
     minibatchSourceConfiguration = cntk_py.Dictionary()
