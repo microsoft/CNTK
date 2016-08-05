@@ -15,6 +15,7 @@ from cntk.tests.test_utils import *
 
 from ...context import get_new_context
 from ...utils import sanitize_dtype_cntk
+from ...utils import eval as cntk_eval
 from .. import constant, input
 
 I = input
@@ -27,13 +28,13 @@ def left_matrix_type(request):
 def right_matrix_type(request):
     return request.param
 
-def _test_unary_op(ctx, op_func,
+def _test_unary_op(precision, device_id, op_func,
         operand, expected_forward, expected_backward_all):
     
-    value = AA(operand, dtype=ctx.precision_numpy) 
+    value = AA(operand, dtype=PRECISION_TO_TYPE[precision]) 
     
     a = I(shape=value.shape,
-            data_type=sanitize_dtype_cntk(ctx.precision_numpy),
+            data_type=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]),
             needs_gradient=True,
             name='a')
 
@@ -41,103 +42,89 @@ def _test_unary_op(ctx, op_func,
     value.shape = (1,1) + value.shape    
 
     input_op = op_func(a)
-    forward_input = {a:value}
-    backward_input = {a:np.ones(value.shape)}
+    forward_input = {a:value}    
     expected_backward = { a: expected_backward_all['arg'], }
     unittest_helper(input_op, 
-            forward_input, expected_forward, 
-            backward_input, expected_backward,
-            device_id=ctx.device, precision=ctx.precision, clean_up=True)
+            forward_input, expected_forward, expected_backward,
+            device_id=device_id, precision=precision, clean_up=True)
    
-def _test_binary_op(ctx, op_func,
+def _test_binary_op(precision, device_id, op_func,
         left_operand, right_operand, 
         expected_forward, expected_backward_all):
     
-    left_value = AA(left_operand, dtype=ctx.precision_numpy) 
-    right_value = AA(right_operand, dtype=ctx.precision_numpy)
-
+    left_value = AA(left_operand, dtype=PRECISION_TO_TYPE[precision]) 
+    right_value = AA(right_operand, dtype=PRECISION_TO_TYPE[precision])
+    
     a = I(shape=left_value.shape,
-            data_type=sanitize_dtype_cntk(ctx.precision_numpy),
+            data_type=sanitize_dtype_cntk(precision),
             needs_gradient=True,
             name='a')
 
     b = I(shape=right_value.shape,
-            data_type=sanitize_dtype_cntk(ctx.precision_numpy),
+            data_type=sanitize_dtype_cntk(precision),
             needs_gradient=True,
             name='b')
+    
+    if (type(op_func) == str):
+        input_op_constant = eval('a %s right_value'%op_func)
+        constant_op_input = eval('left_value %s b'%op_func)
+        input_op_input = eval('a %s b'%op_func)
+    else:
+        input_op_constant = op_func(a, right_value)
+        constant_op_input = op_func(left_value, b)
+        input_op_input = op_func(a, b)
 
     # create batch by wrapping the data point into a sequence of length one and
     # putting it into a batch of one sample
     left_value.shape = (1,1) + left_value.shape
     right_value.shape = (1,1) + right_value.shape
-    
-    if (type(op_func) == str):
-        input_op_constant = eval('a %s right_operand'%op_func)
-        constant_op_input = eval('left_operand %s b'%op_func)
-        input_op_input = eval('a %s b'%op_func)
-    else:
-        input_op_constant = op_func(a, right_operand)
-        constant_op_input = op_func(left_operand, b)
-        input_op_input = op_func(a, b)
 
-    forward_input = {a:left_value}
-    backward_input = {a:np.ones(left_value.shape)}
+    ''' 
+    forward_input = {a:left_value}    
     expected_backward = { a: expected_backward_all['left_arg'], }
     unittest_helper(input_op_constant, 
-            forward_input, expected_forward, 
-            backward_input, expected_backward,
-            device_id=ctx.device, precision=ctx.precision, clean_up=True)
-        
-    forward_input = {b:right_value}
-    backward_input = {b:np.ones(right_value.shape)}
+            forward_input, expected_forward, expected_backward,
+            device_id=device_id, precision=precision, clean_up=True)
+    '''
+    forward_input = {b:right_value}    
     expected_backward = { b: expected_backward_all['right_arg'], }
     unittest_helper(constant_op_input, 
-            forward_input, expected_forward, 
-            backward_input, expected_backward,
-            device_id=ctx.device, precision=ctx.precision, clean_up=True) 
-    
-    forward_input = {a:left_value, b:right_value}
-    backward_input = {a:np.ones(left_value.shape), b:np.ones(right_value.shape)}
+            forward_input, expected_forward, expected_backward,
+            device_id=device_id, precision=precision, clean_up=True) 
+    '''
+    forward_input = {a:left_value, b:right_value}    
     expected_backward = { a: expected_backward_all['left_arg'], b: expected_backward_all['right_arg'], }
     unittest_helper(input_op_input, 
-        forward_input, expected_forward, 
-        backward_input, expected_backward,
-        device_id=ctx.device, precision=ctx.precision, clean_up=True)
-   
+        forward_input, expected_forward, expected_backward,
+        device_id=device_id, precision=precision, clean_up=True)
+    '''
 def unittest_helper(root_node, 
-        forward_input, expected_forward, 
-        backward_input, expected_backward,
+        forward_input, expected_forward, expected_backward,
         device_id=-1, precision="float", clean_up=True):
+    
+    backward_pass = expected_backward is not None
+    forward, backward = cntk_eval(root_node, precision, device_id, forward_input, backward_pass)
 
-    from cntk.context import get_new_context
-    with get_new_context() as ctx:
-        ctx.clean_up = clean_up
-        ctx.device_id = device_id
-        ctx.precision = precision
-        assert not ctx.input_nodes
-        backward_pass = expected_backward is not None
-        forward, backward = ctx.eval(root_node, forward_input, backward_pass)
+    # for forward we always expect only one result
+    assert len(forward)==1
+    forward = list(forward.values())[0]
+    
+    for res, exp in zip(forward, expected_forward):
+        assert np.allclose(res, exp, atol=TOLERANCE_ABSOLUTE)
+        assert res.shape == AA(exp).shape
 
-        # for forward we always expect only one result
-        assert len(forward)==1
-        forward = list(forward.values())[0]
-        
-        for res, exp in zip(forward, expected_forward):
-            assert np.allclose(res, exp, atol=TOLERANCE_ABSOLUTE)
-            assert res.shape == AA(exp).shape
+    if expected_backward:                                
+        for key in expected_backward:
+            res, exp = backward[key], expected_backward[key]
+            if isinstance(res, list):
+                assert len(res) == len(exp)
+                for res_seq, exp_seq in zip (res, exp):
+                    assert np.allclose(res_seq, exp_seq, atol=TOLERANCE_ABSOLUTE)
+                    assert res_seq.shape == AA(exp_seq).shape
 
-        if expected_backward:                                
-            for key in expected_backward:
-                res, exp = backward[key], expected_backward[key]
-                if isinstance(res, list):
-                    assert len(res) == len(exp)
-                    for res_seq, exp_seq in zip (res, exp):
-                        assert np.allclose(res_seq, exp_seq, atol=TOLERANCE_ABSOLUTE)
-                        assert res_seq.shape == AA(exp_seq).shape
-
-                elif isinstance(res, np.ndarray):
-                    assert np.allclose(res, exp, atol=TOLERANCE_ABSOLUTE)
-                    assert res.shape == AA(exp).shape
+            elif isinstance(res, np.ndarray):
+                assert np.allclose(res, exp, atol=TOLERANCE_ABSOLUTE)
+                assert res.shape == AA(exp).shape
 
 def batch_dense_to_sparse(batch, dynamic_axis=''):
     '''

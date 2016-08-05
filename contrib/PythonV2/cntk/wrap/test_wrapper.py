@@ -3,9 +3,8 @@ import pytest
 import numpy as np
 from cntk import cntk_py
 from cntk.ops import input, constant
-from ..context import get_new_context
 from cntk.tests.test_utils import *
-from ..utils import sanitize_batch, remove_masked_elements, pad_to_dense
+from ..utils import sanitize_batch, remove_masked_elements, pad_to_dense, precision_numpy, cntk_device
 
 def create_Value_with_value(shape, data_type, value, dev):
     if data_type == cntk_py.DataType_Float:
@@ -56,42 +55,41 @@ def test_hashability_1():
 
     assert len(op.Parameters()) == 0
 
-def test_masking(device_id, precision):
-    with get_new_context() as ctx:
-        ctx.precision = precision
-        ctx.device_id = device_id
+def test_masking(device_id, precision):    
+    # Batch of three sequences of lengths 2, 4, and 1
+    batch = [
+            [[1], [2]],
+            [[3], [4], [5], [6]],
+            [[7]]
+            ]
 
-        # Batch of three sequences of lengths 2, 4, and 1
-        batch = [
-                [[1], [2]],
-                [[3], [4], [5], [6]],
-                [[7]]
-                ]
+    for idx,sample in enumerate(batch):
+        batch[idx] = AA(sample)
 
-        for idx,sample in enumerate(batch):
-            batch[idx] = AA(sample)
+    num_samples = len(batch)
+    max_seq_len = max(len(seq) for seq in batch)
+            
+    precision_np = precision_numpy(precision)    
+    device = cntk_device(device_id)
+            
+    # sanitizing the batch will wrap it into a Value with a corresponding mask
+    value = sanitize_batch(batch, precision_np, device)
 
-        num_samples = len(batch)
-        max_seq_len = max(len(seq) for seq in batch)
+    mask = value.Mask()
 
-        # sanitizing the batch will wrap it into a Value with a corresponding mask
-        value = sanitize_batch(batch, ctx.precision_numpy, ctx.device)
+    # mask_array will contain a row per sequence, with the columns having 1 for valid
+    # entries and 0 for invalid ones.
+    mask_array = mask.ToNumPy()
+    assert mask_array.shape == (num_samples, max_seq_len)
 
-        mask = value.Mask()
+    assert np.all(mask_array[0] == AA([1, 1, 0, 0]))
+    assert np.all(mask_array[1] == AA([1, 1, 1, 1]))
+    assert np.all(mask_array[2] == AA([1, 0, 0, 0]))
 
-        # mask_array will contain a row per sequence, with the columns having 1 for valid
-        # entries and 0 for invalid ones.
-        mask_array = mask.ToNumPy()
-        assert mask_array.shape == (num_samples, max_seq_len)
-
-        assert np.all(mask_array[0] == AA([1, 1, 0, 0]))
-        assert np.all(mask_array[1] == AA([1, 1, 1, 1]))
-        assert np.all(mask_array[2] == AA([1, 0, 0, 0]))
-
-        # now pad the batch and check whether our helper function correctly uses
-        # the mask in order to remove the padded zeros
-        list_of_np = remove_masked_elements(pad_to_dense(batch), mask_array)
-        for actual, expected in zip(list_of_np, batch):
-            assert np.all(actual==expected)
+    # now pad the batch and check whether our helper function correctly uses
+    # the mask in order to remove the padded zeros
+    list_of_np = remove_masked_elements(pad_to_dense(batch), mask_array)
+    for actual, expected in zip(list_of_np, batch):
+        assert np.all(actual==expected)
 
 

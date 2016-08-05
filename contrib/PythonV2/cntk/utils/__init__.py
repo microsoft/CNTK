@@ -8,6 +8,37 @@ import os
 import sys
 import numpy as np
 import scipy.sparse
+from cntk import cntk_py
+
+def precision_numpy(precision):
+    '''
+    Converts string precision to numpy precision 
+    Args:
+        precision (str): string precision
+
+    Returns:
+        numpy precision
+    '''
+    if precision == 'float':
+        return np.float32
+    elif precision == 'double':
+        return np.float64
+    else:
+        raise ValueError('precision value: "%s" is not supported'%precision)
+
+def cntk_device(device_id):
+    '''
+    Converts device ID to CNTK DeviceDescriptor instance
+    Args:
+        device_id (int): device id, -1 for CPU, 0 or higher for GPU
+
+    Returns:
+        CNTK DeviceDescriptor
+    '''
+    if device_id==-1:
+        return cntk_py.DeviceDescriptor_CPUDevice()
+    else:
+        return cntk_py.DeviceDescriptor_GPUDevice(device_id)        
 
 def cntk_to_numpy_shape(shape):
     '''
@@ -28,48 +59,6 @@ def cntk_to_numpy_shape(shape):
 
     # cntk uses column major, thus we reverse the axes
     return tuple(reversed(shape))
-
-
-def aggregate_readers(readers):
-    '''
-    Aggregates the readers. If readers is provided, all elements have to
-    reference the same filename. 
-
-    Args:
-        readers (iterable): readers to be aggregated
-    '''
-    import copy
-    readers_map = {}
-
-    reader_types = set([type(r) for r in readers])
-    if len(reader_types) == 0:
-        return None
-
-    if len(reader_types) > 1:
-        raise ValueError(
-            'only one reader type is provided. You gave: %s' % str(reader_types))
-
-    from ..reader import LazyInputReader, CNTKTextFormatReader
-    if reader_types.pop() == LazyInputReader:
-        from ..context import get_context
-        filename = get_temp_filename(get_context().directory)
-        r = CNTKTextFormatReader(filename)
-        for lr in readers:
-            r.add_lazy_input(lr)
-
-        return r
-
-    else:
-        for r in readers:
-            filename = r['FileName']
-            if filename in readers_map and\
-                    r.__class__.__name__ == readers_map[filename].__class__.__name__:
-                readers_map[filename].inputs_def.extend(r.inputs_def)
-            else:
-                readers_map[filename] = copy.deepcopy(r)
-
-        return list(readers_map.values())[0]
-
 
 def is_string(value):
     if sys.version_info.major < 3:
@@ -266,7 +255,7 @@ def sanitize_input(arg):
     if isinstance(arg, list) and not arg:
         raise ValueError('input is empty')
 
-    if not isinstance(arg, np.ndarray):
+    if not isinstance(arg, np.ndarray):        
         arg = np.asarray(arg, dtype=np.float32)
 
     return Constant(value=arg)
@@ -367,14 +356,15 @@ def sanitize_batch(batch, data_type, dev):
 
     return value
 
-def sanitize_var_map(input_map, ctx):
+def sanitize_var_map(input_map, precision_numpy, device):
     '''
     Sanitizes a dictionary of `Variable`s to input data such that it can be
     handed off to the `Forward` method.
 
     Args:
         input_map (`dict`): `Variable` to input (NumPy array or simple list of lists)
-        ctx (`Context`): `Context` from which to tak ethe precision and device information
+        precision_numpy : np.float32 or np.float64
+        device: CNTK DeviceDescriptor
 
     Returns:
         `dict` that maps variables to sanitized batches
@@ -385,13 +375,13 @@ def sanitize_var_map(input_map, ctx):
             if isinstance(batch, np.ndarray):
                 if batch.dtype not in (np.float32, np.float64):
                     raise ValueError('only float32 and float64 are supported')
-                batch = sanitize_batch(batch, ctx.precision_numpy, ctx.device)
+                batch = sanitize_batch(batch, precision_numpy, device)
             else:
                 if is_tensor(batch):
-                    batch = np.asarray(batch, dtype=ctx.precision_numpy)
-                    batch = create_Value_from_NumPy(batch, ctx.device)
+                    batch = np.asarray(batch, dtype=precision_numpy)
+                    batch = create_Value_from_NumPy(batch, device)
                 else:
-                    batch = sanitize_batch(batch, ctx.precision_numpy, ctx.device)
+                    batch = sanitize_batch(batch, precision_numpy, device)
 
             var_map[var] = batch
 
@@ -411,7 +401,7 @@ def remove_masked_elements(batch, mask):
     '''
     return [seq[mask[idx]==1] for idx,seq in enumerate(batch)]
 
-def ones_like(batch, ctx):
+def ones_like(batch, precision_numpy):
     '''
     Returns a new batch, which has the same format as `batch` but all values
     set to 1.
@@ -419,7 +409,7 @@ def ones_like(batch, ctx):
     Args:
         batch (list of NumPy arrays): a list of sequences, which are NumPy arrays
     '''
-    return [np.ones_like(sample, dtype=ctx.precision_numpy) for sample in batch]
+    return [np.ones_like(sample, dtype=precision_numpy) for sample in batch]
 
 def create_NDArrayView(shape, data_type, dev):
     # FIXME only dense supported so far
@@ -462,7 +452,7 @@ def sanitize_dtype_numpy(dtype):
     else:
         raise ValueError('data type "%s" is not supported'%dtype)
 
-def sanitize_dtype_cntk(dtype):
+def sanitize_dtype_cntk(dtype):           
     if dtype in (cntk_py.DataType_Float, cntk_py.DataType_Double,
             cntk_py.DataType_Unknown):
         return dtype
@@ -474,4 +464,71 @@ def sanitize_dtype_cntk(dtype):
         return cntk_py.DataType_Unknown
     else:
         raise ValueError('data type "%s" is not supported'%dtype)
+
+def eval(op, precision, device_id, input_map=None, backward_pass=False):
+    '''
+    It evaluates `op` on the data provided by the reader. This is useful
+    mainly to explore the operators and for convenient unit testing. 
+    
+    Args:
+        op (:class:`Function`): operation to evaluate
+        input_map (:class:`cntk.reader.InputMap`): describes how to map inputs to the data in a data file using a number, NumPy array or reader object
+        backward_pass (`bool`): whether a backward pass is performed 
+        precision (str): string precision
+        device_id (int): device id, -1 for CPU, 0 or higher for GPU
+
+    Returns: 
+        output generated by `op`. If `op` is an iterable, a dictionary
+        op->result is returned. 
+    '''
+    pn = precision_numpy(precision)
+    device = cntk_device(device_id)
+
+    forward_in_var_map = sanitize_var_map(input_map, pn, device)
+
+    forward_out_var_map =  {}
+    forward_retain = set()
+    for v in op.Outputs():
+        forward_out_var_map[v] = None # will be populated in Forward()
+        forward_retain.add(v)
+
+    state = op.Forward(forward_in_var_map, forward_out_var_map, device, forward_retain)
+
+    forward_output = {}
+    forward_output_mask = {}
+    for v in op.Outputs():
+        value = forward_out_var_map[v]
+        np_data = value.Data().ToNumPy() 
+        np_data = np_data.reshape(tuple(reversed(np_data.shape)))
+        if value.Mask():
+            np_data = remove_masked_elements(np_data, value.Mask().ToNumPy())
+        forward_output[v] = np_data
+        forward_output_mask[v] = value.Mask()
+
+    assert backward_pass
+    if backward_pass:
+        root_gradients = {} 
+        for v, o in forward_output.items():
+            ones_grad = ones_like(o, pn)
+            root_gradients[v] = ones_grad
+        root_gradients = sanitize_var_map(root_gradients, pn, device)
+
+        backward_var_map = dict((var, None) for var in forward_in_var_map)
+
+        op.Backward(state, root_gradients, backward_var_map)
+
+        backward_output = {}
+        for var, value in backward_var_map.items():
+            np_data = value.Data().ToNumPy() 
+            np_data = np_data.reshape(tuple(reversed(np_data.shape)))
+            if value.Mask():
+                np_data = remove_masked_elements(np_data, value.Mask().ToNumPy())
+            backward_output[var] = np_data
+
+        return forward_output, backward_output
+
+    else:
+        return forward_output, None
+
+
 

@@ -10,7 +10,6 @@ import os
 # required for the _cntk_py.pyd/so file
 os.environ['PATH'] += ';'+os.path.abspath(__file__)
 
-from .context import *
 from .graph import *
 from . import ops
 from .ops import *
