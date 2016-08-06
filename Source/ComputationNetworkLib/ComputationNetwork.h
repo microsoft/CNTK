@@ -435,6 +435,9 @@ public:
     static void SetDropoutRate(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const double dropoutRate, double& prevDropoutRate, size_t randSeedBase);
 
     template <class ElemType>
+    static void SetPawnRate(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const double pawnRate, double& prevPawnRate, size_t randSeedBase);
+
+    template <class ElemType>
     static void SetBatchNormalizationTimeConstants(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, 
                                                    double normalizationTimeConstant, double& prevNormalizationTimeConstant,
                                                    double blendTimeConstant, double& prevBlendTimeConstant);

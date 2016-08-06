@@ -520,6 +520,33 @@ template <class ElemType>
 }
 
 template <class ElemType>
+/*static*/ void ComputationNetwork::SetPawnRate(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const double pawnRate, double& prevPawnRate, size_t randSeedBase)
+{
+    list<ComputationNodeBasePtr> pawnNodes = net->GetNodesWithType(OperationNameOf(PawnNode), criterionNode);
+    if (pawnRate != prevPawnRate)
+    {
+        fprintf(stderr, "Setting pawn rate to %.8g.\n", pawnRate);
+        // TODO: Change this to use an interface that is independent of <ElemType>.
+        if (pawnNodes.size() == 0 && pawnRate > 0)
+            fprintf(stderr, "WARNING: Attempting to set pawn rate, but there is no pawn node in the network.\n");
+    }
+
+    // Each pawn node gets a distinct seed. The actual seed for each pawn node is computed as follows:
+    // seed = (((parallelWorkerIdx * maxEpochs) + currentEpochNum) /*i.e. randSeedBase*/ * pawnNodes.size()) + pawnNodeIdx
+    size_t randSeed = randSeedBase * pawnNodes.size();
+    for (auto& nodeIter : pawnNodes)
+    {
+        auto node = dynamic_pointer_cast<PawnNode<ElemType>>(nodeIter);
+        if (pawnRate != prevPawnRate)
+            node->SetPawnRate(pawnRate);
+        node->SetRandomSeed(randSeed);
+        randSeed++;
+    }
+
+    prevPawnRate = pawnRate;
+}
+
+template <class ElemType>
 /*static*/ void ComputationNetwork::SetBatchNormalizationTimeConstants(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode,
                                                                        double normalizationTimeConstant, double& prevNormalizationTimeConstant,
                                                                        double blendTimeConstant, double& prevBlendTimeConstant)
@@ -1471,6 +1498,7 @@ template void ComputationNetwork::Read<float>(const wstring& fileName);
 template void ComputationNetwork::ReadPersistableParameters<float>(File& fstream, bool create);
 template void ComputationNetwork::PerformSVDecomposition<float>(const map<wstring, float>& SVDConfig, size_t alignedsize);
 template /*static*/ void ComputationNetwork::SetDropoutRate<float>(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const double dropoutRate, double& prevDropoutRate, size_t randSeedBase);
+template /*static*/ void ComputationNetwork::SetPawnRate<float>(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const double pawnRate, double& prevPawnRate, size_t randSeedBase);
 template /*static*/ void ComputationNetwork::SetBatchNormalizationTimeConstants<float>(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const double normalizationTimeConstant, double& prevNormalizationTimeConstant, double blendTimeConstant, double& prevBlendTimeConstant);
 template void ComputationNetwork::SetSeqParam<float>(ComputationNetworkPtr net, const ComputationNodeBasePtr criterionNode, const double& hsmoothingWeight, const double& frameDropThresh, const bool& doreferencealign,
                                                      const double& amf, const double& lmf, const double& wp, const double& bMMIfactor, const bool& sMBR);
@@ -1481,6 +1509,7 @@ template void ComputationNetwork::Read<double>(const wstring& fileName);
 template void ComputationNetwork::ReadPersistableParameters<double>(File& fstream, bool create);
 template void ComputationNetwork::PerformSVDecomposition<double>(const map<wstring, float>& SVDConfig, size_t alignedsize);
 template /*static*/ void ComputationNetwork::SetDropoutRate<double>(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const double dropoutRate, double& prevDropoutRate, size_t randSeedBase);
+template /*static*/ void ComputationNetwork::SetPawnRate<double>(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const double pawnRate, double& prevPawnRate, size_t randSeedBase);
 template /*static*/ void ComputationNetwork::SetBatchNormalizationTimeConstants<double>(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const double normalizationTimeConstant, double& prevNormalizationTimeConstant, double blendTimeConstant, double& prevBlendTimeConstant);
 template void ComputationNetwork::SetSeqParam<double>(ComputationNetworkPtr net, const ComputationNodeBasePtr criterionNode, const double& hsmoothingWeight, const double& frameDropThresh, const bool& doreferencealign,
                                                       const double& amf, const double& lmf, const double& wp, const double& bMMIfactor, const bool& sMBR);

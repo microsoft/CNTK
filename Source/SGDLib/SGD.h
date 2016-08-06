@@ -224,6 +224,7 @@ protected:
     size_t m_minibatchSizeTuningMax;
 
     doubleargvector m_dropoutRates;
+    doubleargvector m_pawnRates;
     doubleargvector m_batchNormalizationTimeConstant;
     doubleargvector m_batchNormalizationBlendTimeConstant;
     size_t m_maxTempMemSizeInSamplesForCNN;
@@ -559,6 +560,8 @@ protected:
 
 private:
     void MarkDropoutNodesEvalTimeStampAsOutdated(const ComputationNetworkPtr& net, const ComputationNodeBasePtr& criterionNode);
+
+    void MarkPawnNodesEvalTimeStampAsOutdated(const ComputationNetworkPtr& net, const ComputationNodeBasePtr& criterionNode);
 
     bool UsingGradientAggregation(size_t epochNumber) const
     {

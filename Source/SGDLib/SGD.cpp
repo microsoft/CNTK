@@ -4,7 +4,7 @@
 
 #include "Basics.h"
 #include "SGD.h"
-#include "NonlinearityNodes.h"          // for DropoutNode
+#include "NonlinearityNodes.h"          // for DropoutNode and PawnNode
 #include "SpecialPurposeNodes.h"        // for SequenceWithSoftmaxNode
 #include "DataReaderHelpers.h"
 #include "MatrixQuantizerImpl.h"
@@ -332,6 +332,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
     }
 
     double prevDropoutRate = 0;
+    double prevPawnRate = 0;
     double prevNormalizationTimeConstant = 0;
     double prevNormalizationBlendTimeConstant = 0;
 
@@ -364,11 +365,13 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         Timer timer;
         timer.Start();
 
-        // set dropout rate for this epoch
+        // set dropout rate and pawn rate for this epoch
         // We use the same seed across workers until parallel training kicks in to ensure that the workers have identical models
         size_t parallelWorkerIdx = ((m_mpi == nullptr) || !UsingParallelTrain(i)) ? 0 : m_mpi->CurrentNodeRank();
         size_t dropoutRandSeedBase = (parallelWorkerIdx * m_maxEpochs) + i;
+        size_t pawnRandSeedBase = (parallelWorkerIdx * m_maxEpochs) + i;
         ComputationNetwork::SetDropoutRate<ElemType>(net, criterionNodes[0], m_dropoutRates[i], prevDropoutRate, dropoutRandSeedBase);
+        ComputationNetwork::SetPawnRate<ElemType>(net, criterionNodes[0], m_pawnRates[i], prevPawnRate, pawnRandSeedBase);
         ComputationNetwork::SetBatchNormalizationTimeConstants<ElemType>(net, criterionNodes[0], 
                                                                          m_batchNormalizationTimeConstant[i], prevNormalizationTimeConstant,
                                                                          m_batchNormalizationBlendTimeConstant[i], prevNormalizationBlendTimeConstant);
@@ -893,6 +896,11 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         // This mask is regerated every minibatch and hence dropout nodes with a non-zero dropout rate must me marked outdated
         // w.r.t. inputs to force evaluation in each minibatch
         MarkDropoutNodesEvalTimeStampAsOutdated(net, criterionNodes[0]);
+
+        // Pawn nodes have an implicit input in the form of the random mask that is applied to its explicit input
+        // This mask is regerated every minibatch and hence pawn nodes with a non-zero pawn rate must me marked outdated
+        // w.r.t. inputs to force evaluation in each minibatch
+        MarkPawnNodesEvalTimeStampAsOutdated(net, criterionNodes[0]);
 
         // node data was changed
         // TODO: move this to that function as well--just tired to pass everything as arguments
@@ -2283,6 +2291,14 @@ void SGD<ElemType>::MarkDropoutNodesEvalTimeStampAsOutdated(const ComputationNet
         nodeIter->SetEvalTimeStampOutdatedWrtAll();
 }
 
+template <class ElemType>
+void SGD<ElemType>::MarkPawnNodesEvalTimeStampAsOutdated(const ComputationNetworkPtr& net, const ComputationNodeBasePtr& criterionNode)
+{
+    list<ComputationNodeBasePtr> pawnNodes = net->GetNodesWithType(OperationNameOf(PawnNode), criterionNode);
+    for (auto& nodeIter : pawnNodes)
+        nodeIter->SetEvalTimeStampOutdatedWrtAll();
+}
+
 template class SGD<float>;
 template class SGD<double>;
 
@@ -2415,6 +2431,7 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
     m_seqGammarCalcWP = configSGD(L"seqGammarWordPen", 0.0);
 
     m_dropoutRates = configSGD(L"dropoutRate", ConfigRecordType::Array(doubleargvector(vector<double>{0.0})));
+    m_pawnRates = configSGD(L"pawnRate", ConfigRecordType::Array(doubleargvector(vector<double>{0.0})));
     m_batchNormalizationTimeConstant = configSGD(L"batchNormalizationTimeConstant", ConfigRecordType::Array(doubleargvector(vector<double>{0})));
     m_batchNormalizationBlendTimeConstant = configSGD(L"batchNormalizationBlendTimeConstant", ConfigRecordType::Array(doubleargvector(vector<double>{0})));
 
@@ -2540,6 +2557,14 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
         if (m_dropoutRates[i] >= 1 || m_dropoutRates[i] < 0)
         {
             InvalidArgument("dropoutRate must be >= 0 and < 1.");
+        }
+    }
+
+    for (size_t i = 0; i < m_pawnRates.size(); i++)
+    {
+        if (m_pawnRates[i] >= 1 || m_pawnRates[i] < 0)
+        {
+            InvalidArgument("pawnRate must be >= 0 and < 1.");
         }
     }
 

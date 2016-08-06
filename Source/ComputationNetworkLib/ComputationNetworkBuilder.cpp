@@ -88,6 +88,7 @@ static shared_ptr<ComputationNode<ElemType>> CreateStandardNode(const std::wstri
 	else if (nodeType == OperationNameOf(OrderedCrossEntropyWithSoftmaxNode))	return New<OrderedCrossEntropyWithSoftmaxNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(PackedIndexNode))                      return New<PackedIndexNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(PastValueNode))                        return New<PastValueNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(PawnNode))                             return New<PawnNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(PerDimMeanVarNormalizationNode))       return New<PerDimMeanVarNormalizationNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(PerDimMeanVarDeNormalizationNode))     return New<PerDimMeanVarDeNormalizationNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(PassNode))                             return New<PassNode<ElemType>>(forward<_Types>(_Args)...);
@@ -752,6 +753,18 @@ template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Dropout(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName)
 {
     return net.AddNodeToNetAndAttachInputs(New<DropoutNode<ElemType>>(net.GetDeviceId(), nodeName), { a, b });
+}
+
+template <class ElemType>
+shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Pawn(const ComputationNodePtr a, const std::wstring nodeName)
+{
+    return net.AddNodeToNetAndAttachInputs(New<PawnNode<ElemType>>(net.GetDeviceId(), nodeName), { a });
+}
+
+template <class ElemType>
+shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Pawn(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName)
+{
+    return net.AddNodeToNetAndAttachInputs(New<PawnNode<ElemType>>(net.GetDeviceId(), nodeName), { a, b });
 }
 
 template <class ElemType>

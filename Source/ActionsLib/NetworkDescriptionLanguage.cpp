@@ -182,6 +182,7 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
     else if (EqualInsensitive(nodeType, OperationNameOf(FloorNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(FutureValueNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(IRMetricEvalNode), L"IRMetricEval")) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(PawnNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(SparseElementTimesNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(SparseElementAndXNode))) ret = true;
 #ifdef COMING_SOON

@@ -2192,6 +2192,172 @@ private:
 template class DropoutNode<float>;
 template class DropoutNode<double>;
 
+
+// -----------------------------------------------------------------------
+// PawnNode (input, pawnRate) -- perform pawnize
+// A pawn unit only move forward 
+// -----------------------------------------------------------------------
+
+template <class ElemType>
+class PawnNode : public ComputationNode<ElemType>
+{
+    typedef ComputationNode<ElemType> Base;
+    UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName()
+    {
+        return L"Pawn";
+    }
+
+public:
+    DeclareConstructorFromConfig(PawnNode);
+    PawnNode(DEVICEID_TYPE deviceId, const wstring& name)
+        : Base(deviceId, name),
+        m_pawnRate(0),
+        m_hasUpdatedPawnRate(false)
+    {
+        m_randomSeed = (unsigned long)CreateUniqId();
+    }
+
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
+    {
+        Matrix<ElemType> sliceInput0Grad = Input(0)->GradientFor(fr);
+        Matrix<ElemType> sliceOutputGrad = GradientFor(fr);
+
+        UpdatePawnRate();
+        if (m_pawnRate > 0)
+        {
+            // determine pawn mask for this minibatch
+            auto sliceMask = DataFor(*m_maskOfPawn, fr);
+            sliceMask.SetUniformRandomMask((ElemType)m_pawnRate, (ElemType)1.0, GetRNGHandle());
+            sliceInput0Grad.AddElementProductOf(sliceOutputGrad, sliceMask);
+        }
+        else
+        {
+            sliceInput0Grad += sliceOutputGrad;
+        }
+    }
+
+    virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
+
+    virtual void UpdateFunctionMBSize() override
+    {
+        Base::UpdateFunctionMBSize();
+        UpdatePawnRate();
+        // resize temporaries to their proper size
+        if (m_pawnRate > 0)
+            m_maskOfPawn->Resize(Input(0)->Value());
+    }
+
+    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
+    {
+        Matrix<ElemType> sliceInput0Value = Input(0)->ValueFor(fr);
+        Matrix<ElemType> sliceOutputValue = ValueFor(fr);
+
+        sliceOutputValue.SetValue(sliceInput0Value);
+    }
+
+    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
+    {
+        if (m_inputs.size() != 1 && m_inputs.size() != 2)
+            InvalidArgument("%ls %ls operation requires one or two inputs.", NodeName().c_str(), OperationName().c_str());
+
+        ComputationNodeBase::Validate(isFinalValidationPass);
+        InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
+        SetDims(Input(0));
+    }
+
+    void UpdatePawnRate()
+    {
+        if (m_hasUpdatedPawnRate)
+        {
+            return;
+        }
+
+        m_hasUpdatedPawnRate = true;
+
+        // effective pawn rate, use the node parameter to override global if existing.
+        if (m_inputs.size() == 2)
+        {
+            ElemType pawnRate = (ElemType)(Input(1)->Value().Get00Element());
+            if (pawnRate < 0 || pawnRate >= 1)
+            {
+                LogicError("PawnRate must be >= 0 and < 1.");
+            }
+
+            printf("pawnRate=%f\r\n", pawnRate);
+
+            if (pawnRate > 0)
+            {
+                m_pawnRate = (ElemType)pawnRate;
+            }
+        }
+    }
+
+    // special methods for this node type which ComputationNetwork knows about and calls to pass parameters
+    void SetPawnRate(const double val)
+    {
+        if (val < 0 || val >= 1)
+            LogicError("PawnRate must be >= 0 and < 1.");
+        m_pawnRate = val;
+        m_hasUpdatedPawnRate = false;
+    }
+
+    void SetRandomSeed(const unsigned long val)
+    {
+        m_randomSeed = (unsigned long)val;
+
+        // Upon change of the seed, reset RNGHandle to force the creation of a new RNGHandle
+        // during forward propagation
+        m_RNGHandle = nullptr;
+    }
+
+    RNGHandle& GetRNGHandle()
+    {
+        if (m_RNGHandle == nullptr)
+            m_RNGHandle = RNGHandle::Create(ValuePtr()->GetDeviceId(), m_randomSeed);
+
+        return *m_RNGHandle;
+    }
+
+    virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
+    {
+        Base::CopyTo(nodeP, newName, flags);
+        if (flags & CopyNodeFlags::copyNodeValue)
+        {
+            auto node = dynamic_pointer_cast<PawnNode<ElemType>>(nodeP);
+            node->m_pawnRate = m_pawnRate;
+            node->m_randomSeed = m_randomSeed;
+            node->m_maskOfPawn = m_maskOfPawn;
+        }
+    }
+    // request matrices needed to do node function value evaluation
+    virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
+    {
+        Base::RequestMatricesBeforeForwardProp(matrixPool);
+        RequestMatrixFromPool(m_maskOfPawn, matrixPool);
+    }
+
+    // release gradient and temp matrices that no longer needed after all the children's gradients are computed.
+    virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
+    {
+        Base::ReleaseMatricesAfterBackprop(matrixPool);
+        ReleaseMatrixToPool(m_maskOfPawn, matrixPool);
+    }
+
+private:
+    double m_pawnRate;
+    bool m_hasUpdatedPawnRate;
+    unsigned long m_randomSeed;
+    std::shared_ptr<RNGHandle> m_RNGHandle;
+
+    shared_ptr<Matrix<ElemType>> m_maskOfPawn;
+};
+
+template class PawnNode<float>;
+template class PawnNode<double>;
+
+
 // -----------------------------------------------------------------------
 // BatchNormalizationNode (input, scale, bias, runMean, runInvStdDev, spatial,
 //                         normalizationTimeConstant = 0, blendTimeConstant = 0,
