@@ -18,7 +18,6 @@
 #include <stdexcept>
 #include <list>
 #include <memory>
-#include <type_traits>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -1873,6 +1872,8 @@ public:
         }
 
         if(!isExecuting && useMemorySwapping){ return; }
+        SynchronizationManager<ElemType> *sync = SynchronizationManager<ElemType>::GetSynchronizationManager();
+        if(!sync->IsExecuting() && sync->m_useMemorySwapping){ return; }
 
         if (inputIndex == 0) // derivative with respect to the input.
         {
@@ -1931,23 +1932,8 @@ public:
         InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
     	if (Environment().IsTraining())
     	{
-            bool isExecuting = false;
-            bool useMemorySwapping = false;
-            bool isInTrainingMode = false;
-
-            if(std::is_same<ElemType, float>::value)
-            {
-                isExecuting = g_floatSynchronizationManager->IsExecuting();
-                useMemorySwapping = g_floatSynchronizationManager->m_useMemorySwapping;
-                isInTrainingMode = g_floatSynchronizationManager->m_isInTrainingMode;
-            }
-            else
-            {
-                isExecuting = g_doubleSynchronizationManager->IsExecuting();
-                useMemorySwapping = g_doubleSynchronizationManager->m_useMemorySwapping;
-                isInTrainingMode = g_doubleSynchronizationManager->m_isInTrainingMode;
-            }
-			if(isInTrainingMode && !isExecuting && useMemorySwapping)
+			SynchronizationManager<ElemType> *sync = SynchronizationManager<ElemType>::GetSynchronizationManager();
+			if(sync->m_isInTrainingMode && !sync->IsExecuting() && sync->m_useMemorySwapping)
 			{
 				return;
 			}

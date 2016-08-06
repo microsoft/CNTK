@@ -296,23 +296,10 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
     
     // set memory swapping temporarily to false, so that it gets triggered after momentum
     // and batch normalization was set
-    bool useMemorySwapping = false;
-
-    if(std::is_same<ElemType, float>::value)
-    {
-        useMemorySwapping = g_floatSynchronizationManager->m_useMemorySwapping;
-        g_floatSynchronizationManager->m_isInTrainingMode = true;
-        g_floatSynchronizationManager->m_useMemorySwapping = false;
-    }
-    else
-    {
-        useMemorySwapping = g_doubleSynchronizationManager->m_useMemorySwapping;
-        g_doubleSynchronizationManager->m_isInTrainingMode = true;
-        g_doubleSynchronizationManager->m_useMemorySwapping = false;
-    }
-
-
-
+    SynchronizationManager<ElemType> *sync = SynchronizationManager<ElemType>::GetSynchronizationManager();
+    bool useMemorySwappingTemp = sync->m_useMemorySwapping;
+    sync->m_useMemorySwapping = false;
+    sync->m_isInTrainingMode = true;
 
     // precompute mean and invStdDev nodes and save initial model
     // When no precompute, only save if we did not load the model from a 
@@ -488,24 +475,13 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                       i + 1, learnRatePerSample, MomentumPerMB(momentumPerSample, actualMinibatchSize), momentumAsTimeConstant);
         }
 
-        bool isExecuting = false;
-        if(std::is_same<ElemType, float>::value)
-        {
-            isExecuting = g_floatSynchronizationManager->IsExecuting();
-            g_floatSynchronizationManager->m_useMemorySwapping = useMemorySwapping;
-        }
-        else
-        {
-            isExecuting = g_doubleSynchronizationManager->IsExecuting();
-            g_doubleSynchronizationManager->m_useMemorySwapping = useMemorySwapping;
-        }
-
+        sync->m_useMemorySwapping = useMemorySwappingTemp;
         EpochCriterion epochCriterion; // criterion values are returned in this
         std::vector<EpochCriterion> epochEvalErrors(evaluationNodes.size());
         std::wstring wname = GetModelNameForEpoch(i-1);
         std::string name = std::string(wname.begin(), wname.end());
 
-        if(isExecuting && useMemorySwapping)
+        if(!sync->IsExecuting() && sync->m_useMemorySwapping)
         {
             double prevCriterion = numeric_limits<double>::infinity();
             if (m_mpi != nullptr){ m_mpi->WaitAll(); }
@@ -834,6 +810,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                                     const std::string& prefixMsg)
 {
     ScopedNetworkOperationMode modeGuard(net, NetworkOperationMode::training);
+    SynchronizationManager<ElemType> *sync = SynchronizationManager<ElemType>::GetSynchronizationManager();
     bool reloadBatch = false;
     double learningRateTemp = learnRatePerSample;
 
@@ -1033,21 +1010,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                     ComputationNetwork::BumpEvalTimeStamp(labelNodes);
                 }
 
-                bool isExecuting = false;
-                bool useMemorySwapping = false;
-
-                if(std::is_same<ElemType, float>::value)
-                {
-                    isExecuting = g_floatSynchronizationManager->IsExecuting();
-                    useMemorySwapping = g_floatSynchronizationManager->m_useMemorySwapping;
-                }
-                else
-                {
-                    isExecuting = g_doubleSynchronizationManager->IsExecuting();
-                    useMemorySwapping = g_doubleSynchronizationManager->m_useMemorySwapping;
-                }
-
-                if(ismb == 0 && numMBsRun == 0 && !isExecuting && useMemorySwapping)
+                if(ismb == 0 && numMBsRun == 0 && !sync->IsExecuting() && sync->m_useMemorySwapping)
                 {
                     // we produce 100 gradients during the swap in/out sampling and because we apply gradients via
                     // learning rate per sample this will move the weights in the wrong direction

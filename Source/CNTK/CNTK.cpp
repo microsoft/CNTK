@@ -36,6 +36,7 @@
 #include "BrainScriptEvaluator.h"
 #include "BrainScriptParser.h"
 #include "SynchronizationManager.h"
+#include "SingletonHelper.h"
 
 #include <string>
 #include <chrono>
@@ -307,16 +308,11 @@ void DoCommands(const ConfigParameters& config, const shared_ptr<MPIWrapper>& mp
             NDLScript<ElemType> ndlScript;
             ndlScript.ClearGlobal(); // clear global macros between commands
 
-            if(std::is_same<ElemType, float>::value)
-            {
-                g_floatSynchronizationManager->ClearActionsAndTheirMemory();
-            }
+            std::string type = config(L"precision", "float");
+            if (type == "float")
+                SynchronizationManager<float>::GetSynchronizationManager()->ClearActionsAndTheirMemory();
             else
-            {
-                g_doubleSynchronizationManager->ClearActionsAndTheirMemory();
-            }
-
-
+                SynchronizationManager<double>::GetSynchronizationManager()->ClearActionsAndTheirMemory();
 
             // Synchronize all ranks before proceeding to next action/command
             if (mpi)
@@ -707,13 +703,14 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
 
     if (type == "float")
     {
-        //SynchronizationManager<float>::GetSynchronizationManager()->m_useMemorySwapping = config(L"useMemorySwapping", "true");
-        g_floatSynchronizationManager->m_useMemorySwapping = config(L"useMemorySwapping", "true");
+        SynchronizationManager<float>::GetSynchronizationManager()->m_useMemorySwapping = config(L"useMemorySwapping", "true");
+        SynchronizationManager<float>::GetSynchronizationManager()->m_isFloat = true;
         DoCommands<float>(config, mpi);
     }
     else if (type == "double")
     {
-        g_doubleSynchronizationManager->m_useMemorySwapping = config(L"useMemorySwapping", "true");
+        SynchronizationManager<double>::GetSynchronizationManager()->m_useMemorySwapping = config(L"useMemorySwapping", "true");
+        SynchronizationManager<float>::GetSynchronizationManager()->m_isFloat = false;
         DoCommands<double>(config, mpi);
     }
     else
