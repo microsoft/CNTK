@@ -16,8 +16,6 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-SynchronizationManager<float>* g_floatSynchronizationManager = new SynchronizationManager<float>();
-SynchronizationManager<double>* g_doubleSynchronizationManager = new SynchronizationManager<double>();
 
 using std::cout;
 using std::endl;
@@ -27,18 +25,26 @@ inline float MeasurementUncertainty(){ return 1.15f; }
 
 
 // this fetches the singleton instance
-template <typename ElemType>
-SynchronizationManager<ElemType>::SynchronizationManager()
+template  SynchronizationManager<double>* SynchronizationManager<double>::GetSynchronizationManager();
+template  SynchronizationManager<float>* SynchronizationManager<float>::GetSynchronizationManager();
+template <typename ElemType> SynchronizationManager<ElemType>* SynchronizationManager<ElemType>::GetSynchronizationManager()
 {
-    this->m_currentStepNumber = 0;
-    this->m_timer = CUDATimer();
-    this->m_isExecuting = false;
-    this->m_useMemorySwapping = false;
-    this->m_isInTrainingMode = false;
+    if (SynchronizationManager<ElemType>::s_synchronizationManager == NULL)
+    {
+        SynchronizationManager<ElemType>::s_synchronizationManager = new SynchronizationManager();
+        SynchronizationManager<ElemType>::s_synchronizationManager->m_currentStepNumber = 0;
+        SynchronizationManager<ElemType>::s_synchronizationManager->m_timer = CUDATimer();
+        SynchronizationManager<ElemType>::s_synchronizationManager->m_isExecuting = false;
+        SynchronizationManager<ElemType>::s_synchronizationManager->m_useMemorySwapping = false;
+        SynchronizationManager<ElemType>::s_synchronizationManager->m_isInTrainingMode = false;
+    }
+
+    return SynchronizationManager<ElemType>::s_synchronizationManager;
 }
 
-template <typename ElemType>
-void SynchronizationManager<ElemType>::CleanUp()
+template void SynchronizationManager<double>::CleanUp();
+template void SynchronizationManager<float>::CleanUp();
+template <typename ElemType> void SynchronizationManager<ElemType>::CleanUp()
 {
    // 1. remove all swap actions which are not needed, that is which are too slow
    // 2. remove stats and other temporary structures which are not needed for execution
@@ -63,8 +69,9 @@ void SynchronizationManager<ElemType>::CleanUp()
     }
 }
 
-template<typename ElemType>
-void SynchronizationManager<ElemType>::FindSwapOrder()
+template void SynchronizationManager<double>::FindSwapOrder();
+template void SynchronizationManager<float>::FindSwapOrder();
+template<typename ElemType> void SynchronizationManager<ElemType>::FindSwapOrder()
 {
 #ifndef CPUONLY
     float totalMemorySwappedInMB = 0.0f;
@@ -174,8 +181,9 @@ void SynchronizationManager<ElemType>::FindSwapOrder()
 #endif
 }
 
-template<typename ElemType>
-void SynchronizationManager<ElemType>::BeginSynchronizeState(ComputationNodeBase *node, const size_t idx, const FrameRange& fr, bool isForward)
+template void SynchronizationManager<double>::BeginSynchronizeState(ComputationNodeBase *node, const size_t idx, const FrameRange& fr, bool isForward);
+template void SynchronizationManager<float>::BeginSynchronizeState(ComputationNodeBase *node, const size_t idx, const FrameRange& fr, bool isForward);
+template<typename ElemType> void SynchronizationManager<ElemType>::BeginSynchronizeState(ComputationNodeBase *node, const size_t idx, const FrameRange& fr, bool isForward)
 {
 
 #ifndef CPUONLY
@@ -229,8 +237,9 @@ void SynchronizationManager<ElemType>::BeginSynchronizeState(ComputationNodeBase
 }
 
 
-template<typename ElemType>
-void SynchronizationManager<ElemType>::EndSynchronizeState(ComputationNodeBase *node, const size_t idx, const FrameRange& fr, bool isForward)
+template void SynchronizationManager<double>::EndSynchronizeState(ComputationNodeBase *node, const size_t idx, const FrameRange& fr, bool isForward);
+template void SynchronizationManager<float>::EndSynchronizeState(ComputationNodeBase *node, const size_t idx, const FrameRange& fr, bool isForward);
+template<typename ElemType> void SynchronizationManager<ElemType>::EndSynchronizeState(ComputationNodeBase *node, const size_t idx, const FrameRange& fr, bool isForward)
 {
 #ifndef CPUONLY
 	if(!m_useMemorySwapping){ return; }
@@ -259,8 +268,9 @@ void SynchronizationManager<ElemType>::EndSynchronizeState(ComputationNodeBase *
 #endif
 }
 
-template<typename ElemType>
-void SynchronizationManager<ElemType>::SwapInFreedBuffers(ComputationNodeBase *node, bool isForward)
+template void SynchronizationManager<double>::SwapInFreedBuffers(ComputationNodeBase *node, bool isForward);
+template void SynchronizationManager<float>::SwapInFreedBuffers(ComputationNodeBase *node, bool isForward);
+template<typename ElemType> void SynchronizationManager<ElemType>::SwapInFreedBuffers(ComputationNodeBase *node, bool isForward)
 {
     //if(node->IsValueSharable()){ return; }
 
@@ -281,8 +291,9 @@ void SynchronizationManager<ElemType>::SwapInFreedBuffers(ComputationNodeBase *n
     }
 }
 
-template<typename ElemType>
-void SynchronizationManager<ElemType>::FreeBuffersForDryRun(ComputationNodeBase *node, bool isForward)
+template void SynchronizationManager<float>::FreeBuffersForDryRun(ComputationNodeBase *node, bool isForward);
+template void SynchronizationManager<double>::FreeBuffersForDryRun(ComputationNodeBase *node, bool isForward);
+template <typename ElemType> void SynchronizationManager<ElemType>::FreeBuffersForDryRun(ComputationNodeBase *node, bool isForward)
 {
 #ifndef CPUONLY
     // if a value is marked as shareable, it will be used right after, thus it makes
@@ -320,16 +331,18 @@ void SynchronizationManager<ElemType>::FreeBuffersForDryRun(ComputationNodeBase 
 }
 
 inline std::string IsForwardToString(bool b){ return b ? std::string("_forward") : std::string("_backprop"); }
-template<typename ElemType>
-std::string SynchronizationManager<ElemType>::GetStepName(ComputationNodeBase *node, bool isForward)
+template std::string SynchronizationManager<float>::GetStepName(ComputationNodeBase *node, bool isForward);
+template std::string SynchronizationManager<double>::GetStepName(ComputationNodeBase *node, bool isForward);
+template<typename ElemType> std::string SynchronizationManager<ElemType>::GetStepName(ComputationNodeBase *node, bool isForward)
 {
     std::wstring wname = node->GetName();
     return std::string(wname.begin(), wname.end()) + IsForwardToString(isForward);
 }
 
 
-template<typename ElemType>
-void SynchronizationManager<ElemType>::RegisterBuffers(ComputationNodeBase *node, bool isForward)
+template void SynchronizationManager<float>::RegisterBuffers(ComputationNodeBase *node, bool isForward);
+template void SynchronizationManager<double>::RegisterBuffers(ComputationNodeBase *node, bool isForward);
+template<typename ElemType> void SynchronizationManager<ElemType>::RegisterBuffers(ComputationNodeBase *node, bool isForward)
 {
     
     int inputCount = node->GetNumInputs();
@@ -372,8 +385,9 @@ void SynchronizationManager<ElemType>::RegisterBuffers(ComputationNodeBase *node
 }  
 
 
-template<typename ElemType>
-void SynchronizationManager<ElemType>::GatherRuntimeStatistics(ComputationNodeBase *node, const size_t idx, const FrameRange& fr, bool isForward)
+template void SynchronizationManager<float>::GatherRuntimeStatistics(ComputationNodeBase *node, const size_t idx, const FrameRange& fr, bool isForward);
+template void SynchronizationManager<double>::GatherRuntimeStatistics(ComputationNodeBase *node, const size_t idx, const FrameRange& fr, bool isForward);
+template<typename ElemType> void SynchronizationManager<ElemType>::GatherRuntimeStatistics(ComputationNodeBase *node, const size_t idx, const FrameRange& fr, bool isForward)
 {
 #ifndef CPUONLY
     //special nodes with no inputs can be ignored
@@ -417,8 +431,9 @@ void SynchronizationManager<ElemType>::GatherRuntimeStatistics(ComputationNodeBa
 }
 
 
-template<typename ElemType>
-void SynchronizationManager<ElemType>::MeasureSwapTime(ComputationNodeBase *node, bool isForward) 
+template void SynchronizationManager<double>::MeasureSwapTime(ComputationNodeBase *node, bool isForward);
+template void SynchronizationManager<float>::MeasureSwapTime(ComputationNodeBase *node, bool isForward); 
+template<typename ElemType> void SynchronizationManager<ElemType>::MeasureSwapTime(ComputationNodeBase *node, bool isForward) 
 {
 #ifndef CPUONLY
     std::string name = GetStepName(node, isForward);
@@ -465,8 +480,9 @@ void SynchronizationManager<ElemType>::MeasureSwapTime(ComputationNodeBase *node
 #endif
 }
 
-template<typename ElemType>
-void SynchronizationManager<ElemType>::ClearActionsAndTheirMemory()
+template void SynchronizationManager<float>::ClearActionsAndTheirMemory();
+template void SynchronizationManager<double>::ClearActionsAndTheirMemory();
+template<typename ElemType> void SynchronizationManager<ElemType>::ClearActionsAndTheirMemory()
 {
     for(std::pair<int, std::vector<SyncAction<ElemType>*> > pair : m_stepNumber2Actions)
     {

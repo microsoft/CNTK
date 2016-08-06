@@ -17,8 +17,9 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-template <typename ElemType>
-SwapInAction<ElemType>::SwapInAction(SwapOutAction<ElemType> *swpout, Matrix<ElemType> *GPUBuffer)
+template SwapInAction<float>::SwapInAction(SwapOutAction<float> *swpout, Matrix<float> *GPUBuffer);
+template SwapInAction<double>::SwapInAction(SwapOutAction<double> *swpout, Matrix<double> *GPUBuffer);
+template <typename ElemType> SwapInAction<ElemType>::SwapInAction(SwapOutAction<ElemType> *swpout, Matrix<ElemType> *GPUBuffer)
 {
     this->m_bufferCPU = swpout->GetCPUMatrix();
     this->m_bufferGPU = GPUBuffer;
@@ -34,16 +35,18 @@ SwapInAction<ElemType>::SwapInAction(SwapOutAction<ElemType> *swpout, Matrix<Ele
 
  
 
-template <typename ElemType>
-void SwapInAction<ElemType>::BeginAction()
+template void SwapInAction<float>::BeginAction();
+template void SwapInAction<double>::BeginAction();
+template <typename ElemType> void SwapInAction<ElemType>::BeginAction()
 {
    this->m_bufferGPU->Resize(this->m_swpout->GetRows(),this->m_swpout->GetCols());
    CUDA_CALL(cudaMemcpyAsync(this->m_bufferGPU->Data(), this->m_bufferCPU, this->m_bytes, cudaMemcpyDefault, this->m_swapInStream));
 }
 
 
-template <typename ElemType>
-void SwapInAction<ElemType>::EndAction(){ CUDA_CALL(cudaStreamSynchronize(this->m_swapInStream)); }
+template void SwapInAction<double>::EndAction();
+template void SwapInAction<float>::EndAction();
+template <typename ElemType> void SwapInAction<ElemType>::EndAction(){ CUDA_CALL(cudaStreamSynchronize(this->m_swapInStream)); }
 
 
 }}}

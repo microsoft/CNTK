@@ -29,7 +29,6 @@ class SynchronizationManager
 private:
     std::unordered_map<int, std::vector<SyncAction<ElemType>*> > m_stepNumber2Actions;
     // singleton constructor
-    SynchronizationManager(){};
 
     static SynchronizationManager* s_synchronizationManager;
     bool m_isExecuting;
@@ -65,10 +64,11 @@ private:
     std::string GetStepName(ComputationNodeBase *node, bool isForward);
 
 public:
+    SynchronizationManager(){};
     // we use a singleton here; we could also injected the manager during node creation, but
     // sometimes this also makes sure that there is only a single instance available
     // which is quite handy for such a critical resource as memory
-    static SynchronizationManager<ElemType>* GetSynchronizationManager();
+    static SynchronizationManager* GetSynchronizationManager();
 
     ~SynchronizationManager(){};
     // this is called BEFORE a ForwardProp / BackpropTo method call
@@ -82,6 +82,7 @@ public:
     // the config sets this to false by default
     bool m_useMemorySwapping;
     bool m_isInTrainingMode;
+    bool m_isFloat;
     // this cleans the SynchronizationManager up after a action completes
     void ClearActionsAndTheirMemory();
 	
@@ -89,9 +90,9 @@ public:
 
 template class SynchronizationManager<float>;
 template class SynchronizationManager<double>;
-
 template <typename ElemType> 
 SynchronizationManager<ElemType>* SynchronizationManager<ElemType>::s_synchronizationManager = nullptr;
+
 
 }}}
 

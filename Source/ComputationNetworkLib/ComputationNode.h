@@ -24,7 +24,6 @@
 #include <algorithm>
 #include <assert.h>
 #include <atomic>
-#include <type_traits>
 
 
 
@@ -293,7 +292,7 @@ public:
         m_gradientInitialized(false), m_nodeName(name == L"" ? CreateUniqNodeName() : name)
     {
         // TODO: should m_learningRateMultiplier be set to 0? Or should every node have a way to add its own say on the learning rate for all its inputs?
-    }
+   }
     virtual ~ComputationNodeBase()
     {
     }
@@ -698,21 +697,45 @@ public:
     }
 
     virtual void ForwardPropSpecialization(const FrameRange& fr) = 0;
-    //virtual void ForwardProp(const FrameRange& fr) override final
-    //{
-    //    m_syncManager->BeginSynchronizeState(this, (size_t)0, fr, true);
-    //    ForwardPropSpecialization(fr);
-    //    m_syncManager->EndSynchronizeState(this, (size_t)0, fr, true);
-    //}
+    virtual void ForwardProp(const FrameRange& fr) override final
+    {
+    
+        bool isFloat = SynchronizationManager<float>::GetSynchronizationManager()->m_isFloat;
+
+       if(isFloat)
+          SynchronizationManager<float>::GetSynchronizationManager()->BeginSynchronizeState(this, (size_t)0, fr, true);
+       else
+          SynchronizationManager<double>::GetSynchronizationManager()->BeginSynchronizeState(this, (size_t)0, fr, true);
+ 
+        ForwardPropSpecialization(fr);
+        //m_syncManager->EndSynchronizeState(this, (size_t)0, fr, true);
+       if(isFloat)
+          SynchronizationManager<float>::GetSynchronizationManager()->EndSynchronizeState(this, (size_t)0, fr, true);
+       else
+          SynchronizationManager<double>::GetSynchronizationManager()->EndSynchronizeState(this, (size_t)0, fr, true);
+ 
+ 
+    }
 
 
     virtual void BackpropToSpecialization(const size_t inputIndex, const FrameRange& fr) = 0;
-    //virtual void BackpropTo(const size_t inputIndex, const FrameRange& fr)
-    //{
-    //    m_syncManager->BeginSynchronizeState(this, inputIndex, fr, false);
-    //    BackpropToSpecialization(inputIndex, fr);
-    //    m_syncManager->EndSynchronizeState(this, inputIndex, fr, false);
-    //}
+    virtual void BackpropTo(const size_t inputIndex, const FrameRange& fr)
+    {
+ 
+        bool isFloat = SynchronizationManager<float>::GetSynchronizationManager()->m_isFloat;
+
+       if(isFloat)
+          SynchronizationManager<float>::GetSynchronizationManager()->BeginSynchronizeState(this, (size_t)0, fr, false);
+       else
+          SynchronizationManager<double>::GetSynchronizationManager()->BeginSynchronizeState(this, (size_t)0, fr, false);
+ 
+        BackpropToSpecialization(inputIndex, fr);
+       if(isFloat)
+          SynchronizationManager<float>::GetSynchronizationManager()->EndSynchronizeState(this, (size_t)0, fr, false);
+       else
+          SynchronizationManager<double>::GetSynchronizationManager()->EndSynchronizeState(this, (size_t)0, fr, false);
+
+    }
 
 
     // check whether a node is out of date w.r.t. its children, for lazy evaluation
@@ -931,40 +954,6 @@ protected:
 
 
 public:
-    
-    virtual void ForwardProp(const FrameRange& fr) override final
-    {
-
-        if(std::is_same<ElemType, float>::value)
-            g_floatSynchronizationManager->BeginSynchronizeState(this, (size_t)0, fr, true);
-        else
-            g_doubleSynchronizationManager->BeginSynchronizeState(this, (size_t)0, fr, true);
-
-        ForwardPropSpecialization(fr);
-
-        if(std::is_same<ElemType, float>::value)
-            g_floatSynchronizationManager->EndSynchronizeState(this, (size_t)0, fr, true);
-        else
-            g_doubleSynchronizationManager->EndSynchronizeState(this, (size_t)0, fr, true);
-    }
-
-
-    virtual void BackpropTo(const size_t inputIndex, const FrameRange& fr) override final
-    {
-        m_syncManager->BeginSynchronizeState(this, inputIndex, fr, false);
-
-        if(std::is_same<ElemType, float>::value)
-            g_floatSynchronizationManager->BeginSynchronizeState(this, inputIndex, fr, false);
-        else
-            g_doubleSynchronizationManager->BeginSynchronizeState(this, inputIndex, fr, false);
-
-        BackpropToSpecialization(inputIndex, fr);
-
-        if(std::is_same<ElemType, float>::value)
-            g_floatSynchronizationManager->EndSynchronizeState(this, inputIndex, fr, false);
-        else
-            g_doubleSynchronizationManager->EndSynchronizeState(this, inputIndex, fr, false);
-    }
 
     using ComputationNodeBase::AttachInputs; // import the convenience functions that take 1..6 parameters
     using ComputationNodeBase::SetDims;
@@ -1217,8 +1206,6 @@ public:
     // TODO: This is only used for testing whether a gradient has been allocated. Maybe reduce to bool HasGradient()?
 
 private:
-
-    SynchronizationManager<ElemType> *m_syncManager;
     template<class E>
     void RethrowAs(const std::exception & e, const std::string & what)
     {
@@ -1913,9 +1900,6 @@ public:
     virtual bool RequiresPreCompute() const override { return false; } // return true if the node's value should be computed before the normal training. e.g., mean and invStd of input features.
     virtual std::string FormatOperationPrototype(const std::string& extraArgs) const override { return ""; }
     virtual void DumpNodeInfo(const bool /*printValues*/, const bool /*printMetadata*/, File& fstream) const override {}
-    virtual void ForwardProp(const FrameRange& fr) override {}
-    virtual void BackpropTo(const size_t inputIndex, const FrameRange& fr) override {}
-
 
 protected: public:                                     // needed in ComputationNetwork::FindInRecurrentLoops(), which really should be part of SEQTraversalFlowControlNode
     std::vector<ComputationNodeBasePtr> m_nestedNodes; // nodes tucked away in this node, in evaluation order
