@@ -18,6 +18,7 @@
 #include "PreComputeNodes.h"
 #include "EvaluationNodes.h"
 #include "SpecialPurposeNodes.h"
+#include "DeprecatedNodes.h" // (for SaveToDbnFile(), which is also deprecated)
 #include "MPIWrapper.h" // TODO: does not belong here
 #include <string>
 #include <vector>
@@ -1125,7 +1126,7 @@ public:
     ~DbnLayer() {};
 };
 
-// Save network in the format of the Microsoft-internal legacy "DBN.exe" tool (this function is not useful outside of Microsoft)
+// Save network in the format of the Microsoft-internal legacy "DBN.exe" tool (this function is not useful outside of Microsoft).
 template <class ElemType>
 void ComputationNetwork::SaveToDbnFile(ComputationNetworkPtr net, const std::wstring& fileName) const 
 {

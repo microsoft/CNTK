@@ -27,28 +27,6 @@ speechTrain = [
     BrainScriptNetworkBuilder = (new ComputationNetwork ([    // the same as above but with BS. Currently not used. Enable by removing the SimpleNetworkBuilder above.
         // note: this does not produce identical results because of different initialization order of random-initialized LearnableParameters
 
-        # ---- BEGIN STUFF FOR STD LIB ----
-        Dense {dim, fNonLinearity} = [
-            # parameters for this layer
-            B = Parameter {dim, 1,initValue = 0}
-            W = Parameter {dim, 0} // the input dimension is "learned" (inferred) during training
-            # the function of this layer
-            f(in) = fNonLinearity (W*in+B)
-        ].f
-
-        Identity(x) = x
-
-        # returns a function that applies all functions in arrayOfFunctions to an input (like Keras)
-        Sequential (arrayOfFunctions) = [
-            Apply (in, N) = if N == 0 then in else arrayOfFunctions[N-1](Apply (in, N-1)) # we do that recursively
-            f(in) = Apply (in, Length (arrayOfFunctions))
-        ].f
-
-        # combine two models (like Keras); TODO: extend to >2 inputs
-        Merge (arrayOfTwoFunctions, op) = [
-            f (in1, in2) = op (arrayOfTwoFunctions[0] (in1), arrayOfTwoFunctions[1] (in2))
-        ].f
-
         Fit (features, labels, model, loss, metric) = [
             z  = model (features)  # apply the model function
 
@@ -61,23 +39,22 @@ speechTrain = [
             # BUGBUG: This does not seem to fit.
             scaledLogLikelihood = Pass (z - LogPrior (labels), tag='output')
         ]
-        # ---- END STUFF FOR STD LIB ----
 
         M = 363
         H = 512
         J = 132
 
         # --- define the model
-        model = Sequential ({
-            MeanVarNorm,
-            Dense {H, Sigmoid},
-            Dense {H, Sigmoid},
-            Dense {J, Identity}
-        })
+        model = Sequential (
+            CorpusNormalizationLayer{} :
+            DenseLayer {H, activation=Sigmoid} :
+            DenseLayer {H, activation=Sigmoid} :
+            DenseLayer {J}
+        )
 
         # --- define inputs
-        features = Input (M) # inputs
-        labels   = Input (J)
+        features = Input {M} # inputs
+        labels   = Input {J}
 
         # --- define fitting function. This binds everything together for purpose of training.
         fit = Fit (features, labels, model, CrossEntropyWithSoftmax, ErrorPrediction)

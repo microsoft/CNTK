@@ -922,6 +922,7 @@ public:
 
 // CompareFunctions
 //  - IsSameObject()
+//  - IsArray()
 class CompareFunction : public BoxOf<Bool>
 {
 public:
@@ -942,6 +943,10 @@ public:
             let arg1 = args.At(range.first    ).AsPtr<Object>();
             let arg2 = args.At(range.first + 1).AsPtr<Object>();
             us = arg1.get() == arg2.get();
+        }
+        else if (what == L"IsArray")
+        {
+            us = argsArg.Is<ConfigArray>();
         }
         else
             whatArg.Fail(L"Unknown 'what' value to CompareFunction: " + what);
