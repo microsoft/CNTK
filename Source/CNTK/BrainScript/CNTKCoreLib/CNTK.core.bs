@@ -6,24 +6,8 @@
 //
 
 ##############################################################################
-# standard functions
+# Layers
 ##############################################################################
-
-Print(value, format='') = new PrintAction [ what = value /*; how = format*/ ] 
-Fail(what) = new FailAction [ /*what*/ ]
-Format(value, format) = new StringFunction [ what = 'Format' ; arg = value ; how = format ] 
-Replace(s, from, to) = new StringFunction [ what = 'Replace' ; arg = s ; replacewhat = from ; withwhat = to ] 
-Substr(s, begin, num) = new StringFunction [ what = 'Substr' ; arg = s ; pos = begin ; chars = num ] 
-Chr(c) = new StringFunction [ what = 'Chr' ;  arg = c ] 
-Length(x) = new NumericFunction [ what = 'Length' ; arg = x ] 
-Sign(x) = if x > 0 then 1 else if x < 0 then -1 else 0 
-Min(a,b) = if a < b then a else b 
-Max(a,b) = if a > b then a else b 
-Fac(n) = if n > 1 then Fac(n-1) * n else 1 
-IsSameObject(a,b) = new CompareFunction [ what = 'IsSameObject' ; args = (a : b) ]
-Mod(x, y)  = new NumericFunction [ what = 'Mod' ;  args = (x:y) ] 
-IntDiv(x, y)  = new NumericFunction [ what = 'IntDiv' ;  args = (x:y) ] 
-
 
 ##############################################################################
 # aliases
@@ -311,7 +295,26 @@ TransposeTimes(leftMatrix, rightMatrix, tag='') = new ComputationNode [ operatio
 Where(cond, tag='') = new ComputationNode [ operation = 'Where' ; inputs = cond /*plus the function args*/ ]
 
 ##############################################################################
-# common macros
+# non-neural-network functions
+##############################################################################
+
+Print(value, format='') = new PrintAction [ what = value /*; how = format*/ ] 
+Fail(what) = new FailAction [ /*what*/ ]
+Format(value, format) = new StringFunction [ what = 'Format' ; arg = value ; how = format ] 
+Replace(s, from, to) = new StringFunction [ what = 'Replace' ; arg = s ; replacewhat = from ; withwhat = to ] 
+Substr(s, begin, num) = new StringFunction [ what = 'Substr' ; arg = s ; pos = begin ; chars = num ] 
+Chr(c) = new StringFunction [ what = 'Chr' ;  arg = c ] 
+Length(x) = new NumericFunction [ what = 'Length' ; arg = x ] 
+Sign(x) = if x > 0 then 1 else if x < 0 then -1 else 0 
+Min(a,b) = if a < b then a else b 
+Max(a,b) = if a > b then a else b 
+Fac(n) = if n > 1 then Fac(n-1) * n else 1 
+IsSameObject(a,b) = new CompareFunction [ what = 'IsSameObject' ; args = (a : b) ]
+Mod(x, y)  = new NumericFunction [ what = 'Mod' ;  args = (x:y) ] 
+IntDiv(x, y)  = new NumericFunction [ what = 'IntDiv' ;  args = (x:y) ] 
+
+##############################################################################
+# macros from NDL book
 ##############################################################################
 
 BFF(in, rows, cols) = [ B = Parameter(rows, 1, initValue = 0) ; W = Parameter(rows, cols) ; z = W*in+B ] 
