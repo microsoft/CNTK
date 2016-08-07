@@ -885,9 +885,9 @@ void ComputationNetwork::AllocateAllMatrices(const std::vector<ComputationNodeBa
                 if (performingBackPropagation)
                 {
                     if (outputValueNeededDuringBackProp.find(input) == outputValueNeededDuringBackProp.end())
-                        outputValueNeededDuringBackProp[input] = input->OutputUsedInComputingInputNodesGradients();
+                        outputValueNeededDuringBackProp[input] = input->NeedsGradient() && input->OutputUsedInComputingInputNodesGradients();
 
-                    outputValueNeededDuringBackProp[input] |= node->InputUsedInComputingInputNodesGradients(i);
+                    outputValueNeededDuringBackProp[input] |= (node->NeedsGradient() && node->InputUsedInComputingInputNodesGradients(i));
                 }
                 else
                 {

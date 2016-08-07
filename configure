@@ -580,7 +580,7 @@ do
                     exit 1
                 fi
             else
-                if test $(check_dir $optarg $$libzip_check) = yes
+                if test $(check_dir $optarg $libzip_check) = yes
                 then
                     libzip_path=$optarg
                 else

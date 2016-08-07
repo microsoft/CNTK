@@ -86,8 +86,20 @@ template <class ElemType>
         sliceInputGrad.AddCopyOf(sliceOutputGrad);
         break;
 
-    case ElementWiseOperator::opMax:
+    case ElementWiseOperator::opLogSum:
+        {
+            auto input = Input(inputIndex)->ValueTensorFor(rank, fr);
+            auto output = ValueTensorFor(rank, fr.AllowBroadcast());
+            // Let: f(x, y, z) = log(exp x + exp y + exp z)
+            // For the derivative we get:
+            // df / dx = exp(x)/exp(f)
+            //         = exp(x – f)
+            sliceInputGrad.AddElementwiseProductWithExpOfDiffOf(sliceOutputGrad, input, output);
+        }
+        break;
+
     case ElementWiseOperator::opMin:
+    case ElementWiseOperator::opMax:
         auto input = Input(inputIndex)->ValueTensorFor(rank, fr);
         auto output = ValueTensorFor(rank, fr.AllowBroadcast());
 
@@ -122,9 +134,10 @@ template <class ElemType>
 {
     switch (m_reductionOp)
     {
-    case ElementWiseOperator::opMax: return true;
-    case ElementWiseOperator::opMin: return true;
-    case ElementWiseOperator::opSum: return false;
+    case ElementWiseOperator::opSum:    return false;
+    case ElementWiseOperator::opLogSum: return true;
+    case ElementWiseOperator::opMin:    return true;
+    case ElementWiseOperator::opMax:    return true;
     }
     LogicError("Should not get here.");
 }
@@ -134,9 +147,10 @@ template <class ElemType>
 {
     switch (m_reductionOp)
     {
-    case ElementWiseOperator::opMax: return true;
-    case ElementWiseOperator::opMin: return true;
-    case ElementWiseOperator::opSum: return false;
+    case ElementWiseOperator::opSum:    return false;
+    case ElementWiseOperator::opLogSum: return true;
+    case ElementWiseOperator::opMin:    return true;
+    case ElementWiseOperator::opMax:    return true;
     }
     LogicError("Should not get here.");
 }
@@ -149,9 +163,10 @@ void ReduceElementsNode<ElemType>::ValidateOp()
     if (m_operation == L"Plus") m_reductionOp = ElementWiseOperator::opSum;
     else
 #endif
-    if (m_operation == L"Sum"     ) m_reductionOp = ElementWiseOperator::opSum;
-    else if (m_operation == L"Max") m_reductionOp = ElementWiseOperator::opMax;
-    else if (m_operation == L"Min") m_reductionOp = ElementWiseOperator::opMin;
+    if      (m_operation == L"Sum")    m_reductionOp = ElementWiseOperator::opSum;
+    else if (m_operation == L"LogSum") m_reductionOp = ElementWiseOperator::opLogSum;
+    else if (m_operation == L"Min")    m_reductionOp = ElementWiseOperator::opMin;
+    else if (m_operation == L"Max")    m_reductionOp = ElementWiseOperator::opMax;
 
     // more here
     else InvalidArgument("%ls was given an invalid operation code '%ls'. Allowed are: 'Sum', 'Max', 'Min'.", NodeDescription().c_str(), m_operation.c_str());
