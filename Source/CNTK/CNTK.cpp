@@ -36,7 +36,6 @@
 #include "BrainScriptEvaluator.h"
 #include "BrainScriptParser.h"
 #include "SynchronizationManager.h"
-#include "SingletonHelper.h"
 
 #include <string>
 #include <chrono>
