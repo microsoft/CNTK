@@ -11,6 +11,7 @@ ModelDir  = "$OutputDir$/Models"
 command=Train #:Write
 deviceId = $DeviceId$
 modelPath="$ModelDir$/seqcla.dnn"
+makeMode = false # set true to enable checkpointing
 
 Train=[
     action="train"
@@ -22,12 +23,10 @@ Train=[
                 embedding = Transpose(LearnableParameter(vocabSize, embeddingDim, learningRateMultiplier = 0.0, init = 'fromFile', initFromFilePath = embeddingPath))          
                 lookup = GatherPacked(features, embedding)
             ].lookup
-            # TODO: suggested change of parameter order: output dims first, inputDim=input.dim
             DenseLayer(input, inputSize, outputSize, activation) = [
                z = BFF(input, outputSize, inputSize).z
                act = activation(z)
             ].act
-            # TODO: suggested change of parameter order: output dims first, inputDim=input.Dim optional, cellDim=outputDim optional
             LSTMLayer (input, inputSize, outputSize, cellSize, selector) = [ 
                lstm = BS.RNNs.RecurrentLSTMP (outputSize, cellDim=cellSize, input, inputDim=inputSize).h
                result = selector(lstm)
@@ -38,30 +37,42 @@ Train=[
         lstmDim = 25
         cellDim = 25
 
-        // model
+        // model dims
         numLabels = 5        
         vocab = 2000
         embedDim = 50        
 
-        // set up features and labels
-        t = DynamicAxis()
-        features = Input(1, dynamicAxis=t)   # Input has shape (1,t)
-        labels   = Input(numLabels)          # Input has shape (numLabels,*) where all sequences in *=1
+        model (features) = {
+            // load the pre-learned word embedding matrix
+            l1 = Layers.EmbeddingLayer(features, vocab, embedDim, 'embeddingmatrix.txt')
+            l2 = Layers.LSTMLayer(l1, embedDim, lstmDim, cellDim, BS.Sequences.Last)
+            l3 = Layers.DenseLayer(l2, lstmDim, numLabels, Pass)
+            out = Pass(l3, tag='output')   
 
-        // load the pre-learned word embedding matrix
-        l1 = Layers.EmbeddingLayer(features, vocab, embedDim, 'embeddingmatrix.txt')
-        l2 = Layers.LSTMLayer(l1, embedDim, lstmDim, cellDim, BS.Sequences.Last)
-        l3 = Layers.DenseLayer(l2, lstmDim, numLabels, Pass)
-        out = Pass(l3, tag='output')   
+            // Make sure the trainer understands that the time dimension of l3 is actually the same as that of labels.
+            l3p = ReconcileDynamicAxis(l3, labels)
+        }.l3p
 
-        // Make sure the trainer understands that the time dimension of l3 is actually the same as that of labels.
-        l3p = ReconcileDynamicAxis(l3, labels)
+        # inputs
+        t = DynamicAxis{}
+        features = Input {1, dynamicAxis=t}   # Input has shape (1,t)
+        labels   = Input {numLabels}          # Input has shape (numLabels,*) where all sequences in *=1
 
-        // training criteria
-        ce  = CrossEntropyWithSoftmax(labels, l3p, tag='criterion')   // this is the training objective
-        err = ErrorPrediction        (labels, l3p, tag='evaluation')  // this also gets tracked
+        # apply model
+        z = model (features)
+
+        # training criteria
+        ce  = CrossEntropyWithSoftmax (labels, z)  // this is the training objective
+        err = ErrorPrediction         (labels, z)  // this also gets tracked
+
+        # connect to system
+        featureNodes    = (features)
+        labelNodes      = (labels)
+        criterionNodes  = (ce)
+        evaluationNodes = (err)
+        outputNodes     = (z)
     ]
-    
+
     SGD = [	
         epochSize = 0
         minibatchSize = 200

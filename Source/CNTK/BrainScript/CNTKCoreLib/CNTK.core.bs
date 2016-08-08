@@ -41,6 +41,17 @@ LinearLayer {outDim} =
 # DenseLayer -- create a fully-connected layer with optional non-linearity
 DenseLayer{outDim, activation=(x=>x)} = Sequential ( LinearLayer{outDim} : activation )
 
+# EmbeddingLayer -- create a linear embedding layer
+EmbeddingLayer{outDim,                                   # dimension of embedding
+               embeddingPath = '', transpose = false} =  # load a fixed embedding from a path instead
+{
+    E = if embeddingPath == ''
+        then ParameterTensor {(outDim : 0), init='uniform'}  # learnable
+        else ParameterTensor {(outDim : 0), initFromFilePath = embeddingPath, learningRateMultiplier = 0}  # fixed from file
+    TimesOp = if embeddingPath != '' && transpose then TransposeTimes else Times
+    f(x) = TimesOp (E, x)    # x is expected to be sparse one-hot
+}.f
+
 # ConvolutionalLayer -- create a convolution layer with optional non-linearity
 #             [ (shifting dims)  |  (reduction dim)  |  (output dim)  |  (sample dims) ]
 #    in     : [ (shifting dims)  |  (reduction dim)  |                |  (sample dims) ]
@@ -79,7 +90,7 @@ AveragePoolingLayer {filterShape, stride = 1, autoPadding = true /*, lowerPad = 
 
 # RecurrentLSTMLayer -- create an LSTM layer
 RecurrentLSTMLayer {outDim,
-                    cellDim = None, # if set then use a projection
+                    cellDim = BS.Constants.None, # if set then use a projection
                     goBackwards = false,
                     enableSelfStabilization = false} =
 {
@@ -92,7 +103,7 @@ RecurrentLSTMLayer {outDim,
 }.f
 
 # DropoutLayer -- create a drop-out layer
-DropoutLayer {prob = None} = if !BS.Constants.IsNone (prob) then Fail ("DropoutLayer: Dropout probability can currently not be specified per-layer.") else
+DropoutLayer {prob = BS.Constants.None} = if !BS.Constants.IsNone (prob) then Fail ("DropoutLayer: Dropout probability can currently not be specified per-layer.") else
 {
     f(x) = Dropout (x)
 }.f
@@ -112,23 +123,22 @@ BatchNormalizationLayer {spatialRank = 0,  # reduce over these dims. E.g. 2 to r
 }.f
 
 # LayerNormalizationLayer -- create a layer-normalization layer
-LayerNormalizationLayer {spatialRank = 0, dim = None, initScale = 1, initBias = 0} = if BS.Constants.IsNone (dim) then Fail ("LayerNormalizationLayer: 'dim' parameter is currently required.") else
+LayerNormalizationLayer {dim = BS.Constants.None, initScale = 1, initBias = 0} = if BS.Constants.IsNone (dim) then Fail ("LayerNormalizationLayer: 'dim' parameter is currently required.") else
 {
-    normShape = _ConcatArrays (Repeat (spatialRank, 1), 0) # spatial dims get a dimension of 1 (broadcasting, while all others are inferred from input)
-    gain = ParameterTensor{normShape, initValue = initScale}
-    bias = ParameterTensor{normShape, initValue = initBias}
+    gain = ParameterTensor{(1), initValue = initScale}
+    bias = ParameterTensor{(1), initValue = initBias}
 
     f(x) = {
         div = Constant (1.0 / dim)
 
         # normalize w.r.t. actual sample statistics
-        mean = div .* ReduceSum(input)
-        input0 = inputx - mean;
-        std = Sqrt (div .* ReduceSum (input0 .* input0))
-        normedX = ElementDivide (input0, std)
+        mean = div .* ReduceSum (x)
+        x0 = x - mean;
+        std = Sqrt (div .* ReduceSum (x0 .* x0))
+        xHat = ElementDivide (x0, std)
 
         # denormalize with learned parameters
-        val = normedX .* gain + bias
+        val = xHat .* gain + bias
     }.val
 }.f
 
@@ -191,6 +201,7 @@ Minus                   = CNTK2.Minus
 Pass                    = CNTK2.Identity
 Plus                    = CNTK2.Plus
 RectifiedLinear         = CNTK2.Relu
+ReLU                    = CNTK2.Relu
 ReduceSum               = CNTK2.ReduceSum
 ReduceLogSum            = CNTK2.ReduceLogSum
 ReduceMin               = CNTK2.ReduceMin
@@ -313,6 +324,10 @@ CNTK2 = [
     // empirical sequence is compared to. Keeping this for now.
     CrossEntropyWithSoftmax(_, outProbVectorSequence, tag='') = new ComputationNode [ operation = 'CrossEntropyWithSoftmax' ; inputs = (_ : outProbVectorSequence) /*plus the function args*/ ]
     ErrorPrediction(_, outVectorSequence, topN=1, tag='') = new ComputationNode [ operation = 'ErrorPrediction' ; inputs = if topN == 1 then (_ : outVectorSequence) else  (_ : outVectorSequence : Constant (topN)) /*plus the function args*/ ]
+    # TODO: replace with this (need to deal with topN thing):
+    # (_new will be removed once the change is made)
+    CrossEntropyWithSoftmax_new (L, z, tag='') = Minus (ReduceLogSum (z), TransposeTimes (L,          z),  tag=tag)
+    ErrorPrediction_new (L, z, tag='')         = Minus (BS.Constants.One, TransposeTimes (L, Hardmax (z)), tag=tag)
 
     // 12. Comparison nodes
     Less(_, y, tag='')         = new ComputationNode [ operation = 'Less'         ; inputs = (_ : y) /*plus the function args*/ ]
@@ -461,7 +476,7 @@ Replace(s, from, to) = new StringFunction [ what = 'Replace' ; arg = s ; replace
 Substr(s, begin, num) = new StringFunction [ what = 'Substr' ; arg = s ; pos = begin ; chars = num ] 
 Chr(c) = new StringFunction [ what = 'Chr' ;  arg = c ] 
 Length(x) = new NumericFunction [ what = 'Length' ; arg = x ] 
-Repeat (N, what) = if N <= 0 then None else (Repeat (N-1, what) : what) # can also be used to turn a scalar into a 1-element array
+Repeat (N, what) = if N <= 0 then BS.Constants.None else (Repeat (N-1, what) : what) # can also be used to turn a scalar into a 1-element array
 _ForceResizeArray (N, arrayOrScalar) = { # bring an array to a given length, either by chopping or by duplicating its last value
     arr = _AsArray (arrayOrScalar)
     L = Length (arr)

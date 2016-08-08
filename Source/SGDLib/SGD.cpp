@@ -263,7 +263,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                                                      node->Value().GetNumCols(),
                                                      net->GetDeviceId()));
         if (node->IsParameterUpdateRequired())
-            nodesToUpdateDescriptions.push_back(node->NodeDescription());
+            nodesToUpdateDescriptions.push_back(node->NodeDescription() + L" : " + msra::strfun::utf16(string(node->GetSampleLayout())).c_str());
     }
     size_t numNeedsGradient = 0;
     for (let node : net->GetEvalOrder(criterionNodes[0]))
