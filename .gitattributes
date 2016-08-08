@@ -19,6 +19,7 @@ Dockerfile-GPU text
 
 *.md text
 *.txt text
+*.TXT text
 *.html text
 *.lyx text
 *.bib text
@@ -43,6 +44,9 @@ make_binary_drop_linux text eol=lf
 # Used from Unix / Cygwin 'md5sum -c', needs to have LF line endings:
 Tests/EndToEndTests/Examples/Speech/TIMIT/WriteBottleneck/expected_output_md5sum.*.txt eol=lf
 Tests/EndToEndTests/Examples/Speech/TIMIT/WriteScaledLogLike/expected_output_md5sum.*.txt eol=lf
+
+# Used by reader unit test, needs to keep LF line endings.
+Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/invalid_inputs.txt eol=lf
 
 Makefile text
 *.sln text
@@ -105,6 +109,10 @@ TIMIT*.rnn text
 TIMIT*.statelist text
 TIMIT*.tfsa text
 TIMIT*.transitions text
+
+Examples/Text/ATIS/data/ATIS.* text
+
+Examples/SequenceToSequence/CMUDict/Data/cmudict-0.7b* text
 
 # Binary extensions:
 *.vsdm binary

@@ -54,6 +54,9 @@ Plus                    = CNTK2.Plus
 RectifiedLinear         = CNTK2.Relu
 ReduceSum               = CNTK2.ReduceSum
 ReduceLogSum            = CNTK2.ReduceLogSum
+ReduceMin               = CNTK2.ReduceMin
+ReduceMax               = CNTK2.ReduceMax
+
 Round                   = CNTK2.Round
 Sigmoid                 = CNTK2.Sigmoid
 
@@ -142,10 +145,12 @@ CNTK2 = [
     Tanh(_, tag='') = new ComputationNode [ operation = 'Tanh' ; inputs = _ /*plus the function args*/ ]
 
     // 6. Reductions    
-    # the following is a temporary workaround until we have the C++ version
-    ReduceLogSum (_, axis=0, tag='')  = if axis != 0 then Fail("ReduceLogSum for now only supports axis=0.")
-    else [ tag1=tag ; axis1=axis ; out = RowSlice (0, 1, _ - LogSoftmax (_), tag=tag1) ].out
-    ReduceSum (_, axis=0, tag='')     = new ComputationNode [ operation = 'ReduceElements' ; inputs = _ ; reductionOp = "Sum"    /*plus the function args*/ ]
+    ReduceSum   (_, axis=0, tag='') = new ComputationNode [ operation = 'ReduceElements' ; inputs = _ ; reductionOp = "Sum"    /*plus the function args*/ ]
+    ReduceLogSum(_, axis=0, tag='') = new ComputationNode [ operation = 'ReduceElements' ; inputs = _ ; reductionOp = "LogSum" /*plus the function args*/ ]
+    ReduceMin   (_, axis=0, tag='') = new ComputationNode [ operation = 'ReduceElements' ; inputs = _ ; reductionOp = "Min"    /*plus the function args*/ ]
+    ReduceMax   (_, axis=0, tag='') = new ComputationNode [ operation = 'ReduceElements' ; inputs = _ ; reductionOp = "Max"    /*plus the function args*/ ]
+    #ReduceMean (_, axis=0, tag='') = new ComputationNode [ operation = 'ReduceElements' ; inputs = _ ; reductionOp = "Mean"   /*plus the function args*/ ]
+    
     // 7. Control flow (if, composite etc.)
     // None so far
 
@@ -227,7 +232,7 @@ WeightedLogistic(label, probability, instanceWeight, tag='') = new ComputationNo
 ReconcileDynamicAxis(dataInput, layoutInput, tag='') = new ComputationNode [ operation = 'ReconcileDynamicAxis' ; inputs = (dataInput : layoutInput) /*plus the function args*/ ]
 ReconcileMBLayout = ReconcileDynamicAxis # back compat
 CastAs (type, data) = ReconcileDynamicAxis (data, type) # read as CastAs<type>(data) where the cast may consist of rearranging the data w.r.t. MBLayout or broadcasting across sequence items
-Convolution(weightNode, inputValueNode, kernelDims, mapDims = 1, stride = 1, sharing = true, autoPadding = true, lowerPad = 0, upperPad = 0, transpose=false, imageLayout='CHW', maxTempMemSizeInSamples = 0, tag='') = new ComputationNode [ operation = 'Convolution' ; inputs = (weightNode : inputValueNode); kernelShape = new TensorShape [ dims = kernelDims ] ; mapCount = new TensorShape [ dims = mapDims ] ; strideShape = new TensorShape [ dims = stride ] ; dimSharing = new BoolVector [ items = sharing ] ; dimPadding = new BoolVector [ items = autoPadding ] ; dimPadLower = new TensorShape [ dims = lowerPad ] ; dimPadUpper = new TensorShape [ dims = upperPad ] /*plus the function args*/ ]
+Convolution(weightNode, inputValueNode, kernelDims, mapDims = 0, stride = 1, sharing = true, autoPadding = true, lowerPad = 0, upperPad = 0, transpose=false, imageLayout='CHW', maxTempMemSizeInSamples = 0, tag='') = new ComputationNode [ operation = 'Convolution' ; inputs = (weightNode : inputValueNode); kernelShape = new TensorShape [ dims = kernelDims ] ; mapCount = new TensorShape [ dims = mapDims ] ; strideShape = new TensorShape [ dims = stride ] ; dimSharing = new BoolVector [ items = sharing ] ; dimPadding = new BoolVector [ items = autoPadding ] ; dimPadLower = new TensorShape [ dims = lowerPad ] ; dimPadUpper = new TensorShape [ dims = upperPad ] /*plus the function args*/ ]
 # ND pooling/unpooling
 Pooling(input, poolKind/*'max'|'average'*/, kernelDims, stride=1, autoPadding = true, lowerPad = 0, upperPad = 0, imageLayout='CHW', tag='') = new ComputationNode [ operation = 'Pooling' ; inputs = (input); pool = poolKind ; kernelShape = new TensorShape [ dims = kernelDims ] ; strideShape = new TensorShape [ dims = stride ] ; dimPadding = new BoolVector [ items = autoPadding ] ; dimPadLower = new TensorShape [ dims = lowerPad ] ; dimPadUpper = new TensorShape [ dims = upperPad ] /*plus the function args*/ ]
 MaxUnpooling(unpoolInput, poolInput, kernelDims, stride=1, autoPadding = true, lowerPad = 0, upperPad = 0, imageLayout='CHW', tag='') = new ComputationNode [ operation = 'MaxUnpooling' ; inputs = (unpoolInput : poolInput); kernelShape = new TensorShape [ dims = kernelDims ] ; strideShape = new TensorShape [ dims = stride ] ; dimPadding = new BoolVector [ items = autoPadding ] ; dimPadLower = new TensorShape [ dims = lowerPad ] ; dimPadUpper = new TensorShape [ dims = upperPad ] /*plus the function args*/ ]
@@ -267,10 +272,6 @@ PerDimMeanVarDeNormalization(dataVectorSequence, meanVector, invStdDevVector, ta
 PerDimMeanVarNormalization(dataVectorSequence, meanVector, invStdDevVector, tag='') = new ComputationNode [ operation = 'PerDimMeanVarNormalization' ; inputs = (dataVectorSequence : meanVector : invStdDevVector) /*plus the function args*/ ]
 Reciprocal(z, tag='') = new ComputationNode [ operation = 'Reciprocal' ; inputs = z /*plus the function args*/ ]
 //# the following is a temporary workaround until we have the C++ version
-#ReduceLogSum (z, axis=0, tag='')  = new ComputationNode [ operation = 'ReduceElements' ; inputs = z ; reductionOp = "LogSum" /*plus the function args*/ ]
-#ReduceMean (z, axis=0, tag='')    = new ComputationNode [ operation = 'ReduceElements' ; inputs = z ; reductionOp = "Mean"    /*plus the function args*/ ]
-#ReduceMax (z, axis=0, tag='')     = new ComputationNode [ operation = 'ReduceElements' ; inputs = z ; reductionOp = "Max"     /*plus the function args*/ ]
-#ReduceMin (z, axis=0, tag='')     = new ComputationNode [ operation = 'ReduceElements' ; inputs = z ; reductionOp = "Min"     /*plus the function args*/ ]
 Scale(scalarScalingFactor, matrix, tag='') = new ComputationNode [ operation = 'Scale' ; inputs = (scalarScalingFactor : matrix) /*plus the function args*/ ]
 # TODO: Scale = ElementTimes
 ScatterPacked(cond, indexSequence, sourceData, tag='') = new ComputationNode [ operation = 'ScatterPacked' ; inputs = (cond : indexSequence : sourceData) /*plus the function args*/ ]
@@ -1033,6 +1034,7 @@ Seq2Seq =
 
 Network = [
     Load(pathName) = new ComputationNetworkFromFile [ /*pathName; also needs 'precision' somewhere*/ ]
+    CloneFunction (inputNodes, outputNodes, parameters="learnable" /*|"constant"|"shared"*/) = new CloneFunctionConfigLambda [ /*args*/ ]
     Edit(inputModel, editFunctions, additionalRoots) = new ComputationNetworkWithEdits [ /*inputModel, editFunctions, additionalRoots*/ ]
 
     Editing = [

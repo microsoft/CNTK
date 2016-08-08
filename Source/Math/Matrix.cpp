@@ -1139,7 +1139,12 @@ template <>
 /*static*/ char Matrix<char>::MakeNan(size_t)
 {
     return 0;
-} // (needed for completeness)
+} // (needed for completeness and to pass unit tests)
+template <>
+/*static*/ short Matrix<short>::MakeNan(size_t)
+{
+    return 0;
+} // (needed for completeness and to pass unit tests)
 
 template <class ElemType>
 void Matrix<ElemType>::MaskColumnsValue(const Matrix<char>& columnsMask, ElemType val)
@@ -5401,6 +5406,7 @@ void Matrix<ElemType>::TensorOp(ElemType beta, const Matrix<ElemType>& a, const 
                             NOT_IMPLEMENTED);
 }
 
+//template class Matrix<short>;
 template class Matrix<float>;
 template class Matrix<double>;
 
@@ -5429,6 +5435,31 @@ template bool Matrix<char>::IsEmpty() const;
 template void Matrix<char>::Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, bool growOnly);
 template void Matrix<char>::Reshape(const size_t, const size_t);
 template char* Matrix<char>::CopyToArray(void) const;
+
+// Matrix<short> methods
+template Matrix<short>::Matrix(DEVICEID_TYPE);
+template Matrix<short>::Matrix(Matrix<short>&&);
+template Matrix<short>::Matrix(const size_t numRows, const size_t numCols, DEVICEID_TYPE deviceId, const MatrixType matrixType, const MatrixFormat matrixFormat);
+template Matrix<short>::Matrix(const size_t numRows, const size_t numCols, short* pArray, DEVICEID_TYPE deviceId, const size_t matrixFlags, const size_t nnz);
+template Matrix<short>::~Matrix();
+template Matrix<short>& Matrix<short>::operator=(Matrix<short>&& moveFrom);
+template short* Matrix<short>::Data() const;
+template int Matrix<short>::GetDeviceId() const;
+template size_t Matrix<short>::GetNumElements() const;
+template Matrix<short> Matrix<short>::ColumnSlice(size_t startColumn, size_t numCols) const;
+template void Matrix<short>::_transferToDevice(int id_to, bool isBeingMoved, bool emptyTransfer) const;
+template void Matrix<short>::TransferToDeviceIfNotThere(int id_to, bool isBeingMoved, bool emptyTransfer, bool updatePreferredDevice) const;
+template size_t Matrix<short>::GetNumRows() const;
+template size_t Matrix<short>::GetNumCols() const;
+template void Matrix<short>::SetValue(const short);
+template void Matrix<short>::SetValue(size_t numRows, const size_t numCols, int deviceId, short* pArray, size_t matrixFlags);
+//template void Matrix<short>::SetValue(const Matrix<short>&, MatrixFormat);
+template void Matrix<short>::SetValue(const Matrix<short>&);
+template void Matrix<short>::AssignValuesOf(const Matrix<short>&);
+template bool Matrix<short>::IsEmpty() const;
+template void Matrix<short>::Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, bool growOnly);
+template void Matrix<short>::Reshape(const size_t, const size_t);
+template short* Matrix<short>::CopyToArray(void) const;
 
 template Matrix<int>::Matrix(const size_t, const size_t, int*, DEVICEID_TYPE, const size_t, const size_t);
 

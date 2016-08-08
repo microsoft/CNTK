@@ -71,11 +71,11 @@ protected:
         const unsigned char* b = (const unsigned char*) &v;
         return (short) ((b[0] << 8) + b[1]);
     }
-	static unsigned short swapunsignedshort(unsigned short v) throw()
-	{
-		const unsigned char* b = (const unsigned char*)&v;
-		return (unsigned short)((b[0] << 8) + b[1]);
-	}
+    static unsigned short swapunsignedshort(unsigned short v) throw()
+    {
+        const unsigned char* b = (const unsigned char*)&v;
+        return (unsigned short)((b[0] << 8) + b[1]);
+    }
     static int swapint(int v) throw()
     {
         const unsigned char* b = (const unsigned char*) &v;
@@ -92,7 +92,7 @@ protected:
         {
             nsamples = fgetint(f);
             sampperiod = fgetint(f);
-            sampsize =(unsigned short) fgetshort(f);
+            sampsize = (unsigned short) fgetshort(f);
             sampkind = fgetshort(f);
         }
 
@@ -108,9 +108,9 @@ protected:
             int nRows = swapint(fgetint(f));
             int nCols = swapint(fgetint(f));
             int rawsampsize = nRows * nCols;
-            if (rawsampsize > UINT16_MAX)
+            sampsize = (unsigned short) rawsampsize; // features are stored as bytes;
+            if (sampsize != rawsampsize)
                 RuntimeError("reading idx feature cache header: sample size overflow");
-            sampsize = (unsigned short)rawsampsize; // features are stored as bytes;
         }
 
         void write(FILE* f)
@@ -124,7 +124,7 @@ protected:
         {
             nsamples = swapint(nsamples);
             sampperiod = swapint(sampperiod);
-			sampsize = swapunsignedshort(sampsize);
+            sampsize = swapunsignedshort(sampsize);
             sampkind = swapshort(sampkind);
         }
     };
@@ -224,9 +224,9 @@ public:
         H.sampperiod = period;
         const int bytesPerValue = sizeof(float); // we do not support compression for now
         size_t rawsampsize = featdim * bytesPerValue;
-        if (rawsampsize > UINT16_MAX)
+        H.sampsize = (unsigned short) rawsampsize;
+        if (H.sampsize != rawsampsize)
             RuntimeError("htkfeatwriter: sample size overflow");
-        H.sampsize = (unsigned short)rawsampsize;
         H.sampkind = parsekind(kind);
         if (needbyteswapping)
             H.byteswap();

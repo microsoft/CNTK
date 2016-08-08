@@ -22,6 +22,4 @@ ConfigValuePtr Evaluate(ExpressionPtr);                               // evaluat
 void Do(ExpressionPtr e);                                             // evaluate e.do
 shared_ptr<Object> EvaluateField(ExpressionPtr e, const wstring& id); // for experimental CNTK integration
 
-// some simple tests
-void SomeTests();
 } } } // end namespaces

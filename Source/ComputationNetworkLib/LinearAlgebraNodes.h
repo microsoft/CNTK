@@ -463,6 +463,8 @@ public:
         Base::AllocateGradientMatricesForInputs(matrixPool);
     }
 
+    size_t OutputRank() const { return m_outputRank; }
+
 private:
     size_t m_outputRank;
 };

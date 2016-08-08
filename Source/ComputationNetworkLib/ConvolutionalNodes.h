@@ -139,6 +139,16 @@ public:
         fstream << "PoolKind: " << (int)m_poolKind << "\n";
     }
 
+    TensorShape KernelShape() const { return m_kernelShape; }
+    TensorShape Strides() const { return m_stride; }
+    std::vector<bool> Sharing() const { return m_sharing; }
+    std::vector<bool> AutoPad() const { return m_autoPad; }
+    TensorShape LowerPad() const { return m_lowerPad; }
+    TensorShape UpperPad() const { return m_upperPad; }
+    bool Transpose() const { return m_transpose; }
+    size_t MaxTempMemSizeInSamples() const { return m_maxTempMemSizeInSamples; }
+    PoolKind PoolingKind() const { return m_poolKind; }
+
 protected:
     TensorShape m_kernelShape;
     TensorShape m_mapCount;
@@ -148,7 +158,7 @@ protected:
     TensorShape m_lowerPad;
     TensorShape m_upperPad;
     PoolKind m_poolKind;
-    bool m_transpose;
+    bool m_transpose; // means de-convolution ...I think
     ImageLayoutKind m_imageLayout;
 
     size_t m_maxTempMemSizeInSamples;
@@ -338,6 +348,10 @@ public:
 
             size_t mapCount = m_mapCount.GetNumElements();
             size_t weightCols = kW * kH * inDims.m_numChannels;
+
+            // if mapCount is 0 then take it from the input matrix
+            if (mapCount == 0)
+                Input(0)->GetAsMatrixNumRows();
 
             // check/infer input [0] (weights)
             // BUGBUG: For now, we treat the weights as a 2D matrix. They should be a tensor proper.
