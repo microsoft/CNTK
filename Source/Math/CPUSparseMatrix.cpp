@@ -781,6 +781,7 @@ void CPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const CPU
         }
     }
 
+    // TODO: Implement CSR as a transposition of b, like we do for GPU.
     if (rhs.GetFormat() != matrixFormatSparseCSC)
         NOT_IMPLEMENTED;
 
@@ -820,13 +821,42 @@ void CPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const CPU
             }
         }
     }
+    // the transposeA case is copy-paste from above with rows/cols of lhs swapped
     else if (transposeA && !transposeB)
     {
-        NOT_IMPLEMENTED;
+        for (size_t j = 0; j < rhs.GetNumCols(); j++)
+        {
+            size_t start = rhs.SecondaryIndexLocation()[j]; // ColLocation
+            size_t end = rhs.SecondaryIndexLocation()[j + 1];
+            for (size_t p = start; p < end; p++)
+            {
+                size_t i = rhs.MajorIndexLocation()[p]; // RowLocation
+                ElemType val = rhs.Buffer()[p];
+
+                for (size_t h = 0; h < lhs.GetNumCols(); h++)
+                {
+                    c(h, j) += alpha * lhs(i, h) * val;
+                }
+            }
+        }
     }
-    else
+    else if (transposeA && transposeB)
     {
-        NOT_IMPLEMENTED;
+        for (size_t j = 0; j < rhs.GetNumCols(); j++)
+        {
+            size_t start = rhs.SecondaryIndexLocation()[j];
+            size_t end = rhs.SecondaryIndexLocation()[j + 1];
+
+            for (size_t p = start; p < end; p++)
+            {
+                size_t i = rhs.MajorIndexLocation()[p];
+                ElemType val = rhs.Buffer()[p];
+                for (size_t h = 0; h < lhs.GetNumCols(); h++)
+                {
+                    c(h, i) += alpha * lhs(j, h) * val;
+                }
+            }
+        }
     }
 }
 

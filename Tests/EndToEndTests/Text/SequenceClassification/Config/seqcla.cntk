@@ -99,8 +99,8 @@ Write=[
         readerType = "CNTKTextFormatReader"
         file = "$DataDir$/Train.txt"            
         input = [
-            features = [ alias = "x" ; dim = 1 ; format = "dense" ]
-            labels   = [ alias = "y" ; dim = 5 ; format = "dense" ]
+            features = [ alias = "x" ; dim = $vocabDim$ ; format = "sparse" ]
+            labels =   [ alias = "y" ; dim = 5          ; format = "dense" ]
         ]
    ]    
    outputPath = "$OutputDir$/output.txt"        # dump the output as text?
