@@ -4,6 +4,8 @@ import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..'))
 import cntk.cntk_py as cntk_py
 
+#TODO: Make use of the helper functions and move to row major.
+
 def create_variable(shape, data_type='float', is_sparse=False, needs_gradient=True, name=""):
     if data_type == 'float':
         cntk_type = cntk_py.DataType_Float
