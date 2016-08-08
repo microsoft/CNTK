@@ -279,7 +279,12 @@ BOOST_AUTO_TEST_CASE(HTKMLFReaderSimpleDataLoop19)
         1,
         1,
         0,
-        1);
+        1,
+        false,
+        false,
+        true,
+        {},
+        false);
 };
 
 BOOST_AUTO_TEST_CASE(HTKMLFReaderSimpleDataLoop20)
@@ -500,7 +505,12 @@ BOOST_AUTO_TEST_CASE(HTKDeserializersSimpleDataLoop9)
         1,
         1,
         0,
-        1);
+        1,
+        false,
+        false,
+        true,
+        {},
+        false);
 };
 
 BOOST_AUTO_TEST_CASE(HTKMLFReaderSimpleDataLoop9)
@@ -517,7 +527,12 @@ BOOST_AUTO_TEST_CASE(HTKMLFReaderSimpleDataLoop9)
         1,
         1,
         0,
-        1);
+        1,
+        false,
+        false,
+        true,
+        {},
+        false);
 };
 
 BOOST_AUTO_TEST_CASE(HTKDeserializersSimpleDataLoop19)
@@ -534,7 +549,12 @@ BOOST_AUTO_TEST_CASE(HTKDeserializersSimpleDataLoop19)
         1,
         1,
         0,
-        1);
+        1,
+        false,
+        false,
+        true,
+        {},
+        false);
 };
 
 BOOST_AUTO_TEST_CASE(HTKDeserializersSimpleDataLoop10)
