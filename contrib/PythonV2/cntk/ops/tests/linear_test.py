@@ -14,7 +14,6 @@ import numpy as np
 import pytest
 from .ops_test_utils import unittest_helper, _test_unary_op, _test_binary_op, AA, I, precision, PRECISION_TO_TYPE, batch_dense_to_sparse, left_matrix_type, right_matrix_type
 from ...utils import sanitize_dtype_cntk, ones_like, eval, precision_numpy, cntk_device
-from ...context import get_context
 
 TENSOR_PAIRS = [
     ([30.], [10.]),
@@ -151,87 +150,6 @@ def _test_op_element_divide(left_operand, right_operand, device_id, precision):
             left_operand, right_operand, 
             expected_forward, expected_backward)
 
-# -- times function tests --
-
-TIMES_PAIRS = [
-    ([[30.]], [[10.]]),
-    ([[1.5, 2.1]], [[10.], [20.]]),
-    ([[100., 200.]], [[10.], [20.]]),
-]
-
-# TODO: port to v2
-#TODO:enable this test once sparse is sorted out
-@pytest.mark.parametrize("left_operand, right_operand", TIMES_PAIRS)
-def _test_op_times(left_operand, right_operand, device_id, precision,
-        left_matrix_type, right_matrix_type):
-    if right_matrix_type == 'sparse':
-        pytest.skip('second operator of times() has to be dense')
-
-    dt = PRECISION_TO_TYPE[precision]
-    # Forward pass test
-    #==================
-    # we compute the expected output for the forward pass
-    # we need two surrounding brackets
-    # the first for sequences (length=1, since we have dynamic_axis='')
-    # the second for batch of one sample
-    expected = [[np.dot(AA(left_operand, dtype=dt), AA(right_operand, dtype=dt))]]
-    
-    if left_matrix_type == 'sparse':
-        a = SI(*batch_dense_to_sparse([left_operand]))
-    else:
-        a = I([left_operand])
-
-    b = I([right_operand])
-
-    from cntk.ops import times, constant
-    left_as_input = times(a, constant(right_operand))
-    right_as_input = times(constant(left_operand), b)
-
-    unittest_helper(left_as_input, None, expected, device_id=device_id,
-                    precision=precision, backward_pass=False)
-
-    unittest_helper(right_as_input, None, expected, device_id=device_id,
-                    precision=precision, backward_pass=False)
-
-    unittest_helper(times(a, b), None, expected, device_id=device_id,
-                    precision=precision, backward_pass=False)
-
-
-    # Backward pass test
-    #==================
-
-    def op_grad(A, B):
-        '''
-        Compute derivative of A with respect to B. For simplicity, assume A
-        and B to be matrices.
-        Let A be 2x2 and B be 2x1, then we have
-        [a11 a12] [b11]  = [ a11 b11 + a12 b21 ]
-        [a21 a22] [b21]    [ a21 b11 + a22 b21 ]
-
-        The derivative for A with respect to B is
-        [b11 b21]
-        [b11 b21]
-
-        The derivative for B with respect to A:
-        [a11 + a12]
-        [a21 + a22]
-        '''
-        assert len(A.shape) == len(B.shape) == 2
-        D = np.zeros_like(A)
-        D[:,:] = B.sum(axis=1)
-        
-        return D
-
-    if 'sparse' not in [left_matrix_type, right_matrix_type]:
-        # FIXME: disabling until the Pass node supports sparse 
-        expected_left = [[op_grad(AA(left_operand, dtype=dt), AA(right_operand, dtype=dt))]]
-        expected_right = [[op_grad(AA(right_operand, dtype=dt).T, AA(left_operand, dtype=dt).T).T]]
-
-        unittest_helper(left_as_input, None, expected_left, device_id=device_id,
-                        precision=precision, backward_pass=True, input_node=a)
-        # BUG: Fails because of Pass node?
-        unittest_helper(right_as_input, None, expected_right, device_id=device_id,
-                        precision=precision, backward_pass=True, input_node=b)
 
 # -- identity function tests --
 # TODO enable this once the function is exposed

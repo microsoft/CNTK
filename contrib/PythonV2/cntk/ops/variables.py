@@ -3,7 +3,6 @@ from cntk import cntk_py
 from cntk import DATATYPE
 from cntk.graph import TensorOpsMixin
 from .. import utils
-from cntk.context import get_context
 
 FLOAT_32='float32'
 
