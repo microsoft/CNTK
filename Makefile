@@ -122,6 +122,7 @@ ifdef CUDA_PATH
 # Set up CUDA includes and libraries
   INCLUDEPATH += $(CUDA_PATH)/include
   LIBPATH += $(CUDA_PATH)/lib64
+  LIBPATH += $(CUDA_PATH)/lib64/stubs
   LIBS += -lcublas -lcudart -lcuda -lcurand -lcusparse -lnvidia-ml
 
 # Set up cuDNN if needed
@@ -138,8 +139,10 @@ else
 endif
 
 ifeq ("$(MATHLIB)","acml")
-  INCLUDEPATH += $(ACML_PATH)/include
-  LIBPATH += $(ACML_PATH)/lib
+  INCLUDEPATH += $(ACML_PATH)/ifort64/include
+  INCLUDEPATH += $(ACML_PATH)/ifort64_mp/include
+  LIBPATH += $(ACML_PATH)/ifort64/lib
+  LIBPATH += $(ACML_PATH)/ifort64_mp/lib
   LIBS += -lacml_mp -liomp5 -lm -lpthread
   COMMON_FLAGS += -DUSE_ACML
 endif
