@@ -48,7 +48,7 @@ Train=[
         embedDim = 50
 
         # definition without layer composition
-        modelMacroStyle (features) = {
+        model_macroStyle (features) = {
             // load the pre-learned word embedding matrix
             #l1 = Layers.EmbeddingLayer(features, vocabDim, embedDim, 'embeddingmatrix.txt')
             l1 = Layers.EmbeddingLayerSparse(features, vocabDim, embedDim, 'embeddingmatrix.txt')
@@ -58,12 +58,12 @@ Train=[
         }.z
 
         # definition with layer composition
-        modelLayerStyle (features) = {
-            // load the pre-learned word embedding matrix
-            l1o = Layers.EmbeddingLayer(features, vocabDim, embedDim, 'embeddingmatrix.txt')
+        model_layerStyle (features) = {
+            # load the pre-learned word embedding matrix
             l1 = EmbeddingLayer {embedDim, embeddingPath='embeddingmatrix.txt', transpose=true} (features)
-            l2 = Layers.LSTMLayer(l1, embedDim, lstmDim, cellDim, BS.Sequences.Last)
-            l3 = Layers.DenseLayer(l2, lstmDim, numLabels, Pass)
+            l2s = RecurrentLSTMLayer {lstmDim, cellDim=cellDim} (l1)
+            l2 = BS.Sequences.Last (l2s)
+            l3 = DenseLayer {numLabels} (l2)
             z = l3
         }.z
 
@@ -73,7 +73,8 @@ Train=[
         labels   = Input {numLabels}          # Input has shape (numLabels,*) where all sequences in *=1
 
         # apply model
-        model = modelMacroStyle
+        #model = model_macroStyle
+        model = model_layerStyle
         z = model (features)
 
         # Make sure the trainer understands that the time dimension of l3 is actually the same as that of labels.

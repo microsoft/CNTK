@@ -95,12 +95,12 @@ RecurrentLSTMLayer {outDim,
                     goBackwards = false,
                     enableSelfStabilization = false} =
 {
-    cellShape = if BS.Constants.IsNone (cellDim) == 0 then outDim else cellDim
+    cellShape = if BS.Constants.IsNone (cellDim) then outDim else cellDim
     # BUGBUG: Calling f(x) twice will create a second set of parameters. Needs to refactor LSTM for this.
-    f(x) = RecurrentLSTMP (outDim, cellDim = outputDim,
-                           x, inputDim = x.dim,
-                           previousHook = if goBackwards then BS.RNNs.NextHC else BS.RNNs.PreviousHC,
-                           enableSelfStabilization = enableSelfStabilization).h
+    f(x) = BS.RNNs.RecurrentLSTMP (outDim, cellDim = cellShape,
+                                   x, inputDim = 0,
+                                   previousHook = if goBackwards then BS.RNNs.NextHC else BS.RNNs.PreviousHC,
+                                   enableSelfStabilization = enableSelfStabilization).h
 }.f
 
 # DropoutLayer -- create a drop-out layer
