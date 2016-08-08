@@ -10,6 +10,7 @@
 #include <iterator>
 #include "ComputationNetwork.h"
 #include "Utils.h"
+#include "ConvolveGeometry.h"
 
 namespace CNTK
 {
@@ -26,6 +27,7 @@ namespace CNTK
         Abs,
         Reciprocal,
         Softmax,
+        Pooling,
         Plus,
         Minus,
         ElementTimes,
@@ -36,12 +38,14 @@ namespace CNTK
         Greater,
         GreaterEqual,
         Times,
+        Convolution,
         SquaredError,
         CrossEntropyWithSoftmax,
         ClassificationError,
         PastValue,
         FutureValue,
         ReduceSum,
+        BatchNormalization,
         Combine,
     };
 }
@@ -73,6 +77,7 @@ namespace CNTK
             { PrimitiveOpType::Abs, "Abs" },
             { PrimitiveOpType::Reciprocal, "Reciprocal" },
             { PrimitiveOpType::Softmax, "Softmax" },
+            { PrimitiveOpType::Pooling, "Pooling" },
             { PrimitiveOpType::Plus, "Plus" },
             { PrimitiveOpType::Minus, "Minus" },
             { PrimitiveOpType::ElementTimes, "ElementTimes" },
@@ -83,12 +88,14 @@ namespace CNTK
             { PrimitiveOpType::Greater, "Greater" },
             { PrimitiveOpType::GreaterEqual, "GreaterEqual" },
             { PrimitiveOpType::Times, "Times" },
+            { PrimitiveOpType::Convolution, "Convolution" },
             { PrimitiveOpType::SquaredError, "SquaredError" },
             { PrimitiveOpType::CrossEntropyWithSoftmax, "CrossEntropyWithSoftmax" },
             { PrimitiveOpType::ClassificationError, "ClassificationError" },
             { PrimitiveOpType::PastValue, "PastValue" },
             { PrimitiveOpType::FutureValue, "FutureValue" },
             { PrimitiveOpType::ReduceSum, "ReduceSum" },
+            { PrimitiveOpType::BatchNormalization, "BatchNormalization" },
             { PrimitiveOpType::Combine, "Combine" }
         };
 
@@ -102,7 +109,7 @@ namespace CNTK
     {
     public:
         PrimitiveFunction(PrimitiveOpType op, const std::vector<Variable>& inputs, Dictionary&& functionConfig, const std::wstring& functionName = L"")
-            : Function(inputs, GetOutputVariables(op, inputs, this), nullptr, functionName), m_op(op), m_functionConfig(std::move(functionConfig))
+            : Function(inputs, GetOutputVariables(op, inputs, this, functionConfig), nullptr, functionName), m_op(op), m_functionConfig(std::move(functionConfig))
         {
         }
 
@@ -169,25 +176,28 @@ namespace CNTK
             return NDShape(std::move(outputDims));
         }
 
-        static NDShape TimesOpOutputShape(const NDShape& leftOperandShape, const NDShape& rightOperandShape)
+        static NDShape TimesOpOutputShape(const NDShape& leftOperandShape, const NDShape& rightOperandShape, size_t numOutputAxes)
         {
-            if (rightOperandShape.NumAxes() > 2)
-                RuntimeError("The right operand of a times operation can have at most 2 axes");
+            if (numOutputAxes == 0)
+                InvalidArgument("Output #axes of times operation should be at least one");
 
-            size_t numOutputAxes = rightOperandShape.NumAxes();
+            if (numOutputAxes > leftOperandShape.NumAxes())
+                InvalidArgument("Output #axes of times operation can at most be the #axes of the left operand");
 
-            if (leftOperandShape.NumAxes() != 2)
-                RuntimeError("The left operand of a times operation must have 2 axes");
+            size_t numReductionAxes = leftOperandShape.NumAxes() - numOutputAxes;
 
-            std::vector<size_t> outputDims(numOutputAxes);
-            outputDims[0] = leftOperandShape[0];
-            if (numOutputAxes > 1)
-                outputDims[1] = rightOperandShape[1];
+            // The 'numReductionAxes' trailing dimensions of the left operand's shape must match the corresponding leading
+            // dimensions of the right operand
 
-            if (leftOperandShape[1] != rightOperandShape[0])
-                RuntimeError("Left operand's shape %s is not compatible with right operand's shape %s for the times operation", AsString(leftOperandShape).c_str(), AsString(rightOperandShape).c_str());
+            if (rightOperandShape.NumAxes() != numReductionAxes)
+                RuntimeError("The right operand's #axes in a times operation should equal #axes being reduced over!");
 
-            return NDShape(std::move(outputDims));
+            if (leftOperandShape.SubShape(numOutputAxes) != rightOperandShape)
+                InvalidArgument("The trailing dimensions of the left operand (%s) do not match the right operand's dimensions (%s)",
+                                AsString(leftOperandShape.SubShape(numOutputAxes)).c_str(),
+                                AsString(rightOperandShape).c_str());
+
+            return leftOperandShape.SubShape(0, numOutputAxes);
         }
 
         static NDShape ReductionOpOutputShape(PrimitiveOpType op, const NDShape& operandShape, const std::vector<size_t>& reductionAxes)
@@ -209,8 +219,22 @@ namespace CNTK
             return NDShape(std::move(outputDims));
         }
 
+        static NDShape ConvolutionOpOutputShape(const NDShape& operandShape, const NDShape& kernelShape, const NDShape& outputMapCount, const NDShape& strides,
+                                                const std::vector<bool>& sharing,
+                                                std::vector<bool>& autoPad, const NDShape& lowerPad, const NDShape& upperPad,
+                                                bool transpose)
+        {
+            decltype(&Microsoft::MSR::CNTK::ConvolveGeometry::ComputeOutputShape) computeOutputShapeFunc;
+            if (!transpose)
+                computeOutputShapeFunc = &Microsoft::MSR::CNTK::ConvolveGeometry::ComputeOutputShape;
+            else
+                computeOutputShapeFunc = &Microsoft::MSR::CNTK::ConvolveGeometry::ComputeInputShape;
+
+            return AsNDShape(computeOutputShapeFunc(AsTensorShape(operandShape, true), AsTensorShape(kernelShape, true), AsTensorShape(outputMapCount, true), AsTensorShape(strides, true), sharing, autoPad, AsTensorShape(lowerPad, true), AsTensorShape(upperPad, true)));
+        }
+
         // TODO: Reconcile this with the ComputationNode::Validate functionality in core CNTK to avoid duplication of inference logic
-        static std::vector<Variable> GetOutputVariables(PrimitiveOpType op, const std::vector<Variable>& inputs, Function* owner)
+        static std::vector<Variable> GetOutputVariables(PrimitiveOpType op, const std::vector<Variable>& inputs, Function* owner, const Dictionary& functionConfig)
         {
             std::vector<Variable> outputs;
 
@@ -247,6 +271,17 @@ namespace CNTK
                 assert(inputs.size() == 1);
                 outputs.push_back(Variable(UnaryElementwiseOpOutputShape(inputs[0].Shape()), outputDataType, owner, outputDynamicAxes));
                 break;
+            case PrimitiveOpType::Pooling:
+            {
+                assert(inputs.size() == 1);
+                auto poolingWindowsShape = functionConfig[L"poolingWindowShape"].GetValue<NDShape>();
+                auto strides = functionConfig[L"strides"].GetValue<NDShape>();
+                auto lowerPad = functionConfig[L"lowerPad"].GetValue<NDShape>();
+                auto upperPad = functionConfig[L"upperPad"].GetValue<NDShape>();
+                auto autoPadding = AsBasicElementTypeVector<bool>(functionConfig[L"autoPadding"].GetValue<std::vector<DictionaryValue>>());
+                outputs.push_back(Variable(ConvolutionOpOutputShape(inputs[0].Shape(), poolingWindowsShape, { 1 }, strides, { true }, autoPadding, lowerPad, upperPad, false), outputDataType, owner, outputDynamicAxes));
+                break;
+            }
             case PrimitiveOpType::Plus:
             case PrimitiveOpType::Minus:
             case PrimitiveOpType::ElementTimes:
@@ -260,9 +295,34 @@ namespace CNTK
                 outputs.push_back(Variable(BinaryElementwiseOpOutputShape(op, inputs[0].Shape(), inputs[1].Shape()), outputDataType, owner, outputDynamicAxes));
                 break;
             case PrimitiveOpType::Times:
+            {
                 assert(inputs.size() == 2);
-                outputs.push_back(Variable(TimesOpOutputShape(inputs[0].Shape(), inputs[1].Shape()), outputDataType, owner, outputDynamicAxes));
+
+                // TODO: Support dynamic axes on the left operand
+                if (!inputs[0].DynamicAxes().empty())
+                    LogicError("Dynamic axes are currently unsupported for left operand of a Times operation");
+
+                size_t numOutputAxes = functionConfig[L"numOutputAxes"].GetValue<size_t>();
+                outputs.push_back(Variable(TimesOpOutputShape(inputs[0].Shape(), inputs[1].Shape(), numOutputAxes), outputDataType, owner, outputDynamicAxes));
                 break;
+            }
+            case PrimitiveOpType::Convolution:
+            {
+                assert(inputs.size() == 2);
+                auto strides = functionConfig[L"strides"].GetValue<NDShape>();
+                auto lowerPad = functionConfig[L"lowerPad"].GetValue<NDShape>();
+                auto upperPad = functionConfig[L"upperPad"].GetValue<NDShape>();
+                auto sharing = AsBasicElementTypeVector<bool>(functionConfig[L"sharing"].GetValue<std::vector<DictionaryValue>>());
+                auto autoPadding = AsBasicElementTypeVector<bool>(functionConfig[L"autoPadding"].GetValue<std::vector<DictionaryValue>>());
+                bool transpose = functionConfig[L"transpose"].GetValue<bool>();
+                if (inputs[0].Shape().NumAxes() < inputs[1].Shape().NumAxes())
+                    InvalidArgument("The convolution map should have at least as many axes as the shape of the input it operates on!");
+
+                NDShape outputMapCount, kernelShape;
+                std::tie(outputMapCount, kernelShape) = GetConvolutionOutputMapCountAndKernelShape(inputs[0].Shape(), inputs[1].Shape());
+                outputs.push_back(Variable(ConvolutionOpOutputShape(inputs[1].Shape(), kernelShape, outputMapCount, strides, sharing, autoPadding, lowerPad, upperPad, transpose), outputDataType, owner, outputDynamicAxes));
+                break;
+            }
             case PrimitiveOpType::SquaredError:
             case PrimitiveOpType::CrossEntropyWithSoftmax:
             case PrimitiveOpType::ClassificationError:
@@ -303,6 +363,9 @@ namespace CNTK
                 outputs.push_back(Variable(ReductionOpOutputShape(op, inputs[0].Shape(), reductionAxes), outputDataType, owner, reductionOutputDynamicAxes));
                 break;
             }
+            case PrimitiveOpType::BatchNormalization:
+                outputs.push_back(Variable(UnaryElementwiseOpOutputShape(inputs[0].Shape()), outputDataType, owner, outputDynamicAxes));
+                break;
             case PrimitiveOpType::Combine:
                 outputs = inputs;
                 break;
@@ -349,6 +412,10 @@ namespace CNTK
 
         template <typename ElementType>
         friend void SaveAsLegacyModel(const FunctionPtr& rootFunction, const std::wstring& modelFile);
+
+        friend void ComputeInputPerDimMeansAndInvStdDevs(const MinibatchSourcePtr& minibatchSource,
+                                                         std::unordered_map<StreamInfo, std::pair<NDArrayViewPtr, NDArrayViewPtr>>& computedMeanAndInvStdDevs,
+                                                         const DeviceDescriptor& device /*= DeviceDescriptor::CPUDevice()*/);
 
     public:
         static CompositeFunctionPtr Create(const FunctionPtr& rootFunction, const std::wstring& name = L"")
@@ -425,6 +492,7 @@ namespace CNTK
         static void PopulateComputationNodeGradient(const std::pair<Variable, ValuePtr>& variableGradient, Microsoft::MSR::CNTK::ComputationNodeBasePtr& computationNode);
         void PopulateNetworkGradients(const std::unordered_map<Variable, ValuePtr>& gradients);
 
+        static void GetNodeOutputOrGradient(Variable var, ValuePtr& varValue, Microsoft::MSR::CNTK::ComputationNodeBasePtr& computationNode, bool getGradient);
         void GetNetworkOutputs(std::unordered_map<Variable, ValuePtr>& outputs);
         void GetNetworkGradients(std::unordered_map<Variable, ValuePtr>& gradients);
 

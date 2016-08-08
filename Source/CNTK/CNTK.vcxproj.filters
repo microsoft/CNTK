@@ -1,18 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <ClCompile Include="..\Common\DataReader.cpp">
-      <Filter>Common</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Common\DataWriter.cpp">
-      <Filter>Common</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Common\File.cpp">
-      <Filter>Common</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Common\fileutil.cpp">
-      <Filter>Common</Filter>
-    </ClCompile>
     <ClCompile Include="ModelEditLanguage.cpp">
       <Filter>Model Editing</Filter>
     </ClCompile>
@@ -22,33 +10,12 @@
     <ClCompile Include="tests.cpp">
       <Filter>Misc</Filter>
     </ClCompile>
-    <ClCompile Include="..\Common\TimerUtility.cpp">
-      <Filter>Common</Filter>
-    </ClCompile>
     <ClCompile Include="CNTK.cpp" />
-    <ClCompile Include="..\Common\MPIWrapper.cpp">
-      <Filter>MPI Interfacing</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Common\Include\ConcStack.h">
-      <Filter>Common\Include</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Common\Config.cpp">
-      <Filter>Common</Filter>
-    </ClCompile>
     <ClCompile Include="BrainScript\BrainScriptEvaluator.cpp">
       <Filter>BrainScript</Filter>
     </ClCompile>
     <ClCompile Include="BrainScript\BrainScriptParser.cpp">
       <Filter>BrainScript</Filter>
-    </ClCompile>
-    <ClCompile Include="BrainScript\BrainScriptTest.cpp">
-      <Filter>BrainScript</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Common\ExceptionWithCallStack.cpp">
-      <Filter>Common</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Common\CompositeDataReader.cpp">
-      <Filter>Common</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -205,9 +172,8 @@
     <ClInclude Include="..\Readers\ReaderLib\Transformer.h">
       <Filter>from ReaderLib</Filter>
     </ClInclude>
-    <ClInclude Include="..\Common\Include\CompositeDataReader.h">
-      <Filter>Common\Include</Filter>
-    </ClInclude>
+    <ClInclude Include="..\Common\Include\basetypes.h" />
+    <ClInclude Include="..\Readers\CompositeDataReader\CompositeDataReader.h" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="modelEditor.txt">

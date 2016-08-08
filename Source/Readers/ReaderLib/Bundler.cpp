@@ -165,12 +165,6 @@ void Bundler::GetSequencesForChunk(ChunkIdType chunkId, std::vector<SequenceDesc
     std::vector<SequenceDescription> result;
     if (m_takePrimarySequenceLength) // No need to consult other deserializers.
     {
-        // Can return because all sequences are clean.
-        if (chunk->m_invalid.empty())
-        {
-            return;
-        }
-
         // Do cleansing.
         result.reserve(sequences.size());
         for (size_t sequenceIndex = 0; sequenceIndex < sequences.size(); ++sequenceIndex)
@@ -181,6 +175,7 @@ void Bundler::GetSequencesForChunk(ChunkIdType chunkId, std::vector<SequenceDesc
             }
 
             result.push_back(sequences[sequenceIndex]);
+            result.back().m_id = sequenceIndex;
         }
     }
     else // need to get the max sequence length from other deserializers.
@@ -203,6 +198,7 @@ void Bundler::GetSequencesForChunk(ChunkIdType chunkId, std::vector<SequenceDesc
                 sequenceSamples = std::max(sequenceSamples, s.m_numberOfSamples);
             }
             sequence.m_numberOfSamples = sequenceSamples;
+            sequence.m_id = sequenceIndex;
             result.push_back(sequence);
         }
     }

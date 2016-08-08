@@ -28,6 +28,9 @@ class LearnableParameter : public ComputationNode<ElemType>, public NumInputs<0>
 
     void InitShape(const TensorShape& shape);
 
+    // helper to initialize from a matrix read from a text file or a string literal
+    void InitFromArray(const std::vector<ElemType>& array, size_t numRows, size_t numCols);
+
 public:
     LearnableParameter(DEVICEID_TYPE deviceId, const wstring& name)
         : Base(deviceId, name)
@@ -55,39 +58,9 @@ public:
     // initialize by reading a matrix from a text file
     void InitFromFile(const std::wstring& initFromFilePath);
 
-    // helper to initialize from a matrix read from a text file or a string literal
-    void InitFromArray(const std::vector<ElemType>& array, size_t numRows, size_t numCols);
-
     // reload parameters from file
     // This is called from MEL.
-    // TODO: Move this error check there, since this is called only from one place.
-    void ReviseFromFile(const std::wstring& reviseFromFilePath)
-    {
-#if 1
-        try
-        {
-            InitFromFile(reviseFromFilePath);
-        }
-        catch(const std::exception & e)
-        {
-            RuntimeError("ReviseFromFile: Failed to reload %ls %ls operation from file %ls: %s", NodeName().c_str(), OperationName().c_str(), reviseFromFilePath.c_str(), e.what());
-        }
-#else
-        size_t numRows, numCols;
-        auto array = File::LoadMatrixFromTextFile<ElemType>(reviseFromFilePath, numRows, numCols);
-        size_t nRows, nCols;
-        DetermineDataSize(nRows, nCols); // BUGBUG: private
-
-        if (numRows != nRows || numCols != nCols)
-        {
-            RuntimeError("Error in ReviseFromFile for node %ls using file %ls:  original size (%d x %d) vs current size (%d x %d)",
-                         m_nodeName.c_str(), reviseFromFilePath.c_str(), (int) nRows, (int) nCols, (int) numRows, (int) numCols);
-        }
-
-        Value().SetValue(numRows, numCols, m_deviceId, array.data(), matrixFlagNormal);
-        VerifyDataSize(Value());      // sanity check
-#endif
-    }
+    void ReviseFromFile(const std::wstring& reviseFromFilePath);
 
     virtual void Save(File& fstream) const override;
     virtual void Load(File& fstream, size_t modelVersion) override;
