@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
+    <CUDNN_PATH>C:\NVIDIA\cudnn-5.0\cuda</CUDNN_PATH>
+
     <!-- Note: SolutionDir / RepoRootPath are the same in current setup -->
     <RepoRootPath>$(MSBuildThisFileDirectory)</RepoRootPath>
     <RelativeProjectPath>$(MSBuildProjectDirectory.Substring($(MSBuildThisFileDirectory.Length)))</RelativeProjectPath>

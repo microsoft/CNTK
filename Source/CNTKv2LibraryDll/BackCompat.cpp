@@ -206,7 +206,7 @@ namespace CNTK
             else if (node->OperationName() == OperationNameOf(BatchNormalizationNode))
             {
                 auto batchNormalizationNode = node->As<BatchNormalizationNode<ElementType>>();
-                primitiveFunctionConfigParameters[L"spacial"] = batchNormalizationNode->Spatial();
+                primitiveFunctionConfigParameters[L"spatial"] = batchNormalizationNode->Spatial();
                 primitiveFunctionConfigParameters[L"normalizationTimeConstant"] = batchNormalizationNode->NormalizationTimeConstant();
                 primitiveFunctionConfigParameters[L"blendTimeConstant"] = batchNormalizationNode->BlendTimeConstant();
                 primitiveFunctionConfigParameters[L"epsilon"] = batchNormalizationNode->Epsilon();

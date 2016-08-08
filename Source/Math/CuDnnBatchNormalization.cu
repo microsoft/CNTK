@@ -42,7 +42,7 @@ protected:
             InvalidArgument("cuDNN batch normalization supports tensors of max 4 dimensions.");
     }
 
-    void ForwardCore(const Mat& in, const Mat& scale, const Mat& bias, double expAvgFactor, double blendFactor, Mat& runMean, Mat& runInvStdDev,
+    void ForwardCore(const Mat& in, const Mat& scale, const Mat& bias, double expAvgFactor, double blendFactor, Mat& runMean, Mat& runStdDev,
                      Mat& out, double epsilon, Mat& saveMean, Mat& saveInvStdDev) override
     {
         // REVIEW alexeyk: there might be a way to do this in cuDNN.
@@ -59,14 +59,14 @@ protected:
             saveMean.Resize(0, 0);      // (these are not produced in this case)
             saveInvStdDev.Resize(0, 0);
             CUDNN_CALL(cudnnBatchNormalizationForwardInference(*m_cudnn, mode, &C::One, &C::Zero, m_inOutCuDnnT, ptr(in), m_inOutCuDnnT, ptr(out),
-                                                               m_scaleBiasCuDnnT, ptr(scale), ptr(bias), ptr(runMean), ptr(runInvStdDev), epsilon));
+                                                               m_scaleBiasCuDnnT, ptr(scale), ptr(bias), ptr(runMean), ptr(runStdDev), epsilon));
         }
         else
         {
             saveMean.Resize(runMean);
             saveInvStdDev.Resize(runMean);
             CUDNN_CALL(cudnnBatchNormalizationForwardTraining(*m_cudnn, mode, &C::One, &C::Zero, m_inOutCuDnnT, ptr(in),
-                                                              m_inOutCuDnnT, ptr(out), m_scaleBiasCuDnnT, ptr(scale), ptr(bias), expAvgFactor, ptr(runMean), ptr(runInvStdDev),
+                                                              m_inOutCuDnnT, ptr(out), m_scaleBiasCuDnnT, ptr(scale), ptr(bias), expAvgFactor, ptr(runMean), ptr(runStdDev),
                                                               epsilon, ptr(saveMean), ptr(saveInvStdDev)));
         }
     }
@@ -77,14 +77,9 @@ protected:
         UNUSED(blendFactor);  // BUGBUG: It should be used.
         m_inOutCuDnnT.UpdateBatchSize(srcGrad.GetNumCols());
         cudnnBatchNormMode_t mode = m_spatial ? CUDNN_BATCHNORM_SPATIAL : CUDNN_BATCHNORM_PER_ACTIVATION;
-        // REVIEW alexeyk: remove once Philly is upgraded to prod version. Also change betaParamDiff to 1 and update CNTK BN engine.
-#if CUDNN_MAJOR >= 5 || (CUDNN_MAJOR == 4 && CUDNN_PATCHLEVEL >= 7)
+        // REVIEW alexeyk: change betaParamDiff to 1 and update CNTK BN engine.
         CUDNN_CALL(cudnnBatchNormalizationBackward(*m_cudnn, mode, &C::One, &C::One, &C::One, &C::Zero, m_inOutCuDnnT, ptr(in), m_inOutCuDnnT, ptr(srcGrad), m_inOutCuDnnT, ptr(grad),
                                                    m_scaleBiasCuDnnT, ptr(scale), ptr(scaleGrad), ptr(biasGrad), CUDNN_BN_MIN_EPSILON, ptr(saveMean), ptr(saveInvStdDev)));
-#else
-        CUDNN_CALL(cudnnBatchNormalizationBackward(*m_cudnn, mode, &C::One, &C::One,                    m_inOutCuDnnT, ptr(in), m_inOutCuDnnT, ptr(srcGrad), m_inOutCuDnnT, ptr(grad),
-                                                   m_scaleBiasCuDnnT, ptr(scale), ptr(scaleGrad), ptr(biasGrad), CUDNN_BN_MIN_EPSILON, ptr(saveMean), ptr(saveInvStdDev)));
-#endif
     }
 
 private:

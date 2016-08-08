@@ -352,6 +352,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
             "or an explicit learning rate must be specified in config for the starting epoch.");
     }
 
+    // TODO this assumes training is picked up with nodes with zero parameters
     double prevDropoutRate = 0;
     double prevNormalizationTimeConstant = 0;
     double prevNormalizationBlendTimeConstant = 0;

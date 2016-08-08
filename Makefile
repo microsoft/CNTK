@@ -28,7 +28,7 @@
 #   CUB_PATH= path to NVIDIA CUB installation, so $(CUB_PATH)/cub/cub.cuh exists
 #     defaults to /usr/local/cub-1.4.1
 #   CUDNN_PATH= path to NVIDIA cuDNN installation so $(CUDNN_PATH)/cuda/include/cudnn.h exists
-#     If not specified, CNTK will be be built without cuDNN.
+#     CuDNN version needs to be 5.0 or higher.
 #   KALDI_PATH= Path to Kaldi
 #     If not specified, Kaldi plugins will not be built
 #   OPENCV_PATH= path to OpenCV 3.1.0 installation, so $(OPENCV_PATH) exists

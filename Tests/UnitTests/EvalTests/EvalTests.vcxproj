@@ -155,7 +155,7 @@
   </Target>
   <Target Name="CopyUnitTestDependencies" AfterTargets="Build">
     <PropertyGroup>
-      <CuDnnDll Condition="$(GpuBuild) And Exists('$(OutDir)..\cudnn64_4.dll')">$(OutDir)..\cudnn64_4.dll</CuDnnDll>
+      <CuDnnDll Condition="$(GpuBuild) And Exists('$(OutDir)..\cudnn64_5.dll')">$(OutDir)..\cudnn64_5.dll</CuDnnDll>
     </PropertyGroup>
     <ItemGroup>
       <UnitTestDependencies Include="$(OutDir)CNTK.Core.BS;$(OutDir)..\evaldll.dll;$(OutDir)..\Math.dll;$(UnitTestDlls)" />

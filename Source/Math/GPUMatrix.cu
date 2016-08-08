@@ -41,7 +41,7 @@
 #define UNCONST(t, c, uc) GPUMatrix<t>& uc = const_cast<GPUMatrix<t>&>(c);
 
 #ifdef _WIN32
-// thread local storage to access the current stream, initalize to default stream
+// thread local storage to access the current stream, initialize to default stream
 __declspec(thread)
 #endif
     cudaStream_t t_stream = cudaStreamDefault;
@@ -62,7 +62,7 @@ cudaStream_t MATH_API GetStream()
     return t_stream;
 }
 
-// Helper macro patterns for elemtwise methods
+// Helper macro patterns for elementwise methods
 #define DEF_ELEMWISE_INPLACE_FUNC(f)                                      \
     template <class ElemType>                                             \
     GPUMatrix<ElemType>& GPUMatrix<ElemType>::Inplace##f()                \
@@ -3163,7 +3163,7 @@ void GPUMatrix<ElemType>::AveragePoolingBackward(const GPUMatrix<int>& mpRowCol,
 // returns saveMean/saveInvStdDev which are the actual values used to perform the normalization, except for blendFactor 1, in which case they are unused and set to empty
 template <class ElemType>
 void GPUMatrix<ElemType>::BatchNormalizationForward(const GPUMatrix<ElemType>& scale, const GPUMatrix<ElemType>& bias, double expAvgFactor, double blendFactor,
-                                                    GPUMatrix<ElemType>& runMean, GPUMatrix<ElemType>& runInvStdDev, GPUMatrix<ElemType>& out, double epsilon,
+                                                    GPUMatrix<ElemType>& runMean, GPUMatrix<ElemType>& runVariance, GPUMatrix<ElemType>& out, double epsilon,
                                                     GPUMatrix<ElemType>& saveMean, GPUMatrix<ElemType>& saveInvStdDev) const
 {
     assert((GetNumRows() % scale.GetNumRows()) == 0);
@@ -3172,71 +3172,54 @@ void GPUMatrix<ElemType>::BatchNormalizationForward(const GPUMatrix<ElemType>& s
     size_t vectorSize = GetNumRows();
     size_t spatialSize = spatial ? (GetNumRows() / scale.GetNumRows()) : 1;
     size_t batchSize = GetNumCols();
+    bool normalizeRunningStats;
 
     assert(0 < vectorSize && vectorSize <= std::numeric_limits<int>::max());
     assert(0 < batchSize  && batchSize  <= std::numeric_limits<int>::max());
 
-    // --- compute data mean/stddev (into saveMean/saveInvStdDev) and update running mean/stddev
     SyncGuard syncGuard;
-    // If expAvgFactor == 0 && blendFactor == 1 then we don't need to compute current minibatch statistics.
     if (expAvgFactor > 0 || blendFactor < 1)
     {
+        // Compute data mean and inverse standard deviation (into saveMean and
+        // saveInvStdDev), and update running mean and variance.
+        normalizeRunningStats = false;
         saveMean.RequireSize(runMean);
         saveInvStdDev.RequireSize(runMean);
         if (spatial)
         {
             Call<ComputeSpatialBatchMeanAndInvStdDev, ElemType>(spatialSize, vectorSize, spatialSize, batchSize, Data(),
-                                                                expAvgFactor, runMean.Data(), runInvStdDev.Data(), epsilon,
+                                                                expAvgFactor, blendFactor,
+                                                                runMean.Data(), runVariance.Data(), epsilon,
                                                                 saveMean.Data(), saveInvStdDev.Data(), GetStream());
         }
         else
         {
             Call<ComputeBatchMeanAndInvStdDev, ElemType>(vectorSize, vectorSize, batchSize, Data(),
-                                                         expAvgFactor, runMean.Data(), runInvStdDev.Data(), epsilon,
+                                                         expAvgFactor, blendFactor,
+                                                         runMean.Data(), runVariance.Data(), epsilon,
                                                          saveMean.Data(), saveInvStdDev.Data(), GetStream());
         }
     }
-    else // not computing new statistics
+    else
     {
+        // With expAvgFactor == 0 and blendFactor == 1 the running statistics
+        // do not need to be updated. CNTK engine in this case returns saveMean
+        // and saveInvStdDev empty, but cuDNN engine does not.
+        normalizeRunningStats = true;
         saveMean.RequireSize(0, 0);
         saveInvStdDev.RequireSize(0, 0);
     }
 
-    // --- apply MAP estimates of mean/stddev (interpolation of data and running mean/stddev) to data
-    // When:
-    //     blendFactor == 1 - use running mean/var instead of the current minibatch mean/var. Note: saveMean/saveInvStdDev are NOT produced.
-    // 0 < blendFactor <  1 - blend running mean/var with mean/var of the current minibatch: saveMean = (1 - blendFactor) * saveMean + blendFactor * runMean
-    //     blendFactor == 0 - use mean/var of the current minibatch.
-    if (blendFactor < 1)
-    {
-        // non-zero blendFactor: interpolate minibatch mean/stddev in-place with running mean/stddev
-        if (blendFactor > 0)
-        {
-            // REVIEW alexeyk: can be rolled into NormalizeBatchTraining to save bandwidth.
-            // TODO: add a 'beta' parameter to ScaleAndAdd()
-            Scale((ElemType)(1 - blendFactor), saveMean);
-            ScaleAndAdd((ElemType)blendFactor, /*in*/ runMean, /*in/out*/ saveMean);
-            Scale((ElemType)(1 - blendFactor), saveInvStdDev);
-            ScaleAndAdd((ElemType)blendFactor, runInvStdDev, saveInvStdDev);
-        }
-        // normalize
-        Call<NormalizeBatchTraining, ElemType>(spatial ? spatialSize : vectorSize, vectorSize, spatialSize, batchSize, spatial,
-                                               Data(), out.Data(),                            // (in, out) data to be normalized -> normalized data
-                                               scale.Data(), bias.Data(),                     // (in) scale/bias to denormalize with
-                                               /*(in)*/saveMean.Data(), saveInvStdDev.Data(), // (in) actual mean/stddev to normalize with
-                                               GetStream());
-    }
-    else // blendFactor == 1: use running mean/stddev only
-    {
-        Call<NormalizeBatchTraining, ElemType>(spatial ? spatialSize : vectorSize, vectorSize, spatialSize, batchSize, spatial,
-                                               Data(), out.Data(),
-                                               scale.Data(), bias.Data(),
-                                               runMean.Data(), runInvStdDev.Data(), GetStream());
-        // CNTK engine returns saveMean and saveInvStdDev empty, but cnDNN engine does not.
-    }
+    Call<NormalizeBatchTraining, ElemType>(spatial ? spatialSize : vectorSize, vectorSize, spatialSize, batchSize, spatial,
+                                           normalizeRunningStats, epsilon,
+                                           Data(), out.Data(),
+                                           scale.Data(), bias.Data(),
+                                           runMean.Data(), runVariance.Data(),
+                                           saveMean.Data(), saveInvStdDev.Data(),
+                                           GetStream());
 }
 
-// saveMean/saveInvStdDev are the interpolated mean/stddev as used in ForwardProp().
+// saveMean/saveInvStdDev are the interpolated mean/inverse standard deviation as used in ForwardProp().
 // For blendFactor=1, they are not used and can be uninitialized or empty.
 template <class ElemType>
 void GPUMatrix<ElemType>::BatchNormalizationBackward(const GPUMatrix<ElemType>& in, GPUMatrix<ElemType>& grad, const GPUMatrix<ElemType>& scale, double blendFactor,
