@@ -12,7 +12,6 @@ void TestCifarResnet();
 
 int main()
 {
-
     NDArrayViewTests();
     TensorTests();
 
