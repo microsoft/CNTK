@@ -98,10 +98,6 @@ def test_op_plus_var_sequences_input_input(left_batch, right_batch, device_id, p
 #TODO: enable once the function is exposed
 @pytest.mark.parametrize("left_operand, right_operand", TENSOR_PAIRS)
 def _test_op_minus(left_operand, right_operand, device_id, precision):
-    ctx = get_context()
-    ctx.precision = precision
-    ctx.device = device_id
-
     expected_forward = [AA([left_operand]) + AA([right_operand])]
 
     expected_backward = {
@@ -110,10 +106,11 @@ def _test_op_minus(left_operand, right_operand, device_id, precision):
             }
 
     from .. import minus
-    _test_binary_op(ctx, minus,
+    _test_binary_op(precision, device_id, minus,
             left_operand, right_operand, 
             expected_forward, expected_backward)
-    _test_binary_op(ctx, '-',
+
+    _test_binary_op(precision, device_id, '-',
             left_operand, right_operand, 
             expected_forward, expected_backward)
 
@@ -121,10 +118,6 @@ def _test_op_minus(left_operand, right_operand, device_id, precision):
 
 @pytest.mark.parametrize("left_operand, right_operand", TENSOR_PAIRS)
 def test_op_element_times(left_operand, right_operand, device_id, precision):
-    ctx = get_context()
-    ctx.precision = precision
-    ctx.device = device_id
-
     expected_forward = [AA([left_operand]) * AA([right_operand])]
 
     expected_backward = {
@@ -133,10 +126,11 @@ def test_op_element_times(left_operand, right_operand, device_id, precision):
             }
     
     from .. import element_times
-    _test_binary_op(ctx, element_times,
+    _test_binary_op(precision, device_id, element_times,
             left_operand, right_operand, 
             expected_forward, expected_backward)
-    _test_binary_op(ctx, '*',
+
+    _test_binary_op(precision, device_id, '*',
             left_operand, right_operand, 
             expected_forward, expected_backward)
 
@@ -145,10 +139,6 @@ def test_op_element_times(left_operand, right_operand, device_id, precision):
 #TODO: enable once the function is exposed
 @pytest.mark.parametrize("left_operand, right_operand", TENSOR_PAIRS)
 def _test_op_element_divide(left_operand, right_operand, device_id, precision):
-    ctx = get_context()
-    ctx.precision = precision
-    ctx.device = device_id
-
     expected_forward = [AA([left_operand]) / AA([right_operand])]
 
     expected_backward = {
@@ -157,10 +147,11 @@ def _test_op_element_divide(left_operand, right_operand, device_id, precision):
             }
 
     from .. import element_divide
-    _test_binary_op(ctx, element_divide,
+    _test_binary_op(precision, device_id, element_divide,
             left_operand, right_operand, 
             expected_forward, expected_backward)
-    _test_binary_op(ctx, '/',
+
+    _test_binary_op(precision, device_id, '/',
             left_operand, right_operand, 
             expected_forward, expected_backward)
 
@@ -201,13 +192,13 @@ def _test_op_times(left_operand, right_operand, device_id, precision,
     right_as_input = times(constant(left_operand), b)
 
     unittest_helper(left_as_input, None, expected, device_id=device_id,
-                    precision=precision, clean_up=True, backward_pass=False)
+                    precision=precision, backward_pass=False)
 
     unittest_helper(right_as_input, None, expected, device_id=device_id,
-                    precision=precision, clean_up=True, backward_pass=False)
+                    precision=precision, backward_pass=False)
 
     unittest_helper(times(a, b), None, expected, device_id=device_id,
-                    precision=precision, clean_up=True, backward_pass=False)
+                    precision=precision, backward_pass=False)
 
 
     # Backward pass test
@@ -241,10 +232,10 @@ def _test_op_times(left_operand, right_operand, device_id, precision,
         expected_right = [[op_grad(AA(right_operand, dtype=dt).T, AA(left_operand, dtype=dt).T).T]]
 
         unittest_helper(left_as_input, None, expected_left, device_id=device_id,
-                        precision=precision, clean_up=True, backward_pass=True, input_node=a)
+                        precision=precision, backward_pass=True, input_node=a)
         # BUG: Fails because of Pass node?
         unittest_helper(right_as_input, None, expected_right, device_id=device_id,
-                        precision=precision, clean_up=True, backward_pass=True, input_node=b)
+                        precision=precision, backward_pass=True, input_node=b)
 
 # -- identity function tests --
 # TODO enable this once the function is exposed
@@ -256,17 +247,14 @@ IDENTITY_TENSORS = [
     ([[30,40], [1,2], [0.1, 0.2]])
 ]
 
-@pytest.mark.parametrize("tensor", IDENTITY_TENSORS)
-def _test_op_identity(tensor, device_id, precision):
-    ctx = get_context()
-    ctx.precision = precision
-    ctx.device = device_id
-
-    expected_forward = [AA([tensor])]
+@pytest.mark.parametrize("operand", IDENTITY_TENSORS)
+def _test_op_identity(operand, device_id, precision):
+    expected_forward = [AA([operand])]
 
     expected_backward = {
             'arg': np.ones_like(expected_forward),            
             }
 
-    _test_unary_op(ctx, identity,
-            tensor, expected_forward, expected_backward)
+    from cntk.ops import identity
+
+    _test_unary_op(precision, device_id, identity, operand, expected_forward, expected_backward)

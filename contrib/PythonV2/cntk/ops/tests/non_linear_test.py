@@ -110,7 +110,7 @@ def _test_op_log(tensor, device_id, precision):
     unittest_helper(op_node, None, expected,
                     device_id=device_id,
                     precision=precision,
-                    clean_up=True, backward_pass=False)
+                    backward_pass=False)
 
 
     def numpy_op_grad(x):
@@ -125,7 +125,7 @@ def _test_op_log(tensor, device_id, precision):
     expected = [[numpy_op_grad(tensor)]]
 
     unittest_helper(op_node, None, expected, device_id=device_id,
-                    precision=precision, clean_up=True, backward_pass=True,
+                    precision=precision, backward_pass=True,
                     input_node=input_node)
 
 #TODO: port to v2
@@ -155,7 +155,7 @@ def _test_op_sqrt(tensor, device_id, precision):
     unittest_helper(op_node, None, expected,
                     device_id=device_id,
                     precision=precision,
-                    clean_up=True, backward_pass=False)
+                    backward_pass=False)
 
 
     def numpy_op_grad(x):
@@ -167,7 +167,7 @@ def _test_op_sqrt(tensor, device_id, precision):
     expected = [[numpy_op_grad(tensor)]]
 
     unittest_helper(op_node, None, expected, device_id=device_id,
-                    precision=precision, clean_up=True, backward_pass=True,
+                    precision=precision, backward_pass=True,
                     input_node=input_node)
 
 #TODO: port to v2
@@ -193,7 +193,7 @@ def _test_op_square(tensor, device_id, precision):
     unittest_helper(op_node, None, expected,
                     device_id=device_id,
                     precision=precision,
-                    clean_up=True, backward_pass=False)
+                    backward_pass=False)
 
 
     def numpy_op_grad(x):
@@ -205,7 +205,7 @@ def _test_op_square(tensor, device_id, precision):
     expected = [[numpy_op_grad(tensor)]]
 
     unittest_helper(op_node, None, expected, device_id=device_id,
-                    precision=precision, clean_up=True, backward_pass=True,
+                    precision=precision, backward_pass=True,
                     input_node=input_node)
 
 #TODO: port to v2
@@ -233,7 +233,7 @@ def _test_op_relu(tensor, device_id, precision):
     unittest_helper(op_node, None, expected,
                     device_id=device_id,
                     precision=precision,
-                    clean_up=True, backward_pass=False)
+                    backward_pass=False)
 
     # Backward pass test
     # ==================
@@ -246,7 +246,7 @@ def _test_op_relu(tensor, device_id, precision):
     expected = [[numpy_op_grad(tensor)]]
 
     unittest_helper(op_node, None, expected, device_id=device_id,
-                    precision=precision, clean_up=True, backward_pass=True,
+                    precision=precision, backward_pass=True,
                     input_node=input_node)
 
 
@@ -271,7 +271,7 @@ def _test_op_abs(tensor, device_id, precision):
     unittest_helper(op_node, None, expected,
                     device_id=device_id,
                     precision=precision,
-                    clean_up=True, backward_pass=False)
+                    backward_pass=False)
 
     # Backward pass test
     # ==================
@@ -283,7 +283,7 @@ def _test_op_abs(tensor, device_id, precision):
     expected = [[expected]]
 
     unittest_helper(op_node, None, expected, device_id=device_id,
-                    precision=precision, clean_up=True, backward_pass=True,
+                    precision=precision, backward_pass=True,
                     input_node=input_node)
 
 #TODO: port to v2
@@ -321,7 +321,7 @@ def _test_op_softmax(batch, device_id, precision):
     unittest_helper(op_node, None, expected,
                     device_id=device_id,
                     precision=precision,
-                    clean_up=True, backward_pass=False)
+                    backward_pass=False)
 
     # Backward pass test
     # ==================
@@ -344,7 +344,7 @@ def _test_op_softmax(batch, device_id, precision):
 
     unittest_helper(op_node, None, expected,
                     device_id=device_id,
-                    precision=precision, clean_up=True, backward_pass=True,
+                    precision=precision, backward_pass=True,
                     input_node=input_node)
 
 CLIP_TUPLES = [
@@ -386,7 +386,7 @@ def _test_op_clip(min_value, max_value, x, device_id, precision):
     
     result = clip(op_node, a, b)
     unittest_helper(result, None, expected, device_id=device_id, 
-                    precision=precision, clean_up=True, backward_pass=False)
+                    precision=precision, backward_pass=False)
     
     #Backward pass test
     #==================
@@ -395,7 +395,7 @@ def _test_op_clip(min_value, max_value, x, device_id, precision):
     expected = [[np.array(np.logical_not(np.logical_or(np.greater(x, max_value), np.less(x, min_value))), dtype=PRECISION_TO_TYPE[precision])]]
 
     unittest_helper(result, None, expected, device_id=device_id, 
-                    precision=precision, clean_up=True, backward_pass=True,
+                    precision=precision, backward_pass=True,
                     input_node=op_node)
 
 COND_TUPLES = [ 
@@ -427,7 +427,7 @@ def _test_op_cond(flag, value_a, value_b, device_id, precision):
 
     result = cond(cond_as_input, value_a_as_const, value_b_as_const)
     unittest_helper(result, None, expected, device_id=device_id, 
-                    precision=precision, clean_up=True, backward_pass=False)
+                    precision=precision, backward_pass=False)
 
     #Backward pass test
     #==================
@@ -439,16 +439,16 @@ def _test_op_cond(flag, value_a, value_b, device_id, precision):
     # Derivative for first parameter should always be zero
     expected  = [[[np.zeros_like(x) for x in flag]]]
     unittest_helper(result, None, expected, device_id=device_id, 
-                    precision=precision, clean_up=True, backward_pass=True, input_node=cond_as_input)
+                    precision=precision, backward_pass=True, input_node=cond_as_input)
 
     # Derivative of second parameter depends on cond
     expected = [[np.array(np.where(flag, 1, 0), dtype=PRECISION_TO_TYPE[precision])]]
     result = cond(cond_as_const, value_a_as_input, value_b_as_const)
     unittest_helper(result, None, expected, device_id=device_id, 
-                    precision=precision, clean_up=True, backward_pass=True, input_node=value_a_as_input)
+                    precision=precision, backward_pass=True, input_node=value_a_as_input)
 
     # Derivative of third parameter depends on cond
     expected = [[np.array(np.where(flag, 0, 1), dtype=PRECISION_TO_TYPE[precision])]]
     result = cond(cond_as_const, value_a_as_const, value_b_as_input)
     unittest_helper(result, None, expected, device_id=device_id, 
-                    precision=precision, clean_up=True, backward_pass=True, input_node=value_b_as_input)
+                    precision=precision, backward_pass=True, input_node=value_b_as_input)
