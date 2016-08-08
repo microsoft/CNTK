@@ -19,45 +19,16 @@ Train=[
     action="train"
     
     BrainScriptNetworkBuilder=[
-        Layers = [
-            EmbeddingLayer(input, vocabSize, embeddingDim, embeddingPath) = [
-                embedding = Transpose(LearnableParameter(vocabSize, embeddingDim, learningRateMultiplier = 0.0, init = 'fromFile', initFromFilePath = embeddingPath))          
-                lookup = GatherPacked(features, embedding)
-            ].lookup
-            EmbeddingLayerSparse(input, vocabSize, embeddingDim, embeddingPath) = [
-                embedding = Transpose(LearnableParameter(vocabSize, embeddingDim, learningRateMultiplier = 0.0, init = 'fromFile', initFromFilePath = embeddingPath))          
-                lookup = embedding * features
-            ].lookup
-            DenseLayer(input, inputSize, outputSize, activation) = [
-               z = BFF(input, outputSize, inputSize).z
-               act = activation(z)
-            ].act
-            LSTMLayer (input, inputSize, outputSize, cellSize, selector) = [ 
-               lstm = BS.RNNs.RecurrentLSTMP (outputSize, cellDim=cellSize, input, inputDim=inputSize).h
-               result = selector(lstm)
-            ].result
-        ]        
-        
-        // LSTM params
+        # LSTM params
         lstmDim = 25
         cellDim = 25
 
-        // model dims
+        # model dims
         numLabels = 5
         vocabDim = $vocabDim$
         embedDim = 50
 
-        # definition without layer composition
-        model_macroStyle (features) = {
-            // load the pre-learned word embedding matrix
-            #l1 = Layers.EmbeddingLayer(features, vocabDim, embedDim, 'embeddingmatrix.txt')
-            l1 = Layers.EmbeddingLayerSparse(features, vocabDim, embedDim, 'embeddingmatrix.txt')
-            l2 = Layers.LSTMLayer(l1, embedDim, lstmDim, cellDim, BS.Sequences.Last)
-            l3 = Layers.DenseLayer(l2, lstmDim, numLabels, Pass)
-            z = l3
-        }.z
-
-        # definition with layer composition
+        # define the model, by composing layer functions
         model = Sequential
         (
             EmbeddingLayer {embedDim, embeddingPath='embeddingmatrix.txt', transpose=true} :  # load the pre-learned word embedding matrix
@@ -68,11 +39,10 @@ Train=[
 
         # inputs
         t = DynamicAxis{}
-        features = SparseInput {$vocabDim$, dynamicAxis=t}   # Input has shape (1,t)
-        labels   = Input {numLabels}          # Input has shape (numLabels,*) where all sequences in *=1
+        features = SparseInput {$vocabDim$, dynamicAxis=t}  # Input has shape (vocabDim,t) and is one-hot sparse
+        labels   =       Input {numLabels}                  # Input has shape (numLabels,*) where all sequences in *=1
 
         # apply model
-        #z = model_macroStyle (features)
         z = model (features)
 
         # Make sure the trainer understands that the time dimension of l3 is actually the same as that of labels.
