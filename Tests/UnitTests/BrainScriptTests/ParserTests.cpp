@@ -8,6 +8,7 @@
 #include "stdafx.h"
 #include "Basics.h"
 #include "BrainScriptParser.h"
+#include "BrainScriptTestsHelper.h"
 #include "boost/filesystem.hpp"
 
 #include <utility>
@@ -20,37 +21,9 @@ using namespace Microsoft::MSR::CNTK;
 #define let const auto
 #endif
 
-struct ParserTestsFixture
-{
-public:
-    ParserTestsFixture(){
-        boost::filesystem::path path(boost::unit_test::framework::master_test_suite().argv[0]);
-        wstring parentPath = boost::filesystem::canonical(path.parent_path()).generic_wstring();
-
-#ifdef _WIN32
-        // The executable path on Windows is e.g. <cntk>/x64/Debug/Unittests/
-        m_testDataPath = parentPath + L"/../../../Tests/UnitTests/BrainScriptTests";
-#else
-        // The executable path on Linux is e.g. <cntk>/build/cpu/release/bin/
-        m_testDataPath = parentPath + L"/../../../../Tests/UnitTests/BrainScriptTests";
-#endif
-
-        boost::filesystem::path absTestPath(m_testDataPath);
-        absTestPath = boost::filesystem::canonical(absTestPath);
-        m_testDataPath = absTestPath.generic_wstring();
-    }
-
-    const wstring getDataPath(){
-        return m_testDataPath;
-    }
-private:
-    wstring m_testDataPath;
-};
-
-
 namespace Microsoft { namespace MSR { namespace CNTK { namespace Test {
 
-BOOST_FIXTURE_TEST_SUITE(ParserTests, ParserTestsFixture)
+BOOST_FIXTURE_TEST_SUITE(ParserSuite, BSFixture)
 
 void parseLine(const wstring & input, const wstring & expectedOutput)
 {

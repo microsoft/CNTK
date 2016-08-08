@@ -22,105 +22,77 @@
     <ProjectGuid>{9F999212-AFC5-4EAC-AA78-F7247D46C456}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>BrainScriptTests</RootNamespace>
+	<ProjectName>BrainScriptTests</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <Import Project="$(SolutionDir)\CNTK.Cpp.props" />
-  <PropertyGroup Condition="$(DebugBuild)" Label="Configuration">
+  <PropertyGroup>
+    <HasBoost>false</HasBoost>
+    <HasBoost Condition="Exists('$(BOOST_INCLUDE_PATH)') And Exists('$(BOOST_LIB_PATH)')">true</HasBoost>
+  </PropertyGroup>
+  <PropertyGroup Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
-    <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v120</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
     <UseOfMfc>false</UseOfMfc>
   </PropertyGroup>
-  <PropertyGroup Condition="$(ReleaseBuild)" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
-    <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v120</PlatformToolset>
-    <WholeProgramOptimization>true</WholeProgramOptimization>
-    <CharacterSet>Unicode</CharacterSet>
-    <UseOfMfc>false</UseOfMfc>
+  <PropertyGroup Label="Configuration">
+    <UseDebugLibraries>$(DebugBuild)</UseDebugLibraries>
   </PropertyGroup>
-  <Choose>
-    <When Condition="Exists('$(BOOST_INCLUDE_PATH)') And Exists('$(BOOST_LIB_PATH)')">
-      <PropertyGroup>
-        <HasBoost>true</HasBoost>
-      </PropertyGroup>
-    </When>
-    <Otherwise>
-      <PropertyGroup>
-        <HasBoost>false</HasBoost>
-      </PropertyGroup>
-    </Otherwise>
-  </Choose>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
-  <ImportGroup Condition="$(GpuBuild)" Label="ExtensionSettings">
-    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA $(CudaVersion).props" />
-  </ImportGroup>
+  <ImportGroup Label="ExtensionSettings" />
   <ImportGroup Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
-    <LinkIncremental>$(DebugBuild)</LinkIncremental>
-    <OutDir>$(OutDir)UnitTests\</OutDir>
+    <LinkIncremental>false</LinkIncremental>
+    <OutDir>$(OutDir)\UnitTests\</OutDir>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
-      <AdditionalIncludeDirectories>$(BOOST_INCLUDE_PATH);$(SolutionDir)Source\CNTK\BrainScript;$(SolutionDir)Source\Common\Include</AdditionalIncludeDirectories>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <WarningLevel>Level4</WarningLevel>
+      <TreatWarningAsError>true</TreatWarningAsError>
+      <PreprocessorDefinitions>WIN32;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <UseFullPaths>true</UseFullPaths>
+      <OpenMPSupport>true</OpenMPSupport>
+      <AdditionalIncludeDirectories>$(BOOST_INCLUDE_PATH);$(SolutionDir)Source\Math;$(SolutionDir)Source\CNTK\BrainScript;$(SolutionDir)Source\Common\Include;$(SolutionDir)Source\ComputationNetworkLib;</AdditionalIncludeDirectories>
       <DisableSpecificWarnings>4819</DisableSpecificWarnings>
     </ClCompile>
     <Link>
-      <AdditionalLibraryDirectories>$(BOOST_LIB_PATH);$(OutDir)..;</AdditionalLibraryDirectories>
-    </Link>
-  </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="$(DebugBuild)">
-    <ClCompile>
-      <PrecompiledHeader>NotUsing</PrecompiledHeader>
-      <WarningLevel>Level4</WarningLevel>
-      <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>WIN32;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <UseFullPaths>true</UseFullPaths>
-      <TreatWarningAsError>true</TreatWarningAsError>
-    </ClCompile>
-    <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>Common.lib;kernel32.lib;user32.lib;shell32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>ComputationNetworkLib.lib;Common.lib;Math.lib;kernel32.lib;user32.lib;shell32.lib;SequenceTrainingLib.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <OptimizeReferences>true</OptimizeReferences>
+      <AdditionalLibraryDirectories>$(MSMPI_LIB64);$(OutDir)..;$(BOOST_LIB_PATH);</AdditionalLibraryDirectories>
     </Link>
-    <CudaCompile>
-      <TargetMachinePlatform>64</TargetMachinePlatform>
-      <CodeGeneration>compute_30,sm_30;%(CodeGeneration)</CodeGeneration>
-    </CudaCompile>
+  </ItemDefinitionGroup>
+    <ItemDefinitionGroup Condition="$(DebugBuild)">
+    <ClCompile>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="$(ReleaseBuild)">
     <ClCompile>
-      <WarningLevel>Level4</WarningLevel>
-      <PrecompiledHeader>NotUsing</PrecompiledHeader>
-      <Optimization>Disabled</Optimization>
+      <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <UseFullPaths>true</UseFullPaths>
+      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <TreatWarningAsError>true</TreatWarningAsError>
       <AdditionalOptions>/d2Zi+ %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
-      <SubSystem>Console</SubSystem>
-      <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
-      <OptimizeReferences>true</OptimizeReferences>
-      <PreprocessorDefinitions>WIN32;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalDependencies>Common.lib;kernel32.lib;user32.lib;shell32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="$(GpuBuild)">
     <ClCompile>
-      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(CudaInclude)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
-      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories);</AdditionalLibraryDirectories>
-      <DelayLoadDLLs>
-      </DelayLoadDLLs>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories);$(CudaLibPath)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="$(CpuOnlyBuild)">
@@ -131,12 +103,14 @@
   <ItemGroup>
     <ClInclude Include="..\..\..\Source\CNTK\BrainScript\BrainScriptEvaluator.h" />
     <ClInclude Include="..\..\..\Source\CNTK\BrainScript\BrainScriptParser.h" />
+    <ClInclude Include="BrainScriptTestsHelper.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\Source\CNTK\BrainScript\BrainScriptEvaluator.cpp" />
     <ClCompile Include="..\..\..\Source\CNTK\BrainScript\BrainScriptParser.cpp" />
+    <ClCompile Include="ComputationNetworkTests.cpp" />
     <ClCompile Include="ParserTests.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
@@ -146,19 +120,7 @@
   <Target Name="Build" Condition="$(HasBoost)" Outputs="$(TargetPath)" DependsOnTargets="$(BuildDependsOn)" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
-  <ItemDefinitionGroup>
-    <ClCompile>
-      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-    </ClCompile>
-    <Link>
-      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <ImportLibrary Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" />
-    </Link>
-    <Lib>
-      <AdditionalLibraryDirectories>$(BOOST_LIB_FOR_ADAPTER);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-    </Lib>
-  </ItemDefinitionGroup>
   <Target Name="CheckDependencies">
-    <Warning Condition="!$(HasBoost)" Text="MathTests requires the Boost library to build. Please see https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Windows#boost for installation instructions." />
+    <Warning Condition="!$(HasBoost)" Text="BrainScriptTests requires the Boost library to build. Please see https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Windows#boost for installation instructions." />
   </Target>
 </Project>
