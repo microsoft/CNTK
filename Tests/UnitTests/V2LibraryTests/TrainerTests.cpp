@@ -77,16 +77,15 @@ void TrainSimpleFeedForwardClassifer(const DeviceDescriptor& device)
     size_t outputFrequencyInMinibatches = 20;
     for (size_t i = 0; i < numMinibatchesToTrain; ++i)
     {
-
         auto minibatchData = minibatchSource->GetNextMinibatch(minibatchSizeLimits, device);
         trainer.TrainMinibatch({ { input, minibatchData[*featureStreamInfo].m_data }, { labels, minibatchData[*labelStreamInfo].m_data } }, device);
+
         if ((i % outputFrequencyInMinibatches) == 0)
         {
             float trainLossValue = PrevMinibatchTrainingLossValue(trainer);
             printf("Minibatch %d: CrossEntropy loss = %.8g\n", (int)i, trainLossValue);
         }
     }
-
 }
 
 void TrainMNISTClassifier(const DeviceDescriptor& device)
