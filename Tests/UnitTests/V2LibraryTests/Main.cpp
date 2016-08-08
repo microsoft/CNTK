@@ -15,6 +15,7 @@ int main()
 
     NDArrayViewTests();
     TensorTests();
+
     FeedForwardTests();
     RecurrentFunctionTests();
 
