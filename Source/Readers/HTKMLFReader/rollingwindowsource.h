@@ -314,7 +314,7 @@ public:
 #ifdef _MSC_VER
                 key = regex_replace((wstring) ppath, wregex(L"\\.[^\\.\\\\/:]*$"), wstring()); // delete extension (or not if none)
 #else
-                key = removeExtension(basename(ppath));
+                key = removeExtension(ppath);
 #endif
                 if (labels.find(key) == labels.end())
                 {
@@ -630,9 +630,8 @@ public:
                     {
 #ifdef _WIN32
                         key = regex_replace((wstring) ppath, wregex(L"\\.[^\\.\\\\/:]*$"), wstring()); // delete extension (or not if none)
-#endif
-#ifdef __unix__
-                        key = removeExtension(basename(ppath));
+#else
+                        key = removeExtension(ppath);
 #endif
                         if (labels[0].find(key) == labels[0].end())
                         {

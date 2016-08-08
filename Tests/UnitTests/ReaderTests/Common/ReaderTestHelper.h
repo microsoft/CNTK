@@ -184,7 +184,6 @@ struct ReaderFixture
         {
             for (it1 = beginStream1, it2 = beginStream2; it1 != endStream1 && it2 != endStream2; it1++, it2++)
             {
-                fprintf(stderr, "%f vs %f\n", boost::lexical_cast<double>(*it1), boost::lexical_cast<double>(*it2));
                 BOOST_CHECK_CLOSE_FRACTION(boost::lexical_cast<double>(*it1), boost::lexical_cast<double>(*it2), relError);
             }
 
