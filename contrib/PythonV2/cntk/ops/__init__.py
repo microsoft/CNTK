@@ -4,7 +4,7 @@
 # ==============================================================================
 
 import numpy as np
-from ..utils import get_rank, sanitize_input, create_NDArrayView
+from ..utils import get_rank, sanitize_input, get_data_type, create_NDArrayView
 from cntk import cntk_py
 
 ################################################################################
@@ -65,8 +65,8 @@ def square_error(target_matrix, output_matrix, name=''):
         :class:`cntk.graph.ComputationNode`
     """
     from ..cntk_py import SquareError
-    target_matrix = sanitize_input(target_matrix)
-    output_matrix = sanitize_input(output_matrix)
+    target_matrix = sanitize_input(target_matrix, get_data_type(output_matrix))
+    output_matrix = sanitize_input(output_matrix, get_data_type(target_matrix))
     op = SquareError(target_matrix, output_matrix, name = name)
     op.rank = 0
     return op
@@ -95,8 +95,8 @@ def error_prediction(target_vector, output_vector, name=''):
         :class:`cntk.graph.ComputationNode`
     """
     from ..cntk_py import ErrorPrediction
-    target_vector = sanitize_input(target_vector)
-    output_vector = sanitize_input(output_vector)
+    target_matrix = sanitize_input(target_matrix, get_data_type(output_matrix))
+    output_matrix = sanitize_input(output_matrix, get_data_type(target_matrix))
     op = ErrorPrediction(target_vector, output_vector, name = name)
     return op
 
@@ -123,8 +123,8 @@ def less(left, right, name=''):
         :class:`cntk.graph.ComputationNode`
     """
     from ..cntk_py import Less
-    left = sanitize_input(left)
-    right = sanitize_input(right)
+    left = sanitize_input(left, get_data_type(right))
+    right = sanitize_input(right, get_data_type(left))
     op = Less(left, right, name=name)
     return op
 
@@ -147,8 +147,8 @@ def equal(left, right, name=''):
         :class:`cntk.graph.ComputationNode`
     """
     from ..cntk_py import Equal
-    left = sanitize_input(left)
-    right = sanitize_input(right)
+    left = sanitize_input(left, get_data_type(right))
+    right = sanitize_input(right, get_data_type(left))
     op = Equal(left, right, name=name)
     return op
 
@@ -171,8 +171,8 @@ def greater(left, right, name=''):
         :class:`cntk.graph.ComputationNode`
     """
     from ..cntk_py import Greater
-    left = sanitize_input(left)
-    right = sanitize_input(right)
+    left = sanitize_input(left, get_data_type(right))
+    right = sanitize_input(right, get_data_type(left))
     op = Greater(left, right, name=name)
     return op
 
@@ -195,8 +195,8 @@ def greater_equal(left, right, name=''):
         :class:`cntk.graph.ComputationNode`
     """
     from ..cntk_py import GreaterEqual
-    left = sanitize_input(left)
-    right = sanitize_input(right)
+    left = sanitize_input(left, get_data_type(right))
+    right = sanitize_input(right, get_data_type(left))
     op = GreaterEqual(left, right, name=name)
     return op
 
@@ -219,8 +219,8 @@ def not_equal(left, right, name=''):
         :class:`cntk.graph.ComputationNode`
     """
     from ..cntk_py import NotEqual
-    left = sanitize_input(left)
-    right = sanitize_input(right)
+    left = sanitize_input(left, get_data_type(right))
+    right = sanitize_input(right, get_data_type(left))
     op = NotEqual(left, right, name=name)
     return op
 
@@ -243,8 +243,8 @@ def less_equal(left, right, name=''):
         :class:`cntk.graph.ComputationNode`
     """
     from ..cntk_py import LessEqual
-    left = sanitize_input(left)
-    right = sanitize_input(right)
+    left = sanitize_input(left, get_data_type(right))
+    right = sanitize_input(right, get_data_type(left))
     op = LessEqual(left, right, name=name)
     return op
 
@@ -274,8 +274,8 @@ def plus(left, right, name=''):
         :class:`cntk.graph.ComputationNode`
     """
     from ..cntk_py import Plus
-    left = sanitize_input(left)
-    right = sanitize_input(right)    
+    left = sanitize_input(left, get_data_type(right))
+    right = sanitize_input(right, get_data_type(left))   
     op = Plus(left, right, name)
     return op
 
@@ -302,8 +302,8 @@ def minus(left, right, name=''):
     """
 
     from ..cntk_py import Minus
-    left = sanitize_input(left)
-    right = sanitize_input(right)
+    left = sanitize_input(left, get_data_type(right))
+    right = sanitize_input(right, get_data_type(left))
     op = Minus(left, right, name)    
     return op
 
@@ -329,8 +329,8 @@ def element_times(left, right, name=''):
         :class:`cntk.graph.ComputationNode`
     """
     from ..cntk_py import ElementTimes
-    left = sanitize_input(left)
-    right = sanitize_input(right)
+    left = sanitize_input(left, get_data_type(right))
+    right = sanitize_input(right, get_data_type(left))
     op = ElementTimes(left, right, name)    
     return op
 
@@ -359,8 +359,8 @@ def element_divide(left, right, name=''):
         :class:`cntk.graph.ComputationNode`
     """
     from ..cntk_py import ElementDivide
-    left = sanitize_input(left)
-    right = sanitize_input(right)
+    left = sanitize_input(left, get_data_type(right))
+    right = sanitize_input(right, get_data_type(left))
     op = ElementDivide(left, right, name)    
     return op
 
@@ -402,8 +402,8 @@ def times(left, right, output_rank=1, name=''):
     from ..cntk_py import Times   
     # CNTK uses column vectors and column major representation, thus we reverse
     # params    
-    left = sanitize_input(left)
-    right = sanitize_input(right)
+    left = sanitize_input(left, get_data_type(right))
+    right = sanitize_input(right, get_data_type(left))
     op = Times(right, left, outputRank=output_rank, name=name)
     op.rank = op.x.rank + op.y.rank - 2    
     return op
@@ -425,8 +425,8 @@ def identity(x, name=''):
         :class:`cntk.graph.ComputationNode`
     """
     from ..cntk_py import Identity
-    left = sanitize_input(left)
-    right = sanitize_input(right)
+    left = sanitize_input(left, get_data_type(right))
+    right = sanitize_input(right, get_data_type(left))
     op = Identity(x, name=name)
     op.rank = op._.rank   
     return op
@@ -463,8 +463,8 @@ def floor(arg, name=''):
         :class:`cntk.graph.ComputationNode`
     """
     from ..cntk_py import Floor
-    left = sanitize_input(left)
-    right = sanitize_input(right)
+    left = sanitize_input(left, get_data_type(right))
+    right = sanitize_input(right, get_data_type(left))
     op = Floor(arg, name = name)
     op.rank = op._.rank  
     return op
@@ -489,8 +489,8 @@ def ceil(arg, name=''):
         :class:`cntk.graph.ComputationNode`
     """
     from ..cntk_py import Ceil
-    left = sanitize_input(left)
-    right = sanitize_input(right)
+    left = sanitize_input(left, get_data_type(right))
+    right = sanitize_input(right, get_data_type(left))
     op = Ceil(arg, name = name)
     op.rank = op._.rank  
     return op
@@ -525,8 +525,8 @@ def round(arg, name=''):
         :class:`cntk.graph.ComputationNode`
     """
     from ..cntk_py import Round
-    left = sanitize_input(left)
-    right = sanitize_input(right)
+    left = sanitize_input(left, get_data_type(right))
+    right = sanitize_input(right, get_data_type(left))
     op = Round(arg, name = name)
     op.rank = op._.rank  
     return op
@@ -1289,9 +1289,8 @@ def constant(value, name='', data_type=None, dev=None):
     if dev is None:
         dev = cntk_py.DeviceDescriptor_CPUDevice()
 
-    if np.isscalar(value):
+    if np.isscalar(value):        
         return constant_from_scalar(value=value, name=name, data_type=data_type, dev=dev)
-
     return Constant(value=value, name=name, data_type=data_type, dev=dev)
 
 def dynamic_axis(name=''):

@@ -5,6 +5,8 @@ from cntk.graph import TensorOpsMixin
 from .. import utils
 from cntk.context import get_context
 
+FLOAT_32='float32'
+
 def _sanitize_value(shape, value, dtype, dev):
     np_dtype = utils.sanitize_dtype_numpy(dtype)
     cntk_dtype  = utils.sanitize_dtype_cntk(dtype)
@@ -21,7 +23,6 @@ def _sanitize_value(shape, value, dtype, dev):
     else:
         if not isinstance(value, np.ndarray) or value.dtype!=np_dtype:
             value = np.asarray(value, dtype=np_dtype)
-
         ndav = utils.create_NDArrayView_from_NumPy(value, dev)
 
     return ndav
@@ -29,7 +30,7 @@ def _sanitize_value(shape, value, dtype, dev):
 class Variable(cntk_py.Variable, TensorOpsMixin):
     def __init__(self, shape=None, data_type=None, needs_gradient=True, name=''):
         if data_type is None:            
-            data_type = str(np.float32)
+            data_type = FLOAT_32
         dtype = utils.sanitize_dtype_cntk(data_type)
         super(Variable, self).__init__(shape, dtype, needs_gradient, name)
 
@@ -38,7 +39,7 @@ class Parameter(cntk_py.Parameter, TensorOpsMixin):
         
         if data_type is None:
             if not isinstance(value, np.ndarray):        
-                data_type = str(np.float32)
+                data_type = FLOAT_32
             else:
                 data_type = str(value.dtype)        
 
@@ -53,7 +54,7 @@ class Constant(cntk_py.Constant, TensorOpsMixin):
 
         if data_type is None:
             if not isinstance(value, np.ndarray):        
-                data_type = str(np.float32)
+                data_type = FLOAT_32
             else:
                 data_type = str(value.dtype)     
 
@@ -69,7 +70,7 @@ def constant_from_scalar(shape=None, value=None, data_type=None, dev=None, name=
 
     if data_type is None:
         if not isinstance(value, np.ndarray):        
-            data_type = str(np.float32)
+            data_type = 'float32'
         else:
             data_type = str(value.dtype)     
 
@@ -86,6 +87,6 @@ def constant_from_scalar(shape=None, value=None, data_type=None, dev=None, name=
 class Placeholder(cntk_py.Placeholder, TensorOpsMixin):
     def __init__(self, shape=None, data_type=None, name=''):
         if data_type is None:            
-            data_type = str(np.float32)
+            data_type = FLOAT_32
         dtype = utils.sanitize_dtype_cntk(data_type)
         Variable.__init__(self, shape, dtype, name)

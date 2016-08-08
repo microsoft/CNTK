@@ -223,7 +223,7 @@ def get_rank(shape):
 import sys
 from .. import cntk_py
 
-def sanitize_input(arg):
+def sanitize_input(arg, fallback_dtype=np.float32):
     """
     Convert to Variable or Constant so that it can be passed as Variable to the CNTK
     operators. 
@@ -233,12 +233,14 @@ def sanitize_input(arg):
 
     Args:
         arg (number, NumPy array, `Variable`, or `Function`): input
+        fallback_dtype (numpy dtype): fallback dtype in case `arg` is a list
 
     Returns:
         Constant, if `arg` was a number or NumPy array. Variable otherwise.
     """
 
     from cntk.ops.variables import Constant, Variable, Placeholder
+    from cntk.ops import constant
     if isinstance(arg, (Constant, Variable, Placeholder)):
         return arg
 
@@ -256,9 +258,35 @@ def sanitize_input(arg):
         raise ValueError('input is empty')
 
     if not isinstance(arg, np.ndarray):        
-        arg = np.asarray(arg, dtype=np.float32)
+        arg = np.asarray(arg, dtype=fallback_dtype)
 
-    return Constant(value=arg)
+    return constant(value=arg)
+
+def get_data_type(arg):
+    """
+    Return the numpy datatype of `arg`
+    Args:
+        arg (number, list, NumPy array, `Variable`, or `Function`): input       
+    Returns:
+        np.float32 or np.float64
+    """
+
+    from cntk.ops.variables import Constant, Variable, Placeholder
+    from cntk.ops import constant    
+
+    if isinstance(arg, (Constant, Variable, Placeholder)):
+        if cntk_py.DataType_Double == arg.GetDataType():
+            return np.float64
+    try:
+        var_output = arg.Output()
+        if isinstance(var_output, Variable):
+            if cntk_py.DataType_Double == var_output.GetDataType():
+                return np.float64
+    except AttributeError:
+        # no function or function with more then one output
+        pass
+    
+    return np.float32
 
 def pad_to_dense(batch):
     """Appends the minimal required amount of zeroes at the end of each sample

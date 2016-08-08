@@ -17,7 +17,7 @@ class TypeMixin(object):
         '''
         return isinstance(self, _InputTensorOpsMixinBase)
 
-    def is_forward_ref(self): # TODO TEST
+    def is_forward_ref(self): # TODO Remove this as we now have placeholders
         '''
         Although the unrolled graph is a DAG, when we specify recurrence we
         naturally have loops. We can resolve this by using forward references.
@@ -30,65 +30,45 @@ class TypeMixin(object):
 class TensorOpsMixin(object):
     # operator overload for (+) where self is the left operand
     def __add__(self, other):
-        if not isinstance(other, TensorOpsMixin):
-            other = ops.constant(other)
         return ops.plus(self, other)
 
     # operator overload for (+) where self is the right operand
     def __radd__(self, other):
-        if not isinstance(other, TensorOpsMixin):
-            other = ops.constant(other)
         return ops.plus(other, self)
 
     # operator overload for (-) where self is the left operand
     def __sub__(self, other):
-        if not isinstance(other, TensorOpsMixin):
-            other = ops.constant(other)
         return ops.minus(self, other)
 
     # operator overload for (-) where self is the right operand
     def __rsub__(self, other):
-        if not isinstance(other, TensorOpsMixin):
-            other = ops.constant(other)
         return ops.minus(other, self)
 
     # operator overload for (*) where self is the left operand
     def __mul__(self, other):
-        if not isinstance(other, TensorOpsMixin):
-            other = ops.constant(other)
         return ops.element_times(self, other)
 
     # operator overload for (*) where self is the right operand
     def __rmul__(self, other):
-        if not isinstance(other, TensorOpsMixin):
-            other = ops.constant(other)
         return ops.element_times(other, self)
 
     # operator overload for (@) where self is the left operand
     def __matmul__(self, other):
-        if not isinstance(other, TensorOpsMixin):
-            other = ops.constant(other)
         # NOTE supported in Python 3.5
         return ops.times(self, other)
 
     # operator overload for (@) where self is the right operand
     def __rmatmul__(self, other):
-        if not isinstance(other, TensorOpsMixin):
-            other = ops.constant(other)
         # NOTE supported in Python 3.5
         return ops.times(other, self)
 
     # operator overload for (\) where self is the left operand
     def __truediv__(self, other):
-        if not isinstance(other, TensorOpsMixin):
-            other = ops.constant(other)
         self.__div__ = self.__truediv__
         return ops.element_divide(self, other)
 
     # operator overload for (\) where self is the right operand
     def __rtruediv__(self, other):
-        if not isinstance(other, TensorOpsMixin):
-            other = ops.constant(other)
         self.__rdiv__ = self.__rtruediv__
         return ops.element_divide(other, self)
 

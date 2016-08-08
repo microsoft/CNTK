@@ -46,7 +46,7 @@ def _test_unary_op(precision, device_id, op_func,
     expected_backward = { a: expected_backward_all['arg'], }
     unittest_helper(input_op, 
             forward_input, expected_forward, expected_backward,
-            device_id=device_id, precision=precision, clean_up=True)
+            device_id=device_id, precision=precision)
    
 def _test_binary_op(precision, device_id, op_func,
         left_operand, right_operand, 
@@ -66,8 +66,8 @@ def _test_binary_op(precision, device_id, op_func,
             name='b')
     
     if (type(op_func) == str):
-        input_op_constant = eval('a %s right_value'%op_func)
-        constant_op_input = eval('left_value %s b'%op_func)
+        input_op_constant = eval('a %s right_operand'%op_func)
+        constant_op_input = eval('left_operand %s b'%op_func)
         input_op_input = eval('a %s b'%op_func)
     else:
         input_op_constant = op_func(a, right_value)
@@ -79,28 +79,28 @@ def _test_binary_op(precision, device_id, op_func,
     left_value.shape = (1,1) + left_value.shape
     right_value.shape = (1,1) + right_value.shape
 
-    ''' 
+    
     forward_input = {a:left_value}    
     expected_backward = { a: expected_backward_all['left_arg'], }
     unittest_helper(input_op_constant, 
             forward_input, expected_forward, expected_backward,
-            device_id=device_id, precision=precision, clean_up=True)
-    '''
+            device_id=device_id, precision=precision)
+    
     forward_input = {b:right_value}    
     expected_backward = { b: expected_backward_all['right_arg'], }
     unittest_helper(constant_op_input, 
             forward_input, expected_forward, expected_backward,
-            device_id=device_id, precision=precision, clean_up=True) 
-    '''
+            device_id=device_id, precision=precision) 
+    
     forward_input = {a:left_value, b:right_value}    
     expected_backward = { a: expected_backward_all['left_arg'], b: expected_backward_all['right_arg'], }
     unittest_helper(input_op_input, 
         forward_input, expected_forward, expected_backward,
-        device_id=device_id, precision=precision, clean_up=True)
-    '''
+        device_id=device_id, precision=precision)
+    
 def unittest_helper(root_node, 
         forward_input, expected_forward, expected_backward,
-        device_id=-1, precision="float", clean_up=True):
+        device_id=-1, precision="float"):
     
     backward_pass = expected_backward is not None
     forward, backward = cntk_eval(root_node, precision, device_id, forward_input, backward_pass)
