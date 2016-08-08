@@ -433,7 +433,18 @@ private:
     {
         if (HasMBLayout())
             LogicError("%ls: Minibatch data cannot be interpreted as a single 2D tensor.", NodeDescription().c_str());
-        else if (m_sampleLayout.GetRank() < 1 || m_sampleLayout.GetRank() > 2) // note: scalars are not stored as tensors of rank 0, but rather as 1-dim vectors. TODO: clean this up some day
+
+        bool notFlattenableTo2D = false;
+        for (size_t i = 2; i < m_sampleLayout.GetRank(); ++i)
+        {
+            if (!m_sampleLayout.CanFlatten(i))
+            {
+                notFlattenableTo2D = true;
+                break;
+            }
+        }
+
+        if (m_sampleLayout.GetRank() < 1 || ((m_sampleLayout.GetRank() > 2) && notFlattenableTo2D)) // note: scalars are not stored as tensors of rank 0, but rather as 1-dim vectors. TODO: clean this up some day
             LogicError("%ls: Sample [%s] is not a column vector or matrix (1D or 2D tensor).", NodeDescription().c_str(), string(m_sampleLayout).c_str());
     }
 public:
@@ -445,7 +456,11 @@ public:
     size_t GetAsMatrixNumCols() const
     {
         CheckTensorIsMatrix();
-        return m_sampleLayout.GetRank() > 1 ? m_sampleLayout[1] : 1; // a column vector is also a Matrix
+        auto flattenedLayout = m_sampleLayout;
+        if (flattenedLayout.GetRank() > 2)
+            flattenedLayout.FlattenTo2DInPlace(1, "GetAsMatrixNumCols()");
+
+        return flattenedLayout.GetRank() > 1 ? flattenedLayout[1] : 1; // a column vector is also a Matrix
     }
 
     // setting/updating the dimensions of the node

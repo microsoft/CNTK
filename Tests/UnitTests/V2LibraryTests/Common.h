@@ -101,5 +101,14 @@ inline CNTK::FunctionPtr FullyConnectedDNNLayer(CNTK::Variable input, size_t out
     return nonLinearity(plusFunction);
 }
 
+inline float PrevMinibatchTrainingLossValue(const CNTK::Trainer& trainer)
+{
+    float trainLossValue = 0.0;
+    auto prevMBTrainingLossValue = trainer.PreviousMinibatchTrainingLossValue()->Data();
+    CNTK::NDArrayView cpuTrainLossValue(prevMBTrainingLossValue->Shape(), &trainLossValue, 1, CNTK::DeviceDescriptor::CPUDevice());
+    cpuTrainLossValue.CopyFrom(*prevMBTrainingLossValue);
+
+    return trainLossValue;
+}
 
 #pragma warning(pop)

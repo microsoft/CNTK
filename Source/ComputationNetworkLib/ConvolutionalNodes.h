@@ -139,6 +139,16 @@ public:
         fstream << "PoolKind: " << (int)m_poolKind << "\n";
     }
 
+    TensorShape KernelShape() const { return m_kernelShape; }
+    TensorShape Strides() const { return m_stride; }
+    std::vector<bool> Sharing() const { return m_sharing; }
+    std::vector<bool> AutoPad() const { return m_autoPad; }
+    TensorShape LowerPad() const { return m_lowerPad; }
+    TensorShape UpperPad() const { return m_upperPad; }
+    bool Transpose() const { return m_transpose; }
+    size_t MaxTempMemSizeInSamples() const { return m_maxTempMemSizeInSamples; }
+    PoolKind PoolingKind() const { return m_poolKind; }
+
 protected:
     TensorShape m_kernelShape;
     TensorShape m_mapCount;

@@ -1894,6 +1894,12 @@ public:
         m_blendTimeConst = std::numeric_limits<double>::infinity();
     }
 
+    double NormalizationTimeConstant() const { return m_normTimeConst; }
+    double BlendTimeConstant() const { return m_blendTimeConst; }
+    bool Spatial() const { return m_spatial; }
+    double Epsilon() const { return m_epsilon; }
+    bool UseCNTKEngine() const { return m_useCntkEngine; }
+
 private:
     // Old versioning - do not use. Do not remove until we're sure there are no old models around.
     struct VersionInfo

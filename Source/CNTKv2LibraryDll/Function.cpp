@@ -171,6 +171,7 @@ namespace CNTK
         if (dynamic_cast<PrimitiveFunction*>(function))
         {
             PrimitiveFunction* primitiveFunction = dynamic_cast<PrimitiveFunction*>(function);
+            auto functionConfig = primitiveFunction->FunctionConfig();
 
             // Create the nodes corresponding to the inputs
             auto functionInputs = primitiveFunction->Inputs();
@@ -223,6 +224,17 @@ namespace CNTK
 
                 computationNodePtr = builder.Softmax(input0Node, function->Name());
                 break;
+            case PrimitiveOpType::Pooling:
+            {
+                PoolingType poolingType = (PoolingType)(functionConfig[L"poolingType"].GetValue<size_t>());
+                auto poolingWindowsShape = functionConfig[L"poolingWindowShape"].GetValue<NDShape>();
+                auto strides = functionConfig[L"strides"].GetValue<NDShape>();
+                auto lowerPad = functionConfig[L"lowerPad"].GetValue<NDShape>();
+                auto upperPad = functionConfig[L"upperPad"].GetValue<NDShape>();
+                auto autoPadding = AsBasicElementTypeVector<bool>(functionConfig[L"autoPadding"].GetValue<std::vector<DictionaryValue>>());
+                computationNodePtr = builder.Pooling(input0Node, AsCNTKPoolKind(poolingType), AsTensorShape(poolingWindowsShape, true), AsTensorShape(strides, true), autoPadding, AsTensorShape(lowerPad, true), AsTensorShape(upperPad, true), ImageLayoutKind::CHW, function->Name());
+                break;
+            }
             case PrimitiveOpType::Plus:
                 computationNodePtr = builder.Plus(input0Node, input1Node, function->Name());
                 break;
@@ -251,9 +263,25 @@ namespace CNTK
                 computationNodePtr = builder.GreaterEqual(input0Node, input1Node, function->Name());
                 break;
             case PrimitiveOpType::Times:
-                // TODO: The output rank of the times operation is currently hardcoded to 1
-                computationNodePtr = builder.Times(input0Node, input1Node, 1, function->Name());
+            {
+                size_t numOutputAxes = functionConfig[L"numOutputAxes"].GetValue<size_t>();
+                computationNodePtr = builder.Times(input0Node, input1Node, numOutputAxes, function->Name());
                 break;
+            }
+            case PrimitiveOpType::Convolution:
+            {
+                NDShape outputMapCount, kernelShape;
+                std::tie(outputMapCount, kernelShape) = GetConvolutionOutputMapCountAndKernelShape(functionInputs[0].Shape(), functionInputs[1].Shape());
+                auto strides = functionConfig[L"strides"].GetValue<NDShape>();
+                auto lowerPad = functionConfig[L"lowerPad"].GetValue<NDShape>();
+                auto upperPad = functionConfig[L"upperPad"].GetValue<NDShape>();
+                auto sharing = AsBasicElementTypeVector<bool>(functionConfig[L"sharing"].GetValue<std::vector<DictionaryValue>>());
+                auto autoPadding = AsBasicElementTypeVector<bool>(functionConfig[L"autoPadding"].GetValue<std::vector<DictionaryValue>>());
+                auto transpose = functionConfig[L"transpose"].GetValue<bool>();
+                auto maxTempMemSizeInSamples = functionConfig[L"maxTempMemSizeInSamples"].GetValue<size_t>();
+                computationNodePtr = builder.Convolution(input0Node, input1Node, AsTensorShape(kernelShape, true), AsTensorShape(outputMapCount, true), AsTensorShape(strides, true), sharing, autoPadding, AsTensorShape(lowerPad, true), AsTensorShape(upperPad, true), transpose, ImageLayoutKind::CHW, maxTempMemSizeInSamples, function->Name());
+                break;
+            }
             case PrimitiveOpType::SquaredError:
                 computationNodePtr = builder.SquareError(input0Node, input1Node, function->Name());
                 break;
@@ -297,6 +325,23 @@ namespace CNTK
                 // TODO: Use the new ReduceElements node instead of the legacy SumElements node for reduction. Currently ReduceElements has incorrect MBLayout inference.
                 //computationNodePtr = network->AddNodeToNetAndAttachInputs(New<ReduceElementsNode<ElementType>>(network->GetDeviceId(), function->Name(), L"Sum", 0), { input0Node });
                 computationNodePtr = builder.Sum(input0Node, function->Name());
+                break;
+            }
+            case PrimitiveOpType::BatchNormalization:
+            {
+                auto spacial = functionConfig[L"spacial"].GetValue<bool>();
+                auto normalizationTimeConstant = functionConfig[L"normalizationTimeConstant"].GetValue<double>();
+                auto blendTimeConstant = functionConfig[L"blendTimeConstant"].GetValue<double>();
+                auto epsilon = functionConfig[L"epsilon"].GetValue<double>();
+                auto useCuDNNEngine = functionConfig[L"useCuDNNEngine"].GetValue<bool>();
+                std::vector<std::shared_ptr<ComputationNode<ElementType>>> inputNodes;
+                for (auto inputVar : functionInputs)
+                {
+                    auto baseNodePtr = GetNode(inputVar, network, builder, variableToNodeMap, isVariableRootMap);
+                    inputNodes.push_back((baseNodePtr != nullptr) ? baseNodePtr->template As<ComputationNode<ElementType>>()->shared_from_this() : nullptr);
+                }
+
+                computationNodePtr = builder.BatchNormalization(inputNodes[0], inputNodes[1], inputNodes[2], inputNodes[3], inputNodes[4], spacial, normalizationTimeConstant, blendTimeConstant, epsilon, !useCuDNNEngine, ImageLayoutKind::CHW, function->Name());
                 break;
             }
             case PrimitiveOpType::Combine:
@@ -409,7 +454,7 @@ namespace CNTK
                     auto outputShape = outputVar.Shape();
                     auto computationNodeSampleLayout = computationNodePtr->GetSampleLayout();
                     if (((outputShape.NumAxes() == 0) && (computationNodeSampleLayout[0] != 1)) ||
-                        ((outputShape.NumAxes() != 0) && (computationNodeSampleLayout != AsTensorShape(outputShape))))
+                        ((outputShape.NumAxes() != 0) && (computationNodeSampleLayout != AsTensorShape(outputShape)) && (computationNodeSampleLayout != AsTensorShape(outputShape, true))))
                     {
                         LogicError("The output Variable shape %s does not match the SampleLayout shape %s of the corresponding ComputationNode in the network", AsString(outputShape).c_str(), ((std::string)computationNodeSampleLayout).c_str());
                     }
@@ -740,45 +785,48 @@ namespace CNTK
         return NDShape(outputShapeDims);
     }
 
+    /*static*/ void CompositeFunction::GetNodeOutputOrGradient(Variable var, ValuePtr& varValue, Microsoft::MSR::CNTK::ComputationNodeBasePtr& computationNode, bool getGradient)
+    {
+        auto valueShape = GetValueShape(var, computationNode);
+        if (varValue != nullptr)
+        {
+            // TODO: The shape of the specified output Value object must match the actual output shape
+            if (varValue->Data()->Shape() != valueShape)
+                InvalidArgument("The shape %s of the specified Value object for %s does not match the actual shape %s", AsString(varValue->Data()->Shape()).c_str(), getGradient ? "gradient" : "output", AsString(valueShape).c_str());
+        }
+
+        ValuePtr nodeValue;
+        switch (var.GetDataType())
+        {
+        case DataType::Float:
+            nodeValue = GetValueObjectFromCNTKImplMatrixAndMBLayout<float>(var,
+                                                                           getGradient ? computationNode->As<ComputationNode<float>>()->Gradient() : computationNode->As<ComputationNode<float>>()->Value(),
+                                                                           computationNode->GetMBLayout());
+            break;
+        case DataType::Double:
+            nodeValue = GetValueObjectFromCNTKImplMatrixAndMBLayout<double>(var,
+                                                                            getGradient ? computationNode->As<ComputationNode<double>>()->Gradient() : computationNode->As<ComputationNode<double>>()->Value(),
+                                                                            computationNode->GetMBLayout());
+            break;
+        default:
+            LogicError("Unsupported DataType %s", DataTypeName(var.GetDataType()));
+            break;
+        }
+
+        if (varValue == nullptr)
+        {
+            auto data = MakeSharedObject<NDArrayView>(var.GetDataType(), valueShape, AsDeviceDescriptor(computationNode->ValuePtr()->GetDeviceId()));
+            auto mask = (nodeValue->Mask() != nullptr) ? MakeSharedObject<NDMask>(nodeValue->Mask()->Shape(), nodeValue->Mask()->Device()) : nullptr;
+            varValue = MakeSharedObject<Value>(data, mask);
+        }
+        varValue->CopyFrom(*nodeValue);
+    }
+
     void CompositeFunction::GetNetworkOutputs(std::unordered_map<Variable, ValuePtr>& outputs)
     {
         // Now copy the Forward values of output nodes from the network to outputs' Value objects
         for (auto outputVarValuePair : outputs)
-        {
-            auto computationNodePtr = m_variableToNodeMap[outputVarValuePair.first];
-            auto outputValuePtr = outputVarValuePair.second;
-
-            auto outputShape = GetValueShape(outputVarValuePair.first, computationNodePtr);
-            if (outputValuePtr != nullptr)
-            {
-                // TODO: The shape of the specified output Value object must match the actual output shape
-                if (outputValuePtr->Data()->Shape() != outputShape)
-                    InvalidArgument("The shape %s of the specified Value object for output does not match the actual output shape %s", AsString(outputValuePtr->Data()->Shape()).c_str(), AsString(outputShape).c_str());
-            }
-
-            ValuePtr nodeValue;
-            switch (outputVarValuePair.first.GetDataType())
-            {
-            case DataType::Float:
-                nodeValue = GetValueObjectFromCNTKImplMatrixAndMBLayout<float>(outputVarValuePair.first, computationNodePtr->As<ComputationNode<float>>()->Value(), computationNodePtr->GetMBLayout());
-                break;
-            case DataType::Double:
-                nodeValue = GetValueObjectFromCNTKImplMatrixAndMBLayout<double>(outputVarValuePair.first, computationNodePtr->As<ComputationNode<double>>()->Value(), computationNodePtr->GetMBLayout());
-                break;
-            default:
-                LogicError("Unsupported DataType %s", DataTypeName(outputVarValuePair.first.GetDataType()));
-                break;
-            }
-
-            if (outputValuePtr == nullptr)
-            {
-                auto data = MakeSharedObject<NDArrayView>(outputVarValuePair.first.GetDataType(), outputShape, AsDeviceDescriptor(computationNodePtr->ValuePtr()->GetDeviceId()));
-                auto mask = (nodeValue->Mask() != nullptr) ? MakeSharedObject<NDMask>(nodeValue->Mask()->Shape(), nodeValue->Mask()->Device()) : nullptr;
-                outputValuePtr = MakeSharedObject<Value>(data, mask);
-            }
-            outputValuePtr->CopyFrom(*nodeValue);
-            outputs[outputVarValuePair.first] = outputValuePtr;
-        }
+            GetNodeOutputOrGradient(outputVarValuePair.first, outputs[outputVarValuePair.first], m_variableToNodeMap[outputVarValuePair.first], false /*getGradient*/);
     }
 
     void CompositeFunction::GetNetworkGradients(std::unordered_map<Variable, ValuePtr>& gradients)
@@ -796,42 +844,11 @@ namespace CNTK
                 InvalidArgument("Gradient value incorrectly requested for an Output or Constant Variable, or an Input Variable with NeedsGradient setting of false");
 
             auto computationNodePtr = m_variableToNodeMap[gradientVarValuePair.first];
-            auto gradientValuePtr = gradientVarValuePair.second;
-
-            auto gradientShape = GetValueShape(gradientVarValuePair.first, computationNodePtr);
-            if (gradientValuePtr != nullptr)
-            {
-                // TODO: The shape of the specified output Value object must match the actual output shape
-                if (gradientValuePtr->Data()->Shape() != gradientShape)
-                    InvalidArgument("The shape %s of the specified Value object for gradient does not match the actual gradient shape %s", AsString(gradientValuePtr->Data()->Shape()).c_str(), AsString(gradientShape).c_str());
-            }
 
             if (!computationNodePtr->NeedsGradient())
                 LogicError("Backpropagated gradient value cannot be read from a ComputationNode that has NeedsGradient set to false");
 
-            ValuePtr nodeValue;
-            switch (gradientVarValuePair.first.GetDataType())
-            {
-            case DataType::Float:
-                nodeValue = GetValueObjectFromCNTKImplMatrixAndMBLayout<float>(gradientVarValuePair.first, computationNodePtr->As<ComputationNode<float>>()->Gradient(), computationNodePtr->GetMBLayout());
-                break;
-            case DataType::Double:
-                nodeValue = GetValueObjectFromCNTKImplMatrixAndMBLayout<double>(gradientVarValuePair.first, computationNodePtr->As<ComputationNode<double>>()->Gradient(), computationNodePtr->GetMBLayout());
-                break;
-            default:
-                LogicError("Unsupported DataType %s", DataTypeName(gradientVarValuePair.first.GetDataType()));
-                break;
-            }
-
-            if (gradientValuePtr == nullptr)
-            {
-                auto data = MakeSharedObject<NDArrayView>(gradientVarValuePair.first.GetDataType(), gradientShape, AsDeviceDescriptor(computationNodePtr->ValuePtr()->GetDeviceId()));
-                auto mask = (nodeValue->Mask() != nullptr) ? MakeSharedObject<NDMask>(nodeValue->Mask()->Shape(), nodeValue->Mask()->Device()) : nullptr;
-                gradientValuePtr = MakeSharedObject<Value>(data, mask);
-            }
-
-            gradientValuePtr->CopyFrom(*nodeValue);
-            gradients[gradientVarValuePair.first] = gradientValuePtr;
+            GetNodeOutputOrGradient(gradientVarValuePair.first, gradients[gradientVarValuePair.first], computationNodePtr, true /*getGradient*/);
         }
     }
 
@@ -873,6 +890,8 @@ namespace CNTK
                 outputsToEvaluate.push_back(m_variableToNodeMap[rootVarForBackprop]);
         }
 
+        ScopedNetworkOperationMode modeGuard(m_computationNetwork, outputsToRetainBackwardStateFor.empty() ? NetworkOperationMode::inferring : NetworkOperationMode::training);
+
         m_computationNetwork->ForwardProp(outputsToEvaluate);
 
         GetNetworkOutputs(outputs);
@@ -908,6 +927,8 @@ namespace CNTK
         PopulateNetworkGradients(rootGradientValues);
 
         // Backpropagate through the network
+        ScopedNetworkOperationMode modeGuard(m_computationNetwork, NetworkOperationMode::training);
+
         auto rootComputationNodePtr = m_variableToNodeMap[rootGradientValues.begin()->first];
         m_computationNetwork->GetNestedNetwork(rootComputationNodePtr)->Backprop(FrameRange(nullptr), true, true);
 
@@ -1046,9 +1067,11 @@ namespace CNTK
         return BinaryOp(PrimitiveOpType::GreaterEqual, leftOperand, rightOperand, Dictionary(), name);
     }
 
-    FunctionPtr Times(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name/* = L""*/)
+    FunctionPtr Times(const Variable& leftOperand, const Variable& rightOperand, size_t numOutputAxes /*= 1*/, const std::wstring& name/* = L""*/)
     {
-        return BinaryOp(PrimitiveOpType::Times, leftOperand, rightOperand, Dictionary(), name);
+        auto additionalProperties = Dictionary();
+        additionalProperties[L"numOutputAxes"] = numOutputAxes;
+        return BinaryOp(PrimitiveOpType::Times, leftOperand, rightOperand, std::move(additionalProperties), name);
     }
 
     FunctionPtr SquaredError(const Variable& prediction, const Variable& targets, const std::wstring& name/* = L""*/)
@@ -1089,6 +1112,83 @@ namespace CNTK
     FunctionPtr ReduceSum(const Variable& operand, const std::wstring& name/* = L""*/)
     {
         return UnaryOp(PrimitiveOpType::ReduceSum, operand, Dictionary(), name);
+    }
+
+    FunctionPtr PerDimMeanVarianceNormalize(const Variable& operand, const NDArrayViewPtr& mean, const NDArrayViewPtr& invStdDev, const std::wstring& name /*= L""*/)
+    {
+        Constant meanVar(mean);
+        Constant invStdDevVar(invStdDev);
+
+        return ElementTimes(Minus(operand, meanVar), invStdDevVar);
+    }
+
+    FunctionPtr Convolution(const Variable& convolutionMap,
+                            const Variable& operand,
+                            const NDShape& strides,
+                            const std::vector<bool>& sharing,
+                            const std::vector<bool>& autoPadding,
+                            const NDShape& lowerPad,
+                            const NDShape& upperPad,
+                            bool transpose,
+                            size_t maxTempMemSizeInSamples,
+                            const std::wstring& name)
+    {
+        auto additionalProperties = Dictionary();
+        additionalProperties[L"strides"] = strides;
+        additionalProperties[L"sharing"] = AsDictionaryValueVector(sharing);
+        additionalProperties[L"autoPadding"] = AsDictionaryValueVector(autoPadding);
+        additionalProperties[L"lowerPad"] = lowerPad;
+        additionalProperties[L"upperPad"] = upperPad;
+        additionalProperties[L"transpose"] = transpose;
+        additionalProperties[L"maxTempMemSizeInSamples"] = maxTempMemSizeInSamples;
+
+        return BinaryOp(PrimitiveOpType::Convolution, convolutionMap, operand, std::move(additionalProperties), name);
+    }
+
+    FunctionPtr Pooling(const Variable& operand,
+                        PoolingType poolingType,
+                        const NDShape& poolingWindowShape,
+                        const NDShape& strides,
+                        const std::vector<bool>& autoPadding,
+                        const NDShape& lowerPad,
+                        const NDShape& upperPad,
+                        const std::wstring& name)
+    {
+        auto additionalProperties = Dictionary();
+        additionalProperties[L"poolingType"] = (size_t)poolingType;
+        additionalProperties[L"poolingWindowShape"] = poolingWindowShape;
+        additionalProperties[L"strides"] = strides;
+        additionalProperties[L"autoPadding"] = AsDictionaryValueVector(autoPadding);
+        additionalProperties[L"lowerPad"] = lowerPad;
+        additionalProperties[L"upperPad"] = upperPad;
+
+        return UnaryOp(PrimitiveOpType::Pooling, operand, std::move(additionalProperties), name);
+    }
+
+    FunctionPtr BatchNormalization(const Variable& operand,
+                                   const Variable& scale,
+                                   const Variable& bias,
+                                   const Variable& runningMean,
+                                   const Variable& runningInvStd,
+                                   bool spacial,
+                                   double normalizationTimeConstant,
+                                   double blendTimeConstant,
+                                   double epsilon,
+                                   bool useCuDNNEngine,
+                                   const std::wstring& name)
+    {
+        auto additionalProperties = Dictionary();
+        additionalProperties[L"spacial"] = spacial;
+        additionalProperties[L"normalizationTimeConstant"] = normalizationTimeConstant;
+        additionalProperties[L"blendTimeConstant"] = blendTimeConstant;
+        additionalProperties[L"epsilon"] = epsilon;
+        additionalProperties[L"useCuDNNEngine"] = useCuDNNEngine;
+
+        return CompositeFunction::Create(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::BatchNormalization,
+                                                                             std::vector<Variable>({ operand, scale, bias, runningMean, runningInvStd }),
+                                                                             std::move(additionalProperties),
+                                                                             name),
+                                         name);
     }
 
     FunctionPtr Combine(const std::vector<FunctionPtr>& operands, const std::wstring& name/* = L""*/)

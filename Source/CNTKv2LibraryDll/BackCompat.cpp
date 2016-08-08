@@ -71,10 +71,14 @@ namespace CNTK
             }
             else if (node->Is<LearnableParameter<ElementType>>())
             {
+                bool isConstant = (node->GetLearningRateMultiplier() == 0);
                 auto& matrix = node->As<ComputationNode<ElementType>>()->Value();
                 auto tensorView = new TensorView<ElementType>(std::make_shared<Matrix<ElementType>>(matrix.AsReference()), node->GetSampleLayout());
                 NDArrayViewPtr parameterValue = MakeSharedObject<NDArrayView>(AsDataType<ElementType>(), AsDeviceDescriptor(matrix.GetDeviceId()), AsStorageFormat(matrix.GetFormat()), varShape, false, tensorView);
-                var = Parameter(parameterValue, node->GetName());
+                if (isConstant)
+                    var = Constant(parameterValue, node->GetName());
+                else
+                    var = Parameter(parameterValue, node->GetName());
             }
             else
                 LogicError("CNTK::LoadLegacyModel: Unsupported legacy CNTK node named '%S'", node->NodeName().c_str());
@@ -95,16 +99,51 @@ namespace CNTK
 
             PrimitiveOpType opType;
             Dictionary primitiveFunctionConfigParameters;
-            if (node->OperationName() == OperationNameOf(TanhNode))
-                opType = PrimitiveOpType::Tanh;
+            if (node->OperationName() == OperationNameOf(NegateNode))
+                opType = PrimitiveOpType::Negate;
             else if (node->OperationName() == OperationNameOf(SigmoidNode))
                 opType = PrimitiveOpType::Sigmoid;
+            else if (node->OperationName() == OperationNameOf(TanhNode))
+                opType = PrimitiveOpType::Tanh;
+            else if (node->OperationName() == OperationNameOf(RectifiedLinearNode))
+                opType = PrimitiveOpType::ReLU;
             else if (node->OperationName() == OperationNameOf(ExpNode))
                 opType = PrimitiveOpType::Exp;
-            else if (node->OperationName() == OperationNameOf(TimesNode))
-                opType = PrimitiveOpType::Times;
+            else if (node->OperationName() == OperationNameOf(LogNode))
+                opType = PrimitiveOpType::Log;
+            else if (node->OperationName() == OperationNameOf(SqrtNode))
+                opType = PrimitiveOpType::Sqrt;
+            else if (node->OperationName() == OperationNameOf(FloorNode))
+                opType = PrimitiveOpType::Floor;
+            else if (node->OperationName() == OperationNameOf(AbsNode))
+                opType = PrimitiveOpType::Abs;
+            else if (node->OperationName() == OperationNameOf(ReciprocalNode))
+                opType = PrimitiveOpType::Reciprocal;
+            else if (node->OperationName() == OperationNameOf(SoftmaxNode))
+                opType = PrimitiveOpType::Softmax;
             else if (node->OperationName() == OperationNameOf(PlusNode))
                 opType = PrimitiveOpType::Plus;
+            else if (node->OperationName() == OperationNameOf(MinusNode))
+                opType = PrimitiveOpType::Minus;
+            else if (node->OperationName() == OperationNameOf(ElementTimesNode))
+                opType = PrimitiveOpType::ElementTimes;
+            else if (node->OperationName() == OperationNameOf(EqualNode))
+                opType = PrimitiveOpType::Equal;
+            else if (node->OperationName() == OperationNameOf(NotEqualNode))
+                opType = PrimitiveOpType::NotEqual;
+            else if (node->OperationName() == OperationNameOf(LessNode))
+                opType = PrimitiveOpType::Less;
+            else if (node->OperationName() == OperationNameOf(LessEqualNode))
+                opType = PrimitiveOpType::LessEqual;
+            else if (node->OperationName() == OperationNameOf(GreaterNode))
+                opType = PrimitiveOpType::Greater;
+            else if (node->OperationName() == OperationNameOf(GreaterEqualNode))
+                opType = PrimitiveOpType::GreaterEqual;
+            else if (node->OperationName() == OperationNameOf(TimesNode))
+            {
+                primitiveFunctionConfigParameters[L"numOutputAxes"] = DictionaryValue((size_t)node->As<TimesNode<ElementType>>()->OutputRank());
+                opType = PrimitiveOpType::Times;
+            }
             else if (node->OperationName() == OperationNameOf(PastValueNode))
             {
                 if (inputVars.size() == 1)
@@ -125,6 +164,8 @@ namespace CNTK
                 primitiveFunctionConfigParameters[L"stepSize"] = DictionaryValue((size_t)node->As<FutureValueNode<ElementType>>()->TimeStep());
                 opType = PrimitiveOpType::FutureValue;
             }
+            else if (node->OperationName() == OperationNameOf(SquareErrorNode))
+                opType = PrimitiveOpType::SquaredError;
             else if (node->OperationName() == OperationNameOf(CrossEntropyWithSoftmaxNode))
             {
                 std::swap(inputVars[0], inputVars[1]);
@@ -135,10 +176,44 @@ namespace CNTK
                 std::swap(inputVars[0], inputVars[1]);
                 opType = PrimitiveOpType::ClassificationError;
             }
-            else if (node->OperationName() == OperationNameOf(ElementTimesNode))
-                opType = PrimitiveOpType::ElementTimes;
             else if (node->OperationName() == OperationNameOf(SumElementsNode))
                 opType = PrimitiveOpType::ReduceSum;
+            else if (node->OperationName() == OperationNameOf(ConvolutionNode))
+            {
+                auto convolutionNode = node->As<ConvolutionNode<ElementType>>();
+                primitiveFunctionConfigParameters[L"strides"] = AsNDShape(convolutionNode->Strides());
+                primitiveFunctionConfigParameters[L"sharing"] = AsDictionaryValueVector(convolutionNode->Sharing());
+                primitiveFunctionConfigParameters[L"autoPadding"] = AsDictionaryValueVector(convolutionNode->AutoPad());
+                primitiveFunctionConfigParameters[L"lowerPad"] = AsNDShape(convolutionNode->LowerPad());
+                primitiveFunctionConfigParameters[L"upperPad"] = AsNDShape(convolutionNode->UpperPad());
+                primitiveFunctionConfigParameters[L"transpose"] = convolutionNode->Transpose();
+                primitiveFunctionConfigParameters[L"maxTempMemSizeInSamples"] = convolutionNode->MaxTempMemSizeInSamples();
+
+                opType = PrimitiveOpType::Convolution;
+            }
+            else if (node->OperationName() == OperationNameOf(PoolingNode))
+            {
+                auto poolingNode = node->As<PoolingNode<ElementType>>();
+                primitiveFunctionConfigParameters[L"poolingType"] = (size_t)(AsPoolingType(poolingNode->PoolingKind()));
+                primitiveFunctionConfigParameters[L"poolingWindowShape"] = AsNDShape(poolingNode->KernelShape());
+                primitiveFunctionConfigParameters[L"strides"] = AsNDShape(poolingNode->Strides());
+                primitiveFunctionConfigParameters[L"autoPadding"] = AsDictionaryValueVector(poolingNode->AutoPad());
+                primitiveFunctionConfigParameters[L"lowerPad"] = AsNDShape(poolingNode->LowerPad());
+                primitiveFunctionConfigParameters[L"upperPad"] = AsNDShape(poolingNode->UpperPad());
+
+                opType = PrimitiveOpType::Pooling;
+            }
+            else if (node->OperationName() == OperationNameOf(BatchNormalizationNode))
+            {
+                auto batchNormalizationNode = node->As<BatchNormalizationNode<ElementType>>();
+                primitiveFunctionConfigParameters[L"spacial"] = batchNormalizationNode->Spatial();
+                primitiveFunctionConfigParameters[L"normalizationTimeConstant"] = batchNormalizationNode->NormalizationTimeConstant();
+                primitiveFunctionConfigParameters[L"blendTimeConstant"] = batchNormalizationNode->BlendTimeConstant();
+                primitiveFunctionConfigParameters[L"epsilon"] = batchNormalizationNode->Epsilon();
+                primitiveFunctionConfigParameters[L"useCuDNNEngine"] = !batchNormalizationNode->UseCNTKEngine();
+
+                opType = PrimitiveOpType::BatchNormalization;
+            }
             else
                 LogicError("Unsupported ComputationNode with OperationName='%S' found when loading legacy CNTK model", node->OperationName().c_str());
 

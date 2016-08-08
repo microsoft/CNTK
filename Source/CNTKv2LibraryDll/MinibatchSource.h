@@ -19,15 +19,14 @@ namespace CNTK
 
         virtual const std::unordered_set<StreamInfo>& StreamInfos() override { return m_streamInfos; }
 
-        virtual bool GetNextMinibatch(std::unordered_map<StreamInfo, std::pair<size_t, ValuePtr>>& minibatchData) override;
+        virtual std::unordered_map<StreamInfo, MinibatchData> GetNextMinibatch(const std::unordered_map<StreamInfo, std::pair<size_t, size_t>>& perStreamMBSizeLimits,
+                                                                               const DeviceDescriptor& device = DeviceDescriptor::DefaultDevice()) override;
 
     private: 
         std::unordered_set<StreamInfo> m_streamInfos;
         std::shared_ptr<Microsoft::MSR::CNTK::Reader> m_compositeDataReader;
-        bool m_startNewEpoch;
-        size_t m_nextEpochIndex;
+        bool m_epochEndReached;
         size_t m_prevMinibatchSize;
         size_t m_epochSize;
     };
 }
-
