@@ -42,13 +42,14 @@ LinearLayer {outDim} =
 DenseLayer{outDim, activation=(x=>x)} = Sequential ( LinearLayer{outDim} : activation )
 
 # EmbeddingLayer -- create a linear embedding layer
-EmbeddingLayer{outDim,                                   # dimension of embedding
-               embeddingPath = '', transpose = false} =  # load a fixed embedding from a path instead
+EmbeddingLayer {outDim,                                   # dimension of embedding
+                embeddingPath = '', transpose = false} =  # load a fixed embedding from a path instead
 {
+    shape = if transpose then (0 : outDim) else (outDim : 0)
     E = if embeddingPath == ''
-        then ParameterTensor {(outDim : 0), init='uniform'}  # learnable
-        else ParameterTensor {(outDim : 0), initFromFilePath = embeddingPath, learningRateMultiplier = 0}  # fixed from file
-    TimesOp = if embeddingPath != '' && transpose then TransposeTimes else Times
+        then ParameterTensor {shape, init='uniform'}  # learnable
+        else ParameterTensor {shape, initFromFilePath = embeddingPath, learningRateMultiplier = 0}  # fixed from file
+    TimesOp = if transpose then TransposeTimes else Times
     f(x) = TimesOp (E, x)    # x is expected to be sparse one-hot
 }.f
 

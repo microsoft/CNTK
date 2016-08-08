@@ -13,6 +13,8 @@ deviceId = $DeviceId$
 modelPath="$ModelDir$/seqcla.dnn"
 makeMode = false # set true to enable checkpointing
 
+vocabDim = 2000
+
 Train=[
     action="train"
     
@@ -21,6 +23,10 @@ Train=[
             EmbeddingLayer(input, vocabSize, embeddingDim, embeddingPath) = [
                 embedding = Transpose(LearnableParameter(vocabSize, embeddingDim, learningRateMultiplier = 0.0, init = 'fromFile', initFromFilePath = embeddingPath))          
                 lookup = GatherPacked(features, embedding)
+            ].lookup
+            EmbeddingLayerSparse(input, vocabSize, embeddingDim, embeddingPath) = [
+                embedding = Transpose(LearnableParameter(vocabSize, embeddingDim, learningRateMultiplier = 0.0, init = 'fromFile', initFromFilePath = embeddingPath))          
+                lookup = embedding * features
             ].lookup
             DenseLayer(input, inputSize, outputSize, activation) = [
                z = BFF(input, outputSize, inputSize).z
@@ -38,13 +44,14 @@ Train=[
 
         // model dims
         numLabels = 5
-        vocabDim = 2000
+        vocabDim = $vocabDim$
         embedDim = 50
 
         # definition without layer composition
         modelMacroStyle (features) = {
             // load the pre-learned word embedding matrix
-            l1 = Layers.EmbeddingLayer(features, vocabDim, embedDim, 'embeddingmatrix.txt')
+            #l1 = Layers.EmbeddingLayer(features, vocabDim, embedDim, 'embeddingmatrix.txt')
+            l1 = Layers.EmbeddingLayerSparse(features, vocabDim, embedDim, 'embeddingmatrix.txt')
             l2 = Layers.LSTMLayer(l1, embedDim, lstmDim, cellDim, BS.Sequences.Last)
             l3 = Layers.DenseLayer(l2, lstmDim, numLabels, Pass)
             z = l3
@@ -53,7 +60,8 @@ Train=[
         # definition with layer composition
         modelLayerStyle (features) = {
             // load the pre-learned word embedding matrix
-            l1 = Layers.EmbeddingLayer(features, vocabDim, embedDim, 'embeddingmatrix.txt')
+            l1o = Layers.EmbeddingLayer(features, vocabDim, embedDim, 'embeddingmatrix.txt')
+            l1 = EmbeddingLayer {embedDim, embeddingPath='embeddingmatrix.txt', transpose=true} (features)
             l2 = Layers.LSTMLayer(l1, embedDim, lstmDim, cellDim, BS.Sequences.Last)
             l3 = Layers.DenseLayer(l2, lstmDim, numLabels, Pass)
             z = l3
@@ -61,7 +69,7 @@ Train=[
 
         # inputs
         t = DynamicAxis{}
-        features = Input {1, dynamicAxis=t}   # Input has shape (1,t)
+        features = SparseInput {$vocabDim$, dynamicAxis=t}   # Input has shape (1,t)
         labels   = Input {numLabels}          # Input has shape (numLabels,*) where all sequences in *=1
 
         # apply model
@@ -92,22 +100,14 @@ Train=[
         # We are testing checkpointing, keep all checkpoint (.ckp) files
         keepCheckPointFiles = true
     ]
-    
+
     reader = [
         readerType = "CNTKTextFormatReader"
-        file = "$DataDir$/Train.txt"            
-        
-        input = [            
-            features=[
-                alias = "x"                
-                dim = 1               
-                format = "dense"
-            ]
-            labels=[
-                alias = "y"                
-                dim = 5           
-                format = "dense"
-            ]
+        #file = "$DataDir$/Train.txt"
+        file = "$DataDir$/Train.ctf"
+        input = [
+            features = [ alias = "x" ; dim = $vocabDim$ ; format = "sparse" ]
+            labels =   [ alias = "y" ; dim = 5          ; format = "dense" ]
         ]
    ]    
    outputPath = "$OutputDir$/output.txt"        # dump the output as text?

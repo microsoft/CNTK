@@ -251,6 +251,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
     // only one criterion so far TODO: support multiple ones?
     auto& learnableNodes = net->LearnableParameterNodes(criterionNodes[0]);
     list<Matrix<ElemType>> smoothedGradients;
+    size_t numParameters = 0;
 
     vector<wstring> nodesToUpdateDescriptions; // for logging only
     for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
@@ -263,7 +264,10 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                                                      node->Value().GetNumCols(),
                                                      net->GetDeviceId()));
         if (node->IsParameterUpdateRequired())
-            nodesToUpdateDescriptions.push_back(node->NodeDescription() + L" : " + msra::strfun::utf16(string(node->GetSampleLayout())).c_str());
+        {
+            nodesToUpdateDescriptions.push_back(node->NodeDescription() + L" : [" + msra::strfun::utf16(string(node->GetSampleLayout())) + L"]");
+            numParameters += node->GetSampleLayout().GetNumElements();
+        }
     }
     size_t numNeedsGradient = 0;
     for (let node : net->GetEvalOrder(criterionNodes[0]))
@@ -272,7 +276,8 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
             numNeedsGradient++;
     }
     fprintf(stderr, "\n");
-    LOGPRINTF(stderr, "Training %d out of %d parameters and %d nodes with gradient:\n", (int)nodesToUpdateDescriptions.size(), (int)learnableNodes.size(), (int)numNeedsGradient);
+    LOGPRINTF(stderr, "Training %.0f parameters in %d out of %d parameters and %d nodes with gradient:\n",
+              (double)numParameters, (int)nodesToUpdateDescriptions.size(), (int)learnableNodes.size(), (int)numNeedsGradient);
     for (let nodeDescription : nodesToUpdateDescriptions)
     {
         LOGPRINTF(stderr, "\t%ls\n", nodeDescription.c_str());
