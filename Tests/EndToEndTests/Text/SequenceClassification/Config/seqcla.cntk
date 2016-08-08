@@ -15,7 +15,6 @@ makeMode = false # set true to enable checkpointing
 
 Train=[
     action="train"
-    run=BrainScriptNetworkBuilder
     
     BrainScriptNetworkBuilder=[
         Layers = [
@@ -38,20 +37,27 @@ Train=[
         cellDim = 25
 
         // model dims
-        numLabels = 5        
-        vocab = 2000
-        embedDim = 50        
+        numLabels = 5
+        vocabDim = 2000
+        embedDim = 50
 
-        model (features) = {
+        # definition without layer composition
+        modelMacroStyle (features) = {
             // load the pre-learned word embedding matrix
-            l1 = Layers.EmbeddingLayer(features, vocab, embedDim, 'embeddingmatrix.txt')
+            l1 = Layers.EmbeddingLayer(features, vocabDim, embedDim, 'embeddingmatrix.txt')
             l2 = Layers.LSTMLayer(l1, embedDim, lstmDim, cellDim, BS.Sequences.Last)
             l3 = Layers.DenseLayer(l2, lstmDim, numLabels, Pass)
-            out = Pass(l3, tag='output')   
+            z = l3
+        }.z
 
-            // Make sure the trainer understands that the time dimension of l3 is actually the same as that of labels.
-            l3p = ReconcileDynamicAxis(l3, labels)
-        }.l3p
+        # definition with layer composition
+        modelLayerStyle (features) = {
+            // load the pre-learned word embedding matrix
+            l1 = Layers.EmbeddingLayer(features, vocabDim, embedDim, 'embeddingmatrix.txt')
+            l2 = Layers.LSTMLayer(l1, embedDim, lstmDim, cellDim, BS.Sequences.Last)
+            l3 = Layers.DenseLayer(l2, lstmDim, numLabels, Pass)
+            z = l3
+        }.z
 
         # inputs
         t = DynamicAxis{}
@@ -59,11 +65,15 @@ Train=[
         labels   = Input {numLabels}          # Input has shape (numLabels,*) where all sequences in *=1
 
         # apply model
+        model = modelMacroStyle
         z = model (features)
 
+        # Make sure the trainer understands that the time dimension of l3 is actually the same as that of labels.
+        zp = ReconcileDynamicAxis(z, labels)
+
         # training criteria
-        ce  = CrossEntropyWithSoftmax (labels, z)  // this is the training objective
-        err = ErrorPrediction         (labels, z)  // this also gets tracked
+        ce  = CrossEntropyWithSoftmax (labels, zp)  // this is the training objective
+        err = ErrorPrediction         (labels, zp)  // this also gets tracked
 
         # connect to system
         featureNodes    = (features)
@@ -103,36 +113,26 @@ Train=[
    outputPath = "$OutputDir$/output.txt"        # dump the output as text?
 ]
 
+# this is currently not used
 Write=[
-    action="test"
-    run=BrainScriptNetworkBuilder
-    
+    action="test"   # TODO: test vs. Write?
+
+    modelFile = "$ModelDir$/seqcla.dnn"    
+
     format = [
       # %n = minibatch, %x = shape, %d = sequenceId
       sequencePrologue=%d\t|w.shape %x\n%d\t|w\s
       sampleSeparator=\n%d\t|w\s
       elementSeparator=\s
     ]
-    
-    modelFile = "$ModelDir$/seqcla.dnn"    
-    
+
     reader = [
-            readerType = "CNTKTextFormatReader"
-            file = "$DataDir$/Train.txt"            
-            
-            input = [            
-                features=[
-                    alias = "x"                
-                    dim = 1               
-                    format = "dense"
-                ]
-                labels=[
-                    alias = "y"                
-                    dim = 5           
-                    format = "dense"
-                ]
-            ]
-            
+        readerType = "CNTKTextFormatReader"
+        file = "$DataDir$/Train.txt"            
+        input = [
+            features = [ alias = "x" ; dim = 1 ; format = "dense" ]
+            labels   = [ alias = "y" ; dim = 5 ; format = "dense" ]
+        ]
    ]    
    outputPath = "$OutputDir$/output.txt"        # dump the output as text?
 ]
