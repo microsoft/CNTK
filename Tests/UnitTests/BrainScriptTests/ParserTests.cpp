@@ -60,7 +60,8 @@ BOOST_AUTO_TEST_CASE(ParseExpressionsAndCompareTree)
         outputFile.open(wtocharpath(outputPath.c_str()).c_str(), wifstream::in);
 #endif
 
-        if (!inputFile.is_open()){
+        if (!inputFile.is_open())
+        {
             filesAvailable = false;
             continue;
         }

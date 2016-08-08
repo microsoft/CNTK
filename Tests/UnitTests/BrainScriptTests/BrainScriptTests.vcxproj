@@ -22,7 +22,7 @@
     <ProjectGuid>{9F999212-AFC5-4EAC-AA78-F7247D46C456}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>BrainScriptTests</RootNamespace>
-	<ProjectName>BrainScriptTests</ProjectName>
+    <ProjectName>BrainScriptTests</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <Import Project="$(SolutionDir)\CNTK.Cpp.props" />
@@ -66,9 +66,10 @@
       <AdditionalDependencies>ComputationNetworkLib.lib;Common.lib;Math.lib;kernel32.lib;user32.lib;shell32.lib;SequenceTrainingLib.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalLibraryDirectories>$(MSMPI_LIB64);$(OutDir)..;$(BOOST_LIB_PATH);</AdditionalLibraryDirectories>
+	  <DelayLoadDLLs>math.dll;msmpi.dll</DelayLoadDLLs>
     </Link>
   </ItemDefinitionGroup>
-    <ItemDefinitionGroup Condition="$(DebugBuild)">
+  <ItemDefinitionGroup Condition="$(DebugBuild)">
     <ClCompile>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -93,6 +94,7 @@
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories);$(CudaLibPath)</AdditionalLibraryDirectories>
+      <DelayLoadDLLs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">%(DelayLoadDLLs);nvml.dll;$(CudaRuntimeDll)</DelayLoadDLLs>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="$(CpuOnlyBuild)">

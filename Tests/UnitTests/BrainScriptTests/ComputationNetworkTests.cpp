@@ -29,54 +29,46 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Test {
 
 BOOST_FIXTURE_TEST_SUITE(ComputationNetworkSuite, BSFixture)
 
-void parseLine(const wstring & input, const wstring & expectedOutput)
+void compareNetworks(const wstring & modelPath)
 {
-    let expr = BS::ParseConfigDictFromString(input, L"Test", vector<wstring>());
+    wstring actualNetworkPath(modelPath + L"_Actual.txt");
+    wstring expectedNetworkPath(modelPath + L"_Expected.txt");
 
-    wstringstream actualStream;
-    expr->DumpToStream(actualStream);
+    wifstream actualNetworkStream;
+    wifstream expectedNetworkStream;
 
-    BOOST_TEST(actualStream.str() == expectedOutput, boost::test_tools::per_element());
+#ifdef _WIN32
+    actualNetworkStream.open(actualNetworkPath.c_str(), wifstream::in);
+    expectedNetworkStream.open(expectedNetworkPath.c_str(), wifstream::in);
+#else
+    actualNetworkStream.open(wtocharpath(actualNetworkPath.c_str()).c_str(), wifstream::in);
+    expectedNetworkStream.open(wtocharpath(expectedNetworkPath.c_str()).c_str(), wifstream::in);
+#endif
+    wstring actualNetwork;
+    wstring expectedNetwork;
+
+    actualNetworkStream >> actualNetwork;
+    expectedNetworkStream >> expectedNetwork;
+
+    BOOST_TEST(actualNetwork == expectedNetwork, boost::test_tools::per_element());
+
+    actualNetworkStream.close();
+    //remove(ws2s(actualNetworkPath).c_str());
 }
-
-std::vector<wstring> inputModelNames{
-    L"LR_reg.dnn"
-};
 
 BOOST_AUTO_TEST_CASE(CompareNetworkStructureFromModel)
 {
-    wstring inputPrefix(L"Input");
-    wstring outputPrefix(L"ExpectedOutput");
-
     wstring computationData = getDataPath() + L"/Data/ComputationNetwork/";
 
-    for (auto & modelName : inputModelNames)
+    std::vector<wstring> inputModelPaths = getListOfFilesByExtension(L".dnn", computationData);
+
+    for (auto & modelPath : inputModelPaths)
     {
-        wstring modelPath = computationData + modelName;
+        fprintf(stderr, "Model path: %ls\n", modelPath.c_str());
         ComputationNetworkPtr net = ComputationNetwork::CreateFromFile<float>(CPUDEVICE, modelPath);
         net->DumpNodeInfoToFile(L"", true, true, modelPath + L"_Actual.txt", L"");
-        
-        wstring actualNetworkPath(modelPath + L"_Actual.txt");
-        wstring expectedNetworkPath(modelPath + L"_Expected.txt");
-        
-        wifstream actualNetworkStream;
-        wifstream expectedNetworkStream;
 
-#ifdef _WIN32
-        actualNetworkStream.open(actualNetworkPath.c_str(), wifstream::in);
-        expectedNetworkStream.open(expectedNetworkPath.c_str(), wifstream::in);
-#else
-        actualNetworkStream.open(wtocharpath(actualNetworkPath.c_str()).c_str(), wifstream::in);
-        expectedNetworkStream.open(wtocharpath(expectedNetworkPath.c_str()).c_str(), wifstream::in);
-#endif
-        wstring actualNetwork;
-        wstring expectedNetwork;
-
-        actualNetworkStream >> actualNetwork;
-        expectedNetworkStream >> expectedNetwork;
-
-        BOOST_TEST(actualNetwork == expectedNetwork, boost::test_tools::per_element());
-
+        compareNetworks(modelPath);
     }
 }
 
