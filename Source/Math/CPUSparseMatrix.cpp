@@ -781,6 +781,7 @@ void CPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const CPU
         }
     }
 
+    // TODO: Implement CSR as a transposition of b, like we do for GPU.
     if (rhs.GetFormat() != matrixFormatSparseCSC)
         NOT_IMPLEMENTED;
 
@@ -820,13 +821,42 @@ void CPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const CPU
             }
         }
     }
+    // the transposeA case is copy-paste from above with rows/cols of lhs swapped
     else if (transposeA && !transposeB)
     {
-        NOT_IMPLEMENTED;
+        for (size_t j = 0; j < rhs.GetNumCols(); j++)
+        {
+            size_t start = rhs.SecondaryIndexLocation()[j]; // ColLocation
+            size_t end = rhs.SecondaryIndexLocation()[j + 1];
+            for (size_t p = start; p < end; p++)
+            {
+                size_t i = rhs.MajorIndexLocation()[p]; // RowLocation
+                ElemType val = rhs.Buffer()[p];
+
+                for (size_t h = 0; h < lhs.GetNumCols(); h++)
+                {
+                    c(h, j) += alpha * lhs(i, h) * val;
+                }
+            }
+        }
     }
-    else
+    else if (transposeA && transposeB)
     {
-        NOT_IMPLEMENTED;
+        for (size_t j = 0; j < rhs.GetNumCols(); j++)
+        {
+            size_t start = rhs.SecondaryIndexLocation()[j];
+            size_t end = rhs.SecondaryIndexLocation()[j + 1];
+
+            for (size_t p = start; p < end; p++)
+            {
+                size_t i = rhs.MajorIndexLocation()[p];
+                ElemType val = rhs.Buffer()[p];
+                for (size_t h = 0; h < lhs.GetNumCols(); h++)
+                {
+                    c(h, i) += alpha * lhs(j, h) * val;
+                }
+            }
+        }
     }
 }
 
@@ -1474,6 +1504,29 @@ template CPUSparseMatrix<char> CPUSparseMatrix<char>::ColumnSlice(size_t startCo
 template CPUMatrix<char> CPUSparseMatrix<char>::CopyColumnSliceToDense(size_t startColumn, size_t numCols) const;
 template void CPUSparseMatrix<char>::AssignColumnSliceToDense(CPUMatrix<char>&, size_t startColumn, size_t numCols) const;
 template CPUSparseMatrix<char>& CPUSparseMatrix<char>::operator=(const CPUSparseMatrix<char>& deepCopyFrom);
+
+// Support <short>
+template CPUSparseMatrix<short>::CPUSparseMatrix(const MatrixFormat format, const size_t numRows, const size_t numCols, const size_t size);
+template CPUSparseMatrix<short>::CPUSparseMatrix(MatrixFormat);
+template CPUSparseMatrix<short>::CPUSparseMatrix(CPUSparseMatrix<short> const&);
+template CPUSparseMatrix<short>::CPUSparseMatrix(CPUSparseMatrix<short>&&);
+template CPUSparseMatrix<short>& CPUSparseMatrix<short>::operator=(CPUSparseMatrix<short>&& moveFrom);
+template void CPUSparseMatrix<short>::SetValue(size_t, size_t, short);
+//template void CPUSparseMatrix<short>::SetValue(CPUMatrix<short> const&);
+//template void CPUSparseMatrix<short>::SetValue(GPUMatrix<short> const&);
+template void CPUSparseMatrix<short>::SetValue(CPUSparseMatrix<short> const&);
+//template void CPUSparseMatrix<short>::SetValue(GPUSparseMatrix<short> const&);
+template short* CPUSparseMatrix<short>::Data() const;
+template short* CPUSparseMatrix<short>::Data();
+template void CPUSparseMatrix<short>::Reset(void);
+template void CPUSparseMatrix<short>::Resize(const size_t, const size_t, const size_t, const bool);
+template void CPUSparseMatrix<short>::RequireSizeAndAllocate(const size_t, const size_t, const size_t, const bool, bool);
+template void CPUSparseMatrix<short>::RequireSizeAndAllocate(const size_t, const size_t, const size_t, const MatrixFormat, const bool, bool);
+template CPUSparseMatrix<short>::~CPUSparseMatrix();
+template CPUSparseMatrix<short> CPUSparseMatrix<short>::ColumnSlice(size_t startColumn, size_t numCols) const;
+template CPUMatrix<short> CPUSparseMatrix<short>::CopyColumnSliceToDense(size_t startColumn, size_t numCols) const;
+template void CPUSparseMatrix<short>::AssignColumnSliceToDense(CPUMatrix<short>&, size_t startColumn, size_t numCols) const;
+template CPUSparseMatrix<short>& CPUSparseMatrix<short>::operator=(const CPUSparseMatrix<short>& deepCopyFrom);
 
 template CPUSparseMatrix<int>::CPUSparseMatrix(const MatrixFormat, const size_t, const size_t, const size_t);
 template CPUSparseMatrix<int>::~CPUSparseMatrix();

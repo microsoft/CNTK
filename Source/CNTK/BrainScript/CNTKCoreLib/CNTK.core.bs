@@ -6,24 +6,175 @@
 //
 
 ##############################################################################
-# standard functions
+# Layer constructors
+#
+# A layer constructor is a stateful function that creates and returns an instance
+# of a 'learnable function'. A learnable function is a function object that has
+# learnable parameters baked into it, which get trained by SGD.
+# Calling a layer constructor twice creates two instances with independent parameters.
+#
+# Learnable function instances can be applied to data or composed directly into
+# more complex models. For example:
+#   // immediate usage:
+#   z = LinearLayer{9000}(h)  # LinearLayer{9000} returns a new function object
+#   // composing multiple layers into a model
+#   model = Sequential ( DenseLayer{2048, activation=Sigmoid} : LinearLayer {9000} )
+#   z = model (features)
+#   // applying the same model to two inputs, with shared, jointly updated parameters
+#   f = DenseLayer{2048, activation=ReLU}
+#   z1 = f (feat1) ; z2 = f (feat2)
+# The names are intentionally kept similar to other toolkits.
+#
+# Note that functions without parameters can be used as layers directly, e.g. Sigmoid.
 ##############################################################################
 
-Print(value, format='') = new PrintAction [ what = value /*; how = format*/ ] 
-Fail(what) = new FailAction [ /*what*/ ]
-Format(value, format) = new StringFunction [ what = 'Format' ; arg = value ; how = format ] 
-Replace(s, from, to) = new StringFunction [ what = 'Replace' ; arg = s ; replacewhat = from ; withwhat = to ] 
-Substr(s, begin, num) = new StringFunction [ what = 'Substr' ; arg = s ; pos = begin ; chars = num ] 
-Chr(c) = new StringFunction [ what = 'Chr' ;  arg = c ] 
-Length(x) = new NumericFunction [ what = 'Length' ; arg = x ] 
-Sign(x) = if x > 0 then 1 else if x < 0 then -1 else 0 
-Min(a,b) = if a < b then a else b 
-Max(a,b) = if a > b then a else b 
-Fac(n) = if n > 1 then Fac(n-1) * n else 1 
-IsSameObject(a,b) = new CompareFunction [ what = 'IsSameObject' ; args = (a : b) ]
-Mod(x, y)  = new NumericFunction [ what = 'Mod' ;  args = (x:y) ] 
-IntDiv(x, y)  = new NumericFunction [ what = 'IntDiv' ;  args = (x:y) ] 
+# LinearLayer -- create a fully-connected linear projection layer
+# Note: outDim may describe a tensor as well.
+LinearLayer {outDim} =
+{
+    W = ParameterTensor {_ConcatArrays (outDim, 0), init='uniform'}
+    b = ParameterTensor {outDim, initValue=0}
+    outRank = Length (_AsArray (outDim)) # support outputs with tensor layouts
+    f(x) = Times (W, x, outputRank = outRank) + b
+}.f
 
+# DenseLayer -- create a fully-connected layer with optional non-linearity
+DenseLayer{outDim, activation=(x=>x)} = Sequential ( LinearLayer{outDim} : activation )
+
+# EmbeddingLayer -- create a linear embedding layer
+EmbeddingLayer {outDim,                                   # dimension of embedding
+                embeddingPath = '', transpose = false} =  # load a fixed embedding from a path instead
+{
+    shape = if transpose then (0 : outDim) else (outDim : 0)
+    E = if embeddingPath == ''
+        then ParameterTensor {shape, init='uniform'}  # learnable
+        else ParameterTensor {shape, initFromFilePath = embeddingPath, learningRateMultiplier = 0}  # fixed from file
+    TimesOp = if transpose then TransposeTimes else Times
+    f(x) = TimesOp (E, x)    # x is expected to be sparse one-hot
+}.f
+
+# ConvolutionalLayer -- create a convolution layer with optional non-linearity
+#             [ (shifting dims)  |  (reduction dim)  |  (output dim)  |  (sample dims) ]
+#    in     : [ (shifting dims)  |  (reduction dim)  |                |  (sample dims) ]
+#    kernel : [ (filter dims)    |  (reduction dim)  |  (output dim)  |                ]
+#    out    : [ (shifting dims)] |                   |  (output dim)  |  (sample dims) ]
+ConvolutionalLayer {numOutputChannels,   # e.g. (1) or BS.Constants.None
+                    filterShape,         # e.g. (3:3)
+                    init = "uniform",
+                    #reductionRank = 1,          # TODO: support this
+                    stride = 1, autoPadding = true,
+                    #lowerPad = 0, upperPad = 0, # TODO: support this
+                    #transpose = false,          # TODO: support this
+                    maxTempMemSizeInSamples = 0} =
+{
+    reductionRank = 1 # TODO: shall become an optional parameter
+    outputChannelsShape = Repeat (1, numOutputChannels) # Repeat(1) turns a scalar into a 1-element array
+    outputRank = Length (outputChannelsShape)
+    kernelShape = _ConcatArrays (filterShape, Repeat (reductionRank, 0)) # append reduction dims to filter dims
+    W = ParameterTensor{_ConcatArrays (kernelDims, outputChannelsShape), init=init}
+    autoPaddingPadded = _ConcatArrays (_ForceResizeArray (Length (kernelDims), autoPadding), Repeat (reductionRank, false)) # set padding flags for reduction dims to false
+    sharing = false # TODO: support this
+    f(x) = Convolution (W, x, kernelShape, mapDims = numOutputChannels, stride = stride, sharing = sharing, autoPadding = autoPaddingPadded, lowerPad = lowerPad, upperPad = upperPad, transpose = transpose, maxTempMemSizeInSamples = maxTempMemSizeInSamples)
+}.f
+
+# MaxPoolingLayer, AveragePoolingLayer -- create a max- or average-pooling layer
+_PoolingLayer {poolKind,            # "max" or "average"
+               filterShape,         # e.g. (3:3)
+               lowerPad = 0, upperPad = 0} = # TODO: support this
+{
+    f(x) = Pooling (x, poolKind, kernelShape, stride = stride, sharing = sharing, autoPadding = autoPaddingPadded, lowerPad = lowerPad, upperPad = upperPad)
+}.f
+MaxPoolingLayer {filterShape, stride = 1, autoPadding = true /*, lowerPad = 0, upperPad = 0*/} =
+    _PoolingLayer {"max", filterShape, stride = stride, autoPadding = autoPadding}
+AveragePoolingLayer {filterShape, stride = 1, autoPadding = true /*, lowerPad = 0, upperPad = 0*/} =
+    _PoolingLayer {"average", filterShape, stride = stride, autoPadding = autoPadding}
+
+# RecurrentLSTMLayer -- create an LSTM layer
+RecurrentLSTMLayer {outDim,
+                    cellDim = BS.Constants.None, # if set then use a projection
+                    goBackwards = false,
+                    enableSelfStabilization = false} =
+{
+    cellShape = if BS.Constants.IsNone (cellDim) then outDim else cellDim
+    # BUGBUG: Calling f(x) twice will create a second set of parameters. Needs to refactor LSTM for this.
+    f(x) = BS.RNNs.RecurrentLSTMP (outDim, cellDim = cellShape,
+                                   x, inputDim = 0,
+                                   previousHook = if goBackwards then BS.RNNs.NextHC else BS.RNNs.PreviousHC,
+                                   enableSelfStabilization = enableSelfStabilization).h
+}.f
+
+# DropoutLayer -- create a drop-out layer
+DropoutLayer {prob = BS.Constants.None} = if !BS.Constants.IsNone (prob) then Fail ("DropoutLayer: Dropout probability can currently not be specified per-layer.") else
+{
+    f(x) = Dropout (x)
+}.f
+
+# BatchNormalizationLayer -- create a batch-normalization layer
+BatchNormalizationLayer {spatialRank = 0,  # reduce over these dims. E.g. 2 to reduce over (w,h) in a [W x H x C]-shaped input
+                         initialScale = 1,
+                         normalizationTimeConstant = 0, blendTimeConstant = 0,
+                         epsilon = 0.00001, useCntkEngine = true} =
+{
+    normShape = _ConcatArrays (Repeat (spatialRank, 1), 0) # spatial dims get a dimension of 1 (broadcasting, while all others are inferred from input)
+    scale        = ParameterTensor{normShape, initValue = initialScale}
+    bias         = ParameterTensor{normShape, initValue = 0}
+    runMean      = ParameterTensor{normShape, initValue = 0, learningRateMultiplier = 0} # note: disable learning since these are updated differently
+    runInvStdDev = ParameterTensor{normShape, initValue = 0, learningRateMultiplier = 0}
+    f(x) = BatchNormalization (x, scale, bias, runMean, runInvStdDev, spatialDims > 0, normalizationTimeConstant = normalizationTimeConstant, blendTimeConstant = blendTimeConstant, epsilon = epsilon, useCntkEngine = useCntkEngine)
+}.f
+
+# LayerNormalizationLayer -- create a layer-normalization layer
+LayerNormalizationLayer {dim = BS.Constants.None, initScale = 1, initBias = 0} = if BS.Constants.IsNone (dim) then Fail ("LayerNormalizationLayer: 'dim' parameter is currently required.") else
+{
+    gain = ParameterTensor{(1), initValue = initScale}
+    bias = ParameterTensor{(1), initValue = initBias}
+
+    f(x) = {
+        div = Constant (1.0 / dim)
+
+        # normalize w.r.t. actual sample statistics
+        mean = div .* ReduceSum (x)
+        x0 = x - mean;
+        std = Sqrt (div .* ReduceSum (x0 .* x0))
+        xHat = ElementDivide (x0, std)
+
+        # denormalize with learned parameters
+        val = xHat .* gain + bias
+    }.val
+}.f
+
+# StabilizerLayer -- create a scalar stabilizer [J. Droppo, 2014 -- TODO: get the reference]
+StabilizerLayer {} =
+{
+    # BUGBUG: Calling f(x) twice will create a second set of parameters. Needs to refactor Stabilize() for this.
+    f(x) = Stabilize (x)
+}.f
+
+# FeatureMVNLayer -- create a corpus-level feature-normalization layer
+# This can only be applied to features. Statistics are not shared across invocations,
+# which is semantically OK because the values are the same. However, it is not efficient.
+FeatureMVNLayer {} = MeanVarNorm
+
+# Layers that exist in other tools that we will not have:
+# FlattenLayer{}: Not needed since DenseLayer() can handle tensors just fine.
+# Activation{}: Not needed since functions can be used directly.
+
+##############################################################################
+# Composing layers or models into more more complex models
+##############################################################################
+
+# Sequential -- composite that applies a sequence of functions onto an input
+Sequential (arrayOfFunctions) =
+{
+    fs = _AsArray (arrayOfFunctions)  # make sure it works with a single function that is not an array
+    Apply (x, N) = if N == 0 then x else fs[N-1](Apply (x, N-1))  # we do that recursively
+    f(x) = Apply (x, Length (fs))
+}.f
+Merge (arrayOfFunctions, combineFunction) =
+    if Length (arrayOfFunctions) != 2 then Fail ("Merge() is currently limited to binary functions.") else
+    {
+        f(x,y) = combineFunction (arrayOfFunctions[0](x), arrayOfFunctions[1](y))
+    }.f
 
 ##############################################################################
 # aliases
@@ -51,9 +202,13 @@ Log                     = CNTK2.Log
 Minus                   = CNTK2.Minus
 Pass                    = CNTK2.Identity
 Plus                    = CNTK2.Plus
-RectifiedLinear         = CNTK2.Relu
+RectifiedLinear         = CNTK2.ReLU # deprecated
+ReLU                    = CNTK2.ReLU
 ReduceSum               = CNTK2.ReduceSum
 ReduceLogSum            = CNTK2.ReduceLogSum
+ReduceMin               = CNTK2.ReduceMin
+ReduceMax               = CNTK2.ReduceMax
+
 Round                   = CNTK2.Round
 Sigmoid                 = CNTK2.Sigmoid
 
@@ -89,7 +244,7 @@ CNTK2 = [
     // TODO: The API for Parameter is different in current 2.0 design, getting a constant as input for the initial values. 
     // This needs to be fixed to follow the way the Constant() is exposed in Python
     // Making this an internal node with "_" until we agree on the final interface:
-    _Parameter(shape, value = 0, learningRateMultiplier = 1.0, init = 'uniform'/*|fixedValue|gaussian|fromFile|fromLiteral*/, initValueScale = 1, initFromFilePath = '', initFromLiteral = '', initOnCPUOnly=true, randomSeed=-1, tag='') = new ComputationNode [ operation = 'LearnableParameter' ; shape = new TensorShape [ /*shape */ ] /*plus the function args*/ ]
+    _Parameter(shape, value = 0, initValue = '', learningRateMultiplier = 1.0, init = ''/*|uniform|fixedValue|gaussian|fromFile|fromLiteral*/, initValueScale = 1, initFromFilePath = '', initFromLiteral = '', initOnCPUOnly=true, randomSeed=-1, tag='') = new ComputationNode [ operation = 'LearnableParameter' ; shape = new TensorShape [ /*shape */ ] /*plus the function args*/ ]
 
     // 3. Shape operations
     // Changes: NewReshape -> Reshape, input -> _, dims -> shape
@@ -142,10 +297,12 @@ CNTK2 = [
     Tanh(_, tag='') = new ComputationNode [ operation = 'Tanh' ; inputs = _ /*plus the function args*/ ]
 
     // 6. Reductions    
-    # the following is a temporary workaround until we have the C++ version
-    ReduceLogSum (_, axis=0, tag='')  = if axis != 0 then Fail("ReduceLogSum for now only supports axis=0.")
-    else [ tag1=tag ; axis1=axis ; out = RowSlice (0, 1, _ - LogSoftmax (_), tag=tag1) ].out
-    ReduceSum (_, axis=0, tag='')     = new ComputationNode [ operation = 'ReduceElements' ; inputs = _ ; reductionOp = "Sum"    /*plus the function args*/ ]
+    ReduceSum   (_, axis=0, tag='') = new ComputationNode [ operation = 'ReduceElements' ; inputs = _ ; reductionOp = "Sum"    /*plus the function args*/ ]
+    ReduceLogSum(_, axis=0, tag='') = new ComputationNode [ operation = 'ReduceElements' ; inputs = _ ; reductionOp = "LogSum" /*plus the function args*/ ]
+    ReduceMin   (_, axis=0, tag='') = new ComputationNode [ operation = 'ReduceElements' ; inputs = _ ; reductionOp = "Min"    /*plus the function args*/ ]
+    ReduceMax   (_, axis=0, tag='') = new ComputationNode [ operation = 'ReduceElements' ; inputs = _ ; reductionOp = "Max"    /*plus the function args*/ ]
+    #ReduceMean (_, axis=0, tag='') = new ComputationNode [ operation = 'ReduceElements' ; inputs = _ ; reductionOp = "Mean"   /*plus the function args*/ ]
+    
     // 7. Control flow (if, composite etc.)
     // None so far
 
@@ -158,8 +315,9 @@ CNTK2 = [
     PastValue(_, shape, timeStep = 1, defaultHiddenActivation = 0.1, tag='') = new ComputationNode [ operation = 'PastValue' ; inputs = _ ; shape = new TensorShape [ /*shape*/ ] /*plus the function args*/ ]
 
     // 10. NN-specific operations
-    // Changes: input -> _, RectifiedLinear -> Relu. [Use Relu to arrive at relu() in snake_case]
-    Relu(_, tag='') = new ComputationNode [ operation = 'RectifiedLinear' ; inputs = _ /*plus the function args*/ ]
+    // Changes: input -> _, RectifiedLinear -> ReLU
+    ReLU(_, tag='') = new ComputationNode [ operation = 'RectifiedLinear' ; inputs = _ /*plus the function args*/ ]
+    Relu = ReLU // [Use Relu to arrive at relu() in snake_case]
     Sigmoid(_, tag='') = new ComputationNode [ operation = 'Sigmoid' ; inputs = _ /*plus the function args*/ ]
     Softmax(_, tag='') = new ComputationNode [ operation = 'Softmax' ; inputs = _ /*plus the function args*/ ]
     Dropout(_, tag='') = new ComputationNode [ operation = 'Dropout' ; inputs = _ /*plus the function args*/ ]
@@ -169,6 +327,10 @@ CNTK2 = [
     // empirical sequence is compared to. Keeping this for now.
     CrossEntropyWithSoftmax(_, outProbVectorSequence, tag='') = new ComputationNode [ operation = 'CrossEntropyWithSoftmax' ; inputs = (_ : outProbVectorSequence) /*plus the function args*/ ]
     ErrorPrediction(_, outVectorSequence, topN=1, tag='') = new ComputationNode [ operation = 'ErrorPrediction' ; inputs = if topN == 1 then (_ : outVectorSequence) else  (_ : outVectorSequence : Constant (topN)) /*plus the function args*/ ]
+    # TODO: replace with this (need to deal with topN thing):
+    # (_new will be removed once the change is made)
+    CrossEntropyWithSoftmax_new (L, z, tag='') = Minus (ReduceLogSum (z), TransposeTimes (L,          z),  tag=tag)
+    ErrorPrediction_new (L, z, tag='')         = Minus (BS.Constants.One, TransposeTimes (L, Hardmax (z)), tag=tag)
 
     // 12. Comparison nodes
     Less(_, y, tag='')         = new ComputationNode [ operation = 'Less'         ; inputs = (_ : y) /*plus the function args*/ ]
@@ -182,11 +344,21 @@ CNTK2 = [
     Identity(_, tag='') = new ComputationNode [ operation = 'Pass' ; inputs = _ /*plus the function args*/ ]    
 ]
 
-LearnableParameter (outputDim, inputDim, learningRateMultiplier = 1.0, init = 'uniform'/*|fixedValue|gaussian|fromFile|fromLiteral*/, initValueScale = 1, value = 0, initFromFilePath = '', initFromLiteral = '', initOnCPUOnly=true, randomSeed=-1, tag='') = new ComputationNode [ operation = 'LearnableParameter' ; shape = new TensorShape [ dims = (outputDim : inputDim) ] /*plus the function args*/ ]
-Parameter = LearnableParameter // deprecated 
+# Parameter{} can do several forms of initialization. It is no longer required to say 'init="kind"', so we can clean these up a bit.
+#  - initValue=scalar, value=array --> initialize from this value  --array form not implemented yet
+#  - initFromFilePath="..." --> read from a data file
+#  - init="uniform|gaussian" (random init scaled by initValueScale). Warning: This has magic scaling factors. TODO: document them here
+#  - init="zero"
+# deprecated:
+#  - initFromLiteral="..." (deprecated) --> parse a string literal (obsolete with value=array form)
+#  - init="fixedValue", value from 'value'
+# Warning: Current config will behave unexpected if user mistypes 'initValue' as 'value' (which will be ignored, defaulting to "uniform" init)
+Parameter {outputDim, inputDim, learningRateMultiplier = 1.0, init = ''/*|uniform|fixedValue|gaussian|fromFile|fromLiteral*/, initValueScale = 1, value = 0/*deprecated*/, initValue = '', initFromFilePath = '', initFromLiteral = ''/*deprecated*/, initOnCPUOnly=true, randomSeed=-1, tag=''} = new ComputationNode [ operation = 'LearnableParameter' ; shape = new TensorShape [ dims = (outputDim : inputDim) ] /*plus the function args*/ ]
+LearnableParameter = Parameter  // deprecated 
 # TODO: make Parameter take tensor dims?
-ParameterTensor(dims, learningRateMultiplier = 1.0, init = 'uniform'/*|fixedValue|gaussian|fromFile|fromLiteral*/, initValueScale = 1, value = 0, initFromFilePath = '', initFromLiteral = '', initOnCPUOnly=true, randomSeed=-1, tag='') = new ComputationNode [ operation = 'LearnableParameter' ; shape = new TensorShape [ /*dims*/ ] /*plus the function args*/ ]
-ConstantFromString(literal, tag='') = ParameterTensor((0)/*dim, will be inferred*/, init = 'fromLiteral', initFromLiteral = literal, learningRateMultiplier = 0.0)
+ParameterTensor {dims, learningRateMultiplier = 1.0, init = ''/*|uniform|fixedValue|gaussian|fromFile|fromLiteral*/, initValueScale = 1, value = 0, initValue = '', initFromFilePath = '', initFromLiteral = '', initOnCPUOnly=true, randomSeed=-1, tag=''} = new ComputationNode [ operation = 'LearnableParameter' ; shape = new TensorShape [ /*dims*/ ] /*plus the function args*/ ]
+ConstantFromString(literal, tag='') = ParameterTensor((0)/*dim, will be inferred*/, initFromLiteral = literal, learningRateMultiplier = 0.0)
+# TODO: Deprecate ConstantFromString() in favor of Constant(array expression)
 DynamicAxis(tag='') = new ComputationNode [ operation = 'DynamicAxis' ; /*plus the function args*/  ]
 Input(dims, dynamicAxis='', tag='feature') = new ComputationNode [ operation = 'InputValue' ; shape = new TensorShape [ /*dims*/ ] ; isImage = false /*plus the function args*/ ]
 # TODO: change from dynamicAxis by name to dynamicAxis being an actual object
@@ -195,8 +367,8 @@ ImageInput(imageWidth, imageHeight, imageChannels, imageLayout='CHW', dynamicAxi
 SparseImageInput(imageWidth, imageHeight, imageChannels, imageLayout='CHW', dynamicAxis='', tag='feature') = new ComputationNode [ operation = 'SparseInputValue' ; isImage = true /*plus the function args*/ ]
 EnvironmentInput(propertyName, tag='') = new ComputationNode [ operation = 'EnvironmentInput' /*plus the function args*/ ]
 # TODO: make 'dims' the first parameter, think ConstantTensor<dims> (val)
-ConstantTensor(val, dims, tag='') = ParameterTensor(dims, learningRateMultiplier = 0, init = 'fixedValue', value = val) 
-Constant(val, rows = 1, cols = 1, tag='') = Parameter(rows, cols, learningRateMultiplier = 0, init = 'fixedValue', value = val) 
+ConstantTensor(val, dims, tag='') = ParameterTensor(dims, learningRateMultiplier = 0, initValue = val)
+Constant(val, rows = 1, cols = 1, tag='') = Parameter(rows, cols, learningRateMultiplier = 0, initValue = val)
 PastValue(dims, input, timeStep = 1, defaultHiddenActivation = 0.1, tag='') = new ComputationNode [ operation = 'PastValue' ; inputs = input ; shape = new TensorShape [ /*dims*/ ] /*plus the function args*/ ]
 FutureValue(dims, input, timeStep = 1, defaultHiddenActivation = 0.1, tag='') = new ComputationNode [ operation = 'FutureValue' ; inputs = input ; shape = new TensorShape [ /*dims*/ ] /*plus the function args*/ ]
 Shift(input, fromOffset, boundaryValue, boundaryMode=-1/*context*/, dim=-1, tag='') = new ComputationNode [ operation = 'Shift' ; inputs = (input : boundaryValue) /*plus the function args*/ ]
@@ -227,7 +399,7 @@ WeightedLogistic(label, probability, instanceWeight, tag='') = new ComputationNo
 ReconcileDynamicAxis(dataInput, layoutInput, tag='') = new ComputationNode [ operation = 'ReconcileDynamicAxis' ; inputs = (dataInput : layoutInput) /*plus the function args*/ ]
 ReconcileMBLayout = ReconcileDynamicAxis # back compat
 CastAs (type, data) = ReconcileDynamicAxis (data, type) # read as CastAs<type>(data) where the cast may consist of rearranging the data w.r.t. MBLayout or broadcasting across sequence items
-Convolution(weightNode, inputValueNode, kernelDims, mapDims = 1, stride = 1, sharing = true, autoPadding = true, lowerPad = 0, upperPad = 0, transpose=false, imageLayout='CHW', maxTempMemSizeInSamples = 0, tag='') = new ComputationNode [ operation = 'Convolution' ; inputs = (weightNode : inputValueNode); kernelShape = new TensorShape [ dims = kernelDims ] ; mapCount = new TensorShape [ dims = mapDims ] ; strideShape = new TensorShape [ dims = stride ] ; dimSharing = new BoolVector [ items = sharing ] ; dimPadding = new BoolVector [ items = autoPadding ] ; dimPadLower = new TensorShape [ dims = lowerPad ] ; dimPadUpper = new TensorShape [ dims = upperPad ] /*plus the function args*/ ]
+Convolution(weightNode, inputValueNode, kernelDims, mapDims = 0, stride = 1, sharing = true, autoPadding = true, lowerPad = 0, upperPad = 0, transpose=false, imageLayout='CHW', maxTempMemSizeInSamples = 0, tag='') = new ComputationNode [ operation = 'Convolution' ; inputs = (weightNode : inputValueNode); kernelShape = new TensorShape [ dims = kernelDims ] ; mapCount = new TensorShape [ dims = mapDims ] ; strideShape = new TensorShape [ dims = stride ] ; dimSharing = new BoolVector [ items = sharing ] ; dimPadding = new BoolVector [ items = autoPadding ] ; dimPadLower = new TensorShape [ dims = lowerPad ] ; dimPadUpper = new TensorShape [ dims = upperPad ] /*plus the function args*/ ]
 # ND pooling/unpooling
 Pooling(input, poolKind/*'max'|'average'*/, kernelDims, stride=1, autoPadding = true, lowerPad = 0, upperPad = 0, imageLayout='CHW', tag='') = new ComputationNode [ operation = 'Pooling' ; inputs = (input); pool = poolKind ; kernelShape = new TensorShape [ dims = kernelDims ] ; strideShape = new TensorShape [ dims = stride ] ; dimPadding = new BoolVector [ items = autoPadding ] ; dimPadLower = new TensorShape [ dims = lowerPad ] ; dimPadUpper = new TensorShape [ dims = upperPad ] /*plus the function args*/ ]
 MaxUnpooling(unpoolInput, poolInput, kernelDims, stride=1, autoPadding = true, lowerPad = 0, upperPad = 0, imageLayout='CHW', tag='') = new ComputationNode [ operation = 'MaxUnpooling' ; inputs = (unpoolInput : poolInput); kernelShape = new TensorShape [ dims = kernelDims ] ; strideShape = new TensorShape [ dims = stride ] ; dimPadding = new BoolVector [ items = autoPadding ] ; dimPadLower = new TensorShape [ dims = lowerPad ] ; dimPadUpper = new TensorShape [ dims = upperPad ] /*plus the function args*/ ]
@@ -264,13 +436,10 @@ Mean(dataVectorSequence, tag='') = new ComputationNode [ operation = 'Mean' ; in
 Negate(input, tag='') = new ComputationNode [ operation = 'Negate' ; inputs = input /*plus the function args*/ ]
 PackedIndex(targetObject, indexSequence, tag='') = new ComputationNode [ operation = 'PackedIndex' ; inputs = (targetObject : indexSequence) /*plus the function args*/ ]
 PerDimMeanVarDeNormalization(dataVectorSequence, meanVector, invStdDevVector, tag='') = new ComputationNode [ operation = 'PerDimMeanVarDeNormalization' ; inputs = (dataVectorSequence : meanVector : invStdDevVector) /*plus the function args*/ ]
-PerDimMeanVarNormalization(dataVectorSequence, meanVector, invStdDevVector, tag='') = new ComputationNode [ operation = 'PerDimMeanVarNormalization' ; inputs = (dataVectorSequence : meanVector : invStdDevVector) /*plus the function args*/ ]
+#PerDimMeanVarNormalization(dataVectorSequence, meanVector, invStdDevVector, tag='') = new ComputationNode [ operation = 'PerDimMeanVarNormalization' ; inputs = (dataVectorSequence : meanVector : invStdDevVector) /*plus the function args*/ ]
+PerDimMeanVarNormalization (x, mean, invStdDev) = (x - mean) .* invStdDev
 Reciprocal(z, tag='') = new ComputationNode [ operation = 'Reciprocal' ; inputs = z /*plus the function args*/ ]
 //# the following is a temporary workaround until we have the C++ version
-#ReduceLogSum (z, axis=0, tag='')  = new ComputationNode [ operation = 'ReduceElements' ; inputs = z ; reductionOp = "LogSum" /*plus the function args*/ ]
-#ReduceMean (z, axis=0, tag='')    = new ComputationNode [ operation = 'ReduceElements' ; inputs = z ; reductionOp = "Mean"    /*plus the function args*/ ]
-#ReduceMax (z, axis=0, tag='')     = new ComputationNode [ operation = 'ReduceElements' ; inputs = z ; reductionOp = "Max"     /*plus the function args*/ ]
-#ReduceMin (z, axis=0, tag='')     = new ComputationNode [ operation = 'ReduceElements' ; inputs = z ; reductionOp = "Min"     /*plus the function args*/ ]
 Scale(scalarScalingFactor, matrix, tag='') = new ComputationNode [ operation = 'Scale' ; inputs = (scalarScalingFactor : matrix) /*plus the function args*/ ]
 # TODO: Scale = ElementTimes
 ScatterPacked(cond, indexSequence, sourceData, tag='') = new ComputationNode [ operation = 'ScatterPacked' ; inputs = (cond : indexSequence : sourceData) /*plus the function args*/ ]
@@ -300,15 +469,52 @@ TransposeTimes(leftMatrix, rightMatrix, tag='') = new ComputationNode [ operatio
 Where(cond, tag='') = new ComputationNode [ operation = 'Where' ; inputs = cond /*plus the function args*/ ]
 
 ##############################################################################
-# common macros
+# non-neural-network functions
 ##############################################################################
 
-BFF(in, rows, cols) = [ B = Parameter(rows, 1, init = 'fixedValue', value = 0) ; W = Parameter(rows, cols) ; z = W*in+B ] 
+Print(value, format='') = new PrintAction [ what = value /*; how = format*/ ] 
+Fail(what) = new FailAction [ /*what*/ ]
+Format(value, format) = new StringFunction [ what = 'Format' ; arg = value ; how = format ] 
+Replace(s, from, to) = new StringFunction [ what = 'Replace' ; arg = s ; replacewhat = from ; withwhat = to ] 
+Substr(s, begin, num) = new StringFunction [ what = 'Substr' ; arg = s ; pos = begin ; chars = num ] 
+Chr(c) = new StringFunction [ what = 'Chr' ;  arg = c ] 
+Length(x) = new NumericFunction [ what = 'Length' ; arg = x ] 
+Repeat (N, what) = if N <= 0 then BS.Constants.None else (Repeat (N-1, what) : what) # can also be used to turn a scalar into a 1-element array
+_ForceResizeArray (N, arrayOrScalar) = { # bring an array to a given length, either by chopping or by duplicating its last value
+    arr = _AsArray (arrayOrScalar)
+    L = Length (arr)
+    res = if N < L then array[0..N-1] (i => arr[i]) # chop to length
+          else if L == 0 then Fail ("BottomlessExpansion(): needs at least one element to expand.")
+          else _ConcatArrays (arr, Repeat (N-L, arr[L-1])) # append copies of the last value
+}.res
+_AsArray (x) = if IsArray (x) then x else [| x |] # helper to allow dimensions to describe scalars (42) or tensors (13:42)
+_ConcatArrays (aOrScalar, bOrScalar) = {
+    a = _AsArray (aOrScalar) ; b = _AsArray (bOrScalar)
+    newLen = Length (a)+Length(b)
+    res = if newLen == 0 then BS.Constants.None else array[0..newLen-1] (i => if i < Length (a) then a[i] else b[i-Length (a)])
+}.res
+Sign(x) = if x > 0 then 1 else if x < 0 then -1 else 0
+Min(a,b) = if a < b then a else b
+Max(a,b) = if a > b then a else b
+Fac(n) = if n > 1 then Fac(n-1) * n else 1
+IsSameObject(a,b) = new CompareFunction [ what = 'IsSameObject' ; args = (a : b) ]
+IsArray(a) = new CompareFunction [ what = 'IsArray' ; args = a ]
+Mod(x, y)  = new NumericFunction [ what = 'Mod' ;  args = (x:y) ]
+IntDiv(x, y) = new NumericFunction [ what = 'IntDiv' ;  args = (x:y) ]
+
+##############################################################################
+# macros from NDL book
+##############################################################################
+
+BFF(in, rows, cols) = [ B = Parameter(rows, 1, initValue = 0) ; W = Parameter(rows, cols) ; z = W*in+B ] 
 SBFF(in, rows, cols) = [ Eh = Sigmoid(BFF(in, rows, cols).z) ] 
 MeanVarNorm(feat) = PerDimMeanVarNormalization(feat, Mean(feat), InvStdDev(feat)) 
 LogPrior(labels) = Log(Mean(labels)) 
 
-Embedding (embeddingDim, input, inputDim=input.dim, initFrom='fromFile'/*|gaussian|uniform*/, embeddingPath = '', sparseInput = false, learningRateWeight = 0.0) = [
+# specify one of these two for initialization:
+#  - init = "uniform"|"gaussian"
+#  - embeddingFile = PATHNAME
+Embedding (embeddingDim, input, inputDim=input.dim, initFrom=''/*|fromFile|gaussian|uniform*/, embeddingPath = '', sparseInput = false, learningRateWeight = 0.0) = [
     embedding = Transpose (LearnableParameter (inputDim, embeddingDim, learningRateMultiplier = learningRateWeight, init = initFrom, initFromFilePath = embeddingPath))
     lookup = if sparseInput then embedding * input
              else GatherPacked (input, embedding)
@@ -341,7 +547,7 @@ Constants = [
     # is this like Sequences.Repeat?
     True  = 1
     False = 0
-    None = ConstantTensor (42, (1))
+    None = [| |]  # doubles up as an empty array. Note: only use [| |] syntax inside here, as it may change in the future
     IsNone (x) = IsSameObject (x, None)
 ]
 
@@ -553,7 +759,7 @@ Parameters =
 [
     WeightParam (outputDim, inputDim) = Parameter (outputDim, inputDim, init='uniform', initValueScale=1, initOnCPUOnly=true, randomSeed=1)
     DiagWeightParam (outputDim)       = ParameterTensor ((outputDim), init='uniform', initValueScale=1, initOnCPUOnly=true, randomSeed=1) # meant to be applied elementwise
-    BiasParam (dim)                   = ParameterTensor ((dim), init='fixedValue', value=0.0)
+    BiasParam (dim)                   = ParameterTensor ((dim), initValue=0.0)
     ScalarParam()                     = BiasParam (1)
 
     # route input through an extra weight, for stabilization
@@ -561,16 +767,16 @@ Parameters =
         if enabled
         then [
             #beta = Exp (BiasParam ((inputDim))) # init value is 0
-            #beta = ParameterTensor ((inputDim), init='fixedValue', value=1.0) # init value is 1
+            #beta = ParameterTensor ((inputDim), initValue=1.0) # init value is 1
             # or SoftPlus: ln(1+e^beta)
-            #beta = Log (Constants.One + Exp (ParameterTensor ((inputDim), init='fixedValue', value=0.54132485/*ln (e-1)*/))) # init value is 1
+            #beta = Log (Constants.One + Exp (ParameterTensor ((inputDim), initValue=0.54132485/*ln (e-1)*/))) # init value is 1
 
             # sharpened Softplus: 1/f ln(1+e^{f*beta})
             # this behaves linear for weights around 1, yet guarantees positiveness
 
             f = ConstantTensor (4, (1))
             fInv = Reciprocal (f)
-            beta = fInv .* Log (Constants.One + Exp (f .* ParameterTensor ((inputDim), init='fixedValue', value=0.99537863/* 1/f*ln (e^f-1) */))) # init value is 1
+            beta = fInv .* Log (Constants.One + Exp (f .* ParameterTensor ((inputDim), initValue=0.99537863/* 1/f*ln (e^f-1) */))) # init value is 1
 
             TraceDense (h, what) = h  # delete h and uncomment Trace to trace the beta values. They are a valuable indicator.
                 //Trace (h, say=what, logFirst=10, logFrequency=100, logGradientToo=false, onlyUpToRow=9, onlyUpToT=25, format=[ type = "real" ; transpose = false ; precisionFormat = ".6" ])
@@ -1033,6 +1239,7 @@ Seq2Seq =
 
 Network = [
     Load(pathName) = new ComputationNetworkFromFile [ /*pathName; also needs 'precision' somewhere*/ ]
+    CloneFunction (inputNodes, outputNodes, parameters="learnable" /*|"constant"|"shared"*/) = new CloneFunctionConfigLambda [ /*args*/ ]
     Edit(inputModel, editFunctions, additionalRoots) = new ComputationNetworkWithEdits [ /*inputModel, editFunctions, additionalRoots*/ ]
 
     Editing = [

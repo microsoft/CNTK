@@ -60,6 +60,12 @@ void Bundler::CreateChunkDescriptions()
         RuntimeError("Driving deserializer provided too many chunks.");
     }
 
+    // Creating a table of weak chunks for non driving deserializers.
+    for (size_t i = 0; i < m_deserializers.size(); ++i)
+    {
+        m_weakChunkTable.push_back(std::vector<std::weak_ptr<Chunk>>(m_deserializers[i]->GetChunkDescriptions().size()));
+    }
+
     m_chunks.reserve(chunks.size());
 
     if (m_verbosity)
@@ -105,7 +111,7 @@ void Bundler::CreateChunkDescriptions()
             size_t sequenceSamples = sequence.m_numberOfSamples;
             for (size_t deserializerIndex = 1; deserializerIndex < m_deserializers.size(); ++deserializerIndex)
             {
-                isValid = m_deserializers[deserializerIndex]->GetSequenceDescriptionByKey(sequenceDescriptions[sequenceIndex].m_key, s);
+                isValid = m_deserializers[deserializerIndex]->GetSequenceDescription(sequenceDescriptions[sequenceIndex], s);
                 if (!isValid)
                 {
                     invalid.insert(sequenceIndex);
@@ -159,12 +165,6 @@ void Bundler::GetSequencesForChunk(ChunkIdType chunkId, std::vector<SequenceDesc
     std::vector<SequenceDescription> result;
     if (m_takePrimarySequenceLength) // No need to consult other deserializers.
     {
-        // Can return because all sequences are clean.
-        if (chunk->m_invalid.empty())
-        {
-            return;
-        }
-
         // Do cleansing.
         result.reserve(sequences.size());
         for (size_t sequenceIndex = 0; sequenceIndex < sequences.size(); ++sequenceIndex)
@@ -175,6 +175,7 @@ void Bundler::GetSequencesForChunk(ChunkIdType chunkId, std::vector<SequenceDesc
             }
 
             result.push_back(sequences[sequenceIndex]);
+            result.back().m_id = sequenceIndex;
         }
     }
     else // need to get the max sequence length from other deserializers.
@@ -193,10 +194,11 @@ void Bundler::GetSequencesForChunk(ChunkIdType chunkId, std::vector<SequenceDesc
             uint32_t sequenceSamples = sequence.m_numberOfSamples;
             for (size_t deserializerIndex = 1; deserializerIndex < m_deserializers.size(); ++deserializerIndex)
             {
-                m_deserializers[deserializerIndex]->GetSequenceDescriptionByKey(sequence.m_key, s);
+                m_deserializers[deserializerIndex]->GetSequenceDescription(sequence, s);
                 sequenceSamples = std::max(sequenceSamples, s.m_numberOfSamples);
             }
             sequence.m_numberOfSamples = sequenceSamples;
+            sequence.m_id = sequenceIndex;
             result.push_back(sequence);
         }
     }
@@ -251,10 +253,9 @@ public:
 
         // Creating sequence mapping and requiring underlying chunks.
         SequenceDescription s;
-        for (size_t deserializerIndex = 1; deserializerIndex < m_parent->m_deserializers.size(); ++deserializerIndex)
+        for (size_t deserializerIndex = 1; deserializerIndex < deserializers.size(); ++deserializerIndex)
         {
-            std::map<size_t, ChunkPtr> secondaryChunks;
-
+            auto& chunkTable = m_parent->m_weakChunkTable[deserializerIndex];
             for (size_t sequenceIndex = 0; sequenceIndex < sequences.size(); ++sequenceIndex)
             {
                 if (chunk->m_invalid.find(sequenceIndex) != chunk->m_invalid.end())
@@ -263,19 +264,14 @@ public:
                 }
 
                 size_t currentIndex = sequenceIndex * deserializers.size() + deserializerIndex;
-                deserializers[deserializerIndex]->GetSequenceDescriptionByKey(sequences[sequenceIndex].m_key, s);
+                deserializers[deserializerIndex]->GetSequenceDescription(sequences[sequenceIndex], s);
                 m_sequenceToSequence[currentIndex] = s.m_id;
 
-                ChunkPtr secondaryChunk;
-                auto it = secondaryChunks.find(s.m_chunkId);
-                if (it == secondaryChunks.end())
+                ChunkPtr secondaryChunk = chunkTable[s.m_chunkId].lock();
+                if (!secondaryChunk)
                 {
                     secondaryChunk = deserializers[deserializerIndex]->GetChunk(s.m_chunkId);
-                    secondaryChunks.insert(make_pair(s.m_chunkId, secondaryChunk));
-                }
-                else
-                {
-                    secondaryChunk = it->second;
+                    chunkTable[s.m_chunkId] = secondaryChunk;
                 }
 
                 m_innerChunks[currentIndex] = secondaryChunk;

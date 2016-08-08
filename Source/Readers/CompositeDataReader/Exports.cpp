@@ -45,4 +45,9 @@ extern "C" DATAREADER_API void GetReaderD(IDataReader** preader)
     *preader = new CompositeReaderShim<double>(factory);
 }
 
+extern "C" DATAREADER_API Reader* CreateCompositeDataReader(const ConfigParameters* parameters)
+{
+    return new CompositeDataReader(*parameters, std::make_shared<HeapMemoryProvider>());
+}
+
 }}}

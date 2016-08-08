@@ -21,7 +21,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 // -----------------------------------------------------------------------
 
 template <class ElemType>
-class LearnableParameter : public ComputationNode<ElemType>, public NumInputs<0>
+class LearnableParameter : public ComputationNode<ElemType>, public NumInputs<0>, public IFreezable
 {
     typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
     static const std::wstring TypeName() { return L"LearnableParameter"; }
@@ -29,68 +29,56 @@ class LearnableParameter : public ComputationNode<ElemType>, public NumInputs<0>
     void InitShape(const TensorShape& shape);
 
 public:
-    LearnableParameter(DEVICEID_TYPE deviceId, const wstring& name)
-        : Base(deviceId, name)
+    // this constructor is always run (all other constructors call this one)
+    LearnableParameter(DEVICEID_TYPE deviceId, const wstring& name) :
+        Base(deviceId, name)
     {
         SetLearningRateMultiplier(1.0f); // enable normal learning by default
         MarkValueNonSharable();
+        m_initString = L"fromValue"; // default init is with 0; typically overwritten
+        m_initValue = 0;
     }
-    LearnableParameter(DEVICEID_TYPE deviceId, const wstring& name, const TensorShape& shape)
-        : Base(deviceId, name)
+    LearnableParameter(DEVICEID_TYPE deviceId, const wstring& name, const TensorShape& shape) :
+        LearnableParameter(deviceId, name)
     {
-        SetLearningRateMultiplier(1.0f);
-        MarkValueNonSharable();
         InitShape(shape);
+        LazyInitParameters();
     }
-    LearnableParameter(DEVICEID_TYPE deviceId, const wstring& name, size_t rows, size_t cols)
-        : LearnableParameter(deviceId, name, TensorShape(rows, cols))
+    LearnableParameter(DEVICEID_TYPE deviceId, const wstring& name, size_t rows, size_t cols) :
+        LearnableParameter(deviceId, name, TensorShape(rows, cols))
     {
     }
     LearnableParameter(const ScriptableObjects::IConfigRecordPtr configp);
 
-    // initialize with random numbers
-    // if 'initOnCPUOnly' then always init on CPU, making initialization consistent across both (for testing)
-    void InitRandom(const bool uniformInit, const unsigned long randomSeed, const ElemType initValueScale, bool initOnCPUOnly);
+    // initialize after plain constructor; for use by NDL
+    void PostInitParameters(const std::wstring& initString, // "uniform"|"gaussian"|"fixedValue"
+                            ElemType initValue,             //  scale   | scale    | value
+                            unsigned long randomSeed = 0,
+                            bool initOnCPUOnly = false);
 
     // initialize by reading a matrix from a text file
     void InitFromFile(const std::wstring& initFromFilePath);
 
+private:
+    // initialize with random numbers
+    // If 'initOnCPUOnly' then always init on CPU, making initialization consistent across both (for testing).
+    void InitRandom(const bool uniformInit, const unsigned long randomSeed, const ElemType initValueScale, bool initOnCPUOnly);
+
     // helper to initialize from a matrix read from a text file or a string literal
     void InitFromArray(const std::vector<ElemType>& array, size_t numRows, size_t numCols);
 
+    // deferred initialization
+    void LazyInitParameters();
+
+public:
     // reload parameters from file
     // This is called from MEL.
-    // TODO: Move this error check there, since this is called only from one place.
-    void ReviseFromFile(const std::wstring& reviseFromFilePath)
-    {
-#if 1
-        try
-        {
-            InitFromFile(reviseFromFilePath);
-        }
-        catch(const std::exception & e)
-        {
-            RuntimeError("ReviseFromFile: Failed to reload %ls %ls operation from file %ls: %s", NodeName().c_str(), OperationName().c_str(), reviseFromFilePath.c_str(), e.what());
-        }
-#else
-        size_t numRows, numCols;
-        auto array = File::LoadMatrixFromTextFile<ElemType>(reviseFromFilePath, numRows, numCols);
-        size_t nRows, nCols;
-        DetermineDataSize(nRows, nCols); // BUGBUG: private
-
-        if (numRows != nRows || numCols != nCols)
-        {
-            RuntimeError("Error in ReviseFromFile for node %ls using file %ls:  original size (%d x %d) vs current size (%d x %d)",
-                         m_nodeName.c_str(), reviseFromFilePath.c_str(), (int) nRows, (int) nCols, (int) numRows, (int) numCols);
-        }
-
-        Value().SetValue(numRows, numCols, m_deviceId, array.data(), matrixFlagNormal);
-        VerifyDataSize(Value());      // sanity check
-#endif
-    }
+    void ReviseFromFile(const std::wstring& reviseFromFilePath);
 
     virtual void Save(File& fstream) const override;
     virtual void Load(File& fstream, size_t modelVersion) override;
+
+    virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override;
 
     // computation functions don't do anything for parameter nodes
     virtual void UpdateFunctionMBSize() override;
@@ -106,6 +94,17 @@ public:
     void InferInputDimsFrom(const TensorShape& otherShape);
 
     virtual void DumpNodeInfo(const bool printValues, const bool printMetadata, File& fstream) const override;
+
+    // called from CloneFunction(..., parameters="constant")
+    virtual void FreezeParameters() override; // from IFreezable
+
+private:
+    // init parameters for deferred initialization (which happens in Validate())
+    std::wstring m_initString; // if non-empty then deferred initialization is needed. Gets cleared upon completion of deferred init.
+    unsigned long m_randomSeed;
+    ElemType m_initValueScale;
+    bool m_initOnCPUOnly;
+    ElemType m_initValue;
 };
 
 // -----------------------------------------------------------------------
@@ -162,7 +161,7 @@ class InputValueBase : public ComputationNode<ElemType>, public NumInputs<0>, pu
     typedef ComputationNode<ElemType> Base;
     UsingComputationNodeMembers;
 
-    void Init(const TensorShape& sampleLayout, bool isSparse, const std::wstring axisName)
+    void Init(const TensorShape& sampleLayout, bool isSparse, const std::wstring axisName, float learningRateMultiplier = 0)
     {
         m_isSparse = isSparse;
         MarkValueNonSharable();
@@ -171,7 +170,7 @@ class InputValueBase : public ComputationNode<ElemType>, public NumInputs<0>, pu
 
         SetDims(sampleLayout, HasMBLayout()); // also called when reloading a file. Then we have an MBLayout, otherwise not yet
         UpdateFunctionValuesSize();           // we must allocate the matrix so that the readers get objects with valid row dimensions (some readers expect that)
-        SetLearningRateMultiplier(0);
+        SetLearningRateMultiplier(learningRateMultiplier);
         m_dynamicAxisNodeName = axisName;
     }
 
@@ -225,9 +224,9 @@ protected:
             Init(ImageDimensions::AsTensorShape(configp->Get(L"imageWidth"), configp->Get(L"imageHeight"), configp->Get(L"imageChannels"), ImageLayoutKindFrom(configp->Get(L"imageLayout"))), isSparse, axisName);
     }
 
+public:
     virtual const std::wstring GetRequestedDynamicAxis() const { return m_dynamicAxisNodeName; }
 
-public:
     virtual void Save(File& fstream) const override
     {
         Base::Save(fstream);
@@ -239,6 +238,8 @@ public:
         unsigned int nrAxes = 1;
         fstream << nrAxes;
         fstream << m_dynamicAxisNodeName;
+
+        fstream << m_learningRateMultiplier;
     }
 
     virtual void Load(File& fstream, size_t modelVersion) override
@@ -268,7 +269,12 @@ public:
         }
         else
             m_dynamicAxisNodeName = L""; // Use default
-        Init(sampleLayout, m_isSparse, m_dynamicAxisNodeName);
+
+        float learningRateMultiplier = 0;
+        if (modelVersion >= CNTK_MODEL_VERSION_10)
+            fstream >> learningRateMultiplier;
+
+        Init(sampleLayout, m_isSparse, m_dynamicAxisNodeName, learningRateMultiplier);
     }
 
     // InputValue must not resize its inputs because that might destroy it. It should already have the correct size.

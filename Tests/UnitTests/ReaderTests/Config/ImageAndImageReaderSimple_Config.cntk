@@ -1,0 +1,84 @@
+RootDir = .
+ModelDir = "models"
+command = "Simple_Test"
+
+precision = "float"
+
+modelPath = "$ModelDir$/ImageReaderSimple_Model.dnn"
+
+# deviceId = -1 for CPU, >= 0 for GPU devices
+deviceId = -1
+
+outputNodeNames = "Dummy"
+traceLevel = 1
+frameMode = false
+
+Simple_Test = [
+
+# Parameter values for the reader
+reader = [
+        verbosity = 0
+        randomize = true
+
+        deserializers = (
+            [
+                type = "ImageDeserializer"
+                module = "ImageReader"
+                file = "$RootDir$/ImageReaderSimple_map.txt"
+
+                input = [
+                    features1 = [
+                        transforms = (
+                            [
+                                type = "Crop"
+                                cropType = "center"
+                                cropRatio = 1.0
+                                jitterType = "uniRatio"
+                            ]:[
+                                type = "Scale"
+                                width = 4
+                                height = 8
+                                channels = 3
+                                interpolations = "linear"
+                            ]:[
+                                type = "Mean"
+                            ]:[
+                                type = "Transpose"
+                            ]
+                        )
+                    ]
+
+                    labels1 = [
+                        labelDim = 4
+                    ]
+                ]
+            ]:[
+                type = "ImageDeserializer"
+                module = "ImageReader"
+                file = "$RootDir$/ImageReaderSimple_map.txt"
+
+                input = [
+                    features2 = [
+                        transforms = (
+                            [
+                                type = "Scale"
+                                width = 4
+                                height = 8
+                                channels = 3
+                                interpolations = "linear"
+                            ]:[
+                                type = "Mean"
+                            ]:[
+                                type = "Transpose"
+                            ]
+                        )
+                    ]
+
+                    labels2 = [
+                        labelDim = 4
+                    ]
+                ]
+            ]
+        )
+    ]
+]

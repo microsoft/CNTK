@@ -47,6 +47,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template <typename ElementType>
     class ComputationNode;
+
+    class File;
 }}}
 
 // TODO: The following should be reconciled with the equivalent code in the CNTK implementation
@@ -100,9 +102,15 @@ namespace CNTK
 
     // RuntimeError - throw a std::runtime_error with a formatted error string
 #ifndef _MSC_VER // gcc __attribute__((format(printf())) does not percolate through variadic templates; so must go the macro route
+#ifndef RuntimeError
 #define RuntimeError ThrowFormatted<std::runtime_error>
+#endif
+#ifndef LogicError
 #define LogicError ThrowFormatted<std::logic_error>
+#endif
+#ifndef InvalidArgument
 #define InvalidArgument ThrowFormatted<std::invalid_argument>
+#endif
 #else
     template <class... _Types>
     __declspec_noreturn inline void RuntimeError(const char* format, _Types&&... _Args)
@@ -158,4 +166,12 @@ namespace CNTK
 
     class Function;
     typedef std::shared_ptr<Function> FunctionPtr;
+
+    class Learner;
+    typedef std::shared_ptr<Learner> LearnerPtr;
+
+    class Dictionary;
+
+    class MinibatchSource;
+    typedef std::shared_ptr<MinibatchSource> MinibatchSourcePtr;
 }

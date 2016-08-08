@@ -71,6 +71,11 @@ protected:
         const unsigned char* b = (const unsigned char*) &v;
         return (short) ((b[0] << 8) + b[1]);
     }
+    static unsigned short swapunsignedshort(unsigned short v) throw()
+    {
+        const unsigned char* b = (const unsigned char*)&v;
+        return (unsigned short)((b[0] << 8) + b[1]);
+    }
     static int swapint(int v) throw()
     {
         const unsigned char* b = (const unsigned char*) &v;
@@ -81,13 +86,13 @@ protected:
     {
         int nsamples;
         int sampperiod;
-        short sampsize;
+        unsigned short sampsize;
         short sampkind;
         void read(FILE* f)
         {
             nsamples = fgetint(f);
             sampperiod = fgetint(f);
-            sampsize = fgetshort(f);
+            sampsize = (unsigned short) fgetshort(f);
             sampkind = fgetshort(f);
         }
 
@@ -102,21 +107,24 @@ protected:
             sampkind = (short) 9; // user type
             int nRows = swapint(fgetint(f));
             int nCols = swapint(fgetint(f));
-            sampsize = (short) (nRows * nCols); // features are stored as bytes;
+            int rawsampsize = nRows * nCols;
+            sampsize = (unsigned short) rawsampsize; // features are stored as bytes;
+            if (sampsize != rawsampsize)
+                RuntimeError("reading idx feature cache header: sample size overflow");
         }
 
         void write(FILE* f)
         {
             fputint(f, nsamples);
             fputint(f, sampperiod);
-            fputshort(f, sampsize);
+            fputshort(f, (short) sampsize);
             fputshort(f, sampkind);
         }
         void byteswap()
         {
             nsamples = swapint(nsamples);
             sampperiod = swapint(sampperiod);
-            sampsize = swapshort(sampsize);
+            sampsize = swapunsignedshort(sampsize);
             sampkind = swapshort(sampkind);
         }
     };
@@ -215,7 +223,10 @@ public:
         H.nsamples = 0; // unknown for now, updated in close()
         H.sampperiod = period;
         const int bytesPerValue = sizeof(float); // we do not support compression for now
-        H.sampsize = (short) featdim * bytesPerValue;
+        size_t rawsampsize = featdim * bytesPerValue;
+        H.sampsize = (unsigned short) rawsampsize;
+        if (H.sampsize != rawsampsize)
+            RuntimeError("htkfeatwriter: sample size overflow");
         H.sampkind = parsekind(kind);
         if (needbyteswapping)
             H.byteswap();

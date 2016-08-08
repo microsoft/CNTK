@@ -10,6 +10,7 @@ from .ops_test_utils import unittest_helper, AA, I, precision, PRECISION_TO_TYPE
 from ...graph import *
 from ...reader import *
 import cntk as C
+import math as m
 
 REDUCE_TEST_CASES = [
     #(input_data,  axis)
@@ -60,4 +61,69 @@ def test_op_reduce_sum(input_data, axis, device_id, precision):
     unittest_helper(result, None, expected_gradient, device_id = device_id,
                     precision=precision, clean_up=True, backward_pass=True, input_node=a)
 
+
+
+
+REDUCE_MAX_TEST_CASES = [
+     ([[10, 0],[20,  1]], 2,        [20],  [[0,0],[1,0]]),
+     ([[10, 0],[20,  1]], 1, [[10], [20]], [[1,0],[1,0]]),
+     ([[10, 0],[ 0, 20]], 0, [[10,   20]], [[1,0],[0,1]]),
+]
+
+@pytest.mark.parametrize("input_data, axis_data, expected_result, expected_gradient", REDUCE_MAX_TEST_CASES)
+def test_op_reduce_max(input_data, axis_data, expected_result, expected_gradient, device_id, precision):
+
+    a = I([input_data])
+
+
+    # slice using the operator
+    result = C.reduce_max(a, axis = axis_data)
+
+    unittest_helper(result, None, [[expected_result]], device_id=device_id, 
+                precision=precision, clean_up=True, backward_pass=False)
+    unittest_helper(result, None, [[expected_gradient]], device_id = device_id,
+                precision=precision, clean_up=True, backward_pass=True, input_node=a)
+
+
+
+REDUCE_MIN_TEST_CASES = [
+     ([[-10, 0],[-20,  -1]], 2,         [-20],  [[0,0],[1,0]]),
+     ([[-10, 0],[-20,  -1]], 1, [[-10], [-20]], [[1,0],[1,0]]),
+     ([[-10,-0],[  0, -20]], 0, [[-10,   -20]], [[1,0],[0,1]]),
+]
+
+@pytest.mark.parametrize("input_data, axis_data, expected_result, expected_gradient", REDUCE_MIN_TEST_CASES)
+def test_op_reduce_min(input_data, axis_data, expected_result, expected_gradient, device_id, precision):
+
+    a = I([input_data])
+
+
+    # slice using the operator
+    result = C.reduce_min(a, axis = axis_data)
+
+    unittest_helper(result, None, [[expected_result]], device_id=device_id, 
+                precision=precision, clean_up=True, backward_pass=False)
+    unittest_helper(result, None, [[expected_gradient]], device_id = device_id,
+                precision=precision, clean_up=True, backward_pass=True, input_node=a)
+
+
+REDUCE_LOG_SUM_TEST_CASES = [
+     ([[1, 2,  3]],   2,  [m.log(m.exp(1) + m.exp(2) + m.exp(3))],  [[m.exp(1-m.log(m.exp(1) + m.exp(2) + m.exp(3))), m.exp(2-m.log(m.exp(1) + m.exp(2) + m.exp(3))), m.exp(3-m.log(m.exp(1) + m.exp(2) + m.exp(3)))]]),
+     ([[0,  100000]], 1,  [[100000]],  [[0, 1]]),
+     ([[0, -100000]], 1,  [[0]],       [[1, 0]]),
+]
+
+@pytest.mark.parametrize("input_data, axis_data, expected_result, expected_gradient", REDUCE_LOG_SUM_TEST_CASES)
+def test_op_reduce_log_sum(input_data, axis_data, expected_result, expected_gradient, device_id, precision):
+
+    a = I([input_data])
+
+
+    # slice using the operator
+    result = C.reduce_log_sum(a, axis = axis_data)
+
+    unittest_helper(result, None, [[expected_result]], device_id=device_id, 
+                precision=precision, clean_up=True, backward_pass=False)
+    unittest_helper(result, None, [[expected_gradient]], device_id = device_id,
+                precision=precision, clean_up=True, backward_pass=True, input_node=a)
 

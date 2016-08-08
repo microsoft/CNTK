@@ -9,250 +9,14 @@
 #include "CommonMatrix.h"
 #include "TensorShape.h"
 #include <string>
+#include "Config.h"
+#include "Reader.h"
+#include "ConvolutionEngine.h"
 
 namespace CNTK
 {
     // Forward declarations
     class Dictionary;
-
-    class DictionaryValue
-    {
-    public:
-        enum class Type : unsigned int
-        {
-            None,
-            Bool,
-            SizeT,
-            Double,
-            NDShape,
-            Vector
-        };
-
-        static const char* TypeName(Type type)
-        {
-            if (type == Type::None)
-                return "None";
-            else if (type == Type::Bool)
-                return "Bool";
-            else if (type == Type::SizeT)
-                return "SizeT";
-            else if (type == Type::Double)
-                return "Double";
-            else if (type == Type::NDShape)
-                return "NDShape";
-            else if (type == Type::Vector)
-                return "Vector";
-            else
-                LogicError("Unknown DictionaryValue::Type");
-        }
-
-    public:
-        DictionaryValue()
-            : m_valueType(Type::None)
-        {
-        }
-
-        DictionaryValue(bool value)
-            : m_valueType(GetValueType<bool>())
-        {
-            m_data.m_boolean = value;
-        }
-
-        DictionaryValue(size_t value)
-            : m_valueType(GetValueType<size_t>())
-        {
-            m_data.m_sizeT = value;
-        }
-
-        DictionaryValue(double value)
-            : m_valueType(GetValueType<double>())
-        {
-            m_data.m_double = value;
-        }
-
-        template <typename T>
-        DictionaryValue(const T& value)
-            : m_valueType(GetValueType<T>())
-        {
-            static_assert(std::is_same<T, NDShape>::value ||
-                std::is_same<T, std::vector<DictionaryValue>>::value,
-                "Unsupported ValueType");
-
-            AllocateDataPtr(value);
-        }
-
-        DictionaryValue(const DictionaryValue& other)
-            : m_valueType(Type::Bool)
-        {
-            // The m_valueType must hvae been set to a non-ptr type to prevent an attempt to interpret
-            // the underlying underlying uninitialized value as a ptr and free it.
-            *this = other;
-        }
-
-        DictionaryValue& operator=(const DictionaryValue& other)
-        {
-            if (this != &other)
-            {
-                FreeDataPtr();
-
-                m_valueType = other.m_valueType;
-                m_data = other.m_data;
-
-                if (other.m_valueType == Type::NDShape)
-                    AllocateDataPtr(other.GetValue<NDShape>());
-                else if (other.m_valueType == Type::Vector)
-                    AllocateDataPtr(other.GetValue<std::vector<DictionaryValue>>());
-            }
-
-            return *this;
-        }
-
-        ~DictionaryValue()
-        {
-            FreeDataPtr();
-        }
-
-        template <typename T, typename std::enable_if<std::is_same<T, bool>::value>::type* = nullptr>
-        const T& GetValue() const
-        {
-            VerifyType<T>();
-            return m_data.m_boolean;
-        }
-
-        template <typename T, typename std::enable_if<std::is_same<T, size_t>::value>::type* = nullptr>
-        const T& GetValue() const
-        {
-            VerifyType<T>();
-            return m_data.m_sizeT;
-        }
-
-        template <typename T, typename std::enable_if<std::is_same<T, double>::value>::type* = nullptr>
-        const T& GetValue() const
-        {
-            VerifyType<T>();
-            return m_data.m_double;
-        }
-
-        template <typename T, typename std::enable_if<std::is_same<T, NDShape>::value || std::is_same<T, std::vector<DictionaryValue>>::value>::type* = nullptr>
-        const T& GetValue() const
-        {
-            VerifyType<T>();
-            return *(reinterpret_cast<T*>(m_data.m_ptr));
-        }
-
-        bool HasValue() const
-        {
-            return m_valueType != Type::None;
-        }
-
-        Type ValueType() const
-        {
-            return m_valueType;
-        }
-
-    private:
-        template <typename T>
-        static Type GetValueType()
-        {
-            static_assert(std::is_same<T, bool>::value ||
-                std::is_same<T, size_t>::value ||
-                std::is_same<T, double>::value ||
-                std::is_same<T, NDShape>::value ||
-                std::is_same<T, std::vector<DictionaryValue>>::value ||
-                std::is_same<T, CNTK::Dictionary>::value,
-                "Unsupported ValueType");
-
-            if (std::is_same<T, bool>::value)
-                return Type::Bool;
-            else if (std::is_same<T, size_t>::value)
-                return Type::SizeT;
-            else if (std::is_same<T, double>::value)
-                return Type::Double;
-            else if (std::is_same<T, NDShape>::value)
-                return Type::NDShape;
-            else if (std::is_same<T, std::vector<DictionaryValue>>::value)
-                return Type::Vector;
-        }
-
-        template <typename T>
-        void VerifyType() const
-        {
-            if (GetValueType<T>() != m_valueType)
-                RuntimeError("Reading a DictionaryValue as the wrong type; Reading as type %s when actual type is %s", typeid(T).name(), DictionaryValue::TypeName(m_valueType));
-        }
-
-        template <typename T>
-        void AllocateDataPtr(const T& value)
-        {
-            static_assert(std::is_same<T, NDShape>::value || std::is_same<T, std::vector<DictionaryValue>>::value, "AllocateDataPtr called with invalid type");
-            m_data.m_ptr = new T(value);
-        }
-
-        template <typename T>
-        void FreePtrAsType()
-        {
-            T* typedPtr = reinterpret_cast<T*>(m_data.m_ptr);
-            delete typedPtr;
-
-            m_data.m_ptr = nullptr;
-        }
-
-        void FreeDataPtr()
-        {
-            if (m_valueType == Type::NDShape)
-                FreePtrAsType<NDShape>();
-            else if (m_valueType == Type::Vector)
-                FreePtrAsType<std::vector<DictionaryValue>>();
-        }
-
-    private:
-        Type m_valueType;
-
-        union ValueData
-        {
-            bool m_boolean;
-            size_t m_sizeT;
-            double m_double;
-            void* m_ptr;
-        } m_data;
-    };
-
-    class Dictionary
-    {
-    public:
-        Dictionary();
-        ~Dictionary();
-
-        // Disallow copy contruction and assignment
-        Dictionary(const Dictionary&) = delete; Dictionary& operator=(const Dictionary&) = delete;
-
-        Dictionary(Dictionary&& other);
-        Dictionary& operator=(Dictionary&& other);
-
-        DictionaryValue& operator[](const std::wstring& key)
-        {
-            return operator[](key.c_str());
-        }
-
-        DictionaryValue& operator[](const wchar_t* key);
-
-        DictionaryValue operator[](const std::wstring& key) const
-        {
-            return operator[](key.c_str());
-        }
-
-        DictionaryValue operator[](const wchar_t* key) const;
-
-        bool Contains(const std::wstring& key) const
-        {
-            return Contains(key.c_str());
-        }
-
-        bool Contains(const wchar_t* key) const;
-
-    private:
-        std::unordered_map<std::wstring, DictionaryValue>* m_dictionaryData;
-    };
 
     // Helper to get the size of an element of the specified DataType
     inline size_t ElementSize(DataType dataType)
@@ -317,14 +81,53 @@ namespace CNTK
             LogicError("Unknown DataType");
     }
 
-    inline Microsoft::MSR::CNTK::TensorShape AsTensorShape(const NDShape& viewShape)
+    inline NDShape AsNDShape(const Microsoft::MSR::CNTK::TensorShape& tensorShape)
+    {
+        // The TensorShape should be flattenable to 1D
+        for (size_t i = 1; i < tensorShape.GetRank(); ++i)
+        {
+            if (!tensorShape.CanFlatten(i))
+                InvalidArgument("AsNDShape() can only be called for TensorShapes that can be flattened to 1D");
+        }
+
+        return std::vector<size_t>(tensorShape.GetDims().begin(), tensorShape.GetDims().end());
+    }
+
+    inline DataType AsDataType(Microsoft::MSR::CNTK::ElementType readerDataType)
+    {
+        switch (readerDataType)
+        {
+        case Microsoft::MSR::CNTK::ElementType::tfloat:
+            return DataType::Float;
+        case Microsoft::MSR::CNTK::ElementType::tdouble:
+            return DataType::Double;
+        default:
+            LogicError("Unsupported ElementType from CNTK Reader");
+        }
+    }
+
+    inline StorageFormat AsStorageFormat(Microsoft::MSR::CNTK::StorageType readerStorageType)
+    {
+        switch (readerStorageType)
+        {
+        case Microsoft::MSR::CNTK::StorageType::dense:
+            return StorageFormat::Dense;
+        case Microsoft::MSR::CNTK::StorageType::sparse_csc:
+            return StorageFormat::SparseCSC;
+        default:
+            LogicError("Unsupported StorageType from CNTK Reader");
+        }
+    }
+
+    inline Microsoft::MSR::CNTK::TensorShape AsTensorShape(const NDShape& viewShape, bool preserveRank = false)
     {
         const size_t maxNumAxesSupportedByTensorView = 12;
         if (viewShape.NumAxes() > maxNumAxesSupportedByTensorView)
             LogicError("The number of requested axes exceeds the currently supported limit");
 
         // TensorShape is required to be at least 2D
-        Microsoft::MSR::CNTK::SmallVector<size_t> tensorViewShape(std::max<size_t>(2, viewShape.NumAxes()));
+        size_t minRankSize = preserveRank ? viewShape.NumAxes() : 2;
+        Microsoft::MSR::CNTK::SmallVector<size_t> tensorViewShape(std::max<size_t>(minRankSize, viewShape.NumAxes()));
         for (size_t i = 0; i < tensorViewShape.size(); ++i)
             tensorViewShape[i] = (i < viewShape.NumAxes()) ? viewShape[i] : 1;
 
@@ -362,5 +165,152 @@ namespace CNTK
     inline bool IsSparseInput(const Variable& var)
     {
         return var.IsInput() && var.IsSparse();
+    }
+
+    std::vector<DictionaryValue> SerializeToVector(const NDArrayViewPtr& viewPtr);
+
+    void DeserializeFromVector(const NDArrayViewPtr& viewPtr, const std::vector<DictionaryValue>& values);
+
+    inline void AddIndentation(std::wstringstream& s, size_t numIndentationSpaces)
+    {
+        for (size_t i = 0; i < numIndentationSpaces; ++i)
+            s << L" ";
+    }
+
+    static const size_t perLevelIndentSize = 4;
+    inline void AddConfigString(std::wstringstream& s, const std::wstring& key, const DictionaryValue& value, size_t numIndentationSpaces);
+    inline void AddConfigString(std::wstringstream& s, const DictionaryValue& value, size_t numIndentationSpaces)
+    {
+        switch (value.ValueType())
+        {
+        case DictionaryValue::Type::Bool:
+            s << value.GetValue<bool>();
+            break;
+        case DictionaryValue::Type::Float:
+            s << value.GetValue<float>();
+            break;
+        case DictionaryValue::Type::Double:
+            s << value.GetValue<double>();
+            break;
+        case DictionaryValue::Type::String:
+            s << value.GetValue<std::wstring>();
+            break;
+        case DictionaryValue::Type::SizeT:
+            s << value.GetValue<size_t>();
+            break;
+        case DictionaryValue::Type::Vector:
+        {
+            const auto& valueVector = value.GetValue<std::vector<DictionaryValue>>();
+            s << L"(" << std::endl;
+            AddIndentation(s, numIndentationSpaces + perLevelIndentSize);
+            bool isFirst = true;
+            for (const auto& val : valueVector)
+            {
+                if (!isFirst)
+                    s << L":";
+                else
+                    isFirst = false;
+
+                AddConfigString(s, val, numIndentationSpaces + perLevelIndentSize);
+            }
+            AddIndentation(s, numIndentationSpaces);
+            s << L")";
+            break;
+        }
+        case DictionaryValue::Type::Dictionary:
+        {
+            const auto& valueDictionary = value.GetValue<Dictionary>();
+            s << L"[" << std::endl;
+            for (const auto& keyValuePair : *(valueDictionary.m_dictionaryData))
+            {
+                AddConfigString(s, keyValuePair.first, keyValuePair.second, numIndentationSpaces + perLevelIndentSize);
+            }
+            AddIndentation(s, numIndentationSpaces);
+            s << L"]";
+            break;
+        }
+        default:
+            LogicError("Unsupported DictionaryValue type");
+        }
+    }
+
+    inline void AddConfigString(std::wstringstream& s, const std::wstring& key, const DictionaryValue& value, size_t numIndentationSpaces)
+    {
+        static const size_t perLevelIndentSize = 4;
+
+        AddIndentation(s, numIndentationSpaces);
+        s << key << L" = ";
+        AddConfigString(s, value, numIndentationSpaces);
+        s << std::endl;
+    }
+
+    template <typename T>
+    inline std::vector<DictionaryValue> AsDictionaryValueVector(const std::vector<T>& basicElementTypeVector)
+    {
+        static_assert(std::is_same<T, bool>::value ||
+                      std::is_same<T, size_t>::value ||
+                      std::is_same<T, float>::value ||
+                      std::is_same<T, double>::value, "Unsupported ValueType");
+
+        std::vector<DictionaryValue> dictionaryValueVector;
+        for (auto value : basicElementTypeVector)
+            dictionaryValueVector.push_back(value);
+
+        return dictionaryValueVector;
+    }
+
+    template <typename T>
+    inline std::vector<T> AsBasicElementTypeVector(const std::vector<DictionaryValue>& dictionaryValueVector)
+    {
+        static_assert(std::is_same<T, bool>::value ||
+            std::is_same<T, size_t>::value ||
+            std::is_same<T, float>::value ||
+            std::is_same<T, double>::value, "Unsupported ValueType");
+
+        std::vector<T> basicElementTypeVector;
+        for (auto value : dictionaryValueVector)
+            basicElementTypeVector.push_back(value.GetValue<T>());
+
+        return basicElementTypeVector;
+    }
+
+    inline PoolingType AsPoolingType(Microsoft::MSR::CNTK::PoolKind cntkPoolingKind)
+    {
+        switch (cntkPoolingKind)
+        {
+        case Microsoft::MSR::CNTK::PoolKind::Average:
+            return PoolingType::Average;
+        case Microsoft::MSR::CNTK::PoolKind::Max:
+            return PoolingType::Max;
+        default:
+            LogicError("Unknown pooling type");
+        }
+    }
+
+    inline Microsoft::MSR::CNTK::PoolKind AsCNTKPoolKind(PoolingType poolingType)
+    {
+        switch (poolingType)
+        {
+        case PoolingType::Average:
+            return Microsoft::MSR::CNTK::PoolKind::Average;
+        case PoolingType::Max:
+            return Microsoft::MSR::CNTK::PoolKind::Max;
+        default:
+            LogicError("Unknown pooling type");
+        }
+    }
+
+    inline std::pair<NDShape, NDShape> GetConvolutionOutputMapCountAndKernelShape(const NDShape& convolutionMapShape, const NDShape& operandShape)
+    {
+        auto outputMapCount = convolutionMapShape.SubShape(0, convolutionMapShape.NumAxes() - operandShape.NumAxes());
+        NDShape paddedOutputMapCount(operandShape.NumAxes(), 1);
+        for (size_t i = 0; i < outputMapCount.NumAxes(); ++i)
+            paddedOutputMapCount[paddedOutputMapCount.NumAxes() - 1 - i] = outputMapCount[outputMapCount.NumAxes() - 1 - i];
+        //for (size_t i = 0; i < outputMapCount.NumAxes(); ++i)
+        //    paddedOutputMapCount[i] = outputMapCount[i];
+
+        NDShape kernelShape = convolutionMapShape.SubShape(outputMapCount.NumAxes());
+
+        return{ paddedOutputMapCount, kernelShape };
     }
 }

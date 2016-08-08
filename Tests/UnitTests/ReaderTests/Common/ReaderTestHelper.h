@@ -20,6 +20,11 @@ struct ReaderFixture
     ReaderFixture(string subPath = "", string envVariableErrorMessage = "")
     {
         BOOST_TEST_MESSAGE("Setup fixture");
+#ifdef _WIN32
+        BOOST_TEST_MESSAGE("Set two-digit format of exponent number");
+        // Todo: According to MSDN, the following function is obsolete and not available in the CRT from VS2015. 
+        _set_output_format(_TWO_DIGIT_EXPONENT);
+#endif
         m_initialWorkingPath = boost::filesystem::current_path().generic_string();
         BOOST_TEST_MESSAGE("Current working directory: " + m_initialWorkingPath);
         fprintf(stderr, "Current working directory: %s\n", m_initialWorkingPath.c_str());
@@ -28,7 +33,13 @@ struct ReaderFixture
         m_parentPath = boost::filesystem::canonical(path.parent_path()).generic_string();
         fprintf(stderr, "Executable path: %s\n", m_parentPath.c_str());
 
+#ifdef _WIN32
+	// The executable path on Windows is e.g. <cntk>/x64/Debug/Unittests/
         m_testDataPath = m_parentPath + "/../../../Tests/UnitTests/ReaderTests";
+#else
+	// The executable path on Linux is e.g. <cntk>/build/cpu/release/bin/
+        m_testDataPath = m_parentPath + "/../../../../Tests/UnitTests/ReaderTests";
+#endif
         boost::filesystem::path absTestPath(m_testDataPath);
         absTestPath = boost::filesystem::canonical(absTestPath);
         m_testDataPath = absTestPath.generic_string();
@@ -64,13 +75,13 @@ struct ReaderFixture
                     if (!envVariableErrorMessage.empty())
                     {
                         BOOST_TEST_MESSAGE(envVariableErrorMessage);
-                        fprintf(stderr, envVariableErrorMessage.c_str());
+                        fprintf(stderr, "%s\n", envVariableErrorMessage.c_str());
                     }
 
                     newCurrentPath = m_testDataPath;
                 }
             }
-            else if ((subPath[0] == '/' && subPath[1] == '//') || (subPath[0] == '\\' && subPath[1] == '\\'))
+            else if ((subPath[0] == '/' && subPath[1] == '/') || (subPath[0] == '\\' && subPath[1] == '\\'))
             {
                 newCurrentPath = subPath;
             }
@@ -295,16 +306,22 @@ struct ReaderFixture
     // readerSectionName    : the reader field name in the test section
 
     shared_ptr<DataReader> GetDataReader(
-        const string configFileName,
-        const string testSectionName,
-        const string readerSectionName)
+        const std::string& configFileName,
+        const std::string& testSectionName,
+        const std::string& readerSectionName,
+        std::vector<std::wstring> additionalConfigParameters)
     {
         std::wstring configFN(configFileName.begin(), configFileName.end());
         std::wstring configFileCommand(L"configFile=" + configFN);
+        std::wstring cntk(L"CNTK");
+        std::vector<wchar_t*> arg{ &cntk[0], &configFileCommand[0] };
+        for(auto& p : additionalConfigParameters)
+        {
+            arg.push_back(&p[0]);
+        }
 
-        wchar_t* arg[2]{L"CNTK", &configFileCommand[0]};
         ConfigParameters config;
-        const std::string rawConfigString = ConfigParameters::ParseCommandLine(2, arg, config);
+        const std::string rawConfigString = ConfigParameters::ParseCommandLine((int)arg.size(), &arg[0], config);
 
         config.ResolveVariables(rawConfigString);
         const ConfigParameters simpleDemoConfig = config(testSectionName);
@@ -344,14 +361,15 @@ struct ReaderFixture
         size_t numSubsets,
         bool sparseFeatures = false,
         bool sparseLabels = false,
-        bool useSharedLayout = true)
+        bool useSharedLayout = true,
+        std::vector<std::wstring> additionalConfigParameters = {})
     {
         shared_ptr<StreamMinibatchInputs> inputsPtr =
             CreateStreamMinibatchInputs<ElemType>(numFeatureFiles, numLabelFiles,
             sparseFeatures, sparseLabels, useSharedLayout);
 
         shared_ptr<DataReader> readerPtr = GetDataReader(configFileName,
-            testSectionName, readerSectionName);
+            testSectionName, readerSectionName, additionalConfigParameters);
 
         // Perform the data reading
         HelperWriteReaderContentToFile<ElemType>(testDataFilePath, *readerPtr, *inputsPtr,
@@ -391,11 +409,12 @@ struct ReaderFixture
         size_t numSubsets,
         bool sparseFeatures = false,
         bool sparseLabels = false,
-        bool useSharedLayout = true)
+        bool useSharedLayout = true,
+        std::vector<std::wstring> additionalConfigParameters = {})
     {
         HelperReadInAndWriteOut<ElemType>(configFileName, testDataFilePath, testSectionName, readerSectionName,
             epochSize, mbSize, epochs, numFeatureFiles, numLabelFiles, subsetNum,numSubsets,
-            sparseFeatures, sparseLabels, useSharedLayout);
+            sparseFeatures, sparseLabels, useSharedLayout, additionalConfigParameters);
 
         CheckFilesEquivalent(controlDataFilePath, testDataFilePath);
     }
@@ -408,10 +427,11 @@ struct ReaderFixture
     void HelperRunReaderTestWithException(
         string configFileName,
         string testSectionName,
-        string readerSectionName)
+        string readerSectionName,
+        std::vector<std::wstring> additionalConfigParameters = {})
     {
         BOOST_CHECK_THROW(
-            GetDataReader(configFileName,testSectionName, readerSectionName),
+            GetDataReader(configFileName, testSectionName, readerSectionName, additionalConfigParameters),
             ExceptionType);
     }
 };

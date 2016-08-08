@@ -592,7 +592,8 @@ void fgetfile(const std::wstring& pathname, std::vector<char>& buffer);
 void fgetfile(FILE* f, std::vector<char>& buffer);
 namespace msra { namespace files {
 
-void fgetfilelines(const std::wstring& pathname, std::vector<char>& readbuffer, std::vector<std::string>& lines);
+void fgetfilelines(const std::wstring& pathname, std::vector<char>& readbuffer, std::vector<std::string>& lines, int numberOfTries = 1);
+
 static inline std::vector<std::string> fgetfilelines(const std::wstring& pathname)
 {
     std::vector<char> buffer;
@@ -600,7 +601,7 @@ static inline std::vector<std::string> fgetfilelines(const std::wstring& pathnam
     fgetfilelines(pathname, buffer, lines);
     return lines;
 }
-std::vector<char*> fgetfilelines(const std::wstring& pathname, std::vector<char>& readbuffer);
+std::vector<char*> fgetfilelines(const std::wstring& pathname, std::vector<char>& readbuffer, int numberOfTries = 1);
 
 }}
 
