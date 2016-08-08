@@ -666,7 +666,9 @@ class Parser : public Lexer
         return id;
     }
 
-    map<wstring, int> infixPrecedence; // precedence level of infix operators
+    map<wstring, int> infixPrecedence;    // precedence level of infix operators
+    static const int unaryPrecedence = 90;  // for unary "-" and "!". 90 is below x., x[, x(, and x{, but above all others
+    // TODO: Would be more direct to fold this into the table below as well.
 public:
     Parser(SourceFile&& sourceFile, vector<wstring>&& includePaths)
         : Lexer(move(includePaths))
@@ -719,7 +721,7 @@ public:
         {
             operand = make_shared<Expression>(tok.beginLocation, tok.symbol + L"("); // encoded as +( -( !(
             ConsumeToken();
-            operand->args.push_back(ParseExpression(90, stopAtNewline)); // 90 is below x., x[, x(, and x{, but above all others
+            operand->args.push_back(ParseExpression(unaryPrecedence, stopAtNewline));
         }
         else if (tok.symbol == L"new") // === new class instance
         {

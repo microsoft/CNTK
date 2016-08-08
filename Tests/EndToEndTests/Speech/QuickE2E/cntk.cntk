@@ -46,7 +46,7 @@ speechTrain = [
 
         # --- define the model
         model = Sequential (
-            CorpusNormalizationLayer{} :
+            FeatureMVNLayer{} :
             DenseLayer {H, activation=Sigmoid} :
             DenseLayer {H, activation=Sigmoid} :
             DenseLayer {J}

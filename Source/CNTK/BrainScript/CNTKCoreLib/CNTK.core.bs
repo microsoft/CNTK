@@ -150,10 +150,10 @@ StabilizerLayer {} =
     f(x) = Stabilize (x)
 }.f
 
-# CorpusNormalizationLayer -- create a corpus-level feature-normalization layer
+# FeatureMVNLayer -- create a corpus-level feature-normalization layer
 # This can only be applied to features. Statistics are not shared across invocations,
 # which is semantically OK because the values are the same. However, it is not efficient.
-CorpusNormalizationLayer {} = MeanVarNorm
+FeatureMVNLayer {} = MeanVarNorm
 
 # Layers that exist in other tools that we will not have:
 # FlattenLayer{}: Not needed since DenseLayer() can handle tensors just fine.
@@ -202,8 +202,8 @@ Log                     = CNTK2.Log
 Minus                   = CNTK2.Minus
 Pass                    = CNTK2.Identity
 Plus                    = CNTK2.Plus
-RectifiedLinear         = CNTK2.Relu
-ReLU                    = CNTK2.Relu
+RectifiedLinear         = CNTK2.ReLU # deprecated
+ReLU                    = CNTK2.ReLU
 ReduceSum               = CNTK2.ReduceSum
 ReduceLogSum            = CNTK2.ReduceLogSum
 ReduceMin               = CNTK2.ReduceMin
@@ -315,8 +315,9 @@ CNTK2 = [
     PastValue(_, shape, timeStep = 1, defaultHiddenActivation = 0.1, tag='') = new ComputationNode [ operation = 'PastValue' ; inputs = _ ; shape = new TensorShape [ /*shape*/ ] /*plus the function args*/ ]
 
     // 10. NN-specific operations
-    // Changes: input -> _, RectifiedLinear -> Relu. [Use Relu to arrive at relu() in snake_case]
-    Relu(_, tag='') = new ComputationNode [ operation = 'RectifiedLinear' ; inputs = _ /*plus the function args*/ ]
+    // Changes: input -> _, RectifiedLinear -> ReLU
+    ReLU(_, tag='') = new ComputationNode [ operation = 'RectifiedLinear' ; inputs = _ /*plus the function args*/ ]
+    Relu = ReLU // [Use Relu to arrive at relu() in snake_case]
     Sigmoid(_, tag='') = new ComputationNode [ operation = 'Sigmoid' ; inputs = _ /*plus the function args*/ ]
     Softmax(_, tag='') = new ComputationNode [ operation = 'Softmax' ; inputs = _ /*plus the function args*/ ]
     Dropout(_, tag='') = new ComputationNode [ operation = 'Dropout' ; inputs = _ /*plus the function args*/ ]
