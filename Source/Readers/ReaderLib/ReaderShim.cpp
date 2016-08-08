@@ -90,7 +90,13 @@ void ReaderShim<ElemType>::StartDistributedMinibatchLoop(
     // return the result and kick off a new one.
     m_prefetchTask = std::async(m_launchType, [this]()
     {
-        return m_reader->ReadMinibatch();
+        Timer timer;
+        timer.Start();
+        auto m =  m_reader->ReadMinibatch();
+        timer.Stop();
+        double readTime = timer.ElapsedSeconds();
+        fprintf(stderr, "Reading time of the minibatch inside future: %.5gs\n", readTime);
+        return m;
     });
 }
 
@@ -213,7 +219,13 @@ bool ReaderShim<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
         // return the result and kick off a new one.
         m_prefetchTask = std::async(m_launchType, [this]()
         {
-            return m_reader->ReadMinibatch();
+            Timer t;
+            t.Start();
+            auto m = m_reader->ReadMinibatch();
+            t.Stop();
+            double readTime = t.ElapsedSeconds();
+            fprintf(stderr, "Reading time of the minibatch inside future: %.5gs\n", readTime);
+            return m;
         });
     }
 
