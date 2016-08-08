@@ -1,9 +1,9 @@
 #pragma once
-
 #include <exception>
 #include <algorithm>
 #include "CNTKLibrary.h"
 #include <functional>
+#include <fstream>
 
 static const double relativeTolerance = 0.001f;
 static const double absoluteTolerance = 0.000001f;
@@ -40,6 +40,12 @@ static inline int _wunlink(const wchar_t *p)
 {
     return unlink(wtocharpath(p).c_str());
 }
+
+static inline FILE *_wfopen(const wchar_t *path, const wchar_t *mode)
+{
+    return fopen(wtocharpath(path).c_str(), wtocharpath(mode).c_str());
+}
+
 #endif
 
 template <typename ElementType>
@@ -103,3 +109,20 @@ inline CNTK::FunctionPtr FullyConnectedDNNLayer(CNTK::Variable input, size_t out
 
 
 #pragma warning(pop)
+
+
+inline void OpenStream(std::fstream& stream, const std::wstring& filename, bool readonly)
+{
+    if (filename.empty())
+        std::runtime_error("File: filename is empty");
+
+    std::ios_base::openmode mode = std::ios_base::binary;
+    mode = mode | (readonly ? std::ios_base::in : std::ios_base::out);
+
+    #ifdef _MSC_VER
+    stream.open(filename.c_str(), mode);
+    #else
+    stream.open(wtocharpath(filename.c_str()).c_str(), mode);
+    #endif
+    stream.exceptions(std::ios_base::failbit | std::ios_base::badbit);  
+}

@@ -6,6 +6,7 @@ void TensorTests();
 void FeedForwardTests();
 void RecurrentFunctionTests();
 void TrainerTests();
+void SerializationTests();
 
 int main()
 {
@@ -14,6 +15,7 @@ int main()
     FeedForwardTests();
     RecurrentFunctionTests();
     TrainerTests();
+    SerializationTests();
 
     fprintf(stderr, "\nCNTKv2Library tests: Passed\n");
     fflush(stderr);

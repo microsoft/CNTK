@@ -165,10 +165,6 @@ namespace CNTK
         return var.IsInput() && var.IsSparse();
     }
 
-    std::vector<DictionaryValue> SerializeToVector(const NDArrayViewPtr& viewPtr);
-
-    void DeserializeFromVector(const NDArrayViewPtr& viewPtr, const std::vector<DictionaryValue>& values);
-
     inline void AddIndentation(std::wstringstream& s, size_t numIndentationSpaces)
     {
         for (size_t i = 0; i < numIndentationSpaces; ++i)

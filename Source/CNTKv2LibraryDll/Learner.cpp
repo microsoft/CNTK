@@ -8,13 +8,13 @@
 #include "Utils.h"
 
 #define UPDATE_FUNCTION                                                                                       \
-    switch (smoothedGradientValue->GetDataType())                                                     \
+    switch (smoothedGradientValue->GetDataType())                                                             \
     {                                                                                                         \
     case DataType::Float:                                                                                     \
-        Update<float>(parameter, gradientValue, smoothedGradientValue, trainingSampleCount);  \
+        Update<float>(parameter, gradientValue, smoothedGradientValue, trainingSampleCount);                  \
         break;                                                                                                \
     case DataType::Double:                                                                                    \
-        Update<double>(parameter, gradientValue, smoothedGradientValue, trainingSampleCount); \
+        Update<double>(parameter, gradientValue, smoothedGradientValue, trainingSampleCount);                 \
         break;                                                                                                \
     default:                                                                                                  \
         NOT_IMPLEMENTED;                                                                                      \
@@ -162,8 +162,6 @@ namespace CNTK
         const unordered_set<Parameter>& parameterSet = parameters;
         for (const auto& parameter : parameterSet)
         {
-            // TODO: using the same device to allocate data for all smoothed gradients. Is this correct?
-            // Should the device be specified on the per-parameter basis?
             NDArrayViewPtr view;
             if (parameter.GetDataType() == DataType::Float)
             {
@@ -219,6 +217,8 @@ namespace CNTK
 #endif
 
 #if DUMPOUTPUT
+            // TODO: replace m_momentumPerSample with momentum:
+            // const double momentum = MomentumPerMB(momentumPerSample, actualMBSize);
             LOGPRINTF(stderr, "learnRatePerSample=%0.8f, momentum=%0.8f, actualMBSize=%ld\n",
                         m_learningRatePerSample, m_momentumPerSample, trainingSampleCount);
             LOGPRINTF(stderr, "GradUpdateType()=%s, GradientUpdateNoiseStd()=%0.8f\n",
@@ -265,7 +265,6 @@ namespace CNTK
 
     /*virtual*/ Dictionary LearnerBase::GetCheckpointState() const /*override*/
     {
-        NOT_IMPLEMENTED; // Until the new checkpointing is fully fleshed out, nobody should be calling this.
         Dictionary checkpoint;
 
         for (const auto& parameter : Parameters())
@@ -277,31 +276,27 @@ namespace CNTK
             {
                 LogicError("Parameter names must be unique");
             }
-            const auto& smoothedGradientValue = m_smoothedGradientValues.at(parameter);
 
-            // Potentially, could store things like dimensions, element size, format, etc., but
-            // that seems to be redundant, since all of that is passed in the constructor.
-            checkpoint[parameter.Name()] = SerializeToVector(smoothedGradientValue);
+            const auto& smoothedGradientValue = m_smoothedGradientValues.at(parameter);
+            checkpoint[parameter.Name()] = *smoothedGradientValue;
         }
         return checkpoint;
     }
 
     /*virtual*/ void LearnerBase::RestoreFromCheckpoint(const Dictionary& checkpoint) /*override*/
     {
-        NOT_IMPLEMENTED; // Until the new checkpointing is fully fleshed out, nobody should be calling this.
         for (const auto& parameter : Parameters())
         {
             if (!checkpoint.Contains(parameter.Name()))
             {
                 LogicError("Checkpoint does not contain state for parameter %ls", parameter.Name().c_str());
             }
+
             const auto& smoothedGradientValue = m_smoothedGradientValues.at(parameter);
-
-            const DictionaryValue& state = checkpoint[parameter.Name()];
-
-            const auto& data = smoothedGradientValue;
-
-            DeserializeFromVector(data, state.GetValue<vector<DictionaryValue>>());
+            const NDArrayView& checkpointedValue = checkpoint[parameter.Name()].GetValue<NDArrayView>();
+            assert(smoothedGradientValue->GetDataType() == checkpointedValue.GetDataType());
+            assert(smoothedGradientValue->Shape() == checkpointedValue.Shape());
+            smoothedGradientValue->CopyFrom(checkpointedValue);
         }
     }
 
@@ -325,7 +320,7 @@ namespace CNTK
         // TODO: break up the NormalGrad into 3 different functions, each with its own set of parameters
         // (one for vanilla SGD, the other for momentum SGD, and the third one for NAG).
         smoothedGradientMatrix->NormalGrad(*gradientMatrix, *parameterMatrix,
-                                            learningRate, ElementType(m_momentumPerSample), m_useNesterovAcceleration);
+                                           learningRate, ElementType(m_momentumPerSample), m_useNesterovAcceleration);
     }
 
     LearnerAdaGrad::LearnerAdaGrad(const unordered_set<Parameter>& parameters, bool needAveMultiplier)
@@ -379,14 +374,14 @@ namespace CNTK
         auto learningRate = ElementType(ParameterDependentLearningRate(parameter));
 
         smoothedGradientMatrix->FSAdagrad(trainingSampleCount, *gradientMatrix, *parameterMatrix,
-                                            learningRate, ElementType(m_momentumPerSample));
+                                          learningRate, ElementType(m_momentumPerSample));
     }
 
     LearnerRMSProp::LearnerRMSProp(const unordered_set<Parameter>& parameters,
-                                    double gamma, double inc, double dec, double max, double min, bool needAveMultiplier)
-                                    : LearnerBase(parameters),
-                                    m_gamma(gamma), m_inc(inc), m_dec(dec), m_max(max), m_min(min),
-                                    m_needAveMultiplier(needAveMultiplier)
+                                   double gamma, double inc, double dec, double max, double min, bool needAveMultiplier)
+                                   : LearnerBase(parameters),
+                                   m_gamma(gamma), m_inc(inc), m_dec(dec), m_max(max), m_min(min),
+                                   m_needAveMultiplier(needAveMultiplier)
     {
     }
 
@@ -408,9 +403,9 @@ namespace CNTK
         auto learningRate = ElementType(ParameterDependentLearningRate(parameter));
 
         auto aveMultiplier = smoothedGradientMatrix->RmsProp(*gradientMatrix,
-                                                                ElementType(m_gamma), ElementType(m_inc),
-                                                                ElementType(m_max), ElementType(m_dec),
-                                                                ElementType(m_min), m_needAveMultiplier);
+                                                             ElementType(m_gamma), ElementType(m_inc),
+                                                             ElementType(m_max), ElementType(m_dec),
+                                                             ElementType(m_min), m_needAveMultiplier);
         Matrix<ElementType>::ScaleAndAdd(ElementType(-learningRate / aveMultiplier), *gradientMatrix, *parameterMatrix);
     }
 
@@ -444,7 +439,7 @@ namespace CNTK
     }
 
     LearnerPtr RMSPropLearner(const unordered_set<Parameter>& parameters,
-                                double gamma, double inc, double dec, double max, double min, bool needAveMultiplier)
+                              double gamma, double inc, double dec, double max, double min, bool needAveMultiplier)
     {
         return MakeSharedObject<LearnerRMSProp>(parameters, gamma, inc, dec, max, min, needAveMultiplier);
     }
