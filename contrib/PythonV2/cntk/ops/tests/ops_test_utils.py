@@ -13,7 +13,6 @@ import pytest
 
 from cntk.tests.test_utils import *
 
-from ...context import get_new_context
 from ...utils import sanitize_dtype_cntk
 from ...utils import eval as cntk_eval
 from .. import constant, input
