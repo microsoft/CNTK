@@ -1776,44 +1776,71 @@ public:
         if (inputIndex == 0) // derivative with respect to the input.
         {
             auto sliceOutputGrad                 = GradientFor(fr);
-            auto sliceInputValue                 = Input(0)->ValueFor(fr);
             const Matrix<ElemType>& scale        = Input(1)->Value();
-            const Matrix<ElemType>& bias         = Input(2)->Value();
             const Matrix<ElemType>& runMean      = Input(3)->Value();
             const Matrix<ElemType>& runInvStdDev = Input(4)->Value();
-
             auto sliceInputGrad = Input(0)->GradientFor(fr);
-            // The mean used in Forward() are either saveMean or runMean.
-            // This is decided by the engine, which communicates back the decision by returning
-            // an empty saveMean in case runMean should be used. Likewise for stddev.
-            let& actualMean      = !m_saveMean->IsEmpty()      ? *m_saveMean      : runMean;      // empty if only the running mean is used
-            let& actualInvStdDev = !m_saveInvStdDev->IsEmpty() ? *m_saveInvStdDev : runInvStdDev;
-            m_dScale->Resize(scale); // gradients for scale and bias get stored here
-            m_dBias->Resize(bias);
+
+            if (m_lockedDown)
+            {
+                // The parameters of BN doesn't need to be updated.
+                // Calculate the gradient for output directly
+                Matrix<ElemType>& runInvStdDev = Input(4)->Value();
+                m_tempMatrix->AssignElementProductOf(runInvStdDev, scale);
+                auto totalRows = sliceOutputGrad.GetNumRows();
+                auto channelNum = scale.GetNumRows();
+                m_inputGrad->Resize(channelNum, totalRows / channelNum);
+                m_inputGrad->SetValue(0);
+                (*m_inputGrad) += *m_tempMatrix;
+                m_tempMatrix->AssignTransposeOf(*m_inputGrad);
+                m_tempMatrix->Reshape(totalRows, 1);
+                m_inputGrad->Resize(sliceOutputGrad);
+                m_inputGrad->SetValue(sliceOutputGrad);
+                m_inputGrad->ColumnElementMultiplyWith(*m_tempMatrix);
+                sliceInputGrad += *m_inputGrad;
+            }
+            else
+            {
+                auto sliceInputValue = Input(0)->ValueFor(fr);
+                const Matrix<ElemType>& bias = Input(2)->Value();
+                // The mean used in Forward() are either saveMean or runMean.
+                // This is decided by the engine, which communicates back the decision by returning
+                // an empty saveMean in case runMean should be used. Likewise for stddev.
+                let& actualMean = !m_saveMean->IsEmpty() ? *m_saveMean : runMean;      // empty if only the running mean is used
+                let& actualInvStdDev = !m_saveInvStdDev->IsEmpty() ? *m_saveInvStdDev : runInvStdDev;
+                m_dScale->Resize(scale); // gradients for scale and bias get stored here
+                m_dBias->Resize(bias);
 
             double blendFactor = ComputeBlendFactor();  // interpolation weight for the running statistics (the current MB statistics are weighted with 1-this)
 
-            // Compute all derivatives in one step. Save derivatives with respect to scale and bias in temp matrices.
-            m_bnEng->Backward(sliceInputValue, sliceOutputGrad, // (in)  input from below, gradient from above
-                              sliceInputGrad,                   // (out) gradient for data input goes here
-                              scale,                            // (in)  out of scale and bias, only scale is needed in gradient propagation
+                // Compute all derivatives in one step. Save derivatives with respect to scale and bias in temp matrices.
+                m_bnEng->Backward(sliceInputValue, sliceOutputGrad, // (in)  input from below, gradient from above
+                    sliceInputGrad,                   // (out) gradient for data input goes here
+                    scale,                            // (in)  out of scale and bias, only scale is needed in gradient propagation
                               blendFactor,                      // (in)  smoothing weight for running stats (1=use only running stats)
-                              actualMean, actualInvStdDev,      // (in)  actual mean/stddev values used in ForwardProp()
-                              *m_dScale, *m_dBias);             // (out) gradients for scale and bias
+                    actualMean, actualInvStdDev,      // (in)  actual mean/stddev values used in ForwardProp()
+                    *m_dScale, *m_dBias);             // (out) gradients for scale and bias
+            }
         }
         else if (inputIndex == 1) // derivative with respect to the scale
         {
-            // Derivative with respect to the scale was precomputed during input derivative computation.
-            Matrix<ElemType>& grad = Input(1)->Gradient();
-            grad.SetValue(grad.GetNumRows(), grad.GetNumCols(), grad.GetDeviceId(), m_dScale->Data());
-            // BUGBUG: ^^ This should add the gradient, not overwrite it.
+            if (!m_lockedDown)
+            {
+                // Derivative with respect to the scale was precomputed during input derivative computation.
+                Matrix<ElemType>& grad = Input(1)->Gradient();
+                grad.SetValue(grad.GetNumRows(), grad.GetNumCols(), grad.GetDeviceId(), m_dScale->Data());
+                // BUGBUG: ^^ This should add the gradient, not overwrite it.
+            }
         }
         else if (inputIndex == 2) // derivative with respect to the bias
         {
-            // Derivative with respect to the bias was precomputed during input derivative computation.
-            Matrix<ElemType>& grad = Input(2)->Gradient();
-            grad.SetValue(grad.GetNumRows(), grad.GetNumCols(), grad.GetDeviceId(), m_dBias->Data());
-            // BUGBUG: ^^ Also here, this should add the gradient, not overwrite it.
+            if (!m_lockedDown)
+            {
+                // Derivative with respect to the bias was precomputed during input derivative computation.
+                Matrix<ElemType>& grad = Input(2)->Gradient();
+                grad.SetValue(grad.GetNumRows(), grad.GetNumCols(), grad.GetDeviceId(), m_dBias->Data());
+                // BUGBUG: ^^ Also here, this should add the gradient, not overwrite it.
+            }
         }
         // No derivatives with respect to running mean and InvStdDev.
     }
@@ -1835,12 +1862,15 @@ public:
         //         Until this has been corrected, we need a workaround that infers the wrong dimensions.
 #if 1   // Workaround for today's definition: Trigger on [0 x 1] and infer that 0 as the total # elements needed.
         for (size_t i = 1; i < GetNumInputs(); i++)
+            m_lockedDown = false;
         {
             auto paramLayout = Input(i)->GetSampleLayout();
             if (paramLayout.GetRank() == 2 && paramLayout[0] == 0 && paramLayout[1] == 1 && inputLayout.GetNumElements() > 0) // [0 x 1]
             {
                 size_t total = m_spatial ? inputLayout.GetDims().back() : inputLayout.GetNumElements();
                 Input(i)->ValidateInferInputDimsFrom(TensorShape(total, 1));
+
+            m_lockedDown = blendFactor == 1.0 && expAvgFactor == 0.0;
             }
         }
 #else
@@ -1899,6 +1929,8 @@ public:
     void RequestMatricesBeforeBackprop(MatrixPool& matrixPool) override
     {
         Base::RequestMatricesBeforeBackprop(matrixPool);
+        RequestMatrixFromPool(m_inputGrad, matrixPool);
+        RequestMatrixFromPool(m_tempMatrix, matrixPool);
         RequestMatrixFromPool(m_dScale, matrixPool);
         RequestMatrixFromPool(m_dBias, matrixPool);
     }
@@ -1908,6 +1940,8 @@ public:
         Base::ReleaseMatricesAfterBackprop(matrixPool);
         ReleaseMatrixToPool(m_saveMean, matrixPool);
         ReleaseMatrixToPool(m_saveInvStdDev, matrixPool);
+        ReleaseMatrixToPool(m_inputGrad, matrixPool);
+        ReleaseMatrixToPool(m_tempMatrix, matrixPool);
         ReleaseMatrixToPool(m_dScale, matrixPool);
         ReleaseMatrixToPool(m_dBias, matrixPool);
     }
@@ -1997,6 +2031,12 @@ private:
     // Not used for blendFactor=1 in CNTK engine.
     shared_ptr<Matrix<ElemType>> m_dScale;
     shared_ptr<Matrix<ElemType>> m_dBias;
+
+    shared_ptr<Matrix<ElemType>> m_inputGrad;
+    shared_ptr<Matrix<ElemType>> m_tempMatrix;
+
+    // Parameter to indicate whether the BN node will still be updated during training
+    bool m_lockedDown;
 
     std::unique_ptr<BatchNormEngine<ElemType>> m_bnEng;
 };
