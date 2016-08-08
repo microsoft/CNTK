@@ -58,14 +58,13 @@ Train=[
         }.z
 
         # definition with layer composition
-        model_layerStyle (features) = {
-            # load the pre-learned word embedding matrix
-            l1 = EmbeddingLayer {embedDim, embeddingPath='embeddingmatrix.txt', transpose=true} (features)
-            l2s = RecurrentLSTMLayer {lstmDim, cellDim=cellDim} (l1)
-            l2 = BS.Sequences.Last (l2s)
-            l3 = DenseLayer {numLabels} (l2)
-            z = l3
-        }.z
+        model = Sequential
+        (
+            EmbeddingLayer {embedDim, embeddingPath='embeddingmatrix.txt', transpose=true} :  # load the pre-learned word embedding matrix
+            RecurrentLSTMLayer {lstmDim, cellDim=cellDim} :
+            BS.Sequences.Last :
+            DenseLayer {numLabels}
+        )
 
         # inputs
         t = DynamicAxis{}
@@ -73,8 +72,7 @@ Train=[
         labels   = Input {numLabels}          # Input has shape (numLabels,*) where all sequences in *=1
 
         # apply model
-        #model = model_macroStyle
-        model = model_layerStyle
+        #z = model_macroStyle (features)
         z = model (features)
 
         # Make sure the trainer understands that the time dimension of l3 is actually the same as that of labels.

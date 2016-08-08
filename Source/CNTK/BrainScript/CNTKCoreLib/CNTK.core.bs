@@ -166,8 +166,9 @@ CorpusNormalizationLayer {} = MeanVarNorm
 # Sequential -- composite that applies a sequence of functions onto an input
 Sequential (arrayOfFunctions) =
 {
-    Apply (in, N) = if N == 0 then in else arrayOfFunctions[N-1](Apply (in, N-1)) # we do that recursively
-    f(x) = Apply (x, Length (arrayOfFunctions))
+    fs = _AsArray (arrayOfFunctions)  # make sure it works with a single function that is not an array
+    Apply (x, N) = if N == 0 then x else fs[N-1](Apply (x, N-1))  # we do that recursively
+    f(x) = Apply (x, Length (fs))
 }.f
 Merge (arrayOfFunctions, combineFunction) =
     if Length (arrayOfFunctions) != 2 then Fail ("Merge() is currently limited to binary functions.") else
