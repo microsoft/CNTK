@@ -1123,16 +1123,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             }
         }
 
-        if (m_perfTraceLevel > 0)
-        {
-            std::unique_ptr<MatrixComputeStreamEvent> mainStreamSyncEvent(MatrixComputeStreamEvent::Create(net->GetDeviceId()));
-            mainStreamSyncEvent->SynchronizeEvent();
-            fineGrainedPerfMeasurementTimer.Stop();
-            parameterUpdateTime = fineGrainedPerfMeasurementTimer.ElapsedSeconds();
 
-            PREPENDTS(stderr);
-            fprintf(stderr, "Perf trace: Worker MB size = %d, Read = %.5gs; Compute = %.5gs; Parameter update = %.5gs, Aggregate MB size = %d\n", (int)actualMBSize, readTime, computeTime, parameterUpdateTime, (int)aggregateNumSamples);
-        }
 
         if (m_perfTraceLevel > 0)
             fineGrainedPerfMeasurementTimer.Start();
@@ -1161,7 +1152,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             if (useDistributedMBReading)
             {
                 noMoreSamplesToProcess = !wasDataRead;
-        }
+            }
 
             if (nSamplesSinceLastModelSync >= m_nFramesBetweenASGDSync[epochNumber])
             {
@@ -1176,8 +1167,20 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             fineGrainedPerfMeasurementTimer.Stop();
             parameterSyncTime = fineGrainedPerfMeasurementTimer.ElapsedSeconds();
         }
+
         timer.Stop();
         numMBsRun++;
+
+        if (m_perfTraceLevel > 0)
+        {
+            std::unique_ptr<MatrixComputeStreamEvent> mainStreamSyncEvent(MatrixComputeStreamEvent::Create(net->GetDeviceId()));
+            mainStreamSyncEvent->SynchronizeEvent();
+            fineGrainedPerfMeasurementTimer.Stop();
+            parameterUpdateTime = fineGrainedPerfMeasurementTimer.ElapsedSeconds();
+
+            PREPENDTS(stderr);
+            fprintf(stderr, "Perf trace: Worker MB size = %d, Read = %.5gs; Compute = %.5gs; Parameter update = %.5gs, Parameter sync = %.5gs, Aggregate MB size = %d\n", (int)actualMBSize, readTime, computeTime, parameterSyncTime, parameterUpdateTime, (int)aggregateNumSamples);
+        }
 
         totalTimeInMBs += timer.ElapsedSeconds();
         //trainSamplesSinceLastLogged += (int)aggregateNumSamplesWithLabel; // now inside epochCriterionLastLogged
@@ -1241,13 +1244,14 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                 fprintf(stderr, ("time = " + GeneratePaddedFloatOrExpFormat(0, 4, totalTimeInMBs) + "s; samplesPerSecond = %.1f\n").c_str(),
                         totalTimeInMBs, trainSamplesSinceLastLogged / totalTimeInMBs);
             }
-            if (m_perfTraceLevel > 0)
-            {
-                fprintf(stderr, ("\t\t ----ReadTime = " + GeneratePaddedFloatOrExpFormat(0, 5, readTime) + "s; ComputeTime = " +
-                    GeneratePaddedFloatOrExpFormat(0, 5, computeTime) + "s; ParameterUpdateTime = " +
-                    GeneratePaddedFloatOrExpFormat(0, 5, parameterUpdateTime) + "s; ParameterSyncTime = " +
-                    GeneratePaddedFloatOrExpFormat(0, 5, parameterSyncTime) + "s;\n").c_str(), readTime, computeTime, parameterUpdateTime, parameterSyncTime);
-            }
+
+            //if (m_perfTraceLevel > 0)
+            //{
+            //    fprintf(stderr, ("\t\t ----ReadTime = " + GeneratePaddedFloatOrExpFormat(0, 5, readTime) + "s; ComputeTime = " +
+            //        GeneratePaddedFloatOrExpFormat(0, 5, computeTime) + "s; ParameterUpdateTime = " +
+            //        GeneratePaddedFloatOrExpFormat(0, 5, parameterUpdateTime) + "s; ParameterSyncTime = " +
+            //        GeneratePaddedFloatOrExpFormat(0, 5, parameterSyncTime) + "s;\n").c_str(), readTime, computeTime, parameterUpdateTime, parameterSyncTime);
+            //}
 
             // progress tracing for compute cluster management
             if (wasProgressPrinted)
