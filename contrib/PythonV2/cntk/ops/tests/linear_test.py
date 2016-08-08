@@ -34,9 +34,7 @@ TENSOR_PAIRS = [
 # -- plus operation tests --
 
 @pytest.mark.parametrize("left_operand, right_operand", TENSOR_PAIRS)
-def test_op_plus(left_operand, right_operand, device_id, precision):    
-    device = cntk_device(device_id)
-
+def test_op_plus(left_operand, right_operand, device_id, precision):        
     expected_forward = [AA([left_operand]) + AA([right_operand])]
 
     expected_backward = {
@@ -61,9 +59,7 @@ SEQ_TENSOR_PAIRS = [
      [[[ 3., -10]], [[ 4, -20], [ 5, -30]]]), # second batch with two sequences
 ]
 @pytest.mark.parametrize("left_batch, right_batch", SEQ_TENSOR_PAIRS)
-def _test_op_plus_var_sequences_input_input(left_batch, right_batch, device_id, precision):    
-    device = cntk_device(device_id)
-
+def test_op_plus_var_sequences_input_input(left_batch, right_batch, device_id, precision):        
     assert len(left_batch) == len(right_batch)
     expected_forward = [AA(left_batch[i]) + AA(right_batch[i]) \
             for i in range(len(left_batch))]
@@ -95,8 +91,8 @@ def _test_op_plus_var_sequences_input_input(left_batch, right_batch, device_id, 
     expected_backward = { a: expected_backward['left'], b: expected_backward['right'], }
     unittest_helper(input_op_input, 
         forward_input, expected_forward, 
-        backward_input, expected_backward,
-        device_id=device_id, precision=precision, clean_up=True)
+        expected_backward,
+        device_id, precision)
 
 # -- minus operation tests --
 #TODO: enable once the function is exposed
