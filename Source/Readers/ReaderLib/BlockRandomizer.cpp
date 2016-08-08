@@ -14,6 +14,7 @@
 
 #include "DataReader.h"
 #include "ExceptionCapture.h"
+#include "TimerUtility.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -370,7 +371,16 @@ void BlockRandomizer::Prefetch(ChunkIdType chunkId)
         }
 
         m_prefetchedChunk = chunkId;
-        m_prefetch = std::async(m_launchType, [this, chunkId]() { return m_deserializer->GetChunk(chunkId); });
+        m_prefetch = std::async(m_launchType, [this, chunkId]()
+        {
+            Timer t;
+            t.Start();
+            ChunkPtr chunk = m_deserializer->GetChunk(chunkId);
+            t.Stop();
+            double readTime = t.ElapsedSeconds();
+            fprintf(stderr, "Loading chunk took: %.5gs\n", readTime);
+            return chunk;
+        });
 
         if (m_verbosity >= Debug)
             fprintf(stderr, "BlockRandomizer::Prefetch: prefetching original chunk: %u\n", chunkId);
