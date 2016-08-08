@@ -46,7 +46,7 @@ CNTKTextFormatReader::CNTKTextFormatReader(MemoryProviderPtr provider,
         {
             // Verbosity is a general config parameter, not specific to the text format reader.
             int verbosity = config(L"verbosity", 0);
-            m_randomizer = make_shared<BlockRandomizer>(verbosity, window, m_deserializer);
+            m_randomizer = make_shared<BlockRandomizer>(verbosity, window, m_deserializer, true);
         }
         else
         {

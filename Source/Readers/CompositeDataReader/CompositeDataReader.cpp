@@ -100,7 +100,7 @@ CompositeDataReader::CompositeDataReader(const ConfigParameters& config, MemoryP
         size_t randomizationWindow = config(L"randomizationWindow", requestDataSize);
         // By default using STL random number generator.
         bool useLegacyRandomization = config(L"useLegacyRandomization", false);
-        m_sequenceEnumerator = std::make_shared<BlockRandomizer>(verbosity, randomizationWindow, deserializer, BlockRandomizer::DecimationMode::chunk, useLegacyRandomization, multiThreadedDeserialization);
+        m_sequenceEnumerator = std::make_shared<BlockRandomizer>(verbosity, randomizationWindow, deserializer, true /* should Prefetch */, BlockRandomizer::DecimationMode::chunk, useLegacyRandomization, multiThreadedDeserialization);
     }
     else
     {
@@ -251,7 +251,7 @@ void CompositeDataReader::StartEpoch(const EpochConfiguration& cfg)
 
     if (config.m_totalEpochSizeInSamples <= 0)
     {
-        RuntimeError("Unsupported minibatch size '%d'.", (int)config.m_totalEpochSizeInSamples);
+        RuntimeError("Unsupported epoch size '%d'.", (int)config.m_totalEpochSizeInSamples);
     }
 
     m_sequenceEnumerator->StartEpoch(config);

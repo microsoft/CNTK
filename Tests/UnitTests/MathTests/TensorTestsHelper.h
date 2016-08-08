@@ -307,4 +307,5 @@ void TestOldRnnForwardPropSRP(size_t nRow = 100, size_t nCol = 1000, size_t mNbr
     auto t_end = clock();
     fprintf(stderr, "TestOldRnnForwardPropSRP:  %f seconds\n", 1.0 * (t_end - t_start) / CLOCKS_PER_SEC);
 }
+
 }}}}

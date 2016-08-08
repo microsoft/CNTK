@@ -1,0 +1,1 @@
+do = Print(val) ; val = [ v = (i => i + offset) ].v(42) ; offset = 13 

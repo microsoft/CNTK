@@ -423,7 +423,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
 
         if (learnRatePerSample < m_minLearnRate)
         {
-            LOGPRINTF(stderr, "Learn Rate Per Sample for Epoch[%d] = %.8g is less than minLearnRate %.8g. Training complete.\n",
+            LOGPRINTF(stderr, "Learn Rate Per Sample for Epoch[%d] = %.8g is less than minLearningRatePerSample %.8g. Training complete.\n",
                       i + 1, learnRatePerSample, m_minLearnRate);
             if (m_autoLearnRateSearchType != LearningRateSearchAlgorithm::None)
             {
@@ -1131,7 +1131,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             parameterUpdateTime = fineGrainedPerfMeasurementTimer.ElapsedSeconds();
 
             PREPENDTS(stderr);
-            fprintf(stderr, "Perf trace: Read = %.5gs; Compute = %.5gs; Parameter update = %.5gs\n", readTime, computeTime, parameterUpdateTime);
+            fprintf(stderr, "Perf trace: Worker MB size = %d, Read = %.5gs; Compute = %.5gs; Parameter update = %.5gs, Aggregate MB size = %d\n", (int)actualMBSize, readTime, computeTime, parameterUpdateTime, (int)aggregateNumSamples);
         }
 
         if (m_perfTraceLevel > 0)
@@ -2652,7 +2652,7 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
     if (m_adaptationRegWeight > 1 || m_adaptationRegWeight < 0)
         InvalidArgument("adaptationRegWeight must be in [0 1]");
 
-    m_minLearnRate = 1e-9f;
+    m_minLearnRate = configSGD(L"minLearningRatePerSample", 1e-9f);
 
     m_needAdaptRegularization = false;
 
