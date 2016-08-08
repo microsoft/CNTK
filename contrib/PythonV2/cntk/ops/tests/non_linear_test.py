@@ -25,62 +25,48 @@ TENSORS = [
       [0.001, 0.01], [0.1, 1], [10, 100]]),
 ]
 
-@pytest.mark.parametrize("tensor", TENSORS)
-def test_op_sigmoid(tensor, device_id, precision):
-    from .. import sigmoid    
-    ctx = get_context()
-    ctx.precision = precision
-    ctx.device = device_id
-
-    s = 1.0 / (1.0 + np.exp(-AA(tensor, dtype=PRECISION_TO_TYPE[precision])))
+@pytest.mark.parametrize("operand", TENSORS)
+def test_op_sigmoid(operand, device_id, precision):   
+    s = 1.0 / (1.0 + np.exp(-AA(operand, dtype=PRECISION_TO_TYPE[precision])))
     expected_forward = [AA([s])]
 
     expected_backward = {
             'arg': [[s * (1 - s)]],            
             }
 
-    _test_unary_op(ctx, sigmoid,
-            tensor, expected_forward, expected_backward)
+    from .. import sigmoid    
+    _test_unary_op(precision, device_id, sigmoid, operand, 
+        expected_forward, expected_backward)
 
-@pytest.mark.parametrize("tensor", TENSORS)
-def test_op_exp(tensor, device_id, precision):
-    from .. import exp
-    ctx = get_context()
-    ctx.precision = precision
-    ctx.device = device_id
-
-    e = np.exp(AA(tensor, dtype=PRECISION_TO_TYPE[precision]))
+@pytest.mark.parametrize("operand", TENSORS)
+def test_op_exp(operand, device_id, precision):
+    e = np.exp(AA(operand, dtype=PRECISION_TO_TYPE[precision]))
     expected_forward = [AA([e])]
 
     expected_backward = {
             'arg': expected_forward,            
             }
 
-    _test_unary_op(ctx, exp,
-            tensor, expected_forward, expected_backward)
+    from .. import exp
+    _test_unary_op(precision, device_id, exp, operand, 
+        expected_forward, expected_backward)
 
-@pytest.mark.parametrize("tensor", TENSORS)
-def test_op_tanh(tensor, device_id, precision):
-
-    from .. import tanh
-    
-    ctx = get_context()
-    ctx.precision = precision
-    ctx.device = device_id
-
-    t = np.tanh(AA(tensor, dtype=PRECISION_TO_TYPE[precision]))
+@pytest.mark.parametrize("operand", TENSORS)
+def test_op_tanh(operand, device_id, precision):    
+    t = np.tanh(AA(operand, dtype=PRECISION_TO_TYPE[precision]))
     expected_forward = [AA([t])]
 
     expected_backward = {
             'arg': [[1 - t**2]],
             }
-
-    _test_unary_op(ctx, tanh,
-            tensor, expected_forward, expected_backward)
+    
+    from .. import tanh
+    _test_unary_op(precision, device_id, tanh, operand, 
+        expected_forward, expected_backward)
 
 #TODO: port to v2
-@pytest.mark.parametrize("tensor", TENSORS)
-def _test_op_log(tensor, device_id, precision):
+@pytest.mark.parametrize("operand", TENSORS)
+def _test_op_log(operand, device_id, precision):
 
     from .. import log
 
@@ -102,9 +88,9 @@ def _test_op_log(tensor, device_id, precision):
     # the first for sequences (length=1, since we have dynamic_axis='')
     # the second for batch of one sample
 
-    expected = [[numpy_op(tensor)]]
+    expected = [[numpy_op(operand)]]
 
-    input_node = I([tensor])
+    input_node = I([operand])
     op_node = log(input_node)
 
     unittest_helper(op_node, None, expected,
@@ -122,15 +108,15 @@ def _test_op_log(tensor, device_id, precision):
     # Backward pass test
     # ==================
     # The expected results for the backward pass is 1/x
-    expected = [[numpy_op_grad(tensor)]]
+    expected = [[numpy_op_grad(operand)]]
 
     unittest_helper(op_node, None, expected, device_id=device_id,
                     precision=precision, backward_pass=True,
                     input_node=input_node)
 
 #TODO: port to v2
-@pytest.mark.parametrize("tensor", TENSORS)
-def _test_op_sqrt(tensor, device_id, precision):
+@pytest.mark.parametrize("operand", TENSORS)
+def _test_op_sqrt(operand, device_id, precision):
     from .. import sqrt
 
     def numpy_op(x):
@@ -147,9 +133,9 @@ def _test_op_sqrt(tensor, device_id, precision):
     # the first for sequences (length=1, since we have dynamic_axis='')
     # the second for batch of one sample
 
-    expected = [[numpy_op(tensor)]]
+    expected = [[numpy_op(operand)]]
 
-    input_node = I([tensor])
+    input_node = I([operand])
     op_node = sqrt(input_node)
 
     unittest_helper(op_node, None, expected,
@@ -164,15 +150,15 @@ def _test_op_sqrt(tensor, device_id, precision):
     # Backward pass test
     # ==================
     # The expected results for the backward pass is 0.5/sqrt(x)
-    expected = [[numpy_op_grad(tensor)]]
+    expected = [[numpy_op_grad(operand)]]
 
     unittest_helper(op_node, None, expected, device_id=device_id,
                     precision=precision, backward_pass=True,
                     input_node=input_node)
 
 #TODO: port to v2
-@pytest.mark.parametrize("tensor", TENSORS)
-def _test_op_square(tensor, device_id, precision):
+@pytest.mark.parametrize("operand", TENSORS)
+def _test_op_square(operand, device_id, precision):
     from .. import square
 
     def numpy_op(x):
@@ -185,9 +171,9 @@ def _test_op_square(tensor, device_id, precision):
     # the first for sequences (length=1, since we have dynamic_axis='')
     # the second for batch of one sample
 
-    expected = [[numpy_op(tensor)]]
+    expected = [[numpy_op(operand)]]
 
-    input_node = I([tensor])
+    input_node = I([operand])
     op_node = square(input_node)
 
     unittest_helper(op_node, None, expected,
@@ -202,15 +188,15 @@ def _test_op_square(tensor, device_id, precision):
     # Backward pass test
     # ==================
     # The expected results for the backward pass is 2x
-    expected = [[numpy_op_grad(tensor)]]
+    expected = [[numpy_op_grad(operand)]]
 
     unittest_helper(op_node, None, expected, device_id=device_id,
                     precision=precision, backward_pass=True,
                     input_node=input_node)
 
 #TODO: port to v2
-@pytest.mark.parametrize("tensor", TENSORS)
-def _test_op_relu(tensor, device_id, precision):
+@pytest.mark.parametrize("operand", TENSORS)
+def _test_op_relu(operand, device_id, precision):
 
     from .. import relu
 
@@ -225,9 +211,9 @@ def _test_op_relu(tensor, device_id, precision):
     # the first for sequences (length=1, since we have dynamic_axis='')
     # the second for batch of one sample
 
-    expected = [[numpy_op(tensor)]]
+    expected = [[numpy_op(operand)]]
 
-    input_node = I([tensor])
+    input_node = I([operand])
     op_node = relu(input_node)
 
     unittest_helper(op_node, None, expected,
@@ -243,7 +229,7 @@ def _test_op_relu(tensor, device_id, precision):
         npx = AA(x, dtype=PRECISION_TO_TYPE[precision])
         return np.asarray(npx > 0, dtype=int)
 
-    expected = [[numpy_op_grad(tensor)]]
+    expected = [[numpy_op_grad(operand)]]
 
     unittest_helper(op_node, None, expected, device_id=device_id,
                     precision=precision, backward_pass=True,
@@ -251,10 +237,10 @@ def _test_op_relu(tensor, device_id, precision):
 
 
 #TODO: port to v2_
-@pytest.mark.parametrize("tensor", TENSORS)
-def _test_op_abs(tensor, device_id, precision):
+@pytest.mark.parametrize("operand", TENSORS)
+def _test_op_abs(operand, device_id, precision):
     from .. import abs
-    np_tensor = AA(tensor, dtype=PRECISION_TO_TYPE[precision])
+    np_tensor = AA(operand, dtype=PRECISION_TO_TYPE[precision])
 
     # Forward pass test
     # ==================
@@ -263,9 +249,9 @@ def _test_op_abs(tensor, device_id, precision):
     # the first for sequences (length=1, since we have dynamic_axis='')
     # the second for batch of one sample
 
-    expected = [[np.abs(tensor)]]
+    expected = [[np.abs(operand)]]
 
-    input_node = I([tensor])
+    input_node = I([operand])
     op_node = abs(input_node)
 
     unittest_helper(op_node, None, expected,

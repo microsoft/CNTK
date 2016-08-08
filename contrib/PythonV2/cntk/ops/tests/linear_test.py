@@ -253,4 +253,5 @@ def _test_op_identity(operand, device_id, precision):
 
     from cntk.ops import identity
 
-    _test_unary_op(precision, device_id, identity, operand, expected_forward, expected_backward)
+    _test_unary_op(precision, device_id, identity, operand, 
+        expected_forward, expected_backward)
