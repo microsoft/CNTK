@@ -933,22 +933,24 @@ UNITTEST_BRAINSCRIPT_SRC = \
 	$(SOURCEDIR)/CNTK/BrainScript/BrainScriptEvaluator.cpp \
 	$(SOURCEDIR)/CNTK/BrainScript/BrainScriptParser.cpp \
 	$(SOURCEDIR)/../Tests/UnitTests/BrainScriptTests/ParserTests.cpp \
+	$(SOURCEDIR)/../Tests/UnitTests/BrainScriptTests/ComputationNetworkTests.cpp \
 	$(SOURCEDIR)/../Tests/UnitTests/BrainScriptTests/stdafx.cpp
 
-UNITTEST_BRAINSCRIPT_SRC+=$(COMMON_SRC)
+UNITTEST_BRAINSCRIPT_SRC += $(COMPUTATION_NETWORK_LIB_SRC)
+UNITTEST_BRAINSCRIPT_SRC += $(SEQUENCE_TRAINING_LIB_SRC)
 
-UNITTEST_BRAINSCRIPT_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(UNITTEST_BRAINSCRIPT_SRC))
+UNITTEST_BRAINSCRIPT_OBJ := $(patsubst %.cu, $(OBJDIR)/%.o, $(patsubst %.cpp, $(OBJDIR)/%.o, $(UNITTEST_BRAINSCRIPT_SRC)))
 
 UNITTEST_BRAINSCRIPT := $(BINDIR)/brainscripttests
 
 ALL += $(UNITTEST_BRAINSCRIPT)
 SRC += $(UNITTEST_BRAINSCRIPT_SRC)
 
-$(UNITTEST_BRAINSCRIPT): $(UNITTEST_BRAINSCRIPT_OBJ)
+$(UNITTEST_BRAINSCRIPT): $(UNITTEST_BRAINSCRIPT_OBJ) | $(CNTKMATH_LIB)
 	@echo $(SEPARATOR)
 	@mkdir -p $(dir $@)
 	@echo building $@ for $(ARCH) with build type $(BUILDTYPE)
-	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH) $(BOOSTLIB_PATH)) $(patsubst %, $(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH) $(BOOSTLIB_PATH)) -o $@ $^ $(BOOSTLIBS) $(LIBS) -ldl
+	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH) $(BOOSTLIB_PATH)) $(patsubst %, $(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH) $(BOOSTLIB_PATH)) -o $@ $^ $(BOOSTLIBS) $(LIBS) -ldl -l$(CNTKMATH)
 
 unittests: $(UNITTEST_EVAL) $(UNITTEST_READER) $(UNITTEST_NETWORK) $(UNITTEST_MATH) $(UNITTEST_BRAINSCRIPT)
 
