@@ -360,8 +360,11 @@ ParameterTensor {dims, learningRateMultiplier = 1.0, init = ''/*|uniform|fixedVa
 ConstantFromString(literal, tag='') = ParameterTensor((0)/*dim, will be inferred*/, initFromLiteral = literal, learningRateMultiplier = 0.0)
 # TODO: Deprecate ConstantFromString() in favor of Constant(array expression)
 DynamicAxis(tag='') = new ComputationNode [ operation = 'DynamicAxis' ; /*plus the function args*/  ]
-Input(dims, dynamicAxis='', tag='feature') = new ComputationNode [ operation = 'InputValue' ; shape = new TensorShape [ /*dims*/ ] ; isImage = false /*plus the function args*/ ]
+Input(dims, dynamicAxis='', sparse=false, tag='feature') =
+     if sparse then SparseInput(dims, dynamicAxis=dynamicAxis, tag=tag)
+     else new ComputationNode [ operation = 'InputValue' ; shape = new TensorShape [ /*dims*/ ] ; isImage = false /*plus the function args*/ ]
 # TODO: change from dynamicAxis by name to dynamicAxis being an actual object
+# the following variants of Input() are deprecated
 SparseInput(dims, dynamicAxis='', tag='feature') = new ComputationNode [ operation = 'SparseInputValue' ; shape = new TensorShape [ /*dims*/ ] ; isImage = false /*plus the function args*/ ]
 ImageInput(imageWidth, imageHeight, imageChannels, imageLayout='CHW', dynamicAxis='', tag='feature') = new ComputationNode [ operation = 'InputValue' ; isImage = true /*plus the function args*/ ]
 SparseImageInput(imageWidth, imageHeight, imageChannels, imageLayout='CHW', dynamicAxis='', tag='feature') = new ComputationNode [ operation = 'SparseInputValue' ; isImage = true /*plus the function args*/ ]

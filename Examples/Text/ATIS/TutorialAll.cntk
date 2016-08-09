@@ -1,29 +1,32 @@
 # The configuration file to build language understanding model with ATIS corpus.
 # An LSTM model is built to tag each word in sentences with its semantic label.
 
-WorkDir = work
-DataDir = data
-
 makeMode = false
-modelPath = $WorkDir$/ATIS.slot.lstm
+traceLevel = 1
+
+WorkDir = Work
+DataDir = Data
+
+modelPath = $WorkDir$/ATIS.slot.model
 parallelTrain = true
 
 #stderr = $WorkDir$/log
 
-command = Train:Output:Test
+command = TrainSlotTagger:Output:Test
 
 precision = "float"
-deviceId = "-1"        # change to "auto" to use GPUs
+deviceId = -1        # change to "auto" to use GPUs
 
-wordCount = 944    # number of words
-labelCount = 127   # number of labels 
+vocabSize = 944    # number of words
+numLabels = 127    # number of slot labels
+numIntents = 19    # number of intent labels
 
 # The command to train the LSTM model
-Train = [
-    action = train
+TrainSlotTagger = [
+    action = "train"
     BrainScriptNetworkBuilder = [
-        inputDim = $wordCount$
-        labelDim = $labelCount$
+        inputDim = $vocabSize$
+        labelDim = $numLabels$
         featDim = inputDim*3   # contextual words are used as features: previous word, current word, next word.
         embDim = 150
         hiddenDim = 300
@@ -60,10 +63,9 @@ Train = [
         outputs = W * LSTMoutput + b
         
         cr = CrossEntropyWithSoftmax(labels, outputs)
-        errs = ErrorPrediction(labels, outputs)
 
         criterionNodes = (cr)
-        evaluationNodes = (errs)
+        evaluationNodes = (cr)
         outputNodes = (outputs)
     ]
 
@@ -84,10 +86,9 @@ Train = [
         clippingThresholdPerSample = 15.0
 
         # number of minibatches to report progress
-        numMBsToShowResult = 100
-        
         firstMBsToShowResult = 10 
-        
+        numMBsToShowResult = 100
+
         # if validation shows that the model has no improvement, then do back-up to the previously
         # estimated model and reduce learning rate
         loadBestModel = true
@@ -109,23 +110,23 @@ Train = [
         input = [ 
             featuresPW = [ 
                 alias = "PW"    # previous word
-                dim = $wordCount$ 
+                dim = $vocabSize$ 
                 format = "sparse" 
             ] 
             featuresCW = [ 
                 alias = "CW"    # current word
-                dim = $wordCount$ 
+                dim = $vocabSize$ 
                 format = "sparse" 
             ]
             featuresNW = [ 
                 alias = "NW"    # next word
-                dim = $wordCount$ 
+                dim = $vocabSize$ 
                 format = "sparse" 
             ]            
             
             labels = [ 
                 alias = "L"     # label
-                dim = $labelCount$        
+                dim = $numLabels$        
                 format = "sparse" 
             ] 
         ]
@@ -156,23 +157,23 @@ Output = [
         input = [ 
             featuresPW = [ 
                 alias = "PW"    # previous word
-                dim = $wordCount$ 
+                dim = $vocabSize$ 
                 format = "sparse" 
             ] 
             featuresCW = [ 
                 alias = "CW"    # current word
-                dim = $wordCount$ 
+                dim = $vocabSize$ 
                 format = "sparse" 
             ]
             featuresNW = [ 
                 alias = "NW"    # next word
-                dim = $wordCount$ 
+                dim = $vocabSize$ 
                 format = "sparse" 
             ]            
             
             labels = [ 
                 alias = "L"     # label
-                dim = $labelCount$        
+                dim = $numLabels$        
                 format = "sparse" 
             ] 
         ]
@@ -188,13 +189,13 @@ Test = [
 
     defaultHiddenActivity = 0.1
     BrainScriptNetworkBuilder = [
-        labels = Input($labelCount$, tag = "label")
         modelAsTrained = BS.Network.Load ("$modelPath$")
+        labels = Input {$numLabels$, tag = "label"}
         final = Hardmax(modelAsTrained.outputs)
-        errorRate = ErrorPrediction(labels, final, tag='evaluation')
+        errs = ErrorPrediction(labels, final, tag='evaluation')
     ]
     
-    evalNodeNames  = errorRate
+    evalNodeNames  = errs
     
     reader = [
         readerType = "CNTKTextFormatReader" 
@@ -204,23 +205,23 @@ Test = [
         input = [ 
             featuresPW = [ 
                 alias = "PW"    # previous word
-                dim = $wordCount$ 
+                dim = $vocabSize$ 
                 format = "sparse" 
             ] 
             featuresCW = [ 
                 alias = "CW"    # current word
-                dim = $wordCount$ 
+                dim = $vocabSize$ 
                 format = "sparse" 
             ]
             featuresNW = [ 
                 alias = "NW"    # next word
-                dim = $wordCount$ 
+                dim = $vocabSize$ 
                 format = "sparse" 
             ]            
             
             labels = [ 
                 alias = "L"     # label
-                dim = $labelCount$        
+                dim = $numLabels$        
                 format = "sparse" 
             ] 
         ]
