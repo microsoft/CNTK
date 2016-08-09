@@ -1,7 +1,7 @@
 # The configuration file to build language understanding model with ATIS corpus.
 # An LSTM model is built to tag each word in sentences with its semantic label.
 
-makeMode = true ; traceLevel = 1 ; deviceId = -1
+makeMode = false ; traceLevel = 1 ; deviceId = -1
 
 WorkDir = Work
 DataDir = Data
@@ -15,7 +15,7 @@ command = TrainSlotTagger:RunSlotTagger:EvalSlotTagger
 
 vocabSize = 943    # number of words
 numLabels = 129    # number of slot labels
-numIntents = 19    # number of intent labels
+numIntents = 26    # number of intent labels
 
 # The command to train the LSTM model
 TrainSlotTagger = [
@@ -25,12 +25,13 @@ TrainSlotTagger = [
         labelDim = $numLabels$
         embDim = 150
         hiddenDim = 300
+        #hiddenDim = 150
 
         model = Sequential (
             Parallel ((DelayLayer{T=1} : Identity : DelayLayer{T=-1}), Splice) :  # 3-word window
             EmbeddingLayer {embDim} :                                             # embedding
-            #RecurrentLSTMLayer {hiddenDim} :              # LSTM
-            Parallel ((RecurrentLSTMLayer {hiddenDim} : RecurrentLSTMLayer {hiddenDim, goBackwards=true}), Splice) :  # bidirectional LSTM
+            RecurrentLSTMLayer {hiddenDim} :              # LSTM
+            #Parallel ((RecurrentLSTMLayer {hiddenDim} : RecurrentLSTMLayer {hiddenDim, goBackwards=true}), Splice) :  # bidirectional LSTM
             DenseLayer {labelDim, initValueScale=7}        # output layer
         )
 
@@ -47,6 +48,39 @@ TrainSlotTagger = [
 
         featureNodes    = (query)
         labelNodes      = (slotLabels)
+        criterionNodes  = (ce)
+        evaluationNodes = (errs)
+        outputNodes     = (z)
+    ]
+    # enable this one instead for intent classification
+    Intent_BrainScriptNetworkBuilder = [
+        inputDim = $vocabSize$
+        labelDim = $numIntents$
+        embDim = 150
+        hiddenDim = 300
+
+        model = Sequential (
+            Parallel ((DelayLayer{T=1} : Identity : DelayLayer{T=-1}), Splice) :  # 3-word window
+            EmbeddingLayer {embDim} :                                             # embedding
+            RecurrentLSTMLayer {hiddenDim} :               # LSTM
+            BS.Sequences.Last :                            # get last LSTM state
+            DenseLayer {labelDim, initValueScale=7}        # output layer
+        )
+
+        # features
+        t = DynamicAxis{}
+        query        = Input {inputDim, dynamicAxis=t}
+        intentLabels = Input {labelDim}
+
+        # model application
+        z = ReconcileDynamicAxis (model (query), intentLabels)
+
+        # loss and metric
+        ce   = CrossEntropyWithSoftmax (intentLabels, z)
+        errs = ErrorPrediction         (intentLabels, z)
+
+        featureNodes    = (query)
+        labelNodes      = (intentLabels)
         criterionNodes  = (ce)
         evaluationNodes = (errs)
         outputNodes     = (z)
@@ -93,7 +127,7 @@ TrainSlotTagger = [
         input = [
             query        = [ alias = "S0" ; dim = $vocabSize$ ;  format = "sparse" ]
             intentLabels = [ alias = "S1" ; dim = $numIntents$ ; format = "sparse" ]
-            slotLabels   = [ alias = "S2" ; dim = $numLabels$ ; format = "sparse" ]
+            slotLabels   = [ alias = "S2" ; dim = $numLabels$ ;  format = "sparse" ]
         ]
     ]
 ]
@@ -105,10 +139,15 @@ RunSlotTagger = [
         modelAsTrained = BS.Network.Load ("$modelPath$")
         final = Hardmax (modelAsTrained.z)  # make a decision
         labels = Pass (modelAsTrained.slotLabels)
+        # enable this for intent classification:
+        #labels = Pass (modelAsTrained.intentLabels)
+        #t = DynamicAxis()
     ]
 
     outputPath = $WorkDir$/model.writeaction
     outputNodeNames = slotLabels:final
+    # enable this for intent classification:
+    #outputNodeNames = intentLabels:final
 
     reader = [
         readerType = "CNTKTextFormatReader"
