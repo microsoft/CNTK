@@ -32,6 +32,7 @@ TrainSlotTagger = [
             EmbeddingLayer {embDim} :                                             # embedding
             RecurrentLSTMLayer {hiddenDim} :              # LSTM
             #Parallel ((RecurrentLSTMLayer {hiddenDim} : RecurrentLSTMLayer {hiddenDim, goBackwards=true}), Splice) :  # bidirectional LSTM
+            #Parallel ((RecurrentLSTMLayer {hiddenDim} : RecurrentLSTMLayer {hiddenDim, goBackwards=true}), Splice) :  # bidirectional LSTM
             DenseLayer {labelDim, initValueScale=7}        # output layer
         )
 
@@ -57,13 +58,21 @@ TrainSlotTagger = [
         inputDim = $vocabSize$
         labelDim = $numIntents$
         embDim = 150
-        hiddenDim = 300
+        #hiddenDim = 300
+        hiddenDim = 150
+
+        RecSplice (a2) = [ # splice with reconciliation
+            i1 = a2[0]
+            i2 = ReconcileDynamicAxis (a2[1], i1)
+            res = Splice (i1 : i2)
+        ].res
 
         model = Sequential (
             Parallel ((DelayLayer{T=1} : Identity : DelayLayer{T=-1}), Splice) :  # 3-word window
             EmbeddingLayer {embDim} :                                             # embedding
-            RecurrentLSTMLayer {hiddenDim} :               # LSTM
-            BS.Sequences.Last :                            # get last LSTM state
+            RecurrentLSTMLayer {hiddenDim} : BS.Sequences.Last :                  # LSTM state, final state
+            #Parallel ((Sequential (RecurrentLSTMLayer {hiddenDim}                  : BS.Sequences.Last):
+            #           Sequential (RecurrentLSTMLayer {hiddenDim, goBackwards=true}: BS.Sequences.First)), RecSplice) :  # bidirectional LSTM
             DenseLayer {labelDim, initValueScale=7}        # output layer
         )
 
@@ -89,6 +98,7 @@ TrainSlotTagger = [
     SGD = [
         # maximum number of epochs
         maxEpochs = 20   # set to 1 so this can be added to regression test. Increase to 20 get a good accuracy
+        #maxEpochs = 200   # set to 1 so this can be added to regression test. Increase to 20 get a good accuracy
 
         # for each epoch, maximum number of input samples(words) is set below
         epochSize = 36000
@@ -97,6 +107,7 @@ TrainSlotTagger = [
         minibatchSize = 70
 
         learningRatesPerSample = 0.01*2:0.005*12:0.001
+        #learningRatesPerSample = 0.01*20:0.005*120:0.001
         gradUpdateType = "FSAdaGrad"
 
         gradientClippingWithTruncation = true
