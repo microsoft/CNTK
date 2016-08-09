@@ -352,9 +352,9 @@ public:
         const auto endTime = seqDesc.tEnd;
 
         CheckWritable();
-        if ((ptrdiff_t) endTime <= beginTime)
+        if ((ptrdiff_t)endTime <= beginTime && m_numTimeSteps != 0)
             LogicError("AddSequence: Sequences must be a least one frame long.");
-        if (beginTime >= (ptrdiff_t) m_numTimeSteps) // no need to test endTime since it is always non-negative (size_t)
+        if (beginTime >= (ptrdiff_t)m_numTimeSteps && m_numTimeSteps != 0) // no need to test endTime since it is always non-negative (size_t)
             LogicError("AddSequence: Sequence added to an MBLayout must overlap with minibatch.");
 
         // remember it

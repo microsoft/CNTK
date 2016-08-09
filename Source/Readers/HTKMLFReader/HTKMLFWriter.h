@@ -16,16 +16,19 @@ template <class ElemType>
 class HTKMLFWriter : public IDataWriter
 {
 private:
-    std::vector<size_t> outputDims;
-    std::vector<std::vector<std::wstring>> outputFiles;
+    std::vector<std::vector<std::wstring>> m_outputFiles;
 
-    std::vector<size_t> udims;
-    std::map<std::wstring, size_t> outputNameToIdMap;
-    std::map<std::wstring, size_t> outputNameToDimMap;
-    std::map<std::wstring, size_t> outputNameToTypeMap;
+    std::vector<size_t> m_udims;
+    std::map<std::wstring, size_t> m_outputNameToIdMap;
+    std::map<std::wstring, size_t> m_outputNameToDimMap;
+    std::map<std::wstring, size_t> m_outputNameToTypeMap;
+
+    std::map<std::wstring, size_t> m_outputNameToTotalSamples;
+    std::map<std::wstring, vector<float>> m_outputNameToValues;
+
     unsigned int sampPeriod;
     size_t outputFileIndex;
-    void Save(std::wstring& outputFile, Matrix<ElemType>& outputData);
+    void Save(std::wstring& outputFile, vector<float>& outputData, const size_t dim, const size_t totalSamples);
     ElemType* m_tempArray;
     size_t m_tempArraySize;
 

@@ -64,6 +64,14 @@ public:
         size_t actualMBSize;
         while (DataReaderHelpers::GetMinibatchIntoNetwork<ElemType>(dataReader, m_net, nullptr, false, false, inputMatrices, actualMBSize, nullptr))
         {
+            //we don't have a way to sync utterance id for old reader/writer design.
+            //this actualMBSize == 0 is used to indicate the end of an utterance when minibatchSize < total size of data
+            if (actualMBSize == 0)  
+            {
+                dataWriter.SaveData(0, outputMatrices, actualMBSize, actualMBSize, 0);
+                continue;
+            }
+
             ComputationNetwork::BumpEvalTimeStamp(inputNodes);
 
             for (int i = 0; i < outputNodes.size(); i++)

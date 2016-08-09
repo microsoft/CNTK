@@ -47,7 +47,7 @@ void HTKMLFWriter<ElemType>::InitFromConfig(const ConfigRecordType& writerConfig
     {
         ConfigParameters thisOutput = writerConfig(outputNames[i]);
         if (thisOutput.Exists("dim"))
-            udims.push_back(thisOutput(L"dim"));
+            m_udims.push_back(thisOutput(L"dim"));
         else
             RuntimeError("HTKMLFWriter::Init: writer need to specify dim of output");
 
@@ -58,12 +58,15 @@ void HTKMLFWriter<ElemType>::InitFromConfig(const ConfigRecordType& writerConfig
         else
             RuntimeError("HTKMLFWriter::Init: writer needs to specify scpFile for output");
 
-        outputNameToIdMap[outputNames[i]] = i;
-        outputNameToDimMap[outputNames[i]] = udims[i];
+        m_outputNameToIdMap[outputNames[i]] = i;
+        m_outputNameToDimMap[outputNames[i]] = m_udims[i];
+        m_outputNameToTotalSamples[outputNames[i]] = 0;
+        m_outputNameToValues[outputNames[i]] = vector<float>();
+
         wstring type = thisOutput(L"type", "Real");
         if (type == L"Real")
         {
-            outputNameToTypeMap[outputNames[i]] = OutputTypes::outputReal;
+            m_outputNameToTypeMap[outputNames[i]] = OutputTypes::outputReal;
         }
         else
         {
@@ -91,7 +94,7 @@ void HTKMLFWriter<ElemType>::InitFromConfig(const ConfigRecordType& writerConfig
         else if (n != numFiles)
             RuntimeError("HTKMLFWriter:Init: number of files in each scriptfile inconsistent (%d vs. %d)", (int) numFiles, (int) n);
 
-        outputFiles.push_back(filelist);
+        m_outputFiles.push_back(filelist);
     }
     outputFileIndex = 0;
     sampPeriod = 100000;
@@ -111,45 +114,73 @@ void HTKMLFWriter<ElemType>::GetSections(std::map<std::wstring, SectionType, noc
 }
 
 template <class ElemType>
-bool HTKMLFWriter<ElemType>::SaveData(size_t /*recordStart*/, const std::map<std::wstring, void*, nocase_compare>& matrices, size_t /*numRecords*/, size_t /*datasetSize*/, size_t /*byteVariableSized*/)
+bool HTKMLFWriter<ElemType>::SaveData(size_t /*recordStart*/, const std::map<std::wstring, void*, nocase_compare>& matrices, size_t numRecords, size_t /*datasetSize*/, size_t /*byteVariableSized*/)
 {
 
     // std::map<std::wstring, void*, nocase_compare>::iterator iter;
-    if (outputFileIndex >= outputFiles[0].size())
+    if (outputFileIndex >= m_outputFiles[0].size())
         RuntimeError("index for output scp file out of range...");
 
-    for (auto iter = matrices.begin(); iter != matrices.end(); iter++)
+    if (numRecords == 0)  //indicate end of an utterance
     {
-        wstring outputName = iter->first;
-        Matrix<ElemType>& outputData = *(static_cast<Matrix<ElemType>*>(iter->second));
-        size_t id = outputNameToIdMap[outputName];
-        size_t dim = outputNameToDimMap[outputName];
-        wstring outFile = outputFiles[id][outputFileIndex];
+        for (auto iter = m_outputNameToValues.begin(); iter != m_outputNameToValues.end(); iter++)
+        {
+            wstring outputName = iter->first;
+            vector<float>& outputData = iter->second;
+            size_t id = m_outputNameToIdMap[outputName];
+            size_t dim = m_outputNameToDimMap[outputName];
+            size_t totalSamples = m_outputNameToTotalSamples[outputName];
+            wstring outFile = m_outputFiles[id][outputFileIndex];
 
-        assert(outputData.GetNumRows() == dim);
-        dim;
+            assert(dim * totalSamples == outputData.size());
+            dim;
+            Save(outFile, outputData, dim, totalSamples);
 
-        Save(outFile, outputData);
+            outputData.clear();
+            m_outputNameToTotalSamples[outputName] = 0;
+        }
+        outputFileIndex++;
+    }
+    else  //not end of an utterance, accumulate values
+    {
+        for (auto iter = matrices.begin(); iter != matrices.end(); iter++)
+        {
+            wstring outputName = iter->first;
+            Matrix<ElemType>& nodeValue = *(static_cast<Matrix<ElemType>*>(iter->second));
+            vector<float>& outputData = m_outputNameToValues[outputName];
+            size_t dim = m_outputNameToDimMap[outputName];
+
+            assert(dim == nodeValue.GetNumRows()); 
+            dim;
+
+            for (int j = 0; j < nodeValue.GetNumCols(); j++)
+            {
+                for (int i = 0; i < nodeValue.GetNumRows(); i++)
+                {
+                    outputData.push_back((float)nodeValue(i,j));
+                }
+            }
+
+            m_outputNameToTotalSamples[outputName] += nodeValue.GetNumCols();
+        }
     }
 
-    outputFileIndex++;
 
     return true;
 }
 
 template <class ElemType>
-void HTKMLFWriter<ElemType>::Save(std::wstring& outputFile, Matrix<ElemType>& outputData)
+void HTKMLFWriter<ElemType>::Save(std::wstring& outputFile, vector<float>& outputData, const size_t dim, const size_t totalSamples)
 {
-    msra::dbn::matrix output;
-    output.resize(outputData.GetNumRows(), outputData.GetNumCols());
-    outputData.CopyToArray(m_tempArray, m_tempArraySize);
-    ElemType* pValue = m_tempArray;
+    msra::dbn::matrix output;  //TODO: this extra copy is not needed. leave it for now.
+    output.resize(dim, totalSamples);
 
-    for (int j = 0; j < outputData.GetNumCols(); j++)
+    size_t k = 0;
+    for (size_t j = 0; j < totalSamples; j++)
     {
-        for (int i = 0; i < outputData.GetNumRows(); i++)
+        for (size_t i = 0; i < dim; i++)
         {
-            output(i, j) = (float) *pValue++;
+            output(i, j) = outputData[k++];
         }
     }
 

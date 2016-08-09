@@ -355,8 +355,12 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
         size_t n = 0;
         for (msra::files::textreader reader(scriptpath); reader && filelist.size() <= firstfilesonly /*optimization*/;)
         {
-            filelist.push_back(reader.wgetline());
-            n++;
+            wstring line = reader.wgetline();
+            if (!line.empty())
+            {
+                filelist.push_back(line);
+                n++;
+            }
         }
 
         fprintf(stderr, " %lu entries\n", n);
@@ -624,6 +628,8 @@ void HTKMLFReader<ElemType>::PrepareForWriting(const ConfigRecordType& readerCon
 
     GetDataNamesFromConfig(readerConfig, featureNames, labelNames, hmmNames, latticeNames);
 
+    m_frameMode = readerConfig(L"frameMode", false);
+
     foreach_index (i, featureNames)
     {
         const ConfigRecordType& thisFeature = readerConfig(featureNames[i]);
@@ -687,8 +693,12 @@ void HTKMLFReader<ElemType>::PrepareForWriting(const ConfigRecordType& readerCon
         size_t n = 0;
         for (msra::files::textreader reader(scriptpath); reader && filelist.size() <= firstfilesonly /*optimization*/;)
         {
-            filelist.push_back(reader.wgetline());
-            n++;
+            wstring line = reader.wgetline();
+            if (!line.empty())
+            {
+                filelist.push_back(line);
+                n++;
+            }
         }
 
         fprintf(stderr, " %d entries\n", (int) n);
@@ -876,6 +886,8 @@ void HTKMLFReader<ElemType>::StartMinibatchLoopToWrite(size_t mbSize, size_t /*e
     m_fileEvalSource->Reset();
     m_fileEvalSource->SetMinibatchSize(mbSize);
     m_inputFileIndex = 0;
+    m_numFramesToProcess[0] = 0;
+    m_processedFrame[0] = 0;
 
     if (m_featuresBufferMultiIO[0] != nullptr) // check first feature, if it isn't NULL, safe to assume all are not NULL?
     {
@@ -1566,47 +1578,58 @@ bool HTKMLFReader<ElemType>::GetMinibatchToWrite(StreamMinibatchInputs& matrices
 
     if (m_inputFileIndex < m_inputFilesMultiIO[0].size())
     {
-        m_fileEvalSource->Reset();
-
-        // load next file (or set of files)
-        size_t nfr = 0;
-        foreach_index (i, m_inputFilesMultiIO)
+        if (m_processedFrame[0] == m_numFramesToProcess[0] && m_numFramesToProcess[0] > 0) //end of utterence
         {
-            msra::asr::htkfeatreader reader;
-
-            const auto path = reader.parse(m_inputFilesMultiIO[i][m_inputFileIndex]);
-            // read file
-            msra::dbn::matrix feat;
-            string featkind;
-            unsigned int sampperiod;
-            msra::util::attempt(5, [&]()
-            {
-                reader.read(path, featkind, sampperiod, feat); // whole file read as columns of feature vectors
-            });
-
-            if (i == 0)
-            {
-                nfr = feat.cols();
-            }
-            else if (feat.cols() == 1 && nfr > 1)
-            { 
-                // This broadcasts a vector to be multiple columns, as needed for i-vector support
-                msra::dbn::matrix feat_col(feat);
-                feat.resize(feat.rows(), nfr);
-                for (size_t i = 0; i < feat.rows(); i++)
-                    for (size_t j = 0; j < feat.cols(); j++)
-                        feat(i, j) = feat_col(i, 0);
-            }
-
-            fprintf(stderr, "evaluate: reading %d frames of %ls\n", (int) feat.cols(), ((wstring) path).c_str());
-            m_fileEvalSource->AddFile(feat, featkind, sampperiod, i);
+            m_processedFrame[0] = m_numFramesToProcess[0] = 0;
+            m_inputFileIndex++;
         }
-        m_inputFileIndex++;
+        else if (m_numFramesToProcess[0] == 0)  //nothing loaded into memory
+        {
+            m_fileEvalSource->Reset();
 
-        // turn frames into minibatch (augment neighbors, etc)
-        m_fileEvalSource->CreateEvalMinibatch();
+            // load next file (or set of files)
+            size_t nfr = 0;
+            foreach_index(i, m_inputFilesMultiIO)
+            {
+                msra::asr::htkfeatreader reader;
+
+                const auto path = reader.parse(m_inputFilesMultiIO[i][m_inputFileIndex]);
+                // read file
+                msra::dbn::matrix feat;
+                string featkind;
+                unsigned int sampperiod;
+                msra::util::attempt(5, [&]()
+                {
+                    reader.read(path, featkind, sampperiod, feat); // whole file read as columns of feature vectors
+                });
+
+                if (i == 0)
+                {
+                    nfr = feat.cols();
+                    m_numFramesToProcess[0] = nfr;
+                }
+                else if (feat.cols() == 1 && nfr > 1)
+                {
+                    // This broadcasts a vector to be multiple columns, as needed for i-vector support
+                    msra::dbn::matrix feat_col(feat);
+                    feat.resize(feat.rows(), nfr);
+                    for (size_t i = 0; i < feat.rows(); i++)
+                        for (size_t j = 0; j < feat.cols(); j++)
+                            feat(i, j) = feat_col(i, 0);
+                }
+
+                fprintf(stderr, "evaluate: reading %d frames of %ls\n", (int)feat.cols(), ((wstring)path).c_str());
+                m_fileEvalSource->AddFile(feat, featkind, sampperiod, i);
+            }
+
+            // turn frames into minibatch (augment neighbors, etc)
+            m_fileEvalSource->CreateEvalMinibatch();
+        }
 
         // populate input matrices
+        size_t startFrame = m_processedFrame[0];  //only one utterance is allowed
+        size_t actualMBsize = startFrame + m_mbNumTimeSteps > m_numFramesToProcess[0] ? m_numFramesToProcess[0] - startFrame : m_mbNumTimeSteps;
+
         bool first = true;
         for (auto iter = matrices.begin(); iter != matrices.end(); iter++)
         {
@@ -1624,10 +1647,15 @@ bool HTKMLFReader<ElemType>::GetMinibatchToWrite(StreamMinibatchInputs& matrices
                 // update the MBLayout
                 if (first)
                 {
-                    m_pMBLayout->Init(1, feat.cols());
-                    m_pMBLayout->AddSequence(NEW_SEQUENCE_ID, 0, 0, feat.cols()); // feat.cols() == number of time steps here since we only have one parallel sequence
-                    // m_pMBLayout->Set(0, 0, MinibatchPackingFlags::SequenceStart);
-                    // m_pMBLayout->SetWithoutOr(0, feat.cols() - 1, MinibatchPackingFlags::SequenceEnd);  // BUGBUG: using SetWithoutOr() because original code did; but that seems inconsistent
+                    if (m_frameMode)
+                    {
+                        m_pMBLayout->InitAsFrameMode(actualMBsize);
+                    }
+                    else
+                    {
+                        m_pMBLayout->Init(1, actualMBsize);
+                        m_pMBLayout->AddSequence(NEW_SEQUENCE_ID, 0, -(ptrdiff_t)startFrame, m_numFramesToProcess[0] - startFrame);
+                    }
                     first = false;
                 }
 
@@ -1636,33 +1664,36 @@ bool HTKMLFReader<ElemType>::GetMinibatchToWrite(StreamMinibatchInputs& matrices
                 dim; // check feature dimension matches what's expected
 
                 if ((m_featuresBufferMultiIO[id] == nullptr) ||
-                    (m_featuresBufferAllocatedMultiIO[id] < (feat.rows() * feat.cols())) /*buffer size changed. can be partial minibatch*/)
+                    (m_featuresBufferAllocatedMultiIO[id] < (feat.rows() * actualMBsize)) /*buffer size changed. can be partial minibatch*/)
                 {
-                    m_featuresBufferMultiIO[id] = AllocateIntermediateBuffer(data.GetDeviceId(), feat.rows() * feat.cols());
-                    m_featuresBufferAllocatedMultiIO[id] = feat.rows() * feat.cols();
+                    m_featuresBufferMultiIO[id] = AllocateIntermediateBuffer(data.GetDeviceId(), feat.rows() * actualMBsize);
+                    m_featuresBufferAllocatedMultiIO[id] = feat.rows() * actualMBsize;
                 }
 
                 if (sizeof(ElemType) == sizeof(float))
                 {
-                    for (int j = 0; j < feat.cols(); j++) // column major, so iterate columns
+                    for (int j = 0; j < actualMBsize; j++) // column major, so iterate columns
                     {
                         // copy over the entire column at once, need to do this because SSEMatrix may have gaps at the end of the columns
-                        memcpy_s(&m_featuresBufferMultiIO[id].get()[j * feat.rows()], sizeof(ElemType) * feat.rows(), &feat(0, j), sizeof(ElemType) * feat.rows());
+                        memcpy_s(&m_featuresBufferMultiIO[id].get()[j * feat.rows()], sizeof(ElemType) * feat.rows(), &feat(0, j + startFrame), sizeof(ElemType) * feat.rows());
                     }
                 }
                 else
                 {
-                    for (int j = 0; j < feat.cols(); j++) // column major, so iterate columns in outside loop
+                    for (int j = 0; j < actualMBsize; j++) // column major, so iterate columns in outside loop
                     {
                         for (int i = 0; i < feat.rows(); i++)
                         {
-                            m_featuresBufferMultiIO[id].get()[j * feat.rows() + i] = feat(i, j);
+                            m_featuresBufferMultiIO[id].get()[j * feat.rows() + i] = feat(i, j + startFrame);
                         }
                     }
                 }
-                data.SetValue(feat.rows(), feat.cols(), data.GetDeviceId(), m_featuresBufferMultiIO[id].get(), matrixFlagNormal);
+
+                data.SetValue(feat.rows(), actualMBsize, data.GetDeviceId(), m_featuresBufferMultiIO[id].get(), matrixFlagNormal);
             }
         }
+        m_processedFrame[0] += actualMBsize;
+
         return true;
     }
     else
