@@ -261,10 +261,17 @@ class NDShape(_object):
 
     def __getitem__(self, i):
         return _cntk_py.NDShape___getitem__(self, i)
+
+    def __hash__(self):
+        return _cntk_py.NDShape___hash__(self)
     __swig_destroy__ = _cntk_py.delete_NDShape
     __del__ = lambda self: None
 NDShape_swigregister = _cntk_py.NDShape_swigregister
 NDShape_swigregister(NDShape)
+
+def NDShape_eq(first, second):
+    return _cntk_py.NDShape_eq(first, second)
+NDShape_eq = _cntk_py.NDShape_eq
 
 class NDArrayView(_object):
     __swig_setmethods__ = {}
@@ -827,6 +834,24 @@ def ReduceSum(*args):
     return _cntk_py.ReduceSum(*args)
 ReduceSum = _cntk_py.ReduceSum
 
+def PerDimMeanVarianceNormalize(*args):
+    return _cntk_py.PerDimMeanVarianceNormalize(*args)
+PerDimMeanVarianceNormalize = _cntk_py.PerDimMeanVarianceNormalize
+
+def Convolution(*args):
+    return _cntk_py.Convolution(*args)
+Convolution = _cntk_py.Convolution
+PoolingType_Max = _cntk_py.PoolingType_Max
+PoolingType_Average = _cntk_py.PoolingType_Average
+
+def Pooling(*args):
+    return _cntk_py.Pooling(*args)
+Pooling = _cntk_py.Pooling
+
+def BatchNormalization(*args):
+    return _cntk_py.BatchNormalization(*args)
+BatchNormalization = _cntk_py.BatchNormalization
+
 def Combine(*args):
     return _cntk_py.Combine(*args)
 Combine = _cntk_py.Combine
@@ -1012,6 +1037,9 @@ class StreamInfo(_object):
     if _newclass:
         m_sampleLayout = _swig_property(_cntk_py.StreamInfo_m_sampleLayout_get, _cntk_py.StreamInfo_m_sampleLayout_set)
 
+    def __hash__(self):
+        return _cntk_py.StreamInfo___hash__(self)
+
     def __init__(self):
         this = _cntk_py.new_StreamInfo()
         try:
@@ -1027,6 +1055,36 @@ StreamInfo_swigregister(StreamInfo)
 def __eq__(*args):
     return _cntk_py.__eq__(*args)
 __eq__ = _cntk_py.__eq__
+class MinibatchData(_object):
+    __swig_setmethods__ = {}
+    __setattr__ = lambda self, name, value: _swig_setattr(self, MinibatchData, name, value)
+    __swig_getmethods__ = {}
+    __getattr__ = lambda self, name: _swig_getattr(self, MinibatchData, name)
+    __repr__ = _swig_repr
+    __swig_setmethods__["m_numSequences"] = _cntk_py.MinibatchData_m_numSequences_set
+    __swig_getmethods__["m_numSequences"] = _cntk_py.MinibatchData_m_numSequences_get
+    if _newclass:
+        m_numSequences = _swig_property(_cntk_py.MinibatchData_m_numSequences_get, _cntk_py.MinibatchData_m_numSequences_set)
+    __swig_setmethods__["m_numSamples"] = _cntk_py.MinibatchData_m_numSamples_set
+    __swig_getmethods__["m_numSamples"] = _cntk_py.MinibatchData_m_numSamples_get
+    if _newclass:
+        m_numSamples = _swig_property(_cntk_py.MinibatchData_m_numSamples_get, _cntk_py.MinibatchData_m_numSamples_set)
+    __swig_setmethods__["m_data"] = _cntk_py.MinibatchData_m_data_set
+    __swig_getmethods__["m_data"] = _cntk_py.MinibatchData_m_data_get
+    if _newclass:
+        m_data = _swig_property(_cntk_py.MinibatchData_m_data_get, _cntk_py.MinibatchData_m_data_set)
+
+    def __init__(self):
+        this = _cntk_py.new_MinibatchData()
+        try:
+            self.this.append(this)
+        except __builtin__.Exception:
+            self.this = this
+    __swig_destroy__ = _cntk_py.delete_MinibatchData
+    __del__ = lambda self: None
+MinibatchData_swigregister = _cntk_py.MinibatchData_swigregister
+MinibatchData_swigregister(MinibatchData)
+
 class MinibatchSource(_object):
     __swig_setmethods__ = {}
     __setattr__ = lambda self, name, value: _swig_setattr(self, MinibatchSource, name, value)
@@ -1040,8 +1098,8 @@ class MinibatchSource(_object):
     def StreamInfos(self):
         return _cntk_py.MinibatchSource_StreamInfos(self)
 
-    def GetNextMinibatch(self, minibatchData):
-        return _cntk_py.MinibatchSource_GetNextMinibatch(self, minibatchData)
+    def GetNextMinibatch(self, *args):
+        return _cntk_py.MinibatchSource_GetNextMinibatch(self, *args)
     __swig_destroy__ = _cntk_py.delete_MinibatchSource
     __del__ = lambda self: None
 MinibatchSource_swigregister = _cntk_py.MinibatchSource_swigregister
@@ -1051,6 +1109,10 @@ MinibatchSource_swigregister(MinibatchSource)
 def CreateCompositeMinibatchSource(configuration):
     return _cntk_py.CreateCompositeMinibatchSource(configuration)
 CreateCompositeMinibatchSource = _cntk_py.CreateCompositeMinibatchSource
+
+def ComputeInputPerDimMeansAndInvStdDevs(*args):
+    return _cntk_py.ComputeInputPerDimMeansAndInvStdDevs(*args)
+ComputeInputPerDimMeansAndInvStdDevs = _cntk_py.ComputeInputPerDimMeansAndInvStdDevs
 class Callback(_object):
     __swig_setmethods__ = {}
     __setattr__ = lambda self, name, value: _swig_setattr(self, Callback, name, value)
@@ -1124,6 +1186,12 @@ Placeholder.__eq__ = lambda a,b: Variable_eq(a,b)
 
 
 Parameter.__eq__ = lambda a,b: Variable_eq(a,b)
+
+
+NDShape.__eq__ = lambda a,b: NDShape_eq(a,b)
+
+
+StreamInfo.__eq__ = lambda a,b: a.m_name==b.m_name and a.m_id==b.m_id and a.m_storageFormat==b.m_storageFormat and a.m_elementType==b.m_elementType and a.m_sampleLayout.Dimensions()==b.m_sampleLayout.Dimensions()
 
 # This file is compatible with both classic and new-style classes.
 

@@ -30,20 +30,14 @@
 %rename(EQ) operator==(const DATA_TYPE&, const DATA_TYPE&);
 %enddef
 
-%extend CNTK::Variable {
-    const size_t __hash__() {
-        return std::hash<CNTK::Variable>()(*$self);
-    }
-}
-
-
 %eq_for(Variable, Variable_eq)
 %eq_for(Constant, Variable_eq)
 %eq_for(Placeholder, Variable_eq)
 %eq_for(Parameter, Variable_eq)
+%eq_for(NDShape, NDShape_eq)
 
 
- %extend CNTK::Dictionary {
+%extend CNTK::Dictionary {
     CNTK::DictionaryValue __getitem__(const wchar_t* key) {
         return (*($self))[key];
     }
@@ -284,17 +278,17 @@
 
 
 //
-// Converting Python dictionary {StreamInfo: (mbsize, Value)} to std::unordered_map<CNTK::StreamInfo, std::pair<size_t, CNTK::ValuePtr>>&
+// Converting Python dictionary {StreamInfo: (mbsize, Value)} to std::unordered_map<CNTK::StreamInfo, std::pair<size_t, size_t>>&
 //
-%typecheck(1000)  std::unordered_map<CNTK::StreamInfo, std::pair<size_t, CNTK::ValuePtr>>& {
+%typecheck(1000)  std::unordered_map<CNTK::StreamInfo, std::pair<size_t, size_t>>& {
     // '1000' is the typecheck precedence code. It means: check after basic
     // types, but before arrays. See: http://www.swig.org/Doc1.3/Typemaps.html#Typemaps_overloading
     $1 = PyDict_Check($input) ? 1 : 0;
 }
 
-%typemap(in)  std::unordered_map<CNTK::StreamInfo, std::pair<size_t, CNTK::ValuePtr>>& {
+%typemap(in)  std::unordered_map<CNTK::StreamInfo, std::pair<size_t, size_t>>& {
      if (PyDict_Check($input)) {
-         std::unordered_map<CNTK::StreamInfo, std::pair<size_t, CNTK::ValuePtr>>* args_map = new  std::unordered_map<CNTK::StreamInfo, std::pair<size_t, CNTK::ValuePtr>>();
+         std::unordered_map<CNTK::StreamInfo, std::pair<size_t, size_t>>* args_map = new  std::unordered_map<CNTK::StreamInfo, std::pair<size_t, size_t>>();
 
         PyObject *key, *value;
         Py_ssize_t pos = 0;
@@ -317,19 +311,8 @@
                 PyObject* first = PyTuple_GET_ITEM(value, 0);
                 size_t first_val = PyLong_AsSize_t(first);                
                 PyObject* second = PyTuple_GET_ITEM(value, 1);        
-                int res2 = SWIG_ConvertPtr(second, &raw_value, SWIGTYPE_p_std__shared_ptrT_CNTK__Value_t,  0);    
-                if (!SWIG_IsOK(res2)) {
-                    SWIG_exception_fail(SWIG_ArgError(res2), "cannot convert value of dictionary to CNTK::ValuePtr"); 
-                }   
-
-                CNTK::ValuePtr* second_val;
-                if (raw_value) {
-                    second_val = reinterpret_cast<CNTK::ValuePtr*>(raw_value);
-                } else {
-                    // We got an empty ValuePtr, which carries a nullptr.
-                    second_val = new CNTK::ValuePtr();
-                }                
-                args_map->insert(std::make_pair(*var, std::make_pair(first_val, *second_val)));
+                size_t second_val = PyLong_AsSize_t(second);
+                args_map->insert(std::make_pair(*var, std::make_pair(first_val, second_val)));
             } else {
                 SWIG_exception(SWIG_TypeError, "tuple expected");
             }
@@ -340,66 +323,6 @@
      } else {
          SWIG_exception(SWIG_TypeError, "dictionary expected");
      }
-}
-
-// For the output dict (the non-const unordered_map) we need to get the
-// modified values and put them back into the dictionary. This is used, when
-// e.g. the user puts a variable into the dictionary, hoping that it will
-// afterwards point to the proper value.
-%typemap(argout) std::unordered_map<CNTK::StreamInfo, std::pair<size_t, CNTK::ValuePtr>>& {
-     if (!PyDict_Check($input)) {
-         SWIG_exception(SWIG_TypeError, "dictionary expected");
-     }
-
-     for (auto it: *$1)
-     {
-        // Convert StreamInfo to PyObject
-        PyObject *returned_var = SWIG_NewPointerObj(SWIG_as_voidptr(&it.first), SWIGTYPE_p_CNTK__StreamInfo, SWIG_POINTER_NOSHADOW);
-
-        // Push the ValuePtr onto the heap so that it survives
-
-        size_t * smartresult1 = it.second.first ? &it.second.first : 0;
-        PyObject *returned_val1 = SWIG_NewPointerObj(SWIG_as_voidptr(smartresult1), SWIGTYPE_p_size_type, 0);
-
-        std::shared_ptr<CNTK::Value> *smartresult2 = it.second.second ? new std::shared_ptr<CNTK::Value>(it.second.second) : 0;
-        PyObject *returned_val2 = SWIG_NewPointerObj(SWIG_as_voidptr(smartresult2), SWIGTYPE_p_std__shared_ptrT_CNTK__Value_t, SWIG_POINTER_OWN);
-
-        // Find the corresponding Variable instance in the Python dictionary
-        // and set its value to the new ValuePtr
-
-        /* FIXME We would love to do the following, but the hashing does not
-         * correctly work here, which is why we never find the keys. Instead,
-         * we will for now loop over the dictionary and use C++ comparison.
-         * Although not beautiful, there should not be a lot of overhead since
-         * the dictionary usually contains only a handful of variables as keys.
-        if (PyDict_Contains($input, returned_var))
-        {
-            SWIG_exception_fail(SWIG_ValueError, "returned output map contains unknown key");
-        }
-         */
-
-        PyObject *py_key, *py_value;
-        Py_ssize_t pos = 0;
-
-        while (PyDict_Next($input, &pos, &py_key, &py_value)) {
-            void *cntk_key = 0 ;
-            int res = SWIG_ConvertPtr(py_key, &cntk_key, SWIGTYPE_p_CNTK__StreamInfo,  0);
-            if (!SWIG_IsOK(res)) {
-                SWIG_exception_fail(SWIG_ArgError(res), "cannot convert key of dictionary to CNTK::StreamInfo"); 
-            }
-            if (!cntk_key) {
-                SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting key of dictionary to CNTK::StreamInfo");
-            }
-
-            CNTK::StreamInfo* cntk_var = reinterpret_cast<CNTK::StreamInfo*>(cntk_key);
-            if (*cntk_var == *&it.first)
-            {
-                PyDict_SetItem($input, py_key, PyTuple_Pack(2, returned_val1, returned_val2));
-                // FIXME is this necessary?
-                Py_INCREF(returned_val2);
-            }
-        }
-    }
 }
 
 
@@ -723,6 +646,37 @@
 
 %unordered_set_ref_conversion(StreamInfo, SWIGTYPE_p_CNTK__StreamInfo)
 
+// Unordered map conversion
+
+%define %unordered_map_conversion(DATA_TYPE1, _SWIG_TYPE1, DATA_TYPE2, _SWIG_TYPE2)
+
+%typemap(out) std::unordered_map<CNTK::DATA_TYPE1, CNTK::DATA_TYPE2> {
+    PyObject* container = PyDict_New();
+    if (container == NULL)
+    {
+        SWIG_exception(SWIG_RuntimeError, "error passing dictionary to Python");
+    }
+ 
+    // *&$1 -> $1 is the returned result being converted (unordered_map<...>*),
+    // wrapped by SwigValueWrapper. So we need to unwrap it using '&', 
+    // then access its value using '*'.
+    for (auto it : *&$1)
+    {        
+        PyObject *returned_var = SWIG_NewPointerObj(SWIG_as_voidptr(new CNTK::DATA_TYPE1(it.first)), _SWIG_TYPE1, SWIG_POINTER_OWN);
+        PyObject *returned_val = SWIG_NewPointerObj(SWIG_as_voidptr(new CNTK::DATA_TYPE2(it.second)), _SWIG_TYPE2, SWIG_POINTER_OWN);
+        
+        PyDict_SetItem(container, returned_var, returned_val);        
+    }
+
+    Py_INCREF(container);
+
+    $result = container;
+}
+%enddef
+
+%unordered_map_conversion(StreamInfo, SWIGTYPE_p_CNTK__StreamInfo, MinibatchData, SWIGTYPE_p_CNTK__MinibatchData);
+
+
 %shared_ptr(CNTK::Function)
 %shared_ptr(CNTK::NDArrayView)
 %shared_ptr(CNTK::Value)
@@ -912,5 +866,18 @@ DATA_TYPE.__eq__ = lambda a,b: EQ(a,b)
 %py_hash_for(Constant, Variable_eq)
 %py_hash_for(Placeholder, Variable_eq)
 %py_hash_for(Parameter, Variable_eq)
+%py_hash_for(NDShape, NDShape_eq)
+
+
+%pythoncode %{
+StreamInfo.__eq__ = lambda a,b: a.m_name==b.m_name and a.m_id==b.m_id and a.m_storageFormat==b.m_storageFormat and a.m_elementType==b.m_elementType and a.m_sampleLayout.Dimensions()==b.m_sampleLayout.Dimensions()
+%}
+
+%extend CNTK::StreamInfo {
+    const size_t __hash__() {
+        return std::hash<CNTK::StreamInfo>()(*$self);
+    }
+}
+
 
 

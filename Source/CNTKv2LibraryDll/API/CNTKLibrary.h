@@ -1103,6 +1103,15 @@ namespace CNTK
 }
 
 namespace std {
+    
+    template <> struct hash<CNTK::NDShape>
+    {
+        size_t operator()(const CNTK::NDShape& x) const
+        {
+            return std::hash<std::wstring>()(x.AsString());
+        }
+    };
+
     template <> struct hash<CNTK::Axis>
     {
         size_t operator()(const CNTK::Axis& x) const

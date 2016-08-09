@@ -92,29 +92,26 @@ if __name__=='__main__':
     cm = cntk_py.CreateCompositeMinibatchSource(minibatchSourceConfiguration)
         
     streamInfos = cm.StreamInfos();    
-
-    minibatchData = dict()    
-    minibatchData[streamInfos[0]] = (minibatch_size, None)
-    minibatchData[streamInfos[1]] = (minibatch_size, None)
+    
+    minibatchSizeLimits = dict()    
+    minibatchSizeLimits[streamInfos[0]] = (0,minibatch_size)
+    minibatchSizeLimits[streamInfos[1]] = (0,minibatch_size)
                 
+    mb=cm.GetNextMinibatch(minibatchSizeLimits, dev)
+      
     trainer = cntk_py.Trainer(ffnet, ce.Output(), [cntk_py.SGDLearner(ffnet.Parameters(), lr)])          
-
+    
     for i in range(0,int(num_minibatches_to_train)):    
-            
-        # TODO: Fix this, for some reason we need to reset minibatch_size in the dictionary becuase
-        # it is getting messed up by SWIG resulting in the following CNTK error:
-        # "Different minibatch sizes across different input streams is currently unsupported!"
-        # it should be an easy fix in SWIG
-        minibatchData[streamInfos[0]] = (minibatch_size, minibatchData[streamInfos[0]][1])
-        minibatchData[streamInfos[1]] = (minibatch_size, minibatchData[streamInfos[1]][1])        
-                
-        cm.GetNextMinibatch(minibatchData)
+        a=cm.GetNextMinibatch(minibatchSizeLimits, dev)
+
+        
         arguments = dict()
-        arguments[input] = minibatchData[streamInfos[0]][1]
-        arguments[label] = minibatchData[streamInfos[1]][1]
+        arguments[input] = mb[streamInfos[0]].m_data
+        arguments[label] = mb[streamInfos[1]].m_data
 
         
         trainer.TrainMinibatch(arguments, dev)
         freq = 20
         if i % freq == 0:
             print(str(i+freq) + ": " + str(trainer.PreviousMinibatchTrainingLossValue().Data().ToNumPy()))
+    
