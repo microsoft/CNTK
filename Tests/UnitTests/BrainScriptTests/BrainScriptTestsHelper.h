@@ -42,7 +42,7 @@ public:
         {
             if (boost::filesystem::is_regular_file(*it) && it->path().extension() == extension)
             {
-                listOfFiles.push_back(it->path().c_str());
+                listOfFiles.push_back(it->path().wstring());
             }
             ++it;
         }

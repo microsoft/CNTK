@@ -66,7 +66,6 @@
       <AdditionalDependencies>ComputationNetworkLib.lib;Common.lib;Math.lib;kernel32.lib;user32.lib;shell32.lib;SequenceTrainingLib.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalLibraryDirectories>$(MSMPI_LIB64);$(OutDir)..;$(BOOST_LIB_PATH);</AdditionalLibraryDirectories>
-	  <DelayLoadDLLs>math.dll;msmpi.dll</DelayLoadDLLs>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="$(DebugBuild)">
@@ -90,11 +89,10 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="$(GpuBuild)">
     <ClCompile>
-      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(CudaInclude)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories);$(CudaLibPath)</AdditionalLibraryDirectories>
-      <DelayLoadDLLs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">%(DelayLoadDLLs);nvml.dll;$(CudaRuntimeDll)</DelayLoadDLLs>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="$(CpuOnlyBuild)">
@@ -124,5 +122,16 @@
   </ImportGroup>
   <Target Name="CheckDependencies">
     <Warning Condition="!$(HasBoost)" Text="BrainScriptTests requires the Boost library to build. Please see https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Windows#boost for installation instructions." />
+  </Target>
+  <Target Name="CopyUnitTestDependencies" AfterTargets="Build">
+    <PropertyGroup>
+      <CuDnnDll Condition="$(GpuBuild) And Exists('$(OutDir)..\cudnn64_4.dll')">$(OutDir)..\cudnn64_4.dll</CuDnnDll>
+    </PropertyGroup>
+    <ItemGroup>
+      <UnitTestDependencies Include="$(OutDir)..\Math.dll;$(CuDnnDll);$(UnitTestDlls)" />
+    </ItemGroup>
+    <Copy SourceFiles="@(UnitTestDependencies)" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true">
+      <Output TaskParameter="DestinationFiles" ItemName="NewFileWrites" />
+    </Copy>
   </Target>
 </Project>
