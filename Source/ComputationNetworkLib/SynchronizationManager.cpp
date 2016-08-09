@@ -405,9 +405,6 @@ template<typename ElemType> void SynchronizationManager<ElemType>::GatherRuntime
         // we have to do this, otherwise the calls will be aborted because the values were already
         // calculated. This is at least so for GEMM operations.
         Matrix<ElemType> *output = (Matrix<ElemType>*)node->ValuePtr().get(); 
-        ElemType *data = output->Data();
-        CUDA_CALL(cudaMemset(data, 0, output->BufferSize()));
-        CUDA_CALL(cudaDeviceSynchronize());
 
         m_timer.tick(name);
         if(isForward)
@@ -419,6 +416,10 @@ template<typename ElemType> void SynchronizationManager<ElemType>::GatherRuntime
             node->BackpropToSpecialization(idx, fr);
         }
         m_timer.tick(name);
+
+        ElemType *data = output->Data();
+        CUDA_CALL(cudaMemset(data, 0, output->BufferSize()));
+        CUDA_CALL(cudaDeviceSynchronize());
 
     }
 
