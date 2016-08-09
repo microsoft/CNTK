@@ -71,6 +71,8 @@ RUN OPENBLAS_VERSION=0.2.18 && \
     make PREFIX=/usr/local/openblas install && \
     rm -rf /OpenBLAS-${OPENBLAS_VERSION}
 
+ENV LD_LIBRARY_PATH /usr/local/openblas/lib:$LD_LIBRARY_PATH
+
 # Install Boost
 RUN BOOST_VERSION=1_60_0 && \
     BOOST_DOTTED_VERSION=$(echo $BOOST_VERSION | tr _ .) && \
@@ -89,7 +91,6 @@ RUN pip install pytest sphinx-rtd-theme Pillow
 
 ENV BLAS=/usr/local/openblas/lib/libopenblas.so
 ENV LAPACK=/usr/local/openblas/lib/libopenblas.so
-ENV LD_LIBRARY_PATH=/usr/local/openblas/lib:/usr/local/lib:$LD_LIBRARY_PATH
 
 RUN SCIPY_VERSION=0.18.0 && \
     wget -q -O - https://github.com/scipy/scipy/releases/download/v${SCIPY_VERSION}/scipy-${SCIPY_VERSION}.tar.gz | tar -zxf - && \
