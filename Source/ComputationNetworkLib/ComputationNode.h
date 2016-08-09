@@ -725,15 +725,15 @@ public:
         bool isFloat = SynchronizationManager<float>::GetSynchronizationManager()->m_isFloat;
 
        if(isFloat)
-          SynchronizationManager<float>::GetSynchronizationManager()->BeginSynchronizeState(this, (size_t)0, fr, false);
+          SynchronizationManager<float>::GetSynchronizationManager()->BeginSynchronizeState(this, inputIndex, fr, false);
        else
-          SynchronizationManager<double>::GetSynchronizationManager()->BeginSynchronizeState(this, (size_t)0, fr, false);
+          SynchronizationManager<double>::GetSynchronizationManager()->BeginSynchronizeState(this, inputIndex, fr, false);
  
         BackpropToSpecialization(inputIndex, fr);
        if(isFloat)
-          SynchronizationManager<float>::GetSynchronizationManager()->EndSynchronizeState(this, (size_t)0, fr, false);
+          SynchronizationManager<float>::GetSynchronizationManager()->EndSynchronizeState(this, inputIndex, fr, false);
        else
-          SynchronizationManager<double>::GetSynchronizationManager()->EndSynchronizeState(this, (size_t)0, fr, false);
+          SynchronizationManager<double>::GetSynchronizationManager()->EndSynchronizeState(this, inputIndex, fr, false);
 
     }
 

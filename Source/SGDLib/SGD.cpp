@@ -300,6 +300,9 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
     sync->m_useMemorySwapping = false;
     sync->m_isInTrainingMode = true;
 
+
+
+
     // precompute mean and invStdDev nodes and save initial model
     // When no precompute, only save if we did not load the model from a 
     // checkpoint but instead built it from a network description
@@ -478,6 +481,8 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
 
         if(!sync->IsExecuting() && sync->m_useMemorySwapping)
         {
+            int traceLevelTemp = m_traceLevel;
+            m_traceLevel = 0;
             double prevCriterion = numeric_limits<double>::infinity();
             if (m_mpi != nullptr){ m_mpi->WaitAll(); }
             if ((m_mpi == nullptr) || m_mpi->IsMainNode())
@@ -500,8 +505,10 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                                         smoothedGradients,
                                         /*out*/ epochCriterion, /*out*/ epochEvalErrors,
                                         "Memory swapping dry run:");
+            ComputationNetwork::SetDropoutRate<ElemType>(net, criterionNodes[0], m_dropoutRates[i], prevDropoutRate, dropoutRandSeedBase);
 
             cout << "LOADED NETWORK: Name: " << name << endl;
+            m_traceLevel = traceLevelTemp;
         }
 
 
@@ -990,36 +997,36 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                     ComputationNetwork::BumpEvalTimeStamp(labelNodes);
                 }
 
-                if(ismb == 0 && numMBsRun == 0 && !sync->IsExecuting() && sync->m_useMemorySwapping)
-                {
-                    // we produce 100 gradients during the swap in/out sampling and because we apply gradients via
-                    // learning rate per sample this will move the weights in the wrong direction
-                    // solution: we set the learning rate to 0 for the swapping process and then reset it to its original value
-                    double *ptr = (double*)(&learnRatePerSample);
-                    // we produce a lot of gradients in memory swapping,
-                    // by setting the learning rate to zero we ensure that these gradients do not affect the results
-                    *ptr = 0.0; 
+                //if(ismb == 0 && numMBsRun == 0 && !sync->IsExecuting() && sync->m_useMemorySwapping)
+                //{
+                //    // we produce 100 gradients during the swap in/out sampling and because we apply gradients via
+                //    // learning rate per sample this will move the weights in the wrong direction
+                //    // solution: we set the learning rate to 0 for the swapping process and then reset it to its original value
+                //    double *ptr = (double*)(&learnRatePerSample);
+                //    // we produce a lot of gradients in memory swapping,
+                //    // by setting the learning rate to zero we ensure that these gradients do not affect the results
+                //    *ptr = 0.0; 
 
-                    fprintf(stderr, "Begin benchmarking for memory swapping...\n");
+                //    fprintf(stderr, "Begin benchmarking for memory swapping...\n");
 
-                    //forward + backward pass for the synchronization manager
-                    net->ForwardProp(evaluationNodes);
-                    net->ForwardProp(criterionNodes[0]);
-                    // swapping in backwards pass only possible, if gradients are computing
-                    if (learnRatePerSample > 0.01 * m_minLearnRate) 
-                        net->Backprop(criterionNodes[0]);
+                //    //forward + backward pass for the synchronization manager
+                //    net->ForwardProp(evaluationNodes);
+                //    net->ForwardProp(criterionNodes[0]);
+                //    // swapping in backwards pass only possible, if gradients are computing
+                //    if (learnRatePerSample > 0.01 * m_minLearnRate) 
+                //        net->Backprop(criterionNodes[0]);
 
-                    fprintf(stderr, "Memory swapping benchmarking complete!\n");
-                    reloadBatch = true;
-                }
-                else
-                {
-                    // reset the learning rate to its original value
-                    double *ptr = (double*)(&learnRatePerSample);
-                    *ptr = learningRateTemp;
-                    reloadBatch = false;
+                //    fprintf(stderr, "Memory swapping benchmarking complete!\n");
+                //    reloadBatch = true;
+                //}
+                //else
+                //{
+                //    // reset the learning rate to its original value
+                //    double *ptr = (double*)(&learnRatePerSample);
+                //    *ptr = learningRateTemp;
+                //    reloadBatch = false;
 
-                }
+                //}
 
                 // ===========================================================
                 // forward prop for evaluate eval nodes
@@ -1141,11 +1148,17 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                 if (node->IsParameterUpdateRequired())
                 {
                     Matrix<ElemType>& smoothedGradient = *smoothedGradientIter;
+                    
+
+                   if(!sync->IsExecuting() && sync->m_useMemorySwapping)
+                    smoothedGradient.SetValue(0);
 #ifdef _DEBUG
                     if (smoothedGradient.HasNan("TrainOneEpoch/UpdateWeights(): "))
                         LogicError("%ls %ls operation has NaNs in smoothedGradient.", node->NodeName().c_str(), node->OperationName().c_str());
 #endif
                     // BUGBUG (Issue #95): Access to net MBLayout can no longer be done if we have multiple input layouts
+                    
+                   if(!sync->m_useMemorySwapping || (sync->IsExecuting() && sync->m_useMemorySwapping))
                     UpdateWeights(node, smoothedGradient, learnRatePerSample,
                                   GetMomentumPerSample(epochNumber /*BUGBUG workaround:*/, net->GetMBLayoutPtrOfNetwork()->GetNumParallelSequences()), numSamplesInMinibatch,
                                   m_L2RegWeight, m_L1RegWeight,
