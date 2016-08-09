@@ -588,6 +588,9 @@ public:
                                     const int startLbl, // the time 0 start symbol in the output layer
                                     const int shift);
 
+public:
+	Matrix<ElemType>& AssignReshapeOf(const Matrix<ElemType>& a);
+	Matrix<ElemType>& AssignInvReshapeOf(const Matrix<ElemType>& a);
     template <typename T>
     friend class MatrixQuantizer;
 

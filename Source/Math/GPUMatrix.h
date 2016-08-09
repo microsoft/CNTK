@@ -540,6 +540,10 @@ public:
     GPUMatrix<ElemType>& AssignElementProductOfWithShift(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, const size_t shift);
 
 public:
+	GPUMatrix<ElemType>& AssignReshapeOf(const GPUMatrix<ElemType>& a);
+	GPUMatrix<ElemType>& AssignInvReshapeOf(const GPUMatrix<ElemType>& a);
+
+public:
     static void RCRFBackwardCompute(
         const GPUMatrix<ElemType>& alpha, GPUMatrix<ElemType>& beta,
         const GPUMatrix<ElemType>& lbls,

@@ -524,6 +524,39 @@ __global__ void _addToRowRepeatValuesOf(ElemType* dest, ElemType* src, const CUD
 }
 
 template <class ElemType>
+__global__ void _assignReshapeOf(ElemType* dest, ElemType* src, const CUDA_LONG N, const CUDA_LONG srcRows, const CUDA_LONG srcCols, const CUDA_LONG destRows)
+{
+	CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+	if (id >= N)
+		return;
+
+	CUDA_LONG numSequence = srcRows * srcCols / destRows;
+	CUDA_LONG destCol = id / destRows;
+	CUDA_LONG destRow = id - (destCol * destRows);
+
+	CUDA_LONG srcRow = destRow % srcRows;
+	CUDA_LONG srcCol = (destRow / srcRows) * numSequence + destCol;
+
+	dest[id] = src[IDX2C(srcRow, srcCol, srcRows)];
+}
+
+template <class ElemType>
+__global__ void _assignInvReshapeOf(ElemType* dest, ElemType* src, const CUDA_LONG N, const CUDA_LONG srcRows, const CUDA_LONG srcCols, const CUDA_LONG destRows)
+{
+	CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+	if (id >= N)
+		return;
+
+	CUDA_LONG destCol = id / destRows;
+	CUDA_LONG destRow = id - (destCol * destRows);
+
+	CUDA_LONG srcRow = (destCol / srcCols) * destRows + destRow;
+	CUDA_LONG srcCol = destCol % srcCols;
+
+	dest[id] = src[IDX2C(srcRow, srcCol, srcRows)];
+}
+
+template <class ElemType>
 __global__ void _assignPositiveAndShiftedNegSample(ElemType* dest, const ElemType* src, const CUDA_LONG N, const CUDA_LONG srcRows, const CUDA_LONG srcCols, const CUDA_LONG destRows, const CUDA_LONG posNumber, const CUDA_LONG shiftNumber)
 {
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;

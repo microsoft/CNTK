@@ -784,6 +784,44 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignRepeatOf(const GPUMatrix<ElemTyp
 }
 
 template <class ElemType>
+GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignReshapeOf(const GPUMatrix<ElemType>& a)
+{
+
+	if (a.IsEmpty())
+		LogicError("AssignRepeatOf: Matrix a is empty.");
+
+	if (a.GetNumRows() % GetNumCols() != 0)
+		LogicError("AssignReshapeOf: numRow of Matrix a should be multiple of target cols.");
+
+	CUDA_LONG N = (CUDA_LONG)GetNumElements();
+	CUDA_LONG n = (CUDA_LONG)a.GetNumCols(), m = (CUDA_LONG)a.GetNumRows();
+	int blocksPerGrid = (int)ceil(1.0 * N / GridDim::maxThreadsPerBlock);
+	PrepareDevice();
+	SyncGuard syncGuard;
+	_assignReshapeOf<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> >(Data(), a.Data(), N, m, n, (CUDA_LONG)GetNumRows());
+	return *this;
+}
+
+template <class ElemType>
+GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignInvReshapeOf(const GPUMatrix<ElemType>& a)
+{
+
+	if (a.IsEmpty())
+		LogicError("AssignRepeatOf: Matrix a is empty.");
+
+	if (a.GetNumRows() % GetNumCols() != 0)
+		LogicError("AssignReshapeOf: numRow of Matrix a should be multiple of target cols.");
+
+	CUDA_LONG N = (CUDA_LONG)GetNumElements();
+	CUDA_LONG n = (CUDA_LONG)a.GetNumCols(), m = (CUDA_LONG)a.GetNumRows();
+	int blocksPerGrid = (int)ceil(1.0 * N / GridDim::maxThreadsPerBlock);
+	PrepareDevice();
+	SyncGuard syncGuard;
+	_assignInvReshapeOf<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> >(Data(), a.Data(), N, m, n, (CUDA_LONG)GetNumRows());
+	return *this;
+}
+
+template <class ElemType>
 GPUMatrix<ElemType>& GPUMatrix<ElemType>::AddToRowRepeatValuesOf(const GPUMatrix<ElemType>& a, const size_t numRepeats)
 {
     if (a.IsEmpty())

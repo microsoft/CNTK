@@ -521,6 +521,70 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignRepeatOf(const CPUMatrix<ElemTyp
 }
 
 template <class ElemType>
+CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignReshapeOf(const CPUMatrix<ElemType>& a)
+{
+
+	if (a.IsEmpty())
+		LogicError("AssignReshapeOf: Matrix a is empty.");
+
+	if (a.GetNumRows() % GetNumCols() != 0)
+		LogicError("AssignReshapeOf: numRow of Matrix a should be multiple of target cols.");
+	long numParrallelSequence = (long) GetNumCols();
+	long n = (long) a.GetNumCols(), m = (long) a.GetNumRows();
+	auto& us = *this;
+
+#pragma omp parallel for
+	for (long j = 0; j < n; ++j){
+		// four-way unrolling
+		long rowOffset = (j / numParrallelSequence) * m;
+		long colOffset = j % numParrallelSequence;
+		for (long i = 0; i < (m & ~3); i += 4, rowOffset += 4){
+			us(rowOffset, colOffset) = a(i, j);
+			us(rowOffset + 1, colOffset) = a(i + 1, j);
+			us(rowOffset + 2, colOffset) = a(i + 2, j);
+			us(rowOffset + 3, colOffset) = a(i + 3, j);
+		}
+		// handle remaining stuffs
+		for (long i = m & ~3; i < m; i++, rowOffset++){
+			us(rowOffset, colOffset) = a(i, j);
+		}
+	}
+	return *this;
+}
+
+template <class ElemType>
+CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignInvReshapeOf(const CPUMatrix<ElemType>& a)
+{
+
+	if (a.IsEmpty())
+		LogicError("AssignInvReshapeOf: Matrix a is empty.");
+
+	if (GetNumRows() % a.GetNumCols() != 0)
+		LogicError("AssignInvReshapeOf: numRow of target matrix should be multiple of cols of matrix a.");
+	long numParrallelSequence = (long) a.GetNumCols();
+	long n = (long)GetNumCols(), m = (long)GetNumRows();
+	auto& us = *this;
+
+#pragma omp parallel for
+	for (long j = 0; j < n; ++j){
+		// four-way unrolling
+		long rowOffset = (j / numParrallelSequence) * m;
+		long colOffset = j % numParrallelSequence;
+		for (long i = 0; i < (m & ~3); i += 4, rowOffset += 4){
+			us(i, j) = a(rowOffset, colOffset);
+			us(i + 1, j) = a(rowOffset + 1, colOffset);
+			us(i + 2, j) = a(rowOffset + 2, colOffset);
+			us(i + 3, j) = a(rowOffset + 3, colOffset);
+		}
+		// handle remaining stuffs
+		for (long i = m & ~3; i < m; i++, rowOffset++){
+			us(i, j) = a(rowOffset, colOffset);
+		}
+	}
+	return *this;
+}
+
+template <class ElemType>
 CPUMatrix<ElemType>& CPUMatrix<ElemType>::AddToRowRepeatValuesOf(const CPUMatrix<ElemType>& a, const size_t numRepeats)
 {
     if (a.IsEmpty())

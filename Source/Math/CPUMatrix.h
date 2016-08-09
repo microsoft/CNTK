@@ -505,6 +505,10 @@ public:
                                      const size_t tPos // position
                                      );
 
+public:
+	CPUMatrix<ElemType>& AssignReshapeOf(const CPUMatrix<ElemType>& a);
+	CPUMatrix<ElemType>& AssignInvReshapeOf(const CPUMatrix<ElemType>& a);
+
 protected:
     size_t LocateElement(const size_t i, const size_t j) const;
     size_t LocateColumn(const size_t j) const;

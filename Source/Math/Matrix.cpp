@@ -5343,6 +5343,52 @@ Matrix<ElemType>& Matrix<ElemType>::AssignSequenceError(const ElemType hsmoothin
 }
 #pragma endregion Static BLAS Functions
 
+template <class ElemType>
+Matrix<ElemType>& Matrix<ElemType>::AssignReshapeOf(const Matrix<ElemType>& a)
+{
+	if (a.IsEmpty())
+		LogicError("AssignReshapeOf: Matrix a is empty.");
+
+	DecideAndMoveToRightDevice(a, *this);
+	// WARNING: a and this must have same type
+	if (!(GetMatrixType() == a.GetMatrixType()))
+		NOT_IMPLEMENTED;
+
+	SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
+
+	DISPATCH_MATRIX_ON_FLAG(&a,
+		this,
+		m_CPUMatrix->AssignReshapeOf(*a.m_CPUMatrix),
+		m_GPUMatrix->AssignReshapeOf(*a.m_GPUMatrix),
+		NOT_IMPLEMENTED,
+		NOT_IMPLEMENTED);
+
+	return *this;
+}
+
+template <class ElemType>
+Matrix<ElemType>& Matrix<ElemType>::AssignInvReshapeOf(const Matrix<ElemType>& a)
+{
+	if (a.IsEmpty())
+		LogicError("AddWithInvReshapeOf: Matrix a is empty.");
+
+	DecideAndMoveToRightDevice(a, *this);
+	// WARNING: a and this must have same type
+	if (!(GetMatrixType() == a.GetMatrixType()))
+		NOT_IMPLEMENTED;
+
+	SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
+
+	DISPATCH_MATRIX_ON_FLAG(&a,
+		this,
+		m_CPUMatrix->AssignInvReshapeOf(*a.m_CPUMatrix),
+		m_GPUMatrix->AssignInvReshapeOf(*a.m_GPUMatrix),
+		NOT_IMPLEMENTED,
+		NOT_IMPLEMENTED);
+
+	return *this;
+}
+
 // TensorView currently does not interface with sparse matrices. For now, we just catch this and throw.
 template <class ElemType>
 static bool VerifyIsDense(const Matrix<ElemType>& a)

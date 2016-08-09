@@ -762,4 +762,135 @@ public:
 template class DummyCriterionNode<float>;
 template class DummyCriterionNode<double>;
 
+template <class ElemType>
+class AttentionNode : public ComputationNode<ElemType>, public NumInputs<2>
+{
+	typedef ComputationNode<ElemType> Base;
+	UsingComputationNodeMembers; 
+	using Base::OperationName;                                                                                                                           \
+
+public:
+	AttentionNode(DEVICEID_TYPE deviceId, const wstring& name, size_t windowsize = 100, ElemType default_value=0.0 )
+		: Base(deviceId, name), m_windowsize(windowsize), m_defaultvalue(default_value), m_numrows(0), m_numcols(0)
+	{
+	}
+
+	virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
+	{
+		Base::CopyTo(nodeP, newName, flags);
+		if (flags & CopyNodeFlags::copyNodeValue)
+		{
+			auto node = dynamic_pointer_cast<AttentionNode<ElemType>>(nodeP);
+			node->m_windowsize = m_windowsize;
+		}
+	}
+
+	void Save(File& fstream) const
+	{
+		Base::Save(fstream);
+		fstream << m_windowsize;
+	}
+
+	virtual void Load(File& fstream, size_t modelVersion) override
+	{
+		Base::Load(fstream, modelVersion);
+		fstream >> m_windowsize;
+	}
+
+private:
+	// if the left argument of the matrix product (A) has a time axis, it can only be applied sample by sample
+	// where each sample is treated as a separate matrix object (as a consequence, it then also applies to B and the result as well)
+	TensorView<ElemType> OneSampleTensorFor(int inputIndex/*-1 for output*/, bool gradient/*instead of value*/, const FrameRange& fr)
+	{
+		auto input = inputIndex < 0 ? this : Input(inputIndex).get();
+		auto data = gradient ? input->GradientPtr() : input->ValuePtr();
+		size_t rank = input->GetSampleLayout().GetRank();
+		if (inputIndex == 0 && m_transpose && rank == 1) // transposing a 1D tensor implies it is really a 2D tensor. Note that m_transpose applies to left operand only.
+			rank = 2;
+		if (!Input(0)->HasMBLayout()) // left input is no MB data: run normally
+			return input->DataTensorFor(data, rank, fr);
+		auto tensorShape = input->GetOneSampleTensorSliceFor(rank, fr);
+		return TensorView<ElemType>(data, tensorShape);
+	}
+
+public:
+	virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
+	{
+		size_t startpoint = fr.timeIdxInSeq * m_windowize;
+		Matrix<ElemType> sliceInput0Value;
+		size_t numTimeSteps0 = (Input(0)->GetMBLayout()).GetNumTimeSteps();
+		if (startpoint + m_windowsize <= numTimeSteps0){
+			FrameRange fr0(Input(0)->GetMBLayout(), startpoint);
+			fr0 = fr0.WithTimeRange(m_windowsize);
+			Input(0)->MaskMissingValueColumnsToZero(fr0);
+			sliceInput0Value = Input(0)->ValueFor(fr0);
+		}
+		else {
+			m_temp.Resize(m_numrows, m_numcols);
+			m_temp.SetValue(m_defaultvalue);
+			if (startpoint < numTimeSteps0){
+				FrameRange fr0(Input(0)->GetMBLayout(), startpoint);
+				fr0 = fr0.WithTimeRange(numTimeSteps0 - startpoint);
+				Input(0)->MaskMissingValueColumnsToZero(fr0);
+				sliceInput0Value = Input(0)->ValueFor(fr0);
+				m_temp.SetColumnSlice(sliceInput0Value, 0, sliceInput0Value.GetNumCols());
+			}
+			sliceInput0Value = m_temp;
+		}
+		Matrix<ElemType> sliceOutputValue = ValueFor(fr);
+		sliceOutputValue.AssignReshapeOf(sliceInput0Value);
+	}
+
+	virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
+	{
+		if (inputIndex == 0){
+			size_t startpoint = fr.timeIdxInSeq * m_windowsize;
+			size_t numTimeSteps0 = (Input(0)->GetMBLayout()).GetNumTimeSteps();
+			if (startpoint < numTimeSteps0){
+				m_temp.Resize(m_numrows, m_numcols);
+				m_temp.AssignInvReshapeOf(GradientFor(fr));
+				FrameRange fr0(Input(0)->GetMBLayout(), startpoint);
+				fr0 = fr0.WithTimeRange(numTimeSteps0 - startpoint);
+				Matrix<ElemType> sliceInput0Gradient = Input(0)->GradientFor(fr0);
+				Matrix<ElemType> slicegradient = m_temp.ColumnSlice(0, sliceInput0Gradient.GetNumCols());
+				sliceInput0Gradient.AddWithScaleOf(1.0, slicegradient);
+				Input(0)->MaskMissingGradientColumnsToZero(fr0);
+			}
+		}
+	}
+
+	virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
+	{
+		Base::Validate(isFinalValidationPass);
+		if ((Input(0)->GetMBLayout()).GetNumParallelSequences() != (Input(1)->GetMBLayout()).GetNumParallelSequences()) LogicError("Input 0 and Input 1 should have same parallel sequences");
+		if (!Input(1)->HasMBLayout()) LogicError("The second input of %ls (type %ls) should have MBLayout.", NodeName().c_str(), OperationName().c_str());
+		LinkToMBLayout(Input(1)->GetMBLayout());
+		auto dimsA = Input(0)->GetSampleLayout().GetDims();
+		auto dimsC = dimsA;
+		dimsC.resize(dimsA.size() + 1);
+		dimsC[0] = m_windowsize;
+		for (size_t i = 0; i < dimsC.size(); ++i)
+			dimsC[i + 1] = dimsA[i];
+		m_numrows = Input(0)->GetSampleLayout().GetNumElements();
+		m_numcols = Input(0)->GetMBLayout().GetNumParallelSequences() * m_windowsize;
+		SetDims(TensorShape(dimsC), true);
+	}
+
+	virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
+	{
+		Base::RequestMatricesBeforeForwardProp(matrixPool);
+		RequestMatrixFromPool(m_temp, matrixPool);
+	}
+
+	virtual void ReleaseMatricesAfterBackProp(MatrixPool& matrixPool)
+	{
+		Base::ReleaseMatricesAfterForwardProp(matrixPool);
+		ReleaseMatrixToPool(m_temp, matrixPool);
+	}
+private:
+	size_t m_stride, m_windowsize, m_numrows, m_numcols;
+	Matrix<ElemType> m_temp;
+	ElemType m_defaultvalue;
+};
+
 } } }
