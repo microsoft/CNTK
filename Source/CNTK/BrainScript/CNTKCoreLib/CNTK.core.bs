@@ -30,16 +30,16 @@
 
 # LinearLayer -- create a fully-connected linear projection layer
 # Note: outDim may describe a tensor as well.
-LinearLayer {outDim, initValueScale=1} =
+LinearLayer {outDim, init='uniform', initValueScale=1} =
 {
-    W = ParameterTensor {_ConcatArrays (outDim, 0), init='uniform', initValueScale=initValueScale}
+    W = ParameterTensor {_ConcatArrays (outDim, 0), init=init, initValueScale=initValueScale}
     b = ParameterTensor {outDim, initValue=0}
     outRank = Length (_AsArray (outDim)) # support outputs with tensor layouts
     f(x) = Times (W, x, outputRank = outRank) + b
 }.f
 
 # DenseLayer -- create a fully-connected layer with optional non-linearity
-DenseLayer{outDim, activation=(x=>x), initValueScale=1} = Sequential ( LinearLayer{outDim, initValueScale=initValueScale} : activation )
+DenseLayer{outDim, activation=(x=>x), init='uniform', initValueScale=1} = Sequential ( LinearLayer{outDim, init=init, initValueScale=initValueScale} : activation )
 
 # EmbeddingLayer -- create a linear embedding layer
 EmbeddingLayer {outDim,                                   # dimension of embedding
