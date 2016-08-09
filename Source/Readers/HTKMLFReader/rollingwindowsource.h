@@ -311,7 +311,7 @@ public:
             wstring key;
             if (!labels.empty()) // empty means unsupervised mode (don't load any)
             {
-#ifdef _MSC_VER
+#ifdef _WIN32
                 key = regex_replace((wstring) ppath, wregex(L"\\.[^\\.\\\\/:]*$"), wstring()); // delete extension (or not if none)
 #else
                 key = removeExtension(ppath);
