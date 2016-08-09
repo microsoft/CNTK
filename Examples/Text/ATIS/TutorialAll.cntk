@@ -1,8 +1,7 @@
 # The configuration file to build language understanding model with ATIS corpus.
 # An LSTM model is built to tag each word in sentences with its semantic label.
 
-makeMode = false
-traceLevel = 1
+makeMode = true ; traceLevel = 1 ; deviceId = -1
 
 WorkDir = Work
 DataDir = Data
@@ -12,10 +11,7 @@ parallelTrain = true
 
 #stderr = $WorkDir$/log
 
-command = TrainSlotTagger:Output:Test
-
-precision = "float"
-deviceId = -1        # change to "auto" to use GPUs
+command = TrainSlotTagger:RunSlotTagger:EvalSlotTagger
 
 vocabSize = 943    # number of words
 numLabels = 129    # number of slot labels
@@ -27,46 +23,33 @@ TrainSlotTagger = [
     BrainScriptNetworkBuilder = [
         inputDim = $vocabSize$
         labelDim = $numLabels$
-        featDim = 0 //inputDim*3   # contextual words are used as features: previous word, current word, next word.
         embDim = 150
         hiddenDim = 300
-        maxLayer = 1
-        initScale = 6
-        #featuresPW = Input(inputDim)    # the previous word
-        featuresCW = Input(inputDim)    # the current word
-        #featuresNW = Input(inputDim)    # the next word
-        features = featuresCW  //RowStack(featuresPW : featuresCW : featuresNW)
 
-        labels = Input(labelDim, tag = "label")
+        model = Sequential (
+            Parallel ((DelayLayer{T=1} : Identity : DelayLayer{T=-1}), Splice) :  # 3-word window
+            EmbeddingLayer {embDim} :                                             # embedding
+            #RecurrentLSTMLayer {hiddenDim} :              # LSTM
+            Parallel ((RecurrentLSTMLayer {hiddenDim} : RecurrentLSTMLayer {hiddenDim, goBackwards=true}), Splice) :  # bidirectional LSTM
+            DenseLayer {labelDim, initValueScale=7}        # output layer
+        )
 
-        # embedding layer
-        emb = Parameter(embDim, featDim)
-        featEmbedded = emb * features
+        # features
+        query      = Input {inputDim}
+        slotLabels = Input {labelDim}
 
-        # build the LSTM stack
-        lstmDims[i:0..maxLayer-1] = hiddenDim
-        NoAuxInputHook (input, lstmState) = BS.Constants.None
-        lstmStack = BS.RNNs.RecurrentLSTMPStack (lstmDims,
-            cellDims=lstmDims,
-            featEmbedded,
-            inputDim=embDim,
-            previousHook=BS.RNNs.PreviousHC,
-            augmentInputHook=BS.RNNs.NoAuxInputHook,
-            augmentInputDim=0,
-            enableSelfStabilization=false)
+        # model application
+        z = model (query)
 
-        lstmOutputLayer = Length (lstmStack)-1
-        LSTMoutput = lstmStack[lstmOutputLayer].h
+        # loss and metric
+        ce   = CrossEntropyWithSoftmax (slotLabels, z)
+        errs = ErrorPrediction         (slotLabels, z)
 
-        W = Parameter(labelDim, hiddenDim, init = "uniform", initValueScale=initScale)
-        b = Parameter(labelDim, 1, init = "fixedValue", value=0)
-        outputs = W * LSTMoutput + b
-
-        cr = CrossEntropyWithSoftmax(labels, outputs)
-
-        criterionNodes = (cr)
-        evaluationNodes = (cr)
-        outputNodes = (outputs)
+        featureNodes    = (query)
+        labelNodes      = (slotLabels)
+        criterionNodes  = (ce)
+        evaluationNodes = (errs)
+        outputNodes     = (z)
     ]
 
     SGD = [
@@ -108,126 +91,49 @@ TrainSlotTagger = [
         file = "$DataDir$/atis.train.ctf"
         randomize = true
         input = [
-            #featuresPW = [
-            #    alias = "S0"    # previous word
-            #    dim = $vocabSize$
-            #    format = "sparse"
-            #]
-            featuresCW = [
-                alias = "S0"    # current word
-                dim = $vocabSize$
-                format = "sparse"
-            ]
-            #featuresNW = [
-            #    alias = "S0"    # next word
-            #    dim = $vocabSize$
-            #    format = "sparse"
-            #]
-            intents = [
-                alias = "S1"     # intent labels
-                dim = $numIntents$
-                format = "sparse"
-            ]
-            labels = [
-                alias = "S2"     # slot labels
-                dim = $numLabels$
-                format = "sparse"
-            ]
+            query        = [ alias = "S0" ; dim = $vocabSize$ ;  format = "sparse" ]
+            intentLabels = [ alias = "S1" ; dim = $numIntents$ ; format = "sparse" ]
+            slotLabels   = [ alias = "S2" ; dim = $numLabels$ ; format = "sparse" ]
         ]
     ]
 ]
 
-# Evaluate the model to predict labels
-Output = [
+# Run the model to predict slot labels
+RunSlotTagger = [
     action = "write"
-
-    traceLevel = 1
-    epochSize = 0
-
-    defaultHiddenActivity = 0.1
     BrainScriptNetworkBuilder = [
         modelAsTrained = BS.Network.Load ("$modelPath$")
-        final = Hardmax(modelAsTrained.outputs)
+        final = Hardmax (modelAsTrained.z)  # make a decision
+        labels = Pass (modelAsTrained.slotLabels)
     ]
 
     outputPath = $WorkDir$/model.writeaction
-    outputNodeNames = final
+    outputNodeNames = slotLabels:final
 
     reader = [
         readerType = "CNTKTextFormatReader"
         file = "$DataDir$/atis.test.ctf"
-
         randomize = false
         input = [
-            featuresPW = [
-                alias = "PW"    # previous word
-                dim = $vocabSize$
-                format = "sparse"
-            ]
-            featuresCW = [
-                alias = "CW"    # current word
-                dim = $vocabSize$
-                format = "sparse"
-            ]
-            featuresNW = [
-                alias = "NW"    # next word
-                dim = $vocabSize$
-                format = "sparse"
-            ]
-
-            labels = [
-                alias = "L"     # label
-                dim = $numLabels$
-                format = "sparse"
-            ]
+            query        = [ alias = "S0" ; dim = $vocabSize$ ;  format = "sparse" ]
+            intentLabels = [ alias = "S1" ; dim = $numIntents$ ; format = "sparse" ]
+            slotLabels   = [ alias = "S2" ; dim = $numLabels$ ;  format = "sparse" ]
         ]
     ]
 ]
 
-# Evaluate the model's accuracy
-Test = [
-    action = "test"
-
-    traceLevel = 1
-    epochSize = 0
-
-    defaultHiddenActivity = 0.1
-    BrainScriptNetworkBuilder = [
-        modelAsTrained = BS.Network.Load ("$modelPath$")
-        labels = Input {$numLabels$, tag = "label"}
-        final = Hardmax(modelAsTrained.outputs)
-        errs = ErrorPrediction(labels, final, tag='evaluation')
-    ]
-
-    evalNodeNames  = errs
-
+# Evaluate the model's slot-tagging accuracy (as an error count)
+EvalSlotTagger = [
+    action = "eval"
+    modelPath = $modelPath$  # from outside
     reader = [
         readerType = "CNTKTextFormatReader"
         file = "$DataDir$/atis.test.ctf"
-
         randomize = false
         input = [
-            featuresPW = [
-                alias = "PW"    # previous word
-                dim = $vocabSize$
-                format = "sparse"
-            ]
-            featuresCW = [
-                alias = "CW"    # current word
-                dim = $vocabSize$
-                format = "sparse"
-            ]
-            featuresNW = [
-                alias = "NW"    # next word
-                dim = $vocabSize$
-                format = "sparse"
-            ]
-
-            labels = [
-                alias = "L"     # label
-                dim = $numLabels$
-                format = "sparse"
-            ]
+            query        = [ alias = "S0" ; dim = $vocabSize$ ;  format = "sparse" ]
+            intentLabels = [ alias = "S1" ; dim = $numIntents$ ; format = "sparse" ]
+            slotLabels   = [ alias = "S2" ; dim = $numLabels$ ;  format = "sparse" ]
         ]
     ]
 ]
