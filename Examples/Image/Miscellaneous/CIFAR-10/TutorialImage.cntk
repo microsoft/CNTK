@@ -1,0 +1,191 @@
+RootDir = "."
+
+makeMode = false
+
+
+DataDir  = "$RootDir$"
+ModelDir = "$RootDir$/Output/Models"
+
+deviceId = 0
+#imageLayout = "cudnn"
+# override the above as follows when running on CPU:
+# deviceId = -1
+
+# If set to true, always initialize the network on CPU, making initialization consistent across CPU and GPU targets (for testing).
+initOnCPUOnly=true
+
+command = Train:Test
+
+modelPath = "$ModelDir$/01_Convolution"
+
+#stderr = "$OutputDir$/01_Conv"
+traceLevel = 1
+
+Train = [
+    action = "train"
+
+    BrainScriptNetworkBuilder = [
+ConvReLULayer(inp, outMap, inWCount, kW, kH, hStride, vStride, wScale, bValue) =
+[
+    W = LearnableParameter(outMap, inWCount, init = "gaussian", initValueScale = wScale)
+    b = ParameterTensor(1:1:outMap, initValue  = bValue)
+    #c = Convolution(W, inp, kW, kH, outMap, hStride, vStride, zeroPadding = true)
+    c = Convolution(W, inp, kW:kH:(inWCount/kW/kH), mapDims=outMap, stride=hStride:vStride:(inWCount/kW/kH), autoPadding = true:true:false)
+
+
+#Convolution(weightNode, inputValueNode, kernelDims, mapDims = 0, stride = 1, sharing = true, autoPadding = true, lowerPad = 0, upperPad = 0, transpose=false, imageLayout='CHW', maxTempMemSizeInSamples = 0, tag='') = new ComputationNode [ operation = 'Convolution' ; inputs = (weightNode : inputValueNode); kernelShape = new TensorShape [ dims = kernelDims ] ; mapCount = new TensorShape [ dims = mapDims ] ; strideShape = new TensorShape [ dims = stride ] ; dimSharing = new BoolVector [ items = sharing ] ; dimPadding = new BoolVector [ items = autoPadding ] ; dimPadLower = new TensorShape [ dims = lowerPad ] ; dimPadUpper = new TensorShape [ dims = upperPad ] /*plus the function args*/ ]
+
+
+    p = Plus(c, b)
+    y = RectifiedLinear(p)
+].y
+DNNImageReLULayer(inW, inH, inC, outDim, x, wScale, bValue) =
+[
+    W = Parameter(outDim,inW*inH*inC, init = "gaussian",   initValueScale = wScale)
+    b = LearnableParameter(outDim, 1,         initValue  = bValue) 
+    t = Times(W, x)
+    z = Plus(t, b)
+    y = RectifiedLinear(z)
+].y
+DNNLastLayer(hiddenDim, labelDim, x, wScale, bValue) =
+[
+    W = LearnableParameter(labelDim, hiddenDim, init = "gaussian", initValueScale = wScale)
+    b = ParameterTensor(labelDim, initValue = bValue)
+    t = Times(W, x)
+    z = Plus(t, b)
+].z
+
+        imageShape = 32:32:3
+        labelDim = 10
+
+        # inputs
+        features = Input {imageShape}
+        labels   = Input {labelDim}
+
+        featOffs = Constant (128)
+        featScaled = features - featOffs
+    
+        conv1WScale = 0.0043
+        conv1BValue = 0
+        conv2WScale = 1.414
+        conv2BValue = 0
+        conv3WScale = 1.414
+        conv3BValue = 0
+        fc1WScale = 12
+        fc1BValue = 0
+        fc2WScale = 1.5
+        fc2BValue = 0
+
+        # conv1
+        kW1 = 5
+        kH1 = 5
+        cMap1 = 32
+        hStride1 = 1
+        vStride1 = 1
+        # weight[cMap1, kW1 * kH1 * ImageC]
+        conv1_act = ConvReLULayer(featScaled, cMap1, 75, kW1, kH1, hStride1, vStride1, conv1WScale, conv1BValue)
+
+        # pool1
+        pool1W = 3
+        pool1H = 3
+        pool1hStride = 2
+        pool1vStride = 2
+        pool1 = MaxPooling(conv1_act, pool1W, pool1H, pool1hStride, pool1vStride)
+
+        # conv2
+        kW2 = 5
+        kH2 = 5
+        cMap2 = 32
+        hStride2 = 1
+        vStride2 = 1
+        # weight[cMap2, kW2 * kH2 * cMap1]
+        conv2_act = ConvReLULayer(pool1, cMap2, 800, kW2, kH2, hStride2, vStride2, conv2WScale, conv2BValue)
+
+        # pool2
+        pool2W = 3
+        pool2H = 3
+        pool2hStride = 2
+        pool2vStride = 2
+        pool2 = MaxPooling(conv2_act, pool2W, pool2H, pool2hStride, pool2vStride)
+
+        # conv3
+        kW3 = 5
+        kH3 = 5
+        cMap3 = 64
+        hStride3 = 1
+        vStride3 = 1
+        # weight[cMap3, kW3 * kH3 * cMap2]
+        conv3_act = ConvReLULayer(pool2, cMap3, 800, kW3, kH3, hStride3, vStride3, conv3WScale, conv3BValue)
+
+        # pool3
+        pool3W = 3
+        pool3H = 3
+        pool3hStride = 2
+        pool3vStride = 2
+        pool3 = MaxPooling(conv3_act, pool3W, pool3H, pool3hStride, pool3vStride)
+
+        hiddenDim = 64
+        h1 = DNNImageReLULayer(3, 3, cMap3, hiddenDim, pool3, fc1WScale, fc1BValue)
+        h1_d = Dropout(h1)
+        z = DNNLastLayer(hiddenDim, labelDim, h1_d, fc2WScale, fc2BValue)
+
+        # connect to system    
+        ce   = CrossEntropyWithSoftmax (labels, z)
+        errs = ErrorPrediction         (labels, z)
+
+        featureNodes    = (features)
+        labelNodes      = (labels)
+        criterionNodes  = (ce)
+        evaluationNodes = (errs)
+        outputNodes     = (z)
+    ]
+    
+    SGD = [
+        epochSize = 49984
+        minibatchSize = 64
+        learningRatesPerMB = 0.01*10:0.003*10:0.001
+        momentumPerMB = 0.9*20:0.99
+        maxEpochs = 30
+        L2RegWeight = 0.03
+        dropoutRate = 0*5:0.5
+        firstMBsToShowResult = 10
+        numMBsToShowResult = 500
+    ]
+    
+    reader = [
+        readerType = "CNTKTextFormatReader"
+        # See REAMDE.md for details on getting the data (Train_cntk_text.txt).
+        file = "$DataDir$/Train_cntk_text.txt"
+        input = [
+            features = [
+                dim = 3072
+                format = "dense"
+            ]
+            labels = [
+                dim = 10
+                format = "dense"
+            ]
+        ]
+    ]    
+]
+
+Test = [
+    action = "test"
+    # Set minibatch size for testing.
+    minibatchSize = 16
+
+    reader = [
+        readerType = "CNTKTextFormatReader"
+        file = "$DataDir$/Test_cntk_text.txt"
+        input = [
+            features = [
+                dim = 3072
+                format = "dense"
+            ]
+            labels = [
+                dim = 10
+                format = "dense"
+            ]
+        ]
+    ]    
+]
