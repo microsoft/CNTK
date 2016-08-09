@@ -3498,21 +3498,20 @@ namespace Swig {
 #define SWIGTYPE_p_std__shared_ptrT_CNTK__Value_t swig_types[43]
 #define SWIGTYPE_p_std__unordered_mapT_CNTK__Parameter_std__shared_ptrT_CNTK__NDArrayView_t_t swig_types[44]
 #define SWIGTYPE_p_std__unordered_mapT_CNTK__Placeholder_CNTK__Variable_t swig_types[45]
-#define SWIGTYPE_p_std__unordered_mapT_CNTK__StreamInfo_std__pairT_std__shared_ptrT_CNTK__NDArrayView_t_std__shared_ptrT_CNTK__NDArrayView_t_t_t swig_types[46]
-#define SWIGTYPE_p_std__unordered_setT_CNTK__Parameter_t swig_types[47]
-#define SWIGTYPE_p_std__unordered_setT_std__shared_ptrT_CNTK__Learner_t_t swig_types[48]
-#define SWIGTYPE_p_std__vectorT_CNTK__Axis_std__allocatorT_CNTK__Axis_t_t swig_types[49]
-#define SWIGTYPE_p_std__vectorT_bool_std__allocatorT_bool_t_t swig_types[50]
-#define SWIGTYPE_p_swig__SwigPyIterator swig_types[51]
-#define SWIGTYPE_p_unsigned___int64 swig_types[52]
-#define SWIGTYPE_p_unsigned_char swig_types[53]
-#define SWIGTYPE_p_unsigned_int swig_types[54]
-#define SWIGTYPE_p_unsigned_long swig_types[55]
-#define SWIGTYPE_p_unsigned_short swig_types[56]
-#define SWIGTYPE_p_value_type swig_types[57]
-#define SWIGTYPE_p_wchar_t swig_types[58]
-static swig_type_info *swig_types[60];
-static swig_module_info swig_module = {swig_types, 59, 0, 0, 0, 0};
+#define SWIGTYPE_p_std__unordered_setT_CNTK__Parameter_t swig_types[46]
+#define SWIGTYPE_p_std__unordered_setT_std__shared_ptrT_CNTK__Learner_t_t swig_types[47]
+#define SWIGTYPE_p_std__vectorT_CNTK__Axis_std__allocatorT_CNTK__Axis_t_t swig_types[48]
+#define SWIGTYPE_p_std__vectorT_bool_std__allocatorT_bool_t_t swig_types[49]
+#define SWIGTYPE_p_swig__SwigPyIterator swig_types[50]
+#define SWIGTYPE_p_unsigned___int64 swig_types[51]
+#define SWIGTYPE_p_unsigned_char swig_types[52]
+#define SWIGTYPE_p_unsigned_int swig_types[53]
+#define SWIGTYPE_p_unsigned_long swig_types[54]
+#define SWIGTYPE_p_unsigned_short swig_types[55]
+#define SWIGTYPE_p_value_type swig_types[56]
+#define SWIGTYPE_p_wchar_t swig_types[57]
+static swig_type_info *swig_types[59];
+static swig_module_info swig_module = {swig_types, 58, 0, 0, 0, 0};
 #define SWIG_TypeQuery(name) SWIG_TypeQueryModule(&swig_module, &swig_module, name)
 #define SWIG_MangledTypeQuery(name) SWIG_MangledTypeQueryModule(&swig_module, &swig_module, name)
 
@@ -33252,8 +33251,6 @@ SWIGINTERN PyObject *_wrap_ComputeInputPerDimMeansAndInvStdDevs__SWIG_0(PyObject
   void *argp1 ;
   int res1 = 0 ;
   CNTK::MinibatchSourcePtr tempshared1 ;
-  void *argp2 = 0 ;
-  int res2 = 0 ;
   void *argp3 = 0 ;
   int res3 = 0 ;
   PyObject * obj0 = 0 ;
@@ -33275,14 +33272,67 @@ SWIGINTERN PyObject *_wrap_ComputeInputPerDimMeansAndInvStdDevs__SWIG_0(PyObject
       arg1 = (argp1) ? reinterpret_cast< CNTK::MinibatchSourcePtr * >(argp1) : &tempshared1;
     }
   }
-  res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_std__unordered_mapT_CNTK__StreamInfo_std__pairT_std__shared_ptrT_CNTK__NDArrayView_t_std__shared_ptrT_CNTK__NDArrayView_t_t_t,  0 );
-  if (!SWIG_IsOK(res2)) {
-    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "ComputeInputPerDimMeansAndInvStdDevs" "', argument " "2"" of type '" "std::unordered_map< CNTK::StreamInfo,std::pair< CNTK::NDArrayViewPtr,CNTK::NDArrayViewPtr > > &""'"); 
+  {
+    if (PyDict_Check(obj1)) {
+      std::unordered_map<CNTK::StreamInfo, std::pair<CNTK::NDArrayViewPtr, CNTK::NDArrayViewPtr>>* args_map = new  std::unordered_map<CNTK::StreamInfo, std::pair<CNTK::NDArrayViewPtr, CNTK::NDArrayViewPtr>>();
+      
+      PyObject *key, *value;
+      Py_ssize_t pos = 0;
+      
+      while (PyDict_Next(obj1, &pos, &key, &value)) {
+        void *raw_var = 0 ;
+        int res = SWIG_ConvertPtr(key, &raw_var, SWIGTYPE_p_CNTK__StreamInfo,  0);
+        if (!SWIG_IsOK(res)) {
+          SWIG_exception_fail(SWIG_ArgError(res), "cannot convert key of dictionary to CNTK::StreamInfo"); 
+        }
+        if (!raw_var) {
+          SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting key of dictionary to CNTK::StreamInfo");
+        }
+        
+        CNTK::StreamInfo* var = reinterpret_cast<CNTK::StreamInfo*>(raw_var);           
+        
+        if (PyTuple_Check(value)) {
+          PyObject* first = PyTuple_GET_ITEM(value, 0);
+          void *raw_value1 = 0;
+          int res1 = SWIG_ConvertPtr(first, &raw_value1, SWIGTYPE_p_std__shared_ptrT_CNTK__NDArrayView_t,  0);
+          if (!SWIG_IsOK(res1)) {
+            SWIG_exception_fail(SWIG_ArgError(res1), "cannot convert value of dictionary to CNTK::NDArrayViewPtr"); 
+          }
+          
+          CNTK::NDArrayViewPtr* value1;
+          if (raw_value1) {
+            value1 = reinterpret_cast<CNTK::NDArrayViewPtr*>(raw_value1);
+          } else {
+            // We got an empty NDArrayViewPtr, which carries a nullptr.
+            value1 = new CNTK::NDArrayViewPtr();
+          }
+          
+          PyObject* second = PyTuple_GET_ITEM(value, 1);        
+          void *raw_value2 = 0;
+          int res2 = SWIG_ConvertPtr(second, &raw_value2, SWIGTYPE_p_std__shared_ptrT_CNTK__NDArrayView_t,  0);
+          if (!SWIG_IsOK(res2)) {
+            SWIG_exception_fail(SWIG_ArgError(res2), "cannot convert value of dictionary to CNTK::NDArrayViewPtr"); 
+          }
+          
+          CNTK::NDArrayViewPtr* value2;
+          if (raw_value2) {
+            value2 = reinterpret_cast<CNTK::NDArrayViewPtr*>(raw_value2);
+          } else {
+            // We got an empty NDArrayViewPtr, which carries a nullptr.
+            value2 = new CNTK::NDArrayViewPtr();
+          }
+          
+          args_map->insert(std::make_pair(*var, std::make_pair(*value1, *value2)));
+        } else {
+          SWIG_exception(SWIG_TypeError, "tuple expected");
+        }   
+      }
+      
+      arg2 = args_map;
+    } else {
+      SWIG_exception(SWIG_TypeError, "dictionary expected");
+    }
   }
-  if (!argp2) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "ComputeInputPerDimMeansAndInvStdDevs" "', argument " "2"" of type '" "std::unordered_map< CNTK::StreamInfo,std::pair< CNTK::NDArrayViewPtr,CNTK::NDArrayViewPtr > > &""'"); 
-  }
-  arg2 = reinterpret_cast< std::unordered_map< CNTK::StreamInfo,std::pair< CNTK::NDArrayViewPtr,CNTK::NDArrayViewPtr > > * >(argp2);
   res3 = SWIG_ConvertPtr(obj2, &argp3, SWIGTYPE_p_CNTK__DeviceDescriptor,  0  | 0);
   if (!SWIG_IsOK(res3)) {
     SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "ComputeInputPerDimMeansAndInvStdDevs" "', argument " "3"" of type '" "CNTK::DeviceDescriptor const &""'"); 
@@ -33312,6 +33362,61 @@ SWIGINTERN PyObject *_wrap_ComputeInputPerDimMeansAndInvStdDevs__SWIG_0(PyObject
     }
   }
   resultobj = SWIG_Py_Void();
+  {
+    if (!PyDict_Check(obj1)) {
+      SWIG_exception(SWIG_TypeError, "dictionary expected");
+    }
+    
+    for (auto it: *arg2)
+    {
+      // Convert StreamInfo to PyObject
+      PyObject *returned_var = SWIG_NewPointerObj(SWIG_as_voidptr(&it.first), SWIGTYPE_p_CNTK__StreamInfo, SWIG_POINTER_NOSHADOW);
+      
+      // Push onto the heap so that it survives
+      
+      std::shared_ptr<CNTK::NDArrayView> *smartresult1 = it.second.first ? new std::shared_ptr<CNTK::NDArrayView>(it.second.first) : 0;
+      PyObject *returned_val1 = SWIG_NewPointerObj(SWIG_as_voidptr(smartresult1), SWIGTYPE_p_std__shared_ptrT_CNTK__NDArrayView_t, SWIG_POINTER_OWN);
+      
+      std::shared_ptr<CNTK::NDArrayView> *smartresult2 = it.second.second ? new std::shared_ptr<CNTK::NDArrayView>(it.second.second) : 0;
+      PyObject *returned_val2 = SWIG_NewPointerObj(SWIG_as_voidptr(smartresult2), SWIGTYPE_p_std__shared_ptrT_CNTK__NDArrayView_t, SWIG_POINTER_OWN);
+      
+      // Find the corresponding Variable instance in the Python dictionary
+      // and set its value to the new MinibatchData
+      
+      /* FIXME We would love to do the following, but the hashing does not
+               * correctly work here, which is why we never find the keys. Instead,
+               * we will for now loop over the dictionary and use C++ comparison.
+               * Although not beautiful, there should not be a lot of overhead since
+               * the dictionary usually contains only a handful of variables as keys.
+              if (PyDict_Contains(obj1, returned_var))
+              {
+                  SWIG_exception_fail(SWIG_ValueError, "returned output map contains unknown key");
+              }
+               */
+      
+      PyObject *py_key, *py_value;
+      Py_ssize_t pos = 0;
+      
+      while (PyDict_Next(obj1, &pos, &py_key, &py_value)) {
+        void *cntk_key = 0 ;
+        int res = SWIG_ConvertPtr(py_key, &cntk_key, SWIGTYPE_p_CNTK__StreamInfo,  0);
+        if (!SWIG_IsOK(res)) {
+          SWIG_exception_fail(SWIG_ArgError(res), "cannot convert key of dictionary to CNTK::StreamInfo"); 
+        }
+        if (!cntk_key) {
+          SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting key of dictionary to CNTK::StreamInfo");
+        }
+        
+        CNTK::StreamInfo* cntk_var = reinterpret_cast<CNTK::StreamInfo*>(cntk_key);
+        if (*cntk_var == *&it.first)
+        {
+          PyDict_SetItem(obj1, py_key, PyTuple_Pack(2, returned_val1, returned_val2));
+          // FIXME is this necessary?
+          Py_INCREF(returned_val2);
+        }
+      }
+    }
+  }
   return resultobj;
 fail:
   return NULL;
@@ -33325,8 +33430,6 @@ SWIGINTERN PyObject *_wrap_ComputeInputPerDimMeansAndInvStdDevs__SWIG_1(PyObject
   void *argp1 ;
   int res1 = 0 ;
   CNTK::MinibatchSourcePtr tempshared1 ;
-  void *argp2 = 0 ;
-  int res2 = 0 ;
   PyObject * obj0 = 0 ;
   PyObject * obj1 = 0 ;
   
@@ -33345,14 +33448,67 @@ SWIGINTERN PyObject *_wrap_ComputeInputPerDimMeansAndInvStdDevs__SWIG_1(PyObject
       arg1 = (argp1) ? reinterpret_cast< CNTK::MinibatchSourcePtr * >(argp1) : &tempshared1;
     }
   }
-  res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_std__unordered_mapT_CNTK__StreamInfo_std__pairT_std__shared_ptrT_CNTK__NDArrayView_t_std__shared_ptrT_CNTK__NDArrayView_t_t_t,  0 );
-  if (!SWIG_IsOK(res2)) {
-    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "ComputeInputPerDimMeansAndInvStdDevs" "', argument " "2"" of type '" "std::unordered_map< CNTK::StreamInfo,std::pair< CNTK::NDArrayViewPtr,CNTK::NDArrayViewPtr > > &""'"); 
+  {
+    if (PyDict_Check(obj1)) {
+      std::unordered_map<CNTK::StreamInfo, std::pair<CNTK::NDArrayViewPtr, CNTK::NDArrayViewPtr>>* args_map = new  std::unordered_map<CNTK::StreamInfo, std::pair<CNTK::NDArrayViewPtr, CNTK::NDArrayViewPtr>>();
+      
+      PyObject *key, *value;
+      Py_ssize_t pos = 0;
+      
+      while (PyDict_Next(obj1, &pos, &key, &value)) {
+        void *raw_var = 0 ;
+        int res = SWIG_ConvertPtr(key, &raw_var, SWIGTYPE_p_CNTK__StreamInfo,  0);
+        if (!SWIG_IsOK(res)) {
+          SWIG_exception_fail(SWIG_ArgError(res), "cannot convert key of dictionary to CNTK::StreamInfo"); 
+        }
+        if (!raw_var) {
+          SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting key of dictionary to CNTK::StreamInfo");
+        }
+        
+        CNTK::StreamInfo* var = reinterpret_cast<CNTK::StreamInfo*>(raw_var);           
+        
+        if (PyTuple_Check(value)) {
+          PyObject* first = PyTuple_GET_ITEM(value, 0);
+          void *raw_value1 = 0;
+          int res1 = SWIG_ConvertPtr(first, &raw_value1, SWIGTYPE_p_std__shared_ptrT_CNTK__NDArrayView_t,  0);
+          if (!SWIG_IsOK(res1)) {
+            SWIG_exception_fail(SWIG_ArgError(res1), "cannot convert value of dictionary to CNTK::NDArrayViewPtr"); 
+          }
+          
+          CNTK::NDArrayViewPtr* value1;
+          if (raw_value1) {
+            value1 = reinterpret_cast<CNTK::NDArrayViewPtr*>(raw_value1);
+          } else {
+            // We got an empty NDArrayViewPtr, which carries a nullptr.
+            value1 = new CNTK::NDArrayViewPtr();
+          }
+          
+          PyObject* second = PyTuple_GET_ITEM(value, 1);        
+          void *raw_value2 = 0;
+          int res2 = SWIG_ConvertPtr(second, &raw_value2, SWIGTYPE_p_std__shared_ptrT_CNTK__NDArrayView_t,  0);
+          if (!SWIG_IsOK(res2)) {
+            SWIG_exception_fail(SWIG_ArgError(res2), "cannot convert value of dictionary to CNTK::NDArrayViewPtr"); 
+          }
+          
+          CNTK::NDArrayViewPtr* value2;
+          if (raw_value2) {
+            value2 = reinterpret_cast<CNTK::NDArrayViewPtr*>(raw_value2);
+          } else {
+            // We got an empty NDArrayViewPtr, which carries a nullptr.
+            value2 = new CNTK::NDArrayViewPtr();
+          }
+          
+          args_map->insert(std::make_pair(*var, std::make_pair(*value1, *value2)));
+        } else {
+          SWIG_exception(SWIG_TypeError, "tuple expected");
+        }   
+      }
+      
+      arg2 = args_map;
+    } else {
+      SWIG_exception(SWIG_TypeError, "dictionary expected");
+    }
   }
-  if (!argp2) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "ComputeInputPerDimMeansAndInvStdDevs" "', argument " "2"" of type '" "std::unordered_map< CNTK::StreamInfo,std::pair< CNTK::NDArrayViewPtr,CNTK::NDArrayViewPtr > > &""'"); 
-  }
-  arg2 = reinterpret_cast< std::unordered_map< CNTK::StreamInfo,std::pair< CNTK::NDArrayViewPtr,CNTK::NDArrayViewPtr > > * >(argp2);
   {
     try {
       CNTK::ComputeInputPerDimMeansAndInvStdDevs((std::shared_ptr< CNTK::MinibatchSource > const &)*arg1,*arg2); 
@@ -33374,6 +33530,61 @@ SWIGINTERN PyObject *_wrap_ComputeInputPerDimMeansAndInvStdDevs__SWIG_1(PyObject
     }
   }
   resultobj = SWIG_Py_Void();
+  {
+    if (!PyDict_Check(obj1)) {
+      SWIG_exception(SWIG_TypeError, "dictionary expected");
+    }
+    
+    for (auto it: *arg2)
+    {
+      // Convert StreamInfo to PyObject
+      PyObject *returned_var = SWIG_NewPointerObj(SWIG_as_voidptr(&it.first), SWIGTYPE_p_CNTK__StreamInfo, SWIG_POINTER_NOSHADOW);
+      
+      // Push onto the heap so that it survives
+      
+      std::shared_ptr<CNTK::NDArrayView> *smartresult1 = it.second.first ? new std::shared_ptr<CNTK::NDArrayView>(it.second.first) : 0;
+      PyObject *returned_val1 = SWIG_NewPointerObj(SWIG_as_voidptr(smartresult1), SWIGTYPE_p_std__shared_ptrT_CNTK__NDArrayView_t, SWIG_POINTER_OWN);
+      
+      std::shared_ptr<CNTK::NDArrayView> *smartresult2 = it.second.second ? new std::shared_ptr<CNTK::NDArrayView>(it.second.second) : 0;
+      PyObject *returned_val2 = SWIG_NewPointerObj(SWIG_as_voidptr(smartresult2), SWIGTYPE_p_std__shared_ptrT_CNTK__NDArrayView_t, SWIG_POINTER_OWN);
+      
+      // Find the corresponding Variable instance in the Python dictionary
+      // and set its value to the new MinibatchData
+      
+      /* FIXME We would love to do the following, but the hashing does not
+               * correctly work here, which is why we never find the keys. Instead,
+               * we will for now loop over the dictionary and use C++ comparison.
+               * Although not beautiful, there should not be a lot of overhead since
+               * the dictionary usually contains only a handful of variables as keys.
+              if (PyDict_Contains(obj1, returned_var))
+              {
+                  SWIG_exception_fail(SWIG_ValueError, "returned output map contains unknown key");
+              }
+               */
+      
+      PyObject *py_key, *py_value;
+      Py_ssize_t pos = 0;
+      
+      while (PyDict_Next(obj1, &pos, &py_key, &py_value)) {
+        void *cntk_key = 0 ;
+        int res = SWIG_ConvertPtr(py_key, &cntk_key, SWIGTYPE_p_CNTK__StreamInfo,  0);
+        if (!SWIG_IsOK(res)) {
+          SWIG_exception_fail(SWIG_ArgError(res), "cannot convert key of dictionary to CNTK::StreamInfo"); 
+        }
+        if (!cntk_key) {
+          SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting key of dictionary to CNTK::StreamInfo");
+        }
+        
+        CNTK::StreamInfo* cntk_var = reinterpret_cast<CNTK::StreamInfo*>(cntk_key);
+        if (*cntk_var == *&it.first)
+        {
+          PyDict_SetItem(obj1, py_key, PyTuple_Pack(2, returned_val1, returned_val2));
+          // FIXME is this necessary?
+          Py_INCREF(returned_val2);
+        }
+      }
+    }
+  }
   return resultobj;
 fail:
   return NULL;
@@ -33397,9 +33608,11 @@ SWIGINTERN PyObject *_wrap_ComputeInputPerDimMeansAndInvStdDevs(PyObject *self, 
     int res = SWIG_ConvertPtr(argv[0], 0, SWIGTYPE_p_std__shared_ptrT_CNTK__MinibatchSource_t, 0);
     _v = SWIG_CheckState(res);
     if (_v) {
-      void *vptr = 0;
-      int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_std__unordered_mapT_CNTK__StreamInfo_std__pairT_std__shared_ptrT_CNTK__NDArrayView_t_std__shared_ptrT_CNTK__NDArrayView_t_t_t, 0);
-      _v = SWIG_CheckState(res);
+      {
+        // '1000' is the typecheck precedence code. It means: check after basic
+        // types, but before arrays. See: http://www.swig.org/Doc1.3/Typemaps.html#Typemaps_overloading
+        _v = PyDict_Check(argv[1]) ? 1 : 0;
+      }
       if (_v) {
         return _wrap_ComputeInputPerDimMeansAndInvStdDevs__SWIG_1(self, args);
       }
@@ -33410,9 +33623,11 @@ SWIGINTERN PyObject *_wrap_ComputeInputPerDimMeansAndInvStdDevs(PyObject *self, 
     int res = SWIG_ConvertPtr(argv[0], 0, SWIGTYPE_p_std__shared_ptrT_CNTK__MinibatchSource_t, 0);
     _v = SWIG_CheckState(res);
     if (_v) {
-      void *vptr = 0;
-      int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_std__unordered_mapT_CNTK__StreamInfo_std__pairT_std__shared_ptrT_CNTK__NDArrayView_t_std__shared_ptrT_CNTK__NDArrayView_t_t_t, 0);
-      _v = SWIG_CheckState(res);
+      {
+        // '1000' is the typecheck precedence code. It means: check after basic
+        // types, but before arrays. See: http://www.swig.org/Doc1.3/Typemaps.html#Typemaps_overloading
+        _v = PyDict_Check(argv[1]) ? 1 : 0;
+      }
       if (_v) {
         int res = SWIG_ConvertPtr(argv[2], 0, SWIGTYPE_p_CNTK__DeviceDescriptor, 0);
         _v = SWIG_CheckState(res);
@@ -34195,7 +34410,6 @@ static swig_type_info _swigt__p_std__shared_ptrT_CNTK__NDMask_t = {"_p_std__shar
 static swig_type_info _swigt__p_std__shared_ptrT_CNTK__Value_t = {"_p_std__shared_ptrT_CNTK__Value_t", "std::shared_ptr< CNTK::Value > *|CNTK::ValuePtr *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_std__unordered_mapT_CNTK__Parameter_std__shared_ptrT_CNTK__NDArrayView_t_t = {"_p_std__unordered_mapT_CNTK__Parameter_std__shared_ptrT_CNTK__NDArrayView_t_t", "std::unordered_map< CNTK::Parameter,std::shared_ptr< CNTK::NDArrayView > > *|std::unordered_map< CNTK::Parameter,CNTK::NDArrayViewPtr > *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_std__unordered_mapT_CNTK__Placeholder_CNTK__Variable_t = {"_p_std__unordered_mapT_CNTK__Placeholder_CNTK__Variable_t", "std::unordered_map< CNTK::Placeholder,CNTK::Variable > *", 0, 0, (void*)0, 0};
-static swig_type_info _swigt__p_std__unordered_mapT_CNTK__StreamInfo_std__pairT_std__shared_ptrT_CNTK__NDArrayView_t_std__shared_ptrT_CNTK__NDArrayView_t_t_t = {"_p_std__unordered_mapT_CNTK__StreamInfo_std__pairT_std__shared_ptrT_CNTK__NDArrayView_t_std__shared_ptrT_CNTK__NDArrayView_t_t_t", "std::unordered_map< CNTK::StreamInfo,std::pair< std::shared_ptr< CNTK::NDArrayView >,std::shared_ptr< CNTK::NDArrayView > > > *|std::unordered_map< CNTK::StreamInfo,std::pair< CNTK::NDArrayViewPtr,CNTK::NDArrayViewPtr > > *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_std__unordered_setT_CNTK__Parameter_t = {"_p_std__unordered_setT_CNTK__Parameter_t", "std::unordered_set< CNTK::Parameter > *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_std__unordered_setT_std__shared_ptrT_CNTK__Learner_t_t = {"_p_std__unordered_setT_std__shared_ptrT_CNTK__Learner_t_t", "std::unordered_set< CNTK::LearnerPtr > *|std::unordered_set< std::shared_ptr< CNTK::Learner > > *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_std__vectorT_CNTK__Axis_std__allocatorT_CNTK__Axis_t_t = {"_p_std__vectorT_CNTK__Axis_std__allocatorT_CNTK__Axis_t_t", "std::vector< CNTK::Axis,std::allocator< CNTK::Axis > > *", 0, 0, (void*)0, 0};
@@ -34256,7 +34470,6 @@ static swig_type_info *swig_type_initial[] = {
   &_swigt__p_std__shared_ptrT_CNTK__Value_t,
   &_swigt__p_std__unordered_mapT_CNTK__Parameter_std__shared_ptrT_CNTK__NDArrayView_t_t,
   &_swigt__p_std__unordered_mapT_CNTK__Placeholder_CNTK__Variable_t,
-  &_swigt__p_std__unordered_mapT_CNTK__StreamInfo_std__pairT_std__shared_ptrT_CNTK__NDArrayView_t_std__shared_ptrT_CNTK__NDArrayView_t_t_t,
   &_swigt__p_std__unordered_setT_CNTK__Parameter_t,
   &_swigt__p_std__unordered_setT_std__shared_ptrT_CNTK__Learner_t_t,
   &_swigt__p_std__vectorT_CNTK__Axis_std__allocatorT_CNTK__Axis_t_t,
@@ -34317,7 +34530,6 @@ static swig_cast_info _swigc__p_std__shared_ptrT_CNTK__NDMask_t[] = {  {&_swigt_
 static swig_cast_info _swigc__p_std__shared_ptrT_CNTK__Value_t[] = {  {&_swigt__p_std__shared_ptrT_CNTK__Value_t, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_std__unordered_mapT_CNTK__Parameter_std__shared_ptrT_CNTK__NDArrayView_t_t[] = {  {&_swigt__p_std__unordered_mapT_CNTK__Parameter_std__shared_ptrT_CNTK__NDArrayView_t_t, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_std__unordered_mapT_CNTK__Placeholder_CNTK__Variable_t[] = {  {&_swigt__p_std__unordered_mapT_CNTK__Placeholder_CNTK__Variable_t, 0, 0, 0},{0, 0, 0, 0}};
-static swig_cast_info _swigc__p_std__unordered_mapT_CNTK__StreamInfo_std__pairT_std__shared_ptrT_CNTK__NDArrayView_t_std__shared_ptrT_CNTK__NDArrayView_t_t_t[] = {  {&_swigt__p_std__unordered_mapT_CNTK__StreamInfo_std__pairT_std__shared_ptrT_CNTK__NDArrayView_t_std__shared_ptrT_CNTK__NDArrayView_t_t_t, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_std__unordered_setT_CNTK__Parameter_t[] = {  {&_swigt__p_std__unordered_setT_CNTK__Parameter_t, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_std__unordered_setT_std__shared_ptrT_CNTK__Learner_t_t[] = {  {&_swigt__p_std__unordered_setT_std__shared_ptrT_CNTK__Learner_t_t, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_std__vectorT_CNTK__Axis_std__allocatorT_CNTK__Axis_t_t[] = {  {&_swigt__p_std__vectorT_CNTK__Axis_std__allocatorT_CNTK__Axis_t_t, 0, 0, 0},{0, 0, 0, 0}};
@@ -34378,7 +34590,6 @@ static swig_cast_info *swig_cast_initial[] = {
   _swigc__p_std__shared_ptrT_CNTK__Value_t,
   _swigc__p_std__unordered_mapT_CNTK__Parameter_std__shared_ptrT_CNTK__NDArrayView_t_t,
   _swigc__p_std__unordered_mapT_CNTK__Placeholder_CNTK__Variable_t,
-  _swigc__p_std__unordered_mapT_CNTK__StreamInfo_std__pairT_std__shared_ptrT_CNTK__NDArrayView_t_std__shared_ptrT_CNTK__NDArrayView_t_t_t,
   _swigc__p_std__unordered_setT_CNTK__Parameter_t,
   _swigc__p_std__unordered_setT_std__shared_ptrT_CNTK__Learner_t_t,
   _swigc__p_std__vectorT_CNTK__Axis_std__allocatorT_CNTK__Axis_t_t,

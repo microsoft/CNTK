@@ -325,6 +325,129 @@
      }
 }
 
+%typecheck(1000)  std::unordered_map<CNTK::StreamInfo, std::pair<CNTK::NDArrayViewPtr, CNTK::NDArrayViewPtr>>& {
+    // '1000' is the typecheck precedence code. It means: check after basic
+    // types, but before arrays. See: http://www.swig.org/Doc1.3/Typemaps.html#Typemaps_overloading
+    $1 = PyDict_Check($input) ? 1 : 0;
+}
+
+%typemap(in)  std::unordered_map<CNTK::StreamInfo, std::pair<CNTK::NDArrayViewPtr, CNTK::NDArrayViewPtr>>& {
+     if (PyDict_Check($input)) {
+         std::unordered_map<CNTK::StreamInfo, std::pair<CNTK::NDArrayViewPtr, CNTK::NDArrayViewPtr>>* args_map = new  std::unordered_map<CNTK::StreamInfo, std::pair<CNTK::NDArrayViewPtr, CNTK::NDArrayViewPtr>>();
+
+        PyObject *key, *value;
+        Py_ssize_t pos = 0;
+
+        while (PyDict_Next($input, &pos, &key, &value)) {
+            void *raw_var = 0 ;
+            int res = SWIG_ConvertPtr(key, &raw_var, SWIGTYPE_p_CNTK__StreamInfo,  0);
+            if (!SWIG_IsOK(res)) {
+                SWIG_exception_fail(SWIG_ArgError(res), "cannot convert key of dictionary to CNTK::StreamInfo"); 
+            }
+            if (!raw_var) {
+                SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting key of dictionary to CNTK::StreamInfo");
+            }
+
+            CNTK::StreamInfo* var = reinterpret_cast<CNTK::StreamInfo*>(raw_var);           
+
+            if (PyTuple_Check(value)) {
+                PyObject* first = PyTuple_GET_ITEM(value, 0);
+                void *raw_value1 = 0;
+                int res1 = SWIG_ConvertPtr(first, &raw_value1, SWIGTYPE_p_std__shared_ptrT_CNTK__NDArrayView_t,  0);
+                if (!SWIG_IsOK(res1)) {
+                    SWIG_exception_fail(SWIG_ArgError(res1), "cannot convert value of dictionary to CNTK::NDArrayViewPtr"); 
+                }
+
+                CNTK::NDArrayViewPtr* value1;
+                if (raw_value1) {
+                    value1 = reinterpret_cast<CNTK::NDArrayViewPtr*>(raw_value1);
+                } else {
+                    // We got an empty NDArrayViewPtr, which carries a nullptr.
+                    value1 = new CNTK::NDArrayViewPtr();
+                }
+
+                PyObject* second = PyTuple_GET_ITEM(value, 1);        
+                void *raw_value2 = 0;
+                int res2 = SWIG_ConvertPtr(second, &raw_value2, SWIGTYPE_p_std__shared_ptrT_CNTK__NDArrayView_t,  0);
+                if (!SWIG_IsOK(res2)) {
+                    SWIG_exception_fail(SWIG_ArgError(res2), "cannot convert value of dictionary to CNTK::NDArrayViewPtr"); 
+                }
+
+                CNTK::NDArrayViewPtr* value2;
+                if (raw_value2) {
+                    value2 = reinterpret_cast<CNTK::NDArrayViewPtr*>(raw_value2);
+                } else {
+                    // We got an empty NDArrayViewPtr, which carries a nullptr.
+                    value2 = new CNTK::NDArrayViewPtr();
+                }
+
+                args_map->insert(std::make_pair(*var, std::make_pair(*value1, *value2)));
+            } else {
+                SWIG_exception(SWIG_TypeError, "tuple expected");
+            }   
+        }
+
+        $1 = args_map;
+     } else {
+         SWIG_exception(SWIG_TypeError, "dictionary expected");
+     }
+}
+
+%typemap(argout) std::unordered_map<CNTK::StreamInfo, std::pair<CNTK::NDArrayViewPtr, CNTK::NDArrayViewPtr>>& {
+     if (!PyDict_Check($input)) {
+         SWIG_exception(SWIG_TypeError, "dictionary expected");
+     }
+
+     for (auto it: *$1)
+     {
+        // Convert StreamInfo to PyObject
+        PyObject *returned_var = SWIG_NewPointerObj(SWIG_as_voidptr(&it.first), SWIGTYPE_p_CNTK__StreamInfo, SWIG_POINTER_NOSHADOW);
+
+        // Push onto the heap so that it survives
+
+        std::shared_ptr<CNTK::NDArrayView> *smartresult1 = it.second.first ? new std::shared_ptr<CNTK::NDArrayView>(it.second.first) : 0;
+        PyObject *returned_val1 = SWIG_NewPointerObj(SWIG_as_voidptr(smartresult1), SWIGTYPE_p_std__shared_ptrT_CNTK__NDArrayView_t, SWIG_POINTER_OWN);
+
+        std::shared_ptr<CNTK::NDArrayView> *smartresult2 = it.second.second ? new std::shared_ptr<CNTK::NDArrayView>(it.second.second) : 0;
+        PyObject *returned_val2 = SWIG_NewPointerObj(SWIG_as_voidptr(smartresult2), SWIGTYPE_p_std__shared_ptrT_CNTK__NDArrayView_t, SWIG_POINTER_OWN);
+
+        // Find the corresponding Variable instance in the Python dictionary
+        // and set its value to the new MinibatchData
+
+        /* FIXME We would love to do the following, but the hashing does not
+         * correctly work here, which is why we never find the keys. Instead,
+         * we will for now loop over the dictionary and use C++ comparison.
+         * Although not beautiful, there should not be a lot of overhead since
+         * the dictionary usually contains only a handful of variables as keys.
+        if (PyDict_Contains($input, returned_var))
+        {
+            SWIG_exception_fail(SWIG_ValueError, "returned output map contains unknown key");
+        }
+         */
+
+        PyObject *py_key, *py_value;
+        Py_ssize_t pos = 0;
+
+        while (PyDict_Next($input, &pos, &py_key, &py_value)) {
+            void *cntk_key = 0 ;
+            int res = SWIG_ConvertPtr(py_key, &cntk_key, SWIGTYPE_p_CNTK__StreamInfo,  0);
+            if (!SWIG_IsOK(res)) {
+                SWIG_exception_fail(SWIG_ArgError(res), "cannot convert key of dictionary to CNTK::StreamInfo"); 
+            }
+            if (!cntk_key) {
+                SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting key of dictionary to CNTK::StreamInfo");
+            }
+
+            CNTK::StreamInfo* cntk_var = reinterpret_cast<CNTK::StreamInfo*>(cntk_key);
+            if (*cntk_var == *&it.first)
+            {
+                PyDict_SetItem($input, py_key, PyTuple_Pack(2, returned_val1, returned_val2));
+                // FIXME is this necessary?
+                Py_INCREF(returned_val2);
+            }
+        }
+    }
+}
 
 //
 // Converting Python list {DictionaryValue} to std::vector
