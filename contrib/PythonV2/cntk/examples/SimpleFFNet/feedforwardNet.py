@@ -53,7 +53,6 @@ def create_minibatch_source():
     return cntk_py.CreateCompositeMinibatchSource(minibatchSourceConfiguration)
 
 if __name__=='__main__':      
-    import time;time.sleep(1)   
     input_dim = 2
     num_output_classes = 2
     num_hidden_layers = 2
@@ -70,7 +69,6 @@ if __name__=='__main__':
     netout = fully_connected_classifier_net(input, num_output_classes, hidden_layers_dim, num_hidden_layers, dev, sigmoid)  
         
     ce = cross_entropy_with_softmax(netout.Output(), label)
-
     pe = classification_error(netout.Output(), label)
     ffnet = combine([ce, pe, netout], "classifier_model")      
     
