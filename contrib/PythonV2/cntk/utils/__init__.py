@@ -241,7 +241,7 @@ def sanitize_input(arg, fallback_dtype=np.float32):
 
     from cntk.ops.variables import Constant, Variable, Placeholder
     from cntk.ops import constant
-    if isinstance(arg, (Constant, Variable, Placeholder)):
+    if isinstance(arg, (Constant, Variable, Placeholder, cntk_py.Constant, cntk_py.Variable, cntk_py.Placeholder)):
         return arg
 
     try:

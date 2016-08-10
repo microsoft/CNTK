@@ -3,28 +3,15 @@ import sys
 import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..'))
 import cntk.cntk_py as cntk_py
-
-#TODO: Make use of the helper functions and move to row major.
-
-def create_variable(shape, data_type='float', is_sparse=False, needs_gradient=True, name=""):
-    if data_type == 'float':
-        cntk_type = cntk_py.DataType_Float
-    elif data_type == 'double':
-        cntk_type = cntk_py.DataType_Double
-    else:
-        raise ValueError('Type %s is not supported'%data_type)
-
-    return cntk_py.Variable(shape, is_sparse, cntk_type, needs_gradient, name)
+from cntk.ops import variable, constant, parameter, cross_entropy_with_softmax, combine, classification_error, sigmoid, plus, times
 
 def fully_connected_layer(input, output_dim, device_id, nonlinearity):    
+    #TODO: wrap in SWIG or python Shape() methods in order to return the reversed shape (row/col major)
     input_dim = input.Shape()[0]    
-    #import ipdb;ipdb.set_trace()        
-    v1 = cntk_py.NDArrayView.RandomUniformFloat((output_dim,input_dim), -0.05, 0.05, 1, device_id)    
-    times_param = cntk_py.Parameter(v1)    
-    t = cntk_py.Times(times_param, input)    
-    v2 = cntk_py.NDArrayView.RandomUniformFloat((output_dim,), -0.05, 0.05, 1, device_id)       
-    plus_param = cntk_py.Parameter(v2)
-    p = cntk_py.Plus(plus_param,t.Output())    
+    times_param = parameter(shape=(input_dim,output_dim))    
+    t = times(input,times_param)
+    plus_param = parameter(shape=(output_dim,))
+    p = plus(plus_param,t.Output())    
     return nonlinearity(p.Output());
 
 def fully_connected_classifier_net(input, num_output_classes, hidden_layer_dim, num_hidden_layers, device, nonlinearity):
@@ -32,37 +19,14 @@ def fully_connected_classifier_net(input, num_output_classes, hidden_layer_dim, 
     for i in range(1, num_hidden_layers):
         classifier_root = fully_connected_layer(classifier_root.Output(), hidden_layer_dim, device, nonlinearity)
     
-    v1 = cntk_py.NDArrayView.RandomUniformFloat((num_output_classes,hidden_layer_dim), -0.05, 0.05, 1, device)    
-    output_times_param = cntk_py.Parameter(v1)    
-
-    v2 = cntk_py.NDArrayView.RandomUniformFloat((num_output_classes,), -0.05, 0.05, 1, device)       
-    output_plus_param = cntk_py.Parameter(v2)
-    t = cntk_py.Times(output_times_param, classifier_root.Output())
-    classifier_root = cntk_py.Plus(output_plus_param,t.Output()) 
+    output_times_param = parameter(shape=(hidden_layer_dim,num_output_classes))
+    output_plus_param = parameter(shape=(num_output_classes,))
+    t = times(classifier_root.Output(),output_times_param)
+    classifier_root = plus(output_plus_param,t.Output()) 
     return classifier_root;
 
-if __name__=='__main__':      
-    import time;time.sleep(1)
-    dev = cntk_py.DeviceDescriptor.CPUDevice()       
-    input_dim = 2
-    num_output_classes = 2
-    num_hidden_layers = 2
-    hidden_layers_dim = 50
-    
-    minibatch_size = 25
-    num_samples_per_sweep = 10000
-    num_sweeps_to_train_with = 2
-    num_minibatches_to_train = (num_samples_per_sweep * num_sweeps_to_train_with) / minibatch_size
-    lr = 0.02
-    input = create_variable((input_dim,), needs_gradient=False, name="features")
-    label = create_variable((num_output_classes,), needs_gradient=False, name="labels")
-    
-    netout = fully_connected_classifier_net(input, num_output_classes, hidden_layers_dim, num_hidden_layers, dev, cntk_py.Sigmoid)  
-        
-    ce = cntk_py.CrossEntropyWithSoftmax(netout.Output(), label)
-    pe = cntk_py.ClassificationError(netout.Output(), label)
-    ffnet = cntk_py.Combine([ce, pe, netout], "classifier_model")      
-    
+def create_minibatch_source():
+    #todo: add helper functions
     featuresStreamConfig = cntk_py.Dictionary();
     featuresStreamConfig["dim"] = cntk_py.DictionaryValue(input_dim)       
     featuresStreamConfig["format"] = cntk_py.DictionaryValue("dense")
@@ -86,7 +50,31 @@ if __name__=='__main__':
     deser = cntk_py.DictionaryValueFromDict(deserializerConfiguration)
     minibatchSourceConfiguration["deserializers"] = cntk_py.DictionaryValue([deser])
 
-    cm = cntk_py.CreateCompositeMinibatchSource(minibatchSourceConfiguration)
+    return cntk_py.CreateCompositeMinibatchSource(minibatchSourceConfiguration)
+
+if __name__=='__main__':      
+    import time;time.sleep(1)   
+    input_dim = 2
+    num_output_classes = 2
+    num_hidden_layers = 2
+    hidden_layers_dim = 50
+    
+    minibatch_size = 25
+    num_samples_per_sweep = 10000
+    num_sweeps_to_train_with = 2
+    num_minibatches_to_train = (num_samples_per_sweep * num_sweeps_to_train_with) / minibatch_size
+    lr = 0.02
+    input = variable((input_dim,), np.float32, needs_gradient=False, name="features")
+    label = variable((num_output_classes,), np.float32, needs_gradient=False, name="labels")
+    dev = cntk_py.DeviceDescriptor.CPUDevice()     
+    netout = fully_connected_classifier_net(input, num_output_classes, hidden_layers_dim, num_hidden_layers, dev, sigmoid)  
+        
+    ce = cross_entropy_with_softmax(netout.Output(), label)
+
+    pe = classification_error(netout.Output(), label)
+    ffnet = combine([ce, pe, netout], "classifier_model")      
+    
+    cm = create_minibatch_source()
         
     streamInfos = cm.StreamInfos();    
     

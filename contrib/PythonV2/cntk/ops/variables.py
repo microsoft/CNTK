@@ -6,7 +6,7 @@ from .. import utils
 
 FLOAT_32='float32'
 
-def _sanitize_value(shape, value, dtype, device):
+def _sanitize_value(shape, value, dtype, device, is_param=False):
     np_dtype = utils.sanitize_dtype_numpy(dtype)
     cntk_dtype  = utils.sanitize_dtype_cntk(dtype)
     if value is None:
@@ -16,8 +16,13 @@ def _sanitize_value(shape, value, dtype, device):
         if not np.isscalar(shape):
             # cntk uses column major, thus we reverse the shape    
             shape = tuple(reversed(shape))
-
-        ndav = utils.create_NDArrayView(shape, cntk_dtype, device)
+        
+        if is_param:
+            # TODO: expose the initialization params
+            ndav = cntk_py.NDArrayView.RandomUniformFloat(shape, -0.05, 0.05, 1, device)        
+        else:
+            ndav = utils.create_NDArrayView(shape, cntk_dtype, device)
+    
 
     else:
         if not isinstance(value, np.ndarray) or value.dtype!=np_dtype:
@@ -47,7 +52,7 @@ class Parameter(cntk_py.Parameter, TensorOpsMixin):
             else:
                 data_type = str(value.dtype)        
 
-        ndav = _sanitize_value(shape, value, data_type, device)
+        ndav = _sanitize_value(shape, value, data_type, device, True)
         super(Parameter, self).__init__(ndav, name)
 
 class Constant(cntk_py.Constant, TensorOpsMixin):

@@ -22,7 +22,7 @@ def combine(operands, name=''):
         :class:`cntk_py.Function`
     """
     from ..cntk_py import Combine
-    return Combine(target_vector, output_vector, name = name)
+    return Combine(operands, name)
 
 ################################################################################
 # evaluation ops
@@ -53,7 +53,9 @@ def cross_entropy_with_softmax(target_vector, output_vector, name=''):
         :class:`cntk_py.Function`
     """
     from ..cntk_py import CrossEntropyWithSoftmax
-    return CrossEntropyWithSoftmax(target_vector, output_vector, name = name)
+    target_vector = sanitize_input(target_vector, get_data_type(output_vector))
+    output_vector = sanitize_input(output_vector, get_data_type(target_vector))
+    return CrossEntropyWithSoftmax(target_vector, output_vector, name)
 
 def square_error(target_matrix, output_matrix, name=''):
     """
@@ -78,7 +80,7 @@ def square_error(target_matrix, output_matrix, name=''):
     from ..cntk_py import SquaredError
     target_matrix = sanitize_input(target_matrix, get_data_type(output_matrix))
     output_matrix = sanitize_input(output_matrix, get_data_type(target_matrix))
-    return SquaredError(target_matrix, output_matrix, name = name)
+    return SquaredError(target_matrix, output_matrix, name)
 
 def classification_error(target_vector, output_vector, name=''):
     """
@@ -104,9 +106,9 @@ def classification_error(target_vector, output_vector, name=''):
         :class:`cntk_py.Function`
     """
     from ..cntk_py import ClassificationError
-    target_matrix = sanitize_input(target_matrix, get_data_type(output_matrix))
-    output_matrix = sanitize_input(output_matrix, get_data_type(target_matrix))
-    return ClassificationError(target_vector, output_vector, name = name)    
+    target_vector = sanitize_input(target_vector, get_data_type(output_vector))
+    output_vector = sanitize_input(output_vector, get_data_type(target_vector))
+    return ClassificationError(target_vector, output_vector, name)    
 
 ################################################################################
 # convolution ops
@@ -140,7 +142,7 @@ def less(left, right, name=''):
     from ..cntk_py import Less
     left = sanitize_input(left, get_data_type(right))
     right = sanitize_input(right, get_data_type(left))
-    return Less(left, right, name=name)    
+    return Less(left, right, name)    
 
 def equal(left, right, name=''):
     """
@@ -163,7 +165,7 @@ def equal(left, right, name=''):
     from ..cntk_py import Equal
     left = sanitize_input(left, get_data_type(right))
     right = sanitize_input(right, get_data_type(left))
-    return Equal(left, right, name=name)    
+    return Equal(left, right, name)    
 
 def greater(left, right, name=''):
     """
@@ -186,7 +188,7 @@ def greater(left, right, name=''):
     from ..cntk_py import Greater
     left = sanitize_input(left, get_data_type(right))
     right = sanitize_input(right, get_data_type(left))
-    return Greater(left, right, name=name)    
+    return Greater(left, right, name)    
 
 def greater_equal(left, right, name=''):
     """
@@ -209,7 +211,7 @@ def greater_equal(left, right, name=''):
     from ..cntk_py import GreaterEqual
     left = sanitize_input(left, get_data_type(right))
     right = sanitize_input(right, get_data_type(left))
-    return GreaterEqual(left, right, name=name)    
+    return GreaterEqual(left, right, name)    
 
 def not_equal(left, right, name=''):
     """
@@ -232,7 +234,7 @@ def not_equal(left, right, name=''):
     from ..cntk_py import NotEqual
     left = sanitize_input(left, get_data_type(right))
     right = sanitize_input(right, get_data_type(left))
-    return NotEqual(left, right, name=name)    
+    return NotEqual(left, right, name)    
 
 def less_equal(left, right, name=''):
     """
@@ -255,7 +257,7 @@ def less_equal(left, right, name=''):
     from ..cntk_py import LessEqual
     left = sanitize_input(left, get_data_type(right))
     right = sanitize_input(right, get_data_type(left))
-    return LessEqual(left, right, name=name)    
+    return LessEqual(left, right, name)    
 
 ################################################################################
 # linear ops
@@ -408,7 +410,7 @@ def times(left, right, output_rank=1, name=''):
     from ..cntk_py import Times      
     left = sanitize_input(left, get_data_type(right))
     right = sanitize_input(right, get_data_type(left))
-    return Times(right, left, outputRank=output_rank, name=name)        
+    return Times(right, left, output_rank, name)        
 
 #TOOD: enable when it is exposed in c++
 def identity(x, name=''):
@@ -463,7 +465,7 @@ def floor(arg, name=''):
     from ..cntk_py import Floor
     left = sanitize_input(left, get_data_type(right))
     right = sanitize_input(right, get_data_type(left))
-    return Floor(arg, name = name)    
+    return Floor(arg, name)    
 
 def ceil(arg, name=''):
     """
@@ -487,7 +489,7 @@ def ceil(arg, name=''):
     from ..cntk_py import Ceil
     left = sanitize_input(left, get_data_type(right))
     right = sanitize_input(right, get_data_type(left))
-    return Ceil(arg, name = name)
+    return Ceil(arg, name)
 
 def round(arg, name=''):
     """
@@ -521,7 +523,7 @@ def round(arg, name=''):
     from ..cntk_py import Round
     left = sanitize_input(left, get_data_type(right))
     right = sanitize_input(right, get_data_type(left))
-    return Round(arg, name = name)
+    return Round(arg, name)
 
 ################################################################################
 # non_linear and nn ops
@@ -575,7 +577,7 @@ def relu(x, name=''):
     """
     from ..cntk_py import Relu
     x = sanitize_input(x)
-    return Relu(x, name=name)    
+    return Relu(x, name)    
 
 def sigmoid(x, name=''):
     """
@@ -688,7 +690,7 @@ def log(x, name=''):
     """
     from ..cntk_py import Log
     x = sanitize_input(x)
-    return Log(x, name=name)    
+    return Log(x, name)    
 
 def sqrt(x, name=''):
     """
@@ -712,7 +714,7 @@ def sqrt(x, name=''):
     """
     from ..cntk_py import Sqrt
     x = sanitize_input(x)
-    return Sqrt(x, name=name)    
+    return Sqrt(x, name)    
 
 def square(x, name=''):
     """
@@ -730,7 +732,7 @@ def square(x, name=''):
     """
     from ..cntk_py import Square
     x = sanitize_input(x)
-    return Square(x, name=name)    
+    return Square(x, name)    
 
 def abs(x, name=''):
     """
@@ -750,7 +752,7 @@ def abs(x, name=''):
     """
     from ..cntk_py import Abs
     x = sanitize_input(x)
-    return Abs(x, name=name)    
+    return Abs(x, name)    
 
 def negate(x, name=''):
     """
@@ -770,7 +772,7 @@ def negate(x, name=''):
     """
     from ..cntk_py import Negate
     x = sanitize_input(x)
-    return Negate(x, name=name)    
+    return Negate(x, name)    
 
 def reciprocal(x, name=''):
     """
@@ -788,7 +790,7 @@ def reciprocal(x, name=''):
     """
     from ..cntk_py import Reciprocal
     x = sanitize_input(x)
-    return Reciprocal(x, name=name)    
+    return Reciprocal(x, name)    
 
 #TOOD: enable when it is exposed in c++
 def cond(flag, value_if_true, value_if_false, name=''):
@@ -864,7 +866,7 @@ def past_value(initial_state, x, time_step=1, default_hidden_activation=0.1, nam
     
     from ..cntk_py import PastValue
     x = sanitize_input(x)
-    return PastValue(initial_state, x, time_step, name = name)    
+    return PastValue(initial_state, x, time_step, name)    
 
 ################################################################################
 # reshaping ops
@@ -1028,7 +1030,7 @@ def reduce_sum(x, axis=0, name=''):
     '''
     from ..cntk_py import ReduceSum
     x = sanitize_input(x)
-    return ReduceSum(x, axis, name=name)    
+    return ReduceSum(x, axis, name)    
 
 #TOOD: enable when it is exposed in c++
 def reduce_log_sum(inputs, name=''): 
@@ -1115,14 +1117,13 @@ def parameter(shape=None, value=None, device_id=-1, name=''):
 
     Returns:
         :class:`cntk_py.Function`
-    """
-    #TODO: random uniform
+    """    
     #TODO: add swig support to this templatized constructor and reflect the change in this method:
     #   template<typename ElemType>
     #   Parameter(const NDShape& shape, ElemType initValue, const DeviceDescriptor& device = DeviceDescriptor::DefaultDevice(), const std::wstring& name = L"")
     #       : Variable(shape, VariableKind::Parameter, AsDataType<ElemType>(), MakeSharedObject<NDArrayView>(initValue, shape, device), true, {}, name)
 
-    from variables import Parameter    
+    from .variables import Parameter    
     return Parameter(shape, value, None, cntk_device(device_id), name)        
 
 def constant(shape=None, value=None, device_id=-1, name=''):
