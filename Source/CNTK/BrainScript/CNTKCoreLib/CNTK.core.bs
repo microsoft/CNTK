@@ -78,15 +78,6 @@ ConvolutionalLayer {numOutputChannels,   # e.g. (1) or BS.Constants.None
     W = ParameterTensor{_ConcatArrays (                kernelShape,      outputChannelsShape), init = init, initValueScale = initValueScale}  # [ W x H x C x K ]
     #W = ParameterTensor{(outputChannelsShape:0), init = init, initValueScale = initValueScale}  # old-style for backwards-compatible random initialization
     b = ParameterTensor(_ConcatArrays (Repeat (Length (filterShape), 1), outputChannelsShape), initValue = 0)                                 # [ 1 x 1 x     K ]
-    #stridePadded =
-    #    if (Length (_AsArray (stride))) == 1 then stride
-    #    else _ConcatArrays (stride, Repeat (reductionRank, 0)) # gets inferred
-    #FixShapes (vec, val) = # padding vectors must be either length 1 or match kernel dim including reduction dims
-    #    if Length (_AsArray (vec)) == 1 then vec
-    #    else _ConcatArrays (_ForceResizeArray (Length (kernelShape), vec), Repeat (reductionRank, val)) # set padding flags for reduction dims to false
-    #autoPaddingPadded = FixShapes (autoPadding, false)
-    #lowerPadPadded = FixShapes (lowerPad, 0)
-    #upperPadPadded = FixShapes (upperPad, 0)
     sharing = true    # TODO: support this
     transpose = false # TODO: support this
     f(x) = {
