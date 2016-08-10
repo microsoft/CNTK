@@ -46,6 +46,8 @@ RUN LIBZIP_VERSION=1.1.2 && \
     make -j"$(nproc)" install && \
     rm -rf /libzip-${LIBZIP_VERSION}
 
+ENV LD_LIBRARY_PATH /usr/local/lib:$LD_LIBRARY_PATH
+
 RUN OPENCV_VERSION=3.1.0 && \
     wget -q -O - https://github.com/Itseez/opencv/archive/${OPENCV_VERSION}.tar.gz | tar -xzf - && \
     cd opencv-${OPENCV_VERSION} && \

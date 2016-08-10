@@ -934,7 +934,7 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Data", "Data", "{D11F76CC-DB6D-4CB4-B3B7-AB139DE2F5FA}"
 	ProjectSection(SolutionItems) = preProject
 		Tests\EndToEndTests\Text\SequenceClassification\Data\embeddingmatrix.txt = Tests\EndToEndTests\Text\SequenceClassification\Data\embeddingmatrix.txt
-		Tests\EndToEndTests\Text\SequenceClassification\Data\Train.txt = Tests\EndToEndTests\Text\SequenceClassification\Data\Train.txt
+		Tests\EndToEndTests\Text\SequenceClassification\Data\Train.ctf = Tests\EndToEndTests\Text\SequenceClassification\Data\Train.ctf
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SLU", "SLU", "{181664AC-4C95-4798-A923-09B879215B33}"

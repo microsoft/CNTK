@@ -71,9 +71,10 @@ protected:
         }
     }
 
-    void BackwardCore(const Mat& in, const Mat& srcGrad, Mat& grad, const Mat& scale, const Mat& saveMean, const Mat& saveInvStdDev,
+    void BackwardCore(const Mat& in, const Mat& srcGrad, Mat& grad, const Mat& scale, double blendFactor, const Mat& saveMean, const Mat& saveInvStdDev,
                       Mat& scaleGrad, Mat& biasGrad) override
     {
+        UNUSED(blendFactor);  // BUGBUG: It should be used.
         m_inOutCuDnnT.UpdateBatchSize(srcGrad.GetNumCols());
         cudnnBatchNormMode_t mode = m_spatial ? CUDNN_BATCHNORM_SPATIAL : CUDNN_BATCHNORM_PER_ACTIVATION;
         // REVIEW alexeyk: remove once Philly is upgraded to prod version. Also change betaParamDiff to 1 and update CNTK BN engine.

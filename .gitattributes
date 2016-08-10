@@ -6,6 +6,7 @@ Dockerfile-GPU text
 *.counts text
 *.labels text
 *.feats text
+*.ctf text
 *.post text
 *.cpu text
 *.gpu text

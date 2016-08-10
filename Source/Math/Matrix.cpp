@@ -4294,7 +4294,8 @@ void Matrix<ElemType>::BatchNormalizationForward(const Matrix<ElemType>& scale, 
 }
 
 template <class ElemType>
-void Matrix<ElemType>::BatchNormalizationBackward(const Matrix<ElemType>& in, Matrix<ElemType>& grad, const Matrix<ElemType>& scale, const Matrix<ElemType>& saveMean, const Matrix<ElemType>& saveInvStdDev,
+void Matrix<ElemType>::BatchNormalizationBackward(const Matrix<ElemType>& in, Matrix<ElemType>& grad, const Matrix<ElemType>& scale, double blendFactor,
+                                                  const Matrix<ElemType>& saveMean, const Matrix<ElemType>& saveInvStdDev,
                                                   Matrix<ElemType>& scaleGrad, Matrix<ElemType>& biasGrad) const
 {
     DecideAndMoveToRightDevice(*this, grad);
@@ -4302,10 +4303,10 @@ void Matrix<ElemType>::BatchNormalizationBackward(const Matrix<ElemType>& in, Ma
     // REVIEW alexeyk: add sparse version.
     DISPATCH_MATRIX_ON_FLAG(this,
                             this,
-                            m_CPUMatrix->BatchNormalizationBackward(*(in.m_CPUMatrix), *(grad.m_CPUMatrix), *(scale.m_CPUMatrix),
+                            m_CPUMatrix->BatchNormalizationBackward(*(in.m_CPUMatrix), *(grad.m_CPUMatrix), *(scale.m_CPUMatrix), blendFactor,
                                                                     *(saveMean.m_CPUMatrix), *(saveInvStdDev.m_CPUMatrix),
                                                                     *(scaleGrad.m_CPUMatrix), *(biasGrad.m_CPUMatrix)),
-                            m_GPUMatrix->BatchNormalizationBackward(*(in.m_GPUMatrix), *(grad.m_GPUMatrix), *(scale.m_GPUMatrix),
+                            m_GPUMatrix->BatchNormalizationBackward(*(in.m_GPUMatrix), *(grad.m_GPUMatrix), *(scale.m_GPUMatrix), blendFactor,
                                                                     *(saveMean.m_GPUMatrix), *(saveInvStdDev.m_GPUMatrix),
                                                                     *(scaleGrad.m_GPUMatrix), *(biasGrad.m_GPUMatrix)),
                             NOT_IMPLEMENTED,
