@@ -12,7 +12,8 @@
 #include "latticearchive.h" // for reading HTK phoneme lattices (MMI training)
 #include "minibatchsourcehelpers.h"
 #include "minibatchiterator.h"
-#include "unordered_set"
+#include <unordered_set>
+#include <random>
 
 namespace msra { namespace dbn {
 
@@ -37,6 +38,10 @@ class minibatchutterancesourcemulti : public minibatchsource
     // lattice reader
     // const std::vector<unique_ptr<latticesource>> &lattices;
     const latticesource &lattices;
+
+    // Flag indicating whether to use Mersenne Twister random generator.
+    bool m_useMersenneTwister;
+    std::mt19937_64 m_rng;
 
     // std::vector<latticesource> lattices;
     // word-level transcripts (for MMI mode when adding best path to lattices)
@@ -413,6 +418,7 @@ class minibatchutterancesourcemulti : public minibatchsource
         // When true we use a rolling window of randomized framerefs to minimize memory
         // footprint, instead of using a large vector listing all frames in the training corpus
         // Functionally, the 2 methods are identical.
+        // When it is true, we also use Mersenne Twister random generator for randomization.
         const bool m_minimizeMemoryFootprint;
 
         // [globalt-sweepts] -> (chunk, utt, frame) lookup table for randomized frames  --this can be REALLY big!
@@ -428,6 +434,10 @@ class minibatchutterancesourcemulti : public minibatchsource
         size_t m_currentRangeBeginChunkIdx;
         size_t m_currentRangeEndChunkIdx;
         size_t m_nextFramePosNotYetRandomized;
+
+        // If m_minimizeMemoryFootprint is true, Mersenne Twister is used for randomization
+        // because rand has problems in distributed case.
+        std::mt19937_64 m_rng;
 
     public:
         framerandomizer(const std::vector<std::vector<chunk>>& randomizedChunks, bool minimizeMemoryFootprint)
@@ -496,7 +506,9 @@ class minibatchutterancesourcemulti : public minibatchsource
 
                 for (;;) // (randomization retry loop)
                 {
-                    size_t tswap = Microsoft::MSR::CNTK::rand(postbegin, postend); // random frame position within allowed range
+                    size_t tswap = m_minimizeMemoryFootprint ?
+                        Microsoft::MSR::CNTK::RandMT(postbegin, postend, m_rng) :
+                        Microsoft::MSR::CNTK::rand(postbegin, postend); // random frame position within allowed range
                     // We want to swap 't' to 'tswap' and 'tswap' to 't'.
                     //  - Both may have been swapped before.
                     //  - Both must stay within the randomization window of their respective position.
@@ -542,11 +554,11 @@ class minibatchutterancesourcemulti : public minibatchsource
 
         void reset(unsigned int randSeed)
         {
-            srand(randSeed);
             size_t sweepts = m_randomizedChunks[0][0].globalts;
             size_t totalFrames = m_randomizedChunks[0].back().globalte() - sweepts;
             if (m_minimizeMemoryFootprint)
             {
+                m_rng.seed(randSeed);
                 m_randomizedframerefsWindow.clear();
                 m_currentRangeBeginChunkIdx = m_randomizedChunks[0][0].windowbegin;
                 m_currentRangeEndChunkIdx = m_currentRangeBeginChunkIdx;
@@ -554,6 +566,7 @@ class minibatchutterancesourcemulti : public minibatchsource
             }
             else
             {
+                srand(randSeed);
                 if (m_randomizedframerefs.size() != totalFrames)
                     m_randomizedframerefs.resize(totalFrames);
 
@@ -866,10 +879,11 @@ public:
     // constructor
     // Pass empty labels to denote unsupervised training (so getbatch() will not return uids).
     // This mode requires utterances with time stamps.
-    minibatchutterancesourcemulti(const std::vector<std::vector<wstring>> &infiles, const std::vector<map<wstring, std::vector<msra::asr::htkmlfentry>>> &labels,
+    minibatchutterancesourcemulti(bool useMersenneTwister, const std::vector<std::vector<wstring>> &infiles, const std::vector<map<wstring, std::vector<msra::asr::htkmlfentry>>> &labels,
                                   std::vector<size_t> vdim, std::vector<size_t> udim, std::vector<size_t> leftcontext, std::vector<size_t> rightcontext, size_t randomizationrange,
-                                  const latticesource &lattices, const map<wstring, msra::lattices::lattice::htkmlfwordsequence> &allwordtranscripts, const bool framemode, bool minimizeMemoryFootprint, std::vector<bool> expandToUtt)
-                                  : vdim(vdim), leftcontext(leftcontext), rightcontext(rightcontext), sampperiod(0), featdim(0), randomizationrange(randomizationrange), currentsweep(SIZE_MAX), lattices(lattices), allwordtranscripts(allwordtranscripts), framemode(framemode), chunksinram(0), timegetbatch(0), verbosity(2), m_generatePhoneBoundaries(!lattices.empty()), m_frameRandomizer(randomizedchunks, minimizeMemoryFootprint), expandToUtt(expandToUtt)
+                                  const latticesource &lattices, const map<wstring, msra::lattices::lattice::htkmlfwordsequence> &allwordtranscripts, const bool framemode, std::vector<bool> expandToUtt)
+                                  : vdim(vdim), leftcontext(leftcontext), rightcontext(rightcontext), sampperiod(0), featdim(0), randomizationrange(randomizationrange), currentsweep(SIZE_MAX), lattices(lattices), allwordtranscripts(allwordtranscripts), framemode(framemode), chunksinram(0), timegetbatch(0), verbosity(2), m_generatePhoneBoundaries(!lattices.empty()), m_frameRandomizer(randomizedchunks, useMersenneTwister), expandToUtt(expandToUtt),
+                                    m_useMersenneTwister(useMersenneTwister)
     // [v-hansu] change framemode (lattices.empty()) into framemode (false) to run utterance mode without lattice
     // you also need to change another line, search : [v-hansu] comment out to run utterance mode without lattice
     {
@@ -1251,8 +1265,16 @@ private:
                 randomizedchunkrefs[i].push_back(allchunks[i].begin() + j);
             assert(randomizedchunkrefs[i].size() == allchunks[i].size());
 
-            // note that sincew randomshuffle() uses sweep as seed, this will keep the randomization common across all feature streams
-            randomshuffle(randomizedchunkrefs[i], sweep); // bring into random order (with random seed depending on sweep)
+            if (m_useMersenneTwister)
+            {
+                m_rng.seed((unsigned long)sweep);
+                Microsoft::MSR::CNTK::RandomShuffleMT(randomizedchunkrefs[i], m_rng); // bring into random order (with random seed depending on sweep)
+            }
+            else
+            {
+                // note that sincew randomshuffle() uses sweep as seed, this will keep the randomization common across all feature streams
+                randomshuffle(randomizedchunkrefs[i], sweep); // bring into random order (with random seed depending on sweep)
+            }
         }
 
         // place them onto the global timeline -> randomizedchunks[]
@@ -1348,7 +1370,7 @@ private:
             // check we got those setup right
 
             // we now randomly shuffle randomizedutterancerefs[pos], while considering the constraints of what chunk range needs to be in memory
-            srand((unsigned int) sweep + 1);
+            m_useMersenneTwister ? m_rng.seed((unsigned long)sweep) : srand((unsigned int)sweep + 1);
             for (size_t i = 0; i < randomizedutterancerefs.size(); i++)
             {
                 // get valid randomization range, expressed in chunks
@@ -1364,7 +1386,9 @@ private:
                 for (;;)
                 {
                     // pick a random location
-                    const size_t j = Microsoft::MSR::CNTK::rand(posbegin, posend); // a random number within the window
+                    const size_t j = m_useMersenneTwister ?
+                        Microsoft::MSR::CNTK::RandMT(posbegin, posend, m_rng) :
+                        Microsoft::MSR::CNTK::rand(posbegin, posend); // a random number within the window
                     if (i == j)
                         break; // the random gods say "this one points to its original position"... nothing wrong about that, but better not try to swap
 
