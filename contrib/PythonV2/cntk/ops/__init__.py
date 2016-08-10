@@ -4,7 +4,7 @@
 # ==============================================================================
 
 import numpy as np
-from ..utils import sanitize_input, get_data_type
+from ..utils import sanitize_input, get_data_type, cntk_device
 from cntk import cntk_py
 
 def combine(operands, name=''):
@@ -1082,83 +1082,72 @@ def dropout(x, name=''):
 ################################################################################
 
 
-def input(shape, dynamic_axis='', data_type=None, needs_gradient=True, name=''):
+def variable(shape, data_type=None, needs_gradient=True, name=''):
     """
     It creates an input node. The graph requires a separate reader that will be
     fed to this input.
 
     Args:
-        shape (tuple): the shape of the input tensor
-        dynamic_axis (str or output of :func:`cntk.ops.dynamic_axis`): the dynamic axis
+        shape (tuple): the shape of the input tensor     
+        data_type: np.float32 or np.float64
+        needs_gradients (bool): whether to back-propagates to it or not
         name (str): the name of the node in the network
         
     Returns:
         :class:`cntk_py.Function`
     """
-    if dynamic_axis:
-        raise NotImplemented
-
     from .variables import Variable
-    if not np.isscalar(shape):
-        # cntk uses column major, thus we reverse the shape    
-        shape = tuple(reversed(shape))
 
     # TODO dynamic axis
-    return Variable(shape, data_type, needs_gradient, name=name)
+    # TODO Sparse
+    return Variable(shape, data_type, needs_gradient, name)
     
-#TOOD: enable when it is exposed in c++
-def sparse_input(shape, dynamic_axis='', name=''):
-    """
-    It creates a sparse input node. The graph requires a separate reader that will be
-    fed to this input.
-
-    Args:
-        shape (tuple): the shape of the input tensor
-        dynamic_axis (str or output of :func:`cntk.ops.dynamic_axis`): the dynamic axis
-        name (str): the name of the node in the network
-    Returns:
-        :class:`cntk_py.Function`
-    """
-
-    raise NotImplementedError("sparse_input is not implemented yet in V2")
-
-def parameter(shape=None, value=None, learning_rate_multiplier=1.0,
-        init_from_file_path=None, name=''):
+def parameter(shape=None, value=None, device_id=-1, name=''):
     """
     It creates a parameter tensor. 
 
     Args:
         shape (tuple or int, optional): the shape of the input tensor. If not provided, it will be inferred from ``value``.
-        value (scalar or NumPy array, optional): a scalar initial value that would be replicated for every element in the tensor or NumPy array. If ``None``, the tensor will be initialized uniformly random.
-        learning_rate_multiplier (float): set to control the learning rate on this particular node
-        init_from_file_path (str): the file that contains the initial tensor value. Used only if ``value=None``.
+        value (scalar or NumPy array, optional): a scalar initial value that would be replicated for every element in the tensor or NumPy array. 
+        If ``None``, the tensor will be initialized uniformly random.
+        device_id (int): device id, -1 for CPU, 0 or higher for GPU                
         name (str, optional): the name of the node in the network
 
     Returns:
         :class:`cntk_py.Function`
     """
+    #TODO: random uniform
+    #TODO: add swig support to this templatized constructor and reflect the change in this method:
+    #   template<typename ElemType>
+    #   Parameter(const NDShape& shape, ElemType initValue, const DeviceDescriptor& device = DeviceDescriptor::DefaultDevice(), const std::wstring& name = L"")
+    #       : Variable(shape, VariableKind::Parameter, AsDataType<ElemType>(), MakeSharedObject<NDArrayView>(initValue, shape, device), true, {}, name)
 
-    from variables import Parameter
-    return Parameter(shape, value)        
+    from variables import Parameter    
+    return Parameter(shape, value, None, cntk_device(device_id), name)        
 
-def constant(value, name='', data_type=None, dev=None):
+def constant(shape=None, value=None, device_id=-1, name=''):
     """
     It creates a constant tensor initialized from a numpy array
 
     Args:
-        value: the tensor constant passed as numpy array
-        name (str): the name of the node in the network
+        shape (tuple or int, optional): the shape of the input tensor. If not provided, it will be inferred from ``value``.
+        value (scalar or NumPy array, optional): a scalar initial value that would be replicated for every element in the tensor or NumPy array. 
+        If ``None``, the tensor will be initialized uniformly random.
+        device_id (int): device id, -1 for CPU, 0 or higher for GPU                
+        name (str, optional): the name of the node in the network
     Returns:
         :class:`cntk_py.Function`
     """
     from .variables import Constant, constant_from_scalar
 
-    if dev is None:
-        dev = cntk_py.DeviceDescriptor_CPUDevice()
+    #TODO: add swig support to this templatized constructor and reflect the change in this method:
+    #   template<typename ElemType>
+    #   Constant(const NDShape& shape, ElemType initValue, const DeviceDescriptor& device = DeviceDescriptor::DefaultDevice(), const std::wstring& name = L"")
+    #       : Variable(shape, VariableKind::Constant, AsDataType<ElemType>(), MakeSharedObject<NDArrayView>(initValue, shape, device), true, {}, name)
 
     if np.isscalar(value):        
-        return constant_from_scalar(value=value, name=name, data_type=data_type, dev=dev)
-    return Constant(value=value, name=name, data_type=data_type, dev=dev)
+        return constant_from_scalar(shape, value, None, cntk_device(device_id), name)   
+    return Constant(shape, value, None, cntk_device(device_id), name)
 
 #TOOD: enable when it is exposed in c++
 def dynamic_axis(name=''):

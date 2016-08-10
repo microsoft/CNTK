@@ -2,7 +2,7 @@ import pytest
 
 import numpy as np
 from cntk import cntk_py
-from cntk.ops import input, constant
+from cntk.ops import variable, constant
 from cntk.tests.test_utils import *
 from ..utils import sanitize_batch, remove_masked_elements, pad_to_dense, precision_numpy, cntk_device
 
@@ -22,8 +22,8 @@ def _input_plus_const():
 
     shape = (2,3)
 
-    left_var = input(shape, data_type='float', needs_gradient=True, name="left_node")
-    right_const = constant(np.ones(shape=shape), data_type='float', name="right_node")
+    left_var = variable(shape, data_type='float', needs_gradient=True, name="left_node")
+    right_const = constant(value=np.ones(shape=shape), name="right_node")
 
     op = cntk_py.Plus(left_var, right_const)
 

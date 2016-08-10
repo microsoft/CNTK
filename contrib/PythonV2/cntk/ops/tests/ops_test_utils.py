@@ -15,9 +15,9 @@ from cntk.tests.test_utils import *
 
 from ...utils import sanitize_dtype_cntk
 from ...utils import eval as cntk_eval
-from .. import constant, input
+from .. import constant, variable
 
-I = input
+I = variable
 
 @pytest.fixture(params=["dense", "sparse"])
 def left_matrix_type(request):

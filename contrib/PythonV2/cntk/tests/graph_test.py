@@ -6,7 +6,7 @@
 
 from ..graph import *
 #from ..ops.cntk2 import Abs, Plus, Minus, ElementTimes
-from ..ops import constant, input, plus, times, past_value
+from ..ops import constant, variable, plus, times, past_value
 import numpy as np
 
 import pytest
@@ -14,7 +14,7 @@ import pytest
 # keeping things short
 A = np.asarray
 C = constant
-I = input
+I = variable
 
 
 def test_overload_exception():
