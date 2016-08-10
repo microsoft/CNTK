@@ -489,25 +489,24 @@ public:
         return m_poolKind == PoolKind::Max;
     }
 
-    void Validate(bool isFinalValidationPass) override
+private:
+    // add 'reductionDims' dimensions to 'shape', copying from 'from' or 'deflt'
+    template<class V, typename T>
+    static void FixVectorShape(size_t reductionDims, V& shape, T deflt)
     {
-        auto inputShape = GetInputSampleLayout(0);
-        ValidatePooling(inputShape, isFinalValidationPass);
-        if (isFinalValidationPass)
-        {
-            if (m_convEng == nullptr)
-            {
-                auto geometry = std::make_shared<ConvolveGeometry>(inputShape, m_kernelShape, m_mapCount, m_stride,
-                                                                   m_sharing, m_autoPad, m_lowerPad, m_upperPad);
-                m_convEng = ConvolutionEngine<ElemType>::Create(geometry, m_deviceId, m_imageLayout,
-                                                                m_maxTempMemSizeInSamples, m_poolKind,
-                                                                ConvolutionEngineKind::All, NodeName());
-            }
-        }
+        size_t targetRank = shape.size() + reductionDims;
+        if (shape.size() < targetRank)
+            shape.resize(targetRank, deflt);
+        // else let ComputeOutputShape() deal with the failure
     }
-
-protected:
-    void ValidatePooling(const TensorShape& inputShape, bool isFinalValidationPass)
+    static void FixTensorShape(size_t reductionDims, TensorShape& shape, size_t deflt)
+    {
+        auto dims = shape.GetDims();
+        FixVectorShape(reductionDims, dims, deflt);
+        shape = TensorShape(dims);
+    }
+public:
+    void Validate(bool isFinalValidationPass) override
     {
         Base::Validate(isFinalValidationPass);
         InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
@@ -520,9 +519,41 @@ protected:
                 "and make sure input data layout is CHW", NodeName().c_str(), OperationName().c_str(), NodeName().c_str());
         }
 
+        auto inputShape = GetInputSampleLayout(0);
+        // make kernel shape etc. look like convolution parameters, i.e. create nominal reduction dimensions
+        // In older versions, it was expected that pooling takes kernel shapes like convolution,
+        // which included the reduction dim(s). It makes more sense to not require users to
+        // include them for pooing, which the padding below accounts for.
+        if (inputShape.size() > m_kernelShape.size())   // user specified only the pooling-area shape: add the missing dims
+        {
+            size_t reductionDims = inputShape.size() - m_kernelShape.size(); // number of missing dims--these are reduction dims
+            FixTensorShape(reductionDims,     m_kernelShape, 1);             // pool over 1 in reduction dimension
+            if (m_stride.GetRank() != 1)
+                FixTensorShape(reductionDims, m_stride,      1);             // stride for reduction dims is 1
+            if (m_autoPad.size() != 1)
+                FixVectorShape(reductionDims, m_autoPad,     false);         // no padding for reduction dims
+            if (m_lowerPad.GetRank() != 1)
+                FixTensorShape(reductionDims, m_lowerPad,    0);
+            if (m_upperPad.GetRank() != 1)
+                FixTensorShape(reductionDims, m_upperPad,    0);
+            if (m_sharing.size() != 1)
+                FixVectorShape(reductionDims, m_sharing,     false); // dummy
+        }
+
         auto outDims = ConvolveGeometry::ComputeOutputShape(inputShape, m_kernelShape, m_mapCount, m_stride,
                                                             m_sharing, m_autoPad, m_lowerPad, m_upperPad);
         SetDims(outDims, HasMBLayout());
+        if (isFinalValidationPass)
+        {
+            if (m_convEng == nullptr)
+            {
+                auto geometry = std::make_shared<ConvolveGeometry>(inputShape, m_kernelShape, m_mapCount, m_stride,
+                                                                   m_sharing, m_autoPad, m_lowerPad, m_upperPad);
+                m_convEng = ConvolutionEngine<ElemType>::Create(geometry, m_deviceId, m_imageLayout,
+                                                                m_maxTempMemSizeInSamples, m_poolKind,
+                                                                ConvolutionEngineKind::All, NodeName());
+            }
+        }
     }
 };
 

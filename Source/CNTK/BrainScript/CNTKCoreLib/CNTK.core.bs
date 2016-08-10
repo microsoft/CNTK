@@ -80,14 +80,15 @@ ConvolutionalLayer {numOutputChannels,   # e.g. (1) or BS.Constants.None
 # MaxPoolingLayer, AveragePoolingLayer -- create a max- or average-pooling layer
 _PoolingLayer {poolKind,            # "max" or "average"
                filterShape,         # e.g. (3:3)
+               stride = 1, autoPadding = true,
                lowerPad = 0, upperPad = 0} = # TODO: support this
 {
-    f(x) = Pooling (x, poolKind, kernelShape, stride = stride, sharing = sharing, autoPadding = autoPaddingPadded, lowerPad = lowerPad, upperPad = upperPad)
+    f(x) = Pooling (x, poolKind, filterShape, stride = stride, autoPadding = autoPadding, lowerPad = lowerPad, upperPad = upperPad)
 }.f
-MaxPoolingLayer {filterShape, stride = 1, autoPadding = true /*, lowerPad = 0, upperPad = 0*/} =
-    _PoolingLayer {"max", filterShape, stride = stride, autoPadding = autoPadding}
-AveragePoolingLayer {filterShape, stride = 1, autoPadding = true /*, lowerPad = 0, upperPad = 0*/} =
-    _PoolingLayer {"average", filterShape, stride = stride, autoPadding = autoPadding}
+MaxPoolingLayer {filterShape, stride = 1, autoPadding = true, lowerPad = 0, upperPad = 0} =
+    _PoolingLayer {"max", filterShape, stride = stride, autoPadding = autoPadding, lowerPad = lowerPad, upperPad = upperPad}
+AveragePoolingLayer {filterShape, stride = 1, autoPadding = true, lowerPad = 0, upperPad = 0} =
+    _PoolingLayer {"average", filterShape, stride = stride, autoPadding = autoPadding, lowerPad = lowerPad, upperPad = upperPad}
 
 # RecurrentLSTMLayer -- create an LSTM layer
 RecurrentLSTMLayer {outputDim,

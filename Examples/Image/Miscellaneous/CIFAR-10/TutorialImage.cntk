@@ -28,8 +28,8 @@ ConvReLULayer(inp, outMap, inWCount, kW, kH, hStride, vStride, wScale, bValue) =
         labelDim = 10
 
         model (features) = {
-            featOffs = Constant (128)
-            featScaled = features - featOffs
+            Subtract128 (x) = x - Constant (128)
+            featScaled = Subtract128 (features)
 
             # conv1
             kW1 = 5
@@ -45,7 +45,8 @@ ConvReLULayer(inp, outMap, inWCount, kW, kH, hStride, vStride, wScale, bValue) =
             pool1H = 3
             pool1hStride = 2
             pool1vStride = 2
-            pool1 = MaxPooling(conv1_act, pool1W, pool1H, pool1hStride, pool1vStride)
+            #pool1 = MaxPooling(conv1_act, pool1W, pool1H, pool1hStride, pool1vStride)
+            pool1 = MaxPoolingLayer {(pool1W:pool1H), stride = (pool1hStride:pool1vStride)} (conv1_act)
 
             # conv2
             kW2 = 5
@@ -61,7 +62,8 @@ ConvReLULayer(inp, outMap, inWCount, kW, kH, hStride, vStride, wScale, bValue) =
             pool2H = 3
             pool2hStride = 2
             pool2vStride = 2
-            pool2 = MaxPooling(conv2_act, pool2W, pool2H, pool2hStride, pool2vStride)
+            #pool2 = MaxPooling(conv2_act, pool2W, pool2H, pool2hStride, pool2vStride)
+            pool2 = MaxPoolingLayer {(pool2W:pool2H), stride = (pool2hStride:pool2vStride)} (conv2_act)
 
             # conv3
             kW3 = 5
@@ -77,18 +79,29 @@ ConvReLULayer(inp, outMap, inWCount, kW, kH, hStride, vStride, wScale, bValue) =
             pool3H = 3
             pool3hStride = 2
             pool3vStride = 2
-            pool3 = MaxPooling(conv3_act, pool3W, pool3H, pool3hStride, pool3vStride)
+            #pool3 = MaxPooling(conv3_act, pool3W, pool3H, pool3hStride, pool3vStride)
+            pool3 = MaxPoolingLayer {(pool3W:pool3H), stride = (pool3hStride:pool3vStride)} (conv3_act)
 
-DNNImageReLULayer(inW, inH, inC, outDim, x, wScale, bValue) =
-[
-    W = Parameter(outDim,inW*inH*inC, init = "gaussian",   initValueScale = wScale)
-    b = LearnableParameter(outDim, 1,         initValue  = bValue)
-    t = Times(W, x)
-    z = Plus(t, b)
-    y = RectifiedLinear(z)
-].y
-            h1 = DNNImageReLULayer(3, 3, cMap3, 64, pool3, 12, 0)
-            #h1 = DenseLayer {64, activation = ReLU, init = "gaussian", initValueScale = 12} (pool3)
+#_PoolingLayer {poolKind,            # "max" or "average"
+#               filterShape,         # e.g. (3:3)
+#               stride = 1, autoPadding = true,
+#               lowerPad = 0, upperPad = 0} = # TODO: support this
+#{
+#    f(x) = Pooling (x, poolKind, kernelShape, stride = stride, autoPadding = autoPadding, lowerPad = lowerPad, upperPad = upperPad)
+#}.f
+
+
+
+#DNNImageReLULayer(inW, inH, inC, outDim, x, wScale, bValue) =
+#[
+#    W = Parameter(outDim,inW*inH*inC, init = "gaussian",   initValueScale = wScale)
+#    b = LearnableParameter(outDim, 1,         initValue  = bValue)
+#    t = Times(W, x)
+#    z = Plus(t, b)
+#    y = RectifiedLinear(z)
+#].y
+            #h1 = DNNImageReLULayer(3, 3, cMap3, 64, pool3, 12, 0)
+            h1 = DenseLayer {64, activation = ReLU, init = "gaussian", initValueScale = 12} (pool3)
             h1_d = Dropout(h1)
 
 #DNNLastLayer(64, labelDim, x, wScale, bValue) =
