@@ -454,7 +454,7 @@ public:
                 //LogicError("Convolution weight matrix %ls should have dimension [%d, %d] which is [kernelCount, kernelWidth * kernelHeight * inputChannels]",
                 //           Input(0)->NodeName().c_str(), (int)m_convEng->Geometry()->KernelCount(), (int)m_kernelShape.GetNumElements());
                 LogicError("Convolution weight matrix %ls should have dimension [(filter shape) x (input channels) x (output channels)]",
-                           Input(0)->NodeName().c_str(), (int)m_convEng->Geometry()->KernelCount(), (int)m_kernelShape.GetNumElements());
+                           Input(0)->NodeName().c_str());
             }
         }
     }

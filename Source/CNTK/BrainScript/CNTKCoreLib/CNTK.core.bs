@@ -138,14 +138,11 @@ DelayLayer {T=1, defaultHiddenActivation=0} =
 # BatchNormalizationLayer -- create a batch-normalization layer
 BatchNormalizationLayer {spatialRank = 0,  # reduce over these dims. E.g. 2 to reduce over (w,h) in a [W x H x C]-shaped input
                          initialScale = 1,
-                         outDim = BS.Constants.None,   # TODO: must be specified for now
                          normalizationTimeConstant = 0, blendTimeConstant = 0,
                          epsilon = 0.00001, useCntkEngine = true} =
 {
-    normShape =
-        if BS.Constants.IsNone (outDim) then Fail ("BatchNormalizationLayer: Currently, outDim= is required.")
-            #_ConcatArrays (Repeat (spatialRank, 1), 0) # spatial dims get a dimension of 1 (broadcasting, while all others are inferred from input)
-        else (outDim : 1)   # this is how it is currently parameterized. Clean this up to enable inference.
+    #normShape = _ConcatArrays (Repeat (spatialRank, 1), 0) # spatial dims get a dimension of 1 (broadcasting, while all others are inferred from input)
+    normShape = (0:1)  # TODO: Update this once we support broadcasting-style parameters.
     scale        = ParameterTensor {normShape, initValue = initialScale}
     bias         = ParameterTensor {normShape, initValue = 0}
     runMean      = ParameterTensor {normShape, initValue = 0, learningRateMultiplier = 0} # note: disable learning since these are updated differently

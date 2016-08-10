@@ -1,7 +1,7 @@
 # Simple CIFAR-10 convnet
 
-command = TrainConvNet:Eval
-#command = TrainConvNetWithBN:Eval
+#command = TrainConvNet:Eval
+command = TrainConvNetWithBN:Eval
 
 makeMode = false ; traceLevel = 1 ; deviceId = 0
 
@@ -87,16 +87,16 @@ TrainConvNetWithBN = [
         model = Sequential (
             Subtract128 :
             ConvolutionalLayer {32, (5:5), bias = false, init = "gaussian", initValueScale = 0.0043} :
-              BatchNormalizationLayer {outDim = 32, spatialRank = 2, normalizationTimeConstant = 4096} : ReLU :
+              BatchNormalizationLayer {spatialRank = 2, normalizationTimeConstant = 4096} : ReLU :
                 MaxPoolingLayer {(3:3), stride = (2:2)} :
             ConvolutionalLayer {32, (5:5), bias = false, init = "gaussian", initValueScale = 1.414} :
-              BatchNormalizationLayer {outDim = 32, spatialRank = 2, normalizationTimeConstant = 4096} : ReLU :
+              BatchNormalizationLayer {spatialRank = 2, normalizationTimeConstant = 4096} : ReLU :
                 MaxPoolingLayer {(3:3), stride = (2:2)} :
             ConvolutionalLayer {64, (5:5), bias = false, init = "gaussian", initValueScale = 1.414} :
-              BatchNormalizationLayer {outDim = 64, spatialRank = 2, normalizationTimeConstant = 4096} : ReLU :
+              BatchNormalizationLayer {spatialRank = 2, normalizationTimeConstant = 4096} : ReLU :
                 MaxPoolingLayer {(3:3), stride = (2:2)} :
             LinearLayer {64, bias = false, init = "gaussian", initValueScale = 12} :
-              BatchNormalizationLayer {outDim = 64, normalizationTimeConstant = 4096} : ReLU :
+              BatchNormalizationLayer {normalizationTimeConstant = 4096} : ReLU :
             LinearLayer {labelDim, init = "gaussian", initValueScale = 1.5}
         )
 
