@@ -63,6 +63,25 @@ TrainConvNet = [
         firstMBsToShowResult = 10 ; numMBsToShowResult = 500
     ]
 
+    reader_new = [
+        readerType = "ImageReader"
+        file = "$DataDir$/cifar-10-batches-py/train_map.txt"
+        randomize = "auto"
+        prefetch = true
+        features = [
+            width = 32
+            height = 32
+            channels = 3
+            cropType = "random"
+            cropRatio = 0.8
+            jitterType = "uniRatio"
+            interpolations = "linear"
+            meanFile = "$DataDir$/cifar-10-batches-py/CIFAR-10_mean.xml"
+        ]
+        labels = [
+            labelDim = 10
+        ]
+    ]    
     reader = [
         readerType = "CNTKTextFormatReader"
         file = "$DataDir$/Train_cntk_text.txt"
