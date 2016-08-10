@@ -566,7 +566,7 @@ class minibatchutterancesourcemulti : public minibatchsource
             }
             else
             {
-                srand(randSeed);
+                srand(randSeed + 1);
                 if (m_randomizedframerefs.size() != totalFrames)
                     m_randomizedframerefs.resize(totalFrames);
 
@@ -1440,7 +1440,7 @@ private:
         }
         else // frame mode
         {
-            m_frameRandomizer.reset((unsigned int)sweep + 1);
+            m_frameRandomizer.reset((unsigned int)sweep);
         }
 
         return sweep;
