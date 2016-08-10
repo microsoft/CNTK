@@ -1,8 +1,8 @@
 import numpy as np
 import sys
 import os
-sys.path.append(os.path.join("..",".."))
-import cntk_py
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+import cntk.cntk_py as cntk_py
 
 # class MyVariable(cntk_py.Variable):
 def create_variable(shape, data_type='float', is_sparse=False, needs_gradient=True, name=""):
