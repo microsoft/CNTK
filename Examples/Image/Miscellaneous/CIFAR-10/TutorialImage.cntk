@@ -1,13 +1,10 @@
-makeMode = false ; traceLevel = 1 ; deviceId = 0
-
-RootDir = "."  # overridable from outside
-DataDir  = "$RootDir$"
-ModelDir = "$RootDir$/Output/Models"
-
-# If set to true, always initialize the network on CPU, making initialization consistent across CPU and GPU targets (for testing).
-initOnCPUOnly=true
+# Simple CIFAR-10 convnet
 
 command = Train:Eval
+
+makeMode = false ; traceLevel = 1 ; deviceId = 0
+
+RootDir = "." ; DataDir  = "$RootDir$" ; ModelDir = "$RootDir$/Output/Models"
 
 modelPath = "$ModelDir$/01_Convolution"
 
@@ -20,67 +17,6 @@ Train = [
 
         Subtract128 (x) = x - Constant (128)
 
-        model0 (features) = {
-            featScaled = Subtract128 (features)
-
-            # conv1
-            #kW1 = 5
-            #kH1 = 5
-            #cMap1 = 32
-            #hStride1 = 1
-            #vStride1 = 1
-            ## weight[cMap1, kW1 * kH1 * ImageC]
-            conv1_act = ConvolutionalLayer {32, (5:5), activation = ReLU, init = "gaussian", initValueScale = 0.0043} (featScaled)
-
-            # pool1
-            #pool1W = 3
-            #pool1H = 3
-            #pool1hStride = 2
-            #pool1vStride = 2
-            #pool1 = MaxPooling(conv1_act, pool1W, pool1H, pool1hStride, pool1vStride)
-            pool1 = MaxPoolingLayer {(3:3), stride = (2:2)} (conv1_act)
-
-            # conv2
-            #kW2 = 5
-            #kH2 = 5
-            #cMap2 = 32
-            #hStride2 = 1
-            #vStride2 = 1
-            ## weight[cMap2, kW2 * kH2 * cMap1]
-            #conv2_act = ConvReLULayer(pool1, cMap2, 800, kW2, kH2, hStride2, vStride2, 1.414, 0)
-            conv2_act = ConvolutionalLayer {32, (5:5), activation = ReLU, init = "gaussian", initValueScale = 1.414} (pool1)
-
-            # pool2
-            #pool2W = 3
-            #pool2H = 3
-            #pool2hStride = 2
-            #pool2vStride = 2
-            #pool2 = MaxPooling(conv2_act, pool2W, pool2H, pool2hStride, pool2vStride)
-            pool2 = MaxPoolingLayer {(3:3), stride = (2:2)} (conv2_act)
-
-            # conv3
-            #kW3 = 5
-            #kH3 = 5
-            #cMap3 = 64
-            #hStride3 = 1
-            #vStride3 = 1
-            # weight[cMap3, kW3 * kH3 * cMap2]
-            #conv3_act = ConvReLULayer(pool2, cMap3, 800, kW3, kH3, hStride3, vStride3, 1.414, 0)
-            conv3_act = ConvolutionalLayer {64, (5:5), activation = ReLU, init = "gaussian", initValueScale = 1.414} (pool2)
-
-            # pool3
-            #pool3W = 3
-            #pool3H = 3
-            #pool3hStride = 2
-            #pool3vStride = 2
-            #pool3 = MaxPooling(conv3_act, pool3W, pool3H, pool3hStride, pool3vStride)
-            pool3 = MaxPoolingLayer {(3:3), stride = (2:2)} (conv3_act)
-
-            h1 = DenseLayer {64, activation = ReLU, init = "gaussian", initValueScale = 12} (pool3)
-            h1_d = Dropout(h1)
-
-            z = LinearLayer {labelDim, init = "gaussian", initValueScale = 1.5} (h1_d)
-        }.z
         model = Sequential (
             Subtract128 :
             ConvolutionalLayer {32, (5:5), activation = ReLU, init = "gaussian", initValueScale = 0.0043} :
@@ -127,7 +63,6 @@ Train = [
 
     reader = [
         readerType = "CNTKTextFormatReader"
-        # See REAMDE.md for details on getting the data (Train_cntk_text.txt).
         file = "$DataDir$/Train_cntk_text.txt"
         input = [
             features = [ dim = 3072 ; format = "dense" ]
@@ -138,11 +73,8 @@ Train = [
 
 Eval = [
     action = "eval"
-    # Set minibatch size for testing.
     minibatchSize = 16
-
-    evalNodeNames = errs:top5Errs
-
+    evalNodeNames = errs:top5Errs  # also test top-5 error rate
     reader = [
         readerType = "CNTKTextFormatReader"
         file = "$DataDir$/Test_cntk_text.txt"
