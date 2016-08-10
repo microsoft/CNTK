@@ -109,6 +109,7 @@
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="LearnerTests.cpp" />
     <ClCompile Include="SerializationTests.cpp" />
     <ClCompile Include="FeedForwardTests.cpp" />
     <ClCompile Include="Main.cpp" />

@@ -4,6 +4,7 @@
 #include "CNTKLibrary.h"
 #include <functional>
 #include <fstream>
+#include <random>
 
 static const double relativeTolerance = 0.001f;
 static const double absoluteTolerance = 0.000001f;
@@ -20,6 +21,8 @@ inline void FloatingPointVectorCompare(const std::vector<ElementType>& first, co
             throw std::runtime_error(message);
     }
 }
+
+static std::mt19937_64 rng(0);
 
 #pragma warning(push)
 #pragma warning(disable: 4996)
@@ -110,6 +113,16 @@ inline CNTK::FunctionPtr FullyConnectedDNNLayer(CNTK::Variable input, size_t out
 
 #pragma warning(pop)
 
+inline CNTK::NDShape CreateShape(size_t numAxes, size_t maxDimSize)
+{
+    CNTK::NDShape shape(numAxes);
+    for (size_t i = 0; i < numAxes; ++i)
+    {
+        shape[i] = (rng() % maxDimSize) + 1;
+    }
+
+    return shape;
+}
 
 inline void OpenStream(std::fstream& stream, const std::wstring& filename, bool readonly)
 {

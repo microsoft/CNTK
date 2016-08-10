@@ -7,6 +7,7 @@ void FeedForwardTests();
 void RecurrentFunctionTests();
 void TrainerTests();
 void SerializationTests();
+void LearnerTests();
 
 int main()
 {
@@ -16,6 +17,7 @@ int main()
     RecurrentFunctionTests();
     TrainerTests();
     SerializationTests();
+    LearnerTests();
 
     fprintf(stderr, "\nCNTKv2Library tests: Passed\n");
     fflush(stderr);

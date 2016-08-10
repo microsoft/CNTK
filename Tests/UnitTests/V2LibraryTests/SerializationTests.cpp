@@ -20,7 +20,6 @@ static const size_t maxDimSize = 15;
 
 
 static size_t keyCounter = 0;
-static mt19937_64 rng(0);
 static uniform_real_distribution<double> double_dist = uniform_real_distribution<double>();
 static uniform_real_distribution<float> float_dist = uniform_real_distribution<float>();
 
@@ -157,9 +156,7 @@ void TestLearnerSerialization(int numParameters, const DeviceDescriptor& device)
     if ((_wunlink(tempFilePath.c_str()) != 0) && (errno != ENOENT))
         std::runtime_error("Error deleting temporary test file 'serialization.tmp'.");
 
-    NDShape shape(5);
-    for (size_t i = 0; i < shape.NumAxes(); ++i)
-        shape[i] = (rng() % maxDimSize) + 1;
+    NDShape shape = CreateShape(5, maxDimSize);
 
     unordered_set<Parameter> parameters;
     unordered_map<Parameter, NDArrayViewPtr> gradientValues;

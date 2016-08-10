@@ -237,4 +237,9 @@ namespace CNTK
         AddConfigString(s, value, numIndentationSpaces);
         s << std::endl;
     }
+
+    inline double MomentumPerMB(double momentumPerSample, size_t minibatchSize)
+    {
+        return std::pow(momentumPerSample, minibatchSize);
+    }
 }

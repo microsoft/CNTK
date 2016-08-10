@@ -122,18 +122,18 @@ namespace CNTK
 
         ElementType* data1 = nullptr;
         ElementType* data2 = nullptr;
-        if ((view1.Device().Type() == DeviceKind::CPU))
+        if (view1.Device().Type() == DeviceKind::CPU)
         {
             data1 = view1.WritableDataBuffer<ElementType>();
             data2 = view2.WritableDataBuffer<ElementType>();
         }
         else
         {
-            auto temp1CpuDataView = MakeSharedObject<NDArrayView>(AsDataType<ElementType>(), view1.Shape(), DeviceDescriptor::CPUDevice());
+            NDArrayViewPtr temp1CpuDataView = MakeSharedObject<NDArrayView>(AsDataType<ElementType>(), view1.Shape(), DeviceDescriptor::CPUDevice());
             temp1CpuDataView->CopyFrom(view1);
             data1 = temp1CpuDataView->WritableDataBuffer<ElementType>();
 
-            auto temp2CpuDataView = MakeSharedObject<NDArrayView>(AsDataType<ElementType>(), view2.Shape(), DeviceDescriptor::CPUDevice());
+            NDArrayViewPtr temp2CpuDataView = MakeSharedObject<NDArrayView>(AsDataType<ElementType>(), view2.Shape(), DeviceDescriptor::CPUDevice());
             temp2CpuDataView->CopyFrom(view2);
             data2 = temp2CpuDataView->WritableDataBuffer<ElementType>();
         }
@@ -544,6 +544,19 @@ namespace CNTK
         return stream;
     }
 
+    // Returns the element whose key is less or equal to the argument.
+    template <typename T>
+    const T& MBSchedule<T>::operator[](size_t key) const
+    {
+        assert(m_schedule.begin()->first == 0);
+        auto it = m_schedule.lower_bound(key);
+        if (it == m_schedule.end() || (it != m_schedule.begin() && it->first != key))
+        {
+            --it;
+        }
+        return it->second;
+    }
+
     template void DictionaryValue::AllocateDataPtr<NDShape>(const NDShape& value);
     template void DictionaryValue::AllocateDataPtr<vector<DictionaryValue>>(const vector<DictionaryValue>& value);
     template void DictionaryValue::AllocateDataPtr<wstring>(const wstring& value);
@@ -555,4 +568,6 @@ namespace CNTK
     template void DictionaryValue::FreePtrAsType<wstring>();
     template void DictionaryValue::FreePtrAsType<Dictionary>();
     template void DictionaryValue::FreePtrAsType<NDArrayView>();
+
+    template const double& MBSchedule<double>::operator[](size_t key) const;
 }

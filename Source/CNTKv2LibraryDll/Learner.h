@@ -9,6 +9,7 @@
 
 namespace CNTK 
 {
+    // TODO: should this be exposed at the API surface?
     // A collection of additional options that are applicable for all standard learners 
     // (after these options are set, they retain their value for the entire lifespan of a learner).
     struct AdditionalLearningOptions
@@ -42,23 +43,19 @@ namespace CNTK
         // needed for BlockMomemtumSGD to reset SGD momentum after aggregation.
         void ResetSmoothedGradients();
 
-        // TODO: move learning rate and momentum scheduling and adjustment functionality 
-        // inside the learner and drop these setters.
-        void SetLearningRate(double value) { m_learningRatePerSample = value; }
-
     protected:
-        LearnerBase(const std::unordered_set<Parameter>& parameters);
+        LearnerBase(const std::unordered_set<Parameter>& parameters, const LearningRatesPerSample& learningRates);
 
         virtual void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const = 0;
 
         double ParameterDependentLearningRate(const Parameter& parameter) const
         {
-            return m_learningRatePerSample * m_additionalOptions.learningRateMultipliers.at(parameter);
+            return m_learningRates[m_minibatchCount] * m_additionalOptions.learningRateMultipliers.at(parameter);
         }
 
         std::string LearnerType() const;
 
-        double m_learningRatePerSample;
+        LearningRatesPerSample m_learningRates;
 
         AdditionalLearningOptions m_additionalOptions;
 
@@ -91,6 +88,9 @@ namespace CNTK
         template <typename ElementType>
         void PostProcess(const Parameter& parameter, const NDArrayViewPtr& gradientValue, size_t actualMBSize) const;
 
+        size_t m_sampleCount;
+        size_t m_minibatchCount;
+
     private:
         // Templatized update function, it invokes preprocess and postprocess using the provided
         // template parameter and also invokes virtual Update method implemented in one of the subclasses.
@@ -101,18 +101,18 @@ namespace CNTK
         static bool HasNan(const NDArrayViewPtr& value, const char* name);
         static void Print(const NDArrayViewPtr& value, const char* msg);
 
-        size_t m_sampleCount;
+        static const size_t checkpointVersion = 1;
     };
 
     // Vanilla gradient descent optimization algorithm.
     class LearnerSGD : public LearnerBase
     {
     public:
-        LearnerSGD(const std::unordered_set<Parameter>& parameters, double learningRatePerSample = 0)
-            : LearnerBase(parameters), m_momentumPerSample(0.0), m_useNesterovAcceleration(false)
-        {
-            SetLearningRate(learningRatePerSample);
-        }
+        LearnerSGD(const std::unordered_set<Parameter>& parameters, const LearningRatesPerSample& learningRates)
+            : LearnerBase(parameters, learningRates), 
+            m_momentums(0.0), 
+            m_useNesterovAcceleration(false)
+        { }
 
     protected:
 
@@ -121,7 +121,7 @@ namespace CNTK
         template <typename ElementType>
         void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const;
 
-        double m_momentumPerSample;
+        MomentumsPerSample m_momentums;
         bool m_useNesterovAcceleration;
     };
 
@@ -129,20 +129,24 @@ namespace CNTK
     class LearnerMomentumSGD : public LearnerSGD
     {
     public:
-        LearnerMomentumSGD(const std::unordered_set<Parameter>& parameters)
-            : LearnerSGD(parameters)
-        {}
-
-        void SetMomentum(double value) { m_momentumPerSample = value; }
+        LearnerMomentumSGD(const std::unordered_set<Parameter>& parameters, 
+                           const LearningRatesPerSample& learningRates,
+                           const MomentumsPerSample& momentums)
+            : LearnerSGD(parameters, learningRates)
+        {
+            m_momentums = momentums;
+        }
     };
 
     // Nesterov's accelerated SGDLearnerBase descent. 
-    class LearnerNesterov : public LearnerSGD
+    class LearnerNesterov : public LearnerMomentumSGD
     {
     public:
 
-        LearnerNesterov(const std::unordered_set<Parameter>& parameters)
-            : LearnerSGD(parameters)
+        LearnerNesterov(const std::unordered_set<Parameter>& parameters, 
+                        const LearningRatesPerSample& learningRates,
+                        const MomentumsPerSample& momentums)
+            : LearnerMomentumSGD(parameters, learningRates, momentums)
         {
             m_useNesterovAcceleration = true;
         }
@@ -152,7 +156,8 @@ namespace CNTK
     {
     public:
 
-        LearnerAdaGrad(const std::unordered_set<Parameter>& parameters, bool needAveMultiplier);
+        LearnerAdaGrad(const std::unordered_set<Parameter>& parameters, 
+                       const LearningRatesPerSample& learningRates, bool needAveMultiplier);
 
     protected:
         bool m_needAveMultiplier;
@@ -167,7 +172,9 @@ namespace CNTK
     {
     public:
 
-        LearnerFSAdaGrad(const std::unordered_set<Parameter>& parameters);
+        LearnerFSAdaGrad(const std::unordered_set<Parameter>& parameters,
+                         const LearningRatesPerSample& learningRates,
+                         const MomentumsPerSample& momentums);
 
     protected:
 
@@ -182,6 +189,7 @@ namespace CNTK
     public:
 
         LearnerRMSProp(const std::unordered_set<Parameter>& parameters,
+                       const LearningRatesPerSample& learningRates,
                        double gamma, double inc, double dec, double max, double min, bool needAveMultiplier);
 
     protected:

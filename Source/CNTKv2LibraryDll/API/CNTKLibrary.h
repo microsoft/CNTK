@@ -14,6 +14,7 @@
 #include <array>
 #include <stdarg.h>
 #include <assert.h>
+#include <map>
 #include <unordered_map>
 #include <unordered_set>
 #include <string>
@@ -1918,36 +1919,90 @@ namespace CNTK
     };
 
     ///
+    /// A collection of key-value pairs that map the number of processed minibatches
+    /// to a new hyper-parameter value. If this collection contains (x,y) pair, than 
+    /// the corresponding value will be set to y after x minibatches have been processed 
+    /// (i.e., before starting x+1 minibatch). 
+    /// This class provides a number of convenience constructors to allow easy conversion 
+    /// from a single value, a list of values and a map to the per-minibatch schedule. 
+    ///
+    template <typename T>
+    class MBSchedule
+    {
+    public:
+        MBSchedule(T value)
+            : m_schedule({ std::make_pair(0, value) })
+        {}
+
+        MBSchedule(const std::initializer_list<T>& values)
+        {
+            size_t i = 0;
+            for (auto value : values)
+            {
+                m_schedule[i++] = value;
+            }
+        }
+
+         MBSchedule(const std::initializer_list<std::pair<const size_t, T>>& valuesPerMB)
+            : MBSchedule(std::map<size_t, T>(valuesPerMB))
+        {}
+
+        MBSchedule(const std::map<size_t, T>& valuesPerMB)
+            : m_schedule(valuesPerMB)
+        {
+            if (m_schedule.find(0) == m_schedule.end())
+                RuntimeError("MBSchedule::constructor : valuesPerMB must contain initial value (corresponding to the key = 0).");
+        }
+
+        CNTK_API const T& operator[](size_t key) const;
+
+    private:
+        std::map<size_t, T> m_schedule;
+    };
+
+    typedef MBSchedule<double> LearningRatesPerSample;
+    typedef MBSchedule<double> MomentumsPerSample;
+
+
+    ///
     /// Create an instance of the CNTK built-in SGD learner.
     ///
-    /// TODO: add additional SGD parameters here (a collection of learning rate values)
-    CNTK_API LearnerPtr SGDLearner(const std::unordered_set<Parameter>& parameters, double learningRatePerSample);
+    CNTK_API LearnerPtr SGDLearner(const std::unordered_set<Parameter>& parameters, 
+                                   const LearningRatesPerSample& learningRates);
 
     ///
     /// Create an instance of the CNTK built-in Momentum SGD learner.
     ///
-    /// TODO: add additional Momentum parameters here (a collection of momentum rate values)
-    CNTK_API LearnerPtr MomentumSGDLearner(const std::unordered_set<Parameter>& parameters);
+    CNTK_API LearnerPtr MomentumSGDLearner(const std::unordered_set<Parameter>& parameters, 
+                                           const LearningRatesPerSample& learningRates,
+                                           const MomentumsPerSample& momentums);
 
     ///
     /// Create an instance of the CNTK built-in Nesterov's accelerated SGD learner.
     ///
-    CNTK_API LearnerPtr NesterovLearner(const std::unordered_set<Parameter>& parameters);
+    CNTK_API LearnerPtr NesterovLearner(const std::unordered_set<Parameter>& parameters, 
+                                        const LearningRatesPerSample& learningRates,
+                                        const MomentumsPerSample& momentums);
 
     ///
     /// Create an instance of the CNTK built-in AdaGrad learner.
     ///
-    CNTK_API LearnerPtr AdaGradLearner(const std::unordered_set<Parameter>& parameters, bool needAveMultiplier = true);
+    CNTK_API LearnerPtr AdaGradLearner(const std::unordered_set<Parameter>& parameters,
+                                       const LearningRatesPerSample& learningRates,
+                                       bool needAveMultiplier = true);
 
     ///
     /// Create an instance of the CNTK built-in FSAdaGrad (improved AdaGrad) learner.
     ///
-    CNTK_API LearnerPtr FSAdaGradLearner(const std::unordered_set<Parameter>& parameters);
+    CNTK_API LearnerPtr FSAdaGradLearner(const std::unordered_set<Parameter>& parameters,
+                                         const LearningRatesPerSample& learningRates,
+                                         const MomentumsPerSample& momentums);
 
     ///
     /// Create an instance of the CNTK built-in RMSProp learner.
     ///
     CNTK_API LearnerPtr RMSPropLearner(const std::unordered_set<Parameter>& parameters,
+                                       const LearningRatesPerSample& learningRates,
                                        double gamma,
                                        double inc,
                                        double dec,
