@@ -218,6 +218,7 @@ protected:                                  \
     using Base::m_maxTempMemSizeInSamples;  \
     using Base::m_tempMatrix;               \
     using Base::m_convEng;                  \
+    using Base::InferReductionDims;         \
 public:
 
 // -----------------------------------------------------------------------
@@ -227,13 +228,8 @@ public:
 template <class ElemType>
 class ConvolutionNode : public ConvolutionNodeBase<ElemType>, public NumInputs<2>
 {
-    typedef ConvolutionNodeBase<ElemType> Base;
-    UsingConvolutionNodeBaseMembers;
-    static const std::wstring TypeName()
-    {
-        return L"Convolution";
-    }
-
+    typedef ConvolutionNodeBase<ElemType> Base; UsingConvolutionNodeBaseMembers;
+    static const std::wstring TypeName() { return L"Convolution"; }
 public:
     ConvolutionNode(DEVICEID_TYPE deviceId, const wstring& name)
         : Base(deviceId, name)
@@ -495,13 +491,8 @@ protected:
 template <class ElemType>
 class PoolingNode : public ConvolutionNodeBase<ElemType>, public NumInputs<1>
 {
-    typedef ConvolutionNodeBase<ElemType> Base;
-    UsingConvolutionNodeBaseMembers;
-    static const std::wstring TypeName()
-    {
-        return L"Pooling";
-    }
-
+    typedef ConvolutionNodeBase<ElemType> Base; UsingConvolutionNodeBaseMembers;
+    static const std::wstring TypeName() { return L"Pooling"; }
 public:
     PoolingNode(DEVICEID_TYPE deviceId, const wstring& name)
         : Base(deviceId, name)
