@@ -24,15 +24,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 //    This follows "high performance convolutional neural networks for document processing" by Kumar Chellapilla, Sidde Puri, and Patrice Simard.
 //    Each sample is stored as a column-major matrix (height, width) of float[numChannels] (r00, g00, b00, r10, g10, b10, r01, g01, b01, r11, g11, b11).
 //
-//     - input :  [C  x W  x H      x T]  or  ARRAY[1..T] OF                ARRAY[1..H]  OF ARRAY[1..W]  OF ARRAY[1..C]
-//     - output : [C' x W' x H'     x T]  or  ARRAY[1..T] OF                ARRAY[1..H'] OF ARRAY[1..W'] OF ARRAY[1..C']
-//     - filter : [C' x W" x H" x C    ]  or                 ARRAY[1..C] OF ARRAY[1..H"] OF ARRAY[1..W"] OF ARRAY[1..C']
+//     - input :  [C x W  x H      x T]  or  ARRAY[1..T] OF                ARRAY[1..H]  OF ARRAY[1..W]  OF ARRAY[1..C]
+//     - output : [K x W' x H'     x T]  or  ARRAY[1..T] OF                ARRAY[1..H'] OF ARRAY[1..W'] OF ARRAY[1..K]
+//     - filter : [K x W" x H" x C    ]  or                 ARRAY[1..C] OF ARRAY[1..H"] OF ARRAY[1..W"] OF ARRAY[1..K]
 //
 // * cudnn ("CHW") mode (works both GPU and CPU): Channels are planes
 //
-//     - input :   [W  x H  x C       x T]   or  ARRAY[1..T] OF                 ARRAY[1..C]  OF ARRAY[1..H]  OF ARRAY[1..W]
-//     - output :  [W' x H' x      C' x T]   or  ARRAY[1..T] OF ARRAY[1..C'] OF                 ARRAY[1..H'] OF ARRAY[1..W']
-//     - filter :  [W" x H" x C  x C'    ]   or                 ARRAY[1..C'] OF ARRAY[1..C]  OF ARRAY[1..H]  OF ARRAY[1..W]
+//     - input :   [W  x H  x C      x T]   or  ARRAY[1..T] OF                ARRAY[1..C]  OF ARRAY[1..H]  OF ARRAY[1..W]
+//     - output :  [W' x H' x      K x T]   or  ARRAY[1..T] OF ARRAY[1..K] OF                 ARRAY[1..H'] OF ARRAY[1..W']
+//     - filter :  [W" x H" x C  x K    ]   or                 ARRAY[1..K] OF ARRAY[1..C]  OF ARRAY[1..H]  OF ARRAY[1..W]
 //
 // where:
 //  - using ' for output and " for filter
@@ -41,7 +41,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 //  - C = input channels
 //     - 3 for color images, 1 for B&W images
 //     - for hidden layer: dimension of activation vector for each pixel
-//  - C' = output channels = dimension of activation vector for each pixel (also called N by NVidia, inconsistently)
+//  - K = output channels = dimension of activation vector for each pixel (also called N by NVidia, inconsistently)
 //
 // For ND-convolution/pooling only second format ('cudnn') is supported.
 // 
@@ -148,6 +148,41 @@ public:
     bool Transpose() const { return m_transpose; }
     size_t MaxTempMemSizeInSamples() const { return m_maxTempMemSizeInSamples; }
     PoolKind PoolingKind() const { return m_poolKind; }
+
+private:
+    // bottomlessly expand shape to filterRank, then expand to inputRank using defaults or given 'from' values
+    template<class V, typename T>
+    static void FixVectorShape(size_t filterRank, size_t inputRank, V& shape, T deflt, const V& from = V())
+    {
+        if (shape.size() == 0)
+            return; // let ComputeOutputShape() deal with this special case
+        // repeat the last value until we have the same rank as the filter
+        while (shape.size() < filterRank)
+            shape.push_back(shape.back());
+        // increase to input rank
+        // If 'from' is given then clone the value from there. This is meant to be the input dimensions for convolution.
+        while (shape.size() < inputRank)
+            shape.push_back(shape.size() < from.size() ? from[shape.size()] : deflt);
+    }
+    static void FixTensorShape(size_t filterRank, size_t inputRank, TensorShape& shape, size_t deflt, const TensorShape& from = TensorShape())
+    {
+        auto dims = shape.GetDims();
+        FixVectorShape(filterRank, inputRank, dims, deflt, from.GetDims());
+        shape = TensorShape(dims);
+    }
+protected:
+    // infer reduction dimensions if not given
+    void InferReductionDims(const TensorShape& inputShape, const TensorShape& fromShape)
+    {
+        // If kernel has a lower rank than the input then the remaining dimensions are to be reduced over.
+        size_t filterRank = m_kernelShape.size();
+        FixTensorShape(filterRank, inputShape.size(), m_kernelShape, 1,     fromShape); // convolve over red dim; pool over 1
+        FixTensorShape(filterRank, inputShape.size(), m_stride,      1,     fromShape); // stride for reduction dims is red dim or 1
+        FixVectorShape(filterRank, inputShape.size(), m_autoPad,     false);            // no padding for reduction dims
+        FixTensorShape(filterRank, inputShape.size(), m_lowerPad,    0);
+        FixTensorShape(filterRank, inputShape.size(), m_upperPad,    0);
+        FixVectorShape(filterRank, inputShape.size(), m_sharing,     true);
+    }
 
 protected:
     TensorShape m_kernelShape;
@@ -369,6 +404,8 @@ public:
         else
         {
             inputShape = GetInputSampleLayout(inputIdx);
+            // infer reduction dimensions if not given
+            InferReductionDims(inputShape, inputShape);
             if (!m_transpose)
             {
                 outputShape = ConvolveGeometry::ComputeOutputShape(inputShape, m_kernelShape, m_mapCount, m_stride,
@@ -385,6 +422,25 @@ public:
         // ConvolveGeometry always uses CHW.
         SetDims(ImageDimensions(outputShape, ImageLayoutKind::CHW).AsTensorShape(m_imageLayout), HasMBLayout());
 
+        // update LearnableParameter if it has 0 dimensions (to be inferred)
+        // Typically this would be the #inputChannels (C).
+        if (Input(0)->GetSampleLayout().GetNumElements() == 0)
+        {
+            // BUGBUG: Inference does not support sharing. Problem is that we have the information too late.
+            //         In this case, users will have to specify the correct dimensions. Good luck.
+#if 1       // old style for back compat with previous results. Randomization will differ.
+            if (Input(0)->GetSampleLayout().GetRank() == 2)
+                Input(0)->ValidateInferInputDimsFrom(TensorShape(m_mapCount.GetNumElements(), m_kernelShape.GetNumElements()));
+            else
+#endif
+            {
+                auto weightShape = m_kernelShape.GetDims();
+                for (auto outDim : m_mapCount.GetDims())
+                    weightShape.push_back(outDim);
+                Input(0)->ValidateInferInputDimsFrom(TensorShape(weightShape));
+            }
+        }
+
         if (isFinalValidationPass)
         {
             if (m_convEng == nullptr)
@@ -397,10 +453,11 @@ public:
                                                                 ConvolutionEngineKind::All, NodeName());
             }
 
-            if (Input(0)->GetAsMatrixNumCols() != m_kernelShape.GetNumElements() ||
-                Input(0)->GetAsMatrixNumRows() != m_convEng->Geometry()->KernelCount())
+            if (Input(0)->GetSampleLayout().GetNumElements() != m_kernelShape.GetNumElements() * m_convEng->Geometry()->KernelCount())
             {
-                LogicError("Convolution weight matrix %ls should have dimension [%d, %d] which is [kernelCount, kernelWidth * kernelHeight * inputChannels]",
+                //LogicError("Convolution weight matrix %ls should have dimension [%d, %d] which is [kernelCount, kernelWidth * kernelHeight * inputChannels]",
+                //           Input(0)->NodeName().c_str(), (int)m_convEng->Geometry()->KernelCount(), (int)m_kernelShape.GetNumElements());
+                LogicError("Convolution weight matrix %ls should have dimension [(filter shape) x (input channels) x (output channels)]",
                            Input(0)->NodeName().c_str(), (int)m_convEng->Geometry()->KernelCount(), (int)m_kernelShape.GetNumElements());
             }
         }
@@ -489,22 +546,6 @@ public:
         return m_poolKind == PoolKind::Max;
     }
 
-private:
-    // add 'reductionDims' dimensions to 'shape', copying from 'from' or 'deflt'
-    template<class V, typename T>
-    static void FixVectorShape(size_t reductionDims, V& shape, T deflt)
-    {
-        size_t targetRank = shape.size() + reductionDims;
-        if (shape.size() < targetRank)
-            shape.resize(targetRank, deflt);
-        // else let ComputeOutputShape() deal with the failure
-    }
-    static void FixTensorShape(size_t reductionDims, TensorShape& shape, size_t deflt)
-    {
-        auto dims = shape.GetDims();
-        FixVectorShape(reductionDims, dims, deflt);
-        shape = TensorShape(dims);
-    }
 public:
     void Validate(bool isFinalValidationPass) override
     {
@@ -519,26 +560,10 @@ public:
                 "and make sure input data layout is CHW", NodeName().c_str(), OperationName().c_str(), NodeName().c_str());
         }
 
-        auto inputShape = GetInputSampleLayout(0);
-        // make kernel shape etc. look like convolution parameters, i.e. create nominal reduction dimensions
-        // In older versions, it was expected that pooling takes kernel shapes like convolution,
-        // which included the reduction dim(s). It makes more sense to not require users to
-        // include them for pooing, which the padding below accounts for.
-        if (inputShape.size() > m_kernelShape.size())   // user specified only the pooling-area shape: add the missing dims
-        {
-            size_t reductionDims = inputShape.size() - m_kernelShape.size(); // number of missing dims--these are reduction dims
-            FixTensorShape(reductionDims,     m_kernelShape, 1);             // pool over 1 in reduction dimension
-            if (m_stride.GetRank() != 1)
-                FixTensorShape(reductionDims, m_stride,      1);             // stride for reduction dims is 1
-            if (m_autoPad.size() != 1)
-                FixVectorShape(reductionDims, m_autoPad,     false);         // no padding for reduction dims
-            if (m_lowerPad.GetRank() != 1)
-                FixTensorShape(reductionDims, m_lowerPad,    0);
-            if (m_upperPad.GetRank() != 1)
-                FixTensorShape(reductionDims, m_upperPad,    0);
-            if (m_sharing.size() != 1)
-                FixVectorShape(reductionDims, m_sharing,     false); // dummy
-        }
+        const auto& inputShape = GetInputSampleLayout(0);
+
+        // infer reduction dimensions if not given
+        InferReductionDims(inputShape, TensorShape());
 
         auto outDims = ConvolveGeometry::ComputeOutputShape(inputShape, m_kernelShape, m_mapCount, m_stride,
                                                             m_sharing, m_autoPad, m_lowerPad, m_upperPad);
@@ -634,6 +659,10 @@ public:
         }
 
         auto inputShape = GetInputSampleLayout(0);
+
+        // infer reduction dimensions if not given
+        InferReductionDims(inputShape, TensorShape());
+
         // Same as in case of deconvolution, node input (inputShape) is really the output of the max pooling
         // and node output (outDims) is pooling input.
         auto outputShape = ConvolveGeometry::ComputeInputShape(inputShape, m_kernelShape, m_mapCount, m_stride,

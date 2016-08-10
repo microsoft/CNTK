@@ -60,34 +60,52 @@ EmbeddingLayer {outDim,                                   # dimension of embeddi
 #    out    : [ (shifting dims)] |                   |  (output dim)  |  (sample dims) ]
 ConvolutionalLayer {numOutputChannels,   # e.g. (1) or BS.Constants.None
                     filterShape,         # e.g. (3:3)
+                    bias = true,
+                    activation = (x=>x),
                     init = "uniform",
+                    initValueScale = 1,
                     #reductionRank = 1,          # TODO: support this
                     stride = 1, autoPadding = true,
-                    #lowerPad = 0, upperPad = 0, # TODO: support this
+                    lowerPad = 0, upperPad = 0,
                     #transpose = false,          # TODO: support this
                     maxTempMemSizeInSamples = 0} =
 {
     reductionRank = 1 # TODO: shall become an optional parameter
-    outputChannelsShape = Repeat (1, numOutputChannels) # Repeat(1) turns a scalar into a 1-element array
+    outputChannelsShape = _AsArray (numOutputChannels)
     outputRank = Length (outputChannelsShape)
-    kernelShape = _ConcatArrays (filterShape, Repeat (reductionRank, 0)) # append reduction dims to filter dims
-    W = ParameterTensor{_ConcatArrays (kernelDims, outputChannelsShape), init=init}
-    autoPaddingPadded = _ConcatArrays (_ForceResizeArray (Length (kernelDims), autoPadding), Repeat (reductionRank, false)) # set padding flags for reduction dims to false
-    sharing = false # TODO: support this
-    f(x) = Convolution (W, x, kernelShape, mapDims = numOutputChannels, stride = stride, sharing = sharing, autoPadding = autoPaddingPadded, lowerPad = lowerPad, upperPad = upperPad, transpose = transpose, maxTempMemSizeInSamples = maxTempMemSizeInSamples)
+    filterRank = Length (filterShape)
+    kernelShape = _ConcatArrays (filterShape, Repeat (reductionRank, 0)) # kernel := filter plus reductionDims
+    W = ParameterTensor{_ConcatArrays (                kernelShape,      outputChannelsShape), init = init, initValueScale = initValueScale}  # [ W x H x C x K ]
+    #W = ParameterTensor{(outputChannelsShape:0), init = init, initValueScale = initValueScale}  # old-style for backwards-compatible random initialization
+    b = ParameterTensor(_ConcatArrays (Repeat (Length (filterShape), 1), outputChannelsShape), initValue = 0)                                 # [ 1 x 1 x     K ]
+    #stridePadded =
+    #    if (Length (_AsArray (stride))) == 1 then stride
+    #    else _ConcatArrays (stride, Repeat (reductionRank, 0)) # gets inferred
+    #FixShapes (vec, val) = # padding vectors must be either length 1 or match kernel dim including reduction dims
+    #    if Length (_AsArray (vec)) == 1 then vec
+    #    else _ConcatArrays (_ForceResizeArray (Length (kernelShape), vec), Repeat (reductionRank, val)) # set padding flags for reduction dims to false
+    #autoPaddingPadded = FixShapes (autoPadding, false)
+    #lowerPadPadded = FixShapes (lowerPad, 0)
+    #upperPadPadded = FixShapes (upperPad, 0)
+    sharing = true    # TODO: support this
+    transpose = false # TODO: support this
+    f(x) = {
+        c = Convolution (W, x, filterShape, mapDims = numOutputChannels, stride = stride, sharing = sharing, autoPadding = autoPadding, lowerPad = lowerPad, upperPad = upperPad, transpose = transpose, maxTempMemSizeInSamples = maxTempMemSizeInSamples)
+        res = activation (if bias then c + b else c)
+    }.res
 }.f
 
 # MaxPoolingLayer, AveragePoolingLayer -- create a max- or average-pooling layer
 _PoolingLayer {poolKind,            # "max" or "average"
                filterShape,         # e.g. (3:3)
-               stride = 1, autoPadding = true,
+               stride = 1, autoPadding = false,
                lowerPad = 0, upperPad = 0} = # TODO: support this
 {
     f(x) = Pooling (x, poolKind, filterShape, stride = stride, autoPadding = autoPadding, lowerPad = lowerPad, upperPad = upperPad)
 }.f
-MaxPoolingLayer {filterShape, stride = 1, autoPadding = true, lowerPad = 0, upperPad = 0} =
+MaxPoolingLayer {filterShape, stride = 1, autoPadding = false, lowerPad = 0, upperPad = 0} =
     _PoolingLayer {"max", filterShape, stride = stride, autoPadding = autoPadding, lowerPad = lowerPad, upperPad = upperPad}
-AveragePoolingLayer {filterShape, stride = 1, autoPadding = true, lowerPad = 0, upperPad = 0} =
+AveragePoolingLayer {filterShape, stride = 1, autoPadding = false, lowerPad = 0, upperPad = 0} =
     _PoolingLayer {"average", filterShape, stride = stride, autoPadding = autoPadding, lowerPad = lowerPad, upperPad = upperPad}
 
 # RecurrentLSTMLayer -- create an LSTM layer
@@ -424,7 +442,7 @@ ReconcileDynamicAxis(dataInput, layoutInput, tag='') = new ComputationNode [ ope
 ReconcileMBLayout = ReconcileDynamicAxis # back compat
 CastAs (type, data) = ReconcileDynamicAxis (data, type) # read as CastAs<type>(data) where the cast may consist of rearranging the data w.r.t. MBLayout or broadcasting across sequence items
 Convolution(weightNode, inputValueNode, kernelDims, mapDims = 0, stride = 1, sharing = true, autoPadding = true, lowerPad = 0, upperPad = 0, transpose=false, imageLayout='CHW', maxTempMemSizeInSamples = 0, tag='') = new ComputationNode [ operation = 'Convolution' ; inputs = (weightNode : inputValueNode); kernelShape = new TensorShape [ dims = kernelDims ] ; mapCount = new TensorShape [ dims = mapDims ] ; strideShape = new TensorShape [ dims = stride ] ; dimSharing = new BoolVector [ items = sharing ] ; dimPadding = new BoolVector [ items = autoPadding ] ; dimPadLower = new TensorShape [ dims = lowerPad ] ; dimPadUpper = new TensorShape [ dims = upperPad ] /*plus the function args*/ ]
-# ND pooling/unpooling
+# ND pooling/unpooling   --why is autoPadding true? Normally one would want to reduce dimensions, no?
 Pooling(input, poolKind/*'max'|'average'*/, kernelDims, stride=1, autoPadding = true, lowerPad = 0, upperPad = 0, imageLayout='CHW', tag='') = new ComputationNode [ operation = 'Pooling' ; inputs = (input); pool = poolKind ; kernelShape = new TensorShape [ dims = kernelDims ] ; strideShape = new TensorShape [ dims = stride ] ; dimPadding = new BoolVector [ items = autoPadding ] ; dimPadLower = new TensorShape [ dims = lowerPad ] ; dimPadUpper = new TensorShape [ dims = upperPad ] /*plus the function args*/ ]
 MaxUnpooling(unpoolInput, poolInput, kernelDims, stride=1, autoPadding = true, lowerPad = 0, upperPad = 0, imageLayout='CHW', tag='') = new ComputationNode [ operation = 'MaxUnpooling' ; inputs = (unpoolInput : poolInput); kernelShape = new TensorShape [ dims = kernelDims ] ; strideShape = new TensorShape [ dims = stride ] ; dimPadding = new BoolVector [ items = autoPadding ] ; dimPadLower = new TensorShape [ dims = lowerPad ] ; dimPadUpper = new TensorShape [ dims = upperPad ] /*plus the function args*/ ]
 # 2D pooling
@@ -826,7 +844,7 @@ RNNs =
     # This function also takes an optional auxiliary input, e.g. for suporting attention models.
     LSTMBlock (outputDim, cellShape=Constants.None, enableSelfStabilization=false) =
     [
-        cellDim = if Constants.IsNone (cellShape) then outputDim else cellDim
+        cellDim = if Constants.IsNone (cellShape) then outputDim else cellShape
         // parameter macros
         # note: each invocation comes with its own set of weights
         B{} = Parameters.BiasParam {cellDim}
