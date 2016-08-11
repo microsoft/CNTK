@@ -12,6 +12,7 @@
 
 #include <numeric>
 #include <random>
+#include <boost/random/uniform_int_distribution.hpp>
 
 using namespace Microsoft::MSR::CNTK;
 using namespace std;
@@ -306,7 +307,7 @@ void BlockRandomizerChaosMonkeyTest(bool prefetch)
     vector<float> data(numChunks * numSequencesPerChunk);
     iota(data.begin(), data.end(), 0.0f);
     mt19937 rng(seed);
-    uniform_int_distribution<int> distr(1, 10);
+    boost::random::uniform_int_distribution<int> distr(1, 10);
 
     auto mockDeserializer = make_shared<MockDeserializer>(numChunks, numSequencesPerChunk, data, sequenceLength);
 
@@ -444,7 +445,7 @@ BOOST_AUTO_TEST_CASE(DefaultCorpusDescriptor)
 {
     const int seed = 13;
     mt19937 rng(seed);
-    uniform_int_distribution<int> distr(50, 60);
+    boost::random::uniform_int_distribution<int> distr(50, 60);
 
     string randomKey(10, (char)distr(rng));
 

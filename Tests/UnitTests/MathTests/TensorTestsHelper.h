@@ -13,6 +13,7 @@
 #include <iostream>
 #include <vector>
 #include <algorithm>
+#include <boost/random/uniform_real_distribution.hpp>
 
 namespace Microsoft { namespace MSR { namespace CNTK { namespace Test {
 
@@ -50,7 +51,7 @@ struct TensorTest
 
         // random init
         mt19937 rng(randomSeed);
-        uniform_real_distribution<float> nd(-1, 1);
+        boost::random::uniform_real_distribution<float> nd(-1, 1);
         vector<ElemType> init(numElements);
         generate(begin(init), end(init), [&] { return nd(rng); });
 
