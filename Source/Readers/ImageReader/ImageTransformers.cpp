@@ -473,7 +473,6 @@ SequenceDataPtr TransposeTransformer::TypedTransform(SequenceDataPtr sequence)
     result->m_sampleLayout = m_outputStream.m_sampleLayout != nullptr ?
         m_outputStream.m_sampleLayout :
         std::make_shared<TensorShape>(dimensions.AsTensorShape(CHW));;
-
     result->m_data = result->m_buffer.data();
     result->m_numberOfSamples = inputSequence.m_numberOfSamples;
     return result;
