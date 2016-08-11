@@ -9,9 +9,6 @@ RootDir = "." ; DataDir  = "$RootDir$" ; ModelDir = "$RootDir$/Output/Models"
 
 modelPath = "$ModelDir$/01_Convolution"
 
-# image reading pipeline
-imageTransforms = ( [ type = "Scale" ; width = 32 ; height = 32 ; channels = 3 ; interpolations = "linear" ] : [ type = "Transpose" ] )
-
 # Training without BN
 TrainConvNet = [
     action = "train"
@@ -31,7 +28,6 @@ TrainConvNet = [
             ConvolutionalLayer {64, (5:5), activation = ReLU, init = "gaussian", initValueScale = 1.414} :
               MaxPoolingLayer {(3:3), stride = (2:2)} :
             DenseLayer {64, activation = ReLU, init = "gaussian", initValueScale = 12} :
-              Dropout :
             LinearLayer {labelDim, init = "gaussian", initValueScale = 1.5}
         )
 
@@ -61,7 +57,6 @@ TrainConvNet = [
         momentumAsTimeConstant = 600*20:6400
         maxEpochs = 30
         L2RegWeight = 0.03
-        dropoutRate = 0*5:0.5
 
         firstMBsToShowResult = 10 ; numMBsToShowResult = 500
     ]
@@ -73,7 +68,7 @@ TrainConvNet = [
             type = "ImageDeserializer" ; module = "ImageReader"
             file = "$DataDir$/cifar-10-batches-py/train_map.txt"
             input = [
-                features = [ transforms = $imageTransforms$ ]
+                features = [ transforms = ( [ type = "Crop" ; cropType = "random" ; cropRatio = 0.8 ; jitterType = "uniRatio" ] : [ type = "Scale" ; width = 32 ; height = 32 ; channels = 3 ; interpolations = "linear" ] : [ type = "Transpose" ] ) ]
                 labels =   [ labelDim = 10 ]
             ]
         ])
@@ -162,9 +157,9 @@ Eval = [
         randomize = true
         deserializers = ([
             type = "ImageDeserializer" ; module = "ImageReader"
-            file = "$DataDir$/cifar-10-batches-py/train_map.txt"
+            file = "$DataDir$/cifar-10-batches-py/test_map.txt"
             input = [
-                features = [ transforms = $imageTransforms$ ]
+                features = [ transforms = ( [ type = "Scale" ; width = 32 ; height = 32 ; channels = 3 ; interpolations = "linear" ] : [ type = "Transpose" ] ) ]
                 labels =   [ labelDim = 10 ]
             ]
         ])

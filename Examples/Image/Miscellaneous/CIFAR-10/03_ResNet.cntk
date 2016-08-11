@@ -1,4 +1,4 @@
-makeMode = false
+makeMode = true
 RootDir = "."
 
 ConfigDir = "$RootDir$"
