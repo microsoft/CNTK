@@ -1,0 +1,38 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Common">
+      <UniqueIdentifier>{111e07d9-3fce-404b-8855-9307d1120089}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Common\Include">
+      <UniqueIdentifier>{a84774e2-a3a7-4234-acd4-5d2bde4fa5c8}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\Common\Include\DataReader.h">
+      <Filter>Common\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Common\Include\File.h">
+      <Filter>Common\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Common\Include\fileutil.h">
+      <Filter>Common\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="CNTKBinaryReader.h" />
+    <ClInclude Include="stdafx.h" />
+    <ClInclude Include="targetver.h" />
+    <ClInclude Include="BinaryConfigHelper.h" />
+    <ClInclude Include="BinaryChunkDeserializer.h" />
+    <ClInclude Include="BinaryDataChunk.h" />
+    <ClInclude Include="BinaryDataDeserializer.h" />
+    <ClInclude Include="FileHelper.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="dllmain.cpp" />
+    <ClCompile Include="Exports.cpp" />
+    <ClCompile Include="CNTKBinaryReader.cpp" />
+    <ClCompile Include="stdafx.cpp" />
+    <ClCompile Include="BinaryConfigHelper.cpp" />
+    <ClCompile Include="BinaryChunkDeserializer.cpp" />
+  </ItemGroup>
+</Project>

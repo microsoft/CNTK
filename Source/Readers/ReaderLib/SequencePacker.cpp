@@ -115,7 +115,7 @@ MBLayoutPtr SequencePacker::PackDenseStream(const StreamBatch& batch, size_t str
                 assert(sampleOffset == sampleIndex * sampleSize);
                 PackDenseSample(destination, sequence, sampleOffset, sampleSize);
                 sampleOffset += sampleSize;
-    }
+            }
             else if (stream->m_storageType == StorageType::sparse_csc)
             {
                 // TODO: make type casts members of the SparseSequenceData

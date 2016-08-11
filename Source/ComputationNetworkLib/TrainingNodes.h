@@ -1891,7 +1891,7 @@ public:
     {
         FrameRange fr(Input(0)->GetMBLayout());
         if (inputIndex != 1)
-            InvalidArgument("%ls %ls operation cannot compute the gradient for its first inpute.", NodeName().c_str(), OperationName().c_str());
+            InvalidArgument("%ls %ls operation cannot compute the gradient for its first input.", NodeName().c_str(), OperationName().c_str());
 
         // BackpropToRight(m_temp, Input(0)->Value(), Input(2)->Value(), Input(inputIndex)->Gradient(), Gradient(), m_classZeroLabels, m_result);
         // Create vector with 1 for class 1, and -1 for class 0
@@ -1944,10 +1944,12 @@ public:
         m_result->AssignProductOf((ElemType) 2.0, *m_result);
 
         /* Now compute result = 2*y*p + (1-y) */
-        m_result->AssignSumOf(*m_result, classZeroLabels);
+        //m_result->AssignSumOf(*m_result, classZeroLabels);
+        *m_result += classZeroLabels;
 
         /* Finally compute result = 2*y*p + (1-y) - p */
-        m_result->AssignDifferenceOf(*m_result, classOneProbabilities);
+        //m_result->AssignDifferenceOf(*m_result, classOneProbabilities);
+        *m_result -= classOneProbabilities;
 
         // compute the log, resulting in y*log(p) + (1-y)*log(1-p)
         m_temp->AssignLogOf(*m_result);
