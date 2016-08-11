@@ -66,9 +66,9 @@ ConvolutionalLayer {numOutputChannels,   # e.g. (1) or BS.Constants.None
                     bias = true,
                     activation = (x=>x),
                     init = "uniform",
-                    initValueScale = 1,
+                    initValueScale = 1,          # TODO: rename to initScale
                     #reductionRank = 1,          # TODO: support this
-                    stride = 1, autoPadding = true,
+                    stride = 1, pad = false,
                     lowerPad = 0, upperPad = 0,
                     #transpose = false,          # TODO: support this
                     maxTempMemSizeInSamples = 0} =
@@ -84,7 +84,7 @@ ConvolutionalLayer {numOutputChannels,   # e.g. (1) or BS.Constants.None
     sharing = true    # TODO: support this
     transpose = false # TODO: support this
     f(x) = {
-        c = Convolution (W, x, filterShape, mapDims = numOutputChannels, stride = stride, sharing = sharing, autoPadding = autoPadding, lowerPad = lowerPad, upperPad = upperPad, transpose = transpose, maxTempMemSizeInSamples = maxTempMemSizeInSamples)
+        c = Convolution (W, x, filterShape, mapDims = numOutputChannels, stride = stride, sharing = sharing, autoPadding = pad, lowerPad = lowerPad, upperPad = upperPad, transpose = transpose, maxTempMemSizeInSamples = maxTempMemSizeInSamples)
         res = activation (if bias then c + b else c)
     }.res
 }.f
@@ -92,15 +92,15 @@ ConvolutionalLayer {numOutputChannels,   # e.g. (1) or BS.Constants.None
 # MaxPoolingLayer, AveragePoolingLayer -- create a max- or average-pooling layer
 _PoolingLayer {poolKind,            # "max" or "average"
                filterShape,         # e.g. (3:3)
-               stride = 1, autoPadding = false,
+               stride = 1, pad = false,
                lowerPad = 0, upperPad = 0} = # TODO: support this
 {
-    f(x) = Pooling (x, poolKind, filterShape, stride = stride, autoPadding = autoPadding, lowerPad = lowerPad, upperPad = upperPad)
+    f(x) = Pooling (x, poolKind, filterShape, stride = stride, autoPadding = pad, lowerPad = lowerPad, upperPad = upperPad)
 }.f
-MaxPoolingLayer {filterShape, stride = 1, autoPadding = false, lowerPad = 0, upperPad = 0} =
-    _PoolingLayer {"max", filterShape, stride = stride, autoPadding = autoPadding, lowerPad = lowerPad, upperPad = upperPad}
-AveragePoolingLayer {filterShape, stride = 1, autoPadding = false, lowerPad = 0, upperPad = 0} =
-    _PoolingLayer {"average", filterShape, stride = stride, autoPadding = autoPadding, lowerPad = lowerPad, upperPad = upperPad}
+MaxPoolingLayer {filterShape, stride = 1, pad = false, lowerPad = 0, upperPad = 0} =
+    _PoolingLayer {"max", filterShape, stride = stride, pad = pad, lowerPad = lowerPad, upperPad = upperPad}
+AveragePoolingLayer {filterShape, stride = 1, pad = false, lowerPad = 0, upperPad = 0} =
+    _PoolingLayer {"average", filterShape, stride = stride, pad = pad, lowerPad = lowerPad, upperPad = upperPad}
 
 # RecurrentLSTMLayer -- create an LSTM layer
 RecurrentLSTMLayer {outputDim,
@@ -441,8 +441,8 @@ WeightedLogistic(label, probability, instanceWeight, tag='') = new ComputationNo
 ReconcileDynamicAxis(dataInput, layoutInput, tag='') = new ComputationNode [ operation = 'ReconcileDynamicAxis' ; inputs = (dataInput : layoutInput) /*plus the function args*/ ]
 ReconcileMBLayout = ReconcileDynamicAxis # back compat
 CastAs (type, data) = ReconcileDynamicAxis (data, type) # read as CastAs<type>(data) where the cast may consist of rearranging the data w.r.t. MBLayout or broadcasting across sequence items
+# ND convo & pooling/unpooling   --why is autoPadding true? Normally one would want to reduce dimensions, no?
 Convolution(weightNode, inputValueNode, kernelDims, mapDims = 0, stride = 1, sharing = true, autoPadding = true, lowerPad = 0, upperPad = 0, transpose=false, imageLayout='CHW', maxTempMemSizeInSamples = 0, tag='') = new ComputationNode [ operation = 'Convolution' ; inputs = (weightNode : inputValueNode); kernelShape = new TensorShape [ dims = kernelDims ] ; mapCount = new TensorShape [ dims = mapDims ] ; strideShape = new TensorShape [ dims = stride ] ; dimSharing = new BoolVector [ items = sharing ] ; dimPadding = new BoolVector [ items = autoPadding ] ; dimPadLower = new TensorShape [ dims = lowerPad ] ; dimPadUpper = new TensorShape [ dims = upperPad ] /*plus the function args*/ ]
-# ND pooling/unpooling   --why is autoPadding true? Normally one would want to reduce dimensions, no?
 Pooling(input, poolKind/*'max'|'average'*/, kernelDims, stride=1, autoPadding = true, lowerPad = 0, upperPad = 0, imageLayout='CHW', tag='') = new ComputationNode [ operation = 'Pooling' ; inputs = (input); pool = poolKind ; kernelShape = new TensorShape [ dims = kernelDims ] ; strideShape = new TensorShape [ dims = stride ] ; dimPadding = new BoolVector [ items = autoPadding ] ; dimPadLower = new TensorShape [ dims = lowerPad ] ; dimPadUpper = new TensorShape [ dims = upperPad ] /*plus the function args*/ ]
 MaxUnpooling(unpoolInput, poolInput, kernelDims, stride=1, autoPadding = true, lowerPad = 0, upperPad = 0, imageLayout='CHW', tag='') = new ComputationNode [ operation = 'MaxUnpooling' ; inputs = (unpoolInput : poolInput); kernelShape = new TensorShape [ dims = kernelDims ] ; strideShape = new TensorShape [ dims = stride ] ; dimPadding = new BoolVector [ items = autoPadding ] ; dimPadLower = new TensorShape [ dims = lowerPad ] ; dimPadUpper = new TensorShape [ dims = upperPad ] /*plus the function args*/ ]
 # 2D pooling

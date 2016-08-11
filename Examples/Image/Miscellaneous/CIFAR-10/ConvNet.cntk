@@ -21,11 +21,11 @@ TrainConvNet = [
 
         model = Sequential (
             Subtract128 :
-            ConvolutionalLayer {32, (5:5), activation = ReLU, init = "gaussian", initValueScale = 0.0043} :
+            ConvolutionalLayer {32, (5:5), pad = true, activation = ReLU, init = "gaussian", initValueScale = 0.0043} :
               MaxPoolingLayer {(3:3), stride = (2:2)} :
-            ConvolutionalLayer {32, (5:5), activation = ReLU, init = "gaussian", initValueScale = 1.414} :
+            ConvolutionalLayer {32, (5:5), pad = true, activation = ReLU, init = "gaussian", initValueScale = 1.414} :
               MaxPoolingLayer {(3:3), stride = (2:2)} :
-            ConvolutionalLayer {64, (5:5), activation = ReLU, init = "gaussian", initValueScale = 1.414} :
+            ConvolutionalLayer {64, (5:5), pad = true, activation = ReLU, init = "gaussian", initValueScale = 1.414} :
               MaxPoolingLayer {(3:3), stride = (2:2)} :
             DenseLayer {64, activation = ReLU, init = "gaussian", initValueScale = 12} :
               Dropout :
@@ -86,13 +86,13 @@ TrainConvNetWithBN = [
 
         model = Sequential (
             Subtract128 :
-            ConvolutionalLayer {32, (5:5), bias = false, init = "gaussian", initValueScale = 0.0043} :
+            ConvolutionalLayer {32, (5:5), pad = true, bias = false, init = "gaussian", initValueScale = 0.0043} :
               BatchNormalizationLayer {spatialRank = 2, normalizationTimeConstant = 4096} : ReLU :
                 MaxPoolingLayer {(3:3), stride = (2:2)} :
-            ConvolutionalLayer {32, (5:5), bias = false, init = "gaussian", initValueScale = 1.414} :
+            ConvolutionalLayer {32, (5:5), pad = true, bias = false, init = "gaussian", initValueScale = 1.414} :
               BatchNormalizationLayer {spatialRank = 2, normalizationTimeConstant = 4096} : ReLU :
                 MaxPoolingLayer {(3:3), stride = (2:2)} :
-            ConvolutionalLayer {64, (5:5), bias = false, init = "gaussian", initValueScale = 1.414} :
+            ConvolutionalLayer {64, (5:5), pad = true, bias = false, init = "gaussian", initValueScale = 1.414} :
               BatchNormalizationLayer {spatialRank = 2, normalizationTimeConstant = 4096} : ReLU :
                 MaxPoolingLayer {(3:3), stride = (2:2)} :
             LinearLayer {64, bias = false, init = "gaussian", initValueScale = 12} :
