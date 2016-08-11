@@ -130,7 +130,12 @@ HTKMLFReader::HTKMLFReader(MemoryProviderPtr provider,
         for (auto i : d->GetStreamDescriptions())
         {
             StreamDescriptionPtr stream = std::make_shared<StreamDescription>(*i);
-            stream->m_storageType = StorageType::dense;
+            if (m_packingMode == PackingMode::truncated)
+            {
+                // TODO: Currently BPTT does not support sparse format as output.
+                // We always require dense.
+                stream->m_storageType = StorageType::dense;
+            }
             stream->m_id = m_streams.size();
             m_streams.push_back(stream);
         }
