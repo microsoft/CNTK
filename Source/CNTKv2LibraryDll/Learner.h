@@ -9,7 +9,7 @@
 
 namespace CNTK 
 {
-    // TODO: should this be exposed at the API surface?
+    // TODO: Move this to Trainer along with Pre-, PostProcess and ClipGradient.
     // A collection of additional options that are applicable for all standard learners 
     // (after these options are set, they retain their value for the entire lifespan of a learner).
     struct AdditionalLearningOptions
@@ -19,7 +19,6 @@ namespace CNTK
         double gaussianNoiseInjectionStdDev = 0.0;
         bool gradientClippingWithTruncation = true;
         double gradientClippingThresholdPerSample = std::numeric_limits<double>::infinity();
-        std::unordered_map<Parameter, double> learningRateMultipliers;
     };
 
     // An abstract base class at the root of the standard learners hierarchy
@@ -34,15 +33,6 @@ namespace CNTK
 
         virtual void RestoreFromCheckpoint(const Dictionary& checkpoint) override final;
 
-        void SetAdditionalOptions(const AdditionalLearningOptions& additionalOptions)
-        {
-            m_additionalOptions = additionalOptions;
-        }
-
-        // TODO: should this be called ResetMomentum?
-        // needed for BlockMomemtumSGD to reset SGD momentum after aggregation.
-        void ResetSmoothedGradients();
-
     protected:
         LearnerBase(const std::unordered_set<Parameter>& parameters, const LearningRatesPerSample& learningRates);
 
@@ -50,7 +40,7 @@ namespace CNTK
 
         double ParameterDependentLearningRate(const Parameter& parameter) const
         {
-            return m_learningRates[m_minibatchCount] * m_additionalOptions.learningRateMultipliers.at(parameter);
+            return m_learningRates[m_sampleCount] * m_learningRateMultipliers.at(parameter);
         }
 
         std::string LearnerType() const;
@@ -58,6 +48,9 @@ namespace CNTK
         LearningRatesPerSample m_learningRates;
 
         AdditionalLearningOptions m_additionalOptions;
+
+        // TODO: pull this to the API surface.
+        std::unordered_map<Parameter, double> m_learningRateMultipliers;
 
         std::unordered_map<Parameter, NDArrayViewPtr> m_smoothedGradientValues;
 

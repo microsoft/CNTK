@@ -173,27 +173,7 @@ namespace CNTK
             }
 
             m_smoothedGradientValues.insert(make_pair(parameter, view));
-            m_additionalOptions.learningRateMultipliers.insert(make_pair(parameter, 1.0));
-        }
-    }
-
-    void LearnerBase::ResetSmoothedGradients()
-    {
-        for (const auto& parameter : Parameters())
-        {
-            const auto& smoothedGradientValue = m_smoothedGradientValues.at(parameter);
-            const auto& data = smoothedGradientValue;
-            switch (data->GetDataType())
-            {
-            case DataType::Float:
-                data->SetValue(0.0f);
-                break;
-            case DataType::Double:
-                data->SetValue(0.0);
-                break;
-            default:
-                LogicError("Unsupported DataType %s", ::CNTK::DataTypeName(data->GetDataType()));
-            }
+            m_learningRateMultipliers.insert(make_pair(parameter, 1.0));
         }
     }
 
@@ -268,9 +248,9 @@ namespace CNTK
     {
         Dictionary checkpoint;
 
-        checkpoint[L"checkpointVersion"] = checkpointVersion;
-        checkpoint[L"sampleCount"] = m_sampleCount;
-        checkpoint[L"minibatchCount"] = m_minibatchCount;
+        //checkpoint[L"checkpointVersion"] = checkpointVersion;
+        //checkpoint[L"sampleCount"] = m_sampleCount;
+        //checkpoint[L"minibatchCount"] = m_minibatchCount;
 
         // TODO: should we also save learning rate schedule into the checkpoint?
         // If that is the case, need to be able to override this method in subclasses
@@ -294,9 +274,8 @@ namespace CNTK
 
     /*virtual*/ void LearnerBase::RestoreFromCheckpoint(const Dictionary& checkpoint) /*override*/
     {
-        m_sampleCount = checkpoint[L"sampleCount"].GetValue<size_t>();
-        m_minibatchCount = checkpoint[L"minibatchCount"].GetValue<size_t>();
-
+        //m_sampleCount = checkpoint[L"sampleCount"].GetValue<size_t>();
+        //m_minibatchCount = checkpoint[L"minibatchCount"].GetValue<size_t>();
         for (const auto& parameter : Parameters())
         {
             if (!checkpoint.Contains(parameter.Name()))
@@ -326,7 +305,7 @@ namespace CNTK
         const auto& parameterMatrix = GetWritableMatrix<ElementType>(parameterValue);
 
         auto learningRate = ElementType(ParameterDependentLearningRate(parameter));
-        auto momentum = ElementType(MomentumPerMB(m_momentums[m_minibatchCount], trainingSampleCount));
+        auto momentum = ElementType(MomentumPerMB(m_momentums[m_sampleCount], trainingSampleCount));
 
         // TODO: break up the NormalGrad into 3 different functions, each with its own set of parameters
         // (one for vanilla SGD, the other for momentum SGD, and the third one for NAG).
@@ -373,6 +352,8 @@ namespace CNTK
     template <typename ElementType>
     void LearnerFSAdaGrad::Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const
     {
+        UNUSED(trainingSampleCount);
+
         const auto& parameterValue = parameter.Value();
         const auto& smoothedGradientMatrix = GetWritableMatrix<ElementType>(smoothedGradientValue);
         const auto& gradientMatrix = GetWritableMatrix<ElementType>(gradientValue);
@@ -381,7 +362,7 @@ namespace CNTK
         //const double momentum = MomentumPerMB(m_momentumPerSample, trainingSampleCount);
 
         auto learningRate = ElementType(ParameterDependentLearningRate(parameter));
-        auto momentum = ElementType(MomentumPerMB(m_momentums[m_minibatchCount], trainingSampleCount));
+        auto momentum = ElementType(MomentumPerMB(m_momentums[m_sampleCount], trainingSampleCount));
         smoothedGradientMatrix->FSAdagrad(trainingSampleCount, *gradientMatrix, *parameterMatrix, learningRate, momentum);
     }
 

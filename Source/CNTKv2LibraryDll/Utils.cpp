@@ -112,7 +112,7 @@ namespace CNTK
     }
 
     template <typename ElementType> 
-    bool CheckViewsEquivalent(NDArrayView& view1, NDArrayView& view2)
+    bool AreEqual(NDArrayView& view1, NDArrayView& view2)
     {
         if (view1.GetDataType() != view2.GetDataType() ||
             view1.Shape() != view2.Shape())
@@ -204,9 +204,9 @@ namespace CNTK
             switch (viewPtr1->GetDataType())
             {
             case DataType::Float:
-                return CheckViewsEquivalent<float>(*viewPtr1, *viewPtr2);
+                return AreEqual<float>(*viewPtr1, *viewPtr2);
             case DataType::Double:
-                return CheckViewsEquivalent<double>(*viewPtr1, *viewPtr2);
+                return AreEqual<double>(*viewPtr1, *viewPtr2);
             default:
                 NOT_IMPLEMENTED;
             }
@@ -544,13 +544,14 @@ namespace CNTK
         return stream;
     }
 
-    // Returns the element whose key is less or equal to the argument.
+    // Returns the element whose key is greater than the required sample count 
+    // or the last element if no such key exists.
     template <typename T>
-    const T& MBSchedule<T>::operator[](size_t key) const
+    const T& TrainingParametersSchedule<T>::operator[](size_t sampleCount) const
     {
-        assert(m_schedule.begin()->first == 0);
-        auto it = m_schedule.lower_bound(key);
-        if (it == m_schedule.end() || (it != m_schedule.begin() && it->first != key))
+        assert(m_schedule.size() > 0);
+        auto it = m_schedule.upper_bound(sampleCount);
+        if (it == m_schedule.end())
         {
             --it;
         }
@@ -569,5 +570,5 @@ namespace CNTK
     template void DictionaryValue::FreePtrAsType<Dictionary>();
     template void DictionaryValue::FreePtrAsType<NDArrayView>();
 
-    template const double& MBSchedule<double>::operator[](size_t key) const;
+    template const double& TrainingParametersSchedule<double>::operator[](size_t key) const;
 }

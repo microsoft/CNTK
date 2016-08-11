@@ -1698,6 +1698,8 @@ namespace CNTK
                 other.m_data.m_ptr = nullptr;
             }
 
+            other.m_valueType = Type::None;
+
             return *this;
         }
 
@@ -1927,41 +1929,61 @@ namespace CNTK
     /// from a single value, a list of values and a map to the per-minibatch schedule. 
     ///
     template <typename T>
-    class MBSchedule
+    class TrainingParametersSchedule
     {
     public:
-        MBSchedule(T value)
-            : m_schedule({ std::make_pair(0, value) })
+        ///
+        /// Create a schedule with a constant parameter value.
+        ///
+        TrainingParametersSchedule(T value)
+            : m_schedule({ std::make_pair(0, value) }), m_unit(1)
         {}
 
-        MBSchedule(const std::initializer_list<T>& values)
+        ///
+        ///TODO: add description
+        ///
+        TrainingParametersSchedule(const std::vector<T>& schedule, size_t unit = 1) 
+            : m_unit(unit)
         {
-            size_t i = 0;
-            for (auto value : values)
+            if (schedule.size() == 0)
+                RuntimeError("TrainingParametersSchedule::constructor : schedule is empty.");
+
+            size_t i = 1;
+            for (const auto& value : schedule)
             {
-                m_schedule[i++] = value;
+                m_schedule[m_unit * i++] = value;
             }
         }
 
-         MBSchedule(const std::initializer_list<std::pair<const size_t, T>>& valuesPerMB)
-            : MBSchedule(std::map<size_t, T>(valuesPerMB))
-        {}
-
-        MBSchedule(const std::map<size_t, T>& valuesPerMB)
-            : m_schedule(valuesPerMB)
+        ///
+        /// TODO: add description
+        ///
+        TrainingParametersSchedule(const std::initializer_list<std::pair<const size_t, T>>& schedule, size_t unit = 1)
+            : m_unit(unit)
         {
-            if (m_schedule.find(0) == m_schedule.end())
-                RuntimeError("MBSchedule::constructor : valuesPerMB must contain initial value (corresponding to the key = 0).");
+            if (schedule.size() == 0)
+                RuntimeError("TrainingParametersSchedule::constructor : schedule is empty.");
+
+            size_t i = 0;
+            for (const auto& it : schedule)
+            {
+                if (it.first == 0)
+                    RuntimeError("TrainingParametersSchedule::constructor : unit count cannot be 0.");
+
+                i += it.first;
+                m_schedule[m_unit * i] = it.second;
+            }
         }
 
-        CNTK_API const T& operator[](size_t key) const;
+        CNTK_API const T& operator[](size_t samleCount) const;
 
     private:
         std::map<size_t, T> m_schedule;
+        size_t m_unit;
     };
 
-    typedef MBSchedule<double> LearningRatesPerSample;
-    typedef MBSchedule<double> MomentumsPerSample;
+    typedef TrainingParametersSchedule<double> LearningRatesPerSample;
+    typedef TrainingParametersSchedule<double> MomentumsPerSample;
 
 
     ///
