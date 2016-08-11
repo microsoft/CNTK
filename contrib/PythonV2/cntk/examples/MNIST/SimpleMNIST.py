@@ -4,6 +4,7 @@ import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..'))
 import cntk.cntk_py as cntk_py
 from cntk.ops import variable, constant, parameter, cross_entropy_with_softmax, combine, classification_error, sigmoid, plus, times
+from cntk.utils import create_minibatch_source
 
 def fully_connected_layer(input, output_dim, device_id, nonlinearity):    
     #TODO: wrap in SWIG or python Shape() methods in order to return the reversed shape (row/col major)
@@ -25,32 +26,30 @@ def fully_connected_classifier_net(input, num_output_classes, hidden_layer_dim, 
     classifier_root = plus(output_plus_param,t.Output()) 
     return classifier_root;
 
-def create_minibatch_source():
-    #todo: add helper functions
-    featuresStreamConfig = cntk_py.Dictionary();
-    featuresStreamConfig["dim"] = cntk_py.DictionaryValue(input_dim)       
-    featuresStreamConfig["format"] = cntk_py.DictionaryValue("dense")
+def create_mb_source():    
+    features_config = dict();
+    features_config["dim"] = input_dim
+    features_config["format"] = "dense"
 
-    labelsStreamConfig = cntk_py.Dictionary()
-    labelsStreamConfig["dim"] = cntk_py.DictionaryValue(num_output_classes)
-    labelsStreamConfig["format"] = cntk_py.DictionaryValue("dense")
+    labels_config = dict()
+    labels_config["dim"] = num_output_classes
+    labels_config["format"] = "dense"
 
-    inputStreamsConfig = cntk_py.Dictionary()
-    inputStreamsConfig["features"] = cntk_py.DictionaryValueFromDict(featuresStreamConfig)
-    inputStreamsConfig["labels"] = cntk_py.DictionaryValueFromDict(labelsStreamConfig)
+    input_config = dict()
+    input_config["features"] = features_config
+    input_config["labels"] = labels_config
 
-    deserializerConfiguration = cntk_py.Dictionary()
-    deserializerConfiguration["type"] = cntk_py.DictionaryValue("CNTKTextFormatDeserializer")
-    deserializerConfiguration["module"] = cntk_py.DictionaryValue("CNTKTextFormatReader")    
-    deserializerConfiguration["file"] = cntk_py.DictionaryValue(r"E:\CNTK\contrib\Python\cntk\examples\MNIST\Data\Train-28x28_text.txt")
-    deserializerConfiguration["input"] = cntk_py.DictionaryValueFromDict(inputStreamsConfig)
+    deserializer_config = dict()
+    deserializer_config["type"] = "CNTKTextFormatDeserializer"
+    deserializer_config["module"] = "CNTKTextFormatReader"
+    deserializer_config["file"] = r"E:\CNTK\contrib\Python\cntk\examples\MNIST\Data\Train-28x28_text.txt"
+    deserializer_config["input"] = input_config
 
-    minibatchSourceConfiguration = cntk_py.Dictionary()
-    minibatchSourceConfiguration["epochSize"] = cntk_py.DictionaryValue(num_samples_per_sweep)
-    deser = cntk_py.DictionaryValueFromDict(deserializerConfiguration)
-    minibatchSourceConfiguration["deserializers"] = cntk_py.DictionaryValue([deser])
+    minibatch_config = dict()
+    minibatch_config["epochSize"] = sys.maxsize    
+    minibatch_config["deserializers"] = [deserializer_config]
 
-    return cntk_py.CreateCompositeMinibatchSource(minibatchSourceConfiguration)
+    return create_minibatch_source(minibatch_config)
 
 if __name__=='__main__':      
     input_dim = 784
@@ -73,28 +72,25 @@ if __name__=='__main__':
     pe = classification_error(netout.Output(), label)
     ffnet = combine([ce, pe, netout], "classifier_model")        
     
-    cm = create_minibatch_source()
+    cm = create_mb_source()
         
     streamInfos = cm.StreamInfos();    
     
     minibatchSizeLimits = dict()    
     minibatchSizeLimits[streamInfos[0]] = (0,minibatch_size)
     minibatchSizeLimits[streamInfos[1]] = (0,minibatch_size)
-                
-    mb=cm.GetNextMinibatch(minibatchSizeLimits, dev)
-      
+                         
     trainer = cntk_py.Trainer(ffnet, ce.Output(), [cntk_py.SGDLearner(ffnet.Parameters(), lr)])          
     
     for i in range(0,int(num_minibatches_to_train)):    
-        a=cm.GetNextMinibatch(minibatchSizeLimits, dev)
-
+        mb=cm.GetNextMinibatch(minibatchSizeLimits, dev)
         
         arguments = dict()
         arguments[input] = mb[streamInfos[0]].m_data
         arguments[label] = mb[streamInfos[1]].m_data
-
         
         trainer.TrainMinibatch(arguments, dev)
+
         freq = 20
         if i % freq == 0:
             print(str(i+freq) + ": " + str(trainer.PreviousMinibatchTrainingLossValue().Data().ToNumPy()))
