@@ -1722,9 +1722,6 @@ public:
 
     void BackpropToSpecialization(const size_t inputIndex, const FrameRange& fr) override
     {
-        SynchronizationManager<ElemType> *sync = SynchronizationManager<ElemType>::GetSynchronizationManager();
-        if(!sync->IsExecuting() && sync->m_useMemorySwapping){ return; }
-
         if (inputIndex == 0) // derivative with respect to the input.
         {
             auto sliceOutputGrad = GradientFor(fr);
@@ -1764,17 +1761,8 @@ public:
     void ForwardPropSpecialization(const FrameRange& fr) override
 
     {
-    	if (Environment().IsTraining())
-    	{
-			SynchronizationManager<ElemType> *sync = SynchronizationManager<ElemType>::GetSynchronizationManager();
-			if(sync->m_isInTrainingMode && !sync->IsExecuting() && sync->m_useMemorySwapping)
-			{
-				return;
-			}
-    	}
-
+    
         Matrix<ElemType> sliceInputValue = Input(0)->ValueFor(fr);
-
         const Matrix<ElemType>& scale = Input(1)->Value();
         const Matrix<ElemType>& bias = Input(2)->Value();
         Matrix<ElemType>& runMean = Input(3)->Value();

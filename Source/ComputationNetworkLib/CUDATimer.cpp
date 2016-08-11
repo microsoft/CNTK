@@ -46,7 +46,8 @@ float CUDATimer::tock(std::string name)
 	}
 	else
 	{
-        assert(m_dictTickTock.count(name) > 0);
+        if(m_dictTickTock.count(name) == 0){ return 0.0f; }
+        //assert(m_dictTickTock.count(name) > 0);
 		float value = tock(m_dictTickTock[name]);
 		m_dictTickTock.erase(name);
 		return value;
@@ -57,8 +58,8 @@ cudaEvent_t* CUDATimer::create_tick()
 {
     cudaEvent_t* startstop;
     startstop = (cudaEvent_t*)malloc(2*sizeof(cudaEvent_t));
-    cudaEventCreate(&startstop[0]);
-    cudaEventCreate(&startstop[1]);
+    cudaEventCreate(&startstop[0], cudaEventBlockingSync);
+    cudaEventCreate(&startstop[1], cudaEventBlockingSync);
     cudaEventRecord(startstop[0], 0);
 
     return startstop;

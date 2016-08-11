@@ -34,7 +34,11 @@ private:
     bool m_isExecuting;
     CUDATimer m_timer;
     int m_currentStepNumber;
+    int m_currentIteration;
+    int m_maxStepNumber;
 
+    std::unordered_map<ComputationNodeBase*,int> m_nodes2timestep;
+    std::unordered_map<int, ComputationNodeBase*> m_timestep2nodes;
     // needed to identify a step
     std::unordered_map<std::string, int> m_stepName2StepNumber; 
     // steps to buffers; all these buffers need to be handled during one synchronization call for a given timestep
@@ -56,9 +60,11 @@ private:
     void FreeBuffersForDryRun(ComputationNodeBase *node, bool isForward);
     void SwapInFreedBuffers(ComputationNodeBase *node, bool isForward);
     void RegisterBuffers(ComputationNodeBase *node, bool isForward);
-    void GatherRuntimeStatistics(ComputationNodeBase *node, const size_t idx, const FrameRange& fr, bool isForward);
+    void GatherRuntimeStatistics(ComputationNodeBase *node, const size_t idx, const FrameRange& fr, bool isForward, bool isBeforeComputation);
     void FindSwapOrder();
     void CleanUp();
+    int GetStepNumber(int baseStep, int additionalSteps);
+    int GetStepDistance(int step1, int step2);
 
     void MeasureSwapTime(ComputationNodeBase *node, bool isForward);
     std::string GetStepName(ComputationNodeBase *node, bool isForward);
@@ -83,8 +89,11 @@ public:
     bool m_useMemorySwapping;
     bool m_isInTrainingMode;
     bool m_isFloat;
+    std::unordered_map<Matrix<ElemType>*, bool> m_bannedBuffers2bool;
+    std::unordered_map<ComputationNodeBase*,bool> m_bannedNodes2Bool;
     // this cleans the SynchronizationManager up after a action completes
     void ClearActionsAndTheirMemory();
+    void RegisterWeight(Matrix<ElemType> *weight);
 	
 };
 

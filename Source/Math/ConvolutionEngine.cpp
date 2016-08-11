@@ -6,6 +6,7 @@
 #include "stdafx.h"
 #include "ConvolutionEngine.h"
 #include "CuDnnFactories.h"
+#include <iostream>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -52,7 +53,13 @@ template <class ElemType>
 void ConvolutionEngine<ElemType>::BackwardKernel(const Mat& srcGrad, const Mat& in, Mat& kernel, bool allowReuse, Mat& workspace)
 {
     const auto& g = *m_geometry;
-    assert(g.InputShape().GetNumElements() == in.GetNumRows());
+    if(g.InputShape().GetNumElements() != in.GetNumRows())
+    {
+        cout << "g.InputShape().GetNumElements(): " << g.InputShape().GetNumElements() << " vs. " << "in.GetNumRows(): " << in.GetNumCols() << endl;
+        cout << in.GetNumRows() << "x" << in.GetNumCols() << endl;
+        assert(g.InputShape().GetNumElements() == in.GetNumRows());
+    }
+ 
     assert(g.OutputShape().GetNumElements() == srcGrad.GetNumRows());
     size_t batchSize = in.GetNumCols();
     assert(batchSize == srcGrad.GetNumCols());
@@ -92,7 +99,12 @@ void ConvolutionEngine<ElemType>::BackwardPooling(const Mat& out, const Mat& src
     assert(g.InputShape().GetNumElements() == grad.GetNumRows());
     assert(g.InputShape().GetNumElements() == in.GetNumRows());
     assert(g.OutputShape().GetNumElements() == srcGrad.GetNumRows());
-    assert(g.OutputShape().GetNumElements() == out.GetNumRows());
+    if(g.OutputShape().GetNumElements() != out.GetNumRows())
+    {
+        cout << "g.OutputShape().GetNumElements(): " << g.OutputShape().GetNumElements() << " vs. " << "out.GetNumRows(): " << out.GetNumCols() << endl;
+        cout << out.GetNumRows() << "x" << out.GetNumCols() << endl;
+        assert(g.OutputShape().GetNumElements() == out.GetNumRows());
+    }
     size_t batchSize = out.GetNumCols();
     assert(batchSize == srcGrad.GetNumCols());
     assert(batchSize == in.GetNumCols());

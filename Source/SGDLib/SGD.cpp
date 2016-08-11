@@ -256,12 +256,25 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
     auto& learnableNodes = net->LearnableParameterNodes(criterionNodes[0]);
     std::list<Matrix<ElemType>> smoothedGradients;
 
+    SynchronizationManager<ElemType> *sync = SynchronizationManager<ElemType>::GetSynchronizationManager();
     for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
     {
         ComputationNodePtr node = dynamic_pointer_cast<ComputationNode<ElemType>>(*nodeIter);
         smoothedGradients.push_back(Matrix<ElemType>(node->Value().GetNumRows(),
                                                      node->Value().GetNumCols(),
                                                      net->GetDeviceId()));
+
+        sync->m_bannedBuffers2bool[&(smoothedGradients.back())] = true;
+        sync->m_bannedBuffers2bool[(Matrix<ElemType>*)node->ValuePtr().get()] = true;
+
+        cout << "BANNED: " << smoothedGradients.back().GetNumRows() << "x" << smoothedGradients.back().GetNumCols() << endl;
+    }
+
+    std::map<const ComputationNodeBasePtr, std::list<ComputationNodeBasePtr>> allLearnableNodes = net->GetLearnableParameters();
+    for(auto pair : allLearnableNodes)
+    {
+    	for(auto ptr : pair.second)
+    		sync->m_bannedBuffers2bool[(Matrix<ElemType>*)ptr.get()->ValuePtr().get()];
     }
 
     double avgCriterion, lrControlCriterion;
@@ -295,7 +308,6 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
     
     // set memory swapping temporarily to false, so that it gets triggered after momentum
     // and batch normalization was set
-    SynchronizationManager<ElemType> *sync = SynchronizationManager<ElemType>::GetSynchronizationManager();
     bool useMemorySwappingTemp = sync->m_useMemorySwapping;
     sync->m_useMemorySwapping = false;
     sync->m_isInTrainingMode = true;
@@ -477,40 +489,10 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         EpochCriterion epochCriterion; // criterion values are returned in this
         std::vector<EpochCriterion> epochEvalErrors(evaluationNodes.size());
         std::wstring wname = GetModelNameForEpoch(i-1);
-        std::string name = std::string(wname.begin(), wname.end());
 
-        if(!sync->IsExecuting() && sync->m_useMemorySwapping)
-        {
-            int traceLevelTemp = m_traceLevel;
-            m_traceLevel = 0;
-            double prevCriterion = numeric_limits<double>::infinity();
-            if (m_mpi != nullptr){ m_mpi->WaitAll(); }
-            if ((m_mpi == nullptr) || m_mpi->IsMainNode())
-            {
-                cout << "SAVING NETWORK: Name: " << name << endl;
-                net->Save(GetModelNameForEpoch(i - 1));
-                SaveCheckPointInfo(i-1, 0, learnRatePerSample, smoothedGradients, prevCriterion, m_mbSize[i]);
-            }
-
-            if (m_mpi != nullptr){ m_mpi->WaitAll(); }
-            // these two variables are only temporary and are thrown away after the dry-run
-            //EpochCriterion epochCriterion; // criterion values are returned in this
-            //std::vector<EpochCriterion> epochEvalErrors(evaluationNodes.size());
-            cout << "PRE TRAIN" << endl;
-            TrainOneMiniEpochAndReloadModel(net, refNet, refNode, i,
-                                        2, trainSetDataReader, learnRatePerSample, m_mbSize[i],
-                                        featureNodes, labelNodes,
-                                        criterionNodes, evaluationNodes,
-                                        inputMatrices, learnableNodes,
-                                        smoothedGradients,
-                                        /*out*/ epochCriterion, /*out*/ epochEvalErrors,
-                                        "Memory swapping dry run:");
-            ComputationNetwork::SetDropoutRate<ElemType>(net, criterionNodes[0], m_dropoutRates[i], prevDropoutRate, dropoutRandSeedBase);
-
-            cout << "LOADED NETWORK: Name: " << name << endl;
-            m_traceLevel = traceLevelTemp;
-        }
-
+        for(auto node : featureNodes){ sync->m_bannedNodes2Bool[node.get()] = true; }
+        for(auto node : outputNodes){ sync->m_bannedNodes2Bool[node.get()] = true; }
+        for(auto node : labelNodes){ sync->m_bannedNodes2Bool[node.get()] = true; }
 
         TrainOneEpoch(net,
                       refNet,
@@ -831,6 +813,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
     bool useParallelTrain = UsingParallelTrain(epochNumber);
 
 
+
     // MA-related variables
     size_t nSamplesSinceLastModelSync = 0;
     size_t blockSizePerWorker = 0;
@@ -997,43 +980,13 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                     ComputationNetwork::BumpEvalTimeStamp(labelNodes);
                 }
 
-                //if(ismb == 0 && numMBsRun == 0 && !sync->IsExecuting() && sync->m_useMemorySwapping)
-                //{
-                //    // we produce 100 gradients during the swap in/out sampling and because we apply gradients via
-                //    // learning rate per sample this will move the weights in the wrong direction
-                //    // solution: we set the learning rate to 0 for the swapping process and then reset it to its original value
-                //    double *ptr = (double*)(&learnRatePerSample);
-                //    // we produce a lot of gradients in memory swapping,
-                //    // by setting the learning rate to zero we ensure that these gradients do not affect the results
-                //    *ptr = 0.0; 
-
-                //    fprintf(stderr, "Begin benchmarking for memory swapping...\n");
-
-                //    //forward + backward pass for the synchronization manager
-                //    net->ForwardProp(evaluationNodes);
-                //    net->ForwardProp(criterionNodes[0]);
-                //    // swapping in backwards pass only possible, if gradients are computing
-                //    if (learnRatePerSample > 0.01 * m_minLearnRate) 
-                //        net->Backprop(criterionNodes[0]);
-
-                //    fprintf(stderr, "Memory swapping benchmarking complete!\n");
-                //    reloadBatch = true;
-                //}
-                //else
-                //{
-                //    // reset the learning rate to its original value
-                //    double *ptr = (double*)(&learnRatePerSample);
-                //    *ptr = learningRateTemp;
-                //    reloadBatch = false;
-
-                //}
-
                 // ===========================================================
                 // forward prop for evaluate eval nodes
                 // ===========================================================
 
                 // compute eval node first since when gradient is computed the forward function values
                 // may be changed and need to be recomputed when gradient and function value share the same matrix
+                //m_timer->tick();
                 net->ForwardProp(evaluationNodes); // the bulk of this evaluation is reused in ComputeGradient() below
 
                 // ===========================================================
@@ -1049,6 +1002,8 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                 if (learnRatePerSample > 0.01 * m_minLearnRate) // only compute gradient when learning rate is large enough
                     net->Backprop(criterionNodes[0]);
 
+                //float t = m_timer->tock();
+                //cout << t << endl;
                 // house-keeping for sub-minibatching
                 if (actualNumSubminibatches > 1)
                     smbDispatcher.DoneWithCurrentSubMinibatch(ismb); // page state out
@@ -1150,15 +1105,12 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                     Matrix<ElemType>& smoothedGradient = *smoothedGradientIter;
                     
 
-                   if(!sync->IsExecuting() && sync->m_useMemorySwapping)
-                    smoothedGradient.SetValue(0);
 #ifdef _DEBUG
                     if (smoothedGradient.HasNan("TrainOneEpoch/UpdateWeights(): "))
                         LogicError("%ls %ls operation has NaNs in smoothedGradient.", node->NodeName().c_str(), node->OperationName().c_str());
 #endif
                     // BUGBUG (Issue #95): Access to net MBLayout can no longer be done if we have multiple input layouts
                     
-                   if(!sync->m_useMemorySwapping || (sync->IsExecuting() && sync->m_useMemorySwapping))
                     UpdateWeights(node, smoothedGradient, learnRatePerSample,
                                   GetMomentumPerSample(epochNumber /*BUGBUG workaround:*/, net->GetMBLayoutPtrOfNetwork()->GetNumParallelSequences()), numSamplesInMinibatch,
                                   m_L2RegWeight, m_L1RegWeight,
@@ -1964,6 +1916,14 @@ template <class ElemType>
     gradientValues.Print("Gradient Input");
     smoothedGradient.Print("Smoothed Gradient Input");
 #endif
+
+    SynchronizationManager<ElemType> *sync = SynchronizationManager<ElemType>::GetSynchronizationManager();
+    if(sync->m_useMemorySwapping)
+    {
+        //sync->RegisterWeight(&functionValues);
+        //sync->RegisterWeight(&gradientValues);
+        //sync->RegisterWeight(&smoothedGradient);
+    }
 
     // make actualMBSize is a valid value
     assert(actualMBSize > 0);

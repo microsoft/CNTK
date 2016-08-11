@@ -233,6 +233,8 @@ void DoCommands(const ConfigParameters& config, const shared_ptr<MPIWrapper>& mp
             LOGPRINTF(stderr, "#%*s#\n", (int)(strlen(delim) - 2), "");
             LOGPRINTF(stderr, "%s\n\n", delim);
 
+            std::string type = config(L"precision", "float");
+
             if ((mpi == nullptr) || (commandstoRunOnAllRanks.find(thisAction) != commandstoRunOnAllRanks.end()) || mpi->IsMainNode())
             {
                 if (thisAction == "train" || thisAction == "trainRNN")
@@ -248,6 +250,12 @@ void DoCommands(const ConfigParameters& config, const shared_ptr<MPIWrapper>& mp
                 }
                 else if (thisAction == "test" || thisAction == "eval")
                 {
+
+                if (type == "float")
+                    SynchronizationManager<float>::GetSynchronizationManager()->m_useMemorySwapping = false;
+                else
+                    SynchronizationManager<double>::GetSynchronizationManager()->m_useMemorySwapping = false;
+
                     DoEval<ElemType>(commandParams);
                 }
                 else if (thisAction == "edit")
@@ -306,7 +314,6 @@ void DoCommands(const ConfigParameters& config, const shared_ptr<MPIWrapper>& mp
             NDLScript<ElemType> ndlScript;
             ndlScript.ClearGlobal(); // clear global macros between commands
 
-            std::string type = config(L"precision", "float");
             if (type == "float")
                 SynchronizationManager<float>::GetSynchronizationManager()->ClearActionsAndTheirMemory();
             else

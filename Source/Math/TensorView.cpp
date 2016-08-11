@@ -50,7 +50,13 @@ TensorView<ElemType>::TensorView(const MatrixBasePtr& sob, const TensorShape& sh
     const auto r = shape.GetLocationRange();
     const auto n = m_sob->GetNumElements();
     if (r.first < 0 || (size_t)r.second > n)
+    {
+        for(int i = 0; i < shape.GetRank(); i++)
+            cout << shape.GetDim(i) << "x";
+        cout << endl;
+        cout << m_sob->GetNumRows() << "x" << m_sob->GetNumCols() << endl;
         LogicError("TensorView: Shape bounds [%d,%d) exceed bounds of underlying storage object [0,%d).", (int) r.first, (int) r.second, (int) n);
+    }
 #endif
 }
 
