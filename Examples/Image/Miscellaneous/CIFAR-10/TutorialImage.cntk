@@ -9,6 +9,9 @@ RootDir = "." ; DataDir  = "$RootDir$" ; ModelDir = "$RootDir$/Output/Models"
 
 modelPath = "$ModelDir$/01_Convolution"
 
+# image reading pipeline
+imageTransforms = ( [ type = "Scale" ; width = 32 ; height = 32 ; channels = 3 ; interpolations = "linear" ] : [ type = "Transpose" ] )
+
 # Training without BN
 TrainConvNet = [
     action = "train"
@@ -66,57 +69,14 @@ TrainConvNet = [
     reader = [
         verbosity = 0
         randomize = true
-        deserializers = (
-            [
-                type = "ImageDeserializer" ; module = "ImageReader"
-                file = "$DataDir$/cifar-10-batches-py/train_map.txt"
-                input = [
-                    features = [
-                        transforms = (
-                            [ type = "Crop" ; cropType = "center" ; cropRatio = 1.0 ; jitterType = "uniRatio" ] :
-                            [
-                                type = "Scale"
-                                width = 32
-                                height = 32
-                                channels = 3
-                                interpolations = "linear"
-                            ]:[
-                                type = "Mean"
-                            ]:[
-                                type = "Transpose"
-                            ]
-                        )
-                    ]
-                    labels = [ labelDim = 10 ]
-                ]
+        deserializers = ([
+            type = "ImageDeserializer" ; module = "ImageReader"
+            file = "$DataDir$/cifar-10-batches-py/train_map.txt"
+            input = [
+                features = [ transforms = $imageTransforms$ ]
+                labels =   [ labelDim = 10 ]
             ]
-        )
-    ]
-
-    reader_newer = [
-        readerType = "ImageReader"
-        file = "$DataDir$/cifar-10-batches-py/train_map.txt"
-        randomize = "auto"
-        prefetch = true
-        features = [
-            width = 32
-            height = 32
-            channels = 3
-            #cropType = "random"
-            #cropRatio = 0.8
-            #jitterType = "uniRatio"
-            #interpolations = "linear"
-            #meanFile = "$DataDir$/cifar-10-batches-py/CIFAR-10_mean.xml"
-        ]
-        labels = [ labelDim = 10 ]
-    ]    
-    reader_old = [
-        readerType = "CNTKTextFormatReader"
-        file = "$DataDir$/Train_cntk_text.txt"
-        input = [
-            features = [ dim = 3072 ; format = "dense" ]
-            labels   = [ dim = 10 ;   format = "dense" ]
-        ]
+        ])
     ]
 ]
 
@@ -179,12 +139,16 @@ TrainConvNetWithBN = [
     ]
 
     reader = [
-        readerType = "CNTKTextFormatReader"
-        file = "$DataDir$/Train_cntk_text.txt"
-        input = [
-            features = [ dim = 3072 ; format = "dense" ]
-            labels   = [ dim = 10 ;   format = "dense" ]
-        ]
+        verbosity = 0
+        randomize = true
+        deserializers = ([
+            type = "ImageDeserializer" ; module = "ImageReader"
+            file = "$DataDir$/cifar-10-batches-py/train_map.txt"
+            input = [
+                features = [ transforms = ( [ type = "Scale" ; width = 32 ; height = 32 ; channels = 3 ; interpolations = "linear" ] : [ type = "Transpose" ] ) ]
+                labels =   [ labelDim = 10 ]
+            ]
+        ])
     ]
 ]
 
@@ -193,60 +157,16 @@ Eval = [
     action = "eval"
     minibatchSize = 16
     evalNodeNames = errs:top5Errs  # also test top-5 error rate
-    reader_old = [
-        readerType = "CNTKTextFormatReader"
-        file = "$DataDir$/Test_cntk_text.txt"
-        input = [
-            features = [ dim = 3072 ; format = "dense" ]
-            labels   = [ dim = 10 ;   format = "dense" ]
-        ]
-    ]
-    reader_newer = [
-        readerType = "ImageReader"
-        file = "$DataDir$/cifar-10-batches-py/test_map.txt"
-        randomize = "auto"
-        prefetch = true
-        features = [
-            width = 32
-            height = 32
-            channels = 3
-            #cropType = "random"
-            #cropRatio = 0.8
-            #jitterType = "uniRatio"
-            #interpolations = "linear"
-            #meanFile = "$DataDir$/cifar-10-batches-py/CIFAR-10_mean.xml"
-        ]
-        labels = [
-            labelDim = 10
-        ]
-    ]    
     reader = [
         verbosity = 0
         randomize = true
-        deserializers = (
-            [
-                type = "ImageDeserializer" ; module = "ImageReader"
-                file = "$DataDir$/cifar-10-batches-py/train_map.txt"
-                input = [
-                    features = [
-                        transforms = (
-                            [ type = "Crop" ; cropType = "center" ; cropRatio = 1.0 ; jitterType = "uniRatio" ] :
-                            [
-                                type = "Scale"
-                                width = 32
-                                height = 32
-                                channels = 3
-                                interpolations = "linear"
-                            ]:[
-                                type = "Mean"
-                            ]:[
-                                type = "Transpose"
-                            ]
-                        )
-                    ]
-                    labels = [ labelDim = 10 ]
-                ]
+        deserializers = ([
+            type = "ImageDeserializer" ; module = "ImageReader"
+            file = "$DataDir$/cifar-10-batches-py/train_map.txt"
+            input = [
+                features = [ transforms = $imageTransforms$ ]
+                labels =   [ labelDim = 10 ]
             ]
-        )
+        ])
     ]
 ]
