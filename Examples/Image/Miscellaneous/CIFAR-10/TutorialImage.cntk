@@ -32,7 +32,7 @@ TrainConvNet = [
             z = LinearLayer {labelDim, init = "gaussian", initValueScale = 1.5} (d1)
         }.z
 
-        # with self-defined layers
+        # with self-defined layer
         MyConvReLUPoolLayer {dim, initValueScale} =
         {
             C = ConvolutionalLayer {dim, (5:5), pad = true, activation = ReLU, init = "gaussian", initValueScale = initValueScale}
@@ -49,24 +49,25 @@ TrainConvNet = [
             z = LinearLayer {labelDim, init = "gaussian", initValueScale = 1.5} (d1)
         }.z
 
-        # with arrays
-        model_layerStack (features) =
-        {
-            featNorm = features - Constant (128)
-            h3 = LayerStack {3, i => MyConvReLUPoolLayer {(32:32:64)[i], (0.0043:1.414:1.414)[i]} } (featNorm)
-            d1 = DenseLayer {64, activation = ReLU, init = "gaussian", initValueScale = 12} (h3)
-            z = LinearLayer {labelDim, init = "gaussian", initValueScale = 1.5} (d1)
-        }.z
-
         # model-composition style
         # ...TODO: test this again; last run was a little worse
         Subtract128 (x) = x - Constant (128)
         model_compositionStyle = Sequential (
             Subtract128 :
-            LayerStack {3, i => MyConvReLUPoolLayer {(32:32:64)[i], (0.0043:1.414:1.414)[i]} } :
+            MyConvReLUPoolLayer {32, 0.0043} :
+            MyConvReLUPoolLayer {32, 1.414}  :
+            MyConvReLUPoolLayer {64, 1.414}  :
             DenseLayer {64, activation = ReLU, init = "gaussian", initValueScale = 12} :
             LinearLayer {labelDim, init = "gaussian", initValueScale = 1.5}
         )
+        #model_compositionStyle =
+        #    Subtract128 >>
+        #    LayerStack {3, i => MyConvReLUPoolLayer {dims[i], initValueScales[i]} } >>
+        #    MyConvReLUPoolLayer {32, 0.0043} >>
+        #    MyConvReLUPoolLayer {32, 1.414}  >>
+        #    MyConvReLUPoolLayer {64, 1.414}  >>
+        #    DenseLayer {64, activation = ReLU, init = "gaussian", initValueScale = 12} >>
+        #    LinearLayer {labelDim, init = "gaussian", initValueScale = 1.5}
 
         // --- with BatchNorm
         MyConvBNReLUPoolLayer {dim, initValueScale} =
@@ -74,18 +75,20 @@ TrainConvNet = [
             C = ConvolutionalLayer {dim, (5:5), pad = true, bias = false, init = "gaussian", initValueScale = initValueScale}
             B = BatchNormalizationLayer {spatialRank = 2, normalizationTimeConstant = 4096}
             P = MaxPoolingLayer {(3:3), stride = (2:2)}
-            f = Sequential (C:B:ReLU:P)
+            f(x) = P(ReLU(B(C(x))))
         }.f
         MyDenseBNReLULayer {dim, initValueScale} =
         {
             D = DenseLayer {dim, bias = false, init = "gaussian", initValueScale = initValueScale}
             B = BatchNormalizationLayer {normalizationTimeConstant = 4096}
-            f = Sequential (D:B:ReLU)
+            f(x) = ReLU(B(D(x)))
         }.f
         model_withBatchNorm (features) =
         {
             featNorm = features - Constant (128)
-            h3 = LayerStack {3, i => MyConvBNReLUPoolLayer {(32:32:64)[i], (0.0043:1.414:1.414)[i]} } (featNorm)
+            h1 = MyConvBNReLUPoolLayer {32, 0.0043} (featNorm)
+            h2 = MyConvBNReLUPoolLayer {32, 1.414} (h1)
+            h3 = MyConvBNReLUPoolLayer {64, 1.414} (h2)
             d1 = MyDenseBNReLULayer {64, 12} (h3)
             z = LinearLayer {labelDim, init = "gaussian", initValueScale = 1.5} (d1)
         }.z
@@ -96,46 +99,43 @@ TrainConvNet = [
             # note: (3:3), while the macro above is (5:5)
             C = ConvolutionalLayer {dim, (3:3), pad = true, stride = (stride:stride), bias = false, init = "gaussian", initValueScale = initValueScale}
             B = BatchNormalizationLayer {spatialRank = 2, normalizationTimeConstant = 4096}
-            f = Sequential (C:B)
-        }.f
-        MyConvBNReLULayer {dim, initValueScale, stride} =      # TODO: get rid of this
-        {
-            CB = MyConvBNLayer {dim, initValueScale, stride}
-            f = Sequential (CB:ReLU)
+            f(x) = B(C(x))
         }.f
         ResNetNode {dim, initValueScale} =
         {
-            C1 = MyConvBNReLULayer {dim, initValueScale, 1}  # first convolution layer
-            C2 = MyConvBNLayer     {dim, initValueScale, 1}  # second convolution layer, no ReLU
-            f(x) = ReLU (x + C2(C1(x)))
+            C1 = MyConvBNLayer {dim, initValueScale, 1}  # first convolution layer
+            C2 = MyConvBNLayer {dim, initValueScale, 1}  # second convolution layer
+            #B = BatchNormalizationLayer {spatialRank = 2, normalizationTimeConstant = 4096}  # TODO: Having this works better, it seems
+            f(x) = ReLU (x + C2(ReLU(C1(x))))  # ReLU between C1 and C2 and after summation
         }.f
         ResNetIncNode {dim, initValueScale} =
         {
-            # one branch. C2 o c1 doubles the #channels but halves the image size
-            C1 = MyConvBNReLULayer {dim, initValueScale, 2}  # first convolution layer, stride = 2
-            C2 = MyConvBNLayer     {dim, initValueScale, 1}  # second convolution layer, no ReLU
+            # first branch. This doubles the #channels but halves the image size
+            C1 = MyConvBNLayer {dim, initValueScale, 2}  # first convolution layer, stride = 2
+            C2 = MyConvBNLayer {dim, initValueScale, 1}  # second convolution layer
 
             # second branch:
-            #  - sub-sample spatially by a factor of 2
-            #  - append dim/2 zero output channels
-            Down2 = MaxPoolingLayer {(1:1), stride = (2:2)}  # this is a function that sub-samples spatially by a factor of 2
+            # sub-sample spatially by a factor of 2
+            DownSamplingLayer {stride} = MaxPoolingLayer {(1:1), stride = stride}
+            # append dim/2 zero output channels
             pad = ConstantTensor (0, (1:1:dim/2))  # the 1s will broadcast to image size
-            P(x) = Splice ((Down2(x) : pad), axis = 3)
+            P(x) = Splice ((DownSamplingLayer {(2:2)} (x) : pad), axis = 3)
             B = BatchNormalizationLayer {spatialRank = 2, normalizationTimeConstant = 4096}
 
             # layer sums both branches and rectifies the result
-            f(x) = ReLU (B(P(x)) + C2(C1(x)))
+            f(x) = ReLU (B(P(x)) + C2(ReLU(C1(x))))  # ReLU between C1 and C2 and after summation
         }.f
         model_resNet (features) =
         {
-            conv1 = MyConvBNReLULayer {16, 0.26, 1} (features)
-            rn1 = LayerStack {3, i=> ResNetNode {16, 7.07}} (conv1)
+            conv1 = MyConvBNLayer {16, 0.26, 1} (features)
+            rl1   = ReLU (conv1)
+            rn1   = LayerStack {3, _ => ResNetNode {16, 7.07}} (rl1)
 
             rn2_1 = ResNetIncNode {32, 7.07} (rn1)
-            rn2   = LayerStack {2, i=> ResNetNode {32, 7.07}} (rn2_1)
+            rn2   = LayerStack {2, _ => ResNetNode {32, 7.07}} (rn2_1)
 
             rn3_1 = ResNetIncNode {64, 7.07} (rn2)
-            rn3   = LayerStack {2, i=> ResNetNode {64, 7.07}} (rn3_1)
+            rn3   = LayerStack {2, _ => ResNetNode {64, 7.07}} (rn3_1)
 
             pool = AveragePoolingLayer {(8:8)} (rn3)
 
