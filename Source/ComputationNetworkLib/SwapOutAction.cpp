@@ -55,6 +55,8 @@ template <typename ElemType> void SwapOutAction<ElemType>::EndAction()
     CUDA_CALL(cudaStreamSynchronize(m_streamAsync));
     this->m_rows = this->m_bufferGPU->GetNumRows();
     this->m_cols = this->m_bufferGPU->GetNumCols();
+    this->m_bufferGPU->Resize(0,0);
+
 }
 
 

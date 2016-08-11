@@ -8,7 +8,7 @@
 #include <string>
 #include <unordered_map>
 #ifndef CPUONLY
-    #include <cuda_runtime_api.h>
+    #include <cuda_runtime.h>
 #endif
 
 namespace Microsoft { namespace MSR { namespace CNTK {

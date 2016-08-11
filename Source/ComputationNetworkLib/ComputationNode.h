@@ -1913,8 +1913,8 @@ public:
     virtual void CopyTo(ComputationNodeBasePtr node, const std::wstring& newName, const CopyNodeFlags flags) const override { NOT_IMPLEMENTED; }
     virtual ComputationNodeBasePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const override { NOT_IMPLEMENTED; }
     virtual double Get00Element() const override { NOT_IMPLEMENTED; }
-    virtual MatrixBasePtr ValuePtr() const override { NOT_IMPLEMENTED; }
-    virtual MatrixBasePtr GradientPtr() const override { NOT_IMPLEMENTED; }
+    virtual MatrixBasePtr ValuePtr() const override { return NULL; }  // this class is a really bad violation of the substituion principle, its needs to be refactored
+    virtual MatrixBasePtr GradientPtr() const override { return NULL; }
     virtual void UpdateFunctionMBSize() override { NOT_IMPLEMENTED; }
     virtual void AttachInputs(const std::vector<ComputationNodeBasePtr>& inputs) override { NOT_IMPLEMENTED; }
     virtual void PrintSelf(bool) const override { NOT_IMPLEMENTED; }

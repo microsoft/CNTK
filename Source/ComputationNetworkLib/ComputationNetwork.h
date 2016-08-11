@@ -484,6 +484,11 @@ public:
         return iter->second;
     }
 
+    std::map<const ComputationNodeBasePtr, std::list<ComputationNodeBasePtr>> GetLearnableParameters()
+	{
+    	return m_learnableParameters; // [out node] -> all parameter nodes feeding into out node
+    }
+
     inline std::vector<ComputationNodeBasePtr> CriterionNodesFrom(const wstring& criterionNodeName)
     {
         ComputationNodeBasePtr node = GetNodeFromName(criterionNodeName);

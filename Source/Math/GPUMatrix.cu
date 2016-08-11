@@ -3394,7 +3394,10 @@ template <class ElemType>
             return;
         a.PrepareDevice();
         if (a.IsEmpty() || c.IsEmpty())
+        {
+            cout << a.GetNumRows() << "x" << a.GetNumCols() << " vs. " << c.GetNumRows() << "x" << c.GetNumCols() << endl;
             LogicError("ScaleAndAdd:  one of the input matrices is empty.");
+        }
         // if (a.GetNumRows() != 1 && a.GetNumCols() != 1) // a is not a col or row vector
         if (a.GetNumRows() == c.GetNumRows() && a.GetNumCols() == c.GetNumCols()) // dimensions match
         {
@@ -3407,7 +3410,10 @@ template <class ElemType>
             assert(m > 0 && n > 0 && len > 0); // converting from size_t to int may cause overflow
             assert((int) c.GetNumRows() == m && (int) c.GetNumCols() == n);
             if ((int) c.GetNumRows() != m || (int) c.GetNumCols() != n)
+            {
+                cout << c.GetNumRows() << "x" << c.GetNumCols() << " vs. " << a.GetNumRows() << "x" << a.GetNumCols() << endl;
                 InvalidArgument("dimension of matrix c does not match dimension of matrix a.");
+            }
 
             cublasHandle_t cuHandle = GetCublasHandle(a.GetComputeDeviceId());
             // TODO: Overload the call to cublas_axpy to remove these ugly if/else statements.
@@ -3482,7 +3488,10 @@ template <class ElemType>
             }
         }
         else
+        {
+            cout << a.GetNumRows() << "x" << a.GetNumCols() << " vs. " << c.GetNumRows() << "x" << c.GetNumCols() << endl;
             InvalidArgument("dimension of matrix c does not match dimension of matrix a.");
+        }
     }
 }
 
@@ -3558,7 +3567,10 @@ template <class ElemType>
             _matrixVectorRowWiseAddWithThreadPerElem<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(a.Data(), b.Data(), c.Data(), alpha, m, n);
         }
         else
+        {
+            cout << a.GetNumRows() << "x" << a.GetNumCols() << " vs. " << c.GetNumRows() << "x" << c.GetNumCols() << endl;
             InvalidArgument("Dimension of matrix c does not match dimension of matrix a.");
+        }
     }
 }
 

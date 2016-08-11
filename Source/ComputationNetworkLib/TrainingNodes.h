@@ -1940,7 +1940,6 @@ public:
     	}
 
         Matrix<ElemType> sliceInputValue = Input(0)->ValueFor(fr);
-
         const Matrix<ElemType>& scale = Input(1)->Value();
         const Matrix<ElemType>& bias = Input(2)->Value();
         Matrix<ElemType>& runMean = Input(3)->Value();
