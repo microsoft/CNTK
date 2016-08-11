@@ -399,9 +399,12 @@ StreamDescription TransposeTransformer::Transform(const StreamDescription& input
     }
 
     // Changing from NHWC to NCHW
-    ImageDimensions dimensions(*m_inputStream.m_sampleLayout, HWC);
     m_outputStream = m_inputStream;
-    m_outputStream.m_sampleLayout = std::make_shared<TensorShape>(dimensions.AsTensorShape(CHW));
+    if (m_inputStream.m_sampleLayout != nullptr)
+    {
+        ImageDimensions dimensions(*m_inputStream.m_sampleLayout, HWC);
+        m_outputStream.m_sampleLayout = std::make_shared<TensorShape>(dimensions.AsTensorShape(CHW));
+    }
     return m_outputStream;
 }
 
@@ -432,15 +435,27 @@ struct DenseSequenceWithBuffer : DenseSequenceData
 template <class TElemType>
 SequenceDataPtr TransposeTransformer::TypedTransform(SequenceDataPtr sequence)
 {
+    TensorShapePtr shape = m_inputStream.m_sampleLayout;
+    if (shape == nullptr)
+    {
+        // Taking the shape from the sequence.
+        shape = sequence->m_sampleLayout;
+    }
+
+    if (shape == nullptr)
+    {
+        RuntimeError("Unknown shape of the sample in stream '%ls'.", m_inputStream.m_name.c_str());
+    }
+
     auto inputSequence = static_cast<DenseSequenceData&>(*sequence);
     assert(inputSequence.m_numberOfSamples == 1);
 
-    size_t count = m_inputStream.m_sampleLayout->GetNumElements() * GetSizeByType(m_inputStream.m_elementType);
+    size_t count = shape->GetNumElements() * GetSizeByType(m_inputStream.m_elementType);
 
     auto result = std::make_shared<DenseSequenceWithBuffer>();
     result->m_buffer.resize(count);
 
-    ImageDimensions dimensions(*m_inputStream.m_sampleLayout, ImageLayoutKind::HWC);
+    ImageDimensions dimensions(*shape, ImageLayoutKind::HWC);
     size_t rowCount = dimensions.m_height * dimensions.m_width;
     size_t channelCount = dimensions.m_numChannels;
 
@@ -455,7 +470,10 @@ SequenceDataPtr TransposeTransformer::TypedTransform(SequenceDataPtr sequence)
         }
     }
 
-    result->m_sampleLayout = m_outputStream.m_sampleLayout;
+    result->m_sampleLayout = m_outputStream.m_sampleLayout != nullptr ?
+        m_outputStream.m_sampleLayout :
+        std::make_shared<TensorShape>(dimensions.AsTensorShape(CHW));;
+
     result->m_data = result->m_buffer.data();
     result->m_numberOfSamples = inputSequence.m_numberOfSamples;
     return result;
