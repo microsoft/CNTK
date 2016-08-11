@@ -128,5 +128,11 @@ public:
     {
         return currentseed;
     }
+
+    bool IsRandomizationDisabled() const
+    {
+        return randomizationrange == randomizeDisable;
+    }
 };
-} } }
+
+}}}

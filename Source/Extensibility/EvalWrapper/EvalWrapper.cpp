@@ -13,7 +13,8 @@
 #include <memory>
 #include <msclr\marshal_cppstd.h>
 
-#include "ExceptionWithCallStack.h"
+#include "CNTKException.h"
+#include "EvalCommon.h"
 #include "Eval.h"
 
 #using <System.dll>
@@ -27,19 +28,9 @@ using namespace Microsoft::MSR::CNTK;
 
 namespace Microsoft { namespace MSR { namespace CNTK { namespace Extensibility { namespace Managed {
 
-ref class CNTKException;
-
 // Used for retrieving the model appropriate for the element type (float / double)
 template<typename ElemType>
 using GetEvalProc = void(*)(IEvaluateModel<ElemType>**);
-
-/// Enumeration for the types of nodes
-public enum class NodeGroup
-{
-    nodeInput,  // an input node
-    nodeOutput, // an output node
-    nodeSpecified
-};
 
 /// Managed wrapper for the native evaluation model
 template<typename ElemType>
@@ -52,21 +43,10 @@ public:
     /// <param name="funcName">Factory function name for retrieving the native model from the dll.</param>
     IEvaluateModelManaged(String^ funcName)
     {
-        pin_ptr<const WCHAR> dllname = PtrToStringChars("evaldll.dll");
-        auto hModule = LoadLibrary(dllname);
-        if (hModule == nullptr)
-        {
-            throw gcnew CNTKException(System::String::Format("Cannot find library: {0}", gcnew String(dllname)));
-        }
-
         try
         {
-            msclr::interop::marshal_context context;
-            const std::string func = context.marshal_as<std::string>(funcName);
-            auto procAddress = GetProcAddress(hModule, func.c_str());
-            auto getEvalProc = (GetEvalProc<ElemType>)procAddress;
             pin_ptr <IEvaluateModel<ElemType>*> p_eval = &m_eval;
-            getEvalProc(p_eval);
+            GetEval<ElemType>(p_eval);
         }
         catch (const exception& ex)
         {
@@ -247,7 +227,7 @@ public:
         try
         {
             std::vector<shared_ptr<std::vector<ElemType>>> sharedOutputVectors;
-            int outputSize = GetNodeDimensions(NodeGroup::nodeOutput)[outputKey];
+            int outputSize = GetNodeDimensions(NodeGroup::Output)[outputKey];
 
             List<ElemType>^ outputs = gcnew List<ElemType>(outputSize);
             for (int i = 0; i < outputSize; i++)
@@ -393,7 +373,7 @@ public:
     /// <returns>Results for requested layer</returns>
     List<ElemType>^ Evaluate(Dictionary<String^, List<ElemType>^>^ inputs, String^ outputKey)
     {
-        auto outDims = GetNodeDimensions(NodeGroup::nodeOutput);
+        auto outDims = GetNodeDimensions(NodeGroup::Output);
         int outputSize = outDims[outputKey];
 
         List<ElemType>^ outputs = gcnew List<ElemType>(outputSize);
@@ -555,61 +535,6 @@ public:
     }
 };
 
-public ref class CNTKException : Exception
-{
-public:
-    CNTKException() : Exception()
-    {}
-
-    CNTKException(String^ message) : Exception(message)
-    {}
-
-    CNTKException(String^ message, String^ callstack) : Exception(message), NativeCallStack(callstack)
-    {}
-
-    const String^ NativeCallStack;
-};
-
-public ref class CNTKRuntimeException : CNTKException
-{
-public:
-    CNTKRuntimeException() : CNTKException()
-    {}
-
-    CNTKRuntimeException(String^ message, String^ callstack) : CNTKException(message, callstack)
-    {}
-};
-
-public ref class CNTKLogicErrorException : CNTKException
-{
-public:
-    CNTKLogicErrorException() : CNTKException()
-    {}
-
-    CNTKLogicErrorException(String^ message, String^ callstack) : CNTKException(message, callstack)
-    {}
-};
-
-public ref class CNTKInvalidArgumentException : CNTKException
-{
-public:
-    CNTKInvalidArgumentException() : CNTKException()
-    {}
-
-    CNTKInvalidArgumentException(String^ message, String^ callstack) : CNTKException(message, callstack)
-    {}
-};
-
-public ref class CNTKBadAllocException : CNTKException
-{
-public:
-    CNTKBadAllocException() : CNTKException()
-    {}
-
-    CNTKBadAllocException(String^ message) : CNTKException(message)
-    {}
-};
-
 // This method tricks the compiler into emitting the methods of the classes
 // Refer to https://msdn.microsoft.com/en-us/library/ms177213.aspx for an
 // explanation to this behavior
@@ -627,7 +552,7 @@ void emit()
     f.CreateNetwork("", 0);
     f.CreateNetwork("", nullptr);
     f.CreateNetwork("", 0, nullptr);
-    f.GetNodeDimensions(NodeGroup::nodeSpecified);
+    f.GetNodeDimensions(NodeGroup::Specified);
 
     IEvaluateModelManagedD d;
     d.Init("");
@@ -638,7 +563,7 @@ void emit()
     d.CreateNetwork("", 0);
     d.CreateNetwork("", nullptr);
     d.CreateNetwork("", 0,nullptr);
-    d.GetNodeDimensions(NodeGroup::nodeSpecified);
+    d.GetNodeDimensions(NodeGroup::Specified);
 
     // Deprecated code, hush warnings locally only
 #pragma warning(push)

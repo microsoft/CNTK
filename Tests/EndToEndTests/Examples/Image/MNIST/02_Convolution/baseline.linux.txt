@@ -390,28 +390,28 @@ Memory Sharing Structure:
 05/13/2016 15:10:11: Starting Epoch 1: learning rate per sample = 0.003125  effective momentum = 0.000000  momentum as time constant = 0.0 samples
 
 05/13/2016 15:10:11: Starting minibatch loop.
-05/13/2016 15:10:13:  Epoch[ 1 of 3]-Minibatch[   1- 500, 26.67%]: ce = 1.05460791 * 16000; err = 0.35256250 * 16000; time = 2.0377s; samplesPerSecond = 7852.2
-05/13/2016 15:10:14:  Epoch[ 1 of 3]-Minibatch[ 501-1000, 53.33%]: ce = 0.16176135 * 16000; err = 0.04425000 * 16000; time = 0.9884s; samplesPerSecond = 16187.9
-05/13/2016 15:10:15:  Epoch[ 1 of 3]-Minibatch[1001-1500, 80.00%]: ce = 0.10889783 * 16000; err = 0.03043750 * 16000; time = 0.9868s; samplesPerSecond = 16214.2
-05/13/2016 15:10:16: Finished Epoch[ 1 of 3]: [Training] ce = 0.37214827 * 60000; err = 0.11981667 * 60000; totalSamplesSeen = 60000; learningRatePerSample = 0.003125; epochTime=4.77593s
+05/13/2016 15:10:13: Epoch[ 1 of 3]-Minibatch[1-500, 26.67%]: ce = 1.05460791 * 16000; errs = 35.2563% * 16000; time = 2.0377s; samplesPerSecond = 7852.2
+05/13/2016 15:10:14: Epoch[ 1 of 3]-Minibatch[501-1000, 53.33%]: ce = 0.16176135 * 16000; errs = 4.425% * 16000; time = 0.9884s; samplesPerSecond = 16187.9
+05/13/2016 15:10:15: Epoch[ 1 of 3]-Minibatch[1001-1500, 80.00%]: ce = 0.10889783 * 16000; errs = 3.04375% * 16000; time = 0.9868s; samplesPerSecond = 16214.2
+05/13/2016 15:10:16: Finished Epoch[ 1 of 3]: [Training] ce = 0.37214827 * 60000; errs = 11.9817% * 60000; totalSamplesSeen = 60000; learningRatePerSample = 0.003125; epochTime=4.77593s
 05/13/2016 15:10:16: SGD: Saving checkpoint model '/tmp/cntk-test-20160513145544.775982/CNTKTextFormatReader/Examples/Image/MNIST_02_Convolution@release_gpu/Models/02_Convolution.1'
 
 05/13/2016 15:10:16: Starting Epoch 2: learning rate per sample = 0.003125  effective momentum = 0.000000  momentum as time constant = 0.0 samples
 
 05/13/2016 15:10:16: Starting minibatch loop.
-05/13/2016 15:10:17:  Epoch[ 2 of 3]-Minibatch[   1- 500, 26.67%]: ce = 0.07178102 * 16000; err = 0.02206250 * 16000; time = 0.9982s; samplesPerSecond = 16029.6
-05/13/2016 15:10:18:  Epoch[ 2 of 3]-Minibatch[ 501-1000, 53.33%]: ce = 0.06225394 * 16000; err = 0.01800000 * 16000; time = 0.9949s; samplesPerSecond = 16082.6
-05/13/2016 15:10:19:  Epoch[ 2 of 3]-Minibatch[1001-1500, 80.00%]: ce = 0.06624252 * 16000; err = 0.02025000 * 16000; time = 0.9961s; samplesPerSecond = 16062.5
-05/13/2016 15:10:19: Finished Epoch[ 2 of 3]: [Training] ce = 0.06652122 * 60000; err = 0.01995000 * 60000; totalSamplesSeen = 120000; learningRatePerSample = 0.003125; epochTime=3.74643s
+05/13/2016 15:10:17: Epoch[ 2 of 3]-Minibatch[1-500, 26.67%]: ce = 0.07178102 * 16000; errs = 2.20625% * 16000; time = 0.9982s; samplesPerSecond = 16029.6
+05/13/2016 15:10:18: Epoch[ 2 of 3]-Minibatch[501-1000, 53.33%]: ce = 0.06225394 * 16000; errs = 1.8% * 16000; time = 0.9949s; samplesPerSecond = 16082.6
+05/13/2016 15:10:19: Epoch[ 2 of 3]-Minibatch[1001-1500, 80.00%]: ce = 0.06624252 * 16000; errs = 2.025% * 16000; time = 0.9961s; samplesPerSecond = 16062.5
+05/13/2016 15:10:19: Finished Epoch[ 2 of 3]: [Training] ce = 0.06652122 * 60000; errs = 1.995% * 60000; totalSamplesSeen = 120000; learningRatePerSample = 0.003125; epochTime=3.74643s
 05/13/2016 15:10:20: SGD: Saving checkpoint model '/tmp/cntk-test-20160513145544.775982/CNTKTextFormatReader/Examples/Image/MNIST_02_Convolution@release_gpu/Models/02_Convolution.2'
 
 05/13/2016 15:10:20: Starting Epoch 3: learning rate per sample = 0.003125  effective momentum = 0.000000  momentum as time constant = 0.0 samples
 
 05/13/2016 15:10:20: Starting minibatch loop.
-05/13/2016 15:10:21:  Epoch[ 3 of 3]-Minibatch[   1- 500, 26.67%]: ce = 0.04257084 * 16000; err = 0.01256250 * 16000; time = 0.9942s; samplesPerSecond = 16093.1
-05/13/2016 15:10:21:  Epoch[ 3 of 3]-Minibatch[ 501-1000, 53.33%]: ce = 0.04675156 * 16000; err = 0.01418750 * 16000; time = 0.9927s; samplesPerSecond = 16118.2
-05/13/2016 15:10:22:  Epoch[ 3 of 3]-Minibatch[1001-1500, 80.00%]: ce = 0.04904524 * 16000; err = 0.01475000 * 16000; time = 0.9901s; samplesPerSecond = 16160.8
-05/13/2016 15:10:23: Finished Epoch[ 3 of 3]: [Training] ce = 0.04529028 * 60000; err = 0.01366667 * 60000; totalSamplesSeen = 180000; learningRatePerSample = 0.003125; epochTime=3.73418s
+05/13/2016 15:10:21: Epoch[ 3 of 3]-Minibatch[1-500, 26.67%]: ce = 0.04257084 * 16000; errs = 1.25625% * 16000; time = 0.9942s; samplesPerSecond = 16093.1
+05/13/2016 15:10:21: Epoch[ 3 of 3]-Minibatch[501-1000, 53.33%]: ce = 0.04675156 * 16000; errs = 1.41875% * 16000; time = 0.9927s; samplesPerSecond = 16118.2
+05/13/2016 15:10:22: Epoch[ 3 of 3]-Minibatch[1001-1500, 80.00%]: ce = 0.04904524 * 16000; errs = 1.475% * 16000; time = 0.9901s; samplesPerSecond = 16160.8
+05/13/2016 15:10:23: Finished Epoch[ 3 of 3]: [Training] ce = 0.04529028 * 60000; errs = 1.36667% * 60000; totalSamplesSeen = 180000; learningRatePerSample = 0.003125; epochTime=3.73418s
 05/13/2016 15:10:23: SGD: Saving checkpoint model '/tmp/cntk-test-20160513145544.775982/CNTKTextFormatReader/Examples/Image/MNIST_02_Convolution@release_gpu/Models/02_Convolution'
 05/13/2016 15:10:23: CNTKCommandTrainEnd: train
 
@@ -517,7 +517,7 @@ Memory Sharing Structure:
 0x7f427f4fd3e8: {[ol.t Value[10 x 1 x *1]] }
 0x7f427f4fd5a8: {[ol.z Value[10 x 1 x *1]] }
 
-05/13/2016 15:10:28: Final Results: Minibatch[1-625]: err = 0.01460000 * 10000; ce = 0.04549626 * 10000; perplexity = 1.04654709
+05/13/2016 15:10:28: Final Results: Minibatch[1-10]: errs = 1.46% * 10000; ce = 0.04549626 * 10000; perplexity = 1.04654709
 
 05/13/2016 15:10:28: Action "test" complete.
 

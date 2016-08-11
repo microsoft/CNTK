@@ -25,6 +25,7 @@
 #include <map>
 #include <vector>
 #include <string>
+#include <memory>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -108,19 +109,19 @@ void EVAL_API GetEval(IEvaluateModel<ElemType>** peval);
 extern "C" EVAL_API void GetEvalF(IEvaluateModel<float>** peval);
 extern "C" EVAL_API void GetEvalD(IEvaluateModel<double>** peval);
 
+class Plugin;
 
-// Data Reader class
-// interface for clients of the Data Reader
-// mirrors the IEvaluateModel interface, except the Init method is private (use the constructor)
 template <typename ElemType>
-class Eval : public IEvaluateModel<ElemType>, protected Plugin
+class Eval : public IEvaluateModel<ElemType>
 {
 private:
     IEvaluateModel<ElemType>* m_eval; // evaluation class pointer
+    std::shared_ptr<Plugin> m_plugin; 
 
     void GetEvalClass(const std::string& config);
 
-    // Destroy - cleanup and remove this class
+    // Destroy - cleanup and remove this class. Workaround to ensure that memory allocation / deallocation
+    // occur within the DLL boundary.
     // NOTE: this destroys the object, and it can't be used past this point
     virtual void Destroy();
 
@@ -168,13 +169,18 @@ public:
 // Extended interface
 // ------------------------------------------------------------------------
 
+
+// Partial instantiation of vector to reduce to one argument.
+template <typename ElemType>
+using Vector = std::vector<ElemType, std::allocator<ElemType>>;
+
 //
 // A buffer to keep data for all samples in a (variable length) sequence 
 // from a single input or output.
 // This is used for both dense and sparse data.
 //
-template<typename ElemType>
-struct VariableBuffer
+template<typename ElemType, template<typename> class Container = Vector>
+struct ValueBuffer
 {
     //
     // All elements of a sequence, concatenated.
@@ -183,7 +189,7 @@ struct VariableBuffer
     // [2,2] and 12 elements in the buffer, the number of samples is 3.
     // For sparse inputs, the number of samples is indicated by the m_colIndices field.
     //
-    std::vector<ElemType> m_buffer;
+    Container<ElemType> m_buffer;
 
     // In case of sparse data, the following is also used. Otherwise, the 
     // contents are ignored.
@@ -199,15 +205,45 @@ struct VariableBuffer
     // For every element in buffer, an entry in this array gives its position.
     // For every vector the entries must be ascending.
     //
-    std::vector<int> m_indices;
+    Container<int> m_indices;
 
     //
     // Contains numberOfsamples + 1 indices into the buffer. The first entry
     // is always 0. The last entry points after the last element.
     // See http://docs.nvidia.com/cuda/cusparse/#compressed-sparse-column-format-csc
     //
-    std::vector<int> m_colIndices;
+    Container<int> m_colIndices;
 };
+
+//
+// Helper class that can be used in exchange of a std::vector if the memory is managed externally.
+//
+template <typename ElemType>
+struct VectorRef
+{
+    ElemType* m_vector;
+    size_t m_capacity;   // ElemTypes allocated
+    size_t m_size;       // ElemTypes used.
+
+    VectorRef() : m_vector(nullptr), m_capacity(0), m_size(0) {}
+    void InitFrom(std::vector<ElemType>& src) { InitFrom(src.data(), src.capacity(), src.size()); }
+    void InitFrom(ElemType* data, size_t capacity, size_t size) { m_vector = data; m_capacity = capacity; m_size = size; }
+    size_t size() const { return m_size; }
+    size_t capacity() const { return m_capacity; }
+    ElemType* data() { return m_vector; }
+    const ElemType* data() const { return m_vector; }
+    ElemType* begin() { return m_vector; }
+    ElemType* end() { return m_vector + m_size; }
+    void resize(size_t size) { m_size = size; }
+    ElemType& operator[](size_t idx) { return m_vector[idx]; }
+    const ElemType& operator[](size_t idx) const { return m_vector[idx]; }
+};
+
+template <typename ElemType>
+using Values = std::vector<ValueBuffer<ElemType, Vector>>;
+
+template <typename ElemType>
+using ValueRefs = std::vector<ValueBuffer<ElemType, VectorRef>>;
 
 //
 // Meta data
@@ -236,20 +272,33 @@ struct VariableLayout
 
     // Dimension of the tensor, flattened to 1 dimension, for one entry on the dynamic axis.
     // E.g. for a tensor [2,3,*] this would be 6.
-    int m_numElements;
-
-    // Name of the axis, potentially shared between inputs. For any two inputs sharing the same
-    // dynamic axis, the sequence cardinality must be the same.
-    std::wstring m_dynamicAxisName;
+    size_t m_numElements;
 };
 
-template <typename ElemType>
-using Variables = std::vector<VariableBuffer<ElemType>>;
+class VariableSchema : public std::vector<VariableLayout>
+{
+    public:
+        template<typename ElemType>
+        Values<ElemType> CreateBuffers(const std::vector<size_t>& maxLengths)
+        {
+            if (maxLengths.size() != size())
+                throw std::runtime_error("Expected max lengths for all variables.");
 
-using VariableSchema = std::vector<VariableLayout>;
+            Values<ElemType> buffers(size());
+            for (size_t i = 0; i < size(); ++i)
+            {
+                buffers[i].m_buffer.reserve(operator[](i).m_numElements * maxLengths[i]);
+            }
+            return buffers;
+        }
+};
 
 //
 // Extended interface, allowing for sparse input.
+// Implementation constraints: 
+// - Every output is a single tensor (not a batch), 
+// - Outputs must be dense.
+// - Output buffer must be preallocated.
 //
 template <typename ElemType>
 class IEvaluateModelExtended : public IEvaluateModelBase<ElemType>
@@ -265,7 +314,7 @@ public:
     // Allocate internal state for calling ForwardPass(). The call restricts the network (inputs and outputs)
     // to the functions represented by the output name.
     //
-    virtual void StartForwardEvaluation(std::vector<std::wstring> outputs) = 0;
+    virtual void StartForwardEvaluation(const std::vector<std::wstring>& outputs) = 0;
 
     //
     // GetVariableLayout - retrieve information about tensor shapes and memory layout of inputs necessary for a
@@ -275,17 +324,22 @@ public:
     virtual VariableSchema GetInputSchema() const = 0;
 
     //
-    // Evaluate - Evaluate (perform a forward pass for) a single unit using the model with the given inputs and 
+    // ForwardPass - Evaluate (perform a forward pass for) a single unit using the model with the given inputs and 
     // outputs.
     // The layout and shape of the data in inputs vector must match the schema returned by GetInputLayouts.
+    // Output must be preallocated and sized to avoid memory allocation / deallocation across DLL
+    // boundaries.
     // This method is not reentrant, as the forward pass keeps internal state.
-    // outputId - output to compute values for. See GetOutputLayouts()
     // inputs - vector of input buffers, one for every input as given by GetInputLayouts()
-    // outputs - map from node name to output vector, outputs vectors need to be preallocated by caller, sizing 
-    // will happen during evaluation.
-    // Called after StartForwardEvaluation()
+    // outputs - vector of output buffers. Must be sized to fit output schema.
     //
-    virtual void ForwardPass(const Variables<ElemType>& inputs, Variables<ElemType>& output) = 0;
+    virtual void ForwardPass(const Values<ElemType>& inputs, Values<ElemType>& output) = 0;
+
+    //
+    // Same as above, but takes references to static arrays instead of std::vector 
+    // (e.g. when vectors are manages by .net)
+    // 
+    virtual void ForwardPass(const ValueRefs<ElemType>& inputs, ValueRefs<ElemType>& output) = 0;
 };
 
 template <typename ElemType>

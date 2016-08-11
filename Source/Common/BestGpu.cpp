@@ -106,22 +106,18 @@ public:
     ~BestGpu();
     void Init();
     void SetAllowedDevices(const std::vector<int>& devices); // only allow certain GPUs
-    bool DeviceAllowed(int device);
-    void DisallowDevice(int device)
-    {
-        assert((device >= -1) && (device <= 31));
-
-        if (device < 0)
-            m_disallowCPUDevice = true;
-        else
-            m_allowedDevices &= ~(1 << device);
-    }
+    bool DeviceAllowed(int deviceId);
+    void DisallowUnsupportedDevices();
+    void DisallowDevice(int deviceId);
     void AllowAll();                                                                          // reset to allow all GPUs (no allowed list)
     bool UseMultiple();                                                                       // using multiple GPUs?
     int GetDevice(BestGpuFlags flags = bestGpuNormal);                                        // get a single device
     static const int AllDevices = -1;                                                         // can be used to specify all GPUs in GetDevices() call
     static const int RequeryDevices = -2;                                                     // Requery refreshing statistics and picking the same number as last query
+    static const int MininumCCMajorForGpu = 3;                                                // cntk supports GPUs with Compute Capability > 3.0
     std::vector<int> GetDevices(int number = AllDevices, BestGpuFlags flags = bestGpuNormal); // get multiple devices
+    std::vector<ProcessorData *> GetProcessorData();
+
 private:
     bool LockDevice(int deviceId, bool trial = true);
 };
@@ -156,6 +152,8 @@ static DEVICEID_TYPE SelectDevice(DEVICEID_TYPE deviceId, bool bLockGPU, const i
                 {
                     g_bestGpu->DisallowDevice(excludedDevices[i]);
                 }
+
+                g_bestGpu->DisallowUnsupportedDevices();
             }
 
             bestDeviceId = (DEVICEID_TYPE)g_bestGpu->GetDevice(BestGpuFlags(bLockGPU ? (bestGpuAvoidSharing | bestGpuExclusiveLock) : bestGpuAvoidSharing));
@@ -345,22 +343,32 @@ int BestGpu::GetDevice(BestGpuFlags bestFlags)
 void BestGpu::SetAllowedDevices(const std::vector<int>& devices)
 {
     m_allowedDevices = 0;
-    for (int device : devices)
+    for (int deviceId : devices)
     {
-        m_allowedDevices |= (1 << device);
+        m_allowedDevices |= (1 << deviceId);
     }
 }
 
 // DeviceAllowed - is a particular device allowed?
 // returns: true if the device is allowed, otherwise false
-bool BestGpu::DeviceAllowed(int device)
+bool BestGpu::DeviceAllowed(int deviceId)
 {
-    assert((device >= -1) && (device <= 31));
+    assert((deviceId >= -1) && (deviceId <= 31));
 
-    if (device < 0)
+    if (deviceId < 0)
         return !m_disallowCPUDevice;
     else
-        return !!(m_allowedDevices & (1 << device));
+        return !!(m_allowedDevices & (1 << deviceId));
+}
+
+void BestGpu::DisallowDevice(int deviceId)
+{
+    assert((deviceId >= -1) && (deviceId <= 31));
+
+    if (deviceId < 0)
+        m_disallowCPUDevice = true;
+    else
+        m_allowedDevices &= ~(1 << deviceId);
 }
 
 // AllowAll - Reset the allowed filter to allow all GPUs
@@ -525,6 +533,68 @@ std::vector<int> BestGpu::GetDevices(int number, BestGpuFlags p_bestFlags)
     }
 
     return best; // return the array of the best GPUs
+}
+
+// disallow devices wich don't comply with compute capability restriction when cntk runs with deviceId = 'auto'
+void BestGpu::DisallowUnsupportedDevices()
+{
+    for (auto pd : m_procData)
+    {
+        if (pd->deviceProp.major < BestGpu::MininumCCMajorForGpu)
+        {
+            DisallowDevice(pd->deviceId);
+        }
+    }
+}
+
+GpuData GetGpuData(DEVICEID_TYPE deviceId)
+{
+    std::vector<GpuData> gpusData = GetAllGpusData();
+
+    auto it = std::find_if(gpusData.begin(), gpusData.end(), [&deviceId](const GpuData& gpu){return gpu.deviceId == deviceId;});
+
+    if (it != gpusData.end())
+    {
+        return *it;
+    }
+
+    return GpuData(0, 0, deviceId, 0, GpuValidity::UnknownDevice, "", 0);
+}
+
+// populate a vector with data (id, major/minor version, cuda cores, name and memory) for each gpu device in the machine
+std::vector<GpuData> GetAllGpusData()
+{
+    std::vector<GpuData> data;
+
+    auto bestGpu = make_unique<BestGpu>();
+
+    std::vector<ProcessorData*> processorData = bestGpu->GetProcessorData();
+    
+    for (ProcessorData* pd : processorData)
+    {
+
+        GpuValidity validity = GpuValidity::UnknownDevice;
+
+        if (pd->deviceProp.major < BestGpu::MininumCCMajorForGpu)
+        {
+            validity = GpuValidity::ComputeCapabilityNotSupported;
+        }
+        else
+        {
+            validity = GpuValidity::Valid;
+        }
+
+        size_t totalMemory = pd->deviceProp.totalGlobalMem/(1024*1024); //From bytes to MBytes
+        GpuData gpuData = GpuData(pd->deviceProp.major, pd->deviceProp.minor, pd->deviceId, pd->cores, validity, string(pd->deviceProp.name), totalMemory);
+        data.push_back(gpuData);
+    }
+
+    return data;
+}
+
+std::vector<ProcessorData*> BestGpu::GetProcessorData()
+{
+    return m_procData;
 }
 
 // QueryNvmlData - Query data from the Nvidia Management Library, and accumulate counters,

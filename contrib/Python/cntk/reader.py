@@ -102,7 +102,7 @@ class CNTKTextFormatReader(AbstractReader):
        with a label.
 
        If your data is in matrix format (one column per feature), you can use
-       `uci_to_cntk_text_format_converter.py <https://github.com/Microsoft/CNTK/blob/master/Source/Readers/CNTKTextFormatReader/uci_to_cntk_text_format_converter.py>`_
+       `uci2ctf.py <https://github.com/Microsoft/CNTK/blob/master/Scripts/uci2ctf.py>`_
        to convert it to the CNTKTextFormatReader format.
 
     Args:
@@ -366,8 +366,9 @@ class LazyInputReader(_LazyInputReaderBase):
         shape = shapes_in_tensor.pop()
         if not shape:
             shape = (1,)
-
-        self.shape = self.node.shape = shape
+        
+        # cntk uses column major, thus we reverse the shape
+        self.shape = self.node.shape = tuple(reversed(shape))
 
         self.param_dict = {}
         self.param_dict['dim'] = np.multiply.reduce(self.shape)
@@ -420,7 +421,9 @@ class LazySparseInputReader(_LazyInputReaderBase):
         self.indices = indices
         self.values = values
 
-        self.shape = self.node.shape = shape
+        # cntk uses column major, thus we reverse the shape
+        self.shape = self.node.shape = tuple(reversed(shape))
+
 
         self.param_dict = {}
         self.param_dict['dim'] = np.multiply.reduce(self.shape)

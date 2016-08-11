@@ -4,7 +4,9 @@
 //
 #include "stdafx.h"
 #include <math.h>
+#ifdef _WIN32
 #include <crtdefs.h>
+#endif 
 #include "../../../Source/Math/Matrix.h"
 #include "../../../Source/Math/CPUMatrix.h"
 

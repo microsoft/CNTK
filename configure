@@ -1,4 +1,11 @@
 #!/bin/bash
+#
+# Copyright (c) Microsoft. All rights reserved.
+#
+# Licensed under the MIT license. See LICENSE.md file in the project root
+# for full license information.
+# ==============================================================================
+#
 
 configure=$0
 build_top=$PWD
@@ -12,26 +19,37 @@ have_acml=no
 acml_path=
 acml_check=include/acml.h
 
+# CNTK Custom MKL Version
+cntk_custom_mkl_version=1
+
 have_mkl=no
 mkl_path=
-mkl_check=mkl/include/mkl.h
+mkl_check=$cntk_custom_mkl_version/include/mkl.h
 
 # Experimental OpenBLAS support.
 have_openblas=no
 openblas_path=
 openblas_check=include/openblas_config.h
 
+# Boost library
+boost_path=
+boost_check=include/boost/test/unit_test.hpp
+
 have_kaldi=no
 kaldi_path=
-kaldi_check=src/kaldi.mk 
+kaldi_check=src/kaldi.mk
 
 have_buildtype=no
 buildtype=
 default_buildtype=release
 
-have_gdk=no
-gdk_path=
-gdk_check=include/nvidia/gdk/nvml.h
+have_gdk_include=no
+gdk_include_path=
+gdk_include_check=nvml.h
+
+have_gdk_nvml_lib=no
+gdk_nvml_lib_path=
+gdk_nvml_lib_check=libnvidia-ml.so
 
 have_cub=no
 cub_path=
@@ -58,20 +76,23 @@ default_use_code_coverage=no
 enable_code_coverage=$default_use_code_coverage
 
 # List from best to worst choice
-default_path_list="/usr /usr/local /opt /opt/local /opt/intel"
+default_path_list="/usr /usr/local /opt /opt/local"
 
 # List from best to worst choice
 default_acmls="acml5.3.1/ifort64_mp"
-default_mkls=""
+default_mkls="CNTKCustomMKL"
 default_openblas=""
+
+default_boost="boost-1.60.0"
 
 # NOTE: Will get compilation errors with cuda-6.0
 default_cudas="cuda-7.5 cuda-7.0 cuda-6.5"
 default_kaldis="kaldi-trunk kaldi-c024e8aa"
-default_gdks=". gdk/usr"
+default_gdk_includes="include/nvidia/gdk"
+default_gdk_nvml_libs="src/gdk/nvml/lib"
 default_cubs="cub-1.4.1"
 default_cudnns="cudnn-4.0"
-default_opencvs="opencv-3.0.0"
+default_opencvs="opencv-3.1.0 opencv-3.0.0"
 default_libzips="libzip-1.1.2"
 
 function default_paths ()
@@ -125,6 +146,11 @@ function find_openblas ()
     find_dir "$default_openblas" "$openblas_check"
 }
 
+function find_boost ()
+{
+    find_dir "$default_boost" "$boost_check"
+}
+
 function find_cuda ()
 {
     find_dir "$default_cudas" "$cuda_check"
@@ -135,9 +161,14 @@ function find_kaldi ()
     find_dir "$default_kaldis" "$kaldi_check"
 }
 
-function find_gdk ()
+function find_gdk_include ()
 {
-    find_dir "$default_gdks" "$gdk_check"
+    find_dir "$default_gdk_includes" "$gdk_include_check"
+}
+
+function find_gdk_nvml_lib ()
+{
+    find_dir "$default_gdk_nvml_libs" "$gdk_nvml_lib_check"
 }
 
 function find_cub ()
@@ -171,9 +202,9 @@ function is_hardlinked ()
     echo $r
 }
 
-function default_use_cuda () 
+function default_use_cuda ()
 {
-    if test x$(find_cuda) = x || test x$(find_gdk) = x
+    if test x$(find_cuda) = x || test x$(find_gdk_include) = x || test x$(find_gdk_nvml_lib) = x || test x$(find_cudnn) = x || test x$(find_cub) = x
     then
         echo no
     else
@@ -182,7 +213,7 @@ function default_use_cuda ()
 }
 enable_cuda=$(default_use_cuda)
 
-function show_default () 
+function show_default ()
 {
     if test x$1 = x
     then
@@ -203,16 +234,19 @@ function show_help ()
     echo "  --cuda[=(yes|no)] use cuda GPU $(show_default $(default_use_cuda))"
     echo "  --with-cuda[=directory] $(show_default $(find_cuda))"
     echo "  --with-cub[=directory] $(show_default $(find_cub))"
-    echo "  --with-gdk[=directory] $(show_default $(find_gdk))"
+    echo "  --with-gdk-include[=directory] $(show_default $(find_gdk_include))"
+    echo "  --with-gdk-nvml-lib[=directory] $(show_default $(find_gdk_nvml_lib))"
     echo "  --with-cudnn[=directory] $(show_default $(find_cudnn))"
     echo "  --with-acml[=directory] $(show_default $(find_acml))"
     echo "  --with-mkl[=directory] $(show_default $(find_mkl))"
+    echo "  --with-mkl-sequential[=directory] $(show_default $(find_mkl))"
     echo "  --with-openblas[=directory] (experimental) $(show_default $(find_openblas))"
     echo "  --with-buildtype=(debug|release) $(show_default $default_buildtype)"
     echo "  --with-kaldi[=directory] $(show_default $(find_kaldi))"
     echo "  --with-opencv[=directory] $(show_default $(find_opencv))"
     echo "  --with-libzip[=directory] $(show_default $(find_libzip))"
     echo "  --with-code-coverage[=(yes|no)] $(show_default ${default_use_code_coverage})"
+    echo "  --with-boost[=directory] $(show_default $(find_boost))"
     echo "Libraries search path:"
     for head in $(default_paths)
     do
@@ -325,23 +359,44 @@ do
                 fi
             fi
             ;;
-        --with-gdk*)
-            have_gdk=yes
+        --with-gdk-include*)
+            have_gdk_include=yes
             if test x$optarg = x
             then
-                gdk_path=$(find_gdk)
-                if test x$gdk_path = x
+                gdk_include_path=$(find_gdk_include)
+                if test x$gdk_include_path = x
                 then
-                    echo "Cannot find gdk directory."
-                    echo "Please specify a value for --with-gdk"
+                    echo "Cannot find GDK include directory."
+                    echo "Please specify a value for --with-gdk-include"
                     exit 1
                 fi
             else
-                if test $(check_dir $optarg $gdk_check) = yes
+                if test $(check_dir $optarg $gdk_include_check) = yes
                 then
-                    gdk_path=$optarg
+                    gdk_include_path=$optarg
                 else
-                    echo "Invalid gdk directory $optarg"
+                    echo "Invalid GDK include directory $optarg"
+                    exit 1
+                fi
+            fi
+            ;;
+        --with-gdk-nvml-lib*)
+            have_gdk_nvml_lib=yes
+            if test x$optarg = x
+            then
+                gdk_nvml_lib_path=$(find_gdk_nvml_lib)
+                if test x$gdk_nvml_lib_path = x
+                then
+                    echo "Cannot find GDK NVML library directory."
+                    echo "Please specify a value for --with-gdk-nvml-lib"
+                    exit 1
+                fi
+            else
+                if test $(check_dir $optarg $gdk_nvml_lib_check) = yes
+                then
+                    gdk_nvml_lib_path=$optarg
+                else
+                    echo "Invalid GDK NVML library directory $optarg"
                     exit 1
                 fi
             fi
@@ -392,12 +447,16 @@ do
         --with-mkl*)
             have_mkl=yes
             mathlib=mkl
+            mkl_threading=parallel
+            case $key in
+                --with-mkl-sequential*) mkl_threading=sequential ;;
+            esac
             if test x$optarg = x
             then
                 mkl_path=$(find_mkl)
                 if test x$mkl_path = x
                 then
-                    echo "Cannot find mkl directory"
+                    echo "Cannot find CNTK custom MKL directory"
                     echo "Please specify a value for --with-mkl"
                     exit 1
                 fi
@@ -406,7 +465,7 @@ do
                 then
                     mkl_path=$optarg
                 else
-                    echo "Invalid mkl directory $optarg"
+                    echo "Invalid CNTK custom MKL directory $optarg"
                     exit 1
                 fi
             fi
@@ -433,6 +492,26 @@ do
                 fi
             fi
             ;;
+        --with-boost*)
+            if test x$optarg = x
+            then
+                boost_path=$(find_boost)
+                if test x$boost_path = x
+                then 
+                    echo "Cannot find Boost directory"
+                    echo "Please specify a value for --with-boost"
+                    exit 1
+                fi
+            else
+                if test $(check_dir $optarg $boost_check) = yes
+                then 
+                    boost_path=$optarg
+                else
+                    echo "Invalid Boost directory $optarg"
+                    exit 1
+                fi
+             fi
+             ;;
         --with-buildtype*)
             have_buildtype=yes
             case $optarg in
@@ -501,7 +580,7 @@ do
                     exit 1
                 fi
             else
-                if test $(check_dir $optarg $$libzip_check) = yes
+                if test $(check_dir $optarg $libzip_check) = yes
                 then
                     libzip_path=$optarg
                 else
@@ -534,7 +613,7 @@ then
         if test x$mkl_path = x
         then
             echo "Cannot find a CPU math library."
-            echo "Please specify --with-acml, --with-mkl, --with-openblas with a path."
+            echo "Please specify --with-acml, --with-mkl, --with-mkl-sequential, --with-openblas with a path."
             exit 1
         else
             mathlib=mkl
@@ -557,15 +636,27 @@ then
     fi
 fi
 
-if test $enable_cuda = yes && test x$gdk_path = x
+if test $enable_cuda = yes && test x$gdk_include_path = x
 then
-    gdk_path=$(find_gdk)
-    if test x$gdk_path = x ; then
-        echo Cannot locate a gdk directory
+    gdk_include_path=$(find_gdk_include)
+    if test x$gdk_include_path = x ; then
+        echo Cannot locate a GDK include directory
         echo GPU will be disabled
         enable_cuda=no
     else
-        echo Found gdk at $gdk_path
+        echo Found GDK include at $gdk_include_path
+    fi
+fi
+
+if test $enable_cuda = yes && test x$gdk_nvml_lib_path = x
+then
+    gdk_nvml_lib_path=$(find_gdk_nvml_lib)
+    if test x$gdk_nvml_lib_path = x ; then
+        echo Cannot locate a GDK NVML library directory
+        echo GPU will be disabled
+        enable_cuda=no
+    else
+        echo Found GDK NVML library at $gdk_nvml_lib_path
     fi
 fi
 
@@ -626,6 +717,18 @@ then
     fi
 fi
 
+if test x$boost_path = x
+then
+    boost_path=$(find_boost)
+    if test x$boost_path = x
+    then
+        echo Cannot locate Boost libraries
+        echo Unit tests will NOT be built.
+    else
+        echo Found Boost at $boost_path
+    fi
+fi
+
 config=$build_top/Config.make
 echo Generating $config
 echo "#Configuration file for cntk" > $config
@@ -637,6 +740,8 @@ case $mathlib in
         ;;
     mkl)
         echo MKL_PATH=$mkl_path >> $config
+        echo MKL_THREADING=$mkl_threading >> $config
+        echo CNTK_CUSTOM_MKL_VERSION=$cntk_custom_mkl_version >> $config
         ;;
     openblas)
         echo OPENBLAS_PATH=$openblas_path >> $config
@@ -644,7 +749,8 @@ case $mathlib in
 esac
 if test $enable_cuda = yes ; then
     echo CUDA_PATH=$cuda_path >> $config
-    echo GDK_PATH=$gdk_path >> $config
+    echo GDK_INCLUDE_PATH=$gdk_include_path >> $config
+    echo GDK_NVML_LIB_PATH=$gdk_nvml_lib_path >> $config
     echo CUB_PATH=$cub_path >> $config
     echo CUDNN_PATH=$cudnn_path >> $config
 fi
@@ -663,6 +769,9 @@ fi
 if test $enable_code_coverage = yes ; then
     echo CNTK_CODE_COVERAGE=true >> $config
 fi
+if test x$boost_path != x; then
+    echo BOOST_PATH=$boost_path >> $config
+fi
 
 # If we are not in the configure directory, generate a trampoline Makefile
 makefile=$build_top/Makefile
@@ -678,6 +787,6 @@ then
     echo all clean : >> $makefile
     printf '\t$(MAKE) -C $(dir) BUILD_TOP=$(BUILD_TOP) $@\n' >> $makefile
 fi
-echo run 
+echo run
 echo '>make -j all'
 echo to build

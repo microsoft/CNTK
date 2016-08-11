@@ -5,6 +5,8 @@
 
 #include "stdafx.h"
 #include "EvalTestHelper.h"
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
 
 using namespace Microsoft::MSR::CNTK;
 
@@ -21,22 +23,10 @@ BOOST_FIXTURE_TEST_SUITE(EvalTestSuite, EvalFixture)
 
 IEvaluateModelExtended<float>* SetupNetworkAndGetLayouts(std::string modelDefinition, VariableSchema& inputLayouts, VariableSchema& outputLayouts)
 {
-    // Load the eval library
-    auto hModule = LoadLibrary(L"evaldll.dll");
-    if (hModule == nullptr)
-    {
-        auto err = GetLastError();
-        throw std::exception((boost::format("Cannot load evaldll.dll: 0x%08lx") % err).str().c_str());
-    }
-
-    // Get the factory method to the evaluation engine
-    std::string func = "GetEvalExtendedF";
-    auto procAddress = GetProcAddress(hModule, func.c_str());
-    auto getEvalProc = (GetEvalProc<float>)procAddress;
-
     // Native model evaluation instance
     IEvaluateModelExtended<float> *eval;
-    getEvalProc(&eval);
+
+    GetEvalExtendedF(&eval);
 
     try
     {
@@ -44,7 +34,7 @@ IEvaluateModelExtended<float>* SetupNetworkAndGetLayouts(std::string modelDefini
     }
     catch (std::exception& ex)
     {
-        fprintf(stderr, ex.what());
+        fprintf(stderr, "%s\n", ex.what());
         throw;
     }
     fflush(stderr);
@@ -53,13 +43,14 @@ IEvaluateModelExtended<float>* SetupNetworkAndGetLayouts(std::string modelDefini
     outputLayouts = eval->GetOutputSchema();
 
     for (auto vl : outputLayouts)
-    {
-        fprintf(stderr, "Output dimension: %d\n", vl.m_numElements);
+    {        
+        fprintf(stderr, "Output dimension: %" PRIu64 "\n", vl.m_numElements);
         fprintf(stderr, "Output name: %ls\n", vl.m_name.c_str());
     }
 
     eval->StartForwardEvaluation({outputLayouts[0].m_name});
     inputLayouts = eval->GetInputSchema();
+    outputLayouts = eval->GetOutputSchema();
 
     return eval;
 }
@@ -85,11 +76,10 @@ BOOST_AUTO_TEST_CASE(EvalConstantPlusTest)
     eval = SetupNetworkAndGetLayouts(modelDefinition, inputLayouts, outputLayouts);
 
     // Allocate the output values layer
-    std::vector<VariableBuffer<float>> outputBuffer(1);
+    Values<float> outputBuffer = outputLayouts.CreateBuffers<float>({ 1 });
 
     // Allocate the input values layer (empty)
-
-    std::vector<VariableBuffer<float>> inputBuffer;
+    Values<float> inputBuffer(0);
 
     // We can call the evaluate method and get back the results...
     eval->ForwardPass(inputBuffer, outputBuffer);
@@ -120,13 +110,16 @@ BOOST_AUTO_TEST_CASE(EvalScalarTimesTest)
     eval = SetupNetworkAndGetLayouts(modelDefinition, inputLayouts, outputLayouts);
 
     // Allocate the output values layer
-    std::vector<VariableBuffer<float>> outputBuffer(1);
+    Values<float> outputBuffer(0);
 
     // Allocate the input values layer
-    std::vector<VariableBuffer<float>> inputBuffer(1);
+    Values<float> inputBuffer(1);
     inputBuffer[0].m_buffer = { 2 };
     
     // We can call the evaluate method and get back the results...
+    BOOST_REQUIRE_THROW(eval->ForwardPass(inputBuffer, outputBuffer), std::exception); // Output not initialized
+
+    outputBuffer = outputLayouts.CreateBuffers<float>({ 1 });
     eval->ForwardPass(inputBuffer, outputBuffer);
 
     std::vector<float> expected{ 6 };
@@ -157,10 +150,10 @@ BOOST_AUTO_TEST_CASE(EvalScalarTimesDualOutputTest)
     eval = SetupNetworkAndGetLayouts(modelDefinition, inputLayouts, outputLayouts);
 
     // Allocate the output values layer
-    std::vector<VariableBuffer<float>> outputBuffer(1);
+    auto outputBuffer = outputLayouts.CreateBuffers<float>({ 1 });
 
     // Allocate the input values layer
-    std::vector<VariableBuffer<float>> inputBuffer(1);
+    Values<float> inputBuffer(1);
     inputBuffer[0].m_buffer = { 2 };
 
     // We can call the evaluate method and get back the results...
@@ -193,14 +186,14 @@ BOOST_AUTO_TEST_CASE(EvalDenseTimesTest)
     eval = SetupNetworkAndGetLayouts(modelDefinition, inputLayouts, outputLayouts);
 
     // Allocate the output values layer
-    std::vector<VariableBuffer<float>> outputBuffer(1);
+    Values<float> outputBuffer = outputLayouts.CreateBuffers<float>({ 1 });
 
     // Number of inputs must adhere to the schema
-    std::vector<VariableBuffer<float>> inputBuffer1(0);
+    Values<float> inputBuffer1(0);
     BOOST_REQUIRE_THROW(eval->ForwardPass(inputBuffer1, outputBuffer), std::exception); // Not enough inputs
 
     // Number of elements in the input must adhere to the schema
-    std::vector<VariableBuffer<float>> inputBuffer(1);
+    Values<float> inputBuffer(1);
     inputBuffer[0].m_buffer = { 1, 2, 3 };
     BOOST_REQUIRE_THROW(eval->ForwardPass(inputBuffer, outputBuffer), std::exception); // Not enough elements in the sample
 
@@ -211,6 +204,17 @@ BOOST_AUTO_TEST_CASE(EvalDenseTimesTest)
     std::vector<float> expected{ 20 };
     auto buf = outputBuffer[0].m_buffer;
     BOOST_CHECK_EQUAL_COLLECTIONS(buf.begin(), buf.end(), expected.begin(), expected.end());
+
+    // Do the same via ValueRefs
+    ValueRefs<float> inputRefs(1);
+    inputRefs[0].m_buffer.InitFrom(inputBuffer[0].m_buffer);
+    inputRefs[0].m_colIndices.InitFrom(inputBuffer[0].m_colIndices);
+    inputRefs[0].m_indices.InitFrom(inputBuffer[0].m_indices);
+    ValueRefs<float> outputRefs(1);
+    std::vector<float> output(1);
+    outputRefs[0].m_buffer.InitFrom(output);
+    eval->ForwardPass(inputRefs, outputRefs);
+    BOOST_CHECK_EQUAL_COLLECTIONS(output.begin(), output.end(), expected.begin(), expected.end());
 
     eval->Destroy();
 }
@@ -234,10 +238,10 @@ BOOST_AUTO_TEST_CASE(EvalSparseTimesTest)
     eval = SetupNetworkAndGetLayouts(modelDefinition, inputLayouts, outputLayouts);
 
     // Allocate the output values layer
-    std::vector<VariableBuffer<float>> outputBuffer(1);
+    Values<float> outputBuffer = outputLayouts.CreateBuffers<float>({ 3 });
 
     // Allocate the input values layer
-    std::vector<VariableBuffer<float>> inputBuffer(1);
+    Values<float> inputBuffer(1);
     inputBuffer[0].m_buffer = {1, 2, 3, 5, 6};
     inputBuffer[0].m_indices = {0, 2, 2, 1, 2};
 
@@ -262,6 +266,21 @@ BOOST_AUTO_TEST_CASE(EvalSparseTimesTest)
     std::vector<float> expected{ 6, 0, 28 };
     auto buf = outputBuffer[0].m_buffer;
     BOOST_CHECK_EQUAL_COLLECTIONS(buf.begin(), buf.end(), expected.begin(), expected.end());
+
+    // Do the same via ValueRefs
+    ValueRefs<float> inputRefs(1);
+    inputRefs[0].m_buffer.InitFrom(inputBuffer[0].m_buffer);
+    inputRefs[0].m_colIndices.InitFrom(inputBuffer[0].m_colIndices);
+    inputRefs[0].m_indices.InitFrom(inputBuffer[0].m_indices);
+    ValueRefs<float> outputRefs(1);
+    std::vector<float> output(3);
+    outputRefs[0].m_buffer.InitFrom(output);
+    eval->ForwardPass(inputRefs, outputRefs);
+    BOOST_CHECK_EQUAL_COLLECTIONS(output.begin(), output.end(), expected.begin(), expected.end());
+
+    outputBuffer = outputLayouts.CreateBuffers<float>({ 1 });
+    BOOST_REQUIRE_THROW(eval->ForwardPass(inputBuffer, outputBuffer), std::exception); // Not enough capacity in output.
+
     eval->Destroy();
 }
 

@@ -27,6 +27,80 @@
     <CudaVersion Condition="Exists('$(CUDA_PATH_V7_5)') And '$(CudaVersion)' == ''">7.5</CudaVersion>
     <CudaVersion Condition="Exists('$(CUDA_PATH_V7_0)') And '$(CudaVersion)' == ''">7.0</CudaVersion>
 
+    <HasOpenCv>false</HasOpenCv>
+    <HasOpenCv Condition="Exists('$(OPENCV_PATH)') Or Exists('$(OPENCV_PATH_V31)')">true</HasOpenCv>
+
+    <UseZip>false</UseZip>
+    <UseZip Condition="Exists('$(ZLIB_PATH)')">true</UseZip>
+  </PropertyGroup>
+
+  <Choose>
+    <When Condition="Exists('$(ACML_PATH)')">
+      <PropertyGroup>
+        <MathLibrary>ACML</MathLibrary>
+        <MathLibraryName>ACML</MathLibraryName>
+        <MathIncludePath>$(ACML_PATH)\include</MathIncludePath>
+        <MathLibraryPath>$(ACML_PATH)\lib</MathLibraryPath>
+        <MathLinkLibrary>libacml_mp_dll.lib</MathLinkLibrary>
+        <MathDelayLoad>libacml_mp_dll.dll</MathDelayLoad>
+        <MathPostBuildCopyPattern>$(ACML_PATH)\lib\*.dll</MathPostBuildCopyPattern>
+        <UnitTestDlls>$(OutDir)libacml_mp_dll.dll;$(OutDir)libifcoremd.dll;$(OutDir)libifportmd.dll;$(OutDir)libiomp*.dll;$(OutDir)libmmd.dll;$(OutDir)svml_dispmd.dll;</UnitTestDlls>
+        <MathDefine>USE_ACML</MathDefine>
+      </PropertyGroup>
+    </When>
+
+    <!-- See https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Windows#optional-mkl on how to configure to build CNTK with MKL -->
+    <When Condition="'$(CNTK_MKL)' == '1'">
+      <PropertyGroup>
+        <MathLibrary>MKL</MathLibrary>
+        <CNTKCustomMKLVersion>1</CNTKCustomMKLVersion>
+        <CNTKCustomMKLPath>$(CNTK_MKL_PATH)\$(CNTKCustomMKLVersion)</CNTKCustomMKLPath>
+        <MathIncludePath>$(CNTKCustomMKLPath)\include</MathIncludePath>
+        <MathDefine>USE_MKL</MathDefine>
+      </PropertyGroup>
+      <PropertyGroup Condition="'$(CNTK_MKL_SEQUENTIAL)' != '1'">
+        <MathLibraryName>CNTK custom MKL Parallel (Version: $(CNTKCustomMKLVersion))</MathLibraryName>
+        <MathLibraryPath>$(CNTKCustomMKLPath)\x64\parallel</MathLibraryPath>
+        <MathLinkLibrary>mkl_cntk_p.lib</MathLinkLibrary>
+        <MathDelayLoad>mkl_cntk_p.dll</MathDelayLoad>
+        <MathPostBuildCopyPattern>$(MathLibraryPath)\*.dll</MathPostBuildCopyPattern>
+        <UnitTestDlls>$(OutDir)mkl_cntk_p.dll;$(OutDir)libiomp5md.dll;</UnitTestDlls>
+      </PropertyGroup>
+      <PropertyGroup Condition="'$(CNTK_MKL_SEQUENTIAL)' == '1'">
+        <MathLibraryName>CNTK custom MKL Sequential (Version: $(CNTKCustomMKLVersion))</MathLibraryName>
+        <MathLibraryPath>$(CNTKCustomMKLPath)\x64\sequential</MathLibraryPath>
+        <MathLinkLibrary>mkl_cntk_s.lib</MathLinkLibrary>
+        <MathDelayLoad>mkl_cntk_s.dll</MathDelayLoad>
+        <MathPostBuildCopyPattern>$(MathLibraryPath)\*.dll</MathPostBuildCopyPattern>
+        <UnitTestDlls>$(OutDir)mkl_cntk_s.dll;</UnitTestDlls>
+      </PropertyGroup>
+    </When>
+   </Choose>
+
+  <PropertyGroup Condition="$(UseZip)">
+    <ZipInclude>$(ZLIB_PATH)\include;$(ZLIB_PATH)\lib\libzip\include;</ZipInclude>
+    <ZipDefine>USE_ZIP</ZipDefine>
+    <ZipLibPath>$(ZLIB_PATH)\lib;</ZipLibPath>
+    <ZipLibs>zlib.lib;zip.lib;</ZipLibs>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="Exists('$(OPENCV_PATH)')">
+    <OpenCvPath>$(OPENCV_PATH)</OpenCvPath>
+    <OpenCvVersion>300</OpenCvVersion>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="Exists('$(OPENCV_PATH_V31)')">
+    <OpenCvPath>$(OPENCV_PATH_V31)</OpenCvPath>
+    <OpenCvVersion>310</OpenCvVersion>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="$(HasOpenCv)">
+    <OpenCvInclude>$(OpenCvPath)\include;</OpenCvInclude>
+    <OpenCvWorld Condition="$(ReleaseBuild)">opencv_world$(OpenCvVersion)</OpenCvWorld>
+    <OpenCvWorld Condition="$(DebugBuild)">opencv_world$(OpenCvVersion)d</OpenCvWorld>
+    <OpenCvLib>$(OpenCvWorld).lib</OpenCvLib>
+    <OpenCvLibPath>$(OpenCvPath)\x64\vc12\lib</OpenCvLibPath>
+    <OpenCvBinPath>$(OpenCvPath)\x64\vc12\bin</OpenCvBinPath>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(CudaVersion)' == '7.5'">

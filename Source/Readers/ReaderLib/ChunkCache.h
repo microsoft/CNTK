@@ -37,9 +37,9 @@ public:
         return m_deserializer->GetSequencesForChunk(chunkId, descriptions);
     }
 
-    virtual bool GetSequenceDescriptionByKey(const KeyType& key, SequenceDescription& description) override
+    virtual bool GetSequenceDescription(const SequenceDescription& primary, SequenceDescription& description) override
     {
-        return m_deserializer->GetSequenceDescriptionByKey(key, description);
+        return m_deserializer->GetSequenceDescription(primary, description);
     }
 
     // Gets chunk data given its id.

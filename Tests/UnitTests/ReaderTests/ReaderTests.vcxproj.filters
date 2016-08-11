@@ -49,7 +49,7 @@
     <Filter Include="Linked Source">
       <UniqueIdentifier>{1a107324-82f9-49cc-a77d-a8591b21aebb}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Config\ExperimentalHTKMLF">
+    <Filter Include="Config\HTKDeserializers">
       <UniqueIdentifier>{b2a5f515-1b00-4f19-bd19-8e3fd7eb6872}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
@@ -315,6 +315,9 @@
     <Text Include="Data\CNTKTextFormatReader\5x10_jagged.txt">
       <Filter>Data\CNTKTextFormatReader</Filter>
     </Text>
+    <Text Include="Data\ImageReaderMissingImage_map.txt">
+      <Filter>Data</Filter>
+    </Text>
   </ItemGroup>
   <ItemGroup>
     <Image Include="Data\images\black.jpg">
@@ -376,41 +379,44 @@
     <None Include="Config\ImageReaderIntensityTransform_Config.cntk">
       <Filter>Config</Filter>
     </None>
-    <None Include="Config\ExperimentalHtkmlfReaderSimpleDataLoop1_Config.cntk">
-      <Filter>Config\ExperimentalHTKMLF</Filter>
+    <None Include="Config\HTKDeserializersSimpleDataLoop1_Config.cntk">
+      <Filter>Config\HTKDeserializers</Filter>
     </None>
-    <None Include="Config\ExperimentalHTKMLFReaderSimpleDataLoop3_Config.cntk">
-      <Filter>Config\ExperimentalHTKMLF</Filter>
+    <None Include="Config\HTKDeserializersSimpleDataLoop3_Config.cntk">
+      <Filter>Config\HTKDeserializers</Filter>
     </None>
-    <None Include="Config\ExperimentalHtkmlfReaderSimpleDataLoop4_Config.cntk">
-      <Filter>Config\ExperimentalHTKMLF</Filter>
+    <None Include="Config\HTKDeserializersSimpleDataLoop4_Config.cntk">
+      <Filter>Config\HTKDeserializers</Filter>
     </None>
-    <None Include="Config\ExperimentalHtkmlfReaderSimpleDataLoop5_Config.cntk">
-      <Filter>Config\ExperimentalHTKMLF</Filter>
+    <None Include="Config\HTKDeserializersSimpleDataLoop5_Config.cntk">
+      <Filter>Config\HTKDeserializers</Filter>
     </None>
-    <None Include="Config\ExperimentalHTKMLFReaderSimpleDataLoop8_Config.cntk">
-      <Filter>Config\ExperimentalHTKMLF</Filter>
+    <None Include="Config\HTKDeserializersSimpleDataLoop8_Config.cntk">
+      <Filter>Config\HTKDeserializers</Filter>
     </None>
-    <None Include="Config\ExperimentalHtkmlfReaderSimpleDataLoop9_Config.cntk">
-      <Filter>Config\ExperimentalHTKMLF</Filter>
+    <None Include="Config\HTKDeserializersSimpleDataLoop9_Config.cntk">
+      <Filter>Config\HTKDeserializers</Filter>
     </None>
-    <None Include="Config\ExperimentalHtkmlfReaderSimpleDataLoop10_Config.cntk">
-      <Filter>Config\ExperimentalHTKMLF</Filter>
+    <None Include="Config\HTKDeserializersSimpleDataLoop10_Config.cntk">
+      <Filter>Config\HTKDeserializers</Filter>
     </None>
-    <None Include="Config\ExperimentalHtkmlfReaderSimpleDataLoop11_Config.cntk">
-      <Filter>Config\ExperimentalHTKMLF</Filter>
+    <None Include="Config\HTKDeserializersSimpleDataLoop14_Config.cntk">
+      <Filter>Config\HTKDeserializers</Filter>
     </None>
-    <None Include="Config\ExperimentalHTKMLFReaderSimpleDataLoop14_Config.cntk">
-      <Filter>Config\ExperimentalHTKMLF</Filter>
+    <None Include="Config\HTKDeserializersSimpleDataLoop19_Config.cntk">
+      <Filter>Config\HTKDeserializers</Filter>
     </None>
-    <None Include="Config\ExperimentalHtkmlfReaderSimpleDataLoop19_Config.cntk">
-      <Filter>Config\ExperimentalHTKMLF</Filter>
+    <None Include="Config\HTKDeserializersSimpleDataLoop20_Config.cntk">
+      <Filter>Config\HTKDeserializers</Filter>
     </None>
-    <None Include="Config\ExperimentalHtkmlfReaderSimpleDataLoop20_Config.cntk">
-      <Filter>Config\ExperimentalHTKMLF</Filter>
+    <None Include="Config\HTKDeserializersSimpleDataLoop21_Config.cntk">
+      <Filter>Config\HTKDeserializers</Filter>
     </None>
-    <None Include="Config\ExperimentalHtkmlfReaderSimpleDataLoop21_Config.cntk">
-      <Filter>Config\ExperimentalHTKMLF</Filter>
+    <None Include="Config\ImageAndTextReaderSimple_Config.cntk">
+      <Filter>Config</Filter>
+    </None>
+    <None Include="Config\HTKDeserializersSimpleDataLoop11_Config.cntk">
+      <Filter>Config</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>

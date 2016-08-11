@@ -11,6 +11,7 @@
 #include "DataDeserializer.h"
 #include "ChunkRandomizer.h"
 #include "SequenceRandomizer.h"
+#include <future>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -45,6 +46,7 @@ public:
         int verbosity,
         size_t randomizationRangeInSamples,
         IDataDeserializerPtr deserializer,
+        bool shouldPrefetch,
         DecimationMode decimationMode = DecimationMode::chunk,
         bool useLegacyRandomization = false,
         bool multithreadedGetNextSequences = false);
@@ -61,9 +63,18 @@ public:
         return m_deserializer->GetStreamDescriptions();
     }
 
+    ~BlockRandomizer()
+    {
+        if (m_prefetch.valid())
+        {
+            m_prefetch.wait();
+        }
+    }
+
 private:
-    // Retrieve data for chunks.
-    void RetrieveDataChunks();
+    // Load data for chunks if needed.
+    // Returns the next chunk id to prefetch.
+    ChunkIdType LoadDataChunks();
 
     // Get next sequence descriptions that do not exceed sample count.
     // Returns true if epoch end is reached.
@@ -74,6 +85,13 @@ private:
 
     // Prepares a new sweep if needed.
     void PrepareNewSweepIfNeeded(size_t samplePosition);
+
+    // Performs io prefetch of the specified chunk if needed.
+    void Prefetch(ChunkIdType chunkId);
+
+    // Returns next candidate for the prefetch in the given range.
+    template<class Iter>
+    ChunkIdType GetChunkToPrefetch(const Iter& begin, const Iter& end);
 
     // Global sample position on the timeline.
     size_t m_globalSamplePosition;
@@ -107,7 +125,7 @@ private:
     // Exposed streams.
     std::vector<StreamDescriptionPtr> m_streams;
 
-    // A map of data chunks.
+    // A map of data chunks from original chunk id into chunk.
     std::map<size_t, ChunkPtr> m_chunks;
 
     // Last seen data chunk id.
@@ -131,6 +149,13 @@ private:
     };
 
     int m_verbosity;
+
+    // Prefetch future.
+    std::future<ChunkPtr> m_prefetch;
+    // Whether to have async or deferred prefetch.
+    launch m_launchType;
+    // Prefetched original chunk id.
+    ChunkIdType m_prefetchedChunk;
 };
 
 }}}

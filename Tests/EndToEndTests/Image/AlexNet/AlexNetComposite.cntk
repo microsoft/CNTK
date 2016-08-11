@@ -1,101 +1,100 @@
-Train=[
+Train = [
     reader = [
-        verbosity=0
-        randomize=true
+        verbosity = 0
+        randomize = true
 
         # Currently for image reader a single sequence is a chunk
         # so setting randomization window to 1.
-        randomizationWindow=1
-        useLegacy=false
+        randomizationWindow = 1
 
         # A list of deserializers to use.
-        deserializers=[
+        deserializers = (
             [   
-                type="ImageDataDeserializer"
-                module="ImageReader"
+                type = "ImageDeserializer"
+                module = "ImageReader"
 
                 # Map file which maps images to labels using the following format:
                 # <full path to image><tab><numerical label (0-based class id)>
                 # Example:
                 # C:\Data\ImageNet\2012\train\n01440764\n01440764_10026.JPEG<tab>0
-                file=$ConfigDir$/train_map.txt
+                file = "$ConfigDir$/train_map.txt"
 
                 # Description of input streams
-                input=[
-                    features=[
-                        transforms=[
+                input = [
+                    features = [
+                        transforms = (
                             [
-                                type="Crop"
+                                type = "Crop"
                                 # Possible values: Center, Random. Default: Center
-                                cropType=Random
-                                # Crop scale ratio. Examples: cropRatio=0.9, cropRatio=0.7:0.9. Default: 1.
-                                cropRatio=0.875
+                                cropType = "random"
+                                # Crop scale ratio. Examples: cropRatio = 0.9, cropRatio = 0.7:0.9. Default: 1.
+                                cropRatio = 0.875
                                 # Crop scale ratio jitter type.
                                 # Possible values: None, UniRatio, UniLength, UniArea. Default: UniRatio
-                                jitterType=UniRatio
+                                jitterType = "uniRatio"
                             ]:[
-                                type="Scale"
-                                width=224
-                                height=224
-                                channels=3
+                                type = "Scale"
+                                width = 224
+                                height = 224
+                                channels = 3
                                 # Interpolation to use when scaling image to width x height size.
                                 # Possible values: nearest, linear, cubic, lanczos. Default: linear.
-                                interpolations=Linear
+                                interpolations = "linear"
                             ]:[
-                                type="Mean"
+                                type = "Mean"
                                 # Stores mean values for each pixel in OpenCV matrix XML format.
-                                meanFile=$ConfigDir$/ImageNet1K_mean.xml
+                                meanFile = "$ConfigDir$/ImageNet1K_mean.xml"
                             ]:[
-                                type="Transpose"
+                                type = "Transpose"
                             ]
-                        ]
+                        )
                     ]
-                    labels=[
-                        labelDim=1000
+                    labels = [
+                        labelDim = 1000
                     ]
                 ]
             ]
-        ]
+        )
     ]    
 ]
 
-Test=[
-    reader=[
-        verbosity=0
-        randomize=false
+Test = [
+    reader = [
+        verbosity = 0
+        randomize = false
 
         # A list of deserializers to use.
-        deserializers=[
+        deserializers = (
             [
-                type="ImageDataDeserializer"
-                module="ImageReader"
-                file=$ConfigDir$/val_map.txt
+                type = "ImageDeserializer"
+                module = "ImageReader"
+                file = "$ConfigDir$/val_map.txt"
 
                 # Description of input streams
-                input=[
-                    features=[
-                        transforms=[
+                input = [
+                    features = [
+                        transforms = (
                             [
-                                type="Crop"
-                                cropType=Center
+                                type = "Crop"
+                                cropType = "center"
                             ]:[
-                                type="Scale"
-                                width=224
-                                height=224
-                                channels=3
+                                type = "Scale"
+                                width = 224
+                                height = 224
+                                channels = 3
                             ]:[
-                                type="Mean"
-                                meanFile=$ConfigDir$/ImageNet1K_mean.xml
+                                type = "Mean"
+                                meanFile = "$ConfigDir$/ImageNet1K_mean.xml"
                             ]:[
-                                type="Transpose"
+                                type = "Transpose"
                             ]
-                        ]
+                        )
                     ]
-                    labels=[
-                        labelDim=1000
+                    labels = [
+                        labelDim = 1000
                     ]
                 ]
             ]
-        ]
+        )
     ]        
 ]

@@ -37,7 +37,9 @@
 #define CNTK_MODEL_VERSION_6 6 // Batch norm blending
 #define CNTK_MODEL_VERSION_7 7 // ElemType tag in model file
 #define CNTK_MODEL_VERSION_8 8 // DynamicAxis for inputs
-#define CURRENT_CNTK_MODEL_VERSION CNTK_MODEL_VERSION_8
+#define CNTK_MODEL_VERSION_9 9 // Transpose flag in ConvolutionNode to support deconvolution. 
+#define CNTK_MODEL_VERSION_10 10 // Learning rate multiplier for input nodes. 
+#define CURRENT_CNTK_MODEL_VERSION CNTK_MODEL_VERSION_10
 
 extern bool g_shareNodeValueMatrices;
 
@@ -183,7 +185,7 @@ protected:                // TODO: should be fully encapsulated here
     bool m_needsGradient; // true if this node or any children need a gradient to be computed (for own consumption or propagation to somewhere in the child tree)
 
     bool m_valueSharable; // a flag is needed for memory share.
-                          // If it is false (e.g., learnableParameters/InputValue and those nodes are solely induced by learnableParameters),
+                          // If it is false (e.g., LearnableParameters/InputValue and those nodes are solely induced by LearnableParameters),
                           // it will never be released to memory pool
 private:
     bool m_isPartOfLoop; // true if this loop is part of a recurrent loop
@@ -288,6 +290,9 @@ public:
         m_gradientInitialized(false), m_nodeName(name == L"" ? CreateUniqNodeName() : name)
     {
         // TODO: should m_learningRateMultiplier be set to 0? Or should every node have a way to add its own say on the learning rate for all its inputs?
+        // we store a unique numeric number for every node that is constructed, as a debugging aid
+        static size_t uniqueNumericId = 0;
+        m_uniqueNumericId = uniqueNumericId++;
     }
     virtual ~ComputationNodeBase()
     {
@@ -428,7 +433,18 @@ private:
     {
         if (HasMBLayout())
             LogicError("%ls: Minibatch data cannot be interpreted as a single 2D tensor.", NodeDescription().c_str());
-        else if (m_sampleLayout.GetRank() < 1 || m_sampleLayout.GetRank() > 2) // note: scalars are not stored as tensors of rank 0, but rather as 1-dim vectors. TODO: clean this up some day
+
+        bool notFlattenableTo2D = false;
+        for (size_t i = 2; i < m_sampleLayout.GetRank(); ++i)
+        {
+            if (!m_sampleLayout.CanFlatten(i))
+            {
+                notFlattenableTo2D = true;
+                break;
+            }
+        }
+
+        if (m_sampleLayout.GetRank() < 1 || ((m_sampleLayout.GetRank() > 2) && notFlattenableTo2D)) // note: scalars are not stored as tensors of rank 0, but rather as 1-dim vectors. TODO: clean this up some day
             LogicError("%ls: Sample [%s] is not a column vector or matrix (1D or 2D tensor).", NodeDescription().c_str(), string(m_sampleLayout).c_str());
     }
 public:
@@ -440,7 +456,11 @@ public:
     size_t GetAsMatrixNumCols() const
     {
         CheckTensorIsMatrix();
-        return m_sampleLayout.GetRank() > 1 ? m_sampleLayout[1] : 1; // a column vector is also a Matrix
+        auto flattenedLayout = m_sampleLayout;
+        if (flattenedLayout.GetRank() > 2)
+            flattenedLayout.FlattenTo2DInPlace(1, "GetAsMatrixNumCols()");
+
+        return flattenedLayout.GetRank() > 1 ? flattenedLayout[1] : 1; // a column vector is also a Matrix
     }
 
     // setting/updating the dimensions of the node
@@ -573,8 +593,8 @@ public:
             else // a whole vector
             {
                 ScriptableObjects::ConfigArrayPtr inputsArray = *inputsArg;
-                const auto range = inputsArray->GetIndexRange();
-                for (int i = range.first; i <= range.second; i++) // pull them. This will resolve all of them.
+                const auto range = inputsArray->GetIndexBeginEnd();
+                for (int i = range.first; i < range.second; i++) // pull them. This will resolve all of them.
                     inputs.push_back(inputsArray->At(i, [](const wstring&) { LogicError("GetInputs: out of bounds index while iterating??"); }));
             }
         }
@@ -832,6 +852,8 @@ public:
     // Helper that returns [a x b x c], including dynamic axes.
     const std::string ShapeDescription() const;
 
+    // debugging helper
+    size_t m_uniqueNumericId; // (a unique handle for debugging)
 protected:
 
     // -----------------------------------------------------------------------
@@ -1422,6 +1444,20 @@ public:
         m_gradientInitialized = true;
     }
 
+    // Assign the given matrix's value to this node's gradient. The matrix sizes must match.
+    void AssignGradient(const Matrix<ElemType>& val)
+    {
+        UpdateDataSize(Gradient());
+
+        // The specified value matrix's dimensions must match the gradient matrix dimensions
+        if ((val.GetNumRows() != Gradient().GetNumRows()) || (val.GetNumCols() != Gradient().GetNumCols()))
+            LogicError("%ls %ls operation: The value matrix specified for ResetGradient() does not match the dimensions of the gradient matrix.", NodeName().c_str(), OperationName().c_str());
+
+        Gradient().AssignValuesOf(val);
+
+        m_gradientInitialized = true;
+    }
+
     // -----------------------------------------------------------------------
     // memory sharing
     // -----------------------------------------------------------------------
@@ -1875,6 +1911,13 @@ public:
 // =======================================================================
 
 struct IRecurrentNode { virtual int GetRecurrenceSteppingDirection() const = 0; };
+
+// =======================================================================
+// IFreezable -- nodes that have parameters that can be frozen
+// e.g. if a trained model is to be used as a fixed feature extractor for another
+// =======================================================================
+
+struct IFreezable { virtual void FreezeParameters() { } };
 
 // =======================================================================
 // PreComputedNodeBase -- interface implemented by ComputationNodes that precompute

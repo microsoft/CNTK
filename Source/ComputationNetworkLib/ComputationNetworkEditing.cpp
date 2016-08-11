@@ -76,7 +76,7 @@ void ComputationNetwork::CopySubTree(const ComputationNetwork& fromNet,
 
     ComputationNodeBasePtr fromRoot = fromNet.GetNodeFromName(fromName);
 
-    for (const auto& fromNode : GetEvalOrder(fromRoot)) // BUGBUG: This probably will fail because the precomputed eval orders are invalid at this point.
+    for (const auto& fromNode : fromNet.GetEvalOrder(fromRoot)) // BUGBUG: This probably will fail because the precomputed eval orders are invalid at this point.
     {
         wstring fromNodeName = fromNode->NodeName();
         wstring toNodeName = toNamePrefix + fromNodeName;
@@ -167,25 +167,19 @@ void ComputationNetwork::DeleteNode(const std::wstring& nodeName)
 // replace a named node by newNode of the same type under the same name, including moving over all network links
 // This is used in the KL-reg based adaptation to reduce feature copy
 // need to update all the mappings as well childrens.
-void ComputationNetwork::ChangeNode(wstring nodeName, ComputationNodeBasePtr newNode)
+void ComputationNetwork::ReplaceNode(wstring nodeName, ComputationNodeBasePtr newNode)
 {
     ComputationNodeBasePtr oldNode = GetNodeFromName(nodeName);
 
     if (newNode->NodeName() != nodeName) // TODO: This was not tested for earlier; I hope no code depends on this.
         InvalidArgument("ChangeNode: newNode must have the same name as the old node.");
     if (oldNode->OperationName() != newNode->OperationName())
-        InvalidArgument("ChangeNode: newNode must have the same type as the old node.");
+        InvalidArgument("ReplaceNode: newNode must have the same type as the old node.");
 
     InvalidateCompiledNetwork();
 
-    // change all nodes to have old node as input to point to the new node instead
-    for (auto nodeIter = m_nameToNodeMap.begin(); nodeIter != m_nameToNodeMap.end(); nodeIter++)
-    {
-        ComputationNodeBasePtr node = nodeIter->second;
-        for (int i = 0; i < node->GetNumInputs(); i++)
-            if (node->GetInputs()[i] == oldNode)
-                node->SetInput(i, newNode);
-    }
+    // change all nodes that have old node as input to point to the new node instead
+    ChangeNodeInputs(oldNode, newNode);
 
     // change all inputs of this new node to share the old one's inputs
     for (int i = 0; i < oldNode->GetNumInputs(); i++)
@@ -208,10 +202,45 @@ void ComputationNetwork::ChangeNode(wstring nodeName, ComputationNodeBasePtr new
     }
 }
 
+// Inserts a newNode such that the inputNodeName serves as the input to the newNode
+// Prior to this call, inputNodeName should be set as the input to newNode.
+void ComputationNetwork::InsertNode(wstring inputNodeName, ComputationNodeBasePtr newNode, const std::set<std::wstring>& newNodeTags)
+{
+    newNode->Validate(false);
+
+    ComputationNodeBasePtr inputNode = GetNodeFromName(inputNodeName);
+
+    InvalidateCompiledNetwork();
+
+    // change all nodes that have old node as input to point to the new node instead
+    ChangeNodeInputs(inputNode, newNode);
+
+    // insert the node in the network
+    AddNodeToNet(newNode);
+
+    // also update node groups
+    for (auto nodeTag : newNodeTags)
+    {
+        AddToNodeGroup(nodeTag, newNode);
+    }
+}
+
+// change all nodes that have fromNode as input to have toNode as input instead
+void ComputationNetwork::ChangeNodeInputs(ComputationNodeBasePtr fromNode, ComputationNodeBasePtr toNode)
+{
+    for (auto nodeIter = m_nameToNodeMap.begin(); nodeIter != m_nameToNodeMap.end(); nodeIter++)
+    {
+        ComputationNodeBasePtr node = nodeIter->second;
+        for (int i = 0; i < node->GetNumInputs(); i++)
+            if (node->GetInputs()[i] == fromNode)
+                node->SetInput(i, toNode);
+    }
+}
+
 // replace the old node with the current node, assuming the old node is a leaf node
 // need to update those nodes who use oldNode as their child
 // TODO: Can this be called with a node that's already part of the network? This is currently allowed, but should it?
-// BUGBUG: Seems ChangeNode() also updates node groups. Why doesn't this function?
+// BUGBUG: Seems ReplaceNode() also updates node groups. Why doesn't this function?
 // BUGBUG: What if newNode is the one referenced by oldNodeName?
 // BUGBUG: Or what if an unrelated node of the same name exists?
 void ComputationNetwork::ReplaceLeafNode(wstring oldNodeName, ComputationNodeBasePtr newNode)

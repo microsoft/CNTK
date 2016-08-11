@@ -20,6 +20,7 @@
 #include "TruncatedBpttPacker.h"
 #include "CorpusDescriptor.h"
 #include "ConfigUtil.h"
+#include "StringUtil.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -31,6 +32,9 @@ CompositeDataReader::CompositeDataReader(const ConfigParameters& config, MemoryP
     m_corpus(std::make_shared<CorpusDescriptor>()),
     m_provider(provider)
 {
+    wstring action = config(L"action", L"");
+    bool isActionWrite = AreEqualIgnoreCase(action, L"write");
+
     // Identifying packing mode.
     bool frameMode = config(L"frameMode", false);
     bool truncated = config(L"truncated", false);
@@ -39,7 +43,11 @@ CompositeDataReader::CompositeDataReader(const ConfigParameters& config, MemoryP
         LogicError("frameMode and truncated BPTT are mutually exclusive.");
     }
 
-    if (frameMode)
+    if (isActionWrite) // For writing we always use sequence mode.
+    {
+        m_packingMode = PackingMode::sequence;
+    }
+    else if (frameMode)
     {
         m_packingMode = PackingMode::sample;
     }
@@ -79,8 +87,9 @@ CompositeDataReader::CompositeDataReader(const ConfigParameters& config, MemoryP
 
     int verbosity = config(L"verbosity", 0);
 
-    // Pick up the randomizer.
-    bool randomize = config(L"randomize", false);
+    // Pick up the randomizer, always picking up no randomization for the write mode.
+    bool randomize = isActionWrite ? false : config(L"randomize", false);
+
     // By default do not use omp threads for deserialization of sequences.
     // It makes sense to put it to true for cases when deserialization is CPU intensive,
     // i.e. decompression of images.
@@ -91,7 +100,7 @@ CompositeDataReader::CompositeDataReader(const ConfigParameters& config, MemoryP
         size_t randomizationWindow = config(L"randomizationWindow", requestDataSize);
         // By default using STL random number generator.
         bool useLegacyRandomization = config(L"useLegacyRandomization", false);
-        m_sequenceEnumerator = std::make_shared<BlockRandomizer>(verbosity, randomizationWindow, deserializer, BlockRandomizer::DecimationMode::chunk, useLegacyRandomization, multiThreadedDeserialization);
+        m_sequenceEnumerator = std::make_shared<BlockRandomizer>(verbosity, randomizationWindow, deserializer, true /* should Prefetch */, BlockRandomizer::DecimationMode::chunk, useLegacyRandomization, multiThreadedDeserialization);
     }
     else
     {
@@ -242,7 +251,7 @@ void CompositeDataReader::StartEpoch(const EpochConfiguration& cfg)
 
     if (config.m_totalEpochSizeInSamples <= 0)
     {
-        RuntimeError("Unsupported minibatch size '%d'.", (int)config.m_totalEpochSizeInSamples);
+        RuntimeError("Unsupported epoch size '%d'.", (int)config.m_totalEpochSizeInSamples);
     }
 
     m_sequenceEnumerator->StartEpoch(config);

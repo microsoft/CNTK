@@ -271,6 +271,7 @@ class If(ComputationNode):
         self.thenVal = thenVal
         self.elseVal = elseVal
         self.params_with_defaults = []
+        self.inputs = ['cond', 'thenVal', 'elseVal']
 
 """
 
@@ -296,6 +297,15 @@ class Slice(ComputationNode):
         self.inputs = ['_']
         self.params_with_defaults = ['axis']
 
+class Splice(ComputationNode):
+    def __init__(self, _, axis=1, op_name='CNTK2.Splice',
+            name=None):
+        super(Splice, self).__init__(params=['_', 'axis'], op_name=op_name, name=name)
+        self._ = _
+        self.axis = axis
+        self.inputs = ['_']
+        self.params_with_defaults = ['axis']
+
 class Ceil(ComputationNode):
     def __init__(self, _, op_name='CNTK2.Ceil', name=None):
         super(Ceil, self).__init__(params=['_'], op_name=op_name, name=name)
@@ -317,6 +327,15 @@ class Round(ComputationNode):
         self._ = _
         self.inputs = ['_']
         self.params_with_defaults = []
+        
+class ReduceLogSum(ComputationNode):
+    def __init__(self, _, axis=0, op_name='CNTK2.ReduceLogSum',
+            name=None):
+        super(ReduceLogSum, self).__init__(params=['_', 'axis'], op_name=op_name, name=name)
+        self._ = _
+        self.axis = axis
+        self.inputs = ['_']
+        self.params_with_defaults = ['axis']        
 
 """
 

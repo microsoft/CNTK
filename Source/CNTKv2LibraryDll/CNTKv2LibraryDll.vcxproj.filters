@@ -1,0 +1,37 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="dllmain.cpp" />
+    <ClCompile Include="stdafx.cpp" />
+    <ClCompile Include="NDArrayView.cpp" />
+    <ClCompile Include="Value.cpp" />
+    <ClCompile Include="Common.cpp" />
+    <ClCompile Include="Function.cpp" />
+    <ClCompile Include="Variable.cpp" />
+    <ClCompile Include="Utils.cpp" />
+    <ClCompile Include="NDMask.cpp" />
+    <ClCompile Include="Learner.cpp" />
+    <ClCompile Include="BackCompat.cpp" />
+    <ClCompile Include="Trainer.cpp" />
+    <ClCompile Include="MinibatchSource.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="stdafx.h" />
+    <ClInclude Include="targetver.h" />
+    <ClInclude Include="API\CNTKLibrary.h">
+      <Filter>API</Filter>
+    </ClInclude>
+    <ClInclude Include="Utils.h" />
+    <ClInclude Include="API\CNTKLibraryInternals.h">
+      <Filter>API</Filter>
+    </ClInclude>
+    <ClInclude Include="Function.h" />
+    <ClInclude Include="Learner.h" />
+    <ClInclude Include="MinibatchSource.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="API">
+      <UniqueIdentifier>{ea62180a-fb06-4f33-b472-243fab69be01}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

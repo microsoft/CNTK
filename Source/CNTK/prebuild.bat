@@ -1,9 +1,28 @@
 @echo off
 setlocal enableDelayedexpansion
 
-::: This is called as a pre-build step for the CNTK executable.
-::: It receives the build's configuration, $(Configuration), as first paramter.
+::: Copyright (c) Microsoft. All rights reserved.
+:::
+::: Licensed under the MIT license. See LICENSE.md file in the project root 
+::: for full license information.
+::: ==============================================================================
+:::
+::: This is called as a pre-build step for the CNTK executable, taking parameters below.
 ::: It creates buildinfo.h, which makes version information available to the executable itself.
+
+:: Grab the parameters
+::
+:: Note: don't rely on environment variables, since properties may have been
+:: overridden at msbuild invocation. By convention, we let parameters start with p_, locals with l_.
+:: A Vim search for [%!]\([lp]_\)\@!\w\+[%!:] should only match
+:: well-known (non-CNTK-specific) environment variables.
+set p_Configuration=%~1
+set p_CNTK_MKL=%~2
+set p_CNTK_MKL_SEQUENTIAL=%~3
+set p_CNTK_ENABLE_1BitSGD=%~4
+set p_CudaPath=%~5
+set p_CUDNN_PATH=%~6
+set p_CUB_PATH=%~7
 
 echo #ifndef _BUILDINFO_H > buildinfo.h$$
 echo #define _BUILDINFO_H >> buildinfo.h$$
@@ -17,20 +36,25 @@ if not errorlevel 1 (
     call git --version > NUL 2>&1
     if not errorlevel 1 (
         echo #define _GIT_EXIST >> buildinfo.h$$
-        FOR /F %%i IN ('call git rev-parse --abbrev-ref HEAD') DO SET BRANCH=%%i
-        FOR /F %%i IN ('call git rev-parse HEAD') DO SET COMMIT=%%i
-        set STATUS=
+        FOR /F %%i IN ('call git rev-parse --abbrev-ref HEAD') DO SET l_BRANCH=%%i
+        FOR /F %%i IN ('call git rev-parse HEAD') DO SET l_COMMIT=%%i
+        set l_STATUS=
         call git diff --quiet --cached
         if not errorlevel 1 call git diff --quiet
-        if errorlevel 1 set STATUS= ^(modified^)
-        echo #define _BUILDBRANCH_  "!BRANCH!"      >> buildinfo.h$$
-        echo #define _BUILDSHA1_    "!COMMIT!!STATUS!">> buildinfo.h$$
+        if errorlevel 1 set l_STATUS= ^(modified^)
+        echo #define _BUILDBRANCH_  "!l_BRANCH!"      >> buildinfo.h$$
+        echo #define _BUILDSHA1_    "!l_COMMIT!!l_STATUS!">> buildinfo.h$$
     )
 )
 
-:: For now, math lib is basically hardwired
-if exist ACML_PATH (
-    echo #define _MATHLIB_ "acml">> buildinfo.h$$
+if "%p_CNTK_MKL%" == "1" (
+  if "%p_CNTK_MKL_SEQUENTIAL%" == "1" (
+    echo #define _MATHLIB_ "mkl-sequential">> buildinfo.h$$
+  ) else (
+    echo #define _MATHLIB_ "mkl">> buildinfo.h$$
+  )
+) else (
+  echo #define _MATHLIB_ "acml">> buildinfo.h$$
 )
 
 echo #define _BUILDER_ "%USERNAME%"     >> buildinfo.h$$
@@ -38,42 +62,40 @@ echo #define _BUILDER_ "%USERNAME%"     >> buildinfo.h$$
 echo #define _BUILDER_ "%USERNAME%"     >> buildinfo.h$$
 echo #define _BUILDMACHINE_ "%HOST%"    >> buildinfo.h$$
 
-set scriptpath=%~dp0
-set buildpath="%scriptpath:\=\\%"
-echo #define _BUILDPATH_    %buildpath%     >> buildinfo.h$$
+set l_scriptpath=%~dp0
+set l_buildpath="%l_scriptpath:\=\\%"
+echo #define _BUILDPATH_    %l_buildpath%     >> buildinfo.h$$
 
-set build_type=Unknown
-set build_target=Unknown
+set l_build_type=Unknown
+set l_build_target=Unknown
 :: Configuration property provided by CNTK.vcxproj
-if /i "%~1" == "Debug" set build_type=Debug&set build_target=GPU
-if /i "%~1" == "Debug_CpuOnly" set build_type=Debug&set build_target=CPU-only
-if /i "%~1" == "Release" set build_type=Release&set build_target=GPU
-if /i "%~1" == "Release_CpuOnly" set build_type=Release&set build_target=CPU-only
+if /i "%p_Configuration%" == "Debug" set l_build_type=Debug&set l_build_target=GPU
+if /i "%p_Configuration%" == "Debug_CpuOnly" set l_build_type=Debug&set l_build_target=CPU-only
+if /i "%p_Configuration%" == "Release" set l_build_type=Release&set l_build_target=GPU
+if /i "%p_Configuration%" == "Release_CpuOnly" set l_build_type=Release&set l_build_target=CPU-only
 
-echo #define _BUILDTYPE_ "%build_type%">> buildinfo.h$$
-echo #define _BUILDTARGET_ "%build_target%">> buildinfo.h$$
+echo #define _BUILDTYPE_ "%l_build_type%">> buildinfo.h$$
+echo #define _BUILDTARGET_ "%l_build_target%">> buildinfo.h$$
 
-if "%CNTK_ENABLE_1BitSGD%" == "true" (
+if "%p_CNTK_ENABLE_1BitSGD%" == "true" (
     echo #define _WITH_1BITSGD_ "yes">>buildinfo.h$$
 ) else (
     echo #define _WITH_1BITSGD_ "no">>buildinfo.h$$
 )
 
-if not %build_target% == CPU-only (
-    :: CudaPath property provided by CNTK.vcxproj
-    if "%~2%" == "" (
+if not %l_build_target% == CPU-only (
+    if "%p_CudaPath%" == "" (
         echo #define _CUDA_PATH_    "NOT_DEFINED"     >> buildinfo.h$$
     ) else (
-        set cudaPathTemp=%~2
-        echo #define _CUDA_PATH_    "!cudaPathTemp:\=\\!" >> buildinfo.h$$
+        echo #define _CUDA_PATH_    "!p_CudaPath:\=\\!" >> buildinfo.h$$
     )
 
-    if not "%cudnn_path%" == "" (
-        echo #define _CUDNN_PATH_  "%cudnn_path:\=\\%" >> buildinfo.h$$
+    if not "%p_CUDNN_PATH%" == "" (
+        echo #define _CUDNN_PATH_  "%p_CUDNN_PATH:\=\\%" >> buildinfo.h$$
     )
 
-    if not "%cub_path%" == "" (
-        echo #define _CUB_PATH_  "%cub_path:\=\\%" >> buildinfo.h$$
+    if not "%p_CUB_PATH%" == "" (
+        echo #define _CUB_PATH_  "%p_CUB_PATH:\=\\%" >> buildinfo.h$$
     )
 )
 

@@ -49,10 +49,6 @@ DataWriter::DataWriter(const ConfigRecordType& config)
     {
         writerType = L"HTKMLFReader";
     }
-    else if (writerType == L"ExperimentalHTKMLFWriter" || writerType == L"ExperimentalHTKMLFReader")
-    {
-        writerType = L"ExperimentalHTKMLFReader";
-    }
     else if (writerType == L"BinaryWriter" || writerType == L"BinaryReader")
     {
         writerType = L"BinaryReader";

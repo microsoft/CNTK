@@ -129,7 +129,7 @@ public:
         return chunk;
     }
 
-    virtual bool GetSequenceDescriptionByKey(const KeyType&, SequenceDescription&) override
+    virtual bool GetSequenceDescription(const SequenceDescription&, SequenceDescription&) override
     {
         throw logic_error("Not implemented");
     }
@@ -156,21 +156,26 @@ public:
     MockDeserializer& operator=(const MockDeserializer&) = delete;
 };
 
-BOOST_AUTO_TEST_CASE(BlockRandomizerInstantiate)
+void BlockRandomizerInstantiateTest(bool prefetch)
 {
     vector<float> data;
     auto mockDeserializer = make_shared<MockDeserializer>(0, 0, data);
-
-    auto randomizer = make_shared<BlockRandomizer>(0, SIZE_MAX, mockDeserializer, BlockRandomizer::DecimationMode::chunk, false);
+    auto randomizer = make_shared<BlockRandomizer>(0, SIZE_MAX, mockDeserializer, prefetch, BlockRandomizer::DecimationMode::chunk, false);
 }
 
-BOOST_AUTO_TEST_CASE(BlockRandomizerOneEpoch)
+BOOST_AUTO_TEST_CASE(BlockRandomizerInstantiate)
+{
+    BlockRandomizerInstantiateTest(false);
+    BlockRandomizerInstantiateTest(true);
+}
+
+void BlockRandomizerOneEpochTest(bool prefetch)
 {
     vector<float> data(10);
     iota(data.begin(), data.end(), 0.0f);
     auto mockDeserializer = make_shared<MockDeserializer>(5, 2, data);
 
-    auto randomizer = make_shared<BlockRandomizer>(0, SIZE_MAX, mockDeserializer, BlockRandomizer::DecimationMode::chunk, false);
+    auto randomizer = make_shared<BlockRandomizer>(0, SIZE_MAX, mockDeserializer, prefetch, BlockRandomizer::DecimationMode::chunk, false);
 
     EpochConfiguration epochConfiguration;
     epochConfiguration.m_numberOfWorkers = 1;
@@ -199,13 +204,19 @@ BOOST_AUTO_TEST_CASE(BlockRandomizerOneEpoch)
                                   actual.begin(), actual.end());
 }
 
-BOOST_AUTO_TEST_CASE(BlockRandomizerOneEpochWithChunks1)
+BOOST_AUTO_TEST_CASE(BlockRandomizerOneEpoch)
+{
+    BlockRandomizerOneEpochTest(false);
+    BlockRandomizerOneEpochTest(true);
+}
+
+void BlockRandomizerOneEpochWithChunks1Test(bool prefetch)
 {
     vector<float> data(10);
     iota(data.begin(), data.end(), 0.0f);
     auto mockDeserializer = make_shared<MockDeserializer>(5, 2, data);
 
-    auto randomizer = make_shared<BlockRandomizer>(0, 4, mockDeserializer, BlockRandomizer::DecimationMode::chunk, false);
+    auto randomizer = make_shared<BlockRandomizer>(0, 4, mockDeserializer, prefetch, BlockRandomizer::DecimationMode::chunk, false);
 
     EpochConfiguration epochConfiguration;
     epochConfiguration.m_numberOfWorkers = 1;
@@ -234,14 +245,20 @@ BOOST_AUTO_TEST_CASE(BlockRandomizerOneEpochWithChunks1)
         actual.begin(), actual.end());
 }
 
-BOOST_AUTO_TEST_CASE(BlockRandomizerOneEpochWithChunks2)
+BOOST_AUTO_TEST_CASE(BlockRandomizerOneEpochWithChunks1)
+{
+    BlockRandomizerOneEpochWithChunks1Test(false);
+    BlockRandomizerOneEpochWithChunks1Test(true);
+}
+
+void BlockRandomizerOneEpochWithChunks2Test(bool prefetch)
 {
     vector<float> data(20);
     iota(data.begin(), data.end(), 0.0f);
 
     auto mockDeserializer = make_shared<MockDeserializer>(10, 2, data);
 
-    auto randomizer = make_shared<BlockRandomizer>(0, 18, mockDeserializer, BlockRandomizer::DecimationMode::chunk, false);
+    auto randomizer = make_shared<BlockRandomizer>(0, 18, mockDeserializer, prefetch, BlockRandomizer::DecimationMode::chunk, false);
 
     EpochConfiguration epochConfiguration;
     epochConfiguration.m_numberOfWorkers = 1;
@@ -273,7 +290,13 @@ BOOST_AUTO_TEST_CASE(BlockRandomizerOneEpochWithChunks2)
         actual.begin(), actual.end());
 }
 
-BOOST_AUTO_TEST_CASE(BlockRandomizerChaosMonkey)
+BOOST_AUTO_TEST_CASE(BlockRandomizerOneEpochWithChunks2)
+{
+    BlockRandomizerOneEpochWithChunks2Test(false);
+    BlockRandomizerOneEpochWithChunks2Test(true);
+}
+
+void BlockRandomizerChaosMonkeyTest(bool prefetch)
 {
     const int sequenceLength = 3;
     const int seed = 42;
@@ -287,7 +310,7 @@ BOOST_AUTO_TEST_CASE(BlockRandomizerChaosMonkey)
 
     auto mockDeserializer = make_shared<MockDeserializer>(numChunks, numSequencesPerChunk, data, sequenceLength);
 
-    auto randomizer = make_shared<BlockRandomizer>(0, windowSize, mockDeserializer, BlockRandomizer::DecimationMode::chunk, false);
+    auto randomizer = make_shared<BlockRandomizer>(0, windowSize, mockDeserializer, prefetch, BlockRandomizer::DecimationMode::chunk, false);
 
     for (int t = 0; t < 100; t++)
     {
@@ -327,7 +350,13 @@ BOOST_AUTO_TEST_CASE(BlockRandomizerChaosMonkey)
     }
 }
 
-BOOST_AUTO_TEST_CASE(BlockRandomizerOneEpochLegacyRandomization)
+BOOST_AUTO_TEST_CASE(BlockRandomizerChaosMonkey)
+{
+    BlockRandomizerChaosMonkeyTest(false);
+    BlockRandomizerChaosMonkeyTest(true);
+}
+
+void BlockRandomizerOneEpochLegacyRandomizationTest(bool prefetch)
 {
     vector<float> data(10);
     iota(data.begin(), data.end(), 0.0f);
@@ -336,6 +365,7 @@ BOOST_AUTO_TEST_CASE(BlockRandomizerOneEpochLegacyRandomization)
     auto randomizer = make_shared<BlockRandomizer>(0,
         SIZE_MAX,
         mockDeserializer,
+        prefetch,
         BlockRandomizer::DecimationMode::sequence,
         true);
 
@@ -365,6 +395,12 @@ BOOST_AUTO_TEST_CASE(BlockRandomizerOneEpochLegacyRandomization)
     }
     BOOST_CHECK_EQUAL_COLLECTIONS(expected.begin(), expected.end(),
                                   actual.begin(), actual.end());
+}
+
+BOOST_AUTO_TEST_CASE(BlockRandomizerOneEpochLegacyRandomization)
+{
+    BlockRandomizerOneEpochLegacyRandomizationTest(false);
+    BlockRandomizerOneEpochLegacyRandomizationTest(true);
 }
 
 BOOST_AUTO_TEST_CASE(NoRandomizerOneEpoch)

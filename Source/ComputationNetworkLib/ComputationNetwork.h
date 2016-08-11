@@ -50,16 +50,16 @@ public:
 
     ComputationNetwork() :
         m_randomSeedOffset(0),
-          m_isCompiled(false),
-          m_areMatricesAllocated(false),
+        m_isCompiled(false),
+        m_areMatricesAllocated(false),
         m_pMBLayoutOfNetwork(make_shared<MBLayout>(1, 0, L"*")),
         m_environment(make_shared<ComputationEnvironment>())
     {
         //m_pMBLayoutOfNetwork->SetAxisName(L"T");
     }
 
-    ComputationNetwork(DEVICEID_TYPE deviceId)
-        : ComputationNetwork()
+    ComputationNetwork(DEVICEID_TYPE deviceId) :
+        ComputationNetwork()
     {
         SetDeviceId(deviceId);
     }
@@ -82,6 +82,7 @@ public:
 
 protected:
     void ConstructFromRoots(DEVICEID_TYPE deviceId, std::deque<ComputationNodeBasePtr>&& roots, const map<ComputationNodeBasePtr, ComputationNodeBasePtr>& replacements);
+    void ProcessSpecialNodes(const ScriptableObjects::IConfigRecord& config, std::deque<ComputationNodeBasePtr>& roots);
 
 public:
     // -----------------------------------------------------------------------
@@ -175,6 +176,7 @@ private:
     size_t ValidateNodes(list<ComputationNodeBasePtr> nodes, bool isFirstPass, bool isFinalValidationPass);
     bool ValidateNode(ComputationNodeBasePtr node, bool isFinalValidationPass) const;
     void MarkValueNonSharableNodes();
+    void ChangeNodeInputs(ComputationNodeBasePtr fromNode, ComputationNodeBasePtr toNode);
 
 private:
     void DetermineSetOfAllRoots();
@@ -330,14 +332,15 @@ public:
     // node construction
     // -----------------------------------------------------------------------
 
-    // non-static version needed because it accesses m_randomSeedOffset
-    // Excessively used by SimpleNetworkBuilder, but always after CreateLearnableParameter(), so we should really absorb it there
-    template <class ElemType>
+    // this function is only for use by NDL (deprecated)
     void InitLearnableParameters(const ComputationNodeBasePtr& node,
-                                 const bool uniformInit,
-                                 const unsigned long randomSeed,
-                                 const ElemType initValueScale,
-                                 bool initOnCPUOnly = false);
+                                 const wchar_t* initString, // "uniform"|"gaussian"|"fixedValue"
+                                 double initValue,          //  scale   | scale    | value
+                                 unsigned long randomSeed = 0,
+                                 bool initOnCPUOnly = false) const;
+    // non-static version needed because it accesses m_randomSeedOffset
+    // Legacy version that is for random only.
+    void RandomInitLearnableParameters(const ComputationNodeBasePtr& node, const bool uniformInit, const unsigned long randomSeed, const double initValueScale, bool initOnCPUOnly = false) const;
 
     template <typename N>
     static shared_ptr<N> AsNodePtr(const ComputationNodeBasePtr& inode)
@@ -360,7 +363,8 @@ public:
     void RenameNode(const std::wstring& nodeNameOrig, const std::wstring& nodeNameNew);
     void RenameNode(ComputationNodeBasePtr node, const std::wstring& newNodeName);
     void DeleteNode(const std::wstring& nodeName);
-    void ChangeNode(wstring nodeName, ComputationNodeBasePtr newNode);
+    void ReplaceNode(wstring nodeName, ComputationNodeBasePtr newNode);
+    void InsertNode(wstring nodeName, ComputationNodeBasePtr newNode, const std::set<std::wstring>& newNodeTags);
     void ReplaceLeafNode(wstring oldNodeName, ComputationNodeBasePtr newNode);
     void ReplaceFinalCriterionNode(wstring oldNodeName, ComputationNodeBasePtr newNode);
     void AddFeatureNode(ComputationNodeBasePtr featureNode);
@@ -501,7 +505,7 @@ public:
     // Collect all input nodes that outputNodes depend on.
     std::vector<ComputationNodeBasePtr> InputNodesForOutputs(const std::vector<std::wstring>& outputNodeNames)
     {
-        // use map to remove duplicated items
+        // use set to remove duplicated items
         auto outputNodes = OutputNodesByName(outputNodeNames);
 
         std::set<ComputationNodeBasePtr> inputNodesMap;
@@ -518,6 +522,8 @@ public:
         return inputNodes;
     }
 
+
+    const std::vector<ComputationNodeBasePtr>& RootNodes()           const { return m_allRoots; }
 
     // these are specified as such by the user
     const std::vector<ComputationNodeBasePtr>& FeatureNodes()        const { return m_featureNodes   ; }
@@ -607,6 +613,28 @@ public:
                 parents[child].insert(node);
         }
         return parents;
+    }
+
+    // Return set of immediate output (parent) nodes for given input (child) node
+    // TODO: there should be a map from output nodes to inputs, so that this operation doesn't take square time
+    std::vector<ComputationNodeBasePtr> GetParentNodes(const std::wstring& inputNodeName)
+    {
+        std::set<ComputationNodeBasePtr> outputNodes;
+        for (const auto& iter : m_nameToNodeMap)
+        {
+            const auto& node = iter.second;
+
+            //Iterate over inputs of this node
+            for (const auto& inputNode : node->GetInputs())
+            {
+                if (inputNode->GetName() == inputNodeName)
+                {
+                    outputNodes.insert(node);
+                }
+            }
+        }
+
+        return std::vector<ComputationNodeBasePtr>(outputNodes.begin(), outputNodes.end());
     }
 
     std::list<ComputationNodeBasePtr> GetNodesWithType(const wstring typeName, const ComputationNodeBasePtr& rootNode = nullptr)
@@ -726,7 +754,7 @@ public:
         while (!result.second/*if already there*/ && result.first->second != node)
         {
             if (!makeUniqueName || node->NodeName().find_first_of(L".[]") == wstring::npos)
-                RuntimeError("AddNodeToNetIfNotYet: Duplicated name for %ls %ls operation.", node->NodeName().c_str(), node->OperationName().c_str());
+                RuntimeError("AddNodeToNetIfNotYet: Duplicated name for %ls %ls operation (%d vs. %d).", node->NodeName().c_str(), node->OperationName().c_str(), (int)node->m_uniqueNumericId, (int)result.first->second->m_uniqueNumericId);
             node->SetName(L"_" + node->NodeName());
             result = m_nameToNodeMap.insert(make_pair(node->NodeName(), node));
         }
@@ -1009,7 +1037,7 @@ public:
     // data members
     // -----------------------------------------------------------------------
 
-    unsigned long GetRandomSeedOffset()
+    unsigned long GetRandomSeedOffset() const
     {
         return m_randomSeedOffset;
     }

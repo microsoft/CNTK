@@ -29,7 +29,8 @@ public:
         runtime_error(msg)
     {
     }
-    virtual void PrintError(const std::wstring& linePrefix) const = 0;
+    virtual std::wstring GetError(const std::wstring& /*linePrefix*/) const = 0;
+    virtual void PrintError(const std::wstring& /*linePrefix*/) const = 0;
 };
 
 // -----------------------------------------------------------------------
@@ -619,9 +620,9 @@ public:
     {
     }
     // ConfigArray(ConfigValuePtr && val) : firstIndex(0), values(std::vector<ConfigValuePtr>{ move(val) }) { }
-    pair<int, int> GetIndexRange() const
+    pair<int, int> GetIndexBeginEnd() const
     {
-        return make_pair(firstIndex, firstIndex + (int) values.size() - 1);
+        return make_pair(firstIndex, firstIndex + (int)values.size());
     }
     // for use as a plain array: get size and verify that index range starts with 0
     template <typename FAILFN>
