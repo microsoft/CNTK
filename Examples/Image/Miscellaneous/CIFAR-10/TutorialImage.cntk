@@ -17,26 +17,84 @@ TrainConvNet = [
         imageShape = 32:32:3
         labelDim = 10
 
+        # basic model
         Subtract128 (x) = x - Constant (128)
+        model_basic (features) =
+        {
+            featNorm = features - Constant (128)
+            l1 = ConvolutionalLayer {32, (5:5), activation = ReLU, init = "gaussian", initValueScale = 0.0043} (featNorm)
+            p1 = MaxPoolingLayer {(3:3), stride = (2:2)} (l1)
+            l2 = ConvolutionalLayer {32, (5:5), activation = ReLU, init = "gaussian", initValueScale = 1.414} (p1)
+            p2 = MaxPoolingLayer {(3:3), stride = (2:2)} (l2)
+            l3 = ConvolutionalLayer {64, (5:5), activation = ReLU, init = "gaussian", initValueScale = 1.414} (p2)
+            p3 = MaxPoolingLayer {(3:3), stride = (2:2)} (l3)
+            d1 = DenseLayer {64, activation = ReLU, init = "gaussian", initValueScale = 12} (p3)
+            z = LinearLayer {labelDim, init = "gaussian", initValueScale = 1.5} (d1)
+        }.z
 
-        model = Sequential (
+        # with self-defined layers
+        MyConvLayer {dim, initValueScale} =
+        {
+            C = ConvolutionalLayer {dim, (5:5), activation = ReLU, init = "gaussian", initValueScale = initValueScale}
+            P = MaxPoolingLayer {(3:3), stride = (2:2)}
+            f(x) = P(C(x))
+        }.f
+        model_layers (features) =
+        {
+            featNorm = features - Constant (128)
+            h1 = MyConvLayer {32, 0.0043} (featNorm)
+            h2 = MyConvLayer {32, 1.414} (h1)
+            h3 = MyConvLayer {64, 1.414} (h2)
+            d1 = DenseLayer {64, activation = ReLU, init = "gaussian", initValueScale = 12} (h3)
+            z = LinearLayer {labelDim, init = "gaussian", initValueScale = 1.5} (d1)
+        }.z
+
+        # with arrays
+        model_layerStack (features) =
+        {
+            featNorm = features - Constant (128)
+            h3 = LayerStack {3, i => MyConvLayer {(32:32:64)[i], (0.0043:1.414:1.414)[i]} } (featNorm)
+            d1 = DenseLayer {64, activation = ReLU, init = "gaussian", initValueScale = 12} (h3)
+            z = LinearLayer {labelDim, init = "gaussian", initValueScale = 1.5} (d1)
+        }.z
+
+        # model-composition style
+        # ...TODO: test this again; last run was a little worse
+        model_compositionStyle = Sequential (
             Subtract128 :
-            ConvolutionalLayer {32, (5:5), activation = ReLU, init = "gaussian", initValueScale = 0.0043} :
-              MaxPoolingLayer {(3:3), stride = (2:2)} :
-            ConvolutionalLayer {32, (5:5), activation = ReLU, init = "gaussian", initValueScale = 1.414} :
-              MaxPoolingLayer {(3:3), stride = (2:2)} :
-            ConvolutionalLayer {64, (5:5), activation = ReLU, init = "gaussian", initValueScale = 1.414} :
-              MaxPoolingLayer {(3:3), stride = (2:2)} :
+            LayerStack {3, i => MyConvLayer {(32:32:64)[i], (0.0043:1.414:1.414)[i]} } :
             DenseLayer {64, activation = ReLU, init = "gaussian", initValueScale = 12} :
             LinearLayer {labelDim, init = "gaussian", initValueScale = 1.5}
         )
+
+        // --- with BatchNorm
+        MyBNConvLayer {dim, initValueScale} =
+        {
+            C = ConvolutionalLayer {dim, (5:5), bias = false, init = "gaussian", initValueScale = initValueScale}
+            B = BatchNormalizationLayer {spatialRank = 2, normalizationTimeConstant = 4096}
+            P = MaxPoolingLayer {(3:3), stride = (2:2)}
+            f = Sequential (C:B:ReLU:P)
+        }.f
+        MyBNDenseLayer {dim, initValueScale} =
+        {
+            D = DenseLayer {dim, bias = false, init = "gaussian", initValueScale = initValueScale}
+            B = BatchNormalizationLayer {normalizationTimeConstant = 4096}
+            f = Sequential (D:B:ReLU)
+        }.f
+        model_withBatchNorm (features) =
+        {
+            featNorm = features - Constant (128)
+            h3 = LayerStack {3, i => MyBNConvLayer {(32:32:64)[i], (0.0043:1.414:1.414)[i]} } (featNorm)
+            d1 = MyBNDenseLayer {64, 12} (h3)
+            z = LinearLayer {labelDim, init = "gaussian", initValueScale = 1.5} (d1)
+        }.z
 
         # inputs
         features = Input {imageShape}
         labels   = Input {labelDim}
 
         # apply model to features
-        z = model (features)
+        z = model_withBatchNorm (features)
 
         # connect to system
         ce       = CrossEntropyWithSoftmax (labels, z)
@@ -51,12 +109,21 @@ TrainConvNet = [
     ]
 
     SGD = [
-        epochSize = 49984 ; minibatchSize = 64
+        epochSize = 49984
 
-        learningRatesPerSample = 0.00015625*10:0.000046875*10:0.000015625
-        momentumAsTimeConstant = 600*20:6400
+        # without BatchNormalization:
+        #minibatchSize = 64
+        #learningRatesPerSample = 0.00015625*10:0.000046875*10:0.000015625
+        #momentumAsTimeConstant = 600*20:6400
+        #maxEpochs = 30
+        #L2RegWeight = 0.03
+
+        # with BatchNormalization:
+        minibatchSize = 64
+        learningRatesPerSample = 0.00046875*7:0.00015625
+        momentumAsTimeConstant = 0
         maxEpochs = 30
-        L2RegWeight = 0.03
+        L2RegWeight = 0
 
         firstMBsToShowResult = 10 ; numMBsToShowResult = 500
     ]
@@ -77,6 +144,7 @@ TrainConvNet = [
 
 # Training with BN
 # Not working well on this small set. Overtrains.
+# -- DELETE THIS, it is now covered above
 TrainConvNetWithBN = [
     action = "train"
 
