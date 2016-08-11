@@ -66,7 +66,7 @@ if __name__=='__main__':
     label = variable((num_output_classes,), np.float32, needs_gradient=False, name="labels")
     
     dev = cntk_py.DeviceDescriptor.CPUDevice()       
-    netout = fully_connected_classifier_net(input, num_output_classes, hidden_layers_dim, num_hidden_layers, dev, cntk_py.Sigmoid)  
+    netout = fully_connected_classifier_net(input, num_output_classes, hidden_layers_dim, num_hidden_layers, dev, sigmoid)  
         
     ce = cross_entropy_with_softmax(netout.Output(), label)
     pe = classification_error(netout.Output(), label)
