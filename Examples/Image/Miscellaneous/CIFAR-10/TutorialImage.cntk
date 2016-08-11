@@ -37,8 +37,8 @@ TrainConvNet = [
         {
             C = ConvolutionalLayer {dim, (5:5), pad = true, activation = ReLU, init = "gaussian", initValueScale = initValueScale}
             P = MaxPoolingLayer {(3:3), stride = (2:2)}
-            f(x) = P(C(x))
-        }.f
+            apply (x) = P(C(x))
+        }.apply
         model_layers (features) =
         {
             featNorm = features - Constant (128)
@@ -75,14 +75,14 @@ TrainConvNet = [
             C = ConvolutionalLayer {dim, (5:5), pad = true, bias = false, init = "gaussian", initValueScale = initValueScale}
             B = BatchNormalizationLayer {spatialRank = 2, normalizationTimeConstant = 4096}
             P = MaxPoolingLayer {(3:3), stride = (2:2)}
-            f(x) = P(ReLU(B(C(x))))
-        }.f
+            apply (x) = P(ReLU(B(C(x))))
+        }.apply
         MyDenseBNReLULayer {dim, initValueScale} =
         {
             D = DenseLayer {dim, bias = false, init = "gaussian", initValueScale = initValueScale}
             B = BatchNormalizationLayer {normalizationTimeConstant = 4096}
-            f(x) = ReLU(B(D(x)))
-        }.f
+            apply (x) = ReLU(B(D(x)))
+        }.apply
         model_withBatchNorm (features) =
         {
             featNorm = features - Constant (128)
@@ -99,15 +99,16 @@ TrainConvNet = [
             # note: (3:3), while the macro above is (5:5)
             C = ConvolutionalLayer {dim, (3:3), pad = true, stride = (stride:stride), bias = false, init = "gaussian", initValueScale = initValueScale}
             B = BatchNormalizationLayer {spatialRank = 2, normalizationTimeConstant = 4096}
-            f(x) = B(C(x))
-        }.f
+            apply (x) = B(C(x))
+        }.apply
         ResNetNode {dim, initValueScale} =
         {
             C1 = MyConvBNLayer {dim, initValueScale, 1}  # first convolution layer
             C2 = MyConvBNLayer {dim, initValueScale, 1}  # second convolution layer
-            #B = BatchNormalizationLayer {spatialRank = 2, normalizationTimeConstant = 4096}  # TODO: Having this works better, it seems
-            f(x) = ReLU (x + C2(ReLU(C1(x))))  # ReLU between C1 and C2 and after summation
-        }.f
+            #B = BatchNormalizationLayer {spatialRank = 2, normalizationTimeConstant = 4096}
+            # ^^ Note: Adding an exra BN to 'x' trains slightly better.
+            apply (x) = ReLU (x + C2(ReLU(C1(x))))  # ReLU between C1 and C2 and after summation
+        }.apply
         ResNetIncNode {dim, initValueScale} =
         {
             # first branch. This doubles the #channels but halves the image size
@@ -123,8 +124,8 @@ TrainConvNet = [
             B = BatchNormalizationLayer {spatialRank = 2, normalizationTimeConstant = 4096}
 
             # layer sums both branches and rectifies the result
-            f(x) = ReLU (B(P(x)) + C2(ReLU(C1(x))))  # ReLU between C1 and C2 and after summation
-        }.f
+            apply (x) = ReLU (B(P(x)) + C2(ReLU(C1(x))))  # ReLU between C1 and C2 and after summation
+        }.apply
         model_resNet (features) =
         {
             conv1 = MyConvBNLayer {16, 0.26, 1} (features)

@@ -87,6 +87,15 @@ void ComputationNode<ElemType>::Backprop(const FrameRange& fr, bool childrenInTh
 // subroutines for Validate() implementations
 // -----------------------------------------------------------------------
 
+static void InconsistentMBLayout(const ComputationNodeBase& us, const ComputationNodeBase& which, ComputationNodeBase& vsWhich)
+{
+#if 1
+    RuntimeError("%ls: Dynamic axes mismatches between %ls and %ls. If this is by design, use ReconcileDynamicAxis().",
+                 us.NodeDescription().c_str(), which.NodeDescription().c_str(), vsWhich.NodeDescription());
+#else
+#endif
+}
+
 // helper function to infer the MBLayout for this node from inputs, for the *standard case*
 // the standard case is:
 //  - all inputs must share the same layout (e.g. adding two minibatches)
@@ -105,8 +114,7 @@ void ComputationNodeBase::InferMBLayoutFromInputsForStandardCase(bool isFinalVal
         else if (!pMBLayout) // first non-NULL layout: just copy it
             pMBLayout = child->m_pMBLayout;
         else if (pMBLayout != child->m_pMBLayout && isFinalValidationPass) // got a layout--compare whether it is the same
-            RuntimeError("%ls: InferMBLayoutFromInputsForStandardCase: Expected minibatch layouts to be the same between all children. Child '%ls' (%ls) uses a different layout than previously checked children and might get out of sync during runtime. If this is by design, use ReconcileDynamicAxis() to forward layouts between nodes.",
-                         NodeDescription().c_str(), child->NodeName().c_str(), child->OperationName().c_str());
+            InconsistentMBLayout(*this, *this, *child);
     }
     // all are consistent: install it
     LinkToMBLayout(pMBLayout);
@@ -133,9 +141,10 @@ void ComputationNodeBase::ValidateBinaryZip(bool isFinalValidationPass, bool all
     ValidateInferBinaryInputDims();
 
     if (isFinalValidationPass &&
-        Input(0)->GetMBLayout() != Input(1)->GetMBLayout() && Input(0)->HasMBLayout() && Input(1)->HasMBLayout())
+        Input(0)->HasMBLayout() && Input(1)->HasMBLayout() &&
+        Input(0)->GetMBLayout() != Input(1)->GetMBLayout())
     {
-        LogicError("%ls: Minibatch layouts are not the same between arguments and might get out of sync during runtime. If this is by design, use ReconcileDynamicAxis() to forward layouts between nodes.", NodeDescription().c_str());
+        InconsistentMBLayout(*this, *Input(0), *Input(1));
     }
 
     // result has tensor shape with dimensions being the max over both
@@ -176,10 +185,10 @@ void ComputationNodeBase::ValidateNaryZip(bool isFinalValidationPass, bool allow
 
     // check minibatch layout consistency for all possible pairs (n choose 2)
     if (isFinalValidationPass)
-        for (size_t i = 0; i < numInputs; i++)        
-            for (size_t j = i+1; j < numInputs; j++)            
-                if (Input(i)->GetMBLayout() != Input(j)->GetMBLayout() && Input(i)->HasMBLayout() && Input(j)->HasMBLayout())
-                    LogicError("%ls: Minibatch layouts are not the same between arguments and might get out of sync during runtime. If this is by design, use ReconcileDynamicAxis() to forward layouts between nodes.", NodeDescription().c_str());
+        for (size_t i = 0; i < numInputs; i++)
+            for (size_t j = i + 1; j < numInputs; j++)
+                if (Input(i)->HasMBLayout() && Input(j)->HasMBLayout() && Input(i)->GetMBLayout() != Input(j)->GetMBLayout())
+                    InconsistentMBLayout(*this, *Input(i), *Input(j));
 
     // result has tensor shape with dimensions being the max over all inputs
     let shape0 = GetInputSampleLayout(0);

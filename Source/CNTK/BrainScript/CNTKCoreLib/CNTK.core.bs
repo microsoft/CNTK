@@ -35,11 +35,11 @@ LinearLayer {outDim, bias = true, init='uniform', initValueScale=1} =
     W = ParameterTensor {_ConcatArrays (outDim, 0), init=init, initValueScale=initValueScale}
     b = ParameterTensor {outDim, initValue=0}
     outRank = Length (_AsArray (outDim)) # support outputs with tensor layouts
-    f(x) =
+    apply (x) =
         if bias
         then Times (W, x, outputRank = outRank) + b
         else Times (W, x, outputRank = outRank)
-}.f
+}.apply
 
 # DenseLayer -- create a fully-connected layer with optional non-linearity
 DenseLayer{outDim, bias = true, activation=(x=>x), init='uniform', initValueScale=1} = Sequential ( LinearLayer{outDim, bias = bias, init = init, initValueScale = initValueScale} : activation )
@@ -53,8 +53,8 @@ EmbeddingLayer {outDim,                                   # dimension of embeddi
         then ParameterTensor {shape, init='uniform'}  # learnable
         else ParameterTensor {shape, initFromFilePath = embeddingPath, learningRateMultiplier = 0}  # fixed from file
     TimesOp = if transpose then TransposeTimes else Times
-    f(x) = TimesOp (E, x)    # x is expected to be sparse one-hot
-}.f
+    apply (x) = TimesOp (E, x)    # x is expected to be sparse one-hot
+}.apply
 
 # ConvolutionalLayer -- create a convolution layer with optional non-linearity
 #             [ (shifting dims)  |  (reduction dim)  |  (output dim)  |  (sample dims) ]
@@ -83,11 +83,11 @@ ConvolutionalLayer {numOutputChannels,   # e.g. (1) or BS.Constants.None
     b = ParameterTensor(_ConcatArrays (Repeat (Length (filterShape), 1), outputChannelsShape), initValue = 0)                                 # [ 1 x 1 x     K ]
     sharing = true    # TODO: support this
     transpose = false # TODO: support this
-    f(x) = {
+    apply (x) = {
         c = Convolution (W, x, filterShape, mapDims = numOutputChannels, stride = stride, sharing = sharing, autoPadding = pad, lowerPad = lowerPad, upperPad = upperPad, transpose = transpose, maxTempMemSizeInSamples = maxTempMemSizeInSamples)
         res = activation (if bias then c + b else c)
     }.res
-}.f
+}.apply
 
 # MaxPoolingLayer, AveragePoolingLayer -- create a max- or average-pooling layer
 _PoolingLayer {poolKind,            # "max" or "average"
@@ -95,8 +95,8 @@ _PoolingLayer {poolKind,            # "max" or "average"
                stride = 1, pad = false,
                lowerPad = 0, upperPad = 0} = # TODO: support this
 {
-    f(x) = Pooling (x, poolKind, filterShape, stride = stride, autoPadding = pad, lowerPad = lowerPad, upperPad = upperPad)
-}.f
+    apply (x) = Pooling (x, poolKind, filterShape, stride = stride, autoPadding = pad, lowerPad = lowerPad, upperPad = upperPad)
+}.apply
 MaxPoolingLayer {filterShape, stride = 1, pad = false, lowerPad = 0, upperPad = 0} =
     _PoolingLayer {"max", filterShape, stride = stride, pad = pad, lowerPad = lowerPad, upperPad = upperPad}
 AveragePoolingLayer {filterShape, stride = 1, pad = false, lowerPad = 0, upperPad = 0} =
@@ -110,30 +110,30 @@ RecurrentLSTMLayer {outputDim,
 {
     previousHook = if goBackwards then BS.RNNs.NextHC else BS.RNNs.PreviousHC
     lstm = BS.RNNs.LSTMBlock {outputDim, cellShape = cellShape, enableSelfStabilization = enableSelfStabilization}
-    f(x) = {
+    apply (x) = {
         prevState = previousHook (lstmState) # recurrent memory. E.g. Previous or Next, with or without initial state, beam reordering etc.
 
         #auxInput = augmentInputHook(x, prevState)   # optionally augment input. Constants.None if none.
 
         lstmState = lstm (x, prevState)
     }.lstmState.h // that's the value we return
-}.f
+}.apply
 
 # DelayLayer -- delay input
 DelayLayer {T=1, defaultHiddenActivation=0} =
 {
-    f(x) =
+    apply (x) =
         if      T > 0 then PastValue   (0, x, timeStep=T,  defaultHiddenActivation=defaultHiddenActivation)
         else if T < 0 then FutureValue (0, x, timeStep=-T, defaultHiddenActivation=defaultHiddenActivation)
         else x
-}.f
+}.apply
 
 # DropoutLayer -- create a drop-out layer
 # Not yet supported with this interface; just use Dropout directly.
 #DropoutLayer {prob = BS.Constants.None} = if !BS.Constants.IsNone (prob) then Fail ("DropoutLayer: Dropout probability can currently not be specified per-layer.") else
 #{
-#    f(x) = Dropout (x)
-#}.f
+#    apply (x) = Dropout (x)
+#}.apply
 
 # BatchNormalizationLayer -- create a batch-normalization layer
 BatchNormalizationLayer {spatialRank = 0,  # reduce over these dims. E.g. 2 to reduce over (w,h) in a [W x H x C]-shaped input
@@ -147,8 +147,8 @@ BatchNormalizationLayer {spatialRank = 0,  # reduce over these dims. E.g. 2 to r
     bias         = ParameterTensor {normShape, initValue = 0}
     runMean      = ParameterTensor {normShape, initValue = 0, learningRateMultiplier = 0} # note: disable learning since these are updated differently
     runInvStdDev = ParameterTensor {normShape, initValue = 0, learningRateMultiplier = 0}
-    f(x) = BatchNormalization (x, scale, bias, runMean, runInvStdDev, spatialRank > 0, normalizationTimeConstant = normalizationTimeConstant, blendTimeConstant = blendTimeConstant, epsilon = epsilon, useCntkEngine = useCntkEngine)
-}.f
+    apply (x) = BatchNormalization (x, scale, bias, runMean, runInvStdDev, spatialRank > 0, normalizationTimeConstant = normalizationTimeConstant, blendTimeConstant = blendTimeConstant, epsilon = epsilon, useCntkEngine = useCntkEngine)
+}.apply
 
 # LayerNormalizationLayer -- create a layer-normalization layer
 LayerNormalizationLayer {dim = BS.Constants.None, initScale = 1, initBias = 0} = if BS.Constants.IsNone (dim) then Fail ("LayerNormalizationLayer: 'dim' parameter is currently required.") else
@@ -156,7 +156,7 @@ LayerNormalizationLayer {dim = BS.Constants.None, initScale = 1, initBias = 0} =
     gain = ParameterTensor{(1), initValue = initScale}
     bias = ParameterTensor{(1), initValue = initBias}
 
-    f(x) = {
+    apply (x) = {
         div = Constant (1.0 / dim)
 
         # normalize w.r.t. actual sample statistics
@@ -168,14 +168,14 @@ LayerNormalizationLayer {dim = BS.Constants.None, initScale = 1, initBias = 0} =
         # denormalize with learned parameters
         val = xHat .* gain + bias
     }.val
-}.f
+}.apply
 
 # StabilizerLayer -- create a scalar stabilizer [J. Droppo, 2014 -- TODO: get the reference]
 StabilizerLayer {} =
 {
     # BUGBUG: Calling f(x) twice will create a second set of parameters. Needs to refactor Stabilize() for this.
-    f(x) = Stabilize (x)
-}.f
+    apply (x) = Stabilize (x)
+}.apply
 
 # FeatureMVNLayer -- create a corpus-level feature-normalization layer
 # This can only be applied to features. Statistics are not shared across invocations,
@@ -197,20 +197,20 @@ Sequential (arrayOfFunctions) =
 {
     fs = _AsArray (arrayOfFunctions)  # make sure it works with a single function that is not an array
     Apply (x, N) = if N == 0 then x else fs[N-1](Apply (x, N-1))  # we do that recursively
-    f(x) = Apply (x, Length (fs))
-}.f
+    apply (x) = Apply (x, Length (fs))
+}.apply
 # Parallel -- composite that applies several functions to the same input and combines the result
 Parallel (arrayOfFunctions, combineFunction) =
 {
     fs = _AsArray (arrayOfFunctions)
-    f(x) = combineFunction (array[0..Length (fs)-1] (i => fs[i](x)))
-}.f
+    apply (x) = combineFunction (array[0..Length (fs)-1] (i => fs[i](x)))
+}.apply
 # MergeBinary -- apply two functions and combine them with a binary function, e.g. Plus
 MergeBinary (arrayOfFunctions, combineFunction) =
     if Length (arrayOfFunctions) != 2 then Fail ("Merge() is currently limited to binary functions.") else
     {
-        f(x,y) = combineFunction (arrayOfFunctions[0](x), arrayOfFunctions[1](y))
-    }.f
+        apply (x, y) = combineFunction (arrayOfFunctions[0](x), arrayOfFunctions[1](y))
+    }.apply
 # LayerStack -- generate a stack of models from a lambda of the form (i => some expression of i)
 # e.g. h3 = LayerStack {3, i => MyConvLayer {(32:32:64)[i], (0.0043:1.414:1.414)[i]} } (featNorm)
 LayerStack {n, c} = Sequential (array[0..n-1] (c))
@@ -857,7 +857,7 @@ RNNs =
         S(x) = Parameters.Stabilize (x, enabled=enableSelfStabilization)
         # BUGBUG: S() must not be a macro either, but also an object instance
 
-        f(x, prevState, aux=Constants.None) = [
+        apply (x, prevState, aux=Constants.None) = [
             _ = [     // encapsulate the inner workings
 
                 dh = prevState.h // previous values
@@ -890,8 +890,8 @@ RNNs =
                 then Wmr * S(_.ht)        // project
                 else _.ht                 // no projection
             dim = outputDim
-        ] // end of f(x)
-    ].f
+        ] // end of apply(x)
+    ].apply
 
     # LSTMP -- LSTM function with projection and self-stabilization
     # Projection is enabled by passing different values for outputDim and cellDim.
