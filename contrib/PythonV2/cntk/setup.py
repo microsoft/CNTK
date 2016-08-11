@@ -14,7 +14,7 @@ ext_modules = [
     Extension(
            name="_cntk_py",
 
-           sources=[os.path.join("wrap", "cntk_py_wrap.cxx")],
+           sources=[os.path.join("swig", "cntk_py_wrap.cxx")],
 
            libraries=[
                os.path.join(CNTK_LIB_PATH, "CNTKLibrary-2.0"),

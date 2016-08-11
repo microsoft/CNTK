@@ -1,10 +1,12 @@
 import pytest
-
+import sys
 import numpy as np
-from cntk import cntk_py
+import os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
+import cntk.cntk_py as cntk_py
 from cntk.ops import variable, constant
 from cntk.tests.test_utils import *
-from ..utils import sanitize_batch, remove_masked_elements, pad_to_dense, precision_numpy, cntk_device
+from cntk.utils import sanitize_batch, remove_masked_elements, pad_to_dense, precision_numpy, cntk_device
 
 def create_Value_with_value(shape, data_type, value, dev):
     if data_type == cntk_py.DataType_Float:
