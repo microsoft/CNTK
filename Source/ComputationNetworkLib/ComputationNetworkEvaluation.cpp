@@ -811,7 +811,7 @@ void ComputationNetwork::PrintMemorySharingStructure(const vector<ComputationNod
     for (const auto& node : nodes)
     {
         set<pair<const MatrixBase*, wstring>> matrixInfo = node->GetMatrixInfo();
-        for (const auto&item : matrixInfo) // {value} or {value, gradient}
+        for (const auto& item : matrixInfo) // {value} or {value, gradient}
         {
             memSharingStructure[item.first].insert(item.second);
             numMatrices++;

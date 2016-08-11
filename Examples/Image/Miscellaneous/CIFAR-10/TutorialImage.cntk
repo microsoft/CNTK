@@ -63,7 +63,37 @@ TrainConvNet = [
         firstMBsToShowResult = 10 ; numMBsToShowResult = 500
     ]
 
-    reader_new = [
+    reader = [
+        verbosity = 0
+        randomize = true
+        deserializers = (
+            [
+                type = "ImageDeserializer" ; module = "ImageReader"
+                file = "$DataDir$/cifar-10-batches-py/train_map.txt"
+                input = [
+                    features = [
+                        transforms = (
+                            [ type = "Crop" ; cropType = "center" ; cropRatio = 1.0 ; jitterType = "uniRatio" ] :
+                            [
+                                type = "Scale"
+                                width = 32
+                                height = 32
+                                channels = 3
+                                interpolations = "linear"
+                            ]:[
+                                type = "Mean"
+                            ]:[
+                                type = "Transpose"
+                            ]
+                        )
+                    ]
+                    labels = [ labelDim = 10 ]
+                ]
+            ]
+        )
+    ]
+
+    reader_newer = [
         readerType = "ImageReader"
         file = "$DataDir$/cifar-10-batches-py/train_map.txt"
         randomize = "auto"
@@ -72,17 +102,15 @@ TrainConvNet = [
             width = 32
             height = 32
             channels = 3
-            cropType = "random"
-            cropRatio = 0.8
-            jitterType = "uniRatio"
-            interpolations = "linear"
-            meanFile = "$DataDir$/cifar-10-batches-py/CIFAR-10_mean.xml"
+            #cropType = "random"
+            #cropRatio = 0.8
+            #jitterType = "uniRatio"
+            #interpolations = "linear"
+            #meanFile = "$DataDir$/cifar-10-batches-py/CIFAR-10_mean.xml"
         ]
-        labels = [
-            labelDim = 10
-        ]
+        labels = [ labelDim = 10 ]
     ]    
-    reader = [
+    reader_old = [
         readerType = "CNTKTextFormatReader"
         file = "$DataDir$/Train_cntk_text.txt"
         input = [
@@ -165,12 +193,60 @@ Eval = [
     action = "eval"
     minibatchSize = 16
     evalNodeNames = errs:top5Errs  # also test top-5 error rate
-    reader = [
+    reader_old = [
         readerType = "CNTKTextFormatReader"
         file = "$DataDir$/Test_cntk_text.txt"
         input = [
             features = [ dim = 3072 ; format = "dense" ]
             labels   = [ dim = 10 ;   format = "dense" ]
         ]
+    ]
+    reader_newer = [
+        readerType = "ImageReader"
+        file = "$DataDir$/cifar-10-batches-py/test_map.txt"
+        randomize = "auto"
+        prefetch = true
+        features = [
+            width = 32
+            height = 32
+            channels = 3
+            #cropType = "random"
+            #cropRatio = 0.8
+            #jitterType = "uniRatio"
+            #interpolations = "linear"
+            #meanFile = "$DataDir$/cifar-10-batches-py/CIFAR-10_mean.xml"
+        ]
+        labels = [
+            labelDim = 10
+        ]
+    ]    
+    reader = [
+        verbosity = 0
+        randomize = true
+        deserializers = (
+            [
+                type = "ImageDeserializer" ; module = "ImageReader"
+                file = "$DataDir$/cifar-10-batches-py/train_map.txt"
+                input = [
+                    features = [
+                        transforms = (
+                            [ type = "Crop" ; cropType = "center" ; cropRatio = 1.0 ; jitterType = "uniRatio" ] :
+                            [
+                                type = "Scale"
+                                width = 32
+                                height = 32
+                                channels = 3
+                                interpolations = "linear"
+                            ]:[
+                                type = "Mean"
+                            ]:[
+                                type = "Transpose"
+                            ]
+                        )
+                    ]
+                    labels = [ labelDim = 10 ]
+                ]
+            ]
+        )
     ]
 ]
