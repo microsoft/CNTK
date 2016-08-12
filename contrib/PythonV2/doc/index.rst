@@ -21,11 +21,8 @@ them on sample data in real time.
    :maxdepth: 2
 
    Getting Started <gettingstarted>
-   Concepts <concepts>
-   Readers <readers>
-   Operators <cntk.ops>
-   Training <training>
-   Execution Context <context>
+   Concepts <concepts>   
+   Operators <cntk.ops>   
    Examples <examples>
    Release Notes <releasenotes>
    

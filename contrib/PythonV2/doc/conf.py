@@ -261,7 +261,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    (master_doc, 'cntk15', 'Python Wrapper for CNTK 1.5 Documentation',
+    (master_doc, 'cntk15', 'Python API for CNTKv2 Documentation',
      [author], 1)
 ]
 
@@ -275,8 +275,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    (master_doc, 'CNTK15', 'Python Wrapper for CNTK 1.5 Documentation',
-     author, 'CNTK15', 'One line description of project.',
+    (master_doc, 'CNTKv2', 'Python API for CNTKv2 Documentation',
+     author, 'CNTKv2', 'One line description of project.',
      'Miscellaneous'),
 ]
 
