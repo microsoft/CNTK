@@ -11,14 +11,14 @@ parallelTrain = true
 
 #stderr = $WorkDir$/log
 
-command = TrainSlotTagger:RunSlotTagger:EvalSlotTagger
+command = TrainATIS:RunATIS:EvalATIS
 
 vocabSize = 943    # number of words
 numLabels = 129    # number of slot labels
 numIntents = 26    # number of intent labels
 
 # The command to train the LSTM model
-TrainSlotTagger = [
+TrainATIS = [
     action = "train"
     BrainScriptNetworkBuilder = [
         inputDim = $vocabSize$
@@ -53,7 +53,7 @@ TrainSlotTagger = [
         evaluationNodes = (errs)
         outputNodes     = (z)
     ]
-    # enable this one instead for intent classification
+    # rename this to BrainScriptNetworkBuilder to switch to intent-classification task
     Intent_BrainScriptNetworkBuilder = [
         inputDim = $vocabSize$
         labelDim = $numIntents$
@@ -61,18 +61,12 @@ TrainSlotTagger = [
         #hiddenDim = 300
         hiddenDim = 150
 
-        RecSplice (a2) = [ # splice with reconciliation
-            i1 = a2[0]
-            i2 = ReconcileDynamicAxis (a2[1], i1)
-            res = Splice (i1 : i2)
-        ].res
-
         model = Sequential (
             Parallel ((DelayLayer{T=1} : Identity : DelayLayer{T=-1}), Splice) :  # 3-word window
             EmbeddingLayer {embDim} :                                             # embedding
             RecurrentLSTMLayer {hiddenDim} : BS.Sequences.Last :                  # LSTM state, final state
-            #Parallel ((Sequential (RecurrentLSTMLayer {hiddenDim}                  : BS.Sequences.Last):
-            #           Sequential (RecurrentLSTMLayer {hiddenDim, goBackwards=true}: BS.Sequences.First)), RecSplice) :  # bidirectional LSTM
+            #Parallel ((Sequential (RecurrentLSTMLayer {hiddenDim}                   : BS.Sequences.Last):
+                       Sequential (RecurrentLSTMLayer {hiddenDim, goBackwards=true} : BS.Sequences.First)), Splice) :  # bidirectional LSTM
             DenseLayer {labelDim, initValueScale=7}        # output layer
         )
 
@@ -82,7 +76,7 @@ TrainSlotTagger = [
         intentLabels = Input {labelDim}
 
         # model application
-        z = ReconcileDynamicAxis (model (query), intentLabels)
+        z = model (query)
 
         # loss and metric
         ce   = CrossEntropyWithSoftmax (intentLabels, z)
@@ -96,30 +90,18 @@ TrainSlotTagger = [
     ]
 
     SGD = [
-        # maximum number of epochs
-        maxEpochs = 20   # set to 1 so this can be added to regression test. Increase to 20 get a good accuracy
-        #maxEpochs = 200   # set to 1 so this can be added to regression test. Increase to 20 get a good accuracy
+        maxEpochs = 20 ; epochSize = 36000
 
-        # for each epoch, maximum number of input samples(words) is set below
-        epochSize = 36000
-
-        # minibatchSize should be larger than the maximum sentence length
         minibatchSize = 70
 
         learningRatesPerSample = 0.01*2:0.005*12:0.001
-        #learningRatesPerSample = 0.01*20:0.005*120:0.001
+
         gradUpdateType = "FSAdaGrad"
 
-        gradientClippingWithTruncation = true
-        clippingThresholdPerSample = 15.0
+        gradientClippingWithTruncation = true ; clippingThresholdPerSample = 15.0
 
         # number of minibatches to report progress
-        firstMBsToShowResult = 10
-        numMBsToShowResult = 100
-
-        # if validation shows that the model has no improvement, then do back-up to the previously
-        # estimated model and reduce learning rate
-        loadBestModel = true
+        firstMBsToShowResult = 10 ; numMBsToShowResult = 100
 
         parallelTrain = [
             parallelizationMethod = "DataParallelSGD"
@@ -144,21 +126,19 @@ TrainSlotTagger = [
 ]
 
 # Run the model to predict slot labels
-RunSlotTagger = [
+RunATIS = [
     action = "write"
     BrainScriptNetworkBuilder = [
         modelAsTrained = BS.Network.Load ("$modelPath$")
         final = Hardmax (modelAsTrained.z)  # make a decision
-        labels = Pass (modelAsTrained.slotLabels)
+        #labels = Pass (modelAsTrained.slotLabels)
         # enable this for intent classification:
-        #labels = Pass (modelAsTrained.intentLabels)
-        #t = DynamicAxis()
+        labels = Pass (modelAsTrained.intentLabels)
+        t = DynamicAxis()
     ]
 
     outputPath = $WorkDir$/model.writeaction
-    outputNodeNames = slotLabels:final
-    # enable this for intent classification:
-    #outputNodeNames = intentLabels:final
+    outputNodeNames = intentLabels:slotLabels:final
 
     reader = [
         readerType = "CNTKTextFormatReader"
@@ -173,7 +153,7 @@ RunSlotTagger = [
 ]
 
 # Evaluate the model's slot-tagging accuracy (as an error count)
-EvalSlotTagger = [
+EvalATIS = [
     action = "eval"
     modelPath = $modelPath$  # from outside
     reader = [

@@ -239,7 +239,7 @@ Exp                     = CNTK2.Exp
 Floor                   = CNTK2.Floor
 Log                     = CNTK2.Log
 Minus                   = CNTK2.Minus
-Pass                    = CNTK2.Identity
+Pass                    = CNTK2.Pass
 Plus                    = CNTK2.Plus
 RectifiedLinear         = CNTK2.ReLU # deprecated
 ReLU                    = CNTK2.ReLU
@@ -380,10 +380,11 @@ CNTK2 = [
     LessEqual(_, y, tag='')    = new ComputationNode [ operation = 'LessEqual'    ; inputs = (_ : y) /*plus the function args*/ ]
 
     // 13. Others    
-    Identity(_, tag='') = new ComputationNode [ operation = 'Pass' ; inputs = _ /*plus the function args*/ ]    
+    Pass(_, tag='') = new ComputationNode [ operation = 'Pass' ; inputs = _ /*plus the function args*/ ]    
+    Identity = Pass
 ]
 
-# Parameter{} can do several forms of initialization. It is no longer required to say 'init="kind"', so we can clean these up a bit.
+# Parameter{} can do several forms of initialization.
 #  - initValue=scalar, value=array --> initialize from this value  --array form not implemented yet
 #  - initFromFilePath="..." --> read from a data file
 #  - init="uniform|gaussian" (random init scaled by initValueScale). Warning: This has magic scaling factors. TODO: document them here
@@ -393,7 +394,9 @@ CNTK2 = [
 #  - init="fixedValue", value from 'value'
 # Warning: Current config will behave unexpected if user mistypes 'initValue' as 'value' (which will be ignored, defaulting to "uniform" init)
 Parameter {outputDim, inputDim, learningRateMultiplier = 1.0, init = ''/*|uniform|fixedValue|gaussian|fromFile|fromLiteral*/, initValueScale = 1, value = 0/*deprecated*/, initValue = '', initFromFilePath = '', initFromLiteral = ''/*deprecated*/, initOnCPUOnly=true, randomSeed=-1, tag=''} = new ComputationNode [ operation = 'LearnableParameter' ; shape = new TensorShape [ dims = (outputDim : inputDim) ] /*plus the function args*/ ]
-LearnableParameter = Parameter  // deprecated 
+
+LearnableParameter = Parameter  // deprecated
+
 # TODO: make Parameter take tensor dims?
 ParameterTensor {dims, learningRateMultiplier = 1.0, init = ''/*|uniform|fixedValue|gaussian|fromFile|fromLiteral*/, initValueScale = 1, value = 0, initValue = '', initFromFilePath = '', initFromLiteral = '', initOnCPUOnly=true, randomSeed=-1, tag=''} = new ComputationNode [ operation = 'LearnableParameter' ; shape = new TensorShape [ /*dims*/ ] /*plus the function args*/ ]
 ConstantFromString(literal, tag='') = ParameterTensor((0)/*dim, will be inferred*/, initFromLiteral = literal, learningRateMultiplier = 0.0)

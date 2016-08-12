@@ -87,12 +87,21 @@ void ComputationNode<ElemType>::Backprop(const FrameRange& fr, bool childrenInTh
 // subroutines for Validate() implementations
 // -----------------------------------------------------------------------
 
-static void InconsistentMBLayout(const ComputationNodeBase& us, const ComputationNodeBase& which, ComputationNodeBase& vsWhich)
+// compare two MBLayouts, and alert if they are different
+void ComputationNodeBase::ValidateMBLayout(const ComputationNodeBasePtr which, const ComputationNodeBasePtr vsWhich) const
 {
-#if 1
-    RuntimeError("%ls: Dynamic axes mismatches between %ls and %ls. If this is by design, use ReconcileDynamicAxis().",
-                 us.NodeDescription().c_str(), which.NodeDescription().c_str(), vsWhich.NodeDescription());
+    if (!which->HasMBLayout() || !vsWhich->HasMBLayout() || which->GetMBLayout() == vsWhich->GetMBLayout())
+        return;
+    // MBLayouts are inconsistent
+#if 0
+    // can't have that
+    RuntimeError("%ls: Dynamic axes mismatch between %ls and %ls. If this is by design, use ReconcileDynamicAxis().",
+                 NodeDescription().c_str(), which->NodeDescription().c_str(), vsWhich->NodeDescription());
 #else
+    // We will let this slip with a reminder, assuming that this will be caught at runtime.
+    // By allowing this, users will not need ReconcileDynamicAxis() for reductions over a sequence like BS.Sequences.Last().
+    fprintf(stderr, "WARNING: %ls: Dynamic axes mismatch between %ls and %ls. If they are incompatible, this will fail later. If this is by design, use ReconcileDynamicAxis().\n",
+            NodeDescription().c_str(), which->NodeDescription().c_str(), vsWhich->NodeDescription().c_str());
 #endif
 }
 
@@ -104,20 +113,20 @@ static void InconsistentMBLayout(const ComputationNodeBase& us, const Computatio
 //  - if there are more than one different layouts involved, this function will fail
 void ComputationNodeBase::InferMBLayoutFromInputsForStandardCase(bool isFinalValidationPass)
 {
-    MBLayoutPtr pMBLayout; // start with NULL layout
-    for (auto child : m_inputs)
+    ComputationNodeBasePtr firstInputWithMBLayout;
+    for (auto input : m_inputs)
     {
-        if (!child) // node not set yet (DelayedValueNodeBase seems to allow this)--BUGBUG: Then this function won't operate correctly.
+        if (!input) // node not set yet (DelayedValueNodeBase seems to allow this)--BUGBUG: Then this function won't operate correctly.
             ;
-        else if (!child->m_pMBLayout) // NULL layout (typical for parameter nodes)
+        else if (!input->m_pMBLayout) // NULL layout (typical for parameter nodes)
             ;
-        else if (!pMBLayout) // first non-NULL layout: just copy it
-            pMBLayout = child->m_pMBLayout;
-        else if (pMBLayout != child->m_pMBLayout && isFinalValidationPass) // got a layout--compare whether it is the same
-            InconsistentMBLayout(*this, *this, *child);
+        else if (!firstInputWithMBLayout) // first input with layout: remember this child
+            firstInputWithMBLayout = input;
+        else if (isFinalValidationPass) // got a layout--compare whether it is the same
+            ValidateMBLayout(firstInputWithMBLayout, input);
     }
     // all are consistent: install it
-    LinkToMBLayout(pMBLayout);
+    LinkToMBLayout(firstInputWithMBLayout ? firstInputWithMBLayout->m_pMBLayout : nullptr);
 }
 
 // single input that maps its input element-wise (e.g. Sigmoid)
@@ -140,12 +149,8 @@ void ComputationNodeBase::ValidateBinaryZip(bool isFinalValidationPass, bool all
 
     ValidateInferBinaryInputDims();
 
-    if (isFinalValidationPass &&
-        Input(0)->HasMBLayout() && Input(1)->HasMBLayout() &&
-        Input(0)->GetMBLayout() != Input(1)->GetMBLayout())
-    {
-        InconsistentMBLayout(*this, *Input(0), *Input(1));
-    }
+    if (isFinalValidationPass)
+        ValidateMBLayout(Input(0), Input(1));
 
     // result has tensor shape with dimensions being the max over both
     let shape0 = GetInputSampleLayout(0);
@@ -187,8 +192,7 @@ void ComputationNodeBase::ValidateNaryZip(bool isFinalValidationPass, bool allow
     if (isFinalValidationPass)
         for (size_t i = 0; i < numInputs; i++)
             for (size_t j = i + 1; j < numInputs; j++)
-                if (Input(i)->HasMBLayout() && Input(j)->HasMBLayout() && Input(i)->GetMBLayout() != Input(j)->GetMBLayout())
-                    InconsistentMBLayout(*this, *Input(i), *Input(j));
+                ValidateMBLayout(Input(i), Input(j));
 
     // result has tensor shape with dimensions being the max over all inputs
     let shape0 = GetInputSampleLayout(0);
