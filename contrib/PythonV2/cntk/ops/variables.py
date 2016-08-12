@@ -19,7 +19,7 @@ def _sanitize_value(shape, value, dtype, device, is_param=False):
         
         if is_param:
             # TODO: expose the initialization params
-            ndav = cntk_py.NDArrayView.RandomUniformFloat(shape, -0.05, 0.05, 1, device)        
+            ndav = cntk_py.NDArrayView.random_uniform_float(shape, -0.05, 0.05, 1, device)        
         else:
             ndav = utils.create_NDArrayView(shape, cntk_dtype, device)
     

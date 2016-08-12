@@ -10,7 +10,9 @@
 %include <attribute.i>
 %include <std_shared_ptr.i>
 
-
+// if we don't except RandomUniform the corresponding template functions will not be generated
+%rename("%(utitle)s", %$isfunction, notregexmatch$name="RandomUniform") "";
+%rename("%(utitle)s", %$isvariable) "";
 
 %template() std::vector<size_t>;
 %template() std::vector<CNTK::Variable>;
@@ -818,7 +820,7 @@
 // FIXME ignore is ignored
 %ignore CNTK::NDMask::DataBuffer();
 %extend CNTK::NDMask {
-    PyObject* ToNumPy() {
+    PyObject* to_numpy() {
         std::vector<size_t> cntk_dims = (*self).Shape().Dimensions();
         static_assert(dims.size()==2, "mask requires exactly two dimensions");
         std::vector<size_t> dimensions = {cntk_dims[1], cntk_dims[0]};
@@ -889,7 +891,7 @@
         }
     }
 
-    PyObject* ToNumPy() {
+    PyObject* to_numpy() {
         // FIXME use not yet existing NDShape function that returns the dimensions at once
         std::vector<size_t> dimensions = (*self).Shape().Dimensions();
         npy_intp* shape = reinterpret_cast<npy_intp*>(&dimensions[0]);
@@ -923,8 +925,8 @@
 %template(NDArrayViewDouble) CNTK::NDArrayView::NDArrayView<double>;
 %template(ConstantFloat) CNTK::Constant::Constant<float>;
 %template(ConstantDouble) CNTK::Constant::Constant<double>;
-%template(RandomUniformFloat) CNTK::NDArrayView::RandomUniform<float>;
-%template(RandomUniformDouble) CNTK::NDArrayView::RandomUniform<double>;
+%template(random_uniform_float) CNTK::NDArrayView::RandomUniform<float>;
+%template(random_uniform_double) CNTK::NDArrayView::RandomUniform<double>;
 %template(DictionaryValueFromDict) CNTK::DictionaryValue::DictionaryValue<CNTK::Dictionary>;
 
 // end of NDArrayView
@@ -993,7 +995,7 @@ DATA_TYPE.__eq__ = lambda a,b: EQ(a,b)
 
 
 %pythoncode %{
-StreamInfo.__eq__ = lambda a,b: a.m_name==b.m_name and a.m_id==b.m_id and a.m_storageFormat==b.m_storageFormat and a.m_elementType==b.m_elementType and a.m_sampleLayout.Dimensions()==b.m_sampleLayout.Dimensions()
+StreamInfo.__eq__ = lambda a,b: a.m_name==b.m_name and a.m_id==b.m_id and a.m_storage_format==b.m_storage_format and a.m_element_type==b.m_element_type and a.m_sample_layout.dimensions()==b.m_sample_layout.dimensions()
 %}
 
 %extend CNTK::StreamInfo {

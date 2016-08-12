@@ -49,7 +49,7 @@ def forward_backward():
 
     op = cntk_py.Plus(left_var, right_var)
 
-    outputVariable = op.Output()
+    outputVariable = op.output()
     output_value_ptr = create_ValuePtr(output_shape+(1,1), cntk_py.DataType_Float, dev) 
 
     arguments = {} 
@@ -63,8 +63,8 @@ def forward_backward():
     #
     # Forward
     #
-    backpropstate = op.Forward(arguments, outputs, dev, outputs_retain)
-    forward_data = output_value_ptr.Data().ToNumPy()#.reshape(output_shape)
+    backpropstate = op.forward(arguments, outputs, dev, outputs_retain)
+    forward_data = output_value_ptr.data().to_numpy()#.reshape(output_shape)
     print("Result forward:")
     print(forward_data)
 
@@ -80,15 +80,15 @@ def forward_backward():
     gradients[right_var] = grad_right_value_ptr
 
     rootGradients = {} 
-    rootGradientValuePtr = create_ValuePtr_with_value(outputVariable.Shape().Dimensions()+(1,1), cntk_py.DataType_Float, 1, dev) 
+    rootGradientValuePtr = create_ValuePtr_with_value(outputVariable.shape().dimensions()+(1,1), cntk_py.DataType_Float, 1, dev) 
     rootGradients[outputVariable] = rootGradientValuePtr
  
-    op.Backward(backpropstate, rootGradients, gradients)
-    left_grad_data = grad_left_value_ptr.Data().ToNumPy().reshape(output_shape)
+    op.backward(backpropstate, rootGradients, gradients)
+    left_grad_data = grad_left_value_ptr.data().to_numpy().reshape(output_shape)
     print("Result backward left:")
     print(left_grad_data)
 
-    right_grad_data = grad_right_value_ptr.Data().ToNumPy().reshape(output_shape)
+    right_grad_data = grad_right_value_ptr.data().to_numpy().reshape(output_shape)
     print("Result backward right:")
     print(right_grad_data)
 

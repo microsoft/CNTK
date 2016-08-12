@@ -20,14 +20,14 @@ def create_Value_from_NumPy(nd, dev):
     return cntk_py.Value(ndav)
 
 def _input_plus_const():
-    dev = cntk_py.DeviceDescriptor.CPUDevice()
+    dev = cntk_py.DeviceDescriptor.cpudevice()
 
     shape = (2,3)
 
     left_var = variable(shape, data_type='float', needs_gradient=True, name="left_node")
     right_const = constant(value=np.ones(shape=shape), name="right_node")
 
-    op = cntk_py.Plus(left_var, right_const)
+    op = cntk_py.plus(left_var, right_const)
 
     return left_var, right_const, op
 
@@ -35,27 +35,27 @@ def test_hashability_1():
     left, right, op = _input_plus_const()
     assert left != right
 
-    outputVariables = op.Outputs()
+    outputVariables = op.outputs()
     assert len(outputVariables) == 1
-    assert op.Output() in op.Outputs()
+    assert op.output() in op.outputs()
 
     # Swig creates always new references when underlying objects are requested.
     # Here, we check whether the hashing is done properly on the C++ side.
     for o in outputVariables:
-        assert o in op.Outputs()
+        assert o in op.outputs()
 
     # constants are counted as inputs
-    assert len(op.Inputs()) == 2
-    assert left in op.Inputs()
-    assert right in op.Inputs()
+    assert len(op.inputs()) == 2
+    assert left in op.inputs()
+    assert right in op.inputs()
 
-    assert len(op.Constants()) == 1
-    assert left not in op.Constants()
-    assert right in op.Constants()
+    assert len(op.constants()) == 1
+    assert left not in op.constants()
+    assert right in op.constants()
 
-    assert len(op.Placeholders()) == 0
+    assert len(op.placeholders()) == 0
 
-    assert len(op.Parameters()) == 0
+    assert len(op.parameters()) == 0
 
 def test_masking(device_id, precision):    
     # Batch of three sequences of lengths 2, 4, and 1
@@ -77,11 +77,11 @@ def test_masking(device_id, precision):
     # sanitizing the batch will wrap it into a Value with a corresponding mask
     value = sanitize_batch(batch, precision_np, device)
 
-    mask = value.Mask()
+    mask = value.mask()
 
     # mask_array will contain a row per sequence, with the columns having 1 for valid
     # entries and 0 for invalid ones.
-    mask_array = mask.ToNumPy()
+    mask_array = mask.to_numpy()
     assert mask_array.shape == (num_samples, max_seq_len)
 
     assert np.all(mask_array[0] == AA([1, 1, 0, 0]))

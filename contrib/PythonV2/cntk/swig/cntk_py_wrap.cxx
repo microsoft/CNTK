@@ -5541,7 +5541,7 @@ SWIGINTERN CNTK::NDArrayView *new_CNTK_NDArrayView__SWIG_17(PyObject *pyobj,CNTK
             throw std::logic_error("NumPy array of type float32 or float64 expected");
         }
     }
-SWIGINTERN PyObject *CNTK_NDArrayView_ToNumPy(CNTK::NDArrayView *self){
+SWIGINTERN PyObject *CNTK_NDArrayView_to_numpy(CNTK::NDArrayView *self){
         // FIXME use not yet existing NDShape function that returns the dimensions at once
         std::vector<size_t> dimensions = (*self).Shape().Dimensions();
         npy_intp* shape = reinterpret_cast<npy_intp*>(&dimensions[0]);
@@ -5618,7 +5618,7 @@ SWIG_FromCharPtr(const char *cptr)
   return SWIG_FromCharPtrAndSize(cptr, (cptr ? strlen(cptr) : 0));
 }
 
-SWIGINTERN PyObject *CNTK_NDMask_ToNumPy(CNTK::NDMask *self){
+SWIGINTERN PyObject *CNTK_NDMask_to_numpy(CNTK::NDMask *self){
         std::vector<size_t> cntk_dims = (*self).Shape().Dimensions();
         ;
         std::vector<size_t> dimensions = {cntk_dims[1], cntk_dims[0]};
@@ -6697,7 +6697,7 @@ SWIGINTERN PyObject *SwigPyIterator_swigregister(PyObject *SWIGUNUSEDPARM(self),
   return SWIG_Py_Void();
 }
 
-SWIGINTERN PyObject *_wrap_IsSparseStorageFormat(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_is_sparse_storage_format(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::StorageFormat arg1 ;
   int val1 ;
@@ -6705,10 +6705,10 @@ SWIGINTERN PyObject *_wrap_IsSparseStorageFormat(PyObject *SWIGUNUSEDPARM(self),
   PyObject * obj0 = 0 ;
   bool result;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:IsSparseStorageFormat",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:is_sparse_storage_format",&obj0)) SWIG_fail;
   ecode1 = SWIG_AsVal_int(obj0, &val1);
   if (!SWIG_IsOK(ecode1)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode1), "in method '" "IsSparseStorageFormat" "', argument " "1"" of type '" "CNTK::StorageFormat""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode1), "in method '" "is_sparse_storage_format" "', argument " "1"" of type '" "CNTK::StorageFormat""'");
   } 
   arg1 = static_cast< CNTK::StorageFormat >(val1);
   {
@@ -6738,7 +6738,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_DeviceDescriptor_Id(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_DeviceDescriptor_id(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::DeviceDescriptor *arg1 = (CNTK::DeviceDescriptor *) 0 ;
   void *argp1 = 0 ;
@@ -6746,10 +6746,10 @@ SWIGINTERN PyObject *_wrap_DeviceDescriptor_Id(PyObject *SWIGUNUSEDPARM(self), P
   PyObject * obj0 = 0 ;
   int result;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:DeviceDescriptor_Id",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:DeviceDescriptor_id",&obj0)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_CNTK__DeviceDescriptor, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DeviceDescriptor_Id" "', argument " "1"" of type '" "CNTK::DeviceDescriptor const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DeviceDescriptor_id" "', argument " "1"" of type '" "CNTK::DeviceDescriptor const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::DeviceDescriptor * >(argp1);
   {
@@ -6779,7 +6779,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_DeviceDescriptor_Type(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_DeviceDescriptor_type(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::DeviceDescriptor *arg1 = (CNTK::DeviceDescriptor *) 0 ;
   void *argp1 = 0 ;
@@ -6787,10 +6787,10 @@ SWIGINTERN PyObject *_wrap_DeviceDescriptor_Type(PyObject *SWIGUNUSEDPARM(self),
   PyObject * obj0 = 0 ;
   CNTK::DeviceKind result;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:DeviceDescriptor_Type",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:DeviceDescriptor_type",&obj0)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_CNTK__DeviceDescriptor, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DeviceDescriptor_Type" "', argument " "1"" of type '" "CNTK::DeviceDescriptor const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DeviceDescriptor_type" "', argument " "1"" of type '" "CNTK::DeviceDescriptor const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::DeviceDescriptor * >(argp1);
   {
@@ -6820,11 +6820,11 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_DeviceDescriptor_CPUDevice(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_DeviceDescriptor_cpudevice(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   SwigValueWrapper< CNTK::DeviceDescriptor > result;
   
-  if (!PyArg_ParseTuple(args,(char *)":DeviceDescriptor_CPUDevice")) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)":DeviceDescriptor_cpudevice")) SWIG_fail;
   {
     try {
       result = CNTK::DeviceDescriptor::CPUDevice(); 
@@ -6852,7 +6852,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_DeviceDescriptor_GPUDevice(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_DeviceDescriptor_gpudevice(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   unsigned int arg1 ;
   unsigned int val1 ;
@@ -6860,10 +6860,10 @@ SWIGINTERN PyObject *_wrap_DeviceDescriptor_GPUDevice(PyObject *SWIGUNUSEDPARM(s
   PyObject * obj0 = 0 ;
   SwigValueWrapper< CNTK::DeviceDescriptor > result;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:DeviceDescriptor_GPUDevice",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:DeviceDescriptor_gpudevice",&obj0)) SWIG_fail;
   ecode1 = SWIG_AsVal_unsigned_SS_int(obj0, &val1);
   if (!SWIG_IsOK(ecode1)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode1), "in method '" "DeviceDescriptor_GPUDevice" "', argument " "1"" of type '" "unsigned int""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode1), "in method '" "DeviceDescriptor_gpudevice" "', argument " "1"" of type '" "unsigned int""'");
   } 
   arg1 = static_cast< unsigned int >(val1);
   {
@@ -6893,11 +6893,11 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_DeviceDescriptor_DefaultDevice(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_DeviceDescriptor_default_device(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   SwigValueWrapper< CNTK::DeviceDescriptor > result;
   
-  if (!PyArg_ParseTuple(args,(char *)":DeviceDescriptor_DefaultDevice")) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)":DeviceDescriptor_default_device")) SWIG_fail;
   {
     try {
       result = CNTK::DeviceDescriptor::DefaultDevice(); 
@@ -7416,7 +7416,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_NDShape_Dimensions(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_NDShape_dimensions(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::NDShape *arg1 = (CNTK::NDShape *) 0 ;
   void *argp1 = 0 ;
@@ -7424,10 +7424,10 @@ SWIGINTERN PyObject *_wrap_NDShape_Dimensions(PyObject *SWIGUNUSEDPARM(self), Py
   PyObject * obj0 = 0 ;
   std::vector< size_t,std::allocator< size_t > > *result = 0 ;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:NDShape_Dimensions",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:NDShape_dimensions",&obj0)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_CNTK__NDShape, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDShape_Dimensions" "', argument " "1"" of type '" "CNTK::NDShape const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDShape_dimensions" "', argument " "1"" of type '" "CNTK::NDShape const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::NDShape * >(argp1);
   {
@@ -7457,7 +7457,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_NDShape_NumAxes(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_NDShape_num_axes(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::NDShape *arg1 = (CNTK::NDShape *) 0 ;
   void *argp1 = 0 ;
@@ -7465,10 +7465,10 @@ SWIGINTERN PyObject *_wrap_NDShape_NumAxes(PyObject *SWIGUNUSEDPARM(self), PyObj
   PyObject * obj0 = 0 ;
   size_t result;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:NDShape_NumAxes",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:NDShape_num_axes",&obj0)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_CNTK__NDShape, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDShape_NumAxes" "', argument " "1"" of type '" "CNTK::NDShape const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDShape_num_axes" "', argument " "1"" of type '" "CNTK::NDShape const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::NDShape * >(argp1);
   {
@@ -7498,7 +7498,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_NDShape_SubShape__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_NDShape_sub_shape__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::NDShape *arg1 = (CNTK::NDShape *) 0 ;
   size_t arg2 ;
@@ -7514,20 +7514,20 @@ SWIGINTERN PyObject *_wrap_NDShape_SubShape__SWIG_0(PyObject *SWIGUNUSEDPARM(sel
   PyObject * obj2 = 0 ;
   CNTK::NDShape result;
   
-  if (!PyArg_ParseTuple(args,(char *)"OOO:NDShape_SubShape",&obj0,&obj1,&obj2)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OOO:NDShape_sub_shape",&obj0,&obj1,&obj2)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_CNTK__NDShape, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDShape_SubShape" "', argument " "1"" of type '" "CNTK::NDShape const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDShape_sub_shape" "', argument " "1"" of type '" "CNTK::NDShape const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::NDShape * >(argp1);
   ecode2 = SWIG_AsVal_size_t(obj1, &val2);
   if (!SWIG_IsOK(ecode2)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "NDShape_SubShape" "', argument " "2"" of type '" "size_t""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "NDShape_sub_shape" "', argument " "2"" of type '" "size_t""'");
   } 
   arg2 = static_cast< size_t >(val2);
   ecode3 = SWIG_AsVal_size_t(obj2, &val3);
   if (!SWIG_IsOK(ecode3)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "NDShape_SubShape" "', argument " "3"" of type '" "size_t""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "NDShape_sub_shape" "', argument " "3"" of type '" "size_t""'");
   } 
   arg3 = static_cast< size_t >(val3);
   {
@@ -7565,7 +7565,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_NDShape_SubShape__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_NDShape_sub_shape__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::NDShape *arg1 = (CNTK::NDShape *) 0 ;
   size_t arg2 ;
@@ -7577,15 +7577,15 @@ SWIGINTERN PyObject *_wrap_NDShape_SubShape__SWIG_1(PyObject *SWIGUNUSEDPARM(sel
   PyObject * obj1 = 0 ;
   CNTK::NDShape result;
   
-  if (!PyArg_ParseTuple(args,(char *)"OO:NDShape_SubShape",&obj0,&obj1)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OO:NDShape_sub_shape",&obj0,&obj1)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_CNTK__NDShape, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDShape_SubShape" "', argument " "1"" of type '" "CNTK::NDShape const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDShape_sub_shape" "', argument " "1"" of type '" "CNTK::NDShape const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::NDShape * >(argp1);
   ecode2 = SWIG_AsVal_size_t(obj1, &val2);
   if (!SWIG_IsOK(ecode2)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "NDShape_SubShape" "', argument " "2"" of type '" "size_t""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "NDShape_sub_shape" "', argument " "2"" of type '" "size_t""'");
   } 
   arg2 = static_cast< size_t >(val2);
   {
@@ -7623,7 +7623,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_NDShape_SubShape__SWIG_2(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_NDShape_sub_shape__SWIG_2(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::NDShape *arg1 = (CNTK::NDShape *) 0 ;
   void *argp1 = 0 ;
@@ -7631,10 +7631,10 @@ SWIGINTERN PyObject *_wrap_NDShape_SubShape__SWIG_2(PyObject *SWIGUNUSEDPARM(sel
   PyObject * obj0 = 0 ;
   CNTK::NDShape result;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:NDShape_SubShape",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:NDShape_sub_shape",&obj0)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_CNTK__NDShape, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDShape_SubShape" "', argument " "1"" of type '" "CNTK::NDShape const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDShape_sub_shape" "', argument " "1"" of type '" "CNTK::NDShape const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::NDShape * >(argp1);
   {
@@ -7672,7 +7672,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_NDShape_SubShape(PyObject *self, PyObject *args) {
+SWIGINTERN PyObject *_wrap_NDShape_sub_shape(PyObject *self, PyObject *args) {
   Py_ssize_t argc;
   PyObject *argv[4] = {
     0
@@ -7690,7 +7690,7 @@ SWIGINTERN PyObject *_wrap_NDShape_SubShape(PyObject *self, PyObject *args) {
     int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_CNTK__NDShape, 0);
     _v = SWIG_CheckState(res);
     if (_v) {
-      return _wrap_NDShape_SubShape__SWIG_2(self, args);
+      return _wrap_NDShape_sub_shape__SWIG_2(self, args);
     }
   }
   if (argc == 2) {
@@ -7704,7 +7704,7 @@ SWIGINTERN PyObject *_wrap_NDShape_SubShape(PyObject *self, PyObject *args) {
         _v = SWIG_CheckState(res);
       }
       if (_v) {
-        return _wrap_NDShape_SubShape__SWIG_1(self, args);
+        return _wrap_NDShape_sub_shape__SWIG_1(self, args);
       }
     }
   }
@@ -7724,14 +7724,14 @@ SWIGINTERN PyObject *_wrap_NDShape_SubShape(PyObject *self, PyObject *args) {
           _v = SWIG_CheckState(res);
         }
         if (_v) {
-          return _wrap_NDShape_SubShape__SWIG_0(self, args);
+          return _wrap_NDShape_sub_shape__SWIG_0(self, args);
         }
       }
     }
   }
   
 fail:
-  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'NDShape_SubShape'.\n"
+  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'NDShape_sub_shape'.\n"
     "  Possible C/C++ prototypes are:\n"
     "    CNTK::NDShape::SubShape(size_t,size_t) const\n"
     "    CNTK::NDShape::SubShape(size_t) const\n"
@@ -7740,7 +7740,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_NDShape_HasInferredDimension(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_NDShape_has_inferred_dimension(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::NDShape *arg1 = (CNTK::NDShape *) 0 ;
   void *argp1 = 0 ;
@@ -7748,10 +7748,10 @@ SWIGINTERN PyObject *_wrap_NDShape_HasInferredDimension(PyObject *SWIGUNUSEDPARM
   PyObject * obj0 = 0 ;
   bool result;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:NDShape_HasInferredDimension",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:NDShape_has_inferred_dimension",&obj0)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_CNTK__NDShape, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDShape_HasInferredDimension" "', argument " "1"" of type '" "CNTK::NDShape const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDShape_has_inferred_dimension" "', argument " "1"" of type '" "CNTK::NDShape const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::NDShape * >(argp1);
   {
@@ -7781,7 +7781,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_NDShape_TotalSize(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_NDShape_total_size(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::NDShape *arg1 = (CNTK::NDShape *) 0 ;
   void *argp1 = 0 ;
@@ -7789,10 +7789,10 @@ SWIGINTERN PyObject *_wrap_NDShape_TotalSize(PyObject *SWIGUNUSEDPARM(self), PyO
   PyObject * obj0 = 0 ;
   size_t result;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:NDShape_TotalSize",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:NDShape_total_size",&obj0)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_CNTK__NDShape, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDShape_TotalSize" "', argument " "1"" of type '" "CNTK::NDShape const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDShape_total_size" "', argument " "1"" of type '" "CNTK::NDShape const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::NDShape * >(argp1);
   {
@@ -7822,7 +7822,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_NDShape_AsString(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_NDShape_as_string(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::NDShape *arg1 = (CNTK::NDShape *) 0 ;
   void *argp1 = 0 ;
@@ -7830,10 +7830,10 @@ SWIGINTERN PyObject *_wrap_NDShape_AsString(PyObject *SWIGUNUSEDPARM(self), PyOb
   PyObject * obj0 = 0 ;
   std::wstring result;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:NDShape_AsString",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:NDShape_as_string",&obj0)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_CNTK__NDShape, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDShape_AsString" "', argument " "1"" of type '" "CNTK::NDShape const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDShape_as_string" "', argument " "1"" of type '" "CNTK::NDShape const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::NDShape * >(argp1);
   {
@@ -8568,7 +8568,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_NDArrayView_Device(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_NDArrayView_device(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::NDArrayView *arg1 = (CNTK::NDArrayView *) 0 ;
   void *argp1 = 0 ;
@@ -8578,12 +8578,12 @@ SWIGINTERN PyObject *_wrap_NDArrayView_Device(PyObject *SWIGUNUSEDPARM(self), Py
   PyObject * obj0 = 0 ;
   SwigValueWrapper< CNTK::DeviceDescriptor > result;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:NDArrayView_Device",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:NDArrayView_device",&obj0)) SWIG_fail;
   {
     int newmem = 0;
     res1 = SWIG_ConvertPtrAndOwn(obj0, &argp1, SWIGTYPE_p_std__shared_ptrT_CNTK__NDArrayView_t, 0 |  0 , &newmem);
     if (!SWIG_IsOK(res1)) {
-      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDArrayView_Device" "', argument " "1"" of type '" "CNTK::NDArrayView const *""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDArrayView_device" "', argument " "1"" of type '" "CNTK::NDArrayView const *""'"); 
     }
     if (newmem & SWIG_CAST_NEW_MEMORY) {
       tempshared1 = *reinterpret_cast< std::shared_ptr< const CNTK::NDArrayView > * >(argp1);
@@ -8621,7 +8621,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_NDArrayView_GetDataType(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_NDArrayView_get_data_type(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::NDArrayView *arg1 = (CNTK::NDArrayView *) 0 ;
   void *argp1 = 0 ;
@@ -8631,12 +8631,12 @@ SWIGINTERN PyObject *_wrap_NDArrayView_GetDataType(PyObject *SWIGUNUSEDPARM(self
   PyObject * obj0 = 0 ;
   CNTK::DataType result;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:NDArrayView_GetDataType",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:NDArrayView_get_data_type",&obj0)) SWIG_fail;
   {
     int newmem = 0;
     res1 = SWIG_ConvertPtrAndOwn(obj0, &argp1, SWIGTYPE_p_std__shared_ptrT_CNTK__NDArrayView_t, 0 |  0 , &newmem);
     if (!SWIG_IsOK(res1)) {
-      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDArrayView_GetDataType" "', argument " "1"" of type '" "CNTK::NDArrayView const *""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDArrayView_get_data_type" "', argument " "1"" of type '" "CNTK::NDArrayView const *""'"); 
     }
     if (newmem & SWIG_CAST_NEW_MEMORY) {
       tempshared1 = *reinterpret_cast< std::shared_ptr< const CNTK::NDArrayView > * >(argp1);
@@ -8674,7 +8674,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_NDArrayView_GetStorageFormat(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_NDArrayView_get_storage_format(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::NDArrayView *arg1 = (CNTK::NDArrayView *) 0 ;
   void *argp1 = 0 ;
@@ -8684,12 +8684,12 @@ SWIGINTERN PyObject *_wrap_NDArrayView_GetStorageFormat(PyObject *SWIGUNUSEDPARM
   PyObject * obj0 = 0 ;
   CNTK::StorageFormat result;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:NDArrayView_GetStorageFormat",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:NDArrayView_get_storage_format",&obj0)) SWIG_fail;
   {
     int newmem = 0;
     res1 = SWIG_ConvertPtrAndOwn(obj0, &argp1, SWIGTYPE_p_std__shared_ptrT_CNTK__NDArrayView_t, 0 |  0 , &newmem);
     if (!SWIG_IsOK(res1)) {
-      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDArrayView_GetStorageFormat" "', argument " "1"" of type '" "CNTK::NDArrayView const *""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDArrayView_get_storage_format" "', argument " "1"" of type '" "CNTK::NDArrayView const *""'"); 
     }
     if (newmem & SWIG_CAST_NEW_MEMORY) {
       tempshared1 = *reinterpret_cast< std::shared_ptr< const CNTK::NDArrayView > * >(argp1);
@@ -8727,7 +8727,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_NDArrayView_Shape(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_NDArrayView_shape(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::NDArrayView *arg1 = (CNTK::NDArrayView *) 0 ;
   void *argp1 = 0 ;
@@ -8737,12 +8737,12 @@ SWIGINTERN PyObject *_wrap_NDArrayView_Shape(PyObject *SWIGUNUSEDPARM(self), PyO
   PyObject * obj0 = 0 ;
   CNTK::NDShape *result = 0 ;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:NDArrayView_Shape",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:NDArrayView_shape",&obj0)) SWIG_fail;
   {
     int newmem = 0;
     res1 = SWIG_ConvertPtrAndOwn(obj0, &argp1, SWIGTYPE_p_std__shared_ptrT_CNTK__NDArrayView_t, 0 |  0 , &newmem);
     if (!SWIG_IsOK(res1)) {
-      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDArrayView_Shape" "', argument " "1"" of type '" "CNTK::NDArrayView const *""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDArrayView_shape" "', argument " "1"" of type '" "CNTK::NDArrayView const *""'"); 
     }
     if (newmem & SWIG_CAST_NEW_MEMORY) {
       tempshared1 = *reinterpret_cast< std::shared_ptr< const CNTK::NDArrayView > * >(argp1);
@@ -8780,7 +8780,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_NDArrayView_IsSparse(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_NDArrayView_is_sparse(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::NDArrayView *arg1 = (CNTK::NDArrayView *) 0 ;
   void *argp1 = 0 ;
@@ -8790,12 +8790,12 @@ SWIGINTERN PyObject *_wrap_NDArrayView_IsSparse(PyObject *SWIGUNUSEDPARM(self), 
   PyObject * obj0 = 0 ;
   bool result;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:NDArrayView_IsSparse",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:NDArrayView_is_sparse",&obj0)) SWIG_fail;
   {
     int newmem = 0;
     res1 = SWIG_ConvertPtrAndOwn(obj0, &argp1, SWIGTYPE_p_std__shared_ptrT_CNTK__NDArrayView_t, 0 |  0 , &newmem);
     if (!SWIG_IsOK(res1)) {
-      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDArrayView_IsSparse" "', argument " "1"" of type '" "CNTK::NDArrayView const *""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDArrayView_is_sparse" "', argument " "1"" of type '" "CNTK::NDArrayView const *""'"); 
     }
     if (newmem & SWIG_CAST_NEW_MEMORY) {
       tempshared1 = *reinterpret_cast< std::shared_ptr< const CNTK::NDArrayView > * >(argp1);
@@ -8833,7 +8833,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_NDArrayView_IsReadOnly(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_NDArrayView_is_read_only(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::NDArrayView *arg1 = (CNTK::NDArrayView *) 0 ;
   void *argp1 = 0 ;
@@ -8843,12 +8843,12 @@ SWIGINTERN PyObject *_wrap_NDArrayView_IsReadOnly(PyObject *SWIGUNUSEDPARM(self)
   PyObject * obj0 = 0 ;
   bool result;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:NDArrayView_IsReadOnly",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:NDArrayView_is_read_only",&obj0)) SWIG_fail;
   {
     int newmem = 0;
     res1 = SWIG_ConvertPtrAndOwn(obj0, &argp1, SWIGTYPE_p_std__shared_ptrT_CNTK__NDArrayView_t, 0 |  0 , &newmem);
     if (!SWIG_IsOK(res1)) {
-      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDArrayView_IsReadOnly" "', argument " "1"" of type '" "CNTK::NDArrayView const *""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDArrayView_is_read_only" "', argument " "1"" of type '" "CNTK::NDArrayView const *""'"); 
     }
     if (newmem & SWIG_CAST_NEW_MEMORY) {
       tempshared1 = *reinterpret_cast< std::shared_ptr< const CNTK::NDArrayView > * >(argp1);
@@ -8886,7 +8886,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_NDArrayView_SetValue__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_NDArrayView_set_value__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::NDArrayView *arg1 = (CNTK::NDArrayView *) 0 ;
   float arg2 ;
@@ -8899,12 +8899,12 @@ SWIGINTERN PyObject *_wrap_NDArrayView_SetValue__SWIG_0(PyObject *SWIGUNUSEDPARM
   PyObject * obj0 = 0 ;
   PyObject * obj1 = 0 ;
   
-  if (!PyArg_ParseTuple(args,(char *)"OO:NDArrayView_SetValue",&obj0,&obj1)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OO:NDArrayView_set_value",&obj0,&obj1)) SWIG_fail;
   {
     int newmem = 0;
     res1 = SWIG_ConvertPtrAndOwn(obj0, &argp1, SWIGTYPE_p_std__shared_ptrT_CNTK__NDArrayView_t, 0 |  0 , &newmem);
     if (!SWIG_IsOK(res1)) {
-      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDArrayView_SetValue" "', argument " "1"" of type '" "CNTK::NDArrayView *""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDArrayView_set_value" "', argument " "1"" of type '" "CNTK::NDArrayView *""'"); 
     }
     if (newmem & SWIG_CAST_NEW_MEMORY) {
       tempshared1 = *reinterpret_cast< std::shared_ptr<  CNTK::NDArrayView > * >(argp1);
@@ -8917,7 +8917,7 @@ SWIGINTERN PyObject *_wrap_NDArrayView_SetValue__SWIG_0(PyObject *SWIGUNUSEDPARM
   }
   ecode2 = SWIG_AsVal_float(obj1, &val2);
   if (!SWIG_IsOK(ecode2)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "NDArrayView_SetValue" "', argument " "2"" of type '" "float""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "NDArrayView_set_value" "', argument " "2"" of type '" "float""'");
   } 
   arg2 = static_cast< float >(val2);
   {
@@ -8947,7 +8947,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_NDArrayView_SetValue__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_NDArrayView_set_value__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::NDArrayView *arg1 = (CNTK::NDArrayView *) 0 ;
   double arg2 ;
@@ -8960,12 +8960,12 @@ SWIGINTERN PyObject *_wrap_NDArrayView_SetValue__SWIG_1(PyObject *SWIGUNUSEDPARM
   PyObject * obj0 = 0 ;
   PyObject * obj1 = 0 ;
   
-  if (!PyArg_ParseTuple(args,(char *)"OO:NDArrayView_SetValue",&obj0,&obj1)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OO:NDArrayView_set_value",&obj0,&obj1)) SWIG_fail;
   {
     int newmem = 0;
     res1 = SWIG_ConvertPtrAndOwn(obj0, &argp1, SWIGTYPE_p_std__shared_ptrT_CNTK__NDArrayView_t, 0 |  0 , &newmem);
     if (!SWIG_IsOK(res1)) {
-      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDArrayView_SetValue" "', argument " "1"" of type '" "CNTK::NDArrayView *""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDArrayView_set_value" "', argument " "1"" of type '" "CNTK::NDArrayView *""'"); 
     }
     if (newmem & SWIG_CAST_NEW_MEMORY) {
       tempshared1 = *reinterpret_cast< std::shared_ptr<  CNTK::NDArrayView > * >(argp1);
@@ -8978,7 +8978,7 @@ SWIGINTERN PyObject *_wrap_NDArrayView_SetValue__SWIG_1(PyObject *SWIGUNUSEDPARM
   }
   ecode2 = SWIG_AsVal_double(obj1, &val2);
   if (!SWIG_IsOK(ecode2)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "NDArrayView_SetValue" "', argument " "2"" of type '" "double""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "NDArrayView_set_value" "', argument " "2"" of type '" "double""'");
   } 
   arg2 = static_cast< double >(val2);
   {
@@ -9008,7 +9008,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_NDArrayView_SetValue(PyObject *self, PyObject *args) {
+SWIGINTERN PyObject *_wrap_NDArrayView_set_value(PyObject *self, PyObject *args) {
   Py_ssize_t argc;
   PyObject *argv[3] = {
     0
@@ -9030,7 +9030,7 @@ SWIGINTERN PyObject *_wrap_NDArrayView_SetValue(PyObject *self, PyObject *args) 
         _v = SWIG_CheckState(res);
       }
       if (_v) {
-        return _wrap_NDArrayView_SetValue__SWIG_0(self, args);
+        return _wrap_NDArrayView_set_value__SWIG_0(self, args);
       }
     }
   }
@@ -9044,13 +9044,13 @@ SWIGINTERN PyObject *_wrap_NDArrayView_SetValue(PyObject *self, PyObject *args) 
         _v = SWIG_CheckState(res);
       }
       if (_v) {
-        return _wrap_NDArrayView_SetValue__SWIG_1(self, args);
+        return _wrap_NDArrayView_set_value__SWIG_1(self, args);
       }
     }
   }
   
 fail:
-  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'NDArrayView_SetValue'.\n"
+  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'NDArrayView_set_value'.\n"
     "  Possible C/C++ prototypes are:\n"
     "    CNTK::NDArrayView::SetValue(float)\n"
     "    CNTK::NDArrayView::SetValue(double)\n");
@@ -9058,7 +9058,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_NDArrayView_DeepClone__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_NDArrayView_deep_clone__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::NDArrayView *arg1 = (CNTK::NDArrayView *) 0 ;
   bool arg2 ;
@@ -9072,12 +9072,12 @@ SWIGINTERN PyObject *_wrap_NDArrayView_DeepClone__SWIG_0(PyObject *SWIGUNUSEDPAR
   PyObject * obj1 = 0 ;
   CNTK::NDArrayViewPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"OO:NDArrayView_DeepClone",&obj0,&obj1)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OO:NDArrayView_deep_clone",&obj0,&obj1)) SWIG_fail;
   {
     int newmem = 0;
     res1 = SWIG_ConvertPtrAndOwn(obj0, &argp1, SWIGTYPE_p_std__shared_ptrT_CNTK__NDArrayView_t, 0 |  0 , &newmem);
     if (!SWIG_IsOK(res1)) {
-      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDArrayView_DeepClone" "', argument " "1"" of type '" "CNTK::NDArrayView const *""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDArrayView_deep_clone" "', argument " "1"" of type '" "CNTK::NDArrayView const *""'"); 
     }
     if (newmem & SWIG_CAST_NEW_MEMORY) {
       tempshared1 = *reinterpret_cast< std::shared_ptr< const CNTK::NDArrayView > * >(argp1);
@@ -9090,7 +9090,7 @@ SWIGINTERN PyObject *_wrap_NDArrayView_DeepClone__SWIG_0(PyObject *SWIGUNUSEDPAR
   }
   ecode2 = SWIG_AsVal_bool(obj1, &val2);
   if (!SWIG_IsOK(ecode2)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "NDArrayView_DeepClone" "', argument " "2"" of type '" "bool""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "NDArrayView_deep_clone" "', argument " "2"" of type '" "bool""'");
   } 
   arg2 = static_cast< bool >(val2);
   {
@@ -9123,7 +9123,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_NDArrayView_DeepClone__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_NDArrayView_deep_clone__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::NDArrayView *arg1 = (CNTK::NDArrayView *) 0 ;
   void *argp1 = 0 ;
@@ -9133,12 +9133,12 @@ SWIGINTERN PyObject *_wrap_NDArrayView_DeepClone__SWIG_1(PyObject *SWIGUNUSEDPAR
   PyObject * obj0 = 0 ;
   CNTK::NDArrayViewPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:NDArrayView_DeepClone",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:NDArrayView_deep_clone",&obj0)) SWIG_fail;
   {
     int newmem = 0;
     res1 = SWIG_ConvertPtrAndOwn(obj0, &argp1, SWIGTYPE_p_std__shared_ptrT_CNTK__NDArrayView_t, 0 |  0 , &newmem);
     if (!SWIG_IsOK(res1)) {
-      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDArrayView_DeepClone" "', argument " "1"" of type '" "CNTK::NDArrayView const *""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDArrayView_deep_clone" "', argument " "1"" of type '" "CNTK::NDArrayView const *""'"); 
     }
     if (newmem & SWIG_CAST_NEW_MEMORY) {
       tempshared1 = *reinterpret_cast< std::shared_ptr< const CNTK::NDArrayView > * >(argp1);
@@ -9179,7 +9179,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_NDArrayView_DeepClone(PyObject *self, PyObject *args) {
+SWIGINTERN PyObject *_wrap_NDArrayView_deep_clone(PyObject *self, PyObject *args) {
   Py_ssize_t argc;
   PyObject *argv[3] = {
     0
@@ -9196,7 +9196,7 @@ SWIGINTERN PyObject *_wrap_NDArrayView_DeepClone(PyObject *self, PyObject *args)
     int res = SWIG_ConvertPtr(argv[0], 0, SWIGTYPE_p_std__shared_ptrT_CNTK__NDArrayView_t, 0);
     _v = SWIG_CheckState(res);
     if (_v) {
-      return _wrap_NDArrayView_DeepClone__SWIG_1(self, args);
+      return _wrap_NDArrayView_deep_clone__SWIG_1(self, args);
     }
   }
   if (argc == 2) {
@@ -9209,13 +9209,13 @@ SWIGINTERN PyObject *_wrap_NDArrayView_DeepClone(PyObject *self, PyObject *args)
         _v = SWIG_CheckState(res);
       }
       if (_v) {
-        return _wrap_NDArrayView_DeepClone__SWIG_0(self, args);
+        return _wrap_NDArrayView_deep_clone__SWIG_0(self, args);
       }
     }
   }
   
 fail:
-  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'NDArrayView_DeepClone'.\n"
+  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'NDArrayView_deep_clone'.\n"
     "  Possible C/C++ prototypes are:\n"
     "    CNTK::NDArrayView::DeepClone(bool) const\n"
     "    CNTK::NDArrayView::DeepClone() const\n");
@@ -9223,7 +9223,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_NDArrayView_Alias__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_NDArrayView_alias__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::NDArrayView *arg1 = (CNTK::NDArrayView *) 0 ;
   bool arg2 ;
@@ -9237,12 +9237,12 @@ SWIGINTERN PyObject *_wrap_NDArrayView_Alias__SWIG_0(PyObject *SWIGUNUSEDPARM(se
   PyObject * obj1 = 0 ;
   CNTK::NDArrayViewPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"OO:NDArrayView_Alias",&obj0,&obj1)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OO:NDArrayView_alias",&obj0,&obj1)) SWIG_fail;
   {
     int newmem = 0;
     res1 = SWIG_ConvertPtrAndOwn(obj0, &argp1, SWIGTYPE_p_std__shared_ptrT_CNTK__NDArrayView_t, 0 |  0 , &newmem);
     if (!SWIG_IsOK(res1)) {
-      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDArrayView_Alias" "', argument " "1"" of type '" "CNTK::NDArrayView const *""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDArrayView_alias" "', argument " "1"" of type '" "CNTK::NDArrayView const *""'"); 
     }
     if (newmem & SWIG_CAST_NEW_MEMORY) {
       tempshared1 = *reinterpret_cast< std::shared_ptr< const CNTK::NDArrayView > * >(argp1);
@@ -9255,7 +9255,7 @@ SWIGINTERN PyObject *_wrap_NDArrayView_Alias__SWIG_0(PyObject *SWIGUNUSEDPARM(se
   }
   ecode2 = SWIG_AsVal_bool(obj1, &val2);
   if (!SWIG_IsOK(ecode2)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "NDArrayView_Alias" "', argument " "2"" of type '" "bool""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "NDArrayView_alias" "', argument " "2"" of type '" "bool""'");
   } 
   arg2 = static_cast< bool >(val2);
   {
@@ -9288,7 +9288,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_NDArrayView_Alias__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_NDArrayView_alias__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::NDArrayView *arg1 = (CNTK::NDArrayView *) 0 ;
   void *argp1 = 0 ;
@@ -9298,12 +9298,12 @@ SWIGINTERN PyObject *_wrap_NDArrayView_Alias__SWIG_1(PyObject *SWIGUNUSEDPARM(se
   PyObject * obj0 = 0 ;
   CNTK::NDArrayViewPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:NDArrayView_Alias",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:NDArrayView_alias",&obj0)) SWIG_fail;
   {
     int newmem = 0;
     res1 = SWIG_ConvertPtrAndOwn(obj0, &argp1, SWIGTYPE_p_std__shared_ptrT_CNTK__NDArrayView_t, 0 |  0 , &newmem);
     if (!SWIG_IsOK(res1)) {
-      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDArrayView_Alias" "', argument " "1"" of type '" "CNTK::NDArrayView const *""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDArrayView_alias" "', argument " "1"" of type '" "CNTK::NDArrayView const *""'"); 
     }
     if (newmem & SWIG_CAST_NEW_MEMORY) {
       tempshared1 = *reinterpret_cast< std::shared_ptr< const CNTK::NDArrayView > * >(argp1);
@@ -9344,7 +9344,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_NDArrayView_Alias(PyObject *self, PyObject *args) {
+SWIGINTERN PyObject *_wrap_NDArrayView_alias(PyObject *self, PyObject *args) {
   Py_ssize_t argc;
   PyObject *argv[3] = {
     0
@@ -9361,7 +9361,7 @@ SWIGINTERN PyObject *_wrap_NDArrayView_Alias(PyObject *self, PyObject *args) {
     int res = SWIG_ConvertPtr(argv[0], 0, SWIGTYPE_p_std__shared_ptrT_CNTK__NDArrayView_t, 0);
     _v = SWIG_CheckState(res);
     if (_v) {
-      return _wrap_NDArrayView_Alias__SWIG_1(self, args);
+      return _wrap_NDArrayView_alias__SWIG_1(self, args);
     }
   }
   if (argc == 2) {
@@ -9374,13 +9374,13 @@ SWIGINTERN PyObject *_wrap_NDArrayView_Alias(PyObject *self, PyObject *args) {
         _v = SWIG_CheckState(res);
       }
       if (_v) {
-        return _wrap_NDArrayView_Alias__SWIG_0(self, args);
+        return _wrap_NDArrayView_alias__SWIG_0(self, args);
       }
     }
   }
   
 fail:
-  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'NDArrayView_Alias'.\n"
+  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'NDArrayView_alias'.\n"
     "  Possible C/C++ prototypes are:\n"
     "    CNTK::NDArrayView::Alias(bool) const\n"
     "    CNTK::NDArrayView::Alias() const\n");
@@ -9388,7 +9388,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_NDArrayView_CopyFrom(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_NDArrayView_copy_from(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::NDArrayView *arg1 = (CNTK::NDArrayView *) 0 ;
   CNTK::NDArrayView *arg2 = 0 ;
@@ -9402,12 +9402,12 @@ SWIGINTERN PyObject *_wrap_NDArrayView_CopyFrom(PyObject *SWIGUNUSEDPARM(self), 
   PyObject * obj0 = 0 ;
   PyObject * obj1 = 0 ;
   
-  if (!PyArg_ParseTuple(args,(char *)"OO:NDArrayView_CopyFrom",&obj0,&obj1)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OO:NDArrayView_copy_from",&obj0,&obj1)) SWIG_fail;
   {
     int newmem = 0;
     res1 = SWIG_ConvertPtrAndOwn(obj0, &argp1, SWIGTYPE_p_std__shared_ptrT_CNTK__NDArrayView_t, 0 |  0 , &newmem);
     if (!SWIG_IsOK(res1)) {
-      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDArrayView_CopyFrom" "', argument " "1"" of type '" "CNTK::NDArrayView *""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDArrayView_copy_from" "', argument " "1"" of type '" "CNTK::NDArrayView *""'"); 
     }
     if (newmem & SWIG_CAST_NEW_MEMORY) {
       tempshared1 = *reinterpret_cast< std::shared_ptr<  CNTK::NDArrayView > * >(argp1);
@@ -9422,10 +9422,10 @@ SWIGINTERN PyObject *_wrap_NDArrayView_CopyFrom(PyObject *SWIGUNUSEDPARM(self), 
     int newmem = 0;
     res2 = SWIG_ConvertPtrAndOwn(obj1, &argp2, SWIGTYPE_p_std__shared_ptrT_CNTK__NDArrayView_t,  0 , &newmem);
     if (!SWIG_IsOK(res2)) {
-      SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "NDArrayView_CopyFrom" "', argument " "2"" of type '" "CNTK::NDArrayView const &""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "NDArrayView_copy_from" "', argument " "2"" of type '" "CNTK::NDArrayView const &""'"); 
     }
     if (!argp2) {
-      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "NDArrayView_CopyFrom" "', argument " "2"" of type '" "CNTK::NDArrayView const &""'"); 
+      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "NDArrayView_copy_from" "', argument " "2"" of type '" "CNTK::NDArrayView const &""'"); 
     }
     if (newmem & SWIG_CAST_NEW_MEMORY) {
       tempshared2 = *reinterpret_cast< std::shared_ptr< const CNTK::NDArrayView > * >(argp2);
@@ -9714,7 +9714,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_NDArrayView_ToNumPy(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_NDArrayView_to_numpy(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::NDArrayView *arg1 = (CNTK::NDArrayView *) 0 ;
   void *argp1 = 0 ;
@@ -9724,12 +9724,12 @@ SWIGINTERN PyObject *_wrap_NDArrayView_ToNumPy(PyObject *SWIGUNUSEDPARM(self), P
   PyObject * obj0 = 0 ;
   PyObject *result = 0 ;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:NDArrayView_ToNumPy",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:NDArrayView_to_numpy",&obj0)) SWIG_fail;
   {
     int newmem = 0;
     res1 = SWIG_ConvertPtrAndOwn(obj0, &argp1, SWIGTYPE_p_std__shared_ptrT_CNTK__NDArrayView_t, 0 |  0 , &newmem);
     if (!SWIG_IsOK(res1)) {
-      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDArrayView_ToNumPy" "', argument " "1"" of type '" "CNTK::NDArrayView *""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDArrayView_to_numpy" "', argument " "1"" of type '" "CNTK::NDArrayView *""'"); 
     }
     if (newmem & SWIG_CAST_NEW_MEMORY) {
       tempshared1 = *reinterpret_cast< std::shared_ptr<  CNTK::NDArrayView > * >(argp1);
@@ -9742,7 +9742,7 @@ SWIGINTERN PyObject *_wrap_NDArrayView_ToNumPy(PyObject *SWIGUNUSEDPARM(self), P
   }
   {
     try {
-      result = (PyObject *)CNTK_NDArrayView_ToNumPy(arg1); 
+      result = (PyObject *)CNTK_NDArrayView_to_numpy(arg1); 
     }
     catch (Swig::DirectorException &e) {
       SWIG_exception(SWIG_RuntimeError,e.what()); 
@@ -11731,7 +11731,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_NDArrayView_RandomUniformFloat__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_NDArrayView_random_uniform_float__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::NDShape *arg1 = 0 ;
   double arg2 ;
@@ -11753,7 +11753,7 @@ SWIGINTERN PyObject *_wrap_NDArrayView_RandomUniformFloat__SWIG_0(PyObject *SWIG
   PyObject * obj4 = 0 ;
   CNTK::NDArrayViewPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"OOOOO:NDArrayView_RandomUniformFloat",&obj0,&obj1,&obj2,&obj3,&obj4)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OOOOO:NDArrayView_random_uniform_float",&obj0,&obj1,&obj2,&obj3,&obj4)) SWIG_fail;
   {
     if (PyTuple_Check(obj0)) {
       std::vector<size_t> dimensions;;
@@ -11769,25 +11769,25 @@ SWIGINTERN PyObject *_wrap_NDArrayView_RandomUniformFloat__SWIG_0(PyObject *SWIG
   }
   ecode2 = SWIG_AsVal_double(obj1, &val2);
   if (!SWIG_IsOK(ecode2)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "NDArrayView_RandomUniformFloat" "', argument " "2"" of type '" "double""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "NDArrayView_random_uniform_float" "', argument " "2"" of type '" "double""'");
   } 
   arg2 = static_cast< double >(val2);
   ecode3 = SWIG_AsVal_double(obj2, &val3);
   if (!SWIG_IsOK(ecode3)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "NDArrayView_RandomUniformFloat" "', argument " "3"" of type '" "double""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "NDArrayView_random_uniform_float" "', argument " "3"" of type '" "double""'");
   } 
   arg3 = static_cast< double >(val3);
   ecode4 = SWIG_AsVal_unsigned_SS_long(obj3, &val4);
   if (!SWIG_IsOK(ecode4)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode4), "in method '" "NDArrayView_RandomUniformFloat" "', argument " "4"" of type '" "unsigned long""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode4), "in method '" "NDArrayView_random_uniform_float" "', argument " "4"" of type '" "unsigned long""'");
   } 
   arg4 = static_cast< unsigned long >(val4);
   res5 = SWIG_ConvertPtr(obj4, &argp5, SWIGTYPE_p_CNTK__DeviceDescriptor,  0  | 0);
   if (!SWIG_IsOK(res5)) {
-    SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "NDArrayView_RandomUniformFloat" "', argument " "5"" of type '" "CNTK::DeviceDescriptor const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "NDArrayView_random_uniform_float" "', argument " "5"" of type '" "CNTK::DeviceDescriptor const &""'"); 
   }
   if (!argp5) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "NDArrayView_RandomUniformFloat" "', argument " "5"" of type '" "CNTK::DeviceDescriptor const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "NDArrayView_random_uniform_float" "', argument " "5"" of type '" "CNTK::DeviceDescriptor const &""'"); 
   }
   arg5 = reinterpret_cast< CNTK::DeviceDescriptor * >(argp5);
   {
@@ -11820,7 +11820,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_NDArrayView_RandomUniformFloat__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_NDArrayView_random_uniform_float__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::NDShape *arg1 = 0 ;
   double arg2 ;
@@ -11838,7 +11838,7 @@ SWIGINTERN PyObject *_wrap_NDArrayView_RandomUniformFloat__SWIG_1(PyObject *SWIG
   PyObject * obj3 = 0 ;
   CNTK::NDArrayViewPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"OOOO:NDArrayView_RandomUniformFloat",&obj0,&obj1,&obj2,&obj3)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OOOO:NDArrayView_random_uniform_float",&obj0,&obj1,&obj2,&obj3)) SWIG_fail;
   {
     if (PyTuple_Check(obj0)) {
       std::vector<size_t> dimensions;;
@@ -11854,17 +11854,17 @@ SWIGINTERN PyObject *_wrap_NDArrayView_RandomUniformFloat__SWIG_1(PyObject *SWIG
   }
   ecode2 = SWIG_AsVal_double(obj1, &val2);
   if (!SWIG_IsOK(ecode2)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "NDArrayView_RandomUniformFloat" "', argument " "2"" of type '" "double""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "NDArrayView_random_uniform_float" "', argument " "2"" of type '" "double""'");
   } 
   arg2 = static_cast< double >(val2);
   ecode3 = SWIG_AsVal_double(obj2, &val3);
   if (!SWIG_IsOK(ecode3)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "NDArrayView_RandomUniformFloat" "', argument " "3"" of type '" "double""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "NDArrayView_random_uniform_float" "', argument " "3"" of type '" "double""'");
   } 
   arg3 = static_cast< double >(val3);
   ecode4 = SWIG_AsVal_unsigned_SS_long(obj3, &val4);
   if (!SWIG_IsOK(ecode4)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode4), "in method '" "NDArrayView_RandomUniformFloat" "', argument " "4"" of type '" "unsigned long""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode4), "in method '" "NDArrayView_random_uniform_float" "', argument " "4"" of type '" "unsigned long""'");
   } 
   arg4 = static_cast< unsigned long >(val4);
   {
@@ -11897,7 +11897,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_NDArrayView_RandomUniformFloat__SWIG_2(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_NDArrayView_random_uniform_float__SWIG_2(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::NDShape *arg1 = 0 ;
   double arg2 ;
@@ -11911,7 +11911,7 @@ SWIGINTERN PyObject *_wrap_NDArrayView_RandomUniformFloat__SWIG_2(PyObject *SWIG
   PyObject * obj2 = 0 ;
   CNTK::NDArrayViewPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"OOO:NDArrayView_RandomUniformFloat",&obj0,&obj1,&obj2)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OOO:NDArrayView_random_uniform_float",&obj0,&obj1,&obj2)) SWIG_fail;
   {
     if (PyTuple_Check(obj0)) {
       std::vector<size_t> dimensions;;
@@ -11927,12 +11927,12 @@ SWIGINTERN PyObject *_wrap_NDArrayView_RandomUniformFloat__SWIG_2(PyObject *SWIG
   }
   ecode2 = SWIG_AsVal_double(obj1, &val2);
   if (!SWIG_IsOK(ecode2)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "NDArrayView_RandomUniformFloat" "', argument " "2"" of type '" "double""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "NDArrayView_random_uniform_float" "', argument " "2"" of type '" "double""'");
   } 
   arg2 = static_cast< double >(val2);
   ecode3 = SWIG_AsVal_double(obj2, &val3);
   if (!SWIG_IsOK(ecode3)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "NDArrayView_RandomUniformFloat" "', argument " "3"" of type '" "double""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "NDArrayView_random_uniform_float" "', argument " "3"" of type '" "double""'");
   } 
   arg3 = static_cast< double >(val3);
   {
@@ -11965,7 +11965,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_NDArrayView_RandomUniformFloat(PyObject *self, PyObject *args) {
+SWIGINTERN PyObject *_wrap_NDArrayView_random_uniform_float(PyObject *self, PyObject *args) {
   Py_ssize_t argc;
   PyObject *argv[6] = {
     0
@@ -11995,7 +11995,7 @@ SWIGINTERN PyObject *_wrap_NDArrayView_RandomUniformFloat(PyObject *self, PyObje
           _v = SWIG_CheckState(res);
         }
         if (_v) {
-          return _wrap_NDArrayView_RandomUniformFloat__SWIG_2(self, args);
+          return _wrap_NDArrayView_random_uniform_float__SWIG_2(self, args);
         }
       }
     }
@@ -12023,7 +12023,7 @@ SWIGINTERN PyObject *_wrap_NDArrayView_RandomUniformFloat(PyObject *self, PyObje
             _v = SWIG_CheckState(res);
           }
           if (_v) {
-            return _wrap_NDArrayView_RandomUniformFloat__SWIG_1(self, args);
+            return _wrap_NDArrayView_random_uniform_float__SWIG_1(self, args);
           }
         }
       }
@@ -12055,7 +12055,7 @@ SWIGINTERN PyObject *_wrap_NDArrayView_RandomUniformFloat(PyObject *self, PyObje
             int res = SWIG_ConvertPtr(argv[4], 0, SWIGTYPE_p_CNTK__DeviceDescriptor, 0);
             _v = SWIG_CheckState(res);
             if (_v) {
-              return _wrap_NDArrayView_RandomUniformFloat__SWIG_0(self, args);
+              return _wrap_NDArrayView_random_uniform_float__SWIG_0(self, args);
             }
           }
         }
@@ -12064,7 +12064,7 @@ SWIGINTERN PyObject *_wrap_NDArrayView_RandomUniformFloat(PyObject *self, PyObje
   }
   
 fail:
-  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'NDArrayView_RandomUniformFloat'.\n"
+  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'NDArrayView_random_uniform_float'.\n"
     "  Possible C/C++ prototypes are:\n"
     "    CNTK::NDArrayView::RandomUniform< float >(CNTK::NDShape const &,double,double,unsigned long,CNTK::DeviceDescriptor const &)\n"
     "    CNTK::NDArrayView::RandomUniform< float >(CNTK::NDShape const &,double,double,unsigned long)\n"
@@ -12073,7 +12073,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_NDArrayView_RandomUniformDouble__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_NDArrayView_random_uniform_double__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::NDShape *arg1 = 0 ;
   double arg2 ;
@@ -12095,7 +12095,7 @@ SWIGINTERN PyObject *_wrap_NDArrayView_RandomUniformDouble__SWIG_0(PyObject *SWI
   PyObject * obj4 = 0 ;
   CNTK::NDArrayViewPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"OOOOO:NDArrayView_RandomUniformDouble",&obj0,&obj1,&obj2,&obj3,&obj4)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OOOOO:NDArrayView_random_uniform_double",&obj0,&obj1,&obj2,&obj3,&obj4)) SWIG_fail;
   {
     if (PyTuple_Check(obj0)) {
       std::vector<size_t> dimensions;;
@@ -12111,25 +12111,25 @@ SWIGINTERN PyObject *_wrap_NDArrayView_RandomUniformDouble__SWIG_0(PyObject *SWI
   }
   ecode2 = SWIG_AsVal_double(obj1, &val2);
   if (!SWIG_IsOK(ecode2)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "NDArrayView_RandomUniformDouble" "', argument " "2"" of type '" "double""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "NDArrayView_random_uniform_double" "', argument " "2"" of type '" "double""'");
   } 
   arg2 = static_cast< double >(val2);
   ecode3 = SWIG_AsVal_double(obj2, &val3);
   if (!SWIG_IsOK(ecode3)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "NDArrayView_RandomUniformDouble" "', argument " "3"" of type '" "double""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "NDArrayView_random_uniform_double" "', argument " "3"" of type '" "double""'");
   } 
   arg3 = static_cast< double >(val3);
   ecode4 = SWIG_AsVal_unsigned_SS_long(obj3, &val4);
   if (!SWIG_IsOK(ecode4)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode4), "in method '" "NDArrayView_RandomUniformDouble" "', argument " "4"" of type '" "unsigned long""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode4), "in method '" "NDArrayView_random_uniform_double" "', argument " "4"" of type '" "unsigned long""'");
   } 
   arg4 = static_cast< unsigned long >(val4);
   res5 = SWIG_ConvertPtr(obj4, &argp5, SWIGTYPE_p_CNTK__DeviceDescriptor,  0  | 0);
   if (!SWIG_IsOK(res5)) {
-    SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "NDArrayView_RandomUniformDouble" "', argument " "5"" of type '" "CNTK::DeviceDescriptor const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "NDArrayView_random_uniform_double" "', argument " "5"" of type '" "CNTK::DeviceDescriptor const &""'"); 
   }
   if (!argp5) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "NDArrayView_RandomUniformDouble" "', argument " "5"" of type '" "CNTK::DeviceDescriptor const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "NDArrayView_random_uniform_double" "', argument " "5"" of type '" "CNTK::DeviceDescriptor const &""'"); 
   }
   arg5 = reinterpret_cast< CNTK::DeviceDescriptor * >(argp5);
   {
@@ -12162,7 +12162,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_NDArrayView_RandomUniformDouble__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_NDArrayView_random_uniform_double__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::NDShape *arg1 = 0 ;
   double arg2 ;
@@ -12180,7 +12180,7 @@ SWIGINTERN PyObject *_wrap_NDArrayView_RandomUniformDouble__SWIG_1(PyObject *SWI
   PyObject * obj3 = 0 ;
   CNTK::NDArrayViewPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"OOOO:NDArrayView_RandomUniformDouble",&obj0,&obj1,&obj2,&obj3)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OOOO:NDArrayView_random_uniform_double",&obj0,&obj1,&obj2,&obj3)) SWIG_fail;
   {
     if (PyTuple_Check(obj0)) {
       std::vector<size_t> dimensions;;
@@ -12196,17 +12196,17 @@ SWIGINTERN PyObject *_wrap_NDArrayView_RandomUniformDouble__SWIG_1(PyObject *SWI
   }
   ecode2 = SWIG_AsVal_double(obj1, &val2);
   if (!SWIG_IsOK(ecode2)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "NDArrayView_RandomUniformDouble" "', argument " "2"" of type '" "double""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "NDArrayView_random_uniform_double" "', argument " "2"" of type '" "double""'");
   } 
   arg2 = static_cast< double >(val2);
   ecode3 = SWIG_AsVal_double(obj2, &val3);
   if (!SWIG_IsOK(ecode3)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "NDArrayView_RandomUniformDouble" "', argument " "3"" of type '" "double""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "NDArrayView_random_uniform_double" "', argument " "3"" of type '" "double""'");
   } 
   arg3 = static_cast< double >(val3);
   ecode4 = SWIG_AsVal_unsigned_SS_long(obj3, &val4);
   if (!SWIG_IsOK(ecode4)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode4), "in method '" "NDArrayView_RandomUniformDouble" "', argument " "4"" of type '" "unsigned long""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode4), "in method '" "NDArrayView_random_uniform_double" "', argument " "4"" of type '" "unsigned long""'");
   } 
   arg4 = static_cast< unsigned long >(val4);
   {
@@ -12239,7 +12239,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_NDArrayView_RandomUniformDouble__SWIG_2(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_NDArrayView_random_uniform_double__SWIG_2(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::NDShape *arg1 = 0 ;
   double arg2 ;
@@ -12253,7 +12253,7 @@ SWIGINTERN PyObject *_wrap_NDArrayView_RandomUniformDouble__SWIG_2(PyObject *SWI
   PyObject * obj2 = 0 ;
   CNTK::NDArrayViewPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"OOO:NDArrayView_RandomUniformDouble",&obj0,&obj1,&obj2)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OOO:NDArrayView_random_uniform_double",&obj0,&obj1,&obj2)) SWIG_fail;
   {
     if (PyTuple_Check(obj0)) {
       std::vector<size_t> dimensions;;
@@ -12269,12 +12269,12 @@ SWIGINTERN PyObject *_wrap_NDArrayView_RandomUniformDouble__SWIG_2(PyObject *SWI
   }
   ecode2 = SWIG_AsVal_double(obj1, &val2);
   if (!SWIG_IsOK(ecode2)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "NDArrayView_RandomUniformDouble" "', argument " "2"" of type '" "double""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "NDArrayView_random_uniform_double" "', argument " "2"" of type '" "double""'");
   } 
   arg2 = static_cast< double >(val2);
   ecode3 = SWIG_AsVal_double(obj2, &val3);
   if (!SWIG_IsOK(ecode3)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "NDArrayView_RandomUniformDouble" "', argument " "3"" of type '" "double""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "NDArrayView_random_uniform_double" "', argument " "3"" of type '" "double""'");
   } 
   arg3 = static_cast< double >(val3);
   {
@@ -12307,7 +12307,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_NDArrayView_RandomUniformDouble(PyObject *self, PyObject *args) {
+SWIGINTERN PyObject *_wrap_NDArrayView_random_uniform_double(PyObject *self, PyObject *args) {
   Py_ssize_t argc;
   PyObject *argv[6] = {
     0
@@ -12337,7 +12337,7 @@ SWIGINTERN PyObject *_wrap_NDArrayView_RandomUniformDouble(PyObject *self, PyObj
           _v = SWIG_CheckState(res);
         }
         if (_v) {
-          return _wrap_NDArrayView_RandomUniformDouble__SWIG_2(self, args);
+          return _wrap_NDArrayView_random_uniform_double__SWIG_2(self, args);
         }
       }
     }
@@ -12365,7 +12365,7 @@ SWIGINTERN PyObject *_wrap_NDArrayView_RandomUniformDouble(PyObject *self, PyObj
             _v = SWIG_CheckState(res);
           }
           if (_v) {
-            return _wrap_NDArrayView_RandomUniformDouble__SWIG_1(self, args);
+            return _wrap_NDArrayView_random_uniform_double__SWIG_1(self, args);
           }
         }
       }
@@ -12397,7 +12397,7 @@ SWIGINTERN PyObject *_wrap_NDArrayView_RandomUniformDouble(PyObject *self, PyObj
             int res = SWIG_ConvertPtr(argv[4], 0, SWIGTYPE_p_CNTK__DeviceDescriptor, 0);
             _v = SWIG_CheckState(res);
             if (_v) {
-              return _wrap_NDArrayView_RandomUniformDouble__SWIG_0(self, args);
+              return _wrap_NDArrayView_random_uniform_double__SWIG_0(self, args);
             }
           }
         }
@@ -12406,7 +12406,7 @@ SWIGINTERN PyObject *_wrap_NDArrayView_RandomUniformDouble(PyObject *self, PyObj
   }
   
 fail:
-  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'NDArrayView_RandomUniformDouble'.\n"
+  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'NDArrayView_random_uniform_double'.\n"
     "  Possible C/C++ prototypes are:\n"
     "    CNTK::NDArrayView::RandomUniform< double >(CNTK::NDShape const &,double,double,unsigned long,CNTK::DeviceDescriptor const &)\n"
     "    CNTK::NDArrayView::RandomUniform< double >(CNTK::NDShape const &,double,double,unsigned long)\n"
@@ -12634,7 +12634,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_NDMask_MaskSection(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_NDMask_mask_section(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::NDMask *arg1 = (CNTK::NDMask *) 0 ;
   std::vector< size_t,std::allocator< size_t > > *arg2 = 0 ;
@@ -12648,12 +12648,12 @@ SWIGINTERN PyObject *_wrap_NDMask_MaskSection(PyObject *SWIGUNUSEDPARM(self), Py
   PyObject * obj1 = 0 ;
   PyObject * obj2 = 0 ;
   
-  if (!PyArg_ParseTuple(args,(char *)"OOO:NDMask_MaskSection",&obj0,&obj1,&obj2)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OOO:NDMask_mask_section",&obj0,&obj1,&obj2)) SWIG_fail;
   {
     int newmem = 0;
     res1 = SWIG_ConvertPtrAndOwn(obj0, &argp1, SWIGTYPE_p_std__shared_ptrT_CNTK__NDMask_t, 0 |  0 , &newmem);
     if (!SWIG_IsOK(res1)) {
-      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDMask_MaskSection" "', argument " "1"" of type '" "CNTK::NDMask *""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDMask_mask_section" "', argument " "1"" of type '" "CNTK::NDMask *""'"); 
     }
     if (newmem & SWIG_CAST_NEW_MEMORY) {
       tempshared1 = *reinterpret_cast< std::shared_ptr<  CNTK::NDMask > * >(argp1);
@@ -12668,10 +12668,10 @@ SWIGINTERN PyObject *_wrap_NDMask_MaskSection(PyObject *SWIGUNUSEDPARM(self), Py
     std::vector< size_t,std::allocator< size_t > > *ptr = (std::vector< size_t,std::allocator< size_t > > *)0;
     res2 = swig::asptr(obj1, &ptr);
     if (!SWIG_IsOK(res2)) {
-      SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "NDMask_MaskSection" "', argument " "2"" of type '" "std::vector< size_t,std::allocator< size_t > > const &""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "NDMask_mask_section" "', argument " "2"" of type '" "std::vector< size_t,std::allocator< size_t > > const &""'"); 
     }
     if (!ptr) {
-      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "NDMask_MaskSection" "', argument " "2"" of type '" "std::vector< size_t,std::allocator< size_t > > const &""'"); 
+      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "NDMask_mask_section" "', argument " "2"" of type '" "std::vector< size_t,std::allocator< size_t > > const &""'"); 
     }
     arg2 = ptr;
   }
@@ -12717,7 +12717,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_NDMask_Clear(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_NDMask_clear(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::NDMask *arg1 = (CNTK::NDMask *) 0 ;
   void *argp1 = 0 ;
@@ -12726,12 +12726,12 @@ SWIGINTERN PyObject *_wrap_NDMask_Clear(PyObject *SWIGUNUSEDPARM(self), PyObject
   std::shared_ptr< CNTK::NDMask > *smartarg1 = 0 ;
   PyObject * obj0 = 0 ;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:NDMask_Clear",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:NDMask_clear",&obj0)) SWIG_fail;
   {
     int newmem = 0;
     res1 = SWIG_ConvertPtrAndOwn(obj0, &argp1, SWIGTYPE_p_std__shared_ptrT_CNTK__NDMask_t, 0 |  0 , &newmem);
     if (!SWIG_IsOK(res1)) {
-      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDMask_Clear" "', argument " "1"" of type '" "CNTK::NDMask *""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDMask_clear" "', argument " "1"" of type '" "CNTK::NDMask *""'"); 
     }
     if (newmem & SWIG_CAST_NEW_MEMORY) {
       tempshared1 = *reinterpret_cast< std::shared_ptr<  CNTK::NDMask > * >(argp1);
@@ -12769,7 +12769,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_NDMask_MaskedCount(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_NDMask_masked_count(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::NDMask *arg1 = (CNTK::NDMask *) 0 ;
   void *argp1 = 0 ;
@@ -12779,12 +12779,12 @@ SWIGINTERN PyObject *_wrap_NDMask_MaskedCount(PyObject *SWIGUNUSEDPARM(self), Py
   PyObject * obj0 = 0 ;
   size_t result;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:NDMask_MaskedCount",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:NDMask_masked_count",&obj0)) SWIG_fail;
   {
     int newmem = 0;
     res1 = SWIG_ConvertPtrAndOwn(obj0, &argp1, SWIGTYPE_p_std__shared_ptrT_CNTK__NDMask_t, 0 |  0 , &newmem);
     if (!SWIG_IsOK(res1)) {
-      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDMask_MaskedCount" "', argument " "1"" of type '" "CNTK::NDMask const *""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDMask_masked_count" "', argument " "1"" of type '" "CNTK::NDMask const *""'"); 
     }
     if (newmem & SWIG_CAST_NEW_MEMORY) {
       tempshared1 = *reinterpret_cast< std::shared_ptr< const CNTK::NDMask > * >(argp1);
@@ -12822,7 +12822,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_NDMask_Device(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_NDMask_device(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::NDMask *arg1 = (CNTK::NDMask *) 0 ;
   void *argp1 = 0 ;
@@ -12832,12 +12832,12 @@ SWIGINTERN PyObject *_wrap_NDMask_Device(PyObject *SWIGUNUSEDPARM(self), PyObjec
   PyObject * obj0 = 0 ;
   SwigValueWrapper< CNTK::DeviceDescriptor > result;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:NDMask_Device",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:NDMask_device",&obj0)) SWIG_fail;
   {
     int newmem = 0;
     res1 = SWIG_ConvertPtrAndOwn(obj0, &argp1, SWIGTYPE_p_std__shared_ptrT_CNTK__NDMask_t, 0 |  0 , &newmem);
     if (!SWIG_IsOK(res1)) {
-      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDMask_Device" "', argument " "1"" of type '" "CNTK::NDMask const *""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDMask_device" "', argument " "1"" of type '" "CNTK::NDMask const *""'"); 
     }
     if (newmem & SWIG_CAST_NEW_MEMORY) {
       tempshared1 = *reinterpret_cast< std::shared_ptr< const CNTK::NDMask > * >(argp1);
@@ -12875,7 +12875,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_NDMask_Shape(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_NDMask_shape(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::NDMask *arg1 = (CNTK::NDMask *) 0 ;
   void *argp1 = 0 ;
@@ -12885,12 +12885,12 @@ SWIGINTERN PyObject *_wrap_NDMask_Shape(PyObject *SWIGUNUSEDPARM(self), PyObject
   PyObject * obj0 = 0 ;
   CNTK::NDShape *result = 0 ;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:NDMask_Shape",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:NDMask_shape",&obj0)) SWIG_fail;
   {
     int newmem = 0;
     res1 = SWIG_ConvertPtrAndOwn(obj0, &argp1, SWIGTYPE_p_std__shared_ptrT_CNTK__NDMask_t, 0 |  0 , &newmem);
     if (!SWIG_IsOK(res1)) {
-      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDMask_Shape" "', argument " "1"" of type '" "CNTK::NDMask const *""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDMask_shape" "', argument " "1"" of type '" "CNTK::NDMask const *""'"); 
     }
     if (newmem & SWIG_CAST_NEW_MEMORY) {
       tempshared1 = *reinterpret_cast< std::shared_ptr< const CNTK::NDMask > * >(argp1);
@@ -12928,7 +12928,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_NDMask_DataBuffer(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_NDMask_data_buffer(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::NDMask *arg1 = (CNTK::NDMask *) 0 ;
   void *argp1 = 0 ;
@@ -12938,12 +12938,12 @@ SWIGINTERN PyObject *_wrap_NDMask_DataBuffer(PyObject *SWIGUNUSEDPARM(self), PyO
   PyObject * obj0 = 0 ;
   char *result = 0 ;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:NDMask_DataBuffer",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:NDMask_data_buffer",&obj0)) SWIG_fail;
   {
     int newmem = 0;
     res1 = SWIG_ConvertPtrAndOwn(obj0, &argp1, SWIGTYPE_p_std__shared_ptrT_CNTK__NDMask_t, 0 |  0 , &newmem);
     if (!SWIG_IsOK(res1)) {
-      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDMask_DataBuffer" "', argument " "1"" of type '" "CNTK::NDMask const *""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDMask_data_buffer" "', argument " "1"" of type '" "CNTK::NDMask const *""'"); 
     }
     if (newmem & SWIG_CAST_NEW_MEMORY) {
       tempshared1 = *reinterpret_cast< std::shared_ptr< const CNTK::NDMask > * >(argp1);
@@ -12981,7 +12981,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_NDMask_DeepClone(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_NDMask_deep_clone(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::NDMask *arg1 = (CNTK::NDMask *) 0 ;
   void *argp1 = 0 ;
@@ -12991,12 +12991,12 @@ SWIGINTERN PyObject *_wrap_NDMask_DeepClone(PyObject *SWIGUNUSEDPARM(self), PyOb
   PyObject * obj0 = 0 ;
   CNTK::NDMaskPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:NDMask_DeepClone",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:NDMask_deep_clone",&obj0)) SWIG_fail;
   {
     int newmem = 0;
     res1 = SWIG_ConvertPtrAndOwn(obj0, &argp1, SWIGTYPE_p_std__shared_ptrT_CNTK__NDMask_t, 0 |  0 , &newmem);
     if (!SWIG_IsOK(res1)) {
-      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDMask_DeepClone" "', argument " "1"" of type '" "CNTK::NDMask const *""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDMask_deep_clone" "', argument " "1"" of type '" "CNTK::NDMask const *""'"); 
     }
     if (newmem & SWIG_CAST_NEW_MEMORY) {
       tempshared1 = *reinterpret_cast< std::shared_ptr< const CNTK::NDMask > * >(argp1);
@@ -13037,7 +13037,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_NDMask_Alias(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_NDMask_alias(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::NDMask *arg1 = (CNTK::NDMask *) 0 ;
   void *argp1 = 0 ;
@@ -13047,12 +13047,12 @@ SWIGINTERN PyObject *_wrap_NDMask_Alias(PyObject *SWIGUNUSEDPARM(self), PyObject
   PyObject * obj0 = 0 ;
   CNTK::NDMaskPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:NDMask_Alias",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:NDMask_alias",&obj0)) SWIG_fail;
   {
     int newmem = 0;
     res1 = SWIG_ConvertPtrAndOwn(obj0, &argp1, SWIGTYPE_p_std__shared_ptrT_CNTK__NDMask_t, 0 |  0 , &newmem);
     if (!SWIG_IsOK(res1)) {
-      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDMask_Alias" "', argument " "1"" of type '" "CNTK::NDMask const *""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDMask_alias" "', argument " "1"" of type '" "CNTK::NDMask const *""'"); 
     }
     if (newmem & SWIG_CAST_NEW_MEMORY) {
       tempshared1 = *reinterpret_cast< std::shared_ptr< const CNTK::NDMask > * >(argp1);
@@ -13093,7 +13093,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_NDMask_CopyFrom(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_NDMask_copy_from(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::NDMask *arg1 = (CNTK::NDMask *) 0 ;
   CNTK::NDMask *arg2 = 0 ;
@@ -13107,12 +13107,12 @@ SWIGINTERN PyObject *_wrap_NDMask_CopyFrom(PyObject *SWIGUNUSEDPARM(self), PyObj
   PyObject * obj0 = 0 ;
   PyObject * obj1 = 0 ;
   
-  if (!PyArg_ParseTuple(args,(char *)"OO:NDMask_CopyFrom",&obj0,&obj1)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OO:NDMask_copy_from",&obj0,&obj1)) SWIG_fail;
   {
     int newmem = 0;
     res1 = SWIG_ConvertPtrAndOwn(obj0, &argp1, SWIGTYPE_p_std__shared_ptrT_CNTK__NDMask_t, 0 |  0 , &newmem);
     if (!SWIG_IsOK(res1)) {
-      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDMask_CopyFrom" "', argument " "1"" of type '" "CNTK::NDMask *""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDMask_copy_from" "', argument " "1"" of type '" "CNTK::NDMask *""'"); 
     }
     if (newmem & SWIG_CAST_NEW_MEMORY) {
       tempshared1 = *reinterpret_cast< std::shared_ptr<  CNTK::NDMask > * >(argp1);
@@ -13127,10 +13127,10 @@ SWIGINTERN PyObject *_wrap_NDMask_CopyFrom(PyObject *SWIGUNUSEDPARM(self), PyObj
     int newmem = 0;
     res2 = SWIG_ConvertPtrAndOwn(obj1, &argp2, SWIGTYPE_p_std__shared_ptrT_CNTK__NDMask_t,  0 , &newmem);
     if (!SWIG_IsOK(res2)) {
-      SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "NDMask_CopyFrom" "', argument " "2"" of type '" "CNTK::NDMask const &""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "NDMask_copy_from" "', argument " "2"" of type '" "CNTK::NDMask const &""'"); 
     }
     if (!argp2) {
-      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "NDMask_CopyFrom" "', argument " "2"" of type '" "CNTK::NDMask const &""'"); 
+      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "NDMask_copy_from" "', argument " "2"" of type '" "CNTK::NDMask const &""'"); 
     }
     if (newmem & SWIG_CAST_NEW_MEMORY) {
       tempshared2 = *reinterpret_cast< std::shared_ptr< const CNTK::NDMask > * >(argp2);
@@ -13167,7 +13167,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_NDMask_ToNumPy(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_NDMask_to_numpy(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::NDMask *arg1 = (CNTK::NDMask *) 0 ;
   void *argp1 = 0 ;
@@ -13177,12 +13177,12 @@ SWIGINTERN PyObject *_wrap_NDMask_ToNumPy(PyObject *SWIGUNUSEDPARM(self), PyObje
   PyObject * obj0 = 0 ;
   PyObject *result = 0 ;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:NDMask_ToNumPy",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:NDMask_to_numpy",&obj0)) SWIG_fail;
   {
     int newmem = 0;
     res1 = SWIG_ConvertPtrAndOwn(obj0, &argp1, SWIGTYPE_p_std__shared_ptrT_CNTK__NDMask_t, 0 |  0 , &newmem);
     if (!SWIG_IsOK(res1)) {
-      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDMask_ToNumPy" "', argument " "1"" of type '" "CNTK::NDMask *""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDMask_to_numpy" "', argument " "1"" of type '" "CNTK::NDMask *""'"); 
     }
     if (newmem & SWIG_CAST_NEW_MEMORY) {
       tempshared1 = *reinterpret_cast< std::shared_ptr<  CNTK::NDMask > * >(argp1);
@@ -13195,7 +13195,7 @@ SWIGINTERN PyObject *_wrap_NDMask_ToNumPy(PyObject *SWIGUNUSEDPARM(self), PyObje
   }
   {
     try {
-      result = (PyObject *)CNTK_NDMask_ToNumPy(arg1); 
+      result = (PyObject *)CNTK_NDMask_to_numpy(arg1); 
     }
     catch (Swig::DirectorException &e) {
       SWIG_exception(SWIG_RuntimeError,e.what()); 
@@ -13448,7 +13448,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Value_Data(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_Value_data(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Value *arg1 = (CNTK::Value *) 0 ;
   void *argp1 = 0 ;
@@ -13458,12 +13458,12 @@ SWIGINTERN PyObject *_wrap_Value_Data(PyObject *SWIGUNUSEDPARM(self), PyObject *
   PyObject * obj0 = 0 ;
   CNTK::NDArrayViewPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:Value_Data",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:Value_data",&obj0)) SWIG_fail;
   {
     int newmem = 0;
     res1 = SWIG_ConvertPtrAndOwn(obj0, &argp1, SWIGTYPE_p_std__shared_ptrT_CNTK__Value_t, 0 |  0 , &newmem);
     if (!SWIG_IsOK(res1)) {
-      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Value_Data" "', argument " "1"" of type '" "CNTK::Value const *""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Value_data" "', argument " "1"" of type '" "CNTK::Value const *""'"); 
     }
     if (newmem & SWIG_CAST_NEW_MEMORY) {
       tempshared1 = *reinterpret_cast< std::shared_ptr< const CNTK::Value > * >(argp1);
@@ -13504,7 +13504,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Value_Mask(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_Value_mask(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Value *arg1 = (CNTK::Value *) 0 ;
   void *argp1 = 0 ;
@@ -13514,12 +13514,12 @@ SWIGINTERN PyObject *_wrap_Value_Mask(PyObject *SWIGUNUSEDPARM(self), PyObject *
   PyObject * obj0 = 0 ;
   CNTK::NDMaskPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:Value_Mask",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:Value_mask",&obj0)) SWIG_fail;
   {
     int newmem = 0;
     res1 = SWIG_ConvertPtrAndOwn(obj0, &argp1, SWIGTYPE_p_std__shared_ptrT_CNTK__Value_t, 0 |  0 , &newmem);
     if (!SWIG_IsOK(res1)) {
-      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Value_Mask" "', argument " "1"" of type '" "CNTK::Value const *""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Value_mask" "', argument " "1"" of type '" "CNTK::Value const *""'"); 
     }
     if (newmem & SWIG_CAST_NEW_MEMORY) {
       tempshared1 = *reinterpret_cast< std::shared_ptr< const CNTK::Value > * >(argp1);
@@ -13560,7 +13560,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Value_DeepClone__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_Value_deep_clone__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Value *arg1 = (CNTK::Value *) 0 ;
   bool arg2 ;
@@ -13574,12 +13574,12 @@ SWIGINTERN PyObject *_wrap_Value_DeepClone__SWIG_0(PyObject *SWIGUNUSEDPARM(self
   PyObject * obj1 = 0 ;
   CNTK::ValuePtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"OO:Value_DeepClone",&obj0,&obj1)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OO:Value_deep_clone",&obj0,&obj1)) SWIG_fail;
   {
     int newmem = 0;
     res1 = SWIG_ConvertPtrAndOwn(obj0, &argp1, SWIGTYPE_p_std__shared_ptrT_CNTK__Value_t, 0 |  0 , &newmem);
     if (!SWIG_IsOK(res1)) {
-      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Value_DeepClone" "', argument " "1"" of type '" "CNTK::Value const *""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Value_deep_clone" "', argument " "1"" of type '" "CNTK::Value const *""'"); 
     }
     if (newmem & SWIG_CAST_NEW_MEMORY) {
       tempshared1 = *reinterpret_cast< std::shared_ptr< const CNTK::Value > * >(argp1);
@@ -13592,7 +13592,7 @@ SWIGINTERN PyObject *_wrap_Value_DeepClone__SWIG_0(PyObject *SWIGUNUSEDPARM(self
   }
   ecode2 = SWIG_AsVal_bool(obj1, &val2);
   if (!SWIG_IsOK(ecode2)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "Value_DeepClone" "', argument " "2"" of type '" "bool""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "Value_deep_clone" "', argument " "2"" of type '" "bool""'");
   } 
   arg2 = static_cast< bool >(val2);
   {
@@ -13625,7 +13625,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Value_DeepClone__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_Value_deep_clone__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Value *arg1 = (CNTK::Value *) 0 ;
   void *argp1 = 0 ;
@@ -13635,12 +13635,12 @@ SWIGINTERN PyObject *_wrap_Value_DeepClone__SWIG_1(PyObject *SWIGUNUSEDPARM(self
   PyObject * obj0 = 0 ;
   CNTK::ValuePtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:Value_DeepClone",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:Value_deep_clone",&obj0)) SWIG_fail;
   {
     int newmem = 0;
     res1 = SWIG_ConvertPtrAndOwn(obj0, &argp1, SWIGTYPE_p_std__shared_ptrT_CNTK__Value_t, 0 |  0 , &newmem);
     if (!SWIG_IsOK(res1)) {
-      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Value_DeepClone" "', argument " "1"" of type '" "CNTK::Value const *""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Value_deep_clone" "', argument " "1"" of type '" "CNTK::Value const *""'"); 
     }
     if (newmem & SWIG_CAST_NEW_MEMORY) {
       tempshared1 = *reinterpret_cast< std::shared_ptr< const CNTK::Value > * >(argp1);
@@ -13681,7 +13681,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Value_DeepClone(PyObject *self, PyObject *args) {
+SWIGINTERN PyObject *_wrap_Value_deep_clone(PyObject *self, PyObject *args) {
   Py_ssize_t argc;
   PyObject *argv[3] = {
     0
@@ -13698,7 +13698,7 @@ SWIGINTERN PyObject *_wrap_Value_DeepClone(PyObject *self, PyObject *args) {
     int res = SWIG_ConvertPtr(argv[0], 0, SWIGTYPE_p_std__shared_ptrT_CNTK__Value_t, 0);
     _v = SWIG_CheckState(res);
     if (_v) {
-      return _wrap_Value_DeepClone__SWIG_1(self, args);
+      return _wrap_Value_deep_clone__SWIG_1(self, args);
     }
   }
   if (argc == 2) {
@@ -13711,13 +13711,13 @@ SWIGINTERN PyObject *_wrap_Value_DeepClone(PyObject *self, PyObject *args) {
         _v = SWIG_CheckState(res);
       }
       if (_v) {
-        return _wrap_Value_DeepClone__SWIG_0(self, args);
+        return _wrap_Value_deep_clone__SWIG_0(self, args);
       }
     }
   }
   
 fail:
-  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'Value_DeepClone'.\n"
+  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'Value_deep_clone'.\n"
     "  Possible C/C++ prototypes are:\n"
     "    CNTK::Value::DeepClone(bool) const\n"
     "    CNTK::Value::DeepClone() const\n");
@@ -13725,7 +13725,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Value_Alias__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_Value_alias__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Value *arg1 = (CNTK::Value *) 0 ;
   bool arg2 ;
@@ -13739,12 +13739,12 @@ SWIGINTERN PyObject *_wrap_Value_Alias__SWIG_0(PyObject *SWIGUNUSEDPARM(self), P
   PyObject * obj1 = 0 ;
   CNTK::ValuePtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"OO:Value_Alias",&obj0,&obj1)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OO:Value_alias",&obj0,&obj1)) SWIG_fail;
   {
     int newmem = 0;
     res1 = SWIG_ConvertPtrAndOwn(obj0, &argp1, SWIGTYPE_p_std__shared_ptrT_CNTK__Value_t, 0 |  0 , &newmem);
     if (!SWIG_IsOK(res1)) {
-      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Value_Alias" "', argument " "1"" of type '" "CNTK::Value const *""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Value_alias" "', argument " "1"" of type '" "CNTK::Value const *""'"); 
     }
     if (newmem & SWIG_CAST_NEW_MEMORY) {
       tempshared1 = *reinterpret_cast< std::shared_ptr< const CNTK::Value > * >(argp1);
@@ -13757,7 +13757,7 @@ SWIGINTERN PyObject *_wrap_Value_Alias__SWIG_0(PyObject *SWIGUNUSEDPARM(self), P
   }
   ecode2 = SWIG_AsVal_bool(obj1, &val2);
   if (!SWIG_IsOK(ecode2)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "Value_Alias" "', argument " "2"" of type '" "bool""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "Value_alias" "', argument " "2"" of type '" "bool""'");
   } 
   arg2 = static_cast< bool >(val2);
   {
@@ -13790,7 +13790,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Value_Alias__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_Value_alias__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Value *arg1 = (CNTK::Value *) 0 ;
   void *argp1 = 0 ;
@@ -13800,12 +13800,12 @@ SWIGINTERN PyObject *_wrap_Value_Alias__SWIG_1(PyObject *SWIGUNUSEDPARM(self), P
   PyObject * obj0 = 0 ;
   CNTK::ValuePtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:Value_Alias",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:Value_alias",&obj0)) SWIG_fail;
   {
     int newmem = 0;
     res1 = SWIG_ConvertPtrAndOwn(obj0, &argp1, SWIGTYPE_p_std__shared_ptrT_CNTK__Value_t, 0 |  0 , &newmem);
     if (!SWIG_IsOK(res1)) {
-      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Value_Alias" "', argument " "1"" of type '" "CNTK::Value const *""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Value_alias" "', argument " "1"" of type '" "CNTK::Value const *""'"); 
     }
     if (newmem & SWIG_CAST_NEW_MEMORY) {
       tempshared1 = *reinterpret_cast< std::shared_ptr< const CNTK::Value > * >(argp1);
@@ -13846,7 +13846,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Value_Alias(PyObject *self, PyObject *args) {
+SWIGINTERN PyObject *_wrap_Value_alias(PyObject *self, PyObject *args) {
   Py_ssize_t argc;
   PyObject *argv[3] = {
     0
@@ -13863,7 +13863,7 @@ SWIGINTERN PyObject *_wrap_Value_Alias(PyObject *self, PyObject *args) {
     int res = SWIG_ConvertPtr(argv[0], 0, SWIGTYPE_p_std__shared_ptrT_CNTK__Value_t, 0);
     _v = SWIG_CheckState(res);
     if (_v) {
-      return _wrap_Value_Alias__SWIG_1(self, args);
+      return _wrap_Value_alias__SWIG_1(self, args);
     }
   }
   if (argc == 2) {
@@ -13876,13 +13876,13 @@ SWIGINTERN PyObject *_wrap_Value_Alias(PyObject *self, PyObject *args) {
         _v = SWIG_CheckState(res);
       }
       if (_v) {
-        return _wrap_Value_Alias__SWIG_0(self, args);
+        return _wrap_Value_alias__SWIG_0(self, args);
       }
     }
   }
   
 fail:
-  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'Value_Alias'.\n"
+  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'Value_alias'.\n"
     "  Possible C/C++ prototypes are:\n"
     "    CNTK::Value::Alias(bool) const\n"
     "    CNTK::Value::Alias() const\n");
@@ -13890,7 +13890,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Value_CopyFrom(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_Value_copy_from(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Value *arg1 = (CNTK::Value *) 0 ;
   CNTK::Value *arg2 = 0 ;
@@ -13904,12 +13904,12 @@ SWIGINTERN PyObject *_wrap_Value_CopyFrom(PyObject *SWIGUNUSEDPARM(self), PyObje
   PyObject * obj0 = 0 ;
   PyObject * obj1 = 0 ;
   
-  if (!PyArg_ParseTuple(args,(char *)"OO:Value_CopyFrom",&obj0,&obj1)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OO:Value_copy_from",&obj0,&obj1)) SWIG_fail;
   {
     int newmem = 0;
     res1 = SWIG_ConvertPtrAndOwn(obj0, &argp1, SWIGTYPE_p_std__shared_ptrT_CNTK__Value_t, 0 |  0 , &newmem);
     if (!SWIG_IsOK(res1)) {
-      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Value_CopyFrom" "', argument " "1"" of type '" "CNTK::Value *""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Value_copy_from" "', argument " "1"" of type '" "CNTK::Value *""'"); 
     }
     if (newmem & SWIG_CAST_NEW_MEMORY) {
       tempshared1 = *reinterpret_cast< std::shared_ptr<  CNTK::Value > * >(argp1);
@@ -13924,10 +13924,10 @@ SWIGINTERN PyObject *_wrap_Value_CopyFrom(PyObject *SWIGUNUSEDPARM(self), PyObje
     int newmem = 0;
     res2 = SWIG_ConvertPtrAndOwn(obj1, &argp2, SWIGTYPE_p_std__shared_ptrT_CNTK__Value_t,  0 , &newmem);
     if (!SWIG_IsOK(res2)) {
-      SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "Value_CopyFrom" "', argument " "2"" of type '" "CNTK::Value const &""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "Value_copy_from" "', argument " "2"" of type '" "CNTK::Value const &""'"); 
     }
     if (!argp2) {
-      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Value_CopyFrom" "', argument " "2"" of type '" "CNTK::Value const &""'"); 
+      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Value_copy_from" "', argument " "2"" of type '" "CNTK::Value const &""'"); 
     }
     if (newmem & SWIG_CAST_NEW_MEMORY) {
       tempshared2 = *reinterpret_cast< std::shared_ptr< const CNTK::Value > * >(argp2);
@@ -14060,7 +14060,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Axis_IsStaticAxis(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_Axis_is_static_axis(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Axis *arg1 = (CNTK::Axis *) 0 ;
   void *argp1 = 0 ;
@@ -14068,10 +14068,10 @@ SWIGINTERN PyObject *_wrap_Axis_IsStaticAxis(PyObject *SWIGUNUSEDPARM(self), PyO
   PyObject * obj0 = 0 ;
   bool result;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:Axis_IsStaticAxis",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:Axis_is_static_axis",&obj0)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_CNTK__Axis, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Axis_IsStaticAxis" "', argument " "1"" of type '" "CNTK::Axis const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Axis_is_static_axis" "', argument " "1"" of type '" "CNTK::Axis const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Axis * >(argp1);
   {
@@ -14101,7 +14101,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Axis_StaticAxisIndex(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_Axis_static_axis_index(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Axis *arg1 = (CNTK::Axis *) 0 ;
   void *argp1 = 0 ;
@@ -14109,10 +14109,10 @@ SWIGINTERN PyObject *_wrap_Axis_StaticAxisIndex(PyObject *SWIGUNUSEDPARM(self), 
   PyObject * obj0 = 0 ;
   size_t result;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:Axis_StaticAxisIndex",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:Axis_static_axis_index",&obj0)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_CNTK__Axis, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Axis_StaticAxisIndex" "', argument " "1"" of type '" "CNTK::Axis const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Axis_static_axis_index" "', argument " "1"" of type '" "CNTK::Axis const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Axis * >(argp1);
   {
@@ -14142,11 +14142,11 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Axis_DefaultDynamicAxis(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_Axis_default_dynamic_axis(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Axis *result = 0 ;
   
-  if (!PyArg_ParseTuple(args,(char *)":Axis_DefaultDynamicAxis")) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)":Axis_default_dynamic_axis")) SWIG_fail;
   {
     try {
       result = (CNTK::Axis *) &CNTK::Axis::DefaultDynamicAxis(); 
@@ -14174,11 +14174,11 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Axis_BatchAxis(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_Axis_batch_axis(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Axis *result = 0 ;
   
-  if (!PyArg_ParseTuple(args,(char *)":Axis_BatchAxis")) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)":Axis_batch_axis")) SWIG_fail;
   {
     try {
       result = (CNTK::Axis *) &CNTK::Axis::BatchAxis(); 
@@ -14206,11 +14206,11 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Axis_AllAxes(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_Axis_all_axes(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Axis *result = 0 ;
   
-  if (!PyArg_ParseTuple(args,(char *)":Axis_AllAxes")) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)":Axis_all_axes")) SWIG_fail;
   {
     try {
       result = (CNTK::Axis *) &CNTK::Axis::AllAxes(); 
@@ -14238,7 +14238,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Axis_Name(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_Axis_name(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Axis *arg1 = (CNTK::Axis *) 0 ;
   void *argp1 = 0 ;
@@ -14246,10 +14246,10 @@ SWIGINTERN PyObject *_wrap_Axis_Name(PyObject *SWIGUNUSEDPARM(self), PyObject *a
   PyObject * obj0 = 0 ;
   std::wstring *result = 0 ;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:Axis_Name",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:Axis_name",&obj0)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_CNTK__Axis, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Axis_Name" "', argument " "1"" of type '" "CNTK::Axis const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Axis_name" "', argument " "1"" of type '" "CNTK::Axis const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Axis * >(argp1);
   {
@@ -15803,7 +15803,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Variable_Shape(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_Variable_shape(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = (CNTK::Variable *) 0 ;
   void *argp1 = 0 ;
@@ -15811,10 +15811,10 @@ SWIGINTERN PyObject *_wrap_Variable_Shape(PyObject *SWIGUNUSEDPARM(self), PyObje
   PyObject * obj0 = 0 ;
   CNTK::NDShape *result = 0 ;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:Variable_Shape",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:Variable_shape",&obj0)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_CNTK__Variable, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Variable_Shape" "', argument " "1"" of type '" "CNTK::Variable const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Variable_shape" "', argument " "1"" of type '" "CNTK::Variable const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
   {
@@ -15844,7 +15844,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Variable_DynamicAxes(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_Variable_dynamic_axes(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = (CNTK::Variable *) 0 ;
   void *argp1 = 0 ;
@@ -15852,10 +15852,10 @@ SWIGINTERN PyObject *_wrap_Variable_DynamicAxes(PyObject *SWIGUNUSEDPARM(self), 
   PyObject * obj0 = 0 ;
   std::vector< CNTK::Axis,std::allocator< CNTK::Axis > > *result = 0 ;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:Variable_DynamicAxes",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:Variable_dynamic_axes",&obj0)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_CNTK__Variable, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Variable_DynamicAxes" "', argument " "1"" of type '" "CNTK::Variable const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Variable_dynamic_axes" "', argument " "1"" of type '" "CNTK::Variable const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
   {
@@ -15885,7 +15885,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Variable_Kind(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_Variable_kind(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = (CNTK::Variable *) 0 ;
   void *argp1 = 0 ;
@@ -15893,10 +15893,10 @@ SWIGINTERN PyObject *_wrap_Variable_Kind(PyObject *SWIGUNUSEDPARM(self), PyObjec
   PyObject * obj0 = 0 ;
   CNTK::VariableKind result;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:Variable_Kind",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:Variable_kind",&obj0)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_CNTK__Variable, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Variable_Kind" "', argument " "1"" of type '" "CNTK::Variable const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Variable_kind" "', argument " "1"" of type '" "CNTK::Variable const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
   {
@@ -15926,7 +15926,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Variable_IsSparse(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_Variable_is_sparse(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = (CNTK::Variable *) 0 ;
   void *argp1 = 0 ;
@@ -15934,10 +15934,10 @@ SWIGINTERN PyObject *_wrap_Variable_IsSparse(PyObject *SWIGUNUSEDPARM(self), PyO
   PyObject * obj0 = 0 ;
   bool result;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:Variable_IsSparse",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:Variable_is_sparse",&obj0)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_CNTK__Variable, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Variable_IsSparse" "', argument " "1"" of type '" "CNTK::Variable const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Variable_is_sparse" "', argument " "1"" of type '" "CNTK::Variable const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
   {
@@ -15967,7 +15967,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Variable_IsInput(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_Variable_is_input(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = (CNTK::Variable *) 0 ;
   void *argp1 = 0 ;
@@ -15975,10 +15975,10 @@ SWIGINTERN PyObject *_wrap_Variable_IsInput(PyObject *SWIGUNUSEDPARM(self), PyOb
   PyObject * obj0 = 0 ;
   bool result;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:Variable_IsInput",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:Variable_is_input",&obj0)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_CNTK__Variable, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Variable_IsInput" "', argument " "1"" of type '" "CNTK::Variable const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Variable_is_input" "', argument " "1"" of type '" "CNTK::Variable const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
   {
@@ -16008,7 +16008,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Variable_IsOutput(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_Variable_is_output(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = (CNTK::Variable *) 0 ;
   void *argp1 = 0 ;
@@ -16016,10 +16016,10 @@ SWIGINTERN PyObject *_wrap_Variable_IsOutput(PyObject *SWIGUNUSEDPARM(self), PyO
   PyObject * obj0 = 0 ;
   bool result;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:Variable_IsOutput",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:Variable_is_output",&obj0)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_CNTK__Variable, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Variable_IsOutput" "', argument " "1"" of type '" "CNTK::Variable const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Variable_is_output" "', argument " "1"" of type '" "CNTK::Variable const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
   {
@@ -16049,7 +16049,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Variable_IsParameter(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_Variable_is_parameter(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = (CNTK::Variable *) 0 ;
   void *argp1 = 0 ;
@@ -16057,10 +16057,10 @@ SWIGINTERN PyObject *_wrap_Variable_IsParameter(PyObject *SWIGUNUSEDPARM(self), 
   PyObject * obj0 = 0 ;
   bool result;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:Variable_IsParameter",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:Variable_is_parameter",&obj0)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_CNTK__Variable, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Variable_IsParameter" "', argument " "1"" of type '" "CNTK::Variable const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Variable_is_parameter" "', argument " "1"" of type '" "CNTK::Variable const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
   {
@@ -16090,7 +16090,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Variable_IsConstant(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_Variable_is_constant(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = (CNTK::Variable *) 0 ;
   void *argp1 = 0 ;
@@ -16098,10 +16098,10 @@ SWIGINTERN PyObject *_wrap_Variable_IsConstant(PyObject *SWIGUNUSEDPARM(self), P
   PyObject * obj0 = 0 ;
   bool result;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:Variable_IsConstant",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:Variable_is_constant",&obj0)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_CNTK__Variable, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Variable_IsConstant" "', argument " "1"" of type '" "CNTK::Variable const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Variable_is_constant" "', argument " "1"" of type '" "CNTK::Variable const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
   {
@@ -16131,7 +16131,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Variable_IsPlaceholder(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_Variable_is_placeholder(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = (CNTK::Variable *) 0 ;
   void *argp1 = 0 ;
@@ -16139,10 +16139,10 @@ SWIGINTERN PyObject *_wrap_Variable_IsPlaceholder(PyObject *SWIGUNUSEDPARM(self)
   PyObject * obj0 = 0 ;
   bool result;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:Variable_IsPlaceholder",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:Variable_is_placeholder",&obj0)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_CNTK__Variable, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Variable_IsPlaceholder" "', argument " "1"" of type '" "CNTK::Variable const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Variable_is_placeholder" "', argument " "1"" of type '" "CNTK::Variable const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
   {
@@ -16172,7 +16172,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Variable_Name(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_Variable_name(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = (CNTK::Variable *) 0 ;
   void *argp1 = 0 ;
@@ -16180,10 +16180,10 @@ SWIGINTERN PyObject *_wrap_Variable_Name(PyObject *SWIGUNUSEDPARM(self), PyObjec
   PyObject * obj0 = 0 ;
   std::wstring *result = 0 ;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:Variable_Name",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:Variable_name",&obj0)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_CNTK__Variable, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Variable_Name" "', argument " "1"" of type '" "CNTK::Variable const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Variable_name" "', argument " "1"" of type '" "CNTK::Variable const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
   {
@@ -16213,7 +16213,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Variable_Owner(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_Variable_owner(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = (CNTK::Variable *) 0 ;
   void *argp1 = 0 ;
@@ -16221,10 +16221,10 @@ SWIGINTERN PyObject *_wrap_Variable_Owner(PyObject *SWIGUNUSEDPARM(self), PyObje
   PyObject * obj0 = 0 ;
   CNTK::FunctionPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:Variable_Owner",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:Variable_owner",&obj0)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_CNTK__Variable, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Variable_Owner" "', argument " "1"" of type '" "CNTK::Variable const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Variable_owner" "', argument " "1"" of type '" "CNTK::Variable const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
   {
@@ -16257,7 +16257,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Variable_GetDataType(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_Variable_get_data_type(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = (CNTK::Variable *) 0 ;
   void *argp1 = 0 ;
@@ -16265,10 +16265,10 @@ SWIGINTERN PyObject *_wrap_Variable_GetDataType(PyObject *SWIGUNUSEDPARM(self), 
   PyObject * obj0 = 0 ;
   CNTK::DataType result;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:Variable_GetDataType",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:Variable_get_data_type",&obj0)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_CNTK__Variable, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Variable_GetDataType" "', argument " "1"" of type '" "CNTK::Variable const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Variable_get_data_type" "', argument " "1"" of type '" "CNTK::Variable const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
   {
@@ -16298,7 +16298,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Variable_NeedsGradient(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_Variable_needs_gradient(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = (CNTK::Variable *) 0 ;
   void *argp1 = 0 ;
@@ -16306,10 +16306,10 @@ SWIGINTERN PyObject *_wrap_Variable_NeedsGradient(PyObject *SWIGUNUSEDPARM(self)
   PyObject * obj0 = 0 ;
   bool result;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:Variable_NeedsGradient",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:Variable_needs_gradient",&obj0)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_CNTK__Variable, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Variable_NeedsGradient" "', argument " "1"" of type '" "CNTK::Variable const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Variable_needs_gradient" "', argument " "1"" of type '" "CNTK::Variable const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
   {
@@ -16795,7 +16795,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Parameter_Value(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_Parameter_value(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Parameter *arg1 = (CNTK::Parameter *) 0 ;
   void *argp1 = 0 ;
@@ -16803,10 +16803,10 @@ SWIGINTERN PyObject *_wrap_Parameter_Value(PyObject *SWIGUNUSEDPARM(self), PyObj
   PyObject * obj0 = 0 ;
   CNTK::NDArrayViewPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:Parameter_Value",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:Parameter_value",&obj0)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_CNTK__Parameter, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Parameter_Value" "', argument " "1"" of type '" "CNTK::Parameter const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Parameter_value" "', argument " "1"" of type '" "CNTK::Parameter const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Parameter * >(argp1);
   {
@@ -17110,7 +17110,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Constant_Value(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_Constant_value(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Constant *arg1 = (CNTK::Constant *) 0 ;
   void *argp1 = 0 ;
@@ -17118,10 +17118,10 @@ SWIGINTERN PyObject *_wrap_Constant_Value(PyObject *SWIGUNUSEDPARM(self), PyObje
   PyObject * obj0 = 0 ;
   CNTK::NDArrayViewPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:Constant_Value",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:Constant_value",&obj0)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_CNTK__Constant, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Constant_Value" "', argument " "1"" of type '" "CNTK::Constant const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Constant_value" "', argument " "1"" of type '" "CNTK::Constant const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Constant * >(argp1);
   {
@@ -18069,7 +18069,7 @@ SWIGINTERN PyObject *Placeholder_swigregister(PyObject *SWIGUNUSEDPARM(self), Py
   return SWIG_Py_Void();
 }
 
-SWIGINTERN PyObject *_wrap_BackPropState_Function(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_BackPropState_function(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::BackPropState *arg1 = (CNTK::BackPropState *) 0 ;
   void *argp1 = 0 ;
@@ -18079,12 +18079,12 @@ SWIGINTERN PyObject *_wrap_BackPropState_Function(PyObject *SWIGUNUSEDPARM(self)
   PyObject * obj0 = 0 ;
   CNTK::FunctionPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:BackPropState_Function",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:BackPropState_function",&obj0)) SWIG_fail;
   {
     int newmem = 0;
     res1 = SWIG_ConvertPtrAndOwn(obj0, &argp1, SWIGTYPE_p_std__shared_ptrT_CNTK__BackPropState_t, 0 |  0 , &newmem);
     if (!SWIG_IsOK(res1)) {
-      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "BackPropState_Function" "', argument " "1"" of type '" "CNTK::BackPropState const *""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "BackPropState_function" "', argument " "1"" of type '" "CNTK::BackPropState const *""'"); 
     }
     if (newmem & SWIG_CAST_NEW_MEMORY) {
       tempshared1 = *reinterpret_cast< std::shared_ptr< const CNTK::BackPropState > * >(argp1);
@@ -18184,7 +18184,7 @@ SWIGINTERN PyObject *BackPropState_swigregister(PyObject *SWIGUNUSEDPARM(self), 
   return SWIG_Py_Void();
 }
 
-SWIGINTERN PyObject *_wrap_Function_Forward__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_Function_forward__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Function *arg1 = (CNTK::Function *) 0 ;
   std::unordered_map< CNTK::Variable,CNTK::ValuePtr > *arg2 = 0 ;
@@ -18204,12 +18204,12 @@ SWIGINTERN PyObject *_wrap_Function_Forward__SWIG_0(PyObject *SWIGUNUSEDPARM(sel
   PyObject * obj4 = 0 ;
   CNTK::BackPropStatePtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"OOOOO:Function_Forward",&obj0,&obj1,&obj2,&obj3,&obj4)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OOOOO:Function_forward",&obj0,&obj1,&obj2,&obj3,&obj4)) SWIG_fail;
   {
     int newmem = 0;
     res1 = SWIG_ConvertPtrAndOwn(obj0, &argp1, SWIGTYPE_p_std__shared_ptrT_CNTK__Function_t, 0 |  0 , &newmem);
     if (!SWIG_IsOK(res1)) {
-      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Function_Forward" "', argument " "1"" of type '" "CNTK::Function *""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Function_forward" "', argument " "1"" of type '" "CNTK::Function *""'"); 
     }
     if (newmem & SWIG_CAST_NEW_MEMORY) {
       tempshared1 = *reinterpret_cast< std::shared_ptr<  CNTK::Function > * >(argp1);
@@ -18304,10 +18304,10 @@ SWIGINTERN PyObject *_wrap_Function_Forward__SWIG_0(PyObject *SWIGUNUSEDPARM(sel
   }
   res4 = SWIG_ConvertPtr(obj3, &argp4, SWIGTYPE_p_CNTK__DeviceDescriptor,  0  | 0);
   if (!SWIG_IsOK(res4)) {
-    SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "Function_Forward" "', argument " "4"" of type '" "CNTK::DeviceDescriptor const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "Function_forward" "', argument " "4"" of type '" "CNTK::DeviceDescriptor const &""'"); 
   }
   if (!argp4) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Function_Forward" "', argument " "4"" of type '" "CNTK::DeviceDescriptor const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Function_forward" "', argument " "4"" of type '" "CNTK::DeviceDescriptor const &""'"); 
   }
   arg4 = reinterpret_cast< CNTK::DeviceDescriptor * >(argp4);
   {
@@ -18483,7 +18483,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Function_Forward__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_Function_forward__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Function *arg1 = (CNTK::Function *) 0 ;
   std::unordered_map< CNTK::Variable,CNTK::ValuePtr > *arg2 = 0 ;
@@ -18501,12 +18501,12 @@ SWIGINTERN PyObject *_wrap_Function_Forward__SWIG_1(PyObject *SWIGUNUSEDPARM(sel
   PyObject * obj3 = 0 ;
   CNTK::BackPropStatePtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"OOOO:Function_Forward",&obj0,&obj1,&obj2,&obj3)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OOOO:Function_forward",&obj0,&obj1,&obj2,&obj3)) SWIG_fail;
   {
     int newmem = 0;
     res1 = SWIG_ConvertPtrAndOwn(obj0, &argp1, SWIGTYPE_p_std__shared_ptrT_CNTK__Function_t, 0 |  0 , &newmem);
     if (!SWIG_IsOK(res1)) {
-      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Function_Forward" "', argument " "1"" of type '" "CNTK::Function *""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Function_forward" "', argument " "1"" of type '" "CNTK::Function *""'"); 
     }
     if (newmem & SWIG_CAST_NEW_MEMORY) {
       tempshared1 = *reinterpret_cast< std::shared_ptr<  CNTK::Function > * >(argp1);
@@ -18601,10 +18601,10 @@ SWIGINTERN PyObject *_wrap_Function_Forward__SWIG_1(PyObject *SWIGUNUSEDPARM(sel
   }
   res4 = SWIG_ConvertPtr(obj3, &argp4, SWIGTYPE_p_CNTK__DeviceDescriptor,  0  | 0);
   if (!SWIG_IsOK(res4)) {
-    SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "Function_Forward" "', argument " "4"" of type '" "CNTK::DeviceDescriptor const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "Function_forward" "', argument " "4"" of type '" "CNTK::DeviceDescriptor const &""'"); 
   }
   if (!argp4) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Function_Forward" "', argument " "4"" of type '" "CNTK::DeviceDescriptor const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Function_forward" "', argument " "4"" of type '" "CNTK::DeviceDescriptor const &""'"); 
   }
   arg4 = reinterpret_cast< CNTK::DeviceDescriptor * >(argp4);
   {
@@ -18739,7 +18739,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Function_Forward__SWIG_2(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_Function_forward__SWIG_2(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Function *arg1 = (CNTK::Function *) 0 ;
   std::unordered_map< CNTK::Variable,CNTK::ValuePtr > *arg2 = 0 ;
@@ -18753,12 +18753,12 @@ SWIGINTERN PyObject *_wrap_Function_Forward__SWIG_2(PyObject *SWIGUNUSEDPARM(sel
   PyObject * obj2 = 0 ;
   CNTK::BackPropStatePtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"OOO:Function_Forward",&obj0,&obj1,&obj2)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OOO:Function_forward",&obj0,&obj1,&obj2)) SWIG_fail;
   {
     int newmem = 0;
     res1 = SWIG_ConvertPtrAndOwn(obj0, &argp1, SWIGTYPE_p_std__shared_ptrT_CNTK__Function_t, 0 |  0 , &newmem);
     if (!SWIG_IsOK(res1)) {
-      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Function_Forward" "', argument " "1"" of type '" "CNTK::Function *""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Function_forward" "', argument " "1"" of type '" "CNTK::Function *""'"); 
     }
     if (newmem & SWIG_CAST_NEW_MEMORY) {
       tempshared1 = *reinterpret_cast< std::shared_ptr<  CNTK::Function > * >(argp1);
@@ -18983,7 +18983,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Function_Forward(PyObject *self, PyObject *args) {
+SWIGINTERN PyObject *_wrap_Function_forward(PyObject *self, PyObject *args) {
   Py_ssize_t argc;
   PyObject *argv[6] = {
     0
@@ -19012,7 +19012,7 @@ SWIGINTERN PyObject *_wrap_Function_Forward(PyObject *self, PyObject *args) {
           _v = PyDict_Check(argv[2]) ? 1 : 0;
         }
         if (_v) {
-          return _wrap_Function_Forward__SWIG_2(self, args);
+          return _wrap_Function_forward__SWIG_2(self, args);
         }
       }
     }
@@ -19037,7 +19037,7 @@ SWIGINTERN PyObject *_wrap_Function_Forward(PyObject *self, PyObject *args) {
           int res = SWIG_ConvertPtr(argv[3], 0, SWIGTYPE_p_CNTK__DeviceDescriptor, 0);
           _v = SWIG_CheckState(res);
           if (_v) {
-            return _wrap_Function_Forward__SWIG_1(self, args);
+            return _wrap_Function_forward__SWIG_1(self, args);
           }
         }
       }
@@ -19069,7 +19069,7 @@ SWIGINTERN PyObject *_wrap_Function_Forward(PyObject *self, PyObject *args) {
               _v = PySet_Check(argv[4]) ? 1 : 0;
             }
             if (_v) {
-              return _wrap_Function_Forward__SWIG_0(self, args);
+              return _wrap_Function_forward__SWIG_0(self, args);
             }
           }
         }
@@ -19078,7 +19078,7 @@ SWIGINTERN PyObject *_wrap_Function_Forward(PyObject *self, PyObject *args) {
   }
   
 fail:
-  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'Function_Forward'.\n"
+  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'Function_forward'.\n"
     "  Possible C/C++ prototypes are:\n"
     "    CNTK::Function::Forward(std::unordered_map< CNTK::Variable,CNTK::ValuePtr > const &,std::unordered_map< CNTK::Variable,CNTK::ValuePtr > &,CNTK::DeviceDescriptor const &,std::unordered_set< CNTK::Variable > const &)\n"
     "    CNTK::Function::Forward(std::unordered_map< CNTK::Variable,CNTK::ValuePtr > const &,std::unordered_map< CNTK::Variable,CNTK::ValuePtr > &,CNTK::DeviceDescriptor const &)\n"
@@ -19087,7 +19087,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Function_Backward(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_Function_backward(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Function *arg1 = (CNTK::Function *) 0 ;
   CNTK::BackPropStatePtr *arg2 = 0 ;
@@ -19105,12 +19105,12 @@ SWIGINTERN PyObject *_wrap_Function_Backward(PyObject *SWIGUNUSEDPARM(self), PyO
   PyObject * obj2 = 0 ;
   PyObject * obj3 = 0 ;
   
-  if (!PyArg_ParseTuple(args,(char *)"OOOO:Function_Backward",&obj0,&obj1,&obj2,&obj3)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OOOO:Function_backward",&obj0,&obj1,&obj2,&obj3)) SWIG_fail;
   {
     int newmem = 0;
     res1 = SWIG_ConvertPtrAndOwn(obj0, &argp1, SWIGTYPE_p_std__shared_ptrT_CNTK__Function_t, 0 |  0 , &newmem);
     if (!SWIG_IsOK(res1)) {
-      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Function_Backward" "', argument " "1"" of type '" "CNTK::Function *""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Function_backward" "', argument " "1"" of type '" "CNTK::Function *""'"); 
     }
     if (newmem & SWIG_CAST_NEW_MEMORY) {
       tempshared1 = *reinterpret_cast< std::shared_ptr<  CNTK::Function > * >(argp1);
@@ -19125,7 +19125,7 @@ SWIGINTERN PyObject *_wrap_Function_Backward(PyObject *SWIGUNUSEDPARM(self), PyO
     int newmem = 0;
     res2 = SWIG_ConvertPtrAndOwn(obj1, &argp2, SWIGTYPE_p_std__shared_ptrT_CNTK__BackPropState_t,  0 , &newmem);
     if (!SWIG_IsOK(res2)) {
-      SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "Function_Backward" "', argument " "2"" of type '" "CNTK::BackPropStatePtr const &""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "Function_backward" "', argument " "2"" of type '" "CNTK::BackPropStatePtr const &""'"); 
     }
     if (newmem & SWIG_CAST_NEW_MEMORY) {
       if (argp2) tempshared2 = *reinterpret_cast< CNTK::BackPropStatePtr * >(argp2);
@@ -19398,7 +19398,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Function_Name(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_Function_name(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Function *arg1 = (CNTK::Function *) 0 ;
   void *argp1 = 0 ;
@@ -19408,12 +19408,12 @@ SWIGINTERN PyObject *_wrap_Function_Name(PyObject *SWIGUNUSEDPARM(self), PyObjec
   PyObject * obj0 = 0 ;
   std::wstring *result = 0 ;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:Function_Name",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:Function_name",&obj0)) SWIG_fail;
   {
     int newmem = 0;
     res1 = SWIG_ConvertPtrAndOwn(obj0, &argp1, SWIGTYPE_p_std__shared_ptrT_CNTK__Function_t, 0 |  0 , &newmem);
     if (!SWIG_IsOK(res1)) {
-      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Function_Name" "', argument " "1"" of type '" "CNTK::Function const *""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Function_name" "', argument " "1"" of type '" "CNTK::Function const *""'"); 
     }
     if (newmem & SWIG_CAST_NEW_MEMORY) {
       tempshared1 = *reinterpret_cast< std::shared_ptr< const CNTK::Function > * >(argp1);
@@ -19451,7 +19451,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Function_RootFunction(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_Function_root_function(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Function *arg1 = (CNTK::Function *) 0 ;
   void *argp1 = 0 ;
@@ -19461,12 +19461,12 @@ SWIGINTERN PyObject *_wrap_Function_RootFunction(PyObject *SWIGUNUSEDPARM(self),
   PyObject * obj0 = 0 ;
   CNTK::FunctionPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:Function_RootFunction",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:Function_root_function",&obj0)) SWIG_fail;
   {
     int newmem = 0;
     res1 = SWIG_ConvertPtrAndOwn(obj0, &argp1, SWIGTYPE_p_std__shared_ptrT_CNTK__Function_t, 0 |  0 , &newmem);
     if (!SWIG_IsOK(res1)) {
-      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Function_RootFunction" "', argument " "1"" of type '" "CNTK::Function const *""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Function_root_function" "', argument " "1"" of type '" "CNTK::Function const *""'"); 
     }
     if (newmem & SWIG_CAST_NEW_MEMORY) {
       tempshared1 = *reinterpret_cast< std::shared_ptr< const CNTK::Function > * >(argp1);
@@ -19507,7 +19507,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Function_Inputs(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_Function_inputs(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Function *arg1 = (CNTK::Function *) 0 ;
   void *argp1 = 0 ;
@@ -19517,12 +19517,12 @@ SWIGINTERN PyObject *_wrap_Function_Inputs(PyObject *SWIGUNUSEDPARM(self), PyObj
   PyObject * obj0 = 0 ;
   std::vector< CNTK::Variable,std::allocator< CNTK::Variable > > result;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:Function_Inputs",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:Function_inputs",&obj0)) SWIG_fail;
   {
     int newmem = 0;
     res1 = SWIG_ConvertPtrAndOwn(obj0, &argp1, SWIGTYPE_p_std__shared_ptrT_CNTK__Function_t, 0 |  0 , &newmem);
     if (!SWIG_IsOK(res1)) {
-      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Function_Inputs" "', argument " "1"" of type '" "CNTK::Function const *""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Function_inputs" "', argument " "1"" of type '" "CNTK::Function const *""'"); 
     }
     if (newmem & SWIG_CAST_NEW_MEMORY) {
       tempshared1 = *reinterpret_cast< std::shared_ptr< const CNTK::Function > * >(argp1);
@@ -19560,7 +19560,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Function_Output(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_Function_output(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Function *arg1 = (CNTK::Function *) 0 ;
   void *argp1 = 0 ;
@@ -19570,12 +19570,12 @@ SWIGINTERN PyObject *_wrap_Function_Output(PyObject *SWIGUNUSEDPARM(self), PyObj
   PyObject * obj0 = 0 ;
   CNTK::Variable result;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:Function_Output",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:Function_output",&obj0)) SWIG_fail;
   {
     int newmem = 0;
     res1 = SWIG_ConvertPtrAndOwn(obj0, &argp1, SWIGTYPE_p_std__shared_ptrT_CNTK__Function_t, 0 |  0 , &newmem);
     if (!SWIG_IsOK(res1)) {
-      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Function_Output" "', argument " "1"" of type '" "CNTK::Function const *""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Function_output" "', argument " "1"" of type '" "CNTK::Function const *""'"); 
     }
     if (newmem & SWIG_CAST_NEW_MEMORY) {
       tempshared1 = *reinterpret_cast< std::shared_ptr< const CNTK::Function > * >(argp1);
@@ -19613,7 +19613,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Function_Outputs(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_Function_outputs(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Function *arg1 = (CNTK::Function *) 0 ;
   void *argp1 = 0 ;
@@ -19623,12 +19623,12 @@ SWIGINTERN PyObject *_wrap_Function_Outputs(PyObject *SWIGUNUSEDPARM(self), PyOb
   PyObject * obj0 = 0 ;
   std::vector< CNTK::Variable,std::allocator< CNTK::Variable > > *result = 0 ;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:Function_Outputs",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:Function_outputs",&obj0)) SWIG_fail;
   {
     int newmem = 0;
     res1 = SWIG_ConvertPtrAndOwn(obj0, &argp1, SWIGTYPE_p_std__shared_ptrT_CNTK__Function_t, 0 |  0 , &newmem);
     if (!SWIG_IsOK(res1)) {
-      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Function_Outputs" "', argument " "1"" of type '" "CNTK::Function const *""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Function_outputs" "', argument " "1"" of type '" "CNTK::Function const *""'"); 
     }
     if (newmem & SWIG_CAST_NEW_MEMORY) {
       tempshared1 = *reinterpret_cast< std::shared_ptr< const CNTK::Function > * >(argp1);
@@ -19666,7 +19666,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Function_Arguments(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_Function_arguments(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Function *arg1 = (CNTK::Function *) 0 ;
   void *argp1 = 0 ;
@@ -19676,12 +19676,12 @@ SWIGINTERN PyObject *_wrap_Function_Arguments(PyObject *SWIGUNUSEDPARM(self), Py
   PyObject * obj0 = 0 ;
   SwigValueWrapper< std::unordered_set< CNTK::Variable > > result;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:Function_Arguments",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:Function_arguments",&obj0)) SWIG_fail;
   {
     int newmem = 0;
     res1 = SWIG_ConvertPtrAndOwn(obj0, &argp1, SWIGTYPE_p_std__shared_ptrT_CNTK__Function_t, 0 |  0 , &newmem);
     if (!SWIG_IsOK(res1)) {
-      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Function_Arguments" "', argument " "1"" of type '" "CNTK::Function const *""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Function_arguments" "', argument " "1"" of type '" "CNTK::Function const *""'"); 
     }
     if (newmem & SWIG_CAST_NEW_MEMORY) {
       tempshared1 = *reinterpret_cast< std::shared_ptr< const CNTK::Function > * >(argp1);
@@ -19739,7 +19739,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Function_Parameters(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_Function_parameters(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Function *arg1 = (CNTK::Function *) 0 ;
   void *argp1 = 0 ;
@@ -19749,12 +19749,12 @@ SWIGINTERN PyObject *_wrap_Function_Parameters(PyObject *SWIGUNUSEDPARM(self), P
   PyObject * obj0 = 0 ;
   SwigValueWrapper< std::unordered_set< CNTK::Parameter > > result;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:Function_Parameters",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:Function_parameters",&obj0)) SWIG_fail;
   {
     int newmem = 0;
     res1 = SWIG_ConvertPtrAndOwn(obj0, &argp1, SWIGTYPE_p_std__shared_ptrT_CNTK__Function_t, 0 |  0 , &newmem);
     if (!SWIG_IsOK(res1)) {
-      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Function_Parameters" "', argument " "1"" of type '" "CNTK::Function const *""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Function_parameters" "', argument " "1"" of type '" "CNTK::Function const *""'"); 
     }
     if (newmem & SWIG_CAST_NEW_MEMORY) {
       tempshared1 = *reinterpret_cast< std::shared_ptr< const CNTK::Function > * >(argp1);
@@ -19812,7 +19812,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Function_Constants(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_Function_constants(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Function *arg1 = (CNTK::Function *) 0 ;
   void *argp1 = 0 ;
@@ -19822,12 +19822,12 @@ SWIGINTERN PyObject *_wrap_Function_Constants(PyObject *SWIGUNUSEDPARM(self), Py
   PyObject * obj0 = 0 ;
   SwigValueWrapper< std::unordered_set< CNTK::Constant > > result;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:Function_Constants",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:Function_constants",&obj0)) SWIG_fail;
   {
     int newmem = 0;
     res1 = SWIG_ConvertPtrAndOwn(obj0, &argp1, SWIGTYPE_p_std__shared_ptrT_CNTK__Function_t, 0 |  0 , &newmem);
     if (!SWIG_IsOK(res1)) {
-      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Function_Constants" "', argument " "1"" of type '" "CNTK::Function const *""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Function_constants" "', argument " "1"" of type '" "CNTK::Function const *""'"); 
     }
     if (newmem & SWIG_CAST_NEW_MEMORY) {
       tempshared1 = *reinterpret_cast< std::shared_ptr< const CNTK::Function > * >(argp1);
@@ -19885,7 +19885,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Function_Placeholders(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_Function_placeholders(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Function *arg1 = (CNTK::Function *) 0 ;
   void *argp1 = 0 ;
@@ -19895,12 +19895,12 @@ SWIGINTERN PyObject *_wrap_Function_Placeholders(PyObject *SWIGUNUSEDPARM(self),
   PyObject * obj0 = 0 ;
   SwigValueWrapper< std::unordered_set< CNTK::Placeholder > > result;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:Function_Placeholders",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:Function_placeholders",&obj0)) SWIG_fail;
   {
     int newmem = 0;
     res1 = SWIG_ConvertPtrAndOwn(obj0, &argp1, SWIGTYPE_p_std__shared_ptrT_CNTK__Function_t, 0 |  0 , &newmem);
     if (!SWIG_IsOK(res1)) {
-      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Function_Placeholders" "', argument " "1"" of type '" "CNTK::Function const *""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Function_placeholders" "', argument " "1"" of type '" "CNTK::Function const *""'"); 
     }
     if (newmem & SWIG_CAST_NEW_MEMORY) {
       tempshared1 = *reinterpret_cast< std::shared_ptr< const CNTK::Function > * >(argp1);
@@ -19958,7 +19958,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Function_ReplacePlaceholders(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_Function_replace_placeholders(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Function *arg1 = (CNTK::Function *) 0 ;
   std::unordered_map< CNTK::Placeholder,CNTK::Variable > *arg2 = 0 ;
@@ -19972,12 +19972,12 @@ SWIGINTERN PyObject *_wrap_Function_ReplacePlaceholders(PyObject *SWIGUNUSEDPARM
   PyObject * obj1 = 0 ;
   CNTK::FunctionPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"OO:Function_ReplacePlaceholders",&obj0,&obj1)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OO:Function_replace_placeholders",&obj0,&obj1)) SWIG_fail;
   {
     int newmem = 0;
     res1 = SWIG_ConvertPtrAndOwn(obj0, &argp1, SWIGTYPE_p_std__shared_ptrT_CNTK__Function_t, 0 |  0 , &newmem);
     if (!SWIG_IsOK(res1)) {
-      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Function_ReplacePlaceholders" "', argument " "1"" of type '" "CNTK::Function *""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Function_replace_placeholders" "', argument " "1"" of type '" "CNTK::Function *""'"); 
     }
     if (newmem & SWIG_CAST_NEW_MEMORY) {
       tempshared1 = *reinterpret_cast< std::shared_ptr<  CNTK::Function > * >(argp1);
@@ -19990,10 +19990,10 @@ SWIGINTERN PyObject *_wrap_Function_ReplacePlaceholders(PyObject *SWIGUNUSEDPARM
   }
   res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_std__unordered_mapT_CNTK__Placeholder_CNTK__Variable_t,  0  | 0);
   if (!SWIG_IsOK(res2)) {
-    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "Function_ReplacePlaceholders" "', argument " "2"" of type '" "std::unordered_map< CNTK::Placeholder,CNTK::Variable > const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "Function_replace_placeholders" "', argument " "2"" of type '" "std::unordered_map< CNTK::Placeholder,CNTK::Variable > const &""'"); 
   }
   if (!argp2) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Function_ReplacePlaceholders" "', argument " "2"" of type '" "std::unordered_map< CNTK::Placeholder,CNTK::Variable > const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Function_replace_placeholders" "', argument " "2"" of type '" "std::unordered_map< CNTK::Placeholder,CNTK::Variable > const &""'"); 
   }
   arg2 = reinterpret_cast< std::unordered_map< CNTK::Placeholder,CNTK::Variable > * >(argp2);
   {
@@ -20033,7 +20033,7 @@ SWIGINTERN PyObject *Function_swigregister(PyObject *SWIGUNUSEDPARM(self), PyObj
   return SWIG_Py_Void();
 }
 
-SWIGINTERN PyObject *_wrap_Negate__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_negate__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = 0 ;
   std::wstring *arg2 = 0 ;
@@ -20044,23 +20044,23 @@ SWIGINTERN PyObject *_wrap_Negate__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObje
   PyObject * obj1 = 0 ;
   CNTK::FunctionPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"OO:Negate",&obj0,&obj1)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OO:negate",&obj0,&obj1)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Negate" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "negate" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp1) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Negate" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "negate" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
   {
     std::wstring *ptr = (std::wstring *)0;
     res2 = SWIG_AsPtr_std_wstring(obj1, &ptr);
     if (!SWIG_IsOK(res2)) {
-      SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "Negate" "', argument " "2"" of type '" "std::wstring const &""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "negate" "', argument " "2"" of type '" "std::wstring const &""'"); 
     }
     if (!ptr) {
-      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Negate" "', argument " "2"" of type '" "std::wstring const &""'"); 
+      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "negate" "', argument " "2"" of type '" "std::wstring const &""'"); 
     }
     arg2 = ptr;
   }
@@ -20096,7 +20096,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Negate__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_negate__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = 0 ;
   void *argp1 = 0 ;
@@ -20104,13 +20104,13 @@ SWIGINTERN PyObject *_wrap_Negate__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObje
   PyObject * obj0 = 0 ;
   CNTK::FunctionPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:Negate",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:negate",&obj0)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Negate" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "negate" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp1) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Negate" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "negate" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
   {
@@ -20143,7 +20143,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Negate(PyObject *self, PyObject *args) {
+SWIGINTERN PyObject *_wrap_negate(PyObject *self, PyObject *args) {
   Py_ssize_t argc;
   PyObject *argv[3] = {
     0
@@ -20160,7 +20160,7 @@ SWIGINTERN PyObject *_wrap_Negate(PyObject *self, PyObject *args) {
     int res = SWIG_ConvertPtr(argv[0], 0, SWIGTYPE_p_CNTK__Variable, 0);
     _v = SWIG_CheckState(res);
     if (_v) {
-      return _wrap_Negate__SWIG_1(self, args);
+      return _wrap_negate__SWIG_1(self, args);
     }
   }
   if (argc == 2) {
@@ -20171,13 +20171,13 @@ SWIGINTERN PyObject *_wrap_Negate(PyObject *self, PyObject *args) {
       int res = SWIG_AsPtr_std_wstring(argv[1], (std::wstring**)(0));
       _v = SWIG_CheckState(res);
       if (_v) {
-        return _wrap_Negate__SWIG_0(self, args);
+        return _wrap_negate__SWIG_0(self, args);
       }
     }
   }
   
 fail:
-  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'Negate'.\n"
+  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'negate'.\n"
     "  Possible C/C++ prototypes are:\n"
     "    CNTK::Negate(CNTK::Variable const &,std::wstring const &)\n"
     "    CNTK::Negate(CNTK::Variable const &)\n");
@@ -20185,7 +20185,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Sigmoid__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_sigmoid__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = 0 ;
   std::wstring *arg2 = 0 ;
@@ -20196,23 +20196,23 @@ SWIGINTERN PyObject *_wrap_Sigmoid__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObj
   PyObject * obj1 = 0 ;
   CNTK::FunctionPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"OO:Sigmoid",&obj0,&obj1)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OO:sigmoid",&obj0,&obj1)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Sigmoid" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "sigmoid" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp1) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Sigmoid" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "sigmoid" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
   {
     std::wstring *ptr = (std::wstring *)0;
     res2 = SWIG_AsPtr_std_wstring(obj1, &ptr);
     if (!SWIG_IsOK(res2)) {
-      SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "Sigmoid" "', argument " "2"" of type '" "std::wstring const &""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "sigmoid" "', argument " "2"" of type '" "std::wstring const &""'"); 
     }
     if (!ptr) {
-      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Sigmoid" "', argument " "2"" of type '" "std::wstring const &""'"); 
+      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "sigmoid" "', argument " "2"" of type '" "std::wstring const &""'"); 
     }
     arg2 = ptr;
   }
@@ -20248,7 +20248,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Sigmoid__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_sigmoid__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = 0 ;
   void *argp1 = 0 ;
@@ -20256,13 +20256,13 @@ SWIGINTERN PyObject *_wrap_Sigmoid__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObj
   PyObject * obj0 = 0 ;
   CNTK::FunctionPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:Sigmoid",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:sigmoid",&obj0)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Sigmoid" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "sigmoid" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp1) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Sigmoid" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "sigmoid" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
   {
@@ -20295,7 +20295,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Sigmoid(PyObject *self, PyObject *args) {
+SWIGINTERN PyObject *_wrap_sigmoid(PyObject *self, PyObject *args) {
   Py_ssize_t argc;
   PyObject *argv[3] = {
     0
@@ -20312,7 +20312,7 @@ SWIGINTERN PyObject *_wrap_Sigmoid(PyObject *self, PyObject *args) {
     int res = SWIG_ConvertPtr(argv[0], 0, SWIGTYPE_p_CNTK__Variable, 0);
     _v = SWIG_CheckState(res);
     if (_v) {
-      return _wrap_Sigmoid__SWIG_1(self, args);
+      return _wrap_sigmoid__SWIG_1(self, args);
     }
   }
   if (argc == 2) {
@@ -20323,13 +20323,13 @@ SWIGINTERN PyObject *_wrap_Sigmoid(PyObject *self, PyObject *args) {
       int res = SWIG_AsPtr_std_wstring(argv[1], (std::wstring**)(0));
       _v = SWIG_CheckState(res);
       if (_v) {
-        return _wrap_Sigmoid__SWIG_0(self, args);
+        return _wrap_sigmoid__SWIG_0(self, args);
       }
     }
   }
   
 fail:
-  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'Sigmoid'.\n"
+  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'sigmoid'.\n"
     "  Possible C/C++ prototypes are:\n"
     "    CNTK::Sigmoid(CNTK::Variable const &,std::wstring const &)\n"
     "    CNTK::Sigmoid(CNTK::Variable const &)\n");
@@ -20337,7 +20337,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Tanh__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_tanh__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = 0 ;
   std::wstring *arg2 = 0 ;
@@ -20348,23 +20348,23 @@ SWIGINTERN PyObject *_wrap_Tanh__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject
   PyObject * obj1 = 0 ;
   CNTK::FunctionPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"OO:Tanh",&obj0,&obj1)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OO:tanh",&obj0,&obj1)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Tanh" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "tanh" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp1) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Tanh" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "tanh" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
   {
     std::wstring *ptr = (std::wstring *)0;
     res2 = SWIG_AsPtr_std_wstring(obj1, &ptr);
     if (!SWIG_IsOK(res2)) {
-      SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "Tanh" "', argument " "2"" of type '" "std::wstring const &""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "tanh" "', argument " "2"" of type '" "std::wstring const &""'"); 
     }
     if (!ptr) {
-      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Tanh" "', argument " "2"" of type '" "std::wstring const &""'"); 
+      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "tanh" "', argument " "2"" of type '" "std::wstring const &""'"); 
     }
     arg2 = ptr;
   }
@@ -20400,7 +20400,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Tanh__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_tanh__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = 0 ;
   void *argp1 = 0 ;
@@ -20408,13 +20408,13 @@ SWIGINTERN PyObject *_wrap_Tanh__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject
   PyObject * obj0 = 0 ;
   CNTK::FunctionPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:Tanh",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:tanh",&obj0)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Tanh" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "tanh" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp1) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Tanh" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "tanh" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
   {
@@ -20447,7 +20447,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Tanh(PyObject *self, PyObject *args) {
+SWIGINTERN PyObject *_wrap_tanh(PyObject *self, PyObject *args) {
   Py_ssize_t argc;
   PyObject *argv[3] = {
     0
@@ -20464,7 +20464,7 @@ SWIGINTERN PyObject *_wrap_Tanh(PyObject *self, PyObject *args) {
     int res = SWIG_ConvertPtr(argv[0], 0, SWIGTYPE_p_CNTK__Variable, 0);
     _v = SWIG_CheckState(res);
     if (_v) {
-      return _wrap_Tanh__SWIG_1(self, args);
+      return _wrap_tanh__SWIG_1(self, args);
     }
   }
   if (argc == 2) {
@@ -20475,13 +20475,13 @@ SWIGINTERN PyObject *_wrap_Tanh(PyObject *self, PyObject *args) {
       int res = SWIG_AsPtr_std_wstring(argv[1], (std::wstring**)(0));
       _v = SWIG_CheckState(res);
       if (_v) {
-        return _wrap_Tanh__SWIG_0(self, args);
+        return _wrap_tanh__SWIG_0(self, args);
       }
     }
   }
   
 fail:
-  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'Tanh'.\n"
+  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'tanh'.\n"
     "  Possible C/C++ prototypes are:\n"
     "    CNTK::Tanh(CNTK::Variable const &,std::wstring const &)\n"
     "    CNTK::Tanh(CNTK::Variable const &)\n");
@@ -20489,7 +20489,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_ReLU__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_re_lu__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = 0 ;
   std::wstring *arg2 = 0 ;
@@ -20500,23 +20500,23 @@ SWIGINTERN PyObject *_wrap_ReLU__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject
   PyObject * obj1 = 0 ;
   CNTK::FunctionPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"OO:ReLU",&obj0,&obj1)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OO:re_lu",&obj0,&obj1)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ReLU" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "re_lu" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp1) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "ReLU" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "re_lu" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
   {
     std::wstring *ptr = (std::wstring *)0;
     res2 = SWIG_AsPtr_std_wstring(obj1, &ptr);
     if (!SWIG_IsOK(res2)) {
-      SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "ReLU" "', argument " "2"" of type '" "std::wstring const &""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "re_lu" "', argument " "2"" of type '" "std::wstring const &""'"); 
     }
     if (!ptr) {
-      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "ReLU" "', argument " "2"" of type '" "std::wstring const &""'"); 
+      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "re_lu" "', argument " "2"" of type '" "std::wstring const &""'"); 
     }
     arg2 = ptr;
   }
@@ -20552,7 +20552,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_ReLU__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_re_lu__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = 0 ;
   void *argp1 = 0 ;
@@ -20560,13 +20560,13 @@ SWIGINTERN PyObject *_wrap_ReLU__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject
   PyObject * obj0 = 0 ;
   CNTK::FunctionPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:ReLU",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:re_lu",&obj0)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ReLU" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "re_lu" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp1) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "ReLU" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "re_lu" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
   {
@@ -20599,7 +20599,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_ReLU(PyObject *self, PyObject *args) {
+SWIGINTERN PyObject *_wrap_re_lu(PyObject *self, PyObject *args) {
   Py_ssize_t argc;
   PyObject *argv[3] = {
     0
@@ -20616,7 +20616,7 @@ SWIGINTERN PyObject *_wrap_ReLU(PyObject *self, PyObject *args) {
     int res = SWIG_ConvertPtr(argv[0], 0, SWIGTYPE_p_CNTK__Variable, 0);
     _v = SWIG_CheckState(res);
     if (_v) {
-      return _wrap_ReLU__SWIG_1(self, args);
+      return _wrap_re_lu__SWIG_1(self, args);
     }
   }
   if (argc == 2) {
@@ -20627,13 +20627,13 @@ SWIGINTERN PyObject *_wrap_ReLU(PyObject *self, PyObject *args) {
       int res = SWIG_AsPtr_std_wstring(argv[1], (std::wstring**)(0));
       _v = SWIG_CheckState(res);
       if (_v) {
-        return _wrap_ReLU__SWIG_0(self, args);
+        return _wrap_re_lu__SWIG_0(self, args);
       }
     }
   }
   
 fail:
-  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'ReLU'.\n"
+  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 're_lu'.\n"
     "  Possible C/C++ prototypes are:\n"
     "    CNTK::ReLU(CNTK::Variable const &,std::wstring const &)\n"
     "    CNTK::ReLU(CNTK::Variable const &)\n");
@@ -20641,7 +20641,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Exp__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_exp__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = 0 ;
   std::wstring *arg2 = 0 ;
@@ -20652,23 +20652,23 @@ SWIGINTERN PyObject *_wrap_Exp__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject 
   PyObject * obj1 = 0 ;
   CNTK::FunctionPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"OO:Exp",&obj0,&obj1)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OO:exp",&obj0,&obj1)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Exp" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "exp" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp1) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Exp" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "exp" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
   {
     std::wstring *ptr = (std::wstring *)0;
     res2 = SWIG_AsPtr_std_wstring(obj1, &ptr);
     if (!SWIG_IsOK(res2)) {
-      SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "Exp" "', argument " "2"" of type '" "std::wstring const &""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "exp" "', argument " "2"" of type '" "std::wstring const &""'"); 
     }
     if (!ptr) {
-      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Exp" "', argument " "2"" of type '" "std::wstring const &""'"); 
+      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "exp" "', argument " "2"" of type '" "std::wstring const &""'"); 
     }
     arg2 = ptr;
   }
@@ -20704,7 +20704,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Exp__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_exp__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = 0 ;
   void *argp1 = 0 ;
@@ -20712,13 +20712,13 @@ SWIGINTERN PyObject *_wrap_Exp__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject 
   PyObject * obj0 = 0 ;
   CNTK::FunctionPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:Exp",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:exp",&obj0)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Exp" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "exp" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp1) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Exp" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "exp" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
   {
@@ -20751,7 +20751,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Exp(PyObject *self, PyObject *args) {
+SWIGINTERN PyObject *_wrap_exp(PyObject *self, PyObject *args) {
   Py_ssize_t argc;
   PyObject *argv[3] = {
     0
@@ -20768,7 +20768,7 @@ SWIGINTERN PyObject *_wrap_Exp(PyObject *self, PyObject *args) {
     int res = SWIG_ConvertPtr(argv[0], 0, SWIGTYPE_p_CNTK__Variable, 0);
     _v = SWIG_CheckState(res);
     if (_v) {
-      return _wrap_Exp__SWIG_1(self, args);
+      return _wrap_exp__SWIG_1(self, args);
     }
   }
   if (argc == 2) {
@@ -20779,13 +20779,13 @@ SWIGINTERN PyObject *_wrap_Exp(PyObject *self, PyObject *args) {
       int res = SWIG_AsPtr_std_wstring(argv[1], (std::wstring**)(0));
       _v = SWIG_CheckState(res);
       if (_v) {
-        return _wrap_Exp__SWIG_0(self, args);
+        return _wrap_exp__SWIG_0(self, args);
       }
     }
   }
   
 fail:
-  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'Exp'.\n"
+  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'exp'.\n"
     "  Possible C/C++ prototypes are:\n"
     "    CNTK::Exp(CNTK::Variable const &,std::wstring const &)\n"
     "    CNTK::Exp(CNTK::Variable const &)\n");
@@ -20793,7 +20793,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Log__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_log__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = 0 ;
   std::wstring *arg2 = 0 ;
@@ -20804,23 +20804,23 @@ SWIGINTERN PyObject *_wrap_Log__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject 
   PyObject * obj1 = 0 ;
   CNTK::FunctionPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"OO:Log",&obj0,&obj1)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OO:log",&obj0,&obj1)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Log" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "log" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp1) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Log" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "log" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
   {
     std::wstring *ptr = (std::wstring *)0;
     res2 = SWIG_AsPtr_std_wstring(obj1, &ptr);
     if (!SWIG_IsOK(res2)) {
-      SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "Log" "', argument " "2"" of type '" "std::wstring const &""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "log" "', argument " "2"" of type '" "std::wstring const &""'"); 
     }
     if (!ptr) {
-      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Log" "', argument " "2"" of type '" "std::wstring const &""'"); 
+      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "log" "', argument " "2"" of type '" "std::wstring const &""'"); 
     }
     arg2 = ptr;
   }
@@ -20856,7 +20856,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Log__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_log__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = 0 ;
   void *argp1 = 0 ;
@@ -20864,13 +20864,13 @@ SWIGINTERN PyObject *_wrap_Log__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject 
   PyObject * obj0 = 0 ;
   CNTK::FunctionPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:Log",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:log",&obj0)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Log" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "log" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp1) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Log" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "log" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
   {
@@ -20903,7 +20903,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Log(PyObject *self, PyObject *args) {
+SWIGINTERN PyObject *_wrap_log(PyObject *self, PyObject *args) {
   Py_ssize_t argc;
   PyObject *argv[3] = {
     0
@@ -20920,7 +20920,7 @@ SWIGINTERN PyObject *_wrap_Log(PyObject *self, PyObject *args) {
     int res = SWIG_ConvertPtr(argv[0], 0, SWIGTYPE_p_CNTK__Variable, 0);
     _v = SWIG_CheckState(res);
     if (_v) {
-      return _wrap_Log__SWIG_1(self, args);
+      return _wrap_log__SWIG_1(self, args);
     }
   }
   if (argc == 2) {
@@ -20931,13 +20931,13 @@ SWIGINTERN PyObject *_wrap_Log(PyObject *self, PyObject *args) {
       int res = SWIG_AsPtr_std_wstring(argv[1], (std::wstring**)(0));
       _v = SWIG_CheckState(res);
       if (_v) {
-        return _wrap_Log__SWIG_0(self, args);
+        return _wrap_log__SWIG_0(self, args);
       }
     }
   }
   
 fail:
-  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'Log'.\n"
+  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'log'.\n"
     "  Possible C/C++ prototypes are:\n"
     "    CNTK::Log(CNTK::Variable const &,std::wstring const &)\n"
     "    CNTK::Log(CNTK::Variable const &)\n");
@@ -20945,7 +20945,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Square__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_square__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = 0 ;
   std::wstring *arg2 = 0 ;
@@ -20956,23 +20956,23 @@ SWIGINTERN PyObject *_wrap_Square__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObje
   PyObject * obj1 = 0 ;
   CNTK::FunctionPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"OO:Square",&obj0,&obj1)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OO:square",&obj0,&obj1)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Square" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "square" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp1) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Square" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "square" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
   {
     std::wstring *ptr = (std::wstring *)0;
     res2 = SWIG_AsPtr_std_wstring(obj1, &ptr);
     if (!SWIG_IsOK(res2)) {
-      SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "Square" "', argument " "2"" of type '" "std::wstring const &""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "square" "', argument " "2"" of type '" "std::wstring const &""'"); 
     }
     if (!ptr) {
-      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Square" "', argument " "2"" of type '" "std::wstring const &""'"); 
+      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "square" "', argument " "2"" of type '" "std::wstring const &""'"); 
     }
     arg2 = ptr;
   }
@@ -21008,7 +21008,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Square__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_square__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = 0 ;
   void *argp1 = 0 ;
@@ -21016,13 +21016,13 @@ SWIGINTERN PyObject *_wrap_Square__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObje
   PyObject * obj0 = 0 ;
   CNTK::FunctionPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:Square",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:square",&obj0)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Square" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "square" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp1) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Square" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "square" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
   {
@@ -21055,7 +21055,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Square(PyObject *self, PyObject *args) {
+SWIGINTERN PyObject *_wrap_square(PyObject *self, PyObject *args) {
   Py_ssize_t argc;
   PyObject *argv[3] = {
     0
@@ -21072,7 +21072,7 @@ SWIGINTERN PyObject *_wrap_Square(PyObject *self, PyObject *args) {
     int res = SWIG_ConvertPtr(argv[0], 0, SWIGTYPE_p_CNTK__Variable, 0);
     _v = SWIG_CheckState(res);
     if (_v) {
-      return _wrap_Square__SWIG_1(self, args);
+      return _wrap_square__SWIG_1(self, args);
     }
   }
   if (argc == 2) {
@@ -21083,13 +21083,13 @@ SWIGINTERN PyObject *_wrap_Square(PyObject *self, PyObject *args) {
       int res = SWIG_AsPtr_std_wstring(argv[1], (std::wstring**)(0));
       _v = SWIG_CheckState(res);
       if (_v) {
-        return _wrap_Square__SWIG_0(self, args);
+        return _wrap_square__SWIG_0(self, args);
       }
     }
   }
   
 fail:
-  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'Square'.\n"
+  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'square'.\n"
     "  Possible C/C++ prototypes are:\n"
     "    CNTK::Square(CNTK::Variable const &,std::wstring const &)\n"
     "    CNTK::Square(CNTK::Variable const &)\n");
@@ -21097,7 +21097,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Sqrt__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_sqrt__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = 0 ;
   std::wstring *arg2 = 0 ;
@@ -21108,23 +21108,23 @@ SWIGINTERN PyObject *_wrap_Sqrt__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject
   PyObject * obj1 = 0 ;
   CNTK::FunctionPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"OO:Sqrt",&obj0,&obj1)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OO:sqrt",&obj0,&obj1)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Sqrt" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "sqrt" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp1) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Sqrt" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "sqrt" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
   {
     std::wstring *ptr = (std::wstring *)0;
     res2 = SWIG_AsPtr_std_wstring(obj1, &ptr);
     if (!SWIG_IsOK(res2)) {
-      SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "Sqrt" "', argument " "2"" of type '" "std::wstring const &""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "sqrt" "', argument " "2"" of type '" "std::wstring const &""'"); 
     }
     if (!ptr) {
-      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Sqrt" "', argument " "2"" of type '" "std::wstring const &""'"); 
+      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "sqrt" "', argument " "2"" of type '" "std::wstring const &""'"); 
     }
     arg2 = ptr;
   }
@@ -21160,7 +21160,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Sqrt__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_sqrt__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = 0 ;
   void *argp1 = 0 ;
@@ -21168,13 +21168,13 @@ SWIGINTERN PyObject *_wrap_Sqrt__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject
   PyObject * obj0 = 0 ;
   CNTK::FunctionPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:Sqrt",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:sqrt",&obj0)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Sqrt" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "sqrt" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp1) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Sqrt" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "sqrt" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
   {
@@ -21207,7 +21207,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Sqrt(PyObject *self, PyObject *args) {
+SWIGINTERN PyObject *_wrap_sqrt(PyObject *self, PyObject *args) {
   Py_ssize_t argc;
   PyObject *argv[3] = {
     0
@@ -21224,7 +21224,7 @@ SWIGINTERN PyObject *_wrap_Sqrt(PyObject *self, PyObject *args) {
     int res = SWIG_ConvertPtr(argv[0], 0, SWIGTYPE_p_CNTK__Variable, 0);
     _v = SWIG_CheckState(res);
     if (_v) {
-      return _wrap_Sqrt__SWIG_1(self, args);
+      return _wrap_sqrt__SWIG_1(self, args);
     }
   }
   if (argc == 2) {
@@ -21235,13 +21235,13 @@ SWIGINTERN PyObject *_wrap_Sqrt(PyObject *self, PyObject *args) {
       int res = SWIG_AsPtr_std_wstring(argv[1], (std::wstring**)(0));
       _v = SWIG_CheckState(res);
       if (_v) {
-        return _wrap_Sqrt__SWIG_0(self, args);
+        return _wrap_sqrt__SWIG_0(self, args);
       }
     }
   }
   
 fail:
-  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'Sqrt'.\n"
+  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'sqrt'.\n"
     "  Possible C/C++ prototypes are:\n"
     "    CNTK::Sqrt(CNTK::Variable const &,std::wstring const &)\n"
     "    CNTK::Sqrt(CNTK::Variable const &)\n");
@@ -21249,7 +21249,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Round__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_round__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = 0 ;
   std::wstring *arg2 = 0 ;
@@ -21260,23 +21260,23 @@ SWIGINTERN PyObject *_wrap_Round__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObjec
   PyObject * obj1 = 0 ;
   CNTK::FunctionPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"OO:Round",&obj0,&obj1)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OO:round",&obj0,&obj1)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Round" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "round" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp1) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Round" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "round" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
   {
     std::wstring *ptr = (std::wstring *)0;
     res2 = SWIG_AsPtr_std_wstring(obj1, &ptr);
     if (!SWIG_IsOK(res2)) {
-      SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "Round" "', argument " "2"" of type '" "std::wstring const &""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "round" "', argument " "2"" of type '" "std::wstring const &""'"); 
     }
     if (!ptr) {
-      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Round" "', argument " "2"" of type '" "std::wstring const &""'"); 
+      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "round" "', argument " "2"" of type '" "std::wstring const &""'"); 
     }
     arg2 = ptr;
   }
@@ -21312,7 +21312,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Round__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_round__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = 0 ;
   void *argp1 = 0 ;
@@ -21320,13 +21320,13 @@ SWIGINTERN PyObject *_wrap_Round__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObjec
   PyObject * obj0 = 0 ;
   CNTK::FunctionPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:Round",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:round",&obj0)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Round" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "round" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp1) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Round" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "round" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
   {
@@ -21359,7 +21359,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Round(PyObject *self, PyObject *args) {
+SWIGINTERN PyObject *_wrap_round(PyObject *self, PyObject *args) {
   Py_ssize_t argc;
   PyObject *argv[3] = {
     0
@@ -21376,7 +21376,7 @@ SWIGINTERN PyObject *_wrap_Round(PyObject *self, PyObject *args) {
     int res = SWIG_ConvertPtr(argv[0], 0, SWIGTYPE_p_CNTK__Variable, 0);
     _v = SWIG_CheckState(res);
     if (_v) {
-      return _wrap_Round__SWIG_1(self, args);
+      return _wrap_round__SWIG_1(self, args);
     }
   }
   if (argc == 2) {
@@ -21387,13 +21387,13 @@ SWIGINTERN PyObject *_wrap_Round(PyObject *self, PyObject *args) {
       int res = SWIG_AsPtr_std_wstring(argv[1], (std::wstring**)(0));
       _v = SWIG_CheckState(res);
       if (_v) {
-        return _wrap_Round__SWIG_0(self, args);
+        return _wrap_round__SWIG_0(self, args);
       }
     }
   }
   
 fail:
-  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'Round'.\n"
+  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'round'.\n"
     "  Possible C/C++ prototypes are:\n"
     "    CNTK::Round(CNTK::Variable const &,std::wstring const &)\n"
     "    CNTK::Round(CNTK::Variable const &)\n");
@@ -21401,7 +21401,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Floor__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_floor__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = 0 ;
   std::wstring *arg2 = 0 ;
@@ -21412,23 +21412,23 @@ SWIGINTERN PyObject *_wrap_Floor__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObjec
   PyObject * obj1 = 0 ;
   CNTK::FunctionPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"OO:Floor",&obj0,&obj1)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OO:floor",&obj0,&obj1)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Floor" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "floor" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp1) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Floor" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "floor" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
   {
     std::wstring *ptr = (std::wstring *)0;
     res2 = SWIG_AsPtr_std_wstring(obj1, &ptr);
     if (!SWIG_IsOK(res2)) {
-      SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "Floor" "', argument " "2"" of type '" "std::wstring const &""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "floor" "', argument " "2"" of type '" "std::wstring const &""'"); 
     }
     if (!ptr) {
-      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Floor" "', argument " "2"" of type '" "std::wstring const &""'"); 
+      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "floor" "', argument " "2"" of type '" "std::wstring const &""'"); 
     }
     arg2 = ptr;
   }
@@ -21464,7 +21464,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Floor__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_floor__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = 0 ;
   void *argp1 = 0 ;
@@ -21472,13 +21472,13 @@ SWIGINTERN PyObject *_wrap_Floor__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObjec
   PyObject * obj0 = 0 ;
   CNTK::FunctionPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:Floor",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:floor",&obj0)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Floor" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "floor" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp1) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Floor" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "floor" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
   {
@@ -21511,7 +21511,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Floor(PyObject *self, PyObject *args) {
+SWIGINTERN PyObject *_wrap_floor(PyObject *self, PyObject *args) {
   Py_ssize_t argc;
   PyObject *argv[3] = {
     0
@@ -21528,7 +21528,7 @@ SWIGINTERN PyObject *_wrap_Floor(PyObject *self, PyObject *args) {
     int res = SWIG_ConvertPtr(argv[0], 0, SWIGTYPE_p_CNTK__Variable, 0);
     _v = SWIG_CheckState(res);
     if (_v) {
-      return _wrap_Floor__SWIG_1(self, args);
+      return _wrap_floor__SWIG_1(self, args);
     }
   }
   if (argc == 2) {
@@ -21539,13 +21539,13 @@ SWIGINTERN PyObject *_wrap_Floor(PyObject *self, PyObject *args) {
       int res = SWIG_AsPtr_std_wstring(argv[1], (std::wstring**)(0));
       _v = SWIG_CheckState(res);
       if (_v) {
-        return _wrap_Floor__SWIG_0(self, args);
+        return _wrap_floor__SWIG_0(self, args);
       }
     }
   }
   
 fail:
-  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'Floor'.\n"
+  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'floor'.\n"
     "  Possible C/C++ prototypes are:\n"
     "    CNTK::Floor(CNTK::Variable const &,std::wstring const &)\n"
     "    CNTK::Floor(CNTK::Variable const &)\n");
@@ -21553,7 +21553,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Ceil__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_ceil__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = 0 ;
   std::wstring *arg2 = 0 ;
@@ -21564,23 +21564,23 @@ SWIGINTERN PyObject *_wrap_Ceil__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject
   PyObject * obj1 = 0 ;
   CNTK::FunctionPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"OO:Ceil",&obj0,&obj1)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OO:ceil",&obj0,&obj1)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Ceil" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ceil" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp1) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Ceil" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "ceil" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
   {
     std::wstring *ptr = (std::wstring *)0;
     res2 = SWIG_AsPtr_std_wstring(obj1, &ptr);
     if (!SWIG_IsOK(res2)) {
-      SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "Ceil" "', argument " "2"" of type '" "std::wstring const &""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "ceil" "', argument " "2"" of type '" "std::wstring const &""'"); 
     }
     if (!ptr) {
-      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Ceil" "', argument " "2"" of type '" "std::wstring const &""'"); 
+      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "ceil" "', argument " "2"" of type '" "std::wstring const &""'"); 
     }
     arg2 = ptr;
   }
@@ -21616,7 +21616,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Ceil__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_ceil__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = 0 ;
   void *argp1 = 0 ;
@@ -21624,13 +21624,13 @@ SWIGINTERN PyObject *_wrap_Ceil__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject
   PyObject * obj0 = 0 ;
   CNTK::FunctionPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:Ceil",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:ceil",&obj0)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Ceil" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ceil" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp1) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Ceil" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "ceil" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
   {
@@ -21663,7 +21663,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Ceil(PyObject *self, PyObject *args) {
+SWIGINTERN PyObject *_wrap_ceil(PyObject *self, PyObject *args) {
   Py_ssize_t argc;
   PyObject *argv[3] = {
     0
@@ -21680,7 +21680,7 @@ SWIGINTERN PyObject *_wrap_Ceil(PyObject *self, PyObject *args) {
     int res = SWIG_ConvertPtr(argv[0], 0, SWIGTYPE_p_CNTK__Variable, 0);
     _v = SWIG_CheckState(res);
     if (_v) {
-      return _wrap_Ceil__SWIG_1(self, args);
+      return _wrap_ceil__SWIG_1(self, args);
     }
   }
   if (argc == 2) {
@@ -21691,13 +21691,13 @@ SWIGINTERN PyObject *_wrap_Ceil(PyObject *self, PyObject *args) {
       int res = SWIG_AsPtr_std_wstring(argv[1], (std::wstring**)(0));
       _v = SWIG_CheckState(res);
       if (_v) {
-        return _wrap_Ceil__SWIG_0(self, args);
+        return _wrap_ceil__SWIG_0(self, args);
       }
     }
   }
   
 fail:
-  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'Ceil'.\n"
+  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'ceil'.\n"
     "  Possible C/C++ prototypes are:\n"
     "    CNTK::Ceil(CNTK::Variable const &,std::wstring const &)\n"
     "    CNTK::Ceil(CNTK::Variable const &)\n");
@@ -21705,7 +21705,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Abs__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_abs__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = 0 ;
   std::wstring *arg2 = 0 ;
@@ -21716,23 +21716,23 @@ SWIGINTERN PyObject *_wrap_Abs__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject 
   PyObject * obj1 = 0 ;
   CNTK::FunctionPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"OO:Abs",&obj0,&obj1)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OO:abs",&obj0,&obj1)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Abs" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "abs" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp1) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Abs" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "abs" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
   {
     std::wstring *ptr = (std::wstring *)0;
     res2 = SWIG_AsPtr_std_wstring(obj1, &ptr);
     if (!SWIG_IsOK(res2)) {
-      SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "Abs" "', argument " "2"" of type '" "std::wstring const &""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "abs" "', argument " "2"" of type '" "std::wstring const &""'"); 
     }
     if (!ptr) {
-      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Abs" "', argument " "2"" of type '" "std::wstring const &""'"); 
+      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "abs" "', argument " "2"" of type '" "std::wstring const &""'"); 
     }
     arg2 = ptr;
   }
@@ -21768,7 +21768,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Abs__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_abs__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = 0 ;
   void *argp1 = 0 ;
@@ -21776,13 +21776,13 @@ SWIGINTERN PyObject *_wrap_Abs__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject 
   PyObject * obj0 = 0 ;
   CNTK::FunctionPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:Abs",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:abs",&obj0)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Abs" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "abs" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp1) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Abs" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "abs" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
   {
@@ -21815,7 +21815,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Abs(PyObject *self, PyObject *args) {
+SWIGINTERN PyObject *_wrap_abs(PyObject *self, PyObject *args) {
   Py_ssize_t argc;
   PyObject *argv[3] = {
     0
@@ -21832,7 +21832,7 @@ SWIGINTERN PyObject *_wrap_Abs(PyObject *self, PyObject *args) {
     int res = SWIG_ConvertPtr(argv[0], 0, SWIGTYPE_p_CNTK__Variable, 0);
     _v = SWIG_CheckState(res);
     if (_v) {
-      return _wrap_Abs__SWIG_1(self, args);
+      return _wrap_abs__SWIG_1(self, args);
     }
   }
   if (argc == 2) {
@@ -21843,13 +21843,13 @@ SWIGINTERN PyObject *_wrap_Abs(PyObject *self, PyObject *args) {
       int res = SWIG_AsPtr_std_wstring(argv[1], (std::wstring**)(0));
       _v = SWIG_CheckState(res);
       if (_v) {
-        return _wrap_Abs__SWIG_0(self, args);
+        return _wrap_abs__SWIG_0(self, args);
       }
     }
   }
   
 fail:
-  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'Abs'.\n"
+  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'abs'.\n"
     "  Possible C/C++ prototypes are:\n"
     "    CNTK::Abs(CNTK::Variable const &,std::wstring const &)\n"
     "    CNTK::Abs(CNTK::Variable const &)\n");
@@ -21857,7 +21857,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Reciprocal__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_reciprocal__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = 0 ;
   std::wstring *arg2 = 0 ;
@@ -21868,23 +21868,23 @@ SWIGINTERN PyObject *_wrap_Reciprocal__SWIG_0(PyObject *SWIGUNUSEDPARM(self), Py
   PyObject * obj1 = 0 ;
   CNTK::FunctionPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"OO:Reciprocal",&obj0,&obj1)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OO:reciprocal",&obj0,&obj1)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Reciprocal" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "reciprocal" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp1) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Reciprocal" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "reciprocal" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
   {
     std::wstring *ptr = (std::wstring *)0;
     res2 = SWIG_AsPtr_std_wstring(obj1, &ptr);
     if (!SWIG_IsOK(res2)) {
-      SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "Reciprocal" "', argument " "2"" of type '" "std::wstring const &""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "reciprocal" "', argument " "2"" of type '" "std::wstring const &""'"); 
     }
     if (!ptr) {
-      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Reciprocal" "', argument " "2"" of type '" "std::wstring const &""'"); 
+      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "reciprocal" "', argument " "2"" of type '" "std::wstring const &""'"); 
     }
     arg2 = ptr;
   }
@@ -21920,7 +21920,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Reciprocal__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_reciprocal__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = 0 ;
   void *argp1 = 0 ;
@@ -21928,13 +21928,13 @@ SWIGINTERN PyObject *_wrap_Reciprocal__SWIG_1(PyObject *SWIGUNUSEDPARM(self), Py
   PyObject * obj0 = 0 ;
   CNTK::FunctionPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:Reciprocal",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:reciprocal",&obj0)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Reciprocal" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "reciprocal" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp1) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Reciprocal" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "reciprocal" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
   {
@@ -21967,7 +21967,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Reciprocal(PyObject *self, PyObject *args) {
+SWIGINTERN PyObject *_wrap_reciprocal(PyObject *self, PyObject *args) {
   Py_ssize_t argc;
   PyObject *argv[3] = {
     0
@@ -21984,7 +21984,7 @@ SWIGINTERN PyObject *_wrap_Reciprocal(PyObject *self, PyObject *args) {
     int res = SWIG_ConvertPtr(argv[0], 0, SWIGTYPE_p_CNTK__Variable, 0);
     _v = SWIG_CheckState(res);
     if (_v) {
-      return _wrap_Reciprocal__SWIG_1(self, args);
+      return _wrap_reciprocal__SWIG_1(self, args);
     }
   }
   if (argc == 2) {
@@ -21995,13 +21995,13 @@ SWIGINTERN PyObject *_wrap_Reciprocal(PyObject *self, PyObject *args) {
       int res = SWIG_AsPtr_std_wstring(argv[1], (std::wstring**)(0));
       _v = SWIG_CheckState(res);
       if (_v) {
-        return _wrap_Reciprocal__SWIG_0(self, args);
+        return _wrap_reciprocal__SWIG_0(self, args);
       }
     }
   }
   
 fail:
-  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'Reciprocal'.\n"
+  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'reciprocal'.\n"
     "  Possible C/C++ prototypes are:\n"
     "    CNTK::Reciprocal(CNTK::Variable const &,std::wstring const &)\n"
     "    CNTK::Reciprocal(CNTK::Variable const &)\n");
@@ -22009,7 +22009,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Softmax__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_softmax__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = 0 ;
   std::wstring *arg2 = 0 ;
@@ -22020,23 +22020,23 @@ SWIGINTERN PyObject *_wrap_Softmax__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObj
   PyObject * obj1 = 0 ;
   CNTK::FunctionPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"OO:Softmax",&obj0,&obj1)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OO:softmax",&obj0,&obj1)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Softmax" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "softmax" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp1) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Softmax" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "softmax" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
   {
     std::wstring *ptr = (std::wstring *)0;
     res2 = SWIG_AsPtr_std_wstring(obj1, &ptr);
     if (!SWIG_IsOK(res2)) {
-      SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "Softmax" "', argument " "2"" of type '" "std::wstring const &""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "softmax" "', argument " "2"" of type '" "std::wstring const &""'"); 
     }
     if (!ptr) {
-      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Softmax" "', argument " "2"" of type '" "std::wstring const &""'"); 
+      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "softmax" "', argument " "2"" of type '" "std::wstring const &""'"); 
     }
     arg2 = ptr;
   }
@@ -22072,7 +22072,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Softmax__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_softmax__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = 0 ;
   void *argp1 = 0 ;
@@ -22080,13 +22080,13 @@ SWIGINTERN PyObject *_wrap_Softmax__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObj
   PyObject * obj0 = 0 ;
   CNTK::FunctionPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:Softmax",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:softmax",&obj0)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Softmax" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "softmax" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp1) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Softmax" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "softmax" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
   {
@@ -22119,7 +22119,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Softmax(PyObject *self, PyObject *args) {
+SWIGINTERN PyObject *_wrap_softmax(PyObject *self, PyObject *args) {
   Py_ssize_t argc;
   PyObject *argv[3] = {
     0
@@ -22136,7 +22136,7 @@ SWIGINTERN PyObject *_wrap_Softmax(PyObject *self, PyObject *args) {
     int res = SWIG_ConvertPtr(argv[0], 0, SWIGTYPE_p_CNTK__Variable, 0);
     _v = SWIG_CheckState(res);
     if (_v) {
-      return _wrap_Softmax__SWIG_1(self, args);
+      return _wrap_softmax__SWIG_1(self, args);
     }
   }
   if (argc == 2) {
@@ -22147,13 +22147,13 @@ SWIGINTERN PyObject *_wrap_Softmax(PyObject *self, PyObject *args) {
       int res = SWIG_AsPtr_std_wstring(argv[1], (std::wstring**)(0));
       _v = SWIG_CheckState(res);
       if (_v) {
-        return _wrap_Softmax__SWIG_0(self, args);
+        return _wrap_softmax__SWIG_0(self, args);
       }
     }
   }
   
 fail:
-  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'Softmax'.\n"
+  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'softmax'.\n"
     "  Possible C/C++ prototypes are:\n"
     "    CNTK::Softmax(CNTK::Variable const &,std::wstring const &)\n"
     "    CNTK::Softmax(CNTK::Variable const &)\n");
@@ -22161,7 +22161,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Plus__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_plus__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = 0 ;
   CNTK::Variable *arg2 = 0 ;
@@ -22176,31 +22176,31 @@ SWIGINTERN PyObject *_wrap_Plus__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject
   PyObject * obj2 = 0 ;
   CNTK::FunctionPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"OOO:Plus",&obj0,&obj1,&obj2)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OOO:plus",&obj0,&obj1,&obj2)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Plus" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "plus" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp1) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Plus" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "plus" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
   res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res2)) {
-    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "Plus" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "plus" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp2) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Plus" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "plus" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   arg2 = reinterpret_cast< CNTK::Variable * >(argp2);
   {
     std::wstring *ptr = (std::wstring *)0;
     res3 = SWIG_AsPtr_std_wstring(obj2, &ptr);
     if (!SWIG_IsOK(res3)) {
-      SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "Plus" "', argument " "3"" of type '" "std::wstring const &""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "plus" "', argument " "3"" of type '" "std::wstring const &""'"); 
     }
     if (!ptr) {
-      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Plus" "', argument " "3"" of type '" "std::wstring const &""'"); 
+      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "plus" "', argument " "3"" of type '" "std::wstring const &""'"); 
     }
     arg3 = ptr;
   }
@@ -22236,7 +22236,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Plus__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_plus__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = 0 ;
   CNTK::Variable *arg2 = 0 ;
@@ -22248,21 +22248,21 @@ SWIGINTERN PyObject *_wrap_Plus__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject
   PyObject * obj1 = 0 ;
   CNTK::FunctionPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"OO:Plus",&obj0,&obj1)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OO:plus",&obj0,&obj1)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Plus" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "plus" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp1) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Plus" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "plus" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
   res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res2)) {
-    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "Plus" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "plus" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp2) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Plus" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "plus" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   arg2 = reinterpret_cast< CNTK::Variable * >(argp2);
   {
@@ -22295,7 +22295,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Plus(PyObject *self, PyObject *args) {
+SWIGINTERN PyObject *_wrap_plus(PyObject *self, PyObject *args) {
   Py_ssize_t argc;
   PyObject *argv[4] = {
     0
@@ -22315,7 +22315,7 @@ SWIGINTERN PyObject *_wrap_Plus(PyObject *self, PyObject *args) {
       int res = SWIG_ConvertPtr(argv[1], 0, SWIGTYPE_p_CNTK__Variable, 0);
       _v = SWIG_CheckState(res);
       if (_v) {
-        return _wrap_Plus__SWIG_1(self, args);
+        return _wrap_plus__SWIG_1(self, args);
       }
     }
   }
@@ -22330,14 +22330,14 @@ SWIGINTERN PyObject *_wrap_Plus(PyObject *self, PyObject *args) {
         int res = SWIG_AsPtr_std_wstring(argv[2], (std::wstring**)(0));
         _v = SWIG_CheckState(res);
         if (_v) {
-          return _wrap_Plus__SWIG_0(self, args);
+          return _wrap_plus__SWIG_0(self, args);
         }
       }
     }
   }
   
 fail:
-  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'Plus'.\n"
+  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'plus'.\n"
     "  Possible C/C++ prototypes are:\n"
     "    CNTK::Plus(CNTK::Variable const &,CNTK::Variable const &,std::wstring const &)\n"
     "    CNTK::Plus(CNTK::Variable const &,CNTK::Variable const &)\n");
@@ -22345,7 +22345,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Minus__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_minus__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = 0 ;
   CNTK::Variable *arg2 = 0 ;
@@ -22360,31 +22360,31 @@ SWIGINTERN PyObject *_wrap_Minus__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObjec
   PyObject * obj2 = 0 ;
   CNTK::FunctionPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"OOO:Minus",&obj0,&obj1,&obj2)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OOO:minus",&obj0,&obj1,&obj2)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Minus" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "minus" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp1) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Minus" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "minus" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
   res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res2)) {
-    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "Minus" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "minus" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp2) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Minus" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "minus" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   arg2 = reinterpret_cast< CNTK::Variable * >(argp2);
   {
     std::wstring *ptr = (std::wstring *)0;
     res3 = SWIG_AsPtr_std_wstring(obj2, &ptr);
     if (!SWIG_IsOK(res3)) {
-      SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "Minus" "', argument " "3"" of type '" "std::wstring const &""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "minus" "', argument " "3"" of type '" "std::wstring const &""'"); 
     }
     if (!ptr) {
-      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Minus" "', argument " "3"" of type '" "std::wstring const &""'"); 
+      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "minus" "', argument " "3"" of type '" "std::wstring const &""'"); 
     }
     arg3 = ptr;
   }
@@ -22420,7 +22420,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Minus__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_minus__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = 0 ;
   CNTK::Variable *arg2 = 0 ;
@@ -22432,21 +22432,21 @@ SWIGINTERN PyObject *_wrap_Minus__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObjec
   PyObject * obj1 = 0 ;
   CNTK::FunctionPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"OO:Minus",&obj0,&obj1)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OO:minus",&obj0,&obj1)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Minus" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "minus" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp1) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Minus" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "minus" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
   res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res2)) {
-    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "Minus" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "minus" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp2) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Minus" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "minus" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   arg2 = reinterpret_cast< CNTK::Variable * >(argp2);
   {
@@ -22479,7 +22479,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Minus(PyObject *self, PyObject *args) {
+SWIGINTERN PyObject *_wrap_minus(PyObject *self, PyObject *args) {
   Py_ssize_t argc;
   PyObject *argv[4] = {
     0
@@ -22499,7 +22499,7 @@ SWIGINTERN PyObject *_wrap_Minus(PyObject *self, PyObject *args) {
       int res = SWIG_ConvertPtr(argv[1], 0, SWIGTYPE_p_CNTK__Variable, 0);
       _v = SWIG_CheckState(res);
       if (_v) {
-        return _wrap_Minus__SWIG_1(self, args);
+        return _wrap_minus__SWIG_1(self, args);
       }
     }
   }
@@ -22514,14 +22514,14 @@ SWIGINTERN PyObject *_wrap_Minus(PyObject *self, PyObject *args) {
         int res = SWIG_AsPtr_std_wstring(argv[2], (std::wstring**)(0));
         _v = SWIG_CheckState(res);
         if (_v) {
-          return _wrap_Minus__SWIG_0(self, args);
+          return _wrap_minus__SWIG_0(self, args);
         }
       }
     }
   }
   
 fail:
-  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'Minus'.\n"
+  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'minus'.\n"
     "  Possible C/C++ prototypes are:\n"
     "    CNTK::Minus(CNTK::Variable const &,CNTK::Variable const &,std::wstring const &)\n"
     "    CNTK::Minus(CNTK::Variable const &,CNTK::Variable const &)\n");
@@ -22529,7 +22529,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_ElementTimes__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_element_times__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = 0 ;
   CNTK::Variable *arg2 = 0 ;
@@ -22544,31 +22544,31 @@ SWIGINTERN PyObject *_wrap_ElementTimes__SWIG_0(PyObject *SWIGUNUSEDPARM(self), 
   PyObject * obj2 = 0 ;
   CNTK::FunctionPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"OOO:ElementTimes",&obj0,&obj1,&obj2)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OOO:element_times",&obj0,&obj1,&obj2)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ElementTimes" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "element_times" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp1) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "ElementTimes" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "element_times" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
   res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res2)) {
-    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "ElementTimes" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "element_times" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp2) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "ElementTimes" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "element_times" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   arg2 = reinterpret_cast< CNTK::Variable * >(argp2);
   {
     std::wstring *ptr = (std::wstring *)0;
     res3 = SWIG_AsPtr_std_wstring(obj2, &ptr);
     if (!SWIG_IsOK(res3)) {
-      SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "ElementTimes" "', argument " "3"" of type '" "std::wstring const &""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "element_times" "', argument " "3"" of type '" "std::wstring const &""'"); 
     }
     if (!ptr) {
-      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "ElementTimes" "', argument " "3"" of type '" "std::wstring const &""'"); 
+      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "element_times" "', argument " "3"" of type '" "std::wstring const &""'"); 
     }
     arg3 = ptr;
   }
@@ -22604,7 +22604,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_ElementTimes__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_element_times__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = 0 ;
   CNTK::Variable *arg2 = 0 ;
@@ -22616,21 +22616,21 @@ SWIGINTERN PyObject *_wrap_ElementTimes__SWIG_1(PyObject *SWIGUNUSEDPARM(self), 
   PyObject * obj1 = 0 ;
   CNTK::FunctionPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"OO:ElementTimes",&obj0,&obj1)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OO:element_times",&obj0,&obj1)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ElementTimes" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "element_times" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp1) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "ElementTimes" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "element_times" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
   res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res2)) {
-    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "ElementTimes" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "element_times" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp2) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "ElementTimes" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "element_times" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   arg2 = reinterpret_cast< CNTK::Variable * >(argp2);
   {
@@ -22663,7 +22663,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_ElementTimes(PyObject *self, PyObject *args) {
+SWIGINTERN PyObject *_wrap_element_times(PyObject *self, PyObject *args) {
   Py_ssize_t argc;
   PyObject *argv[4] = {
     0
@@ -22683,7 +22683,7 @@ SWIGINTERN PyObject *_wrap_ElementTimes(PyObject *self, PyObject *args) {
       int res = SWIG_ConvertPtr(argv[1], 0, SWIGTYPE_p_CNTK__Variable, 0);
       _v = SWIG_CheckState(res);
       if (_v) {
-        return _wrap_ElementTimes__SWIG_1(self, args);
+        return _wrap_element_times__SWIG_1(self, args);
       }
     }
   }
@@ -22698,14 +22698,14 @@ SWIGINTERN PyObject *_wrap_ElementTimes(PyObject *self, PyObject *args) {
         int res = SWIG_AsPtr_std_wstring(argv[2], (std::wstring**)(0));
         _v = SWIG_CheckState(res);
         if (_v) {
-          return _wrap_ElementTimes__SWIG_0(self, args);
+          return _wrap_element_times__SWIG_0(self, args);
         }
       }
     }
   }
   
 fail:
-  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'ElementTimes'.\n"
+  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'element_times'.\n"
     "  Possible C/C++ prototypes are:\n"
     "    CNTK::ElementTimes(CNTK::Variable const &,CNTK::Variable const &,std::wstring const &)\n"
     "    CNTK::ElementTimes(CNTK::Variable const &,CNTK::Variable const &)\n");
@@ -22713,7 +22713,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_ElementDivide__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_element_divide__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = 0 ;
   CNTK::Variable *arg2 = 0 ;
@@ -22728,31 +22728,31 @@ SWIGINTERN PyObject *_wrap_ElementDivide__SWIG_0(PyObject *SWIGUNUSEDPARM(self),
   PyObject * obj2 = 0 ;
   CNTK::FunctionPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"OOO:ElementDivide",&obj0,&obj1,&obj2)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OOO:element_divide",&obj0,&obj1,&obj2)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ElementDivide" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "element_divide" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp1) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "ElementDivide" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "element_divide" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
   res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res2)) {
-    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "ElementDivide" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "element_divide" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp2) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "ElementDivide" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "element_divide" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   arg2 = reinterpret_cast< CNTK::Variable * >(argp2);
   {
     std::wstring *ptr = (std::wstring *)0;
     res3 = SWIG_AsPtr_std_wstring(obj2, &ptr);
     if (!SWIG_IsOK(res3)) {
-      SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "ElementDivide" "', argument " "3"" of type '" "std::wstring const &""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "element_divide" "', argument " "3"" of type '" "std::wstring const &""'"); 
     }
     if (!ptr) {
-      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "ElementDivide" "', argument " "3"" of type '" "std::wstring const &""'"); 
+      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "element_divide" "', argument " "3"" of type '" "std::wstring const &""'"); 
     }
     arg3 = ptr;
   }
@@ -22788,7 +22788,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_ElementDivide__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_element_divide__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = 0 ;
   CNTK::Variable *arg2 = 0 ;
@@ -22800,21 +22800,21 @@ SWIGINTERN PyObject *_wrap_ElementDivide__SWIG_1(PyObject *SWIGUNUSEDPARM(self),
   PyObject * obj1 = 0 ;
   CNTK::FunctionPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"OO:ElementDivide",&obj0,&obj1)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OO:element_divide",&obj0,&obj1)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ElementDivide" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "element_divide" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp1) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "ElementDivide" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "element_divide" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
   res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res2)) {
-    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "ElementDivide" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "element_divide" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp2) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "ElementDivide" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "element_divide" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   arg2 = reinterpret_cast< CNTK::Variable * >(argp2);
   {
@@ -22847,7 +22847,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_ElementDivide(PyObject *self, PyObject *args) {
+SWIGINTERN PyObject *_wrap_element_divide(PyObject *self, PyObject *args) {
   Py_ssize_t argc;
   PyObject *argv[4] = {
     0
@@ -22867,7 +22867,7 @@ SWIGINTERN PyObject *_wrap_ElementDivide(PyObject *self, PyObject *args) {
       int res = SWIG_ConvertPtr(argv[1], 0, SWIGTYPE_p_CNTK__Variable, 0);
       _v = SWIG_CheckState(res);
       if (_v) {
-        return _wrap_ElementDivide__SWIG_1(self, args);
+        return _wrap_element_divide__SWIG_1(self, args);
       }
     }
   }
@@ -22882,14 +22882,14 @@ SWIGINTERN PyObject *_wrap_ElementDivide(PyObject *self, PyObject *args) {
         int res = SWIG_AsPtr_std_wstring(argv[2], (std::wstring**)(0));
         _v = SWIG_CheckState(res);
         if (_v) {
-          return _wrap_ElementDivide__SWIG_0(self, args);
+          return _wrap_element_divide__SWIG_0(self, args);
         }
       }
     }
   }
   
 fail:
-  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'ElementDivide'.\n"
+  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'element_divide'.\n"
     "  Possible C/C++ prototypes are:\n"
     "    CNTK::ElementDivide(CNTK::Variable const &,CNTK::Variable const &,std::wstring const &)\n"
     "    CNTK::ElementDivide(CNTK::Variable const &,CNTK::Variable const &)\n");
@@ -22897,7 +22897,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Equal__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_equal__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = 0 ;
   CNTK::Variable *arg2 = 0 ;
@@ -22912,31 +22912,31 @@ SWIGINTERN PyObject *_wrap_Equal__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObjec
   PyObject * obj2 = 0 ;
   CNTK::FunctionPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"OOO:Equal",&obj0,&obj1,&obj2)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OOO:equal",&obj0,&obj1,&obj2)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Equal" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "equal" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp1) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Equal" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "equal" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
   res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res2)) {
-    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "Equal" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "equal" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp2) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Equal" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "equal" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   arg2 = reinterpret_cast< CNTK::Variable * >(argp2);
   {
     std::wstring *ptr = (std::wstring *)0;
     res3 = SWIG_AsPtr_std_wstring(obj2, &ptr);
     if (!SWIG_IsOK(res3)) {
-      SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "Equal" "', argument " "3"" of type '" "std::wstring const &""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "equal" "', argument " "3"" of type '" "std::wstring const &""'"); 
     }
     if (!ptr) {
-      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Equal" "', argument " "3"" of type '" "std::wstring const &""'"); 
+      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "equal" "', argument " "3"" of type '" "std::wstring const &""'"); 
     }
     arg3 = ptr;
   }
@@ -22972,7 +22972,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Equal__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_equal__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = 0 ;
   CNTK::Variable *arg2 = 0 ;
@@ -22984,21 +22984,21 @@ SWIGINTERN PyObject *_wrap_Equal__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObjec
   PyObject * obj1 = 0 ;
   CNTK::FunctionPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"OO:Equal",&obj0,&obj1)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OO:equal",&obj0,&obj1)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Equal" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "equal" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp1) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Equal" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "equal" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
   res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res2)) {
-    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "Equal" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "equal" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp2) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Equal" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "equal" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   arg2 = reinterpret_cast< CNTK::Variable * >(argp2);
   {
@@ -23031,7 +23031,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Equal(PyObject *self, PyObject *args) {
+SWIGINTERN PyObject *_wrap_equal(PyObject *self, PyObject *args) {
   Py_ssize_t argc;
   PyObject *argv[4] = {
     0
@@ -23051,7 +23051,7 @@ SWIGINTERN PyObject *_wrap_Equal(PyObject *self, PyObject *args) {
       int res = SWIG_ConvertPtr(argv[1], 0, SWIGTYPE_p_CNTK__Variable, 0);
       _v = SWIG_CheckState(res);
       if (_v) {
-        return _wrap_Equal__SWIG_1(self, args);
+        return _wrap_equal__SWIG_1(self, args);
       }
     }
   }
@@ -23066,14 +23066,14 @@ SWIGINTERN PyObject *_wrap_Equal(PyObject *self, PyObject *args) {
         int res = SWIG_AsPtr_std_wstring(argv[2], (std::wstring**)(0));
         _v = SWIG_CheckState(res);
         if (_v) {
-          return _wrap_Equal__SWIG_0(self, args);
+          return _wrap_equal__SWIG_0(self, args);
         }
       }
     }
   }
   
 fail:
-  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'Equal'.\n"
+  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'equal'.\n"
     "  Possible C/C++ prototypes are:\n"
     "    CNTK::Equal(CNTK::Variable const &,CNTK::Variable const &,std::wstring const &)\n"
     "    CNTK::Equal(CNTK::Variable const &,CNTK::Variable const &)\n");
@@ -23081,7 +23081,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_NotEqual__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_not_equal__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = 0 ;
   CNTK::Variable *arg2 = 0 ;
@@ -23096,31 +23096,31 @@ SWIGINTERN PyObject *_wrap_NotEqual__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyOb
   PyObject * obj2 = 0 ;
   CNTK::FunctionPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"OOO:NotEqual",&obj0,&obj1,&obj2)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OOO:not_equal",&obj0,&obj1,&obj2)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NotEqual" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "not_equal" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp1) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "NotEqual" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "not_equal" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
   res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res2)) {
-    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "NotEqual" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "not_equal" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp2) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "NotEqual" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "not_equal" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   arg2 = reinterpret_cast< CNTK::Variable * >(argp2);
   {
     std::wstring *ptr = (std::wstring *)0;
     res3 = SWIG_AsPtr_std_wstring(obj2, &ptr);
     if (!SWIG_IsOK(res3)) {
-      SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "NotEqual" "', argument " "3"" of type '" "std::wstring const &""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "not_equal" "', argument " "3"" of type '" "std::wstring const &""'"); 
     }
     if (!ptr) {
-      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "NotEqual" "', argument " "3"" of type '" "std::wstring const &""'"); 
+      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "not_equal" "', argument " "3"" of type '" "std::wstring const &""'"); 
     }
     arg3 = ptr;
   }
@@ -23156,7 +23156,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_NotEqual__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_not_equal__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = 0 ;
   CNTK::Variable *arg2 = 0 ;
@@ -23168,21 +23168,21 @@ SWIGINTERN PyObject *_wrap_NotEqual__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyOb
   PyObject * obj1 = 0 ;
   CNTK::FunctionPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"OO:NotEqual",&obj0,&obj1)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OO:not_equal",&obj0,&obj1)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NotEqual" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "not_equal" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp1) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "NotEqual" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "not_equal" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
   res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res2)) {
-    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "NotEqual" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "not_equal" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp2) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "NotEqual" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "not_equal" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   arg2 = reinterpret_cast< CNTK::Variable * >(argp2);
   {
@@ -23215,7 +23215,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_NotEqual(PyObject *self, PyObject *args) {
+SWIGINTERN PyObject *_wrap_not_equal(PyObject *self, PyObject *args) {
   Py_ssize_t argc;
   PyObject *argv[4] = {
     0
@@ -23235,7 +23235,7 @@ SWIGINTERN PyObject *_wrap_NotEqual(PyObject *self, PyObject *args) {
       int res = SWIG_ConvertPtr(argv[1], 0, SWIGTYPE_p_CNTK__Variable, 0);
       _v = SWIG_CheckState(res);
       if (_v) {
-        return _wrap_NotEqual__SWIG_1(self, args);
+        return _wrap_not_equal__SWIG_1(self, args);
       }
     }
   }
@@ -23250,14 +23250,14 @@ SWIGINTERN PyObject *_wrap_NotEqual(PyObject *self, PyObject *args) {
         int res = SWIG_AsPtr_std_wstring(argv[2], (std::wstring**)(0));
         _v = SWIG_CheckState(res);
         if (_v) {
-          return _wrap_NotEqual__SWIG_0(self, args);
+          return _wrap_not_equal__SWIG_0(self, args);
         }
       }
     }
   }
   
 fail:
-  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'NotEqual'.\n"
+  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'not_equal'.\n"
     "  Possible C/C++ prototypes are:\n"
     "    CNTK::NotEqual(CNTK::Variable const &,CNTK::Variable const &,std::wstring const &)\n"
     "    CNTK::NotEqual(CNTK::Variable const &,CNTK::Variable const &)\n");
@@ -23265,7 +23265,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Less__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_less__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = 0 ;
   CNTK::Variable *arg2 = 0 ;
@@ -23280,31 +23280,31 @@ SWIGINTERN PyObject *_wrap_Less__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject
   PyObject * obj2 = 0 ;
   CNTK::FunctionPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"OOO:Less",&obj0,&obj1,&obj2)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OOO:less",&obj0,&obj1,&obj2)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Less" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "less" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp1) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Less" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "less" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
   res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res2)) {
-    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "Less" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "less" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp2) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Less" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "less" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   arg2 = reinterpret_cast< CNTK::Variable * >(argp2);
   {
     std::wstring *ptr = (std::wstring *)0;
     res3 = SWIG_AsPtr_std_wstring(obj2, &ptr);
     if (!SWIG_IsOK(res3)) {
-      SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "Less" "', argument " "3"" of type '" "std::wstring const &""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "less" "', argument " "3"" of type '" "std::wstring const &""'"); 
     }
     if (!ptr) {
-      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Less" "', argument " "3"" of type '" "std::wstring const &""'"); 
+      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "less" "', argument " "3"" of type '" "std::wstring const &""'"); 
     }
     arg3 = ptr;
   }
@@ -23340,7 +23340,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Less__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_less__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = 0 ;
   CNTK::Variable *arg2 = 0 ;
@@ -23352,21 +23352,21 @@ SWIGINTERN PyObject *_wrap_Less__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject
   PyObject * obj1 = 0 ;
   CNTK::FunctionPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"OO:Less",&obj0,&obj1)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OO:less",&obj0,&obj1)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Less" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "less" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp1) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Less" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "less" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
   res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res2)) {
-    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "Less" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "less" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp2) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Less" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "less" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   arg2 = reinterpret_cast< CNTK::Variable * >(argp2);
   {
@@ -23399,7 +23399,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Less(PyObject *self, PyObject *args) {
+SWIGINTERN PyObject *_wrap_less(PyObject *self, PyObject *args) {
   Py_ssize_t argc;
   PyObject *argv[4] = {
     0
@@ -23419,7 +23419,7 @@ SWIGINTERN PyObject *_wrap_Less(PyObject *self, PyObject *args) {
       int res = SWIG_ConvertPtr(argv[1], 0, SWIGTYPE_p_CNTK__Variable, 0);
       _v = SWIG_CheckState(res);
       if (_v) {
-        return _wrap_Less__SWIG_1(self, args);
+        return _wrap_less__SWIG_1(self, args);
       }
     }
   }
@@ -23434,14 +23434,14 @@ SWIGINTERN PyObject *_wrap_Less(PyObject *self, PyObject *args) {
         int res = SWIG_AsPtr_std_wstring(argv[2], (std::wstring**)(0));
         _v = SWIG_CheckState(res);
         if (_v) {
-          return _wrap_Less__SWIG_0(self, args);
+          return _wrap_less__SWIG_0(self, args);
         }
       }
     }
   }
   
 fail:
-  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'Less'.\n"
+  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'less'.\n"
     "  Possible C/C++ prototypes are:\n"
     "    CNTK::Less(CNTK::Variable const &,CNTK::Variable const &,std::wstring const &)\n"
     "    CNTK::Less(CNTK::Variable const &,CNTK::Variable const &)\n");
@@ -23449,7 +23449,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_LessEqual__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_less_equal__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = 0 ;
   CNTK::Variable *arg2 = 0 ;
@@ -23464,31 +23464,31 @@ SWIGINTERN PyObject *_wrap_LessEqual__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyO
   PyObject * obj2 = 0 ;
   CNTK::FunctionPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"OOO:LessEqual",&obj0,&obj1,&obj2)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OOO:less_equal",&obj0,&obj1,&obj2)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "LessEqual" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "less_equal" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp1) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "LessEqual" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "less_equal" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
   res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res2)) {
-    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "LessEqual" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "less_equal" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp2) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "LessEqual" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "less_equal" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   arg2 = reinterpret_cast< CNTK::Variable * >(argp2);
   {
     std::wstring *ptr = (std::wstring *)0;
     res3 = SWIG_AsPtr_std_wstring(obj2, &ptr);
     if (!SWIG_IsOK(res3)) {
-      SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "LessEqual" "', argument " "3"" of type '" "std::wstring const &""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "less_equal" "', argument " "3"" of type '" "std::wstring const &""'"); 
     }
     if (!ptr) {
-      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "LessEqual" "', argument " "3"" of type '" "std::wstring const &""'"); 
+      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "less_equal" "', argument " "3"" of type '" "std::wstring const &""'"); 
     }
     arg3 = ptr;
   }
@@ -23524,7 +23524,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_LessEqual__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_less_equal__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = 0 ;
   CNTK::Variable *arg2 = 0 ;
@@ -23536,21 +23536,21 @@ SWIGINTERN PyObject *_wrap_LessEqual__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyO
   PyObject * obj1 = 0 ;
   CNTK::FunctionPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"OO:LessEqual",&obj0,&obj1)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OO:less_equal",&obj0,&obj1)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "LessEqual" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "less_equal" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp1) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "LessEqual" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "less_equal" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
   res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res2)) {
-    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "LessEqual" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "less_equal" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp2) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "LessEqual" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "less_equal" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   arg2 = reinterpret_cast< CNTK::Variable * >(argp2);
   {
@@ -23583,7 +23583,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_LessEqual(PyObject *self, PyObject *args) {
+SWIGINTERN PyObject *_wrap_less_equal(PyObject *self, PyObject *args) {
   Py_ssize_t argc;
   PyObject *argv[4] = {
     0
@@ -23603,7 +23603,7 @@ SWIGINTERN PyObject *_wrap_LessEqual(PyObject *self, PyObject *args) {
       int res = SWIG_ConvertPtr(argv[1], 0, SWIGTYPE_p_CNTK__Variable, 0);
       _v = SWIG_CheckState(res);
       if (_v) {
-        return _wrap_LessEqual__SWIG_1(self, args);
+        return _wrap_less_equal__SWIG_1(self, args);
       }
     }
   }
@@ -23618,14 +23618,14 @@ SWIGINTERN PyObject *_wrap_LessEqual(PyObject *self, PyObject *args) {
         int res = SWIG_AsPtr_std_wstring(argv[2], (std::wstring**)(0));
         _v = SWIG_CheckState(res);
         if (_v) {
-          return _wrap_LessEqual__SWIG_0(self, args);
+          return _wrap_less_equal__SWIG_0(self, args);
         }
       }
     }
   }
   
 fail:
-  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'LessEqual'.\n"
+  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'less_equal'.\n"
     "  Possible C/C++ prototypes are:\n"
     "    CNTK::LessEqual(CNTK::Variable const &,CNTK::Variable const &,std::wstring const &)\n"
     "    CNTK::LessEqual(CNTK::Variable const &,CNTK::Variable const &)\n");
@@ -23633,7 +23633,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Greater__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_greater__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = 0 ;
   CNTK::Variable *arg2 = 0 ;
@@ -23648,31 +23648,31 @@ SWIGINTERN PyObject *_wrap_Greater__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObj
   PyObject * obj2 = 0 ;
   CNTK::FunctionPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"OOO:Greater",&obj0,&obj1,&obj2)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OOO:greater",&obj0,&obj1,&obj2)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Greater" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "greater" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp1) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Greater" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "greater" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
   res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res2)) {
-    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "Greater" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "greater" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp2) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Greater" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "greater" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   arg2 = reinterpret_cast< CNTK::Variable * >(argp2);
   {
     std::wstring *ptr = (std::wstring *)0;
     res3 = SWIG_AsPtr_std_wstring(obj2, &ptr);
     if (!SWIG_IsOK(res3)) {
-      SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "Greater" "', argument " "3"" of type '" "std::wstring const &""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "greater" "', argument " "3"" of type '" "std::wstring const &""'"); 
     }
     if (!ptr) {
-      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Greater" "', argument " "3"" of type '" "std::wstring const &""'"); 
+      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "greater" "', argument " "3"" of type '" "std::wstring const &""'"); 
     }
     arg3 = ptr;
   }
@@ -23708,7 +23708,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Greater__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_greater__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = 0 ;
   CNTK::Variable *arg2 = 0 ;
@@ -23720,21 +23720,21 @@ SWIGINTERN PyObject *_wrap_Greater__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObj
   PyObject * obj1 = 0 ;
   CNTK::FunctionPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"OO:Greater",&obj0,&obj1)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OO:greater",&obj0,&obj1)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Greater" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "greater" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp1) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Greater" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "greater" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
   res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res2)) {
-    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "Greater" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "greater" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp2) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Greater" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "greater" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   arg2 = reinterpret_cast< CNTK::Variable * >(argp2);
   {
@@ -23767,7 +23767,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Greater(PyObject *self, PyObject *args) {
+SWIGINTERN PyObject *_wrap_greater(PyObject *self, PyObject *args) {
   Py_ssize_t argc;
   PyObject *argv[4] = {
     0
@@ -23787,7 +23787,7 @@ SWIGINTERN PyObject *_wrap_Greater(PyObject *self, PyObject *args) {
       int res = SWIG_ConvertPtr(argv[1], 0, SWIGTYPE_p_CNTK__Variable, 0);
       _v = SWIG_CheckState(res);
       if (_v) {
-        return _wrap_Greater__SWIG_1(self, args);
+        return _wrap_greater__SWIG_1(self, args);
       }
     }
   }
@@ -23802,14 +23802,14 @@ SWIGINTERN PyObject *_wrap_Greater(PyObject *self, PyObject *args) {
         int res = SWIG_AsPtr_std_wstring(argv[2], (std::wstring**)(0));
         _v = SWIG_CheckState(res);
         if (_v) {
-          return _wrap_Greater__SWIG_0(self, args);
+          return _wrap_greater__SWIG_0(self, args);
         }
       }
     }
   }
   
 fail:
-  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'Greater'.\n"
+  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'greater'.\n"
     "  Possible C/C++ prototypes are:\n"
     "    CNTK::Greater(CNTK::Variable const &,CNTK::Variable const &,std::wstring const &)\n"
     "    CNTK::Greater(CNTK::Variable const &,CNTK::Variable const &)\n");
@@ -23817,7 +23817,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_GreaterEqual__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_greater_equal__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = 0 ;
   CNTK::Variable *arg2 = 0 ;
@@ -23832,31 +23832,31 @@ SWIGINTERN PyObject *_wrap_GreaterEqual__SWIG_0(PyObject *SWIGUNUSEDPARM(self), 
   PyObject * obj2 = 0 ;
   CNTK::FunctionPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"OOO:GreaterEqual",&obj0,&obj1,&obj2)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OOO:greater_equal",&obj0,&obj1,&obj2)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "GreaterEqual" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "greater_equal" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp1) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "GreaterEqual" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "greater_equal" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
   res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res2)) {
-    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "GreaterEqual" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "greater_equal" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp2) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "GreaterEqual" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "greater_equal" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   arg2 = reinterpret_cast< CNTK::Variable * >(argp2);
   {
     std::wstring *ptr = (std::wstring *)0;
     res3 = SWIG_AsPtr_std_wstring(obj2, &ptr);
     if (!SWIG_IsOK(res3)) {
-      SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "GreaterEqual" "', argument " "3"" of type '" "std::wstring const &""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "greater_equal" "', argument " "3"" of type '" "std::wstring const &""'"); 
     }
     if (!ptr) {
-      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "GreaterEqual" "', argument " "3"" of type '" "std::wstring const &""'"); 
+      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "greater_equal" "', argument " "3"" of type '" "std::wstring const &""'"); 
     }
     arg3 = ptr;
   }
@@ -23892,7 +23892,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_GreaterEqual__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_greater_equal__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = 0 ;
   CNTK::Variable *arg2 = 0 ;
@@ -23904,21 +23904,21 @@ SWIGINTERN PyObject *_wrap_GreaterEqual__SWIG_1(PyObject *SWIGUNUSEDPARM(self), 
   PyObject * obj1 = 0 ;
   CNTK::FunctionPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"OO:GreaterEqual",&obj0,&obj1)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OO:greater_equal",&obj0,&obj1)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "GreaterEqual" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "greater_equal" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp1) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "GreaterEqual" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "greater_equal" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
   res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res2)) {
-    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "GreaterEqual" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "greater_equal" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp2) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "GreaterEqual" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "greater_equal" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   arg2 = reinterpret_cast< CNTK::Variable * >(argp2);
   {
@@ -23951,7 +23951,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_GreaterEqual(PyObject *self, PyObject *args) {
+SWIGINTERN PyObject *_wrap_greater_equal(PyObject *self, PyObject *args) {
   Py_ssize_t argc;
   PyObject *argv[4] = {
     0
@@ -23971,7 +23971,7 @@ SWIGINTERN PyObject *_wrap_GreaterEqual(PyObject *self, PyObject *args) {
       int res = SWIG_ConvertPtr(argv[1], 0, SWIGTYPE_p_CNTK__Variable, 0);
       _v = SWIG_CheckState(res);
       if (_v) {
-        return _wrap_GreaterEqual__SWIG_1(self, args);
+        return _wrap_greater_equal__SWIG_1(self, args);
       }
     }
   }
@@ -23986,14 +23986,14 @@ SWIGINTERN PyObject *_wrap_GreaterEqual(PyObject *self, PyObject *args) {
         int res = SWIG_AsPtr_std_wstring(argv[2], (std::wstring**)(0));
         _v = SWIG_CheckState(res);
         if (_v) {
-          return _wrap_GreaterEqual__SWIG_0(self, args);
+          return _wrap_greater_equal__SWIG_0(self, args);
         }
       }
     }
   }
   
 fail:
-  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'GreaterEqual'.\n"
+  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'greater_equal'.\n"
     "  Possible C/C++ prototypes are:\n"
     "    CNTK::GreaterEqual(CNTK::Variable const &,CNTK::Variable const &,std::wstring const &)\n"
     "    CNTK::GreaterEqual(CNTK::Variable const &,CNTK::Variable const &)\n");
@@ -24001,7 +24001,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Times__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_times__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = 0 ;
   CNTK::Variable *arg2 = 0 ;
@@ -24020,36 +24020,36 @@ SWIGINTERN PyObject *_wrap_Times__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObjec
   PyObject * obj3 = 0 ;
   CNTK::FunctionPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"OOOO:Times",&obj0,&obj1,&obj2,&obj3)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OOOO:times",&obj0,&obj1,&obj2,&obj3)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Times" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "times" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp1) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Times" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "times" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
   res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res2)) {
-    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "Times" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "times" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp2) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Times" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "times" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   arg2 = reinterpret_cast< CNTK::Variable * >(argp2);
   ecode3 = SWIG_AsVal_size_t(obj2, &val3);
   if (!SWIG_IsOK(ecode3)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "Times" "', argument " "3"" of type '" "size_t""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "times" "', argument " "3"" of type '" "size_t""'");
   } 
   arg3 = static_cast< size_t >(val3);
   {
     std::wstring *ptr = (std::wstring *)0;
     res4 = SWIG_AsPtr_std_wstring(obj3, &ptr);
     if (!SWIG_IsOK(res4)) {
-      SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "Times" "', argument " "4"" of type '" "std::wstring const &""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "times" "', argument " "4"" of type '" "std::wstring const &""'"); 
     }
     if (!ptr) {
-      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Times" "', argument " "4"" of type '" "std::wstring const &""'"); 
+      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "times" "', argument " "4"" of type '" "std::wstring const &""'"); 
     }
     arg4 = ptr;
   }
@@ -24085,7 +24085,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Times__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_times__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = 0 ;
   CNTK::Variable *arg2 = 0 ;
@@ -24101,26 +24101,26 @@ SWIGINTERN PyObject *_wrap_Times__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObjec
   PyObject * obj2 = 0 ;
   CNTK::FunctionPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"OOO:Times",&obj0,&obj1,&obj2)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OOO:times",&obj0,&obj1,&obj2)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Times" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "times" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp1) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Times" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "times" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
   res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res2)) {
-    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "Times" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "times" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp2) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Times" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "times" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   arg2 = reinterpret_cast< CNTK::Variable * >(argp2);
   ecode3 = SWIG_AsVal_size_t(obj2, &val3);
   if (!SWIG_IsOK(ecode3)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "Times" "', argument " "3"" of type '" "size_t""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "times" "', argument " "3"" of type '" "size_t""'");
   } 
   arg3 = static_cast< size_t >(val3);
   {
@@ -24153,7 +24153,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Times__SWIG_2(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_times__SWIG_2(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = 0 ;
   CNTK::Variable *arg2 = 0 ;
@@ -24165,21 +24165,21 @@ SWIGINTERN PyObject *_wrap_Times__SWIG_2(PyObject *SWIGUNUSEDPARM(self), PyObjec
   PyObject * obj1 = 0 ;
   CNTK::FunctionPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"OO:Times",&obj0,&obj1)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OO:times",&obj0,&obj1)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Times" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "times" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp1) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Times" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "times" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
   res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res2)) {
-    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "Times" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "times" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp2) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Times" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "times" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   arg2 = reinterpret_cast< CNTK::Variable * >(argp2);
   {
@@ -24212,7 +24212,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Times(PyObject *self, PyObject *args) {
+SWIGINTERN PyObject *_wrap_times(PyObject *self, PyObject *args) {
   Py_ssize_t argc;
   PyObject *argv[5] = {
     0
@@ -24232,7 +24232,7 @@ SWIGINTERN PyObject *_wrap_Times(PyObject *self, PyObject *args) {
       int res = SWIG_ConvertPtr(argv[1], 0, SWIGTYPE_p_CNTK__Variable, 0);
       _v = SWIG_CheckState(res);
       if (_v) {
-        return _wrap_Times__SWIG_2(self, args);
+        return _wrap_times__SWIG_2(self, args);
       }
     }
   }
@@ -24249,7 +24249,7 @@ SWIGINTERN PyObject *_wrap_Times(PyObject *self, PyObject *args) {
           _v = SWIG_CheckState(res);
         }
         if (_v) {
-          return _wrap_Times__SWIG_1(self, args);
+          return _wrap_times__SWIG_1(self, args);
         }
       }
     }
@@ -24270,7 +24270,7 @@ SWIGINTERN PyObject *_wrap_Times(PyObject *self, PyObject *args) {
           int res = SWIG_AsPtr_std_wstring(argv[3], (std::wstring**)(0));
           _v = SWIG_CheckState(res);
           if (_v) {
-            return _wrap_Times__SWIG_0(self, args);
+            return _wrap_times__SWIG_0(self, args);
           }
         }
       }
@@ -24278,7 +24278,7 @@ SWIGINTERN PyObject *_wrap_Times(PyObject *self, PyObject *args) {
   }
   
 fail:
-  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'Times'.\n"
+  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'times'.\n"
     "  Possible C/C++ prototypes are:\n"
     "    CNTK::Times(CNTK::Variable const &,CNTK::Variable const &,size_t,std::wstring const &)\n"
     "    CNTK::Times(CNTK::Variable const &,CNTK::Variable const &,size_t)\n"
@@ -24287,7 +24287,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_SquaredError__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_squared_error__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = 0 ;
   CNTK::Variable *arg2 = 0 ;
@@ -24302,31 +24302,31 @@ SWIGINTERN PyObject *_wrap_SquaredError__SWIG_0(PyObject *SWIGUNUSEDPARM(self), 
   PyObject * obj2 = 0 ;
   CNTK::FunctionPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"OOO:SquaredError",&obj0,&obj1,&obj2)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OOO:squared_error",&obj0,&obj1,&obj2)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SquaredError" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "squared_error" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp1) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "SquaredError" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "squared_error" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
   res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res2)) {
-    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "SquaredError" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "squared_error" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp2) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "SquaredError" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "squared_error" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   arg2 = reinterpret_cast< CNTK::Variable * >(argp2);
   {
     std::wstring *ptr = (std::wstring *)0;
     res3 = SWIG_AsPtr_std_wstring(obj2, &ptr);
     if (!SWIG_IsOK(res3)) {
-      SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "SquaredError" "', argument " "3"" of type '" "std::wstring const &""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "squared_error" "', argument " "3"" of type '" "std::wstring const &""'"); 
     }
     if (!ptr) {
-      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "SquaredError" "', argument " "3"" of type '" "std::wstring const &""'"); 
+      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "squared_error" "', argument " "3"" of type '" "std::wstring const &""'"); 
     }
     arg3 = ptr;
   }
@@ -24362,7 +24362,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_SquaredError__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_squared_error__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = 0 ;
   CNTK::Variable *arg2 = 0 ;
@@ -24374,21 +24374,21 @@ SWIGINTERN PyObject *_wrap_SquaredError__SWIG_1(PyObject *SWIGUNUSEDPARM(self), 
   PyObject * obj1 = 0 ;
   CNTK::FunctionPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"OO:SquaredError",&obj0,&obj1)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OO:squared_error",&obj0,&obj1)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SquaredError" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "squared_error" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp1) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "SquaredError" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "squared_error" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
   res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res2)) {
-    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "SquaredError" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "squared_error" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp2) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "SquaredError" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "squared_error" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   arg2 = reinterpret_cast< CNTK::Variable * >(argp2);
   {
@@ -24421,7 +24421,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_SquaredError(PyObject *self, PyObject *args) {
+SWIGINTERN PyObject *_wrap_squared_error(PyObject *self, PyObject *args) {
   Py_ssize_t argc;
   PyObject *argv[4] = {
     0
@@ -24441,7 +24441,7 @@ SWIGINTERN PyObject *_wrap_SquaredError(PyObject *self, PyObject *args) {
       int res = SWIG_ConvertPtr(argv[1], 0, SWIGTYPE_p_CNTK__Variable, 0);
       _v = SWIG_CheckState(res);
       if (_v) {
-        return _wrap_SquaredError__SWIG_1(self, args);
+        return _wrap_squared_error__SWIG_1(self, args);
       }
     }
   }
@@ -24456,14 +24456,14 @@ SWIGINTERN PyObject *_wrap_SquaredError(PyObject *self, PyObject *args) {
         int res = SWIG_AsPtr_std_wstring(argv[2], (std::wstring**)(0));
         _v = SWIG_CheckState(res);
         if (_v) {
-          return _wrap_SquaredError__SWIG_0(self, args);
+          return _wrap_squared_error__SWIG_0(self, args);
         }
       }
     }
   }
   
 fail:
-  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'SquaredError'.\n"
+  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'squared_error'.\n"
     "  Possible C/C++ prototypes are:\n"
     "    CNTK::SquaredError(CNTK::Variable const &,CNTK::Variable const &,std::wstring const &)\n"
     "    CNTK::SquaredError(CNTK::Variable const &,CNTK::Variable const &)\n");
@@ -24471,7 +24471,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_CrossEntropyWithSoftmax__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_cross_entropy_with_softmax__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = 0 ;
   CNTK::Variable *arg2 = 0 ;
@@ -24486,31 +24486,31 @@ SWIGINTERN PyObject *_wrap_CrossEntropyWithSoftmax__SWIG_0(PyObject *SWIGUNUSEDP
   PyObject * obj2 = 0 ;
   CNTK::FunctionPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"OOO:CrossEntropyWithSoftmax",&obj0,&obj1,&obj2)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OOO:cross_entropy_with_softmax",&obj0,&obj1,&obj2)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "CrossEntropyWithSoftmax" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "cross_entropy_with_softmax" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp1) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "CrossEntropyWithSoftmax" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "cross_entropy_with_softmax" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
   res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res2)) {
-    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "CrossEntropyWithSoftmax" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "cross_entropy_with_softmax" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp2) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "CrossEntropyWithSoftmax" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "cross_entropy_with_softmax" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   arg2 = reinterpret_cast< CNTK::Variable * >(argp2);
   {
     std::wstring *ptr = (std::wstring *)0;
     res3 = SWIG_AsPtr_std_wstring(obj2, &ptr);
     if (!SWIG_IsOK(res3)) {
-      SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "CrossEntropyWithSoftmax" "', argument " "3"" of type '" "std::wstring const &""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "cross_entropy_with_softmax" "', argument " "3"" of type '" "std::wstring const &""'"); 
     }
     if (!ptr) {
-      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "CrossEntropyWithSoftmax" "', argument " "3"" of type '" "std::wstring const &""'"); 
+      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "cross_entropy_with_softmax" "', argument " "3"" of type '" "std::wstring const &""'"); 
     }
     arg3 = ptr;
   }
@@ -24546,7 +24546,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_CrossEntropyWithSoftmax__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_cross_entropy_with_softmax__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = 0 ;
   CNTK::Variable *arg2 = 0 ;
@@ -24558,21 +24558,21 @@ SWIGINTERN PyObject *_wrap_CrossEntropyWithSoftmax__SWIG_1(PyObject *SWIGUNUSEDP
   PyObject * obj1 = 0 ;
   CNTK::FunctionPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"OO:CrossEntropyWithSoftmax",&obj0,&obj1)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OO:cross_entropy_with_softmax",&obj0,&obj1)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "CrossEntropyWithSoftmax" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "cross_entropy_with_softmax" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp1) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "CrossEntropyWithSoftmax" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "cross_entropy_with_softmax" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
   res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res2)) {
-    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "CrossEntropyWithSoftmax" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "cross_entropy_with_softmax" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp2) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "CrossEntropyWithSoftmax" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "cross_entropy_with_softmax" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   arg2 = reinterpret_cast< CNTK::Variable * >(argp2);
   {
@@ -24605,7 +24605,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_CrossEntropyWithSoftmax(PyObject *self, PyObject *args) {
+SWIGINTERN PyObject *_wrap_cross_entropy_with_softmax(PyObject *self, PyObject *args) {
   Py_ssize_t argc;
   PyObject *argv[4] = {
     0
@@ -24625,7 +24625,7 @@ SWIGINTERN PyObject *_wrap_CrossEntropyWithSoftmax(PyObject *self, PyObject *arg
       int res = SWIG_ConvertPtr(argv[1], 0, SWIGTYPE_p_CNTK__Variable, 0);
       _v = SWIG_CheckState(res);
       if (_v) {
-        return _wrap_CrossEntropyWithSoftmax__SWIG_1(self, args);
+        return _wrap_cross_entropy_with_softmax__SWIG_1(self, args);
       }
     }
   }
@@ -24640,14 +24640,14 @@ SWIGINTERN PyObject *_wrap_CrossEntropyWithSoftmax(PyObject *self, PyObject *arg
         int res = SWIG_AsPtr_std_wstring(argv[2], (std::wstring**)(0));
         _v = SWIG_CheckState(res);
         if (_v) {
-          return _wrap_CrossEntropyWithSoftmax__SWIG_0(self, args);
+          return _wrap_cross_entropy_with_softmax__SWIG_0(self, args);
         }
       }
     }
   }
   
 fail:
-  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'CrossEntropyWithSoftmax'.\n"
+  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'cross_entropy_with_softmax'.\n"
     "  Possible C/C++ prototypes are:\n"
     "    CNTK::CrossEntropyWithSoftmax(CNTK::Variable const &,CNTK::Variable const &,std::wstring const &)\n"
     "    CNTK::CrossEntropyWithSoftmax(CNTK::Variable const &,CNTK::Variable const &)\n");
@@ -24655,7 +24655,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_ClassificationError__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_classification_error__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = 0 ;
   CNTK::Variable *arg2 = 0 ;
@@ -24670,31 +24670,31 @@ SWIGINTERN PyObject *_wrap_ClassificationError__SWIG_0(PyObject *SWIGUNUSEDPARM(
   PyObject * obj2 = 0 ;
   CNTK::FunctionPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"OOO:ClassificationError",&obj0,&obj1,&obj2)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OOO:classification_error",&obj0,&obj1,&obj2)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ClassificationError" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "classification_error" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp1) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "ClassificationError" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "classification_error" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
   res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res2)) {
-    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "ClassificationError" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "classification_error" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp2) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "ClassificationError" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "classification_error" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   arg2 = reinterpret_cast< CNTK::Variable * >(argp2);
   {
     std::wstring *ptr = (std::wstring *)0;
     res3 = SWIG_AsPtr_std_wstring(obj2, &ptr);
     if (!SWIG_IsOK(res3)) {
-      SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "ClassificationError" "', argument " "3"" of type '" "std::wstring const &""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "classification_error" "', argument " "3"" of type '" "std::wstring const &""'"); 
     }
     if (!ptr) {
-      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "ClassificationError" "', argument " "3"" of type '" "std::wstring const &""'"); 
+      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "classification_error" "', argument " "3"" of type '" "std::wstring const &""'"); 
     }
     arg3 = ptr;
   }
@@ -24730,7 +24730,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_ClassificationError__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_classification_error__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = 0 ;
   CNTK::Variable *arg2 = 0 ;
@@ -24742,21 +24742,21 @@ SWIGINTERN PyObject *_wrap_ClassificationError__SWIG_1(PyObject *SWIGUNUSEDPARM(
   PyObject * obj1 = 0 ;
   CNTK::FunctionPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"OO:ClassificationError",&obj0,&obj1)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OO:classification_error",&obj0,&obj1)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ClassificationError" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "classification_error" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp1) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "ClassificationError" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "classification_error" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
   res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res2)) {
-    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "ClassificationError" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "classification_error" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp2) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "ClassificationError" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "classification_error" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   arg2 = reinterpret_cast< CNTK::Variable * >(argp2);
   {
@@ -24789,7 +24789,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_ClassificationError(PyObject *self, PyObject *args) {
+SWIGINTERN PyObject *_wrap_classification_error(PyObject *self, PyObject *args) {
   Py_ssize_t argc;
   PyObject *argv[4] = {
     0
@@ -24809,7 +24809,7 @@ SWIGINTERN PyObject *_wrap_ClassificationError(PyObject *self, PyObject *args) {
       int res = SWIG_ConvertPtr(argv[1], 0, SWIGTYPE_p_CNTK__Variable, 0);
       _v = SWIG_CheckState(res);
       if (_v) {
-        return _wrap_ClassificationError__SWIG_1(self, args);
+        return _wrap_classification_error__SWIG_1(self, args);
       }
     }
   }
@@ -24824,14 +24824,14 @@ SWIGINTERN PyObject *_wrap_ClassificationError(PyObject *self, PyObject *args) {
         int res = SWIG_AsPtr_std_wstring(argv[2], (std::wstring**)(0));
         _v = SWIG_CheckState(res);
         if (_v) {
-          return _wrap_ClassificationError__SWIG_0(self, args);
+          return _wrap_classification_error__SWIG_0(self, args);
         }
       }
     }
   }
   
 fail:
-  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'ClassificationError'.\n"
+  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'classification_error'.\n"
     "  Possible C/C++ prototypes are:\n"
     "    CNTK::ClassificationError(CNTK::Variable const &,CNTK::Variable const &,std::wstring const &)\n"
     "    CNTK::ClassificationError(CNTK::Variable const &,CNTK::Variable const &)\n");
@@ -24839,7 +24839,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_PastValue__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_past_value__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = 0 ;
   CNTK::Variable *arg2 = 0 ;
@@ -24858,36 +24858,36 @@ SWIGINTERN PyObject *_wrap_PastValue__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyO
   PyObject * obj3 = 0 ;
   CNTK::FunctionPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"OOOO:PastValue",&obj0,&obj1,&obj2,&obj3)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OOOO:past_value",&obj0,&obj1,&obj2,&obj3)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "PastValue" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "past_value" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp1) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "PastValue" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "past_value" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
   res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res2)) {
-    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "PastValue" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "past_value" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp2) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "PastValue" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "past_value" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   arg2 = reinterpret_cast< CNTK::Variable * >(argp2);
   ecode3 = SWIG_AsVal_size_t(obj2, &val3);
   if (!SWIG_IsOK(ecode3)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "PastValue" "', argument " "3"" of type '" "size_t""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "past_value" "', argument " "3"" of type '" "size_t""'");
   } 
   arg3 = static_cast< size_t >(val3);
   {
     std::wstring *ptr = (std::wstring *)0;
     res4 = SWIG_AsPtr_std_wstring(obj3, &ptr);
     if (!SWIG_IsOK(res4)) {
-      SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "PastValue" "', argument " "4"" of type '" "std::wstring const &""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "past_value" "', argument " "4"" of type '" "std::wstring const &""'"); 
     }
     if (!ptr) {
-      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "PastValue" "', argument " "4"" of type '" "std::wstring const &""'"); 
+      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "past_value" "', argument " "4"" of type '" "std::wstring const &""'"); 
     }
     arg4 = ptr;
   }
@@ -24923,7 +24923,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_PastValue__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_past_value__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = 0 ;
   CNTK::Variable *arg2 = 0 ;
@@ -24939,26 +24939,26 @@ SWIGINTERN PyObject *_wrap_PastValue__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyO
   PyObject * obj2 = 0 ;
   CNTK::FunctionPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"OOO:PastValue",&obj0,&obj1,&obj2)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OOO:past_value",&obj0,&obj1,&obj2)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "PastValue" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "past_value" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp1) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "PastValue" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "past_value" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
   res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res2)) {
-    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "PastValue" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "past_value" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp2) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "PastValue" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "past_value" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   arg2 = reinterpret_cast< CNTK::Variable * >(argp2);
   ecode3 = SWIG_AsVal_size_t(obj2, &val3);
   if (!SWIG_IsOK(ecode3)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "PastValue" "', argument " "3"" of type '" "size_t""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "past_value" "', argument " "3"" of type '" "size_t""'");
   } 
   arg3 = static_cast< size_t >(val3);
   {
@@ -24991,7 +24991,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_PastValue(PyObject *self, PyObject *args) {
+SWIGINTERN PyObject *_wrap_past_value(PyObject *self, PyObject *args) {
   Py_ssize_t argc;
   PyObject *argv[5] = {
     0
@@ -25016,7 +25016,7 @@ SWIGINTERN PyObject *_wrap_PastValue(PyObject *self, PyObject *args) {
           _v = SWIG_CheckState(res);
         }
         if (_v) {
-          return _wrap_PastValue__SWIG_1(self, args);
+          return _wrap_past_value__SWIG_1(self, args);
         }
       }
     }
@@ -25037,7 +25037,7 @@ SWIGINTERN PyObject *_wrap_PastValue(PyObject *self, PyObject *args) {
           int res = SWIG_AsPtr_std_wstring(argv[3], (std::wstring**)(0));
           _v = SWIG_CheckState(res);
           if (_v) {
-            return _wrap_PastValue__SWIG_0(self, args);
+            return _wrap_past_value__SWIG_0(self, args);
           }
         }
       }
@@ -25045,7 +25045,7 @@ SWIGINTERN PyObject *_wrap_PastValue(PyObject *self, PyObject *args) {
   }
   
 fail:
-  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'PastValue'.\n"
+  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'past_value'.\n"
     "  Possible C/C++ prototypes are:\n"
     "    CNTK::PastValue(CNTK::Variable const &,CNTK::Variable const &,size_t,std::wstring const &)\n"
     "    CNTK::PastValue(CNTK::Variable const &,CNTK::Variable const &,size_t)\n");
@@ -25053,7 +25053,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_FutureValue__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_future_value__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = 0 ;
   CNTK::Variable *arg2 = 0 ;
@@ -25072,36 +25072,36 @@ SWIGINTERN PyObject *_wrap_FutureValue__SWIG_0(PyObject *SWIGUNUSEDPARM(self), P
   PyObject * obj3 = 0 ;
   CNTK::FunctionPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"OOOO:FutureValue",&obj0,&obj1,&obj2,&obj3)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OOOO:future_value",&obj0,&obj1,&obj2,&obj3)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FutureValue" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "future_value" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp1) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "FutureValue" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "future_value" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
   res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res2)) {
-    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "FutureValue" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "future_value" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp2) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "FutureValue" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "future_value" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   arg2 = reinterpret_cast< CNTK::Variable * >(argp2);
   ecode3 = SWIG_AsVal_size_t(obj2, &val3);
   if (!SWIG_IsOK(ecode3)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "FutureValue" "', argument " "3"" of type '" "size_t""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "future_value" "', argument " "3"" of type '" "size_t""'");
   } 
   arg3 = static_cast< size_t >(val3);
   {
     std::wstring *ptr = (std::wstring *)0;
     res4 = SWIG_AsPtr_std_wstring(obj3, &ptr);
     if (!SWIG_IsOK(res4)) {
-      SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "FutureValue" "', argument " "4"" of type '" "std::wstring const &""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "future_value" "', argument " "4"" of type '" "std::wstring const &""'"); 
     }
     if (!ptr) {
-      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "FutureValue" "', argument " "4"" of type '" "std::wstring const &""'"); 
+      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "future_value" "', argument " "4"" of type '" "std::wstring const &""'"); 
     }
     arg4 = ptr;
   }
@@ -25137,7 +25137,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_FutureValue__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_future_value__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = 0 ;
   CNTK::Variable *arg2 = 0 ;
@@ -25153,26 +25153,26 @@ SWIGINTERN PyObject *_wrap_FutureValue__SWIG_1(PyObject *SWIGUNUSEDPARM(self), P
   PyObject * obj2 = 0 ;
   CNTK::FunctionPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"OOO:FutureValue",&obj0,&obj1,&obj2)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OOO:future_value",&obj0,&obj1,&obj2)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FutureValue" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "future_value" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp1) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "FutureValue" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "future_value" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
   res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res2)) {
-    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "FutureValue" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "future_value" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp2) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "FutureValue" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "future_value" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   arg2 = reinterpret_cast< CNTK::Variable * >(argp2);
   ecode3 = SWIG_AsVal_size_t(obj2, &val3);
   if (!SWIG_IsOK(ecode3)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "FutureValue" "', argument " "3"" of type '" "size_t""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "future_value" "', argument " "3"" of type '" "size_t""'");
   } 
   arg3 = static_cast< size_t >(val3);
   {
@@ -25205,7 +25205,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_FutureValue(PyObject *self, PyObject *args) {
+SWIGINTERN PyObject *_wrap_future_value(PyObject *self, PyObject *args) {
   Py_ssize_t argc;
   PyObject *argv[5] = {
     0
@@ -25230,7 +25230,7 @@ SWIGINTERN PyObject *_wrap_FutureValue(PyObject *self, PyObject *args) {
           _v = SWIG_CheckState(res);
         }
         if (_v) {
-          return _wrap_FutureValue__SWIG_1(self, args);
+          return _wrap_future_value__SWIG_1(self, args);
         }
       }
     }
@@ -25251,7 +25251,7 @@ SWIGINTERN PyObject *_wrap_FutureValue(PyObject *self, PyObject *args) {
           int res = SWIG_AsPtr_std_wstring(argv[3], (std::wstring**)(0));
           _v = SWIG_CheckState(res);
           if (_v) {
-            return _wrap_FutureValue__SWIG_0(self, args);
+            return _wrap_future_value__SWIG_0(self, args);
           }
         }
       }
@@ -25259,7 +25259,7 @@ SWIGINTERN PyObject *_wrap_FutureValue(PyObject *self, PyObject *args) {
   }
   
 fail:
-  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'FutureValue'.\n"
+  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'future_value'.\n"
     "  Possible C/C++ prototypes are:\n"
     "    CNTK::FutureValue(CNTK::Variable const &,CNTK::Variable const &,size_t,std::wstring const &)\n"
     "    CNTK::FutureValue(CNTK::Variable const &,CNTK::Variable const &,size_t)\n");
@@ -25267,7 +25267,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_ReduceSum__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_reduce_sum__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = 0 ;
   std::wstring *arg2 = 0 ;
@@ -25278,23 +25278,23 @@ SWIGINTERN PyObject *_wrap_ReduceSum__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyO
   PyObject * obj1 = 0 ;
   CNTK::FunctionPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"OO:ReduceSum",&obj0,&obj1)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OO:reduce_sum",&obj0,&obj1)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ReduceSum" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "reduce_sum" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp1) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "ReduceSum" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "reduce_sum" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
   {
     std::wstring *ptr = (std::wstring *)0;
     res2 = SWIG_AsPtr_std_wstring(obj1, &ptr);
     if (!SWIG_IsOK(res2)) {
-      SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "ReduceSum" "', argument " "2"" of type '" "std::wstring const &""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "reduce_sum" "', argument " "2"" of type '" "std::wstring const &""'"); 
     }
     if (!ptr) {
-      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "ReduceSum" "', argument " "2"" of type '" "std::wstring const &""'"); 
+      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "reduce_sum" "', argument " "2"" of type '" "std::wstring const &""'"); 
     }
     arg2 = ptr;
   }
@@ -25330,7 +25330,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_ReduceSum__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_reduce_sum__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = 0 ;
   void *argp1 = 0 ;
@@ -25338,13 +25338,13 @@ SWIGINTERN PyObject *_wrap_ReduceSum__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyO
   PyObject * obj0 = 0 ;
   CNTK::FunctionPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:ReduceSum",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:reduce_sum",&obj0)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ReduceSum" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "reduce_sum" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp1) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "ReduceSum" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "reduce_sum" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
   {
@@ -25377,7 +25377,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_ReduceSum(PyObject *self, PyObject *args) {
+SWIGINTERN PyObject *_wrap_reduce_sum(PyObject *self, PyObject *args) {
   Py_ssize_t argc;
   PyObject *argv[3] = {
     0
@@ -25394,7 +25394,7 @@ SWIGINTERN PyObject *_wrap_ReduceSum(PyObject *self, PyObject *args) {
     int res = SWIG_ConvertPtr(argv[0], 0, SWIGTYPE_p_CNTK__Variable, 0);
     _v = SWIG_CheckState(res);
     if (_v) {
-      return _wrap_ReduceSum__SWIG_1(self, args);
+      return _wrap_reduce_sum__SWIG_1(self, args);
     }
   }
   if (argc == 2) {
@@ -25405,13 +25405,13 @@ SWIGINTERN PyObject *_wrap_ReduceSum(PyObject *self, PyObject *args) {
       int res = SWIG_AsPtr_std_wstring(argv[1], (std::wstring**)(0));
       _v = SWIG_CheckState(res);
       if (_v) {
-        return _wrap_ReduceSum__SWIG_0(self, args);
+        return _wrap_reduce_sum__SWIG_0(self, args);
       }
     }
   }
   
 fail:
-  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'ReduceSum'.\n"
+  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'reduce_sum'.\n"
     "  Possible C/C++ prototypes are:\n"
     "    CNTK::ReduceSum(CNTK::Variable const &,std::wstring const &)\n"
     "    CNTK::ReduceSum(CNTK::Variable const &)\n");
@@ -25419,7 +25419,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_PerDimMeanVarianceNormalize__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_per_dim_mean_variance_normalize__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = 0 ;
   CNTK::NDArrayViewPtr *arg2 = 0 ;
@@ -25440,20 +25440,20 @@ SWIGINTERN PyObject *_wrap_PerDimMeanVarianceNormalize__SWIG_0(PyObject *SWIGUNU
   PyObject * obj3 = 0 ;
   CNTK::FunctionPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"OOOO:PerDimMeanVarianceNormalize",&obj0,&obj1,&obj2,&obj3)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OOOO:per_dim_mean_variance_normalize",&obj0,&obj1,&obj2,&obj3)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "PerDimMeanVarianceNormalize" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "per_dim_mean_variance_normalize" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp1) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "PerDimMeanVarianceNormalize" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "per_dim_mean_variance_normalize" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
   {
     int newmem = 0;
     res2 = SWIG_ConvertPtrAndOwn(obj1, &argp2, SWIGTYPE_p_std__shared_ptrT_CNTK__NDArrayView_t,  0 , &newmem);
     if (!SWIG_IsOK(res2)) {
-      SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "PerDimMeanVarianceNormalize" "', argument " "2"" of type '" "CNTK::NDArrayViewPtr const &""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "per_dim_mean_variance_normalize" "', argument " "2"" of type '" "CNTK::NDArrayViewPtr const &""'"); 
     }
     if (newmem & SWIG_CAST_NEW_MEMORY) {
       if (argp2) tempshared2 = *reinterpret_cast< CNTK::NDArrayViewPtr * >(argp2);
@@ -25467,7 +25467,7 @@ SWIGINTERN PyObject *_wrap_PerDimMeanVarianceNormalize__SWIG_0(PyObject *SWIGUNU
     int newmem = 0;
     res3 = SWIG_ConvertPtrAndOwn(obj2, &argp3, SWIGTYPE_p_std__shared_ptrT_CNTK__NDArrayView_t,  0 , &newmem);
     if (!SWIG_IsOK(res3)) {
-      SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "PerDimMeanVarianceNormalize" "', argument " "3"" of type '" "CNTK::NDArrayViewPtr const &""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "per_dim_mean_variance_normalize" "', argument " "3"" of type '" "CNTK::NDArrayViewPtr const &""'"); 
     }
     if (newmem & SWIG_CAST_NEW_MEMORY) {
       if (argp3) tempshared3 = *reinterpret_cast< CNTK::NDArrayViewPtr * >(argp3);
@@ -25481,10 +25481,10 @@ SWIGINTERN PyObject *_wrap_PerDimMeanVarianceNormalize__SWIG_0(PyObject *SWIGUNU
     std::wstring *ptr = (std::wstring *)0;
     res4 = SWIG_AsPtr_std_wstring(obj3, &ptr);
     if (!SWIG_IsOK(res4)) {
-      SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "PerDimMeanVarianceNormalize" "', argument " "4"" of type '" "std::wstring const &""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "per_dim_mean_variance_normalize" "', argument " "4"" of type '" "std::wstring const &""'"); 
     }
     if (!ptr) {
-      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "PerDimMeanVarianceNormalize" "', argument " "4"" of type '" "std::wstring const &""'"); 
+      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "per_dim_mean_variance_normalize" "', argument " "4"" of type '" "std::wstring const &""'"); 
     }
     arg4 = ptr;
   }
@@ -25520,7 +25520,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_PerDimMeanVarianceNormalize__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_per_dim_mean_variance_normalize__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = 0 ;
   CNTK::NDArrayViewPtr *arg2 = 0 ;
@@ -25538,20 +25538,20 @@ SWIGINTERN PyObject *_wrap_PerDimMeanVarianceNormalize__SWIG_1(PyObject *SWIGUNU
   PyObject * obj2 = 0 ;
   CNTK::FunctionPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"OOO:PerDimMeanVarianceNormalize",&obj0,&obj1,&obj2)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OOO:per_dim_mean_variance_normalize",&obj0,&obj1,&obj2)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "PerDimMeanVarianceNormalize" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "per_dim_mean_variance_normalize" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp1) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "PerDimMeanVarianceNormalize" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "per_dim_mean_variance_normalize" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
   {
     int newmem = 0;
     res2 = SWIG_ConvertPtrAndOwn(obj1, &argp2, SWIGTYPE_p_std__shared_ptrT_CNTK__NDArrayView_t,  0 , &newmem);
     if (!SWIG_IsOK(res2)) {
-      SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "PerDimMeanVarianceNormalize" "', argument " "2"" of type '" "CNTK::NDArrayViewPtr const &""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "per_dim_mean_variance_normalize" "', argument " "2"" of type '" "CNTK::NDArrayViewPtr const &""'"); 
     }
     if (newmem & SWIG_CAST_NEW_MEMORY) {
       if (argp2) tempshared2 = *reinterpret_cast< CNTK::NDArrayViewPtr * >(argp2);
@@ -25565,7 +25565,7 @@ SWIGINTERN PyObject *_wrap_PerDimMeanVarianceNormalize__SWIG_1(PyObject *SWIGUNU
     int newmem = 0;
     res3 = SWIG_ConvertPtrAndOwn(obj2, &argp3, SWIGTYPE_p_std__shared_ptrT_CNTK__NDArrayView_t,  0 , &newmem);
     if (!SWIG_IsOK(res3)) {
-      SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "PerDimMeanVarianceNormalize" "', argument " "3"" of type '" "CNTK::NDArrayViewPtr const &""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "per_dim_mean_variance_normalize" "', argument " "3"" of type '" "CNTK::NDArrayViewPtr const &""'"); 
     }
     if (newmem & SWIG_CAST_NEW_MEMORY) {
       if (argp3) tempshared3 = *reinterpret_cast< CNTK::NDArrayViewPtr * >(argp3);
@@ -25605,7 +25605,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_PerDimMeanVarianceNormalize(PyObject *self, PyObject *args) {
+SWIGINTERN PyObject *_wrap_per_dim_mean_variance_normalize(PyObject *self, PyObject *args) {
   Py_ssize_t argc;
   PyObject *argv[5] = {
     0
@@ -25628,7 +25628,7 @@ SWIGINTERN PyObject *_wrap_PerDimMeanVarianceNormalize(PyObject *self, PyObject 
         int res = SWIG_ConvertPtr(argv[2], 0, SWIGTYPE_p_std__shared_ptrT_CNTK__NDArrayView_t, 0);
         _v = SWIG_CheckState(res);
         if (_v) {
-          return _wrap_PerDimMeanVarianceNormalize__SWIG_1(self, args);
+          return _wrap_per_dim_mean_variance_normalize__SWIG_1(self, args);
         }
       }
     }
@@ -25647,7 +25647,7 @@ SWIGINTERN PyObject *_wrap_PerDimMeanVarianceNormalize(PyObject *self, PyObject 
           int res = SWIG_AsPtr_std_wstring(argv[3], (std::wstring**)(0));
           _v = SWIG_CheckState(res);
           if (_v) {
-            return _wrap_PerDimMeanVarianceNormalize__SWIG_0(self, args);
+            return _wrap_per_dim_mean_variance_normalize__SWIG_0(self, args);
           }
         }
       }
@@ -25655,7 +25655,7 @@ SWIGINTERN PyObject *_wrap_PerDimMeanVarianceNormalize(PyObject *self, PyObject 
   }
   
 fail:
-  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'PerDimMeanVarianceNormalize'.\n"
+  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'per_dim_mean_variance_normalize'.\n"
     "  Possible C/C++ prototypes are:\n"
     "    CNTK::PerDimMeanVarianceNormalize(CNTK::Variable const &,CNTK::NDArrayViewPtr const &,CNTK::NDArrayViewPtr const &,std::wstring const &)\n"
     "    CNTK::PerDimMeanVarianceNormalize(CNTK::Variable const &,CNTK::NDArrayViewPtr const &,CNTK::NDArrayViewPtr const &)\n");
@@ -25663,7 +25663,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Convolution__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_convolution__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = 0 ;
   CNTK::Variable *arg2 = 0 ;
@@ -25700,21 +25700,21 @@ SWIGINTERN PyObject *_wrap_Convolution__SWIG_0(PyObject *SWIGUNUSEDPARM(self), P
   PyObject * obj9 = 0 ;
   CNTK::FunctionPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"OOOOOOOOOO:Convolution",&obj0,&obj1,&obj2,&obj3,&obj4,&obj5,&obj6,&obj7,&obj8,&obj9)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OOOOOOOOOO:convolution",&obj0,&obj1,&obj2,&obj3,&obj4,&obj5,&obj6,&obj7,&obj8,&obj9)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Convolution" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "convolution" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp1) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Convolution" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "convolution" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
   res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res2)) {
-    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "Convolution" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "convolution" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp2) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Convolution" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "convolution" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   arg2 = reinterpret_cast< CNTK::Variable * >(argp2);
   {
@@ -25732,18 +25732,18 @@ SWIGINTERN PyObject *_wrap_Convolution__SWIG_0(PyObject *SWIGUNUSEDPARM(self), P
   }
   res4 = SWIG_ConvertPtr(obj3, &argp4, SWIGTYPE_p_std__vectorT_bool_std__allocatorT_bool_t_t,  0  | 0);
   if (!SWIG_IsOK(res4)) {
-    SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "Convolution" "', argument " "4"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "convolution" "', argument " "4"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
   }
   if (!argp4) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Convolution" "', argument " "4"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "convolution" "', argument " "4"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
   }
   arg4 = reinterpret_cast< std::vector< bool,std::allocator< bool > > * >(argp4);
   res5 = SWIG_ConvertPtr(obj4, &argp5, SWIGTYPE_p_std__vectorT_bool_std__allocatorT_bool_t_t,  0  | 0);
   if (!SWIG_IsOK(res5)) {
-    SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "Convolution" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "convolution" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
   }
   if (!argp5) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Convolution" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "convolution" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
   }
   arg5 = reinterpret_cast< std::vector< bool,std::allocator< bool > > * >(argp5);
   {
@@ -25774,22 +25774,22 @@ SWIGINTERN PyObject *_wrap_Convolution__SWIG_0(PyObject *SWIGUNUSEDPARM(self), P
   }
   ecode8 = SWIG_AsVal_bool(obj7, &val8);
   if (!SWIG_IsOK(ecode8)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode8), "in method '" "Convolution" "', argument " "8"" of type '" "bool""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode8), "in method '" "convolution" "', argument " "8"" of type '" "bool""'");
   } 
   arg8 = static_cast< bool >(val8);
   ecode9 = SWIG_AsVal_size_t(obj8, &val9);
   if (!SWIG_IsOK(ecode9)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode9), "in method '" "Convolution" "', argument " "9"" of type '" "size_t""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode9), "in method '" "convolution" "', argument " "9"" of type '" "size_t""'");
   } 
   arg9 = static_cast< size_t >(val9);
   {
     std::wstring *ptr = (std::wstring *)0;
     res10 = SWIG_AsPtr_std_wstring(obj9, &ptr);
     if (!SWIG_IsOK(res10)) {
-      SWIG_exception_fail(SWIG_ArgError(res10), "in method '" "Convolution" "', argument " "10"" of type '" "std::wstring const &""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res10), "in method '" "convolution" "', argument " "10"" of type '" "std::wstring const &""'"); 
     }
     if (!ptr) {
-      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Convolution" "', argument " "10"" of type '" "std::wstring const &""'"); 
+      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "convolution" "', argument " "10"" of type '" "std::wstring const &""'"); 
     }
     arg10 = ptr;
   }
@@ -25825,7 +25825,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Convolution__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_convolution__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = 0 ;
   CNTK::Variable *arg2 = 0 ;
@@ -25859,21 +25859,21 @@ SWIGINTERN PyObject *_wrap_Convolution__SWIG_1(PyObject *SWIGUNUSEDPARM(self), P
   PyObject * obj8 = 0 ;
   CNTK::FunctionPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"OOOOOOOOO:Convolution",&obj0,&obj1,&obj2,&obj3,&obj4,&obj5,&obj6,&obj7,&obj8)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OOOOOOOOO:convolution",&obj0,&obj1,&obj2,&obj3,&obj4,&obj5,&obj6,&obj7,&obj8)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Convolution" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "convolution" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp1) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Convolution" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "convolution" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
   res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res2)) {
-    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "Convolution" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "convolution" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp2) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Convolution" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "convolution" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   arg2 = reinterpret_cast< CNTK::Variable * >(argp2);
   {
@@ -25891,18 +25891,18 @@ SWIGINTERN PyObject *_wrap_Convolution__SWIG_1(PyObject *SWIGUNUSEDPARM(self), P
   }
   res4 = SWIG_ConvertPtr(obj3, &argp4, SWIGTYPE_p_std__vectorT_bool_std__allocatorT_bool_t_t,  0  | 0);
   if (!SWIG_IsOK(res4)) {
-    SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "Convolution" "', argument " "4"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "convolution" "', argument " "4"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
   }
   if (!argp4) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Convolution" "', argument " "4"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "convolution" "', argument " "4"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
   }
   arg4 = reinterpret_cast< std::vector< bool,std::allocator< bool > > * >(argp4);
   res5 = SWIG_ConvertPtr(obj4, &argp5, SWIGTYPE_p_std__vectorT_bool_std__allocatorT_bool_t_t,  0  | 0);
   if (!SWIG_IsOK(res5)) {
-    SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "Convolution" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "convolution" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
   }
   if (!argp5) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Convolution" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "convolution" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
   }
   arg5 = reinterpret_cast< std::vector< bool,std::allocator< bool > > * >(argp5);
   {
@@ -25933,12 +25933,12 @@ SWIGINTERN PyObject *_wrap_Convolution__SWIG_1(PyObject *SWIGUNUSEDPARM(self), P
   }
   ecode8 = SWIG_AsVal_bool(obj7, &val8);
   if (!SWIG_IsOK(ecode8)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode8), "in method '" "Convolution" "', argument " "8"" of type '" "bool""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode8), "in method '" "convolution" "', argument " "8"" of type '" "bool""'");
   } 
   arg8 = static_cast< bool >(val8);
   ecode9 = SWIG_AsVal_size_t(obj8, &val9);
   if (!SWIG_IsOK(ecode9)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode9), "in method '" "Convolution" "', argument " "9"" of type '" "size_t""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode9), "in method '" "convolution" "', argument " "9"" of type '" "size_t""'");
   } 
   arg9 = static_cast< size_t >(val9);
   {
@@ -25971,7 +25971,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Convolution__SWIG_2(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_convolution__SWIG_2(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = 0 ;
   CNTK::Variable *arg2 = 0 ;
@@ -26001,21 +26001,21 @@ SWIGINTERN PyObject *_wrap_Convolution__SWIG_2(PyObject *SWIGUNUSEDPARM(self), P
   PyObject * obj7 = 0 ;
   CNTK::FunctionPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"OOOOOOOO:Convolution",&obj0,&obj1,&obj2,&obj3,&obj4,&obj5,&obj6,&obj7)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OOOOOOOO:convolution",&obj0,&obj1,&obj2,&obj3,&obj4,&obj5,&obj6,&obj7)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Convolution" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "convolution" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp1) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Convolution" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "convolution" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
   res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res2)) {
-    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "Convolution" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "convolution" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp2) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Convolution" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "convolution" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   arg2 = reinterpret_cast< CNTK::Variable * >(argp2);
   {
@@ -26033,18 +26033,18 @@ SWIGINTERN PyObject *_wrap_Convolution__SWIG_2(PyObject *SWIGUNUSEDPARM(self), P
   }
   res4 = SWIG_ConvertPtr(obj3, &argp4, SWIGTYPE_p_std__vectorT_bool_std__allocatorT_bool_t_t,  0  | 0);
   if (!SWIG_IsOK(res4)) {
-    SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "Convolution" "', argument " "4"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "convolution" "', argument " "4"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
   }
   if (!argp4) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Convolution" "', argument " "4"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "convolution" "', argument " "4"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
   }
   arg4 = reinterpret_cast< std::vector< bool,std::allocator< bool > > * >(argp4);
   res5 = SWIG_ConvertPtr(obj4, &argp5, SWIGTYPE_p_std__vectorT_bool_std__allocatorT_bool_t_t,  0  | 0);
   if (!SWIG_IsOK(res5)) {
-    SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "Convolution" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "convolution" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
   }
   if (!argp5) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Convolution" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "convolution" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
   }
   arg5 = reinterpret_cast< std::vector< bool,std::allocator< bool > > * >(argp5);
   {
@@ -26075,7 +26075,7 @@ SWIGINTERN PyObject *_wrap_Convolution__SWIG_2(PyObject *SWIGUNUSEDPARM(self), P
   }
   ecode8 = SWIG_AsVal_bool(obj7, &val8);
   if (!SWIG_IsOK(ecode8)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode8), "in method '" "Convolution" "', argument " "8"" of type '" "bool""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode8), "in method '" "convolution" "', argument " "8"" of type '" "bool""'");
   } 
   arg8 = static_cast< bool >(val8);
   {
@@ -26108,7 +26108,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Convolution__SWIG_3(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_convolution__SWIG_3(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = 0 ;
   CNTK::Variable *arg2 = 0 ;
@@ -26134,21 +26134,21 @@ SWIGINTERN PyObject *_wrap_Convolution__SWIG_3(PyObject *SWIGUNUSEDPARM(self), P
   PyObject * obj6 = 0 ;
   CNTK::FunctionPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"OOOOOOO:Convolution",&obj0,&obj1,&obj2,&obj3,&obj4,&obj5,&obj6)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OOOOOOO:convolution",&obj0,&obj1,&obj2,&obj3,&obj4,&obj5,&obj6)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Convolution" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "convolution" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp1) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Convolution" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "convolution" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
   res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res2)) {
-    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "Convolution" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "convolution" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp2) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Convolution" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "convolution" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   arg2 = reinterpret_cast< CNTK::Variable * >(argp2);
   {
@@ -26166,18 +26166,18 @@ SWIGINTERN PyObject *_wrap_Convolution__SWIG_3(PyObject *SWIGUNUSEDPARM(self), P
   }
   res4 = SWIG_ConvertPtr(obj3, &argp4, SWIGTYPE_p_std__vectorT_bool_std__allocatorT_bool_t_t,  0  | 0);
   if (!SWIG_IsOK(res4)) {
-    SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "Convolution" "', argument " "4"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "convolution" "', argument " "4"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
   }
   if (!argp4) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Convolution" "', argument " "4"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "convolution" "', argument " "4"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
   }
   arg4 = reinterpret_cast< std::vector< bool,std::allocator< bool > > * >(argp4);
   res5 = SWIG_ConvertPtr(obj4, &argp5, SWIGTYPE_p_std__vectorT_bool_std__allocatorT_bool_t_t,  0  | 0);
   if (!SWIG_IsOK(res5)) {
-    SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "Convolution" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "convolution" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
   }
   if (!argp5) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Convolution" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "convolution" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
   }
   arg5 = reinterpret_cast< std::vector< bool,std::allocator< bool > > * >(argp5);
   {
@@ -26236,7 +26236,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Convolution__SWIG_4(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_convolution__SWIG_4(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = 0 ;
   CNTK::Variable *arg2 = 0 ;
@@ -26260,21 +26260,21 @@ SWIGINTERN PyObject *_wrap_Convolution__SWIG_4(PyObject *SWIGUNUSEDPARM(self), P
   PyObject * obj5 = 0 ;
   CNTK::FunctionPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"OOOOOO:Convolution",&obj0,&obj1,&obj2,&obj3,&obj4,&obj5)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OOOOOO:convolution",&obj0,&obj1,&obj2,&obj3,&obj4,&obj5)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Convolution" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "convolution" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp1) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Convolution" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "convolution" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
   res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res2)) {
-    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "Convolution" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "convolution" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp2) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Convolution" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "convolution" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   arg2 = reinterpret_cast< CNTK::Variable * >(argp2);
   {
@@ -26292,18 +26292,18 @@ SWIGINTERN PyObject *_wrap_Convolution__SWIG_4(PyObject *SWIGUNUSEDPARM(self), P
   }
   res4 = SWIG_ConvertPtr(obj3, &argp4, SWIGTYPE_p_std__vectorT_bool_std__allocatorT_bool_t_t,  0  | 0);
   if (!SWIG_IsOK(res4)) {
-    SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "Convolution" "', argument " "4"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "convolution" "', argument " "4"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
   }
   if (!argp4) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Convolution" "', argument " "4"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "convolution" "', argument " "4"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
   }
   arg4 = reinterpret_cast< std::vector< bool,std::allocator< bool > > * >(argp4);
   res5 = SWIG_ConvertPtr(obj4, &argp5, SWIGTYPE_p_std__vectorT_bool_std__allocatorT_bool_t_t,  0  | 0);
   if (!SWIG_IsOK(res5)) {
-    SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "Convolution" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "convolution" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
   }
   if (!argp5) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Convolution" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "convolution" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
   }
   arg5 = reinterpret_cast< std::vector< bool,std::allocator< bool > > * >(argp5);
   {
@@ -26349,7 +26349,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Convolution__SWIG_5(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_convolution__SWIG_5(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = 0 ;
   CNTK::Variable *arg2 = 0 ;
@@ -26371,21 +26371,21 @@ SWIGINTERN PyObject *_wrap_Convolution__SWIG_5(PyObject *SWIGUNUSEDPARM(self), P
   PyObject * obj4 = 0 ;
   CNTK::FunctionPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"OOOOO:Convolution",&obj0,&obj1,&obj2,&obj3,&obj4)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OOOOO:convolution",&obj0,&obj1,&obj2,&obj3,&obj4)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Convolution" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "convolution" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp1) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Convolution" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "convolution" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
   res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res2)) {
-    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "Convolution" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "convolution" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp2) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Convolution" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "convolution" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   arg2 = reinterpret_cast< CNTK::Variable * >(argp2);
   {
@@ -26403,18 +26403,18 @@ SWIGINTERN PyObject *_wrap_Convolution__SWIG_5(PyObject *SWIGUNUSEDPARM(self), P
   }
   res4 = SWIG_ConvertPtr(obj3, &argp4, SWIGTYPE_p_std__vectorT_bool_std__allocatorT_bool_t_t,  0  | 0);
   if (!SWIG_IsOK(res4)) {
-    SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "Convolution" "', argument " "4"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "convolution" "', argument " "4"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
   }
   if (!argp4) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Convolution" "', argument " "4"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "convolution" "', argument " "4"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
   }
   arg4 = reinterpret_cast< std::vector< bool,std::allocator< bool > > * >(argp4);
   res5 = SWIG_ConvertPtr(obj4, &argp5, SWIGTYPE_p_std__vectorT_bool_std__allocatorT_bool_t_t,  0  | 0);
   if (!SWIG_IsOK(res5)) {
-    SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "Convolution" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "convolution" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
   }
   if (!argp5) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Convolution" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "convolution" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
   }
   arg5 = reinterpret_cast< std::vector< bool,std::allocator< bool > > * >(argp5);
   {
@@ -26447,7 +26447,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Convolution__SWIG_6(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_convolution__SWIG_6(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = 0 ;
   CNTK::Variable *arg2 = 0 ;
@@ -26465,21 +26465,21 @@ SWIGINTERN PyObject *_wrap_Convolution__SWIG_6(PyObject *SWIGUNUSEDPARM(self), P
   PyObject * obj3 = 0 ;
   CNTK::FunctionPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"OOOO:Convolution",&obj0,&obj1,&obj2,&obj3)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OOOO:convolution",&obj0,&obj1,&obj2,&obj3)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Convolution" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "convolution" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp1) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Convolution" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "convolution" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
   res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res2)) {
-    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "Convolution" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "convolution" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp2) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Convolution" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "convolution" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   arg2 = reinterpret_cast< CNTK::Variable * >(argp2);
   {
@@ -26497,10 +26497,10 @@ SWIGINTERN PyObject *_wrap_Convolution__SWIG_6(PyObject *SWIGUNUSEDPARM(self), P
   }
   res4 = SWIG_ConvertPtr(obj3, &argp4, SWIGTYPE_p_std__vectorT_bool_std__allocatorT_bool_t_t,  0  | 0);
   if (!SWIG_IsOK(res4)) {
-    SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "Convolution" "', argument " "4"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "convolution" "', argument " "4"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
   }
   if (!argp4) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Convolution" "', argument " "4"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "convolution" "', argument " "4"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
   }
   arg4 = reinterpret_cast< std::vector< bool,std::allocator< bool > > * >(argp4);
   {
@@ -26533,7 +26533,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Convolution__SWIG_7(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_convolution__SWIG_7(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = 0 ;
   CNTK::Variable *arg2 = 0 ;
@@ -26547,21 +26547,21 @@ SWIGINTERN PyObject *_wrap_Convolution__SWIG_7(PyObject *SWIGUNUSEDPARM(self), P
   PyObject * obj2 = 0 ;
   CNTK::FunctionPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"OOO:Convolution",&obj0,&obj1,&obj2)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OOO:convolution",&obj0,&obj1,&obj2)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Convolution" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "convolution" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp1) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Convolution" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "convolution" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
   res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res2)) {
-    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "Convolution" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "convolution" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp2) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Convolution" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "convolution" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   arg2 = reinterpret_cast< CNTK::Variable * >(argp2);
   {
@@ -26607,7 +26607,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Convolution__SWIG_8(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_convolution__SWIG_8(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = 0 ;
   CNTK::Variable *arg2 = 0 ;
@@ -26619,21 +26619,21 @@ SWIGINTERN PyObject *_wrap_Convolution__SWIG_8(PyObject *SWIGUNUSEDPARM(self), P
   PyObject * obj1 = 0 ;
   CNTK::FunctionPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"OO:Convolution",&obj0,&obj1)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OO:convolution",&obj0,&obj1)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Convolution" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "convolution" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp1) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Convolution" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "convolution" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
   res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res2)) {
-    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "Convolution" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "convolution" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp2) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Convolution" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "convolution" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   arg2 = reinterpret_cast< CNTK::Variable * >(argp2);
   {
@@ -26666,7 +26666,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Convolution(PyObject *self, PyObject *args) {
+SWIGINTERN PyObject *_wrap_convolution(PyObject *self, PyObject *args) {
   Py_ssize_t argc;
   PyObject *argv[11] = {
     0
@@ -26686,7 +26686,7 @@ SWIGINTERN PyObject *_wrap_Convolution(PyObject *self, PyObject *args) {
       int res = SWIG_ConvertPtr(argv[1], 0, SWIGTYPE_p_CNTK__Variable, 0);
       _v = SWIG_CheckState(res);
       if (_v) {
-        return _wrap_Convolution__SWIG_8(self, args);
+        return _wrap_convolution__SWIG_8(self, args);
       }
     }
   }
@@ -26704,7 +26704,7 @@ SWIGINTERN PyObject *_wrap_Convolution(PyObject *self, PyObject *args) {
           _v = PyTuple_Check(argv[2]) ? 1 : 0;
         }
         if (_v) {
-          return _wrap_Convolution__SWIG_7(self, args);
+          return _wrap_convolution__SWIG_7(self, args);
         }
       }
     }
@@ -26726,7 +26726,7 @@ SWIGINTERN PyObject *_wrap_Convolution(PyObject *self, PyObject *args) {
           int res = SWIG_ConvertPtr(argv[3], 0, SWIGTYPE_p_std__vectorT_bool_std__allocatorT_bool_t_t, 0);
           _v = SWIG_CheckState(res);
           if (_v) {
-            return _wrap_Convolution__SWIG_6(self, args);
+            return _wrap_convolution__SWIG_6(self, args);
           }
         }
       }
@@ -26752,7 +26752,7 @@ SWIGINTERN PyObject *_wrap_Convolution(PyObject *self, PyObject *args) {
             int res = SWIG_ConvertPtr(argv[4], 0, SWIGTYPE_p_std__vectorT_bool_std__allocatorT_bool_t_t, 0);
             _v = SWIG_CheckState(res);
             if (_v) {
-              return _wrap_Convolution__SWIG_5(self, args);
+              return _wrap_convolution__SWIG_5(self, args);
             }
           }
         }
@@ -26785,7 +26785,7 @@ SWIGINTERN PyObject *_wrap_Convolution(PyObject *self, PyObject *args) {
                 _v = PyTuple_Check(argv[5]) ? 1 : 0;
               }
               if (_v) {
-                return _wrap_Convolution__SWIG_4(self, args);
+                return _wrap_convolution__SWIG_4(self, args);
               }
             }
           }
@@ -26825,7 +26825,7 @@ SWIGINTERN PyObject *_wrap_Convolution(PyObject *self, PyObject *args) {
                   _v = PyTuple_Check(argv[6]) ? 1 : 0;
                 }
                 if (_v) {
-                  return _wrap_Convolution__SWIG_3(self, args);
+                  return _wrap_convolution__SWIG_3(self, args);
                 }
               }
             }
@@ -26871,7 +26871,7 @@ SWIGINTERN PyObject *_wrap_Convolution(PyObject *self, PyObject *args) {
                     _v = SWIG_CheckState(res);
                   }
                   if (_v) {
-                    return _wrap_Convolution__SWIG_2(self, args);
+                    return _wrap_convolution__SWIG_2(self, args);
                   }
                 }
               }
@@ -26923,7 +26923,7 @@ SWIGINTERN PyObject *_wrap_Convolution(PyObject *self, PyObject *args) {
                       _v = SWIG_CheckState(res);
                     }
                     if (_v) {
-                      return _wrap_Convolution__SWIG_1(self, args);
+                      return _wrap_convolution__SWIG_1(self, args);
                     }
                   }
                 }
@@ -26979,7 +26979,7 @@ SWIGINTERN PyObject *_wrap_Convolution(PyObject *self, PyObject *args) {
                       int res = SWIG_AsPtr_std_wstring(argv[9], (std::wstring**)(0));
                       _v = SWIG_CheckState(res);
                       if (_v) {
-                        return _wrap_Convolution__SWIG_0(self, args);
+                        return _wrap_convolution__SWIG_0(self, args);
                       }
                     }
                   }
@@ -26993,7 +26993,7 @@ SWIGINTERN PyObject *_wrap_Convolution(PyObject *self, PyObject *args) {
   }
   
 fail:
-  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'Convolution'.\n"
+  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'convolution'.\n"
     "  Possible C/C++ prototypes are:\n"
     "    CNTK::Convolution(CNTK::Variable const &,CNTK::Variable const &,CNTK::NDShape const &,std::vector< bool,std::allocator< bool > > const &,std::vector< bool,std::allocator< bool > > const &,CNTK::NDShape const &,CNTK::NDShape const &,bool,size_t,std::wstring const &)\n"
     "    CNTK::Convolution(CNTK::Variable const &,CNTK::Variable const &,CNTK::NDShape const &,std::vector< bool,std::allocator< bool > > const &,std::vector< bool,std::allocator< bool > > const &,CNTK::NDShape const &,CNTK::NDShape const &,bool,size_t)\n"
@@ -27008,7 +27008,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Pooling__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_pooling__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = 0 ;
   CNTK::PoolingType arg2 ;
@@ -27035,18 +27035,18 @@ SWIGINTERN PyObject *_wrap_Pooling__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObj
   PyObject * obj7 = 0 ;
   CNTK::FunctionPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"OOOOOOOO:Pooling",&obj0,&obj1,&obj2,&obj3,&obj4,&obj5,&obj6,&obj7)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OOOOOOOO:pooling",&obj0,&obj1,&obj2,&obj3,&obj4,&obj5,&obj6,&obj7)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Pooling" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "pooling" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp1) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Pooling" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "pooling" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
   ecode2 = SWIG_AsVal_int(obj1, &val2);
   if (!SWIG_IsOK(ecode2)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "Pooling" "', argument " "2"" of type '" "CNTK::PoolingType""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "pooling" "', argument " "2"" of type '" "CNTK::PoolingType""'");
   } 
   arg2 = static_cast< CNTK::PoolingType >(val2);
   {
@@ -27077,10 +27077,10 @@ SWIGINTERN PyObject *_wrap_Pooling__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObj
   }
   res5 = SWIG_ConvertPtr(obj4, &argp5, SWIGTYPE_p_std__vectorT_bool_std__allocatorT_bool_t_t,  0  | 0);
   if (!SWIG_IsOK(res5)) {
-    SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "Pooling" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "pooling" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
   }
   if (!argp5) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Pooling" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "pooling" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
   }
   arg5 = reinterpret_cast< std::vector< bool,std::allocator< bool > > * >(argp5);
   {
@@ -27113,10 +27113,10 @@ SWIGINTERN PyObject *_wrap_Pooling__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObj
     std::wstring *ptr = (std::wstring *)0;
     res8 = SWIG_AsPtr_std_wstring(obj7, &ptr);
     if (!SWIG_IsOK(res8)) {
-      SWIG_exception_fail(SWIG_ArgError(res8), "in method '" "Pooling" "', argument " "8"" of type '" "std::wstring const &""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res8), "in method '" "pooling" "', argument " "8"" of type '" "std::wstring const &""'"); 
     }
     if (!ptr) {
-      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Pooling" "', argument " "8"" of type '" "std::wstring const &""'"); 
+      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "pooling" "', argument " "8"" of type '" "std::wstring const &""'"); 
     }
     arg8 = ptr;
   }
@@ -27152,7 +27152,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Pooling__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_pooling__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = 0 ;
   CNTK::PoolingType arg2 ;
@@ -27176,18 +27176,18 @@ SWIGINTERN PyObject *_wrap_Pooling__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObj
   PyObject * obj6 = 0 ;
   CNTK::FunctionPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"OOOOOOO:Pooling",&obj0,&obj1,&obj2,&obj3,&obj4,&obj5,&obj6)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OOOOOOO:pooling",&obj0,&obj1,&obj2,&obj3,&obj4,&obj5,&obj6)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Pooling" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "pooling" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp1) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Pooling" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "pooling" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
   ecode2 = SWIG_AsVal_int(obj1, &val2);
   if (!SWIG_IsOK(ecode2)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "Pooling" "', argument " "2"" of type '" "CNTK::PoolingType""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "pooling" "', argument " "2"" of type '" "CNTK::PoolingType""'");
   } 
   arg2 = static_cast< CNTK::PoolingType >(val2);
   {
@@ -27218,10 +27218,10 @@ SWIGINTERN PyObject *_wrap_Pooling__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObj
   }
   res5 = SWIG_ConvertPtr(obj4, &argp5, SWIGTYPE_p_std__vectorT_bool_std__allocatorT_bool_t_t,  0  | 0);
   if (!SWIG_IsOK(res5)) {
-    SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "Pooling" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "pooling" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
   }
   if (!argp5) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Pooling" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "pooling" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
   }
   arg5 = reinterpret_cast< std::vector< bool,std::allocator< bool > > * >(argp5);
   {
@@ -27280,7 +27280,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Pooling__SWIG_2(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_pooling__SWIG_2(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = 0 ;
   CNTK::PoolingType arg2 ;
@@ -27302,18 +27302,18 @@ SWIGINTERN PyObject *_wrap_Pooling__SWIG_2(PyObject *SWIGUNUSEDPARM(self), PyObj
   PyObject * obj5 = 0 ;
   CNTK::FunctionPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"OOOOOO:Pooling",&obj0,&obj1,&obj2,&obj3,&obj4,&obj5)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OOOOOO:pooling",&obj0,&obj1,&obj2,&obj3,&obj4,&obj5)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Pooling" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "pooling" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp1) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Pooling" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "pooling" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
   ecode2 = SWIG_AsVal_int(obj1, &val2);
   if (!SWIG_IsOK(ecode2)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "Pooling" "', argument " "2"" of type '" "CNTK::PoolingType""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "pooling" "', argument " "2"" of type '" "CNTK::PoolingType""'");
   } 
   arg2 = static_cast< CNTK::PoolingType >(val2);
   {
@@ -27344,10 +27344,10 @@ SWIGINTERN PyObject *_wrap_Pooling__SWIG_2(PyObject *SWIGUNUSEDPARM(self), PyObj
   }
   res5 = SWIG_ConvertPtr(obj4, &argp5, SWIGTYPE_p_std__vectorT_bool_std__allocatorT_bool_t_t,  0  | 0);
   if (!SWIG_IsOK(res5)) {
-    SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "Pooling" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "pooling" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
   }
   if (!argp5) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Pooling" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "pooling" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
   }
   arg5 = reinterpret_cast< std::vector< bool,std::allocator< bool > > * >(argp5);
   {
@@ -27393,7 +27393,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Pooling__SWIG_3(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_pooling__SWIG_3(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = 0 ;
   CNTK::PoolingType arg2 ;
@@ -27413,18 +27413,18 @@ SWIGINTERN PyObject *_wrap_Pooling__SWIG_3(PyObject *SWIGUNUSEDPARM(self), PyObj
   PyObject * obj4 = 0 ;
   CNTK::FunctionPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"OOOOO:Pooling",&obj0,&obj1,&obj2,&obj3,&obj4)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OOOOO:pooling",&obj0,&obj1,&obj2,&obj3,&obj4)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Pooling" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "pooling" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp1) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Pooling" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "pooling" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
   ecode2 = SWIG_AsVal_int(obj1, &val2);
   if (!SWIG_IsOK(ecode2)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "Pooling" "', argument " "2"" of type '" "CNTK::PoolingType""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "pooling" "', argument " "2"" of type '" "CNTK::PoolingType""'");
   } 
   arg2 = static_cast< CNTK::PoolingType >(val2);
   {
@@ -27455,10 +27455,10 @@ SWIGINTERN PyObject *_wrap_Pooling__SWIG_3(PyObject *SWIGUNUSEDPARM(self), PyObj
   }
   res5 = SWIG_ConvertPtr(obj4, &argp5, SWIGTYPE_p_std__vectorT_bool_std__allocatorT_bool_t_t,  0  | 0);
   if (!SWIG_IsOK(res5)) {
-    SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "Pooling" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "pooling" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
   }
   if (!argp5) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Pooling" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "pooling" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
   }
   arg5 = reinterpret_cast< std::vector< bool,std::allocator< bool > > * >(argp5);
   {
@@ -27491,7 +27491,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Pooling__SWIG_4(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_pooling__SWIG_4(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = 0 ;
   CNTK::PoolingType arg2 ;
@@ -27507,18 +27507,18 @@ SWIGINTERN PyObject *_wrap_Pooling__SWIG_4(PyObject *SWIGUNUSEDPARM(self), PyObj
   PyObject * obj3 = 0 ;
   CNTK::FunctionPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"OOOO:Pooling",&obj0,&obj1,&obj2,&obj3)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OOOO:pooling",&obj0,&obj1,&obj2,&obj3)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Pooling" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "pooling" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp1) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Pooling" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "pooling" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
   ecode2 = SWIG_AsVal_int(obj1, &val2);
   if (!SWIG_IsOK(ecode2)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "Pooling" "', argument " "2"" of type '" "CNTK::PoolingType""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "pooling" "', argument " "2"" of type '" "CNTK::PoolingType""'");
   } 
   arg2 = static_cast< CNTK::PoolingType >(val2);
   {
@@ -27577,7 +27577,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Pooling__SWIG_5(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_pooling__SWIG_5(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = 0 ;
   CNTK::PoolingType arg2 ;
@@ -27591,18 +27591,18 @@ SWIGINTERN PyObject *_wrap_Pooling__SWIG_5(PyObject *SWIGUNUSEDPARM(self), PyObj
   PyObject * obj2 = 0 ;
   CNTK::FunctionPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"OOO:Pooling",&obj0,&obj1,&obj2)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OOO:pooling",&obj0,&obj1,&obj2)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Pooling" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "pooling" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp1) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Pooling" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "pooling" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
   ecode2 = SWIG_AsVal_int(obj1, &val2);
   if (!SWIG_IsOK(ecode2)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "Pooling" "', argument " "2"" of type '" "CNTK::PoolingType""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "pooling" "', argument " "2"" of type '" "CNTK::PoolingType""'");
   } 
   arg2 = static_cast< CNTK::PoolingType >(val2);
   {
@@ -27648,7 +27648,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Pooling(PyObject *self, PyObject *args) {
+SWIGINTERN PyObject *_wrap_pooling(PyObject *self, PyObject *args) {
   Py_ssize_t argc;
   PyObject *argv[9] = {
     0
@@ -27676,7 +27676,7 @@ SWIGINTERN PyObject *_wrap_Pooling(PyObject *self, PyObject *args) {
           _v = PyTuple_Check(argv[2]) ? 1 : 0;
         }
         if (_v) {
-          return _wrap_Pooling__SWIG_5(self, args);
+          return _wrap_pooling__SWIG_5(self, args);
         }
       }
     }
@@ -27703,7 +27703,7 @@ SWIGINTERN PyObject *_wrap_Pooling(PyObject *self, PyObject *args) {
             _v = PyTuple_Check(argv[3]) ? 1 : 0;
           }
           if (_v) {
-            return _wrap_Pooling__SWIG_4(self, args);
+            return _wrap_pooling__SWIG_4(self, args);
           }
         }
       }
@@ -27734,7 +27734,7 @@ SWIGINTERN PyObject *_wrap_Pooling(PyObject *self, PyObject *args) {
             int res = SWIG_ConvertPtr(argv[4], 0, SWIGTYPE_p_std__vectorT_bool_std__allocatorT_bool_t_t, 0);
             _v = SWIG_CheckState(res);
             if (_v) {
-              return _wrap_Pooling__SWIG_3(self, args);
+              return _wrap_pooling__SWIG_3(self, args);
             }
           }
         }
@@ -27772,7 +27772,7 @@ SWIGINTERN PyObject *_wrap_Pooling(PyObject *self, PyObject *args) {
                 _v = PyTuple_Check(argv[5]) ? 1 : 0;
               }
               if (_v) {
-                return _wrap_Pooling__SWIG_2(self, args);
+                return _wrap_pooling__SWIG_2(self, args);
               }
             }
           }
@@ -27817,7 +27817,7 @@ SWIGINTERN PyObject *_wrap_Pooling(PyObject *self, PyObject *args) {
                   _v = PyTuple_Check(argv[6]) ? 1 : 0;
                 }
                 if (_v) {
-                  return _wrap_Pooling__SWIG_1(self, args);
+                  return _wrap_pooling__SWIG_1(self, args);
                 }
               }
             }
@@ -27866,7 +27866,7 @@ SWIGINTERN PyObject *_wrap_Pooling(PyObject *self, PyObject *args) {
                   int res = SWIG_AsPtr_std_wstring(argv[7], (std::wstring**)(0));
                   _v = SWIG_CheckState(res);
                   if (_v) {
-                    return _wrap_Pooling__SWIG_0(self, args);
+                    return _wrap_pooling__SWIG_0(self, args);
                   }
                 }
               }
@@ -27878,7 +27878,7 @@ SWIGINTERN PyObject *_wrap_Pooling(PyObject *self, PyObject *args) {
   }
   
 fail:
-  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'Pooling'.\n"
+  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'pooling'.\n"
     "  Possible C/C++ prototypes are:\n"
     "    CNTK::Pooling(CNTK::Variable const &,CNTK::PoolingType,CNTK::NDShape const &,CNTK::NDShape const &,std::vector< bool,std::allocator< bool > > const &,CNTK::NDShape const &,CNTK::NDShape const &,std::wstring const &)\n"
     "    CNTK::Pooling(CNTK::Variable const &,CNTK::PoolingType,CNTK::NDShape const &,CNTK::NDShape const &,std::vector< bool,std::allocator< bool > > const &,CNTK::NDShape const &,CNTK::NDShape const &)\n"
@@ -27890,7 +27890,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_BatchNormalization__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_batch_normalization__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = 0 ;
   CNTK::Variable *arg2 = 0 ;
@@ -27937,80 +27937,80 @@ SWIGINTERN PyObject *_wrap_BatchNormalization__SWIG_0(PyObject *SWIGUNUSEDPARM(s
   PyObject * obj10 = 0 ;
   CNTK::FunctionPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"OOOOOOOOOOO:BatchNormalization",&obj0,&obj1,&obj2,&obj3,&obj4,&obj5,&obj6,&obj7,&obj8,&obj9,&obj10)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OOOOOOOOOOO:batch_normalization",&obj0,&obj1,&obj2,&obj3,&obj4,&obj5,&obj6,&obj7,&obj8,&obj9,&obj10)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "BatchNormalization" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "batch_normalization" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp1) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "BatchNormalization" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "batch_normalization" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
   res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res2)) {
-    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "BatchNormalization" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "batch_normalization" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp2) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "BatchNormalization" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "batch_normalization" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   arg2 = reinterpret_cast< CNTK::Variable * >(argp2);
   res3 = SWIG_ConvertPtr(obj2, &argp3, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res3)) {
-    SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "BatchNormalization" "', argument " "3"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "batch_normalization" "', argument " "3"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp3) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "BatchNormalization" "', argument " "3"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "batch_normalization" "', argument " "3"" of type '" "CNTK::Variable const &""'"); 
   }
   arg3 = reinterpret_cast< CNTK::Variable * >(argp3);
   res4 = SWIG_ConvertPtr(obj3, &argp4, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res4)) {
-    SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "BatchNormalization" "', argument " "4"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "batch_normalization" "', argument " "4"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp4) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "BatchNormalization" "', argument " "4"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "batch_normalization" "', argument " "4"" of type '" "CNTK::Variable const &""'"); 
   }
   arg4 = reinterpret_cast< CNTK::Variable * >(argp4);
   res5 = SWIG_ConvertPtr(obj4, &argp5, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res5)) {
-    SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "BatchNormalization" "', argument " "5"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "batch_normalization" "', argument " "5"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp5) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "BatchNormalization" "', argument " "5"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "batch_normalization" "', argument " "5"" of type '" "CNTK::Variable const &""'"); 
   }
   arg5 = reinterpret_cast< CNTK::Variable * >(argp5);
   ecode6 = SWIG_AsVal_bool(obj5, &val6);
   if (!SWIG_IsOK(ecode6)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode6), "in method '" "BatchNormalization" "', argument " "6"" of type '" "bool""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode6), "in method '" "batch_normalization" "', argument " "6"" of type '" "bool""'");
   } 
   arg6 = static_cast< bool >(val6);
   ecode7 = SWIG_AsVal_double(obj6, &val7);
   if (!SWIG_IsOK(ecode7)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode7), "in method '" "BatchNormalization" "', argument " "7"" of type '" "double""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode7), "in method '" "batch_normalization" "', argument " "7"" of type '" "double""'");
   } 
   arg7 = static_cast< double >(val7);
   ecode8 = SWIG_AsVal_double(obj7, &val8);
   if (!SWIG_IsOK(ecode8)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode8), "in method '" "BatchNormalization" "', argument " "8"" of type '" "double""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode8), "in method '" "batch_normalization" "', argument " "8"" of type '" "double""'");
   } 
   arg8 = static_cast< double >(val8);
   ecode9 = SWIG_AsVal_double(obj8, &val9);
   if (!SWIG_IsOK(ecode9)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode9), "in method '" "BatchNormalization" "', argument " "9"" of type '" "double""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode9), "in method '" "batch_normalization" "', argument " "9"" of type '" "double""'");
   } 
   arg9 = static_cast< double >(val9);
   ecode10 = SWIG_AsVal_bool(obj9, &val10);
   if (!SWIG_IsOK(ecode10)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode10), "in method '" "BatchNormalization" "', argument " "10"" of type '" "bool""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode10), "in method '" "batch_normalization" "', argument " "10"" of type '" "bool""'");
   } 
   arg10 = static_cast< bool >(val10);
   {
     std::wstring *ptr = (std::wstring *)0;
     res11 = SWIG_AsPtr_std_wstring(obj10, &ptr);
     if (!SWIG_IsOK(res11)) {
-      SWIG_exception_fail(SWIG_ArgError(res11), "in method '" "BatchNormalization" "', argument " "11"" of type '" "std::wstring const &""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res11), "in method '" "batch_normalization" "', argument " "11"" of type '" "std::wstring const &""'"); 
     }
     if (!ptr) {
-      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "BatchNormalization" "', argument " "11"" of type '" "std::wstring const &""'"); 
+      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "batch_normalization" "', argument " "11"" of type '" "std::wstring const &""'"); 
     }
     arg11 = ptr;
   }
@@ -28046,7 +28046,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_BatchNormalization__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_batch_normalization__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = 0 ;
   CNTK::Variable *arg2 = 0 ;
@@ -28090,70 +28090,70 @@ SWIGINTERN PyObject *_wrap_BatchNormalization__SWIG_1(PyObject *SWIGUNUSEDPARM(s
   PyObject * obj9 = 0 ;
   CNTK::FunctionPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"OOOOOOOOOO:BatchNormalization",&obj0,&obj1,&obj2,&obj3,&obj4,&obj5,&obj6,&obj7,&obj8,&obj9)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OOOOOOOOOO:batch_normalization",&obj0,&obj1,&obj2,&obj3,&obj4,&obj5,&obj6,&obj7,&obj8,&obj9)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "BatchNormalization" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "batch_normalization" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp1) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "BatchNormalization" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "batch_normalization" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
   res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res2)) {
-    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "BatchNormalization" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "batch_normalization" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp2) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "BatchNormalization" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "batch_normalization" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   arg2 = reinterpret_cast< CNTK::Variable * >(argp2);
   res3 = SWIG_ConvertPtr(obj2, &argp3, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res3)) {
-    SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "BatchNormalization" "', argument " "3"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "batch_normalization" "', argument " "3"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp3) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "BatchNormalization" "', argument " "3"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "batch_normalization" "', argument " "3"" of type '" "CNTK::Variable const &""'"); 
   }
   arg3 = reinterpret_cast< CNTK::Variable * >(argp3);
   res4 = SWIG_ConvertPtr(obj3, &argp4, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res4)) {
-    SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "BatchNormalization" "', argument " "4"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "batch_normalization" "', argument " "4"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp4) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "BatchNormalization" "', argument " "4"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "batch_normalization" "', argument " "4"" of type '" "CNTK::Variable const &""'"); 
   }
   arg4 = reinterpret_cast< CNTK::Variable * >(argp4);
   res5 = SWIG_ConvertPtr(obj4, &argp5, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res5)) {
-    SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "BatchNormalization" "', argument " "5"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "batch_normalization" "', argument " "5"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp5) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "BatchNormalization" "', argument " "5"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "batch_normalization" "', argument " "5"" of type '" "CNTK::Variable const &""'"); 
   }
   arg5 = reinterpret_cast< CNTK::Variable * >(argp5);
   ecode6 = SWIG_AsVal_bool(obj5, &val6);
   if (!SWIG_IsOK(ecode6)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode6), "in method '" "BatchNormalization" "', argument " "6"" of type '" "bool""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode6), "in method '" "batch_normalization" "', argument " "6"" of type '" "bool""'");
   } 
   arg6 = static_cast< bool >(val6);
   ecode7 = SWIG_AsVal_double(obj6, &val7);
   if (!SWIG_IsOK(ecode7)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode7), "in method '" "BatchNormalization" "', argument " "7"" of type '" "double""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode7), "in method '" "batch_normalization" "', argument " "7"" of type '" "double""'");
   } 
   arg7 = static_cast< double >(val7);
   ecode8 = SWIG_AsVal_double(obj7, &val8);
   if (!SWIG_IsOK(ecode8)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode8), "in method '" "BatchNormalization" "', argument " "8"" of type '" "double""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode8), "in method '" "batch_normalization" "', argument " "8"" of type '" "double""'");
   } 
   arg8 = static_cast< double >(val8);
   ecode9 = SWIG_AsVal_double(obj8, &val9);
   if (!SWIG_IsOK(ecode9)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode9), "in method '" "BatchNormalization" "', argument " "9"" of type '" "double""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode9), "in method '" "batch_normalization" "', argument " "9"" of type '" "double""'");
   } 
   arg9 = static_cast< double >(val9);
   ecode10 = SWIG_AsVal_bool(obj9, &val10);
   if (!SWIG_IsOK(ecode10)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode10), "in method '" "BatchNormalization" "', argument " "10"" of type '" "bool""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode10), "in method '" "batch_normalization" "', argument " "10"" of type '" "bool""'");
   } 
   arg10 = static_cast< bool >(val10);
   {
@@ -28186,7 +28186,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_BatchNormalization__SWIG_2(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_batch_normalization__SWIG_2(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = 0 ;
   CNTK::Variable *arg2 = 0 ;
@@ -28226,65 +28226,65 @@ SWIGINTERN PyObject *_wrap_BatchNormalization__SWIG_2(PyObject *SWIGUNUSEDPARM(s
   PyObject * obj8 = 0 ;
   CNTK::FunctionPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"OOOOOOOOO:BatchNormalization",&obj0,&obj1,&obj2,&obj3,&obj4,&obj5,&obj6,&obj7,&obj8)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OOOOOOOOO:batch_normalization",&obj0,&obj1,&obj2,&obj3,&obj4,&obj5,&obj6,&obj7,&obj8)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "BatchNormalization" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "batch_normalization" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp1) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "BatchNormalization" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "batch_normalization" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
   res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res2)) {
-    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "BatchNormalization" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "batch_normalization" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp2) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "BatchNormalization" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "batch_normalization" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   arg2 = reinterpret_cast< CNTK::Variable * >(argp2);
   res3 = SWIG_ConvertPtr(obj2, &argp3, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res3)) {
-    SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "BatchNormalization" "', argument " "3"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "batch_normalization" "', argument " "3"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp3) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "BatchNormalization" "', argument " "3"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "batch_normalization" "', argument " "3"" of type '" "CNTK::Variable const &""'"); 
   }
   arg3 = reinterpret_cast< CNTK::Variable * >(argp3);
   res4 = SWIG_ConvertPtr(obj3, &argp4, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res4)) {
-    SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "BatchNormalization" "', argument " "4"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "batch_normalization" "', argument " "4"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp4) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "BatchNormalization" "', argument " "4"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "batch_normalization" "', argument " "4"" of type '" "CNTK::Variable const &""'"); 
   }
   arg4 = reinterpret_cast< CNTK::Variable * >(argp4);
   res5 = SWIG_ConvertPtr(obj4, &argp5, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res5)) {
-    SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "BatchNormalization" "', argument " "5"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "batch_normalization" "', argument " "5"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp5) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "BatchNormalization" "', argument " "5"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "batch_normalization" "', argument " "5"" of type '" "CNTK::Variable const &""'"); 
   }
   arg5 = reinterpret_cast< CNTK::Variable * >(argp5);
   ecode6 = SWIG_AsVal_bool(obj5, &val6);
   if (!SWIG_IsOK(ecode6)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode6), "in method '" "BatchNormalization" "', argument " "6"" of type '" "bool""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode6), "in method '" "batch_normalization" "', argument " "6"" of type '" "bool""'");
   } 
   arg6 = static_cast< bool >(val6);
   ecode7 = SWIG_AsVal_double(obj6, &val7);
   if (!SWIG_IsOK(ecode7)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode7), "in method '" "BatchNormalization" "', argument " "7"" of type '" "double""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode7), "in method '" "batch_normalization" "', argument " "7"" of type '" "double""'");
   } 
   arg7 = static_cast< double >(val7);
   ecode8 = SWIG_AsVal_double(obj7, &val8);
   if (!SWIG_IsOK(ecode8)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode8), "in method '" "BatchNormalization" "', argument " "8"" of type '" "double""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode8), "in method '" "batch_normalization" "', argument " "8"" of type '" "double""'");
   } 
   arg8 = static_cast< double >(val8);
   ecode9 = SWIG_AsVal_double(obj8, &val9);
   if (!SWIG_IsOK(ecode9)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode9), "in method '" "BatchNormalization" "', argument " "9"" of type '" "double""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode9), "in method '" "batch_normalization" "', argument " "9"" of type '" "double""'");
   } 
   arg9 = static_cast< double >(val9);
   {
@@ -28317,7 +28317,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_BatchNormalization__SWIG_3(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_batch_normalization__SWIG_3(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = 0 ;
   CNTK::Variable *arg2 = 0 ;
@@ -28353,60 +28353,60 @@ SWIGINTERN PyObject *_wrap_BatchNormalization__SWIG_3(PyObject *SWIGUNUSEDPARM(s
   PyObject * obj7 = 0 ;
   CNTK::FunctionPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"OOOOOOOO:BatchNormalization",&obj0,&obj1,&obj2,&obj3,&obj4,&obj5,&obj6,&obj7)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OOOOOOOO:batch_normalization",&obj0,&obj1,&obj2,&obj3,&obj4,&obj5,&obj6,&obj7)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "BatchNormalization" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "batch_normalization" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp1) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "BatchNormalization" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "batch_normalization" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
   res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res2)) {
-    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "BatchNormalization" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "batch_normalization" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp2) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "BatchNormalization" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "batch_normalization" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   arg2 = reinterpret_cast< CNTK::Variable * >(argp2);
   res3 = SWIG_ConvertPtr(obj2, &argp3, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res3)) {
-    SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "BatchNormalization" "', argument " "3"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "batch_normalization" "', argument " "3"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp3) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "BatchNormalization" "', argument " "3"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "batch_normalization" "', argument " "3"" of type '" "CNTK::Variable const &""'"); 
   }
   arg3 = reinterpret_cast< CNTK::Variable * >(argp3);
   res4 = SWIG_ConvertPtr(obj3, &argp4, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res4)) {
-    SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "BatchNormalization" "', argument " "4"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "batch_normalization" "', argument " "4"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp4) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "BatchNormalization" "', argument " "4"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "batch_normalization" "', argument " "4"" of type '" "CNTK::Variable const &""'"); 
   }
   arg4 = reinterpret_cast< CNTK::Variable * >(argp4);
   res5 = SWIG_ConvertPtr(obj4, &argp5, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res5)) {
-    SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "BatchNormalization" "', argument " "5"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "batch_normalization" "', argument " "5"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp5) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "BatchNormalization" "', argument " "5"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "batch_normalization" "', argument " "5"" of type '" "CNTK::Variable const &""'"); 
   }
   arg5 = reinterpret_cast< CNTK::Variable * >(argp5);
   ecode6 = SWIG_AsVal_bool(obj5, &val6);
   if (!SWIG_IsOK(ecode6)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode6), "in method '" "BatchNormalization" "', argument " "6"" of type '" "bool""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode6), "in method '" "batch_normalization" "', argument " "6"" of type '" "bool""'");
   } 
   arg6 = static_cast< bool >(val6);
   ecode7 = SWIG_AsVal_double(obj6, &val7);
   if (!SWIG_IsOK(ecode7)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode7), "in method '" "BatchNormalization" "', argument " "7"" of type '" "double""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode7), "in method '" "batch_normalization" "', argument " "7"" of type '" "double""'");
   } 
   arg7 = static_cast< double >(val7);
   ecode8 = SWIG_AsVal_double(obj7, &val8);
   if (!SWIG_IsOK(ecode8)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode8), "in method '" "BatchNormalization" "', argument " "8"" of type '" "double""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode8), "in method '" "batch_normalization" "', argument " "8"" of type '" "double""'");
   } 
   arg8 = static_cast< double >(val8);
   {
@@ -28439,7 +28439,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_BatchNormalization__SWIG_4(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_batch_normalization__SWIG_4(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = 0 ;
   CNTK::Variable *arg2 = 0 ;
@@ -28471,55 +28471,55 @@ SWIGINTERN PyObject *_wrap_BatchNormalization__SWIG_4(PyObject *SWIGUNUSEDPARM(s
   PyObject * obj6 = 0 ;
   CNTK::FunctionPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"OOOOOOO:BatchNormalization",&obj0,&obj1,&obj2,&obj3,&obj4,&obj5,&obj6)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OOOOOOO:batch_normalization",&obj0,&obj1,&obj2,&obj3,&obj4,&obj5,&obj6)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "BatchNormalization" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "batch_normalization" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp1) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "BatchNormalization" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "batch_normalization" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
   res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res2)) {
-    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "BatchNormalization" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "batch_normalization" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp2) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "BatchNormalization" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "batch_normalization" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   arg2 = reinterpret_cast< CNTK::Variable * >(argp2);
   res3 = SWIG_ConvertPtr(obj2, &argp3, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res3)) {
-    SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "BatchNormalization" "', argument " "3"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "batch_normalization" "', argument " "3"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp3) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "BatchNormalization" "', argument " "3"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "batch_normalization" "', argument " "3"" of type '" "CNTK::Variable const &""'"); 
   }
   arg3 = reinterpret_cast< CNTK::Variable * >(argp3);
   res4 = SWIG_ConvertPtr(obj3, &argp4, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res4)) {
-    SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "BatchNormalization" "', argument " "4"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "batch_normalization" "', argument " "4"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp4) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "BatchNormalization" "', argument " "4"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "batch_normalization" "', argument " "4"" of type '" "CNTK::Variable const &""'"); 
   }
   arg4 = reinterpret_cast< CNTK::Variable * >(argp4);
   res5 = SWIG_ConvertPtr(obj4, &argp5, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res5)) {
-    SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "BatchNormalization" "', argument " "5"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "batch_normalization" "', argument " "5"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp5) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "BatchNormalization" "', argument " "5"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "batch_normalization" "', argument " "5"" of type '" "CNTK::Variable const &""'"); 
   }
   arg5 = reinterpret_cast< CNTK::Variable * >(argp5);
   ecode6 = SWIG_AsVal_bool(obj5, &val6);
   if (!SWIG_IsOK(ecode6)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode6), "in method '" "BatchNormalization" "', argument " "6"" of type '" "bool""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode6), "in method '" "batch_normalization" "', argument " "6"" of type '" "bool""'");
   } 
   arg6 = static_cast< bool >(val6);
   ecode7 = SWIG_AsVal_double(obj6, &val7);
   if (!SWIG_IsOK(ecode7)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode7), "in method '" "BatchNormalization" "', argument " "7"" of type '" "double""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode7), "in method '" "batch_normalization" "', argument " "7"" of type '" "double""'");
   } 
   arg7 = static_cast< double >(val7);
   {
@@ -28552,7 +28552,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_BatchNormalization__SWIG_5(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_batch_normalization__SWIG_5(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = 0 ;
   CNTK::Variable *arg2 = 0 ;
@@ -28580,50 +28580,50 @@ SWIGINTERN PyObject *_wrap_BatchNormalization__SWIG_5(PyObject *SWIGUNUSEDPARM(s
   PyObject * obj5 = 0 ;
   CNTK::FunctionPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"OOOOOO:BatchNormalization",&obj0,&obj1,&obj2,&obj3,&obj4,&obj5)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OOOOOO:batch_normalization",&obj0,&obj1,&obj2,&obj3,&obj4,&obj5)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "BatchNormalization" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "batch_normalization" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp1) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "BatchNormalization" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "batch_normalization" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
   res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res2)) {
-    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "BatchNormalization" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "batch_normalization" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp2) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "BatchNormalization" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "batch_normalization" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
   }
   arg2 = reinterpret_cast< CNTK::Variable * >(argp2);
   res3 = SWIG_ConvertPtr(obj2, &argp3, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res3)) {
-    SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "BatchNormalization" "', argument " "3"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "batch_normalization" "', argument " "3"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp3) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "BatchNormalization" "', argument " "3"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "batch_normalization" "', argument " "3"" of type '" "CNTK::Variable const &""'"); 
   }
   arg3 = reinterpret_cast< CNTK::Variable * >(argp3);
   res4 = SWIG_ConvertPtr(obj3, &argp4, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res4)) {
-    SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "BatchNormalization" "', argument " "4"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "batch_normalization" "', argument " "4"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp4) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "BatchNormalization" "', argument " "4"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "batch_normalization" "', argument " "4"" of type '" "CNTK::Variable const &""'"); 
   }
   arg4 = reinterpret_cast< CNTK::Variable * >(argp4);
   res5 = SWIG_ConvertPtr(obj4, &argp5, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res5)) {
-    SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "BatchNormalization" "', argument " "5"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "batch_normalization" "', argument " "5"" of type '" "CNTK::Variable const &""'"); 
   }
   if (!argp5) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "BatchNormalization" "', argument " "5"" of type '" "CNTK::Variable const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "batch_normalization" "', argument " "5"" of type '" "CNTK::Variable const &""'"); 
   }
   arg5 = reinterpret_cast< CNTK::Variable * >(argp5);
   ecode6 = SWIG_AsVal_bool(obj5, &val6);
   if (!SWIG_IsOK(ecode6)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode6), "in method '" "BatchNormalization" "', argument " "6"" of type '" "bool""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode6), "in method '" "batch_normalization" "', argument " "6"" of type '" "bool""'");
   } 
   arg6 = static_cast< bool >(val6);
   {
@@ -28656,7 +28656,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_BatchNormalization(PyObject *self, PyObject *args) {
+SWIGINTERN PyObject *_wrap_batch_normalization(PyObject *self, PyObject *args) {
   Py_ssize_t argc;
   PyObject *argv[12] = {
     0
@@ -28690,7 +28690,7 @@ SWIGINTERN PyObject *_wrap_BatchNormalization(PyObject *self, PyObject *args) {
                 _v = SWIG_CheckState(res);
               }
               if (_v) {
-                return _wrap_BatchNormalization__SWIG_5(self, args);
+                return _wrap_batch_normalization__SWIG_5(self, args);
               }
             }
           }
@@ -28725,7 +28725,7 @@ SWIGINTERN PyObject *_wrap_BatchNormalization(PyObject *self, PyObject *args) {
                   _v = SWIG_CheckState(res);
                 }
                 if (_v) {
-                  return _wrap_BatchNormalization__SWIG_4(self, args);
+                  return _wrap_batch_normalization__SWIG_4(self, args);
                 }
               }
             }
@@ -28766,7 +28766,7 @@ SWIGINTERN PyObject *_wrap_BatchNormalization(PyObject *self, PyObject *args) {
                     _v = SWIG_CheckState(res);
                   }
                   if (_v) {
-                    return _wrap_BatchNormalization__SWIG_3(self, args);
+                    return _wrap_batch_normalization__SWIG_3(self, args);
                   }
                 }
               }
@@ -28813,7 +28813,7 @@ SWIGINTERN PyObject *_wrap_BatchNormalization(PyObject *self, PyObject *args) {
                       _v = SWIG_CheckState(res);
                     }
                     if (_v) {
-                      return _wrap_BatchNormalization__SWIG_2(self, args);
+                      return _wrap_batch_normalization__SWIG_2(self, args);
                     }
                   }
                 }
@@ -28866,7 +28866,7 @@ SWIGINTERN PyObject *_wrap_BatchNormalization(PyObject *self, PyObject *args) {
                         _v = SWIG_CheckState(res);
                       }
                       if (_v) {
-                        return _wrap_BatchNormalization__SWIG_1(self, args);
+                        return _wrap_batch_normalization__SWIG_1(self, args);
                       }
                     }
                   }
@@ -28923,7 +28923,7 @@ SWIGINTERN PyObject *_wrap_BatchNormalization(PyObject *self, PyObject *args) {
                         int res = SWIG_AsPtr_std_wstring(argv[10], (std::wstring**)(0));
                         _v = SWIG_CheckState(res);
                         if (_v) {
-                          return _wrap_BatchNormalization__SWIG_0(self, args);
+                          return _wrap_batch_normalization__SWIG_0(self, args);
                         }
                       }
                     }
@@ -28938,7 +28938,7 @@ SWIGINTERN PyObject *_wrap_BatchNormalization(PyObject *self, PyObject *args) {
   }
   
 fail:
-  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'BatchNormalization'.\n"
+  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'batch_normalization'.\n"
     "  Possible C/C++ prototypes are:\n"
     "    CNTK::BatchNormalization(CNTK::Variable const &,CNTK::Variable const &,CNTK::Variable const &,CNTK::Variable const &,CNTK::Variable const &,bool,double,double,double,bool,std::wstring const &)\n"
     "    CNTK::BatchNormalization(CNTK::Variable const &,CNTK::Variable const &,CNTK::Variable const &,CNTK::Variable const &,CNTK::Variable const &,bool,double,double,double,bool)\n"
@@ -28950,7 +28950,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Combine__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_combine__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   std::vector< CNTK::FunctionPtr,std::allocator< CNTK::FunctionPtr > > *arg1 = 0 ;
   std::wstring *arg2 = 0 ;
@@ -28960,15 +28960,15 @@ SWIGINTERN PyObject *_wrap_Combine__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObj
   PyObject * obj1 = 0 ;
   CNTK::FunctionPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"OO:Combine",&obj0,&obj1)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OO:combine",&obj0,&obj1)) SWIG_fail;
   {
     std::vector< std::shared_ptr< CNTK::Function >,std::allocator< std::shared_ptr< CNTK::Function > > > *ptr = (std::vector< std::shared_ptr< CNTK::Function >,std::allocator< std::shared_ptr< CNTK::Function > > > *)0;
     res1 = swig::asptr(obj0, &ptr);
     if (!SWIG_IsOK(res1)) {
-      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Combine" "', argument " "1"" of type '" "std::vector< CNTK::FunctionPtr,std::allocator< CNTK::FunctionPtr > > const &""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "combine" "', argument " "1"" of type '" "std::vector< CNTK::FunctionPtr,std::allocator< CNTK::FunctionPtr > > const &""'"); 
     }
     if (!ptr) {
-      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Combine" "', argument " "1"" of type '" "std::vector< CNTK::FunctionPtr,std::allocator< CNTK::FunctionPtr > > const &""'"); 
+      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "combine" "', argument " "1"" of type '" "std::vector< CNTK::FunctionPtr,std::allocator< CNTK::FunctionPtr > > const &""'"); 
     }
     arg1 = ptr;
   }
@@ -28976,10 +28976,10 @@ SWIGINTERN PyObject *_wrap_Combine__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObj
     std::wstring *ptr = (std::wstring *)0;
     res2 = SWIG_AsPtr_std_wstring(obj1, &ptr);
     if (!SWIG_IsOK(res2)) {
-      SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "Combine" "', argument " "2"" of type '" "std::wstring const &""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "combine" "', argument " "2"" of type '" "std::wstring const &""'"); 
     }
     if (!ptr) {
-      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Combine" "', argument " "2"" of type '" "std::wstring const &""'"); 
+      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "combine" "', argument " "2"" of type '" "std::wstring const &""'"); 
     }
     arg2 = ptr;
   }
@@ -29017,22 +29017,22 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Combine__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_combine__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   std::vector< CNTK::FunctionPtr,std::allocator< CNTK::FunctionPtr > > *arg1 = 0 ;
   int res1 = SWIG_OLDOBJ ;
   PyObject * obj0 = 0 ;
   CNTK::FunctionPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:Combine",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:combine",&obj0)) SWIG_fail;
   {
     std::vector< std::shared_ptr< CNTK::Function >,std::allocator< std::shared_ptr< CNTK::Function > > > *ptr = (std::vector< std::shared_ptr< CNTK::Function >,std::allocator< std::shared_ptr< CNTK::Function > > > *)0;
     res1 = swig::asptr(obj0, &ptr);
     if (!SWIG_IsOK(res1)) {
-      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Combine" "', argument " "1"" of type '" "std::vector< CNTK::FunctionPtr,std::allocator< CNTK::FunctionPtr > > const &""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "combine" "', argument " "1"" of type '" "std::vector< CNTK::FunctionPtr,std::allocator< CNTK::FunctionPtr > > const &""'"); 
     }
     if (!ptr) {
-      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Combine" "', argument " "1"" of type '" "std::vector< CNTK::FunctionPtr,std::allocator< CNTK::FunctionPtr > > const &""'"); 
+      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "combine" "', argument " "1"" of type '" "std::vector< CNTK::FunctionPtr,std::allocator< CNTK::FunctionPtr > > const &""'"); 
     }
     arg1 = ptr;
   }
@@ -29068,7 +29068,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Combine(PyObject *self, PyObject *args) {
+SWIGINTERN PyObject *_wrap_combine(PyObject *self, PyObject *args) {
   Py_ssize_t argc;
   PyObject *argv[3] = {
     0
@@ -29085,7 +29085,7 @@ SWIGINTERN PyObject *_wrap_Combine(PyObject *self, PyObject *args) {
     int res = swig::asptr(argv[0], (std::vector< std::shared_ptr< CNTK::Function >,std::allocator< std::shared_ptr< CNTK::Function > > >**)(0));
     _v = SWIG_CheckState(res);
     if (_v) {
-      return _wrap_Combine__SWIG_1(self, args);
+      return _wrap_combine__SWIG_1(self, args);
     }
   }
   if (argc == 2) {
@@ -29096,13 +29096,13 @@ SWIGINTERN PyObject *_wrap_Combine(PyObject *self, PyObject *args) {
       int res = SWIG_AsPtr_std_wstring(argv[1], (std::wstring**)(0));
       _v = SWIG_CheckState(res);
       if (_v) {
-        return _wrap_Combine__SWIG_0(self, args);
+        return _wrap_combine__SWIG_0(self, args);
       }
     }
   }
   
 fail:
-  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'Combine'.\n"
+  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'combine'.\n"
     "  Possible C/C++ prototypes are:\n"
     "    CNTK::Combine(std::vector< CNTK::FunctionPtr,std::allocator< CNTK::FunctionPtr > > const &,std::wstring const &)\n"
     "    CNTK::Combine(std::vector< CNTK::FunctionPtr,std::allocator< CNTK::FunctionPtr > > const &)\n");
@@ -29110,7 +29110,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_DictionaryValue_TypeName(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_DictionaryValue_type_name(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::DictionaryValue::Type arg1 ;
   int val1 ;
@@ -29118,10 +29118,10 @@ SWIGINTERN PyObject *_wrap_DictionaryValue_TypeName(PyObject *SWIGUNUSEDPARM(sel
   PyObject * obj0 = 0 ;
   char *result = 0 ;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:DictionaryValue_TypeName",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:DictionaryValue_type_name",&obj0)) SWIG_fail;
   ecode1 = SWIG_AsVal_int(obj0, &val1);
   if (!SWIG_IsOK(ecode1)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode1), "in method '" "DictionaryValue_TypeName" "', argument " "1"" of type '" "CNTK::DictionaryValue::Type""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode1), "in method '" "DictionaryValue_type_name" "', argument " "1"" of type '" "CNTK::DictionaryValue::Type""'");
   } 
   arg1 = static_cast< CNTK::DictionaryValue::Type >(val1);
   {
@@ -29648,7 +29648,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_DictionaryValue_HasValue(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_DictionaryValue_has_value(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::DictionaryValue *arg1 = (CNTK::DictionaryValue *) 0 ;
   void *argp1 = 0 ;
@@ -29656,10 +29656,10 @@ SWIGINTERN PyObject *_wrap_DictionaryValue_HasValue(PyObject *SWIGUNUSEDPARM(sel
   PyObject * obj0 = 0 ;
   bool result;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:DictionaryValue_HasValue",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:DictionaryValue_has_value",&obj0)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_CNTK__DictionaryValue, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DictionaryValue_HasValue" "', argument " "1"" of type '" "CNTK::DictionaryValue const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DictionaryValue_has_value" "', argument " "1"" of type '" "CNTK::DictionaryValue const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::DictionaryValue * >(argp1);
   {
@@ -29689,7 +29689,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_DictionaryValue_ValueType(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_DictionaryValue_value_type(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::DictionaryValue *arg1 = (CNTK::DictionaryValue *) 0 ;
   void *argp1 = 0 ;
@@ -29697,10 +29697,10 @@ SWIGINTERN PyObject *_wrap_DictionaryValue_ValueType(PyObject *SWIGUNUSEDPARM(se
   PyObject * obj0 = 0 ;
   CNTK::DictionaryValue::Type result;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:DictionaryValue_ValueType",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:DictionaryValue_value_type",&obj0)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_CNTK__DictionaryValue, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DictionaryValue_ValueType" "', argument " "1"" of type '" "CNTK::DictionaryValue const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DictionaryValue_value_type" "', argument " "1"" of type '" "CNTK::DictionaryValue const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::DictionaryValue * >(argp1);
   {
@@ -29984,7 +29984,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Dictionary_Contains__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_Dictionary_contains__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Dictionary *arg1 = (CNTK::Dictionary *) 0 ;
   wchar_t *arg2 = (wchar_t *) 0 ;
@@ -29997,15 +29997,15 @@ SWIGINTERN PyObject *_wrap_Dictionary_Contains__SWIG_0(PyObject *SWIGUNUSEDPARM(
   PyObject * obj1 = 0 ;
   bool result;
   
-  if (!PyArg_ParseTuple(args,(char *)"OO:Dictionary_Contains",&obj0,&obj1)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OO:Dictionary_contains",&obj0,&obj1)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_CNTK__Dictionary, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Dictionary_Contains" "', argument " "1"" of type '" "CNTK::Dictionary const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Dictionary_contains" "', argument " "1"" of type '" "CNTK::Dictionary const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Dictionary * >(argp1);
   res2 = SWIG_AsWCharPtrAndSize(obj1, &buf2, NULL, &alloc2);
   if (!SWIG_IsOK(res2)) {
-    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "Dictionary_Contains" "', argument " "2"" of type '" "wchar_t const *""'");
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "Dictionary_contains" "', argument " "2"" of type '" "wchar_t const *""'");
   }
   arg2 = reinterpret_cast< wchar_t * >(buf2);
   {
@@ -30037,7 +30037,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Dictionary_Contains__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_Dictionary_contains__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Dictionary *arg1 = (CNTK::Dictionary *) 0 ;
   std::wstring *arg2 = 0 ;
@@ -30048,20 +30048,20 @@ SWIGINTERN PyObject *_wrap_Dictionary_Contains__SWIG_1(PyObject *SWIGUNUSEDPARM(
   PyObject * obj1 = 0 ;
   bool result;
   
-  if (!PyArg_ParseTuple(args,(char *)"OO:Dictionary_Contains",&obj0,&obj1)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OO:Dictionary_contains",&obj0,&obj1)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_CNTK__Dictionary, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Dictionary_Contains" "', argument " "1"" of type '" "CNTK::Dictionary const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Dictionary_contains" "', argument " "1"" of type '" "CNTK::Dictionary const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Dictionary * >(argp1);
   {
     std::wstring *ptr = (std::wstring *)0;
     res2 = SWIG_AsPtr_std_wstring(obj1, &ptr);
     if (!SWIG_IsOK(res2)) {
-      SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "Dictionary_Contains" "', argument " "2"" of type '" "std::wstring const &""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "Dictionary_contains" "', argument " "2"" of type '" "std::wstring const &""'"); 
     }
     if (!ptr) {
-      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Dictionary_Contains" "', argument " "2"" of type '" "std::wstring const &""'"); 
+      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Dictionary_contains" "', argument " "2"" of type '" "std::wstring const &""'"); 
     }
     arg2 = ptr;
   }
@@ -30094,7 +30094,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Dictionary_Contains(PyObject *self, PyObject *args) {
+SWIGINTERN PyObject *_wrap_Dictionary_contains(PyObject *self, PyObject *args) {
   Py_ssize_t argc;
   PyObject *argv[3] = {
     0
@@ -30115,7 +30115,7 @@ SWIGINTERN PyObject *_wrap_Dictionary_Contains(PyObject *self, PyObject *args) {
       int res = SWIG_AsPtr_std_wstring(argv[1], (std::wstring**)(0));
       _v = SWIG_CheckState(res);
       if (_v) {
-        return _wrap_Dictionary_Contains__SWIG_1(self, args);
+        return _wrap_Dictionary_contains__SWIG_1(self, args);
       }
     }
   }
@@ -30128,13 +30128,13 @@ SWIGINTERN PyObject *_wrap_Dictionary_Contains(PyObject *self, PyObject *args) {
       int res = SWIG_AsWCharPtrAndSize(argv[1], 0, NULL, 0);
       _v = SWIG_CheckState(res);
       if (_v) {
-        return _wrap_Dictionary_Contains__SWIG_0(self, args);
+        return _wrap_Dictionary_contains__SWIG_0(self, args);
       }
     }
   }
   
 fail:
-  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'Dictionary_Contains'.\n"
+  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'Dictionary_contains'.\n"
     "  Possible C/C++ prototypes are:\n"
     "    CNTK::Dictionary::Contains(wchar_t const *) const\n"
     "    CNTK::Dictionary::Contains(std::wstring const &) const\n");
@@ -30233,7 +30233,7 @@ SWIGINTERN PyObject *Dictionary_swigregister(PyObject *SWIGUNUSEDPARM(self), PyO
   return SWIG_Py_Void();
 }
 
-SWIGINTERN PyObject *_wrap_Learner_Update(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_Learner_update(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Learner *arg1 = (CNTK::Learner *) 0 ;
   std::unordered_map< CNTK::Parameter,CNTK::NDArrayViewPtr > *arg2 = 0 ;
@@ -30251,12 +30251,12 @@ SWIGINTERN PyObject *_wrap_Learner_Update(PyObject *SWIGUNUSEDPARM(self), PyObje
   PyObject * obj2 = 0 ;
   bool result;
   
-  if (!PyArg_ParseTuple(args,(char *)"OOO:Learner_Update",&obj0,&obj1,&obj2)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OOO:Learner_update",&obj0,&obj1,&obj2)) SWIG_fail;
   {
     int newmem = 0;
     res1 = SWIG_ConvertPtrAndOwn(obj0, &argp1, SWIGTYPE_p_std__shared_ptrT_CNTK__Learner_t, 0 |  0 , &newmem);
     if (!SWIG_IsOK(res1)) {
-      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Learner_Update" "', argument " "1"" of type '" "CNTK::Learner *""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Learner_update" "', argument " "1"" of type '" "CNTK::Learner *""'"); 
     }
     if (newmem & SWIG_CAST_NEW_MEMORY) {
       tempshared1 = *reinterpret_cast< std::shared_ptr<  CNTK::Learner > * >(argp1);
@@ -30269,15 +30269,15 @@ SWIGINTERN PyObject *_wrap_Learner_Update(PyObject *SWIGUNUSEDPARM(self), PyObje
   }
   res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_std__unordered_mapT_CNTK__Parameter_std__shared_ptrT_CNTK__NDArrayView_t_t,  0  | 0);
   if (!SWIG_IsOK(res2)) {
-    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "Learner_Update" "', argument " "2"" of type '" "std::unordered_map< CNTK::Parameter,CNTK::NDArrayViewPtr > const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "Learner_update" "', argument " "2"" of type '" "std::unordered_map< CNTK::Parameter,CNTK::NDArrayViewPtr > const &""'"); 
   }
   if (!argp2) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Learner_Update" "', argument " "2"" of type '" "std::unordered_map< CNTK::Parameter,CNTK::NDArrayViewPtr > const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Learner_update" "', argument " "2"" of type '" "std::unordered_map< CNTK::Parameter,CNTK::NDArrayViewPtr > const &""'"); 
   }
   arg2 = reinterpret_cast< std::unordered_map< CNTK::Parameter,CNTK::NDArrayViewPtr > * >(argp2);
   ecode3 = SWIG_AsVal_size_t(obj2, &val3);
   if (!SWIG_IsOK(ecode3)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "Learner_Update" "', argument " "3"" of type '" "size_t""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "Learner_update" "', argument " "3"" of type '" "size_t""'");
   } 
   arg3 = static_cast< size_t >(val3);
   {
@@ -30307,7 +30307,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Learner_Parameters(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_Learner_parameters(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Learner *arg1 = (CNTK::Learner *) 0 ;
   void *argp1 = 0 ;
@@ -30317,12 +30317,12 @@ SWIGINTERN PyObject *_wrap_Learner_Parameters(PyObject *SWIGUNUSEDPARM(self), Py
   PyObject * obj0 = 0 ;
   std::unordered_set< CNTK::Parameter > *result = 0 ;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:Learner_Parameters",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:Learner_parameters",&obj0)) SWIG_fail;
   {
     int newmem = 0;
     res1 = SWIG_ConvertPtrAndOwn(obj0, &argp1, SWIGTYPE_p_std__shared_ptrT_CNTK__Learner_t, 0 |  0 , &newmem);
     if (!SWIG_IsOK(res1)) {
-      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Learner_Parameters" "', argument " "1"" of type '" "CNTK::Learner const *""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Learner_parameters" "', argument " "1"" of type '" "CNTK::Learner const *""'"); 
     }
     if (newmem & SWIG_CAST_NEW_MEMORY) {
       tempshared1 = *reinterpret_cast< std::shared_ptr< const CNTK::Learner > * >(argp1);
@@ -30360,7 +30360,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Learner_GetCheckpointState(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_Learner_get_checkpoint_state(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Learner *arg1 = (CNTK::Learner *) 0 ;
   void *argp1 = 0 ;
@@ -30370,12 +30370,12 @@ SWIGINTERN PyObject *_wrap_Learner_GetCheckpointState(PyObject *SWIGUNUSEDPARM(s
   PyObject * obj0 = 0 ;
   CNTK::Dictionary result;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:Learner_GetCheckpointState",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:Learner_get_checkpoint_state",&obj0)) SWIG_fail;
   {
     int newmem = 0;
     res1 = SWIG_ConvertPtrAndOwn(obj0, &argp1, SWIGTYPE_p_std__shared_ptrT_CNTK__Learner_t, 0 |  0 , &newmem);
     if (!SWIG_IsOK(res1)) {
-      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Learner_GetCheckpointState" "', argument " "1"" of type '" "CNTK::Learner const *""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Learner_get_checkpoint_state" "', argument " "1"" of type '" "CNTK::Learner const *""'"); 
     }
     if (newmem & SWIG_CAST_NEW_MEMORY) {
       tempshared1 = *reinterpret_cast< std::shared_ptr< const CNTK::Learner > * >(argp1);
@@ -30413,7 +30413,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Learner_RestoreFromCheckpoint(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_Learner_restore_from_checkpoint(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Learner *arg1 = (CNTK::Learner *) 0 ;
   CNTK::Dictionary *arg2 = 0 ;
@@ -30426,12 +30426,12 @@ SWIGINTERN PyObject *_wrap_Learner_RestoreFromCheckpoint(PyObject *SWIGUNUSEDPAR
   PyObject * obj0 = 0 ;
   PyObject * obj1 = 0 ;
   
-  if (!PyArg_ParseTuple(args,(char *)"OO:Learner_RestoreFromCheckpoint",&obj0,&obj1)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OO:Learner_restore_from_checkpoint",&obj0,&obj1)) SWIG_fail;
   {
     int newmem = 0;
     res1 = SWIG_ConvertPtrAndOwn(obj0, &argp1, SWIGTYPE_p_std__shared_ptrT_CNTK__Learner_t, 0 |  0 , &newmem);
     if (!SWIG_IsOK(res1)) {
-      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Learner_RestoreFromCheckpoint" "', argument " "1"" of type '" "CNTK::Learner *""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Learner_restore_from_checkpoint" "', argument " "1"" of type '" "CNTK::Learner *""'"); 
     }
     if (newmem & SWIG_CAST_NEW_MEMORY) {
       tempshared1 = *reinterpret_cast< std::shared_ptr<  CNTK::Learner > * >(argp1);
@@ -30444,10 +30444,10 @@ SWIGINTERN PyObject *_wrap_Learner_RestoreFromCheckpoint(PyObject *SWIGUNUSEDPAR
   }
   res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_CNTK__Dictionary,  0  | 0);
   if (!SWIG_IsOK(res2)) {
-    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "Learner_RestoreFromCheckpoint" "', argument " "2"" of type '" "CNTK::Dictionary const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "Learner_restore_from_checkpoint" "', argument " "2"" of type '" "CNTK::Dictionary const &""'"); 
   }
   if (!argp2) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Learner_RestoreFromCheckpoint" "', argument " "2"" of type '" "CNTK::Dictionary const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Learner_restore_from_checkpoint" "', argument " "2"" of type '" "CNTK::Dictionary const &""'"); 
   }
   arg2 = reinterpret_cast< CNTK::Dictionary * >(argp2);
   {
@@ -30536,7 +30536,7 @@ SWIGINTERN PyObject *Learner_swigregister(PyObject *SWIGUNUSEDPARM(self), PyObje
   return SWIG_Py_Void();
 }
 
-SWIGINTERN PyObject *_wrap_SGDLearner(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_sgdlearner(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   std::unordered_set< CNTK::Parameter > *arg1 = 0 ;
   double arg2 ;
@@ -30546,7 +30546,7 @@ SWIGINTERN PyObject *_wrap_SGDLearner(PyObject *SWIGUNUSEDPARM(self), PyObject *
   PyObject * obj1 = 0 ;
   CNTK::LearnerPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"OO:SGDLearner",&obj0,&obj1)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OO:sgdlearner",&obj0,&obj1)) SWIG_fail;
   {
     if (PyList_Check(obj0)) {
       std::unordered_set<CNTK::Parameter>* args_set = new std::unordered_set<CNTK::Parameter>();
@@ -30590,7 +30590,7 @@ SWIGINTERN PyObject *_wrap_SGDLearner(PyObject *SWIGUNUSEDPARM(self), PyObject *
   }
   ecode2 = SWIG_AsVal_double(obj1, &val2);
   if (!SWIG_IsOK(ecode2)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SGDLearner" "', argument " "2"" of type '" "double""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "sgdlearner" "', argument " "2"" of type '" "double""'");
   } 
   arg2 = static_cast< double >(val2);
   {
@@ -30623,13 +30623,13 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_MomentumSGDLearner(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_momentum_sgdlearner(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   std::unordered_set< CNTK::Parameter > *arg1 = 0 ;
   PyObject * obj0 = 0 ;
   CNTK::LearnerPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:MomentumSGDLearner",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:momentum_sgdlearner",&obj0)) SWIG_fail;
   {
     if (PyList_Check(obj0)) {
       std::unordered_set<CNTK::Parameter>* args_set = new std::unordered_set<CNTK::Parameter>();
@@ -30701,13 +30701,13 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_NesterovLearner(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_nesterov_learner(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   std::unordered_set< CNTK::Parameter > *arg1 = 0 ;
   PyObject * obj0 = 0 ;
   CNTK::LearnerPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:NesterovLearner",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:nesterov_learner",&obj0)) SWIG_fail;
   {
     if (PyList_Check(obj0)) {
       std::unordered_set<CNTK::Parameter>* args_set = new std::unordered_set<CNTK::Parameter>();
@@ -30779,7 +30779,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_AdaGradLearner__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_ada_grad_learner__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   std::unordered_set< CNTK::Parameter > *arg1 = 0 ;
   bool arg2 ;
@@ -30789,7 +30789,7 @@ SWIGINTERN PyObject *_wrap_AdaGradLearner__SWIG_0(PyObject *SWIGUNUSEDPARM(self)
   PyObject * obj1 = 0 ;
   CNTK::LearnerPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"OO:AdaGradLearner",&obj0,&obj1)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OO:ada_grad_learner",&obj0,&obj1)) SWIG_fail;
   {
     if (PyList_Check(obj0)) {
       std::unordered_set<CNTK::Parameter>* args_set = new std::unordered_set<CNTK::Parameter>();
@@ -30833,7 +30833,7 @@ SWIGINTERN PyObject *_wrap_AdaGradLearner__SWIG_0(PyObject *SWIGUNUSEDPARM(self)
   }
   ecode2 = SWIG_AsVal_bool(obj1, &val2);
   if (!SWIG_IsOK(ecode2)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "AdaGradLearner" "', argument " "2"" of type '" "bool""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "ada_grad_learner" "', argument " "2"" of type '" "bool""'");
   } 
   arg2 = static_cast< bool >(val2);
   {
@@ -30866,13 +30866,13 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_AdaGradLearner__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_ada_grad_learner__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   std::unordered_set< CNTK::Parameter > *arg1 = 0 ;
   PyObject * obj0 = 0 ;
   CNTK::LearnerPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:AdaGradLearner",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:ada_grad_learner",&obj0)) SWIG_fail;
   {
     if (PyList_Check(obj0)) {
       std::unordered_set<CNTK::Parameter>* args_set = new std::unordered_set<CNTK::Parameter>();
@@ -30944,7 +30944,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_AdaGradLearner(PyObject *self, PyObject *args) {
+SWIGINTERN PyObject *_wrap_ada_grad_learner(PyObject *self, PyObject *args) {
   Py_ssize_t argc;
   PyObject *argv[3] = {
     0
@@ -30964,7 +30964,7 @@ SWIGINTERN PyObject *_wrap_AdaGradLearner(PyObject *self, PyObject *args) {
       _v = PyList_Check(argv[0]) ? 1 : 0;
     }
     if (_v) {
-      return _wrap_AdaGradLearner__SWIG_1(self, args);
+      return _wrap_ada_grad_learner__SWIG_1(self, args);
     }
   }
   if (argc == 2) {
@@ -30980,13 +30980,13 @@ SWIGINTERN PyObject *_wrap_AdaGradLearner(PyObject *self, PyObject *args) {
         _v = SWIG_CheckState(res);
       }
       if (_v) {
-        return _wrap_AdaGradLearner__SWIG_0(self, args);
+        return _wrap_ada_grad_learner__SWIG_0(self, args);
       }
     }
   }
   
 fail:
-  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'AdaGradLearner'.\n"
+  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'ada_grad_learner'.\n"
     "  Possible C/C++ prototypes are:\n"
     "    CNTK::AdaGradLearner(std::unordered_set< CNTK::Parameter > const &,bool)\n"
     "    CNTK::AdaGradLearner(std::unordered_set< CNTK::Parameter > const &)\n");
@@ -30994,13 +30994,13 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_FSAdaGradLearner(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_fsada_grad_learner(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   std::unordered_set< CNTK::Parameter > *arg1 = 0 ;
   PyObject * obj0 = 0 ;
   CNTK::LearnerPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:FSAdaGradLearner",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:fsada_grad_learner",&obj0)) SWIG_fail;
   {
     if (PyList_Check(obj0)) {
       std::unordered_set<CNTK::Parameter>* args_set = new std::unordered_set<CNTK::Parameter>();
@@ -31072,7 +31072,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_RMSPropLearner__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_rmsprop_learner__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   std::unordered_set< CNTK::Parameter > *arg1 = 0 ;
   double arg2 ;
@@ -31102,7 +31102,7 @@ SWIGINTERN PyObject *_wrap_RMSPropLearner__SWIG_0(PyObject *SWIGUNUSEDPARM(self)
   PyObject * obj6 = 0 ;
   CNTK::LearnerPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"OOOOOOO:RMSPropLearner",&obj0,&obj1,&obj2,&obj3,&obj4,&obj5,&obj6)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OOOOOOO:rmsprop_learner",&obj0,&obj1,&obj2,&obj3,&obj4,&obj5,&obj6)) SWIG_fail;
   {
     if (PyList_Check(obj0)) {
       std::unordered_set<CNTK::Parameter>* args_set = new std::unordered_set<CNTK::Parameter>();
@@ -31146,32 +31146,32 @@ SWIGINTERN PyObject *_wrap_RMSPropLearner__SWIG_0(PyObject *SWIGUNUSEDPARM(self)
   }
   ecode2 = SWIG_AsVal_double(obj1, &val2);
   if (!SWIG_IsOK(ecode2)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "RMSPropLearner" "', argument " "2"" of type '" "double""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "rmsprop_learner" "', argument " "2"" of type '" "double""'");
   } 
   arg2 = static_cast< double >(val2);
   ecode3 = SWIG_AsVal_double(obj2, &val3);
   if (!SWIG_IsOK(ecode3)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "RMSPropLearner" "', argument " "3"" of type '" "double""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "rmsprop_learner" "', argument " "3"" of type '" "double""'");
   } 
   arg3 = static_cast< double >(val3);
   ecode4 = SWIG_AsVal_double(obj3, &val4);
   if (!SWIG_IsOK(ecode4)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode4), "in method '" "RMSPropLearner" "', argument " "4"" of type '" "double""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode4), "in method '" "rmsprop_learner" "', argument " "4"" of type '" "double""'");
   } 
   arg4 = static_cast< double >(val4);
   ecode5 = SWIG_AsVal_double(obj4, &val5);
   if (!SWIG_IsOK(ecode5)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode5), "in method '" "RMSPropLearner" "', argument " "5"" of type '" "double""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode5), "in method '" "rmsprop_learner" "', argument " "5"" of type '" "double""'");
   } 
   arg5 = static_cast< double >(val5);
   ecode6 = SWIG_AsVal_double(obj5, &val6);
   if (!SWIG_IsOK(ecode6)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode6), "in method '" "RMSPropLearner" "', argument " "6"" of type '" "double""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode6), "in method '" "rmsprop_learner" "', argument " "6"" of type '" "double""'");
   } 
   arg6 = static_cast< double >(val6);
   ecode7 = SWIG_AsVal_bool(obj6, &val7);
   if (!SWIG_IsOK(ecode7)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode7), "in method '" "RMSPropLearner" "', argument " "7"" of type '" "bool""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode7), "in method '" "rmsprop_learner" "', argument " "7"" of type '" "bool""'");
   } 
   arg7 = static_cast< bool >(val7);
   {
@@ -31204,7 +31204,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_RMSPropLearner__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_rmsprop_learner__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   std::unordered_set< CNTK::Parameter > *arg1 = 0 ;
   double arg2 ;
@@ -31230,7 +31230,7 @@ SWIGINTERN PyObject *_wrap_RMSPropLearner__SWIG_1(PyObject *SWIGUNUSEDPARM(self)
   PyObject * obj5 = 0 ;
   CNTK::LearnerPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"OOOOOO:RMSPropLearner",&obj0,&obj1,&obj2,&obj3,&obj4,&obj5)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OOOOOO:rmsprop_learner",&obj0,&obj1,&obj2,&obj3,&obj4,&obj5)) SWIG_fail;
   {
     if (PyList_Check(obj0)) {
       std::unordered_set<CNTK::Parameter>* args_set = new std::unordered_set<CNTK::Parameter>();
@@ -31274,27 +31274,27 @@ SWIGINTERN PyObject *_wrap_RMSPropLearner__SWIG_1(PyObject *SWIGUNUSEDPARM(self)
   }
   ecode2 = SWIG_AsVal_double(obj1, &val2);
   if (!SWIG_IsOK(ecode2)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "RMSPropLearner" "', argument " "2"" of type '" "double""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "rmsprop_learner" "', argument " "2"" of type '" "double""'");
   } 
   arg2 = static_cast< double >(val2);
   ecode3 = SWIG_AsVal_double(obj2, &val3);
   if (!SWIG_IsOK(ecode3)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "RMSPropLearner" "', argument " "3"" of type '" "double""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "rmsprop_learner" "', argument " "3"" of type '" "double""'");
   } 
   arg3 = static_cast< double >(val3);
   ecode4 = SWIG_AsVal_double(obj3, &val4);
   if (!SWIG_IsOK(ecode4)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode4), "in method '" "RMSPropLearner" "', argument " "4"" of type '" "double""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode4), "in method '" "rmsprop_learner" "', argument " "4"" of type '" "double""'");
   } 
   arg4 = static_cast< double >(val4);
   ecode5 = SWIG_AsVal_double(obj4, &val5);
   if (!SWIG_IsOK(ecode5)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode5), "in method '" "RMSPropLearner" "', argument " "5"" of type '" "double""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode5), "in method '" "rmsprop_learner" "', argument " "5"" of type '" "double""'");
   } 
   arg5 = static_cast< double >(val5);
   ecode6 = SWIG_AsVal_double(obj5, &val6);
   if (!SWIG_IsOK(ecode6)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode6), "in method '" "RMSPropLearner" "', argument " "6"" of type '" "double""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode6), "in method '" "rmsprop_learner" "', argument " "6"" of type '" "double""'");
   } 
   arg6 = static_cast< double >(val6);
   {
@@ -31327,7 +31327,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_RMSPropLearner(PyObject *self, PyObject *args) {
+SWIGINTERN PyObject *_wrap_rmsprop_learner(PyObject *self, PyObject *args) {
   Py_ssize_t argc;
   PyObject *argv[8] = {
     0
@@ -31372,7 +31372,7 @@ SWIGINTERN PyObject *_wrap_RMSPropLearner(PyObject *self, PyObject *args) {
                 _v = SWIG_CheckState(res);
               }
               if (_v) {
-                return _wrap_RMSPropLearner__SWIG_1(self, args);
+                return _wrap_rmsprop_learner__SWIG_1(self, args);
               }
             }
           }
@@ -31418,7 +31418,7 @@ SWIGINTERN PyObject *_wrap_RMSPropLearner(PyObject *self, PyObject *args) {
                   _v = SWIG_CheckState(res);
                 }
                 if (_v) {
-                  return _wrap_RMSPropLearner__SWIG_0(self, args);
+                  return _wrap_rmsprop_learner__SWIG_0(self, args);
                 }
               }
             }
@@ -31429,7 +31429,7 @@ SWIGINTERN PyObject *_wrap_RMSPropLearner(PyObject *self, PyObject *args) {
   }
   
 fail:
-  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'RMSPropLearner'.\n"
+  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'rmsprop_learner'.\n"
     "  Possible C/C++ prototypes are:\n"
     "    CNTK::RMSPropLearner(std::unordered_set< CNTK::Parameter > const &,double,double,double,double,double,bool)\n"
     "    CNTK::RMSPropLearner(std::unordered_set< CNTK::Parameter > const &,double,double,double,double,double)\n");
@@ -31543,7 +31543,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Trainer_TrainMinibatch__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_Trainer_train_minibatch__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Trainer *arg1 = (CNTK::Trainer *) 0 ;
   std::unordered_map< CNTK::Variable,CNTK::ValuePtr > *arg2 = 0 ;
@@ -31557,10 +31557,10 @@ SWIGINTERN PyObject *_wrap_Trainer_TrainMinibatch__SWIG_0(PyObject *SWIGUNUSEDPA
   PyObject * obj2 = 0 ;
   bool result;
   
-  if (!PyArg_ParseTuple(args,(char *)"OOO:Trainer_TrainMinibatch",&obj0,&obj1,&obj2)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OOO:Trainer_train_minibatch",&obj0,&obj1,&obj2)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_CNTK__Trainer, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Trainer_TrainMinibatch" "', argument " "1"" of type '" "CNTK::Trainer *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Trainer_train_minibatch" "', argument " "1"" of type '" "CNTK::Trainer *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Trainer * >(argp1);
   {
@@ -31606,10 +31606,10 @@ SWIGINTERN PyObject *_wrap_Trainer_TrainMinibatch__SWIG_0(PyObject *SWIGUNUSEDPA
   }
   res3 = SWIG_ConvertPtr(obj2, &argp3, SWIGTYPE_p_CNTK__DeviceDescriptor,  0  | 0);
   if (!SWIG_IsOK(res3)) {
-    SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "Trainer_TrainMinibatch" "', argument " "3"" of type '" "CNTK::DeviceDescriptor const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "Trainer_train_minibatch" "', argument " "3"" of type '" "CNTK::DeviceDescriptor const &""'"); 
   }
   if (!argp3) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Trainer_TrainMinibatch" "', argument " "3"" of type '" "CNTK::DeviceDescriptor const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Trainer_train_minibatch" "', argument " "3"" of type '" "CNTK::DeviceDescriptor const &""'"); 
   }
   arg3 = reinterpret_cast< CNTK::DeviceDescriptor * >(argp3);
   {
@@ -31690,7 +31690,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Trainer_TrainMinibatch__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_Trainer_train_minibatch__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Trainer *arg1 = (CNTK::Trainer *) 0 ;
   std::unordered_map< CNTK::Variable,CNTK::ValuePtr > *arg2 = 0 ;
@@ -31700,10 +31700,10 @@ SWIGINTERN PyObject *_wrap_Trainer_TrainMinibatch__SWIG_1(PyObject *SWIGUNUSEDPA
   PyObject * obj1 = 0 ;
   bool result;
   
-  if (!PyArg_ParseTuple(args,(char *)"OO:Trainer_TrainMinibatch",&obj0,&obj1)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OO:Trainer_train_minibatch",&obj0,&obj1)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_CNTK__Trainer, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Trainer_TrainMinibatch" "', argument " "1"" of type '" "CNTK::Trainer *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Trainer_train_minibatch" "', argument " "1"" of type '" "CNTK::Trainer *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Trainer * >(argp1);
   {
@@ -31825,7 +31825,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Trainer_TrainMinibatch(PyObject *self, PyObject *args) {
+SWIGINTERN PyObject *_wrap_Trainer_train_minibatch(PyObject *self, PyObject *args) {
   Py_ssize_t argc;
   PyObject *argv[4] = {
     0
@@ -31849,7 +31849,7 @@ SWIGINTERN PyObject *_wrap_Trainer_TrainMinibatch(PyObject *self, PyObject *args
         _v = PyDict_Check(argv[1]) ? 1 : 0;
       }
       if (_v) {
-        return _wrap_Trainer_TrainMinibatch__SWIG_1(self, args);
+        return _wrap_Trainer_train_minibatch__SWIG_1(self, args);
       }
     }
   }
@@ -31868,14 +31868,14 @@ SWIGINTERN PyObject *_wrap_Trainer_TrainMinibatch(PyObject *self, PyObject *args
         int res = SWIG_ConvertPtr(argv[2], 0, SWIGTYPE_p_CNTK__DeviceDescriptor, 0);
         _v = SWIG_CheckState(res);
         if (_v) {
-          return _wrap_Trainer_TrainMinibatch__SWIG_0(self, args);
+          return _wrap_Trainer_train_minibatch__SWIG_0(self, args);
         }
       }
     }
   }
   
 fail:
-  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'Trainer_TrainMinibatch'.\n"
+  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'Trainer_train_minibatch'.\n"
     "  Possible C/C++ prototypes are:\n"
     "    CNTK::Trainer::TrainMinibatch(std::unordered_map< CNTK::Variable,CNTK::ValuePtr > const &,CNTK::DeviceDescriptor const &)\n"
     "    CNTK::Trainer::TrainMinibatch(std::unordered_map< CNTK::Variable,CNTK::ValuePtr > const &)\n");
@@ -31883,7 +31883,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Trainer_Model(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_Trainer_model(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Trainer *arg1 = (CNTK::Trainer *) 0 ;
   void *argp1 = 0 ;
@@ -31891,10 +31891,10 @@ SWIGINTERN PyObject *_wrap_Trainer_Model(PyObject *SWIGUNUSEDPARM(self), PyObjec
   PyObject * obj0 = 0 ;
   CNTK::FunctionPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:Trainer_Model",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:Trainer_model",&obj0)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_CNTK__Trainer, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Trainer_Model" "', argument " "1"" of type '" "CNTK::Trainer const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Trainer_model" "', argument " "1"" of type '" "CNTK::Trainer const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Trainer * >(argp1);
   {
@@ -31927,7 +31927,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Trainer_TrainingLossVariable(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_Trainer_training_loss_variable(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Trainer *arg1 = (CNTK::Trainer *) 0 ;
   void *argp1 = 0 ;
@@ -31935,10 +31935,10 @@ SWIGINTERN PyObject *_wrap_Trainer_TrainingLossVariable(PyObject *SWIGUNUSEDPARM
   PyObject * obj0 = 0 ;
   CNTK::Variable result;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:Trainer_TrainingLossVariable",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:Trainer_training_loss_variable",&obj0)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_CNTK__Trainer, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Trainer_TrainingLossVariable" "', argument " "1"" of type '" "CNTK::Trainer const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Trainer_training_loss_variable" "', argument " "1"" of type '" "CNTK::Trainer const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Trainer * >(argp1);
   {
@@ -31968,7 +31968,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Trainer_PreviousMinibatchTrainingLossValue(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_Trainer_previous_minibatch_training_loss_value(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Trainer *arg1 = (CNTK::Trainer *) 0 ;
   void *argp1 = 0 ;
@@ -31976,10 +31976,10 @@ SWIGINTERN PyObject *_wrap_Trainer_PreviousMinibatchTrainingLossValue(PyObject *
   PyObject * obj0 = 0 ;
   CNTK::ValuePtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:Trainer_PreviousMinibatchTrainingLossValue",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:Trainer_previous_minibatch_training_loss_value",&obj0)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_CNTK__Trainer, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Trainer_PreviousMinibatchTrainingLossValue" "', argument " "1"" of type '" "CNTK::Trainer const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Trainer_previous_minibatch_training_loss_value" "', argument " "1"" of type '" "CNTK::Trainer const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Trainer * >(argp1);
   {
@@ -32012,7 +32012,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Trainer_ParameterLearners(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_Trainer_parameter_learners(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Trainer *arg1 = (CNTK::Trainer *) 0 ;
   void *argp1 = 0 ;
@@ -32020,10 +32020,10 @@ SWIGINTERN PyObject *_wrap_Trainer_ParameterLearners(PyObject *SWIGUNUSEDPARM(se
   PyObject * obj0 = 0 ;
   std::unordered_set< CNTK::LearnerPtr > *result = 0 ;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:Trainer_ParameterLearners",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:Trainer_parameter_learners",&obj0)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_CNTK__Trainer, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Trainer_ParameterLearners" "', argument " "1"" of type '" "CNTK::Trainer const *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Trainer_parameter_learners" "', argument " "1"" of type '" "CNTK::Trainer const *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Trainer * >(argp1);
   {
@@ -32196,7 +32196,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_StreamInfo_m_storageFormat_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_StreamInfo_m_storage_format_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::StreamInfo *arg1 = (CNTK::StreamInfo *) 0 ;
   CNTK::StorageFormat arg2 ;
@@ -32207,15 +32207,15 @@ SWIGINTERN PyObject *_wrap_StreamInfo_m_storageFormat_set(PyObject *SWIGUNUSEDPA
   PyObject * obj0 = 0 ;
   PyObject * obj1 = 0 ;
   
-  if (!PyArg_ParseTuple(args,(char *)"OO:StreamInfo_m_storageFormat_set",&obj0,&obj1)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OO:StreamInfo_m_storage_format_set",&obj0,&obj1)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_CNTK__StreamInfo, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "StreamInfo_m_storageFormat_set" "', argument " "1"" of type '" "CNTK::StreamInfo *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "StreamInfo_m_storage_format_set" "', argument " "1"" of type '" "CNTK::StreamInfo *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::StreamInfo * >(argp1);
   ecode2 = SWIG_AsVal_int(obj1, &val2);
   if (!SWIG_IsOK(ecode2)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "StreamInfo_m_storageFormat_set" "', argument " "2"" of type '" "CNTK::StorageFormat""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "StreamInfo_m_storage_format_set" "', argument " "2"" of type '" "CNTK::StorageFormat""'");
   } 
   arg2 = static_cast< CNTK::StorageFormat >(val2);
   if (arg1) (arg1)->m_storageFormat = arg2;
@@ -32226,7 +32226,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_StreamInfo_m_storageFormat_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_StreamInfo_m_storage_format_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::StreamInfo *arg1 = (CNTK::StreamInfo *) 0 ;
   void *argp1 = 0 ;
@@ -32234,10 +32234,10 @@ SWIGINTERN PyObject *_wrap_StreamInfo_m_storageFormat_get(PyObject *SWIGUNUSEDPA
   PyObject * obj0 = 0 ;
   CNTK::StorageFormat result;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:StreamInfo_m_storageFormat_get",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:StreamInfo_m_storage_format_get",&obj0)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_CNTK__StreamInfo, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "StreamInfo_m_storageFormat_get" "', argument " "1"" of type '" "CNTK::StreamInfo *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "StreamInfo_m_storage_format_get" "', argument " "1"" of type '" "CNTK::StreamInfo *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::StreamInfo * >(argp1);
   result = (CNTK::StorageFormat) ((arg1)->m_storageFormat);
@@ -32248,7 +32248,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_StreamInfo_m_elementType_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_StreamInfo_m_element_type_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::StreamInfo *arg1 = (CNTK::StreamInfo *) 0 ;
   CNTK::DataType arg2 ;
@@ -32259,15 +32259,15 @@ SWIGINTERN PyObject *_wrap_StreamInfo_m_elementType_set(PyObject *SWIGUNUSEDPARM
   PyObject * obj0 = 0 ;
   PyObject * obj1 = 0 ;
   
-  if (!PyArg_ParseTuple(args,(char *)"OO:StreamInfo_m_elementType_set",&obj0,&obj1)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OO:StreamInfo_m_element_type_set",&obj0,&obj1)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_CNTK__StreamInfo, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "StreamInfo_m_elementType_set" "', argument " "1"" of type '" "CNTK::StreamInfo *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "StreamInfo_m_element_type_set" "', argument " "1"" of type '" "CNTK::StreamInfo *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::StreamInfo * >(argp1);
   ecode2 = SWIG_AsVal_int(obj1, &val2);
   if (!SWIG_IsOK(ecode2)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "StreamInfo_m_elementType_set" "', argument " "2"" of type '" "CNTK::DataType""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "StreamInfo_m_element_type_set" "', argument " "2"" of type '" "CNTK::DataType""'");
   } 
   arg2 = static_cast< CNTK::DataType >(val2);
   if (arg1) (arg1)->m_elementType = arg2;
@@ -32278,7 +32278,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_StreamInfo_m_elementType_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_StreamInfo_m_element_type_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::StreamInfo *arg1 = (CNTK::StreamInfo *) 0 ;
   void *argp1 = 0 ;
@@ -32286,10 +32286,10 @@ SWIGINTERN PyObject *_wrap_StreamInfo_m_elementType_get(PyObject *SWIGUNUSEDPARM
   PyObject * obj0 = 0 ;
   CNTK::DataType result;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:StreamInfo_m_elementType_get",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:StreamInfo_m_element_type_get",&obj0)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_CNTK__StreamInfo, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "StreamInfo_m_elementType_get" "', argument " "1"" of type '" "CNTK::StreamInfo *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "StreamInfo_m_element_type_get" "', argument " "1"" of type '" "CNTK::StreamInfo *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::StreamInfo * >(argp1);
   result = (CNTK::DataType) ((arg1)->m_elementType);
@@ -32300,7 +32300,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_StreamInfo_m_sampleLayout_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_StreamInfo_m_sample_layout_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::StreamInfo *arg1 = (CNTK::StreamInfo *) 0 ;
   CNTK::NDShape *arg2 = (CNTK::NDShape *) 0 ;
@@ -32311,15 +32311,15 @@ SWIGINTERN PyObject *_wrap_StreamInfo_m_sampleLayout_set(PyObject *SWIGUNUSEDPAR
   PyObject * obj0 = 0 ;
   PyObject * obj1 = 0 ;
   
-  if (!PyArg_ParseTuple(args,(char *)"OO:StreamInfo_m_sampleLayout_set",&obj0,&obj1)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OO:StreamInfo_m_sample_layout_set",&obj0,&obj1)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_CNTK__StreamInfo, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "StreamInfo_m_sampleLayout_set" "', argument " "1"" of type '" "CNTK::StreamInfo *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "StreamInfo_m_sample_layout_set" "', argument " "1"" of type '" "CNTK::StreamInfo *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::StreamInfo * >(argp1);
   res2 = SWIG_ConvertPtr(obj1, &argp2,SWIGTYPE_p_CNTK__NDShape, 0 |  0 );
   if (!SWIG_IsOK(res2)) {
-    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "StreamInfo_m_sampleLayout_set" "', argument " "2"" of type '" "CNTK::NDShape *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "StreamInfo_m_sample_layout_set" "', argument " "2"" of type '" "CNTK::NDShape *""'"); 
   }
   arg2 = reinterpret_cast< CNTK::NDShape * >(argp2);
   if (arg1) (arg1)->m_sampleLayout = *arg2;
@@ -32330,7 +32330,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_StreamInfo_m_sampleLayout_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_StreamInfo_m_sample_layout_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::StreamInfo *arg1 = (CNTK::StreamInfo *) 0 ;
   void *argp1 = 0 ;
@@ -32338,10 +32338,10 @@ SWIGINTERN PyObject *_wrap_StreamInfo_m_sampleLayout_get(PyObject *SWIGUNUSEDPAR
   PyObject * obj0 = 0 ;
   CNTK::NDShape *result = 0 ;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:StreamInfo_m_sampleLayout_get",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:StreamInfo_m_sample_layout_get",&obj0)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_CNTK__StreamInfo, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "StreamInfo_m_sampleLayout_get" "', argument " "1"" of type '" "CNTK::StreamInfo *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "StreamInfo_m_sample_layout_get" "', argument " "1"" of type '" "CNTK::StreamInfo *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::StreamInfo * >(argp1);
   result = (CNTK::NDShape *)& ((arg1)->m_sampleLayout);
@@ -32568,7 +32568,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_MinibatchData_m_numSequences_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_MinibatchData_m_num_sequences_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::MinibatchData *arg1 = (CNTK::MinibatchData *) 0 ;
   size_t arg2 ;
@@ -32579,15 +32579,15 @@ SWIGINTERN PyObject *_wrap_MinibatchData_m_numSequences_set(PyObject *SWIGUNUSED
   PyObject * obj0 = 0 ;
   PyObject * obj1 = 0 ;
   
-  if (!PyArg_ParseTuple(args,(char *)"OO:MinibatchData_m_numSequences_set",&obj0,&obj1)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OO:MinibatchData_m_num_sequences_set",&obj0,&obj1)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_CNTK__MinibatchData, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MinibatchData_m_numSequences_set" "', argument " "1"" of type '" "CNTK::MinibatchData *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MinibatchData_m_num_sequences_set" "', argument " "1"" of type '" "CNTK::MinibatchData *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::MinibatchData * >(argp1);
   ecode2 = SWIG_AsVal_size_t(obj1, &val2);
   if (!SWIG_IsOK(ecode2)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "MinibatchData_m_numSequences_set" "', argument " "2"" of type '" "size_t""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "MinibatchData_m_num_sequences_set" "', argument " "2"" of type '" "size_t""'");
   } 
   arg2 = static_cast< size_t >(val2);
   if (arg1) (arg1)->m_numSequences = arg2;
@@ -32598,7 +32598,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_MinibatchData_m_numSequences_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_MinibatchData_m_num_sequences_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::MinibatchData *arg1 = (CNTK::MinibatchData *) 0 ;
   void *argp1 = 0 ;
@@ -32606,10 +32606,10 @@ SWIGINTERN PyObject *_wrap_MinibatchData_m_numSequences_get(PyObject *SWIGUNUSED
   PyObject * obj0 = 0 ;
   size_t result;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:MinibatchData_m_numSequences_get",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:MinibatchData_m_num_sequences_get",&obj0)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_CNTK__MinibatchData, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MinibatchData_m_numSequences_get" "', argument " "1"" of type '" "CNTK::MinibatchData *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MinibatchData_m_num_sequences_get" "', argument " "1"" of type '" "CNTK::MinibatchData *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::MinibatchData * >(argp1);
   result =  ((arg1)->m_numSequences);
@@ -32620,7 +32620,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_MinibatchData_m_numSamples_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_MinibatchData_m_num_samples_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::MinibatchData *arg1 = (CNTK::MinibatchData *) 0 ;
   size_t arg2 ;
@@ -32631,15 +32631,15 @@ SWIGINTERN PyObject *_wrap_MinibatchData_m_numSamples_set(PyObject *SWIGUNUSEDPA
   PyObject * obj0 = 0 ;
   PyObject * obj1 = 0 ;
   
-  if (!PyArg_ParseTuple(args,(char *)"OO:MinibatchData_m_numSamples_set",&obj0,&obj1)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OO:MinibatchData_m_num_samples_set",&obj0,&obj1)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_CNTK__MinibatchData, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MinibatchData_m_numSamples_set" "', argument " "1"" of type '" "CNTK::MinibatchData *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MinibatchData_m_num_samples_set" "', argument " "1"" of type '" "CNTK::MinibatchData *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::MinibatchData * >(argp1);
   ecode2 = SWIG_AsVal_size_t(obj1, &val2);
   if (!SWIG_IsOK(ecode2)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "MinibatchData_m_numSamples_set" "', argument " "2"" of type '" "size_t""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "MinibatchData_m_num_samples_set" "', argument " "2"" of type '" "size_t""'");
   } 
   arg2 = static_cast< size_t >(val2);
   if (arg1) (arg1)->m_numSamples = arg2;
@@ -32650,7 +32650,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_MinibatchData_m_numSamples_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_MinibatchData_m_num_samples_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::MinibatchData *arg1 = (CNTK::MinibatchData *) 0 ;
   void *argp1 = 0 ;
@@ -32658,10 +32658,10 @@ SWIGINTERN PyObject *_wrap_MinibatchData_m_numSamples_get(PyObject *SWIGUNUSEDPA
   PyObject * obj0 = 0 ;
   size_t result;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:MinibatchData_m_numSamples_get",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:MinibatchData_m_num_samples_get",&obj0)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_CNTK__MinibatchData, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MinibatchData_m_numSamples_get" "', argument " "1"" of type '" "CNTK::MinibatchData *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MinibatchData_m_num_samples_get" "', argument " "1"" of type '" "CNTK::MinibatchData *""'"); 
   }
   arg1 = reinterpret_cast< CNTK::MinibatchData * >(argp1);
   result =  ((arg1)->m_numSamples);
@@ -32786,7 +32786,7 @@ SWIGINTERN PyObject *MinibatchData_swigregister(PyObject *SWIGUNUSEDPARM(self), 
   return SWIG_Py_Void();
 }
 
-SWIGINTERN PyObject *_wrap_MinibatchSource_StreamInfos(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_MinibatchSource_stream_infos(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::MinibatchSource *arg1 = (CNTK::MinibatchSource *) 0 ;
   void *argp1 = 0 ;
@@ -32796,12 +32796,12 @@ SWIGINTERN PyObject *_wrap_MinibatchSource_StreamInfos(PyObject *SWIGUNUSEDPARM(
   PyObject * obj0 = 0 ;
   std::unordered_set< CNTK::StreamInfo > *result = 0 ;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:MinibatchSource_StreamInfos",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:MinibatchSource_stream_infos",&obj0)) SWIG_fail;
   {
     int newmem = 0;
     res1 = SWIG_ConvertPtrAndOwn(obj0, &argp1, SWIGTYPE_p_std__shared_ptrT_CNTK__MinibatchSource_t, 0 |  0 , &newmem);
     if (!SWIG_IsOK(res1)) {
-      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MinibatchSource_StreamInfos" "', argument " "1"" of type '" "CNTK::MinibatchSource *""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MinibatchSource_stream_infos" "', argument " "1"" of type '" "CNTK::MinibatchSource *""'"); 
     }
     if (newmem & SWIG_CAST_NEW_MEMORY) {
       tempshared1 = *reinterpret_cast< std::shared_ptr<  CNTK::MinibatchSource > * >(argp1);
@@ -32856,7 +32856,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_MinibatchSource_GetNextMinibatch__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_MinibatchSource_get_next_minibatch__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::MinibatchSource *arg1 = (CNTK::MinibatchSource *) 0 ;
   std::unordered_map< CNTK::StreamInfo,std::pair< size_t,size_t > > *arg2 = 0 ;
@@ -32872,12 +32872,12 @@ SWIGINTERN PyObject *_wrap_MinibatchSource_GetNextMinibatch__SWIG_0(PyObject *SW
   PyObject * obj2 = 0 ;
   SwigValueWrapper< std::unordered_map< CNTK::StreamInfo,CNTK::MinibatchData > > result;
   
-  if (!PyArg_ParseTuple(args,(char *)"OOO:MinibatchSource_GetNextMinibatch",&obj0,&obj1,&obj2)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OOO:MinibatchSource_get_next_minibatch",&obj0,&obj1,&obj2)) SWIG_fail;
   {
     int newmem = 0;
     res1 = SWIG_ConvertPtrAndOwn(obj0, &argp1, SWIGTYPE_p_std__shared_ptrT_CNTK__MinibatchSource_t, 0 |  0 , &newmem);
     if (!SWIG_IsOK(res1)) {
-      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MinibatchSource_GetNextMinibatch" "', argument " "1"" of type '" "CNTK::MinibatchSource *""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MinibatchSource_get_next_minibatch" "', argument " "1"" of type '" "CNTK::MinibatchSource *""'"); 
     }
     if (newmem & SWIG_CAST_NEW_MEMORY) {
       tempshared1 = *reinterpret_cast< std::shared_ptr<  CNTK::MinibatchSource > * >(argp1);
@@ -32928,10 +32928,10 @@ SWIGINTERN PyObject *_wrap_MinibatchSource_GetNextMinibatch__SWIG_0(PyObject *SW
   }
   res3 = SWIG_ConvertPtr(obj2, &argp3, SWIGTYPE_p_CNTK__DeviceDescriptor,  0  | 0);
   if (!SWIG_IsOK(res3)) {
-    SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "MinibatchSource_GetNextMinibatch" "', argument " "3"" of type '" "CNTK::DeviceDescriptor const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "MinibatchSource_get_next_minibatch" "', argument " "3"" of type '" "CNTK::DeviceDescriptor const &""'"); 
   }
   if (!argp3) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "MinibatchSource_GetNextMinibatch" "', argument " "3"" of type '" "CNTK::DeviceDescriptor const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "MinibatchSource_get_next_minibatch" "', argument " "3"" of type '" "CNTK::DeviceDescriptor const &""'"); 
   }
   arg3 = reinterpret_cast< CNTK::DeviceDescriptor * >(argp3);
   {
@@ -32982,7 +32982,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_MinibatchSource_GetNextMinibatch__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_MinibatchSource_get_next_minibatch__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::MinibatchSource *arg1 = (CNTK::MinibatchSource *) 0 ;
   std::unordered_map< CNTK::StreamInfo,std::pair< size_t,size_t > > *arg2 = 0 ;
@@ -32994,12 +32994,12 @@ SWIGINTERN PyObject *_wrap_MinibatchSource_GetNextMinibatch__SWIG_1(PyObject *SW
   PyObject * obj1 = 0 ;
   SwigValueWrapper< std::unordered_map< CNTK::StreamInfo,CNTK::MinibatchData > > result;
   
-  if (!PyArg_ParseTuple(args,(char *)"OO:MinibatchSource_GetNextMinibatch",&obj0,&obj1)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OO:MinibatchSource_get_next_minibatch",&obj0,&obj1)) SWIG_fail;
   {
     int newmem = 0;
     res1 = SWIG_ConvertPtrAndOwn(obj0, &argp1, SWIGTYPE_p_std__shared_ptrT_CNTK__MinibatchSource_t, 0 |  0 , &newmem);
     if (!SWIG_IsOK(res1)) {
-      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MinibatchSource_GetNextMinibatch" "', argument " "1"" of type '" "CNTK::MinibatchSource *""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MinibatchSource_get_next_minibatch" "', argument " "1"" of type '" "CNTK::MinibatchSource *""'"); 
     }
     if (newmem & SWIG_CAST_NEW_MEMORY) {
       tempshared1 = *reinterpret_cast< std::shared_ptr<  CNTK::MinibatchSource > * >(argp1);
@@ -33096,7 +33096,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_MinibatchSource_GetNextMinibatch(PyObject *self, PyObject *args) {
+SWIGINTERN PyObject *_wrap_MinibatchSource_get_next_minibatch(PyObject *self, PyObject *args) {
   Py_ssize_t argc;
   PyObject *argv[4] = {
     0
@@ -33119,7 +33119,7 @@ SWIGINTERN PyObject *_wrap_MinibatchSource_GetNextMinibatch(PyObject *self, PyOb
         _v = PyDict_Check(argv[1]) ? 1 : 0;
       }
       if (_v) {
-        return _wrap_MinibatchSource_GetNextMinibatch__SWIG_1(self, args);
+        return _wrap_MinibatchSource_get_next_minibatch__SWIG_1(self, args);
       }
     }
   }
@@ -33137,14 +33137,14 @@ SWIGINTERN PyObject *_wrap_MinibatchSource_GetNextMinibatch(PyObject *self, PyOb
         int res = SWIG_ConvertPtr(argv[2], 0, SWIGTYPE_p_CNTK__DeviceDescriptor, 0);
         _v = SWIG_CheckState(res);
         if (_v) {
-          return _wrap_MinibatchSource_GetNextMinibatch__SWIG_0(self, args);
+          return _wrap_MinibatchSource_get_next_minibatch__SWIG_0(self, args);
         }
       }
     }
   }
   
 fail:
-  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'MinibatchSource_GetNextMinibatch'.\n"
+  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'MinibatchSource_get_next_minibatch'.\n"
     "  Possible C/C++ prototypes are:\n"
     "    CNTK::MinibatchSource::GetNextMinibatch(std::unordered_map< CNTK::StreamInfo,std::pair< size_t,size_t > > const &,CNTK::DeviceDescriptor const &)\n"
     "    CNTK::MinibatchSource::GetNextMinibatch(std::unordered_map< CNTK::StreamInfo,std::pair< size_t,size_t > > const &)\n");
@@ -33196,7 +33196,7 @@ SWIGINTERN PyObject *MinibatchSource_swigregister(PyObject *SWIGUNUSEDPARM(self)
   return SWIG_Py_Void();
 }
 
-SWIGINTERN PyObject *_wrap_CreateCompositeMinibatchSource(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_create_composite_minibatch_source(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Dictionary *arg1 = 0 ;
   void *argp1 = 0 ;
@@ -33204,13 +33204,13 @@ SWIGINTERN PyObject *_wrap_CreateCompositeMinibatchSource(PyObject *SWIGUNUSEDPA
   PyObject * obj0 = 0 ;
   CNTK::MinibatchSourcePtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:CreateCompositeMinibatchSource",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:create_composite_minibatch_source",&obj0)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Dictionary,  0  | 0);
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "CreateCompositeMinibatchSource" "', argument " "1"" of type '" "CNTK::Dictionary const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "create_composite_minibatch_source" "', argument " "1"" of type '" "CNTK::Dictionary const &""'"); 
   }
   if (!argp1) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "CreateCompositeMinibatchSource" "', argument " "1"" of type '" "CNTK::Dictionary const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "create_composite_minibatch_source" "', argument " "1"" of type '" "CNTK::Dictionary const &""'"); 
   }
   arg1 = reinterpret_cast< CNTK::Dictionary * >(argp1);
   {
@@ -33243,7 +33243,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_ComputeInputPerDimMeansAndInvStdDevs__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_compute_input_per_dim_means_and_inv_std_devs__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::MinibatchSourcePtr *arg1 = 0 ;
   std::unordered_map< CNTK::StreamInfo,std::pair< CNTK::NDArrayViewPtr,CNTK::NDArrayViewPtr > > *arg2 = 0 ;
@@ -33257,12 +33257,12 @@ SWIGINTERN PyObject *_wrap_ComputeInputPerDimMeansAndInvStdDevs__SWIG_0(PyObject
   PyObject * obj1 = 0 ;
   PyObject * obj2 = 0 ;
   
-  if (!PyArg_ParseTuple(args,(char *)"OOO:ComputeInputPerDimMeansAndInvStdDevs",&obj0,&obj1,&obj2)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OOO:compute_input_per_dim_means_and_inv_std_devs",&obj0,&obj1,&obj2)) SWIG_fail;
   {
     int newmem = 0;
     res1 = SWIG_ConvertPtrAndOwn(obj0, &argp1, SWIGTYPE_p_std__shared_ptrT_CNTK__MinibatchSource_t,  0 , &newmem);
     if (!SWIG_IsOK(res1)) {
-      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ComputeInputPerDimMeansAndInvStdDevs" "', argument " "1"" of type '" "CNTK::MinibatchSourcePtr const &""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "compute_input_per_dim_means_and_inv_std_devs" "', argument " "1"" of type '" "CNTK::MinibatchSourcePtr const &""'"); 
     }
     if (newmem & SWIG_CAST_NEW_MEMORY) {
       if (argp1) tempshared1 = *reinterpret_cast< CNTK::MinibatchSourcePtr * >(argp1);
@@ -33335,10 +33335,10 @@ SWIGINTERN PyObject *_wrap_ComputeInputPerDimMeansAndInvStdDevs__SWIG_0(PyObject
   }
   res3 = SWIG_ConvertPtr(obj2, &argp3, SWIGTYPE_p_CNTK__DeviceDescriptor,  0  | 0);
   if (!SWIG_IsOK(res3)) {
-    SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "ComputeInputPerDimMeansAndInvStdDevs" "', argument " "3"" of type '" "CNTK::DeviceDescriptor const &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "compute_input_per_dim_means_and_inv_std_devs" "', argument " "3"" of type '" "CNTK::DeviceDescriptor const &""'"); 
   }
   if (!argp3) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "ComputeInputPerDimMeansAndInvStdDevs" "', argument " "3"" of type '" "CNTK::DeviceDescriptor const &""'"); 
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "compute_input_per_dim_means_and_inv_std_devs" "', argument " "3"" of type '" "CNTK::DeviceDescriptor const &""'"); 
   }
   arg3 = reinterpret_cast< CNTK::DeviceDescriptor * >(argp3);
   {
@@ -33423,7 +33423,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_ComputeInputPerDimMeansAndInvStdDevs__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_compute_input_per_dim_means_and_inv_std_devs__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::MinibatchSourcePtr *arg1 = 0 ;
   std::unordered_map< CNTK::StreamInfo,std::pair< CNTK::NDArrayViewPtr,CNTK::NDArrayViewPtr > > *arg2 = 0 ;
@@ -33433,12 +33433,12 @@ SWIGINTERN PyObject *_wrap_ComputeInputPerDimMeansAndInvStdDevs__SWIG_1(PyObject
   PyObject * obj0 = 0 ;
   PyObject * obj1 = 0 ;
   
-  if (!PyArg_ParseTuple(args,(char *)"OO:ComputeInputPerDimMeansAndInvStdDevs",&obj0,&obj1)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OO:compute_input_per_dim_means_and_inv_std_devs",&obj0,&obj1)) SWIG_fail;
   {
     int newmem = 0;
     res1 = SWIG_ConvertPtrAndOwn(obj0, &argp1, SWIGTYPE_p_std__shared_ptrT_CNTK__MinibatchSource_t,  0 , &newmem);
     if (!SWIG_IsOK(res1)) {
-      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ComputeInputPerDimMeansAndInvStdDevs" "', argument " "1"" of type '" "CNTK::MinibatchSourcePtr const &""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "compute_input_per_dim_means_and_inv_std_devs" "', argument " "1"" of type '" "CNTK::MinibatchSourcePtr const &""'"); 
     }
     if (newmem & SWIG_CAST_NEW_MEMORY) {
       if (argp1) tempshared1 = *reinterpret_cast< CNTK::MinibatchSourcePtr * >(argp1);
@@ -33591,7 +33591,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_ComputeInputPerDimMeansAndInvStdDevs(PyObject *self, PyObject *args) {
+SWIGINTERN PyObject *_wrap_compute_input_per_dim_means_and_inv_std_devs(PyObject *self, PyObject *args) {
   Py_ssize_t argc;
   PyObject *argv[4] = {
     0
@@ -33614,7 +33614,7 @@ SWIGINTERN PyObject *_wrap_ComputeInputPerDimMeansAndInvStdDevs(PyObject *self, 
         _v = PyDict_Check(argv[1]) ? 1 : 0;
       }
       if (_v) {
-        return _wrap_ComputeInputPerDimMeansAndInvStdDevs__SWIG_1(self, args);
+        return _wrap_compute_input_per_dim_means_and_inv_std_devs__SWIG_1(self, args);
       }
     }
   }
@@ -33632,14 +33632,14 @@ SWIGINTERN PyObject *_wrap_ComputeInputPerDimMeansAndInvStdDevs(PyObject *self, 
         int res = SWIG_ConvertPtr(argv[2], 0, SWIGTYPE_p_CNTK__DeviceDescriptor, 0);
         _v = SWIG_CheckState(res);
         if (_v) {
-          return _wrap_ComputeInputPerDimMeansAndInvStdDevs__SWIG_0(self, args);
+          return _wrap_compute_input_per_dim_means_and_inv_std_devs__SWIG_0(self, args);
         }
       }
     }
   }
   
 fail:
-  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'ComputeInputPerDimMeansAndInvStdDevs'.\n"
+  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'compute_input_per_dim_means_and_inv_std_devs'.\n"
     "  Possible C/C++ prototypes are:\n"
     "    CNTK::ComputeInputPerDimMeansAndInvStdDevs(CNTK::MinibatchSourcePtr const &,std::unordered_map< CNTK::StreamInfo,std::pair< CNTK::NDArrayViewPtr,CNTK::NDArrayViewPtr > > &,CNTK::DeviceDescriptor const &)\n"
     "    CNTK::ComputeInputPerDimMeansAndInvStdDevs(CNTK::MinibatchSourcePtr const &,std::unordered_map< CNTK::StreamInfo,std::pair< CNTK::NDArrayViewPtr,CNTK::NDArrayViewPtr > > &)\n");
@@ -33921,17 +33921,17 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_FunctionInCNTK_delCallback(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_FunctionInCNTK_del_callback(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   FunctionInCNTK *arg1 = (FunctionInCNTK *) 0 ;
   void *argp1 = 0 ;
   int res1 = 0 ;
   PyObject * obj0 = 0 ;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:FunctionInCNTK_delCallback",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:FunctionInCNTK_del_callback",&obj0)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_FunctionInCNTK, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FunctionInCNTK_delCallback" "', argument " "1"" of type '" "FunctionInCNTK *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FunctionInCNTK_del_callback" "', argument " "1"" of type '" "FunctionInCNTK *""'"); 
   }
   arg1 = reinterpret_cast< FunctionInCNTK * >(argp1);
   {
@@ -33961,7 +33961,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_FunctionInCNTK_setCallback(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_FunctionInCNTK_set_callback(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   FunctionInCNTK *arg1 = (FunctionInCNTK *) 0 ;
   Callback *arg2 = (Callback *) 0 ;
@@ -33972,15 +33972,15 @@ SWIGINTERN PyObject *_wrap_FunctionInCNTK_setCallback(PyObject *SWIGUNUSEDPARM(s
   PyObject * obj0 = 0 ;
   PyObject * obj1 = 0 ;
   
-  if (!PyArg_ParseTuple(args,(char *)"OO:FunctionInCNTK_setCallback",&obj0,&obj1)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OO:FunctionInCNTK_set_callback",&obj0,&obj1)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_FunctionInCNTK, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FunctionInCNTK_setCallback" "', argument " "1"" of type '" "FunctionInCNTK *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "FunctionInCNTK_set_callback" "', argument " "1"" of type '" "FunctionInCNTK *""'"); 
   }
   arg1 = reinterpret_cast< FunctionInCNTK * >(argp1);
   res2 = SWIG_ConvertPtr(obj1, &argp2,SWIGTYPE_p_Callback, 0 |  0 );
   if (!SWIG_IsOK(res2)) {
-    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "FunctionInCNTK_setCallback" "', argument " "2"" of type '" "Callback *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "FunctionInCNTK_set_callback" "', argument " "2"" of type '" "Callback *""'"); 
   }
   arg2 = reinterpret_cast< Callback * >(argp2);
   {
@@ -34117,100 +34117,100 @@ static PyMethodDef SwigMethods[] = {
 	 { (char *)"SwigPyIterator___add__", _wrap_SwigPyIterator___add__, METH_VARARGS, NULL},
 	 { (char *)"SwigPyIterator___sub__", _wrap_SwigPyIterator___sub__, METH_VARARGS, NULL},
 	 { (char *)"SwigPyIterator_swigregister", SwigPyIterator_swigregister, METH_VARARGS, NULL},
-	 { (char *)"IsSparseStorageFormat", _wrap_IsSparseStorageFormat, METH_VARARGS, NULL},
-	 { (char *)"DeviceDescriptor_Id", _wrap_DeviceDescriptor_Id, METH_VARARGS, NULL},
-	 { (char *)"DeviceDescriptor_Type", _wrap_DeviceDescriptor_Type, METH_VARARGS, NULL},
-	 { (char *)"DeviceDescriptor_CPUDevice", _wrap_DeviceDescriptor_CPUDevice, METH_VARARGS, NULL},
-	 { (char *)"DeviceDescriptor_GPUDevice", _wrap_DeviceDescriptor_GPUDevice, METH_VARARGS, NULL},
-	 { (char *)"DeviceDescriptor_DefaultDevice", _wrap_DeviceDescriptor_DefaultDevice, METH_VARARGS, NULL},
+	 { (char *)"is_sparse_storage_format", _wrap_is_sparse_storage_format, METH_VARARGS, NULL},
+	 { (char *)"DeviceDescriptor_id", _wrap_DeviceDescriptor_id, METH_VARARGS, NULL},
+	 { (char *)"DeviceDescriptor_type", _wrap_DeviceDescriptor_type, METH_VARARGS, NULL},
+	 { (char *)"DeviceDescriptor_cpudevice", _wrap_DeviceDescriptor_cpudevice, METH_VARARGS, NULL},
+	 { (char *)"DeviceDescriptor_gpudevice", _wrap_DeviceDescriptor_gpudevice, METH_VARARGS, NULL},
+	 { (char *)"DeviceDescriptor_default_device", _wrap_DeviceDescriptor_default_device, METH_VARARGS, NULL},
 	 { (char *)"delete_DeviceDescriptor", _wrap_delete_DeviceDescriptor, METH_VARARGS, NULL},
 	 { (char *)"DeviceDescriptor_swigregister", DeviceDescriptor_swigregister, METH_VARARGS, NULL},
 	 { (char *)"NDShape_eq", _wrap_NDShape_eq, METH_VARARGS, NULL},
 	 { (char *)"new_NDShape", _wrap_new_NDShape, METH_VARARGS, NULL},
-	 { (char *)"NDShape_Dimensions", _wrap_NDShape_Dimensions, METH_VARARGS, NULL},
-	 { (char *)"NDShape_NumAxes", _wrap_NDShape_NumAxes, METH_VARARGS, NULL},
-	 { (char *)"NDShape_SubShape", _wrap_NDShape_SubShape, METH_VARARGS, NULL},
-	 { (char *)"NDShape_HasInferredDimension", _wrap_NDShape_HasInferredDimension, METH_VARARGS, NULL},
-	 { (char *)"NDShape_TotalSize", _wrap_NDShape_TotalSize, METH_VARARGS, NULL},
-	 { (char *)"NDShape_AsString", _wrap_NDShape_AsString, METH_VARARGS, NULL},
+	 { (char *)"NDShape_dimensions", _wrap_NDShape_dimensions, METH_VARARGS, NULL},
+	 { (char *)"NDShape_num_axes", _wrap_NDShape_num_axes, METH_VARARGS, NULL},
+	 { (char *)"NDShape_sub_shape", _wrap_NDShape_sub_shape, METH_VARARGS, NULL},
+	 { (char *)"NDShape_has_inferred_dimension", _wrap_NDShape_has_inferred_dimension, METH_VARARGS, NULL},
+	 { (char *)"NDShape_total_size", _wrap_NDShape_total_size, METH_VARARGS, NULL},
+	 { (char *)"NDShape_as_string", _wrap_NDShape_as_string, METH_VARARGS, NULL},
 	 { (char *)"NDShape___getitem__", _wrap_NDShape___getitem__, METH_VARARGS, NULL},
 	 { (char *)"NDShape___hash__", _wrap_NDShape___hash__, METH_VARARGS, NULL},
 	 { (char *)"delete_NDShape", _wrap_delete_NDShape, METH_VARARGS, NULL},
 	 { (char *)"NDShape_swigregister", NDShape_swigregister, METH_VARARGS, NULL},
 	 { (char *)"delete_NDArrayView", _wrap_delete_NDArrayView, METH_VARARGS, NULL},
-	 { (char *)"NDArrayView_Device", _wrap_NDArrayView_Device, METH_VARARGS, NULL},
-	 { (char *)"NDArrayView_GetDataType", _wrap_NDArrayView_GetDataType, METH_VARARGS, NULL},
-	 { (char *)"NDArrayView_GetStorageFormat", _wrap_NDArrayView_GetStorageFormat, METH_VARARGS, NULL},
-	 { (char *)"NDArrayView_Shape", _wrap_NDArrayView_Shape, METH_VARARGS, NULL},
-	 { (char *)"NDArrayView_IsSparse", _wrap_NDArrayView_IsSparse, METH_VARARGS, NULL},
-	 { (char *)"NDArrayView_IsReadOnly", _wrap_NDArrayView_IsReadOnly, METH_VARARGS, NULL},
-	 { (char *)"NDArrayView_SetValue", _wrap_NDArrayView_SetValue, METH_VARARGS, NULL},
-	 { (char *)"NDArrayView_DeepClone", _wrap_NDArrayView_DeepClone, METH_VARARGS, NULL},
-	 { (char *)"NDArrayView_Alias", _wrap_NDArrayView_Alias, METH_VARARGS, NULL},
-	 { (char *)"NDArrayView_CopyFrom", _wrap_NDArrayView_CopyFrom, METH_VARARGS, NULL},
+	 { (char *)"NDArrayView_device", _wrap_NDArrayView_device, METH_VARARGS, NULL},
+	 { (char *)"NDArrayView_get_data_type", _wrap_NDArrayView_get_data_type, METH_VARARGS, NULL},
+	 { (char *)"NDArrayView_get_storage_format", _wrap_NDArrayView_get_storage_format, METH_VARARGS, NULL},
+	 { (char *)"NDArrayView_shape", _wrap_NDArrayView_shape, METH_VARARGS, NULL},
+	 { (char *)"NDArrayView_is_sparse", _wrap_NDArrayView_is_sparse, METH_VARARGS, NULL},
+	 { (char *)"NDArrayView_is_read_only", _wrap_NDArrayView_is_read_only, METH_VARARGS, NULL},
+	 { (char *)"NDArrayView_set_value", _wrap_NDArrayView_set_value, METH_VARARGS, NULL},
+	 { (char *)"NDArrayView_deep_clone", _wrap_NDArrayView_deep_clone, METH_VARARGS, NULL},
+	 { (char *)"NDArrayView_alias", _wrap_NDArrayView_alias, METH_VARARGS, NULL},
+	 { (char *)"NDArrayView_copy_from", _wrap_NDArrayView_copy_from, METH_VARARGS, NULL},
 	 { (char *)"new_NDArrayView", _wrap_new_NDArrayView, METH_VARARGS, NULL},
-	 { (char *)"NDArrayView_ToNumPy", _wrap_NDArrayView_ToNumPy, METH_VARARGS, NULL},
+	 { (char *)"NDArrayView_to_numpy", _wrap_NDArrayView_to_numpy, METH_VARARGS, NULL},
 	 { (char *)"new_NDArrayViewFloat", _wrap_new_NDArrayViewFloat, METH_VARARGS, NULL},
 	 { (char *)"new_NDArrayViewDouble", _wrap_new_NDArrayViewDouble, METH_VARARGS, NULL},
-	 { (char *)"NDArrayView_RandomUniformFloat", _wrap_NDArrayView_RandomUniformFloat, METH_VARARGS, NULL},
-	 { (char *)"NDArrayView_RandomUniformDouble", _wrap_NDArrayView_RandomUniformDouble, METH_VARARGS, NULL},
+	 { (char *)"NDArrayView_random_uniform_float", _wrap_NDArrayView_random_uniform_float, METH_VARARGS, NULL},
+	 { (char *)"NDArrayView_random_uniform_double", _wrap_NDArrayView_random_uniform_double, METH_VARARGS, NULL},
 	 { (char *)"NDArrayView_swigregister", NDArrayView_swigregister, METH_VARARGS, NULL},
 	 { (char *)"new_NDMask", _wrap_new_NDMask, METH_VARARGS, NULL},
 	 { (char *)"delete_NDMask", _wrap_delete_NDMask, METH_VARARGS, NULL},
-	 { (char *)"NDMask_MaskSection", _wrap_NDMask_MaskSection, METH_VARARGS, NULL},
-	 { (char *)"NDMask_Clear", _wrap_NDMask_Clear, METH_VARARGS, NULL},
-	 { (char *)"NDMask_MaskedCount", _wrap_NDMask_MaskedCount, METH_VARARGS, NULL},
-	 { (char *)"NDMask_Device", _wrap_NDMask_Device, METH_VARARGS, NULL},
-	 { (char *)"NDMask_Shape", _wrap_NDMask_Shape, METH_VARARGS, NULL},
-	 { (char *)"NDMask_DataBuffer", _wrap_NDMask_DataBuffer, METH_VARARGS, NULL},
-	 { (char *)"NDMask_DeepClone", _wrap_NDMask_DeepClone, METH_VARARGS, NULL},
-	 { (char *)"NDMask_Alias", _wrap_NDMask_Alias, METH_VARARGS, NULL},
-	 { (char *)"NDMask_CopyFrom", _wrap_NDMask_CopyFrom, METH_VARARGS, NULL},
-	 { (char *)"NDMask_ToNumPy", _wrap_NDMask_ToNumPy, METH_VARARGS, NULL},
+	 { (char *)"NDMask_mask_section", _wrap_NDMask_mask_section, METH_VARARGS, NULL},
+	 { (char *)"NDMask_clear", _wrap_NDMask_clear, METH_VARARGS, NULL},
+	 { (char *)"NDMask_masked_count", _wrap_NDMask_masked_count, METH_VARARGS, NULL},
+	 { (char *)"NDMask_device", _wrap_NDMask_device, METH_VARARGS, NULL},
+	 { (char *)"NDMask_shape", _wrap_NDMask_shape, METH_VARARGS, NULL},
+	 { (char *)"NDMask_data_buffer", _wrap_NDMask_data_buffer, METH_VARARGS, NULL},
+	 { (char *)"NDMask_deep_clone", _wrap_NDMask_deep_clone, METH_VARARGS, NULL},
+	 { (char *)"NDMask_alias", _wrap_NDMask_alias, METH_VARARGS, NULL},
+	 { (char *)"NDMask_copy_from", _wrap_NDMask_copy_from, METH_VARARGS, NULL},
+	 { (char *)"NDMask_to_numpy", _wrap_NDMask_to_numpy, METH_VARARGS, NULL},
 	 { (char *)"NDMask_swigregister", NDMask_swigregister, METH_VARARGS, NULL},
 	 { (char *)"new_Value", _wrap_new_Value, METH_VARARGS, NULL},
 	 { (char *)"delete_Value", _wrap_delete_Value, METH_VARARGS, NULL},
-	 { (char *)"Value_Data", _wrap_Value_Data, METH_VARARGS, NULL},
-	 { (char *)"Value_Mask", _wrap_Value_Mask, METH_VARARGS, NULL},
-	 { (char *)"Value_DeepClone", _wrap_Value_DeepClone, METH_VARARGS, NULL},
-	 { (char *)"Value_Alias", _wrap_Value_Alias, METH_VARARGS, NULL},
-	 { (char *)"Value_CopyFrom", _wrap_Value_CopyFrom, METH_VARARGS, NULL},
+	 { (char *)"Value_data", _wrap_Value_data, METH_VARARGS, NULL},
+	 { (char *)"Value_mask", _wrap_Value_mask, METH_VARARGS, NULL},
+	 { (char *)"Value_deep_clone", _wrap_Value_deep_clone, METH_VARARGS, NULL},
+	 { (char *)"Value_alias", _wrap_Value_alias, METH_VARARGS, NULL},
+	 { (char *)"Value_copy_from", _wrap_Value_copy_from, METH_VARARGS, NULL},
 	 { (char *)"Value_swigregister", Value_swigregister, METH_VARARGS, NULL},
-	 { (char *)"Axis_IsStaticAxis", _wrap_Axis_IsStaticAxis, METH_VARARGS, NULL},
-	 { (char *)"Axis_StaticAxisIndex", _wrap_Axis_StaticAxisIndex, METH_VARARGS, NULL},
-	 { (char *)"Axis_DefaultDynamicAxis", _wrap_Axis_DefaultDynamicAxis, METH_VARARGS, NULL},
-	 { (char *)"Axis_BatchAxis", _wrap_Axis_BatchAxis, METH_VARARGS, NULL},
-	 { (char *)"Axis_AllAxes", _wrap_Axis_AllAxes, METH_VARARGS, NULL},
-	 { (char *)"Axis_Name", _wrap_Axis_Name, METH_VARARGS, NULL},
+	 { (char *)"Axis_is_static_axis", _wrap_Axis_is_static_axis, METH_VARARGS, NULL},
+	 { (char *)"Axis_static_axis_index", _wrap_Axis_static_axis_index, METH_VARARGS, NULL},
+	 { (char *)"Axis_default_dynamic_axis", _wrap_Axis_default_dynamic_axis, METH_VARARGS, NULL},
+	 { (char *)"Axis_batch_axis", _wrap_Axis_batch_axis, METH_VARARGS, NULL},
+	 { (char *)"Axis_all_axes", _wrap_Axis_all_axes, METH_VARARGS, NULL},
+	 { (char *)"Axis_name", _wrap_Axis_name, METH_VARARGS, NULL},
 	 { (char *)"new_Axis", _wrap_new_Axis, METH_VARARGS, NULL},
 	 { (char *)"delete_Axis", _wrap_delete_Axis, METH_VARARGS, NULL},
 	 { (char *)"Axis_swigregister", Axis_swigregister, METH_VARARGS, NULL},
 	 { (char *)"Variable_eq", _wrap_Variable_eq, METH_VARARGS, NULL},
 	 { (char *)"new_Variable", _wrap_new_Variable, METH_VARARGS, NULL},
-	 { (char *)"Variable_Shape", _wrap_Variable_Shape, METH_VARARGS, NULL},
-	 { (char *)"Variable_DynamicAxes", _wrap_Variable_DynamicAxes, METH_VARARGS, NULL},
-	 { (char *)"Variable_Kind", _wrap_Variable_Kind, METH_VARARGS, NULL},
-	 { (char *)"Variable_IsSparse", _wrap_Variable_IsSparse, METH_VARARGS, NULL},
-	 { (char *)"Variable_IsInput", _wrap_Variable_IsInput, METH_VARARGS, NULL},
-	 { (char *)"Variable_IsOutput", _wrap_Variable_IsOutput, METH_VARARGS, NULL},
-	 { (char *)"Variable_IsParameter", _wrap_Variable_IsParameter, METH_VARARGS, NULL},
-	 { (char *)"Variable_IsConstant", _wrap_Variable_IsConstant, METH_VARARGS, NULL},
-	 { (char *)"Variable_IsPlaceholder", _wrap_Variable_IsPlaceholder, METH_VARARGS, NULL},
-	 { (char *)"Variable_Name", _wrap_Variable_Name, METH_VARARGS, NULL},
-	 { (char *)"Variable_Owner", _wrap_Variable_Owner, METH_VARARGS, NULL},
-	 { (char *)"Variable_GetDataType", _wrap_Variable_GetDataType, METH_VARARGS, NULL},
-	 { (char *)"Variable_NeedsGradient", _wrap_Variable_NeedsGradient, METH_VARARGS, NULL},
+	 { (char *)"Variable_shape", _wrap_Variable_shape, METH_VARARGS, NULL},
+	 { (char *)"Variable_dynamic_axes", _wrap_Variable_dynamic_axes, METH_VARARGS, NULL},
+	 { (char *)"Variable_kind", _wrap_Variable_kind, METH_VARARGS, NULL},
+	 { (char *)"Variable_is_sparse", _wrap_Variable_is_sparse, METH_VARARGS, NULL},
+	 { (char *)"Variable_is_input", _wrap_Variable_is_input, METH_VARARGS, NULL},
+	 { (char *)"Variable_is_output", _wrap_Variable_is_output, METH_VARARGS, NULL},
+	 { (char *)"Variable_is_parameter", _wrap_Variable_is_parameter, METH_VARARGS, NULL},
+	 { (char *)"Variable_is_constant", _wrap_Variable_is_constant, METH_VARARGS, NULL},
+	 { (char *)"Variable_is_placeholder", _wrap_Variable_is_placeholder, METH_VARARGS, NULL},
+	 { (char *)"Variable_name", _wrap_Variable_name, METH_VARARGS, NULL},
+	 { (char *)"Variable_owner", _wrap_Variable_owner, METH_VARARGS, NULL},
+	 { (char *)"Variable_get_data_type", _wrap_Variable_get_data_type, METH_VARARGS, NULL},
+	 { (char *)"Variable_needs_gradient", _wrap_Variable_needs_gradient, METH_VARARGS, NULL},
 	 { (char *)"Variable___hash__", _wrap_Variable___hash__, METH_VARARGS, NULL},
 	 { (char *)"delete_Variable", _wrap_delete_Variable, METH_VARARGS, NULL},
 	 { (char *)"Variable_swigregister", Variable_swigregister, METH_VARARGS, NULL},
 	 { (char *)"__ne__", _wrap___ne__, METH_VARARGS, NULL},
 	 { (char *)"new_Parameter", _wrap_new_Parameter, METH_VARARGS, NULL},
-	 { (char *)"Parameter_Value", _wrap_Parameter_Value, METH_VARARGS, NULL},
+	 { (char *)"Parameter_value", _wrap_Parameter_value, METH_VARARGS, NULL},
 	 { (char *)"Parameter___hash__", _wrap_Parameter___hash__, METH_VARARGS, NULL},
 	 { (char *)"delete_Parameter", _wrap_delete_Parameter, METH_VARARGS, NULL},
 	 { (char *)"Parameter_swigregister", Parameter_swigregister, METH_VARARGS, NULL},
 	 { (char *)"new_Constant", _wrap_new_Constant, METH_VARARGS, NULL},
-	 { (char *)"Constant_Value", _wrap_Constant_Value, METH_VARARGS, NULL},
+	 { (char *)"Constant_value", _wrap_Constant_value, METH_VARARGS, NULL},
 	 { (char *)"new_ConstantFloat", _wrap_new_ConstantFloat, METH_VARARGS, NULL},
 	 { (char *)"new_ConstantDouble", _wrap_new_ConstantDouble, METH_VARARGS, NULL},
 	 { (char *)"Constant___hash__", _wrap_Constant___hash__, METH_VARARGS, NULL},
@@ -34220,122 +34220,122 @@ static PyMethodDef SwigMethods[] = {
 	 { (char *)"Placeholder___hash__", _wrap_Placeholder___hash__, METH_VARARGS, NULL},
 	 { (char *)"delete_Placeholder", _wrap_delete_Placeholder, METH_VARARGS, NULL},
 	 { (char *)"Placeholder_swigregister", Placeholder_swigregister, METH_VARARGS, NULL},
-	 { (char *)"BackPropState_Function", _wrap_BackPropState_Function, METH_VARARGS, NULL},
+	 { (char *)"BackPropState_function", _wrap_BackPropState_function, METH_VARARGS, NULL},
 	 { (char *)"delete_BackPropState", _wrap_delete_BackPropState, METH_VARARGS, NULL},
 	 { (char *)"BackPropState_swigregister", BackPropState_swigregister, METH_VARARGS, NULL},
-	 { (char *)"Function_Forward", _wrap_Function_Forward, METH_VARARGS, NULL},
-	 { (char *)"Function_Backward", _wrap_Function_Backward, METH_VARARGS, NULL},
+	 { (char *)"Function_forward", _wrap_Function_forward, METH_VARARGS, NULL},
+	 { (char *)"Function_backward", _wrap_Function_backward, METH_VARARGS, NULL},
 	 { (char *)"delete_Function", _wrap_delete_Function, METH_VARARGS, NULL},
-	 { (char *)"Function_Name", _wrap_Function_Name, METH_VARARGS, NULL},
-	 { (char *)"Function_RootFunction", _wrap_Function_RootFunction, METH_VARARGS, NULL},
-	 { (char *)"Function_Inputs", _wrap_Function_Inputs, METH_VARARGS, NULL},
-	 { (char *)"Function_Output", _wrap_Function_Output, METH_VARARGS, NULL},
-	 { (char *)"Function_Outputs", _wrap_Function_Outputs, METH_VARARGS, NULL},
-	 { (char *)"Function_Arguments", _wrap_Function_Arguments, METH_VARARGS, NULL},
-	 { (char *)"Function_Parameters", _wrap_Function_Parameters, METH_VARARGS, NULL},
-	 { (char *)"Function_Constants", _wrap_Function_Constants, METH_VARARGS, NULL},
-	 { (char *)"Function_Placeholders", _wrap_Function_Placeholders, METH_VARARGS, NULL},
-	 { (char *)"Function_ReplacePlaceholders", _wrap_Function_ReplacePlaceholders, METH_VARARGS, NULL},
+	 { (char *)"Function_name", _wrap_Function_name, METH_VARARGS, NULL},
+	 { (char *)"Function_root_function", _wrap_Function_root_function, METH_VARARGS, NULL},
+	 { (char *)"Function_inputs", _wrap_Function_inputs, METH_VARARGS, NULL},
+	 { (char *)"Function_output", _wrap_Function_output, METH_VARARGS, NULL},
+	 { (char *)"Function_outputs", _wrap_Function_outputs, METH_VARARGS, NULL},
+	 { (char *)"Function_arguments", _wrap_Function_arguments, METH_VARARGS, NULL},
+	 { (char *)"Function_parameters", _wrap_Function_parameters, METH_VARARGS, NULL},
+	 { (char *)"Function_constants", _wrap_Function_constants, METH_VARARGS, NULL},
+	 { (char *)"Function_placeholders", _wrap_Function_placeholders, METH_VARARGS, NULL},
+	 { (char *)"Function_replace_placeholders", _wrap_Function_replace_placeholders, METH_VARARGS, NULL},
 	 { (char *)"Function_swigregister", Function_swigregister, METH_VARARGS, NULL},
-	 { (char *)"Negate", _wrap_Negate, METH_VARARGS, NULL},
-	 { (char *)"Sigmoid", _wrap_Sigmoid, METH_VARARGS, NULL},
-	 { (char *)"Tanh", _wrap_Tanh, METH_VARARGS, NULL},
-	 { (char *)"ReLU", _wrap_ReLU, METH_VARARGS, NULL},
-	 { (char *)"Exp", _wrap_Exp, METH_VARARGS, NULL},
-	 { (char *)"Log", _wrap_Log, METH_VARARGS, NULL},
-	 { (char *)"Square", _wrap_Square, METH_VARARGS, NULL},
-	 { (char *)"Sqrt", _wrap_Sqrt, METH_VARARGS, NULL},
-	 { (char *)"Round", _wrap_Round, METH_VARARGS, NULL},
-	 { (char *)"Floor", _wrap_Floor, METH_VARARGS, NULL},
-	 { (char *)"Ceil", _wrap_Ceil, METH_VARARGS, NULL},
-	 { (char *)"Abs", _wrap_Abs, METH_VARARGS, NULL},
-	 { (char *)"Reciprocal", _wrap_Reciprocal, METH_VARARGS, NULL},
-	 { (char *)"Softmax", _wrap_Softmax, METH_VARARGS, NULL},
-	 { (char *)"Plus", _wrap_Plus, METH_VARARGS, NULL},
-	 { (char *)"Minus", _wrap_Minus, METH_VARARGS, NULL},
-	 { (char *)"ElementTimes", _wrap_ElementTimes, METH_VARARGS, NULL},
-	 { (char *)"ElementDivide", _wrap_ElementDivide, METH_VARARGS, NULL},
-	 { (char *)"Equal", _wrap_Equal, METH_VARARGS, NULL},
-	 { (char *)"NotEqual", _wrap_NotEqual, METH_VARARGS, NULL},
-	 { (char *)"Less", _wrap_Less, METH_VARARGS, NULL},
-	 { (char *)"LessEqual", _wrap_LessEqual, METH_VARARGS, NULL},
-	 { (char *)"Greater", _wrap_Greater, METH_VARARGS, NULL},
-	 { (char *)"GreaterEqual", _wrap_GreaterEqual, METH_VARARGS, NULL},
-	 { (char *)"Times", _wrap_Times, METH_VARARGS, NULL},
-	 { (char *)"SquaredError", _wrap_SquaredError, METH_VARARGS, NULL},
-	 { (char *)"CrossEntropyWithSoftmax", _wrap_CrossEntropyWithSoftmax, METH_VARARGS, NULL},
-	 { (char *)"ClassificationError", _wrap_ClassificationError, METH_VARARGS, NULL},
-	 { (char *)"PastValue", _wrap_PastValue, METH_VARARGS, NULL},
-	 { (char *)"FutureValue", _wrap_FutureValue, METH_VARARGS, NULL},
-	 { (char *)"ReduceSum", _wrap_ReduceSum, METH_VARARGS, NULL},
-	 { (char *)"PerDimMeanVarianceNormalize", _wrap_PerDimMeanVarianceNormalize, METH_VARARGS, NULL},
-	 { (char *)"Convolution", _wrap_Convolution, METH_VARARGS, NULL},
-	 { (char *)"Pooling", _wrap_Pooling, METH_VARARGS, NULL},
-	 { (char *)"BatchNormalization", _wrap_BatchNormalization, METH_VARARGS, NULL},
-	 { (char *)"Combine", _wrap_Combine, METH_VARARGS, NULL},
-	 { (char *)"DictionaryValue_TypeName", _wrap_DictionaryValue_TypeName, METH_VARARGS, NULL},
+	 { (char *)"negate", _wrap_negate, METH_VARARGS, NULL},
+	 { (char *)"sigmoid", _wrap_sigmoid, METH_VARARGS, NULL},
+	 { (char *)"tanh", _wrap_tanh, METH_VARARGS, NULL},
+	 { (char *)"re_lu", _wrap_re_lu, METH_VARARGS, NULL},
+	 { (char *)"exp", _wrap_exp, METH_VARARGS, NULL},
+	 { (char *)"log", _wrap_log, METH_VARARGS, NULL},
+	 { (char *)"square", _wrap_square, METH_VARARGS, NULL},
+	 { (char *)"sqrt", _wrap_sqrt, METH_VARARGS, NULL},
+	 { (char *)"round", _wrap_round, METH_VARARGS, NULL},
+	 { (char *)"floor", _wrap_floor, METH_VARARGS, NULL},
+	 { (char *)"ceil", _wrap_ceil, METH_VARARGS, NULL},
+	 { (char *)"abs", _wrap_abs, METH_VARARGS, NULL},
+	 { (char *)"reciprocal", _wrap_reciprocal, METH_VARARGS, NULL},
+	 { (char *)"softmax", _wrap_softmax, METH_VARARGS, NULL},
+	 { (char *)"plus", _wrap_plus, METH_VARARGS, NULL},
+	 { (char *)"minus", _wrap_minus, METH_VARARGS, NULL},
+	 { (char *)"element_times", _wrap_element_times, METH_VARARGS, NULL},
+	 { (char *)"element_divide", _wrap_element_divide, METH_VARARGS, NULL},
+	 { (char *)"equal", _wrap_equal, METH_VARARGS, NULL},
+	 { (char *)"not_equal", _wrap_not_equal, METH_VARARGS, NULL},
+	 { (char *)"less", _wrap_less, METH_VARARGS, NULL},
+	 { (char *)"less_equal", _wrap_less_equal, METH_VARARGS, NULL},
+	 { (char *)"greater", _wrap_greater, METH_VARARGS, NULL},
+	 { (char *)"greater_equal", _wrap_greater_equal, METH_VARARGS, NULL},
+	 { (char *)"times", _wrap_times, METH_VARARGS, NULL},
+	 { (char *)"squared_error", _wrap_squared_error, METH_VARARGS, NULL},
+	 { (char *)"cross_entropy_with_softmax", _wrap_cross_entropy_with_softmax, METH_VARARGS, NULL},
+	 { (char *)"classification_error", _wrap_classification_error, METH_VARARGS, NULL},
+	 { (char *)"past_value", _wrap_past_value, METH_VARARGS, NULL},
+	 { (char *)"future_value", _wrap_future_value, METH_VARARGS, NULL},
+	 { (char *)"reduce_sum", _wrap_reduce_sum, METH_VARARGS, NULL},
+	 { (char *)"per_dim_mean_variance_normalize", _wrap_per_dim_mean_variance_normalize, METH_VARARGS, NULL},
+	 { (char *)"convolution", _wrap_convolution, METH_VARARGS, NULL},
+	 { (char *)"pooling", _wrap_pooling, METH_VARARGS, NULL},
+	 { (char *)"batch_normalization", _wrap_batch_normalization, METH_VARARGS, NULL},
+	 { (char *)"combine", _wrap_combine, METH_VARARGS, NULL},
+	 { (char *)"DictionaryValue_type_name", _wrap_DictionaryValue_type_name, METH_VARARGS, NULL},
 	 { (char *)"new_DictionaryValue", _wrap_new_DictionaryValue, METH_VARARGS, NULL},
 	 { (char *)"delete_DictionaryValue", _wrap_delete_DictionaryValue, METH_VARARGS, NULL},
-	 { (char *)"DictionaryValue_HasValue", _wrap_DictionaryValue_HasValue, METH_VARARGS, NULL},
-	 { (char *)"DictionaryValue_ValueType", _wrap_DictionaryValue_ValueType, METH_VARARGS, NULL},
+	 { (char *)"DictionaryValue_has_value", _wrap_DictionaryValue_has_value, METH_VARARGS, NULL},
+	 { (char *)"DictionaryValue_value_type", _wrap_DictionaryValue_value_type, METH_VARARGS, NULL},
 	 { (char *)"new_DictionaryValueFromDict", _wrap_new_DictionaryValueFromDict, METH_VARARGS, NULL},
 	 { (char *)"DictionaryValue_swigregister", DictionaryValue_swigregister, METH_VARARGS, NULL},
 	 { (char *)"delete_Dictionary", _wrap_delete_Dictionary, METH_VARARGS, NULL},
 	 { (char *)"new_Dictionary", _wrap_new_Dictionary, METH_VARARGS, NULL},
-	 { (char *)"Dictionary_Contains", _wrap_Dictionary_Contains, METH_VARARGS, NULL},
+	 { (char *)"Dictionary_contains", _wrap_Dictionary_contains, METH_VARARGS, NULL},
 	 { (char *)"Dictionary___getitem__", _wrap_Dictionary___getitem__, METH_VARARGS, NULL},
 	 { (char *)"Dictionary___setitem__", _wrap_Dictionary___setitem__, METH_VARARGS, NULL},
 	 { (char *)"Dictionary_swigregister", Dictionary_swigregister, METH_VARARGS, NULL},
-	 { (char *)"Learner_Update", _wrap_Learner_Update, METH_VARARGS, NULL},
-	 { (char *)"Learner_Parameters", _wrap_Learner_Parameters, METH_VARARGS, NULL},
-	 { (char *)"Learner_GetCheckpointState", _wrap_Learner_GetCheckpointState, METH_VARARGS, NULL},
-	 { (char *)"Learner_RestoreFromCheckpoint", _wrap_Learner_RestoreFromCheckpoint, METH_VARARGS, NULL},
+	 { (char *)"Learner_update", _wrap_Learner_update, METH_VARARGS, NULL},
+	 { (char *)"Learner_parameters", _wrap_Learner_parameters, METH_VARARGS, NULL},
+	 { (char *)"Learner_get_checkpoint_state", _wrap_Learner_get_checkpoint_state, METH_VARARGS, NULL},
+	 { (char *)"Learner_restore_from_checkpoint", _wrap_Learner_restore_from_checkpoint, METH_VARARGS, NULL},
 	 { (char *)"delete_Learner", _wrap_delete_Learner, METH_VARARGS, NULL},
 	 { (char *)"Learner_swigregister", Learner_swigregister, METH_VARARGS, NULL},
-	 { (char *)"SGDLearner", _wrap_SGDLearner, METH_VARARGS, NULL},
-	 { (char *)"MomentumSGDLearner", _wrap_MomentumSGDLearner, METH_VARARGS, NULL},
-	 { (char *)"NesterovLearner", _wrap_NesterovLearner, METH_VARARGS, NULL},
-	 { (char *)"AdaGradLearner", _wrap_AdaGradLearner, METH_VARARGS, NULL},
-	 { (char *)"FSAdaGradLearner", _wrap_FSAdaGradLearner, METH_VARARGS, NULL},
-	 { (char *)"RMSPropLearner", _wrap_RMSPropLearner, METH_VARARGS, NULL},
+	 { (char *)"sgdlearner", _wrap_sgdlearner, METH_VARARGS, NULL},
+	 { (char *)"momentum_sgdlearner", _wrap_momentum_sgdlearner, METH_VARARGS, NULL},
+	 { (char *)"nesterov_learner", _wrap_nesterov_learner, METH_VARARGS, NULL},
+	 { (char *)"ada_grad_learner", _wrap_ada_grad_learner, METH_VARARGS, NULL},
+	 { (char *)"fsada_grad_learner", _wrap_fsada_grad_learner, METH_VARARGS, NULL},
+	 { (char *)"rmsprop_learner", _wrap_rmsprop_learner, METH_VARARGS, NULL},
 	 { (char *)"new_Trainer", _wrap_new_Trainer, METH_VARARGS, NULL},
-	 { (char *)"Trainer_TrainMinibatch", _wrap_Trainer_TrainMinibatch, METH_VARARGS, NULL},
-	 { (char *)"Trainer_Model", _wrap_Trainer_Model, METH_VARARGS, NULL},
-	 { (char *)"Trainer_TrainingLossVariable", _wrap_Trainer_TrainingLossVariable, METH_VARARGS, NULL},
-	 { (char *)"Trainer_PreviousMinibatchTrainingLossValue", _wrap_Trainer_PreviousMinibatchTrainingLossValue, METH_VARARGS, NULL},
-	 { (char *)"Trainer_ParameterLearners", _wrap_Trainer_ParameterLearners, METH_VARARGS, NULL},
+	 { (char *)"Trainer_train_minibatch", _wrap_Trainer_train_minibatch, METH_VARARGS, NULL},
+	 { (char *)"Trainer_model", _wrap_Trainer_model, METH_VARARGS, NULL},
+	 { (char *)"Trainer_training_loss_variable", _wrap_Trainer_training_loss_variable, METH_VARARGS, NULL},
+	 { (char *)"Trainer_previous_minibatch_training_loss_value", _wrap_Trainer_previous_minibatch_training_loss_value, METH_VARARGS, NULL},
+	 { (char *)"Trainer_parameter_learners", _wrap_Trainer_parameter_learners, METH_VARARGS, NULL},
 	 { (char *)"delete_Trainer", _wrap_delete_Trainer, METH_VARARGS, NULL},
 	 { (char *)"Trainer_swigregister", Trainer_swigregister, METH_VARARGS, NULL},
 	 { (char *)"StreamInfo_m_name_set", _wrap_StreamInfo_m_name_set, METH_VARARGS, NULL},
 	 { (char *)"StreamInfo_m_name_get", _wrap_StreamInfo_m_name_get, METH_VARARGS, NULL},
 	 { (char *)"StreamInfo_m_id_set", _wrap_StreamInfo_m_id_set, METH_VARARGS, NULL},
 	 { (char *)"StreamInfo_m_id_get", _wrap_StreamInfo_m_id_get, METH_VARARGS, NULL},
-	 { (char *)"StreamInfo_m_storageFormat_set", _wrap_StreamInfo_m_storageFormat_set, METH_VARARGS, NULL},
-	 { (char *)"StreamInfo_m_storageFormat_get", _wrap_StreamInfo_m_storageFormat_get, METH_VARARGS, NULL},
-	 { (char *)"StreamInfo_m_elementType_set", _wrap_StreamInfo_m_elementType_set, METH_VARARGS, NULL},
-	 { (char *)"StreamInfo_m_elementType_get", _wrap_StreamInfo_m_elementType_get, METH_VARARGS, NULL},
-	 { (char *)"StreamInfo_m_sampleLayout_set", _wrap_StreamInfo_m_sampleLayout_set, METH_VARARGS, NULL},
-	 { (char *)"StreamInfo_m_sampleLayout_get", _wrap_StreamInfo_m_sampleLayout_get, METH_VARARGS, NULL},
+	 { (char *)"StreamInfo_m_storage_format_set", _wrap_StreamInfo_m_storage_format_set, METH_VARARGS, NULL},
+	 { (char *)"StreamInfo_m_storage_format_get", _wrap_StreamInfo_m_storage_format_get, METH_VARARGS, NULL},
+	 { (char *)"StreamInfo_m_element_type_set", _wrap_StreamInfo_m_element_type_set, METH_VARARGS, NULL},
+	 { (char *)"StreamInfo_m_element_type_get", _wrap_StreamInfo_m_element_type_get, METH_VARARGS, NULL},
+	 { (char *)"StreamInfo_m_sample_layout_set", _wrap_StreamInfo_m_sample_layout_set, METH_VARARGS, NULL},
+	 { (char *)"StreamInfo_m_sample_layout_get", _wrap_StreamInfo_m_sample_layout_get, METH_VARARGS, NULL},
 	 { (char *)"StreamInfo___hash__", _wrap_StreamInfo___hash__, METH_VARARGS, NULL},
 	 { (char *)"new_StreamInfo", _wrap_new_StreamInfo, METH_VARARGS, NULL},
 	 { (char *)"delete_StreamInfo", _wrap_delete_StreamInfo, METH_VARARGS, NULL},
 	 { (char *)"StreamInfo_swigregister", StreamInfo_swigregister, METH_VARARGS, NULL},
 	 { (char *)"__eq__", _wrap___eq__, METH_VARARGS, NULL},
-	 { (char *)"MinibatchData_m_numSequences_set", _wrap_MinibatchData_m_numSequences_set, METH_VARARGS, NULL},
-	 { (char *)"MinibatchData_m_numSequences_get", _wrap_MinibatchData_m_numSequences_get, METH_VARARGS, NULL},
-	 { (char *)"MinibatchData_m_numSamples_set", _wrap_MinibatchData_m_numSamples_set, METH_VARARGS, NULL},
-	 { (char *)"MinibatchData_m_numSamples_get", _wrap_MinibatchData_m_numSamples_get, METH_VARARGS, NULL},
+	 { (char *)"MinibatchData_m_num_sequences_set", _wrap_MinibatchData_m_num_sequences_set, METH_VARARGS, NULL},
+	 { (char *)"MinibatchData_m_num_sequences_get", _wrap_MinibatchData_m_num_sequences_get, METH_VARARGS, NULL},
+	 { (char *)"MinibatchData_m_num_samples_set", _wrap_MinibatchData_m_num_samples_set, METH_VARARGS, NULL},
+	 { (char *)"MinibatchData_m_num_samples_get", _wrap_MinibatchData_m_num_samples_get, METH_VARARGS, NULL},
 	 { (char *)"MinibatchData_m_data_set", _wrap_MinibatchData_m_data_set, METH_VARARGS, NULL},
 	 { (char *)"MinibatchData_m_data_get", _wrap_MinibatchData_m_data_get, METH_VARARGS, NULL},
 	 { (char *)"new_MinibatchData", _wrap_new_MinibatchData, METH_VARARGS, NULL},
 	 { (char *)"delete_MinibatchData", _wrap_delete_MinibatchData, METH_VARARGS, NULL},
 	 { (char *)"MinibatchData_swigregister", MinibatchData_swigregister, METH_VARARGS, NULL},
-	 { (char *)"MinibatchSource_StreamInfos", _wrap_MinibatchSource_StreamInfos, METH_VARARGS, NULL},
-	 { (char *)"MinibatchSource_GetNextMinibatch", _wrap_MinibatchSource_GetNextMinibatch, METH_VARARGS, NULL},
+	 { (char *)"MinibatchSource_stream_infos", _wrap_MinibatchSource_stream_infos, METH_VARARGS, NULL},
+	 { (char *)"MinibatchSource_get_next_minibatch", _wrap_MinibatchSource_get_next_minibatch, METH_VARARGS, NULL},
 	 { (char *)"delete_MinibatchSource", _wrap_delete_MinibatchSource, METH_VARARGS, NULL},
 	 { (char *)"MinibatchSource_swigregister", MinibatchSource_swigregister, METH_VARARGS, NULL},
-	 { (char *)"CreateCompositeMinibatchSource", _wrap_CreateCompositeMinibatchSource, METH_VARARGS, NULL},
-	 { (char *)"ComputeInputPerDimMeansAndInvStdDevs", _wrap_ComputeInputPerDimMeansAndInvStdDevs, METH_VARARGS, NULL},
+	 { (char *)"create_composite_minibatch_source", _wrap_create_composite_minibatch_source, METH_VARARGS, NULL},
+	 { (char *)"compute_input_per_dim_means_and_inv_std_devs", _wrap_compute_input_per_dim_means_and_inv_std_devs, METH_VARARGS, NULL},
 	 { (char *)"delete_Callback", _wrap_delete_Callback, METH_VARARGS, NULL},
 	 { (char *)"Callback_forward", _wrap_Callback_forward, METH_VARARGS, NULL},
 	 { (char *)"Callback_backward", _wrap_Callback_backward, METH_VARARGS, NULL},
@@ -34344,8 +34344,8 @@ static PyMethodDef SwigMethods[] = {
 	 { (char *)"Callback_swigregister", Callback_swigregister, METH_VARARGS, NULL},
 	 { (char *)"new_FunctionInCNTK", _wrap_new_FunctionInCNTK, METH_VARARGS, NULL},
 	 { (char *)"delete_FunctionInCNTK", _wrap_delete_FunctionInCNTK, METH_VARARGS, NULL},
-	 { (char *)"FunctionInCNTK_delCallback", _wrap_FunctionInCNTK_delCallback, METH_VARARGS, NULL},
-	 { (char *)"FunctionInCNTK_setCallback", _wrap_FunctionInCNTK_setCallback, METH_VARARGS, NULL},
+	 { (char *)"FunctionInCNTK_del_callback", _wrap_FunctionInCNTK_del_callback, METH_VARARGS, NULL},
+	 { (char *)"FunctionInCNTK_set_callback", _wrap_FunctionInCNTK_set_callback, METH_VARARGS, NULL},
 	 { (char *)"FunctionInCNTK_forward", _wrap_FunctionInCNTK_forward, METH_VARARGS, NULL},
 	 { (char *)"FunctionInCNTK_backward", _wrap_FunctionInCNTK_backward, METH_VARARGS, NULL},
 	 { (char *)"FunctionInCNTK_swigregister", FunctionInCNTK_swigregister, METH_VARARGS, NULL},

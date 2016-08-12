@@ -81,7 +81,7 @@ def test_op_plus_var_sequences_input_input(left_batch, right_batch, device_id, p
 
     input_op_input = a + b
     forward_input = {a:left_value, b:right_value}
-    output_shape = input_op_input.Output().Shape().Dimensions()
+    output_shape = input_op_input.output().shape().dimensions()
     backward_input = { a: None, b: None }
     expected_backward = { a: expected_backward['left'], b: expected_backward['right'], }
     unittest_helper(input_op_input, 

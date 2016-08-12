@@ -36,9 +36,9 @@ def cntk_device(device_id):
         CNTK DeviceDescriptor
     '''
     if device_id==-1:
-        return cntk_py.DeviceDescriptor_CPUDevice()
+        return cntk_py.DeviceDescriptor_cpudevice()
     else:
-        return cntk_py.DeviceDescriptor_GPUDevice(device_id)        
+        return cntk_py.DeviceDescriptor_gpudevice(device_id)        
 
 def cntk_to_numpy_shape(shape):
     '''
@@ -245,7 +245,7 @@ def sanitize_input(arg, fallback_dtype=np.float32):
         return arg
 
     try:
-        var_output = arg.Output()
+        var_output = arg.output()
         if isinstance(var_output, Variable):
             return var_output
         else:
@@ -275,12 +275,12 @@ def get_data_type(arg):
     from cntk.ops import constant    
 
     if isinstance(arg, (Constant, Variable, Placeholder)):
-        if cntk_py.DataType_Double == arg.GetDataType():
+        if cntk_py.DataType_Double == arg.get_data_type():
             return np.float64
     try:
-        var_output = arg.Output()
+        var_output = arg.output()
         if isinstance(var_output, Variable):
-            if cntk_py.DataType_Double == var_output.GetDataType():
+            if cntk_py.DataType_Double == var_output.get_data_type():
                 return np.float64
     except AttributeError:
         # no function or function with more then one output
@@ -350,7 +350,7 @@ def sanitize_batch(batch, data_type, dev):
         from cntk.cntk_py import NDMask
         mask = NDMask((max(seq_lens), num_seq), dev)
         for idx, seq_len in enumerate(seq_lens):
-            mask.MaskSection((seq_len, idx), (cntk_py.InferredDimension, 1)) 
+            mask.mask_section((seq_len, idx), (cntk_py.InferredDimension, 1)) 
 
         # Then we pad the batch to rectangular shape
         if isinstance(batch, list):
@@ -452,11 +452,11 @@ def create_NDArrayView_from_NumPy(nd, dev):
 
 def create_Value_for_Variable(var, shape=None, dev=None, mask=None):
     if not dev:
-        dev = cntk_py.DeviceDescriptor_CPUDevice()
+        dev = cntk_py.DeviceDescriptor_cpudevice()
 
     if shape is None:
-        shape = var.Shape().Dimensions()
-    view = cntk_py.NDArrayView(var.GetDataType(), cntk_py.StorageFormat_Dense, shape, dev)
+        shape = var.shape().dimensions()
+    view = cntk_py.NDArrayView(var.get_data_type(), cntk_py.StorageFormat_Dense, shape, dev)
     if mask:
         value = cntk_py.Value(view, mask)
     else:
@@ -527,7 +527,7 @@ def create_minibatch_source(config_dict):
         :class:`cntk_py.MinibatchSource`
     '''
     cntk_dict = _py_dict_to_cntk_dict(config_dict)
-    return cntk_py.CreateCompositeMinibatchSource(cntk_dict)
+    return cntk_py.create_composite_minibatch_source(cntk_dict)
 
 def eval(op, precision, device_id, input_map=None, backward_pass=False):
     '''
@@ -536,7 +536,7 @@ def eval(op, precision, device_id, input_map=None, backward_pass=False):
     
     Args:
         op (:class:`Function`): operation to evaluate
-        input_map (:class:`cntk.reader.InputMap`): describes how to map inputs to the data in a data file using a number, NumPy array or reader object
+        input_map: describes how to map inputs to the data in a data file using a number, NumPy array or reader object
         backward_pass (`bool`): whether a backward pass is performed 
         precision (str): string precision
         device_id (int): device id, -1 for CPU, 0 or higher for GPU
@@ -552,22 +552,22 @@ def eval(op, precision, device_id, input_map=None, backward_pass=False):
 
     forward_out_var_map =  {}
     forward_retain = set()
-    for v in op.Outputs():
+    for v in op.outputs():
         forward_out_var_map[v] = None # will be populated in Forward()
         forward_retain.add(v)
 
-    state = op.Forward(forward_in_var_map, forward_out_var_map, device, forward_retain)
+    state = op.forward(forward_in_var_map, forward_out_var_map, device, forward_retain)
 
     forward_output = {}
     forward_output_mask = {}
-    for v in op.Outputs():
+    for v in op.outputs():
         value = forward_out_var_map[v]
-        np_data = value.Data().ToNumPy() 
+        np_data = value.data().to_numpy() 
         np_data = np_data.reshape(tuple(reversed(np_data.shape)))
-        if value.Mask():
-            np_data = remove_masked_elements(np_data, value.Mask().ToNumPy())
+        if value.mask():
+            np_data = remove_masked_elements(np_data, value.mask().to_numpy())
         forward_output[v] = np_data
-        forward_output_mask[v] = value.Mask()
+        forward_output_mask[v] = value.mask()
 
     assert backward_pass
     if backward_pass:
@@ -579,14 +579,14 @@ def eval(op, precision, device_id, input_map=None, backward_pass=False):
 
         backward_var_map = dict((var, None) for var in forward_in_var_map)
 
-        op.Backward(state, root_gradients, backward_var_map)
+        op.backward(state, root_gradients, backward_var_map)
 
         backward_output = {}
         for var, value in backward_var_map.items():
-            np_data = value.Data().ToNumPy() 
+            np_data = value.data().to_numpy() 
             np_data = np_data.reshape(tuple(reversed(np_data.shape)))
-            if value.Mask():
-                np_data = remove_masked_elements(np_data, value.Mask().ToNumPy())
+            if value.mask():
+                np_data = remove_masked_elements(np_data, value.mask().to_numpy())
             backward_output[var] = np_data
 
         return forward_output, backward_output
