@@ -180,6 +180,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
 
     // allocate memory for forward and backward computation
     net->AllocateAllMatrices(evaluationNodes, additionalNodesToEvaluate, criterionNodes[0]); // TODO: use criterionNodes.front() throughout
+    net->FindDependencyGraph<ElemType>(evaluationNodes, additionalNodesToEvaluate, criterionNodes[0]);
 
     // get feature and label nodes into an array of matrices that will be passed to GetMinibatch()
     // TODO: instead, remember the nodes directly, to be able to handle both float and double nodes; current version will crash for mixed networks
@@ -253,6 +254,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
             numParameters += node->GetSampleLayout().GetNumElements();
         }
 
+        cout << "PRE BANNED: " << smoothedGradients.back().GetNumRows() << "x" << smoothedGradients.back().GetNumCols() << endl;
         sync->m_bannedBuffers2bool[&(smoothedGradients.back())] = true;
         sync->m_bannedBuffers2bool[(Matrix<ElemType>*)node->ValuePtr().get()] = true;
 
@@ -311,7 +313,6 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
     // and batch normalization was set
     bool useMemorySwappingTemp = sync->m_useMemorySwapping;
     sync->m_useMemorySwapping = false;
-    sync->m_isInTrainingMode = true;
 
 
 

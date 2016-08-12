@@ -56,6 +56,8 @@ template <typename ElemType> void SwapOutAction<ElemType>::EndAction()
     this->m_rows = this->m_bufferGPU->GetNumRows();
     this->m_cols = this->m_bufferGPU->GetNumCols();
     this->m_bufferGPU->Resize(0,0);
+    //ElemType *data = this->m_bufferGPU->Data();
+    //CUDA_CALL(cudaFree(data));
 
 }
 

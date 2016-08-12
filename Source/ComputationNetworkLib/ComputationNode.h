@@ -728,6 +728,15 @@ public:
     {
     
         bool isFloat = SynchronizationManager<float>::GetSynchronizationManager()->m_isFloat;
+        bool registeringBuffers = SynchronizationManager<float>::GetSynchronizationManager()->m_registeringBuffers;
+
+       if(registeringBuffers) 
+       {
+			std::string nodename = std::string(NodeName().begin(), NodeName().end());
+			std::cout << " " << nodename << endl;
+            return;
+       }
+
 
        if(isFloat)
           SynchronizationManager<float>::GetSynchronizationManager()->BeginSynchronizeState(this, (size_t)0, fr, true);

@@ -17,6 +17,8 @@
 #include <algorithm>
 #include <map>
 
+#include <iostream>
+
 using namespace std;
 
 namespace Microsoft { namespace MSR { namespace CNTK {
@@ -1004,6 +1006,168 @@ void ComputationNetwork::AllocateAllMatrices(const std::vector<ComputationNodeBa
 
     // print the memory sharing structure
     PrintMemorySharingStructure(GetAllNodes());
+}
+
+template void ComputationNetwork::FindDependencyGraph<double>(const std::vector<ComputationNodeBasePtr>& evalRootNodes,
+                                             const std::vector<ComputationNodeBasePtr>& outValueRootNodes,
+                                             ComputationNodeBasePtr trainRootNode);
+template void ComputationNetwork::FindDependencyGraph<float>(const std::vector<ComputationNodeBasePtr>& evalRootNodes,
+                                             const std::vector<ComputationNodeBasePtr>& outValueRootNodes,
+                                             ComputationNodeBasePtr trainRootNode);
+
+template <class ElemType>
+void ComputationNetwork::FindDependencyGraph(const std::vector<ComputationNodeBasePtr>& evalRootNodes,
+                                             const std::vector<ComputationNodeBasePtr>& outValueRootNodes,
+                                             ComputationNodeBasePtr trainRootNode)
+{
+
+
+	 std::vector<ComputationNodeBasePtr> forwardPropRoots;
+	    forwardPropRoots.insert(forwardPropRoots.end(), evalRootNodes.begin(), evalRootNodes.end());
+	    forwardPropRoots.insert(forwardPropRoots.end(), outValueRootNodes.begin(), outValueRootNodes.end());
+	    if (trainRootNode != nullptr)
+	        forwardPropRoots.push_back(trainRootNode);
+
+	    // Construct the composite forward prop eval order by enumerating the
+	    // nodes corresponding to each of our roots and then arranging them in the
+	    // relative order that they appear in the global evaluation order
+	    const std::list<ComputationNodeBasePtr>& allNodesEvalOrder = GetEvalOrder(nullptr);
+	    std::list<ComputationNodeBasePtr> nodesForForwardPropRoots = ComputationNodeBase::EnumerateNodes(forwardPropRoots);
+	    std::vector<ComputationNodeBasePtr> compositeForwardPropEvalOrder;
+	    for (auto& node : allNodesEvalOrder)
+	    {
+	        if (std::find(nodesForForwardPropRoots.cbegin(), nodesForForwardPropRoots.cend(), node) != nodesForForwardPropRoots.cend())
+	        {
+	            compositeForwardPropEvalOrder.push_back(node);
+	        }
+	    }
+
+    	int idx = 1;
+	    std::unordered_map<Matrix<ElemType>*, std::set<int> > buffer2Idxs;
+	    for (auto& node : compositeForwardPropEvalOrder)
+	    {
+	    	std::set<Matrix<ElemType>*> buffers;
+	    	int inputCount = node->GetNumInputs();
+	    	for(int i = 0; i < inputCount; i++)
+            {
+                Matrix<ElemType> *buffer = (Matrix<ElemType>*)node->Input(i)->ValuePtr().get(); 
+                buffer2Idxs[buffer].insert(idx);
+            }
+
+            if(node->ValuePtr() != NULL)
+            { 
+                Matrix<ElemType> *buffer = (Matrix<ElemType>*)node->ValuePtr().get();
+                buffer2Idxs[buffer].insert(idx);
+            }
+
+	    	idx++;
+	   }
+
+       std::vector<int> maxValues;
+       std::unordered_map<int, std::set<Matrix<ElemType>*> > idx2Buffers;
+       for(std::pair<Matrix<ElemType>*, std::set<int> > pair : buffer2Idxs)
+       {
+             int max = -1;
+             for(int idx : pair.second)
+                max = idx > max ? idx : max; 
+
+             maxValues.push_back(max);
+             idx2Buffers[max].insert(pair.first);
+       }
+
+
+        std::sort(maxValues.begin(), maxValues.end()); 
+        std::unordered_map<int, std::set<Matrix<ElemType>*> > timeStep2Buffers;
+        int timeStep = 0;
+        int prevMaxValue = -1;
+        for(int maxValue : maxValues)
+        {
+            if(prevMaxValue == maxValue){ continue; }
+
+            timeStep2Buffers[timeStep] = idx2Buffers[maxValue];
+            prevMaxValue = maxValue;
+            timeStep++;
+        }
+
+       
+        for(auto pairs : timeStep2Buffers)
+            for(auto buffer : pairs.second)
+                cout << pairs.first << "->" << pairs.first << ": " << buffer << endl;
+
+
+       // determined when to swap out, and when to swap in
+
+
+	    std::unordered_map<Matrix<ElemType>*, std::set<int> > backBuffer2Idxs;
+	    for (auto& node : compositeForwardPropEvalOrder)
+	    {
+	    	std::set<Matrix<ElemType>*> buffers;
+	    	int inputCount = node->GetNumInputs();
+	    	for(int i = 0; i < inputCount; i++)
+            {
+                if(node->InputUsedInComputingInputNodesGradients(i))
+                {
+                    Matrix<ElemType> *buffer = (Matrix<ElemType>*)node->Input(i)->ValuePtr().get(); 
+                    backBuffer2Idxs[buffer].insert(idx);
+                }
+            }
+
+            if(node->ValuePtr() != NULL)
+            { 
+                if(node->OutputUsedInComputingInputNodesGradients())
+                {
+                    Matrix<ElemType> *buffer = (Matrix<ElemType>*)node->ValuePtr().get();
+                    backBuffer2Idxs[buffer].insert(idx);
+                }
+            }
+
+            if(node->GradientPtr() != NULL)
+            { 
+                Matrix<ElemType> *buffer = (Matrix<ElemType>*)node->GradientPtr().get();
+                backBuffer2Idxs[buffer].insert(idx);
+            }
+
+
+	    	idx--;
+	   }
+
+       maxValues.clear();
+       std::unordered_map<int, std::set<Matrix<ElemType>*> > backIdx2Buffers;
+       for(std::pair<Matrix<ElemType>*, std::set<int> > pair : backBuffer2Idxs)
+       {
+             int max = -1;
+             for(int idx : pair.second)
+                max = idx > max ? idx : max; 
+
+             maxValues.push_back(max);
+             backIdx2Buffers[max].insert(pair.first);
+       }
+
+
+
+        std::sort(maxValues.begin(), maxValues.end()); 
+        std::unordered_map<int, std::set<Matrix<ElemType>*> > backTimeStep2Buffers;
+        timeStep = 0;
+        prevMaxValue = -1;
+        for(int maxValue : maxValues)
+        {
+            if(prevMaxValue == maxValue){ continue; }
+
+            backTimeStep2Buffers[timeStep] = backIdx2Buffers[maxValue];
+            prevMaxValue = maxValue;
+            timeStep++;
+        }
+
+       
+        cout << "BACKPROP" << endl;
+        for(auto pairs : backTimeStep2Buffers)
+            for(auto buffer : pairs.second)
+                cout << pairs.first << "->" << pairs.first << ": " << buffer << endl;
+
+
+
+
+
 }
 
 void ComputationNetwork::ReleaseMatricesAfterEvalForChildren(ComputationNodeBasePtr n, std::unordered_map<ComputationNodeBasePtr, int>& parentCount)

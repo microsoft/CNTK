@@ -188,6 +188,7 @@ private:
     void VerifyIsCompiled(const char* where) const;
 public:
     void AllocateAllMatrices(const std::vector<ComputationNodeBasePtr>& evalRootNodes, const std::vector<ComputationNodeBasePtr>& outValueRootNodes, ComputationNodeBasePtr trainRootNode);
+    template <class ElemType> void FindDependencyGraph(const std::vector<ComputationNodeBasePtr>& evalRootNodes, const std::vector<ComputationNodeBasePtr>& outValueRootNodes, ComputationNodeBasePtr trainRootNode);
 
 private:
     void PrintMemorySharingStructure(const std::vector<ComputationNodeBasePtr>& nodes);

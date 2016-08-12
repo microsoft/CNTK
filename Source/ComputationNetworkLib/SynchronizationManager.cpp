@@ -36,10 +36,11 @@ template <typename ElemType> SynchronizationManager<ElemType>* SynchronizationMa
         SynchronizationManager<ElemType>::s_synchronizationManager->m_currentStepNumber = 0;
         SynchronizationManager<ElemType>::s_synchronizationManager->m_currentIteration = 0;
         SynchronizationManager<ElemType>::s_synchronizationManager->m_maxStepNumber = 0;
+        SynchronizationManager<ElemType>::s_synchronizationManager->m_GBFreed = 0.0f;
         SynchronizationManager<ElemType>::s_synchronizationManager->m_timer = CUDATimer();
         SynchronizationManager<ElemType>::s_synchronizationManager->m_isExecuting = false;
         SynchronizationManager<ElemType>::s_synchronizationManager->m_useMemorySwapping = false;
-        SynchronizationManager<ElemType>::s_synchronizationManager->m_isInTrainingMode = false;
+        SynchronizationManager<ElemType>::s_synchronizationManager->m_registeringBuffers = true;
     }
 
     return SynchronizationManager<ElemType>::s_synchronizationManager;
@@ -51,22 +52,35 @@ template <typename ElemType> void SynchronizationManager<ElemType>::CleanUp()
 {
    // 1. remove all swap actions which are not needed, that is which are too slow
    // 2. remove stats and other temporary structures which are not needed for execution
+    //Matrix<ElemType> *buffer;
+    //for(auto pair : m_stepNumber2Buffer) // auto = <int, Matrix<ElemType>>
+    //{
+    //    std::vector<Matrix<ElemType> *> buffers = pair.second;
+    //    for(int j = 0; j < buffers.size(); j++)
+    //    {
+    //        buffer = buffers[j];
+
+    //        if(m_buffer2SwapOut.count(buffer) == 0){ continue; }
+
+    //        m_buffer2SwapOut[buffer]->ReleaseMemory();
+    //        m_buffer2SwapOut.erase(buffer);
+    //        m_buffer2SwapIn.erase(buffer);
+
+    //        // adding this line causes and error during the 2nd actions, and I do not know why
+    //        //m_buffer2IsFreed.erase(buffer); 
+    //    }
+    //}
+
+    // sanity check for a bug
     Matrix<ElemType> *buffer;
-    for(auto pair : m_stepNumber2Buffer) // auto = <int, Matrix<ElemType>>
+    for(std::pair<Matrix<ElemType>*, bool> pair : m_buffer2IsFreed)
     {
-        std::vector<Matrix<ElemType> *> buffers = pair.second;
-        for(int j = 0; j < buffers.size(); j++)
+        buffer = pair.first;
+        if(pair.second)
         {
-            buffer = buffers[j];
-
-            if(m_buffer2SwapOut.count(buffer) == 0){ continue; }
-
-            m_buffer2SwapOut[buffer]->ReleaseMemory();
-            m_buffer2SwapOut.erase(buffer);
-            m_buffer2SwapIn.erase(buffer);
-
-            // adding this line causes and error during the 2nd actions, and I do not know why
-            //m_buffer2IsFreed.erase(buffer); 
+            SwapInAction<ElemType> *swpIn = m_buffer2SwapIn[buffer];
+            swpIn->BeginAction();
+            swpIn->EndAction();
         }
     }
 }
@@ -209,6 +223,11 @@ template<typename ElemType> void SynchronizationManager<ElemType>::BeginSynchron
 #ifndef CPUONLY
 	if(!m_useMemorySwapping){ return; }
 
+    size_t free, total;
+    CUDA_CALL(cudaMemGetInfo(&free, &total));
+
+    cout << "FREE MEMORY: " << free/1024.0f/1024.0f/1024.0f << endl;
+
     if(!m_isExecuting)
     {
         bool allStatsGathered = false;
@@ -296,11 +315,8 @@ template<typename ElemType> void SynchronizationManager<ElemType>::BeginSynchron
 
 
 
-            if(m_isInTrainingMode)
-            {
-            	MeasureSwapTime(node, isForward);
-            	GatherRuntimeStatistics(node, idx, fr, isForward, true);
-            }
+            MeasureSwapTime(node, isForward);
+            GatherRuntimeStatistics(node, idx, fr, isForward, true);
         }
         else
         {
@@ -403,6 +419,8 @@ template<typename ElemType> void SynchronizationManager<ElemType>::SwapInFreedBu
                 swp->EndAction(); // end swap in
 
 
+                m_GBFreed -= buffer->GetNumElements()*sizeof(ElemType)/1024.0f/1024.0f/1024.0f;
+                cout << "Currently: " << m_GBFreed << "GB of memory is swapped out." << endl;
 
                 //cout << buffer->GetNumRows() << "x" << buffer->GetNumCols() << endl;
                 m_buffer2IsFreed[buffer] = false;
@@ -430,6 +448,40 @@ template<typename ElemType> void SynchronizationManager<ElemType>::SwapInFreedBu
                 swp->EndAction(); // end swap in
 
 
+                m_GBFreed -= buffer->GetNumElements()*sizeof(ElemType)/1024.0f/1024.0f/1024.0f;
+
+                cout << "Currently: " << m_GBFreed << "GB of memory is swapped out." << endl;
+
+                //cout << buffer->GetNumRows() << "x" << buffer->GetNumCols() << endl;
+                m_buffer2IsFreed[buffer] = false;
+                //cout << "swapped in buffer: " << buffer->GetNumRows()  << "x" << buffer->GetNumCols() << endl;
+            }
+        
+
+        }
+    }
+
+
+    if(node->GradientPtr() != NULL)
+    {
+        Matrix<ElemType> *buffer = (Matrix<ElemType>*)node->GradientPtr().get();
+
+        if(!((buffer->GetDataLocation() != CurrentDataLocation::GPU &&
+              buffer->GetDataLocation() != CurrentDataLocation::BOTH) ||
+              buffer->GetMatrixType() != MatrixType::DENSE))
+        {
+
+            if(m_buffer2IsFreed.count(buffer) > 0)
+            if(m_buffer2IsFreed[buffer])
+            {
+                SwapInAction<ElemType> *swp = m_buffer2SwapIn[buffer];
+                swp->BeginAction(); // begin swap in
+                swp->EndAction(); // end swap in
+
+
+                m_GBFreed -= buffer->GetNumElements()*sizeof(ElemType)/1024.0f/1024.0f/1024.0f;
+
+                cout << "Currently: " << m_GBFreed << "GB of memory is swapped out." << endl;
 
                 //cout << buffer->GetNumRows() << "x" << buffer->GetNumCols() << endl;
                 m_buffer2IsFreed[buffer] = false;
@@ -491,29 +543,31 @@ template <typename ElemType> void SynchronizationManager<ElemType>::FreeBuffersF
 
     std::string name = GetStepName(node, isForward);
     int timeStep = m_nodes2timestep[node];
-    timeStep = GetStepNumber(timeStep, -5);
+    timeStep = GetStepNumber(timeStep, -2);
+    cout << "freeing timestep: " << timeStep << endl;
     if(m_timestep2nodes.count(timeStep) == 0){ return; }
     ComputationNodeBase *swapNode = m_timestep2nodes[timeStep];
 
-    if(swapNode->GradientPtr() != NULL)
-    {
-        Matrix<ElemType> *buffer = (Matrix<ElemType>*)swapNode->ValuePtr().get();
+    //if(swapNode->GradientPtr() != NULL)
+    //{
+    //    Matrix<ElemType> *buffer = (Matrix<ElemType>*)swapNode->ValuePtr().get();
 
-        if(m_bannedBuffers2bool.count(buffer) == 0)
-            m_bannedBuffers2bool[buffer] = true;
-    }
+    //    if(m_bannedBuffers2bool.count(buffer) == 0)
+    //        m_bannedBuffers2bool[buffer] = true;
+    //}
 
     int inputCount = swapNode->GetNumInputs();
     for(int i = 0; i < inputCount; i++)
     {
 
-       if(swapNode->Input(i)->ValuePtr() == NULL){ continue; }
+       if(swapNode->Input(i)->ValuePtr() == NULL){ cout << "NULL" << endl; continue; }
        Matrix<ElemType> *buffer = (Matrix<ElemType>*)swapNode->Input(i)->ValuePtr().get();
 
-        if(m_bannedNodes2Bool.count(swapNode->Input(i).get()) > 0){ continue; }
-        if(buffer == NULL){ continue; }
-        if(buffer->GetNumElements() < 1024){ continue; }
-        if(m_bannedBuffers2bool.count(buffer) > 0){ continue; }
+        if(m_bannedNodes2Bool.count(swapNode->Input(i).get()) > 0){ cout << "BANNED" << endl; continue; }
+        if(buffer == NULL){ cout << "NULL2" << endl; continue; }
+        if(buffer->GetNumElements() < 1024){ cout << "small" << endl; continue; }
+        if(m_bannedBuffers2bool.count(buffer) > 0){ cout << "BANNED2" << endl; continue; }
+        //if(swapNode->Input(i)->IsValueSharable()){ cout << "SHARED" << endl; continue; }
 
         if(m_buffer2IsFreed.count(buffer) > 0)
             if(m_buffer2IsFreed[buffer])
@@ -532,6 +586,8 @@ template <typename ElemType> void SynchronizationManager<ElemType>::FreeBuffersF
         std::string nodename = std::string(node->NodeName().begin(), node->NodeName().end());
         //if(buffer->GetNumRows() == 784 && buffer->GetNumCols() == 32){ cout << "INPUT: " << nodename << endl; continue; }
         //cout << "freeing buffer: " << buffer->GetNumRows()  << "x" << buffer->GetNumCols() << endl;
+        m_GBFreed += buffer->GetNumElements()*sizeof(ElemType)/1024.0f/1024.0f/1024.0f;
+        cout << "Currently: " << m_GBFreed << "GB of memory is swapped out." << endl;
         m_buffer2SwapOut[buffer]->BeginAction(); // begin swap out
         m_buffer2SwapOut[buffer]->EndAction(); // complete swap out
         m_buffer2IsFreed[buffer] = true;
@@ -544,8 +600,9 @@ template <typename ElemType> void SynchronizationManager<ElemType>::FreeBuffersF
     {
         Matrix<ElemType> *buffer = (Matrix<ElemType>*)swapNode->ValuePtr().get();
 
-        if(m_bannedBuffers2bool.count(buffer) > 0){ return; }
-        if(buffer->GetNumElements() < 1024){ return; }
+        if(m_bannedBuffers2bool.count(buffer) > 0){ cout << "banned3" << endl; return; }
+        if(buffer->GetNumElements() < 1024){ cout << "small2" << endl; return; }
+        //if(swapNode->IsValueSharable()){ cout << "SHARED" << endl; return; }
 
         if(m_buffer2IsFreed.count(buffer) > 0)
             if(m_buffer2IsFreed[buffer])
@@ -561,6 +618,8 @@ template <typename ElemType> void SynchronizationManager<ElemType>::FreeBuffersF
         }
 
         //cout << "freeing buffer: " << buffer->GetNumRows()  << "x" << buffer->GetNumCols() << endl;
+        m_GBFreed += buffer->GetNumElements()*sizeof(ElemType)/1024.0f/1024.0f/1024.0f;
+        cout << "Currently: " << m_GBFreed << "GB of memory is swapped out." << endl;
         m_buffer2SwapOut[buffer]->BeginAction(); // begin swap out
         m_buffer2SwapOut[buffer]->EndAction(); // complete swap out
         m_buffer2IsFreed[buffer] = true;
@@ -592,6 +651,9 @@ template<typename ElemType> void SynchronizationManager<ElemType>::RegisterBuffe
     m_nodes2timestep[node] = m_currentStepNumber;
     m_timestep2nodes[m_currentStepNumber] = node;
     m_currentStepNumber++;
+
+    std::string nodename = std::string(node->NodeName().begin(), node->NodeName().end());
+    cout << m_currentStepNumber << " " << nodename << endl;
 
     //int inputCount = node->GetNumInputs();
     //std::string name = GetStepName(node, isForward);
@@ -759,6 +821,7 @@ template<typename ElemType> void SynchronizationManager<ElemType>::ClearActionsA
            action->ReleaseMemory();
        pair.second.clear();
     }
+
     m_stepName2StepNumber.clear();
     m_buffer2StepNumbers.clear();
     m_stepNumber2ComputationTime.clear();
@@ -767,6 +830,8 @@ template<typename ElemType> void SynchronizationManager<ElemType>::ClearActionsA
     m_buffer2SwapOut.clear();
     m_buffer2IsFreed.clear();
     m_stepNumber2Buffer.clear();
+    m_bannedBuffers2bool.clear();
+    m_bannedNodes2Bool.clear();
     
     m_buffer2SwapTime.clear();
     m_stepNumber2CumulativeSwapInTime.clear();
@@ -776,7 +841,7 @@ template<typename ElemType> void SynchronizationManager<ElemType>::ClearActionsA
 
     m_currentStepNumber = 0;
     m_isExecuting = false;
-    m_isInTrainingMode = false;
+    m_registeringBuffers = true;
 }
 
 
