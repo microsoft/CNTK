@@ -41,16 +41,18 @@ CNTKTextFormatReader::CNTKTextFormatReader(MemoryProviderPtr provider,
             m_deserializer = shared_ptr<IDataDeserializer>(new ChunkCache(m_deserializer));
         }
 
+        intargvector maxNumOfSequencesPerEpoch = config(L"maxNumOfSequencesPerEpoch", intargvector(vector<int> { INT_MAX }));
+
         size_t window = configHelper.GetRandomizationWindow();
         if (window > 0)
         {
             // Verbosity is a general config parameter, not specific to the text format reader.
             int verbosity = config(L"verbosity", 0);
-            m_randomizer = make_shared<BlockRandomizer>(verbosity, window, m_deserializer, true);
+            m_randomizer = make_shared<BlockRandomizer>(verbosity, window, m_deserializer, true, BlockRandomizer::DecimationMode::chunk, false, false, maxNumOfSequencesPerEpoch);
         }
         else
         {
-            m_randomizer = std::make_shared<NoRandomizer>(m_deserializer);
+            m_randomizer = std::make_shared<NoRandomizer>(m_deserializer, false, maxNumOfSequencesPerEpoch);
         }
 
         if (configHelper.IsInFrameMode()) 

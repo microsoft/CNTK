@@ -8,6 +8,7 @@
 #include <vector>
 #include "SequenceEnumerator.h"
 #include "DataDeserializer.h"
+#include "Config.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -18,7 +19,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 class NoRandomizer : public SequenceEnumerator
 {
 public:
-    NoRandomizer(IDataDeserializerPtr deserializer, bool multithreadedGetNextSequences = false);
+    NoRandomizer(IDataDeserializerPtr deserializer, bool multithreadedGetNextSequences = false, intargvector maxNumOfSequencesPerEpoch =  intargvector(vector<int> { INT_MAX }));
 
     virtual void StartEpoch(const EpochConfiguration& config) override;
     virtual Sequences GetNextSequences(size_t sampleCount) override;
@@ -80,6 +81,9 @@ private:
 
     // Total number of samples in the sweep.
     size_t m_totalNumberOfSamples;
+
+    intargvector m_maxNumOfSequencesPerEpoch;
+    int m_currentMaxNumOfSequences;
 };
 
 }}}
