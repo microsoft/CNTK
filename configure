@@ -17,7 +17,7 @@ enable_cuda=
 
 have_acml=no
 acml_path=
-acml_check=include/acml.h
+acml_check=ifort64/include/acml.h
 
 # CNTK Custom MKL Version
 cntk_custom_mkl_version=1
