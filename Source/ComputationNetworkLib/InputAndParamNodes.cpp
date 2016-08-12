@@ -26,11 +26,13 @@ void LearnableParameter<ElemType>::InitShape(const TensorShape& shape)
     Value().Invalidate();
 }
 
+static pair<bool/*uniform*/, double/*stddev or range*/> ParseRandomizationType(const std::wstring& type, size_t fanOut = 1, size_t fanIn = 1);
+
 // constructor from config
 // Parameterization is a little wicked. An older version required to specify the type of initialization
-// ("uniform|fixedValue|gaussian|fromFile|fromLiteral") and then a parameter with a matching name.
+// ("uniform|gaussian|...|fixedValue|fromFile|fromLiteral") and then a parameter with a matching name.
 // Now, only the matching parameter is sufficient, making it less verbose.
-//  - init="uniform|gaussian" (random init, scaled by arg initValueScale)
+//  - init="uniform|gaussian|..." (random init, scaled by arg initValueScale)
 //  - init="zero"
 //  - initValue=scalar --> initialize from this value
 //  - initValue=array or nested array --> initialize from this value, infer dimensions  --TODO: not implemented yet
@@ -80,7 +82,7 @@ LearnableParameter<ElemType>::LearnableParameter(const ScriptableObjects::IConfi
     }
     // deferred variants
     // Deferred means that this kind of initialization is allowed when some dimensions are unspecified, and thus happens during Validate().
-    if (initString == L"uniform" || initString == L"gaussian") // random init
+    if (ParseRandomizationType(initString).second != 0) // random init
     {
         m_initString = initString;
         // TODO: add more randomization types, and use a more meaningful scaling
@@ -148,7 +150,7 @@ void LearnableParameter<ElemType>::PostInitParameters(const wstring& initString,
                                                       unsigned long randomSeed /*= 0*/,
                                                       bool initOnCPUOnly /*= false*/)
 {
-    if (initString == L"uniform" || initString == L"gaussian") // random init
+    if (ParseRandomizationType(initString).second != 0) // random init
     {
         m_initString = initString;
         m_randomSeed = randomSeed;
@@ -171,36 +173,65 @@ void LearnableParameter<ElemType>::PostInitParameters(const wstring& initString,
         fprintf(stderr, "%ls: Initializating Parameter[%s] as %ls later when dimensions are fully known.\n", NodeDescription().c_str(), string(GetSampleLayout()).c_str(), m_initString.c_str());
 }
 
+// understood options:
+//  uniform:       1/20
+//  gaussian:      sqrt(0.04 / fanin)
+//  xavier:        sqrt(3 / fanin)
+//  glorotNormal:  sqrt(2 / (fanin+fanout))
+//  glorotUniform: sqrt(6 / (fanin+fanout))
+//  heNormal:      sqrt(2 / fanin)
+//  heUniform:     sqrt(6 / fanin)
+// returns (*,0) for unrecognized string
+static pair<bool/*uniform*/,double/*stddev or range*/> ParseRandomizationType(const std::wstring& type, size_t fanOut /* = 1*/, size_t fanIn /*= 1*/)
+{
+    if      (type == L"uniform")       return make_pair( true, 0.05f);
+    else if (type == L"gaussian")      return make_pair(false, 0.2 / sqrt(fanIn));
+    else if (type == L"xavier")        return make_pair( true, sqrt(3.0 / fanIn));
+    else if (type == L"glorotUniform") return make_pair( true, sqrt(6.0 / (fanIn + fanOut)));
+    else if (type == L"glorotNormal")  return make_pair(false, sqrt(2.0 / (fanIn + fanOut)));
+    else if (type == L"heUniform")     return make_pair( true, sqrt(6.0 / fanIn));
+    else if (type == L"heNormal")      return make_pair(false, sqrt(2.0 / fanIn));
+    else                               return make_pair(false, 0.0);
+}
+
 // initialize with random numbers
 // if 'initOnCPUOnly' then always init on CPU, making initialization consistent across both (for testing)
 template <class ElemType>
-void LearnableParameter<ElemType>::InitRandom(const bool uniformInit,
-                                                const unsigned long randomSeed,
-                                                const ElemType initValueScale,
-                                                bool initOnCPUOnly)
+void LearnableParameter<ElemType>::InitRandom(const std::wstring& type,
+                                              const unsigned long randomSeed,
+                                              const ElemType initValueScale,
+                                              bool initOnCPUOnly)
 {
     // fprintf(stderr, "%d x %d: %d  %ls\n", (int)GetNumRows(), (int)GetNumCols(), (int)randomSeed, NodeName().c_str());
 
-    // the random seed offset is set via the "randomSeedOffset" parameter in config
-    if (initOnCPUOnly)
-        Value().TransferToDeviceIfNotThere(CPUDEVICE, true);
+    let& sampleLayout = GetSampleLayout();
 #if 1   // this more complex version is needed to repro test cases generated with an older version
-    auto& value = GetSampleLayout().GetRank() > 2 ? Value() : ValueAsMatrix();
+    auto& value = sampleLayout.GetRank() > 2 ? Value() : ValueAsMatrix();
 #else
     auto& value = Value();
 #endif
-    if (uniformInit)
-    {
-        // TODO: move these hidden extra factors out from here and into NDL, and make them visible in BS
-        ElemType randRange = 0.05f * initValueScale;
-        value.SetUniformRandomValue(-randRange, randRange, randomSeed);
-    }
+
+    let numElements = sampleLayout.GetNumElements();
+    if (numElements == 0)
+        return;
+    // We assume that the matrix row dimension is the output dimension. This is wrong in case of ND biases, convolution filters, and BatchNorm.
+    size_t fanIn = value.GetNumCols();   // fan-in
+    size_t fanOut = numElements / fanIn; // remaining dimensions
+    let opts = ParseRandomizationType(type, fanOut, fanIn);
+    let isUniform = opts.first;
+    ElemType range = (ElemType)opts.second;
+    if (range == 0)
+        LogicError("InitRandom: Invalid initialization type '%ls'", type.c_str());
+
+    // the random seed offset is set via the "randomSeedOffset" parameter in config
+    fprintf(stderr, "%ls: Initializing Parameter[%s] <- %ls(seed=%d, range=%f*%f, onCPU=%s).\n", NodeDescription().c_str(), string(GetSampleLayout()).c_str(), m_initString.c_str(), (int)m_randomSeed, range, m_initValueScale, m_initOnCPUOnly ? "true" : "false");
+    range *= initValueScale;
+    if (initOnCPUOnly)
+        Value().TransferToDeviceIfNotThere(CPUDEVICE, true);
+    if (isUniform)
+        value.SetUniformRandomValue(-range, range, randomSeed);
     else
-    {
-        size_t inputSize = value.GetNumCols();
-        ElemType randInitstd = 0.2f * initValueScale / sqrt(ElemType(inputSize));
-        value.SetGaussianRandomValue(0, randInitstd, randomSeed);
-    }
+        value.SetGaussianRandomValue(0, range, randomSeed);
     if (initOnCPUOnly)
         Value().TransferToDeviceIfNotThere(m_deviceId, true);
 }
@@ -406,10 +437,9 @@ void LearnableParameter<ElemType>::LazyInitParameters()
         fprintf(stderr, "%ls: Initializing Parameter[%s] <- %f.\n", NodeDescription().c_str(), string(GetSampleLayout()).c_str(), m_initValue);
         Value().SetValue(m_initValue);
     }
-    else if (m_initString == L"uniform" || m_initString == L"gaussian")
+    else if (ParseRandomizationType(m_initString).second != 0)
     {
-        fprintf(stderr, "%ls: Initializing Parameter[%s] <- %ls(seed=%d, scale=%f, onCPU=%s).\n", NodeDescription().c_str(), string(GetSampleLayout()).c_str(), m_initString.c_str(), (int)m_randomSeed, m_initValueScale, m_initOnCPUOnly ? "true" : "false");
-        InitRandom((m_initString == L"uniform"), m_randomSeed, m_initValueScale, m_initOnCPUOnly);
+        InitRandom(m_initString, m_randomSeed, m_initValueScale, m_initOnCPUOnly);
     }
     else
         LogicError("LearnableParameter: Invalid value of m_initString '%ls' for deferred initialization for %ls.", m_initString.c_str(), NodeDescription().c_str());
