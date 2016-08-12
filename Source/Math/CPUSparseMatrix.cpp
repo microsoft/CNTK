@@ -785,38 +785,40 @@ void CPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const CPU
     if (rhs.GetFormat() != matrixFormatSparseCSC)
         NOT_IMPLEMENTED;
 
+    // Do the actual multiplication.
+    ElemType* valueBuffer = rhs.Buffer() + *rhs.SecondaryIndexLocation(); //points to the value buffer of the current  view (i.e. buffer containing indices of non-zero elements)
+    int* rowIndexBuffer   = rhs.MajorIndexLocation(); //points to the index buffer of the current view. (i.e. buffer containing indices of non-zero elements)
+    int iNonzero          = 0; // Number of nonzero elements handled so far.
     if (!transposeA && !transposeB)
     {
-        for (size_t j = 0; j < rhs.GetNumCols(); j++)
+        for (size_t colB = 0; colB < rhs.GetNumCols(); colB++)
         {
-            size_t start = rhs.SecondaryIndexLocation()[j]; // ColLocation
-            size_t end = rhs.SecondaryIndexLocation()[j + 1];
-            for (size_t p = start; p < end; p++)
+            size_t end = rhs.SecondaryIndexLocation()[colB + 1];
+            for (; iNonzero < end; iNonzero++)
             {
-                size_t i = rhs.MajorIndexLocation()[p]; // RowLocation
-                ElemType val = rhs.Buffer()[p];
+                size_t rowB = rowIndexBuffer[iNonzero]; // RowLocation
+                ElemType val = valueBuffer[iNonzero];
 
-                for (size_t h = 0; h < lhs.GetNumRows(); h++)
+                for (size_t rowA = 0; rowA < lhs.GetNumRows(); rowA++)
                 {
-                    c(h, j) += alpha * lhs(h, i) * val;
+                    c(rowA, colB) += alpha * lhs(rowA, rowB) * val;
                 }
             }
         }
     }
     else if (!transposeA && transposeB)
     {
-        for (size_t j = 0; j < rhs.GetNumCols(); j++)
+        for (size_t colB = 0; colB < rhs.GetNumCols(); colB++)
         {
-            size_t start = rhs.SecondaryIndexLocation()[j];
-            size_t end = rhs.SecondaryIndexLocation()[j + 1];
-
-            for (size_t p = start; p < end; p++)
+            size_t end = rhs.SecondaryIndexLocation()[colB + 1];
+            for (; iNonzero < end; iNonzero++)
             {
-                size_t i = rhs.MajorIndexLocation()[p];
-                ElemType val = rhs.Buffer()[p];
-                for (size_t h = 0; h < lhs.GetNumRows(); h++)
+                size_t rowB = rowIndexBuffer[iNonzero]; // RowLocation
+                ElemType val = valueBuffer[iNonzero];
+
+                for (size_t rowA = 0; rowA < lhs.GetNumRows(); rowA++)
                 {
-                    c(h, i) += alpha * lhs(h, j) * val;
+                    c(rowA, rowB) += alpha * lhs(rowA, colB) * val;
                 }
             }
         }
@@ -824,36 +826,34 @@ void CPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const CPU
     // the transposeA case is copy-paste from above with rows/cols of lhs swapped
     else if (transposeA && !transposeB)
     {
-        for (size_t j = 0; j < rhs.GetNumCols(); j++)
+        for (size_t colB = 0; colB < rhs.GetNumCols(); colB++)
         {
-            size_t start = rhs.SecondaryIndexLocation()[j]; // ColLocation
-            size_t end = rhs.SecondaryIndexLocation()[j + 1];
-            for (size_t p = start; p < end; p++)
+            size_t end = rhs.SecondaryIndexLocation()[colB + 1];
+            for (; iNonzero < end; iNonzero++)
             {
-                size_t i = rhs.MajorIndexLocation()[p]; // RowLocation
-                ElemType val = rhs.Buffer()[p];
+                size_t rowB = rowIndexBuffer[iNonzero]; // RowLocation
+                ElemType val = valueBuffer[iNonzero];
 
-                for (size_t h = 0; h < lhs.GetNumCols(); h++)
+                for (size_t colA = 0; colA < lhs.GetNumCols(); colA++)
                 {
-                    c(h, j) += alpha * lhs(i, h) * val;
+                    c(colA, colB) += alpha * lhs(rowB, colA) * val;
                 }
             }
         }
     }
     else if (transposeA && transposeB)
     {
-        for (size_t j = 0; j < rhs.GetNumCols(); j++)
+        for (size_t colB = 0; colB < rhs.GetNumCols(); colB++)
         {
-            size_t start = rhs.SecondaryIndexLocation()[j];
-            size_t end = rhs.SecondaryIndexLocation()[j + 1];
-
-            for (size_t p = start; p < end; p++)
+            size_t end = rhs.SecondaryIndexLocation()[colB + 1];
+            for (; iNonzero < end; iNonzero++)
             {
-                size_t i = rhs.MajorIndexLocation()[p];
-                ElemType val = rhs.Buffer()[p];
-                for (size_t h = 0; h < lhs.GetNumCols(); h++)
+                size_t rowB = rowIndexBuffer[iNonzero]; // RowLocation
+                ElemType val = valueBuffer[iNonzero];
+
+                for (size_t colA = 0; colA < lhs.GetNumCols(); colA++)
                 {
-                    c(h, i) += alpha * lhs(j, h) * val;
+                    c(colA, rowB) += alpha * lhs(colB, colA) * val;
                 }
             }
         }
