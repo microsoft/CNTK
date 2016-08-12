@@ -112,13 +112,17 @@ CompositeDataReader::CompositeDataReader(const ConfigParameters& config, MemoryP
         ? m_sequenceEnumerator 
         : std::make_shared<TransformController>(m_transforms, m_sequenceEnumerator);
 
-    // Create output stream descriptions - where to get those? from config? what if it is not the same as network expects?
-    // TODO: Currently only dense output streams.
-    // TODO: Check here. We should already support repacking sparse into dense in the shim/matrix.
+    // TODO: Creating output stream descriptions - this should come from the network so that we can check 
+    // that input matches what the network expects (including tensor shape, etc.).
     for (const auto& streamDescription : m_sequenceEnumerator->GetStreamDescriptions())
     {
         StreamDescriptionPtr stream = std::make_shared<StreamDescription>(*streamDescription);
-        stream->m_storageType = StorageType::dense;
+        if (m_packingMode == PackingMode::truncated)
+        {
+            // TODO: Currently BPTT does not support sparse format as output.
+            // We always require dense.
+            stream->m_storageType = StorageType::dense;
+        }
         m_streams.push_back(stream);
         m_nameToStreamId.insert(std::make_pair(streamDescription->m_name, streamDescription->m_id));
     }
