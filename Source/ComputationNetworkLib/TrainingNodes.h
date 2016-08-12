@@ -1556,6 +1556,8 @@ template class DropoutNode<double>;
 // * scale is a LearnableParameter that stores scale vector (gamma term in the equation above).
 // * bias is a LearnableParameter that stores bias vector (beta term). scale and bias must have the same dimensions which must be equal 
 //      to the input dimensions in case of spatial = false or number of output convolution feature maps in case of spatial = true.
+//      BUGBUG: Number of convolution feature maps are considered the last axis of the input.
+//              More correct would be to infer that from broadcasting dimensions (spatial mode is broadcasting).
 // * runMean is the running mean which is used during evaluation phase and might be used during training as well.
 //      It is represented as a LearnableParameter with the same dimensions as scale and bias.
 // * runInvStdDev is the running inverse square root of variance(so InvStdDev = 1 / sqrt(var + epsilon)).
@@ -1732,6 +1734,38 @@ private: // time-constant conversions
     }
 public:
 
+    virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
+    {
+        FrameRange fr(Input(0)->GetMBLayout());
+
+        Matrix<ElemType> sliceInputValue  = Input(0)->ValueFor(fr);
+        const Matrix<ElemType>& scale     = Input(1)->Value();
+        const Matrix<ElemType>& bias      = Input(2)->Value();
+        Matrix<ElemType>& runMean         = Input(3)->Value();
+        Matrix<ElemType>& runInvStdDev    = Input(4)->Value();
+        Matrix<ElemType> sliceOutputValue = ValueFor(fr);
+
+        assert(scale.GetNumRows() == bias.GetNumRows());
+        assert(scale.GetNumCols() == bias.GetNumCols());
+        assert(runMean.GetNumRows() == scale.GetNumRows());
+        assert(runMean.GetNumCols() == scale.GetNumCols());
+        assert(runMean.GetNumRows() == runInvStdDev.GetNumRows());
+        assert(runMean.GetNumCols() == runInvStdDev.GetNumCols());
+
+        // determine the factors from the time constants
+        double expAvgFactor = ComputeExpAvgFactor(); // weight for the new MB statistics in the running estimate. The previous value of the running statistics is kept with weight (1-this)
+        double blendFactor  = ComputeBlendFactor();  // interpolation weight for the running statistics (the current MB statistics are weighted with 1-this)
+
+        m_bnEng->Forward(/*in=*/ sliceInputValue, scale, bias, // (in)
+                         expAvgFactor, blendFactor,
+                         runMean, runInvStdDev,                // (in/out) running estimates, updated from the current MB mean/stddev
+                         /*out=*/ sliceOutputValue,            // (out) batch-normalized output value
+                         m_epsilon,
+                         *m_saveMean, *m_saveInvStdDev);       // (out) actual interpolated mean/stddev values. Note: unused/empty for blendFactor==1 for CNTK engine
+
+        m_mbCount++;
+    }
+
     // Note: This function assumes that inputIndex=0 is called before the others.
     // BUGBUG: The node should not make assumptions in which order the inputs' derivates are computed. It currently assumes to start with 0.
     // BUGBUG: If the input has no learnables (e.g. using BN instead of corpus mean/var norm), this will not be called for inputIndex=0 at all.
@@ -1741,11 +1775,11 @@ public:
 
         if (inputIndex == 0) // derivative with respect to the input.
         {
-            auto sliceOutputGrad = GradientFor(fr);
-            auto sliceInputValue = Input(0)->ValueFor(fr);
-            const Matrix<ElemType>& scale = Input(1)->Value();
-            const Matrix<ElemType>& bias = Input(2)->Value();
-            const Matrix<ElemType>& runMean = Input(3)->Value();
+            auto sliceOutputGrad                 = GradientFor(fr);
+            auto sliceInputValue                 = Input(0)->ValueFor(fr);
+            const Matrix<ElemType>& scale        = Input(1)->Value();
+            const Matrix<ElemType>& bias         = Input(2)->Value();
+            const Matrix<ElemType>& runMean      = Input(3)->Value();
             const Matrix<ElemType>& runInvStdDev = Input(4)->Value();
 
             auto sliceInputGrad = Input(0)->GradientFor(fr);
@@ -1786,39 +1820,6 @@ public:
 
     virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
 
-    virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
-    {
-        FrameRange fr(Input(0)->GetMBLayout());
-
-        Matrix<ElemType> sliceInputValue = Input(0)->ValueFor(fr);
-
-        const Matrix<ElemType>& scale = Input(1)->Value();
-        const Matrix<ElemType>& bias = Input(2)->Value();
-        Matrix<ElemType>& runMean = Input(3)->Value();
-        Matrix<ElemType>& runInvStdDev = Input(4)->Value();
-        assert(scale.GetNumRows() == bias.GetNumRows());
-        assert(scale.GetNumCols() == bias.GetNumCols());
-        assert(runMean.GetNumRows() == scale.GetNumRows());
-        assert(runMean.GetNumCols() == scale.GetNumCols());
-        assert(runMean.GetNumRows() == runInvStdDev.GetNumRows());
-        assert(runMean.GetNumCols() == runInvStdDev.GetNumCols());
-
-        Matrix<ElemType> sliceOutputValue = ValueFor(fr);
-
-        // determine the factors from the time constants
-        double expAvgFactor = ComputeExpAvgFactor(); // weight for the new MB statistics in the running estimate. The previous value of the running statistics is kept with weight (1-this)
-        double blendFactor  = ComputeBlendFactor();  // interpolation weight for the running statistics (the current MB statistics are weighted with 1-this)
-
-        m_bnEng->Forward(/*in=*/ sliceInputValue, scale, bias, // (in)
-                         expAvgFactor, blendFactor,
-                         runMean, runInvStdDev,                // (in/out) running estimates, updated from the current MB mean/stddev
-                         /*out=*/ sliceOutputValue,            // (out) batch-normalized output value
-                         m_epsilon,
-                         *m_saveMean, *m_saveInvStdDev);       // (out) actual interpolated mean/stddev values. Note: unused/empty for blendFactor==1 for CNTK engine
-
-        m_mbCount++;
-    }
-
     void Validate(bool isFinalValidationPass) override
     {
         Base::Validate(isFinalValidationPass);
@@ -1826,8 +1827,45 @@ public:
 
         SetDims(Input(0));
 
+        const auto& inputLayout = Input(0)->GetSampleLayout();
+
+        // infer dimensions of learnable parameters
+        // BUGBUG: Parameter dimensions are totally wrong. E.g. a valid spatial bias for [15 x 15 x 32] is currently [32 x 1].
+        //         The correct bias shape should be [1 x 1 x 32]. That can be specified but leads to different results for unknown reasons.
+        //         Until this has been corrected, we need a workaround that infers the wrong dimensions.
+#if 1   // Workaround for today's definition: Trigger on [0 x 1] and infer that 0 as the total # elements needed.
+        for (size_t i = 1; i < GetNumInputs(); i++)
+        {
+            auto paramLayout = Input(i)->GetSampleLayout();
+            if (paramLayout.GetRank() == 2 && paramLayout[0] == 0 && paramLayout[1] == 1 && inputLayout.GetNumElements() > 0) // [0 x 1]
+            {
+                size_t total = m_spatial ? inputLayout.GetDims().back() : inputLayout.GetNumElements();
+                Input(i)->ValidateInferInputDimsFrom(TensorShape(total, 1));
+            }
+        }
+#else
+        // These are here only inferred like for elementwise operations. We must check more.
+        ValidateNaryZip(isFinalValidationPass, /*allowBroadcast=*/ true, GetNumInputs());
+#endif
+
         if (isFinalValidationPass)
         {
+            // check inputs
+            for (size_t i = 1; i < GetNumInputs(); i++)
+            {
+                if (Input(i)->HasMBLayout())
+                    InvalidArgument("%ls: Input[%d] has a dynamic axis. BatchNormalization parameters cannot have that.", NodeDescription().c_str(), (int)i);
+                auto paramLayout = Input(i)->GetSampleLayout();
+                if (paramLayout != Input(1)->GetSampleLayout())
+                    InvalidArgument("%ls: Input[%d] has a layout different from Input[1]. All must be identical.", NodeDescription().c_str(), (int)i);
+#if 0           // BUGBUG: For this to work, parameter shapes must be correct (cf. comment above on inference).
+                if (paramLayout.GetRank() > inputLayout.GetRank())
+                    InvalidArgument("%ls: Input[%d] has a tensor rank greated than the data input.", NodeDescription().c_str(), (int)i);
+                for (size_t k = 0; k < paramLayout.size(); k++)
+                    if (paramLayout[k] > inputLayout[k])
+                        InvalidArgument("%ls: Data input cannot broadcast.", NodeDescription().c_str());
+#endif
+            }
             if (m_spatial && m_imageLayoutKind != CHW)
             {
                 InvalidArgument(
@@ -1842,10 +1880,9 @@ public:
             if (m_blendTimeConst < 0)
                 InvalidArgument("%ls %ls requires blend time constant to be >= 0.", NodeName().c_str(), OperationName().c_str());
 
-            auto shape = GetSampleLayout();
-
             if (m_bnEng == nullptr)
             {
+                auto shape = GetSampleLayout();
                 m_bnEng = BatchNormEngine<ElemType>::Create(m_deviceId, shape, m_spatial, m_imageLayoutKind,
                                                             m_useCntkEngine ? BatchNormEngineKind::Cntk : BatchNormEngineKind::CuDnn);
             }

@@ -32,7 +32,7 @@ Train=[
         model = Sequential
         (
             EmbeddingLayer {embedDim, embeddingPath='embeddingmatrix.txt', transpose=true} :  # load the pre-learned word embedding matrix
-            RecurrentLSTMLayer {lstmDim, cellDim=cellDim} :
+            RecurrentLSTMLayer {lstmDim, cellShape=cellDim} :
             BS.Sequences.Last :
             DenseLayer {numLabels}
         )

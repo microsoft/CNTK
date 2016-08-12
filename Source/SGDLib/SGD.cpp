@@ -276,7 +276,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
             numNeedsGradient++;
     }
     fprintf(stderr, "\n");
-    LOGPRINTF(stderr, "Training %.0f parameters in %d out of %d parameter tensors and %d nodes with gradient:\n",
+    LOGPRINTF(stderr, "Training %.0f parameters in %d out of %d parameter tensors and %d nodes with gradient:\n\n",
               (double)numParameters, (int)nodesToUpdateDescriptions.size(), (int)learnableNodes.size(), (int)numNeedsGradient);
     for (let nodeDescription : nodesToUpdateDescriptions)
     {
