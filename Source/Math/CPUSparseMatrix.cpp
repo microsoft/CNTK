@@ -770,7 +770,7 @@ void CPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const CPU
 
     if (beta == 0)
     {
-        memset(c.Buffer(), 0, sizeof(ElemType) * c.GetNumElements());
+        memset(c.Data(), 0, sizeof(ElemType) * c.GetNumElements());
     }
     else if (beta != 1)
     {
