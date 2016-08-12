@@ -1921,12 +1921,10 @@ namespace CNTK
     };
 
     ///
-    /// A collection of key-value pairs that map the number of processed minibatches
-    /// to a new hyper-parameter value. If this collection contains (x,y) pair, than 
-    /// the corresponding value will be set to y after x minibatches have been processed 
-    /// (i.e., before starting x+1 minibatch). 
+    /// A collection of key-value pairs that represents training parameter schedule in 
+    /// terms of the number of processed samples. 
     /// This class provides a number of convenience constructors to allow easy conversion 
-    /// from a single value, a list of values and a map to the per-minibatch schedule. 
+    /// from a single value, a vector of values and a list of pairs to the training schedule.
     ///
     template <typename T>
     class TrainingParametersSchedule
@@ -1940,11 +1938,17 @@ namespace CNTK
         {}
 
         ///
-        ///TODO: add description
+        /// Create a schedule where the parameter changes its value every 'unit' samples:
+        /// schedule[0] is used for the first 'unit' samples, schedule[1] -- for the second,
+        /// and so on. The last value is then used repeatedly until the end of training.
         ///
         TrainingParametersSchedule(const std::vector<T>& schedule, size_t unit = 1) 
             : m_unit(unit)
         {
+            // TODO: 0 will be used to mean "the entire sweep"
+            if (unit == 0)
+                RuntimeError("TrainingParametersSchedule::constructor : 'unit' cannot be 0.");
+
             if (schedule.size() == 0)
                 RuntimeError("TrainingParametersSchedule::constructor : schedule is empty.");
 
@@ -1956,11 +1960,21 @@ namespace CNTK
         }
 
         ///
-        /// TODO: add description
+        /// Create a schedule using the list of key-value pairs, where the key specifies 
+        /// the number of 'units' the parameter should maintain the corresponding value.
+        /// The value from the last pair is used repeatedly until the end of training.
+        /// For example, {{1, 0.05}, {2, 0.1}, {1, 0.005}} and unit = 100, corresponds to 
+        /// a schedule where the value of '0.05' is used for the first 100 samples, then
+        /// '0.1' is used for the second 200 samples, after which the values is switched
+        /// to '0.005'.
         ///
         TrainingParametersSchedule(const std::initializer_list<std::pair<const size_t, T>>& schedule, size_t unit = 1)
             : m_unit(unit)
         {
+            // TODO: 0 will be used to mean "the entire sweep"
+            if (unit == 0)
+                RuntimeError("TrainingParametersSchedule::constructor : 'unit' cannot be 0.");
+
             if (schedule.size() == 0)
                 RuntimeError("TrainingParametersSchedule::constructor : schedule is empty.");
 
@@ -1975,6 +1989,9 @@ namespace CNTK
             }
         }
 
+        ///
+        /// Returns a value corresponding to the absolute sample count from the beginning of training.
+        ///
         CNTK_API const T& operator[](size_t samleCount) const;
 
     private:
@@ -1984,33 +2001,38 @@ namespace CNTK
 
     typedef TrainingParametersSchedule<double> LearningRatesPerSample;
     typedef TrainingParametersSchedule<double> MomentumsPerSample;
-
+    
+    typedef std::unordered_map<Parameter, double> LearningRateMultipliers;
 
     ///
     /// Create an instance of the CNTK built-in SGD learner.
     ///
     CNTK_API LearnerPtr SGDLearner(const std::unordered_set<Parameter>& parameters, 
-                                   const LearningRatesPerSample& learningRates);
+                                   const LearningRatesPerSample& learningRates,
+                                   const LearningRateMultipliers& multipliers = {});
 
     ///
     /// Create an instance of the CNTK built-in Momentum SGD learner.
     ///
     CNTK_API LearnerPtr MomentumSGDLearner(const std::unordered_set<Parameter>& parameters, 
                                            const LearningRatesPerSample& learningRates,
-                                           const MomentumsPerSample& momentums);
+                                           const MomentumsPerSample& momentums,
+                                           const LearningRateMultipliers& multipliers = {});
 
     ///
     /// Create an instance of the CNTK built-in Nesterov's accelerated SGD learner.
     ///
     CNTK_API LearnerPtr NesterovLearner(const std::unordered_set<Parameter>& parameters, 
                                         const LearningRatesPerSample& learningRates,
-                                        const MomentumsPerSample& momentums);
+                                        const MomentumsPerSample& momentums,
+                                        const LearningRateMultipliers& multipliers = {});
 
     ///
     /// Create an instance of the CNTK built-in AdaGrad learner.
     ///
     CNTK_API LearnerPtr AdaGradLearner(const std::unordered_set<Parameter>& parameters,
                                        const LearningRatesPerSample& learningRates,
+                                       const LearningRateMultipliers& multipliers = {},
                                        bool needAveMultiplier = true);
 
     ///
@@ -2018,7 +2040,8 @@ namespace CNTK
     ///
     CNTK_API LearnerPtr FSAdaGradLearner(const std::unordered_set<Parameter>& parameters,
                                          const LearningRatesPerSample& learningRates,
-                                         const MomentumsPerSample& momentums);
+                                         const MomentumsPerSample& momentums,
+                                         const LearningRateMultipliers& multipliers = {});
 
     ///
     /// Create an instance of the CNTK built-in RMSProp learner.
@@ -2030,11 +2053,12 @@ namespace CNTK
                                        double dec,
                                        double max,
                                        double min,
+                                       const LearningRateMultipliers& multipliers = {},
                                        bool needAveMultiplier = true);
 
     ///
     /// Trainer is the top-level abstraction responsible for the orchestration of the training of a model
-    /// using the specified learners and training data either explicilty supplied as Value objects or from
+    /// using the specified learners and training data either explicitly supplied as Value objects or from
     /// a MinibatchSource object.
     ///
     class Trainer
@@ -2111,7 +2135,7 @@ namespace std {
 namespace CNTK
 {
     ///
-    /// Abstraction for generating minbatches of samples for training/evaluation.
+    /// Abstraction for generating minibatches of samples for training/evaluation.
     ///
     class MinibatchSource : public std::enable_shared_from_this<MinibatchSource>
     {

@@ -34,7 +34,10 @@ namespace CNTK
         virtual void RestoreFromCheckpoint(const Dictionary& checkpoint) override final;
 
     protected:
-        LearnerBase(const std::unordered_set<Parameter>& parameters, const LearningRatesPerSample& learningRates);
+        LearnerBase(const std::unordered_set<Parameter>& parameters, 
+                    const LearningRatesPerSample& learningRates, 
+                    const LearningRateMultipliers& multipliers,
+                    bool allocateSmoothGradients = true);
 
         virtual void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const = 0;
 
@@ -49,8 +52,7 @@ namespace CNTK
 
         AdditionalLearningOptions m_additionalOptions;
 
-        // TODO: pull this to the API surface.
-        std::unordered_map<Parameter, double> m_learningRateMultipliers;
+        LearningRateMultipliers m_learningRateMultipliers;
 
         std::unordered_map<Parameter, NDArrayViewPtr> m_smoothedGradientValues;
 
@@ -101,8 +103,11 @@ namespace CNTK
     class LearnerSGD : public LearnerBase
     {
     public:
-        LearnerSGD(const std::unordered_set<Parameter>& parameters, const LearningRatesPerSample& learningRates)
-            : LearnerBase(parameters, learningRates), 
+        LearnerSGD(const std::unordered_set<Parameter>& parameters, 
+                   const LearningRatesPerSample& learningRates, 
+                   const LearningRateMultipliers& multipliers, 
+                   bool allocateSmoothGradients = true)
+            : LearnerBase(parameters, learningRates, multipliers, allocateSmoothGradients), 
             m_momentums(0.0), 
             m_useNesterovAcceleration(false)
         { }
@@ -124,8 +129,10 @@ namespace CNTK
     public:
         LearnerMomentumSGD(const std::unordered_set<Parameter>& parameters, 
                            const LearningRatesPerSample& learningRates,
-                           const MomentumsPerSample& momentums)
-            : LearnerSGD(parameters, learningRates)
+                           const MomentumsPerSample& momentums,
+                           const LearningRateMultipliers& multipliers,
+                           bool allocateSmoothGradients = true)
+            : LearnerSGD(parameters, learningRates, multipliers, allocateSmoothGradients)
         {
             m_momentums = momentums;
         }
@@ -138,8 +145,9 @@ namespace CNTK
 
         LearnerNesterov(const std::unordered_set<Parameter>& parameters, 
                         const LearningRatesPerSample& learningRates,
-                        const MomentumsPerSample& momentums)
-            : LearnerMomentumSGD(parameters, learningRates, momentums)
+                        const MomentumsPerSample& momentums,
+                        const LearningRateMultipliers& multipliers)
+            : LearnerMomentumSGD(parameters, learningRates, momentums, multipliers)
         {
             m_useNesterovAcceleration = true;
         }
@@ -150,7 +158,9 @@ namespace CNTK
     public:
 
         LearnerAdaGrad(const std::unordered_set<Parameter>& parameters, 
-                       const LearningRatesPerSample& learningRates, bool needAveMultiplier);
+                       const LearningRatesPerSample& learningRates,
+                       const LearningRateMultipliers& multipliers,
+                       bool needAveMultiplier);
 
     protected:
         bool m_needAveMultiplier;
@@ -167,7 +177,8 @@ namespace CNTK
 
         LearnerFSAdaGrad(const std::unordered_set<Parameter>& parameters,
                          const LearningRatesPerSample& learningRates,
-                         const MomentumsPerSample& momentums);
+                         const MomentumsPerSample& momentums, 
+                         const LearningRateMultipliers& multipliers);
 
     protected:
 
@@ -183,7 +194,9 @@ namespace CNTK
 
         LearnerRMSProp(const std::unordered_set<Parameter>& parameters,
                        const LearningRatesPerSample& learningRates,
-                       double gamma, double inc, double dec, double max, double min, bool needAveMultiplier);
+                       double gamma, double inc, double dec, double max, double min,
+                       const LearningRateMultipliers& multipliers, 
+                       bool needAveMultiplier);
 
     protected:
 

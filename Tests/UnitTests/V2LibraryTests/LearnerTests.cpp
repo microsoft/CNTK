@@ -75,7 +75,7 @@ void TestAdaGradLearner(size_t numParameters, size_t numMinibatches, const Devic
 {
     NDShape shape = CreateShape(rng() % maxNumAxes + 1, maxDimSize);
     auto parameters = CreateParameters<ElementType>(shape, numParameters, device);
-    auto learner = AdaGradLearner(parameters, { vector<double>{0.5, 0.4, 0.3, 0.2, 0.1}, 2 }, true);
+    auto learner = AdaGradLearner(parameters, { vector<double>{0.5, 0.4, 0.3, 0.2, 0.1}, 2 }, { }, true);
     TestUpdate<ElementType>(learner, shape, numMinibatches, device);
 }
 
@@ -93,7 +93,7 @@ void TestRMSPropLearner(size_t numParameters, size_t numMinibatches, const Devic
 {
     NDShape shape = CreateShape(rng() % maxNumAxes + 1, maxDimSize);
     auto parameters = CreateParameters<ElementType>(shape, numParameters, device);
-    auto learner = RMSPropLearner(parameters, { {0, 0.7}, {1, 0.2} }, 0.01, 0.02, 0.03, 0.1, 0.001, false);
+    auto learner = RMSPropLearner(parameters, { { 3, 0.7 }, { 1, 0.2 } }, 0.01, 0.02, 0.03, 0.1, 0.001 );
     TestUpdate<ElementType>(learner, shape, numMinibatches, device);
 }
 
@@ -180,10 +180,6 @@ void LearnerTests()
     
     TestAdaGradLearner<double>(2, 10, DeviceDescriptor::CPUDevice());
     
-    // TODO: Both FSAdaGradLearner and TestRMSPropLearner try to resize smoothed gradients 
-    // and throw
-    // 'Microsoft::MSR::CNTK::CPUMatrix<double>::Resize: Cannot resize the matrix because it is a view.'
-    // 
-    // TestFSAdaGradLearner<double>(10, 2, DeviceDescriptor::CPUDevice());
-    // TestRMSPropLearner<float>(3, 3, DeviceDescriptor::CPUDevice());
+    TestFSAdaGradLearner<double>(10, 2, DeviceDescriptor::CPUDevice());
+    TestRMSPropLearner<float>(3, 3, DeviceDescriptor::CPUDevice());
 }
