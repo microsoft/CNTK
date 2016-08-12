@@ -13,7 +13,7 @@
 
 using namespace Microsoft::MSR::CNTK;
 
-bool g_shareNodeValueMatrices = true;
+bool g_shareNodeValueMatrices = false;
 
 namespace CNTK
 {
