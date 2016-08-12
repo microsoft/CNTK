@@ -24,7 +24,8 @@ BlockRandomizer::BlockRandomizer(
     bool shouldPrefetch,
     DecimationMode decimationMode,
     bool useLegacyRandomization,
-    bool multithreadedGetNextSequence)
+    bool multithreadedGetNextSequence,
+    intargvector maxNumOfSequencesPerEpoch)
     : m_verbosity(verbosity),
       m_deserializer(deserializer),
       m_decimationMode(decimationMode),
@@ -36,7 +37,8 @@ BlockRandomizer::BlockRandomizer(
       m_lastSeenChunkId(CHUNKID_MAX),
       m_chunkRandomizer(std::make_shared<ChunkRandomizer>(deserializer, randomizationRangeInSamples, useLegacyRandomization)),
       m_multithreadedGetNextSequences(multithreadedGetNextSequence),
-      m_prefetchedChunk(CHUNKID_MAX)
+      m_prefetchedChunk(CHUNKID_MAX),
+      m_maxNumOfSequencesPerEpoch(maxNumOfSequencesPerEpoch)
 {
     assert(deserializer != nullptr);
 
@@ -57,6 +59,9 @@ BlockRandomizer::BlockRandomizer(
 void BlockRandomizer::StartEpoch(const EpochConfiguration& config)
 {
     m_lastSeenChunkId = CHUNKID_MAX;
+    m_currentMaxNumOfSequences = (int)
+        (m_maxNumOfSequencesPerEpoch[config.m_epochIndex] / config.m_numberOfWorkers) +
+        (config.m_workerRank < (m_maxNumOfSequencesPerEpoch[config.m_epochIndex] % config.m_numberOfWorkers) ? 1 : 0);
 
     m_config = config;
     if (config.m_totalEpochSizeInSamples == requestDataSize)
@@ -204,7 +209,7 @@ bool BlockRandomizer::GetNextSequenceDescriptions(size_t sampleCount, std::vecto
     assert(sampleCount != 0);
 
     // Randomizing sequences
-    result = m_sequenceRandomizer->GetNextSequenceDescriptions(sampleCount);
+    result = m_sequenceRandomizer->GetNextSequenceDescriptions(sampleCount, m_currentMaxNumOfSequences);
     return false;
 }
 

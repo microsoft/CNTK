@@ -12,14 +12,15 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-NoRandomizer::NoRandomizer(IDataDeserializerPtr deserializer, bool multithreadedGetNextSequences)
+    NoRandomizer::NoRandomizer(IDataDeserializerPtr deserializer, bool multithreadedGetNextSequences, intargvector maxNumOfSequencesPerEpoch)
     : m_deserializer(deserializer),
       m_samplePositionInEpoch(0),
       m_currentChunkPosition(CHUNKID_MAX),
       m_globalSamplePosition(0),
       m_totalNumberOfSamples(0),
       m_currentSequencePositionInChunk(0),
-      m_multithreadedGetNextSequences(multithreadedGetNextSequences)
+      m_multithreadedGetNextSequences(multithreadedGetNextSequences),
+      m_maxNumOfSequencesPerEpoch(maxNumOfSequencesPerEpoch)
 {
     assert(deserializer != nullptr);
     m_streams = m_deserializer->GetStreamDescriptions();
@@ -52,6 +53,9 @@ ChunkIdType NoRandomizer::GetChunkIndexOf(size_t samplePosition)
 void NoRandomizer::StartEpoch(const EpochConfiguration& config)
 {
     m_config = config;
+    m_currentMaxNumOfSequences = (int)
+        (m_maxNumOfSequencesPerEpoch[config.m_epochIndex] / config.m_numberOfWorkers) +
+        (config.m_workerRank < (m_maxNumOfSequencesPerEpoch[config.m_epochIndex] % config.m_numberOfWorkers) ? 1 : 0);
 
     if (m_config.m_totalEpochSizeInSamples == requestDataSize)
     {
@@ -139,7 +143,7 @@ std::vector<SequenceDescription> NoRandomizer::GetNextSequenceDescriptions(size_
         MoveToNextSequence();
     }
     // Check whether the next sequence fits into the sample count, if not, exit.
-    while (samples - (int)m_sequenceWindow[m_currentSequencePositionInChunk].m_numberOfSamples >= 0);
+    while (samples - (int)m_sequenceWindow[m_currentSequencePositionInChunk].m_numberOfSamples >= 0 && result.size() < m_currentMaxNumOfSequences);
     return result;
 }
 

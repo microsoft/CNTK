@@ -12,6 +12,7 @@
 #include "ChunkRandomizer.h"
 #include "SequenceRandomizer.h"
 #include <future>
+#include "../LUSequenceReader/LUSequenceParser.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -49,7 +50,8 @@ public:
         bool shouldPrefetch,
         DecimationMode decimationMode = DecimationMode::chunk,
         bool useLegacyRandomization = false,
-        bool multithreadedGetNextSequences = false);
+        bool multithreadedGetNextSequences = false,
+        intargvector maxNumOfSequencesPerEpoch = intargvector(vector<int> { INT_MAX }));
 
     // Starts a new epoch.
     virtual void StartEpoch(const EpochConfiguration& config) override;
@@ -156,6 +158,9 @@ private:
     launch m_launchType;
     // Prefetched original chunk id.
     ChunkIdType m_prefetchedChunk;
+
+    intargvector m_maxNumOfSequencesPerEpoch;
+    int m_currentMaxNumOfSequences;
 };
 
 }}}

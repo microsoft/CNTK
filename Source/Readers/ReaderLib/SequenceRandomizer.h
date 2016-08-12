@@ -45,7 +45,7 @@ public:
     size_t Seek(size_t sweepSampleOffset, size_t sweep);
 
     // Gets the next randomized sequence descriptions not exceeding the sample count.
-    std::vector<RandomizedSequenceDescription> GetNextSequenceDescriptions(size_t sampleCount);
+    std::vector<RandomizedSequenceDescription> GetNextSequenceDescriptions(size_t sampleCount, size_t maxNumberOfSequences);
 
     // Gets the current randomized chunk window.
     const std::deque<RandomizedChunk>& GetChunkWindow(size_t& randomizedIndex) const
