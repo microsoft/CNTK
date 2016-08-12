@@ -11,13 +11,11 @@ def _sanitize_value(shape, value, dtype, device, is_param=False):
     cntk_dtype  = utils.sanitize_dtype_cntk(dtype)
     if value is None:
         if shape is None:
-            raise ValueError('you need to specify at least shape or value')
-
-        if not np.isscalar(shape):
-            # cntk uses column major, thus we reverse the shape    
-            shape = tuple(reversed(shape))
-        
+            raise ValueError('you need to specify at least shape or value')        
         if is_param:
+            if not np.isscalar(shape):
+                # cntk uses column major, thus we reverse the shape    
+                shape = tuple(reversed(shape))
             # TODO: expose the initialization params
             ndav = cntk_py.NDArrayView.random_uniform_float(shape, -0.05, 0.05, 1, device)        
         else:

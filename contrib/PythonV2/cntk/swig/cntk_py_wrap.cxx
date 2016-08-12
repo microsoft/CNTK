@@ -5424,6 +5424,18 @@ SWIG_From_std_wstring  (const std::wstring& s)
 SWIGINTERN size_t const &CNTK_NDShape___getitem__(CNTK::NDShape *self,size_t i){
         return (*self)[i];
     }
+SWIGINTERN PyObject *CNTK_NDShape_dimensions(CNTK::NDShape *self){        
+        std::vector<size_t> dims = (*self).Dimensions();
+        size_t num_axes = (*self).NumAxes();
+        PyObject* result = PyTuple_New(num_axes);
+        // CNTK uses column major, thus we reverse the shape
+        for (int i=num_axes-1; i>=0; i--)
+        {
+            size_t dim = dims[i];
+            PyTuple_SET_ITEM(result, i, PyInt_FromLong(dim));
+        }
+        return result;
+    }
 SWIGINTERN size_t const CNTK_NDShape___hash__(CNTK::NDShape *self){
         return std::hash<CNTK::NDShape>()(*self);
     }
@@ -5512,7 +5524,8 @@ SWIGINTERN CNTK::NDArrayView *new_CNTK_NDArrayView__SWIG_17(PyObject *pyobj,CNTK
         std::vector<size_t> shape;
 
         npy_intp num_elements = 1;
-        for (int i=0; i<num_axes; i++)
+        // CNTK uses column major, thus we reverse the shape
+        for (int i=num_axes-1; i>=0; i--)
         {
             shape.push_back(np_shape[i]);
             num_elements *= np_shape[i];
@@ -7416,47 +7429,6 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_NDShape_dimensions(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
-  PyObject *resultobj = 0;
-  CNTK::NDShape *arg1 = (CNTK::NDShape *) 0 ;
-  void *argp1 = 0 ;
-  int res1 = 0 ;
-  PyObject * obj0 = 0 ;
-  std::vector< size_t,std::allocator< size_t > > *result = 0 ;
-  
-  if (!PyArg_ParseTuple(args,(char *)"O:NDShape_dimensions",&obj0)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_CNTK__NDShape, 0 |  0 );
-  if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDShape_dimensions" "', argument " "1"" of type '" "CNTK::NDShape const *""'"); 
-  }
-  arg1 = reinterpret_cast< CNTK::NDShape * >(argp1);
-  {
-    try {
-      result = (std::vector< size_t,std::allocator< size_t > > *) &((CNTK::NDShape const *)arg1)->Dimensions(); 
-    }
-    catch (Swig::DirectorException &e) {
-      SWIG_exception(SWIG_RuntimeError,e.what()); 
-    }
-    catch (std::runtime_error &e) {
-      SWIG_exception(SWIG_RuntimeError,e.what()); 
-    }
-    catch (std::invalid_argument &e) {
-      SWIG_exception(SWIG_RuntimeError,e.what()); 
-    }
-    catch (std::logic_error &e) {
-      SWIG_exception(SWIG_RuntimeError,e.what()); 
-    }
-    catch (...) {
-      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
-    }
-  }
-  resultobj = swig::from(static_cast< std::vector< size_t,std::allocator< size_t > > >(*result));
-  return resultobj;
-fail:
-  return NULL;
-}
-
-
 SWIGINTERN PyObject *_wrap_NDShape_num_axes(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::NDShape *arg1 = (CNTK::NDShape *) 0 ;
@@ -7907,6 +7879,47 @@ SWIGINTERN PyObject *_wrap_NDShape___getitem__(PyObject *SWIGUNUSEDPARM(self), P
     }
   }
   resultobj = SWIG_From_size_t(static_cast< size_t >(*result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_NDShape_dimensions(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  CNTK::NDShape *arg1 = (CNTK::NDShape *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject *result = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:NDShape_dimensions",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_CNTK__NDShape, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "NDShape_dimensions" "', argument " "1"" of type '" "CNTK::NDShape *""'"); 
+  }
+  arg1 = reinterpret_cast< CNTK::NDShape * >(argp1);
+  {
+    try {
+      result = (PyObject *)CNTK_NDShape_dimensions(arg1); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  resultobj = result;
   return resultobj;
 fail:
   return NULL;
@@ -34127,13 +34140,13 @@ static PyMethodDef SwigMethods[] = {
 	 { (char *)"DeviceDescriptor_swigregister", DeviceDescriptor_swigregister, METH_VARARGS, NULL},
 	 { (char *)"NDShape_eq", _wrap_NDShape_eq, METH_VARARGS, NULL},
 	 { (char *)"new_NDShape", _wrap_new_NDShape, METH_VARARGS, NULL},
-	 { (char *)"NDShape_dimensions", _wrap_NDShape_dimensions, METH_VARARGS, NULL},
 	 { (char *)"NDShape_num_axes", _wrap_NDShape_num_axes, METH_VARARGS, NULL},
 	 { (char *)"NDShape_sub_shape", _wrap_NDShape_sub_shape, METH_VARARGS, NULL},
 	 { (char *)"NDShape_has_inferred_dimension", _wrap_NDShape_has_inferred_dimension, METH_VARARGS, NULL},
 	 { (char *)"NDShape_total_size", _wrap_NDShape_total_size, METH_VARARGS, NULL},
 	 { (char *)"NDShape_as_string", _wrap_NDShape_as_string, METH_VARARGS, NULL},
 	 { (char *)"NDShape___getitem__", _wrap_NDShape___getitem__, METH_VARARGS, NULL},
+	 { (char *)"NDShape_dimensions", _wrap_NDShape_dimensions, METH_VARARGS, NULL},
 	 { (char *)"NDShape___hash__", _wrap_NDShape___hash__, METH_VARARGS, NULL},
 	 { (char *)"delete_NDShape", _wrap_delete_NDShape, METH_VARARGS, NULL},
 	 { (char *)"NDShape_swigregister", NDShape_swigregister, METH_VARARGS, NULL},

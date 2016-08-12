@@ -77,7 +77,6 @@ def _test_binary_op(precision, device_id, op_func,
     # putting it into a batch of one sample
     left_value.shape = (1,1) + left_value.shape
     right_value.shape = (1,1) + right_value.shape
-
     
     forward_input = {a:left_value}    
     expected_backward = { a: expected_backward_all['left_arg'], }
@@ -90,7 +89,7 @@ def _test_binary_op(precision, device_id, op_func,
     unittest_helper(constant_op_input, 
             forward_input, expected_forward, expected_backward,
             device_id=device_id, precision=precision) 
-    
+
     forward_input = {a:left_value, b:right_value}    
     expected_backward = { a: expected_backward_all['left_arg'], b: expected_backward_all['right_arg'], }
     unittest_helper(input_op_input, 

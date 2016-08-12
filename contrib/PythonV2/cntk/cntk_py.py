@@ -241,9 +241,6 @@ class NDShape(_object):
         except __builtin__.Exception:
             self.this = this
 
-    def dimensions(self):
-        return _cntk_py.NDShape_dimensions(self)
-
     def num_axes(self):
         return _cntk_py.NDShape_num_axes(self)
 
@@ -261,6 +258,9 @@ class NDShape(_object):
 
     def __getitem__(self, i):
         return _cntk_py.NDShape___getitem__(self, i)
+
+    def dimensions(self):
+        return _cntk_py.NDShape_dimensions(self)
 
     def __hash__(self):
         return _cntk_py.NDShape___hash__(self)

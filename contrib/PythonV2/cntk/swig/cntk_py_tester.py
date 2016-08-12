@@ -31,7 +31,7 @@ def create_ValuePtr_from_NumPy(nd, dev):
     return cntk_py.Value(ndav)
 
 def forward_backward():
-    dev = cntk_py.DeviceDescriptor.CPUDevice()
+    dev = cntk_py.DeviceDescriptor.cpudevice()
 
     # import time;time.sleep(20)
     left_shape = (2,3)
@@ -47,7 +47,7 @@ def forward_backward():
     right_value_ptr = create_ValuePtr_with_value(right_shape+(1,1),
             cntk_py.DataType_Float, 5, dev)
 
-    op = cntk_py.Plus(left_var, right_var)
+    op = cntk_py.plus(left_var, right_var)
 
     outputVariable = op.output()
     output_value_ptr = create_ValuePtr(output_shape+(1,1), cntk_py.DataType_Float, dev) 
@@ -63,8 +63,11 @@ def forward_backward():
     #
     # Forward
     #
+
+    print (left_value_ptr.data().shape().dimensions())
     backpropstate = op.forward(arguments, outputs, dev, outputs_retain)
-    forward_data = output_value_ptr.data().to_numpy()#.reshape(output_shape)
+    forward_data = output_value_ptr.data().to_numpy()
+    
     print("Result forward:")
     print(forward_data)
 

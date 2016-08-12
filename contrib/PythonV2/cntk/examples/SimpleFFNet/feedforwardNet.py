@@ -6,8 +6,7 @@ import cntk.cntk_py as cntk_py
 from cntk.ops import variable, constant, parameter, cross_entropy_with_softmax, combine, classification_error, sigmoid, plus, times
 from cntk.utils import create_minibatch_source
 
-def fully_connected_layer(input, output_dim, device_id, nonlinearity):    
-    #TODO: wrap in SWIG or python Shape() methods in order to return the reversed shape (row/col major)
+def fully_connected_layer(input, output_dim, device_id, nonlinearity):        
     input_dim = input.shape()[0]    
     times_param = parameter(shape=(input_dim,output_dim))    
     t = times(input,times_param)

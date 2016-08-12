@@ -72,8 +72,6 @@
 }
 
 
-//%attribute2(CNTK::Variable, CNTK::NDShape, shape, Shape);
-
 // 
 // NDShape 
 //
@@ -111,16 +109,31 @@
     const size_t& __getitem__(size_t i) {
         return (*self)[i];
     }
+
+    PyObject* dimensions() {        
+        std::vector<size_t> dims = (*self).Dimensions();
+        size_t num_axes = (*self).NumAxes();
+        PyObject* result = PyTuple_New(num_axes);
+        // CNTK uses column major, thus we reverse the shape
+        for (int i=num_axes-1; i>=0; i--)
+        {
+            size_t dim = dims[i];
+            PyTuple_SET_ITEM(result, i, PyInt_FromLong(dim));
+        }
+        return result;
+    }
 }
 
 %ignore CNTK::NDShape::operator[];
 %ignore CNTK::NDShape::AppendShape;
+%ignore CNTK::NDShape::Dimensions;
 %ignore CNTK::Dictionary::AppendShape;
 %rename ("$ignore", fullname=1) CNTK::Variable(const NDShape&, CNTK::DataType, const wchar_t*);
 
 
 // (size_t)-1 will result into an OverflowException
 %ignore CNTK::NDShape::InferredDimension;
+//%ignore CNTK::NDShape::Dimensions;
 // FIXME: The following is not picked up yet, which is why we have to tag it to
 // the module
 //%constant long CNTK::NDShape::InferredDimension = -1;
@@ -861,7 +874,8 @@
         std::vector<size_t> shape;
 
         npy_intp num_elements = 1;
-        for (int i=0; i<num_axes; i++)
+        // CNTK uses column major, thus we reverse the shape
+        for (int i=num_axes-1; i>=0; i--)
         {
             shape.push_back(np_shape[i]);
             num_elements *= np_shape[i];

@@ -202,27 +202,6 @@ def get_temp_filename(directory=None):
 
     return tf.name
 
-def get_rank(shape):
-    '''
-    computes the rank of a tensor.
-    
-    Args:
-        shape: it is either a tuple or an integer.
-        
-    Returns: the rank of the tensor.
-    
-    '''
-    if np.isscalar(shape):
-        if shape == 1:
-            return 0
-        else:
-            return 1
-    else:
-        return len(shape)
-        
-import sys
-from .. import cntk_py
-
 def sanitize_input(arg, fallback_dtype=np.float32):
     """
     Convert to Variable or Constant so that it can be passed as Variable to the CNTK
@@ -440,13 +419,14 @@ def ones_like(batch, precision_numpy):
     return [np.ones_like(sample, dtype=precision_numpy) for sample in batch]
 
 def create_NDArrayView(shape, data_type, dev):
+    if not np.isscalar(shape):
+    # cntk uses column major, thus we reverse the shape    
+        shape = tuple(reversed(shape))
     # FIXME only dense supported so far
     view = cntk_py.NDArrayView(data_type, cntk_py.StorageFormat_Dense, shape, dev)
     return view
 
-def create_NDArrayView_from_NumPy(nd, dev):
-    # reshaping just to get it running (values will be wrong)
-    nd = nd.reshape(tuple(reversed(nd.shape)))
+def create_NDArrayView_from_NumPy(nd, dev):              
     view = cntk_py.NDArrayView(nd, dev, False)
     return view
 

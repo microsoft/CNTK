@@ -92,14 +92,13 @@ def test_op_plus_var_sequences_input_input(left_batch, right_batch, device_id, p
 # -- minus operation tests --
 #TODO: enable once the function is exposed
 @pytest.mark.parametrize("left_operand, right_operand", TENSOR_PAIRS)
-def _test_op_minus(left_operand, right_operand, device_id, precision):
-    expected_forward = [AA([left_operand]) + AA([right_operand])]
+def test_op_minus(left_operand, right_operand, device_id, precision):
+    expected_forward = [AA([left_operand]) - AA([right_operand])]
 
     expected_backward = {
-            'left_arg':  [[[np.ones_like(x, dtype=ctx.precision_numpy) for x in left_operand]]],
-            'right_arg': [[[np.ones_like(x, dtype=ctx.precision_numpy) for x in right_operand]]]
+            'left_arg':  [[[np.ones_like(x, dtype=PRECISION_TO_TYPE[precision]) for x in left_operand]]],
+            'right_arg': [[[-1*np.ones_like(x, dtype=PRECISION_TO_TYPE[precision]) for x in right_operand]]]
             }
-
     from .. import minus
     _test_binary_op(precision, device_id, minus,
             left_operand, right_operand, 
@@ -133,7 +132,7 @@ def test_op_element_times(left_operand, right_operand, device_id, precision):
 # -- element divide tests --
 #TODO: enable once the function is exposed
 @pytest.mark.parametrize("left_operand, right_operand", TENSOR_PAIRS)
-def _test_op_element_divide(left_operand, right_operand, device_id, precision):
+def test_op_element_divide(left_operand, right_operand, device_id, precision):
     expected_forward = [AA([left_operand]) / AA([right_operand])]
 
     expected_backward = {
