@@ -81,6 +81,8 @@ struct /*interface*/ IComputationNode
     virtual void ForwardProp(const FrameRange&) = 0; // forward prop for one minibatch
     virtual void EndForwardProp() = 0;               // called after last iteration step of ForwardProp()
 
+    virtual void BeforeBackprop() = 0;               // called before Backprop() of whole network
+
     virtual void BeginBackprop() = 0;                                        // called before first iteration step of ComputeGradient()
     virtual void BackpropTo(const size_t inputIndex, const FrameRange&) = 0; // backprop gradient into one of the inputs
     virtual void EndBackprop() = 0;                                          // called after last iteration step of ComputeGradient()
@@ -677,6 +679,12 @@ public:
     {
 #ifdef TRACK_GAP_NANS
         fprintf(stderr, "EndForwardProp: %ls %ls operation\n", NodeName().c_str(), OperationName().c_str());
+#endif
+    }
+    virtual void /*IComputationNode::*/ BeforeBackprop() override // called before Backprop() of whole network
+    {
+#ifdef TRACK_GAP_NANS
+        fprintf(stderr, "BeforeBackprop: %ls %ls operation\n", NodeName().c_str(), OperationName().c_str());
 #endif
     }
     virtual void /*IComputationNode::*/ BeginBackprop() override // called before first iteration step of ComputeGradient()

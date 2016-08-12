@@ -2218,9 +2218,9 @@ public:
         m_randomSeed = (unsigned long)CreateUniqId();
     }
 
-    virtual void /*IComputationNode::*/ EndForwardProp() override
+    virtual void /*IComputationNode::*/ BeforeBackprop() override
     {
-        Base::EndForwardProp();
+        Base::BeforeBackprop();
         auto fr = FrameRange(m_pMBLayout);
         ValueFor(fr).AssignElementProductOf(DataFor(*m_maskOfPawn, fr), ValueFor(fr));
     }
@@ -2259,7 +2259,7 @@ public:
         Matrix<ElemType> sliceOutputValue = ValueFor(fr);
 
         sliceOutputValue.SetValue(sliceInput0Value);
-        if (!Environment().IsInferring() && m_pawnRate > 0 && m_pawnRate < 1)
+        if (!Environment().IsInferring() && m_pawnRate > 0)
         {
             // determine pawn mask for this minibatch
             auto sliceMask = DataFor(*m_maskOfPawn, fr);
