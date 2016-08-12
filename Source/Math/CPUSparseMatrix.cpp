@@ -786,14 +786,15 @@ void CPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const CPU
         NOT_IMPLEMENTED;
 
     // Do the actual multiplication.
-    ElemType* valueBuffer = rhs.Buffer() + *rhs.SecondaryIndexLocation(); //points to the value buffer of the current  view (i.e. buffer containing indices of non-zero elements)
-    int* rowIndexBuffer   = rhs.MajorIndexLocation(); //points to the index buffer of the current view. (i.e. buffer containing indices of non-zero elements)
-    int iNonzero          = 0; // Number of nonzero elements handled so far.
+    ElemType* valueBuffer = rhs.Buffer() + *rhs.SecondaryIndexLocation(); // Points to the value buffer of the current  view (i.e. buffer containing indices of non-zero elements)
+    int* rowIndexBuffer   = rhs.MajorIndexLocation();                     // Points to the index buffer of the current view. (i.e. buffer containing indices of non-zero elements)
+    int iNonzero          = 0;                                            // Number of nonzero elements handled so far for curent slice view.
+    int numPreviosNonzero = rhs.SecondaryIndexLocation()[0];              // Total number of nonzero values handled in previous slices.
     if (!transposeA && !transposeB)
     {
         for (size_t colB = 0; colB < rhs.GetNumCols(); colB++)
         {
-            size_t end = rhs.SecondaryIndexLocation()[colB + 1];
+            size_t end = rhs.SecondaryIndexLocation()[colB + 1] - numPreviosNonzero;
             for (; iNonzero < end; iNonzero++)
             {
                 size_t rowB = rowIndexBuffer[iNonzero]; // RowLocation
@@ -810,7 +811,7 @@ void CPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const CPU
     {
         for (size_t colB = 0; colB < rhs.GetNumCols(); colB++)
         {
-            size_t end = rhs.SecondaryIndexLocation()[colB + 1];
+            size_t end = rhs.SecondaryIndexLocation()[colB + 1] - numPreviosNonzero;
             for (; iNonzero < end; iNonzero++)
             {
                 size_t rowB = rowIndexBuffer[iNonzero]; // RowLocation
@@ -828,7 +829,7 @@ void CPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const CPU
     {
         for (size_t colB = 0; colB < rhs.GetNumCols(); colB++)
         {
-            size_t end = rhs.SecondaryIndexLocation()[colB + 1];
+            size_t end = rhs.SecondaryIndexLocation()[colB + 1] - numPreviosNonzero;
             for (; iNonzero < end; iNonzero++)
             {
                 size_t rowB = rowIndexBuffer[iNonzero]; // RowLocation
@@ -845,7 +846,7 @@ void CPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const CPU
     {
         for (size_t colB = 0; colB < rhs.GetNumCols(); colB++)
         {
-            size_t end = rhs.SecondaryIndexLocation()[colB + 1];
+            size_t end = rhs.SecondaryIndexLocation()[colB + 1] - numPreviosNonzero;
             for (; iNonzero < end; iNonzero++)
             {
                 size_t rowB = rowIndexBuffer[iNonzero]; // RowLocation
