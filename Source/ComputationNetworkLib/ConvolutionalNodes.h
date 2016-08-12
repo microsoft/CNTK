@@ -490,10 +490,29 @@ protected:
 
 
 // -----------------------------------------------------------------------
-// ROIPoolingNode (inputROIs, inputFeatures)
-// use adaptive pooling window for input regions of interest to pool to the same
-// output size. ROIs are input(0). inputFeatureMaps (infm) are Input(1).
-// ROIs should have dimension [ROI_size, ROIs_per_image, batch_size];
+// ROIPoolingNode (inputROIs, inputFeatures)--pooling for object detection.
+
+// Each input image has a fixed number of regions of interest (ROIs),
+// specified as bounding boxes (x, y, w, h) that are relative to the
+// image size [W x H]. This node is meant as a replacement for the
+// final pooling layer of an image classification network.  The first
+// fully-connected layer expects a fixed size input, but for object
+// detection we want each ROI to look like an image to the network so
+// we can get a label for it. The ROIs have different spatial sizes,
+// so this node does Max Pooling, but with an adaptive pooling window,
+// so that each ROI output has the spatial size expected by the first
+// fully-connected layer. ROIs are Input(0). Images are Input(1).
+
+// ROI inputs should be [4 * ROIs per image x Batch Size]. Images are
+// [W*H*C x Batch Size]. The output shape of this node is [Pooled
+// Width x Pooled Height x Channels x ROIs Per Image x Batch Size],
+// which the CNTK Matrix represents as [Pooled Width * Pooled Height *
+// Channels * ROIs Per Image x Batch Size]. However, we want the fully
+// connected layers to interpret /each ROI/ as an image, so this node
+// is followed by a reshape node that changes the batch dimension, giving:
+// [Pooled Width * Pooled Height * Channels x ROIs Per Image * Batch
+// Size].
+
 // See http://arxiv.org/abs/1504.08083
 // -----------------------------------------------------------------------
 template <class ElemType>
@@ -502,18 +521,18 @@ class ROIPoolingNode : public ComputationNode<ElemType>, public NumInputs<2>
     typedef ComputationNode<ElemType> Base;
     UsingComputationNodeMembersBoilerplate;
 
-  static const std::wstring TypeName() 
-  {
-    return L"ROIPooling";
-  }
+    static const std::wstring TypeName()
+    {
+        return L"ROIPooling";
+    }
 public:
 
     ROIPoolingNode(DEVICEID_TYPE deviceId, const wstring& name)
         : Base(deviceId, name), m_argmaxData(Matrix<ElemType>::Zeros(1,1,deviceId))
     {
     }
-    ROIPoolingNode(DEVICEID_TYPE deviceId, const wstring& name, const size_t H, const size_t W, ImageLayoutKind imageLayoutKind)
-        : Base(deviceId, name), m_outH(H), m_outW(W), m_imageLayout(imageLayoutKind), m_argmaxData(Matrix<ElemType>::Zeros(1, 1, deviceId))
+    ROIPoolingNode(DEVICEID_TYPE deviceId, const wstring& name, const size_t height, const size_t width, ImageLayoutKind imageLayoutKind)
+        : Base(deviceId, name), m_outH(height), m_outW(width), m_imageLayout(imageLayoutKind), m_argmaxData(Matrix<ElemType>::Zeros(1, 1, deviceId))
     {
     }
 
@@ -536,6 +555,21 @@ public:
         ReleaseMatrixToPool(m_tempMatrix, matrixPool);
     }
 
+    // input: ROIs [4 * ROIs Per Image x Batch Size], Images: [W*H*C x Batch Size]
+    // output: Pooled ROIs, stacked along the batch dimension: 
+    // [Pooled Width * Pooled Height * Channels * ROIs Per Image x Batch Size]
+    // Explanation: this node has a target output shape of [Pooled
+    // Width x Pooled Height x Channels], as does any pooling
+    // layer. However, we want each /ROI/ to have that output size,
+    // not each image. After this node, operations in the network
+    // should be on ROIs, not on the full images. The forward pass
+    // loops over images and the ROIs associated with each image; for
+    // every ROI, it treats the subset of the image specified by that
+    // ROI as a full image and does max pooling over that subset,
+    // using whatever window size will correspond to an output of
+    // [Pooled Width x Pooled Height x Channels]. A reshape node then
+    // changes the batch dimension so that the following nodes
+    // interpret each ROI as a sample.
     void ForwardProp(const FrameRange& fr) override
     {
         // first dimension is roi_size (4) * rois/image, second is mb size
@@ -592,6 +626,12 @@ public:
         SetDims(TensorShape(m_outW, m_outH, inDims.m_numChannels, rois_per_image), HasMBLayout());
     }
 
+    // similar to usual MaxPooling backpropagation. Send gradients
+    // back through to the locations that were used as the "max." Only
+    // difference: needs to sum gradients over all the ROIs that may
+    // have used that location. One image location could be in
+    // multiple ROIs--in that case each ROI may contribute a gradient
+    // term.
     void BackpropTo(const size_t /*inputIndex*/, const FrameRange& fr) override
     {
         auto inputShape = GetInputSampleLayout(1);
@@ -610,11 +650,6 @@ public:
 
         pooledGrad.ROIPoolingBackward(rois_per_image, inputSlice.GetNumCols(), num_channels, 
             input_h, input_w, m_outH, m_outW, roi_data, inputGrad, *m_tempMatrix);
-    }
-
-    void DumpNodeInfo(const bool printValues, const bool printMetadata, File& fstream) const override
-    {
-        Base::DumpNodeInfo(printValues, printMetadata, fstream);
     }
 
     void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override

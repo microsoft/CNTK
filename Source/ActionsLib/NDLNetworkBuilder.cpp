@@ -269,7 +269,7 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
         }
     }
 
-    else if (cnNodeType == L"ReconcileDynamicAccess" /*OperationNameOf(ReshapeNode)*/)
+    else if (cnNodeType == OperationNameOf(ReconcileDynamicAxisNode))
     {
         nodeParamCount = 2;
         nodeParamStart = 0;

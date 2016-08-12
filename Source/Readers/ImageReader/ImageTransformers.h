@@ -109,6 +109,9 @@ private:
     double m_curAspectRatioRadius;
 };
 
+// This transformer pads input images to a target width and height,
+// making them all the same size. It can take a specified pad value,
+// or, if no value is specified, it replicates the border pixel values.
 class PadTransformer : public ImageTransformerBase
 {
 public:
@@ -126,8 +129,8 @@ private:
     int m_borderType;
 };
 
-// scale either the minimum or maximum side to a certain
-// target number and preserve the aspect ratio. good for use
+// This transformer scales either the minimum or maximum side to a certain
+// target number and preserves the aspect ratio. It's good for use
 // before a Pad transform (which makes all images the same size).
 class ScaleSideTransformer : public ImageTransformerBase
 {

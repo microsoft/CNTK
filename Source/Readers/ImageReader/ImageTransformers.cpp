@@ -285,7 +285,7 @@ void PadTransformer::Apply(size_t id, cv::Mat &mat)
 ScaleSideTransformer::ScaleSideTransformer(const ConfigParameters& config) : ImageTransformerBase(config)
 {
     m_target = config(L"target");
-    std::string side = config(L"side", "max");
+    string side = config(L"side", "max");
 
     m_scaleSide = AreEqualIgnoreCase(side, "max") ? Side::MAX : Side::MIN;
 }
@@ -310,13 +310,15 @@ void ScaleSideTransformer::Apply(size_t id, cv::Mat &mat)
 
     int targetW, targetH;
 
-    if (scale_w) {
-        targetW = static_cast<int>(m_target);
-        targetH = static_cast<int>(round(height * scale_ratio));
+    if (scale_w)
+    {
+        targetW = (int)m_target;
+        targetH = (int)round(height * scale_ratio);
     }
-    else {
-        targetH = static_cast<int>(m_target);
-        targetW = static_cast<int>(round(width * scale_ratio));
+    else
+    {
+        targetH = (int)m_target;
+        targetW = (int)round(width * scale_ratio);
     }
 
     cv::resize(mat, mat, cv::Size(targetW, targetH), 0, 0, cv::INTER_LINEAR);

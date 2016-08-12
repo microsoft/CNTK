@@ -3144,31 +3144,33 @@ void GPUMatrix<ElemType>::MaxPoolingBackward(const GPUMatrix<ElemType>& out, con
 
 
 template <class ElemType>
-void GPUMatrix<ElemType>::ROIPoolingForward(const int num_rois, const int num_img, const int channels, const int height, const int width, 
-    const int pooled_height, const int pooled_width, const GPUMatrix<ElemType>& roi_data, GPUMatrix<ElemType>& output, GPUMatrix<ElemType>& argmax) const
+void GPUMatrix<ElemType>::ROIPoolingForward(const int numRois, const int numImg, const int channels, const int height, const int width, 
+                                            const int pooledHeight, const int pooledWidth, const GPUMatrix<ElemType>& roiData, GPUMatrix<ElemType>& output, 
+                                            GPUMatrix<ElemType>& argmax) const
 {	
     PrepareDevice();
     SyncGuard syncGuard;
 
-    int count = num_rois * num_img * channels * pooled_height * pooled_width;
+    int count = numRois * numImg * channels * pooledHeight * pooledWidth;
     const int BlockSize = 128;
-    int nthreads = (int)floor((double)(count + BlockSize - 1) / BlockSize);
-    kROIPoolingForward<<<nthreads, BlockSize, 0, t_stream>>>(count, num_rois, num_img, channels, height, 
-        width, pooled_height, pooled_width, Data(), roi_data.Data(), output.Data(), argmax.Data());
+    auto numThreads = dim3((int)floor((double)(count + BlockSize - 1) / BlockSize));
+    kROIPoolingForward<<<numThreads, BlockSize, 0, t_stream>>>(count, numRois, numImg, channels, height, 
+        width, pooledHeight, pooledWidth, Data(), roiData.Data(), output.Data(), argmax.Data());
 }
 
 template <class ElemType>
-void GPUMatrix<ElemType>::ROIPoolingBackward(const int num_rois, const int num_img, const int channels, const int height, const int width,
-    const int pooled_height, const int pooled_width, const GPUMatrix<ElemType>& roi_data, GPUMatrix<ElemType>& grad, GPUMatrix<ElemType>& argmax) const
+void GPUMatrix<ElemType>::ROIPoolingBackward(const int numRois, const int numImg, const int channels, const int height, const int width,
+                                             const int pooledHeight, const int pooledWidth, const GPUMatrix<ElemType>& roiData, GPUMatrix<ElemType>& grad, 
+                                             GPUMatrix<ElemType>& argmax) const
 {
     PrepareDevice();
     SyncGuard syncGuard;
 
-    int count = num_img * channels * height * width;
+    int count = numImg * channels * height * width;
     const int BlockSize = 128;
-    int nthreads = (int)floor((double)(count + BlockSize - 1) / BlockSize);
-    kROIPoolingBackward<<<nthreads, BlockSize, 0, t_stream>>>(count, num_rois, num_img, channels, height,
-        width, pooled_height, pooled_width, Data(), roi_data.Data(), grad.Data(), argmax.Data());
+    auto numThreads = dim3((int)floor((double)(count + BlockSize - 1) / BlockSize));
+    kROIPoolingBackward <<<numThreads, BlockSize, 0, t_stream >>>(count, numRois, numImg, channels, height,
+        width, pooledHeight, pooledWidth, Data(), roiData.Data(), grad.Data(), argmax.Data());
 }
 
 
