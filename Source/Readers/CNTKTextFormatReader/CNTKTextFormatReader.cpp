@@ -41,7 +41,7 @@ CNTKTextFormatReader::CNTKTextFormatReader(MemoryProviderPtr provider,
             m_deserializer = shared_ptr<IDataDeserializer>(new ChunkCache(m_deserializer));
         }
 
-        intargvector maxNumOfSequencesPerEpoch = config(L"maxNumOfSequencesPerEpoch", intargvector(vector<int> { INT_MAX }));
+        intargvector maxNumOfSequencesPerEpoch = config(L"maxNumOfSequencesInMinibatchPerEpoch", intargvector(vector<int> { INT_MAX }));
 
         size_t window = configHelper.GetRandomizationWindow();
         if (window > 0)
