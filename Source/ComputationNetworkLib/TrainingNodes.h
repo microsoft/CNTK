@@ -2221,8 +2221,11 @@ public:
     virtual void /*IComputationNode::*/ BeforeBackprop() override
     {
         Base::BeforeBackprop();
-        auto fr = FrameRange(m_pMBLayout);
-        ValueFor(fr).AssignElementProductOf(DataFor(*m_maskOfPawn, fr), ValueFor(fr));
+        if (m_pawnRate > 0)
+        {
+            auto fr = FrameRange(m_pMBLayout);
+            ValueFor(fr).AssignElementProductOf(DataFor(*m_maskOfPawn, fr), ValueFor(fr));
+        }
     }
 
     virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
