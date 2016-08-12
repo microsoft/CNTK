@@ -35,7 +35,16 @@ void ConvolutionEngine<ElemType>::BackwardData(const Mat& srcGrad, const Mat& ke
 {
     const auto& g = *m_geometry;
     assert(g.InputShape().GetNumElements() == grad.GetNumRows());
-    assert(g.OutputShape().GetNumElements() == srcGrad.GetNumRows());
+    if(g.OutputShape().GetNumElements() != srcGrad.GetNumRows())
+    {
+        cout << "g.OutputShape().GetNumElements(): " << g.OutputShape().GetNumElements() << " vs. " << "srcGrad.GetNumRows(): " << srcGrad.GetNumRows() << endl;
+        cout << srcGrad.GetNumRows() << "x" << srcGrad.GetNumCols() << endl;
+        for(int idx = 0; idx < g.OutputShape().GetRank(); idx++)
+            cout << g.OutputShape().GetDim(idx) << "x";
+        cout << endl;
+      
+        assert(g.OutputShape().GetNumElements() == srcGrad.GetNumRows());
+    }
     size_t batchSize = srcGrad.GetNumCols();
     assert(batchSize == grad.GetNumCols());
     assert(g.KernelShape().GetNumElements() * g.KernelCount() == kernel.GetNumElements());
@@ -57,10 +66,23 @@ void ConvolutionEngine<ElemType>::BackwardKernel(const Mat& srcGrad, const Mat& 
     {
         cout << "g.InputShape().GetNumElements(): " << g.InputShape().GetNumElements() << " vs. " << "in.GetNumRows(): " << in.GetNumCols() << endl;
         cout << in.GetNumRows() << "x" << in.GetNumCols() << endl;
+        for(int idx = 0; idx < g.InputShape().GetRank(); idx++)
+            cout << g.InputShape().GetDim(idx) << "x";
+        cout << endl;
         assert(g.InputShape().GetNumElements() == in.GetNumRows());
     }
  
-    assert(g.OutputShape().GetNumElements() == srcGrad.GetNumRows());
+    if(g.OutputShape().GetNumElements() != srcGrad.GetNumRows())
+    {
+        cout << "g.OutputShape().GetNumElements(): " << g.OutputShape().GetNumElements() << " vs. " << "srcGrad.GetNumRows(): " << srcGrad.GetNumRows() << endl;        
+        cout << srcGrad.GetNumRows() << "x" << srcGrad.GetNumCols() << endl;
+        for(int idx = 0; idx < g.OutputShape().GetRank(); idx++)
+            cout << g.OutputShape().GetDim(idx) << "x";
+        cout << endl;
+
+      
+        assert(g.OutputShape().GetNumElements() == srcGrad.GetNumRows());
+    }
     size_t batchSize = in.GetNumCols();
     assert(batchSize == srcGrad.GetNumCols());
     assert(g.KernelShape().GetNumElements() * g.KernelCount() == kernel.GetNumElements());
@@ -98,7 +120,16 @@ void ConvolutionEngine<ElemType>::BackwardPooling(const Mat& out, const Mat& src
     const auto& g = *m_geometry;
     assert(g.InputShape().GetNumElements() == grad.GetNumRows());
     assert(g.InputShape().GetNumElements() == in.GetNumRows());
-    assert(g.OutputShape().GetNumElements() == srcGrad.GetNumRows());
+    if(g.OutputShape().GetNumElements() != srcGrad.GetNumRows())
+    {
+        cout << "g.OutputShape().GetNumElements(): " << g.OutputShape().GetNumElements() << " vs. " << "srcGrad.GetNumRows(): " << srcGrad.GetNumRows() << endl;
+        cout << srcGrad.GetNumRows() << "x" << srcGrad.GetNumCols() << endl;
+        for(int idx = 0; idx < g.OutputShape().GetRank(); idx++)
+            cout << g.OutputShape().GetDim(idx) << "x";
+        cout << endl;
+      
+        assert(g.OutputShape().GetNumElements() == srcGrad.GetNumRows());
+    }
     if(g.OutputShape().GetNumElements() != out.GetNumRows())
     {
         cout << "g.OutputShape().GetNumElements(): " << g.OutputShape().GetNumElements() << " vs. " << "out.GetNumRows(): " << out.GetNumCols() << endl;

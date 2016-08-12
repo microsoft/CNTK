@@ -554,6 +554,10 @@ template <class ElemType>
 static shared_ptr<ElemType> AllocateReductionBuffer(size_t N)
 {
     ElemType* deviceBufferPtr;
+    
+    size_t free, total;                              
+    CUDA_CALL(cudaMemGetInfo(&free, &total));  
+    cout << "FREE: " << free/1024.0f/1024.0f/1024.0f << endl; 
     CUDA_CALL(cudaMalloc((void**)&deviceBufferPtr, sizeof(ElemType) * N));
     return shared_ptr<ElemType>(deviceBufferPtr, [](ElemType* deviceBufferPtr){ cudaFree((void*)deviceBufferPtr); });
 }

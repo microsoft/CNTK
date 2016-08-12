@@ -36,6 +36,9 @@ private:
     int m_currentStepNumber;
     int m_currentIteration;
     int m_maxStepNumber;
+    float m_GBFreed;
+
+    std::unordered_map<Matrix<ElemType>*, std::vector<ComputationNodeBase*>> m_buffers2Nodes;
 
     std::unordered_map<ComputationNodeBase*,int> m_nodes2timestep;
     std::unordered_map<int, ComputationNodeBase*> m_timestep2nodes;
@@ -87,8 +90,8 @@ public:
     bool IsExecuting(){ return m_isExecuting; }
     // the config sets this to false by default
     bool m_useMemorySwapping;
-    bool m_isInTrainingMode;
     bool m_isFloat;
+    bool m_registeringBuffers;
     std::unordered_map<Matrix<ElemType>*, bool> m_bannedBuffers2bool;
     std::unordered_map<ComputationNodeBase*,bool> m_bannedNodes2Bool;
     // this cleans the SynchronizationManager up after a action completes

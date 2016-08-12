@@ -40,6 +40,9 @@ template void SwapInAction<double>::BeginAction();
 template <typename ElemType> void SwapInAction<ElemType>::BeginAction()
 {
    this->m_bufferGPU->Resize(this->m_swpout->GetRows(),this->m_swpout->GetCols());
+   //size_t bytes = this->m_swpout->GetRows()*this->m_swpout->GetCols()*sizeof(ElemType);
+   //ElemType *ptr = this->m_bufferGPU->Data();
+   //CUDA_CALL(cudaMalloc((void**)&ptr, bytes));
    CUDA_CALL(cudaMemcpyAsync(this->m_bufferGPU->Data(), this->m_bufferCPU, this->m_bytes, cudaMemcpyDefault, this->m_swapInStream));
 }
 
