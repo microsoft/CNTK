@@ -35,7 +35,7 @@ TrainConvNet = {
         }.z
 
         # with self-defined layer
-        MyConvReLUPool (x, dim, initValueScale) =
+        MyLayer (x, dim, initValueScale) =
         {
             c = ConvolutionalLayer {dim, (5:5), pad = true, activation = ReLU, init = "gaussian", initValueScale = initValueScale} (x)
             p = MaxPoolingLayer {(3:3), stride = (2:2)} (c)
@@ -43,9 +43,9 @@ TrainConvNet = {
         model_f (features) =
         {
             featNorm = features - Constant (128)
-            p1 = MyConvReLUPool (featNorm, 32, 0.0043)
-            p2 = MyConvReLUPool (p1,       32, 1.414)
-            p3 = MyConvReLUPool (p2,       64, 1.414)
+            p1 = MyLayer (featNorm, 32, 0.0043)
+            p2 = MyLayer (p1,       32, 1.414)
+            p3 = MyLayer (p2,       64, 1.414)
             d1 = DenseLayer {64, activation = ReLU, init = "gaussian", initValueScale = 12} (p3)
             d1_d = Dropout (d1)
             z  = LinearLayer {10, init = "gaussian", initValueScale = 1.5} (d1_d)
@@ -53,7 +53,7 @@ TrainConvNet = {
 
         // --- with BatchNorm
         # with self-defined layer
-        MyConvBNReLUPool (x, dim, initValueScale) =
+        MyLayerWithBN (x, dim, initValueScale) =
         {
             c = ConvolutionalLayer {dim, (5:5), pad = true, init = "gaussian", initValueScale = initValueScale} (x)
             b = BatchNormalizationLayer {spatialRank = 2} (c)
@@ -63,9 +63,9 @@ TrainConvNet = {
         model_bn (features) =
         {
             featNorm = features - Constant (128)
-            p1 = MyConvBNReLUPool (featNorm, 32, 0.0043)
-            p2 = MyConvBNReLUPool (p1,       32, 1.414)
-            p3 = MyConvBNReLUPool (p2,       64, 1.414)
+            p1 = MyLayerWithBN (featNorm, 32, 0.0043)
+            p2 = MyLayerWithBN (p1,       32, 1.414)
+            p3 = MyLayerWithBN (p2,       64, 1.414)
             d1 = DenseLayer {64, init = "gaussian", initValueScale = 12} (p3)
             d1_bnr = ReLU (BatchNormalizationLayer {} (d1))
             d1_d = Dropout (d1_bnr)
@@ -105,18 +105,40 @@ TrainConvNet = {
             px = ResNetResample (x, dim)
             b = BatchNormalizationLayer {spatialRank = 2, normalizationTimeConstant = 4096} (px)
 
-            z = ReLU (b + c2)  # ReLU between C1 and C2 and after summation
-        }.z
+            r = ReLU (b + c2)  # ReLU between C1 and C2 and after summation
+        }.r
+
+        # these are the ones the participants are given upfront
+        ResNetNode1 (x, dim) =
+        {
+            c1 = MyConvBNReLU (x,  dim, 7.07, 1)
+            c2 = MyConvBNReLU (c1, dim, 7.07, 1)
+        }.c2
+        ResNetIncNode1 (x, dim) =
+        {
+            px = ResNetResample (x, dim)  # sub-sample but double the dims
+            b = BatchNormalizationLayer {spatialRank = 2, normalizationTimeConstant = 4096} (px)
+            r = ReLU (b)
+        }.r
+
+        # this must be written
+        ResNetNodeStack (x, dim, L) =
+            if L == 0 then x
+            else ResNetNode (ResNetNodeStack (x, dim, L-1), dim)
+
         model (features) =
         {
             conv1 = MyConvBNReLU (features, 16, 0.26, 1)
-            rn1 = ResNetNode (ResNetNode (ResNetNode (conv1, 16), 16), 16)
+            #rn1 = ResNetNode1 (ResNetNode1 (ResNetNode1 (conv1, 16), 16), 16)
+            rn1   = ResNetNodeStack (conv1, 16, 3)  # 3 means 3 such nodes
 
-            rn2_1 = ResNetIncNode (rn1, 32)
-            rn2 = ResNetNode (ResNetNode (rn2_1, 32), 32)
+            rn2_1 = ResNetIncNode1 (rn1, 32)
+            #rn2 = ResNetNode1 (ResNetNode1 (rn2_1, 32), 32)
+            rn2   = ResNetNodeStack (rn2_1, 32, 2)
 
-            rn3_1 = ResNetIncNode (rn2, 64)
-            rn3 = ResNetNode (ResNetNode (rn3_1, 64), 64)
+            rn3_1 = ResNetIncNode1 (rn2, 64)
+            #rn3 = ResNetNode1 (ResNetNode1 (rn3_1, 64), 64)
+            rn3   = ResNetNodeStack (rn3_1, 64, 2)
 
             pool = AveragePoolingLayer {(8:8)} (rn3)
 
