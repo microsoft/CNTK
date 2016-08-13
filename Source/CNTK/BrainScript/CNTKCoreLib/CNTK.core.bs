@@ -1028,7 +1028,7 @@ RNNs =
         ]
     ].layers
 
-	# NOTE: the GRU implementation below has too much code duplication with the LSTM functions; it will be re-written
+    # NOTE: the GRU implementation below has too much code duplication with the LSTM functions; it will be re-written
     # GRU -- GRU function with projection and self-stabilization
     # It returns a dictionary with three members: the hidden state h, the cell state c, and dim=h.dim.
     # While c isn't required, we return it for implementations like seq2seq that expect it so that this can be a proper drop-in replacement for LSTM
