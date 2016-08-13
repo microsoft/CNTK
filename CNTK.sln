@@ -1153,6 +1153,15 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "BrainScriptTests", "Tests\U
 		{86883653-8A61-4038-81A0-2379FAE4200A} = {86883653-8A61-4038-81A0-2379FAE4200A}
 	EndProjectSection
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tutorials", "Tutorials", "{8BE0642A-A3AA-4A64-95D0-C78FB285B2A4}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ImageHandsOn", "ImageHandsOn", "{2230BF3D-4317-4A3F-A743-DDD6160503F8}"
+	ProjectSection(SolutionItems) = preProject
+		Tutorials\ImageHandsOn\cifar10.cmf = Tutorials\ImageHandsOn\cifar10.cmf
+		Tutorials\ImageHandsOn\CifarConverter.py = Tutorials\ImageHandsOn\CifarConverter.py
+		Tutorials\ImageHandsOn\ImageHandsOn.cntk = Tutorials\ImageHandsOn\ImageHandsOn.cntk
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug_CpuOnly|x64 = Debug_CpuOnly|x64
@@ -1598,5 +1607,6 @@ Global
 		{1C6E6C53-1AA7-4B69-913E-B97BB5A872CF} = {3385EBEA-5F97-4B2B-9F30-0E6D7F91B9CA}
 		{CCC07E8E-F33A-4AF7-9F60-93E2AA61C75E} = {3385EBEA-5F97-4B2B-9F30-0E6D7F91B9CA}
 		{9F999212-AFC5-4EAC-AA78-F7247D46C456} = {6F19321A-65E7-4829-B00C-3886CD6C6EDE}
+		{2230BF3D-4317-4A3F-A743-DDD6160503F8} = {8BE0642A-A3AA-4A64-95D0-C78FB285B2A4}
 	EndGlobalSection
 EndGlobal
