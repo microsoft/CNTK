@@ -1157,7 +1157,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tutorials", "Tutorials", "{
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ImageHandsOn", "ImageHandsOn", "{2230BF3D-4317-4A3F-A743-DDD6160503F8}"
 	ProjectSection(SolutionItems) = preProject
-		Tutorials\ImageHandsOn\cifar10.cmf = Tutorials\ImageHandsOn\cifar10.cmf
+		Tutorials\ImageHandsOn\cifar10.pretrained.cmf = Tutorials\ImageHandsOn\cifar10.pretrained.cmf
 		Tutorials\ImageHandsOn\CifarConverter.py = Tutorials\ImageHandsOn\CifarConverter.py
 		Tutorials\ImageHandsOn\ImageHandsOn.cntk = Tutorials\ImageHandsOn\ImageHandsOn.cntk
 	EndProjectSection

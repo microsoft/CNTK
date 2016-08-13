@@ -174,7 +174,7 @@ LayerNormalizationLayer {dim = BS.Constants.None, initScale = 1, initBias = 0} =
 StabilizerLayer {} =
 {
     # BUGBUG: Calling f(x) twice will create a second set of parameters. Needs to refactor Stabilize() for this.
-    apply (x) = Stabilize (x)
+    apply (x) = BS.Parameters.Stabilize (x)
 }.apply
 
 # FeatureMVNLayer -- create a corpus-level feature-normalization layer
