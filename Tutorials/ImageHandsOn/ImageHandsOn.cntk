@@ -17,7 +17,6 @@ TrainConvNet = {
         imageShape = 32:32:3
         labelDim = 10
 
-        # basic model
         model (features) = {
             featNorm = features - Constant (128)
             l1 = ConvolutionalLayer {32, (5:5), pad=true, activation=ReLU,

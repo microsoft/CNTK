@@ -1,0 +1,152 @@
+# CNTK Configuration File for training a simple CIFAR-10 convnet.
+# During the hands-on tutorial, this will be fleshed out into a ResNet-20 model.
+
+command = TrainConvNet:Eval
+
+makeMode = false ; traceLevel = 0 ; deviceId = "auto"
+
+rootDir = "." ; dataDir  = "$rootDir$" ; modelDir = "$rootDir$/Models"
+
+modelPath = "$modelDir$/cifar10.cmf"
+
+# Training action for a convolutional network
+TrainConvNet = {
+    action = "train"
+
+        BrainScriptNetworkBuilder = {
+            imageShape = 32:32:3
+            labelDim = 10
+
+        MyConvBNReLU (x, dim, initValueScale, stride) =
+        {
+            c = ConvolutionalLayer {dim, (3:3), pad = true, stride = (stride:stride), bias = false,
+                                    init = "gaussian", initValueScale = initValueScale} (x)
+            b = BatchNormalizationLayer {spatialRank = 2, normalizationTimeConstant = 4096} (c)
+            r = ReLU (b)
+        }.r
+        MyConvBN (x, dim, initValueScale, stride) =  ##### version without ReLU
+        {
+            c = ConvolutionalLayer {dim, (3:3), pad = true, stride = (stride:stride), bias = false,
+                                    init = "gaussian", initValueScale = initValueScale} (x)
+            b = BatchNormalizationLayer {spatialRank = 2, normalizationTimeConstant = 4096} (c)
+        }.b
+        ResNetNode (x, dim) =
+        {
+            c1 = MyConvBNReLU (x,  dim, 7.07, 1)
+            c2 = MyConvBN     (c1, dim, 7.07, 1)  ##### split off ReLU
+            r = ReLU (x + c2)
+        }.r
+        ResNetIncNode (x, dim) =
+        {
+            c1 = MyConvBNReLU (x,  dim, 7.07, 2)
+            c2 = MyConvBN     (c1, dim, 7.07, 1)
+
+            ResNetResample (x, dim) =  # sub-sample and pad: [W x H x dim/2] --> [W/2 x H/2 x dim]
+            {
+                x2 = MaxPoolingLayer {(1:1), stride = (2:2)} (x)  # sub-sample by 2
+                pad = ConstantTensor (0, (1:1:dim/2))             # pad with zeroes
+                p = Splice ((x2 : pad), axis = 3)
+            }.p
+
+            px = ResNetResample (x, dim)
+            b = BatchNormalizationLayer {spatialRank = 2, normalizationTimeConstant = 4096} (px)
+
+            r = ReLU (b + c2)
+        }.r
+        ResNetNodeStack (x, dim, L) =
+        {
+            r = if L == 0
+                then x
+                else ResNetNode (ResNetNodeStack (x, dim, L-1), dim)
+        }.r
+        model (features) =
+        {
+            conv1 = MyConvBNReLU (features, 16, 0.26, 1)
+            rn1   = ResNetNodeStack (conv1, 16, 3)  ##### replaced
+
+            rn2_1 = ResNetIncNode (rn1, 32)
+            #rn2   = ResNetNode (ResNetNode (rn2_1, 32), 32)
+            rn2   = ResNetNodeStack (rn2_1, 32, 2)  ##### replaced
+
+            rn3_1 = ResNetIncNode (rn2, 64)
+            #rn3   = ResNetNode (ResNetNode (rn3_1, 64), 64)
+            rn3   = ResNetNodeStack (rn3_1, 64, 2)  ##### replaced
+
+            pool = AveragePoolingLayer {(8:8)} (rn3)
+
+            z = LinearLayer {labelDim, init = "gaussian", initValueScale = 0.4} (pool)
+        }.z
+
+        # inputs
+        features = Input {imageShape}
+        labels   = Input {labelDim}
+
+        # apply model to features
+        z = model (features)
+
+        # connect to system
+        ce       = CrossEntropyWithSoftmax (labels, z)
+        errs     = ErrorPrediction         (labels, z)
+
+        featureNodes    = (features)
+        labelNodes      = (labels)
+        criterionNodes  = (ce)
+        evaluationNodes = (errs)
+        outputNodes     = (z)
+    }
+
+    SGD = {
+        epochSize = 50000
+    
+        maxEpochs = 160 ; minibatchSize = 128
+        learningRatesPerSample = 0.0078125*80:0.00078125*40:0.000078125
+        momentumAsTimeConstant = 1200
+        L2RegWeight = 0.0001
+    
+        firstMBsToShowResult = 10 ; numMBsToShowResult = 500
+
+        ParallelTrain = {
+            parallelizationMethod = "DataParallelSGD"
+            parallelizationStartEpoch = 2
+            distributedMBReading = true
+            dataParallelSGD = { gradientBits = 1 }
+        }
+    }
+
+    reader = {
+        verbosity = 0 ; randomize = true
+        deserializers = ({
+            type = "ImageDeserializer" ; module = "ImageReader"
+            file = "$dataDir$/cifar-10-batches-py/train_map.txt"
+            input = {
+                features = { transforms = (
+                    { type = "Crop" ; cropType = "random" ; cropRatio = 0.8 ; jitterType = "uniRatio" } :
+                    { type = "Scale" ; width = 32 ; height = 32 ; channels = 3 ; interpolations = "linear" } :
+                    { type = "Transpose" }
+                )}
+                labels = { labelDim = 10 }
+            }
+        })
+    }
+}
+
+# Eval action
+Eval = {
+    action = "eval"
+    minibatchSize = 16
+    evalNodeNames = errs
+    reader = {
+        verbosity = 0 ; randomize = true
+        deserializers = ({
+            type = "ImageDeserializer" ; module = "ImageReader"
+            file = "$dataDir$/cifar-10-batches-py/test_map.txt"
+            input = {
+                features = { transforms = (
+                   { type = "Scale" ; width = 32 ; height = 32 ; channels = 3 ; interpolations = "linear" } :
+                   { type = "Transpose" }
+                )}
+                labels = { labelDim = 10 }
+            }
+        })
+    }
+}

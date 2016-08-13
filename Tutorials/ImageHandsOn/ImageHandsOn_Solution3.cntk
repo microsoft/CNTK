@@ -17,7 +17,6 @@ TrainConvNet = {
         imageShape = 32:32:3
         labelDim = 10
 
-        # basic model
         model (features) = {
             MyLayer (x, dim, initValueScale) =
             {
