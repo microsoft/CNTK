@@ -907,12 +907,6 @@ RNNs =
         S(x) = Parameters.Stabilize (x, enabled=enableSelfStabilization)
 
         _ = [     // encapsulate the inner workings
-            dh = prevState.h // previous values
-            dc = prevState.c
-
-            dhs = S(dh) // previous values, stabilized
-            dcs = S(dc)
-            # note: input does not get a stabilizer here, user is meant to do that outside
 
             // parameter macros
             # note: each invocation comes with its own set of weights
