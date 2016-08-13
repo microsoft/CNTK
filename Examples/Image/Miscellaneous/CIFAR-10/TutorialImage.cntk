@@ -18,7 +18,7 @@ TrainConvNet = {
         labelDim = 10
 
         # basic model
-        model_basic (features) =
+        model_1 (features) =
         {
             featNorm = features - Constant (128)
             l1 = ConvolutionalLayer {32, (5:5), pad = true, activation = ReLU,
@@ -35,67 +35,95 @@ TrainConvNet = {
         }.z
 
         # with self-defined layer
-        MyConvReLUPoolLayer {dim, initValueScale} =
+        MyConvReLUPool (x, dim, initValueScale) =
         {
-            C = ConvolutionalLayer {dim, (5:5), pad = true, activation = ReLU, init = "gaussian", initValueScale = initValueScale}
-            P = MaxPoolingLayer {(3:3), stride = (2:2)}
-            apply (x) = P(C(x))
-        }.apply
-        model_layers (features) =
+            c = ConvolutionalLayer {dim, (5:5), pad = true, activation = ReLU, init = "gaussian", initValueScale = initValueScale} (x)
+            p = MaxPoolingLayer {(3:3), stride = (2:2)} (c)
+        }.p
+        model_f (features) =
         {
             featNorm = features - Constant (128)
-            h1 = MyConvReLUPoolLayer {32, 0.0043} (featNorm)
-            h2 = MyConvReLUPoolLayer {32, 1.414} (h1)
-            h3 = MyConvReLUPoolLayer {64, 1.414} (h2)
-            d1 = DenseLayer {64, activation = ReLU, init = "gaussian", initValueScale = 12} (h3)
-            z = LinearLayer {labelDim, init = "gaussian", initValueScale = 1.5} (d1)
+            p1 = MyConvReLUPool (featNorm, 32, 0.0043)
+            p2 = MyConvReLUPool (p1,       32, 1.414)
+            p3 = MyConvReLUPool (p2,       64, 1.414)
+            d1 = DenseLayer {64, activation = ReLU, init = "gaussian", initValueScale = 12} (p3)
+            d1_d = Dropout (d1)
+            z  = LinearLayer {10, init = "gaussian", initValueScale = 1.5} (d1_d)
         }.z
 
-        # model-composition style
-        # ...TODO: test this again; last run was a little worse
-        Subtract128 (x) = x - Constant (128)
-        model_compositionStyle = Sequential (
-            Subtract128 :
-            MyConvReLUPoolLayer {32, 0.0043} :
-            MyConvReLUPoolLayer {32, 1.414}  :
-            MyConvReLUPoolLayer {64, 1.414}  :
-            DenseLayer {64, activation = ReLU, init = "gaussian", initValueScale = 12} :
-            LinearLayer {labelDim, init = "gaussian", initValueScale = 1.5}
-        )
-        #model_compositionStyle =
-        #    Subtract128 >>
-        #    LayerStack {3, i => MyConvReLUPoolLayer {dims[i], initValueScales[i]} } >>
-        #    MyConvReLUPoolLayer {32, 0.0043} >>
-        #    MyConvReLUPoolLayer {32, 1.414}  >>
-        #    MyConvReLUPoolLayer {64, 1.414}  >>
-        #    DenseLayer {64, activation = ReLU, init = "gaussian", initValueScale = 12} >>
-        #    LinearLayer {labelDim, init = "gaussian", initValueScale = 1.5}
-
         // --- with BatchNorm
-        MyConvBNReLUPoolLayer {dim, initValueScale} =
+        # with self-defined layer
+        MyConvBNReLUPool (x, dim, initValueScale) =
         {
-            C = ConvolutionalLayer {dim, (5:5), pad = true, bias = false, init = "gaussian", initValueScale = initValueScale}
-            B = BatchNormalizationLayer {spatialRank = 2, normalizationTimeConstant = 4096}
-            P = MaxPoolingLayer {(3:3), stride = (2:2)}
-            apply (x) = P(ReLU(B(C(x))))
-        }.apply
-        MyDenseBNReLULayer {dim, initValueScale} =
-        {
-            D = DenseLayer {dim, bias = false, init = "gaussian", initValueScale = initValueScale}
-            B = BatchNormalizationLayer {normalizationTimeConstant = 4096}
-            apply (x) = ReLU(B(D(x)))
-        }.apply
-        model_withBatchNorm (features) =
+            c = ConvolutionalLayer {dim, (5:5), pad = true, init = "gaussian", initValueScale = initValueScale} (x)
+            b = BatchNormalizationLayer {spatialRank = 2} (c)
+            r = ReLU (b)
+            p = MaxPoolingLayer {(3:3), stride = (2:2)} (r)
+        }.p
+        model_bn (features) =
         {
             featNorm = features - Constant (128)
-            h1 = MyConvBNReLUPoolLayer {32, 0.0043} (featNorm)
-            h2 = MyConvBNReLUPoolLayer {32, 1.414} (h1)
-            h3 = MyConvBNReLUPoolLayer {64, 1.414} (h2)
-            d1 = MyDenseBNReLULayer {64, 12} (h3)
-            z = LinearLayer {labelDim, init = "gaussian", initValueScale = 1.5} (d1)
+            p1 = MyConvBNReLUPool (featNorm, 32, 0.0043)
+            p2 = MyConvBNReLUPool (p1,       32, 1.414)
+            p3 = MyConvBNReLUPool (p2,       64, 1.414)
+            d1 = DenseLayer {64, init = "gaussian", initValueScale = 12} (p3)
+            d1_bnr = ReLU (BatchNormalizationLayer {} (d1))
+            d1_d = Dropout (d1_bnr)
+            z  = LinearLayer {10, init = "gaussian", initValueScale = 1.5} (d1_d)
         }.z
 
         // --- ResNet
+        MyConvBN (x, dim, initValueScale, stride) =  # TO BE WRITTEN BY PARTICIPANT
+        {
+            c = ConvolutionalLayer {dim, (3:3), pad = true, stride = (stride:stride), bias = false, init = "gaussian", initValueScale = initValueScale} (x)
+            b = BatchNormalizationLayer {spatialRank = 2, normalizationTimeConstant = 4096} (c)
+        }.b
+        MyConvBNReLU (x, dim, initValueScale, stride) =
+        {
+            c = ConvolutionalLayer {dim, (3:3), pad = true, stride = (stride:stride), bias = false, init = "gaussian", initValueScale = initValueScale} (x)
+            b = BatchNormalizationLayer {spatialRank = 2, normalizationTimeConstant = 4096} (c)
+            r = ReLU (b)
+        }.r
+        ResNetNode (x, dim) =
+        {
+            c1 = MyConvBNReLU (x,  dim, 7.07, 1)
+            X2 = MyConvBNReLU (c1, dim, 7.07, 1)     # wrong
+            c2 = MyConvBN     (c1, dim, 7.07, 1)
+            r = ReLU (x + c2)
+        }.r   # change to X2
+        ResNetResample (x, dim) =
+        {
+            x2 = MaxPoolingLayer {(1:1), stride = (2:2)} (x)  # sub-sample by 2
+            pad = ConstantTensor (0, (1:1:dim/2))             # pad with zeroes
+            p = Splice ((x2 : pad), axis = 3)
+        }.p
+        ResNetIncNode (x, dim) =
+        {
+            c1 = MyConvBNReLU (x,  dim, 7.07, 2)
+            c2 = MyConvBN     (c1, dim, 7.07, 1)
+
+            px = ResNetResample (x, dim)
+            b = BatchNormalizationLayer {spatialRank = 2, normalizationTimeConstant = 4096} (px)
+
+            z = ReLU (b + c2)  # ReLU between C1 and C2 and after summation
+        }.z
+        model (features) =
+        {
+            conv1 = MyConvBNReLU (features, 16, 0.26, 1)
+            rn1 = ResNetNode (ResNetNode (ResNetNode (conv1, 16), 16), 16)
+
+            rn2_1 = ResNetIncNode (rn1, 32)
+            rn2 = ResNetNode (ResNetNode (rn2_1, 32), 32)
+
+            rn3_1 = ResNetIncNode (rn2, 64)
+            rn3 = ResNetNode (ResNetNode (rn3_1, 64), 64)
+
+            pool = AveragePoolingLayer {(8:8)} (rn3)
+
+            z = LinearLayer {labelDim, init = "gaussian", initValueScale = 0.4} (pool)
+        }.z
+
+        // --- ResNet, functional style
         MyConvBNLayer {dim, initValueScale, stride} =
         {
             # note: (3:3), while the macro above is (5:5)
@@ -103,7 +131,7 @@ TrainConvNet = {
             B = BatchNormalizationLayer {spatialRank = 2, normalizationTimeConstant = 4096}
             apply (x) = B(C(x))
         }.apply
-        ResNetNode {dim, initValueScale} =
+        ResNetLayer {dim, initValueScale} =
         {
             C1 = MyConvBNLayer {dim, initValueScale, 1}  # first convolution layer
             C2 = MyConvBNLayer {dim, initValueScale, 1}  # second convolution layer
@@ -111,7 +139,7 @@ TrainConvNet = {
             # ^^ Note: Adding an exra BN to 'x' trains slightly better.
             apply (x) = ReLU (x + C2(ReLU(C1(x))))  # ReLU between C1 and C2 and after summation
         }.apply
-        ResNetIncNode {dim, initValueScale} =
+        ResNetIncLayer {dim, initValueScale} =
         {
             # first branch. This doubles the #channels but halves the image size
             C1 = MyConvBNLayer {dim, initValueScale, 2}  # first convolution layer, stride = 2
@@ -132,13 +160,13 @@ TrainConvNet = {
         {
             conv1 = MyConvBNLayer {16, 0.26, 1} (features)
             rl1   = ReLU (conv1)
-            rn1   = LayerStack {3, _ => ResNetNode {16, 7.07}} (rl1)
+            rn1   = LayerStack {3, _ => ResNetLayer {16, 7.07}} (rl1)
 
-            rn2_1 = ResNetIncNode {32, 7.07} (rn1)
-            rn2   = LayerStack {2, _ => ResNetNode {32, 7.07}} (rn2_1)
+            rn2_1 = ResNetIncLayer {32, 7.07} (rn1)
+            rn2   = LayerStack {2, _ => ResNetLayer {32, 7.07}} (rn2_1)
 
-            rn3_1 = ResNetIncNode {64, 7.07} (rn2)
-            rn3   = LayerStack {2, _ => ResNetNode {64, 7.07}} (rn3_1)
+            rn3_1 = ResNetIncLayer {64, 7.07} (rn2)
+            rn3   = LayerStack {2, _ => ResNetLayer {64, 7.07}} (rn3_1)
 
             pool = AveragePoolingLayer {(8:8)} (rn3)
 
@@ -150,7 +178,7 @@ TrainConvNet = {
         labels   = Input {labelDim}
 
         # apply model to features
-        z = model_basic (features)
+        z = model (features)
 
         # connect to system
         ce       = CrossEntropyWithSoftmax (labels, z)
@@ -165,25 +193,27 @@ TrainConvNet = {
     }
 
     SGD = {
-        epochSize = 50000   # 49984 --TODO: why 16 less?
+        epochSize = 50000
 
         # without BatchNormalization:
-        maxEpochs = 30 ; minibatchSize = 64
-        learningRatesPerSample = 0.00015625*10:0.000046875*10:0.000015625
-        momentumAsTimeConstant = 600*20:6400
-        L2RegWeight = 0.03
+        #maxEpochs = 30 ; minibatchSize = 64
+        #learningRatesPerSample = 0.00015625*10:0.000046875*10:0.000015625
+        #momentumAsTimeConstant = 600*20:6400
+        #L2RegWeight = 0.03
+        #dropoutRate = 0*5:0.5   ##### added
 
         # with BatchNormalization:
         #maxEpochs = 30 ; minibatchSize = 64
-        #learningRatesPerSample = 0.00046875*7:0.00015625
+        #learningRatesPerSample = 0.00046875*7:0.00015625*10:0.000046875*10:0.000015625
         #momentumAsTimeConstant = 0
         #L2RegWeight = 0
+        #dropoutRate = 0*5:0.5   ##### added
 
         # ResNet
-        #maxEpochs = 160 ; minibatchSize = 128
-        #learningRatesPerSample = 0.0078125*80:0.00078125*40:0.000078125
-        #momentumAsTimeConstant = 1200
-        #L2RegWeight = 0.0001
+        maxEpochs = 160 ; minibatchSize = 128
+        learningRatesPerSample = 0.0078125*80:0.00078125*40:0.000078125
+        momentumAsTimeConstant = 1200
+        L2RegWeight = 0.0001
 
         firstMBsToShowResult = 10 ; numMBsToShowResult = 500
     }

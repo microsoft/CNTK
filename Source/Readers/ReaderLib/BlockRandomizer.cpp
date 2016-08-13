@@ -78,6 +78,7 @@ void BlockRandomizer::StartEpoch(const EpochConfiguration& config)
     size_t newOffset = m_sequenceRandomizer->Seek(offsetInSweep, m_sweep);
     m_globalSamplePosition = m_sweep * m_sweepTotalNumberOfSamples + newOffset;
 
+#ifdef _DEBUG
     size_t epochStartFrame = config.m_epochIndex * m_epochSize;
     fprintf(stderr, "BlockRandomizer::StartEpoch: epoch %" PRIu64 ": frames [%" PRIu64 "..%" PRIu64 "] (first sequence at sample %" PRIu64 "), data subset %" PRIu64 " of %" PRIu64 "\n",
             config.m_epochIndex,
@@ -86,6 +87,7 @@ void BlockRandomizer::StartEpoch(const EpochConfiguration& config)
             m_globalSamplePosition,
             config.m_workerRank,
             config.m_numberOfWorkers);
+#endif
 }
 
 // Prepares a new sweep if needed.
