@@ -1,26 +1,19 @@
-# The configuration file to build language understanding model with ATIS corpus.
-# An LSTM model is built to tag each word in sentences with its semantic label.
+# CNTK Configuration File for creating a slot tagger and an intent tagger.
 
-makeMode = false ; traceLevel = 1 ; deviceId = -1
+command = TrainTagger:TestTagger
 
-WorkDir = Work
-DataDir = Data
+makeMode = false ; traceLevel = 0 ; deviceId = "auto"
 
-modelPath = $WorkDir$/slot.model
-parallelTrain = true
+rootDir = "." ; dataDir  = "$rootDir$" ; modelDir = "$rootDir$/Models"
 
-#stderr = $WorkDir$/log
+modelPath = "$modelDir$/slu.cmf"
 
-command = TrainATIS:RunATIS:EvalATIS
-
-vocabSize = 943    # number of words
-numLabels = 129    # number of slot labels
-numIntents = 26    # number of intent labels
+vocabSize = 943 ; numLabels = 129 ; numIntents = 26    # number of words in vocab, slot labels, and intent labels
 
 # The command to train the LSTM model
-TrainATIS = [
+TrainTagger = {
     action = "train"
-    BrainScriptNetworkBuilder = [
+    BrainScriptNetworkBuilder = {
         inputDim = $vocabSize$
         labelDim = $numLabels$
         embDim = 150
@@ -52,9 +45,9 @@ TrainATIS = [
         criterionNodes  = (ce)
         evaluationNodes = (errs)
         outputNodes     = (z)
-    ]
+    }
     # rename this to BrainScriptNetworkBuilder to switch to intent-classification task
-    Intent_BrainScriptNetworkBuilder = [
+    Intent_BrainScriptNetworkBuilder = {
         inputDim = $vocabSize$
         labelDim = $numIntents$
         embDim = 150
@@ -66,7 +59,7 @@ TrainATIS = [
             EmbeddingLayer {embDim} :                                             # embedding
             RecurrentLSTMLayer {hiddenDim} : BS.Sequences.Last :                  # LSTM state, final state
             #Parallel ((Sequential (RecurrentLSTMLayer {hiddenDim}                   : BS.Sequences.Last):
-                       Sequential (RecurrentLSTMLayer {hiddenDim, goBackwards=true} : BS.Sequences.First)), Splice) :  # bidirectional LSTM
+            #           Sequential (RecurrentLSTMLayer {hiddenDim, goBackwards=true} : BS.Sequences.First)), Splice) :  # bidirectional LSTM
             DenseLayer {labelDim, initValueScale=7}        # output layer
         )
 
@@ -87,83 +80,51 @@ TrainATIS = [
         criterionNodes  = (ce)
         evaluationNodes = (errs)
         outputNodes     = (z)
-    ]
+    }
 
-    SGD = [
+    SGD = {
         maxEpochs = 20 ; epochSize = 36000
 
         minibatchSize = 70
 
         learningRatesPerSample = 0.01*2:0.005*12:0.001
-
         gradUpdateType = "FSAdaGrad"
-
         gradientClippingWithTruncation = true ; clippingThresholdPerSample = 15.0
 
-        # number of minibatches to report progress
         firstMBsToShowResult = 10 ; numMBsToShowResult = 100
 
-        parallelTrain = [
+        parallelTrain = {
             parallelizationMethod = "DataParallelSGD"
             parallelizationStartEpoch = 2
             distributedMBReading = true
-            dataParallelSGD = [
-                gradientBits = 1
-            ]
-        ]
-    ]
+            dataParallelSGD = { gradientBits = 1 }
+        }
+    }
 
-    reader = [
+    reader = {
         readerType = "CNTKTextFormatReader"
         file = "$DataDir$/atis.train.ctf"
         randomize = true
-        input = [
-            query        = [ alias = "S0" ; dim = $vocabSize$ ;  format = "sparse" ]
-            intentLabels = [ alias = "S1" ; dim = $numIntents$ ; format = "sparse" ]
-            slotLabels   = [ alias = "S2" ; dim = $numLabels$ ;  format = "sparse" ]
-        ]
-    ]
-]
+        input = {
+            query        = { alias = "S0" ; dim = $vocabSize$ ;  format = "sparse" }
+            intentLabels = { alias = "S1" ; dim = $numIntents$ ; format = "sparse" }
+            slotLabels   = { alias = "S2" ; dim = $numLabels$ ;  format = "sparse" }
+        }
+    }
+}
 
-# Run the model to predict slot labels
-RunATIS = [
-    action = "write"
-    BrainScriptNetworkBuilder = [
-        modelAsTrained = BS.Network.Load ("$modelPath$")
-        final = Hardmax (modelAsTrained.z)  # make a decision
-        #labels = Pass (modelAsTrained.slotLabels)
-        # enable this for intent classification:
-        labels = Pass (modelAsTrained.intentLabels)
-        t = DynamicAxis()
-    ]
-
-    outputPath = $WorkDir$/model.writeaction
-    outputNodeNames = intentLabels:slotLabels:final
-
-    reader = [
-        readerType = "CNTKTextFormatReader"
-        file = "$DataDir$/atis.test.ctf"
-        randomize = false
-        input = [
-            query        = [ alias = "S0" ; dim = $vocabSize$ ;  format = "sparse" ]
-            intentLabels = [ alias = "S1" ; dim = $numIntents$ ; format = "sparse" ]
-            slotLabels   = [ alias = "S2" ; dim = $numLabels$ ;  format = "sparse" ]
-        ]
-    ]
-]
-
-# Evaluate the model's slot-tagging accuracy (as an error count)
-EvalATIS = [
+# Test the model's accuracy (as an error count)
+TestTagger = {
     action = "eval"
-    modelPath = $modelPath$  # from outside
-    reader = [
+    modelPath = $modelPath$
+    reader = {
         readerType = "CNTKTextFormatReader"
         file = "$DataDir$/atis.test.ctf"
         randomize = false
-        input = [
-            query        = [ alias = "S0" ; dim = $vocabSize$ ;  format = "sparse" ]
-            intentLabels = [ alias = "S1" ; dim = $numIntents$ ; format = "sparse" ]
-            slotLabels   = [ alias = "S2" ; dim = $numLabels$ ;  format = "sparse" ]
-        ]
-    ]
-]
+        input = {
+            query        = { alias = "S0" ; dim = $vocabSize$ ;  format = "sparse" }
+            intentLabels = { alias = "S1" ; dim = $numIntents$ ; format = "sparse" }
+            slotLabels   = { alias = "S2" ; dim = $numLabels$ ;  format = "sparse" }
+        }
+    }
+}
