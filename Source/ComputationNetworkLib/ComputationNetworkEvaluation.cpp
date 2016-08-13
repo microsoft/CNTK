@@ -1014,7 +1014,6 @@ template void ComputationNetwork::FindDependencyGraph<double>(const std::vector<
 template void ComputationNetwork::FindDependencyGraph<float>(const std::vector<ComputationNodeBasePtr>& evalRootNodes,
                                              const std::vector<ComputationNodeBasePtr>& outValueRootNodes,
                                              ComputationNodeBasePtr trainRootNode);
-
 template <class ElemType>
 void ComputationNetwork::FindDependencyGraph(const std::vector<ComputationNodeBasePtr>& evalRootNodes,
                                              const std::vector<ComputationNodeBasePtr>& outValueRootNodes,
@@ -1042,131 +1041,423 @@ void ComputationNetwork::FindDependencyGraph(const std::vector<ComputationNodeBa
 	        }
 	    }
 
-    	int idx = 1;
-	    std::unordered_map<Matrix<ElemType>*, std::set<int> > buffer2Idxs;
+
+       // std::unordered_map<ComputationNodeBasePtr, int> node2TimeStep;
+       // // get all the buffers in the forward pass and assign an index to them which depends on the evaluation order
+       // int idx = 1;
+	   // std::unordered_map<Matrix<ElemType>*, std::set<int> > buffer2Idxs;
+       // std::unordered_map<Matrix<ElemType>*, std::vector<Matrix<ElemType>*> > forwardDependencies;
+	   // for (auto& node : compositeForwardPropEvalOrder)
+	   // {
+	   // 	std::set<Matrix<ElemType>*> buffers;
+	   // 	int inputCount = node->GetNumInputs();
+	   // 	for(int i = 0; i < inputCount; i++)
+       //     {
+       //         Matrix<ElemType> *buffer = (Matrix<ElemType>*)node->Input(i)->ValuePtr().get(); 
+       //         buffer2Idxs[buffer].insert(idx);
+       //     }
+
+       //     if(node->ValuePtr() != NULL)
+       //     { 
+       //         Matrix<ElemType> *buffer = (Matrix<ElemType>*)node->ValuePtr().get();
+       //         buffer2Idxs[buffer].insert(idx);
+       //         if(inputCount == 0){ buffer2NeededAfterBackprop[buffer] = true; }
+       //     }
+
+	   // 	idx++;
+	   //}
+
+       //// find which is the maximum index in the evaluation order in which a buffer no longer has any dependencies
+       //std::vector<int> maxValues;
+       //std::unordered_map<int, std::set<Matrix<ElemType>*> > idx2Buffers;
+       //for(std::pair<Matrix<ElemType>*, std::set<int> > pair : buffer2Idxs)
+       //{
+       //      int max = -1;
+       //      for(int idx : pair.second)
+       //         max = idx > max ? idx : max; 
+
+       //      maxValues.push_back(max);
+       //      idx2Buffers[max].insert(pair.first);
+       //}
+
+
+       // // sort the max dependency index to find a topological order (those buffers that lose dependency first also need to be computed first)
+       // std::sort(maxValues.begin(), maxValues.end()); 
+       // std::unordered_map<int, std::set<Matrix<ElemType>*> > timeStep2Buffers;
+       // int timeStep = 0;
+       // int prevMaxValue = -1;
+       // for(int maxValue : maxValues)
+       // {
+       //     if(prevMaxValue == maxValue){ continue; }
+
+       //     timeStep2Buffers[timeStep] = idx2Buffers[maxValue];
+       //     prevMaxValue = maxValue;
+       //     timeStep++;
+       // }
+
+       //
+       // for(auto pairs : timeStep2Buffers)
+       //     for(auto buffer : pairs.second)
+       //         cout << pairs.first << "->" << pairs.first << ": " << buffer << endl;
+
+
+       //// determined when to swap out, and when to swap in
+
+       //// find buffers used in the backward pass 
+	   // std::unordered_map<Matrix<ElemType>*, std::set<int> > backBuffer2Idxs;
+	   // for (auto& node : compositeForwardPropEvalOrder)
+	   // {
+	   // 	std::set<Matrix<ElemType>*> buffers;
+	   // 	int inputCount = node->GetNumInputs();
+	   // 	for(int i = 0; i < inputCount; i++)
+       //     {
+       //         if(node->InputUsedInComputingInputNodesGradients(i))
+       //         {
+       //             Matrix<ElemType> *buffer = (Matrix<ElemType>*)node->Input(i)->ValuePtr().get(); 
+       //             backBuffer2Idxs[buffer].insert(idx);
+       //         }
+       //     }
+
+       //     if(node->ValuePtr() != NULL)
+       //     { 
+       //         if(node->OutputUsedInComputingInputNodesGradients())
+       //         {
+       //             Matrix<ElemType> *buffer = (Matrix<ElemType>*)node->ValuePtr().get();
+       //             backBuffer2Idxs[buffer].insert(idx);
+       //         }
+       //     }
+
+       //     if(node->GradientPtr() != NULL)
+       //     { 
+       //         Matrix<ElemType> *buffer = (Matrix<ElemType>*)node->GradientPtr().get();
+       //         backBuffer2Idxs[buffer].insert(idx);
+       //         buffer2NeededAfterBackprop[buffer] = true;
+       //     }
+
+
+	   // 	idx--;
+	   //}
+      //// find maximum dependency index for backward buffers
+       //maxValues.clear();
+       //std::unordered_map<int, std::set<Matrix<ElemType>*> > backIdx2Buffers;
+       //for(std::pair<Matrix<ElemType>*, std::set<int> > pair : backBuffer2Idxs)
+       //{
+       //      int max = -1;
+       //      for(int idx : pair.second)
+       //         max = idx > max ? idx : max; 
+
+       //      maxValues.push_back(max);
+       //      backIdx2Buffers[max].insert(pair.first);
+       //}
+
+
+       //// sort maximum depency index to find a topological order for the backward pass
+       // std::sort(maxValues.begin(), maxValues.end()); 
+       // std::unordered_map<int, std::set<Matrix<ElemType>*> > backTimeStep2Buffers;
+       // timeStep = 0;
+       // prevMaxValue = -1;
+       // for(int maxValue : maxValues)
+       // {
+       //     if(prevMaxValue == maxValue){ continue; }
+
+       //     backTimeStep2Buffers[timeStep] = backIdx2Buffers[maxValue];
+       //     prevMaxValue = maxValue;
+       //     timeStep++;
+       // }
+
+       //
+       // cout << "BACKPROP" << endl;
+       // for(auto pairs : backTimeStep2Buffers)
+       //     for(auto buffer : pairs.second)
+       //         cout << pairs.first << "->" << pairs.first << ": " << buffer << endl;
+
+
+        //TODO: ban gradients and weights during gradient / weight allocation
+        
+        //cout << "Needed after backprop" << endl;
+        //for(auto pair : buffer2NeededAfterBackprop)
+        //    cout << pair.first << endl;
+
+        //std::unordered_map<Matrix<ElemType>*, int> buffer2FullTimeStep;
+        //std::unordered_map<int, std::vector<Matrix<ElemType>*> > buffers2FullTimeStep;
+        //std::unordered_map<Matrix<ElemType>*, bool> buffer2IsBanned;
+        //timeStep = 0;
+        //
+        //for(auto pair : timeStep2Buffers)
+        //{
+        //    buffers2FullTimeStep[timeStep] = pair.second;
+        //    for(auto buffer : pair.second)
+        //    {
+        //        if(buffer
+        //    }
+        //}
+
+
+
+        std::vector<DependencyNode<ElemType>*> rootNodes;
+        DependencyNode<ElemType> *helper = new DependencyNode<ElemType>();
+        std::unordered_map<DependencyNode<ElemType>*, std::vector<DependencyNode<ElemType>*> > forwardDependencies;
+        std::unordered_map<Matrix<ElemType>*, DependencyNode<ElemType>*> buffer2DependencyNode;
+        DependencyNode<ElemType> *childNode;
 	    for (auto& node : compositeForwardPropEvalOrder)
 	    {
-	    	std::set<Matrix<ElemType>*> buffers;
-	    	int inputCount = node->GetNumInputs();
-	    	for(int i = 0; i < inputCount; i++)
-            {
-                Matrix<ElemType> *buffer = (Matrix<ElemType>*)node->Input(i)->ValuePtr().get(); 
-                buffer2Idxs[buffer].insert(idx);
-            }
-
+            int inputCount = node->GetNumInputs();
             if(node->ValuePtr() != NULL)
             { 
                 Matrix<ElemType> *buffer = (Matrix<ElemType>*)node->ValuePtr().get();
-                buffer2Idxs[buffer].insert(idx);
-            }
+                if(buffer2DependencyNode.count(buffer) == 0)
+                {
+                    buffer2DependencyNode[buffer] = helper->makeNode(buffer);
+                    rootNodes.push_back(buffer2DependencyNode[buffer]);
+                }
 
-	    	idx++;
+                childNode = buffer2DependencyNode[buffer];
+
+               for(int i = 0; i < inputCount; i++)
+               {
+                    Matrix<ElemType> *parentBuffer = (Matrix<ElemType>*)node->Input(i)->ValuePtr().get(); 
+                    if(buffer2DependencyNode.count(parentBuffer) == 0)
+                    {
+                        buffer2DependencyNode[parentBuffer] = helper->makeNode(parentBuffer);
+                        rootNodes.push_back(buffer2DependencyNode[parentBuffer]);
+                    }
+                    
+
+                    forwardDependencies[buffer2DependencyNode[parentBuffer]].push_back(childNode);
+               }
+           }
+ 
 	   }
 
-       std::vector<int> maxValues;
-       std::unordered_map<int, std::set<Matrix<ElemType>*> > idx2Buffers;
-       for(std::pair<Matrix<ElemType>*, std::set<int> > pair : buffer2Idxs)
-       {
-             int max = -1;
-             for(int idx : pair.second)
-                max = idx > max ? idx : max; 
 
-             maxValues.push_back(max);
-             idx2Buffers[max].insert(pair.first);
-       }
+       for(auto node : rootNodes)
+            for(auto child : forwardDependencies[node])
+                node->BecomeParentTo(child);
 
 
-        std::sort(maxValues.begin(), maxValues.end()); 
-        std::unordered_map<int, std::set<Matrix<ElemType>*> > timeStep2Buffers;
-        int timeStep = 0;
-        int prevMaxValue = -1;
-        for(int maxValue : maxValues)
-        {
-            if(prevMaxValue == maxValue){ continue; }
+    for(auto root  : rootNodes.front()->FindRoots())
+        cout << root->buffer << endl;
 
-            timeStep2Buffers[timeStep] = idx2Buffers[maxValue];
-            prevMaxValue = maxValue;
-            timeStep++;
-        }
+    for(auto root  : rootNodes.front()->FindRoots())
+        root->PrintChildrenBuffers();
 
-       
-        for(auto pairs : timeStep2Buffers)
-            for(auto buffer : pairs.second)
-                cout << pairs.first << "->" << pairs.first << ": " << buffer << endl;
+    //for(auto node : rootNodes)
+    //{
+    //    cout << "--------------" << endl;
+    //    node->PrintGraph(0);
+    //    cout << "--------------" << endl;
+    //}
 
-
-       // determined when to swap out, and when to swap in
-
-
-	    std::unordered_map<Matrix<ElemType>*, std::set<int> > backBuffer2Idxs;
-	    for (auto& node : compositeForwardPropEvalOrder)
-	    {
-	    	std::set<Matrix<ElemType>*> buffers;
-	    	int inputCount = node->GetNumInputs();
-	    	for(int i = 0; i < inputCount; i++)
+    buffer2DependencyNode.clear();
+    rootNodes.clear();
+    forwardDependencies.clear();
+    DependencyNode<ElemType>* parentNode;
+    for (auto& node : compositeForwardPropEvalOrder)
+    {
+        //IsOutputNeededDuringBackprop
+        int inputCount = node->GetNumInputs();
+        
+        ComputationNode<ElemType>* compNode = node->As<ComputationNode<ElemType>>();
+        if(node->ValuePtr() != NULL)
+            cout << node->ValuePtr().get() << endl;
+        if(node->GradientPtr() != NULL)
+        { 
+            cout << "has grad" << endl;
+            Matrix<ElemType> *buffer = (Matrix<ElemType>*)node->GradientPtr().get();
+            if(buffer2DependencyNode.count(buffer) == 0)
             {
-                if(node->InputUsedInComputingInputNodesGradients(i))
+                buffer2DependencyNode[buffer] = helper->makeNode(buffer);
+                rootNodes.push_back(buffer2DependencyNode[buffer]);
+            }
+
+            parentNode = buffer2DependencyNode[buffer];
+
+           for(int i = 0; i < inputCount; i++)
+           {
+                cout << "has inputs" << endl;
+                if(!node->InputUsedInComputingInputNodesGradients(i)){ continue; }
+                Matrix<ElemType> *childBuffer = (Matrix<ElemType>*)node->Input(i)->ValuePtr().get(); 
+                cout << "input " << childBuffer << " used" << endl;
+                if(buffer2DependencyNode.count(childBuffer) == 0)
                 {
-                    Matrix<ElemType> *buffer = (Matrix<ElemType>*)node->Input(i)->ValuePtr().get(); 
-                    backBuffer2Idxs[buffer].insert(idx);
+                    buffer2DependencyNode[childBuffer] = helper->makeNode(childBuffer);
+                    rootNodes.push_back(buffer2DependencyNode[childBuffer]);
                 }
-            }
+                
 
-            if(node->ValuePtr() != NULL)
-            { 
-                if(node->OutputUsedInComputingInputNodesGradients())
+                forwardDependencies[parentNode].push_back(buffer2DependencyNode[childBuffer]);
+           }
+
+           if(node->ValuePtr() != NULL &&
+              node->OutputUsedInComputingInputNodesGradients())
+           {
+                Matrix<ElemType> *outputBuffer = (Matrix<ElemType>*)node->ValuePtr().get();
+                cout << "output used for input grad " << outputBuffer << endl;
+                if(buffer2DependencyNode.count(outputBuffer) == 0)
                 {
-                    Matrix<ElemType> *buffer = (Matrix<ElemType>*)node->ValuePtr().get();
-                    backBuffer2Idxs[buffer].insert(idx);
+                    buffer2DependencyNode[outputBuffer] = helper->makeNode(outputBuffer);
+                    rootNodes.push_back(buffer2DependencyNode[outputBuffer]);
                 }
-            }
-
-            if(node->GradientPtr() != NULL)
-            { 
-                Matrix<ElemType> *buffer = (Matrix<ElemType>*)node->GradientPtr().get();
-                backBuffer2Idxs[buffer].insert(idx);
-            }
 
 
-	    	idx--;
-	   }
-
-       maxValues.clear();
-       std::unordered_map<int, std::set<Matrix<ElemType>*> > backIdx2Buffers;
-       for(std::pair<Matrix<ElemType>*, std::set<int> > pair : backBuffer2Idxs)
-       {
-             int max = -1;
-             for(int idx : pair.second)
-                max = idx > max ? idx : max; 
-
-             maxValues.push_back(max);
-             backIdx2Buffers[max].insert(pair.first);
+                forwardDependencies[parentNode].push_back(buffer2DependencyNode[outputBuffer]);
+                
+           }
        }
 
 
+    }
 
-        std::sort(maxValues.begin(), maxValues.end()); 
-        std::unordered_map<int, std::set<Matrix<ElemType>*> > backTimeStep2Buffers;
-        timeStep = 0;
-        prevMaxValue = -1;
-        for(int maxValue : maxValues)
-        {
-            if(prevMaxValue == maxValue){ continue; }
+     // Create a composite Eval order with the specified nodes as roots
+     // For each node determine parents and whether the output of the
+     // node is needed during back propagation
+    // std::unordered_map<ComputationNodeBasePtr, bool> outputValueNeededDuringBackProp;
+    // std::unordered_map<ComputationNodeBasePtr, std::unordered_set<ComputationNodeBasePtr>> parentsMap;
+    //forwardDependencies.clear();
+    // for (auto& rootNode : forwardPropRoots)
+    // {
+    //     for (const auto& node : GetEvalOrder(rootNode))
+    //     {
+    //         for (int i = 0; i < node->GetNumInputs(); i++)
+    //         {
+    //             ComputationNodeBasePtr input = node->GetInputs()[i];
+    //             if(input->GradientPtr() != NULL)
+    //             {
 
-            backTimeStep2Buffers[timeStep] = backIdx2Buffers[maxValue];
-            prevMaxValue = maxValue;
-            timeStep++;
-        }
+    //                 Matrix<ElemType> *buffer = (Matrix<ElemType>*)input->GradientPtr().get();
+    //                 if(buffer2DependencyNode.count(buffer) == 0)
+    //                 {
+    //                     buffer2DependencyNode[buffer] = helper->makeNode(buffer);
+    //                     rootNodes.push_back(buffer2DependencyNode[buffer]);
+    //                 }
+
+    //                 parentNode = buffer2DependencyNode[buffer];
+
+
+    //                 if(input->OutputUsedInComputingInputNodesGradients() &&
+    //                    input->ValuePtr() != NULL)
+    //                 {
+    //                    Matrix<ElemType> *outputBuffer = (Matrix<ElemType>*)input->ValuePtr().get();
+    //                    if(buffer2DependencyNode.count(outputBuffer) == 0)
+    //                    {
+    //                        buffer2DependencyNode[outputBuffer] = helper->makeNode(outputBuffer);
+    //                        rootNodes.push_back(buffer2DependencyNode[outputBuffer]);
+    //                    }
+    //                    forwardDependencies[parentNode].push_back(buffer2DependencyNode[outputBuffer]);
+    //                    
+    //                 }
+
+    //                if(node->GradientPtr() != NULL && 
+    //                   node->InputUsedInComputingInputNodesGradients(i) &&
+    //                   input->ValuePtr() != NULL)
+    //                {
+
+    //                 Matrix<ElemType> *nodebuffer = (Matrix<ElemType>*)node->GradientPtr().get();
+    //                 Matrix<ElemType> *outputBuffer = (Matrix<ElemType>*)input->ValuePtr().get();
+    //                 if(buffer2DependencyNode.count(nodebuffer) == 0)
+    //                 {
+    //                     buffer2DependencyNode[nodebuffer] = helper->makeNode(nodebuffer);
+    //                     rootNodes.push_back(buffer2DependencyNode[nodebuffer]);
+    //                 }
+    //                if(buffer2DependencyNode.count(outputBuffer) == 0)
+    //                {
+    //                    buffer2DependencyNode[outputBuffer] = helper->makeNode(outputBuffer);
+    //                    rootNodes.push_back(buffer2DependencyNode[outputBuffer]);
+    //                }
+ 
+    //                    forwardDependencies[buffer2DependencyNode[nodebuffer]].push_back(buffer2DependencyNode[outputBuffer]);
+
+    //                }
+    //             }
+
+    //             
+    //         }
+    //     }
+    // }
+
+    //for (auto& node : compositeForwardPropEvalOrder)
+	//    {
+    //        int inputCount = node->GetNumInputs();
+    //        if(node->ValuePtr() != NULL
+    //           node->OutputUsedInComputingInputNodesGradients())
+    //        { 
+    //            Matrix<ElemType> *buffer = (Matrix<ElemType>*)node->ValuePtr().get();
+    //            if(buffer2DependencyNode.count(buffer) == 0)
+    //            {
+    //                buffer2DependencyNode[buffer] = helper->makeNode(buffer);
+    //                rootNodes.push_back(buffer2DependencyNode[buffer]);
+    //            }
+
+    //            childNode = buffer2DependencyNode[buffer];
+
+    //           for(int i = 0; i < inputCount; i++)
+    //           {
+    //                if(!node->InputUsedInComputingInputNodesGradients(i)){ continue; }
+    //                Matrix<ElemType> *parentBuffer = (Matrix<ElemType>*)node->Input(i)->ValuePtr().get(); 
+    //                if(buffer2DependencyNode.count(parentBuffer) == 0)
+    //                {
+    //                    buffer2DependencyNode[parentBuffer] = helper->makeNode(parentBuffer);
+    //                    rootNodes.push_back(buffer2DependencyNode[parentBuffer]);
+    //                }
+    //                
+    //                forwardDependencies[buffer2DependencyNode[parentBuffer]].push_back(childNode);
+    //           }
+    //       }
+
+    //      if(node->GradientPtr() != NULL)
+    //        { 
+    //            Matrix<ElemType> *buffer = (Matrix<ElemType>*)node->GradientPtr().get();
+    //            if(buffer2DependencyNode.count(buffer) == 0)
+    //            {
+    //                buffer2DependencyNode[buffer] = helper->makeNode(buffer);
+    //                rootNodes.push_back(buffer2DependencyNode[buffer]);
+    //            }
+
+    //            childNode = buffer2DependencyNode[buffer];
+
+    //           for(int i = 0; i < inputCount; i++)
+    //           {
+    //                if(!node->InputUsedInComputingInputNodesGradients(i)){ continue; }
+    //                Matrix<ElemType> *parentBuffer = (Matrix<ElemType>*)node->Input(i)->ValuePtr().get(); 
+    //                if(buffer2DependencyNode.count(parentBuffer) == 0)
+    //                {
+    //                    buffer2DependencyNode[parentBuffer] = helper->makeNode(parentBuffer);
+    //                    rootNodes.push_back(buffer2DependencyNode[parentBuffer]);
+    //                }
+    //                
+
+    //                forwardDependencies[buffer2DependencyNode[parentBuffer]].push_back(childNode);
+    //           }
+    //       }
+ 
+	//   }
+
+
+
+
+    cout << "BackProp: " << endl; 
+    for(auto node : rootNodes)
+    {
+        if(forwardDependencies.count(node) > 0)
+            for(auto child : forwardDependencies[node])
+                node->BecomeParentTo(child);
+    }
+
+
+
+    std::set<DependencyNode<ElemType>*> allRoots;
+    for(auto node : rootNodes)
+        for(auto root  : node->FindRoots())
+            allRoots.insert(root);
+   for(auto root : allRoots)
+        root->PrintChildrenBuffers();
+
+
+
+
+
 
        
-        cout << "BACKPROP" << endl;
-        for(auto pairs : backTimeStep2Buffers)
-            for(auto buffer : pairs.second)
-                cout << pairs.first << "->" << pairs.first << ": " << buffer << endl;
-
-
-
-
 
 }
 

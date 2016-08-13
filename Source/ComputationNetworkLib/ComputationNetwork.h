@@ -1118,6 +1118,96 @@ private:
     // TODO: does this apply to anything else besides temporary node-internal intermediate results? What, for example?
     MatrixPool m_matrixPool;
 };
+
+template <typename ElemType>
+class DependencyNode
+{
+public:
+    int level;
+    Matrix<ElemType>* buffer;
+
+    std::vector<DependencyNode*> children;
+    std::vector<DependencyNode*> parents;
+
+    DependencyNode<ElemType> *makeNode(Matrix<ElemType> *buffer)
+    {
+        DependencyNode<ElemType> *node = new DependencyNode();
+        node->level = 0;
+        node->buffer = buffer;
+        return node;
+    }
+
+    void BecomeParentTo(DependencyNode* child)
+    {
+
+        if(child->level > level+1)
+            UpdateLevel(child->level-1);
+        else if(child->level <= level)
+            child->UpdateLevel(level+1);
+
+        children.push_back(child);
+        child->parents.push_back(this);
+    }
+
+    void UpdateLevel(int newLevel)
+    {
+       level  = newLevel;
+       for(auto parent : parents)
+       {
+           if(parent->level != level-1)
+               parent->UpdateLevel(newLevel-1);
+       }
+       for(auto child : children)
+       {
+           if(child->level != level+1)
+               child->UpdateLevel(newLevel+1);
+       }
+    }
+
+
+    // iterative breadth first search
+    std::vector<DependencyNode<ElemType>*> FindRoots()
+    {
+        std::unordered_map<DependencyNode<ElemType>*, bool> visited;
+        std::vector<DependencyNode<ElemType>*> nextNodes;
+        std::set<DependencyNode<ElemType>*> rootSet;
+        nextNodes.push_back(this);
+
+        while(nextNodes.size() > 0)
+        {
+                for(auto child : nextNodes.front()->children)
+                {
+                    if(visited.count(child) > 0){ continue; }
+                    nextNodes.push_back(child);
+                    if(child->level == 0){ rootSet.insert(child); }
+                }
+
+                for(auto parent : nextNodes.front()->parents)
+                {
+                    if(visited.count(parent) > 0){ continue; }
+                    nextNodes.push_back(parent);
+                    if(parent->level == 0){ rootSet.insert(parent); }
+                }
+
+                visited[nextNodes.front()] = true;
+                nextNodes.erase(nextNodes.begin());
+        }
+        
+        std::vector<DependencyNode<ElemType>*> roots(rootSet.begin(), rootSet.end());
+        return roots; 
+    }
+
+    void PrintChildrenBuffers()
+    {
+       cout << level << ": " << buffer << endl;
+       for(auto child : children)
+            child->PrintChildrenBuffers();
+    }
+};
+
+template class DependencyNode<float>;
+template class DependencyNode<double>;
+
 typedef ComputationNetwork::ComputationNetworkPtr ComputationNetworkPtr;
 
 // helper that returns 'float' or 'double' depending on ElemType
@@ -1132,5 +1222,7 @@ template class Matrix<double>;
 // TODOs:
 //  - automatic inference of time window w.r.t. delay nodes (and related nodes such as a temporal pooling)
 //  - have overrides of RuntimeError etc. in ComputationNode, which prepend the error string with the node name and operation
+
+
 
 } } }
