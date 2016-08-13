@@ -228,6 +228,15 @@ template<typename ElemType> void SynchronizationManager<ElemType>::BeginSynchron
 
     cout << "FREE MEMORY: " << free/1024.0f/1024.0f/1024.0f << endl;
 
+
+    if(node->ValuePtr() != NULL)
+    {
+        Matrix<ElemType> *buffer = (Matrix<ElemType>*)node->ValuePtr().get();
+
+        //if(isForward)
+        //    m_forwardGraph[buffer] << endl;
+    }
+
     if(!m_isExecuting)
     {
         bool allStatsGathered = false;
@@ -751,6 +760,34 @@ template<typename ElemType> void SynchronizationManager<ElemType>::GatherRuntime
         m_stepNumber2ComputationTime[stepNumber] += t;
     }
 #endif
+}
+
+template void SynchronizationManager<double>::InitializeSwapping(
+                          std::unordered_map<int, std::set<Matrix<double>*> > forwardGraph,
+                          std::unordered_map<int, std::set<Matrix<double>*> > backwardGraph);
+template void SynchronizationManager<float>::InitializeSwapping(
+                          std::unordered_map<int, std::set<Matrix<float>*> > forwardGraph,
+                          std::unordered_map<int, std::set<Matrix<float>*> > backwardGraph);
+template <typename ElemType> void SynchronizationManager<ElemType>::InitializeSwapping(
+                          std::unordered_map<int, std::set<Matrix<ElemType>*> > forwardGraph,
+                          std::unordered_map<int, std::set<Matrix<ElemType>*> > backwardGraph)
+{
+    //m_forwardGraph(forwardGraph.begin(), forwardGraph.end());
+    //std::unordered_map<Matrix<ElemType>*, int> firstUsageForward;
+    //std::unordered_map<Matrix<ElemType>*, int> firstUsageBackward;
+    //std::unordered_map<Matrix<ElemType>*, int> lastUsageForward;
+    //std::unordered_map<Matrix<ElemType>*, int> lastUsageBackward;
+    //std::unordered_map<Matrix<ElemType>*, vector<int> > buffer2TimeSteps;
+
+    //for(std::pair<int, std::set<Matrix<ElemType> *> > pair : forwardGraph)
+    //{
+    //    for(auto buffer : pair.second)
+    //    {
+    //        if(firstUsageForward
+    //    }
+    //}
+    //m_backwardGraph = backwardGraph;
+
 }
 
 

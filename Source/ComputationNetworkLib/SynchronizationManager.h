@@ -55,6 +55,9 @@ private:
     std::unordered_map<Matrix<ElemType>*, bool> m_buffer2IsFreed;
     std::unordered_map<int, std::vector<Matrix<ElemType>*> > m_stepNumber2Buffer; 
 
+    std::unordered_map<int, std::vector<Matrix<ElemType>*> > m_forwardGraph;
+    std::unordered_map<int, std::vector<Matrix<ElemType>*> > m_backwardGraph;
+
     std::unordered_map<Matrix<ElemType>*, std::pair<ElemType, ElemType> > m_buffer2SwapTime;
     std::set<Matrix<ElemType> *> m_bufferSet; // contains all buffers which have the potential to be swapped (that is they are non-sharable)
     std::unordered_map<int, std::pair<ElemType,ElemType> > m_stepNumber2CumulativeSwapInTime;
@@ -97,7 +100,8 @@ public:
     // this cleans the SynchronizationManager up after a action completes
     void ClearActionsAndTheirMemory();
     void RegisterWeight(Matrix<ElemType> *weight);
-	
+    void InitializeSwapping(std::unordered_map<int, std::set<Matrix<ElemType>*> > forwardGraph,
+                            std::unordered_map<int, std::set<Matrix<ElemType>*> > backwardGraph);	
 };
 
 template class SynchronizationManager<float>;
