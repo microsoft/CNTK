@@ -20,12 +20,28 @@ TrainTagger = {
         hiddenDim = 300
         #hiddenDim = 150
 
+        TrigramLayer{} = {
+            Left  = DelayLayer{T=-2}
+            Right = DelayLayer{T=-1}
+            apply (x) = Splice (/*Left (x) :*/ x : Right(x))
+        }.apply
+
+        BiRecurrentLSTMLayer {hiddenDim} =
+        {
+            L2R = RecurrentLSTMLayer {hiddenDim, goBackwards=false}
+            R2L = RecurrentLSTMLayer {hiddenDim, goBackwards=true}
+            apply (x) = Splice (L2R (x) : R2L (x))
+        }.apply
+
         model = Sequential (
-            Parallel ((DelayLayer{T=1} : Identity : DelayLayer{T=-1}), Splice) :  # 3-word window
+            TrigramLayer{} :
             EmbeddingLayer {embDim} :                                             # embedding
-            RecurrentLSTMLayer {hiddenDim} :              # LSTM
+            BatchNormalizationLayer {normalizationTimeConstant=2048} :
+            RecurrentLSTMLayer {hiddenDim, goBackwards=false} :              # LSTM
+            #BiRecurrentLSTMLayer {hiddenDim} : 
             #Parallel ((RecurrentLSTMLayer {hiddenDim} : RecurrentLSTMLayer {hiddenDim, goBackwards=true}), Splice) :  # bidirectional LSTM
             #Parallel ((RecurrentLSTMLayer {hiddenDim} : RecurrentLSTMLayer {hiddenDim, goBackwards=true}), Splice) :  # bidirectional LSTM
+            BatchNormalizationLayer {normalizationTimeConstant=2048} :
             DenseLayer {labelDim, initValueScale=7}        # output layer
         )
 
@@ -83,7 +99,7 @@ TrainTagger = {
     }
 
     SGD = {
-        maxEpochs = 20 ; epochSize = 36000
+        maxEpochs = 8 ; epochSize = 36000
 
         minibatchSize = 70
 
