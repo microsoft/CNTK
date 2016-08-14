@@ -1160,14 +1160,19 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ImageHandsOn", "ImageHandsO
 		Tutorials\ImageHandsOn\cifar10.pretrained.cmf = Tutorials\ImageHandsOn\cifar10.pretrained.cmf
 		Tutorials\ImageHandsOn\CifarConverter.py = Tutorials\ImageHandsOn\CifarConverter.py
 		Tutorials\ImageHandsOn\ImageHandsOn.cntk = Tutorials\ImageHandsOn\ImageHandsOn.cntk
+		Tutorials\SLUHandsOn\slu.forward.backward.cmf = Tutorials\SLUHandsOn\slu.forward.backward.cmf
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SLUHandsOn", "SLUHandsOn", "{CC143D08-567D-4DAC-9E14-264749C19039}"
 	ProjectSection(SolutionItems) = preProject
 		Tutorials\SLUHandsOn\atis.test.ctf = Tutorials\SLUHandsOn\atis.test.ctf
 		Tutorials\SLUHandsOn\atis.train.ctf = Tutorials\SLUHandsOn\atis.train.ctf
+		Tutorials\SLUHandsOn\slu.forward.cmf = Tutorials\SLUHandsOn\slu.forward.cmf
+		Tutorials\SLUHandsOn\slu.forward.lookahead.cmf = Tutorials\SLUHandsOn\slu.forward.lookahead.cmf
 		Tutorials\SLUHandsOn\slu.forward.nobn.cmf = Tutorials\SLUHandsOn\slu.forward.nobn.cmf
 		Tutorials\SLUHandsOn\SLUHandsOn.cntk = Tutorials\SLUHandsOn\SLUHandsOn.cntk
+		Tutorials\SLUHandsOn\SLUHandsOn_Solution1.cntk = Tutorials\SLUHandsOn\SLUHandsOn_Solution1.cntk
+		Tutorials\SLUHandsOn\SLUHandsOn_Solution2.cntk = Tutorials\SLUHandsOn\SLUHandsOn_Solution2.cntk
 	EndProjectSection
 EndProject
 Global
