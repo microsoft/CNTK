@@ -17,45 +17,43 @@ TrainConvNet = {
         imageShape = 32:32:3
         labelDim = 10
 
-        MyConvBNReLU (x, dim, initValueScale, stride) =
+        old_ResNetResample (x, depth) =  # sub-sample and pad: [W x H x depth/2] --> [W/2 x H/2 x depth]
         {
-            c = ConvolutionalLayer {dim, (3:3), pad = true, stride = (stride:stride), bias = false,
-                                    init = "gaussian", initValueScale = initValueScale} (x)
-            b = BatchNormalizationLayer {spatialRank = 2, normalizationTimeConstant = 4096} (c)
-            r = ReLU (b)
-        }.r
-        MyConvBN (x, dim, initValueScale, stride) =  ##### version without ReLU
+            x2 = MaxPoolingLayer {(1:1), stride = (2:2)} (x)  # sub-sample by 2
+            pad = ConstantTensor (0, (1:1:depth/2))             # pad with zeroes
+            p = Splice ((x2 : pad), axis = 3)
+        }.p
+        MySubSampleBN (x, depth, stride) =
         {
-            c = ConvolutionalLayer {dim, (3:3), pad = true, stride = (stride:stride), bias = false,
+            s = Splice ((MaxPoolingLayer {(1:1), stride = (stride:stride)} (x) : ConstantTensor (0, (1:1:depth/stride))), axis = 3)  # sub-sample and pad: [W x H x depth/2] --> [W/2 x H/2 x depth]
+            b = BatchNormalizationLayer {spatialRank = 2, normalizationTimeConstant = 4096} (s)
+        }.b
+        MyConvBN (x, depth, initValueScale, stride) =  ##### version without ReLU
+        {
+            c = ConvolutionalLayer {depth, (3:3), pad = true, stride = (stride:stride), bias = false,
                                     init = "gaussian", initValueScale = initValueScale} (x)
             b = BatchNormalizationLayer {spatialRank = 2, normalizationTimeConstant = 4096} (c)
         }.b
-        ResNetNode (x, dim) =
+        ResNetNode (x, depth) =
         {
-            c1 = MyConvBNReLU (x,  dim, 7.07, 1)
-            c2 = MyConvBN     (c1, dim, 7.07, 1)  ##### split off ReLU
-            r = ReLU (x + c2)
+            c1 = MyConvBN (x,  depth, 7.07, 1)
+            r1 = ReLU (c1)
+            c2 = MyConvBN (r1, depth, 7.07, 1)  ##### split off ReLU
+            r  = ReLU (x + c2)
         }.r
-        ResNetIncNode (x, dim) =
+        ResNetIncNode (x, depth) =
         {
-            c1 = MyConvBNReLU (x,  dim, 7.07, 2)
-            c2 = MyConvBN     (c1, dim, 7.07, 1)
+            c1 = MyConvBN (x,  depth, 7.07, 2)  # note the 2
+            r1 = ReLU (c1)
+            c2 = MyConvBN (r1, depth, 7.07, 1)
 
-            ResNetResample (x, dim) =  # sub-sample and pad: [W x H x dim/2] --> [W/2 x H/2 x dim]
-            {
-                x2 = MaxPoolingLayer {(1:1), stride = (2:2)} (x)  # sub-sample by 2
-                pad = ConstantTensor (0, (1:1:dim/2))             # pad with zeroes
-                p = Splice ((x2 : pad), axis = 3)
-            }.p
+            xs = MySubSampleBN (x, depth)
 
-            px = ResNetResample (x, dim)
-            b = BatchNormalizationLayer {spatialRank = 2, normalizationTimeConstant = 4096} (px)
-
-            r = ReLU (b + c2)
+            r  = ReLU (xs + c2)
         }.r
         model (features) =
         {
-            conv1 = MyConvBNReLU (features, 16, 0.26, 1)
+            conv1 = ReLU (MyConvBN (features, 16, 0.26, 1))
             rn1   = ResNetNode (ResNetNode (ResNetNode (conv1, 16), 16), 16)
 
             rn2_1 = ResNetIncNode (rn1, 32)
