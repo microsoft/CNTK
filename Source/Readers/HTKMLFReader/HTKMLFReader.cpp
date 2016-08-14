@@ -377,8 +377,8 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
 
             // second, remove trailing slash if there is any
             // TODO: when gcc -v is 4.9 or greater, this should be: std::regex_replace(rootpath, L"\\/+$", wstring());
-            size_t stringPos = 0;
-            for (stringPos = rootpath.length() - 1; stringPos >= 0; stringPos--) 
+            int stringPos = 0;
+            for (stringPos = (int) (rootpath.length() - 1); stringPos >= 0; stringPos--) 
             {
                 if (rootpath[stringPos] != L'/')
                 {

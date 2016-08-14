@@ -171,6 +171,12 @@ public:
     // setup all the state variables and state tables for state machine
     void Init();
 
+    // convenience function for setting the flags
+    inline unsigned int SetSequenceFlags()
+    {
+        return (m_beginSequence ? seqFlagStartLabel : 0) | (m_endSequence ? seqFlagStopLabel : 0) | seqFlagLineBreak;
+    }
+
     // Parser destructor
     ~SequenceParser();
 
@@ -334,8 +340,7 @@ public:
                 case EndOfLine:
                     if (seqPos)
                     {
-                        SequencePosition sequencePos(numbers->size(), labels->size(),
-                                                     (m_beginSequence ? seqFlagStartLabel : 0) | (m_endSequence ? seqFlagStopLabel : 0) | seqFlagLineBreak);
+                        SequencePosition sequencePos(numbers->size(), labels->size(), SetSequenceFlags());
                         // add a sequence element to the list
                         seqPos->push_back(sequencePos);
                         sequencePositionLast = sequencePos;
@@ -429,8 +434,7 @@ public:
         // this could probably be fixed by taking another pass through the loop above, but this is easier
         if (seqPos)
         {
-            SequencePosition sequencePos(numbers->size(), labels->size(),
-                                         m_beginSequence ? seqFlagStartLabel : 0 | m_endSequence ? seqFlagStopLabel : 0 | seqFlagLineBreak);
+            SequencePosition sequencePos(numbers->size(), labels->size(), SetSequenceFlags());
             // add the final sequence element if needed
             if (!(sequencePos.labelPos == sequencePositionLast.labelPos && sequencePos.numberPos == sequencePositionLast.numberPos))
             {
@@ -594,8 +598,7 @@ public:
                 labels->push_back(std::move(vstr[i])); // TODO: is this an entire sequence, or multiple columns describing a single token?
 
             // add a sequence element to the list
-            SequencePosition sequencePos(numbers->size(), labels->size(),
-                                         m_beginSequence ? seqFlagStartLabel : 0 | m_endSequence ? seqFlagStopLabel : 0 | seqFlagLineBreak);
+            SequencePosition sequencePos(numbers->size(), labels->size(), SetSequenceFlags());
             seqPos->push_back(sequencePos);
 
             lineCount++;
