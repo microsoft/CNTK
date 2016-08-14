@@ -18,31 +18,11 @@ TrainTagger = {
         labelDim = $numLabels$
         embDim = 150
         hiddenDim = 300
-        #hiddenDim = 150
-
-        TrigramLayer{} = {
-            Left  = DelayLayer{T=-2}
-            Right = DelayLayer{T=-1}
-            apply (x) = Splice (/*Left (x) :*/ x : Right(x))
-        }.apply
-
-        BiRecurrentLSTMLayer {hiddenDim} =
-        {
-            L2R = RecurrentLSTMLayer {hiddenDim, goBackwards=false}
-            R2L = RecurrentLSTMLayer {hiddenDim, goBackwards=true}
-            apply (x) = Splice (L2R (x) : R2L (x))
-        }.apply
 
         model = Sequential (
-            TrigramLayer{} :
-            EmbeddingLayer {embDim} :                                             # embedding
-            BatchNormalizationLayer {normalizationTimeConstant=2048} :
-            RecurrentLSTMLayer {hiddenDim, goBackwards=false} :              # LSTM
-            #BiRecurrentLSTMLayer {hiddenDim} : 
-            #Parallel ((RecurrentLSTMLayer {hiddenDim} : RecurrentLSTMLayer {hiddenDim, goBackwards=true}), Splice) :  # bidirectional LSTM
-            #Parallel ((RecurrentLSTMLayer {hiddenDim} : RecurrentLSTMLayer {hiddenDim, goBackwards=true}), Splice) :  # bidirectional LSTM
-            BatchNormalizationLayer {normalizationTimeConstant=2048} :
-            DenseLayer {labelDim, initValueScale=7}        # output layer
+            EmbeddingLayer {embDim} :                            # embedding
+            RecurrentLSTMLayer {hiddenDim, goBackwards=false} :  # LSTM
+            DenseLayer {labelDim, initValueScale=7}              # output layer
         )
 
         # features
@@ -62,41 +42,6 @@ TrainTagger = {
         evaluationNodes = (errs)
         outputNodes     = (z)
     }
-    # rename this to BrainScriptNetworkBuilder to switch to intent-classification task
-    Intent_BrainScriptNetworkBuilder = {
-        inputDim = $vocabSize$
-        labelDim = $numIntents$
-        embDim = 150
-        #hiddenDim = 300
-        hiddenDim = 150
-
-        model = Sequential (
-            Parallel ((DelayLayer{T=1} : Identity : DelayLayer{T=-1}), Splice) :  # 3-word window
-            EmbeddingLayer {embDim} :                                             # embedding
-            RecurrentLSTMLayer {hiddenDim} : BS.Sequences.Last :                  # LSTM state, final state
-            #Parallel ((Sequential (RecurrentLSTMLayer {hiddenDim}                   : BS.Sequences.Last):
-            #           Sequential (RecurrentLSTMLayer {hiddenDim, goBackwards=true} : BS.Sequences.First)), Splice) :  # bidirectional LSTM
-            DenseLayer {labelDim, initValueScale=7}        # output layer
-        )
-
-        # features
-        t = DynamicAxis{}
-        query        = Input {inputDim, dynamicAxis=t}
-        intentLabels = Input {labelDim}
-
-        # model application
-        z = model (query)
-
-        # loss and metric
-        ce   = CrossEntropyWithSoftmax (intentLabels, z)
-        errs = ErrorPrediction         (intentLabels, z)
-
-        featureNodes    = (query)
-        labelNodes      = (intentLabels)
-        criterionNodes  = (ce)
-        evaluationNodes = (errs)
-        outputNodes     = (z)
-    }
 
     SGD = {
         maxEpochs = 8 ; epochSize = 36000
@@ -108,13 +53,6 @@ TrainTagger = {
         gradientClippingWithTruncation = true ; clippingThresholdPerSample = 15.0
 
         firstMBsToShowResult = 10 ; numMBsToShowResult = 100
-
-        parallelTrain = {
-            parallelizationMethod = "DataParallelSGD"
-            parallelizationStartEpoch = 2
-            distributedMBReading = true
-            dataParallelSGD = { gradientBits = 1 }
-        }
     }
 
     reader = {

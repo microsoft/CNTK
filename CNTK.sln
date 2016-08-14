@@ -1162,6 +1162,14 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ImageHandsOn", "ImageHandsO
 		Tutorials\ImageHandsOn\ImageHandsOn.cntk = Tutorials\ImageHandsOn\ImageHandsOn.cntk
 	EndProjectSection
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SLUHandsOn", "SLUHandsOn", "{CC143D08-567D-4DAC-9E14-264749C19039}"
+	ProjectSection(SolutionItems) = preProject
+		Tutorials\SLUHandsOn\atis.test.ctf = Tutorials\SLUHandsOn\atis.test.ctf
+		Tutorials\SLUHandsOn\atis.train.ctf = Tutorials\SLUHandsOn\atis.train.ctf
+		Tutorials\SLUHandsOn\slu.forward.nobn.cmf = Tutorials\SLUHandsOn\slu.forward.nobn.cmf
+		Tutorials\SLUHandsOn\SLUHandsOn.cntk = Tutorials\SLUHandsOn\SLUHandsOn.cntk
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug_CpuOnly|x64 = Debug_CpuOnly|x64
@@ -1608,5 +1616,6 @@ Global
 		{CCC07E8E-F33A-4AF7-9F60-93E2AA61C75E} = {3385EBEA-5F97-4B2B-9F30-0E6D7F91B9CA}
 		{9F999212-AFC5-4EAC-AA78-F7247D46C456} = {6F19321A-65E7-4829-B00C-3886CD6C6EDE}
 		{2230BF3D-4317-4A3F-A743-DDD6160503F8} = {8BE0642A-A3AA-4A64-95D0-C78FB285B2A4}
+		{CC143D08-567D-4DAC-9E14-264749C19039} = {8BE0642A-A3AA-4A64-95D0-C78FB285B2A4}
 	EndGlobalSection
 EndGlobal
