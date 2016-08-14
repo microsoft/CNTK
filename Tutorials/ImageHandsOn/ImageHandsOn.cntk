@@ -53,8 +53,8 @@ TrainConvNet = {
     SGD = {
         epochSize = 50000
 
-        maxEpochs = 30 ; minibatchSize = 64
-        learningRatesPerSample = 0.00015625*10:0.000046875*10:0.000015625
+        maxEpochs = 10 ; minibatchSize = 64
+        learningRatesPerSample = 0.00015625*7:0.000046875*10:0.000015625
         momentumAsTimeConstant = 600*20:6400
         L2RegWeight = 0.03
 
