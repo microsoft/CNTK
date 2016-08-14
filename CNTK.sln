@@ -1157,7 +1157,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tutorials", "Tutorials", "{
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ImageHandsOn", "ImageHandsOn", "{2230BF3D-4317-4A3F-A743-DDD6160503F8}"
 	ProjectSection(SolutionItems) = preProject
-		Tutorials\ImageHandsOn\CifarConverter.py = Tutorials\ImageHandsOn\CifarConverter.py
 		Tutorials\ImageHandsOn\ImageHandsOn.cntk = Tutorials\ImageHandsOn\ImageHandsOn.cntk
 	EndProjectSection
 EndProject
@@ -1177,7 +1176,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solutions", "Solutions", "{
 		Tutorials\ImageHandsOn\ImageHandsOn_Solution1.cntk = Tutorials\ImageHandsOn\ImageHandsOn_Solution1.cntk
 		Tutorials\ImageHandsOn\ImageHandsOn_Solution2.cntk = Tutorials\ImageHandsOn\ImageHandsOn_Solution2.cntk
 		Tutorials\ImageHandsOn\ImageHandsOn_Solution3.cntk = Tutorials\ImageHandsOn\ImageHandsOn_Solution3.cntk
-		Tutorials\ImageHandsOn\ImageHandsOn_Solution3_cpu.cntk = Tutorials\ImageHandsOn\ImageHandsOn_Solution3_cpu.cntk
 		Tutorials\ImageHandsOn\ImageHandsOn_Solution4.cntk = Tutorials\ImageHandsOn\ImageHandsOn_Solution4.cntk
 		Tutorials\ImageHandsOn\ImageHandsOn_Solution5.cntk = Tutorials\ImageHandsOn\ImageHandsOn_Solution5.cntk
 		Tutorials\ImageHandsOn\ImageHandsOn_Task4_Start.cntk = Tutorials\ImageHandsOn\ImageHandsOn_Task4_Start.cntk
@@ -1204,6 +1202,11 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Pretrained Models", "Pretra
 		Tutorials\SLUHandsOn\slu.forward.cmf = Tutorials\SLUHandsOn\slu.forward.cmf
 		Tutorials\SLUHandsOn\slu.forward.lookahead.cmf = Tutorials\SLUHandsOn\slu.forward.lookahead.cmf
 		Tutorials\SLUHandsOn\slu.forward.nobn.cmf = Tutorials\SLUHandsOn\slu.forward.nobn.cmf
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Data", "Data", "{4A59163B-1EDE-4439-9E7D-40A30B82A3A0}"
+	ProjectSection(SolutionItems) = preProject
+		Tutorials\ImageHandsOn\CifarConverter.py = Tutorials\ImageHandsOn\CifarConverter.py
 	EndProjectSection
 EndProject
 Global
@@ -1658,5 +1661,6 @@ Global
 		{8CFBD0DB-5F16-48E6-984C-4401317FA10E} = {CC143D08-567D-4DAC-9E14-264749C19039}
 		{BD7FF8C0-EC3A-49CD-9D81-4A8A29B8AD8E} = {CC143D08-567D-4DAC-9E14-264749C19039}
 		{4727594B-A052-4834-B0E8-57DBB9ADEF13} = {CC143D08-567D-4DAC-9E14-264749C19039}
+		{4A59163B-1EDE-4439-9E7D-40A30B82A3A0} = {2230BF3D-4317-4A3F-A743-DDD6160503F8}
 	EndGlobalSection
 EndGlobal

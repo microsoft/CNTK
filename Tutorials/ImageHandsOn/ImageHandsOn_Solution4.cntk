@@ -17,18 +17,12 @@ TrainConvNet = {
         imageShape = 32:32:3
         labelDim = 10
 
-        old_ResNetResample (x, depth) =  # sub-sample and pad: [W x H x depth/2] --> [W/2 x H/2 x depth]
-        {
-            x2 = MaxPoolingLayer {(1:1), stride = (2:2)} (x)  # sub-sample by 2
-            pad = ConstantTensor (0, (1:1:depth/2))             # pad with zeroes
-            p = Splice ((x2 : pad), axis = 3)
-        }.p
         MySubSampleBN (x, depth, stride) =
         {
             s = Splice ((MaxPoolingLayer {(1:1), stride = (stride:stride)} (x) : ConstantTensor (0, (1:1:depth/stride))), axis = 3)  # sub-sample and pad: [W x H x depth/2] --> [W/2 x H/2 x depth]
             b = BatchNormalizationLayer {spatialRank = 2, normalizationTimeConstant = 4096} (s)
         }.b
-        MyConvBN (x, depth, initValueScale, stride) =  ##### version without ReLU
+        MyConvBN (x, depth, initValueScale, stride) =
         {
             c = ConvolutionalLayer {depth, (3:3), pad = true, stride = (stride:stride), bias = false,
                                     init = "gaussian", initValueScale = initValueScale} (x)
@@ -38,8 +32,8 @@ TrainConvNet = {
         {
             c1 = MyConvBN (x,  depth, 7.07, 1)
             r1 = ReLU (c1)
-            c2 = MyConvBN (r1, depth, 7.07, 1)  ##### split off ReLU
-            r  = ReLU (x + c2)
+            c2 = MyConvBN (r1, depth, 7.07, 1)
+            r  = ReLU (x + c2)   ##### added skip connection
         }.r
         ResNetIncNode (x, depth) =
         {
@@ -47,9 +41,9 @@ TrainConvNet = {
             r1 = ReLU (c1)
             c2 = MyConvBN (r1, depth, 7.07, 1)
 
-            xs = MySubSampleBN (x, depth)
+            xs = MySubSampleBN (x, depth, 2)
 
-            r  = ReLU (xs + c2)
+            r  = ReLU (xs + c2)   ##### added skip connection
         }.r
         model (features) =
         {
