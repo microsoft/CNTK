@@ -18,9 +18,9 @@ TrainConvNet = {
         labelDim = 10
 
         model (features) = {
-            MyLayer (x, dim, initValueScale) =
+            MyLayer (x, depth, initValueScale) =
             {
-                c = ConvolutionalLayer {dim, (5:5), pad = true,  ##### no activation=ReLU
+                c = ConvolutionalLayer {depth, (5:5), pad = true,  ##### no activation=ReLU
                                         init = "gaussian", initValueScale = initValueScale} (x)
                 b = BatchNormalizationLayer {spatialRank = 2, normalizationTimeConstant = 4096} (c)
                 r = ReLU (b)   ##### now called explicitly
