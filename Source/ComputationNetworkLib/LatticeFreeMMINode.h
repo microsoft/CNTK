@@ -161,7 +161,7 @@ public:
         (*m_likelihoods) += (ElemType)1e-15;
 
         size_t nf = m_likelihoods->GetNumCols();
-        fprintf(stderr, "frame num:%d\n", nf);
+        fprintf(stderr, "frame num:%u\n", nf);
         double logNumeratorWithCE = CalculateNumeratorsWithCE(Input(0)->MaskedValueFor(fr), nf);
         double logDenominator = ForwardBackwardProcessForDenorminator(nf, *m_posteriorsDen, *m_tmap, *m_tmapTranspose, *m_smap, *m_smapTranspose);
 
