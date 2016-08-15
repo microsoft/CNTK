@@ -87,7 +87,7 @@ public:
             // k * (1-alpha) * r_DEN + alpha * P_net - (k * (1-alpha) + alpha) * r_NUM + c * y
             if (m_ceweight != 0)
             {
-                //m_softmax->InplaceExp();
+                m_softmax->InplaceExp();
                 Matrix<ElemType>::ScaleAndAdd(m_ceweight, *m_softmax, m_acweight * (1 - m_ceweight), *m_posteriorsDen);
                 Matrix<ElemType>::Scale(m_acweight * (1 - m_ceweight) + m_ceweight, *m_posteriorsNum);
             }
@@ -97,9 +97,6 @@ public:
             }
 
             Matrix<ElemType>::AddScaledDifference(Gradient(), *m_posteriorsDen, *m_posteriorsNum, gradient);
-
-            gradient.DropFrame(*m_posteriorsNum, *m_posteriorsDen, (ElemType)(1e-8));
-
         }
     }
 
@@ -135,7 +132,6 @@ public:
     }
 
     double CalculateNumeratorsWithCE(const Matrix<ElemType>& labelMatrix, const size_t nf);
-    double CTCCalculation(const Matrix<ElemType>& labelMatrix, const size_t nf);
 
     double ForwardBackwardProcessForDenorminator(const size_t nf, Matrix<ElemType>& posteriors,
         const Matrix<ElemType>& tmap, const Matrix<ElemType>& tmapTranspose, const Matrix<ElemType>& smap, const Matrix<ElemType>& smapTranspose);
@@ -152,9 +148,9 @@ public:
         // first compute the softmax (column-wise)
         // Note that we need both log and non-log for gradient computation.
         m_likelihoods->AssignLogSoftmaxOf(Input(1)->ValueFor(fr), true);
-        //if (m_ceweight != 0)
+        if (m_ceweight != 0)
             m_softmax->SetValue(*m_likelihoods);
-            m_softmax->InplaceExp();
+
         if (m_usePrior)
             (*m_likelihoods) -= Input(2)->ValueAsMatrix();
 
@@ -165,6 +161,7 @@ public:
         (*m_likelihoods) += (ElemType)1e-15;
 
         size_t nf = m_likelihoods->GetNumCols();
+        fprintf(stderr, "frame num:%d\n", nf);
         double logNumeratorWithCE = CalculateNumeratorsWithCE(Input(0)->MaskedValueFor(fr), nf);
         double logDenominator = ForwardBackwardProcessForDenorminator(nf, *m_posteriorsDen, *m_tmap, *m_tmapTranspose, *m_smap, *m_smapTranspose);
 
@@ -246,8 +243,7 @@ public:
         RequestMatrixFromPool(m_maxLabelIndexes, matrixPool);
         RequestMatrixFromPool(m_maxLabelValues, matrixPool);
         RequestMatrixFromPool(m_posteriorsNum, matrixPool);
-        RequestMatrixFromPool(m_posteriorsCTC, matrixPool);
-       // if (m_ceweight != 0)
+        if (m_ceweight != 0)
             RequestMatrixFromPool(m_softmax, matrixPool);
     }
 
@@ -269,7 +265,6 @@ public:
         Base::ReleaseMatricesAfterBackprop(matrixPool);
         ReleaseMatrixToPool(m_posteriorsDen, matrixPool);
         ReleaseMatrixToPool(m_posteriorsNum, matrixPool);
-        ReleaseMatrixToPool(m_posteriorsCTC, matrixPool);
         if (m_ceweight != 0)
             ReleaseMatrixToPool(m_softmax, matrixPool);
     }
@@ -467,7 +462,6 @@ protected:
     shared_ptr<Matrix<ElemType>> m_maxLabelValues;
     shared_ptr<Matrix<ElemType>> m_posteriorsNum;
     shared_ptr<Matrix<ElemType>> m_posteriorsDen;
-    shared_ptr<Matrix<ElemType>> m_posteriorsCTC;
     shared_ptr<Matrix<ElemType>> m_likelihoods;
 
     // For CE
