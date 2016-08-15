@@ -514,6 +514,7 @@ public:
     using SequenceParser<NumType, LabelType>::m_totalNumbersConverted;
     using SequenceParser<NumType, LabelType>::m_dimLabelsOut;
     using SequenceParser<NumType, LabelType>::m_bufferStart;
+    using SequenceParser<NumType, LabelType>::SetSequenceFlags;
     LMSequenceParser()
     {
         mFile = nullptr;
