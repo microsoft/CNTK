@@ -20,6 +20,11 @@ struct ReaderFixture
     ReaderFixture(string subPath = "", string envVariableErrorMessage = "")
     {
         BOOST_TEST_MESSAGE("Setup fixture");
+#ifdef _WIN32
+        BOOST_TEST_MESSAGE("Set two-digit format of exponent number");
+        // Todo: According to MSDN, the following function is obsolete and not available in the CRT from VS2015. 
+        _set_output_format(_TWO_DIGIT_EXPONENT);
+#endif
         m_initialWorkingPath = boost::filesystem::current_path().generic_string();
         BOOST_TEST_MESSAGE("Current working directory: " + m_initialWorkingPath);
         fprintf(stderr, "Current working directory: %s\n", m_initialWorkingPath.c_str());
@@ -28,7 +33,13 @@ struct ReaderFixture
         m_parentPath = boost::filesystem::canonical(path.parent_path()).generic_string();
         fprintf(stderr, "Executable path: %s\n", m_parentPath.c_str());
 
+#ifdef _WIN32
+	// The executable path on Windows is e.g. <cntk>/x64/Debug/Unittests/
         m_testDataPath = m_parentPath + "/../../../Tests/UnitTests/ReaderTests";
+#else
+	// The executable path on Linux is e.g. <cntk>/build/cpu/release/bin/
+        m_testDataPath = m_parentPath + "/../../../../Tests/UnitTests/ReaderTests";
+#endif
         boost::filesystem::path absTestPath(m_testDataPath);
         absTestPath = boost::filesystem::canonical(absTestPath);
         m_testDataPath = absTestPath.generic_string();

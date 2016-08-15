@@ -158,7 +158,7 @@ To run locally,
 ```
 
 By default, the maxEpochs is set to 1 to save training time. One can change it to larger value such as 20 in order to get a good model accuracy. 
-Depends on GPU, it normally takes about 20 minutes to run 20 epochs on single GPU, and slot F1 score is about 93.
+Depends on GPU, it normally takes about 20 minutes to run 20 epochs on single GPU. The slot F1 score should be around 94 with 20 epochs.
 
 **For Microsoft users only**, to run the job on Philly:
 - first upload data folder to philly cloud. e.g. `\\storage.gcr.philly.selfhost.corp.microsoft.com\pnrsy\<your_alias>\ATIS `
