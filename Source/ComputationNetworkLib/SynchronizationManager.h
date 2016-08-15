@@ -28,6 +28,7 @@ class SynchronizationManager
 
 private:
     std::unordered_map<int, std::vector<SyncAction<ElemType>*> > m_stepNumber2Actions;
+    std::unordered_map<int, std::vector<SyncAction<ElemType>*> > m_stepNumber2ActionsBackprop;
     // singleton constructor
 
     static SynchronizationManager* s_synchronizationManager;
@@ -48,6 +49,7 @@ private:
     // needed in order to determine dependencies
     std::unordered_map<Matrix<ElemType>*, std::vector<int> > m_buffer2StepNumbers; 
     std::unordered_map<int, ElemType> m_stepNumber2ComputationTime; 
+    int m_maxTimestep;
 
     //these are for managing full memory swapping during the dryrun
     std::unordered_map<Matrix<ElemType>*, SwapInAction<ElemType>*> m_buffer2SwapIn;
@@ -55,8 +57,9 @@ private:
     std::unordered_map<Matrix<ElemType>*, bool> m_buffer2IsFreed;
     std::unordered_map<int, std::vector<Matrix<ElemType>*> > m_stepNumber2Buffer; 
 
-    std::unordered_map<int, std::vector<Matrix<ElemType>*> > m_forwardGraph;
-    std::unordered_map<int, std::vector<Matrix<ElemType>*> > m_backwardGraph;
+    std::unordered_map<int, std::vector<Matrix<ElemType>*> > m_timestep2Buffers;
+    std::unordered_map<Matrix<ElemType>*, std::vector<int>> m_buffer2Timesteps;
+    std::unordered_map<Matrix<ElemType>*, bool> m_buffer2IsUsedInBackprop;
 
     std::unordered_map<Matrix<ElemType>*, std::pair<ElemType, ElemType> > m_buffer2SwapTime;
     std::set<Matrix<ElemType> *> m_bufferSet; // contains all buffers which have the potential to be swapped (that is they are non-sharable)
@@ -74,6 +77,8 @@ private:
 
     void MeasureSwapTime(ComputationNodeBase *node, bool isForward);
     std::string GetStepName(ComputationNodeBase *node, bool isForward);
+    int DetermineCurrentTimestep(ComputationNodeBase *node);
+
 
 public:
     SynchronizationManager(){};
@@ -100,8 +105,9 @@ public:
     // this cleans the SynchronizationManager up after a action completes
     void ClearActionsAndTheirMemory();
     void RegisterWeight(Matrix<ElemType> *weight);
-    void InitializeSwapping(std::unordered_map<int, std::set<Matrix<ElemType>*> > forwardGraph,
-                            std::unordered_map<int, std::set<Matrix<ElemType>*> > backwardGraph);	
+    void InitializeSwapping(std::unordered_map<Matrix<ElemType>*, std::vector<int> > buffers2Timesteps,
+                            std::unordered_map<int, std::vector<Matrix<ElemType>*> > timesteps2Buffers,
+                            std::unordered_map<Matrix<ElemType>*, bool> buffer2IsNeededDuringBackprop);
 };
 
 template class SynchronizationManager<float>;

@@ -25,6 +25,7 @@ template <typename ElemType> SwapOutAction<ElemType>::SwapOutAction(Matrix<ElemT
 {
         this->m_bufferCPU = NULL;
         this->m_bufferGPU = GPUbuffer;
+        this->m_hasDoneInitialSwap = false;
         cudaStream_t stream;
         CUDA_CALL(cudaStreamCreate(&stream));
         this->m_streamAsync = stream;
@@ -38,15 +39,38 @@ template <typename ElemType> SwapOutAction<ElemType>::SwapOutAction(Matrix<ElemT
 
 template SwapOutAction<float>::~SwapOutAction();
 template SwapOutAction<double>::~SwapOutAction();
-template <typename ElemType> SwapOutAction<ElemType>::~SwapOutAction(){ ReleaseMemory(); }
+template <typename ElemType> SwapOutAction<ElemType>::~SwapOutAction()
+{ 
+    ReleaseMemory(); 
+}
 
 template void SwapOutAction<double>::BeginAction();
 template void SwapOutAction<float>::BeginAction();
 template <typename ElemType> void SwapOutAction<ElemType>::BeginAction()
 {
     // perform the actual asynchronous copy
+    if(this->m_rows != this->m_bufferGPU->GetNumRows() || 
+       this->m_cols != this->m_bufferGPU->GetNumCols())
+       {
+            if(this->m_bytes > 0)
+                ReleaseMemory();
+            cout << this->m_rows << " vs. " << this->m_bufferGPU->GetNumRows() << endl;
+            cout << this->m_cols << " vs. " << this->m_bufferGPU->GetNumCols() << endl;
+            cout << "REALLOC!" << endl;
+            this->m_rows = this->m_bufferGPU->GetNumRows();
+            this->m_cols = this->m_bufferGPU->GetNumCols();
+            this->m_bytes = this->m_rows*this->m_cols*sizeof(ElemType);
+            cout << this->m_rows << " vs. " << this->m_bufferGPU->GetNumRows() << endl;
+            cout << this->m_cols << " vs. " << this->m_bufferGPU->GetNumCols() << endl;
+            cout << this->m_bytes << " vs. " << this->m_bufferGPU->BufferSize() << endl;
+            cout << "REALLOC2!" << endl;
+            allocatePinnedBuffer();
+       }
+
     CUDA_CALL(cudaMemcpyAsync(this->m_bufferCPU, this->m_bufferGPU->Data(), this->m_bytes, cudaMemcpyDefault, this->m_streamAsync));
 }
+
+
 
 template void SwapOutAction<double>::EndAction();
 template void SwapOutAction<float>::EndAction();
@@ -55,9 +79,12 @@ template <typename ElemType> void SwapOutAction<ElemType>::EndAction()
     CUDA_CALL(cudaStreamSynchronize(m_streamAsync));
     this->m_rows = this->m_bufferGPU->GetNumRows();
     this->m_cols = this->m_bufferGPU->GetNumCols();
-    this->m_bufferGPU->Resize(0,0);
+    this->m_bytes = this->m_rows*this->m_cols*sizeof(ElemType);
+    this->m_bufferGPU->Resize(0,0,0, false);
     //ElemType *data = this->m_bufferGPU->Data();
     //CUDA_CALL(cudaFree(data));
+    cout << "Swapped out: " << this->m_bufferGPU << ", " << this->m_rows*this->m_cols*sizeof(ElemType)/1024./1024./1024. << "GB" << endl;
+    m_hasDoneInitialSwap = true;
 
 }
 
