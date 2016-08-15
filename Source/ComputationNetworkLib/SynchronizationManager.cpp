@@ -36,6 +36,7 @@ template <typename ElemType> SynchronizationManager<ElemType>* SynchronizationMa
         SynchronizationManager<ElemType>::s_synchronizationManager->m_currentStepNumber = 0;
         SynchronizationManager<ElemType>::s_synchronizationManager->m_currentIteration = 0;
         SynchronizationManager<ElemType>::s_synchronizationManager->m_maxStepNumber = 0;
+        SynchronizationManager<ElemType>::s_synchronizationManager->m_maxTimestep = 0;
         SynchronizationManager<ElemType>::s_synchronizationManager->m_GBFreed = 0.0f;
         SynchronizationManager<ElemType>::s_synchronizationManager->m_timer = CUDATimer();
         SynchronizationManager<ElemType>::s_synchronizationManager->m_isExecuting = false;
@@ -223,132 +224,147 @@ template<typename ElemType> void SynchronizationManager<ElemType>::BeginSynchron
 #ifndef CPUONLY
 	if(!m_useMemorySwapping){ return; }
 
-    size_t free, total;
-    CUDA_CALL(cudaMemGetInfo(&free, &total));
+    int stepNumber = DetermineCurrentTimestep(node);
+    cout << stepNumber << endl;
 
-    cout << "FREE MEMORY: " << free/1024.0f/1024.0f/1024.0f << endl;
-
-
-    if(node->ValuePtr() != NULL)
+    std::vector<SyncAction<ElemType>*> actionsToDo = isForward ? m_stepNumber2Actions[stepNumber] : m_stepNumber2ActionsBackprop[stepNumber];
+    for (int i = 0; i < actionsToDo.size(); i++)
     {
-        Matrix<ElemType> *buffer = (Matrix<ElemType>*)node->ValuePtr().get();
-
-        //if(isForward)
-        //    m_forwardGraph[buffer] << endl;
+           // criteron, evaluation and input nodes do not have a MB layout?
+           // does not make sense to free those anyway
+           actionsToDo[i]->BeginAction();
     }
 
-    if(!m_isExecuting)
-    {
-        bool allStatsGathered = false;
-        std::string name = GetStepName(node, isForward);
-
-        // the stats gathering ends when we are back at stepNumber 0, that is in the forward pass
-        if(m_stepName2StepNumber.count(name) > 0)
-            if(m_stepName2StepNumber[name] == 0 && isForward == true)
-            {
-                m_currentIteration += 1;
-                //cout << "CURRENT ITERATION: " << m_currentIteration << endl;
-                if(m_maxStepNumber == 0)
-                    m_maxStepNumber = m_currentStepNumber;
-
-                //float t = m_timer.tock("swap");
-                //cout << t << endl;
-            }
-
-        
-        //if(m_currentIteration == SampleSize() + 1)
-            //allStatsGathered = true;
-        //if(!allStatsGathered || !m_isInTrainingMode)
-        if(!allStatsGathered)
-        {
-            RegisterBuffers(node, isForward);
 
 
-            int stepNumber = m_stepName2StepNumber[name];
-            //SwapInFreedBuffers(GetStepNumber(stepNumber,-1));
-            //SwapInFreedBuffers(stepNumber);
-            //SwapInFreedBuffers(GetStepNumber(stepNumber,1));
-            SwapInFreedBuffers(node, isForward);
+    //size_t free, total;
+    //CUDA_CALL(cudaMemGetInfo(&free, &total));
+
+    //cout << "FREE MEMORY: " << free/1024.0f/1024.0f/1024.0f << endl;
+
+    //cout << "current timestep: " << DetermineCurrentTimestep(node) << endl;
 
 
+    //if(node->ValuePtr() != NULL)
+    //{
+    //    Matrix<ElemType> *buffer = (Matrix<ElemType>*)node->ValuePtr().get();
+
+    //    //if(isForward)
+    //    //    m_forwardGraph[buffer] << endl;
+    //}
+
+    //if(!m_isExecuting)
+    //{
+    //    bool allStatsGathered = false;
+    //    std::string name = GetStepName(node, isForward);
+
+    //    // the stats gathering ends when we are back at stepNumber 0, that is in the forward pass
+    //    if(m_stepName2StepNumber.count(name) > 0)
+    //        if(m_stepName2StepNumber[name] == 0 && isForward == true)
+    //        {
+    //            m_currentIteration += 1;
+    //            //cout << "CURRENT ITERATION: " << m_currentIteration << endl;
+    //            if(m_maxStepNumber == 0)
+    //                m_maxStepNumber = m_currentStepNumber;
+
+    //            //float t = m_timer.tock("swap");
+    //            //cout << t << endl;
+    //        }
+
+    //    
+    //    //if(m_currentIteration == SampleSize() + 1)
+    //        //allStatsGathered = true;
+    //    //if(!allStatsGathered || !m_isInTrainingMode)
+    //    if(!allStatsGathered)
+    //    {
+    //        RegisterBuffers(node, isForward);
 
 
-
-            //int inputCount = node->GetNumInputs();
-            //std::string name = GetStepName(node, isForward);
-            //for(int i = 0; i < inputCount; i++)
-            //{
-
-            //   if(node->Input(i)->ValuePtr() == NULL){ continue; }
-            //   Matrix<ElemType> *buffer = (Matrix<ElemType>*)node->Input(i)->ValuePtr().get();
-            //   if((buffer->GetDataLocation() != CurrentDataLocation::GPU &&
-            //      buffer->GetDataLocation() != CurrentDataLocation::BOTH) ||
-            //      buffer->GetMatrixType() != MatrixType::DENSE)
-            //        { continue; }
-
-            //   
-            //   cout << "NEEDED: " << buffer->GetNumRows() << "x" << buffer->GetNumCols() << endl;
-            //}
-
-
-            //if(node->ValuePtr() != NULL)
-            //{
-            //    Matrix<ElemType> *buffer = (Matrix<ElemType>*)node->ValuePtr().get();
-
-            //    if(!((buffer->GetDataLocation() != CurrentDataLocation::GPU &&
-            //          buffer->GetDataLocation() != CurrentDataLocation::BOTH) ||
-            //          buffer->GetMatrixType() != MatrixType::DENSE))
-            //    {
-
-            //           cout << "NEEDED: " << buffer->GetNumRows() << "x" << buffer->GetNumCols() << endl;
-            //    }
-            //}
-
-
-
-            //if(node->GradientPtr() != NULL)
-            //{
-            //    Matrix<ElemType> *buffer = (Matrix<ElemType>*)node->GradientPtr().get();
-
-            //    if(!((buffer->GetDataLocation() != CurrentDataLocation::GPU &&
-            //          buffer->GetDataLocation() != CurrentDataLocation::BOTH) ||
-            //          buffer->GetMatrixType() != MatrixType::DENSE))
-            //    {
-
-            //           cout << "NEEDED: " << buffer->GetNumRows() << "x" << buffer->GetNumCols() << endl;
-            //    }
-            //}
+    //        int stepNumber = m_stepName2StepNumber[name];
+    //        //SwapInFreedBuffers(GetStepNumber(stepNumber,-1));
+    //        //SwapInFreedBuffers(stepNumber);
+    //        //SwapInFreedBuffers(GetStepNumber(stepNumber,1));
+    //        SwapInFreedBuffers(node, isForward);
 
 
 
 
 
+    //        //int inputCount = node->GetNumInputs();
+    //        //std::string name = GetStepName(node, isForward);
+    //        //for(int i = 0; i < inputCount; i++)
+    //        //{
 
-            MeasureSwapTime(node, isForward);
-            GatherRuntimeStatistics(node, idx, fr, isForward, true);
-        }
-        else
-        {
-            //CleanUp(); // release all cpu memory that was used in the dry run
-            //FindSwapOrder();
-            //m_isExecuting = true;
-        }
-    }
+    //        //   if(node->Input(i)->ValuePtr() == NULL){ continue; }
+    //        //   Matrix<ElemType> *buffer = (Matrix<ElemType>*)node->Input(i)->ValuePtr().get();
+    //        //   if((buffer->GetDataLocation() != CurrentDataLocation::GPU &&
+    //        //      buffer->GetDataLocation() != CurrentDataLocation::BOTH) ||
+    //        //      buffer->GetMatrixType() != MatrixType::DENSE)
+    //        //        { continue; }
 
-    if(m_isExecuting)
-    {
-        std::string name = GetStepName(node, isForward);
-        int stepNumber = m_stepName2StepNumber[name];
-        std::vector<SyncAction<ElemType>*> actionsToDo = m_stepNumber2Actions[stepNumber];
-        for (int i = 0; i < actionsToDo.size(); i++)
-        {
-               // criteron, evaluation and input nodes do not have a MB layout?
-               // does not make sense to free those anyway
-               if(node->HasMBLayout()) 
-                   actionsToDo[i]->BeginAction();
-        }
+    //        //   
+    //        //   cout << "NEEDED: " << buffer->GetNumRows() << "x" << buffer->GetNumCols() << endl;
+    //        //}
 
-    }
+
+    //        //if(node->ValuePtr() != NULL)
+    //        //{
+    //        //    Matrix<ElemType> *buffer = (Matrix<ElemType>*)node->ValuePtr().get();
+
+    //        //    if(!((buffer->GetDataLocation() != CurrentDataLocation::GPU &&
+    //        //          buffer->GetDataLocation() != CurrentDataLocation::BOTH) ||
+    //        //          buffer->GetMatrixType() != MatrixType::DENSE))
+    //        //    {
+
+    //        //           cout << "NEEDED: " << buffer->GetNumRows() << "x" << buffer->GetNumCols() << endl;
+    //        //    }
+    //        //}
+
+
+
+    //        //if(node->GradientPtr() != NULL)
+    //        //{
+    //        //    Matrix<ElemType> *buffer = (Matrix<ElemType>*)node->GradientPtr().get();
+
+    //        //    if(!((buffer->GetDataLocation() != CurrentDataLocation::GPU &&
+    //        //          buffer->GetDataLocation() != CurrentDataLocation::BOTH) ||
+    //        //          buffer->GetMatrixType() != MatrixType::DENSE))
+    //        //    {
+
+    //        //           cout << "NEEDED: " << buffer->GetNumRows() << "x" << buffer->GetNumCols() << endl;
+    //        //    }
+    //        //}
+
+
+
+
+
+
+    //        MeasureSwapTime(node, isForward);
+    //        GatherRuntimeStatistics(node, idx, fr, isForward, true);
+    //    }
+    //    else
+    //    {
+    //        //CleanUp(); // release all cpu memory that was used in the dry run
+    //        //FindSwapOrder();
+    //        //m_isExecuting = true;
+    //    }
+    //}
+
+    //if(m_isExecuting)
+    //{
+    //    std::string name = GetStepName(node, isForward);
+    //    int stepNumber = m_stepName2StepNumber[name];
+    //    std::vector<SyncAction<ElemType>*> actionsToDo = m_stepNumber2Actions[stepNumber];
+    //    for (int i = 0; i < actionsToDo.size(); i++)
+    //    {
+    //           // criteron, evaluation and input nodes do not have a MB layout?
+    //           // does not make sense to free those anyway
+    //           if(node->HasMBLayout()) 
+    //               actionsToDo[i]->BeginAction();
+    //    }
+
+    //}
 #endif
 }
 
@@ -360,28 +376,40 @@ template<typename ElemType> void SynchronizationManager<ElemType>::EndSynchroniz
 #ifndef CPUONLY
 	if(!m_useMemorySwapping){ return; }
 
-    if(!m_isExecuting)
-    {
-        // end synchronize is called after the forward / backward pass, thus we can free
-        // the memory now
-        GatherRuntimeStatistics(node, idx, fr, isForward, false);
-        FreeBuffersForDryRun(node, isForward);
-    }
-    else
-    {
-        std::string name = GetStepName(node, isForward);
-        int stepNumber = m_stepName2StepNumber[name];
-        std::vector<SyncAction<ElemType>*> actionsToDo = m_stepNumber2Actions[stepNumber];
-        if (actionsToDo.size() == 0){ return; }
 
-        for (int i = 0; i < actionsToDo.size(); i++)
-        {
+    int stepNumber = DetermineCurrentTimestep(node);
+    std::vector<SyncAction<ElemType>*> actionsToDo = isForward ? m_stepNumber2Actions[stepNumber] : m_stepNumber2ActionsBackprop[stepNumber];
+    for (int i = 0; i < actionsToDo.size(); i++)
+    {
            // criteron, evaluation and input nodes do not have a MB layout?
            // does not make sense to free those anyway
-           if(node->HasMBLayout()) 
-                actionsToDo[i]->EndAction();
-        }
+           actionsToDo[i]->EndAction();
     }
+
+
+
+    //if(!m_isExecuting)
+    //{
+    //    // end synchronize is called after the forward / backward pass, thus we can free
+    //    // the memory now
+    //    GatherRuntimeStatistics(node, idx, fr, isForward, false);
+    //    FreeBuffersForDryRun(node, isForward);
+    //}
+    //else
+    //{
+    //    std::string name = GetStepName(node, isForward);
+    //    int stepNumber = m_stepName2StepNumber[name];
+    //    std::vector<SyncAction<ElemType>*> actionsToDo = m_stepNumber2Actions[stepNumber];
+    //    if (actionsToDo.size() == 0){ return; }
+
+    //    for (int i = 0; i < actionsToDo.size(); i++)
+    //    {
+    //       // criteron, evaluation and input nodes do not have a MB layout?
+    //       // does not make sense to free those anyway
+    //       if(node->HasMBLayout()) 
+    //            actionsToDo[i]->EndAction();
+    //    }
+    //}
 #endif
 }
 
@@ -763,30 +791,112 @@ template<typename ElemType> void SynchronizationManager<ElemType>::GatherRuntime
 }
 
 template void SynchronizationManager<double>::InitializeSwapping(
-                          std::unordered_map<int, std::set<Matrix<double>*> > forwardGraph,
-                          std::unordered_map<int, std::set<Matrix<double>*> > backwardGraph);
+                          std::unordered_map<Matrix<double>*, std::vector<int> > buffer2Timesteps,
+                          std::unordered_map<int, std::vector<Matrix<double>*> > timesteps2Buffers,
+                          std::unordered_map<Matrix<double>*, bool> buffer2IsNeededDuringBackprop);
 template void SynchronizationManager<float>::InitializeSwapping(
-                          std::unordered_map<int, std::set<Matrix<float>*> > forwardGraph,
-                          std::unordered_map<int, std::set<Matrix<float>*> > backwardGraph);
+                          std::unordered_map<Matrix<float>*, std::vector<int> > buffer2Timesteps,
+                          std::unordered_map<int, std::vector<Matrix<float>*> > timesteps2Buffers,
+                          std::unordered_map<Matrix<float>*, bool>  buffer2IsNeededDuringBackprop);
 template <typename ElemType> void SynchronizationManager<ElemType>::InitializeSwapping(
-                          std::unordered_map<int, std::set<Matrix<ElemType>*> > forwardGraph,
-                          std::unordered_map<int, std::set<Matrix<ElemType>*> > backwardGraph)
+                          std::unordered_map<Matrix<ElemType>*, std::vector<int> > buffer2Timesteps,
+                          std::unordered_map<int, std::vector<Matrix<ElemType>*> > timesteps2Buffers,
+                          std::unordered_map<Matrix<ElemType>*, bool> buffer2IsNeededDuringBackprop)
 {
-    //m_forwardGraph(forwardGraph.begin(), forwardGraph.end());
-    //std::unordered_map<Matrix<ElemType>*, int> firstUsageForward;
-    //std::unordered_map<Matrix<ElemType>*, int> firstUsageBackward;
-    //std::unordered_map<Matrix<ElemType>*, int> lastUsageForward;
-    //std::unordered_map<Matrix<ElemType>*, int> lastUsageBackward;
-    //std::unordered_map<Matrix<ElemType>*, vector<int> > buffer2TimeSteps;
 
-    //for(std::pair<int, std::set<Matrix<ElemType> *> > pair : forwardGraph)
-    //{
-    //    for(auto buffer : pair.second)
-    //    {
-    //        if(firstUsageForward
-    //    }
-    //}
-    //m_backwardGraph = backwardGraph;
+    int maxTimestep = -1;
+    for(auto pair : timesteps2Buffers)
+        maxTimestep = pair.first > maxTimestep ? pair.first : maxTimestep;
+
+    int maxSwapTimeStep = maxTimestep - 2;
+
+    m_maxTimestep = maxTimestep;
+    m_buffer2Timesteps = buffer2Timesteps;
+    m_timestep2Buffers = timesteps2Buffers;
+    m_buffer2IsUsedInBackprop = buffer2IsNeededDuringBackprop;
+
+    for(auto pair : m_bannedBuffers2bool)
+        cout << "BANNED: " << pair.first << endl;
+
+    for(auto pair : timesteps2Buffers) // int, vector<buffer>
+    {
+        for(auto buffer : pair.second)
+        {
+            if(m_bannedBuffers2bool.count(buffer) > 0){ continue; }
+            // we do not swap the first 2 and last 2 layers
+            if(pair.first+3 >= m_maxTimestep ||
+               pair.first-3 <= 0)
+                   continue;
+
+            int lastUsage = -1;
+            int earliestUsage = 99999999;
+            if(buffer2Timesteps[buffer].size() > 1)
+            {
+                cout << "MULTI-USE: " << buffer << endl;
+                for(auto timeStep : buffer2Timesteps[buffer])
+                {
+                    lastUsage = timeStep > lastUsage ? timeStep : lastUsage;
+                    earliestUsage = timeStep < earliestUsage ? timeStep : earliestUsage;
+                }
+
+                if(lastUsage != pair.first){ continue; }
+            }
+            else
+            {
+                lastUsage = pair.first;
+                earliestUsage = pair.first;
+            }
+
+
+            cout << "buffer: " << buffer << ", last usage: " << lastUsage << ", earliestUsage: " << earliestUsage << endl;
+
+
+            SwapOutAction<ElemType> *out = new SwapOutAction<ElemType>(buffer);
+            SwapInAction<ElemType> *in =  new SwapInAction<ElemType>(out, out->GetGPUMatrix());
+            m_buffer2SwapOut[buffer] = out;
+            m_buffer2SwapIn[buffer] = in;
+            if(m_buffer2IsUsedInBackprop.count(buffer) > 0)
+            {
+                m_stepNumber2Actions[lastUsage+2].push_back(out); 
+                m_stepNumber2Actions[m_maxTimestep - 1].push_back(in); // swap in before backprop
+                cout << "forward: swap out: " << buffer << " at timestep " << lastUsage+3 << endl;
+                cout << "forward: swap in: " << buffer << " at timestep " << m_maxTimestep-1 << endl;
+            }
+            else
+            {
+                // forward
+                m_stepNumber2Actions[lastUsage+2].push_back(out); 
+                m_stepNumber2Actions[earliestUsage - 2].push_back(in); 
+                cout << "forward: swap out: " << buffer << " at timestep " << lastUsage+2 << endl;
+                cout << "forward: swap in: " << buffer << " at timestep " << earliestUsage-2 << endl;
+                // backward
+                m_stepNumber2ActionsBackprop[lastUsage+3].push_back(in);
+                m_stepNumber2ActionsBackprop[earliestUsage-3].push_back(out);
+                cout << "backward: swap out: " << buffer << " at timestep " << earliestUsage-3 << endl;
+                cout << "backward: swap in: " << buffer << " at timestep " << lastUsage+3 << endl;
+            }
+
+            
+
+        }
+    }
+
+
+}
+
+
+template int SynchronizationManager<double>::DetermineCurrentTimestep(ComputationNodeBase *node);
+template int SynchronizationManager<float>::DetermineCurrentTimestep(ComputationNodeBase *node);
+template <typename ElemType> int SynchronizationManager<ElemType>::DetermineCurrentTimestep(ComputationNodeBase *node)
+{
+    if(node->ValuePtr() == NULL){ return -1; }
+    Matrix<ElemType>* buffer = (Matrix<ElemType>*)node->ValuePtr().get();
+    if(m_buffer2Timesteps.count(buffer) == 0){ return -1; }
+    if(m_buffer2Timesteps.count(buffer) == 1){ return m_buffer2Timesteps[buffer].front(); }
+    
+    std::cout << "USED MORE THAN ONCE" << std::endl;
+
+    return -1;
 
 }
 

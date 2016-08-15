@@ -8,14 +8,16 @@
 #include "SwapInAction.h"
 #include "SwapOutAction.h"
 #include "GPUMatrix.h"
+#include <iostream>
 
 #ifndef CPUONLY
     #include <cuda.h>
 #endif
 
-
-
 namespace Microsoft { namespace MSR { namespace CNTK {
+
+using std::cout;
+using std::endl;
 
 template SwapInAction<float>::SwapInAction(SwapOutAction<float> *swpout, Matrix<float> *GPUBuffer);
 template SwapInAction<double>::SwapInAction(SwapOutAction<double> *swpout, Matrix<double> *GPUBuffer);
@@ -39,17 +41,41 @@ template void SwapInAction<float>::BeginAction();
 template void SwapInAction<double>::BeginAction();
 template <typename ElemType> void SwapInAction<ElemType>::BeginAction()
 {
-   this->m_bufferGPU->Resize(this->m_swpout->GetRows(),this->m_swpout->GetCols());
-   //size_t bytes = this->m_swpout->GetRows()*this->m_swpout->GetCols()*sizeof(ElemType);
-   //ElemType *ptr = this->m_bufferGPU->Data();
+   if(!this->m_swpout->m_hasDoneInitialSwap){ return; }
+
+   this->m_bufferGPU->Resize(this->m_swpout->GetRows(),this->m_swpout->GetCols(), 0, false);
+   size_t bytes = this->m_swpout->GetRows()*this->m_swpout->GetCols()*sizeof(ElemType);
+
+   //cudaPointerAttributes bla;
+   //ElemType *ptr = this->m_bufferGPU->FullData();
+   //ElemType *ptr;
    //CUDA_CALL(cudaMalloc((void**)&ptr, bytes));
-   CUDA_CALL(cudaMemcpyAsync(this->m_bufferGPU->Data(), this->m_bufferCPU, this->m_bytes, cudaMemcpyDefault, this->m_swapInStream));
+   //ElemType *data = this->m_bufferGPU->Data();
+   //CUDA_CALL(cudaMemcpy(&(data[0]), ptr, bytes, cudaMemcpyDefault));
+   //cout << ptr << data << endl;
+   //cout << ptr << this->m_bufferGPU->FullData() << endl;
+   //CUDA_CALL(cudaMalloc(&ptr, bytes));
+   //cout << ptr << this->m_bufferGPU->FullData() << endl;
+   //cout << ptr << this->m_bufferGPU->FullData() << endl;
+   //CUDA_CALL(cudaPointerGetAttributes(&bla, this->m_bufferGPU->FullData()));
+   //cout << bla.devicePointer << " " << bla.hostPointer << endl;
+   //CUDA_CALL(cudaPointerGetAttributes(&bla, ptr));
+   //cout << bla.devicePointer << " " << bla.hostPointer << endl;
+
+
+   CUDA_CALL(cudaMemcpyAsync(this->m_bufferGPU->Data(), this->m_swpout->GetCPUMatrix(), bytes, cudaMemcpyDefault, this->m_swapInStream));
+   cout << "begin swapping in" << endl;
 }
 
 
 template void SwapInAction<double>::EndAction();
 template void SwapInAction<float>::EndAction();
-template <typename ElemType> void SwapInAction<ElemType>::EndAction(){ CUDA_CALL(cudaStreamSynchronize(this->m_swapInStream)); }
+template <typename ElemType> void SwapInAction<ElemType>::EndAction()
+{
+    if(!this->m_swpout->m_hasDoneInitialSwap){ return; }
+    CUDA_CALL(cudaStreamSynchronize(this->m_swapInStream));
+    cout << "Swapped in: " << this->m_bufferGPU << ", " << this->m_rows*this->m_cols*sizeof(ElemType)/1024./1024./1024. << "GB" << endl;
+}
 
 
 }}}

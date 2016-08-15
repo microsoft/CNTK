@@ -265,11 +265,10 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                                                      node->Value().GetNumCols(),
                                                      net->GetDeviceId()));
 
-        cout << "PRE BANNED: " << smoothedGradients.back().GetNumRows() << "x" << smoothedGradients.back().GetNumCols() << endl;
-        sync->m_bannedBuffers2bool[&(smoothedGradients.back())] = true;
+       sync->m_bannedBuffers2bool[&(smoothedGradients.back())] = true;
         sync->m_bannedBuffers2bool[(Matrix<ElemType>*)node->ValuePtr().get()] = true;
 
-        cout << "BANNED: " << smoothedGradients.back().GetNumRows() << "x" << smoothedGradients.back().GetNumCols() << endl;
+        cout << "BANNED: " << &smoothedGradients.back() << ", " << smoothedGradients.back().GetNumRows() << "x" << smoothedGradients.back().GetNumCols() << endl;
     }
 
     std::map<const ComputationNodeBasePtr, std::list<ComputationNodeBasePtr>> allLearnableNodes = net->GetLearnableParameters();
