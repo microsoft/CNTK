@@ -3476,42 +3476,43 @@ namespace Swig {
 #define SWIGTYPE_p___int64 swig_types[21]
 #define SWIGTYPE_p_allocator_type swig_types[22]
 #define SWIGTYPE_p_char swig_types[23]
-#define SWIGTYPE_p_difference_type swig_types[24]
-#define SWIGTYPE_p_double swig_types[25]
-#define SWIGTYPE_p_float swig_types[26]
-#define SWIGTYPE_p_int swig_types[27]
-#define SWIGTYPE_p_long swig_types[28]
-#define SWIGTYPE_p_p_char swig_types[29]
-#define SWIGTYPE_p_p_unsigned_long swig_types[30]
-#define SWIGTYPE_p_short swig_types[31]
-#define SWIGTYPE_p_signed___int64 swig_types[32]
-#define SWIGTYPE_p_signed_char swig_types[33]
-#define SWIGTYPE_p_size_type swig_types[34]
-#define SWIGTYPE_p_std__initializer_listT_size_t_t swig_types[35]
-#define SWIGTYPE_p_std__invalid_argument swig_types[36]
-#define SWIGTYPE_p_std__shared_ptrT_CNTK__BackPropState_t swig_types[37]
-#define SWIGTYPE_p_std__shared_ptrT_CNTK__Function_t swig_types[38]
-#define SWIGTYPE_p_std__shared_ptrT_CNTK__Learner_t swig_types[39]
-#define SWIGTYPE_p_std__shared_ptrT_CNTK__MinibatchSource_t swig_types[40]
-#define SWIGTYPE_p_std__shared_ptrT_CNTK__NDArrayView_t swig_types[41]
-#define SWIGTYPE_p_std__shared_ptrT_CNTK__NDMask_t swig_types[42]
-#define SWIGTYPE_p_std__shared_ptrT_CNTK__Value_t swig_types[43]
-#define SWIGTYPE_p_std__unordered_mapT_CNTK__Parameter_std__shared_ptrT_CNTK__NDArrayView_t_t swig_types[44]
-#define SWIGTYPE_p_std__unordered_mapT_CNTK__Placeholder_CNTK__Variable_t swig_types[45]
-#define SWIGTYPE_p_std__unordered_setT_CNTK__Parameter_t swig_types[46]
-#define SWIGTYPE_p_std__unordered_setT_std__shared_ptrT_CNTK__Learner_t_t swig_types[47]
-#define SWIGTYPE_p_std__vectorT_CNTK__Axis_std__allocatorT_CNTK__Axis_t_t swig_types[48]
-#define SWIGTYPE_p_std__vectorT_bool_std__allocatorT_bool_t_t swig_types[49]
-#define SWIGTYPE_p_swig__SwigPyIterator swig_types[50]
-#define SWIGTYPE_p_unsigned___int64 swig_types[51]
-#define SWIGTYPE_p_unsigned_char swig_types[52]
-#define SWIGTYPE_p_unsigned_int swig_types[53]
-#define SWIGTYPE_p_unsigned_long swig_types[54]
-#define SWIGTYPE_p_unsigned_short swig_types[55]
-#define SWIGTYPE_p_value_type swig_types[56]
-#define SWIGTYPE_p_wchar_t swig_types[57]
-static swig_type_info *swig_types[59];
-static swig_module_info swig_module = {swig_types, 58, 0, 0, 0, 0};
+#define SWIGTYPE_p_const_reference swig_types[24]
+#define SWIGTYPE_p_difference_type swig_types[25]
+#define SWIGTYPE_p_double swig_types[26]
+#define SWIGTYPE_p_float swig_types[27]
+#define SWIGTYPE_p_int swig_types[28]
+#define SWIGTYPE_p_long swig_types[29]
+#define SWIGTYPE_p_p_char swig_types[30]
+#define SWIGTYPE_p_p_unsigned_long swig_types[31]
+#define SWIGTYPE_p_reference swig_types[32]
+#define SWIGTYPE_p_short swig_types[33]
+#define SWIGTYPE_p_signed___int64 swig_types[34]
+#define SWIGTYPE_p_signed_char swig_types[35]
+#define SWIGTYPE_p_size_type swig_types[36]
+#define SWIGTYPE_p_std__initializer_listT_size_t_t swig_types[37]
+#define SWIGTYPE_p_std__invalid_argument swig_types[38]
+#define SWIGTYPE_p_std__shared_ptrT_CNTK__BackPropState_t swig_types[39]
+#define SWIGTYPE_p_std__shared_ptrT_CNTK__Function_t swig_types[40]
+#define SWIGTYPE_p_std__shared_ptrT_CNTK__Learner_t swig_types[41]
+#define SWIGTYPE_p_std__shared_ptrT_CNTK__MinibatchSource_t swig_types[42]
+#define SWIGTYPE_p_std__shared_ptrT_CNTK__NDArrayView_t swig_types[43]
+#define SWIGTYPE_p_std__shared_ptrT_CNTK__NDMask_t swig_types[44]
+#define SWIGTYPE_p_std__shared_ptrT_CNTK__Value_t swig_types[45]
+#define SWIGTYPE_p_std__unordered_mapT_CNTK__Parameter_std__shared_ptrT_CNTK__NDArrayView_t_t swig_types[46]
+#define SWIGTYPE_p_std__unordered_mapT_CNTK__Placeholder_CNTK__Variable_t swig_types[47]
+#define SWIGTYPE_p_std__unordered_setT_CNTK__Parameter_t swig_types[48]
+#define SWIGTYPE_p_std__unordered_setT_std__shared_ptrT_CNTK__Learner_t_t swig_types[49]
+#define SWIGTYPE_p_std__vectorT_CNTK__Axis_std__allocatorT_CNTK__Axis_t_t swig_types[50]
+#define SWIGTYPE_p_swig__SwigPyIterator swig_types[51]
+#define SWIGTYPE_p_unsigned___int64 swig_types[52]
+#define SWIGTYPE_p_unsigned_char swig_types[53]
+#define SWIGTYPE_p_unsigned_int swig_types[54]
+#define SWIGTYPE_p_unsigned_long swig_types[55]
+#define SWIGTYPE_p_unsigned_short swig_types[56]
+#define SWIGTYPE_p_value_type swig_types[57]
+#define SWIGTYPE_p_wchar_t swig_types[58]
+static swig_type_info *swig_types[60];
+static swig_module_info swig_module = {swig_types, 59, 0, 0, 0, 0};
 #define SWIG_TypeQuery(name) SWIG_TypeQueryModule(&swig_module, &swig_module, name)
 #define SWIG_MangledTypeQuery(name) SWIG_MangledTypeQueryModule(&swig_module, &swig_module, name)
 
@@ -5741,6 +5742,36 @@ SWIGINTERN size_t const CNTK_Placeholder___hash__(CNTK::Placeholder *self){
 	  typedef pointer_category category;
 	  static const char* type_name() {
 	    return "std::vector<" "CNTK::Variable" "," "std::allocator< CNTK::Variable >" " >";
+	  }
+	};
+      }
+    
+
+namespace swig {
+  template <> struct traits< bool > {
+    typedef value_category category;
+    static const char* type_name() { return"bool"; }
+  };
+  template <>  struct traits_asval< bool > {
+    typedef bool value_type;
+    static int asval(PyObject *obj, value_type *val) {
+      return SWIG_AsVal_bool (obj, val);
+    }
+  };
+  template <>  struct traits_from< bool > {
+    typedef bool value_type;
+    static PyObject *from(const value_type& val) {
+      return SWIG_From_bool  (val);
+    }
+  };
+}
+
+
+      namespace swig {
+	template <>  struct traits<std::vector<bool, std::allocator< bool > > > {
+	  typedef value_category category;
+	  static const char* type_name() {
+	    return "std::vector<bool, std::allocator< bool > >";
 	  }
 	};
       }
@@ -25692,10 +25723,8 @@ SWIGINTERN PyObject *_wrap_convolution__SWIG_0(PyObject *SWIGUNUSEDPARM(self), P
   int res1 = 0 ;
   void *argp2 = 0 ;
   int res2 = 0 ;
-  void *argp4 = 0 ;
-  int res4 = 0 ;
-  void *argp5 = 0 ;
-  int res5 = 0 ;
+  int res4 = SWIG_OLDOBJ ;
+  int res5 = SWIG_OLDOBJ ;
   bool val8 ;
   int ecode8 = 0 ;
   size_t val9 ;
@@ -25743,22 +25772,28 @@ SWIGINTERN PyObject *_wrap_convolution__SWIG_0(PyObject *SWIGUNUSEDPARM(self), P
       SWIG_exception(SWIG_TypeError, "tuple expected");
     }
   }
-  res4 = SWIG_ConvertPtr(obj3, &argp4, SWIGTYPE_p_std__vectorT_bool_std__allocatorT_bool_t_t,  0  | 0);
-  if (!SWIG_IsOK(res4)) {
-    SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "convolution" "', argument " "4"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+  {
+    std::vector<bool,std::allocator< bool > > *ptr = (std::vector<bool,std::allocator< bool > > *)0;
+    res4 = swig::asptr(obj3, &ptr);
+    if (!SWIG_IsOK(res4)) {
+      SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "convolution" "', argument " "4"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+    }
+    if (!ptr) {
+      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "convolution" "', argument " "4"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+    }
+    arg4 = ptr;
   }
-  if (!argp4) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "convolution" "', argument " "4"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+  {
+    std::vector<bool,std::allocator< bool > > *ptr = (std::vector<bool,std::allocator< bool > > *)0;
+    res5 = swig::asptr(obj4, &ptr);
+    if (!SWIG_IsOK(res5)) {
+      SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "convolution" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+    }
+    if (!ptr) {
+      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "convolution" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+    }
+    arg5 = ptr;
   }
-  arg4 = reinterpret_cast< std::vector< bool,std::allocator< bool > > * >(argp4);
-  res5 = SWIG_ConvertPtr(obj4, &argp5, SWIGTYPE_p_std__vectorT_bool_std__allocatorT_bool_t_t,  0  | 0);
-  if (!SWIG_IsOK(res5)) {
-    SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "convolution" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
-  }
-  if (!argp5) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "convolution" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
-  }
-  arg5 = reinterpret_cast< std::vector< bool,std::allocator< bool > > * >(argp5);
   {
     if (PyTuple_Check(obj5)) {
       std::vector<size_t> dimensions;;
@@ -25830,9 +25865,13 @@ SWIGINTERN PyObject *_wrap_convolution__SWIG_0(PyObject *SWIGUNUSEDPARM(self), P
     std::shared_ptr<  CNTK::Function > *smartresult = result ? new std::shared_ptr<  CNTK::Function >(result) : 0;
     resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(smartresult), SWIGTYPE_p_std__shared_ptrT_CNTK__Function_t, SWIG_POINTER_OWN);
   }
+  if (SWIG_IsNewObj(res4)) delete arg4;
+  if (SWIG_IsNewObj(res5)) delete arg5;
   if (SWIG_IsNewObj(res10)) delete arg10;
   return resultobj;
 fail:
+  if (SWIG_IsNewObj(res4)) delete arg4;
+  if (SWIG_IsNewObj(res5)) delete arg5;
   if (SWIG_IsNewObj(res10)) delete arg10;
   return NULL;
 }
@@ -25853,10 +25892,8 @@ SWIGINTERN PyObject *_wrap_convolution__SWIG_1(PyObject *SWIGUNUSEDPARM(self), P
   int res1 = 0 ;
   void *argp2 = 0 ;
   int res2 = 0 ;
-  void *argp4 = 0 ;
-  int res4 = 0 ;
-  void *argp5 = 0 ;
-  int res5 = 0 ;
+  int res4 = SWIG_OLDOBJ ;
+  int res5 = SWIG_OLDOBJ ;
   bool val8 ;
   int ecode8 = 0 ;
   size_t val9 ;
@@ -25902,22 +25939,28 @@ SWIGINTERN PyObject *_wrap_convolution__SWIG_1(PyObject *SWIGUNUSEDPARM(self), P
       SWIG_exception(SWIG_TypeError, "tuple expected");
     }
   }
-  res4 = SWIG_ConvertPtr(obj3, &argp4, SWIGTYPE_p_std__vectorT_bool_std__allocatorT_bool_t_t,  0  | 0);
-  if (!SWIG_IsOK(res4)) {
-    SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "convolution" "', argument " "4"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+  {
+    std::vector<bool,std::allocator< bool > > *ptr = (std::vector<bool,std::allocator< bool > > *)0;
+    res4 = swig::asptr(obj3, &ptr);
+    if (!SWIG_IsOK(res4)) {
+      SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "convolution" "', argument " "4"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+    }
+    if (!ptr) {
+      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "convolution" "', argument " "4"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+    }
+    arg4 = ptr;
   }
-  if (!argp4) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "convolution" "', argument " "4"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+  {
+    std::vector<bool,std::allocator< bool > > *ptr = (std::vector<bool,std::allocator< bool > > *)0;
+    res5 = swig::asptr(obj4, &ptr);
+    if (!SWIG_IsOK(res5)) {
+      SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "convolution" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+    }
+    if (!ptr) {
+      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "convolution" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+    }
+    arg5 = ptr;
   }
-  arg4 = reinterpret_cast< std::vector< bool,std::allocator< bool > > * >(argp4);
-  res5 = SWIG_ConvertPtr(obj4, &argp5, SWIGTYPE_p_std__vectorT_bool_std__allocatorT_bool_t_t,  0  | 0);
-  if (!SWIG_IsOK(res5)) {
-    SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "convolution" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
-  }
-  if (!argp5) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "convolution" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
-  }
-  arg5 = reinterpret_cast< std::vector< bool,std::allocator< bool > > * >(argp5);
   {
     if (PyTuple_Check(obj5)) {
       std::vector<size_t> dimensions;;
@@ -25978,8 +26021,12 @@ SWIGINTERN PyObject *_wrap_convolution__SWIG_1(PyObject *SWIGUNUSEDPARM(self), P
     std::shared_ptr<  CNTK::Function > *smartresult = result ? new std::shared_ptr<  CNTK::Function >(result) : 0;
     resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(smartresult), SWIGTYPE_p_std__shared_ptrT_CNTK__Function_t, SWIG_POINTER_OWN);
   }
+  if (SWIG_IsNewObj(res4)) delete arg4;
+  if (SWIG_IsNewObj(res5)) delete arg5;
   return resultobj;
 fail:
+  if (SWIG_IsNewObj(res4)) delete arg4;
+  if (SWIG_IsNewObj(res5)) delete arg5;
   return NULL;
 }
 
@@ -25998,10 +26045,8 @@ SWIGINTERN PyObject *_wrap_convolution__SWIG_2(PyObject *SWIGUNUSEDPARM(self), P
   int res1 = 0 ;
   void *argp2 = 0 ;
   int res2 = 0 ;
-  void *argp4 = 0 ;
-  int res4 = 0 ;
-  void *argp5 = 0 ;
-  int res5 = 0 ;
+  int res4 = SWIG_OLDOBJ ;
+  int res5 = SWIG_OLDOBJ ;
   bool val8 ;
   int ecode8 = 0 ;
   PyObject * obj0 = 0 ;
@@ -26044,22 +26089,28 @@ SWIGINTERN PyObject *_wrap_convolution__SWIG_2(PyObject *SWIGUNUSEDPARM(self), P
       SWIG_exception(SWIG_TypeError, "tuple expected");
     }
   }
-  res4 = SWIG_ConvertPtr(obj3, &argp4, SWIGTYPE_p_std__vectorT_bool_std__allocatorT_bool_t_t,  0  | 0);
-  if (!SWIG_IsOK(res4)) {
-    SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "convolution" "', argument " "4"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+  {
+    std::vector<bool,std::allocator< bool > > *ptr = (std::vector<bool,std::allocator< bool > > *)0;
+    res4 = swig::asptr(obj3, &ptr);
+    if (!SWIG_IsOK(res4)) {
+      SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "convolution" "', argument " "4"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+    }
+    if (!ptr) {
+      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "convolution" "', argument " "4"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+    }
+    arg4 = ptr;
   }
-  if (!argp4) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "convolution" "', argument " "4"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+  {
+    std::vector<bool,std::allocator< bool > > *ptr = (std::vector<bool,std::allocator< bool > > *)0;
+    res5 = swig::asptr(obj4, &ptr);
+    if (!SWIG_IsOK(res5)) {
+      SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "convolution" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+    }
+    if (!ptr) {
+      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "convolution" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+    }
+    arg5 = ptr;
   }
-  arg4 = reinterpret_cast< std::vector< bool,std::allocator< bool > > * >(argp4);
-  res5 = SWIG_ConvertPtr(obj4, &argp5, SWIGTYPE_p_std__vectorT_bool_std__allocatorT_bool_t_t,  0  | 0);
-  if (!SWIG_IsOK(res5)) {
-    SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "convolution" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
-  }
-  if (!argp5) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "convolution" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
-  }
-  arg5 = reinterpret_cast< std::vector< bool,std::allocator< bool > > * >(argp5);
   {
     if (PyTuple_Check(obj5)) {
       std::vector<size_t> dimensions;;
@@ -26115,8 +26166,12 @@ SWIGINTERN PyObject *_wrap_convolution__SWIG_2(PyObject *SWIGUNUSEDPARM(self), P
     std::shared_ptr<  CNTK::Function > *smartresult = result ? new std::shared_ptr<  CNTK::Function >(result) : 0;
     resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(smartresult), SWIGTYPE_p_std__shared_ptrT_CNTK__Function_t, SWIG_POINTER_OWN);
   }
+  if (SWIG_IsNewObj(res4)) delete arg4;
+  if (SWIG_IsNewObj(res5)) delete arg5;
   return resultobj;
 fail:
+  if (SWIG_IsNewObj(res4)) delete arg4;
+  if (SWIG_IsNewObj(res5)) delete arg5;
   return NULL;
 }
 
@@ -26134,10 +26189,8 @@ SWIGINTERN PyObject *_wrap_convolution__SWIG_3(PyObject *SWIGUNUSEDPARM(self), P
   int res1 = 0 ;
   void *argp2 = 0 ;
   int res2 = 0 ;
-  void *argp4 = 0 ;
-  int res4 = 0 ;
-  void *argp5 = 0 ;
-  int res5 = 0 ;
+  int res4 = SWIG_OLDOBJ ;
+  int res5 = SWIG_OLDOBJ ;
   PyObject * obj0 = 0 ;
   PyObject * obj1 = 0 ;
   PyObject * obj2 = 0 ;
@@ -26177,22 +26230,28 @@ SWIGINTERN PyObject *_wrap_convolution__SWIG_3(PyObject *SWIGUNUSEDPARM(self), P
       SWIG_exception(SWIG_TypeError, "tuple expected");
     }
   }
-  res4 = SWIG_ConvertPtr(obj3, &argp4, SWIGTYPE_p_std__vectorT_bool_std__allocatorT_bool_t_t,  0  | 0);
-  if (!SWIG_IsOK(res4)) {
-    SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "convolution" "', argument " "4"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+  {
+    std::vector<bool,std::allocator< bool > > *ptr = (std::vector<bool,std::allocator< bool > > *)0;
+    res4 = swig::asptr(obj3, &ptr);
+    if (!SWIG_IsOK(res4)) {
+      SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "convolution" "', argument " "4"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+    }
+    if (!ptr) {
+      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "convolution" "', argument " "4"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+    }
+    arg4 = ptr;
   }
-  if (!argp4) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "convolution" "', argument " "4"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+  {
+    std::vector<bool,std::allocator< bool > > *ptr = (std::vector<bool,std::allocator< bool > > *)0;
+    res5 = swig::asptr(obj4, &ptr);
+    if (!SWIG_IsOK(res5)) {
+      SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "convolution" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+    }
+    if (!ptr) {
+      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "convolution" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+    }
+    arg5 = ptr;
   }
-  arg4 = reinterpret_cast< std::vector< bool,std::allocator< bool > > * >(argp4);
-  res5 = SWIG_ConvertPtr(obj4, &argp5, SWIGTYPE_p_std__vectorT_bool_std__allocatorT_bool_t_t,  0  | 0);
-  if (!SWIG_IsOK(res5)) {
-    SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "convolution" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
-  }
-  if (!argp5) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "convolution" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
-  }
-  arg5 = reinterpret_cast< std::vector< bool,std::allocator< bool > > * >(argp5);
   {
     if (PyTuple_Check(obj5)) {
       std::vector<size_t> dimensions;;
@@ -26243,8 +26302,12 @@ SWIGINTERN PyObject *_wrap_convolution__SWIG_3(PyObject *SWIGUNUSEDPARM(self), P
     std::shared_ptr<  CNTK::Function > *smartresult = result ? new std::shared_ptr<  CNTK::Function >(result) : 0;
     resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(smartresult), SWIGTYPE_p_std__shared_ptrT_CNTK__Function_t, SWIG_POINTER_OWN);
   }
+  if (SWIG_IsNewObj(res4)) delete arg4;
+  if (SWIG_IsNewObj(res5)) delete arg5;
   return resultobj;
 fail:
+  if (SWIG_IsNewObj(res4)) delete arg4;
+  if (SWIG_IsNewObj(res5)) delete arg5;
   return NULL;
 }
 
@@ -26261,10 +26324,8 @@ SWIGINTERN PyObject *_wrap_convolution__SWIG_4(PyObject *SWIGUNUSEDPARM(self), P
   int res1 = 0 ;
   void *argp2 = 0 ;
   int res2 = 0 ;
-  void *argp4 = 0 ;
-  int res4 = 0 ;
-  void *argp5 = 0 ;
-  int res5 = 0 ;
+  int res4 = SWIG_OLDOBJ ;
+  int res5 = SWIG_OLDOBJ ;
   PyObject * obj0 = 0 ;
   PyObject * obj1 = 0 ;
   PyObject * obj2 = 0 ;
@@ -26303,22 +26364,28 @@ SWIGINTERN PyObject *_wrap_convolution__SWIG_4(PyObject *SWIGUNUSEDPARM(self), P
       SWIG_exception(SWIG_TypeError, "tuple expected");
     }
   }
-  res4 = SWIG_ConvertPtr(obj3, &argp4, SWIGTYPE_p_std__vectorT_bool_std__allocatorT_bool_t_t,  0  | 0);
-  if (!SWIG_IsOK(res4)) {
-    SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "convolution" "', argument " "4"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+  {
+    std::vector<bool,std::allocator< bool > > *ptr = (std::vector<bool,std::allocator< bool > > *)0;
+    res4 = swig::asptr(obj3, &ptr);
+    if (!SWIG_IsOK(res4)) {
+      SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "convolution" "', argument " "4"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+    }
+    if (!ptr) {
+      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "convolution" "', argument " "4"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+    }
+    arg4 = ptr;
   }
-  if (!argp4) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "convolution" "', argument " "4"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+  {
+    std::vector<bool,std::allocator< bool > > *ptr = (std::vector<bool,std::allocator< bool > > *)0;
+    res5 = swig::asptr(obj4, &ptr);
+    if (!SWIG_IsOK(res5)) {
+      SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "convolution" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+    }
+    if (!ptr) {
+      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "convolution" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+    }
+    arg5 = ptr;
   }
-  arg4 = reinterpret_cast< std::vector< bool,std::allocator< bool > > * >(argp4);
-  res5 = SWIG_ConvertPtr(obj4, &argp5, SWIGTYPE_p_std__vectorT_bool_std__allocatorT_bool_t_t,  0  | 0);
-  if (!SWIG_IsOK(res5)) {
-    SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "convolution" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
-  }
-  if (!argp5) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "convolution" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
-  }
-  arg5 = reinterpret_cast< std::vector< bool,std::allocator< bool > > * >(argp5);
   {
     if (PyTuple_Check(obj5)) {
       std::vector<size_t> dimensions;;
@@ -26356,8 +26423,12 @@ SWIGINTERN PyObject *_wrap_convolution__SWIG_4(PyObject *SWIGUNUSEDPARM(self), P
     std::shared_ptr<  CNTK::Function > *smartresult = result ? new std::shared_ptr<  CNTK::Function >(result) : 0;
     resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(smartresult), SWIGTYPE_p_std__shared_ptrT_CNTK__Function_t, SWIG_POINTER_OWN);
   }
+  if (SWIG_IsNewObj(res4)) delete arg4;
+  if (SWIG_IsNewObj(res5)) delete arg5;
   return resultobj;
 fail:
+  if (SWIG_IsNewObj(res4)) delete arg4;
+  if (SWIG_IsNewObj(res5)) delete arg5;
   return NULL;
 }
 
@@ -26373,10 +26444,8 @@ SWIGINTERN PyObject *_wrap_convolution__SWIG_5(PyObject *SWIGUNUSEDPARM(self), P
   int res1 = 0 ;
   void *argp2 = 0 ;
   int res2 = 0 ;
-  void *argp4 = 0 ;
-  int res4 = 0 ;
-  void *argp5 = 0 ;
-  int res5 = 0 ;
+  int res4 = SWIG_OLDOBJ ;
+  int res5 = SWIG_OLDOBJ ;
   PyObject * obj0 = 0 ;
   PyObject * obj1 = 0 ;
   PyObject * obj2 = 0 ;
@@ -26414,22 +26483,28 @@ SWIGINTERN PyObject *_wrap_convolution__SWIG_5(PyObject *SWIGUNUSEDPARM(self), P
       SWIG_exception(SWIG_TypeError, "tuple expected");
     }
   }
-  res4 = SWIG_ConvertPtr(obj3, &argp4, SWIGTYPE_p_std__vectorT_bool_std__allocatorT_bool_t_t,  0  | 0);
-  if (!SWIG_IsOK(res4)) {
-    SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "convolution" "', argument " "4"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+  {
+    std::vector<bool,std::allocator< bool > > *ptr = (std::vector<bool,std::allocator< bool > > *)0;
+    res4 = swig::asptr(obj3, &ptr);
+    if (!SWIG_IsOK(res4)) {
+      SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "convolution" "', argument " "4"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+    }
+    if (!ptr) {
+      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "convolution" "', argument " "4"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+    }
+    arg4 = ptr;
   }
-  if (!argp4) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "convolution" "', argument " "4"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+  {
+    std::vector<bool,std::allocator< bool > > *ptr = (std::vector<bool,std::allocator< bool > > *)0;
+    res5 = swig::asptr(obj4, &ptr);
+    if (!SWIG_IsOK(res5)) {
+      SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "convolution" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+    }
+    if (!ptr) {
+      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "convolution" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+    }
+    arg5 = ptr;
   }
-  arg4 = reinterpret_cast< std::vector< bool,std::allocator< bool > > * >(argp4);
-  res5 = SWIG_ConvertPtr(obj4, &argp5, SWIGTYPE_p_std__vectorT_bool_std__allocatorT_bool_t_t,  0  | 0);
-  if (!SWIG_IsOK(res5)) {
-    SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "convolution" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
-  }
-  if (!argp5) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "convolution" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
-  }
-  arg5 = reinterpret_cast< std::vector< bool,std::allocator< bool > > * >(argp5);
   {
     try {
       result = CNTK::Convolution((CNTK::Variable const &)*arg1,(CNTK::Variable const &)*arg2,(CNTK::NDShape const &)*arg3,(std::vector< bool,std::allocator< bool > > const &)*arg4,(std::vector< bool,std::allocator< bool > > const &)*arg5); 
@@ -26454,8 +26529,12 @@ SWIGINTERN PyObject *_wrap_convolution__SWIG_5(PyObject *SWIGUNUSEDPARM(self), P
     std::shared_ptr<  CNTK::Function > *smartresult = result ? new std::shared_ptr<  CNTK::Function >(result) : 0;
     resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(smartresult), SWIGTYPE_p_std__shared_ptrT_CNTK__Function_t, SWIG_POINTER_OWN);
   }
+  if (SWIG_IsNewObj(res4)) delete arg4;
+  if (SWIG_IsNewObj(res5)) delete arg5;
   return resultobj;
 fail:
+  if (SWIG_IsNewObj(res4)) delete arg4;
+  if (SWIG_IsNewObj(res5)) delete arg5;
   return NULL;
 }
 
@@ -26470,8 +26549,7 @@ SWIGINTERN PyObject *_wrap_convolution__SWIG_6(PyObject *SWIGUNUSEDPARM(self), P
   int res1 = 0 ;
   void *argp2 = 0 ;
   int res2 = 0 ;
-  void *argp4 = 0 ;
-  int res4 = 0 ;
+  int res4 = SWIG_OLDOBJ ;
   PyObject * obj0 = 0 ;
   PyObject * obj1 = 0 ;
   PyObject * obj2 = 0 ;
@@ -26508,14 +26586,17 @@ SWIGINTERN PyObject *_wrap_convolution__SWIG_6(PyObject *SWIGUNUSEDPARM(self), P
       SWIG_exception(SWIG_TypeError, "tuple expected");
     }
   }
-  res4 = SWIG_ConvertPtr(obj3, &argp4, SWIGTYPE_p_std__vectorT_bool_std__allocatorT_bool_t_t,  0  | 0);
-  if (!SWIG_IsOK(res4)) {
-    SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "convolution" "', argument " "4"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+  {
+    std::vector<bool,std::allocator< bool > > *ptr = (std::vector<bool,std::allocator< bool > > *)0;
+    res4 = swig::asptr(obj3, &ptr);
+    if (!SWIG_IsOK(res4)) {
+      SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "convolution" "', argument " "4"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+    }
+    if (!ptr) {
+      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "convolution" "', argument " "4"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+    }
+    arg4 = ptr;
   }
-  if (!argp4) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "convolution" "', argument " "4"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
-  }
-  arg4 = reinterpret_cast< std::vector< bool,std::allocator< bool > > * >(argp4);
   {
     try {
       result = CNTK::Convolution((CNTK::Variable const &)*arg1,(CNTK::Variable const &)*arg2,(CNTK::NDShape const &)*arg3,(std::vector< bool,std::allocator< bool > > const &)*arg4); 
@@ -26540,8 +26621,10 @@ SWIGINTERN PyObject *_wrap_convolution__SWIG_6(PyObject *SWIGUNUSEDPARM(self), P
     std::shared_ptr<  CNTK::Function > *smartresult = result ? new std::shared_ptr<  CNTK::Function >(result) : 0;
     resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(smartresult), SWIGTYPE_p_std__shared_ptrT_CNTK__Function_t, SWIG_POINTER_OWN);
   }
+  if (SWIG_IsNewObj(res4)) delete arg4;
   return resultobj;
 fail:
+  if (SWIG_IsNewObj(res4)) delete arg4;
   return NULL;
 }
 
@@ -26736,7 +26819,7 @@ SWIGINTERN PyObject *_wrap_convolution(PyObject *self, PyObject *args) {
           _v = PyTuple_Check(argv[2]) ? 1 : 0;
         }
         if (_v) {
-          int res = SWIG_ConvertPtr(argv[3], 0, SWIGTYPE_p_std__vectorT_bool_std__allocatorT_bool_t_t, 0);
+          int res = swig::asptr(argv[3], (std::vector<bool,std::allocator< bool > >**)(0));
           _v = SWIG_CheckState(res);
           if (_v) {
             return _wrap_convolution__SWIG_6(self, args);
@@ -26759,10 +26842,10 @@ SWIGINTERN PyObject *_wrap_convolution(PyObject *self, PyObject *args) {
           _v = PyTuple_Check(argv[2]) ? 1 : 0;
         }
         if (_v) {
-          int res = SWIG_ConvertPtr(argv[3], 0, SWIGTYPE_p_std__vectorT_bool_std__allocatorT_bool_t_t, 0);
+          int res = swig::asptr(argv[3], (std::vector<bool,std::allocator< bool > >**)(0));
           _v = SWIG_CheckState(res);
           if (_v) {
-            int res = SWIG_ConvertPtr(argv[4], 0, SWIGTYPE_p_std__vectorT_bool_std__allocatorT_bool_t_t, 0);
+            int res = swig::asptr(argv[4], (std::vector<bool,std::allocator< bool > >**)(0));
             _v = SWIG_CheckState(res);
             if (_v) {
               return _wrap_convolution__SWIG_5(self, args);
@@ -26786,10 +26869,10 @@ SWIGINTERN PyObject *_wrap_convolution(PyObject *self, PyObject *args) {
           _v = PyTuple_Check(argv[2]) ? 1 : 0;
         }
         if (_v) {
-          int res = SWIG_ConvertPtr(argv[3], 0, SWIGTYPE_p_std__vectorT_bool_std__allocatorT_bool_t_t, 0);
+          int res = swig::asptr(argv[3], (std::vector<bool,std::allocator< bool > >**)(0));
           _v = SWIG_CheckState(res);
           if (_v) {
-            int res = SWIG_ConvertPtr(argv[4], 0, SWIGTYPE_p_std__vectorT_bool_std__allocatorT_bool_t_t, 0);
+            int res = swig::asptr(argv[4], (std::vector<bool,std::allocator< bool > >**)(0));
             _v = SWIG_CheckState(res);
             if (_v) {
               {
@@ -26820,10 +26903,10 @@ SWIGINTERN PyObject *_wrap_convolution(PyObject *self, PyObject *args) {
           _v = PyTuple_Check(argv[2]) ? 1 : 0;
         }
         if (_v) {
-          int res = SWIG_ConvertPtr(argv[3], 0, SWIGTYPE_p_std__vectorT_bool_std__allocatorT_bool_t_t, 0);
+          int res = swig::asptr(argv[3], (std::vector<bool,std::allocator< bool > >**)(0));
           _v = SWIG_CheckState(res);
           if (_v) {
-            int res = SWIG_ConvertPtr(argv[4], 0, SWIGTYPE_p_std__vectorT_bool_std__allocatorT_bool_t_t, 0);
+            int res = swig::asptr(argv[4], (std::vector<bool,std::allocator< bool > >**)(0));
             _v = SWIG_CheckState(res);
             if (_v) {
               {
@@ -26861,10 +26944,10 @@ SWIGINTERN PyObject *_wrap_convolution(PyObject *self, PyObject *args) {
           _v = PyTuple_Check(argv[2]) ? 1 : 0;
         }
         if (_v) {
-          int res = SWIG_ConvertPtr(argv[3], 0, SWIGTYPE_p_std__vectorT_bool_std__allocatorT_bool_t_t, 0);
+          int res = swig::asptr(argv[3], (std::vector<bool,std::allocator< bool > >**)(0));
           _v = SWIG_CheckState(res);
           if (_v) {
-            int res = SWIG_ConvertPtr(argv[4], 0, SWIGTYPE_p_std__vectorT_bool_std__allocatorT_bool_t_t, 0);
+            int res = swig::asptr(argv[4], (std::vector<bool,std::allocator< bool > >**)(0));
             _v = SWIG_CheckState(res);
             if (_v) {
               {
@@ -26908,10 +26991,10 @@ SWIGINTERN PyObject *_wrap_convolution(PyObject *self, PyObject *args) {
           _v = PyTuple_Check(argv[2]) ? 1 : 0;
         }
         if (_v) {
-          int res = SWIG_ConvertPtr(argv[3], 0, SWIGTYPE_p_std__vectorT_bool_std__allocatorT_bool_t_t, 0);
+          int res = swig::asptr(argv[3], (std::vector<bool,std::allocator< bool > >**)(0));
           _v = SWIG_CheckState(res);
           if (_v) {
-            int res = SWIG_ConvertPtr(argv[4], 0, SWIGTYPE_p_std__vectorT_bool_std__allocatorT_bool_t_t, 0);
+            int res = swig::asptr(argv[4], (std::vector<bool,std::allocator< bool > >**)(0));
             _v = SWIG_CheckState(res);
             if (_v) {
               {
@@ -26961,10 +27044,10 @@ SWIGINTERN PyObject *_wrap_convolution(PyObject *self, PyObject *args) {
           _v = PyTuple_Check(argv[2]) ? 1 : 0;
         }
         if (_v) {
-          int res = SWIG_ConvertPtr(argv[3], 0, SWIGTYPE_p_std__vectorT_bool_std__allocatorT_bool_t_t, 0);
+          int res = swig::asptr(argv[3], (std::vector<bool,std::allocator< bool > >**)(0));
           _v = SWIG_CheckState(res);
           if (_v) {
-            int res = SWIG_ConvertPtr(argv[4], 0, SWIGTYPE_p_std__vectorT_bool_std__allocatorT_bool_t_t, 0);
+            int res = swig::asptr(argv[4], (std::vector<bool,std::allocator< bool > >**)(0));
             _v = SWIG_CheckState(res);
             if (_v) {
               {
@@ -27035,8 +27118,7 @@ SWIGINTERN PyObject *_wrap_pooling__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObj
   int res1 = 0 ;
   int val2 ;
   int ecode2 = 0 ;
-  void *argp5 = 0 ;
-  int res5 = 0 ;
+  int res5 = SWIG_OLDOBJ ;
   int res8 = SWIG_OLDOBJ ;
   PyObject * obj0 = 0 ;
   PyObject * obj1 = 0 ;
@@ -27088,14 +27170,17 @@ SWIGINTERN PyObject *_wrap_pooling__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObj
       SWIG_exception(SWIG_TypeError, "tuple expected");
     }
   }
-  res5 = SWIG_ConvertPtr(obj4, &argp5, SWIGTYPE_p_std__vectorT_bool_std__allocatorT_bool_t_t,  0  | 0);
-  if (!SWIG_IsOK(res5)) {
-    SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "pooling" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+  {
+    std::vector<bool,std::allocator< bool > > *ptr = (std::vector<bool,std::allocator< bool > > *)0;
+    res5 = swig::asptr(obj4, &ptr);
+    if (!SWIG_IsOK(res5)) {
+      SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "pooling" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+    }
+    if (!ptr) {
+      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "pooling" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+    }
+    arg5 = ptr;
   }
-  if (!argp5) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "pooling" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
-  }
-  arg5 = reinterpret_cast< std::vector< bool,std::allocator< bool > > * >(argp5);
   {
     if (PyTuple_Check(obj5)) {
       std::vector<size_t> dimensions;;
@@ -27157,9 +27242,11 @@ SWIGINTERN PyObject *_wrap_pooling__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObj
     std::shared_ptr<  CNTK::Function > *smartresult = result ? new std::shared_ptr<  CNTK::Function >(result) : 0;
     resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(smartresult), SWIGTYPE_p_std__shared_ptrT_CNTK__Function_t, SWIG_POINTER_OWN);
   }
+  if (SWIG_IsNewObj(res5)) delete arg5;
   if (SWIG_IsNewObj(res8)) delete arg8;
   return resultobj;
 fail:
+  if (SWIG_IsNewObj(res5)) delete arg5;
   if (SWIG_IsNewObj(res8)) delete arg8;
   return NULL;
 }
@@ -27178,8 +27265,7 @@ SWIGINTERN PyObject *_wrap_pooling__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObj
   int res1 = 0 ;
   int val2 ;
   int ecode2 = 0 ;
-  void *argp5 = 0 ;
-  int res5 = 0 ;
+  int res5 = SWIG_OLDOBJ ;
   PyObject * obj0 = 0 ;
   PyObject * obj1 = 0 ;
   PyObject * obj2 = 0 ;
@@ -27229,14 +27315,17 @@ SWIGINTERN PyObject *_wrap_pooling__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObj
       SWIG_exception(SWIG_TypeError, "tuple expected");
     }
   }
-  res5 = SWIG_ConvertPtr(obj4, &argp5, SWIGTYPE_p_std__vectorT_bool_std__allocatorT_bool_t_t,  0  | 0);
-  if (!SWIG_IsOK(res5)) {
-    SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "pooling" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+  {
+    std::vector<bool,std::allocator< bool > > *ptr = (std::vector<bool,std::allocator< bool > > *)0;
+    res5 = swig::asptr(obj4, &ptr);
+    if (!SWIG_IsOK(res5)) {
+      SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "pooling" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+    }
+    if (!ptr) {
+      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "pooling" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+    }
+    arg5 = ptr;
   }
-  if (!argp5) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "pooling" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
-  }
-  arg5 = reinterpret_cast< std::vector< bool,std::allocator< bool > > * >(argp5);
   {
     if (PyTuple_Check(obj5)) {
       std::vector<size_t> dimensions;;
@@ -27287,8 +27376,10 @@ SWIGINTERN PyObject *_wrap_pooling__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObj
     std::shared_ptr<  CNTK::Function > *smartresult = result ? new std::shared_ptr<  CNTK::Function >(result) : 0;
     resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(smartresult), SWIGTYPE_p_std__shared_ptrT_CNTK__Function_t, SWIG_POINTER_OWN);
   }
+  if (SWIG_IsNewObj(res5)) delete arg5;
   return resultobj;
 fail:
+  if (SWIG_IsNewObj(res5)) delete arg5;
   return NULL;
 }
 
@@ -27305,8 +27396,7 @@ SWIGINTERN PyObject *_wrap_pooling__SWIG_2(PyObject *SWIGUNUSEDPARM(self), PyObj
   int res1 = 0 ;
   int val2 ;
   int ecode2 = 0 ;
-  void *argp5 = 0 ;
-  int res5 = 0 ;
+  int res5 = SWIG_OLDOBJ ;
   PyObject * obj0 = 0 ;
   PyObject * obj1 = 0 ;
   PyObject * obj2 = 0 ;
@@ -27355,14 +27445,17 @@ SWIGINTERN PyObject *_wrap_pooling__SWIG_2(PyObject *SWIGUNUSEDPARM(self), PyObj
       SWIG_exception(SWIG_TypeError, "tuple expected");
     }
   }
-  res5 = SWIG_ConvertPtr(obj4, &argp5, SWIGTYPE_p_std__vectorT_bool_std__allocatorT_bool_t_t,  0  | 0);
-  if (!SWIG_IsOK(res5)) {
-    SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "pooling" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+  {
+    std::vector<bool,std::allocator< bool > > *ptr = (std::vector<bool,std::allocator< bool > > *)0;
+    res5 = swig::asptr(obj4, &ptr);
+    if (!SWIG_IsOK(res5)) {
+      SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "pooling" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+    }
+    if (!ptr) {
+      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "pooling" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+    }
+    arg5 = ptr;
   }
-  if (!argp5) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "pooling" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
-  }
-  arg5 = reinterpret_cast< std::vector< bool,std::allocator< bool > > * >(argp5);
   {
     if (PyTuple_Check(obj5)) {
       std::vector<size_t> dimensions;;
@@ -27400,8 +27493,10 @@ SWIGINTERN PyObject *_wrap_pooling__SWIG_2(PyObject *SWIGUNUSEDPARM(self), PyObj
     std::shared_ptr<  CNTK::Function > *smartresult = result ? new std::shared_ptr<  CNTK::Function >(result) : 0;
     resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(smartresult), SWIGTYPE_p_std__shared_ptrT_CNTK__Function_t, SWIG_POINTER_OWN);
   }
+  if (SWIG_IsNewObj(res5)) delete arg5;
   return resultobj;
 fail:
+  if (SWIG_IsNewObj(res5)) delete arg5;
   return NULL;
 }
 
@@ -27417,8 +27512,7 @@ SWIGINTERN PyObject *_wrap_pooling__SWIG_3(PyObject *SWIGUNUSEDPARM(self), PyObj
   int res1 = 0 ;
   int val2 ;
   int ecode2 = 0 ;
-  void *argp5 = 0 ;
-  int res5 = 0 ;
+  int res5 = SWIG_OLDOBJ ;
   PyObject * obj0 = 0 ;
   PyObject * obj1 = 0 ;
   PyObject * obj2 = 0 ;
@@ -27466,14 +27560,17 @@ SWIGINTERN PyObject *_wrap_pooling__SWIG_3(PyObject *SWIGUNUSEDPARM(self), PyObj
       SWIG_exception(SWIG_TypeError, "tuple expected");
     }
   }
-  res5 = SWIG_ConvertPtr(obj4, &argp5, SWIGTYPE_p_std__vectorT_bool_std__allocatorT_bool_t_t,  0  | 0);
-  if (!SWIG_IsOK(res5)) {
-    SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "pooling" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+  {
+    std::vector<bool,std::allocator< bool > > *ptr = (std::vector<bool,std::allocator< bool > > *)0;
+    res5 = swig::asptr(obj4, &ptr);
+    if (!SWIG_IsOK(res5)) {
+      SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "pooling" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+    }
+    if (!ptr) {
+      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "pooling" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+    }
+    arg5 = ptr;
   }
-  if (!argp5) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "pooling" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
-  }
-  arg5 = reinterpret_cast< std::vector< bool,std::allocator< bool > > * >(argp5);
   {
     try {
       result = CNTK::Pooling((CNTK::Variable const &)*arg1,arg2,(CNTK::NDShape const &)*arg3,(CNTK::NDShape const &)*arg4,(std::vector< bool,std::allocator< bool > > const &)*arg5); 
@@ -27498,8 +27595,10 @@ SWIGINTERN PyObject *_wrap_pooling__SWIG_3(PyObject *SWIGUNUSEDPARM(self), PyObj
     std::shared_ptr<  CNTK::Function > *smartresult = result ? new std::shared_ptr<  CNTK::Function >(result) : 0;
     resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(smartresult), SWIGTYPE_p_std__shared_ptrT_CNTK__Function_t, SWIG_POINTER_OWN);
   }
+  if (SWIG_IsNewObj(res5)) delete arg5;
   return resultobj;
 fail:
+  if (SWIG_IsNewObj(res5)) delete arg5;
   return NULL;
 }
 
@@ -27744,7 +27843,7 @@ SWIGINTERN PyObject *_wrap_pooling(PyObject *self, PyObject *args) {
             _v = PyTuple_Check(argv[3]) ? 1 : 0;
           }
           if (_v) {
-            int res = SWIG_ConvertPtr(argv[4], 0, SWIGTYPE_p_std__vectorT_bool_std__allocatorT_bool_t_t, 0);
+            int res = swig::asptr(argv[4], (std::vector<bool,std::allocator< bool > >**)(0));
             _v = SWIG_CheckState(res);
             if (_v) {
               return _wrap_pooling__SWIG_3(self, args);
@@ -27776,7 +27875,7 @@ SWIGINTERN PyObject *_wrap_pooling(PyObject *self, PyObject *args) {
             _v = PyTuple_Check(argv[3]) ? 1 : 0;
           }
           if (_v) {
-            int res = SWIG_ConvertPtr(argv[4], 0, SWIGTYPE_p_std__vectorT_bool_std__allocatorT_bool_t_t, 0);
+            int res = swig::asptr(argv[4], (std::vector<bool,std::allocator< bool > >**)(0));
             _v = SWIG_CheckState(res);
             if (_v) {
               {
@@ -27815,7 +27914,7 @@ SWIGINTERN PyObject *_wrap_pooling(PyObject *self, PyObject *args) {
             _v = PyTuple_Check(argv[3]) ? 1 : 0;
           }
           if (_v) {
-            int res = SWIG_ConvertPtr(argv[4], 0, SWIGTYPE_p_std__vectorT_bool_std__allocatorT_bool_t_t, 0);
+            int res = swig::asptr(argv[4], (std::vector<bool,std::allocator< bool > >**)(0));
             _v = SWIG_CheckState(res);
             if (_v) {
               {
@@ -27861,7 +27960,7 @@ SWIGINTERN PyObject *_wrap_pooling(PyObject *self, PyObject *args) {
             _v = PyTuple_Check(argv[3]) ? 1 : 0;
           }
           if (_v) {
-            int res = SWIG_ConvertPtr(argv[4], 0, SWIGTYPE_p_std__vectorT_bool_std__allocatorT_bool_t_t, 0);
+            int res = swig::asptr(argv[4], (std::vector<bool,std::allocator< bool > >**)(0));
             _v = SWIG_CheckState(res);
             if (_v) {
               {
@@ -34401,6 +34500,7 @@ static swig_type_info _swigt__p_FunctionInCNTK = {"_p_FunctionInCNTK", "Function
 static swig_type_info _swigt__p___int64 = {"_p___int64", "__int64 *|LONGLONG *|LONG64 *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_allocator_type = {"_p_allocator_type", "allocator_type *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_char = {"_p_char", "CHAR *|TCHAR *|char *|CCHAR *", 0, 0, (void*)0, 0};
+static swig_type_info _swigt__p_const_reference = {"_p_const_reference", "const_reference *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_difference_type = {"_p_difference_type", "difference_type *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_double = {"_p_double", "double *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_float = {"_p_float", "FLOAT *|float *", 0, 0, (void*)0, 0};
@@ -34408,6 +34508,7 @@ static swig_type_info _swigt__p_int = {"_p_int", "BOOL *|CNTK::SparseIndexType *
 static swig_type_info _swigt__p_long = {"_p_long", "SHANDLE_PTR *|LONG_PTR *|LONG *|HRESULT *|long *|SSIZE_T *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_p_char = {"_p_p_char", "PTCH *|PCTSTR *|LPCTSTR *|LPTCH *|PUTSTR *|LPUTSTR *|PCUTSTR *|LPCUTSTR *|char **|PTSTR *|LPTSTR *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_p_unsigned_long = {"_p_p_unsigned_long", "unsigned long **|PLCID *", 0, 0, (void*)0, 0};
+static swig_type_info _swigt__p_reference = {"_p_reference", "reference *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_short = {"_p_short", "HALF_PTR *|short *|SHORT *|INT16 *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_signed___int64 = {"_p_signed___int64", "INT64 *|signed __int64 *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_signed_char = {"_p_signed_char", "signed char *|INT8 *", 0, 0, (void*)0, 0};
@@ -34426,7 +34527,6 @@ static swig_type_info _swigt__p_std__unordered_mapT_CNTK__Placeholder_CNTK__Vari
 static swig_type_info _swigt__p_std__unordered_setT_CNTK__Parameter_t = {"_p_std__unordered_setT_CNTK__Parameter_t", "std::unordered_set< CNTK::Parameter > *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_std__unordered_setT_std__shared_ptrT_CNTK__Learner_t_t = {"_p_std__unordered_setT_std__shared_ptrT_CNTK__Learner_t_t", "std::unordered_set< CNTK::LearnerPtr > *|std::unordered_set< std::shared_ptr< CNTK::Learner > > *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_std__vectorT_CNTK__Axis_std__allocatorT_CNTK__Axis_t_t = {"_p_std__vectorT_CNTK__Axis_std__allocatorT_CNTK__Axis_t_t", "std::vector< CNTK::Axis,std::allocator< CNTK::Axis > > *", 0, 0, (void*)0, 0};
-static swig_type_info _swigt__p_std__vectorT_bool_std__allocatorT_bool_t_t = {"_p_std__vectorT_bool_std__allocatorT_bool_t_t", "std::vector< bool,std::allocator< bool > > *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_swig__SwigPyIterator = {"_p_swig__SwigPyIterator", "swig::SwigPyIterator *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_unsigned___int64 = {"_p_unsigned___int64", "UINT64 *|DWORD64 *|unsigned __int64 *|DWORDLONG *|ULONGLONG *|ULONG64 *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_unsigned_char = {"_p_unsigned_char", "FCHAR *|unsigned char *|UCHAR *|BYTE *|TBYTE *|UINT8 *|BOOLEAN *", 0, 0, (void*)0, 0};
@@ -34461,6 +34561,7 @@ static swig_type_info *swig_type_initial[] = {
   &_swigt__p___int64,
   &_swigt__p_allocator_type,
   &_swigt__p_char,
+  &_swigt__p_const_reference,
   &_swigt__p_difference_type,
   &_swigt__p_double,
   &_swigt__p_float,
@@ -34468,6 +34569,7 @@ static swig_type_info *swig_type_initial[] = {
   &_swigt__p_long,
   &_swigt__p_p_char,
   &_swigt__p_p_unsigned_long,
+  &_swigt__p_reference,
   &_swigt__p_short,
   &_swigt__p_signed___int64,
   &_swigt__p_signed_char,
@@ -34486,7 +34588,6 @@ static swig_type_info *swig_type_initial[] = {
   &_swigt__p_std__unordered_setT_CNTK__Parameter_t,
   &_swigt__p_std__unordered_setT_std__shared_ptrT_CNTK__Learner_t_t,
   &_swigt__p_std__vectorT_CNTK__Axis_std__allocatorT_CNTK__Axis_t_t,
-  &_swigt__p_std__vectorT_bool_std__allocatorT_bool_t_t,
   &_swigt__p_swig__SwigPyIterator,
   &_swigt__p_unsigned___int64,
   &_swigt__p_unsigned_char,
@@ -34521,6 +34622,7 @@ static swig_cast_info _swigc__p_FunctionInCNTK[] = {  {&_swigt__p_FunctionInCNTK
 static swig_cast_info _swigc__p___int64[] = {  {&_swigt__p___int64, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_allocator_type[] = {  {&_swigt__p_allocator_type, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_char[] = {  {&_swigt__p_char, 0, 0, 0},{0, 0, 0, 0}};
+static swig_cast_info _swigc__p_const_reference[] = {  {&_swigt__p_const_reference, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_difference_type[] = {  {&_swigt__p_difference_type, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_double[] = {  {&_swigt__p_double, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_float[] = {  {&_swigt__p_float, 0, 0, 0},{0, 0, 0, 0}};
@@ -34528,6 +34630,7 @@ static swig_cast_info _swigc__p_int[] = {  {&_swigt__p_int, 0, 0, 0},{0, 0, 0, 0
 static swig_cast_info _swigc__p_long[] = {  {&_swigt__p_long, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_p_char[] = {  {&_swigt__p_p_char, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_p_unsigned_long[] = {  {&_swigt__p_p_unsigned_long, 0, 0, 0},{0, 0, 0, 0}};
+static swig_cast_info _swigc__p_reference[] = {  {&_swigt__p_reference, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_short[] = {  {&_swigt__p_short, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_signed___int64[] = {  {&_swigt__p_signed___int64, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_signed_char[] = {  {&_swigt__p_signed_char, 0, 0, 0},{0, 0, 0, 0}};
@@ -34546,7 +34649,6 @@ static swig_cast_info _swigc__p_std__unordered_mapT_CNTK__Placeholder_CNTK__Vari
 static swig_cast_info _swigc__p_std__unordered_setT_CNTK__Parameter_t[] = {  {&_swigt__p_std__unordered_setT_CNTK__Parameter_t, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_std__unordered_setT_std__shared_ptrT_CNTK__Learner_t_t[] = {  {&_swigt__p_std__unordered_setT_std__shared_ptrT_CNTK__Learner_t_t, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_std__vectorT_CNTK__Axis_std__allocatorT_CNTK__Axis_t_t[] = {  {&_swigt__p_std__vectorT_CNTK__Axis_std__allocatorT_CNTK__Axis_t_t, 0, 0, 0},{0, 0, 0, 0}};
-static swig_cast_info _swigc__p_std__vectorT_bool_std__allocatorT_bool_t_t[] = {  {&_swigt__p_std__vectorT_bool_std__allocatorT_bool_t_t, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_swig__SwigPyIterator[] = {  {&_swigt__p_swig__SwigPyIterator, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_unsigned___int64[] = {  {&_swigt__p_unsigned___int64, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_unsigned_char[] = {  {&_swigt__p_unsigned_char, 0, 0, 0},{0, 0, 0, 0}};
@@ -34581,6 +34683,7 @@ static swig_cast_info *swig_cast_initial[] = {
   _swigc__p___int64,
   _swigc__p_allocator_type,
   _swigc__p_char,
+  _swigc__p_const_reference,
   _swigc__p_difference_type,
   _swigc__p_double,
   _swigc__p_float,
@@ -34588,6 +34691,7 @@ static swig_cast_info *swig_cast_initial[] = {
   _swigc__p_long,
   _swigc__p_p_char,
   _swigc__p_p_unsigned_long,
+  _swigc__p_reference,
   _swigc__p_short,
   _swigc__p_signed___int64,
   _swigc__p_signed_char,
@@ -34606,7 +34710,6 @@ static swig_cast_info *swig_cast_initial[] = {
   _swigc__p_std__unordered_setT_CNTK__Parameter_t,
   _swigc__p_std__unordered_setT_std__shared_ptrT_CNTK__Learner_t_t,
   _swigc__p_std__vectorT_CNTK__Axis_std__allocatorT_CNTK__Axis_t_t,
-  _swigc__p_std__vectorT_bool_std__allocatorT_bool_t_t,
   _swigc__p_swig__SwigPyIterator,
   _swigc__p_unsigned___int64,
   _swigc__p_unsigned_char,

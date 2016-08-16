@@ -113,9 +113,33 @@ def classification_error(target_vector, output_vector, name=''):
 ################################################################################
 # convolution ops
 ################################################################################
-#TODO: Convolution
 #TODO: Pooling
 #TODO: BatchNormalization
+
+def convolution(convolution_map, operand, strides=[1], sharing=[True], 
+                auto_padding=[True], lower_pad=[0], upper_pad=[0], transpose=False, 
+                max_temp_mem_size_in_samples=0, name=''):
+    """
+    TODO: 
+    Args:        
+        convolution_map:
+        operand:
+        strides:
+        sharing:
+        auto_padding:
+        lower_pad:
+        upper_pad:
+        transpose:
+        max_temp_mem_size_in_samples:
+        name (str): the name of the node in the network
+    Returns:
+        :class:`cntk_py.Function`
+    """
+    from ..cntk_py import convolution
+    operand = sanitize_input(operand)    
+    return convolution(convolution_map, operand, strides, sharing, auto_padding, 
+                        lower_pad, upper_pad, transpose, max_temp_mem_size_in_samples,
+                        name) 
 
 ################################################################################
 # comparison ops

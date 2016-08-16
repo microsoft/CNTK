@@ -15,6 +15,7 @@
 %rename("%(utitle)s", %$isvariable) "";
 
 %template() std::vector<size_t>;
+%template() std::vector<bool>;
 %template() std::vector<CNTK::Variable>;
 %template() std::vector<std::shared_ptr<CNTK::Function>>;
 
