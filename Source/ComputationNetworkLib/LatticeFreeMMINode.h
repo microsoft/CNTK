@@ -84,6 +84,12 @@ public:
         {
             FrameRange fr(Input(0)->GetMBLayout());
             auto gradient = Input(1)->GradientFor(fr);
+            Matrix<ElemType> posteriorNumBackup(m_posteriorsNum->GetNumRows(), m_posteriorsNum->GetNumCols(), m_posteriorsNum->GetDeviceId());
+            posteriorNumBackup.SetValue(*m_posteriorsNum);
+            Matrix<ElemType> posteriorDenBackup(m_posteriorsDen->GetNumRows(), m_posteriorsDen->GetNumCols(), m_posteriorsDen->GetDeviceId());
+            posteriorDenBackup.SetValue(*m_posteriorsDen);
+           
+
             // k * (1-alpha) * r_DEN + alpha * P_net - (k * (1-alpha) + alpha) * r_NUM + c * y
             if (m_ceweight != 0)
             {
@@ -97,6 +103,8 @@ public:
             }
 
             Matrix<ElemType>::AddScaledDifference(Gradient(), *m_posteriorsDen, *m_posteriorsNum, gradient);
+            gradient.DropFrame(posteriorNumBackup, posteriorDenBackup, (ElemType)(1e-8));
+            //gradient.AssignElementwiseProductOf(framedropmask, gradient);
         }
     }
 
@@ -161,7 +169,7 @@ public:
         (*m_likelihoods) += (ElemType)1e-15;
 
         size_t nf = m_likelihoods->GetNumCols();
-        fprintf(stderr, "frame num:%lu\n", nf);
+        //fprintf(stderr, "frame num:%lu\n", nf);
         double logNumeratorWithCE = CalculateNumeratorsWithCE(Input(0)->MaskedValueFor(fr), nf);
         double logDenominator = ForwardBackwardProcessForDenorminator(nf, *m_posteriorsDen, *m_tmap, *m_tmapTranspose, *m_smap, *m_smapTranspose);
 
