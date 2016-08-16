@@ -37,14 +37,8 @@
 #pragma warning(disable : 4244) // unreachable code; triggered for unknown reasons
 #pragma warning(disable : 4702) // conversion from 'double' to 'float'
 
-#ifdef USE_ACML
-// Download ACML 5.3.1 (e.g., acml5.3.1-ifort64.exe) or above
-// from http://developer.amd.com/tools/cpu-development/amd-core-math-library-acml/acml-downloads-resources/
-// Install the ifort64_mp variant (compiled with intel compiler) of the library
-// Set Environment variable ACML_PATH to C:\AMD\acml5.3.1\ifort64_mp or the folder you installed acml
-// to point to your folder for the include file and link library
-#include <acml.h> // requires ACML 5.3.1 and above
-#elif defined(USE_MKL)
+
+#ifdef defined(USE_MKL)
 // requires MKL 10.0 and above
 #include <mkl.h>
 #else
@@ -55,12 +49,6 @@
 #endif
 #include <cblas.h>
 #include <lapacke.h>
-#endif
-
-#ifdef USE_ACML // MKL has one additional parameter for different matrix order
-#define BLAS_COLMAJOR
-#else
-#define BLAS_COLMAJOR (int) MatrixOrder::ColMajor,
 #endif
 
 #define SWAP(a, b)  \
@@ -912,11 +900,7 @@ void CPUMatrix<ElemType>::SetValue(const size_t numRows, const size_t numCols, E
 #pragma omp parallel for
                     foreach_column (j, us)
                     {
-#ifdef USE_ACML
-                        dcopy((int) numRows, reinterpret_cast<double*>(pArray + j), (int) numCols, reinterpret_cast<double*>(bufPtr + LocateColumn(j)), 1);
-#else
                         cblas_dcopy((int) numRows, reinterpret_cast<double*>(pArray + j), (int) numCols, reinterpret_cast<double*>(bufPtr + LocateColumn(j)), 1);
-#endif
                     }
                 }
                 else
@@ -926,11 +910,7 @@ void CPUMatrix<ElemType>::SetValue(const size_t numRows, const size_t numCols, E
                     {
                         {
 #pragma warning(suppress : 4244)
-#ifdef USE_ACML
-                            scopy((int) numRows, reinterpret_cast<float*>(pArray + j), (int) numCols, reinterpret_cast<float*>(bufPtr + LocateColumn(j)), 1);
-#else
                             cblas_scopy((int) numRows, reinterpret_cast<float*>(pArray + j), (int) numCols, reinterpret_cast<float*>(bufPtr + LocateColumn(j)), 1);
-#endif
                         }
                     }
                 }
@@ -2844,20 +2824,12 @@ ElemType CPUMatrix<ElemType>::SumOfAbsElements() const
 
     if (sizeof(ElemType) == sizeof(double))
     {
-#ifdef USE_ACML
-        return (ElemType) dasum((int) GetNumElements(), reinterpret_cast<double*>(Data()), 1);
-#else
         return (ElemType) cblas_dasum((int) GetNumElements(), reinterpret_cast<double*>(Data()), 1);
-#endif
     }
     else
     {
 #pragma warning(suppress : 4244)
-#ifdef USE_ACML
-        return sasum((int) GetNumElements(), reinterpret_cast<float*>(Data()), 1);
-#else
         return cblas_sasum((int) GetNumElements(), reinterpret_cast<float*>(Data()), 1);
-#endif
     }
 }
 
@@ -3028,11 +3000,7 @@ void CPUMatrix<ElemType>::VectorNorm2(CPUMatrix<ElemType>& c, const bool isColWi
 #pragma omp parallel for
             foreach_column (j, c)
             {
-#ifdef USE_ACML
-                c(0, j) = (ElemType) dnrm2(m, reinterpret_cast<double*>(bufPtr + us.LocateColumn(j)), 1);
-#else
                 c(0, j) = (ElemType) cblas_dnrm2(m, reinterpret_cast<double*>(bufPtr + us.LocateColumn(j)), 1);
-#endif
             }
         }
         else
@@ -3041,11 +3009,7 @@ void CPUMatrix<ElemType>::VectorNorm2(CPUMatrix<ElemType>& c, const bool isColWi
             foreach_column (j, c)
             {
 #pragma warning(suppress : 4244)
-#ifdef USE_ACML
-                c(0, j) = snrm2(m, reinterpret_cast<float*>(bufPtr + us.LocateColumn(j)), 1);
-#else
                 c(0, j) = cblas_snrm2(m, reinterpret_cast<float*>(bufPtr + us.LocateColumn(j)), 1);
-#endif
             }
         }
     }
@@ -3058,11 +3022,7 @@ void CPUMatrix<ElemType>::VectorNorm2(CPUMatrix<ElemType>& c, const bool isColWi
 #pragma omp parallel for
             foreach_row (i, c)
             {
-#ifdef USE_ACML
-                c(i, 0) = dnrm2(n, reinterpret_cast<double*>(bufPtr + i), m);
-#else
                 c(i, 0) = cblas_dnrm2(n, reinterpret_cast<double*>(bufPtr + i), m);
-#endif
             }
         }
         else
@@ -3071,11 +3031,7 @@ void CPUMatrix<ElemType>::VectorNorm2(CPUMatrix<ElemType>& c, const bool isColWi
             foreach_row (i, c)
             {
 #pragma warning(suppress : 4244)
-#ifdef USE_ACML
-                c(i, 0) = snrm2(n, reinterpret_cast<float*>(bufPtr + i), m);
-#else
                 c(i, 0) = cblas_snrm2(n, reinterpret_cast<float*>(bufPtr + i), m);
-#endif
             }
         }
     }
@@ -4486,34 +4442,22 @@ void CPUMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const CPUMatrix
 
     int m, n, k, l;
     int lda, ldb, ldc;
-#ifdef USE_ACML
-    char transA, transB;
-#else
     CBLAS_TRANSPOSE mklTransA;
     CBLAS_TRANSPOSE mklTransB;
-#endif
 
     if (transposeA)
     {
         m = (int) a.GetNumCols();
         k = (int) a.GetNumRows();
         lda = k;
-#ifdef USE_ACML
-        transA = (char) MatrixTranspose::Trans;
-#else
         mklTransA = CBLAS_TRANSPOSE::CblasTrans;
-#endif
     }
     else
     {
         m = (int) a.GetNumRows();
         k = (int) a.GetNumCols();
         lda = m;
-#ifdef USE_ACML
-        transA = (char) MatrixTranspose::NoTrans;
-#else
         mklTransA = CBLAS_TRANSPOSE::CblasNoTrans;
-#endif
     }
 
     if (transposeB)
@@ -4521,22 +4465,14 @@ void CPUMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const CPUMatrix
         l = (int) b.GetNumCols();
         n = (int) b.GetNumRows();
         ldb = n;
-#ifdef USE_ACML
-        transB = (char) MatrixTranspose::Trans;
-#else
         mklTransB = CBLAS_TRANSPOSE::CblasTrans;
-#endif
     }
     else
     {
         l = (int) b.GetNumRows();
         n = (int) b.GetNumCols();
         ldb = l;
-#ifdef USE_ACML
-        transB = (char) MatrixTranspose::NoTrans;
-#else
         mklTransB = CBLAS_TRANSPOSE::CblasNoTrans;
-#endif
     }
 
     assert(m > 0 && k > 0 && l > 0 && n > 0); // converting from size_t to int may cause overflow
@@ -4553,20 +4489,12 @@ void CPUMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const CPUMatrix
 
     if (sizeof(ElemType) == sizeof(double))
     {
-#ifdef USE_ACML
-        dgemm(transA, transB, m, n, k, alpha, reinterpret_cast<double*>(a.Data()), lda, reinterpret_cast<double*>(b.Data()), ldb, beta, reinterpret_cast<double*>(c.Data()), ldc);
-#else
-        cblas_dgemm((CBLAS_ORDER) BLAS_COLMAJOR mklTransA, mklTransB, m, n, k, alpha, reinterpret_cast<double*>(a.Data()), lda, reinterpret_cast<double*>(b.Data()), ldb, beta, reinterpret_cast<double*>(c.Data()), ldc);
-#endif
+        cblas_dgemm((CBLAS_ORDER) (int)MatrixOrder::ColMajor, mklTransA, mklTransB, m, n, k, alpha, reinterpret_cast<double*>(a.Data()), lda, reinterpret_cast<double*>(b.Data()), ldb, beta, reinterpret_cast<double*>(c.Data()), ldc);
     }
     else
     {
 #pragma warning(suppress : 4244)
-#ifdef USE_ACML
-        sgemm(BLAS_COLMAJOR transA, transB, m, n, k, alpha, reinterpret_cast<float*>(a.Data()), lda, reinterpret_cast<float*>(b.Data()), ldb, beta, reinterpret_cast<float*>(c.Data()), ldc);
-#else
-        cblas_sgemm((CBLAS_ORDER) BLAS_COLMAJOR mklTransA, mklTransB, m, n, k, alpha, reinterpret_cast<float*>(a.Data()), lda, reinterpret_cast<float*>(b.Data()), ldb, beta, reinterpret_cast<float*>(c.Data()), ldc);
-#endif
+        cblas_sgemm((CBLAS_ORDER) (int)MatrixOrder::ColMajor, mklTransA, mklTransB, m, n, k, alpha, reinterpret_cast<float*>(a.Data()), lda, reinterpret_cast<float*>(b.Data()), ldb, beta, reinterpret_cast<float*>(c.Data()), ldc);
     }
 }
 
@@ -4611,9 +4539,7 @@ void CPUMatrix<ElemType>::SVD(const CPUMatrix<ElemType>& A, CPUMatrix<ElemType>&
 
     if (sizeof(ElemType) == sizeof(double))
     {
-#ifdef USE_ACML
-        dgesvd('A', 'A', (int) m, (int) n, reinterpret_cast<double*>(A.Data()), (int) lda, reinterpret_cast<double*>(SIGMA.Data()), reinterpret_cast<double*>(U.Data()), (int) ldu, reinterpret_cast<double*>(VT.Data()), (int) ldvt, &info);
-#elif defined(USE_MKL)
+#ifdef USE_MKL
         double wkopt;
         int lwork = -1;
         dgesvd("All", "All", &m, &n, reinterpret_cast<double*>(A.Data()), &lda, reinterpret_cast<double*>(SIGMA.Data()), reinterpret_cast<double*>(U.Data()), &ldu, reinterpret_cast<double*>(VT.Data()), &ldvt, &wkopt, &lwork, &info);
@@ -4622,16 +4548,13 @@ void CPUMatrix<ElemType>::SVD(const CPUMatrix<ElemType>& A, CPUMatrix<ElemType>&
         dgesvd("All", "All", &m, &n, reinterpret_cast<double*>(A.Data()), &lda, reinterpret_cast<double*>(SIGMA.Data()), reinterpret_cast<double*>(U.Data()), &ldu, reinterpret_cast<double*>(VT.Data()), &ldvt, reinterpret_cast<double*>(W.Data()), &lwork, &info);
 #else
         std::vector<double> superb(std::max(std::min(m, n) - 1, 1));
-        info = LAPACKE_dgesvd(BLAS_COLMAJOR 'A', 'A', (int) m, (int) n, reinterpret_cast<double*>(A.Data()), (int) lda, reinterpret_cast<double*>(SIGMA.Data()),
+        info = LAPACKE_dgesvd((int) MatrixOrder::ColMajor, 'A', 'A', (int) m, (int) n, reinterpret_cast<double*>(A.Data()), (int) lda, reinterpret_cast<double*>(SIGMA.Data()),
             reinterpret_cast<double*>(U.Data()), (int) ldu, reinterpret_cast<double*>(VT.Data()), (int) ldvt, &superb[0]);
 #endif
     }
     else
     {
-#ifdef USE_ACML
-#pragma warning(suppress : 4244)
-        sgesvd('A', 'A', (int) m, (int) n, reinterpret_cast<float*>(A.Data()), (int) lda, reinterpret_cast<float*>(SIGMA.Data()), reinterpret_cast<float*>(U.Data()), (int) ldu, reinterpret_cast<float*>(VT.Data()), (int) ldvt, &info);
-#elif defined(USE_MKL)
+#ifdef USE_MKL
         float wkopt;
         int lwork = -1;
         sgesvd("All", "All", &m, &n, reinterpret_cast<float*>(A.Data()), &lda, reinterpret_cast<float*>(SIGMA.Data()), reinterpret_cast<float*>(U.Data()), &ldu, reinterpret_cast<float*>(VT.Data()), &ldvt, &wkopt, &lwork, &info);
@@ -4640,7 +4563,7 @@ void CPUMatrix<ElemType>::SVD(const CPUMatrix<ElemType>& A, CPUMatrix<ElemType>&
         sgesvd("All", "All", &m, &n, reinterpret_cast<float*>(A.Data()), &lda, reinterpret_cast<float*>(SIGMA.Data()), reinterpret_cast<float*>(U.Data()), &ldu, reinterpret_cast<float*>(VT.Data()), &ldvt, reinterpret_cast<float*>(W.Data()), &lwork, &info);
 #else
         std::vector<float> superb(std::max(std::min(m, n) - 1, 1));
-        info = LAPACKE_sgesvd(BLAS_COLMAJOR 'A', 'A', (int) m, (int) n, reinterpret_cast<float*>(A.Data()), (int) lda, reinterpret_cast<float*>(SIGMA.Data()),
+        info = LAPACKE_sgesvd((int) MatrixOrder::ColMajor, 'A', 'A', (int) m, (int) n, reinterpret_cast<float*>(A.Data()), (int) lda, reinterpret_cast<float*>(SIGMA.Data()),
             reinterpret_cast<float*>(U.Data()), (int) ldu, reinterpret_cast<float*>(VT.Data()), (int) ldvt, &superb[0]);
 #endif
     }
@@ -4837,20 +4760,12 @@ void CPUMatrix<ElemType>::ScaleAndAdd(ElemType alpha, const CPUMatrix<ElemType>&
 
         if (sizeof(ElemType) == sizeof(double))
         {
-#ifdef USE_ACML
-            daxpy(len, alpha, reinterpret_cast<double*>(a.Data()), incx, reinterpret_cast<double*>(c.Data()), incy);
-#else
             cblas_daxpy(len, alpha, reinterpret_cast<double*>(a.Data()), incx, reinterpret_cast<double*>(c.Data()), incy);
-#endif
         }
         else
         {
 #pragma warning(suppress : 4244)
-#ifdef USE_ACML
-            saxpy(len, alpha, reinterpret_cast<float*>(a.Data()), incx, reinterpret_cast<float*>(c.Data()), incy);
-#else
             cblas_saxpy(len, alpha, reinterpret_cast<float*>(a.Data()), incx, reinterpret_cast<float*>(c.Data()), incy);
-#endif
         }
     }
     else if (a.GetNumElements() == 1) // scalar, add to all elements
@@ -4889,11 +4804,7 @@ void CPUMatrix<ElemType>::ScaleAndAdd(ElemType alpha, const CPUMatrix<ElemType>&
 #pragma omp parallel for
             foreach_column (j, c)
             {
-#ifdef USE_ACML
-                daxpy(m, alpha, reinterpret_cast<double*>(aBufPtr), 1, reinterpret_cast<double*>(cBufPtr + c.LocateColumn(j)), 1);
-#else
                 cblas_daxpy(m, alpha, reinterpret_cast<double*>(aBufPtr), 1, reinterpret_cast<double*>(cBufPtr + c.LocateColumn(j)), 1);
-#endif
             }
         }
         else
@@ -4902,11 +4813,7 @@ void CPUMatrix<ElemType>::ScaleAndAdd(ElemType alpha, const CPUMatrix<ElemType>&
             foreach_column (j, c)
             {
 #pragma warning(suppress : 4244)
-#ifdef USE_ACML
-                saxpy(m, alpha, reinterpret_cast<float*>(aBufPtr), 1, reinterpret_cast<float*>(cBufPtr + c.LocateColumn(j)), 1);
-#else
                 cblas_saxpy(m, alpha, reinterpret_cast<float*>(aBufPtr), 1, reinterpret_cast<float*>(cBufPtr + c.LocateColumn(j)), 1);
-#endif
             }
         }
     }
@@ -4925,11 +4832,7 @@ void CPUMatrix<ElemType>::ScaleAndAdd(ElemType alpha, const CPUMatrix<ElemType>&
 #pragma omp parallel for
             foreach_row (i, c)
             {
-#ifdef USE_ACML
-                daxpy(n, alpha, reinterpret_cast<double*>(aBufPtr), 1, reinterpret_cast<double*>(cBufPtr + i), m);
-#else
                 cblas_daxpy(n, alpha, reinterpret_cast<double*>(aBufPtr), 1, reinterpret_cast<double*>(cBufPtr + i), m);
-#endif
             }
         }
         else
@@ -4938,11 +4841,7 @@ void CPUMatrix<ElemType>::ScaleAndAdd(ElemType alpha, const CPUMatrix<ElemType>&
             foreach_row (i, c)
             {
 #pragma warning(suppress : 4244)
-#ifdef USE_ACML
-                saxpy(n, alpha, reinterpret_cast<float*>(aBufPtr), 1, reinterpret_cast<float*>(cBufPtr + i), m);
-#else
                 cblas_saxpy(n, alpha, reinterpret_cast<float*>(aBufPtr), 1, reinterpret_cast<float*>(cBufPtr + i), m);
-#endif
             }
         }
     }
@@ -5163,20 +5062,12 @@ template <class ElemType>
     }
     else if (sizeof(ElemType) == sizeof(double))
     {
-#ifdef USE_ACML
-        dscal(len, alpha, reinterpret_cast<double*>(a.Data()), incx); // TODO: Use overloads.
-#else
         cblas_dscal(len, alpha, reinterpret_cast<double*>(a.Data()), incx);
-#endif
     }
     else
     {
 #pragma warning(suppress : 4244)
-#ifdef USE_ACML
-        sscal(len, alpha, reinterpret_cast<float*>(a.Data()), incx);
-#else
         cblas_sscal(len, alpha, reinterpret_cast<float*>(a.Data()), incx);
-#endif
     }
 }
 
@@ -5224,11 +5115,7 @@ void CPUMatrix<ElemType>::InnerProduct(const CPUMatrix<ElemType>& a, const CPUMa
 #pragma omp parallel for
             foreach_column (j, c)
             {
-#ifdef USE_ACML
-                c(0, j) = (ElemType) ddot(m, reinterpret_cast<double*>(aBufPtr + a.LocateColumn(j)), 1, reinterpret_cast<double*>(bBufPtr + b.LocateColumn(j)), 1);
-#else
                 c(0, j) = (ElemType) cblas_ddot(m, reinterpret_cast<double*>(aBufPtr + a.LocateColumn(j)), 1, reinterpret_cast<double*>(bBufPtr + b.LocateColumn(j)), 1);
-#endif
             }
         }
         else
@@ -5237,11 +5124,7 @@ void CPUMatrix<ElemType>::InnerProduct(const CPUMatrix<ElemType>& a, const CPUMa
             foreach_column (j, c)
             {
 #pragma warning(suppress : 4244)
-#ifdef USE_ACML
-                c(0, j) = (ElemType) sdot(m, reinterpret_cast<float*>(aBufPtr + a.LocateColumn(j)), 1, reinterpret_cast<float*>(bBufPtr + b.LocateColumn(j)), 1);
-#else
                 c(0, j) = (ElemType) cblas_sdot(m, reinterpret_cast<float*>(aBufPtr + a.LocateColumn(j)), 1, reinterpret_cast<float*>(bBufPtr + b.LocateColumn(j)), 1);
-#endif
             }
         }
     }
@@ -5256,11 +5139,7 @@ void CPUMatrix<ElemType>::InnerProduct(const CPUMatrix<ElemType>& a, const CPUMa
 #pragma omp parallel for
             foreach_row (i, c)
             {
-#ifdef USE_ACML
-                c(i, 0) = ddot(n, reinterpret_cast<double*>(aBufPtr + i), m, reinterpret_cast<double*>(bBufPtr + i), m);
-#else
                 c(i, 0) = cblas_ddot(n, reinterpret_cast<double*>(aBufPtr + i), m, reinterpret_cast<double*>(bBufPtr + i), m);
-#endif
             }
         }
         else
@@ -5269,11 +5148,7 @@ void CPUMatrix<ElemType>::InnerProduct(const CPUMatrix<ElemType>& a, const CPUMa
             foreach_row (i, c)
             {
 #pragma warning(suppress : 4244)
-#ifdef USE_ACML
-                c(i, 0) = sdot(n, reinterpret_cast<float*>(aBufPtr + i), m, reinterpret_cast<float*>(bBufPtr + i), m);
-#else
                 c(i, 0) = cblas_sdot(n, reinterpret_cast<float*>(aBufPtr + i), m, reinterpret_cast<float*>(bBufPtr + i), m);
-#endif
             }
         }
     }
@@ -5298,20 +5173,12 @@ ElemType CPUMatrix<ElemType>::InnerProductOfMatrices(const CPUMatrix<ElemType>& 
 
     if (sizeof(ElemType) == sizeof(double))
     {
-#ifdef USE_ACML
-        return (ElemType) ddot((int) a.GetNumElements(), reinterpret_cast<double*>(a.Data()), 1, reinterpret_cast<double*>(b.Data()), 1);
-#else
         return (ElemType) cblas_ddot((int) a.GetNumElements(), reinterpret_cast<double*>(a.Data()), 1, reinterpret_cast<double*>(b.Data()), 1);
-#endif
     }
     else
     {
 #pragma warning(suppress : 4244)
-#ifdef USE_ACML
-        return (ElemType) sdot((int) a.GetNumElements(), reinterpret_cast<float*>(a.Data()), 1, reinterpret_cast<float*>(b.Data()), 1);
-#else
         return (ElemType) cblas_sdot((int) a.GetNumElements(), reinterpret_cast<float*>(a.Data()), 1, reinterpret_cast<float*>(b.Data()), 1);
-#endif
     }
 }
 
@@ -5539,21 +5406,13 @@ void CPUMatrix<ElemType>::InnerProductWithShiftNeg(const CPUMatrix<ElemType>& a,
         {
             for (long j = 0; j < n; j++)
             {
-#ifdef USE_ACML
-                c(0, j) = (ElemType) ddot(m, reinterpret_cast<double*>(aBufPtr + a.LocateColumn(j)), 1, reinterpret_cast<double*>(bBufPtr + b.LocateColumn(j)), 1);
-#else
                 c(0, j) = (ElemType) cblas_ddot(m, reinterpret_cast<double*>(aBufPtr + a.LocateColumn(j)), 1, reinterpret_cast<double*>(bBufPtr + b.LocateColumn(j)), 1);
-#endif
             }
             for (long j = 0; j < n; j++)
             {
                 for (long i = 1; i < negnumber + 1; i++)
                 {
-#ifdef USE_ACML
-                    c(i, j) = (ElemType) ddot(m, reinterpret_cast<double*>(aBufPtr + a.LocateColumn(j)), 1, reinterpret_cast<double*>(bBufPtr + b.LocateColumn((j + shift + i - 1) % n)), 1);
-#else
                     c(i, j) = (ElemType) cblas_ddot(m, reinterpret_cast<double*>(aBufPtr + a.LocateColumn(j)), 1, reinterpret_cast<double*>(bBufPtr + b.LocateColumn((j + shift + i - 1) % n)), 1);
-#endif
                 }
             }
         }
@@ -5561,21 +5420,13 @@ void CPUMatrix<ElemType>::InnerProductWithShiftNeg(const CPUMatrix<ElemType>& a,
         {
             for (long j = 0; j < n; j++)
             {
-#ifdef USE_ACML
-                c(0, j) = (ElemType) sdot(m, reinterpret_cast<float*>(aBufPtr + a.LocateColumn(j)), 1, reinterpret_cast<float*>(bBufPtr + b.LocateColumn(j)), 1);
-#else
                 c(0, j) = (ElemType) cblas_sdot(m, reinterpret_cast<float*>(aBufPtr + a.LocateColumn(j)), 1, reinterpret_cast<float*>(bBufPtr + b.LocateColumn(j)), 1);
-#endif
             }
             for (long j = 0; j < n; j++)
             {
                 for (long i = 1; i < negnumber + 1; i++)
                 {
-#ifdef USE_ACML
-                    c(i, j) = (ElemType) sdot(m, reinterpret_cast<float*>(aBufPtr + a.LocateColumn(j)), 1, reinterpret_cast<float*>(bBufPtr + b.LocateColumn((j + shift + i - 1) % n)), 1);
-#else
                     c(i, j) = (ElemType) cblas_sdot(m, reinterpret_cast<float*>(aBufPtr + a.LocateColumn(j)), 1, reinterpret_cast<float*>(bBufPtr + b.LocateColumn((j + shift + i - 1) % n)), 1);
-#endif
                 }
             }
         }
@@ -5593,11 +5444,7 @@ void CPUMatrix<ElemType>::InnerProductWithShiftNeg(const CPUMatrix<ElemType>& a,
 #pragma omp parallel for
             foreach_row (i, c)
             {
-#ifdef USE_ACML
-                c(i, 0) = (ElemType) ddot(n, reinterpret_cast<double*>(aBufPtr + i), m, reinterpret_cast<double*>(bBufPtr + i), m);
-#else
                 c(i, 0) = (ElemType) cblas_ddot(n, reinterpret_cast<double*>(aBufPtr + i), m, reinterpret_cast<double*>(bBufPtr + i), m);
-#endif
             }
         }
         else
@@ -5606,9 +5453,6 @@ void CPUMatrix<ElemType>::InnerProductWithShiftNeg(const CPUMatrix<ElemType>& a,
             foreach_row (i, c)
             {
 #pragma warning(suppress : 4244)
-#ifdef USE_ACML
-                c(i, 0) = sdot(n, reinterpret_cast<float*>(aBufPtr + i), m, reinterpret_cast<float*>(bBufPtr + i), m);
-#else
                 c(i, 0) = cblas_sdot(n, reinterpret_cast<float*>(aBufPtr + i), m, reinterpret_cast<float*>(bBufPtr + i), m);
 #endif
             }
@@ -6025,13 +5869,11 @@ int CPUMatrix<ElemType>::SetNumThreads(int numThreads)
     omp_set_num_threads(numThreads);
     numThreads = omp_get_max_threads();
 
-#ifdef USE_ACML
-    acmlsetnumthreads(numThreads);
-#elif defined(USE_MKL)
-    mkl_set_num_threads(numThreads);
-#elif defined(USE_OPENBLAS)
-    openblas_set_num_threads(numThreads);
-#endif
+    #ifdef USE_MKL
+        mkl_set_num_threads(numThreads);
+    #elif defined(USE_OPENBLAS)
+        openblas_set_num_threads(numThreads);
+    #endif
 #endif
     return numThreads;
 }

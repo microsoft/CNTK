@@ -23,15 +23,7 @@
 
 #pragma warning(disable : 4127) // conditional expression is constant; "if (sizeof(ElemType)==sizeof(float))" triggers this
 
-#ifdef USE_ACML
-// use ACML as default.
-// Download ACML 5.3.0 (e.g., acml5.3.0-ifort64.exe) or above
-// from http://developer.amd.com/tools/cpu-development/amd-core-math-library-acml/acml-downloads-resources/
-// Install the ifort64 variant (compiled with intel compiler) of the library
-// Set Environment variable ACML_PATH to C:\AMD\acml5.3.0\ifort64_mp or the folder you installed acml
-// to point to your folder for the include file and link library
-#include <acml.h> // requires ACML 5.3.0 and above
-#elif defined(USE_MKL)
+#ifdef USE_MKL
 // requires MKL 10.0 and above
 #include <mkl.h>
 #else
@@ -52,12 +44,6 @@
 //{
 //    return 42;
 //}
-
-#ifdef USE_ACML // MKL has one additional parameter for different matrix order
-#define BLAS_COLMAJOR
-#else
-#define BLAS_COLMAJOR (int) MatrixOrder::ColMajor,
-#endif
 
 // TODO: Move to CommonMatrix.h
 #define IDX2C(i, j, ld) (((j) * (ld)) + (i)) // 0 based indexing
@@ -1340,20 +1326,12 @@ ElemType CPUSparseMatrix<ElemType>::SumOfAbsElements() const
 
     if (sizeof(ElemType) == sizeof(double))
     {
-#ifdef USE_ACML
-        return (ElemType) dasum((int) this->NzCount(), reinterpret_cast<double*>(Data()), 1);
-#else
         return (ElemType) cblas_dasum((int) this->NzCount(), reinterpret_cast<double*>(Data()), 1);
-#endif
     }
     else
     {
 #pragma warning(suppress : 4244)
-#ifdef USE_ACML
-        return sasum((int) this->NzCount(), reinterpret_cast<float*>(Data()), 1);
-#else
         return cblas_sasum((int) this->NzCount(), reinterpret_cast<float*>(Data()), 1);
-#endif
     }
 }
 
