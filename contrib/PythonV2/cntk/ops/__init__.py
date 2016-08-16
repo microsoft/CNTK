@@ -1278,6 +1278,8 @@ def reconcile_dynamic_axis(data_input, layout_input, name=''):
 # normalization ops
 ################################################################################
 
+#TODO: ComputeInputPerDimMeansAndInvStdDevs
+
 def per_dim_mean_variance_normalize(operand, mean, inv_stddev, name=''):
     '''
     Computes per dimension mean-variance normalization of the specified input operand.
