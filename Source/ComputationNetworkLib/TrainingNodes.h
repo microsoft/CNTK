@@ -691,9 +691,9 @@ template class NoiseContrastiveEstimationNode<double>;
 // Input(0) Sampling weight. (constant) matrix of shape (nClasses x 1) providing smapling weights > 0. Probablility draw a class will be proportional to the weight.
 // Input(1)? True lables: Needed to exclude true tlables from random sample if requested (do we want that?)
 template <class ElemType>
-class RandomSampleNode : public ComputationNode<ElemType>, public NumInputs<1>
+class RandomSampleNode : public ComputationNodeNonLooping<ElemType>, public NumInputs<1>
 {
-    typedef ComputationNode<ElemType> Base;
+    typedef ComputationNodeNonLooping<ElemType> Base;
     UsingComputationNodeMembersBoilerplate;
 
     static const std::wstring TypeName()
@@ -718,7 +718,7 @@ public:
     }
 
 
-    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
+    virtual void /*ComputationNode::*/ ForwardPropNonLooping() override
     {
         Matrix<ElemType>& valueMatrix = ValueAsMatrix();
         valueMatrix.SwitchToMatrixType(SPARSE, matrixFormatSparseCSC, false);
@@ -726,7 +726,7 @@ public:
        // valueMatrix.SetMatrixFromCSCFormat();
     }
 
-    virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
+    virtual void /*ComputationNode::*/ BackpropToNonLooping(size_t inputIndex) override
     {
         // This node does not propagate gradients.
     }
