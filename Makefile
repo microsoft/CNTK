@@ -9,8 +9,6 @@
 # that provides
 #   BUILDTYPE= One of release or debug
 #     defaults to release
-#   ACML_PATH= path to ACML library installation
-#     only needed if MATHLIB=acml
 #   MKL_PATH= path to CNTK custom MKL installation
 #     only needed if MATHLIB=mkl
 #   CNTK_CUSTOM_MKL_VERSION=2
@@ -21,8 +19,8 @@
 #     defaults to /usr/include/nvidia/gdk
 #   GDK_NVML_LIB_PATH= path to CUDA GDK (stub) library path, so $(GDK_NVML_LIB_PATH)/libnvidia-ml.so exists
 #     defaults to /usr/src/gdk/nvml/lib
-#   MATHLIB= One of acml or mkl
-#     defaults to acml
+#   MATHLIB= mkl
+#     defaults to mkl
 #   CUDA_PATH= Path to CUDA
 #     If not specified, GPU will not be enabled
 #   CUB_PATH= path to NVIDIA CUB installation, so $(CUB_PATH)/cub/cub.cuh exists
@@ -60,8 +58,8 @@ BUILDTYPE=release
 endif
 
 ifndef MATHLIB
-$(info DEFAULTING MATHLIB=acml)
-MATHLIB = acml
+$(info DEFAULTING MATHLIB=mkl)
+MATHLIB = mkl
 endif
 
 #### Configure based on options above
@@ -135,13 +133,6 @@ else
   DEVICE = cpu
 
   COMMON_FLAGS +=-DCPUONLY
-endif
-
-ifeq ("$(MATHLIB)","acml")
-  INCLUDEPATH += $(ACML_PATH)/include
-  LIBPATH += $(ACML_PATH)/lib
-  LIBS += -lacml_mp -liomp5 -lm -lpthread
-  COMMON_FLAGS += -DUSE_ACML
 endif
 
 ifeq ("$(MATHLIB)","mkl")
