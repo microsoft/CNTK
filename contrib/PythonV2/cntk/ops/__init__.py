@@ -442,8 +442,6 @@ def element_divide(left, right, name=''):
     right = sanitize_input(right, get_data_type(left))
     return element_divide(left, right, name)        
 
-#TODO: PerDimMeanVarianceNormalize
-
 def times(left, right, output_rank=1, name=''):
     """
     The output of this operation is the matrix product of the two input matrices.
@@ -1276,4 +1274,21 @@ def reconcile_dynamic_axis(data_input, layout_input, name=''):
     
     raise NotImplementedError("reconcile_dynamic_axis is not implemented yet in V2")
 
+################################################################################
+# normalization ops
+################################################################################
 
+def per_dim_mean_variance_normalize(operand, mean, inv_stddev, name=''):
+    """
+    Computes per dimension mean-variance normalization of the specified input operand.
+    
+    Args:
+        operand: the variable to be normalized
+        mean: per dimension mean to use for the normalization
+        inv_stddev: per dimension standard deviation to use for the normalization
+        name (str): the name of the node in the network
+    Returns:
+        :class:`cntk_py.Function`                    
+    """
+    from ..cntk_py import per_dim_mean_variance_normalize    
+    return per_dim_mean_variance_normalize(operand, mean, inv_stddev, name)    
