@@ -1155,8 +1155,6 @@ def dropout(x, name=''):
 # variables_and_parameters ops
 ################################################################################
 
-#TODO: placeholder
-
 def variable(shape, data_type=None, needs_gradient=True, name=''):
     """
     It creates an input node. The graph requires a separate reader that will be
@@ -1176,6 +1174,23 @@ def variable(shape, data_type=None, needs_gradient=True, name=''):
     # TODO dynamic axis
     # TODO Sparse
     return Variable(shape, data_type, needs_gradient, name)
+
+def placeholder(shape, name=''):
+    """
+    It creates a variable place holder for recurrence networks, when the network's dynamic axes
+    are unfolded, the place holder will get assigned a variable along the correspondent dynamic axis.
+
+    Args:
+        shape (tuple): the shape of the variable tensor             
+        name (str): the name of the node in the network
+        
+    Returns:
+        :class:`cntk_py.Function`
+    """
+    from .variables import Placeholder
+
+    # TODO dynamic axis?    
+    return Placeholder(shape, name)
     
 def parameter(shape=None, value=None, device_id=-1, name=''):
     """
