@@ -27,7 +27,11 @@ class SynchronizationManager
 {
 
 private:
+    std::unordered_map<int, std::vector<SyncAction<ElemType>*> > m_stepNumber2SwapOut;
     std::unordered_map<int, std::vector<SyncAction<ElemType>*> > m_stepNumber2Actions;
+    std::unordered_map<int, std::vector<SyncAction<ElemType>*> > m_stepNumber2SwapIn;
+    std::unordered_map<Matrix<ElemType>*, SwapInAction<ElemType>*> m_buffer2SwapIn;
+    std::unordered_map<Matrix<ElemType>*, SwapOutAction<ElemType>*> m_buffer2SwapOut;
     std::unordered_map<int, std::vector<SyncAction<ElemType>*> > m_stepNumber2ActionsBackprop;
     // singleton constructor
 
@@ -52,8 +56,6 @@ private:
     int m_maxTimestep;
 
     //these are for managing full memory swapping during the dryrun
-    std::unordered_map<Matrix<ElemType>*, SwapInAction<ElemType>*> m_buffer2SwapIn;
-    std::unordered_map<Matrix<ElemType>*, SwapOutAction<ElemType>*> m_buffer2SwapOut;
     std::unordered_map<Matrix<ElemType>*, bool> m_buffer2IsFreed;
     std::unordered_map<int, std::vector<Matrix<ElemType>*> > m_stepNumber2Buffer; 
 
@@ -78,7 +80,7 @@ private:
     void MeasureSwapTime(ComputationNodeBase *node, bool isForward);
     std::string GetStepName(ComputationNodeBase *node, bool isForward);
     int DetermineCurrentTimestep(ComputationNodeBase *node);
-
+    std::vector<Matrix<ElemType>*> GetBuffersForNode(ComputationNodeBase *node);
 
 public:
     SynchronizationManager(){};

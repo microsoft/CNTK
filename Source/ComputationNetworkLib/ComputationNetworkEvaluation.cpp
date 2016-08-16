@@ -1231,12 +1231,6 @@ void ComputationNetwork::FindDependencyGraph(const std::vector<ComputationNodeBa
                 node->BecomeParentTo(child);
 
 
-    for(auto root  : rootNodes.front()->FindRoots())
-        cout << root->buffer << endl;
-
-    for(auto root  : rootNodes.front()->FindRoots())
-        root->PrintChildrenBuffers();
-
      std::unordered_map<Matrix<ElemType>*, bool> buffer2IsNeededDuringBackprop;
      for (auto& node : compositeForwardPropEvalOrder)
      {
@@ -1246,7 +1240,7 @@ void ComputationNetwork::FindDependencyGraph(const std::vector<ComputationNodeBa
             if(std::count(rootNodes.begin(), rootNodes.end(), buffer2DependencyNode[buffer]) > 0)
             {
                 buffer2IsNeededDuringBackprop[buffer] = true;
-                cout << "is needed during backprop: " << buffer << endl;
+                //cout << "is needed during backprop: " << buffer << endl;
             }
         }
      }

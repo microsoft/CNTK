@@ -1921,7 +1921,7 @@ template <class ElemType>
     if(sync->m_useMemorySwapping)
     {
         //sync->RegisterWeight(&functionValues);
-        //sync->RegisterWeight(&gradientValues);
+        sync->RegisterWeight(&gradientValues);
         //sync->RegisterWeight(&smoothedGradient);
     }
 

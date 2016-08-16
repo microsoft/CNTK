@@ -54,16 +54,16 @@ template <typename ElemType> void SwapOutAction<ElemType>::BeginAction()
        {
             if(this->m_bytes > 0)
                 ReleaseMemory();
-            cout << this->m_rows << " vs. " << this->m_bufferGPU->GetNumRows() << endl;
-            cout << this->m_cols << " vs. " << this->m_bufferGPU->GetNumCols() << endl;
-            cout << "REALLOC!" << endl;
+            //cout << this->m_rows << " vs. " << this->m_bufferGPU->GetNumRows() << endl;
+            //cout << this->m_cols << " vs. " << this->m_bufferGPU->GetNumCols() << endl;
+            //cout << "REALLOC!" << endl;
             this->m_rows = this->m_bufferGPU->GetNumRows();
             this->m_cols = this->m_bufferGPU->GetNumCols();
             this->m_bytes = this->m_rows*this->m_cols*sizeof(ElemType);
-            cout << this->m_rows << " vs. " << this->m_bufferGPU->GetNumRows() << endl;
-            cout << this->m_cols << " vs. " << this->m_bufferGPU->GetNumCols() << endl;
-            cout << this->m_bytes << " vs. " << this->m_bufferGPU->BufferSize() << endl;
-            cout << "REALLOC2!" << endl;
+            //cout << this->m_rows << " vs. " << this->m_bufferGPU->GetNumRows() << endl;
+            //cout << this->m_cols << " vs. " << this->m_bufferGPU->GetNumCols() << endl;
+            //cout << this->m_bytes << " vs. " << this->m_bufferGPU->BufferSize() << endl;
+            //cout << "REALLOC2!" << endl;
             allocatePinnedBuffer();
        }
 

@@ -64,7 +64,7 @@ template <typename ElemType> void SwapInAction<ElemType>::BeginAction()
 
 
    CUDA_CALL(cudaMemcpyAsync(this->m_bufferGPU->Data(), this->m_swpout->GetCPUMatrix(), bytes, cudaMemcpyDefault, this->m_swapInStream));
-   cout << "begin swapping in" << endl;
+   //cout << "begin swapping in" << endl;
 }
 
 
@@ -74,7 +74,7 @@ template <typename ElemType> void SwapInAction<ElemType>::EndAction()
 {
     if(!this->m_swpout->m_hasDoneInitialSwap){ return; }
     CUDA_CALL(cudaStreamSynchronize(this->m_swapInStream));
-    cout << "Swapped in: " << this->m_bufferGPU << ", " << this->m_rows*this->m_cols*sizeof(ElemType)/1024./1024./1024. << "GB" << endl;
+    cout << "Swapped in: " << this->m_bufferGPU << ", " << this->m_bufferGPU->BufferSize()/1024./1024./1024. << "GB" << endl;
 }
 
 

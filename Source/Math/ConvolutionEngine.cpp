@@ -34,7 +34,17 @@ template <class ElemType>
 void ConvolutionEngine<ElemType>::BackwardData(const Mat& srcGrad, const Mat& kernel, Mat& grad, Mat& workspace)
 {
     const auto& g = *m_geometry;
-    assert(g.InputShape().GetNumElements() == grad.GetNumRows());
+    if(g.InputShape().GetNumElements() != grad.GetNumRows())
+    {
+        cout << "g.InputShape().GetNumElements(): " << g.InputShape().GetNumElements() << " vs. " << "grad.GetNumRows(): " << grad.GetNumRows() << endl;
+        cout << grad.GetNumRows() << "x" << grad.GetNumCols() << endl;
+        for(int idx = 0; idx < g.InputShape().GetRank(); idx++)
+            cout << g.InputShape().GetDim(idx) << "x";
+        cout << endl;
+      
+        assert(g.InputShape().GetNumElements() == grad.GetNumRows());
+    }
+
     if(g.OutputShape().GetNumElements() != srcGrad.GetNumRows())
     {
         cout << "g.OutputShape().GetNumElements(): " << g.OutputShape().GetNumElements() << " vs. " << "srcGrad.GetNumRows(): " << srcGrad.GetNumRows() << endl;
