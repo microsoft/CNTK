@@ -482,7 +482,7 @@ def times(left, right, output_rank=1, name=''):
     right = sanitize_input(right, get_data_type(left))
     return times(right, left, output_rank, name)        
 
-#TOOD: enable when it is exposed in c++
+#TODO: enable when it is exposed in c++
 def identity(x, name=''):
     """
     The identity function. It returns an identical tensor to the input tensor `x`: 
@@ -599,7 +599,7 @@ def round(arg, name=''):
 # non_linear and nn ops
 ################################################################################
 
-#TOOD: enable when it is exposed in c++
+#TODO: enable when it is exposed in c++
 def clip(x, min_value, max_value, name=''):
     """
     Computes a tensor with all of its values clipped to fall
@@ -862,7 +862,7 @@ def reciprocal(x, name=''):
     x = sanitize_input(x)
     return reciprocal(x, name)    
 
-#TOOD: enable when it is exposed in c++
+#TODO: enable when it is exposed in c++
 def cond(flag, value_if_true, value_if_false, name=''):
     """
     return either value_if_true or value_if_false based on the value of flag.
@@ -942,7 +942,7 @@ def past_value(initial_state, x, time_step=1, default_hidden_activation=0.1, nam
 # reshaping ops
 ################################################################################
 
-#TOOD: enable when it is exposed in c++
+#TODO: enable when it is exposed in c++
 def reshape(x, shape, name=''):
     """
     Reinterpret input samples as having different tensor dimensions
@@ -966,7 +966,7 @@ def reshape(x, shape, name=''):
     """    
     raise NotImplementedError("reshape is not implemented yet in V2")
 
-#TOOD: enable when it is exposed in c++  
+#TODO: enable when it is exposed in c++  
 def transpose_dimensions(x, axis1, axis2, name=''):
     """
     Reverses two axes of the tensor. The output tensor has the same data but with
@@ -987,7 +987,7 @@ def transpose_dimensions(x, axis1, axis2, name=''):
     """    
     raise NotImplementedError("transpose_dimensions is not implemented yet in V2")
 
-#TOOD: enable when it is exposed in c++
+#TODO: enable when it is exposed in c++
 def slice(x, begin_index, end_index, axis=0, name=''): 
     '''
     Slice the input along an axis.    
@@ -1029,7 +1029,7 @@ def slice(x, begin_index, end_index, axis=0, name=''):
     '''
     raise NotImplementedError("slice is not implemented yet in V2")
 
-#TOOD: enable when it is exposed in c++
+#TODO: enable when it is exposed in c++
 def splice(inputs, axis=0, name=''): 
     '''
     Concatenate the input tensors along an axis.    
@@ -1102,7 +1102,7 @@ def reduce_sum(x, axis=0, name=''):
     x = sanitize_input(x)
     return reduce_sum(x, axis, name)    
 
-#TOOD: enable when it is exposed in c++
+#TODO: enable when it is exposed in c++
 def reduce_log_sum(inputs, name=''): 
     '''
     Computes the log sum of the input tensor's elements. The output is a scalar,
@@ -1130,7 +1130,7 @@ def reduce_log_sum(inputs, name=''):
 # training ops
 ################################################################################
 
-#TOOD: enable when it is exposed in c++
+#TODO: enable when it is exposed in c++
 def dropout(x, name=''):
     """
     Compute a new tensor with `dropoutRate` perecent set to zero. The values 
@@ -1236,7 +1236,7 @@ def constant(shape=None, value=None, device_id=-1, name=''):
         return constant_from_scalar(shape, value, None, cntk_device(device_id), name)   
     return Constant(shape, value, None, cntk_device(device_id), name)
 
-#TOOD: enable when it is exposed in c++
+#TODO: enable when it is exposed in c++
 def dynamic_axis(name=''):
     """
     This function creates a dynamic axis object that can be connected to an input. 
@@ -1254,7 +1254,7 @@ def dynamic_axis(name=''):
     
     raise NotImplementedError("dynamic_axis is not implemented yet in V2")
 
-#TOOD: enable when it is exposed in c++
+#TODO: enable when it is exposed in c++
 def reconcile_dynamic_axis(data_input, layout_input, name=''):
     """
     This function adapts the dynamic axis layout for `data_input` to match that 
