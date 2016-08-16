@@ -698,10 +698,8 @@ class RandomSampleNode : public ComputationNodeNonLooping<ElemType>, public NumI
 
     static const std::wstring TypeName()
     {
-        return L"RandomSampleNode";
+        return L"RandomSample";
     }
-    std::wstring m_targetType;
-
 
 public:
     RandomSampleNode(DEVICEID_TYPE deviceId, const wstring& name, int nSamples = 0)
@@ -732,7 +730,16 @@ public:
 
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
     {
-        ValidateUnaryMap(isFinalValidationPass);
+        Base::Validate(isFinalValidationPass);
+
+        // TODO check if number of requested samples is less then the number of classes
+        
+        // TODO set output dimm to num-classes * non-samples
+        let shape = Input(0)->GetSampleLayout();
+        auto dims = shape.GetDims();
+        //m_pMBLayout = null;
+
+        SetDims(TensorShape(1, m_nSamples), false);
     }
 
     virtual bool OutputUsedInComputingInputNodesGradients() const override
