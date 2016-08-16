@@ -11,8 +11,10 @@
 #include "TextParser.h"
 #include "TextReaderConstants.h"
 
-#define isSign(c) ((c == '-' || c == '+'))
-#define isE(c) ((c == 'e' || c == 'E'))
+#define isSign(c) (((c) == '-' || (c) == '+'))
+#define isE(c) (((c) == 'e' || (c) == 'E'))
+#define isN(c) (((c) == 'n' || (c) == 'N'))
+#define isA(c) (((c) == 'a' || (c) == 'A'))
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -30,7 +32,9 @@ enum State
     FractionalPart,
     TheLetterE,
     ExponentSign,
-    Exponent
+    Exponent,
+    NanBegin,
+    NanEnd
 };
 
 template <class ElemType>
@@ -988,6 +992,10 @@ bool TextParser<ElemType>::TryReadRealNumber(ElemType& value, size_t& bytesToRea
                 state = Sign;
                 negative = (c == '-');
             }
+            else if (isN(c))
+            {
+                state = NanBegin;
+            }
             else
             {
                 if (ShouldWarn())
@@ -1134,6 +1142,41 @@ bool TextParser<ElemType>::TryReadRealNumber(ElemType& value, size_t& bytesToRea
                 double exponent = (negative) ? -number : number;
                 value = static_cast<ElemType>(coefficient * pow(10.0, exponent));
                 return true;
+            }
+            break;
+        case NanBegin:
+            if (isA(c))
+            {
+                state = NanEnd;
+            }
+            else
+            {
+                if (ShouldWarn())
+                {
+                    fprintf(stderr,
+                        "WARNING: Encountered an unexpected character('%c')"
+                        " in a nan value %ls.\n", c, GetFileInfo().c_str());
+                }
+                return false;
+            }
+            break;
+        case NanEnd:
+            if (isN(c))
+            {
+                value = std::numeric_limits<ElemType>::lowest();
+                ++m_pos;
+                --bytesToRead;
+                return true;
+            }
+            else
+            {
+                if (ShouldWarn())
+                {
+                    fprintf(stderr,
+                        "WARNING: Encountered an unexpected character('%c')"
+                        " in a nan value %ls.\n", c, GetFileInfo().c_str());
+                }
+                return false;
             }
             break;
         default:
