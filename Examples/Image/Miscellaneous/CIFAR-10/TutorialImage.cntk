@@ -3,17 +3,17 @@
 command = TrainConvNet:Eval
 #command = TrainConvNetWithBN:Eval
 
-makeMode = false ; traceLevel = 1 ; deviceId = 0
+makeMode = false ; traceLevel = 0 ; deviceId = "auto"
 
 RootDir = "." ; DataDir  = "$RootDir$" ; ModelDir = "$RootDir$/Output/Models"
 
-modelPath = "$ModelDir$/01_Convolution"
+modelPath = "$ModelDir$/cifar10.cmf"
 
 # Training without BN
-TrainConvNet = [
+TrainConvNet = {
     action = "train"
 
-    BrainScriptNetworkBuilder = [
+    BrainScriptNetworkBuilder = {
         imageShape = 32:32:3
         labelDim = 10
 
@@ -21,15 +21,17 @@ TrainConvNet = [
         model_basic (features) =
         {
             featNorm = features - Constant (128)
-            # BUGBUG: pad=true desired?
-            l1 = ConvolutionalLayer {32, (5:5), pad = true, activation = ReLU, init = "gaussian", initValueScale = 0.0043} (featNorm)
+            l1 = ConvolutionalLayer {32, (5:5), pad = true, activation = ReLU,
+                                     init = "gaussian", initValueScale = 0.0043} (featNorm)
             p1 = MaxPoolingLayer {(3:3), stride = (2:2)} (l1)
-            l2 = ConvolutionalLayer {32, (5:5), pad = true, activation = ReLU, init = "gaussian", initValueScale = 1.414} (p1)
+            l2 = ConvolutionalLayer {32, (5:5), pad = true, activation = ReLU,
+                                     init = "gaussian", initValueScale = 1.414} (p1)
             p2 = MaxPoolingLayer {(3:3), stride = (2:2)} (l2)
-            l3 = ConvolutionalLayer {64, (5:5), pad = true, activation = ReLU, init = "gaussian", initValueScale = 1.414} (p2)
+            l3 = ConvolutionalLayer {64, (5:5), pad = true, activation = ReLU,
+                                     init = "gaussian", initValueScale = 1.414} (p2)
             p3 = MaxPoolingLayer {(3:3), stride = (2:2)} (l3)
             d1 = DenseLayer {64, activation = ReLU, init = "gaussian", initValueScale = 12} (p3)
-            z = LinearLayer {labelDim, init = "gaussian", initValueScale = 1.5} (d1)
+            z  = LinearLayer {10, init = "gaussian", initValueScale = 1.5} (d1)
         }.z
 
         # with self-defined layer
@@ -148,7 +150,7 @@ TrainConvNet = [
         labels   = Input {labelDim}
 
         # apply model to features
-        z = model_resNet (features)
+        z = model_basic (features)
 
         # connect to system
         ce       = CrossEntropyWithSoftmax (labels, z)
@@ -160,16 +162,16 @@ TrainConvNet = [
         criterionNodes  = (ce)
         evaluationNodes = (errs)  # top5Errs only used in Eval
         outputNodes     = (z)
-    ]
+    }
 
-    SGD = [
+    SGD = {
         epochSize = 50000   # 49984 --TODO: why 16 less?
 
         # without BatchNormalization:
-        #maxEpochs = 30 ; minibatchSize = 64
-        #learningRatesPerSample = 0.00015625*10:0.000046875*10:0.000015625
-        #momentumAsTimeConstant = 600*20:6400
-        #L2RegWeight = 0.03
+        maxEpochs = 30 ; minibatchSize = 64
+        learningRatesPerSample = 0.00015625*10:0.000046875*10:0.000015625
+        momentumAsTimeConstant = 600*20:6400
+        L2RegWeight = 0.03
 
         # with BatchNormalization:
         #maxEpochs = 30 ; minibatchSize = 64
@@ -178,118 +180,50 @@ TrainConvNet = [
         #L2RegWeight = 0
 
         # ResNet
-        maxEpochs = 160 ; minibatchSize = 128
-        learningRatesPerSample = 0.0078125*80:0.00078125*40:0.000078125
-        momentumAsTimeConstant = 1200
-        L2RegWeight = 0.0001
-        #learningRatesPerMB = 1.0*80:0.1*40:0.01
-        #momentumPerMB = 0.9
+        #maxEpochs = 160 ; minibatchSize = 128
+        #learningRatesPerSample = 0.0078125*80:0.00078125*40:0.000078125
+        #momentumAsTimeConstant = 1200
+        #L2RegWeight = 0.0001
 
         firstMBsToShowResult = 10 ; numMBsToShowResult = 500
-    ]
+    }
 
-    reader = [
+    reader = {
         verbosity = 0
         randomize = true
-        deserializers = ([
+        deserializers = ({
             type = "ImageDeserializer" ; module = "ImageReader"
             file = "$DataDir$/cifar-10-batches-py/train_map.txt"
-            input = [
-                features = [ transforms = ( [ type = "Crop" ; cropType = "random" ; cropRatio = 0.8 ; jitterType = "uniRatio" ] : [ type = "Scale" ; width = 32 ; height = 32 ; channels = 3 ; interpolations = "linear" ] : [ type = "Transpose" ] ) ]
-                labels =   [ labelDim = 10 ]
-            ]
-        ])
-    ]
-]
-
-# Training with BN
-# Not working well on this small set. Overtrains.
-# -- DELETE THIS, it is now covered above
-TrainConvNetWithBN = [
-    action = "train"
-
-    BrainScriptNetworkBuilder = [
-        imageShape = 32:32:3
-        labelDim = 10
-
-        Subtract128 (x) = x - Constant (128)
-
-        model = Sequential (
-            Subtract128 :
-            ConvolutionalLayer {32, (5:5), pad = true, bias = false, init = "gaussian", initValueScale = 0.0043} :
-              BatchNormalizationLayer {spatialRank = 2, normalizationTimeConstant = 4096} : ReLU :
-                MaxPoolingLayer {(3:3), stride = (2:2)} :
-            ConvolutionalLayer {32, (5:5), pad = true, bias = false, init = "gaussian", initValueScale = 1.414} :
-              BatchNormalizationLayer {spatialRank = 2, normalizationTimeConstant = 4096} : ReLU :
-                MaxPoolingLayer {(3:3), stride = (2:2)} :
-            ConvolutionalLayer {64, (5:5), pad = true, bias = false, init = "gaussian", initValueScale = 1.414} :
-              BatchNormalizationLayer {spatialRank = 2, normalizationTimeConstant = 4096} : ReLU :
-                MaxPoolingLayer {(3:3), stride = (2:2)} :
-            LinearLayer {64, bias = false, init = "gaussian", initValueScale = 12} :
-              BatchNormalizationLayer {normalizationTimeConstant = 4096} : ReLU :
-            LinearLayer {labelDim, init = "gaussian", initValueScale = 1.5}
-        )
-
-        # inputs
-        features = Input {imageShape}
-        labels   = Input {labelDim}
-
-        # apply model to features
-        z = model (features)
-
-        # connect to system
-        ce       = CrossEntropyWithSoftmax (labels, z)
-        errs     = ErrorPrediction         (labels, z)
-        top5Errs = ErrorPrediction         (labels, z, topN=5)
-
-        featureNodes    = (features)
-        labelNodes      = (labels)
-        criterionNodes  = (ce)
-        evaluationNodes = (errs)
-        outputNodes     = (z)
-    ]
-
-    SGD = [
-        epochSize = 49984 ; minibatchSize = 64
-
-        learningRatesPerSample = 0.00046875*7:0.00015625
-        momentumAsTimeConstant = 0
-        maxEpochs = 10
-        L2RegWeight = 0
-        dropoutRate = 0
-
-        firstMBsToShowResult = 10 ; numMBsToShowResult = 500
-    ]
-
-    reader = [
-        verbosity = 0
-        randomize = true
-        deserializers = ([
-            type = "ImageDeserializer" ; module = "ImageReader"
-            file = "$DataDir$/cifar-10-batches-py/train_map.txt"
-            input = [
-                features = [ transforms = ( [ type = "Scale" ; width = 32 ; height = 32 ; channels = 3 ; interpolations = "linear" ] : [ type = "Transpose" ] ) ]
-                labels =   [ labelDim = 10 ]
-            ]
-        ])
-    ]
-]
+            input = {
+                features = { transforms = (
+                    { type = "Crop" ; cropType = "random" ; cropRatio = 0.8 ; jitterType = "uniRatio" } :
+                    { type = "Scale" ; width = 32 ; height = 32 ; channels = 3 ; interpolations = "linear" } :
+                    { type = "Transpose" }
+                )}
+                labels =   { labelDim = 10 }
+            }
+        })
+    }
+}
 
 # Eval action
-Eval = [
+Eval = {
     action = "eval"
     minibatchSize = 16
     evalNodeNames = errs:top5Errs  # also test top-5 error rate
-    reader = [
+    reader = {
         verbosity = 0
         randomize = true
-        deserializers = ([
+        deserializers = ({
             type = "ImageDeserializer" ; module = "ImageReader"
             file = "$DataDir$/cifar-10-batches-py/test_map.txt"
-            input = [
-                features = [ transforms = ( [ type = "Scale" ; width = 32 ; height = 32 ; channels = 3 ; interpolations = "linear" ] : [ type = "Transpose" ] ) ]
-                labels =   [ labelDim = 10 ]
-            ]
-        ])
-    ]
-]
+            input = {
+                features = { transforms = (
+                   { type = "Scale" ; width = 32 ; height = 32 ; channels = 3 ; interpolations = "linear" } :
+                   { type = "Transpose" }
+                )}
+                labels =   { labelDim = 10 }
+            }
+        })
+    }
+}
