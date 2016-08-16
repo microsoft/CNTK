@@ -38,7 +38,7 @@
 #pragma warning(disable : 4702) // conversion from 'double' to 'float'
 
 
-#ifdef defined(USE_MKL)
+#ifdef USE_MKL
 // requires MKL 10.0 and above
 #include <mkl.h>
 #else
@@ -5454,7 +5454,6 @@ void CPUMatrix<ElemType>::InnerProductWithShiftNeg(const CPUMatrix<ElemType>& a,
             {
 #pragma warning(suppress : 4244)
                 c(i, 0) = cblas_sdot(n, reinterpret_cast<float*>(aBufPtr + i), m, reinterpret_cast<float*>(bBufPtr + i), m);
-#endif
             }
         }
     }
