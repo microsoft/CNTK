@@ -222,6 +222,8 @@ FlattenDimensions(x, axis, num) = NewReshape(x, 0, beginAxis=axis, endAxis=axis 
 SplitDimension(x, axis, N) = ReshapeDimension(x, axis, 0:N) 
 # TODO: make input the last arg!
 Transpose(x) = TransposeDimensions(x, 1, 2)
+NDCG(label, pred, pairNumberIndex, tag='') = new ComputationNode [ operation = 'IRMetric' ; inputs = (label : pred : pairNumberIndex) /*plus the function args*/ ]
+NDCG1(label, pred, pairNumberIndex, tag='') = new ComputationNode [ operation = 'IRMetricEval' ; inputs = (label : pred : pairNumberIndex) /*plus the function args*/ ]
 Logistic(label, probability, tag='') = new ComputationNode [ operation = 'Logistic' ; inputs = (label : probability) /*plus the function args*/ ]
 WeightedLogistic(label, probability, instanceWeight, tag='') = new ComputationNode [ operation = 'Logistic' ; inputs = (label : probability : instanceWeight) /*plus the function args*/ ]
 ReconcileDynamicAxis(dataInput, layoutInput, tag='') = new ComputationNode [ operation = 'ReconcileDynamicAxis' ; inputs = (dataInput : layoutInput) /*plus the function args*/ ]
