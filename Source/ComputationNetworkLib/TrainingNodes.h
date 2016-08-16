@@ -678,6 +678,99 @@ private:
 template class NoiseContrastiveEstimationNode<float>;
 template class NoiseContrastiveEstimationNode<double>;
 
+
+
+
+
+// -----------------------------------------------------------------------
+// RandomSampleNode: Creates random samples of classes. To be used in context of different sampling based citerion functions like:
+// samples softmax, noise contrastive estimation and negative sampling.
+// Creates one sampled set per mini-batch to speed up calculations.
+// Result is a sparse matrix of shape nClasses * nSamples. We use this shape instead its transposed as the CSC representation will be much more compact.
+// Inputs:
+// Input(0) Sampling weight. (constant) matrix of shape (nClasses x 1) providing smapling weights > 0. Probablility draw a class will be proportional to the weight.
+// Input(1)? True lables: Needed to exclude true tlables from random sample if requested (do we want that?)
+template <class ElemType>
+class RandomSampleNode : public ComputationNode<ElemType>, public NumInputs<1>
+{
+    typedef ComputationNode<ElemType> Base;
+    UsingComputationNodeMembersBoilerplate;
+
+    static const std::wstring TypeName()
+    {
+        return L"";
+    }
+    std::wstring m_targetType;
+
+
+public:
+    //DeclareConstructorFromConfigWithNumInputs(AsSparseNode)????
+
+    RandomSampleNode(DEVICEID_TYPE deviceId, const wstring& name, std::wstring targetType = std::wstring())
+        : Base(deviceId, name), m_targetType(targetType)
+    {
+    }
+
+    RandomSampleNode(const ScriptableObjects::IConfigRecordPtr configp)
+        : RandomSampleNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"type"))
+    {
+        AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
+    }
+
+
+    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
+    {
+        Matrix<ElemType>& valueMatrix = ValueAsMatrix();
+        valueMatrix.SwitchToMatrixType(SPARSE, matrixFormatSparseCSC, false);
+
+       // valueMatrix.SetMatrixFromCSCFormat();
+    }
+
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
+    {
+        // This node does not propagate gradients.
+    }
+
+    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
+    {
+        ValidateUnaryMap(isFinalValidationPass);
+    }
+
+    virtual bool OutputUsedInComputingInputNodesGradients() const override
+    {
+        return false;
+    }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override
+    {
+        return false;
+    }
+
+
+};
+
+template class RandomSampleNode<float>;
+template class RandomSampleNode<double>;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 // -----------------------------------------------------------------------
 // ClassBasedCrossEntropyWithSoftmaxNode (labeldata(.,t), inputdata(.,t), embeddingMatrix, clsProbBeforeSoftmaxData(.,t))
 //  - Input(0) [4 x T] label in dense matrix in
@@ -689,7 +782,6 @@ template class NoiseContrastiveEstimationNode<double>;
 //  - Input(2) [hdsize x vocab_size] weight matrix in, for speed-up, as per word matrix can be simply obtained as column slice
 //  - Input(3) [nbr_cls x T] clsprob in dense matrix in. This input, if applied softmax on, is the posterior probabilty of class given observations
 // -----------------------------------------------------------------------
-
 // calculates: -sum(left_i * log(softmax_i(right))) for class given history and for word given history
 // need to provide class probabilty from external node
 template <class ElemType>
