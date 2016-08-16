@@ -698,21 +698,20 @@ class RandomSampleNode : public ComputationNodeNonLooping<ElemType>, public NumI
 
     static const std::wstring TypeName()
     {
-        return L"";
+        return L"RandomSampleNode";
     }
     std::wstring m_targetType;
 
 
 public:
-    //DeclareConstructorFromConfigWithNumInputs(AsSparseNode)????
-
-    RandomSampleNode(DEVICEID_TYPE deviceId, const wstring& name, std::wstring targetType = std::wstring())
-        : Base(deviceId, name), m_targetType(targetType)
+    RandomSampleNode(DEVICEID_TYPE deviceId, const wstring& name, int nSamples = 0)
+        : Base(deviceId, name), m_nSamples(nSamples)
     {
+
     }
 
     RandomSampleNode(const ScriptableObjects::IConfigRecordPtr configp)
-        : RandomSampleNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"type"))
+        : RandomSampleNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"nSamples"))
     {
         AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
     }
@@ -745,6 +744,8 @@ public:
         return false;
     }
 
+private:
+    int m_nSamples;
 
 };
 

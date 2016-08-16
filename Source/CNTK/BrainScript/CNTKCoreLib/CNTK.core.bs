@@ -382,7 +382,7 @@ CNTK2 = [
     // 13. Others    
     Pass(_, tag='') = new ComputationNode [ operation = 'Pass' ; inputs = _ /*plus the function args*/ ]    
     Identity = Pass
-	RandomSample(_ ,targetType, tag='') = new ComputationNode [ operation = 'RandomSample' ; type = targetType ; inputs = _ /*plus the function args*/ ]
+	RandomSample(_ ,numSamples , tag='') = new ComputationNode [ operation = 'RandomSample' ; nSamples = numSamples ; inputs = _ /*plus the function args*/ ]
 
 ]
 
