@@ -113,7 +113,6 @@ def classification_error(target_vector, output_vector, name=''):
 ################################################################################
 # convolution ops
 ################################################################################
-#TODO: BatchNormalization
 
 def convolution(convolution_map, operand, strides=[1], sharing=[True], 
                 auto_padding=[True], lower_pad=[0], upper_pad=[0], transpose=False, 
@@ -163,6 +162,32 @@ def pooling(operand, pooling_type, pooling_window_shape, strides=[1], auto_paddi
     operand = sanitize_input(operand)    
     return pooling(operand, pooling_type, pooling_window_shape, strides, auto_padding,
                     lower_pad, upper_pad, name) 
+
+def batch_normalization(operand, scale, bias, running_mean, running_inv_std, special,
+                        normalization_time_constant=0, blend_time_constant=0,
+                        epsilon=0.00001, use_cudnn_engine=False, name=''):
+    """
+    TODO: 
+    Args:                
+        operand:
+        scale:   
+        bias:
+        running_mean:
+        running_inv_std:
+        special:
+        normalization_time_constant:
+        blend_time_constant:
+        epsilon:
+        use_cudnn_engine:
+        name (str): the name of the node in the network
+    Returns:
+        :class:`cntk_py.Function`
+    """
+    from ..cntk_py import batch_normalization
+    operand = sanitize_input(operand)    
+    return batch_normalization(operand, scale, bias, running_mean, running_inv_std, special,
+                                normalization_time_constant, blend_time_constant,
+                                epsilon, use_cudnn_engine, name) 
 
 ################################################################################
 # comparison ops
