@@ -1972,7 +1972,10 @@ template <class ElemType>
 Matrix<ElemType>& Matrix<ElemType>::operator-=(const Matrix<ElemType>& a)
 {
     if (a.IsEmpty())
+    {
+        cout << this->GetNumRows() << "x" << this->GetNumCols() << endl;
         LogicError("Minus Operation: Matrix a is empty.");
+    }
     DecideAndMoveToRightDevice(*this, a);
 
     DISPATCH_MATRIX_ON_FLAG(this,

@@ -1139,23 +1139,65 @@ public:
 
     void BecomeParentTo(DependencyNode* child)
     {
-
+        
         if(child->level > level+1)
             UpdateLevel(child->level-1);
         else if(child->level <= level)
-            child->UpdateLevel(level+1);
+            child->UpdateLevel(level+1); 
 
         children.push_back(child);
         child->parents.push_back(this);
+
+        //UpdateLevel();
+    }
+
+    // iterative breadth first search with visited hashtable to avoid loops
+    void UpdateLevel()
+    {
+    	std::vector<DependencyNode<ElemType>*> roots = FindRoots();
+
+    	std::unordered_map<DependencyNode<ElemType>*, bool> visited;
+    	std::vector<DependencyNode<ElemType>*> children = roots;
+    	std::vector<DependencyNode<ElemType>*> newChildren;
+    	int level = 0;
+    	while(children.size() > 0)
+    	{
+            newChildren.clear();
+    		for(int i = 0; i < children.size(); i++)
+    		{
+    			DependencyNode<ElemType>* child = children.front();
+    			if(visited.count(child) == 0)
+    			{
+    				child->level = level;
+    				//visited[child] = true;
+
+                    for(auto childNode : child->children)
+                        newChildren.push_back(childNode);
+    			}
+                else
+                {
+                    if(child->level < level)
+                        child->level = level;
+                }
+                i--;
+                children.erase(children.begin());
+
+
+    		}
+            children = newChildren;
+    		level++;
+    	}
     }
 
     void UpdateLevel(int newLevel)
     {
+
        level  = newLevel;
        for(auto parent : parents)
        {
            if(parent->level != level-1)
                parent->UpdateLevel(newLevel-1);
+
        }
        for(auto child : children)
        {
