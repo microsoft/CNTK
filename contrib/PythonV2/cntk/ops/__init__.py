@@ -113,7 +113,6 @@ def classification_error(target_vector, output_vector, name=''):
 ################################################################################
 # convolution ops
 ################################################################################
-#TODO: Pooling
 #TODO: BatchNormalization
 
 def convolution(convolution_map, operand, strides=[1], sharing=[True], 
@@ -140,6 +139,30 @@ def convolution(convolution_map, operand, strides=[1], sharing=[True],
     return convolution(convolution_map, operand, strides, sharing, auto_padding, 
                         lower_pad, upper_pad, transpose, max_temp_mem_size_in_samples,
                         name) 
+
+MAX_POOLING=1
+AVG_POOLING=2
+
+def pooling(operand, pooling_type, pooling_window_shape, strides=[1], auto_padding=[False], 
+            lower_pad=[0], upper_pad=[0], name=''):
+    """
+    TODO: 
+    Args:                
+        operand:
+        pooling_type:   
+        pooling_window_shape:
+        strides:
+        auto_padding:
+        lower_pad:
+        upper_pad:
+        name (str): the name of the node in the network
+    Returns:
+        :class:`cntk_py.Function`
+    """
+    from ..cntk_py import pooling
+    operand = sanitize_input(operand)    
+    return pooling(operand, pooling_type, pooling_window_shape, strides, auto_padding,
+                    lower_pad, upper_pad, name) 
 
 ################################################################################
 # comparison ops
