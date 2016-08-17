@@ -188,6 +188,8 @@ FeatureMVNLayer {} = MeanVarNorm
 
 Identity(x) = x # sometimes helpful
 
+None = BS.Constants.None   # for use with some optional parameters; test with IsNone()
+
 ##############################################################################
 # Composing layers or models into more more complex models
 ##############################################################################

@@ -876,7 +876,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             else
                 fprintf(stderr, ", with %d subminibatch", (int)numSubminibatchesNeeded);
         }
-    fprintf(stderr, ".\n");
+        fprintf(stderr, ".\n");
     }
 
     Timer timer;
