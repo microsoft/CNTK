@@ -13,6 +13,7 @@
 #include "TextParser.h"
 #include "SequencePacker.h"
 #include "FramePacker.h"
+#include "XPacker.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -62,10 +63,10 @@ CNTKTextFormatReader::CNTKTextFormatReader(MemoryProviderPtr provider,
         }
         else
         {
-        m_packer = std::make_shared<SequencePacker>(
-            m_provider,
-            m_randomizer,
-            GetStreamDescriptions());
+            m_packer = std::make_shared<XPacker>(
+                m_provider,
+                m_randomizer,
+                GetStreamDescriptions());
         }
     }
     catch (const std::runtime_error& e)
