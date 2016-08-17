@@ -15,7 +15,10 @@ namespace CNTK
     template <typename T>
     void DictionaryValue::AllocateDataPtr(const T& value)
     {
-        static_assert(is_same<T, NDShape>::value || is_same<T, vector<DictionaryValue>>::value, "AllocateDataPtr called with invalid type");
+        static_assert(is_same<T, NDShape>::value ||
+                      is_same<T, wstring>::value ||
+                      is_same<T, vector<DictionaryValue>>::value ||
+                      is_same<T, Dictionary>::value, "AllocateDataPtr called with invalid type");
         m_data.m_ptr = new T(value);
     }
 
@@ -26,14 +29,6 @@ namespace CNTK
         delete typedPtr;
 
         m_data.m_ptr = nullptr;
-    }
-
-    void DictionaryValue::FreeDataPtr()
-    {
-        if (m_valueType == Type::NDShape)
-            FreePtrAsType<NDShape>();
-        else if (m_valueType == Type::Vector)
-            FreePtrAsType<vector<DictionaryValue>>();
     }
 
     Microsoft::MSR::CNTK::File& operator>>(Microsoft::MSR::CNTK::File& stream, DictionaryValue& us)
@@ -143,7 +138,18 @@ namespace CNTK
 
     Dictionary::~Dictionary()
     {
-        delete m_dictionaryData;
+    }
+
+    Dictionary::Dictionary(const Dictionary& other)
+    {
+        *this = other;
+    }
+
+    Dictionary& Dictionary::operator=(const Dictionary& other)
+    {
+        assert(this != &other);
+        m_dictionaryData.reset(new std::unordered_map<std::wstring, DictionaryValue>(*(other.m_dictionaryData)));
+        return *this;
     }
 
     Dictionary::Dictionary(Dictionary&& other)
@@ -155,8 +161,6 @@ namespace CNTK
     Dictionary& Dictionary::operator=(Dictionary&& other)
     {
         assert(this != &other);
-
-        delete m_dictionaryData;
 
         m_dictionaryData = other.m_dictionaryData;
         other.m_dictionaryData = nullptr;
@@ -304,4 +308,11 @@ namespace CNTK
      
     template void DictionaryValue::AllocateDataPtr<NDShape>(const NDShape& value);
     template void DictionaryValue::AllocateDataPtr<vector<DictionaryValue>>(const vector<DictionaryValue>& value);
+    template void DictionaryValue::AllocateDataPtr<wstring>(const wstring& value);
+    template void DictionaryValue::AllocateDataPtr<Dictionary>(const Dictionary& value);
+
+    template void DictionaryValue::FreePtrAsType<NDShape>();
+    template void DictionaryValue::FreePtrAsType<vector<DictionaryValue>>();
+    template void DictionaryValue::FreePtrAsType<wstring>();
+    template void DictionaryValue::FreePtrAsType<Dictionary>();
 }

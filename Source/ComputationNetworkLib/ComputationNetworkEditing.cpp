@@ -76,7 +76,7 @@ void ComputationNetwork::CopySubTree(const ComputationNetwork& fromNet,
 
     ComputationNodeBasePtr fromRoot = fromNet.GetNodeFromName(fromName);
 
-    for (const auto& fromNode : GetEvalOrder(fromRoot)) // BUGBUG: This probably will fail because the precomputed eval orders are invalid at this point.
+    for (const auto& fromNode : fromNet.GetEvalOrder(fromRoot)) // BUGBUG: This probably will fail because the precomputed eval orders are invalid at this point.
     {
         wstring fromNodeName = fromNode->NodeName();
         wstring toNodeName = toNamePrefix + fromNodeName;

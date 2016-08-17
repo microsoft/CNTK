@@ -130,6 +130,7 @@
     </ClInclude>
     <ClInclude Include="GPURNGHandle.h">
       <Filter>GPU</Filter>
+    </ClInclude>
     <ClInclude Include="CuDnnRNN.h">
       <Filter>GPU\RNN</Filter>
     </ClInclude>

@@ -1,0 +1,9 @@
+ []
+ do =
+  new PrintAction
+   []
+    what =
+     'abc'
+
+
+

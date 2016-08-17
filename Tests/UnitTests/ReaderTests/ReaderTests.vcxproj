@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" InitialTargets="CheckDependencies" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|x64">
@@ -195,6 +195,8 @@
     <Text Include="Data\CNTKTextFormatReader\MNIST_dense.txt" />
     <Text Include="Data\CNTKTextFormatReader\missing_trailing_newline.txt" />
     <Text Include="Data\CNTKTextFormatReader\Simple_dense.txt" />
+    <Text Include="Data\ImageAndTextReaderSimple_labels.txt" />
+    <Text Include="Data\ImageAndTextReaderSimple_map.txt" />
     <Text Include="Data\ImageReaderBadLabel_map.txt" />
     <Text Include="Data\ImageReaderBadMap_map.txt" />
     <Text Include="Data\ImageReaderGrayscale_map.txt" />
@@ -230,7 +232,9 @@
     <None Include="Config\HTKDeserializersSimpleDataLoop5_Config.cntk" />
     <None Include="Config\HTKDeserializersSimpleDataLoop8_Config.cntk" />
     <None Include="Config\HTKDeserializersSimpleDataLoop9_Config.cntk" />
+    <None Include="Config\ImageAndImageReaderSimple_Config.cntk" />
     <None Include="Config\ImageAndTextReaderSimple_Config.cntk" />
+    <None Include="Config\ImageTransforms_Config.cntk" />
     <None Include="Config\ImageReaderBadLabel_Config.cntk" />
     <None Include="Config\ImageReaderBadMap_Config.cntk" />
     <None Include="Config\ImageReaderColorTransform_Config.cntk" />
@@ -257,8 +261,11 @@
     <ImageReaderDependencies Condition="$(UseZip)">$(ImageReaderDependencies);$(OutDir)..\zip.dll;$(OutDir)..\zlib1.dll</ImageReaderDependencies>
   </PropertyGroup>
   <Target Name="CopyUnitTestDependencies" AfterTargets="Build">
+    <PropertyGroup>
+      <CuDnnDll Condition="$(GpuBuild) And Exists('$(OutDir)..\cudnn64_4.dll')">$(OutDir)..\cudnn64_4.dll</CuDnnDll>
+    </PropertyGroup>
     <ItemGroup>
-      <UnitTestDependencies Include="$(OutDir)..\Math.dll;$(OutDir)..\ucifastreader.dll;$(OutDir)..\cntktextformatreader.dll;$(OutDir)..\htkmlfreader.dll;$(OutDir)..\HTKDeserializers.dll;$(OutDir)..\compositedatareader.dll;$(UnitTestDlls);$(ImageReaderDependencies);" />
+      <UnitTestDependencies Include="$(OutDir)..\Math.dll;$(OutDir)..\ucifastreader.dll;$(OutDir)..\cntktextformatreader.dll;$(OutDir)..\htkmlfreader.dll;$(OutDir)..\HTKDeserializers.dll;$(OutDir)..\compositedatareader.dll;$(UnitTestDlls);$(ImageReaderDependencies);$(CuDnnDll)" />
     </ItemGroup>
     <Copy SourceFiles="@(UnitTestDependencies)" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true">
       <Output TaskParameter="DestinationFiles" ItemName="NewFileWrites" />

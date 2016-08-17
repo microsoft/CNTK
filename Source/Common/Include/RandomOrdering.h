@@ -134,4 +134,5 @@ public:
         return randomizationrange == randomizeDisable;
     }
 };
-} } }
+
+}}}
