@@ -80,7 +80,7 @@ private:
     void MeasureSwapTime(ComputationNodeBase *node, bool isForward);
     std::string GetStepName(ComputationNodeBase *node, bool isForward);
     int DetermineCurrentTimestep(ComputationNodeBase *node);
-    std::vector<Matrix<ElemType>*> GetBuffersForNode(ComputationNodeBase *node);
+    std::vector<Matrix<ElemType>*> GetBuffersForNode(ComputationNodeBase *node, bool isForward, bool getAllBuffers);
 
 public:
     SynchronizationManager(){};
