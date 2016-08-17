@@ -478,11 +478,10 @@ void LearnableParameter<ElemType>::InferInputDimsFrom(const TensorShape& otherSh
         InitShape(otherShape);
     else if (hasMissingDims) // we got a pre-existing shape: If it has zeroes, we fill them in from otherShape
     {
-        if (thisShape.GetRank() != 0 && thisShape.GetRank() > otherShape.GetRank())
-            return; // LogicError("ValidateInferInputDimsFrom: Inferred dimensions cannot decrease rank.");
+        if (thisShape.GetRank() != 0 && thisShape.GetRank() != otherShape.GetRank())
+            return; // LogicError("ValidateInferInputDimsFrom: Inferred dimensions must match in rank.");
         SmallVector<size_t> newDims = thisShape.GetDims();
-        newDims.resize(otherShape.GetRank(), 0);
-        for (size_t i = 0; i < newDims.size(); i++)
+        for (size_t i = 0; i < thisShape.GetRank(); i++)
             if (newDims[i] == 0)
                 newDims[i] = otherShape[i];
         InitShape(TensorShape(newDims));
