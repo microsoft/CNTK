@@ -7,14 +7,13 @@
 #include <algorithm>
 #include <unordered_map>
 #include <random>
+#include <boost/random/bernoulli_distribution.hpp>
+#include <boost/random/normal_distribution.hpp>
 #include "ImageTransformers.h"
 #include "Config.h"
 #include "ConcStack.h"
 #include "StringUtil.h"
 #include "ElementTypeUtils.h"
-#include <boost/random/bernoulli_distribution.hpp>
-#include <boost/random/normal_distribution.hpp>
-
 
 namespace Microsoft { namespace MSR { namespace CNTK 
 {

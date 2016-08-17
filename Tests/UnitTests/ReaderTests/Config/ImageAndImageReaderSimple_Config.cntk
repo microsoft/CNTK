@@ -19,7 +19,6 @@ Simple_Test = [
 reader = [
         verbosity = 0
         randomize = true
-        numCPUThreads = 1
 
         deserializers = (
             [

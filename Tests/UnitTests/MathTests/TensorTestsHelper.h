@@ -5,15 +5,15 @@
 
 #pragma once
 
-#include "Matrix.h"
-#include "CPUMatrix.h"
-#include "TensorView.h"
-#include "Sequences.h"
 #include <chrono>
 #include <iostream>
 #include <vector>
 #include <algorithm>
 #include <boost/random/uniform_real_distribution.hpp>
+#include "Matrix.h"
+#include "CPUMatrix.h"
+#include "TensorView.h"
+#include "Sequences.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK { namespace Test {
 
@@ -50,7 +50,7 @@ struct TensorTest
             cout << " \t// " << (deviceId < 0 ? "C" : "G") << "PU\n   " << flush;
 
         // random init
-        mt19937 rng(randomSeed);
+        std::mt19937 rng(randomSeed);
         boost::random::uniform_real_distribution<float> nd(-1, 1);
         vector<ElemType> init(numElements);
         generate(begin(init), end(init), [&] { return nd(rng); });

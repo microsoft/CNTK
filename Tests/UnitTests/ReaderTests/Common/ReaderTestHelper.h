@@ -5,13 +5,13 @@
 #pragma once
 
 #include <boost/test/unit_test.hpp>
-#include "boost/filesystem.hpp"
-#include "boost/lexical_cast.hpp"
+#include <boost/filesystem.hpp>
+#include <boost/lexical_cast.hpp>
 #include "DataReader.h"
 
-using namespace Microsoft::MSR::CNTK;
-
 namespace Microsoft { namespace MSR { namespace CNTK { namespace Test {
+
+const double relError = 1e-5f;
 
 struct ReaderFixture
 {
@@ -114,9 +114,7 @@ struct ReaderFixture
     string m_initialWorkingPath;
     string m_testDataPath;
     string m_parentPath;
-
-    double relError = 1e-5f;
-    
+   
     string initialPath()
     {
         return m_initialWorkingPath;
@@ -184,14 +182,14 @@ struct ReaderFixture
         {
             for (it1 = beginStream1, it2 = beginStream2; it1 != endStream1 && it2 != endStream2; it1++, it2++)
             {
-                BOOST_CHECK_CLOSE_FRACTION(boost::lexical_cast<double>(*it1), boost::lexical_cast<double>(*it2), relError);
+                BOOST_REQUIRE_CLOSE_FRACTION(boost::lexical_cast<double>(*it1), boost::lexical_cast<double>(*it2), relError);
             }
 
-            BOOST_CHECK_MESSAGE(it1 == endStream1 && it2 == endStream2, "Different number of elements in file " << filename1 << " and " << filename2);
+            BOOST_REQUIRE_MESSAGE(it1 == endStream1 && it2 == endStream2, "Different number of elements in file " << filename1 << " and " << filename2);
         }
         else
         {
-            BOOST_CHECK_EQUAL_COLLECTIONS(beginStream1, endStream1, beginStream2, endStream2);
+            BOOST_REQUIRE_EQUAL_COLLECTIONS(beginStream1, endStream1, beginStream2, endStream2);
         }
     }
 

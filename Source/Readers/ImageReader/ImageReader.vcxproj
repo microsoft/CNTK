@@ -127,9 +127,10 @@
     <ClCompile Include="ZipByteReader.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
-  <Target Name="Build" Condition="$(HasOpenCv)" Outputs="$(TargetPath)" DependsOnTargets="$(BuildDependsOn)" />
+  <Target Name="Build" Condition="$(HasOpenCv) And $(HasBoost)" Outputs="$(TargetPath)" DependsOnTargets="$(BuildDependsOn)" />
   <ImportGroup Label="ExtensionTargets" />
   <Target Name="CheckDependencies">
+    <Warning Condition="!$(HasBoost)" Text="ImageReader requires the Boost library to build. Please see https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Windows#boost for installation instructions." />
     <Warning Condition="!$(HasOpenCv)" Text="ImageReader requires the OpenCV library to build. Please see https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Windows#opencv for installation instructions." />
     <Warning Condition="!$(UseZip)" Text="zlib and libzip libraries were not found, ImageReader will be built without zip container support. Please see https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Windows#libzip for installation instructions." />
   </Target>
