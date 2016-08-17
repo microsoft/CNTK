@@ -47,6 +47,17 @@ RNNNode<ElemType>::RNNNode(const ScriptableObjects::IConfigRecordPtr configp)
 }
 
 template<class ElemType>
+/*virtual*/ void RNNNode<ElemType>::CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const /*override*/
+{
+	Base::CopyTo(nodeP, newName, flags);
+	if (flags & CopyNodeFlags::copyNodeValue)
+	{
+		auto node = dynamic_pointer_cast<RNNNode<ElemType>>(nodeP);
+		node->m_rnnParameters = m_rnnParameters;
+	}
+}
+
+template<class ElemType>
 void RNNNode<ElemType>::Save(File& fstream) const
 {
     Base::Save(fstream);

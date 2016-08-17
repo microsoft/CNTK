@@ -39,7 +39,8 @@ public:
     RNNNode(DEVICEID_TYPE deviceId, const wstring& name);
     RNNNode(const ScriptableObjects::IConfigRecordPtr configp);
 
-    void Save(File& fstream) const;
+	virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override;
+	virtual void Save(File& fstream) const;
     virtual void Load(File& fstream, size_t modelVersion) override;
 
 public:
@@ -109,4 +110,4 @@ private:
     RnnParameters m_rnnParameters;
 };
 
-} } }
+}}}
