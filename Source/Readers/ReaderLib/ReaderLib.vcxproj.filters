@@ -79,6 +79,9 @@
     <ClInclude Include="ExceptionCapture.h">
       <Filter>Utils</Filter>
     </ClInclude>
+    <ClInclude Include="XPacker.h">
+      <Filter>Packers</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="NoRandomizer.cpp">
@@ -113,6 +116,9 @@
     </ClCompile>
     <ClCompile Include="ChunkCache.cpp">
       <Filter>Utils</Filter>
+    </ClCompile>
+    <ClCompile Include="XPacker.cpp">
+      <Filter>Packers</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

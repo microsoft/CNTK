@@ -66,6 +66,7 @@
     <ClInclude Include="ReaderShim.h" />
     <ClInclude Include="Transformer.h" />
     <ClInclude Include="TruncatedBpttPacker.h" />
+    <ClInclude Include="XPacker.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Bundler.cpp" />
@@ -79,6 +80,7 @@
     <ClCompile Include="SequencePacker.cpp" />
     <ClCompile Include="SequenceRandomizer.cpp" />
     <ClCompile Include="TruncatedBpttPacker.cpp" />
+    <ClCompile Include="XPacker.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

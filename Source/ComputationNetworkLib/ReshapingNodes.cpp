@@ -232,6 +232,7 @@ template <class ElemType>
     let& inMBLayout = Input(0)->GetMBLayout();
     let& input = Input(0)->Value();
     let& sequences = inMBLayout->GetAllSequences();
+    map<size_t, size_t> seqIdToIndexMap;
     auto& indexSequences = m_indexSequenceBuffer;
     if (indexSequences.size() < sequences.size())
         indexSequences.resize(sequences.size());
@@ -242,6 +243,7 @@ template <class ElemType>
             continue;
         auto& indexSequence = indexSequences[i];
         indexSequence.clear();
+        seqIdToIndexMap[seq.seqId] = i;
         for (size_t t = 0; t < seq.GetNumTimeSteps(); t++)
             if (input(0, inMBLayout->GetColumnIndex(seq, t))) // this is the condition check that this node performs; the meat
                 indexSequence.push_back(t);
@@ -259,7 +261,8 @@ template <class ElemType>
         let& seq = outMBLayout->GetAllSequences()[i];
         if (seq.seqId == GAP_SEQUENCE_ID) // gaps will keep the NaN
             continue;
-        let& indexSequence = indexSequences[i];
+        size_t index = seqIdToIndexMap[seq.seqId];
+        let& indexSequence = indexSequences[index];
         for (size_t t = 0; t < seq.GetNumTimeSteps(); t++)
             buf[outMBLayout->GetColumnIndex(seq, t)] = (ElemType)indexSequence[t];
     }
