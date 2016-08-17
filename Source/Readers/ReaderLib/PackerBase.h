@@ -70,6 +70,9 @@ protected:
     // Minibatch size in samples.
     size_t m_minibatchSize;
 
+    // For which streams there should be a shape check for each sequence.
+    std::vector<bool> m_checkSampleShape;
+
 public:
     // Sets current epoch configuration.
     virtual void StartEpoch(const EpochConfiguration& config) override;

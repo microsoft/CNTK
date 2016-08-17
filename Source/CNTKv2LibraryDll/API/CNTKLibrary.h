@@ -7,6 +7,12 @@
 
 #pragma once
 
+#ifdef SWIG
+#define final
+#define explicit
+#define static_assert(condition, message)
+#endif
+
 #include "CNTKLibraryInternals.h"
 
 #include <memory>
@@ -784,14 +790,21 @@ namespace CNTK
         ///
         /// Create an 'Input' Variable.
         ///
-        Variable(const NDShape& shape, CNTK::DataType dataType, const wchar_t* name = L"")
+        Variable(const NDShape& shape, CNTK::DataType dataType)
+            : Variable(shape, dataType, L"")
+        {}
+
+        ///
+        /// Create an 'Input' Variable.
+        ///
+        Variable(const NDShape& shape, CNTK::DataType dataType, const wchar_t* name)
             : Variable(shape, dataType, std::wstring(name))
         {}
 
         ///
         /// Create an 'Input' Variable.
         ///
-        Variable(const NDShape& shape, CNTK::DataType dataType, const std::wstring& name = L"")
+        Variable(const NDShape& shape, CNTK::DataType dataType, const std::wstring& name)
             : Variable(shape, VariableKind::Input, dataType, nullptr, nullptr, false, { Axis::DefaultDynamicAxis() }, false, name)
         {}
 
@@ -1090,6 +1103,15 @@ namespace CNTK
 }
 
 namespace std {
+    
+    template <> struct hash<CNTK::NDShape>
+    {
+        size_t operator()(const CNTK::NDShape& x) const
+        {
+            return std::hash<std::wstring>()(x.AsString());
+        }
+    };
+
     template <> struct hash<CNTK::Axis>
     {
         size_t operator()(const CNTK::Axis& x) const
@@ -1488,7 +1510,7 @@ namespace CNTK
     /// Create an instance of the CNTK built-in matrix multiplication operation with the specified input operands.
     /// TODO: Specify the constraints on the shapes of the operands.
     ///
-    CNTK_API FunctionPtr Times(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name = L"");
+    CNTK_API FunctionPtr Times(const Variable& leftOperand, const Variable& rightOperand, size_t numOutputAxes = 1, const std::wstring& name = L"");
 
     ///
     /// Create an instance of the CNTK built-in operation to compute squared-error for specified input operands.
@@ -1524,6 +1546,61 @@ namespace CNTK
     /// Create an instance of the CNTK built-in sum reduction operation on specified tensor input operand along all the axes
     ///
     CNTK_API FunctionPtr ReduceSum(const Variable& operand, const std::wstring& name = L"");
+
+    ///
+    /// Per dimension mean-variance normalization of the specified input operand.
+    ///
+    CNTK_API FunctionPtr PerDimMeanVarianceNormalize(const Variable& operand, const NDArrayViewPtr& mean, const NDArrayViewPtr& invStdDev, const std::wstring& name = L"");
+
+    ///
+    /// TODO:
+    ///
+    CNTK_API FunctionPtr Convolution(const Variable& convolutionMap,
+                                     const Variable& operand,
+                                     const NDShape& strides = {1},
+                                     const std::vector<bool>& sharing = {true},
+                                     const std::vector<bool>& autoPadding = {true},
+                                     const NDShape& lowerPad = {0},
+                                     const NDShape& upperPad = {0},
+                                     bool transpose = false,
+                                     size_t maxTempMemSizeInSamples = 0,
+                                     const std::wstring& name = L"");
+
+    ///
+    /// TODO:
+    ///
+    enum class PoolingType
+    {
+        Max,
+        Average,
+    };
+
+    ///
+    /// TODO:
+    ///
+    CNTK_API FunctionPtr Pooling(const Variable& operand,
+                                 PoolingType poolingType,
+                                 const NDShape& poolingWindowShape,
+                                 const NDShape& strides = {1},
+                                 const std::vector<bool>& autoPadding = {false},
+                                 const NDShape& lowerPad = {0},
+                                 const NDShape& upperPad = {0},
+                                 const std::wstring& name = L"");
+
+    ///
+    /// TODO:
+    ///
+    CNTK_API FunctionPtr BatchNormalization(const Variable& operand,
+                                            const Variable& scale,
+                                            const Variable& bias,
+                                            const Variable& runningMean,
+                                            const Variable& runningInvStd,
+                                            bool spacial,
+                                            double normalizationTimeConstant = 0,
+                                            double blendTimeConstant = 0,
+                                            double epsilon = 0.00001,
+                                            bool useCuDNNEngine = false,
+                                            const std::wstring& name = L"");
 
     ///
     /// Create a new Function instance which just combines the outputs of the specified list of 'operands' Functions such that the 'Outputs' of the 
@@ -1625,13 +1702,20 @@ namespace CNTK
         DictionaryValue(const wchar_t* value) 
             : DictionaryValue(std::wstring(value))
         {}
+
+        // Due to SWIG we had to flatten this template for vector<DictionaryValue>
+        DictionaryValue(const std::vector<CNTK::DictionaryValue>& value) : m_valueType(GetValueType<std::vector<CNTK::DictionaryValue>>())
+        {
+            AllocateDataPtr(value);
+        }
+
         template <typename T>
         DictionaryValue(const T& value) : m_valueType(GetValueType<T>())
         {
-            static_assert(std::is_same<T, NDShape>::value ||
+            static_assert((std::is_same<T, NDShape>::value ||
                 std::is_same<T, std::wstring>::value ||
                 std::is_same<T, std::vector<DictionaryValue>>::value ||
-                std::is_same<T, Dictionary>::value,
+                std::is_same<T, Dictionary>::value),
                           "Unsupported ValueType");
 
             AllocateDataPtr(value);
@@ -1726,14 +1810,14 @@ namespace CNTK
         template <typename T>
         static Type GetValueType()
         {
-            static_assert(std::is_same<T, bool>::value ||
+            static_assert((std::is_same<T, bool>::value ||
                           std::is_same<T, size_t>::value ||
                           std::is_same<T, float>::value ||
                           std::is_same<T, double>::value ||
-                std::is_same<T, std::wstring>::value ||
+                          std::is_same<T, std::wstring>::value ||
                           std::is_same<T, NDShape>::value ||
                 std::is_same<T, std::vector<DictionaryValue>>::value ||
-                std::is_same<T, Dictionary>::value,
+                std::is_same<T, Dictionary>::value),
                           "Unsupported ValueType");
 
             if (std::is_same<T, bool>::value)                                      return Type::Bool;
@@ -1973,7 +2057,11 @@ namespace CNTK
 
     inline bool operator==(const StreamInfo& left, const StreamInfo& right)
     {
-        return (left.m_id == right.m_id);
+        return ((left.m_id == right.m_id) &&
+                (left.m_name == right.m_name) &&
+                (left.m_storageFormat == right.m_storageFormat) &&
+                (left.m_elementType == right.m_elementType) &&
+                (left.m_sampleLayout == right.m_sampleLayout));
     }
 }
 
@@ -1989,6 +2077,13 @@ namespace std {
 
 namespace CNTK
 {
+    struct MinibatchData
+    {
+        size_t m_numSequences;
+        size_t m_numSamples;
+        ValuePtr m_data;
+    };
+
     ///
     /// Abstraction for generating minbatches of samples for training/evaluation.
     ///
@@ -2002,10 +2097,14 @@ namespace CNTK
 
         ///
         /// Reads a minibatch that contains data across all input streams.
-        /// The minibatchData argument specifies the desired minibatch size for each stream of the reader and the actual returned size is the min across all streams.
-        /// The return value of false indciates that the reader will no longer return any further data.
+        /// The minibatchData argument specifies the desired minibatch size for each stream of the reader either in terms of #sequences or 
+        /// #samples or both. In case the size is specified in terms of both #sequences and #samples, the smaller of the 2 is taken. The actual
+        /// returned size of the minibatch is the min across all streams. Also the requested MB size fields in the maps are updated by the 
+        /// MinibatchSource to contain the actual #sequences and #samples in the returned minibatch for the corresponding stream.
+        /// The return value indciates if the MinibatchSource will return any further data in subsequent calls of this function.
         ///
-        virtual bool GetNextMinibatch(std::unordered_map<StreamInfo, std::pair<size_t, ValuePtr>>& minibatchData) = 0;
+        virtual std::unordered_map<StreamInfo, MinibatchData> GetNextMinibatch(const std::unordered_map<StreamInfo, std::pair<size_t, size_t>>& perStreamMBSizeLimits,
+                                                                               const DeviceDescriptor& device = DeviceDescriptor::DefaultDevice()) = 0;
 
         // TODO: Methods to save and restore from checkpoints
 
@@ -2020,4 +2119,11 @@ namespace CNTK
     /// Instantiate the CNTK built-in composite minibatch source.
     ///
     CNTK_API MinibatchSourcePtr CreateCompositeMinibatchSource(const Dictionary& configuration);
+
+    ///
+    /// Compute the per dimension means and variances for each of the specified streams using data from the specified minibatchSource.
+    ///
+    CNTK_API void ComputeInputPerDimMeansAndInvStdDevs(const MinibatchSourcePtr& minibatchSource,
+                                                       std::unordered_map<StreamInfo, std::pair<NDArrayViewPtr, NDArrayViewPtr>>& computedMeanAndVariances,
+                                                       const DeviceDescriptor& device = DeviceDescriptor::CPUDevice());
 }

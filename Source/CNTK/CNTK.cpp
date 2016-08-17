@@ -109,9 +109,8 @@ void DumpNodeInfo(const ConfigParameters& config)
         InvalidArgument("printValues and printMetadata: Since both are set to false, there will be nothing to dump");
     }
 
-    ComputationNetwork net(-1);    // always use CPU
-    net.Load<ElemType>(modelPath); // TODO: we have a function now to combine this and the previous line
-    net.DumpNodeInfoToFile(nodeName, printValues, printMetadata, outputFile, nodeNameRegexStr);
+    ComputationNetworkPtr net = ComputationNetwork::CreateFromFile<ElemType>(CPUDEVICE, modelPath);
+    net->DumpNodeInfoToFile(nodeName, printValues, printMetadata, outputFile, nodeNameRegexStr);
 }
 
 size_t GetMaxEpochs(const ConfigParameters& configParams)
@@ -584,13 +583,11 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
     if (actionsVal.Is<ScriptableObjects::ConfigArray>())
     {
         const ScriptableObjects::ConfigArray& actions = actionsVal;
-        for (int i = actions.GetIndexRange().first; i <= actions.GetIndexRange().second; i++)
+        for (int i = actions.GetIndexBeginEnd().first; i < actions.GetIndexBeginEnd().second; i++)
         {
             // TODO: When running in parallel with MPI, only commands in 'commandstoRunOnAllRanks' should
             // be run in parallel across multiple ranks. Others should only run on rank 0
-            actions.At(i, [](const wstring&)
-                       {
-                       }); // this will evaluate and thus execute the action
+            actions.At(i, [](const wstring&){}); // this will evaluate and thus execute the action
         }
     }
     // else action has already been executed, see comment above
@@ -685,6 +682,7 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
         fprintf(stderr, "%*s%ls", i > 0 ? 2 : 0, "", argv[i]); // use 2 spaces for better visual separability
     fprintf(stderr, "\n\n");
 
+#if 1 //def _DEBUG
     // This simply merges all the different config parameters specified (eg, via config files or via command line directly),
     // and prints it.
     fprintf(stderr, "\n\n");
@@ -705,6 +703,7 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
     LOGPRINTF(stderr, ">>>>>>>>>>>>>>>>>>>> PROCESSED CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>\n");
     config.dumpWithResolvedVariables();
     LOGPRINTF(stderr, "<<<<<<<<<<<<<<<<<<<< PROCESSED CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<\n");
+#endif
 
     LOGPRINTF(stderr, "Commands:");
     for (int i = 0; i < command.size(); i++)

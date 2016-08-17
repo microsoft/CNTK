@@ -6,6 +6,7 @@ Dockerfile-GPU text
 *.counts text
 *.labels text
 *.feats text
+*.ctf text
 *.post text
 *.cpu text
 *.gpu text
@@ -121,3 +122,4 @@ Examples/SequenceToSequence/CMUDict/Data/cmudict-0.7b* text
 *.docx binary
 *.chunk binary
 *.pptx binary
+*.snk binary

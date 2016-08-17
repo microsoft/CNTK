@@ -83,6 +83,7 @@
     <ClCompile Include="CNTKException.h" />
     <ClCompile Include="EvalExtendedWrapper.cpp" />
     <ClCompile Include="EvalWrapper.cpp" />
+    <ClCompile Include="EvalWrapperAssemblyInfo.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\Common\Include\Eval.h" />

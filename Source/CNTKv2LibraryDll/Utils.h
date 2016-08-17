@@ -11,6 +11,7 @@
 #include <string>
 #include "Config.h"
 #include "Reader.h"
+#include "ConvolutionEngine.h"
 
 namespace CNTK
 {
@@ -118,14 +119,15 @@ namespace CNTK
         }
     }
 
-    inline Microsoft::MSR::CNTK::TensorShape AsTensorShape(const NDShape& viewShape)
+    inline Microsoft::MSR::CNTK::TensorShape AsTensorShape(const NDShape& viewShape, bool preserveRank = false)
     {
         const size_t maxNumAxesSupportedByTensorView = 12;
         if (viewShape.NumAxes() > maxNumAxesSupportedByTensorView)
             LogicError("The number of requested axes exceeds the currently supported limit");
 
         // TensorShape is required to be at least 2D
-        Microsoft::MSR::CNTK::SmallVector<size_t> tensorViewShape(std::max<size_t>(2, viewShape.NumAxes()));
+        size_t minRankSize = preserveRank ? viewShape.NumAxes() : 2;
+        Microsoft::MSR::CNTK::SmallVector<size_t> tensorViewShape(std::max<size_t>(minRankSize, viewShape.NumAxes()));
         for (size_t i = 0; i < tensorViewShape.size(); ++i)
             tensorViewShape[i] = (i < viewShape.NumAxes()) ? viewShape[i] : 1;
 
@@ -240,5 +242,75 @@ namespace CNTK
         s << key << L" = ";
         AddConfigString(s, value, numIndentationSpaces);
         s << std::endl;
+    }
+
+    template <typename T>
+    inline std::vector<DictionaryValue> AsDictionaryValueVector(const std::vector<T>& basicElementTypeVector)
+    {
+        static_assert(std::is_same<T, bool>::value ||
+                      std::is_same<T, size_t>::value ||
+                      std::is_same<T, float>::value ||
+                      std::is_same<T, double>::value, "Unsupported ValueType");
+
+        std::vector<DictionaryValue> dictionaryValueVector;
+        for (auto value : basicElementTypeVector)
+            dictionaryValueVector.push_back(value);
+
+        return dictionaryValueVector;
+    }
+
+    template <typename T>
+    inline std::vector<T> AsBasicElementTypeVector(const std::vector<DictionaryValue>& dictionaryValueVector)
+    {
+        static_assert(std::is_same<T, bool>::value ||
+            std::is_same<T, size_t>::value ||
+            std::is_same<T, float>::value ||
+            std::is_same<T, double>::value, "Unsupported ValueType");
+
+        std::vector<T> basicElementTypeVector;
+        for (auto value : dictionaryValueVector)
+            basicElementTypeVector.push_back(value.GetValue<T>());
+
+        return basicElementTypeVector;
+    }
+
+    inline PoolingType AsPoolingType(Microsoft::MSR::CNTK::PoolKind cntkPoolingKind)
+    {
+        switch (cntkPoolingKind)
+        {
+        case Microsoft::MSR::CNTK::PoolKind::Average:
+            return PoolingType::Average;
+        case Microsoft::MSR::CNTK::PoolKind::Max:
+            return PoolingType::Max;
+        default:
+            LogicError("Unknown pooling type");
+        }
+    }
+
+    inline Microsoft::MSR::CNTK::PoolKind AsCNTKPoolKind(PoolingType poolingType)
+    {
+        switch (poolingType)
+        {
+        case PoolingType::Average:
+            return Microsoft::MSR::CNTK::PoolKind::Average;
+        case PoolingType::Max:
+            return Microsoft::MSR::CNTK::PoolKind::Max;
+        default:
+            LogicError("Unknown pooling type");
+        }
+    }
+
+    inline std::pair<NDShape, NDShape> GetConvolutionOutputMapCountAndKernelShape(const NDShape& convolutionMapShape, const NDShape& operandShape)
+    {
+        auto outputMapCount = convolutionMapShape.SubShape(0, convolutionMapShape.NumAxes() - operandShape.NumAxes());
+        NDShape paddedOutputMapCount(operandShape.NumAxes(), 1);
+        for (size_t i = 0; i < outputMapCount.NumAxes(); ++i)
+            paddedOutputMapCount[paddedOutputMapCount.NumAxes() - 1 - i] = outputMapCount[outputMapCount.NumAxes() - 1 - i];
+        //for (size_t i = 0; i < outputMapCount.NumAxes(); ++i)
+        //    paddedOutputMapCount[i] = outputMapCount[i];
+
+        NDShape kernelShape = convolutionMapShape.SubShape(outputMapCount.NumAxes());
+
+        return{ paddedOutputMapCount, kernelShape };
     }
 }

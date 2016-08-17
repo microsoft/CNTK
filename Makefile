@@ -9,8 +9,6 @@
 # that provides
 #   BUILDTYPE= One of release or debug
 #     defaults to release
-#   ACML_PATH= path to ACML library installation
-#     only needed if MATHLIB=acml
 #   MKL_PATH= path to CNTK custom MKL installation
 #     only needed if MATHLIB=mkl
 #   CNTK_CUSTOM_MKL_VERSION=2
@@ -21,8 +19,8 @@
 #     defaults to /usr/include/nvidia/gdk
 #   GDK_NVML_LIB_PATH= path to CUDA GDK (stub) library path, so $(GDK_NVML_LIB_PATH)/libnvidia-ml.so exists
 #     defaults to /usr/src/gdk/nvml/lib
-#   MATHLIB= One of acml or mkl
-#     defaults to acml
+#   MATHLIB= mkl
+#     defaults to mkl
 #   CUDA_PATH= Path to CUDA
 #     If not specified, GPU will not be enabled
 #   CUB_PATH= path to NVIDIA CUB installation, so $(CUB_PATH)/cub/cub.cuh exists
@@ -60,8 +58,8 @@ BUILDTYPE=release
 endif
 
 ifndef MATHLIB
-$(info DEFAULTING MATHLIB=acml)
-MATHLIB = acml
+$(info DEFAULTING MATHLIB=mkl)
+MATHLIB = mkl
 endif
 
 #### Configure based on options above
@@ -135,13 +133,6 @@ else
   DEVICE = cpu
 
   COMMON_FLAGS +=-DCPUONLY
-endif
-
-ifeq ("$(MATHLIB)","acml")
-  INCLUDEPATH += $(ACML_PATH)/include
-  LIBPATH += $(ACML_PATH)/lib
-  LIBS += -lacml_mp -liomp5 -lm -lpthread
-  COMMON_FLAGS += -DUSE_ACML
 endif
 
 ifeq ("$(MATHLIB)","mkl")
@@ -417,6 +408,7 @@ CNTKLIBRARY_TESTS_SRC =\
 	Tests/UnitTests/V2LibraryTests/RecurrentFunctionTests.cpp \
 	Tests/UnitTests/V2LibraryTests/TensorTests.cpp \
 	Tests/UnitTests/V2LibraryTests/TrainerTests.cpp \
+	Tests/UnitTests/V2LibraryTests/CifarResNet.cpp \
 
 CNTKLIBRARY_TESTS:=$(BINDIR)/v2librarytests
 CNTKLIBRARY_TESTS_OBJ := $(patsubst %.cu, $(OBJDIR)/%.o, $(patsubst %.cpp, $(OBJDIR)/%.o, $(CNTKLIBRARY_TESTS_SRC)))
@@ -932,22 +924,24 @@ UNITTEST_BRAINSCRIPT_SRC = \
 	$(SOURCEDIR)/CNTK/BrainScript/BrainScriptEvaluator.cpp \
 	$(SOURCEDIR)/CNTK/BrainScript/BrainScriptParser.cpp \
 	$(SOURCEDIR)/../Tests/UnitTests/BrainScriptTests/ParserTests.cpp \
+	$(SOURCEDIR)/../Tests/UnitTests/BrainScriptTests/ComputationNetworkTests.cpp \
 	$(SOURCEDIR)/../Tests/UnitTests/BrainScriptTests/stdafx.cpp
 
-UNITTEST_BRAINSCRIPT_SRC+=$(COMMON_SRC)
+UNITTEST_BRAINSCRIPT_SRC += $(COMPUTATION_NETWORK_LIB_SRC)
+UNITTEST_BRAINSCRIPT_SRC += $(SEQUENCE_TRAINING_LIB_SRC)
 
-UNITTEST_BRAINSCRIPT_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(UNITTEST_BRAINSCRIPT_SRC))
+UNITTEST_BRAINSCRIPT_OBJ := $(patsubst %.cu, $(OBJDIR)/%.o, $(patsubst %.cpp, $(OBJDIR)/%.o, $(UNITTEST_BRAINSCRIPT_SRC)))
 
 UNITTEST_BRAINSCRIPT := $(BINDIR)/brainscripttests
 
 ALL += $(UNITTEST_BRAINSCRIPT)
 SRC += $(UNITTEST_BRAINSCRIPT_SRC)
 
-$(UNITTEST_BRAINSCRIPT): $(UNITTEST_BRAINSCRIPT_OBJ)
+$(UNITTEST_BRAINSCRIPT): $(UNITTEST_BRAINSCRIPT_OBJ) | $(CNTKMATH_LIB)
 	@echo $(SEPARATOR)
 	@mkdir -p $(dir $@)
 	@echo building $@ for $(ARCH) with build type $(BUILDTYPE)
-	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(BOOSTLIB_PATH)) $(patsubst %, $(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH) $(BOOSTLIB_PATH)) -o $@ $^ $(BOOSTLIBS) $(LIBS) -ldl
+	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH) $(BOOSTLIB_PATH)) $(patsubst %, $(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH) $(BOOSTLIB_PATH)) -o $@ $^ $(BOOSTLIBS) $(LIBS) -ldl -l$(CNTKMATH)
 
 unittests: $(UNITTEST_EVAL) $(UNITTEST_READER) $(UNITTEST_NETWORK) $(UNITTEST_MATH) $(UNITTEST_BRAINSCRIPT)
 

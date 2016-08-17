@@ -10,15 +10,16 @@ if [[ "$CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY" == "" || ! -d "$CNTK_EXTERNAL_T
 fi
 
 if [ "$OS" == "Windows_NT" ]; then
-    DataSourceDir=`cygpath -au $CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY`/Image/MNIST/v0
+    DataSourceDir=`cygpath -au $CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY`/Image
 else
-    DataSourceDir=$CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY/Image/MNIST/v0
+    DataSourceDir=$CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY/Image
 fi
 
 # Copy the test data to the test run directory
 DataDir=$TEST_RUN_DIR/TestData
 mkdir $DataDir
-cp -R $DataSourceDir/Train-28x28_cntk_text.txt $DataDir || exit $?
+cp -R $DataSourceDir/MNIST/v0/Train-28x28_cntk_text.txt $DataDir || exit $?
+cp -R $DataSourceDir/CIFAR/v0/cifar-10-batches-py $DataDir || exit $?
 cp -R $TEST_DIR/../../../../Examples/Other/Simple2d/Data/SimpleDataTrain_cntk_text.txt $DataDir || exit $?
 
 pushd $DataDir

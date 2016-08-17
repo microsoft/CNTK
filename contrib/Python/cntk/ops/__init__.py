@@ -1095,38 +1095,6 @@ def reduce_sum(x, axis=0, name=None):
     op.rank = 0 if op.axis == 0 else op._[0].rank    
     return op
 
-def reduce_log_sum(inputs, name=None): 
-    '''
-    Computes the log sum of the input tensor's elements. The output is a scalar,
-    which is the log sum of tensor's elements.
-
-    Examples:
-        >>> # create 3x2 matrix in a sequence of length 1 in a batch of one sample
-        >>> data = [[10, 20],[30, 40],[50, 60]]        
-        
-        >>> # reduce over the all axes
-        >>> C.eval(C.reduce_sum(data))
-        [array([[ 60.000046]])]       
-
-    Args:
-        x: input tensor        
-        name (str): the name of the node in the network
-
-    Returns:
-        :class:`cntk.graph.ComputationNode`
-    '''
-    from cntk.ops.cntk2 import ReduceLogSum
-    op = ReduceLogSum(inputs, 0, name=name)
-    wrap_numpy_arrays(op)            
-    
-    #TODO: Once axis != 0 is supported, expose it as argument, and compute the 
-    #rank similar to reduce_sum
-    op.rank = 0   
-    #reduce_log_sum is implemented using BrainScript code that results in nested nodes,
-    #We wrap it by Identity to guarantee that the tag 'output' is passed over and with a fixed name.
-    return identity(op) 
-
-
 ################################################################################
 # training ops
 ################################################################################
@@ -1440,10 +1408,10 @@ def reconcile_dynamic_axis(data_input, layout_input, name=None):
 # reduction ops
 ################################################################################
 
-def reduce_max(value, axis=0, name=None):
+def reduce_max(value, axis=0, name=None): #BUGBUG for the axis of reduction opeations we should have default 0 (in contrast to brain script) but instead have e.g. 'None'. (see also reduce:im. reduce_sum, reduce_log_sum
     """
-    For axis >= 1 computes the maximum of a tensor along the specifed axis. In the result the corresponding axis is dropped, i.e. the rank of the result tensore is smaller that the rank of the input tensor.
-    If axis == 0 the reduction is taken over all tensor values, and the result is a tensor of rank one with one dimension.
+    For axis < rank computes the maximum of a tensor along the specifed axis. In the result the corresponding axis is dropped, i.e. the rank of the result tensore is smaller that the rank of the input tensor.
+    if axis==rank, then the maximum will be computed over all axes, that is, the output is a scalar.
 
     Args:
         value (list): list of input tensors
@@ -1463,8 +1431,8 @@ def reduce_max(value, axis=0, name=None):
 
 def reduce_min(value, axis=0, name=None):
     """
-    For axis >= 1 computes the minimum of a tensor along the specifed axis. In the result the corresponding axis is dropped, i.e. the rank of the result tensore is smaller that the rank of the input tensor.
-    If axis == 0 the reduction is taken over all tensor values, and the result is a tensor of rank one with one dimension.
+    For axis < rank computes the minimum of a tensor along the specifed axis. In the result the corresponding axis is dropped, i.e. the rank of the result tensore is smaller that the rank of the input tensor.
+    if axis==rank, then the minimum will be computed over all axes, that is, the output is a scalar.
 
     Args:
         value (list): list of input tensors
@@ -1476,6 +1444,29 @@ def reduce_min(value, axis=0, name=None):
 
     from cntk.ops.cntk1 import ReduceMin
     op = ReduceMin(value, axis=axis, name=name)
+    wrap_numpy_arrays(op)    
+    op.axis = abs(axis) if axis<0 else op.z.rank - axis
+    op.rank = 0 if op.axis == 0 else op.z.rank    
+    return op
+
+def reduce_log_sum(value, axis=0, name=None):
+    """
+    For axis < rank computes the following aggregate along specifed axis:
+    :math:`reduce\_log\_sum(value, axis=n) = log({\sum_{i \in \{\hbox{indices of axis} n\}} \exp(value_i) })`
+
+    In the result the corresponding axis is dropped, i.e. the rank of the result tensore is smaller that the rank of the input tensor.
+    if axis==rank, then the aggregate will be computed over all axes, that is, the output is a scalar.
+
+    Args:
+        value (list): list of input tensors
+        axis (int): axis to reduce. For axis==0 the whole tensor is reduce into one value.
+        name (str): the name of the node in the network
+    Returns:
+        :class:`cntk.graph.ComputationNode`
+    """
+
+    from cntk.ops.cntk1 import ReduceLogSum
+    op = ReduceLogSum(value, axis=axis, name=name)
     wrap_numpy_arrays(op)    
     op.axis = abs(axis) if axis<0 else op.z.rank - axis
     op.rank = 0 if op.axis == 0 else op.z.rank    

@@ -28,42 +28,57 @@ class LearnableParameter : public ComputationNode<ElemType>, public NumInputs<0>
 
     void InitShape(const TensorShape& shape);
 
-    // helper to initialize from a matrix read from a text file or a string literal
-    void InitFromArray(const std::vector<ElemType>& array, size_t numRows, size_t numCols);
-
 public:
-    LearnableParameter(DEVICEID_TYPE deviceId, const wstring& name)
-        : Base(deviceId, name)
+    // this constructor is always run (all other constructors call this one)
+    LearnableParameter(DEVICEID_TYPE deviceId, const wstring& name) :
+        Base(deviceId, name)
     {
         SetLearningRateMultiplier(1.0f); // enable normal learning by default
         MarkValueNonSharable();
+        m_initString = L"fromValue"; // default init is with 0; typically overwritten
+        m_initValue = 0;
     }
-    LearnableParameter(DEVICEID_TYPE deviceId, const wstring& name, const TensorShape& shape)
-        : Base(deviceId, name)
+    LearnableParameter(DEVICEID_TYPE deviceId, const wstring& name, const TensorShape& shape) :
+        LearnableParameter(deviceId, name)
     {
-        SetLearningRateMultiplier(1.0f);
-        MarkValueNonSharable();
         InitShape(shape);
+        LazyInitParameters();
     }
-    LearnableParameter(DEVICEID_TYPE deviceId, const wstring& name, size_t rows, size_t cols)
-        : LearnableParameter(deviceId, name, TensorShape(rows, cols))
+    LearnableParameter(DEVICEID_TYPE deviceId, const wstring& name, size_t rows, size_t cols) :
+        LearnableParameter(deviceId, name, TensorShape(rows, cols))
     {
     }
     LearnableParameter(const ScriptableObjects::IConfigRecordPtr configp);
 
-    // initialize with random numbers
-    // if 'initOnCPUOnly' then always init on CPU, making initialization consistent across both (for testing)
-    void InitRandom(const bool uniformInit, const unsigned long randomSeed, const ElemType initValueScale, bool initOnCPUOnly);
+    // initialize after plain constructor; for use by NDL
+    void PostInitParameters(const std::wstring& initString, // "uniform"|"gaussian"|"fixedValue"
+                            ElemType initValue,             //  scale   | scale    | value
+                            unsigned long randomSeed = 0,
+                            bool initOnCPUOnly = false);
 
     // initialize by reading a matrix from a text file
     void InitFromFile(const std::wstring& initFromFilePath);
 
+private:
+    // initialize with random numbers
+    // If 'initOnCPUOnly' then always init on CPU, making initialization consistent across both (for testing).
+    void InitRandom(const std::wstring& type, const unsigned long randomSeed, const ElemType initValueScale, bool initOnCPUOnly);
+
+    // helper to initialize from a matrix read from a text file or a string literal
+    void InitFromArray(const std::vector<ElemType>& array, size_t numRows, size_t numCols);
+
+    // deferred initialization
+    void LazyInitParameters();
+
+public:
     // reload parameters from file
     // This is called from MEL.
     void ReviseFromFile(const std::wstring& reviseFromFilePath);
 
     virtual void Save(File& fstream) const override;
     virtual void Load(File& fstream, size_t modelVersion) override;
+
+    virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override;
 
     // computation functions don't do anything for parameter nodes
     virtual void UpdateFunctionMBSize() override;
@@ -82,6 +97,14 @@ public:
 
     // called from CloneFunction(..., parameters="constant")
     virtual void FreezeParameters() override; // from IFreezable
+
+private:
+    // init parameters for deferred initialization (which happens in Validate())
+    std::wstring m_initString; // if non-empty then deferred initialization is needed. Gets cleared upon completion of deferred init.
+    unsigned long m_randomSeed;
+    ElemType m_initValueScale;
+    bool m_initOnCPUOnly;
+    ElemType m_initValue;
 };
 
 // -----------------------------------------------------------------------

@@ -72,8 +72,8 @@ bool TryGetNetworkFactory(const ConfigRecordType& config, function<ComputationNe
         // We prepend a few standard definitions, and also definition of deviceId and precision, which all objects will pull out again when they are being constructed.
         // BUGBUG: We are not getting TextLocations right in this way! Do we need to inject location markers into the source? Moot once we fully switch to BS
         wstring sourceOfNetwork = config.Exists(L"BrainScriptNetworkBuilder") ? config(L"BrainScriptNetworkBuilder") : config(L"ExperimentalNetworkBuilder");
-        if (sourceOfNetwork.find_first_of(L"([") != 0)
-            InvalidArgument("BrainScript network description must be either a BS expression in ( ) or a config record in [ ]");
+        if (sourceOfNetwork.find_first_of(L"([{") != 0)
+            InvalidArgument("BrainScript network description must be either a BS expression in ( ) or a config record in { }");
 
         // set the include paths to all paths that configs were read from; no additional configurable include paths are supported by BrainScriptNetworkBuilder
         auto includePaths = ConfigParameters::GetBrainScriptNetworkBuilderIncludePaths();
@@ -81,8 +81,9 @@ bool TryGetNetworkFactory(const ConfigRecordType& config, function<ComputationNe
         // inject additional items into the source code
         // We support two ways of specifying the network in BrainScript:
         //  - BrainScriptNetworkBuilder = ( any BS expression that evaluates to a ComputationNetwork )
-        //  - BrainScriptNetworkBuilder = [ constructor parameters for a ComputationNetwork ]
-        if (sourceOfNetwork[0] == '[') // if [ ] form then we turn it into ComputationNetwork by constructing a ComputationNetwork from it
+        //  - BrainScriptNetworkBuilder = { constructor parameters for a ComputationNetwork }
+        // For back-compat, [ ] is allowed and means the same as { }
+        if (sourceOfNetwork[0] == '{' || sourceOfNetwork[0] == '[') // if { } form then we turn it into ComputationNetwork by constructing a ComputationNetwork from it
             sourceOfNetwork = L"new ComputationNetwork " + sourceOfNetwork;
         let sourceOfBS = msra::strfun::wstrprintf(L"include \'cntk.core.bs\'\n" // include our core lib. Note: Using lowercase here to match the Linux name of the CNTK exe.
             L"deviceId = %d\n"            // deviceId as passed in
