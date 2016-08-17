@@ -15,6 +15,7 @@
 #include <stdexcept>
 #include <list>
 #include <memory>
+#include <random>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -720,7 +721,52 @@ public:
         Matrix<ElemType>& valueMatrix = ValueAsMatrix();
         valueMatrix.SwitchToMatrixType(SPARSE, matrixFormatSparseCSC, false);
 
-       // valueMatrix.SetMatrixFromCSCFormat();
+        // Create vector with prefix sum of sampling weights.
+        // TODO: Don't repeat that if Input(0) didn't change.
+        const Matrix<ElemType>& samplingWeights = Input(0)->ValueAsMatrix();
+        std::vector<double> samplingWeightsPrefixSum;
+        double runningWeightsSum = 0;
+        for (int iClass = 0; iClass < valueMatrix.GetNumRows(); iClass++)
+        {
+            ElemType currentWeight = samplingWeights.GetValue(iClass, 0);
+            runningWeightsSum += currentWeight;
+            samplingWeightsPrefixSum.push_back(runningWeightsSum);
+        }
+
+        // Get vector with indices of randomly sampled classes
+        std::vector<int> samples = GetWeightedSamples(samplingWeightsPrefixSum);
+
+        // Set columns of (sparse) result matrix as indicator vectors
+        for(int iSample = 0; iSample < m_nSamples; iSample++)
+        {
+            int sample = samples[iSample];
+            valueMatrix.SetValue(sample, iSample, 1);
+        }
+    }
+
+    std::vector<int> GetWeightedSamples(std::vector<double>& weightPrefixSum)
+    {
+#ifdef _MSC_VER // TODO: check if available under GCC/Linux
+        std::ranlux64_base_01 generator;
+//        generator.seed(seed == USE_TIME_BASED_SEED ? (unsigned long)time(NULL) : seed);
+#else
+        std::default_random_engine generator(seed);
+#endif
+        std::uniform_real_distribution<double> r(0, weightPrefixSum.back());
+
+        std::vector<int> samples;
+        // find random samples using the specified weight
+        for (int iSample = 0; iSample < m_nSamples; iSample++)
+        {
+            double randomValue = r(generator);
+            auto lower = std::lower_bound(weightPrefixSum.begin(), weightPrefixSum.end(), randomValue);
+            // check that value has been found
+            // const bool found = lower != weightPrefixSum.end() && *lower == randomValue;
+
+            auto idx = lower - weightPrefixSum.begin();
+            samples.push_back((int)idx);
+        }
+        return samples;
     }
 
     virtual void /*ComputationNode::*/ BackpropToNonLooping(size_t inputIndex) override
@@ -731,15 +777,16 @@ public:
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
     {
         Base::Validate(isFinalValidationPass);
+        m_pMBLayout = nullptr;
 
         // TODO check if number of requested samples is less then the number of classes
-        
-        // TODO set output dimm to num-classes * non-samples
+
+        // TODO set output shape to num-classes * non-samples
         let shape = Input(0)->GetSampleLayout();
         auto dims = shape.GetDims();
-        //m_pMBLayout = null;
 
-        SetDims(TensorShape(1, m_nSamples), false);
+        size_t nClasses = dims[0];
+        SetDims(TensorShape(nClasses, m_nSamples), false);
     }
 
     virtual bool OutputUsedInComputingInputNodesGradients() const override
