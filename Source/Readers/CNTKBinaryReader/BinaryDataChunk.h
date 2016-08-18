@@ -30,7 +30,10 @@ public:
         result.resize(m_data.size());
         // now copy the decoded sequences
         for (size_t c = 0; c < m_data.size(); c++)
+        {
             result[c] = m_data[c][sequenceId - m_startSequence];
+            m_data[c][sequenceId - m_startSequence] = nullptr;
+        }
     }
 
     uint32_t GetNumSamples(size_t sequenceId)
@@ -55,8 +58,8 @@ protected:
         {
             bytesProcessed += m_deserializers[c]->GetSequencesForChunk(m_numSequences, 0, (byte*)m_buffer.get() + bytesProcessed, m_data[c]);
             // We now fill in the m_chunk ptr, which the deserializers couldn't do.
-            //for (size_t d = 0; d < m_data[c].size(); d++)
-            //    m_data[c][d]->m_chunk = shared_from_this();
+            for (size_t d = 0; d < m_data[c].size(); d++)
+                m_data[c][d]->m_chunk = shared_from_this();
         }
     }
 

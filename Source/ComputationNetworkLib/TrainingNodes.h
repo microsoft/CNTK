@@ -697,7 +697,7 @@ public:
     {
         FrameRange fr(Input(0)->GetMBLayout());
 
-        if (inputIndex == 1) // right derivative
+        if (inputIndex == 1 && m_pairCounts > 0) // right derivative
         {
             auto gradient = Input(1)->GradientFor(fr);
 
@@ -769,16 +769,18 @@ public:
 
     virtual void UpdateFunctionMBSize() override
     {
-        FrameRange fr(Input(0)->GetMBLayout());
+        //FrameRange fr(Input(0)->GetMBLayout());
+
+        UpdateCounts();
 
         // clean up first
         if (!m_queryUrls.empty()) m_queryUrls.clear();
         if (!m_urlSorter.empty()) m_urlSorter.clear();
         if (!m_logWeights.empty()) m_logWeights.clear();
 
-        const Matrix<ElemType>& pairIndeces = Input(2)->ValueFor(fr);
+ /*       const Matrix<ElemType>& pairIndeces = Input(2)->ValueFor(fr);
         m_samples = pairIndeces.GetNumCols();
-        m_pairCounts = (size_t)pairIndeces.SumOfElements();
+        m_pairCounts = (size_t)pairIndeces.SumOfElements();*/
 
         m_pairwiseDifferences->Resize(1, m_pairCounts);
         m_sigmaPairwiseDiff->Resize(1, m_pairCounts);
@@ -792,15 +794,15 @@ public:
         // prepare sorting buffer
         m_maxPairIndexIndex->Resize(1, 1);
         m_maxPairValues->Resize(1, 1);
-        pairIndeces.VectorMax(*m_maxPairIndexIndex, *m_maxPairValues, false);
+        //pairIndeces.VectorMax(*m_maxPairIndexIndex, *m_maxPairValues, false);
 
         // TODO: Double check this part
-        size_t maxNumofUrlsPerQuery = (size_t)(*m_maxPairValues)(0, 0) + 1;
+        //size_t maxNumofUrlsPerQuery = (size_t)(*m_maxPairValues)(0, 0) + 1;
         // keep one additional space to avoid pointer moving out
-        m_urlSorter.resize(maxNumofUrlsPerQuery + 1);
+        m_urlSorter.resize(m_maxNumberOfUrlsPerQuery + 1);
         
         // prepared lookup table
-        m_logWeights.resize(maxNumofUrlsPerQuery);
+        m_logWeights.resize(m_maxNumberOfUrlsPerQuery);
         size_t i = 0;
         for (typename std::vector<ElemType>::iterator it = m_logWeights.begin(); it != m_logWeights.end(); it++, i++)
         {
@@ -810,39 +812,80 @@ public:
 
     virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
     {
-        // Input(0) is l (label), Input(1) is s (scores), Input(2) is k (pair index)
+        // Input:
+        // 1. gain
+        // 2. score
+        // 3. query id
         FrameRange fr(Input(0)->GetMBLayout());
         // construct matrices for further computation
         const Matrix<ElemType>& singleLabels = Input(0)->ValueFor(fr);
         const Matrix<ElemType>& scores = Input(1)->ValueFor(fr);
-        const Matrix<ElemType>& pairIndeces = Input(2)->ValueFor(fr);
+        const Matrix<ElemType>& queryIds = Input(2)->ValueFor(fr);
         size_t nCols = singleLabels.GetNumCols();
         // iterate through all samples
-        size_t i = 0, totalK = 0, K = 0, nUrls = 0;
+        size_t i = 0;// , K = 0;// , nUrls = 0;
         QueryUrls aqu;
+
+        // 
+        int previousQueryId = -1;
+        int numberOfQueries = 0;
 
         // Populate m_queryUrls
         while (i < nCols)
         {
-            nUrls = (size_t)pairIndeces(0, i) + 1;
-            totalK += nUrls;
+            int queryId = (int)queryIds(0, i);
+            if (queryId != previousQueryId)
+            {
+                m_queryUrls.push_back(aqu);
+                numberOfQueries++;
+                previousQueryId = queryId;
+            }
 
-            m_queryUrls.push_back(aqu);
             QueryUrls& qub = m_queryUrls.back();
-            qub.urls.resize(nUrls);
+            Url u;
+            u.id = i;
+            u.rk0 = qub.urls.size();
+            u.sc = scores(0, i);
+            u.gn = singleLabels(0, i);
+            qub.urls.push_back(u);
+            i++;
+        }
 
+        size_t pairCount = 0;
+        for (std::list<QueryUrls>::iterator qit = m_queryUrls.begin(); qit != m_queryUrls.end(); ++qit)
+        {
+            QueryUrls& qub = *qit;
             std::vector<Url>& urls = qub.urls;
-            typename std::vector<Url>::iterator its = m_urlSorter.begin(), it = urls.begin();
-            typename std::vector<Url>::iterator its0 = its;
-            int rk0 = 0; // rk0 is original rank, rk is the sorted rank 
+
+            // Update K
+            size_t size = urls.size();
+            ElemType min = urls[size - 1].gn;
+            for (size_t j = 0; j < urls.size(); j++)
+            {
+                if (urls[j].gn > min)
+                {
+                    size_t pairs_j = size - j - 1;
+                    urls[j].K = pairs_j;
+
+                    if (pairs_j > 0)
+                    {
+                        ElemType s_j = urls[j].sc;
+                        for (size_t k = 0; k < pairs_j; k++)
+                        {
+                            (*m_pairwiseDifferences)(0, pairCount++) = s_j - urls[j + 1 + k].sc;
+                        }
+                    }
+                }
+                else 
+                {
+                    urls[j].K = 0;
+                }
+            }
+
+            std::vector<Url>::iterator its = m_urlSorter.begin(), it = urls.begin();
+            std::vector<Url>::iterator its0 = its;
             for (; it != urls.end(); it++)
             {
-                it->id = i;
-                it->rk0 = rk0++;
-                it->sc = scores(0, i);
-                it->K = (int)pairIndeces(0, i);
-                it->gn = singleLabels(0, i++);
-
                 *its++ = *it;
             }
 
@@ -853,12 +896,6 @@ public:
             int rk = 0;
             for (it = its0; it != its; it++)
                 urls[it->rk0].rk = rk++;
-        }
-
-        // the total number of samples should be the same as totalK and nCols
-        if (totalK != nCols)
-        {
-            InvalidArgument("In %ls %ls totalK != nCols.", NodeName().c_str(), OperationName().c_str());
         }
 
         // calculate IRMetrics
@@ -888,7 +925,7 @@ public:
         const Matrix<ElemType>& perUrlGainOrig = *m_perUrlGainsOrig;
         const Matrix<ElemType>& perUrlGainSort = *m_perUrlGainsSort;
         ElemType IRMetricValue = 0.0;
-        size_t nValidQueries = 0;
+        //size_t nValidQueries = 0;
         for (typename std::list<QueryUrls>::iterator itqu = m_queryUrls.begin(); itqu != m_queryUrls.end(); itqu++)
         {
             QueryUrls& qu = *itqu;
@@ -905,35 +942,23 @@ public:
             if (qu.irm0 != 0.0)
             {
                 IRMetricValue += (qu.irm / qu.irm0);
-                nValidQueries++;
+                //nValidQueries++;
             }
-
-            //IRMetricValue += (qu.irm0 == 0.0 ? (ElemType) 1.0 : qu.irm / qu.irm0);
-            //nValidQueries++;
         }
 
-        if (nValidQueries == 0)
-            LogicError("In %ls %ls nValidQueries==0, check your data.", NodeName().c_str(), OperationName().c_str());
-        
+       /* if (nValidQueries == 0)
+            LogicError("In %ls %ls nValidQueries==0, check your data.", NodeName().c_str(), OperationName().c_str());*/
+
+        if (numberOfQueries == 0)
+            LogicError("In %ls %ls numberOfQueries==0, check your data.", NodeName().c_str(), OperationName().c_str());
+
         // IRMetricValue = IRMetricValue / nValidQueries * 100;
         // to make up the reporting
-        IRMetricValue = (1.0f-IRMetricValue / nValidQueries) * 100 * nCols;
+        IRMetricValue = (1.0f - IRMetricValue / numberOfQueries) * 100 * nCols;
         Value().SetValue(IRMetricValue);
         //Value().Print("IRMetric", 0, 0, 0, 0);
 
-        // set for pairs
-        size_t k0, k1, j, pairsCount = 0;
-        for (i = 0; i < nCols; i++)
-        {
-            K = (size_t)pairIndeces(0, i);
-            if (K == 0) continue;
-            k0 = i + 1;
-            k1 = i + K;
-            for (j = k0; j <= k1; j++)
-            {
-                (*m_pairwiseDifferences)(0, pairsCount++) = scores(0, i) - scores(0, j);
-            }
-        }
+
     }
 
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
@@ -1006,6 +1031,61 @@ public:
 
 protected:
 
+    void UpdateCounts()
+    {
+        FrameRange fr(Input(0)->GetMBLayout());
+        const Matrix<ElemType>& gains = Input(0)->ValueFor(fr);
+        const Matrix<ElemType>& queryIds = Input(2)->ValueFor(fr);
+        const size_t numberOfQueryUrlPairs = gains.GetNumCols();
+        int previousQueryId = -1;
+
+        // Number of urls we have seen for the current query
+        size_t numberOfUrls = 0;
+
+        // Number of urls that have gains greater than 0 for the current query 
+        size_t numberOfUrlsWithNonZeroGain = 0;
+        size_t i = 0;
+        size_t validNumberOfQueryUrlPairs = 0;
+        size_t maxNumberOfUrlsPerQuery = 0;
+        while (i < numberOfQueryUrlPairs)
+        {
+            int queryId = (int)queryIds(0, i);
+            ElemType gain = gains(0, i);
+            if (queryId != previousQueryId)
+            {
+                validNumberOfQueryUrlPairs += (2 * numberOfUrls - 1 - numberOfUrlsWithNonZeroGain) * numberOfUrlsWithNonZeroGain / 2;
+                if (numberOfUrls > maxNumberOfUrlsPerQuery)
+                {
+                    maxNumberOfUrlsPerQuery = numberOfUrls;
+                }
+
+                numberOfUrls = 0;
+                numberOfUrlsWithNonZeroGain = 0;
+                previousQueryId = queryId;
+            }
+            
+            numberOfUrls++;
+            if (gain > 0)
+            {
+                numberOfUrlsWithNonZeroGain++;
+            }
+
+            i++;
+        }
+
+        {
+            validNumberOfQueryUrlPairs += (2 * numberOfUrls - 1 - numberOfUrlsWithNonZeroGain) * numberOfUrlsWithNonZeroGain / 2;
+            if (numberOfUrls > maxNumberOfUrlsPerQuery)
+            {
+                maxNumberOfUrlsPerQuery = numberOfUrls;
+            }
+        }
+
+        m_samples = numberOfQueryUrlPairs;
+        m_pairCounts = validNumberOfQueryUrlPairs;
+        m_maxNumberOfUrlsPerQuery = maxNumberOfUrlsPerQuery;
+    }
+
     struct Url
     {
         int id; // sample id
@@ -1043,6 +1123,7 @@ protected:
 
     size_t m_samples;
     size_t m_pairCounts;
+    size_t m_maxNumberOfUrlsPerQuery;
     // TODO: to make it a config?
     ElemType m_sigma;
     shared_ptr<Matrix<ElemType>> m_pairwiseDifferences;
