@@ -73,11 +73,17 @@ if __name__=='__main__':
     
     cm = create_mb_source()
         
-    streamInfos = cm.stream_infos();    
+    stream_infos = cm.stream_infos();    
     
+    for si in stream_infos:
+        if si.m_name == 'features':
+            features_si = si
+        elif si.m_name == 'labels':
+            labels_si = si
+
     minibatchSizeLimits = dict()    
-    minibatchSizeLimits[streamInfos[0]] = (0,minibatch_size)
-    minibatchSizeLimits[streamInfos[1]] = (0,minibatch_size)
+    minibatchSizeLimits[features_si] = (0,minibatch_size)
+    minibatchSizeLimits[labels_si] = (0,minibatch_size)
                          
     trainer = cntk_py.Trainer(ffnet, ce.output(), [cntk_py.sgdlearner(ffnet.parameters(), lr)])          
     
@@ -85,8 +91,8 @@ if __name__=='__main__':
         mb=cm.get_next_minibatch(minibatchSizeLimits, dev)
         
         arguments = dict()
-        arguments[input] = mb[streamInfos[0]].m_data
-        arguments[label] = mb[streamInfos[1]].m_data
+        arguments[input] = mb[features_si].m_data
+        arguments[label] = mb[labels_si].m_data
         
         trainer.train_minibatch(arguments, dev)
 
