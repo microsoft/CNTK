@@ -118,6 +118,9 @@ CropTransformer::CropTransformer(const ConfigParameters& config) : ImageTransfor
         m_hFlip = config(L"hflip");
     }
 
+    // TODO: for MultiView10 we need to set m_hflip = false, otherwise we might not get 5 unflipped image
+    // if(m_cropType == CropType::MultiView10) m_hflip = false;
+
     m_aspectRatioRadius = config(L"aspectRatioRadius", ConfigParameters::Array(doubleargvector(vector<double>{0.0})));
 }
 

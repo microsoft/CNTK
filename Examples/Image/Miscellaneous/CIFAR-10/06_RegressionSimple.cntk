@@ -1,0 +1,178 @@
+RootDir = "."
+
+ConfigDir = "$RootDir$"
+DataDir = "$RootDir$"
+OutputDir = "$RootDir$/Output"
+ModelDir = "$OutputDir$/Models"
+
+ndlMacros = "$ConfigDir$/Macros.ndl"
+
+precision = "float"
+deviceId = 0
+imageLayout = "cudnn"
+# override the above as follows when running on CPU:
+# deviceId = -1
+
+# If set to true, always initialize the network on CPU, making initialization consistent across CPU and GPU targets (for testing).
+initOnCPUOnly=true
+
+# command = Train:Test:Write
+command = Train:Write
+
+modelPath = "$ModelDir$/06_RegressionSimple"
+
+# stderr = "$OutputDir$/06_RegressionSimple"
+traceLevel = 1
+numMBsToShowResult = 50
+
+Train = [
+    action = "train"
+
+     NDLNetworkBuilder = [
+        networkDescription = "$ConfigDir$/06_RegressionSimple.ndl"
+    ]
+    
+    SGD = [
+        epochSize = 0
+        minibatchSize = 128
+        learningRatesPerMB = 0.05
+        momentumPerMB = 0.9
+        maxEpochs = 5
+        #L2RegWeight = 0.03
+    ]
+    
+    reader = [
+        randomize = false
+        verbosity = 2
+        deserializers = (
+        [
+            type = "CNTKTextFormatDeserializer"
+            module = "CNTKTextFormatReader"
+            file = "$DataDir$/cifar-10-batches-py/train_regrLabels.txt"
+            input = [
+                regrLabels = [
+                    dim = 3
+                    format = "dense"
+                ]
+            ]
+        ]:[
+            type = "ImageDeserializer"
+            module = "ImageReader"
+            file = "$DataDir$/cifar-10-batches-py/train_map.txt"
+            input = [
+                features = [
+                    transforms = (
+                    [
+                        type = "Scale"
+                        width = 32
+                        height = 32
+                        channels = 3
+                        interpolations = "linear"
+                    ]:[
+                        type = "Mean"
+                        meanFile = "$DataDir$/cifar-10-batches-py/CIFAR-10_mean.xml"
+                    ]
+                    )
+                ]
+                ignored=[
+                    labelDim=10
+                ]
+            ]
+        ]
+        )
+    ]
+]
+
+Test = [
+    action = "test"
+    minibatchSize = 64
+
+    reader = [
+        randomize = false
+        verbosity = 2
+        deserializers = (
+        [
+            type = "CNTKTextFormatDeserializer"
+            module = "CNTKTextFormatReader"
+            file = "$DataDir$/cifar-10-batches-py/test_regrLabels.txt"
+            input = [
+                regrLabels = [
+                    dim = 3
+                    format = "dense"
+                ]
+            ]
+        ]:[
+            type = "ImageDeserializer"
+            module = "ImageReader"
+            file = "$DataDir$/cifar-10-batches-py/test_map.txt"
+            input = [
+                features = [
+                    transforms = (
+                    [
+                        type = "Scale"
+                        width = 32
+                        height = 32
+                        channels = 3
+                        interpolations = "linear"
+                    ]:[
+                        type = "Mean"
+                        meanFile = "$DataDir$/cifar-10-batches-py/CIFAR-10_mean.xml"
+                    ]
+                    )
+                ]
+                ignored=[
+                    labelDim=10
+                ]
+            ]
+        ]
+        )
+    ]
+]
+
+Write = [
+    action = "write"
+    minibatchSize = 1
+    outputNodeNames = (OutputNodes.z, regrLabels, rmse)
+    outputPath = "$OutputDir$/06_RegressionSimple"
+    
+    reader = [
+        randomize = false
+        verbosity = 2
+        deserializers = (
+        [
+            type = "CNTKTextFormatDeserializer"
+            module = "CNTKTextFormatReader"
+            file = "$DataDir$/cifar-10-batches-py/test_regrLabels.txt"
+            input = [
+                regrLabels = [
+                    dim = 3
+                    format = "dense"
+                ]
+            ]
+        ]:[
+            type = "ImageDeserializer"
+            module = "ImageReader"
+            file = "$DataDir$/cifar-10-batches-py/test_map.txt"
+            input = [
+                features = [
+                    transforms = (
+                    [
+                        type = "Scale"
+                        width = 32
+                        height = 32
+                        channels = 3
+                        interpolations = "linear"
+                    ]:[
+                        type = "Mean"
+                        meanFile = "$DataDir$/cifar-10-batches-py/CIFAR-10_mean.xml"
+                    ]
+                    )
+                ]
+                ignored=[
+                    labelDim=10
+                ]
+            ]
+        ]
+        )
+    ]
+]
