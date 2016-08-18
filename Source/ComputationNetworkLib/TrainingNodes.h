@@ -719,6 +719,7 @@ public:
     virtual void /*ComputationNode::*/ ForwardPropNonLooping() override
     {
         Matrix<ElemType>& valueMatrix = ValueAsMatrix();
+        valueMatrix.SetDevice(CPUDEVICE);
         valueMatrix.SwitchToMatrixType(SPARSE, matrixFormatSparseCSC, false);
         valueMatrix.Reset();
 
