@@ -736,7 +736,7 @@ public:
         }
 
         // Get vector with indices of randomly sampled classes
-        std::vector<int> samples = GetWeightedSamples(samplingWeightsPrefixSum);
+        std::vector<int> samples = GetWeightedSamples(samplingWeightsPrefixSum, true);
 
         // Set columns of (sparse) result matrix as indicator vectors
         for(int iSample = 0; iSample < m_nSamples; iSample++)
@@ -746,18 +746,30 @@ public:
         }
     }
 
-    std::vector<int> GetWeightedSamples(std::vector<double>& weightPrefixSum)
+    std::vector<int> GetWeightedSamples(std::vector<double>& weightPrefixSum, bool sampleWithReplacment)
     {
         std::uniform_real_distribution<double> r(0, weightPrefixSum.back());
-
+        std::unordered_set<int> alreadySampled;
         std::vector<int> samples;
         // find random samples using the specified weight
         for (int iSample = 0; iSample < m_nSamples; iSample++)
         {
             double randomValue = r(m_generator);
             auto lower = std::lower_bound(weightPrefixSum.begin(), weightPrefixSum.end(), randomValue);
-            auto idx = lower - weightPrefixSum.begin();
-            samples.push_back((int)idx);
+            int idx = (int)(lower - weightPrefixSum.begin());
+            if (sampleWithReplacment) samples.push_back(idx);
+            else
+            {
+                // Sampling without replacement: each value can be sampled at most once. 
+                // The implementation below using rejection sampling is problematic.
+                // E.g if first class has probability p = 0.999999 we typically will have to sample 1000,000 times or more to hit another class.
+                // BUGBUG Alternative implementions, e.g:
+                // * Weighted Random Sampling with Reservoir: http://utopia.duth.gr/~pefraimi/research/data/2007EncOfAlg.pdf
+                // * Binary tree with classes as leafes and branch probs on non-leafes.
+                if (alreadySampled.find(idx) != alreadySampled.end()) continue;
+                else samples.push_back(idx);
+            }
+
         }
         return samples;
     }
