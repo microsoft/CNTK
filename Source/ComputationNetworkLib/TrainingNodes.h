@@ -720,6 +720,7 @@ public:
     {
         Matrix<ElemType>& valueMatrix = ValueAsMatrix();
         valueMatrix.SwitchToMatrixType(SPARSE, matrixFormatSparseCSC, false);
+        valueMatrix.Reset();
 
         // Create vector with prefix sum of sampling weights.
         // TODO: Don't repeat that if Input(0) didn't change.
@@ -746,20 +747,13 @@ public:
 
     std::vector<int> GetWeightedSamples(std::vector<double>& weightPrefixSum)
     {
-#ifdef _MSC_VER // TODO: check if available under GCC/Linux
-        std::ranlux64_base_01 generator;
-        // TODO: handle seeding, e.g. similar to line below:
-        // generator.seed(seed == USE_TIME_BASED_SEED ? (unsigned long)time(NULL) : seed);
-#else
-        std::default_random_engine generator(seed);
-#endif
         std::uniform_real_distribution<double> r(0, weightPrefixSum.back());
 
         std::vector<int> samples;
         // find random samples using the specified weight
         for (int iSample = 0; iSample < m_nSamples; iSample++)
         {
-            double randomValue = r(generator);
+            double randomValue = r(m_generator);
             auto lower = std::lower_bound(weightPrefixSum.begin(), weightPrefixSum.end(), randomValue);
             auto idx = lower - weightPrefixSum.begin();
             samples.push_back((int)idx);
@@ -796,8 +790,21 @@ public:
         return false;
     }
 
+    virtual bool IsOutOfDateWrtInputs() const override
+    {
+        return true;
+    }
+
+
 private:
     int m_nSamples;
+#ifdef _MSC_VER // TODO: check if available under GCC/Linux
+    std::ranlux64_base_01 m_generator;
+    // TODO: handle seeding, e.g. similar to line below:
+    // generator.seed(seed == USE_TIME_BASED_SEED ? (unsigned long)time(NULL) : seed);
+#else
+    std::default_random_engine generator(seed);
+#endif
 
 };
 
