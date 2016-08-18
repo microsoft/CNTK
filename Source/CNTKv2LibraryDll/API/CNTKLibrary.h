@@ -1927,13 +1927,13 @@ namespace CNTK
     /// from a single value, a vector of values and a list of pairs to the training schedule.
     ///
     template <typename T>
-    class TrainingParametersSchedule
+    class TrainingParameterSchedule
     {
     public:
         ///
         /// Create a schedule with a constant parameter value.
         ///
-        TrainingParametersSchedule(T value)
+        TrainingParameterSchedule(T value)
             : m_schedule({ std::make_pair(0, value) }), m_unit(1)
         {}
 
@@ -1942,15 +1942,15 @@ namespace CNTK
         /// schedule[0] is used for the first 'unit' samples, schedule[1] -- for the second,
         /// and so on. The last value is then used repeatedly until the end of training.
         ///
-        TrainingParametersSchedule(const std::vector<T>& schedule, size_t unit = 1) 
+        TrainingParameterSchedule(const std::vector<T>& schedule, size_t unit = 1) 
             : m_unit(unit)
         {
             // TODO: 0 will be used to mean "the entire sweep"
             if (unit == 0)
-                RuntimeError("TrainingParametersSchedule::constructor : 'unit' cannot be 0.");
+                RuntimeError("TrainingParameterSchedule::constructor : 'unit' cannot be 0.");
 
             if (schedule.size() == 0)
-                RuntimeError("TrainingParametersSchedule::constructor : schedule is empty.");
+                RuntimeError("TrainingParameterSchedule::constructor : schedule is empty.");
 
             size_t i = 1;
             for (const auto& value : schedule)
@@ -1968,21 +1968,21 @@ namespace CNTK
         /// '0.1' is used for the second 200 samples, after which the values is switched
         /// to '0.005'.
         ///
-        TrainingParametersSchedule(const std::initializer_list<std::pair<const size_t, T>>& schedule, size_t unit = 1)
+        TrainingParameterSchedule(const std::initializer_list<std::pair<const size_t, T>>& schedule, size_t unit = 1)
             : m_unit(unit)
         {
             // TODO: 0 will be used to mean "the entire sweep"
             if (unit == 0)
-                RuntimeError("TrainingParametersSchedule::constructor : 'unit' cannot be 0.");
+                RuntimeError("TrainingParameterSchedule::constructor : 'unit' cannot be 0.");
 
             if (schedule.size() == 0)
-                RuntimeError("TrainingParametersSchedule::constructor : schedule is empty.");
+                RuntimeError("TrainingParameterSchedule::constructor : schedule is empty.");
 
             size_t i = 0;
             for (const auto& it : schedule)
             {
                 if (it.first == 0)
-                    RuntimeError("TrainingParametersSchedule::constructor : unit count cannot be 0.");
+                    RuntimeError("TrainingParameterSchedule::constructor : unit count cannot be 0.");
 
                 i += it.first;
                 m_schedule[m_unit * i] = it.second;
@@ -1999,40 +1999,34 @@ namespace CNTK
         size_t m_unit;
     };
 
-    typedef TrainingParametersSchedule<double> LearningRatesPerSample;
-    typedef TrainingParametersSchedule<double> MomentumsPerSample;
-    
-    typedef std::unordered_map<Parameter, double> LearningRateMultipliers;
+    typedef TrainingParameterSchedule<double> LearningRatesPerSample;
+    typedef TrainingParameterSchedule<double> MomentumsPerSample;
 
     ///
     /// Create an instance of the CNTK built-in SGD learner.
     ///
     CNTK_API LearnerPtr SGDLearner(const std::unordered_set<Parameter>& parameters, 
-                                   const LearningRatesPerSample& learningRates,
-                                   const LearningRateMultipliers& multipliers = {});
+                                   const LearningRatesPerSample& learningRates);
 
     ///
     /// Create an instance of the CNTK built-in Momentum SGD learner.
     ///
     CNTK_API LearnerPtr MomentumSGDLearner(const std::unordered_set<Parameter>& parameters, 
                                            const LearningRatesPerSample& learningRates,
-                                           const MomentumsPerSample& momentums,
-                                           const LearningRateMultipliers& multipliers = {});
+                                           const MomentumsPerSample& momentums);
 
     ///
     /// Create an instance of the CNTK built-in Nesterov's accelerated SGD learner.
     ///
     CNTK_API LearnerPtr NesterovLearner(const std::unordered_set<Parameter>& parameters, 
                                         const LearningRatesPerSample& learningRates,
-                                        const MomentumsPerSample& momentums,
-                                        const LearningRateMultipliers& multipliers = {});
+                                        const MomentumsPerSample& momentums);
 
     ///
     /// Create an instance of the CNTK built-in AdaGrad learner.
     ///
     CNTK_API LearnerPtr AdaGradLearner(const std::unordered_set<Parameter>& parameters,
                                        const LearningRatesPerSample& learningRates,
-                                       const LearningRateMultipliers& multipliers = {},
                                        bool needAveMultiplier = true);
 
     ///
@@ -2040,8 +2034,7 @@ namespace CNTK
     ///
     CNTK_API LearnerPtr FSAdaGradLearner(const std::unordered_set<Parameter>& parameters,
                                          const LearningRatesPerSample& learningRates,
-                                         const MomentumsPerSample& momentums,
-                                         const LearningRateMultipliers& multipliers = {});
+                                         const MomentumsPerSample& momentums);
 
     ///
     /// Create an instance of the CNTK built-in RMSProp learner.
@@ -2053,7 +2046,6 @@ namespace CNTK
                                        double dec,
                                        double max,
                                        double min,
-                                       const LearningRateMultipliers& multipliers = {},
                                        bool needAveMultiplier = true);
 
     ///

@@ -48,7 +48,7 @@ namespace CNTK
         typename std::enable_if<std::is_pod<T>::value, BinaryIStreamWrapper&>::type
         operator>>(T& value)
         { 
-            assert(sizeof(T) <= sizeof(size_t));
+            static_assert(sizeof(T) <= sizeof(size_t), "size_t is the largest supported type.");
             m_stream.read(buf, sizeof(T)); 
             value = *(reinterpret_cast<T*>(buf));
             return *this ; 
@@ -547,7 +547,7 @@ namespace CNTK
     // Returns the element whose key is greater than the required sample count 
     // or the last element if no such key exists.
     template <typename T>
-    const T& TrainingParametersSchedule<T>::operator[](size_t sampleCount) const
+    const T& TrainingParameterSchedule<T>::operator[](size_t sampleCount) const
     {
         assert(m_schedule.size() > 0);
         auto it = m_schedule.upper_bound(sampleCount);
@@ -570,5 +570,5 @@ namespace CNTK
     template void DictionaryValue::FreePtrAsType<Dictionary>();
     template void DictionaryValue::FreePtrAsType<NDArrayView>();
 
-    template const double& TrainingParametersSchedule<double>::operator[](size_t key) const;
+    template const double& TrainingParameterSchedule<double>::operator[](size_t key) const;
 }

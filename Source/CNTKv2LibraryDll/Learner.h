@@ -35,24 +35,16 @@ namespace CNTK
 
     protected:
         LearnerBase(const std::unordered_set<Parameter>& parameters, 
-                    const LearningRatesPerSample& learningRates, 
-                    const LearningRateMultipliers& multipliers,
+                    const LearningRatesPerSample& learningRates,
                     bool allocateSmoothGradients = true);
 
         virtual void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const = 0;
-
-        double ParameterDependentLearningRate(const Parameter& parameter) const
-        {
-            return m_learningRates[m_sampleCount] * m_learningRateMultipliers.at(parameter);
-        }
 
         std::string LearnerType() const;
 
         LearningRatesPerSample m_learningRates;
 
         AdditionalLearningOptions m_additionalOptions;
-
-        LearningRateMultipliers m_learningRateMultipliers;
 
         std::unordered_map<Parameter, NDArrayViewPtr> m_smoothedGradientValues;
 
@@ -83,6 +75,13 @@ namespace CNTK
         template <typename ElementType>
         void PostProcess(const Parameter& parameter, const NDArrayViewPtr& gradientValue, size_t actualMBSize) const;
 
+        // Returns an NDArrayView with the required shape, with the same data type as parameter value
+        // and allocated on the same device.
+        static NDArrayViewPtr AllocateNDArrayView(const Parameter& parameter, const NDShape& shape);
+
+        // Retrieves the shape of the matrix corresponding to the parameter value.
+        static NDShape GetMatrixShape(const Parameter& parameter);
+
         size_t m_sampleCount;
         size_t m_minibatchCount;
 
@@ -105,9 +104,8 @@ namespace CNTK
     public:
         LearnerSGD(const std::unordered_set<Parameter>& parameters, 
                    const LearningRatesPerSample& learningRates, 
-                   const LearningRateMultipliers& multipliers, 
                    bool allocateSmoothGradients = true)
-            : LearnerBase(parameters, learningRates, multipliers, allocateSmoothGradients), 
+            : LearnerBase(parameters, learningRates, allocateSmoothGradients), 
             m_momentums(0.0), 
             m_useNesterovAcceleration(false)
         { }
@@ -119,6 +117,7 @@ namespace CNTK
         template <typename ElementType>
         void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const;
 
+        // TODO: Move m_momentums to LearnerMomentumSGD as soon as NormalGrad is refactored.
         MomentumsPerSample m_momentums;
         bool m_useNesterovAcceleration;
     };
@@ -130,9 +129,8 @@ namespace CNTK
         LearnerMomentumSGD(const std::unordered_set<Parameter>& parameters, 
                            const LearningRatesPerSample& learningRates,
                            const MomentumsPerSample& momentums,
-                           const LearningRateMultipliers& multipliers,
                            bool allocateSmoothGradients = true)
-            : LearnerSGD(parameters, learningRates, multipliers, allocateSmoothGradients)
+            : LearnerSGD(parameters, learningRates, allocateSmoothGradients)
         {
             m_momentums = momentums;
         }
@@ -145,9 +143,8 @@ namespace CNTK
 
         LearnerNesterov(const std::unordered_set<Parameter>& parameters, 
                         const LearningRatesPerSample& learningRates,
-                        const MomentumsPerSample& momentums,
-                        const LearningRateMultipliers& multipliers)
-            : LearnerMomentumSGD(parameters, learningRates, momentums, multipliers)
+                        const MomentumsPerSample& momentums)
+            : LearnerMomentumSGD(parameters, learningRates, momentums)
         {
             m_useNesterovAcceleration = true;
         }
@@ -159,7 +156,6 @@ namespace CNTK
 
         LearnerAdaGrad(const std::unordered_set<Parameter>& parameters, 
                        const LearningRatesPerSample& learningRates,
-                       const LearningRateMultipliers& multipliers,
                        bool needAveMultiplier);
 
     protected:
@@ -177,8 +173,7 @@ namespace CNTK
 
         LearnerFSAdaGrad(const std::unordered_set<Parameter>& parameters,
                          const LearningRatesPerSample& learningRates,
-                         const MomentumsPerSample& momentums, 
-                         const LearningRateMultipliers& multipliers);
+                         const MomentumsPerSample& momentums);
 
     protected:
 
@@ -195,7 +190,6 @@ namespace CNTK
         LearnerRMSProp(const std::unordered_set<Parameter>& parameters,
                        const LearningRatesPerSample& learningRates,
                        double gamma, double inc, double dec, double max, double min,
-                       const LearningRateMultipliers& multipliers, 
                        bool needAveMultiplier);
 
     protected:

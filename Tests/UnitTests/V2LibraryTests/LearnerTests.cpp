@@ -75,7 +75,7 @@ void TestAdaGradLearner(size_t numParameters, size_t numMinibatches, const Devic
 {
     NDShape shape = CreateShape(rng() % maxNumAxes + 1, maxDimSize);
     auto parameters = CreateParameters<ElementType>(shape, numParameters, device);
-    auto learner = AdaGradLearner(parameters, { vector<double>{0.5, 0.4, 0.3, 0.2, 0.1}, 2 }, { }, true);
+    auto learner = AdaGradLearner(parameters, { vector<double>{0.5, 0.4, 0.3, 0.2, 0.1}, 2 }, true);
     TestUpdate<ElementType>(learner, shape, numMinibatches, device);
 }
 
