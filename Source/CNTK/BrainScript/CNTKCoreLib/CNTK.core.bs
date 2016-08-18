@@ -370,6 +370,23 @@ CNTK2 = [
     # (_new will be removed once the change is made)
     CrossEntropyWithSoftmax_new (L, z, tag='') = Minus (ReduceLogSum (z), TransposeTimes (L,          z),  tag=tag)
     ErrorPrediction_new (L, z, tag='')         = Minus (BS.Constants.One, TransposeTimes (L, Hardmax (z)), tag=tag)
+    CrossEntropyWithSampledSoftmax(hiddenLayer                    /* vector of dimension nHidden */, 
+                                   labels                         /* one-hot for the true class (labels). Dimension: nClasses */, 
+                                   randomSampleSelector           /* Sparse matrix of dimension nClasses * nSamples */,
+                                   weights                        /* nClasses * nHidden */,
+                                   bias                           /* biases for logit computation. Dimension nClasses */,
+                                   logPrior                       /* Log of sampling probablilities nClasses */
+                                      ) = [
+                                        wS = TransposeTimes(weights, randomSampleSelector)     /* Weight matrix in the subspace of samples. Dimension: nHidden * nHidden */
+                                        zS = TransposeTimes(wS, hiddenLayer) +  Transpose(TransposeTimes(bias - logPrior, randomSampleSelector)) /* We the the Transpose(TransposeTimes(...)) because TransposeTimesTimes currently accepts sparse input only for second argument */
+                                        
+                                        wT = TransposeTimes(weights, labels) /* dimension nHidden * 1 */
+                                        zT = TransposeTimes(wT, hiddenLayer) +  TransposeTimes(bias - logPrior, labels) /* here we don't need an additional transpose as the output is already scalar */
+                                        
+                                        zSReduced = ReduceLogSum(zS)
+                                        ce = LogPlus(zt, zSReduced) - zT
+                                       ].ce
+
 
     // 12. Comparison nodes
     Less(_, y, tag='')         = new ComputationNode [ operation = 'Less'         ; inputs = (_ : y) /*plus the function args*/ ]
@@ -382,7 +399,7 @@ CNTK2 = [
     // 13. Others    
     Pass(_, tag='') = new ComputationNode [ operation = 'Pass' ; inputs = _ /*plus the function args*/ ]    
     Identity = Pass
-	RandomSample(_ ,numSamples , tag='') = new ComputationNode [ operation = 'RandomSample' ; nSamples = numSamples; inputs = _ /*plus the function args*/ ]
+    RandomSample(_ ,numSamples , tag='') = new ComputationNode [ operation = 'RandomSample' ; nSamples = numSamples; inputs = _ /*plus the function args*/ ]
 
 ]
 

@@ -748,7 +748,8 @@ public:
     {
 #ifdef _MSC_VER // TODO: check if available under GCC/Linux
         std::ranlux64_base_01 generator;
-//        generator.seed(seed == USE_TIME_BASED_SEED ? (unsigned long)time(NULL) : seed);
+        // TODO: handle seeding, e.g. similar to line below:
+        // generator.seed(seed == USE_TIME_BASED_SEED ? (unsigned long)time(NULL) : seed);
 #else
         std::default_random_engine generator(seed);
 #endif
@@ -760,9 +761,6 @@ public:
         {
             double randomValue = r(generator);
             auto lower = std::lower_bound(weightPrefixSum.begin(), weightPrefixSum.end(), randomValue);
-            // check that value has been found
-            // const bool found = lower != weightPrefixSum.end() && *lower == randomValue;
-
             auto idx = lower - weightPrefixSum.begin();
             samples.push_back((int)idx);
         }
