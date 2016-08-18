@@ -26,6 +26,13 @@ def fully_connected_classifier_net(input, num_output_classes, hidden_layer_dim, 
     return classifier_root;
 
 def create_mb_source():    
+    image_height = 32
+    image_width = 32
+    num_channels = 3
+    num_classes = 10
+    map_file = ''
+    mean_file = ''
+
     features_config = dict();
     features_config["dim"] = input_dim
     features_config["format"] = "dense"
@@ -41,7 +48,7 @@ def create_mb_source():
     deserializer_config = dict()
     deserializer_config["type"] = "CNTKTextFormatDeserializer"
     deserializer_config["module"] = "CNTKTextFormatReader"
-    deserializer_config["file"] = r"../../../../../Examples/Image/MNIST/Data/Train-28x28_cntk_text.txt"
+    deserializer_config["file"] = r"E:\CNTK\contrib\Python\cntk\examples\MNIST\Data\Train-28x28_text.txt"
     deserializer_config["input"] = input_config
 
     minibatch_config = dict()
@@ -52,6 +59,7 @@ def create_mb_source():
 
 if __name__=='__main__':      
     input_dim = 784
+    
     num_output_classes = 10
     num_hidden_layers = 1
     hidden_layers_dim = 200
@@ -59,6 +67,21 @@ if __name__=='__main__':
     minibatch_size = 32
     num_samples_per_sweep = 60000
     num_sweeps_to_train_with = 3
+    cm = create_mb_source()
+        
+    stream_infos = cm.stream_infos();    
+    
+    for si in stream_infos:
+        if si.m_name == 'features':
+            features_si = si
+        elif si.m_name == 'labels':
+            labels_si = si
+    
+    
+    image_shape = features_si.m_sample_layout.dimensions()
+    
+    '''
+
     num_minibatches_to_train = (num_samples_per_sweep * num_sweeps_to_train_with) / minibatch_size
     lr = 0.003125
     input = variable((input_dim,), np.float32, needs_gradient=False, name="features")
@@ -69,21 +92,11 @@ if __name__=='__main__':
         
     ce = cross_entropy_with_softmax(netout.output(), label)
     pe = classification_error(netout.output(), label)
-    ffnet = combine([ce, pe, netout], "classifier_model")        
+    ffnet = combine([ce, pe, netout], "classifier_model")           
     
-    cm = create_mb_source()
-        
-    stream_infos = cm.stream_infos();    
-    
-    for si in stream_infos:
-        if si.m_name == 'features':
-            features_si = si
-        elif si.m_name == 'labels':
-            labels_si = si
-
     minibatchSizeLimits = dict()    
-    minibatchSizeLimits[features_si] = (0,minibatch_size)
-    minibatchSizeLimits[labels_si] = (0,minibatch_size)
+    minibatchSizeLimits[streamInfos[0]] = (0,minibatch_size)
+    minibatchSizeLimits[streamInfos[1]] = (0,minibatch_size)
                          
     trainer = cntk_py.Trainer(ffnet, ce.output(), [cntk_py.sgdlearner(ffnet.parameters(), lr)])          
     
@@ -91,12 +104,12 @@ if __name__=='__main__':
         mb=cm.get_next_minibatch(minibatchSizeLimits, dev)
         
         arguments = dict()
-        arguments[input] = mb[features_si].m_data
-        arguments[label] = mb[labels_si].m_data
+        arguments[input] = mb[streamInfos[0]].m_data
+        arguments[label] = mb[streamInfos[1]].m_data
         
         trainer.train_minibatch(arguments, dev)
 
         freq = 20
         if i % freq == 0:
             print(str(i+freq) + ": " + str(trainer.previous_minibatch_training_loss_value().data().to_numpy()))
-    
+    '''
