@@ -12,7 +12,4 @@ swig.bat
 # go one level up
 python .\setup.py build_ext -if -c msvc --plat-name=win-amd64
 
-# Run
-python cntk_py_tester.py
-
 
