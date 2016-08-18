@@ -26,7 +26,7 @@ def fully_connected_classifier_net(input, num_output_classes, hidden_layer_dim, 
     return classifier_root;
 
 def create_mb_source():    
-    features_config = dict();
+    features_config = dict()
     features_config["dim"] = input_dim
     features_config["format"] = "dense"
 
@@ -45,7 +45,7 @@ def create_mb_source():
     deserializer_config["input"] = input_config
 
     minibatch_config = dict()
-    minibatch_config["epochSize"] = sys.maxsize    
+    minibatch_config["epochSize"] = epoch_size  
     minibatch_config["deserializers"] = [deserializer_config]
 
     return create_minibatch_source(minibatch_config)
@@ -55,7 +55,7 @@ if __name__=='__main__':
     num_output_classes = 10
     num_hidden_layers = 1
     hidden_layers_dim = 200
-    
+    epoch_size = sys.maxsize
     minibatch_size = 32
     num_samples_per_sweep = 60000
     num_sweeps_to_train_with = 3
