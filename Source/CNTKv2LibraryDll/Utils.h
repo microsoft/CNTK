@@ -167,10 +167,6 @@ namespace CNTK
         return var.IsInput() && var.IsSparse();
     }
 
-    std::vector<DictionaryValue> SerializeToVector(const NDArrayViewPtr& viewPtr);
-
-    void DeserializeFromVector(const NDArrayViewPtr& viewPtr, const std::vector<DictionaryValue>& values);
-
     inline void AddIndentation(std::wstringstream& s, size_t numIndentationSpaces)
     {
         for (size_t i = 0; i < numIndentationSpaces; ++i)
@@ -312,5 +308,10 @@ namespace CNTK
         NDShape kernelShape = convolutionMapShape.SubShape(outputMapCount.NumAxes());
 
         return{ paddedOutputMapCount, kernelShape };
+    }
+
+    inline double MomentumPerMB(double momentumPerSample, size_t minibatchSize)
+    {
+        return std::pow(momentumPerSample, minibatchSize);
     }
 }

@@ -20,10 +20,12 @@
 #include <array>
 #include <stdarg.h>
 #include <assert.h>
+#include <map>
 #include <unordered_map>
 #include <unordered_set>
 #include <string>
 #include <sstream>
+#include <iosfwd>
 #include<algorithm>
 
 namespace CNTK
@@ -242,7 +244,7 @@ namespace CNTK
         }
 
         ///
-        /// Creates and returns a new shape contructed by appending the dimensions of the specified 'shape' to 'this' shape's dimensions.
+        /// Creates and returns a new shape constructed by appending the dimensions of the specified 'shape' to 'this' shape's dimensions.
         ///
         NDShape AppendShape(const NDShape& shape) const
         {
@@ -1645,6 +1647,7 @@ namespace CNTK
             NDShape,
             Vector,
             Dictionary,
+            NDArrayView,
         };
 
         static const char* TypeName(Type type)
@@ -1669,6 +1672,8 @@ namespace CNTK
                 return "Vector";
             case Type::Dictionary:
                 return "Dictionary";
+            case Type::NDArrayView:
+                return "NDArrayView";
             default:
                 LogicError("Unknown DictionaryValue::Type");
             }
@@ -1715,8 +1720,9 @@ namespace CNTK
             static_assert((std::is_same<T, NDShape>::value ||
                 std::is_same<T, std::wstring>::value ||
                 std::is_same<T, std::vector<DictionaryValue>>::value ||
-                std::is_same<T, Dictionary>::value),
-                          "Unsupported ValueType");
+                std::is_same<T, Dictionary>::value ||
+                std::is_same<T, NDArrayView>::value),
+                "Unsupported ValueType");
 
             AllocateDataPtr(value);
         }
@@ -1726,6 +1732,13 @@ namespace CNTK
             // The m_valueType must have been set to a non-ptr type to prevent an attempt to interpret
             // the underlying underlying uninitialized value as a ptr and free it.
             *this = other;
+        }
+
+        DictionaryValue(DictionaryValue&& other) : m_valueType(Type::Bool)
+        {
+            // The m_valueType must have been set to a non-ptr type to prevent an attempt to interpret
+            // the underlying underlying uninitialized value as a ptr and free it.
+            *this = std::move(other);
         }
 
         DictionaryValue& operator=(const DictionaryValue& other)
@@ -1745,7 +1758,30 @@ namespace CNTK
                     AllocateDataPtr(other.GetValue<std::vector<DictionaryValue>>());
                 else if (other.m_valueType == Type::Dictionary)
                     AllocateDataPtr(other.GetValue<Dictionary>());
+                else if (other.m_valueType == Type::NDArrayView)
+                    AllocateDataPtr(other.GetValue<NDArrayView>());
             }
+
+            return *this;
+        }
+
+        DictionaryValue& operator=(DictionaryValue&& other)
+        {
+            FreeDataPtr();
+
+            m_valueType = other.m_valueType;
+            m_data = other.m_data;
+
+            if (other.m_valueType == Type::String ||
+                other.m_valueType == Type::NDShape ||
+                other.m_valueType == Type::Vector ||
+                other.m_valueType == Type::Dictionary ||
+                other.m_valueType == Type::NDArrayView)
+            {
+                other.m_data.m_ptr = nullptr;
+            }
+
+            other.m_valueType = Type::None;
 
             return *this;
         }
@@ -1786,7 +1822,8 @@ namespace CNTK
         template <typename T, typename std::enable_if<std::is_same<T, NDShape>::value ||
             std::is_same<T, std::wstring>::value ||
             std::is_same<T, std::vector<DictionaryValue>>::value ||
-            std::is_same<T, Dictionary>::value>::type* = nullptr>
+            std::is_same<T, Dictionary>::value ||
+            std::is_same<T, NDArrayView>::value>::type* = nullptr>
         const T& GetValue() const
         {
             VerifyType<T>();
@@ -1803,8 +1840,11 @@ namespace CNTK
             return m_valueType;
         }
 
-        friend CNTK_API Microsoft::MSR::CNTK::File& operator>>(Microsoft::MSR::CNTK::File& stream, DictionaryValue& us);
-        friend CNTK_API Microsoft::MSR::CNTK::File& operator<<(Microsoft::MSR::CNTK::File& stream, const DictionaryValue& us);
+        CNTK_API bool operator==(const DictionaryValue& other) const;
+        CNTK_API bool operator!=(const DictionaryValue& other) const;
+
+        friend CNTK_API std::istream& operator>>(std::istream& stream, DictionaryValue& us);
+        friend CNTK_API std::ostream& operator<<(std::ostream& stream, const DictionaryValue& us);
 
     private:
         template <typename T>
@@ -1816,8 +1856,9 @@ namespace CNTK
                           std::is_same<T, double>::value ||
                           std::is_same<T, std::wstring>::value ||
                           std::is_same<T, NDShape>::value ||
-                std::is_same<T, std::vector<DictionaryValue>>::value ||
-                std::is_same<T, Dictionary>::value),
+                          std::is_same<T, std::vector<DictionaryValue>>::value ||
+                          std::is_same<T, Dictionary>::value ||
+                          std::is_same<T, NDArrayView>::value),
                           "Unsupported ValueType");
 
             if (std::is_same<T, bool>::value)                                      return Type::Bool;
@@ -1828,6 +1869,7 @@ namespace CNTK
             if (std::is_same<T, NDShape>::value)                                   return Type::NDShape;
             if (std::is_same<T, std::vector<DictionaryValue>>::value)              return Type::Vector;
             if (std::is_same<T, Dictionary>::value)                                return Type::Dictionary;
+            if (std::is_same<T, NDArrayView>::value)                               return Type::NDArrayView;
         }
 
         template <typename T>
@@ -1853,6 +1895,8 @@ namespace CNTK
                 FreePtrAsType<std::vector<DictionaryValue>>();
             else if (m_valueType == Type::Dictionary)
                 FreePtrAsType<Dictionary>();
+            else if (m_valueType == Type::Dictionary)
+                FreePtrAsType<NDArrayView>();
         }
 
         Type m_valueType;
@@ -1906,9 +1950,11 @@ namespace CNTK
             return Contains(key.c_str());
         }
 
+        CNTK_API bool operator==(const Dictionary& other) const;
+        CNTK_API bool operator!=(const Dictionary& other) const;
 
-        friend CNTK_API Microsoft::MSR::CNTK::File& operator>>(Microsoft::MSR::CNTK::File& stream, Dictionary& us);
-        friend CNTK_API Microsoft::MSR::CNTK::File& operator<<(Microsoft::MSR::CNTK::File& stream, const Dictionary& us);
+        friend CNTK_API std::istream& operator>>(std::istream& stream, Dictionary& us);
+        friend CNTK_API std::ostream& operator<<(std::ostream& stream, const Dictionary& us);
 
     private:
         std::shared_ptr<std::unordered_map<std::wstring, DictionaryValue>> m_dictionaryData;
@@ -1958,36 +2004,126 @@ namespace CNTK
     };
 
     ///
+    /// A collection of key-value pairs that represents training parameter schedule in 
+    /// terms of the number of processed samples. 
+    /// This class provides a number of convenience constructors to allow easy conversion 
+    /// from a single value, a vector of values and a list of pairs to the training schedule.
+    ///
+    template <typename T>
+    class TrainingParameterSchedule
+    {
+    public:
+        ///
+        /// Create a schedule with a constant parameter value.
+        ///
+        TrainingParameterSchedule(T value)
+            : m_schedule({ std::make_pair(0, value) }), m_unit(1)
+        {}
+
+        ///
+        /// Create a schedule where the parameter changes its value every 'unit' samples:
+        /// schedule[0] is used for the first 'unit' samples, schedule[1] -- for the second,
+        /// and so on. The last value is then used repeatedly until the end of training.
+        ///
+        TrainingParameterSchedule(const std::vector<T>& schedule, size_t unit = 1) 
+            : m_unit(unit)
+        {
+            // TODO: 0 will be used to mean "the entire sweep"
+            if (unit == 0)
+                RuntimeError("TrainingParameterSchedule::constructor : 'unit' cannot be 0.");
+
+            if (schedule.size() == 0)
+                RuntimeError("TrainingParameterSchedule::constructor : schedule is empty.");
+
+            size_t i = 1;
+            for (const auto& value : schedule)
+            {
+                m_schedule[m_unit * i++] = value;
+            }
+        }
+
+        ///
+        /// Create a schedule using the list of key-value pairs, where the key specifies 
+        /// the number of 'units' the parameter should maintain the corresponding value.
+        /// The value from the last pair is used repeatedly until the end of training.
+        /// For example, {{1, 0.05}, {2, 0.1}, {1, 0.005}} and unit = 100, corresponds to 
+        /// a schedule where the value of '0.05' is used for the first 100 samples, then
+        /// '0.1' is used for the second 200 samples, after which the values is switched
+        /// to '0.005'.
+        ///
+        TrainingParameterSchedule(const std::initializer_list<std::pair<const size_t, T>>& schedule, size_t unit = 1)
+            : m_unit(unit)
+        {
+            // TODO: 0 will be used to mean "the entire sweep"
+            if (unit == 0)
+                RuntimeError("TrainingParameterSchedule::constructor : 'unit' cannot be 0.");
+
+            if (schedule.size() == 0)
+                RuntimeError("TrainingParameterSchedule::constructor : schedule is empty.");
+
+            size_t i = 0;
+            for (const auto& it : schedule)
+            {
+                if (it.first == 0)
+                    RuntimeError("TrainingParameterSchedule::constructor : unit count cannot be 0.");
+
+                i += it.first;
+                m_schedule[m_unit * i] = it.second;
+            }
+        }
+
+        ///
+        /// Returns a value corresponding to the absolute sample count from the beginning of training.
+        ///
+        CNTK_API const T& operator[](size_t samleCount) const;
+
+    private:
+        std::map<size_t, T> m_schedule;
+        size_t m_unit;
+    };
+
+    typedef TrainingParameterSchedule<double> LearningRatesPerSample;
+    typedef TrainingParameterSchedule<double> MomentumsPerSample;
+
+    ///
     /// Create an instance of the CNTK built-in SGD learner.
     ///
-    /// TODO: add additional SGD parameters here (a collection of learning rate values)
-    CNTK_API LearnerPtr SGDLearner(const std::unordered_set<Parameter>& parameters, double learningRatePerSample);
+    CNTK_API LearnerPtr SGDLearner(const std::unordered_set<Parameter>& parameters, 
+                                   const LearningRatesPerSample& learningRates);
 
     ///
     /// Create an instance of the CNTK built-in Momentum SGD learner.
     ///
-    /// TODO: add additional Momentum parameters here (a collection of momentum rate values)
-    CNTK_API LearnerPtr MomentumSGDLearner(const std::unordered_set<Parameter>& parameters);
+    CNTK_API LearnerPtr MomentumSGDLearner(const std::unordered_set<Parameter>& parameters, 
+                                           const LearningRatesPerSample& learningRates,
+                                           const MomentumsPerSample& momentums);
 
     ///
     /// Create an instance of the CNTK built-in Nesterov's accelerated SGD learner.
     ///
-    CNTK_API LearnerPtr NesterovLearner(const std::unordered_set<Parameter>& parameters);
+    CNTK_API LearnerPtr NesterovLearner(const std::unordered_set<Parameter>& parameters, 
+                                        const LearningRatesPerSample& learningRates,
+                                        const MomentumsPerSample& momentums);
 
     ///
     /// Create an instance of the CNTK built-in AdaGrad learner.
     ///
-    CNTK_API LearnerPtr AdaGradLearner(const std::unordered_set<Parameter>& parameters, bool needAveMultiplier = true);
+    CNTK_API LearnerPtr AdaGradLearner(const std::unordered_set<Parameter>& parameters,
+                                       const LearningRatesPerSample& learningRates,
+                                       bool needAveMultiplier = true);
 
     ///
     /// Create an instance of the CNTK built-in FSAdaGrad (improved AdaGrad) learner.
     ///
-    CNTK_API LearnerPtr FSAdaGradLearner(const std::unordered_set<Parameter>& parameters);
+    CNTK_API LearnerPtr FSAdaGradLearner(const std::unordered_set<Parameter>& parameters,
+                                         const LearningRatesPerSample& learningRates,
+                                         const MomentumsPerSample& momentums);
 
     ///
     /// Create an instance of the CNTK built-in RMSProp learner.
     ///
     CNTK_API LearnerPtr RMSPropLearner(const std::unordered_set<Parameter>& parameters,
+                                       const LearningRatesPerSample& learningRates,
                                        double gamma,
                                        double inc,
                                        double dec,
@@ -1997,7 +2133,7 @@ namespace CNTK
 
     ///
     /// Trainer is the top-level abstraction responsible for the orchestration of the training of a model
-    /// using the specified learners and training data either explicilty supplied as Value objects or from
+    /// using the specified learners and training data either explicitly supplied as Value objects or from
     /// a MinibatchSource object.
     ///
     class Trainer
@@ -2085,7 +2221,7 @@ namespace CNTK
     };
 
     ///
-    /// Abstraction for generating minbatches of samples for training/evaluation.
+    /// Abstraction for generating minibatches of samples for training/evaluation.
     ///
     class MinibatchSource : public std::enable_shared_from_this<MinibatchSource>
     {
@@ -2101,7 +2237,7 @@ namespace CNTK
         /// #samples or both. In case the size is specified in terms of both #sequences and #samples, the smaller of the 2 is taken. The actual
         /// returned size of the minibatch is the min across all streams. Also the requested MB size fields in the maps are updated by the 
         /// MinibatchSource to contain the actual #sequences and #samples in the returned minibatch for the corresponding stream.
-        /// The return value indciates if the MinibatchSource will return any further data in subsequent calls of this function.
+        /// The return value indicates if the MinibatchSource will return any further data in subsequent calls of this function.
         ///
         virtual std::unordered_map<StreamInfo, MinibatchData> GetNextMinibatch(const std::unordered_map<StreamInfo, std::pair<size_t, size_t>>& perStreamMBSizeLimits,
                                                                                const DeviceDescriptor& device = DeviceDescriptor::DefaultDevice()) = 0;
