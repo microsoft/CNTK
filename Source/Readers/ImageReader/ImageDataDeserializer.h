@@ -59,6 +59,7 @@ public:
         // TODO: How to best infer m_sampleLayout? cf. constructor of ImageConfigHelper
         features->m_storageType = StorageType::dense;
         features->m_elementType = std::is_same<PrecisionType, float>::value ? ElementType::tfloat : ElementType::tdouble;
+        m_featureElementType = features->m_elementType;
         m_streams.push_back(features);
 
         // Label stream.

@@ -13,7 +13,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 // "private" helper functions
 namespace {
-    m_featureElementType = features->m_elementType;
 
 std::unique_ptr<IDataDeserializer> createImageDataDeserializer(CorpusDescriptorPtr corpus, const ConfigParameters& config, const LabelType& labelType, const ElementType& elementType)
 {
