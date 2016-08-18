@@ -7,6 +7,12 @@
 
 #pragma once
 
+#ifdef SWIG
+#define final
+#define explicit
+#define static_assert(condition, message)
+#endif
+
 #include "CNTKLibraryInternals.h"
 
 #include <memory>
@@ -1097,6 +1103,15 @@ namespace CNTK
 }
 
 namespace std {
+    
+    template <> struct hash<CNTK::NDShape>
+    {
+        size_t operator()(const CNTK::NDShape& x) const
+        {
+            return std::hash<std::wstring>()(x.AsString());
+        }
+    };
+
     template <> struct hash<CNTK::Axis>
     {
         size_t operator()(const CNTK::Axis& x) const
@@ -1687,13 +1702,20 @@ namespace CNTK
         DictionaryValue(const wchar_t* value) 
             : DictionaryValue(std::wstring(value))
         {}
+
+        // Due to SWIG we had to flatten this template for vector<DictionaryValue>
+        DictionaryValue(const std::vector<CNTK::DictionaryValue>& value) : m_valueType(GetValueType<std::vector<CNTK::DictionaryValue>>())
+        {
+            AllocateDataPtr(value);
+        }
+
         template <typename T>
         DictionaryValue(const T& value) : m_valueType(GetValueType<T>())
         {
-            static_assert(std::is_same<T, NDShape>::value ||
-                          std::is_same<T, std::wstring>::value ||
-                          std::is_same<T, std::vector<DictionaryValue>>::value ||
-                          std::is_same<T, Dictionary>::value,
+            static_assert((std::is_same<T, NDShape>::value ||
+                std::is_same<T, std::wstring>::value ||
+                std::is_same<T, std::vector<DictionaryValue>>::value ||
+                std::is_same<T, Dictionary>::value),
                           "Unsupported ValueType");
 
             AllocateDataPtr(value);
@@ -1788,14 +1810,14 @@ namespace CNTK
         template <typename T>
         static Type GetValueType()
         {
-            static_assert(std::is_same<T, bool>::value ||
+            static_assert((std::is_same<T, bool>::value ||
                           std::is_same<T, size_t>::value ||
                           std::is_same<T, float>::value ||
                           std::is_same<T, double>::value ||
                           std::is_same<T, std::wstring>::value ||
                           std::is_same<T, NDShape>::value ||
-                          std::is_same<T, std::vector<DictionaryValue>>::value ||
-                          std::is_same<T, Dictionary>::value,
+                std::is_same<T, std::vector<DictionaryValue>>::value ||
+                std::is_same<T, Dictionary>::value),
                           "Unsupported ValueType");
 
             if (std::is_same<T, bool>::value)                                      return Type::Bool;
