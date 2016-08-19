@@ -96,6 +96,10 @@
      }
 }
 
+%ignore CNTK::NDShape::operator[];
+%ignore CNTK::NDShape::AppendShape;
+%ignore CNTK::NDShape::Dimensions;
+
 %typemap(out) CNTK::NDShape {
     size_t num_axes = $1.NumAxes();
     $result = PyTuple_New(num_axes);
@@ -116,18 +120,15 @@
         size_t num_axes = (*self).NumAxes();
         PyObject* result = PyTuple_New(num_axes);
         // CNTK uses column major, thus we reverse the shape
-        for (int i=num_axes-1; i>=0; i--)
+        for (int i=0; i<num_axes; i++)
         {
             size_t dim = dims[i];
-            PyTuple_SET_ITEM(result, i, PyInt_FromLong(dim));
+            PyTuple_SET_ITEM(result, num_axes-1-i, PyInt_FromLong(dim));
         }
         return result;
     }
 }
 
-%ignore CNTK::NDShape::operator[];
-%ignore CNTK::NDShape::AppendShape;
-%ignore CNTK::NDShape::Dimensions;
 %ignore CNTK::Dictionary::AppendShape;
 %rename ("$ignore", fullname=1) CNTK::Variable(const NDShape&, CNTK::DataType, const wchar_t*);
 
@@ -876,10 +877,12 @@
 
         npy_intp num_elements = 1;
         // CNTK uses column major, thus we reverse the shape
-        for (int i=num_axes-1; i>=0; i--)
+
+        for (int i=0; i<num_axes; i++)
         {
             shape.push_back(np_shape[i]);
             num_elements *= np_shape[i];
+            std::reverse(shape.begin(),shape.end());
         }
 
         int typecode = PyArray_TYPE(array);
