@@ -68,6 +68,7 @@ void ZipByteReader::Register(const std::map<std::string, size_t>& sequences)
             numberOfEntries++;
         }
     }
+    m_zips.push(std::move(zipFile));
 
     if (numberOfEntries != sequences.size())
     {
@@ -83,7 +84,6 @@ void ZipByteReader::Register(const std::map<std::string, size_t>& sequences)
 
         RuntimeError("Cannot retrieve image data for some sequences. For more detail, please see the log file.");
     }
-    m_zips.push(std::move(zipFile));
 }
 
 cv::Mat ZipByteReader::Read(size_t seqId, const std::string& path, bool grayscale)
