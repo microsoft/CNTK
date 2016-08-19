@@ -72,7 +72,7 @@ if __name__=='__main__':
     
     cm = create_mb_source()
        
-    stream_infos = cm.stream_infos();    
+    stream_infos = cm.stream_infos()    
 
     for si in stream_infos:
         if si.m_name == 'features':
