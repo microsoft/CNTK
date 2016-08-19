@@ -1,0 +1,112 @@
+command=Train
+precision="float"
+deviceId="Auto"
+parallelTrain="false"
+
+numMBsToShowResult=1
+
+rootDir = "." ; dataDir  = "$rootDir$/data/" ; modelDir = "D:"
+modelPath = "$modelDir$/RCNN-test.bs"
+
+TestROIDim = 8000
+TestROILabelDim = 42000
+
+TrainROIDim = 256 
+TrainROILabelDim = 1344
+LabelDim = 21
+traceLevel=1
+
+#stderr="$rootDir$/bstest.log"
+
+Train = [
+    action = "train"
+    
+    BrainScriptNetworkBuilder = [
+        ROIPooling (input, rois, shape) = new ComputationNode [ operation = 'ROIPooling' ; inputs = (rois:input) ; H = shape[1] ; W = shape[0] ; imageLayout = "cudnn" ; tag='' /*plus the function args*/ ] 
+
+        # 21 x 64 x bsz, 21 x 64 x bsz
+        CrossEntropyWithSoftmax_new (L, z, tag='') = Minus (ReduceLogSum (z, axis=1), TransposeTimes (L, z),  tag=tag) 
+        CrossEntropyWithSoftmax_new2 (y, z, axis=0) = ReduceLogSum (z, axis=axis) - ReduceSum (y .* z, axis=axis)
+
+        imageShape = 1000:1000:3
+        labelShape = 21:64
+        roiShape = 256
+
+        network = BS.Network.Load ("AlexNet.89")
+        c1 = BS.Network.CloneFunction(network.features, network.pool1, parameters="constant")
+        middle = BS.Network.CloneFunction(network.pool1, network.conv5_y)
+        last = BS.Network.CloneFunction(network.pool3, network.h2_d)
+
+        model (features, rois) = [
+            featNorm = features - Constant (114)
+            pool1Out = c1 (featNorm)
+            conv5Out = middle (pool1Out)
+            roi = ROIPooling (conv5Out, rois, (6:6))
+            h2dOut = last (roi)
+            fW = ParameterTensor((21:4096), init='gaussian', initValueScale=0.01)
+            fb = ParameterTensor(21, init='zero')
+            ft = Times(fW, h2dOut)
+            z = Plus(ft, fb)
+        ].z
+
+        features = Input (imageShape)
+        roiLabels = Input (labelShape)
+        rois = Input (roiShape)
+
+        z = model (features, rois)
+        ce = CrossEntropyWithSoftmax_new2 (roiLabels, z, axis=1)
+        errs = ErrorPrediction (roiLabels, z, tag='eval')
+
+        featureNodes    = (features:rois)
+        labelNodes      = (roiLabels)
+        criterionNodes  = (ce)
+        evaluationNodes = (errs)
+        outputNodes     = (z)
+    ]
+
+    SGD = [
+        epochSize=0
+        minibatchSize=2
+        maxEpochs=2
+        learningRatesPerMB=0.001
+        momentumAsTimeConstant=100
+        L2RegWeight=0.0005
+        dropoutRate=0.5
+        firstMBsToShowResult=1
+        numMBsToShowResult=50
+    ]
+
+    reader = [
+        randomize = false
+        verbosity = 2
+        deserializers = ([
+            type = "CNTKTextFormatDeserializer" ; module = "CNTKTextFormatReader"
+            file = "$dataDir$/1k_train_stage2.rois.txt"
+            input = [
+                rois = [
+                    dim = $TrainROIDim$ ; format = "dense"
+                    format = "dense"
+                ]
+            ]
+        ]:[
+            type = "CNTKTextFormatDeserializer" ; module = "CNTKTextFormatReader"
+            file = "$DataDir$/1k_train_stage2.roilabels.txt"
+            input = [
+                roiLabels = [
+                    dim = $TrainROILabelDim$ ; format = "dense"
+                ]
+            ]
+        ]:[
+            type = "ImageDeserializer" ; module = "ImageReader"
+            file="$DataDir$/1k_train_stage2.txt"
+            input = [
+                features = [ transforms = (
+                    [ type = "ScaleSide" ; target = 1000 ; side = "max" ]:
+                    [ type = "Pad" ; width = 1000 ; height = 1000; channels = 3; value = 114 ]:
+                    [ type = "Transpose" ]
+                )]
+                ignored=[labelDim=1000]
+            ]
+        ])
+    ]
+]

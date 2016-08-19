@@ -11,8 +11,6 @@ LabelDim = $LabelDim$
 # replace the pooling layer
 rois = Input(roiDim, tag="feature")
 roi = ROIPooling(rois, conv5.y, 6, 6)
-
-# 9216 = 6 * 6 * 256--the size of each ROI.
 rshp = Reshape(roi, 9216, imageWidth=6, imageHeight=6, imageChannels=256, imageLayout="CHW")
 SetInput(h1.t, 1, rshp)
 

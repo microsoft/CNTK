@@ -9,27 +9,22 @@ ndlMacros="$ConfigDir$/Macros.ndl"
 precision="float"
 deviceId="Auto"
 parallelTrain="false"
-command=FixForTest:Write
+command=StageTransition:Train2
+#Train
 
-#stderr="$OutputDir$/AlexNet"
+#
 traceLevel=1
-numMBsToShowResult=50
+numMBsToShowResult=1
 
-FinalModel = "AlexNet.rcnn.just_resize.allim.pad"
+FinalModel = "AlexNet.rcnn.momentumtest.allim.pad"
 
-#### dimension variables; used here and in MEL files. ####
+# dimension variables; used here and in MEL files.
+TestROIDim = 8000
+TestROILabelDim = 42000
 
-# 200 rois per image * 4 points per ROI
-TestROIDim = 800
-# 200 rois per image * 21 object classes
-TestROILabelDim = 4200
-
-# 64 rois per image for training
-TrainROIDim = 256
+TrainROIDim = 256 
 TrainROILabelDim = 1344
 LabelDim = 21
-
-#### end dimension variables ####
 
 AddROILayer=[
     action="edit"
@@ -40,15 +35,23 @@ AddROILayer=[
 
 JustLast=[
     action="edit"
-    CurModel="$ModelDir$/$FinalModel$"
-    NewModel="$ModelDir$/$FinalModel$"
+    CurModel="$ModelDir$/$FinalModel$.0"
+    NewModel="$ModelDir$/$FinalModel$.0"
     editPath="$ConfigDir$/JustLast.mel"
 ]
 
+StageTransition=[
+    action="edit"
+    CurModel="$ModelDir$/$FinalModel$.1"
+    NewModel="$ModelDir$/$FinalModel$_stage2.0"
+    editPath="$ConfigDir$/StageTransition.mel"
+]
+
+
 ChangeInputSize=[
     action="edit"
-    NewHeight = 500
-    NewWidth = 500
+    NewHeight = 1000
+    NewWidth = 1000
     CurModel="$ModelDir$/$FinalModel$.0"
     NewModel="$ModelDir$/$FinalModel$.0"
     editPath="$ConfigDir$/ChangeInputSize.mel"
@@ -56,15 +59,15 @@ ChangeInputSize=[
 
 FixForTest=[
     action="edit"
-    CurModel="$ModelDir$/$FinalModel$.0"
+    CurModel="$ModelDir$/$FinalModel$"
     NewModel="$ModelDir$/$FinalModel$.test"
     editPath="$ConfigDir$/FixForTest.mel"
 ]
 
-Train=[
+Train2=[
     action="train"
 
-    modelPath="$ModelDir$/$FinalModel$"
+    modelPath="$ModelDir$/$FinalModel$_stage2"
     NDLNetworkBuilder=[
         networkDescription="$ConfigDir$/AlexNet.ndl"
     ]
@@ -72,9 +75,9 @@ Train=[
     SGD=[
         epochSize=0
         minibatchSize=2
-        learningRatesPerMB=0.001*5:0.0001
-        momentumPerMB=0.9
-        maxEpochs=15
+        learningRatesPerMB=0.0001
+        momentumAsTimeConstant=1215
+        maxEpochs=2
         gradUpdateType=None
         L2RegWeight=0.0005
         dropoutRate=0.5
@@ -98,7 +101,7 @@ Train=[
         [
             type = "CNTKTextFormatDeserializer"
             module = "CNTKTextFormatReader"
-            file = "$DataDir$/tv2012pad.rois.txt"
+            file = "$DataDir$/1k_train_stage2.rois.txt"
             input = [
                 rois = [
                     dim = $TrainROIDim$
@@ -108,7 +111,7 @@ Train=[
         ]:[
             type = "CNTKTextFormatDeserializer"
             module = "CNTKTextFormatReader"
-            file = "$DataDir$/tv2012pad.roilabels.txt"
+            file = "$DataDir$/1k_train_stage2.roilabels.txt"
             input = [
                 roiLabels = [
                     dim = $TrainROILabelDim$
@@ -118,14 +121,18 @@ Train=[
         ]:[
             type = "ImageDeserializer"
             module = "ImageReader"
-            file="$DataDir$/tv2012pad.txt"
+            file="$DataDir$/1k_train_stage2.txt"
             input = [
                 features = [
                 transforms = (
-                    [
+		[  
+			type = "ScaleSide"
+			target = 1000
+			side = "max"
+		   ]:[
                         type = "Pad"
-                        width = 500
-                        height = 500
+                        width = 1000
+                        height = 1000
                         channels = 3
                         value = 114
                     ]:[
@@ -147,12 +154,26 @@ Train=[
     ]
 ]
 
-Write=[
-    action="write"
-    modelPath="$ModelDir$/$FinalModel$.test"
-    # Set minibatch size for testing.
-    minibatchSize=8
-    outputPath="$OutputDir$/justlast_sanity-test200-withcasts"
+Train=[
+    action="train"
+
+    modelPath="$ModelDir$/$FinalModel$"
+    NDLNetworkBuilder=[
+        networkDescription="$ConfigDir$/AlexNet.ndl"
+    ]
+    
+    SGD=[
+        epochSize=0
+        minibatchSize=2
+        learningRatesPerMB=0.0005*2:0.0001
+	momentumAsTimeConstant=1215
+        maxEpochs=3
+        gradUpdateType=None
+        L2RegWeight=0.0005
+        dropoutRate=0.5
+        numMBsToShowResult=50
+
+    ]
     reader=[
         randomize = false
         verbosity = 2
@@ -160,7 +181,74 @@ Write=[
         [
             type = "CNTKTextFormatDeserializer"
             module = "CNTKTextFormatReader"
-            file = "$DataDir$/test2007pad_all.rois.txt"
+            file = "$DataDir$/1k_train_stage1.rois.txt"
+            input = [
+                rois = [
+                    dim = $TrainROIDim$
+                    format = "dense"
+                ]
+            ]
+        ]:[
+            type = "CNTKTextFormatDeserializer"
+            module = "CNTKTextFormatReader"
+            file = "$DataDir$/1k_train_stage1.roilabels.txt"
+            input = [
+                roiLabels = [
+                    dim = $TrainROILabelDim$
+                    format = "dense"
+                ]
+            ]
+        ]:[
+            type = "ImageDeserializer"
+            module = "ImageReader"
+            file="$DataDir$/1k_train_stage1.txt"
+            input = [
+                features = [
+                transforms = (
+		[  
+			type = "ScaleSide"
+			target = 1000
+			side = "max"
+		   ]:[
+                        type = "Pad"
+                        width = 1000
+                        height = 1000
+                        channels = 3
+                        value = 114
+                    ]:[
+                        type = "Mean"
+                        # Stores mean values for each pixel in OpenCV matrix XML format.
+                        meanFile = "$ConfigDir$/ImageNet1000_mean.xml"
+                    ]:[
+                        # Changes the image layout from HWC to CHW
+                        type = "Transpose"
+                    ]
+                )
+                ]
+                ignored=[
+                    labelDim=1000
+                ]
+            ]
+        ]
+        )
+    ]
+]
+
+
+Write=[
+    action="write"
+    modelPath="$ModelDir$/$FinalModel$.test"
+    # Set minibatch size for testing.
+    minibatchSize=8
+    outputPath="$OutputDir$/newbprop4_stage1-1000-ep5"
+    reader=[
+        randomize = false
+        verbosity = 2
+        deserializers = (
+        [
+            type = "CNTKTextFormatDeserializer"
+            module = "CNTKTextFormatReader"
+            file = "$DataDir$/1k_test_2krois.rois.txt"
             input = [
                 rois = [
                     dim = $TestROIDim$
@@ -170,7 +258,7 @@ Write=[
         ]:[
             type = "CNTKTextFormatDeserializer"
             module = "CNTKTextFormatReader"
-            file = "$DataDir$/test2007pad_all.roilabels.txt"
+            file = "$DataDir$/1k_test_2krois.roilabels.txt"
             input = [
                 roiLabels = [
                     dim = $TestROILabelDim$
@@ -180,21 +268,21 @@ Write=[
         ]:[
             type = "ImageDeserializer"
             module = "ImageReader"
-            file="$DataDir$/test2007pad_all.txt"
+            file="$DataDir$/1k_test_2krois.txt"
             input = [
                 features = [
                 transforms = (
-                [
-                        type = "Pad"
-                        height = 500
-                        width = 500
-                        channels = 3
-                        value = 114
+		[
+		        type = "ScaleSide"
+			target = 1000
+			side = "max"
                     ]:[
-                        type = "Mean"
-                        # Stores mean values for each pixel in OpenCV matrix XML format.
-                        meanFile = "$ConfigDir$/ImageNet500_mean.xml"
-                    ]:[
+			type = "Pad"
+			width=1000
+			height=1000
+			channels=3
+			value=0
+		    ]:[
                         # Changes the image layout from HWC to CHW
                         type = "Transpose"
                     ]

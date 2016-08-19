@@ -1,0 +1,2 @@
+m1 = LoadModel("$curModel$", format="cntk")
+SaveModel(m1, "$newModel$", format="cntk")
