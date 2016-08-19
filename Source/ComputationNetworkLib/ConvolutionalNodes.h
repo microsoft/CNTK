@@ -396,6 +396,8 @@ public:
 
             outputShape = ConvolveGeometry::ComputeOutputShape(inputShape, m_kernelShape, m_mapCount, m_stride,
                                                                 m_sharing, m_autoPad, m_lowerPad, m_upperPad);
+            // ConvolveGeometry always uses CHW.
+            SetDims(ImageDimensions(outputShape, ImageLayoutKind::CHW).AsTensorShape(m_imageLayout), HasMBLayout());
         }
         else
         {
@@ -414,9 +416,8 @@ public:
                 outputShape = ConvolveGeometry::ComputeInputShape(inputShape, m_kernelShape, m_mapCount, m_stride,
                                                                    m_sharing, m_autoPad, m_lowerPad, m_upperPad);
             }
+            SetDims(outputShape, HasMBLayout());
         }
-        // ConvolveGeometry always uses CHW.
-        SetDims(ImageDimensions(outputShape, ImageLayoutKind::CHW).AsTensorShape(m_imageLayout), HasMBLayout());
 
         // update LearnableParameter if it has 0 dimensions (to be inferred)
         // Typically this would be the #inputChannels (C).
