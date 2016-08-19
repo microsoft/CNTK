@@ -294,7 +294,7 @@ namespace CNTK
                 }
             }
 
-            m_computationNetwork->AllocateAllMatrices(forwardRootNodes, {}, backpropRootNode);
+            m_computationNetwork->AllocateAllMatrices<ElementType>(forwardRootNodes, {}, backpropRootNode);
         }
 
         return m_computationNetwork;

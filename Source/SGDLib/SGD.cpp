@@ -200,8 +200,8 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
     additionalNodesToEvaluate.insert(additionalNodesToEvaluate.end(), preComputeNodesList.cbegin(), preComputeNodesList.cend());
 
     // allocate memory for forward and backward computation
-    net->AllocateAllMatrices(evaluationNodes, additionalNodesToEvaluate, criterionNodes[0]);
-    net->FindDependencyGraph<ElemType>(evaluationNodes, additionalNodesToEvaluate, criterionNodes[0]);
+    net->AllocateAllMatrices<ElemType>(evaluationNodes, additionalNodesToEvaluate, criterionNodes[0]);
+    //net->FindDependencyGraph<ElemType>(evaluationNodes, additionalNodesToEvaluate, criterionNodes[0]);
 
     // get feature and label nodes into an array of matrices that will be passed to GetMinibatch()
     // TODO: instead, remember the nodes directly, to be able to handle both float and double nodes; current version will crash for mixed networks
@@ -249,7 +249,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         refNet->CompileNetwork();
 
         // allocate memory for forward computation
-        refNet->AllocateAllMatrices({refNode}, {}, nullptr);
+        refNet->AllocateAllMatrices<ElemType>({refNode}, {}, nullptr);
     }
 
     // initializing weights and gradient holder
@@ -257,7 +257,6 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
     auto& learnableNodes = net->LearnableParameterNodes(criterionNodes[0]);
     std::list<Matrix<ElemType>> smoothedGradients;
 
-    SynchronizationManager<ElemType> *sync = SynchronizationManager<ElemType>::GetSynchronizationManager();
     for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
     {
         ComputationNodePtr node = dynamic_pointer_cast<ComputationNode<ElemType>>(*nodeIter);
@@ -265,18 +264,10 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                                                      node->Value().GetNumCols(),
                                                      net->GetDeviceId()));
 
-       sync->m_bannedBuffers2bool[&(smoothedGradients.back())] = true;
-        sync->m_bannedBuffers2bool[(Matrix<ElemType>*)node->ValuePtr().get()] = true;
 
-        cout << "BANNED: " << &smoothedGradients.back() << ", " << smoothedGradients.back().GetNumRows() << "x" << smoothedGradients.back().GetNumCols() << endl;
     }
 
     std::map<const ComputationNodeBasePtr, std::list<ComputationNodeBasePtr>> allLearnableNodes = net->GetLearnableParameters();
-    for(auto pair : allLearnableNodes)
-    {
-    	for(auto ptr : pair.second)
-    		sync->m_bannedBuffers2bool[(Matrix<ElemType>*)ptr.get()->ValuePtr().get()];
-    }
 
     double avgCriterion, lrControlCriterion;
     lrControlCriterion = avgCriterion = numeric_limits<double>::infinity();
@@ -307,14 +298,6 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
     }
     
     
-    // set memory swapping temporarily to false, so that it gets triggered after momentum
-    // and batch normalization was set
-    bool useMemorySwappingTemp = sync->m_useMemorySwapping;
-    sync->m_useMemorySwapping = false;
-
-
-
-
     // precompute mean and invStdDev nodes and save initial model
     // When no precompute, only save if we did not load the model from a 
     // checkpoint but instead built it from a network description
@@ -485,14 +468,9 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         LOGPRINTF(stderr, "Starting Epoch %d: learning rate per sample = %f  effective momentum = %f  momentum as time constant = %.1f samples\n",
                   i + 1, learnRatePerSample, MomentumPerMB(momentumPerSample, actualMinibatchSize), momentumAsTimeConstant);
 
-        sync->m_useMemorySwapping = useMemorySwappingTemp;
         EpochCriterion epochCriterion; // criterion values are returned in this
         std::vector<EpochCriterion> epochEvalErrors(evaluationNodes.size());
         std::wstring wname = GetModelNameForEpoch(i-1);
-
-        for(auto node : featureNodes){ sync->m_bannedNodes2Bool[node.get()] = true; }
-        for(auto node : outputNodes){ sync->m_bannedNodes2Bool[node.get()] = true; }
-        for(auto node : labelNodes){ sync->m_bannedNodes2Bool[node.get()] = true; }
 
         TrainOneEpoch(net,
                       refNet,
@@ -793,7 +771,6 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                                     const std::string& prefixMsg)
 {
     ScopedNetworkOperationMode modeGuard(net, NetworkOperationMode::training);
-    SynchronizationManager<ElemType> *sync = SynchronizationManager<ElemType>::GetSynchronizationManager();
     bool reloadBatch = false;
     double learningRateTemp = learnRatePerSample;
 
@@ -1916,14 +1893,6 @@ template <class ElemType>
     gradientValues.Print("Gradient Input");
     smoothedGradient.Print("Smoothed Gradient Input");
 #endif
-
-    SynchronizationManager<ElemType> *sync = SynchronizationManager<ElemType>::GetSynchronizationManager();
-    if(sync->m_useMemorySwapping)
-    {
-        //sync->RegisterWeight(&functionValues);
-        sync->RegisterWeight(&gradientValues);
-        //sync->RegisterWeight(&smoothedGradient);
-    }
 
     // make actualMBSize is a valid value
     assert(actualMBSize > 0);

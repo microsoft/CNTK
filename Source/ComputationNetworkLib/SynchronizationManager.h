@@ -33,20 +33,24 @@ private:
     std::unordered_map<Matrix<ElemType>*, SwapInAction<ElemType>*> m_buffer2SwapIn;
     std::unordered_map<Matrix<ElemType>*, SwapOutAction<ElemType>*> m_buffer2SwapOut;
     std::unordered_map<int, std::vector<SyncAction<ElemType>*> > m_stepNumber2ActionsBackprop;
+
+    std::unordered_map<ComputationNodeBase*, std::vector<SyncAction<ElemType>*> > m_node2ForwardSwapOut;
+    std::unordered_map<ComputationNodeBase*, std::vector<SyncAction<ElemType>*> > m_node2BackwardSwapin;
+    std::unordered_map<ComputationNodeBase*, std::vector<Matrix<ElemType>*> > m_node2BackwardFree;
     // singleton constructor
 
-    static SynchronizationManager* s_synchronizationManager;
     bool m_isExecuting;
     CUDATimer m_timer;
     int m_currentStepNumber;
     int m_currentIteration;
     int m_maxStepNumber;
     float m_GBFreed;
+    bool m_maxIsInitialized;
 
     std::unordered_map<Matrix<ElemType>*, std::vector<ComputationNodeBase*>> m_buffers2Nodes;
 
     std::unordered_map<ComputationNodeBase*,int> m_nodes2timestep;
-    std::unordered_map<int, ComputationNodeBase*> m_timestep2nodes;
+    std::unordered_map<int, ComputationNodeBase*> m_timestep2node;
     // needed to identify a step
     std::unordered_map<std::string, int> m_stepName2StepNumber; 
     // steps to buffers; all these buffers need to be handled during one synchronization call for a given timestep
@@ -83,17 +87,12 @@ private:
     std::vector<Matrix<ElemType>*> GetBuffersForNode(ComputationNodeBase *node, bool isForward, bool getAllBuffers);
 
 public:
-    SynchronizationManager(){};
-    // we use a singleton here; we could also injected the manager during node creation, but
-    // sometimes this also makes sure that there is only a single instance available
-    // which is quite handy for such a critical resource as memory
-    static SynchronizationManager* GetSynchronizationManager();
-
+    SynchronizationManager();
     ~SynchronizationManager(){};
     // this is called BEFORE a ForwardProp / BackpropTo method call
-    void BeginSynchronizeState(ComputationNodeBase *node, const size_t idx, const FrameRange& fr, bool isForward);
+    void BeginSynchronizeState(ComputationNodeBase *node, bool isForward);
     // this is called AFTER a ForwardProp / BackpropTo method call
-    void EndSynchronizeState(ComputationNodeBase *node, const size_t idx, const FrameRange& fr, bool isForward);
+    void EndSynchronizeState(ComputationNodeBase *node, bool isForward);
     // indicates the current state of the manager: 
     // (1) gather stats and determine swap order, or 
     // (2) active usage of swapping (=Executing==true)
@@ -107,15 +106,14 @@ public:
     // this cleans the SynchronizationManager up after a action completes
     void ClearActionsAndTheirMemory();
     void RegisterWeight(Matrix<ElemType> *weight);
-    void InitializeSwapping(std::unordered_map<Matrix<ElemType>*, std::vector<int> > buffers2Timesteps,
-                            std::unordered_map<int, std::vector<Matrix<ElemType>*> > timesteps2Buffers,
-                            std::unordered_map<Matrix<ElemType>*, bool> buffer2IsNeededDuringBackprop);
+    void InitializeSwapping(std::unordered_map<ComputationNodeBase*, std::vector<Matrix<ElemType>*> > forwardSwapOutNodes2matrices,
+    std::unordered_map<ComputationNodeBase*, std::vector<Matrix<ElemType>*> > backwardSwapInNodes2matrices,
+    std::unordered_map<ComputationNodeBase*, std::vector<Matrix<ElemType>*> > lastBackwardNodes2matrices);
+
 };
 
 template class SynchronizationManager<float>;
 template class SynchronizationManager<double>;
-template <typename ElemType> 
-SynchronizationManager<ElemType>* SynchronizationManager<ElemType>::s_synchronizationManager = nullptr;
 
 
 }}}

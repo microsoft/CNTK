@@ -17,7 +17,12 @@ void ConvolutionEngine<ElemType>::Forward(const Mat& in, const Mat& kernel, Mat&
     assert(g.InputShape().GetNumElements() == in.GetNumRows());
     assert(g.OutputShape().GetNumElements() == out.GetNumRows());
     size_t batchSize = in.GetNumCols();
-    assert(batchSize == out.GetNumCols());
+    if(batchSize != out.GetNumCols())
+    {
+        cout << "batchsize: " << batchSize << ", out.GetNumCols(): " << out.GetNumCols() << endl;
+        assert(batchSize == out.GetNumCols());    
+    }
+    
     // REVIEW alexeyk: add shape-aware asserts?
     assert(g.KernelShape().GetNumElements() * g.KernelCount() == kernel.GetNumElements());
 #ifdef NDEBUG
@@ -113,7 +118,11 @@ void ConvolutionEngine<ElemType>::ForwardPooling(const Mat& in, Mat& out)
     assert(g.InputShape().GetNumElements() == in.GetNumRows());
     assert(g.OutputShape().GetNumElements() == out.GetNumRows());
     size_t batchSize = in.GetNumCols();
-    assert(batchSize == out.GetNumCols());
+    if(batchSize != out.GetNumCols())
+    {
+        cout << "batchsize: " << batchSize << ", out.GetNumCols(): " << out.GetNumCols() << endl;
+        assert(batchSize == out.GetNumCols());    
+    }
 #ifdef NDEBUG
     UNUSED(g);
     UNUSED(batchSize);
@@ -168,7 +177,11 @@ void ConvolutionEngine<ElemType>::MaxUnpooling(const Mat& out, const Mat& poolIn
     assert(g.InputShape().GetNumElements() == poolIn.GetNumRows());
     assert(g.OutputShape().GetNumElements() == out.GetNumRows());
     size_t batchSize = in.GetNumCols();
-    assert(batchSize == out.GetNumCols());
+    if(batchSize != out.GetNumCols())
+    {
+        cout << "batchsize: " << batchSize << ", out.GetNumCols(): " << out.GetNumCols() << endl;
+        assert(batchSize == out.GetNumCols());    
+    }
     assert(batchSize == poolIn.GetNumCols());
 #ifdef NDEBUG
     UNUSED(g);
@@ -422,7 +435,11 @@ protected:
         out.Reshape(m_outT.c() * outputSizePerChannel, batchSize); // each sample becomes a column
 
         assert(m_outT.w() * m_outT.h() * m_outT.c() == out.GetNumRows());
-        assert(batchSize == out.GetNumCols());
+        if(batchSize != out.GetNumCols())
+        {
+            cout << "batchsize: " << batchSize << ", out.GetNumCols(): " << out.GetNumCols() << endl;
+            assert(batchSize == out.GetNumCols());    
+        }
     }
 
     void BackwardDataCore(const Mat& srcGrad, const Mat& kernel, Mat& grad, Mat& workspace) override
