@@ -114,8 +114,8 @@ def classification_error(target_vector, output_vector, name=''):
 # convolution ops
 ################################################################################
 
-def convolution(convolution_map, operand, strides=[1], sharing=[True], 
-                auto_padding=[True], lower_pad=[0], upper_pad=[0], transpose=False, 
+def convolution(convolution_map, operand, strides=(1,), sharing=[True], 
+                auto_padding=[True], lower_pad=(0,), upper_pad=(0,), transpose=False, 
                 max_temp_mem_size_in_samples=0, name=''):
     '''
     TODO: 
@@ -142,8 +142,8 @@ def convolution(convolution_map, operand, strides=[1], sharing=[True],
 MAX_POOLING=1
 AVG_POOLING=2
 
-def pooling(operand, pooling_type, pooling_window_shape, strides=[1], auto_padding=[False], 
-            lower_pad=[0], upper_pad=[0], name=''):
+def pooling(operand, pooling_type, pooling_window_shape, strides=(1,), auto_padding=[False], 
+            lower_pad=(0), upper_pad=(0,), name=''):
     '''
     TODO: 
     Args:                
@@ -645,7 +645,7 @@ def relu(x, name=''):
     Returns:
         :class:`cntk_py.Function`
     '''
-    from ..cntk_py import relu
+    from ..cntk_py import re_lu
     x = sanitize_input(x)
     return relu(x, name)    
 
