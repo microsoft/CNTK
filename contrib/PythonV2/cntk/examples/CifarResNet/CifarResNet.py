@@ -4,7 +4,7 @@ import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..'))
 import cntk.cntk_py as cntk_py
 from cntk.ops import variable, constant, parameter, cross_entropy_with_softmax, combine, classification_error, plus, times, relu, convolution, batch_normalization, pooling,AVG_POOLING
-from cntk.utils import create_minibatch_source, cntk_device
+from cntk.utils import create_minibatch_source, cntk_device, create_NDArrayView
 
 def create_mb_source():    
     image_height = 32
@@ -152,8 +152,9 @@ if __name__=='__main__':
 
         freq = 20
         if i % freq == 0:
-            #TODO: read loss values from GPU
-            #print(str(i+freq) + ": " + str(trainer.previous_minibatch_training_loss_value().data().to_numpy()))
-            print (i)
+            #TODO: add helper function to copy the loss value from the GPU or expose the c++ helper function
+            ndav = create_NDArrayView(trainer.previous_minibatch_training_loss_value().data().shape().dimensions(), cntk_py.DataType_Float,cntk_device(-1))
+            ndav.copy_from(trainer.previous_minibatch_training_loss_value().data())
+            print(str(i+freq) + ": " + str(ndav.to_numpy()))
 
     
