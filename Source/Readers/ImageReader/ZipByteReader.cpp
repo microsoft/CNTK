@@ -55,7 +55,7 @@ void ZipByteReader::Register(const std::map<std::string, size_t>& sequences)
     for (size_t i = 0; i < numEntries; ++i) {
         int err = zip_stat_index(zipFile.get(), i, 0, &stat);
         if (ZIP_ER_OK != err)
-            RuntimeError("Failed to get file info for index %d, zip library error: %s", i, GetZipError(err).c_str());
+            RuntimeError("Failed to get file info for index %d, zip library error: %s", (int)i, GetZipError(err).c_str());
 
         auto sequenceId = sequences.find(std::string(stat.name));
         if (sequenceId == sequences.end())
