@@ -697,7 +697,8 @@ public:
     {
         FrameRange fr(Input(0)->GetMBLayout());
 
-        if (inputIndex == 1 && m_pairCounts > 0) // right derivative
+        if (inputIndex == 1 &&  // right derivative
+            m_actualNumberOfQueryUrlPairs > 0)   // 
         {
             auto gradient = Input(1)->GradientFor(fr);
 
@@ -778,18 +779,14 @@ public:
         if (!m_urlSorter.empty()) m_urlSorter.clear();
         if (!m_logWeights.empty()) m_logWeights.clear();
 
- /*       const Matrix<ElemType>& pairIndeces = Input(2)->ValueFor(fr);
-        m_samples = pairIndeces.GetNumCols();
-        m_pairCounts = (size_t)pairIndeces.SumOfElements();*/
+        m_pairwiseDifferences->Resize(1, m_actualNumberOfQueryUrlPairs);
+        m_sigmaPairwiseDiff->Resize(1, m_actualNumberOfQueryUrlPairs);
+        m_logexpterm->Resize(1, m_actualNumberOfQueryUrlPairs);
 
-        m_pairwiseDifferences->Resize(1, m_pairCounts);
-        m_sigmaPairwiseDiff->Resize(1, m_pairCounts);
-        m_logexpterm->Resize(1, m_pairCounts);
-
-        m_perUrlGainsOrig->Resize(1, m_samples);
-        m_perUrlGainsSort->Resize(1, m_samples);
-        m_perUrlWeightsOrig->Resize(1, m_samples);
-        m_perUrlWeightsSort->Resize(1, m_samples);
+        m_perUrlGainsOrig->Resize(1, m_numberOfQueryUrlPairs);
+        m_perUrlGainsSort->Resize(1, m_numberOfQueryUrlPairs);
+        m_perUrlWeightsOrig->Resize(1, m_numberOfQueryUrlPairs);
+        m_perUrlWeightsSort->Resize(1, m_numberOfQueryUrlPairs);
 
         // prepare sorting buffer
         m_maxPairIndexIndex->Resize(1, 1);
@@ -812,10 +809,10 @@ public:
 
     virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
     {
-        // Input:
-        // 1. gain
-        // 2. score
-        // 3. query id
+        // Inputs:
+        // 0. gain
+        // 1. score
+        // 2. query id
         FrameRange fr(Input(0)->GetMBLayout());
         // construct matrices for further computation
         const Matrix<ElemType>& singleLabels = Input(0)->ValueFor(fr);
@@ -823,7 +820,7 @@ public:
         const Matrix<ElemType>& queryIds = Input(2)->ValueFor(fr);
         size_t nCols = singleLabels.GetNumCols();
         // iterate through all samples
-        size_t i = 0;// , K = 0;// , nUrls = 0;
+        size_t i = 0;
         QueryUrls aqu;
 
         // 
@@ -852,7 +849,7 @@ public:
         }
 
         size_t pairCount = 0;
-        for (std::list<QueryUrls>::iterator qit = m_queryUrls.begin(); qit != m_queryUrls.end(); ++qit)
+        for (typename std::list<QueryUrls>::iterator qit = m_queryUrls.begin(); qit != m_queryUrls.end(); ++qit)
         {
             QueryUrls& qub = *qit;
             std::vector<Url>& urls = qub.urls;
@@ -882,8 +879,8 @@ public:
                 }
             }
 
-            std::vector<Url>::iterator its = m_urlSorter.begin(), it = urls.begin();
-            std::vector<Url>::iterator its0 = its;
+            typename std::vector<Url>::iterator its = m_urlSorter.begin(), it = urls.begin();
+            typename std::vector<Url>::iterator its0 = its;
             for (; it != urls.end(); it++)
             {
                 *its++ = *it;
@@ -945,9 +942,6 @@ public:
                 //nValidQueries++;
             }
         }
-
-       /* if (nValidQueries == 0)
-            LogicError("In %ls %ls nValidQueries==0, check your data.", NodeName().c_str(), OperationName().c_str());*/
 
         if (numberOfQueries == 0)
             LogicError("In %ls %ls numberOfQueries==0, check your data.", NodeName().c_str(), OperationName().c_str());
@@ -1045,7 +1039,7 @@ protected:
         // Number of urls that have gains greater than 0 for the current query 
         size_t numberOfUrlsWithNonZeroGain = 0;
         size_t i = 0;
-        size_t validNumberOfQueryUrlPairs = 0;
+        size_t actualNumberOfQueryUrlPairs = 0;
         size_t maxNumberOfUrlsPerQuery = 0;
         while (i < numberOfQueryUrlPairs)
         {
@@ -1053,12 +1047,14 @@ protected:
             ElemType gain = gains(0, i);
             if (queryId != previousQueryId)
             {
-                validNumberOfQueryUrlPairs += (2 * numberOfUrls - 1 - numberOfUrlsWithNonZeroGain) * numberOfUrlsWithNonZeroGain / 2;
+                // Ignore pairs between urls with zero gains.
+                actualNumberOfQueryUrlPairs += (2 * numberOfUrls - 1 - numberOfUrlsWithNonZeroGain) * numberOfUrlsWithNonZeroGain / 2;
                 if (numberOfUrls > maxNumberOfUrlsPerQuery)
                 {
                     maxNumberOfUrlsPerQuery = numberOfUrls;
                 }
 
+                // New query
                 numberOfUrls = 0;
                 numberOfUrlsWithNonZeroGain = 0;
                 previousQueryId = queryId;
@@ -1073,28 +1069,28 @@ protected:
             i++;
         }
 
+        // Add last query.
         {
-            validNumberOfQueryUrlPairs += (2 * numberOfUrls - 1 - numberOfUrlsWithNonZeroGain) * numberOfUrlsWithNonZeroGain / 2;
+            actualNumberOfQueryUrlPairs += (2 * numberOfUrls - 1 - numberOfUrlsWithNonZeroGain) * numberOfUrlsWithNonZeroGain / 2;
             if (numberOfUrls > maxNumberOfUrlsPerQuery)
             {
                 maxNumberOfUrlsPerQuery = numberOfUrls;
             }
         }
 
-        m_samples = numberOfQueryUrlPairs;
-        m_pairCounts = validNumberOfQueryUrlPairs;
+        m_numberOfQueryUrlPairs = numberOfQueryUrlPairs;
+        m_actualNumberOfQueryUrlPairs = actualNumberOfQueryUrlPairs;
         m_maxNumberOfUrlsPerQuery = maxNumberOfUrlsPerQuery;
     }
 
     struct Url
     {
-        int id; // sample id
-        int rk0; // original rank based on label
-        int rk; // rank based on s in the associated query
-        // score
-        ElemType sc; 
-        ElemType gn; // gain
-        int K; // the pair index
+        int id;         // sample id
+        int rk0;        // original rank based on label
+        int rk;         // rank based on s in the associated query
+        ElemType sc;    // score
+        ElemType gn;    // gain
+        int K;          // the pair index
         bool operator < (const Url &url) const{
             // tie breaking
             if (sc == url.sc || std::isnan(sc) || std::isnan(url.sc))
@@ -1108,8 +1104,8 @@ protected:
 
     struct QueryUrls
     {
-        ElemType irm0; // the ideal IR Metric
-        ElemType irm; // IR metric based on the current scores
+        ElemType irm0;  // the ideal IR Metric
+        ElemType irm;   // IR metric based on the current scores
 
         std::vector<Url> urls;
     };
@@ -1121,9 +1117,10 @@ protected:
     // lookup table for position based weights
     std::vector<ElemType> m_logWeights;
 
-    size_t m_samples;
-    size_t m_pairCounts;
+    size_t m_numberOfQueryUrlPairs;
+    size_t m_actualNumberOfQueryUrlPairs;
     size_t m_maxNumberOfUrlsPerQuery;
+
     // TODO: to make it a config?
     ElemType m_sigma;
     shared_ptr<Matrix<ElemType>> m_pairwiseDifferences;

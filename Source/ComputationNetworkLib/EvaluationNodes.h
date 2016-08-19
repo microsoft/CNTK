@@ -209,7 +209,7 @@ public:
             i++;
         }
 
-        for (std::list<QueryUrls>::iterator qit = m_queryUrls.begin(); qit != m_queryUrls.end(); ++qit)
+        for (typename std::list<QueryUrls>::iterator qit = m_queryUrls.begin(); qit != m_queryUrls.end(); ++qit)
         {
             QueryUrls& qub = *qit;
             std::vector<Url>& urls = qub.urls;
@@ -229,8 +229,8 @@ public:
                 }
             }
 
-            std::vector<Url>::iterator its = m_urlSorter.begin(), it = urls.begin();
-            std::vector<Url>::iterator its0 = its;
+            typename std::vector<Url>::iterator its = m_urlSorter.begin(), it = urls.begin();
+            typename std::vector<Url>::iterator its0 = its;
             for (; it != urls.end(); it++)
             {
                 *its++ = *it;
