@@ -135,6 +135,11 @@ else
   COMMON_FLAGS +=-DCPUONLY
 endif
 
+ifdef OPENMPI_PATH
+  INCLUDEPATH += $(OPENMPI_PATH)/include
+  LIBPATH += $(OPENMPI_PATH)/lib
+endif
+
 ifeq ("$(MATHLIB)","mkl")
   INCLUDEPATH += $(MKL_PATH)/$(CNTK_CUSTOM_MKL_VERSION)/include
   LIBS += -lm
