@@ -1,178 +1,147 @@
-RootDir = "."
+# 06_RegressionSimple.cntk shows how to train a regression model on image data.
+# It uses a very simple network and a composite reader using both the ImageReader
+# and CNTKTextFormatReader and defines the RMSE (root mean square error) as the
+# loss function. The value that the network learns to predict are simply the
+# average rgb values of an image normalized to [0, 1].
+# The network consists simply of two linear layers, i.e. two fully connected layers
+# with no non-linear activation function, simply LinearLayer{...} (v) = W * v + b
+# See https://github.com/Microsoft/CNTK/wiki/Layers-Reference for details on CNTK layers.
+# See README.md for instructions on how to generate data and regression labels for this example.
 
-ConfigDir = "$RootDir$"
-DataDir = "$RootDir$"
-OutputDir = "$RootDir$/Output"
-ModelDir = "$OutputDir$/Models"
+command = TrainConvNet:Write
 
-ndlMacros = "$ConfigDir$/Macros.ndl"
+makeMode = false ; traceLevel = 1 ; deviceId = "auto"
 
-precision = "float"
-deviceId = 0
-imageLayout = "cudnn"
-# override the above as follows when running on CPU:
-# deviceId = -1
+rootDir = "." ; configDir = "$rootDir$" ; dataDir  = "$rootDir$" ;
+outputDir = "$rootDir$/Output" ; modelDir = "$outputDir$/Models"
 
-# If set to true, always initialize the network on CPU, making initialization consistent across CPU and GPU targets (for testing).
-initOnCPUOnly=true
+modelPath = "$ModelDir$/06_RegressionSimple.cmf"
 
-# command = Train:Test:Write
-command = Train:Write
-
-modelPath = "$ModelDir$/06_RegressionSimple"
-
-# stderr = "$OutputDir$/06_RegressionSimple"
-traceLevel = 1
-numMBsToShowResult = 50
-
-Train = [
+# Training action for a convolutional network
+TrainConvNet = {
     action = "train"
 
-     NDLNetworkBuilder = [
-        networkDescription = "$ConfigDir$/06_RegressionSimple.ndl"
+    BrainScriptNetworkBuilder = [
+        imageShape = 32:32:3
+        featScale = Constant(1/256)
+        labelDim = 3
+
+        model (features) = {
+            featNorm = Scale(features, featScale)
+            h1 = LinearLayer {100,      init="gaussian", initValueScale=1.5} (featNorm)
+            ol = LinearLayer {labelDim, init="gaussian", initValueScale=1.5} (h1)
+        }.ol
+
+        # inputs
+        features = Input {imageShape}
+        regrLabels = Input {labelDim}
+        
+        # apply model to features
+        ol = model (features)
+
+        # define regression loss
+        # rmse = sqrt(SquareError(regrLabels, ol) / labelDim)
+        sqerr = SquareError (regrLabels, ol)
+        rmse = Sqrt (Constant(1/labelDim).* sqerr)
+
+        featureNodes    = (features)
+        labelNodes      = (regrLabels)
+        criterionNodes  = (rmse)
+        evaluationNodes = (rmse)
+        OutputNodes     = (ol)
     ]
-    
-    SGD = [
+
+    SGD = {
         epochSize = 0
+
+        maxEpochs = 2
         minibatchSize = 128
-        learningRatesPerMB = 0.05
-        momentumPerMB = 0.9
-        maxEpochs = 5
-        #L2RegWeight = 0.03
-    ]
-    
-    reader = [
-        randomize = false
-        verbosity = 2
-        deserializers = (
-        [
-            type = "CNTKTextFormatDeserializer"
-            module = "CNTKTextFormatReader"
-            file = "$DataDir$/cifar-10-batches-py/train_regrLabels.txt"
-            input = [
-                regrLabels = [
-                    dim = 3
-                    format = "dense"
-                ]
-            ]
-        ]:[
-            type = "ImageDeserializer"
-            module = "ImageReader"
-            file = "$DataDir$/cifar-10-batches-py/train_map.txt"
-            input = [
-                features = [
-                    transforms = (
-                    [
-                        type = "Scale"
-                        width = 32
-                        height = 32
-                        channels = 3
-                        interpolations = "linear"
-                    ]:[
-                        type = "Mean"
-                        meanFile = "$DataDir$/cifar-10-batches-py/CIFAR-10_mean.xml"
-                    ]
-                    )
-                ]
-                ignored=[
-                    labelDim=10
-                ]
-            ]
-        ]
-        )
-    ]
-]
+        learningRatesPerSample = 0.0005
+        momentumAsTimeConstant = 1024
 
-Test = [
-    action = "test"
-    minibatchSize = 64
+        firstMBsToShowResult = 5 ; numMBsToShowResult = 50
+    }
 
-    reader = [
-        randomize = false
-        verbosity = 2
-        deserializers = (
-        [
-            type = "CNTKTextFormatDeserializer"
-            module = "CNTKTextFormatReader"
-            file = "$DataDir$/cifar-10-batches-py/test_regrLabels.txt"
-            input = [
-                regrLabels = [
-                    dim = 3
-                    format = "dense"
-                ]
-            ]
-        ]:[
-            type = "ImageDeserializer"
-            module = "ImageReader"
-            file = "$DataDir$/cifar-10-batches-py/test_map.txt"
-            input = [
-                features = [
-                    transforms = (
-                    [
-                        type = "Scale"
-                        width = 32
-                        height = 32
-                        channels = 3
-                        interpolations = "linear"
-                    ]:[
-                        type = "Mean"
-                        meanFile = "$DataDir$/cifar-10-batches-py/CIFAR-10_mean.xml"
-                    ]
-                    )
-                ]
-                ignored=[
-                    labelDim=10
-                ]
-            ]
-        ]
-        )
-    ]
-]
+    # The reader is a composite reader that uses the ImageReader to read imageShape
+    # and the CNTKTextFormatReader to reade the regression ground truth labels.
+    # It does so by defining an array of deserializers (using {...} : {...} below)
+    # and assiging the inputs as defined in the network above (cf. features and regrLabels).
+    reader = {
+        verbosity = 0 ; randomize = true
+        deserializers = ({
+            type = "ImageDeserializer" ; module = "ImageReader"
+            file = "$dataDir$/cifar-10-batches-py/train_map.txt"
+            input = {
+                features = { transforms = (
+                    { type = "Scale" ; width = 32 ; height = 32 ; channels = 3 ; interpolations = "linear" } :
+                    { type = "Transpose" }
+                )}
+                ignored = { labelDim = 10 }
+            }
+        } : {
+            type = "CNTKTextFormatDeserializer" ; module = "CNTKTextFormatReader"
+            file = "$dataDir$/cifar-10-batches-py/train_regrLabels.txt"
+            input = {
+                regrLabels = { dim = 3 ; format = "dense" }
+            }
+        })
+    }
+}
 
-Write = [
+# Write action
+Write = {
     action = "write"
     minibatchSize = 1
-    outputNodeNames = (OutputNodes.z, regrLabels, rmse)
+    outputNodeNames = (ol, regrLabels, rmse)
     outputPath = "$OutputDir$/06_RegressionSimple"
     
-    reader = [
-        randomize = false
-        verbosity = 2
-        deserializers = (
-        [
-            type = "CNTKTextFormatDeserializer"
-            module = "CNTKTextFormatReader"
-            file = "$DataDir$/cifar-10-batches-py/test_regrLabels.txt"
-            input = [
-                regrLabels = [
-                    dim = 3
-                    format = "dense"
-                ]
-            ]
-        ]:[
-            type = "ImageDeserializer"
-            module = "ImageReader"
-            file = "$DataDir$/cifar-10-batches-py/test_map.txt"
-            input = [
-                features = [
-                    transforms = (
-                    [
-                        type = "Scale"
-                        width = 32
-                        height = 32
-                        channels = 3
-                        interpolations = "linear"
-                    ]:[
-                        type = "Mean"
-                        meanFile = "$DataDir$/cifar-10-batches-py/CIFAR-10_mean.xml"
-                    ]
-                    )
-                ]
-                ignored=[
-                    labelDim=10
-                ]
-            ]
-        ]
-        )
-    ]
-]
+    reader = {
+        verbosity = 0 ; randomize = false
+        deserializers = ({
+            type = "ImageDeserializer" ; module = "ImageReader"
+            file = "$dataDir$/cifar-10-batches-py/test_map.txt"
+            input = {
+                features = { transforms = (
+                    { type = "Scale" ; width = 32 ; height = 32 ; channels = 3 ; interpolations = "linear" } :
+                    { type = "Transpose" }
+                )}
+                ignored = { labelDim = 10 }
+            }
+        } : {
+            type = "CNTKTextFormatDeserializer" ; module = "CNTKTextFormatReader"
+            file = "$dataDir$/cifar-10-batches-py/test_regrLabels.txt"
+            input = {
+                regrLabels = { dim = 3 ; format = "dense" }
+            }
+        })
+    }
+}
+
+# Test action
+Test = {
+    action = "test"
+    minibatchSize = 512
+    outputNodeNames = (ol, regrLabels, rmse)
+    outputPath = "$OutputDir$/06_RegressionSimple"
+    
+    reader = {
+        verbosity = 0 ; randomize = false
+        deserializers = ({
+            type = "ImageDeserializer" ; module = "ImageReader"
+            file = "$dataDir$/cifar-10-batches-py/test_map.txt"
+            input = {
+                features = { transforms = (
+                    { type = "Scale" ; width = 32 ; height = 32 ; channels = 3 ; interpolations = "linear" } :
+                    { type = "Transpose" }
+                )}
+                ignored = { labelDim = 10 }
+            }
+        } : {
+            type = "CNTKTextFormatDeserializer" ; module = "CNTKTextFormatReader"
+            file = "$dataDir$/cifar-10-batches-py/test_regrLabels.txt"
+            input = {
+                regrLabels = { dim = 3 ; format = "dense" }
+            }
+        })
+    }
+}

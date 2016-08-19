@@ -118,8 +118,11 @@ CropTransformer::CropTransformer(const ConfigParameters& config) : ImageTransfor
         m_hFlip = config(L"hflip");
     }
 
-    // TODO: for MultiView10 we need to set m_hflip = false, otherwise we might not get 5 unflipped image
-    // if(m_cropType == CropType::MultiView10) m_hflip = false;
+    // for MultiView10 we need to set m_hflip = false, otherwise we might not get 5 unflipped image (see CropTransformer::Apply below)
+    if (m_cropType == CropType::MultiView10)
+    {
+        m_hFlip = false;
+    }
 
     m_aspectRatioRadius = config(L"aspectRatioRadius", ConfigParameters::Array(doubleargvector(vector<double>{0.0})));
 }
@@ -161,6 +164,7 @@ void CropTransformer::Apply(size_t id, cv::Mat &mat)
     int viewIndex = m_cropType == CropType::MultiView10 ? (int)(id % 10) : 0;
 
     mat = mat(GetCropRect(m_cropType, viewIndex, mat.rows, mat.cols, ratio, *rng));
+    // for MultiView10 m_hFlip is false, hence the first 5 will be unflipped, the later 5 will be flipped
     if ((m_hFlip && boost::random::bernoulli_distribution<>()(*rng)) ||
         viewIndex >= 5)
     {
