@@ -44,15 +44,45 @@ ZipByteReader::ZipPtr ZipByteReader::OpenZip()
     });
 }
 
-void ZipByteReader::Register(size_t seqId, const std::string& path)
+void ZipByteReader::Register(const std::map<std::string, size_t>& sequences)
 {
     auto zipFile = m_zips.pop_or_create([this]() { return OpenZip(); });
     zip_stat_t stat;
     zip_stat_init(&stat);
-    int err = zip_stat(zipFile.get(), path.c_str(), 0, &stat);
-    if (ZIP_ER_OK != err)
-        RuntimeError("Failed to get file info of %s, zip library error: %s", path.c_str(), GetZipError(err).c_str());
-    m_seqIdToIndex[seqId] = std::make_pair(stat.index, stat.size);
+
+    size_t numberOfEntries = 0;
+    size_t numEntries = zip_get_num_entries(zipFile.get(), 0);
+    for (size_t i = 0; i < numEntries; ++i) {
+        int err = zip_stat_index(zipFile.get(), i, 0, &stat);
+        if (ZIP_ER_OK != err)
+            RuntimeError("Failed to get file info for index %d, zip library error: %s", i, GetZipError(err).c_str());
+
+        auto sequenceId = sequences.find(std::string(stat.name));
+        if (sequenceId == sequences.end())
+        {
+            continue;
+        }
+        else
+        {
+            m_seqIdToIndex[sequenceId->second] = std::make_pair(stat.index, stat.size);
+            numberOfEntries++;
+        }
+    }
+
+    if (numberOfEntries != sequences.size())
+    {
+        // Not all sequences have been found. Let's print them out and throw.
+        for (const auto& s : sequences)
+        {
+            auto index = m_seqIdToIndex.find(s.second);
+            if (index == m_seqIdToIndex.end())
+            {
+                fprintf(stderr, "Sequence %s is not found in container %s.\n", s.first.c_str(), m_zipPath.c_str());
+            }
+        }
+
+        RuntimeError("Cannot retrieve image data for some sequences. For more detail, please see the log file.");
+    }
     m_zips.push(std::move(zipFile));
 }
 
