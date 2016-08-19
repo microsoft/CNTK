@@ -37,19 +37,22 @@ int main(int argc, char* argv[])
     std::string app = argv[0];
     std::string path; 
     IEvaluateModel<float> *model;
+    size_t pos;
 
 #ifdef _WIN32
-    path = app.substr(0, app.rfind("\\"));
+    pos = app.rfind("\\");
+    path = (pos == std::string::npos) ? "." : app.substr(0, pos);
 
     // This relative path assumes launching from CNTK's binary folder, e.g. x64\Release
     const std::string modelWorkingDirectory = path + "/../../Examples/Image/MNIST/Data/";
 #else // on Linux
-    path = app.substr(0, app.rfind("/"));
+    pos = app.rfind("/");
+    path = (pos == std::string::npos) ? "." : app.substr(0, pos);
 
     // This relative path assumes launching from CNTK's binary folder, e.g. build/release/bin/
     const std::string modelWorkingDirectory = path + "/../../../Examples/Image/MNIST/Data/";
 #endif
-
+    
     GetEvalF(&model);
 
     const std::string modelFilePath = modelWorkingDirectory + "../Output/Models/01_OneHidden";

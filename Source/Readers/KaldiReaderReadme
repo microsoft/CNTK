@@ -22,16 +22,9 @@
 == Preeliminaries == 
 
 To build the cpu version, you have to install intel MKL blas library
-or ACML library first. Note that ACML is free, whereas MKL may not be.
 
 for MKL:
 1. Download from https://software.intel.com/en-us/intel-mkl
-
-for ACML:
-1. Download from
-http://developer.amd.com/tools-and-sdks/archive/amd-core-math-library-acml/acml-downloads-resources/
-We have seen some problems with some versions of the library on Intel
-processors, but have had success with acml-5-3-1-ifort-64bit.tgz
 
 for Kaldi:
 1. In kaldi-trunk/tools/Makefile, uncomment # OPENFST_VERSION = 1.4.1, and
@@ -54,8 +47,7 @@ build in the directory "build" type
 (For an in source build, just run configure in the $CNTK directory).
 
 You will see various options for configure, as well as their default
-values.  CNTK needs a CPU math directory, either acml or mkl.  If you
-do not specify one and both are available, acml will be used.  For GPU
+values.  CNTK needs a CPU math library (mkl). For GPU
 use, a cuda and gdk directory are also required.  Similary, to build
 the kaldi plugin a kaldi directory is required.  You may also specify
 whether you want a debug or release build, as well as add additional

@@ -144,6 +144,7 @@ ImageDataDeserializer::ImageDataDeserializer(CorpusDescriptorPtr corpus, const C
     features->m_storageType = StorageType::dense;
     features->m_elementType = AreEqualIgnoreCase(precision, "float") ? ElementType::tfloat : ElementType::tdouble;
     m_streams.push_back(features);
+    m_featureElementType = features->m_elementType;
 
     // Label stream.
     ConfigParameters label = inputs(labelNames[0]);

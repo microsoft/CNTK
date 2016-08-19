@@ -76,7 +76,10 @@ void ComputationNetwork::CopySubTree(const ComputationNetwork& fromNet,
 
     ComputationNodeBasePtr fromRoot = fromNet.GetNodeFromName(fromName);
 
-    for (const auto& fromNode : GetEvalOrder(fromRoot)) // BUGBUG: This probably will fail because the precomputed eval orders are invalid at this point.
+    if (!fromNet.EvalOrderExists(fromRoot))
+        const_cast<ComputationNetwork&>(fromNet).FormEvalOrder(fromRoot);
+
+    for (const auto& fromNode : fromNet.GetEvalOrder(fromRoot)) // BUGBUG: This probably will fail because the precomputed eval orders are invalid at this point.
     {
         wstring fromNodeName = fromNode->NodeName();
         wstring toNodeName = toNamePrefix + fromNodeName;
@@ -353,6 +356,9 @@ void ComputationNetwork::SetLearnableNodesBelowLearningRateMultiplier(const floa
     else
     {
         // for calculating a specific node
+        if (!EvalOrderExists(rootNode))
+            const_cast<ComputationNetwork&>(*this).FormEvalOrder(rootNode);
+
         for (const auto& node : GetAllNodesForRoot(rootNode))
         {
             if (node->OperationName() == OperationNameOf(LearnableParameter))

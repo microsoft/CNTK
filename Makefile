@@ -9,18 +9,18 @@
 # that provides
 #   BUILDTYPE= One of release or debug
 #     defaults to release
-#   ACML_PATH= path to ACML library installation
-#     only needed if MATHLIB=acml
 #   MKL_PATH= path to CNTK custom MKL installation
 #     only needed if MATHLIB=mkl
 #   CNTK_CUSTOM_MKL_VERSION=2
 #     version for the CNTK custom MKL installation
 #   MKL_THREADING=parallel|sequential
 #     only needed if MATHLIB=mkl
-#   GDK_PATH= path to cuda gdk installation, so $(GDK_PATH)/include/nvidia/gdk/nvml.h exists
-#     defaults to /usr
-#   MATHLIB= One of acml or mkl
-#     defaults to acml
+#   GDK_INCLUDE_PATH= path to CUDA GDK include path, so $(GDK_INCLUDE_PATH)/nvml.h exists
+#     defaults to /usr/include/nvidia/gdk
+#   GDK_NVML_LIB_PATH= path to CUDA GDK (stub) library path, so $(GDK_NVML_LIB_PATH)/libnvidia-ml.so exists
+#     defaults to /usr/src/gdk/nvml/lib
+#   MATHLIB= mkl
+#     defaults to mkl
 #   CUDA_PATH= Path to CUDA
 #     If not specified, GPU will not be enabled
 #   CUB_PATH= path to NVIDIA CUB installation, so $(CUB_PATH)/cub/cub.cuh exists
@@ -29,10 +29,12 @@
 #     If not specified, CNTK will be be built without cuDNN.
 #   KALDI_PATH= Path to Kaldi
 #     If not specified, Kaldi plugins will not be built
-#   OPENCV_PATH= path to OpenCV 3.0.0 installation, so $(OPENCV_PATH) exists
-#     defaults to /usr/local/opencv-3.0.0
+#   OPENCV_PATH= path to OpenCV 3.1.0 installation, so $(OPENCV_PATH) exists
+#     defaults to /usr/local/opencv-3.1.0
 #   LIBZIP_PATH= path to libzip installation, so $(LIBZIP_PATH) exists
 #     defaults to /usr/local/
+#   BOOST_PATH= path to Boost installation, so $(BOOST_PATH)/include/boost/test/unit_test.hpp
+#     defaults to /usr/local/boost-1.60.0
 # These can be overridden on the command line, e.g. make BUILDTYPE=debug
 
 # TODO: Build static libraries for common dependencies that are shared by multiple 
@@ -56,8 +58,8 @@ BUILDTYPE=release
 endif
 
 ifndef MATHLIB
-$(info DEFAULTING MATHLIB=acml)
-MATHLIB = acml
+$(info DEFAULTING MATHLIB=mkl)
+MATHLIB = mkl
 endif
 
 #### Configure based on options above
@@ -93,9 +95,14 @@ all : buildall
 CUFLAGS = -m 64 
 
 ifdef CUDA_PATH
-  ifndef GDK_PATH
-    $(info defaulting GDK_PATH to /usr)
-    GDK_PATH=/usr
+  ifndef GDK_INCLUDE_PATH
+    GDK_INCLUDE_PATH=/usr/include/nvidia/gdk
+    $(info defaulting GDK_INCLUDE_PATH to $(GDK_INCLUDE_PATH))
+  endif
+
+  ifndef GDK_NVML_LIB_PATH
+    GDK_NVML_LIB_PATH=/usr/src/gdk/nvml/lib
+    $(info defaulting GDK_NVML_LIB_PATH to $(GDK_NVML_LIB_PATH))
   endif
 
   ifndef CUB_PATH
@@ -107,10 +114,8 @@ ifdef CUDA_PATH
 
   NVCC = $(CUDA_PATH)/bin/nvcc
 
-  # This is a suggested/default location for NVML
-  INCLUDEPATH+=$(GDK_PATH)/include/nvidia/gdk
+  INCLUDEPATH+=$(GDK_INCLUDE_PATH)
   INCLUDEPATH+=$(CUB_PATH)
-  NVMLLIBPATH=$(GDK_PATH)/src/gdk/nvml/lib
 
 # Set up CUDA includes and libraries
   INCLUDEPATH += $(CUDA_PATH)/include
@@ -128,18 +133,6 @@ else
   DEVICE = cpu
 
   COMMON_FLAGS +=-DCPUONLY
-endif
-
-ifdef OPENMPI_PATH
-  INCLUDEPATH += $(OPENMPI_PATH)/include
-  LIBPATH += $(OPENMPI_PATH)/lib
-endif
-
-ifeq ("$(MATHLIB)","acml")
-  INCLUDEPATH += $(ACML_PATH)/include
-  LIBPATH += $(ACML_PATH)/lib
-  LIBS += -lacml_mp -liomp5 -lm -lpthread
-  COMMON_FLAGS += -DUSE_ACML
 endif
 
 ifeq ("$(MATHLIB)","mkl")
@@ -333,7 +326,7 @@ $(CNTKMATH_LIB): $(MATH_OBJ)
 	@echo $(SEPARATOR)
 	@echo creating $@ for $(ARCH) with build type $(BUILDTYPE)
 	@mkdir -p $(dir $@)
-	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBPATH) $(NVMLLIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -fopenmp
+	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBPATH) $(GDK_NVML_LIB_PATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -fopenmp
 
 ########################################
 # CNTKLibrary
@@ -373,15 +366,17 @@ SEQUENCE_TRAINING_LIB_SRC +=\
 endif
 
 CNTKLIBRARY_SRC =\
+	$(SOURCEDIR)/CNTKv2LibraryDll/BackCompat.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/Common.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/Function.cpp \
+	$(SOURCEDIR)/CNTKv2LibraryDll/MinibatchSource.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/NDArrayView.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/NDMask.cpp \
+	$(SOURCEDIR)/CNTKv2LibraryDll/Trainer.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/Utils.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/Value.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/Variable.cpp \
     $(SOURCEDIR)/CNTKv2LibraryDll/Learner.cpp \
-
 
 CNTKLIBRARY_SRC+=$(CNTK_COMMON_SRC)
 CNTKLIBRARY_SRC+=$(COMPUTATION_NETWORK_LIB_SRC)
@@ -400,7 +395,7 @@ $(CNTKLIBRARY_LIB): $(CNTKLIBRARY_OBJ) | $(CNTKMATH_LIB)
 	@echo $(SEPARATOR)
 	@mkdir -p $(dir $@)
 	@echo building output for $(ARCH) with build type $(BUILDTYPE)
-	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(NVMLLIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -l$(CNTKMATH)
+	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -l$(CNTKMATH)
 
 ########################################
 # CNTKLibrary tests
@@ -412,6 +407,10 @@ CNTKLIBRARY_TESTS_SRC =\
 	Tests/UnitTests/V2LibraryTests/NDArrayViewTests.cpp \
 	Tests/UnitTests/V2LibraryTests/RecurrentFunctionTests.cpp \
 	Tests/UnitTests/V2LibraryTests/TensorTests.cpp \
+	Tests/UnitTests/V2LibraryTests/TrainerTests.cpp \
+	Tests/UnitTests/V2LibraryTests/CifarResNet.cpp \
+    Tests/UnitTests/V2LibraryTests/SerializationTests.cpp \
+    Tests/UnitTests/V2LibraryTests/LearnerTests.cpp \
 
 CNTKLIBRARY_TESTS:=$(BINDIR)/v2librarytests
 CNTKLIBRARY_TESTS_OBJ := $(patsubst %.cu, $(OBJDIR)/%.o, $(patsubst %.cpp, $(OBJDIR)/%.o, $(CNTKLIBRARY_TESTS_SRC)))
@@ -423,7 +422,7 @@ $(CNTKLIBRARY_TESTS): $(CNTKLIBRARY_TESTS_OBJ) | $(CNTKLIBRARY_LIB)
 	@echo $(SEPARATOR)
 	@mkdir -p $(dir $@)
 	@echo building output for $(ARCH) with build type $(BUILDTYPE)
-	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(NVMLLIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -l$(CNTKLIBRARY) -l$(CNTKMATH)
+	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH)) $(patsubst %,$(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -l$(CNTKLIBRARY) -l$(CNTKMATH)
 
 ########################################
 # LibEval
@@ -457,11 +456,11 @@ EVAL_LIB:=$(LIBDIR)/lib$(EVAL).so
 ALL+=$(EVAL_LIB)
 SRC+=$(EVAL_SRC)
 
-$(EVAL_LIB): $(EVAL_OBJ) 
+$(EVAL_LIB): $(EVAL_OBJ) | $(CNTKMATH_LIB)
 	@echo $(SEPARATOR)
 	@mkdir -p $(dir $@)
 	@echo Building $(EVAL_LIB) for $(ARCH) with build type $(BUILDTYPE)
-	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(NVMLLIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ $(LIBS)
+	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -l$(CNTKMATH) 
 
 ########################################
 # Eval Sample client
@@ -476,11 +475,11 @@ EVAL_SAMPLE_CLIENT_OBJ:=$(patsubst %.cpp, $(OBJDIR)/%.o, $(EVAL_SAMPLE_CLIENT_SR
 ALL+=$(EVAL_SAMPLE_CLIENT)
 SRC+=$(EVAL_SAMPLE_CLIENT_SRC)
 
-$(EVAL_SAMPLE_CLIENT): $(EVAL_SAMPLE_CLIENT_OBJ) | $(EVAL_LIB) $(CNTKMATH_LIB)
+$(EVAL_SAMPLE_CLIENT): $(EVAL_SAMPLE_CLIENT_OBJ) | $(EVAL_LIB) 
 	@echo $(SEPARATOR)
 	@mkdir -p $(dir $@)
 	@echo building $(EVAL_SAMPLE_CLIENT) for $(ARCH) with build type $(BUILDTYPE)
-	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR)) $(patsubst %,$(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH)) -o $@ $^ -l$(EVAL) -l$(CNTKMATH)
+	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH)) $(patsubst %,$(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -l$(EVAL) -l$(CNTKMATH)
 
 ########################################
 # BinaryReader plugin
@@ -777,7 +776,6 @@ CNTK_SRC =\
 	$(SOURCEDIR)/ActionsLib/NDLNetworkBuilder.cpp \
 	$(SOURCEDIR)/CNTK/BrainScript/BrainScriptEvaluator.cpp \
 	$(SOURCEDIR)/CNTK/BrainScript/BrainScriptParser.cpp \
-	$(SOURCEDIR)/CNTK/BrainScript/BrainScriptTest.cpp \
 
 CNTK_SRC+=$(SGDLIB_SRC)
 CNTK_SRC+=$(CNTK_COMMON_SRC)
@@ -794,7 +792,7 @@ $(CNTK): $(CNTK_OBJ) | $(CNTKMATH_LIB)
 	@echo $(SEPARATOR)
 	@mkdir -p $(dir $@)
 	@echo building output for $(ARCH) with build type $(BUILDTYPE)
-	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(NVMLLIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -l$(CNTKMATH) -fopenmp
+	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH)) $(patsubst %,$(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -l$(CNTKMATH) -fopenmp
 
 # deployable resources: standard library of BS
 CNTK_CORE_BS:=$(BINDIR)/cntk.core.bs
@@ -808,10 +806,13 @@ $(CNTK_CORE_BS): $(SOURCEDIR)/CNTK/BrainScript/CNTKCoreLib/CNTK.core.bs
 # Unit Tests
 ########################################
 
-# use system pre-installed Boost libraries
-# Todo: use our own version of boost libraries 
-BOOSTLIB_PATH = /usr/lib/x86_64-linux-gnu
-BOOSTLIBS := boost_unit_test_framework boost_filesystem boost_system
+# only build unit tests when Boost is available
+ifdef BOOST_PATH
+
+INCLUDEPATH += $(BOOST_PATH)/include
+
+BOOSTLIB_PATH = $(BOOST_PATH)/lib
+BOOSTLIBS := -lboost_unit_test_framework -lboost_filesystem -lboost_system
 
 UNITTEST_EVAL_SRC = \
 	$(SOURCEDIR)/../Tests/UnitTests/EvalTests/EvalExtendedTests.cpp \
@@ -820,6 +821,7 @@ UNITTEST_EVAL_SRC = \
 UNITTEST_EVAL_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(UNITTEST_EVAL_SRC))
 
 UNITTEST_EVAL := $(BINDIR)/evaltests
+
 ALL += $(UNITTEST_EVAL)
 SRC += $(UNITTEST_EVAL_SRC)
 
@@ -827,7 +829,7 @@ $(UNITTEST_EVAL) : $(UNITTEST_EVAL_OBJ) | $(EVAL_LIB) $(CNTKMATH_LIB)
 	@echo $(SEPARATOR)
 	@mkdir -p $(dir $@)
 	@echo building $@ for $(ARCH) with build type $(BUILDTYPE)
-	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(BOOSTLIB_PATH)) $(patsubst %, $(RPATH)%, $(LIBDIR) $(BOOSTLIB_PATH)) -o $@ $^ $(patsubst %, -l%, $(BOOSTLIBS)) -l$(EVAL) -l$(CNTKMATH) 
+	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH) $(BOOSTLIB_PATH)) $(patsubst %, $(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH) $(BOOSTLIB_PATH)) -o $@ $^ $(BOOSTLIBS) $(LIBS) -l$(EVAL) -l$(CNTKMATH) 
 
 #TODO: create project specific makefile or rules to avoid adding project specific path to the global path
 INCLUDEPATH += $(SOURCEDIR)/Readers/CNTKTextFormatReader
@@ -845,6 +847,7 @@ UNITTEST_READER_SRC = \
 UNITTEST_READER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(UNITTEST_READER_SRC))
 
 UNITTEST_READER := $(BINDIR)/readertests
+
 ALL += $(UNITTEST_READER)
 SRC += $(UNITTEST_READER_SRC)
 
@@ -852,7 +855,7 @@ $(UNITTEST_READER): $(UNITTEST_READER_OBJ) | $(HTKMLFREADER) $(HTKDESERIALIZERS)
 	@echo $(SEPARATOR)
 	@mkdir -p $(dir $@)
 	@echo building $@ for $(ARCH) with build type $(BUILDTYPE)
-	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(BOOSTLIB_PATH)) $(patsubst %, $(RPATH)%, $(LIBDIR) $(BOOSTLIB_PATH)) -o $@ $^ $(patsubst %, -l%, $(BOOSTLIBS))  -l$(CNTKMATH) 
+	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(BOOSTLIB_PATH)) $(patsubst %, $(RPATH)%, $(ORIGINLIBDIR) $(BOOSTLIB_PATH)) -o $@ $^ $(BOOSTLIBS) -l$(CNTKMATH) -ldl 
 
 UNITTEST_NETWORK_SRC = \
 	$(SOURCEDIR)/../Tests/UnitTests/NetworkTests/OperatorEvaluation.cpp \
@@ -868,7 +871,6 @@ UNITTEST_NETWORK_SRC = \
 	$(SOURCEDIR)/ActionsLib/NDLNetworkBuilder.cpp \
 	$(SOURCEDIR)/CNTK/BrainScript/BrainScriptEvaluator.cpp \
 	$(SOURCEDIR)/CNTK/BrainScript/BrainScriptParser.cpp \
-	$(SOURCEDIR)/CNTK/BrainScript/BrainScriptTest.cpp \
 
 UNITTEST_NETWORK_SRC += $(COMPUTATION_NETWORK_LIB_SRC)
 UNITTEST_NETWORK_SRC += $(CNTK_COMMON_SRC)
@@ -878,6 +880,7 @@ UNITTEST_NETWORK_SRC += $(SGDLIB_SRC)
 UNITTEST_NETWORK_OBJ := $(patsubst %.cu, $(OBJDIR)/%.o, $(patsubst %.cpp, $(OBJDIR)/%.o, $(UNITTEST_NETWORK_SRC)))
 
 UNITTEST_NETWORK := $(BINDIR)/networktests
+
 ALL += $(UNITTEST_NETWORK)
 SRC += $(UNITTEST_NETWORK_SRC)
 
@@ -885,7 +888,7 @@ $(UNITTEST_NETWORK): $(UNITTEST_NETWORK_OBJ) | $(CNTKMATH_LIB) $(CNTKTEXTFORMATR
 	@echo $(SEPARATOR)
 	@mkdir -p $(dir $@)
 	@echo building $@ for $(ARCH) with build type $(BUILDTYPE)
-	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(NVMLLIBPATH) $(BOOSTLIB_PATH)) $(patsubst %, $(RPATH)%, $(LIBDIR) $(LIBPATH) $(BOOSTLIB_PATH)) -o $@ $^ $(patsubst %, -l%, $(BOOSTLIBS)) -l$(CNTKMATH) $(LIBS) 
+	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH) $(BOOSTLIB_PATH)) $(patsubst %, $(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH) $(BOOSTLIB_PATH)) -o $@ $^ $(BOOSTLIBS) $(LIBS) -l$(CNTKMATH) -fopenmp
 
 UNITTEST_MATH_SRC = \
 	$(SOURCEDIR)/../Tests/UnitTests/MathTests/BatchNormalizationEngineTests.cpp \
@@ -909,6 +912,7 @@ UNITTEST_MATH_SRC = \
 UNITTEST_MATH_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(UNITTEST_MATH_SRC))
 
 UNITTEST_MATH := $(BINDIR)/mathtests
+
 ALL += $(UNITTEST_MATH)
 SRC += $(UNITTEST_MATH_SRC)
 
@@ -916,10 +920,34 @@ $(UNITTEST_MATH): $(UNITTEST_MATH_OBJ) | $(CNTKMATH_LIB)
 	@echo $(SEPARATOR)
 	@mkdir -p $(dir $@)
 	@echo building $@ for $(ARCH) with build type $(BUILDTYPE)
-	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(NVMLLIBPATH) $(BOOSTLIB_PATH)) $(patsubst %, $(RPATH)%, $(LIBDIR) $(LIBPATH) $(BOOSTLIB_PATH)) -o $@ $^ $(patsubst %, -l%, $(BOOSTLIBS)) $(LIBS) -l$(CNTKMATH) 
+	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH) $(BOOSTLIB_PATH)) $(patsubst %, $(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH) $(BOOSTLIB_PATH)) -o $@ $^ $(BOOSTLIBS) $(LIBS) -l$(CNTKMATH) -ldl -fopenmp
 
-unittests: $(UNITTEST_EVAL) $(UNITTEST_READER) $(UNITTEST_NETWORK) $(UNITTEST_MATH)
+UNITTEST_BRAINSCRIPT_SRC = \
+	$(SOURCEDIR)/CNTK/BrainScript/BrainScriptEvaluator.cpp \
+	$(SOURCEDIR)/CNTK/BrainScript/BrainScriptParser.cpp \
+	$(SOURCEDIR)/../Tests/UnitTests/BrainScriptTests/ParserTests.cpp \
+	$(SOURCEDIR)/../Tests/UnitTests/BrainScriptTests/ComputationNetworkTests.cpp \
+	$(SOURCEDIR)/../Tests/UnitTests/BrainScriptTests/stdafx.cpp
 
+UNITTEST_BRAINSCRIPT_SRC += $(COMPUTATION_NETWORK_LIB_SRC)
+UNITTEST_BRAINSCRIPT_SRC += $(SEQUENCE_TRAINING_LIB_SRC)
+
+UNITTEST_BRAINSCRIPT_OBJ := $(patsubst %.cu, $(OBJDIR)/%.o, $(patsubst %.cpp, $(OBJDIR)/%.o, $(UNITTEST_BRAINSCRIPT_SRC)))
+
+UNITTEST_BRAINSCRIPT := $(BINDIR)/brainscripttests
+
+ALL += $(UNITTEST_BRAINSCRIPT)
+SRC += $(UNITTEST_BRAINSCRIPT_SRC)
+
+$(UNITTEST_BRAINSCRIPT): $(UNITTEST_BRAINSCRIPT_OBJ) | $(CNTKMATH_LIB)
+	@echo $(SEPARATOR)
+	@mkdir -p $(dir $@)
+	@echo building $@ for $(ARCH) with build type $(BUILDTYPE)
+	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH) $(BOOSTLIB_PATH)) $(patsubst %, $(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH) $(BOOSTLIB_PATH)) -o $@ $^ $(BOOSTLIBS) $(LIBS) -ldl -l$(CNTKMATH)
+
+unittests: $(UNITTEST_EVAL) $(UNITTEST_READER) $(UNITTEST_NETWORK) $(UNITTEST_MATH) $(UNITTEST_BRAINSCRIPT)
+
+endif
 
 ########################################
 # General compile and dependency rules

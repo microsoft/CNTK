@@ -181,7 +181,6 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         {
             fprintf(stderr, "\n");
             LOGPRINTF(stderr, "Evaluation criterion node(s):\n");
-            fprintf(stderr, "\n");
             for (const auto& node : evaluationNodes)
             {
                 LOGPRINTF(stderr, "\t%ls = %ls\n", node->NodeName().c_str(), node->OperationName().c_str());
@@ -197,7 +196,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
     additionalNodesToEvaluate.insert(additionalNodesToEvaluate.end(), preComputeNodesList.cbegin(), preComputeNodesList.cend());
 
     // allocate memory for forward and backward computation
-    net->AllocateAllMatrices(evaluationNodes, additionalNodesToEvaluate, criterionNodes[0]);
+    net->AllocateAllMatrices(evaluationNodes, additionalNodesToEvaluate, criterionNodes[0]); // TODO: use criterionNodes.front() throughout
 
     // get feature and label nodes into an array of matrices that will be passed to GetMinibatch()
     // TODO: instead, remember the nodes directly, to be able to handle both float and double nodes; current version will crash for mixed networks
@@ -251,15 +250,39 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
     // initializing weights and gradient holder
     // only one criterion so far TODO: support multiple ones?
     auto& learnableNodes = net->LearnableParameterNodes(criterionNodes[0]);
-    std::list<Matrix<ElemType>> smoothedGradients;
+    list<Matrix<ElemType>> smoothedGradients;
+    size_t numParameters = 0;
 
+    vector<wstring> nodesToUpdateDescriptions; // for logging only
     for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
     {
         ComputationNodePtr node = dynamic_pointer_cast<ComputationNode<ElemType>>(*nodeIter);
+        // Note: We don't actually need the smoothedGradients if !IsParameterUpdateRequired().
+        // However, this is hard to fix since lots of code assumes smoothedGradients to be in the same order as learnableNodes.
+        // V2 API fixes this.
         smoothedGradients.push_back(Matrix<ElemType>(node->Value().GetNumRows(),
                                                      node->Value().GetNumCols(),
                                                      net->GetDeviceId()));
+        if (node->IsParameterUpdateRequired())
+        {
+            nodesToUpdateDescriptions.push_back(node->NodeDescription() + L" : [" + msra::strfun::utf16(string(node->GetSampleLayout())) + L"]");
+            numParameters += node->GetSampleLayout().GetNumElements();
+        }
     }
+    size_t numNeedsGradient = 0;
+    for (let node : net->GetEvalOrder(criterionNodes[0]))
+    {
+        if (node->NeedsGradient())
+            numNeedsGradient++;
+    }
+    fprintf(stderr, "\n");
+    LOGPRINTF(stderr, "Training %.0f parameters in %d out of %d parameter tensors and %d nodes with gradient:\n\n",
+              (double)numParameters, (int)nodesToUpdateDescriptions.size(), (int)learnableNodes.size(), (int)numNeedsGradient);
+    for (let nodeDescription : nodesToUpdateDescriptions)
+    {
+        LOGPRINTF(stderr, "\t%ls\n", nodeDescription.c_str());
+    }
+    fprintf(stderr, "\n");
 
     double avgCriterion, lrControlCriterion;
     lrControlCriterion = avgCriterion = numeric_limits<double>::infinity();
@@ -275,9 +298,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
     vector<double> prevLearnRates;
     prevLearnRates.resize(m_numPrevLearnRates);
     for (int i = 0; i < m_numPrevLearnRates; i++)
-    {
         prevLearnRates[i] = -1.0;
-    }
 
     if (GetParallelizationMethod() == ParallelizationMethod::dataParallelSGD)
     {
@@ -404,7 +425,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
 
         if (learnRatePerSample < m_minLearnRate)
         {
-            LOGPRINTF(stderr, "Learn Rate Per Sample for Epoch[%d] = %.8g is less than minLearnRate %.8g. Training complete.\n",
+            LOGPRINTF(stderr, "Learn Rate Per Sample for Epoch[%d] = %.8g is less than minLearningRatePerSample %.8g. Training complete.\n",
                       i + 1, learnRatePerSample, m_minLearnRate);
             if (m_autoLearnRateSearchType != LearningRateSearchAlgorithm::None)
             {
@@ -873,6 +894,14 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
     bool noMoreSamplesToProcess = false;
     for (;;)
     {
+        // Per-minibatch performance measurements; only enabled when perfTraceLevel > 0
+        Timer fineGrainedPerfMeasurementTimer;
+        double readTime = 0;
+        double computeTime = 0;
+        double parameterUpdateTime = 0;
+        if (m_perfTraceLevel > 0)
+            fineGrainedPerfMeasurementTimer.Start();
+
         // get minibatch
         // TODO: is it guaranteed that the GPU is already completed at this point, is it safe to overwrite the buffers?
         size_t actualMBSize = 0;
@@ -880,6 +909,13 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                                                                                 useDistributedMBReading, useParallelTrain, *inputMatrices, actualMBSize, m_mpi);
         if (!wasDataRead && (!useDistributedMBReading || noMoreSamplesToProcess)) // in case of distributed reading, we do a few more loops until all ranks have completed
             break;                                                                // end of epoch
+
+        if (m_perfTraceLevel > 0)
+        {
+            fineGrainedPerfMeasurementTimer.Stop();
+            readTime = fineGrainedPerfMeasurementTimer.ElapsedSeconds();
+            fineGrainedPerfMeasurementTimer.Start();
+        }
 
         // Note: If !wasDataRead then the data that GetMinibatchIntoNetwork() was supposed to full in are undefined.
         // Must not touch them.
@@ -967,6 +1003,15 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             if (actualNumSubminibatches > 1)
                 smbDispatcher.DoneWithCurrentMinibatch();
         } // if (actualMBSize > 0)
+
+        if (m_perfTraceLevel > 0)
+        {
+            std::unique_ptr<MatrixComputeStreamEvent> mainStreamSyncEvent(MatrixComputeStreamEvent::Create(net->GetDeviceId()));
+            mainStreamSyncEvent->SynchronizeEvent();
+            fineGrainedPerfMeasurementTimer.Stop();
+            computeTime = fineGrainedPerfMeasurementTimer.ElapsedSeconds();
+            fineGrainedPerfMeasurementTimer.Start();
+        }
 
         // for momentum/clipping/regularization/etc., as well as for progress and statistics, we should only count frames that are not gaps
         // #samples according to the default dynamic axis, for use with criterion nodes that do not have an MBLayout
@@ -1072,6 +1117,17 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 #endif
                 }
             }
+        }
+
+        if (m_perfTraceLevel > 0)
+        {
+            std::unique_ptr<MatrixComputeStreamEvent> mainStreamSyncEvent(MatrixComputeStreamEvent::Create(net->GetDeviceId()));
+            mainStreamSyncEvent->SynchronizeEvent();
+            fineGrainedPerfMeasurementTimer.Stop();
+            parameterUpdateTime = fineGrainedPerfMeasurementTimer.ElapsedSeconds();
+
+            PREPENDTS(stderr);
+            fprintf(stderr, "Perf trace: Worker MB size = %d, Read = %.5gs; Compute = %.5gs; Parameter update = %.5gs, Aggregate MB size = %d\n", (int)actualMBSize, readTime, computeTime, parameterUpdateTime, (int)aggregateNumSamples);
         }
 
         // aggregation by model averaging or block momentum 
@@ -1298,7 +1354,7 @@ bool SGD<ElemType>::PreCompute(ComputationNetworkPtr net,
 
     if (nodes.size() == 0)
     {
-        LOGPRINTF(stderr, "No PreCompute nodes found, skipping PreCompute step.\n");
+        LOGPRINTF(stderr, "No PreCompute nodes found, or all already computed. Skipping pre-computation step.\n");
         return false;
     }
 
@@ -2546,12 +2602,14 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
     if (m_adaptationRegWeight > 1 || m_adaptationRegWeight < 0)
         InvalidArgument("adaptationRegWeight must be in [0 1]");
 
-    m_minLearnRate = 1e-9f;
+    m_minLearnRate = configSGD(L"minLearningRatePerSample", 1e-9f);
 
     m_needAdaptRegularization = false;
 
     // BUGBUG: these are not passed to Init()
     m_doUnitTest = configSGD(L"unitTest", false);
+
+    m_perfTraceLevel = configSGD(L"perfTraceLevel", (int)0);
 
     // parallel training
     m_parallelizationMethod = ParallelizationMethod::none;

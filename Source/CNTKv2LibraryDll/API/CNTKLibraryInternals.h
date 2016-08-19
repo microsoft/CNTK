@@ -7,6 +7,12 @@
 
 #pragma once
 
+#ifdef SWIG
+#define final
+#define explicit
+#define static_assert(condition, message)
+#endif
+
 #ifdef _WIN32
 #ifdef CNTKV2LIBRARYDLL
 #define CNTK_API __declspec(dllexport)
@@ -47,8 +53,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template <typename ElementType>
     class ComputationNode;
-
-    class File;
 }}}
 
 // TODO: The following should be reconciled with the equivalent code in the CNTK implementation
@@ -102,9 +106,15 @@ namespace CNTK
 
     // RuntimeError - throw a std::runtime_error with a formatted error string
 #ifndef _MSC_VER // gcc __attribute__((format(printf())) does not percolate through variadic templates; so must go the macro route
+#ifndef RuntimeError
 #define RuntimeError ThrowFormatted<std::runtime_error>
+#endif
+#ifndef LogicError
 #define LogicError ThrowFormatted<std::logic_error>
+#endif
+#ifndef InvalidArgument
 #define InvalidArgument ThrowFormatted<std::invalid_argument>
+#endif
 #else
     template <class... _Types>
     __declspec_noreturn inline void RuntimeError(const char* format, _Types&&... _Args)
@@ -127,7 +137,7 @@ namespace CNTK
 #define NOT_IMPLEMENTED                                                                                                              \
     {                                                                                                                                \
         fprintf(stderr, "Inside File: %s  Line: %d  Function: %s  -> Feature Not Implemented.\n", __FILE__, __LINE__, __FUNCTION__); \
-        LogicError("Inside File: %s  Line: %d  Function: %s  -> Feature Not Implemented.\n", __FILE__, __LINE__, __FUNCTION__);      \
+        CNTK::LogicError("Inside File: %s  Line: %d  Function: %s  -> Feature Not Implemented.\n", __FILE__, __LINE__, __FUNCTION__);      \
     }
 #endif
 }
@@ -163,4 +173,9 @@ namespace CNTK
 
     class Learner;
     typedef std::shared_ptr<Learner> LearnerPtr;
+
+    class Dictionary;
+
+    class MinibatchSource;
+    typedef std::shared_ptr<MinibatchSource> MinibatchSourcePtr;
 }

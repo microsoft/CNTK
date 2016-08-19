@@ -62,6 +62,27 @@ cudaStream_t MATH_API GetStream();
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 // -----------------------------------------------------------------------
+// SyncGuard -- synchronize around CUDA calls
+// -----------------------------------------------------------------------
+
+class SyncGuard
+{
+private:
+    static bool s_isSyncEnabled;
+
+    bool m_forceSync;
+#ifndef CPUONLY
+    cudaEvent_t m_done;
+#endif
+
+public:
+    static MATH_API void EnableSync();
+
+    SyncGuard(bool forceSync = false);
+    ~SyncGuard();
+};
+
+// -----------------------------------------------------------------------
 // DeviceBoundNumber -- This class represents a number which resides on a particular device. Use it to avoid unnecessary transfers between CPU and GPU
 // -----------------------------------------------------------------------
 
@@ -207,18 +228,14 @@ public:
     // multiple views, RequireSize will first check to see if Resize is required. If it is not, then it short-circuits and is a noop. Otherwise, RequireSize
     // will call Resize, which may fail if the matrix has multiple views.
     void RequireSize(const size_t numRows, const size_t numCols, bool growOnly = true); // by default we only reallocate if need to grow
+    void RequireSize(const GPUMatrix<ElemType>& like, bool growOnly = true) { RequireSize(like.GetNumRows(), like.GetNumCols(), growOnly); }
+
     // Resize first checks to ensure that the caller has the authority to call Resize (i.e., it checks to ensure the underlying data is owned by only this matrix), and then
     // actually resizes the underlying matrix, doing any allocation as required.
     void Resize(const size_t numRows, const size_t numCols, bool growOnly = true); // by default we only reallocate if need to grow
 
-    ElemType& operator()(const size_t /*row*/, const size_t /*col*/)
-    {
-        LogicError("GPUMatrix doesn't support this");
-    }
-    const ElemType& operator()(const size_t /*row*/, const size_t /*col*/) const
-    {
-        LogicError("GPUMatrix doesn't support this");
-    }
+    ElemType&       operator()(const size_t /*row*/, const size_t /*col*/)       { LogicError("GPUMatrix doesn't support operator(,) on the CPU."); }
+    const ElemType& operator()(const size_t /*row*/, const size_t /*col*/) const { LogicError("GPUMatrix doesn't support operator(,) on the CPU."); }
     ElemType Get00Element() const;
 
     void SetValue(const ElemType v);
@@ -453,7 +470,8 @@ public:
     void BatchNormalizationForward(const GPUMatrix<ElemType>& scale, const GPUMatrix<ElemType>& bias, double expAvgFactor, double blendFactor,
                                    GPUMatrix<ElemType>& runMean, GPUMatrix<ElemType>& runInvStdDev, GPUMatrix<ElemType>& out, double epsilon,
                                    GPUMatrix<ElemType>& saveMean, GPUMatrix<ElemType>& saveInvStdDev) const;
-    void BatchNormalizationBackward(const GPUMatrix<ElemType>& in, GPUMatrix<ElemType>& grad, const GPUMatrix<ElemType>& scale, const GPUMatrix<ElemType>& saveMean, const GPUMatrix<ElemType>& saveInvStdDev,
+    void BatchNormalizationBackward(const GPUMatrix<ElemType>& in, GPUMatrix<ElemType>& grad, const GPUMatrix<ElemType>& scale, double blendFactor,
+                                    const GPUMatrix<ElemType>& saveMean, const GPUMatrix<ElemType>& saveInvStdDev,
                                     GPUMatrix<ElemType>& scaleGrad, GPUMatrix<ElemType>& biasGrad) const;
 
 public:
@@ -622,52 +640,5 @@ static void CudaCall(ERRTYPE retCode, const char* exprString, const char* libNam
 #define CUSPARSE_CALL(expr) (CudaCall((expr), #expr, "CUSPARSE", CUSPARSE_STATUS_SUCCESS))
 #define CURAND_CALL(expr)   (CudaCall((expr), #expr, "CURAND",   CURAND_STATUS_SUCCESS))
 #define CUDNN_CALL(expr)    (CudaCall((expr), #expr, "cuDNN",    CUDNN_STATUS_SUCCESS))
-
-// -----------------------------------------------------------------------
-// SyncGuard -- synchronize around CUDA calls
-// -----------------------------------------------------------------------
-
-class SyncGuard
-{
-    static bool DoSync()
-    {
-#ifdef NO_SYNC // this strange way of writing it allows modifying this variable at runtime in the debugger
-        static bool do_sync = false;
-#else
-        static bool do_sync = true;
-#endif
-        return do_sync;
-    }
-    cudaEvent_t m_done;
-public:
-    SyncGuard()
-    {
-        m_done = nullptr;
-        if (DoSync())
-        {
-            CUDA_CALL(cudaGetLastError());
-            CUDA_CALL(cudaEventCreate(&m_done));
-        }
-    }
-    ~SyncGuard()
-    {
-        if (DoSync())
-        {
-            // The regular use of this destructor is to synchronize the GPU, but also
-            // to check for errors. So this destructor is where CUDA errors would be thrown.
-            // If this destructor runs during stack unwinding, then a different error has
-            // already happened that should be reported; so we only clean up the resource.
-            if (std::uncaught_exception())
-                cudaEventDestroy(m_done);
-            else
-            {
-                // failures in a prior launch might be reported here
-                CUDA_CALL(cudaEventRecord(m_done));
-                CUDA_CALL(cudaEventSynchronize(m_done));
-                CUDA_CALL(cudaEventDestroy(m_done));
-            }
-        }
-    }
-};
 
 #endif // CPUONLY
