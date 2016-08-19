@@ -356,6 +356,7 @@ void ImageDataDeserializer::RegisterByteReader(size_t seqId, const std::string& 
 #else
     UNUSED(seqId);
     UNUSED(knownReaders);
+    UNUSED(readerSequences);
     RuntimeError("The code is built without zip container support. Only plain image files are supported.");
 #endif
 }
