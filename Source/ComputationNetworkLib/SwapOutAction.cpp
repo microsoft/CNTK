@@ -81,6 +81,7 @@ template <typename ElemType> void SwapOutAction<ElemType>::EndAction()
     this->m_cols = this->m_bufferGPU->GetNumCols();
     this->m_bytes = this->m_rows*this->m_cols*sizeof(ElemType);
     this->m_bufferGPU->Resize(0,0,0, false);
+    //this->m_bufferGPU->Resize(0,0);
     //ElemType *data = this->m_bufferGPU->Data();
     //CUDA_CALL(cudaFree(data));
     cout << "Swapped out: " << this->m_bufferGPU << ", " << this->m_rows*this->m_cols*sizeof(ElemType)/1024./1024./1024. << "GB" << endl;

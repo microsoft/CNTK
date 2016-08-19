@@ -12,7 +12,6 @@
 #include "TensorShape.h"
 #include "MatrixPool.h"
 #include "ComputationEnvironment.h"
-#include "SynchronizationManager.h"
 
 #include <unordered_set>
 #include <map>
@@ -655,6 +654,14 @@ public:
     void SetEnvironment(ComputationEnvironmentPtr environment) { m_environment = environment; }
 
     virtual std::set<std::pair<const MatrixBase*, std::wstring>> GetMatrixInfo() const = 0; // to be defined by <ElemType> version
+    const NetworkInformation& NetworkInfo() const
+    {
+        if (!m_networkInfo)
+            LogicError("NetworkInformation: No network info has been set!");
+        return *m_networkInfo;
+    }
+    NetworkInformationPtr GetNetworkInfoPtr() const { return m_networkInfo; }
+    void SetNetworkInfo(NetworkInformationPtr networkInfo) { m_networkInfo = networkInfo; }
 
     // -----------------------------------------------------------------------
     // validation
@@ -726,30 +733,8 @@ public:
     virtual void ForwardPropSpecialization(const FrameRange& fr) = 0;
     virtual void ForwardProp(const FrameRange& fr) override final
     {
-    
-        bool isFloat = SynchronizationManager<float>::GetSynchronizationManager()->m_isFloat;
-        bool registeringBuffers = SynchronizationManager<float>::GetSynchronizationManager()->m_registeringBuffers;
+    	ForwardPropSpecialization(fr);
 
-       //if(registeringBuffers) 
-       //{
-	   // 	std::string nodename = std::string(NodeName().begin(), NodeName().end());
-	   // 	std::cout << " " << nodename << endl;
-       //     return;
-       //}
-
-
-       if(isFloat)
-          SynchronizationManager<float>::GetSynchronizationManager()->BeginSynchronizeState(this, (size_t)0, fr, true);
-       else
-          SynchronizationManager<double>::GetSynchronizationManager()->BeginSynchronizeState(this, (size_t)0, fr, true);
- 
-        ForwardPropSpecialization(fr);
-        //m_syncManager->EndSynchronizeState(this, (size_t)0, fr, true);
-       if(isFloat)
-          SynchronizationManager<float>::GetSynchronizationManager()->EndSynchronizeState(this, (size_t)0, fr, true);
-       else
-          SynchronizationManager<double>::GetSynchronizationManager()->EndSynchronizeState(this, (size_t)0, fr, true);
- 
  
     }
 
@@ -757,20 +742,7 @@ public:
     virtual void BackpropToSpecialization(const size_t inputIndex, const FrameRange& fr) = 0;
     virtual void BackpropTo(const size_t inputIndex, const FrameRange& fr)
     {
- 
-        bool isFloat = SynchronizationManager<float>::GetSynchronizationManager()->m_isFloat;
-
-       if(isFloat)
-          SynchronizationManager<float>::GetSynchronizationManager()->BeginSynchronizeState(this, inputIndex, fr, false);
-       else
-          SynchronizationManager<double>::GetSynchronizationManager()->BeginSynchronizeState(this, inputIndex, fr, false);
- 
-        BackpropToSpecialization(inputIndex, fr);
-       if(isFloat)
-          SynchronizationManager<float>::GetSynchronizationManager()->EndSynchronizeState(this, inputIndex, fr, false);
-       else
-          SynchronizationManager<double>::GetSynchronizationManager()->EndSynchronizeState(this, inputIndex, fr, false);
-
+    	BackpropToSpecialization(inputIndex, fr);
     }
 
 
@@ -942,6 +914,7 @@ protected:
     // environment information
     // This structure is shared with the ComputationNetwork that this node lives in
     ComputationEnvironmentPtr m_environment;
+    NetworkInformationPtr m_networkInfo;
 
     // flags related to gradient propagation
     float m_learningRateMultiplier;    // update parameters? Only used for LearnableParameters.    --TODO: Should we make this a member of LearnableParameters actually? And require a type cast? Currently it is read out for all leaves.
@@ -1939,12 +1912,9 @@ public:
     virtual bool RequiresPreCompute() const override { return false; } // return true if the node's value should be computed before the normal training. e.g., mean and invStd of input features.
     virtual std::string FormatOperationPrototype(const std::string& extraArgs) const override { return ""; }
     virtual void DumpNodeInfo(const bool /*printValues*/, const bool /*printMetadata*/, File& fstream) const override {}
-<<<<<<< HEAD
     virtual std::set<std::pair<const MatrixBase*, std::wstring>> GetMatrixInfo() const override { NOT_IMPLEMENTED; }
     virtual void ForwardProp(const FrameRange& fr) override {}
     virtual void BackpropTo(const size_t inputIndex, const FrameRange& fr) override {}
-=======
->>>>>>> Fixed issue with types determination for ComputationNodeBase.
 
 protected: public:                                     // needed in ComputationNetwork::FindInRecurrentLoops(), which really should be part of SEQTraversalFlowControlNode
     std::vector<ComputationNodeBasePtr> m_nestedNodes; // nodes tucked away in this node, in evaluation order

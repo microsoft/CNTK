@@ -46,7 +46,7 @@ public:
         std::vector<ComputationNodeBasePtr> inputNodes  = m_net->InputNodesForOutputs(outputNodeNames);
 
         // allocate memory for forward computation
-        m_net->AllocateAllMatrices({}, outputNodes, nullptr);
+        m_net->AllocateAllMatrices<ElemType>({}, outputNodes, nullptr);
 
         StreamMinibatchInputs inputMatrices = DataReaderHelpers::RetrieveInputMatrices(inputNodes);
 
@@ -103,7 +103,7 @@ public:
         std::vector<ComputationNodeBasePtr> outputNodes = m_net->OutputNodesByName(outputNodeNames);
 
         // allocate memory for forward computation
-        m_net->AllocateAllMatrices({}, outputNodes, nullptr);
+        m_net->AllocateAllMatrices<ElemType>({}, outputNodes, nullptr);
 
         m_net->StartEvaluateMinibatchLoop(outputNodes);
 
@@ -162,7 +162,7 @@ public:
 
         if (!nodeUnitTest)                                        // regular operation
         {
-            m_net->AllocateAllMatrices({}, outputNodes, nullptr); // don't allocate for backward pass
+            m_net->AllocateAllMatrices<ElemType>({}, outputNodes, nullptr); // don't allocate for backward pass
         }
         else                                                      // we mis-appropriate this code for unit testing of the back-prop path
         {
@@ -193,7 +193,7 @@ public:
             
             // Allocate memory for forward and backward computation. In case of unit test, treat the output node
             // like a criterion node. Submitting a node as parameter 3 here will allocate the gradients.
-            m_net->AllocateAllMatrices({}, outputNodes, outputNodes[0]);
+            m_net->AllocateAllMatrices<ElemType>({}, outputNodes, outputNodes[0]);
         }
 
         StreamMinibatchInputs inputMatrices = DataReaderHelpers::RetrieveInputMatrices(inputNodes);

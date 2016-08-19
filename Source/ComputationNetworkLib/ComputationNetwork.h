@@ -55,6 +55,9 @@ public:
         m_pMBLayoutOfNetwork(make_shared<MBLayout>(1, 0, L"*")),
         m_environment(make_shared<ComputationEnvironment>())
     {
+        m_networkInfo = make_shared<NetworkInformation>();
+        m_networkInfo->GetSynchronizationManager<float>();
+        m_networkInfo->GetSynchronizationManager<double>();
         //m_pMBLayoutOfNetwork->SetAxisName(L"T");
     }
 
@@ -140,7 +143,9 @@ public:
     void ForwardProp(const NODESET& nodes)
     {
         for (auto& node : nodes)
+        {
             ForwardProp(node);
+        }
     }
 
     static void BumpEvalTimeStamp(const std::vector<ComputationNodeBasePtr>& nodes);
@@ -187,12 +192,14 @@ private:
     bool AreMatricesAllocated() const { return m_areMatricesAllocated; }
     void VerifyIsCompiled(const char* where) const;
 public:
-    void AllocateAllMatrices(const std::vector<ComputationNodeBasePtr>& evalRootNodes, const std::vector<ComputationNodeBasePtr>& outValueRootNodes, ComputationNodeBasePtr trainRootNode);
+    template <class ElemType> void AllocateAllMatrices(const std::vector<ComputationNodeBasePtr>& evalRootNodes, const std::vector<ComputationNodeBasePtr>& outValueRootNodes, ComputationNodeBasePtr trainRootNode);
+
     template <class ElemType> void FindDependencyGraph(const std::vector<ComputationNodeBasePtr>& evalRootNodes, const std::vector<ComputationNodeBasePtr>& outValueRootNodes, ComputationNodeBasePtr trainRootNode);
 
 private:
     void PrintMemorySharingStructure(const std::vector<ComputationNodeBasePtr>& nodes);
-    void ReleaseMatricesAfterEvalForChildren(ComputationNodeBasePtr n, std::unordered_map<ComputationNodeBasePtr, int>& parentCount);
+    template <class ElemType> void PrintMemorySharingStructure(const std::vector<ComputationNodeBasePtr>& nodes);
+    bool ReleaseMatricesAfterEvalForChildren(ComputationNodeBasePtr n, std::unordered_map<ComputationNodeBasePtr, int>& parentCount);
     void AllocateGradientMatricesForInputs(ComputationNodeBasePtr parentNode);
 
 public:
@@ -436,6 +443,7 @@ public:
     // -----------------------------------------------------------------------
 
     ComputationEnvironment& Environment() const { return *m_environment; }
+    NetworkInformation& NetworkInfo() const { return *m_networkInfo; }
 
     // -----------------------------------------------------------------------
     // functions to pass on specific SGD options to nodes
@@ -740,6 +748,7 @@ public:
         if (!result.second)
             RuntimeError("AddNodeToNet: Duplicated name for %ls %ls operation.", node->NodeName().c_str(), node->OperationName().c_str());
         node->SetEnvironment(m_environment);
+        node->SetNetworkInfo(m_networkInfo);
         return node; // allows e.g. return AddNodeToNet(New...);
     }
     // TODO: not very nice--need to fix way more outside to get this right
@@ -775,6 +784,7 @@ public:
             result = m_nameToNodeMap.insert(make_pair(node->NodeName(), node));
         }
         node->SetEnvironment(m_environment); // (note: redundant if already part of the network)
+        node->SetNetworkInfo(m_networkInfo); // (note: redundant if already part of the network)
         return result.second;
     }
 
@@ -957,6 +967,9 @@ protected:
 
     class SEQTraversalFlowControlNode : public FlowControlNode
     {
+
+    private:
+        ComputationNetwork *m_net;
     public: // m_nestedNodes needed public by ComputationNetwork::FindInRecurrentLoops(), which really should be part of SEQTraversalFlowControlNode
         typedef FlowControlNode Base;
         using Base::m_nestedNodes;
@@ -1012,6 +1025,9 @@ protected:
     {
         typedef FlowControlNode Base;
         using Base::m_nestedNodes;
+
+    private:
+        ComputationNetwork *m_net;
 
     public:
         virtual const std::wstring OperationName() const override
@@ -1090,6 +1106,7 @@ private:
 
     // environment information that nodes may want to inquire, e.g. to know whether we are training
     ComputationEnvironmentPtr m_environment;
+    NetworkInformationPtr m_networkInfo;
 private:
     // -----------------------------------------------------------------------
     // the following members are all result of post-processing by CompileNetwork()

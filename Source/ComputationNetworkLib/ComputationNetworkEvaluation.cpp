@@ -16,6 +16,7 @@
 #include <set>
 #include <algorithm>
 #include <map>
+#include <type_traits>
 
 #include <iostream>
 
@@ -142,7 +143,17 @@ ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(con
         if (node->IsOutOfDateWrtInputs())
         {
             node->BeginForwardProp();
+            std::string nodename = std::string(node->NodeName().begin(), node->NodeName().end());
+            if (node->Is<ComputationNode<float>>())
+            	node->GetNetworkInfoPtr()->GetSynchronizationManager<float>()->BeginSynchronizeState(node.get(), true);
+            else
+            	node->GetNetworkInfoPtr()->GetSynchronizationManager<double>()->BeginSynchronizeState(node.get(), true);
+            cout <<"PAR NETWORK FRONT: " << nodename << " needs gradient:" << node->NeedsGradient() << endl;
             node->ForwardProp(fr.WithLayout(node->GetMBLayout()));
+            if (node->Is<ComputationNode<float>>())
+            	node->GetNetworkInfoPtr()->GetSynchronizationManager<float>()->EndSynchronizeState(node.get(), true);
+            else
+            	node->GetNetworkInfoPtr()->GetSynchronizationManager<double>()->EndSynchronizeState(node.get(), true);
             node->EndForwardProp();
 
             node->BumpEvalTimeStamp();
@@ -159,7 +170,22 @@ ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(con
         auto& node = *pnode;
 
         node->BeginBackprop();
+        //m_syncFloat->BeginSynchronizeState(node.get(), false);
+        std::string nodename = std::string(node->NodeName().begin(), node->NodeName().end());
+        if (node->Is<ComputationNode<float>>())
+        	node->GetNetworkInfoPtr()->GetSynchronizationManager<float>()->BeginSynchronizeState(node.get(), false);
+        else
+        	node->GetNetworkInfoPtr()->GetSynchronizationManager<double>()->BeginSynchronizeState(node.get(), false);
+
+        cout <<"NETWORK BACK: " << nodename << endl;
         node->Backprop(fr.WithLayout(node->GetMBLayout()), true /*childrenInThisLoop*/, true /*childrenInOuterLoop*/);
+        if (node->Is<ComputationNode<float>>())
+        	node->GetNetworkInfoPtr()->GetSynchronizationManager<float>()->EndSynchronizeState(node.get(), false);
+        else
+        	node->GetNetworkInfoPtr()->GetSynchronizationManager<double>()->EndSynchronizeState(node.get(), false);
+
+
+        //m_syncFloat->EndSynchronizeState(node.get(), false);
         node->EndBackprop();
     }
 }
@@ -222,6 +248,7 @@ ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(con
     {
         for (auto& node : m_nestedNodes)
         {
+            node->BeginBackprop();
             node->ForwardProp(t);
             node->BumpEvalTimeStamp();
         }
@@ -859,6 +886,13 @@ void ComputationNetwork::PrintMemorySharingStructure(const vector<ComputationNod
 // predetermine how to share matrices to reduce memory usage.
 // TODO: find a simple topological order and allocateEvalMatrices on that order directly
 // without passing in eval, out, and train nodes.
+template void ComputationNetwork::AllocateAllMatrices<double>(const std::vector<ComputationNodeBasePtr>& evalRootNodes,
+                                             const std::vector<ComputationNodeBasePtr>& outValueRootNodes,
+                                             ComputationNodeBasePtr trainRootNode);
+template void ComputationNetwork::AllocateAllMatrices<float>(const std::vector<ComputationNodeBasePtr>& evalRootNodes,
+                                             const std::vector<ComputationNodeBasePtr>& outValueRootNodes,
+                                             ComputationNodeBasePtr trainRootNode);
+template <class ElemType>
 void ComputationNetwork::AllocateAllMatrices(const std::vector<ComputationNodeBasePtr>& evalRootNodes,
                                              const std::vector<ComputationNodeBasePtr>& outValueRootNodes,
                                              ComputationNodeBasePtr trainRootNode)
@@ -936,6 +970,9 @@ void ComputationNetwork::AllocateAllMatrices(const std::vector<ComputationNodeBa
     }
 
     set<ComputationNodeBasePtr> completedEvaluate;
+    std::unordered_map<ComputationNodeBase*, std::vector<Matrix<ElemType>*>> forwardSwapOutDependencyNode2matrices;
+    std::unordered_map<Matrix<ElemType>*, bool> matrix2IsReleased;
+    std::unordered_map<Matrix<ElemType>*, std::vector<ComputationNodeBasePtr>> matrix2Children;
     for (auto& nodeIter : compositeForwardPropEvalOrder)
     {
         nodeIter->SetOutputNeededDuringBackprop(outputValueNeededDuringBackProp[nodeIter]);
@@ -951,19 +988,61 @@ void ComputationNetwork::AllocateAllMatrices(const std::vector<ComputationNodeBa
 
                 for (auto& nodeLoopIter : recInfo->m_nestedNodes)
                 {
-                    ReleaseMatricesAfterEvalForChildren(nodeLoopIter, parentCount);
+                    bool isReleased = ReleaseMatricesAfterEvalForChildren(nodeLoopIter, parentCount);
+                    if(isReleased)
+                        matrix2Children[(Matrix<ElemType>*)nodeLoopIter->ValuePtr().get()] = nodeLoopIter->GetInputs();
+
+                    int numInputs = nodeLoopIter->GetNumInputs();
+                    for(int i = 0; i < numInputs; i++)
+                    {
+                        Matrix<ElemType> *buffer = (Matrix<ElemType>*)nodeLoopIter->Input(i)->ValuePtr().get();
+                        if(matrix2IsReleased.count(buffer) == 0){ continue; }
+                        if(matrix2IsReleased[buffer] && matrix2Children[buffer].size() > 0)
+                        {
+                            
+                            std::vector<ComputationNodeBasePtr> children = matrix2Children[buffer];
+                            children.erase(std::remove(children.begin(), children.end(), nodeLoopIter), children.end());
+                            if(children.size() == 0)
+                                forwardSwapOutDependencyNode2matrices[nodeLoopIter.get()].push_back(buffer);
+                        }
+                       
+                    }
+
                 }
             }
         }
         else
         {
+            std::string nodename = std::string(nodeIter->NodeName().begin(), nodeIter->NodeName().end());
+            cout << nodename << endl;
             nodeIter->RequestMatricesBeforeForwardProp(m_matrixPool);
             // we only release matrices for the children since the root node's information will be used and should not be shared
             // with others
-            ReleaseMatricesAfterEvalForChildren(nodeIter, parentCount);
-        }
+            bool isReleased = ReleaseMatricesAfterEvalForChildren(nodeIter, parentCount);
+
+            if(isReleased)
+                matrix2Children[(Matrix<ElemType>*)nodeIter->ValuePtr().get()] = nodeIter->GetInputs();
+
+            int numInputs = nodeIter->GetNumInputs();
+            for(int i = 0; i < numInputs; i++)
+            {
+                Matrix<ElemType> *buffer = (Matrix<ElemType>*)nodeIter->Input(i)->ValuePtr().get();
+                if(matrix2IsReleased.count(buffer) == 0){ continue; }
+                if(matrix2IsReleased[buffer] && matrix2Children[buffer].size() > 0)
+                {
+                    
+                    std::vector<ComputationNodeBasePtr> children = matrix2Children[buffer];
+                    children.erase(std::remove(children.begin(), children.end(), nodeIter), children.end());
+                    if(children.size() == 0)
+                        forwardSwapOutDependencyNode2matrices[nodeIter.get()].push_back(buffer);
+                }
+               
+            }
+       }
     }
 
+    unordered_map<Matrix<ElemType>*, ComputationNodeBasePtr> matrix2LastUsageNode;
+    unordered_map<Matrix<ElemType>*, ComputationNodeBasePtr> matrix2FirstUsageNode;
     if (trainRootNode != nullptr)
     {
         const std::list<ComputationNodeBasePtr>& backPropNodes = GetEvalOrder(trainRootNode);
@@ -989,6 +1068,7 @@ void ComputationNetwork::AllocateAllMatrices(const std::vector<ComputationNodeBa
                     recInfo->AllocateGradientMatricesForInputs(m_matrixPool);
                     // Loops are computed sample by sample so we have to allocate them all
                     recInfo->ReleaseMatricesAfterBackprop(m_matrixPool);
+                    matrix2LastUsageNode[(Matrix<ElemType>*)n->ValuePtr().get()] = n;
                 }
             }
             else
@@ -997,10 +1077,96 @@ void ComputationNetwork::AllocateAllMatrices(const std::vector<ComputationNodeBa
                 n->AllocateGradientMatricesForInputs(m_matrixPool);
                 // Root node's information will be used and should not be shared with others, also it's small (1x1)
                 if ((n != trainRootNode) && n->NeedsGradient())
+                {
                     n->ReleaseMatricesAfterBackprop(m_matrixPool);
+                }
             }
         }
+
+        for (auto iter = backPropNodes.rbegin(); iter != backPropNodes.rend(); iter++) // for gradient computation, traverse in reverse order
+        {
+            auto n = *iter;
+            int numInputs = n->GetNumInputs();
+            Matrix<ElemType> *bufferValue;
+            Matrix<ElemType> *bufferGrad;
+            if (n->IsPartOfLoop())
+            {
+                shared_ptr<SEQTraversalFlowControlNode> recInfo = FindInRecurrentLoops(m_allSEQNodes, n);
+                if (completedGradient.insert(recInfo).second)
+                {
+                    for(int i = 0; i < numInputs; i++)
+                    {
+                        bufferValue = (Matrix<ElemType>*)n->Input(i)->ValuePtr().get();
+                        bufferGrad = (Matrix<ElemType>*)n->Input(i)->ValuePtr().get();
+                        matrix2LastUsageNode[bufferValue] = n;
+                        matrix2LastUsageNode[bufferGrad] = n;
+
+                        if(matrix2FirstUsageNode.count(bufferValue) == 0)
+                            matrix2FirstUsageNode[bufferValue] = n;
+                        if(matrix2FirstUsageNode.count(bufferGrad) == 0)
+                            matrix2FirstUsageNode[bufferGrad] = n;
+                    }
+                    bufferValue = (Matrix<ElemType>*)n->ValuePtr().get();
+                    bufferGrad = (Matrix<ElemType>*)n->ValuePtr().get();
+                    matrix2LastUsageNode[bufferValue] = n;
+                    matrix2LastUsageNode[bufferGrad] = n;
+
+                    if(matrix2FirstUsageNode.count(bufferValue) == 0)
+                        matrix2FirstUsageNode[bufferValue] = n;
+                    if(matrix2FirstUsageNode.count(bufferGrad) == 0)
+                        matrix2FirstUsageNode[bufferGrad] = n;
+                }
+            }
+            else
+            {
+                if ((n != trainRootNode) && n->NeedsGradient())
+                {
+                    for(int i = 0; i < numInputs; i++)
+                    {
+                        bufferValue = (Matrix<ElemType>*)n->Input(i)->ValuePtr().get();
+                        bufferGrad = (Matrix<ElemType>*)n->Input(i)->ValuePtr().get();
+                        matrix2LastUsageNode[bufferValue] = n;
+                        matrix2LastUsageNode[bufferGrad] = n;
+
+                        if(matrix2FirstUsageNode.count(bufferValue) == 0)
+                            matrix2FirstUsageNode[bufferValue] = n;
+                        if(matrix2FirstUsageNode.count(bufferGrad) == 0)
+                            matrix2FirstUsageNode[bufferGrad] = n;
+                    }
+                    bufferValue = (Matrix<ElemType>*)n->ValuePtr().get();
+                    bufferGrad = (Matrix<ElemType>*)n->ValuePtr().get();
+                    matrix2LastUsageNode[bufferValue] = n;
+                    matrix2LastUsageNode[bufferGrad] = n;
+
+                    if(matrix2FirstUsageNode.count(bufferValue) == 0)
+                        matrix2FirstUsageNode[bufferValue] = n;
+                    if(matrix2FirstUsageNode.count(bufferGrad) == 0)
+                        matrix2FirstUsageNode[bufferGrad] = n;
+                }
+            }
+        }
+
     }
+
+    unordered_map<ComputationNodeBase*, std::vector<Matrix<ElemType>*> > backwardSwapInDependencyNode2matrices;
+    unordered_map<ComputationNodeBase*, std::vector<Matrix<ElemType>*> > lastBackwardsDependencyNode2matrices;
+    for(auto node :  GetNodesWithType(OperationNameOf(LearnableParameter)))
+    {
+        Matrix<ElemType> *buffer = (Matrix<ElemType>*)node->ValuePtr().get();
+        if(matrix2LastUsageNode.count(buffer) > 0)
+            matrix2LastUsageNode.erase(buffer);
+    }
+
+    for(auto pair : matrix2FirstUsageNode)
+        backwardSwapInDependencyNode2matrices[pair.second.get()].push_back(pair.first);
+
+    for(auto pair : matrix2LastUsageNode)
+        lastBackwardsDependencyNode2matrices[pair.second.get()].push_back(pair.first);
+
+
+        m_networkInfo->GetSynchronizationManager<ElemType>()->InitializeSwapping(forwardSwapOutDependencyNode2matrices, 
+                             backwardSwapInDependencyNode2matrices,
+                             lastBackwardsDependencyNode2matrices);
 
     m_areMatricesAllocated = true;
 
@@ -1194,89 +1360,89 @@ void ComputationNetwork::FindDependencyGraph(const std::vector<ComputationNodeBa
 
 
 
-    SynchronizationManager<ElemType> *sync = SynchronizationManager<ElemType>::GetSynchronizationManager();
-        std::vector<DependencyNode<ElemType>*> rootNodes;
-        DependencyNode<ElemType> *helper = new DependencyNode<ElemType>();
-        std::unordered_map<DependencyNode<ElemType>*, std::vector<DependencyNode<ElemType>*> > forwardDependencies;
-        std::unordered_map<Matrix<ElemType>*, DependencyNode<ElemType>*> buffer2DependencyNode;
-        DependencyNode<ElemType> *childNode;
-	    for (auto& node : compositeForwardPropEvalOrder)
-	    {
-            int inputCount = node->GetNumInputs();
-           
-            if(node->ValuePtr() != NULL)
-            { 
-                Matrix<ElemType> *buffer = (Matrix<ElemType>*)node->ValuePtr().get();
-                if(inputCount == 0){  sync->m_bannedBuffers2bool[buffer] = true; }
-                if(buffer2DependencyNode.count(buffer) == 0)
-                {
-                    buffer2DependencyNode[buffer] = helper->makeNode(buffer);
-                    rootNodes.push_back(buffer2DependencyNode[buffer]);
-                }
+    //    SynchronizationManager<ElemType> *sync = SynchronizationManager<ElemType>::GetSynchronizationManager();
+    //    std::vector<DependencyNode<ElemType>*> rootNodes;
+    //    DependencyNode<ElemType> *helper = new DependencyNode<ElemType>();
+    //    std::unordered_map<DependencyNode<ElemType>*, std::vector<DependencyNode<ElemType>*> > forwardDependencies;
+    //    std::unordered_map<Matrix<ElemType>*, DependencyNode<ElemType>*> buffer2DependencyNode;
+    //    DependencyNode<ElemType> *childNode;
+	//    for (auto& node : compositeForwardPropEvalOrder)
+	//    {
+    //        int inputCount = node->GetNumInputs();
+    //       
+    //        if(node->ValuePtr() != NULL)
+    //        { 
+    //            Matrix<ElemType> *buffer = (Matrix<ElemType>*)node->ValuePtr().get();
+    //            if(inputCount == 0){  sync->m_bannedBuffers2bool[buffer] = true; }
+    //            if(buffer2DependencyNode.count(buffer) == 0)
+    //            {
+    //                buffer2DependencyNode[buffer] = helper->makeNode(buffer);
+    //                rootNodes.push_back(buffer2DependencyNode[buffer]);
+    //            }
 
-                childNode = buffer2DependencyNode[buffer];
+    //            childNode = buffer2DependencyNode[buffer];
 
-               for(int i = 0; i < inputCount; i++)
-               {
-                    Matrix<ElemType> *parentBuffer = (Matrix<ElemType>*)node->Input(i)->ValuePtr().get(); 
-                    if(buffer2DependencyNode.count(parentBuffer) == 0)
-                    {
-                        buffer2DependencyNode[parentBuffer] = helper->makeNode(parentBuffer);
-                        rootNodes.push_back(buffer2DependencyNode[parentBuffer]);
-                    }
-                    
+    //           for(int i = 0; i < inputCount; i++)
+    //           {
+    //                Matrix<ElemType> *parentBuffer = (Matrix<ElemType>*)node->Input(i)->ValuePtr().get(); 
+    //                if(buffer2DependencyNode.count(parentBuffer) == 0)
+    //                {
+    //                    buffer2DependencyNode[parentBuffer] = helper->makeNode(parentBuffer);
+    //                    rootNodes.push_back(buffer2DependencyNode[parentBuffer]);
+    //                }
+    //                
 
-                    forwardDependencies[buffer2DependencyNode[parentBuffer]].push_back(childNode);
-               }
-           }
+    //                forwardDependencies[buffer2DependencyNode[parentBuffer]].push_back(childNode);
+    //           }
+    //       }
  
-	   }
+	//   }
 
 
-       for(auto node : rootNodes)
-            for(auto child : forwardDependencies[node])
-                node->BecomeParentTo(child);
+    //   for(auto node : rootNodes)
+    //        for(auto child : forwardDependencies[node])
+    //            node->BecomeParentTo(child);
 
 
-     std::unordered_map<Matrix<ElemType>*, bool> buffer2IsNeededDuringBackprop;
-     for (auto& node : compositeForwardPropEvalOrder)
-     {
-        if(node->GradientPtr() != NULL)
-        {
-            Matrix<ElemType>* buffer = (Matrix<ElemType>*)node->GradientPtr().get();
-            if(std::count(rootNodes.begin(), rootNodes.end(), buffer2DependencyNode[buffer]) > 0)
-            {
-                buffer2IsNeededDuringBackprop[buffer] = true;
-                //cout << "is needed during backprop: " << buffer << endl;
-            }
-        }
-     }
+    // std::unordered_map<Matrix<ElemType>*, bool> buffer2IsNeededDuringBackprop;
+    // for (auto& node : compositeForwardPropEvalOrder)
+    // {
+    //    if(node->GradientPtr() != NULL)
+    //    {
+    //        Matrix<ElemType>* buffer = (Matrix<ElemType>*)node->GradientPtr().get();
+    //        if(std::count(rootNodes.begin(), rootNodes.end(), buffer2DependencyNode[buffer]) > 0)
+    //        {
+    //            buffer2IsNeededDuringBackprop[buffer] = true;
+    //            //cout << "is needed during backprop: " << buffer << endl;
+    //        }
+    //    }
+    // }
 
 
-     std::unordered_map<Matrix<ElemType>*, std::vector<int>> buffer2TimeSteps;
-     std::unordered_map<int, std::vector<Matrix<ElemType>*>> timeStep2Buffers;
-     for(auto root : rootNodes)
-     {
-        if(buffer2TimeSteps.count(root->buffer))
-        {
-            std::vector<int> timesteps = buffer2TimeSteps[root->buffer];
-            if(std::count(timesteps.begin(), timesteps.end(), root->level))
-                continue;
-        }
+    // std::unordered_map<Matrix<ElemType>*, std::vector<int>> buffer2TimeSteps;
+    // std::unordered_map<int, std::vector<Matrix<ElemType>*>> timeStep2Buffers;
+    // for(auto root : rootNodes)
+    // {
+    //    if(buffer2TimeSteps.count(root->buffer))
+    //    {
+    //        std::vector<int> timesteps = buffer2TimeSteps[root->buffer];
+    //        if(std::count(timesteps.begin(), timesteps.end(), root->level))
+    //            continue;
+    //    }
 
-        if(timeStep2Buffers.count(root->level))
-        {
-            std::vector<Matrix<ElemType>*> buffers = timeStep2Buffers[root->level];
-            if(std::count(buffers.begin(), buffers.end(), root->buffer))
-                continue;
-        }
-        buffer2TimeSteps[root->buffer].push_back(root->level);
-        timeStep2Buffers[root->level].push_back(root->buffer);
-     }
+    //    if(timeStep2Buffers.count(root->level))
+    //    {
+    //        std::vector<Matrix<ElemType>*> buffers = timeStep2Buffers[root->level];
+    //        if(std::count(buffers.begin(), buffers.end(), root->buffer))
+    //            continue;
+    //    }
+    //    buffer2TimeSteps[root->buffer].push_back(root->level);
+    //    timeStep2Buffers[root->level].push_back(root->buffer);
+    // }
 
 
 
-    sync->InitializeSwapping(buffer2TimeSteps, timeStep2Buffers, buffer2IsNeededDuringBackprop);
+    //sync->InitializeSwapping(buffer2TimeSteps, timeStep2Buffers, buffer2IsNeededDuringBackprop);
 
     //for(auto node : rootNodes)
     //{
@@ -1496,15 +1662,21 @@ void ComputationNetwork::FindDependencyGraph(const std::vector<ComputationNodeBa
 
 }
 
-void ComputationNetwork::ReleaseMatricesAfterEvalForChildren(ComputationNodeBasePtr n, std::unordered_map<ComputationNodeBasePtr, int>& parentCount)
+bool ComputationNetwork::ReleaseMatricesAfterEvalForChildren(ComputationNodeBasePtr n, std::unordered_map<ComputationNodeBasePtr, int>& parentCount)
 {
+    bool isReleased = false;
     for (int i = 0; i < n->GetNumInputs(); i++)
     {
         ComputationNodeBasePtr pNode = n->GetInputs()[i];
         parentCount[pNode]--;
         if (parentCount[pNode] == 0)
+        {
+            isReleased = true;
             pNode->ReleaseMatricesAfterForwardProp(m_matrixPool);
+        }
     }
+
+    return isReleased;
 }
 
 }}}

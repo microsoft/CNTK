@@ -263,7 +263,7 @@ void CNTKEvalExtended<ElemType>::StartForwardEvaluation(const std::vector<wstrin
     m_outputNodes  = this->m_net->OutputNodesByName(outputNodeNames);
     m_inputNodes = this->m_net->InputNodesForOutputs(outputNodeNames);
     // allocate memory for forward computation
-    this->m_net->AllocateAllMatrices({}, m_outputNodes, nullptr);
+    this->m_net->AllocateAllMatrices<ElemType>({}, m_outputNodes, nullptr);
     this->m_net->StartEvaluateMinibatchLoop(m_outputNodes);
     m_inputMatrices = DataReaderHelpers::RetrieveInputMatrices(m_inputNodes);
 

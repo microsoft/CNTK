@@ -251,12 +251,6 @@ void DoCommands(const ConfigParameters& config, const shared_ptr<MPIWrapper>& mp
                 }
                 else if (thisAction == "test" || thisAction == "eval")
                 {
-
-                if (type == "float")
-                    SynchronizationManager<float>::GetSynchronizationManager()->m_useMemorySwapping = false;
-                else
-                    SynchronizationManager<double>::GetSynchronizationManager()->m_useMemorySwapping = false;
-
                     DoEval<ElemType>(commandParams);
                 }
                 else if (thisAction == "edit")
@@ -314,12 +308,6 @@ void DoCommands(const ConfigParameters& config, const shared_ptr<MPIWrapper>& mp
 
             NDLScript<ElemType> ndlScript;
             ndlScript.ClearGlobal(); // clear global macros between commands
-
-            if (type == "float")
-                SynchronizationManager<float>::GetSynchronizationManager()->ClearActionsAndTheirMemory();
-            else
-                SynchronizationManager<double>::GetSynchronizationManager()->ClearActionsAndTheirMemory();
-
             // Synchronize all ranks before proceeding to next action/command
             if (mpi)
                 mpi->WaitAll();
@@ -708,17 +696,9 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
 
 
     if (type == "float")
-    {
-        SynchronizationManager<float>::GetSynchronizationManager()->m_useMemorySwapping = config(L"useMemorySwapping", "true");
-        SynchronizationManager<float>::GetSynchronizationManager()->m_isFloat = true;
         DoCommands<float>(config, mpi);
-    }
     else if (type == "double")
-    {
-        SynchronizationManager<double>::GetSynchronizationManager()->m_useMemorySwapping = config(L"useMemorySwapping", "true");
-        SynchronizationManager<float>::GetSynchronizationManager()->m_isFloat = false;
         DoCommands<double>(config, mpi);
-    }
     else
         RuntimeError("CNTK: Invalid precision string: \"%s\", must be \"float\" or \"double\"", type.c_str());
 

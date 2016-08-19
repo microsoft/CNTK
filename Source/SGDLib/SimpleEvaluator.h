@@ -87,7 +87,7 @@ public:
         std::vector<EpochCriterion> evalResults(evalNodes.size(), EpochCriterion(0));
 
         // allocate memory for forward computation
-        m_net->AllocateAllMatrices(evalNodes, {}, nullptr);
+        m_net->AllocateAllMatrices<ElemType>(evalNodes, {}, nullptr);
 
         // prepare features and labels
         auto& featureNodes = m_net->FeatureNodes();
