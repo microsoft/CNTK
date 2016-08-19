@@ -83,14 +83,14 @@ if __name__=='__main__':
         elif si.m_name == 'labels':
             labels_si = si
 
-    minibatchSizeLimits = dict()    
-    minibatchSizeLimits[features_si] = (0,minibatch_size)
-    minibatchSizeLimits[labels_si] = (0,minibatch_size)
+    minibatch_size_limits = dict()    
+    minibatch_size_limits[features_si] = (0,minibatch_size)
+    minibatch_size_limits[labels_si] = (0,minibatch_size)
                          
     trainer = cntk_py.Trainer(ffnet, ce.output(), [cntk_py.sgdlearner(ffnet.parameters(), lr)])          
     
     for i in range(0,int(num_minibatches_to_train)):    
-        mb=cm.get_next_minibatch(minibatchSizeLimits, dev)
+        mb=cm.get_next_minibatch(minibatch_size_limits, dev)
         
         arguments = dict()
         arguments[input] = mb[features_si].m_data
@@ -100,5 +100,6 @@ if __name__=='__main__':
 
         freq = 20
         if i % freq == 0:
+            #TODO: read loss values from GPU, if applicable
             print(str(i+freq) + ": " + str(trainer.previous_minibatch_training_loss_value().data().to_numpy()))
     
