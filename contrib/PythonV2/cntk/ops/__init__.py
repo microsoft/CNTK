@@ -135,15 +135,15 @@ def convolution(convolution_map, operand, strides=(1,), sharing=[True],
     '''
     from ..cntk_py import convolution
     operand = sanitize_input(operand)    
-    return convolution(convolution_map, operand, strides, sharing, auto_padding, 
-                        lower_pad, upper_pad, transpose, max_temp_mem_size_in_samples,
+    return convolution(convolution_map, operand, tuple(reversed(strides)), sharing, auto_padding, 
+                        tuple(reversed(lower_pad)), tuple(reversed(upper_pad)), transpose, max_temp_mem_size_in_samples,
                         name) 
 
-MAX_POOLING=1
-AVG_POOLING=2
+MAX_POOLING=cntk_py.PoolingType_Max
+AVG_POOLING=cntk_py.PoolingType_Average
 
 def pooling(operand, pooling_type, pooling_window_shape, strides=(1,), auto_padding=[False], 
-            lower_pad=(0), upper_pad=(0,), name=''):
+            lower_pad=(0,), upper_pad=(0,), name=''):
     '''
     TODO: 
     Args:                
@@ -160,8 +160,8 @@ def pooling(operand, pooling_type, pooling_window_shape, strides=(1,), auto_padd
     '''
     from ..cntk_py import pooling
     operand = sanitize_input(operand)    
-    return pooling(operand, pooling_type, pooling_window_shape, strides, auto_padding,
-                    lower_pad, upper_pad, name) 
+    return pooling(operand, pooling_type, tuple(reversed(pooling_window_shape)), tuple(reversed(strides)), auto_padding,
+                    tuple(reversed(lower_pad)), tuple(reversed(upper_pad)), name)
 
 def batch_normalization(operand, scale, bias, running_mean, running_inv_std, special,
                         normalization_time_constant=0, blend_time_constant=0,
@@ -647,7 +647,7 @@ def relu(x, name=''):
     '''
     from ..cntk_py import re_lu
     x = sanitize_input(x)
-    return relu(x, name)    
+    return re_lu(x, name)    
 
 def sigmoid(x, name=''):
     '''
