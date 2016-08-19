@@ -365,6 +365,7 @@ public:
         TensorShape outputShape;
         // If 2D convolution syntax is used then some of the tensor dimensions need to be inferred.
         if (m_convolution2D)
+        // NOTE: when m_convolution2D is true, it's a legacy branch. Code should not enter here any more. 
         {
             // Need to update some tensors with correct input dims.
             auto inDims = ImageDimensions(GetInputSampleLayout(inputIdx), m_imageLayout);
@@ -416,7 +417,11 @@ public:
                 outputShape = ConvolveGeometry::ComputeInputShape(inputShape, m_kernelShape, m_mapCount, m_stride,
                                                                    m_sharing, m_autoPad, m_lowerPad, m_upperPad);
             }
-            SetDims(outputShape, HasMBLayout());
+
+            if (m_imageLayout == ImageLayoutKind::CHW) 
+                SetDims(outputShape, HasMBLayout());
+            else    // legacy format 
+                SetDims(ImageDimensions(outputShape, ImageLayoutKind::CHW).AsTensorShape(m_imageLayout), HasMBLayout());
         }
 
         // update LearnableParameter if it has 0 dimensions (to be inferred)
