@@ -1,0 +1,196 @@
+makeMode = false
+
+command=Train
+#command=Test
+#command=Write
+
+deviceId = "Auto"
+precision = "float"
+parallelTrain = "false"
+traceLevel = 1
+
+rootDir = "." ; 
+dataDir  = "$rootDir$/data/" ; 
+outputDir = "$rootDir$/Output"
+modelDir = "$outputDir$"
+
+modelPath = "$modelDir$/Fast-RCNN"
+stderr = "$outputDir$/Fast-RCNN.log"
+
+ImageH = 1000
+ImageW = 1000
+ImageC = 3
+
+NumLabels = 21
+
+NumTrainROIs = 64
+TrainROIDim = 256               # $NumTrainROIs$ * 4 
+TrainROILabelDim = 1344         # $NumTrainROIs$ * $NumLabels$
+
+NumTestROIs = 200
+TestROIDim = 800
+TestROILabelDim = 4200
+
+Train = {
+    action = "train"
+    
+    BrainScriptNetworkBuilder = {
+        ROIPooling (input, ROIs, shape) = new ComputationNode { operation = 'ROIPooling' ; inputs = (ROIs:input) ; H = shape[1] ; W = shape[0] ; imageLayout = "cudnn" ; tag='' /*plus the function args*/ } 
+        CrossEntropyWithSoftmaxND (y, z, axis=0) = ReduceLogSum (z, axis=axis) - ReduceSum (y .* z, axis=axis)
+        # account for all wrong predictions, max 1 per instance
+        MyClassificationErrorND (out, labels, axis=1, tag='') = {
+            axmax = ReduceMax (out, axis=axis)          # max value along competition axis
+            pred = Equal(out, axmax)                    # 1 for all values that are max
+            wrongPred = NotEqual (labels, pred)         # look up all wrong predictions {label index}
+            axErr = ReduceSum(wrongPred, axis=axis)     # sum up wrong predictions  along competition axis
+            capErr = GreaterEqual (axErr, Constant(1))  # only count maximally one error per prediction
+            err = ReduceMean (capErr, tag=tag)          # average into a single number per sample
+        }.err
+
+        imageShape = $ImageH$:$ImageW$:$ImageC$         # 500:500:3
+        labelShape = $NumLabels$:$NumTrainROIs$         # 21:64
+        ROIShape = $TrainROIDim$                        # 256
+
+        network = BS.Network.Load ("AlexNet.89")
+        pool1 = BS.Network.CloneFunction(network.features, network.pool1, parameters="constant")
+        middle = BS.Network.CloneFunction(network.pool1, network.conv5_y)
+        fcLayers = BS.Network.CloneFunction(network.pool3, network.h2_d)
+
+        model (features, rois) = {
+            featNorm = features - Constant (114)
+            pool1Out = pool1 (featNorm)
+            conv5Out = middle (pool1Out)
+            roiOut   = ROIPooling (conv5Out, rois, (6:6))
+            fcOut    = fcLayers (roiOut)
+            #z       = LinearLayer { 21, init='gaussian', initValueScale=0.01 } (fcOut)
+            fW = ParameterTensor((21:4096), init='gaussian', initValueScale=0.01)
+            fb = ParameterTensor(21, init='zero')
+            ft = Times(fW, fcOut)
+            z = Plus(ft, fb)
+        }.z
+
+        features = Input (imageShape)
+        roiLabels = Input (labelShape)
+        rois = Input (ROIShape)
+
+        z = model (features, rois)
+        
+        ce = CrossEntropyWithSoftmaxND (roiLabels, z, axis=1)
+        errs = MyClassificationErrorND(z, roiLabels, axis=1)
+        
+        featureNodes    = (features:rois)
+        labelNodes      = (roiLabels)
+        criterionNodes  = (ce)
+        evaluationNodes = (errs)
+        outputNodes     = (z)
+    }
+
+    SGD = {
+        epochSize=0
+        minibatchSize=2
+        maxEpochs=1                          # !!!! 15
+        learningRatesPerMB=0.0001*5:0.0001
+        momentumPerMB=0*5:0.9
+        L2RegWeight=0.0001 #0.0005
+        dropoutRate=0.5
+        
+        numMBsToShowResult=50
+    }
+
+    reader = {
+        randomize = false
+        verbosity = 2
+        deserializers = ({
+            type = "CNTKTextFormatDeserializer" ; module = "CNTKTextFormatReader"
+            file = "$dataDir$/tv2012pad.rois.txt"
+            input = { rois = { dim = $TrainROIDim$ ; format = "dense" } }
+        }:{
+            type = "CNTKTextFormatDeserializer" ; module = "CNTKTextFormatReader"
+            file = "$dataDir$/tv2012pad.roilabels.txt"
+            input = { roiLabels = { dim = $TrainROILabelDim$ ; format = "dense" } }
+        }:{
+            type = "ImageDeserializer" ; module = "ImageReader"
+            file="$dataDir$/tv2012pad.txt"
+            input = {
+                features = { transforms = (
+                    { type = "ScaleSide" ; target = $ImageW$ ; side = "max" }:
+                    { type = "Pad" ; width = $ImageW$ ; height = $ImageH$; channels = $ImageC$; value = 114 }:
+                    #{ type = "Mean" ; meanFile = "$rootDir$/ImageNet500_mean.xml" }
+                    { type = "Transpose" }
+                )}
+                ignored={labelDim=1000}
+            }
+        })
+    }
+}
+
+Test={
+    action="test"
+    minibatchSize=1
+
+    # use for wrtie action
+    # action="write"
+    # outputPath="$OutputDir$/write_bs03_model02"
+    
+    BrainScriptNetworkBuilder = {
+        CrossEntropyWithSoftmaxND (y, z, axis=0) = ReduceLogSum (z, axis=axis) - ReduceSum (y .* z, axis=axis)
+        # account for all wrong predictions, max 1 per instance
+        MyClassificationErrorND (out, labels, axis=1, tag='') = {
+            axmax = ReduceMax (out, axis=axis)          # max value along competition axis
+            pred = Equal(out, axmax)                    # 1 for all values that are max
+            wrongPred = NotEqual (labels, pred)         # look up all wrong predictions {label index}
+            axErr = ReduceSum(wrongPred, axis=axis)     # sum up wrong predictions  along competition axis
+            capErr = GreaterEqual (axErr, Constant(1))  # only count maximally one error per prediction
+            err = ReduceMean (capErr, tag=tag)          # average into a single number per sample
+        }.err
+
+        imageShape = $ImageH$:$ImageW$:$ImageC$        # 1000:1000:3
+        labelShape = $NumLabels$:$NumTestROIs$         # 21:200
+        ROIShape = $TestROIDim$                        # 800
+
+        # load network
+        network = BS.Network.Load ("$modelDir$/RCNN-test02.bs")
+        clonedNet = BS.Network.CloneFunction ((network.features:network.rois), { z = network.z }, parameters="constant")
+
+        features = Input (imageShape)
+        roiLabels = Input (labelShape)
+        rois = Input (ROIShape)
+
+        z = clonedNet(features, rois).z
+        
+        ce = CrossEntropyWithSoftmaxND (roiLabels, z, axis=1)
+        errs = MyClassificationErrorND(z, roiLabels, axis=1)
+        
+        featureNodes    = (features:rois)
+        labelNodes      = (roiLabels)
+        criterionNodes  = (ce)
+        evaluationNodes = (errs)
+        outputNodes     = (z)
+    }
+    
+    reader = {
+        randomize = false
+        verbosity = 2
+        deserializers = ({
+            type = "CNTKTextFormatDeserializer" ; module = "CNTKTextFormatReader"
+            file = "$dataDir$/test2007pad_all.rois.txt"
+            input = { rois = { dim = $TestROIDim$ ; format = "dense" } }
+        }:{
+            type = "CNTKTextFormatDeserializer" ; module = "CNTKTextFormatReader"
+            file = "$dataDir$/test2007pad_all.roilabels.txt"
+            input = { roiLabels = { dim = $TestROILabelDim$ : format = "dense" } }
+        }:{
+            type = "ImageDeserializer" ; module = "ImageReader"
+            file="$dataDir$/test2007pad_all.txt"
+            input = {
+                features = { transforms = (
+                    { type = "ScaleSide" ; target = $ImageW$ ; side = "max" }:
+                    { type = "Pad" ; width = $ImageW$ ; height = $ImageH$; channels = $ImageC$; value = 114 }:
+                    #{ type = "Mean" ; meanFile = "$rootDir$/ImageNet500_mean.xml" }
+                    { type = "Transpose" }
+                )}
+                ignored={labelDim=1000}
+            }
+        })
+    }
+}

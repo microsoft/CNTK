@@ -1,9 +1,0 @@
-m1 = LoadModel("$curModel$", format="cntk")
-SetDefaultModel(m1)
-
-newFeatures = ImageInput($newHeight$, $newWidth$, 3, tag=feature, imageLayout="cudnn")
-SetInput(conv1.c, 1, newFeatures)
-DeleteNode(features)
-Rename(newFeatures, features)
-
-SaveModel(m1, "$newModel$", format="cntk")
