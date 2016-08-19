@@ -81,6 +81,7 @@ private:
     SeqReaderMap m_readers;
 
     FileByteReader m_defaultReader;
+    int m_verbosity;
 };
 
 }}}

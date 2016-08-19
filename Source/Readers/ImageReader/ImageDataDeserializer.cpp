@@ -136,6 +136,7 @@ ImageDataDeserializer::ImageDataDeserializer(CorpusDescriptorPtr corpus, const C
     }
 
     string precision = (ConfigValue)config("precision", "float");
+    m_verbosity = config(L"verbosity", 0);
 
     // Feature stream.
     ConfigParameters featureSection = inputs(featureNames[0]);
@@ -180,6 +181,8 @@ ImageDataDeserializer::ImageDataDeserializer(const ConfigParameters& config)
     m_grayscale = configHelper.UseGrayscale();
     const auto& label = m_streams[configHelper.GetLabelStreamId()];
     const auto& feature = m_streams[configHelper.GetFeatureStreamId()];
+
+    m_verbosity = config(L"verbosity", 0);
 
     // Expect data in HWC.
     ImageDimensions dimensions(*feature->m_sampleLayout, configHelper.GetDataFormat());
@@ -312,7 +315,10 @@ void ImageDataDeserializer::CreateSequenceDescriptions(CorpusDescriptorPtr corpu
     }
 
     timer.Stop();
-    fprintf(stderr, "ImageDeserializer: Read information about %d images in %.6g seconds\n", (int)m_imageSequences.size(), timer.ElapsedSeconds());
+    if (m_verbosity > 1)
+    {
+        fprintf(stderr, "ImageDeserializer: Read information about %d images in %.6g seconds\n", (int)m_imageSequences.size(), timer.ElapsedSeconds());
+    }
 }
 
 ChunkPtr ImageDataDeserializer::GetChunk(ChunkIdType chunkId)
