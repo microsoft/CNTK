@@ -3,7 +3,7 @@ import sys
 import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..'))
 import cntk.cntk_py as cntk_py
-from cntk.ops import variable, constant, parameter, cross_entropy_with_softmax, combine, classification_error, sigmoid, plus, times
+from cntk.ops import variable, constant, parameter, cross_entropy_with_softmax, combine, classification_error, sigmoid, plus, times, element_times
 from cntk.utils import create_minibatch_source
 
 def fully_connected_layer(input, output_dim, device_id, nonlinearity):        
@@ -62,10 +62,12 @@ if __name__=='__main__':
     num_minibatches_to_train = (num_samples_per_sweep * num_sweeps_to_train_with) / minibatch_size
     lr = 0.003125
     input = variable((input_dim,), np.float32, needs_gradient=False, name="features")
+    scaled_input = element_times(constant((), 0.00390625), input)
+
     label = variable((num_output_classes,), np.float32, needs_gradient=False, name="labels")
     
     dev = cntk_py.DeviceDescriptor.cpudevice()       
-    netout = fully_connected_classifier_net(input, num_output_classes, hidden_layers_dim, num_hidden_layers, dev, sigmoid)  
+    netout = fully_connected_classifier_net(scaled_input.output(), num_output_classes, hidden_layers_dim, num_hidden_layers, dev, sigmoid)  
         
     ce = cross_entropy_with_softmax(netout.output(), label)
     pe = classification_error(netout.output(), label)
