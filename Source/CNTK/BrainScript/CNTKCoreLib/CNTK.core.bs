@@ -30,25 +30,25 @@
 
 # LinearLayer -- create a fully-connected linear projection layer
 # Note: outDim may describe a tensor as well.
-LinearLayer {outDim, bias = true, init='uniform', initValueScale=1} =
+LinearLayer {outDim, bias = true, init='uniform', initValueScale=1, inputRank=0} =
 {
-    W = ParameterTensor {_ConcatArrays (outDim, 0), init=init, initValueScale=initValueScale}
+    W = ParameterTensor {_ConcatArrays (outDim, Inferred), init=init, initValueScale=initValueScale}
     b = ParameterTensor {outDim, initValue=0}
-    outRank = Length (_AsArray (outDim)) # support outputs with tensor layouts
+    outputRank = Length (_AsArray (outDim)) # support outputs with tensor layouts
     apply (x) =
         if bias
-        then Times (W, x, outputRank = outRank) + b
-        else Times (W, x, outputRank = outRank)
+        then Times (W, x, outputRank=outputRank, inputRank=inputRank) + b
+        else Times (W, x, outputRank=outputRank, inputRank=inputRank)
 }.apply
 
 # DenseLayer -- create a fully-connected layer with optional non-linearity
-DenseLayer{outDim, bias = true, activation=(x=>x), init='uniform', initValueScale=1} = Sequential ( LinearLayer{outDim, bias = bias, init = init, initValueScale = initValueScale} : activation )
+DenseLayer{outDim, bias = true, activation=(x=>x), init='uniform', initValueScale=1, inputRank=0} = Sequential ( LinearLayer{outDim, bias=bias, init=init, initValueScale=initValueScale, inputRank=inputRank} : activation )
 
 # EmbeddingLayer -- create a linear embedding layer
 EmbeddingLayer {outDim,                                   # dimension of embedding
                 embeddingPath = '', transpose = false} =  # load a fixed embedding from a path instead
 {
-    shape = if transpose then (0 : outDim) else (outDim : 0)
+    shape = if transpose then (Inferred : outDim) else (outDim : Inferred)
     E = if embeddingPath == ''
         then ParameterTensor {shape, init='uniform'}  # learnable
         else ParameterTensor {shape, initFromFilePath = embeddingPath, learningRateMultiplier = 0}  # fixed from file
@@ -77,9 +77,9 @@ ConvolutionalLayer {numOutputChannels,   # e.g. (1) or BS.Constants.None
     outputChannelsShape = _AsArray (numOutputChannels)
     outputRank = Length (outputChannelsShape)
     filterRank = Length (filterShape)
-    kernelShape = _ConcatArrays (filterShape, Repeat (reductionRank, 0)) # kernel := filter plus reductionDims
+    kernelShape = _ConcatArrays (filterShape, Repeat (reductionRank, Inferred)) # kernel := filter plus reductionDims
     #W = ParameterTensor{_ConcatArrays (                kernelShape,      outputChannelsShape), init = init, initValueScale = initValueScale}  # [ W x H x C x K ]
-    W = ParameterTensor{(outputChannelsShape:0), init = init, initValueScale = initValueScale}  # old-style for backwards-compatible random initialization
+    W = ParameterTensor{(outputChannelsShape : Inferred), init = init, initValueScale = initValueScale}  # old-style for backwards-compatible random initialization
     b = ParameterTensor(_ConcatArrays (Repeat (Length (filterShape), 1), outputChannelsShape), initValue = 0)                                 # [ 1 x 1 x     K ]
     sharing = true    # TODO: support this
     transpose = false # TODO: support this
@@ -195,6 +195,8 @@ LogPriorLayer{} = LogPrior
 Identity(x) = x # sometimes helpful
 
 None = BS.Constants.None   # for use with some optional parameters; test with IsNone()
+
+Inferred = 0  # denotes a dimension that is to be inferred
 
 ##############################################################################
 # Composing layers or models into more more complex models
@@ -324,7 +326,7 @@ CNTK2 = [
 
     // 4. Tensor operations
     // Changes: Matrix -> Tensor. A -> x, B -> y. Data must come on y ("default parameter") hence not using _
-    Times(x, y, outputRank=1, tag='') = new ComputationNode [ operation = 'Times' ; inputs = ( x : y ) /*plus the function args*/ ]
+    Times(x, y, outputRank=1, inputRank=1, tag='') = new ComputationNode [ operation = 'Times' ; inputs = ( x : y ) /*plus the function args*/ ]
 
     // 5. Elementwise operations.
     // Changes: "Matrix" -> "Tensor"; left input -> _; Clip: move input to front. ElementDivide/Times: anotherTensor -> y
@@ -344,12 +346,12 @@ CNTK2 = [
     Tanh(_, tag='') = new ComputationNode [ operation = 'Tanh' ; inputs = _ /*plus the function args*/ ]
 
     // 6. Reductions    
-    ReduceSum   (_, axis=0, tag='') = new ComputationNode [ operation = 'ReduceElements' ; inputs = _ ; reductionOp = "Sum"    /*plus the function args*/ ]
-    ReduceLogSum(_, axis=0, tag='') = new ComputationNode [ operation = 'ReduceElements' ; inputs = _ ; reductionOp = "LogSum" /*plus the function args*/ ]
-    ReduceMin   (_, axis=0, tag='') = new ComputationNode [ operation = 'ReduceElements' ; inputs = _ ; reductionOp = "Min"    /*plus the function args*/ ]
-    ReduceMax   (_, axis=0, tag='') = new ComputationNode [ operation = 'ReduceElements' ; inputs = _ ; reductionOp = "Max"    /*plus the function args*/ ]
-    #ReduceMean (_, axis=0, tag='') = new ComputationNode [ operation = 'ReduceElements' ; inputs = _ ; reductionOp = "Mean"   /*plus the function args*/ ]
-    
+    ReduceSum   (_, axis=None, tag='') = new ComputationNode [ operation = 'ReduceElements' ; inputs = _ ; axis = if BS.Constants.IsNone (axis) then 0 else axis reductionOp = "Sum"    /*plus the function args*/ ]
+    ReduceLogSum(_, axis=None, tag='') = new ComputationNode [ operation = 'ReduceElements' ; inputs = _ ; axis = if BS.Constants.IsNone (axis) then 0 else axis reductionOp = "LogSum" /*plus the function args*/ ]
+    ReduceMin   (_, axis=None, tag='') = new ComputationNode [ operation = 'ReduceElements' ; inputs = _ ; axis = if BS.Constants.IsNone (axis) then 0 else axis reductionOp = "Min"    /*plus the function args*/ ]
+    ReduceMax   (_, axis=None, tag='') = new ComputationNode [ operation = 'ReduceElements' ; inputs = _ ; axis = if BS.Constants.IsNone (axis) then 0 else axis reductionOp = "Max"    /*plus the function args*/ ]
+    #ReduceMean (_, axis=None, tag='') = new ComputationNode [ operation = 'ReduceElements' ; inputs = _ ; axis = if BS.Constants.IsNone (axis) then 0 else axis reductionOp = "Mean"   /*plus the function args*/ ]
+
     // 7. Control flow (if, composite etc.)
     // None so far
 

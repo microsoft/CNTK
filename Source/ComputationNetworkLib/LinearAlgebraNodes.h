@@ -238,8 +238,8 @@ class TimesNodeBase : public ComputationNode<ElemType>, public NumInputs<2>
     typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers; using Base::OperationName;                                                                                                                           \
 
 public:
-    TimesNodeBase(DEVICEID_TYPE deviceId, const wstring& name, size_t outputRank = 1)
-        : Base(deviceId, name), m_outputRank(outputRank)
+    TimesNodeBase(DEVICEID_TYPE deviceId, const wstring& name, size_t outputRank = 1, int inputRank = 1)
+        : Base(deviceId, name), m_outputRank(outputRank), m_inputRank(inputRank)
     {
     }
 
@@ -250,6 +250,7 @@ public:
         {
             auto node = dynamic_pointer_cast<TimesNodeBase<ElemType, m_transpose>>(nodeP);
             node->m_outputRank = m_outputRank;
+            node->m_inputRank  = m_inputRank;
         }
     }
 
@@ -257,6 +258,7 @@ public:
     {
         Base::Save(fstream);
         fstream << m_outputRank;
+        fstream << m_inputRank;
     }
 
     virtual void Load(File& fstream, size_t modelVersion) override
@@ -266,6 +268,10 @@ public:
             fstream >> m_outputRank;
         else
             m_outputRank = 1;
+        if (modelVersion >= CNTK_MODEL_VERSION_11)
+            fstream >> m_inputRank;
+        else
+            m_inputRank = 1;
     }
 
 private:
@@ -420,19 +426,37 @@ public:
                 if (dimsA[k] == 0)
                     InvalidArgument("%ls %ls operation: The outputRank (%d) dimensions in left argument's shape [%s] must not be 0.", NodeName().c_str(), OperationName().c_str(), (int)m_outputRank, dimsAstring.c_str());
 
-            // if the last dimension of A is 0, then extend it to fully match B
-            // E.g. [I x 0] * [X x Y x Z x K] => infer as [I x X x Y x Z], not as [I x X].
-            // I.e. we cannot use inference to infer a matrix product on a part of an input tensor.
-            // We default to inferring the whole, as part of a tensor is a special use case.
-            assert (dimsA.size() == m_outputRank + numReductionDims);
-            while (numReductionDims < dimsB.size() && dimsA.back() == 0)
+            // infer rank of dimsA
+            // For purpose of dimension inference, Times() accepts an optional parameter inputRank (default 1).
+            // The first 'inputRank' axes are considered those that the matrix product should reduce over,
+            // while the remaining axes are kept (Times() is applied one by one, like a "map" operation).
+            // Importantly, inputRank <= 0 will be interpreted from the end. Hence, inputRank=-1 denotes
+            // that the one last axis will not be reduced over.
+            // And inputRank=0 means to reduce over all input axes, e.g. for an image input that
+            // should be flattened.
+            // Examples:
+            //  [I x Inferred] * [J x K], inputRank=1 --> Inferred := J, result is [I x K]
+            //  [I x Inferred] * [W x H x C], inputRank=1 --> Inferred := W, result is [I x H x C] (not desired)
+            //  [I x Inferred] * [W x H x C], inputRank=0 --> Inferred := W x H x C, result is [I] (desired)
+            //  [I x Inferred] * [W x H x C x R], inputRank=-1 --> Inferred := W x H x C, result is [I x R] (desired)
+            // In each case,
+            //  * if the output tensor is too short *and* the last dimension is 0, it will be extended
+            //  * output tensor dimensions that are not 0 are not touched
+            if (dimsA.back() == 0) // if last entry is 0, we infer the tensor rank as well
             {
-                dimsA.push_back(0);
-                numReductionDims++;
+                if (abs(m_inputRank) > dimsB.size())
+                    InvalidArgument("%ls %ls operation: 'inputDims' argument %d exceeds rank of second operand [%s].", NodeName().c_str(), OperationName().c_str(), m_inputRank, dimsBstring.c_str());
+                size_t inputRank = (size_t)(m_inputRank > 0 ? m_inputRank : (int)dimsB.size() + m_inputRank);
+                assert(dimsA.size() == m_outputRank + numReductionDims);
+                while (numReductionDims < inputRank)
+                {
+                    dimsA.push_back(0);
+                    numReductionDims++;
+                }
             }
 
             // fill in the missing ones
-            // We fill in dimensions given as 0. The tensor rank is not inferred.
+            // We fill in dimensions given as 0. The tensor rank is not inferred here (that is done above).
             for (size_t k = m_outputRank; k < dimsA.size(); k++)
             {
                 auto& dimA = dimsA[k];
@@ -478,6 +502,7 @@ public:
 
 private:
     size_t m_outputRank;
+    int m_inputRank;  // can be negative to indicate counting from end
 };
 
 // -----------------------------------------------------------------------
@@ -504,12 +529,12 @@ class TimesNode : public TimesNodeBase<ElemType, false>
     static const std::wstring TypeName() { return L"Times"; }
 
 public:
-    TimesNode(DEVICEID_TYPE deviceId, const wstring& name, size_t outputRank = 1)
-        : Base(deviceId, name, outputRank)
+    TimesNode(DEVICEID_TYPE deviceId, const wstring& name, size_t outputRank = 1, int inputRank = 1)
+        : Base(deviceId, name, outputRank, inputRank)
     {
     }
     TimesNode(const ScriptableObjects::IConfigRecordPtr configp)
-        : TimesNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"outputRank"))
+        : TimesNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"outputRank"), configp->Get(L"inputRank"))
     {
         AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
     }
@@ -537,7 +562,7 @@ class TransposeTimesNode : public TimesNodeBase<ElemType, true>
 public:
     DeclareConstructorFromConfigWithNumInputs(TransposeTimesNode);
     TransposeTimesNode(DEVICEID_TYPE deviceId, const wstring& name)
-        : Base(deviceId, name, /*outputRank=*/1)
+        : Base(deviceId, name, /*outputRank=*/1, /*inputRank=*/1)
     {
     }
 };
@@ -547,18 +572,14 @@ template class TransposeTimesNode<double>;
 
 // -----------------------------------------------------------------------
 // DiagTimesNode (vector representing the diagonal of a square matrix, data)
-// TODO: This is redundant with ElementTimes and should be removed (with a compat stub).
+// TODO: Deprecate and move to DeprecatedNodes.h. (Can be implemented with ElementTimes.)
 // -----------------------------------------------------------------------
 
 template <class ElemType>
 class DiagTimesNode : public ComputationNode<ElemType>, public NumInputs<2>
 {
-    typedef ComputationNode<ElemType> Base;
-    UsingComputationNodeMembersBoilerplate;
-    static const std::wstring TypeName()
-    {
-        return L"DiagTimes";
-    }
+    typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName() { return L"DiagTimes"; }
 
 public:
     DeclareConstructorFromConfigWithNumInputs(DiagTimesNode);
