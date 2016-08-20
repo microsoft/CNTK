@@ -26,7 +26,7 @@ void LearnableParameter<ElemType>::InitShape(const TensorShape& shape)
     Value().Invalidate();
 }
 
-static pair<bool/*uniform*/, double/*stddev or range*/> ParseRandomizationType(const std::wstring& type, size_t fanOut = 1, size_t fanIn = 1);
+static pair<bool/*uniform*/, double/*stddev or range*/> ParseRandomizationType(const wstring& type, size_t fanOut = 1, size_t fanIn = 1);
 
 // constructor from config
 // Parameterization is a little wicked. An older version required to specify the type of initialization
@@ -189,7 +189,7 @@ void LearnableParameter<ElemType>::PostInitParameters(const wstring& initString,
 //  heNormal:      sqrt(2 / fanin)
 //  heUniform:     sqrt(6 / fanin)
 // returns (*,0) for unrecognized string
-static pair<bool/*uniform*/,double/*stddev or range*/> ParseRandomizationType(const std::wstring& type, size_t fanOut /* = 1*/, size_t fanIn /*= 1*/)
+static pair<bool/*uniform*/,double/*stddev or range*/> ParseRandomizationType(const wstring& type, size_t fanOut /* = 1*/, size_t fanIn /*= 1*/)
 {
     if      (type == L"uniform")       return make_pair( true, 0.05f);
     else if (type == L"gaussian")      return make_pair(false, 0.2 / sqrt(fanIn));
@@ -204,7 +204,7 @@ static pair<bool/*uniform*/,double/*stddev or range*/> ParseRandomizationType(co
 // initialize with random numbers
 // if 'initOnCPUOnly' then always init on CPU, making initialization consistent across both (for testing)
 template <class ElemType>
-void LearnableParameter<ElemType>::InitRandom(const std::wstring& type,
+void LearnableParameter<ElemType>::InitRandom(const wstring& type,
                                               const unsigned long randomSeed,
                                               const ElemType initValueScale,
                                               const int initOutputRank,
@@ -263,7 +263,7 @@ void LearnableParameter<ElemType>::InitFromFile(const wstring& initFromFilePath)
 
 // initialize by reading a matrix from a text file
 template <class ElemType>
-void LearnableParameter<ElemType>::InitFromArray(const std::vector<ElemType>& array, size_t numRows, size_t numCols)
+void LearnableParameter<ElemType>::InitFromArray(const vector<ElemType>& array, size_t numRows, size_t numCols)
 {
     // infer tensor dimensions from input file if not set
     // Note: The mapping of dimensions of the input matrix to tensor dimensions are somewhat confusing.
@@ -311,13 +311,13 @@ void LearnableParameter<ElemType>::InitFromArray(const std::vector<ElemType>& ar
 
 // TODO: Move this error check there, since this is called only from one place.
 template <class ElemType>
-void LearnableParameter<ElemType>::ReviseFromFile(const std::wstring& reviseFromFilePath)
+void LearnableParameter<ElemType>::ReviseFromFile(const wstring& reviseFromFilePath)
 {
     try
     {
         InitFromFile(reviseFromFilePath);
     }
-    catch (const std::exception & e)
+    catch (const exception & e)
     {
         RuntimeError("ReviseFromFile: Failed to reload %ls %ls operation from file %ls: %s", NodeName().c_str(), OperationName().c_str(), reviseFromFilePath.c_str(), e.what());
     }
@@ -372,7 +372,7 @@ void LearnableParameter<ElemType>::Load(File& fstream, size_t modelVersion) /*ov
 }
 
 template <class ElemType>
-/*virtual*/ void LearnableParameter<ElemType>::CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const /*override*/
+/*virtual*/ void LearnableParameter<ElemType>::CopyTo(ComputationNodeBasePtr nodeP, const wstring& newName, const CopyNodeFlags flags) const /*override*/
 {
     Base::CopyTo(nodeP, newName, flags);
     if (flags & CopyNodeFlags::copyNodeValue)

@@ -10,7 +10,7 @@
 #include "stdafx.h"
 #ifdef _WIN32
 #include <crtdbg.h>
-#endif 
+#endif
 
 #include "Basics.h"
 #include "Actions.h"
@@ -91,27 +91,6 @@ std::string WCharToString(const wchar_t* wst)
     std::string s(ws.begin(), ws.end());
     s.assign(ws.begin(), ws.end());
     return s;
-}
-
-// TODO: This is an action, it should be moved into ActionsLib.
-template <typename ElemType>
-void DumpNodeInfo(const ConfigParameters& config)
-{
-    wstring modelPath = config(L"modelPath");
-    wstring nodeName = config(L"nodeName", L"__AllNodes__");
-    wstring nodeNameRegexStr = config(L"nodeNameRegex", L"");
-    wstring defOutFilePath = modelPath + L"." + nodeName + L".txt";
-    wstring outputFile = config(L"outputFile", defOutFilePath);
-    bool printValues = config(L"printValues", true);
-    bool printMetadata = config(L"printMetadata", true);
-    if (!printValues && !printMetadata)
-    {
-        InvalidArgument("printValues and printMetadata: Since both are set to false, there will be nothing to dump");
-    }
-
-    ComputationNetwork net(-1);    // always use CPU
-    net.Load<ElemType>(modelPath); // TODO: we have a function now to combine this and the previous line
-    net.DumpNodeInfoToFile(nodeName, printValues, printMetadata, outputFile, nodeNameRegexStr);
 }
 
 size_t GetMaxEpochs(const ConfigParameters& configParams)
@@ -287,9 +266,9 @@ void DoCommands(const ConfigParameters& config, const shared_ptr<MPIWrapper>& mp
                 {
                     TestCn<ElemType>(config); // for "devtest" action pass the root config instead
                 }
-                else if (thisAction == "dumpNode" /*deprecated:*/|| thisAction == "dumpnode")
+                else if (thisAction == "dumpNodes" /*deprecated:*/ || thisAction == "dumpNode" || thisAction == "dumpnode")
                 {
-                    DumpNodeInfo<ElemType>(commandParams);
+                    DoDumpNodes<ElemType>(commandParams);
                 }
                 else if (thisAction == "convertdbn")
                 {
