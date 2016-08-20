@@ -30,7 +30,7 @@
 
 # LinearLayer -- create a fully-connected linear projection layer
 # Note: outDim may describe a tensor as well.
-LinearLayer {outDim, bias = true, init='uniform', initValueScale=1, inputRank=0} =
+LinearLayer {outDim, bias = true, init='heNormal', initValueScale=1, inputRank=0} =
 {
     W = ParameterTensor {_ConcatArrays (outDim, Inferred), init=init, initValueScale=initValueScale}
     b = ParameterTensor {outDim, initValue=0}
@@ -42,7 +42,7 @@ LinearLayer {outDim, bias = true, init='uniform', initValueScale=1, inputRank=0}
 }.apply
 
 # DenseLayer -- create a fully-connected layer with optional non-linearity
-DenseLayer{outDim, bias = true, activation=(x=>x), init='uniform', initValueScale=1, inputRank=0} = Sequential ( LinearLayer{outDim, bias=bias, init=init, initValueScale=initValueScale, inputRank=inputRank} : activation )
+DenseLayer{outDim, bias = true, activation=(x=>x), init='heNormal', initValueScale=1, inputRank=0} = Sequential ( LinearLayer{outDim, bias=bias, init=init, initValueScale=initValueScale, inputRank=inputRank} : activation )
 
 # EmbeddingLayer -- create a linear embedding layer
 EmbeddingLayer {outDim,                                   # dimension of embedding
@@ -65,7 +65,7 @@ ConvolutionalLayer {numOutputChannels,   # e.g. (1) or BS.Constants.None
                     filterShape,         # e.g. (3:3)
                     bias = true,
                     activation = (x=>x),
-                    init = "uniform",
+                    init = "heNormal",
                     initValueScale = 1,          # TODO: rename to initScale
                     #reductionRank = 1,          # TODO: support this
                     stride = 1, pad = false,
@@ -346,11 +346,11 @@ CNTK2 = [
     Tanh(_, tag='') = new ComputationNode [ operation = 'Tanh' ; inputs = _ /*plus the function args*/ ]
 
     // 6. Reductions    
-    ReduceSum   (_, axis=None, tag='') = new ComputationNode [ operation = 'ReduceElements' ; inputs = _ ; axis = if BS.Constants.IsNone (axis) then 0 else axis ; reductionOp = "Sum"    /*plus the function args*/ ]
-    ReduceLogSum(_, axis=None, tag='') = new ComputationNode [ operation = 'ReduceElements' ; inputs = _ ; axis = if BS.Constants.IsNone (axis) then 0 else axis ; reductionOp = "LogSum" /*plus the function args*/ ]
-    ReduceMin   (_, axis=None, tag='') = new ComputationNode [ operation = 'ReduceElements' ; inputs = _ ; axis = if BS.Constants.IsNone (axis) then 0 else axis ; reductionOp = "Min"    /*plus the function args*/ ]
-    ReduceMax   (_, axis=None, tag='') = new ComputationNode [ operation = 'ReduceElements' ; inputs = _ ; axis = if BS.Constants.IsNone (axis) then 0 else axis ; reductionOp = "Max"    /*plus the function args*/ ]
-    #ReduceMean (_, axis=None, tag='') = new ComputationNode [ operation = 'ReduceElements' ; inputs = _ ; axis = if BS.Constants.IsNone (axis) then 0 else axis ; reductionOp = "Mean"   /*plus the function args*/ ]
+    ReduceSum   (_, axis=None, tag='') = { axis1 = if BS.Constants.IsNone (axis) then 0 else axis ; r = new ComputationNode [ operation = 'ReduceElements' ; inputs = _ ; axis = axis1 ; reductionOp = "Sum"    /*plus the function args*/ ]}.r
+    ReduceLogSum(_, axis=None, tag='') = { axis1 = if BS.Constants.IsNone (axis) then 0 else axis ; r = new ComputationNode [ operation = 'ReduceElements' ; inputs = _ ; axis = axis1 ; reductionOp = "LogSum" /*plus the function args*/ ]}.r
+    ReduceMin   (_, axis=None, tag='') = { axis1 = if BS.Constants.IsNone (axis) then 0 else axis ; r = new ComputationNode [ operation = 'ReduceElements' ; inputs = _ ; axis = axis1 ; reductionOp = "Min"    /*plus the function args*/ ]}.r
+    ReduceMax   (_, axis=None, tag='') = { axis1 = if BS.Constants.IsNone (axis) then 0 else axis ; r = new ComputationNode [ operation = 'ReduceElements' ; inputs = _ ; axis = axis1 ; reductionOp = "Max"    /*plus the function args*/ ]}.r
+    #ReduceMean (_, axis=None, tag='') = { axis1 = if BS.Constants.IsNone (axis) then 0 else axis ; r = new ComputationNode [ operation = 'ReduceElements' ; inputs = _ ; axis = axis1 ; reductionOp = "Mean"   /*plus the function args*/ ]}.r
 
     // 7. Control flow (if, composite etc.)
     // None so far
