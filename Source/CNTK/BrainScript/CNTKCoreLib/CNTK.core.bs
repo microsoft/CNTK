@@ -106,10 +106,11 @@ AveragePoolingLayer {filterShape, stride = 1, pad = false, lowerPad = 0, upperPa
 RecurrentLSTMLayer {outputDim,
                     cellShape = BS.Constants.None, # if set then use a projection
                     goBackwards = false,
+                    init='heNormal', initValueScale=1,
                     enableSelfStabilization = false} =
 {
     previousHook = if goBackwards then BS.RNNs.NextHC else BS.RNNs.PreviousHC
-    lstm = BS.RNNs.LSTMBlock {outputDim, cellShape = cellShape, enableSelfStabilization = enableSelfStabilization}
+    lstm = BS.RNNs.LSTMBlock {outputDim, cellShape = cellShape, enableSelfStabilization = enableSelfStabilization, init=init, initValueScale=initValueScale}
     apply (x) = {
         prevState = previousHook (lstmState) # recurrent memory. E.g. Previous or Next, with or without initial state, beam reordering etc.
 
@@ -863,19 +864,19 @@ RNNs =
     # This is the stateless version that takes the previous state as an input.
     # It returns a dictionary with three members: h and c, and dim=h.dim for convenience. prevState must have h and c.
     # This function also takes an optional auxiliary input, e.g. for suporting attention models.
-    LSTMBlock (outputDim, cellShape=None, enableSelfStabilization=false) =
+    LSTMBlock (outputDim, cellShape=None, init='heNormal', initValueScale=1, enableSelfStabilization=false) =
     {
         cellDim = if Constants.IsNone (cellShape) then outputDim else cellShape
 
         # parameter helpers
         # note: invoked multiple times, each invocation comes with its own set of weights
         B{} = ParameterTensor {(cellDim),             initValue=0}       # a bias
-        W{} = ParameterTensor {(cellDim : Inferred),  init='heNormal'}   # a input
-        A{} = ParameterTensor {(cellDim : Inferred),  init='heNormal'}   # an aux input
-        H{} = ParameterTensor {(cellDim : outputDim), init='heNormal'}   # a hidden-to-hidden
-        C{} = ParameterTensor {(cellDim),             init='heNormal'}   # a cell-to-hiddden {note: applied elementwise}
+        W{} = ParameterTensor {(cellDim : Inferred),  init=init, initValueScale=initValueScale}   # a input
+        A{} = ParameterTensor {(cellDim : Inferred),  init=init, initValueScale=initValueScale}   # an aux input
+        H{} = ParameterTensor {(cellDim : outputDim), init=init, initValueScale=initValueScale}   # a hidden-to-hidden
+        C{} = ParameterTensor {(cellDim),             init=init, initValueScale=initValueScale}   # a cell-to-hiddden {note: applied elementwise}
 
-        Wmr = ParameterTensor {(outputDim : cellDim), init='heNormal'};  # final projection
+        Wmr = ParameterTensor {(outputDim : cellDim), init=init, initValueScale=initValueScale};  # final projection
 
         S(x) = Parameters.Stabilize (x, enabled=enableSelfStabilization)
         # BUGBUG: S() must not be a macro either, but also an object instance
