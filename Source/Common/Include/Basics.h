@@ -705,9 +705,14 @@ public:
     }
     ~Plugin()
     {
-        // TODO: Check for error code and throw if !std::uncaught_exception()
         if (handle != NULL)
-            dlclose(handle);
+        {
+            int rc = dlclose(handle);
+            if ((rc != 0) && !std::uncaught_exception())
+            {
+                RuntimeError("Plugin: Failed to decrements the reference count.");
+            }
+        }
     }
 };
 #endif

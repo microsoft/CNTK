@@ -46,7 +46,11 @@ public:
         if (::WaitForSingleObject(m_handle, wait ? INFINITE : 0) != WAIT_OBJECT_0)
         {
             // failed to acquire
-            ::CloseHandle(m_handle);
+            int rc = ::CloseHandle(m_handle);
+            if ((rc == 0) && !std::uncaught_exception())
+            {
+                RuntimeError("Handler close failure with error code %d", ::GetLastError());
+            }
             m_handle = NULL;
             return false;
         }
@@ -58,9 +62,17 @@ public:
     void Release()
     {
         assert(m_handle != NULL);
-        // TODO: Check for error code and throw if !std::uncaught_exception()
-        ::ReleaseMutex(m_handle);
-        ::CloseHandle(m_handle);
+        int rc = 0;
+        rc = ::ReleaseMutex(m_handle);
+        if ((rc == 0) && !std::uncaught_exception())
+        {
+            RuntimeError("Release: Failed to release mutex %s: %d", m_name.c_str(), ::GetLastError());
+        }
+        rc = ::CloseHandle(m_handle);
+        if ((rc == 0) && !std::uncaught_exception())
+        {
+            RuntimeError("Release: Failed to close handle %s: %d", m_name.c_str(), ::GetLastError());
+        }
         m_handle = NULL;
     }
 
@@ -181,8 +193,10 @@ public:
         m_lock.l_type = F_UNLCK;
         // Now removing the lock and closing the file descriptor
         // waiting processes will be notified
-        // TODO: Check for error code and throw if !std::uncaught_exception()
-        fcntl(m_fd, F_SETLKW, &m_lock);
+        int rc = fcntl(m_fd, F_SETLKW, &m_lock);
+        if (rc == -1) {
+            RuntimeError("Release: Failed to release mutex %S", m_fileName.c_str());
+        }
         close(m_fd);
         m_fd = -1;
     }

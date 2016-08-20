@@ -247,7 +247,9 @@ inline int _ConvertSMVer2Cores(int major, int minor)
 void BestGpu::GetCudaProperties()
 {
     if (m_cudaData)
+    {
         return;
+    }
 
     int dev = 0;
 
@@ -304,8 +306,11 @@ BestGpu::~BestGpu()
 
     if (m_nvmlData)
     {
-        // TODO: Check for error code and throw if !std::uncaught_exception()
-        nvmlShutdown();
+        nvmlReturn_t r = nvmlShutdown();
+        if ((r != NVML_SUCCESS) && !std::uncaught_exception()) 
+        {
+            RuntimeError("BestGPU Destructor: failed to shut down NVML");
+        }
     }
 }
 
@@ -333,7 +338,9 @@ int BestGpu::GetDevice(BestGpuFlags bestFlags)
     std::vector<int> best = GetDevices(1, bestFlags);
 
     if (best.empty())
+    {
         RuntimeError("Device selection: No eligible device found.");
+    }
 
     return best[0];
 }
@@ -356,9 +363,13 @@ bool BestGpu::DeviceAllowed(int deviceId)
     assert((deviceId >= -1) && (deviceId <= 31));
 
     if (deviceId < 0)
+    {
         return !m_disallowCPUDevice;
+    }
     else
+    {
         return !!(m_allowedDevices & (1 << deviceId));
+    }
 }
 
 void BestGpu::DisallowDevice(int deviceId)
@@ -366,9 +377,13 @@ void BestGpu::DisallowDevice(int deviceId)
     assert((deviceId >= -1) && (deviceId <= 31));
 
     if (deviceId < 0)
+    {
         m_disallowCPUDevice = true;
+    }
     else
+    {
         m_allowedDevices &= ~(1 << deviceId);
+    }
 }
 
 // AllowAll - Reset the allowed filter to allow all GPUs
@@ -393,7 +408,9 @@ std::vector<int> BestGpu::GetDevices(int number, BestGpuFlags p_bestFlags)
 
     // if they want all devices give them eveything we have
     if (number == AllDevices)
+    {
         number = std::max(m_deviceCount, 1);
+    }
     else if (number == RequeryDevices)
     {
         number = m_lastCount;
