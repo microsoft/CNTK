@@ -14,6 +14,7 @@ vocabSize = 943 ; numLabels = 129 ; numIntents = 26    # number of words in voca
 TrainTagger = {
     action = "train"
     BrainScriptNetworkBuilder = {
+        # TODO: adapt _Solution files and web site to changed the random-init defaults. Also test Embedding and LSTM
         inputDim = $vocabSize$
         labelDim = $numLabels$
         embDim = 150

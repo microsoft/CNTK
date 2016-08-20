@@ -50,7 +50,7 @@ EmbeddingLayer {outDim,                                   # dimension of embeddi
 {
     shape = if transpose then (Inferred : outDim) else (outDim : Inferred)
     E = if embeddingPath == ''
-        then ParameterTensor {shape, init='uniform'}  # learnable
+        then ParameterTensor {shape, init='heNormal'}  # learnable
         else ParameterTensor {shape, initFromFilePath = embeddingPath, learningRateMultiplier = 0}  # fixed from file
     TimesOp = if transpose then TransposeTimes else Times
     apply (x) = TimesOp (E, x)    # x is expected to be sparse one-hot
@@ -818,6 +818,7 @@ Loop = [
 
 Parameters =
 [
+    # TODO: These all have randomSeed set to 1!
     WeightParam (outputDim, inputDim) = Parameter (outputDim, inputDim, init='uniform', initValueScale=1, initOnCPUOnly=true, randomSeed=1)
     DiagWeightParam (outputDim)       = ParameterTensor ((outputDim), init='uniform', initValueScale=1, initOnCPUOnly=true, randomSeed=1) # meant to be applied elementwise
     BiasParam (dim)                   = ParameterTensor ((dim), initValue=0.0)
@@ -861,23 +862,25 @@ RNNs =
     # This is the stateless version that takes the previous state as an input.
     # It returns a dictionary with three members: h and c, and dim=h.dim for convenience. prevState must have h and c.
     # This function also takes an optional auxiliary input, e.g. for suporting attention models.
-    LSTMBlock (outputDim, cellShape=Constants.None, enableSelfStabilization=false) =
-    [
+    LSTMBlock (outputDim, cellShape=None, enableSelfStabilization=false) =
+    {
         cellDim = if Constants.IsNone (cellShape) then outputDim else cellShape
-        // parameter macros
-        # note: each invocation comes with its own set of weights
-        B{} = Parameters.BiasParam {cellDim}
-        W{} = Parameters.WeightParam {cellDim, 0}               // input
-        A{} = Parameters.WeightParam {cellDim, 0}               // aux input
-        H{} = Parameters.WeightParam {cellDim, outputDim}       // hidden-to-hidden
-        C{} = Parameters.DiagWeightParam {cellDim}              // cell-to-hiddden {note: applied elementwise}
-        Wmr = Parameters.WeightParam {outputDim, cellDim};
+
+        # parameter helpers
+        # note: invoked multiple times, each invocation comes with its own set of weights
+        B{} = ParameterTensor {(cellDim),             initValue=0}       # a bias
+        W{} = ParameterTensor {(cellDim : Inferred),  init='heNormal'}   # a input
+        A{} = ParameterTensor {(cellDim : Inferred),  init='heNormal'}   # an aux input
+        H{} = ParameterTensor {(cellDim : outputDim), init='heNormal'}   # a hidden-to-hidden
+        C{} = ParameterTensor {(cellDim),             init='heNormal'}   # a cell-to-hiddden {note: applied elementwise}
+
+        Wmr = ParameterTensor {(outputDim : cellDim), init='heNormal'};  # final projection
 
         S(x) = Parameters.Stabilize (x, enabled=enableSelfStabilization)
         # BUGBUG: S() must not be a macro either, but also an object instance
 
-        apply (x, prevState, aux=Constants.None) = [
-            _ = [     // encapsulate the inner workings
+        apply (x, prevState, aux=None) = {
+            _ = {     // encapsulate the inner workings
 
                 dh = prevState.h // previous values
                 dc = prevState.c
@@ -888,20 +891,20 @@ RNNs =
 
                 # projected contribution from input(s) and bias
                 pin() = if Constants.IsNone (aux)
-                        then B() + W() * x
-                        else B() + W() * x + A() * aux
+                        then B{} + W{} * x
+                        else B{} + W{} * x + A{} * aux
 
-                it = Sigmoid (pin() + H() * dhs + C() .* dcs)           // input gate(t)
-                bit = it .* Tanh (pin() + H() * dhs)                    // applied to tanh of input network
+                it = Sigmoid (pin() + H{} * dhs + C{} .* dcs)           // input gate(t)
+                bit = it .* Tanh (pin() + H{} * dhs)                    // applied to tanh of input network
 
-                ft = Sigmoid (pin() + H() * dhs + C() .* dcs)           // forget-me-not gate(t)
+                ft = Sigmoid (pin() + H{} * dhs + C{} .* dcs)           // forget-me-not gate(t)
                 bft = ft .* dc                                          // applied to cell(t-1)
 
                 ct = bft + bit                                          // c(t) is sum of both
 
-                ot = Sigmoid (pin() + H() * dhs + C() .* S(ct))         // output gate(t)
+                ot = Sigmoid (pin() + H{} * dhs + C{} .* S(ct))         // output gate(t)
                 ht = ot .* Tanh (ct)                                    // applied to tanh(cell(t))
-            ]
+            }
 
             # our return values
             c = _.ct          // cell value
@@ -909,8 +912,8 @@ RNNs =
                 then Wmr * S(_.ht)        // project
                 else _.ht                 // no projection
             dim = outputDim
-        ] // end of apply(x)
-    ].apply
+        } // end of apply (x, prevState)
+    }.apply
 
     # LSTMP -- LSTM function with projection and self-stabilization
     # Projection is enabled by passing different values for outputDim and cellDim.
