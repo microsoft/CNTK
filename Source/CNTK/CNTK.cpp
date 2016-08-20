@@ -30,7 +30,6 @@
 #include "ScriptableObjects.h"
 #include "BrainScriptEvaluator.h"
 #include "BrainScriptParser.h"
-#include "SynchronizationManager.h"
 
 #include <string>
 #include <chrono>
@@ -60,6 +59,7 @@
 // node output value matrices. This will go away when the
 // sharing is ready to be enabled by default
 bool g_shareNodeValueMatrices = false;
+bool g_useMemorySwapping = true;
 
 using namespace std;
 using namespace Microsoft::MSR;
@@ -481,6 +481,7 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
         mpi = MPIWrapper::GetInstance(true /*create*/);
 
     g_shareNodeValueMatrices = config(L"shareNodeValueMatrices", false);
+    g_useMemorySwapping = config(L"useMemorySwapping", true);
 
     TracingGPUMemoryAllocator::SetTraceLevel(config(L"traceGPUMemoryAllocations", 0));
 
@@ -579,6 +580,7 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
         mpi = MPIWrapper::GetInstance(true /*create*/);
 
     g_shareNodeValueMatrices = config(L"shareNodeValueMatrices", false);
+    g_useMemorySwapping = config(L"useMemorySwapping", true);
 
     TracingGPUMemoryAllocator::SetTraceLevel(config(L"traceGPUMemoryAllocations", 0));
 

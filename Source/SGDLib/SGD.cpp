@@ -18,7 +18,6 @@
 
 #include "SimpleDistGradAggregator.h"
 #include "ProgressTracing.h"
-#include "SynchronizationManager.h"
 
 #include <map>
 #include <set>

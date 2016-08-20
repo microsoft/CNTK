@@ -5,14 +5,14 @@
 
 #pragma once
 
-#include "SyncAction.h"
+#include "SwapAction.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 template <typename ElemType> class SwapOutAction;
 
 template <typename ElemType> 
-class SwapInAction : public SyncAction<ElemType>
+class SwapInAction : public SwapAction<ElemType>
 {
 
 public:

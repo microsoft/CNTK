@@ -42,6 +42,7 @@ void CNTKEvalBase<ElemType>::Init(const std::string& config)
     size_t nThreads = m_config("numCPUThreads", "1");
     CPUMatrix<ElemType>::SetNumThreads(nThreads);
     g_shareNodeValueMatrices = m_config(L"shareNodeValueMatrices", false);
+    g_useMemorySwapping = m_config(L"useMemorySwapping", true);
 }
 
 

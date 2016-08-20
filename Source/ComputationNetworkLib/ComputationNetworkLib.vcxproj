@@ -109,8 +109,8 @@
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="SwapInAction.h" />
     <ClInclude Include="SwapOutAction.h" />
-    <ClInclude Include="SyncAction.h" />
-    <ClInclude Include="SynchronizationManager.h" />
+    <ClInclude Include="SwapAction.h" />
+    <ClInclude Include="SwapManager.h" />
     <ClInclude Include="targetver.h" />
     <ClInclude Include="TrainingNodes.h" />
   </ItemGroup>
@@ -130,7 +130,7 @@
     <ClCompile Include="stdafx.cpp" />
     <ClCompile Include="SwapInAction.cpp" />
     <ClCompile Include="SwapOutAction.cpp" />
-    <ClCompile Include="SynchronizationManager.cpp" />
+    <ClCompile Include="SwapManager.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" />

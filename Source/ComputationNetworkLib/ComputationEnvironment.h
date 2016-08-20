@@ -7,7 +7,7 @@
 
 #include "Basics.h"
 #include <memory>
-#include "SynchronizationManager.h"
+#include "SwapManager.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -48,21 +48,21 @@ typedef std::shared_ptr<ComputationEnvironment> ComputationEnvironmentPtr;
 class NetworkInformation
 {
     private:
-        SynchronizationManager<float> *m_syncManagerFloat;
-        SynchronizationManager<double> *m_syncManagerDouble;
+        SwapManager<float> *m_syncManagerFloat;
+        SwapManager<double> *m_syncManagerDouble;
         
     public:
         NetworkInformation()
         {
-            m_syncManagerFloat = new SynchronizationManager<float>();
-            m_syncManagerDouble = new SynchronizationManager<double>();
+            m_syncManagerFloat = new SwapManager<float>();
+            m_syncManagerDouble = new SwapManager<double>();
         };
         ~NetworkInformation(){};
-        template <typename ElemType> SynchronizationManager<ElemType> *GetSynchronizationManager();
+        template <typename ElemType> SwapManager<ElemType> *GetSwapManager();
 };
 
-template<> inline SynchronizationManager<float> *NetworkInformation::GetSynchronizationManager<float>(){ return m_syncManagerFloat; }
-template<> inline SynchronizationManager<double> *NetworkInformation::GetSynchronizationManager<double>(){ return m_syncManagerDouble; }
+template<> inline SwapManager<float> *NetworkInformation::GetSwapManager<float>(){ return m_syncManagerFloat; }
+template<> inline SwapManager<double> *NetworkInformation::GetSwapManager<double>(){ return m_syncManagerDouble; }
 typedef std::shared_ptr<NetworkInformation> NetworkInformationPtr;
 
 // RAII wrapper for setting and reverting ComputationEnvironment::networkOperationMode

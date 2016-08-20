@@ -54,16 +54,10 @@ template <typename ElemType> void SwapOutAction<ElemType>::BeginAction()
        {
             if(this->m_bytes > 0)
                 ReleaseMemory();
-            //cout << this->m_rows << " vs. " << this->m_bufferGPU->GetNumRows() << endl;
-            //cout << this->m_cols << " vs. " << this->m_bufferGPU->GetNumCols() << endl;
-            //cout << "REALLOC!" << endl;
+
             this->m_rows = this->m_bufferGPU->GetNumRows();
             this->m_cols = this->m_bufferGPU->GetNumCols();
             this->m_bytes = this->m_rows*this->m_cols*sizeof(ElemType);
-            //cout << this->m_rows << " vs. " << this->m_bufferGPU->GetNumRows() << endl;
-            //cout << this->m_cols << " vs. " << this->m_bufferGPU->GetNumCols() << endl;
-            //cout << this->m_bytes << " vs. " << this->m_bufferGPU->BufferSize() << endl;
-            //cout << "REALLOC2!" << endl;
             allocatePinnedBuffer();
        }
 
@@ -81,10 +75,7 @@ template <typename ElemType> void SwapOutAction<ElemType>::EndAction()
     this->m_cols = this->m_bufferGPU->GetNumCols();
     this->m_bytes = this->m_rows*this->m_cols*sizeof(ElemType);
     this->m_bufferGPU->Resize(0,0,0, false);
-    //this->m_bufferGPU->Resize(0,0);
-    //ElemType *data = this->m_bufferGPU->Data();
-    //CUDA_CALL(cudaFree(data));
-    cout << "Swapped out: " << this->m_bufferGPU << ", " << this->m_rows*this->m_cols*sizeof(ElemType)/1024./1024./1024. << "GB" << endl;
+    cout << "Swapped out: " << this->m_bufferGPU << ", " << this->m_bufferGPU->GetNumRows() << "x" << this->m_bufferGPU->GetNumCols() << ", " << this->m_rows*this->m_cols*sizeof(ElemType)/1024./1024./1024. << "GB" << endl;
     m_hasDoneInitialSwap = true;
 
 }

@@ -40,7 +40,7 @@
     <ClCompile Include="InputAndParamNodes.cpp">
       <Filter>Nodes</Filter>
     </ClCompile>
-    <ClCompile Include="SynchronizationManager.cpp">
+    <ClCompile Include="SwapManager.cpp">
       <Filter>Synchronization</Filter>
     </ClCompile>
     <ClCompile Include="SwapInAction.cpp">
@@ -141,10 +141,10 @@
     <ClInclude Include="DeprecatedNodes.h">
       <Filter>Nodes</Filter>
     </ClInclude>
-    <ClInclude Include="SynchronizationManager.h">
+    <ClInclude Include="SwapManager.h">
       <Filter>Synchronization</Filter>
     </ClInclude>
-    <ClInclude Include="SyncAction.h">
+    <ClInclude Include="SwapAction.h">
       <Filter>Synchronization</Filter>
     </ClInclude>
     <ClInclude Include="SwapInAction.h">
