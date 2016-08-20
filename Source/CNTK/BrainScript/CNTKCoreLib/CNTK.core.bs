@@ -78,7 +78,7 @@ ConvolutionalLayer {numOutputChannels,   # e.g. (1) or BS.Constants.None
     outputRank = Length (outputChannelsShape)
     filterRank = Length (filterShape)
     kernelShape = _ConcatArrays (filterShape, Repeat (reductionRank, Inferred)) # kernel := filter plus reductionDims
-    #W = ParameterTensor{_ConcatArrays (                kernelShape,      outputChannelsShape), init = init, initValueScale = initValueScale}  # [ W x H x C x K ]
+    #W = ParameterTensor{_ConcatArrays (                kernelShape,      outputChannelsShape), init = init, initValueScale = initValueScale, initOutputRank = -1}  # [ W x H x C x K ]
     W = ParameterTensor{(outputChannelsShape : Inferred), init = init, initValueScale = initValueScale}  # old-style for backwards-compatible random initialization
     b = ParameterTensor(_ConcatArrays (Repeat (Length (filterShape), 1), outputChannelsShape), initValue = 0)                                 # [ 1 x 1 x     K ]
     sharing = true    # TODO: support this
