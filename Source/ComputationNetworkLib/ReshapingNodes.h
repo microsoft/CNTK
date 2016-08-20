@@ -176,10 +176,10 @@ template class ReshapeNode<double>;
 // The optional axis can be 0 (meaning all elements) or a specific axis.
 // Allowed operations:
 //  - "Sum"
-//  - "LogSum"    --not implemented yet
-//  - "Mean"      --not implemented yet
-//  - "Max"       --not implemented yet
-//  - "Min"       --not implemented yet
+//  - "LogSum"
+//  - "Mean"
+//  - "Max"
+//  - "Min"
 //  - "All"       --not implemented yet
 //  - "Any"       --not implemented yet
 // TODO:
@@ -196,7 +196,7 @@ class ReduceElementsNode : public ComputationNode<ElemType>, public NumInputs<1>
     void ValidateOp();
 public:
     ReduceElementsNode(DEVICEID_TYPE deviceId, const wstring& name, const std::wstring& operation = std::wstring(), int axis = 0) :
-        Base(deviceId, name), m_operation(operation), m_axis(axis), m_reductionOp((ElementWiseOperator)-1/*invalid*/)
+        Base(deviceId, name), m_operation(operation), m_axis(axis), m_reductionOp((ElementWiseOperator)-1/*invalid*/), m_scale(0/*invalid*/)
     {
         if (!m_operation.empty()) // verify validity already here out of courtesy (would otherwise be caught in Validate())
             ValidateOp();
@@ -218,9 +218,13 @@ public:
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override;
 
 private:
+    // operation attributes
     int m_axis;
-    std::wstring m_operation; // the operation as a string, e.g. "Sum", see ValidateOp()
+    std::wstring m_operation;          // the operation as a string, e.g. "Sum", see ValidateOp()
+
+    // things cached during validation
     ElementWiseOperator m_reductionOp; // the reduction operation mapped to our internal opCode
+    ElemType m_scale;                  // 1 or, for Mean, 1/number of elements we are reducing over
 };
 
 // -----------------------------------------------------------------------
