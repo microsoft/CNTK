@@ -47,7 +47,7 @@ float CUDATimer::tock(std::string name)
 	else
 	{
         if(m_dictTickTock.count(name) == 0){ return 0.0f; }
-        //assert(m_dictTickTock.count(name) > 0);
+        assert(m_dictTickTock.count(name) > 0);
 		float value = tock(m_dictTickTock[name]);
 		m_dictTickTock.erase(name);
 		return value;

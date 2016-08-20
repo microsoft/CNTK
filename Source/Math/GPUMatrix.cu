@@ -222,7 +222,7 @@ AllocatedElemType* TracingGPUMemoryAllocator::AllocateNoTrace(int deviceId, size
     PrepareDevice(deviceId);
     size_t free, total;                              
     CUDA_CALL(cudaMemGetInfo(&free, &total));  
-    //cout << "FREE: " << free/1024.0f/1024.0f/1024.0f << endl; 
+    cout << "FREE: " << free/1024.0f/1024.0f/1024.0f << endl; 
 
     CUDA_CALL(cudaMalloc((void**) &deviceBufferPtr, sizeof(AllocatedElemType) * numElements));
 

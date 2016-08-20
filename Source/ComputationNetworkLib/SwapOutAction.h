@@ -5,7 +5,7 @@
 
 #pragma once
 
-#include "SyncAction.h"
+#include "SwapAction.h"
 #include "GPUMatrix.h"
 
 #ifndef CPUONLY
@@ -15,7 +15,7 @@
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 template <typename ElemType>
-class SwapOutAction : public SyncAction<ElemType>
+class SwapOutAction : public SwapAction<ElemType>
 {
 
 public:

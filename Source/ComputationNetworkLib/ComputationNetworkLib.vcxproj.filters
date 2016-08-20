@@ -42,7 +42,7 @@
     </ClCompile>
     <ClCompile Include="RNNNodes.cpp">
       <Filter>Nodes</Filter>
-    <ClCompile Include="SynchronizationManager.cpp">
+    <ClCompile Include="SwapManager.cpp">
       <Filter>Synchronization</Filter>
     </ClCompile>
     <ClCompile Include="SwapInAction.cpp">
@@ -143,14 +143,12 @@
     <ClInclude Include="DeprecatedNodes.h">
       <Filter>Nodes</Filter>
     </ClInclude>
-<<<<<<< HEAD
     <ClInclude Include="RNNNodes.h">
       <Filter>Nodes</Filter>
-=======
-    <ClInclude Include="SynchronizationManager.h">
+    <ClInclude Include="SwapManager.h">
       <Filter>Synchronization</Filter>
     </ClInclude>
-    <ClInclude Include="SyncAction.h">
+    <ClInclude Include="SwapAction.h">
       <Filter>Synchronization</Filter>
     </ClInclude>
     <ClInclude Include="SwapInAction.h">
@@ -158,7 +156,6 @@
     </ClInclude>
     <ClInclude Include="SwapOutAction.h">
       <Filter>Synchronization</Filter>
->>>>>>> Added initial for memoryswapping.
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

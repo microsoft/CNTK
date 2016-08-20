@@ -56,8 +56,8 @@ public:
         m_environment(make_shared<ComputationEnvironment>())
     {
         m_networkInfo = make_shared<NetworkInformation>();
-        m_networkInfo->GetSynchronizationManager<float>();
-        m_networkInfo->GetSynchronizationManager<double>();
+        m_networkInfo->GetSwapManager<float>();
+        m_networkInfo->GetSwapManager<double>();
         //m_pMBLayoutOfNetwork->SetAxisName(L"T");
     }
 
@@ -194,7 +194,7 @@ private:
 public:
     template <class ElemType> void AllocateAllMatrices(const std::vector<ComputationNodeBasePtr>& evalRootNodes, const std::vector<ComputationNodeBasePtr>& outValueRootNodes, ComputationNodeBasePtr trainRootNode);
 
-    template <class ElemType> void FindDependencyGraph(const std::vector<ComputationNodeBasePtr>& evalRootNodes, const std::vector<ComputationNodeBasePtr>& outValueRootNodes, ComputationNodeBasePtr trainRootNode);
+    template <class ElemType> void FindSwappingStructure(const std::vector<ComputationNodeBasePtr>& evalRootNodes, const std::vector<ComputationNodeBasePtr>& outValueRootNodes, ComputationNodeBasePtr trainRootNode);
 
 private:
     void PrintMemorySharingStructure(const std::vector<ComputationNodeBasePtr>& nodes);

@@ -11,7 +11,7 @@
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 template <typename ElemType>
-class SyncAction
+class SwapAction
 {
 
 protected:
@@ -22,7 +22,7 @@ protected:
     size_t m_bytes;
 
 public:
-    ~SyncAction(){};
+    ~SwapAction(){};
     virtual void BeginAction() = 0; // for starting asynchronous actions
     virtual void EndAction() = 0; // for synchronization and cleanup
     virtual void ReleaseMemory() = 0;
@@ -34,7 +34,7 @@ public:
 
 };
 
-template class SyncAction<double>;
-template class SyncAction<float>;
+template class SwapAction<double>;
+template class SwapAction<float>;
 
 }}}
