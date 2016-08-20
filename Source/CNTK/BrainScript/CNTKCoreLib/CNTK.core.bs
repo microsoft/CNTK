@@ -346,11 +346,11 @@ CNTK2 = [
     Tanh(_, tag='') = new ComputationNode [ operation = 'Tanh' ; inputs = _ /*plus the function args*/ ]
 
     // 6. Reductions    
-    ReduceSum   (_, axis=None, tag='') = new ComputationNode [ operation = 'ReduceElements' ; inputs = _ ; axis = if BS.Constants.IsNone (axis) then 0 else axis reductionOp = "Sum"    /*plus the function args*/ ]
-    ReduceLogSum(_, axis=None, tag='') = new ComputationNode [ operation = 'ReduceElements' ; inputs = _ ; axis = if BS.Constants.IsNone (axis) then 0 else axis reductionOp = "LogSum" /*plus the function args*/ ]
-    ReduceMin   (_, axis=None, tag='') = new ComputationNode [ operation = 'ReduceElements' ; inputs = _ ; axis = if BS.Constants.IsNone (axis) then 0 else axis reductionOp = "Min"    /*plus the function args*/ ]
-    ReduceMax   (_, axis=None, tag='') = new ComputationNode [ operation = 'ReduceElements' ; inputs = _ ; axis = if BS.Constants.IsNone (axis) then 0 else axis reductionOp = "Max"    /*plus the function args*/ ]
-    #ReduceMean (_, axis=None, tag='') = new ComputationNode [ operation = 'ReduceElements' ; inputs = _ ; axis = if BS.Constants.IsNone (axis) then 0 else axis reductionOp = "Mean"   /*plus the function args*/ ]
+    ReduceSum   (_, axis=None, tag='') = new ComputationNode [ operation = 'ReduceElements' ; inputs = _ ; axis = if BS.Constants.IsNone (axis) then 0 else axis ; reductionOp = "Sum"    /*plus the function args*/ ]
+    ReduceLogSum(_, axis=None, tag='') = new ComputationNode [ operation = 'ReduceElements' ; inputs = _ ; axis = if BS.Constants.IsNone (axis) then 0 else axis ; reductionOp = "LogSum" /*plus the function args*/ ]
+    ReduceMin   (_, axis=None, tag='') = new ComputationNode [ operation = 'ReduceElements' ; inputs = _ ; axis = if BS.Constants.IsNone (axis) then 0 else axis ; reductionOp = "Min"    /*plus the function args*/ ]
+    ReduceMax   (_, axis=None, tag='') = new ComputationNode [ operation = 'ReduceElements' ; inputs = _ ; axis = if BS.Constants.IsNone (axis) then 0 else axis ; reductionOp = "Max"    /*plus the function args*/ ]
+    #ReduceMean (_, axis=None, tag='') = new ComputationNode [ operation = 'ReduceElements' ; inputs = _ ; axis = if BS.Constants.IsNone (axis) then 0 else axis ; reductionOp = "Mean"   /*plus the function args*/ ]
 
     // 7. Control flow (if, composite etc.)
     // None so far
