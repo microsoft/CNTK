@@ -167,9 +167,6 @@ namespace CNTK
         return var.IsInput() && var.IsSparse();
     }
 
-    std::vector<DictionaryValue> SerializeToVector(const NDArrayViewPtr& viewPtr);
-
-    void DeserializeFromVector(const NDArrayViewPtr& viewPtr, const std::vector<DictionaryValue>& values);
 
     inline void AddIndentation(std::wstringstream& s, size_t numIndentationSpaces)
     {
@@ -324,5 +321,10 @@ namespace CNTK
             return CNTK::Constant({}, (double)value, device);
         else
             LogicError("CNTK::ScalarConstant: Unsupported DataType %s", DataTypeName(dataType));
+    }
+
+    inline double MomentumPerMB(double momentumPerSample, size_t minibatchSize)
+    {
+        return std::pow(momentumPerSample, minibatchSize);
     }
 }

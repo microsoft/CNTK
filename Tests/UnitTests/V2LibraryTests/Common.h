@@ -1,9 +1,10 @@
 #pragma once
-
 #include <exception>
 #include <algorithm>
 #include "CNTKLibrary.h"
 #include <functional>
+#include <fstream>
+#include <random>
 
 static const double relativeTolerance = 0.001f;
 static const double absoluteTolerance = 0.000001f;
@@ -20,6 +21,8 @@ inline void FloatingPointVectorCompare(const std::vector<ElementType>& first, co
             throw std::runtime_error(message);
     }
 }
+
+static std::mt19937_64 rng(0);
 
 #pragma warning(push)
 #pragma warning(disable: 4996)
@@ -40,6 +43,12 @@ static inline int _wunlink(const wchar_t *p)
 {
     return unlink(wtocharpath(p).c_str());
 }
+
+static inline FILE *_wfopen(const wchar_t *path, const wchar_t *mode)
+{
+    return fopen(wtocharpath(path).c_str(), wtocharpath(mode).c_str());
+}
+
 #endif
 
 template <typename ElementType>
@@ -331,3 +340,30 @@ inline CNTK::ValuePtr GenerateSequences(const std::vector<size_t>& sequenceLengt
 }
 
 #pragma warning(pop)
+
+inline CNTK::NDShape CreateShape(size_t numAxes, size_t maxDimSize)
+{
+    CNTK::NDShape shape(numAxes);
+    for (size_t i = 0; i < numAxes; ++i)
+    {
+        shape[i] = (rng() % maxDimSize) + 1;
+    }
+
+    return shape;
+}
+
+inline void OpenStream(std::fstream& stream, const std::wstring& filename, bool readonly)
+{
+    if (filename.empty())
+        std::runtime_error("File: filename is empty");
+
+    std::ios_base::openmode mode = std::ios_base::binary;
+    mode = mode | (readonly ? std::ios_base::in : std::ios_base::out);
+
+    #ifdef _MSC_VER
+    stream.open(filename.c_str(), mode);
+    #else
+    stream.open(wtocharpath(filename.c_str()).c_str(), mode);
+    #endif
+    stream.exceptions(std::ios_base::failbit | std::ios_base::badbit);  
+}

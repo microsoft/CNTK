@@ -11,6 +11,8 @@ void TrainerTests();
 void TestCifarResnet();
 void FunctionTests();
 void TrainLSTMSequenceClassifer();
+void SerializationTests();
+void LearnerTests();
 
 int main()
 {
@@ -22,6 +24,9 @@ int main()
     RecurrentFunctionTests();
 
     TrainerTests();
+    SerializationTests();
+    LearnerTests();
+
     TestCifarResnet();
     TrainLSTMSequenceClassifer();
 
