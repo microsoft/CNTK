@@ -33,6 +33,7 @@ speechTrain = [
         nbruttsineachrecurrentiter = 32
         randomize = "auto"
         verbosity = 0
+        useMersenneTwisterRand=true
 
         features = [
             dim = 363
