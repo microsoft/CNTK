@@ -1,6 +1,6 @@
  
 ce=CrossEntropyWithSoftmax ( labels , z.z ) 
-errs=ErrorPrediction ( labels , z.z ) 
+errs=ClassificationError ( labels , z.z ) 
 featScaled=ElementTimes ( featScaled.ElementTimesArgs[0] , features ) 
 featScaled.ElementTimesArgs[0]=LearnableParameter [1,1]   learningRateMultiplier=0.000000  NeedsGradient=false 
  0.00390625 
@@ -417,7 +417,7 @@ inputs[2]=LearnableParameter [1,1]   learningRateMultiplier=0.000000  NeedsGradi
  5 
  #################################################################### 
 labels=InputValue [ 10 ] 
-top5Errs=ErrorPrediction ( labels , z.z , inputs[2] ) 
+top5Errs=ClassificationError ( labels , z.z , inputs[2] ) 
 z.b=LearnableParameter [10,1]   learningRateMultiplier=1.000000  NeedsGradient=true 
  0.0423767529 
  0.0258520395 

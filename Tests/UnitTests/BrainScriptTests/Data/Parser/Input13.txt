@@ -7,7 +7,7 @@ val = new NDLComputationNetwork [
   outLayer = BFF(HiddenStack(numHiddenLayers).Eh, labelDim, hiddenDim) 
   outZ = outLayer.z 
   CE = CrossEntropyWithSoftmax(myLabels, outZ) 
-  Err = ErrorPrediction(myLabels, outZ) 
+  Err = ClassificationError(myLabels, outZ) 
   logPrior = LogPrior(myLabels) 
   ScaledLogLikelihood = outZ - logPrior 
 ]

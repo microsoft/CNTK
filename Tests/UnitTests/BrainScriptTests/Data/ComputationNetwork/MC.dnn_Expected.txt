@@ -5,7 +5,7 @@ b=LearnableParameter [3,1]   learningRateMultiplier=1.000000  NeedsGradient=true
  -0.434973776 
  #################################################################### 
 ce=CrossEntropyWithSoftmax ( labels , z ) 
-errs=ErrorPrediction ( labels , z ) 
+errs=ClassificationError ( labels , z ) 
 features=InputValue [ 2 ] 
 labels=InputValue [ 3 ] 
 w=LearnableParameter [3,2]   learningRateMultiplier=1.000000  NeedsGradient=true 
