@@ -6,13 +6,16 @@ import cntk.cntk_py as cntk_py
 from cntk.ops import variable, constant, parameter, cross_entropy_with_softmax, combine, classification_error, plus, times, relu, convolution, batch_normalization, pooling,AVG_POOLING
 from cntk.utils import create_minibatch_source, cntk_device, create_NDArrayView
 
-def create_mb_source():    
+def create_mb_source(epoch_size):    
     image_height = 32
     image_width = 32
     num_channels = 3
     num_classes = 10
-    map_file = r"../../../../../Examples/Image/Miscellaneous/CIFAR-10/cifar-10-batches-py/train_map.txt"
-    mean_file = r"../../../../../Examples/Image/Miscellaneous/CIFAR-10/cifar-10-batches-py/CIFAR-10_mean.xml"
+
+    map_file_rel_path = r"../../../../../Examples/Image/Miscellaneous/CIFAR-10/cifar-10-batches-py/train_map.txt"
+    map_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), map_file_rel_path)
+    mean_file_rel_path = r"../../../../../Examples/Image/Miscellaneous/CIFAR-10/cifar-10-batches-py/CIFAR-10_mean.xml"    
+    mean_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), mean_file_rel_path)
 
     crop_transform_config = dict()
     crop_transform_config["type"] = "Crop"
@@ -107,11 +110,11 @@ def resnet_classifer(input, num_classes, device, output_name):
     t = times(pool.output(), out_times_params)
     return plus(t.output(), out_bias_params, output_name)    
 
-if __name__=='__main__':      
+def _test_cifar_resnet():
     dev = 0
     cntk_dev = cntk_device(dev)
     epoch_size = sys.maxsize    
-    mbs = create_mb_source()    
+    mbs = create_mb_source(epoch_size)    
     stream_infos = mbs.stream_infos()      
     for si in stream_infos:
         if si.m_name == 'features':
@@ -136,7 +139,7 @@ if __name__=='__main__':
     trainer = cntk_py.Trainer(image_classifier, ce.output(), [cntk_py.sgdlearner(image_classifier.parameters(), learning_rate_per_sample)])
     
     mb_size = 32
-    num_mbs = 100
+    num_mbs = 10000
 
     minibatch_size_limits = dict()    
     minibatch_size_limits[features_si] = (0,mb_size)
@@ -152,9 +155,10 @@ if __name__=='__main__':
 
         freq = 20
         if i % freq == 0:
-            #TODO: add helper function to copy the loss value from the GPU or expose the c++ helper function
             ndav = create_NDArrayView(trainer.previous_minibatch_training_loss_value().data().shape().dimensions(), cntk_py.DataType_Float,cntk_device(-1))
             ndav.copy_from(trainer.previous_minibatch_training_loss_value().data())
             print(str(i+freq) + ": " + str(ndav.to_numpy()))
 
-    
+   
+if __name__=='__main__':      
+    _test_cifar_resnet()

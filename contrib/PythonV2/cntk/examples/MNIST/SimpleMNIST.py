@@ -25,7 +25,7 @@ def fully_connected_classifier_net(input, num_output_classes, hidden_layer_dim, 
     classifier_root = plus(output_plus_param,t.output()) 
     return classifier_root;
 
-def create_mb_source():    
+def create_mb_source(input_dim, num_output_classes, epoch_size):
     features_config = dict()
     features_config["dim"] = input_dim
     features_config["format"] = "dense"
@@ -41,7 +41,9 @@ def create_mb_source():
     deserializer_config = dict()
     deserializer_config["type"] = "CNTKTextFormatDeserializer"
     deserializer_config["module"] = "CNTKTextFormatReader"
-    deserializer_config["file"] = r"../../../../../Examples/Image/MNIST/Data/Train-28x28_cntk_text.txt"
+    rel_path = r"../../../../../Examples/Image/MNIST/Data/Train-28x28_cntk_text.txt"
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), rel_path)
+    deserializer_config["file"] = path    
     deserializer_config["input"] = input_config
 
     minibatch_config = dict()
@@ -50,7 +52,7 @@ def create_mb_source():
 
     return create_minibatch_source(minibatch_config)
 
-if __name__=='__main__':      
+def _test_simple_mnist():
     input_dim = 784
     num_output_classes = 10
     num_hidden_layers = 1
@@ -73,7 +75,7 @@ if __name__=='__main__':
     pe = classification_error(netout.output(), label)
     ffnet = combine([ce, pe, netout], "classifier_model")        
     
-    cm = create_mb_source()
+    cm = create_mb_source(input_dim, num_output_classes, epoch_size)
         
     stream_infos = cm.stream_infos()  
     
@@ -103,3 +105,5 @@ if __name__=='__main__':
             #TODO: read loss values from GPU, if applicable
             print(str(i+freq) + ": " + str(trainer.previous_minibatch_training_loss_value().data().to_numpy()))
     
+if __name__=='__main__':      
+    _test_simple_mnist()
