@@ -684,13 +684,21 @@ template class NoiseContrastiveEstimationNode<double>;
 
 
 // -----------------------------------------------------------------------
-// RandomSampleNode: Creates random samples of classes. To be used in context of different sampling based citerion functions like:
+// RandomSampleNode: 
+// This node is intended to be used in context off sampled softmax, noise contrastive estimation etc.
+// The value is a sparse matrix of dimension num-classes * num-samples, where ich column is a one-hotr representation of the selected class.
+// The idea of this node is to have one set of random samples to be used for a whole mini-batch
+//Creates random samples of classes. To be used in context of different sampling based citerion functions like:
 // samples softmax, noise contrastive estimation and negative sampling.
+// This node does not create a minibatch but a raw matrix
 // Creates one sampled set per mini-batch to speed up calculations.
 // Result is a sparse matrix of shape nClasses * nSamples. We use this shape instead its transposed as the CSC representation will be much more compact.
 // Inputs:
 // Input(0) Sampling weight. (constant) matrix of shape (nClasses x 1) providing smapling weights > 0. Probablility draw a class will be proportional to the weight.
-// Input(1)? True lables: Needed to exclude true tlables from random sample if requested (do we want that?)
+// Remark: In context of sample softmax one might want to exclude the true class from the randomly sampled, we don't support that with this node
+// for the follwing reasons:
+// As this node drwas samples for the full minibatch will will typically have several 'true' classes in the  minibatch.
+// If we
 template <class ElemType>
 class RandomSampleNode : public ComputationNodeNonLooping<ElemType>, public NumInputs<1>
 {

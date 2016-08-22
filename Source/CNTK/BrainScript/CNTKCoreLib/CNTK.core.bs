@@ -384,7 +384,7 @@ CNTK2 = [
                                         zT = TransposeTimes(wT, hiddenLayer) +  TransposeTimes(bias - logPrior, labels) /* here we don't need an additional transpose as the output is already scalar */
                                         
                                         zSReduced = ReduceLogSum(zS)
-                                        ce = LogPlus(zt, zSReduced) - zT
+                                        ce = LogPlus(zT, zSReduced) - zT
                                        ].ce
 
 
