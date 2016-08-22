@@ -1209,6 +1209,16 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Data", "Data", "{4A59163B-1
 		Tutorials\ImageHandsOn\CifarConverter.py = Tutorials\ImageHandsOn\CifarConverter.py
 	EndProjectSection
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "TIMIT", "TIMIT", "{B586AA4C-0BB9-4629-9EDA-25FF2618AC9F}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "TrainSimpleNetwork", "TrainSimpleNetwork", "{C2102C39-BF5F-4B12-9C41-849D1ED35EE8}"
+	ProjectSection(SolutionItems) = preProject
+		Tests\EndToEndTests\Examples\Speech\TIMIT\TrainSimpleNetwork\baseline.linux.txt = Tests\EndToEndTests\Examples\Speech\TIMIT\TrainSimpleNetwork\baseline.linux.txt
+		Tests\EndToEndTests\Examples\Speech\TIMIT\TrainSimpleNetwork\baseline.windows.txt = Tests\EndToEndTests\Examples\Speech\TIMIT\TrainSimpleNetwork\baseline.windows.txt
+		Tests\EndToEndTests\Examples\Speech\TIMIT\TrainSimpleNetwork\run-test = Tests\EndToEndTests\Examples\Speech\TIMIT\TrainSimpleNetwork\run-test
+		Tests\EndToEndTests\Examples\Speech\TIMIT\TrainSimpleNetwork\testcases.yml = Tests\EndToEndTests\Examples\Speech\TIMIT\TrainSimpleNetwork\testcases.yml
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug_CpuOnly|x64 = Debug_CpuOnly|x64
@@ -1662,5 +1672,7 @@ Global
 		{BD7FF8C0-EC3A-49CD-9D81-4A8A29B8AD8E} = {CC143D08-567D-4DAC-9E14-264749C19039}
 		{4727594B-A052-4834-B0E8-57DBB9ADEF13} = {CC143D08-567D-4DAC-9E14-264749C19039}
 		{4A59163B-1EDE-4439-9E7D-40A30B82A3A0} = {2230BF3D-4317-4A3F-A743-DDD6160503F8}
+		{B586AA4C-0BB9-4629-9EDA-25FF2618AC9F} = {FB7AF7B9-6BEA-459F-94D9-94D53916D2B6}
+		{C2102C39-BF5F-4B12-9C41-849D1ED35EE8} = {B586AA4C-0BB9-4629-9EDA-25FF2618AC9F}
 	EndGlobalSection
 EndGlobal

@@ -76,7 +76,7 @@ TrainConvNet = {
 
         # connect to system
         ce       = CrossEntropyWithSoftmax (labels, z)
-        errs     = ErrorPrediction         (labels, z)
+        errs     = ClassificationError     (labels, z)
 
         featureNodes    = (features)
         labelNodes      = (labels)
@@ -97,9 +97,15 @@ TrainConvNet = {
 
         ParallelTrain = {
             parallelizationMethod = "DataParallelSGD"
-            parallelizationStartEpoch = 2
+            parallelizationStartEpoch = 1
             distributedMBReading = true
-            dataParallelSGD = { gradientBits = 1 }
+            dataParallelSGD = { gradientBits = 2 }
+        }
+        AutoAdjust = {
+            autoAdjustMinibatch = true       # enable automatic growing of minibatch size
+            minibatchSizeTuningFrequency = 5 # try to enlarge after this many epochs
+            numMiniBatch4LRSearch = 500
+            minibatchSizeTuningMax = 15000   # out of memory above this
         }
     }
 
