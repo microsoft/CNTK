@@ -4,7 +4,8 @@ import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..'))
 import cntk.cntk_py as cntk_py
 from cntk.ops import variable, constant, parameter, cross_entropy_with_softmax, combine, classification_error, sigmoid, plus, times
-from cntk.utils import create_minibatch_source
+from cntk.utils import create_minibatch_source, get_train_loss
+from cntk.tests.test_utils import TOLERANCE_ABSOLUTE
 
 def fully_connected_layer(input, output_dim, device_id, nonlinearity):        
     input_dim = input.shape()[0]    
@@ -91,16 +92,17 @@ def test_ffnet():
     for i in range(0,int(num_minibatches_to_train)):        
         mb=cm.get_next_minibatch(minibatch_size_limits, dev)
 
-        
         arguments = dict()
         arguments[input] = mb[features_si].m_data
         arguments[label] = mb[labels_si].m_data
             
         trainer.train_minibatch(arguments, dev)
         freq = 20
-        if i % freq == 0:            
-            #TODO: read loss values from GPU, if applicable
-            print(str(i+freq) + ": " + str(trainer.previous_minibatch_training_loss_value().data().to_numpy()))
+        if i % freq == 0: 
+            training_loss = get_train_loss(trainer)                   
+            print(str(i+freq) + ": " + str(training_loss))            
+    #TODO: move the testing code into a separate test module ?
+    assert np.allclose(training_loss, np.asarray([6.574318885803223]), atol=TOLERANCE_ABSOLUTE)
     
 if __name__=='__main__':      
-    test_ffnet()
+    test_ffnet()    
