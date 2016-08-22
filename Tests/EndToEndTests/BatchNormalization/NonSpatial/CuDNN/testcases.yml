@@ -1,10 +1,9 @@
 dataDir: ../../../../../Examples/Image/MNIST/Data
 
 tags:
-    # running on every BVT job in 'S' (Speech) leg in Debug-GPU and Release-CPU configurations:
-    - bvt-s  (build_sku == 'gpu') and ((flavor=='debug') ^ (device=='cpu'))
-    # running unconditionally on every Nightly job in 'S' leg
-    - nightly-s (build_sku == 'gpu')
+    # CPU training for BatchNormalization not supported.
+    - bvt-e (build_sku=='gpu') and (device=='gpu') and (flavor=='release')
+    - nightly-e (build_sku=='gpu') and (device=='gpu')
 
 testCases:
   CNTK Run must be completed:
