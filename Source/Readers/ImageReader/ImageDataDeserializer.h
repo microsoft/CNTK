@@ -74,6 +74,7 @@ public:
         m_streams.push_back(labels);
 
         m_grayscale = config(L"grayscale", false);
+        m_verbosity = config(L"verbosity", 0);
 
         // TODO: multiview should be done on the level of randomizer/transformers - it is responsiblity of the
         // TODO: randomizer to collect how many copies each transform needs and request same sequence several times.
@@ -87,6 +88,7 @@ public:
         m_streams = configHelper.GetStreams();
         assert(m_streams.size() == 2);
         m_grayscale = configHelper.UseGrayscale();
+        m_verbosity = config(L"verbosity", 0);
         const auto& label = m_streams[configHelper.GetLabelStreamId()];
         const auto& feature = m_streams[configHelper.GetFeatureStreamId()];
 
@@ -164,8 +166,12 @@ private:
         std::string line;
         std::string sequenceKey;
         PathReaderMap knownReaders;
+        ReaderSequenceMap readerSequences;
         ImageSequenceDescription<labelType, PrecisionType> description;
         description.m_numberOfSamples = 1;
+
+        Timer timer;
+        timer.Start();
 
         auto& stringRegistry = corpus->GetStringRegistry();
         for (size_t lineIndex = 0; std::getline(mapFile, line); ++lineIndex)
@@ -189,8 +195,20 @@ private:
 
                 m_keyToSequence[description.m_key.m_sequence] = m_imageSequences.size();
                 m_imageSequences.push_back(description);
-                RegisterByteReader(description.m_id, description.m_path, knownReaders);
+                RegisterByteReader(description.m_id, description.m_path, knownReaders, readerSequences);
             }
+        }
+
+        for (auto& reader : knownReaders)
+        {
+            reader.second->Register(readerSequences[reader.first]);
+        }
+
+
+        timer.Stop();
+        if (m_verbosity > 1)
+        {
+            fprintf(stderr, "ImageDeserializer: Read information about %d images in %.6g seconds\n", (int)m_imageSequences.size(), timer.ElapsedSeconds());
         }
     }
 
@@ -433,8 +451,8 @@ private:
 
     // Not using nocase_compare here as it's not correct on Linux.
     using PathReaderMap = std::unordered_map<std::string, std::shared_ptr<ByteReader>>;
-
-    void RegisterByteReader(size_t seqId, const std::string& path, PathReaderMap& knownReaders)
+    using ReaderSequenceMap = std::map<std::string, std::map<std::string, size_t>>;
+    void RegisterByteReader(size_t seqId, const std::string& path, PathReaderMap& knownReaders, ReaderSequenceMap& readerSequences)
     {
         assert(!path.empty());
 
@@ -457,14 +475,17 @@ private:
         {
             reader = std::make_shared<ZipByteReader>(containerPath);
             knownReaders[containerPath] = reader;
+            readerSequences[containerPath] = std::map<std::string, size_t>();
         }
         else
         {
             reader = (*r).second;
         }
-        reader->Register(seqId, itemPath);
+        readerSequences[containerPath][itemPath] = seqId;
         m_readers[seqId] = reader;
+        
 #else
+        UNUSED(readerSequences);
         UNUSED(seqId);
         UNUSED(knownReaders);
         RuntimeError("The code is built without zip container support. Only plain image files are supported.");
@@ -486,6 +507,7 @@ private:
     SeqReaderMap m_readers;
 
     FileByteReader m_defaultReader;
+    int m_verbosity;
 };
 
 // Non-template factory functions for C ABI and for convenience

@@ -8,6 +8,7 @@
 #include <opencv2/opencv.hpp>
 #include <numeric>
 #include "ImageDataDeserializer.h"
+#include "TimerUtility.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 

@@ -198,7 +198,7 @@ BOOST_AUTO_TEST_CASE(ImageReaderZipMissingFile)
             0,
             1),
             std::runtime_error,
-            [](std::runtime_error const& ex) { return string("Failed to get file info of missing.jpg, zip library error: Unknown error -1") == ex.what(); });
+            [](std::runtime_error const& ex) { return string("Cannot retrieve image data for some sequences. For more detail, please see the log file.") == ex.what(); });
 }
 
 BOOST_AUTO_TEST_CASE(ImageReaderMultiView)
