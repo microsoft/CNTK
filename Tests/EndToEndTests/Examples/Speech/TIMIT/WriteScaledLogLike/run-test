@@ -6,7 +6,7 @@
 . $TEST_DIR/../run-timit-test-common
 
 # Train:
-cntkrun TIMIT_TrainSimpleNetwork.cntk "$CntkArguments" || exit $?
+cntkrun TIMIT_TrainSimpleNetwork.cntk "$CntkArguments TIMIT_TrainSimple=[reader=[useMersenneTwisterRand=true]]" || exit $?
 
 # Copy the test data to the test run directory, so that we do not damage anything
 DataDir=$TEST_RUN_DIR/TestData
@@ -14,7 +14,7 @@ mkdir $DataDir
 cp -R $DataSourceDir/* $DataDir || exit $?
 
 # Write:
-cntkrun TIMIT_WriteScaledLogLike.cntk "$CntkArguments"
+cntkrun TIMIT_WriteScaledLogLike.cntk "$CntkArguments TIMIT_WriteScaledLogLike=[reader=[useMersenneTwisterRand=true]]"
 ExitCode=$?
 
 if [ $ExitCode == 0 ]; then

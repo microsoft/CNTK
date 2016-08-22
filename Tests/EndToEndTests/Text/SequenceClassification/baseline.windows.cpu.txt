@@ -91,7 +91,7 @@ labels   = Input(numLabels)
         l3p = ReconcileDynamicAxis(l3, labels)
         // training criteria
         ce  = CrossEntropyWithSoftmax(labels, l3p, tag='criterion')   // this is the training objective
-        err = ClassificationError        (labels, l3p, tag='evaluation')  // this also gets tracked
+        err = ErrorPrediction        (labels, l3p, tag='evaluation')  // this also gets tracked
     ]
     SGD = [	
       epochSize = 0
@@ -208,7 +208,7 @@ labels   = Input(numLabels)
         l3p = ReconcileDynamicAxis(l3, labels)
         // training criteria
         ce  = CrossEntropyWithSoftmax(labels, l3p, tag='criterion')   // this is the training objective
-        err = ClassificationError        (labels, l3p, tag='evaluation')  // this also gets tracked
+        err = ErrorPrediction        (labels, l3p, tag='evaluation')  // this also gets tracked
     ]
     SGD = [	
       epochSize = 0
@@ -328,7 +328,7 @@ labels   = Input(numLabels)
         l3p = ReconcileDynamicAxis(l3, labels)
         // training criteria
         ce  = CrossEntropyWithSoftmax(labels, l3p, tag='criterion')   // this is the training objective
-        err = ClassificationError        (labels, l3p, tag='evaluation')  // this also gets tracked
+        err = ErrorPrediction        (labels, l3p, tag='evaluation')  // this also gets tracked
     ]
     SGD = [	
       epochSize = 0
@@ -406,7 +406,7 @@ Post-processing network...
 
 4 roots:
 	ce = CrossEntropyWithSoftmax()
-	err = ClassificationError()
+	err = ErrorPrediction()
 	out = Pass()
 	t = DynamicAxis()
 
@@ -490,7 +490,7 @@ Validating --> l3.z.z = Plus (l3.z.z.PlusArgs[0], l3.z.B) : [5 x WhereNodeAxis],
 Validating --> l3.act = Pass (l3.z.z) : [5 x 1 x WhereNodeAxis] -> [5 x 1 x WhereNodeAxis]
 Validating --> l3p = ReconcileDynamicAxis (l3.act, labels) : [5 x 1 x WhereNodeAxis], [5 x *] -> [5 x 1 x *]
 Validating --> ce = CrossEntropyWithSoftmax (labels, l3p) : [5 x *], [5 x 1 x *] -> [1]
-Validating --> err = ClassificationError (labels, l3p) : [5 x *], [5 x 1 x *] -> [1]
+Validating --> err = ErrorPrediction (labels, l3p) : [5 x *], [5 x 1 x *] -> [1]
 Validating --> out = Pass (l3.act) : [5 x 1 x WhereNodeAxis] -> [5 x 1 x WhereNodeAxis]
 Validating --> t = DynamicAxis() :  -> [1 x 1 x t]
 
@@ -524,7 +524,7 @@ Post-processing network complete.
 
 05/03/2016 14:29:43: Evaluation criterion node(s):
 
-05/03/2016 14:29:43: 	err = ClassificationError
+05/03/2016 14:29:43: 	err = ErrorPrediction
 
 
 Allocating matrices for forward and/or backward propagation.
@@ -764,7 +764,7 @@ labels   = Input(numLabels)
         l3p = ReconcileDynamicAxis(l3, labels)
         // training criteria
         ce  = CrossEntropyWithSoftmax(labels, l3p, tag='criterion')   // this is the training objective
-        err = ClassificationError        (labels, l3p, tag='evaluation')  // this also gets tracked
+        err = ErrorPrediction        (labels, l3p, tag='evaluation')  // this also gets tracked
     ]
     SGD = [	
       epochSize = 0
@@ -882,7 +882,7 @@ labels   = Input(numLabels)
         l3p = ReconcileDynamicAxis(l3, labels)
         // training criteria
         ce  = CrossEntropyWithSoftmax(labels, l3p, tag='criterion')   // this is the training objective
-        err = ClassificationError        (labels, l3p, tag='evaluation')  // this also gets tracked
+        err = ErrorPrediction        (labels, l3p, tag='evaluation')  // this also gets tracked
     ]
     SGD = [	
       epochSize = 0
@@ -1004,7 +1004,7 @@ labels   = Input(numLabels)
         l3p = ReconcileDynamicAxis(l3, labels)
         // training criteria
         ce  = CrossEntropyWithSoftmax(labels, l3p, tag='criterion')   // this is the training objective
-        err = ClassificationError        (labels, l3p, tag='evaluation')  // this also gets tracked
+        err = ErrorPrediction        (labels, l3p, tag='evaluation')  // this also gets tracked
     ]
     SGD = [	
       epochSize = 0
@@ -1082,7 +1082,7 @@ Post-processing network...
 
 4 roots:
 	ce = CrossEntropyWithSoftmax()
-	err = ClassificationError()
+	err = ErrorPrediction()
 	out = Pass()
 	t = DynamicAxis()
 
@@ -1166,7 +1166,7 @@ Validating --> l3.z.z = Plus (l3.z.z.PlusArgs[0], l3.z.B) : [5 x WhereNodeAxis],
 Validating --> l3.act = Pass (l3.z.z) : [5 x 1 x WhereNodeAxis] -> [5 x 1 x WhereNodeAxis]
 Validating --> l3p = ReconcileDynamicAxis (l3.act, labels) : [5 x 1 x WhereNodeAxis], [5 x *] -> [5 x 1 x *]
 Validating --> ce = CrossEntropyWithSoftmax (labels, l3p) : [5 x *], [5 x 1 x *] -> [1]
-Validating --> err = ClassificationError (labels, l3p) : [5 x *], [5 x 1 x *] -> [1]
+Validating --> err = ErrorPrediction (labels, l3p) : [5 x *], [5 x 1 x *] -> [1]
 Validating --> out = Pass (l3.act) : [5 x 1 x WhereNodeAxis] -> [5 x 1 x WhereNodeAxis]
 Validating --> t = DynamicAxis() :  -> [1 x 1 x t1]
 
@@ -1200,7 +1200,7 @@ Post-processing network complete.
 
 05/03/2016 14:29:45: Evaluation criterion node(s):
 
-05/03/2016 14:29:45: 	err = ClassificationError
+05/03/2016 14:29:45: 	err = ErrorPrediction
 
 
 Allocating matrices for forward and/or backward propagation.

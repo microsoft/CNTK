@@ -272,8 +272,8 @@ Post-processing network...
 
 4 roots:
 	ce = CrossEntropyWithSoftmax()
-	err = ClassificationError()
-	errTop1 = ClassificationError()
+	err = ErrorPrediction()
+	errTop1 = ErrorPrediction()
 	ol.z = Plus()
 
 Validating network. 17 nodes to process in pass 1.
@@ -292,9 +292,9 @@ Validating --> ol.t = Times (ol.W, h1.y) : [10 x 200], [200 x 1 x *] -> [10 x 1 
 Validating --> ol.b = LearnableParameter() :  -> [10 x 1]
 Validating --> ol.z = Plus (ol.t, ol.b) : [10 x 1 x *], [10 x 1] -> [10 x 1 x *]
 Validating --> ce = CrossEntropyWithSoftmax (labels, ol.z) : [10 x *], [10 x 1 x *] -> [1]
-Validating --> err = ClassificationError (labels, ol.z) : [10 x *], [10 x 1 x *] -> [1]
+Validating --> err = ErrorPrediction (labels, ol.z) : [10 x *], [10 x 1 x *] -> [1]
 Validating --> unnamed81 = LearnableParameter() :  -> [1 x 1]
-Validating --> errTop1 = ClassificationError (labels, ol.z, unnamed81) : [10 x *], [10 x 1 x *], [1 x 1] -> [1]
+Validating --> errTop1 = ErrorPrediction (labels, ol.z, unnamed81) : [10 x *], [10 x 1 x *], [1 x 1] -> [1]
 
 Validating network. 9 nodes to process in pass 2.
 
@@ -314,8 +314,8 @@ Post-processing network complete.
 
 05/13/2016 15:10:02: Evaluation criterion node(s):
 
-05/13/2016 15:10:02: 	errTop1 = ClassificationError
-05/13/2016 15:10:02: 	err = ClassificationError
+05/13/2016 15:10:02: 	errTop1 = ErrorPrediction
+05/13/2016 15:10:02: 	err = ErrorPrediction
 
 
 Allocating matrices for forward and/or backward propagation.
@@ -390,8 +390,8 @@ Post-processing network...
 
 4 roots:
 	ce = CrossEntropyWithSoftmax()
-	err = ClassificationError()
-	errTop1 = ClassificationError()
+	err = ErrorPrediction()
+	errTop1 = ErrorPrediction()
 	ol.z = Plus()
 
 Validating network. 17 nodes to process in pass 1.
@@ -410,9 +410,9 @@ Validating --> ol.t = Times (ol.W, h1.y) : [10 x 200], [200 x 1 x *1] -> [10 x 1
 Validating --> ol.b = LearnableParameter() :  -> [10 x 1]
 Validating --> ol.z = Plus (ol.t, ol.b) : [10 x 1 x *1], [10 x 1] -> [10 x 1 x *1]
 Validating --> ce = CrossEntropyWithSoftmax (labels, ol.z) : [10 x *1], [10 x 1 x *1] -> [1]
-Validating --> err = ClassificationError (labels, ol.z) : [10 x *1], [10 x 1 x *1] -> [1]
+Validating --> err = ErrorPrediction (labels, ol.z) : [10 x *1], [10 x 1 x *1] -> [1]
 Validating --> unnamed81 = LearnableParameter() :  -> [1 x 1]
-Validating --> errTop1 = ClassificationError (labels, ol.z, unnamed81) : [10 x *1], [10 x 1 x *1], [1 x 1] -> [1]
+Validating --> errTop1 = ErrorPrediction (labels, ol.z, unnamed81) : [10 x *1], [10 x 1 x *1], [1 x 1] -> [1]
 
 Validating network. 9 nodes to process in pass 2.
 

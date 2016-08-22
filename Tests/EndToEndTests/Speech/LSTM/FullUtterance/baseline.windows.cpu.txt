@@ -145,7 +145,7 @@ speechTrain = [
         crNode = CrossEntropyWithSoftmax(labels, z)                 // this is the objective, as a node
         crExplicit = -(ReduceSum (labels .* LogSoftmax (z)))        // manually-defined per-sample objective
         ce = Pass (if useExplicitCriterion then crExplicit else crNode, tag='criterion')
-        err = ClassificationError(labels, z, tag='evaluation')          // this also gets tracked
+        err = ErrorPrediction(labels, z, tag='evaluation')          // this also gets tracked
         // decoding
         logPrior = LogPrior(labels)	 
         ScaledLogLikelihood = Pass (z - logPrior, tag='output')     // using Pass() since we can't assign a tag to x - y
@@ -273,7 +273,7 @@ speechTrain = [
         crNode = CrossEntropyWithSoftmax(labels, z)                 // this is the objective, as a node
         crExplicit = -(ReduceSum (labels .* LogSoftmax (z)))        // manually-defined per-sample objective
         ce = Pass (if useExplicitCriterion then crExplicit else crNode, tag='criterion')
-        err = ClassificationError(labels, z, tag='evaluation')          // this also gets tracked
+        err = ErrorPrediction(labels, z, tag='evaluation')          // this also gets tracked
         // decoding
         logPrior = LogPrior(labels)	 
         ScaledLogLikelihood = Pass (z - logPrior, tag='output')     // using Pass() since we can't assign a tag to x - y
@@ -406,7 +406,7 @@ configparameters: cntk.cntk:speechTrain=[
         crNode = CrossEntropyWithSoftmax(labels, z)                 // this is the objective, as a node
         crExplicit = -(ReduceSum (labels .* LogSoftmax (z)))        // manually-defined per-sample objective
         ce = Pass (if useExplicitCriterion then crExplicit else crNode, tag='criterion')
-        err = ClassificationError(labels, z, tag='evaluation')          // this also gets tracked
+        err = ErrorPrediction(labels, z, tag='evaluation')          // this also gets tracked
         // decoding
         logPrior = LogPrior(labels)	 
         ScaledLogLikelihood = Pass (z - logPrior, tag='output')     // using Pass() since we can't assign a tag to x - y
@@ -444,7 +444,7 @@ Post-processing network...
 	ScaledLogLikelihood = Pass()
 	ce = Pass()
 	crExplicit = Negate()
-	err = ClassificationError()
+	err = ErrorPrediction()
 	featNorm.invStdDevVector = InvStdDev()
 	featNorm.meanVector = Mean()
 	logPrior.x = Mean()
@@ -772,7 +772,7 @@ Validating --> crExplicit._negate.z.ElementTimesArgs[1] = LogSoftmax (z) : [132 
 Validating --> crExplicit._negate.z = ElementTimes (labels, crExplicit._negate.z.ElementTimesArgs[1]) : [132 x *], [132 x 1 x *] -> [132 x 1 x *]
 Validating --> crExplicit._negate = ReduceElements (crExplicit._negate.z) : [132 x 1 x *] -> [1 x *]
 Validating --> crExplicit = Negate (crExplicit._negate) : [1 x *] -> [1 x *]
-Validating --> err = ClassificationError (labels, z) : [132 x *], [132 x 1 x *] -> [1]
+Validating --> err = ErrorPrediction (labels, z) : [132 x *], [132 x 1 x *] -> [1]
 
 Validating network. 194 nodes to process in pass 2.
 
@@ -840,7 +840,7 @@ Post-processing network complete.
 
 05/03/2016 14:13:33: Evaluation criterion node(s):
 
-05/03/2016 14:13:33: 	err = ClassificationError
+05/03/2016 14:13:33: 	err = ErrorPrediction
 
 
 Allocating matrices for forward and/or backward propagation.

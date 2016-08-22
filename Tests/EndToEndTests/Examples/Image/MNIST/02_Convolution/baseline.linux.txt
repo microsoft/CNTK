@@ -284,7 +284,7 @@ Post-processing network...
 
 3 roots:
 	ce = CrossEntropyWithSoftmax()
-	err = ClassificationError()
+	err = ErrorPrediction()
 	ol.z = Plus()
 
 Validating network. 27 nodes to process in pass 1.
@@ -315,7 +315,7 @@ Validating --> ol.t = Times (ol.W, h1.y) : [10 x 128], [128 x 1 x *] -> [10 x 1 
 Validating --> ol.b = LearnableParameter() :  -> [10 x 1]
 Validating --> ol.z = Plus (ol.t, ol.b) : [10 x 1 x *], [10 x 1] -> [10 x 1 x *]
 Validating --> ce = CrossEntropyWithSoftmax (labels, ol.z) : [10 x *], [10 x 1 x *] -> [1]
-Validating --> err = ClassificationError (labels, ol.z) : [10 x *], [10 x 1 x *] -> [1]
+Validating --> err = ErrorPrediction (labels, ol.z) : [10 x *], [10 x 1 x *] -> [1]
 
 Validating network. 16 nodes to process in pass 2.
 
@@ -343,7 +343,7 @@ Post-processing network complete.
 
 05/13/2016 15:10:11: Evaluation criterion node(s):
 
-05/13/2016 15:10:11: 	err = ClassificationError
+05/13/2016 15:10:11: 	err = ErrorPrediction
 
 
 Allocating matrices for forward and/or backward propagation.
@@ -429,7 +429,7 @@ Post-processing network...
 
 3 roots:
 	ce = CrossEntropyWithSoftmax()
-	err = ClassificationError()
+	err = ErrorPrediction()
 	ol.z = Plus()
 
 Validating network. 27 nodes to process in pass 1.
@@ -460,7 +460,7 @@ Validating --> ol.t = Times (ol.W, h1.y) : [10 x 128], [128 x 1 x *1] -> [10 x 1
 Validating --> ol.b = LearnableParameter() :  -> [10 x 1]
 Validating --> ol.z = Plus (ol.t, ol.b) : [10 x 1 x *1], [10 x 1] -> [10 x 1 x *1]
 Validating --> ce = CrossEntropyWithSoftmax (labels, ol.z) : [10 x *1], [10 x 1 x *1] -> [1]
-Validating --> err = ClassificationError (labels, ol.z) : [10 x *1], [10 x 1 x *1] -> [1]
+Validating --> err = ErrorPrediction (labels, ol.z) : [10 x *1], [10 x 1 x *1] -> [1]
 
 Validating network. 16 nodes to process in pass 2.
 

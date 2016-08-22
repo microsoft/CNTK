@@ -72,18 +72,6 @@ void DoTrain(const ConfigRecordType& config)
     bool makeMode = config(L"makeMode", true);
     DEVICEID_TYPE deviceId = DeviceFromConfig(config);
 
-    // determine the network-creation function
-    // We have several ways to create that network.
-    function<ComputationNetworkPtr(DEVICEID_TYPE)> createNetworkFn;
-
-    createNetworkFn = GetNetworkFactory<ConfigRecordType, ElemType>(config);
-
-    auto dataReader = CreateObject<DataReader>(config, L"reader");
-
-    shared_ptr<DataReader> cvDataReader;
-    if (config.Exists(L"cvReader"))
-        cvDataReader = CreateObject<DataReader>(config, L"cvReader");
-
     shared_ptr<SGD<ElemType>> optimizer;
     if (config.Exists(L"optimizer"))
     {
@@ -95,8 +83,39 @@ void DoTrain(const ConfigRecordType& config)
         optimizer = make_shared<SGD<ElemType>>(configSGD);
     }
 
+    // determine which epoch to start with, including recovering a checkpoint if any and 'makeMode' enabled
+    int startEpoch = optimizer->DetermineStartEpoch(makeMode);
+    if (startEpoch == optimizer->GetMaxEpochs())
+    {
+        LOGPRINTF(stderr, "No further training is necessary.\n");
+        return;
+    }
+
+    wstring modelFileName = optimizer->GetModelNameForEpoch(int(startEpoch) - 1);
+    bool loadNetworkFromCheckpoint = startEpoch >= 0;
+    fprintf(stderr, "\n");
+    if (loadNetworkFromCheckpoint)
+        LOGPRINTF(stderr, "Starting from checkpoint. Loading network from '%ls'.\n", modelFileName.c_str());
+    else
+        LOGPRINTF(stderr, "Creating virgin network.\n");
+
+    // determine the network-creation function
+    // We have several ways to create that network.
+    function<ComputationNetworkPtr(DEVICEID_TYPE)> createNetworkFn;
+
+    createNetworkFn = GetNetworkFactory<ConfigRecordType, ElemType>(config);
+
+    // create or load from checkpoint
+    shared_ptr<ComputationNetwork> net = !loadNetworkFromCheckpoint ? createNetworkFn(deviceId) : ComputationNetwork::CreateFromFile<ElemType>(deviceId, modelFileName);
+
+    auto dataReader = CreateObject<DataReader>(config, L"reader");
+
+    shared_ptr<DataReader> cvDataReader;
+    if (config.Exists(L"cvReader"))
+        cvDataReader = CreateObject<DataReader>(config, L"cvReader");
+
     optimizer->InitMPI(MPIWrapper::GetInstance());
-    optimizer->Train(createNetworkFn, deviceId, dataReader.get(), cvDataReader.get(), makeMode);
+    optimizer->Train(net, deviceId, dataReader.get(), cvDataReader.get(), startEpoch, loadNetworkFromCheckpoint);
 }
 
 namespace Microsoft { namespace MSR { namespace ScriptableObjects {
@@ -189,9 +208,8 @@ void DoDumpNodes(const ConfigParameters& config)
     if (!printValues && !printMetadata)
         InvalidArgument("printValues and printMetadata: Since both are set to false, there will be nothing to dump");
 
-    ComputationNetwork net(CPUDEVICE);    // always use CPU
-    net.Load<ElemType>(modelPath); // TODO: we have a function now to combine this and the previous line
-    net.DumpNodeInfoToFile(nodeName, printValues, printMetadata, outputFile, nodeNameRegexStr);
+    ComputationNetworkPtr net = ComputationNetwork::CreateFromFile<ElemType>(CPUDEVICE, modelPath);
+    net->DumpNodeInfoToFile(nodeName, printValues, printMetadata, outputFile, nodeNameRegexStr);
 }
 
 template void DoDumpNodes<float>(const ConfigParameters& config);

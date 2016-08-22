@@ -11,7 +11,7 @@
 #   BUILDTYPE       (release/debug)
 #   BUILDTYPE       (GPU/CPU-only)
 #   WITH_1BITSGD    (whether 1bit-SGD support was enabled)
-#   MATHLIB         (MKL/ACML)
+#   MATHLIB         (MKL)
 #   CUDA_PATH       (if exists, i.e., for GPU builds)
 #   CUB_PATH        (if exists, i.e., for GPU builds)
 #   CUDNN_PATH      (if exists, i.e., only for GPU builds)

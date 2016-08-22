@@ -10,7 +10,7 @@
 #include "stdafx.h"
 #ifdef _WIN32
 #include <crtdbg.h>
-#endif
+#endif 
 
 #include "Basics.h"
 #include "Actions.h"
