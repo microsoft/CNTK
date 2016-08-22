@@ -52,7 +52,7 @@ def create_mb_source(input_dim, num_output_classes, epoch_size):
 
     return create_minibatch_source(minibatch_config)
 
-def _test_simple_mnist():
+def test_simple_mnist():
     input_dim = 784
     num_output_classes = 10
     num_hidden_layers = 1
@@ -106,4 +106,4 @@ def _test_simple_mnist():
             print(str(i+freq) + ": " + str(trainer.previous_minibatch_training_loss_value().data().to_numpy()))
     
 if __name__=='__main__':      
-    _test_simple_mnist()
+    test_simple_mnist()

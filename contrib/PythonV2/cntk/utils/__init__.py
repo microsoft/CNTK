@@ -316,13 +316,13 @@ def sanitize_batch(batch, data_type, dev):
         return batch
 
     num_seq = len(batch)
+
     try:
         seq_lens = [len(seq) for seq in batch]
     except:
         import ipdb;ipdb.set_trace()
-
-    use_mask = set(seq_lens)!=1
-
+    
+    use_mask = len(set(seq_lens))!=1    
     if use_mask:
         # If not all sequences are of the same length, we have to pad them to
         # the same length and create a mask over the original data.
@@ -542,15 +542,15 @@ def eval(op, precision, device_id, input_map=None, backward_pass=False):
     forward_output_mask = {}
     for v in op.outputs():
         value = forward_out_var_map[v]
-        np_data = value.data().to_numpy() 
-        np_data = np_data.reshape(tuple(reversed(np_data.shape)))
+        np_data = value.data().to_numpy()         
         if value.mask():
             np_data = remove_masked_elements(np_data, value.mask().to_numpy())
         forward_output[v] = np_data
         forward_output_mask[v] = value.mask()
 
     assert backward_pass
-    if backward_pass:
+    
+    if backward_pass:    
         root_gradients = {} 
         for v, o in forward_output.items():
             ones_grad = ones_like(o, pn)
@@ -563,8 +563,7 @@ def eval(op, precision, device_id, input_map=None, backward_pass=False):
 
         backward_output = {}
         for var, value in backward_var_map.items():
-            np_data = value.data().to_numpy() 
-            np_data = np_data.reshape(tuple(reversed(np_data.shape)))
+            np_data = value.data().to_numpy()             
             if value.mask():
                 np_data = remove_masked_elements(np_data, value.mask().to_numpy())
             backward_output[var] = np_data

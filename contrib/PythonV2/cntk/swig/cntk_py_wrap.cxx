@@ -5436,8 +5436,7 @@ SWIGINTERN PyObject *CNTK_NDShape_dimensions(CNTK::NDShape *self){
         for (int i=0; i<num_axes; i++)
         {
             size_t dim = dims[i];
-            //PyTuple_SET_ITEM(result, num_axes-1-i, PyInt_FromLong(dim));
-            PyTuple_SET_ITEM(result, i, PyInt_FromLong(dim));
+            PyTuple_SET_ITEM(result, num_axes-1-i, PyInt_FromLong(dim));                       
         }
         return result;
     }
@@ -5530,12 +5529,10 @@ SWIGINTERN CNTK::NDArrayView *new_CNTK_NDArrayView__SWIG_17(PyObject *pyobj,CNTK
 
         npy_intp num_elements = 1;
         // CNTK uses column major, thus we reverse the shape
-
-        for (int i=0; i<num_axes; i++)
+        for (int i=num_axes-1; i>=0; i--)
         {
             shape.push_back(np_shape[i]);
-            num_elements *= np_shape[i];
-            //std::reverse(shape.begin(),shape.end());
+            num_elements *= np_shape[i];            
         }
 
         int typecode = PyArray_TYPE(array);
@@ -5563,7 +5560,15 @@ SWIGINTERN CNTK::NDArrayView *new_CNTK_NDArrayView__SWIG_17(PyObject *pyobj,CNTK
     }
 SWIGINTERN PyObject *CNTK_NDArrayView_to_numpy(CNTK::NDArrayView *self){
         // FIXME use not yet existing NDShape function that returns the dimensions at once
-        std::vector<size_t> dimensions = (*self).Shape().Dimensions();
+        std::vector<size_t> dimensions_cntk = (*self).Shape().Dimensions();
+        std::vector<size_t> dimensions;
+
+        // CNTK uses column major, thus we reverse the shape
+        for (int i=dimensions_cntk.size()-1; i>=0; i--)
+        {
+            dimensions.push_back(dimensions_cntk[i]);            
+        }
+
         npy_intp* shape = reinterpret_cast<npy_intp*>(&dimensions[0]);
 
         NPY_TYPES numpy_type;
