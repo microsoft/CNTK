@@ -43,3 +43,28 @@ def conv_bn_layer(input, out_feature_map_count, kernel_width, kernel_height, h_s
 def conv_bn_relu_layer(input, out_feature_map_count, kernel_width, kernel_height, h_stride, v_stride, w_scale, b_value, sc_value, bn_time_const, device):
     conv_bn_function = conv_bn_layer(input, out_feature_map_count, kernel_width, kernel_height, h_stride, v_stride, w_scale, b_value, sc_value, bn_time_const, device)
     return relu(conv_bn_function.output())
+
+def resnet_node2(input, out_feature_map_count, kernel_width, kernel_height, w_scale, b_value, sc_value, bn_time_const, device):
+    c1 = conv_bn_relu_layer(input, out_feature_map_count, kernel_width, kernel_height, 1, 1, w_scale, b_value, sc_value, bn_time_const, device)
+    c2 =  conv_bn_layer(c1.output(), out_feature_map_count, kernel_width, kernel_height, 1, 1, w_scale, b_value, sc_value, bn_time_const, device)
+    p = plus(c2.output(), input)
+    return relu(p.output())
+
+def proj_layer(w_proj, input, h_stride, v_stride, b_value, sc_value, bn_time_const, device):
+    out_feature_map_count = w_proj.shape().dimensions()[-1];
+    #TODO: initialize using b_value and sc_value, needs to be exposed in the python api
+    bias_params = parameter(shape=(out_feature_map_count,), device_id=device)   
+    scale_params = parameter(shape=(out_feature_map_count,), device_id=device)   
+    running_mean = constant((out_feature_map_count,), 0.0, device_id=device)
+    running_invstd = constant((out_feature_map_count,), 0.0, device_id=device)
+    num_in_channels = input.shape().dimensions()[0]        
+    conv_func = convolution(w_proj, input, (num_in_channels, v_stride, h_stride))    
+    return batch_normalization(conv_func.output(), scale_params, bias_params, running_mean, running_invstd, True, bn_time_const)
+
+def resnet_node2_inc(input, out_feature_map_count, kernel_width, kernel_height, w_scale, b_value, sc_value, bn_time_const, w_proj, device):
+    c1 = conv_bn_relu_layer(input, out_feature_map_count, kernel_width, kernel_height, 2, 2, w_scale, b_value, sc_value, bn_time_const, device)
+    c2 =  conv_bn_layer(c1.output(), out_feature_map_count, kernel_width, kernel_height, 1, 1, w_scale, b_value, sc_value, bn_time_const, device)
+
+    c_proj = proj_layer(w_proj, input, 2, 2, b_value, sc_value, bn_time_const, device)
+    p = plus(c2.output(), c_proj.output())
+    return relu(p.output())

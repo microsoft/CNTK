@@ -7,6 +7,8 @@ import numpy as np
 from ..utils import sanitize_input, get_data_type, cntk_device
 from cntk import cntk_py
 
+#TODO: for nodes with single output, return node.output() instead of the node itself
+
 def combine(operands, name=''):
     '''
      Create a new Function instance which just combines the outputs of the specified list of 

@@ -418,7 +418,7 @@ def ones_like(batch, precision_numpy):
     '''
     return [np.ones_like(sample, dtype=precision_numpy) for sample in batch]
 
-def create_NDArrayView(shape, data_type, dev):
+def create_NDArrayView(shape, data_type=cntk_py.DataType_Float, dev=cntk_device(-1)):
     if not np.isscalar(shape):
     # cntk uses column major, thus we reverse the shape    
         shape = tuple(reversed(shape))
@@ -426,7 +426,7 @@ def create_NDArrayView(shape, data_type, dev):
     view = cntk_py.NDArrayView(data_type, cntk_py.StorageFormat_Dense, shape, dev)
     return view
 
-def create_NDArrayView_from_NumPy(nd, dev):              
+def create_NDArrayView_from_NumPy(nd, dev=cntk_device(-1)):              
     view = cntk_py.NDArrayView(nd, dev, False)
     return view
 

@@ -4,8 +4,8 @@ import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..'))
 import cntk.cntk_py as cntk_py
 from cntk.ops import variable, constant, parameter, cross_entropy_with_softmax, combine, classification_error, plus, times, relu, convolution, batch_normalization, pooling,AVG_POOLING
-from cntk.utils import create_minibatch_source, get_train_loss, cntk_device
-from cntk.nn import conv_bn_relu_layer, conv_bn_layer
+from cntk.utils import create_minibatch_source, get_train_loss, cntk_device, create_NDArrayView, create_NDArrayView_from_NumPy
+from cntk.nn import conv_bn_relu_layer, conv_bn_layer, resnet_node2, resnet_node2_inc
 
 def create_mb_source(epoch_size):    
     image_height = 32
@@ -59,8 +59,17 @@ def create_mb_source(epoch_size):
 
     return create_minibatch_source(minibatch_config)    
 
-def resnet_classifer(input, num_classes, device, output_name):
-    #TOTO: add all missing layers
+def get_projection_map(out_dim, in_dim, device):
+    if in_dim > out_dim:
+        raise ValueError("Can only project from lower to higher dimensionality")
+    
+    projection_map_values = np.zeros(in_dim*out_dim, dtype=np.float32)
+    for i in range(0, in_dim):
+        projection_map_values[(i*out_dim) + i] = 1.0
+        shape = (in_dim, 1, 1, out_dim)
+        return constant(value=projection_map_values.reshape(shape), device_id = device)
+
+def resnet_classifer(input, num_classes, device, output_name):    
     conv_w_scale = 7.07
     conv_b_value = 0
 
@@ -77,20 +86,30 @@ def resnet_classifer(input, num_classes, device, output_name):
     c_map1 = 16    
     
     conv1 = conv_bn_relu_layer(input, c_map1, kernel_width, kernel_height, 1, 1, conv1_w_scale, conv_b_value, sc_value, bn_time_const, device)
-    
+    rn1_1 = resnet_node2(conv1.output(), c_map1, kernel_width, kernel_height, conv1_w_scale, conv_b_value, sc_value, bn_time_const, device)
+    rn1_2 = resnet_node2(rn1_1.output(), c_map1, kernel_width, kernel_height, conv1_w_scale, conv_b_value, sc_value, bn_time_const, device)
+    rn1_3 = resnet_node2(rn1_2.output(), c_map1, kernel_width, kernel_height, conv1_w_scale, conv_b_value, sc_value, bn_time_const, device)
+        
     c_map2 = 32
+    rn2_1_wProj=get_projection_map(c_map2, c_map1, device)    
+    rn2_1 = resnet_node2_inc(rn1_3.output(), c_map2, kernel_width, kernel_height, conv1_w_scale, conv_b_value, sc_value, bn_time_const, rn2_1_wProj, device)
+    rn2_2 = resnet_node2(rn2_1.output(), c_map2, kernel_width, kernel_height, conv1_w_scale, conv_b_value, sc_value, bn_time_const, device)
+    rn2_3 = resnet_node2(rn2_2.output(), c_map2, kernel_width, kernel_height, conv1_w_scale, conv_b_value, sc_value, bn_time_const, device)
     
     c_map3 = 64
+    rn3_1_wProj=get_projection_map(c_map3, c_map2, device)    
+    rn3_1 = resnet_node2_inc(rn2_3.output(), c_map3, kernel_width, kernel_height, conv1_w_scale, conv_b_value, sc_value, bn_time_const, rn3_1_wProj, device)
+    rn3_2 = resnet_node2(rn3_1.output(), c_map3, kernel_width, kernel_height, conv1_w_scale, conv_b_value, sc_value, bn_time_const, device)
+    rn3_3 = resnet_node2(rn3_2.output(), c_map3, kernel_width, kernel_height, conv1_w_scale, conv_b_value, sc_value, bn_time_const, device)
 
-    # Global average pooling
-    #TODO: use original values
-    poolw = 32
-    poolh = 32
+    # Global average pooling    
+    poolw = 8
+    poolh = 8
     poolh_stride = 1
     poolv_stride = 1
 
-    pool = pooling(conv1.output(), AVG_POOLING, (1, poolh, poolw), (1, poolv_stride, poolh_stride))
-    out_times_params = parameter(shape=(c_map1, 1, 1, num_classes), device_id=device)
+    pool = pooling(rn3_3.output(), AVG_POOLING, (1, poolh, poolw), (1, poolv_stride, poolh_stride))
+    out_times_params = parameter(shape=(c_map3, 1, 1, num_classes), device_id=device)
     out_bias_params = parameter(shape=(num_classes,), device_id=device)
     t = times(pool.output(), out_times_params)
     return plus(t.output(), out_bias_params, output_name)    
@@ -142,5 +161,5 @@ def _test_cifar_resnet():
         if i % freq == 0:
             print(str(i+freq) + ": " + str(get_train_loss(trainer)))
    
-if __name__=='__main__':      
+if __name__=='__main__':         
     _test_cifar_resnet()
