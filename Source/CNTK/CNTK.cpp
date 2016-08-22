@@ -665,26 +665,19 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
 #ifdef _DEBUG
     // This simply merges all the different config parameters specified (eg, via config files or via command line directly),
     // and prints it.
-    fprintf(stderr, "\n\n");
-    LOGPRINTF(stderr, ">>>>>>>>>>>>>>>>>>>> RAW CONFIG (VARIABLES NOT RESOLVED) >>>>>>>>>>>>>>>>>>>>\n");
+    fprintf(stderr, "\nConfiguration, Raw:\n\n");
     LOGPRINTF(stderr, "%s\n", rawConfigString.c_str());
-    LOGPRINTF(stderr, "<<<<<<<<<<<<<<<<<<<< RAW CONFIG (VARIABLES NOT RESOLVED)  <<<<<<<<<<<<<<<<<<<<\n");
 
     // Same as above, but all variables are resolved.  If a parameter is set multiple times (eg, set in config, overridden at command line),
     // All of these assignments will appear, even though only the last assignment matters.
-    fprintf(stderr, "\n");
-    LOGPRINTF(stderr, ">>>>>>>>>>>>>>>>>>>> RAW CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>\n");
+    fprintf(stderr, "\nConfiguration After Variable Resolution:\n\n");
     LOGPRINTF(stderr, "%s\n", config.ResolveVariables(rawConfigString).c_str());
-    LOGPRINTF(stderr, "<<<<<<<<<<<<<<<<<<<< RAW CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<\n");
 
 #endif
     // This outputs the final value each variable/parameter is assigned to in config (so if a parameter is set multiple times, only the last
     // value it is set to will appear).
-    //fprintf(stderr, "\n");
-    //LOGPRINTF(stderr, ">>>>>>>>>>>>>>>>>>>> PROCESSED CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>\n");
     fprintf(stderr, "\nConfiguration After Processing and Variable Resolution:\n\n");
     config.dumpWithResolvedVariables();
-    //LOGPRINTF(stderr, "<<<<<<<<<<<<<<<<<<<< PROCESSED CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<\n");
 
     LOGPRINTF(stderr, "Commands:");
     for (int i = 0; i < command.size(); i++)

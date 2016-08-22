@@ -352,7 +352,6 @@ CNTK2 = [
     ReduceMean  (_, axis=None, tag='') = { axis1 = if BS.Constants.IsNone (axis) then 0 else axis ; r = new ComputationNode [ operation = 'ReduceElements' ; inputs = _ ; axis = axis1 ; reductionOp = "Mean"   /*plus the function args*/ ]}.r
     ReduceMin   (_, axis=None, tag='') = { axis1 = if BS.Constants.IsNone (axis) then 0 else axis ; r = new ComputationNode [ operation = 'ReduceElements' ; inputs = _ ; axis = axis1 ; reductionOp = "Min"    /*plus the function args*/ ]}.r
     ReduceMax   (_, axis=None, tag='') = { axis1 = if BS.Constants.IsNone (axis) then 0 else axis ; r = new ComputationNode [ operation = 'ReduceElements' ; inputs = _ ; axis = axis1 ; reductionOp = "Max"    /*plus the function args*/ ]}.r
-    #ReduceMean (_, axis=None, tag='') = { axis1 = if BS.Constants.IsNone (axis) then 0 else axis ; r = new ComputationNode [ operation = 'ReduceElements' ; inputs = _ ; axis = axis1 ; reductionOp = "Mean"   /*plus the function args*/ ]}.r
 
     // 7. Control flow (if, composite etc.)
     // None so far
