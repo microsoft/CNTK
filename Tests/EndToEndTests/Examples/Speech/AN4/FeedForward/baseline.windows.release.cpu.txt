@@ -65,7 +65,7 @@ speechTrain = [
     SimpleNetworkBuilder = [
         layerSizes = 363:512:512:132
         trainingCriterion = "CrossEntropyWithSoftmax"
-        evalCriterion = "ErrorPrediction"
+        evalCriterion = "ClassificationError"
         layerTypes = "Sigmoid"
         applyMeanVarNorm = true
         needPrior = true
@@ -139,7 +139,7 @@ speechTrain = [
     SimpleNetworkBuilder = [
         layerSizes = 363:512:512:132
         trainingCriterion = "CrossEntropyWithSoftmax"
-        evalCriterion = "ErrorPrediction"
+        evalCriterion = "ClassificationError"
         layerTypes = "Sigmoid"
         applyMeanVarNorm = true
         needPrior = true
@@ -214,7 +214,7 @@ configparameters: FeedForward.cntk:speechTrain=[
     SimpleNetworkBuilder = [
         layerSizes = 363:512:512:132
         trainingCriterion = "CrossEntropyWithSoftmax"
-        evalCriterion = "ErrorPrediction"
+        evalCriterion = "ClassificationError"
         layerTypes = "Sigmoid"
         applyMeanVarNorm = true
         needPrior = true
@@ -290,7 +290,7 @@ Post-processing network...
 
 7 roots:
 	CrossEntropyWithSoftmax = CrossEntropyWithSoftmax()
-	EvalErrorPrediction = ErrorPrediction()
+	EvalClassificationError = ClassificationError()
 	InvStdOfFeatures = InvStdDev()
 	MeanOfFeatures = Mean()
 	PosteriorProb = Softmax()
@@ -319,7 +319,7 @@ Validating --> W2*H1 = Times (W2, H2) : [132 x 512], [512 x 1 x *] -> [132 x 1 x
 Validating --> B2 = LearnableParameter() :  -> [132 x 1]
 Validating --> HLast = Plus (W2*H1, B2) : [132 x 1 x *], [132 x 1] -> [132 x 1 x *]
 Validating --> CrossEntropyWithSoftmax = CrossEntropyWithSoftmax (labels, HLast) : [132 x *], [132 x 1 x *] -> [1]
-Validating --> EvalErrorPrediction = ErrorPrediction (labels, HLast) : [132 x *], [132 x 1 x *] -> [1]
+Validating --> EvalClassificationError = ClassificationError (labels, HLast) : [132 x *], [132 x 1 x *] -> [1]
 Validating --> PosteriorProb = Softmax (HLast) : [132 x 1 x *] -> [132 x 1 x *]
 Validating --> Prior = Mean (labels) : [132 x *] -> [132]
 Validating --> LogOfPrior = Log (Prior) : [132] -> [132]
@@ -343,14 +343,14 @@ Post-processing network complete.
 
 05/03/2016 13:22:23: Evaluation criterion node(s):
 
-05/03/2016 13:22:23: 	EvalErrorPrediction = ErrorPrediction
+05/03/2016 13:22:23: 	EvalClassificationError = ClassificationError
 
 
 Allocating matrices for forward and/or backward propagation.
 
 Memory Sharing Structure:
 
-0000000000000000: {[EvalErrorPrediction Gradient[1]] [InvStdOfFeatures Gradient[363]] [LogOfPrior Gradient[132]] [MVNormalizedFeatures Gradient[363 x *]] [MeanOfFeatures Gradient[363]] [PosteriorProb Gradient[132 x 1 x *]] [PosteriorProb Value[132 x 1 x *]] [Prior Gradient[132]] [ScaledLogLikelihood Gradient[132 x 1 x *]] [features Gradient[363 x *]] [labels Gradient[132 x *]] }
+0000000000000000: {[EvalClassificationError Gradient[1]] [InvStdOfFeatures Gradient[363]] [LogOfPrior Gradient[132]] [MVNormalizedFeatures Gradient[363 x *]] [MeanOfFeatures Gradient[363]] [PosteriorProb Gradient[132 x 1 x *]] [PosteriorProb Value[132 x 1 x *]] [Prior Gradient[132]] [ScaledLogLikelihood Gradient[132 x 1 x *]] [features Gradient[363 x *]] [labels Gradient[132 x *]] }
 000000BDD334C430: {[features Value[363 x *]] }
 000000BDD334C4D0: {[W0 Value[512 x 363]] }
 000000BDD334C610: {[MeanOfFeatures Value[363]] }
@@ -359,7 +359,7 @@ Memory Sharing Structure:
 000000BDD334CE30: {[B1 Value[512 x 1]] }
 000000BDD334D1F0: {[InvStdOfFeatures Value[363]] }
 000000BDD5BCA080: {[Prior Value[132]] }
-000000BDD5BCA120: {[EvalErrorPrediction Value[1]] }
+000000BDD5BCA120: {[EvalClassificationError Value[1]] }
 000000BDD5BCA260: {[W2 Value[132 x 512]] }
 000000BDD5BCA440: {[labels Value[132 x *]] }
 000000BDD5BCA6C0: {[MVNormalizedFeatures Value[363 x *]] }
@@ -396,7 +396,7 @@ requiredata: determined feature kind as 33-dimensional 'USER' with frame shift 1
 minibatchiterator: epoch 0: frames [0..2048] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
 
 05/03/2016 13:22:24: Starting minibatch loop, DataParallelSGD training (MyRank = 0, NumNodes = 1, NumGradientBits = 1), distributed reading is ENABLED.
-05/03/2016 13:22:25: Finished Epoch[ 1 of 1]: [Training] CrossEntropyWithSoftmax = 4.48531419 * 2048; EvalErrorPrediction = 0.90722656 * 2048; totalSamplesSeen = 2048; learningRatePerSample = 0.00390625; epochTime=0.288909s
+05/03/2016 13:22:25: Finished Epoch[ 1 of 1]: [Training] CrossEntropyWithSoftmax = 4.48531419 * 2048; EvalClassificationError = 0.90722656 * 2048; totalSamplesSeen = 2048; learningRatePerSample = 0.00390625; epochTime=0.288909s
 05/03/2016 13:22:25: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503132211.330996\Examples\Speech\AN4_FeedForward@release_cpu/Models/cntkSpeechFF.dnn'
 05/03/2016 13:22:25: CNTKCommandTrainEnd: speechTrain
 

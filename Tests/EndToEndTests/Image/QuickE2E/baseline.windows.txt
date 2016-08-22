@@ -105,7 +105,7 @@ train = [
         h1 = DNNSigmoidLayer((4 : 4 : cMap2/*cudnn: CHW*/), h1Dim, pool2, 1).out
         ol = DNNLayer(h1Dim, labelDim, h1, 1).out
         ce = CrossEntropyWithSoftmax(labels, ol, tag="criterion")
-        err = ErrorPrediction(labels, ol, tag="evaluation")
+        err = ClassificationError(labels, ol, tag="evaluation")
         outputNodes = ol
     ]
     SGD = [
@@ -224,7 +224,7 @@ train = [
         h1 = DNNSigmoidLayer((4 : 4 : cMap2/*cudnn: CHW*/), h1Dim, pool2, 1).out
         ol = DNNLayer(h1Dim, labelDim, h1, 1).out
         ce = CrossEntropyWithSoftmax(labels, ol, tag="criterion")
-        err = ErrorPrediction(labels, ol, tag="evaluation")
+        err = ClassificationError(labels, ol, tag="evaluation")
         outputNodes = ol
     ]
     SGD = [
@@ -368,7 +368,7 @@ configparameters: Image_QuickE2E.cntk:train=[
         h1 = DNNSigmoidLayer((4 : 4 : cMap2/*cudnn: CHW*/), h1Dim, pool2, 1).out
         ol = DNNLayer(h1Dim, labelDim, h1, 1).out
         ce = CrossEntropyWithSoftmax(labels, ol, tag="criterion")
-        err = ErrorPrediction(labels, ol, tag="evaluation")
+        err = ClassificationError(labels, ol, tag="evaluation")
         outputNodes = ol
     ]
     SGD = [
@@ -416,7 +416,7 @@ Post-processing network...
 
 2 roots:
 	ce = CrossEntropyWithSoftmax()
-	err = ErrorPrediction()
+	err = ClassificationError()
 
 Validating network. 27 nodes to process in pass 1.
 
@@ -446,7 +446,7 @@ Validating --> ol.out.PlusArgs[0] = Times (ol.W, h1.out) : [10 x 128], [128 x *]
 Validating --> ol.b = LearnableParameter() :  -> [10 x 1]
 Validating --> ol.out = Plus (ol.out.PlusArgs[0], ol.b) : [10 x *], [10 x 1] -> [10 x 1 x *]
 Validating --> ce = CrossEntropyWithSoftmax (labels, ol.out) : [10 x *], [10 x 1 x *] -> [1]
-Validating --> err = ErrorPrediction (labels, ol.out) : [10 x *], [10 x 1 x *] -> [1]
+Validating --> err = ClassificationError (labels, ol.out) : [10 x *], [10 x 1 x *] -> [1]
 
 Validating network. 16 nodes to process in pass 2.
 
@@ -474,7 +474,7 @@ Post-processing network complete.
 
 04/20/2016 13:14:17: Evaluation criterion node(s):
 
-04/20/2016 13:14:17: 	err = ErrorPrediction
+04/20/2016 13:14:17: 	err = ClassificationError
 
 
 Allocating matrices for forward and/or backward propagation.
@@ -530,7 +530,7 @@ Post-processing network...
 
 2 roots:
 	ce = CrossEntropyWithSoftmax()
-	err = ErrorPrediction()
+	err = ClassificationError()
 
 Validating network. 27 nodes to process in pass 1.
 
@@ -560,7 +560,7 @@ Validating --> ol.out.PlusArgs[0] = Times (ol.W, h1.out) : [10 x 128], [128 x *1
 Validating --> ol.b = LearnableParameter() :  -> [10 x 1]
 Validating --> ol.out = Plus (ol.out.PlusArgs[0], ol.b) : [10 x *1], [10 x 1] -> [10 x 1 x *1]
 Validating --> ce = CrossEntropyWithSoftmax (labels, ol.out) : [10 x *1], [10 x 1 x *1] -> [1]
-Validating --> err = ErrorPrediction (labels, ol.out) : [10 x *1], [10 x 1 x *1] -> [1]
+Validating --> err = ClassificationError (labels, ol.out) : [10 x *1], [10 x 1 x *1] -> [1]
 
 Validating network. 16 nodes to process in pass 2.
 
@@ -585,7 +585,7 @@ evalNodeNames are not specified, using all the default evalnodes and training cr
 
 
 Allocating matrices for forward and/or backward propagation.
-Final Results: Minibatch[1-1]: * 100    err: ErrorPrediction/Sample = 0.9    ce: CrossEntropyWithSoftmax/Sample = 2.3315085    perplexity = 10.293457    
+Final Results: Minibatch[1-1]: * 100    err: ClassificationError/Sample = 0.9    ce: CrossEntropyWithSoftmax/Sample = 2.3315085    perplexity = 10.293457    
 
 04/20/2016 13:14:19: Action "test" complete.
 
@@ -699,7 +699,7 @@ train = [
         h1 = DNNSigmoidLayer((4 : 4 : cMap2/*cudnn: CHW*/), h1Dim, pool2, 1).out
         ol = DNNLayer(h1Dim, labelDim, h1, 1).out
         ce = CrossEntropyWithSoftmax(labels, ol, tag="criterion")
-        err = ErrorPrediction(labels, ol, tag="evaluation")
+        err = ClassificationError(labels, ol, tag="evaluation")
         outputNodes = ol
     ]
     SGD = [
@@ -819,7 +819,7 @@ train = [
         h1 = DNNSigmoidLayer((4 : 4 : cMap2/*cudnn: CHW*/), h1Dim, pool2, 1).out
         ol = DNNLayer(h1Dim, labelDim, h1, 1).out
         ce = CrossEntropyWithSoftmax(labels, ol, tag="criterion")
-        err = ErrorPrediction(labels, ol, tag="evaluation")
+        err = ClassificationError(labels, ol, tag="evaluation")
         outputNodes = ol
     ]
     SGD = [
@@ -965,7 +965,7 @@ configparameters: Image_QuickE2E.cntk:train=[
         h1 = DNNSigmoidLayer((4 : 4 : cMap2/*cudnn: CHW*/), h1Dim, pool2, 1).out
         ol = DNNLayer(h1Dim, labelDim, h1, 1).out
         ce = CrossEntropyWithSoftmax(labels, ol, tag="criterion")
-        err = ErrorPrediction(labels, ol, tag="evaluation")
+        err = ClassificationError(labels, ol, tag="evaluation")
         outputNodes = ol
     ]
     SGD = [
@@ -1013,7 +1013,7 @@ Post-processing network...
 
 2 roots:
 	ce = CrossEntropyWithSoftmax()
-	err = ErrorPrediction()
+	err = ClassificationError()
 
 Validating network. 27 nodes to process in pass 1.
 
@@ -1043,7 +1043,7 @@ Validating --> ol.out.PlusArgs[0] = Times (ol.W, h1.out) : [10 x 128], [128 x *]
 Validating --> ol.b = LearnableParameter() :  -> [10 x 1]
 Validating --> ol.out = Plus (ol.out.PlusArgs[0], ol.b) : [10 x *], [10 x 1] -> [10 x 1 x *]
 Validating --> ce = CrossEntropyWithSoftmax (labels, ol.out) : [10 x *], [10 x 1 x *] -> [1]
-Validating --> err = ErrorPrediction (labels, ol.out) : [10 x *], [10 x 1 x *] -> [1]
+Validating --> err = ClassificationError (labels, ol.out) : [10 x *], [10 x 1 x *] -> [1]
 
 Validating network. 16 nodes to process in pass 2.
 
@@ -1071,7 +1071,7 @@ Post-processing network complete.
 
 04/20/2016 13:14:20: Evaluation criterion node(s):
 
-04/20/2016 13:14:20: 	err = ErrorPrediction
+04/20/2016 13:14:20: 	err = ClassificationError
 
 
 Allocating matrices for forward and/or backward propagation.
@@ -1100,7 +1100,7 @@ Post-processing network...
 
 2 roots:
 	ce = CrossEntropyWithSoftmax()
-	err = ErrorPrediction()
+	err = ClassificationError()
 
 Validating network. 27 nodes to process in pass 1.
 
@@ -1130,7 +1130,7 @@ Validating --> ol.out.PlusArgs[0] = Times (ol.W, h1.out) : [10 x 128], [128 x *1
 Validating --> ol.b = LearnableParameter() :  -> [10 x 1]
 Validating --> ol.out = Plus (ol.out.PlusArgs[0], ol.b) : [10 x *1], [10 x 1] -> [10 x 1 x *1]
 Validating --> ce = CrossEntropyWithSoftmax (labels, ol.out) : [10 x *1], [10 x 1 x *1] -> [1]
-Validating --> err = ErrorPrediction (labels, ol.out) : [10 x *1], [10 x 1 x *1] -> [1]
+Validating --> err = ClassificationError (labels, ol.out) : [10 x *1], [10 x 1 x *1] -> [1]
 
 Validating network. 16 nodes to process in pass 2.
 
@@ -1155,7 +1155,7 @@ evalNodeNames are not specified, using all the default evalnodes and training cr
 
 
 Allocating matrices for forward and/or backward propagation.
-Final Results: Minibatch[1-1]: * 100    err: ErrorPrediction/Sample = 0.9    ce: CrossEntropyWithSoftmax/Sample = 2.3327824    perplexity = 10.306579    
+Final Results: Minibatch[1-1]: * 100    err: ClassificationError/Sample = 0.9    ce: CrossEntropyWithSoftmax/Sample = 2.3327824    perplexity = 10.306579    
 
 04/20/2016 13:14:21: Action "test" complete.
 

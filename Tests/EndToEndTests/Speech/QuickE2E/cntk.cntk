@@ -14,7 +14,7 @@ speechTrain = [
     SimpleNetworkBuilder = [
         layerSizes = 363:512:512:132
         trainingCriterion = "CrossEntropyWithSoftmax"
-        evalCriterion = "ErrorPrediction"
+        evalCriterion = "ClassificationError"
         layerTypes = "Sigmoid"
         applyMeanVarNorm = true
         initValueScale = 1.0
@@ -57,14 +57,14 @@ speechTrain = [
         labels   = Input {J}
 
         # --- define fitting function. This binds everything together for purpose of training.
-        fit = Fit (features, labels, model, CrossEntropyWithSoftmax, ErrorPrediction)
+        fit = Fit (features, labels, model, CrossEntropyWithSoftmax, ClassificationError)
     ].fit))
 
     BrainScriptNetworkBuilder_plain = [    // the same as above but with BS. Currently not used. Enable by removing the SimpleNetworkBuilder above.
         // note: this does not produce identical results because of different initialization order of random-initialized LearnableParameters
         layerSizes=363:512:512:132  // [0..]
         trainingCriterion=CrossEntropyWithSoftmax
-        evalCriterion=ErrorPrediction
+        evalCriterion=ClassificationError
         layerTypes[i:1..Length(layerSizes)-2]=Sigmoid
         applyMeanVarNorm=true
         initValueScale=1.0

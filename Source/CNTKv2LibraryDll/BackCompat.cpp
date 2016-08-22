@@ -171,7 +171,7 @@ namespace CNTK
                 std::swap(inputVars[0], inputVars[1]);
                 opType = PrimitiveOpType::CrossEntropyWithSoftmax;
             }
-            else if (node->OperationName() == OperationNameOf(ErrorPredictionNode))
+            else if (node->OperationName() == OperationNameOf(ClassificationErrorNode))
             {
                 std::swap(inputVars[0], inputVars[1]);
                 opType = PrimitiveOpType::ClassificationError;

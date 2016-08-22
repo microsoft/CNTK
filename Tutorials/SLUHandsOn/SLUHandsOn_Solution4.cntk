@@ -43,7 +43,7 @@ TrainTagger = {
 
         # loss and metric
         ce   = CrossEntropyWithSoftmax (intentLabels, z)
-        errs = ErrorPrediction         (intentLabels, z)
+        errs = ClassificationError         (intentLabels, z)
 
         featureNodes    = (query)
         labelNodes      = (intentLabels)

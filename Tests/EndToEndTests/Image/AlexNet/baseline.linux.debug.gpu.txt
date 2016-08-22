@@ -320,10 +320,10 @@ Post-processing network...
 3 roots:
 	OutputNodes.z = Plus
 	CE = CrossEntropyWithSoftmax
-	Err = ErrorPrediction
+	Err = ClassificationError
 FormNestedNetwork: WARNING: Was called twice for OutputNodes.z Plus operation
 FormNestedNetwork: WARNING: Was called twice for CE CrossEntropyWithSoftmax operation
-FormNestedNetwork: WARNING: Was called twice for Err ErrorPrediction operation
+FormNestedNetwork: WARNING: Was called twice for Err ClassificationError operation
 
 
 Validating for node OutputNodes.z. 45 nodes to process in pass 1.
@@ -674,7 +674,7 @@ Validating --> h2_d = Dropout(h2.y[4096, MBSize 0]) -> [4096 [4096 {1}], MBSize 
 Validating --> OutputNodes.t = Times(OutputNodes.W[1000, 4096], h2_d[4096, MBSize 0]) -> [1000 [1000 {1}], MBSize 0]
 Validating --> OutputNodes.b = LearnableParameter -> [1000 [1000 {1}], 1]
 Validating --> OutputNodes.z = Plus(OutputNodes.t[1000, MBSize 0], OutputNodes.b[1000, 1]) -> [1000 [1000 {1}], MBSize 0]
-Validating --> Err = ErrorPrediction(labels[1000, MBSize 0], OutputNodes.z[1000, MBSize 0]) -> [1 [1 {1}], 1]
+Validating --> Err = ClassificationError(labels[1000, MBSize 0], OutputNodes.z[1000, MBSize 0]) -> [1 [1 {1}], 1]
 
 Validating for node Err. 29 nodes to process in pass 2.
 
@@ -724,7 +724,7 @@ Validating --> h2_d = Dropout(h2.y[4096, MBSize 0]) -> [4096 [4096 {1}], MBSize 
 Validating --> OutputNodes.t = Times(OutputNodes.W[1000, 4096], h2_d[4096, MBSize 0]) -> [1000 [1000 {1}], MBSize 0]
 Validating --> OutputNodes.b = LearnableParameter -> [1000 [1000 {1}], 1]
 Validating --> OutputNodes.z = Plus(OutputNodes.t[1000, MBSize 0], OutputNodes.b[1000, 1]) -> [1000 [1000 {1}], MBSize 0]
-Validating --> Err = ErrorPrediction(labels[1000, MBSize 0], OutputNodes.z[1000, MBSize 0]) -> [1 [1 {1}], 1]
+Validating --> Err = ClassificationError(labels[1000, MBSize 0], OutputNodes.z[1000, MBSize 0]) -> [1 [1 {1}], 1]
 
 Validating for node Err, final verification.
 
@@ -774,7 +774,7 @@ Validating --> h2_d = Dropout(h2.y[4096, MBSize 0]) -> [4096 [4096 {1}], MBSize 
 Validating --> OutputNodes.t = Times(OutputNodes.W[1000, 4096], h2_d[4096, MBSize 0]) -> [1000 [1000 {1}], MBSize 0]
 Validating --> OutputNodes.b = LearnableParameter -> [1000 [1000 {1}], 1]
 Validating --> OutputNodes.z = Plus(OutputNodes.t[1000, MBSize 0], OutputNodes.b[1000, 1]) -> [1000 [1000 {1}], MBSize 0]
-Validating --> Err = ErrorPrediction(labels[1000, MBSize 0], OutputNodes.z[1000, MBSize 0]) -> [1 [1 {1}], 1]
+Validating --> Err = ClassificationError(labels[1000, MBSize 0], OutputNodes.z[1000, MBSize 0]) -> [1 [1 {1}], 1]
 
 17 out of 47 nodes do not share the minibatch layout with the input data.
 
@@ -786,7 +786,7 @@ Training criterion node(s):
 	CE = CrossEntropyWithSoftmax
 
 Evaluation criterion node(s):
-	Err = ErrorPrediction
+	Err = ClassificationError
 
 
 Allocating matrices for forward and/or backward propagation.
@@ -821,10 +821,10 @@ Post-processing network...
 
 3 roots:
 	CE = CrossEntropyWithSoftmax
-	Err = ErrorPrediction
+	Err = ClassificationError
 	OutputNodes.z = Plus
 FormNestedNetwork: WARNING: Was called twice for CE CrossEntropyWithSoftmax operation
-FormNestedNetwork: WARNING: Was called twice for Err ErrorPrediction operation
+FormNestedNetwork: WARNING: Was called twice for Err ClassificationError operation
 FormNestedNetwork: WARNING: Was called twice for OutputNodes.z Plus operation
 
 
@@ -1029,7 +1029,7 @@ Validating --> h2_d = Dropout(h2.y[4096, MBSize 0]) -> [4096 [4096 {1}], MBSize 
 Validating --> OutputNodes.t = Times(OutputNodes.W[1000, 4096], h2_d[4096, MBSize 0]) -> [1000 [1000 {1}], MBSize 0]
 Validating --> OutputNodes.b = LearnableParameter -> [1000 [1000 {1}], 1]
 Validating --> OutputNodes.z = Plus(OutputNodes.t[1000, MBSize 0], OutputNodes.b[1000, 1]) -> [1000 [1000 {1}], MBSize 0]
-Validating --> Err = ErrorPrediction(labels[1000, MBSize 0], OutputNodes.z[1000, MBSize 0]) -> [1 [1 {1}], 1]
+Validating --> Err = ClassificationError(labels[1000, MBSize 0], OutputNodes.z[1000, MBSize 0]) -> [1 [1 {1}], 1]
 
 Validating for node Err. 29 nodes to process in pass 2.
 
@@ -1079,7 +1079,7 @@ Validating --> h2_d = Dropout(h2.y[4096, MBSize 0]) -> [4096 [4096 {1}], MBSize 
 Validating --> OutputNodes.t = Times(OutputNodes.W[1000, 4096], h2_d[4096, MBSize 0]) -> [1000 [1000 {1}], MBSize 0]
 Validating --> OutputNodes.b = LearnableParameter -> [1000 [1000 {1}], 1]
 Validating --> OutputNodes.z = Plus(OutputNodes.t[1000, MBSize 0], OutputNodes.b[1000, 1]) -> [1000 [1000 {1}], MBSize 0]
-Validating --> Err = ErrorPrediction(labels[1000, MBSize 0], OutputNodes.z[1000, MBSize 0]) -> [1 [1 {1}], 1]
+Validating --> Err = ClassificationError(labels[1000, MBSize 0], OutputNodes.z[1000, MBSize 0]) -> [1 [1 {1}], 1]
 
 Validating for node Err, final verification.
 
@@ -1129,7 +1129,7 @@ Validating --> h2_d = Dropout(h2.y[4096, MBSize 0]) -> [4096 [4096 {1}], MBSize 
 Validating --> OutputNodes.t = Times(OutputNodes.W[1000, 4096], h2_d[4096, MBSize 0]) -> [1000 [1000 {1}], MBSize 0]
 Validating --> OutputNodes.b = LearnableParameter -> [1000 [1000 {1}], 1]
 Validating --> OutputNodes.z = Plus(OutputNodes.t[1000, MBSize 0], OutputNodes.b[1000, 1]) -> [1000 [1000 {1}], MBSize 0]
-Validating --> Err = ErrorPrediction(labels[1000, MBSize 0], OutputNodes.z[1000, MBSize 0]) -> [1 [1 {1}], 1]
+Validating --> Err = ClassificationError(labels[1000, MBSize 0], OutputNodes.z[1000, MBSize 0]) -> [1 [1 {1}], 1]
 
 17 out of 47 nodes do not share the minibatch layout with the input data.
 
@@ -1286,12 +1286,12 @@ Post-processing network...
 
 4 roots:
 	CE = CrossEntropyWithSoftmax
-	Err = ErrorPrediction
-	errTop5 = ErrorPrediction
+	Err = ClassificationError
+	errTop5 = ClassificationError
 	OutputNodes.z = Plus
 FormNestedNetwork: WARNING: Was called twice for CE CrossEntropyWithSoftmax operation
-FormNestedNetwork: WARNING: Was called twice for Err ErrorPrediction operation
-FormNestedNetwork: WARNING: Was called twice for errTop5 ErrorPrediction operation
+FormNestedNetwork: WARNING: Was called twice for Err ClassificationError operation
+FormNestedNetwork: WARNING: Was called twice for errTop5 ClassificationError operation
 FormNestedNetwork: WARNING: Was called twice for OutputNodes.z Plus operation
 
 
@@ -1496,7 +1496,7 @@ Validating --> h2_d = Dropout(h2.y[4096, MBSize 0]) -> [4096 [4096 {1}], MBSize 
 Validating --> OutputNodes.t = Times(OutputNodes.W[1000, 4096], h2_d[4096, MBSize 0]) -> [1000 [1000 {1}], MBSize 0]
 Validating --> OutputNodes.b = LearnableParameter -> [1000 [1000 {1}], 1]
 Validating --> OutputNodes.z = Plus(OutputNodes.t[1000, MBSize 0], OutputNodes.b[1000, 1]) -> [1000 [1000 {1}], MBSize 0]
-Validating --> Err = ErrorPrediction(labels[1000, MBSize 0], OutputNodes.z[1000, MBSize 0]) -> [1 [1 {1}], 1]
+Validating --> Err = ClassificationError(labels[1000, MBSize 0], OutputNodes.z[1000, MBSize 0]) -> [1 [1 {1}], 1]
 
 Validating for node Err. 29 nodes to process in pass 2.
 
@@ -1546,7 +1546,7 @@ Validating --> h2_d = Dropout(h2.y[4096, MBSize 0]) -> [4096 [4096 {1}], MBSize 
 Validating --> OutputNodes.t = Times(OutputNodes.W[1000, 4096], h2_d[4096, MBSize 0]) -> [1000 [1000 {1}], MBSize 0]
 Validating --> OutputNodes.b = LearnableParameter -> [1000 [1000 {1}], 1]
 Validating --> OutputNodes.z = Plus(OutputNodes.t[1000, MBSize 0], OutputNodes.b[1000, 1]) -> [1000 [1000 {1}], MBSize 0]
-Validating --> Err = ErrorPrediction(labels[1000, MBSize 0], OutputNodes.z[1000, MBSize 0]) -> [1 [1 {1}], 1]
+Validating --> Err = ClassificationError(labels[1000, MBSize 0], OutputNodes.z[1000, MBSize 0]) -> [1 [1 {1}], 1]
 
 Validating for node Err, final verification.
 
@@ -1596,7 +1596,7 @@ Validating --> h2_d = Dropout(h2.y[4096, MBSize 0]) -> [4096 [4096 {1}], MBSize 
 Validating --> OutputNodes.t = Times(OutputNodes.W[1000, 4096], h2_d[4096, MBSize 0]) -> [1000 [1000 {1}], MBSize 0]
 Validating --> OutputNodes.b = LearnableParameter -> [1000 [1000 {1}], 1]
 Validating --> OutputNodes.z = Plus(OutputNodes.t[1000, MBSize 0], OutputNodes.b[1000, 1]) -> [1000 [1000 {1}], MBSize 0]
-Validating --> Err = ErrorPrediction(labels[1000, MBSize 0], OutputNodes.z[1000, MBSize 0]) -> [1 [1 {1}], 1]
+Validating --> Err = ClassificationError(labels[1000, MBSize 0], OutputNodes.z[1000, MBSize 0]) -> [1 [1 {1}], 1]
 
 17 out of 47 nodes do not share the minibatch layout with the input data.
 
@@ -1650,7 +1650,7 @@ Validating --> OutputNodes.t = Times(OutputNodes.W[1000, 4096], h2_d[4096, MBSiz
 Validating --> OutputNodes.b = LearnableParameter -> [1000 [1000 {1}], 1]
 Validating --> OutputNodes.z = Plus(OutputNodes.t[1000, MBSize 0], OutputNodes.b[1000, 1]) -> [1000 [1000 {1}], MBSize 0]
 Validating --> unnamed125 = LearnableParameter -> [1 [1 {1}], 1]
-Validating --> errTop5 = ErrorPrediction(labels[1000, MBSize 0], OutputNodes.z[1000, MBSize 0], unnamed125[1, 1]) -> [1 [1 {1}], 1]
+Validating --> errTop5 = ClassificationError(labels[1000, MBSize 0], OutputNodes.z[1000, MBSize 0], unnamed125[1, 1]) -> [1 [1 {1}], 1]
 
 Validating for node errTop5. 29 nodes to process in pass 2.
 
@@ -1701,7 +1701,7 @@ Validating --> OutputNodes.t = Times(OutputNodes.W[1000, 4096], h2_d[4096, MBSiz
 Validating --> OutputNodes.b = LearnableParameter -> [1000 [1000 {1}], 1]
 Validating --> OutputNodes.z = Plus(OutputNodes.t[1000, MBSize 0], OutputNodes.b[1000, 1]) -> [1000 [1000 {1}], MBSize 0]
 Validating --> unnamed125 = LearnableParameter -> [1 [1 {1}], 1]
-Validating --> errTop5 = ErrorPrediction(labels[1000, MBSize 0], OutputNodes.z[1000, MBSize 0], unnamed125[1, 1]) -> [1 [1 {1}], 1]
+Validating --> errTop5 = ClassificationError(labels[1000, MBSize 0], OutputNodes.z[1000, MBSize 0], unnamed125[1, 1]) -> [1 [1 {1}], 1]
 
 Validating for node errTop5, final verification.
 
@@ -1752,7 +1752,7 @@ Validating --> OutputNodes.t = Times(OutputNodes.W[1000, 4096], h2_d[4096, MBSiz
 Validating --> OutputNodes.b = LearnableParameter -> [1000 [1000 {1}], 1]
 Validating --> OutputNodes.z = Plus(OutputNodes.t[1000, MBSize 0], OutputNodes.b[1000, 1]) -> [1000 [1000 {1}], MBSize 0]
 Validating --> unnamed125 = LearnableParameter -> [1 [1 {1}], 1]
-Validating --> errTop5 = ErrorPrediction(labels[1000, MBSize 0], OutputNodes.z[1000, MBSize 0], unnamed125[1, 1]) -> [1 [1 {1}], 1]
+Validating --> errTop5 = ClassificationError(labels[1000, MBSize 0], OutputNodes.z[1000, MBSize 0], unnamed125[1, 1]) -> [1 [1 {1}], 1]
 
 18 out of 48 nodes do not share the minibatch layout with the input data.
 
@@ -1909,12 +1909,12 @@ Post-processing network...
 
 4 roots:
 	CE = CrossEntropyWithSoftmax
-	errTop5 = ErrorPrediction
-	Err = ErrorPrediction
+	errTop5 = ClassificationError
+	Err = ClassificationError
 	OutputNodes.z = Plus
 FormNestedNetwork: WARNING: Was called twice for CE CrossEntropyWithSoftmax operation
-FormNestedNetwork: WARNING: Was called twice for errTop5 ErrorPrediction operation
-FormNestedNetwork: WARNING: Was called twice for Err ErrorPrediction operation
+FormNestedNetwork: WARNING: Was called twice for errTop5 ClassificationError operation
+FormNestedNetwork: WARNING: Was called twice for Err ClassificationError operation
 FormNestedNetwork: WARNING: Was called twice for OutputNodes.z Plus operation
 
 
@@ -2120,7 +2120,7 @@ Validating --> OutputNodes.t = Times(OutputNodes.W[1000, 4096], h2_d[4096, MBSiz
 Validating --> OutputNodes.b = LearnableParameter -> [1000 [1000 {1}], 1]
 Validating --> OutputNodes.z = Plus(OutputNodes.t[1000, MBSize 0], OutputNodes.b[1000, 1]) -> [1000 [1000 {1}], MBSize 0]
 Validating --> unnamed125 = LearnableParameter -> [1 [1 {1}], 1]
-Validating --> errTop5 = ErrorPrediction(labels[1000, MBSize 0], OutputNodes.z[1000, MBSize 0], unnamed125[1, 1]) -> [1 [1 {1}], 1]
+Validating --> errTop5 = ClassificationError(labels[1000, MBSize 0], OutputNodes.z[1000, MBSize 0], unnamed125[1, 1]) -> [1 [1 {1}], 1]
 
 Validating for node errTop5. 29 nodes to process in pass 2.
 
@@ -2171,7 +2171,7 @@ Validating --> OutputNodes.t = Times(OutputNodes.W[1000, 4096], h2_d[4096, MBSiz
 Validating --> OutputNodes.b = LearnableParameter -> [1000 [1000 {1}], 1]
 Validating --> OutputNodes.z = Plus(OutputNodes.t[1000, MBSize 0], OutputNodes.b[1000, 1]) -> [1000 [1000 {1}], MBSize 0]
 Validating --> unnamed125 = LearnableParameter -> [1 [1 {1}], 1]
-Validating --> errTop5 = ErrorPrediction(labels[1000, MBSize 0], OutputNodes.z[1000, MBSize 0], unnamed125[1, 1]) -> [1 [1 {1}], 1]
+Validating --> errTop5 = ClassificationError(labels[1000, MBSize 0], OutputNodes.z[1000, MBSize 0], unnamed125[1, 1]) -> [1 [1 {1}], 1]
 
 Validating for node errTop5, final verification.
 
@@ -2222,7 +2222,7 @@ Validating --> OutputNodes.t = Times(OutputNodes.W[1000, 4096], h2_d[4096, MBSiz
 Validating --> OutputNodes.b = LearnableParameter -> [1000 [1000 {1}], 1]
 Validating --> OutputNodes.z = Plus(OutputNodes.t[1000, MBSize 0], OutputNodes.b[1000, 1]) -> [1000 [1000 {1}], MBSize 0]
 Validating --> unnamed125 = LearnableParameter -> [1 [1 {1}], 1]
-Validating --> errTop5 = ErrorPrediction(labels[1000, MBSize 0], OutputNodes.z[1000, MBSize 0], unnamed125[1, 1]) -> [1 [1 {1}], 1]
+Validating --> errTop5 = ClassificationError(labels[1000, MBSize 0], OutputNodes.z[1000, MBSize 0], unnamed125[1, 1]) -> [1 [1 {1}], 1]
 
 18 out of 48 nodes do not share the minibatch layout with the input data.
 
@@ -2275,7 +2275,7 @@ Validating --> h2_d = Dropout(h2.y[4096, MBSize 0]) -> [4096 [4096 {1}], MBSize 
 Validating --> OutputNodes.t = Times(OutputNodes.W[1000, 4096], h2_d[4096, MBSize 0]) -> [1000 [1000 {1}], MBSize 0]
 Validating --> OutputNodes.b = LearnableParameter -> [1000 [1000 {1}], 1]
 Validating --> OutputNodes.z = Plus(OutputNodes.t[1000, MBSize 0], OutputNodes.b[1000, 1]) -> [1000 [1000 {1}], MBSize 0]
-Validating --> Err = ErrorPrediction(labels[1000, MBSize 0], OutputNodes.z[1000, MBSize 0]) -> [1 [1 {1}], 1]
+Validating --> Err = ClassificationError(labels[1000, MBSize 0], OutputNodes.z[1000, MBSize 0]) -> [1 [1 {1}], 1]
 
 Validating for node Err. 29 nodes to process in pass 2.
 
@@ -2325,7 +2325,7 @@ Validating --> h2_d = Dropout(h2.y[4096, MBSize 0]) -> [4096 [4096 {1}], MBSize 
 Validating --> OutputNodes.t = Times(OutputNodes.W[1000, 4096], h2_d[4096, MBSize 0]) -> [1000 [1000 {1}], MBSize 0]
 Validating --> OutputNodes.b = LearnableParameter -> [1000 [1000 {1}], 1]
 Validating --> OutputNodes.z = Plus(OutputNodes.t[1000, MBSize 0], OutputNodes.b[1000, 1]) -> [1000 [1000 {1}], MBSize 0]
-Validating --> Err = ErrorPrediction(labels[1000, MBSize 0], OutputNodes.z[1000, MBSize 0]) -> [1 [1 {1}], 1]
+Validating --> Err = ClassificationError(labels[1000, MBSize 0], OutputNodes.z[1000, MBSize 0]) -> [1 [1 {1}], 1]
 
 Validating for node Err, final verification.
 
@@ -2375,7 +2375,7 @@ Validating --> h2_d = Dropout(h2.y[4096, MBSize 0]) -> [4096 [4096 {1}], MBSize 
 Validating --> OutputNodes.t = Times(OutputNodes.W[1000, 4096], h2_d[4096, MBSize 0]) -> [1000 [1000 {1}], MBSize 0]
 Validating --> OutputNodes.b = LearnableParameter -> [1000 [1000 {1}], 1]
 Validating --> OutputNodes.z = Plus(OutputNodes.t[1000, MBSize 0], OutputNodes.b[1000, 1]) -> [1000 [1000 {1}], MBSize 0]
-Validating --> Err = ErrorPrediction(labels[1000, MBSize 0], OutputNodes.z[1000, MBSize 0]) -> [1 [1 {1}], 1]
+Validating --> Err = ClassificationError(labels[1000, MBSize 0], OutputNodes.z[1000, MBSize 0]) -> [1 [1 {1}], 1]
 
 17 out of 47 nodes do not share the minibatch layout with the input data.
 
@@ -2531,6 +2531,6 @@ evalNodeNames are not specified, using all the default evalnodes and training cr
 
 
 Allocating matrices for forward and/or backward propagation.
-Minibatch[1-32]: Samples Seen = 500    Err: ErrorPrediction/Sample = 0.998    errTop5: ErrorPrediction/Sample = 0.992    CE: CrossEntropyWithSoftmax/Sample = 6.9591762    
-Final Results: Minibatch[1-32]: Samples Seen = 500    Err: ErrorPrediction/Sample = 0.998    errTop5: ErrorPrediction/Sample = 0.992    CE: CrossEntropyWithSoftmax/Sample = 6.9591762    perplexity = 1052.766    
+Minibatch[1-32]: Samples Seen = 500    Err: ClassificationError/Sample = 0.998    errTop5: ClassificationError/Sample = 0.992    CE: CrossEntropyWithSoftmax/Sample = 6.9591762    
+Final Results: Minibatch[1-32]: Samples Seen = 500    Err: ClassificationError/Sample = 0.998    errTop5: ClassificationError/Sample = 0.992    CE: CrossEntropyWithSoftmax/Sample = 6.9591762    perplexity = 1052.766    
 __COMPLETED__

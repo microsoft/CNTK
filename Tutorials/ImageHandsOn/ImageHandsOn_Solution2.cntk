@@ -42,7 +42,7 @@ TrainConvNet = {
 
         # connect to system
         ce       = CrossEntropyWithSoftmax (labels, z)
-        errs     = ErrorPrediction         (labels, z)
+        errs     = ClassificationError         (labels, z)
 
         featureNodes    = (features)
         labelNodes      = (labels)

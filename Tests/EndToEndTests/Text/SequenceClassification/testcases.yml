@@ -31,4 +31,4 @@ testCases:
 #      - Epoch[{{integer}} of {{integer}}]-Minibatch[{{integer}}-{{integer}}
 #      - " * {{integer}}; "
 #      - ce = {{float,tolerance=.5%}}
-#      - EvalErrorPrediction = {{float,tolerance=.5%}}
+#      - EvalClassificationError = {{float,tolerance=.5%}}
