@@ -870,6 +870,7 @@ class DictionaryValue(_object):
     Type_NDShape = _cntk_py.DictionaryValue_Type_NDShape
     Type_Vector = _cntk_py.DictionaryValue_Type_Vector
     Type_Dictionary = _cntk_py.DictionaryValue_Type_Dictionary
+    Type_NDArrayView = _cntk_py.DictionaryValue_Type_NDArrayView
     if _newclass:
         type_name = staticmethod(_cntk_py.DictionaryValue_type_name)
     else:
@@ -889,6 +890,12 @@ class DictionaryValue(_object):
 
     def value_type(self):
         return _cntk_py.DictionaryValue_value_type(self)
+
+    def __eq__(self, other):
+        return _cntk_py.DictionaryValue___eq__(self, other)
+
+    def __ne__(self, other):
+        return _cntk_py.DictionaryValue___ne__(self, other)
 DictionaryValue_swigregister = _cntk_py.DictionaryValue_swigregister
 DictionaryValue_swigregister(DictionaryValue)
 
@@ -918,6 +925,12 @@ class Dictionary(_object):
 
     def contains(self, *args):
         return _cntk_py.Dictionary_contains(self, *args)
+
+    def __eq__(self, other):
+        return _cntk_py.Dictionary___eq__(self, other)
+
+    def __ne__(self, other):
+        return _cntk_py.Dictionary___ne__(self, other)
 
     def __getitem__(self, key):
         return _cntk_py.Dictionary___getitem__(self, key)
@@ -954,28 +967,28 @@ Learner_swigregister = _cntk_py.Learner_swigregister
 Learner_swigregister(Learner)
 
 
-def sgdlearner(parameters, learningRatePerSample):
-    return _cntk_py.sgdlearner(parameters, learningRatePerSample)
+def sgdlearner(parameters, learningRates):
+    return _cntk_py.sgdlearner(parameters, learningRates)
 sgdlearner = _cntk_py.sgdlearner
 
-def momentum_sgdlearner(parameters):
-    return _cntk_py.momentum_sgdlearner(parameters)
+def momentum_sgdlearner(parameters, learningRates, momentums):
+    return _cntk_py.momentum_sgdlearner(parameters, learningRates, momentums)
 momentum_sgdlearner = _cntk_py.momentum_sgdlearner
 
-def nesterov_learner(parameters):
-    return _cntk_py.nesterov_learner(parameters)
+def nesterov_learner(parameters, learningRates, momentums):
+    return _cntk_py.nesterov_learner(parameters, learningRates, momentums)
 nesterov_learner = _cntk_py.nesterov_learner
 
-def ada_grad_learner(parameters, needAveMultiplier=True):
-    return _cntk_py.ada_grad_learner(parameters, needAveMultiplier)
+def ada_grad_learner(parameters, learningRates, needAveMultiplier=True):
+    return _cntk_py.ada_grad_learner(parameters, learningRates, needAveMultiplier)
 ada_grad_learner = _cntk_py.ada_grad_learner
 
-def fsada_grad_learner(parameters):
-    return _cntk_py.fsada_grad_learner(parameters)
+def fsada_grad_learner(parameters, learningRates, momentums):
+    return _cntk_py.fsada_grad_learner(parameters, learningRates, momentums)
 fsada_grad_learner = _cntk_py.fsada_grad_learner
 
-def rmsprop_learner(parameters, gamma, inc, dec, max, min, needAveMultiplier=True):
-    return _cntk_py.rmsprop_learner(parameters, gamma, inc, dec, max, min, needAveMultiplier)
+def rmsprop_learner(parameters, learningRates, gamma, inc, dec, max, min, needAveMultiplier=True):
+    return _cntk_py.rmsprop_learner(parameters, learningRates, gamma, inc, dec, max, min, needAveMultiplier)
 rmsprop_learner = _cntk_py.rmsprop_learner
 class Trainer(_object):
     __swig_setmethods__ = {}
@@ -1113,6 +1126,42 @@ create_composite_minibatch_source = _cntk_py.create_composite_minibatch_source
 def compute_input_per_dim_means_and_inv_std_devs(*args):
     return _cntk_py.compute_input_per_dim_means_and_inv_std_devs(*args)
 compute_input_per_dim_means_and_inv_std_devs = _cntk_py.compute_input_per_dim_means_and_inv_std_devs
+class learning_rates_per_sample(_object):
+    __swig_setmethods__ = {}
+    __setattr__ = lambda self, name, value: _swig_setattr(self, learning_rates_per_sample, name, value)
+    __swig_getmethods__ = {}
+    __getattr__ = lambda self, name: _swig_getattr(self, learning_rates_per_sample, name)
+    __repr__ = _swig_repr
+
+    def __init__(self, *args):
+        this = _cntk_py.new_learning_rates_per_sample(*args)
+        try:
+            self.this.append(this)
+        except __builtin__.Exception:
+            self.this = this
+    __swig_destroy__ = _cntk_py.delete_learning_rates_per_sample
+    __del__ = lambda self: None
+learning_rates_per_sample_swigregister = _cntk_py.learning_rates_per_sample_swigregister
+learning_rates_per_sample_swigregister(learning_rates_per_sample)
+
+class momentums_per_sample(_object):
+    __swig_setmethods__ = {}
+    __setattr__ = lambda self, name, value: _swig_setattr(self, momentums_per_sample, name, value)
+    __swig_getmethods__ = {}
+    __getattr__ = lambda self, name: _swig_getattr(self, momentums_per_sample, name)
+    __repr__ = _swig_repr
+
+    def __init__(self, *args):
+        this = _cntk_py.new_momentums_per_sample(*args)
+        try:
+            self.this.append(this)
+        except __builtin__.Exception:
+            self.this = this
+    __swig_destroy__ = _cntk_py.delete_momentums_per_sample
+    __del__ = lambda self: None
+momentums_per_sample_swigregister = _cntk_py.momentums_per_sample_swigregister
+momentums_per_sample_swigregister(momentums_per_sample)
+
 class Callback(_object):
     __swig_setmethods__ = {}
     __setattr__ = lambda self, name, value: _swig_setattr(self, Callback, name, value)

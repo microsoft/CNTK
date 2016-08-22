@@ -135,7 +135,7 @@ def _test_cifar_resnet():
     pe = classification_error(classifer_output.output(), label_var)
     image_classifier = combine([ce, pe, classifer_output], "ImageClassifier")
 
-    learning_rate_per_sample = 0.0078125
+    learning_rate_per_sample = cntk_py.learning_rates_per_sample(0.0078125)
     trainer = cntk_py.Trainer(image_classifier, ce.output(), [cntk_py.sgdlearner(image_classifier.parameters(), learning_rate_per_sample)])
     
     mb_size = 32

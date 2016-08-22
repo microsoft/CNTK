@@ -61,8 +61,8 @@ def _test_simple_mnist():
     minibatch_size = 32
     num_samples_per_sweep = 60000
     num_sweeps_to_train_with = 3
-    num_minibatches_to_train = (num_samples_per_sweep * num_sweeps_to_train_with) / minibatch_size
-    lr = 0.003125
+    num_minibatches_to_train = (num_samples_per_sweep * num_sweeps_to_train_with) / minibatch_size    
+    lr = cntk_py.learning_rates_per_sample(0.003125)
     input = variable((input_dim,), np.float32, needs_gradient=False, name="features")
     scaled_input = element_times(constant((), 0.00390625), input)
 

@@ -19,6 +19,7 @@
 %template() std::vector<CNTK::Variable>;
 %template() std::vector<std::shared_ptr<CNTK::Function>>;
 
+
 %{
 #define SWIG_FILE_WITH_INIT
 %}
@@ -123,7 +124,8 @@
         for (int i=0; i<num_axes; i++)
         {
             size_t dim = dims[i];
-            PyTuple_SET_ITEM(result, num_axes-1-i, PyInt_FromLong(dim));
+            //PyTuple_SET_ITEM(result, num_axes-1-i, PyInt_FromLong(dim));
+            PyTuple_SET_ITEM(result, i, PyInt_FromLong(dim));
         }
         return result;
     }
@@ -882,7 +884,7 @@
         {
             shape.push_back(np_shape[i]);
             num_elements *= np_shape[i];
-            std::reverse(shape.begin(),shape.end());
+            //std::reverse(shape.begin(),shape.end());
         }
 
         int typecode = PyArray_TYPE(array);
@@ -947,6 +949,9 @@
 %template(random_uniform_double) CNTK::NDArrayView::RandomUniform<double>;
 %template(DictionaryValueFromDict) CNTK::DictionaryValue::DictionaryValue<CNTK::Dictionary>;
 
+%template(learning_rates_per_sample) CNTK::TrainingParameterSchedule<double>;
+%template(momentums_per_sample) CNTK::TrainingParameterSchedule<double>;
+        
 // end of NDArrayView
 
 //

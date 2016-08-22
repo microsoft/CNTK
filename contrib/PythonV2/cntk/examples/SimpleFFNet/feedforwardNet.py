@@ -61,8 +61,8 @@ def test_ffnet():
     minibatch_size = 25
     num_samples_per_sweep = 10000
     num_sweeps_to_train_with = 2
-    num_minibatches_to_train = (num_samples_per_sweep * num_sweeps_to_train_with) / minibatch_size
-    lr = 0.02
+    num_minibatches_to_train = (num_samples_per_sweep * num_sweeps_to_train_with) / minibatch_size    
+    lr = cntk_py.learning_rates_per_sample(0.02)
     input = variable((input_dim,), np.float32, needs_gradient=False, name="features")
     label = variable((num_output_classes,), np.float32, needs_gradient=False, name="labels")
     dev = cntk_py.DeviceDescriptor.cpudevice()     
