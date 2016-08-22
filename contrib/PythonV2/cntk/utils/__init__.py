@@ -509,6 +509,18 @@ def create_minibatch_source(config_dict):
     cntk_dict = _py_dict_to_cntk_dict(config_dict)
     return cntk_py.create_composite_minibatch_source(cntk_dict)
 
+def get_train_loss(trainer):
+    '''
+    Fetch the train loss from the last minibatch and copy it to the CPU in case it is on the GPU.
+    Args:
+        trainer (:class:`Trainer`): the trainer used.        
+    Returns: 
+        the loss value
+    '''
+    ndav = create_NDArrayView(trainer.previous_minibatch_training_loss_value().data().shape().dimensions(), cntk_py.DataType_Float,cntk_device(-1))
+    ndav.copy_from(trainer.previous_minibatch_training_loss_value().data())        
+    return float(ndav.to_numpy())
+
 def eval(op, precision, device_id, input_map=None, backward_pass=False):
     '''
     It evaluates `op` on the data provided by the reader. This is useful
