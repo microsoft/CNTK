@@ -718,7 +718,7 @@ public:
     }
 
     RandomSampleNode(const ScriptableObjects::IConfigRecordPtr configp)
-        : RandomSampleNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"nSamples"))
+        : RandomSampleNode(CPUDEVICE, L"<placeholder>", configp->Get(L"nSamples"))
     {
         AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
     }
@@ -727,6 +727,7 @@ public:
     virtual void /*ComputationNode::*/ ForwardPropNonLooping() override
     {
         Matrix<ElemType>& valueMatrix = ValueAsMatrix();
+        valueMatrix.TransferToDeviceIfNotThere(CPUDEVICE, /*ismoved =*/ false/*means: BOTH state OK*/, /*emptyTransfer =*/ true, /*updatePreferredDevice =*/ true);
         valueMatrix.SetDevice(CPUDEVICE);
         valueMatrix.SwitchToMatrixType(SPARSE, matrixFormatSparseCSC, false);
         valueMatrix.Reset();
