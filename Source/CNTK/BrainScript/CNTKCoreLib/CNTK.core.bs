@@ -243,7 +243,7 @@ CrossEntropyWithSoftmax = CNTK2.CrossEntropyWithSoftmax
 Dropout                 = CNTK2.Dropout
 ElementTimes            = CNTK2.ElementTimes
 ElementDivide           = CNTK2.ElementDivide
-ErrorPrediction         = CNTK2.ErrorPrediction
+ClassificationError     = CNTK2.ClassificationError
 Exp                     = CNTK2.Exp
 Floor                   = CNTK2.Floor
 Log                     = CNTK2.Log
@@ -377,11 +377,12 @@ CNTK2 = [
     // No changes here - we said the default input would be the label sequence here, against which the 
     // empirical sequence is compared to. Keeping this for now.
     CrossEntropyWithSoftmax(_, outProbVectorSequence, tag='') = new ComputationNode [ operation = 'CrossEntropyWithSoftmax' ; inputs = (_ : outProbVectorSequence) /*plus the function args*/ ]
-    ErrorPrediction(_, outVectorSequence, topN=1, tag='') = new ComputationNode [ operation = 'ErrorPrediction' ; inputs = if topN == 1 then (_ : outVectorSequence) else  (_ : outVectorSequence : Constant (topN)) /*plus the function args*/ ]
+    ClassificationError(_, outVectorSequence, topN=1, tag='') = new ComputationNode [ operation = 'ClassificationError' ; inputs = if topN == 1 then (_ : outVectorSequence) else  (_ : outVectorSequence : Constant (topN)) /*plus the function args*/ ]
+    ErrorPrediction = ClassificationError  # legacy
     # TODO: replace with this (need to deal with topN thing):
     # (_new will be removed once the change is made)
     CrossEntropyWithSoftmax_new (L, z, tag='') = Minus (ReduceLogSum (z), TransposeTimes (L,          z),  tag=tag)
-    ErrorPrediction_new (L, z, tag='')         = Minus (BS.Constants.One, TransposeTimes (L, Hardmax (z)), tag=tag)
+    ClassificationError_new (L, z, tag='')     = Minus (BS.Constants.One, TransposeTimes (L, Hardmax (z)), tag=tag)
 
     // 12. Comparison nodes
     Less(_, y, tag='')         = new ComputationNode [ operation = 'Less'         ; inputs = (_ : y) /*plus the function args*/ ]
@@ -464,7 +465,7 @@ MaxUnpooling(unpoolInput, poolInput, kernelDims, stride=1, autoPadding = true, l
 MaxPooling(input, windowWidth, windowHeight, horizontalSubsample, verticalSubsample, imageLayout='CHW', tag='') = new ComputationNode [ operation = 'MaxPooling' ; inputs = input /*plus the function args*/ ]
 AveragePooling(input, windowWidth, windowHeight, horizontalSubsample, verticalSubsample, imageLayout='CHW', tag='') = new ComputationNode [ operation = 'AveragePooling' ; inputs = input /*plus the function args*/ ]
 ColumnwiseCrossProduct = KhatriRaoProduct // deprecated 
-ClassificationError = ErrorPrediction 
+ErrorPrediction = ClassificationError   # legacy name
 Delay = PastValue 
 
 BatchNormalization(input, scale, bias, runMean, runInvStdDev, spatial, normalizationTimeConstant = 0, blendTimeConstant = 0, epsilon = 0.00001, useCntkEngine = true, imageLayout='CHW', tag='') = new ComputationNode [ operation = 'BatchNormalization' ; inputs = (input : scale : bias : runMean : runInvStdDev) /*plus the function args*/ ]

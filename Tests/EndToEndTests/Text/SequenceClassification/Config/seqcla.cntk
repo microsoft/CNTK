@@ -50,7 +50,7 @@ Train=[
 
         # training criteria
         ce  = CrossEntropyWithSoftmax (labels, zp)  // this is the training objective
-        err = ErrorPrediction         (labels, zp)  // this also gets tracked
+        err = ClassificationError     (labels, zp)  // this also gets tracked
 
         # connect to system
         featureNodes    = (features)
