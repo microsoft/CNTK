@@ -9,6 +9,8 @@ void FeedForwardTests();
 void RecurrentFunctionTests();
 void TrainerTests();
 void TestCifarResnet();
+void SerializationTests();
+void LearnerTests();
 
 int main()
 {
@@ -19,6 +21,8 @@ int main()
     RecurrentFunctionTests();
 
     TrainerTests();
+    SerializationTests();
+    LearnerTests();
 
     TestCifarResnet();
 

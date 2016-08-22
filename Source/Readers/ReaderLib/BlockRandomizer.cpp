@@ -79,8 +79,8 @@ void BlockRandomizer::StartEpoch(const EpochConfiguration& config)
     m_globalSamplePosition = m_sweep * m_sweepTotalNumberOfSamples + newOffset;
 
     size_t epochStartFrame = config.m_epochIndex * m_epochSize;
-    fprintf(stderr, "BlockRandomizer::StartEpoch: epoch %" PRIu64 ": frames [%" PRIu64 "..%" PRIu64 "] (first sequence at sample %" PRIu64 "), data subset %" PRIu64 " of %" PRIu64 "\n",
-            config.m_epochIndex,
+    fprintf(stderr, "BlockRandomizer::StartEpoch: epoch %" PRIu64 ": samples [%" PRIu64 "..%" PRIu64 "] (first sequence at sample %" PRIu64 "), worker rank %" PRIu64 ", total workers %" PRIu64 "\n",
+            config.m_epochIndex + 1,
             epochStartFrame,
             epochStartFrame + m_epochSize,
             m_globalSamplePosition,
@@ -136,8 +136,8 @@ Sequences BlockRandomizer::GetNextSequences(size_t sampleCount)
 
     if (m_verbosity >= Debug)
         fprintf(stderr, "BlockRandomizer::GetNextSequences(): getting %" PRIu64 " out of %" PRIu64 " sequences for %" PRIu64 " requested samples in sweep %" PRIu64 "\n",
-            sequences.size(),
             decimated.size(),
+            sequences.size(),
             sampleCount,
             m_sweep);
 
