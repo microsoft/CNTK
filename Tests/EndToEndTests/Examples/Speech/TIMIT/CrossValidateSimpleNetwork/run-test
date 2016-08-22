@@ -6,7 +6,7 @@
 . $TEST_DIR/../run-timit-test-common
 
 # Train:
-cntkrun TIMIT_TrainSimpleNetwork.cntk "$CntkArguments" || exit $?
+cntkrun TIMIT_TrainSimpleNetwork.cntk "$CntkArguments TIMIT_TrainSimple=[reader=[useMersenneTwisterRand=true]]" || exit $?
 
 # Validate:
 cntkrun TIMIT_CrossValidateSimpleNetwork.cntk "$CntkArguments" || exit $?
