@@ -4,7 +4,8 @@ import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..'))
 import cntk.cntk_py as cntk_py
 from cntk.ops import variable, constant, parameter, cross_entropy_with_softmax, combine, classification_error, plus, times, relu, convolution, batch_normalization, pooling,AVG_POOLING
-from cntk.utils import create_minibatch_source, cntk_device, create_NDArrayView
+from cntk.utils import create_minibatch_source, get_train_loss, cntk_device
+from cntk.nn import conv_bn_relu_layer, conv_bn_layer
 
 def create_mb_source(epoch_size):    
     image_height = 32
@@ -57,22 +58,6 @@ def create_mb_source(epoch_size):
     minibatch_config["deserializers"] = [deserializer_config]
 
     return create_minibatch_source(minibatch_config)    
-
-def conv_bn_layer(input, out_feature_map_count, kernel_width, kernel_height, h_stride, v_stride, w_scale, b_value, sc_value, bn_time_const, device):
-    num_in_channels = input.shape().dimensions()[0]        
-    #TODO: use RandomNormal to initialize, needs to be exposed in the python api
-    conv_params = parameter(shape=(num_in_channels, kernel_height, kernel_width, out_feature_map_count), device_id=device)       
-    conv_func = convolution(conv_params, input, (num_in_channels, v_stride, h_stride))    
-    #TODO: initialize using b_value and sc_value, needs to be exposed in the python api
-    bias_params = parameter(shape=(out_feature_map_count,), device_id=device)   
-    scale_params = parameter(shape=(out_feature_map_count,), device_id=device)   
-    running_mean = constant((out_feature_map_count,), 0.0, device_id=device)
-    running_invstd = constant((out_feature_map_count,), 0.0, device_id=device)
-    return batch_normalization(conv_func.output(), scale_params, bias_params, running_mean, running_invstd, True, bn_time_const, 0.0, 0.000000001)    
-
-def conv_bn_relu_layer(input, out_feature_map_count, kernel_width, kernel_height, h_stride, v_stride, w_scale, b_value, sc_value, bn_time_const, device):
-    conv_bn_function = conv_bn_layer(input, out_feature_map_count, kernel_width, kernel_height, h_stride, v_stride, w_scale, b_value, sc_value, bn_time_const, device)
-    return relu(conv_bn_function.output())
 
 def resnet_classifer(input, num_classes, device, output_name):
     #TOTO: add all missing layers
@@ -139,7 +124,7 @@ def _test_cifar_resnet():
     trainer = cntk_py.Trainer(image_classifier, ce.output(), [cntk_py.sgdlearner(image_classifier.parameters(), learning_rate_per_sample)])
     
     mb_size = 32
-    num_mbs = 10000
+    num_mbs = 100
 
     minibatch_size_limits = dict()    
     minibatch_size_limits[features_si] = (0,mb_size)
@@ -155,10 +140,7 @@ def _test_cifar_resnet():
 
         freq = 20
         if i % freq == 0:
-            ndav = create_NDArrayView(trainer.previous_minibatch_training_loss_value().data().shape().dimensions(), cntk_py.DataType_Float,cntk_device(-1))
-            ndav.copy_from(trainer.previous_minibatch_training_loss_value().data())
-            print(str(i+freq) + ": " + str(ndav.to_numpy()))
-
+            print(str(i+freq) + ": " + str(get_train_loss(trainer)))
    
 if __name__=='__main__':      
     _test_cifar_resnet()

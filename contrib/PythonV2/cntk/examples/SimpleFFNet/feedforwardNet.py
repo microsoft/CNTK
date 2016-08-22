@@ -3,28 +3,10 @@ import sys
 import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..'))
 import cntk.cntk_py as cntk_py
-from cntk.ops import variable, constant, parameter, cross_entropy_with_softmax, combine, classification_error, sigmoid, plus, times
+from cntk.ops import variable, cross_entropy_with_softmax, combine, classification_error, sigmoid
 from cntk.utils import create_minibatch_source, get_train_loss
 from cntk.tests.test_utils import TOLERANCE_ABSOLUTE
-
-def fully_connected_layer(input, output_dim, device_id, nonlinearity):        
-    input_dim = input.shape()[0]    
-    times_param = parameter(shape=(input_dim,output_dim))    
-    t = times(input,times_param)
-    plus_param = parameter(shape=(output_dim,))
-    p = plus(plus_param,t.output())    
-    return nonlinearity(p.output());
-
-def fully_connected_classifier_net(input, num_output_classes, hidden_layer_dim, num_hidden_layers, device, nonlinearity):
-    classifier_root = fully_connected_layer(input, hidden_layer_dim, device, nonlinearity)
-    for i in range(1, num_hidden_layers):
-        classifier_root = fully_connected_layer(classifier_root.output(), hidden_layer_dim, device, nonlinearity)
-    
-    output_times_param = parameter(shape=(hidden_layer_dim,num_output_classes))
-    output_plus_param = parameter(shape=(num_output_classes,))
-    t = times(classifier_root.output(),output_times_param)
-    classifier_root = plus(output_plus_param,t.output()) 
-    return classifier_root;
+from cntk.nn import fully_connected_classifier_net
 
 def create_mb_source(input_dim, num_output_classes, epoch_size):    
     features_config = dict()
