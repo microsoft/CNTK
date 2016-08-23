@@ -1677,9 +1677,9 @@ public:
             }
         }
 
-        if (modelVersion < CNTK_MODEL_VERSION_11) 
+        if (modelVersion < CNTK_MODEL_VERSION_12) 
         {
-            // Prior to CNTK_MODEL_VERSION_11, running inverse standard
+            // Prior to CNTK_MODEL_VERSION_12, running inverse standard
             // deviation was stored in Input 4. Now variance is used.
             // We (approximately) convert it during validation later.
             m_convertRunningVariance = true;
