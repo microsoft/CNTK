@@ -1583,13 +1583,15 @@ class BatchNormalizationNode : public ComputationNodeNonLooping<ElemType>, publi
 public:
     BatchNormalizationNode(DEVICEID_TYPE deviceId, const wstring& name) :
         Base(deviceId, name), m_spatial(false), m_normTimeConst(0), m_blendTimeConst(0), m_epsilon(0), m_useCntkEngine(true),
-        m_mbCount(0), m_imageLayoutKind(ImageLayoutKind::CHW)
+        m_mbCount(0), m_imageLayoutKind(ImageLayoutKind::CHW), m_postBatchNormalization(false), m_swapNormTimeConst(0), 
+		m_swapBlendTimeConst(0)
     {
     }
     BatchNormalizationNode(DEVICEID_TYPE deviceId, const wstring& name, bool spatial, double normalizationTimeConstant, double blendTimeConstant,
                            double epsilon, bool useCntkEngine, ImageLayoutKind imageLayoutKind) :
         Base(deviceId, name), m_spatial(spatial), m_normTimeConst(normalizationTimeConstant), m_blendTimeConst(blendTimeConstant),
-        m_epsilon(epsilon), m_useCntkEngine(useCntkEngine), m_imageLayoutKind(imageLayoutKind), m_mbCount(0)
+        m_epsilon(epsilon), m_useCntkEngine(useCntkEngine), m_imageLayoutKind(imageLayoutKind), m_mbCount(0), m_postBatchNormalization(false),
+		m_swapNormTimeConst(0), m_swapBlendTimeConst(0)
     {
     }
     BatchNormalizationNode(const ScriptableObjects::IConfigRecordPtr configp) :
@@ -1599,6 +1601,9 @@ public:
                                ImageLayoutKindFrom(configp->Get(L"imageLayout")))
     {
         AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
+		m_postBatchNormalization = false;
+		m_swapNormTimeConst = 0;
+		m_swapBlendTimeConst = 0;
     }
 
     void Save(File& fstream) const override
@@ -1695,7 +1700,7 @@ private: // time-constant conversions
     double ComputeExpAvgFactor() const
     {
         // in inference mode, only use long-term mean and do not update running estimates
-        if (!Environment().IsTraining())
+        if (!Environment().IsTraining() && !m_postBatchNormalization)
             return 0;                                        //  (m_normTimeConst == infinity) no new contribution from current minibatch
 
         // REVIEW alexeyk: hack, m_normTimeConst < 0 is used to denote corpus-level statistics (without forgetting factor).
@@ -1719,7 +1724,7 @@ private: // time-constant conversions
     double ComputeBlendFactor() const
     {
         // in inference mode, only use long-term mean and do not update running estimates
-        if (!Environment().IsTraining())
+        if (!Environment().IsTraining() && !m_postBatchNormalization)
             return 1.0; // (m_blendTimeConst == infinity) estimate is taken 100% from the long-term running estimate
 
         // convert to blend factor (= weight for running stats)
@@ -1937,6 +1942,23 @@ public:
     double Epsilon() const { return m_epsilon; }
     bool UseCNTKEngine() const { return m_useCntkEngine; }
 
+	void SetPostBatchNormalizationBegin()
+	{
+		m_postBatchNormalization = true;
+		m_mbCount = 0;
+		m_swapNormTimeConst = m_normTimeConst;
+		m_swapBlendTimeConst = m_blendTimeConst;
+		m_normTimeConst = -1;
+		m_blendTimeConst = 0;
+	}
+	void SetPostBatchNormalizationEnd()
+	{
+		m_postBatchNormalization = false;
+		m_mbCount = 0;
+		m_normTimeConst = m_swapNormTimeConst;
+		m_blendTimeConst = m_swapBlendTimeConst;
+	}
+
 private:
     // Old versioning - do not use. Do not remove until we're sure there are no old models around.
     struct VersionInfo
@@ -1999,6 +2021,12 @@ private:
     shared_ptr<Matrix<ElemType>> m_dBias;
 
     std::unique_ptr<BatchNormEngine<ElemType>> m_bnEng;
+
+	// post batch normalization process mark
+	bool m_postBatchNormalization;
+
+	double m_swapNormTimeConst;
+	double m_swapBlendTimeConst;
 };
 
 template class BatchNormalizationNode<float>;
