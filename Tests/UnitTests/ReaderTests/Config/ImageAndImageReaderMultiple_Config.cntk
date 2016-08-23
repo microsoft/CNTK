@@ -32,18 +32,8 @@ reader = [
                             [
                                 type = "Crop"
                                 cropType = "center"
-                                cropRatio = 1.0
+                                cropRatio = 0.7:0.9
                                 jitterType = "uniRatio"
-                            ]:[
-                                type = "Scale"
-                                width = 4
-                                height = 8
-                                channels = 3
-                                interpolations = "linear"
-                            ]:[
-                                type = "Mean"
-                            ]:[
-                                type = "Transpose"
                             ]
                         )
                     ]
@@ -66,10 +56,6 @@ reader = [
                                 height = 8
                                 channels = 3
                                 interpolations = "linear"
-                            ]:[
-                                type = "Mean"
-                            ]:[
-                                type = "Transpose"
                             ]
                         )
                     ]
