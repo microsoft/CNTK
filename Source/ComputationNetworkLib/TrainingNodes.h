@@ -9,6 +9,8 @@
 #include "BatchNormalizationEngine.h"
 #include "RNGHandle.h"
 
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
 #include <map>
 #include <string>
 #include <vector>
@@ -1618,20 +1620,19 @@ public:
 
     void Load(File& fstream, size_t modelVersion) override
     {
+        size_t mbCount = 0;
         Base::Load(fstream, modelVersion);
 
         if (modelVersion >= CNTK_MODEL_VERSION_6)
         {
-            size_t mbCount;
             fstream >> m_spatial;
             fstream >> m_normTimeConst;
             fstream >> m_blendTimeConst;
             fstream >> m_imageLayoutKind;
-#ifdef _DEBUG 
-            fprintf(stderr, "INFO: %ls: initialized samplesSeen from mbCount when loading pre-CuDNNv5 model\n", NodeName().c_str());
-#endif
-            fstream >> mbCount;
-            m_samplesSeen = mbCount;
+            if (modelVersion >= CNTK_MODEL_VERSION_12)
+                fstream >> m_samplesSeen;
+            else
+                fstream >> mbCount; // converted below
             fstream >> m_epsilon;
             fstream >> m_useCntkEngine;
         }
@@ -1666,13 +1667,8 @@ public:
             }
             if (verWritten >= 0x00010002)
             {
-                size_t mbCount;
                 fstream >> m_imageLayoutKind;
-#ifdef _DEBUG 
-                fprintf(stderr, "INFO: %ls: initialized samplesSeen from mbCount when loading pre-CuDNNv5 model\n", NodeName().c_str());
-#endif
-                fstream >> mbCount;
-                m_samplesSeen = mbCount;
+                fstream >> mbCount; // converted below
             }
             if (verWritten >= 0x00010003)
             {
@@ -1681,12 +1677,19 @@ public:
             }
         }
 
-        if (modelVersion < CNTK_MODEL_VERSION_12) 
+        if (modelVersion < CNTK_MODEL_VERSION_12)
         {
-            // Prior to CNTK_MODEL_VERSION_12, running inverse standard
-            // deviation was stored in Input 4. Now variance is used.
-            // We (approximately) convert it during validation later
-            // (and then clear the flag).
+            // Prior to version 12, minibatch count was stored instead of samples seen.
+            // Approximate by assuming minibatch size 16, inform about that.
+            m_samplesSeen = 16 * mbCount;
+            fprintf(stderr,
+                    "INFO: %ls: loading pre-CuDNNv5 model: approximated mini-batch count of %" PRIu64 " as %" PRIu64 " trained samples.\n"
+                    "      Statistics in further training may be biased; consider re-training instead.\n",
+                    NodeName().c_str(), mbCount, m_samplesSeen);
+
+            // Prior to version 12, running inverse standard deviation was
+            // stored in Input 4. Now variance is used. We (approximately)
+            // convert it during validation later (and then clear the flag).
             m_convertRunningVariancePending = true;
         }
     }
@@ -1912,7 +1915,7 @@ public:
                 // To load an old model for further training or inference, Input(4) (which is inverse standard deviation) needs to
                 // be converted to variance, via v = 1/(isd^2) + epsilon, where 'v' is variance and 'isd' is inverse standard
                 // Since this is an approximation, we output a warning.
-                fprintf(stderr, "WARNING: %ls: loading pre-CuDNNv5 model and approximately converting variance statistics format\n",
+                fprintf(stderr, "WARNING: %ls: loading pre-CuDNNv5 model: approximately converting variance statistics format\n",
                         NodeName().c_str());
                 Matrix<ElemType>& runInvStdDev = Input(4)->Value();
                 runInvStdDev.AssignElementPowerOf(runInvStdDev, 2);
