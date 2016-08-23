@@ -723,11 +723,32 @@ public:
         AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
     }
 
+	virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
+	{
+		Base::CopyTo(nodeP, newName, flags);
+		if (flags & CopyNodeFlags::copyNodeValue)
+		{
+			auto node = dynamic_pointer_cast<RandomSampleNode<ElemType>>(nodeP);
+			node->m_nSamples = m_nSamples;
+		}
+	}
+
+	void Save(File& fstream) const
+	{
+		Base::Save(fstream);
+		fstream << m_nSamples;
+	}
+
+	virtual void Load(File& fstream, size_t modelVersion) override
+	{
+		Base::Load(fstream, modelVersion);
+		fstream >> m_nSamples;
+	}
 
     virtual void /*ComputationNode::*/ ForwardPropNonLooping() override
     {
         Matrix<ElemType>& valueMatrix = ValueAsMatrix();
-        valueMatrix.TransferToDeviceIfNotThere(CPUDEVICE, /*ismoved =*/ false/*means: BOTH state OK*/, /*emptyTransfer =*/ true, /*updatePreferredDevice =*/ true);
+        valueMatrix.TransferToDeviceIfNotThere(CPUDEVICE, /*ismoved =*/ true/*means: BOTH state not ok */, /*emptyTransfer =*/ true, /*updatePreferredDevice =*/ false);
         valueMatrix.SetDevice(CPUDEVICE);
         valueMatrix.SwitchToMatrixType(SPARSE, matrixFormatSparseCSC, false);
         valueMatrix.Reset();
