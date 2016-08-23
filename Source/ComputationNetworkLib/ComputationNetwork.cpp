@@ -13,6 +13,7 @@
 #include "LinearAlgebraNodes.h"
 #include "NonlinearityNodes.h"
 #include "ConvolutionalNodes.h"
+#include "RNNNodes.h"
 #include "RecurrentNodes.h"
 #include "ReshapingNodes.h"
 #include "TrainingNodes.h"

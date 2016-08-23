@@ -508,6 +508,10 @@ public:
     void BatchNormalizationBackward(const Matrix<ElemType>& in, Matrix<ElemType>& grad, const Matrix<ElemType>& scale, double blendFactor, const Matrix<ElemType>& saveMean, const Matrix<ElemType>& saveInvStdDev,
                                     Matrix<ElemType>& scaleGrad, Matrix<ElemType>& biasGrad) const;
 
+    void RNNForward(const Matrix<ElemType>& inputX, const Matrix<ElemType>& paramW, size_t xDim, size_t yDim, const vector<size_t>& numSequencesForFrame, const struct RnnParameters& rnnParameters, Matrix<ElemType>& reserve, Matrix<ElemType>& workspace);
+    void RNNBackwardData(const Matrix<ElemType>& outputDY, const Matrix<ElemType>& paramW, Matrix<ElemType>& outputDX, const struct RnnParameters& rnnParameters, Matrix<ElemType>& reserve, Matrix<ElemType>& workspace);
+    void RNNBackwardWeights(const Matrix<ElemType>& inputX, const Matrix<ElemType>& outputY, Matrix<ElemType>& dw, const struct RnnParameters& rnnParameters, Matrix<ElemType>& reserve, Matrix<ElemType>& workspace);
+
 public:
     // TODO: why are these not static? And why are they here?
     ElemType Exp10(ElemType num);

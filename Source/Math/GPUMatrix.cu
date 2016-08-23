@@ -26,6 +26,7 @@
 #include <memory>
 #include "CntkBatchNormalization.cuh"
 #include "Convolution.cuh"
+#include "CuDnnRNN.h"
 
 #pragma comment(lib, "cudart.lib") // instruct linker to reference these libs
 #pragma comment(lib, "cublas.lib")
@@ -3267,6 +3268,37 @@ void GPUMatrix<ElemType>::BatchNormalizationBackward(const GPUMatrix<ElemType>& 
     ElemType mbStatsWeight = (ElemType)(1 - blendFactor); // weight for contribution from actual MB stats (0 if none, e.g. locked BN node)
     Call<BackpropagateBatchNormGradients, ElemType>(spatial ? spatialSize : vectorSize, vectorSize, spatialSize, batchSize, spatial,
                                                     in.Data(), Data(), grad.Data(), scale.Data(), mbStatsWeight, scaleGrad.Data(), biasGrad.Data(), saveMean.Data(), saveInvStdDev.Data(), GetStream());
+}
+
+#pragma region RNN Functions
+
+template<class ElemType>
+struct GPUMatrix<ElemType>::RNNWrapper
+{
+    std::unique_ptr<CuDnnRNNExecutor<ElemType>> m_rnnExecutor;
+};
+
+template <class ElemType>
+void GPUMatrix<ElemType>::RNNForward(const GPUMatrix<ElemType> &inputX, const GPUMatrix<ElemType> &paramW, size_t xDim, size_t yDim, const vector<size_t>& numSequencesForFrame, const RnnParameters& rnnParameters, GPUMatrix<ElemType>& reserve, GPUMatrix<ElemType>& workspace)
+{
+    // numLayers, hiddenSize are input parameters
+    if (!m_RNNWrapper)
+        m_RNNWrapper = std::make_unique<RNNWrapper>();
+    if (!m_RNNWrapper->m_rnnExecutor)
+        m_RNNWrapper->m_rnnExecutor = std::make_unique<CuDnnRNNExecutor<ElemType>>(xDim, yDim, rnnParameters);
+    m_RNNWrapper->m_rnnExecutor->ForwardCore(paramW, inputX, *this, numSequencesForFrame, rnnParameters, reserve, workspace);
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::RNNBackwardData(const GPUMatrix<ElemType>& outputDY, const GPUMatrix<ElemType>& paramW, GPUMatrix<ElemType>& outputDX, const RnnParameters& rnnParameters, GPUMatrix<ElemType>& reserve, GPUMatrix<ElemType>& workspace)
+{
+    m_RNNWrapper->m_rnnExecutor->BackwardDataCore(*this, outputDY, paramW, outputDX, rnnParameters, reserve, workspace);
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::RNNBackwardWeights(const GPUMatrix<ElemType>& inputX, const GPUMatrix<ElemType>& outputY, GPUMatrix<ElemType>& dw, const RnnParameters& rnnParameters, GPUMatrix<ElemType>& reserve, GPUMatrix<ElemType>& workspace)
+{
+    m_RNNWrapper->m_rnnExecutor->BackwardWeightsCore(inputX, outputY, dw, rnnParameters, reserve, workspace);
 }
 
 #pragma region Static BLAS Functions
