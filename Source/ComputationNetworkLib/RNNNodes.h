@@ -101,13 +101,12 @@ protected:
     shared_ptr<Matrix<ElemType>> m_packingIndex;
 
 private:
-    TensorView<ElemType> TensorHelper(int inputIndex/*-1 for output*/, bool gradient/*instead of value*/, const FrameRange& fr);
     void TransposeHelper(const MatrixBasePtr matX, const TensorShape &shapeX, MatrixBasePtr matY, TensorShape &shapeY);
 
     void PackSequencesForCuDNN(const Matrix<ElemType>& src, Matrix<ElemType>& dst, vector<size_t>& numSequencesForFrame);
     void UnpackSequencesFromCuDNN(const Matrix<ElemType>& src, Matrix<ElemType>& dst);
 
-    RnnParameters m_rnnParameters;
+    RnnAttributes m_rnnAttributes;
 };
 
 }}}

@@ -46,9 +46,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                         bool useParallelTrain,
                                         StreamMinibatchInputs& inputMatrices,
                                         size_t& actualMBSize, 
-                                        const MPIWrapperPtr& mpi,
-                                        size_t dataDecimationFactor = 0
-                                        )
+                                        const MPIWrapperPtr& mpi)
     {
         // Reading consists of a sequence of Reader API calls:
         //  - GetMinibatch() --fills the inputMatrices and copies the MBLayout from Reader into inputMatrices
