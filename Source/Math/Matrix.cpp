@@ -4434,12 +4434,18 @@ void Matrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const Matrix<ElemT
             *c.m_GPUSparseMatrix = tmpSparse + (*c.m_GPUSparseMatrix) * beta;
             c.SetDataLocation(GPU, SPARSE);
         }
-		else if (a.m_matrixType == MatrixType::SPARSE && b.m_matrixType == MatrixType::SPARSE && c.m_matrixType == MatrixType::DENSE) // GPU, SPARSE * SPARSE -> DENSE
-			NOT_IMPLEMENTED;
-		else if (a.m_matrixType == MatrixType::SPARSE && b.m_matrixType == MatrixType::DENSE && c.m_matrixType == MatrixType::SPARSE) // GPU, SPARSE * DENSE -> SPARSE
-			NOT_IMPLEMENTED;
-		else // No combination left
-            NOT_IMPLEMENTED; // We should never get here.
+        else if (a.m_matrixType == MatrixType::SPARSE && b.m_matrixType == MatrixType::SPARSE && c.m_matrixType == MatrixType::DENSE) // GPU, SPARSE * SPARSE -> DENSE
+        {
+            NOT_IMPLEMENTED;
+        }
+        else if (a.m_matrixType == MatrixType::SPARSE && b.m_matrixType == MatrixType::DENSE && c.m_matrixType == MatrixType::SPARSE) // GPU, SPARSE * DENSE -> SPARSE
+        {
+            NOT_IMPLEMENTED;
+        }
+        else // No combination left
+        {
+            NOT_IMPLEMENTED;
+        }
     }
 }
 
