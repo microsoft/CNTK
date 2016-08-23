@@ -1,6 +1,8 @@
 # CNTK
 
 ## Latest news
+*2016-08-10.* CNTK now supports **Gated Recurrent Units (GRU)**. Read more in the [corresponding article](https://github.com/Microsoft/CNTK/wiki/GRUs-on-CNTK-with-BrainScript).
+
 *2016-07-15.* V 1.6 Binary release  
 CNTK v.1.6 binaries are on the [CNTK Releases page](https://github.com/Microsoft/CNTK/releases)
 
@@ -10,8 +12,6 @@ CNTK v.1.6 binaries are on the [CNTK Releases page](https://github.com/Microsoft
 
 *2016-06-23.* New License Terms for CNTK 1bit-SGD and related components.  
 Effective immediately the License Terms for CNTK 1bit-SGD and related components have changed. The new Terms provide more flexibility and enable new usage scenarios, especially in commercial environments. Read the new Terms at the [standard location](https://cntk1bitsgd.codeplex.com/license). Please note, that while the new Terms are significantly more flexible comparing to the previous ones, they are still **more restrictive** than the main CNTK License. Consequently everything described in [Enabling 1bit-SGD](https://github.com/Microsoft/CNTK/wiki/Enabling-1bit-SGD) section of the Wiki remains valid.
-
-*2016-06-20.* A [post](http://itpeernetwork.intel.com/accelerating-the-computational-network-tool-kit-with-intel-mkl/) on Intel MKL and CNTK is published in the [Intel IT Peer Network](http://itpeernetwork.intel.com/accelerating-the-computational-network-tool-kit-with-intel-mkl/)
 
 See [all news](https://github.com/Microsoft/CNTK/wiki/News).
 

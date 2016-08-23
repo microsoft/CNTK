@@ -18,6 +18,7 @@
 #include "PreComputeNodes.h"
 #include "EvaluationNodes.h"
 #include "SpecialPurposeNodes.h"
+#include "DeprecatedNodes.h" // (for SaveToDbnFile(), which is also deprecated)
 #include "MPIWrapper.h" // TODO: does not belong here
 #include <string>
 #include <vector>
@@ -391,13 +392,38 @@ void ComputationNetwork::Read(const wstring& fileName)
 // node construction
 // -----------------------------------------------------------------------
 
-// non-static version needed because it accesses m_randomSeedOffset
-// Excessively used by SimpleNetworkBuilder, but always after CreateLearnableParameter(), so we should really absorb it there
-template <class ElemType>
-void ComputationNetwork::InitLearnableParameters(const ComputationNodeBasePtr& node, const bool uniformInit, const unsigned long randomSeed, const ElemType initValueScale, bool initOnCPUOnly)
+// helper of InitLearnableParameters()
+// Note: This should really be done through an interface without <ElemType> that LearnableParameter would derive from.
+// However, this is only for NDL (which is deprecated), so I rather not pollute the code with more interfaces just for a deprecated cause.
+template<class ElemType>
+static bool TryPostInitParameters(const ComputationNodeBasePtr& node, const wchar_t* initString, double initValue, unsigned long randomSeed, bool initOnCPUOnly)
 {
     auto learnableParameterNode = dynamic_pointer_cast<LearnableParameter<ElemType>>(node);
-    learnableParameterNode->InitRandom(uniformInit, randomSeed + GetRandomSeedOffset(), initValueScale, initOnCPUOnly);
+    if (!learnableParameterNode)
+        return false;
+    learnableParameterNode->PostInitParameters(initString, (ElemType) initValue, randomSeed, initOnCPUOnly);
+    return true;
+}
+
+// non-static version needed because it accesses m_randomSeedOffset
+void ComputationNetwork::InitLearnableParameters(const ComputationNodeBasePtr& node,
+                                                 const wchar_t* initString, // "uniform"|"gaussian"|"fixedValue"
+                                                 double initValue,        //  scale   | scale    | value
+                                                 unsigned long randomSeed /*= 0*/,
+                                                 bool initOnCPUOnly /*= false*/) const
+{
+    randomSeed += GetRandomSeedOffset();
+    if (TryPostInitParameters<float> (node, initString, initValue, randomSeed, initOnCPUOnly) ||
+        TryPostInitParameters<double>(node, initString, initValue, randomSeed, initOnCPUOnly))
+        return;
+    LogicError("InitLearnableParameters: Input node is not a LearnableParameter<float or double>");
+}
+
+// non-static version needed because it accesses m_randomSeedOffset
+// Legacy version that is for random only.
+void ComputationNetwork::RandomInitLearnableParameters(const ComputationNodeBasePtr& node, const bool uniformInit, const unsigned long randomSeed, const double initValueScale, bool initOnCPUOnly) const
+{
+    InitLearnableParameters(node, uniformInit ? L"uniform" : L"gaussian", initValueScale, randomSeed, initOnCPUOnly);
 }
 
 bool ComputationNetwork::IsTypicalCriterionNode(ComputationNodeBasePtr nodePtr)
@@ -1049,10 +1075,12 @@ void ComputationNetwork::PerformSVDecomposition(const map<wstring, float>& SVDCo
             wstring rightChildName = name + L"_V";
             shared_ptr<ComputationNode<ElemType>> pLeft = AddNodeToNetWithElemType(New<LearnableParameter<ElemType>>(m_deviceId, leftChildName, m, r));
             shared_ptr<ComputationNode<ElemType>> pRight = AddNodeToNetWithElemType(New<LearnableParameter<ElemType>>(m_deviceId, rightChildName, r, n));
+            InitLearnableParameters(pLeft,  L"fixedValue", 0); // follow the protocol; otherwise deferred initialization will overwrite the SVD values in validation
+            InitLearnableParameters(pRight, L"fixedValue", 0);
 
             // TODO: We should be able to move instead of copy but it currently isn't straightforward
             // due to redU and redVT being slices
-            pLeft->ValueAsMatrix() = redU.DeepClone();
+            pLeft->ValueAsMatrix()  = redU.DeepClone();
             pRight->ValueAsMatrix() = redVT.DeepClone();
 
             // Step 3. Change the network hierachy to include the SVD nodes
@@ -1098,7 +1126,7 @@ public:
     ~DbnLayer() {};
 };
 
-// Save network in the format of the Microsoft-internal legacy "DBN.exe" tool (this function is not useful outside of Microsoft)
+// Save network in the format of the Microsoft-internal legacy "DBN.exe" tool (this function is not useful outside of Microsoft).
 template <class ElemType>
 void ComputationNetwork::SaveToDbnFile(ComputationNetworkPtr net, const std::wstring& fileName) const 
 {
@@ -1450,7 +1478,6 @@ void ComputationNetwork::SaveToDbnFile(ComputationNetworkPtr net, const std::wst
     PutTag("EDBN");
 }
 
-template void ComputationNetwork::InitLearnableParameters<float>(const ComputationNodeBasePtr& node, const bool uniformInit, const unsigned long randomSeed, const float initValueScale, bool initOnCPUOnly);
 template void ComputationNetwork::Read<float>(const wstring& fileName);
 template void ComputationNetwork::ReadPersistableParameters<float>(File& fstream, bool create);
 template void ComputationNetwork::PerformSVDecomposition<float>(const map<wstring, float>& SVDConfig, size_t alignedsize);
@@ -1460,7 +1487,6 @@ template void ComputationNetwork::SetSeqParam<float>(ComputationNetworkPtr net, 
                                                      const double& amf, const double& lmf, const double& wp, const double& bMMIfactor, const bool& sMBR);
 template void ComputationNetwork::SaveToDbnFile<float>(ComputationNetworkPtr net, const std::wstring& fileName) const;
 
-template void ComputationNetwork::InitLearnableParameters<double>(const ComputationNodeBasePtr& node, const bool uniformInit, const unsigned long randomSeed, const double initValueScale, bool initOnCPUOnly);
 template void ComputationNetwork::Read<double>(const wstring& fileName);
 template void ComputationNetwork::ReadPersistableParameters<double>(File& fstream, bool create);
 template void ComputationNetwork::PerformSVDecomposition<double>(const map<wstring, float>& SVDConfig, size_t alignedsize);

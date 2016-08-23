@@ -1,5 +1,7 @@
-# these are defined outside, but currently this is not implemented (we need the "with" operator)
+# This file is a sketch on how a full BS integration for all of CNTK would look like.
+# This used to work, but is not maintained presently.
 
+# these are defined outside, but currently this is not implemented (we need the "with" operator)
 stderr='..\RunDir\LSTM\Truncated\models\cntkSpeech.dnn.log'
 RunDir='..\RunDir\LSTM\Truncated'
 NdlDir='..\LSTM'

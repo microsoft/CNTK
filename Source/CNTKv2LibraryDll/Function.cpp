@@ -10,6 +10,10 @@
 #include "Utils.h"
 #include "ComputationNode.h"
 #include "ReshapingNodes.h"
+#include "EvaluationNodes.h"
+#include "TrainingNodes.h"
+#include "LinearAlgebraNodes.h"
+#include "InputAndParamNodes.h"
 
 using namespace Microsoft::MSR::CNTK;
 
@@ -72,6 +76,17 @@ namespace CNTK
         }
     }
 
+    /*static*/ const std::wstring PrimitiveFunction::InternalSumReductionOpName = L"Sum";
+    /*static*/ const std::wstring PrimitiveFunction::InternalLogSumReductionOpName = L"LogSum";
+    /*static*/ const std::wstring PrimitiveFunction::InternalMeanReductionOpName = L"Mean";
+    /*static*/ const std::wstring PrimitiveFunction::InternalMaxReductionOpName = L"Max";
+    /*static*/ const std::wstring PrimitiveFunction::InternalMinReductionOpName = L"Min";
+    /*static*/ const std::wstring PrimitiveFunction::InternalAllReductionOpName = L"All";
+    /*static*/ const std::wstring PrimitiveFunction::InternalAnyReductionOpName = L"Any";
+
+    /*static*/ std::wstring CompositeFunction::s_internalDefaultDynamicAxisName = L"";
+    /*static*/ std::wstring CompositeFunction::s_internalNoSequenceAxisName = L"noSequenceAxis";
+
     // Replace any PlaceHolder Variables in the graph of Functions underlying 'this' CompositeFunction. All PlaceHolder variables
     // should have been replaced before performing any Forward compute of 'this' Function.
     /*virtual*/ void CompositeFunction::ReplacePlaceholders(const std::unordered_map<Placeholder, Variable>& placeholderReplacements,
@@ -117,26 +132,51 @@ namespace CNTK
         if (variable.IsParameter() || variable.IsConstant())
         {
             computationNodePtr = builder.CreateLearnableParameter(variable.Name(), AsTensorShape(variable.Shape()));
+            network->InitLearnableParameters(computationNodePtr, L"fixedValue", 0); // must call this to follow protocol; can overwrite later
             if (!variable.NeedsGradient())
                 computationNodePtr->SetLearningRateMultiplier(0.0);
 
             NDArrayViewPtr value = variable.IsConstant() ? Constant(variable).Value() : Parameter(variable).Value();
-            auto matrix = variable.IsConstant() ? value->GetMatrix<ElementType>()->AsReference() : value->GetWritableMatrix<ElementType>()->AsReference();
-            computationNodePtr->Value() = std::move(matrix);
+            std::shared_ptr<const Matrix<ElementType>> valueMatrix = variable.IsConstant() ? value->GetMatrix<ElementType>() : value->GetWritableMatrix<ElementType>();
+            if (variable.IsParameter() || (valueMatrix->GetDeviceId() == network->GetDeviceId()))
+                computationNodePtr->Value() = valueMatrix->AsReference();
+            else
+            {
+                Matrix<ElementType> clonedMatrix(valueMatrix->GetNumRows(), valueMatrix->GetNumCols(), network->GetDeviceId(), valueMatrix->GetMatrixType(), valueMatrix->GetFormat());
+                clonedMatrix.AssignValuesOf(*valueMatrix);
+                computationNodePtr->Value() = std::move(clonedMatrix);
+            }
         }
         else if (variable.IsInput())
         {
-            // TODO: Support inputs with > 1 dynamic axes
-            if (variable.DynamicAxes().size() != 1)
-                LogicError("Currently only Input variables with one dynamic axis are supported");
+            // TODO: Input variables currently are required to have the default batch axis
+            auto dynamicAxes = variable.DynamicAxes();
+            auto foundDefaultBatchAxis = std::find(dynamicAxes.begin(), dynamicAxes.end(), Axis::DefaultBatchAxis());
+            if (foundDefaultBatchAxis == dynamicAxes.end())
+                LogicError("Currently Input Variables are required to have the DefaultBatchAxis as one of their dynamic axes");
 
-            auto dynamicAxis = variable.DynamicAxes()[0];
-            if (dynamicAxis != Axis::DefaultDynamicAxis())
-                LogicError("Currently only Input variables with DefaultDynamicAxis are supported");
-            if (IsSparseInput(variable))
-                computationNodePtr = builder.CreateSparseInputNode(variable.Name(), AsTensorShape(variable.Shape()));
+            if (dynamicAxes.back() != Axis::DefaultBatchAxis())
+                LogicError("Currently Input Variables are required to have the DefaultBatchAxis as their last dynamic axes");
+
+            // TODO: Support inputs with > 1 dynamic axes
+            if ((dynamicAxes.size() < 1) || (dynamicAxes.size() > 2))
+                LogicError("Currently only Input variables with 1 or 2 dynamic axis are supported");
+
+            std::wstring internalDynamicAxisName;
+            if (dynamicAxes.size() == 1)
+                internalDynamicAxisName = s_internalNoSequenceAxisName;
+            else if (dynamicAxes[0] == Axis::DefaultDynamicAxis())
+                internalDynamicAxisName = s_internalDefaultDynamicAxisName;
             else
-                computationNodePtr = builder.CreateInputNode(variable.Name(), AsTensorShape(variable.Shape()));
+                internalDynamicAxisName = dynamicAxes[0].Name();
+
+            if (!internalDynamicAxisName.empty())
+                network->AddNodeToNetAndAttachInputs(New<DynamicAxisNode<ElementType>>(network->GetDeviceId(), internalDynamicAxisName), {});
+
+            if (IsSparseInput(variable))
+                computationNodePtr = builder.CreateSparseInputNode(variable.Name(), AsTensorShape(variable.Shape()), internalDynamicAxisName);
+            else
+                computationNodePtr = builder.CreateInputNode(variable.Name(), AsTensorShape(variable.Shape()), internalDynamicAxisName);
 
             if (variable.NeedsGradient())
             {
@@ -218,11 +258,29 @@ namespace CNTK
                 computationNodePtr = builder.Reciprocal(input0Node, function->Name());
                 break;
             case PrimitiveOpType::Softmax:
-                if (functionInputs[0].Shape().NumAxes() > 1)
-                    InvalidArgument("Softmax operation can only be applied to a 1D input");
-
                 computationNodePtr = builder.Softmax(input0Node, function->Name());
                 break;
+            case PrimitiveOpType::Hardmax:
+                computationNodePtr = builder.Hardmax(input0Node, function->Name());
+                break;
+            case PrimitiveOpType::TransposeAxes:
+            {
+                auto axis1 = Axis(functionConfig[L"axis1"].GetValue<std::wstring>());
+                auto axis2 = Axis(functionConfig[L"axis2"].GetValue<std::wstring>());
+
+                // The axis ids passed to the internal CNTK TransposeDimensionsNode are 1 based instead of 0 based
+                computationNodePtr = New<TransposeDimensionsNode<ElementType>>(network->GetDeviceId(), function->Name(), (int)(axis1.StaticAxisIndex() + 1), (int)(axis2.StaticAxisIndex() + 1));
+                network->AddNodeToNetAndAttachInputs(computationNodePtr, { input0Node });
+                break;
+            }
+            case PrimitiveOpType::Where:
+            {
+                auto dynamicAxes = variable.DynamicAxes();
+                auto internalCNTKWhereNodeDynamicAxisName = (dynamicAxes == std::vector<Axis>({ Axis::DefaultBatchAxis() })) ? CompositeFunction::s_internalNoSequenceAxisName : dynamicAxes[0].Name();
+                computationNodePtr = New<WhereNode<ElementType>>(network->GetDeviceId(), function->Name(), internalCNTKWhereNodeDynamicAxisName);
+                network->AddNodeToNetAndAttachInputs(computationNodePtr, { input0Node });
+                break;
+            }
             case PrimitiveOpType::Pooling:
             {
                 PoolingType poolingType = (PoolingType)(functionConfig[L"poolingType"].GetValue<size_t>());
@@ -234,6 +292,9 @@ namespace CNTK
                 computationNodePtr = builder.Pooling(input0Node, AsCNTKPoolKind(poolingType), AsTensorShape(poolingWindowsShape, true), AsTensorShape(strides, true), autoPadding, AsTensorShape(lowerPad, true), AsTensorShape(upperPad, true), ImageLayoutKind::CHW, function->Name());
                 break;
             }
+            case PrimitiveOpType::SumAll:
+                computationNodePtr = builder.Sum(input0Node, function->Name());
+                break;
             case PrimitiveOpType::Plus:
                 computationNodePtr = builder.Plus(input0Node, input1Node, function->Name());
                 break;
@@ -267,6 +328,12 @@ namespace CNTK
                 computationNodePtr = builder.Times(input0Node, input1Node, numOutputAxes, function->Name());
                 break;
             }
+            case PrimitiveOpType::TransposeTimes:
+            {
+                size_t numOutputAxes = functionConfig[L"numOutputAxes"].GetValue<size_t>();
+                computationNodePtr = network->AddNodeToNetAndAttachInputs(New<TransposeTimesNode<ElementType>>(network->GetDeviceId(), function->Name(), numOutputAxes), { input0Node, input1Node });
+                break;
+            }
             case PrimitiveOpType::Convolution:
             {
                 NDShape outputMapCount, kernelShape;
@@ -295,35 +362,25 @@ namespace CNTK
             {
                 Variable initialStateVar = functionInputs[0];
                 Variable inputOperandVar = functionInputs[1];
-                // TODO: Current we only support a scalar initial state
-                if (!initialStateVar.IsConstant() || (initialStateVar.Shape().NumAxes() > 0))
-                    LogicError("Currently PastValue/FutureValue Function only supports scalar initial state");
-
-                // TODO: We currently only support input operand with 1 static axis for PastValue/FutureValue
-                if (inputOperandVar.Shape().NumAxes() != 1)
-                    LogicError("Currently PastValue/FutureValue Function only supports input operand with 1 static axis");
-
-                // TODO: We currently only support input operand with 1 dynamic axis for PastValue/FutureValue
-                if (inputOperandVar.DynamicAxes().size() != 1)
-                    LogicError("Currently PastValue/FutureValue Function only supports input operand with 1 dynamic axis");
 
                 // Get the intial state of the PastValue/FutureValue operation
                 ElementType initStateValue;
                 NDArrayView tempView({}, &initStateValue, 1, DeviceDescriptor::CPUDevice());
                 tempView.CopyFrom(*Constant(initialStateVar).Value());
 
+                size_t stepSize = primitiveFunction->FunctionConfig()[L"stepSize"].GetValue<size_t>();
                 if (op == PrimitiveOpType::PastValue)
-                    computationNodePtr = builder.PastValue(input1Node, (float)initStateValue, inputOperandVar.Shape()[0], primitiveFunction->FunctionConfig()[L"stepSize"].GetValue<size_t>(), function->Name());
+                    computationNodePtr = builder.PastValue(input1Node, (float)initStateValue, inputOperandVar.Shape().TotalSize(), stepSize, function->Name());
                 else
-                    computationNodePtr = builder.FutureValue(input1Node, (float)initStateValue, inputOperandVar.Shape()[0], primitiveFunction->FunctionConfig()[L"stepSize"].GetValue<size_t>(), function->Name());
+                    computationNodePtr = builder.FutureValue(input1Node, (float)initStateValue, inputOperandVar.Shape().TotalSize(), stepSize, function->Name());
 
                 break;
             }
-            case PrimitiveOpType::ReduceSum:
+            case PrimitiveOpType::ReduceElements:
             {
-                // TODO: Use the new ReduceElements node instead of the legacy SumElements node for reduction. Currently ReduceElements has incorrect MBLayout inference.
-                //computationNodePtr = network->AddNodeToNetAndAttachInputs(New<ReduceElementsNode<ElementType>>(network->GetDeviceId(), function->Name(), L"Sum", 0), { input0Node });
-                computationNodePtr = builder.Sum(input0Node, function->Name());
+                auto CNTKInternalReductionAxisIndex = (int)functionConfig[L"CNTKInternalReductionAxisIndex"].GetValue<size_t>();
+                auto reductionOpName = functionConfig[L"ReductionOpName"].GetValue<std::wstring>();
+                computationNodePtr = network->AddNodeToNetAndAttachInputs(New<ReduceElementsNode<ElementType>>(network->GetDeviceId(), function->Name(), reductionOpName, CNTKInternalReductionAxisIndex), { input0Node });
                 break;
             }
             case PrimitiveOpType::BatchNormalization:
@@ -352,6 +409,25 @@ namespace CNTK
                 computationNodePtr = variableToNodeMap[variable];
 
                 break;
+            case PrimitiveOpType::PackedIndex:
+                computationNodePtr = New<PackedIndexNode<ElementType>>(network->GetDeviceId(), function->Name());
+                network->AddNodeToNetAndAttachInputs(computationNodePtr, { input0Node, input1Node });
+                break;
+            case PrimitiveOpType::GatherPacked:
+                computationNodePtr = New<GatherPackedNode<ElementType>>(network->GetDeviceId(), function->Name());
+                network->AddNodeToNetAndAttachInputs(computationNodePtr, { input1Node, input0Node });
+                break;
+            case PrimitiveOpType::Slice:
+            {
+                auto axis = Axis(functionConfig[L"axis"].GetValue<std::wstring>());
+                int beginIndex = functionConfig[L"beginIndex"].GetValue<size_t>();
+                int endIndex = functionConfig[L"endIndex"].GetValue<size_t>();
+
+                // Internal CNTK SliceNode takes 1 based axis indices instead of 0 based
+                computationNodePtr = New<SliceNode<ElementType>>(network->GetDeviceId(), function->Name(), beginIndex, endIndex, (int)(axis.StaticAxisIndex() + 1));
+                network->AddNodeToNetAndAttachInputs(computationNodePtr, { input0Node });
+                break;
+            }
             default:
                 LogicError("Specified op %s not yet supported", PrimitiveOpTypeName(op));
                 break;
@@ -485,11 +561,11 @@ namespace CNTK
         if (value->Data()->Shape().NumAxes() == var.Shape().NumAxes())
             return{ value->Data()->GetMatrix<ElementType>(), nullptr };
 
-        if (value->Data()->Shape().NumAxes() != (var.Shape().NumAxes() + var.DynamicAxes().size() + 1))
-            InvalidArgument("Value's number of axes should be larger than the Variable's number of axes by 1 + number of dynamic axes");
+        if (value->Data()->Shape().NumAxes() < (var.Shape().NumAxes() + var.DynamicAxes().size()))
+            InvalidArgument("Value's number of axes should be larger than the Variable's number of axes by number of dynamic axes");
 
-        if (var.DynamicAxes().size() > 1)
-            LogicError("More than one dynamic axis for a variable is currently unsupported");
+        if (var.DynamicAxes().size() > 2)
+            LogicError("More than 2 dynamic axis for a variable is currently unsupported");
 
         size_t maxNumTimeSteps = value->Data()->Shape()[var.Shape().NumAxes()];
         size_t numSequences = value->Data()->Shape()[var.Shape().NumAxes() + 1];
@@ -617,9 +693,9 @@ namespace CNTK
                 sequenceLengths.push_back(sequenceInfo.GetNumTimeSteps());
         }
 
-        // Reshuffle to data to unpack and uninterleave the CNTK form data
-        // Now generate the gather indices
-        auto shuffledMatrixData = std::make_shared<Matrix<ElementType>>(matrix.GetNumRows(), maxNumTimeSteps * numSequences, matrix.GetDeviceId());
+        // Reshuffle to data to unpack and uninterleave the CNTK form packed data
+        // Now generate the scatter indices
+        auto shuffledMatrixData = std::make_shared<Matrix<ElementType>>(matrix.GetNumRows(), maxNumTimeSteps * numSequences, matrix.GetDeviceId(), matrix.GetMatrixType(), matrix.GetFormat());
 
         std::vector<size_t> sequencesShorterThanLongestSequence;
         for (size_t i = 0; i < numSequences; ++i)
@@ -658,15 +734,15 @@ namespace CNTK
         }
 
         auto tensorView = new TensorView<ElementType>(shuffledMatrixData, AsTensorShape(valueDataShape));
-        auto data = MakeSharedObject<NDArrayView>(AsDataType<ElementType>(), AsDeviceDescriptor(matrix.GetDeviceId()), StorageFormat::Dense, valueDataShape, readOnly, tensorView);
+        auto data = MakeSharedObject<NDArrayView>(AsDataType<ElementType>(), AsDeviceDescriptor(matrix.GetDeviceId()), AsStorageFormat(shuffledMatrixData->GetFormat()), valueDataShape, readOnly, tensorView);
         return MakeSharedObject<Value>(data, mask);
     }
 
     template <typename ElementType>
     /*static*/ ValuePtr CompositeFunction::GetValueObjectFromCNTKImplMatrixAndMBLayout(Variable var, const Matrix<ElementType>& matrix, const MBLayoutPtr& layout, bool readOnly /*= true*/)
     {
-        if (var.DynamicAxes().size() > 1)
-            LogicError("More than one dynamic axis for a variable is currently unsupported");
+        if (var.DynamicAxes().size() > 2)
+            LogicError("More than 2 dynamic axis for a variable is currently unsupported");
 
         if (AsDataType<ElementType>() != var.GetDataType())
             LogicError("The specified ElementType %s does not match the DataType %s", typeid(ElementType).name(), DataTypeName(var.GetDataType()));
@@ -731,7 +807,7 @@ namespace CNTK
         MBLayoutPtr layout = CNTKMatrixAndMBLayout.second;
         auto nodeLayout = computationNode->GetMBLayout();
         if (((layout == nullptr) != (nodeLayout == nullptr)) || ((layout != nullptr) && (*layout != *nodeLayout)))
-            InvalidArgument("The layout of the specified gradient Value in incompatible with the layout of the corresponding Variable computed during Forward call");
+            InvalidArgument("The layout of the specified gradient Value is incompatible with the layout of the corresponding Variable computed during Forward call");
         computationNode->As<ComputationNode<ElementType>>()->AssignGradient(*CNTKMatrixAndMBLayout.first);
     }
 
@@ -813,12 +889,9 @@ namespace CNTK
         }
 
         if (varValue == nullptr)
-        {
-            auto data = MakeSharedObject<NDArrayView>(var.GetDataType(), valueShape, AsDeviceDescriptor(computationNode->ValuePtr()->GetDeviceId()));
-            auto mask = (nodeValue->Mask() != nullptr) ? MakeSharedObject<NDMask>(nodeValue->Mask()->Shape(), nodeValue->Mask()->Device()) : nullptr;
-            varValue = MakeSharedObject<Value>(data, mask);
-        }
-        varValue->CopyFrom(*nodeValue);
+            varValue = nodeValue->DeepClone();
+        else
+            varValue->CopyFrom(*nodeValue);
     }
 
     void CompositeFunction::GetNetworkOutputs(std::unordered_map<Variable, ValuePtr>& outputs)
@@ -983,7 +1056,7 @@ namespace CNTK
 
     FunctionPtr Round(const Variable& operand, const std::wstring& name/* = L""*/)
     {
-        return Floor(Plus(operand, Constant(NDShape({}), 0.5f)), name);
+        return Floor(Plus(operand, ScalarConstant(operand.GetDataType(), 0.5f)), name);
     }
 
     FunctionPtr Floor(const Variable& operand, const std::wstring& name/* = L""*/)
@@ -1009,6 +1082,71 @@ namespace CNTK
     FunctionPtr Softmax(const Variable& operand, const std::wstring& name/* = L""*/)
     {
         return UnaryOp(PrimitiveOpType::Softmax, operand, Dictionary(), name);
+    }
+
+    FunctionPtr Hardmax(const Variable& operand, const std::wstring& name/* = L""*/)
+    {
+        return UnaryOp(PrimitiveOpType::Hardmax, operand, Dictionary(), name);
+    }
+
+    FunctionPtr TransposeAxes(const Variable& operand, const Axis& axis1, const Axis& axis2, const std::wstring& name /*= L""*/)
+    {
+        if (!axis1.IsStaticAxis() || !axis2.IsStaticAxis())
+            LogicError("TransposeAxes currently does not support transposing dynamic axes");
+
+        auto additionalProperties = Dictionary();
+        additionalProperties[L"axis1"] = axis1.Name();
+        additionalProperties[L"axis2"] = axis2.Name();
+        return UnaryOp(PrimitiveOpType::TransposeAxes, operand, std::move(additionalProperties), name);
+    }
+
+    FunctionPtr Slice(const Variable& operand, const Axis& axis, int beginIndex, int endIndex, const std::wstring& name /*= L""*/)
+    {
+        if ((endIndex - beginIndex) <= 0)
+            InvalidArgument("CNTK::Slice: endIndex (%d) - beginIndex (%d) must be a positive number", endIndex, beginIndex);
+
+        if (axis == Axis::DefaultBatchAxis())
+            LogicError("Slice is currently unsupported along the batch axis");
+
+        if (axis.IsStaticAxis())
+            return Internal::Slice(operand, axis, beginIndex, endIndex, name);
+
+        auto operandAxes = operand.DynamicAxes();
+        auto findAxis = std::find(operandAxes.begin(), operandAxes.end(), axis);
+        if (findAxis == operandAxes.end())
+            InvalidArgument("The specified dynamic axis named %S does not match any of the dynamic axes of the operand", axis.Name().c_str());
+
+        auto beginFlagsLambda = [beginIndex, operand]() {
+            return (beginIndex > 0) ? Minus(ScalarConstant(operand.GetDataType(), 1.0f), Internal::IsWithin(operand, beginIndex)) : Internal::IsWithin(operand, beginIndex);
+        };
+
+        auto endFlagsLambda = [endIndex, operand]() {
+            return (endIndex > 0) ? Internal::IsWithin(operand, endIndex) : Minus(ScalarConstant(operand.GetDataType(), 1.0f), Internal::IsWithin(operand, endIndex));
+        };
+
+        FunctionPtr flags;
+        if (beginIndex == 0)
+            flags = endFlagsLambda();
+        else if (endIndex == 0)
+            flags = beginFlagsLambda();
+        else
+            flags = ElementTimes(beginFlagsLambda(), endFlagsLambda());
+
+        // Since we are slicing along a dynamic axis, the output variable's dynamic axes will be different than the operand
+        std::vector<Axis> newDynamicAxes;
+        for (auto operandAxis : operandAxes)
+        {
+            if (operandAxis == axis)
+            {
+                // If we are selecting just one frame from the dynamic axis, we can remove that axis
+                if ((endIndex - beginIndex) > 1)
+                    newDynamicAxes.push_back(CompositeFunction::NextAutoGeneratedDynamicAxis());
+            }
+            else
+                newDynamicAxes.push_back(operandAxis);
+        }
+
+        return Internal::Gather(operand, flags, newDynamicAxes);
     }
 
     FunctionPtr BinaryOp(PrimitiveOpType op, const Variable& leftOperand, const Variable& rightOperand, Dictionary&& opConfig, const std::wstring& name)
@@ -1073,6 +1211,13 @@ namespace CNTK
         return BinaryOp(PrimitiveOpType::Times, leftOperand, rightOperand, std::move(additionalProperties), name);
     }
 
+    FunctionPtr TransposeTimes(const Variable& leftOperand, const Variable& rightOperand, size_t numOutputAxes /*= 1*/, const std::wstring& name/* = L""*/)
+    {
+        auto additionalProperties = Dictionary();
+        additionalProperties[L"numOutputAxes"] = numOutputAxes;
+        return BinaryOp(PrimitiveOpType::TransposeTimes, leftOperand, rightOperand, std::move(additionalProperties), name);
+    }
+
     FunctionPtr SquaredError(const Variable& prediction, const Variable& targets, const std::wstring& name/* = L""*/)
     {
         return BinaryOp(PrimitiveOpType::SquaredError, prediction, targets, Dictionary(), name);
@@ -1080,18 +1225,20 @@ namespace CNTK
 
     FunctionPtr CrossEntropyWithSoftmax(const Variable& prediction, const Variable& labels, const std::wstring& name/* = L""*/)
     {
-        return BinaryOp(PrimitiveOpType::CrossEntropyWithSoftmax, prediction, labels, Dictionary(), name);
+        return ReduceSum(Minus(ReduceLogSum(prediction, Axis(0)), TransposeTimes(labels, prediction)), name);
+        //return BinaryOp(PrimitiveOpType::CrossEntropyWithSoftmax, prediction, labels, Dictionary(), name);
     }
 
     FunctionPtr ClassificationError(const Variable& prediction, const Variable& labels, const std::wstring& name/* = L""*/)
     {
-        return BinaryOp(PrimitiveOpType::ClassificationError, prediction, labels, Dictionary(), name);
+        return ReduceSum(Minus(ScalarConstant(prediction.GetDataType(), 1.0f), TransposeTimes(labels, Hardmax(prediction))), name);
+        //return BinaryOp(PrimitiveOpType::ClassificationError, prediction, labels, Dictionary(), name);
     }
 
     FunctionPtr PastValue(const Variable& initialState, const Variable& operand, size_t stepSize, const std::wstring& name/* = L""*/)
     {
-        if (operand.DynamicAxes().size() != 1)
-            InvalidArgument("PastValue overload that does not explicitly specify a dynamic axis can only be used for operands with exactly one dynamic axis");
+        if (operand.DynamicAxes().size() != 2)
+            InvalidArgument("PastValue overload that does not explicitly specify a dynamic axis can only be used for operands with exactly one dynamic sequence-axis");
 
         auto additionalProperties = Dictionary();
         additionalProperties[L"stepSize"] = DictionaryValue(stepSize);
@@ -1100,8 +1247,8 @@ namespace CNTK
 
     FunctionPtr FutureValue(const Variable& initialState, const Variable& operand, size_t stepSize, const std::wstring& name/* = L""*/)
     {
-        if (operand.DynamicAxes().size() != 1)
-            InvalidArgument("FutureValue overload that does not explicitly specify a dynamic axis can only be used for operands with exactly one dynamic axis");
+        if (operand.DynamicAxes().size() != 2)
+            InvalidArgument("FutureValue overload that does not explicitly specify a dynamic axis can only be used for operands with exactly one dynamic sequence-axis");
 
         auto additionalProperties = Dictionary();
         additionalProperties[L"stepSize"] = DictionaryValue(stepSize);
@@ -1110,7 +1257,17 @@ namespace CNTK
 
     FunctionPtr ReduceSum(const Variable& operand, const std::wstring& name/* = L""*/)
     {
-        return UnaryOp(PrimitiveOpType::ReduceSum, operand, Dictionary(), name);
+        return UnaryOp(PrimitiveOpType::SumAll, operand, Dictionary(), name);
+    }
+
+    FunctionPtr ReduceSum(const Variable& operand, const Axis& axis, const std::wstring& name/* = L""*/)
+    {
+        return Internal::ReduceElements(operand, PrimitiveFunction::InternalSumReductionOpName, axis, name);
+    }
+
+    FunctionPtr ReduceLogSum(const Variable& operand, const Axis& axis, const std::wstring& name/* = L""*/)
+    {
+        return Internal::ReduceElements(operand, PrimitiveFunction::InternalLogSumReductionOpName, axis, name);
     }
 
     FunctionPtr PerDimMeanVarianceNormalize(const Variable& operand, const NDArrayViewPtr& mean, const NDArrayViewPtr& invStdDev, const std::wstring& name /*= L""*/)
@@ -1206,4 +1363,94 @@ namespace CNTK
 
         return CompositeFunction::Create(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::Combine, inputs, Dictionary(), name), name);
     }
+
+    namespace Internal
+    {
+        FunctionPtr PackedIndex(const Variable& operand, const Variable& index, const std::wstring& name /*= L""*/)
+        {
+            return BinaryOp(PrimitiveOpType::PackedIndex, operand, index, Dictionary(), name);
+        }
+
+        FunctionPtr GatherPacked(const Variable& operand, const Variable& packedIndex, const std::wstring& name /*= L""*/)
+        {
+            return BinaryOp(PrimitiveOpType::GatherPacked, operand, packedIndex, Dictionary(), name);
+        }
+
+        FunctionPtr ZeroesLike(const Variable& operand)
+        {
+            if (operand.Shape().NumAxes() > 1)
+                LogicError("ZerosLike currently does not support operands with more than 1 static axes");
+
+            auto rowSliceFunc = Internal::Slice(operand, Axis(0), 0, 1);
+            return Minus(rowSliceFunc, rowSliceFunc);
+        }
+
+        FunctionPtr IsWithin(const Variable& operand, int offset, const std::wstring& name /*= L""*/)
+        {
+            if (offset == 0)
+                InvalidArgument("Internal::CNTK::IsWithin: The offset must be positive");
+
+            if (offset > 0)
+                return PastValue(ScalarConstant(operand.GetDataType(), 1.0f), ZeroesLike(operand), offset, name);
+            else
+                return FutureValue(ScalarConstant(operand.GetDataType(), 1.0f), ZeroesLike(operand), -offset, name);
+        }
+
+        FunctionPtr Where(const Variable& condition, const std::vector<Axis>& newDynamicAxes, const std::wstring& name /*= L""*/)
+        {
+            auto additionalProperties = Dictionary();
+            std::vector<std::wstring> newDynamicAxesNames;
+            for (auto axis : newDynamicAxes)
+                newDynamicAxesNames.push_back(axis.Name());
+
+            additionalProperties[L"newDynamicAxes"] = AsDictionaryValueVector(newDynamicAxesNames);
+            return UnaryOp(PrimitiveOpType::Where, condition, std::move(additionalProperties), name);
+        }
+
+        FunctionPtr Gather(const Variable& operand, const Variable& condition, const std::vector<Axis>& newDynamicAxes, const std::wstring& name /*= L""*/)
+        {
+            return Internal::GatherPacked(operand, Internal::PackedIndex(operand, Where(condition, newDynamicAxes)));
+        }
+
+        FunctionPtr Slice(const Variable& operand, const Axis& axis, int beginIndex, int endIndex, const std::wstring& name /*= L""*/)
+        {
+            auto additionalProperties = Dictionary();
+            additionalProperties[L"axis"] = axis.Name();
+            additionalProperties[L"beginIndex"] = (size_t)beginIndex;
+            additionalProperties[L"endIndex"] = (size_t)endIndex;
+
+            return UnaryOp(PrimitiveOpType::Slice, operand, std::move(additionalProperties), name);
+        }
+
+        FunctionPtr ReduceElements(const Variable& operand, const std::wstring& reductionOpName, const Axis& axis, const std::wstring& name /*= L""*/)
+        {
+            using namespace std::placeholders;
+
+            if (axis.IsStaticAxis())
+            {
+                auto additionalProperties = Dictionary();
+                additionalProperties[L"CNTKInternalReductionAxisIndex"] = (size_t)(axis.StaticAxisIndex() + 1);
+                additionalProperties[L"ReductionOpName"] = reductionOpName;
+                return UnaryOp(PrimitiveOpType::ReduceElements, operand, std::move(additionalProperties), name);
+            }
+
+            if (axis == Axis::DefaultBatchAxis())
+                LogicError("Reduction is currently unsupported along the batch axis");
+
+            if (reductionOpName != PrimitiveFunction::InternalSumReductionOpName)
+                LogicError("%S reduction along dynamic axis is currently unsupported", reductionOpName.c_str());
+
+            std::function<FunctionPtr(const Variable& leftOperand, const Variable& rightOperand)> reductionFunctor;
+            if (reductionOpName == PrimitiveFunction::InternalSumReductionOpName)
+                reductionFunctor = std::bind(Plus, _1, _2, L"");
+
+            // We are reducing over a dynamic axis which is currently implemented using recurrence
+            auto cumulativeSumFunctionPlaceholder = Placeholder(operand.Shape());
+            auto prevAccumulatedValuesFunction = PastValue(ScalarConstant(operand.GetDataType(), 0.0f), cumulativeSumFunctionPlaceholder, 1);
+            auto cumulativeSumFunction = reductionFunctor(prevAccumulatedValuesFunction, operand);
+            cumulativeSumFunction->ReplacePlaceholders({ { cumulativeSumFunctionPlaceholder, cumulativeSumFunction } });
+
+            return CNTK::Slice(cumulativeSumFunction, axis, -1, 0);
+        }
+   }
 }

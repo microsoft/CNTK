@@ -40,30 +40,10 @@ template SGD<double>::SGD(const ScriptableObjects::IConfigRecord&);
 // -----------------------------------------------------------------------
 
 template <class ElemType>
-void SGD<ElemType>::Train(function<ComputationNetworkPtr(DEVICEID_TYPE)> createNetworkFn, DEVICEID_TYPE deviceId,
+void SGD<ElemType>::Train(shared_ptr<ComputationNetwork> net, DEVICEID_TYPE deviceId,
                           IDataReader* trainSetDataReader,
-                          IDataReader* validationSetDataReader,
-                          const bool makeMode)
+                          IDataReader* validationSetDataReader, int startEpoch, bool loadNetworkFromCheckpoint)
 {
-    // determine which epoch to start with, including recovering a checkpoint if any and 'makeMode' enabled
-    int startEpoch = DetermineStartEpoch(makeMode);
-    if (startEpoch == m_maxEpochs)
-    {
-        LOGPRINTF(stderr, "No further training is necessary.\n");
-        return;
-    }
-
-    wstring modelFileName = GetModelNameForEpoch(int(startEpoch) - 1);
-    bool loadNetworkFromCheckpoint = startEpoch >= 0;
-    fprintf(stderr, "\n");
-    if (loadNetworkFromCheckpoint)
-        LOGPRINTF(stderr, "Starting from checkpoint. Loading network from '%ls'.\n", modelFileName.c_str());
-    else
-        LOGPRINTF(stderr, "Creating virgin network.\n");
-
-    // create or load from checkpoint
-    shared_ptr<ComputationNetwork> net = !loadNetworkFromCheckpoint ? createNetworkFn(deviceId) : ComputationNetwork::CreateFromFile<ElemType>(deviceId, modelFileName);
-
     // log the device we are computing on
     LOGPRINTF(stderr, "%s model with %d nodes", loadNetworkFromCheckpoint ? "Loaded" : "Created", (int)net->GetTotalNumberOfNodes());
     if (net->GetDeviceId() < 0)
@@ -181,7 +161,6 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         {
             fprintf(stderr, "\n");
             LOGPRINTF(stderr, "Evaluation criterion node(s):\n");
-            fprintf(stderr, "\n");
             for (const auto& node : evaluationNodes)
             {
                 LOGPRINTF(stderr, "\t%ls = %ls\n", node->NodeName().c_str(), node->OperationName().c_str());
@@ -197,7 +176,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
     additionalNodesToEvaluate.insert(additionalNodesToEvaluate.end(), preComputeNodesList.cbegin(), preComputeNodesList.cend());
 
     // allocate memory for forward and backward computation
-    net->AllocateAllMatrices(evaluationNodes, additionalNodesToEvaluate, criterionNodes[0]);
+    net->AllocateAllMatrices(evaluationNodes, additionalNodesToEvaluate, criterionNodes[0]); // TODO: use criterionNodes.front() throughout
 
     // get feature and label nodes into an array of matrices that will be passed to GetMinibatch()
     // TODO: instead, remember the nodes directly, to be able to handle both float and double nodes; current version will crash for mixed networks
@@ -251,15 +230,39 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
     // initializing weights and gradient holder
     // only one criterion so far TODO: support multiple ones?
     auto& learnableNodes = net->LearnableParameterNodes(criterionNodes[0]);
-    std::list<Matrix<ElemType>> smoothedGradients;
+    list<Matrix<ElemType>> smoothedGradients;
+    size_t numParameters = 0;
 
+    vector<wstring> nodesToUpdateDescriptions; // for logging only
     for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
     {
         ComputationNodePtr node = dynamic_pointer_cast<ComputationNode<ElemType>>(*nodeIter);
+        // Note: We don't actually need the smoothedGradients if !IsParameterUpdateRequired().
+        // However, this is hard to fix since lots of code assumes smoothedGradients to be in the same order as learnableNodes.
+        // V2 API fixes this.
         smoothedGradients.push_back(Matrix<ElemType>(node->Value().GetNumRows(),
                                                      node->Value().GetNumCols(),
                                                      net->GetDeviceId()));
+        if (node->IsParameterUpdateRequired())
+        {
+            nodesToUpdateDescriptions.push_back(node->NodeDescription() + L" : [" + msra::strfun::utf16(string(node->GetSampleLayout())) + L"]");
+            numParameters += node->GetSampleLayout().GetNumElements();
+        }
     }
+    size_t numNeedsGradient = 0;
+    for (let node : net->GetEvalOrder(criterionNodes[0]))
+    {
+        if (node->NeedsGradient())
+            numNeedsGradient++;
+    }
+    fprintf(stderr, "\n");
+    LOGPRINTF(stderr, "Training %.0f parameters in %d out of %d parameter tensors and %d nodes with gradient:\n\n",
+              (double)numParameters, (int)nodesToUpdateDescriptions.size(), (int)learnableNodes.size(), (int)numNeedsGradient);
+    for (let nodeDescription : nodesToUpdateDescriptions)
+    {
+        LOGPRINTF(stderr, "\t%ls\n", nodeDescription.c_str());
+    }
+    fprintf(stderr, "\n");
 
     double avgCriterion, lrControlCriterion;
     lrControlCriterion = avgCriterion = numeric_limits<double>::infinity();
@@ -275,9 +278,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
     vector<double> prevLearnRates;
     prevLearnRates.resize(m_numPrevLearnRates);
     for (int i = 0; i < m_numPrevLearnRates; i++)
-    {
         prevLearnRates[i] = -1.0;
-    }
 
     if (GetParallelizationMethod() == ParallelizationMethod::dataParallelSGD)
     {
@@ -1395,7 +1396,7 @@ bool SGD<ElemType>::PreCompute(ComputationNetworkPtr net,
 
     if (nodes.size() == 0)
     {
-        LOGPRINTF(stderr, "No PreCompute nodes found, skipping PreCompute step.\n");
+        LOGPRINTF(stderr, "No PreCompute nodes found, or all already computed. Skipping pre-computation step.\n");
         return false;
     }
 

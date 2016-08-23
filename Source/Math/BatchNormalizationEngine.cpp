@@ -56,11 +56,11 @@ void BatchNormEngine<ElemType>::Forward(const Mat& in, const Mat& scale, const M
 }
 
 template <class ElemType>
-void BatchNormEngine<ElemType>::Backward(const Mat& in, const Mat& srcGrad, Mat& grad, const Mat& scale, 
+void BatchNormEngine<ElemType>::Backward(const Mat& in, const Mat& srcGrad, Mat& grad, const Mat& scale, double blendFactor,
                                          const Mat& saveMean, const Mat& saveInvStdDev, Mat& scaleGrad, Mat& biasGrad)
 {
     EnsureCompatible();
-    BackwardCore(in, srcGrad, grad, scale, saveMean, saveInvStdDev, scaleGrad, biasGrad);
+    BackwardCore(in, srcGrad, grad, scale, blendFactor, saveMean, saveInvStdDev, scaleGrad, biasGrad);
 }
 
 template <class ElemType>
@@ -95,10 +95,10 @@ protected:
         in.BatchNormalizationForward(scale, bias, expAvgFactor, blendFactor, runMean, runInvStdDev, out, epsilon, saveMean, saveInvStdDev);
     }
 
-    void BackwardCore(const Mat& in, const Mat& srcGrad, Mat& grad, const Mat& scale, const Mat& saveMean, const Mat& saveInvStdDev,
+    void BackwardCore(const Mat& in, const Mat& srcGrad, Mat& grad, const Mat& scale, double blendFactor, const Mat& saveMean, const Mat& saveInvStdDev,
                       Mat& scaleGrad, Mat& biasGrad) override
     {
-        srcGrad.BatchNormalizationBackward(in, grad, scale, saveMean, saveInvStdDev, scaleGrad, biasGrad);
+        srcGrad.BatchNormalizationBackward(in, grad, scale, blendFactor, saveMean, saveInvStdDev, scaleGrad, biasGrad);
     }
 };
 

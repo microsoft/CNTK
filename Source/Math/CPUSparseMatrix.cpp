@@ -23,15 +23,7 @@
 
 #pragma warning(disable : 4127) // conditional expression is constant; "if (sizeof(ElemType)==sizeof(float))" triggers this
 
-#ifdef USE_ACML
-// use ACML as default.
-// Download ACML 5.3.0 (e.g., acml5.3.0-ifort64.exe) or above
-// from http://developer.amd.com/tools/cpu-development/amd-core-math-library-acml/acml-downloads-resources/
-// Install the ifort64 variant (compiled with intel compiler) of the library
-// Set Environment variable ACML_PATH to C:\AMD\acml5.3.0\ifort64_mp or the folder you installed acml
-// to point to your folder for the include file and link library
-#include <acml.h> // requires ACML 5.3.0 and above
-#elif defined(USE_MKL)
+#ifdef USE_MKL
 // requires MKL 10.0 and above
 #include <mkl.h>
 #else
@@ -52,12 +44,6 @@
 //{
 //    return 42;
 //}
-
-#ifdef USE_ACML // MKL has one additional parameter for different matrix order
-#define BLAS_COLMAJOR
-#else
-#define BLAS_COLMAJOR (int) MatrixOrder::ColMajor,
-#endif
 
 // TODO: Move to CommonMatrix.h
 #define IDX2C(i, j, ld) (((j) * (ld)) + (i)) // 0 based indexing
@@ -261,11 +247,23 @@ void CPUSparseMatrix<ElemType>::SetValue(const CPUSparseMatrix<ElemType>& v)
     RequireSizeAndAllocate(v.GetNumRows(), v.GetNumCols(), v.NzSize());
     let nz = v.NzCount();
 
+    auto matrixFormat = v.GetFormat();
+    if (((matrixFormat == matrixFormatSparseBlockCol) || (matrixFormat == matrixFormatSparseBlockRow)) && (v.GetBlockIdShift() > 0))
+        NOT_IMPLEMENTED;
+
     if (nz > 0)
     {
         memcpy(NzValues(),    v.NzValues(),    v.NzSize());
-        memcpy(RowLocation(), v.RowLocation(), v.RowSize());
-        memcpy(ColLocation(), v.ColLocation(), v.ColSize());
+
+        if ((matrixFormat == matrixFormatSparseCSC) || (matrixFormat == matrixFormatSparseCSR))
+        {
+            memcpy(RowLocation(), v.RowLocation(), v.RowSize());
+            memcpy(ColLocation(), v.ColLocation(), v.ColSize());
+        }
+        else
+        {
+            memcpy(GetBlockIds(), v.GetBlockIds(), v.GetBlockSize());
+        }
     }
     if (v.m_sliceViewOffset > 0)
     {
@@ -379,6 +377,66 @@ CPUSparseMatrix<ElemType>& CPUSparseMatrix<ElemType>::DoGatherColumnsOf(ElemType
         }
 
         SecondaryIndexLocation()[j + 1] = CPUSPARSE_INDEX_TYPE(offset);
+    }
+
+    return *this;
+}
+
+// *this[:,idx[j]] = a[:,j] * alpha + *this[:,idx[j]] * beta
+template <class ElemType>
+CPUSparseMatrix<ElemType>& CPUSparseMatrix<ElemType>::DoScatterColumnsOf(ElemType beta, const CPUMatrix<ElemType>& idx, const CPUSparseMatrix<ElemType>& a, ElemType alpha)
+{
+    VerifyWritable(__func__);
+
+    if ((a.GetFormat() != matrixFormatSparseCSC) || (GetFormat() != matrixFormatSparseCSC))
+        NOT_IMPLEMENTED;
+
+    if (idx.GetNumRows() != 1) // index is 1-dimensional only
+        InvalidArgument("DoScatterColumnsOf: Map must be a row vector.");
+
+    if (beta != 0)
+        NOT_IMPLEMENTED;
+
+    if (NzCount() != 0)
+        InvalidArgument("CPUSparseMatrix::DoScatterColumnsOf: The target matrix cannot have pre-existing non-zero values when being scattered into");
+
+    size_t numNonZeroElements = a.NzCount();
+
+    if (beta == 0)
+        RequireSizeAndAllocate(GetNumRows(), GetNumCols(), numNonZeroElements);
+
+    // Setup the Secondary index
+    std::vector<int> columnElementCounts(GetNumCols(), 0);
+    size_t numColsToWrite = idx.GetNumCols();
+    for (long j = 0; j < numColsToWrite; j++)
+    {
+        auto jOutF = idx(0, j); // this is the column we need to write to
+        if (::isnan(jOutF) || (jOutF < 0))     // negative index means gap
+            continue;
+        size_t jOut = (size_t)jOutF;
+        columnElementCounts[jOut] = a.SecondaryIndexLocation()[j + 1] - a.SecondaryIndexLocation()[j];
+    }
+
+    // TODO: Replace with std::exclusive_scan when we switch to C++17
+    for (size_t i = 1; i <= GetNumCols(); ++i)
+        SecondaryIndexLocation()[i] = SecondaryIndexLocation()[i - 1] + columnElementCounts[i - 1];
+    
+    size_t offset = a.SecondaryIndexLocation()[0];
+    // TODO: Does it make sense to parallelize this?
+    for (long j = 0; j < numColsToWrite; j++)
+    {
+        auto jOutF = idx(0, j); // this is the column we need to write to
+        if (::isnan(jOutF) || (jOutF < 0))     // negative index means gap
+            continue;
+        size_t jOut = (size_t)jOutF;
+
+        auto start = SecondaryIndexLocation()[jOut];
+        auto end = SecondaryIndexLocation()[jOut + 1];
+        for (auto p = start; p < end; p++, offset++)
+        {
+            GetUnCompIndex()[p] = a.GetUnCompIndex()[offset];
+            Buffer()[p] = a.Buffer()[offset] * alpha;
+        }
     }
 
     return *this;
@@ -587,13 +645,7 @@ void CPUSparseMatrix<ElemType>::SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYP
 }
 
 template <class ElemType>
-ElemType* CPUSparseMatrix<ElemType>::Data() const
-{
-    return Buffer() + GetCompIndex()[m_sliceViewOffset];
-}
-
-template <class ElemType>
-ElemType* CPUSparseMatrix<ElemType>::Data() 
+ElemType* CPUSparseMatrix<ElemType>::Data()  const
 {
     return (Buffer() + 
         ((GetFormat() == matrixFormatSparseCSC || GetFormat() == matrixFormatSparseCSR) ? GetCompIndex()[m_sliceViewOffset] : 0));
@@ -770,7 +822,7 @@ void CPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const CPU
 
     if (beta == 0)
     {
-        memset(c.Buffer(), 0, sizeof(ElemType) * c.GetNumElements());
+        memset(c.Data(), 0, sizeof(ElemType) * c.GetNumElements());
     }
     else if (beta != 1)
     {
@@ -781,52 +833,83 @@ void CPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const CPU
         }
     }
 
+    // TODO: Implement CSR as a transposition of b, like we do for GPU.
     if (rhs.GetFormat() != matrixFormatSparseCSC)
         NOT_IMPLEMENTED;
 
+    // Do the actual multiplication.
+    ElemType* valueBuffer = rhs.Buffer() + *rhs.SecondaryIndexLocation(); // Points to the value buffer of the current  view (i.e. buffer containing indices of non-zero elements)
+    int* rowIndexBuffer   = rhs.MajorIndexLocation();                     // Points to the index buffer of the current view. (i.e. buffer containing indices of non-zero elements)
+    int iNonzero          = 0;                                            // Number of nonzero elements handled so far for curent slice view.
+    int numPreviosNonzero = rhs.SecondaryIndexLocation()[0];              // Total number of nonzero values handled in previous slices.
     if (!transposeA && !transposeB)
     {
-        for (size_t j = 0; j < rhs.GetNumCols(); j++)
+        for (size_t colB = 0; colB < rhs.GetNumCols(); colB++)
         {
-            size_t start = rhs.SecondaryIndexLocation()[j]; // ColLocation
-            size_t end = rhs.SecondaryIndexLocation()[j + 1];
-            for (size_t p = start; p < end; p++)
+            size_t end = rhs.SecondaryIndexLocation()[colB + 1] - numPreviosNonzero;
+            for (; iNonzero < end; iNonzero++)
             {
-                size_t i = rhs.MajorIndexLocation()[p]; // RowLocation
-                ElemType val = rhs.Buffer()[p];
+                size_t rowB = rowIndexBuffer[iNonzero]; // RowLocation
+                ElemType val = valueBuffer[iNonzero];
 
-                for (size_t h = 0; h < lhs.GetNumRows(); h++)
+                for (size_t rowA = 0; rowA < lhs.GetNumRows(); rowA++)
                 {
-                    c(h, j) += alpha * lhs(h, i) * val;
+                    c(rowA, colB) += alpha * lhs(rowA, rowB) * val;
                 }
             }
         }
     }
     else if (!transposeA && transposeB)
     {
-        for (size_t j = 0; j < rhs.GetNumCols(); j++)
+        for (size_t colB = 0; colB < rhs.GetNumCols(); colB++)
         {
-            size_t start = rhs.SecondaryIndexLocation()[j];
-            size_t end = rhs.SecondaryIndexLocation()[j + 1];
-
-            for (size_t p = start; p < end; p++)
+            size_t end = rhs.SecondaryIndexLocation()[colB + 1] - numPreviosNonzero;
+            for (; iNonzero < end; iNonzero++)
             {
-                size_t i = rhs.MajorIndexLocation()[p];
-                ElemType val = rhs.Buffer()[p];
-                for (size_t h = 0; h < lhs.GetNumRows(); h++)
+                size_t rowB = rowIndexBuffer[iNonzero]; // RowLocation
+                ElemType val = valueBuffer[iNonzero];
+
+                for (size_t rowA = 0; rowA < lhs.GetNumRows(); rowA++)
                 {
-                    c(h, i) += alpha * lhs(h, j) * val;
+                    c(rowA, rowB) += alpha * lhs(rowA, colB) * val;
                 }
             }
         }
     }
+    // the transposeA case is copy-paste from above with rows/cols of lhs swapped
     else if (transposeA && !transposeB)
     {
-        NOT_IMPLEMENTED;
+        for (size_t colB = 0; colB < rhs.GetNumCols(); colB++)
+        {
+            size_t end = rhs.SecondaryIndexLocation()[colB + 1] - numPreviosNonzero;
+            for (; iNonzero < end; iNonzero++)
+            {
+                size_t rowB = rowIndexBuffer[iNonzero]; // RowLocation
+                ElemType val = valueBuffer[iNonzero];
+
+                for (size_t colA = 0; colA < lhs.GetNumCols(); colA++)
+                {
+                    c(colA, colB) += alpha * lhs(rowB, colA) * val;
+                }
+            }
+        }
     }
-    else
+    else if (transposeA && transposeB)
     {
-        NOT_IMPLEMENTED;
+        for (size_t colB = 0; colB < rhs.GetNumCols(); colB++)
+        {
+            size_t end = rhs.SecondaryIndexLocation()[colB + 1] - numPreviosNonzero;
+            for (; iNonzero < end; iNonzero++)
+            {
+                size_t rowB = rowIndexBuffer[iNonzero]; // RowLocation
+                ElemType val = valueBuffer[iNonzero];
+
+                for (size_t colA = 0; colA < lhs.GetNumCols(); colA++)
+                {
+                    c(colA, rowB) += alpha * lhs(colB, colA) * val;
+                }
+            }
+        }
     }
 }
 
@@ -1309,20 +1392,12 @@ ElemType CPUSparseMatrix<ElemType>::SumOfAbsElements() const
 
     if (sizeof(ElemType) == sizeof(double))
     {
-#ifdef USE_ACML
-        return (ElemType) dasum((int) this->NzCount(), reinterpret_cast<double*>(Data()), 1);
-#else
         return (ElemType) cblas_dasum((int) this->NzCount(), reinterpret_cast<double*>(Data()), 1);
-#endif
     }
     else
     {
 #pragma warning(suppress : 4244)
-#ifdef USE_ACML
-        return sasum((int) this->NzCount(), reinterpret_cast<float*>(Data()), 1);
-#else
         return cblas_sasum((int) this->NzCount(), reinterpret_cast<float*>(Data()), 1);
-#endif
     }
 }
 
@@ -1464,7 +1539,6 @@ template void CPUSparseMatrix<char>::SetValue(size_t, size_t, char);
 template void CPUSparseMatrix<char>::SetValue(CPUSparseMatrix<char> const&);
 //template void CPUSparseMatrix<char>::SetValue(GPUSparseMatrix<char> const&);
 template char* CPUSparseMatrix<char>::Data() const;
-template char* CPUSparseMatrix<char>::Data();
 template void CPUSparseMatrix<char>::Reset(void);
 template void CPUSparseMatrix<char>::Resize(const size_t, const size_t, const size_t, const bool);
 template void CPUSparseMatrix<char>::RequireSizeAndAllocate(const size_t, const size_t, const size_t, const bool, bool);
@@ -1487,7 +1561,6 @@ template void CPUSparseMatrix<short>::SetValue(size_t, size_t, short);
 template void CPUSparseMatrix<short>::SetValue(CPUSparseMatrix<short> const&);
 //template void CPUSparseMatrix<short>::SetValue(GPUSparseMatrix<short> const&);
 template short* CPUSparseMatrix<short>::Data() const;
-template short* CPUSparseMatrix<short>::Data();
 template void CPUSparseMatrix<short>::Reset(void);
 template void CPUSparseMatrix<short>::Resize(const size_t, const size_t, const size_t, const bool);
 template void CPUSparseMatrix<short>::RequireSizeAndAllocate(const size_t, const size_t, const size_t, const bool, bool);

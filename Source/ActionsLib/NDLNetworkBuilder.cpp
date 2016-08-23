@@ -149,11 +149,11 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
             int forcedRandomSeed = node->GetOptionalParameter("randomSeed", "-1" /*disabled*/);
 
             if (EqualCI(initString, L"fixedValue"))
-                nodePtr->Value().SetValue(value);
+                m_net->InitLearnableParameters(nodePtr, L"fixedValue", value);
             else if (EqualCI(initString, L"uniform"))
-                m_net->InitLearnableParameters(nodePtr, true, forcedRandomSeed < 0 ? randomSeed++ : (unsigned long) forcedRandomSeed, initValueScale, initOnCPUOnly);
+                m_net->InitLearnableParameters(nodePtr, L"uniform",  initValueScale, forcedRandomSeed < 0 ? randomSeed++ : (unsigned long)forcedRandomSeed, initOnCPUOnly);
             else if (EqualCI(initString, L"gaussian"))
-                m_net->InitLearnableParameters(nodePtr, false, forcedRandomSeed < 0 ? randomSeed++ : (unsigned long) forcedRandomSeed, initValueScale, initOnCPUOnly);
+                m_net->InitLearnableParameters(nodePtr, L"gaussian", initValueScale, forcedRandomSeed < 0 ? randomSeed++ : (unsigned long)forcedRandomSeed, initOnCPUOnly);
             else if (EqualCI(initString, L"fromFile"))
             {
                 std::string initFromFilePath = node->GetOptionalParameter("initFromFilePath", "");
@@ -167,7 +167,7 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
                 dynamic_pointer_cast<LearnableParameter<ElemType>>(nodePtr)->InitFromFile(msra::strfun::utf16(initFromFilePath));
             }
             else
-                RuntimeError("'init' must be one of the values of [ uniform | gaussian | fixedValue ]");
+                RuntimeError("'init' must be one of the values of [ uniform | gaussian | fixedValue | fromFile ]");
         }
     }
     else if (cnNodeType == L"Constant")
@@ -186,7 +186,7 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
         else if (pass == ndlPassFinal || nodePtr->Value().GetNumElements() != 0)
         {
             ElemType val = parameter[0]->GetScalar();
-            nodePtr->Value().SetValue(val);
+            m_net->InitLearnableParameters(nodePtr, L"fixedValue", val);
         }
     }
     else if (cnNodeType == L"RowSlice") // Note: This now maps onto SliceNode which specifies the end differently.

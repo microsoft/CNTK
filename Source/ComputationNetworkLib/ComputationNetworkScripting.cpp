@@ -37,6 +37,8 @@ using namespace Microsoft::MSR::ScriptableObjects;
 // construction from config
 // ===================================================================
 
+const static set<wstring> nodeGroupNames{ L"feature", L"label", L"criterion", L"evaluation", L"output" };
+
 // construct a ComputationNetwork from a ConfigRecord
 ComputationNetwork::ComputationNetwork(const IConfigRecordPtr configp) :
     ComputationNetwork()
@@ -57,7 +59,16 @@ ComputationNetwork::ComputationNetwork(const IConfigRecordPtr configp) :
     {
         let& value = config[id];
         if (value.Is<ComputationNodeBase>())
-            workList.push_back((const ComputationNodeBasePtr&) value);
+        {
+            const ComputationNodeBasePtr& node = value;
+            // top-level defined record members get their top-level name
+            bool isSpecialNode = false;
+            for (let& nodeGroupName : nodeGroupNames)
+                isSpecialNode |= id == nodeGroupName + L"Nodes";
+            if (!isSpecialNode)
+                node->SetName(id);
+            workList.push_back(node);
+        }
     }
 
     // TODO: process "outputNodes" etc. arrays: Sync to node Tags, and make them all roots.
@@ -69,8 +80,6 @@ ComputationNetwork::ComputationNetwork(const IConfigRecordPtr configp) :
 // process the special-nodes parameters
 void ComputationNetwork::ProcessSpecialNodes(const ScriptableObjects::IConfigRecord& config, std::deque<ComputationNodeBasePtr>& workList)
 {
-    set<wstring> nodeGroupNames{ L"feature", L"label", L"criterion", L"evaluation", L"output" };
-
     for (let& id : config.GetMemberIds())
     {
         let pos = id.find(L"Nodes");

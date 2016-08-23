@@ -865,7 +865,7 @@ struct ComputeSpatialScaleAndBiasGradients
 {
     template <typename ElemType>
     static void Call(size_t vectorSize, size_t spatialSize, size_t batchSize, const ElemType* x, const ElemType* dy,
-        ElemType* dScale, ElemType* dBias, const ElemType* saveMean, const ElemType* saveInvStdDev, cudaStream_t stream)
+                     ElemType* dScale, ElemType* dBias, const ElemType* saveMean, const ElemType* saveInvStdDev, cudaStream_t stream)
     {
         assert((spatialSize % U) == 0);
         assert((vectorSize % spatialSize) == 0);
@@ -880,9 +880,10 @@ struct ComputeSpatialScaleAndBiasGradients
     }
 };
 
+// mbStatsWeight is the weight with which current MB's stats were used (0 means not at all, locked model).
 template <int BlockDimX, int BlockDimY, bool Spatial, int U, typename ElemType>
 __global__ void kBackpropagateBatchNormGradients(int vectorSize, int spatialSize, int batchSize, const ElemType* x, const ElemType* dy, ElemType* dx,
-                                                    const ElemType* bnScale, const ElemType* dScale, const ElemType* dBias,
+                                                    const ElemType* bnScale, ElemType mbStatsWeight, const ElemType* dScale, const ElemType* dBias,
                                                     const ElemType* saveMean, const ElemType* saveInvStdDev)
 {
     static_assert(BlockDimX * U == CUB_PTX_WARP_THREADS, "BlockDimX * U must be equal to warp size (32).");
@@ -943,18 +944,29 @@ __global__ void kBackpropagateBatchNormGradients(int vectorSize, int spatialSize
         LoadValues<U>(pdy, dyCur);
         LoadValues<U>(pdx, dxCur);
         // From the BN paper, dL/dxi is a sum of three terms: dL/dxi = t1 + t2 + t3
-        // After simplifcation, they become the following:
-        // 1. t1 = scale * dL/dyi * invStdDev
-        // 2. t2 = (-scale / m) * invStdDev * xHat * dL/dScale
-        // 3. t3 = (-scale / m) * invStdDev * dL/dBias (for this one note that Sum(xHat) == 0)
+        // The formulas for dBias and dScale happen to occur as subexpressions in this gradient as well.
+        // Leveraging this, this gradient can be simplified to:
+        //   t1 = scale * dL/dyi * invStdDev
+        //   t2 = mbStatsWeight * (-scale / m) * invStdDev * xHat * dL/dScale
+        //   t3 = mbStatsWeight * (-scale / m) * invStdDev * dL/dBias (for this one note that Sum(xHat) == 0)
+        // with
+        //   dBias = Reduce(dy)
+        //   dScale = Reduce(dy * xHat)
         // Simplifying this a bit more, we get the formula below.
         ElemType val[U];
         int m = Spatial ? batchSize * spatialSize : batchSize;
 #pragma unroll
         for (int k = 0; k < U; k++)
         {
-            ElemType xNorm = (xCur[k] - mean[k]) * invStdDev[k];
-            val[k] = dxCur[k] + (scale[k] * invStdDev[k]) * (dyCur[k] - (xNorm * ds[k] + db[k]) / m);
+            ElemType xNorm = (xCur[k] - mean[k]) * invStdDev[k]; // xHat
+            // scale * invStdDev * (
+            //   dL/dyi
+            //   - mbStatsWeight * (xHat * dL/dScale + dL/dBias) / m
+            // )
+            val[k] = dxCur[k]   // (adding to gradient)
+                     + (scale[k] * invStdDev[k]) * (
+                        dyCur[k]
+                        - mbStatsWeight * (xNorm * ds[k] + db[k]) / m);
         }
         StoreValues<U>(val, pdx);
     }
@@ -965,25 +977,26 @@ struct BackpropagateBatchNormGradients
 {
     template <typename ElemType>
     static void Call(size_t vectorSize, size_t spatialSize, size_t batchSize, bool spatial, const ElemType* x, const ElemType* dy, ElemType* dx,
-                        const ElemType* bnScale, const ElemType* dScale, const ElemType* dBias, const ElemType* saveMean, const ElemType* saveInvStdDev, cudaStream_t stream)
+                     const ElemType* bnScale, ElemType mbStatsWeight, const ElemType* dScale,
+                     const ElemType* dBias, const ElemType* saveMean, const ElemType* saveInvStdDev, cudaStream_t stream)
     {
         assert((vectorSize % U) == 0);
         const int BlockDimX = 32 / U;
         const int BlockDimY = 4 * U;
         auto bdim = dim3(BlockDimX, BlockDimY);
         auto gdim = dim3(static_cast<unsigned int>(RoundUpToMultiple(vectorSize, BlockDimX * U)),
-                            static_cast<unsigned int>(RoundUpToMultiple(batchSize, BlockDimY)));
+                         static_cast<unsigned int>(RoundUpToMultiple(batchSize,  BlockDimY)));
         if (spatial)
         {
-            kBackpropagateBatchNormGradients<BlockDimX, BlockDimY, true, U><<<gdim, bdim, 0, stream>>>(
-                static_cast<int>(vectorSize), static_cast<int>(spatialSize), static_cast<int>(batchSize), x, dy, dx, bnScale, dScale, dBias, saveMean, saveInvStdDev);
+            kBackpropagateBatchNormGradients<BlockDimX, BlockDimY, true/*spatial*/, U><<<gdim, bdim, 0, stream>>>(
+                static_cast<int>(vectorSize), static_cast<int>(spatialSize), static_cast<int>(batchSize), x, dy, dx, bnScale, mbStatsWeight, dScale, dBias, saveMean, saveInvStdDev);
         }
         else
         {
-            kBackpropagateBatchNormGradients<BlockDimX, BlockDimY, false, U><<<gdim, bdim, 0, stream>>>(
-                static_cast<int>(vectorSize), static_cast<int>(spatialSize), static_cast<int>(batchSize), x, dy, dx, bnScale, dScale, dBias, saveMean, saveInvStdDev);
+            kBackpropagateBatchNormGradients<BlockDimX, BlockDimY, false/*not spatial*/, U><<<gdim, bdim, 0, stream>>>(
+                static_cast<int>(vectorSize), static_cast<int>(spatialSize), static_cast<int>(batchSize), x, dy, dx, bnScale, mbStatsWeight, dScale, dBias, saveMean, saveInvStdDev);
         }
     }
 };
 
-} } }
+}}}
