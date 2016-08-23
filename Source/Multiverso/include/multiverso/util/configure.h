@@ -18,10 +18,9 @@ struct Command {
 template<typename T>
 class FlagRegister {
 public:
-  Command<T>* RegisterFlag(const std::string& name,
+  void RegisterFlag(const std::string& name,
                            const T& default_value, const std::string& text) {
     commands[name] = { default_value, text };
-    return &commands[name];
   }
 
   // set flag value if in the defined list
@@ -35,6 +34,10 @@ public:
 
   T& GetValue(const std::string& name) {
     return commands[name].value;
+  }
+
+  const std::string& GetInfo(const std::string& name) {
+    return commands[name].description;
   }
 
   // get flag register instance
@@ -51,13 +54,17 @@ private:
 };
 
 template<typename T>
-class FlagRegisterHelper{
+class FlagRegisterHelper {
 public:
   FlagRegisterHelper(const std::string name, T val, const std::string &text) {
-    command = FlagRegister<T>::Get()->RegisterFlag(name, val, text);
+    FlagRegister<T>::Get()->RegisterFlag(name, val, text);
   }
-  Command<T>* command;
 };
+
+// declare the variable as MV_CONFIG_##name
+#define DECLARE_CONFIGURE(type, name)                                       \
+  static const type& MV_CONFIG_##name = configure::FlagRegister<type>       \
+  ::Get()->GetValue(#name);
 
 // register a flag, use MV_CONFIG_##name to use
 // \param type variable type
@@ -69,17 +76,12 @@ public:
     FlagRegisterHelper<type> internal_configure_helper_##name(              \
       #name, default_value, text);                                          \
   }                                                                         \
-  static const type& MV_CONFIG_##name = configure::FlagRegister<type>              \
-    ::Get()->GetValue(#name);
-
-// declare the variable as MV_CONFIG_##name
-#define DECLARE_CONFIGURE(type, name)                                       \
-  static const type& MV_CONFIG_##name = configure::FlagRegister<type>              \
-    ::Get()->GetValue(#name);
+  DECLARE_CONFIGURE(type, name)
 
 }  // namespace configure
 
 void ParseCMDFlags(int *argc, char* argv[]);
+
 template <typename T>
 void SetCMDFlag(const std::string& name, const T& value) {
   CHECK(configure::FlagRegister<T>::Get()->SetFlagIfFound(name, value));

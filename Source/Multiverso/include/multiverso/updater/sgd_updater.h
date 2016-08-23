@@ -11,7 +11,6 @@ public:
   explicit SGDUpdater(size_t){
     Log::Debug("[SGDUpdater] Init. \n");
   }
- 
   void Update(size_t num_element, T* data, T* delta,
               AddOption*, size_t offset) override {
     for (size_t index = 0; index < num_element; ++index) {

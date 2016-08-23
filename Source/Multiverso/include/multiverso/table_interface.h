@@ -55,7 +55,6 @@ private:
   int msg_id_;
 };
 
-// TODO(feiga): move to a seperate file
 class Stream;
 
 // interface for checkpoint table

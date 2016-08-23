@@ -139,10 +139,6 @@ public:
 	return -1;
   }
   
-  void Close(const char*) override {
-    Log::Fatal("Shouldn't call this in MPI Net\n");
-  }
-
   bool active() const { return inited_ != 0; }
   int rank() const override { return rank_; }
   int size() const override { return size_; }
@@ -422,9 +418,9 @@ private:
   std::unique_ptr<MPIMsgHandle> last_handle_;
   MtQueue<MessagePtr> send_queue_;
   char* send_buffer_;
-  size_t send_size_;
+  long long send_size_;
   char* recv_buffer_;
-  size_t recv_size_;
+  long long recv_size_;
 };
 
 }

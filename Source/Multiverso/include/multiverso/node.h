@@ -12,13 +12,7 @@ enum Role {
 
 struct Node {
   int rank;
-  // role can be 0, 1, 2, 3
-  // 00 means neither worker nor server
-  // 01 means worker
-  // 10 means server
-  // 11 means both server and worker, default value
   int role;
-  // bool is_controller; // currently rank == 0 means controller
   int worker_id;
   int server_id;
 

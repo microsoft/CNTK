@@ -7,22 +7,6 @@
 namespace multiverso {
 namespace net {
 
-// std::string GetHostName() {
-//   return "";
-// }
-//
-// std::string HostNameToIP(std::string hostname) {
-//   return "";
-// }
-//
-// std::string IPToHostName(std::string ip) {
-//   return "";
-// }
-//
-// bool IsLocalAddress(std::string ip) {
-//   return true;
-// }
-
 void GetLocalIPAddress(std::unordered_set<std::string>* result);
 
 }  // namespace net

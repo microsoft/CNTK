@@ -81,11 +81,9 @@ private:
 
 template<typename T>
 void MtQueue<T>::Push(T& item) {
-  {
-    std::lock_guard<std::mutex> lock(mutex_);
-    buffer_.push(std::move(item));
-    empty_condition_.notify_one();
-  }
+  std::lock_guard<std::mutex> lock(mutex_);
+  buffer_.push(std::move(item));
+  empty_condition_.notify_one();
 }
 
 template<typename T>

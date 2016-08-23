@@ -53,18 +53,6 @@ DllExport void MV_AddMatrixTableByRows(TableHandler handler, float* data,
 DllExport void MV_AddAsyncMatrixTableByRows(TableHandler handler, float* data,
                                        int size, int row_ids[], int row_ids_n);
 
-// typedef void* ArrayWorkerFloat;
-// typedef void* ArrayServerFloat;
-// struct AddOption {
-//   float learning_rate;
-//   float momentum;
-//   float rho;
-// };
-// ArrayServerFloat newArrayServerFloat(int);
-// ArrayWorkerFloat newArrayWorkerFloat(int);
-// void getArrayWorkerFloat(ArrayWorkerFloat, float*, int);
-// void addArrayWorkerFloat(ArrayServerFloat, float*, int, struct AddOption*);
-
 #ifdef __cplusplus
 }  // end extern "C"
 #endif

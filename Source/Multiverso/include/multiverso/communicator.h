@@ -22,6 +22,7 @@ private:
   void Communicate();
   // Forward to other actors in the same node
   void LocalForward(MessagePtr& msg);
+
   NetInterface* net_util_;
   std::unique_ptr<std::thread> recv_thread_;
 };

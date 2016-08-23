@@ -51,7 +51,12 @@ struct URI {
     if (scheme == "hdfs" && host.length() == 0) host = "default";
 
     name = uri.substr(start, std::string::npos);
-    path = scheme + "://" + host + name;
+    if (scheme == "hdfs") {
+      path = scheme + "://" + host + name;
+    }
+    else {
+      path = uri;
+    }
   }
 };
 

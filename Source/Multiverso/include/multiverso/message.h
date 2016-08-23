@@ -49,8 +49,6 @@ public:
   inline const int* header() const { return header_; }
   static const int kHeaderSize = 8 * sizeof(int);
 
-  // Deep Copy
-  Message* CopyFrom(const Message& src);
   // Create a Message with only headers
   // The src/dst, type is opposite with src message
   inline Message* CreateReplyMessage() {

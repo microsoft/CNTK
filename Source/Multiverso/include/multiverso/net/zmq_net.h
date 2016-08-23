@@ -22,15 +22,11 @@ MV_DEFINE_int(port, 55555 , "port used to communication");
 
 class ZMQNetWrapper : public NetInterface {
 public:
-  // argc >= 2
-  // argv[1]: machine file, format is same with MPI machine file
-  // argv[2]: port used
   void Init(int* argc, char** argv) override {
     // get machine file 
     if (active_) return;
-    // CHECK(*argc > 2);
     ParseMachineFile(MV_CONFIG_machine_file, &machine_lists_);
-    int port = MV_CONFIG_port; // atoi(argv[2]);
+    int port = MV_CONFIG_port; 
 
     size_ = static_cast<int>(machine_lists_.size());
     CHECK(size_ > 0);
@@ -48,20 +44,14 @@ public:
         receiver_.socket = zmq_socket(context_, ZMQ_DEALER);
         receiver_.endpoint = ip + ":" + std::to_string(port);
         int rc = zmq_bind(receiver_.socket, ("tcp://" + receiver_.endpoint).c_str());
-        endpoint_to_socket_[receiver_.endpoint] = receiver_.socket;
         CHECK(rc == 0);
-        int linger = 0;
-        // CHECK(zmq_setsockopt(receiver_.socket, ZMQ_LINGER, &linger, sizeof(linger)) == 0);
       } else {
         Entity sender;
         sender.socket = zmq_socket(context_, ZMQ_DEALER);
         sender.endpoint = ip + ":" + std::to_string(port);
         int rc = zmq_connect(sender.socket, ("tcp://" + sender.endpoint).c_str());
-        endpoint_to_socket_[sender.endpoint] = sender.socket;
         CHECK(rc == 0);
         senders_.push_back(sender);
-        int linger = 0;
-        // CHECK(zmq_setsockopt(sender.socket, ZMQ_LINGER, &linger, sizeof(linger)) == 0);
       }
     }
     CHECK_NOTNULL(receiver_.socket);
@@ -73,15 +63,16 @@ public:
   virtual int Bind(int rank, char* endpoint) override {
     rank_ = rank;
     std::string ip_port(endpoint);
-    if (context_ == nullptr) { context_ = zmq_ctx_new(); }
+    if (context_ == nullptr) { 
+      context_ = zmq_ctx_new(); 
+    }
     CHECK_NOTNULL(context_);
-    receiver_.socket = zmq_socket(context_, ZMQ_DEALER);
+    if (receiver_.socket == nullptr) 
+      receiver_.socket = zmq_socket(context_, ZMQ_DEALER);
     receiver_.endpoint = ip_port;
     int rc = zmq_bind(receiver_.socket, ("tcp://" + receiver_.endpoint).c_str());
-    endpoint_to_socket_[receiver_.endpoint] = receiver_.socket;
     if (rc == 0) {
       int linger = 0;
-      // CHECK(zmq_setsockopt(receiver_.socket, ZMQ_LINGER, &linger, sizeof(linger)) == 0);
       return 0;
     }
     else {
@@ -97,18 +88,15 @@ public:
     CHECK_NOTNULL(context_);
     size_ = size;
     senders_.resize(size_);
-    for (int i = 0; i < size; ++i) {
+    for (auto i = 0; i < size; ++i) {
       int rank = ranks[i];
       std::string ip_port(endpoints[i]);
-      // if (rank == rank_) continue;
       if (ip_port == receiver_.endpoint) {
         rank_ = rank;
         continue;
       }
       senders_[rank].socket = zmq_socket(context_, ZMQ_DEALER);
       senders_[rank].endpoint = ip_port;
-      endpoint_to_socket_[senders_[rank].endpoint] = senders_[rank].socket;
-      // NOTE(feiga): set linger to 0, otherwise will hang
       int rc = zmq_connect(senders_[rank].socket, ("tcp://" + senders_[rank].endpoint).c_str());
       if (rc != 0) {
         Log::Error("Failed to connect the socket for sender, rank = %d, " 
@@ -120,33 +108,8 @@ public:
     return 0;
   }
 
-  void Close(const char* endpoint) override {
-    std::string str_endpoint(endpoint);
-    auto it = endpoint_to_socket_.find(str_endpoint);
-    if (it != endpoint_to_socket_.end()) {
-      Log::Info("Close endpoint %s\n", it->first.c_str());
-      CHECK_NOTNULL(it->second);
-      CHECK(zmq_close(it->second) == 0);
-      endpoint_to_socket_.erase(it);
-      if (endpoint_to_socket_.empty()) {
-        // Term the context when the last endpoint is closed properly
-        zmq_ctx_term(context_); 
-        Log::Info("ZMQ Finalize sucessfully\n");
-      }
-    }
-  }
-
   void Finalize() override {
-    //active_ = false;
-    //for (auto entity : senders_) {
-    //  if (entity.socket != nullptr) {
-    //    zmq_disconnect(entity.socket, entity.endpoint.c_str());
-    //    Close(entity.endpoint.c_str());
-    //  }
-    //}
-    //zmq_unbind(receiver_.socket, receiver_.endpoint.c_str());
-    // Close(receiver_.endpoint.c_str());
-    for (int i = 0; i < senders_.size(); ++i) {
+    for (auto i = 0; i < senders_.size(); ++i) {
       if (i != rank_) {
         int linger = 0;
         CHECK(zmq_setsockopt(senders_[i].socket, ZMQ_LINGER, &linger, sizeof(linger)) == 0);
@@ -164,7 +127,9 @@ public:
 
     Log::Info("zmq finalize: before close context\n");
     CHECK(zmq_ctx_shutdown(context_)==0);
+    CHECK_NOTNULL(context_);
     zmq_ctx_term(context_);
+    context_ = nullptr;
     Log::Info("zmq finalize: close context\n");
   }
 
@@ -299,13 +264,9 @@ protected:
   Entity receiver_;
   std::vector<Entity> senders_;
 
-  // void* receiver_;
-  // std::vector<void*> senders_;
-
   int rank_;
   int size_;
   std::vector<std::string> machine_lists_;
-  std::unordered_map<std::string, void*> endpoint_to_socket_;
 };
 } // namespace multiverso
 

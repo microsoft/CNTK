@@ -58,7 +58,6 @@ int  MV_NetBind(int rank, char* endpoint);
 // \return  0 SUCCESS
 // \return -1 FAIL
 int  MV_NetConnect(int* rank, char* endpoint[], int size);
-void MV_NetClose(const char* endpoint);
 void MV_NetFinalize();
 
 }  // namespace multiverso

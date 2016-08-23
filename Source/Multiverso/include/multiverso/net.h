@@ -1,7 +1,6 @@
 #ifndef MULTIVERSO_NET_NET_H_
 #define MULTIVERSO_NET_NET_H_
 
-
 #include <string>
 #include "multiverso/message.h"
 
@@ -26,24 +25,16 @@ public:
   // Connect with other endpoints
   virtual int  Connect(int* rank, char* endpoints[], int size) = 0;
 
-  virtual void Close(const char* endpoint) = 0;
-
   virtual bool active() const = 0;
 
   virtual std::string name() const = 0;
   virtual int size() const = 0;
   virtual int rank() const = 0;
 
-  // virtual void Allreduce(void* data, size_t count, int type, int type_size);
-
-  // \return 1. > 0 sended size
-  //         2. = 0 not sended
-  //         3. < 0 net error
+  // \return 1. > 0 sended size 2. = 0 not sended 3. < 0 net error
   virtual size_t Send(MessagePtr& msg) = 0;
 
-  // \return 1. > 0 received size
-  //         2. = 0 not received
-  //         3. < 0 net error
+  // \return 1. > 0 received size 2. = 0 not received 3. < 0 net error
   virtual size_t Recv(MessagePtr* msg) = 0;
 
   // Blocking, send raw data to rank
@@ -58,9 +49,11 @@ public:
 };
 
 namespace net {
+
 // inplace allreduce
 template <typename Typename>
 void Allreduce(Typename* data, size_t elem_count);
+
 }
 
 }  // namespace multiverso
