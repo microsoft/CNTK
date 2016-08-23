@@ -323,5 +323,22 @@ BOOST_AUTO_TEST_CASE(ImageReaderMissingScaleTransforms)
         });
 }
 
+BOOST_AUTO_TEST_CASE(ImageAndImageReaderMultiple)
+{
+    HelperRunReaderTest<float>(
+        testDataPath() + "/Config/ImageAndImageReaderMultiple_Config.cntk",
+        testDataPath() + "/Control/ImageAndImageReaderMultiple_Control.txt",
+        testDataPath() + "/Control/ImageAndImageReaderMultiple_Output.txt",
+        "Simple_Test",
+        "reader",
+        80,
+        80,
+        2,
+        2,
+        2,
+        0,
+        1);
+}
+
 BOOST_AUTO_TEST_SUITE_END()
 } } } }
