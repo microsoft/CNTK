@@ -1764,6 +1764,8 @@ public:
                          *m_saveMean, *m_saveInvStdDev);       // (out) actual interpolated mean/stddev values. Note: unused/empty for blendFactor==1 for CNTK engine
 
         m_mbCount++;
+
+        m_lockedDown = blendFactor == 1.0 && expAvgFactor == 0.0;
     }
 
     // Note: This function assumes that inputIndex=0 is called before the others.
@@ -1775,9 +1777,9 @@ public:
 
         if (inputIndex == 0) // derivative with respect to the input.
         {
-            auto sliceOutputGrad                 = GradientFor(fr);
-            const Matrix<ElemType>& scale        = Input(1)->Value();
-            const Matrix<ElemType>& runMean      = Input(3)->Value();
+            auto sliceOutputGrad = GradientFor(fr);
+            const Matrix<ElemType>& scale = Input(1)->Value();
+            const Matrix<ElemType>& runMean = Input(3)->Value();
             const Matrix<ElemType>& runInvStdDev = Input(4)->Value();
             auto sliceInputGrad = Input(0)->GradientFor(fr);
 
@@ -1811,13 +1813,13 @@ public:
                 m_dScale->Resize(scale); // gradients for scale and bias get stored here
                 m_dBias->Resize(bias);
 
-            double blendFactor = ComputeBlendFactor();  // interpolation weight for the running statistics (the current MB statistics are weighted with 1-this)
+                double blendFactor = ComputeBlendFactor();  // interpolation weight for the running statistics (the current MB statistics are weighted with 1-this)
 
                 // Compute all derivatives in one step. Save derivatives with respect to scale and bias in temp matrices.
                 m_bnEng->Backward(sliceInputValue, sliceOutputGrad, // (in)  input from below, gradient from above
                     sliceInputGrad,                   // (out) gradient for data input goes here
                     scale,                            // (in)  out of scale and bias, only scale is needed in gradient propagation
-                              blendFactor,                      // (in)  smoothing weight for running stats (1=use only running stats)
+                    blendFactor,                      // (in)  smoothing weight for running stats (1=use only running stats)
                     actualMean, actualInvStdDev,      // (in)  actual mean/stddev values used in ForwardProp()
                     *m_dScale, *m_dBias);             // (out) gradients for scale and bias
             }
@@ -1862,15 +1864,12 @@ public:
         //         Until this has been corrected, we need a workaround that infers the wrong dimensions.
 #if 1   // Workaround for today's definition: Trigger on [0 x 1] and infer that 0 as the total # elements needed.
         for (size_t i = 1; i < GetNumInputs(); i++)
-            m_lockedDown = false;
         {
             auto paramLayout = Input(i)->GetSampleLayout();
             if (paramLayout.GetRank() == 2 && paramLayout[0] == 0 && paramLayout[1] == 1 && inputLayout.GetNumElements() > 0) // [0 x 1]
             {
                 size_t total = m_spatial ? inputLayout.GetDims().back() : inputLayout.GetNumElements();
                 Input(i)->ValidateInferInputDimsFrom(TensorShape(total, 1));
-
-            m_lockedDown = blendFactor == 1.0 && expAvgFactor == 0.0;
             }
         }
 #else
