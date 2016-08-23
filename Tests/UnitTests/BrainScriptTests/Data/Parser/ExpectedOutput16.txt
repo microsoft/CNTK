@@ -19,7 +19,7 @@
 
     Err =
      (
-      ClassificationError
+      ErrorPrediction
       ()
        myLabels
        outZ
