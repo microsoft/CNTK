@@ -49,10 +49,12 @@ namespace CNTK
             m_streamInfos.insert({ streamDesc->m_name, streamDesc->m_id, AsStorageFormat(streamDesc->m_storageType), AsDataType(streamDesc->m_elementType), AsNDShape(*(streamDesc->m_sampleLayout)) });
     }
 
-    /*virtual*/ std::unordered_map<StreamInfo, MinibatchData> CompositeMinibatchSource::GetNextMinibatch(const std::unordered_map<StreamInfo, std::pair<size_t, size_t>>& perStreamMBSizeLimits,
-                                                                                                         const DeviceDescriptor& device /*= DeviceDescriptor::DefaultDevice()*/) /*override*/
+    /*virtual*/ const std::unordered_map<StreamInfo, MinibatchData>&
+    CompositeMinibatchSource::GetNextMinibatch(const std::unordered_map<StreamInfo, std::pair<size_t, size_t>>& perStreamMBSizeLimits,
+                                               const DeviceDescriptor& device /*= DeviceDescriptor::DefaultDevice()*/) /*override*/
     {
-        std::unordered_map<StreamInfo, MinibatchData> minibatchData;
+        m_minibatchData.clear();
+
         if (!m_epochEndReached)
         {
             // TODO: Support different minibatch sizes for different streams
@@ -117,7 +119,9 @@ namespace CNTK
                 auto currentStreamMinibatchData = compositeReaderMinibatchData.m_data[i];
                 if (currentStreamDesc->m_elementType == ElementType::tfloat)
                 {
-                    auto dataMatrix = std::make_shared<Matrix<float>>(CPUDEVICE);
+                    auto CNTKMatrixType = (currentStreamDesc->m_storageType == StorageType::dense) ? DENSE : SPARSE;
+                    auto CNTKMatrixFormat = (currentStreamDesc->m_storageType == StorageType::dense) ? matrixFormatDense : matrixFormatSparseCSC;
+                    auto dataMatrix = std::make_shared<Matrix<float>>(0, 0, CPUDEVICE, CNTKMatrixType, CNTKMatrixFormat);
                     size_t sampleSize = currentStreamDesc->m_sampleLayout->GetNumElements();
 
                     // TODO: Eliminate the unnecessary CPU to CPU copy
@@ -127,14 +131,14 @@ namespace CNTK
                     size_t numSamples = currentStreamMinibatchData->m_layout->GetActualNumSamples();
                     size_t numSequences = currentStreamMinibatchData->m_layout->GetNumSequences();
 
-                    minibatchData[currentStreamInfo] = { numSequences, numSamples, minibatchValuePtr };
+                    m_minibatchData[currentStreamInfo] = { numSequences, numSamples, minibatchValuePtr };
                 }
                 else
                     LogicError("Input data of type other than DataType::Float is currently unsupported by the CNTK built-in composite MinibatchSource!");
             }
         }
 
-        return minibatchData;
+        return m_minibatchData;
     }
 
     void ComputeInputPerDimMeansAndInvStdDevs(const MinibatchSourcePtr& minibatchSource,

@@ -19,8 +19,8 @@ namespace CNTK
 
         virtual const std::unordered_set<StreamInfo>& StreamInfos() override { return m_streamInfos; }
 
-        virtual std::unordered_map<StreamInfo, MinibatchData> GetNextMinibatch(const std::unordered_map<StreamInfo, std::pair<size_t, size_t>>& perStreamMBSizeLimits,
-                                                                               const DeviceDescriptor& device = DeviceDescriptor::DefaultDevice()) override;
+        virtual const std::unordered_map<StreamInfo, MinibatchData>& GetNextMinibatch(const std::unordered_map<StreamInfo, std::pair<size_t, size_t>>& perStreamMBSizeLimits,
+                                                                                      const DeviceDescriptor& device = DeviceDescriptor::DefaultDevice()) override;
 
     private: 
         std::unordered_set<StreamInfo> m_streamInfos;
@@ -28,5 +28,6 @@ namespace CNTK
         bool m_epochEndReached;
         size_t m_prevMinibatchSize;
         size_t m_epochSize;
+        std::unordered_map<StreamInfo, MinibatchData> m_minibatchData;
     };
 }
