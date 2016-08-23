@@ -981,16 +981,15 @@ def transpose_dimensions(x, axis1, axis2, name=''):
             
     Args:        
         x: tensor to be reshaped
-        axis1 (int): the axis to swap with axis2
-        axis2 (int): the axis to swap with axis1
+        axis (:class:`cntk_py.Axis`): the axis to swap with axis2
+        axis (:class:`cntk_py.Axis`): the axis to swap with axis1
         name (str): the name of the node in the network
     Returns:
         :class:`cntk_py.Function`
     '''    
     raise NotImplementedError("transpose_dimensions is not implemented yet in V2")
 
-#TODO: enable when it is exposed in c++
-def slice(x, begin_index, end_index, axis=0, name=''): 
+def slice(x, axis, begin_index, end_index, name=''): 
     '''
     Slice the input along an axis.    
 
@@ -1018,9 +1017,9 @@ def slice(x, begin_index, end_index, axis=0, name=''):
 
     Args:
         x: input tensor
+        axis (:class:`cntk_py.Axis`): axis along which `begin_index` and `end_index` will be used. 
         begin_index (int): the index along axis where the slicing starts
-        end_index (int): the index along axis where the slicing ends
-        axis (int or str): axis along which `begin_index` and `end_index` will be used. If axis is of type `str` then the time axis will be used.
+        end_index (int): the index along axis where the slicing ends        
         name (str): the name of the node in the network
         
     See also:
@@ -1029,7 +1028,9 @@ def slice(x, begin_index, end_index, axis=0, name=''):
     Returns:
         :class:`cntk_py.Function`
     '''
-    raise NotImplementedError("slice is not implemented yet in V2")
+    from ..cntk_py import slice
+    x = sanitize_input(x)
+    return slice(x, axis, begin_index, end_index, name)     
 
 #TODO: enable when it is exposed in c++
 def splice(inputs, axis=0, name=''): 
@@ -1056,7 +1057,7 @@ def splice(inputs, axis=0, name=''):
 
     Args:
         inputs (list): tuple of input tensors
-        axis (int): axis along which the concatenation will be performed
+        axis (:class:`cntk_py.Axis`): axis along which the concatenation will be performed
         name (str): the name of the node in the network
 
     Returns:
@@ -1094,7 +1095,7 @@ def reduce_sum(x, axis=0, name=''):
 
     Args:
         x: input tensor
-        axis (int): axis along which the reduction will be performed
+        axis (:class:`cntk_py.Axis`): axis along which the reduction will be performed
         name (str): the name of the node in the network
 
     Returns:
@@ -1171,8 +1172,8 @@ def variable(shape, data_type=None, needs_gradient=True, name=''):
     '''
     from .variables import Variable
 
-    # TODO dynamic axis
-    # TODO Sparse
+    # TODO dynamic axis for numpy arrays
+    # TODO sparse for numpy arrays
     return Variable(shape, data_type, needs_gradient, name)
 
 def placeholder(shape, name=''):
@@ -1188,8 +1189,7 @@ def placeholder(shape, name=''):
         :class:`cntk_py.Function`
     '''
     from .variables import Placeholder
-
-    # TODO dynamic axis?    
+    
     return Placeholder(shape, name)
     
 def parameter(shape=None, value=None, device_id=-1, name=''):

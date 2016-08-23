@@ -17,6 +17,7 @@
 %template() std::vector<size_t>;
 %template() std::vector<bool>;
 %template() std::vector<CNTK::Variable>;
+%template() std::vector<CNTK::Axis>;
 %template() std::vector<std::shared_ptr<CNTK::Function>>;
 
 %ignore CNTK::Internal::Slice;
@@ -727,6 +728,57 @@
          SWIG_exception(SWIG_ValueError, "list expected");
      }
 }
+
+%typecheck(1000) const std::unordered_map<CNTK::Placeholder, CNTK::Variable>& {
+    // '1000' is the typecheck precedence code. It means: check after basic
+    // types, but before arrays. See: http://www.swig.org/Doc1.3/Typemaps.html#Typemaps_overloading
+    $1 = PyDict_Check($input) ? 1 : 0;
+}
+
+
+%typemap(in) std::unordered_map<CNTK::Placeholder, CNTK::Variable>& {
+     if (PyDict_Check($input)) {
+        std::unordered_map<CNTK::Placeholder, CNTK::Variable>* args_map = new std::unordered_map<CNTK::Placeholder, CNTK::Variable>();
+
+        PyObject *key, *value;
+        Py_ssize_t pos = 0;
+
+        while (PyDict_Next($input, &pos, &key, &value)) {
+            void *raw_var = 0 ;
+            int res1 = SWIG_ConvertPtr(key, &raw_var, SWIGTYPE_p_CNTK__Placeholder,  0);
+            if (!SWIG_IsOK(res1)) {
+                SWIG_exception_fail(SWIG_ArgError(res1), "cannot convert key of dictionary to CNTK::Placeholder"); 
+            }
+            if (!raw_var) {
+                SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting key of dictionary to CNTK::Placeholder");
+            }
+
+            CNTK::Placeholder* var = reinterpret_cast<CNTK::Placeholder*>(raw_var);
+
+            void *raw_value = 0;
+            int res2 = SWIG_ConvertPtr(value, &raw_value, SWIGTYPE_p_CNTK__Variable,  0);
+            if (!SWIG_IsOK(res2)) {
+                SWIG_exception_fail(SWIG_ArgError(res2), "cannot convert value of dictionary to CNTK::Variable"); 
+            }
+
+            CNTK::Variable* value;
+            if (raw_value) {
+                value = reinterpret_cast<CNTK::Variable*>(raw_value);
+            } else {
+                // We got an empty Variable, which carries a nullptr.
+                value = new CNTK::Variable();
+            }
+
+            args_map->insert(std::make_pair(*var, *value));
+        }
+
+        $1 = args_map;
+     } else {
+         SWIG_exception(SWIG_TypeError, "dictionary expected");
+     }
+}
+
+
 
 //
 // Converting std::unordered_set to Python list.
