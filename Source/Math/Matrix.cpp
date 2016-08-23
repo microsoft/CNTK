@@ -4387,12 +4387,12 @@ void Matrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const Matrix<ElemT
     }
     else // GPU operations
     {
-		if (a.m_matrixType == MatrixType::DENSE && b.m_matrixType == MatrixType::DENSE && c.m_matrixType == MatrixType::DENSE) // GPU, DENSE * DENSE -> DENSE
+        if (a.m_matrixType == MatrixType::DENSE && b.m_matrixType == MatrixType::DENSE && c.m_matrixType == MatrixType::DENSE) // GPU, DENSE * DENSE -> DENSE
         {
             GPUMatrix<ElemType>::MultiplyAndWeightedAdd(alpha, *a.m_GPUMatrix, transposeA, *b.m_GPUMatrix, transposeB, beta, *c.m_GPUMatrix);
             c.SetDataLocation(GPU, DENSE);
         }
-		else if (a.m_matrixType == MatrixType::SPARSE && b.m_matrixType == MatrixType::DENSE && c.m_matrixType == MatrixType::DENSE) // GPU, SPARSE * DENSE -> DENSE
+        else if (a.m_matrixType == MatrixType::SPARSE && b.m_matrixType == MatrixType::DENSE && c.m_matrixType == MatrixType::DENSE) // GPU, SPARSE * DENSE -> DENSE
         {
             GPUMatrix<ElemType> second = transposeB ? b.m_GPUMatrix->Transpose() : *b.m_GPUMatrix;
             GPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(alpha, *a.m_GPUSparseMatrix, transposeA, second, false, beta, *c.m_GPUMatrix);
@@ -4408,7 +4408,7 @@ void Matrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const Matrix<ElemT
             GPUSparseMatrix<ElemType>::MultiplyAndAdd(alpha, *a.m_GPUMatrix, transposeA, *b.m_GPUSparseMatrix, transposeB, *c.m_GPUSparseMatrix);
             c.SetDataLocation(GPU, SPARSE);
         }
-		else if (a.m_matrixType == MatrixType::SPARSE && b.m_matrixType == MatrixType::SPARSE && c.m_matrixType == MatrixType::SPARSE) // GPU, SPARSE * SPARSE -> SPARSE
+        else if (a.m_matrixType == MatrixType::SPARSE && b.m_matrixType == MatrixType::SPARSE && c.m_matrixType == MatrixType::SPARSE) // GPU, SPARSE * SPARSE -> SPARSE
         {
             GPUSparseMatrix<ElemType> firstDummy = alpha == 1 ? *a.m_GPUSparseMatrix : (*a.m_GPUSparseMatrix) * alpha;
             GPUSparseMatrix<ElemType>& first = firstDummy; // By Malcolm.. gcc doesn't support auto
@@ -4425,7 +4425,7 @@ void Matrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const Matrix<ElemT
                 c.SetDataLocation(GPU, SPARSE);
             }
         }
-		else if (a.m_matrixType == MatrixType::DENSE && b.m_matrixType == MatrixType::DENSE && c.m_matrixType == MatrixType::SPARSE) // GPU, DENSE * DENSE -> SPARSE
+        else if (a.m_matrixType == MatrixType::DENSE && b.m_matrixType == MatrixType::DENSE && c.m_matrixType == MatrixType::SPARSE) // GPU, DENSE * DENSE -> SPARSE
         {
             GPUMatrix<ElemType> tmp(a.m_GPUMatrix->GetComputeDeviceId());
             GPUSparseMatrix<ElemType> tmpSparse(a.m_GPUMatrix->GetComputeDeviceId());
