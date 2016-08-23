@@ -203,7 +203,7 @@ __global__ void kComputeBatchMeanAndInvStdDev(int vectorSize, int batchSize,
     assert(::isfinite(epsilon) && epsilon > 0);
     assert(::isfinite(expAvgFactor) && 0 <= expAvgFactor && expAvgFactor <= 1);
     assert(::isfinite(blendFactor) && 0 <= blendFactor && blendFactor <= 1);
-    assert(expAvgFactor != 0 || blendFactor != 1); // otherwise no need call (no update)
+    // TODO optimize for (expAvgFactor == 0) && (blendFactor == 1)
 
     int irowSrcBase = (blockIdx.x * BlockDimX + threadIdx.x) * U;
     if (irowSrcBase >= vectorSize)
@@ -346,7 +346,7 @@ __global__ void kComputeBatchMeanAndInvStdDev(int vectorSize, int batchSize,
             im2[k] = Operations::RSqrt(static_cast<ElemType>(m2[k] / batchSize + epsilon));
             if (blendFactor != 0)
             {
-                ElemType runInvStdDev = Operations::RSqrt(static_cast<ElemType>(run[k] * (batchSize - 1) / batchSize + epsilon));
+                ElemType runInvStdDev = Operations::RSqrt(static_cast<ElemType>(run[k] + epsilon));
                 im2[k] = blendFactor * runInvStdDev + (1.0 - blendFactor) * im2[k];
             }
         }
@@ -376,7 +376,7 @@ __global__ void kComputeSpatialBatchMeanAndInvStdDev(int vectorSize, int spatial
     assert((vectorSize % spatialSize) == 0);
     assert(::isfinite(expAvgFactor) && 0 <= expAvgFactor && expAvgFactor <= 1);
     assert(::isfinite(blendFactor) && 0 <= blendFactor && blendFactor <= 1);
-    assert(expAvgFactor != 0 || blendFactor != 1); // otherwise no need call (no update)
+    // TODO optimize for (expAvgFactor == 0) && (blendFactor == 1)
     assert(::isfinite(epsilon) && epsilon > 0);
 
     int irowSrcBase = blockIdx.x * spatialSize + threadIdx.x * U;
@@ -506,7 +506,7 @@ __global__ void kComputeSpatialBatchMeanAndInvStdDev(int vectorSize, int spatial
         xInvStdDev[blockIdx.x] = Operations::RSqrt(static_cast<ElemType>(m2[0] / (batchSize * spatialSize) + epsilon));
         if (blendFactor != 0)
         {
-            ElemType runInvStdDev = Operations::RSqrt(static_cast<ElemType>(runVariance[blockIdx.x] * (batchSize - 1) / batchSize + epsilon));
+            ElemType runInvStdDev = Operations::RSqrt(static_cast<ElemType>(runVariance[blockIdx.x] + epsilon));
             xInvStdDev[blockIdx.x] = blendFactor * runInvStdDev + (1.0 - blendFactor) * xInvStdDev[blockIdx.x];
         }
     }
@@ -729,7 +729,7 @@ struct NormalizeBatchTraining
 
 template <int BlockDimX, int BlockDimY, int U, typename ElemType>
 __global__ void kComputeScaleAndBiasGradients(int vectorSize, int batchSize, const ElemType* x, const ElemType* dy, ElemType* dScale, ElemType* dBias,
-                                              const ElemType* saveMean, const ElemType* saveInvStdDev)
+                                              const ElemType* savedMean, const ElemType* savedInvStdDev)
 {
     static_assert(BlockDimX * U == CUB_PTX_WARP_THREADS, "BlockDimX * U must be equal to warp size (32).");
     static_assert((BlockDimX * BlockDimY % CUB_PTX_WARP_THREADS) == 0, "Block size must be a multiple of warp size (32).");
@@ -754,8 +754,8 @@ __global__ void kComputeScaleAndBiasGradients(int vectorSize, int batchSize, con
     // Read mean and inv std dev.
     if (threadIdx.y == 0)
     {
-        LoadValues<U>(saveMean + irowSrcBase, mean);
-        LoadValues<U>(saveInvStdDev + irowSrcBase, invStdDev);
+        LoadValues<U>(savedMean + irowSrcBase, mean);
+        LoadValues<U>(savedInvStdDev + irowSrcBase, invStdDev);
         StoreValues<U>(mean, &meanS[threadIdx.x * U]);
         StoreValues<U>(invStdDev, &invStdDevS[threadIdx.x * U]);
     }
@@ -833,7 +833,7 @@ __global__ void kComputeScaleAndBiasGradients(int vectorSize, int batchSize, con
 
 template <int BlockDimX, int BlockDimY, int U, typename ElemType>
 __global__ void kComputeSpatialScaleAndBiasGradients(int vectorSize, int spatialSize, int batchSize, const ElemType* x, const ElemType* dy,
-                                                        ElemType* dScale, ElemType* dBias, const ElemType* saveMean, const ElemType* saveInvStdDev)
+                                                        ElemType* dScale, ElemType* dBias, const ElemType* savedMean, const ElemType* savedInvStdDev)
 {
     static_assert(BlockDimX * U == CUB_PTX_WARP_THREADS, "BlockDimX * U must be equal to warp size (32).");
     static_assert((BlockDimX * BlockDimY % CUB_PTX_WARP_THREADS) == 0, "Block size must be a multiple of warp size (32).");
@@ -859,8 +859,8 @@ __global__ void kComputeSpatialScaleAndBiasGradients(int vectorSize, int spatial
     // Read mean and inv std dev.
     if (tid == 0)
     {
-        meanS = saveMean[blockIdx.x];
-        invStdDevS = saveInvStdDev[blockIdx.x];
+        meanS = savedMean[blockIdx.x];
+        invStdDevS = savedInvStdDev[blockIdx.x];
     }
     __syncthreads();
     if (tid != 0)
@@ -922,7 +922,7 @@ struct ComputeScaleAndBiasGradients
 {
     template <typename ElemType>
     static void Call(size_t vectorSize, size_t batchSize, const ElemType* x, const ElemType* dy,
-        ElemType* dScale, ElemType* dBias, const ElemType* saveMean, const ElemType* saveInvStdDev, cudaStream_t stream)
+        ElemType* dScale, ElemType* dBias, const ElemType* savedMean, const ElemType* savedInvStdDev, cudaStream_t stream)
     {
         assert((vectorSize % U) == 0);
         const int BlockDimX = 32 / U;
@@ -931,7 +931,7 @@ struct ComputeScaleAndBiasGradients
         // Create a grid that has uses striding in y-dimension to cover whole minibatch.
         auto gdim = dim3(static_cast<unsigned int>(RoundUpToMultiple(vectorSize, BlockDimX * U)));
         kComputeScaleAndBiasGradients<BlockDimX, BlockDimY, U><<<gdim, bdim, 0, stream>>>(
-            static_cast<int>(vectorSize), static_cast<int>(batchSize), x, dy, dScale, dBias, saveMean, saveInvStdDev);
+            static_cast<int>(vectorSize), static_cast<int>(batchSize), x, dy, dScale, dBias, savedMean, savedInvStdDev);
     }
 };
 
@@ -940,7 +940,7 @@ struct ComputeSpatialScaleAndBiasGradients
 {
     template <typename ElemType>
     static void Call(size_t vectorSize, size_t spatialSize, size_t batchSize, const ElemType* x, const ElemType* dy,
-                     ElemType* dScale, ElemType* dBias, const ElemType* saveMean, const ElemType* saveInvStdDev, cudaStream_t stream)
+                     ElemType* dScale, ElemType* dBias, const ElemType* savedMean, const ElemType* savedInvStdDev, cudaStream_t stream)
     {
         assert((spatialSize % U) == 0);
         assert((vectorSize % spatialSize) == 0);
@@ -951,7 +951,7 @@ struct ComputeSpatialScaleAndBiasGradients
         // Create a grid that has uses striding in y-dimension to cover whole minibatch.
         auto gdim = dim3(static_cast<unsigned int>(vectorSize / spatialSize));
         kComputeSpatialScaleAndBiasGradients<BlockDimX, BlockDimY, U><<<gdim, bdim, 0, stream>>>(
-            static_cast<int>(vectorSize), static_cast<int>(spatialSize), static_cast<int>(batchSize), x, dy, dScale, dBias, saveMean, saveInvStdDev);
+            static_cast<int>(vectorSize), static_cast<int>(spatialSize), static_cast<int>(batchSize), x, dy, dScale, dBias, savedMean, savedInvStdDev);
     }
 };
 
@@ -959,7 +959,7 @@ struct ComputeSpatialScaleAndBiasGradients
 template <int BlockDimX, int BlockDimY, bool Spatial, int U, typename ElemType>
 __global__ void kBackpropagateBatchNormGradients(int vectorSize, int spatialSize, int batchSize, const ElemType* x, const ElemType* dy, ElemType* dx,
                                                     const ElemType* bnScale, ElemType mbStatsWeight, const ElemType* dScale, const ElemType* dBias,
-                                                    const ElemType* saveMean, const ElemType* saveInvStdDev)
+                                                    const ElemType* savedMean, const ElemType* savedInvStdDev)
 {
     static_assert(BlockDimX * U == CUB_PTX_WARP_THREADS, "BlockDimX * U must be equal to warp size (32).");
     static_assert((BlockDimX * BlockDimY % CUB_PTX_WARP_THREADS) == 0, "Block size must be a multiple of warp size (32).");
@@ -991,8 +991,8 @@ __global__ void kBackpropagateBatchNormGradients(int vectorSize, int spatialSize
             scale[k] = bnScale[imap];
             ds[k] = dScale[imap];
             db[k] = dBias[imap];
-            mean[k] = saveMean[imap];
-            invStdDev[k] = saveInvStdDev[imap];
+            mean[k] = savedMean[imap];
+            invStdDev[k] = savedInvStdDev[imap];
         }
     }
     else
@@ -1000,8 +1000,8 @@ __global__ void kBackpropagateBatchNormGradients(int vectorSize, int spatialSize
         LoadValues<U>(bnScale + irowBase, scale);
         LoadValues<U>(dScale + irowBase, ds);
         LoadValues<U>(dBias + irowBase, db);
-        LoadValues<U>(saveMean + irowBase, mean);
-        LoadValues<U>(saveInvStdDev + irowBase, invStdDev);
+        LoadValues<U>(savedMean + irowBase, mean);
+        LoadValues<U>(savedInvStdDev + irowBase, invStdDev);
     }
 
     int icol = blockIdx.y * BlockDimY + threadIdx.y;
@@ -1053,7 +1053,7 @@ struct BackpropagateBatchNormGradients
     template <typename ElemType>
     static void Call(size_t vectorSize, size_t spatialSize, size_t batchSize, bool spatial, const ElemType* x, const ElemType* dy, ElemType* dx,
                      const ElemType* bnScale, ElemType mbStatsWeight, const ElemType* dScale,
-                     const ElemType* dBias, const ElemType* saveMean, const ElemType* saveInvStdDev, cudaStream_t stream)
+                     const ElemType* dBias, const ElemType* savedMean, const ElemType* savedInvStdDev, cudaStream_t stream)
     {
         assert((vectorSize % U) == 0);
         const int BlockDimX = 32 / U;
@@ -1064,12 +1064,12 @@ struct BackpropagateBatchNormGradients
         if (spatial)
         {
             kBackpropagateBatchNormGradients<BlockDimX, BlockDimY, true/*spatial*/, U><<<gdim, bdim, 0, stream>>>(
-                static_cast<int>(vectorSize), static_cast<int>(spatialSize), static_cast<int>(batchSize), x, dy, dx, bnScale, mbStatsWeight, dScale, dBias, saveMean, saveInvStdDev);
+                static_cast<int>(vectorSize), static_cast<int>(spatialSize), static_cast<int>(batchSize), x, dy, dx, bnScale, mbStatsWeight, dScale, dBias, savedMean, savedInvStdDev);
         }
         else
         {
             kBackpropagateBatchNormGradients<BlockDimX, BlockDimY, false/*not spatial*/, U><<<gdim, bdim, 0, stream>>>(
-                static_cast<int>(vectorSize), static_cast<int>(spatialSize), static_cast<int>(batchSize), x, dy, dx, bnScale, mbStatsWeight, dScale, dBias, saveMean, saveInvStdDev);
+                static_cast<int>(vectorSize), static_cast<int>(spatialSize), static_cast<int>(batchSize), x, dy, dx, bnScale, mbStatsWeight, dScale, dBias, savedMean, savedInvStdDev);
         }
     }
 };

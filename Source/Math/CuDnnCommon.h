@@ -9,7 +9,7 @@
 #include "TensorShape.h"
 #include <cudnn.h>
 #if CUDNN_MAJOR < 5
-#error CNTK needs CuDNN version 5.0 or higher, cf. https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Windows#cudnn or https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Linux#cudnn.
+#error CNTK requires the NVIDIA cuDNN library 5.0 or higher to build, cf. https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Windows#cudnn or https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Linux#cudnn for installation instructions.
 #endif
 #include <memory>
 

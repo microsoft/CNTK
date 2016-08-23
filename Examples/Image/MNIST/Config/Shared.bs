@@ -22,13 +22,13 @@ DNNImageSigmoidLayer (inW, inH, inC, outDim, x, parmScale) = [
 # ReLU layer with batch normalization
 # TODO: rename to DNN-
 DnnBNReLULayer (inDim, outDim, x, wScale, bValue, scValue, bnTimeConst) = [
-    W   = Parameter (outDim, inDim, init = "gaussian", initValueScale = wScale, initOnCPUOnly=true) 
-    b   = Parameter (outDim, 1, init = "fixedValue", value = bValue) 
-    sc  = Parameter (outDim, 1, init = "fixedValue", value = scValue) 
-    m   = Parameter (outDim, 1, init = "fixedValue", value = 0, learningRateMultiplier = 0)
-    var = Parameter (outDim, 1, init = "fixedValue", value = 0, learningRateMultiplier = 0)
+    W  = Parameter (outDim, inDim, init = "gaussian", initValueScale = wScale, initOnCPUOnly=true) 
+    b  = Parameter (outDim, 1, init = "fixedValue", value = bValue) 
+    sc = Parameter (outDim, 1, init = "fixedValue", value = scValue) 
+    m  = Parameter (outDim, 1, init = "fixedValue", value = 0, learningRateMultiplier = 0)
+    v  = Parameter (outDim, 1, init = "fixedValue", value = 0, learningRateMultiplier = 0)
     t = Times(W, x)  # TODO: W * x
-    bn = BatchNormalization(t, sc, b, m, var, eval = false, spatial = false, normalizationTimeConstant = bnTimeConst)
+    bn = BatchNormalization(t, sc, b, m, v, eval = false, spatial = false, normalizationTimeConstant = bnTimeConst)
     y = RectifiedLinear(bn)
 ].y
 
@@ -58,13 +58,13 @@ ConvNDReLULayer (inp, kW, kH, inMap, inWCount, outMap, hStride, vStride, wScale,
 ].out
 
 ConvBNLayerW (W, inp, outMap, kW, kH, hStride, vStride, bValue, scValue, bnTimeConst) = [   # TODO: delete if not needed
-    b   = Parameter(outMap, 1, init="fixedValue", value=bValue)
-    sc  = Parameter(outMap, 1, init="fixedValue", value=scValue)
-    m   = Parameter(outMap, 1, init="fixedValue", value=0, learningRateMultiplier=0)
-    var = Parameter(outMap, 1, init="fixedValue", value=0, learningRateMultiplier=0)
+    b  = Parameter(outMap, 1, init="fixedValue", value=bValue)
+    sc = Parameter(outMap, 1, init="fixedValue", value=scValue)
+    m  = Parameter(outMap, 1, init="fixedValue", value=0, learningRateMultiplier=0)
+    v  = Parameter(outMap, 1, init="fixedValue", value=0, learningRateMultiplier=0)
     
     c = Convolution(W, inp, kW, kH, outMap, hStride, vStride, zeroPadding=true /* , imageLayout=$imageLayout$*/)
-    y = BatchNormalization(c, sc, b, m, var, eval=false, spatial=true, normalizationTimeConstant=bnTimeConst /* , imageLayout=$imageLayout$*/)
+    y = BatchNormalization(c, sc, b, m, v, eval=false, spatial=true, normalizationTimeConstant=bnTimeConst /* , imageLayout=$imageLayout$*/)
 ].y
 
 ConvBNLayer(inp, outMap, inWCount, kW, kH, hStride, vStride, wScale, bValue, scValue, bnTimeConst) = [

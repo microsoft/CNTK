@@ -67,7 +67,7 @@ cudaStream_t MATH_API GetStream()
     template <class ElemType>                                             \
     GPUMatrix<ElemType>& GPUMatrix<ElemType>::Inplace##f()                \
     {                                                                     \
-        performElementWiseFunction(ElementWiseOperator::op##f, Data()); \
+        performElementWiseFunction(ElementWiseOperator::op##f, Data());   \
         return *this;                                                     \
     }
 #define DEF_ELEMWISE_ASSIGN_FUNC(f)                                                       \
@@ -77,8 +77,8 @@ cudaStream_t MATH_API GetStream()
         if (a.IsEmpty())                                                                  \
             LogicError("Assign##f##Of: Matrix a is empty.");                              \
         if (this != &a)                                                                   \
-            RequireSize(a.GetNumRows(), a.GetNumCols());                                       \
-        performElementWiseFunction(ElementWiseOperator::op##f, a.Data());               \
+            RequireSize(a.GetNumRows(), a.GetNumCols());                                  \
+        performElementWiseFunction(ElementWiseOperator::op##f, a.Data());                 \
         return *this;                                                                     \
     }
 
@@ -3160,12 +3160,13 @@ void GPUMatrix<ElemType>::AveragePoolingBackward(const GPUMatrix<int>& mpRowCol,
                                                                 Data(), (int)GetNumRows(), grad.Data(), (int)grad.GetNumRows());
 }
 
-// returns saveMean/saveInvStdDev which are the actual values used to perform the normalization, except for blendFactor 1, in which case they are unused and set to empty
+// returns savedMean/savedInvStdDev which are the actual values used to perform the normalization, except for blendFactor 1, in which case they are unused and set to empty
 template <class ElemType>
-void GPUMatrix<ElemType>::BatchNormalizationForward(const GPUMatrix<ElemType>& scale, const GPUMatrix<ElemType>& bias, double expAvgFactor, double blendFactor,
+void GPUMatrix<ElemType>::BatchNormalizationForward(const GPUMatrix<ElemType>& scale, const GPUMatrix<ElemType>& bias, bool inferenceOnly, double expAvgFactor, double blendFactor,
                                                     GPUMatrix<ElemType>& runMean, GPUMatrix<ElemType>& runVariance, GPUMatrix<ElemType>& out, double epsilon,
-                                                    GPUMatrix<ElemType>& saveMean, GPUMatrix<ElemType>& saveInvStdDev) const
+                                                    GPUMatrix<ElemType>& savedMean, GPUMatrix<ElemType>& savedInvStdDev) const
 {
+    UNUSED(inferenceOnly); // TODO
     assert((GetNumRows() % scale.GetNumRows()) == 0);
 
     bool spatial = GetNumRows() != scale.GetNumRows();
@@ -3178,36 +3179,38 @@ void GPUMatrix<ElemType>::BatchNormalizationForward(const GPUMatrix<ElemType>& s
     assert(0 < batchSize  && batchSize  <= std::numeric_limits<int>::max());
 
     SyncGuard syncGuard;
-    if (expAvgFactor > 0 || blendFactor < 1)
+    //if (expAvgFactor > 0 || blendFactor < 1)
+    if (inferenceOnly)
     {
-        // Compute data mean and inverse standard deviation (into saveMean and
-        // saveInvStdDev), and update running mean and variance.
+        // Pick running statistics for normalizing. No update reuqired, and
+        // saved statistics do not need to be produced.
+        assert(expAvgFactor == 0 && blendFactor == 1);
+        normalizeRunningStats = true;
+        savedMean.RequireSize(0, 0);
+        savedInvStdDev.RequireSize(0, 0);
+    }
+    else
+    {
+        // Compute data mean and inverse standard deviation (into savedMean and
+        // savedInvStdDev), and update running mean and variance.
+        // TODO expAvgFactor == 0 && blendFactor == 1 can be optimized (no need for update).
         normalizeRunningStats = false;
-        saveMean.RequireSize(runMean);
-        saveInvStdDev.RequireSize(runMean);
+        savedMean.RequireSize(runMean);
+        savedInvStdDev.RequireSize(runMean);
         if (spatial)
         {
             Call<ComputeSpatialBatchMeanAndInvStdDev, ElemType>(spatialSize, vectorSize, spatialSize, batchSize, Data(),
                                                                 expAvgFactor, blendFactor,
                                                                 runMean.Data(), runVariance.Data(), epsilon,
-                                                                saveMean.Data(), saveInvStdDev.Data(), GetStream());
+                                                                savedMean.Data(), savedInvStdDev.Data(), GetStream());
         }
         else
         {
             Call<ComputeBatchMeanAndInvStdDev, ElemType>(vectorSize, vectorSize, batchSize, Data(),
                                                          expAvgFactor, blendFactor,
                                                          runMean.Data(), runVariance.Data(), epsilon,
-                                                         saveMean.Data(), saveInvStdDev.Data(), GetStream());
+                                                         savedMean.Data(), savedInvStdDev.Data(), GetStream());
         }
-    }
-    else
-    {
-        // With expAvgFactor == 0 and blendFactor == 1 the running statistics
-        // do not need to be updated. CNTK engine in this case returns saveMean
-        // and saveInvStdDev empty, but cuDNN engine does not.
-        normalizeRunningStats = true;
-        saveMean.RequireSize(0, 0);
-        saveInvStdDev.RequireSize(0, 0);
     }
 
     Call<NormalizeBatchTraining, ElemType>(spatial ? spatialSize : vectorSize, vectorSize, spatialSize, batchSize, spatial,
@@ -3215,15 +3218,15 @@ void GPUMatrix<ElemType>::BatchNormalizationForward(const GPUMatrix<ElemType>& s
                                            Data(), out.Data(),
                                            scale.Data(), bias.Data(),
                                            runMean.Data(), runVariance.Data(),
-                                           saveMean.Data(), saveInvStdDev.Data(),
+                                           savedMean.Data(), savedInvStdDev.Data(),
                                            GetStream());
 }
 
-// saveMean/saveInvStdDev are the interpolated mean/inverse standard deviation as used in ForwardProp().
+// savedMean/savedInvStdDev are the interpolated mean/inverse standard deviation as used in ForwardProp().
 // For blendFactor=1, they are not used and can be uninitialized or empty.
 template <class ElemType>
 void GPUMatrix<ElemType>::BatchNormalizationBackward(const GPUMatrix<ElemType>& in, GPUMatrix<ElemType>& grad, const GPUMatrix<ElemType>& scale, double blendFactor,
-                                                     const GPUMatrix<ElemType>& saveMean, const GPUMatrix<ElemType>& saveInvStdDev,
+                                                     const GPUMatrix<ElemType>& savedMean, const GPUMatrix<ElemType>& savedInvStdDev,
                                                      GPUMatrix<ElemType>& scaleGrad, GPUMatrix<ElemType>& biasGrad) const
 {
     assert((GetNumRows() % scale.GetNumRows()) == 0);
@@ -3240,16 +3243,16 @@ void GPUMatrix<ElemType>::BatchNormalizationBackward(const GPUMatrix<ElemType>& 
     if (spatial)
     {
         Call<ComputeSpatialScaleAndBiasGradients, ElemType>(spatialSize, vectorSize, spatialSize, batchSize, in.Data(), Data(), scaleGrad.Data(), biasGrad.Data(),
-                                                            saveMean.Data(), saveInvStdDev.Data(), GetStream());
+                                                            savedMean.Data(), savedInvStdDev.Data(), GetStream());
     }
     else
     {
         Call<ComputeScaleAndBiasGradients, ElemType>(vectorSize, vectorSize, batchSize, in.Data(), Data(), scaleGrad.Data(), biasGrad.Data(),
-                                                     saveMean.Data(), saveInvStdDev.Data(), GetStream());
+                                                     savedMean.Data(), savedInvStdDev.Data(), GetStream());
     }
     ElemType mbStatsWeight = (ElemType)(1 - blendFactor); // weight for contribution from actual MB stats (0 if none, e.g. locked BN node)
     Call<BackpropagateBatchNormGradients, ElemType>(spatial ? spatialSize : vectorSize, vectorSize, spatialSize, batchSize, spatial,
-                                                    in.Data(), Data(), grad.Data(), scale.Data(), mbStatsWeight, scaleGrad.Data(), biasGrad.Data(), saveMean.Data(), saveInvStdDev.Data(), GetStream());
+                                                    in.Data(), Data(), grad.Data(), scale.Data(), mbStatsWeight, scaleGrad.Data(), biasGrad.Data(), savedMean.Data(), savedInvStdDev.Data(), GetStream());
 }
 
 #pragma region Static BLAS Functions
