@@ -88,7 +88,7 @@ def test_simple_mnist():
             training_loss = get_train_loss(trainer)                   
             print(str(i+freq) + ": " + str(training_loss)) 
     #TODO: move the testing code into a separate test module ?
-    assert np.allclose(training_loss, np.asarray([0.6147856712341309]), atol=TOLERANCE_ABSOLUTE)               
+    assert np.allclose(training_loss, 0.6142425537109375, atol=TOLERANCE_ABSOLUTE)               
 
 if __name__=='__main__':      
     test_simple_mnist()

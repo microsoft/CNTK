@@ -171,6 +171,30 @@ SwigPyIterator_swigregister(SwigPyIterator)
 
 SHARED_PTR_DISOWN = _cntk_py.SHARED_PTR_DISOWN
 InferredDimension = _cntk_py.InferredDimension
+
+def packed_index(*args):
+    return _cntk_py.packed_index(*args)
+packed_index = _cntk_py.packed_index
+
+def gather_packed(*args):
+    return _cntk_py.gather_packed(*args)
+gather_packed = _cntk_py.gather_packed
+
+def is_within(*args):
+    return _cntk_py.is_within(*args)
+is_within = _cntk_py.is_within
+
+def where(*args):
+    return _cntk_py.where(*args)
+where = _cntk_py.where
+
+def gather(*args):
+    return _cntk_py.gather(*args)
+gather = _cntk_py.gather
+
+def reduce_elements(*args):
+    return _cntk_py.reduce_elements(*args)
+reduce_elements = _cntk_py.reduce_elements
 DataType_Unknown = _cntk_py.DataType_Unknown
 DataType_Float = _cntk_py.DataType_Float
 DataType_Double = _cntk_py.DataType_Double
@@ -446,13 +470,9 @@ class Axis(_object):
     else:
         default_dynamic_axis = _cntk_py.Axis_default_dynamic_axis
     if _newclass:
-        batch_axis = staticmethod(_cntk_py.Axis_batch_axis)
+        default_batch_axis = staticmethod(_cntk_py.Axis_default_batch_axis)
     else:
-        batch_axis = _cntk_py.Axis_batch_axis
-    if _newclass:
-        all_axes = staticmethod(_cntk_py.Axis_all_axes)
-    else:
-        all_axes = _cntk_py.Axis_all_axes
+        default_batch_axis = _cntk_py.Axis_default_batch_axis
 
     def name(self):
         return _cntk_py.Axis_name(self)
@@ -472,13 +492,9 @@ def Axis_default_dynamic_axis():
     return _cntk_py.Axis_default_dynamic_axis()
 Axis_default_dynamic_axis = _cntk_py.Axis_default_dynamic_axis
 
-def Axis_batch_axis():
-    return _cntk_py.Axis_batch_axis()
-Axis_batch_axis = _cntk_py.Axis_batch_axis
-
-def Axis_all_axes():
-    return _cntk_py.Axis_all_axes()
-Axis_all_axes = _cntk_py.Axis_all_axes
+def Axis_default_batch_axis():
+    return _cntk_py.Axis_default_batch_axis()
+Axis_default_batch_axis = _cntk_py.Axis_default_batch_axis
 
 VariableKind_Input = _cntk_py.VariableKind_Input
 VariableKind_Output = _cntk_py.VariableKind_Output
@@ -766,6 +782,18 @@ def softmax(*args):
     return _cntk_py.softmax(*args)
 softmax = _cntk_py.softmax
 
+def hardmax(*args):
+    return _cntk_py.hardmax(*args)
+hardmax = _cntk_py.hardmax
+
+def transpose_axes(*args):
+    return _cntk_py.transpose_axes(*args)
+transpose_axes = _cntk_py.transpose_axes
+
+def slice(*args):
+    return _cntk_py.slice(*args)
+slice = _cntk_py.slice
+
 def plus(*args):
     return _cntk_py.plus(*args)
 plus = _cntk_py.plus
@@ -810,6 +838,10 @@ def times(*args):
     return _cntk_py.times(*args)
 times = _cntk_py.times
 
+def transpose_times(*args):
+    return _cntk_py.transpose_times(*args)
+transpose_times = _cntk_py.transpose_times
+
 def squared_error(*args):
     return _cntk_py.squared_error(*args)
 squared_error = _cntk_py.squared_error
@@ -833,6 +865,10 @@ future_value = _cntk_py.future_value
 def reduce_sum(*args):
     return _cntk_py.reduce_sum(*args)
 reduce_sum = _cntk_py.reduce_sum
+
+def reduce_log_sum(*args):
+    return _cntk_py.reduce_log_sum(*args)
+reduce_log_sum = _cntk_py.reduce_log_sum
 
 def per_dim_mean_variance_normalize(*args):
     return _cntk_py.per_dim_mean_variance_normalize(*args)

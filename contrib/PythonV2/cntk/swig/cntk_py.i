@@ -19,6 +19,7 @@
 %template() std::vector<CNTK::Variable>;
 %template() std::vector<std::shared_ptr<CNTK::Function>>;
 
+%ignore CNTK::Internal::Slice;
 
 %{
 #define SWIG_FILE_WITH_INIT
@@ -789,9 +790,9 @@
 
 // Unordered map conversion
 
-%define %unordered_map_conversion(DATA_TYPE1, _SWIG_TYPE1, DATA_TYPE2, _SWIG_TYPE2)
+%define %unordered_map_ref_conversion(DATA_TYPE1, _SWIG_TYPE1, DATA_TYPE2, _SWIG_TYPE2)
 
-%typemap(out) std::unordered_map<CNTK::DATA_TYPE1, CNTK::DATA_TYPE2> {
+%typemap(out) std::unordered_map<CNTK::DATA_TYPE1, CNTK::DATA_TYPE2>& {
     PyObject* container = PyDict_New();
     if (container == NULL)
     {
@@ -801,7 +802,7 @@
     // *&$1 -> $1 is the returned result being converted (unordered_map<...>*),
     // wrapped by SwigValueWrapper. So we need to unwrap it using '&', 
     // then access its value using '*'.
-    for (auto it : *&$1)
+    for (auto it : *$1)
     {        
         PyObject *returned_var = SWIG_NewPointerObj(SWIG_as_voidptr(new CNTK::DATA_TYPE1(it.first)), _SWIG_TYPE1, SWIG_POINTER_OWN);
         PyObject *returned_val = SWIG_NewPointerObj(SWIG_as_voidptr(new CNTK::DATA_TYPE2(it.second)), _SWIG_TYPE2, SWIG_POINTER_OWN);
@@ -815,7 +816,7 @@
 }
 %enddef
 
-%unordered_map_conversion(StreamInfo, SWIGTYPE_p_CNTK__StreamInfo, MinibatchData, SWIGTYPE_p_CNTK__MinibatchData);
+%unordered_map_ref_conversion(StreamInfo, SWIGTYPE_p_CNTK__StreamInfo, MinibatchData, SWIGTYPE_p_CNTK__MinibatchData);
 
 
 %shared_ptr(CNTK::Function)

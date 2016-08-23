@@ -84,7 +84,7 @@ def test_ffnet():
             training_loss = get_train_loss(trainer)                   
             print(str(i+freq) + ": " + str(training_loss))            
     #TODO: move the testing code into a separate test module ?
-    assert np.allclose(training_loss, np.asarray([6.574318885803223]), atol=TOLERANCE_ABSOLUTE)
+    assert np.allclose(training_loss, 6.574318885803223, atol=TOLERANCE_ABSOLUTE)
     
 if __name__=='__main__':      
     test_ffnet()    
