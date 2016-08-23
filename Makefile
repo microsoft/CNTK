@@ -92,7 +92,7 @@ SRC:=
 all : buildall
 
 # Set up basic nvcc options and add CUDA targets from above
-CUFLAGS = -m 64 
+CUFLAGS = -m 64
 
 ifdef CUDA_PATH
   ifndef GDK_INCLUDE_PATH
@@ -261,7 +261,7 @@ READER_SRC =\
 	$(SOURCEDIR)/Readers/ReaderLib/TruncatedBpttPacker.cpp \
 	$(SOURCEDIR)/Readers/ReaderLib/PackerBase.cpp \
 	$(SOURCEDIR)/Readers/ReaderLib/FramePacker.cpp \
-	$(SOURCEDIR)/Readers/ReaderLib/ChunkCache.cpp \
+    $(SOURCEDIR)/Readers/ReaderLib/ChunkCache.cpp \
 
 COMMON_SRC =\
 	$(SOURCEDIR)/Common/Config.cpp \

@@ -46,7 +46,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                         bool useParallelTrain,
                                         StreamMinibatchInputs& inputMatrices,
                                         size_t& actualMBSize, 
-                                        const MPIWrapperPtr& mpi)
+                                        const MPIWrapperPtr& mpi,
+                                        size_t dataDecimationFactor = 0
+                                        )
     {
         // Reading consists of a sequence of Reader API calls:
         //  - GetMinibatch() --fills the inputMatrices and copies the MBLayout from Reader into inputMatrices
@@ -91,6 +93,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         
             DecimateMinibatchInPlace<ElemType>(inputMatrices, mpi->NumNodesInUse(), mpi->CurrentNodeRank(), pMBLayout);
+        }
+
+        // This will automatically discard a large fraction of the data, useful if the training data is known to be highly correlated
+        if (dataDecimationFactor)
+        {
+            auto& pMBLayout = net->GetMBLayoutPtrOfNetwork();
+
+            // Verify that there's indeed a single layout
+            for (const auto& iter : inputMatrices)
+            {
+                assert(iter.second.pMBLayout == pMBLayout);
+                // TODO: This must be a runtime check, not an assert().
+                UNUSED(iter);
+            }
+
+            DecimateMinibatchInPlace<ElemType>(inputMatrices, dataDecimationFactor, 0, pMBLayout);
         }
 
         NotifyChangedNodes<ElemType>(net, inputMatrices);
