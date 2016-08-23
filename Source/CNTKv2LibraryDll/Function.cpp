@@ -385,7 +385,7 @@ namespace CNTK
             }
             case PrimitiveOpType::BatchNormalization:
             {
-                auto spacial = functionConfig[L"spacial"].GetValue<bool>();
+                auto spatial = functionConfig[L"spatial"].GetValue<bool>();
                 auto normalizationTimeConstant = functionConfig[L"normalizationTimeConstant"].GetValue<double>();
                 auto blendTimeConstant = functionConfig[L"blendTimeConstant"].GetValue<double>();
                 auto epsilon = functionConfig[L"epsilon"].GetValue<double>();
@@ -397,7 +397,7 @@ namespace CNTK
                     inputNodes.push_back((baseNodePtr != nullptr) ? baseNodePtr->template As<ComputationNode<ElementType>>()->shared_from_this() : nullptr);
                 }
 
-                computationNodePtr = builder.BatchNormalization(inputNodes[0], inputNodes[1], inputNodes[2], inputNodes[3], inputNodes[4], spacial, normalizationTimeConstant, blendTimeConstant, epsilon, !useCuDNNEngine, ImageLayoutKind::CHW, function->Name());
+                computationNodePtr = builder.BatchNormalization(inputNodes[0], inputNodes[1], inputNodes[2], inputNodes[3], inputNodes[4], spatial, normalizationTimeConstant, blendTimeConstant, epsilon, !useCuDNNEngine, ImageLayoutKind::CHW, function->Name());
                 break;
             }
             case PrimitiveOpType::Combine:
@@ -1325,8 +1325,8 @@ namespace CNTK
                                    const Variable& scale,
                                    const Variable& bias,
                                    const Variable& runningMean,
-                                   const Variable& runningInvStd,
-                                   bool spacial,
+                                   const Variable& runningStdDev,
+                                   bool spatial,
                                    double normalizationTimeConstant,
                                    double blendTimeConstant,
                                    double epsilon,
@@ -1334,14 +1334,14 @@ namespace CNTK
                                    const std::wstring& name)
     {
         auto additionalProperties = Dictionary();
-        additionalProperties[L"spacial"] = spacial;
+        additionalProperties[L"spatial"] = spatial;
         additionalProperties[L"normalizationTimeConstant"] = normalizationTimeConstant;
         additionalProperties[L"blendTimeConstant"] = blendTimeConstant;
         additionalProperties[L"epsilon"] = epsilon;
         additionalProperties[L"useCuDNNEngine"] = useCuDNNEngine;
 
         return CompositeFunction::Create(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::BatchNormalization,
-                                                                             std::vector<Variable>({ operand, scale, bias, runningMean, runningInvStd }),
+                                                                             std::vector<Variable>({ operand, scale, bias, runningMean, runningStdDev }),
                                                                              std::move(additionalProperties),
                                                                              name),
                                          name);

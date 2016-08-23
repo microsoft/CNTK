@@ -142,13 +142,13 @@ BatchNormalizationLayer {spatialRank = 0,  # reduce over these dims. E.g. 2 to r
                          normalizationTimeConstant = 0, blendTimeConstant = 0,  # TODO: normTimeConst should be INF, not 0
                          epsilon = 0.00001, useCntkEngine = true} =
 {
-    #normShape = _ConcatArrays (Repeat (spatialRank, 1), 0) # spatial dims get a dimension of 1 (broadcasting, while all others are inferred from input)
-    normShape = (0:1)  # TODO: Update this once we support broadcasting-style parameters.
-    scale        = ParameterTensor {normShape, initValue = initialScale}
-    bias         = ParameterTensor {normShape, initValue = 0}
-    runMean      = ParameterTensor {normShape, initValue = 0, learningRateMultiplier = 0} # note: disable learning since these are updated differently
-    runInvStdDev = ParameterTensor {normShape, initValue = 0, learningRateMultiplier = 0}
-    apply (x) = BatchNormalization (x, scale, bias, runMean, runInvStdDev, spatialRank > 0, normalizationTimeConstant = normalizationTimeConstant, blendTimeConstant = blendTimeConstant, epsilon = epsilon, useCntkEngine = useCntkEngine)
+    #normShape   = _ConcatArrays (Repeat (spatialRank, 1), 0) # spatial dims get a dimension of 1 (broadcasting, while all others are inferred from input)
+    normShape   = (0:1)  # TODO: Update this once we support broadcasting-style parameters.
+    scale       = ParameterTensor {normShape, initValue = initialScale}
+    bias        = ParameterTensor {normShape, initValue = 0}
+    runMean     = ParameterTensor {normShape, initValue = 0, learningRateMultiplier = 0} # note: disable learning since these are updated differently
+    runVariance = ParameterTensor {normShape, initValue = 0, learningRateMultiplier = 0}
+    apply (x)   = BatchNormalization (x, scale, bias, runMean, runVariance, spatialRank > 0, normalizationTimeConstant = normalizationTimeConstant, blendTimeConstant = blendTimeConstant, epsilon = epsilon, useCntkEngine = useCntkEngine)
 }.apply
 
 # LayerNormalizationLayer -- create a layer-normalization layer
@@ -467,7 +467,7 @@ ColumnwiseCrossProduct = KhatriRaoProduct // deprecated
 ErrorPrediction = ClassificationError   # legacy name
 Delay = PastValue 
 
-BatchNormalization(input, scale, bias, runMean, runInvStdDev, spatial, normalizationTimeConstant = 0, blendTimeConstant = 0, epsilon = 0.00001, useCntkEngine = true, imageLayout='CHW', tag='') = new ComputationNode [ operation = 'BatchNormalization' ; inputs = (input : scale : bias : runMean : runInvStdDev) /*plus the function args*/ ]
+BatchNormalization(input, scale, bias, runMean, runVariance, spatial, normalizationTimeConstant = 0, blendTimeConstant = 0, epsilon = 0.00001, useCntkEngine = true, imageLayout='CHW', tag='') = new ComputationNode [ operation = 'BatchNormalization' ; inputs = (input : scale : bias : runMean : runVariance) /*plus the function args*/ ]
 ClassBasedCrossEntropyWithSoftmax(labelClassDescriptorVectorSequence, mainInputInfo, mainWeight, classLogProbsBeforeSoftmax, tag='') = new ComputationNode [ operation = 'ClassBasedCrossEntropyWithSoftmax' ; inputs = (labelClassDescriptorVectorSequence : mainInputInfo : mainWeight : classLogProbsBeforeSoftmax) /*plus the function args*/ ]
 Clip(minValue, maxValue, x, tag='') = new ComputationNode [ operation = 'Clip' ; inputs = (minValue : maxValue : x) /* plus the function args*/ ]
 ColumnElementTimes(aVectorSequence, anotherVectorSequence, tag='') = new ComputationNode [ operation = 'ColumnElementTimes' ; inputs = (aVectorSequence : anotherVectorSequence) /*plus the function args*/ ]

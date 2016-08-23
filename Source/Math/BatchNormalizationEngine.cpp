@@ -10,7 +10,7 @@
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 template <class ElemType>
-void BatchNormEngine<ElemType>::Forward(const Mat& in, const Mat& scale, const Mat& bias, double expAvgFactor, double blendFactor, Mat& runMean, Mat& runInvStdDev,
+void BatchNormEngine<ElemType>::Forward(const Mat& in, const Mat& scale, const Mat& bias, double expAvgFactor, double blendFactor, Mat& runMean, Mat& runVariance,
                                         Mat& out, double epsilon, Mat& saveMean, Mat& saveInvStdDev)
 {
     assert(in.GetNumRows() == m_inOutT.GetNumElements());
@@ -24,22 +24,22 @@ void BatchNormEngine<ElemType>::Forward(const Mat& in, const Mat& scale, const M
         assert(m_inOutT.GetNumElements() == scale.GetNumRows());
         assert(m_inOutT.GetNumElements() == bias.GetNumRows());
         assert(m_inOutT.GetNumElements() == runMean.GetNumRows());
-        assert(m_inOutT.GetNumElements() == runInvStdDev.GetNumRows());
+        assert(m_inOutT.GetNumElements() == runVariance.GetNumRows());
     }
     else
     {
         assert((m_inOutT.GetNumElements() % scale.GetNumRows()) == 0);
         assert((m_inOutT.GetNumElements() % bias.GetNumRows()) == 0);
         assert((m_inOutT.GetNumElements() % runMean.GetNumRows()) == 0);
-        assert((m_inOutT.GetNumElements() % runInvStdDev.GetNumRows()) == 0);
+        assert((m_inOutT.GetNumElements() % runVariance.GetNumRows()) == 0);
     }
     assert(scale.GetNumCols() == 1);
     assert(bias.GetNumCols() == 1);
     assert(runMean.GetNumCols() == 1);
-    assert(runInvStdDev.GetNumCols() == 1);
+    assert(runVariance.GetNumCols() == 1);
 
     EnsureCompatible();
-    ForwardCore(in, scale, bias, expAvgFactor, blendFactor, runMean, runInvStdDev, out, epsilon, saveMean, saveInvStdDev);
+    ForwardCore(in, scale, bias, expAvgFactor, blendFactor, runMean, runVariance, out, epsilon, saveMean, saveInvStdDev);
 
     if (!m_spatial)
     {
@@ -89,10 +89,10 @@ protected:
             InvalidArgument("CNTK batch normalization supports only cudnn(CHW) layout.");
     }
 
-    void ForwardCore(const Mat& in, const Mat& scale, const Mat& bias, double expAvgFactor, double blendFactor, Mat& runMean, Mat& runInvStdDev,
+    void ForwardCore(const Mat& in, const Mat& scale, const Mat& bias, double expAvgFactor, double blendFactor, Mat& runMean, Mat& runVariance,
                      Mat& out, double epsilon, Mat& saveMean, Mat& saveInvStdDev) override
     {
-        in.BatchNormalizationForward(scale, bias, expAvgFactor, blendFactor, runMean, runInvStdDev, out, epsilon, saveMean, saveInvStdDev);
+        in.BatchNormalizationForward(scale, bias, expAvgFactor, blendFactor, runMean, runVariance, out, epsilon, saveMean, saveInvStdDev);
     }
 
     void BackwardCore(const Mat& in, const Mat& srcGrad, Mat& grad, const Mat& scale, double blendFactor, const Mat& saveMean, const Mat& saveInvStdDev,

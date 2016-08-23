@@ -61,7 +61,7 @@ std::vector<std::tuple<TensorShape, size_t, bool, double, double>> GenerateBNTes
         res.push_back(std::make_tuple(TensorShape(2, 2, 2048), 64, true, expAvgFactor, blendFactor));
     }
 
-    // Test running mean/isd.
+    // Test running mean/variance.
     expAvgFactor = 0.1;
     res.push_back(std::make_tuple(TensorShape(2, 2, 2), 8, false, expAvgFactor, 0));
     res.push_back(std::make_tuple(TensorShape(2, 2, 2), 8, true, expAvgFactor, 0));
@@ -75,6 +75,7 @@ BOOST_AUTO_TEST_SUITE(BatchNormalizationSuite)
 
 BOOST_AUTO_TEST_CASE(BatchNormalizationForward)
 {
+    // TODO tests for expAvgFactor 0?
     std::mt19937 rng(0);
     std::normal_distribution<float> nd;
 
@@ -186,7 +187,7 @@ BOOST_AUTO_TEST_CASE(BatchNormalizationForward)
 #ifndef _DEBUG
             float elapsedCntk = time1.Elapsed();
             float elapsedCudnn = time2.Elapsed();
-            // Check performance. Current version of cuDNN (v4 RC) is significanlty slower than CNTK implementation.
+            // Check performance. Current version of cuDNN (v4 RC) is significantly slower than CNTK implementation.
             // For optimal cases (vectorSize % 32 == 0 and batchSize % 32 == 0), CNTK implementation can be >5x faster than cuDNN.
             // Production version is about the same.
             if (crow >= 32 && ccol >= 32)
