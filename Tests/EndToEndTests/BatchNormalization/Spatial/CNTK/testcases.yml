@@ -28,4 +28,4 @@ testCases:
     patterns:
       - "Final Results: Minibatch[{{integer}}-{{integer}}]"
       - Err = {{float,tolerance=0.1%}} * {{integer}}
-      - CE = {{float,tolerance=0.1%}} * {{integer}}
+      - CE = {{float,tolerance=0.2%}} * {{integer}}

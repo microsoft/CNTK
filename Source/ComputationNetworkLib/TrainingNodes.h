@@ -1863,9 +1863,12 @@ public:
 
     virtual void EndBackprop() override
     {
-        // TODO don't update in locked mode
-        auto numSamples = GetMBLayout()->GetActualNumSamples();
-        m_samplesSeen += numSamples;
+        // Update samples if not locked.
+        double expAvgFactor = ComputeExpAvgFactor(); // weight for the new MB statistics in the running estimate. The previous value of the running statistics is kept with weight (1-this)
+        double blendFactor  = ComputeBlendFactor();  // interpolation weight for the running statistics (the current MB statistics are weighted with 1-this)
+        if (expAvgFactor != 0 || blendFactor != 1)
+            m_samplesSeen += GetMBLayout()->GetActualNumSamples();
+
         Base::EndBackprop();
     }
 

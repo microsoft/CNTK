@@ -32,4 +32,4 @@ testCases:
       - "Final Results: Minibatch[{{integer}}-{{integer}}]"
       # this part is flaky, needs to be investigated (VSO item #414)
       #- Err = {{float,tolerance=2.0%}} * {{integer}}
-      - CE = {{float,tolerance=4.0%}} * {{integer}}
+      - CE = {{float,tolerance=10.0%}} * {{integer}}
