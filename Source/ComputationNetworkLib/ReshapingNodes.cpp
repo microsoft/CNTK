@@ -290,7 +290,7 @@ template <class ElemType>
     if (!m_pMBLayout)
     {
         m_pMBLayout = make_shared<MBLayout>(); // this generates a new layout
-        m_pMBLayout->SetUniqueAxisName(L"WhereNodeAxis");
+        m_pMBLayout->SetUniqueAxisName(m_dynamicAxisName);
     }
     // we map scalars to scalars
     if (isFinalValidationPass && Input(0)->GetSampleLayout().GetNumElements() != 1)

@@ -87,6 +87,24 @@ void ComputationNode<ElemType>::Backprop(const FrameRange& fr, bool childrenInTh
 // subroutines for Validate() implementations
 // -----------------------------------------------------------------------
 
+// compare two MBLayouts, and alert if they are different
+void ComputationNodeBase::ValidateMBLayout(const ComputationNodeBasePtr which, const ComputationNodeBasePtr vsWhich) const
+{
+    if (!which->HasMBLayout() || !vsWhich->HasMBLayout() || which->GetMBLayout() == vsWhich->GetMBLayout())
+        return;
+    // MBLayouts are inconsistent
+#if 0
+    // can't have that
+    RuntimeError("%ls: Dynamic axes mismatch between %ls and %ls. If this is by design, use ReconcileDynamicAxis().",
+                 NodeDescription().c_str(), which->NodeDescription().c_str(), vsWhich->NodeDescription());
+#else
+    // We will let this slip with a reminder, assuming that this will be caught at runtime.
+    // By allowing this, users will not need ReconcileDynamicAxis() for reductions over a sequence like BS.Sequences.Last().
+    fprintf(stderr, "WARNING: %ls: Dynamic axes mismatch between %ls and %ls. If they are incompatible, this will fail later.\n",
+            NodeDescription().c_str(), which->NodeDescription().c_str(), vsWhich->NodeDescription().c_str());
+#endif
+}
+
 // helper function to infer the MBLayout for this node from inputs, for the *standard case*
 // the standard case is:
 //  - all inputs must share the same layout (e.g. adding two minibatches)
@@ -95,21 +113,20 @@ void ComputationNode<ElemType>::Backprop(const FrameRange& fr, bool childrenInTh
 //  - if there are more than one different layouts involved, this function will fail
 void ComputationNodeBase::InferMBLayoutFromInputsForStandardCase(bool isFinalValidationPass)
 {
-    MBLayoutPtr pMBLayout; // start with NULL layout
-    for (auto child : m_inputs)
+    ComputationNodeBasePtr firstInputWithMBLayout;
+    for (auto input : m_inputs)
     {
-        if (!child) // node not set yet (DelayedValueNodeBase seems to allow this)--BUGBUG: Then this function won't operate correctly.
+        if (!input) // node not set yet (DelayedValueNodeBase seems to allow this)--BUGBUG: Then this function won't operate correctly.
             ;
-        else if (!child->m_pMBLayout) // NULL layout (typical for parameter nodes)
+        else if (!input->m_pMBLayout) // NULL layout (typical for parameter nodes)
             ;
-        else if (!pMBLayout) // first non-NULL layout: just copy it
-            pMBLayout = child->m_pMBLayout;
-        else if (pMBLayout != child->m_pMBLayout && isFinalValidationPass) // got a layout--compare whether it is the same
-            RuntimeError("%ls: InferMBLayoutFromInputsForStandardCase: Expected minibatch layouts to be the same between all children. Child '%ls' (%ls) uses a different layout than previously checked children and might get out of sync during runtime. If this is by design, use ReconcileDynamicAxis() to forward layouts between nodes.",
-                         NodeDescription().c_str(), child->NodeName().c_str(), child->OperationName().c_str());
+        else if (!firstInputWithMBLayout) // first input with layout: remember this child
+            firstInputWithMBLayout = input;
+        else if (isFinalValidationPass) // got a layout--compare whether it is the same
+            ValidateMBLayout(firstInputWithMBLayout, input);
     }
     // all are consistent: install it
-    LinkToMBLayout(pMBLayout);
+    LinkToMBLayout(firstInputWithMBLayout ? firstInputWithMBLayout->m_pMBLayout : nullptr);
 }
 
 // single input that maps its input element-wise (e.g. Sigmoid)
@@ -132,11 +149,8 @@ void ComputationNodeBase::ValidateBinaryZip(bool isFinalValidationPass, bool all
 
     ValidateInferBinaryInputDims();
 
-    if (isFinalValidationPass &&
-        Input(0)->GetMBLayout() != Input(1)->GetMBLayout() && Input(0)->HasMBLayout() && Input(1)->HasMBLayout())
-    {
-        LogicError("%ls: Minibatch layouts are not the same between arguments and might get out of sync during runtime. If this is by design, use ReconcileDynamicAxis() to forward layouts between nodes.", NodeDescription().c_str());
-    }
+    if (isFinalValidationPass)
+        ValidateMBLayout(Input(0), Input(1));
 
     // result has tensor shape with dimensions being the max over both
     let shape0 = GetInputSampleLayout(0);
@@ -176,10 +190,9 @@ void ComputationNodeBase::ValidateNaryZip(bool isFinalValidationPass, bool allow
 
     // check minibatch layout consistency for all possible pairs (n choose 2)
     if (isFinalValidationPass)
-        for (size_t i = 0; i < numInputs; i++)        
-            for (size_t j = i+1; j < numInputs; j++)            
-                if (Input(i)->GetMBLayout() != Input(j)->GetMBLayout() && Input(i)->HasMBLayout() && Input(j)->HasMBLayout())
-                    LogicError("%ls: Minibatch layouts are not the same between arguments and might get out of sync during runtime. If this is by design, use ReconcileDynamicAxis() to forward layouts between nodes.", NodeDescription().c_str());
+        for (size_t i = 0; i < numInputs; i++)
+            for (size_t j = i + 1; j < numInputs; j++)
+                ValidateMBLayout(Input(i), Input(j));
 
     // result has tensor shape with dimensions being the max over all inputs
     let shape0 = GetInputSampleLayout(0);

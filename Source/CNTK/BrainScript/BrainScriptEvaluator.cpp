@@ -535,8 +535,13 @@ static ConfigValuePtr Evaluate(const ExpressionPtr &e, const IConfigRecordPtr &s
             }
             return ConfigValuePtr(make_shared<ConfigLambda>(move(paramNames), move(namedParams), f), MakeFailFn(e->location), exprPath);
         }
-        else if (e->op == L"(") // === apply a function to its arguments
+        else if (e->op == L"(" || e->op == L"{") // === apply a function to its arguments
         {
+            // Note: "{" is experimental and currently ignored as a distinction. To do it more completely, we need
+            //  - remember how a function was declared (currently not possible for lambdas)
+            //  - make sure the invocation matches declaration
+            //  - disallow calling Parameter() or any other creating functions as "()"
+            //  - disallow calling "{}"-declared functions from inside a "()"
             let &lambdaExpr = e->args[0]; // [0] = function
             let &argsExpr = e->args[1];   // [1] = arguments passed to the function ("()" expression of expressions)
             let lambda = AsPtr<ConfigLambda>(Evaluate(lambdaExpr, scope, exprPath, L"" /*macros are not visible in expression names*/), lambdaExpr, L"function");
@@ -847,8 +852,8 @@ static wstring FormatConfigValue(ConfigValuePtr arg, const wstring &how)
     {
         let arr = arg.AsPtr<ConfigArray>();
         wstring result;
-        let range = arr->GetIndexRange();
-        for (int i = range.first; i <= range.second; i++)
+        let range = arr->GetIndexBeginEnd();
+        for (int i = range.first; i < range.second; i++)
         {
             if (i > range.first)
                 result.append(L"\n");
@@ -889,20 +894,20 @@ public:
                 else // otherwise expect an array
                 {
                     let & arr = arg.AsRef<ConfigArray>();
-                    let range = arr.GetIndexRange();
-                    us = (double)(range.second + 1 - range.first);
+                    let range = arr.GetSize(arg.GetFailFn());
+                    us = (double)range;
                 }
             }
         }
-        else if (what == L"Mod" || what == L"IntDiv")  //two-arg int functions
+        else if (what == L"Mod" || what == L"IntDiv")  // two-arg int functions
         {
             let argsArg = config[L"args"];
             let& args = argsArg.AsRef<ConfigArray>();
-            auto range = args.GetIndexRange();
-            if (range.second != range.first + 1)
+            auto range = args.GetIndexBeginEnd();
+            if (range.second != range.first + 2)
                 argsArg.Fail(L"Mod/IntDiv expects two arguments");
             let arg1 = (int)args.At(range.first);
-            let arg2 = (int)args.At(range.second);
+            let arg2 = (int)args.At(range.first + 1);
 
             if (what == L"Mod")
                 us = (int)(arg1 % arg2);
@@ -917,6 +922,7 @@ public:
 
 // CompareFunctions
 //  - IsSameObject()
+//  - IsArray()
 class CompareFunction : public BoxOf<Bool>
 {
 public:
@@ -931,12 +937,16 @@ public:
         if (what == L"IsSameObject")
         {
             let& args = argsArg.AsRef<ConfigArray>();
-            auto range = args.GetIndexRange();
-            if (range.second != range.first+1)
+            auto range = args.GetIndexBeginEnd();
+            if (range.second != range.first + 2)
                 argsArg.Fail(L"IsSameObject expects two arguments");
-            let arg1 = args.At(range.first ).AsPtr<Object>();
-            let arg2 = args.At(range.second).AsPtr<Object>();
+            let arg1 = args.At(range.first    ).AsPtr<Object>();
+            let arg2 = args.At(range.first + 1).AsPtr<Object>();
             us = arg1.get() == arg2.get();
+        }
+        else if (what == L"IsArray")
+        {
+            us = argsArg.Is<ConfigArray>();
         }
         else
             whatArg.Fail(L"Unknown 'what' value to CompareFunction: " + what);

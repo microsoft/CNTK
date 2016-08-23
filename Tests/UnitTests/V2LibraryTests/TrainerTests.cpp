@@ -6,33 +6,6 @@ using namespace CNTK;
 
 using namespace std::placeholders;
 
-MinibatchSourcePtr CreateTextMinibatchSource(const std::wstring& filePath, size_t featureDim, size_t labelDim, size_t epochSize)
-{
-    Dictionary featuresStreamConfig;
-    featuresStreamConfig[L"dim"] = featureDim;
-    featuresStreamConfig[L"format"] = L"dense";
-
-    Dictionary labelsStreamConfig;
-    labelsStreamConfig[L"dim"] = labelDim;
-    labelsStreamConfig[L"format"] = L"dense";
-
-    Dictionary inputStreamsConfig;
-    inputStreamsConfig[L"features"] = featuresStreamConfig;
-    inputStreamsConfig[L"labels"] = labelsStreamConfig;
-
-    Dictionary deserializerConfiguration;
-    deserializerConfiguration[L"type"] = L"CNTKTextFormatDeserializer";
-    deserializerConfiguration[L"module"] = L"CNTKTextFormatReader";
-    deserializerConfiguration[L"file"] = filePath;
-    deserializerConfiguration[L"input"] = inputStreamsConfig;
-
-    Dictionary minibatchSourceConfiguration;
-    minibatchSourceConfiguration[L"epochSize"] = epochSize;
-    minibatchSourceConfiguration[L"deserializers"] = std::vector<DictionaryValue>({ deserializerConfiguration });
-
-    return CreateCompositeMinibatchSource(minibatchSourceConfiguration);
-}
-
 void TrainSimpleFeedForwardClassifer(const DeviceDescriptor& device)
 {
     const size_t inputDim = 2;

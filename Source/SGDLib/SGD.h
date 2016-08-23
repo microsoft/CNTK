@@ -115,6 +115,8 @@ struct SGDParams : public ScriptableObjects::Object
 
     // SGDParams(SGDParams&&) = default; // (does not compile in VS 2013; not critical)
 
+    size_t GetMaxEpochs() { return m_maxEpochs; }
+
 protected:
     // learning rate per sample provided outside
     floatargvector m_learningRatesParam;
@@ -357,10 +359,9 @@ public:
             m_parallelizationMethod = ParallelizationMethod::none;
         }
 
-    void Train(function<ComputationNetworkPtr(DEVICEID_TYPE)> createNetworkFn, DEVICEID_TYPE deviceId,
+    void Train(shared_ptr<ComputationNetwork> net, DEVICEID_TYPE deviceId,
                IDataReader* trainSetDataReader,
-               IDataReader* validationSetDataReader,
-               const bool makeMode = true);
+               IDataReader* validationSetDataReader, int startEpoch, bool loadNetworkFromCheckpoint);
     void Adapt(wstring origModelFileName, wstring refNodeName,
                IDataReader* trainSetDataReader,
                IDataReader* validationSetDataReader,
@@ -498,6 +499,10 @@ public:
                                const double L1RegWeight,
                                const bool needAveMultiplier,
                                const bool useNesterovMomentum);
+    // return -1 if nothing exists
+    int DetermineStartEpoch(const bool makeMode);
+
+    wstring GetModelNameForEpoch(const int epoch, bool bLastModel = false);
 
 protected:
     // UpdateWeights - update the weights in
@@ -532,10 +537,6 @@ protected:
                             /*out*/ size_t& minibatchSize);
 
     wstring GetCheckPointFileNameForEpoch(const int epoch);
-    wstring GetModelNameForEpoch(const int epoch, bool bLastModel = false);
-
-    // return -1 if nothing exists
-    int DetermineStartEpoch(const bool makeMode);
 
     GradientsUpdateType GradUpdateType() const
     {

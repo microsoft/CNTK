@@ -37,7 +37,7 @@ public:
     void Forward(const Mat& in, const Mat& scale, const Mat& bias, double expAvgFactor, double blendFactor, Mat& runMean, Mat& runInvStdDev,
                  Mat& out, double epsilon, Mat& saveMean, Mat& saveInvStdDev);
 
-    void Backward(const Mat& in, const Mat& srcGrad, Mat& grad, const Mat& scale, const Mat& saveMean, const Mat& saveInvStdDev,
+    void Backward(const Mat& in, const Mat& srcGrad, Mat& grad, const Mat& scale, double blendFactor, const Mat& saveMean, const Mat& saveInvStdDev,
                   Mat& scaleGrad, Mat& biasGrad);
 
     static std::unique_ptr<BatchNormEngine<ElemType>> Create(DEVICEID_TYPE deviceId, const TensorShape& inOutT,
@@ -59,7 +59,7 @@ protected:
     virtual void ForwardCore(const Mat& in, const Mat& scale, const Mat& bias, double expAvgFactor, double blendFactor, Mat& runMean, Mat& runInvStdDev,
                  Mat& out, double epsilon, Mat& saveMean, Mat& saveInvStdDev) = 0;
 
-    virtual void BackwardCore(const Mat& in, const Mat& srcGrad, Mat& grad, const Mat& scale, const Mat& saveMean, const Mat& saveInvStdDev,
+    virtual void BackwardCore(const Mat& in, const Mat& srcGrad, Mat& grad, const Mat& scale, double blendFactor, const Mat& saveMean, const Mat& saveInvStdDev,
                   Mat& scaleGrad, Mat& biasGrad) = 0;
 
 protected:

@@ -237,7 +237,7 @@ std::pair<size_t, size_t> TracingGPUMemoryAllocator::GetFreeAndTotalMemoryInMBs(
 // deviceId - the device on which the operation will take place
 void PrepareDevice(DEVICEID_TYPE deviceId)
 {
-    static DEVICEID_TYPE currentDevice = DEVICEID_NOTYETDETERMINED;
+    THREAD_LOCAL static DEVICEID_TYPE currentDevice = DEVICEID_NOTYETDETERMINED;
     // and if we last set the device to be this device we are good
     if (deviceId == currentDevice)
         return;
@@ -3237,9 +3237,9 @@ void GPUMatrix<ElemType>::BatchNormalizationForward(const GPUMatrix<ElemType>& s
 }
 
 // saveMean/saveInvStdDev are the interpolated mean/stddev as used in ForwardProp().
-// BUGBUG (in call site): For blendFactor=1, they are empty. Caller must pass running mean/stddev instead in that case.
+// For blendFactor=1, they are not used and can be uninitialized or empty.
 template <class ElemType>
-void GPUMatrix<ElemType>::BatchNormalizationBackward(const GPUMatrix<ElemType>& in, GPUMatrix<ElemType>& grad, const GPUMatrix<ElemType>& scale, 
+void GPUMatrix<ElemType>::BatchNormalizationBackward(const GPUMatrix<ElemType>& in, GPUMatrix<ElemType>& grad, const GPUMatrix<ElemType>& scale, double blendFactor,
                                                      const GPUMatrix<ElemType>& saveMean, const GPUMatrix<ElemType>& saveInvStdDev,
                                                      GPUMatrix<ElemType>& scaleGrad, GPUMatrix<ElemType>& biasGrad) const
 {
@@ -3264,8 +3264,9 @@ void GPUMatrix<ElemType>::BatchNormalizationBackward(const GPUMatrix<ElemType>& 
         Call<ComputeScaleAndBiasGradients, ElemType>(vectorSize, vectorSize, batchSize, in.Data(), Data(), scaleGrad.Data(), biasGrad.Data(),
                                                      saveMean.Data(), saveInvStdDev.Data(), GetStream());
     }
+    ElemType mbStatsWeight = (ElemType)(1 - blendFactor); // weight for contribution from actual MB stats (0 if none, e.g. locked BN node)
     Call<BackpropagateBatchNormGradients, ElemType>(spatial ? spatialSize : vectorSize, vectorSize, spatialSize, batchSize, spatial,
-                                                    in.Data(), Data(), grad.Data(), scale.Data(), scaleGrad.Data(), biasGrad.Data(), saveMean.Data(), saveInvStdDev.Data(), GetStream());
+                                                    in.Data(), Data(), grad.Data(), scale.Data(), mbStatsWeight, scaleGrad.Data(), biasGrad.Data(), saveMean.Data(), saveInvStdDev.Data(), GetStream());
 }
 
 #pragma region Static BLAS Functions
