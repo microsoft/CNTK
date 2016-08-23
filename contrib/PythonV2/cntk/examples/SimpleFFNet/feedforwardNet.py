@@ -6,7 +6,7 @@ import cntk.cntk_py as cntk_py
 from cntk.ops import variable, cross_entropy_with_softmax, combine, classification_error, sigmoid
 from cntk.utils import create_minibatch_source, get_train_loss
 from cntk.tests.test_utils import TOLERANCE_ABSOLUTE
-from cntk.nn import fully_connected_classifier_net
+from cntk.examples.common.nn import fully_connected_classifier_net
 
 def create_mb_source(input_dim, num_output_classes, epoch_size):    
     features_config = dict()

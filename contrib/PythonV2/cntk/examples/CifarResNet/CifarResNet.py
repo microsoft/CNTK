@@ -5,7 +5,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..'))
 import cntk.cntk_py as cntk_py
 from cntk.ops import variable, constant, parameter, cross_entropy_with_softmax, combine, classification_error, plus, times, relu, convolution, batch_normalization, pooling,AVG_POOLING
 from cntk.utils import create_minibatch_source, get_train_loss, cntk_device, create_NDArrayView, create_NDArrayView_from_NumPy
-from cntk.nn import conv_bn_relu_layer, conv_bn_layer, resnet_node2, resnet_node2_inc
+from cntk.examples.common.nn import conv_bn_relu_layer, conv_bn_layer, resnet_node2, resnet_node2_inc
 
 def create_mb_source(epoch_size):    
     image_height = 32
