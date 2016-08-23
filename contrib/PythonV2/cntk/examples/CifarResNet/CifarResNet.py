@@ -143,7 +143,7 @@ def _test_cifar_resnet():
     trainer = cntk_py.Trainer(image_classifier, ce.output(), [cntk_py.sgdlearner(image_classifier.parameters(), learning_rate_per_sample)])
     
     mb_size = 32
-    num_mbs = 100
+    num_mbs = 1000
 
     minibatch_size_limits = dict()    
     minibatch_size_limits[features_si] = (0,mb_size)

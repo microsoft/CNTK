@@ -4,36 +4,10 @@ import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..'))
 import cntk.cntk_py as cntk_py
 from cntk.ops import variable, cross_entropy_with_softmax, combine, classification_error, sigmoid
-from cntk.utils import create_minibatch_source, get_train_loss
+from cntk.utils import get_train_loss
 from cntk.tests.test_utils import TOLERANCE_ABSOLUTE
 from cntk.examples.common.nn import fully_connected_classifier_net
-
-def create_mb_source(input_dim, num_output_classes, epoch_size):    
-    features_config = dict()
-    features_config["dim"] = input_dim
-    features_config["format"] = "dense"
-
-    labels_config = dict()
-    labels_config["dim"] = num_output_classes
-    labels_config["format"] = "dense"
-
-    input_config = dict()
-    input_config["features"] = features_config
-    input_config["labels"] = labels_config
-
-    deserializer_config = dict()
-    deserializer_config["type"] = "CNTKTextFormatDeserializer"
-    deserializer_config["module"] = "CNTKTextFormatReader"
-    rel_path = r"../../../../../Examples/Other/Simple2d/Data/SimpleDataTrain_cntk_text.txt"
-    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), rel_path)
-    deserializer_config["file"] = path
-    deserializer_config["input"] = input_config
-
-    minibatch_config = dict()
-    minibatch_config["epochSize"] = epoch_size
-    minibatch_config["deserializers"] = [deserializer_config]
-
-    return create_minibatch_source(minibatch_config)
+from cntk.examples.common.mb import create_text_mb_source
 
 def test_ffnet():
     input_dim = 2
@@ -54,8 +28,10 @@ def test_ffnet():
     ce = cross_entropy_with_softmax(netout.output(), label)
     pe = classification_error(netout.output(), label)
     ffnet = combine([ce, pe, netout], "classifier_model")      
-    
-    cm = create_mb_source(input_dim, num_output_classes, epoch_size)
+
+    rel_path = r"../../../../../Examples/Other/Simple2d/Data/SimpleDataTrain_cntk_text.txt"
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), rel_path)    
+    cm = create_text_mb_source(path, input_dim, num_output_classes, epoch_size)
        
     stream_infos = cm.stream_infos()    
 
