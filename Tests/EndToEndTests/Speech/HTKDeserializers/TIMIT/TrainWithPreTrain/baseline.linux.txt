@@ -379,7 +379,7 @@ Post-processing network...
 
 6 roots:
 	CE.SM = CrossEntropyWithSoftmax()
-	Err = ClassificationError()
+	Err = ErrorPrediction()
 	ScaledLogLikelihood = Minus()
 	featNorm.xMean = Mean()
 	featNorm.xStdDev = InvStdDev()
@@ -402,7 +402,7 @@ Validating --> CE.BFF.FF.T = Times (CE.BFF.W, L1.S) : [183 x 512], [512 x *] -> 
 Validating --> CE.BFF.B = LearnableParameter() :  -> [183]
 Validating --> CE.BFF.FF.P = Plus (CE.BFF.FF.T, CE.BFF.B) : [183 x *], [183] -> [183 x *]
 Validating --> CE.SM = CrossEntropyWithSoftmax (labels, CE.BFF.FF.P) : [183 x *], [183 x *] -> [1]
-Validating --> Err = ClassificationError (labels, CE.BFF.FF.P) : [183 x *], [183 x *] -> [1]
+Validating --> Err = ErrorPrediction (labels, CE.BFF.FF.P) : [183 x *], [183 x *] -> [1]
 Validating --> logPrior.Prior = Mean (labels) : [183 x *] -> [183]
 Validating --> logPrior.LogPrior = Log (logPrior.Prior) : [183] -> [183]
 Validating --> ScaledLogLikelihood = Minus (CE.BFF.FF.P, logPrior.LogPrior) : [183 x *], [183] -> [183 x *]
@@ -424,7 +424,7 @@ Post-processing network complete.
 08/16/2016 10:46:34: 	CE.SM = CrossEntropyWithSoftmax
 
 08/16/2016 10:46:34: Evaluation criterion node(s):
-08/16/2016 10:46:34: 	Err = ClassificationError
+08/16/2016 10:46:34: 	Err = ErrorPrediction
 
 
 Allocating matrices for forward and/or backward propagation.
@@ -1370,7 +1370,7 @@ Post-processing network...
 
 6 roots:
 	CE.SM = CrossEntropyWithSoftmax()
-	Err = ClassificationError()
+	Err = ErrorPrediction()
 	ScaledLogLikelihood = Minus()
 	featNorm.xMean = Mean()
 	featNorm.xStdDev = InvStdDev()
@@ -1393,7 +1393,7 @@ Validating --> CE.BFF.FF.T = Times (CE.BFF.W, L1.S) : [183 x 512], [512 x *1] ->
 Validating --> CE.BFF.B = LearnableParameter() :  -> [183]
 Validating --> CE.BFF.FF.P = Plus (CE.BFF.FF.T, CE.BFF.B) : [183 x *1], [183] -> [183 x *1]
 Validating --> CE.SM = CrossEntropyWithSoftmax (labels, CE.BFF.FF.P) : [183 x *1], [183 x *1] -> [1]
-Validating --> Err = ClassificationError (labels, CE.BFF.FF.P) : [183 x *1], [183 x *1] -> [1]
+Validating --> Err = ErrorPrediction (labels, CE.BFF.FF.P) : [183 x *1], [183 x *1] -> [1]
 Validating --> logPrior.Prior = Mean (labels) : [183 x *1] -> [183]
 Validating --> logPrior.LogPrior = Log (logPrior.Prior) : [183] -> [183]
 Validating --> ScaledLogLikelihood = Minus (CE.BFF.FF.P, logPrior.LogPrior) : [183 x *1], [183] -> [183 x *1]
@@ -1418,7 +1418,7 @@ Post-processing network...
 
 6 roots:
 	CE.SM = CrossEntropyWithSoftmax()
-	Err = ClassificationError()
+	Err = ErrorPrediction()
 	ScaledLogLikelihood = Minus()
 	featNorm.xMean = Mean()
 	featNorm.xStdDev = InvStdDev()
@@ -1446,7 +1446,7 @@ Validating --> CE.BFF.FF.T = Times (CE.BFF.W, L2.S) : [183 x 512], [512 x *1] ->
 Validating --> CE.BFF.B = LearnableParameter() :  -> [183]
 Validating --> CE.BFF.FF.P = Plus (CE.BFF.FF.T, CE.BFF.B) : [183 x *1], [183] -> [183 x *1]
 Validating --> CE.SM = CrossEntropyWithSoftmax (labels, CE.BFF.FF.P) : [183 x *1], [183 x *1] -> [1]
-Validating --> Err = ClassificationError (labels, CE.BFF.FF.P) : [183 x *1], [183 x *1] -> [1]
+Validating --> Err = ErrorPrediction (labels, CE.BFF.FF.P) : [183 x *1], [183 x *1] -> [1]
 Validating --> logPrior.Prior = Mean (labels) : [183 x *1] -> [183]
 Validating --> logPrior.LogPrior = Log (logPrior.Prior) : [183] -> [183]
 Validating --> ScaledLogLikelihood = Minus (CE.BFF.FF.P, logPrior.LogPrior) : [183 x *1], [183] -> [183 x *1]
@@ -1487,7 +1487,7 @@ Post-processing network...
 
 6 roots:
 	CE.SM = CrossEntropyWithSoftmax()
-	Err = ClassificationError()
+	Err = ErrorPrediction()
 	ScaledLogLikelihood = Minus()
 	featNorm.xMean = Mean()
 	featNorm.xStdDev = InvStdDev()
@@ -1515,7 +1515,7 @@ Validating --> CE.BFF.FF.T = Times (CE.BFF.W, L2.S) : [183 x 512], [512 x *3] ->
 Validating --> CE.BFF.B = LearnableParameter() :  -> [183]
 Validating --> CE.BFF.FF.P = Plus (CE.BFF.FF.T, CE.BFF.B) : [183 x *3], [183] -> [183 x *3]
 Validating --> CE.SM = CrossEntropyWithSoftmax (labels, CE.BFF.FF.P) : [183 x *3], [183 x *3] -> [1]
-Validating --> Err = ClassificationError (labels, CE.BFF.FF.P) : [183 x *3], [183 x *3] -> [1]
+Validating --> Err = ErrorPrediction (labels, CE.BFF.FF.P) : [183 x *3], [183 x *3] -> [1]
 Validating --> logPrior.Prior = Mean (labels) : [183 x *3] -> [183]
 Validating --> logPrior.LogPrior = Log (logPrior.Prior) : [183] -> [183]
 Validating --> ScaledLogLikelihood = Minus (CE.BFF.FF.P, logPrior.LogPrior) : [183 x *3], [183] -> [183 x *3]
@@ -1537,7 +1537,7 @@ Post-processing network complete.
 08/16/2016 10:46:48: 	CE.SM = CrossEntropyWithSoftmax
 
 08/16/2016 10:46:48: Evaluation criterion node(s):
-08/16/2016 10:46:48: 	Err = ClassificationError
+08/16/2016 10:46:48: 	Err = ErrorPrediction
 
 
 Allocating matrices for forward and/or backward propagation.
@@ -2484,7 +2484,7 @@ Post-processing network...
 
 6 roots:
 	CE.SM = CrossEntropyWithSoftmax()
-	Err = ClassificationError()
+	Err = ErrorPrediction()
 	ScaledLogLikelihood = Minus()
 	featNorm.xMean = Mean()
 	featNorm.xStdDev = InvStdDev()
@@ -2512,7 +2512,7 @@ Validating --> CE.BFF.FF.T = Times (CE.BFF.W, L2.S) : [183 x 512], [512 x *4] ->
 Validating --> CE.BFF.B = LearnableParameter() :  -> [183]
 Validating --> CE.BFF.FF.P = Plus (CE.BFF.FF.T, CE.BFF.B) : [183 x *4], [183] -> [183 x *4]
 Validating --> CE.SM = CrossEntropyWithSoftmax (labels, CE.BFF.FF.P) : [183 x *4], [183 x *4] -> [1]
-Validating --> Err = ClassificationError (labels, CE.BFF.FF.P) : [183 x *4], [183 x *4] -> [1]
+Validating --> Err = ErrorPrediction (labels, CE.BFF.FF.P) : [183 x *4], [183 x *4] -> [1]
 Validating --> logPrior.Prior = Mean (labels) : [183 x *4] -> [183]
 Validating --> logPrior.LogPrior = Log (logPrior.Prior) : [183] -> [183]
 Validating --> ScaledLogLikelihood = Minus (CE.BFF.FF.P, logPrior.LogPrior) : [183 x *4], [183] -> [183 x *4]
@@ -2537,7 +2537,7 @@ Post-processing network...
 
 6 roots:
 	CE.SM = CrossEntropyWithSoftmax()
-	Err = ClassificationError()
+	Err = ErrorPrediction()
 	ScaledLogLikelihood = Minus()
 	featNorm.xMean = Mean()
 	featNorm.xStdDev = InvStdDev()
@@ -2570,7 +2570,7 @@ Validating --> CE.BFF.FF.T = Times (CE.BFF.W, L3.S) : [183 x 512], [512 x *4] ->
 Validating --> CE.BFF.B = LearnableParameter() :  -> [183]
 Validating --> CE.BFF.FF.P = Plus (CE.BFF.FF.T, CE.BFF.B) : [183 x *4], [183] -> [183 x *4]
 Validating --> CE.SM = CrossEntropyWithSoftmax (labels, CE.BFF.FF.P) : [183 x *4], [183 x *4] -> [1]
-Validating --> Err = ClassificationError (labels, CE.BFF.FF.P) : [183 x *4], [183 x *4] -> [1]
+Validating --> Err = ErrorPrediction (labels, CE.BFF.FF.P) : [183 x *4], [183 x *4] -> [1]
 Validating --> logPrior.Prior = Mean (labels) : [183 x *4] -> [183]
 Validating --> logPrior.LogPrior = Log (logPrior.Prior) : [183] -> [183]
 Validating --> ScaledLogLikelihood = Minus (CE.BFF.FF.P, logPrior.LogPrior) : [183 x *4], [183] -> [183 x *4]
@@ -2611,7 +2611,7 @@ Post-processing network...
 
 6 roots:
 	CE.SM = CrossEntropyWithSoftmax()
-	Err = ClassificationError()
+	Err = ErrorPrediction()
 	ScaledLogLikelihood = Minus()
 	featNorm.xMean = Mean()
 	featNorm.xStdDev = InvStdDev()
@@ -2644,7 +2644,7 @@ Validating --> CE.BFF.FF.T = Times (CE.BFF.W, L3.S) : [183 x 512], [512 x *6] ->
 Validating --> CE.BFF.B = LearnableParameter() :  -> [183]
 Validating --> CE.BFF.FF.P = Plus (CE.BFF.FF.T, CE.BFF.B) : [183 x *6], [183] -> [183 x *6]
 Validating --> CE.SM = CrossEntropyWithSoftmax (labels, CE.BFF.FF.P) : [183 x *6], [183 x *6] -> [1]
-Validating --> Err = ClassificationError (labels, CE.BFF.FF.P) : [183 x *6], [183 x *6] -> [1]
+Validating --> Err = ErrorPrediction (labels, CE.BFF.FF.P) : [183 x *6], [183 x *6] -> [1]
 Validating --> logPrior.Prior = Mean (labels) : [183 x *6] -> [183]
 Validating --> logPrior.LogPrior = Log (logPrior.Prior) : [183] -> [183]
 Validating --> ScaledLogLikelihood = Minus (CE.BFF.FF.P, logPrior.LogPrior) : [183 x *6], [183] -> [183 x *6]
@@ -2666,7 +2666,7 @@ Post-processing network complete.
 08/16/2016 10:47:03: 	CE.SM = CrossEntropyWithSoftmax
 
 08/16/2016 10:47:03: Evaluation criterion node(s):
-08/16/2016 10:47:03: 	Err = ClassificationError
+08/16/2016 10:47:03: 	Err = ErrorPrediction
 
 
 Allocating matrices for forward and/or backward propagation.

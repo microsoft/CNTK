@@ -1,48 +1,61 @@
-=== Running /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/release/bin/cntk configFile=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/SVD/cntk.cntk currentDirectory=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/Data RunDir=/tmp/cntk-test-20160503181449.303380/Speech_SVD@release_gpu DataDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/Data ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/SVD OutputDir=/tmp/cntk-test-20160503181449.303380/Speech_SVD@release_gpu DeviceId=0 timestamping=true
+CPU info:
+    CPU Model Name: Intel(R) Xeon(R) CPU E5-2630 v2 @ 2.60GHz
+    Hardware threads: 24
+    Total Memory: 264172964 kB
+-------------------------------------------------------------------
+=== Running /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/release/bin/cntk configFile=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/SVD/cntk.cntk currentDirectory=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/Data RunDir=/tmp/cntk-test-20160816095713.701165/Speech_SVD@release_gpu DataDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/Data ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/SVD OutputDir=/tmp/cntk-test-20160816095713.701165/Speech_SVD@release_gpu DeviceId=0 timestamping=true
 -------------------------------------------------------------------
 Build info: 
 
-		Built time: May  3 2016 17:56:15
-		Last modified date: Tue May  3 11:36:22 2016
+		Built time: Aug 16 2016 09:41:56
+		Last modified date: Fri Aug 12 07:32:43 2016
 		Build type: release
 		Build target: GPU
 		With 1bit-SGD: no
-		Math lib: acml
+		Math lib: mkl
 		CUDA_PATH: /usr/local/cuda-7.5
 		CUB_PATH: /usr/local/cub-1.4.1
 		CUDNN_PATH: /usr/local/cudnn-4.0
 		Build Branch: HEAD
-		Build SHA1: 571b092d60e131fd529081a5ed52af2dc815dc82
-		Built by philly on 18750d26eb32
+		Build SHA1: 026b1e772b963461e189f8f00aa7ed6951298f84
+		Built by philly on f67b30a647de
 		Build Path: /home/philly/jenkins/workspace/CNTK-Build-Linux
 -------------------------------------------------------------------
 Changed current directory to /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/Data
-05/03/2016 18:18:58: -------------------------------------------------------------------
-05/03/2016 18:18:58: Build info: 
+08/16/2016 10:01:18: -------------------------------------------------------------------
+08/16/2016 10:01:18: Build info: 
 
-05/03/2016 18:18:58: 		Built time: May  3 2016 17:56:15
-05/03/2016 18:18:58: 		Last modified date: Tue May  3 11:36:22 2016
-05/03/2016 18:18:58: 		Build type: release
-05/03/2016 18:18:58: 		Build target: GPU
-05/03/2016 18:18:58: 		With 1bit-SGD: no
-05/03/2016 18:18:58: 		Math lib: acml
-05/03/2016 18:18:58: 		CUDA_PATH: /usr/local/cuda-7.5
-05/03/2016 18:18:58: 		CUB_PATH: /usr/local/cub-1.4.1
-05/03/2016 18:18:58: 		CUDNN_PATH: /usr/local/cudnn-4.0
-05/03/2016 18:18:58: 		Build Branch: HEAD
-05/03/2016 18:18:58: 		Build SHA1: 571b092d60e131fd529081a5ed52af2dc815dc82
-05/03/2016 18:18:58: 		Built by philly on 18750d26eb32
-05/03/2016 18:18:58: 		Build Path: /home/philly/jenkins/workspace/CNTK-Build-Linux
-05/03/2016 18:18:58: -------------------------------------------------------------------
+08/16/2016 10:01:18: 		Built time: Aug 16 2016 09:41:56
+08/16/2016 10:01:18: 		Last modified date: Fri Aug 12 07:32:43 2016
+08/16/2016 10:01:18: 		Build type: release
+08/16/2016 10:01:18: 		Build target: GPU
+08/16/2016 10:01:18: 		With 1bit-SGD: no
+08/16/2016 10:01:18: 		Math lib: mkl
+08/16/2016 10:01:18: 		CUDA_PATH: /usr/local/cuda-7.5
+08/16/2016 10:01:18: 		CUB_PATH: /usr/local/cub-1.4.1
+08/16/2016 10:01:18: 		CUDNN_PATH: /usr/local/cudnn-4.0
+08/16/2016 10:01:18: 		Build Branch: HEAD
+08/16/2016 10:01:18: 		Build SHA1: 026b1e772b963461e189f8f00aa7ed6951298f84
+08/16/2016 10:01:18: 		Built by philly on f67b30a647de
+08/16/2016 10:01:18: 		Build Path: /home/philly/jenkins/workspace/CNTK-Build-Linux
+08/16/2016 10:01:18: -------------------------------------------------------------------
+08/16/2016 10:01:18: -------------------------------------------------------------------
+08/16/2016 10:01:18: GPU info:
 
-05/03/2016 18:18:58: Running on localhost at 2016/05/03 18:18:58
-05/03/2016 18:18:58: Command line: 
-/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/release/bin/cntk  configFile=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/SVD/cntk.cntk  currentDirectory=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/Data  RunDir=/tmp/cntk-test-20160503181449.303380/Speech_SVD@release_gpu  DataDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/Data  ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/SVD  OutputDir=/tmp/cntk-test-20160503181449.303380/Speech_SVD@release_gpu  DeviceId=0  timestamping=true
+08/16/2016 10:01:18: 		Device[0]: cores = 2880; computeCapability = 3.5; type = "GeForce GTX 780 Ti"; memory = 3071 MB
+08/16/2016 10:01:18: 		Device[1]: cores = 2880; computeCapability = 3.5; type = "GeForce GTX 780 Ti"; memory = 3071 MB
+08/16/2016 10:01:18: 		Device[2]: cores = 2880; computeCapability = 3.5; type = "GeForce GTX 780 Ti"; memory = 3071 MB
+08/16/2016 10:01:18: 		Device[3]: cores = 2880; computeCapability = 3.5; type = "GeForce GTX 780 Ti"; memory = 3071 MB
+08/16/2016 10:01:18: -------------------------------------------------------------------
+
+08/16/2016 10:01:18: Running on localhost at 2016/08/16 10:01:18
+08/16/2016 10:01:18: Command line: 
+/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/release/bin/cntk  configFile=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/SVD/cntk.cntk  currentDirectory=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/Data  RunDir=/tmp/cntk-test-20160816095713.701165/Speech_SVD@release_gpu  DataDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/Data  ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/SVD  OutputDir=/tmp/cntk-test-20160816095713.701165/Speech_SVD@release_gpu  DeviceId=0  timestamping=true
 
 
 
-05/03/2016 18:18:58: >>>>>>>>>>>>>>>>>>>> RAW CONFIG (VARIABLES NOT RESOLVED) >>>>>>>>>>>>>>>>>>>>
-05/03/2016 18:18:58: precision=float
+08/16/2016 10:01:18: >>>>>>>>>>>>>>>>>>>> RAW CONFIG (VARIABLES NOT RESOLVED) >>>>>>>>>>>>>>>>>>>>
+08/16/2016 10:01:18: precision=float
 command=speechTrain:modelDecomposition:SVDTrain
 deviceId=$DeviceId$
 speechTrain=[
@@ -54,7 +67,7 @@ speechTrain=[
     SimpleNetworkBuilder=[
         layerSizes=363:512:512:132
         trainingCriterion=CrossEntropyWithSoftmax
-        evalCriterion=ClassificationError
+        evalCriterion=ErrorPrediction
         layerTypes=Sigmoid
         applyMeanVarNorm=true
         initValueScale=1.0
@@ -79,6 +92,7 @@ reader=[
     miniBatchMode=Partial
     randomize=Auto
     verbosity=0
+    useMersenneTwisterRand=true
     features=[
         dim=363
         type=Real
@@ -120,29 +134,29 @@ SVDTrain=[
     ]
 ]
 currentDirectory=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/Data
-RunDir=/tmp/cntk-test-20160503181449.303380/Speech_SVD@release_gpu
+RunDir=/tmp/cntk-test-20160816095713.701165/Speech_SVD@release_gpu
 DataDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/Data
 ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/SVD
-OutputDir=/tmp/cntk-test-20160503181449.303380/Speech_SVD@release_gpu
+OutputDir=/tmp/cntk-test-20160816095713.701165/Speech_SVD@release_gpu
 DeviceId=0
 timestamping=true
 
-05/03/2016 18:18:58: <<<<<<<<<<<<<<<<<<<< RAW CONFIG (VARIABLES NOT RESOLVED)  <<<<<<<<<<<<<<<<<<<<
+08/16/2016 10:01:18: <<<<<<<<<<<<<<<<<<<< RAW CONFIG (VARIABLES NOT RESOLVED)  <<<<<<<<<<<<<<<<<<<<
 
-05/03/2016 18:18:58: >>>>>>>>>>>>>>>>>>>> RAW CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
-05/03/2016 18:18:58: precision=float
+08/16/2016 10:01:18: >>>>>>>>>>>>>>>>>>>> RAW CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
+08/16/2016 10:01:18: precision=float
 command=speechTrain:modelDecomposition:SVDTrain
 deviceId=0
 speechTrain=[
     action=train
     makeMode=false
-    modelPath=/tmp/cntk-test-20160503181449.303380/Speech_SVD@release_gpu/models/cntkSpeech.dnn
+    modelPath=/tmp/cntk-test-20160816095713.701165/Speech_SVD@release_gpu/models/cntkSpeech.dnn
     deviceId=0
     traceLevel=1
     SimpleNetworkBuilder=[
         layerSizes=363:512:512:132
         trainingCriterion=CrossEntropyWithSoftmax
-        evalCriterion=ClassificationError
+        evalCriterion=ErrorPrediction
         layerTypes=Sigmoid
         applyMeanVarNorm=true
         initValueScale=1.0
@@ -167,6 +181,7 @@ reader=[
     miniBatchMode=Partial
     randomize=Auto
     verbosity=0
+    useMersenneTwisterRand=true
     features=[
         dim=363
         type=Real
@@ -181,19 +196,19 @@ reader=[
 ]
 modelDecomposition=[
     action=SVD
-    modelPath=/tmp/cntk-test-20160503181449.303380/Speech_SVD@release_gpu/models/cntkSpeech.dnn
-    outputmodelPath=/tmp/cntk-test-20160503181449.303380/Speech_SVD@release_gpu/models/cntkSpeech.svd.dnn.0
+    modelPath=/tmp/cntk-test-20160816095713.701165/Speech_SVD@release_gpu/models/cntkSpeech.dnn
+    outputmodelPath=/tmp/cntk-test-20160816095713.701165/Speech_SVD@release_gpu/models/cntkSpeech.svd.dnn.0
     KeepRatio=0.5
     NodeNameRegex=W.*
 ]
 SVDTrain=[
     action=train
     makeMode=true
-    modelPath=/tmp/cntk-test-20160503181449.303380/Speech_SVD@release_gpu/models/cntkSpeech.svd.dnn
+    modelPath=/tmp/cntk-test-20160816095713.701165/Speech_SVD@release_gpu/models/cntkSpeech.svd.dnn
     deviceId=0
     traceLevel=1
     NDLNetworkBuilder=[
-        NetworkDescription=/tmp/cntk-test-20160503181449.303380/Speech_SVD@release_gpu/nonExistent.ndl
+        NetworkDescription=/tmp/cntk-test-20160816095713.701165/Speech_SVD@release_gpu/nonExistent.ndl
     ]
     SGD=[
         epochSize=20480
@@ -208,16 +223,16 @@ SVDTrain=[
     ]
 ]
 currentDirectory=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/Data
-RunDir=/tmp/cntk-test-20160503181449.303380/Speech_SVD@release_gpu
+RunDir=/tmp/cntk-test-20160816095713.701165/Speech_SVD@release_gpu
 DataDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/Data
 ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/SVD
-OutputDir=/tmp/cntk-test-20160503181449.303380/Speech_SVD@release_gpu
+OutputDir=/tmp/cntk-test-20160816095713.701165/Speech_SVD@release_gpu
 DeviceId=0
 timestamping=true
 
-05/03/2016 18:18:58: <<<<<<<<<<<<<<<<<<<< RAW CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
+08/16/2016 10:01:18: <<<<<<<<<<<<<<<<<<<< RAW CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
 
-05/03/2016 18:18:58: >>>>>>>>>>>>>>>>>>>> PROCESSED CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
+08/16/2016 10:01:18: >>>>>>>>>>>>>>>>>>>> PROCESSED CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
 configparameters: cntk.cntk:command=speechTrain:modelDecomposition:SVDTrain
 configparameters: cntk.cntk:ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/SVD
 configparameters: cntk.cntk:currentDirectory=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/Data
@@ -225,13 +240,13 @@ configparameters: cntk.cntk:DataDir=/home/philly/jenkins/workspace/CNTK-Test-Lin
 configparameters: cntk.cntk:deviceId=0
 configparameters: cntk.cntk:modelDecomposition=[
     action=SVD
-    modelPath=/tmp/cntk-test-20160503181449.303380/Speech_SVD@release_gpu/models/cntkSpeech.dnn
-    outputmodelPath=/tmp/cntk-test-20160503181449.303380/Speech_SVD@release_gpu/models/cntkSpeech.svd.dnn.0
+    modelPath=/tmp/cntk-test-20160816095713.701165/Speech_SVD@release_gpu/models/cntkSpeech.dnn
+    outputmodelPath=/tmp/cntk-test-20160816095713.701165/Speech_SVD@release_gpu/models/cntkSpeech.svd.dnn.0
     KeepRatio=0.5
     NodeNameRegex=W.*
 ]
 
-configparameters: cntk.cntk:OutputDir=/tmp/cntk-test-20160503181449.303380/Speech_SVD@release_gpu
+configparameters: cntk.cntk:OutputDir=/tmp/cntk-test-20160816095713.701165/Speech_SVD@release_gpu
 configparameters: cntk.cntk:precision=float
 configparameters: cntk.cntk:reader=[
     readerType=HTKMLFReader
@@ -239,6 +254,7 @@ configparameters: cntk.cntk:reader=[
     miniBatchMode=Partial
     randomize=Auto
     verbosity=0
+    useMersenneTwisterRand=true
     features=[
         dim=363
         type=Real
@@ -252,17 +268,17 @@ configparameters: cntk.cntk:reader=[
     ]
 ]
 
-configparameters: cntk.cntk:RunDir=/tmp/cntk-test-20160503181449.303380/Speech_SVD@release_gpu
+configparameters: cntk.cntk:RunDir=/tmp/cntk-test-20160816095713.701165/Speech_SVD@release_gpu
 configparameters: cntk.cntk:speechTrain=[
     action=train
     makeMode=false
-    modelPath=/tmp/cntk-test-20160503181449.303380/Speech_SVD@release_gpu/models/cntkSpeech.dnn
+    modelPath=/tmp/cntk-test-20160816095713.701165/Speech_SVD@release_gpu/models/cntkSpeech.dnn
     deviceId=0
     traceLevel=1
     SimpleNetworkBuilder=[
         layerSizes=363:512:512:132
         trainingCriterion=CrossEntropyWithSoftmax
-        evalCriterion=ClassificationError
+        evalCriterion=ErrorPrediction
         layerTypes=Sigmoid
         applyMeanVarNorm=true
         initValueScale=1.0
@@ -285,11 +301,11 @@ configparameters: cntk.cntk:speechTrain=[
 configparameters: cntk.cntk:SVDTrain=[
     action=train
     makeMode=true
-    modelPath=/tmp/cntk-test-20160503181449.303380/Speech_SVD@release_gpu/models/cntkSpeech.svd.dnn
+    modelPath=/tmp/cntk-test-20160816095713.701165/Speech_SVD@release_gpu/models/cntkSpeech.svd.dnn
     deviceId=0
     traceLevel=1
     NDLNetworkBuilder=[
-        NetworkDescription=/tmp/cntk-test-20160503181449.303380/Speech_SVD@release_gpu/nonExistent.ndl
+        NetworkDescription=/tmp/cntk-test-20160816095713.701165/Speech_SVD@release_gpu/nonExistent.ndl
     ]
     SGD=[
         epochSize=20480
@@ -305,22 +321,22 @@ configparameters: cntk.cntk:SVDTrain=[
 ]
 
 configparameters: cntk.cntk:timestamping=true
-05/03/2016 18:18:58: <<<<<<<<<<<<<<<<<<<< PROCESSED CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
-05/03/2016 18:18:58: Commands: speechTrain modelDecomposition SVDTrain
-05/03/2016 18:18:58: Precision = "float"
-05/03/2016 18:18:58: CNTKModelPath: /tmp/cntk-test-20160503181449.303380/Speech_SVD@release_gpu/models/cntkSpeech.dnn
-05/03/2016 18:18:58: CNTKCommandTrainInfo: speechTrain : 3
-05/03/2016 18:18:58: CNTKModelPath: /tmp/cntk-test-20160503181449.303380/Speech_SVD@release_gpu/models/cntkSpeech.svd.dnn
-05/03/2016 18:18:58: CNTKCommandTrainInfo: SVDTrain : 2
-05/03/2016 18:18:58: CNTKCommandTrainInfo: CNTKNoMoreCommands_Total : 5
+08/16/2016 10:01:18: <<<<<<<<<<<<<<<<<<<< PROCESSED CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
+08/16/2016 10:01:18: Commands: speechTrain modelDecomposition SVDTrain
+08/16/2016 10:01:18: Precision = "float"
+08/16/2016 10:01:18: CNTKModelPath: /tmp/cntk-test-20160816095713.701165/Speech_SVD@release_gpu/models/cntkSpeech.dnn
+08/16/2016 10:01:18: CNTKCommandTrainInfo: speechTrain : 3
+08/16/2016 10:01:18: CNTKModelPath: /tmp/cntk-test-20160816095713.701165/Speech_SVD@release_gpu/models/cntkSpeech.svd.dnn
+08/16/2016 10:01:18: CNTKCommandTrainInfo: SVDTrain : 2
+08/16/2016 10:01:18: CNTKCommandTrainInfo: CNTKNoMoreCommands_Total : 5
 
-05/03/2016 18:18:58: ##############################################################################
-05/03/2016 18:18:58: #                                                                            #
-05/03/2016 18:18:58: # Action "train"                                                             #
-05/03/2016 18:18:58: #                                                                            #
-05/03/2016 18:18:58: ##############################################################################
+08/16/2016 10:01:18: ##############################################################################
+08/16/2016 10:01:18: #                                                                            #
+08/16/2016 10:01:18: # Action "train"                                                             #
+08/16/2016 10:01:18: #                                                                            #
+08/16/2016 10:01:18: ##############################################################################
 
-05/03/2016 18:18:58: CNTKCommandTrainBegin: speechTrain
+08/16/2016 10:01:18: CNTKCommandTrainBegin: speechTrain
 SimpleNetworkBuilder Using GPU 0
 reading script file glob_0000.scp ... 948 entries
 total 132 state names in state list /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/Data/state.list
@@ -329,14 +345,26 @@ htkmlfreader: reading MLF file /home/philly/jenkins/workspace/CNTK-Test-Linux-W1
 label set 0: 129 classes
 minibatchutterancesource: 948 utterances grouped into 3 chunks, av. chunk size: 316.0 utterances, 84244.7 frames
 
-05/03/2016 18:18:58: Creating virgin network.
+08/16/2016 10:01:19: Creating virgin network.
+Node 'W0' (LearnableParameter operation): Initializing Parameter[512 x 363] <- 0.000000.
+Node 'W0' (LearnableParameter operation): Initializing Parameter[512 x 363] <- uniform(seed=1, range=0.050000*1.000000, onCPU=false).
 SetUniformRandomValue (GPU): creating curand object with seed 1, sizeof(ElemType)==4
+Node 'B0' (LearnableParameter operation): Initializing Parameter[512 x 1] <- 0.000000.
+Node 'B0' (LearnableParameter operation): Initializing Parameter[512 x 1] <- 0.000000.
+Node 'W1' (LearnableParameter operation): Initializing Parameter[512 x 512] <- 0.000000.
+Node 'W1' (LearnableParameter operation): Initializing Parameter[512 x 512] <- uniform(seed=2, range=0.050000*1.000000, onCPU=false).
+Node 'B1' (LearnableParameter operation): Initializing Parameter[512 x 1] <- 0.000000.
+Node 'B1' (LearnableParameter operation): Initializing Parameter[512 x 1] <- 0.000000.
+Node 'W2' (LearnableParameter operation): Initializing Parameter[132 x 512] <- 0.000000.
+Node 'W2' (LearnableParameter operation): Initializing Parameter[132 x 512] <- uniform(seed=3, range=0.050000*1.000000, onCPU=false).
+Node 'B2' (LearnableParameter operation): Initializing Parameter[132 x 1] <- 0.000000.
+Node 'B2' (LearnableParameter operation): Initializing Parameter[132 x 1] <- 0.000000.
 
 Post-processing network...
 
 7 roots:
 	CrossEntropyWithSoftmax = CrossEntropyWithSoftmax()
-	EvalClassificationError = ClassificationError()
+	EvalErrorPrediction = ErrorPrediction()
 	InvStdOfFeatures = InvStdDev()
 	MeanOfFeatures = Mean()
 	PosteriorProb = Softmax()
@@ -365,7 +393,7 @@ Validating --> W2*H1 = Times (W2, H2) : [132 x 512], [512 x 1 x *] -> [132 x 1 x
 Validating --> B2 = LearnableParameter() :  -> [132 x 1]
 Validating --> HLast = Plus (W2*H1, B2) : [132 x 1 x *], [132 x 1] -> [132 x 1 x *]
 Validating --> CrossEntropyWithSoftmax = CrossEntropyWithSoftmax (labels, HLast) : [132 x *], [132 x 1 x *] -> [1]
-Validating --> EvalClassificationError = ClassificationError (labels, HLast) : [132 x *], [132 x 1 x *] -> [1]
+Validating --> EvalErrorPrediction = ErrorPrediction (labels, HLast) : [132 x *], [132 x 1 x *] -> [1]
 Validating --> PosteriorProb = Softmax (HLast) : [132 x 1 x *] -> [132 x 1 x *]
 Validating --> Prior = Mean (labels) : [132 x *] -> [132]
 Validating --> LogOfPrior = Log (Prior) : [132] -> [132]
@@ -382,141 +410,140 @@ Validating network, final pass.
 
 Post-processing network complete.
 
-05/03/2016 18:18:58: Created model with 25 nodes on GPU 0.
+08/16/2016 10:01:19: Created model with 25 nodes on GPU 0.
 
-05/03/2016 18:18:58: Training criterion node(s):
-05/03/2016 18:18:58: 	CrossEntropyWithSoftmax = CrossEntropyWithSoftmax
+08/16/2016 10:01:19: Training criterion node(s):
+08/16/2016 10:01:19: 	CrossEntropyWithSoftmax = CrossEntropyWithSoftmax
 
-05/03/2016 18:18:58: Evaluation criterion node(s):
-
-05/03/2016 18:18:58: 	EvalClassificationError = ClassificationError
+08/16/2016 10:01:19: Evaluation criterion node(s):
+08/16/2016 10:01:19: 	EvalErrorPrediction = ErrorPrediction
 
 
 Allocating matrices for forward and/or backward propagation.
 
-Memory Sharing Structure:
+Memory Sharing: Out of 40 matrices, 19 are shared as 8, and 21 are not shared.
 
-(nil): {[EvalClassificationError Gradient[1]] [InvStdOfFeatures Gradient[363]] [LogOfPrior Gradient[132]] [MVNormalizedFeatures Gradient[363 x *]] [MeanOfFeatures Gradient[363]] [PosteriorProb Gradient[132 x 1 x *]] [PosteriorProb Value[132 x 1 x *]] [Prior Gradient[132]] [ScaledLogLikelihood Gradient[132 x 1 x *]] [features Gradient[363 x *]] [labels Gradient[132 x *]] }
-0x1846848: {[B0 Value[512 x 1]] }
-0x18537e8: {[features Value[363 x *]] }
-0x24ae688: {[InvStdOfFeatures Value[363]] }
-0x24af3b8: {[W0 Value[512 x 363]] }
-0x24b31c8: {[MeanOfFeatures Value[363]] }
-0x2502cc8: {[W1 Value[512 x 512]] }
-0x28b72a8: {[B1 Value[512 x 1]] }
-0x28b8428: {[W2 Value[132 x 512]] }
-0x28b8ba8: {[B2 Value[132 x 1]] }
-0x28b9f08: {[labels Value[132 x *]] }
-0x28bb168: {[Prior Value[132]] }
-0x28c0b98: {[EvalClassificationError Value[1]] }
-0x28c0cf8: {[ScaledLogLikelihood Value[132 x 1 x *]] }
-0x28c0eb8: {[CrossEntropyWithSoftmax Value[1]] }
-0x28c1348: {[W0 Gradient[512 x 363]] [W0*features+B0 Value[512 x 1 x *]] }
-0x28c1478: {[LogOfPrior Value[132]] }
-0x28c2bd8: {[MVNormalizedFeatures Value[363 x *]] }
-0x28c3398: {[W0*features Value[512 x *]] }
-0x28c35a8: {[H1 Value[512 x 1 x *]] [W0*features Gradient[512 x *]] }
-0x28c3708: {[W0*features+B0 Gradient[512 x 1 x *]] [W1*H1 Value[512 x 1 x *]] }
-0x28c38c8: {[W1 Gradient[512 x 512]] [W1*H1+B1 Value[512 x 1 x *]] }
-0x28c3a88: {[H2 Value[512 x 1 x *]] [W1*H1 Gradient[512 x 1 x *]] }
-0x28c3c48: {[B0 Gradient[512 x 1]] [H1 Gradient[512 x 1 x *]] [W1*H1+B1 Gradient[512 x 1 x *]] [W2*H1 Value[132 x 1 x *]] }
-0x28c3e08: {[HLast Value[132 x 1 x *]] [W2 Gradient[132 x 512]] }
-0x28c4968: {[CrossEntropyWithSoftmax Gradient[1]] }
-0x28c4b28: {[B1 Gradient[512 x 1]] [H2 Gradient[512 x 1 x *]] [HLast Gradient[132 x 1 x *]] }
-0x28c4ce8: {[W2*H1 Gradient[132 x 1 x *]] }
-0x28c4ea8: {[B2 Gradient[132 x 1]] }
+	{ W0 : [512 x 363] (gradient)
+	  W0*features+B0 : [512 x 1 x *] }
+	{ H1 : [512 x 1 x *]
+	  W0*features : [512 x *] (gradient) }
+	{ W0*features+B0 : [512 x 1 x *] (gradient)
+	  W1*H1 : [512 x 1 x *] }
+	{ W1 : [512 x 512] (gradient)
+	  W1*H1+B1 : [512 x 1 x *] }
+	{ H2 : [512 x 1 x *]
+	  W1*H1 : [512 x 1 x *] (gradient) }
+	{ B0 : [512 x 1] (gradient)
+	  H1 : [512 x 1 x *] (gradient)
+	  W1*H1+B1 : [512 x 1 x *] (gradient)
+	  W2*H1 : [132 x 1 x *] }
+	{ HLast : [132 x 1 x *]
+	  W2 : [132 x 512] (gradient) }
+	{ B1 : [512 x 1] (gradient)
+	  H2 : [512 x 1 x *] (gradient)
+	  HLast : [132 x 1 x *] (gradient) }
 
 
-05/03/2016 18:18:58: Precomputing --> 3 PreCompute nodes found.
+08/16/2016 10:01:19: Training 516740 parameters in 6 out of 6 parameter tensors and 15 nodes with gradient:
 
-05/03/2016 18:18:58: 	MeanOfFeatures = Mean()
-05/03/2016 18:18:58: 	InvStdOfFeatures = InvStdDev()
-05/03/2016 18:18:58: 	Prior = Mean()
+08/16/2016 10:01:19: 	Node 'B0' (LearnableParameter operation) : [512 x 1]
+08/16/2016 10:01:19: 	Node 'B1' (LearnableParameter operation) : [512 x 1]
+08/16/2016 10:01:19: 	Node 'B2' (LearnableParameter operation) : [132 x 1]
+08/16/2016 10:01:19: 	Node 'W0' (LearnableParameter operation) : [512 x 363]
+08/16/2016 10:01:19: 	Node 'W1' (LearnableParameter operation) : [512 x 512]
+08/16/2016 10:01:19: 	Node 'W2' (LearnableParameter operation) : [132 x 512]
+
+
+08/16/2016 10:01:19: Precomputing --> 3 PreCompute nodes found.
+
+08/16/2016 10:01:19: 	MeanOfFeatures = Mean()
+08/16/2016 10:01:19: 	InvStdOfFeatures = InvStdDev()
+08/16/2016 10:01:19: 	Prior = Mean()
 minibatchiterator: epoch 0: frames [0..252734] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
 requiredata: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
 
-05/03/2016 18:18:59: Precomputing --> Completed.
+08/16/2016 10:01:20: Precomputing --> Completed.
 
 
-05/03/2016 18:18:59: Starting Epoch 1: learning rate per sample = 0.015625  effective momentum = 0.900000  momentum as time constant = 607.4 samples
+08/16/2016 10:01:20: Starting Epoch 1: learning rate per sample = 0.015625  effective momentum = 0.900000  momentum as time constant = 607.4 samples
 minibatchiterator: epoch 0: frames [0..20480] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
 
-05/03/2016 18:18:59: Starting minibatch loop.
-05/03/2016 18:18:59:  Epoch[ 1 of 3]-Minibatch[   1-  10, 3.12%]: CrossEntropyWithSoftmax = 4.32135277 * 640; EvalClassificationError = 0.90000000 * 640; time = 0.0102s; samplesPerSecond = 62924.0
-05/03/2016 18:18:59:  Epoch[ 1 of 3]-Minibatch[  11-  20, 6.25%]: CrossEntropyWithSoftmax = 4.15070992 * 640; EvalClassificationError = 0.86718750 * 640; time = 0.0075s; samplesPerSecond = 84813.1
-05/03/2016 18:18:59:  Epoch[ 1 of 3]-Minibatch[  21-  30, 9.38%]: CrossEntropyWithSoftmax = 3.99901123 * 640; EvalClassificationError = 0.87656250 * 640; time = 0.0074s; samplesPerSecond = 85975.3
-05/03/2016 18:18:59:  Epoch[ 1 of 3]-Minibatch[  31-  40, 12.50%]: CrossEntropyWithSoftmax = 3.86945953 * 640; EvalClassificationError = 0.87656250 * 640; time = 0.0075s; samplesPerSecond = 85790.9
-05/03/2016 18:18:59:  Epoch[ 1 of 3]-Minibatch[  41-  50, 15.62%]: CrossEntropyWithSoftmax = 3.80219574 * 640; EvalClassificationError = 0.87812500 * 640; time = 0.0074s; samplesPerSecond = 86148.9
-05/03/2016 18:18:59:  Epoch[ 1 of 3]-Minibatch[  51-  60, 18.75%]: CrossEntropyWithSoftmax = 3.72890930 * 640; EvalClassificationError = 0.86875000 * 640; time = 0.0075s; samplesPerSecond = 85630.2
-05/03/2016 18:18:59:  Epoch[ 1 of 3]-Minibatch[  61-  70, 21.88%]: CrossEntropyWithSoftmax = 3.56186981 * 640; EvalClassificationError = 0.82343750 * 640; time = 0.0075s; samplesPerSecond = 85676.0
-05/03/2016 18:18:59:  Epoch[ 1 of 3]-Minibatch[  71-  80, 25.00%]: CrossEntropyWithSoftmax = 3.42790527 * 640; EvalClassificationError = 0.80781250 * 640; time = 0.0074s; samplesPerSecond = 86183.7
-05/03/2016 18:18:59:  Epoch[ 1 of 3]-Minibatch[  81-  90, 28.12%]: CrossEntropyWithSoftmax = 3.33928528 * 640; EvalClassificationError = 0.77343750 * 640; time = 0.0075s; samplesPerSecond = 85710.5
-05/03/2016 18:18:59:  Epoch[ 1 of 3]-Minibatch[  91- 100, 31.25%]: CrossEntropyWithSoftmax = 3.36398926 * 640; EvalClassificationError = 0.84375000 * 640; time = 0.0075s; samplesPerSecond = 85906.0
-05/03/2016 18:18:59:  Epoch[ 1 of 3]-Minibatch[ 101- 110, 34.38%]: CrossEntropyWithSoftmax = 3.21223450 * 640; EvalClassificationError = 0.75312500 * 640; time = 0.0075s; samplesPerSecond = 85630.2
-05/03/2016 18:18:59:  Epoch[ 1 of 3]-Minibatch[ 111- 120, 37.50%]: CrossEntropyWithSoftmax = 3.31265564 * 640; EvalClassificationError = 0.78750000 * 640; time = 0.0075s; samplesPerSecond = 85390.3
-05/03/2016 18:18:59:  Epoch[ 1 of 3]-Minibatch[ 121- 130, 40.62%]: CrossEntropyWithSoftmax = 3.14082031 * 640; EvalClassificationError = 0.74687500 * 640; time = 0.0075s; samplesPerSecond = 85756.4
-05/03/2016 18:18:59:  Epoch[ 1 of 3]-Minibatch[ 131- 140, 43.75%]: CrossEntropyWithSoftmax = 3.00689697 * 640; EvalClassificationError = 0.69687500 * 640; time = 0.0074s; samplesPerSecond = 86148.9
-05/03/2016 18:18:59:  Epoch[ 1 of 3]-Minibatch[ 141- 150, 46.88%]: CrossEntropyWithSoftmax = 3.00495911 * 640; EvalClassificationError = 0.72343750 * 640; time = 0.0074s; samplesPerSecond = 86288.3
-05/03/2016 18:18:59:  Epoch[ 1 of 3]-Minibatch[ 151- 160, 50.00%]: CrossEntropyWithSoftmax = 2.97858887 * 640; EvalClassificationError = 0.73906250 * 640; time = 0.0074s; samplesPerSecond = 86160.5
-05/03/2016 18:18:59:  Epoch[ 1 of 3]-Minibatch[ 161- 170, 53.12%]: CrossEntropyWithSoftmax = 2.85686035 * 640; EvalClassificationError = 0.70781250 * 640; time = 0.0075s; samplesPerSecond = 85906.0
-05/03/2016 18:18:59:  Epoch[ 1 of 3]-Minibatch[ 171- 180, 56.25%]: CrossEntropyWithSoftmax = 2.69053345 * 640; EvalClassificationError = 0.67187500 * 640; time = 0.0075s; samplesPerSecond = 85894.5
-05/03/2016 18:18:59:  Epoch[ 1 of 3]-Minibatch[ 181- 190, 59.38%]: CrossEntropyWithSoftmax = 2.78653564 * 640; EvalClassificationError = 0.70468750 * 640; time = 0.0075s; samplesPerSecond = 85871.5
-05/03/2016 18:18:59:  Epoch[ 1 of 3]-Minibatch[ 191- 200, 62.50%]: CrossEntropyWithSoftmax = 2.57702026 * 640; EvalClassificationError = 0.64843750 * 640; time = 0.0074s; samplesPerSecond = 86044.6
-05/03/2016 18:18:59:  Epoch[ 1 of 3]-Minibatch[ 201- 210, 65.62%]: CrossEntropyWithSoftmax = 2.61571655 * 640; EvalClassificationError = 0.66406250 * 640; time = 0.0075s; samplesPerSecond = 85584.4
-05/03/2016 18:18:59:  Epoch[ 1 of 3]-Minibatch[ 211- 220, 68.75%]: CrossEntropyWithSoftmax = 2.55236206 * 640; EvalClassificationError = 0.65781250 * 640; time = 0.0075s; samplesPerSecond = 85664.6
-05/03/2016 18:18:59:  Epoch[ 1 of 3]-Minibatch[ 221- 230, 71.88%]: CrossEntropyWithSoftmax = 2.48211670 * 640; EvalClassificationError = 0.62500000 * 640; time = 0.0075s; samplesPerSecond = 85527.2
-05/03/2016 18:18:59:  Epoch[ 1 of 3]-Minibatch[ 231- 240, 75.00%]: CrossEntropyWithSoftmax = 2.38778687 * 640; EvalClassificationError = 0.62812500 * 640; time = 0.0075s; samplesPerSecond = 85538.6
-05/03/2016 18:18:59:  Epoch[ 1 of 3]-Minibatch[ 241- 250, 78.12%]: CrossEntropyWithSoftmax = 2.36900635 * 640; EvalClassificationError = 0.64843750 * 640; time = 0.0075s; samplesPerSecond = 85435.9
-05/03/2016 18:18:59:  Epoch[ 1 of 3]-Minibatch[ 251- 260, 81.25%]: CrossEntropyWithSoftmax = 2.43967285 * 640; EvalClassificationError = 0.63281250 * 640; time = 0.0075s; samplesPerSecond = 85231.1
-05/03/2016 18:18:59:  Epoch[ 1 of 3]-Minibatch[ 261- 270, 84.38%]: CrossEntropyWithSoftmax = 2.30281982 * 640; EvalClassificationError = 0.61250000 * 640; time = 0.0075s; samplesPerSecond = 84948.2
-05/03/2016 18:18:59:  Epoch[ 1 of 3]-Minibatch[ 271- 280, 87.50%]: CrossEntropyWithSoftmax = 2.19668579 * 640; EvalClassificationError = 0.55937500 * 640; time = 0.0075s; samplesPerSecond = 85550.1
-05/03/2016 18:18:59:  Epoch[ 1 of 3]-Minibatch[ 281- 290, 90.62%]: CrossEntropyWithSoftmax = 2.28980103 * 640; EvalClassificationError = 0.60468750 * 640; time = 0.0075s; samplesPerSecond = 85208.4
-05/03/2016 18:18:59:  Epoch[ 1 of 3]-Minibatch[ 291- 300, 93.75%]: CrossEntropyWithSoftmax = 2.17750854 * 640; EvalClassificationError = 0.62187500 * 640; time = 0.0075s; samplesPerSecond = 85163.0
-05/03/2016 18:18:59:  Epoch[ 1 of 3]-Minibatch[ 301- 310, 96.88%]: CrossEntropyWithSoftmax = 2.26263428 * 640; EvalClassificationError = 0.59687500 * 640; time = 0.0075s; samplesPerSecond = 85310.6
-05/03/2016 18:18:59:  Epoch[ 1 of 3]-Minibatch[ 311- 320, 100.00%]: CrossEntropyWithSoftmax = 2.15072632 * 640; EvalClassificationError = 0.56250000 * 640; time = 0.0075s; samplesPerSecond = 85140.3
-05/03/2016 18:18:59: Finished Epoch[ 1 of 3]: [Training] CrossEntropyWithSoftmax = 2.97995720 * 20480; EvalClassificationError = 0.72216797 * 20480; totalSamplesSeen = 20480; learningRatePerSample = 0.015625; epochTime=0.244611s
-05/03/2016 18:18:59: SGD: Saving checkpoint model '/tmp/cntk-test-20160503181449.303380/Speech_SVD@release_gpu/models/cntkSpeech.dnn.1'
+08/16/2016 10:01:20: Starting minibatch loop.
+08/16/2016 10:01:20:  Epoch[ 1 of 3]-Minibatch[   1-  10, 3.12%]: CrossEntropyWithSoftmax = 4.53638611 * 640; EvalErrorPrediction = 0.92031250 * 640; time = 0.0102s; samplesPerSecond = 62936.4
+08/16/2016 10:01:20:  Epoch[ 1 of 3]-Minibatch[  11-  20, 6.25%]: CrossEntropyWithSoftmax = 4.32517776 * 640; EvalErrorPrediction = 0.92500000 * 640; time = 0.0077s; samplesPerSecond = 83496.4
+08/16/2016 10:01:20:  Epoch[ 1 of 3]-Minibatch[  21-  30, 9.38%]: CrossEntropyWithSoftmax = 3.98246384 * 640; EvalErrorPrediction = 0.87187500 * 640; time = 0.0076s; samplesPerSecond = 83967.5
+08/16/2016 10:01:20:  Epoch[ 1 of 3]-Minibatch[  31-  40, 12.50%]: CrossEntropyWithSoftmax = 3.73673553 * 640; EvalErrorPrediction = 0.84531250 * 640; time = 0.0077s; samplesPerSecond = 83507.3
+08/16/2016 10:01:20:  Epoch[ 1 of 3]-Minibatch[  41-  50, 15.62%]: CrossEntropyWithSoftmax = 3.84021912 * 640; EvalErrorPrediction = 0.86406250 * 640; time = 0.0076s; samplesPerSecond = 83714.8
+08/16/2016 10:01:20:  Epoch[ 1 of 3]-Minibatch[  51-  60, 18.75%]: CrossEntropyWithSoftmax = 3.69831390 * 640; EvalErrorPrediction = 0.86250000 * 640; time = 0.0076s; samplesPerSecond = 83890.4
+08/16/2016 10:01:20:  Epoch[ 1 of 3]-Minibatch[  61-  70, 21.88%]: CrossEntropyWithSoftmax = 3.39593201 * 640; EvalErrorPrediction = 0.77031250 * 640; time = 0.0077s; samplesPerSecond = 83409.4
+08/16/2016 10:01:20:  Epoch[ 1 of 3]-Minibatch[  71-  80, 25.00%]: CrossEntropyWithSoftmax = 3.49749756 * 640; EvalErrorPrediction = 0.82968750 * 640; time = 0.0077s; samplesPerSecond = 83583.6
+08/16/2016 10:01:20:  Epoch[ 1 of 3]-Minibatch[  81-  90, 28.12%]: CrossEntropyWithSoftmax = 3.47295837 * 640; EvalErrorPrediction = 0.81093750 * 640; time = 0.0077s; samplesPerSecond = 83616.4
+08/16/2016 10:01:20:  Epoch[ 1 of 3]-Minibatch[  91- 100, 31.25%]: CrossEntropyWithSoftmax = 3.36483765 * 640; EvalErrorPrediction = 0.79843750 * 640; time = 0.0076s; samplesPerSecond = 83758.7
+08/16/2016 10:01:20:  Epoch[ 1 of 3]-Minibatch[ 101- 110, 34.38%]: CrossEntropyWithSoftmax = 3.46790466 * 640; EvalErrorPrediction = 0.81718750 * 640; time = 0.0077s; samplesPerSecond = 83365.9
+08/16/2016 10:01:20:  Epoch[ 1 of 3]-Minibatch[ 111- 120, 37.50%]: CrossEntropyWithSoftmax = 3.22105103 * 640; EvalErrorPrediction = 0.75625000 * 640; time = 0.0076s; samplesPerSecond = 83967.5
+08/16/2016 10:01:20:  Epoch[ 1 of 3]-Minibatch[ 121- 130, 40.62%]: CrossEntropyWithSoftmax = 3.12504578 * 640; EvalErrorPrediction = 0.75312500 * 640; time = 0.0077s; samplesPerSecond = 83225.0
+08/16/2016 10:01:20:  Epoch[ 1 of 3]-Minibatch[ 131- 140, 43.75%]: CrossEntropyWithSoftmax = 2.99507751 * 640; EvalErrorPrediction = 0.71875000 * 640; time = 0.0076s; samplesPerSecond = 83967.5
+08/16/2016 10:01:20:  Epoch[ 1 of 3]-Minibatch[ 141- 150, 46.88%]: CrossEntropyWithSoftmax = 2.89601440 * 640; EvalErrorPrediction = 0.70000000 * 640; time = 0.0076s; samplesPerSecond = 84343.7
+08/16/2016 10:01:20:  Epoch[ 1 of 3]-Minibatch[ 151- 160, 50.00%]: CrossEntropyWithSoftmax = 3.04739380 * 640; EvalErrorPrediction = 0.74218750 * 640; time = 0.0076s; samplesPerSecond = 83682.0
+08/16/2016 10:01:20:  Epoch[ 1 of 3]-Minibatch[ 161- 170, 53.12%]: CrossEntropyWithSoftmax = 2.75064697 * 640; EvalErrorPrediction = 0.69375000 * 640; time = 0.0076s; samplesPerSecond = 84033.6
+08/16/2016 10:01:20:  Epoch[ 1 of 3]-Minibatch[ 171- 180, 56.25%]: CrossEntropyWithSoftmax = 2.65537720 * 640; EvalErrorPrediction = 0.63750000 * 640; time = 0.0076s; samplesPerSecond = 84243.8
+08/16/2016 10:01:20:  Epoch[ 1 of 3]-Minibatch[ 181- 190, 59.38%]: CrossEntropyWithSoftmax = 2.74816895 * 640; EvalErrorPrediction = 0.69062500 * 640; time = 0.0076s; samplesPerSecond = 84232.7
+08/16/2016 10:01:20:  Epoch[ 1 of 3]-Minibatch[ 191- 200, 62.50%]: CrossEntropyWithSoftmax = 2.68736572 * 640; EvalErrorPrediction = 0.68593750 * 640; time = 0.0076s; samplesPerSecond = 83912.4
+08/16/2016 10:01:20:  Epoch[ 1 of 3]-Minibatch[ 201- 210, 65.62%]: CrossEntropyWithSoftmax = 2.53269653 * 640; EvalErrorPrediction = 0.64375000 * 640; time = 0.0076s; samplesPerSecond = 84243.8
+08/16/2016 10:01:20:  Epoch[ 1 of 3]-Minibatch[ 211- 220, 68.75%]: CrossEntropyWithSoftmax = 2.53923340 * 640; EvalErrorPrediction = 0.63750000 * 640; time = 0.0076s; samplesPerSecond = 84044.6
+08/16/2016 10:01:20:  Epoch[ 1 of 3]-Minibatch[ 221- 230, 71.88%]: CrossEntropyWithSoftmax = 2.48909302 * 640; EvalErrorPrediction = 0.64218750 * 640; time = 0.0077s; samplesPerSecond = 83409.4
+08/16/2016 10:01:20:  Epoch[ 1 of 3]-Minibatch[ 231- 240, 75.00%]: CrossEntropyWithSoftmax = 2.50032349 * 640; EvalErrorPrediction = 0.65156250 * 640; time = 0.0076s; samplesPerSecond = 83736.8
+08/16/2016 10:01:20:  Epoch[ 1 of 3]-Minibatch[ 241- 250, 78.12%]: CrossEntropyWithSoftmax = 2.43569336 * 640; EvalErrorPrediction = 0.63125000 * 640; time = 0.0077s; samplesPerSecond = 83627.3
+08/16/2016 10:01:20:  Epoch[ 1 of 3]-Minibatch[ 251- 260, 81.25%]: CrossEntropyWithSoftmax = 2.34293823 * 640; EvalErrorPrediction = 0.61562500 * 640; time = 0.0076s; samplesPerSecond = 83747.7
+08/16/2016 10:01:20:  Epoch[ 1 of 3]-Minibatch[ 261- 270, 84.38%]: CrossEntropyWithSoftmax = 2.20427856 * 640; EvalErrorPrediction = 0.57812500 * 640; time = 0.0077s; samplesPerSecond = 83594.6
+08/16/2016 10:01:20:  Epoch[ 1 of 3]-Minibatch[ 271- 280, 87.50%]: CrossEntropyWithSoftmax = 2.46885986 * 640; EvalErrorPrediction = 0.65468750 * 640; time = 0.0077s; samplesPerSecond = 83649.2
+08/16/2016 10:01:20:  Epoch[ 1 of 3]-Minibatch[ 281- 290, 90.62%]: CrossEntropyWithSoftmax = 2.22067261 * 640; EvalErrorPrediction = 0.58906250 * 640; time = 0.0076s; samplesPerSecond = 83725.8
+08/16/2016 10:01:20:  Epoch[ 1 of 3]-Minibatch[ 291- 300, 93.75%]: CrossEntropyWithSoftmax = 2.21785278 * 640; EvalErrorPrediction = 0.60781250 * 640; time = 0.0076s; samplesPerSecond = 83747.7
+08/16/2016 10:01:20:  Epoch[ 1 of 3]-Minibatch[ 301- 310, 96.88%]: CrossEntropyWithSoftmax = 2.20442505 * 640; EvalErrorPrediction = 0.57812500 * 640; time = 0.0076s; samplesPerSecond = 83835.5
+08/16/2016 10:01:20:  Epoch[ 1 of 3]-Minibatch[ 311- 320, 100.00%]: CrossEntropyWithSoftmax = 2.18215332 * 640; EvalErrorPrediction = 0.58593750 * 640; time = 0.0076s; samplesPerSecond = 83725.8
+08/16/2016 10:01:20: Finished Epoch[ 1 of 3]: [Training] CrossEntropyWithSoftmax = 2.99321213 * 20480; EvalErrorPrediction = 0.72216797 * 20480; totalSamplesSeen = 20480; learningRatePerSample = 0.015625; epochTime=0.249802s
+08/16/2016 10:01:20: SGD: Saving checkpoint model '/tmp/cntk-test-20160816095713.701165/Speech_SVD@release_gpu/models/cntkSpeech.dnn.1'
 
-05/03/2016 18:18:59: Starting Epoch 2: learning rate per sample = 0.001953  effective momentum = 0.656119  momentum as time constant = 607.5 samples
+08/16/2016 10:01:20: Starting Epoch 2: learning rate per sample = 0.001953  effective momentum = 0.656119  momentum as time constant = 607.5 samples
 minibatchiterator: epoch 1: frames [20480..40960] (first utterance at frame 20480), data subset 0 of 1, with 1 datapasses
 
-05/03/2016 18:18:59: Starting minibatch loop.
-05/03/2016 18:18:59:  Epoch[ 2 of 3]-Minibatch[   1-  10, 12.50%]: CrossEntropyWithSoftmax = 2.01598530 * 2560; EvalClassificationError = 0.54140625 * 2560; time = 0.0144s; samplesPerSecond = 177617.4
-05/03/2016 18:18:59:  Epoch[ 2 of 3]-Minibatch[  11-  20, 25.00%]: CrossEntropyWithSoftmax = 1.98818569 * 2560; EvalClassificationError = 0.54296875 * 2560; time = 0.0121s; samplesPerSecond = 212131.3
-05/03/2016 18:18:59:  Epoch[ 2 of 3]-Minibatch[  21-  30, 37.50%]: CrossEntropyWithSoftmax = 1.98698120 * 2560; EvalClassificationError = 0.54140625 * 2560; time = 0.0120s; samplesPerSecond = 212695.2
-05/03/2016 18:18:59:  Epoch[ 2 of 3]-Minibatch[  31-  40, 50.00%]: CrossEntropyWithSoftmax = 1.93126144 * 2560; EvalClassificationError = 0.52773437 * 2560; time = 0.0120s; samplesPerSecond = 212748.3
-05/03/2016 18:18:59:  Epoch[ 2 of 3]-Minibatch[  41-  50, 62.50%]: CrossEntropyWithSoftmax = 1.90067825 * 2560; EvalClassificationError = 0.52656250 * 2560; time = 0.0120s; samplesPerSecond = 213138.0
-05/03/2016 18:18:59:  Epoch[ 2 of 3]-Minibatch[  51-  60, 75.00%]: CrossEntropyWithSoftmax = 1.97115860 * 2560; EvalClassificationError = 0.54140625 * 2560; time = 0.0120s; samplesPerSecond = 212642.2
-05/03/2016 18:18:59:  Epoch[ 2 of 3]-Minibatch[  61-  70, 87.50%]: CrossEntropyWithSoftmax = 1.89518127 * 2560; EvalClassificationError = 0.52031250 * 2560; time = 0.0120s; samplesPerSecond = 214064.7
-05/03/2016 18:18:59:  Epoch[ 2 of 3]-Minibatch[  71-  80, 100.00%]: CrossEntropyWithSoftmax = 1.90450439 * 2560; EvalClassificationError = 0.53164062 * 2560; time = 0.0119s; samplesPerSecond = 214477.2
-05/03/2016 18:18:59: Finished Epoch[ 2 of 3]: [Training] CrossEntropyWithSoftmax = 1.94924202 * 20480; EvalClassificationError = 0.53417969 * 20480; totalSamplesSeen = 40960; learningRatePerSample = 0.001953125; epochTime=0.100566s
-05/03/2016 18:18:59: SGD: Saving checkpoint model '/tmp/cntk-test-20160503181449.303380/Speech_SVD@release_gpu/models/cntkSpeech.dnn.2'
+08/16/2016 10:01:20: Starting minibatch loop.
+08/16/2016 10:01:20:  Epoch[ 2 of 3]-Minibatch[   1-  10, 12.50%]: CrossEntropyWithSoftmax = 2.08889847 * 2560; EvalErrorPrediction = 0.56367188 * 2560; time = 0.0143s; samplesPerSecond = 178521.6
+08/16/2016 10:01:20:  Epoch[ 2 of 3]-Minibatch[  11-  20, 25.00%]: CrossEntropyWithSoftmax = 2.00776215 * 2560; EvalErrorPrediction = 0.54218750 * 2560; time = 0.0123s; samplesPerSecond = 208079.3
+08/16/2016 10:01:20:  Epoch[ 2 of 3]-Minibatch[  21-  30, 37.50%]: CrossEntropyWithSoftmax = 1.99260178 * 2560; EvalErrorPrediction = 0.54257813 * 2560; time = 0.0123s; samplesPerSecond = 207287.4
+08/16/2016 10:01:20:  Epoch[ 2 of 3]-Minibatch[  31-  40, 50.00%]: CrossEntropyWithSoftmax = 1.98459930 * 2560; EvalErrorPrediction = 0.54648438 * 2560; time = 0.0123s; samplesPerSecond = 207809.1
+08/16/2016 10:01:20:  Epoch[ 2 of 3]-Minibatch[  41-  50, 62.50%]: CrossEntropyWithSoftmax = 1.97206497 * 2560; EvalErrorPrediction = 0.53984375 * 2560; time = 0.0123s; samplesPerSecond = 207455.4
+08/16/2016 10:01:20:  Epoch[ 2 of 3]-Minibatch[  51-  60, 75.00%]: CrossEntropyWithSoftmax = 1.91865540 * 2560; EvalErrorPrediction = 0.52109375 * 2560; time = 0.0123s; samplesPerSecond = 207944.1
+08/16/2016 10:01:20:  Epoch[ 2 of 3]-Minibatch[  61-  70, 87.50%]: CrossEntropyWithSoftmax = 1.91066666 * 2560; EvalErrorPrediction = 0.52148438 * 2560; time = 0.0123s; samplesPerSecond = 207657.4
+08/16/2016 10:01:20:  Epoch[ 2 of 3]-Minibatch[  71-  80, 100.00%]: CrossEntropyWithSoftmax = 1.89501343 * 2560; EvalErrorPrediction = 0.51992187 * 2560; time = 0.0123s; samplesPerSecond = 207623.7
+08/16/2016 10:01:20: Finished Epoch[ 2 of 3]: [Training] CrossEntropyWithSoftmax = 1.97128277 * 20480; EvalErrorPrediction = 0.53715820 * 20480; totalSamplesSeen = 40960; learningRatePerSample = 0.001953125; epochTime=0.102483s
+08/16/2016 10:01:20: SGD: Saving checkpoint model '/tmp/cntk-test-20160816095713.701165/Speech_SVD@release_gpu/models/cntkSpeech.dnn.2'
 
-05/03/2016 18:18:59: Starting Epoch 3: learning rate per sample = 0.000098  effective momentum = 0.656119  momentum as time constant = 2429.9 samples
+08/16/2016 10:01:20: Starting Epoch 3: learning rate per sample = 0.000098  effective momentum = 0.656119  momentum as time constant = 2429.9 samples
 minibatchiterator: epoch 2: frames [40960..61440] (first utterance at frame 40960), data subset 0 of 1, with 1 datapasses
 
-05/03/2016 18:18:59: Starting minibatch loop.
-05/03/2016 18:19:00:  Epoch[ 3 of 3]-Minibatch[   1-  10, 50.00%]: CrossEntropyWithSoftmax = 1.87359848 * 10240; EvalClassificationError = 0.51933594 * 10240; time = 0.0356s; samplesPerSecond = 287777.9
-05/03/2016 18:19:00:  Epoch[ 3 of 3]-Minibatch[  11-  20, 100.00%]: CrossEntropyWithSoftmax = 1.86656265 * 10240; EvalClassificationError = 0.51748047 * 10240; time = 0.0300s; samplesPerSecond = 341492.7
-05/03/2016 18:19:00: Finished Epoch[ 3 of 3]: [Training] CrossEntropyWithSoftmax = 1.87008057 * 20480; EvalClassificationError = 0.51840820 * 20480; totalSamplesSeen = 61440; learningRatePerSample = 9.7656251e-05; epochTime=0.070526s
-05/03/2016 18:19:00: SGD: Saving checkpoint model '/tmp/cntk-test-20160503181449.303380/Speech_SVD@release_gpu/models/cntkSpeech.dnn'
-05/03/2016 18:19:00: CNTKCommandTrainEnd: speechTrain
+08/16/2016 10:01:20: Starting minibatch loop.
+08/16/2016 10:01:20:  Epoch[ 3 of 3]-Minibatch[   1-  10, 50.00%]: CrossEntropyWithSoftmax = 1.89820576 * 10240; EvalErrorPrediction = 0.52470703 * 10240; time = 0.0363s; samplesPerSecond = 281775.4
+08/16/2016 10:01:20:  Epoch[ 3 of 3]-Minibatch[  11-  20, 100.00%]: CrossEntropyWithSoftmax = 1.91958065 * 10240; EvalErrorPrediction = 0.53974609 * 10240; time = 0.0304s; samplesPerSecond = 336609.6
+08/16/2016 10:01:20: Finished Epoch[ 3 of 3]: [Training] CrossEntropyWithSoftmax = 1.90889320 * 20480; EvalErrorPrediction = 0.53222656 * 20480; totalSamplesSeen = 61440; learningRatePerSample = 9.7656251e-05; epochTime=0.070479s
+08/16/2016 10:01:20: SGD: Saving checkpoint model '/tmp/cntk-test-20160816095713.701165/Speech_SVD@release_gpu/models/cntkSpeech.dnn'
+08/16/2016 10:01:20: CNTKCommandTrainEnd: speechTrain
 
-05/03/2016 18:19:00: Action "train" complete.
+08/16/2016 10:01:20: Action "train" complete.
 
 
-05/03/2016 18:19:00: ##############################################################################
-05/03/2016 18:19:00: #                                                                            #
-05/03/2016 18:19:00: # Action "SVD"                                                               #
-05/03/2016 18:19:00: #                                                                            #
-05/03/2016 18:19:00: ##############################################################################
+08/16/2016 10:01:20: ##############################################################################
+08/16/2016 10:01:20: #                                                                            #
+08/16/2016 10:01:20: # Action "SVD"                                                               #
+08/16/2016 10:01:20: #                                                                            #
+08/16/2016 10:01:20: ##############################################################################
 
 
 Post-processing network...
 
 7 roots:
 	CrossEntropyWithSoftmax = CrossEntropyWithSoftmax()
-	EvalClassificationError = ClassificationError()
+	EvalErrorPrediction = ErrorPrediction()
 	InvStdOfFeatures = InvStdDev()
 	MeanOfFeatures = Mean()
 	PosteriorProb = Softmax()
@@ -545,7 +572,7 @@ Validating --> W2*H1 = Times (W2, H2) : [132 x 512], [512 x 1 x *1] -> [132 x 1 
 Validating --> B2 = LearnableParameter() :  -> [132 x 1]
 Validating --> HLast = Plus (W2*H1, B2) : [132 x 1 x *1], [132 x 1] -> [132 x 1 x *1]
 Validating --> CrossEntropyWithSoftmax = CrossEntropyWithSoftmax (labels, HLast) : [132 x *1], [132 x 1 x *1] -> [1]
-Validating --> EvalClassificationError = ClassificationError (labels, HLast) : [132 x *1], [132 x 1 x *1] -> [1]
+Validating --> EvalErrorPrediction = ErrorPrediction (labels, HLast) : [132 x *1], [132 x 1 x *1] -> [1]
 Validating --> PosteriorProb = Softmax (HLast) : [132 x 1 x *1] -> [132 x 1 x *1]
 Validating --> Prior = Mean (labels) : [132 x *1] -> [132]
 Validating --> LogOfPrior = Log (Prior) : [132] -> [132]
@@ -565,15 +592,27 @@ Post-processing network complete.
 --------------------------------------------------------------------------------------------
 ParameterSVD: start to process group 0 with KeepRatio=0.50
 --------------------------------------------------------------------------------------------
-Performing SVD for a   512-by-363   matrix (node name: W0                  ) ---  computation time  0.31 secs ;  keep 50.0% energy ===> keep   104 svd values (reduce to 49.0% parameters) 
-Performing SVD for a   512-by-512   matrix (node name: W1                  ) ---  computation time  0.20 secs ;  keep 50.0% energy ===> keep   128 svd values (reduce to 50.0% parameters) 
-Performing SVD for a   132-by-512   matrix (node name: W2                  ) ---  computation time  0.04 secs ;  keep 50.0% energy ===> keep    32 svd values (reduce to 30.5% parameters) 
+Performing SVD for a   512-by-363   matrix (node name: W0                  ) ---  computation time  0.13 secs ;  keep 50.0% energy ===> keep   104 svd values (reduce to 49.0% parameters) 
+Node 'W0_U' (LearnableParameter operation): Initializing Parameter[512 x 104] <- 0.000000.
+Node 'W0_V' (LearnableParameter operation): Initializing Parameter[104 x 363] <- 0.000000.
+Node 'W0_U' (LearnableParameter operation): Initializing Parameter[512 x 104] <- 0.000000.
+Node 'W0_V' (LearnableParameter operation): Initializing Parameter[104 x 363] <- 0.000000.
+Performing SVD for a   512-by-512   matrix (node name: W1                  ) ---  computation time  0.22 secs ;  keep 50.0% energy ===> keep   128 svd values (reduce to 50.0% parameters) 
+Node 'W1_U' (LearnableParameter operation): Initializing Parameter[512 x 128] <- 0.000000.
+Node 'W1_V' (LearnableParameter operation): Initializing Parameter[128 x 512] <- 0.000000.
+Node 'W1_U' (LearnableParameter operation): Initializing Parameter[512 x 128] <- 0.000000.
+Node 'W1_V' (LearnableParameter operation): Initializing Parameter[128 x 512] <- 0.000000.
+Performing SVD for a   132-by-512   matrix (node name: W2                  ) ---  computation time  0.03 secs ;  keep 50.0% energy ===> keep    32 svd values (reduce to 30.5% parameters) 
+Node 'W2_U' (LearnableParameter operation): Initializing Parameter[132 x 32] <- 0.000000.
+Node 'W2_V' (LearnableParameter operation): Initializing Parameter[32 x 512] <- 0.000000.
+Node 'W2_U' (LearnableParameter operation): Initializing Parameter[132 x 32] <- 0.000000.
+Node 'W2_V' (LearnableParameter operation): Initializing Parameter[32 x 512] <- 0.000000.
 
 Post-processing network...
 
 7 roots:
 	CrossEntropyWithSoftmax = CrossEntropyWithSoftmax()
-	EvalClassificationError = ClassificationError()
+	EvalErrorPrediction = ErrorPrediction()
 	InvStdOfFeatures = InvStdDev()
 	MeanOfFeatures = Mean()
 	PosteriorProb = Softmax()
@@ -583,32 +622,32 @@ Post-processing network...
 Validating network. 31 nodes to process in pass 1.
 
 Validating --> labels = InputValue() :  -> [132 x *1]
-Validating --> W2-U = LearnableParameter() :  -> [132 x 32]
-Validating --> W2-V = LearnableParameter() :  -> [32 x 512]
-Validating --> W2-SVD = Times (W2-U, W2-V) : [132 x 32], [32 x 512] -> [132 x 512]
-Validating --> W1-U = LearnableParameter() :  -> [512 x 128]
-Validating --> W1-V = LearnableParameter() :  -> [128 x 512]
-Validating --> W1-SVD = Times (W1-U, W1-V) : [512 x 128], [128 x 512] -> [512 x 512]
-Validating --> W0-U = LearnableParameter() :  -> [512 x 104]
-Validating --> W0-V = LearnableParameter() :  -> [104 x 363]
-Validating --> W0-SVD = Times (W0-U, W0-V) : [512 x 104], [104 x 363] -> [512 x 363]
+Validating --> W2_U = LearnableParameter() :  -> [132 x 32]
+Validating --> W2_V = LearnableParameter() :  -> [32 x 512]
+Validating --> W1_U = LearnableParameter() :  -> [512 x 128]
+Validating --> W1_V = LearnableParameter() :  -> [128 x 512]
+Validating --> W0_U = LearnableParameter() :  -> [512 x 104]
+Validating --> W0_V = LearnableParameter() :  -> [104 x 363]
 Validating --> features = InputValue() :  -> [363 x *1]
 Validating --> MeanOfFeatures = Mean (features) : [363 x *1] -> [363]
 Validating --> InvStdOfFeatures = InvStdDev (features) : [363 x *1] -> [363]
 Validating --> MVNormalizedFeatures = PerDimMeanVarNormalization (features, MeanOfFeatures, InvStdOfFeatures) : [363 x *1], [363], [363] -> [363 x *1]
-Validating --> W0*features = Times (W0-SVD, MVNormalizedFeatures) : [512 x 363], [363 x *1] -> [512 x *1]
+Validating --> W0*features = Times (W0_V, MVNormalizedFeatures) : [104 x 363], [363 x *1] -> [104 x *1]
+Validating --> W0_SVD = Times (W0_U, W0*features) : [512 x 104], [104 x *1] -> [512 x *1]
 Validating --> B0 = LearnableParameter() :  -> [512 x 1]
-Validating --> W0*features+B0 = Plus (W0*features, B0) : [512 x *1], [512 x 1] -> [512 x 1 x *1]
+Validating --> W0*features+B0 = Plus (W0_SVD, B0) : [512 x *1], [512 x 1] -> [512 x 1 x *1]
 Validating --> H1 = Sigmoid (W0*features+B0) : [512 x 1 x *1] -> [512 x 1 x *1]
-Validating --> W1*H1 = Times (W1-SVD, H1) : [512 x 512], [512 x 1 x *1] -> [512 x 1 x *1]
+Validating --> W1*H1 = Times (W1_V, H1) : [128 x 512], [512 x 1 x *1] -> [128 x 1 x *1]
+Validating --> W1_SVD = Times (W1_U, W1*H1) : [512 x 128], [128 x 1 x *1] -> [512 x 1 x *1]
 Validating --> B1 = LearnableParameter() :  -> [512 x 1]
-Validating --> W1*H1+B1 = Plus (W1*H1, B1) : [512 x 1 x *1], [512 x 1] -> [512 x 1 x *1]
+Validating --> W1*H1+B1 = Plus (W1_SVD, B1) : [512 x 1 x *1], [512 x 1] -> [512 x 1 x *1]
 Validating --> H2 = Sigmoid (W1*H1+B1) : [512 x 1 x *1] -> [512 x 1 x *1]
-Validating --> W2*H1 = Times (W2-SVD, H2) : [132 x 512], [512 x 1 x *1] -> [132 x 1 x *1]
+Validating --> W2*H1 = Times (W2_V, H2) : [32 x 512], [512 x 1 x *1] -> [32 x 1 x *1]
+Validating --> W2_SVD = Times (W2_U, W2*H1) : [132 x 32], [32 x 1 x *1] -> [132 x 1 x *1]
 Validating --> B2 = LearnableParameter() :  -> [132 x 1]
-Validating --> HLast = Plus (W2*H1, B2) : [132 x 1 x *1], [132 x 1] -> [132 x 1 x *1]
+Validating --> HLast = Plus (W2_SVD, B2) : [132 x 1 x *1], [132 x 1] -> [132 x 1 x *1]
 Validating --> CrossEntropyWithSoftmax = CrossEntropyWithSoftmax (labels, HLast) : [132 x *1], [132 x 1 x *1] -> [1]
-Validating --> EvalClassificationError = ClassificationError (labels, HLast) : [132 x *1], [132 x 1 x *1] -> [1]
+Validating --> EvalErrorPrediction = ErrorPrediction (labels, HLast) : [132 x *1], [132 x 1 x *1] -> [1]
 Validating --> PosteriorProb = Softmax (HLast) : [132 x 1 x *1] -> [132 x 1 x *1]
 Validating --> Prior = Mean (labels) : [132 x *1] -> [132]
 Validating --> LogOfPrior = Log (Prior) : [132] -> [132]
@@ -621,21 +660,21 @@ Validating network, final pass.
 
 
 
-18 out of 31 nodes do not share the minibatch layout with the input data.
+15 out of 31 nodes do not share the minibatch layout with the input data.
 
 Post-processing network complete.
 
 
-05/03/2016 18:19:00: Action "SVD" complete.
+08/16/2016 10:01:21: Action "SVD" complete.
 
 
-05/03/2016 18:19:00: ##############################################################################
-05/03/2016 18:19:00: #                                                                            #
-05/03/2016 18:19:00: # Action "train"                                                             #
-05/03/2016 18:19:00: #                                                                            #
-05/03/2016 18:19:00: ##############################################################################
+08/16/2016 10:01:21: ##############################################################################
+08/16/2016 10:01:21: #                                                                            #
+08/16/2016 10:01:21: # Action "train"                                                             #
+08/16/2016 10:01:21: #                                                                            #
+08/16/2016 10:01:21: ##############################################################################
 
-05/03/2016 18:19:00: CNTKCommandTrainBegin: SVDTrain
+08/16/2016 10:01:21: CNTKCommandTrainBegin: SVDTrain
 NDLBuilder Using GPU 0
 reading script file glob_0000.scp ... 948 entries
 total 132 state names in state list /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/Data/state.list
@@ -644,13 +683,13 @@ htkmlfreader: reading MLF file /home/philly/jenkins/workspace/CNTK-Test-Linux-W1
 label set 0: 129 classes
 minibatchutterancesource: 948 utterances grouped into 3 chunks, av. chunk size: 316.0 utterances, 84244.7 frames
 
-05/03/2016 18:19:00: Starting from checkpoint. Loading network from '/tmp/cntk-test-20160503181449.303380/Speech_SVD@release_gpu/models/cntkSpeech.svd.dnn.0'.
+08/16/2016 10:01:21: Starting from checkpoint. Loading network from '/tmp/cntk-test-20160816095713.701165/Speech_SVD@release_gpu/models/cntkSpeech.svd.dnn.0'.
 
 Post-processing network...
 
 7 roots:
 	CrossEntropyWithSoftmax = CrossEntropyWithSoftmax()
-	EvalClassificationError = ClassificationError()
+	EvalErrorPrediction = ErrorPrediction()
 	InvStdOfFeatures = InvStdDev()
 	MeanOfFeatures = Mean()
 	PosteriorProb = Softmax()
@@ -660,32 +699,32 @@ Post-processing network...
 Validating network. 31 nodes to process in pass 1.
 
 Validating --> labels = InputValue() :  -> [132 x *3]
-Validating --> W2-U = LearnableParameter() :  -> [132 x 32]
-Validating --> W2-V = LearnableParameter() :  -> [32 x 512]
-Validating --> W2-SVD = Times (W2-U, W2-V) : [132 x 32], [32 x 512] -> [132 x 512]
-Validating --> W1-U = LearnableParameter() :  -> [512 x 128]
-Validating --> W1-V = LearnableParameter() :  -> [128 x 512]
-Validating --> W1-SVD = Times (W1-U, W1-V) : [512 x 128], [128 x 512] -> [512 x 512]
-Validating --> W0-U = LearnableParameter() :  -> [512 x 104]
-Validating --> W0-V = LearnableParameter() :  -> [104 x 363]
-Validating --> W0-SVD = Times (W0-U, W0-V) : [512 x 104], [104 x 363] -> [512 x 363]
+Validating --> W2_U = LearnableParameter() :  -> [132 x 32]
+Validating --> W2_V = LearnableParameter() :  -> [32 x 512]
+Validating --> W1_U = LearnableParameter() :  -> [512 x 128]
+Validating --> W1_V = LearnableParameter() :  -> [128 x 512]
+Validating --> W0_U = LearnableParameter() :  -> [512 x 104]
+Validating --> W0_V = LearnableParameter() :  -> [104 x 363]
 Validating --> features = InputValue() :  -> [363 x *3]
 Validating --> MeanOfFeatures = Mean (features) : [363 x *3] -> [363]
 Validating --> InvStdOfFeatures = InvStdDev (features) : [363 x *3] -> [363]
 Validating --> MVNormalizedFeatures = PerDimMeanVarNormalization (features, MeanOfFeatures, InvStdOfFeatures) : [363 x *3], [363], [363] -> [363 x *3]
-Validating --> W0*features = Times (W0-SVD, MVNormalizedFeatures) : [512 x 363], [363 x *3] -> [512 x *3]
+Validating --> W0*features = Times (W0_V, MVNormalizedFeatures) : [104 x 363], [363 x *3] -> [104 x *3]
+Validating --> W0_SVD = Times (W0_U, W0*features) : [512 x 104], [104 x *3] -> [512 x *3]
 Validating --> B0 = LearnableParameter() :  -> [512 x 1]
-Validating --> W0*features+B0 = Plus (W0*features, B0) : [512 x *3], [512 x 1] -> [512 x 1 x *3]
+Validating --> W0*features+B0 = Plus (W0_SVD, B0) : [512 x *3], [512 x 1] -> [512 x 1 x *3]
 Validating --> H1 = Sigmoid (W0*features+B0) : [512 x 1 x *3] -> [512 x 1 x *3]
-Validating --> W1*H1 = Times (W1-SVD, H1) : [512 x 512], [512 x 1 x *3] -> [512 x 1 x *3]
+Validating --> W1*H1 = Times (W1_V, H1) : [128 x 512], [512 x 1 x *3] -> [128 x 1 x *3]
+Validating --> W1_SVD = Times (W1_U, W1*H1) : [512 x 128], [128 x 1 x *3] -> [512 x 1 x *3]
 Validating --> B1 = LearnableParameter() :  -> [512 x 1]
-Validating --> W1*H1+B1 = Plus (W1*H1, B1) : [512 x 1 x *3], [512 x 1] -> [512 x 1 x *3]
+Validating --> W1*H1+B1 = Plus (W1_SVD, B1) : [512 x 1 x *3], [512 x 1] -> [512 x 1 x *3]
 Validating --> H2 = Sigmoid (W1*H1+B1) : [512 x 1 x *3] -> [512 x 1 x *3]
-Validating --> W2*H1 = Times (W2-SVD, H2) : [132 x 512], [512 x 1 x *3] -> [132 x 1 x *3]
+Validating --> W2*H1 = Times (W2_V, H2) : [32 x 512], [512 x 1 x *3] -> [32 x 1 x *3]
+Validating --> W2_SVD = Times (W2_U, W2*H1) : [132 x 32], [32 x 1 x *3] -> [132 x 1 x *3]
 Validating --> B2 = LearnableParameter() :  -> [132 x 1]
-Validating --> HLast = Plus (W2*H1, B2) : [132 x 1 x *3], [132 x 1] -> [132 x 1 x *3]
+Validating --> HLast = Plus (W2_SVD, B2) : [132 x 1 x *3], [132 x 1] -> [132 x 1 x *3]
 Validating --> CrossEntropyWithSoftmax = CrossEntropyWithSoftmax (labels, HLast) : [132 x *3], [132 x 1 x *3] -> [1]
-Validating --> EvalClassificationError = ClassificationError (labels, HLast) : [132 x *3], [132 x 1 x *3] -> [1]
+Validating --> EvalErrorPrediction = ErrorPrediction (labels, HLast) : [132 x *3], [132 x 1 x *3] -> [1]
 Validating --> PosteriorProb = Softmax (HLast) : [132 x 1 x *3] -> [132 x 1 x *3]
 Validating --> Prior = Mean (labels) : [132 x *3] -> [132]
 Validating --> LogOfPrior = Log (Prior) : [132] -> [132]
@@ -698,82 +737,88 @@ Validating network, final pass.
 
 
 
-18 out of 31 nodes do not share the minibatch layout with the input data.
+15 out of 31 nodes do not share the minibatch layout with the input data.
 
 Post-processing network complete.
 
-05/03/2016 18:19:00: Loaded model with 31 nodes on GPU 0.
+08/16/2016 10:01:21: Loaded model with 31 nodes on GPU 0.
 
-05/03/2016 18:19:00: Training criterion node(s):
-05/03/2016 18:19:00: 	CrossEntropyWithSoftmax = CrossEntropyWithSoftmax
+08/16/2016 10:01:21: Training criterion node(s):
+08/16/2016 10:01:21: 	CrossEntropyWithSoftmax = CrossEntropyWithSoftmax
 
-05/03/2016 18:19:00: Evaluation criterion node(s):
-
-05/03/2016 18:19:00: 	EvalClassificationError = ClassificationError
+08/16/2016 10:01:21: Evaluation criterion node(s):
+08/16/2016 10:01:21: 	EvalErrorPrediction = ErrorPrediction
 
 
 Allocating matrices for forward and/or backward propagation.
 
-Memory Sharing Structure:
+Memory Sharing: Out of 52 matrices, 29 are shared as 12, and 23 are not shared.
 
-(nil): {[EvalClassificationError Gradient[1]] [InvStdOfFeatures Gradient[363]] [LogOfPrior Gradient[132]] [MVNormalizedFeatures Gradient[363 x *3]] [MeanOfFeatures Gradient[363]] [PosteriorProb Gradient[132 x 1 x *3]] [PosteriorProb Value[132 x 1 x *3]] [Prior Gradient[132]] [ScaledLogLikelihood Gradient[132 x 1 x *3]] [features Gradient[363 x *3]] [labels Gradient[132 x *3]] }
-0x17322d8: {[features Value[363 x *3]] }
-0x1736198: {[B2 Gradient[132 x 1]] }
-0x1736fa8: {[B2 Value[132 x 1]] }
-0x178b118: {[W0*features+B0 Value[512 x 1 x *3]] [W0-SVD Gradient[512 x 363]] [W1-U Gradient[512 x 128]] }
-0x178b248: {[LogOfPrior Value[132]] }
-0x187f3d8: {[ScaledLogLikelihood Value[132 x 1 x *3]] }
-0x1884c78: {[CrossEntropyWithSoftmax Value[1]] }
-0x189b338: {[H1 Value[512 x 1 x *3]] [W0*features Gradient[512 x *3]] [W0-V Gradient[104 x 363]] }
-0x189b7b8: {[W0*features+B0 Gradient[512 x 1 x *3]] [W1*H1 Value[512 x 1 x *3]] [W1-V Gradient[128 x 512]] }
-0x189b978: {[W1*H1+B1 Value[512 x 1 x *3]] [W1-SVD Gradient[512 x 512]] [W2-U Gradient[132 x 32]] }
-0x189bb38: {[H2 Value[512 x 1 x *3]] [W1*H1 Gradient[512 x 1 x *3]] [W2-V Gradient[32 x 512]] }
-0x24af0e8: {[W2-V Value[32 x 512]] }
-0x24b2ac8: {[Prior Value[132]] }
-0x2502338: {[EvalClassificationError Value[1]] }
-0x28bb808: {[W2-U Value[132 x 32]] }
-0x28ed478: {[MVNormalizedFeatures Value[363 x *3]] }
-0x2900aa8: {[B1 Value[512 x 1]] }
-0x5b40e28: {[W2-SVD Value[132 x 512]] }
-0x5b40fe8: {[W0*features Value[512 x *3]] [W0-U Gradient[512 x 104]] }
-0x5b410a8: {[W1-SVD Value[512 x 512]] }
-0x5b41328: {[W0-SVD Value[512 x 363]] }
-0x5b45cb8: {[W1-U Value[512 x 128]] }
-0x5b51cc8: {[B0 Gradient[512 x 1]] [H1 Gradient[512 x 1 x *3]] [W1*H1+B1 Gradient[512 x 1 x *3]] [W2*H1 Value[132 x 1 x *3]] }
-0x5b51e88: {[HLast Value[132 x 1 x *3]] [W2-SVD Gradient[132 x 512]] }
-0x5b61528: {[B0 Value[512 x 1]] }
-0x5b8c778: {[W1-V Value[128 x 512]] }
-0x5b8ee28: {[CrossEntropyWithSoftmax Gradient[1]] }
-0x5b8efe8: {[B1 Gradient[512 x 1]] [H2 Gradient[512 x 1 x *3]] [HLast Gradient[132 x 1 x *3]] }
-0x5b8f1a8: {[W2*H1 Gradient[132 x 1 x *3]] }
-0x5b8fa58: {[W0-U Value[512 x 104]] }
-0x5b8fb58: {[W0-V Value[104 x 363]] }
-0x5b94138: {[labels Value[132 x *3]] }
-0x5b94558: {[MeanOfFeatures Value[363]] }
-0x5b94a08: {[InvStdOfFeatures Value[363]] }
+	{ HLast : [132 x 1 x *3]
+	  W2_U : [132 x 32] (gradient) }
+	{ H1 : [512 x 1 x *3]
+	  W0_SVD : [512 x *3] (gradient) }
+	{ W0*features : [104 x *3] (gradient)
+	  W0*features+B0 : [512 x 1 x *3] (gradient)
+	  W1*H1 : [128 x 1 x *3] }
+	{ W1_SVD : [512 x 1 x *3]
+	  W1_V : [128 x 512] (gradient) }
+	{ W1*H1+B1 : [512 x 1 x *3]
+	  W1_U : [512 x 128] (gradient) }
+	{ B0 : [512 x 1] (gradient)
+	  H1 : [512 x 1 x *3] (gradient)
+	  H2 : [512 x 1 x *3]
+	  W1_SVD : [512 x 1 x *3] (gradient) }
+	{ W1*H1 : [128 x 1 x *3] (gradient)
+	  W1*H1+B1 : [512 x 1 x *3] (gradient)
+	  W2*H1 : [32 x 1 x *3] }
+	{ W2_SVD : [132 x 1 x *3]
+	  W2_V : [32 x 512] (gradient) }
+	{ HLast : [132 x 1 x *3] (gradient)
+	  W2*H1 : [32 x 1 x *3] (gradient) }
+	{ B1 : [512 x 1] (gradient)
+	  H2 : [512 x 1 x *3] (gradient)
+	  W2_SVD : [132 x 1 x *3] (gradient) }
+	{ W0_SVD : [512 x *3]
+	  W0_V : [104 x 363] (gradient) }
+	{ W0*features+B0 : [512 x 1 x *3]
+	  W0_U : [512 x 104] (gradient) }
 
-05/03/2016 18:19:00: No PreCompute nodes found, skipping PreCompute step.
 
-05/03/2016 18:19:00: Starting Epoch 1: learning rate per sample = 0.000098  effective momentum = 0.656119  momentum as time constant = 2429.9 samples
+08/16/2016 10:01:21: Training 243836 parameters in 9 out of 9 parameter tensors and 21 nodes with gradient:
+
+08/16/2016 10:01:21: 	Node 'B0' (LearnableParameter operation) : [512 x 1]
+08/16/2016 10:01:21: 	Node 'B1' (LearnableParameter operation) : [512 x 1]
+08/16/2016 10:01:21: 	Node 'B2' (LearnableParameter operation) : [132 x 1]
+08/16/2016 10:01:21: 	Node 'W0_U' (LearnableParameter operation) : [512 x 104]
+08/16/2016 10:01:21: 	Node 'W0_V' (LearnableParameter operation) : [104 x 363]
+08/16/2016 10:01:21: 	Node 'W1_U' (LearnableParameter operation) : [512 x 128]
+08/16/2016 10:01:21: 	Node 'W1_V' (LearnableParameter operation) : [128 x 512]
+08/16/2016 10:01:21: 	Node 'W2_U' (LearnableParameter operation) : [132 x 32]
+08/16/2016 10:01:21: 	Node 'W2_V' (LearnableParameter operation) : [32 x 512]
+
+08/16/2016 10:01:21: No PreCompute nodes found, or all already computed. Skipping pre-computation step.
+
+08/16/2016 10:01:21: Starting Epoch 1: learning rate per sample = 0.000098  effective momentum = 0.656119  momentum as time constant = 2429.9 samples
 minibatchiterator: epoch 0: frames [0..20480] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
 requiredata: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
 
-05/03/2016 18:19:00: Starting minibatch loop.
-05/03/2016 18:19:00:  Epoch[ 1 of 2]-Minibatch[   1-  10, 50.00%]: CrossEntropyWithSoftmax = 1.86152649 * 10240; EvalClassificationError = 0.51777344 * 10240; time = 0.0381s; samplesPerSecond = 268470.5
-05/03/2016 18:19:01:  Epoch[ 1 of 2]-Minibatch[  11-  20, 100.00%]: CrossEntropyWithSoftmax = 1.81946220 * 10240; EvalClassificationError = 0.51054687 * 10240; time = 0.0341s; samplesPerSecond = 299976.6
-05/03/2016 18:19:01: Finished Epoch[ 1 of 2]: [Training] CrossEntropyWithSoftmax = 1.84049435 * 20480; EvalClassificationError = 0.51416016 * 20480; totalSamplesSeen = 20480; learningRatePerSample = 9.7656251e-05; epochTime=0.186662s
-05/03/2016 18:19:01: SGD: Saving checkpoint model '/tmp/cntk-test-20160503181449.303380/Speech_SVD@release_gpu/models/cntkSpeech.svd.dnn.1'
+08/16/2016 10:01:21: Starting minibatch loop.
+08/16/2016 10:01:21:  Epoch[ 1 of 2]-Minibatch[   1-  10, 50.00%]: CrossEntropyWithSoftmax = 1.86991444 * 10240; EvalErrorPrediction = 0.51210937 * 10240; time = 0.0338s; samplesPerSecond = 302654.1
+08/16/2016 10:01:21:  Epoch[ 1 of 2]-Minibatch[  11-  20, 100.00%]: CrossEntropyWithSoftmax = 1.81981297 * 10240; EvalErrorPrediction = 0.50917969 * 10240; time = 0.0288s; samplesPerSecond = 355518.5
+08/16/2016 10:01:21: Finished Epoch[ 1 of 2]: [Training] CrossEntropyWithSoftmax = 1.84486370 * 20480; EvalErrorPrediction = 0.51064453 * 20480; totalSamplesSeen = 20480; learningRatePerSample = 9.7656251e-05; epochTime=0.292218s
+08/16/2016 10:01:21: SGD: Saving checkpoint model '/tmp/cntk-test-20160816095713.701165/Speech_SVD@release_gpu/models/cntkSpeech.svd.dnn.1'
 
-05/03/2016 18:19:01: Starting Epoch 2: learning rate per sample = 0.000098  effective momentum = 0.656119  momentum as time constant = 2429.9 samples
+08/16/2016 10:01:21: Starting Epoch 2: learning rate per sample = 0.000098  effective momentum = 0.656119  momentum as time constant = 2429.9 samples
 minibatchiterator: epoch 1: frames [20480..40960] (first utterance at frame 20480), data subset 0 of 1, with 1 datapasses
 
-05/03/2016 18:19:01: Starting minibatch loop.
-05/03/2016 18:19:01:  Epoch[ 2 of 2]-Minibatch[   1-  10, 50.00%]: CrossEntropyWithSoftmax = 1.80154209 * 10240; EvalClassificationError = 0.50097656 * 10240; time = 0.0354s; samplesPerSecond = 289036.9
-05/03/2016 18:19:01:  Epoch[ 2 of 2]-Minibatch[  11-  20, 100.00%]: CrossEntropyWithSoftmax = 1.81663570 * 10240; EvalClassificationError = 0.50869141 * 10240; time = 0.0341s; samplesPerSecond = 300548.9
-05/03/2016 18:19:01: Finished Epoch[ 2 of 2]: [Training] CrossEntropyWithSoftmax = 1.80908890 * 20480; EvalClassificationError = 0.50483398 * 20480; totalSamplesSeen = 40960; learningRatePerSample = 9.7656251e-05; epochTime=0.073052s
-05/03/2016 18:19:01: SGD: Saving checkpoint model '/tmp/cntk-test-20160503181449.303380/Speech_SVD@release_gpu/models/cntkSpeech.svd.dnn'
-05/03/2016 18:19:01: CNTKCommandTrainEnd: SVDTrain
+08/16/2016 10:01:21: Starting minibatch loop.
+08/16/2016 10:01:21:  Epoch[ 2 of 2]-Minibatch[   1-  10, 50.00%]: CrossEntropyWithSoftmax = 1.83950176 * 10240; EvalErrorPrediction = 0.51162109 * 10240; time = 0.0302s; samplesPerSecond = 339365.0
+08/16/2016 10:01:21:  Epoch[ 2 of 2]-Minibatch[  11-  20, 100.00%]: CrossEntropyWithSoftmax = 1.82350254 * 10240; EvalErrorPrediction = 0.50566406 * 10240; time = 0.0289s; samplesPerSecond = 354902.4
+08/16/2016 10:01:21: Finished Epoch[ 2 of 2]: [Training] CrossEntropyWithSoftmax = 1.83150215 * 20480; EvalErrorPrediction = 0.50864258 * 20480; totalSamplesSeen = 40960; learningRatePerSample = 9.7656251e-05; epochTime=0.062712s
+08/16/2016 10:01:21: SGD: Saving checkpoint model '/tmp/cntk-test-20160816095713.701165/Speech_SVD@release_gpu/models/cntkSpeech.svd.dnn'
+08/16/2016 10:01:21: CNTKCommandTrainEnd: SVDTrain
 
-05/03/2016 18:19:01: Action "train" complete.
+08/16/2016 10:01:21: Action "train" complete.
 
-05/03/2016 18:19:01: __COMPLETED__
+08/16/2016 10:01:21: __COMPLETED__

@@ -105,7 +105,7 @@ MPI Rank 0:     traceLevel = 1
 MPI Rank 0:     BrainScriptNetworkBuilder = [
 MPI Rank 0:         layerSizes = 363:512:512:512:132
 MPI Rank 0:         trainingCriterion=CrossEntropyWithSoftmax
-MPI Rank 0:         evalCriterion=ClassificationError
+MPI Rank 0:         evalCriterion=ErrorPrediction
 MPI Rank 0:         layerTypes[i:1..Length(layerSizes)-2]=Sigmoid
 MPI Rank 0:         applyMeanVarNorm = true
 MPI Rank 0:         initValueScale=1.0
@@ -194,7 +194,7 @@ MPI Rank 0:     traceLevel = 1
 MPI Rank 0:     BrainScriptNetworkBuilder = [
 MPI Rank 0:         layerSizes = 363:512:512:512:132
 MPI Rank 0:         trainingCriterion=CrossEntropyWithSoftmax
-MPI Rank 0:         evalCriterion=ClassificationError
+MPI Rank 0:         evalCriterion=ErrorPrediction
 MPI Rank 0:         layerTypes[i:1..Length(layerSizes)-2]=Sigmoid
 MPI Rank 0:         applyMeanVarNorm = true
 MPI Rank 0:         initValueScale=1.0
@@ -289,7 +289,7 @@ MPI Rank 0:     traceLevel = 1
 MPI Rank 0:     BrainScriptNetworkBuilder = [
 MPI Rank 0:         layerSizes = 363:512:512:512:132
 MPI Rank 0:         trainingCriterion=CrossEntropyWithSoftmax
-MPI Rank 0:         evalCriterion=ClassificationError
+MPI Rank 0:         evalCriterion=ErrorPrediction
 MPI Rank 0:         layerTypes[i:1..Length(layerSizes)-2]=Sigmoid
 MPI Rank 0:         applyMeanVarNorm = true
 MPI Rank 0:         initValueScale=1.0
@@ -402,7 +402,7 @@ MPI Rank 0: Post-processing network...
 MPI Rank 0: 
 MPI Rank 0: 6 roots:
 MPI Rank 0: 	ce = CrossEntropyWithSoftmax()
-MPI Rank 0: 	err = ClassificationError()
+MPI Rank 0: 	err = ErrorPrediction()
 MPI Rank 0: 	featNorm.invStdDev = InvStdDev()
 MPI Rank 0: 	featNorm.mean = Mean()
 MPI Rank 0: 	logPrior._ = Mean()
@@ -443,7 +443,7 @@ MPI Rank 0: Validating --> outLayer.z.PlusArgs[0] = Times (outLayer.W, outLayer.
 MPI Rank 0: Validating --> outLayer.B = LearnableParameter() :  -> [132 x 1]
 MPI Rank 0: Validating --> outZ = Plus (outLayer.z.PlusArgs[0], outLayer.B) : [132 x 1 x *], [132 x 1] -> [132 x 1 x *]
 MPI Rank 0: Validating --> ce = CrossEntropyWithSoftmax (labels, outZ) : [132 x *], [132 x 1 x *] -> [1]
-MPI Rank 0: Validating --> err = ClassificationError (labels, outZ) : [132 x *], [132 x 1 x *] -> [1]
+MPI Rank 0: Validating --> err = ErrorPrediction (labels, outZ) : [132 x *], [132 x 1 x *] -> [1]
 MPI Rank 0: Validating --> logPrior._ = Mean (labels) : [132 x *] -> [132]
 MPI Rank 0: Validating --> logPrior = Log (logPrior._) : [132] -> [132]
 MPI Rank 0: Validating --> scaledLogLikelihood = Minus (outZ, logPrior) : [132 x 1 x *], [132] -> [132 x 1 x *]
@@ -465,7 +465,7 @@ MPI Rank 0: 08/16/2016 09:57:23: Training criterion node(s):
 MPI Rank 0: 08/16/2016 09:57:23: 	ce = CrossEntropyWithSoftmax
 MPI Rank 0: 
 MPI Rank 0: 08/16/2016 09:57:23: Evaluation criterion node(s):
-MPI Rank 0: 08/16/2016 09:57:23: 	err = ClassificationError
+MPI Rank 0: 08/16/2016 09:57:23: 	err = ErrorPrediction
 MPI Rank 0: 
 MPI Rank 0: 
 MPI Rank 0: Allocating matrices for forward and/or backward propagation.
@@ -658,7 +658,7 @@ MPI Rank 1:     traceLevel = 1
 MPI Rank 1:     BrainScriptNetworkBuilder = [
 MPI Rank 1:         layerSizes = 363:512:512:512:132
 MPI Rank 1:         trainingCriterion=CrossEntropyWithSoftmax
-MPI Rank 1:         evalCriterion=ClassificationError
+MPI Rank 1:         evalCriterion=ErrorPrediction
 MPI Rank 1:         layerTypes[i:1..Length(layerSizes)-2]=Sigmoid
 MPI Rank 1:         applyMeanVarNorm = true
 MPI Rank 1:         initValueScale=1.0
@@ -747,7 +747,7 @@ MPI Rank 1:     traceLevel = 1
 MPI Rank 1:     BrainScriptNetworkBuilder = [
 MPI Rank 1:         layerSizes = 363:512:512:512:132
 MPI Rank 1:         trainingCriterion=CrossEntropyWithSoftmax
-MPI Rank 1:         evalCriterion=ClassificationError
+MPI Rank 1:         evalCriterion=ErrorPrediction
 MPI Rank 1:         layerTypes[i:1..Length(layerSizes)-2]=Sigmoid
 MPI Rank 1:         applyMeanVarNorm = true
 MPI Rank 1:         initValueScale=1.0
@@ -842,7 +842,7 @@ MPI Rank 1:     traceLevel = 1
 MPI Rank 1:     BrainScriptNetworkBuilder = [
 MPI Rank 1:         layerSizes = 363:512:512:512:132
 MPI Rank 1:         trainingCriterion=CrossEntropyWithSoftmax
-MPI Rank 1:         evalCriterion=ClassificationError
+MPI Rank 1:         evalCriterion=ErrorPrediction
 MPI Rank 1:         layerTypes[i:1..Length(layerSizes)-2]=Sigmoid
 MPI Rank 1:         applyMeanVarNorm = true
 MPI Rank 1:         initValueScale=1.0
@@ -955,7 +955,7 @@ MPI Rank 1: Post-processing network...
 MPI Rank 1: 
 MPI Rank 1: 6 roots:
 MPI Rank 1: 	ce = CrossEntropyWithSoftmax()
-MPI Rank 1: 	err = ClassificationError()
+MPI Rank 1: 	err = ErrorPrediction()
 MPI Rank 1: 	featNorm.invStdDev = InvStdDev()
 MPI Rank 1: 	featNorm.mean = Mean()
 MPI Rank 1: 	logPrior._ = Mean()
@@ -996,7 +996,7 @@ MPI Rank 1: Validating --> outLayer.z.PlusArgs[0] = Times (outLayer.W, outLayer.
 MPI Rank 1: Validating --> outLayer.B = LearnableParameter() :  -> [132 x 1]
 MPI Rank 1: Validating --> outZ = Plus (outLayer.z.PlusArgs[0], outLayer.B) : [132 x 1 x *], [132 x 1] -> [132 x 1 x *]
 MPI Rank 1: Validating --> ce = CrossEntropyWithSoftmax (labels, outZ) : [132 x *], [132 x 1 x *] -> [1]
-MPI Rank 1: Validating --> err = ClassificationError (labels, outZ) : [132 x *], [132 x 1 x *] -> [1]
+MPI Rank 1: Validating --> err = ErrorPrediction (labels, outZ) : [132 x *], [132 x 1 x *] -> [1]
 MPI Rank 1: Validating --> logPrior._ = Mean (labels) : [132 x *] -> [132]
 MPI Rank 1: Validating --> logPrior = Log (logPrior._) : [132] -> [132]
 MPI Rank 1: Validating --> scaledLogLikelihood = Minus (outZ, logPrior) : [132 x 1 x *], [132] -> [132 x 1 x *]
@@ -1018,7 +1018,7 @@ MPI Rank 1: 08/16/2016 09:57:23: Training criterion node(s):
 MPI Rank 1: 08/16/2016 09:57:23: 	ce = CrossEntropyWithSoftmax
 MPI Rank 1: 
 MPI Rank 1: 08/16/2016 09:57:23: Evaluation criterion node(s):
-MPI Rank 1: 08/16/2016 09:57:23: 	err = ClassificationError
+MPI Rank 1: 08/16/2016 09:57:23: 	err = ErrorPrediction
 MPI Rank 1: 
 MPI Rank 1: 
 MPI Rank 1: Allocating matrices for forward and/or backward propagation.
@@ -1265,7 +1265,7 @@ MPI Rank 0:     traceLevel = 1
 MPI Rank 0:     BrainScriptNetworkBuilder = [
 MPI Rank 0:         layerSizes = 363:512:512:512:132
 MPI Rank 0:         trainingCriterion=CrossEntropyWithSoftmax
-MPI Rank 0:         evalCriterion=ClassificationError
+MPI Rank 0:         evalCriterion=ErrorPrediction
 MPI Rank 0:         layerTypes[i:1..Length(layerSizes)-2]=Sigmoid
 MPI Rank 0:         applyMeanVarNorm = true
 MPI Rank 0:         initValueScale=1.0
@@ -1354,7 +1354,7 @@ MPI Rank 0:     traceLevel = 1
 MPI Rank 0:     BrainScriptNetworkBuilder = [
 MPI Rank 0:         layerSizes = 363:512:512:512:132
 MPI Rank 0:         trainingCriterion=CrossEntropyWithSoftmax
-MPI Rank 0:         evalCriterion=ClassificationError
+MPI Rank 0:         evalCriterion=ErrorPrediction
 MPI Rank 0:         layerTypes[i:1..Length(layerSizes)-2]=Sigmoid
 MPI Rank 0:         applyMeanVarNorm = true
 MPI Rank 0:         initValueScale=1.0
@@ -1449,7 +1449,7 @@ MPI Rank 0:     traceLevel = 1
 MPI Rank 0:     BrainScriptNetworkBuilder = [
 MPI Rank 0:         layerSizes = 363:512:512:512:132
 MPI Rank 0:         trainingCriterion=CrossEntropyWithSoftmax
-MPI Rank 0:         evalCriterion=ClassificationError
+MPI Rank 0:         evalCriterion=ErrorPrediction
 MPI Rank 0:         layerTypes[i:1..Length(layerSizes)-2]=Sigmoid
 MPI Rank 0:         applyMeanVarNorm = true
 MPI Rank 0:         initValueScale=1.0
@@ -1544,7 +1544,7 @@ MPI Rank 0: Post-processing network...
 MPI Rank 0: 
 MPI Rank 0: 6 roots:
 MPI Rank 0: 	ce = CrossEntropyWithSoftmax()
-MPI Rank 0: 	err = ClassificationError()
+MPI Rank 0: 	err = ErrorPrediction()
 MPI Rank 0: 	featNorm.invStdDev = InvStdDev()
 MPI Rank 0: 	featNorm.mean = Mean()
 MPI Rank 0: 	logPrior._ = Mean()
@@ -1585,7 +1585,7 @@ MPI Rank 0: Validating --> outLayer.z.PlusArgs[0] = Times (outLayer.W, outLayer.
 MPI Rank 0: Validating --> outLayer.B = LearnableParameter() :  -> [132 x 1]
 MPI Rank 0: Validating --> outZ = Plus (outLayer.z.PlusArgs[0], outLayer.B) : [132 x 1 x *], [132 x 1] -> [132 x 1 x *]
 MPI Rank 0: Validating --> ce = CrossEntropyWithSoftmax (labels, outZ) : [132 x *], [132 x 1 x *] -> [1]
-MPI Rank 0: Validating --> err = ClassificationError (labels, outZ) : [132 x *], [132 x 1 x *] -> [1]
+MPI Rank 0: Validating --> err = ErrorPrediction (labels, outZ) : [132 x *], [132 x 1 x *] -> [1]
 MPI Rank 0: Validating --> logPrior._ = Mean (labels) : [132 x *] -> [132]
 MPI Rank 0: Validating --> logPrior = Log (logPrior._) : [132] -> [132]
 MPI Rank 0: Validating --> scaledLogLikelihood = Minus (outZ, logPrior) : [132 x 1 x *], [132] -> [132 x 1 x *]
@@ -1607,7 +1607,7 @@ MPI Rank 0: 08/16/2016 09:58:04: Training criterion node(s):
 MPI Rank 0: 08/16/2016 09:58:04: 	ce = CrossEntropyWithSoftmax
 MPI Rank 0: 
 MPI Rank 0: 08/16/2016 09:58:04: Evaluation criterion node(s):
-MPI Rank 0: 08/16/2016 09:58:04: 	err = ClassificationError
+MPI Rank 0: 08/16/2016 09:58:04: 	err = ErrorPrediction
 MPI Rank 0: 
 MPI Rank 0: 
 MPI Rank 0: Allocating matrices for forward and/or backward propagation.
@@ -1745,7 +1745,7 @@ MPI Rank 1:     traceLevel = 1
 MPI Rank 1:     BrainScriptNetworkBuilder = [
 MPI Rank 1:         layerSizes = 363:512:512:512:132
 MPI Rank 1:         trainingCriterion=CrossEntropyWithSoftmax
-MPI Rank 1:         evalCriterion=ClassificationError
+MPI Rank 1:         evalCriterion=ErrorPrediction
 MPI Rank 1:         layerTypes[i:1..Length(layerSizes)-2]=Sigmoid
 MPI Rank 1:         applyMeanVarNorm = true
 MPI Rank 1:         initValueScale=1.0
@@ -1834,7 +1834,7 @@ MPI Rank 1:     traceLevel = 1
 MPI Rank 1:     BrainScriptNetworkBuilder = [
 MPI Rank 1:         layerSizes = 363:512:512:512:132
 MPI Rank 1:         trainingCriterion=CrossEntropyWithSoftmax
-MPI Rank 1:         evalCriterion=ClassificationError
+MPI Rank 1:         evalCriterion=ErrorPrediction
 MPI Rank 1:         layerTypes[i:1..Length(layerSizes)-2]=Sigmoid
 MPI Rank 1:         applyMeanVarNorm = true
 MPI Rank 1:         initValueScale=1.0
@@ -1929,7 +1929,7 @@ MPI Rank 1:     traceLevel = 1
 MPI Rank 1:     BrainScriptNetworkBuilder = [
 MPI Rank 1:         layerSizes = 363:512:512:512:132
 MPI Rank 1:         trainingCriterion=CrossEntropyWithSoftmax
-MPI Rank 1:         evalCriterion=ClassificationError
+MPI Rank 1:         evalCriterion=ErrorPrediction
 MPI Rank 1:         layerTypes[i:1..Length(layerSizes)-2]=Sigmoid
 MPI Rank 1:         applyMeanVarNorm = true
 MPI Rank 1:         initValueScale=1.0
@@ -2024,7 +2024,7 @@ MPI Rank 1: Post-processing network...
 MPI Rank 1: 
 MPI Rank 1: 6 roots:
 MPI Rank 1: 	ce = CrossEntropyWithSoftmax()
-MPI Rank 1: 	err = ClassificationError()
+MPI Rank 1: 	err = ErrorPrediction()
 MPI Rank 1: 	featNorm.invStdDev = InvStdDev()
 MPI Rank 1: 	featNorm.mean = Mean()
 MPI Rank 1: 	logPrior._ = Mean()
@@ -2065,7 +2065,7 @@ MPI Rank 1: Validating --> outLayer.z.PlusArgs[0] = Times (outLayer.W, outLayer.
 MPI Rank 1: Validating --> outLayer.B = LearnableParameter() :  -> [132 x 1]
 MPI Rank 1: Validating --> outZ = Plus (outLayer.z.PlusArgs[0], outLayer.B) : [132 x 1 x *], [132 x 1] -> [132 x 1 x *]
 MPI Rank 1: Validating --> ce = CrossEntropyWithSoftmax (labels, outZ) : [132 x *], [132 x 1 x *] -> [1]
-MPI Rank 1: Validating --> err = ClassificationError (labels, outZ) : [132 x *], [132 x 1 x *] -> [1]
+MPI Rank 1: Validating --> err = ErrorPrediction (labels, outZ) : [132 x *], [132 x 1 x *] -> [1]
 MPI Rank 1: Validating --> logPrior._ = Mean (labels) : [132 x *] -> [132]
 MPI Rank 1: Validating --> logPrior = Log (logPrior._) : [132] -> [132]
 MPI Rank 1: Validating --> scaledLogLikelihood = Minus (outZ, logPrior) : [132 x 1 x *], [132] -> [132 x 1 x *]
@@ -2087,7 +2087,7 @@ MPI Rank 1: 08/16/2016 09:58:04: Training criterion node(s):
 MPI Rank 1: 08/16/2016 09:58:04: 	ce = CrossEntropyWithSoftmax
 MPI Rank 1: 
 MPI Rank 1: 08/16/2016 09:58:04: Evaluation criterion node(s):
-MPI Rank 1: 08/16/2016 09:58:04: 	err = ClassificationError
+MPI Rank 1: 08/16/2016 09:58:04: 	err = ErrorPrediction
 MPI Rank 1: 
 MPI Rank 1: 
 MPI Rank 1: Allocating matrices for forward and/or backward propagation.

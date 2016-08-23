@@ -264,8 +264,8 @@ Post-processing network...
 9 roots:
 	CE1 = CrossEntropyWithSoftmax()
 	CE2 = CrossEntropyWithSoftmax()
-	FER1 = ClassificationError()
-	FER2 = ClassificationError()
+	FER1 = ErrorPrediction()
+	FER2 = ErrorPrediction()
 	ObjFcn.O = Plus()
 	Prior = Mean()
 	ScaledLogLikelihood = Minus()
@@ -305,8 +305,8 @@ Validating --> BFF2.FF.T = Times (BFF2.W, L3.S) : [8 x 512], [512 x *] -> [8 x *
 Validating --> BFF2.B = LearnableParameter() :  -> [8]
 Validating --> BFF2.FF.P = Plus (BFF2.FF.T, BFF2.B) : [8 x *], [8] -> [8 x *]
 Validating --> CE2 = CrossEntropyWithSoftmax (regions, BFF2.FF.P) : [8 x *], [8 x *] -> [1]
-Validating --> FER1 = ClassificationError (labels, BFF1.FF.P) : [183 x *], [183 x *] -> [1]
-Validating --> FER2 = ClassificationError (regions, BFF2.FF.P) : [8 x *], [8 x *] -> [1]
+Validating --> FER1 = ErrorPrediction (labels, BFF1.FF.P) : [183 x *], [183 x *] -> [1]
+Validating --> FER2 = ErrorPrediction (regions, BFF2.FF.P) : [8 x *], [8 x *] -> [1]
 Validating --> ObjFcn.A1 = LearnableParameter() :  -> [1 x 1]
 Validating --> ObjFcn.T1 = Times (ObjFcn.A1, CE1) : [1 x 1], [1] -> [1]
 Validating --> ObjFcn.A2 = LearnableParameter() :  -> [1 x 1]
@@ -335,9 +335,9 @@ Post-processing network complete.
 05/17/2016 13:12:47: Evaluation criterion node(s):
 
 05/17/2016 13:12:47: 	CE1 = CrossEntropyWithSoftmax
-05/17/2016 13:12:47: 	FER1 = ClassificationError
+05/17/2016 13:12:47: 	FER1 = ErrorPrediction
 05/17/2016 13:12:47: 	CE2 = CrossEntropyWithSoftmax
-05/17/2016 13:12:47: 	FER2 = ClassificationError
+05/17/2016 13:12:47: 	FER2 = ErrorPrediction
 
 
 Allocating matrices for forward and/or backward propagation.

@@ -303,7 +303,7 @@ Post-processing network...
 3 roots:
 	AutoName217 = Times()
 	LossFunction = CrossEntropyWithSoftmax()
-	PredictionError = ClassificationError()
+	PredictionError = ErrorPrediction()
 
 Validating network. 36 nodes to process in pass 1.
 
@@ -342,7 +342,7 @@ Validating --> AutoName216 = Sigmoid (AutoName215) : [2048 x 1 x *8] -> [2048 x 
 Validating --> AutoName217 = Times (AutoName185, AutoName216) : [9304 x 2048], [2048 x 1 x *8] -> [9304 x 1 x *8]
 Validating --> AutoName218 = InputValue() :  -> [9304 x 1 x *8]
 Validating --> LossFunction = CrossEntropyWithSoftmax (AutoName218, AutoName217) : [9304 x 1 x *8], [9304 x 1 x *8] -> [1]
-Validating --> PredictionError = ClassificationError (AutoName218, AutoName217) : [9304 x 1 x *8], [9304 x 1 x *8] -> [1]
+Validating --> PredictionError = ErrorPrediction (AutoName218, AutoName217) : [9304 x 1 x *8], [9304 x 1 x *8] -> [1]
 
 Validating network. 21 nodes to process in pass 2.
 
@@ -405,7 +405,7 @@ Post-processing network...
 3 roots:
 	AutoName382 = Times()
 	LossFunction = CrossEntropyWithSoftmax()
-	PredictionError = ClassificationError()
+	PredictionError = ErrorPrediction()
 
 Validating network. 36 nodes to process in pass 1.
 
@@ -444,7 +444,7 @@ Validating --> AutoName381 = Sigmoid (AutoName380) : [2048 x 1 x *9] -> [2048 x 
 Validating --> AutoName382 = Times (AutoName350, AutoName381) : [9304 x 2048], [2048 x 1 x *9] -> [9304 x 1 x *9]
 Validating --> AutoName383 = InputValue() :  -> [9304 x 1 x *9]
 Validating --> LossFunction = CrossEntropyWithSoftmax (AutoName383, AutoName382) : [9304 x 1 x *9], [9304 x 1 x *9] -> [1]
-Validating --> PredictionError = ClassificationError (AutoName383, AutoName382) : [9304 x 1 x *9], [9304 x 1 x *9] -> [1]
+Validating --> PredictionError = ErrorPrediction (AutoName383, AutoName382) : [9304 x 1 x *9], [9304 x 1 x *9] -> [1]
 
 Validating network. 21 nodes to process in pass 2.
 
@@ -865,7 +865,7 @@ Post-processing network...
 	AutoName1611 = LearnableParameter()
 	AutoName1665 = Plus()
 	lossFunction = CrossEntropyWithSoftmax()
-	predictionError = ClassificationError()
+	predictionError = ErrorPrediction()
 
 Loop[0] --> Loop_AutoName1497 -> 35 nodes
 
@@ -1182,7 +1182,7 @@ Validating --> AutoName1664 = LearnableParameter() :  -> [9304 x 1]
 Validating --> AutoName1665 = Plus (AutoName1663, AutoName1664) : [9304 x 1 x *16], [9304 x 1] -> [9304 x 1 x *16]
 Validating --> AutoName1666 = InputValue() :  -> [9304 x 1 x *16]
 Validating --> lossFunction = CrossEntropyWithSoftmax (AutoName1666, AutoName1665) : [9304 x 1 x *16], [9304 x 1 x *16] -> [1]
-Validating --> predictionError = ClassificationError (AutoName1666, AutoName1665) : [9304 x 1 x *16], [9304 x 1 x *16] -> [1]
+Validating --> predictionError = ErrorPrediction (AutoName1666, AutoName1665) : [9304 x 1 x *16], [9304 x 1 x *16] -> [1]
 
 Validating network. 180 nodes to process in pass 2.
 
@@ -1591,7 +1591,7 @@ Post-processing network...
 	AutoName5595 = LearnableParameter()
 	AutoName5649 = Plus()
 	lossFunction = CrossEntropyWithSoftmax()
-	predictionError = ClassificationError()
+	predictionError = ErrorPrediction()
 
 Loop[0] --> Loop_AutoName5481 -> 35 nodes
 
@@ -1908,7 +1908,7 @@ Validating --> AutoName5648 = LearnableParameter() :  -> [9304 x 1]
 Validating --> AutoName5649 = Plus (AutoName5647, AutoName5648) : [9304 x 1 x *17], [9304 x 1] -> [9304 x 1 x *17]
 Validating --> AutoName5650 = InputValue() :  -> [9304 x 1 x *17]
 Validating --> lossFunction = CrossEntropyWithSoftmax (AutoName5650, AutoName5649) : [9304 x 1 x *17], [9304 x 1 x *17] -> [1]
-Validating --> predictionError = ClassificationError (AutoName5650, AutoName5649) : [9304 x 1 x *17], [9304 x 1 x *17] -> [1]
+Validating --> predictionError = ErrorPrediction (AutoName5650, AutoName5649) : [9304 x 1 x *17], [9304 x 1 x *17] -> [1]
 
 Validating network. 180 nodes to process in pass 2.
 

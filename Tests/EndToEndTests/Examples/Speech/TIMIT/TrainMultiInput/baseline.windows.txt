@@ -267,7 +267,7 @@ Post-processing network...
 
 8 roots:
 	CE.SM = CrossEntropyWithSoftmax()
-	FER = ClassificationError()
+	FER = ErrorPrediction()
 	Prior = Mean()
 	ScaledLogLikelihood = Minus()
 	featInvStd1 = InvStdDev()
@@ -309,7 +309,7 @@ Validating --> CE.BFF.FF.T = Times (CE.BFF.W, L3.S) : [183 x 512], [512 x *] -> 
 Validating --> CE.BFF.B = LearnableParameter() :  -> [183]
 Validating --> CE.BFF.FF.P = Plus (CE.BFF.FF.T, CE.BFF.B) : [183 x *], [183] -> [183 x *]
 Validating --> CE.SM = CrossEntropyWithSoftmax (labels, CE.BFF.FF.P) : [183 x *], [183 x *] -> [1]
-Validating --> FER = ClassificationError (labels, CE.BFF.FF.P) : [183 x *], [183 x *] -> [1]
+Validating --> FER = ErrorPrediction (labels, CE.BFF.FF.P) : [183 x *], [183 x *] -> [1]
 Validating --> Prior = Mean (labels) : [183 x *] -> [183]
 Validating --> LogPrior = Log (Prior) : [183] -> [183]
 Validating --> ScaledLogLikelihood = Minus (CE.BFF.FF.P, LogPrior) : [183 x *], [183] -> [183 x *]
@@ -332,7 +332,7 @@ Post-processing network complete.
 
 05/18/2016 01:01:36: Evaluation criterion node(s):
 
-05/18/2016 01:01:36: 	FER = ClassificationError
+05/18/2016 01:01:36: 	FER = ErrorPrediction
 
 
 Allocating matrices for forward and/or backward propagation.

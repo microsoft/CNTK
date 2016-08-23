@@ -395,7 +395,7 @@ Post-processing network...
 
 3 roots:
 	ce = CrossEntropyWithSoftmax()
-	err = ClassificationError()
+	err = ErrorPrediction()
 	scaledLogLikelihood = Minus()
 
 Validating network. 19 nodes to process in pass 1.
@@ -415,7 +415,7 @@ Validating --> OL.t = Times (OL.W, HL1.y) : [132 x 512], [512 x 1 x *] -> [132 x
 Validating --> OL.b = LearnableParameter() :  -> [132 x 1]
 Validating --> OL.z = Plus (OL.t, OL.b) : [132 x 1 x *], [132 x 1] -> [132 x 1 x *]
 Validating --> ce = CrossEntropyWithSoftmax (labels, OL.z) : [132 x *], [132 x 1 x *] -> [1]
-Validating --> err = ClassificationError (labels, OL.z) : [132 x *], [132 x 1 x *] -> [1]
+Validating --> err = ErrorPrediction (labels, OL.z) : [132 x *], [132 x 1 x *] -> [1]
 Validating --> globalPrior = LearnableParameter() :  -> [132 x 1]
 Validating --> logPrior = Log (globalPrior) : [132 x 1] -> [132 x 1]
 Validating --> scaledLogLikelihood = Minus (OL.z, logPrior) : [132 x 1 x *], [132 x 1] -> [132 x 1 x *]
@@ -437,7 +437,7 @@ Post-processing network complete.
 08/16/2016 09:57:16: 	ce = CrossEntropyWithSoftmax
 
 08/16/2016 09:57:16: Evaluation criterion node(s):
-08/16/2016 09:57:16: 	err = ClassificationError
+08/16/2016 09:57:16: 	err = ErrorPrediction
 
 
 Allocating matrices for forward and/or backward propagation.
@@ -560,7 +560,7 @@ Post-processing network...
 
 3 roots:
 	ce = CrossEntropyWithSoftmax()
-	err = ClassificationError()
+	err = ErrorPrediction()
 	scaledLogLikelihood = Minus()
 
 Validating network. 19 nodes to process in pass 1.
@@ -580,7 +580,7 @@ Validating --> OL.t = Times (OL.W, HL1.y) : [132 x 512], [512 x 1 x *1] -> [132 
 Validating --> OL.b = LearnableParameter() :  -> [132 x 1]
 Validating --> OL.z = Plus (OL.t, OL.b) : [132 x 1 x *1], [132 x 1] -> [132 x 1 x *1]
 Validating --> ce = CrossEntropyWithSoftmax (labels, OL.z) : [132 x *1], [132 x 1 x *1] -> [1]
-Validating --> err = ClassificationError (labels, OL.z) : [132 x *1], [132 x 1 x *1] -> [1]
+Validating --> err = ErrorPrediction (labels, OL.z) : [132 x *1], [132 x 1 x *1] -> [1]
 Validating --> globalPrior = LearnableParameter() :  -> [132 x 1]
 Validating --> logPrior = Log (globalPrior) : [132 x 1] -> [132 x 1]
 Validating --> scaledLogLikelihood = Minus (OL.z, logPrior) : [132 x 1 x *1], [132 x 1] -> [132 x 1 x *1]
@@ -605,7 +605,7 @@ Post-processing network...
 
 3 roots:
 	ce = CrossEntropyWithSoftmax()
-	err = ClassificationError()
+	err = ErrorPrediction()
 	scaledLogLikelihood = Minus()
 
 Validating network. 24 nodes to process in pass 1.
@@ -630,7 +630,7 @@ Validating --> OL.t = Times (OL.W, HL2.y) : [132 x 512], [512 x 1 x *1] -> [132 
 Validating --> OL.b = LearnableParameter() :  -> [132 x 1]
 Validating --> OL.z = Plus (OL.t, OL.b) : [132 x 1 x *1], [132 x 1] -> [132 x 1 x *1]
 Validating --> ce = CrossEntropyWithSoftmax (labels, OL.z) : [132 x *1], [132 x 1 x *1] -> [1]
-Validating --> err = ClassificationError (labels, OL.z) : [132 x *1], [132 x 1 x *1] -> [1]
+Validating --> err = ErrorPrediction (labels, OL.z) : [132 x *1], [132 x 1 x *1] -> [1]
 Validating --> globalPrior = LearnableParameter() :  -> [132 x 1]
 Validating --> logPrior = Log (globalPrior) : [132 x 1] -> [132 x 1]
 Validating --> scaledLogLikelihood = Minus (OL.z, logPrior) : [132 x 1 x *1], [132 x 1] -> [132 x 1 x *1]
@@ -671,7 +671,7 @@ Post-processing network...
 
 3 roots:
 	ce = CrossEntropyWithSoftmax()
-	err = ClassificationError()
+	err = ErrorPrediction()
 	scaledLogLikelihood = Minus()
 
 Validating network. 24 nodes to process in pass 1.
@@ -696,7 +696,7 @@ Validating --> OL.t = Times (OL.W, HL2.y) : [132 x 512], [512 x 1 x *3] -> [132 
 Validating --> OL.b = LearnableParameter() :  -> [132 x 1]
 Validating --> OL.z = Plus (OL.t, OL.b) : [132 x 1 x *3], [132 x 1] -> [132 x 1 x *3]
 Validating --> ce = CrossEntropyWithSoftmax (labels, OL.z) : [132 x *3], [132 x 1 x *3] -> [1]
-Validating --> err = ClassificationError (labels, OL.z) : [132 x *3], [132 x 1 x *3] -> [1]
+Validating --> err = ErrorPrediction (labels, OL.z) : [132 x *3], [132 x 1 x *3] -> [1]
 Validating --> globalPrior = LearnableParameter() :  -> [132 x 1]
 Validating --> logPrior = Log (globalPrior) : [132 x 1] -> [132 x 1]
 Validating --> scaledLogLikelihood = Minus (OL.z, logPrior) : [132 x 1 x *3], [132 x 1] -> [132 x 1 x *3]
@@ -718,7 +718,7 @@ Post-processing network complete.
 08/16/2016 09:57:17: 	ce = CrossEntropyWithSoftmax
 
 08/16/2016 09:57:17: Evaluation criterion node(s):
-08/16/2016 09:57:17: 	err = ClassificationError
+08/16/2016 09:57:17: 	err = ErrorPrediction
 
 
 Allocating matrices for forward and/or backward propagation.
@@ -851,7 +851,7 @@ Post-processing network...
 
 3 roots:
 	ce = CrossEntropyWithSoftmax()
-	err = ClassificationError()
+	err = ErrorPrediction()
 	scaledLogLikelihood = Minus()
 
 Validating network. 24 nodes to process in pass 1.
@@ -876,7 +876,7 @@ Validating --> OL.t = Times (OL.W, HL2.y) : [132 x 512], [512 x 1 x *4] -> [132 
 Validating --> OL.b = LearnableParameter() :  -> [132 x 1]
 Validating --> OL.z = Plus (OL.t, OL.b) : [132 x 1 x *4], [132 x 1] -> [132 x 1 x *4]
 Validating --> ce = CrossEntropyWithSoftmax (labels, OL.z) : [132 x *4], [132 x 1 x *4] -> [1]
-Validating --> err = ClassificationError (labels, OL.z) : [132 x *4], [132 x 1 x *4] -> [1]
+Validating --> err = ErrorPrediction (labels, OL.z) : [132 x *4], [132 x 1 x *4] -> [1]
 Validating --> globalPrior = LearnableParameter() :  -> [132 x 1]
 Validating --> logPrior = Log (globalPrior) : [132 x 1] -> [132 x 1]
 Validating --> scaledLogLikelihood = Minus (OL.z, logPrior) : [132 x 1 x *4], [132 x 1] -> [132 x 1 x *4]
@@ -901,7 +901,7 @@ Post-processing network...
 
 3 roots:
 	ce = CrossEntropyWithSoftmax()
-	err = ClassificationError()
+	err = ErrorPrediction()
 	scaledLogLikelihood = Minus()
 
 Validating network. 29 nodes to process in pass 1.
@@ -931,7 +931,7 @@ Validating --> OL.t = Times (OL.W, HL3.y) : [132 x 512], [512 x 1 x *4] -> [132 
 Validating --> OL.b = LearnableParameter() :  -> [132 x 1]
 Validating --> OL.z = Plus (OL.t, OL.b) : [132 x 1 x *4], [132 x 1] -> [132 x 1 x *4]
 Validating --> ce = CrossEntropyWithSoftmax (labels, OL.z) : [132 x *4], [132 x 1 x *4] -> [1]
-Validating --> err = ClassificationError (labels, OL.z) : [132 x *4], [132 x 1 x *4] -> [1]
+Validating --> err = ErrorPrediction (labels, OL.z) : [132 x *4], [132 x 1 x *4] -> [1]
 Validating --> globalPrior = LearnableParameter() :  -> [132 x 1]
 Validating --> logPrior = Log (globalPrior) : [132 x 1] -> [132 x 1]
 Validating --> scaledLogLikelihood = Minus (OL.z, logPrior) : [132 x 1 x *4], [132 x 1] -> [132 x 1 x *4]
@@ -972,7 +972,7 @@ Post-processing network...
 
 3 roots:
 	ce = CrossEntropyWithSoftmax()
-	err = ClassificationError()
+	err = ErrorPrediction()
 	scaledLogLikelihood = Minus()
 
 Validating network. 29 nodes to process in pass 1.
@@ -1002,7 +1002,7 @@ Validating --> OL.t = Times (OL.W, HL3.y) : [132 x 512], [512 x 1 x *6] -> [132 
 Validating --> OL.b = LearnableParameter() :  -> [132 x 1]
 Validating --> OL.z = Plus (OL.t, OL.b) : [132 x 1 x *6], [132 x 1] -> [132 x 1 x *6]
 Validating --> ce = CrossEntropyWithSoftmax (labels, OL.z) : [132 x *6], [132 x 1 x *6] -> [1]
-Validating --> err = ClassificationError (labels, OL.z) : [132 x *6], [132 x 1 x *6] -> [1]
+Validating --> err = ErrorPrediction (labels, OL.z) : [132 x *6], [132 x 1 x *6] -> [1]
 Validating --> globalPrior = LearnableParameter() :  -> [132 x 1]
 Validating --> logPrior = Log (globalPrior) : [132 x 1] -> [132 x 1]
 Validating --> scaledLogLikelihood = Minus (OL.z, logPrior) : [132 x 1 x *6], [132 x 1] -> [132 x 1 x *6]
@@ -1024,7 +1024,7 @@ Post-processing network complete.
 08/16/2016 09:57:18: 	ce = CrossEntropyWithSoftmax
 
 08/16/2016 09:57:18: Evaluation criterion node(s):
-08/16/2016 09:57:18: 	err = ClassificationError
+08/16/2016 09:57:18: 	err = ErrorPrediction
 
 
 Allocating matrices for forward and/or backward propagation.
