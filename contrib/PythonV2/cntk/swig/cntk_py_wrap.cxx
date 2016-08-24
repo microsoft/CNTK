@@ -19400,6 +19400,594 @@ fail:
 }
 
 
+SWIGINTERN PyObject *_wrap_new_ParameterFloat__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  CNTK::NDShape *arg1 = 0 ;
+  float arg2 ;
+  CNTK::DeviceDescriptor *arg3 = 0 ;
+  std::wstring *arg4 = 0 ;
+  float val2 ;
+  int ecode2 = 0 ;
+  void *argp3 = 0 ;
+  int res3 = 0 ;
+  int res4 = SWIG_OLDOBJ ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  PyObject * obj2 = 0 ;
+  PyObject * obj3 = 0 ;
+  CNTK::Parameter *result = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OOOO:new_ParameterFloat",&obj0,&obj1,&obj2,&obj3)) SWIG_fail;
+  {
+    if (PyTuple_Check(obj0)) {
+      std::vector<size_t> dimensions;;
+      size_t num_axes = PyTuple_Size(obj0);
+      for (int i=0; i<num_axes; i++)
+      dimensions.push_back(PyLong_AsLong(PyTuple_GET_ITEM(obj0, i)));
+      
+      // TODO cleans this up?
+      arg1 = new CNTK::NDShape(dimensions);
+    } else {
+      SWIG_exception(SWIG_TypeError, "tuple expected");
+    }
+  }
+  ecode2 = SWIG_AsVal_float(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "new_ParameterFloat" "', argument " "2"" of type '" "float""'");
+  } 
+  arg2 = static_cast< float >(val2);
+  res3 = SWIG_ConvertPtr(obj2, &argp3, SWIGTYPE_p_CNTK__DeviceDescriptor,  0  | 0);
+  if (!SWIG_IsOK(res3)) {
+    SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "new_ParameterFloat" "', argument " "3"" of type '" "CNTK::DeviceDescriptor const &""'"); 
+  }
+  if (!argp3) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "new_ParameterFloat" "', argument " "3"" of type '" "CNTK::DeviceDescriptor const &""'"); 
+  }
+  arg3 = reinterpret_cast< CNTK::DeviceDescriptor * >(argp3);
+  {
+    std::wstring *ptr = (std::wstring *)0;
+    res4 = SWIG_AsPtr_std_wstring(obj3, &ptr);
+    if (!SWIG_IsOK(res4)) {
+      SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "new_ParameterFloat" "', argument " "4"" of type '" "std::wstring const &""'"); 
+    }
+    if (!ptr) {
+      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "new_ParameterFloat" "', argument " "4"" of type '" "std::wstring const &""'"); 
+    }
+    arg4 = ptr;
+  }
+  {
+    try {
+      result = (CNTK::Parameter *)new CNTK::Parameter((CNTK::NDShape const &)*arg1,arg2,(CNTK::DeviceDescriptor const &)*arg3,(std::wstring const &)*arg4); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__Parameter, SWIG_POINTER_OWN |  0 );
+  if (SWIG_IsNewObj(res4)) delete arg4;
+  return resultobj;
+fail:
+  if (SWIG_IsNewObj(res4)) delete arg4;
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_new_ParameterFloat__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  CNTK::NDShape *arg1 = 0 ;
+  float arg2 ;
+  CNTK::DeviceDescriptor *arg3 = 0 ;
+  float val2 ;
+  int ecode2 = 0 ;
+  void *argp3 = 0 ;
+  int res3 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  PyObject * obj2 = 0 ;
+  CNTK::Parameter *result = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OOO:new_ParameterFloat",&obj0,&obj1,&obj2)) SWIG_fail;
+  {
+    if (PyTuple_Check(obj0)) {
+      std::vector<size_t> dimensions;;
+      size_t num_axes = PyTuple_Size(obj0);
+      for (int i=0; i<num_axes; i++)
+      dimensions.push_back(PyLong_AsLong(PyTuple_GET_ITEM(obj0, i)));
+      
+      // TODO cleans this up?
+      arg1 = new CNTK::NDShape(dimensions);
+    } else {
+      SWIG_exception(SWIG_TypeError, "tuple expected");
+    }
+  }
+  ecode2 = SWIG_AsVal_float(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "new_ParameterFloat" "', argument " "2"" of type '" "float""'");
+  } 
+  arg2 = static_cast< float >(val2);
+  res3 = SWIG_ConvertPtr(obj2, &argp3, SWIGTYPE_p_CNTK__DeviceDescriptor,  0  | 0);
+  if (!SWIG_IsOK(res3)) {
+    SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "new_ParameterFloat" "', argument " "3"" of type '" "CNTK::DeviceDescriptor const &""'"); 
+  }
+  if (!argp3) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "new_ParameterFloat" "', argument " "3"" of type '" "CNTK::DeviceDescriptor const &""'"); 
+  }
+  arg3 = reinterpret_cast< CNTK::DeviceDescriptor * >(argp3);
+  {
+    try {
+      result = (CNTK::Parameter *)new CNTK::Parameter((CNTK::NDShape const &)*arg1,arg2,(CNTK::DeviceDescriptor const &)*arg3); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__Parameter, 0 |  0 );
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_new_ParameterFloat__SWIG_2(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  CNTK::NDShape *arg1 = 0 ;
+  float arg2 ;
+  float val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  CNTK::Parameter *result = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:new_ParameterFloat",&obj0,&obj1)) SWIG_fail;
+  {
+    if (PyTuple_Check(obj0)) {
+      std::vector<size_t> dimensions;;
+      size_t num_axes = PyTuple_Size(obj0);
+      for (int i=0; i<num_axes; i++)
+      dimensions.push_back(PyLong_AsLong(PyTuple_GET_ITEM(obj0, i)));
+      
+      // TODO cleans this up?
+      arg1 = new CNTK::NDShape(dimensions);
+    } else {
+      SWIG_exception(SWIG_TypeError, "tuple expected");
+    }
+  }
+  ecode2 = SWIG_AsVal_float(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "new_ParameterFloat" "', argument " "2"" of type '" "float""'");
+  } 
+  arg2 = static_cast< float >(val2);
+  {
+    try {
+      result = (CNTK::Parameter *)new CNTK::Parameter((CNTK::NDShape const &)*arg1,arg2); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__Parameter, 0 |  0 );
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_new_ParameterFloat(PyObject *self, PyObject *args) {
+  Py_ssize_t argc;
+  PyObject *argv[5] = {
+    0
+  };
+  Py_ssize_t ii;
+  
+  if (!PyTuple_Check(args)) SWIG_fail;
+  argc = args ? PyObject_Length(args) : 0;
+  for (ii = 0; (ii < 4) && (ii < argc); ii++) {
+    argv[ii] = PyTuple_GET_ITEM(args,ii);
+  }
+  if (argc == 2) {
+    int _v;
+    {
+      // '1000' is the typecheck precedence code. It means: check after basic
+      // types, but before arrays. See: http://www.swig.org/Doc1.3/Typemaps.html#Typemaps_overloading
+      _v = PyTuple_Check(argv[0]) ? 1 : 0;
+    }
+    if (_v) {
+      {
+        int res = SWIG_AsVal_float(argv[1], NULL);
+        _v = SWIG_CheckState(res);
+      }
+      if (_v) {
+        return _wrap_new_ParameterFloat__SWIG_2(self, args);
+      }
+    }
+  }
+  if (argc == 3) {
+    int _v;
+    {
+      // '1000' is the typecheck precedence code. It means: check after basic
+      // types, but before arrays. See: http://www.swig.org/Doc1.3/Typemaps.html#Typemaps_overloading
+      _v = PyTuple_Check(argv[0]) ? 1 : 0;
+    }
+    if (_v) {
+      {
+        int res = SWIG_AsVal_float(argv[1], NULL);
+        _v = SWIG_CheckState(res);
+      }
+      if (_v) {
+        int res = SWIG_ConvertPtr(argv[2], 0, SWIGTYPE_p_CNTK__DeviceDescriptor, 0);
+        _v = SWIG_CheckState(res);
+        if (_v) {
+          return _wrap_new_ParameterFloat__SWIG_1(self, args);
+        }
+      }
+    }
+  }
+  if (argc == 4) {
+    int _v;
+    {
+      // '1000' is the typecheck precedence code. It means: check after basic
+      // types, but before arrays. See: http://www.swig.org/Doc1.3/Typemaps.html#Typemaps_overloading
+      _v = PyTuple_Check(argv[0]) ? 1 : 0;
+    }
+    if (_v) {
+      {
+        int res = SWIG_AsVal_float(argv[1], NULL);
+        _v = SWIG_CheckState(res);
+      }
+      if (_v) {
+        int res = SWIG_ConvertPtr(argv[2], 0, SWIGTYPE_p_CNTK__DeviceDescriptor, 0);
+        _v = SWIG_CheckState(res);
+        if (_v) {
+          int res = SWIG_AsPtr_std_wstring(argv[3], (std::wstring**)(0));
+          _v = SWIG_CheckState(res);
+          if (_v) {
+            return _wrap_new_ParameterFloat__SWIG_0(self, args);
+          }
+        }
+      }
+    }
+  }
+  
+fail:
+  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'new_ParameterFloat'.\n"
+    "  Possible C/C++ prototypes are:\n"
+    "    CNTK::Parameter::Parameter(CNTK::NDShape const &,float,CNTK::DeviceDescriptor const &,std::wstring const &)\n"
+    "    CNTK::Parameter::Parameter(CNTK::NDShape const &,float,CNTK::DeviceDescriptor const &)\n"
+    "    CNTK::Parameter::Parameter(CNTK::NDShape const &,float)\n");
+  return 0;
+}
+
+
+SWIGINTERN PyObject *_wrap_new_ParameterDouble__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  CNTK::NDShape *arg1 = 0 ;
+  double arg2 ;
+  CNTK::DeviceDescriptor *arg3 = 0 ;
+  std::wstring *arg4 = 0 ;
+  double val2 ;
+  int ecode2 = 0 ;
+  void *argp3 = 0 ;
+  int res3 = 0 ;
+  int res4 = SWIG_OLDOBJ ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  PyObject * obj2 = 0 ;
+  PyObject * obj3 = 0 ;
+  CNTK::Parameter *result = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OOOO:new_ParameterDouble",&obj0,&obj1,&obj2,&obj3)) SWIG_fail;
+  {
+    if (PyTuple_Check(obj0)) {
+      std::vector<size_t> dimensions;;
+      size_t num_axes = PyTuple_Size(obj0);
+      for (int i=0; i<num_axes; i++)
+      dimensions.push_back(PyLong_AsLong(PyTuple_GET_ITEM(obj0, i)));
+      
+      // TODO cleans this up?
+      arg1 = new CNTK::NDShape(dimensions);
+    } else {
+      SWIG_exception(SWIG_TypeError, "tuple expected");
+    }
+  }
+  ecode2 = SWIG_AsVal_double(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "new_ParameterDouble" "', argument " "2"" of type '" "double""'");
+  } 
+  arg2 = static_cast< double >(val2);
+  res3 = SWIG_ConvertPtr(obj2, &argp3, SWIGTYPE_p_CNTK__DeviceDescriptor,  0  | 0);
+  if (!SWIG_IsOK(res3)) {
+    SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "new_ParameterDouble" "', argument " "3"" of type '" "CNTK::DeviceDescriptor const &""'"); 
+  }
+  if (!argp3) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "new_ParameterDouble" "', argument " "3"" of type '" "CNTK::DeviceDescriptor const &""'"); 
+  }
+  arg3 = reinterpret_cast< CNTK::DeviceDescriptor * >(argp3);
+  {
+    std::wstring *ptr = (std::wstring *)0;
+    res4 = SWIG_AsPtr_std_wstring(obj3, &ptr);
+    if (!SWIG_IsOK(res4)) {
+      SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "new_ParameterDouble" "', argument " "4"" of type '" "std::wstring const &""'"); 
+    }
+    if (!ptr) {
+      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "new_ParameterDouble" "', argument " "4"" of type '" "std::wstring const &""'"); 
+    }
+    arg4 = ptr;
+  }
+  {
+    try {
+      result = (CNTK::Parameter *)new CNTK::Parameter((CNTK::NDShape const &)*arg1,arg2,(CNTK::DeviceDescriptor const &)*arg3,(std::wstring const &)*arg4); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__Parameter, SWIG_POINTER_OWN |  0 );
+  if (SWIG_IsNewObj(res4)) delete arg4;
+  return resultobj;
+fail:
+  if (SWIG_IsNewObj(res4)) delete arg4;
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_new_ParameterDouble__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  CNTK::NDShape *arg1 = 0 ;
+  double arg2 ;
+  CNTK::DeviceDescriptor *arg3 = 0 ;
+  double val2 ;
+  int ecode2 = 0 ;
+  void *argp3 = 0 ;
+  int res3 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  PyObject * obj2 = 0 ;
+  CNTK::Parameter *result = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OOO:new_ParameterDouble",&obj0,&obj1,&obj2)) SWIG_fail;
+  {
+    if (PyTuple_Check(obj0)) {
+      std::vector<size_t> dimensions;;
+      size_t num_axes = PyTuple_Size(obj0);
+      for (int i=0; i<num_axes; i++)
+      dimensions.push_back(PyLong_AsLong(PyTuple_GET_ITEM(obj0, i)));
+      
+      // TODO cleans this up?
+      arg1 = new CNTK::NDShape(dimensions);
+    } else {
+      SWIG_exception(SWIG_TypeError, "tuple expected");
+    }
+  }
+  ecode2 = SWIG_AsVal_double(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "new_ParameterDouble" "', argument " "2"" of type '" "double""'");
+  } 
+  arg2 = static_cast< double >(val2);
+  res3 = SWIG_ConvertPtr(obj2, &argp3, SWIGTYPE_p_CNTK__DeviceDescriptor,  0  | 0);
+  if (!SWIG_IsOK(res3)) {
+    SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "new_ParameterDouble" "', argument " "3"" of type '" "CNTK::DeviceDescriptor const &""'"); 
+  }
+  if (!argp3) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "new_ParameterDouble" "', argument " "3"" of type '" "CNTK::DeviceDescriptor const &""'"); 
+  }
+  arg3 = reinterpret_cast< CNTK::DeviceDescriptor * >(argp3);
+  {
+    try {
+      result = (CNTK::Parameter *)new CNTK::Parameter((CNTK::NDShape const &)*arg1,arg2,(CNTK::DeviceDescriptor const &)*arg3); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__Parameter, 0 |  0 );
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_new_ParameterDouble__SWIG_2(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  CNTK::NDShape *arg1 = 0 ;
+  double arg2 ;
+  double val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  CNTK::Parameter *result = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:new_ParameterDouble",&obj0,&obj1)) SWIG_fail;
+  {
+    if (PyTuple_Check(obj0)) {
+      std::vector<size_t> dimensions;;
+      size_t num_axes = PyTuple_Size(obj0);
+      for (int i=0; i<num_axes; i++)
+      dimensions.push_back(PyLong_AsLong(PyTuple_GET_ITEM(obj0, i)));
+      
+      // TODO cleans this up?
+      arg1 = new CNTK::NDShape(dimensions);
+    } else {
+      SWIG_exception(SWIG_TypeError, "tuple expected");
+    }
+  }
+  ecode2 = SWIG_AsVal_double(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "new_ParameterDouble" "', argument " "2"" of type '" "double""'");
+  } 
+  arg2 = static_cast< double >(val2);
+  {
+    try {
+      result = (CNTK::Parameter *)new CNTK::Parameter((CNTK::NDShape const &)*arg1,arg2); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__Parameter, 0 |  0 );
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_new_ParameterDouble(PyObject *self, PyObject *args) {
+  Py_ssize_t argc;
+  PyObject *argv[5] = {
+    0
+  };
+  Py_ssize_t ii;
+  
+  if (!PyTuple_Check(args)) SWIG_fail;
+  argc = args ? PyObject_Length(args) : 0;
+  for (ii = 0; (ii < 4) && (ii < argc); ii++) {
+    argv[ii] = PyTuple_GET_ITEM(args,ii);
+  }
+  if (argc == 2) {
+    int _v;
+    {
+      // '1000' is the typecheck precedence code. It means: check after basic
+      // types, but before arrays. See: http://www.swig.org/Doc1.3/Typemaps.html#Typemaps_overloading
+      _v = PyTuple_Check(argv[0]) ? 1 : 0;
+    }
+    if (_v) {
+      {
+        int res = SWIG_AsVal_double(argv[1], NULL);
+        _v = SWIG_CheckState(res);
+      }
+      if (_v) {
+        return _wrap_new_ParameterDouble__SWIG_2(self, args);
+      }
+    }
+  }
+  if (argc == 3) {
+    int _v;
+    {
+      // '1000' is the typecheck precedence code. It means: check after basic
+      // types, but before arrays. See: http://www.swig.org/Doc1.3/Typemaps.html#Typemaps_overloading
+      _v = PyTuple_Check(argv[0]) ? 1 : 0;
+    }
+    if (_v) {
+      {
+        int res = SWIG_AsVal_double(argv[1], NULL);
+        _v = SWIG_CheckState(res);
+      }
+      if (_v) {
+        int res = SWIG_ConvertPtr(argv[2], 0, SWIGTYPE_p_CNTK__DeviceDescriptor, 0);
+        _v = SWIG_CheckState(res);
+        if (_v) {
+          return _wrap_new_ParameterDouble__SWIG_1(self, args);
+        }
+      }
+    }
+  }
+  if (argc == 4) {
+    int _v;
+    {
+      // '1000' is the typecheck precedence code. It means: check after basic
+      // types, but before arrays. See: http://www.swig.org/Doc1.3/Typemaps.html#Typemaps_overloading
+      _v = PyTuple_Check(argv[0]) ? 1 : 0;
+    }
+    if (_v) {
+      {
+        int res = SWIG_AsVal_double(argv[1], NULL);
+        _v = SWIG_CheckState(res);
+      }
+      if (_v) {
+        int res = SWIG_ConvertPtr(argv[2], 0, SWIGTYPE_p_CNTK__DeviceDescriptor, 0);
+        _v = SWIG_CheckState(res);
+        if (_v) {
+          int res = SWIG_AsPtr_std_wstring(argv[3], (std::wstring**)(0));
+          _v = SWIG_CheckState(res);
+          if (_v) {
+            return _wrap_new_ParameterDouble__SWIG_0(self, args);
+          }
+        }
+      }
+    }
+  }
+  
+fail:
+  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'new_ParameterDouble'.\n"
+    "  Possible C/C++ prototypes are:\n"
+    "    CNTK::Parameter::Parameter(CNTK::NDShape const &,double,CNTK::DeviceDescriptor const &,std::wstring const &)\n"
+    "    CNTK::Parameter::Parameter(CNTK::NDShape const &,double,CNTK::DeviceDescriptor const &)\n"
+    "    CNTK::Parameter::Parameter(CNTK::NDShape const &,double)\n");
+  return 0;
+}
+
+
 SWIGINTERN PyObject *_wrap_Parameter___hash__(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Parameter *arg1 = (CNTK::Parameter *) 0 ;
@@ -39229,6 +39817,8 @@ static PyMethodDef SwigMethods[] = {
 	 { (char *)"__ne__", _wrap___ne__, METH_VARARGS, NULL},
 	 { (char *)"new_Parameter", _wrap_new_Parameter, METH_VARARGS, NULL},
 	 { (char *)"Parameter_value", _wrap_Parameter_value, METH_VARARGS, NULL},
+	 { (char *)"new_ParameterFloat", _wrap_new_ParameterFloat, METH_VARARGS, NULL},
+	 { (char *)"new_ParameterDouble", _wrap_new_ParameterDouble, METH_VARARGS, NULL},
 	 { (char *)"Parameter___hash__", _wrap_Parameter___hash__, METH_VARARGS, NULL},
 	 { (char *)"delete_Parameter", _wrap_delete_Parameter, METH_VARARGS, NULL},
 	 { (char *)"Parameter_swigregister", Parameter_swigregister, METH_VARARGS, NULL},

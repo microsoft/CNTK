@@ -597,6 +597,14 @@ class Parameter(Variable):
 Parameter_swigregister = _cntk_py.Parameter_swigregister
 Parameter_swigregister(Parameter)
 
+def ParameterFloat(*args):
+    val = _cntk_py.new_ParameterFloat(*args)
+    return val
+
+def ParameterDouble(*args):
+    val = _cntk_py.new_ParameterDouble(*args)
+    return val
+
 class Constant(Variable):
     __swig_setmethods__ = {}
     for _s in [Variable]:

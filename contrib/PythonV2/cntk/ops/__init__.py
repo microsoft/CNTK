@@ -1156,7 +1156,7 @@ def dropout(x, name=''):
 # variables_and_parameters ops
 ################################################################################
 
-def variable(shape, data_type=None, needs_gradient=True, name=''):
+def variable(shape, data_type=None, needs_gradient=False, is_sparse=False, name=''):
     '''
     It creates an input node. The graph requires a separate reader that will be
     fed to this input.
@@ -1165,6 +1165,7 @@ def variable(shape, data_type=None, needs_gradient=True, name=''):
         shape (tuple): the shape of the input tensor     
         data_type: np.float32 or np.float64
         needs_gradients (bool): whether to back-propagates to it or not
+        is_sparse (bool): whether the variable is sparse
         name (str): the name of the node in the network
         
     Returns:
@@ -1174,7 +1175,7 @@ def variable(shape, data_type=None, needs_gradient=True, name=''):
 
     # TODO dynamic axis for numpy arrays
     # TODO sparse for numpy arrays
-    return Variable(shape, data_type, needs_gradient, name)
+    return Variable(shape, data_type, needs_gradient, is_sparse, name)
 
 def placeholder(shape, name=''):
     '''
@@ -1206,12 +1207,10 @@ def parameter(shape=None, value=None, device_id=-1, name=''):
     Returns:
         :class:`cntk_py.Function`
     '''    
-    #TODO: add swig support to this templatized constructor and reflect the change in this method:
-    #   template<typename ElemType>
-    #   Parameter(const NDShape& shape, ElemType initValue, const DeviceDescriptor& device = DeviceDescriptor::DefaultDevice(), const std::wstring& name = L"")
-    #       : Variable(shape, VariableKind::Parameter, AsDataType<ElemType>(), MakeSharedObject<NDArrayView>(initValue, shape, device), true, {}, name)
 
-    from .variables import Parameter    
+    from .variables import Parameter, parameter_from_scalar   
+    if np.isscalar(value):        
+        return parameter_from_scalar(shape, value, None, cntk_device(device_id), name)   
     return Parameter(shape, value, None, cntk_device(device_id), name)        
 
 def constant(shape=None, value=None, device_id=-1, name=''):
@@ -1228,11 +1227,6 @@ def constant(shape=None, value=None, device_id=-1, name=''):
         :class:`cntk_py.Function`
     '''
     from .variables import Constant, constant_from_scalar
-
-    #TODO: add swig support to this templatized constructor and reflect the change in this method:
-    #   template<typename ElemType>
-    #   Constant(const NDShape& shape, ElemType initValue, const DeviceDescriptor& device = DeviceDescriptor::DefaultDevice(), const std::wstring& name = L"")
-    #       : Variable(shape, VariableKind::Constant, AsDataType<ElemType>(), MakeSharedObject<NDArrayView>(initValue, shape, device), true, {}, name)
 
     if np.isscalar(value):        
         return constant_from_scalar(shape, value, None, cntk_device(device_id), name)   

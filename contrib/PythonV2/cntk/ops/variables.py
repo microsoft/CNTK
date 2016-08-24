@@ -37,7 +37,7 @@ def _sanitize_value(shape, value, dtype, device, is_param=False):
     return ndav
 
 class Variable(cntk_py.Variable, TensorOpsMixin):
-    def __init__(self, shape=None, data_type=None, needs_gradient=True, name=''):
+    def __init__(self, shape=None, data_type=None, needs_gradient=False, is_sparse=False, name=''):
         if not np.isscalar(shape):
             # cntk uses column major, thus we reverse the shape    
             shape = tuple(reversed(shape))        
@@ -46,7 +46,7 @@ class Variable(cntk_py.Variable, TensorOpsMixin):
             data_type = FLOAT_32
         dtype = utils.sanitize_dtype_cntk(data_type)
 
-        super(Variable, self).__init__(shape, dtype, needs_gradient, name)
+        super(Variable, self).__init__(shape, is_sparse, dtype, needs_gradient, name)
 
 class Parameter(cntk_py.Parameter, TensorOpsMixin):
     def __init__(self, shape=None, value=None, data_type=None, device=None, name=''):
@@ -60,6 +60,28 @@ class Parameter(cntk_py.Parameter, TensorOpsMixin):
         ndav = _sanitize_value(shape, value, data_type, device, True)
         super(Parameter, self).__init__(ndav, name)
 
+# TODO: make this part of the above constructor
+def parameter_from_scalar(shape=None, value=None, data_type=None, device=None, name=''):
+    if not device:
+        device = cntk_py.DeviceDescriptor_cpudevice()            
+
+    if data_type is None:
+        if not isinstance(value, np.ndarray):        
+            data_type = 'float32'
+        else:
+            data_type = str(value.dtype)     
+
+    dtype = utils.sanitize_dtype_cntk(data_type)
+
+    if not shape:
+        shape = ()
+    if dtype == cntk_py.DataType_Float:
+        return cntk_py.ParameterFloat(shape, value, device, name)
+    elif dtype == cntk_py.DataType_Double:
+        return cntk_py.ParameterDouble(shape, value, device, name)
+    raise ValueError('unrecognized data_type: %s', dtype)
+
+# TODO: make this part of the above constructor
 class Constant(cntk_py.Constant, TensorOpsMixin):
     def __init__(self, shape=None, value=None, data_type=None, device=None, name=''):
 

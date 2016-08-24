@@ -1003,6 +1003,8 @@
 %template(NDArrayViewDouble) CNTK::NDArrayView::NDArrayView<double>;
 %template(ConstantFloat) CNTK::Constant::Constant<float>;
 %template(ConstantDouble) CNTK::Constant::Constant<double>;
+%template(ParameterFloat) CNTK::Parameter::Parameter<float>;
+%template(ParameterDouble) CNTK::Parameter::Parameter<double>;
 %template(random_uniform_float) CNTK::NDArrayView::RandomUniform<float>;
 %template(random_uniform_double) CNTK::NDArrayView::RandomUniform<double>;
 %template(DictionaryValueFromDict) CNTK::DictionaryValue::DictionaryValue<CNTK::Dictionary>;
