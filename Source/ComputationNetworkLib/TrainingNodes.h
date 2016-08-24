@@ -786,20 +786,10 @@ public:
         valueMatrix.SwitchToMatrixType(SPARSE, matrixFormatSparseCSC, false);
         valueMatrix.Reset();
 
-        // Create vector with prefix sum of sampling weights.
-        // TODO: Don't repeat that if Input(0) didn't change.
-        const Matrix<ElemType>& samplingWeights = Input(0)->ValueAsMatrix();
-        std::vector<double> samplingWeightsPrefixSum;
-        double runningWeightsSum = 0;
-        for (int iClass = 0; iClass < valueMatrix.GetNumRows(); iClass++)
-        {
-            ElemType currentWeight = samplingWeights.GetValue(iClass, 0);
-            runningWeightsSum += currentWeight;
-            samplingWeightsPrefixSum.push_back(runningWeightsSum);
-        }
+		UpdateWeightsPrefixSum();
 
         // Get vector with indices of randomly sampled classes
-        std::vector<int> samples = GetWeightedSamples(samplingWeightsPrefixSum, true);
+        std::vector<int> samples = GetWeightedSamples(m_samplingWeightsPrefixSum, true);
 
         // Set columns of (sparse) result matrix as indicator vectors
         for(int iSample = 0; iSample < m_nSamples; iSample++)
@@ -808,6 +798,23 @@ public:
             valueMatrix.SetValue(sample, iSample, 1);
         }
     }
+
+	void UpdateWeightsPrefixSum()
+	{
+		// If sampling probabilites have changed update m_samplingWeightsPrefixSum
+		if (m_samplingWeightsPrefixSum.empty() || TimeStamp::IsOlderThan(*Input(0)))
+		{
+			const Matrix<ElemType>& samplingWeights = Input(0)->ValueAsMatrix();
+			m_samplingWeightsPrefixSum.clear();
+			double runningWeightsSum = 0;
+			for (int iClass = 0; iClass < samplingWeights.GetNumRows(); iClass++)
+			{
+				ElemType currentWeight = samplingWeights.GetValue(iClass, 0);
+				runningWeightsSum += currentWeight;
+				m_samplingWeightsPrefixSum.push_back(runningWeightsSum);
+			}
+		}
+	}
 
     std::vector<int> GetWeightedSamples(std::vector<double>& weightPrefixSum, bool sampleWithReplacment)
     {
@@ -821,19 +828,19 @@ public:
 			double randomValue = r(cpuRNGHandle->Generator());
             auto lower = std::lower_bound(weightPrefixSum.begin(), weightPrefixSum.end(), randomValue);
             int idx = (int)(lower - weightPrefixSum.begin());
-            if (sampleWithReplacment) samples.push_back(idx);
+            if (sampleWithReplacment)
+				samples.push_back(idx);
             else
             {
                 // Sampling without replacement: each value can be sampled at most once. 
                 // The implementation below using rejection sampling is problematic.
-                // E.g if first class has probability p = 0.999999 we typically will have to sample 1000,000 times or more to hit another class.
+                // E.g if first class has probability p = 0.999 we typically will have to sample 1000 times or more to hit another class.
                 // BUGBUG Alternative implementions, e.g:
                 // * Weighted Random Sampling with Reservoir: http://utopia.duth.gr/~pefraimi/research/data/2007EncOfAlg.pdf
                 // * Binary tree with classes as leafes and branch probs on non-leafes.
                 if (alreadySampled.find(idx) != alreadySampled.end()) continue;
                 else samples.push_back(idx);
             }
-
         }
         return samples;
     }
@@ -848,9 +855,6 @@ public:
         Base::Validate(isFinalValidationPass);
         m_pMBLayout = nullptr;
 
-        // TODO check if number of requested samples is less then the number of classes
-
-        // TODO set output shape to num-classes * non-samples
         let shape = Input(0)->GetSampleLayout();
         auto dims = shape.GetDims();
 
@@ -869,21 +873,14 @@ public:
 
     virtual bool IsOutOfDateWrtInputs() const override
     {
+		// The only input are the sampling probabilities that typically will be constant. Still we want the value of the node be refreshed for each minibatch. 
         return true;
     }
 
 
 private:
     int m_nSamples;
-
-#ifdef _MSC_VER // TODO: check if available under GCC/Linux
-    std::ranlux64_base_01 m_generator;
-    // TODO: handle seeding, e.g. similar to line below:
-    // generator.seed(seed == USE_TIME_BASED_SEED ? (unsigned long)time(NULL) : seed);
-#else
-    std::default_random_engine generator(seed);
-#endif
-
+	std::vector<double> m_samplingWeightsPrefixSum;
 };
 
 template class RandomSampleNode<float>;
