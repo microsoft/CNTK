@@ -238,8 +238,8 @@ class TimesNodeBase : public ComputationNode<ElemType>, public NumInputs<2>
     typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers; using Base::OperationName;                                                                                                                           \
 
 public:
-    TimesNodeBase(DEVICEID_TYPE deviceId, const wstring& name, size_t outputRank = 1, int inferInputRank = 1)
-        : Base(deviceId, name), m_outputRank(outputRank), m_inferInputRank(inferInputRank)
+    TimesNodeBase(DEVICEID_TYPE deviceId, const wstring& name, size_t outputRank = 1, int inferInputRankToMap = 1)
+        : Base(deviceId, name), m_outputRank(outputRank), m_inferInputRankToMap(inferInputRankToMap)
     {
     }
 
@@ -250,7 +250,7 @@ public:
         {
             auto node = dynamic_pointer_cast<TimesNodeBase<ElemType, m_transpose>>(nodeP);
             node->m_outputRank      = m_outputRank;
-            node->m_inferInputRank  = m_inferInputRank;
+            node->m_inferInputRankToMap  = m_inferInputRankToMap;
         }
     }
 
@@ -258,7 +258,7 @@ public:
     {
         Base::Save(fstream);
         fstream << m_outputRank;
-        fstream << m_inferInputRank;
+        fstream << m_inferInputRankToMap;
     }
 
     virtual void Load(File& fstream, size_t modelVersion) override
@@ -269,9 +269,9 @@ public:
         else
             m_outputRank = 1;
         if (modelVersion >= CNTK_MODEL_VERSION_11)
-            fstream >> m_inferInputRank;
+            fstream >> m_inferInputRankToMap;
         else
-            m_inferInputRank = 1;
+            m_inferInputRankToMap = 1;
     }
 
 private:
@@ -427,28 +427,24 @@ public:
                     InvalidArgument("%ls %ls operation: The outputRank (%d) dimensions in left argument's shape [%s] must not be 0.", NodeName().c_str(), OperationName().c_str(), (int)m_outputRank, dimsAstring.c_str());
 
             // infer rank of dimsA
-            // For purpose of dimension inference, Times() accepts an optional parameter inferInputRank (default 1).
-            // The first 'inferInputRank' axes are considered those that the matrix product should reduce over,
-            // while the remaining axes are kept (Times() is applied one by one, like a "map" operation).
-            // Importantly, inferInputRank <= 0 will be interpreted from the end. Hence, inferInputRank=-1 denotes
-            // that the one last axis will not be reduced over.
-            // And inferInputRank=0 means to reduce over all input axes, e.g. for an image input that
+            // For purpose of dimension inference, Times() accepts an optional parameter inferInputRankToMap (default -1=unspecified).
+            // The last 'inferInputRankToMap' axes are considered those that the matrix product should keep (Times()
+            // is applied one by one, like a "map" operation) rather than reducing over.
+            // Specifically, inferInputRankToMap=0 means to reduce over all input axes, e.g. for an image input that
             // should be flattened.
             // Examples:
-            //  [I x Inferred] * [J x K], inferInputRank=1 --> Inferred := J, result is [I x K]
-            //  [I x Inferred] * [W x H x C], inferInputRank=1 --> Inferred := W, result is [I x H x C] (not desired)
-            //  [I x Inferred] * [W x H x C], inferInputRank=0 --> Inferred := W x H x C, result is [I] (desired)
-            //  [I x Inferred] * [W x H x C x R], inferInputRank=-1 --> Inferred := W x H x C, result is [I x R] (desired)
-            // In each case,
-            //  * if the output tensor is too short *and* the last dimension is 0, it will be extended
-            //  * output tensor dimensions that are not 0 are not touched
-            if (dimsA.back() == 0) // if last entry is 0, we infer the tensor rank as well
+            //  [I x Inferred] * [J x K],                    inferInputRankToMap=n/a --> Inferred  := J, result is [I x K]
+            //  [I x Inferred] * [W x H x C],                inferInputRankToMap=n/a --> Inferred  := W, result is [I x H x C] (not desired)
+            //  [I x Inferred x Inferred] * [W x H x C],     inferInputRankToMap=n/a --> Inf x Inf := [W x H], result is [I x C]
+            //  [I x Inferred] * [W x H x C],                inferInputRankToMap=0   --> Inferred  := W x H x C, result is [I] (desired)
+            //  [I x Inferred] * [W x H x C x R],            inferInputRankToMap=1   --> Inferred  := W x H x C, result is [I x R] (desired)
+            // If W's shape is too short, it will be padded with 0 (i.e. inferred in a subsequent step).
+            if (m_inferInputRankToMap >= 0) // if given, we pad if needed
             {
-                if (abs(m_inferInputRank) > dimsB.size())
-                    InvalidArgument("%ls %ls operation: 'inputDims' argument %d exceeds rank of second operand [%s].", NodeName().c_str(), OperationName().c_str(), m_inferInputRank, dimsBstring.c_str());
-                size_t inferInputRank = (size_t)(m_inferInputRank > 0 ? m_inferInputRank : (int)dimsB.size() + m_inferInputRank);
+                if ((size_t)m_inferInputRankToMap >= dimsB.size() && isFinalValidationPass) // at least one axis must be left to reduce over
+                    InvalidArgument("%ls %ls operation: 'inferInputRankToMap' argument %d must be less than rank of second operand [%s].", NodeName().c_str(), OperationName().c_str(), m_inferInputRankToMap, dimsBstring.c_str());
                 assert(dimsA.size() == m_outputRank + numReductionDims);
-                while (numReductionDims < inferInputRank)
+                while (numReductionDims + (size_t)m_inferInputRankToMap < dimsB.size())
                 {
                     dimsA.push_back(0);
                     numReductionDims++;
@@ -502,7 +498,7 @@ public:
 
 private:
     size_t m_outputRank;
-    int m_inferInputRank;  // can be negative to indicate counting from end
+    int m_inferInputRankToMap;  // -1 (not specified) or says how to expand shape of W, to keep this many mapping dims
 };
 
 // -----------------------------------------------------------------------
@@ -529,12 +525,12 @@ class TimesNode : public TimesNodeBase<ElemType, false>
     static const std::wstring TypeName() { return L"Times"; }
 
 public:
-    TimesNode(DEVICEID_TYPE deviceId, const wstring& name, size_t outputRank = 1, int inferInputRank = 1)
-        : Base(deviceId, name, outputRank, inferInputRank)
+    TimesNode(DEVICEID_TYPE deviceId, const wstring& name, size_t outputRank = 1, int inferInputRankToMap = 1)
+        : Base(deviceId, name, outputRank, inferInputRankToMap)
     {
     }
     TimesNode(const ScriptableObjects::IConfigRecordPtr configp)
-        : TimesNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"outputRank"), configp->Get(L"inferInputRank"))
+        : TimesNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"outputRank"), configp->Get(L"inferInputRankToMap"))
     {
         AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
     }
@@ -562,7 +558,7 @@ class TransposeTimesNode : public TimesNodeBase<ElemType, true>
 public:
     DeclareConstructorFromConfigWithNumInputs(TransposeTimesNode);
     TransposeTimesNode(DEVICEID_TYPE deviceId, const wstring& name, size_t outputRank = 1)
-        : Base(deviceId, name, outputRank, /*inferInputRank=*/1)
+        : Base(deviceId, name, outputRank, /*inferInputRankToMap=*/1)
     {
     }
 };

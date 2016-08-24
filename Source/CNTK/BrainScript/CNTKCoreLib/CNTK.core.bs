@@ -30,19 +30,24 @@
 
 # LinearLayer -- create a fully-connected linear projection layer
 # Note: outDim may describe a tensor as well.
-LinearLayer {outDim, bias = true, init='heNormal', initValueScale=1, inputRank=0} =
+LinearLayer {outDim, bias = true, init='heNormal', initValueScale=1, inputRank=None, mapRank=None} =
 {
-    W = ParameterTensor {_ConcatArrays (outDim, Inferred), init=init, initValueScale=initValueScale}
+    inputShape = if BS.Constants.IsNone (inputRank) then Inferred else Repeat (inputRank, Inferred)
+    W = ParameterTensor {_ConcatArrays (outDim, inputShape), init=init, initValueScale=initValueScale}
     b = ParameterTensor {outDim, initValue=0}
     outputRank = Length (_AsArray (outDim)) # support outputs with tensor layouts
+    inferInputRankToMap =
+        if       BS.Constants.IsNone (mapRank) then -1  # means not specified
+        else if !BS.Constants.IsNone (inputRank) Fail ("'inputRank' and 'mapRank' cannot be specified at the same time.")
+        else mapRank
     apply (x) =
         if bias
-        then Times (W, x, outputRank=outputRank, inferInputRank=inputRank) + b
-        else Times (W, x, outputRank=outputRank, inferInputRank=inputRank)
+        then Times (W, x, outputRank=outputRank, inferInputRankToMap=inferInputRankToMap) + b
+        else Times (W, x, outputRank=outputRank, inferInputRankToMap=inferInputRankToMap)
 }.apply
 
 # DenseLayer -- create a fully-connected layer with optional non-linearity
-DenseLayer{outDim, bias = true, activation=(x=>x), init='heNormal', initValueScale=1, inputRank=0} = Sequential ( LinearLayer{outDim, bias=bias, init=init, initValueScale=initValueScale, inferInputRank=inputRank} : activation )
+DenseLayer{outDim, bias = true, activation=(x=>x), init='heNormal', initValueScale=1, inputRank=None, mapRank=None} = Sequential ( LinearLayer{outDim, bias=bias, init=init, initValueScale=initValueScale, inputRank=inputRank, mapRank=mapRank} : activation )
 
 # EmbeddingLayer -- create a linear embedding layer
 EmbeddingLayer {outDim,                                   # dimension of embedding
@@ -326,7 +331,7 @@ CNTK2 = [
 
     // 4. Tensor operations
     // Changes: Matrix -> Tensor. A -> x, B -> y. Data must come on y ("default parameter") hence not using _
-    Times(x, y, outputRank=1, inferInputRank=1, tag='') = new ComputationNode [ operation = 'Times' ; inputs = ( x : y ) /*plus the function args*/ ]
+    Times(x, y, outputRank=1, inferInputRankToMap=-1, tag='') = new ComputationNode [ operation = 'Times' ; inputs = ( x : y ) /*plus the function args*/ ]
 
     // 5. Elementwise operations.
     // Changes: "Matrix" -> "Tensor"; left input -> _; Clip: move input to front. ElementDivide/Times: anotherTensor -> y
