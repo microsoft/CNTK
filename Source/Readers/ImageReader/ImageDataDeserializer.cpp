@@ -9,6 +9,7 @@
 #include <numeric>
 #include "ImageDataDeserializer.h"
 #include "TimerUtility.h"
+#include "TimerUtility.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 

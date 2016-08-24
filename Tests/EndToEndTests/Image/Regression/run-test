@@ -13,9 +13,9 @@ fi
 
 # release and debug configurations lead to very close results, so make no distinction
 if [ "$TEST_DEVICE" == "cpu" ]; then
-  OUTPUT_BASELINE=$OUTPUT_BASELINE.cpu
+  OUTPUT_BASELINE=$OUTPUT_BASELINE.cpu.txt
 elif [ "$TEST_DEVICE" == "gpu" ]; then
-  OUTPUT_BASELINE=$OUTPUT_BASELINE.gpu
+  OUTPUT_BASELINE=$OUTPUT_BASELINE.gpu.txt
 else
   echo "Error: Unknown TEST_DEVICE specified!"
   exit 3
