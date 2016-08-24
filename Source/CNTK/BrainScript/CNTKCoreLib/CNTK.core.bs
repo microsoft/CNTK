@@ -895,21 +895,26 @@ RNNs =
                 dcs = S(dc)
                 # note: input does not get a stabilizer here, user is meant to do that outside
 
-                # projected contribution from input(s) and bias
-                pin() = if Constants.IsNone (aux)
-                        then B{} + W{} * x
-                        else B{} + W{} * x + A{} * aux
+                # projected contribution from input(s), hidden, and bias
+                proj() = if Constants.IsNone (aux)
+                        then B{} + W{} * x + H{} * dhs
+                        else B{} + W{} * x + H{} * dhs + A{} * aux
 
-                it = Sigmoid (pin() + H{} * dhs + C{} .* dcs)           // input gate(t)
-                bit = it .* Tanh (pin() + H{} * dhs)                    // applied to tanh of input network
+                itProj  = proj()
+                bitProj = proj()
+                ftProj  = proj()
+                otProj  = proj()
 
-                ft = Sigmoid (pin() + H{} * dhs + C{} .* dcs)           // forget-me-not gate(t)
-                bft = ft .* dc                                          // applied to cell(t-1)
+                it = Sigmoid (itProj + C{} .* dcs)           // input gate(t)
+                bit = it .* Tanh (bitProj)                   // applied to tanh of input network
 
-                ct = bft + bit                                          // c(t) is sum of both
+                ft = Sigmoid (ftProj + C{} .* dcs)           // forget-me-not gate(t)
+                bft = ft .* dc                               // applied to cell(t-1)
 
-                ot = Sigmoid (pin() + H{} * dhs + C{} .* S(ct))         // output gate(t)
-                ht = ot .* Tanh (ct)                                    // applied to tanh(cell(t))
+                ct = bft + bit                               // c(t) is sum of both
+
+                ot = Sigmoid (otProj + C{} .* S(ct))         // output gate(t)
+                ht = ot .* Tanh (ct)                         // applied to tanh(cell(t))
             }
 
             # our return values
