@@ -4,7 +4,7 @@ precision = "float" ; deviceId = $DeviceId$ ; traceLevel = 1 ; parallelTrain = f
 
 command = speechTrain
 
-modelSelector = 0   # 0 = regression test; 1 = layers lib; 2 = StandardRecurrentLayerStack
+modelSelector = 1   # 0 = regression test; 1 = layers lib; 2 = StandardRecurrentLayerStack
 
 // Note: These options are overridden from the command line in some test cases.
 frameMode = false
@@ -37,10 +37,12 @@ speechTrain = {
         modelUsingLayers = Sequential
         (
             MeanVarNorm :
-            LayerStack {numLSTMLayers, _ =>
+            LayerStack {numLSTMLayers, _ => Sequential (
+                LayerNormalizationLayer{} :
                 RecurrentLSTMLayer {hiddenDim, cellShape=innerCellDim, enableSelfStabilization=useSelfStabilization, init='uniform'}
-            } :
-            StabilizerLayer{} :
+            )} :
+            #StabilizerLayer{} :
+            #LayerNormalizationLayer{} :
             DenseLayer {labelDim, init='uniform'}
         )
 
