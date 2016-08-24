@@ -25,7 +25,14 @@ def _sanitize_value(shape, value, dtype, device, is_param=False):
     else:
         if not isinstance(value, np.ndarray) or value.dtype!=np_dtype:
             value = np.asarray(value, dtype=np_dtype)
-        ndav = utils.create_NDArrayView_from_NumPy(value, device)
+
+        #TODO: check whether this copy operation from cpu to gpu is not needed
+        if device != cntk_py.DeviceDescriptor_cpudevice():
+            ndav_cpu = utils.create_NDArrayView_from_NumPy(value)
+            ndav = utils.create_NDArrayView(value.shape, data_type=cntk_dtype, dev=device)
+            ndav.copy_from(ndav_cpu)
+        else:
+            ndav = utils.create_NDArrayView_from_NumPy(value, device)
 
     return ndav
 
@@ -63,14 +70,14 @@ class Constant(cntk_py.Constant, TensorOpsMixin):
                 data_type = str(value.dtype)     
 
         if not device:
-            device = cntk_py.DeviceDescriptor_CPUDevice()            
+            device = cntk_py.DeviceDescriptor_cpudevice()            
 
         ndav = _sanitize_value(shape, value, data_type, device)
         super(Constant, self).__init__(ndav, name)
 
 def constant_from_scalar(shape=None, value=None, data_type=None, device=None, name=''):
     if not device:
-        device = cntk_py.DeviceDescriptor_CPUDevice()            
+        device = cntk_py.DeviceDescriptor_cpudevice()            
 
     if data_type is None:
         if not isinstance(value, np.ndarray):        

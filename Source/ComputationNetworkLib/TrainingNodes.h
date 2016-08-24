@@ -1629,7 +1629,7 @@ public:
             fstream >> m_normTimeConst;
             fstream >> m_blendTimeConst;
             fstream >> m_imageLayoutKind;
-            if (modelVersion >= CNTK_MODEL_VERSION_12)
+            if (modelVersion >= CNTK_MODEL_VERSION_13)
                 fstream >> m_samplesSeen;
             else
                 fstream >> mbCount; // converted below
@@ -1677,7 +1677,7 @@ public:
             }
         }
 
-        if (modelVersion < CNTK_MODEL_VERSION_12)
+        if (modelVersion < CNTK_MODEL_VERSION_13)
         {
             // Prior to version 12, minibatch count was stored instead of samples seen.
             // Approximate by assuming minibatch size 16, inform about that.
@@ -1779,7 +1779,7 @@ public:
             LogicError("%ls: Failed to convert running variance until forward prop", NodeName().c_str());
         FrameRange fr(Input(0)->GetMBLayout());
 
-        Matrix<ElemType> sliceInputValue  = Input(0)->ValueFor(fr);
+        Matrix<ElemType> sliceInputValue  = Input(0)->MaskedValueFor(fr);
         const Matrix<ElemType>& scale     = Input(1)->Value();
         const Matrix<ElemType>& bias      = Input(2)->Value();
         Matrix<ElemType>& runMean         = Input(3)->Value();
@@ -1828,10 +1828,10 @@ public:
 
         if (inputIndex == 0) // derivative with respect to the input.
         {
-            auto sliceOutputGrad                = GradientFor(fr);
-            auto sliceInputValue                = Input(0)->ValueFor(fr);
-            const Matrix<ElemType>& scale       = Input(1)->Value();
-            const Matrix<ElemType>& bias        = Input(2)->Value();
+            auto sliceOutputGrad          = MaskedGradientFor(fr);
+            auto sliceInputValue          = Input(0)->ValueFor(fr);
+            const Matrix<ElemType>& scale = Input(1)->Value();
+            const Matrix<ElemType>& bias  = Input(2)->Value();
 
             auto sliceInputGrad = Input(0)->GradientFor(fr);
             m_dScale->Resize(scale); // gradients for scale and bias get stored here
