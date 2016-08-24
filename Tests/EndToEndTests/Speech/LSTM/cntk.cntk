@@ -1,89 +1,52 @@
 # end-to-end test for recurrent LSTM for speech
 
-precision = "float"
-deviceId = $DeviceId$
+precision = "float" ; deviceId = $DeviceId$ ; traceLevel = 1 ; parallelTrain = false
 
 command = speechTrain
+
+modelSelector = 0   # 0 = regression test; 1 = layers lib; 2 = StandardRecurrentLayerStack
 
 // Note: These options are overridden from the command line in some test cases.
 frameMode = false
 truncated = true
-parallelTrain = false
 
-speechTrain = [
+# regression test for old version
+speechTrain = {
     action = "train"
     modelPath = "$RunDir$/models/cntkSpeech.dnn"
-    #deviceId = $DeviceId$
-    traceLevel = 1
-    
-    SGD = [
-        epochSize = 20480
-        minibatchSize = 20
-        learningRatesPerMB = 0.5
-        numMBsToShowResult = 10
-        momentumPerMB = 0:0.9
-        maxEpochs = 4
-        keepCheckPointFiles = true       
-    ]
-
-    reader = [
-        readerType = "HTKMLFReader"
-        readMethod = "blockRandomize"
-        miniBatchMode = "partial"
-        nbruttsineachrecurrentiter = 32
-        randomize = "auto"
-        verbosity = 0
-        useMersenneTwisterRand=true
-
-        features = [
-            dim = 363
-            type = "real"
-            scpFile = "$DataDir$/glob_0000.scp"
-        ]
-
-        labels = [
-            mlfFile = "$DataDir$/glob_0000.mlf"
-            labelMappingFile = "$DataDir$/state.list"
-          
-            labelDim = 132
-            labelType = "category"
-        ]
-    ]
 
     # define network using BrainScript
-    BrainScriptNetworkBuilder = [
+    BrainScriptNetworkBuilder = {
 
         // dimensions (needed for both model and readers)
         baseFeatDim = 33
         featDim = 11 * baseFeatDim
         labelDim = 132
 
+        useSelfStabilization = true
+
+        // hidden dimensions
+        innerCellDim  = 1024
+        hiddenDim     = 256
+        numLSTMLayers = 3        // number of hidden LSTM model layers
+
         # define the model function
-        model (features) = [
-
-            useSelfStabilization = true
-
-            // hidden dimensions
-            innerCellDim  = 1024
-            hiddenDim     = 256
-            numLSTMLayers = 3        // number of hidden LSTM model layers
-
-            feashift = RowSlice(featDim - baseFeatDim, baseFeatDim, features);
-
-            featNorm = MeanVarNorm(feashift)
+        # We define three functions here
+        modelRegressionTest (features) = {  # old test
+            featNorm = MeanVarNorm(features)
 
             // we define the LSTM locally for now, since the one in CNTK.core.bs has a slightly changed configuration that breaks this test
             Stabilize (x, enabled=true) =
                 if enabled
-                then [
+                then {
                     beta = Exp (BS.Parameters.BiasParam ((1))) # init value is 0
                     result = beta .* x
-                ].result
+                }.result
                 else x
 
             LSTMP (outputDim, cellDim=outputDim, x, inputDim=x.dim, prevState, enableSelfStabilization=false) =
-            [
-                _privateInnards = [       // encapsulate the inner workings
+            {
+                _privateInnards = {       // encapsulate the inner workings
                     dh = prevState.h // previous values
                     dc = prevState.c
 
@@ -105,25 +68,25 @@ speechTrain = [
 
                     ot = Sigmoid (W(x) + B() + H(dh) + C(ct))          // output gate(t)
                     ht = ot .* Tanh (ct)                               // applied to tanh(cell(t))
-                ]
+                }
 
                 # our return values
                 c = _privateInnards.ct          // cell value
                 h = if outputDim != cellDim     // output/hidden state
-                    then [                      // project
+                    then {                      // project
                         Wmr = BS.Parameters.WeightParam (outputDim, cellDim);
                         htp = Wmr * Stabilize (_privateInnards.ht, enabled=enableSelfStabilization)
-                    ].htp         // TODO: ^^ extend BS syntax to allow to say: then [ Wmr = WeightParam(outputDim, cellDim) ] in Wmr * Stabilize (...)
+                    }.htp         // TODO: ^^ extend BS syntax to allow to say: then { Wmr = WeightParam(outputDim, cellDim) } in Wmr * Stabilize (...)
                     else _privateInnards.ht     // no projection
                 dim = outputDim
-            ]
+            }
 
             RecurrentLSTMP (outputDim, cellDim=outputDim.dim, x, inputDim=x.dim, previousHook=BS.RNNs.PreviousHC, enableSelfStabilization=false) =
-            [
+            {
                 prevState = previousHook (lstmState)
                 inputDim1 = inputDim ; cellDim1 = cellDim ; enableSelfStabilization1 = enableSelfStabilization
                 lstmState = LSTMP (outputDim, cellDim=cellDim1, x, inputDim=inputDim1, prevState, enableSelfStabilization=enableSelfStabilization1)
-            ].lstmState // we return the state record (h,c)
+            }.lstmState // we return the state record (h,c)
 
             // define the stack of hidden LSTM layers  --TODO: change to RecurrentLSTMPStack(), change stabilizer config
             S(x) = Stabilize (x, enabled=useSelfStabilization)
@@ -137,15 +100,18 @@ speechTrain = [
             B = BS.Parameters.BiasParam   (labelDim)
 
             z = W * S(LSTMoutput[numLSTMLayers]) + B; // top-level input to Softmax
-        ].z
+        }.z
 
         // features
         features = Input((1 : featDim),  tag='feature') // TEST: Artificially reading data transposed
         realFeatures = Transpose (features)             //       and swapping them back to (featDim:1), for testing Transpose()
+        feashift = RowSlice(featDim - baseFeatDim, baseFeatDim, realFeatures);  # interface with a reader set up for frame mode
         labels   = Input(labelDim, tag='label')
 
         // link model to inputs
-        z = model (realFeatures)
+        models = [| modelRegressionTest |]  # array of model functions...
+        model = models[$modelSelector$]     # ...that we select from with a command-line-overridable parameter
+        z = model (feashift)
 
         // link model to training
         # this shows how both CE and frame error rate can be constructed as BS expressions
@@ -159,5 +125,23 @@ speechTrain = [
         // decoding
         logPrior = LogPrior(labels)	 
         ScaledLogLikelihood = Pass (z - logPrior, tag='output') // using Pass() since we can't assign a tag to x - y
-    ]
-]
+    }
+
+    SGD = {
+        epochSize = 20480 ; maxEpochs = 4 ; minibatchSize = 20
+        learningRatesPerMB = 0.5 ;  momentumPerMB = 0:0.9
+        numMBsToShowResult = 10
+        keepCheckPointFiles = true       
+    }
+
+    reader = {
+        readerType = "HTKMLFReader"
+        randomize = "auto" ; readMethod = "blockRandomize"
+
+        nbruttsineachrecurrentiter = 32
+        miniBatchMode = "partial" ; verbosity = 0 ; useMersenneTwisterRand = true
+
+        features = { dim =      363 ; type      = "real"     ; scpFile = "$DataDir$/glob_0000.scp" ; }
+        labels   = { labelDim = 132 ; labelType = "category" ; mlfFile = "$DataDir$/glob_0000.mlf" ; labelMappingFile = "$DataDir$/state.list" }
+    }
+}
