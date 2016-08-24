@@ -25,54 +25,54 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 vector<size_t> numSequencesForFrame;
 // -----------------------------------------------------------------------
-// RNNNode
+// OptimizedRNNStack
 // -----------------------------------------------------------------------
 
 template<class ElemType>
-RNNNode<ElemType>::RNNNode(DEVICEID_TYPE deviceId, const wstring& name)
+OptimizedRNNStack<ElemType>::OptimizedRNNStack(DEVICEID_TYPE deviceId, const wstring& name)
     : Base(deviceId, name),
-    m_rnnAttributes(0, 0, 0, L"LSTM"),
+    m_rnnAttributes(0, 0, 0, L"LSTM", -1),
     m_BackwardDataCalledYet(false)
 {
 }
 
 // This constructor helps with BrainScript integration
 template<class ElemType>
-RNNNode<ElemType>::RNNNode(const ScriptableObjects::IConfigRecordPtr configp)
+OptimizedRNNStack<ElemType>::OptimizedRNNStack(const ScriptableObjects::IConfigRecordPtr configp)
     : Base(configp->Get(L"deviceId"), L"<placeholder>"), 
-    m_rnnAttributes(configp->Get(L"bidirectional"), configp->Get(L"numLayers"), configp->Get(L"hiddenSize"), configp->Get(L"rnnMode")),
+    m_rnnAttributes(configp->Get(L"bidirectional"), configp->Get(L"numLayers"), configp->Get(L"hiddenDims"), configp->Get(L"recurrentOp"), configp->Get(L"axis")),
     m_BackwardDataCalledYet(false)
 {
     AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
 }
 
 template<class ElemType>
-/*virtual*/ void RNNNode<ElemType>::CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const /*override*/
+/*virtual*/ void OptimizedRNNStack<ElemType>::CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const /*override*/
 {
-	Base::CopyTo(nodeP, newName, flags);
-	if (flags & CopyNodeFlags::copyNodeValue)
-	{
-		auto node = dynamic_pointer_cast<RNNNode<ElemType>>(nodeP);
-		node->m_rnnAttributes = m_rnnAttributes;
-	}
+    Base::CopyTo(nodeP, newName, flags);
+    if (flags & CopyNodeFlags::copyNodeValue)
+    {
+        auto node = dynamic_pointer_cast<OptimizedRNNStack<ElemType>>(nodeP);
+        node->m_rnnAttributes = m_rnnAttributes;
+    }
 }
 
 template<class ElemType>
-void RNNNode<ElemType>::Save(File& fstream) const
+void OptimizedRNNStack<ElemType>::Save(File& fstream) const
 {
     Base::Save(fstream);
     m_rnnAttributes.Write(fstream);
 }
 
 template<class ElemType>
-void RNNNode<ElemType>::Load(File& fstream, size_t modelVersion)
+void OptimizedRNNStack<ElemType>::Load(File& fstream, size_t modelVersion)
 {
     Base::Load(fstream, modelVersion);
-    m_rnnAttributes.Read(fstream);
+    m_rnnAttributes.Read(fstream, /*readAxis=*/ modelVersion >= CNTK_MODEL_VERSION_14);
 }
 
 template<class ElemType>
-void RNNNode<ElemType>::TransposeHelper(const MatrixBasePtr matX, const TensorShape &shapeX, MatrixBasePtr matY, TensorShape &shapeY)
+void OptimizedRNNStack<ElemType>::TransposeHelper(const MatrixBasePtr matX, const TensorShape &shapeX, MatrixBasePtr matY, TensorShape &shapeY)
 {
     // This function transposes the second and third axes of the input (X), creating a transposed copy in the output (Y).
     //
@@ -89,19 +89,19 @@ void RNNNode<ElemType>::TransposeHelper(const MatrixBasePtr matX, const TensorSh
 };
 
 template<class ElemType>
-void RNNNode<ElemType>::ForwardProp(const FrameRange& fr)
+void OptimizedRNNStack<ElemType>::ForwardProp(const FrameRange& fr)
 {
     // ComputationNode derived classes are guaranteed to have a MBLayout
     if (!HasMBLayout())
     {
-        LogicError("RNNNode must operate on minibatches");
+        LogicError("OptimizedRNNStack must operate on minibatches");
     }
 
     // The parameters are stored in a column matrix
     Matrix<ElemType>& paramW = Input(1)->Value();
 
     MBLayoutPtr mb = GetMBLayout();
-    if (m_rnnAttributes.m_frameMode)
+    if (m_rnnAttributes.IsWindowedRecurrence())
     {
         TensorView<ElemType> outputY = ValueTensorFor(SIZE_MAX, fr);
 
@@ -137,7 +137,7 @@ void RNNNode<ElemType>::ForwardProp(const FrameRange& fr)
     else
     {
         if (mb->GetNumTimeSteps() == 1)
-            RuntimeError("RNNNode configured for sequence mode, but minibatch only has one time step.");
+            RuntimeError("OptimizedRNNStack configured for sequence mode, but minibatch only has one time step.");
 
         shapeXT = TensorShape(Input(0)->GetTensorSliceFor(SIZE_MAX, fr));
         shapeYT = TensorShape(this->GetTensorSliceFor(SIZE_MAX, fr));
@@ -155,7 +155,7 @@ void RNNNode<ElemType>::ForwardProp(const FrameRange& fr)
 }
 
 template<class ElemType>
-void RNNNode<ElemType>::BackpropTo(const size_t inputIndex, const FrameRange& fr)
+void OptimizedRNNStack<ElemType>::BackpropTo(const size_t inputIndex, const FrameRange& fr)
 {
     MBLayoutPtr mb = this->GetMBLayout();
 
@@ -164,7 +164,7 @@ void RNNNode<ElemType>::BackpropTo(const size_t inputIndex, const FrameRange& fr
     {
         Matrix<ElemType>& paramW = Input(1)->Value();
 
-        if (m_rnnAttributes.m_frameMode)
+        if (m_rnnAttributes.IsWindowedRecurrence())
         {
             // To obey the data layout constraints of CuDnn, we take the derivative we're given,
             // and transpose it before feeding to the interface.
@@ -191,7 +191,7 @@ void RNNNode<ElemType>::BackpropTo(const size_t inputIndex, const FrameRange& fr
     else if (inputIndex == 0) // data
     {
         // all of the work was done above, where RNNBackwardData is called. Now, just unpack the result.
-        if (m_rnnAttributes.m_frameMode)
+        if (m_rnnAttributes.IsWindowedRecurrence())
         {
             TensorShape tmp;
             TransposeHelper(m_transposedDInput, shapeXT, Input(0)->GradientPtr(), tmp);
@@ -204,7 +204,7 @@ void RNNNode<ElemType>::BackpropTo(const size_t inputIndex, const FrameRange& fr
 }
 
 template<class ElemType>
-void RNNNode<ElemType>::Validate(bool isFinalValidationPass)
+void OptimizedRNNStack<ElemType>::Validate(bool isFinalValidationPass)
 {
     // N.B.: I need both of these lines.
     Base::Validate(isFinalValidationPass);
@@ -214,12 +214,19 @@ void RNNNode<ElemType>::Validate(bool isFinalValidationPass)
     auto dimsA = Input(1)->GetSampleLayout().GetDims(); // data
     auto dimsB = Input(0)->GetSampleLayout().GetDims(); // parameters
 
+    if (isFinalValidationPass &&
+        dimsA.size() != (m_rnnAttributes.IsWindowedRecurrence() ? 2 : 1))
+    {
+        InvalidArgument("%ls: Input must have rank 1 for axis=-1 and rank 2 for axis=2.", NodeDescription().c_str());
+    }
+
     // validate and infer
     if (isFinalValidationPass || (dimsA.size() > 0 && dimsB.size() > 0)) // only if we got at least some input dimensions to work with or need to wrap up
     {
         // now determine result dimensions
         auto dimsC = dimsB;
-        // output dims - bugbug: this is hard-coded for bidirectional models
+
+        // output dims
         dimsC[0] = (m_rnnAttributes.m_bidirectional ? 2 : 1) * m_rnnAttributes.m_hiddenSize;
 
         // N.B. - this is the magical call, the reason for the function
@@ -227,12 +234,11 @@ void RNNNode<ElemType>::Validate(bool isFinalValidationPass)
         // This call establishes outputRank * numSamples, the rest will be filled in
         // dynamically though the MBLayout.
         SetDims(TensorShape(dimsC), HasMBLayout());
-
     }
 };
 
 template<class ElemType>
-void RNNNode<ElemType>::PackSequencesForCuDNN(const Matrix<ElemType>& src, Matrix<ElemType>& dst, vector<size_t>& numSequencesForFrame)
+void OptimizedRNNStack<ElemType>::PackSequencesForCuDNN(const Matrix<ElemType>& src, Matrix<ElemType>& dst, vector<size_t>& numSequencesForFrame)
 {
     MBLayoutPtr mb = this->GetMBLayout();
     if (mb->HasSequenceBeyondBegin())
@@ -266,8 +272,7 @@ void RNNNode<ElemType>::PackSequencesForCuDNN(const Matrix<ElemType>& src, Matri
         else if (seq[a].GetNumTimeSteps() == seq[b].GetNumTimeSteps())
             return seq[a].seqId < seq[b].seqId;
         return false;
-    }
-    );
+    });
 
     size_t maxSeqLength = seq[sequenceOrder[0]].GetNumTimeSteps();
     // BUGBUG: This forces the sequences to fit, due to a very bad convention in the evaldll interface.
@@ -302,7 +307,7 @@ void RNNNode<ElemType>::PackSequencesForCuDNN(const Matrix<ElemType>& src, Matri
     dst.DoGatherColumnsOf(0.0, *(this->m_packingIndex), src, 1.0);
 }
 template<class ElemType>
-void RNNNode<ElemType>::UnpackSequencesFromCuDNN(const Matrix<ElemType>& src, Matrix<ElemType>& dst)
+void OptimizedRNNStack<ElemType>::UnpackSequencesFromCuDNN(const Matrix<ElemType>& src, Matrix<ElemType>& dst)
 {
     // this->scatter(beta,ndx,a,alpha) operation is defined as
     // *this[:,idx[j]] = a[:,j] * alpha + *this[:,idx[j]] * beta
@@ -310,7 +315,7 @@ void RNNNode<ElemType>::UnpackSequencesFromCuDNN(const Matrix<ElemType>& src, Ma
 }
 
 
-template class RNNNode<float>;
-template class RNNNode<double>;
+template class OptimizedRNNStack<float>;
+template class OptimizedRNNStack<double>;
 
-} } }
+}}}

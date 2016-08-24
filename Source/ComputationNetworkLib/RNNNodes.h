@@ -24,23 +24,22 @@
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 // -----------------------------------------------------------------------
-// RNNNode (data, weights)
+// OptimizedRNNStack (data, weights)
 // -----------------------------------------------------------------------
 
 template <class ElemType>
-class RNNNode : public ComputationNode<ElemType>, public NumInputs<2>
+class OptimizedRNNStack : public ComputationNode<ElemType>, public NumInputs<2>
 {
-    typedef ComputationNode<ElemType> Base;
-    UsingComputationNodeMembersBoilerplate;
-    static const std::wstring TypeName() { return L"RNN"; }
-    using Base::OperationName;                                                                                                                           \
+    typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName() { return L"OptimizedRNN"; }
+    using Base::OperationName;
 
 public:
-    RNNNode(DEVICEID_TYPE deviceId, const wstring& name);
-    RNNNode(const ScriptableObjects::IConfigRecordPtr configp);
+    OptimizedRNNStack(DEVICEID_TYPE deviceId, const wstring& name);
+    OptimizedRNNStack(const ScriptableObjects::IConfigRecordPtr configp);
 
-	virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override;
-	virtual void Save(File& fstream) const;
+    virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override;
+    virtual void Save(File& fstream) const;
     virtual void Load(File& fstream, size_t modelVersion) override;
 
 public:

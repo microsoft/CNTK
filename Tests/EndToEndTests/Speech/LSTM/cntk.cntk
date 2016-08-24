@@ -4,7 +4,7 @@ precision = "float" ; deviceId = $DeviceId$ ; traceLevel = 1 ; parallelTrain = f
 
 command = speechTrain
 
-modelSelector = 3   # 0 = regression test; 1 = layers lib; 2 = StandardRecurrentLayerStack
+modelSelector = 2   # 0 = regression test; 1 = layers lib; 2 = StandardRecurrentLayerStack
 
 // Note: These options are overridden from the command line in some test cases.
 frameMode = false
@@ -38,7 +38,7 @@ speechTrain = {
         modelUsingCuDNN5 = Sequential
         (
             MeanVarNorm :
-            (_ => RNNStack(_, W, hiddenSize=hiddenDim, numLayers=numLSTMLayers, bidirectional=true, rnnMode='LSTM')) :
+            (_ => OptimizedRNNStack(W, _, hiddenDim, numLayers=numLSTMLayers, bidirectional=true, rnnMode='LSTM')) :
             DenseLayer {labelDim, init='heUniform', initValueScale=1/3}
         )
 
