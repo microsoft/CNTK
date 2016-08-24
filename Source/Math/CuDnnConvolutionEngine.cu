@@ -117,7 +117,7 @@ private:
 class CuDnnPool
 {
 public:
-    CuDnnPool(const ConvolveGeometry& geometry, PoolKind kind)
+    CuDnnPool(const ConvolveGeometry& geometry, PoolKind kind, bool deterministic)
         : m_pool(nullptr)
     {
         assert(kind == PoolKind::Max || kind == PoolKind::Average);
@@ -139,7 +139,7 @@ public:
 
         // Must use CUDNN_POOLING_AVERAGE_COUNT_EXCLUDE_PADDING to get the same results as in reference engine.
         CUDNN_CALL(cudnnSetPoolingNdDescriptor(m_pool,
-                                               kind == PoolKind::Max ? CUDNN_POOLING_MAX : CUDNN_POOLING_AVERAGE_COUNT_EXCLUDE_PADDING,
+                                               kind == PoolKind::Max && !deterministic ? CUDNN_POOLING_MAX : CUDNN_POOLING_AVERAGE_COUNT_EXCLUDE_PADDING,
                                                CUDNN_PROPAGATE_NAN,
                                                (int)dims.size(), dims.data(), pad.data(), stride.data()));
     }
@@ -178,7 +178,10 @@ public:
                            m_cudnn(CuDnn::Instance()),
                            m_dataType(CuDnnTensor::GetDataType<ElemType>()),
                            m_inT(geometry->InputShape(), m_dataType),
-                           m_outT(geometry->OutputShape(), m_dataType)
+                           m_outT(geometry->OutputShape(), m_dataType),
+                           m_deterministic(false),
+                           m_backDataNonDeterministic({ CUDNN_CONVOLUTION_BWD_DATA_ALGO_0 }),
+                           m_backFilterNonDeterministic({ CUDNN_CONVOLUTION_BWD_FILTER_ALGO_0, CUDNN_CONVOLUTION_BWD_FILTER_ALGO_3 })
     {
     }
 
@@ -188,6 +191,11 @@ protected:
     using Base::m_imageLayout;
     using Base::m_maxTempMemSizeInSamples;
     using Base::m_poolKind;
+
+    void MakeDeterministic() override
+    {
+        m_deterministic = true;
+    }
 
     void EnsureCompatible() override
     {
@@ -218,7 +226,7 @@ protected:
         {
             return cudnnGetConvolutionForwardAlgorithm(*m_cudnn, m_inT, *m_kernelT, *m_conv, m_outT, CUDNN_CONVOLUTION_FWD_NO_WORKSPACE, 0, &algo);
         };
-        FindBestAlgo(batchSize, m_fwdAlgo, finder, staticFinder);
+        FindBestAlgo(batchSize, m_fwdAlgo, finder, staticFinder, std::set<cudnnConvolutionFwdAlgo_t>());
         if (m_fwdAlgo.Algo.memory > 0)
             workspace.Resize((m_fwdAlgo.Algo.memory + sizeof(ElemType) - 1) / sizeof(ElemType), 1);
         // Perform forward convolution operation.
@@ -249,7 +257,7 @@ protected:
         {
             return cudnnGetConvolutionBackwardDataAlgorithm(*m_cudnn, *m_kernelT, m_outT, *m_conv, m_inT, CUDNN_CONVOLUTION_BWD_DATA_NO_WORKSPACE, 0, &algo);
         };
-        FindBestAlgo(batchSize, m_backDataAlgo, finder, staticFinder);
+        FindBestAlgo(batchSize, m_backDataAlgo, finder, staticFinder, m_backDataNonDeterministic);
         if (m_backDataAlgo.Algo.memory > 0)
             workspace.Resize((m_backDataAlgo.Algo.memory + sizeof(ElemType) - 1) / sizeof(ElemType), 1);
         // Compute gradients with respect to the output tensor (data).
@@ -269,7 +277,7 @@ protected:
         {
             return cudnnGetConvolutionBackwardFilterAlgorithm(*m_cudnn, m_inT, m_outT, *m_conv, *m_kernelT, CUDNN_CONVOLUTION_BWD_FILTER_NO_WORKSPACE, 0, &algo);
         };
-        FindBestAlgo(batchSize, m_backFiltAlgo, finder, staticFinder);
+        FindBestAlgo(batchSize, m_backFiltAlgo, finder, staticFinder, m_backFilterNonDeterministic);
         if (m_backFiltAlgo.Algo.memory > 0)
             workspace.Resize((m_backFiltAlgo.Algo.memory + sizeof(ElemType) - 1) / sizeof(ElemType), 1);
         // Compute gradients with respect to the output tensor (data).
@@ -280,7 +288,7 @@ protected:
     void EnsurePoolingInitialized() override
     {
         if (m_pool == nullptr)
-            m_pool = std::make_unique<CuDnnPool>(*m_geometry, m_poolKind);
+            m_pool = std::make_unique<CuDnnPool>(*m_geometry, m_poolKind, m_deterministic);
     }
 
     void ForwardPoolingCore(const Mat& in, Mat& out) override
@@ -314,8 +322,8 @@ private:
 
     static const int MaxAlgoCount = 10;
 
-    template <typename TAlgo, typename TFinder, typename TStaticFinder>
-    void FindBestAlgo(size_t batchSize, TAlgo& algo, TFinder finder, TStaticFinder staticFinder)
+    template <typename TAlgo, typename TFinder, typename TStaticFinder, typename TAlgoEnum>
+    void FindBestAlgo(size_t batchSize, TAlgo& algo, TFinder finder, TStaticFinder staticFinder, const std::set<TAlgoEnum>& nonDeterministic)
     {
         m_inT.UpdateBatchSize(batchSize);
         m_outT.UpdateBatchSize(batchSize);
@@ -333,6 +341,11 @@ private:
         {
             decltype(CuDnnAlgoT::algo) noMemAlgo;
             CUDNN_CALL(staticFinder(noMemAlgo));
+            if (m_deterministic && nonDeterministic.find(noMemAlgo) != nonDeterministic.end())
+            {
+                RuntimeError("cuDNN could not find a deterministic algorithm. Set 'deterministic=false' in your configuration.");
+            }
+
             algo.MaxAllowedMBSizeForCurrentAlgo = batchSize;
             algo.Algo = algoPerf[0];
             algo.Algo.algo = noMemAlgo;
@@ -347,15 +360,20 @@ private:
         size_t maxMem = m_maxTempMemSizeInSamples == 0 ? (std::numeric_limits<size_t>::max)() : inputSampleSize * m_maxTempMemSizeInSamples * sizeof(ElemType);
         // Find best (fastest) algorithm which satisfies workspace requirements.
         auto res = std::find_if(algoPerf, algoPerf + calgo,
-            [=](const CuDnnAlgoT& cur)
+            [this, maxMem, &nonDeterministic](const CuDnnAlgoT& cur)
             {
-                return cur.status == CUDNN_STATUS_SUCCESS && cur.memory <= maxMem;
+                return cur.status == CUDNN_STATUS_SUCCESS && cur.memory <= maxMem &&
+                    (!m_deterministic || nonDeterministic.find(cur.algo) == nonDeterministic.end());
             });
+
+        const std::string errorSuffix = m_deterministic ? " Set 'deterministic=false' in your configuration." : "";
         if (res == algoPerf + calgo)
-            RuntimeError("cuDNN could not find suitable algorithm for the current convolution configuration.");
+            RuntimeError("cuDNN could not find suitable algorithm for the current convolution configuration.%s", errorSuffix.c_str());
         algo.MaxAllowedMBSizeForCurrentAlgo = batchSize;
         algo.Algo = *res;
+
         // Find fastest algorithm that does NOT require workspace. It is used as a fallback algo in Forward function.
+        // Currently all Forward algorithms are deterministic, so no need for checking.
         res = std::find_if(algoPerf, algoPerf + calgo,
             [](const CuDnnAlgoT& cur)
             {
@@ -364,7 +382,7 @@ private:
         if (res == algoPerf + calgo)
         {
             // In theory, this should never happen.
-            RuntimeError("cuDNN could not find no-workspace algorithm for the current convolution configuration.");
+            RuntimeError("cuDNN could not find no-workspace algorithm for the current convolution configuration.%s", errorSuffix.c_str());
         }
         else
             algo.NoWorkspaceAlgo = (*res).algo;
@@ -423,6 +441,11 @@ private:
     ConvAlgoInfo<cudnnConvolutionFwdAlgoPerf_t> m_fwdAlgo;
     ConvAlgoInfo<cudnnConvolutionBwdDataAlgoPerf_t> m_backDataAlgo;
     ConvAlgoInfo<cudnnConvolutionBwdFilterAlgoPerf_t> m_backFiltAlgo;
+
+    // Flag indicating whether only deterministic algorithms should be used.
+    bool m_deterministic;
+    const std::set<cudnnConvolutionBwdDataAlgo_t> m_backDataNonDeterministic;
+    const std::set<cudnnConvolutionBwdFilterAlgo_t> m_backFilterNonDeterministic;
 };
 
 template <class ElemType>

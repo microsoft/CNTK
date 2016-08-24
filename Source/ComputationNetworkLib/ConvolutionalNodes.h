@@ -261,6 +261,11 @@ public:
     }
 
 public:
+    void MakeDeterministic() override
+    {
+        m_convEng->MakeDeterministic();
+    }
+
     void Save(File& fstream) const override
     {
         Base::Save(fstream);

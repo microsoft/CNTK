@@ -106,7 +106,10 @@ void DoTrain(const ConfigRecordType& config)
     createNetworkFn = GetNetworkFactory<ConfigRecordType, ElemType>(config);
 
     // create or load from checkpoint
+    bool deterministic = config(L"deterministic", false);
     shared_ptr<ComputationNetwork> net = !loadNetworkFromCheckpoint ? createNetworkFn(deviceId) : ComputationNetwork::CreateFromFile<ElemType>(deviceId, modelFileName);
+    if (deterministic)
+        net->MakeDeterministic();
 
     auto dataReader = CreateObject<DataReader>(config, L"reader");
 
@@ -182,10 +185,12 @@ void DoAdapt(const ConfigParameters& config)
     wstring origModelFileName = config(L"origModelFileName", L"");
     wstring refNodeName = config(L"refNodeName", L"");
 
+    bool deterministic = config(L"deterministic", false);
+
     SGD<ElemType> sgd(configSGD);
 
     sgd.InitMPI(MPIWrapper::GetInstance());
-    sgd.Adapt(origModelFileName, refNodeName, dataReader.get(), cvDataReader.get(), deviceId, makeMode);
+    sgd.Adapt(origModelFileName, refNodeName, dataReader.get(), cvDataReader.get(), deviceId, makeMode, deterministic);
 }
 
 template void DoAdapt<float>(const ConfigParameters& config);

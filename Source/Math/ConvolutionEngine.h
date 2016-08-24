@@ -45,6 +45,8 @@ public:
 public:
     virtual ~ConvolutionEngine() = default;
 
+    virtual void MakeDeterministic() {}
+
     void Forward(const Mat& in, const Mat& kernel, Mat& out, Mat& workspace);
 
     void BackwardData(const Mat& srcGrad, const Mat& kernel, Mat& grad, Mat& workspace);
@@ -59,8 +61,8 @@ public:
 
     std::shared_ptr<const ConvolveGeometry> Geometry() const { return m_geometry; }
 
-    static std::unique_ptr<ConvolutionEngine<ElemType>> Create(ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId, ImageLayoutKind imageLayout,
-                                                               size_t maxTempMemSizeInSamples, PoolKind poolKind = PoolKind::None, 
+    static std::unique_ptr<ConvolutionEngine<ElemType>> Create(ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId, 
+                                                               ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, PoolKind poolKind = PoolKind::None,
                                                                ConvolutionEngineKind enabledEngines = ConvolutionEngineKind::All,
                                                                std::wstring logPrefix = L"");
 

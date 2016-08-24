@@ -71,7 +71,8 @@ template <class ElemType>
 void SGD<ElemType>::Adapt(wstring origModelFileName, wstring refNodeName,
                           IDataReader* trainSetDataReader,
                           IDataReader* validationSetDataReader,
-                          const DEVICEID_TYPE deviceId, const bool makeMode)
+                          const DEVICEID_TYPE deviceId, const bool makeMode,
+                          const bool deterministic)
 {
     int startEpoch = DetermineStartEpoch(makeMode);
     if (startEpoch == m_maxEpochs)
@@ -87,12 +88,16 @@ void SGD<ElemType>::Adapt(wstring origModelFileName, wstring refNodeName,
         wstring modelFileName = GetModelNameForEpoch(int(startEpoch) - 1);
         LOGPRINTF(stderr, "Starting from checkpoint. Loading network from '%ls'.\n", modelFileName.c_str());
         net = ComputationNetwork::CreateFromFile<ElemType>(deviceId, modelFileName);
+        if (deterministic)
+            net->MakeDeterministic();
         networkLoadedFromCheckpoint = true;
     }
     else
     {
         LOGPRINTF(stderr, "Load Network From the original model file %ls.\n", origModelFileName.c_str());
         net = ComputationNetwork::CreateFromFile<ElemType>(deviceId, origModelFileName);
+        if (deterministic)
+            net->MakeDeterministic();
     }
 
     startEpoch = max(startEpoch, 0);
@@ -103,6 +108,8 @@ void SGD<ElemType>::Adapt(wstring origModelFileName, wstring refNodeName,
     {
         LOGPRINTF(stderr, "Load reference Network From the original model file %ls.\n", origModelFileName.c_str());
         refNet = ComputationNetwork::CreateFromFile<ElemType>(deviceId, origModelFileName);
+        if (deterministic)
+            net->MakeDeterministic();
     }
 
     ComputationNodeBasePtr refNode;

@@ -324,6 +324,11 @@ public:
         node->ClearConfigMemberCache();
     }
 
+    // Requires the node to be deterministic.
+    // If it cannot, it should throw with the reason.
+    virtual void MakeDeterministic()
+    {}
+
     virtual ComputationNodeBasePtr Duplicate(const std::wstring& newName = L"", const CopyNodeFlags flags = CopyNodeFlags::copyNodeAll) const = 0;   // (called on here implemented by ComputationNode<ElemType>
 
     virtual void Load(File& /*fstream*/, size_t /*modelVersion*/)

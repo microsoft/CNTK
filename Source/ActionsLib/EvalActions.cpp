@@ -158,6 +158,8 @@ void DoCrossValidate(const ConfigParameters& config)
 
         cvModels.push_back(cvModelPath);
         auto net = ComputationNetwork::CreateFromFile<ElemType>(deviceId, cvModelPath);
+        if (config(L"deterministic", false))
+            net->MakeDeterministic();
         // BUGBUG: ^^ Should use GetModelFromConfig()
         
         SimpleEvaluator<ElemType> eval(net, MPIWrapper::GetInstance(), enableDistributedMBReading, numMBsToShowResult,

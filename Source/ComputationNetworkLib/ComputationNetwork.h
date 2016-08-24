@@ -610,6 +610,16 @@ public:
         return nodes;
     }
 
+    // Requires the nodes to be deterministic.
+    // If some nodes cannot be, they should throw.
+    void MakeDeterministic()
+    {
+        for (auto& node: GetAllNodes())
+        {
+            node->MakeDeterministic();
+        }
+    }
+
     // determine parent map (this is needed in some editing steps)
     // Returns a map[node] -> set of parent nodes.
     std::map<ComputationNodeBasePtr, std::set<ComputationNodeBasePtr>> CreateParentsMap() const
