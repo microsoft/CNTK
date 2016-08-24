@@ -90,8 +90,8 @@ speechTrain = [
                     // parameter macros--these carry their own weight matrices
                     B() = BS.Parameters.BiasParam (cellDim)
 
-                    W(v) = BS.Parameters.WeightParam (cellDim, Inferred/*inputDim*/)  * Stabilize (v, enabled=enableSelfStabilization) // input-to-hidden
-                    H(h) = BS.Parameters.WeightParam (cellDim, Inferred/*outputDim*/) * Stabilize (h, enabled=enableSelfStabilization) // hidden-to-hidden
+                    W(v) = BS.Parameters.WeightParam (cellDim, Inferred)  * Stabilize (v, enabled=enableSelfStabilization) // input-to-hidden
+                    H(h) = BS.Parameters.WeightParam (cellDim, outputDim) * Stabilize (h, enabled=enableSelfStabilization) // hidden-to-hidden
                     C(c) = BS.Parameters.DiagWeightParam (cellDim)       .* Stabilize (c, enabled=enableSelfStabilization) // cell-to-hiddden (note: applied elementwise)
 
                     // note: the W(x) here are all different, they all come with their own set of weights; same for H(dh), C(dc), and B()

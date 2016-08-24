@@ -832,7 +832,7 @@ Loop = [
 Parameters =
 [
     # TODO: These all have randomSeed set to 1!
-    WeightParam (outputDim, inputDim) = Parameter (outputDim, inputDim, init='uniform', initValueScale=1, initOnCPUOnly=true, randomSeed=1)
+    WeightParam (outputDim, inputDim) = ParameterTensor ((outputDim : inputDim), init='uniform', initValueScale=1, initOnCPUOnly=true, randomSeed=1)
     DiagWeightParam (outputDim)       = ParameterTensor ((outputDim), init='uniform', initValueScale=1, initOnCPUOnly=true, randomSeed=1) # meant to be applied elementwise
     BiasParam (dim)                   = ParameterTensor ((dim), initValue=0.0)
     ScalarParam()                     = BiasParam (1)
