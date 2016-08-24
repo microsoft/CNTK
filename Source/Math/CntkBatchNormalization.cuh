@@ -637,7 +637,7 @@ __global__ void kNormalizeBatchTraining(int vectorSize, int spatialSize, int bat
                 int imap = (irowBase + k) / spatialSize;
                 meanS[offs + k] = NormalizeRunningStats ? runningMean[imap] : batchMean[imap];
                 invStdDevS[offs + k] = NormalizeRunningStats
-                    ? Operations::RSqrt(static_cast<ElemType>(runningVariance[imap] * (batchSize - 1) / batchSize + epsilon))
+                    ? Operations::RSqrt(static_cast<ElemType>(runningVariance[imap] + epsilon))
                     : batchInvStdDev[imap];
                 scaleS[offs + k] = bnScale[imap];
                 biasS[offs + k] = bnBias[imap];
@@ -650,7 +650,7 @@ __global__ void kNormalizeBatchTraining(int vectorSize, int spatialSize, int bat
             for (int k = 0; k < U; k++)
             {
                 invStdDevS[offs + k] = NormalizeRunningStats
-                    ? Operations::RSqrt(static_cast<ElemType>(runningVariance[irowBase + k] * (batchSize - 1) / batchSize + epsilon))
+                    ? Operations::RSqrt(static_cast<ElemType>(runningVariance[irowBase + k] + epsilon))
                     : invStdDevS[offs + k] = batchInvStdDev[irowBase + k];
             }
             LoadValues<U>(bnScale + irowBase, scaleS + offs);
