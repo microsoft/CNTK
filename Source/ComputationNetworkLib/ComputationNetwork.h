@@ -441,7 +441,10 @@ public:
     template <class ElemType>
     static void SetDropoutRate(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const double dropoutRate, double& prevDropoutRate, size_t randSeedBase);
 
-    template <class ElemType>
+	template <class ElemType>
+	static void SetRandomSampleNodeSeed(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, size_t randSeedBase);
+	
+	template <class ElemType>
     static void SetBatchNormalizationTimeConstants(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, 
                                                    double normalizationTimeConstant, double& prevNormalizationTimeConstant,
                                                    double blendTimeConstant, double& prevBlendTimeConstant);

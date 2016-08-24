@@ -682,8 +682,35 @@ template class NoiseContrastiveEstimationNode<float>;
 template class NoiseContrastiveEstimationNode<double>;
 
 
+// Nodes using a rsndom number generator can iherit from this class.
+class RngUser{
+public:
+	RngUser(){
+		this->m_randomSeed = 0;
+	}
 
+	RNGHandle& GetRNGHandle(DEVICEID_TYPE deviceId)
+	{
+		if (m_RNGHandle == nullptr)
+			m_RNGHandle = RNGHandle::Create(deviceId, m_randomSeed);
 
+		return *m_RNGHandle;
+	}
+
+	// E.g. called from ComputationNetwork to make sure that CNTK running on different nodes will have different seed.
+	void SetRandomSeed(const unsigned long val)
+	{
+		m_randomSeed = (unsigned long)val;
+
+		// Upon change of the seed, reset RNGHandle to force the creation of a new RNGHandle
+		// during forward propagation
+		m_RNGHandle = nullptr;
+	}
+
+protected:
+	unsigned long m_randomSeed;
+	std::shared_ptr<RNGHandle> m_RNGHandle;
+};
 
 // -----------------------------------------------------------------------
 // RandomSampleNode: 
@@ -702,7 +729,7 @@ template class NoiseContrastiveEstimationNode<double>;
 // As this node drwas samples for the full minibatch will will typically have several 'true' classes in the  minibatch.
 // If we
 template <class ElemType>
-class RandomSampleNode : public ComputationNodeNonLooping<ElemType>, public NumInputs<1>
+class RandomSampleNode : public ComputationNodeNonLooping<ElemType>, public NumInputs<1>, public RngUser
 {
     typedef ComputationNodeNonLooping<ElemType> Base;
     UsingComputationNodeMembersBoilerplate;
@@ -714,9 +741,9 @@ class RandomSampleNode : public ComputationNodeNonLooping<ElemType>, public NumI
 
 public:
     RandomSampleNode(DEVICEID_TYPE deviceId, const wstring& name, int nSamples = 0)
-        : Base(deviceId, name), m_nSamples(nSamples)
+		: Base(deviceId, name), m_nSamples(nSamples)
     {
-		m_randomSeed = (unsigned long)CreateUniqId();
+		SetRandomSeed((unsigned long)CreateUniqId());
     }
 
     RandomSampleNode(const ScriptableObjects::IConfigRecordPtr configp)
@@ -725,22 +752,7 @@ public:
         AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
     }
 
-	void SetRandomSeed(const unsigned long val)
-	{
-		m_randomSeed = (unsigned long)val;
 
-		// Upon change of the seed, reset RNGHandle to force the creation of a new RNGHandle
-		// during forward propagation
-		m_RNGHandle = nullptr;
-	}
-
-	RNGHandle& GetRNGHandle()
-	{
-		if (m_RNGHandle == nullptr)
-			m_RNGHandle = RNGHandle::Create(ValuePtr()->GetDeviceId(), m_randomSeed);
-
-		return *m_RNGHandle;
-	}
 
 
 	virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
@@ -802,7 +814,7 @@ public:
         std::uniform_real_distribution<double> r(0, weightPrefixSum.back());
         std::unordered_set<int> alreadySampled;
         std::vector<int> samples;
-		CPURNGHandle* cpuRNGHandle = dynamic_cast<CPURNGHandle*>(&GetRNGHandle());
+		CPURNGHandle* cpuRNGHandle = dynamic_cast<CPURNGHandle*>(&GetRNGHandle(CPUDEVICE));
 		// find random samples using the specified weight
         for (int iSample = 0; iSample < m_nSamples; iSample++)
         {
@@ -863,8 +875,6 @@ public:
 
 private:
     int m_nSamples;
-	unsigned long m_randomSeed;
-	std::shared_ptr<RNGHandle> m_RNGHandle;
 
 #ifdef _MSC_VER // TODO: check if available under GCC/Linux
     std::ranlux64_base_01 m_generator;
