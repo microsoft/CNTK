@@ -8,6 +8,8 @@
 #include "ComputationNode.h"
 #include "BatchNormalizationEngine.h"
 #include "RNGHandle.h"
+#include "CPURNGHandle.h"
+
 
 #include <map>
 #include <string>
@@ -714,7 +716,7 @@ public:
     RandomSampleNode(DEVICEID_TYPE deviceId, const wstring& name, int nSamples = 0)
         : Base(deviceId, name), m_nSamples(nSamples)
     {
-
+		m_randomSeed = (unsigned long)CreateUniqId();
     }
 
     RandomSampleNode(const ScriptableObjects::IConfigRecordPtr configp)
@@ -723,6 +725,24 @@ public:
         AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
     }
 
+	void SetRandomSeed(const unsigned long val)
+	{
+		m_randomSeed = (unsigned long)val;
+
+		// Upon change of the seed, reset RNGHandle to force the creation of a new RNGHandle
+		// during forward propagation
+		m_RNGHandle = nullptr;
+	}
+
+	RNGHandle& GetRNGHandle()
+	{
+		if (m_RNGHandle == nullptr)
+			m_RNGHandle = RNGHandle::Create(ValuePtr()->GetDeviceId(), m_randomSeed);
+
+		return *m_RNGHandle;
+	}
+
+
 	virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
 	{
 		Base::CopyTo(nodeP, newName, flags);
@@ -730,6 +750,7 @@ public:
 		{
 			auto node = dynamic_pointer_cast<RandomSampleNode<ElemType>>(nodeP);
 			node->m_nSamples = m_nSamples;
+			node->m_randomSeed = m_randomSeed;
 		}
 	}
 
@@ -781,10 +802,11 @@ public:
         std::uniform_real_distribution<double> r(0, weightPrefixSum.back());
         std::unordered_set<int> alreadySampled;
         std::vector<int> samples;
-        // find random samples using the specified weight
+		CPURNGHandle* cpuRNGHandle = dynamic_cast<CPURNGHandle*>(&GetRNGHandle());
+		// find random samples using the specified weight
         for (int iSample = 0; iSample < m_nSamples; iSample++)
         {
-            double randomValue = r(m_generator);
+			double randomValue = r(cpuRNGHandle->Generator());
             auto lower = std::lower_bound(weightPrefixSum.begin(), weightPrefixSum.end(), randomValue);
             int idx = (int)(lower - weightPrefixSum.begin());
             if (sampleWithReplacment) samples.push_back(idx);
@@ -841,6 +863,9 @@ public:
 
 private:
     int m_nSamples;
+	unsigned long m_randomSeed;
+	std::shared_ptr<RNGHandle> m_RNGHandle;
+
 #ifdef _MSC_VER // TODO: check if available under GCC/Linux
     std::ranlux64_base_01 m_generator;
     // TODO: handle seeding, e.g. similar to line below:
