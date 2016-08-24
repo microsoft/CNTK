@@ -155,6 +155,9 @@ BatchNormalizationLayer {spatialRank = 0,  # reduce over these dims. E.g. 2 to r
 LayerNormalizationLayer {initScale = 1, initBias = 0} =
 {
     gain = ParameterTensor{(1), initValue = initScale}  # TODO: offer Softplus version for protection, as for Stabilizer
+    #        f = ConstantTensor (4, (1))
+    #        fInv = Reciprocal (f)
+    #        gain = fInv .* Log (BS.Constants.One + Exp (f .* ParameterTensor ((1), initValue=0.99537863/* 1/f*ln (e^f-1) */))) # init value is 1
     bias = ParameterTensor{(1), initValue = initBias}
 
     apply (x) = {
