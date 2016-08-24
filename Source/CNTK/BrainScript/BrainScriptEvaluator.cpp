@@ -335,7 +335,7 @@ static ConfigValuePtr NodeOp(const ExpressionPtr &e, ConfigValuePtr leftVal, Con
     {
         let one = MakePrimitiveConfigValuePtr(1.0, leftFailFn, exprPath);
         config->Add(L"outputRank", leftFailFn, one);
-        config->Add(L"inputRank", leftFailFn, one);
+        config->Add(L"inferInputRank", leftFailFn, one);
     }
     // instantiate the ComputationNode
     let value = ConfigValuePtr(rtInfo->construct(config), MakeFailFn(e->location), exprPath);

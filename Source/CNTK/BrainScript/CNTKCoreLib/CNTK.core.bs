@@ -37,12 +37,12 @@ LinearLayer {outDim, bias = true, init='heNormal', initValueScale=1, inputRank=0
     outputRank = Length (_AsArray (outDim)) # support outputs with tensor layouts
     apply (x) =
         if bias
-        then Times (W, x, outputRank=outputRank, inputRank=inputRank) + b
-        else Times (W, x, outputRank=outputRank, inputRank=inputRank)
+        then Times (W, x, outputRank=outputRank, inferInputRank=inputRank) + b
+        else Times (W, x, outputRank=outputRank, inferInputRank=inputRank)
 }.apply
 
 # DenseLayer -- create a fully-connected layer with optional non-linearity
-DenseLayer{outDim, bias = true, activation=(x=>x), init='heNormal', initValueScale=1, inputRank=0} = Sequential ( LinearLayer{outDim, bias=bias, init=init, initValueScale=initValueScale, inputRank=inputRank} : activation )
+DenseLayer{outDim, bias = true, activation=(x=>x), init='heNormal', initValueScale=1, inputRank=0} = Sequential ( LinearLayer{outDim, bias=bias, init=init, initValueScale=initValueScale, inferInputRank=inputRank} : activation )
 
 # EmbeddingLayer -- create a linear embedding layer
 EmbeddingLayer {outDim,                                   # dimension of embedding
@@ -326,7 +326,7 @@ CNTK2 = [
 
     // 4. Tensor operations
     // Changes: Matrix -> Tensor. A -> x, B -> y. Data must come on y ("default parameter") hence not using _
-    Times(x, y, outputRank=1, inputRank=1, tag='') = new ComputationNode [ operation = 'Times' ; inputs = ( x : y ) /*plus the function args*/ ]
+    Times(x, y, outputRank=1, inferInputRank=1, tag='') = new ComputationNode [ operation = 'Times' ; inputs = ( x : y ) /*plus the function args*/ ]
 
     // 5. Elementwise operations.
     // Changes: "Matrix" -> "Tensor"; left input -> _; Clip: move input to front. ElementDivide/Times: anotherTensor -> y
