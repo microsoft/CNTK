@@ -238,7 +238,7 @@ class TimesNodeBase : public ComputationNode<ElemType>, public NumInputs<2>
     typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers; using Base::OperationName;                                                                                                                           \
 
 public:
-    TimesNodeBase(DEVICEID_TYPE deviceId, const wstring& name, size_t outputRank = 1, int inferInputRankToMap = 1)
+    TimesNodeBase(DEVICEID_TYPE deviceId, const wstring& name, size_t outputRank = 1, int inferInputRankToMap = -1)
         : Base(deviceId, name), m_outputRank(outputRank), m_inferInputRankToMap(inferInputRankToMap)
     {
     }
@@ -249,8 +249,8 @@ public:
         if (flags & CopyNodeFlags::copyNodeValue)
         {
             auto node = dynamic_pointer_cast<TimesNodeBase<ElemType, m_transpose>>(nodeP);
-            node->m_outputRank      = m_outputRank;
-            node->m_inferInputRankToMap  = m_inferInputRankToMap;
+            node->m_outputRank          = m_outputRank;
+            node->m_inferInputRankToMap = m_inferInputRankToMap;
         }
     }
 
@@ -271,7 +271,7 @@ public:
         if (modelVersion >= CNTK_MODEL_VERSION_11)
             fstream >> m_inferInputRankToMap;
         else
-            m_inferInputRankToMap = 1;
+            m_inferInputRankToMap = -1;
     }
 
 private:
@@ -525,7 +525,7 @@ class TimesNode : public TimesNodeBase<ElemType, false>
     static const std::wstring TypeName() { return L"Times"; }
 
 public:
-    TimesNode(DEVICEID_TYPE deviceId, const wstring& name, size_t outputRank = 1, int inferInputRankToMap = 1)
+    TimesNode(DEVICEID_TYPE deviceId, const wstring& name, size_t outputRank = 1, int inferInputRankToMap = -1)
         : Base(deviceId, name, outputRank, inferInputRankToMap)
     {
     }
@@ -558,7 +558,7 @@ class TransposeTimesNode : public TimesNodeBase<ElemType, true>
 public:
     DeclareConstructorFromConfigWithNumInputs(TransposeTimesNode);
     TransposeTimesNode(DEVICEID_TYPE deviceId, const wstring& name, size_t outputRank = 1)
-        : Base(deviceId, name, outputRank, /*inferInputRankToMap=*/1)
+        : Base(deviceId, name, outputRank, /*inferInputRankToMap=*/-1)
     {
     }
 };

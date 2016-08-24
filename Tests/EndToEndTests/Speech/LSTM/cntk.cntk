@@ -90,8 +90,8 @@ speechTrain = [
                     // parameter macros--these carry their own weight matrices
                     B() = BS.Parameters.BiasParam (cellDim)
 
-                    W(v) = BS.Parameters.WeightParam (cellDim, inputDim)  * Stabilize (v, enabled=enableSelfStabilization) // input-to-hidden
-                    H(h) = BS.Parameters.WeightParam (cellDim, outputDim) * Stabilize (h, enabled=enableSelfStabilization) // hidden-to-hidden
+                    W(v) = BS.Parameters.WeightParam (cellDim, Inferred/*inputDim*/)  * Stabilize (v, enabled=enableSelfStabilization) // input-to-hidden
+                    H(h) = BS.Parameters.WeightParam (cellDim, Inferred/*outputDim*/) * Stabilize (h, enabled=enableSelfStabilization) // hidden-to-hidden
                     C(c) = BS.Parameters.DiagWeightParam (cellDim)       .* Stabilize (c, enabled=enableSelfStabilization) // cell-to-hiddden (note: applied elementwise)
 
                     // note: the W(x) here are all different, they all come with their own set of weights; same for H(dh), C(dc), and B()
@@ -133,10 +133,11 @@ speechTrain = [
                 else /*BS.RNNs.*/ RecurrentLSTMP (hiddenDim, cellDim=innerCellDim, /*S*/ (LSTMoutput[k-1]), inputDim=hiddenDim,   enableSelfStabilization=useSelfStabilization).h
 
             // and add a softmax layer on top
-            W = BS.Parameters.WeightParam (labelDim, hiddenDim)
+            W = BS.Parameters.WeightParam (labelDim, Inferred)
             B = BS.Parameters.BiasParam   (labelDim)
 
-            z = W * S(LSTMoutput[numLSTMLayers]) + B; // top-level input to Softmax
+            // (unnecessarily using explicit Times with inferInputRankToMap in order to have a test for inferInputRankToMap parameter)
+            z = Times (W, S(LSTMoutput[numLSTMLayers]), inferInputRankToMap=0) + B; // top-level input to Softmax
         ].z
 
         // features

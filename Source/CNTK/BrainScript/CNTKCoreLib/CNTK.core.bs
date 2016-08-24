@@ -32,13 +32,19 @@
 # Note: outDim may describe a tensor as well.
 LinearLayer {outDim, bias = true, init='heNormal', initValueScale=1, inputRank=None, mapRank=None} =
 {
-    inputShape = if BS.Constants.IsNone (inputRank) then Inferred else Repeat (inputRank, Inferred)
+    # inputRank given: number of zeroes to add to W (mapRank must not be given)
+    # mapRank   given: expand W to leave exactly mapRank axes (inputRank must not be given)
+    # none      given: expand W to all (same as mapRank=0)
+    inputShape =
+        if       BS.Constants.IsNone (inputRank) then Inferred  # not given: one Inferred, which will get expanded
+        else if !BS.Constants.IsNone (mapRank)   then Fail ("'inputRank' and 'mapRank' cannot be specified at the same time.")
+        else Repeat (inputRank, Inferred)
     W = ParameterTensor {_ConcatArrays (outDim, inputShape), init=init, initValueScale=initValueScale}
     b = ParameterTensor {outDim, initValue=0}
     outputRank = Length (_AsArray (outDim)) # support outputs with tensor layouts
     inferInputRankToMap =
-        if       BS.Constants.IsNone (mapRank) then -1  # means not specified
-        else if !BS.Constants.IsNone (inputRank) Fail ("'inputRank' and 'mapRank' cannot be specified at the same time.")
+        if      !BS.Constants.IsNone (inputRank) then -1  # means not specified
+        else if  BS.Constants.IsNone (mapRank)   then 0   # default to 'use all input dims'
         else mapRank
     apply (x) =
         if bias
