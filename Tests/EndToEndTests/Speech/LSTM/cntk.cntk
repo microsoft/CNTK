@@ -23,7 +23,7 @@ speechTrain = {
         featDim = 11 * baseFeatDim
         labelDim = 132
 
-        useSelfStabilization = true
+        useSelfStabilization = false;#true   # note: overridden in modelRegressionTest
 
         // hidden dimensions
         innerCellDim  = 1024
@@ -32,7 +32,23 @@ speechTrain = {
 
         # define the model function
         # We define three functions here
-        modelRegressionTest (features) = {  # old test
+
+        # layers library
+        modelUsingLayers = Sequential
+        (
+            MeanVarNorm :
+            LayerStack {numLSTMLayers, _ =>
+                RecurrentLSTMLayer {hiddenDim, cellShape=innerCellDim, enableSelfStabilization=useSelfStabilization, init='uniform'}
+            } :
+            StabilizerLayer{} :
+            DenseLayer {labelDim, init='uniform'}
+        )
+
+        # old test
+        modelRegressionTest (features) =
+        {
+            useSelfStabilization = true
+
             featNorm = MeanVarNorm(features)
 
             // we define the LSTM locally for now, since the one in CNTK.core.bs has a slightly changed configuration that breaks this test
@@ -109,7 +125,7 @@ speechTrain = {
         labels   = Input(labelDim, tag='label')
 
         // link model to inputs
-        models = [| modelRegressionTest |]  # array of model functions...
+        models = [| modelRegressionTest; modelUsingLayers |]  # array of model functions...
         model = models[$modelSelector$]     # ...that we select from with a command-line-overridable parameter
         z = model (feashift)
 
@@ -125,6 +141,12 @@ speechTrain = {
         // decoding
         logPrior = LogPrior(labels)	 
         ScaledLogLikelihood = Pass (z - logPrior, tag='output') // using Pass() since we can't assign a tag to x - y
+
+        featureNodes = (features)
+        labelNodes = (labels)
+        criterionNodes = (ce)
+        evaluationNodes = (err)
+        outputNodes = (ScaledLogLikelihood)
     }
 
     SGD = {
