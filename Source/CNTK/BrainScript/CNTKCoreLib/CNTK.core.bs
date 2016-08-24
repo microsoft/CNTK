@@ -497,7 +497,7 @@ PerDimMeanVarDeNormalization(dataVectorSequence, meanVector, invStdDevVector, ta
 PerDimMeanVarNormalization (x, mean, invStdDev) = (x - mean) .* invStdDev
 Reciprocal(z, tag='') = new ComputationNode [ operation = 'Reciprocal' ; inputs = z /*plus the function args*/ ]
 //# the following is a temporary workaround until we have the C++ version
-RNN(A, B, hiddenSize=10, numLayers=1, bidirectional=false, rnnMode='LSTM', tag='') = new ComputationNode [ operation = 'RNN' ; inputs = ( A : B ) /*plus the function args*/ ]
+RNNStack(A, B, hiddenSize=10, numLayers=1, bidirectional=false, rnnMode='LSTM', tag='') = new ComputationNode [ operation = 'RNN' ; inputs = ( A : B ) /*plus the function args*/ ]
 Scale(scalarScalingFactor, matrix, tag='') = new ComputationNode [ operation = 'Scale' ; inputs = (scalarScalingFactor : matrix) /*plus the function args*/ ]
 # TODO: Scale = ElementTimes
 ScatterPacked(cond, indexSequence, sourceData, tag='') = new ComputationNode [ operation = 'ScatterPacked' ; inputs = (cond : indexSequence : sourceData) /*plus the function args*/ ]

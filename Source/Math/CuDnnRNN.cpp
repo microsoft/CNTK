@@ -21,7 +21,7 @@ class CuDnnTensorDescriptor
 private:
     cudnnTensorDescriptor_t m_tensorDesc;
 public:
-    CuDnnTensorDescriptor(size_t hiddenSize, size_t miniBatch, size_t numLayers)
+    CuDnnTensorDescriptor(size_t hiddenSize, size_t miniBatch, size_t numLayers) : m_tensorDesc(nullptr)
     {
         cudnnDataType_t m_dataType = CuDnnTensor::GetDataType<ElemType>();
         int dimA[3] = { (int)hiddenSize, (int)miniBatch, (int)numLayers };
@@ -53,9 +53,10 @@ void CuDnnRNNExecutor<ElemType>::SetDescriptors(size_t dim, const vector<size_t>
             descriptors.push_back(cudnnTensorDescriptor_t());
             CUDNN_CALL(cudnnCreateTensorDescriptor(&descriptors[i]));
         }
+        // these dimensions are what CUDNN expects: (the minibatch dimension, the data dimension, and the number 1 (because each descriptor describes one frame of data)
         int dims[3] = { (int)numSequencesForFrame[i], (int)dim, 1 };
         int strides[3] = { dims[2] * dims[1], dims[2], 1 };
-        CUDNN_CALL(cudnnSetTensorNdDescriptor(descriptors[i], CUDNN_DATA_FLOAT, 3, dims, strides));
+        CUDNN_CALL(cudnnSetTensorNdDescriptor(descriptors[i], m_dataType, 3, dims, strides));
     }
 }
 
@@ -64,12 +65,12 @@ void CuDnnRNNExecutor<ElemType>::ForwardCore(
     const GPUMatrix<ElemType>& weightsW,
     const GPUMatrix<ElemType>& inputX, GPUMatrix<ElemType>& outputY,
     const vector<size_t>& numSequencesForFrame,
-    const RnnParameters& rnnParameters,
+    const RnnAttributes& rnnAttributes,
     GPUMatrix<ElemType>& reserve, GPUMatrix<ElemType>& workspace
     )
 {
     // test that the RNN shape is correct
-    if (!m_rnnT->IsCompatable(rnnParameters))
+    if (!m_rnnT->IsCompatible(rnnAttributes))
         LogicError("RNN Layout has changed during processing");
 
     if (m_yDim != (m_rnnT->isBidirectional() ? 2 : 1) * m_rnnT->GetNumHidden())
@@ -118,12 +119,12 @@ void CuDnnRNNExecutor<ElemType>::ForwardCore(
 template <class ElemType>
 void CuDnnRNNExecutor<ElemType>::BackwardDataCore(
     const GPUMatrix<ElemType>& outputY, const GPUMatrix<ElemType>& outputDY, const GPUMatrix<ElemType>& weightsW, GPUMatrix<ElemType>& dx,
-    const RnnParameters& rnnParameters,
+    const RnnAttributes& rnnAttributes,
     GPUMatrix<ElemType>& reserve, GPUMatrix<ElemType>& workspace
     )
 {
     // test that the RNN shape is correct
-    if (!m_rnnT->IsCompatable(rnnParameters))
+    if (!m_rnnT->IsCompatible(rnnAttributes))
         LogicError("RNN Layout has changed during processing");
 
     if (!m_BackwardDataCalledYet)
@@ -149,12 +150,12 @@ void CuDnnRNNExecutor<ElemType>::BackwardDataCore(
 
 template <class ElemType>
 void CuDnnRNNExecutor<ElemType>::BackwardWeightsCore(const GPUMatrix<ElemType>& inputX, const GPUMatrix<ElemType>& outputY, GPUMatrix<ElemType>& dw,
-    const RnnParameters& rnnParameters,
+    const RnnAttributes& rnnAttributes,
     GPUMatrix<ElemType>& reserve, GPUMatrix<ElemType>& workspace
     )
 {
     // test that the RNN shape is correct
-    if (!m_rnnT->IsCompatable(rnnParameters))
+    if (!m_rnnT->IsCompatible(rnnAttributes))
         LogicError("RNN Layout has changed during processing");
     if (!m_BackwardDataCalledYet)
         LogicError("out of order calling you have been very bad");

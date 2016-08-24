@@ -23,7 +23,7 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-    vector<size_t> numSequencesForFrame;
+vector<size_t> numSequencesForFrame;
 // -----------------------------------------------------------------------
 // RNNNode
 // -----------------------------------------------------------------------
@@ -31,7 +31,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 template<class ElemType>
 RNNNode<ElemType>::RNNNode(DEVICEID_TYPE deviceId, const wstring& name)
     : Base(deviceId, name),
-    m_rnnParameters(0, 0, 0, L"LSTM"),
+    m_rnnAttributes(0, 0, 0, L"LSTM"),
     m_BackwardDataCalledYet(false)
 {
 }
@@ -40,7 +40,7 @@ RNNNode<ElemType>::RNNNode(DEVICEID_TYPE deviceId, const wstring& name)
 template<class ElemType>
 RNNNode<ElemType>::RNNNode(const ScriptableObjects::IConfigRecordPtr configp)
     : Base(configp->Get(L"deviceId"), L"<placeholder>"), 
-    m_rnnParameters(configp->Get(L"bidirectional"), configp->Get(L"numLayers"), configp->Get(L"hiddenSize"), configp->Get(L"rnnMode")),
+    m_rnnAttributes(configp->Get(L"bidirectional"), configp->Get(L"numLayers"), configp->Get(L"hiddenSize"), configp->Get(L"rnnMode")),
     m_BackwardDataCalledYet(false)
 {
     AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
@@ -53,7 +53,7 @@ template<class ElemType>
 	if (flags & CopyNodeFlags::copyNodeValue)
 	{
 		auto node = dynamic_pointer_cast<RNNNode<ElemType>>(nodeP);
-		node->m_rnnParameters = m_rnnParameters;
+		node->m_rnnAttributes = m_rnnAttributes;
 	}
 }
 
@@ -61,26 +61,24 @@ template<class ElemType>
 void RNNNode<ElemType>::Save(File& fstream) const
 {
     Base::Save(fstream);
-    m_rnnParameters.Write(fstream);
+    m_rnnAttributes.Write(fstream);
 }
 
 template<class ElemType>
 void RNNNode<ElemType>::Load(File& fstream, size_t modelVersion)
 {
     Base::Load(fstream, modelVersion);
-    m_rnnParameters.Read(fstream);
-}
-
-template<class ElemType>
-TensorView<ElemType> RNNNode<ElemType>::TensorHelper(int inputIndex/*-1 for output*/, bool gradient/*instead of value*/, const FrameRange& fr)
-{
-    auto input = inputIndex < 0 ? this : Input(inputIndex).get();
-    return gradient ? input->GradientTensorFor(SIZE_MAX, fr) : input->ValueTensorFor(SIZE_MAX, fr);
+    m_rnnAttributes.Read(fstream);
 }
 
 template<class ElemType>
 void RNNNode<ElemType>::TransposeHelper(const MatrixBasePtr matX, const TensorShape &shapeX, MatrixBasePtr matY, TensorShape &shapeY)
 {
+    // This function transposes the second and third axes of the input (X), creating a transposed copy in the output (Y).
+    //
+    // In 'frame mode', CNTK will present the data with the final two axes being the recurrent axis followed by the 
+    // 'minibatch axis'. CUDNN expects these to be in the reverse order, which is accomplished by TransposeHelper().
+
     shapeY = shapeX;
     shapeY.SwapDimsInPlace(1, 2);
 
@@ -94,7 +92,7 @@ template<class ElemType>
 void RNNNode<ElemType>::ForwardProp(const FrameRange& fr)
 {
     // ComputationNode derived classes are guaranteed to have a MBLayout
-    if (!this->HasMBLayout())
+    if (!HasMBLayout())
     {
         LogicError("RNNNode must operate on minibatches");
     }
@@ -102,11 +100,8 @@ void RNNNode<ElemType>::ForwardProp(const FrameRange& fr)
     // The parameters are stored in a column matrix
     Matrix<ElemType>& paramW = Input(1)->Value();
 
-    // Detect frame mode. Bugbug: should never revisit this decision after the first data comes through
-    MBLayoutPtr mb = this->GetMBLayout();
-    bool frameMode = (mb->GetNumTimeSteps() == 1) ? true : false;
-
-    if (frameMode)
+    MBLayoutPtr mb = GetMBLayout();
+    if (m_rnnAttributes.m_frameMode)
     {
         TensorView<ElemType> outputY = ValueTensorFor(SIZE_MAX, fr);
 
@@ -133,22 +128,7 @@ void RNNNode<ElemType>::ForwardProp(const FrameRange& fr)
 
         // create a vector with the correct number of timesteps(shapeXT[2]) containing the sequence count (shapeXT[1])
         numSequencesForFrame = vector<size_t>(shapeXT[2], shapeXT[1]);
-        try
-        {
-            m_transposedOutput->RNNForward(*m_transposedInput, paramW, shapeXT[0], shapeYT[0], numSequencesForFrame, m_rnnParameters, *m_reserve, *m_workspace);
-        }
-        catch (exception e)
-        {
-            fprintf(stderr, "|m_transposedInput|=%ld\n", m_transposedInput->GetNumElements());
-            fprintf(stderr, "|m_reserve|=%ld\n", m_reserve->GetNumElements());
-            fprintf(stderr, "|m_workspace|=%ld\n", m_workspace->GetNumElements());
-            fprintf(stderr, "shapeXT=%s\n", ((std::string)shapeXT).c_str());
-            fprintf(stderr, "shapeYT=%s\n", ((std::string)shapeYT).c_str());
-            fprintf(stderr, "numSequencesForFrame=[");
-            for (size_t x : numSequencesForFrame) fprintf(stderr, "%ld, ", x);
-            fprintf(stderr, "\n");
-            throw e;
-        }
+        m_transposedOutput->RNNForward(*m_transposedInput, paramW, shapeXT[0], shapeYT[0], numSequencesForFrame, m_rnnAttributes, *m_reserve, *m_workspace);
 
         // No one uses shapeY, but it is necessary
         TensorShape shapeY;
@@ -156,6 +136,9 @@ void RNNNode<ElemType>::ForwardProp(const FrameRange& fr)
     }
     else
     {
+        if (mb->GetNumTimeSteps() == 1)
+            RuntimeError("RNNNode configured for sequence mode, but minibatch only has one time step.");
+
         shapeXT = TensorShape(Input(0)->GetTensorSliceFor(SIZE_MAX, fr));
         shapeYT = TensorShape(this->GetTensorSliceFor(SIZE_MAX, fr));
 
@@ -165,7 +148,7 @@ void RNNNode<ElemType>::ForwardProp(const FrameRange& fr)
         // ensure enough storage
         m_transposedOutput->Resize(this->Value().GetNumRows(), m_transposedInput->GetNumCols());
 
-        m_transposedOutput->RNNForward(*m_transposedInput, paramW, shapeXT[0], shapeYT[0], numSequencesForFrame, m_rnnParameters, *m_reserve, *m_workspace);
+        m_transposedOutput->RNNForward(*m_transposedInput, paramW, shapeXT[0], shapeYT[0], numSequencesForFrame, m_rnnAttributes, *m_reserve, *m_workspace);
         this->UnpackSequencesFromCuDNN(*m_transposedOutput, this->Value());
     }
     m_BackwardDataCalledYet = false;
@@ -175,14 +158,13 @@ template<class ElemType>
 void RNNNode<ElemType>::BackpropTo(const size_t inputIndex, const FrameRange& fr)
 {
     MBLayoutPtr mb = this->GetMBLayout();
-    bool frameMode = (mb->GetNumTimeSteps() == 1) ? true : false;
 
     // ensure BackwardData is the first method called, as required by CuDnn API
     if (!m_BackwardDataCalledYet)
     {
         Matrix<ElemType>& paramW = Input(1)->Value();
 
-        if (frameMode)
+        if (m_rnnAttributes.m_frameMode)
         {
             // To obey the data layout constraints of CuDnn, we take the derivative we're given,
             // and transpose it before feeding to the interface.
@@ -198,52 +180,18 @@ void RNNNode<ElemType>::BackpropTo(const size_t inputIndex, const FrameRange& fr
         m_transposedDInput->Resize(Input(0)->Value().GetNumRows(), m_transposedDOutput->GetNumCols());
 
         // Do the work
-        try
-        {
-            m_transposedOutput->RNNBackwardData(*m_transposedDOutput, paramW, *m_transposedDInput, m_rnnParameters, *m_reserve, *m_workspace);
-        }
-        catch (exception e)
-        {
-            fprintf(stderr, "|m_transposedDOutput|=%ld\n", m_transposedDOutput->GetNumElements());
-            fprintf(stderr, "|paramW|=%ld\n", paramW.GetNumElements());
-            fprintf(stderr, "|m_transposedDInput|=%ld\n", m_transposedDInput->GetNumElements());
-            fprintf(stderr, "|m_reserve|=%ld\n", m_reserve->GetNumElements());
-            fprintf(stderr, "|m_workspace|=%ld\n", m_workspace->GetNumElements());
-            fprintf(stderr, "shapeXT=%s\n", ((std::string)shapeXT).c_str());
-            fprintf(stderr, "shapeYT=%s\n", ((std::string)shapeYT).c_str());
-            fprintf(stderr, "numSequencesForFrame=[");
-            for (size_t x : numSequencesForFrame) fprintf(stderr, "%ld, ", x);
-            fprintf(stderr, "\n");
-            throw e;
-        }
+        m_transposedOutput->RNNBackwardData(*m_transposedDOutput, paramW, *m_transposedDInput, m_rnnAttributes, *m_reserve, *m_workspace);
         m_BackwardDataCalledYet = true;
     }
     if (inputIndex == 1) // parameters
     {
         Matrix<ElemType>& paramDW = Input(1)->Gradient();
-        try
-        {
-            m_transposedOutput->RNNBackwardWeights(*m_transposedInput, *m_transposedOutput, paramDW, m_rnnParameters, *m_reserve, *m_workspace);
-        }
-        catch (exception e)
-        {
-            fprintf(stderr, "|m_transposedInput|=%ld\n", m_transposedInput->GetNumElements());
-            fprintf(stderr, "|m_transposedOutput|=%ld\n", m_transposedOutput->GetNumElements());
-            fprintf(stderr, "|paramDW|=%ld\n", paramDW.GetNumElements());
-            fprintf(stderr, "|m_reserve|=%ld\n", m_reserve->GetNumElements());
-            fprintf(stderr, "|m_workspace|=%ld\n", m_workspace->GetNumElements());
-            fprintf(stderr, "shapeXT=%s\n", ((std::string)shapeXT).c_str());
-            fprintf(stderr, "shapeYT=%s\n", ((std::string)shapeYT).c_str());
-            fprintf(stderr, "numSequencesForFrame=[");
-            for (size_t x : numSequencesForFrame) fprintf(stderr, "%ld, ", x);
-            fprintf(stderr, "\n");
-            throw e;
-        }
+        m_transposedOutput->RNNBackwardWeights(*m_transposedInput, *m_transposedOutput, paramDW, m_rnnAttributes, *m_reserve, *m_workspace);
     }
     else if (inputIndex == 0) // data
     {
         // all of the work was done above, where RNNBackwardData is called. Now, just unpack the result.
-        if (frameMode)
+        if (m_rnnAttributes.m_frameMode)
         {
             TensorShape tmp;
             TransposeHelper(m_transposedDInput, shapeXT, Input(0)->GradientPtr(), tmp);
@@ -272,7 +220,7 @@ void RNNNode<ElemType>::Validate(bool isFinalValidationPass)
         // now determine result dimensions
         auto dimsC = dimsB;
         // output dims - bugbug: this is hard-coded for bidirectional models
-        dimsC[0] = (m_rnnParameters.m_bidirectional ? 2 : 1) * m_rnnParameters.m_hiddenSize;
+        dimsC[0] = (m_rnnAttributes.m_bidirectional ? 2 : 1) * m_rnnAttributes.m_hiddenSize;
 
         // N.B. - this is the magical call, the reason for the function
         // dimensions would be outputRank * numSamples * minibatch * time.
@@ -333,7 +281,8 @@ void RNNNode<ElemType>::PackSequencesForCuDNN(const Matrix<ElemType>& src, Matri
     fill(numSequencesForFrame.begin(), numSequencesForFrame.end(), 0L);
 
     // make sure the index is on CPU so we can use SetValue()
-    m_packingIndex->TransferToDeviceIfNotThere(-1, true, false, false);
+    // 
+    m_packingIndex->TransferToDeviceIfNotThere(-1, true/*isBeingMoved*/, false/*emptyTransfer*/, false/*updatePreferredDevice*/);
 
     // Reserve one element for every valid sample. DoGatherColumnsOf() requires it to be a row vector
     m_packingIndex->Resize(1, mb->GetActualNumSamples());

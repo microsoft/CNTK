@@ -10,6 +10,9 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+// The CUDNN RNN API requires a dropout descriptor for every RNN. It currently isn't used,
+// so this wrapper creates a default descriptor and makes sure the lifetime of the object
+// is managed properly.
 class CuDnnDropout
 {
     CuDnn::ptr_t m_cudnn;
@@ -26,7 +29,6 @@ public:
         // bugbug: possible leak. Does CuDnn release this for us?
         CUDA_CALL(cudaMalloc(&states, stateSize));
 
-        fprintf(stderr, "CuDnnDropout()\n");
         CUDNN_CALL(cudnnSetDropoutDescriptor(m_dropoutDesc,
             *m_cudnn,
             dropout,
@@ -37,11 +39,9 @@ public:
 
     ~CuDnnDropout()
     {
-        fprintf(stderr, "~CuDnnDropout()\n");
         if (m_dropoutDesc != nullptr)
         {
             cudnnDestroyDropoutDescriptor(m_dropoutDesc);
-            m_dropoutDesc = nullptr;
         }
     }
 
@@ -62,41 +62,39 @@ private:
     cudnnDataType_t m_dataType;
     cudnnRNNDescriptor_t m_rnnDesc;
     CuDnnDropout m_dropout;
-    RnnParameters m_rnnParameters;
+    RnnAttributes m_rnnAttributes;
 
     cudnnRNNMode_t GetMode()
     {
-        if (m_rnnParameters.m_rnnMode == wstring(L"LSTM"))
+        if (m_rnnAttributes.m_rnnMode == wstring(L"LSTM"))
             return cudnnRNNMode_t::CUDNN_LSTM;
-        if (m_rnnParameters.m_rnnMode == wstring(L"GRU"))
+        if (m_rnnAttributes.m_rnnMode == wstring(L"GRU"))
             return cudnnRNNMode_t::CUDNN_GRU;
-        if (m_rnnParameters.m_rnnMode == wstring(L"RNN_RELU"))
+        if (m_rnnAttributes.m_rnnMode == wstring(L"RNN_RELU"))
             return cudnnRNNMode_t::CUDNN_RNN_RELU;
-        if (m_rnnParameters.m_rnnMode == wstring(L"RNN_TANH"))
+        if (m_rnnAttributes.m_rnnMode == wstring(L"RNN_TANH"))
             return cudnnRNNMode_t::CUDNN_RNN_TANH;
-        InvalidArgument("RNN Mode set to %ls, but supported values are LSTM, GRU, RNN_RELU, RNN_TANH.", m_rnnParameters.m_rnnMode.c_str());
+        InvalidArgument("RNN Mode set to %ls, but supported values are LSTM, GRU, RNN_RELU, RNN_TANH.", m_rnnAttributes.m_rnnMode.c_str());
     }
 
 public:
-    CuDnnRNN(const RnnParameters& rnnParameters)
-        : m_rnnDesc(nullptr), m_dropout(0.0f), m_rnnParameters(rnnParameters),
+    CuDnnRNN(const RnnAttributes& rnnAttributes)
+        : m_rnnDesc(nullptr), m_dropout(0.0f), m_rnnAttributes(rnnAttributes),
         m_dataType(CuDnnTensor::GetDataType<ElemType>())
     {
-        fprintf(stderr, "CuDnnRNN()\n");
         CUDNN_CALL(cudnnCreateRNNDescriptor(&m_rnnDesc));
         CUDNN_CALL(cudnnSetRNNDescriptor(m_rnnDesc,
-            (int)m_rnnParameters.m_hiddenSize,
-            (int)m_rnnParameters.m_numLayers,
+            (int)m_rnnAttributes.m_hiddenSize,
+            (int)m_rnnAttributes.m_numLayers,
             m_dropout,
             CUDNN_LINEAR_INPUT, // We can also skip the input matrix transformation
-            m_rnnParameters.m_bidirectional ? CUDNN_BIDIRECTIONAL : CUDNN_UNIDIRECTIONAL,
+            m_rnnAttributes.m_bidirectional ? CUDNN_BIDIRECTIONAL : CUDNN_UNIDIRECTIONAL,
             GetMode(),
             m_dataType));
     }
 
     ~CuDnnRNN()
     {
-        fprintf(stderr, "~CuDnnRNN()\n");
         if (m_rnnDesc != nullptr)
         {
             cudnnDestroyRNNDescriptor(m_rnnDesc);
@@ -104,9 +102,9 @@ public:
         }
     }
 
-    bool IsCompatable(const RnnParameters& rnnParameters) const
+    bool IsCompatible(const RnnAttributes& rnnAttributes) const
     {
-        return this->m_rnnParameters == rnnParameters;
+        return this->m_rnnAttributes == rnnAttributes;
     }
 
     operator cudnnRNNDescriptor_t() const
@@ -114,13 +112,17 @@ public:
         return m_rnnDesc;
     }
 
-    bool isBidirectional() const { return m_rnnParameters.m_bidirectional; }
+    bool isBidirectional() const { return m_rnnAttributes.m_bidirectional; }
 
-    size_t GetNumLayers() { return m_rnnParameters.m_numLayers; }
-    size_t GetNumHidden() { return m_rnnParameters.m_hiddenSize; }
+    size_t GetNumLayers() { return m_rnnAttributes.m_numLayers; }
+    size_t GetNumHidden() { return m_rnnAttributes.m_hiddenSize; }
 
     DISABLE_COPY_AND_MOVE(CuDnnRNN);
 };
+
+// The CUDNN RNN API describes the monolithic block of RNN parameters as a filter. This class
+// wraps the concept of this filter, including the ability to calculate the necessary size
+// based on the rnn descriptor.
 
 template <class ElemType>
 class CuDnnFilter
@@ -174,6 +176,10 @@ private:
     cudnnFilterDescriptor_t m_filterDesc;
 };
 
+// CuDnnRNNExecutor holds the configuration and state for an instance of an RNN for CUDNN.
+// It is generally attached to a GpuMatrix() object, and all calls to the RNN need to go through
+// that object.
+
 template <class ElemType>
 class CuDnnRNNExecutor
 {
@@ -181,20 +187,19 @@ class CuDnnRNNExecutor
     cudnnDataType_t m_dataType;
     size_t m_xDim, m_yDim;
 public:
-    CuDnnRNNExecutor(size_t xDim, size_t yDim, const RnnParameters& rnnParameters ) :
+    CuDnnRNNExecutor(size_t xDim, size_t yDim, const RnnAttributes& rnnAttributes ) :
         m_cudnn(CuDnn::Instance()),
         m_xDim(xDim), m_yDim(yDim),
         m_seqLength(0),
         m_dataType(CuDnnTensor::GetDataType<ElemType>()),
         m_BackwardDataCalledYet(false)
     {
-        fprintf(stderr, "CuDnnRNNExecutor()\n");
-        m_rnnT = std::make_unique<CuDnnRNN<ElemType>>(rnnParameters);
+        m_rnnT = std::make_unique<CuDnnRNN<ElemType>>(rnnAttributes);
     }
 
-    void ForwardCore(const GPUMatrix<ElemType>& weightsW, const GPUMatrix<ElemType>& inputX, GPUMatrix<ElemType>& outputY, const vector<size_t>& numSequencesForFrame, const RnnParameters& rnnParameters, GPUMatrix<ElemType>& reserve, GPUMatrix<ElemType>& workspace);
-    void BackwardWeightsCore(const GPUMatrix<ElemType>& inputX, const GPUMatrix<ElemType>& outputY, GPUMatrix<ElemType>& dw, const RnnParameters& rnnParameters, GPUMatrix<ElemType>& reserve, GPUMatrix<ElemType>& workspace);
-    void BackwardDataCore(const GPUMatrix<ElemType>& outputY, const GPUMatrix<ElemType>& outputDY, const GPUMatrix<ElemType>& w, GPUMatrix<ElemType>& dx, const RnnParameters& rnnParameters, GPUMatrix<ElemType>& reserve, GPUMatrix<ElemType>& workspace);
+    void ForwardCore(const GPUMatrix<ElemType>& weightsW, const GPUMatrix<ElemType>& inputX, GPUMatrix<ElemType>& outputY, const vector<size_t>& numSequencesForFrame, const RnnAttributes& rnnAttributes, GPUMatrix<ElemType>& reserve, GPUMatrix<ElemType>& workspace);
+    void BackwardWeightsCore(const GPUMatrix<ElemType>& inputX, const GPUMatrix<ElemType>& outputY, GPUMatrix<ElemType>& dw, const RnnAttributes& rnnAttributes, GPUMatrix<ElemType>& reserve, GPUMatrix<ElemType>& workspace);
+    void BackwardDataCore(const GPUMatrix<ElemType>& outputY, const GPUMatrix<ElemType>& outputDY, const GPUMatrix<ElemType>& w, GPUMatrix<ElemType>& dx, const RnnAttributes& rnnAttributes, GPUMatrix<ElemType>& reserve, GPUMatrix<ElemType>& workspace);
 
 protected:
     std::unique_ptr<CuDnnFilter<ElemType>> wDesc;
