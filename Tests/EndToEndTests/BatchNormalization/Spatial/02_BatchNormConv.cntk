@@ -1,3 +1,7 @@
+# Synthetic test for spatial batch normalization, (almost) in isolation of
+# other nodes (in particular Convolution). This is not a general example and/or
+# documenting best practices. The network was based on CIFAR-10/02_BatchNormConv.
+
 RootDir = "."
 
 ConfigDir = "$RootDir$"

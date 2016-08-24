@@ -22,8 +22,7 @@ ndlMnistMacros = [
     scValue = 1
     
     # Batch normalization time constant.
-    #bnTimeConst = 4096
-    bnTimeConst = 2048
+    bnTimeConst = 0
   
     fc1WScale = 12
     fc1BValue = 0
@@ -42,9 +41,9 @@ DNN=[
     b = LearnableParameter(cMap1, 1, init = fixedValue, value = conv1BValue)
     sc = LearnableParameter(cMap1, 1, init = fixedValue, value = scValue)
     m = LearnableParameter(cMap1, 1, init = fixedValue, value = 0, learningRateMultiplier = 0)
-    var = LearnableParameter(cMap1, 1, init = fixedValue, value = 0, learningRateMultiplier = 0)
+    v = LearnableParameter(cMap1, 1, init = fixedValue, value = 0, learningRateMultiplier = 0)
     
-    y = BatchNormalization(featScaled, sc, b, m, var, spatial = true, normalizationTimeConstant = bnTimeConst, imageLayout = $imageLayout$, engine=$batchNormalizationEngine$)
+    y = BatchNormalization(featScaled, sc, b, m, v, spatial = true, normalizationTimeConstant = bnTimeConst, imageLayout = $imageLayout$, engine=$batchNormalizationEngine$)
     conv1 = RectifiedLinear(y)
 
     # pool1

@@ -1,3 +1,7 @@
+# Synthetic test for non-spatial batch normalization, (almost) in isolation of
+# other nodes (in particular Convolution). This is not a general example and/or
+# documenting best practices. The network was based on MNIST/01_OneHidden.
+
 rootDir = ".."
 
 configDir = "$rootDir$/Config"
@@ -16,10 +20,6 @@ numMBsToShowResult = 500
 traceLevel = 1
 
 batchNormalizationEngine = "testMustOverrideBatchNormalizationEngine"
-
-#######################################
-#  TRAINING CONFIG                    #
-#######################################
 
 train = [
     action = "train"
@@ -53,10 +53,6 @@ train = [
         ]
     ]   
 ]
-
-#######################################
-#  TEST CONFIG                        #
-#######################################
 
 test = [
     action = "test"

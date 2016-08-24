@@ -3,12 +3,12 @@ CPU info:
     Hardware threads: 24
     Total Memory: 268381192 kB
 -------------------------------------------------------------------
-=== Running /cygdrive/c/jenkins/workspace/CNTK-Test-Windows-W1/x64/release/cntk.exe configFile=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Image\Miscellaneous\CIFAR-10/02_BatchNormConv.cntk currentDirectory=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160822092732.247426\Examples\Image\Miscellaneous\CIFAR-10_02_BatchNormConv@release_gpu\TestData RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160822092732.247426\Examples\Image\Miscellaneous\CIFAR-10_02_BatchNormConv@release_gpu DataDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160822092732.247426\Examples\Image\Miscellaneous\CIFAR-10_02_BatchNormConv@release_gpu\TestData ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Image\Miscellaneous\CIFAR-10 OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160822092732.247426\Examples\Image\Miscellaneous\CIFAR-10_02_BatchNormConv@release_gpu DeviceId=0 timestamping=true Train=[SGD=[maxEpochs=5]] Train=[SGD=[epochSize=100]] stderr=-
+=== Running /cygdrive/c/jenkins/workspace/CNTK-Test-Windows-W1/x64/release/cntk.exe configFile=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Image\Miscellaneous\CIFAR-10/02_BatchNormConv.cntk currentDirectory=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160823035118.956998\Examples\Image\Miscellaneous\CIFAR-10_02_BatchNormConv@release_gpu\TestData RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160823035118.956998\Examples\Image\Miscellaneous\CIFAR-10_02_BatchNormConv@release_gpu DataDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160823035118.956998\Examples\Image\Miscellaneous\CIFAR-10_02_BatchNormConv@release_gpu\TestData ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Image\Miscellaneous\CIFAR-10 OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160823035118.956998\Examples\Image\Miscellaneous\CIFAR-10_02_BatchNormConv@release_gpu DeviceId=0 timestamping=true Train=[SGD=[maxEpochs=5]] Train=[SGD=[epochSize=100]] stderr=-
 -------------------------------------------------------------------
 Build info: 
 
-		Built time: Aug 22 2016 08:48:03
-		Last modified date: Mon Aug 22 08:26:39 2016
+		Built time: Aug 23 2016 03:29:14
+		Last modified date: Mon Aug 22 21:29:13 2016
 		Build type: Release
 		Build target: GPU
 		With 1bit-SGD: no
@@ -17,46 +17,45 @@ Build info:
 		CUB_PATH: C:\src\cub-1.4.1
 		CUDNN_PATH: C:\NVIDIA\cudnn-5.0\cuda
 		Build Branch: HEAD
-		Build SHA1: db500985aff6d7d67b90c1d0dedcbcd7f8ae7b96
-		Built by svcphil on dphaim-26-new
+		Build SHA1: 66498cf414f4bbf6392730c2abfbef6a5eeb8f7b
+		Built by svcphil on LIANA-09-w
 		Build Path: c:\jenkins\workspace\CNTK-Build-Windows\Source\CNTK\
 -------------------------------------------------------------------
-Changed current directory to C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160822092732.247426\Examples\Image\Miscellaneous\CIFAR-10_02_BatchNormConv@release_gpu\TestData
-08/22/2016 09:28:33: Redirecting stderr to file -_Train_Test.log
-08/22/2016 09:28:33: -------------------------------------------------------------------
-08/22/2016 09:28:33: Build info: 
+Changed current directory to C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160823035118.956998\Examples\Image\Miscellaneous\CIFAR-10_02_BatchNormConv@release_gpu\TestData
+08/23/2016 03:52:39: Redirecting stderr to file -_Train_Test.log
+08/23/2016 03:52:39: -------------------------------------------------------------------
+08/23/2016 03:52:39: Build info: 
 
-08/22/2016 09:28:33: 		Built time: Aug 22 2016 08:48:03
-08/22/2016 09:28:33: 		Last modified date: Mon Aug 22 08:26:39 2016
-08/22/2016 09:28:33: 		Build type: Release
-08/22/2016 09:28:33: 		Build target: GPU
-08/22/2016 09:28:33: 		With 1bit-SGD: no
-08/22/2016 09:28:33: 		Math lib: mkl
-08/22/2016 09:28:33: 		CUDA_PATH: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.5
-08/22/2016 09:28:33: 		CUB_PATH: C:\src\cub-1.4.1
-08/22/2016 09:28:33: 		CUDNN_PATH: C:\NVIDIA\cudnn-5.0\cuda
-08/22/2016 09:28:33: 		Build Branch: HEAD
-08/22/2016 09:28:33: 		Build SHA1: db500985aff6d7d67b90c1d0dedcbcd7f8ae7b96
-08/22/2016 09:28:33: 		Built by svcphil on dphaim-26-new
-08/22/2016 09:28:33: 		Build Path: c:\jenkins\workspace\CNTK-Build-Windows\Source\CNTK\
-08/22/2016 09:28:33: -------------------------------------------------------------------
-08/22/2016 09:28:34: -------------------------------------------------------------------
-08/22/2016 09:28:34: GPU info:
+08/23/2016 03:52:39: 		Built time: Aug 23 2016 03:29:14
+08/23/2016 03:52:39: 		Last modified date: Mon Aug 22 21:29:13 2016
+08/23/2016 03:52:39: 		Build type: Release
+08/23/2016 03:52:39: 		Build target: GPU
+08/23/2016 03:52:39: 		With 1bit-SGD: no
+08/23/2016 03:52:39: 		Math lib: mkl
+08/23/2016 03:52:39: 		CUDA_PATH: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.5
+08/23/2016 03:52:39: 		CUB_PATH: C:\src\cub-1.4.1
+08/23/2016 03:52:39: 		CUDNN_PATH: C:\NVIDIA\cudnn-5.0\cuda
+08/23/2016 03:52:39: 		Build Branch: HEAD
+08/23/2016 03:52:39: 		Build SHA1: 66498cf414f4bbf6392730c2abfbef6a5eeb8f7b
+08/23/2016 03:52:39: 		Built by svcphil on LIANA-09-w
+08/23/2016 03:52:39: 		Build Path: c:\jenkins\workspace\CNTK-Build-Windows\Source\CNTK\
+08/23/2016 03:52:39: -------------------------------------------------------------------
+08/23/2016 03:52:41: -------------------------------------------------------------------
+08/23/2016 03:52:41: GPU info:
 
-08/22/2016 09:28:34: 		Device[0]: cores = 2880; computeCapability = 3.5; type = "GeForce GTX 780 Ti"; memory = 3072 MB
-08/22/2016 09:28:34: 		Device[1]: cores = 2880; computeCapability = 3.5; type = "GeForce GTX 780 Ti"; memory = 3072 MB
-08/22/2016 09:28:34: 		Device[2]: cores = 2880; computeCapability = 3.5; type = "GeForce GTX 780 Ti"; memory = 3072 MB
-08/22/2016 09:28:34: 		Device[3]: cores = 2880; computeCapability = 3.5; type = "GeForce GTX 780 Ti"; memory = 3072 MB
-08/22/2016 09:28:34: -------------------------------------------------------------------
+08/23/2016 03:52:41: 		Device[0]: cores = 2880; computeCapability = 3.5; type = "GeForce GTX 780 Ti"; memory = 3072 MB
+08/23/2016 03:52:41: 		Device[1]: cores = 2880; computeCapability = 3.5; type = "GeForce GTX 780 Ti"; memory = 3072 MB
+08/23/2016 03:52:41: 		Device[2]: cores = 2880; computeCapability = 3.5; type = "GeForce GTX 780 Ti"; memory = 3072 MB
+08/23/2016 03:52:41: -------------------------------------------------------------------
 
-08/22/2016 09:28:34: Running on DPHAIM-24 at 2016/08/22 09:28:34
-08/22/2016 09:28:34: Command line: 
-C:\jenkins\workspace\CNTK-Test-Windows-W1\x64\release\cntk.exe  configFile=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Image\Miscellaneous\CIFAR-10/02_BatchNormConv.cntk  currentDirectory=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160822092732.247426\Examples\Image\Miscellaneous\CIFAR-10_02_BatchNormConv@release_gpu\TestData  RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160822092732.247426\Examples\Image\Miscellaneous\CIFAR-10_02_BatchNormConv@release_gpu  DataDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160822092732.247426\Examples\Image\Miscellaneous\CIFAR-10_02_BatchNormConv@release_gpu\TestData  ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Image\Miscellaneous\CIFAR-10  OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160822092732.247426\Examples\Image\Miscellaneous\CIFAR-10_02_BatchNormConv@release_gpu  DeviceId=0  timestamping=true  Train=[SGD=[maxEpochs=5]]  Train=[SGD=[epochSize=100]]  stderr=-
-
+08/23/2016 03:52:41: Running on DPHAIM-25 at 2016/08/23 03:52:41
+08/23/2016 03:52:41: Command line: 
+C:\jenkins\workspace\CNTK-Test-Windows-W1\x64\release\cntk.exe  configFile=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Image\Miscellaneous\CIFAR-10/02_BatchNormConv.cntk  currentDirectory=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160823035118.956998\Examples\Image\Miscellaneous\CIFAR-10_02_BatchNormConv@release_gpu\TestData  RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160823035118.956998\Examples\Image\Miscellaneous\CIFAR-10_02_BatchNormConv@release_gpu  DataDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160823035118.956998\Examples\Image\Miscellaneous\CIFAR-10_02_BatchNormConv@release_gpu\TestData  ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Image\Miscellaneous\CIFAR-10  OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160823035118.956998\Examples\Image\Miscellaneous\CIFAR-10_02_BatchNormConv@release_gpu  DeviceId=0  timestamping=true  Train=[SGD=[maxEpochs=5]]  Train=[SGD=[epochSize=100]]  stderr=-
 
 
-08/22/2016 09:28:34: >>>>>>>>>>>>>>>>>>>> RAW CONFIG (VARIABLES NOT RESOLVED) >>>>>>>>>>>>>>>>>>>>
-08/22/2016 09:28:34: RootDir = "."
+
+08/23/2016 03:52:41: >>>>>>>>>>>>>>>>>>>> RAW CONFIG (VARIABLES NOT RESOLVED) >>>>>>>>>>>>>>>>>>>>
+08/23/2016 03:52:41: RootDir = "."
 ConfigDir = "$RootDir$"
 DataDir = "$RootDir$"
 OutputDir = "$RootDir$/Output"
@@ -119,37 +118,37 @@ Test = [
         ]
     ]    
 ]
-currentDirectory=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160822092732.247426\Examples\Image\Miscellaneous\CIFAR-10_02_BatchNormConv@release_gpu\TestData
-RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160822092732.247426\Examples\Image\Miscellaneous\CIFAR-10_02_BatchNormConv@release_gpu
-DataDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160822092732.247426\Examples\Image\Miscellaneous\CIFAR-10_02_BatchNormConv@release_gpu\TestData
+currentDirectory=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160823035118.956998\Examples\Image\Miscellaneous\CIFAR-10_02_BatchNormConv@release_gpu\TestData
+RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160823035118.956998\Examples\Image\Miscellaneous\CIFAR-10_02_BatchNormConv@release_gpu
+DataDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160823035118.956998\Examples\Image\Miscellaneous\CIFAR-10_02_BatchNormConv@release_gpu\TestData
 ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Image\Miscellaneous\CIFAR-10
-OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160822092732.247426\Examples\Image\Miscellaneous\CIFAR-10_02_BatchNormConv@release_gpu
+OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160823035118.956998\Examples\Image\Miscellaneous\CIFAR-10_02_BatchNormConv@release_gpu
 DeviceId=0
 timestamping=true
 Train=[SGD=[maxEpochs=5]]
 Train=[SGD=[epochSize=100]]
 stderr=-
 
-08/22/2016 09:28:34: <<<<<<<<<<<<<<<<<<<< RAW CONFIG (VARIABLES NOT RESOLVED)  <<<<<<<<<<<<<<<<<<<<
+08/23/2016 03:52:41: <<<<<<<<<<<<<<<<<<<< RAW CONFIG (VARIABLES NOT RESOLVED)  <<<<<<<<<<<<<<<<<<<<
 
-08/22/2016 09:28:34: >>>>>>>>>>>>>>>>>>>> RAW CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
-08/22/2016 09:28:34: RootDir = "."
+08/23/2016 03:52:41: >>>>>>>>>>>>>>>>>>>> RAW CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
+08/23/2016 03:52:41: RootDir = "."
 ConfigDir = "."
 DataDir = "."
 OutputDir = "./Output"
-ModelDir = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160822092732.247426\Examples\Image\Miscellaneous\CIFAR-10_02_BatchNormConv@release_gpu/Models"
+ModelDir = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160823035118.956998\Examples\Image\Miscellaneous\CIFAR-10_02_BatchNormConv@release_gpu/Models"
 ndlMacros = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Image\Miscellaneous\CIFAR-10/Macros.ndl"
 precision = "float"
 deviceId = 0
 imageLayout = "cudnn"
 initOnCPUOnly=true
 command = Train:Test
-stderr = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160822092732.247426\Examples\Image\Miscellaneous\CIFAR-10_02_BatchNormConv@release_gpu/02_BatchNormConv"
+stderr = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160823035118.956998\Examples\Image\Miscellaneous\CIFAR-10_02_BatchNormConv@release_gpu/02_BatchNormConv"
 traceLevel = 1
 numMBsToShowResult = 500
 Train = [
     action = "train"
-    modelPath = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160822092732.247426\Examples\Image\Miscellaneous\CIFAR-10_02_BatchNormConv@release_gpu/Models/02_BatchNormConv"
+    modelPath = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160823035118.956998\Examples\Image\Miscellaneous\CIFAR-10_02_BatchNormConv@release_gpu/Models/02_BatchNormConv"
      NDLNetworkBuilder = [
         networkDescription = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Image\Miscellaneous\CIFAR-10/02_BatchNormConv.ndl"
     ]
@@ -164,7 +163,7 @@ Train = [
     ]
     reader = [
         readerType = "CNTKTextFormatReader"
-        file = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160822092732.247426\Examples\Image\Miscellaneous\CIFAR-10_02_BatchNormConv@release_gpu\TestData/Train_cntk_text.txt"
+        file = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160823035118.956998\Examples\Image\Miscellaneous\CIFAR-10_02_BatchNormConv@release_gpu\TestData/Train_cntk_text.txt"
         input = [
             features = [
                 dim = 3072
@@ -179,11 +178,11 @@ Train = [
 ]
 Test = [
     action = "test"
-    modelPath = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160822092732.247426\Examples\Image\Miscellaneous\CIFAR-10_02_BatchNormConv@release_gpu/Models/02_BatchNormConv"
+    modelPath = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160823035118.956998\Examples\Image\Miscellaneous\CIFAR-10_02_BatchNormConv@release_gpu/Models/02_BatchNormConv"
     minibatchSize = 16
     reader = [
         readerType = "CNTKTextFormatReader"
-        file = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160822092732.247426\Examples\Image\Miscellaneous\CIFAR-10_02_BatchNormConv@release_gpu\TestData/Test_cntk_text.txt"
+        file = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160823035118.956998\Examples\Image\Miscellaneous\CIFAR-10_02_BatchNormConv@release_gpu\TestData/Test_cntk_text.txt"
         input = [
             features = [
                 dim = 3072
@@ -196,42 +195,42 @@ Test = [
         ]
     ]    
 ]
-currentDirectory=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160822092732.247426\Examples\Image\Miscellaneous\CIFAR-10_02_BatchNormConv@release_gpu\TestData
-RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160822092732.247426\Examples\Image\Miscellaneous\CIFAR-10_02_BatchNormConv@release_gpu
-DataDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160822092732.247426\Examples\Image\Miscellaneous\CIFAR-10_02_BatchNormConv@release_gpu\TestData
+currentDirectory=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160823035118.956998\Examples\Image\Miscellaneous\CIFAR-10_02_BatchNormConv@release_gpu\TestData
+RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160823035118.956998\Examples\Image\Miscellaneous\CIFAR-10_02_BatchNormConv@release_gpu
+DataDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160823035118.956998\Examples\Image\Miscellaneous\CIFAR-10_02_BatchNormConv@release_gpu\TestData
 ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Image\Miscellaneous\CIFAR-10
-OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160822092732.247426\Examples\Image\Miscellaneous\CIFAR-10_02_BatchNormConv@release_gpu
+OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160823035118.956998\Examples\Image\Miscellaneous\CIFAR-10_02_BatchNormConv@release_gpu
 DeviceId=0
 timestamping=true
 Train=[SGD=[maxEpochs=5]]
 Train=[SGD=[epochSize=100]]
 stderr=-
 
-08/22/2016 09:28:34: <<<<<<<<<<<<<<<<<<<< RAW CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
+08/23/2016 03:52:41: <<<<<<<<<<<<<<<<<<<< RAW CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
 
-08/22/2016 09:28:34: >>>>>>>>>>>>>>>>>>>> PROCESSED CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
+08/23/2016 03:52:41: >>>>>>>>>>>>>>>>>>>> PROCESSED CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
 configparameters: 02_BatchNormConv.cntk:command=Train:Test
 configparameters: 02_BatchNormConv.cntk:ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Image\Miscellaneous\CIFAR-10
-configparameters: 02_BatchNormConv.cntk:currentDirectory=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160822092732.247426\Examples\Image\Miscellaneous\CIFAR-10_02_BatchNormConv@release_gpu\TestData
-configparameters: 02_BatchNormConv.cntk:DataDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160822092732.247426\Examples\Image\Miscellaneous\CIFAR-10_02_BatchNormConv@release_gpu\TestData
+configparameters: 02_BatchNormConv.cntk:currentDirectory=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160823035118.956998\Examples\Image\Miscellaneous\CIFAR-10_02_BatchNormConv@release_gpu\TestData
+configparameters: 02_BatchNormConv.cntk:DataDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160823035118.956998\Examples\Image\Miscellaneous\CIFAR-10_02_BatchNormConv@release_gpu\TestData
 configparameters: 02_BatchNormConv.cntk:deviceId=0
 configparameters: 02_BatchNormConv.cntk:imageLayout=cudnn
 configparameters: 02_BatchNormConv.cntk:initOnCPUOnly=true
-configparameters: 02_BatchNormConv.cntk:ModelDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160822092732.247426\Examples\Image\Miscellaneous\CIFAR-10_02_BatchNormConv@release_gpu/Models
+configparameters: 02_BatchNormConv.cntk:ModelDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160823035118.956998\Examples\Image\Miscellaneous\CIFAR-10_02_BatchNormConv@release_gpu/Models
 configparameters: 02_BatchNormConv.cntk:ndlMacros=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Image\Miscellaneous\CIFAR-10/Macros.ndl
 configparameters: 02_BatchNormConv.cntk:numMBsToShowResult=500
-configparameters: 02_BatchNormConv.cntk:OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160822092732.247426\Examples\Image\Miscellaneous\CIFAR-10_02_BatchNormConv@release_gpu
+configparameters: 02_BatchNormConv.cntk:OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160823035118.956998\Examples\Image\Miscellaneous\CIFAR-10_02_BatchNormConv@release_gpu
 configparameters: 02_BatchNormConv.cntk:precision=float
 configparameters: 02_BatchNormConv.cntk:RootDir=.
-configparameters: 02_BatchNormConv.cntk:RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160822092732.247426\Examples\Image\Miscellaneous\CIFAR-10_02_BatchNormConv@release_gpu
+configparameters: 02_BatchNormConv.cntk:RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160823035118.956998\Examples\Image\Miscellaneous\CIFAR-10_02_BatchNormConv@release_gpu
 configparameters: 02_BatchNormConv.cntk:stderr=-
 configparameters: 02_BatchNormConv.cntk:Test=[
     action = "test"
-    modelPath = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160822092732.247426\Examples\Image\Miscellaneous\CIFAR-10_02_BatchNormConv@release_gpu/Models/02_BatchNormConv"
+    modelPath = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160823035118.956998\Examples\Image\Miscellaneous\CIFAR-10_02_BatchNormConv@release_gpu/Models/02_BatchNormConv"
     minibatchSize = 16
     reader = [
         readerType = "CNTKTextFormatReader"
-        file = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160822092732.247426\Examples\Image\Miscellaneous\CIFAR-10_02_BatchNormConv@release_gpu\TestData/Test_cntk_text.txt"
+        file = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160823035118.956998\Examples\Image\Miscellaneous\CIFAR-10_02_BatchNormConv@release_gpu\TestData/Test_cntk_text.txt"
         input = [
             features = [
                 dim = 3072
@@ -249,7 +248,7 @@ configparameters: 02_BatchNormConv.cntk:timestamping=true
 configparameters: 02_BatchNormConv.cntk:traceLevel=1
 configparameters: 02_BatchNormConv.cntk:Train=[
     action = "train"
-    modelPath = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160822092732.247426\Examples\Image\Miscellaneous\CIFAR-10_02_BatchNormConv@release_gpu/Models/02_BatchNormConv"
+    modelPath = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160823035118.956998\Examples\Image\Miscellaneous\CIFAR-10_02_BatchNormConv@release_gpu/Models/02_BatchNormConv"
      NDLNetworkBuilder = [
         networkDescription = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Image\Miscellaneous\CIFAR-10/02_BatchNormConv.ndl"
     ]
@@ -264,7 +263,7 @@ configparameters: 02_BatchNormConv.cntk:Train=[
     ]
     reader = [
         readerType = "CNTKTextFormatReader"
-        file = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160822092732.247426\Examples\Image\Miscellaneous\CIFAR-10_02_BatchNormConv@release_gpu\TestData/Train_cntk_text.txt"
+        file = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160823035118.956998\Examples\Image\Miscellaneous\CIFAR-10_02_BatchNormConv@release_gpu\TestData/Train_cntk_text.txt"
         input = [
             features = [
                 dim = 3072
@@ -278,23 +277,23 @@ configparameters: 02_BatchNormConv.cntk:Train=[
     ]    
 ] [SGD=[maxEpochs=5]] [SGD=[epochSize=100]]
 
-08/22/2016 09:28:34: <<<<<<<<<<<<<<<<<<<< PROCESSED CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
-08/22/2016 09:28:34: Commands: Train Test
-08/22/2016 09:28:34: Precision = "float"
-08/22/2016 09:28:34: CNTKModelPath: C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160822092732.247426\Examples\Image\Miscellaneous\CIFAR-10_02_BatchNormConv@release_gpu/Models/02_BatchNormConv
-08/22/2016 09:28:34: CNTKCommandTrainInfo: Train : 5
-08/22/2016 09:28:34: CNTKCommandTrainInfo: CNTKNoMoreCommands_Total : 5
+08/23/2016 03:52:41: <<<<<<<<<<<<<<<<<<<< PROCESSED CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
+08/23/2016 03:52:41: Commands: Train Test
+08/23/2016 03:52:41: Precision = "float"
+08/23/2016 03:52:41: CNTKModelPath: C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160823035118.956998\Examples\Image\Miscellaneous\CIFAR-10_02_BatchNormConv@release_gpu/Models/02_BatchNormConv
+08/23/2016 03:52:41: CNTKCommandTrainInfo: Train : 5
+08/23/2016 03:52:41: CNTKCommandTrainInfo: CNTKNoMoreCommands_Total : 5
 
-08/22/2016 09:28:34: ##############################################################################
-08/22/2016 09:28:34: #                                                                            #
-08/22/2016 09:28:34: # Action "train"                                                             #
-08/22/2016 09:28:34: #                                                                            #
-08/22/2016 09:28:34: ##############################################################################
+08/23/2016 03:52:41: ##############################################################################
+08/23/2016 03:52:41: #                                                                            #
+08/23/2016 03:52:41: # Action "train"                                                             #
+08/23/2016 03:52:41: #                                                                            #
+08/23/2016 03:52:41: ##############################################################################
 
-08/22/2016 09:28:34: CNTKCommandTrainBegin: Train
+08/23/2016 03:52:41: CNTKCommandTrainBegin: Train
+
+08/23/2016 03:52:41: Creating virgin network.
 NDLBuilder Using GPU 0
-
-08/22/2016 09:28:35: Creating virgin network.
 Node 'featOffs' (LearnableParameter operation): Initializing Parameter[1 x 1] <- 0.000000.
 Node 'conv1.c.W' (LearnableParameter operation): Initializing Parameter[32 x 75] <- 0.000000.
 Node 'conv1.c.c.b' (LearnableParameter operation): Initializing Parameter[32 x 1] <- 0.000000.
@@ -349,7 +348,7 @@ Post-processing network...
 
 3 roots:
 	CE = CrossEntropyWithSoftmax()
-	Err = ClassificationError()
+	Err = ErrorPrediction()
 	OutputNodes.z = Plus()
 
 Validating network. 45 nodes to process in pass 1.
@@ -398,7 +397,7 @@ Validating --> OutputNodes.t = Times (OutputNodes.W, h1.y) : [10 x 64], [64 x *]
 Validating --> OutputNodes.b = LearnableParameter() :  -> [10]
 Validating --> OutputNodes.z = Plus (OutputNodes.t, OutputNodes.b) : [10 x *], [10] -> [10 x *]
 Validating --> CE = CrossEntropyWithSoftmax (labels, OutputNodes.z) : [10 x *], [10 x *] -> [1]
-Validating --> Err = ClassificationError (labels, OutputNodes.z) : [10 x *], [10 x *] -> [1]
+Validating --> Err = ErrorPrediction (labels, OutputNodes.z) : [10 x *], [10 x *] -> [1]
 
 Validating network. 20 nodes to process in pass 2.
 
@@ -431,122 +430,122 @@ Using CNTK batch normalization engine.
 
 Post-processing network complete.
 
-08/22/2016 09:28:36: Created model with 45 nodes on GPU 0.
+08/23/2016 03:52:43: Created model with 45 nodes on GPU 0.
 
-08/22/2016 09:28:36: Training criterion node(s):
-08/22/2016 09:28:36: 	CE = CrossEntropyWithSoftmax
+08/23/2016 03:52:43: Training criterion node(s):
+08/23/2016 03:52:43: 	CE = CrossEntropyWithSoftmax
 
-08/22/2016 09:28:36: Evaluation criterion node(s):
-08/22/2016 09:28:36: 	Err = ClassificationError
+08/23/2016 03:52:43: Evaluation criterion node(s):
+08/23/2016 03:52:43: 	Err = ErrorPrediction
 
 
 Allocating matrices for forward and/or backward propagation.
 
 Memory Sharing: Out of 77 matrices, 38 are shared as 16, and 39 are not shared.
 
-	{ conv1.c.c.sc : [32 x 1] (gradient)
-	  conv1.y : [32 x 32 x 32 x *] (gradient) }
-	{ conv2.c.c.y : [15 x 15 x 32 x *] (gradient)
-	  pool2 : [7 x 7 x 32 x *] }
-	{ conv2.c.c.b : [32 x 1] (gradient)
-	  conv3.c.c.c : [7 x 7 x 64 x *] (gradient)
-	  conv3.y : [7 x 7 x 64 x *] }
-	{ conv3.c.c.y : [7 x 7 x 64 x *] (gradient)
-	  pool3 : [3 x 3 x 64 x *] }
-	{ conv3.c.c.sc : [64 x 1] (gradient)
-	  conv3.y : [7 x 7 x 64 x *] (gradient)
-	  h1.t : [64 x *] }
 	{ conv1.c.c.c : [32 x 32 x 32 x *] (gradient)
 	  conv1.y : [32 x 32 x 32 x *] }
-	{ conv1.c.c.y : [32 x 32 x 32 x *] (gradient)
-	  pool1 : [15 x 15 x 32 x *] }
-	{ conv2.c.W : [32 x 800] (gradient)
-	  conv3.c.c.c : [7 x 7 x 64 x *] }
-	{ conv1.c.W : [32 x 75] (gradient)
-	  conv2.c.c.c : [15 x 15 x 32 x *] }
+	{ conv3.c.c.y : [7 x 7 x 64 x *] (gradient)
+	  pool3 : [3 x 3 x 64 x *] }
 	{ conv1.c.c.b : [32 x 1] (gradient)
 	  conv2.c.c.c : [15 x 15 x 32 x *] (gradient)
 	  conv2.y : [15 x 15 x 32 x *] }
-	{ conv2.c.c.sc : [32 x 1] (gradient)
-	  conv2.y : [15 x 15 x 32 x *] (gradient) }
+	{ conv1.c.c.sc : [32 x 1] (gradient)
+	  conv1.y : [32 x 32 x 32 x *] (gradient) }
 	{ OutputNodes.t : [10 x *] (gradient)
 	  pool1 : [15 x 15 x 32 x *] (gradient)
 	  pool2 : [7 x 7 x 32 x *] (gradient)
 	  pool3 : [3 x 3 x 64 x *] (gradient) }
-	{ h1.sc : [64 x 1] (gradient)
-	  h1.y : [64 x *] (gradient) }
-	{ OutputNodes.t : [10 x *]
-	  h1.bn : [64 x *] (gradient) }
 	{ conv3.c.W : [64 x 800] (gradient)
 	  h1.t : [64 x *] (gradient)
 	  h1.y : [64 x *] }
+	{ h1.sc : [64 x 1] (gradient)
+	  h1.y : [64 x *] (gradient) }
+	{ conv2.c.W : [32 x 800] (gradient)
+	  conv3.c.c.c : [7 x 7 x 64 x *] }
+	{ OutputNodes.t : [10 x *]
+	  h1.bn : [64 x *] (gradient) }
+	{ conv2.c.c.sc : [32 x 1] (gradient)
+	  conv2.y : [15 x 15 x 32 x *] (gradient) }
+	{ conv2.c.c.b : [32 x 1] (gradient)
+	  conv3.c.c.c : [7 x 7 x 64 x *] (gradient)
+	  conv3.y : [7 x 7 x 64 x *] }
 	{ OutputNodes.W : [10 x 64] (gradient)
 	  OutputNodes.z : [10 x *] (gradient) }
+	{ conv3.c.c.sc : [64 x 1] (gradient)
+	  conv3.y : [7 x 7 x 64 x *] (gradient)
+	  h1.t : [64 x *] }
+	{ conv1.c.W : [32 x 75] (gradient)
+	  conv2.c.c.c : [15 x 15 x 32 x *] }
+	{ conv1.c.c.y : [32 x 32 x 32 x *] (gradient)
+	  pool1 : [15 x 15 x 32 x *] }
+	{ conv2.c.c.y : [15 x 15 x 32 x *] (gradient)
+	  pool2 : [7 x 7 x 32 x *] }
 
 
-08/22/2016 09:28:36: Training 117098 parameters in 14 out of 14 parameter tensors and 32 nodes with gradient:
+08/23/2016 03:52:43: Training 117098 parameters in 14 out of 14 parameter tensors and 32 nodes with gradient:
 
-08/22/2016 09:28:36: 	Node 'OutputNodes.W' (LearnableParameter operation) : [10 x 64]
-08/22/2016 09:28:36: 	Node 'OutputNodes.b' (LearnableParameter operation) : [10]
-08/22/2016 09:28:36: 	Node 'conv1.c.W' (LearnableParameter operation) : [32 x 75]
-08/22/2016 09:28:36: 	Node 'conv1.c.c.b' (LearnableParameter operation) : [32 x 1]
-08/22/2016 09:28:36: 	Node 'conv1.c.c.sc' (LearnableParameter operation) : [32 x 1]
-08/22/2016 09:28:36: 	Node 'conv2.c.W' (LearnableParameter operation) : [32 x 800]
-08/22/2016 09:28:36: 	Node 'conv2.c.c.b' (LearnableParameter operation) : [32 x 1]
-08/22/2016 09:28:36: 	Node 'conv2.c.c.sc' (LearnableParameter operation) : [32 x 1]
-08/22/2016 09:28:36: 	Node 'conv3.c.W' (LearnableParameter operation) : [64 x 800]
-08/22/2016 09:28:36: 	Node 'conv3.c.c.b' (LearnableParameter operation) : [64 x 1]
-08/22/2016 09:28:36: 	Node 'conv3.c.c.sc' (LearnableParameter operation) : [64 x 1]
-08/22/2016 09:28:36: 	Node 'h1.W' (LearnableParameter operation) : [64 x 3 x 3 x 64]
-08/22/2016 09:28:36: 	Node 'h1.b' (LearnableParameter operation) : [64 x 1]
-08/22/2016 09:28:36: 	Node 'h1.sc' (LearnableParameter operation) : [64 x 1]
+08/23/2016 03:52:43: 	Node 'OutputNodes.W' (LearnableParameter operation) : [10 x 64]
+08/23/2016 03:52:43: 	Node 'OutputNodes.b' (LearnableParameter operation) : [10]
+08/23/2016 03:52:43: 	Node 'conv1.c.W' (LearnableParameter operation) : [32 x 75]
+08/23/2016 03:52:43: 	Node 'conv1.c.c.b' (LearnableParameter operation) : [32 x 1]
+08/23/2016 03:52:43: 	Node 'conv1.c.c.sc' (LearnableParameter operation) : [32 x 1]
+08/23/2016 03:52:43: 	Node 'conv2.c.W' (LearnableParameter operation) : [32 x 800]
+08/23/2016 03:52:43: 	Node 'conv2.c.c.b' (LearnableParameter operation) : [32 x 1]
+08/23/2016 03:52:43: 	Node 'conv2.c.c.sc' (LearnableParameter operation) : [32 x 1]
+08/23/2016 03:52:43: 	Node 'conv3.c.W' (LearnableParameter operation) : [64 x 800]
+08/23/2016 03:52:43: 	Node 'conv3.c.c.b' (LearnableParameter operation) : [64 x 1]
+08/23/2016 03:52:43: 	Node 'conv3.c.c.sc' (LearnableParameter operation) : [64 x 1]
+08/23/2016 03:52:43: 	Node 'h1.W' (LearnableParameter operation) : [64 x 3 x 3 x 64]
+08/23/2016 03:52:43: 	Node 'h1.b' (LearnableParameter operation) : [64 x 1]
+08/23/2016 03:52:43: 	Node 'h1.sc' (LearnableParameter operation) : [64 x 1]
 
-08/22/2016 09:28:36: No PreCompute nodes found, or all already computed. Skipping pre-computation step.
+08/23/2016 03:52:43: No PreCompute nodes found, or all already computed. Skipping pre-computation step.
 
-08/22/2016 09:28:36: Starting Epoch 1: learning rate per sample = 0.000469  effective momentum = 0.000000  momentum as time constant = 0.0 samples
-BlockRandomizer::StartEpoch: epoch 0: frames [0..100] (first sequence at sample 0), data subset 0 of 1
+08/23/2016 03:52:43: Starting Epoch 1: learning rate per sample = 0.000469  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+BlockRandomizer::StartEpoch: epoch 1: samples [0..100] (first sequence at sample 0), worker rank 0, total workers 1
 
-08/22/2016 09:28:36: Starting minibatch loop.
-08/22/2016 09:28:41: Finished Epoch[ 1 of 5]: [Training] CE = 2.31451355 * 100; Err = 0.87000000 * 100; totalSamplesSeen = 100; learningRatePerSample = 0.00046874999; epochTime=5.00378s
-08/22/2016 09:28:41: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160822092732.247426\Examples\Image\Miscellaneous\CIFAR-10_02_BatchNormConv@release_gpu/Models/02_BatchNormConv.1'
+08/23/2016 03:52:43: Starting minibatch loop.
+08/23/2016 03:52:47: Finished Epoch[ 1 of 5]: [Training] CE = 2.26618500 * 100; Err = 0.87000000 * 100; totalSamplesSeen = 100; learningRatePerSample = 0.00046874999; epochTime=4.77551s
+08/23/2016 03:52:47: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160823035118.956998\Examples\Image\Miscellaneous\CIFAR-10_02_BatchNormConv@release_gpu/Models/02_BatchNormConv.1'
 
-08/22/2016 09:28:41: Starting Epoch 2: learning rate per sample = 0.000469  effective momentum = 0.000000  momentum as time constant = 0.0 samples
-BlockRandomizer::StartEpoch: epoch 1: frames [100..200] (first sequence at sample 100), data subset 0 of 1
+08/23/2016 03:52:47: Starting Epoch 2: learning rate per sample = 0.000469  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+BlockRandomizer::StartEpoch: epoch 2: samples [100..200] (first sequence at sample 100), worker rank 0, total workers 1
 
-08/22/2016 09:28:41: Starting minibatch loop.
-08/22/2016 09:28:41: Finished Epoch[ 2 of 5]: [Training] CE = 2.27380722 * 100; Err = 0.82000000 * 100; totalSamplesSeen = 200; learningRatePerSample = 0.00046874999; epochTime=0.015137s
-08/22/2016 09:28:41: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160822092732.247426\Examples\Image\Miscellaneous\CIFAR-10_02_BatchNormConv@release_gpu/Models/02_BatchNormConv.2'
+08/23/2016 03:52:47: Starting minibatch loop.
+08/23/2016 03:52:47: Finished Epoch[ 2 of 5]: [Training] CE = 2.24375671 * 100; Err = 0.82000000 * 100; totalSamplesSeen = 200; learningRatePerSample = 0.00046874999; epochTime=0.014204s
+08/23/2016 03:52:47: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160823035118.956998\Examples\Image\Miscellaneous\CIFAR-10_02_BatchNormConv@release_gpu/Models/02_BatchNormConv.2'
 
-08/22/2016 09:28:41: Starting Epoch 3: learning rate per sample = 0.000469  effective momentum = 0.000000  momentum as time constant = 0.0 samples
-BlockRandomizer::StartEpoch: epoch 2: frames [200..300] (first sequence at sample 200), data subset 0 of 1
+08/23/2016 03:52:47: Starting Epoch 3: learning rate per sample = 0.000469  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+BlockRandomizer::StartEpoch: epoch 3: samples [200..300] (first sequence at sample 200), worker rank 0, total workers 1
 
-08/22/2016 09:28:41: Starting minibatch loop.
-08/22/2016 09:28:41: Finished Epoch[ 3 of 5]: [Training] CE = 2.25244934 * 100; Err = 0.83000000 * 100; totalSamplesSeen = 300; learningRatePerSample = 0.00046874999; epochTime=0.015109s
-08/22/2016 09:28:41: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160822092732.247426\Examples\Image\Miscellaneous\CIFAR-10_02_BatchNormConv@release_gpu/Models/02_BatchNormConv.3'
+08/23/2016 03:52:47: Starting minibatch loop.
+08/23/2016 03:52:47: Finished Epoch[ 3 of 5]: [Training] CE = 2.21209167 * 100; Err = 0.83000000 * 100; totalSamplesSeen = 300; learningRatePerSample = 0.00046874999; epochTime=0.014114s
+08/23/2016 03:52:47: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160823035118.956998\Examples\Image\Miscellaneous\CIFAR-10_02_BatchNormConv@release_gpu/Models/02_BatchNormConv.3'
 
-08/22/2016 09:28:41: Starting Epoch 4: learning rate per sample = 0.000469  effective momentum = 0.000000  momentum as time constant = 0.0 samples
-BlockRandomizer::StartEpoch: epoch 3: frames [300..400] (first sequence at sample 300), data subset 0 of 1
+08/23/2016 03:52:47: Starting Epoch 4: learning rate per sample = 0.000469  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+BlockRandomizer::StartEpoch: epoch 4: samples [300..400] (first sequence at sample 300), worker rank 0, total workers 1
 
-08/22/2016 09:28:41: Starting minibatch loop.
-08/22/2016 09:28:41: Finished Epoch[ 4 of 5]: [Training] CE = 2.16032669 * 100; Err = 0.77000000 * 100; totalSamplesSeen = 400; learningRatePerSample = 0.00046874999; epochTime=0.015029s
-08/22/2016 09:28:41: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160822092732.247426\Examples\Image\Miscellaneous\CIFAR-10_02_BatchNormConv@release_gpu/Models/02_BatchNormConv.4'
+08/23/2016 03:52:47: Starting minibatch loop.
+08/23/2016 03:52:47: Finished Epoch[ 4 of 5]: [Training] CE = 2.20382111 * 100; Err = 0.84000000 * 100; totalSamplesSeen = 400; learningRatePerSample = 0.00046874999; epochTime=0.014017s
+08/23/2016 03:52:47: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160823035118.956998\Examples\Image\Miscellaneous\CIFAR-10_02_BatchNormConv@release_gpu/Models/02_BatchNormConv.4'
 
-08/22/2016 09:28:41: Starting Epoch 5: learning rate per sample = 0.000469  effective momentum = 0.000000  momentum as time constant = 0.0 samples
-BlockRandomizer::StartEpoch: epoch 4: frames [400..500] (first sequence at sample 400), data subset 0 of 1
+08/23/2016 03:52:47: Starting Epoch 5: learning rate per sample = 0.000469  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+BlockRandomizer::StartEpoch: epoch 5: samples [400..500] (first sequence at sample 400), worker rank 0, total workers 1
 
-08/22/2016 09:28:41: Starting minibatch loop.
-08/22/2016 09:28:41: Finished Epoch[ 5 of 5]: [Training] CE = 2.13106216 * 100; Err = 0.68000000 * 100; totalSamplesSeen = 500; learningRatePerSample = 0.00046874999; epochTime=0.015052s
-08/22/2016 09:28:41: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160822092732.247426\Examples\Image\Miscellaneous\CIFAR-10_02_BatchNormConv@release_gpu/Models/02_BatchNormConv'
-08/22/2016 09:28:42: CNTKCommandTrainEnd: Train
+08/23/2016 03:52:47: Starting minibatch loop.
+08/23/2016 03:52:48: Finished Epoch[ 5 of 5]: [Training] CE = 2.17157074 * 100; Err = 0.77000000 * 100; totalSamplesSeen = 500; learningRatePerSample = 0.00046874999; epochTime=0.014101s
+08/23/2016 03:52:48: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160823035118.956998\Examples\Image\Miscellaneous\CIFAR-10_02_BatchNormConv@release_gpu/Models/02_BatchNormConv'
+08/23/2016 03:52:48: CNTKCommandTrainEnd: Train
 
-08/22/2016 09:28:42: Action "train" complete.
+08/23/2016 03:52:48: Action "train" complete.
 
 
-08/22/2016 09:28:42: ##############################################################################
-08/22/2016 09:28:42: #                                                                            #
-08/22/2016 09:28:42: # Action "test"                                                              #
-08/22/2016 09:28:42: #                                                                            #
-08/22/2016 09:28:42: ##############################################################################
+08/23/2016 03:52:48: ##############################################################################
+08/23/2016 03:52:48: #                                                                            #
+08/23/2016 03:52:48: # Action "test"                                                              #
+08/23/2016 03:52:48: #                                                                            #
+08/23/2016 03:52:48: ##############################################################################
 
 INFO: conv1.c.c.y: initialized samplesSeen from mbCount when loading pre-CuDNNv5 model
 INFO: conv2.c.c.y: initialized samplesSeen from mbCount when loading pre-CuDNNv5 model
@@ -557,7 +556,7 @@ Post-processing network...
 
 3 roots:
 	CE = CrossEntropyWithSoftmax()
-	Err = ClassificationError()
+	Err = ErrorPrediction()
 	OutputNodes.z = Plus()
 
 Validating network. 45 nodes to process in pass 1.
@@ -606,7 +605,7 @@ Validating --> OutputNodes.t = Times (OutputNodes.W, h1.y) : [10 x 64], [64 x *1
 Validating --> OutputNodes.b = LearnableParameter() :  -> [10]
 Validating --> OutputNodes.z = Plus (OutputNodes.t, OutputNodes.b) : [10 x *1], [10] -> [10 x *1]
 Validating --> CE = CrossEntropyWithSoftmax (labels, OutputNodes.z) : [10 x *1], [10 x *1] -> [1]
-Validating --> Err = ClassificationError (labels, OutputNodes.z) : [10 x *1], [10 x *1] -> [1]
+Validating --> Err = ErrorPrediction (labels, OutputNodes.z) : [10 x *1], [10 x *1] -> [1]
 
 Validating network. 20 nodes to process in pass 2.
 
@@ -647,11 +646,11 @@ Allocating matrices for forward and/or backward propagation.
 Memory Sharing: Out of 45 matrices, 0 are shared as 0, and 45 are not shared.
 
 
-BlockRandomizer::StartEpoch: epoch 0: frames [0..10000] (first sequence at sample 0), data subset 0 of 1
-08/22/2016 09:28:44: Minibatch[1-500]: Err = 0.83150000 * 8000; CE = 4.27479738 * 8000
-08/22/2016 09:28:44: Minibatch[501-625]: Err = 0.82350000 * 2000; CE = 4.33260401 * 2000
-08/22/2016 09:28:44: Final Results: Minibatch[1-625]: Err = 0.82990000 * 10000; CE = 4.28635871 * 10000; perplexity = 72.70125947
+BlockRandomizer::StartEpoch: epoch 1: samples [0..10000] (first sequence at sample 0), worker rank 0, total workers 1
+08/23/2016 03:52:50: Minibatch[1-500]: Err = 0.84162500 * 8000; CE = 3.51622822 * 8000
+08/23/2016 03:52:50: Minibatch[501-625]: Err = 0.84050000 * 2000; CE = 3.48583282 * 2000
+08/23/2016 03:52:50: Final Results: Minibatch[1-625]: Err = 0.84140000 * 10000; CE = 3.51014914 * 10000; perplexity = 33.45325655
 
-08/22/2016 09:28:44: Action "test" complete.
+08/23/2016 03:52:50: Action "test" complete.
 
-08/22/2016 09:28:44: __COMPLETED__
+08/23/2016 03:52:50: __COMPLETED__

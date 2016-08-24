@@ -34,5 +34,5 @@ testCases:
     patterns:
       - "Final Results: Minibatch[{{integer}}-{{integer}}]"
       - top5Errs = {{float,tolerance=.1%}}% * {{integer}}
-      - errs = {{float,tolerance=.1%}}% * {{integer}}
+      - errs = {{float,tolerance=.5%}}% * {{integer}}
       - ce = {{float,tolerance=.1%}} * {{integer}}

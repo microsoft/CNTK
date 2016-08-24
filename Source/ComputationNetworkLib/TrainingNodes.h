@@ -9,6 +9,8 @@
 #include "BatchNormalizationEngine.h"
 #include "RNGHandle.h"
 
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
 #include <map>
 #include <string>
 #include <vector>
@@ -1547,7 +1549,7 @@ template class DropoutNode<double>;
 // 
 // m = mean(input)
 // var = variance(input)
-// input_norm = (input - mean) / sqrt(var)
+// input_norm = (input - mean) / sqrt(epsilon + var)
 // output = gamma * input_norm + beta
 // 
 // where gamma and beta are trainable parameters(represented as LearnableParameter).
@@ -1570,7 +1572,7 @@ template class DropoutNode<double>;
 // * blendTimeConstant is the time constant which allows to specify how much of running mean / var should be "blended" into mean / var of the current minibatch.
 //      Value 0 (default) means no blending will happen and only the current minibatch statistics will be used.
 //      Value 1#INF (infinity) means only running mean / var will be used(this is used, for example, in evaluation phase).
-// * epsilon is a conditioner constant used in computing inverted standard deviation
+// * epsilon is a conditioner constant used in computing inverse standard deviation
 // * useCntkEngine is a Boolean flag that specifies which batch normalization implementation to use: CNTK or cuDNN-based.
 // * imageLayout is the image layout. Only cudnn is supported at present.
 // -----------------------------------------------------------------------
@@ -1584,14 +1586,14 @@ public:
     BatchNormalizationNode(DEVICEID_TYPE deviceId, const wstring& name) :
         Base(deviceId, name), m_spatial(false), m_normTimeConst(0), m_blendTimeConst(0), m_epsilon(0), m_useCntkEngine(true),
         m_samplesSeen(0), m_imageLayoutKind(ImageLayoutKind::CHW),
-        m_convertRunningVariance(false)
+        m_convertRunningVariancePending(false)
     {
     }
     BatchNormalizationNode(DEVICEID_TYPE deviceId, const wstring& name, bool spatial, double normalizationTimeConstant, double blendTimeConstant,
                            double epsilon, bool useCntkEngine, ImageLayoutKind imageLayoutKind) :
         Base(deviceId, name), m_spatial(spatial), m_normTimeConst(normalizationTimeConstant), m_blendTimeConst(blendTimeConstant),
         m_epsilon(epsilon), m_useCntkEngine(useCntkEngine), m_imageLayoutKind(imageLayoutKind), m_samplesSeen(0),
-        m_convertRunningVariance(false)
+        m_convertRunningVariancePending(false)
     {
     }
     BatchNormalizationNode(const ScriptableObjects::IConfigRecordPtr configp) :
@@ -1618,18 +1620,19 @@ public:
 
     void Load(File& fstream, size_t modelVersion) override
     {
+        size_t mbCount = 0;
         Base::Load(fstream, modelVersion);
 
         if (modelVersion >= CNTK_MODEL_VERSION_6)
         {
-            size_t mbCount;
             fstream >> m_spatial;
             fstream >> m_normTimeConst;
             fstream >> m_blendTimeConst;
             fstream >> m_imageLayoutKind;
-            fprintf(stderr, "INFO: %ls: initialized samplesSeen from mbCount when loading pre-CuDNNv5 model\n", NodeName().c_str());
-            fstream >> mbCount;
-            m_samplesSeen = mbCount;
+            if (modelVersion >= CNTK_MODEL_VERSION_12)
+                fstream >> m_samplesSeen;
+            else
+                fstream >> mbCount; // converted below
             fstream >> m_epsilon;
             fstream >> m_useCntkEngine;
         }
@@ -1664,11 +1667,8 @@ public:
             }
             if (verWritten >= 0x00010002)
             {
-                size_t mbCount;
                 fstream >> m_imageLayoutKind;
-                fprintf(stderr, "INFO: %ls: initialized samplesSeen from mbCount when loading pre-CuDNNv5 model\n", NodeName().c_str());
-                fstream >> mbCount;
-                m_samplesSeen = mbCount;
+                fstream >> mbCount; // converted below
             }
             if (verWritten >= 0x00010003)
             {
@@ -1677,13 +1677,21 @@ public:
             }
         }
 
-        if (modelVersion < CNTK_MODEL_VERSION_11) 
+        if (modelVersion < CNTK_MODEL_VERSION_12)
         {
-            // Prior to CNTK_MODEL_VERSION_11, running inverse standard
-            // deviation was stored in Input 4. Now variance is used.
-            // We (approximately) convert it during validation later.
-            m_convertRunningVariance = true;
-    }
+            // Prior to version 12, minibatch count was stored instead of samples seen.
+            // Approximate by assuming minibatch size 16, inform about that.
+            m_samplesSeen = 16 * mbCount;
+            fprintf(stderr,
+                    "INFO: %ls: loading pre-CuDNNv5 model: approximated mini-batch count of %" PRIu64 " as %" PRIu64 " trained samples.\n"
+                    "      Statistics in further training may be biased; consider re-training instead.\n",
+                    NodeName().c_str(), mbCount, m_samplesSeen);
+
+            // Prior to version 12, running inverse standard deviation was
+            // stored in Input 4. Now variance is used. We (approximately)
+            // convert it during validation later (and then clear the flag).
+            m_convertRunningVariancePending = true;
+        }
     }
 
     void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
@@ -1713,15 +1721,13 @@ private: // time-constant conversions
         // in inference mode, only use long-term mean and do not update running estimates
         if (!Environment().IsTraining())
         {
-            assert(0 < m_samplesSeen);                       // something must have been trained
+            if (m_samplesSeen == 0)
+                RuntimeError("%ls: inference mode is used, but nothing has been trained.", NodeName().c_str());
             return 0;                                        // (m_normTimeConst == infinity) no new contribution from current minibatch
         }
 
         // Initialization case: only use current minibatch.
-        if (m_samplesSeen == 0)
-        {
-            return 1.0;
-        }
+        if (m_samplesSeen == 0) return 1.0;
 
         double numSamples = (double)GetMBLayout()->GetActualNumSamples();
 
@@ -1747,15 +1753,13 @@ private: // time-constant conversions
         // in inference mode, only use long-term mean and do not update running estimates
         if (!Environment().IsTraining())
         {
-            assert(0 < m_samplesSeen);  // something must have been trained
-            return 1.0;             // (m_blendTimeConst == infinity) estimate is taken 100% from the long-term running estimate
+            if (m_samplesSeen == 0)
+                RuntimeError("%ls: inference mode is used, but nothing has been trained.", NodeName().c_str());
+            return 1.0;                 // (m_blendTimeConst == infinity) estimate is taken 100% from the long-term running estimate
         }
 
         // Initialization case: only use current minibatch.
-        if (m_samplesSeen == 0)
-        {
-            return 0;
-        }
+        if (m_samplesSeen == 0) return 0;
 
         // convert to blend factor (= weight for running stats)
         // The code below special-cases two boundary cases, but those are just the limit cases of the main formula.
@@ -1771,7 +1775,8 @@ public:
 
     virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
     {
-        assert(!m_convertRunningVariance);
+        if (m_convertRunningVariancePending)
+            LogicError("%ls: Failed to convert running variance until forward prop", NodeName().c_str());
         FrameRange fr(Input(0)->GetMBLayout());
 
         Matrix<ElemType> sliceInputValue  = Input(0)->MaskedValueFor(fr);
@@ -1792,12 +1797,16 @@ public:
         double expAvgFactor = ComputeExpAvgFactor(); // weight for the new MB statistics in the running estimate. The previous value of the running statistics is kept with weight (1-this)
         double blendFactor  = ComputeBlendFactor();  // interpolation weight for the running statistics (the current MB statistics are weighted with 1-this)
 
-        m_bnEng->Forward(/*in=*/ sliceInputValue, scale, bias, // (in)
-                         expAvgFactor, blendFactor,
-                         runMean, runVariance,                 // (in/out) running estimates, updated from the current MB mean/variance
-                         /*out=*/ sliceOutputValue,            // (out) batch-normalized output value
+        // In inference-only mode, m_savedMean and m_saveInvStdDev will not be
+        // produced and BackpropToNonLooping() may not be called. In
+        // non-inference (training) mode, saved statistics must be produced.
+        bool inferenceOnly = !Environment().IsTraining();
+        m_bnEng->Forward(/*in=*/ sliceInputValue, scale, bias,   // (in)
+                         inferenceOnly, expAvgFactor, blendFactor,
+                         runMean, runVariance,                   // (in/out) running estimates, updated from the current MB mean/variance
+                         /*out=*/ sliceOutputValue,              // (out) batch-normalized output value
                          m_epsilon,
-                         *m_saveMean, *m_saveInvStdDev);       // (out) actual interpolated mean/stddev values. Note: unused/empty for blendFactor==1 for CNTK engine
+                         *m_savedMean, *m_savedInvStdDev);       // (out) actual interpolated mean/stddev values. Note: unused/empty for blendFactor==1 for CNTK engine
     }
 
     // Note: This function assumes that inputIndex=0 is called before the others.
@@ -1805,6 +1814,16 @@ public:
     // BUGBUG: If the input has no learnables (e.g. using BN instead of corpus mean/var norm), this will not be called for inputIndex=0 at all.
     virtual void BackpropToNonLooping(size_t inputIndex) override
     {
+        // Must be in training mode.
+        if (!Environment().IsTraining())
+            LogicError("%ls: BackpropToNonLooping() cannot be called in inference mode", NodeName().c_str());
+        // In non-inference mode, the batch normalization engine must provide
+        // saved statistics, m_savedMean and m_savedInvStdDev
+        if (m_savedMean->IsEmpty())
+            LogicError("%ls: m_savedMean cannot be empty", NodeName().c_str());
+        if (m_savedInvStdDev->IsEmpty())
+            LogicError("%ls: m_savedInvStdDev cannot be empty", NodeName().c_str());
+
         FrameRange fr(Input(0)->GetMBLayout());
 
         if (inputIndex == 0) // derivative with respect to the input.
@@ -1813,16 +1832,8 @@ public:
             auto sliceInputValue                = Input(0)->ValueFor(fr);
             const Matrix<ElemType>& scale       = Input(1)->Value();
             const Matrix<ElemType>& bias        = Input(2)->Value();
-            const Matrix<ElemType>& runMean     = Input(3)->Value();
-            const Matrix<ElemType>& runVariance = Input(4)->Value();
 
             auto sliceInputGrad = Input(0)->GradientFor(fr);
-            // The mean used in Forward() are either saveMean or runMean.
-            // This is decided by the engine, which communicates back the decision by returning
-            // an empty saveMean in case runMean should be used. Likewise for variance / inverted standard deviation.
-            let& actualMean      = !m_saveMean->IsEmpty()      ? *m_saveMean      : runMean;   // empty if only the running mean is used
-            if (m_saveInvStdDev->IsEmpty()) RuntimeError("TODO m_saveInvStdDev <-> runVariance not the same:");
-            let& actualInvStdDev = !m_saveInvStdDev->IsEmpty() ? *m_saveInvStdDev : runVariance;
             m_dScale->Resize(scale); // gradients for scale and bias get stored here
             m_dBias->Resize(bias);
 
@@ -1833,7 +1844,7 @@ public:
                               sliceInputGrad,                   // (out) gradient for data input goes here
                               scale,                            // (in)  out of scale and bias, only scale is needed in gradient propagation
                               blendFactor,                      // (in)  smoothing weight for running stats (1=use only running stats)
-                              actualMean, actualInvStdDev,      // (in)  actual mean/stddev values used in ForwardProp()
+                              *m_savedMean, *m_savedInvStdDev,   // (in)  saved mean/invstddev values used in ForwardProp()
                               *m_dScale, *m_dBias);             // (out) gradients for scale and bias
         }
         else if (inputIndex == 1) // derivative with respect to the scale
@@ -1855,8 +1866,12 @@ public:
 
     virtual void EndBackprop() override
     {
-        auto numSamples = GetMBLayout()->GetActualNumSamples();
-        m_samplesSeen += numSamples;
+        // Update samples if not locked.
+        double expAvgFactor = ComputeExpAvgFactor(); // weight for the new MB statistics in the running estimate. The previous value of the running statistics is kept with weight (1-this)
+        double blendFactor  = ComputeBlendFactor();  // interpolation weight for the running statistics (the current MB statistics are weighted with 1-this)
+        if (expAvgFactor != 0 || blendFactor != 1)
+            m_samplesSeen += GetMBLayout()->GetActualNumSamples();
+
         Base::EndBackprop();
     }
 
@@ -1892,19 +1907,22 @@ public:
 
         if (isFinalValidationPass)
         {
-            if (m_convertRunningVariance)
+            if (m_convertRunningVariancePending)
             {
-                // Input 4 is still inverse standard deviation. We convert it to variance, approximately,
-                // and output a warning.
-                fprintf(stderr, "WARNING: %ls: approximately converting inverse standard deviation into variance when loading pre-CuDNNv5 model\n",
+                // Prior to CNTK CuDNN v5 support (and the CNTK engine of the same time), mean and inverse standard deviation
+                // statistics were computed and stored. With CuDNN v5 (and the corresponding CNTK engine update), this was changed
+                // to mean and variance.
+                // To load an old model for further training or inference, Input(4) (which is inverse standard deviation) needs to
+                // be converted to variance, via v = 1/(isd^2) + epsilon, where 'v' is variance and 'isd' is inverse standard
+                // Since this is an approximation, we output a warning.
+                fprintf(stderr, "WARNING: %ls: loading pre-CuDNNv5 model: approximately converting variance statistics format\n",
                         NodeName().c_str());
                 Matrix<ElemType>& runInvStdDev = Input(4)->Value();
                 runInvStdDev.AssignElementPowerOf(runInvStdDev, 2);
                 runInvStdDev.ElementInverse();
                 runInvStdDev += (float) m_epsilon;
-                fprintf(stderr, "--- %ls converted runVariance after loading\n", NodeName().c_str());
                 runInvStdDev.Print();
-                m_convertRunningVariance = false;
+                m_convertRunningVariancePending = false;
             }
 
             // check inputs
@@ -1949,8 +1967,8 @@ public:
     void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool) override
     {
         Base::RequestMatricesBeforeForwardProp(matrixPool);
-        RequestMatrixFromPool(m_saveMean, matrixPool);
-        RequestMatrixFromPool(m_saveInvStdDev, matrixPool);
+        RequestMatrixFromPool(m_savedMean, matrixPool);
+        RequestMatrixFromPool(m_savedInvStdDev, matrixPool);
     }
 
     void RequestMatricesBeforeBackprop(MatrixPool& matrixPool) override
@@ -1963,8 +1981,8 @@ public:
     void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool) override
     {
         Base::ReleaseMatricesAfterBackprop(matrixPool);
-        ReleaseMatrixToPool(m_saveMean, matrixPool);
-        ReleaseMatrixToPool(m_saveInvStdDev, matrixPool);
+        ReleaseMatrixToPool(m_savedMean, matrixPool);
+        ReleaseMatrixToPool(m_savedInvStdDev, matrixPool);
         ReleaseMatrixToPool(m_dScale, matrixPool);
         ReleaseMatrixToPool(m_dBias, matrixPool);
     }
@@ -2035,7 +2053,7 @@ private:
     // REVIEW alexeyk: if this works, document it properly in Wiki.
     double m_blendTimeConst;
 
-    // Epsilon used to compute inverse standard deviation (m_saveInvStdDev).
+    // Epsilon used to compute inverse standard deviation (m_savedInvStdDev).
     double m_epsilon;
     // Whether to use CNTK or cuDNN BN implementation.
     bool m_useCntkEngine;
@@ -2048,8 +2066,8 @@ private:
     size_t m_samplesSeen;
 
     // Interpolated actual mean/inverse stddev values. Pre-computed on forward pass, also used in gradient computation.
-    shared_ptr<Matrix<ElemType>> m_saveMean;
-    shared_ptr<Matrix<ElemType>> m_saveInvStdDev;
+    shared_ptr<Matrix<ElemType>> m_savedMean;
+    shared_ptr<Matrix<ElemType>> m_savedInvStdDev;
     // Temp buffer for scale and bias derivatives. Only used in BackpropTo(), carrying info from first call to subsequent calls.
     // Not used for blendFactor=1 in CNTK engine.
     shared_ptr<Matrix<ElemType>> m_dScale;
@@ -2057,7 +2075,7 @@ private:
 
     std::unique_ptr<BatchNormEngine<ElemType>> m_bnEng;
 
-    bool m_convertRunningVariance;
+    bool m_convertRunningVariancePending;
 };
 
 template class BatchNormalizationNode<float>;
