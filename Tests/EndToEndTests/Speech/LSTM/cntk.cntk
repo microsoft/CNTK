@@ -44,7 +44,6 @@ speechTrain = {
 
         # layers library emulation of cudnn5 above
         # differences:
-        #  - cudnn has no peephole connections
         #  - cudnn has 2 biases for every bias, for unknown reasons
         modelUsingLayersLikeCuDNN5 = Sequential
         (

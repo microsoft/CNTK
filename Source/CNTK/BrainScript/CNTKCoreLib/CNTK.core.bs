@@ -106,11 +106,12 @@ AveragePoolingLayer {filterShape, stride = 1, pad = false, lowerPad = 0, upperPa
 RecurrentLSTMLayer {outputDim,
                     cellShape = BS.Constants.None, # if set then use a projection
                     goBackwards = false,
+                    usePeepholes = false,
                     init='heNormal', initValueScale=1,
                     enableSelfStabilization = false} =
 {
     previousHook = if goBackwards then BS.RNNs.NextHC else BS.RNNs.PreviousHC
-    lstm = BS.RNNs.LSTMBlock {outputDim, cellShape = cellShape, enableSelfStabilization = enableSelfStabilization, init=init, initValueScale=initValueScale}
+    lstm = BS.RNNs.LSTMBlock {outputDim, cellShape=cellShape, usePeepholes=usePeepholes, enableSelfStabilization=enableSelfStabilization, init=init, initValueScale=initValueScale}
     apply (x) = {
         prevState = previousHook (lstmState) # recurrent memory. E.g. Previous or Next, with or without initial state, beam reordering etc.
 
@@ -868,7 +869,7 @@ RNNs =
     # This is the stateless version that takes the previous state as an input.
     # It returns a dictionary with three members: h and c, and dim=h.dim for convenience. prevState must have h and c.
     # This function also takes an optional auxiliary input, e.g. for suporting attention models.
-    LSTMBlock (outputDim, cellShape=None, init='heNormal', initValueScale=1, enableSelfStabilization=false) =
+    LSTMBlock (outputDim, cellShape=None, usePeepholes=false, init='heNormal', initValueScale=1, enableSelfStabilization=false) =
     {
         cellDim = if Constants.IsNone (cellShape) then outputDim else cellShape
 
@@ -902,21 +903,24 @@ RNNs =
                         then B{} + W{} * x + H{} * dhs
                         else B{} + W{} * x + H{} * dhs + A{} * aux
 
+                # add peephole connection if requested
+                peep(x, c) = if usePeepholes then x + C{} .* c else x
+
                 proj4 = proj()  # do all 4 sub-networks at once (not using an extra tensor dim, for efficiency)
                 itProj  = Slice (0*cellDim, 1*cellDim, proj4, axis=1)
                 bitProj = Slice (1*cellDim, 2*cellDim, proj4, axis=1)
                 ftProj  = Slice (2*cellDim, 3*cellDim, proj4, axis=1)
                 otProj  = Slice (3*cellDim, 4*cellDim, proj4, axis=1)
 
-                it = Sigmoid (itProj + C{} .* dcs)           // input gate(t)
+                it = Sigmoid (peep (itProj, dcs))            // input gate(t)
                 bit = it .* Tanh (bitProj)                   // applied to tanh of input network
 
-                ft = Sigmoid (ftProj + C{} .* dcs)           // forget-me-not gate(t)
+                ft = Sigmoid (peep (ftProj, dcs))            // forget-me-not gate(t)
                 bft = ft .* dc                               // applied to cell(t-1)
 
                 ct = bft + bit                               // c(t) is sum of both
 
-                ot = Sigmoid (otProj + C{} .* S(ct))         // output gate(t)
+                ot = Sigmoid (peep (otProj, S(ct)))          // output gate(t)
                 ht = ot .* Tanh (ct)                         // applied to tanh(cell(t))
             }
 
