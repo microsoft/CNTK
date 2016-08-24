@@ -114,6 +114,13 @@ LearnableParameter<ElemType>::LearnableParameter(const ScriptableObjects::IConfi
         InitFromFile(initFromFilePath);
         m_initString.clear();
     }
+    else if (initString == L"bilinear")
+    {
+        const size_t kernelWidth = configp->Get(L"kernelWidth");
+        const size_t kernelHeight = configp->Get(L"kernelHeight");
+        InitBilinear(kernelWidth, kernelHeight);
+        m_initString.clear();
+    }
     // legacy
     else if (initString == L"fixedValue") // deprecated. Use initValue=... instead
     {
@@ -234,6 +241,60 @@ void LearnableParameter<ElemType>::InitRandom(const std::wstring& type,
         value.SetGaussianRandomValue(0, range, randomSeed);
     if (initOnCPUOnly)
         Value().TransferToDeviceIfNotThere(m_deviceId, true);
+}
+
+// Initialize with bilinear interpolation coefficients (useful for deconvolution layer).
+template <class ElemType>
+void LearnableParameter<ElemType>::InitBilinear(size_t kernelWidth, size_t kernelHeight)
+{
+    if (kernelHeight != kernelWidth)
+        LogicError("Filter for bilinear interpolation must be square.");
+
+    // Transfer to CPU as GPU initialization is still not supported.
+    Value().TransferToDeviceIfNotThere(CPUDEVICE, true);
+
+    const SmallVector<size_t>& dims = GetSampleLayout().GetDims();
+    assert(dims.size() == 2);
+    const size_t kernelCount = dims[0];
+    const size_t kernelWeightCount = dims[1];
+    assert(kernelWeightCount % (kernelWidth * kernelHeight) == 0);
+    const size_t channels = kernelWeightCount / (kernelWidth * kernelHeight);
+    if (kernelCount != channels)
+        LogicError("Number of input and output channels of filter for bilinear interpolation must be equal.");
+
+    ElemType* data = Value().Data();
+    const size_t factor = (kernelWidth + 1) / 2;
+    const float center = (kernelWidth - 1) / 2.0f;
+    int count = 0;
+    // Filter dimensions are [W x H x C x K] or ARRAY[1..K] OF ARRAY[1..C] OF ARRAY[1..H] OF ARRAY[1..W], where:
+    // W = width, H = height, C = input channels, K = output channels.
+    // In deconvolution, output channel should be upsampled version of corresponding input channel.
+    // 2D filter for bilinear interpolation where height=width=3 contains the following values:
+    // |0.25, 0.50, 0.25|
+    // |0.50, 1.00, 0.50|
+    // |0.25, 0.50, 0.25|
+    // So, output kernel with dimensions [3 x 3 x C] will contain all zeros except for the channel which we want to
+    // upsample. For that channel it will contain values above.
+    for (size_t kernel = 0; kernel < kernelCount; ++kernel)
+    {
+        for (size_t channel = 0; channel < channels; ++channel)
+        {
+            for (size_t h = 0; h < kernelHeight; ++h)
+            {
+                for (size_t w = 0; w < kernelWidth; ++w)
+                {
+                    float val = 0;
+                    if (kernel == channel)
+                    {
+                        val = (1 - fabs(w - center) / factor) * (1 - fabs(h - center) / factor);
+                    }
+                    data[count++] = val;
+                }
+            }
+        }
+    }
+
+    Value().TransferToDeviceIfNotThere(m_deviceId, true);
 }
 
 // initialize by reading a matrix from a text file

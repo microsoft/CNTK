@@ -56,6 +56,9 @@ public:
                             unsigned long randomSeed = 0,
                             bool initOnCPUOnly = false);
 
+    // Initialize with bilinear interpolation coefficients (useful for deconvolution layer).
+    void InitBilinear(size_t kernelWidth, size_t kernelHeight);
+
     // initialize by reading a matrix from a text file
     void InitFromFile(const std::wstring& initFromFilePath);
 

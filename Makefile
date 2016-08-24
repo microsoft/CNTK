@@ -409,6 +409,10 @@ CNTKLIBRARY_TESTS_SRC =\
 	Tests/UnitTests/V2LibraryTests/TensorTests.cpp \
 	Tests/UnitTests/V2LibraryTests/TrainerTests.cpp \
 	Tests/UnitTests/V2LibraryTests/CifarResNet.cpp \
+	Tests/UnitTests/V2LibraryTests/SerializationTests.cpp \
+	Tests/UnitTests/V2LibraryTests/LearnerTests.cpp \
+	Tests/UnitTests/V2LibraryTests/FunctionTests.cpp \
+	Tests/UnitTests/V2LibraryTests/SequenceClassification.cpp \
 
 CNTKLIBRARY_TESTS:=$(BINDIR)/v2librarytests
 CNTKLIBRARY_TESTS_OBJ := $(patsubst %.cu, $(OBJDIR)/%.o, $(patsubst %.cpp, $(OBJDIR)/%.o, $(CNTKLIBRARY_TESTS_SRC)))
@@ -709,6 +713,9 @@ endif
 ########################################
 
 ifdef OPENCV_PATH
+ifdef BOOST_PATH
+
+INCLUDEPATH += $(BOOST_PATH)/include
 
 IMAGE_READER_LIBS += -lopencv_core -lopencv_imgproc -lopencv_imgcodecs
 
@@ -738,6 +745,7 @@ LIBPATH += $(OPENCV_PATH)/lib $(OPENCV_PATH)/release/lib
 $(IMAGEREADER): $(IMAGEREADER_OBJ) | $(CNTKMATH_LIB)
 	@echo $(SEPARATOR)
 	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH) $(IMAGE_READER_LIBS)
+endif
 endif
 
 ########################################
@@ -837,7 +845,6 @@ UNITTEST_READER_SRC = \
 	$(SOURCEDIR)/../Tests/UnitTests/ReaderTests/HTKLMFReaderTests.cpp \
 	$(SOURCEDIR)/../Tests/UnitTests/ReaderTests/ImageReaderTests.cpp \
 	$(SOURCEDIR)/../Tests/UnitTests/ReaderTests/ReaderLibTests.cpp \
-	$(SOURCEDIR)/../Tests/UnitTests/ReaderTests/UCIFastReaderTests.cpp \
 	$(SOURCEDIR)/../Tests/UnitTests/ReaderTests/stdafx.cpp \
 	$(SOURCEDIR)/Readers/CNTKTextFormatReader/Indexer.cpp \
 	$(SOURCEDIR)/Readers/CNTKTextFormatReader/TextParser.cpp \

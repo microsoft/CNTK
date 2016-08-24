@@ -237,7 +237,7 @@ std::pair<size_t, size_t> TracingGPUMemoryAllocator::GetFreeAndTotalMemoryInMBs(
 // deviceId - the device on which the operation will take place
 void PrepareDevice(DEVICEID_TYPE deviceId)
 {
-    static DEVICEID_TYPE currentDevice = DEVICEID_NOTYETDETERMINED;
+    THREAD_LOCAL static DEVICEID_TYPE currentDevice = DEVICEID_NOTYETDETERMINED;
     // and if we last set the device to be this device we are good
     if (deviceId == currentDevice)
         return;

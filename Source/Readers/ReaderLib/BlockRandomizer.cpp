@@ -105,7 +105,7 @@ void BlockRandomizer::PrepareNewSweepIfNeeded(size_t samplePosition)
         m_chunkRandomizer->Randomize((unsigned int)m_sweep);
 
         // Resetting sequence randomizer.
-        m_sequenceRandomizer->Reset(m_sweep + 1);
+        m_sequenceRandomizer->Reset(m_sweep);
         m_lastSeenChunkId = CHUNKID_MAX;
     }
 }

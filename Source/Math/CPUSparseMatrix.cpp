@@ -247,11 +247,23 @@ void CPUSparseMatrix<ElemType>::SetValue(const CPUSparseMatrix<ElemType>& v)
     RequireSizeAndAllocate(v.GetNumRows(), v.GetNumCols(), v.NzSize());
     let nz = v.NzCount();
 
+    auto matrixFormat = v.GetFormat();
+    if (((matrixFormat == matrixFormatSparseBlockCol) || (matrixFormat == matrixFormatSparseBlockRow)) && (v.GetBlockIdShift() > 0))
+        NOT_IMPLEMENTED;
+
     if (nz > 0)
     {
         memcpy(NzValues(),    v.NzValues(),    v.NzSize());
-        memcpy(RowLocation(), v.RowLocation(), v.RowSize());
-        memcpy(ColLocation(), v.ColLocation(), v.ColSize());
+
+        if ((matrixFormat == matrixFormatSparseCSC) || (matrixFormat == matrixFormatSparseCSR))
+        {
+            memcpy(RowLocation(), v.RowLocation(), v.RowSize());
+            memcpy(ColLocation(), v.ColLocation(), v.ColSize());
+        }
+        else
+        {
+            memcpy(GetBlockIds(), v.GetBlockIds(), v.GetBlockSize());
+        }
     }
     if (v.m_sliceViewOffset > 0)
     {
@@ -365,6 +377,66 @@ CPUSparseMatrix<ElemType>& CPUSparseMatrix<ElemType>::DoGatherColumnsOf(ElemType
         }
 
         SecondaryIndexLocation()[j + 1] = CPUSPARSE_INDEX_TYPE(offset);
+    }
+
+    return *this;
+}
+
+// *this[:,idx[j]] = a[:,j] * alpha + *this[:,idx[j]] * beta
+template <class ElemType>
+CPUSparseMatrix<ElemType>& CPUSparseMatrix<ElemType>::DoScatterColumnsOf(ElemType beta, const CPUMatrix<ElemType>& idx, const CPUSparseMatrix<ElemType>& a, ElemType alpha)
+{
+    VerifyWritable(__func__);
+
+    if ((a.GetFormat() != matrixFormatSparseCSC) || (GetFormat() != matrixFormatSparseCSC))
+        NOT_IMPLEMENTED;
+
+    if (idx.GetNumRows() != 1) // index is 1-dimensional only
+        InvalidArgument("DoScatterColumnsOf: Map must be a row vector.");
+
+    if (beta != 0)
+        NOT_IMPLEMENTED;
+
+    if (NzCount() != 0)
+        InvalidArgument("CPUSparseMatrix::DoScatterColumnsOf: The target matrix cannot have pre-existing non-zero values when being scattered into");
+
+    size_t numNonZeroElements = a.NzCount();
+
+    if (beta == 0)
+        RequireSizeAndAllocate(GetNumRows(), GetNumCols(), numNonZeroElements);
+
+    // Setup the Secondary index
+    std::vector<int> columnElementCounts(GetNumCols(), 0);
+    size_t numColsToWrite = idx.GetNumCols();
+    for (long j = 0; j < numColsToWrite; j++)
+    {
+        auto jOutF = idx(0, j); // this is the column we need to write to
+        if (::isnan(jOutF) || (jOutF < 0))     // negative index means gap
+            continue;
+        size_t jOut = (size_t)jOutF;
+        columnElementCounts[jOut] = a.SecondaryIndexLocation()[j + 1] - a.SecondaryIndexLocation()[j];
+    }
+
+    // TODO: Replace with std::exclusive_scan when we switch to C++17
+    for (size_t i = 1; i <= GetNumCols(); ++i)
+        SecondaryIndexLocation()[i] = SecondaryIndexLocation()[i - 1] + columnElementCounts[i - 1];
+    
+    size_t offset = a.SecondaryIndexLocation()[0];
+    // TODO: Does it make sense to parallelize this?
+    for (long j = 0; j < numColsToWrite; j++)
+    {
+        auto jOutF = idx(0, j); // this is the column we need to write to
+        if (::isnan(jOutF) || (jOutF < 0))     // negative index means gap
+            continue;
+        size_t jOut = (size_t)jOutF;
+
+        auto start = SecondaryIndexLocation()[jOut];
+        auto end = SecondaryIndexLocation()[jOut + 1];
+        for (auto p = start; p < end; p++, offset++)
+        {
+            GetUnCompIndex()[p] = a.GetUnCompIndex()[offset];
+            Buffer()[p] = a.Buffer()[offset] * alpha;
+        }
     }
 
     return *this;
@@ -573,13 +645,7 @@ void CPUSparseMatrix<ElemType>::SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYP
 }
 
 template <class ElemType>
-ElemType* CPUSparseMatrix<ElemType>::Data() const
-{
-    return Buffer() + GetCompIndex()[m_sliceViewOffset];
-}
-
-template <class ElemType>
-ElemType* CPUSparseMatrix<ElemType>::Data() 
+ElemType* CPUSparseMatrix<ElemType>::Data()  const
 {
     return (Buffer() + 
         ((GetFormat() == matrixFormatSparseCSC || GetFormat() == matrixFormatSparseCSR) ? GetCompIndex()[m_sliceViewOffset] : 0));
@@ -1473,7 +1539,6 @@ template void CPUSparseMatrix<char>::SetValue(size_t, size_t, char);
 template void CPUSparseMatrix<char>::SetValue(CPUSparseMatrix<char> const&);
 //template void CPUSparseMatrix<char>::SetValue(GPUSparseMatrix<char> const&);
 template char* CPUSparseMatrix<char>::Data() const;
-template char* CPUSparseMatrix<char>::Data();
 template void CPUSparseMatrix<char>::Reset(void);
 template void CPUSparseMatrix<char>::Resize(const size_t, const size_t, const size_t, const bool);
 template void CPUSparseMatrix<char>::RequireSizeAndAllocate(const size_t, const size_t, const size_t, const bool, bool);
@@ -1496,7 +1561,6 @@ template void CPUSparseMatrix<short>::SetValue(size_t, size_t, short);
 template void CPUSparseMatrix<short>::SetValue(CPUSparseMatrix<short> const&);
 //template void CPUSparseMatrix<short>::SetValue(GPUSparseMatrix<short> const&);
 template short* CPUSparseMatrix<short>::Data() const;
-template short* CPUSparseMatrix<short>::Data();
 template void CPUSparseMatrix<short>::Reset(void);
 template void CPUSparseMatrix<short>::Resize(const size_t, const size_t, const size_t, const bool);
 template void CPUSparseMatrix<short>::RequireSizeAndAllocate(const size_t, const size_t, const size_t, const bool, bool);

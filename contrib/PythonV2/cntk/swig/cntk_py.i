@@ -15,8 +15,11 @@
 %rename("%(utitle)s", %$isvariable) "";
 
 %template() std::vector<size_t>;
+%template() std::vector<bool>;
 %template() std::vector<CNTK::Variable>;
 %template() std::vector<std::shared_ptr<CNTK::Function>>;
+
+%ignore CNTK::Internal::Slice;
 
 %{
 #define SWIG_FILE_WITH_INIT
@@ -95,6 +98,10 @@
      }
 }
 
+%ignore CNTK::NDShape::operator[];
+%ignore CNTK::NDShape::AppendShape;
+%ignore CNTK::NDShape::Dimensions;
+
 %typemap(out) CNTK::NDShape {
     size_t num_axes = $1.NumAxes();
     $result = PyTuple_New(num_axes);
@@ -115,18 +122,15 @@
         size_t num_axes = (*self).NumAxes();
         PyObject* result = PyTuple_New(num_axes);
         // CNTK uses column major, thus we reverse the shape
-        for (int i=num_axes-1; i>=0; i--)
+        for (int i=0; i<num_axes; i++)
         {
             size_t dim = dims[i];
-            PyTuple_SET_ITEM(result, i, PyInt_FromLong(dim));
+            PyTuple_SET_ITEM(result, num_axes-1-i, PyInt_FromLong(dim));                       
         }
         return result;
     }
 }
 
-%ignore CNTK::NDShape::operator[];
-%ignore CNTK::NDShape::AppendShape;
-%ignore CNTK::NDShape::Dimensions;
 %ignore CNTK::Dictionary::AppendShape;
 %rename ("$ignore", fullname=1) CNTK::Variable(const NDShape&, CNTK::DataType, const wchar_t*);
 
@@ -786,9 +790,9 @@
 
 // Unordered map conversion
 
-%define %unordered_map_conversion(DATA_TYPE1, _SWIG_TYPE1, DATA_TYPE2, _SWIG_TYPE2)
+%define %unordered_map_ref_conversion(DATA_TYPE1, _SWIG_TYPE1, DATA_TYPE2, _SWIG_TYPE2)
 
-%typemap(out) std::unordered_map<CNTK::DATA_TYPE1, CNTK::DATA_TYPE2> {
+%typemap(out) std::unordered_map<CNTK::DATA_TYPE1, CNTK::DATA_TYPE2>& {
     PyObject* container = PyDict_New();
     if (container == NULL)
     {
@@ -798,7 +802,7 @@
     // *&$1 -> $1 is the returned result being converted (unordered_map<...>*),
     // wrapped by SwigValueWrapper. So we need to unwrap it using '&', 
     // then access its value using '*'.
-    for (auto it : *&$1)
+    for (auto it : *$1)
     {        
         PyObject *returned_var = SWIG_NewPointerObj(SWIG_as_voidptr(new CNTK::DATA_TYPE1(it.first)), _SWIG_TYPE1, SWIG_POINTER_OWN);
         PyObject *returned_val = SWIG_NewPointerObj(SWIG_as_voidptr(new CNTK::DATA_TYPE2(it.second)), _SWIG_TYPE2, SWIG_POINTER_OWN);
@@ -812,7 +816,7 @@
 }
 %enddef
 
-%unordered_map_conversion(StreamInfo, SWIGTYPE_p_CNTK__StreamInfo, MinibatchData, SWIGTYPE_p_CNTK__MinibatchData);
+%unordered_map_ref_conversion(StreamInfo, SWIGTYPE_p_CNTK__StreamInfo, MinibatchData, SWIGTYPE_p_CNTK__MinibatchData);
 
 
 %shared_ptr(CNTK::Function)
@@ -878,7 +882,7 @@
         for (int i=num_axes-1; i>=0; i--)
         {
             shape.push_back(np_shape[i]);
-            num_elements *= np_shape[i];
+            num_elements *= np_shape[i];            
         }
 
         int typecode = PyArray_TYPE(array);
@@ -907,7 +911,15 @@
 
     PyObject* to_numpy() {
         // FIXME use not yet existing NDShape function that returns the dimensions at once
-        std::vector<size_t> dimensions = (*self).Shape().Dimensions();
+        std::vector<size_t> dimensions_cntk = (*self).Shape().Dimensions();
+        std::vector<size_t> dimensions;
+
+        // CNTK uses column major, thus we reverse the shape
+        for (int i=dimensions_cntk.size()-1; i>=0; i--)
+        {
+            dimensions.push_back(dimensions_cntk[i]);            
+        }
+
         npy_intp* shape = reinterpret_cast<npy_intp*>(&dimensions[0]);
 
         NPY_TYPES numpy_type;
@@ -943,6 +955,9 @@
 %template(random_uniform_double) CNTK::NDArrayView::RandomUniform<double>;
 %template(DictionaryValueFromDict) CNTK::DictionaryValue::DictionaryValue<CNTK::Dictionary>;
 
+%template(learning_rates_per_sample) CNTK::TrainingParameterSchedule<double>;
+%template(momentums_per_sample) CNTK::TrainingParameterSchedule<double>;
+        
 // end of NDArrayView
 
 //
