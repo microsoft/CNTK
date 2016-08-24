@@ -873,12 +873,14 @@ RNNs =
         cellDim = if Constants.IsNone (cellShape) then outputDim else cellShape
 
         # parameter helpers
+        # we group 4 matrices into one, gives 60% speed-up in some cases
+        # Not merging inputs since initialization would be off.
         # note: invoked multiple times, each invocation comes with its own set of weights
-        B{} = ParameterTensor {(cellDim),             initValue=0}       # a bias
-        W{} = ParameterTensor {(cellDim : Inferred),  init=init, initValueScale=initValueScale}   # a input
-        A{} = ParameterTensor {(cellDim : Inferred),  init=init, initValueScale=initValueScale}   # an aux input
-        H{} = ParameterTensor {(cellDim : outputDim), init=init, initValueScale=initValueScale}   # a hidden-to-hidden
-        C{} = ParameterTensor {(cellDim),             init=init, initValueScale=initValueScale}   # a cell-to-hiddden {note: applied elementwise}
+        B{} = ParameterTensor {(4 * cellDim),             initValue=0}       # a bias
+        W{} = ParameterTensor {(4 * cellDim : Inferred),  init=init, initValueScale=initValueScale}   # a input
+        A{} = ParameterTensor {(4 * cellDim : Inferred),  init=init, initValueScale=initValueScale}   # an aux input
+        H{} = ParameterTensor {(4 * cellDim : outputDim), init=init, initValueScale=initValueScale}   # a hidden-to-hidden
+        C{} = ParameterTensor {(    cellDim),             init=init, initValueScale=initValueScale}   # a cell-to-hiddden {note: applied elementwise}
 
         Wmr = ParameterTensor {(outputDim : cellDim), init=init, initValueScale=initValueScale};  # final projection
 
@@ -900,10 +902,11 @@ RNNs =
                         then B{} + W{} * x + H{} * dhs
                         else B{} + W{} * x + H{} * dhs + A{} * aux
 
-                itProj  = proj()
-                bitProj = proj()
-                ftProj  = proj()
-                otProj  = proj()
+                proj4 = proj()  # do all 4 sub-networks at once (not using an extra tensor dim, for efficiency)
+                itProj  = Slice (0*cellDim, 1*cellDim, proj4, axis=1)
+                bitProj = Slice (1*cellDim, 2*cellDim, proj4, axis=1)
+                ftProj  = Slice (2*cellDim, 3*cellDim, proj4, axis=1)
+                otProj  = Slice (3*cellDim, 4*cellDim, proj4, axis=1)
 
                 it = Sigmoid (itProj + C{} .* dcs)           // input gate(t)
                 bit = it .* Tanh (bitProj)                   // applied to tanh of input network
