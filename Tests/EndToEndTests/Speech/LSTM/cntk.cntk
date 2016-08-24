@@ -23,8 +23,6 @@ speechTrain = {
         featDim = 11 * baseFeatDim
         labelDim = 132
 
-        useSelfStabilization = false;#true   # note: overridden in modelRegressionTest
-
         // hidden dimensions
         innerCellDim  = 1024
         hiddenDim     = 256
@@ -39,11 +37,9 @@ speechTrain = {
             MeanVarNorm :
             LayerStack {numLSTMLayers, _ => Sequential (
                 LayerNormalizationLayer{} :
-                RecurrentLSTMLayer {hiddenDim, cellShape=innerCellDim, enableSelfStabilization=useSelfStabilization, init='uniform'}
+                RecurrentLSTMLayer {hiddenDim, cellShape=innerCellDim, init='heUniform', initValueScale=1/3}
             )} :
-            #StabilizerLayer{} :
-            #LayerNormalizationLayer{} :
-            DenseLayer {labelDim, init='uniform'}
+            DenseLayer {labelDim, init='heUniform', initValueScale=1/3}
         )
 
         # old test

@@ -154,7 +154,7 @@ BatchNormalizationLayer {spatialRank = 0,  # reduce over these dims. E.g. 2 to r
 # LayerNormalizationLayer -- create a layer-normalization layer
 LayerNormalizationLayer {initScale = 1, initBias = 0} =
 {
-    gain = ParameterTensor{(1), initValue = initScale}
+    gain = ParameterTensor{(1), initValue = initScale}  # TODO: offer Softplus version for protection, as for Stabilizer
     bias = ParameterTensor{(1), initValue = initBias}
 
     apply (x) = {
