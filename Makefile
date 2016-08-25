@@ -274,19 +274,19 @@ COMMON_SRC =\
 	$(SOURCEDIR)/Common/fileutil.cpp \
 
 MATH_SRC =\
+	$(SOURCEDIR)/Math/BatchNormalizationEngine.cpp \
 	$(SOURCEDIR)/Math/BlockHandlerSSE.cpp \
+	$(SOURCEDIR)/Math/CUDAPageLockedMemAllocator.cpp \
 	$(SOURCEDIR)/Math/CPUMatrix.cpp \
-	$(SOURCEDIR)/Math/CPUSparseMatrix.cpp \
 	$(SOURCEDIR)/Math/CPURNGHandle.cpp \
+	$(SOURCEDIR)/Math/CPUSparseMatrix.cpp \
+	$(SOURCEDIR)/Math/ConvolutionEngine.cpp \
 	$(SOURCEDIR)/Math/MatrixQuantizerImpl.cpp \
 	$(SOURCEDIR)/Math/MatrixQuantizerCPU.cpp \
-	$(SOURCEDIR)/Math/QuantizedMatrix.cpp \
 	$(SOURCEDIR)/Math/Matrix.cpp \
+	$(SOURCEDIR)/Math/QuantizedMatrix.cpp \
 	$(SOURCEDIR)/Math/RNGHandle.cpp \
 	$(SOURCEDIR)/Math/TensorView.cpp \
-	$(SOURCEDIR)/Math/CUDAPageLockedMemAllocator.cpp \
-	$(SOURCEDIR)/Math/ConvolutionEngine.cpp \
-	$(SOURCEDIR)/Math/BatchNormalizationEngine.cpp \
 
 ifdef SUPPORT_AVX2
 MATH_SRC +=\
@@ -296,16 +296,17 @@ endif
 
 ifdef CUDA_PATH
 MATH_SRC +=\
+	$(SOURCEDIR)/Math/CuDnnBatchNormalization.cu \
+	$(SOURCEDIR)/Math/CuDnnCommon.cu \
+	$(SOURCEDIR)/Math/CuDnnConvolutionEngine.cu \
+	$(SOURCEDIR)/Math/CuDnnRNN.cpp \
+	$(SOURCEDIR)/Math/GPUDataTransferer.cpp \
 	$(SOURCEDIR)/Math/GPUMatrix.cu \
-	$(SOURCEDIR)/Math/GPUTensor.cu \
 	$(SOURCEDIR)/Math/GPUSparseMatrix.cu \
+	$(SOURCEDIR)/Math/GPUTensor.cu \
 	$(SOURCEDIR)/Math/GPUWatcher.cu \
 	$(SOURCEDIR)/Math/GPURNGHandle.cu \
 	$(SOURCEDIR)/Math/MatrixQuantizerGPU.cu \
-	$(SOURCEDIR)/Math/CuDnnCommon.cu \
-	$(SOURCEDIR)/Math/CuDnnConvolutionEngine.cu \
-	$(SOURCEDIR)/Math/CuDnnBatchNormalization.cu \
-	$(SOURCEDIR)/Math/GPUDataTransferer.cpp \
 
 else
 MATH_SRC +=\
