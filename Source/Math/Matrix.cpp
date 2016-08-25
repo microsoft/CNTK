@@ -4362,7 +4362,16 @@ void Matrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const Matrix<ElemT
     if (c.GetDeviceId() < 0) // CPU
     {
         if (a.GetMatrixType() == MatrixType::SPARSE) // CPU, SPARSE * ANY -> ANY
-            NOT_IMPLEMENTED;
+        {
+            if (b.GetMatrixType() == MatrixType::DENSE && c.GetMatrixType() == MatrixType::DENSE) // CPU, SPARSE * DENSE -> DENSE
+            {
+                CPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(alpha, *a.m_CPUSparseMatrix, transposeA, *b.m_CPUMatrix, transposeB, beta, *c.m_CPUMatrix);
+                c.SetDataLocation(CPU, DENSE);
+            }
+            else{
+                NOT_IMPLEMENTED;
+            }
+        }
         if (b.GetMatrixType() == MatrixType::SPARSE) // CPU, DENSE * SPARSE -> ANY
         {
             if (c.GetMatrixType() == MatrixType::DENSE) // CPU, DENSE * SPARSE -> DENSE
