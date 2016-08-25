@@ -15,6 +15,7 @@
 #include "RecurrentNodes.h"
 #include "EvaluationNodes.h"
 #include "TrainingNodes.h"
+#include "ReshapingNodes.h"
 
 using namespace Microsoft::MSR::CNTK;
 
@@ -32,6 +33,7 @@ namespace CNTK
 
         Variable var;
         NDShape varShape = AsNDShape(node->GetSampleLayout());
+
         // The CNTK sample layouts may have trailing axes with dimension size of 1 which are automatically
         // added when converting from NDShape to CNTK internal TensorShapes and are not present in the original
         // shapes specified by the user. These should be truncated.
@@ -57,11 +59,10 @@ namespace CNTK
                 if (node->HasMBLayout())
                 {
                     // TODO: Currently only default dynamic axis is supported
-                    const std::wstring defaultCNTKDynamicAxisName = L"";
-                    if (inputNode->GetRequestedDynamicAxis() != defaultCNTKDynamicAxisName)
-                        LogicError("Found dynamic axis named '%S' while currently only default dynamic axis named '%S' is supported!", node->GetMBLayout()->GetAxisName(), defaultCNTKDynamicAxisName.c_str());
+                    auto inputNodeInternalDynamicAxisName = inputNode->GetRequestedDynamicAxis();
+                    std::vector<Axis> inputVarDynamicAxes = DynamicAxesFromInternalDynamicAxisName(inputNodeInternalDynamicAxisName);
 
-                    var = Variable(varShape, isSparse, AsDataType<ElementType>(), node->GetLearningRateMultiplier() != 0, node->GetName());
+                    var = Variable(varShape, isSparse, AsDataType<ElementType>(), node->GetLearningRateMultiplier() != 0, node->GetName(), inputVarDynamicAxes);
                 }
                 else
                 {
@@ -121,6 +122,40 @@ namespace CNTK
                 opType = PrimitiveOpType::Reciprocal;
             else if (node->OperationName() == OperationNameOf(SoftmaxNode))
                 opType = PrimitiveOpType::Softmax;
+            else if (node->OperationName() == OperationNameOf(HardmaxNode))
+                opType = PrimitiveOpType::Hardmax;
+            else if (node->OperationName() == OperationNameOf(TransposeDimensionsNode))
+            {
+                auto transposeDimensionsNode = node->As<TransposeDimensionsNode<ElementType>>();
+                primitiveFunctionConfigParameters[L"axis1"] = (size_t)transposeDimensionsNode->Axis1();
+                primitiveFunctionConfigParameters[L"axis2"] = (size_t)transposeDimensionsNode->Axis2();
+
+                opType = PrimitiveOpType::TransposeAxes;
+            }
+            else if (node->OperationName() == OperationNameOf(WhereNode))
+            {
+                auto whereNode = node->As<WhereNode<ElementType>>();
+                auto internalDynamicAxisName = whereNode->DynamicAxisName();
+                std::vector<Axis> dynamicAxes = DynamicAxesFromInternalDynamicAxisName(internalDynamicAxisName);
+                std::vector<std::wstring> dynamicAxesNames;
+                for (auto axis : dynamicAxes)
+                    dynamicAxesNames.push_back(axis.Name());
+
+                primitiveFunctionConfigParameters[L"newDynamicAxes"] = AsDictionaryValueVector(dynamicAxesNames);
+
+                opType = PrimitiveOpType::Where;
+            }
+            else if (node->OperationName() == OperationNameOf(SliceNode))
+            {
+                auto sliceNode = node->As<SliceNode<ElementType>>();
+                primitiveFunctionConfigParameters[L"axis"] = Axis(sliceNode->Axis() - 1).Name();
+                primitiveFunctionConfigParameters[L"beginIndex"] = sliceNode->BeginIndex();
+                primitiveFunctionConfigParameters[L"endIndex"] = sliceNode->EndIndex();
+
+                opType = PrimitiveOpType::Slice;
+            }
+            else if (node->OperationName() == OperationNameOf(SumElementsNode))
+                opType = PrimitiveOpType::SumAll;
             else if (node->OperationName() == OperationNameOf(PlusNode))
                 opType = PrimitiveOpType::Plus;
             else if (node->OperationName() == OperationNameOf(MinusNode))
@@ -139,10 +174,22 @@ namespace CNTK
                 opType = PrimitiveOpType::Greater;
             else if (node->OperationName() == OperationNameOf(GreaterEqualNode))
                 opType = PrimitiveOpType::GreaterEqual;
+            else if (node->OperationName() == OperationNameOf(PackedIndexNode))
+                opType = PrimitiveOpType::PackedIndex;
+            else if (node->OperationName() == OperationNameOf(GatherPackedNode))
+            {
+                std::swap(inputVars[0], inputVars[1]);
+                opType = PrimitiveOpType::GatherPacked;
+            }
             else if (node->OperationName() == OperationNameOf(TimesNode))
             {
-                primitiveFunctionConfigParameters[L"numOutputAxes"] = DictionaryValue((size_t)node->As<TimesNode<ElementType>>()->OutputRank());
+                primitiveFunctionConfigParameters[L"numOutputAxes"] = (size_t)node->As<TimesNode<ElementType>>()->OutputRank();
                 opType = PrimitiveOpType::Times;
+            }
+            else if (node->OperationName() == OperationNameOf(TransposeTimesNode))
+            {
+                primitiveFunctionConfigParameters[L"numOutputAxes"] = (size_t)node->As<TransposeTimesNode<ElementType>>()->OutputRank();
+                opType = PrimitiveOpType::TransposeTimes;
             }
             else if (node->OperationName() == OperationNameOf(PastValueNode))
             {
@@ -151,7 +198,7 @@ namespace CNTK
                     auto initialStateVar = Constant({}, node->As<PastValueNode<ElementType>>()->InitialActivationValue(), AsDeviceDescriptor(node->GetDeviceId()));
                     inputVars.insert(inputVars.begin(), initialStateVar);
                 }
-                primitiveFunctionConfigParameters[L"stepSize"] = DictionaryValue((size_t)node->As<PastValueNode<ElementType>>()->TimeStep());
+                primitiveFunctionConfigParameters[L"stepSize"] = (size_t)node->As<PastValueNode<ElementType>>()->TimeStep();
                 opType = PrimitiveOpType::PastValue;
             }
             else if (node->OperationName() == OperationNameOf(FutureValueNode))
@@ -161,7 +208,7 @@ namespace CNTK
                     auto initialStateVar = Constant({}, node->As<FutureValueNode<ElementType>>()->InitialActivationValue(), AsDeviceDescriptor(node->GetDeviceId()));
                     inputVars.insert(inputVars.begin(), initialStateVar);
                 }
-                primitiveFunctionConfigParameters[L"stepSize"] = DictionaryValue((size_t)node->As<FutureValueNode<ElementType>>()->TimeStep());
+                primitiveFunctionConfigParameters[L"stepSize"] = (size_t)node->As<FutureValueNode<ElementType>>()->TimeStep();
                 opType = PrimitiveOpType::FutureValue;
             }
             else if (node->OperationName() == OperationNameOf(SquareErrorNode))
@@ -171,13 +218,19 @@ namespace CNTK
                 std::swap(inputVars[0], inputVars[1]);
                 opType = PrimitiveOpType::CrossEntropyWithSoftmax;
             }
-            else if (node->OperationName() == OperationNameOf(ErrorPredictionNode))
+            else if (node->OperationName() == OperationNameOf(ClassificationErrorNode))
             {
                 std::swap(inputVars[0], inputVars[1]);
                 opType = PrimitiveOpType::ClassificationError;
             }
-            else if (node->OperationName() == OperationNameOf(SumElementsNode))
-                opType = PrimitiveOpType::ReduceSum;
+            else if (node->OperationName() == OperationNameOf(ReduceElementsNode))
+            {
+                auto reduceElementsNode = node->As<ReduceElementsNode<ElementType>>();
+                primitiveFunctionConfigParameters[L"CNTKInternalReductionAxisIndex"] = (size_t)reduceElementsNode->ReductionAxis();
+                primitiveFunctionConfigParameters[L"ReductionOpName"] = reduceElementsNode->ReductionOpName();
+
+                opType = PrimitiveOpType::ReduceElements;
+            }
             else if (node->OperationName() == OperationNameOf(ConvolutionNode))
             {
                 auto convolutionNode = node->As<ConvolutionNode<ElementType>>();

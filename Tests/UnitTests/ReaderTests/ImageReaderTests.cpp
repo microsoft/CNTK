@@ -161,7 +161,7 @@ BOOST_AUTO_TEST_CASE(ImageReaderLabelOutOfRange)
             0,
             1),
             std::runtime_error,
-            [](std::runtime_error const& ex) { return string("Image 'images\\red.jpg' has invalid class id '10'. Expected label dimension is '4'. Line 3 in file ./ImageReaderLabelOutOfRange_map.txt.") == ex.what(); });
+            [](std::runtime_error const& ex) { return string("Image 'images/red.jpg' has invalid class id '10'. Expected label dimension is '4'. Line 3 in file ./ImageReaderLabelOutOfRange_map.txt.") == ex.what(); });
 }
 
 BOOST_AUTO_TEST_CASE(ImageReaderZip)
@@ -287,7 +287,7 @@ BOOST_AUTO_TEST_CASE(ImageReaderMissingImage)
         0,
         1),
         std::runtime_error,
-        [](const std::runtime_error& ex) { return string("Cannot open file 'imageDoesNotExists\\black.jpg'") == ex.what(); });
+        [](const std::runtime_error& ex) { return string("Cannot open file 'imageDoesNotExists/black.jpg'") == ex.what(); });
 }
 
 BOOST_AUTO_TEST_CASE(ImageReaderEmptyTransforms)

@@ -1774,7 +1774,7 @@ public:
     {
         FrameRange fr(Input(0)->GetMBLayout());
 
-        Matrix<ElemType> sliceInputValue  = Input(0)->ValueFor(fr);
+        Matrix<ElemType> sliceInputValue  = Input(0)->MaskedValueFor(fr);
         const Matrix<ElemType>& scale     = Input(1)->Value();
         const Matrix<ElemType>& bias      = Input(2)->Value();
         Matrix<ElemType>& runMean         = Input(3)->Value();
@@ -1811,7 +1811,7 @@ public:
 
         if (inputIndex == 0) // derivative with respect to the input.
         {
-            auto sliceOutputGrad                 = GradientFor(fr);
+            auto sliceOutputGrad                 = MaskedGradientFor(fr);
             auto sliceInputValue                 = Input(0)->ValueFor(fr);
             const Matrix<ElemType>& scale        = Input(1)->Value();
             const Matrix<ElemType>& bias         = Input(2)->Value();

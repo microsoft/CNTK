@@ -148,6 +148,7 @@ namespace CNTK
     class CompositeFunction;
     class Function;
     class Variable;
+    class Axis;
 
     // Similar to make_shared except that it associates a custom deleter with the shared_ptr to ensure
     // that objects are deleted on the same side of the library DLL where they are allocated
@@ -178,4 +179,15 @@ namespace CNTK
 
     class MinibatchSource;
     typedef std::shared_ptr<MinibatchSource> MinibatchSourcePtr;
+
+    namespace Internal
+    {
+        CNTK_API FunctionPtr PackedIndex(const Variable& operand, const Variable& index, const std::wstring& name = L"");
+        CNTK_API FunctionPtr GatherPacked(const Variable& operand, const Variable& packedIndex, const std::wstring& name = L"");
+        CNTK_API FunctionPtr IsWithin(const Variable& operand, int offset, const std::wstring& name = L"");
+        CNTK_API FunctionPtr Where(const Variable& condition, const std::vector<Axis>& newDynamicAxes, const std::wstring& name = L"");
+        CNTK_API FunctionPtr Gather(const Variable& operand, const Variable& condition, const std::vector<Axis>& newDynamicAxes, const std::wstring& name = L"");
+        CNTK_API FunctionPtr Slice(const Variable& operand, const Axis& axis, int beginIndex, int endIndex, const std::wstring& name = L"");
+        CNTK_API FunctionPtr ReduceElements(const Variable& operand, const std::wstring& reductionOpName, const Axis& axis, const std::wstring& name = L"");
+    }
 }

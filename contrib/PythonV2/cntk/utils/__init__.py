@@ -316,13 +316,13 @@ def sanitize_batch(batch, data_type, dev):
         return batch
 
     num_seq = len(batch)
+
     try:
         seq_lens = [len(seq) for seq in batch]
     except:
         import ipdb;ipdb.set_trace()
-
-    use_mask = set(seq_lens)!=1
-
+    
+    use_mask = len(set(seq_lens))!=1    
     if use_mask:
         # If not all sequences are of the same length, we have to pad them to
         # the same length and create a mask over the original data.
@@ -418,7 +418,7 @@ def ones_like(batch, precision_numpy):
     '''
     return [np.ones_like(sample, dtype=precision_numpy) for sample in batch]
 
-def create_NDArrayView(shape, data_type, dev):
+def create_NDArrayView(shape, data_type=cntk_py.DataType_Float, dev=cntk_device(-1)):
     if not np.isscalar(shape):
     # cntk uses column major, thus we reverse the shape    
         shape = tuple(reversed(shape))
@@ -426,7 +426,7 @@ def create_NDArrayView(shape, data_type, dev):
     view = cntk_py.NDArrayView(data_type, cntk_py.StorageFormat_Dense, shape, dev)
     return view
 
-def create_NDArrayView_from_NumPy(nd, dev):              
+def create_NDArrayView_from_NumPy(nd, dev=cntk_device(-1)):              
     view = cntk_py.NDArrayView(nd, dev, False)
     return view
 
@@ -509,6 +509,18 @@ def create_minibatch_source(config_dict):
     cntk_dict = _py_dict_to_cntk_dict(config_dict)
     return cntk_py.create_composite_minibatch_source(cntk_dict)
 
+def get_train_loss(trainer):
+    '''
+    Fetch the train loss from the last minibatch and copy it to the CPU in case it is on the GPU.
+    Args:
+        trainer (:class:`Trainer`): the trainer used.        
+    Returns: 
+        the loss value
+    '''
+    ndav = create_NDArrayView(trainer.previous_minibatch_training_loss_value().data().shape().dimensions(), cntk_py.DataType_Float,cntk_device(-1))
+    ndav.copy_from(trainer.previous_minibatch_training_loss_value().data())        
+    return float(ndav.to_numpy())
+
 def eval(op, precision, device_id, input_map=None, backward_pass=False):
     '''
     It evaluates `op` on the data provided by the reader. This is useful
@@ -542,15 +554,15 @@ def eval(op, precision, device_id, input_map=None, backward_pass=False):
     forward_output_mask = {}
     for v in op.outputs():
         value = forward_out_var_map[v]
-        np_data = value.data().to_numpy() 
-        np_data = np_data.reshape(tuple(reversed(np_data.shape)))
+        np_data = value.data().to_numpy()         
         if value.mask():
             np_data = remove_masked_elements(np_data, value.mask().to_numpy())
         forward_output[v] = np_data
         forward_output_mask[v] = value.mask()
 
     assert backward_pass
-    if backward_pass:
+    
+    if backward_pass:    
         root_gradients = {} 
         for v, o in forward_output.items():
             ones_grad = ones_like(o, pn)
@@ -563,8 +575,7 @@ def eval(op, precision, device_id, input_map=None, backward_pass=False):
 
         backward_output = {}
         for var, value in backward_var_map.items():
-            np_data = value.data().to_numpy() 
-            np_data = np_data.reshape(tuple(reversed(np_data.shape)))
+            np_data = value.data().to_numpy()             
             if value.mask():
                 np_data = remove_masked_elements(np_data, value.mask().to_numpy())
             backward_output[var] = np_data

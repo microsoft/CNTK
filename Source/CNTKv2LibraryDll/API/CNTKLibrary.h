@@ -673,35 +673,52 @@ namespace CNTK
 
     ///
     /// Denotes an Axis of a Variable and is used for specifying the axes parameters of certain Functions such as reductions.
-    /// Besides the static axes corresponding to each of the axes of the Variable's shape, Input and Output Variables
-    /// also have one or more dynamic axes (corresponding to the sequence dimensions) and one implicit batch axis denoting the axes 
-    /// along which multiple sequences are batched in the Values corresponding to the variable when performing computations.
+    /// Besides the static axes corresponding to each of the axes of the Variable's shape, Variables of kind 'Input' and any 
+    /// 'Output' Variables dependent on an 'Input' Variable also have 2 additional dynamic axes whose dimensions are known only 
+    /// when the Variable is bound to actual data during compute (viz. sequence axis and batch axis denoting the axis along which
+    /// multiple sequences are batched)
     ///
     class Axis final
     {
+        CNTK_API static const std::wstring s_staticAxisNamePrefix;
     public:
         ///
         /// Construct an Axis object denoting a static axis with the specified index.
         ///
-        Axis(size_t staticAxisIdx)
+        explicit Axis(size_t staticAxisIdx)
             : m_staticAxisIdx(staticAxisIdx)
         {
-            const wchar_t* staticAxisNamePrefix = L"staticAxis_";
-            m_name = staticAxisNamePrefix + std::to_wstring(staticAxisIdx);
+            m_name = s_staticAxisNamePrefix + std::to_wstring(staticAxisIdx);
         }
 
         ///
         /// Construct a dynamic axis with the specified name.
         ///
-        Axis(const std::wstring& name)
+        explicit Axis(const std::wstring& name)
             : m_staticAxisIdx(SIZE_MAX), m_name(name)
         {
+            if (m_name.length() > s_staticAxisNamePrefix.length())
+            {
+                auto prefix = m_name.substr(0, s_staticAxisNamePrefix.length());
+                auto suffix = m_name.substr(s_staticAxisNamePrefix.length(), m_name.length() - s_staticAxisNamePrefix.length());
+                if (prefix == s_staticAxisNamePrefix)
+                {
+                    if (suffix == L"0")
+                        *this = Axis(0);
+                    else
+                    {
+                        auto suffixVal = std::stoul(suffix);
+                        if (suffixVal != 0)
+                            *this = Axis(suffixVal);
+                    }
+                }
+            }
         }
 
         ///
         /// Returns a boolean indicating if 'this' Axis corresponds to a static axis
         ///
-        bool IsStaticAxis() const { return m_staticAxisIdx == SIZE_MAX; }
+        bool IsStaticAxis() const { return m_staticAxisIdx != SIZE_MAX; }
 
         ///
         /// Returns the axis index if 'this' Axis is a static axis. Throws an exception otherwise.
@@ -722,12 +739,7 @@ namespace CNTK
         ///
         /// Static Axis object representing the batch axis.
         ///
-        CNTK_API static const Axis& BatchAxis();
-
-        ///
-        /// Special Axis object denoting all the axes of the Value object in whose context it is used.
-        ///
-        CNTK_API static const Axis& AllAxes();
+        CNTK_API static const Axis& DefaultBatchAxis();
 
         ///
         /// Name of 'this' axis
@@ -761,7 +773,20 @@ namespace CNTK
     {
         return !(first == second);
     }
+}
 
+namespace std {
+    template <> struct hash<CNTK::Axis>
+    {
+        size_t operator()(const CNTK::Axis& x) const
+        {
+            return std::hash<std::wstring>()(x.Name());
+        }
+    };
+}
+
+namespace CNTK
+{
     ///
     /// Enumeration type denoting the kind of a symbolic Variable object
     ///
@@ -788,47 +813,76 @@ namespace CNTK
         template <typename T>
         friend struct std::hash;
 
+        CNTK_API static const std::vector<Axis> s_defaultInputVariableDynamicAxes;
     public:
         ///
         /// Create an 'Input' Variable.
         ///
-        Variable(const NDShape& shape, CNTK::DataType dataType)
-            : Variable(shape, dataType, L"")
+        Variable(const NDShape& shape, CNTK::DataType dataType, const std::vector<Axis>& dynamicAxes = s_defaultInputVariableDynamicAxes)
+            : Variable(shape, dataType, L"", dynamicAxes)
         {}
 
         ///
         /// Create an 'Input' Variable.
         ///
-        Variable(const NDShape& shape, CNTK::DataType dataType, const wchar_t* name)
-            : Variable(shape, dataType, std::wstring(name))
+        Variable(const NDShape& shape, CNTK::DataType dataType, const wchar_t* name, const std::vector<Axis>& dynamicAxes = s_defaultInputVariableDynamicAxes)
+            : Variable(shape, dataType, std::wstring(name), dynamicAxes)
         {}
 
         ///
         /// Create an 'Input' Variable.
         ///
-        Variable(const NDShape& shape, CNTK::DataType dataType, const std::wstring& name)
-            : Variable(shape, VariableKind::Input, dataType, nullptr, nullptr, false, { Axis::DefaultDynamicAxis() }, false, name)
+        Variable(const NDShape& shape, CNTK::DataType dataType, const std::wstring& name, const std::vector<Axis>& dynamicAxes = s_defaultInputVariableDynamicAxes)
+            : Variable(shape, false, dataType, name, dynamicAxes)
         {}
 
         ///
         /// Create an 'Input' Variable denoting sparse data.
         ///
-        Variable(const NDShape& shape, bool isSparse, CNTK::DataType dataType, const std::wstring& name = L"")
-            : Variable(shape, VariableKind::Input, dataType, nullptr, nullptr, false, { Axis::DefaultDynamicAxis() }, isSparse, name)
+        Variable(const NDShape& shape, bool isSparse, CNTK::DataType dataType, const std::vector<Axis>& dynamicAxes = s_defaultInputVariableDynamicAxes)
+            : Variable(shape, isSparse, dataType, false, L"", dynamicAxes)
+        {}
+
+        ///
+        /// Create an 'Input' Variable denoting sparse data.
+        ///
+        Variable(const NDShape& shape, bool isSparse, CNTK::DataType dataType, const wchar_t* name, const std::vector<Axis>& dynamicAxes = s_defaultInputVariableDynamicAxes)
+            : Variable(shape, isSparse, dataType, std::wstring(name), dynamicAxes)
+        {}
+
+        ///
+        /// Create an 'Input' Variable denoting sparse data.
+        ///
+        Variable(const NDShape& shape, bool isSparse, CNTK::DataType dataType, const std::wstring& name, const std::vector<Axis>& dynamicAxes = s_defaultInputVariableDynamicAxes)
+            : Variable(shape, isSparse, dataType, false, name, dynamicAxes)
         {}
 
         ///
         /// Create an 'Input' Variable and specify if gradients are to be computed for this input
         ///
-        Variable(const NDShape& shape, CNTK::DataType dataType, bool needsGradient, const std::wstring& name = L"")
-            : Variable(shape, VariableKind::Input, dataType, nullptr, nullptr, needsGradient, { Axis::DefaultDynamicAxis() }, false, name)
+        Variable(const NDShape& shape, CNTK::DataType dataType, bool needsGradient, const wchar_t* name, const std::vector<Axis>& dynamicAxes = s_defaultInputVariableDynamicAxes)
+            : Variable(shape, dataType, needsGradient, std::wstring(name), dynamicAxes)
+        {}
+
+        ///
+        /// Create an 'Input' Variable and specify if gradients are to be computed for this input
+        ///
+        Variable(const NDShape& shape, CNTK::DataType dataType, bool needsGradient, const std::wstring& name, const std::vector<Axis>& dynamicAxes = s_defaultInputVariableDynamicAxes)
+            : Variable(shape, false, dataType, needsGradient, name, dynamicAxes)
         {}
 
         ///
         /// Create an 'Input' Variable denoting sparse data and specify if gradients are to be computed for this input
         ///
-        Variable(const NDShape& shape, bool isSparse, CNTK::DataType dataType, bool needsGradient, const std::wstring& name = L"")
-            : Variable(shape, VariableKind::Input, dataType, nullptr, nullptr, needsGradient, { Axis::DefaultDynamicAxis() }, isSparse, name)
+        Variable(const NDShape& shape, bool isSparse, CNTK::DataType dataType, bool needsGradient, const std::vector<Axis>& dynamicAxes = s_defaultInputVariableDynamicAxes)
+            : Variable(shape, isSparse, dataType, needsGradient, L"", dynamicAxes)
+        {}
+
+        ///
+        /// Create an 'Input' Variable denoting sparse data and specify if gradients are to be computed for this input
+        ///
+        Variable(const NDShape& shape, bool isSparse, CNTK::DataType dataType, bool needsGradient, const std::wstring& name, const std::vector<Axis>& dynamicAxes = s_defaultInputVariableDynamicAxes)
+            : Variable(shape, VariableKind::Input, dataType, nullptr, nullptr, needsGradient, dynamicAxes, isSparse, name)
         {}
 
         ///
@@ -868,7 +922,7 @@ namespace CNTK
         ///
         /// Returns a boolean value indicating if 'this' variable denotes sparse data
         ///
-        bool IsSparse() const { return (m_dataFields->m_isSparse); }
+        bool IsSparse() const { return m_dataFields->m_isSparse; }
 
         ///
         /// Returns a boolean value indicating if 'this' variable is an Input
@@ -949,6 +1003,14 @@ namespace CNTK
             VariableFields(const NDShape& shape, VariableKind varType, CNTK::DataType type, Function* ownerFunction, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, bool isSparse, const std::wstring& name)
                 : m_shape(shape), m_varKind(varType), m_dataType(type), m_ownerFunction(ownerFunction), m_value(value), m_needsGradient(needsGradient), m_dynamicAxes(dynamicAxes), m_isSparse(isSparse), m_name(name)
             {
+                // Validate that each of the dynamic axes are unique
+                std::unordered_set<Axis> uniqueDynamicAxis;
+                for (auto& currentDynamicAxis : dynamicAxes)
+                {
+                    auto retVal = uniqueDynamicAxis.insert(currentDynamicAxis);
+                    if (!retVal.second)
+                        InvalidArgument("Dynamic axis named %S is specified more than once for Variable object", currentDynamicAxis.Name().c_str());
+                }
             }
 
         private:
@@ -1087,7 +1149,7 @@ namespace CNTK
         /// Contruct a Placeholder with the specified NDShape
         ///
         explicit Placeholder(const NDShape& shape, const std::wstring& name = L"")
-            : Variable(shape, VariableKind::Placeholder, DataType::Unknown, nullptr, false, {Axis::DefaultDynamicAxis()}, name)
+            : Variable(shape, VariableKind::Placeholder, DataType::Unknown, nullptr, false, { Axis::DefaultDynamicAxis(), Axis::DefaultBatchAxis() }, name)
         {}
 
         ///
@@ -1114,13 +1176,6 @@ namespace std {
         }
     };
 
-    template <> struct hash<CNTK::Axis>
-    {
-        size_t operator()(const CNTK::Axis& x) const
-        {
-            return std::hash<std::wstring>()(x.Name());
-        }
-    };
     
     template <> struct hash<CNTK::Variable>
     {
@@ -1459,6 +1514,21 @@ namespace CNTK
     CNTK_API FunctionPtr Softmax(const Variable& operand, const std::wstring& name = L"");
 
     ///
+    /// Create an instance of the CNTK built-in hardmax operation on specified tensor input operand
+    ///
+    CNTK_API FunctionPtr Hardmax(const Variable& operand, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in transpose dimensions operation on specified tensor input operand
+    ///
+    CNTK_API FunctionPtr TransposeAxes(const Variable& operand, const Axis& axis1, const Axis& axis2, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the slice operation on specified tensor input operand
+    ///
+    CNTK_API FunctionPtr Slice(const Variable& operand, const Axis& axis, int beginIndex, int endIndex, const std::wstring& name = L"");
+
+    ///
     /// Create an instance of the CNTK built-in elementwise tensor addition operation with the specified input operands.
     ///
     CNTK_API FunctionPtr Plus(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name = L"");
@@ -1515,6 +1585,13 @@ namespace CNTK
     CNTK_API FunctionPtr Times(const Variable& leftOperand, const Variable& rightOperand, size_t numOutputAxes = 1, const std::wstring& name = L"");
 
     ///
+    /// Create an instance of the CNTK built-in matrix multiplication operation with the transpose of the left input operand
+    /// and the specified right operand. Only accepts left operands of ranks 1 or 2.
+    /// TODO: Specify the constraints on the shapes of the operands.
+    ///
+    CNTK_API FunctionPtr TransposeTimes(const Variable& leftOperand, const Variable& rightOperand, size_t numOutputAxes = 1, const std::wstring& name = L"");
+
+    ///
     /// Create an instance of the CNTK built-in operation to compute squared-error for specified input operands.
     ///
     CNTK_API FunctionPtr SquaredError(const Variable& prediction, const Variable& targets, const std::wstring& name = L"");
@@ -1535,7 +1612,6 @@ namespace CNTK
     ///
     CNTK_API FunctionPtr PastValue(const Variable& initialState, const Variable& operand, size_t stepSize, const std::wstring& name = L"");
 
-    //CNTK_API FunctionPtr PastValue(const Variable& initialState, const Variable& operand, Axis axis, const std::wstring& name = L"");
 
     ///
     /// Create an instance of the CNTK built-in operation for getting the future value along the lone dynamic axis of the specified operand.
@@ -1548,6 +1624,16 @@ namespace CNTK
     /// Create an instance of the CNTK built-in sum reduction operation on specified tensor input operand along all the axes
     ///
     CNTK_API FunctionPtr ReduceSum(const Variable& operand, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in sum reduction operation on specified tensor input operand along the specified axis
+    ///
+    CNTK_API FunctionPtr ReduceSum(const Variable& operand, const Axis& axis, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in LogSum reduction operation on specified tensor input operand along the specified axis
+    ///
+    CNTK_API FunctionPtr ReduceLogSum(const Variable& operand, const Axis& axis, const std::wstring& name = L"");
 
     ///
     /// Per dimension mean-variance normalization of the specified input operand.
@@ -1722,7 +1808,7 @@ namespace CNTK
                 std::is_same<T, std::vector<DictionaryValue>>::value ||
                 std::is_same<T, Dictionary>::value ||
                 std::is_same<T, NDArrayView>::value),
-                "Unsupported ValueType");
+                          "Unsupported ValueType");
 
             AllocateDataPtr(value);
         }
@@ -1740,7 +1826,6 @@ namespace CNTK
             // the underlying underlying uninitialized value as a ptr and free it.
             *this = std::move(other);
         }
-
         DictionaryValue& operator=(const DictionaryValue& other)
         {
             if (this != &other)
@@ -1785,7 +1870,6 @@ namespace CNTK
 
             return *this;
         }
-
         ~DictionaryValue()
         {
             FreeDataPtr();
@@ -1856,7 +1940,7 @@ namespace CNTK
                           std::is_same<T, double>::value ||
                           std::is_same<T, std::wstring>::value ||
                           std::is_same<T, NDShape>::value ||
-                          std::is_same<T, std::vector<DictionaryValue>>::value ||
+                std::is_same<T, std::vector<DictionaryValue>>::value ||
                           std::is_same<T, Dictionary>::value ||
                           std::is_same<T, NDArrayView>::value),
                           "Unsupported ValueType");
@@ -1992,6 +2076,9 @@ namespace CNTK
         ///
         CNTK_API virtual void RestoreFromCheckpoint(const Dictionary& /*checkpoint*/) {}
 
+        ///
+        /// Destruct this Learner.
+        ///
         virtual ~Learner() {}
 
     protected:
@@ -2239,8 +2326,12 @@ namespace CNTK
         /// MinibatchSource to contain the actual #sequences and #samples in the returned minibatch for the corresponding stream.
         /// The return value indicates if the MinibatchSource will return any further data in subsequent calls of this function.
         ///
-        virtual std::unordered_map<StreamInfo, MinibatchData> GetNextMinibatch(const std::unordered_map<StreamInfo, std::pair<size_t, size_t>>& perStreamMBSizeLimits,
+        virtual const std::unordered_map<StreamInfo, MinibatchData>& GetNextMinibatch(const std::unordered_map<StreamInfo, std::pair<size_t, size_t>>& perStreamMBSizeLimits,
                                                                                const DeviceDescriptor& device = DeviceDescriptor::DefaultDevice()) = 0;
+        ///
+        /// Destruct this MinibatchSource.
+        ///
+        virtual ~MinibatchSource() {}
 
         // TODO: Methods to save and restore from checkpoints
 

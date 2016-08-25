@@ -167,6 +167,7 @@ namespace CNTK
         return var.IsInput() && var.IsSparse();
     }
 
+
     inline void AddIndentation(std::wstringstream& s, size_t numIndentationSpaces)
     {
         for (size_t i = 0; i < numIndentationSpaces; ++i)
@@ -246,7 +247,8 @@ namespace CNTK
         static_assert(std::is_same<T, bool>::value ||
                       std::is_same<T, size_t>::value ||
                       std::is_same<T, float>::value ||
-                      std::is_same<T, double>::value, "Unsupported ValueType");
+                      std::is_same<T, double>::value ||
+                      std::is_same<T, std::wstring>::value, "Unsupported ValueType");
 
         std::vector<DictionaryValue> dictionaryValueVector;
         for (auto value : basicElementTypeVector)
@@ -261,7 +263,8 @@ namespace CNTK
         static_assert(std::is_same<T, bool>::value ||
             std::is_same<T, size_t>::value ||
             std::is_same<T, float>::value ||
-            std::is_same<T, double>::value, "Unsupported ValueType");
+            std::is_same<T, double>::value ||
+            std::is_same<T, std::wstring>::value, "Unsupported ValueType");
 
         std::vector<T> basicElementTypeVector;
         for (auto value : dictionaryValueVector)
@@ -308,6 +311,16 @@ namespace CNTK
         NDShape kernelShape = convolutionMapShape.SubShape(outputMapCount.NumAxes());
 
         return{ paddedOutputMapCount, kernelShape };
+    }
+
+    inline CNTK::Constant ScalarConstant(CNTK::DataType dataType, float value, const CNTK::DeviceDescriptor& device = CNTK::DeviceDescriptor::CPUDevice())
+    {
+        if (dataType == CNTK::DataType::Float)
+            return CNTK::Constant({}, value, device);
+        else if (dataType == CNTK::DataType::Double)
+            return CNTK::Constant({}, (double)value, device);
+        else
+            LogicError("CNTK::ScalarConstant: Unsupported DataType %s", DataTypeName(dataType));
     }
 
     inline double MomentumPerMB(double momentumPerSample, size_t minibatchSize)

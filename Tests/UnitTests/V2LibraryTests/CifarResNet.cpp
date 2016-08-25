@@ -128,8 +128,8 @@ void TrainResNetCifarClassifer(const DeviceDescriptor& device, bool testSaveAndR
     auto labelStreamInfo = std::find_if(streamInfos.begin(), streamInfos.end(), [](const StreamInfo& streamInfo) { return (streamInfo.m_name == L"labels"); });
 
     auto inputImageShape = imageStreamInfo->m_sampleLayout;
-    // Change the input shape from CHW to HWC form
-    inputImageShape = { inputImageShape[1], inputImageShape[2], inputImageShape[0] };
+    // Change the input shape CHW to WHC form
+    inputImageShape = { inputImageShape[2], inputImageShape[1], inputImageShape[0] };
 
     const size_t numOutputClasses = labelStreamInfo->m_sampleLayout[0];
 

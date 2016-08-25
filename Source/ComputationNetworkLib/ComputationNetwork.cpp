@@ -426,6 +426,13 @@ void ComputationNetwork::RandomInitLearnableParameters(const ComputationNodeBase
     InitLearnableParameters(node, uniformInit ? L"uniform" : L"gaussian", initValueScale, randomSeed, initOnCPUOnly);
 }
 
+template <class ElemType>
+void ComputationNetwork::InitLearnableParametersWithBilinearFill(const ComputationNodeBasePtr& node, size_t kernelWidth, size_t kernelHeight)
+{
+    auto learnableParameterNode = dynamic_pointer_cast<LearnableParameter<ElemType>>(node);
+    learnableParameterNode->InitBilinear(kernelWidth, kernelHeight);
+}
+
 bool ComputationNetwork::IsTypicalCriterionNode(ComputationNodeBasePtr nodePtr)
 {
     // TODO: just use return!
@@ -435,7 +442,7 @@ bool ComputationNetwork::IsTypicalCriterionNode(ComputationNodeBasePtr nodePtr)
         nodePtr->OperationName() == OperationNameOf(SequenceWithSoftmaxNode) ||
         nodePtr->OperationName() == OperationNameOf(CrossEntropyNode) ||
         nodePtr->OperationName() == OperationNameOf(ClassBasedCrossEntropyWithSoftmaxNode) ||
-        nodePtr->OperationName() == OperationNameOf(ErrorPredictionNode) ||
+        nodePtr->OperationName() == OperationNameOf(ClassificationErrorNode) ||
 #ifdef COMING_SOON
         nodePtr->OperationName() == OperationNameOf(CRFNode) ||
 #endif
@@ -1228,7 +1235,7 @@ void ComputationNetwork::SaveToDbnFile(ComputationNetworkPtr net, const std::wst
     };
 
     // Get output node
-    std::list<ComputationNodeBasePtr> outputNodes = net->GetNodesWithType(OperationNameOf(ErrorPredictionNode));
+    std::list<ComputationNodeBasePtr> outputNodes = net->GetNodesWithType(OperationNameOf(ClassificationErrorNode));
     ComputationNodeBasePtr outputNode = GetFirstNodeWithDifferentType(outputNodes.front()->GetInputs(), OperationNameOf(InputValue));
 
     if (outputNode == nullptr)
@@ -1478,6 +1485,7 @@ void ComputationNetwork::SaveToDbnFile(ComputationNetworkPtr net, const std::wst
     PutTag("EDBN");
 }
 
+template void ComputationNetwork::InitLearnableParametersWithBilinearFill<float>(const ComputationNodeBasePtr& node, size_t kernelWidth, size_t kernelHeight);
 template void ComputationNetwork::Read<float>(const wstring& fileName);
 template void ComputationNetwork::ReadPersistableParameters<float>(File& fstream, bool create);
 template void ComputationNetwork::PerformSVDecomposition<float>(const map<wstring, float>& SVDConfig, size_t alignedsize);
@@ -1487,6 +1495,7 @@ template void ComputationNetwork::SetSeqParam<float>(ComputationNetworkPtr net, 
                                                      const double& amf, const double& lmf, const double& wp, const double& bMMIfactor, const bool& sMBR);
 template void ComputationNetwork::SaveToDbnFile<float>(ComputationNetworkPtr net, const std::wstring& fileName) const;
 
+template void ComputationNetwork::InitLearnableParametersWithBilinearFill<double>(const ComputationNodeBasePtr& node, size_t kernelWidth, size_t kernelHeight);
 template void ComputationNetwork::Read<double>(const wstring& fileName);
 template void ComputationNetwork::ReadPersistableParameters<double>(File& fstream, bool create);
 template void ComputationNetwork::PerformSVDecomposition<double>(const map<wstring, float>& SVDConfig, size_t alignedsize);

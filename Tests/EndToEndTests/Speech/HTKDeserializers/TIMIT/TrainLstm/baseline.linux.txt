@@ -376,7 +376,7 @@ Node 'W1' (LearnableParameter operation): Initializing Parameter[183 x 1024] <- 
 Post-processing network...
 
 6 roots:
-	Err = ErrorPrediction()
+	Err = ClassificationError()
 	ScaledLogLikelihood = Minus()
 	cr = CrossEntropyWithSoftmax()
 	featNorm.xMean = Mean()
@@ -452,7 +452,7 @@ Validating --> LSTMoutput.ot = Sigmoid (LSTMoutput.unnamed106) : [1024 x *] -> [
 Validating --> LSTMoutput.unnamed109 = Tanh (LSTMoutput.ct) : [1024 x *] -> [1024 x *]
 Validating --> LSTMoutput.output = ElementTimes (LSTMoutput.ot, LSTMoutput.unnamed109) : [1024 x *], [1024 x *] -> [1024 x *]
 Validating --> LSTMoutputW1 = Times (W1, LSTMoutput.output) : [183 x 1024], [1024 x *] -> [183 x *]
-Validating --> Err = ErrorPrediction (labels, LSTMoutputW1) : [183 x *], [183 x *] -> [1]
+Validating --> Err = ClassificationError (labels, LSTMoutputW1) : [183 x *], [183 x *] -> [1]
 Validating --> logPrior.Prior = Mean (labels) : [183 x *] -> [183]
 Validating --> logPrior.LogPrior = Log (logPrior.Prior) : [183] -> [183]
 Validating --> ScaledLogLikelihood = Minus (LSTMoutputW1, logPrior.LogPrior) : [183 x *], [183] -> [183 x *]
@@ -492,7 +492,7 @@ Post-processing network complete.
 08/16/2016 10:21:37: 	cr = CrossEntropyWithSoftmax
 
 08/16/2016 10:21:37: Evaluation criterion node(s):
-08/16/2016 10:21:37: 	Err = ErrorPrediction
+08/16/2016 10:21:37: 	Err = ClassificationError
 
 
 Allocating matrices for forward and/or backward propagation.
