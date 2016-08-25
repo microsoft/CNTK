@@ -341,6 +341,7 @@ COMPUTATION_NETWORK_LIB_SRC =\
 	$(SOURCEDIR)/ComputationNetworkLib/ComputationNodeScripting.cpp \
 	$(SOURCEDIR)/ComputationNetworkLib/InputAndParamNodes.cpp \
 	$(SOURCEDIR)/ComputationNetworkLib/ReshapingNodes.cpp \
+	$(SOURCEDIR)/ComputationNetworkLib/RNNNodes.cpp \
 	$(SOURCEDIR)/ComputationNetworkLib/SpecialPurposeNodes.cpp \
 	$(SOURCEDIR)/ComputationNetworkLib/ComputationNetwork.cpp \
 	$(SOURCEDIR)/ComputationNetworkLib/ComputationNetworkEvaluation.cpp \
