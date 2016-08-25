@@ -793,6 +793,156 @@ void CPUSparseMatrix<ElemType>::Reset()
     SetBlockIdShift(0);
 }
 
+template <class ElemType, bool DenseTimesSparse /* false means SparseTimesDense */, bool transposeA, bool transposeB>
+void Multiply(ElemType alpha, const CPUSparseMatrix<ElemType>& sparse, const CPUMatrix<ElemType>& dense, ElemType beta, CPUMatrix<ElemType>& c)
+{
+    if (sparse.IsEmpty())
+        LogicError("MultiplyAndWeightedAdd: sparse input matrix is empty.");
+
+    if (dense.IsEmpty())
+        LogicError("MultiplyAndWeightedAdd: dense input matrix is empty.");
+
+    Matrix<ElemType>& lhs = DenseTimesSparse ? dense  : sparse;
+    Matrix<ElemType>& rhs = DenseTimesSparse ? sparse : dense;
+
+    // C(m:n) is the product of matrices X * Y where we have the shapes X(m:k) and Y(l:n)
+    int m = transposeA ? (int)lhs.GetNumCols() : (int)lhs.GetNumRows();
+    int k = transposeA ? (int)lhs.GetNumRows() : (int)lhs.GetNumCols();
+    int l = transposeB ? (int)rhs.GetNumCols() : (int)rhs.GetNumRows();
+    int n = transposeB ? (int)rhs.GetNumRows() : (int)rhs.GetNumCols();
+
+    assert(m > 0 && k > 0 && l > 0 && n > 0); // converting from size_t to int may cause overflow
+
+    if (k != l)
+    {
+        InvalidArgument("CPUSparseMatrix::MultiplyAndWeightedAdd: The inner dimensions of a and b must match.");
+    }
+
+    // Determine the dimension of the outer index of the dense matrix.
+    int outerDimensionDense;
+    if      ( DenseTimesSparse && !transposeA)
+        outerDimensionDense = dense.GetNumRows();
+    else if ( DenseTimesSparse &&  transposeA)
+        outerDimensionDense = dense.GetNumCols();
+    else if (!DenseTimesSparse && !transposeB)
+        outerDimensionDense = dense.GetNumCols();
+    else if (!DenseTimesSparse &&  transposeB)
+        outerDimensionDense = dense.GetNumRows();
+
+    if (beta == 0)
+        c.RequireSize(m, n);
+    else
+        c.VerifySize(m, n); // Can't resize if beta != 0
+
+
+    if (beta == 0)
+    {
+        memset(c.Data(), 0, sizeof(ElemType)* c.GetNumElements());
+    }
+    else if (beta != 1)
+    {
+#pragma omp parallel for
+        foreach_coord(i, j, c)
+        {
+            c(i, j) = beta * c(i, j);
+        }
+    }
+
+    // TODO: Implement CSR as a transposition of b, like we do for GPU.
+    if (rhs.GetFormat() != matrixFormatSparseCSC)
+        NOT_IMPLEMENTED;
+
+    // Do the actual multiplication.
+    ElemType* valueBuffer = sparse.Buffer() + *sparse.SecondaryIndexLocation(); // Points to the value buffer of the current  view (i.e. buffer containing indices of non-zero elements)
+    int* rowIndexBuffer = sparse.MajorIndexLocation();                          // Points to the index buffer of the current view. (i.e. buffer containing indices of non-zero elements)
+    int iNonzero = 0;                                                           // Number of nonzero elements handled so far for curent slice view.
+    int numPreviosNonzero = sparse.SecondaryIndexLocation()[0];                 // Total number of nonzero values handled in previous slices.
+
+    // Loop over columns of the sparse matrix
+    for (size_t colSparse = 0; colSparse < sparse.GetNumCols(); colSparse++)
+    {
+        size_t end = sparse.SecondaryIndexLocation()[colSparse + 1] - numPreviosNonzero;
+        // Loop over the nonzero rows of the current column of the sparse matrix
+        for (; iNonzero < end; iNonzero++)
+        {
+            size_t rowSparse = rowIndexBuffer[iNonzero]; // RowLocation
+            ElemType sparseVal = valueBuffer[iNonzero];
+
+            // Determine the index of the 'outer' dimension of the sparse matrix and the commin inner index.
+            int outerIndexSparse;
+            int innerIndex;
+            if (DenseTimesSparse && !transposeB)
+            {
+                outerIndexSparse = colSparse;
+                innerIndex       = rowSparse;
+            }
+            else if (DenseTimesSparse && transposeB)
+            {
+                outerIndexSparse = rowSparse;
+                innerIndex       = colSparse;
+            }
+            else if (!DenseTimesSparse && !transposeA)
+            {
+                outerIndexSparse = rowSparse;
+                innerIndex       = colSparse;
+            }
+            else if (!DenseTimesSparse &&  transposeA)
+            {
+                outerIndexSparse = colSparse;
+                innerIndex       = rowSparse;
+            }
+
+            // Loop over the outer index of the dense matrix
+            for (size_t outerIndexDense = 0; outerIndexDense < outerDimensionDense; innerIndex++)
+            {
+                // Determine the row index of the dense input matrix
+                ElemType denseVal;
+                if (DenseTimesSparse)
+                {
+                    rowDense = outerIndexDense;
+                    colDense = innerIndex;
+                    denseVal = dense(outerIndexDense, innerIndex);
+                }
+                else /*Sparse times dense */
+                {
+                    denseVal = dense(innerIndex, outerIndexDense);
+                }
+
+                int rowC = DenseTimesSparse ? outerIndexDense : outerIndexSparse;
+                int colC = DenseTimesSparse ? outerIndexSparse : outerIndexDense;
+
+                if (DenseTimesSparse)
+                    c(outerIndexDense,  outerIndexSparse) += alpha * denseVal * sparseVal;
+                else /*Sparse times dense */
+                    c(outerIndexSparse, outerIndexDense ) += alpha * denseVal * sparseVal;
+            }
+        }
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 // c = alpha*op(lhs) * op(rhs) + beta*c
 // dense x sparse = dense
 template <class ElemType>
