@@ -34,7 +34,7 @@ speechTrain = {
 
         # cudnn5 library
         # Note: does not run in truncated mode
-        W = ParameterTensor {0:0, initOutputRank=-1, init='heNormal', initValueScale=1/10}  # -> change to 0:hiddenDim, outputRank=-1
+        W = ParameterTensor {0:0, initOutputRank=-1, init='heNormal', initValueScale=1/10}
         modelUsingCuDNN5 = Sequential
         (
             MeanVarNorm :

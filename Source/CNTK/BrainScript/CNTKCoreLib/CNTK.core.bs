@@ -105,11 +105,19 @@ AveragePoolingLayer {filterShape, stride = 1, pad = false, lowerPad = 0, upperPa
 
 # RecurrentLSTMLayer -- create an LSTM layer
 RecurrentLSTMLayer {outputDim,
-                    cellShape = BS.Constants.None, # if set then use a projection
+                    cellShape = None, # if set then use a projection
                     goBackwards = false,
                     usePeepholes = false,
-                    init='heNormal', initValueScale=1,
-                    enableSelfStabilization = false} =
+                    init = 'heNormal', initValueScale = 1,
+                    enableSelfStabilization = false,
+                    allowOptimizedEngine = false} =
+if allowOptimizedEngine && BS.Constants.IsNone (cellShape) && !goBackwards && !usePeepholes && !enableSelfStabilization then
+{
+    # use cudnn instead
+    W = ParameterTensor {0:0, initOutputRank=-1, init=init, initValueScale=initValueScale}
+    apply (x) = OptimizedRNNStack (W, x, outputDim, numLayers=1)
+}.apply
+else
 {
     previousHook = if goBackwards then BS.RNNs.NextHC else BS.RNNs.PreviousHC
     lstm = BS.RNNs.LSTMBlock {outputDim, cellShape=cellShape, usePeepholes=usePeepholes, enableSelfStabilization=enableSelfStabilization, init=init, initValueScale=initValueScale}
