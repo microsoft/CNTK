@@ -126,11 +126,13 @@ namespace Operations
         // __frsqrt_rn intrinsic which performs round-to-nearest-even rounding which adds ~10 other instructions.
         // __frsqrt_rn is unbiased rounding though, need to verify whether it is a better choice for BN implementation.
         //return __frsqrt_rn(a);
+        assert(::isfinite(a) && a > 0);
         return rsqrtf(a);
     }
 
     __device__ double RSqrt(double a)
     {
+        assert(::isfinite(a) && a > 0);
         return rsqrt(a);
     }
 }
@@ -203,6 +205,7 @@ __global__ void kComputeBatchMeanAndInvStdDev(int vectorSize, int batchSize,
     assert(::isfinite(epsilon) && epsilon > 0);
     assert(::isfinite(expAvgFactor) && 0 <= expAvgFactor && expAvgFactor <= 1);
     assert(::isfinite(blendFactor) && 0 <= blendFactor && blendFactor <= 1);
+    assert(batchSize >= 1);
 
     if (expAvgFactor != 0 || blendFactor != 1)
     {
@@ -340,7 +343,7 @@ __global__ void kComputeBatchMeanAndInvStdDev(int vectorSize, int batchSize,
             for (int k = 0; k < U; k++)
             {
                 // Compute batch inverse standard deviation and variance
-                ElemType runVariance = m2[k] / (batchSize - 1);
+                ElemType runVariance = batchSize == 1 ? 0 : m2[k] / (batchSize - 1);
                 // Average
                 run[k] = expAvgFactor * runVariance + (1.0 - expAvgFactor) * run[k];
                 // Blend
@@ -395,6 +398,7 @@ __global__ void kComputeSpatialBatchMeanAndInvStdDev(int vectorSize, int spatial
     assert(::isfinite(expAvgFactor) && 0 <= expAvgFactor && expAvgFactor <= 1);
     assert(::isfinite(blendFactor) && 0 <= blendFactor && blendFactor <= 1);
     assert(::isfinite(epsilon) && epsilon > 0);
+    assert(batchSize >= 1);
 
     if (expAvgFactor != 0 || blendFactor != 1)
     {
@@ -520,7 +524,7 @@ __global__ void kComputeSpatialBatchMeanAndInvStdDev(int vectorSize, int spatial
             runMean[blockIdx.x] = expAvgFactor * mean[0] + (1.0 - expAvgFactor) * runMean[blockIdx.x];
             xMean[blockIdx.x] = blendFactor * runMean[blockIdx.x] + (1.0 - blendFactor) * mean[0];
 
-            ElemType runV = m2[0] / (batchSize * spatialSize - 1);
+            ElemType runV = batchSize * spatialSize == 1 ? 0 : m2[0] / (batchSize * spatialSize - 1);
             runVariance[blockIdx.x] = expAvgFactor * runV + (1.0 - expAvgFactor) * runVariance[blockIdx.x];
             xInvStdDev[blockIdx.x] = Operations::RSqrt(static_cast<ElemType>(m2[0] / (batchSize * spatialSize) + epsilon));
             if (blendFactor != 0)
@@ -553,6 +557,7 @@ struct ComputeBatchMeanAndInvStdDev
                      cudaStream_t stream)
     {
         assert((vectorSize % U) == 0);
+        assert(batchSize >= 1);
 
         const int BlockDimX = 32 / U;
         const int BlockDimY = 4 * U;
@@ -575,6 +580,7 @@ struct ComputeSpatialBatchMeanAndInvStdDev
     {
         assert((vectorSize % spatialSize) == 0);
         assert((spatialSize % U) == 0);
+        assert(batchSize >= 1);
 
         const int BlockDimX = 32 / U;
         const int BlockDimY = 4 * U;
@@ -651,7 +657,7 @@ __global__ void kNormalizeBatchTraining(int vectorSize, int spatialSize, int bat
             {
                 invStdDevS[offs + k] = NormalizeRunningStats
                     ? Operations::RSqrt(static_cast<ElemType>(runningVariance[irowBase + k] + epsilon))
-                    : invStdDevS[offs + k] = batchInvStdDev[irowBase + k];
+                    : batchInvStdDev[irowBase + k];
             }
             LoadValues<U>(bnScale + irowBase, scaleS + offs);
             LoadValues<U>(bnBias + irowBase, biasS + offs);
@@ -676,13 +682,11 @@ __global__ void kNormalizeBatchTraining(int vectorSize, int spatialSize, int bat
     {
         ElemType val[U];
         LoadValues<U>(psrc, val);
-
 #pragma unroll
         for (int k = 0; k < U; k++)
         {
             val[k] = scale[k] * (val[k] - mean[k]) * invStdDev[k] + bias[k];
         }
-
         StoreValues<U>(val, pdst);
     }
 }
@@ -700,10 +704,10 @@ struct NormalizeBatchTraining
                      cudaStream_t stream)
     {
         assert((vectorSize % U) == 0);
+        assert(batchSize >= 1);
 
         const int BlockDimX = 32 / U;
         const int BlockDimY = 4 * U;
-
         auto bdim = dim3(BlockDimX, BlockDimY);
         // Create a grid that has uses striding in y-dimension to cover whole minibatch.
         auto gdim = dim3((unsigned int)RoundUpToMultiple(vectorSize, BlockDimX * U));
@@ -950,6 +954,7 @@ struct ComputeScaleAndBiasGradients
         ElemType* dScale, ElemType* dBias, const ElemType* savedMean, const ElemType* savedInvStdDev, cudaStream_t stream)
     {
         assert((vectorSize % U) == 0);
+        assert(batchSize >= 1);
         const int BlockDimX = 32 / U;
         const int BlockDimY = 4 * U;
         auto bdim = dim3(BlockDimX, BlockDimY);
@@ -969,6 +974,7 @@ struct ComputeSpatialScaleAndBiasGradients
     {
         assert((spatialSize % U) == 0);
         assert((vectorSize % spatialSize) == 0);
+        assert(batchSize >= 1);
 
         const int BlockDimX = 32 / U;
         const int BlockDimY = 4 * U;
@@ -1081,6 +1087,7 @@ struct BackpropagateBatchNormGradients
                      const ElemType* dBias, const ElemType* savedMean, const ElemType* savedInvStdDev, cudaStream_t stream)
     {
         assert((vectorSize % U) == 0);
+        assert(batchSize >= 1);
         const int BlockDimX = 32 / U;
         const int BlockDimY = 4 * U;
         auto bdim = dim3(BlockDimX, BlockDimY);

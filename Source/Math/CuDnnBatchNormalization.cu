@@ -45,7 +45,7 @@ protected:
     void ForwardCore(const Mat& in, const Mat& scale, const Mat& bias, bool inferenceOnly, double expAvgFactor, double blendFactor, Mat& runMean, Mat& runVariance,
                      Mat& out, double epsilon, Mat& savedMean, Mat& savedInvStdDev) override
     {
-        UNUSED(inferenceOnly); // TODO
+        // TODO batchSize == 1
 
         // REVIEW alexeyk: there might be a way to do this in cuDNN.
         if (blendFactor != 0 && (blendFactor != 1 || expAvgFactor > 0))

@@ -3166,7 +3166,6 @@ void GPUMatrix<ElemType>::BatchNormalizationForward(const GPUMatrix<ElemType>& s
                                                     GPUMatrix<ElemType>& runMean, GPUMatrix<ElemType>& runVariance, GPUMatrix<ElemType>& out, double epsilon,
                                                     GPUMatrix<ElemType>& savedMean, GPUMatrix<ElemType>& savedInvStdDev) const
 {
-    UNUSED(inferenceOnly); // TODO
     assert((GetNumRows() % scale.GetNumRows()) == 0);
 
     bool spatial = GetNumRows() != scale.GetNumRows();
@@ -3179,7 +3178,6 @@ void GPUMatrix<ElemType>::BatchNormalizationForward(const GPUMatrix<ElemType>& s
     assert(0 < batchSize  && batchSize  <= std::numeric_limits<int>::max());
 
     SyncGuard syncGuard;
-    //if (expAvgFactor > 0 || blendFactor < 1)
     if (inferenceOnly)
     {
         // Pick running statistics for normalizing. No update reuqired, and
