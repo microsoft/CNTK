@@ -60,7 +60,7 @@ Train = [
         outputs = W * LSTMoutput + b
         
         cr = CrossEntropyWithSoftmax(labels, outputs)
-        errs = ErrorPrediction(labels, outputs)
+        errs = ClassificationError(labels, outputs)
 
         criterionNodes = (cr)
         evaluationNodes = (errs)
@@ -191,7 +191,7 @@ Test = [
         labels = Input($labelCount$, tag = "label")
         modelAsTrained = BS.Network.Load ("$modelPath$")
         final = Hardmax(modelAsTrained.outputs)
-        errorRate = ErrorPrediction(labels, final, tag='evaluation')
+        errorRate = ClassificationError(labels, final, tag='evaluation')
     ]
     
     evalNodeNames  = errorRate

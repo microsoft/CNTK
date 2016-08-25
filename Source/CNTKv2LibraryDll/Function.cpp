@@ -355,7 +355,7 @@ namespace CNTK
                 computationNodePtr = builder.CrossEntropyWithSoftmax(input1Node, input0Node, function->Name());
                 break;
             case PrimitiveOpType::ClassificationError:
-                computationNodePtr = builder.ErrorPrediction(input1Node, input0Node, function->Name());
+                computationNodePtr = builder.ClassificationError(input1Node, input0Node, function->Name());
                 break;
             case PrimitiveOpType::PastValue:
             case PrimitiveOpType::FutureValue:

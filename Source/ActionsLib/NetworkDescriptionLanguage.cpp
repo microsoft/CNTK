@@ -158,6 +158,7 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
     else if (EqualInsensitive(nodeType, OperationNameOf(CRFNode), L"CRF")) ret = true;
 #endif
     else if (EqualInsensitive(nodeType, OperationNameOf(ClassBasedCrossEntropyWithSoftmaxNode), L"CBCEWithSM")) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(ClassificationErrorNode), L"ErrorPrediction")) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(EqualNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(GreaterEqualNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(GreaterNode))) ret = true;
@@ -177,7 +178,6 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
     else if (EqualInsensitive(nodeType, OperationNameOf(DropoutNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(DummyCriterionNode), L"DummyCriterion")) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(ElementTimesNode))) ret = true;
-    else if (EqualInsensitive(nodeType, OperationNameOf(ErrorPredictionNode), L"ClassificationError")) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(ExpNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(FloorNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(FutureValueNode))) ret = true;

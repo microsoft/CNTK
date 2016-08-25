@@ -83,7 +83,7 @@ labels   =       Input {numLabels}
         z = model (features)
         zp = ReconcileDynamicAxis(z, labels)
         ce  = CrossEntropyWithSoftmax (labels, zp)  // this is the training objective
-        err = ErrorPrediction         (labels, zp)  // this also gets tracked
+        err = ClassificationError         (labels, zp)  // this also gets tracked
         featureNodes    = (features)
         labelNodes      = (labels)
         criterionNodes  = (ce)
@@ -168,7 +168,7 @@ labels   =       Input {numLabels}
         z = model (features)
         zp = ReconcileDynamicAxis(z, labels)
         ce  = CrossEntropyWithSoftmax (labels, zp)  // this is the training objective
-        err = ErrorPrediction         (labels, zp)  // this also gets tracked
+        err = ClassificationError         (labels, zp)  // this also gets tracked
         featureNodes    = (features)
         labelNodes      = (labels)
         criterionNodes  = (ce)
@@ -255,7 +255,7 @@ labels   =       Input {numLabels}
         z = model (features)
         zp = ReconcileDynamicAxis(z, labels)
         ce  = CrossEntropyWithSoftmax (labels, zp)  // this is the training objective
-        err = ErrorPrediction         (labels, zp)  // this also gets tracked
+        err = ClassificationError         (labels, zp)  // this also gets tracked
         featureNodes    = (features)
         labelNodes      = (labels)
         criterionNodes  = (ce)
@@ -353,7 +353,7 @@ Post-processing network...
 
 4 roots:
 	ce = CrossEntropyWithSoftmax()
-	err = ErrorPrediction()
+	err = ClassificationError()
 	t = DynamicAxis()
 	z = Plus()
 
@@ -445,7 +445,7 @@ Validating --> model.arrayOfFunctions[3].arrayOfFunctions[0].b = LearnableParame
 Validating --> z = Plus (z.x.PlusArgs[0], model.arrayOfFunctions[3].arrayOfFunctions[0].b) : [5 x WhereNodeAxis], [5] -> [5 x WhereNodeAxis]
 Validating --> zp = ReconcileDynamicAxis (z, labels) : [5 x WhereNodeAxis], [5 x *] -> [5 x *]
 Validating --> ce = CrossEntropyWithSoftmax (labels, zp) : [5 x *], [5 x *] -> [1]
-Validating --> err = ErrorPrediction (labels, zp) : [5 x *], [5 x *] -> [1]
+Validating --> err = ClassificationError (labels, zp) : [5 x *], [5 x *] -> [1]
 Validating --> t = DynamicAxis() :  -> [1 x 1 x t]
 
 Validating network. 46 nodes to process in pass 2.
@@ -476,7 +476,7 @@ Post-processing network complete.
 08/16/2016 03:09:56: 	ce = CrossEntropyWithSoftmax
 
 08/16/2016 03:09:56: Evaluation criterion node(s):
-08/16/2016 03:09:56: 	err = ErrorPrediction
+08/16/2016 03:09:56: 	err = ClassificationError
 
 
 Allocating matrices for forward and/or backward propagation.
@@ -677,7 +677,7 @@ labels   =       Input {numLabels}
         z = model (features)
         zp = ReconcileDynamicAxis(z, labels)
         ce  = CrossEntropyWithSoftmax (labels, zp)  // this is the training objective
-        err = ErrorPrediction         (labels, zp)  // this also gets tracked
+        err = ClassificationError         (labels, zp)  // this also gets tracked
         featureNodes    = (features)
         labelNodes      = (labels)
         criterionNodes  = (ce)
@@ -763,7 +763,7 @@ labels   =       Input {numLabels}
         z = model (features)
         zp = ReconcileDynamicAxis(z, labels)
         ce  = CrossEntropyWithSoftmax (labels, zp)  // this is the training objective
-        err = ErrorPrediction         (labels, zp)  // this also gets tracked
+        err = ClassificationError         (labels, zp)  // this also gets tracked
         featureNodes    = (features)
         labelNodes      = (labels)
         criterionNodes  = (ce)
@@ -851,7 +851,7 @@ labels   =       Input {numLabels}
         z = model (features)
         zp = ReconcileDynamicAxis(z, labels)
         ce  = CrossEntropyWithSoftmax (labels, zp)  // this is the training objective
-        err = ErrorPrediction         (labels, zp)  // this also gets tracked
+        err = ClassificationError         (labels, zp)  // this also gets tracked
         featureNodes    = (features)
         labelNodes      = (labels)
         criterionNodes  = (ce)
@@ -918,7 +918,7 @@ Post-processing network...
 
 4 roots:
 	ce = CrossEntropyWithSoftmax()
-	err = ErrorPrediction()
+	err = ClassificationError()
 	t = DynamicAxis()
 	z = Plus()
 
@@ -1000,7 +1000,7 @@ Validating --> model.arrayOfFunctions[3].arrayOfFunctions[0].b = LearnableParame
 Validating --> z = Plus (z.x.PlusArgs[0], model.arrayOfFunctions[3].arrayOfFunctions[0].b) : [5 x WhereNodeAxis], [5] -> [5 x WhereNodeAxis]
 Validating --> zp = ReconcileDynamicAxis (z, labels) : [5 x WhereNodeAxis], [5 x *] -> [5 x *]
 Validating --> ce = CrossEntropyWithSoftmax (labels, zp) : [5 x *], [5 x *] -> [1]
-Validating --> err = ErrorPrediction (labels, zp) : [5 x *], [5 x *] -> [1]
+Validating --> err = ClassificationError (labels, zp) : [5 x *], [5 x *] -> [1]
 Validating --> t = DynamicAxis() :  -> [1 x 1 x t1]
 
 Validating network. 46 nodes to process in pass 2.
@@ -1031,7 +1031,7 @@ Post-processing network complete.
 08/16/2016 03:10:03: 	ce = CrossEntropyWithSoftmax
 
 08/16/2016 03:10:03: Evaluation criterion node(s):
-08/16/2016 03:10:03: 	err = ErrorPrediction
+08/16/2016 03:10:03: 	err = ClassificationError
 
 
 Allocating matrices for forward and/or backward propagation.

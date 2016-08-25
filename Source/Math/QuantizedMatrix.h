@@ -119,4 +119,5 @@ private:
     template <typename T>
     friend class MatrixQuantizer;
 };
-} } }
+
+}}}

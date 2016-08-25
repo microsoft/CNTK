@@ -52,12 +52,12 @@ train = [
         z  = DNNLayer        (hiddenDim, labelDim, h1,         1)
 
         ce   = CrossEntropyWithSoftmax (labels, z)
-        errs = ErrorPrediction         (labels, z)
+        errs = ClassificationError         (labels, z)
 
         # set top5Errs as an evaluation node to compute the top-5 error rate
         # This is not marked tag="evaluation" since expensive during training.
         # We explicitly select it as an output node in the "test" command.
-        top5Errs = ErrorPrediction (labels, z, topN=5)
+        top5Errs = ClassificationError (labels, z, topN=5)
 
         # declare special nodes
         featureNodes    = (features)

@@ -882,7 +882,7 @@
         for (int i=num_axes-1; i>=0; i--)
         {
             shape.push_back(np_shape[i]);
-            num_elements *= np_shape[i];            
+            num_elements *= np_shape[i];
         }
 
         int typecode = PyArray_TYPE(array);
