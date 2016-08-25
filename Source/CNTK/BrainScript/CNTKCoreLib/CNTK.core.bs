@@ -501,9 +501,10 @@ PerDimMeanVarDeNormalization(dataVectorSequence, meanVector, invStdDevVector, ta
 PerDimMeanVarNormalization (x, mean, invStdDev) = (x - mean) .* invStdDev
 Reciprocal(z, tag='') = new ComputationNode [ operation = 'Reciprocal' ; inputs = z /*plus the function args*/ ]
 //# the following is a temporary workaround until we have the C++ version
-OptimizedRNNStack(weights, input, hiddenDims, numLayers=1, bidirectional=false, rnnMode='LSTM', tag='') = new ComputationNode [ operation = 'OptimizedRNNStack' ; recurrentOp = rnnMode; inputs = ( input : weights ) /*plus the function args*/ ]
+# TODO: change hiddenDims to hiddenShape and pass as a TensorShape (currently, the node only supports rank-1 data)
+OptimizedRNNStack(weights, input, hiddenDims, numLayers=1, bidirectional=false, recurrentOp='lstm', axis=-1, tag='') = new ComputationNode [ operation = 'OptimizedRNNStack' ; inputs = ( weights : input ) /*plus the function args*/ ]
 # legacy:
-RNNStack(x, W, hiddenSize=10, numLayers=1, bidirectional=false, rnnMode='LSTM', tag='') = OptimizedRNNStack(W, X, hiddenSize, numLayers=1, bidirectional=false, rnnMode='LSTM', tag='')
+RNNStack(x, W, hiddenSize=10, numLayers=1, bidirectional=false, rnnMode='lstm', tag='') = OptimizedRNNStack(W, x, hiddenSize, numLayers=1, bidirectional=false, recurrentOp=rnnMode, tag='')
 Scale(scalarScalingFactor, matrix, tag='') = new ComputationNode [ operation = 'Scale' ; inputs = (scalarScalingFactor : matrix) /*plus the function args*/ ]
 # TODO: Scale = ElementTimes
 ScatterPacked(cond, indexSequence, sourceData, tag='') = new ComputationNode [ operation = 'ScatterPacked' ; inputs = (cond : indexSequence : sourceData) /*plus the function args*/ ]
@@ -1045,7 +1046,7 @@ RNNs =
 
     # a stack of recurrent LSTMs (bidirectional)
     # TODO: Should we define layerDims as the total (sum of both forward and backward direction)?
-    RecurrentBirectionalLSTMPStack (layerDims, cellDims=layerDims, input, inputDim=input.dim, previousHook=PreviousHC, nextHook=NextHC, enableSelfStabilization=false) = [
+    RecurrentBidirectionalLSTMPStack (layerDims, cellDims=layerDims, input, inputDim=input.dim, previousHook=PreviousHC, nextHook=NextHC, enableSelfStabilization=false) = [
         previousHook1 = previousHook ; nextHook1 = nextHook ; useStabilizer = enableSelfStabilization
         layers[i:0..Length (layerDims)-1] =
         [
@@ -1159,7 +1160,7 @@ RNNs =
 
     # a stack of recurrent GRUs (bidirectional)
     # TODO: Should we define layerDims as the total (sum of both forward and backward direction)?
-    RecurrentBirectionalGRUStack (layerDims, cellDims=layerDims, input, inputDim=input.dim, previousHook=PreviousHC, nextHook=NextHC, enableSelfStabilization=false) = [
+    RecurrentBidirectionalGRUStack (layerDims, cellDims=layerDims, input, inputDim=input.dim, previousHook=PreviousHC, nextHook=NextHC, enableSelfStabilization=false) = [
         previousHook1 = previousHook ; nextHook1 = nextHook ; useStabilizer = enableSelfStabilization
         layers[i:0..Length (layerDims)-1] =
         [

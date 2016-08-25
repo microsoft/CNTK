@@ -16,9 +16,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 class CuDnnDropout
 {
     CuDnn::ptr_t m_cudnn;
-    unsigned long long m_seed = 0xdeadbeefull;
+    unsigned long long m_seed = 1;
 public:
-    CuDnnDropout(float dropout = 0.0f, unsigned long long seed = 0xdeadbeefull)
+    CuDnnDropout(float dropout = 0.0f, unsigned long long seed = 1)
         : m_dropoutDesc(nullptr), m_cudnn(CuDnn::Instance())
     {
         CUDNN_CALL(cudnnCreateDropoutDescriptor(&m_dropoutDesc));
@@ -66,15 +66,11 @@ private:
 
     cudnnRNNMode_t GetMode()
     {
-        if (m_rnnAttributes.m_rnnMode == wstring(L"LSTM"))
-            return cudnnRNNMode_t::CUDNN_LSTM;
-        if (m_rnnAttributes.m_rnnMode == wstring(L"GRU"))
-            return cudnnRNNMode_t::CUDNN_GRU;
-        if (m_rnnAttributes.m_rnnMode == wstring(L"RNN_RELU"))
-            return cudnnRNNMode_t::CUDNN_RNN_RELU;
-        if (m_rnnAttributes.m_rnnMode == wstring(L"RNN_TANH"))
-            return cudnnRNNMode_t::CUDNN_RNN_TANH;
-        InvalidArgument("RNN Mode set to %ls, but supported values are LSTM, GRU, RNN_RELU, RNN_TANH.", m_rnnAttributes.m_rnnMode.c_str());
+        if      (m_rnnAttributes.m_recurrentOp == wstring(L"lstm"))    return cudnnRNNMode_t::CUDNN_LSTM;
+        else if (m_rnnAttributes.m_recurrentOp == wstring(L"gru"))     return cudnnRNNMode_t::CUDNN_GRU;
+        else if (m_rnnAttributes.m_recurrentOp == wstring(L"rnnReLU")) return cudnnRNNMode_t::CUDNN_RNN_RELU;
+        else if (m_rnnAttributes.m_recurrentOp == wstring(L"rnnTanh")) return cudnnRNNMode_t::CUDNN_RNN_TANH;
+        else InvalidArgument("Unknown cell type. Supported values are 'lstm', 'gru', 'rnnReLU', 'rnnTanh'.", m_rnnAttributes.m_recurrentOp.c_str());
     }
 
 public:

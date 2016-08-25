@@ -34,11 +34,11 @@ speechTrain = {
 
         # cudnn5 library
         # Note: does not run in truncated mode
-        W = ParameterTensor {14704-8*(40-33):hiddenDim, init='heNormal', initValueScale=1/10}  # -> change to 0:hiddenDim, outputRank=-1
+        W = ParameterTensor {hiddenDim:14704-8*(40-33), initOutputRank=-1, init='heNormal', initValueScale=1/10}  # -> change to 0:hiddenDim, outputRank=-1
         modelUsingCuDNN5 = Sequential
         (
             MeanVarNorm :
-            (_ => OptimizedRNNStack(W, _, hiddenDim, numLayers=numLSTMLayers, bidirectional=true, rnnMode='LSTM')) :
+            (_ => OptimizedRNNStack(W, _, hiddenDim, numLayers=numLSTMLayers, bidirectional=true)) :
             DenseLayer {labelDim, init='heUniform', initValueScale=1/3}
         )
 
@@ -144,7 +144,7 @@ speechTrain = {
 
         // features
         features = Input((1 : featDim),  tag='feature') // TEST: Artificially reading data transposed
-        realFeatures = Transpose (features)             //       and swapping them back to (featDim:1), for testing Transpose()
+        realFeatures = FlattenDimensions (Transpose (features), 1, 2)             //       and swapping them back to (featDim:1), for testing Transpose()
         feashift = RowSlice(featDim - baseFeatDim, baseFeatDim, realFeatures);  # interface with a reader set up for frame mode
         labels   = Input(labelDim, tag='label')
 

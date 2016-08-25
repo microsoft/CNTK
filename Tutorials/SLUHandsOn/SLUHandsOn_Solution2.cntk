@@ -39,7 +39,7 @@ TrainTagger = {
 
         # loss and metric
         ce   = CrossEntropyWithSoftmax (slotLabels, z)
-        errs = ClassificationError         (slotLabels, z)
+        errs = ClassificationError     (slotLabels, z)
 
         featureNodes    = (query)
         labelNodes      = (slotLabels)
