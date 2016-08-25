@@ -107,22 +107,22 @@ def unittest_helper(root_node,
     assert len(forward)==1
     forward = list(forward.values())[0]
     
-    for res, exp in zip(forward, expected_forward):
-        assert np.allclose(res, exp, atol=TOLERANCE_ABSOLUTE)
+    for res, exp in zip(forward, expected_forward):               
         assert res.shape == AA(exp).shape
+        assert np.allclose(res, exp, atol=TOLERANCE_ABSOLUTE)        
 
-    if expected_backward:                                
+    if expected_backward:    
         for key in expected_backward:
             res, exp = backward[key], expected_backward[key]
             if isinstance(res, list):
                 assert len(res) == len(exp)
                 for res_seq, exp_seq in zip (res, exp):
-                    assert np.allclose(res_seq, exp_seq, atol=TOLERANCE_ABSOLUTE)
                     assert res_seq.shape == AA(exp_seq).shape
+                    assert np.allclose(res_seq, exp_seq, atol=TOLERANCE_ABSOLUTE)                    
 
             elif isinstance(res, np.ndarray):
-                assert np.allclose(res, exp, atol=TOLERANCE_ABSOLUTE)
                 assert res.shape == AA(exp).shape
+                assert np.allclose(res, exp, atol=TOLERANCE_ABSOLUTE)                
 
 def batch_dense_to_sparse(batch, dynamic_axis=''):
     '''

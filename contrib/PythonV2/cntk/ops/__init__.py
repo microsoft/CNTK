@@ -7,8 +7,10 @@ import numpy as np
 from ..utils import sanitize_input, get_data_type, cntk_device
 from cntk import cntk_py
 
+#TODO: for nodes with single output, return node.output() instead of the node itself
+
 def combine(operands, name=''):
-    """
+    '''
      Create a new Function instance which just combines the outputs of the specified list of 
      'operands' Functions such that the 'Outputs' of the new 'Function' are union of the
      'Outputs' of each of the specified 'operands' Functions. E.g. When creating a classification
@@ -20,7 +22,7 @@ def combine(operands, name=''):
         name (str): the name of the node in the network            
     Returns:
         :class:`cntk_py.Function`
-    """
+    '''
     from ..cntk_py import combine
     return combine(operands, name)
 
@@ -29,7 +31,7 @@ def combine(operands, name=''):
 ################################################################################
 
 def cross_entropy_with_softmax(target_vector, output_vector, name=''):
-    """
+    '''
     This operation computes the cross entropy over the softmax of the `output_vector`.
     It expects the `output_vector` as unscaled, and it computes softmax over 
     the `output_vector` internally.  Any `output_vector` input over which softmax is 
@@ -51,14 +53,14 @@ def cross_entropy_with_softmax(target_vector, output_vector, name=''):
         name (str): the name of the node in the network            
     Returns:
         :class:`cntk_py.Function`
-    """
+    '''
     from ..cntk_py import cross_entropy_with_softmax
     target_vector = sanitize_input(target_vector, get_data_type(output_vector))
     output_vector = sanitize_input(output_vector, get_data_type(target_vector))
     return cross_entropy_with_softmax(target_vector, output_vector, name)
 
 def square_error(target_matrix, output_matrix, name=''):
-    """
+    '''
     This operation computes the sum of the squared difference between elements 
     in the two input matrices. The result is a scalar (i.e., one by one matrix). 
     This is often used as a training criterion node. 
@@ -76,14 +78,14 @@ def square_error(target_matrix, output_matrix, name=''):
         name (str): the name of the node in the network            
     Returns:
         :class:`cntk_py.Function`
-    """
+    '''
     from ..cntk_py import square_error
     target_matrix = sanitize_input(target_matrix, get_data_type(output_matrix))
     output_matrix = sanitize_input(output_matrix, get_data_type(target_matrix))
     return square_error(target_matrix, output_matrix, name)
 
 def classification_error(target_vector, output_vector, name=''):
-    """
+    '''
     This operation computes the prediction error. It finds the index of the highest 
     value in the output_vector and compares it to the actual ground truth label
     (the index of the hot bit in the target vector). The result is a scalar 
@@ -104,7 +106,7 @@ def classification_error(target_vector, output_vector, name=''):
         name (str): the name of the node in the network            
     Returns:
         :class:`cntk_py.Function`
-    """
+    '''
     from ..cntk_py import classification_error
     target_vector = sanitize_input(target_vector, get_data_type(output_vector))
     output_vector = sanitize_input(output_vector, get_data_type(target_vector))
@@ -113,16 +115,88 @@ def classification_error(target_vector, output_vector, name=''):
 ################################################################################
 # convolution ops
 ################################################################################
-#TODO: Convolution
-#TODO: Pooling
-#TODO: BatchNormalization
+
+def convolution(convolution_map, operand, strides=(1,), sharing=[True], 
+                auto_padding=[True], lower_pad=(0,), upper_pad=(0,), transpose=False, 
+                max_temp_mem_size_in_samples=0, name=''):
+    '''
+    TODO: 
+    Args:        
+        convolution_map:
+        operand:
+        strides:
+        sharing:
+        auto_padding:
+        lower_pad:
+        upper_pad:
+        transpose:
+        max_temp_mem_size_in_samples:
+        name (str): the name of the node in the network
+    Returns:
+        :class:`cntk_py.Function`
+    '''
+    from ..cntk_py import convolution
+    operand = sanitize_input(operand)    
+    return convolution(convolution_map, operand, tuple(reversed(strides)), sharing, auto_padding, 
+                        tuple(reversed(lower_pad)), tuple(reversed(upper_pad)), transpose, max_temp_mem_size_in_samples,
+                        name) 
+
+MAX_POOLING=cntk_py.PoolingType_Max
+AVG_POOLING=cntk_py.PoolingType_Average
+
+def pooling(operand, pooling_type, pooling_window_shape, strides=(1,), auto_padding=[False], 
+            lower_pad=(0,), upper_pad=(0,), name=''):
+    '''
+    TODO: 
+    Args:                
+        operand:
+        pooling_type:   
+        pooling_window_shape:
+        strides:
+        auto_padding:
+        lower_pad:
+        upper_pad:
+        name (str): the name of the node in the network
+    Returns:
+        :class:`cntk_py.Function`
+    '''
+    from ..cntk_py import pooling
+    operand = sanitize_input(operand)    
+    return pooling(operand, pooling_type, tuple(reversed(pooling_window_shape)), tuple(reversed(strides)), auto_padding,
+                    tuple(reversed(lower_pad)), tuple(reversed(upper_pad)), name)
+
+def batch_normalization(operand, scale, bias, running_mean, running_inv_std, special,
+                        normalization_time_constant=0, blend_time_constant=0,
+                        epsilon=0.00001, use_cudnn_engine=False, name=''):
+    '''
+    TODO: 
+    Args:                
+        operand:
+        scale:   
+        bias:
+        running_mean:
+        running_inv_std:
+        special:
+        normalization_time_constant:
+        blend_time_constant:
+        epsilon:
+        use_cudnn_engine:
+        name (str): the name of the node in the network
+    Returns:
+        :class:`cntk_py.Function`
+    '''
+    from ..cntk_py import batch_normalization
+    operand = sanitize_input(operand)    
+    return batch_normalization(operand, scale, bias, running_mean, running_inv_std, special,
+                                normalization_time_constant, blend_time_constant,
+                                epsilon, use_cudnn_engine, name) 
 
 ################################################################################
 # comparison ops
 ################################################################################
 
 def less(left, right, name=''):
-    """
+    '''
     Elementwise 'less' comparison of two tensors. Result is 1 if left < right else 0. 
 
     Example:
@@ -138,14 +212,14 @@ def less(left, right, name=''):
         name (str): the name of the node in the network            
     Returns:
         :class:`cntk_py.Function`
-    """
+    '''
     from ..cntk_py import less
     left = sanitize_input(left, get_data_type(right))
     right = sanitize_input(right, get_data_type(left))
     return less(left, right, name)    
 
 def equal(left, right, name=''):
-    """
+    '''
     Elementwise 'equal' comparison of two tensors. Result is 1 if values are equal 0 otherwise. 
 
     Example:
@@ -161,14 +235,14 @@ def equal(left, right, name=''):
         name (str): the name of the node in the network            
     Returns:
         :class:`cntk_py.Function`
-    """
+    '''
     from ..cntk_py import equal
     left = sanitize_input(left, get_data_type(right))
     right = sanitize_input(right, get_data_type(left))
     return equal(left, right, name)    
 
 def greater(left, right, name=''):
-    """
+    '''
     Elementwise 'greater' comparison of two tensors. Result is 1 if left > right else 0. 
 
     Example:
@@ -184,14 +258,14 @@ def greater(left, right, name=''):
         name (str): the name of the node in the network            
     Returns:
         :class:`cntk_py.Function`
-    """
+    '''
     from ..cntk_py import greater
     left = sanitize_input(left, get_data_type(right))
     right = sanitize_input(right, get_data_type(left))
     return greater(left, right, name)    
 
 def greater_equal(left, right, name=''):
-    """
+    '''
     Elementwise 'greater equal' comparison of two tensors. Result is 1 if left >= right else 0. 
 
     Example:
@@ -207,14 +281,14 @@ def greater_equal(left, right, name=''):
         name (str): the name of the node in the network            
     Returns:
         :class:`cntk_py.Function`
-    """
+    '''
     from ..cntk_py import greater_equal
     left = sanitize_input(left, get_data_type(right))
     right = sanitize_input(right, get_data_type(left))
     return greater_equal(left, right, name)    
 
 def not_equal(left, right, name=''):
-    """
+    '''
     Elementwise 'not equal' comparison of two tensors. Result is 1 if left != right else 0. 
 
     Example:
@@ -230,14 +304,14 @@ def not_equal(left, right, name=''):
         name (str): the name of the node in the network            
     Returns:
         :class:`cntk_py.Function`
-    """
+    '''
     from ..cntk_py import not_equal
     left = sanitize_input(left, get_data_type(right))
     right = sanitize_input(right, get_data_type(left))
     return not_equal(left, right, name)    
 
 def less_equal(left, right, name=''):
-    """
+    '''
     Elementwise 'less equal' comparison of two tensors. Result is 1 if left <= right else 0. 
 
     Example:
@@ -253,7 +327,7 @@ def less_equal(left, right, name=''):
         name (str): the name of the node in the network            
     Returns:
         :class:`cntk_py.Function`
-    """
+    '''
     from ..cntk_py import less_equal
     left = sanitize_input(left, get_data_type(right))
     right = sanitize_input(right, get_data_type(left))
@@ -264,7 +338,7 @@ def less_equal(left, right, name=''):
 ################################################################################
 
 def plus(left, right, name=''):
-    """
+    '''
     The output of this operation is the sum of the two input tensors. It supports broadcasting. 
     In case of scalars its backward pass propagates the received gradient. 
     The operator (+) has been overloaded and can equally be used instead of plus()
@@ -282,14 +356,14 @@ def plus(left, right, name=''):
         name (str): the name of the node in the network            
     Returns:
         :class:`cntk_py.Function`
-    """
+    '''
     from ..cntk_py import plus
     left = sanitize_input(left, get_data_type(right))
     right = sanitize_input(right, get_data_type(left))   
     return plus(left, right, name)    
 
 def minus(left, right, name=''):
-    """
+    '''
     The output of this operation is left minus right tensor. It supports broadcasting. 
     In case of scalars its backward pass propagates the received gradient. 
     The operator (-) has been overloaded and can equally be used instead of minus()
@@ -308,7 +382,7 @@ def minus(left, right, name=''):
         name (str): the name of the node in the network            
     Returns:
         :class:`cntk_py.Function`
-    """
+    '''
 
     from ..cntk_py import minus
     left = sanitize_input(left, get_data_type(right))
@@ -316,7 +390,7 @@ def minus(left, right, name=''):
     return minus(left, right, name)        
 
 def element_times(left, right, name=''):
-    """
+    '''
     The output of this operation is the element-wise product of the two input 
     tensors. It supports broadcasting. In case of scalars its backward pass to left propagates right 
     times the received gradient and vice versa.
@@ -335,14 +409,14 @@ def element_times(left, right, name=''):
         name (str): the name of the node in the network            
     Returns:
         :class:`cntk_py.Function`
-    """
+    '''
     from ..cntk_py import element_times
     left = sanitize_input(left, get_data_type(right))
     right = sanitize_input(right, get_data_type(left))
     return element_times(left, right, name)        
 
 def element_divide(left, right, name=''):
-    """
+    '''
     The output of this operation is the element-wise division of the two input 
     tensors. It supports broadcasting. In case of scalars its backward pass to 
     left propagates :math:`1/right` times the received gradient, and the backward 
@@ -364,16 +438,14 @@ def element_divide(left, right, name=''):
         name (str): the name of the node in the network            
     Returns:
         :class:`cntk_py.Function`
-    """
+    '''
     from ..cntk_py import element_divide
     left = sanitize_input(left, get_data_type(right))
     right = sanitize_input(right, get_data_type(left))
     return element_divide(left, right, name)        
 
-#TODO: PerDimMeanVarianceNormalize
-
 def times(left, right, output_rank=1, name=''):
-    """
+    '''
     The output of this operation is the matrix product of the two input matrices.
     It supports broadcasting. Sparse is supported in the right operand, if it is a matrix.
     The operator '@' has been overloaded such that in Python 3.5 and later X @ W equals times(X, W).
@@ -406,15 +478,15 @@ def times(left, right, output_rank=1, name=''):
 
     Returns:
         :class:`cntk_py.Function`
-    """
+    '''
     from ..cntk_py import times      
     left = sanitize_input(left, get_data_type(right))
     right = sanitize_input(right, get_data_type(left))
     return times(right, left, output_rank, name)        
 
-#TOOD: enable when it is exposed in c++
+#TODO: enable when it is exposed in c++
 def identity(x, name=''):
-    """
+    '''
     The identity function. It returns an identical tensor to the input tensor `x`: 
 
     :math:`pass_tensor(x) = x`
@@ -428,7 +500,7 @@ def identity(x, name=''):
         name (str): the name of the node in the network
     Returns:
         :class:`cntk_py.Function`
-    """
+    '''
     raise NotImplementedError("identity is not implemented yet in V2")
 
 ################################################################################
@@ -437,7 +509,7 @@ def identity(x, name=''):
 
 
 def floor(arg, name=''):
-    """
+    '''
     The output of this operation is the element wise value rounded to the largest 
     integer less than or equal to the input.
 
@@ -461,14 +533,14 @@ def floor(arg, name=''):
         name (str): the name of the node in the network (optional)
     Returns:
         :class:`cntk_py.Function`
-    """
+    '''
     from ..cntk_py import floor
     left = sanitize_input(left, get_data_type(right))
     right = sanitize_input(right, get_data_type(left))
     return floor(arg, name)    
 
 def ceil(arg, name=''):
-    """
+    '''
     The output of this operation is the element wise value rounded to the smallest 
     integer greater than or equal to the input.
 
@@ -485,14 +557,14 @@ def ceil(arg, name=''):
         name (str): the name of the node in the network (optional)
     Returns:
         :class:`cntk_py.Function`
-    """
+    '''
     from ..cntk_py import ceil
     left = sanitize_input(left, get_data_type(right))
     right = sanitize_input(right, get_data_type(left))
     return ceil(arg, name)
 
 def round(arg, name=''):
-    """
+    '''
     The output of this operation is the element wise value rounded to the nearest integer. 
     In case of tie, where element can have exact fractional part of 0.5
     this operation follows "round half-up" tie breaking strategy.
@@ -519,7 +591,7 @@ def round(arg, name=''):
         name (str): the name of the node in the network (optional)
     Returns:
         :class:`cntk_py.Function`
-    """
+    '''
     from ..cntk_py import round
     left = sanitize_input(left, get_data_type(right))
     right = sanitize_input(right, get_data_type(left))
@@ -529,9 +601,9 @@ def round(arg, name=''):
 # non_linear and nn ops
 ################################################################################
 
-#TOOD: enable when it is exposed in c++
+#TODO: enable when it is exposed in c++
 def clip(x, min_value, max_value, name=''):
-    """
+    '''
     Computes a tensor with all of its values clipped to fall
     between `min_value` and `max_value`, i.e.
     ``min(max(x, min_value), max_value)``.
@@ -555,11 +627,11 @@ def clip(x, min_value, max_value, name=''):
         name (str): the name of the node in the network            
     Returns:
         :class:`cntk_py.Function`
-    """    
+    '''    
     raise NotImplementedError("clip is not implemented yet in V2")
 
 def relu(x, name=''):
-    """
+    '''
     Rectified linear operation. Computes the element-wise rectified linear
     of `x`: ``max(x, 0)``
 
@@ -574,13 +646,13 @@ def relu(x, name=''):
         name (str): the name of the node in the network
     Returns:
         :class:`cntk_py.Function`
-    """
-    from ..cntk_py import relu
+    '''
+    from ..cntk_py import re_lu
     x = sanitize_input(x)
-    return relu(x, name)    
+    return re_lu(x, name)    
 
 def sigmoid(x, name=''):
-    """
+    '''
     Computes the element-wise sigmoid of `x`: 
 
     :math:`sigmoid(x) = {1 \over {1+\exp(-x)}}`
@@ -596,13 +668,13 @@ def sigmoid(x, name=''):
         name (str): the name of the node in the network
     Returns:
         :class:`cntk_py.Function`
-    """
+    '''
     from ..cntk_py import sigmoid
     x = sanitize_input(x)
     return sigmoid(x, name)    
 
 def tanh(x, name=''):
-    """
+    '''
     Computes the element-wise tanh of `x`: 
 
     The output tensor has the same shape as `x`.
@@ -617,13 +689,13 @@ def tanh(x, name=''):
         name (str): the name of the node in the network
     Returns:
         :class:`cntk_py.Function`
-    """
+    '''
     from ..cntk_py import tanh
     x = sanitize_input(x)
     return tanh(x, name)    
 
 def softmax(x, name=''):
-    """
+    '''
     Squashes the input values `x` such that they add up to 1: 
 
     :math:`softmax(x) = {\exp(x_i) - \max_{x_i \in x}(\exp(x_i)) \over {\sum_{x_i \in x} \exp(x_i)- \max_{x_i \in x}(\exp(x_i)) }}`
@@ -643,13 +715,13 @@ def softmax(x, name=''):
         name (str): the name of the node in the network
     Returns:
         :class:`cntk_py.Function`
-    """
+    '''
     from ..cntk_py import softmax
     x = sanitize_input(x)
     return softmax(x)    
 
 def exp(x, name=''):
-    """
+    '''
     Computes the element-wise exponential of `x`: 
 
     :math:`exp(x) = {e^x}`
@@ -663,13 +735,13 @@ def exp(x, name=''):
         name (str): the name of the node in the network
     Returns:
         :class:`cntk_py.Function`
-    """
+    '''
     from ..cntk_py import exp
     x = sanitize_input(x)
     return exp(x, name)    
 
 def log(x, name=''):
-    """
+    '''
     Computes the element-wise the natural logarithm of `x`: 
     
     Example:
@@ -687,13 +759,13 @@ def log(x, name=''):
         it uses 1e-37 (whose natural logarithm is -85.1) as the smallest float 
         number for `log`, because this is the only guaranteed precision across 
         platforms. This will be changed to return `NaN` and `-inf`.
-    """
+    '''
     from ..cntk_py import log
     x = sanitize_input(x)
     return log(x, name)    
 
 def sqrt(x, name=''):
-    """
+    '''
     Computes the element-wise square-root of `x`: 
 
     :math:`sqrt(x) = {\sqrt[2]{x}}`
@@ -711,13 +783,13 @@ def sqrt(x, name=''):
     Note:
         CNTK returns zero for sqrt of negative nubmers, this will be changed to 
         retrun NaN
-    """
+    '''
     from ..cntk_py import sqrt
     x = sanitize_input(x)
     return sqrt(x, name)    
 
 def square(x, name=''):
-    """
+    '''
     Computes the element-wise square of `x`:     
 
     Example:
@@ -729,13 +801,13 @@ def square(x, name=''):
         name (str): the name of the node in the network
     Returns:
         :class:`cntk_py.Function`
-    """
+    '''
     from ..cntk_py import square
     x = sanitize_input(x)
     return square(x, name)    
 
 def abs(x, name=''):
-    """
+    '''
     Computes the element-wise absolute of `x`: 
 
     :math:`abs(x) = |x|`
@@ -749,13 +821,13 @@ def abs(x, name=''):
         name (str): the name of the node in the network
     Returns:
         :class:`cntk_py.Function`
-    """
+    '''
     from ..cntk_py import abs
     x = sanitize_input(x)
     return abs(x, name)    
 
 def negate(x, name=''):
-    """
+    '''
     Computes the element-wise negation of `x`: 
 
     :math:`abs(x) = -x`
@@ -769,13 +841,13 @@ def negate(x, name=''):
         name (str): the name of the node in the network
     Returns:
         :class:`cntk_py.Function`
-    """
+    '''
     from ..cntk_py import negate
     x = sanitize_input(x)
     return negate(x, name)    
 
 def reciprocal(x, name=''):
-    """
+    '''
     Computes the element-wise reciprocal of `x`: 
 
     Example:
@@ -787,14 +859,14 @@ def reciprocal(x, name=''):
         name (str): the name of the node in the network
     Returns:
         :class:`cntk_py.Function`
-    """
+    '''
     from ..cntk_py import reciprocal
     x = sanitize_input(x)
     return reciprocal(x, name)    
 
-#TOOD: enable when it is exposed in c++
+#TODO: enable when it is exposed in c++
 def cond(flag, value_if_true, value_if_false, name=''):
-    """
+    '''
     return either value_if_true or value_if_false based on the value of flag.
     If flag != 0 value_if_true is returned, otherwise value_if_false.
     Behaves analogously to numpy.where(...).
@@ -811,7 +883,7 @@ def cond(flag, value_if_true, value_if_false, name=''):
         name (str): the name of the node in the network          
     Returns:
         :class:`cntk_py.Function`
-    """    
+    '''    
     raise NotImplementedError("cond is not implemented yet in V2")
     
 ################################################################################
@@ -819,7 +891,7 @@ def cond(flag, value_if_true, value_if_false, name=''):
 ################################################################################
 
 def future_value(initial_state, x, time_step=1, name=''):
-    """
+    '''
     This function returns the future value w.r.t. `x`. It is most often used when 
     creating RNNs. The resulting tensor has the same shape as the input but is 
     the next logical sample. The `time_step` parameter is the number of steps 
@@ -837,14 +909,14 @@ def future_value(initial_state, x, time_step=1, name=''):
         name (str): the name of the node in the network
     Returns:
         :class:`cntk_py.Function`
-    """    
+    '''    
     
     from ..cntk_py import future_value
     x = sanitize_input(x)
     return future_value(initial_state, x, time_step, name)    
     
 def past_value(initial_state, x, time_step=1, default_hidden_activation=0.1, name=''):
-    """
+    '''
     This function returns the past value w.r.t. `x`. It is most often used when 
     creating RNNs. The resulting tensor has the same shape as the input but is 
     the previous logical sample. The `time_step` parameter is the number of steps 
@@ -862,7 +934,7 @@ def past_value(initial_state, x, time_step=1, default_hidden_activation=0.1, nam
         name (str): the name of the node in the network
     Returns:
         :class:`cntk_py.Function`
-    """    
+    '''    
     
     from ..cntk_py import past_value
     x = sanitize_input(x)
@@ -872,9 +944,9 @@ def past_value(initial_state, x, time_step=1, default_hidden_activation=0.1, nam
 # reshaping ops
 ################################################################################
 
-#TOOD: enable when it is exposed in c++
+#TODO: enable when it is exposed in c++
 def reshape(x, shape, name=''):
-    """
+    '''
     Reinterpret input samples as having different tensor dimensions
     One dimension may be specified as 0 and will be inferred
 
@@ -893,12 +965,12 @@ def reshape(x, shape, name=''):
         name (str): the name of the node in the network            
     Returns:
         :class:`cntk_py.Function`
-    """    
+    '''    
     raise NotImplementedError("reshape is not implemented yet in V2")
 
-#TOOD: enable when it is exposed in c++  
+#TODO: enable when it is exposed in c++  
 def transpose_dimensions(x, axis1, axis2, name=''):
-    """
+    '''
     Reverses two axes of the tensor. The output tensor has the same data but with
     axis1 and axis2 swapped.    
         
@@ -914,10 +986,10 @@ def transpose_dimensions(x, axis1, axis2, name=''):
         name (str): the name of the node in the network
     Returns:
         :class:`cntk_py.Function`
-    """    
+    '''    
     raise NotImplementedError("transpose_dimensions is not implemented yet in V2")
 
-#TOOD: enable when it is exposed in c++
+#TODO: enable when it is exposed in c++
 def slice(x, begin_index, end_index, axis=0, name=''): 
     '''
     Slice the input along an axis.    
@@ -959,7 +1031,7 @@ def slice(x, begin_index, end_index, axis=0, name=''):
     '''
     raise NotImplementedError("slice is not implemented yet in V2")
 
-#TOOD: enable when it is exposed in c++
+#TODO: enable when it is exposed in c++
 def splice(inputs, axis=0, name=''): 
     '''
     Concatenate the input tensors along an axis.    
@@ -1032,7 +1104,7 @@ def reduce_sum(x, axis=0, name=''):
     x = sanitize_input(x)
     return reduce_sum(x, axis, name)    
 
-#TOOD: enable when it is exposed in c++
+#TODO: enable when it is exposed in c++
 def reduce_log_sum(inputs, name=''): 
     '''
     Computes the log sum of the input tensor's elements. The output is a scalar,
@@ -1060,9 +1132,9 @@ def reduce_log_sum(inputs, name=''):
 # training ops
 ################################################################################
 
-#TOOD: enable when it is exposed in c++
+#TODO: enable when it is exposed in c++
 def dropout(x, name=''):
-    """
+    '''
     Compute a new tensor with `dropoutRate` perecent set to zero. The values 
     that are set to zero are randomly chosen. This is commonly used to prevent 
     overfitting during the training process.
@@ -1076,17 +1148,15 @@ def dropout(x, name=''):
                 
     Returns:
         :class:`cntk_py.Function`
-    """    
+    '''    
     raise NotImplementedError("dropout is not implemented yet in V2")
 
 ################################################################################
 # variables_and_parameters ops
 ################################################################################
 
-#TODO: placeholder
-
 def variable(shape, data_type=None, needs_gradient=True, name=''):
-    """
+    '''
     It creates an input node. The graph requires a separate reader that will be
     fed to this input.
 
@@ -1098,15 +1168,32 @@ def variable(shape, data_type=None, needs_gradient=True, name=''):
         
     Returns:
         :class:`cntk_py.Function`
-    """
+    '''
     from .variables import Variable
 
     # TODO dynamic axis
     # TODO Sparse
     return Variable(shape, data_type, needs_gradient, name)
+
+def placeholder(shape, name=''):
+    '''
+    It creates a variable place holder for recurrence networks, when the network's dynamic axes
+    are unfolded, the place holder will get assigned a variable along the correspondent dynamic axis.
+
+    Args:
+        shape (tuple): the shape of the variable tensor             
+        name (str): the name of the node in the network
+        
+    Returns:
+        :class:`cntk_py.Function`
+    '''
+    from .variables import Placeholder
+
+    # TODO dynamic axis?    
+    return Placeholder(shape, name)
     
 def parameter(shape=None, value=None, device_id=-1, name=''):
-    """
+    '''
     It creates a parameter tensor. 
 
     Args:
@@ -1118,7 +1205,7 @@ def parameter(shape=None, value=None, device_id=-1, name=''):
 
     Returns:
         :class:`cntk_py.Function`
-    """    
+    '''    
     #TODO: add swig support to this templatized constructor and reflect the change in this method:
     #   template<typename ElemType>
     #   Parameter(const NDShape& shape, ElemType initValue, const DeviceDescriptor& device = DeviceDescriptor::DefaultDevice(), const std::wstring& name = L"")
@@ -1128,7 +1215,7 @@ def parameter(shape=None, value=None, device_id=-1, name=''):
     return Parameter(shape, value, None, cntk_device(device_id), name)        
 
 def constant(shape=None, value=None, device_id=-1, name=''):
-    """
+    '''
     It creates a constant tensor initialized from a numpy array
 
     Args:
@@ -1139,7 +1226,7 @@ def constant(shape=None, value=None, device_id=-1, name=''):
         name (str, optional): the name of the node in the network
     Returns:
         :class:`cntk_py.Function`
-    """
+    '''
     from .variables import Constant, constant_from_scalar
 
     #TODO: add swig support to this templatized constructor and reflect the change in this method:
@@ -1151,9 +1238,9 @@ def constant(shape=None, value=None, device_id=-1, name=''):
         return constant_from_scalar(shape, value, None, cntk_device(device_id), name)   
     return Constant(shape, value, None, cntk_device(device_id), name)
 
-#TOOD: enable when it is exposed in c++
+#TODO: enable when it is exposed in c++
 def dynamic_axis(name=''):
-    """
+    '''
     This function creates a dynamic axis object that can be connected to an input. 
     For sequence-based inputs, this allows the sequences to be of arbitrary lengths 
     and therefore allows networks to be setup without the need for padding.
@@ -1165,13 +1252,13 @@ def dynamic_axis(name=''):
         name (str): the name of the node in the network
     Returns:
         :class:`cntk_py.Function`
-    """
+    '''
     
     raise NotImplementedError("dynamic_axis is not implemented yet in V2")
 
-#TOOD: enable when it is exposed in c++
+#TODO: enable when it is exposed in c++
 def reconcile_dynamic_axis(data_input, layout_input, name=''):
-    """
+    '''
     This function adapts the dynamic axis layout for `data_input` to match that 
     of `layout_input`. It allows these two tensors to be properly compared using, e.g. 
     a criterion node.
@@ -1185,8 +1272,27 @@ def reconcile_dynamic_axis(data_input, layout_input, name=''):
         name (str): the name of the node in the network
     Returns:
         :class:`cntk_py.Function`
-    """
+    '''
     
     raise NotImplementedError("reconcile_dynamic_axis is not implemented yet in V2")
 
+################################################################################
+# normalization ops
+################################################################################
 
+#TODO: ComputeInputPerDimMeansAndInvStdDevs
+
+def per_dim_mean_variance_normalize(operand, mean, inv_stddev, name=''):
+    '''
+    Computes per dimension mean-variance normalization of the specified input operand.
+    
+    Args:
+        operand: the variable to be normalized
+        mean: per dimension mean to use for the normalization
+        inv_stddev: per dimension standard deviation to use for the normalization
+        name (str): the name of the node in the network
+    Returns:
+        :class:`cntk_py.Function`                    
+    '''
+    from ..cntk_py import per_dim_mean_variance_normalize    
+    return per_dim_mean_variance_normalize(operand, mean, inv_stddev, name)    

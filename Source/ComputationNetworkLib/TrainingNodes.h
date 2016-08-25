@@ -1629,7 +1629,7 @@ public:
             fstream >> m_normTimeConst;
             fstream >> m_blendTimeConst;
             fstream >> m_imageLayoutKind;
-            if (modelVersion >= CNTK_MODEL_VERSION_12)
+            if (modelVersion >= CNTK_MODEL_VERSION_13)
                 fstream >> m_samplesSeen;
             else
                 fstream >> mbCount; // converted below
@@ -1677,7 +1677,7 @@ public:
             }
         }
 
-        if (modelVersion < CNTK_MODEL_VERSION_12)
+        if (modelVersion < CNTK_MODEL_VERSION_13)
         {
             // Prior to version 12, minibatch count was stored instead of samples seen.
             // Approximate by assuming minibatch size 16, inform about that.

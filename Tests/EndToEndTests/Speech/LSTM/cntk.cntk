@@ -14,7 +14,7 @@ truncated = true
 speechTrain = {
     action = "train"
     modelPath = "$RunDir$/models/cntkSpeech.dnn"
-
+          
     # define network using BrainScript
     BrainScriptNetworkBuilder = {
         useLayerNorm = $truncated$
@@ -24,10 +24,10 @@ speechTrain = {
         featDim = 11 * baseFeatDim
         labelDim = 132
 
-        // hidden dimensions
-        innerCellDim  = 1024
-        hiddenDim     = 256
-        numLSTMLayers = 3        // number of hidden LSTM model layers
+            // hidden dimensions
+            innerCellDim  = 1024
+            hiddenDim     = 256
+            numLSTMLayers = 3        // number of hidden LSTM model layers
 
         # define the model function
         # We define three functions here
@@ -93,7 +93,7 @@ speechTrain = {
                     // parameter macros--these carry their own weight matrices
                     B() = BS.Parameters.BiasParam (cellDim)
 
-                    W(v) = BS.Parameters.WeightParam (cellDim, inputDim)  * Stabilize (v, enabled=enableSelfStabilization) // input-to-hidden
+                    W(v) = BS.Parameters.WeightParam (cellDim, Inferred)  * Stabilize (v, enabled=enableSelfStabilization) // input-to-hidden
                     H(h) = BS.Parameters.WeightParam (cellDim, outputDim) * Stabilize (h, enabled=enableSelfStabilization) // hidden-to-hidden
                     C(c) = BS.Parameters.DiagWeightParam (cellDim)       .* Stabilize (c, enabled=enableSelfStabilization) // cell-to-hiddden (note: applied elementwise)
 
@@ -136,11 +136,12 @@ speechTrain = {
                 else /*BS.RNNs.*/ RecurrentLSTMP (hiddenDim, cellDim=innerCellDim, /*S*/ (LSTMoutput[k-1]), inputDim=hiddenDim,   enableSelfStabilization=useSelfStabilization).h
 
             // and add a softmax layer on top
-            W = BS.Parameters.WeightParam (labelDim, hiddenDim)
+            W = BS.Parameters.WeightParam (labelDim, Inferred)
             B = BS.Parameters.BiasParam   (labelDim)
 
-            z = W * S(LSTMoutput[numLSTMLayers]) + B; // top-level input to Softmax
-        }.z
+            // (unnecessarily using explicit Times with inferInputRankToMap in order to have a test for inferInputRankToMap parameter)
+            z = Times (W, S(LSTMoutput[numLSTMLayers]), inferInputRankToMap=0) + B; // top-level input to Softmax
+        ].z
 
         // features
         features = Input((1 : featDim),  tag='feature') // TEST: Artificially reading data transposed

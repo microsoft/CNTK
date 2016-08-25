@@ -349,7 +349,7 @@ Post-processing network...
 
 3 roots:
 	CE = CrossEntropyWithSoftmax()
-	Err = ErrorPrediction()
+	Err = ClassificationError()
 	OutputNodes.z = Plus()
 
 Validating network. 45 nodes to process in pass 1.
@@ -398,7 +398,7 @@ Validating --> OutputNodes.t = Times (OutputNodes.W, h1.y) : [10 x 64], [64 x *]
 Validating --> OutputNodes.b = LearnableParameter() :  -> [10]
 Validating --> OutputNodes.z = Plus (OutputNodes.t, OutputNodes.b) : [10 x *], [10] -> [10 x *]
 Validating --> CE = CrossEntropyWithSoftmax (labels, OutputNodes.z) : [10 x *], [10 x *] -> [1]
-Validating --> Err = ErrorPrediction (labels, OutputNodes.z) : [10 x *], [10 x *] -> [1]
+Validating --> Err = ClassificationError (labels, OutputNodes.z) : [10 x *], [10 x *] -> [1]
 
 Validating network. 20 nodes to process in pass 2.
 
@@ -436,8 +436,8 @@ Post-processing network complete.
 08/23/2016 10:54:12: Training criterion node(s):
 08/23/2016 10:54:12: 	CE = CrossEntropyWithSoftmax
 
-08/23/2016 10:54:12: Evaluation criterion node(s):
-08/23/2016 10:54:12: 	Err = ErrorPrediction
+08/16/2016 10:50:46: Evaluation criterion node(s):
+08/16/2016 10:50:46: 	Err = ClassificationError
 
 
 Allocating matrices for forward and/or backward propagation.
@@ -557,7 +557,7 @@ Post-processing network...
 
 3 roots:
 	CE = CrossEntropyWithSoftmax()
-	Err = ErrorPrediction()
+	Err = ClassificationError()
 	OutputNodes.z = Plus()
 
 Validating network. 45 nodes to process in pass 1.
@@ -606,7 +606,7 @@ Validating --> OutputNodes.t = Times (OutputNodes.W, h1.y) : [10 x 64], [64 x *1
 Validating --> OutputNodes.b = LearnableParameter() :  -> [10]
 Validating --> OutputNodes.z = Plus (OutputNodes.t, OutputNodes.b) : [10 x *1], [10] -> [10 x *1]
 Validating --> CE = CrossEntropyWithSoftmax (labels, OutputNodes.z) : [10 x *1], [10 x *1] -> [1]
-Validating --> Err = ErrorPrediction (labels, OutputNodes.z) : [10 x *1], [10 x *1] -> [1]
+Validating --> Err = ClassificationError (labels, OutputNodes.z) : [10 x *1], [10 x *1] -> [1]
 
 Validating network. 20 nodes to process in pass 2.
 

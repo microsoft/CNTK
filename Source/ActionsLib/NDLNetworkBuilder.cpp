@@ -155,6 +155,13 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
                 m_net->InitLearnableParameters(nodePtr, L"uniform",  initValueScale, forcedRandomSeed < 0 ? randomSeed++ : (unsigned long)forcedRandomSeed, initOnCPUOnly);
             else if (EqualCI(initString, L"gaussian"))
                 m_net->InitLearnableParameters(nodePtr, L"gaussian", initValueScale, forcedRandomSeed < 0 ? randomSeed++ : (unsigned long)forcedRandomSeed, initOnCPUOnly);
+            else if (EqualCI(initString, L"bilinear"))
+            {
+                const size_t kernelWidth = node->GetOptionalParameter("kernelWidth", "0");
+                const size_t kernelHeight = node->GetOptionalParameter("kernelHeight", "0");
+                assert(kernelWidth > 0 && kernelHeight > 0);
+                m_net->InitLearnableParametersWithBilinearFill<ElemType>(nodePtr, kernelWidth, kernelHeight);
+            }
             else if (EqualCI(initString, L"fromFile"))
             {
                 std::string initFromFilePath = node->GetOptionalParameter("initFromFilePath", "");
