@@ -68,7 +68,7 @@ int main(int argc, char* argv[])
 	// This relative path assumes launching from CNTK's binary folder, e.g. build/release/bin/
 	const std::string modelWorkingDirectory = path + "/../../../Examples/Image/MNIST/Data/";
 #endif
-	
+
 	// params for openCV
 	int numberOfChannels = 1;
 	int imgDimensionX = 28;
@@ -104,7 +104,7 @@ int main(int argc, char* argv[])
 	std::string testImage = "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 73 253 227 73 21 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 73 251 251 251 174 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 16 166 228 251 251 251 122 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 62 220 253 251 251 251 251 79 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 79 231 253 251 251 251 251 232 77 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 145 253 253 253 255 253 253 253 253 255 108 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 144 251 251 251 253 168 107 169 251 253 189 20 0 0 0 0 0 0 0 0 0 0 0 0 0 0 27 89 236 251 235 215 164 15 6 129 251 253 251 35 0 0 0 0 0 0 0 0 0 0 0 0 0 47 211 253 251 251 142 0 0 0 37 251 251 253 251 35 0 0 0 0 0 0 0 0 0 0 0 0 0 109 251 253 251 251 142 0 0 0 11 148 251 253 251 164 0 0 0 0 0 0 0 0 0 0 0 0 11 150 253 255 211 25 0 0 0 0 11 150 253 255 211 25 0 0 0 0 0 0 0 0 0 0 0 0 140 251 251 253 107 0 0 0 0 0 37 251 251 211 46 0 0 0 0 0 0 0 0 0 0 0 0 0 190 251 251 253 128 5 0 0 0 0 37 251 251 51 0 0 0 0 0 0 0 0 0 0 0 0 0 0 115 251 251 253 188 20 0 0 32 109 129 251 173 103 0 0 0 0 0 0 0 0 0 0 0 0 0 0 217 251 251 201 30 0 0 0 73 251 251 251 71 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 166 253 253 255 149 73 150 253 255 253 253 143 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 140 251 251 253 251 251 251 251 253 251 230 61 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 190 251 251 253 251 251 251 251 242 215 55 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 21 189 251 253 251 251 251 173 103 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 31 200 253 251 96 71 20 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0";
 
 	std::vector<float> inputs;
-	uchar* inputArray = new uchar [imgDimensionX*imgDimensionY];	
+	uchar* inputArray = new uchar[imgDimensionX*imgDimensionY];
 
 	std::istringstream iss(testImage);
 	pos = 0;
@@ -114,12 +114,12 @@ int main(int argc, char* argv[])
 		inputArray[pos] = (atoi(testImage.c_str()));
 		pos++;
 	}
-	
+
 	cv::Mat img0(cv::Size(imgDimensionX, imgDimensionY), cvType, inputArray, step);
 	cv::resize(img0, img0, cv::Size(), scaleFactor, scaleFactor, cv::INTER_NEAREST);
 	// save the input image
 	try {
-		cv::imwrite( "input.png", img0, compression_params);
+		cv::imwrite("input.png", img0, compression_params);
 	}
 	catch (std::runtime_error& ex) {
 		fprintf(stderr, "Exception converting image to PNG format: %s\n", ex.what());
@@ -135,7 +135,7 @@ int main(int argc, char* argv[])
 	inputLayer.insert(MapEntry(inputLayerName, &inputs));
 	Layer outputLayers;
 	int i = 0;
-	for (auto &layer: outDims)
+	for (auto &layer : outDims)
 	{
 		auto outputLayerName = layer.first;
 		outputLayers.insert(MapEntry(outputLayerName, &outputs[i]));
@@ -147,9 +147,9 @@ int main(int argc, char* argv[])
 
 	for (auto outputLayer : outputLayers)
 	{
-		
+
 		// set number of channels, image dimensions, and scale factor depending on the layer
-		if (outputLayer.first == std::wstring {L"conv1.out"})
+		if (outputLayer.first == std::wstring{ L"conv1.out" })
 		{
 			numberOfChannels = 16;
 			imgDimensionX = 28;
@@ -250,6 +250,5 @@ int main(int argc, char* argv[])
 	}
 
 	//cv::waitKey(0);
-    return 0;
+	return 0;
 }
-
