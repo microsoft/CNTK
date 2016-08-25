@@ -41,8 +41,8 @@ TrainConvNet = [
 
         # connect to system
         ce       = CrossEntropyWithSoftmax (labels, z)
-        errs     = ErrorPrediction         (labels, z)
-        top5Errs = ErrorPrediction         (labels, z, topN=5)  # only used in Eval action
+        errs     = ClassificationError         (labels, z)
+        top5Errs = ClassificationError         (labels, z, topN=5)  # only used in Eval action
 
         featureNodes    = (features)
         labelNodes      = (labels)
@@ -109,8 +109,8 @@ TrainConvNetWithBN = [
 
         # connect to system
         ce       = CrossEntropyWithSoftmax (labels, z)
-        errs     = ErrorPrediction         (labels, z)
-        top5Errs = ErrorPrediction         (labels, z, topN=5)
+        errs     = ClassificationError         (labels, z)
+        top5Errs = ClassificationError         (labels, z, topN=5)
 
         featureNodes    = (features)
         labelNodes      = (labels)

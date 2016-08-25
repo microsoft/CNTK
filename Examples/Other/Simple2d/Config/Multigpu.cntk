@@ -39,7 +39,7 @@ Multigpu_Demo_Train=[
         # 2 input, 2 50-element hidden, 2 output
         layerSizes = 2:50*2:2
         trainingCriterion = "CrossEntropyWithSoftmax"
-        evalCriterion = "ErrorPrediction"
+        evalCriterion = "ClassificationError"
         layerTypes = "Sigmoid"
         initValueScale = 1.0
         applyMeanVarNorm = true

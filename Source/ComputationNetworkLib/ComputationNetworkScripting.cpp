@@ -447,7 +447,7 @@ ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<ComputationNetworkWithEd
 //    refWeight = 0.9
 //    kldLabels = labels * (1-refWeight) + Softmax (zRef) * refWeight  # interpolate with ref output
 //    ce = CrossEntropyWithSoftmax (z, kldLabels)
-//    errs = ErrorPrediction (z, labels)
+//    errs = ClassificationError (z, labels)
 //    criterionNodes = (ce)
 //    evaluationNodes = (errs)
 // ===================================================================

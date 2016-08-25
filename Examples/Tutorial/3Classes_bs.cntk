@@ -34,7 +34,7 @@ Train = [
         z = w * features + b
 
         ce = CrossEntropyWithSoftmax (labels, z)
-        errs = ErrorPrediction (labels, z)
+        errs = ClassificationError (labels, z)
 
         # root nodes
         featureNodes    = (features)

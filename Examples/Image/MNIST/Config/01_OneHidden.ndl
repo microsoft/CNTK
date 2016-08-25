@@ -22,8 +22,8 @@ DNN = [
     ol = DNNLayer(hiddenDim, labelDim, h1, 1)
 
     ce = CrossEntropyWithSoftmax(labels, ol)
-    errs = ErrorPrediction(labels, ol)
-    top5Errs = ErrorPrediction(labels, ol, Const(5), tag="eval")  # only used in testing
+    errs = ClassificationError(labels, ol)
+    top5Errs = ClassificationError(labels, ol, Const(5), tag="eval")  # only used in testing
 
     # Special Nodes
     FeatureNodes = (features)

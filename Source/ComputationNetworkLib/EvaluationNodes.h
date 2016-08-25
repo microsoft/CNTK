@@ -18,24 +18,20 @@
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 // -----------------------------------------------------------------------
-// ErrorPredictionNode (label, prediction)   or ErrorPredictionNode (prediction, label)
+// ClassificationErrorNode (label, prediction)   or ClassificationErrorNode (prediction, label)
 // Performs classification and error counting.
 // Result is an error rate, lower = better.
 // -----------------------------------------------------------------------
 
 template <class ElemType>
-class ErrorPredictionNode : public ComputationNodeNonLooping /*ComputationNode*/<ElemType>
+class ClassificationErrorNode : public ComputationNodeNonLooping /*ComputationNode*/<ElemType>
 {
-    typedef ComputationNodeNonLooping<ElemType> Base;
-    UsingComputationNodeMembersBoilerplate;
-    static const std::wstring TypeName()
-    {
-        return L"ErrorPrediction";
-    }
+    typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName() { return L"ClassificationError"; }
 
 public:
-    DeclareConstructorFromConfig(ErrorPredictionNode);
-    ErrorPredictionNode(DEVICEID_TYPE deviceId, const wstring& name)
+    DeclareConstructorFromConfig(ClassificationErrorNode);
+    ClassificationErrorNode(DEVICEID_TYPE deviceId, const wstring& name)
         : Base(deviceId, name)
     {
     }
@@ -63,10 +59,10 @@ public:
         MaskMissingColumnsToZero(*m_maxIndexes1, Input(1)->GetMBLayout(), fr);
         Value().AssignNumOfDiff(*m_maxIndexes0, *m_maxIndexes1, m_topK > 1);
 #if NANCHECK
-        Value().HasNan("ErrorPrediction");
+        Value().HasNan("ClassificationError");
 #endif
 #if DUMPOUTPUT
-        Value().Print("ErrorPredictionNode");
+        Value().Print("ClassificationErrorNode");
 #endif
     }
 
@@ -100,7 +96,7 @@ public:
         Base::CopyTo(nodeP, newName, flags);
         if (flags & CopyNodeFlags::copyNodeValue)
         {
-            auto node = dynamic_pointer_cast<ErrorPredictionNode<ElemType>>(nodeP);
+            auto node = dynamic_pointer_cast<ClassificationErrorNode<ElemType>>(nodeP);
             node->m_maxIndexes0->SetValue(*m_maxIndexes0);
             node->m_maxIndexes1->SetValue(*m_maxIndexes1);
             node->m_maxValues->SetValue(*m_maxValues);
@@ -131,8 +127,8 @@ private:
     int m_topK;
 };
 
-template class ErrorPredictionNode<float>;
-template class ErrorPredictionNode<double>;
+template class ClassificationErrorNode<float>;
+template class ClassificationErrorNode<double>;
 
 #ifdef COMING_SOON
 

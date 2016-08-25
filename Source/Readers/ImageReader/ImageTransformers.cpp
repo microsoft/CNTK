@@ -7,6 +7,8 @@
 #include <algorithm>
 #include <unordered_map>
 #include <random>
+#include <boost/random/bernoulli_distribution.hpp>
+#include <boost/random/normal_distribution.hpp>
 #include "ImageTransformers.h"
 #include "Config.h"
 #include "ConcStack.h"
@@ -156,7 +158,7 @@ void CropTransformer::Apply(size_t id, cv::Mat &mat)
     int viewIndex = m_cropType == CropType::MultiView10 ? (int)(id % 10) : 0;
 
     mat = mat(GetCropRect(m_cropType, viewIndex, mat.rows, mat.cols, ratio, *rng));
-    if ((m_hFlip && std::bernoulli_distribution()(*rng)) ||
+    if ((m_hFlip && boost::random::bernoulli_distribution<>()(*rng)) ||
         viewIndex >= 5)
     {
         cv::flip(mat, mat, 1);
@@ -208,7 +210,7 @@ cv::Rect CropTransformer::GetCropRect(CropType type, int viewIndex, int crow, in
         double factor = 1.0 + UniRealT(-m_curAspectRatioRadius, m_curAspectRatioRadius)(rng);
         double area = cropSize * cropSize;
         double newArea = area * factor;
-        if (std::bernoulli_distribution()(rng))
+        if (boost::random::bernoulli_distribution<>()(rng))
         {
             cropSizeX = (int)std::sqrt(newArea);
             cropSizeY = (int)(area / cropSizeX);
@@ -533,7 +535,7 @@ void IntensityTransformer::Apply(cv::Mat &mat)
     auto rng = m_rngs.pop_or_create([seed]() { return std::make_unique<std::mt19937>(seed); } );
 
     // Using single precision as EigVal and EigVec matrices are single precision.
-    std::normal_distribution<float> d(0, (float)m_curStdDev);
+    boost::random::normal_distribution<float> d(0, (float)m_curStdDev);
     cv::Mat alphas(1, 3, CV_32FC1);
     assert(m_eigVal.rows == 1 && m_eigVec.cols == 3);
     alphas.at<float>(0) = d(*rng) * m_eigVal.at<float>(0);

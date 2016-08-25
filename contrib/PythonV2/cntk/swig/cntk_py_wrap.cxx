@@ -3469,49 +3469,53 @@ namespace Swig {
 #define SWIGTYPE_p_CNTK__Placeholder swig_types[14]
 #define SWIGTYPE_p_CNTK__StreamInfo swig_types[15]
 #define SWIGTYPE_p_CNTK__Trainer swig_types[16]
-#define SWIGTYPE_p_CNTK__Value swig_types[17]
-#define SWIGTYPE_p_CNTK__Variable swig_types[18]
-#define SWIGTYPE_p_Callback swig_types[19]
-#define SWIGTYPE_p_FunctionInCNTK swig_types[20]
-#define SWIGTYPE_p___int64 swig_types[21]
-#define SWIGTYPE_p_allocator_type swig_types[22]
-#define SWIGTYPE_p_char swig_types[23]
-#define SWIGTYPE_p_difference_type swig_types[24]
-#define SWIGTYPE_p_double swig_types[25]
-#define SWIGTYPE_p_float swig_types[26]
-#define SWIGTYPE_p_int swig_types[27]
-#define SWIGTYPE_p_long swig_types[28]
-#define SWIGTYPE_p_p_char swig_types[29]
-#define SWIGTYPE_p_p_unsigned_long swig_types[30]
-#define SWIGTYPE_p_short swig_types[31]
-#define SWIGTYPE_p_signed___int64 swig_types[32]
-#define SWIGTYPE_p_signed_char swig_types[33]
-#define SWIGTYPE_p_size_type swig_types[34]
-#define SWIGTYPE_p_std__initializer_listT_size_t_t swig_types[35]
-#define SWIGTYPE_p_std__invalid_argument swig_types[36]
-#define SWIGTYPE_p_std__shared_ptrT_CNTK__BackPropState_t swig_types[37]
-#define SWIGTYPE_p_std__shared_ptrT_CNTK__Function_t swig_types[38]
-#define SWIGTYPE_p_std__shared_ptrT_CNTK__Learner_t swig_types[39]
-#define SWIGTYPE_p_std__shared_ptrT_CNTK__MinibatchSource_t swig_types[40]
-#define SWIGTYPE_p_std__shared_ptrT_CNTK__NDArrayView_t swig_types[41]
-#define SWIGTYPE_p_std__shared_ptrT_CNTK__NDMask_t swig_types[42]
-#define SWIGTYPE_p_std__shared_ptrT_CNTK__Value_t swig_types[43]
-#define SWIGTYPE_p_std__unordered_mapT_CNTK__Parameter_std__shared_ptrT_CNTK__NDArrayView_t_t swig_types[44]
-#define SWIGTYPE_p_std__unordered_mapT_CNTK__Placeholder_CNTK__Variable_t swig_types[45]
-#define SWIGTYPE_p_std__unordered_setT_CNTK__Parameter_t swig_types[46]
-#define SWIGTYPE_p_std__unordered_setT_std__shared_ptrT_CNTK__Learner_t_t swig_types[47]
-#define SWIGTYPE_p_std__vectorT_CNTK__Axis_std__allocatorT_CNTK__Axis_t_t swig_types[48]
-#define SWIGTYPE_p_std__vectorT_bool_std__allocatorT_bool_t_t swig_types[49]
-#define SWIGTYPE_p_swig__SwigPyIterator swig_types[50]
-#define SWIGTYPE_p_unsigned___int64 swig_types[51]
-#define SWIGTYPE_p_unsigned_char swig_types[52]
-#define SWIGTYPE_p_unsigned_int swig_types[53]
-#define SWIGTYPE_p_unsigned_long swig_types[54]
-#define SWIGTYPE_p_unsigned_short swig_types[55]
-#define SWIGTYPE_p_value_type swig_types[56]
-#define SWIGTYPE_p_wchar_t swig_types[57]
-static swig_type_info *swig_types[59];
-static swig_module_info swig_module = {swig_types, 58, 0, 0, 0, 0};
+#define SWIGTYPE_p_CNTK__TrainingParameterScheduleT_double_t swig_types[17]
+#define SWIGTYPE_p_CNTK__Value swig_types[18]
+#define SWIGTYPE_p_CNTK__Variable swig_types[19]
+#define SWIGTYPE_p_Callback swig_types[20]
+#define SWIGTYPE_p_FunctionInCNTK swig_types[21]
+#define SWIGTYPE_p___int64 swig_types[22]
+#define SWIGTYPE_p_allocator_type swig_types[23]
+#define SWIGTYPE_p_char swig_types[24]
+#define SWIGTYPE_p_const_reference swig_types[25]
+#define SWIGTYPE_p_difference_type swig_types[26]
+#define SWIGTYPE_p_double swig_types[27]
+#define SWIGTYPE_p_float swig_types[28]
+#define SWIGTYPE_p_int swig_types[29]
+#define SWIGTYPE_p_long swig_types[30]
+#define SWIGTYPE_p_p_char swig_types[31]
+#define SWIGTYPE_p_p_unsigned_long swig_types[32]
+#define SWIGTYPE_p_reference swig_types[33]
+#define SWIGTYPE_p_short swig_types[34]
+#define SWIGTYPE_p_signed___int64 swig_types[35]
+#define SWIGTYPE_p_signed_char swig_types[36]
+#define SWIGTYPE_p_size_type swig_types[37]
+#define SWIGTYPE_p_std__initializer_listT_size_t_t swig_types[38]
+#define SWIGTYPE_p_std__initializer_listT_std__pairT_size_t_const_double_t_t swig_types[39]
+#define SWIGTYPE_p_std__invalid_argument swig_types[40]
+#define SWIGTYPE_p_std__shared_ptrT_CNTK__BackPropState_t swig_types[41]
+#define SWIGTYPE_p_std__shared_ptrT_CNTK__Function_t swig_types[42]
+#define SWIGTYPE_p_std__shared_ptrT_CNTK__Learner_t swig_types[43]
+#define SWIGTYPE_p_std__shared_ptrT_CNTK__MinibatchSource_t swig_types[44]
+#define SWIGTYPE_p_std__shared_ptrT_CNTK__NDArrayView_t swig_types[45]
+#define SWIGTYPE_p_std__shared_ptrT_CNTK__NDMask_t swig_types[46]
+#define SWIGTYPE_p_std__shared_ptrT_CNTK__Value_t swig_types[47]
+#define SWIGTYPE_p_std__unordered_mapT_CNTK__Parameter_std__shared_ptrT_CNTK__NDArrayView_t_t swig_types[48]
+#define SWIGTYPE_p_std__unordered_mapT_CNTK__Placeholder_CNTK__Variable_t swig_types[49]
+#define SWIGTYPE_p_std__unordered_setT_CNTK__Parameter_t swig_types[50]
+#define SWIGTYPE_p_std__unordered_setT_std__shared_ptrT_CNTK__Learner_t_t swig_types[51]
+#define SWIGTYPE_p_std__vectorT_CNTK__Axis_std__allocatorT_CNTK__Axis_t_t swig_types[52]
+#define SWIGTYPE_p_std__vectorT_double_std__allocatorT_double_t_t swig_types[53]
+#define SWIGTYPE_p_swig__SwigPyIterator swig_types[54]
+#define SWIGTYPE_p_unsigned___int64 swig_types[55]
+#define SWIGTYPE_p_unsigned_char swig_types[56]
+#define SWIGTYPE_p_unsigned_int swig_types[57]
+#define SWIGTYPE_p_unsigned_long swig_types[58]
+#define SWIGTYPE_p_unsigned_short swig_types[59]
+#define SWIGTYPE_p_value_type swig_types[60]
+#define SWIGTYPE_p_wchar_t swig_types[61]
+static swig_type_info *swig_types[63];
+static swig_module_info swig_module = {swig_types, 62, 0, 0, 0, 0};
 #define SWIG_TypeQuery(name) SWIG_TypeQueryModule(&swig_module, &swig_module, name)
 #define SWIG_MangledTypeQuery(name) SWIG_MangledTypeQueryModule(&swig_module, &swig_module, name)
 
@@ -5182,6 +5186,97 @@ namespace swig
     using namespace CNTK;
 
 
+#include <wchar.h>
+#include <limits.h>
+#ifndef WCHAR_MIN
+#  define WCHAR_MIN 0
+#endif
+#ifndef WCHAR_MAX
+#  define WCHAR_MAX 65535
+#endif
+
+
+SWIGINTERN swig_type_info*
+SWIG_pwchar_descriptor()
+{
+  static int init = 0;
+  static swig_type_info* info = 0;
+  if (!init) {
+    info = SWIG_TypeQuery("_p_wchar_t");
+    init = 1;
+  }
+  return info;
+}
+
+
+SWIGINTERN int
+SWIG_AsWCharPtrAndSize(PyObject *obj, wchar_t **cptr, size_t *psize, int *alloc)
+{
+  PyObject *tmp = 0;
+  int isunicode = PyUnicode_Check(obj);
+#if PY_VERSION_HEX < 0x03000000 && !defined(SWIG_PYTHON_STRICT_UNICODE_WCHAR)
+  if (!isunicode && PyString_Check(obj)) {
+    obj = tmp = PyUnicode_FromObject(obj);
+    isunicode = 1;
+  }
+#endif
+  if (isunicode) {
+    Py_ssize_t len = PyUnicode_GetSize(obj);
+    if (cptr) {
+      *cptr = (new wchar_t[len + 1]);
+      PyUnicode_AsWideChar(SWIGPY_UNICODE_ARG(obj), *cptr, len);
+      (*cptr)[len] = 0;
+    }
+    if (psize) *psize = (size_t) len + 1;
+    if (alloc) *alloc = cptr ? SWIG_NEWOBJ : 0;
+    Py_XDECREF(tmp);
+    return SWIG_OK;
+  } else {
+    swig_type_info* pwchar_descriptor = SWIG_pwchar_descriptor();
+    if (pwchar_descriptor) {
+      void * vptr = 0;
+      if (SWIG_ConvertPtr(obj, &vptr, pwchar_descriptor, 0) == SWIG_OK) {
+	if (cptr) *cptr = (wchar_t *)vptr;
+	if (psize) *psize = vptr ? (wcslen((wchar_t *)vptr) + 1) : 0;
+	return SWIG_OK;
+      }
+    }
+  }
+  return SWIG_TypeError;
+}
+
+
+SWIGINTERN int
+SWIG_AsPtr_std_wstring (PyObject * obj, std::wstring **val) 
+{
+  wchar_t* buf = 0 ; size_t size = 0; int alloc = SWIG_OLDOBJ;
+  if (SWIG_IsOK((SWIG_AsWCharPtrAndSize(obj, &buf, &size, &alloc)))) {
+    if (buf) {
+      if (val) *val = new std::wstring(buf, size - 1);
+      if (alloc == SWIG_NEWOBJ) delete[] buf;
+      return SWIG_NEWOBJ;
+    } else {
+      if (val) *val = 0;
+      return SWIG_OLDOBJ;
+    }
+  } else {
+    static int init = 0;
+    static swig_type_info* descriptor = 0;
+    if (!init) {
+      descriptor = SWIG_TypeQuery("std::wstring" " *");
+      init = 1;
+    }
+    if (descriptor) {
+      std::wstring *vptr;
+      int res = SWIG_ConvertPtr(obj, (void**)&vptr, descriptor, 0);
+      if (SWIG_IsOK(res) && val) *val = vptr;
+      return res;
+    }
+  }
+  return SWIG_ERROR;
+}
+
+
 SWIGINTERN int
 SWIG_AsVal_int (PyObject * obj, int *val)
 {
@@ -5375,29 +5470,6 @@ namespace swig {
       }
     
 
-#include <wchar.h>
-#include <limits.h>
-#ifndef WCHAR_MIN
-#  define WCHAR_MIN 0
-#endif
-#ifndef WCHAR_MAX
-#  define WCHAR_MAX 65535
-#endif
-
-
-SWIGINTERN swig_type_info*
-SWIG_pwchar_descriptor()
-{
-  static int init = 0;
-  static swig_type_info* info = 0;
-  if (!init) {
-    info = SWIG_TypeQuery("_p_wchar_t");
-    init = 1;
-  }
-  return info;
-}
-
-
 SWIGINTERNINLINE PyObject *
 SWIG_FromWCharPtrAndSize(const wchar_t * carray, size_t size)
 {
@@ -5429,10 +5501,10 @@ SWIGINTERN PyObject *CNTK_NDShape_dimensions(CNTK::NDShape *self){
         size_t num_axes = (*self).NumAxes();
         PyObject* result = PyTuple_New(num_axes);
         // CNTK uses column major, thus we reverse the shape
-        for (int i=num_axes-1; i>=0; i--)
+        for (int i=0; i<num_axes; i++)
         {
             size_t dim = dims[i];
-            PyTuple_SET_ITEM(result, i, PyInt_FromLong(dim));
+            PyTuple_SET_ITEM(result, num_axes-1-i, PyInt_FromLong(dim));                       
         }
         return result;
     }
@@ -5556,7 +5628,15 @@ SWIGINTERN CNTK::NDArrayView *new_CNTK_NDArrayView__SWIG_17(PyObject *pyobj,CNTK
     }
 SWIGINTERN PyObject *CNTK_NDArrayView_to_numpy(CNTK::NDArrayView *self){
         // FIXME use not yet existing NDShape function that returns the dimensions at once
-        std::vector<size_t> dimensions = (*self).Shape().Dimensions();
+        std::vector<size_t> dimensions_cntk = (*self).Shape().Dimensions();
+        std::vector<size_t> dimensions;
+
+        // CNTK uses column major, thus we reverse the shape
+        for (int i=dimensions_cntk.size()-1; i>=0; i--)
+        {
+            dimensions.push_back(dimensions_cntk[i]);            
+        }
+
         npy_intp* shape = reinterpret_cast<npy_intp*>(&dimensions[0]);
 
         NPY_TYPES numpy_type;
@@ -5645,74 +5725,6 @@ SWIGINTERN PyObject *CNTK_NDMask_to_numpy(CNTK::NDMask *self){
         return ndarray;
     }
 
-SWIGINTERN int
-SWIG_AsWCharPtrAndSize(PyObject *obj, wchar_t **cptr, size_t *psize, int *alloc)
-{
-  PyObject *tmp = 0;
-  int isunicode = PyUnicode_Check(obj);
-#if PY_VERSION_HEX < 0x03000000 && !defined(SWIG_PYTHON_STRICT_UNICODE_WCHAR)
-  if (!isunicode && PyString_Check(obj)) {
-    obj = tmp = PyUnicode_FromObject(obj);
-    isunicode = 1;
-  }
-#endif
-  if (isunicode) {
-    Py_ssize_t len = PyUnicode_GetSize(obj);
-    if (cptr) {
-      *cptr = (new wchar_t[len + 1]);
-      PyUnicode_AsWideChar(SWIGPY_UNICODE_ARG(obj), *cptr, len);
-      (*cptr)[len] = 0;
-    }
-    if (psize) *psize = (size_t) len + 1;
-    if (alloc) *alloc = cptr ? SWIG_NEWOBJ : 0;
-    Py_XDECREF(tmp);
-    return SWIG_OK;
-  } else {
-    swig_type_info* pwchar_descriptor = SWIG_pwchar_descriptor();
-    if (pwchar_descriptor) {
-      void * vptr = 0;
-      if (SWIG_ConvertPtr(obj, &vptr, pwchar_descriptor, 0) == SWIG_OK) {
-	if (cptr) *cptr = (wchar_t *)vptr;
-	if (psize) *psize = vptr ? (wcslen((wchar_t *)vptr) + 1) : 0;
-	return SWIG_OK;
-      }
-    }
-  }
-  return SWIG_TypeError;
-}
-
-
-SWIGINTERN int
-SWIG_AsPtr_std_wstring (PyObject * obj, std::wstring **val) 
-{
-  wchar_t* buf = 0 ; size_t size = 0; int alloc = SWIG_OLDOBJ;
-  if (SWIG_IsOK((SWIG_AsWCharPtrAndSize(obj, &buf, &size, &alloc)))) {
-    if (buf) {
-      if (val) *val = new std::wstring(buf, size - 1);
-      if (alloc == SWIG_NEWOBJ) delete[] buf;
-      return SWIG_NEWOBJ;
-    } else {
-      if (val) *val = 0;
-      return SWIG_OLDOBJ;
-    }
-  } else {
-    static int init = 0;
-    static swig_type_info* descriptor = 0;
-    if (!init) {
-      descriptor = SWIG_TypeQuery("std::wstring" " *");
-      init = 1;
-    }
-    if (descriptor) {
-      std::wstring *vptr;
-      int res = SWIG_ConvertPtr(obj, (void**)&vptr, descriptor, 0);
-      if (SWIG_IsOK(res) && val) *val = vptr;
-      return res;
-    }
-  }
-  return SWIG_ERROR;
-}
-
-
 
 
 SWIGINTERN size_t const CNTK_Variable___hash__(CNTK::Variable *self){
@@ -5741,6 +5753,36 @@ SWIGINTERN size_t const CNTK_Placeholder___hash__(CNTK::Placeholder *self){
 	  typedef pointer_category category;
 	  static const char* type_name() {
 	    return "std::vector<" "CNTK::Variable" "," "std::allocator< CNTK::Variable >" " >";
+	  }
+	};
+      }
+    
+
+  namespace swig {
+  template <> struct traits< bool > {
+    typedef value_category category;
+    static const char* type_name() { return"bool"; }
+  };
+  template <>  struct traits_asval< bool > {
+    typedef bool value_type;
+    static int asval(PyObject *obj, value_type *val) {
+      return SWIG_AsVal_bool (obj, val);
+    }
+  };
+  template <>  struct traits_from< bool > {
+    typedef bool value_type;
+    static PyObject *from(const value_type& val) {
+      return SWIG_From_bool  (val);
+    }
+  };
+}
+
+
+      namespace swig {
+	template <>  struct traits<std::vector<bool, std::allocator< bool > > > {
+	  typedef value_category category;
+	  static const char* type_name() {
+	    return "std::vector<bool, std::allocator< bool > >";
 	  }
 	};
       }
@@ -6709,6 +6751,1180 @@ SWIGINTERN PyObject *SwigPyIterator_swigregister(PyObject *SWIGUNUSEDPARM(self),
   SWIG_TypeNewClientData(SWIGTYPE_p_swig__SwigPyIterator, SWIG_NewClientData(obj));
   return SWIG_Py_Void();
 }
+
+SWIGINTERN PyObject *_wrap_packed_index__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  CNTK::Variable *arg1 = 0 ;
+  CNTK::Variable *arg2 = 0 ;
+  std::wstring *arg3 = 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  int res3 = SWIG_OLDOBJ ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  PyObject * obj2 = 0 ;
+  CNTK::FunctionPtr result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OOO:packed_index",&obj0,&obj1,&obj2)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "packed_index" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+  }
+  if (!argp1) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "packed_index" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+  }
+  arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
+  res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_CNTK__Variable,  0  | 0);
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "packed_index" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+  }
+  if (!argp2) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "packed_index" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+  }
+  arg2 = reinterpret_cast< CNTK::Variable * >(argp2);
+  {
+    std::wstring *ptr = (std::wstring *)0;
+    res3 = SWIG_AsPtr_std_wstring(obj2, &ptr);
+    if (!SWIG_IsOK(res3)) {
+      SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "packed_index" "', argument " "3"" of type '" "std::wstring const &""'"); 
+    }
+    if (!ptr) {
+      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "packed_index" "', argument " "3"" of type '" "std::wstring const &""'"); 
+    }
+    arg3 = ptr;
+  }
+  {
+    try {
+      result = CNTK::Internal::PackedIndex((CNTK::Variable const &)*arg1,(CNTK::Variable const &)*arg2,(std::wstring const &)*arg3); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  {
+    std::shared_ptr<  CNTK::Function > *smartresult = result ? new std::shared_ptr<  CNTK::Function >(result) : 0;
+    resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(smartresult), SWIGTYPE_p_std__shared_ptrT_CNTK__Function_t, SWIG_POINTER_OWN);
+  }
+  if (SWIG_IsNewObj(res3)) delete arg3;
+  return resultobj;
+fail:
+  if (SWIG_IsNewObj(res3)) delete arg3;
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_packed_index__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  CNTK::Variable *arg1 = 0 ;
+  CNTK::Variable *arg2 = 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  CNTK::FunctionPtr result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:packed_index",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "packed_index" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+  }
+  if (!argp1) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "packed_index" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+  }
+  arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
+  res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_CNTK__Variable,  0  | 0);
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "packed_index" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+  }
+  if (!argp2) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "packed_index" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+  }
+  arg2 = reinterpret_cast< CNTK::Variable * >(argp2);
+  {
+    try {
+      result = CNTK::Internal::PackedIndex((CNTK::Variable const &)*arg1,(CNTK::Variable const &)*arg2); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  {
+    std::shared_ptr<  CNTK::Function > *smartresult = result ? new std::shared_ptr<  CNTK::Function >(result) : 0;
+    resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(smartresult), SWIGTYPE_p_std__shared_ptrT_CNTK__Function_t, SWIG_POINTER_OWN);
+  }
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_packed_index(PyObject *self, PyObject *args) {
+  Py_ssize_t argc;
+  PyObject *argv[4] = {
+    0
+  };
+  Py_ssize_t ii;
+  
+  if (!PyTuple_Check(args)) SWIG_fail;
+  argc = args ? PyObject_Length(args) : 0;
+  for (ii = 0; (ii < 3) && (ii < argc); ii++) {
+    argv[ii] = PyTuple_GET_ITEM(args,ii);
+  }
+  if (argc == 2) {
+    int _v;
+    int res = SWIG_ConvertPtr(argv[0], 0, SWIGTYPE_p_CNTK__Variable, 0);
+    _v = SWIG_CheckState(res);
+    if (_v) {
+      int res = SWIG_ConvertPtr(argv[1], 0, SWIGTYPE_p_CNTK__Variable, 0);
+      _v = SWIG_CheckState(res);
+      if (_v) {
+        return _wrap_packed_index__SWIG_1(self, args);
+      }
+    }
+  }
+  if (argc == 3) {
+    int _v;
+    int res = SWIG_ConvertPtr(argv[0], 0, SWIGTYPE_p_CNTK__Variable, 0);
+    _v = SWIG_CheckState(res);
+    if (_v) {
+      int res = SWIG_ConvertPtr(argv[1], 0, SWIGTYPE_p_CNTK__Variable, 0);
+      _v = SWIG_CheckState(res);
+      if (_v) {
+        int res = SWIG_AsPtr_std_wstring(argv[2], (std::wstring**)(0));
+        _v = SWIG_CheckState(res);
+        if (_v) {
+          return _wrap_packed_index__SWIG_0(self, args);
+        }
+      }
+    }
+  }
+  
+fail:
+  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'packed_index'.\n"
+    "  Possible C/C++ prototypes are:\n"
+    "    CNTK::Internal::PackedIndex(CNTK::Variable const &,CNTK::Variable const &,std::wstring const &)\n"
+    "    CNTK::Internal::PackedIndex(CNTK::Variable const &,CNTK::Variable const &)\n");
+  return 0;
+}
+
+
+SWIGINTERN PyObject *_wrap_gather_packed__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  CNTK::Variable *arg1 = 0 ;
+  CNTK::Variable *arg2 = 0 ;
+  std::wstring *arg3 = 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  int res3 = SWIG_OLDOBJ ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  PyObject * obj2 = 0 ;
+  CNTK::FunctionPtr result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OOO:gather_packed",&obj0,&obj1,&obj2)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "gather_packed" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+  }
+  if (!argp1) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "gather_packed" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+  }
+  arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
+  res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_CNTK__Variable,  0  | 0);
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "gather_packed" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+  }
+  if (!argp2) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "gather_packed" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+  }
+  arg2 = reinterpret_cast< CNTK::Variable * >(argp2);
+  {
+    std::wstring *ptr = (std::wstring *)0;
+    res3 = SWIG_AsPtr_std_wstring(obj2, &ptr);
+    if (!SWIG_IsOK(res3)) {
+      SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "gather_packed" "', argument " "3"" of type '" "std::wstring const &""'"); 
+    }
+    if (!ptr) {
+      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "gather_packed" "', argument " "3"" of type '" "std::wstring const &""'"); 
+    }
+    arg3 = ptr;
+  }
+  {
+    try {
+      result = CNTK::Internal::GatherPacked((CNTK::Variable const &)*arg1,(CNTK::Variable const &)*arg2,(std::wstring const &)*arg3); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  {
+    std::shared_ptr<  CNTK::Function > *smartresult = result ? new std::shared_ptr<  CNTK::Function >(result) : 0;
+    resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(smartresult), SWIGTYPE_p_std__shared_ptrT_CNTK__Function_t, SWIG_POINTER_OWN);
+  }
+  if (SWIG_IsNewObj(res3)) delete arg3;
+  return resultobj;
+fail:
+  if (SWIG_IsNewObj(res3)) delete arg3;
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_gather_packed__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  CNTK::Variable *arg1 = 0 ;
+  CNTK::Variable *arg2 = 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  CNTK::FunctionPtr result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:gather_packed",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "gather_packed" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+  }
+  if (!argp1) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "gather_packed" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+  }
+  arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
+  res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_CNTK__Variable,  0  | 0);
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "gather_packed" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+  }
+  if (!argp2) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "gather_packed" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+  }
+  arg2 = reinterpret_cast< CNTK::Variable * >(argp2);
+  {
+    try {
+      result = CNTK::Internal::GatherPacked((CNTK::Variable const &)*arg1,(CNTK::Variable const &)*arg2); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  {
+    std::shared_ptr<  CNTK::Function > *smartresult = result ? new std::shared_ptr<  CNTK::Function >(result) : 0;
+    resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(smartresult), SWIGTYPE_p_std__shared_ptrT_CNTK__Function_t, SWIG_POINTER_OWN);
+  }
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_gather_packed(PyObject *self, PyObject *args) {
+  Py_ssize_t argc;
+  PyObject *argv[4] = {
+    0
+  };
+  Py_ssize_t ii;
+  
+  if (!PyTuple_Check(args)) SWIG_fail;
+  argc = args ? PyObject_Length(args) : 0;
+  for (ii = 0; (ii < 3) && (ii < argc); ii++) {
+    argv[ii] = PyTuple_GET_ITEM(args,ii);
+  }
+  if (argc == 2) {
+    int _v;
+    int res = SWIG_ConvertPtr(argv[0], 0, SWIGTYPE_p_CNTK__Variable, 0);
+    _v = SWIG_CheckState(res);
+    if (_v) {
+      int res = SWIG_ConvertPtr(argv[1], 0, SWIGTYPE_p_CNTK__Variable, 0);
+      _v = SWIG_CheckState(res);
+      if (_v) {
+        return _wrap_gather_packed__SWIG_1(self, args);
+      }
+    }
+  }
+  if (argc == 3) {
+    int _v;
+    int res = SWIG_ConvertPtr(argv[0], 0, SWIGTYPE_p_CNTK__Variable, 0);
+    _v = SWIG_CheckState(res);
+    if (_v) {
+      int res = SWIG_ConvertPtr(argv[1], 0, SWIGTYPE_p_CNTK__Variable, 0);
+      _v = SWIG_CheckState(res);
+      if (_v) {
+        int res = SWIG_AsPtr_std_wstring(argv[2], (std::wstring**)(0));
+        _v = SWIG_CheckState(res);
+        if (_v) {
+          return _wrap_gather_packed__SWIG_0(self, args);
+        }
+      }
+    }
+  }
+  
+fail:
+  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'gather_packed'.\n"
+    "  Possible C/C++ prototypes are:\n"
+    "    CNTK::Internal::GatherPacked(CNTK::Variable const &,CNTK::Variable const &,std::wstring const &)\n"
+    "    CNTK::Internal::GatherPacked(CNTK::Variable const &,CNTK::Variable const &)\n");
+  return 0;
+}
+
+
+SWIGINTERN PyObject *_wrap_is_within__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  CNTK::Variable *arg1 = 0 ;
+  int arg2 ;
+  std::wstring *arg3 = 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int val2 ;
+  int ecode2 = 0 ;
+  int res3 = SWIG_OLDOBJ ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  PyObject * obj2 = 0 ;
+  CNTK::FunctionPtr result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OOO:is_within",&obj0,&obj1,&obj2)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "is_within" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+  }
+  if (!argp1) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "is_within" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+  }
+  arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
+  ecode2 = SWIG_AsVal_int(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "is_within" "', argument " "2"" of type '" "int""'");
+  } 
+  arg2 = static_cast< int >(val2);
+  {
+    std::wstring *ptr = (std::wstring *)0;
+    res3 = SWIG_AsPtr_std_wstring(obj2, &ptr);
+    if (!SWIG_IsOK(res3)) {
+      SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "is_within" "', argument " "3"" of type '" "std::wstring const &""'"); 
+    }
+    if (!ptr) {
+      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "is_within" "', argument " "3"" of type '" "std::wstring const &""'"); 
+    }
+    arg3 = ptr;
+  }
+  {
+    try {
+      result = CNTK::Internal::IsWithin((CNTK::Variable const &)*arg1,arg2,(std::wstring const &)*arg3); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  {
+    std::shared_ptr<  CNTK::Function > *smartresult = result ? new std::shared_ptr<  CNTK::Function >(result) : 0;
+    resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(smartresult), SWIGTYPE_p_std__shared_ptrT_CNTK__Function_t, SWIG_POINTER_OWN);
+  }
+  if (SWIG_IsNewObj(res3)) delete arg3;
+  return resultobj;
+fail:
+  if (SWIG_IsNewObj(res3)) delete arg3;
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_is_within__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  CNTK::Variable *arg1 = 0 ;
+  int arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  CNTK::FunctionPtr result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:is_within",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "is_within" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+  }
+  if (!argp1) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "is_within" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+  }
+  arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
+  ecode2 = SWIG_AsVal_int(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "is_within" "', argument " "2"" of type '" "int""'");
+  } 
+  arg2 = static_cast< int >(val2);
+  {
+    try {
+      result = CNTK::Internal::IsWithin((CNTK::Variable const &)*arg1,arg2); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  {
+    std::shared_ptr<  CNTK::Function > *smartresult = result ? new std::shared_ptr<  CNTK::Function >(result) : 0;
+    resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(smartresult), SWIGTYPE_p_std__shared_ptrT_CNTK__Function_t, SWIG_POINTER_OWN);
+  }
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_is_within(PyObject *self, PyObject *args) {
+  Py_ssize_t argc;
+  PyObject *argv[4] = {
+    0
+  };
+  Py_ssize_t ii;
+  
+  if (!PyTuple_Check(args)) SWIG_fail;
+  argc = args ? PyObject_Length(args) : 0;
+  for (ii = 0; (ii < 3) && (ii < argc); ii++) {
+    argv[ii] = PyTuple_GET_ITEM(args,ii);
+  }
+  if (argc == 2) {
+    int _v;
+    int res = SWIG_ConvertPtr(argv[0], 0, SWIGTYPE_p_CNTK__Variable, 0);
+    _v = SWIG_CheckState(res);
+    if (_v) {
+      {
+        int res = SWIG_AsVal_int(argv[1], NULL);
+        _v = SWIG_CheckState(res);
+      }
+      if (_v) {
+        return _wrap_is_within__SWIG_1(self, args);
+      }
+    }
+  }
+  if (argc == 3) {
+    int _v;
+    int res = SWIG_ConvertPtr(argv[0], 0, SWIGTYPE_p_CNTK__Variable, 0);
+    _v = SWIG_CheckState(res);
+    if (_v) {
+      {
+        int res = SWIG_AsVal_int(argv[1], NULL);
+        _v = SWIG_CheckState(res);
+      }
+      if (_v) {
+        int res = SWIG_AsPtr_std_wstring(argv[2], (std::wstring**)(0));
+        _v = SWIG_CheckState(res);
+        if (_v) {
+          return _wrap_is_within__SWIG_0(self, args);
+        }
+      }
+    }
+  }
+  
+fail:
+  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'is_within'.\n"
+    "  Possible C/C++ prototypes are:\n"
+    "    CNTK::Internal::IsWithin(CNTK::Variable const &,int,std::wstring const &)\n"
+    "    CNTK::Internal::IsWithin(CNTK::Variable const &,int)\n");
+  return 0;
+}
+
+
+SWIGINTERN PyObject *_wrap_where__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  CNTK::Variable *arg1 = 0 ;
+  std::vector< CNTK::Axis,std::allocator< CNTK::Axis > > *arg2 = 0 ;
+  std::wstring *arg3 = 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  int res3 = SWIG_OLDOBJ ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  PyObject * obj2 = 0 ;
+  CNTK::FunctionPtr result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OOO:where",&obj0,&obj1,&obj2)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "where" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+  }
+  if (!argp1) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "where" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+  }
+  arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
+  res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_std__vectorT_CNTK__Axis_std__allocatorT_CNTK__Axis_t_t,  0  | 0);
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "where" "', argument " "2"" of type '" "std::vector< CNTK::Axis,std::allocator< CNTK::Axis > > const &""'"); 
+  }
+  if (!argp2) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "where" "', argument " "2"" of type '" "std::vector< CNTK::Axis,std::allocator< CNTK::Axis > > const &""'"); 
+  }
+  arg2 = reinterpret_cast< std::vector< CNTK::Axis,std::allocator< CNTK::Axis > > * >(argp2);
+  {
+    std::wstring *ptr = (std::wstring *)0;
+    res3 = SWIG_AsPtr_std_wstring(obj2, &ptr);
+    if (!SWIG_IsOK(res3)) {
+      SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "where" "', argument " "3"" of type '" "std::wstring const &""'"); 
+    }
+    if (!ptr) {
+      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "where" "', argument " "3"" of type '" "std::wstring const &""'"); 
+    }
+    arg3 = ptr;
+  }
+  {
+    try {
+      result = CNTK::Internal::Where((CNTK::Variable const &)*arg1,(std::vector< CNTK::Axis,std::allocator< CNTK::Axis > > const &)*arg2,(std::wstring const &)*arg3); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  {
+    std::shared_ptr<  CNTK::Function > *smartresult = result ? new std::shared_ptr<  CNTK::Function >(result) : 0;
+    resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(smartresult), SWIGTYPE_p_std__shared_ptrT_CNTK__Function_t, SWIG_POINTER_OWN);
+  }
+  if (SWIG_IsNewObj(res3)) delete arg3;
+  return resultobj;
+fail:
+  if (SWIG_IsNewObj(res3)) delete arg3;
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_where__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  CNTK::Variable *arg1 = 0 ;
+  std::vector< CNTK::Axis,std::allocator< CNTK::Axis > > *arg2 = 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  CNTK::FunctionPtr result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:where",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "where" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+  }
+  if (!argp1) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "where" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+  }
+  arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
+  res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_std__vectorT_CNTK__Axis_std__allocatorT_CNTK__Axis_t_t,  0  | 0);
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "where" "', argument " "2"" of type '" "std::vector< CNTK::Axis,std::allocator< CNTK::Axis > > const &""'"); 
+  }
+  if (!argp2) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "where" "', argument " "2"" of type '" "std::vector< CNTK::Axis,std::allocator< CNTK::Axis > > const &""'"); 
+  }
+  arg2 = reinterpret_cast< std::vector< CNTK::Axis,std::allocator< CNTK::Axis > > * >(argp2);
+  {
+    try {
+      result = CNTK::Internal::Where((CNTK::Variable const &)*arg1,(std::vector< CNTK::Axis,std::allocator< CNTK::Axis > > const &)*arg2); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  {
+    std::shared_ptr<  CNTK::Function > *smartresult = result ? new std::shared_ptr<  CNTK::Function >(result) : 0;
+    resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(smartresult), SWIGTYPE_p_std__shared_ptrT_CNTK__Function_t, SWIG_POINTER_OWN);
+  }
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_where(PyObject *self, PyObject *args) {
+  Py_ssize_t argc;
+  PyObject *argv[4] = {
+    0
+  };
+  Py_ssize_t ii;
+  
+  if (!PyTuple_Check(args)) SWIG_fail;
+  argc = args ? PyObject_Length(args) : 0;
+  for (ii = 0; (ii < 3) && (ii < argc); ii++) {
+    argv[ii] = PyTuple_GET_ITEM(args,ii);
+  }
+  if (argc == 2) {
+    int _v;
+    int res = SWIG_ConvertPtr(argv[0], 0, SWIGTYPE_p_CNTK__Variable, 0);
+    _v = SWIG_CheckState(res);
+    if (_v) {
+      int res = SWIG_ConvertPtr(argv[1], 0, SWIGTYPE_p_std__vectorT_CNTK__Axis_std__allocatorT_CNTK__Axis_t_t, 0);
+      _v = SWIG_CheckState(res);
+      if (_v) {
+        return _wrap_where__SWIG_1(self, args);
+      }
+    }
+  }
+  if (argc == 3) {
+    int _v;
+    int res = SWIG_ConvertPtr(argv[0], 0, SWIGTYPE_p_CNTK__Variable, 0);
+    _v = SWIG_CheckState(res);
+    if (_v) {
+      int res = SWIG_ConvertPtr(argv[1], 0, SWIGTYPE_p_std__vectorT_CNTK__Axis_std__allocatorT_CNTK__Axis_t_t, 0);
+      _v = SWIG_CheckState(res);
+      if (_v) {
+        int res = SWIG_AsPtr_std_wstring(argv[2], (std::wstring**)(0));
+        _v = SWIG_CheckState(res);
+        if (_v) {
+          return _wrap_where__SWIG_0(self, args);
+        }
+      }
+    }
+  }
+  
+fail:
+  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'where'.\n"
+    "  Possible C/C++ prototypes are:\n"
+    "    CNTK::Internal::Where(CNTK::Variable const &,std::vector< CNTK::Axis,std::allocator< CNTK::Axis > > const &,std::wstring const &)\n"
+    "    CNTK::Internal::Where(CNTK::Variable const &,std::vector< CNTK::Axis,std::allocator< CNTK::Axis > > const &)\n");
+  return 0;
+}
+
+
+SWIGINTERN PyObject *_wrap_gather__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  CNTK::Variable *arg1 = 0 ;
+  CNTK::Variable *arg2 = 0 ;
+  std::vector< CNTK::Axis,std::allocator< CNTK::Axis > > *arg3 = 0 ;
+  std::wstring *arg4 = 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  void *argp3 = 0 ;
+  int res3 = 0 ;
+  int res4 = SWIG_OLDOBJ ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  PyObject * obj2 = 0 ;
+  PyObject * obj3 = 0 ;
+  CNTK::FunctionPtr result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OOOO:gather",&obj0,&obj1,&obj2,&obj3)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "gather" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+  }
+  if (!argp1) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "gather" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+  }
+  arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
+  res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_CNTK__Variable,  0  | 0);
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "gather" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+  }
+  if (!argp2) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "gather" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+  }
+  arg2 = reinterpret_cast< CNTK::Variable * >(argp2);
+  res3 = SWIG_ConvertPtr(obj2, &argp3, SWIGTYPE_p_std__vectorT_CNTK__Axis_std__allocatorT_CNTK__Axis_t_t,  0  | 0);
+  if (!SWIG_IsOK(res3)) {
+    SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "gather" "', argument " "3"" of type '" "std::vector< CNTK::Axis,std::allocator< CNTK::Axis > > const &""'"); 
+  }
+  if (!argp3) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "gather" "', argument " "3"" of type '" "std::vector< CNTK::Axis,std::allocator< CNTK::Axis > > const &""'"); 
+  }
+  arg3 = reinterpret_cast< std::vector< CNTK::Axis,std::allocator< CNTK::Axis > > * >(argp3);
+  {
+    std::wstring *ptr = (std::wstring *)0;
+    res4 = SWIG_AsPtr_std_wstring(obj3, &ptr);
+    if (!SWIG_IsOK(res4)) {
+      SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "gather" "', argument " "4"" of type '" "std::wstring const &""'"); 
+    }
+    if (!ptr) {
+      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "gather" "', argument " "4"" of type '" "std::wstring const &""'"); 
+    }
+    arg4 = ptr;
+  }
+  {
+    try {
+      result = CNTK::Internal::Gather((CNTK::Variable const &)*arg1,(CNTK::Variable const &)*arg2,(std::vector< CNTK::Axis,std::allocator< CNTK::Axis > > const &)*arg3,(std::wstring const &)*arg4); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  {
+    std::shared_ptr<  CNTK::Function > *smartresult = result ? new std::shared_ptr<  CNTK::Function >(result) : 0;
+    resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(smartresult), SWIGTYPE_p_std__shared_ptrT_CNTK__Function_t, SWIG_POINTER_OWN);
+  }
+  if (SWIG_IsNewObj(res4)) delete arg4;
+  return resultobj;
+fail:
+  if (SWIG_IsNewObj(res4)) delete arg4;
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_gather__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  CNTK::Variable *arg1 = 0 ;
+  CNTK::Variable *arg2 = 0 ;
+  std::vector< CNTK::Axis,std::allocator< CNTK::Axis > > *arg3 = 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  void *argp3 = 0 ;
+  int res3 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  PyObject * obj2 = 0 ;
+  CNTK::FunctionPtr result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OOO:gather",&obj0,&obj1,&obj2)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "gather" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+  }
+  if (!argp1) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "gather" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+  }
+  arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
+  res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_CNTK__Variable,  0  | 0);
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "gather" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+  }
+  if (!argp2) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "gather" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+  }
+  arg2 = reinterpret_cast< CNTK::Variable * >(argp2);
+  res3 = SWIG_ConvertPtr(obj2, &argp3, SWIGTYPE_p_std__vectorT_CNTK__Axis_std__allocatorT_CNTK__Axis_t_t,  0  | 0);
+  if (!SWIG_IsOK(res3)) {
+    SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "gather" "', argument " "3"" of type '" "std::vector< CNTK::Axis,std::allocator< CNTK::Axis > > const &""'"); 
+  }
+  if (!argp3) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "gather" "', argument " "3"" of type '" "std::vector< CNTK::Axis,std::allocator< CNTK::Axis > > const &""'"); 
+  }
+  arg3 = reinterpret_cast< std::vector< CNTK::Axis,std::allocator< CNTK::Axis > > * >(argp3);
+  {
+    try {
+      result = CNTK::Internal::Gather((CNTK::Variable const &)*arg1,(CNTK::Variable const &)*arg2,(std::vector< CNTK::Axis,std::allocator< CNTK::Axis > > const &)*arg3); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  {
+    std::shared_ptr<  CNTK::Function > *smartresult = result ? new std::shared_ptr<  CNTK::Function >(result) : 0;
+    resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(smartresult), SWIGTYPE_p_std__shared_ptrT_CNTK__Function_t, SWIG_POINTER_OWN);
+  }
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_gather(PyObject *self, PyObject *args) {
+  Py_ssize_t argc;
+  PyObject *argv[5] = {
+    0
+  };
+  Py_ssize_t ii;
+  
+  if (!PyTuple_Check(args)) SWIG_fail;
+  argc = args ? PyObject_Length(args) : 0;
+  for (ii = 0; (ii < 4) && (ii < argc); ii++) {
+    argv[ii] = PyTuple_GET_ITEM(args,ii);
+  }
+  if (argc == 3) {
+    int _v;
+    int res = SWIG_ConvertPtr(argv[0], 0, SWIGTYPE_p_CNTK__Variable, 0);
+    _v = SWIG_CheckState(res);
+    if (_v) {
+      int res = SWIG_ConvertPtr(argv[1], 0, SWIGTYPE_p_CNTK__Variable, 0);
+      _v = SWIG_CheckState(res);
+      if (_v) {
+        int res = SWIG_ConvertPtr(argv[2], 0, SWIGTYPE_p_std__vectorT_CNTK__Axis_std__allocatorT_CNTK__Axis_t_t, 0);
+        _v = SWIG_CheckState(res);
+        if (_v) {
+          return _wrap_gather__SWIG_1(self, args);
+        }
+      }
+    }
+  }
+  if (argc == 4) {
+    int _v;
+    int res = SWIG_ConvertPtr(argv[0], 0, SWIGTYPE_p_CNTK__Variable, 0);
+    _v = SWIG_CheckState(res);
+    if (_v) {
+      int res = SWIG_ConvertPtr(argv[1], 0, SWIGTYPE_p_CNTK__Variable, 0);
+      _v = SWIG_CheckState(res);
+      if (_v) {
+        int res = SWIG_ConvertPtr(argv[2], 0, SWIGTYPE_p_std__vectorT_CNTK__Axis_std__allocatorT_CNTK__Axis_t_t, 0);
+        _v = SWIG_CheckState(res);
+        if (_v) {
+          int res = SWIG_AsPtr_std_wstring(argv[3], (std::wstring**)(0));
+          _v = SWIG_CheckState(res);
+          if (_v) {
+            return _wrap_gather__SWIG_0(self, args);
+          }
+        }
+      }
+    }
+  }
+  
+fail:
+  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'gather'.\n"
+    "  Possible C/C++ prototypes are:\n"
+    "    CNTK::Internal::Gather(CNTK::Variable const &,CNTK::Variable const &,std::vector< CNTK::Axis,std::allocator< CNTK::Axis > > const &,std::wstring const &)\n"
+    "    CNTK::Internal::Gather(CNTK::Variable const &,CNTK::Variable const &,std::vector< CNTK::Axis,std::allocator< CNTK::Axis > > const &)\n");
+  return 0;
+}
+
+
+SWIGINTERN PyObject *_wrap_reduce_elements__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  CNTK::Variable *arg1 = 0 ;
+  std::wstring *arg2 = 0 ;
+  CNTK::Axis *arg3 = 0 ;
+  std::wstring *arg4 = 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int res2 = SWIG_OLDOBJ ;
+  void *argp3 = 0 ;
+  int res3 = 0 ;
+  int res4 = SWIG_OLDOBJ ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  PyObject * obj2 = 0 ;
+  PyObject * obj3 = 0 ;
+  CNTK::FunctionPtr result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OOOO:reduce_elements",&obj0,&obj1,&obj2,&obj3)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "reduce_elements" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+  }
+  if (!argp1) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "reduce_elements" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+  }
+  arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
+  {
+    std::wstring *ptr = (std::wstring *)0;
+    res2 = SWIG_AsPtr_std_wstring(obj1, &ptr);
+    if (!SWIG_IsOK(res2)) {
+      SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "reduce_elements" "', argument " "2"" of type '" "std::wstring const &""'"); 
+    }
+    if (!ptr) {
+      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "reduce_elements" "', argument " "2"" of type '" "std::wstring const &""'"); 
+    }
+    arg2 = ptr;
+  }
+  res3 = SWIG_ConvertPtr(obj2, &argp3, SWIGTYPE_p_CNTK__Axis,  0  | 0);
+  if (!SWIG_IsOK(res3)) {
+    SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "reduce_elements" "', argument " "3"" of type '" "CNTK::Axis const &""'"); 
+  }
+  if (!argp3) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "reduce_elements" "', argument " "3"" of type '" "CNTK::Axis const &""'"); 
+  }
+  arg3 = reinterpret_cast< CNTK::Axis * >(argp3);
+  {
+    std::wstring *ptr = (std::wstring *)0;
+    res4 = SWIG_AsPtr_std_wstring(obj3, &ptr);
+    if (!SWIG_IsOK(res4)) {
+      SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "reduce_elements" "', argument " "4"" of type '" "std::wstring const &""'"); 
+    }
+    if (!ptr) {
+      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "reduce_elements" "', argument " "4"" of type '" "std::wstring const &""'"); 
+    }
+    arg4 = ptr;
+  }
+  {
+    try {
+      result = CNTK::Internal::ReduceElements((CNTK::Variable const &)*arg1,(std::wstring const &)*arg2,(CNTK::Axis const &)*arg3,(std::wstring const &)*arg4); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  {
+    std::shared_ptr<  CNTK::Function > *smartresult = result ? new std::shared_ptr<  CNTK::Function >(result) : 0;
+    resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(smartresult), SWIGTYPE_p_std__shared_ptrT_CNTK__Function_t, SWIG_POINTER_OWN);
+  }
+  if (SWIG_IsNewObj(res2)) delete arg2;
+  if (SWIG_IsNewObj(res4)) delete arg4;
+  return resultobj;
+fail:
+  if (SWIG_IsNewObj(res2)) delete arg2;
+  if (SWIG_IsNewObj(res4)) delete arg4;
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_reduce_elements__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  CNTK::Variable *arg1 = 0 ;
+  std::wstring *arg2 = 0 ;
+  CNTK::Axis *arg3 = 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int res2 = SWIG_OLDOBJ ;
+  void *argp3 = 0 ;
+  int res3 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  PyObject * obj2 = 0 ;
+  CNTK::FunctionPtr result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OOO:reduce_elements",&obj0,&obj1,&obj2)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "reduce_elements" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+  }
+  if (!argp1) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "reduce_elements" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+  }
+  arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
+  {
+    std::wstring *ptr = (std::wstring *)0;
+    res2 = SWIG_AsPtr_std_wstring(obj1, &ptr);
+    if (!SWIG_IsOK(res2)) {
+      SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "reduce_elements" "', argument " "2"" of type '" "std::wstring const &""'"); 
+    }
+    if (!ptr) {
+      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "reduce_elements" "', argument " "2"" of type '" "std::wstring const &""'"); 
+    }
+    arg2 = ptr;
+  }
+  res3 = SWIG_ConvertPtr(obj2, &argp3, SWIGTYPE_p_CNTK__Axis,  0  | 0);
+  if (!SWIG_IsOK(res3)) {
+    SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "reduce_elements" "', argument " "3"" of type '" "CNTK::Axis const &""'"); 
+  }
+  if (!argp3) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "reduce_elements" "', argument " "3"" of type '" "CNTK::Axis const &""'"); 
+  }
+  arg3 = reinterpret_cast< CNTK::Axis * >(argp3);
+  {
+    try {
+      result = CNTK::Internal::ReduceElements((CNTK::Variable const &)*arg1,(std::wstring const &)*arg2,(CNTK::Axis const &)*arg3); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  {
+    std::shared_ptr<  CNTK::Function > *smartresult = result ? new std::shared_ptr<  CNTK::Function >(result) : 0;
+    resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(smartresult), SWIGTYPE_p_std__shared_ptrT_CNTK__Function_t, SWIG_POINTER_OWN);
+  }
+  if (SWIG_IsNewObj(res2)) delete arg2;
+  return resultobj;
+fail:
+  if (SWIG_IsNewObj(res2)) delete arg2;
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_reduce_elements(PyObject *self, PyObject *args) {
+  Py_ssize_t argc;
+  PyObject *argv[5] = {
+    0
+  };
+  Py_ssize_t ii;
+  
+  if (!PyTuple_Check(args)) SWIG_fail;
+  argc = args ? PyObject_Length(args) : 0;
+  for (ii = 0; (ii < 4) && (ii < argc); ii++) {
+    argv[ii] = PyTuple_GET_ITEM(args,ii);
+  }
+  if (argc == 3) {
+    int _v;
+    int res = SWIG_ConvertPtr(argv[0], 0, SWIGTYPE_p_CNTK__Variable, 0);
+    _v = SWIG_CheckState(res);
+    if (_v) {
+      int res = SWIG_AsPtr_std_wstring(argv[1], (std::wstring**)(0));
+      _v = SWIG_CheckState(res);
+      if (_v) {
+        int res = SWIG_ConvertPtr(argv[2], 0, SWIGTYPE_p_CNTK__Axis, 0);
+        _v = SWIG_CheckState(res);
+        if (_v) {
+          return _wrap_reduce_elements__SWIG_1(self, args);
+        }
+      }
+    }
+  }
+  if (argc == 4) {
+    int _v;
+    int res = SWIG_ConvertPtr(argv[0], 0, SWIGTYPE_p_CNTK__Variable, 0);
+    _v = SWIG_CheckState(res);
+    if (_v) {
+      int res = SWIG_AsPtr_std_wstring(argv[1], (std::wstring**)(0));
+      _v = SWIG_CheckState(res);
+      if (_v) {
+        int res = SWIG_ConvertPtr(argv[2], 0, SWIGTYPE_p_CNTK__Axis, 0);
+        _v = SWIG_CheckState(res);
+        if (_v) {
+          int res = SWIG_AsPtr_std_wstring(argv[3], (std::wstring**)(0));
+          _v = SWIG_CheckState(res);
+          if (_v) {
+            return _wrap_reduce_elements__SWIG_0(self, args);
+          }
+        }
+      }
+    }
+  }
+  
+fail:
+  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'reduce_elements'.\n"
+    "  Possible C/C++ prototypes are:\n"
+    "    CNTK::Internal::ReduceElements(CNTK::Variable const &,std::wstring const &,CNTK::Axis const &,std::wstring const &)\n"
+    "    CNTK::Internal::ReduceElements(CNTK::Variable const &,std::wstring const &,CNTK::Axis const &)\n");
+  return 0;
+}
+
 
 SWIGINTERN PyObject *_wrap_is_sparse_storage_format(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
@@ -14187,46 +15403,14 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_Axis_batch_axis(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_Axis_default_batch_axis(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Axis *result = 0 ;
   
-  if (!PyArg_ParseTuple(args,(char *)":Axis_batch_axis")) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)":Axis_default_batch_axis")) SWIG_fail;
   {
     try {
-      result = (CNTK::Axis *) &CNTK::Axis::BatchAxis(); 
-    }
-    catch (Swig::DirectorException &e) {
-      SWIG_exception(SWIG_RuntimeError,e.what()); 
-    }
-    catch (std::runtime_error &e) {
-      SWIG_exception(SWIG_RuntimeError,e.what()); 
-    }
-    catch (std::invalid_argument &e) {
-      SWIG_exception(SWIG_RuntimeError,e.what()); 
-    }
-    catch (std::logic_error &e) {
-      SWIG_exception(SWIG_RuntimeError,e.what()); 
-    }
-    catch (...) {
-      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
-    }
-  }
-  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__Axis, 0 |  0 );
-  return resultobj;
-fail:
-  return NULL;
-}
-
-
-SWIGINTERN PyObject *_wrap_Axis_all_axes(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
-  PyObject *resultobj = 0;
-  CNTK::Axis *result = 0 ;
-  
-  if (!PyArg_ParseTuple(args,(char *)":Axis_all_axes")) SWIG_fail;
-  {
-    try {
-      result = (CNTK::Axis *) &CNTK::Axis::AllAxes(); 
+      result = (CNTK::Axis *) &CNTK::Axis::DefaultBatchAxis(); 
     }
     catch (Swig::DirectorException &e) {
       SWIG_exception(SWIG_RuntimeError,e.what()); 
@@ -14572,6 +15756,74 @@ SWIGINTERN PyObject *_wrap_new_Variable__SWIG_0(PyObject *SWIGUNUSEDPARM(self), 
   PyObject *resultobj = 0;
   CNTK::NDShape *arg1 = 0 ;
   CNTK::DataType arg2 ;
+  std::vector< CNTK::Axis,std::allocator< CNTK::Axis > > *arg3 = 0 ;
+  int val2 ;
+  int ecode2 = 0 ;
+  void *argp3 = 0 ;
+  int res3 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  PyObject * obj2 = 0 ;
+  CNTK::Variable *result = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OOO:new_Variable",&obj0,&obj1,&obj2)) SWIG_fail;
+  {
+    if (PyTuple_Check(obj0)) {
+      std::vector<size_t> dimensions;;
+      size_t num_axes = PyTuple_Size(obj0);
+      for (int i=0; i<num_axes; i++)
+      dimensions.push_back(PyLong_AsLong(PyTuple_GET_ITEM(obj0, i)));
+      
+      // TODO cleans this up?
+      arg1 = new CNTK::NDShape(dimensions);
+    } else {
+      SWIG_exception(SWIG_TypeError, "tuple expected");
+    }
+  }
+  ecode2 = SWIG_AsVal_int(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "new_Variable" "', argument " "2"" of type '" "CNTK::DataType""'");
+  } 
+  arg2 = static_cast< CNTK::DataType >(val2);
+  res3 = SWIG_ConvertPtr(obj2, &argp3, SWIGTYPE_p_std__vectorT_CNTK__Axis_std__allocatorT_CNTK__Axis_t_t,  0  | 0);
+  if (!SWIG_IsOK(res3)) {
+    SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "new_Variable" "', argument " "3"" of type '" "std::vector< CNTK::Axis,std::allocator< CNTK::Axis > > const &""'"); 
+  }
+  if (!argp3) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "new_Variable" "', argument " "3"" of type '" "std::vector< CNTK::Axis,std::allocator< CNTK::Axis > > const &""'"); 
+  }
+  arg3 = reinterpret_cast< std::vector< CNTK::Axis,std::allocator< CNTK::Axis > > * >(argp3);
+  {
+    try {
+      result = (CNTK::Variable *)new CNTK::Variable((CNTK::NDShape const &)*arg1,arg2,(std::vector< CNTK::Axis,std::allocator< CNTK::Axis > > const &)*arg3); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__Variable, SWIG_POINTER_NEW |  0 );
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_new_Variable__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  CNTK::NDShape *arg1 = 0 ;
+  CNTK::DataType arg2 ;
   int val2 ;
   int ecode2 = 0 ;
   PyObject * obj0 = 0 ;
@@ -14624,7 +15876,87 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_new_Variable__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_new_Variable__SWIG_2(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  CNTK::NDShape *arg1 = 0 ;
+  CNTK::DataType arg2 ;
+  wchar_t *arg3 = (wchar_t *) 0 ;
+  std::vector< CNTK::Axis,std::allocator< CNTK::Axis > > *arg4 = 0 ;
+  int val2 ;
+  int ecode2 = 0 ;
+  int res3 ;
+  wchar_t *buf3 = 0 ;
+  int alloc3 = 0 ;
+  void *argp4 = 0 ;
+  int res4 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  PyObject * obj2 = 0 ;
+  PyObject * obj3 = 0 ;
+  CNTK::Variable *result = 0 ;
+
+  if (!PyArg_ParseTuple(args,(char *)"OOOO:new_Variable",&obj0,&obj1,&obj2,&obj3)) SWIG_fail;
+  {
+    if (PyTuple_Check(obj0)) {
+      std::vector<size_t> dimensions;;
+      size_t num_axes = PyTuple_Size(obj0);
+      for (int i=0; i<num_axes; i++)
+      dimensions.push_back(PyLong_AsLong(PyTuple_GET_ITEM(obj0, i)));
+      
+      // TODO cleans this up?
+      arg1 = new CNTK::NDShape(dimensions);
+    } else {
+      SWIG_exception(SWIG_TypeError, "tuple expected");
+    }
+  }
+  ecode2 = SWIG_AsVal_int(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "new_Variable" "', argument " "2"" of type '" "CNTK::DataType""'");
+  } 
+  arg2 = static_cast< CNTK::DataType >(val2);
+  res3 = SWIG_AsWCharPtrAndSize(obj2, &buf3, NULL, &alloc3);
+  if (!SWIG_IsOK(res3)) {
+    SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "new_Variable" "', argument " "3"" of type '" "wchar_t const *""'");
+  }
+  arg3 = reinterpret_cast< wchar_t * >(buf3);
+  res4 = SWIG_ConvertPtr(obj3, &argp4, SWIGTYPE_p_std__vectorT_CNTK__Axis_std__allocatorT_CNTK__Axis_t_t,  0  | 0);
+  if (!SWIG_IsOK(res4)) {
+    SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "new_Variable" "', argument " "4"" of type '" "std::vector< CNTK::Axis,std::allocator< CNTK::Axis > > const &""'"); 
+  }
+  if (!argp4) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "new_Variable" "', argument " "4"" of type '" "std::vector< CNTK::Axis,std::allocator< CNTK::Axis > > const &""'"); 
+  }
+  arg4 = reinterpret_cast< std::vector< CNTK::Axis,std::allocator< CNTK::Axis > > * >(argp4);
+  {
+    try {
+      result = (CNTK::Variable *)new CNTK::Variable((CNTK::NDShape const &)*arg1,arg2,(wchar_t const *)arg3,(std::vector< CNTK::Axis,std::allocator< CNTK::Axis > > const &)*arg4); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__Variable, SWIG_POINTER_NEW |  0 );
+  if (alloc3 == SWIG_NEWOBJ) delete[] buf3;
+  return resultobj;
+fail:
+  if (alloc3 == SWIG_NEWOBJ) delete[] buf3;
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_new_Variable__SWIG_3(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::NDShape *arg1 = 0 ;
   CNTK::DataType arg2 ;
@@ -14692,7 +16024,91 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_new_Variable__SWIG_2(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_new_Variable__SWIG_4(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  CNTK::NDShape *arg1 = 0 ;
+  CNTK::DataType arg2 ;
+  std::wstring *arg3 = 0 ;
+  std::vector< CNTK::Axis,std::allocator< CNTK::Axis > > *arg4 = 0 ;
+  int val2 ;
+  int ecode2 = 0 ;
+  int res3 = SWIG_OLDOBJ ;
+  void *argp4 = 0 ;
+  int res4 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  PyObject * obj2 = 0 ;
+  PyObject * obj3 = 0 ;
+  CNTK::Variable *result = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OOOO:new_Variable",&obj0,&obj1,&obj2,&obj3)) SWIG_fail;
+  {
+    if (PyTuple_Check(obj0)) {
+      std::vector<size_t> dimensions;;
+      size_t num_axes = PyTuple_Size(obj0);
+      for (int i=0; i<num_axes; i++)
+      dimensions.push_back(PyLong_AsLong(PyTuple_GET_ITEM(obj0, i)));
+
+      // TODO cleans this up?
+      arg1 = new CNTK::NDShape(dimensions);
+    } else {
+      SWIG_exception(SWIG_TypeError, "tuple expected");
+    }
+  }
+  ecode2 = SWIG_AsVal_int(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "new_Variable" "', argument " "2"" of type '" "CNTK::DataType""'");
+  } 
+  arg2 = static_cast< CNTK::DataType >(val2);
+  {
+    std::wstring *ptr = (std::wstring *)0;
+    res3 = SWIG_AsPtr_std_wstring(obj2, &ptr);
+    if (!SWIG_IsOK(res3)) {
+      SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "new_Variable" "', argument " "3"" of type '" "std::wstring const &""'"); 
+    }
+    if (!ptr) {
+      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "new_Variable" "', argument " "3"" of type '" "std::wstring const &""'"); 
+    }
+    arg3 = ptr;
+  }
+  res4 = SWIG_ConvertPtr(obj3, &argp4, SWIGTYPE_p_std__vectorT_CNTK__Axis_std__allocatorT_CNTK__Axis_t_t,  0  | 0);
+  if (!SWIG_IsOK(res4)) {
+    SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "new_Variable" "', argument " "4"" of type '" "std::vector< CNTK::Axis,std::allocator< CNTK::Axis > > const &""'"); 
+  }
+  if (!argp4) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "new_Variable" "', argument " "4"" of type '" "std::vector< CNTK::Axis,std::allocator< CNTK::Axis > > const &""'"); 
+  }
+  arg4 = reinterpret_cast< std::vector< CNTK::Axis,std::allocator< CNTK::Axis > > * >(argp4);
+  {
+    try {
+      result = (CNTK::Variable *)new CNTK::Variable((CNTK::NDShape const &)*arg1,arg2,(std::wstring const &)*arg3,(std::vector< CNTK::Axis,std::allocator< CNTK::Axis > > const &)*arg4); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__Variable, SWIG_POINTER_NEW |  0 );
+  if (SWIG_IsNewObj(res3)) delete arg3;
+  return resultobj;
+fail:
+  if (SWIG_IsNewObj(res3)) delete arg3;
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_new_Variable__SWIG_5(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::NDShape *arg1 = 0 ;
   CNTK::DataType arg2 ;
@@ -14764,248 +16180,25 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_new_Variable__SWIG_3(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
-  PyObject *resultobj = 0;
-  CNTK::NDShape *arg1 = 0 ;
-  bool arg2 ;
-  CNTK::DataType arg3 ;
-  std::wstring *arg4 = 0 ;
-  bool val2 ;
-  int ecode2 = 0 ;
-  int val3 ;
-  int ecode3 = 0 ;
-  int res4 = SWIG_OLDOBJ ;
-  PyObject * obj0 = 0 ;
-  PyObject * obj1 = 0 ;
-  PyObject * obj2 = 0 ;
-  PyObject * obj3 = 0 ;
-  CNTK::Variable *result = 0 ;
-  
-  if (!PyArg_ParseTuple(args,(char *)"OOOO:new_Variable",&obj0,&obj1,&obj2,&obj3)) SWIG_fail;
-  {
-    if (PyTuple_Check(obj0)) {
-      std::vector<size_t> dimensions;;
-      size_t num_axes = PyTuple_Size(obj0);
-      for (int i=0; i<num_axes; i++)
-      dimensions.push_back(PyLong_AsLong(PyTuple_GET_ITEM(obj0, i)));
-      
-      // TODO cleans this up?
-      arg1 = new CNTK::NDShape(dimensions);
-    } else {
-      SWIG_exception(SWIG_TypeError, "tuple expected");
-    }
-  }
-  ecode2 = SWIG_AsVal_bool(obj1, &val2);
-  if (!SWIG_IsOK(ecode2)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "new_Variable" "', argument " "2"" of type '" "bool""'");
-  } 
-  arg2 = static_cast< bool >(val2);
-  ecode3 = SWIG_AsVal_int(obj2, &val3);
-  if (!SWIG_IsOK(ecode3)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "new_Variable" "', argument " "3"" of type '" "CNTK::DataType""'");
-  } 
-  arg3 = static_cast< CNTK::DataType >(val3);
-  {
-    std::wstring *ptr = (std::wstring *)0;
-    res4 = SWIG_AsPtr_std_wstring(obj3, &ptr);
-    if (!SWIG_IsOK(res4)) {
-      SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "new_Variable" "', argument " "4"" of type '" "std::wstring const &""'"); 
-    }
-    if (!ptr) {
-      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "new_Variable" "', argument " "4"" of type '" "std::wstring const &""'"); 
-    }
-    arg4 = ptr;
-  }
-  {
-    try {
-      result = (CNTK::Variable *)new CNTK::Variable((CNTK::NDShape const &)*arg1,arg2,arg3,(std::wstring const &)*arg4); 
-    }
-    catch (Swig::DirectorException &e) {
-      SWIG_exception(SWIG_RuntimeError,e.what()); 
-    }
-    catch (std::runtime_error &e) {
-      SWIG_exception(SWIG_RuntimeError,e.what()); 
-    }
-    catch (std::invalid_argument &e) {
-      SWIG_exception(SWIG_RuntimeError,e.what()); 
-    }
-    catch (std::logic_error &e) {
-      SWIG_exception(SWIG_RuntimeError,e.what()); 
-    }
-    catch (...) {
-      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
-    }
-  }
-  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__Variable, SWIG_POINTER_NEW |  0 );
-  if (SWIG_IsNewObj(res4)) delete arg4;
-  return resultobj;
-fail:
-  if (SWIG_IsNewObj(res4)) delete arg4;
-  return NULL;
-}
-
-
-SWIGINTERN PyObject *_wrap_new_Variable__SWIG_4(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
-  PyObject *resultobj = 0;
-  CNTK::NDShape *arg1 = 0 ;
-  bool arg2 ;
-  CNTK::DataType arg3 ;
-  bool val2 ;
-  int ecode2 = 0 ;
-  int val3 ;
-  int ecode3 = 0 ;
-  PyObject * obj0 = 0 ;
-  PyObject * obj1 = 0 ;
-  PyObject * obj2 = 0 ;
-  CNTK::Variable *result = 0 ;
-  
-  if (!PyArg_ParseTuple(args,(char *)"OOO:new_Variable",&obj0,&obj1,&obj2)) SWIG_fail;
-  {
-    if (PyTuple_Check(obj0)) {
-      std::vector<size_t> dimensions;;
-      size_t num_axes = PyTuple_Size(obj0);
-      for (int i=0; i<num_axes; i++)
-      dimensions.push_back(PyLong_AsLong(PyTuple_GET_ITEM(obj0, i)));
-      
-      // TODO cleans this up?
-      arg1 = new CNTK::NDShape(dimensions);
-    } else {
-      SWIG_exception(SWIG_TypeError, "tuple expected");
-    }
-  }
-  ecode2 = SWIG_AsVal_bool(obj1, &val2);
-  if (!SWIG_IsOK(ecode2)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "new_Variable" "', argument " "2"" of type '" "bool""'");
-  } 
-  arg2 = static_cast< bool >(val2);
-  ecode3 = SWIG_AsVal_int(obj2, &val3);
-  if (!SWIG_IsOK(ecode3)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "new_Variable" "', argument " "3"" of type '" "CNTK::DataType""'");
-  } 
-  arg3 = static_cast< CNTK::DataType >(val3);
-  {
-    try {
-      result = (CNTK::Variable *)new CNTK::Variable((CNTK::NDShape const &)*arg1,arg2,arg3); 
-    }
-    catch (Swig::DirectorException &e) {
-      SWIG_exception(SWIG_RuntimeError,e.what()); 
-    }
-    catch (std::runtime_error &e) {
-      SWIG_exception(SWIG_RuntimeError,e.what()); 
-    }
-    catch (std::invalid_argument &e) {
-      SWIG_exception(SWIG_RuntimeError,e.what()); 
-    }
-    catch (std::logic_error &e) {
-      SWIG_exception(SWIG_RuntimeError,e.what()); 
-    }
-    catch (...) {
-      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
-    }
-  }
-  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__Variable, SWIG_POINTER_NEW |  0 );
-  return resultobj;
-fail:
-  return NULL;
-}
-
-
-SWIGINTERN PyObject *_wrap_new_Variable__SWIG_5(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
-  PyObject *resultobj = 0;
-  CNTK::NDShape *arg1 = 0 ;
-  CNTK::DataType arg2 ;
-  bool arg3 ;
-  std::wstring *arg4 = 0 ;
-  int val2 ;
-  int ecode2 = 0 ;
-  bool val3 ;
-  int ecode3 = 0 ;
-  int res4 = SWIG_OLDOBJ ;
-  PyObject * obj0 = 0 ;
-  PyObject * obj1 = 0 ;
-  PyObject * obj2 = 0 ;
-  PyObject * obj3 = 0 ;
-  CNTK::Variable *result = 0 ;
-  
-  if (!PyArg_ParseTuple(args,(char *)"OOOO:new_Variable",&obj0,&obj1,&obj2,&obj3)) SWIG_fail;
-  {
-    if (PyTuple_Check(obj0)) {
-      std::vector<size_t> dimensions;;
-      size_t num_axes = PyTuple_Size(obj0);
-      for (int i=0; i<num_axes; i++)
-      dimensions.push_back(PyLong_AsLong(PyTuple_GET_ITEM(obj0, i)));
-      
-      // TODO cleans this up?
-      arg1 = new CNTK::NDShape(dimensions);
-    } else {
-      SWIG_exception(SWIG_TypeError, "tuple expected");
-    }
-  }
-  ecode2 = SWIG_AsVal_int(obj1, &val2);
-  if (!SWIG_IsOK(ecode2)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "new_Variable" "', argument " "2"" of type '" "CNTK::DataType""'");
-  } 
-  arg2 = static_cast< CNTK::DataType >(val2);
-  ecode3 = SWIG_AsVal_bool(obj2, &val3);
-  if (!SWIG_IsOK(ecode3)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "new_Variable" "', argument " "3"" of type '" "bool""'");
-  } 
-  arg3 = static_cast< bool >(val3);
-  {
-    std::wstring *ptr = (std::wstring *)0;
-    res4 = SWIG_AsPtr_std_wstring(obj3, &ptr);
-    if (!SWIG_IsOK(res4)) {
-      SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "new_Variable" "', argument " "4"" of type '" "std::wstring const &""'"); 
-    }
-    if (!ptr) {
-      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "new_Variable" "', argument " "4"" of type '" "std::wstring const &""'"); 
-    }
-    arg4 = ptr;
-  }
-  {
-    try {
-      result = (CNTK::Variable *)new CNTK::Variable((CNTK::NDShape const &)*arg1,arg2,arg3,(std::wstring const &)*arg4); 
-    }
-    catch (Swig::DirectorException &e) {
-      SWIG_exception(SWIG_RuntimeError,e.what()); 
-    }
-    catch (std::runtime_error &e) {
-      SWIG_exception(SWIG_RuntimeError,e.what()); 
-    }
-    catch (std::invalid_argument &e) {
-      SWIG_exception(SWIG_RuntimeError,e.what()); 
-    }
-    catch (std::logic_error &e) {
-      SWIG_exception(SWIG_RuntimeError,e.what()); 
-    }
-    catch (...) {
-      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
-    }
-  }
-  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__Variable, SWIG_POINTER_NEW |  0 );
-  if (SWIG_IsNewObj(res4)) delete arg4;
-  return resultobj;
-fail:
-  if (SWIG_IsNewObj(res4)) delete arg4;
-  return NULL;
-}
-
-
 SWIGINTERN PyObject *_wrap_new_Variable__SWIG_6(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::NDShape *arg1 = 0 ;
-  CNTK::DataType arg2 ;
-  bool arg3 ;
-  int val2 ;
+  bool arg2 ;
+  CNTK::DataType arg3 ;
+  std::vector< CNTK::Axis,std::allocator< CNTK::Axis > > *arg4 = 0 ;
+  bool val2 ;
   int ecode2 = 0 ;
-  bool val3 ;
+  int val3 ;
   int ecode3 = 0 ;
+  void *argp4 = 0 ;
+  int res4 = 0 ;
   PyObject * obj0 = 0 ;
   PyObject * obj1 = 0 ;
   PyObject * obj2 = 0 ;
+  PyObject * obj3 = 0 ;
   CNTK::Variable *result = 0 ;
   
-  if (!PyArg_ParseTuple(args,(char *)"OOO:new_Variable",&obj0,&obj1,&obj2)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OOOO:new_Variable",&obj0,&obj1,&obj2,&obj3)) SWIG_fail;
   {
     if (PyTuple_Check(obj0)) {
       std::vector<size_t> dimensions;;
@@ -15019,19 +16212,27 @@ SWIGINTERN PyObject *_wrap_new_Variable__SWIG_6(PyObject *SWIGUNUSEDPARM(self), 
       SWIG_exception(SWIG_TypeError, "tuple expected");
     }
   }
-  ecode2 = SWIG_AsVal_int(obj1, &val2);
+  ecode2 = SWIG_AsVal_bool(obj1, &val2);
   if (!SWIG_IsOK(ecode2)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "new_Variable" "', argument " "2"" of type '" "CNTK::DataType""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "new_Variable" "', argument " "2"" of type '" "bool""'");
   } 
-  arg2 = static_cast< CNTK::DataType >(val2);
-  ecode3 = SWIG_AsVal_bool(obj2, &val3);
+  arg2 = static_cast< bool >(val2);
+  ecode3 = SWIG_AsVal_int(obj2, &val3);
   if (!SWIG_IsOK(ecode3)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "new_Variable" "', argument " "3"" of type '" "bool""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "new_Variable" "', argument " "3"" of type '" "CNTK::DataType""'");
   } 
-  arg3 = static_cast< bool >(val3);
+  arg3 = static_cast< CNTK::DataType >(val3);
+  res4 = SWIG_ConvertPtr(obj3, &argp4, SWIGTYPE_p_std__vectorT_CNTK__Axis_std__allocatorT_CNTK__Axis_t_t,  0  | 0);
+  if (!SWIG_IsOK(res4)) {
+    SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "new_Variable" "', argument " "4"" of type '" "std::vector< CNTK::Axis,std::allocator< CNTK::Axis > > const &""'"); 
+  }
+  if (!argp4) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "new_Variable" "', argument " "4"" of type '" "std::vector< CNTK::Axis,std::allocator< CNTK::Axis > > const &""'"); 
+  }
+  arg4 = reinterpret_cast< std::vector< CNTK::Axis,std::allocator< CNTK::Axis > > * >(argp4);
   {
     try {
-      result = (CNTK::Variable *)new CNTK::Variable((CNTK::NDShape const &)*arg1,arg2,arg3); 
+      result = (CNTK::Variable *)new CNTK::Variable((CNTK::NDShape const &)*arg1,arg2,arg3,(std::vector< CNTK::Axis,std::allocator< CNTK::Axis > > const &)*arg4); 
     }
     catch (Swig::DirectorException &e) {
       SWIG_exception(SWIG_RuntimeError,e.what()); 
@@ -15057,6 +16258,1013 @@ fail:
 
 
 SWIGINTERN PyObject *_wrap_new_Variable__SWIG_7(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  CNTK::NDShape *arg1 = 0 ;
+  bool arg2 ;
+  CNTK::DataType arg3 ;
+  bool val2 ;
+  int ecode2 = 0 ;
+  int val3 ;
+  int ecode3 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  PyObject * obj2 = 0 ;
+  CNTK::Variable *result = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OOO:new_Variable",&obj0,&obj1,&obj2)) SWIG_fail;
+  {
+    if (PyTuple_Check(obj0)) {
+      std::vector<size_t> dimensions;;
+      size_t num_axes = PyTuple_Size(obj0);
+      for (int i=0; i<num_axes; i++)
+      dimensions.push_back(PyLong_AsLong(PyTuple_GET_ITEM(obj0, i)));
+      
+      // TODO cleans this up?
+      arg1 = new CNTK::NDShape(dimensions);
+    } else {
+      SWIG_exception(SWIG_TypeError, "tuple expected");
+    }
+  }
+  ecode2 = SWIG_AsVal_bool(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "new_Variable" "', argument " "2"" of type '" "bool""'");
+  } 
+  arg2 = static_cast< bool >(val2);
+  ecode3 = SWIG_AsVal_int(obj2, &val3);
+  if (!SWIG_IsOK(ecode3)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "new_Variable" "', argument " "3"" of type '" "CNTK::DataType""'");
+  } 
+  arg3 = static_cast< CNTK::DataType >(val3);
+  {
+    try {
+      result = (CNTK::Variable *)new CNTK::Variable((CNTK::NDShape const &)*arg1,arg2,arg3); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__Variable, SWIG_POINTER_NEW |  0 );
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_new_Variable__SWIG_8(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  CNTK::NDShape *arg1 = 0 ;
+  bool arg2 ;
+  CNTK::DataType arg3 ;
+  wchar_t *arg4 = (wchar_t *) 0 ;
+  std::vector< CNTK::Axis,std::allocator< CNTK::Axis > > *arg5 = 0 ;
+  bool val2 ;
+  int ecode2 = 0 ;
+  int val3 ;
+  int ecode3 = 0 ;
+  int res4 ;
+  wchar_t *buf4 = 0 ;
+  int alloc4 = 0 ;
+  void *argp5 = 0 ;
+  int res5 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  PyObject * obj2 = 0 ;
+  PyObject * obj3 = 0 ;
+  PyObject * obj4 = 0 ;
+  CNTK::Variable *result = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OOOOO:new_Variable",&obj0,&obj1,&obj2,&obj3,&obj4)) SWIG_fail;
+  {
+    if (PyTuple_Check(obj0)) {
+      std::vector<size_t> dimensions;;
+      size_t num_axes = PyTuple_Size(obj0);
+      for (int i=0; i<num_axes; i++)
+      dimensions.push_back(PyLong_AsLong(PyTuple_GET_ITEM(obj0, i)));
+
+      // TODO cleans this up?
+      arg1 = new CNTK::NDShape(dimensions);
+    } else {
+      SWIG_exception(SWIG_TypeError, "tuple expected");
+    }
+  }
+  ecode2 = SWIG_AsVal_bool(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "new_Variable" "', argument " "2"" of type '" "bool""'");
+  } 
+  arg2 = static_cast< bool >(val2);
+  ecode3 = SWIG_AsVal_int(obj2, &val3);
+  if (!SWIG_IsOK(ecode3)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "new_Variable" "', argument " "3"" of type '" "CNTK::DataType""'");
+  } 
+  arg3 = static_cast< CNTK::DataType >(val3);
+  res4 = SWIG_AsWCharPtrAndSize(obj3, &buf4, NULL, &alloc4);
+  if (!SWIG_IsOK(res4)) {
+    SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "new_Variable" "', argument " "4"" of type '" "wchar_t const *""'");
+  }
+  arg4 = reinterpret_cast< wchar_t * >(buf4);
+  res5 = SWIG_ConvertPtr(obj4, &argp5, SWIGTYPE_p_std__vectorT_CNTK__Axis_std__allocatorT_CNTK__Axis_t_t,  0  | 0);
+  if (!SWIG_IsOK(res5)) {
+    SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "new_Variable" "', argument " "5"" of type '" "std::vector< CNTK::Axis,std::allocator< CNTK::Axis > > const &""'"); 
+  }
+  if (!argp5) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "new_Variable" "', argument " "5"" of type '" "std::vector< CNTK::Axis,std::allocator< CNTK::Axis > > const &""'"); 
+  }
+  arg5 = reinterpret_cast< std::vector< CNTK::Axis,std::allocator< CNTK::Axis > > * >(argp5);
+  {
+    try {
+      result = (CNTK::Variable *)new CNTK::Variable((CNTK::NDShape const &)*arg1,arg2,arg3,(wchar_t const *)arg4,(std::vector< CNTK::Axis,std::allocator< CNTK::Axis > > const &)*arg5); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__Variable, SWIG_POINTER_NEW |  0 );
+  if (alloc4 == SWIG_NEWOBJ) delete[] buf4;
+  return resultobj;
+fail:
+  if (alloc4 == SWIG_NEWOBJ) delete[] buf4;
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_new_Variable__SWIG_9(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  CNTK::NDShape *arg1 = 0 ;
+  bool arg2 ;
+  CNTK::DataType arg3 ;
+  wchar_t *arg4 = (wchar_t *) 0 ;
+  bool val2 ;
+  int ecode2 = 0 ;
+  int val3 ;
+  int ecode3 = 0 ;
+  int res4 ;
+  wchar_t *buf4 = 0 ;
+  int alloc4 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  PyObject * obj2 = 0 ;
+  PyObject * obj3 = 0 ;
+  CNTK::Variable *result = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OOOO:new_Variable",&obj0,&obj1,&obj2,&obj3)) SWIG_fail;
+  {
+    if (PyTuple_Check(obj0)) {
+      std::vector<size_t> dimensions;;
+      size_t num_axes = PyTuple_Size(obj0);
+      for (int i=0; i<num_axes; i++)
+      dimensions.push_back(PyLong_AsLong(PyTuple_GET_ITEM(obj0, i)));
+      
+      // TODO cleans this up?
+      arg1 = new CNTK::NDShape(dimensions);
+    } else {
+      SWIG_exception(SWIG_TypeError, "tuple expected");
+    }
+  }
+  ecode2 = SWIG_AsVal_bool(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "new_Variable" "', argument " "2"" of type '" "bool""'");
+  } 
+  arg2 = static_cast< bool >(val2);
+  ecode3 = SWIG_AsVal_int(obj2, &val3);
+  if (!SWIG_IsOK(ecode3)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "new_Variable" "', argument " "3"" of type '" "CNTK::DataType""'");
+  } 
+  arg3 = static_cast< CNTK::DataType >(val3);
+  res4 = SWIG_AsWCharPtrAndSize(obj3, &buf4, NULL, &alloc4);
+  if (!SWIG_IsOK(res4)) {
+    SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "new_Variable" "', argument " "4"" of type '" "wchar_t const *""'");
+  }
+  arg4 = reinterpret_cast< wchar_t * >(buf4);
+  {
+    try {
+      result = (CNTK::Variable *)new CNTK::Variable((CNTK::NDShape const &)*arg1,arg2,arg3,(wchar_t const *)arg4); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__Variable, SWIG_POINTER_NEW |  0 );
+  if (alloc4 == SWIG_NEWOBJ) delete[] buf4;
+  return resultobj;
+fail:
+  if (alloc4 == SWIG_NEWOBJ) delete[] buf4;
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_new_Variable__SWIG_10(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  CNTK::NDShape *arg1 = 0 ;
+  bool arg2 ;
+  CNTK::DataType arg3 ;
+  std::wstring *arg4 = 0 ;
+  std::vector< CNTK::Axis,std::allocator< CNTK::Axis > > *arg5 = 0 ;
+  bool val2 ;
+  int ecode2 = 0 ;
+  int val3 ;
+  int ecode3 = 0 ;
+  int res4 = SWIG_OLDOBJ ;
+  void *argp5 = 0 ;
+  int res5 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  PyObject * obj2 = 0 ;
+  PyObject * obj3 = 0 ;
+  PyObject * obj4 = 0 ;
+  CNTK::Variable *result = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OOOOO:new_Variable",&obj0,&obj1,&obj2,&obj3,&obj4)) SWIG_fail;
+  {
+    if (PyTuple_Check(obj0)) {
+      std::vector<size_t> dimensions;;
+      size_t num_axes = PyTuple_Size(obj0);
+      for (int i=0; i<num_axes; i++)
+      dimensions.push_back(PyLong_AsLong(PyTuple_GET_ITEM(obj0, i)));
+      
+      // TODO cleans this up?
+      arg1 = new CNTK::NDShape(dimensions);
+    } else {
+      SWIG_exception(SWIG_TypeError, "tuple expected");
+    }
+  }
+  ecode2 = SWIG_AsVal_bool(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "new_Variable" "', argument " "2"" of type '" "bool""'");
+  } 
+  arg2 = static_cast< bool >(val2);
+  ecode3 = SWIG_AsVal_int(obj2, &val3);
+  if (!SWIG_IsOK(ecode3)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "new_Variable" "', argument " "3"" of type '" "CNTK::DataType""'");
+  } 
+  arg3 = static_cast< CNTK::DataType >(val3);
+  {
+    std::wstring *ptr = (std::wstring *)0;
+    res4 = SWIG_AsPtr_std_wstring(obj3, &ptr);
+    if (!SWIG_IsOK(res4)) {
+      SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "new_Variable" "', argument " "4"" of type '" "std::wstring const &""'"); 
+    }
+    if (!ptr) {
+      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "new_Variable" "', argument " "4"" of type '" "std::wstring const &""'"); 
+    }
+    arg4 = ptr;
+  }
+  res5 = SWIG_ConvertPtr(obj4, &argp5, SWIGTYPE_p_std__vectorT_CNTK__Axis_std__allocatorT_CNTK__Axis_t_t,  0  | 0);
+  if (!SWIG_IsOK(res5)) {
+    SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "new_Variable" "', argument " "5"" of type '" "std::vector< CNTK::Axis,std::allocator< CNTK::Axis > > const &""'"); 
+  }
+  if (!argp5) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "new_Variable" "', argument " "5"" of type '" "std::vector< CNTK::Axis,std::allocator< CNTK::Axis > > const &""'"); 
+  }
+  arg5 = reinterpret_cast< std::vector< CNTK::Axis,std::allocator< CNTK::Axis > > * >(argp5);
+  {
+    try {
+      result = (CNTK::Variable *)new CNTK::Variable((CNTK::NDShape const &)*arg1,arg2,arg3,(std::wstring const &)*arg4,(std::vector< CNTK::Axis,std::allocator< CNTK::Axis > > const &)*arg5); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__Variable, SWIG_POINTER_NEW |  0 );
+  if (SWIG_IsNewObj(res4)) delete arg4;
+  return resultobj;
+fail:
+  if (SWIG_IsNewObj(res4)) delete arg4;
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_new_Variable__SWIG_11(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  CNTK::NDShape *arg1 = 0 ;
+  bool arg2 ;
+  CNTK::DataType arg3 ;
+  std::wstring *arg4 = 0 ;
+  bool val2 ;
+  int ecode2 = 0 ;
+  int val3 ;
+  int ecode3 = 0 ;
+  int res4 = SWIG_OLDOBJ ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  PyObject * obj2 = 0 ;
+  PyObject * obj3 = 0 ;
+  CNTK::Variable *result = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OOOO:new_Variable",&obj0,&obj1,&obj2,&obj3)) SWIG_fail;
+  {
+    if (PyTuple_Check(obj0)) {
+      std::vector<size_t> dimensions;;
+      size_t num_axes = PyTuple_Size(obj0);
+      for (int i=0; i<num_axes; i++)
+      dimensions.push_back(PyLong_AsLong(PyTuple_GET_ITEM(obj0, i)));
+      
+      // TODO cleans this up?
+      arg1 = new CNTK::NDShape(dimensions);
+    } else {
+      SWIG_exception(SWIG_TypeError, "tuple expected");
+    }
+  }
+  ecode2 = SWIG_AsVal_bool(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "new_Variable" "', argument " "2"" of type '" "bool""'");
+  } 
+  arg2 = static_cast< bool >(val2);
+  ecode3 = SWIG_AsVal_int(obj2, &val3);
+  if (!SWIG_IsOK(ecode3)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "new_Variable" "', argument " "3"" of type '" "CNTK::DataType""'");
+  } 
+  arg3 = static_cast< CNTK::DataType >(val3);
+  {
+    std::wstring *ptr = (std::wstring *)0;
+    res4 = SWIG_AsPtr_std_wstring(obj3, &ptr);
+    if (!SWIG_IsOK(res4)) {
+      SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "new_Variable" "', argument " "4"" of type '" "std::wstring const &""'"); 
+    }
+    if (!ptr) {
+      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "new_Variable" "', argument " "4"" of type '" "std::wstring const &""'"); 
+    }
+    arg4 = ptr;
+  }
+  {
+    try {
+      result = (CNTK::Variable *)new CNTK::Variable((CNTK::NDShape const &)*arg1,arg2,arg3,(std::wstring const &)*arg4); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__Variable, SWIG_POINTER_NEW |  0 );
+  if (SWIG_IsNewObj(res4)) delete arg4;
+  return resultobj;
+fail:
+  if (SWIG_IsNewObj(res4)) delete arg4;
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_new_Variable__SWIG_12(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  CNTK::NDShape *arg1 = 0 ;
+  CNTK::DataType arg2 ;
+  bool arg3 ;
+  wchar_t *arg4 = (wchar_t *) 0 ;
+  std::vector< CNTK::Axis,std::allocator< CNTK::Axis > > *arg5 = 0 ;
+  int val2 ;
+  int ecode2 = 0 ;
+  bool val3 ;
+  int ecode3 = 0 ;
+  int res4 ;
+  wchar_t *buf4 = 0 ;
+  int alloc4 = 0 ;
+  void *argp5 = 0 ;
+  int res5 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  PyObject * obj2 = 0 ;
+  PyObject * obj3 = 0 ;
+  PyObject * obj4 = 0 ;
+  CNTK::Variable *result = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OOOOO:new_Variable",&obj0,&obj1,&obj2,&obj3,&obj4)) SWIG_fail;
+  {
+    if (PyTuple_Check(obj0)) {
+      std::vector<size_t> dimensions;;
+      size_t num_axes = PyTuple_Size(obj0);
+      for (int i=0; i<num_axes; i++)
+      dimensions.push_back(PyLong_AsLong(PyTuple_GET_ITEM(obj0, i)));
+      
+      // TODO cleans this up?
+      arg1 = new CNTK::NDShape(dimensions);
+    } else {
+      SWIG_exception(SWIG_TypeError, "tuple expected");
+    }
+  }
+  ecode2 = SWIG_AsVal_int(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "new_Variable" "', argument " "2"" of type '" "CNTK::DataType""'");
+  } 
+  arg2 = static_cast< CNTK::DataType >(val2);
+  ecode3 = SWIG_AsVal_bool(obj2, &val3);
+  if (!SWIG_IsOK(ecode3)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "new_Variable" "', argument " "3"" of type '" "bool""'");
+  } 
+  arg3 = static_cast< bool >(val3);
+  res4 = SWIG_AsWCharPtrAndSize(obj3, &buf4, NULL, &alloc4);
+  if (!SWIG_IsOK(res4)) {
+    SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "new_Variable" "', argument " "4"" of type '" "wchar_t const *""'");
+  }
+  arg4 = reinterpret_cast< wchar_t * >(buf4);
+  res5 = SWIG_ConvertPtr(obj4, &argp5, SWIGTYPE_p_std__vectorT_CNTK__Axis_std__allocatorT_CNTK__Axis_t_t,  0  | 0);
+  if (!SWIG_IsOK(res5)) {
+    SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "new_Variable" "', argument " "5"" of type '" "std::vector< CNTK::Axis,std::allocator< CNTK::Axis > > const &""'"); 
+  }
+  if (!argp5) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "new_Variable" "', argument " "5"" of type '" "std::vector< CNTK::Axis,std::allocator< CNTK::Axis > > const &""'"); 
+  }
+  arg5 = reinterpret_cast< std::vector< CNTK::Axis,std::allocator< CNTK::Axis > > * >(argp5);
+  {
+    try {
+      result = (CNTK::Variable *)new CNTK::Variable((CNTK::NDShape const &)*arg1,arg2,arg3,(wchar_t const *)arg4,(std::vector< CNTK::Axis,std::allocator< CNTK::Axis > > const &)*arg5); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__Variable, SWIG_POINTER_NEW |  0 );
+  if (alloc4 == SWIG_NEWOBJ) delete[] buf4;
+  return resultobj;
+fail:
+  if (alloc4 == SWIG_NEWOBJ) delete[] buf4;
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_new_Variable__SWIG_13(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  CNTK::NDShape *arg1 = 0 ;
+  CNTK::DataType arg2 ;
+  bool arg3 ;
+  wchar_t *arg4 = (wchar_t *) 0 ;
+  int val2 ;
+  int ecode2 = 0 ;
+  bool val3 ;
+  int ecode3 = 0 ;
+  int res4 ;
+  wchar_t *buf4 = 0 ;
+  int alloc4 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  PyObject * obj2 = 0 ;
+  PyObject * obj3 = 0 ;
+  CNTK::Variable *result = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OOOO:new_Variable",&obj0,&obj1,&obj2,&obj3)) SWIG_fail;
+  {
+    if (PyTuple_Check(obj0)) {
+      std::vector<size_t> dimensions;;
+      size_t num_axes = PyTuple_Size(obj0);
+      for (int i=0; i<num_axes; i++)
+      dimensions.push_back(PyLong_AsLong(PyTuple_GET_ITEM(obj0, i)));
+      
+      // TODO cleans this up?
+      arg1 = new CNTK::NDShape(dimensions);
+    } else {
+      SWIG_exception(SWIG_TypeError, "tuple expected");
+    }
+  }
+  ecode2 = SWIG_AsVal_int(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "new_Variable" "', argument " "2"" of type '" "CNTK::DataType""'");
+  } 
+  arg2 = static_cast< CNTK::DataType >(val2);
+  ecode3 = SWIG_AsVal_bool(obj2, &val3);
+  if (!SWIG_IsOK(ecode3)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "new_Variable" "', argument " "3"" of type '" "bool""'");
+  } 
+  arg3 = static_cast< bool >(val3);
+  res4 = SWIG_AsWCharPtrAndSize(obj3, &buf4, NULL, &alloc4);
+  if (!SWIG_IsOK(res4)) {
+    SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "new_Variable" "', argument " "4"" of type '" "wchar_t const *""'");
+  }
+  arg4 = reinterpret_cast< wchar_t * >(buf4);
+  {
+    try {
+      result = (CNTK::Variable *)new CNTK::Variable((CNTK::NDShape const &)*arg1,arg2,arg3,(wchar_t const *)arg4); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__Variable, SWIG_POINTER_NEW |  0 );
+  if (alloc4 == SWIG_NEWOBJ) delete[] buf4;
+  return resultobj;
+fail:
+  if (alloc4 == SWIG_NEWOBJ) delete[] buf4;
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_new_Variable__SWIG_14(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  CNTK::NDShape *arg1 = 0 ;
+  CNTK::DataType arg2 ;
+  bool arg3 ;
+  std::wstring *arg4 = 0 ;
+  std::vector< CNTK::Axis,std::allocator< CNTK::Axis > > *arg5 = 0 ;
+  int val2 ;
+  int ecode2 = 0 ;
+  bool val3 ;
+  int ecode3 = 0 ;
+  int res4 = SWIG_OLDOBJ ;
+  void *argp5 = 0 ;
+  int res5 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  PyObject * obj2 = 0 ;
+  PyObject * obj3 = 0 ;
+  PyObject * obj4 = 0 ;
+  CNTK::Variable *result = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OOOOO:new_Variable",&obj0,&obj1,&obj2,&obj3,&obj4)) SWIG_fail;
+  {
+    if (PyTuple_Check(obj0)) {
+      std::vector<size_t> dimensions;;
+      size_t num_axes = PyTuple_Size(obj0);
+      for (int i=0; i<num_axes; i++)
+      dimensions.push_back(PyLong_AsLong(PyTuple_GET_ITEM(obj0, i)));
+      
+      // TODO cleans this up?
+      arg1 = new CNTK::NDShape(dimensions);
+    } else {
+      SWIG_exception(SWIG_TypeError, "tuple expected");
+    }
+  }
+  ecode2 = SWIG_AsVal_int(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "new_Variable" "', argument " "2"" of type '" "CNTK::DataType""'");
+  } 
+  arg2 = static_cast< CNTK::DataType >(val2);
+  ecode3 = SWIG_AsVal_bool(obj2, &val3);
+  if (!SWIG_IsOK(ecode3)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "new_Variable" "', argument " "3"" of type '" "bool""'");
+  } 
+  arg3 = static_cast< bool >(val3);
+  {
+    std::wstring *ptr = (std::wstring *)0;
+    res4 = SWIG_AsPtr_std_wstring(obj3, &ptr);
+    if (!SWIG_IsOK(res4)) {
+      SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "new_Variable" "', argument " "4"" of type '" "std::wstring const &""'"); 
+    }
+    if (!ptr) {
+      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "new_Variable" "', argument " "4"" of type '" "std::wstring const &""'"); 
+    }
+    arg4 = ptr;
+  }
+  res5 = SWIG_ConvertPtr(obj4, &argp5, SWIGTYPE_p_std__vectorT_CNTK__Axis_std__allocatorT_CNTK__Axis_t_t,  0  | 0);
+  if (!SWIG_IsOK(res5)) {
+    SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "new_Variable" "', argument " "5"" of type '" "std::vector< CNTK::Axis,std::allocator< CNTK::Axis > > const &""'"); 
+  }
+  if (!argp5) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "new_Variable" "', argument " "5"" of type '" "std::vector< CNTK::Axis,std::allocator< CNTK::Axis > > const &""'"); 
+  }
+  arg5 = reinterpret_cast< std::vector< CNTK::Axis,std::allocator< CNTK::Axis > > * >(argp5);
+  {
+    try {
+      result = (CNTK::Variable *)new CNTK::Variable((CNTK::NDShape const &)*arg1,arg2,arg3,(std::wstring const &)*arg4,(std::vector< CNTK::Axis,std::allocator< CNTK::Axis > > const &)*arg5); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__Variable, SWIG_POINTER_NEW |  0 );
+  if (SWIG_IsNewObj(res4)) delete arg4;
+  return resultobj;
+fail:
+  if (SWIG_IsNewObj(res4)) delete arg4;
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_new_Variable__SWIG_15(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  CNTK::NDShape *arg1 = 0 ;
+  CNTK::DataType arg2 ;
+  bool arg3 ;
+  std::wstring *arg4 = 0 ;
+  int val2 ;
+  int ecode2 = 0 ;
+  bool val3 ;
+  int ecode3 = 0 ;
+  int res4 = SWIG_OLDOBJ ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  PyObject * obj2 = 0 ;
+  PyObject * obj3 = 0 ;
+  CNTK::Variable *result = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OOOO:new_Variable",&obj0,&obj1,&obj2,&obj3)) SWIG_fail;
+  {
+    if (PyTuple_Check(obj0)) {
+      std::vector<size_t> dimensions;;
+      size_t num_axes = PyTuple_Size(obj0);
+      for (int i=0; i<num_axes; i++)
+      dimensions.push_back(PyLong_AsLong(PyTuple_GET_ITEM(obj0, i)));
+      
+      // TODO cleans this up?
+      arg1 = new CNTK::NDShape(dimensions);
+    } else {
+      SWIG_exception(SWIG_TypeError, "tuple expected");
+    }
+  }
+  ecode2 = SWIG_AsVal_int(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "new_Variable" "', argument " "2"" of type '" "CNTK::DataType""'");
+  } 
+  arg2 = static_cast< CNTK::DataType >(val2);
+  ecode3 = SWIG_AsVal_bool(obj2, &val3);
+  if (!SWIG_IsOK(ecode3)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "new_Variable" "', argument " "3"" of type '" "bool""'");
+  } 
+  arg3 = static_cast< bool >(val3);
+  {
+    std::wstring *ptr = (std::wstring *)0;
+    res4 = SWIG_AsPtr_std_wstring(obj3, &ptr);
+    if (!SWIG_IsOK(res4)) {
+      SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "new_Variable" "', argument " "4"" of type '" "std::wstring const &""'"); 
+    }
+    if (!ptr) {
+      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "new_Variable" "', argument " "4"" of type '" "std::wstring const &""'"); 
+    }
+    arg4 = ptr;
+  }
+  {
+    try {
+      result = (CNTK::Variable *)new CNTK::Variable((CNTK::NDShape const &)*arg1,arg2,arg3,(std::wstring const &)*arg4); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__Variable, SWIG_POINTER_NEW |  0 );
+  if (SWIG_IsNewObj(res4)) delete arg4;
+  return resultobj;
+fail:
+  if (SWIG_IsNewObj(res4)) delete arg4;
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_new_Variable__SWIG_16(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  CNTK::NDShape *arg1 = 0 ;
+  bool arg2 ;
+  CNTK::DataType arg3 ;
+  bool arg4 ;
+  std::vector< CNTK::Axis,std::allocator< CNTK::Axis > > *arg5 = 0 ;
+  bool val2 ;
+  int ecode2 = 0 ;
+  int val3 ;
+  int ecode3 = 0 ;
+  bool val4 ;
+  int ecode4 = 0 ;
+  void *argp5 = 0 ;
+  int res5 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  PyObject * obj2 = 0 ;
+  PyObject * obj3 = 0 ;
+  PyObject * obj4 = 0 ;
+  CNTK::Variable *result = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OOOOO:new_Variable",&obj0,&obj1,&obj2,&obj3,&obj4)) SWIG_fail;
+  {
+    if (PyTuple_Check(obj0)) {
+      std::vector<size_t> dimensions;;
+      size_t num_axes = PyTuple_Size(obj0);
+      for (int i=0; i<num_axes; i++)
+      dimensions.push_back(PyLong_AsLong(PyTuple_GET_ITEM(obj0, i)));
+      
+      // TODO cleans this up?
+      arg1 = new CNTK::NDShape(dimensions);
+    } else {
+      SWIG_exception(SWIG_TypeError, "tuple expected");
+    }
+  }
+  ecode2 = SWIG_AsVal_bool(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "new_Variable" "', argument " "2"" of type '" "bool""'");
+  } 
+  arg2 = static_cast< bool >(val2);
+  ecode3 = SWIG_AsVal_int(obj2, &val3);
+  if (!SWIG_IsOK(ecode3)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "new_Variable" "', argument " "3"" of type '" "CNTK::DataType""'");
+  } 
+  arg3 = static_cast< CNTK::DataType >(val3);
+  ecode4 = SWIG_AsVal_bool(obj3, &val4);
+  if (!SWIG_IsOK(ecode4)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode4), "in method '" "new_Variable" "', argument " "4"" of type '" "bool""'");
+  } 
+  arg4 = static_cast< bool >(val4);
+  res5 = SWIG_ConvertPtr(obj4, &argp5, SWIGTYPE_p_std__vectorT_CNTK__Axis_std__allocatorT_CNTK__Axis_t_t,  0  | 0);
+  if (!SWIG_IsOK(res5)) {
+    SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "new_Variable" "', argument " "5"" of type '" "std::vector< CNTK::Axis,std::allocator< CNTK::Axis > > const &""'"); 
+  }
+  if (!argp5) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "new_Variable" "', argument " "5"" of type '" "std::vector< CNTK::Axis,std::allocator< CNTK::Axis > > const &""'"); 
+  }
+  arg5 = reinterpret_cast< std::vector< CNTK::Axis,std::allocator< CNTK::Axis > > * >(argp5);
+  {
+    try {
+      result = (CNTK::Variable *)new CNTK::Variable((CNTK::NDShape const &)*arg1,arg2,arg3,arg4,(std::vector< CNTK::Axis,std::allocator< CNTK::Axis > > const &)*arg5); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__Variable, SWIG_POINTER_NEW |  0 );
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_new_Variable__SWIG_17(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  CNTK::NDShape *arg1 = 0 ;
+  bool arg2 ;
+  CNTK::DataType arg3 ;
+  bool arg4 ;
+  bool val2 ;
+  int ecode2 = 0 ;
+  int val3 ;
+  int ecode3 = 0 ;
+  bool val4 ;
+  int ecode4 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  PyObject * obj2 = 0 ;
+  PyObject * obj3 = 0 ;
+  CNTK::Variable *result = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OOOO:new_Variable",&obj0,&obj1,&obj2,&obj3)) SWIG_fail;
+  {
+    if (PyTuple_Check(obj0)) {
+      std::vector<size_t> dimensions;;
+      size_t num_axes = PyTuple_Size(obj0);
+      for (int i=0; i<num_axes; i++)
+      dimensions.push_back(PyLong_AsLong(PyTuple_GET_ITEM(obj0, i)));
+      
+      // TODO cleans this up?
+      arg1 = new CNTK::NDShape(dimensions);
+    } else {
+      SWIG_exception(SWIG_TypeError, "tuple expected");
+    }
+  }
+  ecode2 = SWIG_AsVal_bool(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "new_Variable" "', argument " "2"" of type '" "bool""'");
+  } 
+  arg2 = static_cast< bool >(val2);
+  ecode3 = SWIG_AsVal_int(obj2, &val3);
+  if (!SWIG_IsOK(ecode3)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "new_Variable" "', argument " "3"" of type '" "CNTK::DataType""'");
+  } 
+  arg3 = static_cast< CNTK::DataType >(val3);
+  ecode4 = SWIG_AsVal_bool(obj3, &val4);
+  if (!SWIG_IsOK(ecode4)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode4), "in method '" "new_Variable" "', argument " "4"" of type '" "bool""'");
+  } 
+  arg4 = static_cast< bool >(val4);
+  {
+    try {
+      result = (CNTK::Variable *)new CNTK::Variable((CNTK::NDShape const &)*arg1,arg2,arg3,arg4); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__Variable, SWIG_POINTER_NEW |  0 );
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_new_Variable__SWIG_18(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  CNTK::NDShape *arg1 = 0 ;
+  bool arg2 ;
+  CNTK::DataType arg3 ;
+  bool arg4 ;
+  std::wstring *arg5 = 0 ;
+  std::vector< CNTK::Axis,std::allocator< CNTK::Axis > > *arg6 = 0 ;
+  bool val2 ;
+  int ecode2 = 0 ;
+  int val3 ;
+  int ecode3 = 0 ;
+  bool val4 ;
+  int ecode4 = 0 ;
+  int res5 = SWIG_OLDOBJ ;
+  void *argp6 = 0 ;
+  int res6 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  PyObject * obj2 = 0 ;
+  PyObject * obj3 = 0 ;
+  PyObject * obj4 = 0 ;
+  PyObject * obj5 = 0 ;
+  CNTK::Variable *result = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OOOOOO:new_Variable",&obj0,&obj1,&obj2,&obj3,&obj4,&obj5)) SWIG_fail;
+  {
+    if (PyTuple_Check(obj0)) {
+      std::vector<size_t> dimensions;;
+      size_t num_axes = PyTuple_Size(obj0);
+      for (int i=0; i<num_axes; i++)
+      dimensions.push_back(PyLong_AsLong(PyTuple_GET_ITEM(obj0, i)));
+      
+      // TODO cleans this up?
+      arg1 = new CNTK::NDShape(dimensions);
+    } else {
+      SWIG_exception(SWIG_TypeError, "tuple expected");
+    }
+  }
+  ecode2 = SWIG_AsVal_bool(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "new_Variable" "', argument " "2"" of type '" "bool""'");
+  } 
+  arg2 = static_cast< bool >(val2);
+  ecode3 = SWIG_AsVal_int(obj2, &val3);
+  if (!SWIG_IsOK(ecode3)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "new_Variable" "', argument " "3"" of type '" "CNTK::DataType""'");
+  } 
+  arg3 = static_cast< CNTK::DataType >(val3);
+  ecode4 = SWIG_AsVal_bool(obj3, &val4);
+  if (!SWIG_IsOK(ecode4)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode4), "in method '" "new_Variable" "', argument " "4"" of type '" "bool""'");
+  } 
+  arg4 = static_cast< bool >(val4);
+  {
+    std::wstring *ptr = (std::wstring *)0;
+    res5 = SWIG_AsPtr_std_wstring(obj4, &ptr);
+    if (!SWIG_IsOK(res5)) {
+      SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "new_Variable" "', argument " "5"" of type '" "std::wstring const &""'"); 
+    }
+    if (!ptr) {
+      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "new_Variable" "', argument " "5"" of type '" "std::wstring const &""'"); 
+    }
+    arg5 = ptr;
+  }
+  res6 = SWIG_ConvertPtr(obj5, &argp6, SWIGTYPE_p_std__vectorT_CNTK__Axis_std__allocatorT_CNTK__Axis_t_t,  0  | 0);
+  if (!SWIG_IsOK(res6)) {
+    SWIG_exception_fail(SWIG_ArgError(res6), "in method '" "new_Variable" "', argument " "6"" of type '" "std::vector< CNTK::Axis,std::allocator< CNTK::Axis > > const &""'"); 
+  }
+  if (!argp6) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "new_Variable" "', argument " "6"" of type '" "std::vector< CNTK::Axis,std::allocator< CNTK::Axis > > const &""'"); 
+  }
+  arg6 = reinterpret_cast< std::vector< CNTK::Axis,std::allocator< CNTK::Axis > > * >(argp6);
+  {
+    try {
+      result = (CNTK::Variable *)new CNTK::Variable((CNTK::NDShape const &)*arg1,arg2,arg3,arg4,(std::wstring const &)*arg5,(std::vector< CNTK::Axis,std::allocator< CNTK::Axis > > const &)*arg6); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__Variable, SWIG_POINTER_NEW |  0 );
+  if (SWIG_IsNewObj(res5)) delete arg5;
+  return resultobj;
+fail:
+  if (SWIG_IsNewObj(res5)) delete arg5;
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_new_Variable__SWIG_19(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::NDShape *arg1 = 0 ;
   bool arg2 ;
@@ -15146,81 +17354,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_new_Variable__SWIG_8(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
-  PyObject *resultobj = 0;
-  CNTK::NDShape *arg1 = 0 ;
-  bool arg2 ;
-  CNTK::DataType arg3 ;
-  bool arg4 ;
-  bool val2 ;
-  int ecode2 = 0 ;
-  int val3 ;
-  int ecode3 = 0 ;
-  bool val4 ;
-  int ecode4 = 0 ;
-  PyObject * obj0 = 0 ;
-  PyObject * obj1 = 0 ;
-  PyObject * obj2 = 0 ;
-  PyObject * obj3 = 0 ;
-  CNTK::Variable *result = 0 ;
-  
-  if (!PyArg_ParseTuple(args,(char *)"OOOO:new_Variable",&obj0,&obj1,&obj2,&obj3)) SWIG_fail;
-  {
-    if (PyTuple_Check(obj0)) {
-      std::vector<size_t> dimensions;;
-      size_t num_axes = PyTuple_Size(obj0);
-      for (int i=0; i<num_axes; i++)
-      dimensions.push_back(PyLong_AsLong(PyTuple_GET_ITEM(obj0, i)));
-      
-      // TODO cleans this up?
-      arg1 = new CNTK::NDShape(dimensions);
-    } else {
-      SWIG_exception(SWIG_TypeError, "tuple expected");
-    }
-  }
-  ecode2 = SWIG_AsVal_bool(obj1, &val2);
-  if (!SWIG_IsOK(ecode2)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "new_Variable" "', argument " "2"" of type '" "bool""'");
-  } 
-  arg2 = static_cast< bool >(val2);
-  ecode3 = SWIG_AsVal_int(obj2, &val3);
-  if (!SWIG_IsOK(ecode3)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "new_Variable" "', argument " "3"" of type '" "CNTK::DataType""'");
-  } 
-  arg3 = static_cast< CNTK::DataType >(val3);
-  ecode4 = SWIG_AsVal_bool(obj3, &val4);
-  if (!SWIG_IsOK(ecode4)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode4), "in method '" "new_Variable" "', argument " "4"" of type '" "bool""'");
-  } 
-  arg4 = static_cast< bool >(val4);
-  {
-    try {
-      result = (CNTK::Variable *)new CNTK::Variable((CNTK::NDShape const &)*arg1,arg2,arg3,arg4); 
-    }
-    catch (Swig::DirectorException &e) {
-      SWIG_exception(SWIG_RuntimeError,e.what()); 
-    }
-    catch (std::runtime_error &e) {
-      SWIG_exception(SWIG_RuntimeError,e.what()); 
-    }
-    catch (std::invalid_argument &e) {
-      SWIG_exception(SWIG_RuntimeError,e.what()); 
-    }
-    catch (std::logic_error &e) {
-      SWIG_exception(SWIG_RuntimeError,e.what()); 
-    }
-    catch (...) {
-      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
-    }
-  }
-  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__Variable, SWIG_POINTER_NEW |  0 );
-  return resultobj;
-fail:
-  return NULL;
-}
-
-
-SWIGINTERN PyObject *_wrap_new_Variable__SWIG_9(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_new_Variable__SWIG_20(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::NDShape *arg1 = 0 ;
   CNTK::DataType arg2 ;
@@ -15325,7 +17459,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_new_Variable__SWIG_10(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_new_Variable__SWIG_21(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::NDShape *arg1 = 0 ;
   CNTK::DataType arg2 ;
@@ -15414,7 +17548,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_new_Variable__SWIG_11(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_new_Variable__SWIG_22(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::FunctionPtr *arg1 = 0 ;
   void *argp1 ;
@@ -15465,7 +17599,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_new_Variable__SWIG_12(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_new_Variable__SWIG_23(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *result = 0 ;
   
@@ -15499,25 +17633,25 @@ fail:
 
 SWIGINTERN PyObject *_wrap_new_Variable(PyObject *self, PyObject *args) {
   Py_ssize_t argc;
-  PyObject *argv[6] = {
+  PyObject *argv[7] = {
     0
   };
   Py_ssize_t ii;
   
   if (!PyTuple_Check(args)) SWIG_fail;
   argc = args ? PyObject_Length(args) : 0;
-  for (ii = 0; (ii < 5) && (ii < argc); ii++) {
+  for (ii = 0; (ii < 6) && (ii < argc); ii++) {
     argv[ii] = PyTuple_GET_ITEM(args,ii);
   }
   if (argc == 0) {
-    return _wrap_new_Variable__SWIG_12(self, args);
+    return _wrap_new_Variable__SWIG_23(self, args);
   }
   if (argc == 1) {
     int _v;
     int res = SWIG_ConvertPtr(argv[0], 0, SWIGTYPE_p_std__shared_ptrT_CNTK__Function_t, 0);
     _v = SWIG_CheckState(res);
     if (_v) {
-      return _wrap_new_Variable__SWIG_11(self, args);
+      return _wrap_new_Variable__SWIG_22(self, args);
     }
   }
   if (argc == 2) {
@@ -15533,7 +17667,7 @@ SWIGINTERN PyObject *_wrap_new_Variable(PyObject *self, PyObject *args) {
         _v = SWIG_CheckState(res);
       }
       if (_v) {
-        return _wrap_new_Variable__SWIG_0(self, args);
+        return _wrap_new_Variable__SWIG_1(self, args);
       }
     }
   }
@@ -15555,7 +17689,7 @@ SWIGINTERN PyObject *_wrap_new_Variable(PyObject *self, PyObject *args) {
           _v = SWIG_CheckState(res);
         }
         if (_v) {
-          return _wrap_new_Variable__SWIG_4(self, args);
+          return _wrap_new_Variable__SWIG_7(self, args);
         }
       }
     }
@@ -15573,12 +17707,10 @@ SWIGINTERN PyObject *_wrap_new_Variable(PyObject *self, PyObject *args) {
         _v = SWIG_CheckState(res);
       }
       if (_v) {
-        {
-          int res = SWIG_AsVal_bool(argv[2], NULL);
+        int res = SWIG_ConvertPtr(argv[2], 0, SWIGTYPE_p_std__vectorT_CNTK__Axis_std__allocatorT_CNTK__Axis_t_t, 0);
           _v = SWIG_CheckState(res);
-        }
         if (_v) {
-          return _wrap_new_Variable__SWIG_6(self, args);
+          return _wrap_new_Variable__SWIG_0(self, args);
         }
       }
     }
@@ -15599,7 +17731,7 @@ SWIGINTERN PyObject *_wrap_new_Variable(PyObject *self, PyObject *args) {
         int res = SWIG_AsPtr_std_wstring(argv[2], (std::wstring**)(0));
         _v = SWIG_CheckState(res);
         if (_v) {
-          return _wrap_new_Variable__SWIG_2(self, args);
+          return _wrap_new_Variable__SWIG_5(self, args);
         }
       }
     }
@@ -15620,10 +17752,37 @@ SWIGINTERN PyObject *_wrap_new_Variable(PyObject *self, PyObject *args) {
         int res = SWIG_AsWCharPtrAndSize(argv[2], 0, NULL, 0);
         _v = SWIG_CheckState(res);
         if (_v) {
-          return _wrap_new_Variable__SWIG_1(self, args);
+          return _wrap_new_Variable__SWIG_3(self, args);
         }
       }
     }
+  }
+  if (argc == 4) {
+    int _v;
+    {
+      // '1000' is the typecheck precedence code. It means: check after basic
+      // types, but before arrays. See: http://www.swig.org/Doc1.3/Typemaps.html#Typemaps_overloading
+      _v = PyTuple_Check(argv[0]) ? 1 : 0;
+    }
+    if (_v) {
+      {
+        int res = SWIG_AsVal_bool(argv[1], NULL);
+        _v = SWIG_CheckState(res);
+      }
+      if (_v) {
+        {
+          int res = SWIG_AsVal_int(argv[2], NULL);
+          _v = SWIG_CheckState(res);
+        }
+        if (_v) {
+          int res = SWIG_ConvertPtr(argv[3], 0, SWIGTYPE_p_std__vectorT_CNTK__Axis_std__allocatorT_CNTK__Axis_t_t, 0);
+          _v = SWIG_CheckState(res);
+          if (_v) {
+            return _wrap_new_Variable__SWIG_6(self, args);
+        }
+      }
+    }
+  }
   }
   if (argc == 4) {
     int _v;
@@ -15648,7 +17807,7 @@ SWIGINTERN PyObject *_wrap_new_Variable(PyObject *self, PyObject *args) {
             _v = SWIG_CheckState(res);
           }
           if (_v) {
-            return _wrap_new_Variable__SWIG_8(self, args);
+            return _wrap_new_Variable__SWIG_17(self, args);
           }
         }
       }
@@ -15675,7 +17834,34 @@ SWIGINTERN PyObject *_wrap_new_Variable(PyObject *self, PyObject *args) {
           int res = SWIG_AsPtr_std_wstring(argv[3], (std::wstring**)(0));
           _v = SWIG_CheckState(res);
           if (_v) {
-            return _wrap_new_Variable__SWIG_3(self, args);
+            return _wrap_new_Variable__SWIG_11(self, args);
+          }
+        }
+      }
+    }
+  }
+  if (argc == 4) {
+    int _v;
+    {
+      // '1000' is the typecheck precedence code. It means: check after basic
+      // types, but before arrays. See: http://www.swig.org/Doc1.3/Typemaps.html#Typemaps_overloading
+      _v = PyTuple_Check(argv[0]) ? 1 : 0;
+    }
+    if (_v) {
+      {
+        int res = SWIG_AsVal_bool(argv[1], NULL);
+        _v = SWIG_CheckState(res);
+      }
+      if (_v) {
+        {
+          int res = SWIG_AsVal_int(argv[2], NULL);
+          _v = SWIG_CheckState(res);
+        }
+        if (_v) {
+          int res = SWIG_AsWCharPtrAndSize(argv[3], 0, NULL, 0);
+          _v = SWIG_CheckState(res);
+          if (_v) {
+            return _wrap_new_Variable__SWIG_9(self, args);
           }
         }
       }
@@ -15700,7 +17886,7 @@ SWIGINTERN PyObject *_wrap_new_Variable(PyObject *self, PyObject *args) {
           int res = SWIG_ConvertPtr(argv[3], 0, SWIGTYPE_p_std__vectorT_CNTK__Axis_std__allocatorT_CNTK__Axis_t_t, 0);
           _v = SWIG_CheckState(res);
           if (_v) {
-            return _wrap_new_Variable__SWIG_10(self, args);
+            return _wrap_new_Variable__SWIG_21(self, args);
           }
         }
       }
@@ -15727,9 +17913,119 @@ SWIGINTERN PyObject *_wrap_new_Variable(PyObject *self, PyObject *args) {
           int res = SWIG_AsPtr_std_wstring(argv[3], (std::wstring**)(0));
           _v = SWIG_CheckState(res);
           if (_v) {
-            return _wrap_new_Variable__SWIG_5(self, args);
+            return _wrap_new_Variable__SWIG_15(self, args);
           }
         }
+      }
+    }
+  }
+  if (argc == 4) {
+    int _v;
+    {
+      // '1000' is the typecheck precedence code. It means: check after basic
+      // types, but before arrays. See: http://www.swig.org/Doc1.3/Typemaps.html#Typemaps_overloading
+      _v = PyTuple_Check(argv[0]) ? 1 : 0;
+    }
+    if (_v) {
+      {
+        int res = SWIG_AsVal_int(argv[1], NULL);
+        _v = SWIG_CheckState(res);
+      }
+      if (_v) {
+        {
+          int res = SWIG_AsVal_bool(argv[2], NULL);
+          _v = SWIG_CheckState(res);
+        }
+        if (_v) {
+          int res = SWIG_AsWCharPtrAndSize(argv[3], 0, NULL, 0);
+          _v = SWIG_CheckState(res);
+          if (_v) {
+            return _wrap_new_Variable__SWIG_13(self, args);
+          }
+        }
+      }
+    }
+  }
+  if (argc == 4) {
+    int _v;
+    {
+      // '1000' is the typecheck precedence code. It means: check after basic
+      // types, but before arrays. See: http://www.swig.org/Doc1.3/Typemaps.html#Typemaps_overloading
+      _v = PyTuple_Check(argv[0]) ? 1 : 0;
+    }
+    if (_v) {
+      {
+        int res = SWIG_AsVal_int(argv[1], NULL);
+        _v = SWIG_CheckState(res);
+      }
+      if (_v) {
+        int res = SWIG_AsPtr_std_wstring(argv[2], (std::wstring**)(0));
+        _v = SWIG_CheckState(res);
+        if (_v) {
+          int res = SWIG_ConvertPtr(argv[3], 0, SWIGTYPE_p_std__vectorT_CNTK__Axis_std__allocatorT_CNTK__Axis_t_t, 0);
+          _v = SWIG_CheckState(res);
+          if (_v) {
+            return _wrap_new_Variable__SWIG_4(self, args);
+          }
+        }
+      }
+    }
+  }
+  if (argc == 4) {
+    int _v;
+    {
+      // '1000' is the typecheck precedence code. It means: check after basic
+      // types, but before arrays. See: http://www.swig.org/Doc1.3/Typemaps.html#Typemaps_overloading
+      _v = PyTuple_Check(argv[0]) ? 1 : 0;
+    }
+    if (_v) {
+      {
+        int res = SWIG_AsVal_int(argv[1], NULL);
+        _v = SWIG_CheckState(res);
+      }
+      if (_v) {
+        int res = SWIG_AsWCharPtrAndSize(argv[2], 0, NULL, 0);
+        _v = SWIG_CheckState(res);
+        if (_v) {
+          int res = SWIG_ConvertPtr(argv[3], 0, SWIGTYPE_p_std__vectorT_CNTK__Axis_std__allocatorT_CNTK__Axis_t_t, 0);
+          _v = SWIG_CheckState(res);
+          if (_v) {
+            return _wrap_new_Variable__SWIG_2(self, args);
+          }
+        }
+      }
+    }
+  }
+  if (argc == 5) {
+    int _v;
+    {
+      // '1000' is the typecheck precedence code. It means: check after basic
+      // types, but before arrays. See: http://www.swig.org/Doc1.3/Typemaps.html#Typemaps_overloading
+      _v = PyTuple_Check(argv[0]) ? 1 : 0;
+    }
+    if (_v) {
+      {
+        int res = SWIG_AsVal_bool(argv[1], NULL);
+        _v = SWIG_CheckState(res);
+      }
+          if (_v) {
+        {
+          int res = SWIG_AsVal_int(argv[2], NULL);
+          _v = SWIG_CheckState(res);
+          }
+        if (_v) {
+          {
+            int res = SWIG_AsVal_bool(argv[3], NULL);
+            _v = SWIG_CheckState(res);
+        }
+          if (_v) {
+            int res = SWIG_ConvertPtr(argv[4], 0, SWIGTYPE_p_std__vectorT_CNTK__Axis_std__allocatorT_CNTK__Axis_t_t, 0);
+            _v = SWIG_CheckState(res);
+            if (_v) {
+              return _wrap_new_Variable__SWIG_16(self, args);
+      }
+    }
+  }
       }
     }
   }
@@ -15759,7 +18055,69 @@ SWIGINTERN PyObject *_wrap_new_Variable(PyObject *self, PyObject *args) {
             int res = SWIG_AsPtr_std_wstring(argv[4], (std::wstring**)(0));
             _v = SWIG_CheckState(res);
             if (_v) {
-              return _wrap_new_Variable__SWIG_7(self, args);
+              return _wrap_new_Variable__SWIG_19(self, args);
+            }
+          }
+        }
+      }
+    }
+  }
+  if (argc == 5) {
+    int _v;
+    {
+      // '1000' is the typecheck precedence code. It means: check after basic
+      // types, but before arrays. See: http://www.swig.org/Doc1.3/Typemaps.html#Typemaps_overloading
+      _v = PyTuple_Check(argv[0]) ? 1 : 0;
+    }
+    if (_v) {
+      {
+        int res = SWIG_AsVal_bool(argv[1], NULL);
+        _v = SWIG_CheckState(res);
+      }
+      if (_v) {
+        {
+          int res = SWIG_AsVal_int(argv[2], NULL);
+          _v = SWIG_CheckState(res);
+        }
+        if (_v) {
+          int res = SWIG_AsPtr_std_wstring(argv[3], (std::wstring**)(0));
+          _v = SWIG_CheckState(res);
+          if (_v) {
+            int res = SWIG_ConvertPtr(argv[4], 0, SWIGTYPE_p_std__vectorT_CNTK__Axis_std__allocatorT_CNTK__Axis_t_t, 0);
+            _v = SWIG_CheckState(res);
+            if (_v) {
+              return _wrap_new_Variable__SWIG_10(self, args);
+            }
+          }
+        }
+      }
+    }
+  }
+  if (argc == 5) {
+    int _v;
+    {
+      // '1000' is the typecheck precedence code. It means: check after basic
+      // types, but before arrays. See: http://www.swig.org/Doc1.3/Typemaps.html#Typemaps_overloading
+      _v = PyTuple_Check(argv[0]) ? 1 : 0;
+    }
+    if (_v) {
+      {
+        int res = SWIG_AsVal_bool(argv[1], NULL);
+        _v = SWIG_CheckState(res);
+      }
+      if (_v) {
+        {
+          int res = SWIG_AsVal_int(argv[2], NULL);
+          _v = SWIG_CheckState(res);
+        }
+        if (_v) {
+          int res = SWIG_AsWCharPtrAndSize(argv[3], 0, NULL, 0);
+          _v = SWIG_CheckState(res);
+          if (_v) {
+            int res = SWIG_ConvertPtr(argv[4], 0, SWIGTYPE_p_std__vectorT_CNTK__Axis_std__allocatorT_CNTK__Axis_t_t, 0);
+            _v = SWIG_CheckState(res);
+            if (_v) {
+              return _wrap_new_Variable__SWIG_8(self, args);
             }
           }
         }
@@ -15788,26 +18146,136 @@ SWIGINTERN PyObject *_wrap_new_Variable(PyObject *self, PyObject *args) {
             int res = SWIG_AsPtr_std_wstring(argv[4], (std::wstring**)(0));
             _v = SWIG_CheckState(res);
             if (_v) {
-              return _wrap_new_Variable__SWIG_9(self, args);
+              return _wrap_new_Variable__SWIG_20(self, args);
             }
           }
         }
       }
     }
   }
+  if (argc == 5) {
+    int _v;
+    {
+      // '1000' is the typecheck precedence code. It means: check after basic
+      // types, but before arrays. See: http://www.swig.org/Doc1.3/Typemaps.html#Typemaps_overloading
+      _v = PyTuple_Check(argv[0]) ? 1 : 0;
+    }
+    if (_v) {
+      {
+        int res = SWIG_AsVal_int(argv[1], NULL);
+        _v = SWIG_CheckState(res);
+      }
+      if (_v) {
+        {
+          int res = SWIG_AsVal_bool(argv[2], NULL);
+          _v = SWIG_CheckState(res);
+        }
+        if (_v) {
+          int res = SWIG_AsPtr_std_wstring(argv[3], (std::wstring**)(0));
+          _v = SWIG_CheckState(res);
+          if (_v) {
+            int res = SWIG_ConvertPtr(argv[4], 0, SWIGTYPE_p_std__vectorT_CNTK__Axis_std__allocatorT_CNTK__Axis_t_t, 0);
+            _v = SWIG_CheckState(res);
+            if (_v) {
+              return _wrap_new_Variable__SWIG_14(self, args);
+            }
+          }
+        }
+      }
+    }
+  }
+  if (argc == 5) {
+    int _v;
+    {
+      // '1000' is the typecheck precedence code. It means: check after basic
+      // types, but before arrays. See: http://www.swig.org/Doc1.3/Typemaps.html#Typemaps_overloading
+      _v = PyTuple_Check(argv[0]) ? 1 : 0;
+    }
+    if (_v) {
+      {
+        int res = SWIG_AsVal_int(argv[1], NULL);
+        _v = SWIG_CheckState(res);
+      }
+      if (_v) {
+        {
+          int res = SWIG_AsVal_bool(argv[2], NULL);
+          _v = SWIG_CheckState(res);
+        }
+        if (_v) {
+          int res = SWIG_AsWCharPtrAndSize(argv[3], 0, NULL, 0);
+          _v = SWIG_CheckState(res);
+          if (_v) {
+            int res = SWIG_ConvertPtr(argv[4], 0, SWIGTYPE_p_std__vectorT_CNTK__Axis_std__allocatorT_CNTK__Axis_t_t, 0);
+            _v = SWIG_CheckState(res);
+            if (_v) {
+              return _wrap_new_Variable__SWIG_12(self, args);
+            }
+          }
+        }
+      }
+    }
+  }
+  if (argc == 6) {
+    int _v;
+    {
+      // '1000' is the typecheck precedence code. It means: check after basic
+      // types, but before arrays. See: http://www.swig.org/Doc1.3/Typemaps.html#Typemaps_overloading
+      _v = PyTuple_Check(argv[0]) ? 1 : 0;
+    }
+    if (_v) {
+      {
+        int res = SWIG_AsVal_bool(argv[1], NULL);
+        _v = SWIG_CheckState(res);
+      }
+      if (_v) {
+        {
+          int res = SWIG_AsVal_int(argv[2], NULL);
+          _v = SWIG_CheckState(res);
+        }
+        if (_v) {
+          {
+            int res = SWIG_AsVal_bool(argv[3], NULL);
+            _v = SWIG_CheckState(res);
+            }
+          if (_v) {
+            int res = SWIG_AsPtr_std_wstring(argv[4], (std::wstring**)(0));
+            _v = SWIG_CheckState(res);
+            if (_v) {
+              int res = SWIG_ConvertPtr(argv[5], 0, SWIGTYPE_p_std__vectorT_CNTK__Axis_std__allocatorT_CNTK__Axis_t_t, 0);
+              _v = SWIG_CheckState(res);
+              if (_v) {
+                return _wrap_new_Variable__SWIG_18(self, args);
+          }
+        }
+      }
+    }
+  }
+    }
+  }
   
 fail:
   SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'new_Variable'.\n"
     "  Possible C/C++ prototypes are:\n"
+    "    CNTK::Variable::Variable(CNTK::NDShape const &,CNTK::DataType,std::vector< CNTK::Axis,std::allocator< CNTK::Axis > > const &)\n"
     "    CNTK::Variable::Variable(CNTK::NDShape const &,CNTK::DataType)\n"
+    "    CNTK::Variable::Variable(CNTK::NDShape const &,CNTK::DataType,wchar_t const *,std::vector< CNTK::Axis,std::allocator< CNTK::Axis > > const &)\n"
     "    CNTK::Variable::Variable(CNTK::NDShape const &,CNTK::DataType,wchar_t const *)\n"
+    "    CNTK::Variable::Variable(CNTK::NDShape const &,CNTK::DataType,std::wstring const &,std::vector< CNTK::Axis,std::allocator< CNTK::Axis > > const &)\n"
     "    CNTK::Variable::Variable(CNTK::NDShape const &,CNTK::DataType,std::wstring const &)\n"
-    "    CNTK::Variable::Variable(CNTK::NDShape const &,bool,CNTK::DataType,std::wstring const &)\n"
+    "    CNTK::Variable::Variable(CNTK::NDShape const &,bool,CNTK::DataType,std::vector< CNTK::Axis,std::allocator< CNTK::Axis > > const &)\n"
     "    CNTK::Variable::Variable(CNTK::NDShape const &,bool,CNTK::DataType)\n"
+    "    CNTK::Variable::Variable(CNTK::NDShape const &,bool,CNTK::DataType,wchar_t const *,std::vector< CNTK::Axis,std::allocator< CNTK::Axis > > const &)\n"
+    "    CNTK::Variable::Variable(CNTK::NDShape const &,bool,CNTK::DataType,wchar_t const *)\n"
+    "    CNTK::Variable::Variable(CNTK::NDShape const &,bool,CNTK::DataType,std::wstring const &,std::vector< CNTK::Axis,std::allocator< CNTK::Axis > > const &)\n"
+    "    CNTK::Variable::Variable(CNTK::NDShape const &,bool,CNTK::DataType,std::wstring const &)\n"
+    "    CNTK::Variable::Variable(CNTK::NDShape const &,CNTK::DataType,bool,wchar_t const *,std::vector< CNTK::Axis,std::allocator< CNTK::Axis > > const &)\n"
+    "    CNTK::Variable::Variable(CNTK::NDShape const &,CNTK::DataType,bool,wchar_t const *)\n"
+    "    CNTK::Variable::Variable(CNTK::NDShape const &,CNTK::DataType,bool,std::wstring const &,std::vector< CNTK::Axis,std::allocator< CNTK::Axis > > const &)\n"
     "    CNTK::Variable::Variable(CNTK::NDShape const &,CNTK::DataType,bool,std::wstring const &)\n"
-    "    CNTK::Variable::Variable(CNTK::NDShape const &,CNTK::DataType,bool)\n"
-    "    CNTK::Variable::Variable(CNTK::NDShape const &,bool,CNTK::DataType,bool,std::wstring const &)\n"
+    "    CNTK::Variable::Variable(CNTK::NDShape const &,bool,CNTK::DataType,bool,std::vector< CNTK::Axis,std::allocator< CNTK::Axis > > const &)\n"
     "    CNTK::Variable::Variable(CNTK::NDShape const &,bool,CNTK::DataType,bool)\n"
+    "    CNTK::Variable::Variable(CNTK::NDShape const &,bool,CNTK::DataType,bool,std::wstring const &,std::vector< CNTK::Axis,std::allocator< CNTK::Axis > > const &)\n"
+    "    CNTK::Variable::Variable(CNTK::NDShape const &,bool,CNTK::DataType,bool,std::wstring const &)\n"
     "    CNTK::Variable::Variable(CNTK::NDShape const &,CNTK::DataType,CNTK::Function *,std::vector< CNTK::Axis,std::allocator< CNTK::Axis > > const &,std::wstring const &)\n"
     "    CNTK::Variable::Variable(CNTK::NDShape const &,CNTK::DataType,CNTK::Function *,std::vector< CNTK::Axis,std::allocator< CNTK::Axis > > const &)\n"
     "    CNTK::Variable::Variable(CNTK::FunctionPtr const &)\n"
@@ -22174,6 +24642,618 @@ fail:
 }
 
 
+SWIGINTERN PyObject *_wrap_hardmax__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  CNTK::Variable *arg1 = 0 ;
+  std::wstring *arg2 = 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int res2 = SWIG_OLDOBJ ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  CNTK::FunctionPtr result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:hardmax",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "hardmax" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+  }
+  if (!argp1) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "hardmax" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+  }
+  arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
+  {
+    std::wstring *ptr = (std::wstring *)0;
+    res2 = SWIG_AsPtr_std_wstring(obj1, &ptr);
+    if (!SWIG_IsOK(res2)) {
+      SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "hardmax" "', argument " "2"" of type '" "std::wstring const &""'"); 
+    }
+    if (!ptr) {
+      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "hardmax" "', argument " "2"" of type '" "std::wstring const &""'"); 
+    }
+    arg2 = ptr;
+  }
+  {
+    try {
+      result = CNTK::Hardmax((CNTK::Variable const &)*arg1,(std::wstring const &)*arg2); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  {
+    std::shared_ptr<  CNTK::Function > *smartresult = result ? new std::shared_ptr<  CNTK::Function >(result) : 0;
+    resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(smartresult), SWIGTYPE_p_std__shared_ptrT_CNTK__Function_t, SWIG_POINTER_OWN);
+  }
+  if (SWIG_IsNewObj(res2)) delete arg2;
+  return resultobj;
+fail:
+  if (SWIG_IsNewObj(res2)) delete arg2;
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_hardmax__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  CNTK::Variable *arg1 = 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  CNTK::FunctionPtr result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:hardmax",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "hardmax" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+  }
+  if (!argp1) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "hardmax" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+  }
+  arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
+  {
+    try {
+      result = CNTK::Hardmax((CNTK::Variable const &)*arg1); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  {
+    std::shared_ptr<  CNTK::Function > *smartresult = result ? new std::shared_ptr<  CNTK::Function >(result) : 0;
+    resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(smartresult), SWIGTYPE_p_std__shared_ptrT_CNTK__Function_t, SWIG_POINTER_OWN);
+  }
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_hardmax(PyObject *self, PyObject *args) {
+  Py_ssize_t argc;
+  PyObject *argv[3] = {
+    0
+  };
+  Py_ssize_t ii;
+  
+  if (!PyTuple_Check(args)) SWIG_fail;
+  argc = args ? PyObject_Length(args) : 0;
+  for (ii = 0; (ii < 2) && (ii < argc); ii++) {
+    argv[ii] = PyTuple_GET_ITEM(args,ii);
+  }
+  if (argc == 1) {
+    int _v;
+    int res = SWIG_ConvertPtr(argv[0], 0, SWIGTYPE_p_CNTK__Variable, 0);
+    _v = SWIG_CheckState(res);
+    if (_v) {
+      return _wrap_hardmax__SWIG_1(self, args);
+    }
+  }
+  if (argc == 2) {
+    int _v;
+    int res = SWIG_ConvertPtr(argv[0], 0, SWIGTYPE_p_CNTK__Variable, 0);
+    _v = SWIG_CheckState(res);
+    if (_v) {
+      int res = SWIG_AsPtr_std_wstring(argv[1], (std::wstring**)(0));
+      _v = SWIG_CheckState(res);
+      if (_v) {
+        return _wrap_hardmax__SWIG_0(self, args);
+      }
+    }
+  }
+  
+fail:
+  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'hardmax'.\n"
+    "  Possible C/C++ prototypes are:\n"
+    "    CNTK::Hardmax(CNTK::Variable const &,std::wstring const &)\n"
+    "    CNTK::Hardmax(CNTK::Variable const &)\n");
+  return 0;
+}
+
+
+SWIGINTERN PyObject *_wrap_transpose_axes__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  CNTK::Variable *arg1 = 0 ;
+  CNTK::Axis *arg2 = 0 ;
+  CNTK::Axis *arg3 = 0 ;
+  std::wstring *arg4 = 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  void *argp3 = 0 ;
+  int res3 = 0 ;
+  int res4 = SWIG_OLDOBJ ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  PyObject * obj2 = 0 ;
+  PyObject * obj3 = 0 ;
+  CNTK::FunctionPtr result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OOOO:transpose_axes",&obj0,&obj1,&obj2,&obj3)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "transpose_axes" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+  }
+  if (!argp1) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "transpose_axes" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+  }
+  arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
+  res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_CNTK__Axis,  0  | 0);
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "transpose_axes" "', argument " "2"" of type '" "CNTK::Axis const &""'"); 
+  }
+  if (!argp2) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "transpose_axes" "', argument " "2"" of type '" "CNTK::Axis const &""'"); 
+  }
+  arg2 = reinterpret_cast< CNTK::Axis * >(argp2);
+  res3 = SWIG_ConvertPtr(obj2, &argp3, SWIGTYPE_p_CNTK__Axis,  0  | 0);
+  if (!SWIG_IsOK(res3)) {
+    SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "transpose_axes" "', argument " "3"" of type '" "CNTK::Axis const &""'"); 
+  }
+  if (!argp3) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "transpose_axes" "', argument " "3"" of type '" "CNTK::Axis const &""'"); 
+  }
+  arg3 = reinterpret_cast< CNTK::Axis * >(argp3);
+  {
+    std::wstring *ptr = (std::wstring *)0;
+    res4 = SWIG_AsPtr_std_wstring(obj3, &ptr);
+    if (!SWIG_IsOK(res4)) {
+      SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "transpose_axes" "', argument " "4"" of type '" "std::wstring const &""'"); 
+    }
+    if (!ptr) {
+      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "transpose_axes" "', argument " "4"" of type '" "std::wstring const &""'"); 
+    }
+    arg4 = ptr;
+  }
+  {
+    try {
+      result = CNTK::TransposeAxes((CNTK::Variable const &)*arg1,(CNTK::Axis const &)*arg2,(CNTK::Axis const &)*arg3,(std::wstring const &)*arg4); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  {
+    std::shared_ptr<  CNTK::Function > *smartresult = result ? new std::shared_ptr<  CNTK::Function >(result) : 0;
+    resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(smartresult), SWIGTYPE_p_std__shared_ptrT_CNTK__Function_t, SWIG_POINTER_OWN);
+  }
+  if (SWIG_IsNewObj(res4)) delete arg4;
+  return resultobj;
+fail:
+  if (SWIG_IsNewObj(res4)) delete arg4;
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_transpose_axes__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  CNTK::Variable *arg1 = 0 ;
+  CNTK::Axis *arg2 = 0 ;
+  CNTK::Axis *arg3 = 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  void *argp3 = 0 ;
+  int res3 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  PyObject * obj2 = 0 ;
+  CNTK::FunctionPtr result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OOO:transpose_axes",&obj0,&obj1,&obj2)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "transpose_axes" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+  }
+  if (!argp1) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "transpose_axes" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+  }
+  arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
+  res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_CNTK__Axis,  0  | 0);
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "transpose_axes" "', argument " "2"" of type '" "CNTK::Axis const &""'"); 
+  }
+  if (!argp2) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "transpose_axes" "', argument " "2"" of type '" "CNTK::Axis const &""'"); 
+  }
+  arg2 = reinterpret_cast< CNTK::Axis * >(argp2);
+  res3 = SWIG_ConvertPtr(obj2, &argp3, SWIGTYPE_p_CNTK__Axis,  0  | 0);
+  if (!SWIG_IsOK(res3)) {
+    SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "transpose_axes" "', argument " "3"" of type '" "CNTK::Axis const &""'"); 
+  }
+  if (!argp3) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "transpose_axes" "', argument " "3"" of type '" "CNTK::Axis const &""'"); 
+  }
+  arg3 = reinterpret_cast< CNTK::Axis * >(argp3);
+  {
+    try {
+      result = CNTK::TransposeAxes((CNTK::Variable const &)*arg1,(CNTK::Axis const &)*arg2,(CNTK::Axis const &)*arg3); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  {
+    std::shared_ptr<  CNTK::Function > *smartresult = result ? new std::shared_ptr<  CNTK::Function >(result) : 0;
+    resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(smartresult), SWIGTYPE_p_std__shared_ptrT_CNTK__Function_t, SWIG_POINTER_OWN);
+  }
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_transpose_axes(PyObject *self, PyObject *args) {
+  Py_ssize_t argc;
+  PyObject *argv[5] = {
+    0
+  };
+  Py_ssize_t ii;
+  
+  if (!PyTuple_Check(args)) SWIG_fail;
+  argc = args ? PyObject_Length(args) : 0;
+  for (ii = 0; (ii < 4) && (ii < argc); ii++) {
+    argv[ii] = PyTuple_GET_ITEM(args,ii);
+  }
+  if (argc == 3) {
+    int _v;
+    int res = SWIG_ConvertPtr(argv[0], 0, SWIGTYPE_p_CNTK__Variable, 0);
+    _v = SWIG_CheckState(res);
+    if (_v) {
+      int res = SWIG_ConvertPtr(argv[1], 0, SWIGTYPE_p_CNTK__Axis, 0);
+      _v = SWIG_CheckState(res);
+      if (_v) {
+        int res = SWIG_ConvertPtr(argv[2], 0, SWIGTYPE_p_CNTK__Axis, 0);
+        _v = SWIG_CheckState(res);
+        if (_v) {
+          return _wrap_transpose_axes__SWIG_1(self, args);
+        }
+      }
+    }
+  }
+  if (argc == 4) {
+    int _v;
+    int res = SWIG_ConvertPtr(argv[0], 0, SWIGTYPE_p_CNTK__Variable, 0);
+    _v = SWIG_CheckState(res);
+    if (_v) {
+      int res = SWIG_ConvertPtr(argv[1], 0, SWIGTYPE_p_CNTK__Axis, 0);
+      _v = SWIG_CheckState(res);
+      if (_v) {
+        int res = SWIG_ConvertPtr(argv[2], 0, SWIGTYPE_p_CNTK__Axis, 0);
+        _v = SWIG_CheckState(res);
+        if (_v) {
+          int res = SWIG_AsPtr_std_wstring(argv[3], (std::wstring**)(0));
+          _v = SWIG_CheckState(res);
+          if (_v) {
+            return _wrap_transpose_axes__SWIG_0(self, args);
+          }
+        }
+      }
+    }
+  }
+  
+fail:
+  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'transpose_axes'.\n"
+    "  Possible C/C++ prototypes are:\n"
+    "    CNTK::TransposeAxes(CNTK::Variable const &,CNTK::Axis const &,CNTK::Axis const &,std::wstring const &)\n"
+    "    CNTK::TransposeAxes(CNTK::Variable const &,CNTK::Axis const &,CNTK::Axis const &)\n");
+  return 0;
+}
+
+
+SWIGINTERN PyObject *_wrap_slice__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  CNTK::Variable *arg1 = 0 ;
+  CNTK::Axis *arg2 = 0 ;
+  int arg3 ;
+  int arg4 ;
+  std::wstring *arg5 = 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  int val3 ;
+  int ecode3 = 0 ;
+  int val4 ;
+  int ecode4 = 0 ;
+  int res5 = SWIG_OLDOBJ ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  PyObject * obj2 = 0 ;
+  PyObject * obj3 = 0 ;
+  PyObject * obj4 = 0 ;
+  CNTK::FunctionPtr result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OOOOO:slice",&obj0,&obj1,&obj2,&obj3,&obj4)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "slice" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+  }
+  if (!argp1) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "slice" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+  }
+  arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
+  res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_CNTK__Axis,  0  | 0);
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "slice" "', argument " "2"" of type '" "CNTK::Axis const &""'"); 
+  }
+  if (!argp2) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "slice" "', argument " "2"" of type '" "CNTK::Axis const &""'"); 
+  }
+  arg2 = reinterpret_cast< CNTK::Axis * >(argp2);
+  ecode3 = SWIG_AsVal_int(obj2, &val3);
+  if (!SWIG_IsOK(ecode3)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "slice" "', argument " "3"" of type '" "int""'");
+  } 
+  arg3 = static_cast< int >(val3);
+  ecode4 = SWIG_AsVal_int(obj3, &val4);
+  if (!SWIG_IsOK(ecode4)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode4), "in method '" "slice" "', argument " "4"" of type '" "int""'");
+  } 
+  arg4 = static_cast< int >(val4);
+  {
+    std::wstring *ptr = (std::wstring *)0;
+    res5 = SWIG_AsPtr_std_wstring(obj4, &ptr);
+    if (!SWIG_IsOK(res5)) {
+      SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "slice" "', argument " "5"" of type '" "std::wstring const &""'"); 
+    }
+    if (!ptr) {
+      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "slice" "', argument " "5"" of type '" "std::wstring const &""'"); 
+    }
+    arg5 = ptr;
+  }
+  {
+    try {
+      result = CNTK::Slice((CNTK::Variable const &)*arg1,(CNTK::Axis const &)*arg2,arg3,arg4,(std::wstring const &)*arg5); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  {
+    std::shared_ptr<  CNTK::Function > *smartresult = result ? new std::shared_ptr<  CNTK::Function >(result) : 0;
+    resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(smartresult), SWIGTYPE_p_std__shared_ptrT_CNTK__Function_t, SWIG_POINTER_OWN);
+  }
+  if (SWIG_IsNewObj(res5)) delete arg5;
+  return resultobj;
+fail:
+  if (SWIG_IsNewObj(res5)) delete arg5;
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_slice__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  CNTK::Variable *arg1 = 0 ;
+  CNTK::Axis *arg2 = 0 ;
+  int arg3 ;
+  int arg4 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  int val3 ;
+  int ecode3 = 0 ;
+  int val4 ;
+  int ecode4 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  PyObject * obj2 = 0 ;
+  PyObject * obj3 = 0 ;
+  CNTK::FunctionPtr result;
+
+  if (!PyArg_ParseTuple(args,(char *)"OOOO:slice",&obj0,&obj1,&obj2,&obj3)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "slice" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+  }
+  if (!argp1) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "slice" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+  }
+  arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
+  res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_CNTK__Axis,  0  | 0);
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "slice" "', argument " "2"" of type '" "CNTK::Axis const &""'"); 
+  }
+  if (!argp2) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "slice" "', argument " "2"" of type '" "CNTK::Axis const &""'"); 
+  }
+  arg2 = reinterpret_cast< CNTK::Axis * >(argp2);
+  ecode3 = SWIG_AsVal_int(obj2, &val3);
+  if (!SWIG_IsOK(ecode3)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "slice" "', argument " "3"" of type '" "int""'");
+  } 
+  arg3 = static_cast< int >(val3);
+  ecode4 = SWIG_AsVal_int(obj3, &val4);
+  if (!SWIG_IsOK(ecode4)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode4), "in method '" "slice" "', argument " "4"" of type '" "int""'");
+  } 
+  arg4 = static_cast< int >(val4);
+  {
+    try {
+      result = CNTK::Slice((CNTK::Variable const &)*arg1,(CNTK::Axis const &)*arg2,arg3,arg4); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  {
+    std::shared_ptr<  CNTK::Function > *smartresult = result ? new std::shared_ptr<  CNTK::Function >(result) : 0;
+    resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(smartresult), SWIGTYPE_p_std__shared_ptrT_CNTK__Function_t, SWIG_POINTER_OWN);
+  }
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_slice(PyObject *self, PyObject *args) {
+  Py_ssize_t argc;
+  PyObject *argv[6] = {
+    0
+  };
+  Py_ssize_t ii;
+  
+  if (!PyTuple_Check(args)) SWIG_fail;
+  argc = args ? PyObject_Length(args) : 0;
+  for (ii = 0; (ii < 5) && (ii < argc); ii++) {
+    argv[ii] = PyTuple_GET_ITEM(args,ii);
+  }
+  if (argc == 4) {
+    int _v;
+    int res = SWIG_ConvertPtr(argv[0], 0, SWIGTYPE_p_CNTK__Variable, 0);
+    _v = SWIG_CheckState(res);
+    if (_v) {
+      int res = SWIG_ConvertPtr(argv[1], 0, SWIGTYPE_p_CNTK__Axis, 0);
+      _v = SWIG_CheckState(res);
+      if (_v) {
+        {
+          int res = SWIG_AsVal_int(argv[2], NULL);
+          _v = SWIG_CheckState(res);
+        }
+        if (_v) {
+          {
+            int res = SWIG_AsVal_int(argv[3], NULL);
+            _v = SWIG_CheckState(res);
+          }
+          if (_v) {
+            return _wrap_slice__SWIG_1(self, args);
+          }
+        }
+      }
+    }
+  }
+  if (argc == 5) {
+    int _v;
+    int res = SWIG_ConvertPtr(argv[0], 0, SWIGTYPE_p_CNTK__Variable, 0);
+    _v = SWIG_CheckState(res);
+    if (_v) {
+      int res = SWIG_ConvertPtr(argv[1], 0, SWIGTYPE_p_CNTK__Axis, 0);
+      _v = SWIG_CheckState(res);
+      if (_v) {
+        {
+          int res = SWIG_AsVal_int(argv[2], NULL);
+          _v = SWIG_CheckState(res);
+        }
+        if (_v) {
+          {
+            int res = SWIG_AsVal_int(argv[3], NULL);
+            _v = SWIG_CheckState(res);
+          }
+          if (_v) {
+            int res = SWIG_AsPtr_std_wstring(argv[4], (std::wstring**)(0));
+            _v = SWIG_CheckState(res);
+            if (_v) {
+              return _wrap_slice__SWIG_0(self, args);
+            }
+          }
+        }
+      }
+    }
+  }
+  
+fail:
+  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'slice'.\n"
+    "  Possible C/C++ prototypes are:\n"
+    "    CNTK::Slice(CNTK::Variable const &,CNTK::Axis const &,int,int,std::wstring const &)\n"
+    "    CNTK::Slice(CNTK::Variable const &,CNTK::Axis const &,int,int)\n");
+  return 0;
+}
+
+
 SWIGINTERN PyObject *_wrap_plus__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = 0 ;
@@ -24300,6 +27380,292 @@ fail:
 }
 
 
+SWIGINTERN PyObject *_wrap_transpose_times__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  CNTK::Variable *arg1 = 0 ;
+  CNTK::Variable *arg2 = 0 ;
+  size_t arg3 ;
+  std::wstring *arg4 = 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  size_t val3 ;
+  int ecode3 = 0 ;
+  int res4 = SWIG_OLDOBJ ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  PyObject * obj2 = 0 ;
+  PyObject * obj3 = 0 ;
+  CNTK::FunctionPtr result;
+
+  if (!PyArg_ParseTuple(args,(char *)"OOOO:transpose_times",&obj0,&obj1,&obj2,&obj3)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "transpose_times" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+  }
+  if (!argp1) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "transpose_times" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+  }
+  arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
+  res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_CNTK__Variable,  0  | 0);
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "transpose_times" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+  }
+  if (!argp2) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "transpose_times" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+  }
+  arg2 = reinterpret_cast< CNTK::Variable * >(argp2);
+  ecode3 = SWIG_AsVal_size_t(obj2, &val3);
+  if (!SWIG_IsOK(ecode3)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "transpose_times" "', argument " "3"" of type '" "size_t""'");
+  } 
+  arg3 = static_cast< size_t >(val3);
+  {
+    std::wstring *ptr = (std::wstring *)0;
+    res4 = SWIG_AsPtr_std_wstring(obj3, &ptr);
+    if (!SWIG_IsOK(res4)) {
+      SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "transpose_times" "', argument " "4"" of type '" "std::wstring const &""'"); 
+    }
+    if (!ptr) {
+      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "transpose_times" "', argument " "4"" of type '" "std::wstring const &""'"); 
+    }
+    arg4 = ptr;
+  }
+  {
+    try {
+      result = CNTK::TransposeTimes((CNTK::Variable const &)*arg1,(CNTK::Variable const &)*arg2,arg3,(std::wstring const &)*arg4); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  {
+    std::shared_ptr<  CNTK::Function > *smartresult = result ? new std::shared_ptr<  CNTK::Function >(result) : 0;
+    resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(smartresult), SWIGTYPE_p_std__shared_ptrT_CNTK__Function_t, SWIG_POINTER_OWN);
+  }
+  if (SWIG_IsNewObj(res4)) delete arg4;
+  return resultobj;
+fail:
+  if (SWIG_IsNewObj(res4)) delete arg4;
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_transpose_times__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  CNTK::Variable *arg1 = 0 ;
+  CNTK::Variable *arg2 = 0 ;
+  size_t arg3 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  size_t val3 ;
+  int ecode3 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  PyObject * obj2 = 0 ;
+  CNTK::FunctionPtr result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OOO:transpose_times",&obj0,&obj1,&obj2)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "transpose_times" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+  }
+  if (!argp1) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "transpose_times" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+  }
+  arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
+  res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_CNTK__Variable,  0  | 0);
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "transpose_times" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+  }
+  if (!argp2) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "transpose_times" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+  }
+  arg2 = reinterpret_cast< CNTK::Variable * >(argp2);
+  ecode3 = SWIG_AsVal_size_t(obj2, &val3);
+  if (!SWIG_IsOK(ecode3)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "transpose_times" "', argument " "3"" of type '" "size_t""'");
+  } 
+  arg3 = static_cast< size_t >(val3);
+  {
+    try {
+      result = CNTK::TransposeTimes((CNTK::Variable const &)*arg1,(CNTK::Variable const &)*arg2,arg3); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  {
+    std::shared_ptr<  CNTK::Function > *smartresult = result ? new std::shared_ptr<  CNTK::Function >(result) : 0;
+    resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(smartresult), SWIGTYPE_p_std__shared_ptrT_CNTK__Function_t, SWIG_POINTER_OWN);
+  }
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_transpose_times__SWIG_2(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  CNTK::Variable *arg1 = 0 ;
+  CNTK::Variable *arg2 = 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  CNTK::FunctionPtr result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:transpose_times",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "transpose_times" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+  }
+  if (!argp1) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "transpose_times" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+  }
+  arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
+  res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_CNTK__Variable,  0  | 0);
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "transpose_times" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+  }
+  if (!argp2) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "transpose_times" "', argument " "2"" of type '" "CNTK::Variable const &""'"); 
+  }
+  arg2 = reinterpret_cast< CNTK::Variable * >(argp2);
+  {
+    try {
+      result = CNTK::TransposeTimes((CNTK::Variable const &)*arg1,(CNTK::Variable const &)*arg2); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  {
+    std::shared_ptr<  CNTK::Function > *smartresult = result ? new std::shared_ptr<  CNTK::Function >(result) : 0;
+    resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(smartresult), SWIGTYPE_p_std__shared_ptrT_CNTK__Function_t, SWIG_POINTER_OWN);
+  }
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_transpose_times(PyObject *self, PyObject *args) {
+  Py_ssize_t argc;
+  PyObject *argv[5] = {
+    0
+  };
+  Py_ssize_t ii;
+  
+  if (!PyTuple_Check(args)) SWIG_fail;
+  argc = args ? PyObject_Length(args) : 0;
+  for (ii = 0; (ii < 4) && (ii < argc); ii++) {
+    argv[ii] = PyTuple_GET_ITEM(args,ii);
+  }
+  if (argc == 2) {
+    int _v;
+    int res = SWIG_ConvertPtr(argv[0], 0, SWIGTYPE_p_CNTK__Variable, 0);
+    _v = SWIG_CheckState(res);
+    if (_v) {
+      int res = SWIG_ConvertPtr(argv[1], 0, SWIGTYPE_p_CNTK__Variable, 0);
+      _v = SWIG_CheckState(res);
+      if (_v) {
+        return _wrap_transpose_times__SWIG_2(self, args);
+      }
+    }
+  }
+  if (argc == 3) {
+    int _v;
+    int res = SWIG_ConvertPtr(argv[0], 0, SWIGTYPE_p_CNTK__Variable, 0);
+    _v = SWIG_CheckState(res);
+    if (_v) {
+      int res = SWIG_ConvertPtr(argv[1], 0, SWIGTYPE_p_CNTK__Variable, 0);
+      _v = SWIG_CheckState(res);
+      if (_v) {
+        {
+          int res = SWIG_AsVal_size_t(argv[2], NULL);
+          _v = SWIG_CheckState(res);
+        }
+        if (_v) {
+          return _wrap_transpose_times__SWIG_1(self, args);
+        }
+      }
+    }
+  }
+  if (argc == 4) {
+    int _v;
+    int res = SWIG_ConvertPtr(argv[0], 0, SWIGTYPE_p_CNTK__Variable, 0);
+    _v = SWIG_CheckState(res);
+    if (_v) {
+      int res = SWIG_ConvertPtr(argv[1], 0, SWIGTYPE_p_CNTK__Variable, 0);
+      _v = SWIG_CheckState(res);
+      if (_v) {
+        {
+          int res = SWIG_AsVal_size_t(argv[2], NULL);
+          _v = SWIG_CheckState(res);
+        }
+        if (_v) {
+          int res = SWIG_AsPtr_std_wstring(argv[3], (std::wstring**)(0));
+          _v = SWIG_CheckState(res);
+          if (_v) {
+            return _wrap_transpose_times__SWIG_0(self, args);
+          }
+        }
+      }
+    }
+  }
+  
+fail:
+  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'transpose_times'.\n"
+    "  Possible C/C++ prototypes are:\n"
+    "    CNTK::TransposeTimes(CNTK::Variable const &,CNTK::Variable const &,size_t,std::wstring const &)\n"
+    "    CNTK::TransposeTimes(CNTK::Variable const &,CNTK::Variable const &,size_t)\n"
+    "    CNTK::TransposeTimes(CNTK::Variable const &,CNTK::Variable const &)\n");
+  return 0;
+}
+
+
 SWIGINTERN PyObject *_wrap_squared_error__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Variable *arg1 = 0 ;
@@ -25390,16 +28756,150 @@ fail:
 }
 
 
+SWIGINTERN PyObject *_wrap_reduce_sum__SWIG_2(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  CNTK::Variable *arg1 = 0 ;
+  CNTK::Axis *arg2 = 0 ;
+  std::wstring *arg3 = 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  int res3 = SWIG_OLDOBJ ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  PyObject * obj2 = 0 ;
+  CNTK::FunctionPtr result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OOO:reduce_sum",&obj0,&obj1,&obj2)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "reduce_sum" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+  }
+  if (!argp1) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "reduce_sum" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+  }
+  arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
+  res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_CNTK__Axis,  0  | 0);
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "reduce_sum" "', argument " "2"" of type '" "CNTK::Axis const &""'"); 
+  }
+  if (!argp2) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "reduce_sum" "', argument " "2"" of type '" "CNTK::Axis const &""'"); 
+  }
+  arg2 = reinterpret_cast< CNTK::Axis * >(argp2);
+  {
+    std::wstring *ptr = (std::wstring *)0;
+    res3 = SWIG_AsPtr_std_wstring(obj2, &ptr);
+    if (!SWIG_IsOK(res3)) {
+      SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "reduce_sum" "', argument " "3"" of type '" "std::wstring const &""'"); 
+    }
+    if (!ptr) {
+      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "reduce_sum" "', argument " "3"" of type '" "std::wstring const &""'"); 
+    }
+    arg3 = ptr;
+  }
+  {
+    try {
+      result = CNTK::ReduceSum((CNTK::Variable const &)*arg1,(CNTK::Axis const &)*arg2,(std::wstring const &)*arg3); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  {
+    std::shared_ptr<  CNTK::Function > *smartresult = result ? new std::shared_ptr<  CNTK::Function >(result) : 0;
+    resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(smartresult), SWIGTYPE_p_std__shared_ptrT_CNTK__Function_t, SWIG_POINTER_OWN);
+  }
+  if (SWIG_IsNewObj(res3)) delete arg3;
+  return resultobj;
+fail:
+  if (SWIG_IsNewObj(res3)) delete arg3;
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_reduce_sum__SWIG_3(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  CNTK::Variable *arg1 = 0 ;
+  CNTK::Axis *arg2 = 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  CNTK::FunctionPtr result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:reduce_sum",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "reduce_sum" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+  }
+  if (!argp1) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "reduce_sum" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+  }
+  arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
+  res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_CNTK__Axis,  0  | 0);
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "reduce_sum" "', argument " "2"" of type '" "CNTK::Axis const &""'"); 
+  }
+  if (!argp2) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "reduce_sum" "', argument " "2"" of type '" "CNTK::Axis const &""'"); 
+  }
+  arg2 = reinterpret_cast< CNTK::Axis * >(argp2);
+  {
+    try {
+      result = CNTK::ReduceSum((CNTK::Variable const &)*arg1,(CNTK::Axis const &)*arg2); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  {
+    std::shared_ptr<  CNTK::Function > *smartresult = result ? new std::shared_ptr<  CNTK::Function >(result) : 0;
+    resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(smartresult), SWIGTYPE_p_std__shared_ptrT_CNTK__Function_t, SWIG_POINTER_OWN);
+  }
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
 SWIGINTERN PyObject *_wrap_reduce_sum(PyObject *self, PyObject *args) {
   Py_ssize_t argc;
-  PyObject *argv[3] = {
+  PyObject *argv[4] = {
     0
   };
   Py_ssize_t ii;
   
   if (!PyTuple_Check(args)) SWIG_fail;
   argc = args ? PyObject_Length(args) : 0;
-  for (ii = 0; (ii < 2) && (ii < argc); ii++) {
+  for (ii = 0; (ii < 3) && (ii < argc); ii++) {
     argv[ii] = PyTuple_GET_ITEM(args,ii);
   }
   if (argc == 1) {
@@ -25415,10 +28915,38 @@ SWIGINTERN PyObject *_wrap_reduce_sum(PyObject *self, PyObject *args) {
     int res = SWIG_ConvertPtr(argv[0], 0, SWIGTYPE_p_CNTK__Variable, 0);
     _v = SWIG_CheckState(res);
     if (_v) {
+      int res = SWIG_ConvertPtr(argv[1], 0, SWIGTYPE_p_CNTK__Axis, 0);
+      _v = SWIG_CheckState(res);
+      if (_v) {
+        return _wrap_reduce_sum__SWIG_3(self, args);
+      }
+    }
+  }
+  if (argc == 2) {
+    int _v;
+    int res = SWIG_ConvertPtr(argv[0], 0, SWIGTYPE_p_CNTK__Variable, 0);
+    _v = SWIG_CheckState(res);
+    if (_v) {
       int res = SWIG_AsPtr_std_wstring(argv[1], (std::wstring**)(0));
       _v = SWIG_CheckState(res);
       if (_v) {
         return _wrap_reduce_sum__SWIG_0(self, args);
+      }
+    }
+  }
+  if (argc == 3) {
+    int _v;
+    int res = SWIG_ConvertPtr(argv[0], 0, SWIGTYPE_p_CNTK__Variable, 0);
+    _v = SWIG_CheckState(res);
+    if (_v) {
+      int res = SWIG_ConvertPtr(argv[1], 0, SWIGTYPE_p_CNTK__Axis, 0);
+      _v = SWIG_CheckState(res);
+      if (_v) {
+        int res = SWIG_AsPtr_std_wstring(argv[2], (std::wstring**)(0));
+        _v = SWIG_CheckState(res);
+        if (_v) {
+          return _wrap_reduce_sum__SWIG_2(self, args);
+        }
       }
     }
   }
@@ -25427,7 +28955,193 @@ fail:
   SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'reduce_sum'.\n"
     "  Possible C/C++ prototypes are:\n"
     "    CNTK::ReduceSum(CNTK::Variable const &,std::wstring const &)\n"
-    "    CNTK::ReduceSum(CNTK::Variable const &)\n");
+    "    CNTK::ReduceSum(CNTK::Variable const &)\n"
+    "    CNTK::ReduceSum(CNTK::Variable const &,CNTK::Axis const &,std::wstring const &)\n"
+    "    CNTK::ReduceSum(CNTK::Variable const &,CNTK::Axis const &)\n");
+  return 0;
+}
+
+
+SWIGINTERN PyObject *_wrap_reduce_log_sum__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  CNTK::Variable *arg1 = 0 ;
+  CNTK::Axis *arg2 = 0 ;
+  std::wstring *arg3 = 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  int res3 = SWIG_OLDOBJ ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  PyObject * obj2 = 0 ;
+  CNTK::FunctionPtr result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OOO:reduce_log_sum",&obj0,&obj1,&obj2)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "reduce_log_sum" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+  }
+  if (!argp1) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "reduce_log_sum" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+  }
+  arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
+  res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_CNTK__Axis,  0  | 0);
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "reduce_log_sum" "', argument " "2"" of type '" "CNTK::Axis const &""'"); 
+  }
+  if (!argp2) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "reduce_log_sum" "', argument " "2"" of type '" "CNTK::Axis const &""'"); 
+  }
+  arg2 = reinterpret_cast< CNTK::Axis * >(argp2);
+  {
+    std::wstring *ptr = (std::wstring *)0;
+    res3 = SWIG_AsPtr_std_wstring(obj2, &ptr);
+    if (!SWIG_IsOK(res3)) {
+      SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "reduce_log_sum" "', argument " "3"" of type '" "std::wstring const &""'"); 
+    }
+    if (!ptr) {
+      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "reduce_log_sum" "', argument " "3"" of type '" "std::wstring const &""'"); 
+    }
+    arg3 = ptr;
+  }
+  {
+    try {
+      result = CNTK::ReduceLogSum((CNTK::Variable const &)*arg1,(CNTK::Axis const &)*arg2,(std::wstring const &)*arg3); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  {
+    std::shared_ptr<  CNTK::Function > *smartresult = result ? new std::shared_ptr<  CNTK::Function >(result) : 0;
+    resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(smartresult), SWIGTYPE_p_std__shared_ptrT_CNTK__Function_t, SWIG_POINTER_OWN);
+  }
+  if (SWIG_IsNewObj(res3)) delete arg3;
+  return resultobj;
+fail:
+  if (SWIG_IsNewObj(res3)) delete arg3;
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_reduce_log_sum__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  CNTK::Variable *arg1 = 0 ;
+  CNTK::Axis *arg2 = 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  CNTK::FunctionPtr result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:reduce_log_sum",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "reduce_log_sum" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+  }
+  if (!argp1) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "reduce_log_sum" "', argument " "1"" of type '" "CNTK::Variable const &""'"); 
+  }
+  arg1 = reinterpret_cast< CNTK::Variable * >(argp1);
+  res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_CNTK__Axis,  0  | 0);
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "reduce_log_sum" "', argument " "2"" of type '" "CNTK::Axis const &""'"); 
+  }
+  if (!argp2) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "reduce_log_sum" "', argument " "2"" of type '" "CNTK::Axis const &""'"); 
+  }
+  arg2 = reinterpret_cast< CNTK::Axis * >(argp2);
+  {
+    try {
+      result = CNTK::ReduceLogSum((CNTK::Variable const &)*arg1,(CNTK::Axis const &)*arg2); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  {
+    std::shared_ptr<  CNTK::Function > *smartresult = result ? new std::shared_ptr<  CNTK::Function >(result) : 0;
+    resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(smartresult), SWIGTYPE_p_std__shared_ptrT_CNTK__Function_t, SWIG_POINTER_OWN);
+  }
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_reduce_log_sum(PyObject *self, PyObject *args) {
+  Py_ssize_t argc;
+  PyObject *argv[4] = {
+    0
+  };
+  Py_ssize_t ii;
+  
+  if (!PyTuple_Check(args)) SWIG_fail;
+  argc = args ? PyObject_Length(args) : 0;
+  for (ii = 0; (ii < 3) && (ii < argc); ii++) {
+    argv[ii] = PyTuple_GET_ITEM(args,ii);
+  }
+  if (argc == 2) {
+    int _v;
+    int res = SWIG_ConvertPtr(argv[0], 0, SWIGTYPE_p_CNTK__Variable, 0);
+    _v = SWIG_CheckState(res);
+    if (_v) {
+      int res = SWIG_ConvertPtr(argv[1], 0, SWIGTYPE_p_CNTK__Axis, 0);
+      _v = SWIG_CheckState(res);
+      if (_v) {
+        return _wrap_reduce_log_sum__SWIG_1(self, args);
+      }
+    }
+  }
+  if (argc == 3) {
+    int _v;
+    int res = SWIG_ConvertPtr(argv[0], 0, SWIGTYPE_p_CNTK__Variable, 0);
+    _v = SWIG_CheckState(res);
+    if (_v) {
+      int res = SWIG_ConvertPtr(argv[1], 0, SWIGTYPE_p_CNTK__Axis, 0);
+      _v = SWIG_CheckState(res);
+      if (_v) {
+        int res = SWIG_AsPtr_std_wstring(argv[2], (std::wstring**)(0));
+        _v = SWIG_CheckState(res);
+        if (_v) {
+          return _wrap_reduce_log_sum__SWIG_0(self, args);
+        }
+      }
+    }
+  }
+  
+fail:
+  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'reduce_log_sum'.\n"
+    "  Possible C/C++ prototypes are:\n"
+    "    CNTK::ReduceLogSum(CNTK::Variable const &,CNTK::Axis const &,std::wstring const &)\n"
+    "    CNTK::ReduceLogSum(CNTK::Variable const &,CNTK::Axis const &)\n");
   return 0;
 }
 
@@ -25692,10 +29406,8 @@ SWIGINTERN PyObject *_wrap_convolution__SWIG_0(PyObject *SWIGUNUSEDPARM(self), P
   int res1 = 0 ;
   void *argp2 = 0 ;
   int res2 = 0 ;
-  void *argp4 = 0 ;
-  int res4 = 0 ;
-  void *argp5 = 0 ;
-  int res5 = 0 ;
+  int res4 = SWIG_OLDOBJ ;
+  int res5 = SWIG_OLDOBJ ;
   bool val8 ;
   int ecode8 = 0 ;
   size_t val9 ;
@@ -25743,22 +29455,28 @@ SWIGINTERN PyObject *_wrap_convolution__SWIG_0(PyObject *SWIGUNUSEDPARM(self), P
       SWIG_exception(SWIG_TypeError, "tuple expected");
     }
   }
-  res4 = SWIG_ConvertPtr(obj3, &argp4, SWIGTYPE_p_std__vectorT_bool_std__allocatorT_bool_t_t,  0  | 0);
+  {
+    std::vector<bool,std::allocator< bool > > *ptr = (std::vector<bool,std::allocator< bool > > *)0;
+    res4 = swig::asptr(obj3, &ptr);
   if (!SWIG_IsOK(res4)) {
     SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "convolution" "', argument " "4"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
   }
-  if (!argp4) {
+    if (!ptr) {
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "convolution" "', argument " "4"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
   }
-  arg4 = reinterpret_cast< std::vector< bool,std::allocator< bool > > * >(argp4);
-  res5 = SWIG_ConvertPtr(obj4, &argp5, SWIGTYPE_p_std__vectorT_bool_std__allocatorT_bool_t_t,  0  | 0);
+    arg4 = ptr;
+  }
+  {
+    std::vector<bool,std::allocator< bool > > *ptr = (std::vector<bool,std::allocator< bool > > *)0;
+    res5 = swig::asptr(obj4, &ptr);
   if (!SWIG_IsOK(res5)) {
     SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "convolution" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
   }
-  if (!argp5) {
+    if (!ptr) {
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "convolution" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
   }
-  arg5 = reinterpret_cast< std::vector< bool,std::allocator< bool > > * >(argp5);
+    arg5 = ptr;
+  }
   {
     if (PyTuple_Check(obj5)) {
       std::vector<size_t> dimensions;;
@@ -25830,9 +29548,13 @@ SWIGINTERN PyObject *_wrap_convolution__SWIG_0(PyObject *SWIGUNUSEDPARM(self), P
     std::shared_ptr<  CNTK::Function > *smartresult = result ? new std::shared_ptr<  CNTK::Function >(result) : 0;
     resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(smartresult), SWIGTYPE_p_std__shared_ptrT_CNTK__Function_t, SWIG_POINTER_OWN);
   }
+  if (SWIG_IsNewObj(res4)) delete arg4;
+  if (SWIG_IsNewObj(res5)) delete arg5;
   if (SWIG_IsNewObj(res10)) delete arg10;
   return resultobj;
 fail:
+  if (SWIG_IsNewObj(res4)) delete arg4;
+  if (SWIG_IsNewObj(res5)) delete arg5;
   if (SWIG_IsNewObj(res10)) delete arg10;
   return NULL;
 }
@@ -25853,10 +29575,8 @@ SWIGINTERN PyObject *_wrap_convolution__SWIG_1(PyObject *SWIGUNUSEDPARM(self), P
   int res1 = 0 ;
   void *argp2 = 0 ;
   int res2 = 0 ;
-  void *argp4 = 0 ;
-  int res4 = 0 ;
-  void *argp5 = 0 ;
-  int res5 = 0 ;
+  int res4 = SWIG_OLDOBJ ;
+  int res5 = SWIG_OLDOBJ ;
   bool val8 ;
   int ecode8 = 0 ;
   size_t val9 ;
@@ -25902,22 +29622,28 @@ SWIGINTERN PyObject *_wrap_convolution__SWIG_1(PyObject *SWIGUNUSEDPARM(self), P
       SWIG_exception(SWIG_TypeError, "tuple expected");
     }
   }
-  res4 = SWIG_ConvertPtr(obj3, &argp4, SWIGTYPE_p_std__vectorT_bool_std__allocatorT_bool_t_t,  0  | 0);
+  {
+    std::vector<bool,std::allocator< bool > > *ptr = (std::vector<bool,std::allocator< bool > > *)0;
+    res4 = swig::asptr(obj3, &ptr);
   if (!SWIG_IsOK(res4)) {
     SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "convolution" "', argument " "4"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
   }
-  if (!argp4) {
+    if (!ptr) {
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "convolution" "', argument " "4"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
   }
-  arg4 = reinterpret_cast< std::vector< bool,std::allocator< bool > > * >(argp4);
-  res5 = SWIG_ConvertPtr(obj4, &argp5, SWIGTYPE_p_std__vectorT_bool_std__allocatorT_bool_t_t,  0  | 0);
+    arg4 = ptr;
+  }
+  {
+    std::vector<bool,std::allocator< bool > > *ptr = (std::vector<bool,std::allocator< bool > > *)0;
+    res5 = swig::asptr(obj4, &ptr);
   if (!SWIG_IsOK(res5)) {
     SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "convolution" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
   }
-  if (!argp5) {
+    if (!ptr) {
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "convolution" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
   }
-  arg5 = reinterpret_cast< std::vector< bool,std::allocator< bool > > * >(argp5);
+    arg5 = ptr;
+  }
   {
     if (PyTuple_Check(obj5)) {
       std::vector<size_t> dimensions;;
@@ -25978,8 +29704,12 @@ SWIGINTERN PyObject *_wrap_convolution__SWIG_1(PyObject *SWIGUNUSEDPARM(self), P
     std::shared_ptr<  CNTK::Function > *smartresult = result ? new std::shared_ptr<  CNTK::Function >(result) : 0;
     resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(smartresult), SWIGTYPE_p_std__shared_ptrT_CNTK__Function_t, SWIG_POINTER_OWN);
   }
+  if (SWIG_IsNewObj(res4)) delete arg4;
+  if (SWIG_IsNewObj(res5)) delete arg5;
   return resultobj;
 fail:
+  if (SWIG_IsNewObj(res4)) delete arg4;
+  if (SWIG_IsNewObj(res5)) delete arg5;
   return NULL;
 }
 
@@ -25998,10 +29728,8 @@ SWIGINTERN PyObject *_wrap_convolution__SWIG_2(PyObject *SWIGUNUSEDPARM(self), P
   int res1 = 0 ;
   void *argp2 = 0 ;
   int res2 = 0 ;
-  void *argp4 = 0 ;
-  int res4 = 0 ;
-  void *argp5 = 0 ;
-  int res5 = 0 ;
+  int res4 = SWIG_OLDOBJ ;
+  int res5 = SWIG_OLDOBJ ;
   bool val8 ;
   int ecode8 = 0 ;
   PyObject * obj0 = 0 ;
@@ -26044,22 +29772,28 @@ SWIGINTERN PyObject *_wrap_convolution__SWIG_2(PyObject *SWIGUNUSEDPARM(self), P
       SWIG_exception(SWIG_TypeError, "tuple expected");
     }
   }
-  res4 = SWIG_ConvertPtr(obj3, &argp4, SWIGTYPE_p_std__vectorT_bool_std__allocatorT_bool_t_t,  0  | 0);
+  {
+    std::vector<bool,std::allocator< bool > > *ptr = (std::vector<bool,std::allocator< bool > > *)0;
+    res4 = swig::asptr(obj3, &ptr);
   if (!SWIG_IsOK(res4)) {
     SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "convolution" "', argument " "4"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
   }
-  if (!argp4) {
+    if (!ptr) {
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "convolution" "', argument " "4"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
   }
-  arg4 = reinterpret_cast< std::vector< bool,std::allocator< bool > > * >(argp4);
-  res5 = SWIG_ConvertPtr(obj4, &argp5, SWIGTYPE_p_std__vectorT_bool_std__allocatorT_bool_t_t,  0  | 0);
+    arg4 = ptr;
+  }
+  {
+    std::vector<bool,std::allocator< bool > > *ptr = (std::vector<bool,std::allocator< bool > > *)0;
+    res5 = swig::asptr(obj4, &ptr);
   if (!SWIG_IsOK(res5)) {
     SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "convolution" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
   }
-  if (!argp5) {
+    if (!ptr) {
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "convolution" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
   }
-  arg5 = reinterpret_cast< std::vector< bool,std::allocator< bool > > * >(argp5);
+    arg5 = ptr;
+  }
   {
     if (PyTuple_Check(obj5)) {
       std::vector<size_t> dimensions;;
@@ -26115,8 +29849,12 @@ SWIGINTERN PyObject *_wrap_convolution__SWIG_2(PyObject *SWIGUNUSEDPARM(self), P
     std::shared_ptr<  CNTK::Function > *smartresult = result ? new std::shared_ptr<  CNTK::Function >(result) : 0;
     resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(smartresult), SWIGTYPE_p_std__shared_ptrT_CNTK__Function_t, SWIG_POINTER_OWN);
   }
+  if (SWIG_IsNewObj(res4)) delete arg4;
+  if (SWIG_IsNewObj(res5)) delete arg5;
   return resultobj;
 fail:
+  if (SWIG_IsNewObj(res4)) delete arg4;
+  if (SWIG_IsNewObj(res5)) delete arg5;
   return NULL;
 }
 
@@ -26134,10 +29872,8 @@ SWIGINTERN PyObject *_wrap_convolution__SWIG_3(PyObject *SWIGUNUSEDPARM(self), P
   int res1 = 0 ;
   void *argp2 = 0 ;
   int res2 = 0 ;
-  void *argp4 = 0 ;
-  int res4 = 0 ;
-  void *argp5 = 0 ;
-  int res5 = 0 ;
+  int res4 = SWIG_OLDOBJ ;
+  int res5 = SWIG_OLDOBJ ;
   PyObject * obj0 = 0 ;
   PyObject * obj1 = 0 ;
   PyObject * obj2 = 0 ;
@@ -26177,22 +29913,28 @@ SWIGINTERN PyObject *_wrap_convolution__SWIG_3(PyObject *SWIGUNUSEDPARM(self), P
       SWIG_exception(SWIG_TypeError, "tuple expected");
     }
   }
-  res4 = SWIG_ConvertPtr(obj3, &argp4, SWIGTYPE_p_std__vectorT_bool_std__allocatorT_bool_t_t,  0  | 0);
+  {
+    std::vector<bool,std::allocator< bool > > *ptr = (std::vector<bool,std::allocator< bool > > *)0;
+    res4 = swig::asptr(obj3, &ptr);
   if (!SWIG_IsOK(res4)) {
     SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "convolution" "', argument " "4"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
   }
-  if (!argp4) {
+    if (!ptr) {
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "convolution" "', argument " "4"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
   }
-  arg4 = reinterpret_cast< std::vector< bool,std::allocator< bool > > * >(argp4);
-  res5 = SWIG_ConvertPtr(obj4, &argp5, SWIGTYPE_p_std__vectorT_bool_std__allocatorT_bool_t_t,  0  | 0);
+    arg4 = ptr;
+  }
+  {
+    std::vector<bool,std::allocator< bool > > *ptr = (std::vector<bool,std::allocator< bool > > *)0;
+    res5 = swig::asptr(obj4, &ptr);
   if (!SWIG_IsOK(res5)) {
     SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "convolution" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
   }
-  if (!argp5) {
+    if (!ptr) {
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "convolution" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
   }
-  arg5 = reinterpret_cast< std::vector< bool,std::allocator< bool > > * >(argp5);
+    arg5 = ptr;
+  }
   {
     if (PyTuple_Check(obj5)) {
       std::vector<size_t> dimensions;;
@@ -26243,8 +29985,12 @@ SWIGINTERN PyObject *_wrap_convolution__SWIG_3(PyObject *SWIGUNUSEDPARM(self), P
     std::shared_ptr<  CNTK::Function > *smartresult = result ? new std::shared_ptr<  CNTK::Function >(result) : 0;
     resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(smartresult), SWIGTYPE_p_std__shared_ptrT_CNTK__Function_t, SWIG_POINTER_OWN);
   }
+  if (SWIG_IsNewObj(res4)) delete arg4;
+  if (SWIG_IsNewObj(res5)) delete arg5;
   return resultobj;
 fail:
+  if (SWIG_IsNewObj(res4)) delete arg4;
+  if (SWIG_IsNewObj(res5)) delete arg5;
   return NULL;
 }
 
@@ -26261,10 +30007,8 @@ SWIGINTERN PyObject *_wrap_convolution__SWIG_4(PyObject *SWIGUNUSEDPARM(self), P
   int res1 = 0 ;
   void *argp2 = 0 ;
   int res2 = 0 ;
-  void *argp4 = 0 ;
-  int res4 = 0 ;
-  void *argp5 = 0 ;
-  int res5 = 0 ;
+  int res4 = SWIG_OLDOBJ ;
+  int res5 = SWIG_OLDOBJ ;
   PyObject * obj0 = 0 ;
   PyObject * obj1 = 0 ;
   PyObject * obj2 = 0 ;
@@ -26303,22 +30047,28 @@ SWIGINTERN PyObject *_wrap_convolution__SWIG_4(PyObject *SWIGUNUSEDPARM(self), P
       SWIG_exception(SWIG_TypeError, "tuple expected");
     }
   }
-  res4 = SWIG_ConvertPtr(obj3, &argp4, SWIGTYPE_p_std__vectorT_bool_std__allocatorT_bool_t_t,  0  | 0);
+  {
+    std::vector<bool,std::allocator< bool > > *ptr = (std::vector<bool,std::allocator< bool > > *)0;
+    res4 = swig::asptr(obj3, &ptr);
   if (!SWIG_IsOK(res4)) {
     SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "convolution" "', argument " "4"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
   }
-  if (!argp4) {
+    if (!ptr) {
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "convolution" "', argument " "4"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
   }
-  arg4 = reinterpret_cast< std::vector< bool,std::allocator< bool > > * >(argp4);
-  res5 = SWIG_ConvertPtr(obj4, &argp5, SWIGTYPE_p_std__vectorT_bool_std__allocatorT_bool_t_t,  0  | 0);
+    arg4 = ptr;
+  }
+  {
+    std::vector<bool,std::allocator< bool > > *ptr = (std::vector<bool,std::allocator< bool > > *)0;
+    res5 = swig::asptr(obj4, &ptr);
   if (!SWIG_IsOK(res5)) {
     SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "convolution" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
   }
-  if (!argp5) {
+    if (!ptr) {
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "convolution" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
   }
-  arg5 = reinterpret_cast< std::vector< bool,std::allocator< bool > > * >(argp5);
+    arg5 = ptr;
+  }
   {
     if (PyTuple_Check(obj5)) {
       std::vector<size_t> dimensions;;
@@ -26356,8 +30106,12 @@ SWIGINTERN PyObject *_wrap_convolution__SWIG_4(PyObject *SWIGUNUSEDPARM(self), P
     std::shared_ptr<  CNTK::Function > *smartresult = result ? new std::shared_ptr<  CNTK::Function >(result) : 0;
     resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(smartresult), SWIGTYPE_p_std__shared_ptrT_CNTK__Function_t, SWIG_POINTER_OWN);
   }
+  if (SWIG_IsNewObj(res4)) delete arg4;
+  if (SWIG_IsNewObj(res5)) delete arg5;
   return resultobj;
 fail:
+  if (SWIG_IsNewObj(res4)) delete arg4;
+  if (SWIG_IsNewObj(res5)) delete arg5;
   return NULL;
 }
 
@@ -26373,10 +30127,8 @@ SWIGINTERN PyObject *_wrap_convolution__SWIG_5(PyObject *SWIGUNUSEDPARM(self), P
   int res1 = 0 ;
   void *argp2 = 0 ;
   int res2 = 0 ;
-  void *argp4 = 0 ;
-  int res4 = 0 ;
-  void *argp5 = 0 ;
-  int res5 = 0 ;
+  int res4 = SWIG_OLDOBJ ;
+  int res5 = SWIG_OLDOBJ ;
   PyObject * obj0 = 0 ;
   PyObject * obj1 = 0 ;
   PyObject * obj2 = 0 ;
@@ -26414,22 +30166,28 @@ SWIGINTERN PyObject *_wrap_convolution__SWIG_5(PyObject *SWIGUNUSEDPARM(self), P
       SWIG_exception(SWIG_TypeError, "tuple expected");
     }
   }
-  res4 = SWIG_ConvertPtr(obj3, &argp4, SWIGTYPE_p_std__vectorT_bool_std__allocatorT_bool_t_t,  0  | 0);
+  {
+    std::vector<bool,std::allocator< bool > > *ptr = (std::vector<bool,std::allocator< bool > > *)0;
+    res4 = swig::asptr(obj3, &ptr);
   if (!SWIG_IsOK(res4)) {
     SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "convolution" "', argument " "4"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
   }
-  if (!argp4) {
+    if (!ptr) {
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "convolution" "', argument " "4"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
   }
-  arg4 = reinterpret_cast< std::vector< bool,std::allocator< bool > > * >(argp4);
-  res5 = SWIG_ConvertPtr(obj4, &argp5, SWIGTYPE_p_std__vectorT_bool_std__allocatorT_bool_t_t,  0  | 0);
+    arg4 = ptr;
+  }
+  {
+    std::vector<bool,std::allocator< bool > > *ptr = (std::vector<bool,std::allocator< bool > > *)0;
+    res5 = swig::asptr(obj4, &ptr);
   if (!SWIG_IsOK(res5)) {
     SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "convolution" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
   }
-  if (!argp5) {
+    if (!ptr) {
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "convolution" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
   }
-  arg5 = reinterpret_cast< std::vector< bool,std::allocator< bool > > * >(argp5);
+    arg5 = ptr;
+  }
   {
     try {
       result = CNTK::Convolution((CNTK::Variable const &)*arg1,(CNTK::Variable const &)*arg2,(CNTK::NDShape const &)*arg3,(std::vector< bool,std::allocator< bool > > const &)*arg4,(std::vector< bool,std::allocator< bool > > const &)*arg5); 
@@ -26454,8 +30212,12 @@ SWIGINTERN PyObject *_wrap_convolution__SWIG_5(PyObject *SWIGUNUSEDPARM(self), P
     std::shared_ptr<  CNTK::Function > *smartresult = result ? new std::shared_ptr<  CNTK::Function >(result) : 0;
     resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(smartresult), SWIGTYPE_p_std__shared_ptrT_CNTK__Function_t, SWIG_POINTER_OWN);
   }
+  if (SWIG_IsNewObj(res4)) delete arg4;
+  if (SWIG_IsNewObj(res5)) delete arg5;
   return resultobj;
 fail:
+  if (SWIG_IsNewObj(res4)) delete arg4;
+  if (SWIG_IsNewObj(res5)) delete arg5;
   return NULL;
 }
 
@@ -26470,8 +30232,7 @@ SWIGINTERN PyObject *_wrap_convolution__SWIG_6(PyObject *SWIGUNUSEDPARM(self), P
   int res1 = 0 ;
   void *argp2 = 0 ;
   int res2 = 0 ;
-  void *argp4 = 0 ;
-  int res4 = 0 ;
+  int res4 = SWIG_OLDOBJ ;
   PyObject * obj0 = 0 ;
   PyObject * obj1 = 0 ;
   PyObject * obj2 = 0 ;
@@ -26508,14 +30269,17 @@ SWIGINTERN PyObject *_wrap_convolution__SWIG_6(PyObject *SWIGUNUSEDPARM(self), P
       SWIG_exception(SWIG_TypeError, "tuple expected");
     }
   }
-  res4 = SWIG_ConvertPtr(obj3, &argp4, SWIGTYPE_p_std__vectorT_bool_std__allocatorT_bool_t_t,  0  | 0);
+  {
+    std::vector<bool,std::allocator< bool > > *ptr = (std::vector<bool,std::allocator< bool > > *)0;
+    res4 = swig::asptr(obj3, &ptr);
   if (!SWIG_IsOK(res4)) {
     SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "convolution" "', argument " "4"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
   }
-  if (!argp4) {
+    if (!ptr) {
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "convolution" "', argument " "4"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
   }
-  arg4 = reinterpret_cast< std::vector< bool,std::allocator< bool > > * >(argp4);
+    arg4 = ptr;
+  }
   {
     try {
       result = CNTK::Convolution((CNTK::Variable const &)*arg1,(CNTK::Variable const &)*arg2,(CNTK::NDShape const &)*arg3,(std::vector< bool,std::allocator< bool > > const &)*arg4); 
@@ -26540,8 +30304,10 @@ SWIGINTERN PyObject *_wrap_convolution__SWIG_6(PyObject *SWIGUNUSEDPARM(self), P
     std::shared_ptr<  CNTK::Function > *smartresult = result ? new std::shared_ptr<  CNTK::Function >(result) : 0;
     resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(smartresult), SWIGTYPE_p_std__shared_ptrT_CNTK__Function_t, SWIG_POINTER_OWN);
   }
+  if (SWIG_IsNewObj(res4)) delete arg4;
   return resultobj;
 fail:
+  if (SWIG_IsNewObj(res4)) delete arg4;
   return NULL;
 }
 
@@ -26736,7 +30502,7 @@ SWIGINTERN PyObject *_wrap_convolution(PyObject *self, PyObject *args) {
           _v = PyTuple_Check(argv[2]) ? 1 : 0;
         }
         if (_v) {
-          int res = SWIG_ConvertPtr(argv[3], 0, SWIGTYPE_p_std__vectorT_bool_std__allocatorT_bool_t_t, 0);
+          int res = swig::asptr(argv[3], (std::vector<bool,std::allocator< bool > >**)(0));
           _v = SWIG_CheckState(res);
           if (_v) {
             return _wrap_convolution__SWIG_6(self, args);
@@ -26759,10 +30525,10 @@ SWIGINTERN PyObject *_wrap_convolution(PyObject *self, PyObject *args) {
           _v = PyTuple_Check(argv[2]) ? 1 : 0;
         }
         if (_v) {
-          int res = SWIG_ConvertPtr(argv[3], 0, SWIGTYPE_p_std__vectorT_bool_std__allocatorT_bool_t_t, 0);
+          int res = swig::asptr(argv[3], (std::vector<bool,std::allocator< bool > >**)(0));
           _v = SWIG_CheckState(res);
           if (_v) {
-            int res = SWIG_ConvertPtr(argv[4], 0, SWIGTYPE_p_std__vectorT_bool_std__allocatorT_bool_t_t, 0);
+            int res = swig::asptr(argv[4], (std::vector<bool,std::allocator< bool > >**)(0));
             _v = SWIG_CheckState(res);
             if (_v) {
               return _wrap_convolution__SWIG_5(self, args);
@@ -26786,10 +30552,10 @@ SWIGINTERN PyObject *_wrap_convolution(PyObject *self, PyObject *args) {
           _v = PyTuple_Check(argv[2]) ? 1 : 0;
         }
         if (_v) {
-          int res = SWIG_ConvertPtr(argv[3], 0, SWIGTYPE_p_std__vectorT_bool_std__allocatorT_bool_t_t, 0);
+          int res = swig::asptr(argv[3], (std::vector<bool,std::allocator< bool > >**)(0));
           _v = SWIG_CheckState(res);
           if (_v) {
-            int res = SWIG_ConvertPtr(argv[4], 0, SWIGTYPE_p_std__vectorT_bool_std__allocatorT_bool_t_t, 0);
+            int res = swig::asptr(argv[4], (std::vector<bool,std::allocator< bool > >**)(0));
             _v = SWIG_CheckState(res);
             if (_v) {
               {
@@ -26820,10 +30586,10 @@ SWIGINTERN PyObject *_wrap_convolution(PyObject *self, PyObject *args) {
           _v = PyTuple_Check(argv[2]) ? 1 : 0;
         }
         if (_v) {
-          int res = SWIG_ConvertPtr(argv[3], 0, SWIGTYPE_p_std__vectorT_bool_std__allocatorT_bool_t_t, 0);
+          int res = swig::asptr(argv[3], (std::vector<bool,std::allocator< bool > >**)(0));
           _v = SWIG_CheckState(res);
           if (_v) {
-            int res = SWIG_ConvertPtr(argv[4], 0, SWIGTYPE_p_std__vectorT_bool_std__allocatorT_bool_t_t, 0);
+            int res = swig::asptr(argv[4], (std::vector<bool,std::allocator< bool > >**)(0));
             _v = SWIG_CheckState(res);
             if (_v) {
               {
@@ -26861,10 +30627,10 @@ SWIGINTERN PyObject *_wrap_convolution(PyObject *self, PyObject *args) {
           _v = PyTuple_Check(argv[2]) ? 1 : 0;
         }
         if (_v) {
-          int res = SWIG_ConvertPtr(argv[3], 0, SWIGTYPE_p_std__vectorT_bool_std__allocatorT_bool_t_t, 0);
+          int res = swig::asptr(argv[3], (std::vector<bool,std::allocator< bool > >**)(0));
           _v = SWIG_CheckState(res);
           if (_v) {
-            int res = SWIG_ConvertPtr(argv[4], 0, SWIGTYPE_p_std__vectorT_bool_std__allocatorT_bool_t_t, 0);
+            int res = swig::asptr(argv[4], (std::vector<bool,std::allocator< bool > >**)(0));
             _v = SWIG_CheckState(res);
             if (_v) {
               {
@@ -26908,10 +30674,10 @@ SWIGINTERN PyObject *_wrap_convolution(PyObject *self, PyObject *args) {
           _v = PyTuple_Check(argv[2]) ? 1 : 0;
         }
         if (_v) {
-          int res = SWIG_ConvertPtr(argv[3], 0, SWIGTYPE_p_std__vectorT_bool_std__allocatorT_bool_t_t, 0);
+          int res = swig::asptr(argv[3], (std::vector<bool,std::allocator< bool > >**)(0));
           _v = SWIG_CheckState(res);
           if (_v) {
-            int res = SWIG_ConvertPtr(argv[4], 0, SWIGTYPE_p_std__vectorT_bool_std__allocatorT_bool_t_t, 0);
+            int res = swig::asptr(argv[4], (std::vector<bool,std::allocator< bool > >**)(0));
             _v = SWIG_CheckState(res);
             if (_v) {
               {
@@ -26961,10 +30727,10 @@ SWIGINTERN PyObject *_wrap_convolution(PyObject *self, PyObject *args) {
           _v = PyTuple_Check(argv[2]) ? 1 : 0;
         }
         if (_v) {
-          int res = SWIG_ConvertPtr(argv[3], 0, SWIGTYPE_p_std__vectorT_bool_std__allocatorT_bool_t_t, 0);
+          int res = swig::asptr(argv[3], (std::vector<bool,std::allocator< bool > >**)(0));
           _v = SWIG_CheckState(res);
           if (_v) {
-            int res = SWIG_ConvertPtr(argv[4], 0, SWIGTYPE_p_std__vectorT_bool_std__allocatorT_bool_t_t, 0);
+            int res = swig::asptr(argv[4], (std::vector<bool,std::allocator< bool > >**)(0));
             _v = SWIG_CheckState(res);
             if (_v) {
               {
@@ -27035,8 +30801,7 @@ SWIGINTERN PyObject *_wrap_pooling__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObj
   int res1 = 0 ;
   int val2 ;
   int ecode2 = 0 ;
-  void *argp5 = 0 ;
-  int res5 = 0 ;
+  int res5 = SWIG_OLDOBJ ;
   int res8 = SWIG_OLDOBJ ;
   PyObject * obj0 = 0 ;
   PyObject * obj1 = 0 ;
@@ -27088,14 +30853,17 @@ SWIGINTERN PyObject *_wrap_pooling__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObj
       SWIG_exception(SWIG_TypeError, "tuple expected");
     }
   }
-  res5 = SWIG_ConvertPtr(obj4, &argp5, SWIGTYPE_p_std__vectorT_bool_std__allocatorT_bool_t_t,  0  | 0);
+  {
+    std::vector<bool,std::allocator< bool > > *ptr = (std::vector<bool,std::allocator< bool > > *)0;
+    res5 = swig::asptr(obj4, &ptr);
   if (!SWIG_IsOK(res5)) {
     SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "pooling" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
   }
-  if (!argp5) {
+    if (!ptr) {
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "pooling" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
   }
-  arg5 = reinterpret_cast< std::vector< bool,std::allocator< bool > > * >(argp5);
+    arg5 = ptr;
+  }
   {
     if (PyTuple_Check(obj5)) {
       std::vector<size_t> dimensions;;
@@ -27157,9 +30925,11 @@ SWIGINTERN PyObject *_wrap_pooling__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObj
     std::shared_ptr<  CNTK::Function > *smartresult = result ? new std::shared_ptr<  CNTK::Function >(result) : 0;
     resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(smartresult), SWIGTYPE_p_std__shared_ptrT_CNTK__Function_t, SWIG_POINTER_OWN);
   }
+  if (SWIG_IsNewObj(res5)) delete arg5;
   if (SWIG_IsNewObj(res8)) delete arg8;
   return resultobj;
 fail:
+  if (SWIG_IsNewObj(res5)) delete arg5;
   if (SWIG_IsNewObj(res8)) delete arg8;
   return NULL;
 }
@@ -27178,8 +30948,7 @@ SWIGINTERN PyObject *_wrap_pooling__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObj
   int res1 = 0 ;
   int val2 ;
   int ecode2 = 0 ;
-  void *argp5 = 0 ;
-  int res5 = 0 ;
+  int res5 = SWIG_OLDOBJ ;
   PyObject * obj0 = 0 ;
   PyObject * obj1 = 0 ;
   PyObject * obj2 = 0 ;
@@ -27229,14 +30998,17 @@ SWIGINTERN PyObject *_wrap_pooling__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObj
       SWIG_exception(SWIG_TypeError, "tuple expected");
     }
   }
-  res5 = SWIG_ConvertPtr(obj4, &argp5, SWIGTYPE_p_std__vectorT_bool_std__allocatorT_bool_t_t,  0  | 0);
+  {
+    std::vector<bool,std::allocator< bool > > *ptr = (std::vector<bool,std::allocator< bool > > *)0;
+    res5 = swig::asptr(obj4, &ptr);
   if (!SWIG_IsOK(res5)) {
     SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "pooling" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
   }
-  if (!argp5) {
+    if (!ptr) {
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "pooling" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
   }
-  arg5 = reinterpret_cast< std::vector< bool,std::allocator< bool > > * >(argp5);
+    arg5 = ptr;
+  }
   {
     if (PyTuple_Check(obj5)) {
       std::vector<size_t> dimensions;;
@@ -27287,8 +31059,10 @@ SWIGINTERN PyObject *_wrap_pooling__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObj
     std::shared_ptr<  CNTK::Function > *smartresult = result ? new std::shared_ptr<  CNTK::Function >(result) : 0;
     resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(smartresult), SWIGTYPE_p_std__shared_ptrT_CNTK__Function_t, SWIG_POINTER_OWN);
   }
+  if (SWIG_IsNewObj(res5)) delete arg5;
   return resultobj;
 fail:
+  if (SWIG_IsNewObj(res5)) delete arg5;
   return NULL;
 }
 
@@ -27305,8 +31079,7 @@ SWIGINTERN PyObject *_wrap_pooling__SWIG_2(PyObject *SWIGUNUSEDPARM(self), PyObj
   int res1 = 0 ;
   int val2 ;
   int ecode2 = 0 ;
-  void *argp5 = 0 ;
-  int res5 = 0 ;
+  int res5 = SWIG_OLDOBJ ;
   PyObject * obj0 = 0 ;
   PyObject * obj1 = 0 ;
   PyObject * obj2 = 0 ;
@@ -27355,14 +31128,17 @@ SWIGINTERN PyObject *_wrap_pooling__SWIG_2(PyObject *SWIGUNUSEDPARM(self), PyObj
       SWIG_exception(SWIG_TypeError, "tuple expected");
     }
   }
-  res5 = SWIG_ConvertPtr(obj4, &argp5, SWIGTYPE_p_std__vectorT_bool_std__allocatorT_bool_t_t,  0  | 0);
+  {
+    std::vector<bool,std::allocator< bool > > *ptr = (std::vector<bool,std::allocator< bool > > *)0;
+    res5 = swig::asptr(obj4, &ptr);
   if (!SWIG_IsOK(res5)) {
     SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "pooling" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
   }
-  if (!argp5) {
+    if (!ptr) {
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "pooling" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
   }
-  arg5 = reinterpret_cast< std::vector< bool,std::allocator< bool > > * >(argp5);
+    arg5 = ptr;
+  }
   {
     if (PyTuple_Check(obj5)) {
       std::vector<size_t> dimensions;;
@@ -27400,8 +31176,10 @@ SWIGINTERN PyObject *_wrap_pooling__SWIG_2(PyObject *SWIGUNUSEDPARM(self), PyObj
     std::shared_ptr<  CNTK::Function > *smartresult = result ? new std::shared_ptr<  CNTK::Function >(result) : 0;
     resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(smartresult), SWIGTYPE_p_std__shared_ptrT_CNTK__Function_t, SWIG_POINTER_OWN);
   }
+  if (SWIG_IsNewObj(res5)) delete arg5;
   return resultobj;
 fail:
+  if (SWIG_IsNewObj(res5)) delete arg5;
   return NULL;
 }
 
@@ -27417,8 +31195,7 @@ SWIGINTERN PyObject *_wrap_pooling__SWIG_3(PyObject *SWIGUNUSEDPARM(self), PyObj
   int res1 = 0 ;
   int val2 ;
   int ecode2 = 0 ;
-  void *argp5 = 0 ;
-  int res5 = 0 ;
+  int res5 = SWIG_OLDOBJ ;
   PyObject * obj0 = 0 ;
   PyObject * obj1 = 0 ;
   PyObject * obj2 = 0 ;
@@ -27466,14 +31243,17 @@ SWIGINTERN PyObject *_wrap_pooling__SWIG_3(PyObject *SWIGUNUSEDPARM(self), PyObj
       SWIG_exception(SWIG_TypeError, "tuple expected");
     }
   }
-  res5 = SWIG_ConvertPtr(obj4, &argp5, SWIGTYPE_p_std__vectorT_bool_std__allocatorT_bool_t_t,  0  | 0);
+  {
+    std::vector<bool,std::allocator< bool > > *ptr = (std::vector<bool,std::allocator< bool > > *)0;
+    res5 = swig::asptr(obj4, &ptr);
   if (!SWIG_IsOK(res5)) {
     SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "pooling" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
   }
-  if (!argp5) {
+    if (!ptr) {
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "pooling" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
   }
-  arg5 = reinterpret_cast< std::vector< bool,std::allocator< bool > > * >(argp5);
+    arg5 = ptr;
+  }
   {
     try {
       result = CNTK::Pooling((CNTK::Variable const &)*arg1,arg2,(CNTK::NDShape const &)*arg3,(CNTK::NDShape const &)*arg4,(std::vector< bool,std::allocator< bool > > const &)*arg5); 
@@ -27498,8 +31278,10 @@ SWIGINTERN PyObject *_wrap_pooling__SWIG_3(PyObject *SWIGUNUSEDPARM(self), PyObj
     std::shared_ptr<  CNTK::Function > *smartresult = result ? new std::shared_ptr<  CNTK::Function >(result) : 0;
     resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(smartresult), SWIGTYPE_p_std__shared_ptrT_CNTK__Function_t, SWIG_POINTER_OWN);
   }
+  if (SWIG_IsNewObj(res5)) delete arg5;
   return resultobj;
 fail:
+  if (SWIG_IsNewObj(res5)) delete arg5;
   return NULL;
 }
 
@@ -27744,7 +31526,7 @@ SWIGINTERN PyObject *_wrap_pooling(PyObject *self, PyObject *args) {
             _v = PyTuple_Check(argv[3]) ? 1 : 0;
           }
           if (_v) {
-            int res = SWIG_ConvertPtr(argv[4], 0, SWIGTYPE_p_std__vectorT_bool_std__allocatorT_bool_t_t, 0);
+            int res = swig::asptr(argv[4], (std::vector<bool,std::allocator< bool > >**)(0));
             _v = SWIG_CheckState(res);
             if (_v) {
               return _wrap_pooling__SWIG_3(self, args);
@@ -27776,7 +31558,7 @@ SWIGINTERN PyObject *_wrap_pooling(PyObject *self, PyObject *args) {
             _v = PyTuple_Check(argv[3]) ? 1 : 0;
           }
           if (_v) {
-            int res = SWIG_ConvertPtr(argv[4], 0, SWIGTYPE_p_std__vectorT_bool_std__allocatorT_bool_t_t, 0);
+            int res = swig::asptr(argv[4], (std::vector<bool,std::allocator< bool > >**)(0));
             _v = SWIG_CheckState(res);
             if (_v) {
               {
@@ -27815,7 +31597,7 @@ SWIGINTERN PyObject *_wrap_pooling(PyObject *self, PyObject *args) {
             _v = PyTuple_Check(argv[3]) ? 1 : 0;
           }
           if (_v) {
-            int res = SWIG_ConvertPtr(argv[4], 0, SWIGTYPE_p_std__vectorT_bool_std__allocatorT_bool_t_t, 0);
+            int res = swig::asptr(argv[4], (std::vector<bool,std::allocator< bool > >**)(0));
             _v = SWIG_CheckState(res);
             if (_v) {
               {
@@ -27861,7 +31643,7 @@ SWIGINTERN PyObject *_wrap_pooling(PyObject *self, PyObject *args) {
             _v = PyTuple_Check(argv[3]) ? 1 : 0;
           }
           if (_v) {
-            int res = SWIG_ConvertPtr(argv[4], 0, SWIGTYPE_p_std__vectorT_bool_std__allocatorT_bool_t_t, 0);
+            int res = swig::asptr(argv[4], (std::vector<bool,std::allocator< bool > >**)(0));
             _v = SWIG_CheckState(res);
             if (_v) {
               {
@@ -29523,6 +33305,50 @@ fail:
 }
 
 
+SWIGINTERN PyObject *_wrap_new_DictionaryValue__SWIG_9(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  CNTK::DictionaryValue *arg1 = 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  CNTK::DictionaryValue *result = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:new_DictionaryValue",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__DictionaryValue,  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "new_DictionaryValue" "', argument " "1"" of type '" "CNTK::DictionaryValue &&""'"); 
+  }
+  if (!argp1) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "new_DictionaryValue" "', argument " "1"" of type '" "CNTK::DictionaryValue &&""'"); 
+  }
+  arg1 = reinterpret_cast< CNTK::DictionaryValue * >(argp1);
+  {
+    try {
+      result = (CNTK::DictionaryValue *)new CNTK::DictionaryValue((CNTK::DictionaryValue &&)*arg1); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__DictionaryValue, SWIG_POINTER_NEW |  0 );
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
 SWIGINTERN PyObject *_wrap_new_DictionaryValue(PyObject *self, PyObject *args) {
   Py_ssize_t argc;
   PyObject *argv[2] = {
@@ -29544,6 +33370,15 @@ SWIGINTERN PyObject *_wrap_new_DictionaryValue(PyObject *self, PyObject *args) {
     _v = SWIG_CheckState(res);
     if (_v) {
       return _wrap_new_DictionaryValue__SWIG_8(self, args);
+    }
+  }
+  if (argc == 1) {
+    int _v;
+    void *vptr = 0;
+    int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_CNTK__DictionaryValue, 0);
+    _v = SWIG_CheckState(res);
+    if (_v) {
+      return _wrap_new_DictionaryValue__SWIG_9(self, args);
     }
   }
   if (argc == 1) {
@@ -29616,7 +33451,8 @@ fail:
     "    CNTK::DictionaryValue::DictionaryValue(double)\n"
     "    CNTK::DictionaryValue::DictionaryValue(wchar_t const *)\n"
     "    CNTK::DictionaryValue::DictionaryValue(std::vector< CNTK::DictionaryValue,std::allocator< CNTK::DictionaryValue > > const &)\n"
-    "    CNTK::DictionaryValue::DictionaryValue(CNTK::DictionaryValue const &)\n");
+    "    CNTK::DictionaryValue::DictionaryValue(CNTK::DictionaryValue const &)\n"
+    "    CNTK::DictionaryValue::DictionaryValue(CNTK::DictionaryValue &&)\n");
   return 0;
 }
 
@@ -29737,6 +33573,112 @@ SWIGINTERN PyObject *_wrap_DictionaryValue_value_type(PyObject *SWIGUNUSEDPARM(s
     }
   }
   resultobj = SWIG_From_int(static_cast< int >(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_DictionaryValue___eq__(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  CNTK::DictionaryValue *arg1 = (CNTK::DictionaryValue *) 0 ;
+  CNTK::DictionaryValue *arg2 = 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  bool result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:DictionaryValue___eq__",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_CNTK__DictionaryValue, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DictionaryValue___eq__" "', argument " "1"" of type '" "CNTK::DictionaryValue const *""'"); 
+  }
+  arg1 = reinterpret_cast< CNTK::DictionaryValue * >(argp1);
+  res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_CNTK__DictionaryValue,  0  | 0);
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "DictionaryValue___eq__" "', argument " "2"" of type '" "CNTK::DictionaryValue const &""'"); 
+  }
+  if (!argp2) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "DictionaryValue___eq__" "', argument " "2"" of type '" "CNTK::DictionaryValue const &""'"); 
+  }
+  arg2 = reinterpret_cast< CNTK::DictionaryValue * >(argp2);
+  {
+    try {
+      result = (bool)((CNTK::DictionaryValue const *)arg1)->operator ==((CNTK::DictionaryValue const &)*arg2); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  resultobj = SWIG_From_bool(static_cast< bool >(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_DictionaryValue___ne__(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  CNTK::DictionaryValue *arg1 = (CNTK::DictionaryValue *) 0 ;
+  CNTK::DictionaryValue *arg2 = 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  bool result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:DictionaryValue___ne__",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_CNTK__DictionaryValue, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "DictionaryValue___ne__" "', argument " "1"" of type '" "CNTK::DictionaryValue const *""'"); 
+  }
+  arg1 = reinterpret_cast< CNTK::DictionaryValue * >(argp1);
+  res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_CNTK__DictionaryValue,  0  | 0);
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "DictionaryValue___ne__" "', argument " "2"" of type '" "CNTK::DictionaryValue const &""'"); 
+  }
+  if (!argp2) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "DictionaryValue___ne__" "', argument " "2"" of type '" "CNTK::DictionaryValue const &""'"); 
+  }
+  arg2 = reinterpret_cast< CNTK::DictionaryValue * >(argp2);
+  {
+    try {
+      result = (bool)((CNTK::DictionaryValue const *)arg1)->operator !=((CNTK::DictionaryValue const &)*arg2); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  resultobj = SWIG_From_bool(static_cast< bool >(result));
   return resultobj;
 fail:
   return NULL;
@@ -30155,6 +34097,112 @@ fail:
 }
 
 
+SWIGINTERN PyObject *_wrap_Dictionary___eq__(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  CNTK::Dictionary *arg1 = (CNTK::Dictionary *) 0 ;
+  CNTK::Dictionary *arg2 = 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  bool result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:Dictionary___eq__",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_CNTK__Dictionary, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Dictionary___eq__" "', argument " "1"" of type '" "CNTK::Dictionary const *""'"); 
+  }
+  arg1 = reinterpret_cast< CNTK::Dictionary * >(argp1);
+  res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_CNTK__Dictionary,  0  | 0);
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "Dictionary___eq__" "', argument " "2"" of type '" "CNTK::Dictionary const &""'"); 
+  }
+  if (!argp2) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Dictionary___eq__" "', argument " "2"" of type '" "CNTK::Dictionary const &""'"); 
+  }
+  arg2 = reinterpret_cast< CNTK::Dictionary * >(argp2);
+  {
+    try {
+      result = (bool)((CNTK::Dictionary const *)arg1)->operator ==((CNTK::Dictionary const &)*arg2); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  resultobj = SWIG_From_bool(static_cast< bool >(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_Dictionary___ne__(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  CNTK::Dictionary *arg1 = (CNTK::Dictionary *) 0 ;
+  CNTK::Dictionary *arg2 = 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  bool result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:Dictionary___ne__",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_CNTK__Dictionary, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Dictionary___ne__" "', argument " "1"" of type '" "CNTK::Dictionary const *""'"); 
+  }
+  arg1 = reinterpret_cast< CNTK::Dictionary * >(argp1);
+  res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_CNTK__Dictionary,  0  | 0);
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "Dictionary___ne__" "', argument " "2"" of type '" "CNTK::Dictionary const &""'"); 
+  }
+  if (!argp2) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "Dictionary___ne__" "', argument " "2"" of type '" "CNTK::Dictionary const &""'"); 
+  }
+  arg2 = reinterpret_cast< CNTK::Dictionary * >(argp2);
+  {
+    try {
+      result = (bool)((CNTK::Dictionary const *)arg1)->operator !=((CNTK::Dictionary const &)*arg2); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  resultobj = SWIG_From_bool(static_cast< bool >(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
 SWIGINTERN PyObject *_wrap_Dictionary___getitem__(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   CNTK::Dictionary *arg1 = (CNTK::Dictionary *) 0 ;
@@ -30552,9 +34600,9 @@ SWIGINTERN PyObject *Learner_swigregister(PyObject *SWIGUNUSEDPARM(self), PyObje
 SWIGINTERN PyObject *_wrap_sgdlearner(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   std::unordered_set< CNTK::Parameter > *arg1 = 0 ;
-  double arg2 ;
-  double val2 ;
-  int ecode2 = 0 ;
+  CNTK::LearningRatesPerSample *arg2 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
   PyObject * obj0 = 0 ;
   PyObject * obj1 = 0 ;
   CNTK::LearnerPtr result;
@@ -30601,14 +34649,17 @@ SWIGINTERN PyObject *_wrap_sgdlearner(PyObject *SWIGUNUSEDPARM(self), PyObject *
       SWIG_exception(SWIG_ValueError, "list expected");
     }
   }
-  ecode2 = SWIG_AsVal_double(obj1, &val2);
-  if (!SWIG_IsOK(ecode2)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "sgdlearner" "', argument " "2"" of type '" "double""'");
+  res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_CNTK__TrainingParameterScheduleT_double_t,  0  | 0);
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "sgdlearner" "', argument " "2"" of type '" "CNTK::LearningRatesPerSample const &""'"); 
   } 
-  arg2 = static_cast< double >(val2);
+  if (!argp2) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "sgdlearner" "', argument " "2"" of type '" "CNTK::LearningRatesPerSample const &""'"); 
+  }
+  arg2 = reinterpret_cast< CNTK::LearningRatesPerSample * >(argp2);
   {
     try {
-      result = CNTK::SGDLearner((std::unordered_set< CNTK::Parameter > const &)*arg1,arg2); 
+      result = CNTK::SGDLearner((std::unordered_set< CNTK::Parameter > const &)*arg1,(CNTK::TrainingParameterSchedule< double > const &)*arg2); 
     }
     catch (Swig::DirectorException &e) {
       SWIG_exception(SWIG_RuntimeError,e.what()); 
@@ -30639,10 +34690,18 @@ fail:
 SWIGINTERN PyObject *_wrap_momentum_sgdlearner(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   std::unordered_set< CNTK::Parameter > *arg1 = 0 ;
+  CNTK::LearningRatesPerSample *arg2 = 0 ;
+  CNTK::MomentumsPerSample *arg3 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  void *argp3 = 0 ;
+  int res3 = 0 ;
   PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  PyObject * obj2 = 0 ;
   CNTK::LearnerPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:momentum_sgdlearner",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OOO:momentum_sgdlearner",&obj0,&obj1,&obj2)) SWIG_fail;
   {
     if (PyList_Check(obj0)) {
       std::unordered_set<CNTK::Parameter>* args_set = new std::unordered_set<CNTK::Parameter>();
@@ -30684,9 +34743,25 @@ SWIGINTERN PyObject *_wrap_momentum_sgdlearner(PyObject *SWIGUNUSEDPARM(self), P
       SWIG_exception(SWIG_ValueError, "list expected");
     }
   }
+  res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_CNTK__TrainingParameterScheduleT_double_t,  0  | 0);
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "momentum_sgdlearner" "', argument " "2"" of type '" "CNTK::LearningRatesPerSample const &""'"); 
+  }
+  if (!argp2) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "momentum_sgdlearner" "', argument " "2"" of type '" "CNTK::LearningRatesPerSample const &""'"); 
+  }
+  arg2 = reinterpret_cast< CNTK::LearningRatesPerSample * >(argp2);
+  res3 = SWIG_ConvertPtr(obj2, &argp3, SWIGTYPE_p_CNTK__TrainingParameterScheduleT_double_t,  0  | 0);
+  if (!SWIG_IsOK(res3)) {
+    SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "momentum_sgdlearner" "', argument " "3"" of type '" "CNTK::MomentumsPerSample const &""'"); 
+  }
+  if (!argp3) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "momentum_sgdlearner" "', argument " "3"" of type '" "CNTK::MomentumsPerSample const &""'"); 
+  }
+  arg3 = reinterpret_cast< CNTK::MomentumsPerSample * >(argp3);
   {
     try {
-      result = CNTK::MomentumSGDLearner((std::unordered_set< CNTK::Parameter > const &)*arg1); 
+      result = CNTK::MomentumSGDLearner((std::unordered_set< CNTK::Parameter > const &)*arg1,(CNTK::TrainingParameterSchedule< double > const &)*arg2,(CNTK::TrainingParameterSchedule< double > const &)*arg3); 
     }
     catch (Swig::DirectorException &e) {
       SWIG_exception(SWIG_RuntimeError,e.what()); 
@@ -30717,10 +34792,18 @@ fail:
 SWIGINTERN PyObject *_wrap_nesterov_learner(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   std::unordered_set< CNTK::Parameter > *arg1 = 0 ;
+  CNTK::LearningRatesPerSample *arg2 = 0 ;
+  CNTK::MomentumsPerSample *arg3 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  void *argp3 = 0 ;
+  int res3 = 0 ;
   PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  PyObject * obj2 = 0 ;
   CNTK::LearnerPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:nesterov_learner",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OOO:nesterov_learner",&obj0,&obj1,&obj2)) SWIG_fail;
   {
     if (PyList_Check(obj0)) {
       std::unordered_set<CNTK::Parameter>* args_set = new std::unordered_set<CNTK::Parameter>();
@@ -30762,9 +34845,25 @@ SWIGINTERN PyObject *_wrap_nesterov_learner(PyObject *SWIGUNUSEDPARM(self), PyOb
       SWIG_exception(SWIG_ValueError, "list expected");
     }
   }
+  res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_CNTK__TrainingParameterScheduleT_double_t,  0  | 0);
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "nesterov_learner" "', argument " "2"" of type '" "CNTK::LearningRatesPerSample const &""'"); 
+  }
+  if (!argp2) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "nesterov_learner" "', argument " "2"" of type '" "CNTK::LearningRatesPerSample const &""'"); 
+  }
+  arg2 = reinterpret_cast< CNTK::LearningRatesPerSample * >(argp2);
+  res3 = SWIG_ConvertPtr(obj2, &argp3, SWIGTYPE_p_CNTK__TrainingParameterScheduleT_double_t,  0  | 0);
+  if (!SWIG_IsOK(res3)) {
+    SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "nesterov_learner" "', argument " "3"" of type '" "CNTK::MomentumsPerSample const &""'"); 
+  }
+  if (!argp3) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "nesterov_learner" "', argument " "3"" of type '" "CNTK::MomentumsPerSample const &""'"); 
+  }
+  arg3 = reinterpret_cast< CNTK::MomentumsPerSample * >(argp3);
   {
     try {
-      result = CNTK::NesterovLearner((std::unordered_set< CNTK::Parameter > const &)*arg1); 
+      result = CNTK::NesterovLearner((std::unordered_set< CNTK::Parameter > const &)*arg1,(CNTK::TrainingParameterSchedule< double > const &)*arg2,(CNTK::TrainingParameterSchedule< double > const &)*arg3); 
     }
     catch (Swig::DirectorException &e) {
       SWIG_exception(SWIG_RuntimeError,e.what()); 
@@ -30795,9 +34894,108 @@ fail:
 SWIGINTERN PyObject *_wrap_ada_grad_learner__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   std::unordered_set< CNTK::Parameter > *arg1 = 0 ;
-  bool arg2 ;
-  bool val2 ;
-  int ecode2 = 0 ;
+  CNTK::LearningRatesPerSample *arg2 = 0 ;
+  bool arg3 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  bool val3 ;
+  int ecode3 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  PyObject * obj2 = 0 ;
+  CNTK::LearnerPtr result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OOO:ada_grad_learner",&obj0,&obj1,&obj2)) SWIG_fail;
+  {
+    if (PyList_Check(obj0)) {
+      std::unordered_set<CNTK::Parameter>* args_set = new std::unordered_set<CNTK::Parameter>();
+      
+      PyObject *item;
+      Py_ssize_t pos = 0;
+      
+      PyObject *iterator = PyObject_GetIter(obj0);
+      if (iterator == NULL) {
+        SWIG_exception_fail(SWIG_ValueError, "cannot convert list element to CNTK::Parameter"); 
+      }
+      
+      while (item = PyIter_Next(iterator)) {
+        void *raw_var = 0 ;
+        int res1 = SWIG_ConvertPtr(item, &raw_var, SWIGTYPE_p_CNTK__Parameter,  0);
+        if (!SWIG_IsOK(res1)) {
+          SWIG_exception_fail(SWIG_ArgError(res1), "cannot convert set element to CNTK::Parameter"); 
+        }
+        if (!raw_var) {
+          SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting a list element to CNTK::Parameter");
+        }
+        
+        CNTK::Parameter* var = reinterpret_cast<CNTK::Parameter*>(raw_var);
+        
+        args_set->insert(*var);
+        
+        Py_DECREF(item);
+      }
+      
+      Py_DECREF(iterator);
+      
+      if (PyErr_Occurred()) {
+        SWIG_exception_fail(SWIG_ValueError, "cannot convert set element to CNTK::Parameter"); 
+      }
+      
+      arg1 = args_set;
+      
+    } else {
+      SWIG_exception(SWIG_ValueError, "list expected");
+    }
+  }
+  res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_CNTK__TrainingParameterScheduleT_double_t,  0  | 0);
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "ada_grad_learner" "', argument " "2"" of type '" "CNTK::LearningRatesPerSample const &""'"); 
+  } 
+  if (!argp2) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "ada_grad_learner" "', argument " "2"" of type '" "CNTK::LearningRatesPerSample const &""'"); 
+  }
+  arg2 = reinterpret_cast< CNTK::LearningRatesPerSample * >(argp2);
+  ecode3 = SWIG_AsVal_bool(obj2, &val3);
+  if (!SWIG_IsOK(ecode3)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "ada_grad_learner" "', argument " "3"" of type '" "bool""'");
+  } 
+  arg3 = static_cast< bool >(val3);
+  {
+    try {
+      result = CNTK::AdaGradLearner((std::unordered_set< CNTK::Parameter > const &)*arg1,(CNTK::TrainingParameterSchedule< double > const &)*arg2,arg3); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  {
+    std::shared_ptr<  CNTK::Learner > *smartresult = result ? new std::shared_ptr<  CNTK::Learner >(result) : 0;
+    resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(smartresult), SWIGTYPE_p_std__shared_ptrT_CNTK__Learner_t, SWIG_POINTER_OWN);
+  }
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_ada_grad_learner__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  std::unordered_set< CNTK::Parameter > *arg1 = 0 ;
+  CNTK::LearningRatesPerSample *arg2 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
   PyObject * obj0 = 0 ;
   PyObject * obj1 = 0 ;
   CNTK::LearnerPtr result;
@@ -30844,92 +35042,17 @@ SWIGINTERN PyObject *_wrap_ada_grad_learner__SWIG_0(PyObject *SWIGUNUSEDPARM(sel
       SWIG_exception(SWIG_ValueError, "list expected");
     }
   }
-  ecode2 = SWIG_AsVal_bool(obj1, &val2);
-  if (!SWIG_IsOK(ecode2)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "ada_grad_learner" "', argument " "2"" of type '" "bool""'");
-  } 
-  arg2 = static_cast< bool >(val2);
+  res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_CNTK__TrainingParameterScheduleT_double_t,  0  | 0);
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "ada_grad_learner" "', argument " "2"" of type '" "CNTK::LearningRatesPerSample const &""'"); 
+  }
+  if (!argp2) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "ada_grad_learner" "', argument " "2"" of type '" "CNTK::LearningRatesPerSample const &""'"); 
+  }
+  arg2 = reinterpret_cast< CNTK::LearningRatesPerSample * >(argp2);
   {
     try {
-      result = CNTK::AdaGradLearner((std::unordered_set< CNTK::Parameter > const &)*arg1,arg2); 
-    }
-    catch (Swig::DirectorException &e) {
-      SWIG_exception(SWIG_RuntimeError,e.what()); 
-    }
-    catch (std::runtime_error &e) {
-      SWIG_exception(SWIG_RuntimeError,e.what()); 
-    }
-    catch (std::invalid_argument &e) {
-      SWIG_exception(SWIG_RuntimeError,e.what()); 
-    }
-    catch (std::logic_error &e) {
-      SWIG_exception(SWIG_RuntimeError,e.what()); 
-    }
-    catch (...) {
-      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
-    }
-  }
-  {
-    std::shared_ptr<  CNTK::Learner > *smartresult = result ? new std::shared_ptr<  CNTK::Learner >(result) : 0;
-    resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(smartresult), SWIGTYPE_p_std__shared_ptrT_CNTK__Learner_t, SWIG_POINTER_OWN);
-  }
-  return resultobj;
-fail:
-  return NULL;
-}
-
-
-SWIGINTERN PyObject *_wrap_ada_grad_learner__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
-  PyObject *resultobj = 0;
-  std::unordered_set< CNTK::Parameter > *arg1 = 0 ;
-  PyObject * obj0 = 0 ;
-  CNTK::LearnerPtr result;
-  
-  if (!PyArg_ParseTuple(args,(char *)"O:ada_grad_learner",&obj0)) SWIG_fail;
-  {
-    if (PyList_Check(obj0)) {
-      std::unordered_set<CNTK::Parameter>* args_set = new std::unordered_set<CNTK::Parameter>();
-      
-      PyObject *item;
-      Py_ssize_t pos = 0;
-      
-      PyObject *iterator = PyObject_GetIter(obj0);
-      if (iterator == NULL) {
-        SWIG_exception_fail(SWIG_ValueError, "cannot convert list element to CNTK::Parameter"); 
-      }
-      
-      while (item = PyIter_Next(iterator)) {
-        void *raw_var = 0 ;
-        int res1 = SWIG_ConvertPtr(item, &raw_var, SWIGTYPE_p_CNTK__Parameter,  0);
-        if (!SWIG_IsOK(res1)) {
-          SWIG_exception_fail(SWIG_ArgError(res1), "cannot convert set element to CNTK::Parameter"); 
-        }
-        if (!raw_var) {
-          SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting a list element to CNTK::Parameter");
-        }
-        
-        CNTK::Parameter* var = reinterpret_cast<CNTK::Parameter*>(raw_var);
-        
-        args_set->insert(*var);
-        
-        Py_DECREF(item);
-      }
-      
-      Py_DECREF(iterator);
-      
-      if (PyErr_Occurred()) {
-        SWIG_exception_fail(SWIG_ValueError, "cannot convert set element to CNTK::Parameter"); 
-      }
-      
-      arg1 = args_set;
-      
-    } else {
-      SWIG_exception(SWIG_ValueError, "list expected");
-    }
-  }
-  {
-    try {
-      result = CNTK::AdaGradLearner((std::unordered_set< CNTK::Parameter > const &)*arg1); 
+      result = CNTK::AdaGradLearner((std::unordered_set< CNTK::Parameter > const &)*arg1,(CNTK::TrainingParameterSchedule< double > const &)*arg2); 
     }
     catch (Swig::DirectorException &e) {
       SWIG_exception(SWIG_RuntimeError,e.what()); 
@@ -30959,26 +35082,15 @@ fail:
 
 SWIGINTERN PyObject *_wrap_ada_grad_learner(PyObject *self, PyObject *args) {
   Py_ssize_t argc;
-  PyObject *argv[3] = {
+  PyObject *argv[4] = {
     0
   };
   Py_ssize_t ii;
   
   if (!PyTuple_Check(args)) SWIG_fail;
   argc = args ? PyObject_Length(args) : 0;
-  for (ii = 0; (ii < 2) && (ii < argc); ii++) {
+  for (ii = 0; (ii < 3) && (ii < argc); ii++) {
     argv[ii] = PyTuple_GET_ITEM(args,ii);
-  }
-  if (argc == 1) {
-    int _v;
-    {
-      // '1000' is the typecheck precedence code. It means: check after basic
-      // types, but before arrays. See: http://www.swig.org/Doc1.3/Typemaps.html#Typemaps_overloading
-      _v = PyList_Check(argv[0]) ? 1 : 0;
-    }
-    if (_v) {
-      return _wrap_ada_grad_learner__SWIG_1(self, args);
-    }
   }
   if (argc == 2) {
     int _v;
@@ -30988,8 +35100,26 @@ SWIGINTERN PyObject *_wrap_ada_grad_learner(PyObject *self, PyObject *args) {
       _v = PyList_Check(argv[0]) ? 1 : 0;
     }
     if (_v) {
+      int res = SWIG_ConvertPtr(argv[1], 0, SWIGTYPE_p_CNTK__TrainingParameterScheduleT_double_t, 0);
+      _v = SWIG_CheckState(res);
+      if (_v) {
+      return _wrap_ada_grad_learner__SWIG_1(self, args);
+    }
+  }
+  }
+  if (argc == 3) {
+    int _v;
+    {
+      // '1000' is the typecheck precedence code. It means: check after basic
+      // types, but before arrays. See: http://www.swig.org/Doc1.3/Typemaps.html#Typemaps_overloading
+      _v = PyList_Check(argv[0]) ? 1 : 0;
+    }
+    if (_v) {
+      int res = SWIG_ConvertPtr(argv[1], 0, SWIGTYPE_p_CNTK__TrainingParameterScheduleT_double_t, 0);
+      _v = SWIG_CheckState(res);
+      if (_v) {
       {
-        int res = SWIG_AsVal_bool(argv[1], NULL);
+          int res = SWIG_AsVal_bool(argv[2], NULL);
         _v = SWIG_CheckState(res);
       }
       if (_v) {
@@ -30997,12 +35127,13 @@ SWIGINTERN PyObject *_wrap_ada_grad_learner(PyObject *self, PyObject *args) {
       }
     }
   }
+  }
   
 fail:
   SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'ada_grad_learner'.\n"
     "  Possible C/C++ prototypes are:\n"
-    "    CNTK::AdaGradLearner(std::unordered_set< CNTK::Parameter > const &,bool)\n"
-    "    CNTK::AdaGradLearner(std::unordered_set< CNTK::Parameter > const &)\n");
+    "    CNTK::AdaGradLearner(std::unordered_set< CNTK::Parameter > const &,CNTK::LearningRatesPerSample const &,bool)\n"
+    "    CNTK::AdaGradLearner(std::unordered_set< CNTK::Parameter > const &,CNTK::LearningRatesPerSample const &)\n");
   return 0;
 }
 
@@ -31010,10 +35141,18 @@ fail:
 SWIGINTERN PyObject *_wrap_fsada_grad_learner(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   std::unordered_set< CNTK::Parameter > *arg1 = 0 ;
+  CNTK::LearningRatesPerSample *arg2 = 0 ;
+  CNTK::MomentumsPerSample *arg3 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  void *argp3 = 0 ;
+  int res3 = 0 ;
   PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  PyObject * obj2 = 0 ;
   CNTK::LearnerPtr result;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:fsada_grad_learner",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OOO:fsada_grad_learner",&obj0,&obj1,&obj2)) SWIG_fail;
   {
     if (PyList_Check(obj0)) {
       std::unordered_set<CNTK::Parameter>* args_set = new std::unordered_set<CNTK::Parameter>();
@@ -31055,9 +35194,25 @@ SWIGINTERN PyObject *_wrap_fsada_grad_learner(PyObject *SWIGUNUSEDPARM(self), Py
       SWIG_exception(SWIG_ValueError, "list expected");
     }
   }
+  res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_CNTK__TrainingParameterScheduleT_double_t,  0  | 0);
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "fsada_grad_learner" "', argument " "2"" of type '" "CNTK::LearningRatesPerSample const &""'"); 
+  }
+  if (!argp2) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "fsada_grad_learner" "', argument " "2"" of type '" "CNTK::LearningRatesPerSample const &""'"); 
+  }
+  arg2 = reinterpret_cast< CNTK::LearningRatesPerSample * >(argp2);
+  res3 = SWIG_ConvertPtr(obj2, &argp3, SWIGTYPE_p_CNTK__TrainingParameterScheduleT_double_t,  0  | 0);
+  if (!SWIG_IsOK(res3)) {
+    SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "fsada_grad_learner" "', argument " "3"" of type '" "CNTK::MomentumsPerSample const &""'"); 
+  }
+  if (!argp3) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "fsada_grad_learner" "', argument " "3"" of type '" "CNTK::MomentumsPerSample const &""'"); 
+  }
+  arg3 = reinterpret_cast< CNTK::MomentumsPerSample * >(argp3);
   {
     try {
-      result = CNTK::FSAdaGradLearner((std::unordered_set< CNTK::Parameter > const &)*arg1); 
+      result = CNTK::FSAdaGradLearner((std::unordered_set< CNTK::Parameter > const &)*arg1,(CNTK::TrainingParameterSchedule< double > const &)*arg2,(CNTK::TrainingParameterSchedule< double > const &)*arg3); 
     }
     catch (Swig::DirectorException &e) {
       SWIG_exception(SWIG_RuntimeError,e.what()); 
@@ -31088,14 +35243,15 @@ fail:
 SWIGINTERN PyObject *_wrap_rmsprop_learner__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   std::unordered_set< CNTK::Parameter > *arg1 = 0 ;
-  double arg2 ;
+  CNTK::LearningRatesPerSample *arg2 = 0 ;
   double arg3 ;
   double arg4 ;
   double arg5 ;
   double arg6 ;
-  bool arg7 ;
-  double val2 ;
-  int ecode2 = 0 ;
+  double arg7 ;
+  bool arg8 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
   double val3 ;
   int ecode3 = 0 ;
   double val4 ;
@@ -31104,7 +35260,150 @@ SWIGINTERN PyObject *_wrap_rmsprop_learner__SWIG_0(PyObject *SWIGUNUSEDPARM(self
   int ecode5 = 0 ;
   double val6 ;
   int ecode6 = 0 ;
-  bool val7 ;
+  double val7 ;
+  int ecode7 = 0 ;
+  bool val8 ;
+  int ecode8 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  PyObject * obj2 = 0 ;
+  PyObject * obj3 = 0 ;
+  PyObject * obj4 = 0 ;
+  PyObject * obj5 = 0 ;
+  PyObject * obj6 = 0 ;
+  PyObject * obj7 = 0 ;
+  CNTK::LearnerPtr result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OOOOOOOO:rmsprop_learner",&obj0,&obj1,&obj2,&obj3,&obj4,&obj5,&obj6,&obj7)) SWIG_fail;
+  {
+    if (PyList_Check(obj0)) {
+      std::unordered_set<CNTK::Parameter>* args_set = new std::unordered_set<CNTK::Parameter>();
+      
+      PyObject *item;
+      Py_ssize_t pos = 0;
+      
+      PyObject *iterator = PyObject_GetIter(obj0);
+      if (iterator == NULL) {
+        SWIG_exception_fail(SWIG_ValueError, "cannot convert list element to CNTK::Parameter"); 
+      }
+      
+      while (item = PyIter_Next(iterator)) {
+        void *raw_var = 0 ;
+        int res1 = SWIG_ConvertPtr(item, &raw_var, SWIGTYPE_p_CNTK__Parameter,  0);
+        if (!SWIG_IsOK(res1)) {
+          SWIG_exception_fail(SWIG_ArgError(res1), "cannot convert set element to CNTK::Parameter"); 
+        }
+        if (!raw_var) {
+          SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting a list element to CNTK::Parameter");
+        }
+        
+        CNTK::Parameter* var = reinterpret_cast<CNTK::Parameter*>(raw_var);
+        
+        args_set->insert(*var);
+        
+        Py_DECREF(item);
+      }
+      
+      Py_DECREF(iterator);
+      
+      if (PyErr_Occurred()) {
+        SWIG_exception_fail(SWIG_ValueError, "cannot convert set element to CNTK::Parameter"); 
+      }
+      
+      arg1 = args_set;
+      
+    } else {
+      SWIG_exception(SWIG_ValueError, "list expected");
+    }
+  }
+  res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_CNTK__TrainingParameterScheduleT_double_t,  0  | 0);
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "rmsprop_learner" "', argument " "2"" of type '" "CNTK::LearningRatesPerSample const &""'"); 
+  }
+  if (!argp2) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "rmsprop_learner" "', argument " "2"" of type '" "CNTK::LearningRatesPerSample const &""'"); 
+  } 
+  arg2 = reinterpret_cast< CNTK::LearningRatesPerSample * >(argp2);
+  ecode3 = SWIG_AsVal_double(obj2, &val3);
+  if (!SWIG_IsOK(ecode3)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "rmsprop_learner" "', argument " "3"" of type '" "double""'");
+  } 
+  arg3 = static_cast< double >(val3);
+  ecode4 = SWIG_AsVal_double(obj3, &val4);
+  if (!SWIG_IsOK(ecode4)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode4), "in method '" "rmsprop_learner" "', argument " "4"" of type '" "double""'");
+  } 
+  arg4 = static_cast< double >(val4);
+  ecode5 = SWIG_AsVal_double(obj4, &val5);
+  if (!SWIG_IsOK(ecode5)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode5), "in method '" "rmsprop_learner" "', argument " "5"" of type '" "double""'");
+  } 
+  arg5 = static_cast< double >(val5);
+  ecode6 = SWIG_AsVal_double(obj5, &val6);
+  if (!SWIG_IsOK(ecode6)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode6), "in method '" "rmsprop_learner" "', argument " "6"" of type '" "double""'");
+  } 
+  arg6 = static_cast< double >(val6);
+  ecode7 = SWIG_AsVal_double(obj6, &val7);
+  if (!SWIG_IsOK(ecode7)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode7), "in method '" "rmsprop_learner" "', argument " "7"" of type '" "double""'");
+  } 
+  arg7 = static_cast< double >(val7);
+  ecode8 = SWIG_AsVal_bool(obj7, &val8);
+  if (!SWIG_IsOK(ecode8)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode8), "in method '" "rmsprop_learner" "', argument " "8"" of type '" "bool""'");
+  } 
+  arg8 = static_cast< bool >(val8);
+  {
+    try {
+      result = CNTK::RMSPropLearner((std::unordered_set< CNTK::Parameter > const &)*arg1,(CNTK::TrainingParameterSchedule< double > const &)*arg2,arg3,arg4,arg5,arg6,arg7,arg8); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  {
+    std::shared_ptr<  CNTK::Learner > *smartresult = result ? new std::shared_ptr<  CNTK::Learner >(result) : 0;
+    resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(smartresult), SWIGTYPE_p_std__shared_ptrT_CNTK__Learner_t, SWIG_POINTER_OWN);
+  }
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_rmsprop_learner__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  std::unordered_set< CNTK::Parameter > *arg1 = 0 ;
+  CNTK::LearningRatesPerSample *arg2 = 0 ;
+  double arg3 ;
+  double arg4 ;
+  double arg5 ;
+  double arg6 ;
+  double arg7 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  double val3 ;
+  int ecode3 = 0 ;
+  double val4 ;
+  int ecode4 = 0 ;
+  double val5 ;
+  int ecode5 = 0 ;
+  double val6 ;
+  int ecode6 = 0 ;
+  double val7 ;
   int ecode7 = 0 ;
   PyObject * obj0 = 0 ;
   PyObject * obj1 = 0 ;
@@ -31157,11 +35456,14 @@ SWIGINTERN PyObject *_wrap_rmsprop_learner__SWIG_0(PyObject *SWIGUNUSEDPARM(self
       SWIG_exception(SWIG_ValueError, "list expected");
     }
   }
-  ecode2 = SWIG_AsVal_double(obj1, &val2);
-  if (!SWIG_IsOK(ecode2)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "rmsprop_learner" "', argument " "2"" of type '" "double""'");
+  res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_CNTK__TrainingParameterScheduleT_double_t,  0  | 0);
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "rmsprop_learner" "', argument " "2"" of type '" "CNTK::LearningRatesPerSample const &""'"); 
+  }
+  if (!argp2) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "rmsprop_learner" "', argument " "2"" of type '" "CNTK::LearningRatesPerSample const &""'"); 
   } 
-  arg2 = static_cast< double >(val2);
+  arg2 = reinterpret_cast< CNTK::LearningRatesPerSample * >(argp2);
   ecode3 = SWIG_AsVal_double(obj2, &val3);
   if (!SWIG_IsOK(ecode3)) {
     SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "rmsprop_learner" "', argument " "3"" of type '" "double""'");
@@ -31182,137 +35484,14 @@ SWIGINTERN PyObject *_wrap_rmsprop_learner__SWIG_0(PyObject *SWIGUNUSEDPARM(self
     SWIG_exception_fail(SWIG_ArgError(ecode6), "in method '" "rmsprop_learner" "', argument " "6"" of type '" "double""'");
   } 
   arg6 = static_cast< double >(val6);
-  ecode7 = SWIG_AsVal_bool(obj6, &val7);
+  ecode7 = SWIG_AsVal_double(obj6, &val7);
   if (!SWIG_IsOK(ecode7)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode7), "in method '" "rmsprop_learner" "', argument " "7"" of type '" "bool""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode7), "in method '" "rmsprop_learner" "', argument " "7"" of type '" "double""'");
   } 
-  arg7 = static_cast< bool >(val7);
+  arg7 = static_cast< double >(val7);
   {
     try {
-      result = CNTK::RMSPropLearner((std::unordered_set< CNTK::Parameter > const &)*arg1,arg2,arg3,arg4,arg5,arg6,arg7); 
-    }
-    catch (Swig::DirectorException &e) {
-      SWIG_exception(SWIG_RuntimeError,e.what()); 
-    }
-    catch (std::runtime_error &e) {
-      SWIG_exception(SWIG_RuntimeError,e.what()); 
-    }
-    catch (std::invalid_argument &e) {
-      SWIG_exception(SWIG_RuntimeError,e.what()); 
-    }
-    catch (std::logic_error &e) {
-      SWIG_exception(SWIG_RuntimeError,e.what()); 
-    }
-    catch (...) {
-      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
-    }
-  }
-  {
-    std::shared_ptr<  CNTK::Learner > *smartresult = result ? new std::shared_ptr<  CNTK::Learner >(result) : 0;
-    resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(smartresult), SWIGTYPE_p_std__shared_ptrT_CNTK__Learner_t, SWIG_POINTER_OWN);
-  }
-  return resultobj;
-fail:
-  return NULL;
-}
-
-
-SWIGINTERN PyObject *_wrap_rmsprop_learner__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
-  PyObject *resultobj = 0;
-  std::unordered_set< CNTK::Parameter > *arg1 = 0 ;
-  double arg2 ;
-  double arg3 ;
-  double arg4 ;
-  double arg5 ;
-  double arg6 ;
-  double val2 ;
-  int ecode2 = 0 ;
-  double val3 ;
-  int ecode3 = 0 ;
-  double val4 ;
-  int ecode4 = 0 ;
-  double val5 ;
-  int ecode5 = 0 ;
-  double val6 ;
-  int ecode6 = 0 ;
-  PyObject * obj0 = 0 ;
-  PyObject * obj1 = 0 ;
-  PyObject * obj2 = 0 ;
-  PyObject * obj3 = 0 ;
-  PyObject * obj4 = 0 ;
-  PyObject * obj5 = 0 ;
-  CNTK::LearnerPtr result;
-  
-  if (!PyArg_ParseTuple(args,(char *)"OOOOOO:rmsprop_learner",&obj0,&obj1,&obj2,&obj3,&obj4,&obj5)) SWIG_fail;
-  {
-    if (PyList_Check(obj0)) {
-      std::unordered_set<CNTK::Parameter>* args_set = new std::unordered_set<CNTK::Parameter>();
-      
-      PyObject *item;
-      Py_ssize_t pos = 0;
-      
-      PyObject *iterator = PyObject_GetIter(obj0);
-      if (iterator == NULL) {
-        SWIG_exception_fail(SWIG_ValueError, "cannot convert list element to CNTK::Parameter"); 
-      }
-      
-      while (item = PyIter_Next(iterator)) {
-        void *raw_var = 0 ;
-        int res1 = SWIG_ConvertPtr(item, &raw_var, SWIGTYPE_p_CNTK__Parameter,  0);
-        if (!SWIG_IsOK(res1)) {
-          SWIG_exception_fail(SWIG_ArgError(res1), "cannot convert set element to CNTK::Parameter"); 
-        }
-        if (!raw_var) {
-          SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting a list element to CNTK::Parameter");
-        }
-        
-        CNTK::Parameter* var = reinterpret_cast<CNTK::Parameter*>(raw_var);
-        
-        args_set->insert(*var);
-        
-        Py_DECREF(item);
-      }
-      
-      Py_DECREF(iterator);
-      
-      if (PyErr_Occurred()) {
-        SWIG_exception_fail(SWIG_ValueError, "cannot convert set element to CNTK::Parameter"); 
-      }
-      
-      arg1 = args_set;
-      
-    } else {
-      SWIG_exception(SWIG_ValueError, "list expected");
-    }
-  }
-  ecode2 = SWIG_AsVal_double(obj1, &val2);
-  if (!SWIG_IsOK(ecode2)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "rmsprop_learner" "', argument " "2"" of type '" "double""'");
-  } 
-  arg2 = static_cast< double >(val2);
-  ecode3 = SWIG_AsVal_double(obj2, &val3);
-  if (!SWIG_IsOK(ecode3)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "rmsprop_learner" "', argument " "3"" of type '" "double""'");
-  } 
-  arg3 = static_cast< double >(val3);
-  ecode4 = SWIG_AsVal_double(obj3, &val4);
-  if (!SWIG_IsOK(ecode4)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode4), "in method '" "rmsprop_learner" "', argument " "4"" of type '" "double""'");
-  } 
-  arg4 = static_cast< double >(val4);
-  ecode5 = SWIG_AsVal_double(obj4, &val5);
-  if (!SWIG_IsOK(ecode5)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode5), "in method '" "rmsprop_learner" "', argument " "5"" of type '" "double""'");
-  } 
-  arg5 = static_cast< double >(val5);
-  ecode6 = SWIG_AsVal_double(obj5, &val6);
-  if (!SWIG_IsOK(ecode6)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode6), "in method '" "rmsprop_learner" "', argument " "6"" of type '" "double""'");
-  } 
-  arg6 = static_cast< double >(val6);
-  {
-    try {
-      result = CNTK::RMSPropLearner((std::unordered_set< CNTK::Parameter > const &)*arg1,arg2,arg3,arg4,arg5,arg6); 
+      result = CNTK::RMSPropLearner((std::unordered_set< CNTK::Parameter > const &)*arg1,(CNTK::TrainingParameterSchedule< double > const &)*arg2,arg3,arg4,arg5,arg6,arg7); 
     }
     catch (Swig::DirectorException &e) {
       SWIG_exception(SWIG_RuntimeError,e.what()); 
@@ -31342,56 +35521,15 @@ fail:
 
 SWIGINTERN PyObject *_wrap_rmsprop_learner(PyObject *self, PyObject *args) {
   Py_ssize_t argc;
-  PyObject *argv[8] = {
+  PyObject *argv[9] = {
     0
   };
   Py_ssize_t ii;
   
   if (!PyTuple_Check(args)) SWIG_fail;
   argc = args ? PyObject_Length(args) : 0;
-  for (ii = 0; (ii < 7) && (ii < argc); ii++) {
+  for (ii = 0; (ii < 8) && (ii < argc); ii++) {
     argv[ii] = PyTuple_GET_ITEM(args,ii);
-  }
-  if (argc == 6) {
-    int _v;
-    {
-      // '1000' is the typecheck precedence code. It means: check after basic
-      // types, but before arrays. See: http://www.swig.org/Doc1.3/Typemaps.html#Typemaps_overloading
-      _v = PyList_Check(argv[0]) ? 1 : 0;
-    }
-    if (_v) {
-      {
-        int res = SWIG_AsVal_double(argv[1], NULL);
-        _v = SWIG_CheckState(res);
-      }
-      if (_v) {
-        {
-          int res = SWIG_AsVal_double(argv[2], NULL);
-          _v = SWIG_CheckState(res);
-        }
-        if (_v) {
-          {
-            int res = SWIG_AsVal_double(argv[3], NULL);
-            _v = SWIG_CheckState(res);
-          }
-          if (_v) {
-            {
-              int res = SWIG_AsVal_double(argv[4], NULL);
-              _v = SWIG_CheckState(res);
-            }
-            if (_v) {
-              {
-                int res = SWIG_AsVal_double(argv[5], NULL);
-                _v = SWIG_CheckState(res);
-              }
-              if (_v) {
-                return _wrap_rmsprop_learner__SWIG_1(self, args);
-              }
-            }
-          }
-        }
-      }
-    }
   }
   if (argc == 7) {
     int _v;
@@ -31401,10 +35539,8 @@ SWIGINTERN PyObject *_wrap_rmsprop_learner(PyObject *self, PyObject *args) {
       _v = PyList_Check(argv[0]) ? 1 : 0;
     }
     if (_v) {
-      {
-        int res = SWIG_AsVal_double(argv[1], NULL);
+      int res = SWIG_ConvertPtr(argv[1], 0, SWIGTYPE_p_CNTK__TrainingParameterScheduleT_double_t, 0);
         _v = SWIG_CheckState(res);
-      }
       if (_v) {
         {
           int res = SWIG_AsVal_double(argv[2], NULL);
@@ -31427,7 +35563,57 @@ SWIGINTERN PyObject *_wrap_rmsprop_learner(PyObject *self, PyObject *args) {
               }
               if (_v) {
                 {
-                  int res = SWIG_AsVal_bool(argv[6], NULL);
+                  int res = SWIG_AsVal_double(argv[6], NULL);
+                  _v = SWIG_CheckState(res);
+                }
+                if (_v) {
+                return _wrap_rmsprop_learner__SWIG_1(self, args);
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  }
+  if (argc == 8) {
+    int _v;
+    {
+      // '1000' is the typecheck precedence code. It means: check after basic
+      // types, but before arrays. See: http://www.swig.org/Doc1.3/Typemaps.html#Typemaps_overloading
+      _v = PyList_Check(argv[0]) ? 1 : 0;
+    }
+    if (_v) {
+      int res = SWIG_ConvertPtr(argv[1], 0, SWIGTYPE_p_CNTK__TrainingParameterScheduleT_double_t, 0);
+        _v = SWIG_CheckState(res);
+      if (_v) {
+        {
+          int res = SWIG_AsVal_double(argv[2], NULL);
+          _v = SWIG_CheckState(res);
+        }
+        if (_v) {
+          {
+            int res = SWIG_AsVal_double(argv[3], NULL);
+            _v = SWIG_CheckState(res);
+          }
+          if (_v) {
+            {
+              int res = SWIG_AsVal_double(argv[4], NULL);
+              _v = SWIG_CheckState(res);
+            }
+            if (_v) {
+              {
+                int res = SWIG_AsVal_double(argv[5], NULL);
+                _v = SWIG_CheckState(res);
+              }
+              if (_v) {
+                {
+                  int res = SWIG_AsVal_double(argv[6], NULL);
+                  _v = SWIG_CheckState(res);
+                }
+                if (_v) {
+                  {
+                    int res = SWIG_AsVal_bool(argv[7], NULL);
                   _v = SWIG_CheckState(res);
                 }
                 if (_v) {
@@ -31440,12 +35626,13 @@ SWIGINTERN PyObject *_wrap_rmsprop_learner(PyObject *self, PyObject *args) {
       }
     }
   }
+  }
   
 fail:
   SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'rmsprop_learner'.\n"
     "  Possible C/C++ prototypes are:\n"
-    "    CNTK::RMSPropLearner(std::unordered_set< CNTK::Parameter > const &,double,double,double,double,double,bool)\n"
-    "    CNTK::RMSPropLearner(std::unordered_set< CNTK::Parameter > const &,double,double,double,double,double)\n");
+    "    CNTK::RMSPropLearner(std::unordered_set< CNTK::Parameter > const &,CNTK::LearningRatesPerSample const &,double,double,double,double,double,bool)\n"
+    "    CNTK::RMSPropLearner(std::unordered_set< CNTK::Parameter > const &,CNTK::LearningRatesPerSample const &,double,double,double,double,double)\n");
   return 0;
 }
 
@@ -32883,7 +37070,7 @@ SWIGINTERN PyObject *_wrap_MinibatchSource_get_next_minibatch__SWIG_0(PyObject *
   PyObject * obj0 = 0 ;
   PyObject * obj1 = 0 ;
   PyObject * obj2 = 0 ;
-  SwigValueWrapper< std::unordered_map< CNTK::StreamInfo,CNTK::MinibatchData > > result;
+  std::unordered_map< CNTK::StreamInfo,CNTK::MinibatchData > *result = 0 ;
   
   if (!PyArg_ParseTuple(args,(char *)"OOO:MinibatchSource_get_next_minibatch",&obj0,&obj1,&obj2)) SWIG_fail;
   {
@@ -32949,7 +37136,7 @@ SWIGINTERN PyObject *_wrap_MinibatchSource_get_next_minibatch__SWIG_0(PyObject *
   arg3 = reinterpret_cast< CNTK::DeviceDescriptor * >(argp3);
   {
     try {
-      result = (arg1)->GetNextMinibatch((std::unordered_map< CNTK::StreamInfo,std::pair< size_t,size_t > > const &)*arg2,(CNTK::DeviceDescriptor const &)*arg3); 
+      result = (std::unordered_map< CNTK::StreamInfo,CNTK::MinibatchData > *) &(arg1)->GetNextMinibatch((std::unordered_map< CNTK::StreamInfo,std::pair< size_t,size_t > > const &)*arg2,(CNTK::DeviceDescriptor const &)*arg3); 
     }
     catch (Swig::DirectorException &e) {
       SWIG_exception(SWIG_RuntimeError,e.what()); 
@@ -32977,7 +37164,7 @@ SWIGINTERN PyObject *_wrap_MinibatchSource_get_next_minibatch__SWIG_0(PyObject *
     // *&result -> result is the returned result being converted (unordered_map<...>*),
     // wrapped by SwigValueWrapper. So we need to unwrap it using '&', 
     // then access its value using '*'.
-    for (auto it : *&result)
+    for (auto it : *result)
     {
       PyObject *returned_var = SWIG_NewPointerObj(SWIG_as_voidptr(new CNTK::StreamInfo(it.first)), SWIGTYPE_p_CNTK__StreamInfo, SWIG_POINTER_OWN);
       PyObject *returned_val = SWIG_NewPointerObj(SWIG_as_voidptr(new CNTK::MinibatchData(it.second)), SWIGTYPE_p_CNTK__MinibatchData, SWIG_POINTER_OWN);
@@ -33005,7 +37192,7 @@ SWIGINTERN PyObject *_wrap_MinibatchSource_get_next_minibatch__SWIG_1(PyObject *
   std::shared_ptr< CNTK::MinibatchSource > *smartarg1 = 0 ;
   PyObject * obj0 = 0 ;
   PyObject * obj1 = 0 ;
-  SwigValueWrapper< std::unordered_map< CNTK::StreamInfo,CNTK::MinibatchData > > result;
+  std::unordered_map< CNTK::StreamInfo,CNTK::MinibatchData > *result = 0 ;
   
   if (!PyArg_ParseTuple(args,(char *)"OO:MinibatchSource_get_next_minibatch",&obj0,&obj1)) SWIG_fail;
   {
@@ -33063,7 +37250,7 @@ SWIGINTERN PyObject *_wrap_MinibatchSource_get_next_minibatch__SWIG_1(PyObject *
   }
   {
     try {
-      result = (arg1)->GetNextMinibatch((std::unordered_map< CNTK::StreamInfo,std::pair< size_t,size_t > > const &)*arg2); 
+      result = (std::unordered_map< CNTK::StreamInfo,CNTK::MinibatchData > *) &(arg1)->GetNextMinibatch((std::unordered_map< CNTK::StreamInfo,std::pair< size_t,size_t > > const &)*arg2); 
     }
     catch (Swig::DirectorException &e) {
       SWIG_exception(SWIG_RuntimeError,e.what()); 
@@ -33091,7 +37278,7 @@ SWIGINTERN PyObject *_wrap_MinibatchSource_get_next_minibatch__SWIG_1(PyObject *
     // *&result -> result is the returned result being converted (unordered_map<...>*),
     // wrapped by SwigValueWrapper. So we need to unwrap it using '&', 
     // then access its value using '*'.
-    for (auto it : *&result)
+    for (auto it : *result)
     {
       PyObject *returned_var = SWIG_NewPointerObj(SWIG_as_voidptr(new CNTK::StreamInfo(it.first)), SWIGTYPE_p_CNTK__StreamInfo, SWIG_POINTER_OWN);
       PyObject *returned_val = SWIG_NewPointerObj(SWIG_as_voidptr(new CNTK::MinibatchData(it.second)), SWIGTYPE_p_CNTK__MinibatchData, SWIG_POINTER_OWN);
@@ -33191,9 +37378,24 @@ SWIGINTERN PyObject *_wrap_delete_MinibatchSource(PyObject *SWIGUNUSEDPARM(self)
     }
   }
   {
-    Py_BEGIN_ALLOW_THREADS;
+    try {
     (void)arg1; delete smartarg1;
-    Py_END_ALLOW_THREADS;
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
   }
   resultobj = SWIG_Py_Void();
   return resultobj;
@@ -33659,6 +37861,698 @@ fail:
   return 0;
 }
 
+
+SWIGINTERN PyObject *_wrap_new_learning_rates_per_sample__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  double arg1 ;
+  double val1 ;
+  int ecode1 = 0 ;
+  PyObject * obj0 = 0 ;
+  CNTK::TrainingParameterSchedule< double > *result = 0 ;
+
+  if (!PyArg_ParseTuple(args,(char *)"O:new_learning_rates_per_sample",&obj0)) SWIG_fail;
+  ecode1 = SWIG_AsVal_double(obj0, &val1);
+  if (!SWIG_IsOK(ecode1)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode1), "in method '" "new_learning_rates_per_sample" "', argument " "1"" of type '" "double""'");
+  } 
+  arg1 = static_cast< double >(val1);
+  {
+    try {
+      result = (CNTK::TrainingParameterSchedule< double > *)new CNTK::TrainingParameterSchedule< double >(arg1); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__TrainingParameterScheduleT_double_t, SWIG_POINTER_NEW |  0 );
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_new_learning_rates_per_sample__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  std::vector< double,std::allocator< double > > *arg1 = 0 ;
+  size_t arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  size_t val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  CNTK::TrainingParameterSchedule< double > *result = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:new_learning_rates_per_sample",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_std__vectorT_double_std__allocatorT_double_t_t,  0  | 0);
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "new_learning_rates_per_sample" "', argument " "1"" of type '" "std::vector< double,std::allocator< double > > const &""'"); 
+  }
+  if (!argp1) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "new_learning_rates_per_sample" "', argument " "1"" of type '" "std::vector< double,std::allocator< double > > const &""'"); 
+  }
+  arg1 = reinterpret_cast< std::vector< double,std::allocator< double > > * >(argp1);
+  ecode2 = SWIG_AsVal_size_t(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "new_learning_rates_per_sample" "', argument " "2"" of type '" "size_t""'");
+  } 
+  arg2 = static_cast< size_t >(val2);
+  {
+    try {
+      result = (CNTK::TrainingParameterSchedule< double > *)new CNTK::TrainingParameterSchedule< double >((std::vector< double,std::allocator< double > > const &)*arg1,arg2); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__TrainingParameterScheduleT_double_t, SWIG_POINTER_NEW |  0 );
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_new_learning_rates_per_sample__SWIG_2(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  std::vector< double,std::allocator< double > > *arg1 = 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  CNTK::TrainingParameterSchedule< double > *result = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:new_learning_rates_per_sample",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_std__vectorT_double_std__allocatorT_double_t_t,  0  | 0);
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "new_learning_rates_per_sample" "', argument " "1"" of type '" "std::vector< double,std::allocator< double > > const &""'"); 
+  }
+  if (!argp1) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "new_learning_rates_per_sample" "', argument " "1"" of type '" "std::vector< double,std::allocator< double > > const &""'"); 
+  }
+  arg1 = reinterpret_cast< std::vector< double,std::allocator< double > > * >(argp1);
+  {
+    try {
+      result = (CNTK::TrainingParameterSchedule< double > *)new CNTK::TrainingParameterSchedule< double >((std::vector< double,std::allocator< double > > const &)*arg1); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__TrainingParameterScheduleT_double_t, SWIG_POINTER_NEW |  0 );
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_new_learning_rates_per_sample__SWIG_3(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  std::initializer_list< std::pair< size_t const,double > > *arg1 = 0 ;
+  size_t arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  size_t val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  CNTK::TrainingParameterSchedule< double > *result = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:new_learning_rates_per_sample",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_std__initializer_listT_std__pairT_size_t_const_double_t_t,  0  | 0);
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "new_learning_rates_per_sample" "', argument " "1"" of type '" "std::initializer_list< std::pair< size_t const,double > > const &""'"); 
+  }
+  if (!argp1) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "new_learning_rates_per_sample" "', argument " "1"" of type '" "std::initializer_list< std::pair< size_t const,double > > const &""'"); 
+  }
+  arg1 = reinterpret_cast< std::initializer_list< std::pair< size_t const,double > > * >(argp1);
+  ecode2 = SWIG_AsVal_size_t(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "new_learning_rates_per_sample" "', argument " "2"" of type '" "size_t""'");
+  } 
+  arg2 = static_cast< size_t >(val2);
+  {
+    try {
+      result = (CNTK::TrainingParameterSchedule< double > *)new CNTK::TrainingParameterSchedule< double >((std::initializer_list< std::pair< size_t const,double > > const &)*arg1,arg2); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__TrainingParameterScheduleT_double_t, SWIG_POINTER_NEW |  0 );
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_new_learning_rates_per_sample__SWIG_4(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  std::initializer_list< std::pair< size_t const,double > > *arg1 = 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  CNTK::TrainingParameterSchedule< double > *result = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:new_learning_rates_per_sample",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_std__initializer_listT_std__pairT_size_t_const_double_t_t,  0  | 0);
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "new_learning_rates_per_sample" "', argument " "1"" of type '" "std::initializer_list< std::pair< size_t const,double > > const &""'"); 
+  }
+  if (!argp1) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "new_learning_rates_per_sample" "', argument " "1"" of type '" "std::initializer_list< std::pair< size_t const,double > > const &""'"); 
+  }
+  arg1 = reinterpret_cast< std::initializer_list< std::pair< size_t const,double > > * >(argp1);
+  {
+    try {
+      result = (CNTK::TrainingParameterSchedule< double > *)new CNTK::TrainingParameterSchedule< double >((std::initializer_list< std::pair< size_t const,double > > const &)*arg1); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__TrainingParameterScheduleT_double_t, SWIG_POINTER_NEW |  0 );
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_new_learning_rates_per_sample(PyObject *self, PyObject *args) {
+  Py_ssize_t argc;
+  PyObject *argv[3] = {
+    0
+  };
+  Py_ssize_t ii;
+  
+  if (!PyTuple_Check(args)) SWIG_fail;
+  argc = args ? PyObject_Length(args) : 0;
+  for (ii = 0; (ii < 2) && (ii < argc); ii++) {
+    argv[ii] = PyTuple_GET_ITEM(args,ii);
+  }
+  if (argc == 1) {
+    int _v;
+    int res = SWIG_ConvertPtr(argv[0], 0, SWIGTYPE_p_std__vectorT_double_std__allocatorT_double_t_t, 0);
+    _v = SWIG_CheckState(res);
+    if (_v) {
+      return _wrap_new_learning_rates_per_sample__SWIG_2(self, args);
+    }
+  }
+  if (argc == 1) {
+    int _v;
+    int res = SWIG_ConvertPtr(argv[0], 0, SWIGTYPE_p_std__initializer_listT_std__pairT_size_t_const_double_t_t, 0);
+    _v = SWIG_CheckState(res);
+    if (_v) {
+      return _wrap_new_learning_rates_per_sample__SWIG_4(self, args);
+    }
+  }
+  if (argc == 1) {
+    int _v;
+    {
+      int res = SWIG_AsVal_double(argv[0], NULL);
+      _v = SWIG_CheckState(res);
+    }
+    if (_v) {
+      return _wrap_new_learning_rates_per_sample__SWIG_0(self, args);
+    }
+  }
+  if (argc == 2) {
+    int _v;
+    int res = SWIG_ConvertPtr(argv[0], 0, SWIGTYPE_p_std__initializer_listT_std__pairT_size_t_const_double_t_t, 0);
+    _v = SWIG_CheckState(res);
+    if (_v) {
+      {
+        int res = SWIG_AsVal_size_t(argv[1], NULL);
+        _v = SWIG_CheckState(res);
+      }
+      if (_v) {
+        return _wrap_new_learning_rates_per_sample__SWIG_3(self, args);
+      }
+    }
+  }
+  if (argc == 2) {
+    int _v;
+    int res = SWIG_ConvertPtr(argv[0], 0, SWIGTYPE_p_std__vectorT_double_std__allocatorT_double_t_t, 0);
+    _v = SWIG_CheckState(res);
+    if (_v) {
+      {
+        int res = SWIG_AsVal_size_t(argv[1], NULL);
+        _v = SWIG_CheckState(res);
+      }
+      if (_v) {
+        return _wrap_new_learning_rates_per_sample__SWIG_1(self, args);
+      }
+    }
+  }
+  
+fail:
+  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'new_learning_rates_per_sample'.\n"
+    "  Possible C/C++ prototypes are:\n"
+    "    CNTK::TrainingParameterSchedule< double >::TrainingParameterSchedule(double)\n"
+    "    CNTK::TrainingParameterSchedule< double >::TrainingParameterSchedule(std::vector< double,std::allocator< double > > const &,size_t)\n"
+    "    CNTK::TrainingParameterSchedule< double >::TrainingParameterSchedule(std::vector< double,std::allocator< double > > const &)\n"
+    "    CNTK::TrainingParameterSchedule< double >::TrainingParameterSchedule(std::initializer_list< std::pair< size_t const,double > > const &,size_t)\n"
+    "    CNTK::TrainingParameterSchedule< double >::TrainingParameterSchedule(std::initializer_list< std::pair< size_t const,double > > const &)\n");
+  return 0;
+}
+
+
+SWIGINTERN PyObject *_wrap_delete_learning_rates_per_sample(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  CNTK::TrainingParameterSchedule< double > *arg1 = (CNTK::TrainingParameterSchedule< double > *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:delete_learning_rates_per_sample",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_CNTK__TrainingParameterScheduleT_double_t, SWIG_POINTER_DISOWN |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_learning_rates_per_sample" "', argument " "1"" of type '" "CNTK::TrainingParameterSchedule< double > *""'"); 
+  }
+  arg1 = reinterpret_cast< CNTK::TrainingParameterSchedule< double > * >(argp1);
+  {
+    Py_BEGIN_ALLOW_THREADS;
+    delete arg1;
+    Py_END_ALLOW_THREADS;
+  }
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *learning_rates_per_sample_swigregister(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *obj;
+  if (!PyArg_ParseTuple(args,(char*)"O:swigregister", &obj)) return NULL;
+  SWIG_TypeNewClientData(SWIGTYPE_p_CNTK__TrainingParameterScheduleT_double_t, SWIG_NewClientData(obj));
+  return SWIG_Py_Void();
+}
+
+SWIGINTERN PyObject *_wrap_new_momentums_per_sample__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  double arg1 ;
+  double val1 ;
+  int ecode1 = 0 ;
+  PyObject * obj0 = 0 ;
+  CNTK::TrainingParameterSchedule< double > *result = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:new_momentums_per_sample",&obj0)) SWIG_fail;
+  ecode1 = SWIG_AsVal_double(obj0, &val1);
+  if (!SWIG_IsOK(ecode1)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode1), "in method '" "new_momentums_per_sample" "', argument " "1"" of type '" "double""'");
+  } 
+  arg1 = static_cast< double >(val1);
+  {
+    try {
+      result = (CNTK::TrainingParameterSchedule< double > *)new CNTK::TrainingParameterSchedule< double >(arg1); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__TrainingParameterScheduleT_double_t, SWIG_POINTER_NEW |  0 );
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_new_momentums_per_sample__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  std::vector< double,std::allocator< double > > *arg1 = 0 ;
+  size_t arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  size_t val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  CNTK::TrainingParameterSchedule< double > *result = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:new_momentums_per_sample",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_std__vectorT_double_std__allocatorT_double_t_t,  0  | 0);
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "new_momentums_per_sample" "', argument " "1"" of type '" "std::vector< double,std::allocator< double > > const &""'"); 
+  }
+  if (!argp1) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "new_momentums_per_sample" "', argument " "1"" of type '" "std::vector< double,std::allocator< double > > const &""'"); 
+  }
+  arg1 = reinterpret_cast< std::vector< double,std::allocator< double > > * >(argp1);
+  ecode2 = SWIG_AsVal_size_t(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "new_momentums_per_sample" "', argument " "2"" of type '" "size_t""'");
+  } 
+  arg2 = static_cast< size_t >(val2);
+  {
+    try {
+      result = (CNTK::TrainingParameterSchedule< double > *)new CNTK::TrainingParameterSchedule< double >((std::vector< double,std::allocator< double > > const &)*arg1,arg2); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__TrainingParameterScheduleT_double_t, SWIG_POINTER_NEW |  0 );
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_new_momentums_per_sample__SWIG_2(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  std::vector< double,std::allocator< double > > *arg1 = 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  CNTK::TrainingParameterSchedule< double > *result = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:new_momentums_per_sample",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_std__vectorT_double_std__allocatorT_double_t_t,  0  | 0);
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "new_momentums_per_sample" "', argument " "1"" of type '" "std::vector< double,std::allocator< double > > const &""'"); 
+  }
+  if (!argp1) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "new_momentums_per_sample" "', argument " "1"" of type '" "std::vector< double,std::allocator< double > > const &""'"); 
+  }
+  arg1 = reinterpret_cast< std::vector< double,std::allocator< double > > * >(argp1);
+  {
+    try {
+      result = (CNTK::TrainingParameterSchedule< double > *)new CNTK::TrainingParameterSchedule< double >((std::vector< double,std::allocator< double > > const &)*arg1); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__TrainingParameterScheduleT_double_t, SWIG_POINTER_NEW |  0 );
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_new_momentums_per_sample__SWIG_3(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  std::initializer_list< std::pair< size_t const,double > > *arg1 = 0 ;
+  size_t arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  size_t val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  CNTK::TrainingParameterSchedule< double > *result = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:new_momentums_per_sample",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_std__initializer_listT_std__pairT_size_t_const_double_t_t,  0  | 0);
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "new_momentums_per_sample" "', argument " "1"" of type '" "std::initializer_list< std::pair< size_t const,double > > const &""'"); 
+  }
+  if (!argp1) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "new_momentums_per_sample" "', argument " "1"" of type '" "std::initializer_list< std::pair< size_t const,double > > const &""'"); 
+  }
+  arg1 = reinterpret_cast< std::initializer_list< std::pair< size_t const,double > > * >(argp1);
+  ecode2 = SWIG_AsVal_size_t(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "new_momentums_per_sample" "', argument " "2"" of type '" "size_t""'");
+  } 
+  arg2 = static_cast< size_t >(val2);
+  {
+    try {
+      result = (CNTK::TrainingParameterSchedule< double > *)new CNTK::TrainingParameterSchedule< double >((std::initializer_list< std::pair< size_t const,double > > const &)*arg1,arg2); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__TrainingParameterScheduleT_double_t, SWIG_POINTER_NEW |  0 );
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_new_momentums_per_sample__SWIG_4(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  std::initializer_list< std::pair< size_t const,double > > *arg1 = 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  CNTK::TrainingParameterSchedule< double > *result = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:new_momentums_per_sample",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_std__initializer_listT_std__pairT_size_t_const_double_t_t,  0  | 0);
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "new_momentums_per_sample" "', argument " "1"" of type '" "std::initializer_list< std::pair< size_t const,double > > const &""'"); 
+  }
+  if (!argp1) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "new_momentums_per_sample" "', argument " "1"" of type '" "std::initializer_list< std::pair< size_t const,double > > const &""'"); 
+  }
+  arg1 = reinterpret_cast< std::initializer_list< std::pair< size_t const,double > > * >(argp1);
+  {
+    try {
+      result = (CNTK::TrainingParameterSchedule< double > *)new CNTK::TrainingParameterSchedule< double >((std::initializer_list< std::pair< size_t const,double > > const &)*arg1); 
+    }
+    catch (Swig::DirectorException &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::logic_error &e) {
+      SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) {
+      SWIG_exception(SWIG_RuntimeError,"Runtime exception"); 
+    }
+  }
+  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_CNTK__TrainingParameterScheduleT_double_t, SWIG_POINTER_NEW |  0 );
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_new_momentums_per_sample(PyObject *self, PyObject *args) {
+  Py_ssize_t argc;
+  PyObject *argv[3] = {
+    0
+  };
+  Py_ssize_t ii;
+  
+  if (!PyTuple_Check(args)) SWIG_fail;
+  argc = args ? PyObject_Length(args) : 0;
+  for (ii = 0; (ii < 2) && (ii < argc); ii++) {
+    argv[ii] = PyTuple_GET_ITEM(args,ii);
+  }
+  if (argc == 1) {
+    int _v;
+    int res = SWIG_ConvertPtr(argv[0], 0, SWIGTYPE_p_std__vectorT_double_std__allocatorT_double_t_t, 0);
+    _v = SWIG_CheckState(res);
+    if (_v) {
+      return _wrap_new_momentums_per_sample__SWIG_2(self, args);
+    }
+  }
+  if (argc == 1) {
+    int _v;
+    int res = SWIG_ConvertPtr(argv[0], 0, SWIGTYPE_p_std__initializer_listT_std__pairT_size_t_const_double_t_t, 0);
+    _v = SWIG_CheckState(res);
+    if (_v) {
+      return _wrap_new_momentums_per_sample__SWIG_4(self, args);
+    }
+  }
+  if (argc == 1) {
+    int _v;
+    {
+      int res = SWIG_AsVal_double(argv[0], NULL);
+      _v = SWIG_CheckState(res);
+    }
+    if (_v) {
+      return _wrap_new_momentums_per_sample__SWIG_0(self, args);
+    }
+  }
+  if (argc == 2) {
+    int _v;
+    int res = SWIG_ConvertPtr(argv[0], 0, SWIGTYPE_p_std__initializer_listT_std__pairT_size_t_const_double_t_t, 0);
+    _v = SWIG_CheckState(res);
+    if (_v) {
+      {
+        int res = SWIG_AsVal_size_t(argv[1], NULL);
+        _v = SWIG_CheckState(res);
+      }
+      if (_v) {
+        return _wrap_new_momentums_per_sample__SWIG_3(self, args);
+      }
+    }
+  }
+  if (argc == 2) {
+    int _v;
+    int res = SWIG_ConvertPtr(argv[0], 0, SWIGTYPE_p_std__vectorT_double_std__allocatorT_double_t_t, 0);
+    _v = SWIG_CheckState(res);
+    if (_v) {
+      {
+        int res = SWIG_AsVal_size_t(argv[1], NULL);
+        _v = SWIG_CheckState(res);
+      }
+      if (_v) {
+        return _wrap_new_momentums_per_sample__SWIG_1(self, args);
+      }
+    }
+  }
+  
+fail:
+  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'new_momentums_per_sample'.\n"
+    "  Possible C/C++ prototypes are:\n"
+    "    CNTK::TrainingParameterSchedule< double >::TrainingParameterSchedule(double)\n"
+    "    CNTK::TrainingParameterSchedule< double >::TrainingParameterSchedule(std::vector< double,std::allocator< double > > const &,size_t)\n"
+    "    CNTK::TrainingParameterSchedule< double >::TrainingParameterSchedule(std::vector< double,std::allocator< double > > const &)\n"
+    "    CNTK::TrainingParameterSchedule< double >::TrainingParameterSchedule(std::initializer_list< std::pair< size_t const,double > > const &,size_t)\n"
+    "    CNTK::TrainingParameterSchedule< double >::TrainingParameterSchedule(std::initializer_list< std::pair< size_t const,double > > const &)\n");
+  return 0;
+}
+
+
+SWIGINTERN PyObject *_wrap_delete_momentums_per_sample(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  CNTK::TrainingParameterSchedule< double > *arg1 = (CNTK::TrainingParameterSchedule< double > *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:delete_momentums_per_sample",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_CNTK__TrainingParameterScheduleT_double_t, SWIG_POINTER_DISOWN |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_momentums_per_sample" "', argument " "1"" of type '" "CNTK::TrainingParameterSchedule< double > *""'"); 
+  }
+  arg1 = reinterpret_cast< CNTK::TrainingParameterSchedule< double > * >(argp1);
+  {
+    Py_BEGIN_ALLOW_THREADS;
+    delete arg1;
+    Py_END_ALLOW_THREADS;
+  }
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *momentums_per_sample_swigregister(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *obj;
+  if (!PyArg_ParseTuple(args,(char*)"O:swigregister", &obj)) return NULL;
+  SWIG_TypeNewClientData(SWIGTYPE_p_CNTK__TrainingParameterScheduleT_double_t, SWIG_NewClientData(obj));
+  return SWIG_Py_Void();
+}
 
 SWIGINTERN PyObject *_wrap_delete_Callback(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
@@ -34130,6 +39024,12 @@ static PyMethodDef SwigMethods[] = {
 	 { (char *)"SwigPyIterator___add__", _wrap_SwigPyIterator___add__, METH_VARARGS, NULL},
 	 { (char *)"SwigPyIterator___sub__", _wrap_SwigPyIterator___sub__, METH_VARARGS, NULL},
 	 { (char *)"SwigPyIterator_swigregister", SwigPyIterator_swigregister, METH_VARARGS, NULL},
+	 { (char *)"packed_index", _wrap_packed_index, METH_VARARGS, NULL},
+	 { (char *)"gather_packed", _wrap_gather_packed, METH_VARARGS, NULL},
+	 { (char *)"is_within", _wrap_is_within, METH_VARARGS, NULL},
+	 { (char *)"where", _wrap_where, METH_VARARGS, NULL},
+	 { (char *)"gather", _wrap_gather, METH_VARARGS, NULL},
+	 { (char *)"reduce_elements", _wrap_reduce_elements, METH_VARARGS, NULL},
 	 { (char *)"is_sparse_storage_format", _wrap_is_sparse_storage_format, METH_VARARGS, NULL},
 	 { (char *)"DeviceDescriptor_id", _wrap_DeviceDescriptor_id, METH_VARARGS, NULL},
 	 { (char *)"DeviceDescriptor_type", _wrap_DeviceDescriptor_type, METH_VARARGS, NULL},
@@ -34192,8 +39092,7 @@ static PyMethodDef SwigMethods[] = {
 	 { (char *)"Axis_is_static_axis", _wrap_Axis_is_static_axis, METH_VARARGS, NULL},
 	 { (char *)"Axis_static_axis_index", _wrap_Axis_static_axis_index, METH_VARARGS, NULL},
 	 { (char *)"Axis_default_dynamic_axis", _wrap_Axis_default_dynamic_axis, METH_VARARGS, NULL},
-	 { (char *)"Axis_batch_axis", _wrap_Axis_batch_axis, METH_VARARGS, NULL},
-	 { (char *)"Axis_all_axes", _wrap_Axis_all_axes, METH_VARARGS, NULL},
+	 { (char *)"Axis_default_batch_axis", _wrap_Axis_default_batch_axis, METH_VARARGS, NULL},
 	 { (char *)"Axis_name", _wrap_Axis_name, METH_VARARGS, NULL},
 	 { (char *)"new_Axis", _wrap_new_Axis, METH_VARARGS, NULL},
 	 { (char *)"delete_Axis", _wrap_delete_Axis, METH_VARARGS, NULL},
@@ -34264,6 +39163,9 @@ static PyMethodDef SwigMethods[] = {
 	 { (char *)"abs", _wrap_abs, METH_VARARGS, NULL},
 	 { (char *)"reciprocal", _wrap_reciprocal, METH_VARARGS, NULL},
 	 { (char *)"softmax", _wrap_softmax, METH_VARARGS, NULL},
+	 { (char *)"hardmax", _wrap_hardmax, METH_VARARGS, NULL},
+	 { (char *)"transpose_axes", _wrap_transpose_axes, METH_VARARGS, NULL},
+	 { (char *)"slice", _wrap_slice, METH_VARARGS, NULL},
 	 { (char *)"plus", _wrap_plus, METH_VARARGS, NULL},
 	 { (char *)"minus", _wrap_minus, METH_VARARGS, NULL},
 	 { (char *)"element_times", _wrap_element_times, METH_VARARGS, NULL},
@@ -34275,12 +39177,14 @@ static PyMethodDef SwigMethods[] = {
 	 { (char *)"greater", _wrap_greater, METH_VARARGS, NULL},
 	 { (char *)"greater_equal", _wrap_greater_equal, METH_VARARGS, NULL},
 	 { (char *)"times", _wrap_times, METH_VARARGS, NULL},
+	 { (char *)"transpose_times", _wrap_transpose_times, METH_VARARGS, NULL},
 	 { (char *)"squared_error", _wrap_squared_error, METH_VARARGS, NULL},
 	 { (char *)"cross_entropy_with_softmax", _wrap_cross_entropy_with_softmax, METH_VARARGS, NULL},
 	 { (char *)"classification_error", _wrap_classification_error, METH_VARARGS, NULL},
 	 { (char *)"past_value", _wrap_past_value, METH_VARARGS, NULL},
 	 { (char *)"future_value", _wrap_future_value, METH_VARARGS, NULL},
 	 { (char *)"reduce_sum", _wrap_reduce_sum, METH_VARARGS, NULL},
+	 { (char *)"reduce_log_sum", _wrap_reduce_log_sum, METH_VARARGS, NULL},
 	 { (char *)"per_dim_mean_variance_normalize", _wrap_per_dim_mean_variance_normalize, METH_VARARGS, NULL},
 	 { (char *)"convolution", _wrap_convolution, METH_VARARGS, NULL},
 	 { (char *)"pooling", _wrap_pooling, METH_VARARGS, NULL},
@@ -34291,11 +39195,15 @@ static PyMethodDef SwigMethods[] = {
 	 { (char *)"delete_DictionaryValue", _wrap_delete_DictionaryValue, METH_VARARGS, NULL},
 	 { (char *)"DictionaryValue_has_value", _wrap_DictionaryValue_has_value, METH_VARARGS, NULL},
 	 { (char *)"DictionaryValue_value_type", _wrap_DictionaryValue_value_type, METH_VARARGS, NULL},
+	 { (char *)"DictionaryValue___eq__", _wrap_DictionaryValue___eq__, METH_VARARGS, NULL},
+	 { (char *)"DictionaryValue___ne__", _wrap_DictionaryValue___ne__, METH_VARARGS, NULL},
 	 { (char *)"new_DictionaryValueFromDict", _wrap_new_DictionaryValueFromDict, METH_VARARGS, NULL},
 	 { (char *)"DictionaryValue_swigregister", DictionaryValue_swigregister, METH_VARARGS, NULL},
 	 { (char *)"delete_Dictionary", _wrap_delete_Dictionary, METH_VARARGS, NULL},
 	 { (char *)"new_Dictionary", _wrap_new_Dictionary, METH_VARARGS, NULL},
 	 { (char *)"Dictionary_contains", _wrap_Dictionary_contains, METH_VARARGS, NULL},
+	 { (char *)"Dictionary___eq__", _wrap_Dictionary___eq__, METH_VARARGS, NULL},
+	 { (char *)"Dictionary___ne__", _wrap_Dictionary___ne__, METH_VARARGS, NULL},
 	 { (char *)"Dictionary___getitem__", _wrap_Dictionary___getitem__, METH_VARARGS, NULL},
 	 { (char *)"Dictionary___setitem__", _wrap_Dictionary___setitem__, METH_VARARGS, NULL},
 	 { (char *)"Dictionary_swigregister", Dictionary_swigregister, METH_VARARGS, NULL},
@@ -34349,6 +39257,12 @@ static PyMethodDef SwigMethods[] = {
 	 { (char *)"MinibatchSource_swigregister", MinibatchSource_swigregister, METH_VARARGS, NULL},
 	 { (char *)"create_composite_minibatch_source", _wrap_create_composite_minibatch_source, METH_VARARGS, NULL},
 	 { (char *)"compute_input_per_dim_means_and_inv_std_devs", _wrap_compute_input_per_dim_means_and_inv_std_devs, METH_VARARGS, NULL},
+	 { (char *)"new_learning_rates_per_sample", _wrap_new_learning_rates_per_sample, METH_VARARGS, NULL},
+	 { (char *)"delete_learning_rates_per_sample", _wrap_delete_learning_rates_per_sample, METH_VARARGS, NULL},
+	 { (char *)"learning_rates_per_sample_swigregister", learning_rates_per_sample_swigregister, METH_VARARGS, NULL},
+	 { (char *)"new_momentums_per_sample", _wrap_new_momentums_per_sample, METH_VARARGS, NULL},
+	 { (char *)"delete_momentums_per_sample", _wrap_delete_momentums_per_sample, METH_VARARGS, NULL},
+	 { (char *)"momentums_per_sample_swigregister", momentums_per_sample_swigregister, METH_VARARGS, NULL},
 	 { (char *)"delete_Callback", _wrap_delete_Callback, METH_VARARGS, NULL},
 	 { (char *)"Callback_forward", _wrap_Callback_forward, METH_VARARGS, NULL},
 	 { (char *)"Callback_backward", _wrap_Callback_backward, METH_VARARGS, NULL},
@@ -34394,6 +39308,7 @@ static swig_type_info _swigt__p_CNTK__Parameter = {"_p_CNTK__Parameter", "CNTK::
 static swig_type_info _swigt__p_CNTK__Placeholder = {"_p_CNTK__Placeholder", "CNTK::Placeholder *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_CNTK__StreamInfo = {"_p_CNTK__StreamInfo", "CNTK::StreamInfo *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_CNTK__Trainer = {"_p_CNTK__Trainer", "CNTK::Trainer *", 0, 0, (void*)0, 0};
+static swig_type_info _swigt__p_CNTK__TrainingParameterScheduleT_double_t = {"_p_CNTK__TrainingParameterScheduleT_double_t", "CNTK::LearningRatesPerSample *|CNTK::MomentumsPerSample *|CNTK::TrainingParameterSchedule< double > *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_CNTK__Value = {"_p_CNTK__Value", "CNTK::Value *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_CNTK__Variable = {"_p_CNTK__Variable", "CNTK::Variable *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_Callback = {"_p_Callback", "Callback *", 0, 0, (void*)0, 0};
@@ -34401,6 +39316,7 @@ static swig_type_info _swigt__p_FunctionInCNTK = {"_p_FunctionInCNTK", "Function
 static swig_type_info _swigt__p___int64 = {"_p___int64", "__int64 *|LONGLONG *|LONG64 *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_allocator_type = {"_p_allocator_type", "allocator_type *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_char = {"_p_char", "CHAR *|TCHAR *|char *|CCHAR *", 0, 0, (void*)0, 0};
+static swig_type_info _swigt__p_const_reference = {"_p_const_reference", "const_reference *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_difference_type = {"_p_difference_type", "difference_type *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_double = {"_p_double", "double *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_float = {"_p_float", "FLOAT *|float *", 0, 0, (void*)0, 0};
@@ -34408,11 +39324,13 @@ static swig_type_info _swigt__p_int = {"_p_int", "BOOL *|CNTK::SparseIndexType *
 static swig_type_info _swigt__p_long = {"_p_long", "SHANDLE_PTR *|LONG_PTR *|LONG *|HRESULT *|long *|SSIZE_T *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_p_char = {"_p_p_char", "PTCH *|PCTSTR *|LPCTSTR *|LPTCH *|PUTSTR *|LPUTSTR *|PCUTSTR *|LPCUTSTR *|char **|PTSTR *|LPTSTR *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_p_unsigned_long = {"_p_p_unsigned_long", "unsigned long **|PLCID *", 0, 0, (void*)0, 0};
+static swig_type_info _swigt__p_reference = {"_p_reference", "reference *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_short = {"_p_short", "HALF_PTR *|short *|SHORT *|INT16 *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_signed___int64 = {"_p_signed___int64", "INT64 *|signed __int64 *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_signed_char = {"_p_signed_char", "signed char *|INT8 *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_size_type = {"_p_size_type", "size_type *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_std__initializer_listT_size_t_t = {"_p_std__initializer_listT_size_t_t", "std::initializer_list< size_t > *", 0, 0, (void*)0, 0};
+static swig_type_info _swigt__p_std__initializer_listT_std__pairT_size_t_const_double_t_t = {"_p_std__initializer_listT_std__pairT_size_t_const_double_t_t", "std::initializer_list< std::pair< size_t const,double > > *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_std__invalid_argument = {"_p_std__invalid_argument", "std::invalid_argument *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_std__shared_ptrT_CNTK__BackPropState_t = {"_p_std__shared_ptrT_CNTK__BackPropState_t", "std::shared_ptr< CNTK::BackPropState > *|CNTK::BackPropStatePtr *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_std__shared_ptrT_CNTK__Function_t = {"_p_std__shared_ptrT_CNTK__Function_t", "CNTK::FunctionPtr *|std::shared_ptr< CNTK::Function > *", 0, 0, (void*)0, 0};
@@ -34426,7 +39344,7 @@ static swig_type_info _swigt__p_std__unordered_mapT_CNTK__Placeholder_CNTK__Vari
 static swig_type_info _swigt__p_std__unordered_setT_CNTK__Parameter_t = {"_p_std__unordered_setT_CNTK__Parameter_t", "std::unordered_set< CNTK::Parameter > *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_std__unordered_setT_std__shared_ptrT_CNTK__Learner_t_t = {"_p_std__unordered_setT_std__shared_ptrT_CNTK__Learner_t_t", "std::unordered_set< CNTK::LearnerPtr > *|std::unordered_set< std::shared_ptr< CNTK::Learner > > *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_std__vectorT_CNTK__Axis_std__allocatorT_CNTK__Axis_t_t = {"_p_std__vectorT_CNTK__Axis_std__allocatorT_CNTK__Axis_t_t", "std::vector< CNTK::Axis,std::allocator< CNTK::Axis > > *", 0, 0, (void*)0, 0};
-static swig_type_info _swigt__p_std__vectorT_bool_std__allocatorT_bool_t_t = {"_p_std__vectorT_bool_std__allocatorT_bool_t_t", "std::vector< bool,std::allocator< bool > > *", 0, 0, (void*)0, 0};
+static swig_type_info _swigt__p_std__vectorT_double_std__allocatorT_double_t_t = {"_p_std__vectorT_double_std__allocatorT_double_t_t", "std::vector< double,std::allocator< double > > *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_swig__SwigPyIterator = {"_p_swig__SwigPyIterator", "swig::SwigPyIterator *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_unsigned___int64 = {"_p_unsigned___int64", "UINT64 *|DWORD64 *|unsigned __int64 *|DWORDLONG *|ULONGLONG *|ULONG64 *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_unsigned_char = {"_p_unsigned_char", "FCHAR *|unsigned char *|UCHAR *|BYTE *|TBYTE *|UINT8 *|BOOLEAN *", 0, 0, (void*)0, 0};
@@ -34454,6 +39372,7 @@ static swig_type_info *swig_type_initial[] = {
   &_swigt__p_CNTK__Placeholder,
   &_swigt__p_CNTK__StreamInfo,
   &_swigt__p_CNTK__Trainer,
+  &_swigt__p_CNTK__TrainingParameterScheduleT_double_t,
   &_swigt__p_CNTK__Value,
   &_swigt__p_CNTK__Variable,
   &_swigt__p_Callback,
@@ -34461,6 +39380,7 @@ static swig_type_info *swig_type_initial[] = {
   &_swigt__p___int64,
   &_swigt__p_allocator_type,
   &_swigt__p_char,
+  &_swigt__p_const_reference,
   &_swigt__p_difference_type,
   &_swigt__p_double,
   &_swigt__p_float,
@@ -34468,11 +39388,13 @@ static swig_type_info *swig_type_initial[] = {
   &_swigt__p_long,
   &_swigt__p_p_char,
   &_swigt__p_p_unsigned_long,
+  &_swigt__p_reference,
   &_swigt__p_short,
   &_swigt__p_signed___int64,
   &_swigt__p_signed_char,
   &_swigt__p_size_type,
   &_swigt__p_std__initializer_listT_size_t_t,
+  &_swigt__p_std__initializer_listT_std__pairT_size_t_const_double_t_t,
   &_swigt__p_std__invalid_argument,
   &_swigt__p_std__shared_ptrT_CNTK__BackPropState_t,
   &_swigt__p_std__shared_ptrT_CNTK__Function_t,
@@ -34486,7 +39408,7 @@ static swig_type_info *swig_type_initial[] = {
   &_swigt__p_std__unordered_setT_CNTK__Parameter_t,
   &_swigt__p_std__unordered_setT_std__shared_ptrT_CNTK__Learner_t_t,
   &_swigt__p_std__vectorT_CNTK__Axis_std__allocatorT_CNTK__Axis_t_t,
-  &_swigt__p_std__vectorT_bool_std__allocatorT_bool_t_t,
+  &_swigt__p_std__vectorT_double_std__allocatorT_double_t_t,
   &_swigt__p_swig__SwigPyIterator,
   &_swigt__p_unsigned___int64,
   &_swigt__p_unsigned_char,
@@ -34514,6 +39436,7 @@ static swig_cast_info _swigc__p_CNTK__Parameter[] = {  {&_swigt__p_CNTK__Paramet
 static swig_cast_info _swigc__p_CNTK__Placeholder[] = {  {&_swigt__p_CNTK__Placeholder, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_CNTK__StreamInfo[] = {  {&_swigt__p_CNTK__StreamInfo, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_CNTK__Trainer[] = {  {&_swigt__p_CNTK__Trainer, 0, 0, 0},{0, 0, 0, 0}};
+static swig_cast_info _swigc__p_CNTK__TrainingParameterScheduleT_double_t[] = {  {&_swigt__p_CNTK__TrainingParameterScheduleT_double_t, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_CNTK__Value[] = {  {&_swigt__p_CNTK__Value, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_CNTK__Variable[] = {  {&_swigt__p_CNTK__Variable, 0, 0, 0},  {&_swigt__p_CNTK__Parameter, _p_CNTK__ParameterTo_p_CNTK__Variable, 0, 0},  {&_swigt__p_CNTK__Constant, _p_CNTK__ConstantTo_p_CNTK__Variable, 0, 0},  {&_swigt__p_CNTK__Placeholder, _p_CNTK__PlaceholderTo_p_CNTK__Variable, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_Callback[] = {  {&_swigt__p_Callback, 0, 0, 0},{0, 0, 0, 0}};
@@ -34521,6 +39444,7 @@ static swig_cast_info _swigc__p_FunctionInCNTK[] = {  {&_swigt__p_FunctionInCNTK
 static swig_cast_info _swigc__p___int64[] = {  {&_swigt__p___int64, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_allocator_type[] = {  {&_swigt__p_allocator_type, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_char[] = {  {&_swigt__p_char, 0, 0, 0},{0, 0, 0, 0}};
+static swig_cast_info _swigc__p_const_reference[] = {  {&_swigt__p_const_reference, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_difference_type[] = {  {&_swigt__p_difference_type, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_double[] = {  {&_swigt__p_double, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_float[] = {  {&_swigt__p_float, 0, 0, 0},{0, 0, 0, 0}};
@@ -34528,11 +39452,13 @@ static swig_cast_info _swigc__p_int[] = {  {&_swigt__p_int, 0, 0, 0},{0, 0, 0, 0
 static swig_cast_info _swigc__p_long[] = {  {&_swigt__p_long, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_p_char[] = {  {&_swigt__p_p_char, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_p_unsigned_long[] = {  {&_swigt__p_p_unsigned_long, 0, 0, 0},{0, 0, 0, 0}};
+static swig_cast_info _swigc__p_reference[] = {  {&_swigt__p_reference, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_short[] = {  {&_swigt__p_short, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_signed___int64[] = {  {&_swigt__p_signed___int64, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_signed_char[] = {  {&_swigt__p_signed_char, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_size_type[] = {  {&_swigt__p_size_type, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_std__initializer_listT_size_t_t[] = {  {&_swigt__p_std__initializer_listT_size_t_t, 0, 0, 0},{0, 0, 0, 0}};
+static swig_cast_info _swigc__p_std__initializer_listT_std__pairT_size_t_const_double_t_t[] = {  {&_swigt__p_std__initializer_listT_std__pairT_size_t_const_double_t_t, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_std__invalid_argument[] = {  {&_swigt__p_std__invalid_argument, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_std__shared_ptrT_CNTK__BackPropState_t[] = {  {&_swigt__p_std__shared_ptrT_CNTK__BackPropState_t, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_std__shared_ptrT_CNTK__Function_t[] = {  {&_swigt__p_std__shared_ptrT_CNTK__Function_t, 0, 0, 0},{0, 0, 0, 0}};
@@ -34546,7 +39472,7 @@ static swig_cast_info _swigc__p_std__unordered_mapT_CNTK__Placeholder_CNTK__Vari
 static swig_cast_info _swigc__p_std__unordered_setT_CNTK__Parameter_t[] = {  {&_swigt__p_std__unordered_setT_CNTK__Parameter_t, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_std__unordered_setT_std__shared_ptrT_CNTK__Learner_t_t[] = {  {&_swigt__p_std__unordered_setT_std__shared_ptrT_CNTK__Learner_t_t, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_std__vectorT_CNTK__Axis_std__allocatorT_CNTK__Axis_t_t[] = {  {&_swigt__p_std__vectorT_CNTK__Axis_std__allocatorT_CNTK__Axis_t_t, 0, 0, 0},{0, 0, 0, 0}};
-static swig_cast_info _swigc__p_std__vectorT_bool_std__allocatorT_bool_t_t[] = {  {&_swigt__p_std__vectorT_bool_std__allocatorT_bool_t_t, 0, 0, 0},{0, 0, 0, 0}};
+static swig_cast_info _swigc__p_std__vectorT_double_std__allocatorT_double_t_t[] = {  {&_swigt__p_std__vectorT_double_std__allocatorT_double_t_t, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_swig__SwigPyIterator[] = {  {&_swigt__p_swig__SwigPyIterator, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_unsigned___int64[] = {  {&_swigt__p_unsigned___int64, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_unsigned_char[] = {  {&_swigt__p_unsigned_char, 0, 0, 0},{0, 0, 0, 0}};
@@ -34574,6 +39500,7 @@ static swig_cast_info *swig_cast_initial[] = {
   _swigc__p_CNTK__Placeholder,
   _swigc__p_CNTK__StreamInfo,
   _swigc__p_CNTK__Trainer,
+  _swigc__p_CNTK__TrainingParameterScheduleT_double_t,
   _swigc__p_CNTK__Value,
   _swigc__p_CNTK__Variable,
   _swigc__p_Callback,
@@ -34581,6 +39508,7 @@ static swig_cast_info *swig_cast_initial[] = {
   _swigc__p___int64,
   _swigc__p_allocator_type,
   _swigc__p_char,
+  _swigc__p_const_reference,
   _swigc__p_difference_type,
   _swigc__p_double,
   _swigc__p_float,
@@ -34588,11 +39516,13 @@ static swig_cast_info *swig_cast_initial[] = {
   _swigc__p_long,
   _swigc__p_p_char,
   _swigc__p_p_unsigned_long,
+  _swigc__p_reference,
   _swigc__p_short,
   _swigc__p_signed___int64,
   _swigc__p_signed_char,
   _swigc__p_size_type,
   _swigc__p_std__initializer_listT_size_t_t,
+  _swigc__p_std__initializer_listT_std__pairT_size_t_const_double_t_t,
   _swigc__p_std__invalid_argument,
   _swigc__p_std__shared_ptrT_CNTK__BackPropState_t,
   _swigc__p_std__shared_ptrT_CNTK__Function_t,
@@ -34606,7 +39536,7 @@ static swig_cast_info *swig_cast_initial[] = {
   _swigc__p_std__unordered_setT_CNTK__Parameter_t,
   _swigc__p_std__unordered_setT_std__shared_ptrT_CNTK__Learner_t_t,
   _swigc__p_std__vectorT_CNTK__Axis_std__allocatorT_CNTK__Axis_t_t,
-  _swigc__p_std__vectorT_bool_std__allocatorT_bool_t_t,
+  _swigc__p_std__vectorT_double_std__allocatorT_double_t_t,
   _swigc__p_swig__SwigPyIterator,
   _swigc__p_unsigned___int64,
   _swigc__p_unsigned_char,
@@ -35338,6 +40268,7 @@ SWIG_init(void) {
   SWIG_Python_SetConstant(d, "DictionaryValue_Type_NDShape",SWIG_From_int(static_cast< int >(CNTK::DictionaryValue::Type::NDShape)));
   SWIG_Python_SetConstant(d, "DictionaryValue_Type_Vector",SWIG_From_int(static_cast< int >(CNTK::DictionaryValue::Type::Vector)));
   SWIG_Python_SetConstant(d, "DictionaryValue_Type_Dictionary",SWIG_From_int(static_cast< int >(CNTK::DictionaryValue::Type::Dictionary)));
+  SWIG_Python_SetConstant(d, "DictionaryValue_Type_NDArrayView",SWIG_From_int(static_cast< int >(CNTK::DictionaryValue::Type::NDArrayView)));
 #if PY_VERSION_HEX >= 0x03000000
   return m;
 #else

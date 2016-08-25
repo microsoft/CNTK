@@ -457,9 +457,12 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         double momentumAsTimeConstant = momentumPerSample == 0.0 ? 0.0
                                                                  : momentumPerSample >= 1.0 ? 0.0
                                                                                             : -1.0 / log(momentumPerSample);
-        fprintf(stderr, "\n");
-        LOGPRINTF(stderr, "Starting Epoch %d: learning rate per sample = %f  effective momentum = %f  momentum as time constant = %.1f samples\n",
-                  i + 1, learnRatePerSample, MomentumPerMB(momentumPerSample, actualMinibatchSize), momentumAsTimeConstant);
+        if (m_traceLevel > 0)
+        {
+            fprintf(stderr, "\n");
+            LOGPRINTF(stderr, "Starting Epoch %d: learning rate per sample = %f  effective momentum = %f  momentum as time constant = %.1f samples\n",
+                      i + 1, learnRatePerSample, MomentumPerMB(momentumPerSample, actualMinibatchSize), momentumAsTimeConstant);
+        }
 
         EpochCriterion epochCriterion; // criterion values are returned in this
         std::vector<EpochCriterion> epochEvalErrors(evaluationNodes.size());
@@ -673,7 +676,8 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
             {
                 SaveCheckPointInfo(i, totalTrainingSamplesSeen, learnRatePerSample, smoothedGradients, prevCriterion, chosenMinibatchSize);
                 auto modelName = GetModelNameForEpoch(i);
-                LOGPRINTF(stderr, "SGD: Saving checkpoint model '%ls'\n", modelName.c_str());
+                if (m_traceLevel > 0)
+                    LOGPRINTF(stderr, "SGD: Saving checkpoint model '%ls'\n", modelName.c_str());
                 net->Save(modelName);
                 if (!m_keepCheckPointFiles)
                 {
@@ -830,32 +834,31 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
     // TODO: move the two-forward-pass support out of the reader, make a first-class citizen.
     AttemptUtteranceDerivativeFeatures(net, trainSetDataReader, featureNodes, inputMatrices);
 
-    fprintf(stderr, "\n");
-    LOGPRINTF(stderr, "Starting minibatch loop");
-    if (useGradientAggregation)
+    if (m_traceLevel > 0)
     {
-        fprintf(stderr, ", DataParallelSGD training (MyRank = %d, NumNodes = %d, NumGradientBits = %d)",
-                (int) m_mpi->CurrentNodeRank(), (int) m_mpi->NumNodesInUse(), (int) m_numGradientBits);
-
-        if (m_bufferedAsyncGradientAggregation)
+        fprintf(stderr, "\n");
+        LOGPRINTF(stderr, "Starting minibatch loop");
+        if (useGradientAggregation)
         {
-            fprintf(stderr, ", BufferedAsyncGradientAggregation is ENABLED");
+            fprintf(stderr, ", DataParallelSGD training (MyRank = %d, NumNodes = %d, NumGradientBits = %d)",
+                    (int) m_mpi->CurrentNodeRank(), (int) m_mpi->NumNodesInUse(), (int) m_numGradientBits);
+
+            if (m_bufferedAsyncGradientAggregation)
+                fprintf(stderr, ", BufferedAsyncGradientAggregation is ENABLED");
         }
-    }
 
-    if (useDistributedMBReading)
-    {
-        fprintf(stderr, ", distributed reading is ENABLED");
-    }
+        if (useDistributedMBReading)
+            fprintf(stderr, ", distributed reading is ENABLED");
 
-    if (numSubminibatchesNeeded > 1)
-    {
-        if (m_maxSamplesInRAM < SIZE_MAX)
-            fprintf(stderr, ", with maximum %d samples in RAM", (int)m_maxSamplesInRAM);
-        else
-            fprintf(stderr, ", with %d subminibatch", (int)numSubminibatchesNeeded);
+        if (numSubminibatchesNeeded > 1)
+        {
+            if (m_maxSamplesInRAM < SIZE_MAX)
+                fprintf(stderr, ", with maximum %d samples in RAM", (int)m_maxSamplesInRAM);
+            else
+                fprintf(stderr, ", with %d subminibatch", (int)numSubminibatchesNeeded);
+        }
+        fprintf(stderr, ".\n");
     }
-    fprintf(stderr, ".\n");
 
     Timer timer;
     timer.Start();
