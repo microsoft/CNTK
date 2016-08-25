@@ -179,9 +179,7 @@ public:
                            m_dataType(CuDnnTensor::GetDataType<ElemType>()),
                            m_inT(geometry->InputShape(), m_dataType),
                            m_outT(geometry->OutputShape(), m_dataType),
-                           m_forceDeterministicAlgorithms(forceDeterministicAlgorithms),
-                           m_backDataNonDeterministic({ CUDNN_CONVOLUTION_BWD_DATA_ALGO_0 }),
-                           m_backFilterNonDeterministic({ CUDNN_CONVOLUTION_BWD_FILTER_ALGO_0, CUDNN_CONVOLUTION_BWD_FILTER_ALGO_3 })
+                           m_forceDeterministicAlgorithms(forceDeterministicAlgorithms)
     {
     }
 
@@ -215,13 +213,23 @@ protected:
         // Find best algo and allocate temp buffer, if needed.
         auto finder = [this](int& calgo, cudnnConvolutionFwdAlgoPerf_t algoPerf[MaxAlgoCount]) -> cudnnStatus_t
         {
-            return cudnnFindConvolutionForwardAlgorithm(*m_cudnn, m_inT, *m_kernelT, *m_conv, m_outT, MaxAlgoCount, &calgo, algoPerf);
+            auto result = cudnnFindConvolutionForwardAlgorithm(*m_cudnn, m_inT, *m_kernelT, *m_conv, m_outT, MaxAlgoCount, &calgo, algoPerf);
+            if (m_forceDeterministicAlgorithms)
+            {
+                auto found = std::find_if(algoPerf, algoPerf + calgo,
+                    [](const cudnnConvolutionFwdAlgoPerf_t& a)  { return a.algo == CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_GEMM && a.status == CUDNN_STATUS_SUCCESS; });
+                if (found == algoPerf + calgo)
+                    RuntimeError("cuDNN could not find a deterministic algorithm. Set 'forceDeterministicAlgorithms=false' in your configuration.");
+                calgo = 1;
+                algoPerf[0] = *found;
+            }
+            return result;
         };
         auto staticFinder = [this](cudnnConvolutionFwdAlgo_t& algo) -> cudnnStatus_t
         {
             return cudnnGetConvolutionForwardAlgorithm(*m_cudnn, m_inT, *m_kernelT, *m_conv, m_outT, CUDNN_CONVOLUTION_FWD_NO_WORKSPACE, 0, &algo);
         };
-        FindBestAlgo(batchSize, m_fwdAlgo, finder, staticFinder, std::set<cudnnConvolutionFwdAlgo_t>());
+        FindBestAlgo(batchSize, m_fwdAlgo, finder, staticFinder);
         if (m_fwdAlgo.Algo.memory > 0)
             workspace.Resize((m_fwdAlgo.Algo.memory + sizeof(ElemType) - 1) / sizeof(ElemType), 1);
         // Perform forward convolution operation.
@@ -231,6 +239,8 @@ protected:
         // REVIEW alexeyk: NVIDIA is currently reviewing this issue.
         if (CUDNN_STATUS_INVALID_VALUE == err && m_fwdAlgo.Algo.memory > 0)
         {
+            if (m_forceDeterministicAlgorithms)
+                RuntimeError("Falling back of the algorithms is not allowed. Please set 'forceDeterministicAlgorithms=false'.");
             auto err2 = cudnnConvolutionForward(*m_cudnn, &C::One, m_inT, ptr(in), *m_kernelT, ptr(kernel), *m_conv,
                                                 m_fwdAlgo.NoWorkspaceAlgo, nullptr, 0, &C::Zero, m_outT, ptr(out));
             // Update original error in case of success.
@@ -246,13 +256,23 @@ protected:
         // Find best algo and allocate temp buffer, if needed.
         auto finder = [this](int& calgo, cudnnConvolutionBwdDataAlgoPerf_t algoPerf[MaxAlgoCount]) -> cudnnStatus_t
         {
-            return cudnnFindConvolutionBackwardDataAlgorithm(*m_cudnn, *m_kernelT, m_outT, *m_conv, m_inT, MaxAlgoCount, &calgo, algoPerf);
+            auto result = cudnnFindConvolutionBackwardDataAlgorithm(*m_cudnn, *m_kernelT, m_outT, *m_conv, m_inT, MaxAlgoCount, &calgo, algoPerf);
+            if (m_forceDeterministicAlgorithms)
+            {
+                auto found = std::find_if(algoPerf, algoPerf + calgo,
+                    [](const cudnnConvolutionBwdDataAlgoPerf_t& a)  { return a.algo == CUDNN_CONVOLUTION_BWD_DATA_ALGO_1 && a.status == CUDNN_STATUS_SUCCESS; });
+                if (found == algoPerf + calgo)
+                    RuntimeError("cuDNN could not find a deterministic algorithm. Set 'forceDeterministicAlgorithms=false' in your configuration.");
+                calgo = 1;
+                algoPerf[0] = *found;
+            }
+            return result;
         };
         auto staticFinder = [this](cudnnConvolutionBwdDataAlgo_t& algo) -> cudnnStatus_t
         {
             return cudnnGetConvolutionBackwardDataAlgorithm(*m_cudnn, *m_kernelT, m_outT, *m_conv, m_inT, CUDNN_CONVOLUTION_BWD_DATA_NO_WORKSPACE, 0, &algo);
         };
-        FindBestAlgo(batchSize, m_backDataAlgo, finder, staticFinder, m_backDataNonDeterministic);
+        FindBestAlgo(batchSize, m_backDataAlgo, finder, staticFinder);
         if (m_backDataAlgo.Algo.memory > 0)
             workspace.Resize((m_backDataAlgo.Algo.memory + sizeof(ElemType) - 1) / sizeof(ElemType), 1);
         // Compute gradients with respect to the output tensor (data).
@@ -266,13 +286,23 @@ protected:
         // Find best algo and allocate temp buffer, if needed.
         auto finder = [this](int& calgo, cudnnConvolutionBwdFilterAlgoPerf_t algoPerf[MaxAlgoCount]) -> cudnnStatus_t
         {
-            return cudnnFindConvolutionBackwardFilterAlgorithm(*m_cudnn, m_inT, m_outT, *m_conv, *m_kernelT, MaxAlgoCount, &calgo, algoPerf);
+            auto result = cudnnFindConvolutionBackwardFilterAlgorithm(*m_cudnn, m_inT, m_outT, *m_conv, *m_kernelT, MaxAlgoCount, &calgo, algoPerf);
+            if (m_forceDeterministicAlgorithms)
+            {
+                auto found = std::find_if(algoPerf, algoPerf + calgo,
+                    [](const cudnnConvolutionBwdFilterAlgoPerf_t& a)  { return a.algo == CUDNN_CONVOLUTION_BWD_FILTER_ALGO_1 && a.status == CUDNN_STATUS_SUCCESS; });
+                if (found == algoPerf + calgo)
+                    RuntimeError("cuDNN could not find a deterministic algorithm. Set 'forceDeterministicAlgorithms=false' in your configuration.");
+                calgo = 1;
+                algoPerf[0] = *found;
+            }
+            return result;
         };
         auto staticFinder = [this](cudnnConvolutionBwdFilterAlgo_t& algo) -> cudnnStatus_t
         {
             return cudnnGetConvolutionBackwardFilterAlgorithm(*m_cudnn, m_inT, m_outT, *m_conv, *m_kernelT, CUDNN_CONVOLUTION_BWD_FILTER_NO_WORKSPACE, 0, &algo);
         };
-        FindBestAlgo(batchSize, m_backFiltAlgo, finder, staticFinder, m_backFilterNonDeterministic);
+        FindBestAlgo(batchSize, m_backFiltAlgo, finder, staticFinder);
         if (m_backFiltAlgo.Algo.memory > 0)
             workspace.Resize((m_backFiltAlgo.Algo.memory + sizeof(ElemType) - 1) / sizeof(ElemType), 1);
         // Compute gradients with respect to the output tensor (data).
@@ -317,8 +347,8 @@ private:
 
     static const int MaxAlgoCount = 10;
 
-    template <typename TAlgo, typename TFinder, typename TStaticFinder, typename TAlgoEnum>
-    void FindBestAlgo(size_t batchSize, TAlgo& algo, TFinder finder, TStaticFinder staticFinder, const std::set<TAlgoEnum>& nonDeterministic)
+    template <typename TAlgo, typename TFinder, typename TStaticFinder>
+    void FindBestAlgo(size_t batchSize, TAlgo& algo, TFinder finder, TStaticFinder staticFinder)
     {
         m_inT.UpdateBatchSize(batchSize);
         m_outT.UpdateBatchSize(batchSize);
@@ -332,14 +362,13 @@ private:
         cudnnStatus_t err = finder(calgo, algoPerf);
         // Alloc failed - usually means cuDNN runtime auto-tuner could not allocate workspace.
         // In such case, use static auto-tuner with no workspace.
+        // This should never happen in the deterministic mode because we pick up algorithms with 0 memory workspace.
         if (err == CUDNN_STATUS_ALLOC_FAILED)
         {
             decltype(CuDnnAlgoT::algo) noMemAlgo;
             CUDNN_CALL(staticFinder(noMemAlgo));
-            if (m_forceDeterministicAlgorithms && nonDeterministic.find(noMemAlgo) != nonDeterministic.end())
-            {
+            if (m_forceDeterministicAlgorithms)
                 RuntimeError("cuDNN could not find a deterministic algorithm. Set 'forceDeterministicAlgorithms=false' in your configuration.");
-            }
 
             algo.MaxAllowedMBSizeForCurrentAlgo = batchSize;
             algo.Algo = algoPerf[0];
@@ -355,29 +384,24 @@ private:
         size_t maxMem = m_maxTempMemSizeInSamples == 0 ? (std::numeric_limits<size_t>::max)() : inputSampleSize * m_maxTempMemSizeInSamples * sizeof(ElemType);
         // Find best (fastest) algorithm which satisfies workspace requirements.
         auto res = std::find_if(algoPerf, algoPerf + calgo,
-            [this, maxMem, &nonDeterministic](const CuDnnAlgoT& cur)
-            {
-                return cur.status == CUDNN_STATUS_SUCCESS && cur.memory <= maxMem &&
-                    (!m_forceDeterministicAlgorithms || nonDeterministic.find(cur.algo) == nonDeterministic.end());
-            });
+            [=](const CuDnnAlgoT& cur) { return cur.status == CUDNN_STATUS_SUCCESS && cur.memory <= maxMem; });
 
-        const std::string errorSuffix = m_forceDeterministicAlgorithms ? " Set 'forceDeterministicAlgorithms=false' in your configuration." : "";
         if (res == algoPerf + calgo)
-            RuntimeError("cuDNN could not find suitable algorithm for the current convolution configuration.%s", errorSuffix.c_str());
+            RuntimeError("cuDNN could not find suitable algorithm for the current convolution configuration.");
         algo.MaxAllowedMBSizeForCurrentAlgo = batchSize;
         algo.Algo = *res;
 
+        if (m_forceDeterministicAlgorithms) // does not allow fallback.
+            return;
+
         // Find fastest algorithm that does NOT require workspace. It is used as a fallback algo in Forward function.
         // Currently all Forward algorithms are deterministic, so no need for checking.
-        res = std::find_if(algoPerf, algoPerf + calgo,
-            [](const CuDnnAlgoT& cur)
-            {
-                return cur.status == CUDNN_STATUS_SUCCESS && cur.memory == 0;
-            });
+        res = std::find_if(algoPerf, algoPerf + calgo, 
+            [](const CuDnnAlgoT& cur) { return cur.status == CUDNN_STATUS_SUCCESS && cur.memory == 0; });
         if (res == algoPerf + calgo)
         {
             // In theory, this should never happen.
-            RuntimeError("cuDNN could not find no-workspace algorithm for the current convolution configuration.%s", errorSuffix.c_str());
+            RuntimeError("cuDNN could not find no-workspace algorithm for the current convolution configuration.");
         }
         else
             algo.NoWorkspaceAlgo = (*res).algo;
@@ -439,7 +463,6 @@ private:
 
     // Flag indicating whether only deterministic algorithms should be used.
     bool m_forceDeterministicAlgorithms;
-    const std::set<cudnnConvolutionBwdDataAlgo_t> m_backDataNonDeterministic;
     const std::set<cudnnConvolutionBwdFilterAlgo_t> m_backFilterNonDeterministic;
 };
 
