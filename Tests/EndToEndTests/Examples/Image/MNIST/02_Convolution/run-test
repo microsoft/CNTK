@@ -2,7 +2,7 @@
 
 . $TEST_DIR/../run-test-common
 
-cntkrun  02_Convolution_ndl_deprecated.cntk  "deterministic=true train=[SGD=[maxEpochs=3]] imageLayout=\"$imageLayout\""
+cntkrun  02_Convolution_ndl_deprecated.cntk  "forceDeterministicAlgorithms=true train=[SGD=[maxEpochs=3]] imageLayout=\"$imageLayout\""
 
 ExitCode=$?
 

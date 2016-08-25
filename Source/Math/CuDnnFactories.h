@@ -16,7 +16,7 @@ class CuDnnConvolutionEngineFactory
 public:
     static std::unique_ptr<ConvolutionEngine<ElemType>> Create(ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId,
                                                                ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples,
-                                                               PoolKind poolKind);
+                                                               PoolKind poolKind, bool forceDeterministicAlgorithms);
     static bool IsSupported(DEVICEID_TYPE deviceId, ConvolveGeometryPtr geometry, PoolKind poolKind);
 };
 

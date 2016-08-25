@@ -610,16 +610,6 @@ public:
         return nodes;
     }
 
-    // Requires the nodes to be deterministic.
-    // If some nodes cannot be, they should throw.
-    void MakeDeterministic()
-    {
-        for (auto& node: GetAllNodes())
-        {
-            node->MakeDeterministic();
-        }
-    }
-
     // determine parent map (this is needed in some editing steps)
     // Returns a map[node] -> set of parent nodes.
     std::map<ComputationNodeBasePtr, std::set<ComputationNodeBasePtr>> CreateParentsMap() const
@@ -1066,6 +1056,16 @@ public:
         m_randomSeedOffset = value;
     }
 
+    static void ForceDeterministicAlgorithms()
+    {
+        m_forceDeterministicAlgorithms = true;
+    }
+
+    static bool ShouldForceDeterministicAlgorithms()
+    {
+        return m_forceDeterministicAlgorithms;
+    }
+
 private:
     DEVICEID_TYPE m_deviceId; // TODO: is this shared by all nodes?
     unsigned long m_randomSeedOffset;
@@ -1120,6 +1120,8 @@ private:
     // pool for matrices that can be shared across nodes
     // TODO: does this apply to anything else besides temporary node-internal intermediate results? What, for example?
     MatrixPool m_matrixPool;
+
+    static bool m_forceDeterministicAlgorithms;
 };
 typedef ComputationNetwork::ComputationNetworkPtr ComputationNetworkPtr;
 

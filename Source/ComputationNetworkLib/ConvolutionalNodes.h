@@ -261,11 +261,6 @@ public:
     }
 
 public:
-    void MakeDeterministic() override
-    {
-        m_convEng->MakeDeterministic();
-    }
-
     void Save(File& fstream) const override
     {
         Base::Save(fstream);
@@ -457,7 +452,7 @@ public:
                                                                    m_sharing, m_autoPad, m_lowerPad, m_upperPad);
                 m_convEng = ConvolutionEngine<ElemType>::Create(geometry, m_deviceId, m_imageLayout,
                                                                 m_maxTempMemSizeInSamples, m_poolKind,
-                                                                ConvolutionEngineKind::All, NodeName());
+                                                                ConvolutionEngineKind::All, NodeName(), ComputationNetwork::ShouldForceDeterministicAlgorithms());
             }
 
             if (Input(0)->GetSampleLayout().GetNumElements() != m_kernelShape.GetNumElements() * m_convEng->Geometry()->KernelCount())

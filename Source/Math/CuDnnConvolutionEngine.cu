@@ -173,13 +173,13 @@ public:
 
 public:
     CuDnnConvolutionEngine(ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId, ImageLayoutKind imageLayout,
-                           size_t maxTempMemSizeInSamples, PoolKind poolKind)
+                           size_t maxTempMemSizeInSamples, PoolKind poolKind, bool forceDeterministicAlgorithms)
                            : Base(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind),
                            m_cudnn(CuDnn::Instance()),
                            m_dataType(CuDnnTensor::GetDataType<ElemType>()),
                            m_inT(geometry->InputShape(), m_dataType),
                            m_outT(geometry->OutputShape(), m_dataType),
-                           m_deterministic(false),
+                           m_forceDeterministicAlgorithms(forceDeterministicAlgorithms),
                            m_backDataNonDeterministic({ CUDNN_CONVOLUTION_BWD_DATA_ALGO_0 }),
                            m_backFilterNonDeterministic({ CUDNN_CONVOLUTION_BWD_FILTER_ALGO_0, CUDNN_CONVOLUTION_BWD_FILTER_ALGO_3 })
     {
@@ -191,11 +191,6 @@ protected:
     using Base::m_imageLayout;
     using Base::m_maxTempMemSizeInSamples;
     using Base::m_poolKind;
-
-    void MakeDeterministic() override
-    {
-        m_deterministic = true;
-    }
 
     void EnsureCompatible() override
     {
@@ -288,7 +283,7 @@ protected:
     void EnsurePoolingInitialized() override
     {
         if (m_pool == nullptr)
-            m_pool = std::make_unique<CuDnnPool>(*m_geometry, m_poolKind, m_deterministic);
+            m_pool = std::make_unique<CuDnnPool>(*m_geometry, m_poolKind, m_forceDeterministicAlgorithms);
     }
 
     void ForwardPoolingCore(const Mat& in, Mat& out) override
@@ -341,9 +336,9 @@ private:
         {
             decltype(CuDnnAlgoT::algo) noMemAlgo;
             CUDNN_CALL(staticFinder(noMemAlgo));
-            if (m_deterministic && nonDeterministic.find(noMemAlgo) != nonDeterministic.end())
+            if (m_forceDeterministicAlgorithms && nonDeterministic.find(noMemAlgo) != nonDeterministic.end())
             {
-                RuntimeError("cuDNN could not find a deterministic algorithm. Set 'deterministic=false' in your configuration.");
+                RuntimeError("cuDNN could not find a deterministic algorithm. Set 'forceDeterministicAlgorithms=false' in your configuration.");
             }
 
             algo.MaxAllowedMBSizeForCurrentAlgo = batchSize;
@@ -363,10 +358,10 @@ private:
             [this, maxMem, &nonDeterministic](const CuDnnAlgoT& cur)
             {
                 return cur.status == CUDNN_STATUS_SUCCESS && cur.memory <= maxMem &&
-                    (!m_deterministic || nonDeterministic.find(cur.algo) == nonDeterministic.end());
+                    (!m_forceDeterministicAlgorithms || nonDeterministic.find(cur.algo) == nonDeterministic.end());
             });
 
-        const std::string errorSuffix = m_deterministic ? " Set 'deterministic=false' in your configuration." : "";
+        const std::string errorSuffix = m_forceDeterministicAlgorithms ? " Set 'forceDeterministicAlgorithms=false' in your configuration." : "";
         if (res == algoPerf + calgo)
             RuntimeError("cuDNN could not find suitable algorithm for the current convolution configuration.%s", errorSuffix.c_str());
         algo.MaxAllowedMBSizeForCurrentAlgo = batchSize;
@@ -443,7 +438,7 @@ private:
     ConvAlgoInfo<cudnnConvolutionBwdFilterAlgoPerf_t> m_backFiltAlgo;
 
     // Flag indicating whether only deterministic algorithms should be used.
-    bool m_deterministic;
+    bool m_forceDeterministicAlgorithms;
     const std::set<cudnnConvolutionBwdDataAlgo_t> m_backDataNonDeterministic;
     const std::set<cudnnConvolutionBwdFilterAlgo_t> m_backFilterNonDeterministic;
 };
@@ -451,9 +446,10 @@ private:
 template <class ElemType>
 std::unique_ptr<ConvolutionEngine<ElemType>> CuDnnConvolutionEngineFactory<ElemType>::Create(ConvolveGeometryPtr geometry,
                                                                                              DEVICEID_TYPE deviceId, ImageLayoutKind imageLayout,
-                                                                                             size_t maxTempMemSizeInSamples, PoolKind poolKind)
+                                                                                             size_t maxTempMemSizeInSamples, PoolKind poolKind,
+                                                                                             bool forceDeterministicAlgorithms)
 {
-    return std::make_unique<CuDnnConvolutionEngine<ElemType>>(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind);
+    return std::make_unique<CuDnnConvolutionEngine<ElemType>>(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind, forceDeterministicAlgorithms);
 }
 
 template <class ElemType>

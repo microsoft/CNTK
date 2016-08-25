@@ -39,6 +39,8 @@ using namespace Microsoft::MSR::ScriptableObjects;
 
 const static set<wstring> nodeGroupNames{ L"feature", L"label", L"criterion", L"evaluation", L"output" };
 
+bool ComputationNetwork::m_forceDeterministicAlgorithms = false;
+
 // construct a ComputationNetwork from a ConfigRecord
 ComputationNetwork::ComputationNetwork(const IConfigRecordPtr configp) :
     ComputationNetwork()
