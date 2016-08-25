@@ -4,7 +4,7 @@ import os
 import numpy
 
 
-CNTK_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "..")
+CNTK_PATH = os.path.join(os.path.dirname(__file__), "..", "..")
 CNTK_SOURCE_PATH = os.path.join(CNTK_PATH, "Source")
 CNTK_LIB_PATH = os.path.join(CNTK_PATH, "x64", "Release")
 print("Using CNTK libs at '%s'"%os.path.abspath(CNTK_LIB_PATH))
@@ -16,7 +16,7 @@ ext_modules = [
     Extension(
            name="_cntk_py",
 
-           sources=[os.path.join("swig", "cntk_py_wrap.cxx")],
+           sources=[os.path.join("cntk", "swig", "cntk_py_wrap.cxx")],
 
            libraries=[
                os.path.join(CNTK_LIB_PATH, "CNTKLibrary-2.0"),
@@ -44,4 +44,4 @@ ext_modules = [
       )
     ]
 
-setup(ext_modules = ext_modules)
+setup(name="cntk", ext_modules = ext_modules, packages=['cntk','cntk.ops','cntk.utils','cntk.examples'])
