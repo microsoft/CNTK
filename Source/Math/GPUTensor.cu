@@ -722,7 +722,7 @@ static void LaunchTensorOpWithReduction(ElemType beta, array<ElemType*, N> point
     C_size_t stride = 1;
     for (C_size_t k = 0; k < reducingOpDimVector.size(); ++k) {
       reducingOpDimDivmodVector.push_back(fast_divmod(stride));
-      stride *= reducingOpDimVector[k];
+      stride *= (C_size_t)reducingOpDimVector[k];
     }
 
     FixedArray<C_unsigned_int,    K> regularOpStrides(regularOpStrideVector);
