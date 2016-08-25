@@ -44,9 +44,9 @@ public:
     SwapManager();
     ~SwapManager(){};
     // this is called BEFORE a ForwardProp / BackpropTo method call
-    void BeginSynchronizeState(ComputationNodeBase *node, bool isForward);
+    void BeginSynchronizeState(ComputationNodeBase *node, bool isForward, bool isTraining);
     // this is called AFTER a ForwardProp / BackpropTo method call
-    void EndSynchronizeState(ComputationNodeBase *node, bool isForward);
+    void EndSynchronizeState(ComputationNodeBase *node, bool isForward, bool isTraining);
     bool m_useMemorySwapping;
     void ClearActionsAndTheirMemory();
     void InitializeSwapping(std::unordered_map<ComputationNodeBase*, std::vector<Matrix<ElemType>*> > forwardSwapOutNodes2matrices,

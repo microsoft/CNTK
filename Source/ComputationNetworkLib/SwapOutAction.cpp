@@ -61,6 +61,7 @@ template <typename ElemType> void SwapOutAction<ElemType>::BeginAction()
             allocatePinnedBuffer();
        }
 
+    cout << "Begin swapping out: " << this->m_bufferGPU << ", " << this->m_bufferGPU->GetNumRows() << "x" << this->m_bufferGPU->GetNumCols() << ", " << this->m_rows*this->m_cols*sizeof(ElemType)/1024./1024./1024. << "GB" << endl;
     CUDA_CALL(cudaMemcpyAsync(this->m_bufferCPU, this->m_bufferGPU->Data(), this->m_bytes, cudaMemcpyDefault, this->m_streamAsync));
 }
 
@@ -74,8 +75,8 @@ template <typename ElemType> void SwapOutAction<ElemType>::EndAction()
     this->m_rows = this->m_bufferGPU->GetNumRows();
     this->m_cols = this->m_bufferGPU->GetNumCols();
     this->m_bytes = this->m_rows*this->m_cols*sizeof(ElemType);
+    //cout << "Swapped out: " << this->m_bufferGPU << ", " << this->m_bufferGPU->GetNumRows() << "x" << this->m_bufferGPU->GetNumCols() << ", " << this->m_rows*this->m_cols*sizeof(ElemType)/1024./1024./1024. << "GB" << endl;
     this->m_bufferGPU->Resize(0,0,0, false);
-    cout << "Swapped out: " << this->m_bufferGPU << ", " << this->m_bufferGPU->GetNumRows() << "x" << this->m_bufferGPU->GetNumCols() << ", " << this->m_rows*this->m_cols*sizeof(ElemType)/1024./1024./1024. << "GB" << endl;
     m_hasDoneInitialSwap = true;
 
 }

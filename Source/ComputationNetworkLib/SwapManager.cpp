@@ -43,9 +43,9 @@ template <typename ElemType> void SwapManager<ElemType>::CleanUp()
 }
 
 
-template void SwapManager<double>::BeginSynchronizeState(ComputationNodeBase *node, bool isForward);
-template void SwapManager<float>::BeginSynchronizeState(ComputationNodeBase *node, bool isForward);
-template<typename ElemType> void SwapManager<ElemType>::BeginSynchronizeState(ComputationNodeBase *node, bool isForward)
+template void SwapManager<double>::BeginSynchronizeState(ComputationNodeBase *node, bool isForward, bool isTraining);
+template void SwapManager<float>::BeginSynchronizeState(ComputationNodeBase *node, bool isForward, bool isTraining);
+template<typename ElemType> void SwapManager<ElemType>::BeginSynchronizeState(ComputationNodeBase *node, bool isForward, bool isTraining)
 {
 
 #ifndef CPUONLY
@@ -54,7 +54,7 @@ template<typename ElemType> void SwapManager<ElemType>::BeginSynchronizeState(Co
     std::string nodename = std::string(node->NodeName().begin(), node->NodeName().end());
     //cout << nodename << " + " << isForward << endl;
 
-    if(!isForward)
+    if(!isForward) 
         for(auto action : m_node2BackwardSwapin[node])
         {
             action->BeginAction();
@@ -64,24 +64,25 @@ template<typename ElemType> void SwapManager<ElemType>::BeginSynchronizeState(Co
 }
 
 
-template void SwapManager<double>::EndSynchronizeState(ComputationNodeBase *node, bool isForward);
-template void SwapManager<float>::EndSynchronizeState(ComputationNodeBase *node, bool isForward);
-template<typename ElemType> void SwapManager<ElemType>::EndSynchronizeState(ComputationNodeBase *node, bool isForward)
+template void SwapManager<double>::EndSynchronizeState(ComputationNodeBase *node, bool isForward, bool isTraining);
+template void SwapManager<float>::EndSynchronizeState(ComputationNodeBase *node, bool isForward, bool isTraining);
+template<typename ElemType> void SwapManager<ElemType>::EndSynchronizeState(ComputationNodeBase *node, bool isForward, bool isTraining)
 {
 #ifndef CPUONLY
 	if(!m_useMemorySwapping){ return; }
 
     std::string nodename = std::string(node->NodeName().begin(), node->NodeName().end());
     //cout << nodename << " + " << isForward << endl;
+    cout << "FORWARD: " << isForward << " " << " TRAINING: " << isTraining << endl;
 
-    if(isForward)
+    if(isForward && isTraining)
         for(auto action : m_node2ForwardSwapOut[node])
         {
             CUDA_CALL(cudaDeviceSynchronize());
             action->BeginAction();
             action->EndAction();
         }
-    else
+    else if(isTraining)
         for(auto matrix : m_node2BackwardFree[node])
         {
             cout << "Freeing matrix during backprop: " << matrix << " " << matrix->GetNumRows() << "x" << matrix->GetNumCols() << endl;
@@ -105,6 +106,7 @@ template <typename ElemType> void SwapManager<ElemType>::InitializeSwapping(
     std::unordered_map<ComputationNodeBase*, std::vector<Matrix<ElemType>*> > lastBackwardNodes2matrices)
 {
 
+    ClearActionsAndTheirMemory();
     for(auto pair : forwardSwapOutNodes2matrices)
     {
         for(auto buffer : pair.second)
