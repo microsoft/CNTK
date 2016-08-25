@@ -4313,6 +4313,52 @@ void Matrix<ElemType>::BatchNormalizationBackward(const Matrix<ElemType>& in, Ma
                             NOT_IMPLEMENTED);
 }
 
+template <class ElemType>
+void Matrix<ElemType>::RNNForward(const Matrix<ElemType> &inputX, const Matrix<ElemType> &paramW, size_t xDim, size_t yDim, const vector<size_t>& numSequencesForFrame, const RnnAttributes& rnnAttributes, Matrix<ElemType>& reserve, Matrix<ElemType>& workspace)
+{
+    DecideAndMoveToRightDevice(*this, inputX, paramW);
+    // move reserve/workspace to the consensus device
+    reserve._transferToDevice(GetDeviceId());
+    workspace._transferToDevice(GetDeviceId());
+
+    DISPATCH_MATRIX_ON_FLAG(this,
+                            this,
+                            NOT_IMPLEMENTED,
+                            m_GPUMatrix->RNNForward(*(inputX.m_GPUMatrix), *(paramW.m_GPUMatrix), xDim, yDim, numSequencesForFrame, rnnAttributes, *(reserve.m_GPUMatrix), *(workspace.m_GPUMatrix)),
+                            NOT_IMPLEMENTED,
+                            NOT_IMPLEMENTED);
+}
+
+template <class ElemType>
+void Matrix<ElemType>::RNNBackwardData(const Matrix<ElemType>& outputDY, const Matrix<ElemType>& paramW, Matrix<ElemType>& outputDX, const RnnAttributes& rnnAttributes, Matrix<ElemType>& reserve, Matrix<ElemType>& workspace)
+{
+    DecideAndMoveToRightDevice(*this, outputDY, paramW, outputDX);
+    // move reserve/workspace to the consensus device
+    reserve._transferToDevice(GetDeviceId());
+    workspace._transferToDevice(GetDeviceId());
+    DISPATCH_MATRIX_ON_FLAG(this,
+                            this,
+                            NOT_IMPLEMENTED,
+                            m_GPUMatrix->RNNBackwardData(*(outputDY.m_GPUMatrix), *(paramW.m_GPUMatrix), *(outputDX.m_GPUMatrix), rnnAttributes, *(reserve.m_GPUMatrix), *(workspace.m_GPUMatrix)),
+                            NOT_IMPLEMENTED,
+                            NOT_IMPLEMENTED);
+}
+
+template <class ElemType>
+void Matrix<ElemType>::RNNBackwardWeights(const Matrix<ElemType>& inputX, const Matrix<ElemType>& outputY, Matrix<ElemType>& dw, const RnnAttributes& rnnAttributes, Matrix<ElemType>& reserve, Matrix<ElemType>& workspace)
+{
+    DecideAndMoveToRightDevice(*this, inputX, outputY, dw);
+    // move reserve/workspace to the consensus device
+    reserve._transferToDevice(GetDeviceId());
+    workspace._transferToDevice(GetDeviceId());
+    DISPATCH_MATRIX_ON_FLAG(this,
+                            this,
+                            NOT_IMPLEMENTED,
+                            m_GPUMatrix->RNNBackwardWeights(*(inputX.m_GPUMatrix), *(outputY.m_GPUMatrix), *(dw.m_GPUMatrix), rnnAttributes, *(reserve.m_GPUMatrix), *(workspace.m_GPUMatrix)),
+                            NOT_IMPLEMENTED,
+                            NOT_IMPLEMENTED);
+}
+
 #pragma region Static BLAS Functions
 
 template <class ElemType>

@@ -1830,10 +1830,10 @@ public:
 
         if (inputIndex == 0) // derivative with respect to the input.
         {
-            auto sliceOutputGrad          = MaskedGradientFor(fr);
-            auto sliceInputValue          = Input(0)->ValueFor(fr);
-            const Matrix<ElemType>& scale = Input(1)->Value();
-            const Matrix<ElemType>& bias  = Input(2)->Value();
+            auto sliceOutputGrad                = MaskedGradientFor(fr);
+            auto sliceInputValue                = Input(0)->ValueFor(fr);
+            const Matrix<ElemType>& scale       = Input(1)->Value();
+            const Matrix<ElemType>& bias        = Input(2)->Value();
 
             auto sliceInputGrad = Input(0)->GradientFor(fr);
             m_dScale->Resize(scale); // gradients for scale and bias get stored here

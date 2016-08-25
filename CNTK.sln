@@ -1222,6 +1222,42 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "TrainSimpleNetwork", "Train
 		Tests\EndToEndTests\Examples\Speech\TIMIT\TrainSimpleNetwork\testcases.yml = Tests\EndToEndTests\Examples\Speech\TIMIT\TrainSimpleNetwork\testcases.yml
 	EndProjectSection
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "FullUtteranceLayers", "FullUtteranceLayers", "{4DDFD21D-E82C-4321-B380-8A9382E18107}"
+	ProjectSection(SolutionItems) = preProject
+		Tests\EndToEndTests\Speech\LSTM\FullUtteranceLayers\baseline.cpu.txt = Tests\EndToEndTests\Speech\LSTM\FullUtteranceLayers\baseline.cpu.txt
+		Tests\EndToEndTests\Speech\LSTM\FullUtteranceLayers\baseline.gpu.txt = Tests\EndToEndTests\Speech\LSTM\FullUtteranceLayers\baseline.gpu.txt
+		Tests\EndToEndTests\Speech\LSTM\FullUtteranceLayers\baseline.windows.cpu.txt = Tests\EndToEndTests\Speech\LSTM\FullUtteranceLayers\baseline.windows.cpu.txt
+		Tests\EndToEndTests\Speech\LSTM\FullUtteranceLayers\baseline.windows.gpu.txt = Tests\EndToEndTests\Speech\LSTM\FullUtteranceLayers\baseline.windows.gpu.txt
+		Tests\EndToEndTests\Speech\LSTM\FullUtteranceLayers\run-test = Tests\EndToEndTests\Speech\LSTM\FullUtteranceLayers\run-test
+		Tests\EndToEndTests\Speech\LSTM\FullUtteranceLayers\testcases.yml = Tests\EndToEndTests\Speech\LSTM\FullUtteranceLayers\testcases.yml
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "FullUtteranceCuDNN5", "FullUtteranceCuDNN5", "{D293C7C7-B7D7-47CE-A796-45262C16F980}"
+	ProjectSection(SolutionItems) = preProject
+		Tests\EndToEndTests\Speech\LSTM\FullUtteranceCuDNN5\baseline.gpu.txt = Tests\EndToEndTests\Speech\LSTM\FullUtteranceCuDNN5\baseline.gpu.txt
+		Tests\EndToEndTests\Speech\LSTM\FullUtteranceCuDNN5\baseline.windows.gpu.txt = Tests\EndToEndTests\Speech\LSTM\FullUtteranceCuDNN5\baseline.windows.gpu.txt
+		Tests\EndToEndTests\Speech\LSTM\FullUtteranceCuDNN5\run-test = Tests\EndToEndTests\Speech\LSTM\FullUtteranceCuDNN5\run-test
+		Tests\EndToEndTests\Speech\LSTM\FullUtteranceCuDNN5\testcases.yml = Tests\EndToEndTests\Speech\LSTM\FullUtteranceCuDNN5\testcases.yml
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "TruncatedLayers", "TruncatedLayers", "{4F534076-39A5-40E2-BF87-64EC464C52B2}"
+	ProjectSection(SolutionItems) = preProject
+		Tests\EndToEndTests\Speech\LSTM\TruncatedLayers\baseline.cpu.txt = Tests\EndToEndTests\Speech\LSTM\TruncatedLayers\baseline.cpu.txt
+		Tests\EndToEndTests\Speech\LSTM\TruncatedLayers\baseline.gpu.txt = Tests\EndToEndTests\Speech\LSTM\TruncatedLayers\baseline.gpu.txt
+		Tests\EndToEndTests\Speech\LSTM\TruncatedLayers\baseline.windows.cpu.txt = Tests\EndToEndTests\Speech\LSTM\TruncatedLayers\baseline.windows.cpu.txt
+		Tests\EndToEndTests\Speech\LSTM\TruncatedLayers\baseline.windows.gpu.txt = Tests\EndToEndTests\Speech\LSTM\TruncatedLayers\baseline.windows.gpu.txt
+		Tests\EndToEndTests\Speech\LSTM\TruncatedLayers\run-test = Tests\EndToEndTests\Speech\LSTM\TruncatedLayers\run-test
+		Tests\EndToEndTests\Speech\LSTM\TruncatedLayers\testcases.yml = Tests\EndToEndTests\Speech\LSTM\TruncatedLayers\testcases.yml
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Truncated-Kaldi", "Truncated-Kaldi", "{31263D7F-F590-475E-B4F0-7DFA4E4FF4B8}"
+	ProjectSection(SolutionItems) = preProject
+		Tests\EndToEndTests\Speech\LSTM\Truncated-Kaldi\baseline.cpu.txt = Tests\EndToEndTests\Speech\LSTM\Truncated-Kaldi\baseline.cpu.txt
+		Tests\EndToEndTests\Speech\LSTM\Truncated-Kaldi\baseline.gpu.txt = Tests\EndToEndTests\Speech\LSTM\Truncated-Kaldi\baseline.gpu.txt
+		Tests\EndToEndTests\Speech\LSTM\Truncated-Kaldi\run-test = Tests\EndToEndTests\Speech\LSTM\Truncated-Kaldi\run-test
+		Tests\EndToEndTests\Speech\LSTM\Truncated-Kaldi\testcases.yml = Tests\EndToEndTests\Speech\LSTM\Truncated-Kaldi\testcases.yml
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug_CpuOnly|x64 = Debug_CpuOnly|x64
@@ -1677,5 +1713,9 @@ Global
 		{4A59163B-1EDE-4439-9E7D-40A30B82A3A0} = {2230BF3D-4317-4A3F-A743-DDD6160503F8}
 		{B586AA4C-0BB9-4629-9EDA-25FF2618AC9F} = {FB7AF7B9-6BEA-459F-94D9-94D53916D2B6}
 		{C2102C39-BF5F-4B12-9C41-849D1ED35EE8} = {B586AA4C-0BB9-4629-9EDA-25FF2618AC9F}
+		{4DDFD21D-E82C-4321-B380-8A9382E18107} = {19EE975B-232D-49F0-94C7-6F1C6424FB53}
+		{D293C7C7-B7D7-47CE-A796-45262C16F980} = {19EE975B-232D-49F0-94C7-6F1C6424FB53}
+		{4F534076-39A5-40E2-BF87-64EC464C52B2} = {19EE975B-232D-49F0-94C7-6F1C6424FB53}
+		{31263D7F-F590-475E-B4F0-7DFA4E4FF4B8} = {19EE975B-232D-49F0-94C7-6F1C6424FB53}
 	EndGlobalSection
 EndGlobal
