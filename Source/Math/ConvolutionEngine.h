@@ -45,8 +45,6 @@ public:
 public:
     virtual ~ConvolutionEngine() = default;
 
-    virtual void MakeDeterministic() {}
-
     void Forward(const Mat& in, const Mat& kernel, Mat& out, Mat& workspace);
 
     void BackwardData(const Mat& srcGrad, const Mat& kernel, Mat& grad, Mat& workspace);

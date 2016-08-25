@@ -350,7 +350,7 @@ public:
     void Adapt(wstring origModelFileName, wstring refNodeName,
                IDataReader* trainSetDataReader,
                IDataReader* validationSetDataReader,
-               const DEVICEID_TYPE deviceID, const bool makeMode);
+               const DEVICEID_TYPE deviceID, const bool makeMode = true);
 
 protected:
 

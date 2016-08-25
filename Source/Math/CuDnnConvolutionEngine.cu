@@ -463,7 +463,6 @@ private:
 
     // Flag indicating whether only deterministic algorithms should be used.
     bool m_forceDeterministicAlgorithms;
-    const std::set<cudnnConvolutionBwdFilterAlgo_t> m_backFilterNonDeterministic;
 };
 
 template <class ElemType>
