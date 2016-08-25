@@ -46,6 +46,7 @@ static shared_ptr<ComputationNode<ElemType>> CreateStandardNode(const std::wstri
     else if (nodeType == OperationNameOf(CosDistanceNode))                      return New<CosDistanceNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(CosDistanceWithNegativeSamplesNode))   return New<CosDistanceWithNegativeSamplesNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(CosineNode))                           return New<CosineNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(CropNode))                             return New<CropNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(CrossEntropyNode))                     return New<CrossEntropyNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(CrossEntropyWithSoftmaxNode))          return New<CrossEntropyWithSoftmaxNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(DiagonalNode))                         return New<DiagonalNode<ElemType>>(forward<_Types>(_Args)...);
@@ -398,6 +399,24 @@ template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::ReconcileDynamicAxis(const ComputationNodePtr dataInput, const ComputationNodePtr layoutInput, const std::wstring nodeName)
 {
     return net.AddNodeToNetAndAttachInputs(New<ReconcileDynamicAxisNode<ElemType>>(net.GetDeviceId(), nodeName), { dataInput, layoutInput });
+}
+
+template <class ElemType>
+shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Crop(const ComputationNodePtr input1, const ComputationNodePtr input2, const std::wstring nodeName)
+{
+    return net.AddNodeToNetAndAttachInputs(New<CropNode<ElemType>>(net.GetDeviceId(), nodeName), { input1, input2 });
+}
+
+template <class ElemType>
+shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Crop(const ComputationNodePtr input1, const ComputationNodePtr input2, size_t offsetX, size_t offsetY, const std::wstring nodeName)
+{
+    return net.AddNodeToNetAndAttachInputs(New<CropNode<ElemType>>(offsetX, offsetY, net.GetDeviceId(), nodeName), { input1, input2 });
+}
+
+template <class ElemType>
+shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Crop(const ComputationNodePtr input1, const ComputationNodePtr input2, const ComputationNodePtr eqNode1, const ComputationNodePtr eqNode2, const std::wstring nodeName)
+{
+    return net.AddNodeToNetAndAttachInputs(New<CropNode<ElemType>>(net.GetDeviceId(), nodeName), { input1, input2, eqNode1, eqNode2 });
 }
 
 template <class ElemType>
