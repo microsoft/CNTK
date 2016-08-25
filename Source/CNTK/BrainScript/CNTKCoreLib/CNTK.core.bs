@@ -141,6 +141,35 @@ else
     }.lstmState.h // that's the value we return
 }.apply
 
+# helper to check whether all elements of an array are the same
+_AreElementsTheSame (arr, L) =
+    if L < 2 then true
+    else arr[L-1] == arr[L-2] && _AreElementsTheSame (arr, L-1)
+
+# RecurrentLSTMLayer -- create a whole stack of LSTM layers
+RecurrentLSTMLayerStack {layerDims,  # an array of dimensions for each layer (last one is output dimension)
+                         cellShapes = None, # if set then use a projection
+                         goBackwards = false,
+                         usePeepholes = false,
+                         init = 'heNormal', initValueScale = 1,
+                         enableSelfStabilization = false,
+                         allowOptimizedEngine = false} =
+if allowOptimizedEngine && BS.Constants.IsNone (cellShapes) && !goBackwards && !usePeepholes && !enableSelfStabilization && _AreElementsTheSame (layerDims, Length(layerDims)) then
+{
+    # use cudnn instead
+    W = ParameterTensor {0:0, initOutputRank=-1, init=init, initValueScale=initValueScale}
+    apply (x) = OptimizedRNNStack (W, x, layerDims[0], numLayers=Length(layerDims))
+}.apply
+else
+    LayerStack {Length(layerDims), i => RecurrentLSTMLayer {
+                                           layerDims[i],
+                                           cellShape = if BS.Constants.IsNone (cellShapes) then None else cellShapes[i], # if set then use a projection
+                                           goBackwards = goBackwards,
+                                           usePeepholes = usePeepholes,
+                                           init = init, initValueScale = initValueScale,
+                                           enableSelfStabilization = enableSelfStabilization,
+                                           allowOptimizedEngine = allowOptimizedEngine}}
+
 # DelayLayer -- delay input
 DelayLayer {T=1, defaultHiddenActivation=0} =
 {
