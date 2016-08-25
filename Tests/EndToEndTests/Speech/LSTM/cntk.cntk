@@ -4,7 +4,7 @@ precision = "float" ; deviceId = $DeviceId$ ; traceLevel = 1 ; parallelTrain = f
 
 command = speechTrain
 
-modelSelector = 2   # 0 = regression test; 1 = layers lib; 2 = StandardRecurrentLayerStack
+modelSelector = 1   # 0 = regression test; 1 = layers lib; 2 = OptimizedRecurrentStack; 3 = emulated 2
 
 // Note: These options are overridden from the command line in some test cases.
 frameMode = false
@@ -14,7 +14,7 @@ truncated = true
 speechTrain = {
     action = "train"
     modelPath = "$RunDir$/models/cntkSpeech.dnn"
-          
+
     # define network using BrainScript
     BrainScriptNetworkBuilder = {
         useLayerNorm = $truncated$
@@ -24,21 +24,20 @@ speechTrain = {
         featDim = 11 * baseFeatDim
         labelDim = 132
 
-            // hidden dimensions
-            innerCellDim  = 1024
-            hiddenDim     = 256
-            numLSTMLayers = 3        // number of hidden LSTM model layers
+        // hidden dimensions
+        innerCellDim  = 1024
+        hiddenDim     = 256
+        numLSTMLayers = 3        // number of hidden LSTM model layers
 
         # define the model function
         # We define three functions here
 
         # cudnn5 library
         # Note: does not run in truncated mode
-        W = ParameterTensor {0:0, initOutputRank=-1, init='heNormal', initValueScale=1/10}
         modelUsingCuDNN5 = Sequential
         (
             MeanVarNorm :
-            (_ => OptimizedRNNStack(W, _, hiddenDim, numLayers=numLSTMLayers, bidirectional=true)) :
+            (_ => OptimizedRNNStack(ParameterTensor {0:0, initOutputRank=-1, init='heNormal', initValueScale=1/10}, _, hiddenDim, numLayers=numLSTMLayers, bidirectional=true)) :
             DenseLayer {labelDim, init='heUniform', initValueScale=1/3}
         )
 
@@ -141,7 +140,7 @@ speechTrain = {
 
             // (unnecessarily using explicit Times with inferInputRankToMap in order to have a test for inferInputRankToMap parameter)
             z = Times (W, S(LSTMoutput[numLSTMLayers]), inferInputRankToMap=0) + B; // top-level input to Softmax
-        ].z
+        }.z
 
         // features
         features = Input((1 : featDim),  tag='feature') // TEST: Artificially reading data transposed
@@ -165,20 +164,19 @@ speechTrain = {
 
         // decoding
         logPrior = LogPrior(labels)	 
-        ScaledLogLikelihood = Pass (z - logPrior, tag='output') // using Pass() since we can't assign a tag to x - y
+        scaledLogLikelihood = Pass (z - logPrior, tag='output') // using Pass() since we can't assign a tag to x - y
 
         featureNodes = (features)
         labelNodes = (labels)
         criterionNodes = (ce)
         evaluationNodes = (err)
-        outputNodes = (ScaledLogLikelihood)
+        outputNodes = (scaledLogLikelihood)
     }
 
     SGD = {
         epochSize = 20480 ; maxEpochs = 4 ; minibatchSize = 20
         learningRatesPerMB = 0.5 ; momentumAsTimeConstant = 2500
-        #momentumPerMB = 0.9:0.9
-        # setting for regression: momentumPerMB=0:0.9  --TODO: find out time-const value. 190 or 6000
+        # note: regression tests require time constant of 0:189.8 (FullUtterance) and 0:6074.4 (Truncated)
         numMBsToShowResult = 10
         keepCheckPointFiles = true       
     }
