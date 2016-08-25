@@ -69,22 +69,27 @@ int main(int argc, char* argv[])
 	const std::string modelWorkingDirectory = path + "/../../../Examples/Image/MNIST/Data/";
 #endif
 	
-	const int numberOfChannels = 16;
-	const int imgDimensionX = 28;
-	const int imgDimensionY = 28;
+	// params for openCV
+	int numberOfChannels = 1;
+	int imgDimensionX = 28;
+	int imgDimensionY = 28;
 	int scaleFactor = 3.0;
 	auto cvType = CV_8UC1;
+	size_t step = sizeof(uchar)*imgDimensionX;
+
+	// compression parameters for saving an image
+	std::vector<int> compression_params;
+	compression_params.push_back(CV_IMWRITE_PNG_COMPRESSION);
+	compression_params.push_back(9);
 
 	GetEvalF(&model);
 
 	const std::string modelFilePath = modelWorkingDirectory + "../Output/Models/02_Convolution";
 
-	// Load model with desired outputs
+	// load model with desired outputs
 	std::string networkConfiguration;
-	// Uncomment the following line to re-define the outputs (include h1.z AND the output ol.z)
-	// When specifying outputNodeNames in the configuration, it will REPLACE the list of output nodes 
-	// with the ones specified.
-	networkConfiguration += "outputNodeNames=\"(features,conv1.out,pool1,conv2.out,pool2.p)\"\n";
+
+	networkConfiguration += "outputNodeNames=\"(conv1.out,pool1,conv2.out,pool2.p,ol.z)\"\n";
 	networkConfiguration += "modelPath=\"" + modelFilePath + "\"";
 	model->CreateNetwork(networkConfiguration);
 
@@ -94,107 +99,157 @@ int main(int argc, char* argv[])
 	model->GetNodeDimensions(inDims, NodeGroup::nodeInput);
 	model->GetNodeDimensions(outDims, NodeGroup::nodeOutput);
 
-
 	// Read input
 	auto inputLayerName = inDims.begin()->first;
-	std::string testImage = "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 38 43 105 255 253 253 253 253 253 174 6 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 43 139 224 226 252 253 252 252 252 252 252 252 158 14 0 0 0 0 0 0 0 0 0 0 0 0 0 0 178 252 252 252 252 253 252 252 252 252 252 252 252 59 0 0 0 0 0 0 0 0 0 0 0 0 0 0 109 252 252 230 132 133 132 132 189 252 252 252 252 59 0 0 0 0 0 0 0 0 0 0 0 0 0 0 4 29 29 24 0 0 0 0 14 226 252 252 172 7 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 85 243 252 252 144 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 88 189 252 252 252 14 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 91 212 247 252 252 252 204 9 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 32 125 193 193 193 253 252 252 252 238 102 28 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 45 222 252 252 252 252 253 252 252 252 177 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 45 223 253 253 253 253 255 253 253 253 253 74 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 31 123 52 44 44 44 44 143 252 252 74 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 15 252 252 74 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 86 252 252 74 0 0 0 0 0 0 0 0 0 0 0 0 0 0 5 75 9 0 0 0 0 0 0 98 242 252 252 74 0 0 0 0 0 0 0 0 0 0 0 0 0 61 183 252 29 0 0 0 0 18 92 239 252 252 243 65 0 0 0 0 0 0 0 0 0 0 0 0 0 208 252 252 147 134 134 134 134 203 253 252 252 188 83 0 0 0 0 0 0 0 0 0 0 0 0 0 0 208 252 252 252 252 252 252 252 252 253 230 153 8 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 49 157 252 252 252 252 252 217 207 146 45 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 7 103 235 252 172 103 24 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0";
+	std::string testImage = "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 73 253 227 73 21 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 73 251 251 251 174 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 16 166 228 251 251 251 122 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 62 220 253 251 251 251 251 79 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 79 231 253 251 251 251 251 232 77 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 145 253 253 253 255 253 253 253 253 255 108 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 144 251 251 251 253 168 107 169 251 253 189 20 0 0 0 0 0 0 0 0 0 0 0 0 0 0 27 89 236 251 235 215 164 15 6 129 251 253 251 35 0 0 0 0 0 0 0 0 0 0 0 0 0 47 211 253 251 251 142 0 0 0 37 251 251 253 251 35 0 0 0 0 0 0 0 0 0 0 0 0 0 109 251 253 251 251 142 0 0 0 11 148 251 253 251 164 0 0 0 0 0 0 0 0 0 0 0 0 11 150 253 255 211 25 0 0 0 0 11 150 253 255 211 25 0 0 0 0 0 0 0 0 0 0 0 0 140 251 251 253 107 0 0 0 0 0 37 251 251 211 46 0 0 0 0 0 0 0 0 0 0 0 0 0 190 251 251 253 128 5 0 0 0 0 37 251 251 51 0 0 0 0 0 0 0 0 0 0 0 0 0 0 115 251 251 253 188 20 0 0 32 109 129 251 173 103 0 0 0 0 0 0 0 0 0 0 0 0 0 0 217 251 251 201 30 0 0 0 73 251 251 251 71 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 166 253 253 255 149 73 150 253 255 253 253 143 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 140 251 251 253 251 251 251 251 253 251 230 61 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 190 251 251 253 251 251 251 251 242 215 55 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 21 189 251 253 251 251 251 173 103 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 31 200 253 251 96 71 20 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0";
 
 	std::vector<float> inputs;
-	uchar inputArray[imgDimensionX][imgDimensionX];
+	uchar* inputArray = new uchar [imgDimensionX*imgDimensionY];	
 
 	std::istringstream iss(testImage);
+	pos = 0;
 	for (std::string testImage; iss >> testImage;)
+	{
 		inputs.push_back((atoi(testImage.c_str())));
-
-	int k = 0;
-	for (int i = 0; i < imgDimensionX; i++)
-	{
-		for (int j = 0; j < imgDimensionX; j++)
-		{
-			inputArray[i][j] = (uchar) inputs[k];
-			k++;
-		}
+		inputArray[pos] = (atoi(testImage.c_str()));
+		pos++;
 	}
 	
-	
-	/*cv::Mat img0(cv::Size(imgDimensionX, imgDimensionY), cvType, &inputArray);
+	cv::Mat img0(cv::Size(imgDimensionX, imgDimensionY), cvType, inputArray, step);
 	cv::resize(img0, img0, cv::Size(), scaleFactor, scaleFactor, cv::INTER_NEAREST);
-	cv::imshow("input", img0);
-	cv::waitKey(0);*/
-
-
-	// Allocate the output values layer
-	std::vector<float> outputs;
-
-	// Setup the maps for inputs and output
-	Layer inputLayer;
-	inputLayer.insert(MapEntry(inputLayerName, &inputs));
-	Layer outputLayer;
-	auto outputLayerName = outDims.begin()->first;
-	outputLayer.insert(MapEntry(outputLayerName, &outputs));
-
-	// We can call the evaluate method and get back the results (single layer)...
-	model->Evaluate(inputLayer, outputLayer);
-
-	std::vector<uchar> outputsChar(outputs.size());
-	auto minMaxOutput = std::minmax_element(outputs.begin(), outputs.end());
-	for (int i = 0; i < outputs.size(); i++)
-	{
-		outputsChar[i] = (uchar) round(255 * (outputs[i] - outputs[minMaxOutput.first - outputs.begin()])
-			/ (outputs[minMaxOutput.second - outputs.begin()] - outputs[minMaxOutput.first - outputs.begin()]));
-	}
-
-	uchar outputArrays[numberOfChannels][imgDimensionX][imgDimensionY];
-
-	int l = 0;
-	for (int i = 0; i < numberOfChannels; i++)
-	{
-		for (int j = 0; j < imgDimensionX; j++)
-		{
-			for (int m = 0; m < imgDimensionY; m++)
-			{
-				outputArrays[i][j][m] = outputsChar[l];
-				l++;
-			}
-		}
-	}
-
-	std::vector<cv::Mat> imgs(numberOfChannels);
-	for (int i = 0; i < numberOfChannels; i++)
-	{	
-		imgs[i] = cv::Mat(cv::Size(imgDimensionX, imgDimensionY), cvType, &outputArrays[i]);
-		cv::resize(imgs[i], imgs[i], cv::Size(), scaleFactor, scaleFactor, cv::INTER_NEAREST);
-		//cv::imshow("Conv1 | channel# " + std::to_string(i+1), imgs[i]);
-	}
-
-	auto pane = cv::Mat(cv::Size(1344, imgDimensionY*scaleFactor), cvType);
-	int column = 0;
-	int row = 0;
-	for (int i = 0; i < numberOfChannels; i++)
-	{
-		if (imgs[i].cols*column > pane.cols - imgs[i].cols)
-		{
-			row++;
-			column = 0;
-		}
-		imgs[i].copyTo(pane(cv::Rect(imgs[i].cols*column, imgs[i].rows*row, imgs[i].cols, imgs[i].rows)));
-		column++;
-	}
-	cv::imshow("Conv1.out", pane);
-
-	// Save the image
-	/*std::vector<int> compression_params;
-	compression_params.push_back(CV_IMWRITE_PNG_COMPRESSION);
-	compression_params.push_back(9);
+	// save the input image
 	try {
-		cv::imwrite("conv1.png", pane, compression_params);
+		cv::imwrite( "input.png", img0, compression_params);
 	}
 	catch (std::runtime_error& ex) {
 		fprintf(stderr, "Exception converting image to PNG format: %s\n", ex.what());
 		return 1;
-	}*/
+	}
+	/*cv::imshow("input", img0);
+	cv::waitKey(0);*/
 
-	cv::waitKey(0);
+	std::vector<std::vector<float>> outputs(outDims.size());
+
+	// setup the maps for inputs and output
+	Layer inputLayer;
+	inputLayer.insert(MapEntry(inputLayerName, &inputs));
+	Layer outputLayers;
+	int i = 0;
+	for (auto &layer: outDims)
+	{
+		auto outputLayerName = layer.first;
+		outputLayers.insert(MapEntry(outputLayerName, &outputs[i]));
+		i++;
+	}
+
+	// evaluate the model
+	model->Evaluate(inputLayer, outputLayers);
+
+	for (auto outputLayer : outputLayers)
+	{
+		
+		// set number of channels, image dimensions, and scale factor depending on the layer
+		if (outputLayer.first == std::wstring {L"conv1.out"})
+		{
+			numberOfChannels = 16;
+			imgDimensionX = 28;
+			imgDimensionY = 28;
+			scaleFactor = 3.0;
+		}
+		else if (outputLayer.first == std::wstring{ L"conv2.out" })
+		{
+			numberOfChannels = 32;
+			imgDimensionX = 14;
+			imgDimensionY = 14;
+			scaleFactor = 6.0;
+		}
+		else if (outputLayer.first == std::wstring{ L"pool1" })
+		{
+			numberOfChannels = 16;
+			imgDimensionX = 14;
+			imgDimensionY = 14;
+			scaleFactor = 6.0;
+		}
+		else if (outputLayer.first == std::wstring{ L"pool2.p" })
+		{
+			numberOfChannels = 32;
+			imgDimensionX = 7;
+			imgDimensionY = 7;
+			scaleFactor = 12.0;
+		}
+		else if (outputLayer.first == std::wstring{ L"ol.z" })
+		{
+			numberOfChannels = 1;
+			imgDimensionX = 10;
+			imgDimensionY = 1;
+			scaleFactor = 84.0;
+		}
+		else
+		{
+			std::cout << "Could not match layer name. Setting to defaults";
+			numberOfChannels = 1;
+			imgDimensionX = 28;
+			imgDimensionY = 28;
+			scaleFactor = 6.0;
+		}
+
+		auto output = *outputLayer.second;
+
+		// normalize and scale to [0,255]
+		std::vector<uchar> outputsChar(output.size());
+		auto minMaxOutput = std::minmax_element(output.begin(), output.end());
+		for (int i = 0; i < output.size(); i++)
+		{
+			outputsChar[i] = (uchar)round(255 * (output[i] - output[minMaxOutput.first - output.begin()])
+				/ (output[minMaxOutput.second - output.begin()] - output[(minMaxOutput.first - output.begin())]));
+		}
+
+		uchar** outputArrays = new uchar*[numberOfChannels];
+		int l = 0;
+		for (int i = 0; i < numberOfChannels; i++)
+		{
+			outputArrays[i] = new uchar[imgDimensionX*imgDimensionY];
+			for (int j = 0; j < imgDimensionX*imgDimensionY; j++)
+			{
+				outputArrays[i][j] = outputsChar[l];
+				l++;
+			}
+		}
+		step = sizeof(uchar)*imgDimensionX;
+		std::vector<cv::Mat> imgs(numberOfChannels);
+		for (int i = 0; i < numberOfChannels; i++)
+		{
+			imgs[i] = cv::Mat(cv::Size(imgDimensionX, imgDimensionY), cvType, outputArrays[i], step);
+			cv::resize(imgs[i], imgs[i], cv::Size(), scaleFactor, scaleFactor, cv::INTER_NEAREST);
+		}
+
+		// copy image of each channel to layer pane
+		auto pane = cv::Mat(cv::Size(1.05*imgDimensionX*ceil(sqrt(numberOfChannels))*scaleFactor, 1.05*imgDimensionY*scaleFactor*ceil(sqrt(numberOfChannels))), cvType);
+		float column = 0;
+		float row = 0;
+		for (int i = 0; i < numberOfChannels; i++)
+		{
+			if (imgs[i].cols*column > pane.cols - imgs[i].cols)
+			{
+				row = row + 1.05;
+				column = 0;
+			}
+			imgs[i].copyTo(pane(cv::Rect(imgs[i].cols*column, imgs[i].rows*row, imgs[i].cols, imgs[i].rows)));
+			column += 1.05;
+		}
+
+		// save the image
+		try {
+			cv::imwrite(std::string(outputLayer.first.begin(), outputLayer.first.end()) + ".png", pane, compression_params);
+		}
+		catch (std::runtime_error& ex) {
+			fprintf(stderr, "Exception converting image to PNG format: %s\n", ex.what());
+			return 1;
+		}
+		//cv::imshow(std::string(outputLayer.first.begin(), outputLayer.first.end()), pane);
+	}
+
+	//cv::waitKey(0);
     return 0;
 }
 
