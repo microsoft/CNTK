@@ -23,7 +23,7 @@ struct RnnAttributes
     RnnAttributes(bool bidirectional, size_t numLayers, size_t hiddenSize, const wstring& recurrentOp, int axis) :
         m_bidirectional(bidirectional), m_numLayers(numLayers), m_hiddenSize(hiddenSize), m_recurrentOp(recurrentOp), m_axis(axis)
     {
-        if (m_recurrentOp != wstring(L"lstm") && m_recurrentOp != wstring(L"gru") &&
+        if (m_recurrentOp != wstring(L"lstm")    && m_recurrentOp != wstring(L"gru") &&
             m_recurrentOp != wstring(L"rnnReLU") && m_recurrentOp != wstring(L"rnnTanh"))
         {
             InvalidArgument("Unknown cell type '%ls'. Supported values are 'lstm', 'gru', 'rnnReLU', 'rnnTanh'.", m_recurrentOp.c_str());
@@ -45,12 +45,12 @@ struct RnnAttributes
         for (size_t i = 0; i < m_numLayers; i++)
         {
             size_t oneNetTotal =
-                numNetworks * m_hiddenSize                   // 1, 3, or 4 networks producing hidden-dim output
-                            * (inputDim + m_hiddenSize)      // each network has these two inputs
-              + numNetworks * m_hiddenSize                   // biases
-                            * 2;                             // for unknown reasons, cudnn5 uses 2 bias terms everywhere
-            total += oneNetTotal * bidirFactor;    // 1 or 2 directions
-            inputDim = bidirFactor * m_hiddenSize; // next layer continues with this as input
+                numNetworks * m_hiddenSize              // 1, 3, or 4 networks producing hidden-dim output
+                            * (inputDim + m_hiddenSize) // each network has these two inputs
+              + numNetworks * m_hiddenSize              // biases
+                            * 2;                        // for unknown reasons, cudnn5 uses 2 bias terms everywhere
+            total += oneNetTotal * bidirFactor;         // 1 or 2 directions
+            inputDim = bidirFactor * m_hiddenSize;      // next layer continues with this as input
         }
         return make_pair(m_hiddenSize, total / m_hiddenSize);
     }
@@ -59,10 +59,10 @@ struct RnnAttributes
     {
         return
             m_bidirectional == other.m_bidirectional &&
-            m_numLayers   == other.m_numLayers       &&
-            m_hiddenSize  == other.m_hiddenSize      &&
-            m_recurrentOp     == other.m_recurrentOp         &&
-            m_axis        == other.m_axis;
+            m_numLayers    == other.m_numLayers      &&
+            m_hiddenSize   == other.m_hiddenSize     &&
+            m_recurrentOp  == other.m_recurrentOp    &&
+            m_axis         == other.m_axis;
     }
 
     void Read(File& stream, bool readAxis)

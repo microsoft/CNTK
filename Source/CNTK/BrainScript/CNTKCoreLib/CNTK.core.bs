@@ -46,11 +46,12 @@ DenseLayer{outDim, bias = true, activation=(x=>x), init='heNormal', initValueSca
 
 # EmbeddingLayer -- create a linear embedding layer
 EmbeddingLayer {outDim,                                   # dimension of embedding
+                init='heNormal', initValueScale=1,
                 embeddingPath = '', transpose = false} =  # load a fixed embedding from a path instead
 {
     shape = if transpose then (Inferred : outDim) else (outDim : Inferred)
     E = if embeddingPath == ''
-        then ParameterTensor {shape, init='heNormal'}  # learnable
+        then ParameterTensor {shape, init=init, initValueScale=initValueScale}  # learnable
         else ParameterTensor {shape, initFromFilePath = embeddingPath, learningRateMultiplier = 0}  # fixed from file
     TimesOp = if transpose then TransposeTimes else Times
     apply (x) = TimesOp (E, x)    # x is expected to be sparse one-hot
