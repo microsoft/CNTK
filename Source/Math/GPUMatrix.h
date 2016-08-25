@@ -119,6 +119,8 @@ public:
 
 void PrepareDevice(DEVICEID_TYPE deviceId);
 
+template<class ElemType> class CuDnnRNNExecutor;
+
 template <class ElemType>
 class MATH_API GPUMatrix : public BaseMatrix<ElemType>
 {
@@ -167,8 +169,7 @@ private:
 #pragma warning(push)
 #pragma warning(disable : 4251)
     mutable std::unique_ptr<conc_stack<std::unique_ptr<GPUMatrix<ElemType>>>> m_workspace;
-    struct RNNWrapper;
-    mutable std::unique_ptr<struct RNNWrapper> m_RNNWrapper;
+    mutable std::shared_ptr<CuDnnRNNExecutor<ElemType>> m_rnnExecutor; // for cudnn5 RNN
 #pragma warning(pop)
 
 private:

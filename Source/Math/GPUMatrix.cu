@@ -3258,37 +3258,29 @@ void GPUMatrix<ElemType>::BatchNormalizationBackward(const GPUMatrix<ElemType>& 
 
 #pragma region RNN Functions
 
-template<class ElemType>
-struct GPUMatrix<ElemType>::RNNWrapper
-{
-    std::unique_ptr<CuDnnRNNExecutor<ElemType>> m_rnnExecutor;
-};
-
 template <class ElemType>
 void GPUMatrix<ElemType>::RNNForward(const GPUMatrix<ElemType> &inputX, const GPUMatrix<ElemType> &paramW, size_t xDim, size_t yDim, const vector<size_t>& numSequencesForFrame, const RnnAttributes& rnnAttributes, GPUMatrix<ElemType>& reserve, GPUMatrix<ElemType>& workspace)
 {
     // numLayers, hiddenSize are input parameters
-    if (!m_RNNWrapper)
-        m_RNNWrapper = std::make_unique<RNNWrapper>();
-    if (!m_RNNWrapper->m_rnnExecutor)
-        m_RNNWrapper->m_rnnExecutor = std::make_unique<CuDnnRNNExecutor<ElemType>>(xDim, yDim, rnnAttributes);
-    m_RNNWrapper->m_rnnExecutor->ForwardCore(paramW, inputX, *this, numSequencesForFrame, rnnAttributes, reserve, workspace);
+    if (!m_rnnExecutor)
+        m_rnnExecutor = std::make_unique<CuDnnRNNExecutor<ElemType>>(xDim, yDim, rnnAttributes);
+    m_rnnExecutor->ForwardCore(paramW, inputX, *this, numSequencesForFrame, rnnAttributes, reserve, workspace);
 }
 
 template <class ElemType>
 void GPUMatrix<ElemType>::RNNBackwardData(const GPUMatrix<ElemType>& outputDY, const GPUMatrix<ElemType>& paramW, GPUMatrix<ElemType>& outputDX, const RnnAttributes& rnnAttributes, GPUMatrix<ElemType>& reserve, GPUMatrix<ElemType>& workspace)
 {
-    if (!m_RNNWrapper)
+    if (!m_rnnExecutor)
         LogicError("RNNBackwardData called, but RNNWrapper object is not yet initialized");
-    m_RNNWrapper->m_rnnExecutor->BackwardDataCore(*this, outputDY, paramW, outputDX, rnnAttributes, reserve, workspace);
+    m_rnnExecutor->BackwardDataCore(*this, outputDY, paramW, outputDX, rnnAttributes, reserve, workspace);
 }
 
 template <class ElemType>
 void GPUMatrix<ElemType>::RNNBackwardWeights(const GPUMatrix<ElemType>& inputX, const GPUMatrix<ElemType>& outputY, GPUMatrix<ElemType>& dw, const RnnAttributes& rnnAttributes, GPUMatrix<ElemType>& reserve, GPUMatrix<ElemType>& workspace)
 {
-    if (!m_RNNWrapper)
+    if (!m_rnnExecutor)
         LogicError("RNNBackwardWeights called, but RNNWrapper object is not yet initialized");
-    m_RNNWrapper->m_rnnExecutor->BackwardWeightsCore(inputX, outputY, dw, rnnAttributes, reserve, workspace);
+    m_rnnExecutor->BackwardWeightsCore(inputX, outputY, dw, rnnAttributes, reserve, workspace);
 }
 
 #pragma region Static BLAS Functions
