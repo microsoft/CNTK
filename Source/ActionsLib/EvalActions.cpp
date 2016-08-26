@@ -93,6 +93,7 @@ static void DoEvalBNBase(const ConfigParameters& config, IDataReader& reader)
 		epochSize = requestDataSize;
 	}
 	wstring modelPath = config(L"modelPath");
+	wstring exportPath = modelPath + L".PBN";
 	intargvector mbSize = minibatchSize;
 
 	int traceLevel = config(L"traceLevel", "0");
@@ -114,7 +115,7 @@ static void DoEvalBNBase(const ConfigParameters& config, IDataReader& reader)
 
 	SimpleEvaluator<ElemType> eval(net, MPIWrapper::GetInstance(), enableDistributedMBReading, numMBsToShowResult,
 		firstMBsToShowResult, traceLevel, maxSamplesInRAM, numSubminiBatches);
-	eval.EvaluateBN(&reader, evalNodeNamesVector, mbSize[0], epochSize);
+	eval.EvaluateBN(&reader, evalNodeNamesVector, exportPath, mbSize[0], epochSize);
 }
 
 template <typename ElemType>

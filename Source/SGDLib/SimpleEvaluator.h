@@ -257,7 +257,7 @@ public:
         return evalResults;
     }
 
-	void EvaluateBN(IDataReader* dataReader, const vector<wstring>& evalNodeNames, const size_t mbSize, const size_t testSize = requestDataSize)
+	void EvaluateBN(IDataReader* dataReader, const vector<wstring>& evalNodeNames, const wstring exportPath, const size_t mbSize, const size_t testSize = requestDataSize)
 	{
 		ScopedNetworkOperationMode modeGuard(m_net, NetworkOperationMode::inferring);
 
@@ -364,7 +364,6 @@ public:
 				ComputationNetwork::BumpEvalTimeStamp(featureNodes);
 				ComputationNetwork::BumpEvalTimeStamp(labelNodes);
 
-				// TODO segement forward
 				m_net->ForwardProp(evalNodes[0], nullptr, node);
 
 				dataReader->DataEnd();
@@ -376,8 +375,7 @@ public:
 		// TODO parallel training weights update
 
 		// Save Model
-		// TODO user names the model
-		m_net->Save(L"ResNet.PBN");
+		m_net->Save(exportPath);
 
 		return;
 	}

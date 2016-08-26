@@ -874,6 +874,19 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
     EpochCriterion         epochCriterionLastLogged  = epochCriterion;
     vector<EpochCriterion> epochEvalErrorsLastLogged = epochEvalErrors;
 
+	std::unordered_set<ComputationNodeBasePtr> batchNormalizationWeights;
+	for (auto& evalNode : evaluationNodes) {
+		shared_ptr<FlowControlNode> nestedNetwork = static_pointer_cast<FlowControlNode>(net->GetNestedNetwork(evalNode));
+		for (auto& node : nestedNetwork->GetNestedNodes()) {
+			shared_ptr<BatchNormalizationNode<ElemType>> castNode =
+				dynamic_pointer_cast<BatchNormalizationNode<ElemType>>(node);
+			if (castNode) {
+				batchNormalizationWeights.insert(castNode->GetInputs()[1]);
+				batchNormalizationWeights.insert(castNode->GetInputs()[2]);
+			}
+		}
+	}
+
     bool noMoreSamplesToProcess = false;
     for (;;)
     {
@@ -1090,9 +1103,10 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                         LogicError("%ls %ls operation has NaNs in smoothedGradient.", node->NodeName().c_str(), node->OperationName().c_str());
 #endif
                     // BUGBUG (Issue #95): Access to net MBLayout can no longer be done if we have multiple input layouts
+					double l2Factor = batchNormalizationWeights.find(node) == batchNormalizationWeights.end() ? 1.0 : 0.0;
                     UpdateWeights(node, smoothedGradient, learnRatePerSample,
                                   GetMomentumPerSample(epochNumber /*BUGBUG workaround:*/, net->GetMBLayoutPtrOfNetwork()->GetNumParallelSequences()), numSamplesInMinibatch,
-                                  m_L2RegWeight, m_L1RegWeight,
+                                  m_L2RegWeight * l2Factor, m_L1RegWeight,
                                   m_needAveMultiplier, m_useNesterovMomentum);
 #ifdef _DEBUG
                     if (dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Value().HasNan("TrainOneEpoch/UpdateWeights(): "))
