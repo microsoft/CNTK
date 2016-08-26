@@ -26,7 +26,7 @@
 #   CUB_PATH= path to NVIDIA CUB installation, so $(CUB_PATH)/cub/cub.cuh exists
 #     defaults to /usr/local/cub-1.4.1
 #   CUDNN_PATH= path to NVIDIA cuDNN installation so $(CUDNN_PATH)/cuda/include/cudnn.h exists
-#     If not specified, CNTK will be be built without cuDNN.
+#     CuDNN version needs to be 5.0 or higher.
 #   KALDI_PATH= Path to Kaldi
 #     If not specified, Kaldi plugins will not be built
 #   OPENCV_PATH= path to OpenCV 3.1.0 installation, so $(OPENCV_PATH) exists
@@ -92,7 +92,7 @@ SRC:=
 all : buildall
 
 # Set up basic nvcc options and add CUDA targets from above
-CUFLAGS = -m 64 
+CUFLAGS = -m 64
 
 ifdef CUDA_PATH
   ifndef GDK_INCLUDE_PATH
@@ -261,7 +261,7 @@ READER_SRC =\
 	$(SOURCEDIR)/Readers/ReaderLib/TruncatedBpttPacker.cpp \
 	$(SOURCEDIR)/Readers/ReaderLib/PackerBase.cpp \
 	$(SOURCEDIR)/Readers/ReaderLib/FramePacker.cpp \
-	$(SOURCEDIR)/Readers/ReaderLib/ChunkCache.cpp \
+    $(SOURCEDIR)/Readers/ReaderLib/ChunkCache.cpp \
 
 COMMON_SRC =\
 	$(SOURCEDIR)/Common/Config.cpp \
@@ -274,19 +274,19 @@ COMMON_SRC =\
 	$(SOURCEDIR)/Common/fileutil.cpp \
 
 MATH_SRC =\
+	$(SOURCEDIR)/Math/BatchNormalizationEngine.cpp \
 	$(SOURCEDIR)/Math/BlockHandlerSSE.cpp \
+	$(SOURCEDIR)/Math/CUDAPageLockedMemAllocator.cpp \
 	$(SOURCEDIR)/Math/CPUMatrix.cpp \
-	$(SOURCEDIR)/Math/CPUSparseMatrix.cpp \
 	$(SOURCEDIR)/Math/CPURNGHandle.cpp \
+	$(SOURCEDIR)/Math/CPUSparseMatrix.cpp \
+	$(SOURCEDIR)/Math/ConvolutionEngine.cpp \
 	$(SOURCEDIR)/Math/MatrixQuantizerImpl.cpp \
 	$(SOURCEDIR)/Math/MatrixQuantizerCPU.cpp \
-	$(SOURCEDIR)/Math/QuantizedMatrix.cpp \
 	$(SOURCEDIR)/Math/Matrix.cpp \
+	$(SOURCEDIR)/Math/QuantizedMatrix.cpp \
 	$(SOURCEDIR)/Math/RNGHandle.cpp \
 	$(SOURCEDIR)/Math/TensorView.cpp \
-	$(SOURCEDIR)/Math/CUDAPageLockedMemAllocator.cpp \
-	$(SOURCEDIR)/Math/ConvolutionEngine.cpp \
-	$(SOURCEDIR)/Math/BatchNormalizationEngine.cpp \
 
 ifdef SUPPORT_AVX2
 MATH_SRC +=\
@@ -296,16 +296,17 @@ endif
 
 ifdef CUDA_PATH
 MATH_SRC +=\
+	$(SOURCEDIR)/Math/CuDnnBatchNormalization.cu \
+	$(SOURCEDIR)/Math/CuDnnCommon.cu \
+	$(SOURCEDIR)/Math/CuDnnConvolutionEngine.cu \
+	$(SOURCEDIR)/Math/CuDnnRNN.cpp \
+	$(SOURCEDIR)/Math/GPUDataTransferer.cpp \
 	$(SOURCEDIR)/Math/GPUMatrix.cu \
-	$(SOURCEDIR)/Math/GPUTensor.cu \
 	$(SOURCEDIR)/Math/GPUSparseMatrix.cu \
+	$(SOURCEDIR)/Math/GPUTensor.cu \
 	$(SOURCEDIR)/Math/GPUWatcher.cu \
 	$(SOURCEDIR)/Math/GPURNGHandle.cu \
 	$(SOURCEDIR)/Math/MatrixQuantizerGPU.cu \
-	$(SOURCEDIR)/Math/CuDnnCommon.cu \
-	$(SOURCEDIR)/Math/CuDnnConvolutionEngine.cu \
-	$(SOURCEDIR)/Math/CuDnnBatchNormalization.cu \
-	$(SOURCEDIR)/Math/GPUDataTransferer.cpp \
 
 else
 MATH_SRC +=\
@@ -341,6 +342,7 @@ COMPUTATION_NETWORK_LIB_SRC =\
 	$(SOURCEDIR)/ComputationNetworkLib/ComputationNodeScripting.cpp \
 	$(SOURCEDIR)/ComputationNetworkLib/InputAndParamNodes.cpp \
 	$(SOURCEDIR)/ComputationNetworkLib/ReshapingNodes.cpp \
+	$(SOURCEDIR)/ComputationNetworkLib/RNNNodes.cpp \
 	$(SOURCEDIR)/ComputationNetworkLib/SpecialPurposeNodes.cpp \
 	$(SOURCEDIR)/ComputationNetworkLib/ComputationNetwork.cpp \
 	$(SOURCEDIR)/ComputationNetworkLib/ComputationNetworkEvaluation.cpp \
