@@ -793,7 +793,7 @@ void CPUSparseMatrix<ElemType>::Reset()
     SetBlockIdShift(0);
 }
 
-// Implements product of one sparse and one dense matrix updating a third dense matrix.
+// Implements product of one sparse and one dense matrix updating a third dense matrix. Input matrices are optionally transposed.
 template <class ElemType, bool DenseTimesSparse /* false means SparseTimesDense */, bool transposeA, bool transposeB>
 class MultiplyDenseAndSparse{
 public:
@@ -809,12 +809,10 @@ public:
         const BaseMatrix<ElemType>* rhs = DenseTimesSparse ? (const BaseMatrix<ElemType>*) &sparse : (const BaseMatrix<ElemType>*) &dense;
 
         // C(m:n) is the product of matrices X * Y where we have the shapes X(m:k) and Y(l:n)
-        int m = transposeA ? (int)lhs->GetNumCols() : (int)lhs->GetNumRows();
-        int k = transposeA ? (int)lhs->GetNumRows() : (int)lhs->GetNumCols();
-        int l = transposeB ? (int)rhs->GetNumCols() : (int)rhs->GetNumRows();
-        int n = transposeB ? (int)rhs->GetNumRows() : (int)rhs->GetNumCols();
-
-        assert(m > 0 && k > 0 && l > 0 && n > 0); // converting from size_t to int may cause overflow
+        size_t m = transposeA ? lhs->GetNumCols() : lhs->GetNumRows();
+        size_t k = transposeA ? lhs->GetNumRows() : lhs->GetNumCols();
+        size_t l = transposeB ? rhs->GetNumCols() : rhs->GetNumRows();
+        size_t n = transposeB ? rhs->GetNumRows() : rhs->GetNumCols();
 
         if (k != l)
         {
@@ -898,39 +896,39 @@ public:
 };
 
 // c = alpha * lhs * rhs + beta * c
-// dense x sparse -> dense
+// dense * sparse -> dense
 template <class ElemType>
-void CPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const CPUMatrix<ElemType>& lhs, const bool transposeA,
-                                                       const CPUSparseMatrix<ElemType>& rhs, const bool transposeB, ElemType beta, CPUMatrix<ElemType>& c)
+void CPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const CPUMatrix<ElemType>& a, const bool transposeA,
+                                                       const CPUSparseMatrix<ElemType>& b, const bool transposeB, ElemType beta, CPUMatrix<ElemType>& c)
 {
     if      ( transposeA &&  transposeB)
-        MultiplyDenseAndSparse<ElemType, true /* dense times sparse */,  true /* transposeA */,  true  /*transposeB*/>::MultiplyAndWeightedAdd(alpha, rhs /*sparse*/, lhs /* dense */, beta, c /* matrix beeing updated */);
+        MultiplyDenseAndSparse<ElemType, true /* dense times sparse */,  true /* transposeA */,  true  /*transposeB*/>::MultiplyAndWeightedAdd(alpha, b /*sparse*/, a /* dense */, beta, c /* matrix beeing updated */);
     else if ( transposeA && !transposeB)
-        MultiplyDenseAndSparse<ElemType, true /* dense times sparse */,  true /* transposeA */, false  /*transposeB*/>::MultiplyAndWeightedAdd(alpha, rhs /*sparse*/, lhs /* dense */, beta, c /* matrix beeing updated */);
+        MultiplyDenseAndSparse<ElemType, true /* dense times sparse */,  true /* transposeA */, false  /*transposeB*/>::MultiplyAndWeightedAdd(alpha, b /*sparse*/, a /* dense */, beta, c /* matrix beeing updated */);
     else if (!transposeA &&  transposeB)
-        MultiplyDenseAndSparse<ElemType, true /* dense times sparse */, false /* transposeA */,  true  /*transposeB*/>::MultiplyAndWeightedAdd(alpha, rhs /*sparse*/, lhs /* dense */, beta, c /* matrix beeing updated */);
+        MultiplyDenseAndSparse<ElemType, true /* dense times sparse */, false /* transposeA */,  true  /*transposeB*/>::MultiplyAndWeightedAdd(alpha, b /*sparse*/, a /* dense */, beta, c /* matrix beeing updated */);
     else if (!transposeA && !transposeB)
-        MultiplyDenseAndSparse<ElemType, true /* dense times sparse */, false /* transposeA */, false  /*transposeB*/>::MultiplyAndWeightedAdd(alpha, rhs /*sparse*/, lhs /* dense */, beta, c /* matrix beeing updated */);
+        MultiplyDenseAndSparse<ElemType, true /* dense times sparse */, false /* transposeA */, false  /*transposeB*/>::MultiplyAndWeightedAdd(alpha, b /*sparse*/, a /* dense */, beta, c /* matrix beeing updated */);
 }
 
 // c = alpha * lhs * rhs + beta * c
-// sparse x dense -> dense
+// sparse * dense -> dense
 template <class ElemType>
-void CPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const CPUSparseMatrix<ElemType>& lhs, const bool transposeA,
-    const CPUMatrix<ElemType>& rhs, const bool transposeB, ElemType beta, CPUMatrix<ElemType>& c)
+void CPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const CPUSparseMatrix<ElemType>& a, const bool transposeA,
+    const CPUMatrix<ElemType>& b, const bool transposeB, ElemType beta, CPUMatrix<ElemType>& c)
 {
     if (transposeA &&  transposeB)
-        MultiplyDenseAndSparse<ElemType, false /* dense times sparse */,  true /* transposeA */,  true /*transposeB*/>::MultiplyAndWeightedAdd(alpha, lhs /*sparse*/, rhs /* dense */, beta, c /* matrix beeing updated */);
+        MultiplyDenseAndSparse<ElemType, false /* dense times sparse */,  true /* transposeA */,  true /*transposeB*/>::MultiplyAndWeightedAdd(alpha, a /*sparse*/, b /* dense */, beta, c /* matrix beeing updated */);
     else if (transposeA && !transposeB)
-        MultiplyDenseAndSparse<ElemType, false /* dense times sparse */,  true /* transposeA */, false /*transposeB*/>::MultiplyAndWeightedAdd(alpha, lhs /*sparse*/, rhs /* dense */, beta, c /* matrix beeing updated */);
+        MultiplyDenseAndSparse<ElemType, false /* dense times sparse */,  true /* transposeA */, false /*transposeB*/>::MultiplyAndWeightedAdd(alpha, a /*sparse*/, b /* dense */, beta, c /* matrix beeing updated */);
     else if (!transposeA &&  transposeB)
-        MultiplyDenseAndSparse<ElemType, false /* dense times sparse */, false /* transposeA */,  true /*transposeB*/>::MultiplyAndWeightedAdd(alpha, lhs /*sparse*/, rhs /* dense */, beta, c /* matrix beeing updated */);
+        MultiplyDenseAndSparse<ElemType, false /* dense times sparse */, false /* transposeA */,  true /*transposeB*/>::MultiplyAndWeightedAdd(alpha, a /*sparse*/, b /* dense */, beta, c /* matrix beeing updated */);
     else if (!transposeA && !transposeB)
-        MultiplyDenseAndSparse<ElemType, false /* dense times sparse */, false /* transposeA */, false /*transposeB*/>::MultiplyAndWeightedAdd(alpha, lhs /*sparse*/, rhs /* dense */, beta, c /* matrix beeing updated */);
+        MultiplyDenseAndSparse<ElemType, false /* dense times sparse */, false /* transposeA */, false /*transposeB*/>::MultiplyAndWeightedAdd(alpha, a /*sparse*/, b /* dense */, beta, c /* matrix beeing updated */);
 }
 
 // c = alpha * lhs * rhs
-// dense x sparse -> sparse
+// dense * sparse -> sparse
 template <class ElemType>
 void CPUSparseMatrix<ElemType>::MultiplyAndAdd(ElemType alpha, const CPUMatrix<ElemType>& lhs, const bool transposeA,
                                                const CPUSparseMatrix<ElemType>& rhs, const bool transposeB, CPUSparseMatrix<ElemType>& c)
