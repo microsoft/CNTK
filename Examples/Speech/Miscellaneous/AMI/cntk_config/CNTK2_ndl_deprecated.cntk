@@ -1,5 +1,9 @@
 # Note: This sample uses the deprecated NdlNetworkBuilder.
 #       An updated version using BrainScript is coming soon.
+#       Please find them on Github, https://github.com/Microsoft/CNTK/tree/master/Examples /...
+#
+# Note: This sample uses the deprecated NdlNetworkBuilder.
+#       An updated version using BrainScript is coming soon.
 #
 NdlDir=$ExpDir$
 DeviceNumber=$DeviceNumber$
