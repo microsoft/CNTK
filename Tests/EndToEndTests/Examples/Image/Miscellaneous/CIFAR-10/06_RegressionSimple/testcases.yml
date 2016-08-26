@@ -2,10 +2,9 @@ dataDir: ../../../../../../../Examples/Image/Miscellaneous/CIFAR-10
 
 tags:
     # In BVT, run Release GPU
-    - bvt-e (build_sku=='gpu') and (device=='gpu') and (flavor=='release') 
-    # In Nightly, additionally run Debug GPU
-    # TODO try to enable at least one CPU configuration as well
-    - nightly-e (build_sku=='gpu') and (device=='gpu')
+    - bvt-e (build_sku=='gpu') and (device=='gpu') and (flavor=='release')
+    # TODO enable more for nightly:
+    - nightly-e (build_sku=='gpu') and (device=='gpu') and (flavor=='release')
 
 testCases:
   CNTK Run must be completed:
