@@ -4372,26 +4372,29 @@ void Matrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const Matrix<ElemT
                 NOT_IMPLEMENTED;
             }
         }
-        if (b.GetMatrixType() == MatrixType::SPARSE) // CPU, DENSE * SPARSE -> ANY
+        else  // CPU, DENSE  * ANY -> ANY
         {
-            if (c.GetMatrixType() == MatrixType::DENSE) // CPU, DENSE * SPARSE -> DENSE
+            if (b.GetMatrixType() == MatrixType::SPARSE) // CPU, DENSE * SPARSE -> ANY
             {
-                CPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(alpha, *a.m_CPUMatrix, transposeA, *b.m_CPUSparseMatrix, transposeB, beta, *c.m_CPUMatrix);
+                if (c.GetMatrixType() == MatrixType::DENSE) // CPU, DENSE * SPARSE -> DENSE
+                {
+                    CPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(alpha, *a.m_CPUMatrix, transposeA, *b.m_CPUSparseMatrix, transposeB, beta, *c.m_CPUMatrix);
+                    c.SetDataLocation(CPU, DENSE);
+                }
+                else if (c.GetMatrixType() == MatrixType::SPARSE) // CPU, DENSE * SPARSE -> SPARSE
+                {
+                    CPUSparseMatrix<ElemType>::MultiplyAndAdd(alpha, *a.m_CPUMatrix, transposeA, *b.m_CPUSparseMatrix, transposeB, *c.m_CPUSparseMatrix);
+                    c.SetDataLocation(CPU, SPARSE);
+                }
+                else
+                    NOT_IMPLEMENTED; // CPU, DENSE * SPARSE -> UNDETERMINED ?
+            }
+            else // CPU, DENSE * DENSE -> DENSE (matrix c enforced to be DENSE)
+            {
+                c.SwitchToMatrixType(MatrixType::DENSE, matrixFormatDense, false);
+                CPUMatrix<ElemType>::MultiplyAndWeightedAdd(alpha, *a.m_CPUMatrix, transposeA, *b.m_CPUMatrix, transposeB, beta, *c.m_CPUMatrix);
                 c.SetDataLocation(CPU, DENSE);
             }
-            else if (c.GetMatrixType() == MatrixType::SPARSE) // CPU, DENSE * SPARSE -> SPARSE
-            {
-                CPUSparseMatrix<ElemType>::MultiplyAndAdd(alpha, *a.m_CPUMatrix, transposeA, *b.m_CPUSparseMatrix, transposeB, *c.m_CPUSparseMatrix);
-                c.SetDataLocation(CPU, SPARSE);
-            }
-            else
-                NOT_IMPLEMENTED; // CPU, DENSE * SPARSE -> UNDETERMINED ?
-        }
-        else // CPU, DENSE * DENSE -> DENSE
-        {
-            c.SwitchToMatrixType(MatrixType::DENSE, matrixFormatDense, false);
-            CPUMatrix<ElemType>::MultiplyAndWeightedAdd(alpha, *a.m_CPUMatrix, transposeA, *b.m_CPUMatrix, transposeB, beta, *c.m_CPUMatrix);
-            c.SetDataLocation(CPU, DENSE);
         }
     }
     else // GPU operations

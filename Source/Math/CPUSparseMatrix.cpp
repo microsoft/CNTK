@@ -848,7 +848,7 @@ public:
         }
 
         // TODO: Implement CSR as a transposition of b, like we do for GPU.
-        if (rhs->GetFormat() != matrixFormatSparseCSC)
+        if (sparse.GetFormat() != matrixFormatSparseCSC)
             NOT_IMPLEMENTED;
 
         // Do the actual multiplication.
@@ -882,8 +882,8 @@ public:
                     ElemType denseVal;
                     if      ( DenseTimesSparse && !transposeA) denseVal = dense(outerIndexDense,      innerIndex);
                     else if ( DenseTimesSparse &&  transposeA) denseVal = dense(     innerIndex, outerIndexDense);
-                    else if (!DenseTimesSparse && !transposeA) denseVal = dense(     innerIndex, outerIndexDense);
-                    else if (!DenseTimesSparse &&  transposeA) denseVal = dense(outerIndexDense,      innerIndex);
+                    else if (!DenseTimesSparse && !transposeB) denseVal = dense(     innerIndex, outerIndexDense);
+                    else if (!DenseTimesSparse &&  transposeB) denseVal = dense(outerIndexDense,      innerIndex);
                     
 
                     // Update matrix c.
