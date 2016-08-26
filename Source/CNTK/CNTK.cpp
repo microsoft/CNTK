@@ -13,6 +13,7 @@
 #endif 
 
 #include "Basics.h"
+#include "Globals.h"
 #include "Actions.h"
 #include "ComputationNetwork.h"
 #include "ComputationNode.h"
@@ -481,7 +482,7 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
     let& config = valp.AsRef<ScriptableObjects::IConfigRecord>(); // this is the dictionary
 
     if (config(L"forceDeterministicAlgorithms", false))
-        ComputationNetwork::ForceDeterministicAlgorithms();
+        Globals::ForceDeterministicAlgorithms();
 
 #ifndef CPUONLY
     auto valpp = config.Find(L"deviceId");
@@ -617,7 +618,7 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
     }
 
     if (config(L"forceDeterministicAlgorithms", false))
-        ComputationNetwork::ForceDeterministicAlgorithms();
+        Globals::ForceDeterministicAlgorithms();
 
     // get the command param set they want
     wstring logpath = config(L"stderr", L"");

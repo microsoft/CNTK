@@ -65,6 +65,7 @@
     <ClCompile Include="ExceptionWithCallStack.cpp" />
     <ClCompile Include="File.cpp" />
     <ClCompile Include="fileutil.cpp" />
+    <ClCompile Include="Globals.cpp" />
     <ClCompile Include="MPIWrapper.cpp" />
     <ClCompile Include="TimerUtility.cpp" />
   </ItemGroup>
