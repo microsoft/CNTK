@@ -336,15 +336,19 @@ public:
 
         if (inputIndex == 0) // left derivative
         {
-            // TODO: we might leverage the fact that eg. for dense * sparse input(0)->Gradient() might ideally be represented as block sparse.
-            // Currently AddMatrixProductOf(..) doesn't support that.
-            auto input0Gradient = OneSampleTensorFor(0,  /*gradient=*/true,  fr.AllowBroadcast());
+            // currently we only support one combination when the input is sparse
+            // If input data is sparse, then gradient is block sparse.
+            // BUGBUG: This does not accumulate into the Input(0)->Gradient, which might cause problems elsewhere.
+            if (Input(1)->Value().GetMatrixType() == SPARSE && Input(0)->Gradient().GetMatrixType() == DENSE && Gradient().GetMatrixType() == DENSE)
+                Input(0)->Gradient().SwitchToMatrixType(SPARSE, MatrixFormat::matrixFormatSparseBlockCol, false);
+            auto input0Gradient = OneSampleTensorFor(0,  /*gradient=*/true, fr.AllowBroadcast());
             auto input1         = OneSampleTensorFor(1,  /*gradient=*/false, fr.AllowBroadcast());
             auto outputGradient = OneSampleTensorFor(-1, /*gradient=*/true,  fr);
             input0Gradient.AddMatrixProductOf(m_transpose/*transC*/, outputGradient, false/*transA*/, input1, true/*transB*/);
         }
         else if (inputIndex == 1) // right derivative
         {
+            // BUGBUG: Above block has potetially sparse gradient. We should have it here too or remove it completly.
             auto input0         = OneSampleTensorFor(0,  /*gradient=*/false, fr.AllowBroadcast());
             auto input1Gradient = OneSampleTensorFor(1,  /*gradient=*/true,  fr.AllowBroadcast());
             auto outputGradient = OneSampleTensorFor(-1, /*gradient=*/true, fr);
