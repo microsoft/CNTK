@@ -189,7 +189,7 @@ DelayLayer {T=1, defaultHiddenActivation=0} =
 # BatchNormalizationLayer -- create a batch-normalization layer
 BatchNormalizationLayer {spatialRank = 0,  # reduce over these dims. E.g. 2 to reduce over (w,h) in a [W x H x C]-shaped input
                          initialScale = 1,
-                         normalizationTimeConstant = 0, blendTimeConstant = 0,  # TODO: normTimeConst should be INF, not 0
+                         normalizationTimeConstant = 5000, blendTimeConstant = 0,
                          epsilon = 0.00001, useCntkEngine = true} =
 {
     #normShape   = _ConcatArrays (Repeat (spatialRank, 1), 0) # spatial dims get a dimension of 1 (broadcasting, while all others are inferred from input)
