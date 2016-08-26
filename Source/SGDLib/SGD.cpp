@@ -1180,7 +1180,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             parameterUpdateTime = fineGrainedPerfMeasurementTimer.ElapsedSeconds();
 
             PREPENDTS(stderr);
-            fprintf(stderr, "Perf trace: Worker MB size = %d, Read = %.5gs; Compute = %.5gs; Parameter update = %.5gs, Parameter sync = %.5gs, Aggregate MB size = %d\n", (int)actualMBSize, readTime, computeTime, parameterSyncTime, parameterUpdateTime, (int)aggregateNumSamples);
+            fprintf(stderr, "Perf trace: Worker MB size = %d, Read = %.5gs; Compute = %.5gs; Parameter update = %.5gs, Parameter sync = %.5gs, Aggregate MB size = %d\n", (int)actualMBSize, readTime, computeTime, parameterUpdateTime, parameterSyncTime, (int)aggregateNumSamples);
         }
 
         totalTimeInMBs += timer.ElapsedSeconds();
