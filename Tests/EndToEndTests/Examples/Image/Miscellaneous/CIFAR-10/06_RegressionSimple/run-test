@@ -2,6 +2,10 @@
 
 . $TEST_ROOT_DIR/run-test-common
 
+export MKL_NUM_THREADS=4
+export MKL_CBWR=COMPATIBLE
+export OMP_NUM_THREADS=1
+
 ConfigDir=$TEST_DIR/../../../../../../../Examples/Image/Miscellaneous/CIFAR-10
 
 # This test uses a large dataset which is not part of the CNTK repository itself
