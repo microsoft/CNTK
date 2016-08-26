@@ -42,12 +42,8 @@
 
 #define IDX2C(i, j, ld) (((j) * (ld)) + (i)) // 0 based indexing
 
-// TODO: This condition seems wrong, it should be:
-// !defined(__CUDA_ARCH__) || __CUDA_ARCH__ < 600
-// NVIDIA should fix their CUDA 8.0 headers
+// On older GPUs, CUDA atomicAdd() only exists for 'float'. This is the 'double' version.
 #if defined(__CUDA_ARCH__) && __CUDA_ARCH__ < 600
-// CUDA atomicAdd() only exists for 'float'. This is the 'double' version.
-// TODO: This may need to be guarded by CUDA version; newer devices may support this.
 static __inline__ __device__ double atomicAdd(double* address, double val)
 {
     unsigned long long int* address_as_ull = (unsigned long long int*) address;
