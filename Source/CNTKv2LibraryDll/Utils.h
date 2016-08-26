@@ -181,23 +181,23 @@ namespace CNTK
         switch (value.ValueType())
         {
         case DictionaryValue::Type::Bool:
-            s << value.GetValue<bool>();
+            s << value.Value<bool>();
             break;
         case DictionaryValue::Type::Float:
-            s << value.GetValue<float>();
+            s << value.Value<float>();
             break;
         case DictionaryValue::Type::Double:
-            s << value.GetValue<double>();
+            s << value.Value<double>();
             break;
         case DictionaryValue::Type::String:
-            s << value.GetValue<std::wstring>();
+            s << value.Value<std::wstring>();
             break;
         case DictionaryValue::Type::SizeT:
-            s << value.GetValue<size_t>();
+            s << value.Value<size_t>();
             break;
         case DictionaryValue::Type::Vector:
         {
-            const auto& valueVector = value.GetValue<std::vector<DictionaryValue>>();
+            const auto& valueVector = value.Value<std::vector<DictionaryValue>>();
             s << L"(" << std::endl;
             AddIndentation(s, numIndentationSpaces + perLevelIndentSize);
             bool isFirst = true;
@@ -216,7 +216,7 @@ namespace CNTK
         }
         case DictionaryValue::Type::Dictionary:
         {
-            const auto& valueDictionary = value.GetValue<Dictionary>();
+            const auto& valueDictionary = value.Value<Dictionary>();
             s << L"[" << std::endl;
             for (const auto& keyValuePair : *(valueDictionary.m_dictionaryData))
             {
@@ -268,7 +268,7 @@ namespace CNTK
 
         std::vector<T> basicElementTypeVector;
         for (auto value : dictionaryValueVector)
-            basicElementTypeVector.push_back(value.GetValue<T>());
+            basicElementTypeVector.push_back(value.Value<T>());
 
         return basicElementTypeVector;
     }
@@ -297,6 +297,22 @@ namespace CNTK
         default:
             LogicError("Unknown pooling type");
         }
+    }
+
+    inline Axis AsAxis(size_t CNTKInternalAxisIdx)
+    {
+        if (CNTKInternalAxisIdx == 0)
+            LogicError("CNTK internal axis indices must be > 0");
+
+        return Axis(CNTKInternalAxisIdx - 1);
+    }
+
+    inline int AsCNTKInternalAxisIdx(const Axis& axis)
+    {
+        if (!axis.IsStaticAxis())
+            LogicError("Only Axis that represent static indices can be converted to a CNTK internal axis index");
+
+        return (int)(axis.StaticAxisIndex() + 1);
     }
 
     inline std::pair<NDShape, NDShape> GetConvolutionOutputMapCountAndKernelShape(const NDShape& convolutionMapShape, const NDShape& operandShape)

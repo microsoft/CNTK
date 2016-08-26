@@ -55,25 +55,22 @@ void TrainLSTMSequenceClassifer(const DeviceDescriptor& device, bool testSaveAnd
     auto minibatchSource = CreateTextMinibatchSource(L"Train.ctf", inputDim, numOutputClasses, 0, true, false, L"x", L"y");
     const size_t minibatchSize = 200;
     
-    auto streamInfos = minibatchSource->StreamInfos();
-    auto featureStreamInfo = std::find_if(streamInfos.begin(), streamInfos.end(), [](const StreamInfo& streamInfo) { return (streamInfo.m_name == L"features"); });
-    auto labelStreamInfo = std::find_if(streamInfos.begin(), streamInfos.end(), [](const StreamInfo& streamInfo) { return (streamInfo.m_name == L"labels"); });
-
+    auto featureStreamInfo = minibatchSource->StreamInfo(features);
+    auto labelStreamInfo = minibatchSource->StreamInfo(labels);
     double learningRatePerSample = 0.0005;
     Trainer trainer(oneHiddenLayerClassifier, trainingLoss, { SGDLearner(oneHiddenLayerClassifier->Parameters(), learningRatePerSample) });
-    std::unordered_map<StreamInfo, std::pair<size_t, size_t>> minibatchSizeLimits = { { *featureStreamInfo, std::make_pair((size_t)0, minibatchSize) }, { *labelStreamInfo, std::make_pair((size_t)0, minibatchSize) } };
     size_t outputFrequencyInMinibatches = 1;
     for (size_t i = 0; true; i++)
     {
-        auto minibatchData = minibatchSource->GetNextMinibatch(minibatchSizeLimits, device);
+        auto minibatchData = minibatchSource->GetNextMinibatch(minibatchSize, device);
         if (minibatchData.empty())
             break;
 
-        trainer.TrainMinibatch({ { features, minibatchData[*featureStreamInfo].m_data }, { labels, minibatchData[*labelStreamInfo].m_data } }, device);
+        trainer.TrainMinibatch({ { features, minibatchData[featureStreamInfo].m_data }, { labels, minibatchData[labelStreamInfo].m_data } }, device);
 
         if ((i % outputFrequencyInMinibatches) == 0)
         {
-            float trainLossValue = PrevMinibatchTrainingLossValue(trainer);
+            double trainLossValue = trainer.PreviousMinibatchAverageTrainingLoss();
             printf("Minibatch %d: CrossEntropy loss = %.8g\n", (int)i, trainLossValue);
         }
     }

@@ -45,7 +45,6 @@ MinibatchSourcePtr CreateCifarMinibatchSource(size_t epochSize)
 
     Dictionary deserializerConfiguration;
     deserializerConfiguration[L"type"] = L"ImageDeserializer";
-    deserializerConfiguration[L"module"] = L"ImageReader";
     deserializerConfiguration[L"file"] = mapFilePath;
     deserializerConfiguration[L"input"] = inputStreamsConfig;
 
@@ -123,21 +122,20 @@ FunctionPtr ResNetClassifier(Variable input, size_t numOutputClasses, const Devi
 void TrainResNetCifarClassifer(const DeviceDescriptor& device, bool testSaveAndReLoad)
 {
     auto minibatchSource = CreateCifarMinibatchSource(SIZE_MAX);
-    auto streamInfos = minibatchSource->StreamInfos();
-    auto imageStreamInfo = std::find_if(streamInfos.begin(), streamInfos.end(), [](const StreamInfo& streamInfo) { return (streamInfo.m_name == L"features"); });
-    auto labelStreamInfo = std::find_if(streamInfos.begin(), streamInfos.end(), [](const StreamInfo& streamInfo) { return (streamInfo.m_name == L"labels"); });
+    auto imageStreamInfo = minibatchSource->StreamInfo(L"features");
+    auto labelStreamInfo = minibatchSource->StreamInfo(L"labels");
 
-    auto inputImageShape = imageStreamInfo->m_sampleLayout;
-    // Change the input shape CHW to WHC form
+    // Change the input shape [C x H x W] to [W x H x C] form
+    auto inputImageShape = imageStreamInfo.m_sampleLayout;
     inputImageShape = { inputImageShape[2], inputImageShape[1], inputImageShape[0] };
 
-    const size_t numOutputClasses = labelStreamInfo->m_sampleLayout[0];
+    const size_t numOutputClasses = labelStreamInfo.m_sampleLayout[0];
 
-    Variable imageInput(inputImageShape, imageStreamInfo->m_elementType, L"Images");
+    Variable imageInput(inputImageShape, imageStreamInfo.m_elementType, L"Images");
     auto classifierOutputFunction = ResNetClassifier(imageInput, numOutputClasses, device, L"classifierOutput");
     Variable classifierOutput = classifierOutputFunction;
 
-    auto labelsVar = Variable({ numOutputClasses }, labelStreamInfo->m_elementType, L"Labels");
+    auto labelsVar = Variable({ numOutputClasses }, labelStreamInfo.m_elementType, L"Labels");
 
     auto trainingLossFunction = CrossEntropyWithSoftmax(classifierOutputFunction, labelsVar, L"lossFunction");
     Variable trainingLoss = trainingLossFunction;
@@ -154,16 +152,15 @@ void TrainResNetCifarClassifer(const DeviceDescriptor& device, bool testSaveAndR
     Trainer trainer(imageClassifier, trainingLoss, { SGDLearner(imageClassifier->Parameters(), learningRatePerSample) });
     const size_t minibatchSize = 32;
     size_t numMinibatchesToTrain = 100;
-    std::unordered_map<StreamInfo, std::pair<size_t, size_t>> minibatchSizeLimits = { { *imageStreamInfo, std::make_pair((size_t)0, minibatchSize) }, { *labelStreamInfo, std::make_pair((size_t)0, minibatchSize) } };
     size_t outputFrequencyInMinibatches = 20;
     for (size_t i = 0; i < numMinibatchesToTrain; ++i)
     {
-        auto minibatchData = minibatchSource->GetNextMinibatch(minibatchSizeLimits, device);
-        trainer.TrainMinibatch({ { imageInput, minibatchData[*imageStreamInfo].m_data }, { labelsVar, minibatchData[*labelStreamInfo].m_data } }, device);
+        auto minibatchData = minibatchSource->GetNextMinibatch(minibatchSize, device);
+        trainer.TrainMinibatch({ { imageInput, minibatchData[imageStreamInfo].m_data }, { labelsVar, minibatchData[labelStreamInfo].m_data } }, device);
 
         if ((i % outputFrequencyInMinibatches) == 0)
         {
-            float trainLossValue = PrevMinibatchTrainingLossValue(trainer);
+            double trainLossValue = trainer.PreviousMinibatchAverageTrainingLoss();
             printf("Minibatch %d: CrossEntropy loss = %.8g\n", (int)i, trainLossValue);
         }
     }

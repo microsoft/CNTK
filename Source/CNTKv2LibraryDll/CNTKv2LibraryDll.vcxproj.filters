@@ -14,6 +14,7 @@
     <ClCompile Include="BackCompat.cpp" />
     <ClCompile Include="Trainer.cpp" />
     <ClCompile Include="MinibatchSource.cpp" />
+    <ClCompile Include="ComputeInputStatistics.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h" />

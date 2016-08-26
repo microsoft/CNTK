@@ -296,10 +296,10 @@ namespace CNTK
 
     /*virtual*/ void LearnerBase::RestoreFromCheckpoint(const Dictionary& checkpoint) /*override*/
     {
-        m_sampleCount = checkpoint[L"sampleCount"].GetValue<size_t>();
-        m_minibatchCount = checkpoint[L"minibatchCount"].GetValue<size_t>();
+        m_sampleCount = checkpoint[L"sampleCount"].Value<size_t>();
+        m_minibatchCount = checkpoint[L"minibatchCount"].Value<size_t>();
 
-        size_t version = checkpoint[L"minibatchCount"].GetValue<size_t>();
+        size_t version = checkpoint[L"minibatchCount"].Value<size_t>();
         if (checkpointVersion != version)
         {
             // At the moment, we only support one version, so this should never happen.
@@ -314,7 +314,7 @@ namespace CNTK
             }
 
             const auto& smoothedGradientValue = m_smoothedGradientValues.at(parameter);
-            const NDArrayView& checkpointedValue = checkpoint[parameter.Name()].GetValue<NDArrayView>();
+            const NDArrayView& checkpointedValue = checkpoint[parameter.Name()].Value<NDArrayView>();
             
             if (smoothedGradientValue->GetDataType() != checkpointedValue.GetDataType())
             {

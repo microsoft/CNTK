@@ -219,21 +219,11 @@ CNTK::FunctionPtr LSTMPComponentWithSelfStabilization(CNTK::Variable input, size
 
     auto LSTMCell = LSTMPCellWithSelfStabilization<ElementType>(input, dh, dc, device);
 
-    auto actualDh = CNTK::PastValue(CNTK::Constant({}, (ElementType)0.0, device), LSTMCell.first, 1);
-    auto actualDc = CNTK::PastValue(CNTK::Constant({}, (ElementType)0.0, device), LSTMCell.second, 1);
+    auto actualDh = CNTK::PastValue(LSTMCell.first, CNTK::Constant({}, (ElementType)0.0, device), 1);
+    auto actualDc = CNTK::PastValue(LSTMCell.second, CNTK::Constant({}, (ElementType)0.0, device), 1);
 
     // Form the recurrence loop by replacing the dh and dc placeholders with the actualDh and actualDc
     return LSTMCell.first->ReplacePlaceholders({ { dh, actualDh }, { dc, actualDc } });
-}
-
-inline float PrevMinibatchTrainingLossValue(const CNTK::Trainer& trainer)
-{
-    float trainLossValue = 0.0;
-    auto prevMBTrainingLossValue = trainer.PreviousMinibatchTrainingLossValue()->Data();
-    CNTK::NDArrayView cpuTrainLossValue(prevMBTrainingLossValue->Shape(), &trainLossValue, 1, CNTK::DeviceDescriptor::CPUDevice());
-    cpuTrainLossValue.CopyFrom(*prevMBTrainingLossValue);
-
-    return trainLossValue;
 }
 
 inline CNTK::MinibatchSourcePtr CreateTextMinibatchSource(const std::wstring& filePath,
@@ -263,7 +253,6 @@ inline CNTK::MinibatchSourcePtr CreateTextMinibatchSource(const std::wstring& fi
 
     CNTK::Dictionary deserializerConfiguration;
     deserializerConfiguration[L"type"] = L"CNTKTextFormatDeserializer";
-    deserializerConfiguration[L"module"] = L"CNTKTextFormatReader";
     deserializerConfiguration[L"file"] = filePath;
     deserializerConfiguration[L"input"] = inputStreamsConfig;
 

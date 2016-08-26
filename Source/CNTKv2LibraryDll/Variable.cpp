@@ -7,7 +7,7 @@
 
 namespace CNTK
 {
-    /*static*/ const std::vector<Axis> Variable::s_defaultInputVariableDynamicAxes = { Axis::DefaultDynamicAxis(), Axis::DefaultBatchAxis() };
+    /*static*/ const std::vector<Axis> Variable::DefaultInputVariableDynamicAxes = { Axis::DefaultDynamicAxis(), Axis::DefaultBatchAxis() };
 
     Variable::Variable(const FunctionPtr& function)
         : Variable(function->Output())

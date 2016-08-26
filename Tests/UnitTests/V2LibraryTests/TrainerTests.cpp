@@ -20,10 +20,10 @@ void TrainSimpleFeedForwardClassifer(const DeviceDescriptor& device)
 
     auto minibatchSource = CreateTextMinibatchSource(L"SimpleDataTrain_cntk_text.txt", (size_t)2, (size_t)2, 0);
     auto streamInfos = minibatchSource->StreamInfos();
-    auto featureStreamInfo = std::find_if(streamInfos.begin(), streamInfos.end(), [](const StreamInfo& streamInfo) { return (streamInfo.m_name == L"features"); });
-    auto labelStreamInfo = std::find_if(streamInfos.begin(), streamInfos.end(), [](const StreamInfo& streamInfo) { return (streamInfo.m_name == L"labels"); });
+    auto featureStreamInfo = std::find_if(streamInfos.begin(), streamInfos.end(), [](const StreamInformation& streamInfo) { return (streamInfo.m_name == L"features"); });
+    auto labelStreamInfo = std::find_if(streamInfos.begin(), streamInfos.end(), [](const StreamInformation& streamInfo) { return (streamInfo.m_name == L"labels"); });
 
-    std::unordered_map<StreamInfo, std::pair<NDArrayViewPtr, NDArrayViewPtr>> inputMeansAndInvStdDevs = { { *featureStreamInfo, { nullptr, nullptr } } };
+    std::unordered_map<StreamInformation, std::pair<NDArrayViewPtr, NDArrayViewPtr>> inputMeansAndInvStdDevs = { { *featureStreamInfo, { nullptr, nullptr } } };
     ComputeInputPerDimMeansAndInvStdDevs(minibatchSource, inputMeansAndInvStdDevs);
 
     auto nonLinearity = std::bind(Sigmoid, _1, L"");
@@ -46,16 +46,15 @@ void TrainSimpleFeedForwardClassifer(const DeviceDescriptor& device)
     double learningRatePerSample = 0.02;
     minibatchSource = CreateTextMinibatchSource(L"SimpleDataTrain_cntk_text.txt", (size_t)2, (size_t)2, SIZE_MAX);
     Trainer trainer(oneHiddenLayerClassifier, trainingLoss, { SGDLearner(oneHiddenLayerClassifier->Parameters(), learningRatePerSample) });
-    std::unordered_map<StreamInfo, std::pair<size_t, size_t>> minibatchSizeLimits = { { *featureStreamInfo, std::make_pair((size_t)0, minibatchSize) }, { *labelStreamInfo, std::make_pair((size_t)0, minibatchSize) } };
     size_t outputFrequencyInMinibatches = 20;
     for (size_t i = 0; i < numMinibatchesToTrain; ++i)
     {
-        auto minibatchData = minibatchSource->GetNextMinibatch(minibatchSizeLimits, device);
+        auto minibatchData = minibatchSource->GetNextMinibatch(minibatchSize, device);
         trainer.TrainMinibatch({ { input, minibatchData[*featureStreamInfo].m_data }, { labels, minibatchData[*labelStreamInfo].m_data } }, device);
 
         if ((i % outputFrequencyInMinibatches) == 0)
         {
-            float trainLossValue = PrevMinibatchTrainingLossValue(trainer);
+            double trainLossValue = trainer.PreviousMinibatchAverageTrainingLoss();
             printf("Minibatch %d: CrossEntropy loss = %.8g\n", (int)i, trainLossValue);
         }
     }
@@ -88,25 +87,20 @@ void TrainMNISTClassifier(const DeviceDescriptor& device)
     auto minibatchSource = CreateTextMinibatchSource(L"Train-28x28_cntk_text.txt", (size_t)784, (size_t)10, SIZE_MAX);
 
     auto streamInfos = minibatchSource->StreamInfos();
-    auto featureStreamInfo = std::find_if(streamInfos.begin(), streamInfos.end(), [](const StreamInfo& streamInfo) {
-        return (streamInfo.m_name == L"features");
-    });
-    auto labelStreamInfo = std::find_if(streamInfos.begin(), streamInfos.end(), [](const StreamInfo& streamInfo) {
-        return (streamInfo.m_name == L"labels");
-    });
+    auto featureStreamInfo = std::find_if(streamInfos.begin(), streamInfos.end(), [](const StreamInformation& streamInfo) { return (streamInfo.m_name == L"features"); });
+    auto labelStreamInfo = std::find_if(streamInfos.begin(), streamInfos.end(), [](const StreamInformation& streamInfo) { return (streamInfo.m_name == L"labels"); });
 
     double learningRatePerSample = 0.003125;
     Trainer trainer(oneHiddenLayerClassifier, trainingLoss, { SGDLearner(oneHiddenLayerClassifier->Parameters(), learningRatePerSample) });
-    std::unordered_map<StreamInfo, std::pair<size_t, size_t>> minibatchSizeLimits = { { *featureStreamInfo, std::make_pair((size_t)0, minibatchSize) }, { *labelStreamInfo, std::make_pair((size_t)0, minibatchSize) } };
     size_t outputFrequencyInMinibatches = 20;
     for (size_t i = 0; i < numMinibatchesToTrain; ++i)
     {
-        auto minibatchData = minibatchSource->GetNextMinibatch(minibatchSizeLimits, device);
+        auto minibatchData = minibatchSource->GetNextMinibatch(minibatchSize, device);
         trainer.TrainMinibatch({ { input, minibatchData[*featureStreamInfo].m_data }, { labels, minibatchData[*labelStreamInfo].m_data } }, device);
 
         if ((i % outputFrequencyInMinibatches) == 0)
         {
-            float trainLossValue = PrevMinibatchTrainingLossValue(trainer);
+            double trainLossValue = trainer.PreviousMinibatchAverageTrainingLoss();
             printf("Minibatch %d: CrossEntropy loss = %.8g\n", (int)i, trainLossValue);
         }
     }

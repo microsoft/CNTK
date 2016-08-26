@@ -125,9 +125,9 @@ void TestSimpleRecurrence(size_t inputDim,
     auto plusOutputFunction = Plus(plusParam, Plus(placeholder, Times(timesParam, inputVar)), L"plusOutput");
     FunctionPtr placeholderReplacement;
     if (useFutureValue)
-        placeholderReplacement = FutureValue(Constant({}, (ElementType)0.0, device), plusOutputFunction, 1);
+        placeholderReplacement = FutureValue(plusOutputFunction, Constant({}, (ElementType)0.0, device), 1);
     else
-        placeholderReplacement = PastValue(Constant({}, (ElementType)0.0, device), plusOutputFunction, 1);
+        placeholderReplacement = PastValue(plusOutputFunction, Constant({}, (ElementType)0.0, device), 1);
 
     plusOutputFunction = plusOutputFunction->ReplacePlaceholders({ { placeholder, placeholderReplacement } });
     Variable plusOutput = plusOutputFunction;
