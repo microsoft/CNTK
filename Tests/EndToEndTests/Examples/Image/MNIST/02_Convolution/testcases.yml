@@ -1,9 +1,7 @@
 dataDir: ../../../../../../Examples/Image/MNIST/Data
 
 tags:
-    # In BVT, run Release GPU 
     - bvt-e (build_sku=='gpu') and (device=='gpu') and (flavor=='release') 
-    # In Nightly on Linux, run Debug GPU in addition.
     - nightly-e (build_sku=='gpu') and (device=='gpu')
 
 testCases:
@@ -31,11 +29,11 @@ testCases:
       # Ignores first set of minibatches at start of epoch, which sometimes has a larger deviation:
       - 01-
       - Epoch[{{integer}} of {{integer}}]-Minibatch[{{integer}}-{{integer}}
-      - ce = {{float,tolerance=0}} * {{integer}}
-      - errs = {{float,tolerance=0}}% * {{integer}}
+      - ce = {{float,tolerance=0.05}} * {{integer}}
+      - errs = {{float,tolerance=0.5}}% * {{integer}}
 
   Final test results must match:
     patterns:
       - "Final Results: Minibatch[{{integer}}-{{integer}}]"
-      - errs = {{float,tolerance=0}}% * {{integer}}
-      - ce = {{float,tolerance=0}} * {{integer}}
+      - errs = {{float,tolerance=0.5}}% * {{integer}}
+      - ce = {{float,tolerance=0.05}} * {{integer}}
