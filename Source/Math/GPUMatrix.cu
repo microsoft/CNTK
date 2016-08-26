@@ -1529,6 +1529,44 @@ void GPUMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, boo
 }
 
 template <class ElemType>
+void GPUMatrix<ElemType>::CachedResize(const size_t numRows, const size_t numCols, bool growOnly)
+{
+	VerifyResizable(__func__);
+
+	if (GetNumRows() == numRows && GetNumCols() == numCols)
+		return;
+
+	if (growOnly && numRows * numCols < GetSizeAllocated()) {
+		m_numRows = numRows;
+		m_numCols = numCols;
+		return;
+	}
+
+	if (GetNumRows() && GetNumCols()) {
+		// Indeed, if using PhysicalReleaseBuffer, the buffer pool will be disabled
+		BufferManager::GetManagerInstance()->LogicalReleaseBuffer<ElemType>(GetComputeDeviceId(), Buffer(), GetSizeAllocated());
+	}
+
+	m_numRows = numRows;
+	m_numCols = numCols;
+
+	size_t numElements = GetNumElements();
+
+	if (IsEmpty())
+	{
+		SetSizeAllocated(0);
+		SetBuffer(nullptr, 0);
+	}
+	else
+	{
+		SetSizeAllocated(numElements);
+		SetBuffer(BufferManager::GetManagerInstance()->RequestBuffer<ElemType>(GetComputeDeviceId(), GetSizeAllocated()),
+			numElements * sizeof(ElemType));
+	}
+	m_sliceViewOffset = 0;
+}
+
+template <class ElemType>
 size_t GPUMatrix<ElemType>::LocateElement(const size_t row, const size_t col) const
 {
     assert(row < m_numRows && col < m_numCols);
@@ -4502,6 +4540,7 @@ template GPUMatrix<char>::GPUMatrix(GPUMatrix<char>&&);
 template char* GPUMatrix<char>::CopyToArray() const;
 template void GPUMatrix<char>::ChangeDeviceTo(int);
 template void GPUMatrix<char>::Resize(size_t, size_t, bool);
+template void GPUMatrix<char>::CachedResize(size_t, size_t, bool);
 template void GPUMatrix<char>::RequireSize(size_t, size_t, bool);
 
 template GPUMatrix<char>::~GPUMatrix();
@@ -4527,6 +4566,7 @@ template GPUMatrix<short>::GPUMatrix(GPUMatrix<short>&&);
 template short* GPUMatrix<short>::CopyToArray() const;
 template void GPUMatrix<short>::ChangeDeviceTo(int);
 template void GPUMatrix<short>::Resize(size_t, size_t, bool);
+template void GPUMatrix<short>::CachedResize(size_t, size_t, bool);
 template void GPUMatrix<short>::RequireSize(size_t, size_t, bool);
 
 template GPUMatrix<short>::~GPUMatrix();
