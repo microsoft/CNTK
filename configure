@@ -86,7 +86,7 @@ default_kaldis="kaldi-trunk kaldi-c024e8aa"
 default_gdk_includes="include/nvidia/gdk"
 default_gdk_nvml_libs="src/gdk/nvml/lib"
 default_cubs="cub-1.4.1"
-default_cudnns="cudnn-5.1 cudnn-5.0"
+default_cudnns="cudnn-5.0 cudnn-5.1"
 default_opencvs="opencv-3.1.0 opencv-3.0.0"
 default_libzips="libzip-1.1.2"
 
