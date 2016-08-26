@@ -823,14 +823,10 @@ public:
 
         // Determine the dimension of the outer index of the dense matrix.
         size_t outerDimensionDense;
-        if (DenseTimesSparse && !transposeA)
-            outerDimensionDense = dense.GetNumRows();
-        else if (DenseTimesSparse &&  transposeA)
-            outerDimensionDense = dense.GetNumCols();
-        else if (!DenseTimesSparse && !transposeB)
-            outerDimensionDense = dense.GetNumCols();
-        else if (!DenseTimesSparse &&  transposeB)
-            outerDimensionDense = dense.GetNumRows();
+        if      ( DenseTimesSparse && !transposeA) outerDimensionDense = dense.GetNumRows();
+        else if ( DenseTimesSparse &&  transposeA) outerDimensionDense = dense.GetNumCols();
+        else if (!DenseTimesSparse && !transposeB) outerDimensionDense = dense.GetNumCols();
+        else if (!DenseTimesSparse &&  transposeB) outerDimensionDense = dense.GetNumRows();
 
         if (beta == 0)
             c.RequireSize(m, n);
@@ -874,40 +870,21 @@ public:
                 // Determine the index of the 'outer' dimension of the sparse matrix and the common inner index.
                 size_t outerIndexSparse;
                 size_t innerIndex;
-                if (DenseTimesSparse && !transposeB)
-                {
-                    outerIndexSparse = colSparse;
-                    innerIndex = rowSparse;
-                }
-                else if (DenseTimesSparse && transposeB)
-                {
-                    outerIndexSparse = rowSparse;
-                    innerIndex = colSparse;
-                }
-                else if (!DenseTimesSparse && !transposeA)
-                {
-                    outerIndexSparse = rowSparse;
-                    innerIndex = colSparse;
-                }
-                else if (!DenseTimesSparse &&  transposeA)
-                {
-                    outerIndexSparse = colSparse;
-                    innerIndex = rowSparse;
-                }
+                if      ( DenseTimesSparse && !transposeB) { outerIndexSparse = colSparse; innerIndex = rowSparse; }
+                else if ( DenseTimesSparse &&  transposeB) { outerIndexSparse = rowSparse; innerIndex = colSparse; }
+                else if (!DenseTimesSparse && !transposeA) { outerIndexSparse = rowSparse; innerIndex = colSparse; }
+                else if (!DenseTimesSparse &&  transposeA) { outerIndexSparse = colSparse; innerIndex = rowSparse; }
 
                 // Loop over the outer index of the dense matrix
-                for (size_t outerIndexDense = 0; outerIndexDense < outerDimensionDense; innerIndex++)
+                for (size_t outerIndexDense = 0; outerIndexDense < outerDimensionDense; outerIndexDense++)
                 {
                     // Determine the row index of the dense input matrix
                     ElemType denseVal;
-                    if (DenseTimesSparse)
-                    {
-                        denseVal = dense(outerIndexDense, innerIndex);
-                    }
-                    else /*Sparse times dense */
-                    {
-                        denseVal = dense(innerIndex, outerIndexDense);
-                    }
+                    if      ( DenseTimesSparse && !transposeA) denseVal = dense(outerIndexDense,      innerIndex);
+                    else if ( DenseTimesSparse &&  transposeA) denseVal = dense(     innerIndex, outerIndexDense);
+                    else if (!DenseTimesSparse && !transposeA) denseVal = dense(     innerIndex, outerIndexDense);
+                    else if (!DenseTimesSparse &&  transposeA) denseVal = dense(outerIndexDense,      innerIndex);
+                    
 
                     // Update matrix c.
                     if (DenseTimesSparse)
@@ -927,13 +904,13 @@ void CPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const CPU
                                                        const CPUSparseMatrix<ElemType>& rhs, const bool transposeB, ElemType beta, CPUMatrix<ElemType>& c)
 {
     if      ( transposeA &&  transposeB)
-        MultiplyDenseAndSparse<ElemType, true /* dense times sparse */, true  /* transposeA */, true  /*transposeB*/>::MultiplyAndWeightedAdd(alpha, rhs /*sparse*/, lhs /* dense */, beta, c /* matrix beeing updated */);
+        MultiplyDenseAndSparse<ElemType, true /* dense times sparse */,  true /* transposeA */,  true  /*transposeB*/>::MultiplyAndWeightedAdd(alpha, rhs /*sparse*/, lhs /* dense */, beta, c /* matrix beeing updated */);
     else if ( transposeA && !transposeB)
-        MultiplyDenseAndSparse<ElemType, true /* dense times sparse */, true  /* transposeA */, true  /*transposeB*/>::MultiplyAndWeightedAdd(alpha, rhs /*sparse*/, lhs /* dense */, beta, c /* matrix beeing updated */);
+        MultiplyDenseAndSparse<ElemType, true /* dense times sparse */,  true /* transposeA */, false  /*transposeB*/>::MultiplyAndWeightedAdd(alpha, rhs /*sparse*/, lhs /* dense */, beta, c /* matrix beeing updated */);
     else if (!transposeA &&  transposeB)
-        MultiplyDenseAndSparse<ElemType, true /* dense times sparse */, true  /* transposeA */, true  /*transposeB*/>::MultiplyAndWeightedAdd(alpha, rhs /*sparse*/, lhs /* dense */, beta, c /* matrix beeing updated */);
+        MultiplyDenseAndSparse<ElemType, true /* dense times sparse */, false /* transposeA */,  true  /*transposeB*/>::MultiplyAndWeightedAdd(alpha, rhs /*sparse*/, lhs /* dense */, beta, c /* matrix beeing updated */);
     else if (!transposeA && !transposeB)
-        MultiplyDenseAndSparse<ElemType, true /* dense times sparse */, true  /* transposeA */, true  /*transposeB*/>::MultiplyAndWeightedAdd(alpha, rhs /*sparse*/, lhs /* dense */, beta, c /* matrix beeing updated */);
+        MultiplyDenseAndSparse<ElemType, true /* dense times sparse */, false /* transposeA */, false  /*transposeB*/>::MultiplyAndWeightedAdd(alpha, rhs /*sparse*/, lhs /* dense */, beta, c /* matrix beeing updated */);
 }
 
 // c = alpha * lhs * rhs + beta * c
@@ -943,13 +920,13 @@ void CPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const CPU
     const CPUMatrix<ElemType>& rhs, const bool transposeB, ElemType beta, CPUMatrix<ElemType>& c)
 {
     if (transposeA &&  transposeB)
-        MultiplyDenseAndSparse<ElemType, false /* dense times sparse */, true  /* transposeA */, true  /*transposeB*/>::MultiplyAndWeightedAdd(alpha, lhs /*sparse*/, rhs /* dense */, beta, c /* matrix beeing updated */);
+        MultiplyDenseAndSparse<ElemType, false /* dense times sparse */,  true /* transposeA */,  true /*transposeB*/>::MultiplyAndWeightedAdd(alpha, lhs /*sparse*/, rhs /* dense */, beta, c /* matrix beeing updated */);
     else if (transposeA && !transposeB)
-        MultiplyDenseAndSparse<ElemType, false /* dense times sparse */, true  /* transposeA */, true  /*transposeB*/>::MultiplyAndWeightedAdd(alpha, lhs /*sparse*/, rhs /* dense */, beta, c /* matrix beeing updated */);
+        MultiplyDenseAndSparse<ElemType, false /* dense times sparse */,  true /* transposeA */, false /*transposeB*/>::MultiplyAndWeightedAdd(alpha, lhs /*sparse*/, rhs /* dense */, beta, c /* matrix beeing updated */);
     else if (!transposeA &&  transposeB)
-        MultiplyDenseAndSparse<ElemType, false /* dense times sparse */, true  /* transposeA */, true  /*transposeB*/>::MultiplyAndWeightedAdd(alpha, lhs /*sparse*/, rhs /* dense */, beta, c /* matrix beeing updated */);
+        MultiplyDenseAndSparse<ElemType, false /* dense times sparse */, false /* transposeA */,  true /*transposeB*/>::MultiplyAndWeightedAdd(alpha, lhs /*sparse*/, rhs /* dense */, beta, c /* matrix beeing updated */);
     else if (!transposeA && !transposeB)
-        MultiplyDenseAndSparse<ElemType, false /* dense times sparse */, true  /* transposeA */, true  /*transposeB*/>::MultiplyAndWeightedAdd(alpha, lhs /*sparse*/, rhs /* dense */, beta, c /* matrix beeing updated */);
+        MultiplyDenseAndSparse<ElemType, false /* dense times sparse */, false /* transposeA */, false /*transposeB*/>::MultiplyAndWeightedAdd(alpha, lhs /*sparse*/, rhs /* dense */, beta, c /* matrix beeing updated */);
 }
 
 // c = alpha * lhs * rhs
