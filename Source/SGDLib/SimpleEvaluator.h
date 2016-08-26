@@ -257,6 +257,131 @@ public:
         return evalResults;
     }
 
+	void EvaluateBN(IDataReader* dataReader, const vector<wstring>& evalNodeNames, const size_t mbSize, const size_t testSize = requestDataSize)
+	{
+		ScopedNetworkOperationMode modeGuard(m_net, NetworkOperationMode::inferring);
+
+		// determine nodes to evaluate
+		std::vector<ComputationNodeBasePtr> evalNodes;
+
+		set<ComputationNodeBasePtr> criteriaLogged; // (keeps track ot duplicates to avoid we don't double-log critera)
+		if (evalNodeNames.size() == 0)
+		{
+			fprintf(stderr, "evalNodeNames are not specified, using all the default evalnodes and training criterion nodes.\n");
+			if (m_net->EvaluationNodes().empty() && m_net->FinalCriterionNodes().empty())
+				InvalidArgument("There is no default evaluation node or training criterion specified in the network.");
+
+			for (const auto& node : m_net->EvaluationNodes())
+				if (criteriaLogged.insert(node).second)
+					evalNodes.push_back(node);
+
+			for (const auto& node : m_net->FinalCriterionNodes())
+				if (criteriaLogged.insert(node).second)
+					evalNodes.push_back(node);
+		}
+		else
+		{
+			for (int i = 0; i < evalNodeNames.size(); i++)
+			{
+				const auto& node = m_net->GetNodeFromName(evalNodeNames[i]);
+				if (!criteriaLogged.insert(node).second)
+					continue;
+				if (node->GetSampleLayout().GetNumElements() != 1)
+					InvalidArgument("Criterion nodes to evaluate must have dimension 1x1.");
+				evalNodes.push_back(node);
+			}
+		}
+
+		// initialize eval results
+		std::vector<EpochCriterion> evalResults(evalNodes.size(), EpochCriterion(0));
+
+		// allocate memory for forward computation
+		m_net->AllocateAllMatrices(evalNodes, {}, nullptr);
+
+		// prepare features and labels
+		auto& featureNodes = m_net->FeatureNodes();
+		auto& labelNodes = m_net->LabelNodes();
+
+		StreamMinibatchInputs inputMatrices;
+		for (auto& node : featureNodes)
+			inputMatrices.AddInput(node->NodeName(), node->ValuePtr(), node->GetMBLayout(), node->GetSampleLayout());
+		for (auto& node : labelNodes)
+			inputMatrices.AddInput(node->NodeName(), node->ValuePtr(), node->GetMBLayout(), node->GetSampleLayout());
+
+		bool useParallelTrain = (m_mpi != nullptr);
+		bool useDistributedMBReading = useParallelTrain && m_enableDistributedMBReading && dataReader->SupportsDistributedMBRead();
+		if (useDistributedMBReading)
+			dataReader->StartDistributedMinibatchLoop(mbSize, 0, m_mpi->CurrentNodeRank(), m_mpi->NumNodesInUse(), testSize);
+		else
+			dataReader->StartMinibatchLoop(mbSize, 0, testSize);
+
+		m_net->StartEvaluateMinibatchLoop(evalNodes);
+
+		std::vector<Matrix<ElemType>*> learnParamsGradients;
+		DataReaderHelpers::SubminibatchDispatcher<ElemType> smbDispatcher;
+		size_t numSubminibatchesNeeded = DataReaderHelpers::GetNumSubminibatchesNeeded<ElemType>(dataReader, m_maxSamplesInRAM, m_numSubminiBatches, mbSize);
+
+		// Passing in two empty node lists so the dispatcher can work for the evalNodes.
+		std::list<ComputationNodeBasePtr> learnableNodes;
+		std::vector<ComputationNodeBasePtr> criterionNodes;
+		if (numSubminibatchesNeeded > 1)
+			smbDispatcher.Init(m_net, learnableNodes, criterionNodes, evalNodes);
+
+		// First, all batch normalization nodes should be marked.
+		std::vector<ComputationNodeBasePtr> batchNormalNodes;
+		shared_ptr<FlowControlNode> nestedNetwork = static_pointer_cast<FlowControlNode>(m_net->GetNestedNetwork(evalNodes[0]));
+		for (auto& node : nestedNetwork->GetNestedNodes()) {
+			shared_ptr<BatchNormalizationNode<ElemType>> castNode =
+				dynamic_pointer_cast<BatchNormalizationNode<ElemType>>(node);
+			if (castNode) {
+				batchNormalNodes.push_back(node);
+			}
+		}
+
+		bool noMoreSamplesToProcess = false;
+		for (auto& node : batchNormalNodes) {
+			shared_ptr<BatchNormalizationNode<ElemType>> batchNode =
+				static_pointer_cast<BatchNormalizationNode<ElemType>>(node);
+			batchNode->SetPostBatchNormalizationBegin();
+
+			LOGPRINTF(stderr, "Start evaluating: %ls\n", batchNode->GetName().c_str());
+
+			// Post batch normal iters, TODO add customize iter numbers
+			for (int iter = 0; iter < 240; iter++) {
+				size_t actualMBSize = 0;
+				bool wasDataRead = DataReaderHelpers::GetMinibatchIntoNetwork<ElemType>(*dataReader, m_net, 
+					nullptr, useDistributedMBReading, useParallelTrain, inputMatrices, actualMBSize, m_mpi);
+
+				if (!wasDataRead && (!useDistributedMBReading || noMoreSamplesToProcess))
+					break;
+
+				// TODO should handle it, since post BN exist no samples in iters
+				if (!wasDataRead)
+					actualMBSize = 0;
+
+				// Batch Normalization Evaluate don't need to support subMinibatches
+
+				ComputationNetwork::BumpEvalTimeStamp(featureNodes);
+				ComputationNetwork::BumpEvalTimeStamp(labelNodes);
+
+				// TODO segement forward
+				m_net->ForwardProp(evalNodes[0], nullptr, node);
+
+				dataReader->DataEnd();
+			}
+
+			batchNode->SetPostBatchNormalizationEnd();
+		}
+
+		// TODO parallel training weights update
+
+		// Save Model
+		// TODO user names the model
+		m_net->Save(L"ResNet.PBN");
+
+		return;
+	}
+
 protected:
     void DisplayEvalStatistics(const size_t startMBNum, const size_t endMBNum, const size_t numSamplesLastLogged,
                                const vector<ComputationNodeBasePtr>& evalNodes,

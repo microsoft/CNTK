@@ -45,6 +45,8 @@ void DoEdit(const ConfigParameters& config);
 
 // evaluation (EvalActions.cpp)
 template <typename ElemType>
+void DoEvalBN(const ConfigParameters& config);
+template <typename ElemType>
 void DoEval(const ConfigParameters& config);
 template <typename ElemType>
 void DoCrossValidate(const ConfigParameters& config);

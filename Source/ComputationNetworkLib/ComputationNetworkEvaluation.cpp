@@ -1,3 +1,5 @@
+#include "ComputationNetwork.h"
+#include "ComputationNetwork.h"
 //
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
@@ -77,6 +79,17 @@ void ComputationNetwork::Backprop(const ComputationNodeBasePtr rootNode) // trai
 
     // backpropagate through the network
     GetNestedNetwork(rootNode)->Backprop(FrameRange(nullptr), true, true);
+}
+
+void ComputationNetwork::ForwardProp(const ComputationNodeBasePtr rootNode, const ComputationNodeBasePtr startNode, const ComputationNodeBasePtr endNode)
+{
+	VerifyIsCompiled("ForwardProp");
+
+	// traverse partial nodes as inputs
+	shared_ptr<FlowControlNode> network = dynamic_pointer_cast<FlowControlNode>(GetNestedNetwork(rootNode));
+	assert(network);
+
+	network->ForwardProp(FrameRange(nullptr), startNode, endNode);
 }
 
 void ComputationNetwork::FormNestedNetwork(const ComputationNodeBasePtr& rootNode)
@@ -175,6 +188,33 @@ ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(con
 }
 /*virtual*/ void ComputationNetwork::PARTraversalFlowControlNode::ReleaseMatricesAfterBackprop(MatrixPool& matrixPool) /*override*/
 {
+}
+/*virtual*/ void ComputationNetwork::PARTraversalFlowControlNode::ForwardProp(const FrameRange & fr, ComputationNodeBasePtr startNode, ComputationNodeBasePtr endNode)
+{
+	// if start node is nullptr, forward will be enable
+	bool enableForward = startNode ? false : true;
+
+	for (auto& node : m_nestedNodes)
+	{
+#if 0
+		if (dynamic_pointer_cast<LearnableParameter<float>>(node))
+			dynamic_pointer_cast<ComputationNode<float>>(node)->DebugLogMinibatch();
+#endif
+		if (node->IsOutOfDateWrtInputs() && enableForward) {
+			node->BeginForwardProp();
+			node->ForwardProp(fr.WithLayout(node->GetMBLayout()));
+			node->EndForwardProp();
+
+			node->BumpEvalTimeStamp();
+		}
+
+		if (node == startNode) {
+			enableForward = true;
+		}
+		else if (node == endNode) {
+			break;
+		}
+	}
 }
 
 // -----------------------------------------------------------------------
