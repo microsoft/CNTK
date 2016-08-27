@@ -347,7 +347,7 @@ public:
 			LOGPRINTF(stderr, "Start evaluating: %ls\n", batchNode->GetName().c_str());
 
 			// Post batch normal iters, TODO add customize iter numbers
-			for (int iter = 0; iter < 240; iter++) {
+			for (int iter = 0; iter < 30; iter++) {
 				size_t actualMBSize = 0;
 				bool wasDataRead = DataReaderHelpers::GetMinibatchIntoNetwork<ElemType>(*dataReader, m_net, 
 					nullptr, useDistributedMBReading, useParallelTrain, inputMatrices, actualMBSize, m_mpi);

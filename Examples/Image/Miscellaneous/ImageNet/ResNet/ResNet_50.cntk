@@ -99,24 +99,7 @@ Train=[
         labels=[
             labelDim=1000
         ]
-    ]
-
-    cvReader=[       
-        readerType="ImageReader"
-        file="$DataDir$/val_map.txt"
-        randomize="None"
-        features=[
-            width=224
-            height=224
-            channels=3
-            cropType="Center"
-            cropRatio=0.875
-            meanFile="$ConfigDir$/ImageNet1K_mean.xml"
-        ]
-        labels=[
-            labelDim=1000
-        ]
-    ]    
+    ]   
 ]
 
 PBN=[
