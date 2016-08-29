@@ -240,6 +240,10 @@ protected:
             if (CUDNN_STATUS_SUCCESS == err2)
                 err = CUDNN_STATUS_SUCCESS;
         }
+
+        // Only supported in MatrixPool enable
+        workspace.Resize(0, 0);
+
         CUDNN_CALL(err);
     }
 
@@ -261,6 +265,7 @@ protected:
         // Compute gradients with respect to the output tensor (data).
         CUDNN_CALL(cudnnConvolutionBackwardData(*m_cudnn, &C::One, *m_kernelT, ptr(kernel), m_outT, ptr(srcGrad), *m_conv, m_backDataAlgo.Algo.algo,
                                                 ptr(workspace), m_backDataAlgo.Algo.memory, &C::One, m_inT, ptr(grad)));
+        workspace.Resize(0, 0);
     }
 
     void BackwardKernelCore(const Mat& srcGrad, const Mat& in, Mat& kernelGrad, bool /*allowReuse*/, Mat& workspace) override
@@ -281,6 +286,7 @@ protected:
         // Compute gradients with respect to the output tensor (data).
         CUDNN_CALL(cudnnConvolutionBackwardFilter(*m_cudnn, &C::One, m_inT, ptr(in), m_outT, ptr(srcGrad), *m_conv, m_backFiltAlgo.Algo.algo,
                                                   ptr(workspace), m_backFiltAlgo.Algo.memory, &C::One, *m_kernelT, ptr(kernelGrad)));
+        workspace.Resize(0, 0);
     }
 
     void EnsurePoolingInitialized() override

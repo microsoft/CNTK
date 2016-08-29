@@ -1528,42 +1528,45 @@ void GPUMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, boo
     m_numCols = numCols;
 }
 
+
 template <class ElemType>
 void GPUMatrix<ElemType>::CachedResize(const size_t numRows, const size_t numCols, bool growOnly)
 {
-	VerifyResizable(__func__);
+    VerifyResizable(__func__);
 
-	if (GetNumRows() == numRows && GetNumCols() == numCols)
-		return;
+    if (GetNumRows() == numRows && GetNumCols() == numCols)
+        return;
 
-	if (growOnly && numRows * numCols < GetSizeAllocated()) {
-		m_numRows = numRows;
-		m_numCols = numCols;
-		return;
-	}
+    if (growOnly && numRows * numCols < GetSizeAllocated())
+    {
+        m_numRows = numRows;
+        m_numCols = numCols;
+        return;
+    }
 
-	if (GetNumRows() && GetNumCols()) {
-		// Indeed, if using PhysicalReleaseBuffer, the buffer pool will be disabled
-		BufferManager::GetManagerInstance()->LogicalReleaseBuffer<ElemType>(GetComputeDeviceId(), Buffer(), GetSizeAllocated());
-	}
+    if (GetNumRows() && GetNumCols())
+    {
+        // Indeed, if using PhysicalReleaseBuffer, the buffer pool will be disabled
+        BufferManager::GetManagerInstance(GetComputeDeviceId())->LogicalReleaseBuffer<ElemType>(Buffer(), GetSizeAllocated());
+    }
 
-	m_numRows = numRows;
-	m_numCols = numCols;
+    m_numRows = numRows;
+    m_numCols = numCols;
 
-	size_t numElements = GetNumElements();
+    size_t numElements = GetNumElements();
 
-	if (IsEmpty())
-	{
-		SetSizeAllocated(0);
-		SetBuffer(nullptr, 0);
-	}
-	else
-	{
-		SetSizeAllocated(numElements);
-		SetBuffer(BufferManager::GetManagerInstance()->RequestBuffer<ElemType>(GetComputeDeviceId(), GetSizeAllocated()),
-			numElements * sizeof(ElemType));
-	}
-	m_sliceViewOffset = 0;
+    if (IsEmpty())
+    {
+        SetSizeAllocated(0);
+        SetBuffer(nullptr, 0);
+    }
+    else
+    {
+        SetSizeAllocated(numElements);
+        SetBuffer(BufferManager::GetManagerInstance(GetComputeDeviceId())->RequestBuffer<ElemType>(GetSizeAllocated()),
+            numElements * sizeof(ElemType));
+    }
+    m_sliceViewOffset = 0;
 }
 
 template <class ElemType>

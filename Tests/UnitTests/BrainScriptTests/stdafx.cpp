@@ -12,3 +12,4 @@
 // node output value matrices. This will go away when the
 // sharing is ready to be enabled by default
 bool g_shareNodeValueMatrices = false;
+bool g_hyperCompressMemory = false;

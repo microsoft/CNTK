@@ -44,6 +44,7 @@
 #define CURRENT_CNTK_MODEL_VERSION CNTK_MODEL_VERSION_12
 
 extern bool g_shareNodeValueMatrices;
+extern bool g_hyperCompressMemory;
 
 // helper mode for debugging
 // If TRACK_GAP_NANS is defined then initialize layout gaps to NaN and do NaN checks. Also do detailed logging of node computations.
@@ -762,6 +763,7 @@ public:
 
     void SetOutputNeededDuringBackprop(bool f) { m_outputNeededDuringBackprop = f; }
     bool IsOutputNeededDuringBackprop() const { return !g_shareNodeValueMatrices || m_outputNeededDuringBackprop; }
+    bool IsHyperCompressMemory() const { return g_hyperCompressMemory; }
 
     // -----------------------------------------------------------------------
     // helpers for network traversal
@@ -1395,6 +1397,15 @@ public:
 #endif
         // tracing
         Trace();
+
+        for (auto& input : GetInputs()) 
+        {
+            if (!input->IsOutputNeededDuringBackprop() && IsHyperCompressMemory()) 
+            {
+                shared_ptr<Matrix<ElemType>> inputMatrix = static_pointer_cast<Matrix<ElemType>>(input->ValuePtr());
+                inputMatrix->Resize(0, 0);
+            }
+        }
     }
 
 #if 0   // (keep it around in case we need to add stuff in the future)
@@ -1404,9 +1415,9 @@ public:
         }
 #endif
 
-#ifdef _DEBUG
     virtual void /*IComputationNode::*/ EndBackprop() override
     {
+#ifdef _DEBUG
         Base::EndBackprop();
 #ifdef TRACK_GAP_NANS
         for (size_t i = 0; i < m_inputs.size(); i++)
@@ -1420,8 +1431,18 @@ public:
             }
         }
 #endif
-    }
 #endif
+        if (IsValueSharable() && IsHyperCompressMemory())
+        {
+            if (GradientPtr()) Gradient().Resize(0, 0);
+
+            // canceling the graph dependency
+            if (IsOutputNeededDuringBackprop()) 
+            {
+                Value().Resize(0, 0);
+            }
+        }
+    }
 
     // this is the entry point from Network; while it will call virtual BackpropTo() into the actual node implementation
     // TODO: move to -Base (or -Network?)

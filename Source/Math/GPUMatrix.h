@@ -234,8 +234,8 @@ public:
     // actually resizes the underlying matrix, doing any allocation as required.
     void Resize(const size_t numRows, const size_t numCols, bool growOnly = true); // by default we only reallocate if need to grow
 
-	// actually resizes the underlying matrix in/out of matrix pool
-	void CachedResize(const size_t numRows, const size_t numCols, bool growOnly = false); // by default we reallocate whether need to grow or not, since its logically operation
+    // actually resizes the underlying matrix in/out of matrix pool
+    void CachedResize(const size_t numRows, const size_t numCols, bool growOnly = false); // by default we reallocate whether need to grow or not, since its logically operation
 
     ElemType&       operator()(const size_t /*row*/, const size_t /*col*/)       { LogicError("GPUMatrix doesn't support operator(,) on the CPU."); }
     const ElemType& operator()(const size_t /*row*/, const size_t /*col*/) const { LogicError("GPUMatrix doesn't support operator(,) on the CPU."); }

@@ -287,6 +287,7 @@ MATH_SRC =\
 	$(SOURCEDIR)/Math/CUDAPageLockedMemAllocator.cpp \
 	$(SOURCEDIR)/Math/ConvolutionEngine.cpp \
 	$(SOURCEDIR)/Math/BatchNormalizationEngine.cpp \
+	$(SOURCEDIR)/Math/CommonMatrix.cpp \
 
 ifdef SUPPORT_AVX2
 MATH_SRC +=\

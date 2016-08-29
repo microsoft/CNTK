@@ -155,6 +155,8 @@ MatrixBase::~MatrixBase() { }
 //            { Cpu code },
 //            { GPU code },
 //            ...
+template <class ElemType>
+bool Matrix<ElemType>::m_useCachedMatrixBuffer = false;
 
 // Initialize all members over virgin memory.
 //This function will only initialize default bland matrix. The actual matrices need to allocated
@@ -448,6 +450,18 @@ template <class ElemType>
 Matrix<ElemType> Matrix<ElemType>::DeepClone() const
 {
     return Matrix<ElemType>(*this, GetDeviceId());
+}
+
+template<class ElemType>
+void Matrix<ElemType>::SetUseCachedMatrixBuffer(bool useCachedMatrixBuffer)
+{
+    m_useCachedMatrixBuffer = useCachedMatrixBuffer;
+}
+
+template<class ElemType>
+bool Matrix<ElemType>::GetUseCachedMatrixBuffer()
+{
+    return m_useCachedMatrixBuffer;
 }
 
 template <class ElemType>
@@ -1570,12 +1584,23 @@ void Matrix<ElemType>::Reshape(const size_t numRows, const size_t numCols)
 template <class ElemType>
 void Matrix<ElemType>::Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve /*=0*/, bool growOnly /*=true*/)
 {
-    // TODO: should this function test whether the size is changing, and skip if it isn't? We have at least one explicit test for this code calling this (recurrent node)
-    DISPATCH_MATRIX_ON_FLAG_USEBOTH_4BOTH(this,
-        { m_CPUMatrix->Resize(numRows, numCols, growOnly); },
-        { m_GPUMatrix->Resize(numRows, numCols, growOnly); },
-        { m_CPUSparseMatrix->RequireSizeAndAllocate(numRows, numCols, numNZElemToReserve, growOnly, false); },
-        { m_GPUSparseMatrix->RequireSizeAndAllocate(numRows, numCols, numNZElemToReserve, growOnly, false); });
+    if (GetUseCachedMatrixBuffer())
+    {
+        // TODO: should this function test whether the size is changing, and skip if it isn't? We have at least one explicit test for this code calling this (recurrent node)
+        DISPATCH_MATRIX_ON_FLAG_USEBOTH_4BOTH(this,
+            { m_CPUMatrix->Resize(numRows, numCols, growOnly); },
+            { m_GPUMatrix->CachedResize(numRows, numCols, false/*growOnly*/); },
+            { m_CPUSparseMatrix->RequireSizeAndAllocate(numRows, numCols, numNZElemToReserve, growOnly, false); },
+            { m_GPUSparseMatrix->RequireSizeAndAllocate(numRows, numCols, numNZElemToReserve, growOnly, false); });
+    }
+    else
+    {
+        DISPATCH_MATRIX_ON_FLAG_USEBOTH_4BOTH(this,
+            { m_CPUMatrix->Resize(numRows, numCols, growOnly); },
+            { m_GPUMatrix->Resize(numRows, numCols, growOnly); },
+            { m_CPUSparseMatrix->RequireSizeAndAllocate(numRows, numCols, numNZElemToReserve, growOnly, false); },
+            { m_GPUSparseMatrix->RequireSizeAndAllocate(numRows, numCols, numNZElemToReserve, growOnly, false); });
+    }
 #ifdef _DEBUG
     if (GetMatrixType() != MatrixType::SPARSE)
         Invalidate(); // Fill the matrix with NaNs to detect using the content which is undefined. Unfortunately this won't work for sparse matrices.

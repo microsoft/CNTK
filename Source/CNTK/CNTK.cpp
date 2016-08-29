@@ -21,6 +21,7 @@
 #include "SimpleNetworkBuilder.h"
 #include "NDLNetworkBuilder.h"
 #include "ModelEditLanguage.h"
+#include "Matrix.h"
 #include "CPUMatrix.h" // used for SetNumThreads()
 #include "GPUMatrix.h" // used for SyncGuard::EnableSync()
 #include "CommonMatrix.h"
@@ -64,6 +65,7 @@
 // node output value matrices. This will go away when the
 // sharing is ready to be enabled by default
 bool g_shareNodeValueMatrices = false;
+bool g_hyperCompressMemory = false;
 
 using namespace std;
 using namespace Microsoft::MSR;
@@ -217,6 +219,8 @@ void DoCommands(const ConfigParameters& config, const shared_ptr<MPIWrapper>& mp
         {
             ProgressTracing::SetStepOffset(fullEpochsOffset); // this is the epoch number that SGD will log relative to
         }
+
+        Matrix<ElemType>::SetUseCachedMatrixBuffer(g_hyperCompressMemory);
 
         // determine the action to perform, and do it
         for (int j = 0; j < action.size(); j++)
@@ -513,6 +517,7 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
         mpi = MPIWrapper::GetInstance(true /*create*/);
 
     g_shareNodeValueMatrices = config(L"shareNodeValueMatrices", false);
+    g_hyperCompressMemory = config(L"hyperCompressMemory", false);
 
     TracingGPUMemoryAllocator::SetTraceLevel(config(L"traceGPUMemoryAllocations", 0));
 
@@ -628,6 +633,7 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
         mpi = MPIWrapper::GetInstance(true /*create*/);
 
     g_shareNodeValueMatrices = config(L"shareNodeValueMatrices", false);
+    g_hyperCompressMemory = config(L"hyperCompressMemory", false);
 
     TracingGPUMemoryAllocator::SetTraceLevel(config(L"traceGPUMemoryAllocations", 0));
 
