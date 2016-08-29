@@ -1,7 +1,7 @@
 # Simple CIFAR-10 convnet, without and with BatchNormalization.
 
 command = TrainConvNet:Eval
-#command = TrainConvNetWithBN:Eval
+command = TrainConvNetWithBN:Eval
 
 makeMode = false ; traceLevel = 1 ; deviceId = 0
 
@@ -21,15 +21,15 @@ TrainConvNet = [
 
         model = Sequential (
             Subtract128 :
-            ConvolutionalLayer {32, (5:5), pad = true, activation = ReLU, init = "gaussian", initValueScale = 0.0043} :
+            ConvolutionalLayer {32, (5:5), pad = true, activation = ReLU, init = "heNormal"} :
               MaxPoolingLayer {(3:3), stride = (2:2)} :
-            ConvolutionalLayer {32, (5:5), pad = true, activation = ReLU, init = "gaussian", initValueScale = 1.414} :
+            ConvolutionalLayer {32, (5:5), pad = true, activation = ReLU, init = "heNormal"} :
               MaxPoolingLayer {(3:3), stride = (2:2)} :
-            ConvolutionalLayer {64, (5:5), pad = true, activation = ReLU, init = "gaussian", initValueScale = 1.414} :
+            ConvolutionalLayer {64, (5:5), pad = true, activation = ReLU, init = "heNormal"} :
               MaxPoolingLayer {(3:3), stride = (2:2)} :
-            DenseLayer {64, activation = ReLU, init = "gaussian", initValueScale = 12} :
+            DenseLayer {64, activation = ReLU, init = "heNormal"} :
               Dropout :
-            LinearLayer {labelDim, init = "gaussian", initValueScale = 1.5}
+            LinearLayer {labelDim, init = "heNormal"}
         )
 
         # inputs
@@ -74,7 +74,6 @@ TrainConvNet = [
 ]
 
 # Training with BN
-# Not working well on this small set. Overtrains.
 TrainConvNetWithBN = [
     action = "train"
 
@@ -86,18 +85,18 @@ TrainConvNetWithBN = [
 
         model = Sequential (
             Subtract128 :
-            ConvolutionalLayer {32, (5:5), pad = true, bias = false, init = "gaussian", initValueScale = 0.0043} :
+            ConvolutionalLayer {32, (5:5), pad = true, bias = false, init = "heNormal"} :
               BatchNormalizationLayer {spatialRank = 2, normalizationTimeConstant = 4096} : ReLU :
                 MaxPoolingLayer {(3:3), stride = (2:2)} :
-            ConvolutionalLayer {32, (5:5), pad = true, bias = false, init = "gaussian", initValueScale = 1.414} :
+            ConvolutionalLayer {32, (5:5), pad = true, bias = false, init = "heNormal"} :
               BatchNormalizationLayer {spatialRank = 2, normalizationTimeConstant = 4096} : ReLU :
                 MaxPoolingLayer {(3:3), stride = (2:2)} :
-            ConvolutionalLayer {64, (5:5), pad = true, bias = false, init = "gaussian", initValueScale = 1.414} :
+            ConvolutionalLayer {64, (5:5), pad = true, bias = false, init = "heNormal"} :
               BatchNormalizationLayer {spatialRank = 2, normalizationTimeConstant = 4096} : ReLU :
                 MaxPoolingLayer {(3:3), stride = (2:2)} :
-            LinearLayer {64, bias = false, init = "gaussian", initValueScale = 12} :
+            LinearLayer {64, bias = false, init = "heNormal"} :
               BatchNormalizationLayer {normalizationTimeConstant = 4096} : ReLU :
-            LinearLayer {labelDim, init = "gaussian", initValueScale = 1.5}
+            LinearLayer {labelDim, init = "heNormal"}
         )
 
         # inputs
