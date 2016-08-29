@@ -1,16 +1,21 @@
-﻿using System.Reflection;
-using System.Runtime.CompilerServices;
+﻿//
+// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
+//
+// AssemblyInfo.cs -- Assembly information
+//
+using System.Reflection;
 using System.Runtime.InteropServices;
 
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("CSEvalExample")]
+[assembly: AssemblyTitle("CSEvalClient")]
 [assembly: AssemblyDescription("Managed client using managed wrapper for CNTK evaluation model")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("Microsoft")]
-[assembly: AssemblyProduct("CSEvalExample")]
-[assembly: AssemblyCopyright("Copyright ©  2016")]
+[assembly: AssemblyProduct("CSEvalClient")]
+[assembly: AssemblyCopyright("Copyright ©  2016 Microsoft. All rights reserved.")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
@@ -20,7 +25,7 @@ using System.Runtime.InteropServices;
 [assembly: ComVisible(false)]
 
 // The following GUID is for the ID of the typelib if this project is exposed to COM
-[assembly: Guid("196bf110-ad4b-46fc-be51-d0329372ebbe")]
+[assembly: Guid("6ec08331-7554-4ebd-b663-b64ab6e719e2")]
 
 // Version information for an assembly consists of the following four values:
 //
