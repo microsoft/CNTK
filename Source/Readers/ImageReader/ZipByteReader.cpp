@@ -8,6 +8,7 @@
 #include "ByteReader.h"
 
 #ifdef USE_ZIP
+#include <File.h>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -100,6 +101,7 @@ cv::Mat ZipByteReader::Read(size_t seqId, const std::string& path, bool grayscal
     if (contents.size() < size)
         contents.resize(size);
     auto zipFile = m_zips.pop_or_create([this]() { return OpenZip(); });
+    attempt(5, [&zipFile, &contents, &path, index, seqId, size]()
     {
         std::unique_ptr<zip_file_t, void(*)(zip_file_t*)> file(
             zip_fopen_index(zipFile.get(), index, 0),
@@ -126,7 +128,7 @@ cv::Mat ZipByteReader::Read(size_t seqId, const std::string& path, bool grayscal
             RuntimeError("Bytes read %lu != expected %lu while reading file %s",
                          (long)bytesRead, (long)size, path.c_str());
         }
-    }
+    });
     m_zips.push(std::move(zipFile));
 
     cv::Mat img; 
