@@ -149,8 +149,13 @@ mkdir -p $baseBinariesPath
 echo "Copying build binaries..." >&3
 cp -r $buildPath/* $baseBinariesPath
 # Remove unnessesary file(s) if exist(s)
-rm -f $baseBinariesPath/bin/v2librarytests
+rm -f $baseBinariesPath/bin/brainscripttests
 rm -f $baseBinariesPath/bin/cppevalclient
+rm -f $baseBinariesPath/bin/evaltests
+rm -f $baseBinariesPath/bin/mathtests
+rm -f $baseBinariesPath/bin/networktests
+rm -f $baseBinariesPath/bin/readertests
+rm -f $baseBinariesPath/bin/v2librarytests
 rm -f $baseBinariesPath/lib/libcntklibrary-2.0.so
 
 # Make Include directory
