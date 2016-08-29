@@ -60,15 +60,9 @@
     <Reference Include="System.Drawing" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="CntkBitmapExtensions.cs">
-      <Link>CntkBitmapExtensions.cs</Link>
-    </Compile>
-    <Compile Include="ModelEvaluator.cs">
-      <Link>ModelEvaluator.cs</Link>
-    </Compile>
-    <Compile Include="Program.cs">
-      <Link>Program.cs</Link>
-    </Compile>
+    <Compile Include="CntkBitmapExtensions.cs" />
+    <Compile Include="ModelEvaluator.cs" />
+    <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
