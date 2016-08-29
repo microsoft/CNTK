@@ -1,0 +1,1885 @@
+CPU info:
+    CPU Model Name: Intel(R) Core(TM) i7-3770 CPU @ 3.40GHz
+    Hardware threads: 8
+    Total Memory: 16725948 kB
+-------------------------------------------------------------------
+=== Running C:/Libraries/CNTK/x64\release\cntk.exe configFile=C:\Libraries\CNTK\Tests\EndToEndTests\Image\Regression/cntk.cntk currentDirectory=C:\Libraries\CNTK\Tests\EndToEndTests\Image\Data RunDir=C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu DataDir=C:\Libraries\CNTK\Tests\EndToEndTests\Image\Data ConfigDir=C:\Libraries\CNTK\Tests\EndToEndTests\Image\Regression OutputDir=C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu DeviceId=0 timestamping=true
+-------------------------------------------------------------------
+Build info: 
+
+		Built time: Aug 26 2016 18:26:29
+		Last modified date: Fri Aug 26 15:55:29 2016
+		Build type: Release
+		Build target: GPU
+		With 1bit-SGD: no
+		Math lib: mkl
+		CUDA_PATH: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v8.0
+		CUB_PATH: C:\Libraries\cub-1.4.1
+		CUDNN_PATH: C:\Libraries\cudnn
+		Build Branch: merged_master_2016_07_27
+		Build SHA1: 07d8b1e7b559b1014a1f52ad2fbb2fa33eba2ad7
+		Built by mer on argos
+		Build Path: C:\Libraries\CNTK\Source\CNTK\
+-------------------------------------------------------------------
+Changed current directory to C:\Libraries\CNTK\Tests\EndToEndTests\Image\Data
+08/26/2016 17:35:13: -------------------------------------------------------------------
+08/26/2016 17:35:13: Build info: 
+
+08/26/2016 17:35:13: 		Built time: Aug 26 2016 18:26:29
+08/26/2016 17:35:13: 		Last modified date: Fri Aug 26 15:55:29 2016
+08/26/2016 17:35:13: 		Build type: Release
+08/26/2016 17:35:13: 		Build target: GPU
+08/26/2016 17:35:13: 		With 1bit-SGD: no
+08/26/2016 17:35:13: 		Math lib: mkl
+08/26/2016 17:35:13: 		CUDA_PATH: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v8.0
+08/26/2016 17:35:13: 		CUB_PATH: C:\Libraries\cub-1.4.1
+08/26/2016 17:35:13: 		CUDNN_PATH: C:\Libraries\cudnn
+08/26/2016 17:35:13: 		Build Branch: merged_master_2016_07_27
+08/26/2016 17:35:13: 		Build SHA1: 07d8b1e7b559b1014a1f52ad2fbb2fa33eba2ad7
+08/26/2016 17:35:13: 		Built by mer on argos
+08/26/2016 17:35:13: 		Build Path: C:\Libraries\CNTK\Source\CNTK\
+08/26/2016 17:35:13: -------------------------------------------------------------------
+08/26/2016 17:35:14: -------------------------------------------------------------------
+08/26/2016 17:35:14: GPU info:
+
+08/26/2016 17:35:14: 		Device[0]: cores = 3840; computeCapability = 6.1; type = "GeForce GTX 1080"; memory = 8192 MB
+08/26/2016 17:35:14: -------------------------------------------------------------------
+
+08/26/2016 17:35:14: Running on argos at 2016/08/26 17:35:14
+08/26/2016 17:35:14: Command line: 
+C:\Libraries\CNTK\x64\release\cntk.exe  configFile=C:\Libraries\CNTK\Tests\EndToEndTests\Image\Regression/cntk.cntk  currentDirectory=C:\Libraries\CNTK\Tests\EndToEndTests\Image\Data  RunDir=C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu  DataDir=C:\Libraries\CNTK\Tests\EndToEndTests\Image\Data  ConfigDir=C:\Libraries\CNTK\Tests\EndToEndTests\Image\Regression  OutputDir=C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu  DeviceId=0  timestamping=true
+
+
+Configuration After Processing and Variable Resolution:
+
+configparameters: cntk.cntk:command=train:test:write
+configparameters: cntk.cntk:ConfigDir=C:\Libraries\CNTK\Tests\EndToEndTests\Image\Regression
+configparameters: cntk.cntk:currentDirectory=C:\Libraries\CNTK\Tests\EndToEndTests\Image\Data
+configparameters: cntk.cntk:DataDir=C:\Libraries\CNTK\Tests\EndToEndTests\Image\Data
+configparameters: cntk.cntk:deviceId=0
+configparameters: cntk.cntk:labelType=regression
+configparameters: cntk.cntk:ndlMacros=C:\Libraries\CNTK\Tests\EndToEndTests\Image\Regression/Macros.ndl
+configparameters: cntk.cntk:numCPUThreads=1
+configparameters: cntk.cntk:OutputDir=C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu
+configparameters: cntk.cntk:parallelTrain=false
+configparameters: cntk.cntk:precision=float
+configparameters: cntk.cntk:RunDir=C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu
+configparameters: cntk.cntk:test=[
+    action = "test"
+    modelPath = "C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn"
+    minibatchSize = 10
+    reader = [
+        readerType = ImageReader
+        file = "C:\Libraries\CNTK\Tests\EndToEndTests\Image\Data/regression_test_map.txt"
+        features = [
+            width = 4
+            height = 4
+            channels = 1
+        ]
+        labels = [
+            labelDim = 4
+        ]
+    ]
+]
+
+configparameters: cntk.cntk:timestamping=true
+configparameters: cntk.cntk:train=[
+    action = "train"
+    modelPath = "C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn"
+    traceLevel = 1
+     NDLNetworkBuilder=[
+        networkDescription = "C:\Libraries\CNTK\Tests\EndToEndTests\Image\Regression/regression.ndl"
+        keepCheckPointFiles = false
+    ]
+    SGD = [
+        epochSize = 200
+        minibatchSize = 20
+        learningRatesPerSample = 0.01*20:0.002*20:0.0004*30:0.0001*30:0.00002*50:0.00001
+        maxEpochs = 200
+        keepCheckPointFiles = false
+        dropoutRate = 0.1
+    ]
+    reader = [
+        readerType = "ImageReader"
+        file = "C:\Libraries\CNTK\Tests\EndToEndTests\Image\Data/regression_train_map.txt"
+        randomize=Auto
+        features = [
+            width=4
+            height=4
+            channels=1
+        ]
+        labels = [
+            labelDim = 4
+        ]
+    ]
+]
+
+configparameters: cntk.cntk:write=[
+    action = "write"
+    modelPath = "C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn"
+    minibatchSize = 1
+    reader = [
+        readerType = ImageReader
+        file = "C:\Libraries\CNTK\Tests\EndToEndTests\Image\Data/regression_write_map.txt"
+        features = [
+            width = 4
+            height = 4
+            channels = 1
+        ]
+        labels = [
+            labelDim = 4
+        ]
+    ]
+    outputPath = "C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/write/output"
+]
+
+08/26/2016 17:35:14: Commands: train test write
+08/26/2016 17:35:14: Precision = "float"
+08/26/2016 17:35:14: Using 1 CPU threads.
+08/26/2016 17:35:14: CNTKModelPath: C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn
+08/26/2016 17:35:14: CNTKCommandTrainInfo: train : 200
+08/26/2016 17:35:14: CNTKCommandTrainInfo: CNTKNoMoreCommands_Total : 200
+
+08/26/2016 17:35:14: ##############################################################################
+08/26/2016 17:35:14: #                                                                            #
+08/26/2016 17:35:14: # Action "train"                                                             #
+08/26/2016 17:35:14: #                                                                            #
+08/26/2016 17:35:14: ##############################################################################
+
+08/26/2016 17:35:14: CNTKCommandTrainBegin: train
+useParallelTrain option is not enabled. ParallelTrain config will be ignored.
+08/26/2016 17:35:14: Creating virgin network.
+NDLBuilder Using GPU 0
+Node 'conv1.W' (LearnableParameter operation): Initializing Parameter[64 x 1] <- 0.000000.
+Node 'conv1.b' (LearnableParameter operation): Initializing Parameter[64 x 1] <- 0.000000.
+Node 'conv1.sc' (LearnableParameter operation): Initializing Parameter[64 x 1] <- 0.000000.
+Node 'conv1.m' (LearnableParameter operation): Initializing Parameter[64 x 1] <- 0.000000.
+Node 'conv1.isd' (LearnableParameter operation): Initializing Parameter[64 x 1] <- 0.000000.
+Node 'h1.W' (LearnableParameter operation): Initializing Parameter[64 x 4 x 4 x 64] <- 0.000000.
+Node 'h1.b' (LearnableParameter operation): Initializing Parameter[64 x 1] <- 0.000000.
+Node 'h1.sc' (LearnableParameter operation): Initializing Parameter[64 x 1] <- 0.000000.
+Node 'h1.m' (LearnableParameter operation): Initializing Parameter[64 x 1] <- 0.000000.
+Node 'h1.isd' (LearnableParameter operation): Initializing Parameter[64 x 1] <- 0.000000.
+Node 'OutputNodes.W' (LearnableParameter operation): Initializing Parameter[4 x 64] <- 0.000000.
+Node 'OutputNodes.b' (LearnableParameter operation): Initializing Parameter[4] <- 0.000000.
+Node 'conv1.W' (LearnableParameter operation): Initializing Parameter[64 x 1] <- gaussian(seed=1, init dims=[64 x 1], range=0.200000*1.000000, onCPU=false).
+Microsoft::MSR::CNTK::GPUMatrix<ElemType>::SetGaussianRandomValue (GPU): creating curand object with seed 1, sizeof(ElemType)==4
+Node 'conv1.b' (LearnableParameter operation): Initializing Parameter[64 x 1] <- gaussian(seed=2, init dims=[64 x 1], range=0.200000*1.000000, onCPU=false).
+Node 'conv1.sc' (LearnableParameter operation): Initializing Parameter[64 x 1] <- gaussian(seed=3, init dims=[64 x 1], range=0.200000*1.000000, onCPU=false).
+Node 'conv1.m' (LearnableParameter operation): Initializing Parameter[64 x 1] <- 0.000000.
+Node 'conv1.isd' (LearnableParameter operation): Initializing Parameter[64 x 1] <- 0.000000.
+Node 'h1.W' (LearnableParameter operation): Initializing Parameter[64 x 4 x 4 x 64] <- gaussian(seed=4, init dims=[64 x 1024], range=0.006250*1.000000, onCPU=false).
+Node 'h1.b' (LearnableParameter operation): Initializing Parameter[64 x 1] <- gaussian(seed=5, init dims=[64 x 1], range=0.200000*1.000000, onCPU=false).
+Node 'h1.sc' (LearnableParameter operation): Initializing Parameter[64 x 1] <- gaussian(seed=6, init dims=[64 x 1], range=0.200000*1.000000, onCPU=false).
+Node 'h1.m' (LearnableParameter operation): Initializing Parameter[64 x 1] <- 0.000000.
+Node 'h1.isd' (LearnableParameter operation): Initializing Parameter[64 x 1] <- 0.000000.
+Node 'OutputNodes.W' (LearnableParameter operation): Initializing Parameter[4 x 64] <- gaussian(seed=7, init dims=[4 x 64], range=0.025000*1.000000, onCPU=false).
+Node 'OutputNodes.b' (LearnableParameter operation): Initializing Parameter[4] <- gaussian(seed=8, init dims=[4 x 1], range=0.200000*1.000000, onCPU=false).
+
+Post-processing network...
+
+4 roots:
+	OutputNodes.out = Plus()
+	invstdVal = InvStdDev()
+	meanVal = Mean()
+	sqErr = SquareError()
+
+Validating network. 28 nodes to process in pass 1.
+
+Validating --> OutputNodes.W = LearnableParameter() :  -> [4 x 64]
+Validating --> h1.W = LearnableParameter() :  -> [64 x 4 x 4 x 64]
+Validating --> conv1.W = LearnableParameter() :  -> [64 x 1]
+Validating --> features = InputValue() :  -> [4 x 4 x 1 x *]
+Validating --> meanVal = Mean (features) : [4 x 4 x 1 x *] -> [4 x 4 x 1]
+Validating --> invstdVal = InvStdDev (features) : [4 x 4 x 1 x *] -> [4 x 4 x 1]
+Validating --> featScaled = PerDimMeanVarNormalization (features, meanVal, invstdVal) : [4 x 4 x 1 x *], [4 x 4 x 1], [4 x 4 x 1] -> [4 x 4 x 1 x *]
+Validating --> conv1.c = Convolution (conv1.W, featScaled) : [64 x 1], [4 x 4 x 1 x *] -> [4 x 4 x 64 x *]
+Validating --> conv1.sc = LearnableParameter() :  -> [64 x 1]
+Validating --> conv1.b = LearnableParameter() :  -> [64 x 1]
+Validating --> conv1.m = LearnableParameter() :  -> [64 x 1]
+Validating --> conv1.isd = LearnableParameter() :  -> [64 x 1]
+Validating --> conv1.bn = BatchNormalization (conv1.c, conv1.sc, conv1.b, conv1.m, conv1.isd) : [4 x 4 x 64 x *], [64 x 1], [64 x 1], [64 x 1], [64 x 1] -> [4 x 4 x 64 x *]
+Validating --> conv1.y = RectifiedLinear (conv1.bn) : [4 x 4 x 64 x *] -> [4 x 4 x 64 x *]
+Validating --> dc1 = Dropout (conv1.y) : [4 x 4 x 64 x *] -> [4 x 4 x 64 x *]
+Validating --> h1.t = Times (h1.W, dc1) : [64 x 4 x 4 x 64], [4 x 4 x 64 x *] -> [64 x *]
+Validating --> h1.sc = LearnableParameter() :  -> [64 x 1]
+Validating --> h1.b = LearnableParameter() :  -> [64 x 1]
+Validating --> h1.m = LearnableParameter() :  -> [64 x 1]
+Validating --> h1.isd = LearnableParameter() :  -> [64 x 1]
+Validating --> h1.bn = BatchNormalization (h1.t, h1.sc, h1.b, h1.m, h1.isd) : [64 x *], [64 x 1], [64 x 1], [64 x 1], [64 x 1] -> [64 x *]
+Validating --> h1.y = RectifiedLinear (h1.bn) : [64 x *] -> [64 x *]
+Validating --> d1 = Dropout (h1.y) : [64 x *] -> [64 x *]
+Validating --> OutputNodes.t = Times (OutputNodes.W, d1) : [4 x 64], [64 x *] -> [4 x *]
+Validating --> OutputNodes.b = LearnableParameter() :  -> [4]
+Validating --> OutputNodes.out = Plus (OutputNodes.t, OutputNodes.b) : [4 x *], [4] -> [4 x *]
+Validating --> labels = InputValue() :  -> [4 x *]
+Validating --> sqErr = SquareError (labels, OutputNodes.out) : [4 x *], [4 x *] -> [1]
+
+Validating network. 14 nodes to process in pass 2.
+
+
+Validating network, final pass.
+
+conv1.c: using cuDNN convolution engine for geometry: Input: 4 x 4 x 1, Output: 4 x 4 x 64, Kernel: 1 x 1 x 1, Map: 1 x 1 x 64, Stride: 1 x 1 x 1, Sharing: (1), AutoPad: (0), LowerPad: 0, UpperPad: 0.
+Using CNTK batch normalization engine.
+Using CNTK batch normalization engine.
+
+
+15 out of 28 nodes do not share the minibatch layout with the input data.
+
+Post-processing network complete.
+
+08/26/2016 17:35:14: Created model with 28 nodes on GPU 0.
+
+08/26/2016 17:35:14: Training criterion node(s):
+08/26/2016 17:35:14: 	sqErr = SquareError
+
+
+Allocating matrices for forward and/or backward propagation.
+
+Memory Sharing: Out of 47 matrices, 20 are shared as 8, and 27 are not shared.
+
+	{ OutputNodes.t : [4 x *] (gradient)
+	  h1.b : [64 x 1] (gradient) }
+	{ conv1.sc : [64 x 1] (gradient)
+	  conv1.y : [4 x 4 x 64 x *] (gradient)
+	  h1.t : [64 x *] }
+	{ conv1.W : [64 x 1] (gradient)
+	  d1 : [64 x *]
+	  dc1 : [4 x 4 x 64 x *] (gradient) }
+	{ conv1.c : [4 x 4 x 64 x *] (gradient)
+	  conv1.y : [4 x 4 x 64 x *] }
+	{ OutputNodes.W : [4 x 64] (gradient)
+	  OutputNodes.out : [4 x *] (gradient) }
+	{ conv1.b : [64 x 1] (gradient)
+	  h1.t : [64 x *] (gradient)
+	  h1.y : [64 x *] }
+	{ d1 : [64 x *] (gradient)
+	  h1.W : [64 x 4 x 4 x 64] (gradient) }
+	{ OutputNodes.t : [4 x *]
+	  h1.sc : [64 x 1] (gradient)
+	  h1.y : [64 x *] (gradient) }
+
+
+08/26/2016 17:35:14: Training 66116 parameters in 8 out of 8 parameter tensors and 19 nodes with gradient:
+
+08/26/2016 17:35:14: 	Node 'OutputNodes.W' (LearnableParameter operation) : [4 x 64]
+08/26/2016 17:35:14: 	Node 'OutputNodes.b' (LearnableParameter operation) : [4]
+08/26/2016 17:35:14: 	Node 'conv1.W' (LearnableParameter operation) : [64 x 1]
+08/26/2016 17:35:14: 	Node 'conv1.b' (LearnableParameter operation) : [64 x 1]
+08/26/2016 17:35:14: 	Node 'conv1.sc' (LearnableParameter operation) : [64 x 1]
+08/26/2016 17:35:14: 	Node 'h1.W' (LearnableParameter operation) : [64 x 4 x 4 x 64]
+08/26/2016 17:35:14: 	Node 'h1.b' (LearnableParameter operation) : [64 x 1]
+08/26/2016 17:35:14: 	Node 'h1.sc' (LearnableParameter operation) : [64 x 1]
+
+
+08/26/2016 17:35:14: Precomputing --> 2 PreCompute nodes found.
+
+08/26/2016 17:35:14: 	meanVal = Mean()
+08/26/2016 17:35:14: 	invstdVal = InvStdDev()
+
+08/26/2016 17:35:16: Precomputing --> Completed.
+
+Setting dropout rate to 0.1.
+
+08/26/2016 17:35:16: Starting Epoch 1: learning rate per sample = 0.010000  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:16: Starting minibatch loop.
+08/26/2016 17:35:16:  Epoch[ 1 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 1.93462982 * 200; time = 0.0338s; samplesPerSecond = 5913.7
+08/26/2016 17:35:16: Finished Epoch[ 1 of 200]: [Training] sqErr = 1.93462982 * 200; totalSamplesSeen = 200; learningRatePerSample = 0.0099999998; epochTime=0.033998s
+08/26/2016 17:35:16: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.1'
+
+08/26/2016 17:35:16: Starting Epoch 2: learning rate per sample = 0.010000  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:16: Starting minibatch loop.
+08/26/2016 17:35:16:  Epoch[ 2 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 1.35782196 * 200; time = 0.0283s; samplesPerSecond = 7060.9
+08/26/2016 17:35:16: Finished Epoch[ 2 of 200]: [Training] sqErr = 1.35782196 * 200; totalSamplesSeen = 400; learningRatePerSample = 0.0099999998; epochTime=0.028521s
+08/26/2016 17:35:16: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.2'
+
+08/26/2016 17:35:16: Starting Epoch 3: learning rate per sample = 0.010000  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:16: Starting minibatch loop.
+08/26/2016 17:35:16:  Epoch[ 3 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 1.19667854 * 200; time = 0.0273s; samplesPerSecond = 7317.2
+08/26/2016 17:35:16: Finished Epoch[ 3 of 200]: [Training] sqErr = 1.19667854 * 200; totalSamplesSeen = 600; learningRatePerSample = 0.0099999998; epochTime=0.027504s
+08/26/2016 17:35:16: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.3'
+
+08/26/2016 17:35:16: Starting Epoch 4: learning rate per sample = 0.010000  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:16: Starting minibatch loop.
+08/26/2016 17:35:16:  Epoch[ 4 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 1.14473061 * 200; time = 0.0274s; samplesPerSecond = 7305.4
+08/26/2016 17:35:16: Finished Epoch[ 4 of 200]: [Training] sqErr = 1.14473061 * 200; totalSamplesSeen = 800; learningRatePerSample = 0.0099999998; epochTime=0.027557s
+08/26/2016 17:35:16: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.4'
+
+08/26/2016 17:35:16: Starting Epoch 5: learning rate per sample = 0.010000  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:16: Starting minibatch loop.
+08/26/2016 17:35:16:  Epoch[ 5 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 1.04135590 * 200; time = 0.0284s; samplesPerSecond = 7035.1
+08/26/2016 17:35:16: Finished Epoch[ 5 of 200]: [Training] sqErr = 1.04135590 * 200; totalSamplesSeen = 1000; learningRatePerSample = 0.0099999998; epochTime=0.028605s
+08/26/2016 17:35:16: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.5'
+
+08/26/2016 17:35:16: Starting Epoch 6: learning rate per sample = 0.010000  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:16: Starting minibatch loop.
+08/26/2016 17:35:16:  Epoch[ 6 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.95149170 * 200; time = 0.0275s; samplesPerSecond = 7282.5
+08/26/2016 17:35:16: Finished Epoch[ 6 of 200]: [Training] sqErr = 0.95149170 * 200; totalSamplesSeen = 1200; learningRatePerSample = 0.0099999998; epochTime=0.027641s
+08/26/2016 17:35:16: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.6'
+
+08/26/2016 17:35:16: Starting Epoch 7: learning rate per sample = 0.010000  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:16: Starting minibatch loop.
+08/26/2016 17:35:16:  Epoch[ 7 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.87661461 * 200; time = 0.0275s; samplesPerSecond = 7269.0
+08/26/2016 17:35:16: Finished Epoch[ 7 of 200]: [Training] sqErr = 0.87661461 * 200; totalSamplesSeen = 1400; learningRatePerSample = 0.0099999998; epochTime=0.027694s
+08/26/2016 17:35:16: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.7'
+
+08/26/2016 17:35:16: Starting Epoch 8: learning rate per sample = 0.010000  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:16: Starting minibatch loop.
+08/26/2016 17:35:16:  Epoch[ 8 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.74291168 * 200; time = 0.0275s; samplesPerSecond = 7278.3
+08/26/2016 17:35:16: Finished Epoch[ 8 of 200]: [Training] sqErr = 0.74291168 * 200; totalSamplesSeen = 1600; learningRatePerSample = 0.0099999998; epochTime=0.027652s
+08/26/2016 17:35:16: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.8'
+
+08/26/2016 17:35:16: Starting Epoch 9: learning rate per sample = 0.010000  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:16: Starting minibatch loop.
+08/26/2016 17:35:16:  Epoch[ 9 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.62233990 * 200; time = 0.0274s; samplesPerSecond = 7294.7
+08/26/2016 17:35:16: Finished Epoch[ 9 of 200]: [Training] sqErr = 0.62233990 * 200; totalSamplesSeen = 1800; learningRatePerSample = 0.0099999998; epochTime=0.0276s
+08/26/2016 17:35:16: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.9'
+
+08/26/2016 17:35:16: Starting Epoch 10: learning rate per sample = 0.010000  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:16: Starting minibatch loop.
+08/26/2016 17:35:16:  Epoch[10 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.52755409 * 200; time = 0.0275s; samplesPerSecond = 7275.6
+08/26/2016 17:35:16: Finished Epoch[10 of 200]: [Training] sqErr = 0.52755409 * 200; totalSamplesSeen = 2000; learningRatePerSample = 0.0099999998; epochTime=0.027665s
+08/26/2016 17:35:16: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.10'
+
+08/26/2016 17:35:16: Starting Epoch 11: learning rate per sample = 0.010000  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:16: Starting minibatch loop.
+08/26/2016 17:35:16:  Epoch[11 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.41385124 * 200; time = 0.0282s; samplesPerSecond = 7088.7
+08/26/2016 17:35:16: Finished Epoch[11 of 200]: [Training] sqErr = 0.41385124 * 200; totalSamplesSeen = 2200; learningRatePerSample = 0.0099999998; epochTime=0.028384s
+08/26/2016 17:35:16: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.11'
+
+08/26/2016 17:35:16: Starting Epoch 12: learning rate per sample = 0.010000  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:16: Starting minibatch loop.
+08/26/2016 17:35:16:  Epoch[12 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.48373848 * 200; time = 0.0279s; samplesPerSecond = 7159.5
+08/26/2016 17:35:16: Finished Epoch[12 of 200]: [Training] sqErr = 0.48373848 * 200; totalSamplesSeen = 2400; learningRatePerSample = 0.0099999998; epochTime=0.028112s
+08/26/2016 17:35:16: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.12'
+
+08/26/2016 17:35:16: Starting Epoch 13: learning rate per sample = 0.010000  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:16: Starting minibatch loop.
+08/26/2016 17:35:16:  Epoch[13 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.37115387 * 200; time = 0.0271s; samplesPerSecond = 7376.0
+08/26/2016 17:35:16: Finished Epoch[13 of 200]: [Training] sqErr = 0.37115387 * 200; totalSamplesSeen = 2600; learningRatePerSample = 0.0099999998; epochTime=0.027283s
+08/26/2016 17:35:16: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.13'
+
+08/26/2016 17:35:16: Starting Epoch 14: learning rate per sample = 0.010000  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:16: Starting minibatch loop.
+08/26/2016 17:35:16:  Epoch[14 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.47365517 * 200; time = 0.0282s; samplesPerSecond = 7085.4
+08/26/2016 17:35:16: Finished Epoch[14 of 200]: [Training] sqErr = 0.47365517 * 200; totalSamplesSeen = 2800; learningRatePerSample = 0.0099999998; epochTime=0.028387s
+08/26/2016 17:35:16: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.14'
+
+08/26/2016 17:35:16: Starting Epoch 15: learning rate per sample = 0.010000  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:16: Starting minibatch loop.
+08/26/2016 17:35:16:  Epoch[15 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.33701679 * 200; time = 0.0273s; samplesPerSecond = 7338.9
+08/26/2016 17:35:16: Finished Epoch[15 of 200]: [Training] sqErr = 0.33701679 * 200; totalSamplesSeen = 3000; learningRatePerSample = 0.0099999998; epochTime=0.027423s
+08/26/2016 17:35:16: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.15'
+
+08/26/2016 17:35:16: Starting Epoch 16: learning rate per sample = 0.010000  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:16: Starting minibatch loop.
+08/26/2016 17:35:16:  Epoch[16 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.33685722 * 200; time = 0.0283s; samplesPerSecond = 7064.9
+08/26/2016 17:35:16: Finished Epoch[16 of 200]: [Training] sqErr = 0.33685722 * 200; totalSamplesSeen = 3200; learningRatePerSample = 0.0099999998; epochTime=0.028478s
+08/26/2016 17:35:16: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.16'
+
+08/26/2016 17:35:16: Starting Epoch 17: learning rate per sample = 0.010000  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:16: Starting minibatch loop.
+08/26/2016 17:35:16:  Epoch[17 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.41651669 * 200; time = 0.0285s; samplesPerSecond = 7028.1
+08/26/2016 17:35:16: Finished Epoch[17 of 200]: [Training] sqErr = 0.41651669 * 200; totalSamplesSeen = 3400; learningRatePerSample = 0.0099999998; epochTime=0.028618s
+08/26/2016 17:35:16: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.17'
+
+08/26/2016 17:35:16: Starting Epoch 18: learning rate per sample = 0.010000  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:16: Starting minibatch loop.
+08/26/2016 17:35:16:  Epoch[18 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.34010918 * 200; time = 0.0291s; samplesPerSecond = 6876.9
+08/26/2016 17:35:16: Finished Epoch[18 of 200]: [Training] sqErr = 0.34010918 * 200; totalSamplesSeen = 3600; learningRatePerSample = 0.0099999998; epochTime=0.029251s
+08/26/2016 17:35:16: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.18'
+
+08/26/2016 17:35:16: Starting Epoch 19: learning rate per sample = 0.010000  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:16: Starting minibatch loop.
+08/26/2016 17:35:16:  Epoch[19 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.31841471 * 200; time = 0.0286s; samplesPerSecond = 7003.3
+08/26/2016 17:35:16: Finished Epoch[19 of 200]: [Training] sqErr = 0.31841471 * 200; totalSamplesSeen = 3800; learningRatePerSample = 0.0099999998; epochTime=0.028717s
+08/26/2016 17:35:16: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.19'
+
+08/26/2016 17:35:16: Starting Epoch 20: learning rate per sample = 0.010000  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:16: Starting minibatch loop.
+08/26/2016 17:35:16:  Epoch[20 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.25700123 * 200; time = 0.0270s; samplesPerSecond = 7419.8
+08/26/2016 17:35:16: Finished Epoch[20 of 200]: [Training] sqErr = 0.25700123 * 200; totalSamplesSeen = 4000; learningRatePerSample = 0.0099999998; epochTime=0.02712s
+08/26/2016 17:35:16: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.20'
+
+08/26/2016 17:35:16: Starting Epoch 21: learning rate per sample = 0.002000  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:16: Starting minibatch loop.
+08/26/2016 17:35:16:  Epoch[21 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.36939243 * 200; time = 0.0276s; samplesPerSecond = 7234.3
+08/26/2016 17:35:16: Finished Epoch[21 of 200]: [Training] sqErr = 0.36939243 * 200; totalSamplesSeen = 4200; learningRatePerSample = 0.0020000001; epochTime=0.027806s
+08/26/2016 17:35:16: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.21'
+
+08/26/2016 17:35:16: Starting Epoch 22: learning rate per sample = 0.002000  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:16: Starting minibatch loop.
+08/26/2016 17:35:16:  Epoch[22 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.27654699 * 200; time = 0.0271s; samplesPerSecond = 7383.3
+08/26/2016 17:35:16: Finished Epoch[22 of 200]: [Training] sqErr = 0.27654699 * 200; totalSamplesSeen = 4400; learningRatePerSample = 0.0020000001; epochTime=0.027248s
+08/26/2016 17:35:16: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.22'
+
+08/26/2016 17:35:16: Starting Epoch 23: learning rate per sample = 0.002000  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:16: Starting minibatch loop.
+08/26/2016 17:35:16:  Epoch[23 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.22417212 * 200; time = 0.0272s; samplesPerSecond = 7363.0
+08/26/2016 17:35:16: Finished Epoch[23 of 200]: [Training] sqErr = 0.22417212 * 200; totalSamplesSeen = 4600; learningRatePerSample = 0.0020000001; epochTime=0.027325s
+08/26/2016 17:35:16: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.23'
+
+08/26/2016 17:35:16: Starting Epoch 24: learning rate per sample = 0.002000  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:16: Starting minibatch loop.
+08/26/2016 17:35:16:  Epoch[24 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.20852606 * 200; time = 0.0273s; samplesPerSecond = 7316.9
+08/26/2016 17:35:16: Finished Epoch[24 of 200]: [Training] sqErr = 0.20852606 * 200; totalSamplesSeen = 4800; learningRatePerSample = 0.0020000001; epochTime=0.027492s
+08/26/2016 17:35:16: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.24'
+
+08/26/2016 17:35:16: Starting Epoch 25: learning rate per sample = 0.002000  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:16: Starting minibatch loop.
+08/26/2016 17:35:16:  Epoch[25 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.22635483 * 200; time = 0.0282s; samplesPerSecond = 7098.2
+08/26/2016 17:35:16: Finished Epoch[25 of 200]: [Training] sqErr = 0.22635483 * 200; totalSamplesSeen = 5000; learningRatePerSample = 0.0020000001; epochTime=0.028333s
+08/26/2016 17:35:16: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.25'
+
+08/26/2016 17:35:17: Starting Epoch 26: learning rate per sample = 0.002000  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:17: Starting minibatch loop.
+08/26/2016 17:35:17:  Epoch[26 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.21611568 * 200; time = 0.0270s; samplesPerSecond = 7394.3
+08/26/2016 17:35:17: Finished Epoch[26 of 200]: [Training] sqErr = 0.21611568 * 200; totalSamplesSeen = 5200; learningRatePerSample = 0.0020000001; epochTime=0.027212s
+08/26/2016 17:35:17: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.26'
+
+08/26/2016 17:35:17: Starting Epoch 27: learning rate per sample = 0.002000  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:17: Starting minibatch loop.
+08/26/2016 17:35:17:  Epoch[27 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.20699888 * 200; time = 0.0278s; samplesPerSecond = 7197.1
+08/26/2016 17:35:17: Finished Epoch[27 of 200]: [Training] sqErr = 0.20699888 * 200; totalSamplesSeen = 5400; learningRatePerSample = 0.0020000001; epochTime=0.027948s
+08/26/2016 17:35:17: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.27'
+
+08/26/2016 17:35:17: Starting Epoch 28: learning rate per sample = 0.002000  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:17: Starting minibatch loop.
+08/26/2016 17:35:17:  Epoch[28 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.20050327 * 200; time = 0.0276s; samplesPerSecond = 7249.8
+08/26/2016 17:35:17: Finished Epoch[28 of 200]: [Training] sqErr = 0.20050327 * 200; totalSamplesSeen = 5600; learningRatePerSample = 0.0020000001; epochTime=0.027752s
+08/26/2016 17:35:17: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.28'
+
+08/26/2016 17:35:17: Starting Epoch 29: learning rate per sample = 0.002000  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:17: Starting minibatch loop.
+08/26/2016 17:35:17:  Epoch[29 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.23997375 * 200; time = 0.0270s; samplesPerSecond = 7420.9
+08/26/2016 17:35:17: Finished Epoch[29 of 200]: [Training] sqErr = 0.23997375 * 200; totalSamplesSeen = 5800; learningRatePerSample = 0.0020000001; epochTime=0.027114s
+08/26/2016 17:35:17: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.29'
+
+08/26/2016 17:35:17: Starting Epoch 30: learning rate per sample = 0.002000  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:17: Starting minibatch loop.
+08/26/2016 17:35:17:  Epoch[30 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.22234835 * 200; time = 0.0274s; samplesPerSecond = 7296.3
+08/26/2016 17:35:17: Finished Epoch[30 of 200]: [Training] sqErr = 0.22234835 * 200; totalSamplesSeen = 6000; learningRatePerSample = 0.0020000001; epochTime=0.027575s
+08/26/2016 17:35:17: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.30'
+
+08/26/2016 17:35:17: Starting Epoch 31: learning rate per sample = 0.002000  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:17: Starting minibatch loop.
+08/26/2016 17:35:17:  Epoch[31 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.20009945 * 200; time = 0.0271s; samplesPerSecond = 7388.3
+08/26/2016 17:35:17: Finished Epoch[31 of 200]: [Training] sqErr = 0.20009945 * 200; totalSamplesSeen = 6200; learningRatePerSample = 0.0020000001; epochTime=0.027231s
+08/26/2016 17:35:17: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.31'
+
+08/26/2016 17:35:17: Starting Epoch 32: learning rate per sample = 0.002000  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:17: Starting minibatch loop.
+08/26/2016 17:35:17:  Epoch[32 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.19418903 * 200; time = 0.0274s; samplesPerSecond = 7288.6
+08/26/2016 17:35:17: Finished Epoch[32 of 200]: [Training] sqErr = 0.19418903 * 200; totalSamplesSeen = 6400; learningRatePerSample = 0.0020000001; epochTime=0.027604s
+08/26/2016 17:35:17: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.32'
+
+08/26/2016 17:35:17: Starting Epoch 33: learning rate per sample = 0.002000  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:17: Starting minibatch loop.
+08/26/2016 17:35:17:  Epoch[33 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.21012001 * 200; time = 0.0277s; samplesPerSecond = 7214.7
+08/26/2016 17:35:17: Finished Epoch[33 of 200]: [Training] sqErr = 0.21012001 * 200; totalSamplesSeen = 6600; learningRatePerSample = 0.0020000001; epochTime=0.027884s
+08/26/2016 17:35:17: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.33'
+
+08/26/2016 17:35:17: Starting Epoch 34: learning rate per sample = 0.002000  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:17: Starting minibatch loop.
+08/26/2016 17:35:17:  Epoch[34 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.23596191 * 200; time = 0.0276s; samplesPerSecond = 7246.1
+08/26/2016 17:35:17: Finished Epoch[34 of 200]: [Training] sqErr = 0.23596191 * 200; totalSamplesSeen = 6800; learningRatePerSample = 0.0020000001; epochTime=0.027763s
+08/26/2016 17:35:17: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.34'
+
+08/26/2016 17:35:17: Starting Epoch 35: learning rate per sample = 0.002000  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:17: Starting minibatch loop.
+08/26/2016 17:35:17:  Epoch[35 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.24832279 * 200; time = 0.0276s; samplesPerSecond = 7247.2
+08/26/2016 17:35:17: Finished Epoch[35 of 200]: [Training] sqErr = 0.24832279 * 200; totalSamplesSeen = 7000; learningRatePerSample = 0.0020000001; epochTime=0.027766s
+08/26/2016 17:35:17: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.35'
+
+08/26/2016 17:35:17: Starting Epoch 36: learning rate per sample = 0.002000  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:17: Starting minibatch loop.
+08/26/2016 17:35:17:  Epoch[36 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.25838955 * 200; time = 0.0284s; samplesPerSecond = 7048.0
+08/26/2016 17:35:17: Finished Epoch[36 of 200]: [Training] sqErr = 0.25838955 * 200; totalSamplesSeen = 7200; learningRatePerSample = 0.0020000001; epochTime=0.028539s
+08/26/2016 17:35:17: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.36'
+
+08/26/2016 17:35:17: Starting Epoch 37: learning rate per sample = 0.002000  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:17: Starting minibatch loop.
+08/26/2016 17:35:17:  Epoch[37 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.19668650 * 200; time = 0.0279s; samplesPerSecond = 7176.9
+08/26/2016 17:35:17: Finished Epoch[37 of 200]: [Training] sqErr = 0.19668650 * 200; totalSamplesSeen = 7400; learningRatePerSample = 0.0020000001; epochTime=0.02804s
+08/26/2016 17:35:17: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.37'
+
+08/26/2016 17:35:17: Starting Epoch 38: learning rate per sample = 0.002000  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:17: Starting minibatch loop.
+08/26/2016 17:35:17:  Epoch[38 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.20629339 * 200; time = 0.0274s; samplesPerSecond = 7290.5
+08/26/2016 17:35:17: Finished Epoch[38 of 200]: [Training] sqErr = 0.20629339 * 200; totalSamplesSeen = 7600; learningRatePerSample = 0.0020000001; epochTime=0.027592s
+08/26/2016 17:35:17: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.38'
+
+08/26/2016 17:35:17: Starting Epoch 39: learning rate per sample = 0.002000  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:17: Starting minibatch loop.
+08/26/2016 17:35:17:  Epoch[39 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.23414383 * 200; time = 0.0276s; samplesPerSecond = 7255.1
+08/26/2016 17:35:17: Finished Epoch[39 of 200]: [Training] sqErr = 0.23414383 * 200; totalSamplesSeen = 7800; learningRatePerSample = 0.0020000001; epochTime=0.027732s
+08/26/2016 17:35:17: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.39'
+
+08/26/2016 17:35:17: Starting Epoch 40: learning rate per sample = 0.002000  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:17: Starting minibatch loop.
+08/26/2016 17:35:17:  Epoch[40 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.17702671 * 200; time = 0.0272s; samplesPerSecond = 7356.2
+08/26/2016 17:35:17: Finished Epoch[40 of 200]: [Training] sqErr = 0.17702671 * 200; totalSamplesSeen = 8000; learningRatePerSample = 0.0020000001; epochTime=0.027349s
+08/26/2016 17:35:17: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.40'
+
+08/26/2016 17:35:17: Starting Epoch 41: learning rate per sample = 0.000400  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:17: Starting minibatch loop.
+08/26/2016 17:35:17:  Epoch[41 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.19718033 * 200; time = 0.0279s; samplesPerSecond = 7173.9
+08/26/2016 17:35:17: Finished Epoch[41 of 200]: [Training] sqErr = 0.19718033 * 200; totalSamplesSeen = 8200; learningRatePerSample = 0.00039999999; epochTime=0.02804s
+08/26/2016 17:35:17: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.41'
+
+08/26/2016 17:35:17: Starting Epoch 42: learning rate per sample = 0.000400  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:17: Starting minibatch loop.
+08/26/2016 17:35:17:  Epoch[42 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.20915583 * 200; time = 0.0275s; samplesPerSecond = 7265.6
+08/26/2016 17:35:17: Finished Epoch[42 of 200]: [Training] sqErr = 0.20915583 * 200; totalSamplesSeen = 8400; learningRatePerSample = 0.00039999999; epochTime=0.02769s
+08/26/2016 17:35:17: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.42'
+
+08/26/2016 17:35:17: Starting Epoch 43: learning rate per sample = 0.000400  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:17: Starting minibatch loop.
+08/26/2016 17:35:17:  Epoch[43 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.19834925 * 200; time = 0.0274s; samplesPerSecond = 7304.9
+08/26/2016 17:35:17: Finished Epoch[43 of 200]: [Training] sqErr = 0.19834925 * 200; totalSamplesSeen = 8600; learningRatePerSample = 0.00039999999; epochTime=0.027547s
+08/26/2016 17:35:17: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.43'
+
+08/26/2016 17:35:17: Starting Epoch 44: learning rate per sample = 0.000400  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:17: Starting minibatch loop.
+08/26/2016 17:35:17:  Epoch[44 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.19291779 * 200; time = 0.0276s; samplesPerSecond = 7238.0
+08/26/2016 17:35:17: Finished Epoch[44 of 200]: [Training] sqErr = 0.19291779 * 200; totalSamplesSeen = 8800; learningRatePerSample = 0.00039999999; epochTime=0.027794s
+08/26/2016 17:35:17: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.44'
+
+08/26/2016 17:35:17: Starting Epoch 45: learning rate per sample = 0.000400  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:17: Starting minibatch loop.
+08/26/2016 17:35:17:  Epoch[45 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.20628119 * 200; time = 0.0274s; samplesPerSecond = 7291.3
+08/26/2016 17:35:17: Finished Epoch[45 of 200]: [Training] sqErr = 0.20628119 * 200; totalSamplesSeen = 9000; learningRatePerSample = 0.00039999999; epochTime=0.027601s
+08/26/2016 17:35:17: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.45'
+
+08/26/2016 17:35:17: Starting Epoch 46: learning rate per sample = 0.000400  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:17: Starting minibatch loop.
+08/26/2016 17:35:17:  Epoch[46 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.22087727 * 200; time = 0.0273s; samplesPerSecond = 7326.3
+08/26/2016 17:35:17: Finished Epoch[46 of 200]: [Training] sqErr = 0.22087727 * 200; totalSamplesSeen = 9200; learningRatePerSample = 0.00039999999; epochTime=0.027461s
+08/26/2016 17:35:17: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.46'
+
+08/26/2016 17:35:17: Starting Epoch 47: learning rate per sample = 0.000400  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:17: Starting minibatch loop.
+08/26/2016 17:35:17:  Epoch[47 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.20735550 * 200; time = 0.0278s; samplesPerSecond = 7206.9
+08/26/2016 17:35:17: Finished Epoch[47 of 200]: [Training] sqErr = 0.20735550 * 200; totalSamplesSeen = 9400; learningRatePerSample = 0.00039999999; epochTime=0.027916s
+08/26/2016 17:35:17: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.47'
+
+08/26/2016 17:35:17: Starting Epoch 48: learning rate per sample = 0.000400  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:17: Starting minibatch loop.
+08/26/2016 17:35:17:  Epoch[48 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.23690424 * 200; time = 0.0282s; samplesPerSecond = 7100.3
+08/26/2016 17:35:17: Finished Epoch[48 of 200]: [Training] sqErr = 0.23690424 * 200; totalSamplesSeen = 9600; learningRatePerSample = 0.00039999999; epochTime=0.028336s
+08/26/2016 17:35:17: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.48'
+
+08/26/2016 17:35:17: Starting Epoch 49: learning rate per sample = 0.000400  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:17: Starting minibatch loop.
+08/26/2016 17:35:17:  Epoch[49 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.19257755 * 200; time = 0.0277s; samplesPerSecond = 7229.6
+08/26/2016 17:35:17: Finished Epoch[49 of 200]: [Training] sqErr = 0.19257755 * 200; totalSamplesSeen = 9800; learningRatePerSample = 0.00039999999; epochTime=0.027829s
+08/26/2016 17:35:17: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.49'
+
+08/26/2016 17:35:17: Starting Epoch 50: learning rate per sample = 0.000400  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:17: Starting minibatch loop.
+08/26/2016 17:35:17:  Epoch[50 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.18068550 * 200; time = 0.0266s; samplesPerSecond = 7519.4
+08/26/2016 17:35:17: Finished Epoch[50 of 200]: [Training] sqErr = 0.18068550 * 200; totalSamplesSeen = 10000; learningRatePerSample = 0.00039999999; epochTime=0.026769s
+08/26/2016 17:35:17: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.50'
+
+08/26/2016 17:35:17: Starting Epoch 51: learning rate per sample = 0.000400  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:17: Starting minibatch loop.
+08/26/2016 17:35:18:  Epoch[51 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.19503435 * 200; time = 0.0271s; samplesPerSecond = 7386.1
+08/26/2016 17:35:18: Finished Epoch[51 of 200]: [Training] sqErr = 0.19503435 * 200; totalSamplesSeen = 10200; learningRatePerSample = 0.00039999999; epochTime=0.027244s
+08/26/2016 17:35:18: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.51'
+
+08/26/2016 17:35:18: Starting Epoch 52: learning rate per sample = 0.000400  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:18: Starting minibatch loop.
+08/26/2016 17:35:18:  Epoch[52 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.20846855 * 200; time = 0.0277s; samplesPerSecond = 7222.8
+08/26/2016 17:35:18: Finished Epoch[52 of 200]: [Training] sqErr = 0.20846855 * 200; totalSamplesSeen = 10400; learningRatePerSample = 0.00039999999; epochTime=0.027846s
+08/26/2016 17:35:18: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.52'
+
+08/26/2016 17:35:18: Starting Epoch 53: learning rate per sample = 0.000400  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:18: Starting minibatch loop.
+08/26/2016 17:35:18:  Epoch[53 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.18738651 * 200; time = 0.0273s; samplesPerSecond = 7314.8
+08/26/2016 17:35:18: Finished Epoch[53 of 200]: [Training] sqErr = 0.18738651 * 200; totalSamplesSeen = 10600; learningRatePerSample = 0.00039999999; epochTime=0.02751s
+08/26/2016 17:35:18: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.53'
+
+08/26/2016 17:35:18: Starting Epoch 54: learning rate per sample = 0.000400  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:18: Starting minibatch loop.
+08/26/2016 17:35:18:  Epoch[54 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.17439390 * 200; time = 0.0272s; samplesPerSecond = 7356.7
+08/26/2016 17:35:18: Finished Epoch[54 of 200]: [Training] sqErr = 0.17439390 * 200; totalSamplesSeen = 10800; learningRatePerSample = 0.00039999999; epochTime=0.027349s
+08/26/2016 17:35:18: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.54'
+
+08/26/2016 17:35:18: Starting Epoch 55: learning rate per sample = 0.000400  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:18: Starting minibatch loop.
+08/26/2016 17:35:18:  Epoch[55 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.22743002 * 200; time = 0.0274s; samplesPerSecond = 7309.1
+08/26/2016 17:35:18: Finished Epoch[55 of 200]: [Training] sqErr = 0.22743002 * 200; totalSamplesSeen = 11000; learningRatePerSample = 0.00039999999; epochTime=0.027527s
+08/26/2016 17:35:18: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.55'
+
+08/26/2016 17:35:18: Starting Epoch 56: learning rate per sample = 0.000400  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:18: Starting minibatch loop.
+08/26/2016 17:35:18:  Epoch[56 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.21442463 * 200; time = 0.0273s; samplesPerSecond = 7322.8
+08/26/2016 17:35:18: Finished Epoch[56 of 200]: [Training] sqErr = 0.21442463 * 200; totalSamplesSeen = 11200; learningRatePerSample = 0.00039999999; epochTime=0.027475s
+08/26/2016 17:35:18: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.56'
+
+08/26/2016 17:35:18: Starting Epoch 57: learning rate per sample = 0.000400  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:18: Starting minibatch loop.
+08/26/2016 17:35:18:  Epoch[57 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.17229097 * 200; time = 0.0280s; samplesPerSecond = 7143.4
+08/26/2016 17:35:18: Finished Epoch[57 of 200]: [Training] sqErr = 0.17229097 * 200; totalSamplesSeen = 11400; learningRatePerSample = 0.00039999999; epochTime=0.028166s
+08/26/2016 17:35:18: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.57'
+
+08/26/2016 17:35:18: Starting Epoch 58: learning rate per sample = 0.000400  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:18: Starting minibatch loop.
+08/26/2016 17:35:18:  Epoch[58 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.15721533 * 200; time = 0.0278s; samplesPerSecond = 7183.4
+08/26/2016 17:35:18: Finished Epoch[58 of 200]: [Training] sqErr = 0.15721533 * 200; totalSamplesSeen = 11600; learningRatePerSample = 0.00039999999; epochTime=0.028003s
+08/26/2016 17:35:18: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.58'
+
+08/26/2016 17:35:18: Starting Epoch 59: learning rate per sample = 0.000400  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:18: Starting minibatch loop.
+08/26/2016 17:35:18:  Epoch[59 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.22225540 * 200; time = 0.0273s; samplesPerSecond = 7327.6
+08/26/2016 17:35:18: Finished Epoch[59 of 200]: [Training] sqErr = 0.22225540 * 200; totalSamplesSeen = 11800; learningRatePerSample = 0.00039999999; epochTime=0.027462s
+08/26/2016 17:35:18: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.59'
+
+08/26/2016 17:35:18: Starting Epoch 60: learning rate per sample = 0.000400  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:18: Starting minibatch loop.
+08/26/2016 17:35:18:  Epoch[60 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.22956863 * 200; time = 0.0275s; samplesPerSecond = 7279.3
+08/26/2016 17:35:18: Finished Epoch[60 of 200]: [Training] sqErr = 0.22956863 * 200; totalSamplesSeen = 12000; learningRatePerSample = 0.00039999999; epochTime=0.027633s
+08/26/2016 17:35:18: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.60'
+
+08/26/2016 17:35:18: Starting Epoch 61: learning rate per sample = 0.000400  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:18: Starting minibatch loop.
+08/26/2016 17:35:18:  Epoch[61 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.18848783 * 200; time = 0.0278s; samplesPerSecond = 7205.9
+08/26/2016 17:35:18: Finished Epoch[61 of 200]: [Training] sqErr = 0.18848783 * 200; totalSamplesSeen = 12200; learningRatePerSample = 0.00039999999; epochTime=0.027944s
+08/26/2016 17:35:18: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.61'
+
+08/26/2016 17:35:18: Starting Epoch 62: learning rate per sample = 0.000400  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:18: Starting minibatch loop.
+08/26/2016 17:35:18:  Epoch[62 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.16490303 * 200; time = 0.0276s; samplesPerSecond = 7243.8
+08/26/2016 17:35:18: Finished Epoch[62 of 200]: [Training] sqErr = 0.16490303 * 200; totalSamplesSeen = 12400; learningRatePerSample = 0.00039999999; epochTime=0.027781s
+08/26/2016 17:35:18: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.62'
+
+08/26/2016 17:35:18: Starting Epoch 63: learning rate per sample = 0.000400  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:18: Starting minibatch loop.
+08/26/2016 17:35:18:  Epoch[63 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.17988167 * 200; time = 0.0284s; samplesPerSecond = 7049.7
+08/26/2016 17:35:18: Finished Epoch[63 of 200]: [Training] sqErr = 0.17988167 * 200; totalSamplesSeen = 12600; learningRatePerSample = 0.00039999999; epochTime=0.028533s
+08/26/2016 17:35:18: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.63'
+
+08/26/2016 17:35:18: Starting Epoch 64: learning rate per sample = 0.000400  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:18: Starting minibatch loop.
+08/26/2016 17:35:18:  Epoch[64 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.25277636 * 200; time = 0.0280s; samplesPerSecond = 7140.8
+08/26/2016 17:35:18: Finished Epoch[64 of 200]: [Training] sqErr = 0.25277636 * 200; totalSamplesSeen = 12800; learningRatePerSample = 0.00039999999; epochTime=0.028175s
+08/26/2016 17:35:18: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.64'
+
+08/26/2016 17:35:18: Starting Epoch 65: learning rate per sample = 0.000400  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:18: Starting minibatch loop.
+08/26/2016 17:35:18:  Epoch[65 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.18815008 * 200; time = 0.0285s; samplesPerSecond = 7019.0
+08/26/2016 17:35:18: Finished Epoch[65 of 200]: [Training] sqErr = 0.18815008 * 200; totalSamplesSeen = 13000; learningRatePerSample = 0.00039999999; epochTime=0.028658s
+08/26/2016 17:35:18: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.65'
+
+08/26/2016 17:35:18: Starting Epoch 66: learning rate per sample = 0.000400  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:18: Starting minibatch loop.
+08/26/2016 17:35:18:  Epoch[66 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.18823822 * 200; time = 0.0278s; samplesPerSecond = 7199.4
+08/26/2016 17:35:18: Finished Epoch[66 of 200]: [Training] sqErr = 0.18823822 * 200; totalSamplesSeen = 13200; learningRatePerSample = 0.00039999999; epochTime=0.027948s
+08/26/2016 17:35:18: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.66'
+
+08/26/2016 17:35:18: Starting Epoch 67: learning rate per sample = 0.000400  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:18: Starting minibatch loop.
+08/26/2016 17:35:18:  Epoch[67 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.21839607 * 200; time = 0.0270s; samplesPerSecond = 7393.7
+08/26/2016 17:35:18: Finished Epoch[67 of 200]: [Training] sqErr = 0.21839607 * 200; totalSamplesSeen = 13400; learningRatePerSample = 0.00039999999; epochTime=0.027235s
+08/26/2016 17:35:18: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.67'
+
+08/26/2016 17:35:18: Starting Epoch 68: learning rate per sample = 0.000400  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:18: Starting minibatch loop.
+08/26/2016 17:35:18:  Epoch[68 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.19973021 * 200; time = 0.0278s; samplesPerSecond = 7187.8
+08/26/2016 17:35:18: Finished Epoch[68 of 200]: [Training] sqErr = 0.19973021 * 200; totalSamplesSeen = 13600; learningRatePerSample = 0.00039999999; epochTime=0.027991s
+08/26/2016 17:35:18: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.68'
+
+08/26/2016 17:35:18: Starting Epoch 69: learning rate per sample = 0.000400  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:18: Starting minibatch loop.
+08/26/2016 17:35:18:  Epoch[69 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.18639318 * 200; time = 0.0282s; samplesPerSecond = 7095.5
+08/26/2016 17:35:18: Finished Epoch[69 of 200]: [Training] sqErr = 0.18639318 * 200; totalSamplesSeen = 13800; learningRatePerSample = 0.00039999999; epochTime=0.028352s
+08/26/2016 17:35:18: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.69'
+
+08/26/2016 17:35:18: Starting Epoch 70: learning rate per sample = 0.000400  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:18: Starting minibatch loop.
+08/26/2016 17:35:18:  Epoch[70 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.21554655 * 200; time = 0.0271s; samplesPerSecond = 7378.4
+08/26/2016 17:35:18: Finished Epoch[70 of 200]: [Training] sqErr = 0.21554655 * 200; totalSamplesSeen = 14000; learningRatePerSample = 0.00039999999; epochTime=0.02727s
+08/26/2016 17:35:18: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.70'
+
+08/26/2016 17:35:18: Starting Epoch 71: learning rate per sample = 0.000100  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:18: Starting minibatch loop.
+08/26/2016 17:35:18:  Epoch[71 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.20089962 * 200; time = 0.0280s; samplesPerSecond = 7148.0
+08/26/2016 17:35:18: Finished Epoch[71 of 200]: [Training] sqErr = 0.20089962 * 200; totalSamplesSeen = 14200; learningRatePerSample = 9.9999997e-005; epochTime=0.028139s
+08/26/2016 17:35:18: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.71'
+
+08/26/2016 17:35:18: Starting Epoch 72: learning rate per sample = 0.000100  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:18: Starting minibatch loop.
+08/26/2016 17:35:18:  Epoch[72 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.20191523 * 200; time = 0.0278s; samplesPerSecond = 7203.1
+08/26/2016 17:35:18: Finished Epoch[72 of 200]: [Training] sqErr = 0.20191523 * 200; totalSamplesSeen = 14400; learningRatePerSample = 9.9999997e-005; epochTime=0.027933s
+08/26/2016 17:35:18: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.72'
+
+08/26/2016 17:35:18: Starting Epoch 73: learning rate per sample = 0.000100  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:18: Starting minibatch loop.
+08/26/2016 17:35:18:  Epoch[73 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.19024590 * 200; time = 0.0279s; samplesPerSecond = 7155.9
+08/26/2016 17:35:18: Finished Epoch[73 of 200]: [Training] sqErr = 0.19024590 * 200; totalSamplesSeen = 14600; learningRatePerSample = 9.9999997e-005; epochTime=0.02811s
+08/26/2016 17:35:18: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.73'
+
+08/26/2016 17:35:18: Starting Epoch 74: learning rate per sample = 0.000100  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:18: Starting minibatch loop.
+08/26/2016 17:35:18:  Epoch[74 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.19674902 * 200; time = 0.0272s; samplesPerSecond = 7354.6
+08/26/2016 17:35:18: Finished Epoch[74 of 200]: [Training] sqErr = 0.19674902 * 200; totalSamplesSeen = 14800; learningRatePerSample = 9.9999997e-005; epochTime=0.027357s
+08/26/2016 17:35:18: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.74'
+
+08/26/2016 17:35:18: Starting Epoch 75: learning rate per sample = 0.000100  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:18: Starting minibatch loop.
+08/26/2016 17:35:18:  Epoch[75 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.18462234 * 200; time = 0.0277s; samplesPerSecond = 7208.2
+08/26/2016 17:35:18: Finished Epoch[75 of 200]: [Training] sqErr = 0.18462234 * 200; totalSamplesSeen = 15000; learningRatePerSample = 9.9999997e-005; epochTime=0.02791s
+08/26/2016 17:35:18: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.75'
+
+08/26/2016 17:35:18: Starting Epoch 76: learning rate per sample = 0.000100  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:18: Starting minibatch loop.
+08/26/2016 17:35:19:  Epoch[76 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.20884033 * 200; time = 0.0275s; samplesPerSecond = 7264.0
+08/26/2016 17:35:19: Finished Epoch[76 of 200]: [Training] sqErr = 0.20884033 * 200; totalSamplesSeen = 15200; learningRatePerSample = 9.9999997e-005; epochTime=0.027691s
+08/26/2016 17:35:19: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.76'
+
+08/26/2016 17:35:19: Starting Epoch 77: learning rate per sample = 0.000100  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:19: Starting minibatch loop.
+08/26/2016 17:35:19:  Epoch[77 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.19926510 * 200; time = 0.0273s; samplesPerSecond = 7314.0
+08/26/2016 17:35:19: Finished Epoch[77 of 200]: [Training] sqErr = 0.19926510 * 200; totalSamplesSeen = 15400; learningRatePerSample = 9.9999997e-005; epochTime=0.027521s
+08/26/2016 17:35:19: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.77'
+
+08/26/2016 17:35:19: Starting Epoch 78: learning rate per sample = 0.000100  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:19: Starting minibatch loop.
+08/26/2016 17:35:19:  Epoch[78 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.18771385 * 200; time = 0.0272s; samplesPerSecond = 7339.7
+08/26/2016 17:35:19: Finished Epoch[78 of 200]: [Training] sqErr = 0.18771385 * 200; totalSamplesSeen = 15600; learningRatePerSample = 9.9999997e-005; epochTime=0.027419s
+08/26/2016 17:35:19: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.78'
+
+08/26/2016 17:35:19: Starting Epoch 79: learning rate per sample = 0.000100  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:19: Starting minibatch loop.
+08/26/2016 17:35:19:  Epoch[79 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.19582083 * 200; time = 0.0278s; samplesPerSecond = 7193.5
+08/26/2016 17:35:19: Finished Epoch[79 of 200]: [Training] sqErr = 0.19582083 * 200; totalSamplesSeen = 15800; learningRatePerSample = 9.9999997e-005; epochTime=0.027961s
+08/26/2016 17:35:19: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.79'
+
+08/26/2016 17:35:19: Starting Epoch 80: learning rate per sample = 0.000100  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:19: Starting minibatch loop.
+08/26/2016 17:35:19:  Epoch[80 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.20302729 * 200; time = 0.0274s; samplesPerSecond = 7296.1
+08/26/2016 17:35:19: Finished Epoch[80 of 200]: [Training] sqErr = 0.20302729 * 200; totalSamplesSeen = 16000; learningRatePerSample = 9.9999997e-005; epochTime=0.027573s
+08/26/2016 17:35:19: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.80'
+
+08/26/2016 17:35:19: Starting Epoch 81: learning rate per sample = 0.000100  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:19: Starting minibatch loop.
+08/26/2016 17:35:19:  Epoch[81 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.21301838 * 200; time = 0.0284s; samplesPerSecond = 7044.0
+08/26/2016 17:35:19: Finished Epoch[81 of 200]: [Training] sqErr = 0.21301838 * 200; totalSamplesSeen = 16200; learningRatePerSample = 9.9999997e-005; epochTime=0.02856s
+08/26/2016 17:35:19: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.81'
+
+08/26/2016 17:35:19: Starting Epoch 82: learning rate per sample = 0.000100  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:19: Starting minibatch loop.
+08/26/2016 17:35:19:  Epoch[82 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.17670301 * 200; time = 0.0273s; samplesPerSecond = 7317.4
+08/26/2016 17:35:19: Finished Epoch[82 of 200]: [Training] sqErr = 0.17670301 * 200; totalSamplesSeen = 16400; learningRatePerSample = 9.9999997e-005; epochTime=0.027495s
+08/26/2016 17:35:19: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.82'
+
+08/26/2016 17:35:19: Starting Epoch 83: learning rate per sample = 0.000100  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:19: Starting minibatch loop.
+08/26/2016 17:35:19:  Epoch[83 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.20043493 * 200; time = 0.0281s; samplesPerSecond = 7124.8
+08/26/2016 17:35:19: Finished Epoch[83 of 200]: [Training] sqErr = 0.20043493 * 200; totalSamplesSeen = 16600; learningRatePerSample = 9.9999997e-005; epochTime=0.028238s
+08/26/2016 17:35:19: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.83'
+
+08/26/2016 17:35:19: Starting Epoch 84: learning rate per sample = 0.000100  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:19: Starting minibatch loop.
+08/26/2016 17:35:19:  Epoch[84 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.18994101 * 200; time = 0.0279s; samplesPerSecond = 7165.6
+08/26/2016 17:35:19: Finished Epoch[84 of 200]: [Training] sqErr = 0.18994101 * 200; totalSamplesSeen = 16800; learningRatePerSample = 9.9999997e-005; epochTime=0.028071s
+08/26/2016 17:35:19: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.84'
+
+08/26/2016 17:35:19: Starting Epoch 85: learning rate per sample = 0.000100  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:19: Starting minibatch loop.
+08/26/2016 17:35:19:  Epoch[85 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.19266989 * 200; time = 0.0270s; samplesPerSecond = 7403.6
+08/26/2016 17:35:19: Finished Epoch[85 of 200]: [Training] sqErr = 0.19266989 * 200; totalSamplesSeen = 17000; learningRatePerSample = 9.9999997e-005; epochTime=0.027183s
+08/26/2016 17:35:19: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.85'
+
+08/26/2016 17:35:19: Starting Epoch 86: learning rate per sample = 0.000100  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:19: Starting minibatch loop.
+08/26/2016 17:35:19:  Epoch[86 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.20561501 * 200; time = 0.0274s; samplesPerSecond = 7302.2
+08/26/2016 17:35:19: Finished Epoch[86 of 200]: [Training] sqErr = 0.20561501 * 200; totalSamplesSeen = 17200; learningRatePerSample = 9.9999997e-005; epochTime=0.027551s
+08/26/2016 17:35:19: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.86'
+
+08/26/2016 17:35:19: Starting Epoch 87: learning rate per sample = 0.000100  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:19: Starting minibatch loop.
+08/26/2016 17:35:19:  Epoch[87 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.14829780 * 200; time = 0.0276s; samplesPerSecond = 7255.8
+08/26/2016 17:35:19: Finished Epoch[87 of 200]: [Training] sqErr = 0.14829780 * 200; totalSamplesSeen = 17400; learningRatePerSample = 9.9999997e-005; epochTime=0.027731s
+08/26/2016 17:35:19: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.87'
+
+08/26/2016 17:35:19: Starting Epoch 88: learning rate per sample = 0.000100  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:19: Starting minibatch loop.
+08/26/2016 17:35:19:  Epoch[88 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.17309481 * 200; time = 0.0275s; samplesPerSecond = 7276.2
+08/26/2016 17:35:19: Finished Epoch[88 of 200]: [Training] sqErr = 0.17309481 * 200; totalSamplesSeen = 17600; learningRatePerSample = 9.9999997e-005; epochTime=0.027651s
+08/26/2016 17:35:19: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.88'
+
+08/26/2016 17:35:19: Starting Epoch 89: learning rate per sample = 0.000100  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:19: Starting minibatch loop.
+08/26/2016 17:35:19:  Epoch[89 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.19793074 * 200; time = 0.0272s; samplesPerSecond = 7343.0
+08/26/2016 17:35:19: Finished Epoch[89 of 200]: [Training] sqErr = 0.19793074 * 200; totalSamplesSeen = 17800; learningRatePerSample = 9.9999997e-005; epochTime=0.027394s
+08/26/2016 17:35:19: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.89'
+
+08/26/2016 17:35:19: Starting Epoch 90: learning rate per sample = 0.000100  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:19: Starting minibatch loop.
+08/26/2016 17:35:19:  Epoch[90 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.22122911 * 200; time = 0.0268s; samplesPerSecond = 7453.2
+08/26/2016 17:35:19: Finished Epoch[90 of 200]: [Training] sqErr = 0.22122911 * 200; totalSamplesSeen = 18000; learningRatePerSample = 9.9999997e-005; epochTime=0.026995s
+08/26/2016 17:35:19: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.90'
+
+08/26/2016 17:35:19: Starting Epoch 91: learning rate per sample = 0.000100  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:19: Starting minibatch loop.
+08/26/2016 17:35:19:  Epoch[91 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.17479137 * 200; time = 0.0276s; samplesPerSecond = 7251.1
+08/26/2016 17:35:19: Finished Epoch[91 of 200]: [Training] sqErr = 0.17479137 * 200; totalSamplesSeen = 18200; learningRatePerSample = 9.9999997e-005; epochTime=0.027749s
+08/26/2016 17:35:19: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.91'
+
+08/26/2016 17:35:19: Starting Epoch 92: learning rate per sample = 0.000100  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:19: Starting minibatch loop.
+08/26/2016 17:35:19:  Epoch[92 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.17276808 * 200; time = 0.0272s; samplesPerSecond = 7350.0
+08/26/2016 17:35:19: Finished Epoch[92 of 200]: [Training] sqErr = 0.17276808 * 200; totalSamplesSeen = 18400; learningRatePerSample = 9.9999997e-005; epochTime=0.027373s
+08/26/2016 17:35:19: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.92'
+
+08/26/2016 17:35:19: Starting Epoch 93: learning rate per sample = 0.000100  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:19: Starting minibatch loop.
+08/26/2016 17:35:19:  Epoch[93 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.17417822 * 200; time = 0.0276s; samplesPerSecond = 7258.7
+08/26/2016 17:35:19: Finished Epoch[93 of 200]: [Training] sqErr = 0.17417822 * 200; totalSamplesSeen = 18600; learningRatePerSample = 9.9999997e-005; epochTime=0.027712s
+08/26/2016 17:35:19: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.93'
+
+08/26/2016 17:35:19: Starting Epoch 94: learning rate per sample = 0.000100  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:19: Starting minibatch loop.
+08/26/2016 17:35:19:  Epoch[94 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.17902399 * 200; time = 0.0278s; samplesPerSecond = 7189.6
+08/26/2016 17:35:19: Finished Epoch[94 of 200]: [Training] sqErr = 0.17902399 * 200; totalSamplesSeen = 18800; learningRatePerSample = 9.9999997e-005; epochTime=0.027979s
+08/26/2016 17:35:19: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.94'
+
+08/26/2016 17:35:19: Starting Epoch 95: learning rate per sample = 0.000100  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:19: Starting minibatch loop.
+08/26/2016 17:35:19:  Epoch[95 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.20460701 * 200; time = 0.0284s; samplesPerSecond = 7032.3
+08/26/2016 17:35:19: Finished Epoch[95 of 200]: [Training] sqErr = 0.20460701 * 200; totalSamplesSeen = 19000; learningRatePerSample = 9.9999997e-005; epochTime=0.0286s
+08/26/2016 17:35:19: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.95'
+
+08/26/2016 17:35:19: Starting Epoch 96: learning rate per sample = 0.000100  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:19: Starting minibatch loop.
+08/26/2016 17:35:19:  Epoch[96 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.19606539 * 200; time = 0.0275s; samplesPerSecond = 7273.0
+08/26/2016 17:35:19: Finished Epoch[96 of 200]: [Training] sqErr = 0.19606539 * 200; totalSamplesSeen = 19200; learningRatePerSample = 9.9999997e-005; epochTime=0.027669s
+08/26/2016 17:35:19: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.96'
+
+08/26/2016 17:35:19: Starting Epoch 97: learning rate per sample = 0.000100  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:19: Starting minibatch loop.
+08/26/2016 17:35:19:  Epoch[97 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.18071583 * 200; time = 0.0278s; samplesPerSecond = 7199.2
+08/26/2016 17:35:19: Finished Epoch[97 of 200]: [Training] sqErr = 0.18071583 * 200; totalSamplesSeen = 19400; learningRatePerSample = 9.9999997e-005; epochTime=0.027949s
+08/26/2016 17:35:19: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.97'
+
+08/26/2016 17:35:19: Starting Epoch 98: learning rate per sample = 0.000100  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:19: Starting minibatch loop.
+08/26/2016 17:35:19:  Epoch[98 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.18049269 * 200; time = 0.0279s; samplesPerSecond = 7179.3
+08/26/2016 17:35:19: Finished Epoch[98 of 200]: [Training] sqErr = 0.18049269 * 200; totalSamplesSeen = 19600; learningRatePerSample = 9.9999997e-005; epochTime=0.028015s
+08/26/2016 17:35:19: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.98'
+
+08/26/2016 17:35:19: Starting Epoch 99: learning rate per sample = 0.000100  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:19: Starting minibatch loop.
+08/26/2016 17:35:19:  Epoch[99 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.17088329 * 200; time = 0.0268s; samplesPerSecond = 7475.5
+08/26/2016 17:35:19: Finished Epoch[99 of 200]: [Training] sqErr = 0.17088329 * 200; totalSamplesSeen = 19800; learningRatePerSample = 9.9999997e-005; epochTime=0.026919s
+08/26/2016 17:35:19: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.99'
+
+08/26/2016 17:35:19: Starting Epoch 100: learning rate per sample = 0.000100  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:19: Starting minibatch loop.
+08/26/2016 17:35:19:  Epoch[100 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.22665504 * 200; time = 0.0277s; samplesPerSecond = 7219.4
+08/26/2016 17:35:19: Finished Epoch[100 of 200]: [Training] sqErr = 0.22665504 * 200; totalSamplesSeen = 20000; learningRatePerSample = 9.9999997e-005; epochTime=0.027864s
+08/26/2016 17:35:19: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.100'
+
+08/26/2016 17:35:19: Starting Epoch 101: learning rate per sample = 0.000020  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:19: Starting minibatch loop.
+08/26/2016 17:35:20:  Epoch[101 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.19905596 * 200; time = 0.0279s; samplesPerSecond = 7164.6
+08/26/2016 17:35:20: Finished Epoch[101 of 200]: [Training] sqErr = 0.19905596 * 200; totalSamplesSeen = 20200; learningRatePerSample = 1.9999999e-005; epochTime=0.028084s
+08/26/2016 17:35:20: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.101'
+
+08/26/2016 17:35:20: Starting Epoch 102: learning rate per sample = 0.000020  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:20: Starting minibatch loop.
+08/26/2016 17:35:20:  Epoch[102 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.20319725 * 200; time = 0.0281s; samplesPerSecond = 7123.8
+08/26/2016 17:35:20: Finished Epoch[102 of 200]: [Training] sqErr = 0.20319725 * 200; totalSamplesSeen = 20400; learningRatePerSample = 1.9999999e-005; epochTime=0.028237s
+08/26/2016 17:35:20: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.102'
+
+08/26/2016 17:35:20: Starting Epoch 103: learning rate per sample = 0.000020  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:20: Starting minibatch loop.
+08/26/2016 17:35:20:  Epoch[103 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.19579342 * 200; time = 0.0285s; samplesPerSecond = 7018.8
+08/26/2016 17:35:20: Finished Epoch[103 of 200]: [Training] sqErr = 0.19579342 * 200; totalSamplesSeen = 20600; learningRatePerSample = 1.9999999e-005; epochTime=0.028667s
+08/26/2016 17:35:20: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.103'
+
+08/26/2016 17:35:20: Starting Epoch 104: learning rate per sample = 0.000020  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:20: Starting minibatch loop.
+08/26/2016 17:35:20:  Epoch[104 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.19411839 * 200; time = 0.0274s; samplesPerSecond = 7298.5
+08/26/2016 17:35:20: Finished Epoch[104 of 200]: [Training] sqErr = 0.19411839 * 200; totalSamplesSeen = 20800; learningRatePerSample = 1.9999999e-005; epochTime=0.027569s
+08/26/2016 17:35:20: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.104'
+
+08/26/2016 17:35:20: Starting Epoch 105: learning rate per sample = 0.000020  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:20: Starting minibatch loop.
+08/26/2016 17:35:20:  Epoch[105 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.16460615 * 200; time = 0.0281s; samplesPerSecond = 7106.8
+08/26/2016 17:35:20: Finished Epoch[105 of 200]: [Training] sqErr = 0.16460615 * 200; totalSamplesSeen = 21000; learningRatePerSample = 1.9999999e-005; epochTime=0.028299s
+08/26/2016 17:35:20: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.105'
+
+08/26/2016 17:35:20: Starting Epoch 106: learning rate per sample = 0.000020  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:20: Starting minibatch loop.
+08/26/2016 17:35:20:  Epoch[106 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.19555969 * 200; time = 0.0278s; samplesPerSecond = 7196.3
+08/26/2016 17:35:20: Finished Epoch[106 of 200]: [Training] sqErr = 0.19555969 * 200; totalSamplesSeen = 21200; learningRatePerSample = 1.9999999e-005; epochTime=0.027957s
+08/26/2016 17:35:20: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.106'
+
+08/26/2016 17:35:20: Starting Epoch 107: learning rate per sample = 0.000020  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:20: Starting minibatch loop.
+08/26/2016 17:35:20:  Epoch[107 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.19043913 * 200; time = 0.0275s; samplesPerSecond = 7268.0
+08/26/2016 17:35:20: Finished Epoch[107 of 200]: [Training] sqErr = 0.19043913 * 200; totalSamplesSeen = 21400; learningRatePerSample = 1.9999999e-005; epochTime=0.027677s
+08/26/2016 17:35:20: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.107'
+
+08/26/2016 17:35:20: Starting Epoch 108: learning rate per sample = 0.000020  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:20: Starting minibatch loop.
+08/26/2016 17:35:20:  Epoch[108 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.17277849 * 200; time = 0.0282s; samplesPerSecond = 7095.7
+08/26/2016 17:35:20: Finished Epoch[108 of 200]: [Training] sqErr = 0.17277849 * 200; totalSamplesSeen = 21600; learningRatePerSample = 1.9999999e-005; epochTime=0.028348s
+08/26/2016 17:35:20: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.108'
+
+08/26/2016 17:35:20: Starting Epoch 109: learning rate per sample = 0.000020  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:20: Starting minibatch loop.
+08/26/2016 17:35:20:  Epoch[109 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.18999678 * 200; time = 0.0274s; samplesPerSecond = 7286.5
+08/26/2016 17:35:20: Finished Epoch[109 of 200]: [Training] sqErr = 0.18999678 * 200; totalSamplesSeen = 21800; learningRatePerSample = 1.9999999e-005; epochTime=0.02762s
+08/26/2016 17:35:20: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.109'
+
+08/26/2016 17:35:20: Starting Epoch 110: learning rate per sample = 0.000020  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:20: Starting minibatch loop.
+08/26/2016 17:35:20:  Epoch[110 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.17948673 * 200; time = 0.0279s; samplesPerSecond = 7159.2
+08/26/2016 17:35:20: Finished Epoch[110 of 200]: [Training] sqErr = 0.17948673 * 200; totalSamplesSeen = 22000; learningRatePerSample = 1.9999999e-005; epochTime=0.028096s
+08/26/2016 17:35:20: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.110'
+
+08/26/2016 17:35:20: Starting Epoch 111: learning rate per sample = 0.000020  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:20: Starting minibatch loop.
+08/26/2016 17:35:20:  Epoch[111 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.17111475 * 200; time = 0.0294s; samplesPerSecond = 6809.4
+08/26/2016 17:35:20: Finished Epoch[111 of 200]: [Training] sqErr = 0.17111475 * 200; totalSamplesSeen = 22200; learningRatePerSample = 1.9999999e-005; epochTime=0.029546s
+08/26/2016 17:35:20: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.111'
+
+08/26/2016 17:35:20: Starting Epoch 112: learning rate per sample = 0.000020  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:20: Starting minibatch loop.
+08/26/2016 17:35:20:  Epoch[112 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.21139769 * 200; time = 0.0282s; samplesPerSecond = 7088.4
+08/26/2016 17:35:20: Finished Epoch[112 of 200]: [Training] sqErr = 0.21139769 * 200; totalSamplesSeen = 22400; learningRatePerSample = 1.9999999e-005; epochTime=0.028379s
+08/26/2016 17:35:20: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.112'
+
+08/26/2016 17:35:20: Starting Epoch 113: learning rate per sample = 0.000020  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:20: Starting minibatch loop.
+08/26/2016 17:35:20:  Epoch[113 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.17663574 * 200; time = 0.0280s; samplesPerSecond = 7130.4
+08/26/2016 17:35:20: Finished Epoch[113 of 200]: [Training] sqErr = 0.17663574 * 200; totalSamplesSeen = 22600; learningRatePerSample = 1.9999999e-005; epochTime=0.028227s
+08/26/2016 17:35:20: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.113'
+
+08/26/2016 17:35:20: Starting Epoch 114: learning rate per sample = 0.000020  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:20: Starting minibatch loop.
+08/26/2016 17:35:20:  Epoch[114 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.16472881 * 200; time = 0.0277s; samplesPerSecond = 7224.9
+08/26/2016 17:35:20: Finished Epoch[114 of 200]: [Training] sqErr = 0.16472881 * 200; totalSamplesSeen = 22800; learningRatePerSample = 1.9999999e-005; epochTime=0.02785s
+08/26/2016 17:35:20: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.114'
+
+08/26/2016 17:35:20: Starting Epoch 115: learning rate per sample = 0.000020  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:20: Starting minibatch loop.
+08/26/2016 17:35:20:  Epoch[115 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.18326710 * 200; time = 0.0282s; samplesPerSecond = 7097.0
+08/26/2016 17:35:20: Finished Epoch[115 of 200]: [Training] sqErr = 0.18326710 * 200; totalSamplesSeen = 23000; learningRatePerSample = 1.9999999e-005; epochTime=0.028341s
+08/26/2016 17:35:20: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.115'
+
+08/26/2016 17:35:20: Starting Epoch 116: learning rate per sample = 0.000020  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:20: Starting minibatch loop.
+08/26/2016 17:35:20:  Epoch[116 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.26296703 * 200; time = 0.0282s; samplesPerSecond = 7095.5
+08/26/2016 17:35:20: Finished Epoch[116 of 200]: [Training] sqErr = 0.26296703 * 200; totalSamplesSeen = 23200; learningRatePerSample = 1.9999999e-005; epochTime=0.028352s
+08/26/2016 17:35:20: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.116'
+
+08/26/2016 17:35:20: Starting Epoch 117: learning rate per sample = 0.000020  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:20: Starting minibatch loop.
+08/26/2016 17:35:20:  Epoch[117 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.20319773 * 200; time = 0.0282s; samplesPerSecond = 7085.7
+08/26/2016 17:35:20: Finished Epoch[117 of 200]: [Training] sqErr = 0.20319773 * 200; totalSamplesSeen = 23400; learningRatePerSample = 1.9999999e-005; epochTime=0.028397s
+08/26/2016 17:35:20: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.117'
+
+08/26/2016 17:35:20: Starting Epoch 118: learning rate per sample = 0.000020  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:20: Starting minibatch loop.
+08/26/2016 17:35:20:  Epoch[118 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.20950136 * 200; time = 0.0281s; samplesPerSecond = 7118.5
+08/26/2016 17:35:20: Finished Epoch[118 of 200]: [Training] sqErr = 0.20950136 * 200; totalSamplesSeen = 23600; learningRatePerSample = 1.9999999e-005; epochTime=0.028263s
+08/26/2016 17:35:20: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.118'
+
+08/26/2016 17:35:20: Starting Epoch 119: learning rate per sample = 0.000020  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:20: Starting minibatch loop.
+08/26/2016 17:35:20:  Epoch[119 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.20844446 * 200; time = 0.0271s; samplesPerSecond = 7368.1
+08/26/2016 17:35:20: Finished Epoch[119 of 200]: [Training] sqErr = 0.20844446 * 200; totalSamplesSeen = 23800; learningRatePerSample = 1.9999999e-005; epochTime=0.027314s
+08/26/2016 17:35:20: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.119'
+
+08/26/2016 17:35:20: Starting Epoch 120: learning rate per sample = 0.000020  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:20: Starting minibatch loop.
+08/26/2016 17:35:20:  Epoch[120 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.17827927 * 200; time = 0.0283s; samplesPerSecond = 7067.1
+08/26/2016 17:35:20: Finished Epoch[120 of 200]: [Training] sqErr = 0.17827927 * 200; totalSamplesSeen = 24000; learningRatePerSample = 1.9999999e-005; epochTime=0.028461s
+08/26/2016 17:35:20: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.120'
+
+08/26/2016 17:35:20: Starting Epoch 121: learning rate per sample = 0.000020  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:20: Starting minibatch loop.
+08/26/2016 17:35:20:  Epoch[121 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.19120340 * 200; time = 0.0278s; samplesPerSecond = 7184.4
+08/26/2016 17:35:20: Finished Epoch[121 of 200]: [Training] sqErr = 0.19120340 * 200; totalSamplesSeen = 24200; learningRatePerSample = 1.9999999e-005; epochTime=0.028008s
+08/26/2016 17:35:20: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.121'
+
+08/26/2016 17:35:20: Starting Epoch 122: learning rate per sample = 0.000020  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:20: Starting minibatch loop.
+08/26/2016 17:35:20:  Epoch[122 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.17862432 * 200; time = 0.0284s; samplesPerSecond = 7036.3
+08/26/2016 17:35:20: Finished Epoch[122 of 200]: [Training] sqErr = 0.17862432 * 200; totalSamplesSeen = 24400; learningRatePerSample = 1.9999999e-005; epochTime=0.028589s
+08/26/2016 17:35:20: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.122'
+
+08/26/2016 17:35:20: Starting Epoch 123: learning rate per sample = 0.000020  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:20: Starting minibatch loop.
+08/26/2016 17:35:20:  Epoch[123 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.19326181 * 200; time = 0.0282s; samplesPerSecond = 7091.7
+08/26/2016 17:35:20: Finished Epoch[123 of 200]: [Training] sqErr = 0.19326181 * 200; totalSamplesSeen = 24600; learningRatePerSample = 1.9999999e-005; epochTime=0.028381s
+08/26/2016 17:35:20: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.123'
+
+08/26/2016 17:35:20: Starting Epoch 124: learning rate per sample = 0.000020  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:20: Starting minibatch loop.
+08/26/2016 17:35:20:  Epoch[124 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.18668072 * 200; time = 0.0273s; samplesPerSecond = 7324.9
+08/26/2016 17:35:20: Finished Epoch[124 of 200]: [Training] sqErr = 0.18668072 * 200; totalSamplesSeen = 24800; learningRatePerSample = 1.9999999e-005; epochTime=0.027475s
+08/26/2016 17:35:20: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.124'
+
+08/26/2016 17:35:20: Starting Epoch 125: learning rate per sample = 0.000020  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:20: Starting minibatch loop.
+08/26/2016 17:35:20:  Epoch[125 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.19372410 * 200; time = 0.0270s; samplesPerSecond = 7415.9
+08/26/2016 17:35:20: Finished Epoch[125 of 200]: [Training] sqErr = 0.19372410 * 200; totalSamplesSeen = 25000; learningRatePerSample = 1.9999999e-005; epochTime=0.027138s
+08/26/2016 17:35:20: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.125'
+
+08/26/2016 17:35:20: Starting Epoch 126: learning rate per sample = 0.000020  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:20: Starting minibatch loop.
+08/26/2016 17:35:20:  Epoch[126 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.19821157 * 200; time = 0.0275s; samplesPerSecond = 7260.8
+08/26/2016 17:35:20: Finished Epoch[126 of 200]: [Training] sqErr = 0.19821157 * 200; totalSamplesSeen = 25200; learningRatePerSample = 1.9999999e-005; epochTime=0.027723s
+08/26/2016 17:35:21: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.126'
+
+08/26/2016 17:35:21: Starting Epoch 127: learning rate per sample = 0.000020  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:21: Starting minibatch loop.
+08/26/2016 17:35:21:  Epoch[127 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.23421673 * 200; time = 0.0277s; samplesPerSecond = 7219.7
+08/26/2016 17:35:21: Finished Epoch[127 of 200]: [Training] sqErr = 0.23421673 * 200; totalSamplesSeen = 25400; learningRatePerSample = 1.9999999e-005; epochTime=0.027877s
+08/26/2016 17:35:21: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.127'
+
+08/26/2016 17:35:21: Starting Epoch 128: learning rate per sample = 0.000020  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:21: Starting minibatch loop.
+08/26/2016 17:35:21:  Epoch[128 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.21487341 * 200; time = 0.0284s; samplesPerSecond = 7038.3
+08/26/2016 17:35:21: Finished Epoch[128 of 200]: [Training] sqErr = 0.21487341 * 200; totalSamplesSeen = 25600; learningRatePerSample = 1.9999999e-005; epochTime=0.028586s
+08/26/2016 17:35:21: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.128'
+
+08/26/2016 17:35:21: Starting Epoch 129: learning rate per sample = 0.000020  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:21: Starting minibatch loop.
+08/26/2016 17:35:21:  Epoch[129 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.19229990 * 200; time = 0.0277s; samplesPerSecond = 7228.8
+08/26/2016 17:35:21: Finished Epoch[129 of 200]: [Training] sqErr = 0.19229990 * 200; totalSamplesSeen = 25800; learningRatePerSample = 1.9999999e-005; epochTime=0.027841s
+08/26/2016 17:35:21: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.129'
+
+08/26/2016 17:35:21: Starting Epoch 130: learning rate per sample = 0.000020  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:21: Starting minibatch loop.
+08/26/2016 17:35:21:  Epoch[130 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.18702875 * 200; time = 0.0282s; samplesPerSecond = 7090.7
+08/26/2016 17:35:21: Finished Epoch[130 of 200]: [Training] sqErr = 0.18702875 * 200; totalSamplesSeen = 26000; learningRatePerSample = 1.9999999e-005; epochTime=0.028374s
+08/26/2016 17:35:21: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.130'
+
+08/26/2016 17:35:21: Starting Epoch 131: learning rate per sample = 0.000020  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:21: Starting minibatch loop.
+08/26/2016 17:35:21:  Epoch[131 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.19676596 * 200; time = 0.0280s; samplesPerSecond = 7148.0
+08/26/2016 17:35:21: Finished Epoch[131 of 200]: [Training] sqErr = 0.19676596 * 200; totalSamplesSeen = 26200; learningRatePerSample = 1.9999999e-005; epochTime=0.028152s
+08/26/2016 17:35:21: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.131'
+
+08/26/2016 17:35:21: Starting Epoch 132: learning rate per sample = 0.000020  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:21: Starting minibatch loop.
+08/26/2016 17:35:21:  Epoch[132 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.16748608 * 200; time = 0.0275s; samplesPerSecond = 7279.6
+08/26/2016 17:35:21: Finished Epoch[132 of 200]: [Training] sqErr = 0.16748608 * 200; totalSamplesSeen = 26400; learningRatePerSample = 1.9999999e-005; epochTime=0.027646s
+08/26/2016 17:35:21: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.132'
+
+08/26/2016 17:35:21: Starting Epoch 133: learning rate per sample = 0.000020  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:21: Starting minibatch loop.
+08/26/2016 17:35:21:  Epoch[133 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.22686144 * 200; time = 0.0281s; samplesPerSecond = 7119.5
+08/26/2016 17:35:21: Finished Epoch[133 of 200]: [Training] sqErr = 0.22686144 * 200; totalSamplesSeen = 26600; learningRatePerSample = 1.9999999e-005; epochTime=0.028279s
+08/26/2016 17:35:21: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.133'
+
+08/26/2016 17:35:21: Starting Epoch 134: learning rate per sample = 0.000020  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:21: Starting minibatch loop.
+08/26/2016 17:35:21:  Epoch[134 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.16906061 * 200; time = 0.0274s; samplesPerSecond = 7301.4
+08/26/2016 17:35:21: Finished Epoch[134 of 200]: [Training] sqErr = 0.16906061 * 200; totalSamplesSeen = 26800; learningRatePerSample = 1.9999999e-005; epochTime=0.027571s
+08/26/2016 17:35:21: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.134'
+
+08/26/2016 17:35:21: Starting Epoch 135: learning rate per sample = 0.000020  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:21: Starting minibatch loop.
+08/26/2016 17:35:21:  Epoch[135 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.19445780 * 200; time = 0.0274s; samplesPerSecond = 7302.7
+08/26/2016 17:35:21: Finished Epoch[135 of 200]: [Training] sqErr = 0.19445780 * 200; totalSamplesSeen = 27000; learningRatePerSample = 1.9999999e-005; epochTime=0.027573s
+08/26/2016 17:35:21: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.135'
+
+08/26/2016 17:35:21: Starting Epoch 136: learning rate per sample = 0.000020  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:21: Starting minibatch loop.
+08/26/2016 17:35:21:  Epoch[136 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.20540487 * 200; time = 0.0279s; samplesPerSecond = 7176.2
+08/26/2016 17:35:21: Finished Epoch[136 of 200]: [Training] sqErr = 0.20540487 * 200; totalSamplesSeen = 27200; learningRatePerSample = 1.9999999e-005; epochTime=0.028047s
+08/26/2016 17:35:21: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.136'
+
+08/26/2016 17:35:21: Starting Epoch 137: learning rate per sample = 0.000020  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:21: Starting minibatch loop.
+08/26/2016 17:35:21:  Epoch[137 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.16742233 * 200; time = 0.0271s; samplesPerSecond = 7382.8
+08/26/2016 17:35:21: Finished Epoch[137 of 200]: [Training] sqErr = 0.16742233 * 200; totalSamplesSeen = 27400; learningRatePerSample = 1.9999999e-005; epochTime=0.027272s
+08/26/2016 17:35:21: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.137'
+
+08/26/2016 17:35:21: Starting Epoch 138: learning rate per sample = 0.000020  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:21: Starting minibatch loop.
+08/26/2016 17:35:21:  Epoch[138 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.17575626 * 200; time = 0.0278s; samplesPerSecond = 7204.9
+08/26/2016 17:35:21: Finished Epoch[138 of 200]: [Training] sqErr = 0.17575626 * 200; totalSamplesSeen = 27600; learningRatePerSample = 1.9999999e-005; epochTime=0.027936s
+08/26/2016 17:35:21: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.138'
+
+08/26/2016 17:35:21: Starting Epoch 139: learning rate per sample = 0.000020  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:21: Starting minibatch loop.
+08/26/2016 17:35:21:  Epoch[139 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.18199186 * 200; time = 0.0281s; samplesPerSecond = 7122.8
+08/26/2016 17:35:21: Finished Epoch[139 of 200]: [Training] sqErr = 0.18199186 * 200; totalSamplesSeen = 27800; learningRatePerSample = 1.9999999e-005; epochTime=0.028258s
+08/26/2016 17:35:21: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.139'
+
+08/26/2016 17:35:21: Starting Epoch 140: learning rate per sample = 0.000020  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:21: Starting minibatch loop.
+08/26/2016 17:35:21:  Epoch[140 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.17474058 * 200; time = 0.0275s; samplesPerSecond = 7271.9
+08/26/2016 17:35:21: Finished Epoch[140 of 200]: [Training] sqErr = 0.17474058 * 200; totalSamplesSeen = 28000; learningRatePerSample = 1.9999999e-005; epochTime=0.02768s
+08/26/2016 17:35:21: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.140'
+
+08/26/2016 17:35:21: Starting Epoch 141: learning rate per sample = 0.000020  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:21: Starting minibatch loop.
+08/26/2016 17:35:21:  Epoch[141 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.18533701 * 200; time = 0.0283s; samplesPerSecond = 7072.1
+08/26/2016 17:35:21: Finished Epoch[141 of 200]: [Training] sqErr = 0.18533701 * 200; totalSamplesSeen = 28200; learningRatePerSample = 1.9999999e-005; epochTime=0.028453s
+08/26/2016 17:35:21: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.141'
+
+08/26/2016 17:35:21: Starting Epoch 142: learning rate per sample = 0.000020  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:21: Starting minibatch loop.
+08/26/2016 17:35:21:  Epoch[142 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.18934185 * 200; time = 0.0276s; samplesPerSecond = 7242.7
+08/26/2016 17:35:21: Finished Epoch[142 of 200]: [Training] sqErr = 0.18934185 * 200; totalSamplesSeen = 28400; learningRatePerSample = 1.9999999e-005; epochTime=0.027785s
+08/26/2016 17:35:21: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.142'
+
+08/26/2016 17:35:21: Starting Epoch 143: learning rate per sample = 0.000020  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:21: Starting minibatch loop.
+08/26/2016 17:35:21:  Epoch[143 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.22655966 * 200; time = 0.0270s; samplesPerSecond = 7400.6
+08/26/2016 17:35:21: Finished Epoch[143 of 200]: [Training] sqErr = 0.22655966 * 200; totalSamplesSeen = 28600; learningRatePerSample = 1.9999999e-005; epochTime=0.0272s
+08/26/2016 17:35:21: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.143'
+
+08/26/2016 17:35:21: Starting Epoch 144: learning rate per sample = 0.000020  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:21: Starting minibatch loop.
+08/26/2016 17:35:21:  Epoch[144 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.21025524 * 200; time = 0.0284s; samplesPerSecond = 7045.5
+08/26/2016 17:35:21: Finished Epoch[144 of 200]: [Training] sqErr = 0.21025524 * 200; totalSamplesSeen = 28800; learningRatePerSample = 1.9999999e-005; epochTime=0.028564s
+08/26/2016 17:35:21: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.144'
+
+08/26/2016 17:35:21: Starting Epoch 145: learning rate per sample = 0.000020  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:21: Starting minibatch loop.
+08/26/2016 17:35:21:  Epoch[145 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.17623045 * 200; time = 0.0274s; samplesPerSecond = 7305.7
+08/26/2016 17:35:21: Finished Epoch[145 of 200]: [Training] sqErr = 0.17623045 * 200; totalSamplesSeen = 29000; learningRatePerSample = 1.9999999e-005; epochTime=0.027561s
+08/26/2016 17:35:21: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.145'
+
+08/26/2016 17:35:21: Starting Epoch 146: learning rate per sample = 0.000020  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:21: Starting minibatch loop.
+08/26/2016 17:35:21:  Epoch[146 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.19083275 * 200; time = 0.0278s; samplesPerSecond = 7192.4
+08/26/2016 17:35:21: Finished Epoch[146 of 200]: [Training] sqErr = 0.19083275 * 200; totalSamplesSeen = 29200; learningRatePerSample = 1.9999999e-005; epochTime=0.027985s
+08/26/2016 17:35:21: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.146'
+
+08/26/2016 17:35:21: Starting Epoch 147: learning rate per sample = 0.000020  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:21: Starting minibatch loop.
+08/26/2016 17:35:21:  Epoch[147 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.17316267 * 200; time = 0.0284s; samplesPerSecond = 7031.9
+08/26/2016 17:35:21: Finished Epoch[147 of 200]: [Training] sqErr = 0.17316267 * 200; totalSamplesSeen = 29400; learningRatePerSample = 1.9999999e-005; epochTime=0.028617s
+08/26/2016 17:35:21: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.147'
+
+08/26/2016 17:35:21: Starting Epoch 148: learning rate per sample = 0.000020  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:21: Starting minibatch loop.
+08/26/2016 17:35:21:  Epoch[148 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.19195667 * 200; time = 0.0272s; samplesPerSecond = 7343.2
+08/26/2016 17:35:21: Finished Epoch[148 of 200]: [Training] sqErr = 0.19195667 * 200; totalSamplesSeen = 29600; learningRatePerSample = 1.9999999e-005; epochTime=0.027409s
+08/26/2016 17:35:21: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.148'
+
+08/26/2016 17:35:21: Starting Epoch 149: learning rate per sample = 0.000020  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:21: Starting minibatch loop.
+08/26/2016 17:35:21:  Epoch[149 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.17219152 * 200; time = 0.0273s; samplesPerSecond = 7333.5
+08/26/2016 17:35:21: Finished Epoch[149 of 200]: [Training] sqErr = 0.17219152 * 200; totalSamplesSeen = 29800; learningRatePerSample = 1.9999999e-005; epochTime=0.027449s
+08/26/2016 17:35:21: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.149'
+
+08/26/2016 17:35:21: Starting Epoch 150: learning rate per sample = 0.000020  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:21: Starting minibatch loop.
+08/26/2016 17:35:21:  Epoch[150 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.16017725 * 200; time = 0.0281s; samplesPerSecond = 7116.2
+08/26/2016 17:35:21: Finished Epoch[150 of 200]: [Training] sqErr = 0.16017725 * 200; totalSamplesSeen = 30000; learningRatePerSample = 1.9999999e-005; epochTime=0.028277s
+08/26/2016 17:35:21: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.150'
+
+08/26/2016 17:35:21: Starting Epoch 151: learning rate per sample = 0.000010  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:21: Starting minibatch loop.
+08/26/2016 17:35:21:  Epoch[151 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.16052771 * 200; time = 0.0272s; samplesPerSecond = 7347.5
+08/26/2016 17:35:21: Finished Epoch[151 of 200]: [Training] sqErr = 0.16052771 * 200; totalSamplesSeen = 30200; learningRatePerSample = 9.9999997e-006; epochTime=0.0274s
+08/26/2016 17:35:21: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.151'
+
+08/26/2016 17:35:21: Starting Epoch 152: learning rate per sample = 0.000010  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:21: Starting minibatch loop.
+08/26/2016 17:35:22:  Epoch[152 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.18037621 * 200; time = 0.0265s; samplesPerSecond = 7546.6
+08/26/2016 17:35:22: Finished Epoch[152 of 200]: [Training] sqErr = 0.18037621 * 200; totalSamplesSeen = 30400; learningRatePerSample = 9.9999997e-006; epochTime=0.02667s
+08/26/2016 17:35:22: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.152'
+
+08/26/2016 17:35:22: Starting Epoch 153: learning rate per sample = 0.000010  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:22: Starting minibatch loop.
+08/26/2016 17:35:22:  Epoch[153 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.17089087 * 200; time = 0.0270s; samplesPerSecond = 7402.7
+08/26/2016 17:35:22: Finished Epoch[153 of 200]: [Training] sqErr = 0.17089087 * 200; totalSamplesSeen = 30600; learningRatePerSample = 9.9999997e-006; epochTime=0.02719s
+08/26/2016 17:35:22: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.153'
+
+08/26/2016 17:35:22: Starting Epoch 154: learning rate per sample = 0.000010  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:22: Starting minibatch loop.
+08/26/2016 17:35:22:  Epoch[154 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.19456667 * 200; time = 0.0276s; samplesPerSecond = 7234.6
+08/26/2016 17:35:22: Finished Epoch[154 of 200]: [Training] sqErr = 0.19456667 * 200; totalSamplesSeen = 30800; learningRatePerSample = 9.9999997e-006; epochTime=0.027825s
+08/26/2016 17:35:22: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.154'
+
+08/26/2016 17:35:22: Starting Epoch 155: learning rate per sample = 0.000010  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:22: Starting minibatch loop.
+08/26/2016 17:35:22:  Epoch[155 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.20021448 * 200; time = 0.0275s; samplesPerSecond = 7282.3
+08/26/2016 17:35:22: Finished Epoch[155 of 200]: [Training] sqErr = 0.20021448 * 200; totalSamplesSeen = 31000; learningRatePerSample = 9.9999997e-006; epochTime=0.027672s
+08/26/2016 17:35:22: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.155'
+
+08/26/2016 17:35:22: Starting Epoch 156: learning rate per sample = 0.000010  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:22: Starting minibatch loop.
+08/26/2016 17:35:22:  Epoch[156 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.20817463 * 200; time = 0.0273s; samplesPerSecond = 7329.2
+08/26/2016 17:35:22: Finished Epoch[156 of 200]: [Training] sqErr = 0.20817463 * 200; totalSamplesSeen = 31200; learningRatePerSample = 9.9999997e-006; epochTime=0.027471s
+08/26/2016 17:35:22: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.156'
+
+08/26/2016 17:35:22: Starting Epoch 157: learning rate per sample = 0.000010  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:22: Starting minibatch loop.
+08/26/2016 17:35:22:  Epoch[157 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.19696203 * 200; time = 0.0275s; samplesPerSecond = 7261.1
+08/26/2016 17:35:22: Finished Epoch[157 of 200]: [Training] sqErr = 0.19696203 * 200; totalSamplesSeen = 31400; learningRatePerSample = 9.9999997e-006; epochTime=0.027728s
+08/26/2016 17:35:22: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.157'
+
+08/26/2016 17:35:22: Starting Epoch 158: learning rate per sample = 0.000010  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:22: Starting minibatch loop.
+08/26/2016 17:35:22:  Epoch[158 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.17294165 * 200; time = 0.0284s; samplesPerSecond = 7049.2
+08/26/2016 17:35:22: Finished Epoch[158 of 200]: [Training] sqErr = 0.17294165 * 200; totalSamplesSeen = 31600; learningRatePerSample = 9.9999997e-006; epochTime=0.028548s
+08/26/2016 17:35:22: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.158'
+
+08/26/2016 17:35:22: Starting Epoch 159: learning rate per sample = 0.000010  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:22: Starting minibatch loop.
+08/26/2016 17:35:22:  Epoch[159 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.17076317 * 200; time = 0.0276s; samplesPerSecond = 7243.8
+08/26/2016 17:35:22: Finished Epoch[159 of 200]: [Training] sqErr = 0.17076317 * 200; totalSamplesSeen = 31800; learningRatePerSample = 9.9999997e-006; epochTime=0.027784s
+08/26/2016 17:35:22: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.159'
+
+08/26/2016 17:35:22: Starting Epoch 160: learning rate per sample = 0.000010  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:22: Starting minibatch loop.
+08/26/2016 17:35:22:  Epoch[160 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.17753254 * 200; time = 0.0280s; samplesPerSecond = 7134.7
+08/26/2016 17:35:22: Finished Epoch[160 of 200]: [Training] sqErr = 0.17753254 * 200; totalSamplesSeen = 32000; learningRatePerSample = 9.9999997e-006; epochTime=0.028212s
+08/26/2016 17:35:22: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.160'
+
+08/26/2016 17:35:22: Starting Epoch 161: learning rate per sample = 0.000010  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:22: Starting minibatch loop.
+08/26/2016 17:35:22:  Epoch[161 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.16334942 * 200; time = 0.0279s; samplesPerSecond = 7173.1
+08/26/2016 17:35:22: Finished Epoch[161 of 200]: [Training] sqErr = 0.16334942 * 200; totalSamplesSeen = 32200; learningRatePerSample = 9.9999997e-006; epochTime=0.028049s
+08/26/2016 17:35:22: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.161'
+
+08/26/2016 17:35:22: Starting Epoch 162: learning rate per sample = 0.000010  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:22: Starting minibatch loop.
+08/26/2016 17:35:22:  Epoch[162 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.18435574 * 200; time = 0.0279s; samplesPerSecond = 7163.8
+08/26/2016 17:35:22: Finished Epoch[162 of 200]: [Training] sqErr = 0.18435574 * 200; totalSamplesSeen = 32400; learningRatePerSample = 9.9999997e-006; epochTime=0.028105s
+08/26/2016 17:35:22: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.162'
+
+08/26/2016 17:35:22: Starting Epoch 163: learning rate per sample = 0.000010  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:22: Starting minibatch loop.
+08/26/2016 17:35:22:  Epoch[163 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.18072638 * 200; time = 0.0280s; samplesPerSecond = 7152.3
+08/26/2016 17:35:22: Finished Epoch[163 of 200]: [Training] sqErr = 0.18072638 * 200; totalSamplesSeen = 32600; learningRatePerSample = 9.9999997e-006; epochTime=0.028137s
+08/26/2016 17:35:22: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.163'
+
+08/26/2016 17:35:22: Starting Epoch 164: learning rate per sample = 0.000010  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:22: Starting minibatch loop.
+08/26/2016 17:35:22:  Epoch[164 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.18595160 * 200; time = 0.0284s; samplesPerSecond = 7048.5
+08/26/2016 17:35:22: Finished Epoch[164 of 200]: [Training] sqErr = 0.18595160 * 200; totalSamplesSeen = 32800; learningRatePerSample = 9.9999997e-006; epochTime=0.028584s
+08/26/2016 17:35:22: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.164'
+
+08/26/2016 17:35:22: Starting Epoch 165: learning rate per sample = 0.000010  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:22: Starting minibatch loop.
+08/26/2016 17:35:22:  Epoch[165 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.17990137 * 200; time = 0.0271s; samplesPerSecond = 7380.6
+08/26/2016 17:35:22: Finished Epoch[165 of 200]: [Training] sqErr = 0.17990137 * 200; totalSamplesSeen = 33000; learningRatePerSample = 9.9999997e-006; epochTime=0.027272s
+08/26/2016 17:35:22: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.165'
+
+08/26/2016 17:35:22: Starting Epoch 166: learning rate per sample = 0.000010  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:22: Starting minibatch loop.
+08/26/2016 17:35:22:  Epoch[166 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.18657387 * 200; time = 0.0279s; samplesPerSecond = 7161.5
+08/26/2016 17:35:22: Finished Epoch[166 of 200]: [Training] sqErr = 0.18657387 * 200; totalSamplesSeen = 33200; learningRatePerSample = 9.9999997e-006; epochTime=0.028108s
+08/26/2016 17:35:22: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.166'
+
+08/26/2016 17:35:22: Starting Epoch 167: learning rate per sample = 0.000010  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:22: Starting minibatch loop.
+08/26/2016 17:35:22:  Epoch[167 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.17381987 * 200; time = 0.0276s; samplesPerSecond = 7242.2
+08/26/2016 17:35:22: Finished Epoch[167 of 200]: [Training] sqErr = 0.17381987 * 200; totalSamplesSeen = 33400; learningRatePerSample = 9.9999997e-006; epochTime=0.027799s
+08/26/2016 17:35:22: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.167'
+
+08/26/2016 17:35:22: Starting Epoch 168: learning rate per sample = 0.000010  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:22: Starting minibatch loop.
+08/26/2016 17:35:22:  Epoch[168 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.18110001 * 200; time = 0.0273s; samplesPerSecond = 7327.9
+08/26/2016 17:35:22: Finished Epoch[168 of 200]: [Training] sqErr = 0.18110001 * 200; totalSamplesSeen = 33600; learningRatePerSample = 9.9999997e-006; epochTime=0.027472s
+08/26/2016 17:35:22: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.168'
+
+08/26/2016 17:35:22: Starting Epoch 169: learning rate per sample = 0.000010  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:22: Starting minibatch loop.
+08/26/2016 17:35:22:  Epoch[169 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.16971350 * 200; time = 0.0268s; samplesPerSecond = 7463.5
+08/26/2016 17:35:22: Finished Epoch[169 of 200]: [Training] sqErr = 0.16971350 * 200; totalSamplesSeen = 33800; learningRatePerSample = 9.9999997e-006; epochTime=0.026969s
+08/26/2016 17:35:22: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.169'
+
+08/26/2016 17:35:22: Starting Epoch 170: learning rate per sample = 0.000010  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:22: Starting minibatch loop.
+08/26/2016 17:35:22:  Epoch[170 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.17316574 * 200; time = 0.0276s; samplesPerSecond = 7247.7
+08/26/2016 17:35:22: Finished Epoch[170 of 200]: [Training] sqErr = 0.17316574 * 200; totalSamplesSeen = 34000; learningRatePerSample = 9.9999997e-006; epochTime=0.027779s
+08/26/2016 17:35:22: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.170'
+
+08/26/2016 17:35:22: Starting Epoch 171: learning rate per sample = 0.000010  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:22: Starting minibatch loop.
+08/26/2016 17:35:22:  Epoch[171 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.19691065 * 200; time = 0.0265s; samplesPerSecond = 7544.9
+08/26/2016 17:35:22: Finished Epoch[171 of 200]: [Training] sqErr = 0.19691065 * 200; totalSamplesSeen = 34200; learningRatePerSample = 9.9999997e-006; epochTime=0.026686s
+08/26/2016 17:35:22: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.171'
+
+08/26/2016 17:35:22: Starting Epoch 172: learning rate per sample = 0.000010  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:22: Starting minibatch loop.
+08/26/2016 17:35:22:  Epoch[172 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.17192188 * 200; time = 0.0279s; samplesPerSecond = 7174.4
+08/26/2016 17:35:22: Finished Epoch[172 of 200]: [Training] sqErr = 0.17192188 * 200; totalSamplesSeen = 34400; learningRatePerSample = 9.9999997e-006; epochTime=0.028056s
+08/26/2016 17:35:22: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.172'
+
+08/26/2016 17:35:22: Starting Epoch 173: learning rate per sample = 0.000010  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:22: Starting minibatch loop.
+08/26/2016 17:35:22:  Epoch[173 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.16934412 * 200; time = 0.0279s; samplesPerSecond = 7169.5
+08/26/2016 17:35:22: Finished Epoch[173 of 200]: [Training] sqErr = 0.16934412 * 200; totalSamplesSeen = 34600; learningRatePerSample = 9.9999997e-006; epochTime=0.028076s
+08/26/2016 17:35:22: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.173'
+
+08/26/2016 17:35:22: Starting Epoch 174: learning rate per sample = 0.000010  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:22: Starting minibatch loop.
+08/26/2016 17:35:22:  Epoch[174 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.20166702 * 200; time = 0.0270s; samplesPerSecond = 7403.8
+08/26/2016 17:35:22: Finished Epoch[174 of 200]: [Training] sqErr = 0.20166702 * 200; totalSamplesSeen = 34800; learningRatePerSample = 9.9999997e-006; epochTime=0.027188s
+08/26/2016 17:35:22: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.174'
+
+08/26/2016 17:35:22: Starting Epoch 175: learning rate per sample = 0.000010  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:22: Starting minibatch loop.
+08/26/2016 17:35:22:  Epoch[175 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.14947926 * 200; time = 0.0284s; samplesPerSecond = 7037.3
+08/26/2016 17:35:22: Finished Epoch[175 of 200]: [Training] sqErr = 0.14947926 * 200; totalSamplesSeen = 35000; learningRatePerSample = 9.9999997e-006; epochTime=0.028593s
+08/26/2016 17:35:22: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.175'
+
+08/26/2016 17:35:22: Starting Epoch 176: learning rate per sample = 0.000010  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:22: Starting minibatch loop.
+08/26/2016 17:35:22:  Epoch[176 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.20748278 * 200; time = 0.0278s; samplesPerSecond = 7186.5
+08/26/2016 17:35:22: Finished Epoch[176 of 200]: [Training] sqErr = 0.20748278 * 200; totalSamplesSeen = 35200; learningRatePerSample = 9.9999997e-006; epochTime=0.028001s
+08/26/2016 17:35:22: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.176'
+
+08/26/2016 17:35:22: Starting Epoch 177: learning rate per sample = 0.000010  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:22: Starting minibatch loop.
+08/26/2016 17:35:23:  Epoch[177 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.19328604 * 200; time = 0.0281s; samplesPerSecond = 7125.0
+08/26/2016 17:35:23: Finished Epoch[177 of 200]: [Training] sqErr = 0.19328604 * 200; totalSamplesSeen = 35400; learningRatePerSample = 9.9999997e-006; epochTime=0.028236s
+08/26/2016 17:35:23: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.177'
+
+08/26/2016 17:35:23: Starting Epoch 178: learning rate per sample = 0.000010  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:23: Starting minibatch loop.
+08/26/2016 17:35:23:  Epoch[178 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.18026890 * 200; time = 0.0279s; samplesPerSecond = 7178.5
+08/26/2016 17:35:23: Finished Epoch[178 of 200]: [Training] sqErr = 0.18026890 * 200; totalSamplesSeen = 35600; learningRatePerSample = 9.9999997e-006; epochTime=0.028036s
+08/26/2016 17:35:23: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.178'
+
+08/26/2016 17:35:23: Starting Epoch 179: learning rate per sample = 0.000010  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:23: Starting minibatch loop.
+08/26/2016 17:35:23:  Epoch[179 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.17936005 * 200; time = 0.0275s; samplesPerSecond = 7262.4
+08/26/2016 17:35:23: Finished Epoch[179 of 200]: [Training] sqErr = 0.17936005 * 200; totalSamplesSeen = 35800; learningRatePerSample = 9.9999997e-006; epochTime=0.027707s
+08/26/2016 17:35:23: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.179'
+
+08/26/2016 17:35:23: Starting Epoch 180: learning rate per sample = 0.000010  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:23: Starting minibatch loop.
+08/26/2016 17:35:23:  Epoch[180 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.22735346 * 200; time = 0.0285s; samplesPerSecond = 7027.9
+08/26/2016 17:35:23: Finished Epoch[180 of 200]: [Training] sqErr = 0.22735346 * 200; totalSamplesSeen = 36000; learningRatePerSample = 9.9999997e-006; epochTime=0.028619s
+08/26/2016 17:35:23: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.180'
+
+08/26/2016 17:35:23: Starting Epoch 181: learning rate per sample = 0.000010  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:23: Starting minibatch loop.
+08/26/2016 17:35:23:  Epoch[181 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.17176365 * 200; time = 0.0278s; samplesPerSecond = 7185.5
+08/26/2016 17:35:23: Finished Epoch[181 of 200]: [Training] sqErr = 0.17176365 * 200; totalSamplesSeen = 36200; learningRatePerSample = 9.9999997e-006; epochTime=0.028005s
+08/26/2016 17:35:23: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.181'
+
+08/26/2016 17:35:23: Starting Epoch 182: learning rate per sample = 0.000010  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:23: Starting minibatch loop.
+08/26/2016 17:35:23:  Epoch[182 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.18861301 * 200; time = 0.0283s; samplesPerSecond = 7063.6
+08/26/2016 17:35:23: Finished Epoch[182 of 200]: [Training] sqErr = 0.18861301 * 200; totalSamplesSeen = 36400; learningRatePerSample = 9.9999997e-006; epochTime=0.028473s
+08/26/2016 17:35:23: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.182'
+
+08/26/2016 17:35:23: Starting Epoch 183: learning rate per sample = 0.000010  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:23: Starting minibatch loop.
+08/26/2016 17:35:23:  Epoch[183 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.24980501 * 200; time = 0.0282s; samplesPerSecond = 7089.2
+08/26/2016 17:35:23: Finished Epoch[183 of 200]: [Training] sqErr = 0.24980501 * 200; totalSamplesSeen = 36600; learningRatePerSample = 9.9999997e-006; epochTime=0.028387s
+08/26/2016 17:35:23: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.183'
+
+08/26/2016 17:35:23: Starting Epoch 184: learning rate per sample = 0.000010  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:23: Starting minibatch loop.
+08/26/2016 17:35:23:  Epoch[184 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.16880413 * 200; time = 0.0274s; samplesPerSecond = 7296.9
+08/26/2016 17:35:23: Finished Epoch[184 of 200]: [Training] sqErr = 0.16880413 * 200; totalSamplesSeen = 36800; learningRatePerSample = 9.9999997e-006; epochTime=0.027573s
+08/26/2016 17:35:23: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.184'
+
+08/26/2016 17:35:23: Starting Epoch 185: learning rate per sample = 0.000010  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:23: Starting minibatch loop.
+08/26/2016 17:35:23:  Epoch[185 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.22528555 * 200; time = 0.0286s; samplesPerSecond = 7004.5
+08/26/2016 17:35:23: Finished Epoch[185 of 200]: [Training] sqErr = 0.22528555 * 200; totalSamplesSeen = 37000; learningRatePerSample = 9.9999997e-006; epochTime=0.028712s
+08/26/2016 17:35:23: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.185'
+
+08/26/2016 17:35:23: Starting Epoch 186: learning rate per sample = 0.000010  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:23: Starting minibatch loop.
+08/26/2016 17:35:23:  Epoch[186 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.18172316 * 200; time = 0.0278s; samplesPerSecond = 7193.2
+08/26/2016 17:35:23: Finished Epoch[186 of 200]: [Training] sqErr = 0.18172316 * 200; totalSamplesSeen = 37200; learningRatePerSample = 9.9999997e-006; epochTime=0.02798s
+08/26/2016 17:35:23: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.186'
+
+08/26/2016 17:35:23: Starting Epoch 187: learning rate per sample = 0.000010  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:23: Starting minibatch loop.
+08/26/2016 17:35:23:  Epoch[187 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.20498133 * 200; time = 0.0286s; samplesPerSecond = 7001.6
+08/26/2016 17:35:23: Finished Epoch[187 of 200]: [Training] sqErr = 0.20498133 * 200; totalSamplesSeen = 37400; learningRatePerSample = 9.9999997e-006; epochTime=0.028724s
+08/26/2016 17:35:23: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.187'
+
+08/26/2016 17:35:23: Starting Epoch 188: learning rate per sample = 0.000010  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:23: Starting minibatch loop.
+08/26/2016 17:35:23:  Epoch[188 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.18242847 * 200; time = 0.0286s; samplesPerSecond = 6996.7
+08/26/2016 17:35:23: Finished Epoch[188 of 200]: [Training] sqErr = 0.18242847 * 200; totalSamplesSeen = 37600; learningRatePerSample = 9.9999997e-006; epochTime=0.028758s
+08/26/2016 17:35:23: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.188'
+
+08/26/2016 17:35:23: Starting Epoch 189: learning rate per sample = 0.000010  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:23: Starting minibatch loop.
+08/26/2016 17:35:23:  Epoch[189 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.18396841 * 200; time = 0.0277s; samplesPerSecond = 7221.3
+08/26/2016 17:35:23: Finished Epoch[189 of 200]: [Training] sqErr = 0.18396841 * 200; totalSamplesSeen = 37800; learningRatePerSample = 9.9999997e-006; epochTime=0.027857s
+08/26/2016 17:35:23: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.189'
+
+08/26/2016 17:35:23: Starting Epoch 190: learning rate per sample = 0.000010  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:23: Starting minibatch loop.
+08/26/2016 17:35:23:  Epoch[190 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.21003920 * 200; time = 0.0287s; samplesPerSecond = 6976.9
+08/26/2016 17:35:23: Finished Epoch[190 of 200]: [Training] sqErr = 0.21003920 * 200; totalSamplesSeen = 38000; learningRatePerSample = 9.9999997e-006; epochTime=0.028827s
+08/26/2016 17:35:23: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.190'
+
+08/26/2016 17:35:23: Starting Epoch 191: learning rate per sample = 0.000010  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:23: Starting minibatch loop.
+08/26/2016 17:35:23:  Epoch[191 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.17800053 * 200; time = 0.0280s; samplesPerSecond = 7141.1
+08/26/2016 17:35:23: Finished Epoch[191 of 200]: [Training] sqErr = 0.17800053 * 200; totalSamplesSeen = 38200; learningRatePerSample = 9.9999997e-006; epochTime=0.028179s
+08/26/2016 17:35:23: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.191'
+
+08/26/2016 17:35:23: Starting Epoch 192: learning rate per sample = 0.000010  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:23: Starting minibatch loop.
+08/26/2016 17:35:23:  Epoch[192 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.20784504 * 200; time = 0.0268s; samplesPerSecond = 7452.4
+08/26/2016 17:35:23: Finished Epoch[192 of 200]: [Training] sqErr = 0.20784504 * 200; totalSamplesSeen = 38400; learningRatePerSample = 9.9999997e-006; epochTime=0.026999s
+08/26/2016 17:35:23: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.192'
+
+08/26/2016 17:35:23: Starting Epoch 193: learning rate per sample = 0.000010  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:23: Starting minibatch loop.
+08/26/2016 17:35:23:  Epoch[193 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.21007336 * 200; time = 0.0288s; samplesPerSecond = 6944.2
+08/26/2016 17:35:23: Finished Epoch[193 of 200]: [Training] sqErr = 0.21007336 * 200; totalSamplesSeen = 38600; learningRatePerSample = 9.9999997e-006; epochTime=0.028971s
+08/26/2016 17:35:23: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.193'
+
+08/26/2016 17:35:23: Starting Epoch 194: learning rate per sample = 0.000010  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:23: Starting minibatch loop.
+08/26/2016 17:35:23:  Epoch[194 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.18317503 * 200; time = 0.0280s; samplesPerSecond = 7136.0
+08/26/2016 17:35:23: Finished Epoch[194 of 200]: [Training] sqErr = 0.18317503 * 200; totalSamplesSeen = 38800; learningRatePerSample = 9.9999997e-006; epochTime=0.028183s
+08/26/2016 17:35:23: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.194'
+
+08/26/2016 17:35:23: Starting Epoch 195: learning rate per sample = 0.000010  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:23: Starting minibatch loop.
+08/26/2016 17:35:23:  Epoch[195 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.15926212 * 200; time = 0.0281s; samplesPerSecond = 7107.1
+08/26/2016 17:35:23: Finished Epoch[195 of 200]: [Training] sqErr = 0.15926212 * 200; totalSamplesSeen = 39000; learningRatePerSample = 9.9999997e-006; epochTime=0.028305s
+08/26/2016 17:35:23: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.195'
+
+08/26/2016 17:35:23: Starting Epoch 196: learning rate per sample = 0.000010  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:23: Starting minibatch loop.
+08/26/2016 17:35:23:  Epoch[196 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.19456591 * 200; time = 0.0283s; samplesPerSecond = 7074.4
+08/26/2016 17:35:23: Finished Epoch[196 of 200]: [Training] sqErr = 0.19456591 * 200; totalSamplesSeen = 39200; learningRatePerSample = 9.9999997e-006; epochTime=0.028439s
+08/26/2016 17:35:23: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.196'
+
+08/26/2016 17:35:23: Starting Epoch 197: learning rate per sample = 0.000010  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:23: Starting minibatch loop.
+08/26/2016 17:35:23:  Epoch[197 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.20560293 * 200; time = 0.0277s; samplesPerSecond = 7225.2
+08/26/2016 17:35:23: Finished Epoch[197 of 200]: [Training] sqErr = 0.20560293 * 200; totalSamplesSeen = 39400; learningRatePerSample = 9.9999997e-006; epochTime=0.02784s
+08/26/2016 17:35:23: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.197'
+
+08/26/2016 17:35:23: Starting Epoch 198: learning rate per sample = 0.000010  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:23: Starting minibatch loop.
+08/26/2016 17:35:23:  Epoch[198 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.15512188 * 200; time = 0.0274s; samplesPerSecond = 7295.5
+08/26/2016 17:35:23: Finished Epoch[198 of 200]: [Training] sqErr = 0.15512188 * 200; totalSamplesSeen = 39600; learningRatePerSample = 9.9999997e-006; epochTime=0.027575s
+08/26/2016 17:35:23: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.198'
+
+08/26/2016 17:35:23: Starting Epoch 199: learning rate per sample = 0.000010  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:23: Starting minibatch loop.
+08/26/2016 17:35:23:  Epoch[199 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.17619740 * 200; time = 0.0281s; samplesPerSecond = 7109.8
+08/26/2016 17:35:23: Finished Epoch[199 of 200]: [Training] sqErr = 0.17619740 * 200; totalSamplesSeen = 39800; learningRatePerSample = 9.9999997e-006; epochTime=0.028287s
+08/26/2016 17:35:23: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn.199'
+
+08/26/2016 17:35:23: Starting Epoch 200: learning rate per sample = 0.000010  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+08/26/2016 17:35:23: Starting minibatch loop.
+08/26/2016 17:35:23:  Epoch[200 of 200]-Minibatch[   1-  10, 100.00%]: sqErr = 0.21285166 * 200; time = 0.0283s; samplesPerSecond = 7064.4
+08/26/2016 17:35:23: Finished Epoch[200 of 200]: [Training] sqErr = 0.21285166 * 200; totalSamplesSeen = 40000; learningRatePerSample = 9.9999997e-006; epochTime=0.028481s
+08/26/2016 17:35:23: SGD: Saving checkpoint model 'C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/models/cntk.dnn'
+08/26/2016 17:35:23: CNTKCommandTrainEnd: train
+
+08/26/2016 17:35:23: Action "train" complete.
+
+
+08/26/2016 17:35:23: ##############################################################################
+08/26/2016 17:35:23: #                                                                            #
+08/26/2016 17:35:23: # Action "test"                                                              #
+08/26/2016 17:35:23: #                                                                            #
+08/26/2016 17:35:23: ##############################################################################
+
+
+Post-processing network...
+
+4 roots:
+	OutputNodes.out = Plus()
+	invstdVal = InvStdDev()
+	meanVal = Mean()
+	sqErr = SquareError()
+
+Validating network. 28 nodes to process in pass 1.
+
+Validating --> OutputNodes.W = LearnableParameter() :  -> [4 x 64]
+Validating --> h1.W = LearnableParameter() :  -> [64 x 4 x 4 x 64]
+Validating --> conv1.W = LearnableParameter() :  -> [64 x 1]
+Validating --> features = InputValue() :  -> [4 x 4 x 1 x *1]
+Validating --> meanVal = Mean (features) : [4 x 4 x 1 x *1] -> [4 x 4 x 1]
+Validating --> invstdVal = InvStdDev (features) : [4 x 4 x 1 x *1] -> [4 x 4 x 1]
+Validating --> featScaled = PerDimMeanVarNormalization (features, meanVal, invstdVal) : [4 x 4 x 1 x *1], [4 x 4 x 1], [4 x 4 x 1] -> [4 x 4 x 1 x *1]
+Validating --> conv1.c = Convolution (conv1.W, featScaled) : [64 x 1], [4 x 4 x 1 x *1] -> [4 x 4 x 64 x *1]
+Validating --> conv1.sc = LearnableParameter() :  -> [64 x 1]
+Validating --> conv1.b = LearnableParameter() :  -> [64 x 1]
+Validating --> conv1.m = LearnableParameter() :  -> [64 x 1]
+Validating --> conv1.isd = LearnableParameter() :  -> [64 x 1]
+Validating --> conv1.bn = BatchNormalization (conv1.c, conv1.sc, conv1.b, conv1.m, conv1.isd) : [4 x 4 x 64 x *1], [64 x 1], [64 x 1], [64 x 1], [64 x 1] -> [4 x 4 x 64 x *1]
+Validating --> conv1.y = RectifiedLinear (conv1.bn) : [4 x 4 x 64 x *1] -> [4 x 4 x 64 x *1]
+Validating --> dc1 = Dropout (conv1.y) : [4 x 4 x 64 x *1] -> [4 x 4 x 64 x *1]
+Validating --> h1.t = Times (h1.W, dc1) : [64 x 4 x 4 x 64], [4 x 4 x 64 x *1] -> [64 x *1]
+Validating --> h1.sc = LearnableParameter() :  -> [64 x 1]
+Validating --> h1.b = LearnableParameter() :  -> [64 x 1]
+Validating --> h1.m = LearnableParameter() :  -> [64 x 1]
+Validating --> h1.isd = LearnableParameter() :  -> [64 x 1]
+Validating --> h1.bn = BatchNormalization (h1.t, h1.sc, h1.b, h1.m, h1.isd) : [64 x *1], [64 x 1], [64 x 1], [64 x 1], [64 x 1] -> [64 x *1]
+Validating --> h1.y = RectifiedLinear (h1.bn) : [64 x *1] -> [64 x *1]
+Validating --> d1 = Dropout (h1.y) : [64 x *1] -> [64 x *1]
+Validating --> OutputNodes.t = Times (OutputNodes.W, d1) : [4 x 64], [64 x *1] -> [4 x *1]
+Validating --> OutputNodes.b = LearnableParameter() :  -> [4]
+Validating --> OutputNodes.out = Plus (OutputNodes.t, OutputNodes.b) : [4 x *1], [4] -> [4 x *1]
+Validating --> labels = InputValue() :  -> [4 x *1]
+Validating --> sqErr = SquareError (labels, OutputNodes.out) : [4 x *1], [4 x *1] -> [1]
+
+Validating network. 14 nodes to process in pass 2.
+
+
+Validating network, final pass.
+
+conv1.c: using cuDNN convolution engine for geometry: Input: 4 x 4 x 1, Output: 4 x 4 x 64, Kernel: 1 x 1 x 1, Map: 1 x 1 x 64, Stride: 1 x 1 x 1, Sharing: (1), AutoPad: (0), LowerPad: 0, UpperPad: 0.
+Using CNTK batch normalization engine.
+Using CNTK batch normalization engine.
+
+
+15 out of 28 nodes do not share the minibatch layout with the input data.
+
+Post-processing network complete.
+
+evalNodeNames are not specified, using all the default evalnodes and training criterion nodes.
+
+
+Allocating matrices for forward and/or backward propagation.
+
+Memory Sharing: Out of 28 matrices, 0 are shared as 0, and 28 are not shared.
+
+
+08/26/2016 17:35:23: Final Results: Minibatch[1-5]: sqErr = 0.10565990 * 50
+
+08/26/2016 17:35:23: Action "test" complete.
+
+
+08/26/2016 17:35:23: ##############################################################################
+08/26/2016 17:35:23: #                                                                            #
+08/26/2016 17:35:23: # Action "write"                                                             #
+08/26/2016 17:35:23: #                                                                            #
+08/26/2016 17:35:23: ##############################################################################
+
+
+Post-processing network...
+
+4 roots:
+	OutputNodes.out = Plus()
+	invstdVal = InvStdDev()
+	meanVal = Mean()
+	sqErr = SquareError()
+
+Validating network. 28 nodes to process in pass 1.
+
+Validating --> OutputNodes.W = LearnableParameter() :  -> [4 x 64]
+Validating --> h1.W = LearnableParameter() :  -> [64 x 4 x 4 x 64]
+Validating --> conv1.W = LearnableParameter() :  -> [64 x 1]
+Validating --> features = InputValue() :  -> [4 x 4 x 1 x *2]
+Validating --> meanVal = Mean (features) : [4 x 4 x 1 x *2] -> [4 x 4 x 1]
+Validating --> invstdVal = InvStdDev (features) : [4 x 4 x 1 x *2] -> [4 x 4 x 1]
+Validating --> featScaled = PerDimMeanVarNormalization (features, meanVal, invstdVal) : [4 x 4 x 1 x *2], [4 x 4 x 1], [4 x 4 x 1] -> [4 x 4 x 1 x *2]
+Validating --> conv1.c = Convolution (conv1.W, featScaled) : [64 x 1], [4 x 4 x 1 x *2] -> [4 x 4 x 64 x *2]
+Validating --> conv1.sc = LearnableParameter() :  -> [64 x 1]
+Validating --> conv1.b = LearnableParameter() :  -> [64 x 1]
+Validating --> conv1.m = LearnableParameter() :  -> [64 x 1]
+Validating --> conv1.isd = LearnableParameter() :  -> [64 x 1]
+Validating --> conv1.bn = BatchNormalization (conv1.c, conv1.sc, conv1.b, conv1.m, conv1.isd) : [4 x 4 x 64 x *2], [64 x 1], [64 x 1], [64 x 1], [64 x 1] -> [4 x 4 x 64 x *2]
+Validating --> conv1.y = RectifiedLinear (conv1.bn) : [4 x 4 x 64 x *2] -> [4 x 4 x 64 x *2]
+Validating --> dc1 = Dropout (conv1.y) : [4 x 4 x 64 x *2] -> [4 x 4 x 64 x *2]
+Validating --> h1.t = Times (h1.W, dc1) : [64 x 4 x 4 x 64], [4 x 4 x 64 x *2] -> [64 x *2]
+Validating --> h1.sc = LearnableParameter() :  -> [64 x 1]
+Validating --> h1.b = LearnableParameter() :  -> [64 x 1]
+Validating --> h1.m = LearnableParameter() :  -> [64 x 1]
+Validating --> h1.isd = LearnableParameter() :  -> [64 x 1]
+Validating --> h1.bn = BatchNormalization (h1.t, h1.sc, h1.b, h1.m, h1.isd) : [64 x *2], [64 x 1], [64 x 1], [64 x 1], [64 x 1] -> [64 x *2]
+Validating --> h1.y = RectifiedLinear (h1.bn) : [64 x *2] -> [64 x *2]
+Validating --> d1 = Dropout (h1.y) : [64 x *2] -> [64 x *2]
+Validating --> OutputNodes.t = Times (OutputNodes.W, d1) : [4 x 64], [64 x *2] -> [4 x *2]
+Validating --> OutputNodes.b = LearnableParameter() :  -> [4]
+Validating --> OutputNodes.out = Plus (OutputNodes.t, OutputNodes.b) : [4 x *2], [4] -> [4 x *2]
+Validating --> labels = InputValue() :  -> [4 x *2]
+Validating --> sqErr = SquareError (labels, OutputNodes.out) : [4 x *2], [4 x *2] -> [1]
+
+Validating network. 14 nodes to process in pass 2.
+
+
+Validating network, final pass.
+
+conv1.c: using cuDNN convolution engine for geometry: Input: 4 x 4 x 1, Output: 4 x 4 x 64, Kernel: 1 x 1 x 1, Map: 1 x 1 x 64, Stride: 1 x 1 x 1, Sharing: (1), AutoPad: (0), LowerPad: 0, UpperPad: 0.
+Using CNTK batch normalization engine.
+Using CNTK batch normalization engine.
+
+
+15 out of 28 nodes do not share the minibatch layout with the input data.
+
+Post-processing network complete.
+
+
+
+Allocating matrices for forward and/or backward propagation.
+
+Memory Sharing: Out of 28 matrices, 0 are shared as 0, and 28 are not shared.
+
+
+Minibatch[0]: ActualMBSize = 1
+Minibatch[1]: ActualMBSize = 1
+Minibatch[2]: ActualMBSize = 1
+Minibatch[3]: ActualMBSize = 1
+Minibatch[4]: ActualMBSize = 1
+Minibatch[5]: ActualMBSize = 1
+Minibatch[6]: ActualMBSize = 1
+Minibatch[7]: ActualMBSize = 1
+Minibatch[8]: ActualMBSize = 1
+Minibatch[9]: ActualMBSize = 1
+Minibatch[10]: ActualMBSize = 1
+Minibatch[11]: ActualMBSize = 1
+Minibatch[12]: ActualMBSize = 1
+Minibatch[13]: ActualMBSize = 1
+Minibatch[14]: ActualMBSize = 1
+Minibatch[15]: ActualMBSize = 1
+Minibatch[16]: ActualMBSize = 1
+Minibatch[17]: ActualMBSize = 1
+Minibatch[18]: ActualMBSize = 1
+Minibatch[19]: ActualMBSize = 1
+Minibatch[20]: ActualMBSize = 1
+Minibatch[21]: ActualMBSize = 1
+Minibatch[22]: ActualMBSize = 1
+Minibatch[23]: ActualMBSize = 1
+Minibatch[24]: ActualMBSize = 1
+Minibatch[25]: ActualMBSize = 1
+Minibatch[26]: ActualMBSize = 1
+Minibatch[27]: ActualMBSize = 1
+Minibatch[28]: ActualMBSize = 1
+Minibatch[29]: ActualMBSize = 1
+Minibatch[30]: ActualMBSize = 1
+Minibatch[31]: ActualMBSize = 1
+Minibatch[32]: ActualMBSize = 1
+Minibatch[33]: ActualMBSize = 1
+Minibatch[34]: ActualMBSize = 1
+Minibatch[35]: ActualMBSize = 1
+Minibatch[36]: ActualMBSize = 1
+Minibatch[37]: ActualMBSize = 1
+Minibatch[38]: ActualMBSize = 1
+Minibatch[39]: ActualMBSize = 1
+Minibatch[40]: ActualMBSize = 1
+Minibatch[41]: ActualMBSize = 1
+Minibatch[42]: ActualMBSize = 1
+Minibatch[43]: ActualMBSize = 1
+Minibatch[44]: ActualMBSize = 1
+Minibatch[45]: ActualMBSize = 1
+Minibatch[46]: ActualMBSize = 1
+Minibatch[47]: ActualMBSize = 1
+Minibatch[48]: ActualMBSize = 1
+Minibatch[49]: ActualMBSize = 1
+Written to C:\cygwin_x64\tmp\cntk-test-20160826173512.335379\Image_Regression@release_gpu/write/output*
+Total Samples Evaluated = 50
+
+08/26/2016 17:35:24: Action "write" complete.
+
+08/26/2016 17:35:24: __COMPLETED__
+Error: Output of write command does not match baseline output within specified tolerance. See /cygdrive/C/cygwin_x64/tmp/cntk-test-20160826173512.335379/Image_Regression@release_gpu/write/output.OutputNodes.out.diff

@@ -1,0 +1,4 @@
+images\11.png	1	1
+images\23.png	2	3
+images\31.png	3	1
+images\03.png	0	3

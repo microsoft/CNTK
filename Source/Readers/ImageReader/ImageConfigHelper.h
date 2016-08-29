@@ -12,6 +12,12 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+enum class LabelType
+{
+    Classification = 0,
+    Regression = 1
+};
+
 enum class CropType
 {
     Center = 0,
@@ -68,6 +74,16 @@ public:
         return m_cropType == CropType::MultiView10;
     }
 
+    LabelType GetLabelType() const
+    {
+        return m_labelType;
+    }
+
+    ElementType GetElementType() const
+    {
+        return m_elementType;
+    }
+
     static CropType ParseCropType(const std::string &src);
 
 private:
@@ -81,6 +97,8 @@ private:
     bool m_randomize;
     bool m_grayscale;
     CropType m_cropType;
+    LabelType m_labelType;
+    ElementType m_elementType;
 };
 
 typedef std::shared_ptr<ImageConfigHelper> ImageConfigHelperPtr;

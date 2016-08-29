@@ -40,6 +40,23 @@ ImageConfigHelper::ImageConfigHelper(const ConfigParameters& config)
         RuntimeError("ImageReader does not support the sample format '%s', only 'nchw' and 'nhwc' are supported.", mbFmt.c_str());
     }
 
+    ConfigParameters labelSection = config(labelNames[0]);
+    size_t labelDimension = labelSection("labelDim");
+
+    std::string type = labelSection(L"labelType", "classification");
+    if (AreEqualIgnoreCase(type, "classification"))
+    {
+        m_labelType = LabelType::Classification;
+    }
+    else if (AreEqualIgnoreCase(type, "regression"))
+    {
+        m_labelType = LabelType::Regression;
+    }
+    else
+    {
+        RuntimeError("'labelType' parameter must be set to 'classification' or 'regression'");
+    }
+
     auto features = std::make_shared<StreamDescription>();
     features->m_id = 0;
     features->m_name = msra::strfun::utf16(featureSection.ConfigName());
@@ -47,21 +64,17 @@ ImageConfigHelper::ImageConfigHelper(const ConfigParameters& config)
     features->m_storageType = StorageType::dense;
     m_streams.push_back(features);
 
-    ConfigParameters label = config(labelNames[0]);
-    size_t labelDimension = label("labelDim");
-
-    auto labelSection = std::make_shared<StreamDescription>();
-    labelSection->m_id = 1;
-    labelSection->m_name = msra::strfun::utf16(label.ConfigName());
-    labelSection->m_sampleLayout = std::make_shared<TensorShape>(labelDimension);
-    labelSection->m_storageType = StorageType::dense;
-    m_streams.push_back(labelSection);
+    auto labels = std::make_shared<StreamDescription>();
+    labels->m_id = 1;
+    labels->m_name = msra::strfun::utf16(labelSection.ConfigName());
+    labels->m_sampleLayout = std::make_shared<TensorShape>(labelDimension);
+    labels->m_storageType = m_labelType == LabelType::Classification ? StorageType::sparse_csc : StorageType::dense;
+    m_streams.push_back(labels);
 
     m_mapPath = config(L"file");
-
     m_grayscale = config(L"grayscale", c == 1);
-    std::string rand = config(L"randomize", "auto");
 
+    std::string rand = config(L"randomize", "auto");
     if (AreEqualIgnoreCase(rand, "auto"))
     {
         m_randomize = true;
@@ -76,16 +89,18 @@ ImageConfigHelper::ImageConfigHelper(const ConfigParameters& config)
     }
 
     // Identify precision
-    string precision = config.Find("precision", "float");
+    string precision = config(L"precision", "float");
     if (AreEqualIgnoreCase(precision, "float"))
     {
+        m_elementType = ElementType::tfloat;
         features->m_elementType = ElementType::tfloat;
-        labelSection->m_elementType = ElementType::tfloat;
+        labels->m_elementType = ElementType::tfloat;
     }
     else if (AreEqualIgnoreCase(precision, "double"))
     {
+        m_elementType = ElementType::tdouble;
         features->m_elementType = ElementType::tdouble;
-        labelSection->m_elementType = ElementType::tdouble;
+        labels->m_elementType = ElementType::tdouble;
     }
     else
     {

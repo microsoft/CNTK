@@ -1,0 +1,87 @@
+precision = "float"
+command = train:test:write
+deviceId = $DeviceId$
+
+ndlMacros = "$ConfigDir$/Macros.ndl"
+parallelTrain = false
+numCPUThreads = 1
+labelType = regression
+
+train = [
+    action = "train"
+    modelPath = "$RunDir$/models/cntk.dnn"
+    traceLevel = 1
+    
+     NDLNetworkBuilder=[
+        networkDescription = "$ConfigDir$/regression.ndl"
+        keepCheckPointFiles = false
+    ]
+    
+    SGD = [
+        epochSize = 200
+        minibatchSize = 20
+        learningRatesPerSample = 0.01*20:0.002*20:0.0004*30:0.0001*30:0.00002*50:0.00001
+        maxEpochs = 200
+        keepCheckPointFiles = false
+        dropoutRate = 0.1
+    ]
+
+    reader = [
+        readerType = "ImageReader"
+        file = "$DataDir$/regression_train_map.txt"
+        randomize=Auto
+        
+        features = [
+            width=4
+            height=4
+            channels=1
+        ]
+        
+        labels = [
+            labelDim = 4
+        ]
+    ]
+]
+
+test = [
+    action = "test"
+    modelPath = "$RunDir$/models/cntk.dnn"
+    minibatchSize = 10
+
+    reader = [
+        readerType = ImageReader
+        file = "$DataDir$/regression_test_map.txt"
+                
+        features = [
+            width = 4
+            height = 4
+            channels = 1
+        ]
+        
+        labels = [
+            labelDim = 4
+        ]
+    ]
+]
+
+write = [
+    action = "write"
+    modelPath = "$RunDir$/models/cntk.dnn"
+    minibatchSize = 1
+
+    reader = [
+        readerType = ImageReader
+        file = "$DataDir$/regression_write_map.txt"
+                
+        features = [
+            width = 4
+            height = 4
+            channels = 1
+        ]
+        
+        labels = [
+            labelDim = 4
+        ]
+    ]
+    outputPath = "$RunDir$/write/output"
+]
