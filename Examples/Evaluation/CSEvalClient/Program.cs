@@ -373,7 +373,6 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
             // The examples assume the executable is running from the data folder
             // We switch the current directory to the data folder (assuming the executable is in the <CNTK>/x64/Debug|Release folder
             Environment.CurrentDirectory = Path.Combine(initialDirectory, @"..\..\Examples\Image\MNIST\Data\");
-            
 
             // Load model
             string modelFilePath = Path.Combine(Environment.CurrentDirectory, @"..\Output\Models\02_Convolution");
