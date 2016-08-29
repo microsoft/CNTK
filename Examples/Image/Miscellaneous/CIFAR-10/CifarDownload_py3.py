@@ -61,7 +61,7 @@ def loadData(src, outFmt):
     return (trn, tst)
 
 def usage():
-    print ('Usage: CIFAR_convert.py [-f <format>] \n  where format can be either cudnn or legacy. Default is cudnn.')
+    print ('Usage: CifarDownload_py3.py [-f <format>] \n  where format can be either cudnn or legacy. Default is cudnn.')
 
 def parseCmdOpt(argv):
     if len(argv) == 0:
