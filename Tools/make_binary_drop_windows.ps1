@@ -111,6 +111,9 @@ Copy-Item $includeFile -Destination $baseIncludePath
 # Copy Examples
 Write-Verbose "Copying Examples ..."
 Copy-Item Examples -Recurse -Destination $baseDropPath\Examples
+#   Remove directories for CNTK.sln-only use:
+Remove-Item $baseDropPath\Examples\Evaluation\CPPEvalClient-FromCntkSln
+Remove-Item $baseDropPath\Examples\Evaluation\CSEvalClient-FromCntkSln
 
 # Copy Scripts
 Write-Verbose "Copying Scripts ..."
