@@ -7,8 +7,8 @@
     <ProjectGuid>{1C6E6C53-1AA7-4B69-913E-B97BB5A872CF}</ProjectGuid>
     <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClientFromCntkSln</RootNamespace>
-    <AssemblyName>CSEvalClient-FromCntkSln</AssemblyName>
+    <RootNamespace>Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClientCntkSln</RootNamespace>
+    <AssemblyName>CSEvalClient-CntkSln</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>

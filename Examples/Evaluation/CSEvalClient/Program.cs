@@ -112,7 +112,7 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
                     string modelFilePath = Path.Combine(Environment.CurrentDirectory, @"..\Output\Models\01_OneHidden");
                     if (!File.Exists(modelFilePath))
                     {
-                        Console.WriteLine("Error: The model {0} does not exist. Please run the example in <CNTK>/Examples/Image/MNIST to create the model.", modelFilePath);
+                        Console.WriteLine("Error: The model {0} does not exist. Please follow instructions in README.md in <CNTK>/Examples/Image/MNIST to create the model.", modelFilePath);
                         throw new FileNotFoundException(string.Format("File {0} not found.", modelFilePath));
                     }
 
@@ -167,7 +167,7 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
                     string modelFilePath = Path.Combine(Environment.CurrentDirectory, @"..\Output\Models\01_OneHidden");
                     if (!File.Exists(modelFilePath))
                     {
-                        Console.WriteLine("Error: The model {0} does not exist. Please run the example in <CNTK>/Examples/Image/MNIST to create the model.", modelFilePath);
+                        Console.WriteLine("Error: The model {0} does not exist. Please follow instructions in README.md in <CNTK>/Examples/Image/MNIST to create the model.", modelFilePath);
                         throw new FileNotFoundException(string.Format("File {0} not found.", modelFilePath));
                     }
 
@@ -379,7 +379,7 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
             string modelFilePath = Path.Combine(Environment.CurrentDirectory, @"..\Output\Models\02_Convolution");
             if (!File.Exists(modelFilePath))
             {
-                Console.WriteLine("Error: The model {0} does not exist. Please run the example in <CNTK>/Examples/Image/MNIST to create the model.", modelFilePath);
+                Console.WriteLine("Error: The model {0} does not exist. Please follow instructions in README.md in <CNTK>/Examples/Image/MNIST to create the model.", modelFilePath);
                 throw new FileNotFoundException(string.Format("File {0} not found.", modelFilePath));
             }
 
@@ -389,7 +389,7 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
             string testfile = Path.Combine(Environment.CurrentDirectory, @"Test-28x28_cntk_text.txt");
             if (!File.Exists(testfile))
             {
-                Console.WriteLine("Error: The test file {0} does not exist. Please read README.md in <CNTK>/Examples/Image/MNIST to download the data file", testfile);
+                Console.WriteLine("Error: The test file {0} does not exist. Please follow instructions in README.md in <CNTK>/Examples/Image/MNIST to download the data.", testfile);
                 throw new FileNotFoundException(string.Format("File {0} not found.", testfile));
             }
 

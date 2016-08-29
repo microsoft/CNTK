@@ -58,8 +58,8 @@ int main(int argc, char* argv[])
     struct stat statBuf;
     if (stat(modelFilePath.c_str(), &statBuf) != 0)
     {
-        printf("Error: The model %s does not exist. Please run the example in <CNTK>/Examples/Image/MNIST to create the model.\n", modelFilePath.c_str());
-        exit(1);
+        fprintf(stderr, "Error: The model %s does not exist. Please follow instructions in README.md in <CNTK>/Examples/Image/MNIST to create the model.\n", modelFilePath.c_str());
+        return(1);
     }
 
     GetEvalF(&model);    
