@@ -1629,6 +1629,7 @@ static size_t fgetfilechars(const std::wstring& path, vector<char>& buffer)
     size_t len = filesize(f);
     buffer.reserve(len + 1);
     freadOrDie(buffer, len, f);
+    fclose(f);
     buffer.push_back(0); // this makes it a proper C string
     return len;
 }
@@ -1850,17 +1851,41 @@ void expand_wildcards(const wstring& path, vector<wstring>& paths)
 
 static void mkdir(const wstring& path)
 {
-    int rc = _wmkdir(path.c_str());
+    int rc = 0;
+
+#ifdef _WIN32
+    rc = _wmkdir(path.c_str());
     if (rc >= 0 || errno == EEXIST)
+    {
         return; // no error or already existing --ok
-#ifdef _WIN32   // bug in _wmkdir(): returns access_denied if folder exists but read-only --check existence
+    }
+    // _wmkdir(): returns access_denied if folder exists but read-only --check existence
     if (errno == EACCES)
     {
         DWORD att = ::GetFileAttributesW(path.c_str());
         if (att != INVALID_FILE_ATTRIBUTES || (att & FILE_ATTRIBUTE_DIRECTORY) != 0)
+        {
             return; // ok
+        }
+    }
+#else
+    rc = mkdir(wtocharpath(path.c_str()).c_str(), 0755);
+    if (rc >= 0 || errno == EEXIST)
+    {
+        return; // no error or already existing --ok
+    }
+    // mkdir(): check file existence
+    if (errno == EACCES)
+    {
+        struct stat buf_stat;
+        rc = stat(wtocharpath(path.c_str()).c_str(), &buf_stat);
+        if (rc == 0)
+        {
+            return;
+        }
     }
 #endif
+
     RuntimeError("mkdir: error creating intermediate directory %ls", path.c_str());
 }
 
