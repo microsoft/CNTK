@@ -94,6 +94,10 @@ public:
         {
             FrameRange fr(Input(0)->GetMBLayout());
             auto gradient = Input(1)->GradientFor(fr);
+            Matrix<ElemType> posteriorNumBackup(m_posteriorsNum->GetNumRows(), m_posteriorsNum->GetNumCols(), m_posteriorsNum->GetDeviceId());
+            posteriorNumBackup.SetValue(*m_posteriorsNum);
+            Matrix<ElemType> posteriorDenBackup(m_posteriorsDen->GetNumRows(), m_posteriorsDen->GetNumCols(), m_posteriorsDen->GetDeviceId());
+            posteriorDenBackup.SetValue(*m_posteriorsDen);
 
             if (m_totalFrameNumberOfCurrentMinibatch == 0 || m_frameNumberOfCurrentMinibatch == m_totalFrameNumberOfCurrentMinibatch)
             {
@@ -126,6 +130,7 @@ public:
                 gradient += m_mbGradients->ColumnSlice(m_frameNumberOfCurrentMinibatch, nf);
                 m_frameNumberOfCurrentMinibatch += nf;
             }
+            gradient.DropFrame(posteriorNumBackup, posteriorDenBackup, (ElemType)(1e-8));
         }
     }
 
