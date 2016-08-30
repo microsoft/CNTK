@@ -783,24 +783,62 @@ public:
         fstream >> m_nSamples;
     }
 
+    // Code and comment of below is nearly a copy of some tensorflow code 
+    // (see function 'ExpectedCountHelper' in https://github.com/tensorflow/tensorflow/blob/master/tensorflow/core/kernels/range_sampler.cc).
+    // How to cite properly?
+
+    // Approximates the expected number of occurences of a class in the sampled set.
+    // Assuming (falsely) that the number of tries to get a sampled set with the requested number of distinct values is always estimatedNumTries
+    // the probability that a specific class in in the sampled set is (1 - (1-p)^estimatedNumTries), where p is the probablity to pick the clas in one draw.
+    float EstimateCountOfClass(float p, long estimatedNumTries) const
+    {
+        if (m_allowDuplicates)
+        {
+            return p * m_nSamples;
+        }
+        else /* No duplicates allowed. Estimated count is same as probability of inclusion. */
+        {
+            return -expm1(estimatedNumTries * log1p(-p));
+        }
+    }
+
     virtual void /*ComputationNode::*/ ForwardPropNonLooping() override
     {
+        UpdateWeightsPrefixSum();
         Matrix<ElemType>& valueMatrix = ValueAsMatrix();
         valueMatrix.TransferToDeviceIfNotThere(CPUDEVICE, /*ismoved =*/ true/*means: BOTH state not ok */, /*emptyTransfer =*/ true, /*updatePreferredDevice =*/ false);
         valueMatrix.SetDevice(CPUDEVICE);
-        valueMatrix.SwitchToMatrixType(SPARSE, matrixFormatSparseCSC, false);
-        valueMatrix.Reset();
 
-        UpdateWeightsPrefixSum();
-
-        // Get vector with indices of randomly sampled classes
-        const std::vector<int> samples = GetWeightedSamples(m_samplingWeightsPrefixSum);
-
-        // Set columns of (sparse) result matrix as indicator vectors
-        for(int iSample = 0; iSample < m_nSamples; iSample++)
+        if (m_estimateInclusionProbs)
         {
-            int sample = samples[iSample];
-            valueMatrix.SetValue(sample, iSample, 1);
+            valueMatrix.SwitchToMatrixType(DENSE, matrixFormatDense, false);
+            valueMatrix.Reset();
+            float sumOfWeights = (float) m_samplingWeightsPrefixSum.back();
+            const Matrix<ElemType>& samplingWeights = Input(0)->ValueAsMatrix();
+
+            long estimatedNumTries = GetNumberOfTries();
+            for (int iSample = 0; iSample < m_samplingWeightsPrefixSum.size(); iSample++)
+            {
+                float pSample = (float)samplingWeights.GetValue(iSample, 0) / sumOfWeights;
+                float estimatedCount = EstimateCountOfClass(pSample, estimatedNumTries);
+                valueMatrix.SetValue(iSample, 0, estimatedCount);
+            }
+        }
+        else /* compute random samples */
+        {
+            valueMatrix.SwitchToMatrixType(SPARSE, matrixFormatSparseCSC, false);
+            valueMatrix.Reset();
+
+
+            // Get vector with indices of randomly sampled classes
+            const std::vector<int> samples = GetWeightedSamples();
+
+            // Set columns of (sparse) result matrix as indicator vectors
+            for (int iSample = 0; iSample < m_nSamples; iSample++)
+            {
+                int sample = samples[iSample];
+                valueMatrix.SetValue(sample, iSample, 1);
+            }
         }
     }
 
@@ -821,22 +859,22 @@ public:
         }
     }
 
-    const std::vector<int> GetWeightedSamples(const std::vector<double>& weightPrefixSum)
+    const std::vector<int> GetWeightedSamples()
     {
         long dummy; 
-        return RunSampling(weightPrefixSum, dummy);
+        return RunSampling(dummy);
     }
 
-    long GetNumberOfTries(const std::vector<double>& weightPrefixSum)
+    long GetNumberOfTries()
     {
         long nTries;
-        RunSampling(weightPrefixSum, nTries);
+        RunSampling(nTries);
         return nTries;
     }
 
-    const std::vector<int> RunSampling(const std::vector<double>& weightPrefixSum, long& nTries)
+    const std::vector<int> RunSampling(long& nTries)
     {
-        std::uniform_real_distribution<double> r(0, weightPrefixSum.back());
+        std::uniform_real_distribution<double> r(0, m_samplingWeightsPrefixSum.back());
         std::unordered_set<int> alreadySampled;
         std::vector<int> samples;
         CPURNGHandle* cpuRNGHandle = dynamic_cast<CPURNGHandle*>(&GetRNGHandle(CPUDEVICE));
@@ -850,8 +888,9 @@ public:
         while (samples.size() < m_nSamples)
         {
             double randomValue = r(cpuRNGHandle->Generator());
-            auto lower = std::lower_bound(weightPrefixSum.begin(), weightPrefixSum.end(), randomValue);
-            int idx = (int)(lower - weightPrefixSum.begin());
+            // Find the first index where value[idx] >= randomValue.
+            auto lower = std::lower_bound(m_samplingWeightsPrefixSum.begin(), m_samplingWeightsPrefixSum.end(), randomValue);
+            int idx = (int)(lower - m_samplingWeightsPrefixSum.begin());
 
             if (m_allowDuplicates)
                 samples.push_back(idx);
@@ -904,19 +943,6 @@ public:
         // Still we want the value of the node to be refreshed for each minibatch. 
         return true;
     }
-
-    // The node can create samples allowing for dupicates (WITH_REPLACEMENT) or not (WITHOUT_REPLACEMENT)
-    enum SamplingType
-    {
-        WITH_REPLACEMENT,
-        WITHOUT_REPLACEMENT,
-    };
-
-    // Based on the sampling weigts the node either creates a set of random samples or estimates the inclusion probability for each class.+
-    enum RunMode{
-        CREATE_SAMPLES,
-        ESTIMATE_INCLUSION_PROBABILITY,
-    };
 
 private:
     bool m_allowDuplicates;        // The node can create samples allowing for duplicates (sampling with replacement) or not (sampling without replacment).
