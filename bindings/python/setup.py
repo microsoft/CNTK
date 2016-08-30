@@ -20,6 +20,21 @@ ext_modules = [
 
            libraries=[
                os.path.join(CNTK_LIB_PATH, "CNTKLibrary-2.0"),
+               os.path.join(CNTK_LIB_PATH, "BinaryReader"),               
+               os.path.join(CNTK_LIB_PATH, "CNTKTextFormatReader"),               
+               os.path.join(CNTK_LIB_PATH, "CompositeDataReader"),               
+               os.path.join(CNTK_LIB_PATH, "DSSMReader"),               
+               os.path.join(CNTK_LIB_PATH, "EvalDll"),               
+               os.path.join(CNTK_LIB_PATH, "EvalWrapper"),               
+               os.path.join(CNTK_LIB_PATH, "HTKDeserializers"),               
+               os.path.join(CNTK_LIB_PATH, "HTKMLFReader"),               
+               os.path.join(CNTK_LIB_PATH, "ImageReader"),               
+               os.path.join(CNTK_LIB_PATH, "LibSVMBinaryReader"),               
+               os.path.join(CNTK_LIB_PATH, "LMSequenceReader"),               
+               os.path.join(CNTK_LIB_PATH, "LUSequenceReader"),               
+               os.path.join(CNTK_LIB_PATH, "nvml"),               
+               os.path.join(CNTK_LIB_PATH, "SparsePCReader"),               
+               os.path.join(CNTK_LIB_PATH, "UCIFastReader"),                              
                os.path.join(CNTK_LIB_PATH, "Math")
                ],
            library_dirs=[CNTK_LIB_PATH],
@@ -40,8 +55,8 @@ ext_modules = [
                "/Zi",     # TODO remove for release
                "/Od"     # TODO remove for release
                ],
-           extra_link_args=[ "/DEBUG"],
+           extra_link_args=[ "/DEBUG"],           
       )
     ]
 
-setup(name="cntk", ext_modules = ext_modules, packages=['cntk','cntk.ops','cntk.utils','cntk.examples'])
+setup(name="cntk", ext_modules = ext_modules, packages=setuptools.find_packages())
