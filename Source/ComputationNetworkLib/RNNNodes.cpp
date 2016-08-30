@@ -68,7 +68,9 @@ template<class ElemType>
 void OptimizedRNNStackNode<ElemType>::Load(File& fstream, size_t modelVersion)
 {
     Base::Load(fstream, modelVersion);
-    m_rnnAttributes.Read(fstream, /*readAxis=*/ modelVersion >= CNTK_MODEL_VERSION_14);
+    bool isLegacyVersion = modelVersion < CNTK_MODEL_VERSION_14; // (to support an internal legacy version)
+    m_legacySwapInputsPending = isLegacyVersion;
+    m_rnnAttributes.Read(fstream, /*readAxis=*/ !isLegacyVersion);
 }
 
 template<class ElemType>
@@ -206,6 +208,12 @@ void OptimizedRNNStackNode<ElemType>::BackpropTo(const size_t inputIndex, const 
 template<class ElemType>
 void OptimizedRNNStackNode<ElemType>::Validate(bool isFinalValidationPass)
 {
+    // support an internal legacy version
+    if (m_legacySwapInputsPending)
+    {
+        ::swap(m_inputs[0], m_inputs[1]);
+        m_legacySwapInputsPending = false;
+    }
     // N.B.: I need both of these lines.
     Base::Validate(isFinalValidationPass);
     InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);

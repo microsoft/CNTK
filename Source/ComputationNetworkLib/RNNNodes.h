@@ -106,6 +106,8 @@ private:
     void UnpackSequencesFromCuDNN(const Matrix<ElemType>& src, Matrix<ElemType>& dst);
 
     RnnAttributes m_rnnAttributes;
+
+    bool m_legacySwapInputsPending = false; // to support an internal legacy version
 };
 
 }}}
