@@ -220,9 +220,9 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
                 using (var model = new IEvaluateModelManagedF())
                 {
                     // Create the network
-                    // This network (AddOperatorConstant.cntk) is a simple network consisting of a single binary operator (Plus)
+                    // This network (AddOperatorConstant_ndl_deprecated.cntk) is a simple network consisting of a single binary operator (Plus)
                     // operating over a single input and a constant
-                    string networkFilePath = Path.Combine(workingDirectory, @"AddOperatorConstant.cntk");
+                    string networkFilePath = Path.Combine(workingDirectory, @"AddOperatorConstant_ndl_deprecated.cntk");
                     if (!File.Exists(networkFilePath))
                     {
                         Console.WriteLine("Error: The network configuration file {0} does not exist.", networkFilePath);
@@ -270,9 +270,9 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
                 using (var model = new IEvaluateModelManagedF())
                 {
                     // Create the network
-                    // This network (AddOperatorConstantNoInput.cntk) is a simple network consisting of a single binary operator (Plus)
+                    // This network (AddOperatorConstantNoInput_ndl_deprecated.cntk) is a simple network consisting of a single binary operator (Plus)
                     // operating over a two constants, therefore no input is necessary.
-                    string networkFilePath = Path.Combine(workingDirectory, @"AddOperatorConstantNoInput.cntk");
+                    string networkFilePath = Path.Combine(workingDirectory, @"AddOperatorConstantNoInput_ndl_deprecated.cntk");
                     if (!File.Exists(networkFilePath))
                     {
                         Console.WriteLine("Error: The network configuration file {0} does not exist.", networkFilePath);
@@ -318,8 +318,6 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
                 using (var model = new ModelEvaluationExtendedF())
                 {
                     // Create the network
-                    // This network (AddOperatorConstantNoInput.cntk) is a simple network consisting of a single binary operator (Plus)
-                    // operating over a two constants, therefore no input is necessary.
                     model.CreateNetwork(modelDefinition);
 
                     VariableSchema outputSchema = model.GetOutputSchema();
