@@ -90,6 +90,23 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
         }
 
         /// <summary>
+        /// Checks whether the file exist. If not, write the error message on the console and throw FileNotFoundException
+        /// </summary>
+        /// <param name="filePath">The file to be checked</param>
+        /// <param name="errorMsg">The message to write on console if the file does not exist</param>
+        private static void ThrowIfFileNotExist(string filePath, string errorMsg = "")
+        {
+            if (!File.Exists(filePath))
+            {                
+                if (!string.IsNullOrEmpty(errorMsg))
+                {
+                    Console.WriteLine(errorMsg);
+                }
+                throw new FileNotFoundException(string.Format("File \"{0}\" not found.", filePath));
+            }
+        }
+
+        /// <summary>
         /// Evaluates a trained model and obtains a single layer output
         /// </summary>
         /// <remarks>
@@ -110,11 +127,8 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
                 {
                     // Load model
                     string modelFilePath = Path.Combine(Environment.CurrentDirectory, @"..\Output\Models\01_OneHidden");
-                    if (!File.Exists(modelFilePath))
-                    {
-                        Console.WriteLine("Error: The model {0} does not exist. Please follow instructions in README.md in <CNTK>/Examples/Image/MNIST to create the model.", modelFilePath);
-                        throw new FileNotFoundException(string.Format("File {0} not found.", modelFilePath));
-                    }
+                    ThrowIfFileNotExist(modelFilePath, 
+                        string.Format("Error: The model \"{0}\" does not exist. Please follow instructions in README.md in <CNTK>/Examples/Image/MNIST to create the model.", modelFilePath));
 
                     model.CreateNetwork(string.Format("modelPath=\"{0}\"", modelFilePath), deviceId: -1);
 
@@ -165,11 +179,8 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
 
                     // Load model
                     string modelFilePath = Path.Combine(Environment.CurrentDirectory, @"..\Output\Models\01_OneHidden");
-                    if (!File.Exists(modelFilePath))
-                    {
-                        Console.WriteLine("Error: The model {0} does not exist. Please follow instructions in README.md in <CNTK>/Examples/Image/MNIST to create the model.", modelFilePath);
-                        throw new FileNotFoundException(string.Format("File {0} not found.", modelFilePath));
-                    }
+                    ThrowIfFileNotExist(modelFilePath,
+                        string.Format("Error: The model \"{0}\" does not exist. Please follow instructions in README.md in <CNTK>/Examples/Image/MNIST to create the model.", modelFilePath));
 
                     var desiredOutputLayers = new List<string>() { hiddenLayerName, outputLayerName };
                     model.CreateNetwork(string.Format("modelPath=\"{0}\"", modelFilePath), deviceId: -1, outputNodeNames: desiredOutputLayers);
@@ -223,11 +234,7 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
                     // This network (AddOperatorConstant_ndl_deprecated.cntk) is a simple network consisting of a single binary operator (Plus)
                     // operating over a single input and a constant
                     string networkFilePath = Path.Combine(workingDirectory, @"AddOperatorConstant_ndl_deprecated.cntk");
-                    if (!File.Exists(networkFilePath))
-                    {
-                        Console.WriteLine("Error: The network configuration file {0} does not exist.", networkFilePath);
-                        throw new FileNotFoundException(string.Format("File {0} not found.", networkFilePath));
-                    }
+                    ThrowIfFileNotExist(networkFilePath, string.Format("Error: The network configuration file \"{0}\" does not exist.", networkFilePath));
 
                     string networkDescription = File.ReadAllText(networkFilePath);
                     model.CreateNetwork(networkDescription, deviceId: -1);
@@ -273,11 +280,7 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
                     // This network (AddOperatorConstantNoInput_ndl_deprecated.cntk) is a simple network consisting of a single binary operator (Plus)
                     // operating over a two constants, therefore no input is necessary.
                     string networkFilePath = Path.Combine(workingDirectory, @"AddOperatorConstantNoInput_ndl_deprecated.cntk");
-                    if (!File.Exists(networkFilePath))
-                    {
-                        Console.WriteLine("Error: The network configuration file {0} does not exist.", networkFilePath);
-                        throw new FileNotFoundException(string.Format("File {0} not found.", networkFilePath));
-                    }
+                    ThrowIfFileNotExist(networkFilePath, string.Format("Error: The network configuration file \"{0}\" does not exist.", networkFilePath));
 
                     string networkDescription = File.ReadAllText(networkFilePath);
                     model.CreateNetwork(networkDescription, deviceId: -1);
@@ -374,21 +377,15 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
 
             // Load model
             string modelFilePath = Path.Combine(Environment.CurrentDirectory, @"..\Output\Models\02_Convolution");
-            if (!File.Exists(modelFilePath))
-            {
-                Console.WriteLine("Error: The model {0} does not exist. Please follow instructions in README.md in <CNTK>/Examples/Image/MNIST to create the model.", modelFilePath);
-                throw new FileNotFoundException(string.Format("File {0} not found.", modelFilePath));
-            }
+            ThrowIfFileNotExist(modelFilePath, 
+                string.Format("Error: The model \"{0}\" does not exist. Please follow instructions in README.md in <CNTK>/Examples/Image/MNIST to create the model.", modelFilePath));
 
             // Initializes the model instances
             ModelEvaluator.Initialize(numConcurrentModels, modelFilePath);
 
             string testfile = Path.Combine(Environment.CurrentDirectory, @"Test-28x28_cntk_text.txt");
-            if (!File.Exists(testfile))
-            {
-                Console.WriteLine("Error: The test file {0} does not exist. Please follow instructions in README.md in <CNTK>/Examples/Image/MNIST to download the data.", testfile);
-                throw new FileNotFoundException(string.Format("File {0} not found.", testfile));
-            }
+            ThrowIfFileNotExist(testfile, 
+                string.Format("Error: The test file \"{0}\" does not exist. Please follow instructions in README.md in <CNTK>/Examples/Image/MNIST to download the data.", testfile));
 
             Stopwatch sw = new Stopwatch();
             sw.Start();
@@ -466,12 +463,9 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
                 using (var model = new IEvaluateModelManagedF())
                 {
                     string modelFilePath = Path.Combine(workingDirectory, "ResNet_18.model");
-                    if (!File.Exists(modelFilePath))
-                    {
-                        Console.WriteLine("Error: The model {0} does not exist. Please download the model from https://www.cntk.ai/resnet/ResNet_18.model and save it under ..\\..\\Examples\\Image\\Miscellaneous\\ImageNet\\ResNet.", modelFilePath);
-                        throw new FileNotFoundException(string.Format("File {0} not found.", modelFilePath));
-                    }
-
+                    ThrowIfFileNotExist(modelFilePath, 
+                        string.Format("Error: The model \"{0}\" does not exist. Please download the model from https://www.cntk.ai/resnet/ResNet_18.model and save it under ..\\..\\Examples\\Image\\Miscellaneous\\ImageNet\\ResNet.", modelFilePath));
+                        
                     model.CreateNetwork(string.Format("modelPath=\"{0}\"", modelFilePath), deviceId: -1);
 
                     // Prepare input value in the appropriate structure and size
@@ -483,11 +477,7 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
 
                     // Transform the image
                     string imageFileName = Path.Combine(workingDirectory, "zebra.jpg");
-                    if (!File.Exists(imageFileName))
-                    {
-                        Console.WriteLine("Error: The test image file {0} does not exist.", imageFileName);
-                        throw new FileNotFoundException(string.Format("File {0} not found.", imageFileName));
-                    }
+                    ThrowIfFileNotExist(imageFileName, string.Format("Error: The test image file \"{0}\" does not exist.", imageFileName));
 
                     Bitmap bmp = new Bitmap(Bitmap.FromFile(imageFileName));
 
