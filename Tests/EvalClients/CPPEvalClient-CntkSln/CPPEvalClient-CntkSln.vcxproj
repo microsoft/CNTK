@@ -106,7 +106,7 @@
     </ProjectReference>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\CPPEvalClient\CPPEvalClient.cpp" />
+    <ClCompile Include="..\..\..\Examples\Evaluation\CPPEvalClient\CPPEvalClient.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" />

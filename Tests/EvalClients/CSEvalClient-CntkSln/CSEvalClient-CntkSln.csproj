@@ -59,9 +59,9 @@
     <Reference Include="System.Drawing" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="..\CSEvalClient\CntkBitmapExtensions.cs" />
-    <Compile Include="..\CSEvalClient\ModelEvaluator.cs" />
-    <Compile Include="..\CSEvalClient\Program.cs" />
+    <Compile Include="..\..\..\Examples\Evaluation\CSEvalClient\CntkBitmapExtensions.cs" />
+    <Compile Include="..\..\..\Examples\Evaluation\CSEvalClient\ModelEvaluator.cs" />
+    <Compile Include="..\..\..\Examples\Evaluation\CSEvalClient\Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
