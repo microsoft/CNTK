@@ -2,7 +2,7 @@ import numpy as np
 import sys
 import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..'))
-import cntk.cntk_py as cntk_py
+from cntk import learning_rates_per_sample, DeviceDescriptor, Trainer, sgdlearner
 from cntk.ops import variable, cross_entropy_with_softmax, combine, classification_error, sigmoid, element_times, constant
 from cntk.utils import create_minibatch_source, get_train_loss
 from cntk.tests.test_utils import TOLERANCE_ABSOLUTE
@@ -19,13 +19,13 @@ def test_simple_mnist():
     num_samples_per_sweep = 60000
     num_sweeps_to_train_with = 3
     num_minibatches_to_train = (num_samples_per_sweep * num_sweeps_to_train_with) / minibatch_size    
-    lr = cntk_py.learning_rates_per_sample(0.003125)
+    lr = learning_rates_per_sample(0.003125)
     input = variable((input_dim,), np.float32, needs_gradient=False, name="features")
     scaled_input = element_times(constant((), 0.00390625), input)
 
     label = variable((num_output_classes,), np.float32, needs_gradient=False, name="labels")
     
-    dev = cntk_py.DeviceDescriptor.cpudevice()       
+    dev = DeviceDescriptor.cpudevice()       
     netout = fully_connected_classifier_net(scaled_input.output(), num_output_classes, hidden_layers_dim, num_hidden_layers, dev, sigmoid)  
         
     ce = cross_entropy_with_softmax(netout.output(), label)
@@ -48,7 +48,7 @@ def test_simple_mnist():
     minibatch_size_limits[features_si] = (0,minibatch_size)
     minibatch_size_limits[labels_si] = (0,minibatch_size)
                          
-    trainer = cntk_py.Trainer(ffnet, ce.output(), [cntk_py.sgdlearner(ffnet.parameters(), lr)])          
+    trainer = Trainer(ffnet, ce.output(), [sgdlearner(ffnet.parameters(), lr)])          
     
     for i in range(0,int(num_minibatches_to_train)):    
         mb=cm.get_next_minibatch(minibatch_size_limits, dev)

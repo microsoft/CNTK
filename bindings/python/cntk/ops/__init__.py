@@ -5,7 +5,6 @@
 
 import numpy as np
 from ..utils import sanitize_input, get_data_type, cntk_device
-from cntk import cntk_py
 
 #TODO: for nodes with single output, return node.output() instead of the node itself
 
@@ -21,9 +20,9 @@ def combine(operands, name=''):
         operands (list): list of functions to combine
         name (str): the name of the node in the network            
     Returns:
-        :class:`cntk_py.Function`
+        :class:`cntk.Function`
     '''
-    from ..cntk_py import combine
+    from cntk import combine
     return combine(operands, name)
 
 ################################################################################
@@ -52,9 +51,9 @@ def cross_entropy_with_softmax(target_vector, output_vector, name=''):
         output_vector: the unscaled computed output values from the network
         name (str): the name of the node in the network            
     Returns:
-        :class:`cntk_py.Function`
+        :class:`cntk.Function`
     '''
-    from ..cntk_py import cross_entropy_with_softmax
+    from cntk import cross_entropy_with_softmax
     target_vector = sanitize_input(target_vector, get_data_type(output_vector))
     output_vector = sanitize_input(output_vector, get_data_type(target_vector))
     return cross_entropy_with_softmax(target_vector, output_vector, name)
@@ -77,9 +76,9 @@ def square_error(target_matrix, output_matrix, name=''):
         output_matrix: the output values from the network
         name (str): the name of the node in the network            
     Returns:
-        :class:`cntk_py.Function`
+        :class:`cntk.Function`
     '''
-    from ..cntk_py import square_error
+    from cntk import square_error
     target_matrix = sanitize_input(target_matrix, get_data_type(output_matrix))
     output_matrix = sanitize_input(output_matrix, get_data_type(target_matrix))
     return square_error(target_matrix, output_matrix, name)
@@ -105,9 +104,9 @@ def classification_error(target_vector, output_vector, name=''):
         output_vector: the output values from the network
         name (str): the name of the node in the network            
     Returns:
-        :class:`cntk_py.Function`
+        :class:`cntk.Function`
     '''
-    from ..cntk_py import classification_error
+    from cntk import classification_error
     target_vector = sanitize_input(target_vector, get_data_type(output_vector))
     output_vector = sanitize_input(output_vector, get_data_type(target_vector))
     return classification_error(target_vector, output_vector, name)    
@@ -133,16 +132,17 @@ def convolution(convolution_map, operand, strides=(1,), sharing=[True],
         max_temp_mem_size_in_samples:
         name (str): the name of the node in the network
     Returns:
-        :class:`cntk_py.Function`
+        :class:`cntk.Function`
     '''
-    from ..cntk_py import convolution
+    from cntk import convolution
     operand = sanitize_input(operand)    
     return convolution(convolution_map, operand, tuple(reversed(strides)), sharing, auto_padding, 
                         tuple(reversed(lower_pad)), tuple(reversed(upper_pad)), transpose, max_temp_mem_size_in_samples,
                         name) 
 
-MAX_POOLING=cntk_py.PoolingType_Max
-AVG_POOLING=cntk_py.PoolingType_Average
+#from cntk import PoolingType_Max,PoolingType_Average
+MAX_POOLING=1
+AVG_POOLING=2
 
 def pooling(operand, pooling_type, pooling_window_shape, strides=(1,), auto_padding=[False], 
             lower_pad=(0,), upper_pad=(0,), name=''):
@@ -158,9 +158,9 @@ def pooling(operand, pooling_type, pooling_window_shape, strides=(1,), auto_padd
         upper_pad:
         name (str): the name of the node in the network
     Returns:
-        :class:`cntk_py.Function`
+        :class:`cntk.Function`
     '''
-    from ..cntk_py import pooling
+    from cntk import pooling
     operand = sanitize_input(operand)    
     return pooling(operand, pooling_type, tuple(reversed(pooling_window_shape)), tuple(reversed(strides)), auto_padding,
                     tuple(reversed(lower_pad)), tuple(reversed(upper_pad)), name)
@@ -183,9 +183,9 @@ def batch_normalization(operand, scale, bias, running_mean, running_inv_std, spe
         use_cudnn_engine:
         name (str): the name of the node in the network
     Returns:
-        :class:`cntk_py.Function`
+        :class:`cntk.Function`
     '''
-    from ..cntk_py import batch_normalization
+    from cntk import batch_normalization
     operand = sanitize_input(operand)    
     return batch_normalization(operand, scale, bias, running_mean, running_inv_std, special,
                                 normalization_time_constant, blend_time_constant,
@@ -211,9 +211,9 @@ def less(left, right, name=''):
         right: right side tensor
         name (str): the name of the node in the network            
     Returns:
-        :class:`cntk_py.Function`
+        :class:`cntk.Function`
     '''
-    from ..cntk_py import less
+    from cntk import less
     left = sanitize_input(left, get_data_type(right))
     right = sanitize_input(right, get_data_type(left))
     return less(left, right, name)    
@@ -234,9 +234,9 @@ def equal(left, right, name=''):
         right: right side tensor
         name (str): the name of the node in the network            
     Returns:
-        :class:`cntk_py.Function`
+        :class:`cntk.Function`
     '''
-    from ..cntk_py import equal
+    from cntk import equal
     left = sanitize_input(left, get_data_type(right))
     right = sanitize_input(right, get_data_type(left))
     return equal(left, right, name)    
@@ -257,9 +257,9 @@ def greater(left, right, name=''):
         right: right side tensor
         name (str): the name of the node in the network            
     Returns:
-        :class:`cntk_py.Function`
+        :class:`cntk.Function`
     '''
-    from ..cntk_py import greater
+    from cntk import greater
     left = sanitize_input(left, get_data_type(right))
     right = sanitize_input(right, get_data_type(left))
     return greater(left, right, name)    
@@ -280,9 +280,9 @@ def greater_equal(left, right, name=''):
         right: right side tensor
         name (str): the name of the node in the network            
     Returns:
-        :class:`cntk_py.Function`
+        :class:`cntk.Function`
     '''
-    from ..cntk_py import greater_equal
+    from cntk import greater_equal
     left = sanitize_input(left, get_data_type(right))
     right = sanitize_input(right, get_data_type(left))
     return greater_equal(left, right, name)    
@@ -303,9 +303,9 @@ def not_equal(left, right, name=''):
         right: right side tensor
         name (str): the name of the node in the network            
     Returns:
-        :class:`cntk_py.Function`
+        :class:`cntk.Function`
     '''
-    from ..cntk_py import not_equal
+    from cntk import not_equal
     left = sanitize_input(left, get_data_type(right))
     right = sanitize_input(right, get_data_type(left))
     return not_equal(left, right, name)    
@@ -326,9 +326,9 @@ def less_equal(left, right, name=''):
         right: right side tensor
         name (str): the name of the node in the network            
     Returns:
-        :class:`cntk_py.Function`
+        :class:`cntk.Function`
     '''
-    from ..cntk_py import less_equal
+    from cntk import less_equal
     left = sanitize_input(left, get_data_type(right))
     right = sanitize_input(right, get_data_type(left))
     return less_equal(left, right, name)    
@@ -355,9 +355,9 @@ def plus(left, right, name=''):
         right: right side tensor
         name (str): the name of the node in the network            
     Returns:
-        :class:`cntk_py.Function`
+        :class:`cntk.Function`
     '''
-    from ..cntk_py import plus
+    from cntk import plus
     left = sanitize_input(left, get_data_type(right))
     right = sanitize_input(right, get_data_type(left))   
     return plus(left, right, name)    
@@ -381,10 +381,10 @@ def minus(left, right, name=''):
         right: right side tensor
         name (str): the name of the node in the network            
     Returns:
-        :class:`cntk_py.Function`
+        :class:`cntk.Function`
     '''
 
-    from ..cntk_py import minus
+    from cntk import minus
     left = sanitize_input(left, get_data_type(right))
     right = sanitize_input(right, get_data_type(left))
     return minus(left, right, name)        
@@ -408,9 +408,9 @@ def element_times(left, right, name=''):
         right: right side tensor
         name (str): the name of the node in the network            
     Returns:
-        :class:`cntk_py.Function`
+        :class:`cntk.Function`
     '''
-    from ..cntk_py import element_times
+    from cntk import element_times
     left = sanitize_input(left, get_data_type(right))
     right = sanitize_input(right, get_data_type(left))
     return element_times(left, right, name)        
@@ -437,9 +437,9 @@ def element_divide(left, right, name=''):
         right: right side tensor
         name (str): the name of the node in the network            
     Returns:
-        :class:`cntk_py.Function`
+        :class:`cntk.Function`
     '''
-    from ..cntk_py import element_divide
+    from cntk import element_divide
     left = sanitize_input(left, get_data_type(right))
     right = sanitize_input(right, get_data_type(left))
     return element_divide(left, right, name)        
@@ -477,9 +477,9 @@ def times(left, right, output_rank=1, name=''):
         name (str): the name of the node in the network            
 
     Returns:
-        :class:`cntk_py.Function`
+        :class:`cntk.Function`
     '''
-    from ..cntk_py import times      
+    from cntk import times      
     left = sanitize_input(left, get_data_type(right))
     right = sanitize_input(right, get_data_type(left))
     return times(right, left, output_rank, name)        
@@ -496,10 +496,10 @@ def identity(x, name=''):
         [array([[ 0.      ,  1.]])]
 
     Args:
-        x: numpy array or any :class:`cntk_py.Function` that outputs a tensor
+        x: numpy array or any :class:`cntk.Function` that outputs a tensor
         name (str): the name of the node in the network
     Returns:
-        :class:`cntk_py.Function`
+        :class:`cntk.Function`
     '''
     raise NotImplementedError("identity is not implemented yet in V2")
 
@@ -532,9 +532,9 @@ def floor(arg, name=''):
         arg: input tensor
         name (str): the name of the node in the network (optional)
     Returns:
-        :class:`cntk_py.Function`
+        :class:`cntk.Function`
     '''
-    from ..cntk_py import floor
+    from cntk import floor
     left = sanitize_input(left, get_data_type(right))
     right = sanitize_input(right, get_data_type(left))
     return floor(arg, name)    
@@ -556,9 +556,9 @@ def ceil(arg, name=''):
         arg: input tensor
         name (str): the name of the node in the network (optional)
     Returns:
-        :class:`cntk_py.Function`
+        :class:`cntk.Function`
     '''
-    from ..cntk_py import ceil
+    from cntk import ceil
     left = sanitize_input(left, get_data_type(right))
     right = sanitize_input(right, get_data_type(left))
     return ceil(arg, name)
@@ -590,9 +590,9 @@ def round(arg, name=''):
         arg: input tensor
         name (str): the name of the node in the network (optional)
     Returns:
-        :class:`cntk_py.Function`
+        :class:`cntk.Function`
     '''
-    from ..cntk_py import round
+    from cntk import round
     left = sanitize_input(left, get_data_type(right))
     right = sanitize_input(right, get_data_type(left))
     return round(arg, name)
@@ -626,7 +626,7 @@ def clip(x, min_value, max_value, name=''):
         max_value: a scalar or a tensor which represents the maximum value to clip element values to
         name (str): the name of the node in the network            
     Returns:
-        :class:`cntk_py.Function`
+        :class:`cntk.Function`
     '''    
     raise NotImplementedError("clip is not implemented yet in V2")
 
@@ -642,12 +642,12 @@ def relu(x, name=''):
         [array([[[ 0.,  0.,  0.,  1.,  2.]]])]
     
     Args:
-        x: numpy array or any :class:`cntk_py.Function` that outputs a tensor
+        x: numpy array or any :class:`cntk.Function` that outputs a tensor
         name (str): the name of the node in the network
     Returns:
-        :class:`cntk_py.Function`
+        :class:`cntk.Function`
     '''
-    from ..cntk_py import re_lu
+    from cntk import re_lu
     x = sanitize_input(x)
     return re_lu(x, name)    
 
@@ -664,12 +664,12 @@ def sigmoid(x, name=''):
         [array([[ 0.119203,  0.268941,  0.5     ,  0.731059,  0.880797]])]
     
     Args:
-        x: numpy array or any :class:`cntk_py.Function` that outputs a tensor
+        x: numpy array or any :class:`cntk.Function` that outputs a tensor
         name (str): the name of the node in the network
     Returns:
-        :class:`cntk_py.Function`
+        :class:`cntk.Function`
     '''
-    from ..cntk_py import sigmoid
+    from cntk import sigmoid
     x = sanitize_input(x)
     return sigmoid(x, name)    
 
@@ -685,12 +685,12 @@ def tanh(x, name=''):
                  [ 0.995055,  0.999329]]])]
     
     Args:
-        x: numpy array or any :class:`cntk_py.Function` that outputs a tensor
+        x: numpy array or any :class:`cntk.Function` that outputs a tensor
         name (str): the name of the node in the network
     Returns:
-        :class:`cntk_py.Function`
+        :class:`cntk.Function`
     '''
-    from ..cntk_py import tanh
+    from cntk import tanh
     x = sanitize_input(x)
     return tanh(x, name)    
 
@@ -711,12 +711,12 @@ def softmax(x, name=''):
         [array([[ 0.5,  0.5]])]
 
     Args:
-        x: numpy array or any :class:`cntk_py.Function` that outputs a tensor
+        x: numpy array or any :class:`cntk.Function` that outputs a tensor
         name (str): the name of the node in the network
     Returns:
-        :class:`cntk_py.Function`
+        :class:`cntk.Function`
     '''
-    from ..cntk_py import softmax
+    from cntk import softmax
     x = sanitize_input(x)
     return softmax(x)    
 
@@ -731,12 +731,12 @@ def exp(x, name=''):
         [array([[ 1.      ,  2.718282]])]
 
     Args:
-        x: numpy array or any :class:`cntk_py.Function` that outputs a tensor
+        x: numpy array or any :class:`cntk.Function` that outputs a tensor
         name (str): the name of the node in the network
     Returns:
-        :class:`cntk_py.Function`
+        :class:`cntk.Function`
     '''
-    from ..cntk_py import exp
+    from cntk import exp
     x = sanitize_input(x)
     return exp(x, name)    
 
@@ -749,10 +749,10 @@ def log(x, name=''):
         [array([[ 0.      ,  0.69314718056]])]
 
     Args:
-        x: numpy array or any :class:`cntk_py.Function` that outputs a tensor
+        x: numpy array or any :class:`cntk.Function` that outputs a tensor
         name (str): the name of the node in the network
     Returns:
-        :class:`cntk_py.Function`
+        :class:`cntk.Function`
                 
     Note:
         CNTK returns -85.1 for log(x) if `x` is negative or zero. The reason is that 
@@ -760,7 +760,7 @@ def log(x, name=''):
         number for `log`, because this is the only guaranteed precision across 
         platforms. This will be changed to return `NaN` and `-inf`.
     '''
-    from ..cntk_py import log
+    from cntk import log
     x = sanitize_input(x)
     return log(x, name)    
 
@@ -775,16 +775,16 @@ def sqrt(x, name=''):
         [array([[ 0.      ,  2.]])]
 
     Args:
-        x: numpy array or any :class:`cntk_py.Function` that outputs a tensor
+        x: numpy array or any :class:`cntk.Function` that outputs a tensor
         name (str): the name of the node in the network
     Returns:
-        :class:`cntk_py.Function`        
+        :class:`cntk.Function`        
         
     Note:
         CNTK returns zero for sqrt of negative nubmers, this will be changed to 
         retrun NaN
     '''
-    from ..cntk_py import sqrt
+    from cntk import sqrt
     x = sanitize_input(x)
     return sqrt(x, name)    
 
@@ -797,12 +797,12 @@ def square(x, name=''):
         [array([[ 1.      ,  100.]])]
 
     Args:
-        x: numpy array or any :class:`cntk_py.Function` that outputs a tensor
+        x: numpy array or any :class:`cntk.Function` that outputs a tensor
         name (str): the name of the node in the network
     Returns:
-        :class:`cntk_py.Function`
+        :class:`cntk.Function`
     '''
-    from ..cntk_py import square
+    from cntk import square
     x = sanitize_input(x)
     return square(x, name)    
 
@@ -817,12 +817,12 @@ def abs(x, name=''):
         [array([[ 1.,  1.,  2.,  3.]])]
 
     Args:
-        x: numpy array or any :class:`cntk_py.Function` that outputs a tensor
+        x: numpy array or any :class:`cntk.Function` that outputs a tensor
         name (str): the name of the node in the network
     Returns:
-        :class:`cntk_py.Function`
+        :class:`cntk.Function`
     '''
-    from ..cntk_py import abs
+    from cntk import abs
     x = sanitize_input(x)
     return abs(x, name)    
 
@@ -837,12 +837,12 @@ def negate(x, name=''):
         [array([[ 1.,  -1.,  2.,  -3.]])]
 
     Args:
-        x: numpy array or any :class:`cntk_py.Function` that outputs a tensor
+        x: numpy array or any :class:`cntk.Function` that outputs a tensor
         name (str): the name of the node in the network
     Returns:
-        :class:`cntk_py.Function`
+        :class:`cntk.Function`
     '''
-    from ..cntk_py import negate
+    from cntk import negate
     x = sanitize_input(x)
     return negate(x, name)    
 
@@ -855,12 +855,12 @@ def reciprocal(x, name=''):
         [array([[ -3.,  5.,  -1/2.,  1/3.]])]
 
     Args:
-        x: numpy array or any :class:`cntk_py.Function` that outputs a tensor
+        x: numpy array or any :class:`cntk.Function` that outputs a tensor
         name (str): the name of the node in the network
     Returns:
-        :class:`cntk_py.Function`
+        :class:`cntk.Function`
     '''
-    from ..cntk_py import reciprocal
+    from cntk import reciprocal
     x = sanitize_input(x)
     return reciprocal(x, name)    
 
@@ -882,7 +882,7 @@ def cond(flag, value_if_true, value_if_false, name=''):
         value_if_false: tensor
         name (str): the name of the node in the network          
     Returns:
-        :class:`cntk_py.Function`
+        :class:`cntk.Function`
     '''    
     raise NotImplementedError("cond is not implemented yet in V2")
     
@@ -908,10 +908,10 @@ def future_value(initial_state, x, time_step=1, name=''):
         time_step (int): the number of time steps to look into the future (default 1)        
         name (str): the name of the node in the network
     Returns:
-        :class:`cntk_py.Function`
+        :class:`cntk.Function`
     '''    
     
-    from ..cntk_py import future_value
+    from cntk import future_value
     x = sanitize_input(x)
     return future_value(initial_state, x, time_step, name)    
     
@@ -933,10 +933,10 @@ def past_value(initial_state, x, time_step=1, default_hidden_activation=0.1, nam
         time_step (int): the number of time steps to look into the past (default 1)        
         name (str): the name of the node in the network
     Returns:
-        :class:`cntk_py.Function`
+        :class:`cntk.Function`
     '''    
     
-    from ..cntk_py import past_value
+    from cntk import past_value
     x = sanitize_input(x)
     return past_value(initial_state, x, time_step, name)    
 
@@ -964,7 +964,7 @@ def reshape(x, shape, name=''):
         shape (tuple): a tuple defining the resulting shape
         name (str): the name of the node in the network            
     Returns:
-        :class:`cntk_py.Function`
+        :class:`cntk.Function`
     '''    
     raise NotImplementedError("reshape is not implemented yet in V2")
 
@@ -981,11 +981,11 @@ def transpose_dimensions(x, axis1, axis2, name=''):
             
     Args:        
         x: tensor to be reshaped
-        axis (:class:`cntk_py.Axis`): the axis to swap with axis2
-        axis (:class:`cntk_py.Axis`): the axis to swap with axis1
+        axis (:class:`cntk.Axis`): the axis to swap with axis2
+        axis (:class:`cntk.Axis`): the axis to swap with axis1
         name (str): the name of the node in the network
     Returns:
-        :class:`cntk_py.Function`
+        :class:`cntk.Function`
     '''    
     raise NotImplementedError("transpose_dimensions is not implemented yet in V2")
 
@@ -1017,7 +1017,7 @@ def slice(x, axis, begin_index, end_index, name=''):
 
     Args:
         x: input tensor
-        axis (:class:`cntk_py.Axis`): axis along which `begin_index` and `end_index` will be used. 
+        axis (:class:`cntk.Axis`): axis along which `begin_index` and `end_index` will be used. 
         begin_index (int): the index along axis where the slicing starts
         end_index (int): the index along axis where the slicing ends        
         name (str): the name of the node in the network
@@ -1026,9 +1026,9 @@ def slice(x, axis, begin_index, end_index, name=''):
         Indexing in NumPy: http://docs.scipy.org/doc/numpy/reference/arrays.indexing.html
 
     Returns:
-        :class:`cntk_py.Function`
+        :class:`cntk.Function`
     '''
-    from ..cntk_py import slice
+    from cntk import slice
     x = sanitize_input(x)
     return slice(x, axis, begin_index, end_index, name)     
 
@@ -1057,11 +1057,11 @@ def splice(inputs, axis=0, name=''):
 
     Args:
         inputs (list): tuple of input tensors
-        axis (:class:`cntk_py.Axis`): axis along which the concatenation will be performed
+        axis (:class:`cntk.Axis`): axis along which the concatenation will be performed
         name (str): the name of the node in the network
 
     Returns:
-        :class:`cntk_py.Function`
+        :class:`cntk.Function`
     '''
     raise NotImplementedError("splice is not implemented yet in V2") 
 
@@ -1095,13 +1095,13 @@ def reduce_sum(x, axis=0, name=''):
 
     Args:
         x: input tensor
-        axis (:class:`cntk_py.Axis`): axis along which the reduction will be performed
+        axis (:class:`cntk.Axis`): axis along which the reduction will be performed
         name (str): the name of the node in the network
 
     Returns:
-        :class:`cntk_py.Function`
+        :class:`cntk.Function`
     '''
-    from ..cntk_py import reduce_sum
+    from cntk import reduce_sum
     x = sanitize_input(x)
     return reduce_sum(x, axis, name)    
 
@@ -1124,7 +1124,7 @@ def reduce_log_sum(inputs, name=''):
         name (str): the name of the node in the network
 
     Returns:
-        :class:`cntk_py.Function`
+        :class:`cntk.Function`
     '''
     raise NotImplementedError("reduce_log_sum is not implemented yet in V2")
 
@@ -1148,7 +1148,7 @@ def dropout(x, name=''):
         name (str): the name of the node in the network
                 
     Returns:
-        :class:`cntk_py.Function`
+        :class:`cntk.Function`
     '''    
     raise NotImplementedError("dropout is not implemented yet in V2")
 
@@ -1169,7 +1169,7 @@ def variable(shape, data_type=None, needs_gradient=False, is_sparse=False, name=
         name (str): the name of the node in the network
         
     Returns:
-        :class:`cntk_py.Function`
+        :class:`cntk.Function`
     '''
     from .variables import Variable
 
@@ -1187,7 +1187,7 @@ def placeholder(shape, name=''):
         name (str): the name of the node in the network
         
     Returns:
-        :class:`cntk_py.Function`
+        :class:`cntk.Function`
     '''
     from .variables import Placeholder
     
@@ -1205,7 +1205,7 @@ def parameter(shape=None, value=None, device_id=-1, name=''):
         name (str, optional): the name of the node in the network
 
     Returns:
-        :class:`cntk_py.Function`
+        :class:`cntk.Function`
     '''    
 
     from .variables import Parameter, parameter_from_scalar   
@@ -1224,7 +1224,7 @@ def constant(shape=None, value=None, device_id=-1, name=''):
         device_id (int): device id, -1 for CPU, 0 or higher for GPU                
         name (str, optional): the name of the node in the network
     Returns:
-        :class:`cntk_py.Function`
+        :class:`cntk.Function`
     '''
     from .variables import Constant, constant_from_scalar
 
@@ -1245,7 +1245,7 @@ def dynamic_axis(name=''):
     Args:
         name (str): the name of the node in the network
     Returns:
-        :class:`cntk_py.Function`
+        :class:`cntk.Function`
     '''
     
     raise NotImplementedError("dynamic_axis is not implemented yet in V2")
@@ -1265,7 +1265,7 @@ def reconcile_dynamic_axis(data_input, layout_input, name=''):
         layout_input: the tensor layout to use for adapting `data_input`s layout
         name (str): the name of the node in the network
     Returns:
-        :class:`cntk_py.Function`
+        :class:`cntk.Function`
     '''
     
     raise NotImplementedError("reconcile_dynamic_axis is not implemented yet in V2")
@@ -1286,7 +1286,7 @@ def per_dim_mean_variance_normalize(operand, mean, inv_stddev, name=''):
         inv_stddev: per dimension standard deviation to use for the normalization
         name (str): the name of the node in the network
     Returns:
-        :class:`cntk_py.Function`                    
+        :class:`cntk.Function`                    
     '''
-    from ..cntk_py import per_dim_mean_variance_normalize    
+    from cntk import per_dim_mean_variance_normalize    
     return per_dim_mean_variance_normalize(operand, mean, inv_stddev, name)    

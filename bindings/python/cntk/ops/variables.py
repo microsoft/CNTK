@@ -1,6 +1,5 @@
 import numpy as np
-from cntk import cntk_py
-from cntk import DATATYPE
+from cntk import DATATYPE, NDArrayView, DeviceDescriptor_cpudevice, DeviceDescriptor_gpudevice, Variable, Parameter, ConstantFloat, ConstantDouble, Constant, Placeholder, DataType_Float, DataType_Double
 from cntk.graph import TensorOpsMixin
 from .. import utils
 
@@ -17,7 +16,7 @@ def _sanitize_value(shape, value, dtype, device, is_param=False):
                 # cntk uses column major, thus we reverse the shape    
                 shape = tuple(reversed(shape))
             # TODO: expose the initialization params
-            ndav = cntk_py.NDArrayView.random_uniform_float(shape, -0.05, 0.05, 1, device)        
+            ndav = NDArrayView.random_uniform_float(shape, -0.05, 0.05, 1, device)        
         else:
             ndav = utils.create_NDArrayView(shape, cntk_dtype, device)
     
@@ -27,7 +26,7 @@ def _sanitize_value(shape, value, dtype, device, is_param=False):
             value = np.asarray(value, dtype=np_dtype)
 
         #TODO: check whether this copy operation from cpu to gpu is not needed
-        if device != cntk_py.DeviceDescriptor_cpudevice():
+        if device != DeviceDescriptor_cpudevice():
             ndav_cpu = utils.create_NDArrayView_from_NumPy(value)
             ndav = utils.create_NDArrayView(value.shape, data_type=cntk_dtype, dev=device)
             ndav.copy_from(ndav_cpu)
@@ -36,7 +35,7 @@ def _sanitize_value(shape, value, dtype, device, is_param=False):
 
     return ndav
 
-class Variable(cntk_py.Variable, TensorOpsMixin):
+class Variable(Variable, TensorOpsMixin):
     def __init__(self, shape=None, data_type=None, needs_gradient=False, is_sparse=False, name=''):
         if not np.isscalar(shape):
             # cntk uses column major, thus we reverse the shape    
@@ -48,7 +47,7 @@ class Variable(cntk_py.Variable, TensorOpsMixin):
 
         super(Variable, self).__init__(shape, is_sparse, dtype, needs_gradient, name)
 
-class Parameter(cntk_py.Parameter, TensorOpsMixin):
+class Parameter(Parameter, TensorOpsMixin):
     def __init__(self, shape=None, value=None, data_type=None, device=None, name=''):
         
         if data_type is None:
@@ -63,7 +62,7 @@ class Parameter(cntk_py.Parameter, TensorOpsMixin):
 # TODO: make this part of the above constructor
 def parameter_from_scalar(shape=None, value=None, data_type=None, device=None, name=''):
     if not device:
-        device = cntk_py.DeviceDescriptor_cpudevice()            
+        device = DeviceDescriptor_cpudevice()            
 
     if data_type is None:
         if not isinstance(value, np.ndarray):        
@@ -75,14 +74,14 @@ def parameter_from_scalar(shape=None, value=None, data_type=None, device=None, n
 
     if not shape:
         shape = ()
-    if dtype == cntk_py.DataType_Float:
-        return cntk_py.ParameterFloat(shape, value, device, name)
-    elif dtype == cntk_py.DataType_Double:
-        return cntk_py.ParameterDouble(shape, value, device, name)
+    if dtype == DataType_Float:
+        return ParameterFloat(shape, value, device, name)
+    elif dtype == DataType_Double:
+        return ParameterDouble(shape, value, device, name)
     raise ValueError('unrecognized data_type: %s', dtype)
 
 # TODO: make this part of the above constructor
-class Constant(cntk_py.Constant, TensorOpsMixin):
+class Constant(Constant, TensorOpsMixin):
     def __init__(self, shape=None, value=None, data_type=None, device=None, name=''):
 
         if data_type is None:
@@ -92,14 +91,14 @@ class Constant(cntk_py.Constant, TensorOpsMixin):
                 data_type = str(value.dtype)     
 
         if not device:
-            device = cntk_py.DeviceDescriptor_cpudevice()            
+            device = DeviceDescriptor_cpudevice()            
 
         ndav = _sanitize_value(shape, value, data_type, device)
         super(Constant, self).__init__(ndav, name)
 
 def constant_from_scalar(shape=None, value=None, data_type=None, device=None, name=''):
     if not device:
-        device = cntk_py.DeviceDescriptor_cpudevice()            
+        device = DeviceDescriptor_cpudevice()            
 
     if data_type is None:
         if not isinstance(value, np.ndarray):        
@@ -111,13 +110,13 @@ def constant_from_scalar(shape=None, value=None, data_type=None, device=None, na
 
     if not shape:
         shape = ()
-    if dtype == cntk_py.DataType_Float:
-        return cntk_py.ConstantFloat(shape, value, device, name)
-    elif dtype == cntk_py.DataType_Double:
-        return cntk_py.ConstantDouble(shape, value, device, name)
+    if dtype == DataType_Float:
+        return ConstantFloat(shape, value, device, name)
+    elif dtype == DataType_Double:
+        return ConstantDouble(shape, value, device, name)
     raise ValueError('unrecognized data_type: %s', dtype)
 
-class Placeholder(cntk_py.Placeholder, TensorOpsMixin):    
+class Placeholder(Placeholder, TensorOpsMixin):    
     def __init__(self, shape=None, name=''):
 
         if not np.isscalar(shape):

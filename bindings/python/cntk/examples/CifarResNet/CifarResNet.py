@@ -2,7 +2,7 @@ import numpy as np
 import sys
 import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..'))
-import cntk.cntk_py as cntk_py
+from cntk import learning_rates_per_sample, DeviceDescriptor, Trainer, sgdlearner
 from cntk.ops import variable, constant, parameter, cross_entropy_with_softmax, combine, classification_error, plus, times, relu, convolution, batch_normalization, pooling,AVG_POOLING
 from cntk.utils import create_minibatch_source, get_train_loss, cntk_device, create_NDArrayView, create_NDArrayView_from_NumPy
 from cntk.examples.common.nn import conv_bn_relu_layer, conv_bn_layer, resnet_node2, resnet_node2_inc
@@ -139,8 +139,8 @@ def _test_cifar_resnet():
     pe = classification_error(classifer_output.output(), label_var)
     image_classifier = combine([ce, pe, classifer_output], "ImageClassifier")
 
-    learning_rate_per_sample = cntk_py.learning_rates_per_sample(0.0078125)
-    trainer = cntk_py.Trainer(image_classifier, ce.output(), [cntk_py.sgdlearner(image_classifier.parameters(), learning_rate_per_sample)])
+    learning_rate_per_sample = learning_rates_per_sample(0.0078125)
+    trainer = Trainer(image_classifier, ce.output(), [sgdlearner(image_classifier.parameters(), learning_rate_per_sample)])
     
     mb_size = 32
     num_mbs = 1000
