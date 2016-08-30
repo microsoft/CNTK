@@ -487,10 +487,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "CIFAR-10", "CIFAR-10", "{77
 		Examples\Image\Miscellaneous\CIFAR-10\04_ResNet_56.ndl = Examples\Image\Miscellaneous\CIFAR-10\04_ResNet_56.ndl
 		Examples\Image\Miscellaneous\CIFAR-10\16to32.txt = Examples\Image\Miscellaneous\CIFAR-10\16to32.txt
 		Examples\Image\Miscellaneous\CIFAR-10\32to64.txt = Examples\Image\Miscellaneous\CIFAR-10\32to64.txt
-		Examples\Image\Miscellaneous\CIFAR-10\CifarDownload.py = Examples\Image\Miscellaneous\CIFAR-10\CifarDownload.py
-		Examples\Image\Miscellaneous\CIFAR-10\CifarDownload_py3.py = Examples\Image\Miscellaneous\CIFAR-10\CifarDownload_py3.py
 		Examples\Image\Miscellaneous\CIFAR-10\CifarConverter.py = Examples\Image\Miscellaneous\CIFAR-10\CifarConverter.py
 		Examples\Image\Miscellaneous\CIFAR-10\CifarConverter_py3.py = Examples\Image\Miscellaneous\CIFAR-10\CifarConverter_py3.py
+		Examples\Image\Miscellaneous\CIFAR-10\CifarDownload.py = Examples\Image\Miscellaneous\CIFAR-10\CifarDownload.py
+		Examples\Image\Miscellaneous\CIFAR-10\CifarDownload_py3.py = Examples\Image\Miscellaneous\CIFAR-10\CifarDownload_py3.py
 		Examples\Image\Miscellaneous\CIFAR-10\labelsmap.txt = Examples\Image\Miscellaneous\CIFAR-10\labelsmap.txt
 		Examples\Image\Miscellaneous\CIFAR-10\Macros.ndl = Examples\Image\Miscellaneous\CIFAR-10\Macros.ndl
 		Examples\Image\Miscellaneous\CIFAR-10\readme.txt = Examples\Image\Miscellaneous\CIFAR-10\readme.txt
@@ -1260,6 +1260,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Truncated-Kaldi", "Truncate
 		Tests\EndToEndTests\Speech\LSTM\Truncated-Kaldi\testcases.yml = Tests\EndToEndTests\Speech\LSTM\Truncated-Kaldi\testcases.yml
 	EndProjectSection
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CDenseReader", "Source\Readers\CDenseReader\CDenseReader.vcxproj", "{F1A00CBE-257C-4D69-8CDA-A9A381BD6423}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "DenseReader", "Source\Readers\DenseReader\DenseReader.vcxproj", "{FADF4DBB-7F62-4085-95AE-4D8F796E1A56}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug_CpuOnly|x64 = Debug_CpuOnly|x64
@@ -1546,6 +1550,22 @@ Global
 		{9F999212-AFC5-4EAC-AA78-F7247D46C456}.Release_CpuOnly|x64.Build.0 = Release_CpuOnly|x64
 		{9F999212-AFC5-4EAC-AA78-F7247D46C456}.Release|x64.ActiveCfg = Release|x64
 		{9F999212-AFC5-4EAC-AA78-F7247D46C456}.Release|x64.Build.0 = Release|x64
+		{F1A00CBE-257C-4D69-8CDA-A9A381BD6423}.Debug_CpuOnly|x64.ActiveCfg = Debug_CpuOnly|x64
+		{F1A00CBE-257C-4D69-8CDA-A9A381BD6423}.Debug_CpuOnly|x64.Build.0 = Debug_CpuOnly|x64
+		{F1A00CBE-257C-4D69-8CDA-A9A381BD6423}.Debug|x64.ActiveCfg = Debug|x64
+		{F1A00CBE-257C-4D69-8CDA-A9A381BD6423}.Debug|x64.Build.0 = Debug|x64
+		{F1A00CBE-257C-4D69-8CDA-A9A381BD6423}.Release_CpuOnly|x64.ActiveCfg = Release_CpuOnly|x64
+		{F1A00CBE-257C-4D69-8CDA-A9A381BD6423}.Release_CpuOnly|x64.Build.0 = Release_CpuOnly|x64
+		{F1A00CBE-257C-4D69-8CDA-A9A381BD6423}.Release|x64.ActiveCfg = Release|x64
+		{F1A00CBE-257C-4D69-8CDA-A9A381BD6423}.Release|x64.Build.0 = Release|x64
+		{FADF4DBB-7F62-4085-95AE-4D8F796E1A56}.Debug_CpuOnly|x64.ActiveCfg = Debug_CpuOnly|x64
+		{FADF4DBB-7F62-4085-95AE-4D8F796E1A56}.Debug_CpuOnly|x64.Build.0 = Debug_CpuOnly|x64
+		{FADF4DBB-7F62-4085-95AE-4D8F796E1A56}.Debug|x64.ActiveCfg = Debug|x64
+		{FADF4DBB-7F62-4085-95AE-4D8F796E1A56}.Debug|x64.Build.0 = Debug|x64
+		{FADF4DBB-7F62-4085-95AE-4D8F796E1A56}.Release_CpuOnly|x64.ActiveCfg = Release_CpuOnly|x64
+		{FADF4DBB-7F62-4085-95AE-4D8F796E1A56}.Release_CpuOnly|x64.Build.0 = Release_CpuOnly|x64
+		{FADF4DBB-7F62-4085-95AE-4D8F796E1A56}.Release|x64.ActiveCfg = Release|x64
+		{FADF4DBB-7F62-4085-95AE-4D8F796E1A56}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -1719,5 +1739,7 @@ Global
 		{D293C7C7-B7D7-47CE-A796-45262C16F980} = {19EE975B-232D-49F0-94C7-6F1C6424FB53}
 		{4F534076-39A5-40E2-BF87-64EC464C52B2} = {19EE975B-232D-49F0-94C7-6F1C6424FB53}
 		{31263D7F-F590-475E-B4F0-7DFA4E4FF4B8} = {19EE975B-232D-49F0-94C7-6F1C6424FB53}
+		{F1A00CBE-257C-4D69-8CDA-A9A381BD6423} = {33EBFE78-A1A8-4961-8938-92A271941F94}
+		{FADF4DBB-7F62-4085-95AE-4D8F796E1A56} = {33EBFE78-A1A8-4961-8938-92A271941F94}
 	EndGlobalSection
 EndGlobal
