@@ -2169,6 +2169,7 @@ wstring SGD<ElemType>::GetCheckPointFileNameForEpoch(const int epoch)
 template <class ElemType>
 wstring SGD<ElemType>::GetModelNameForEpoch(const int epoch, bool bLastModel)
 {
+	/*
     int epoch1Base = epoch + 1;
     if (epoch1Base == m_maxEpochs || bLastModel)
     {
@@ -2179,6 +2180,9 @@ wstring SGD<ElemType>::GetModelNameForEpoch(const int epoch, bool bLastModel)
         wstring w = msra::strfun::wstrprintf(L"%ls.%d", m_modelPath.c_str(), (int) epoch1Base);
         return w;
     }
+	*/
+	wstring w = msra::strfun::wstrprintf(L"%ls.%d", m_modelPath.c_str(), (int)epoch1Base);
+	return w;
 }
 
 // return -1 if nothing exists
