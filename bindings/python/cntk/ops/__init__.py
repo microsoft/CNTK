@@ -140,9 +140,9 @@ def convolution(convolution_map, operand, strides=(1,), sharing=[True],
                         tuple(reversed(lower_pad)), tuple(reversed(upper_pad)), transpose, max_temp_mem_size_in_samples,
                         name) 
 
-#from cntk import PoolingType_Max,PoolingType_Average
-MAX_POOLING=1
-AVG_POOLING=2
+from cntk.cntk_py import PoolingType_Max,PoolingType_Average
+MAX_POOLING=PoolingType_Max
+AVG_POOLING=PoolingType_Average
 
 def pooling(operand, pooling_type, pooling_window_shape, strides=(1,), auto_padding=[False], 
             lower_pad=(0,), upper_pad=(0,), name=''):
