@@ -103,7 +103,7 @@ RUN SCIPY_VERSION=0.18.0 && \
 # Install Kaldi
 ENV KALDI_VERSION=c024e8aa
 ENV KALDI_PATH /usr/local/kaldi-$KALDI_VERSION
-    
+
 RUN mv /bin/sh /bin/sh.orig && \
    ln -s -f /bin/bash /bin/sh && \
    mkdir $KALDI_PATH && \
@@ -136,7 +136,7 @@ RUN git clone --depth=1 -b master https://github.com/Microsoft/CNTK.git . && \
     make -j"$(nproc)" all
 
 RUN cd Examples/Image/Miscellaneous/CIFAR-10 && \
-    python CIFAR_convert.py && \
+    python CifarDownload.py && \
     python CifarConverter.py cifar-10-batches-py && \
     cd ../../../..
 

@@ -487,8 +487,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "CIFAR-10", "CIFAR-10", "{77
 		Examples\Image\Miscellaneous\CIFAR-10\04_ResNet_56.ndl = Examples\Image\Miscellaneous\CIFAR-10\04_ResNet_56.ndl
 		Examples\Image\Miscellaneous\CIFAR-10\16to32.txt = Examples\Image\Miscellaneous\CIFAR-10\16to32.txt
 		Examples\Image\Miscellaneous\CIFAR-10\32to64.txt = Examples\Image\Miscellaneous\CIFAR-10\32to64.txt
-		Examples\Image\Miscellaneous\CIFAR-10\CIFAR_convert.py = Examples\Image\Miscellaneous\CIFAR-10\CIFAR_convert.py
+		Examples\Image\Miscellaneous\CIFAR-10\CifarDownload.py = Examples\Image\Miscellaneous\CIFAR-10\CifarDownload.py
+		Examples\Image\Miscellaneous\CIFAR-10\CifarDownload_py3.py = Examples\Image\Miscellaneous\CIFAR-10\CifarDownload_py3.py
 		Examples\Image\Miscellaneous\CIFAR-10\CifarConverter.py = Examples\Image\Miscellaneous\CIFAR-10\CifarConverter.py
+		Examples\Image\Miscellaneous\CIFAR-10\CifarConverter_py3.py = Examples\Image\Miscellaneous\CIFAR-10\CifarConverter_py3.py
 		Examples\Image\Miscellaneous\CIFAR-10\labelsmap.txt = Examples\Image\Miscellaneous\CIFAR-10\labelsmap.txt
 		Examples\Image\Miscellaneous\CIFAR-10\Macros.ndl = Examples\Image\Miscellaneous\CIFAR-10\Macros.ndl
 		Examples\Image\Miscellaneous\CIFAR-10\readme.txt = Examples\Image\Miscellaneous\CIFAR-10\readme.txt
@@ -1141,9 +1143,9 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ManagedEvalTests", "Tests\U
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Evaluation", "Evaluation", "{3385EBEA-5F97-4B2B-9F30-0E6D7F91B9CA}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CSEvalClient", "Examples\Evaluation\CSEvalClient\CSEvalClient.csproj", "{1C6E6C53-1AA7-4B69-913E-B97BB5A872CF}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CSEvalClient-CntkSln", "Examples\Evaluation\CSEvalClient-CntkSln\CSEvalClient-CntkSln.csproj", "{1C6E6C53-1AA7-4B69-913E-B97BB5A872CF}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CPPEvalClient", "Examples\Evaluation\CPPEvalClient\CPPEvalClient.vcxproj", "{CCC07E8E-F33A-4AF7-9F60-93E2AA61C75E}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CPPEvalClient-CntkSln", "Examples\Evaluation\CPPEvalClient-CntkSln\CPPEvalClient-CntkSln.vcxproj", "{CCC07E8E-F33A-4AF7-9F60-93E2AA61C75E}"
 	ProjectSection(ProjectDependencies) = postProject
 		{482999D1-B7E2-466E-9F8D-2119F93EAFD9} = {482999D1-B7E2-466E-9F8D-2119F93EAFD9}
 	EndProjectSection
@@ -1154,6 +1156,108 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "BrainScriptTests", "Tests\U
 		{928ABD1B-4D3B-4017-AEF1-0FA1B4467513} = {928ABD1B-4D3B-4017-AEF1-0FA1B4467513}
 		{EAD17188-072C-4726-B840-A769C36DAD1B} = {EAD17188-072C-4726-B840-A769C36DAD1B}
 		{86883653-8A61-4038-81A0-2379FAE4200A} = {86883653-8A61-4038-81A0-2379FAE4200A}
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tutorials", "Tutorials", "{8BE0642A-A3AA-4A64-95D0-C78FB285B2A4}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ImageHandsOn", "ImageHandsOn", "{2230BF3D-4317-4A3F-A743-DDD6160503F8}"
+	ProjectSection(SolutionItems) = preProject
+		Tutorials\ImageHandsOn\ImageHandsOn.cntk = Tutorials\ImageHandsOn\ImageHandsOn.cntk
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SLUHandsOn", "SLUHandsOn", "{CC143D08-567D-4DAC-9E14-264749C19039}"
+	ProjectSection(SolutionItems) = preProject
+		Tutorials\SLUHandsOn\SLUHandsOn.cntk = Tutorials\SLUHandsOn\SLUHandsOn.cntk
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Pretrained Models", "Pretrained Models", "{0ED2EE97-0A26-4865-871F-11033867BA34}"
+	ProjectSection(SolutionItems) = preProject
+		Tutorials\ImageHandsOn\cifar10.pretrained.cmf = Tutorials\ImageHandsOn\cifar10.pretrained.cmf
+		Tutorials\ImageHandsOn\cifar10.ResNet.cmf = Tutorials\ImageHandsOn\cifar10.ResNet.cmf
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solutions", "Solutions", "{A2A4893C-0D5B-42E2-BFAD-C123AE7FDAFD}"
+	ProjectSection(SolutionItems) = preProject
+		Tutorials\ImageHandsOn\ImageHandsOn_Solution1.cntk = Tutorials\ImageHandsOn\ImageHandsOn_Solution1.cntk
+		Tutorials\ImageHandsOn\ImageHandsOn_Solution2.cntk = Tutorials\ImageHandsOn\ImageHandsOn_Solution2.cntk
+		Tutorials\ImageHandsOn\ImageHandsOn_Solution3.cntk = Tutorials\ImageHandsOn\ImageHandsOn_Solution3.cntk
+		Tutorials\ImageHandsOn\ImageHandsOn_Solution4.cntk = Tutorials\ImageHandsOn\ImageHandsOn_Solution4.cntk
+		Tutorials\ImageHandsOn\ImageHandsOn_Solution5.cntk = Tutorials\ImageHandsOn\ImageHandsOn_Solution5.cntk
+		Tutorials\ImageHandsOn\ImageHandsOn_Task4_Start.cntk = Tutorials\ImageHandsOn\ImageHandsOn_Task4_Start.cntk
+		Tutorials\ImageHandsOn\ImageHandsOn_Task6.cntk = Tutorials\ImageHandsOn\ImageHandsOn_Task6.cntk
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Data", "Data", "{8CFBD0DB-5F16-48E6-984C-4401317FA10E}"
+	ProjectSection(SolutionItems) = preProject
+		Tutorials\SLUHandsOn\atis.test.ctf = Tutorials\SLUHandsOn\atis.test.ctf
+		Tutorials\SLUHandsOn\atis.train.ctf = Tutorials\SLUHandsOn\atis.train.ctf
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solutions", "Solutions", "{BD7FF8C0-EC3A-49CD-9D81-4A8A29B8AD8E}"
+	ProjectSection(SolutionItems) = preProject
+		Tutorials\SLUHandsOn\SLUHandsOn_Solution1.cntk = Tutorials\SLUHandsOn\SLUHandsOn_Solution1.cntk
+		Tutorials\SLUHandsOn\SLUHandsOn_Solution2.cntk = Tutorials\SLUHandsOn\SLUHandsOn_Solution2.cntk
+		Tutorials\SLUHandsOn\SLUHandsOn_Solution3.cntk = Tutorials\SLUHandsOn\SLUHandsOn_Solution3.cntk
+		Tutorials\SLUHandsOn\SLUHandsOn_Solution4.cntk = Tutorials\SLUHandsOn\SLUHandsOn_Solution4.cntk
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Pretrained Models", "Pretrained Models", "{4727594B-A052-4834-B0E8-57DBB9ADEF13}"
+	ProjectSection(SolutionItems) = preProject
+		Tutorials\SLUHandsOn\slu.forward.backward.cmf = Tutorials\SLUHandsOn\slu.forward.backward.cmf
+		Tutorials\SLUHandsOn\slu.forward.cmf = Tutorials\SLUHandsOn\slu.forward.cmf
+		Tutorials\SLUHandsOn\slu.forward.lookahead.cmf = Tutorials\SLUHandsOn\slu.forward.lookahead.cmf
+		Tutorials\SLUHandsOn\slu.forward.nobn.cmf = Tutorials\SLUHandsOn\slu.forward.nobn.cmf
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Data", "Data", "{4A59163B-1EDE-4439-9E7D-40A30B82A3A0}"
+	ProjectSection(SolutionItems) = preProject
+		Tutorials\ImageHandsOn\CifarConverter.py = Tutorials\ImageHandsOn\CifarConverter.py
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "TIMIT", "TIMIT", "{B586AA4C-0BB9-4629-9EDA-25FF2618AC9F}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "TrainSimpleNetwork", "TrainSimpleNetwork", "{C2102C39-BF5F-4B12-9C41-849D1ED35EE8}"
+	ProjectSection(SolutionItems) = preProject
+		Tests\EndToEndTests\Examples\Speech\TIMIT\TrainSimpleNetwork\baseline.linux.txt = Tests\EndToEndTests\Examples\Speech\TIMIT\TrainSimpleNetwork\baseline.linux.txt
+		Tests\EndToEndTests\Examples\Speech\TIMIT\TrainSimpleNetwork\baseline.windows.txt = Tests\EndToEndTests\Examples\Speech\TIMIT\TrainSimpleNetwork\baseline.windows.txt
+		Tests\EndToEndTests\Examples\Speech\TIMIT\TrainSimpleNetwork\run-test = Tests\EndToEndTests\Examples\Speech\TIMIT\TrainSimpleNetwork\run-test
+		Tests\EndToEndTests\Examples\Speech\TIMIT\TrainSimpleNetwork\testcases.yml = Tests\EndToEndTests\Examples\Speech\TIMIT\TrainSimpleNetwork\testcases.yml
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "FullUtteranceLayers", "FullUtteranceLayers", "{4DDFD21D-E82C-4321-B380-8A9382E18107}"
+	ProjectSection(SolutionItems) = preProject
+		Tests\EndToEndTests\Speech\LSTM\FullUtteranceLayers\baseline.cpu.txt = Tests\EndToEndTests\Speech\LSTM\FullUtteranceLayers\baseline.cpu.txt
+		Tests\EndToEndTests\Speech\LSTM\FullUtteranceLayers\baseline.gpu.txt = Tests\EndToEndTests\Speech\LSTM\FullUtteranceLayers\baseline.gpu.txt
+		Tests\EndToEndTests\Speech\LSTM\FullUtteranceLayers\baseline.windows.cpu.txt = Tests\EndToEndTests\Speech\LSTM\FullUtteranceLayers\baseline.windows.cpu.txt
+		Tests\EndToEndTests\Speech\LSTM\FullUtteranceLayers\baseline.windows.gpu.txt = Tests\EndToEndTests\Speech\LSTM\FullUtteranceLayers\baseline.windows.gpu.txt
+		Tests\EndToEndTests\Speech\LSTM\FullUtteranceLayers\run-test = Tests\EndToEndTests\Speech\LSTM\FullUtteranceLayers\run-test
+		Tests\EndToEndTests\Speech\LSTM\FullUtteranceLayers\testcases.yml = Tests\EndToEndTests\Speech\LSTM\FullUtteranceLayers\testcases.yml
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "FullUtteranceCuDNN5", "FullUtteranceCuDNN5", "{D293C7C7-B7D7-47CE-A796-45262C16F980}"
+	ProjectSection(SolutionItems) = preProject
+		Tests\EndToEndTests\Speech\LSTM\FullUtteranceCuDNN5\baseline.gpu.txt = Tests\EndToEndTests\Speech\LSTM\FullUtteranceCuDNN5\baseline.gpu.txt
+		Tests\EndToEndTests\Speech\LSTM\FullUtteranceCuDNN5\baseline.windows.gpu.txt = Tests\EndToEndTests\Speech\LSTM\FullUtteranceCuDNN5\baseline.windows.gpu.txt
+		Tests\EndToEndTests\Speech\LSTM\FullUtteranceCuDNN5\run-test = Tests\EndToEndTests\Speech\LSTM\FullUtteranceCuDNN5\run-test
+		Tests\EndToEndTests\Speech\LSTM\FullUtteranceCuDNN5\testcases.yml = Tests\EndToEndTests\Speech\LSTM\FullUtteranceCuDNN5\testcases.yml
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "TruncatedLayers", "TruncatedLayers", "{4F534076-39A5-40E2-BF87-64EC464C52B2}"
+	ProjectSection(SolutionItems) = preProject
+		Tests\EndToEndTests\Speech\LSTM\TruncatedLayers\baseline.cpu.txt = Tests\EndToEndTests\Speech\LSTM\TruncatedLayers\baseline.cpu.txt
+		Tests\EndToEndTests\Speech\LSTM\TruncatedLayers\baseline.gpu.txt = Tests\EndToEndTests\Speech\LSTM\TruncatedLayers\baseline.gpu.txt
+		Tests\EndToEndTests\Speech\LSTM\TruncatedLayers\baseline.windows.cpu.txt = Tests\EndToEndTests\Speech\LSTM\TruncatedLayers\baseline.windows.cpu.txt
+		Tests\EndToEndTests\Speech\LSTM\TruncatedLayers\baseline.windows.gpu.txt = Tests\EndToEndTests\Speech\LSTM\TruncatedLayers\baseline.windows.gpu.txt
+		Tests\EndToEndTests\Speech\LSTM\TruncatedLayers\run-test = Tests\EndToEndTests\Speech\LSTM\TruncatedLayers\run-test
+		Tests\EndToEndTests\Speech\LSTM\TruncatedLayers\testcases.yml = Tests\EndToEndTests\Speech\LSTM\TruncatedLayers\testcases.yml
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Truncated-Kaldi", "Truncated-Kaldi", "{31263D7F-F590-475E-B4F0-7DFA4E4FF4B8}"
+	ProjectSection(SolutionItems) = preProject
+		Tests\EndToEndTests\Speech\LSTM\Truncated-Kaldi\baseline.cpu.txt = Tests\EndToEndTests\Speech\LSTM\Truncated-Kaldi\baseline.cpu.txt
+		Tests\EndToEndTests\Speech\LSTM\Truncated-Kaldi\baseline.gpu.txt = Tests\EndToEndTests\Speech\LSTM\Truncated-Kaldi\baseline.gpu.txt
+		Tests\EndToEndTests\Speech\LSTM\Truncated-Kaldi\run-test = Tests\EndToEndTests\Speech\LSTM\Truncated-Kaldi\run-test
+		Tests\EndToEndTests\Speech\LSTM\Truncated-Kaldi\testcases.yml = Tests\EndToEndTests\Speech\LSTM\Truncated-Kaldi\testcases.yml
 	EndProjectSection
 EndProject
 Global
@@ -1601,5 +1705,19 @@ Global
 		{1C6E6C53-1AA7-4B69-913E-B97BB5A872CF} = {3385EBEA-5F97-4B2B-9F30-0E6D7F91B9CA}
 		{CCC07E8E-F33A-4AF7-9F60-93E2AA61C75E} = {3385EBEA-5F97-4B2B-9F30-0E6D7F91B9CA}
 		{9F999212-AFC5-4EAC-AA78-F7247D46C456} = {6F19321A-65E7-4829-B00C-3886CD6C6EDE}
+		{2230BF3D-4317-4A3F-A743-DDD6160503F8} = {8BE0642A-A3AA-4A64-95D0-C78FB285B2A4}
+		{CC143D08-567D-4DAC-9E14-264749C19039} = {8BE0642A-A3AA-4A64-95D0-C78FB285B2A4}
+		{0ED2EE97-0A26-4865-871F-11033867BA34} = {2230BF3D-4317-4A3F-A743-DDD6160503F8}
+		{A2A4893C-0D5B-42E2-BFAD-C123AE7FDAFD} = {2230BF3D-4317-4A3F-A743-DDD6160503F8}
+		{8CFBD0DB-5F16-48E6-984C-4401317FA10E} = {CC143D08-567D-4DAC-9E14-264749C19039}
+		{BD7FF8C0-EC3A-49CD-9D81-4A8A29B8AD8E} = {CC143D08-567D-4DAC-9E14-264749C19039}
+		{4727594B-A052-4834-B0E8-57DBB9ADEF13} = {CC143D08-567D-4DAC-9E14-264749C19039}
+		{4A59163B-1EDE-4439-9E7D-40A30B82A3A0} = {2230BF3D-4317-4A3F-A743-DDD6160503F8}
+		{B586AA4C-0BB9-4629-9EDA-25FF2618AC9F} = {FB7AF7B9-6BEA-459F-94D9-94D53916D2B6}
+		{C2102C39-BF5F-4B12-9C41-849D1ED35EE8} = {B586AA4C-0BB9-4629-9EDA-25FF2618AC9F}
+		{4DDFD21D-E82C-4321-B380-8A9382E18107} = {19EE975B-232D-49F0-94C7-6F1C6424FB53}
+		{D293C7C7-B7D7-47CE-A796-45262C16F980} = {19EE975B-232D-49F0-94C7-6F1C6424FB53}
+		{4F534076-39A5-40E2-BF87-64EC464C52B2} = {19EE975B-232D-49F0-94C7-6F1C6424FB53}
+		{31263D7F-F590-475E-B4F0-7DFA4E4FF4B8} = {19EE975B-232D-49F0-94C7-6F1C6424FB53}
 	EndGlobalSection
 EndGlobal

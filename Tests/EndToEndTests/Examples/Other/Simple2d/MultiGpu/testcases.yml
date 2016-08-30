@@ -21,7 +21,7 @@ testCases:
     patterns:
       - Finished Epoch[{{integer}} of {{integer}}]
       - CrossEntropyWithSoftmax = {{float,tolerance=0.05}} * {{integer}}
-      - EvalErrorPrediction = {{float,tolerance=0.05}} * {{integer}}
+      - EvalClassificationError = {{float,tolerance=0.05}} * {{integer}}
       - totalSamplesSeen = {{integer}}
       - learningRatePerSample = {{float,tolerance=0.1%}}
 
@@ -29,10 +29,10 @@ testCases:
     patterns:
       - Epoch[{{integer}} of {{integer}}]-Minibatch[{{integer}}-{{integer}}
       - CrossEntropyWithSoftmax = {{float,tolerance=0.05}} * {{integer}}
-      - EvalErrorPrediction = {{float,tolerance=0.05}} * {{integer}}
+      - EvalClassificationError = {{float,tolerance=0.05}} * {{integer}}
 
   Final test results must match:
     patterns:
       - "Final Results: Minibatch[{{integer}}-{{integer}}]"
       - CrossEntropyWithSoftmax = {{float,tolerance=0.05}} * {{integer}}
-      - EvalErrorPrediction = {{float,tolerance=0.05}} * {{integer}}
+      - EvalClassificationError = {{float,tolerance=0.05}} * {{integer}}
