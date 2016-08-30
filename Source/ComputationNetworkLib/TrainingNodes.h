@@ -685,31 +685,31 @@ template class NoiseContrastiveEstimationNode<double>;
 // Nodes using a rsndom number generator can iherit from this class.
 class RngUser{
 public:
-	RngUser(){
-		this->m_randomSeed = 0;
-	}
+    RngUser(){
+        this->m_randomSeed = 0;
+    }
 
-	RNGHandle& GetRNGHandle(DEVICEID_TYPE deviceId)
-	{
-		if (m_RNGHandle == nullptr)
-			m_RNGHandle = RNGHandle::Create(deviceId, m_randomSeed);
+    RNGHandle& GetRNGHandle(DEVICEID_TYPE deviceId)
+    {
+        if (m_RNGHandle == nullptr)
+            m_RNGHandle = RNGHandle::Create(deviceId, m_randomSeed);
 
-		return *m_RNGHandle;
-	}
+        return *m_RNGHandle;
+    }
 
-	// E.g. called from ComputationNetwork to make sure that CNTK running on different nodes will have different seed.
-	void SetRandomSeed(const unsigned long val)
-	{
-		m_randomSeed = (unsigned long)val;
+    // E.g. called from ComputationNetwork to make sure that CNTK running on different nodes will have different seed.
+    void SetRandomSeed(const unsigned long val)
+    {
+        m_randomSeed = (unsigned long)val;
 
-		// Upon change of the seed, reset RNGHandle to force the creation of a new RNGHandle
-		// during forward propagation
-		m_RNGHandle = nullptr;
-	}
+        // Upon change of the seed, reset RNGHandle to force the creation of a new RNGHandle
+        // during forward propagation
+        m_RNGHandle = nullptr;
+    }
 
 protected:
-	unsigned long m_randomSeed;
-	std::shared_ptr<RNGHandle> m_RNGHandle;
+    unsigned long m_randomSeed;
+    std::shared_ptr<RNGHandle> m_RNGHandle;
 };
 
 // -----------------------------------------------------------------------
@@ -740,43 +740,46 @@ class RandomSampleNode : public ComputationNodeNonLooping<ElemType>, public NumI
     }
 
 public:
-    RandomSampleNode(DEVICEID_TYPE deviceId, const wstring& name, int nSamples = 0)
-		: Base(deviceId, name), m_nSamples(nSamples)
+    RandomSampleNode(DEVICEID_TYPE deviceId, const wstring& name, int nSamples = 0, bool allowDuplicates = false, bool estimateInclusionProbs = false)
+        : Base(deviceId, name), m_nSamples(nSamples), m_allowDuplicates(allowDuplicates), m_estimateInclusionProbs(estimateInclusionProbs)
     {
-		SetRandomSeed((unsigned long)CreateUniqId());
+        SetRandomSeed((unsigned long)CreateUniqId());
     }
 
     RandomSampleNode(const ScriptableObjects::IConfigRecordPtr configp)
-        : RandomSampleNode(CPUDEVICE, L"<placeholder>", configp->Get(L"nSamples"))
+        : RandomSampleNode(CPUDEVICE, L"<placeholder>", configp->Get(L"nSamples"), configp->Get(L"allowDuplicates"), configp->Get(L"estimateInclusionProbs"))
     {
         AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
     }
 
+    virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
+    {
+        Base::CopyTo(nodeP, newName, flags);
+        if (flags & CopyNodeFlags::copyNodeValue)
+        {
+            auto node = dynamic_pointer_cast<RandomSampleNode<ElemType>>(nodeP);
+            node->m_allowDuplicates = m_allowDuplicates;
+            node->m_estimateInclusionProbs = m_estimateInclusionProbs;
+            node->m_nSamples = m_nSamples;
+            node->m_randomSeed = m_randomSeed;
+        }
+    }
 
+    void Save(File& fstream) const
+    {
+        Base::Save(fstream);
+        fstream << m_allowDuplicates;
+        fstream << m_estimateInclusionProbs;
+        fstream << m_nSamples;
+    }
 
-
-	virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
-	{
-		Base::CopyTo(nodeP, newName, flags);
-		if (flags & CopyNodeFlags::copyNodeValue)
-		{
-			auto node = dynamic_pointer_cast<RandomSampleNode<ElemType>>(nodeP);
-			node->m_nSamples = m_nSamples;
-			node->m_randomSeed = m_randomSeed;
-		}
-	}
-
-	void Save(File& fstream) const
-	{
-		Base::Save(fstream);
-		fstream << m_nSamples;
-	}
-
-	virtual void Load(File& fstream, size_t modelVersion) override
-	{
-		Base::Load(fstream, modelVersion);
-		fstream >> m_nSamples;
-	}
+    virtual void Load(File& fstream, size_t modelVersion) override
+    {
+        Base::Load(fstream, modelVersion);
+        fstream >> m_allowDuplicates;
+        fstream >> m_estimateInclusionProbs;
+        fstream >> m_nSamples;
+    }
 
     virtual void /*ComputationNode::*/ ForwardPropNonLooping() override
     {
@@ -786,10 +789,10 @@ public:
         valueMatrix.SwitchToMatrixType(SPARSE, matrixFormatSparseCSC, false);
         valueMatrix.Reset();
 
-		UpdateWeightsPrefixSum();
+        UpdateWeightsPrefixSum();
 
         // Get vector with indices of randomly sampled classes
-        std::vector<int> samples = GetWeightedSamples(m_samplingWeightsPrefixSum, true);
+        const std::vector<int> samples = GetWeightedSamples(m_samplingWeightsPrefixSum);
 
         // Set columns of (sparse) result matrix as indicator vectors
         for(int iSample = 0; iSample < m_nSamples; iSample++)
@@ -799,37 +802,57 @@ public:
         }
     }
 
-	void UpdateWeightsPrefixSum()
-	{
-		// If sampling probabilites have changed update m_samplingWeightsPrefixSum
-		if (m_samplingWeightsPrefixSum.empty() || TimeStamp::IsOlderThan(*Input(0)))
-		{
-			const Matrix<ElemType>& samplingWeights = Input(0)->ValueAsMatrix();
-			m_samplingWeightsPrefixSum.clear();
-			double runningWeightsSum = 0;
-			for (int iClass = 0; iClass < samplingWeights.GetNumRows(); iClass++)
-			{
-				ElemType currentWeight = samplingWeights.GetValue(iClass, 0);
-				runningWeightsSum += currentWeight;
-				m_samplingWeightsPrefixSum.push_back(runningWeightsSum);
-			}
-		}
-	}
+    void UpdateWeightsPrefixSum()
+    {
+        // If sampling probabilites have changed update m_samplingWeightsPrefixSum
+        if (m_samplingWeightsPrefixSum.empty() || TimeStamp::IsOlderThan(*Input(0)))
+        {
+            const Matrix<ElemType>& samplingWeights = Input(0)->ValueAsMatrix();
+            m_samplingWeightsPrefixSum.clear();
+            double runningWeightsSum = 0;
+            for (int iClass = 0; iClass < samplingWeights.GetNumRows(); iClass++)
+            {
+                ElemType currentWeight = samplingWeights.GetValue(iClass, 0);
+                runningWeightsSum += currentWeight;
+                m_samplingWeightsPrefixSum.push_back(runningWeightsSum);
+            }
+        }
+    }
 
-    std::vector<int> GetWeightedSamples(std::vector<double>& weightPrefixSum, bool sampleWithReplacment)
+    const std::vector<int> GetWeightedSamples(const std::vector<double>& weightPrefixSum)
+    {
+        long dummy; 
+        return RunSampling(weightPrefixSum, dummy);
+    }
+
+    long GetNumberOfTries(const std::vector<double>& weightPrefixSum)
+    {
+        long nTries;
+        RunSampling(weightPrefixSum, nTries);
+        return nTries;
+    }
+
+    const std::vector<int> RunSampling(const std::vector<double>& weightPrefixSum, long& nTries)
     {
         std::uniform_real_distribution<double> r(0, weightPrefixSum.back());
         std::unordered_set<int> alreadySampled;
         std::vector<int> samples;
-		CPURNGHandle* cpuRNGHandle = dynamic_cast<CPURNGHandle*>(&GetRNGHandle(CPUDEVICE));
-		// find random samples using the specified weight
-        for (int iSample = 0; iSample < m_nSamples; iSample++)
+        CPURNGHandle* cpuRNGHandle = dynamic_cast<CPURNGHandle*>(&GetRNGHandle(CPUDEVICE));
+        // find random samples using the specified weight
+
+        if (m_allowDuplicates)
+            nTries = m_nSamples;
+        else
+            nTries = 0; // just initialize and count how many tries we need;
+
+        while (samples.size() < m_nSamples)
         {
-			double randomValue = r(cpuRNGHandle->Generator());
+            double randomValue = r(cpuRNGHandle->Generator());
             auto lower = std::lower_bound(weightPrefixSum.begin(), weightPrefixSum.end(), randomValue);
             int idx = (int)(lower - weightPrefixSum.begin());
-            if (sampleWithReplacment)
-				samples.push_back(idx);
+
+            if (m_allowDuplicates)
+                samples.push_back(idx);
             else
             {
                 // Sampling without replacement: each value can be sampled at most once. 
@@ -838,6 +861,7 @@ public:
                 // BUGBUG Alternative implementions, e.g:
                 // * Weighted Random Sampling with Reservoir: http://utopia.duth.gr/~pefraimi/research/data/2007EncOfAlg.pdf
                 // * Binary tree with classes as leafes and branch probs on non-leafes.
+                nTries++;
                 if (alreadySampled.find(idx) != alreadySampled.end()) continue;
                 else samples.push_back(idx);
             }
@@ -866,6 +890,7 @@ public:
     {
         return false;
     }
+
     virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override
     {
         return false;
@@ -873,14 +898,29 @@ public:
 
     virtual bool IsOutOfDateWrtInputs() const override
     {
-		// The only input are the sampling probabilities that typically will be constant. Still we want the value of the node be refreshed for each minibatch. 
+        // The only input are the sampling weights that typically will be constant. 
+        // Still we want the value of the node to be refreshed for each minibatch. 
         return true;
     }
 
+    // The node can create samples allowing for dupicates (WITH_REPLACEMENT) or not (WITHOUT_REPLACEMENT)
+    enum SamplingType
+    {
+        WITH_REPLACEMENT,
+        WITHOUT_REPLACEMENT,
+    };
+
+    // Based on the sampling weigts the node either creates a set of random samples or estimates the inclusion probability for each class.+
+    enum RunMode{
+        CREATE_SAMPLES,
+        ESTIMATE_INCLUSION_PROBABILITY,
+    };
 
 private:
-    int m_nSamples;
-	std::vector<double> m_samplingWeightsPrefixSum;
+    bool m_allowDuplicates;        // The node can create samples allowing for duplicates (sampling with replacement) or not (sampling without replacment).
+    bool m_estimateInclusionProbs; // Control wether to create random samples or estimate inclusion probabilties.
+    int m_nSamples;              // Requested size of sample in case of run-mode = CREATE_SAMPLES.
+    std::vector<double> m_samplingWeightsPrefixSum;
 };
 
 template class RandomSampleNode<float>;
