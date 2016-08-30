@@ -11,13 +11,14 @@ swig.bat
 
 # If you are just building to use it locally:
 # Build -> generate .pyd
-# go one level up
+# go two levels up
 python .\setup.py build_ext -if -c msvc --plat-name=win-amd64
 
-# If you want to package it and upload it:
-#in order to build the package and upload it to PyPl
+# If you want to package it:
 pip install twine
 pip install wheel
+
+# go two levels up
 python .\setup.py build_ext -if -c msvc --plat-name=win-amd64 bdist_wheel
-#TBC
+
 
