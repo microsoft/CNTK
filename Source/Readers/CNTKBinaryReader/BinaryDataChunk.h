@@ -33,7 +33,7 @@ public:
         {
             result[c] = m_data[c][sequenceId - m_startSequence];
             // We now fill in the m_chunk ptr. We only do it for result, to avoid circular references in m_data
-            result[c]->m_chunk = shared_from_this();
+            //result[c]->m_chunk = shared_from_this();
         }
     }
 
