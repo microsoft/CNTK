@@ -23,9 +23,7 @@ command = train:test
 precision = "float"
 modelPath = "$ModelDir$/03_ConvBatchNorm"
 
-# uncomment the following line to write logs to a file 
-# stderr = "$OutputDir$/03_ConvBatchNorm_out"
-
+stderr = "$OutputDir$/03_ConvBatchNorm_ndl_out"
 traceLevel=1
 numMBsToShowResult=500
 

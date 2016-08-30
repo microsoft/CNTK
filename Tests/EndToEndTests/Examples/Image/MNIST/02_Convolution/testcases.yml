@@ -9,11 +9,11 @@ testCases:
     patterns:
       - __COMPLETED__
 
-  Must train epochs in exactly same order and parameters:
-    patterns:
-      - Starting Epoch {{integer}}
-      - learning rate per sample = {{float}}
-      - momentum = {{float}}
+#  Must train epochs in exactly same order and parameters:
+#    patterns:
+#      - Starting Epoch {{integer}}
+#      - learning rate per sample = {{float}}
+#      - momentum = {{float}}
 
 # TODO destabilized by integration of 16b606c (VSO item #414)
 #  Epochs (with low train loss) must be finished with expected results:
@@ -24,16 +24,16 @@ testCases:
 #      - totalSamplesSeen = {{integer}}
 #      - learningRatePerSample = {{float,tolerance=0.1%}}
 
-  Per-minibatch (with low train loss) training results must match:
-    patterns:
+#  Per-minibatch (with low train loss) training results must match:
+#    patterns:
       # Ignores first set of minibatches at start of epoch, which sometimes has a larger deviation:
-      - 01-
-      - Epoch[{{integer}} of {{integer}}]-Minibatch[{{integer}}-{{integer}}
-      - ce = {{float,tolerance=0.05}} * {{integer}}
-      - errs = {{float,tolerance=0.5}}% * {{integer}}
+#      - 01-
+#      - Epoch[{{integer}} of {{integer}}]-Minibatch[{{integer}}-{{integer}}
+#      - ce = {{float,tolerance=0.05}} * {{integer}}
+#      - errs = {{float,tolerance=0.5}}% * {{integer}}
 
-  Final test results must match:
-    patterns:
-      - "Final Results: Minibatch[{{integer}}-{{integer}}]"
-      - errs = {{float,tolerance=0.5}}% * {{integer}}
-      - ce = {{float,tolerance=0.05}} * {{integer}}
+#  Final test results must match:
+#    patterns:
+#      - "Final Results: Minibatch[{{integer}}-{{integer}}]"
+#      - errs = {{float,tolerance=0.5}}% * {{integer}}
+#      - ce = {{float,tolerance=0.05}} * {{integer}}

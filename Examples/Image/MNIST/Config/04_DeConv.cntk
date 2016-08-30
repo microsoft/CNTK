@@ -1,0 +1,138 @@
+# Parameters can be overwritten on the command line
+# for example: cntk configFile=myConfigFile RootDir=../.. 
+# For running from Visual Studio add
+# currentDirectory=$(SolutionDir)/<path to corresponding data folder> 
+
+command = trainNetwork:testNetwork
+
+precision = "float"; traceLevel = 1 ; deviceId = "auto"
+
+rootDir = ".." ; configDir = "$rootDir$/Config" ; dataDir   = "$rootDir$/Data" ;
+outputDir = "$rootDir$/Output" ; modelDir  = "$outputDir$/Models"
+
+modelPath = "$modelDir$/03_DeConv"
+stderr = "$outputDir$/04_DeConv_bs_out"
+
+prefetch=true
+
+# TRAINING CONFIG
+trainNetwork = [
+    action = "train"
+
+    BrainScriptNetworkBuilder = {
+        imageShape = 28:28:1                        # image dimensions, 1 channel only
+        featScale = Constant(1/256)
+        labelDim = 10                               # number of distinct labels
+        convWScale = 0.1                            # the initial value scale for the conv layers
+
+        model (features) = {
+            #featNorm = features.* featScale
+            featNorm = features
+            
+            c1 = ConvolutionalLayer {16, (5:5), stride=2, pad = true, initValueScale=convWScale} (featNorm)
+			r1 = ReLU(c1)
+            p1 = MaxPoolingLayer {(2:2), stride=(2:2)} (r1)
+            
+            #unpool
+                # unpool = MaxUnpool(p1, c1, pool1W, pool1H, pool1hStride, pool1vStride)
+                # !! BS unpooling results in 13 x 13 while NDL unpooling return 14 x 14 !!
+            unpool = MaxUnpooling(p1, c1, (2:2), stride=2)
+            
+            # deconv1
+            lpad = 2
+            upad = 1
+                # weight[cMap1, kW1 * kH1 * inputChannels]
+                #imageC = 1
+                #cMap1 = 16
+                #deconv1 = DeconvReLULayer(unpool1, kW1, kH1, imageC, 25,       cMap1, hStride1, vStride1, lpad1, upad1, wScale1, bValue1)
+                #          DeconvReLULayer(inp,     kW,  kH,  inMap, inWCount, outMap, hStride,  vStride,  lpad,  upad,  wScale,  bValue) = [
+                #    W = LearnableParameter(outMap, inWCount, init="uniform", initValueScale=wScale, initOnCPUOnly=true)
+                #    act = RectifiedLinear(inp)
+                #    out = DeConv(W, act, kW, kH, inMap, outMap, hStride, vStride, lpad, upad)
+                #]
+                #          DeConv(w, inp, kW, kH, inMap, outMap, hStride, vStride, lpad, upad) = [
+                #             c = Convolution(w, inp, {kW, kH, inMap}, mapCount=outMap, stride={hStride, vStride, inMap}, sharing={true, true, true}, autoPadding=false, lowerPad={lpad, lpad, 0}, upperPad={upad, upad, 0}, transpose=1, imageLayout=$imageLayout$)
+                #          ]
+                
+                #W = LearnableParameter(outMap, inWCount, init="uniform", initValueScale=wScale, initOnCPUOnly=true)
+                #W = LearnableParameter(1, 25, init="uniform", initValueScale=convWScale, initOnCPUOnly=true)
+            W = ParameterTensor{(1:25), init="uniform", initValueScale=convWScale}
+            
+            act = ReLU(unpool)
+                #out = DeConv(w, act, kW, kH, inMap, outMap, hStride, vStride, lpad, upad)
+                #out = DeConv(w, act, 5,  5,  1,     16,     hStride, vStride, lpad, upad)
+                #out = Convolution(W, act, {kW, kH, inMap}, mapDims=outMap, stride={hStride, vStride, inMap}, sharing={true, true, true}, autoPadding=false, lowerPad={lpad, lpad, 0}, upperPad={upad, upad, 0}, transpose=1) #, imageLayout="cudnn")
+                #out = Convolution(W, act, {5, 5, 1}, mapDims=16, stride={1, 1, 1}, sharing={true, true, true}, autoPadding=false, lowerPad={lpad, lpad, 0}, upperPad={upad, upad, 0}, transpose=1) #, imageLayout="cudnn")
+                #?out = Convolution(W, act, (kW:kH), mapDims=outMap, stride=(hStride:vStride:inMap), sharing={true, true, true}, autoPadding=false, lowerPad=(lpad:lpad), upperPad=(upad:upad), transpose=1) #, imageLayout="cudnn")
+                # !! Transform=true not yet supported in BS !!
+            out = Convolution(W, act, (5:5), mapDims=16, stride=(1:1), sharing=true, autoPadding=false, lowerPad=(lpad:lpad), upperPad=(upad:upad), transpose=true) #, imageLayout="cudnn")
+                # from core.bs
+                #c = Convolution (W, x, filterShape, mapDims = numOutputChannels, stride = stride, sharing = sharing, autoPadding = pad, lowerPad = lowerPad, upperPad = upperPad, transpose = transpose, maxTempMemSizeInSamples = maxTempMemSizeInSamples)
+        }.out
+
+        # inputs
+        features = Input {imageShape}
+        labels = Input {labelDim}
+
+        # apply model to features
+        featNorm = features.* featScale
+        ol = model (featNorm)
+
+        # loss and error computation
+        mse = SquareError(featNorm, ol)
+
+        # declare special nodes
+        featureNodes    = (features)
+        #labelNodes      = (labels)
+        criterionNodes  = (mse)
+        evaluationNodes = (mse)
+        outputNodes     = (ol)
+    }
+    
+    SGD = [
+        epochSize = 60000
+        minibatchSize = 32
+        maxEpochs = 10
+        learningRatesPerMB = 0.001          # learningRatesPerSample = 
+        momentumPerMB = 0.9                 # momentumAsTimeConstant = 
+        
+        numMBsToShowResult = 500
+    ]
+
+    reader = [
+        readerType = "CNTKTextFormatReader"
+        # See ../REAMDE.md for details on getting the data (Train-28x28_cntk_text.txt).
+        file = "$DataDir$/Train-28x28_cntk_text.txt"
+        input = [
+            features = [
+                dim = 784
+                format = "dense"
+            ]
+            labels = [
+                dim = 10
+                format = "dense"
+            ]
+        ]
+    ]    
+]
+
+# TEST CONFIG
+testNetwork = [
+    action = test
+    minibatchSize = 16
+    
+    reader = [
+        readerType = "CNTKTextFormatReader"
+        file = "$DataDir$/Test-28x28_cntk_text.txt"
+        input = [
+            features = [
+            dim = 784
+            format = "dense"
+            ]
+            labels = [
+                dim = 10
+                format = "dense"
+            ]
+        ]
+    ]
+]

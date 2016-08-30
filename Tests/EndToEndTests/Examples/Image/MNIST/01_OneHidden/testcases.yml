@@ -31,9 +31,9 @@ testCases:
       - ce = {{float,tolerance=.1%}} * {{integer}}
       - errs = {{float,tolerance=.1%}}% * {{integer}}
 
-  Final test results must match:
-    patterns:
-      - "Final Results: Minibatch[{{integer}}-{{integer}}]"
-      - top5Errs = {{float,tolerance=.1%}}% * {{integer}}
-      - errs = {{float,tolerance=.1%}}% * {{integer}}
-      - ce = {{float,tolerance=.1%}} * {{integer}}
+#  Final test results must match:
+#    patterns:
+#      - "Final Results: Minibatch[{{integer}}-{{integer}}]"
+#      - top5Errs = {{float,tolerance=.1%}}% * {{integer}}
+#      - errs = {{float,tolerance=.1%}}% * {{integer}}
+#      - ce = {{float,tolerance=.1%}} * {{integer}}
