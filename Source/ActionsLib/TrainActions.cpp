@@ -192,6 +192,30 @@ template void DoAdapt<float>(const ConfigParameters& config);
 template void DoAdapt<double>(const ConfigParameters& config);
 
 // ===========================================================================
+// DoDumpNodes() - implements CNTK "dumpNode" command
+// ===========================================================================
+
+template <typename ElemType>
+void DoDumpNodes(const ConfigParameters& config)
+{
+    wstring modelPath        = config(L"modelPath");
+    wstring nodeName         = config(L"nodeName", L"__AllNodes__");
+    wstring nodeNameRegexStr = config(L"nodeNameRegex", L"");
+    wstring defOutFilePath   = modelPath + L"." + nodeName + L".txt";
+    wstring outputFile       = config(L"outputFile", defOutFilePath);
+    bool printValues         = config(L"printValues", true);
+    bool printMetadata       = config(L"printMetadata", true);
+    if (!printValues && !printMetadata)
+        InvalidArgument("printValues and printMetadata: Since both are set to false, there will be nothing to dump");
+
+    ComputationNetworkPtr net = ComputationNetwork::CreateFromFile<ElemType>(CPUDEVICE, modelPath);
+    net->DumpNodeInfoToFile(nodeName, printValues, printMetadata, outputFile, nodeNameRegexStr);
+}
+
+template void DoDumpNodes<float>(const ConfigParameters& config);
+template void DoDumpNodes<double>(const ConfigParameters& config);
+
+// ===========================================================================
 // DoEdit() - implements CNTK "edit" command
 // ===========================================================================
 

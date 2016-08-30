@@ -10,7 +10,6 @@
   <ItemGroup>
     <ClCompile Include="stdafx.cpp" />
     <ClCompile Include="HTKLMFReaderTests.cpp" />
-    <ClCompile Include="UCIFastReaderTests.cpp" />
     <ClCompile Include="ReaderLibTests.cpp" />
     <ClCompile Include="ImageReaderTests.cpp" />
     <ClCompile Include="CNTKTextFormatReaderTests.cpp" />

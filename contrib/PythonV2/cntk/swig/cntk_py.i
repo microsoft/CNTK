@@ -1,3 +1,4 @@
+
 %module(directors="1") cntk_py
 
 %include "stl.i"
@@ -1086,6 +1087,5 @@ StreamInfo.__eq__ = lambda a,b: a.m_name==b.m_name and a.m_id==b.m_id and a.m_st
         return std::hash<CNTK::StreamInfo>()(*$self);
     }
 }
-
 
 

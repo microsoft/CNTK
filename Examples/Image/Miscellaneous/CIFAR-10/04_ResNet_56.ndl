@@ -106,7 +106,7 @@ DNN=[
     ol = DnnLastLayer(cMap3, labelDim, pool, fc1WScale, fc1BValue)
     
     CE = CrossEntropyWithSoftmax(labels, ol, tag = Criteria)
-    Err = ErrorPrediction(labels, ol, tag = Eval)
+    Err = ClassificationError(labels, ol, tag = Eval)
     OutputNodes = ol
 ]
 

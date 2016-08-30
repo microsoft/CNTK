@@ -32,7 +32,7 @@ Simple_Demo_Train = [
         # 2 input, 2 50-element hidden, 2 output
         layerSizes = 2:50*2:2
         trainingCriterion = "CrossEntropyWithSoftmax"
-        evalCriterion = "ErrorPrediction"
+        evalCriterion = "ClassificationError"
         layerTypes = "Sigmoid"
         initValueScale = 1.0
         applyMeanVarNorm = true
@@ -137,6 +137,6 @@ Simple_Demo_Output=[
         #    grep labels        SimpleOutput.labels        | awk '{print $1}' > L
         #    diff L P | grep "<" | wc -l
         #    wc -l P
-        # The ratio of the two numbers gives the same error rate as ErrorPrediction/Sample in the log.
+        # The ratio of the two numbers gives the same error rate as ClassificationError/Sample in the log.
     ]
 ]

@@ -105,7 +105,7 @@ MPI Rank 0:     traceLevel = 1
 MPI Rank 0:     SimpleNetworkBuilder = [
 MPI Rank 0:         layerSizes = 363:512:512:132
 MPI Rank 0:         trainingCriterion = "CrossEntropyWithSoftmax"
-MPI Rank 0:         evalCriterion = "ErrorPrediction"
+MPI Rank 0:         evalCriterion = "ClassificationError"
 MPI Rank 0:         layerTypes = "Sigmoid"
 MPI Rank 0:         initValueScale = 1.0
 MPI Rank 0:         applyMeanVarNorm = true
@@ -131,7 +131,7 @@ MPI Rank 0:         CE = if trainingCriterion == 'CE'
 MPI Rank 0:              then CrossEntropyWithSoftmax(labels, outZ, tag='criterion')
 MPI Rank 0:              else Fail('unknown trainingCriterion ' + trainingCriterion)
 MPI Rank 0:         Err = if evalCriterion == 'Err' then
-MPI Rank 0:               ErrorPrediction(labels, outZ, tag='eval')
+MPI Rank 0:               ClassificationError(labels, outZ, tag='eval')
 MPI Rank 0:               else Fail('unknown evalCriterion ' + evalCriterion)
 MPI Rank 0:         logPrior = LogPrior(labels)
 MPI Rank 0:         // TODO: how to add a tag to an infix operation?
@@ -228,7 +228,7 @@ MPI Rank 0:     traceLevel = 1
 MPI Rank 0:     SimpleNetworkBuilder = [
 MPI Rank 0:         layerSizes = 363:512:512:132
 MPI Rank 0:         trainingCriterion = "CrossEntropyWithSoftmax"
-MPI Rank 0:         evalCriterion = "ErrorPrediction"
+MPI Rank 0:         evalCriterion = "ClassificationError"
 MPI Rank 0:         layerTypes = "Sigmoid"
 MPI Rank 0:         initValueScale = 1.0
 MPI Rank 0:         applyMeanVarNorm = true
@@ -254,7 +254,7 @@ MPI Rank 0:         CE = if trainingCriterion == 'CE'
 MPI Rank 0:              then CrossEntropyWithSoftmax(labels, outZ, tag='criterion')
 MPI Rank 0:              else Fail('unknown trainingCriterion ' + trainingCriterion)
 MPI Rank 0:         Err = if evalCriterion == 'Err' then
-MPI Rank 0:               ErrorPrediction(labels, outZ, tag='eval')
+MPI Rank 0:               ClassificationError(labels, outZ, tag='eval')
 MPI Rank 0:               else Fail('unknown evalCriterion ' + evalCriterion)
 MPI Rank 0:         logPrior = LogPrior(labels)
 MPI Rank 0:         // TODO: how to add a tag to an infix operation?
@@ -358,7 +358,7 @@ MPI Rank 0:     traceLevel = 1
 MPI Rank 0:     SimpleNetworkBuilder = [
 MPI Rank 0:         layerSizes = 363:512:512:132
 MPI Rank 0:         trainingCriterion = "CrossEntropyWithSoftmax"
-MPI Rank 0:         evalCriterion = "ErrorPrediction"
+MPI Rank 0:         evalCriterion = "ClassificationError"
 MPI Rank 0:         layerTypes = "Sigmoid"
 MPI Rank 0:         initValueScale = 1.0
 MPI Rank 0:         applyMeanVarNorm = true
@@ -384,7 +384,7 @@ MPI Rank 0:         CE = if trainingCriterion == 'CE'
 MPI Rank 0:              then CrossEntropyWithSoftmax(labels, outZ, tag='criterion')
 MPI Rank 0:              else Fail('unknown trainingCriterion ' + trainingCriterion)
 MPI Rank 0:         Err = if evalCriterion == 'Err' then
-MPI Rank 0:               ErrorPrediction(labels, outZ, tag='eval')
+MPI Rank 0:               ClassificationError(labels, outZ, tag='eval')
 MPI Rank 0:               else Fail('unknown evalCriterion ' + evalCriterion)
 MPI Rank 0:         logPrior = LogPrior(labels)
 MPI Rank 0:         // TODO: how to add a tag to an infix operation?
@@ -506,7 +506,7 @@ MPI Rank 0: Post-processing network...
 MPI Rank 0: 
 MPI Rank 0: 7 roots:
 MPI Rank 0: 	CrossEntropyWithSoftmax = CrossEntropyWithSoftmax()
-MPI Rank 0: 	EvalErrorPrediction = ErrorPrediction()
+MPI Rank 0: 	EvalClassificationError = ClassificationError()
 MPI Rank 0: 	InvStdOfFeatures = InvStdDev()
 MPI Rank 0: 	MeanOfFeatures = Mean()
 MPI Rank 0: 	PosteriorProb = Softmax()
@@ -535,7 +535,7 @@ MPI Rank 0: Validating --> W2*H1 = Times (W2, H2) : [132 x 512], [512 x 1 x *] -
 MPI Rank 0: Validating --> B2 = LearnableParameter() :  -> [132 x 1]
 MPI Rank 0: Validating --> HLast = Plus (W2*H1, B2) : [132 x 1 x *], [132 x 1] -> [132 x 1 x *]
 MPI Rank 0: Validating --> CrossEntropyWithSoftmax = CrossEntropyWithSoftmax (labels, HLast) : [132 x *], [132 x 1 x *] -> [1]
-MPI Rank 0: Validating --> EvalErrorPrediction = ErrorPrediction (labels, HLast) : [132 x *], [132 x 1 x *] -> [1]
+MPI Rank 0: Validating --> EvalClassificationError = ClassificationError (labels, HLast) : [132 x *], [132 x 1 x *] -> [1]
 MPI Rank 0: Validating --> PosteriorProb = Softmax (HLast) : [132 x 1 x *] -> [132 x 1 x *]
 MPI Rank 0: Validating --> Prior = Mean (labels) : [132 x *] -> [132]
 MPI Rank 0: Validating --> LogOfPrior = Log (Prior) : [132] -> [132]
@@ -558,7 +558,7 @@ MPI Rank 0: 08/16/2016 09:59:41: Training criterion node(s):
 MPI Rank 0: 08/16/2016 09:59:41: 	CrossEntropyWithSoftmax = CrossEntropyWithSoftmax
 MPI Rank 0: 
 MPI Rank 0: 08/16/2016 09:59:41: Evaluation criterion node(s):
-MPI Rank 0: 08/16/2016 09:59:41: 	EvalErrorPrediction = ErrorPrediction
+MPI Rank 0: 08/16/2016 09:59:41: 	EvalClassificationError = ClassificationError
 MPI Rank 0: 
 MPI Rank 0: 
 MPI Rank 0: Allocating matrices for forward and/or backward propagation.
@@ -613,73 +613,73 @@ MPI Rank 0: 08/16/2016 09:59:43: Starting Epoch 1: learning rate per sample = 0.
 MPI Rank 0: minibatchiterator: epoch 0: frames [0..20480] (first utterance at frame 0), data subset 0 of 2, with 1 datapasses
 MPI Rank 0: 
 MPI Rank 0: 08/16/2016 09:59:43: Starting minibatch loop, DataParallelSGD training (MyRank = 0, NumNodes = 2, NumGradientBits = 64), distributed reading is ENABLED.
-MPI Rank 0: 08/16/2016 09:59:43:  Epoch[ 1 of 3]-Minibatch[   1-  10, 3.12%]: CrossEntropyWithSoftmax = 4.62512789 * 640; EvalErrorPrediction = 0.94062500 * 640; time = 0.1080s; samplesPerSecond = 5925.3
-MPI Rank 0: 08/16/2016 09:59:43:  Epoch[ 1 of 3]-Minibatch[  11-  20, 6.25%]: CrossEntropyWithSoftmax = 4.35619366 * 640; EvalErrorPrediction = 0.92343750 * 640; time = 0.1000s; samplesPerSecond = 6397.8
-MPI Rank 0: 08/16/2016 09:59:44:  Epoch[ 1 of 3]-Minibatch[  21-  30, 9.38%]: CrossEntropyWithSoftmax = 3.97911998 * 640; EvalErrorPrediction = 0.89531250 * 640; time = 0.1013s; samplesPerSecond = 6319.2
-MPI Rank 0: 08/16/2016 09:59:44:  Epoch[ 1 of 3]-Minibatch[  31-  40, 12.50%]: CrossEntropyWithSoftmax = 3.73643568 * 640; EvalErrorPrediction = 0.84531250 * 640; time = 0.0994s; samplesPerSecond = 6437.1
-MPI Rank 0: 08/16/2016 09:59:44:  Epoch[ 1 of 3]-Minibatch[  41-  50, 15.62%]: CrossEntropyWithSoftmax = 3.83079081 * 640; EvalErrorPrediction = 0.88281250 * 640; time = 0.0999s; samplesPerSecond = 6404.9
-MPI Rank 0: 08/16/2016 09:59:44:  Epoch[ 1 of 3]-Minibatch[  51-  60, 18.75%]: CrossEntropyWithSoftmax = 3.71437689 * 640; EvalErrorPrediction = 0.86875000 * 640; time = 0.1008s; samplesPerSecond = 6348.5
-MPI Rank 0: 08/16/2016 09:59:44:  Epoch[ 1 of 3]-Minibatch[  61-  70, 21.88%]: CrossEntropyWithSoftmax = 3.42186230 * 640; EvalErrorPrediction = 0.79062500 * 640; time = 0.1001s; samplesPerSecond = 6390.9
-MPI Rank 0: 08/16/2016 09:59:44:  Epoch[ 1 of 3]-Minibatch[  71-  80, 25.00%]: CrossEntropyWithSoftmax = 3.53658053 * 640; EvalErrorPrediction = 0.82031250 * 640; time = 0.1022s; samplesPerSecond = 6262.2
-MPI Rank 0: 08/16/2016 09:59:44:  Epoch[ 1 of 3]-Minibatch[  81-  90, 28.12%]: CrossEntropyWithSoftmax = 3.49758017 * 640; EvalErrorPrediction = 0.81718750 * 640; time = 0.1031s; samplesPerSecond = 6210.3
-MPI Rank 0: 08/16/2016 09:59:44:  Epoch[ 1 of 3]-Minibatch[  91- 100, 31.25%]: CrossEntropyWithSoftmax = 3.39996308 * 640; EvalErrorPrediction = 0.80468750 * 640; time = 0.0992s; samplesPerSecond = 6454.5
-MPI Rank 0: 08/16/2016 09:59:44:  Epoch[ 1 of 3]-Minibatch[ 101- 110, 34.38%]: CrossEntropyWithSoftmax = 3.49445773 * 640; EvalErrorPrediction = 0.82500000 * 640; time = 0.0998s; samplesPerSecond = 6412.1
-MPI Rank 0: 08/16/2016 09:59:44:  Epoch[ 1 of 3]-Minibatch[ 111- 120, 37.50%]: CrossEntropyWithSoftmax = 3.26676999 * 640; EvalErrorPrediction = 0.79218750 * 640; time = 0.1006s; samplesPerSecond = 6361.3
-MPI Rank 0: 08/16/2016 09:59:45:  Epoch[ 1 of 3]-Minibatch[ 121- 130, 40.62%]: CrossEntropyWithSoftmax = 3.18870173 * 640; EvalErrorPrediction = 0.78906250 * 640; time = 0.0995s; samplesPerSecond = 6430.6
-MPI Rank 0: 08/16/2016 09:59:45:  Epoch[ 1 of 3]-Minibatch[ 131- 140, 43.75%]: CrossEntropyWithSoftmax = 3.05687264 * 640; EvalErrorPrediction = 0.74687500 * 640; time = 0.1003s; samplesPerSecond = 6379.9
-MPI Rank 0: 08/16/2016 09:59:45:  Epoch[ 1 of 3]-Minibatch[ 141- 150, 46.88%]: CrossEntropyWithSoftmax = 2.95594569 * 640; EvalErrorPrediction = 0.71875000 * 640; time = 0.0999s; samplesPerSecond = 6404.0
-MPI Rank 0: 08/16/2016 09:59:45:  Epoch[ 1 of 3]-Minibatch[ 151- 160, 50.00%]: CrossEntropyWithSoftmax = 3.10219604 * 640; EvalErrorPrediction = 0.74062500 * 640; time = 0.0992s; samplesPerSecond = 6454.3
-MPI Rank 0: 08/16/2016 09:59:45:  Epoch[ 1 of 3]-Minibatch[ 161- 170, 53.12%]: CrossEntropyWithSoftmax = 2.80745014 * 640; EvalErrorPrediction = 0.70625000 * 640; time = 0.1004s; samplesPerSecond = 6375.9
-MPI Rank 0: 08/16/2016 09:59:45:  Epoch[ 1 of 3]-Minibatch[ 171- 180, 56.25%]: CrossEntropyWithSoftmax = 2.72061842 * 640; EvalErrorPrediction = 0.65468750 * 640; time = 0.0994s; samplesPerSecond = 6435.8
-MPI Rank 0: 08/16/2016 09:59:45:  Epoch[ 1 of 3]-Minibatch[ 181- 190, 59.38%]: CrossEntropyWithSoftmax = 2.80425747 * 640; EvalErrorPrediction = 0.71718750 * 640; time = 0.1004s; samplesPerSecond = 6376.7
-MPI Rank 0: 08/16/2016 09:59:45:  Epoch[ 1 of 3]-Minibatch[ 191- 200, 62.50%]: CrossEntropyWithSoftmax = 2.71253068 * 640; EvalErrorPrediction = 0.67812500 * 640; time = 0.0998s; samplesPerSecond = 6413.0
-MPI Rank 0: 08/16/2016 09:59:45:  Epoch[ 1 of 3]-Minibatch[ 201- 210, 65.62%]: CrossEntropyWithSoftmax = 2.59360399 * 640; EvalErrorPrediction = 0.66093750 * 640; time = 0.1008s; samplesPerSecond = 6351.2
-MPI Rank 0: 08/16/2016 09:59:45:  Epoch[ 1 of 3]-Minibatch[ 211- 220, 68.75%]: CrossEntropyWithSoftmax = 2.60386649 * 640; EvalErrorPrediction = 0.65625000 * 640; time = 0.0979s; samplesPerSecond = 6538.0
-MPI Rank 0: 08/16/2016 09:59:46:  Epoch[ 1 of 3]-Minibatch[ 221- 230, 71.88%]: CrossEntropyWithSoftmax = 2.53706678 * 640; EvalErrorPrediction = 0.65625000 * 640; time = 0.0998s; samplesPerSecond = 6415.3
-MPI Rank 0: 08/16/2016 09:59:46:  Epoch[ 1 of 3]-Minibatch[ 231- 240, 75.00%]: CrossEntropyWithSoftmax = 2.56177343 * 640; EvalErrorPrediction = 0.65625000 * 640; time = 0.1005s; samplesPerSecond = 6368.9
-MPI Rank 0: 08/16/2016 09:59:46:  Epoch[ 1 of 3]-Minibatch[ 241- 250, 78.12%]: CrossEntropyWithSoftmax = 2.50118791 * 640; EvalErrorPrediction = 0.64218750 * 640; time = 0.0999s; samplesPerSecond = 6405.0
-MPI Rank 0: 08/16/2016 09:59:46:  Epoch[ 1 of 3]-Minibatch[ 251- 260, 81.25%]: CrossEntropyWithSoftmax = 2.40119788 * 640; EvalErrorPrediction = 0.62500000 * 640; time = 0.0996s; samplesPerSecond = 6427.6
-MPI Rank 0: 08/16/2016 09:59:46:  Epoch[ 1 of 3]-Minibatch[ 261- 270, 84.38%]: CrossEntropyWithSoftmax = 2.27491503 * 640; EvalErrorPrediction = 0.58906250 * 640; time = 0.0997s; samplesPerSecond = 6417.7
-MPI Rank 0: 08/16/2016 09:59:46:  Epoch[ 1 of 3]-Minibatch[ 271- 280, 87.50%]: CrossEntropyWithSoftmax = 2.51724208 * 640; EvalErrorPrediction = 0.65781250 * 640; time = 0.1002s; samplesPerSecond = 6387.7
-MPI Rank 0: 08/16/2016 09:59:46:  Epoch[ 1 of 3]-Minibatch[ 281- 290, 90.62%]: CrossEntropyWithSoftmax = 2.27797542 * 640; EvalErrorPrediction = 0.59687500 * 640; time = 0.1008s; samplesPerSecond = 6351.5
-MPI Rank 0: 08/16/2016 09:59:46:  Epoch[ 1 of 3]-Minibatch[ 291- 300, 93.75%]: CrossEntropyWithSoftmax = 2.26017740 * 640; EvalErrorPrediction = 0.60937500 * 640; time = 0.1003s; samplesPerSecond = 6382.4
-MPI Rank 0: 08/16/2016 09:59:46:  Epoch[ 1 of 3]-Minibatch[ 301- 310, 96.88%]: CrossEntropyWithSoftmax = 2.24735342 * 640; EvalErrorPrediction = 0.58437500 * 640; time = 0.1001s; samplesPerSecond = 6396.3
-MPI Rank 0: 08/16/2016 09:59:46:  Epoch[ 1 of 3]-Minibatch[ 311- 320, 100.00%]: CrossEntropyWithSoftmax = 2.23665382 * 640; EvalErrorPrediction = 0.60625000 * 640; time = 0.0991s; samplesPerSecond = 6456.1
-MPI Rank 0: 08/16/2016 09:59:46: Finished Epoch[ 1 of 3]: [Training] CrossEntropyWithSoftmax = 3.03815141 * 20480; EvalErrorPrediction = 0.73432617 * 20480; totalSamplesSeen = 20480; learningRatePerSample = 0.015625; epochTime=3.22028s
+MPI Rank 0: 08/16/2016 09:59:43:  Epoch[ 1 of 3]-Minibatch[   1-  10, 3.12%]: CrossEntropyWithSoftmax = 4.62512789 * 640; EvalClassificationError = 0.94062500 * 640; time = 0.1080s; samplesPerSecond = 5925.3
+MPI Rank 0: 08/16/2016 09:59:43:  Epoch[ 1 of 3]-Minibatch[  11-  20, 6.25%]: CrossEntropyWithSoftmax = 4.35619366 * 640; EvalClassificationError = 0.92343750 * 640; time = 0.1000s; samplesPerSecond = 6397.8
+MPI Rank 0: 08/16/2016 09:59:44:  Epoch[ 1 of 3]-Minibatch[  21-  30, 9.38%]: CrossEntropyWithSoftmax = 3.97911998 * 640; EvalClassificationError = 0.89531250 * 640; time = 0.1013s; samplesPerSecond = 6319.2
+MPI Rank 0: 08/16/2016 09:59:44:  Epoch[ 1 of 3]-Minibatch[  31-  40, 12.50%]: CrossEntropyWithSoftmax = 3.73643568 * 640; EvalClassificationError = 0.84531250 * 640; time = 0.0994s; samplesPerSecond = 6437.1
+MPI Rank 0: 08/16/2016 09:59:44:  Epoch[ 1 of 3]-Minibatch[  41-  50, 15.62%]: CrossEntropyWithSoftmax = 3.83079081 * 640; EvalClassificationError = 0.88281250 * 640; time = 0.0999s; samplesPerSecond = 6404.9
+MPI Rank 0: 08/16/2016 09:59:44:  Epoch[ 1 of 3]-Minibatch[  51-  60, 18.75%]: CrossEntropyWithSoftmax = 3.71437689 * 640; EvalClassificationError = 0.86875000 * 640; time = 0.1008s; samplesPerSecond = 6348.5
+MPI Rank 0: 08/16/2016 09:59:44:  Epoch[ 1 of 3]-Minibatch[  61-  70, 21.88%]: CrossEntropyWithSoftmax = 3.42186230 * 640; EvalClassificationError = 0.79062500 * 640; time = 0.1001s; samplesPerSecond = 6390.9
+MPI Rank 0: 08/16/2016 09:59:44:  Epoch[ 1 of 3]-Minibatch[  71-  80, 25.00%]: CrossEntropyWithSoftmax = 3.53658053 * 640; EvalClassificationError = 0.82031250 * 640; time = 0.1022s; samplesPerSecond = 6262.2
+MPI Rank 0: 08/16/2016 09:59:44:  Epoch[ 1 of 3]-Minibatch[  81-  90, 28.12%]: CrossEntropyWithSoftmax = 3.49758017 * 640; EvalClassificationError = 0.81718750 * 640; time = 0.1031s; samplesPerSecond = 6210.3
+MPI Rank 0: 08/16/2016 09:59:44:  Epoch[ 1 of 3]-Minibatch[  91- 100, 31.25%]: CrossEntropyWithSoftmax = 3.39996308 * 640; EvalClassificationError = 0.80468750 * 640; time = 0.0992s; samplesPerSecond = 6454.5
+MPI Rank 0: 08/16/2016 09:59:44:  Epoch[ 1 of 3]-Minibatch[ 101- 110, 34.38%]: CrossEntropyWithSoftmax = 3.49445773 * 640; EvalClassificationError = 0.82500000 * 640; time = 0.0998s; samplesPerSecond = 6412.1
+MPI Rank 0: 08/16/2016 09:59:44:  Epoch[ 1 of 3]-Minibatch[ 111- 120, 37.50%]: CrossEntropyWithSoftmax = 3.26676999 * 640; EvalClassificationError = 0.79218750 * 640; time = 0.1006s; samplesPerSecond = 6361.3
+MPI Rank 0: 08/16/2016 09:59:45:  Epoch[ 1 of 3]-Minibatch[ 121- 130, 40.62%]: CrossEntropyWithSoftmax = 3.18870173 * 640; EvalClassificationError = 0.78906250 * 640; time = 0.0995s; samplesPerSecond = 6430.6
+MPI Rank 0: 08/16/2016 09:59:45:  Epoch[ 1 of 3]-Minibatch[ 131- 140, 43.75%]: CrossEntropyWithSoftmax = 3.05687264 * 640; EvalClassificationError = 0.74687500 * 640; time = 0.1003s; samplesPerSecond = 6379.9
+MPI Rank 0: 08/16/2016 09:59:45:  Epoch[ 1 of 3]-Minibatch[ 141- 150, 46.88%]: CrossEntropyWithSoftmax = 2.95594569 * 640; EvalClassificationError = 0.71875000 * 640; time = 0.0999s; samplesPerSecond = 6404.0
+MPI Rank 0: 08/16/2016 09:59:45:  Epoch[ 1 of 3]-Minibatch[ 151- 160, 50.00%]: CrossEntropyWithSoftmax = 3.10219604 * 640; EvalClassificationError = 0.74062500 * 640; time = 0.0992s; samplesPerSecond = 6454.3
+MPI Rank 0: 08/16/2016 09:59:45:  Epoch[ 1 of 3]-Minibatch[ 161- 170, 53.12%]: CrossEntropyWithSoftmax = 2.80745014 * 640; EvalClassificationError = 0.70625000 * 640; time = 0.1004s; samplesPerSecond = 6375.9
+MPI Rank 0: 08/16/2016 09:59:45:  Epoch[ 1 of 3]-Minibatch[ 171- 180, 56.25%]: CrossEntropyWithSoftmax = 2.72061842 * 640; EvalClassificationError = 0.65468750 * 640; time = 0.0994s; samplesPerSecond = 6435.8
+MPI Rank 0: 08/16/2016 09:59:45:  Epoch[ 1 of 3]-Minibatch[ 181- 190, 59.38%]: CrossEntropyWithSoftmax = 2.80425747 * 640; EvalClassificationError = 0.71718750 * 640; time = 0.1004s; samplesPerSecond = 6376.7
+MPI Rank 0: 08/16/2016 09:59:45:  Epoch[ 1 of 3]-Minibatch[ 191- 200, 62.50%]: CrossEntropyWithSoftmax = 2.71253068 * 640; EvalClassificationError = 0.67812500 * 640; time = 0.0998s; samplesPerSecond = 6413.0
+MPI Rank 0: 08/16/2016 09:59:45:  Epoch[ 1 of 3]-Minibatch[ 201- 210, 65.62%]: CrossEntropyWithSoftmax = 2.59360399 * 640; EvalClassificationError = 0.66093750 * 640; time = 0.1008s; samplesPerSecond = 6351.2
+MPI Rank 0: 08/16/2016 09:59:45:  Epoch[ 1 of 3]-Minibatch[ 211- 220, 68.75%]: CrossEntropyWithSoftmax = 2.60386649 * 640; EvalClassificationError = 0.65625000 * 640; time = 0.0979s; samplesPerSecond = 6538.0
+MPI Rank 0: 08/16/2016 09:59:46:  Epoch[ 1 of 3]-Minibatch[ 221- 230, 71.88%]: CrossEntropyWithSoftmax = 2.53706678 * 640; EvalClassificationError = 0.65625000 * 640; time = 0.0998s; samplesPerSecond = 6415.3
+MPI Rank 0: 08/16/2016 09:59:46:  Epoch[ 1 of 3]-Minibatch[ 231- 240, 75.00%]: CrossEntropyWithSoftmax = 2.56177343 * 640; EvalClassificationError = 0.65625000 * 640; time = 0.1005s; samplesPerSecond = 6368.9
+MPI Rank 0: 08/16/2016 09:59:46:  Epoch[ 1 of 3]-Minibatch[ 241- 250, 78.12%]: CrossEntropyWithSoftmax = 2.50118791 * 640; EvalClassificationError = 0.64218750 * 640; time = 0.0999s; samplesPerSecond = 6405.0
+MPI Rank 0: 08/16/2016 09:59:46:  Epoch[ 1 of 3]-Minibatch[ 251- 260, 81.25%]: CrossEntropyWithSoftmax = 2.40119788 * 640; EvalClassificationError = 0.62500000 * 640; time = 0.0996s; samplesPerSecond = 6427.6
+MPI Rank 0: 08/16/2016 09:59:46:  Epoch[ 1 of 3]-Minibatch[ 261- 270, 84.38%]: CrossEntropyWithSoftmax = 2.27491503 * 640; EvalClassificationError = 0.58906250 * 640; time = 0.0997s; samplesPerSecond = 6417.7
+MPI Rank 0: 08/16/2016 09:59:46:  Epoch[ 1 of 3]-Minibatch[ 271- 280, 87.50%]: CrossEntropyWithSoftmax = 2.51724208 * 640; EvalClassificationError = 0.65781250 * 640; time = 0.1002s; samplesPerSecond = 6387.7
+MPI Rank 0: 08/16/2016 09:59:46:  Epoch[ 1 of 3]-Minibatch[ 281- 290, 90.62%]: CrossEntropyWithSoftmax = 2.27797542 * 640; EvalClassificationError = 0.59687500 * 640; time = 0.1008s; samplesPerSecond = 6351.5
+MPI Rank 0: 08/16/2016 09:59:46:  Epoch[ 1 of 3]-Minibatch[ 291- 300, 93.75%]: CrossEntropyWithSoftmax = 2.26017740 * 640; EvalClassificationError = 0.60937500 * 640; time = 0.1003s; samplesPerSecond = 6382.4
+MPI Rank 0: 08/16/2016 09:59:46:  Epoch[ 1 of 3]-Minibatch[ 301- 310, 96.88%]: CrossEntropyWithSoftmax = 2.24735342 * 640; EvalClassificationError = 0.58437500 * 640; time = 0.1001s; samplesPerSecond = 6396.3
+MPI Rank 0: 08/16/2016 09:59:46:  Epoch[ 1 of 3]-Minibatch[ 311- 320, 100.00%]: CrossEntropyWithSoftmax = 2.23665382 * 640; EvalClassificationError = 0.60625000 * 640; time = 0.0991s; samplesPerSecond = 6456.1
+MPI Rank 0: 08/16/2016 09:59:46: Finished Epoch[ 1 of 3]: [Training] CrossEntropyWithSoftmax = 3.03815141 * 20480; EvalClassificationError = 0.73432617 * 20480; totalSamplesSeen = 20480; learningRatePerSample = 0.015625; epochTime=3.22028s
 MPI Rank 0: minibatchiterator: epoch 0: frames [0..83050] (first utterance at frame 0), data subset 0 of 2, with 1 datapasses
 MPI Rank 0: requiredata: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
-MPI Rank 0: 08/16/2016 09:59:49: Final Results: Minibatch[1-1299]: CrossEntropyWithSoftmax = 2.24821047 * 83050; perplexity = 9.47077247; EvalErrorPrediction = 0.61623119 * 83050
-MPI Rank 0: 08/16/2016 09:59:49: Finished Epoch[ 1 of 3]: [Validate] CrossEntropyWithSoftmax = 2.24821047 * 83050; EvalErrorPrediction = 0.61623119 * 83050
+MPI Rank 0: 08/16/2016 09:59:49: Final Results: Minibatch[1-1299]: CrossEntropyWithSoftmax = 2.24821047 * 83050; perplexity = 9.47077247; EvalClassificationError = 0.61623119 * 83050
+MPI Rank 0: 08/16/2016 09:59:49: Finished Epoch[ 1 of 3]: [Validate] CrossEntropyWithSoftmax = 2.24821047 * 83050; EvalClassificationError = 0.61623119 * 83050
 MPI Rank 0: 08/16/2016 09:59:49: SGD: Saving checkpoint model '/tmp/cntk-test-20160816095705.492453/Speech/DNN_ParallelCrossValidation@release_gpu/models/cntkSpeech.dnn.1'
 MPI Rank 0: 
 MPI Rank 0: 08/16/2016 09:59:49: Starting Epoch 2: learning rate per sample = 0.001953  effective momentum = 0.656119  momentum as time constant = 607.5 samples
 MPI Rank 0: minibatchiterator: epoch 1: frames [20480..40960] (first utterance at frame 20480), data subset 0 of 2, with 1 datapasses
 MPI Rank 0: 
 MPI Rank 0: 08/16/2016 09:59:49: Starting minibatch loop, DataParallelSGD training (MyRank = 0, NumNodes = 2, NumGradientBits = 64), distributed reading is ENABLED.
-MPI Rank 0: 08/16/2016 09:59:49:  Epoch[ 2 of 3]-Minibatch[   1-  10, 12.50%]: CrossEntropyWithSoftmax = 2.13894071 * 2560; EvalErrorPrediction = 0.56992188 * 2560; time = 0.1288s; samplesPerSecond = 19871.6
-MPI Rank 0: 08/16/2016 09:59:49:  Epoch[ 2 of 3]-Minibatch[  11-  20, 25.00%]: CrossEntropyWithSoftmax = 2.06106261 * 2560; EvalErrorPrediction = 0.55664062 * 2560; time = 0.1249s; samplesPerSecond = 20497.2
-MPI Rank 0: 08/16/2016 09:59:49:  Epoch[ 2 of 3]-Minibatch[  21-  30, 37.50%]: CrossEntropyWithSoftmax = 2.04459475 * 2560; EvalErrorPrediction = 0.55039063 * 2560; time = 0.1248s; samplesPerSecond = 20516.8
-MPI Rank 0: 08/16/2016 09:59:49:  Epoch[ 2 of 3]-Minibatch[  31-  40, 50.00%]: CrossEntropyWithSoftmax = 2.03347291 * 2560; EvalErrorPrediction = 0.55742187 * 2560; time = 0.1270s; samplesPerSecond = 20161.6
-MPI Rank 0: 08/16/2016 09:59:49:  Epoch[ 2 of 3]-Minibatch[  41-  50, 62.50%]: CrossEntropyWithSoftmax = 2.02079287 * 2560; EvalErrorPrediction = 0.54414063 * 2560; time = 0.1266s; samplesPerSecond = 20219.3
-MPI Rank 0: 08/16/2016 09:59:49:  Epoch[ 2 of 3]-Minibatch[  51-  60, 75.00%]: CrossEntropyWithSoftmax = 1.96950012 * 2560; EvalErrorPrediction = 0.53085938 * 2560; time = 0.1269s; samplesPerSecond = 20173.8
-MPI Rank 0: 08/16/2016 09:59:50:  Epoch[ 2 of 3]-Minibatch[  61-  70, 87.50%]: CrossEntropyWithSoftmax = 1.95934862 * 2560; EvalErrorPrediction = 0.52812500 * 2560; time = 0.1253s; samplesPerSecond = 20432.8
-MPI Rank 0: 08/16/2016 09:59:50:  Epoch[ 2 of 3]-Minibatch[  71-  80, 100.00%]: CrossEntropyWithSoftmax = 1.94070839 * 2560; EvalErrorPrediction = 0.53125000 * 2560; time = 0.1236s; samplesPerSecond = 20704.9
-MPI Rank 0: 08/16/2016 09:59:50: Finished Epoch[ 2 of 3]: [Training] CrossEntropyWithSoftmax = 2.02105262 * 20480; EvalErrorPrediction = 0.54609375 * 20480; totalSamplesSeen = 40960; learningRatePerSample = 0.001953125; epochTime=1.01496s
+MPI Rank 0: 08/16/2016 09:59:49:  Epoch[ 2 of 3]-Minibatch[   1-  10, 12.50%]: CrossEntropyWithSoftmax = 2.13894071 * 2560; EvalClassificationError = 0.56992188 * 2560; time = 0.1288s; samplesPerSecond = 19871.6
+MPI Rank 0: 08/16/2016 09:59:49:  Epoch[ 2 of 3]-Minibatch[  11-  20, 25.00%]: CrossEntropyWithSoftmax = 2.06106261 * 2560; EvalClassificationError = 0.55664062 * 2560; time = 0.1249s; samplesPerSecond = 20497.2
+MPI Rank 0: 08/16/2016 09:59:49:  Epoch[ 2 of 3]-Minibatch[  21-  30, 37.50%]: CrossEntropyWithSoftmax = 2.04459475 * 2560; EvalClassificationError = 0.55039063 * 2560; time = 0.1248s; samplesPerSecond = 20516.8
+MPI Rank 0: 08/16/2016 09:59:49:  Epoch[ 2 of 3]-Minibatch[  31-  40, 50.00%]: CrossEntropyWithSoftmax = 2.03347291 * 2560; EvalClassificationError = 0.55742187 * 2560; time = 0.1270s; samplesPerSecond = 20161.6
+MPI Rank 0: 08/16/2016 09:59:49:  Epoch[ 2 of 3]-Minibatch[  41-  50, 62.50%]: CrossEntropyWithSoftmax = 2.02079287 * 2560; EvalClassificationError = 0.54414063 * 2560; time = 0.1266s; samplesPerSecond = 20219.3
+MPI Rank 0: 08/16/2016 09:59:49:  Epoch[ 2 of 3]-Minibatch[  51-  60, 75.00%]: CrossEntropyWithSoftmax = 1.96950012 * 2560; EvalClassificationError = 0.53085938 * 2560; time = 0.1269s; samplesPerSecond = 20173.8
+MPI Rank 0: 08/16/2016 09:59:50:  Epoch[ 2 of 3]-Minibatch[  61-  70, 87.50%]: CrossEntropyWithSoftmax = 1.95934862 * 2560; EvalClassificationError = 0.52812500 * 2560; time = 0.1253s; samplesPerSecond = 20432.8
+MPI Rank 0: 08/16/2016 09:59:50:  Epoch[ 2 of 3]-Minibatch[  71-  80, 100.00%]: CrossEntropyWithSoftmax = 1.94070839 * 2560; EvalClassificationError = 0.53125000 * 2560; time = 0.1236s; samplesPerSecond = 20704.9
+MPI Rank 0: 08/16/2016 09:59:50: Finished Epoch[ 2 of 3]: [Training] CrossEntropyWithSoftmax = 2.02105262 * 20480; EvalClassificationError = 0.54609375 * 20480; totalSamplesSeen = 40960; learningRatePerSample = 0.001953125; epochTime=1.01496s
 MPI Rank 0: minibatchiterator: epoch 0: frames [0..83050] (first utterance at frame 0), data subset 0 of 2, with 1 datapasses
-MPI Rank 0: 08/16/2016 09:59:51: Final Results: Minibatch[1-326]: CrossEntropyWithSoftmax = 1.92733488 * 83050; perplexity = 6.87117331; EvalErrorPrediction = 0.53122216 * 83050
-MPI Rank 0: 08/16/2016 09:59:51: Finished Epoch[ 2 of 3]: [Validate] CrossEntropyWithSoftmax = 1.92733488 * 83050; EvalErrorPrediction = 0.53122216 * 83050
+MPI Rank 0: 08/16/2016 09:59:51: Final Results: Minibatch[1-326]: CrossEntropyWithSoftmax = 1.92733488 * 83050; perplexity = 6.87117331; EvalClassificationError = 0.53122216 * 83050
+MPI Rank 0: 08/16/2016 09:59:51: Finished Epoch[ 2 of 3]: [Validate] CrossEntropyWithSoftmax = 1.92733488 * 83050; EvalClassificationError = 0.53122216 * 83050
 MPI Rank 0: 08/16/2016 09:59:51: SGD: Saving checkpoint model '/tmp/cntk-test-20160816095705.492453/Speech/DNN_ParallelCrossValidation@release_gpu/models/cntkSpeech.dnn.2'
 MPI Rank 0: 
 MPI Rank 0: 08/16/2016 09:59:51: Starting Epoch 3: learning rate per sample = 0.000098  effective momentum = 0.656119  momentum as time constant = 2429.9 samples
 MPI Rank 0: minibatchiterator: epoch 2: frames [40960..61440] (first utterance at frame 40960), data subset 0 of 2, with 1 datapasses
 MPI Rank 0: 
 MPI Rank 0: 08/16/2016 09:59:51: Starting minibatch loop, DataParallelSGD training (MyRank = 0, NumNodes = 2, NumGradientBits = 64), distributed reading is ENABLED.
-MPI Rank 0: 08/16/2016 09:59:51:  Epoch[ 3 of 3]-Minibatch[   1-  10, 50.00%]: CrossEntropyWithSoftmax = 1.94336419 * 10240; EvalErrorPrediction = 0.53056641 * 10240; time = 0.2783s; samplesPerSecond = 36788.6
-MPI Rank 0: 08/16/2016 09:59:51:  Epoch[ 3 of 3]-Minibatch[  11-  20, 100.00%]: CrossEntropyWithSoftmax = 1.96525554 * 10240; EvalErrorPrediction = 0.54873047 * 10240; time = 0.2723s; samplesPerSecond = 37610.7
-MPI Rank 0: 08/16/2016 09:59:51: Finished Epoch[ 3 of 3]: [Training] CrossEntropyWithSoftmax = 1.95430987 * 20480; EvalErrorPrediction = 0.53964844 * 20480; totalSamplesSeen = 61440; learningRatePerSample = 9.7656251e-05; epochTime=0.560004s
+MPI Rank 0: 08/16/2016 09:59:51:  Epoch[ 3 of 3]-Minibatch[   1-  10, 50.00%]: CrossEntropyWithSoftmax = 1.94336419 * 10240; EvalClassificationError = 0.53056641 * 10240; time = 0.2783s; samplesPerSecond = 36788.6
+MPI Rank 0: 08/16/2016 09:59:51:  Epoch[ 3 of 3]-Minibatch[  11-  20, 100.00%]: CrossEntropyWithSoftmax = 1.96525554 * 10240; EvalClassificationError = 0.54873047 * 10240; time = 0.2723s; samplesPerSecond = 37610.7
+MPI Rank 0: 08/16/2016 09:59:51: Finished Epoch[ 3 of 3]: [Training] CrossEntropyWithSoftmax = 1.95430987 * 20480; EvalClassificationError = 0.53964844 * 20480; totalSamplesSeen = 61440; learningRatePerSample = 9.7656251e-05; epochTime=0.560004s
 MPI Rank 0: minibatchiterator: epoch 0: frames [0..83050] (first utterance at frame 0), data subset 0 of 2, with 1 datapasses
-MPI Rank 0: 08/16/2016 09:59:52: Final Results: Minibatch[1-83]: CrossEntropyWithSoftmax = 1.90639119 * 83050; perplexity = 6.72876207; EvalErrorPrediction = 0.52304636 * 83050
-MPI Rank 0: 08/16/2016 09:59:52: Finished Epoch[ 3 of 3]: [Validate] CrossEntropyWithSoftmax = 1.90639119 * 83050; EvalErrorPrediction = 0.52304636 * 83050
+MPI Rank 0: 08/16/2016 09:59:52: Final Results: Minibatch[1-83]: CrossEntropyWithSoftmax = 1.90639119 * 83050; perplexity = 6.72876207; EvalClassificationError = 0.52304636 * 83050
+MPI Rank 0: 08/16/2016 09:59:52: Finished Epoch[ 3 of 3]: [Validate] CrossEntropyWithSoftmax = 1.90639119 * 83050; EvalClassificationError = 0.52304636 * 83050
 MPI Rank 0: 08/16/2016 09:59:52: SGD: Saving checkpoint model '/tmp/cntk-test-20160816095705.492453/Speech/DNN_ParallelCrossValidation@release_gpu/models/cntkSpeech.dnn'
 MPI Rank 0: 08/16/2016 09:59:52: CNTKCommandTrainEnd: speechTrain
 MPI Rank 0: 
@@ -732,7 +732,7 @@ MPI Rank 1:     traceLevel = 1
 MPI Rank 1:     SimpleNetworkBuilder = [
 MPI Rank 1:         layerSizes = 363:512:512:132
 MPI Rank 1:         trainingCriterion = "CrossEntropyWithSoftmax"
-MPI Rank 1:         evalCriterion = "ErrorPrediction"
+MPI Rank 1:         evalCriterion = "ClassificationError"
 MPI Rank 1:         layerTypes = "Sigmoid"
 MPI Rank 1:         initValueScale = 1.0
 MPI Rank 1:         applyMeanVarNorm = true
@@ -758,7 +758,7 @@ MPI Rank 1:         CE = if trainingCriterion == 'CE'
 MPI Rank 1:              then CrossEntropyWithSoftmax(labels, outZ, tag='criterion')
 MPI Rank 1:              else Fail('unknown trainingCriterion ' + trainingCriterion)
 MPI Rank 1:         Err = if evalCriterion == 'Err' then
-MPI Rank 1:               ErrorPrediction(labels, outZ, tag='eval')
+MPI Rank 1:               ClassificationError(labels, outZ, tag='eval')
 MPI Rank 1:               else Fail('unknown evalCriterion ' + evalCriterion)
 MPI Rank 1:         logPrior = LogPrior(labels)
 MPI Rank 1:         // TODO: how to add a tag to an infix operation?
@@ -855,7 +855,7 @@ MPI Rank 1:     traceLevel = 1
 MPI Rank 1:     SimpleNetworkBuilder = [
 MPI Rank 1:         layerSizes = 363:512:512:132
 MPI Rank 1:         trainingCriterion = "CrossEntropyWithSoftmax"
-MPI Rank 1:         evalCriterion = "ErrorPrediction"
+MPI Rank 1:         evalCriterion = "ClassificationError"
 MPI Rank 1:         layerTypes = "Sigmoid"
 MPI Rank 1:         initValueScale = 1.0
 MPI Rank 1:         applyMeanVarNorm = true
@@ -881,7 +881,7 @@ MPI Rank 1:         CE = if trainingCriterion == 'CE'
 MPI Rank 1:              then CrossEntropyWithSoftmax(labels, outZ, tag='criterion')
 MPI Rank 1:              else Fail('unknown trainingCriterion ' + trainingCriterion)
 MPI Rank 1:         Err = if evalCriterion == 'Err' then
-MPI Rank 1:               ErrorPrediction(labels, outZ, tag='eval')
+MPI Rank 1:               ClassificationError(labels, outZ, tag='eval')
 MPI Rank 1:               else Fail('unknown evalCriterion ' + evalCriterion)
 MPI Rank 1:         logPrior = LogPrior(labels)
 MPI Rank 1:         // TODO: how to add a tag to an infix operation?
@@ -985,7 +985,7 @@ MPI Rank 1:     traceLevel = 1
 MPI Rank 1:     SimpleNetworkBuilder = [
 MPI Rank 1:         layerSizes = 363:512:512:132
 MPI Rank 1:         trainingCriterion = "CrossEntropyWithSoftmax"
-MPI Rank 1:         evalCriterion = "ErrorPrediction"
+MPI Rank 1:         evalCriterion = "ClassificationError"
 MPI Rank 1:         layerTypes = "Sigmoid"
 MPI Rank 1:         initValueScale = 1.0
 MPI Rank 1:         applyMeanVarNorm = true
@@ -1011,7 +1011,7 @@ MPI Rank 1:         CE = if trainingCriterion == 'CE'
 MPI Rank 1:              then CrossEntropyWithSoftmax(labels, outZ, tag='criterion')
 MPI Rank 1:              else Fail('unknown trainingCriterion ' + trainingCriterion)
 MPI Rank 1:         Err = if evalCriterion == 'Err' then
-MPI Rank 1:               ErrorPrediction(labels, outZ, tag='eval')
+MPI Rank 1:               ClassificationError(labels, outZ, tag='eval')
 MPI Rank 1:               else Fail('unknown evalCriterion ' + evalCriterion)
 MPI Rank 1:         logPrior = LogPrior(labels)
 MPI Rank 1:         // TODO: how to add a tag to an infix operation?
@@ -1133,7 +1133,7 @@ MPI Rank 1: Post-processing network...
 MPI Rank 1: 
 MPI Rank 1: 7 roots:
 MPI Rank 1: 	CrossEntropyWithSoftmax = CrossEntropyWithSoftmax()
-MPI Rank 1: 	EvalErrorPrediction = ErrorPrediction()
+MPI Rank 1: 	EvalClassificationError = ClassificationError()
 MPI Rank 1: 	InvStdOfFeatures = InvStdDev()
 MPI Rank 1: 	MeanOfFeatures = Mean()
 MPI Rank 1: 	PosteriorProb = Softmax()
@@ -1162,7 +1162,7 @@ MPI Rank 1: Validating --> W2*H1 = Times (W2, H2) : [132 x 512], [512 x 1 x *] -
 MPI Rank 1: Validating --> B2 = LearnableParameter() :  -> [132 x 1]
 MPI Rank 1: Validating --> HLast = Plus (W2*H1, B2) : [132 x 1 x *], [132 x 1] -> [132 x 1 x *]
 MPI Rank 1: Validating --> CrossEntropyWithSoftmax = CrossEntropyWithSoftmax (labels, HLast) : [132 x *], [132 x 1 x *] -> [1]
-MPI Rank 1: Validating --> EvalErrorPrediction = ErrorPrediction (labels, HLast) : [132 x *], [132 x 1 x *] -> [1]
+MPI Rank 1: Validating --> EvalClassificationError = ClassificationError (labels, HLast) : [132 x *], [132 x 1 x *] -> [1]
 MPI Rank 1: Validating --> PosteriorProb = Softmax (HLast) : [132 x 1 x *] -> [132 x 1 x *]
 MPI Rank 1: Validating --> Prior = Mean (labels) : [132 x *] -> [132]
 MPI Rank 1: Validating --> LogOfPrior = Log (Prior) : [132] -> [132]
@@ -1185,7 +1185,7 @@ MPI Rank 1: 08/16/2016 09:59:41: Training criterion node(s):
 MPI Rank 1: 08/16/2016 09:59:41: 	CrossEntropyWithSoftmax = CrossEntropyWithSoftmax
 MPI Rank 1: 
 MPI Rank 1: 08/16/2016 09:59:41: Evaluation criterion node(s):
-MPI Rank 1: 08/16/2016 09:59:41: 	EvalErrorPrediction = ErrorPrediction
+MPI Rank 1: 08/16/2016 09:59:41: 	EvalClassificationError = ClassificationError
 MPI Rank 1: 
 MPI Rank 1: 
 MPI Rank 1: Allocating matrices for forward and/or backward propagation.
@@ -1240,70 +1240,70 @@ MPI Rank 1: 08/16/2016 09:59:43: Starting Epoch 1: learning rate per sample = 0.
 MPI Rank 1: minibatchiterator: epoch 0: frames [0..20480] (first utterance at frame 0), data subset 1 of 2, with 1 datapasses
 MPI Rank 1: 
 MPI Rank 1: 08/16/2016 09:59:43: Starting minibatch loop, DataParallelSGD training (MyRank = 1, NumNodes = 2, NumGradientBits = 64), distributed reading is ENABLED.
-MPI Rank 1: 08/16/2016 09:59:43:  Epoch[ 1 of 3]-Minibatch[   1-  10, 3.12%]: CrossEntropyWithSoftmax = 4.62512789 * 640; EvalErrorPrediction = 0.94062500 * 640; time = 0.1079s; samplesPerSecond = 5931.0
-MPI Rank 1: 08/16/2016 09:59:43:  Epoch[ 1 of 3]-Minibatch[  11-  20, 6.25%]: CrossEntropyWithSoftmax = 4.35619366 * 640; EvalErrorPrediction = 0.92343750 * 640; time = 0.1000s; samplesPerSecond = 6401.4
-MPI Rank 1: 08/16/2016 09:59:44:  Epoch[ 1 of 3]-Minibatch[  21-  30, 9.38%]: CrossEntropyWithSoftmax = 3.97911998 * 640; EvalErrorPrediction = 0.89531250 * 640; time = 0.1012s; samplesPerSecond = 6325.5
-MPI Rank 1: 08/16/2016 09:59:44:  Epoch[ 1 of 3]-Minibatch[  31-  40, 12.50%]: CrossEntropyWithSoftmax = 3.73643568 * 640; EvalErrorPrediction = 0.84531250 * 640; time = 0.0994s; samplesPerSecond = 6435.8
-MPI Rank 1: 08/16/2016 09:59:44:  Epoch[ 1 of 3]-Minibatch[  41-  50, 15.62%]: CrossEntropyWithSoftmax = 3.83079081 * 640; EvalErrorPrediction = 0.88281250 * 640; time = 0.0999s; samplesPerSecond = 6408.6
-MPI Rank 1: 08/16/2016 09:59:44:  Epoch[ 1 of 3]-Minibatch[  51-  60, 18.75%]: CrossEntropyWithSoftmax = 3.71437689 * 640; EvalErrorPrediction = 0.86875000 * 640; time = 0.1008s; samplesPerSecond = 6351.6
-MPI Rank 1: 08/16/2016 09:59:44:  Epoch[ 1 of 3]-Minibatch[  61-  70, 21.88%]: CrossEntropyWithSoftmax = 3.42186230 * 640; EvalErrorPrediction = 0.79062500 * 640; time = 0.1001s; samplesPerSecond = 6394.2
-MPI Rank 1: 08/16/2016 09:59:44:  Epoch[ 1 of 3]-Minibatch[  71-  80, 25.00%]: CrossEntropyWithSoftmax = 3.53658053 * 640; EvalErrorPrediction = 0.82031250 * 640; time = 0.1022s; samplesPerSecond = 6262.5
-MPI Rank 1: 08/16/2016 09:59:44:  Epoch[ 1 of 3]-Minibatch[  81-  90, 28.12%]: CrossEntropyWithSoftmax = 3.49758017 * 640; EvalErrorPrediction = 0.81718750 * 640; time = 0.1030s; samplesPerSecond = 6214.2
-MPI Rank 1: 08/16/2016 09:59:44:  Epoch[ 1 of 3]-Minibatch[  91- 100, 31.25%]: CrossEntropyWithSoftmax = 3.39996308 * 640; EvalErrorPrediction = 0.80468750 * 640; time = 0.0991s; samplesPerSecond = 6457.4
-MPI Rank 1: 08/16/2016 09:59:44:  Epoch[ 1 of 3]-Minibatch[ 101- 110, 34.38%]: CrossEntropyWithSoftmax = 3.49445773 * 640; EvalErrorPrediction = 0.82500000 * 640; time = 0.0998s; samplesPerSecond = 6415.0
-MPI Rank 1: 08/16/2016 09:59:44:  Epoch[ 1 of 3]-Minibatch[ 111- 120, 37.50%]: CrossEntropyWithSoftmax = 3.26676999 * 640; EvalErrorPrediction = 0.79218750 * 640; time = 0.1005s; samplesPerSecond = 6365.1
-MPI Rank 1: 08/16/2016 09:59:45:  Epoch[ 1 of 3]-Minibatch[ 121- 130, 40.62%]: CrossEntropyWithSoftmax = 3.18870173 * 640; EvalErrorPrediction = 0.78906250 * 640; time = 0.0994s; samplesPerSecond = 6435.5
-MPI Rank 1: 08/16/2016 09:59:45:  Epoch[ 1 of 3]-Minibatch[ 131- 140, 43.75%]: CrossEntropyWithSoftmax = 3.05687264 * 640; EvalErrorPrediction = 0.74687500 * 640; time = 0.1003s; samplesPerSecond = 6382.7
-MPI Rank 1: 08/16/2016 09:59:45:  Epoch[ 1 of 3]-Minibatch[ 141- 150, 46.88%]: CrossEntropyWithSoftmax = 2.95594569 * 640; EvalErrorPrediction = 0.71875000 * 640; time = 0.0999s; samplesPerSecond = 6407.5
-MPI Rank 1: 08/16/2016 09:59:45:  Epoch[ 1 of 3]-Minibatch[ 151- 160, 50.00%]: CrossEntropyWithSoftmax = 3.10219604 * 640; EvalErrorPrediction = 0.74062500 * 640; time = 0.0991s; samplesPerSecond = 6457.9
-MPI Rank 1: 08/16/2016 09:59:45:  Epoch[ 1 of 3]-Minibatch[ 161- 170, 53.12%]: CrossEntropyWithSoftmax = 2.80745014 * 640; EvalErrorPrediction = 0.70625000 * 640; time = 0.1003s; samplesPerSecond = 6380.4
-MPI Rank 1: 08/16/2016 09:59:45:  Epoch[ 1 of 3]-Minibatch[ 171- 180, 56.25%]: CrossEntropyWithSoftmax = 2.72061842 * 640; EvalErrorPrediction = 0.65468750 * 640; time = 0.0994s; samplesPerSecond = 6437.5
-MPI Rank 1: 08/16/2016 09:59:45:  Epoch[ 1 of 3]-Minibatch[ 181- 190, 59.38%]: CrossEntropyWithSoftmax = 2.80425747 * 640; EvalErrorPrediction = 0.71718750 * 640; time = 0.1003s; samplesPerSecond = 6383.1
-MPI Rank 1: 08/16/2016 09:59:45:  Epoch[ 1 of 3]-Minibatch[ 191- 200, 62.50%]: CrossEntropyWithSoftmax = 2.71253068 * 640; EvalErrorPrediction = 0.67812500 * 640; time = 0.0998s; samplesPerSecond = 6411.1
-MPI Rank 1: 08/16/2016 09:59:45:  Epoch[ 1 of 3]-Minibatch[ 201- 210, 65.62%]: CrossEntropyWithSoftmax = 2.59360399 * 640; EvalErrorPrediction = 0.66093750 * 640; time = 0.1007s; samplesPerSecond = 6354.6
-MPI Rank 1: 08/16/2016 09:59:45:  Epoch[ 1 of 3]-Minibatch[ 211- 220, 68.75%]: CrossEntropyWithSoftmax = 2.60386649 * 640; EvalErrorPrediction = 0.65625000 * 640; time = 0.0978s; samplesPerSecond = 6543.0
-MPI Rank 1: 08/16/2016 09:59:46:  Epoch[ 1 of 3]-Minibatch[ 221- 230, 71.88%]: CrossEntropyWithSoftmax = 2.53706678 * 640; EvalErrorPrediction = 0.65625000 * 640; time = 0.0997s; samplesPerSecond = 6416.4
-MPI Rank 1: 08/16/2016 09:59:46:  Epoch[ 1 of 3]-Minibatch[ 231- 240, 75.00%]: CrossEntropyWithSoftmax = 2.56177343 * 640; EvalErrorPrediction = 0.65625000 * 640; time = 0.1004s; samplesPerSecond = 6374.1
-MPI Rank 1: 08/16/2016 09:59:46:  Epoch[ 1 of 3]-Minibatch[ 241- 250, 78.12%]: CrossEntropyWithSoftmax = 2.50118791 * 640; EvalErrorPrediction = 0.64218750 * 640; time = 0.0999s; samplesPerSecond = 6409.4
-MPI Rank 1: 08/16/2016 09:59:46:  Epoch[ 1 of 3]-Minibatch[ 251- 260, 81.25%]: CrossEntropyWithSoftmax = 2.40119788 * 640; EvalErrorPrediction = 0.62500000 * 640; time = 0.0995s; samplesPerSecond = 6429.1
-MPI Rank 1: 08/16/2016 09:59:46:  Epoch[ 1 of 3]-Minibatch[ 261- 270, 84.38%]: CrossEntropyWithSoftmax = 2.27491503 * 640; EvalErrorPrediction = 0.58906250 * 640; time = 0.0997s; samplesPerSecond = 6421.6
-MPI Rank 1: 08/16/2016 09:59:46:  Epoch[ 1 of 3]-Minibatch[ 271- 280, 87.50%]: CrossEntropyWithSoftmax = 2.51724208 * 640; EvalErrorPrediction = 0.65781250 * 640; time = 0.1001s; samplesPerSecond = 6391.1
-MPI Rank 1: 08/16/2016 09:59:46:  Epoch[ 1 of 3]-Minibatch[ 281- 290, 90.62%]: CrossEntropyWithSoftmax = 2.27797542 * 640; EvalErrorPrediction = 0.59687500 * 640; time = 0.1007s; samplesPerSecond = 6355.2
-MPI Rank 1: 08/16/2016 09:59:46:  Epoch[ 1 of 3]-Minibatch[ 291- 300, 93.75%]: CrossEntropyWithSoftmax = 2.26017740 * 640; EvalErrorPrediction = 0.60937500 * 640; time = 0.1002s; samplesPerSecond = 6386.8
-MPI Rank 1: 08/16/2016 09:59:46:  Epoch[ 1 of 3]-Minibatch[ 301- 310, 96.88%]: CrossEntropyWithSoftmax = 2.24735342 * 640; EvalErrorPrediction = 0.58437500 * 640; time = 0.1000s; samplesPerSecond = 6398.9
-MPI Rank 1: 08/16/2016 09:59:46:  Epoch[ 1 of 3]-Minibatch[ 311- 320, 100.00%]: CrossEntropyWithSoftmax = 2.23665382 * 640; EvalErrorPrediction = 0.60625000 * 640; time = 0.0991s; samplesPerSecond = 6459.2
-MPI Rank 1: 08/16/2016 09:59:46: Finished Epoch[ 1 of 3]: [Training] CrossEntropyWithSoftmax = 3.03815141 * 20480; EvalErrorPrediction = 0.73432617 * 20480; totalSamplesSeen = 20480; learningRatePerSample = 0.015625; epochTime=3.22015s
+MPI Rank 1: 08/16/2016 09:59:43:  Epoch[ 1 of 3]-Minibatch[   1-  10, 3.12%]: CrossEntropyWithSoftmax = 4.62512789 * 640; EvalClassificationError = 0.94062500 * 640; time = 0.1079s; samplesPerSecond = 5931.0
+MPI Rank 1: 08/16/2016 09:59:43:  Epoch[ 1 of 3]-Minibatch[  11-  20, 6.25%]: CrossEntropyWithSoftmax = 4.35619366 * 640; EvalClassificationError = 0.92343750 * 640; time = 0.1000s; samplesPerSecond = 6401.4
+MPI Rank 1: 08/16/2016 09:59:44:  Epoch[ 1 of 3]-Minibatch[  21-  30, 9.38%]: CrossEntropyWithSoftmax = 3.97911998 * 640; EvalClassificationError = 0.89531250 * 640; time = 0.1012s; samplesPerSecond = 6325.5
+MPI Rank 1: 08/16/2016 09:59:44:  Epoch[ 1 of 3]-Minibatch[  31-  40, 12.50%]: CrossEntropyWithSoftmax = 3.73643568 * 640; EvalClassificationError = 0.84531250 * 640; time = 0.0994s; samplesPerSecond = 6435.8
+MPI Rank 1: 08/16/2016 09:59:44:  Epoch[ 1 of 3]-Minibatch[  41-  50, 15.62%]: CrossEntropyWithSoftmax = 3.83079081 * 640; EvalClassificationError = 0.88281250 * 640; time = 0.0999s; samplesPerSecond = 6408.6
+MPI Rank 1: 08/16/2016 09:59:44:  Epoch[ 1 of 3]-Minibatch[  51-  60, 18.75%]: CrossEntropyWithSoftmax = 3.71437689 * 640; EvalClassificationError = 0.86875000 * 640; time = 0.1008s; samplesPerSecond = 6351.6
+MPI Rank 1: 08/16/2016 09:59:44:  Epoch[ 1 of 3]-Minibatch[  61-  70, 21.88%]: CrossEntropyWithSoftmax = 3.42186230 * 640; EvalClassificationError = 0.79062500 * 640; time = 0.1001s; samplesPerSecond = 6394.2
+MPI Rank 1: 08/16/2016 09:59:44:  Epoch[ 1 of 3]-Minibatch[  71-  80, 25.00%]: CrossEntropyWithSoftmax = 3.53658053 * 640; EvalClassificationError = 0.82031250 * 640; time = 0.1022s; samplesPerSecond = 6262.5
+MPI Rank 1: 08/16/2016 09:59:44:  Epoch[ 1 of 3]-Minibatch[  81-  90, 28.12%]: CrossEntropyWithSoftmax = 3.49758017 * 640; EvalClassificationError = 0.81718750 * 640; time = 0.1030s; samplesPerSecond = 6214.2
+MPI Rank 1: 08/16/2016 09:59:44:  Epoch[ 1 of 3]-Minibatch[  91- 100, 31.25%]: CrossEntropyWithSoftmax = 3.39996308 * 640; EvalClassificationError = 0.80468750 * 640; time = 0.0991s; samplesPerSecond = 6457.4
+MPI Rank 1: 08/16/2016 09:59:44:  Epoch[ 1 of 3]-Minibatch[ 101- 110, 34.38%]: CrossEntropyWithSoftmax = 3.49445773 * 640; EvalClassificationError = 0.82500000 * 640; time = 0.0998s; samplesPerSecond = 6415.0
+MPI Rank 1: 08/16/2016 09:59:44:  Epoch[ 1 of 3]-Minibatch[ 111- 120, 37.50%]: CrossEntropyWithSoftmax = 3.26676999 * 640; EvalClassificationError = 0.79218750 * 640; time = 0.1005s; samplesPerSecond = 6365.1
+MPI Rank 1: 08/16/2016 09:59:45:  Epoch[ 1 of 3]-Minibatch[ 121- 130, 40.62%]: CrossEntropyWithSoftmax = 3.18870173 * 640; EvalClassificationError = 0.78906250 * 640; time = 0.0994s; samplesPerSecond = 6435.5
+MPI Rank 1: 08/16/2016 09:59:45:  Epoch[ 1 of 3]-Minibatch[ 131- 140, 43.75%]: CrossEntropyWithSoftmax = 3.05687264 * 640; EvalClassificationError = 0.74687500 * 640; time = 0.1003s; samplesPerSecond = 6382.7
+MPI Rank 1: 08/16/2016 09:59:45:  Epoch[ 1 of 3]-Minibatch[ 141- 150, 46.88%]: CrossEntropyWithSoftmax = 2.95594569 * 640; EvalClassificationError = 0.71875000 * 640; time = 0.0999s; samplesPerSecond = 6407.5
+MPI Rank 1: 08/16/2016 09:59:45:  Epoch[ 1 of 3]-Minibatch[ 151- 160, 50.00%]: CrossEntropyWithSoftmax = 3.10219604 * 640; EvalClassificationError = 0.74062500 * 640; time = 0.0991s; samplesPerSecond = 6457.9
+MPI Rank 1: 08/16/2016 09:59:45:  Epoch[ 1 of 3]-Minibatch[ 161- 170, 53.12%]: CrossEntropyWithSoftmax = 2.80745014 * 640; EvalClassificationError = 0.70625000 * 640; time = 0.1003s; samplesPerSecond = 6380.4
+MPI Rank 1: 08/16/2016 09:59:45:  Epoch[ 1 of 3]-Minibatch[ 171- 180, 56.25%]: CrossEntropyWithSoftmax = 2.72061842 * 640; EvalClassificationError = 0.65468750 * 640; time = 0.0994s; samplesPerSecond = 6437.5
+MPI Rank 1: 08/16/2016 09:59:45:  Epoch[ 1 of 3]-Minibatch[ 181- 190, 59.38%]: CrossEntropyWithSoftmax = 2.80425747 * 640; EvalClassificationError = 0.71718750 * 640; time = 0.1003s; samplesPerSecond = 6383.1
+MPI Rank 1: 08/16/2016 09:59:45:  Epoch[ 1 of 3]-Minibatch[ 191- 200, 62.50%]: CrossEntropyWithSoftmax = 2.71253068 * 640; EvalClassificationError = 0.67812500 * 640; time = 0.0998s; samplesPerSecond = 6411.1
+MPI Rank 1: 08/16/2016 09:59:45:  Epoch[ 1 of 3]-Minibatch[ 201- 210, 65.62%]: CrossEntropyWithSoftmax = 2.59360399 * 640; EvalClassificationError = 0.66093750 * 640; time = 0.1007s; samplesPerSecond = 6354.6
+MPI Rank 1: 08/16/2016 09:59:45:  Epoch[ 1 of 3]-Minibatch[ 211- 220, 68.75%]: CrossEntropyWithSoftmax = 2.60386649 * 640; EvalClassificationError = 0.65625000 * 640; time = 0.0978s; samplesPerSecond = 6543.0
+MPI Rank 1: 08/16/2016 09:59:46:  Epoch[ 1 of 3]-Minibatch[ 221- 230, 71.88%]: CrossEntropyWithSoftmax = 2.53706678 * 640; EvalClassificationError = 0.65625000 * 640; time = 0.0997s; samplesPerSecond = 6416.4
+MPI Rank 1: 08/16/2016 09:59:46:  Epoch[ 1 of 3]-Minibatch[ 231- 240, 75.00%]: CrossEntropyWithSoftmax = 2.56177343 * 640; EvalClassificationError = 0.65625000 * 640; time = 0.1004s; samplesPerSecond = 6374.1
+MPI Rank 1: 08/16/2016 09:59:46:  Epoch[ 1 of 3]-Minibatch[ 241- 250, 78.12%]: CrossEntropyWithSoftmax = 2.50118791 * 640; EvalClassificationError = 0.64218750 * 640; time = 0.0999s; samplesPerSecond = 6409.4
+MPI Rank 1: 08/16/2016 09:59:46:  Epoch[ 1 of 3]-Minibatch[ 251- 260, 81.25%]: CrossEntropyWithSoftmax = 2.40119788 * 640; EvalClassificationError = 0.62500000 * 640; time = 0.0995s; samplesPerSecond = 6429.1
+MPI Rank 1: 08/16/2016 09:59:46:  Epoch[ 1 of 3]-Minibatch[ 261- 270, 84.38%]: CrossEntropyWithSoftmax = 2.27491503 * 640; EvalClassificationError = 0.58906250 * 640; time = 0.0997s; samplesPerSecond = 6421.6
+MPI Rank 1: 08/16/2016 09:59:46:  Epoch[ 1 of 3]-Minibatch[ 271- 280, 87.50%]: CrossEntropyWithSoftmax = 2.51724208 * 640; EvalClassificationError = 0.65781250 * 640; time = 0.1001s; samplesPerSecond = 6391.1
+MPI Rank 1: 08/16/2016 09:59:46:  Epoch[ 1 of 3]-Minibatch[ 281- 290, 90.62%]: CrossEntropyWithSoftmax = 2.27797542 * 640; EvalClassificationError = 0.59687500 * 640; time = 0.1007s; samplesPerSecond = 6355.2
+MPI Rank 1: 08/16/2016 09:59:46:  Epoch[ 1 of 3]-Minibatch[ 291- 300, 93.75%]: CrossEntropyWithSoftmax = 2.26017740 * 640; EvalClassificationError = 0.60937500 * 640; time = 0.1002s; samplesPerSecond = 6386.8
+MPI Rank 1: 08/16/2016 09:59:46:  Epoch[ 1 of 3]-Minibatch[ 301- 310, 96.88%]: CrossEntropyWithSoftmax = 2.24735342 * 640; EvalClassificationError = 0.58437500 * 640; time = 0.1000s; samplesPerSecond = 6398.9
+MPI Rank 1: 08/16/2016 09:59:46:  Epoch[ 1 of 3]-Minibatch[ 311- 320, 100.00%]: CrossEntropyWithSoftmax = 2.23665382 * 640; EvalClassificationError = 0.60625000 * 640; time = 0.0991s; samplesPerSecond = 6459.2
+MPI Rank 1: 08/16/2016 09:59:46: Finished Epoch[ 1 of 3]: [Training] CrossEntropyWithSoftmax = 3.03815141 * 20480; EvalClassificationError = 0.73432617 * 20480; totalSamplesSeen = 20480; learningRatePerSample = 0.015625; epochTime=3.22015s
 MPI Rank 1: minibatchiterator: epoch 0: frames [0..83050] (first utterance at frame 0), data subset 1 of 2, with 1 datapasses
-MPI Rank 1: 08/16/2016 09:59:49: Final Results: Minibatch[1-1299]: CrossEntropyWithSoftmax = 2.24821047 * 83050; perplexity = 9.47077247; EvalErrorPrediction = 0.61623119 * 83050
-MPI Rank 1: 08/16/2016 09:59:49: Finished Epoch[ 1 of 3]: [Validate] CrossEntropyWithSoftmax = 2.24821047 * 83050; EvalErrorPrediction = 0.61623119 * 83050
+MPI Rank 1: 08/16/2016 09:59:49: Final Results: Minibatch[1-1299]: CrossEntropyWithSoftmax = 2.24821047 * 83050; perplexity = 9.47077247; EvalClassificationError = 0.61623119 * 83050
+MPI Rank 1: 08/16/2016 09:59:49: Finished Epoch[ 1 of 3]: [Validate] CrossEntropyWithSoftmax = 2.24821047 * 83050; EvalClassificationError = 0.61623119 * 83050
 MPI Rank 1: 
 MPI Rank 1: 08/16/2016 09:59:49: Starting Epoch 2: learning rate per sample = 0.001953  effective momentum = 0.656119  momentum as time constant = 607.5 samples
 MPI Rank 1: minibatchiterator: epoch 1: frames [20480..40960] (first utterance at frame 20480), data subset 1 of 2, with 1 datapasses
 MPI Rank 1: 
 MPI Rank 1: 08/16/2016 09:59:49: Starting minibatch loop, DataParallelSGD training (MyRank = 1, NumNodes = 2, NumGradientBits = 64), distributed reading is ENABLED.
-MPI Rank 1: 08/16/2016 09:59:49:  Epoch[ 2 of 3]-Minibatch[   1-  10, 12.50%]: CrossEntropyWithSoftmax = 2.13894071 * 2560; EvalErrorPrediction = 0.56992188 * 2560; time = 0.1286s; samplesPerSecond = 19904.8
-MPI Rank 1: 08/16/2016 09:59:49:  Epoch[ 2 of 3]-Minibatch[  11-  20, 25.00%]: CrossEntropyWithSoftmax = 2.06106261 * 2560; EvalErrorPrediction = 0.55664062 * 2560; time = 0.1249s; samplesPerSecond = 20504.1
-MPI Rank 1: 08/16/2016 09:59:49:  Epoch[ 2 of 3]-Minibatch[  21-  30, 37.50%]: CrossEntropyWithSoftmax = 2.04459475 * 2560; EvalErrorPrediction = 0.55039063 * 2560; time = 0.1247s; samplesPerSecond = 20526.1
-MPI Rank 1: 08/16/2016 09:59:49:  Epoch[ 2 of 3]-Minibatch[  31-  40, 50.00%]: CrossEntropyWithSoftmax = 2.03347291 * 2560; EvalErrorPrediction = 0.55742187 * 2560; time = 0.1269s; samplesPerSecond = 20170.8
-MPI Rank 1: 08/16/2016 09:59:49:  Epoch[ 2 of 3]-Minibatch[  41-  50, 62.50%]: CrossEntropyWithSoftmax = 2.02079287 * 2560; EvalErrorPrediction = 0.54414063 * 2560; time = 0.1265s; samplesPerSecond = 20242.0
-MPI Rank 1: 08/16/2016 09:59:49:  Epoch[ 2 of 3]-Minibatch[  51-  60, 75.00%]: CrossEntropyWithSoftmax = 1.96950012 * 2560; EvalErrorPrediction = 0.53085938 * 2560; time = 0.1270s; samplesPerSecond = 20163.5
-MPI Rank 1: 08/16/2016 09:59:50:  Epoch[ 2 of 3]-Minibatch[  61-  70, 87.50%]: CrossEntropyWithSoftmax = 1.95934862 * 2560; EvalErrorPrediction = 0.52812500 * 2560; time = 0.1253s; samplesPerSecond = 20436.0
-MPI Rank 1: 08/16/2016 09:59:50:  Epoch[ 2 of 3]-Minibatch[  71-  80, 100.00%]: CrossEntropyWithSoftmax = 1.94070839 * 2560; EvalErrorPrediction = 0.53125000 * 2560; time = 0.1236s; samplesPerSecond = 20712.5
-MPI Rank 1: 08/16/2016 09:59:50: Finished Epoch[ 2 of 3]: [Training] CrossEntropyWithSoftmax = 2.02105262 * 20480; EvalErrorPrediction = 0.54609375 * 20480; totalSamplesSeen = 40960; learningRatePerSample = 0.001953125; epochTime=1.01478s
+MPI Rank 1: 08/16/2016 09:59:49:  Epoch[ 2 of 3]-Minibatch[   1-  10, 12.50%]: CrossEntropyWithSoftmax = 2.13894071 * 2560; EvalClassificationError = 0.56992188 * 2560; time = 0.1286s; samplesPerSecond = 19904.8
+MPI Rank 1: 08/16/2016 09:59:49:  Epoch[ 2 of 3]-Minibatch[  11-  20, 25.00%]: CrossEntropyWithSoftmax = 2.06106261 * 2560; EvalClassificationError = 0.55664062 * 2560; time = 0.1249s; samplesPerSecond = 20504.1
+MPI Rank 1: 08/16/2016 09:59:49:  Epoch[ 2 of 3]-Minibatch[  21-  30, 37.50%]: CrossEntropyWithSoftmax = 2.04459475 * 2560; EvalClassificationError = 0.55039063 * 2560; time = 0.1247s; samplesPerSecond = 20526.1
+MPI Rank 1: 08/16/2016 09:59:49:  Epoch[ 2 of 3]-Minibatch[  31-  40, 50.00%]: CrossEntropyWithSoftmax = 2.03347291 * 2560; EvalClassificationError = 0.55742187 * 2560; time = 0.1269s; samplesPerSecond = 20170.8
+MPI Rank 1: 08/16/2016 09:59:49:  Epoch[ 2 of 3]-Minibatch[  41-  50, 62.50%]: CrossEntropyWithSoftmax = 2.02079287 * 2560; EvalClassificationError = 0.54414063 * 2560; time = 0.1265s; samplesPerSecond = 20242.0
+MPI Rank 1: 08/16/2016 09:59:49:  Epoch[ 2 of 3]-Minibatch[  51-  60, 75.00%]: CrossEntropyWithSoftmax = 1.96950012 * 2560; EvalClassificationError = 0.53085938 * 2560; time = 0.1270s; samplesPerSecond = 20163.5
+MPI Rank 1: 08/16/2016 09:59:50:  Epoch[ 2 of 3]-Minibatch[  61-  70, 87.50%]: CrossEntropyWithSoftmax = 1.95934862 * 2560; EvalClassificationError = 0.52812500 * 2560; time = 0.1253s; samplesPerSecond = 20436.0
+MPI Rank 1: 08/16/2016 09:59:50:  Epoch[ 2 of 3]-Minibatch[  71-  80, 100.00%]: CrossEntropyWithSoftmax = 1.94070839 * 2560; EvalClassificationError = 0.53125000 * 2560; time = 0.1236s; samplesPerSecond = 20712.5
+MPI Rank 1: 08/16/2016 09:59:50: Finished Epoch[ 2 of 3]: [Training] CrossEntropyWithSoftmax = 2.02105262 * 20480; EvalClassificationError = 0.54609375 * 20480; totalSamplesSeen = 40960; learningRatePerSample = 0.001953125; epochTime=1.01478s
 MPI Rank 1: minibatchiterator: epoch 0: frames [0..83050] (first utterance at frame 0), data subset 1 of 2, with 1 datapasses
-MPI Rank 1: 08/16/2016 09:59:51: Final Results: Minibatch[1-326]: CrossEntropyWithSoftmax = 1.92733488 * 83050; perplexity = 6.87117331; EvalErrorPrediction = 0.53122216 * 83050
-MPI Rank 1: 08/16/2016 09:59:51: Finished Epoch[ 2 of 3]: [Validate] CrossEntropyWithSoftmax = 1.92733488 * 83050; EvalErrorPrediction = 0.53122216 * 83050
+MPI Rank 1: 08/16/2016 09:59:51: Final Results: Minibatch[1-326]: CrossEntropyWithSoftmax = 1.92733488 * 83050; perplexity = 6.87117331; EvalClassificationError = 0.53122216 * 83050
+MPI Rank 1: 08/16/2016 09:59:51: Finished Epoch[ 2 of 3]: [Validate] CrossEntropyWithSoftmax = 1.92733488 * 83050; EvalClassificationError = 0.53122216 * 83050
 MPI Rank 1: 
 MPI Rank 1: 08/16/2016 09:59:51: Starting Epoch 3: learning rate per sample = 0.000098  effective momentum = 0.656119  momentum as time constant = 2429.9 samples
 MPI Rank 1: minibatchiterator: epoch 2: frames [40960..61440] (first utterance at frame 40960), data subset 1 of 2, with 1 datapasses
 MPI Rank 1: 
 MPI Rank 1: 08/16/2016 09:59:51: Starting minibatch loop, DataParallelSGD training (MyRank = 1, NumNodes = 2, NumGradientBits = 64), distributed reading is ENABLED.
-MPI Rank 1: 08/16/2016 09:59:51:  Epoch[ 3 of 3]-Minibatch[   1-  10, 50.00%]: CrossEntropyWithSoftmax = 1.94336419 * 10240; EvalErrorPrediction = 0.53056641 * 10240; time = 0.2793s; samplesPerSecond = 36660.2
-MPI Rank 1: 08/16/2016 09:59:51:  Epoch[ 3 of 3]-Minibatch[  11-  20, 100.00%]: CrossEntropyWithSoftmax = 1.96525554 * 10240; EvalErrorPrediction = 0.54873047 * 10240; time = 0.2722s; samplesPerSecond = 37620.1
-MPI Rank 1: 08/16/2016 09:59:51: Finished Epoch[ 3 of 3]: [Training] CrossEntropyWithSoftmax = 1.95430987 * 20480; EvalErrorPrediction = 0.53964844 * 20480; totalSamplesSeen = 61440; learningRatePerSample = 9.7656251e-05; epochTime=0.559871s
+MPI Rank 1: 08/16/2016 09:59:51:  Epoch[ 3 of 3]-Minibatch[   1-  10, 50.00%]: CrossEntropyWithSoftmax = 1.94336419 * 10240; EvalClassificationError = 0.53056641 * 10240; time = 0.2793s; samplesPerSecond = 36660.2
+MPI Rank 1: 08/16/2016 09:59:51:  Epoch[ 3 of 3]-Minibatch[  11-  20, 100.00%]: CrossEntropyWithSoftmax = 1.96525554 * 10240; EvalClassificationError = 0.54873047 * 10240; time = 0.2722s; samplesPerSecond = 37620.1
+MPI Rank 1: 08/16/2016 09:59:51: Finished Epoch[ 3 of 3]: [Training] CrossEntropyWithSoftmax = 1.95430987 * 20480; EvalClassificationError = 0.53964844 * 20480; totalSamplesSeen = 61440; learningRatePerSample = 9.7656251e-05; epochTime=0.559871s
 MPI Rank 1: minibatchiterator: epoch 0: frames [0..83050] (first utterance at frame 0), data subset 1 of 2, with 1 datapasses
-MPI Rank 1: 08/16/2016 09:59:52: Final Results: Minibatch[1-83]: CrossEntropyWithSoftmax = 1.90639119 * 83050; perplexity = 6.72876207; EvalErrorPrediction = 0.52304636 * 83050
-MPI Rank 1: 08/16/2016 09:59:52: Finished Epoch[ 3 of 3]: [Validate] CrossEntropyWithSoftmax = 1.90639119 * 83050; EvalErrorPrediction = 0.52304636 * 83050
+MPI Rank 1: 08/16/2016 09:59:52: Final Results: Minibatch[1-83]: CrossEntropyWithSoftmax = 1.90639119 * 83050; perplexity = 6.72876207; EvalClassificationError = 0.52304636 * 83050
+MPI Rank 1: 08/16/2016 09:59:52: Finished Epoch[ 3 of 3]: [Validate] CrossEntropyWithSoftmax = 1.90639119 * 83050; EvalClassificationError = 0.52304636 * 83050
 MPI Rank 1: 08/16/2016 09:59:52: CNTKCommandTrainEnd: speechTrain
 MPI Rank 1: 
 MPI Rank 1: 08/16/2016 09:59:52: Action "train" complete.

@@ -98,6 +98,7 @@
     <ClInclude Include="ConvolutionalNodes.h" />
     <ClInclude Include="DeprecatedNodes.h" />
     <ClInclude Include="PreComputeNodes.h" />
+    <ClInclude Include="RNNNodes.h" />
     <ClInclude Include="SpecialPurposeNodes.h" />
     <ClInclude Include="EvaluationNodes.h" />
     <ClInclude Include="InputAndParamNodes.h" />
@@ -122,6 +123,7 @@
     <ClCompile Include="ComputationNodeScripting.cpp" />
     <ClCompile Include="InputAndParamNodes.cpp" />
     <ClCompile Include="ReshapingNodes.cpp" />
+    <ClCompile Include="RNNNodes.cpp" />
     <ClCompile Include="SpecialPurposeNodes.cpp" />
     <ClCompile Include="stdafx.cpp" />
   </ItemGroup>
