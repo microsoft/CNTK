@@ -39,7 +39,7 @@ public:
     {
     }
 
-    virtual void /*ComputationNode::*/ ForwardPropSpecialization(const FrameRange& fr) override
+    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
 
     {
         size_t rank = DetermineElementwiseTensorRank();
@@ -49,7 +49,7 @@ public:
         result.AssignSumOf(input0, input1);
     }
 
-    virtual void /*ComputationNode::*/ BackpropToSpecialization(const size_t inputIndex, const FrameRange& fr) override
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
         size_t rank = DetermineElementwiseTensorRank();
         auto gradient      =                    GradientTensorFor(rank, fr);
@@ -85,7 +85,7 @@ public:
     {
     }
 
-    virtual void /*ComputationNode::*/ ForwardPropSpecialization(const FrameRange& fr) override
+    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
 
     {
         size_t rank = DetermineElementwiseTensorRank();
@@ -95,7 +95,7 @@ public:
         result.AssignLogSumOf(input0, input1);
     }
 
-    virtual void /*ComputationNode::*/ BackpropToSpecialization(const size_t inputIndex, const FrameRange& fr) override
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
         size_t rank = DetermineElementwiseTensorRank();
         auto gradient      =                    GradientTensorFor(rank, fr);
@@ -142,7 +142,7 @@ public:
     {
     }
 
-    virtual void /*ComputationNode::*/ ForwardPropSpecialization(const FrameRange& fr) override
+    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
 
     {
         size_t rank = DetermineElementwiseTensorRank();
@@ -152,7 +152,7 @@ public:
         result.AssignDifferenceOf(input0, input1);
     }
 
-    virtual void /*ComputationNode::*/ BackpropToSpecialization(const size_t inputIndex, const FrameRange& fr) override
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
         size_t rank = DetermineElementwiseTensorRank();
         auto gradient      =                    GradientTensorFor(rank, fr);
@@ -193,7 +193,7 @@ public:
     {
     }
 
-    virtual void /*ComputationNode::*/ ForwardPropSpecialization(const FrameRange& fr) override
+    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
 
     {
         size_t rank = DetermineElementwiseTensorRank();
@@ -203,7 +203,7 @@ public:
         result.AssignElementwiseProductOf(input0, input1);
     }
 
-    virtual void /*ComputationNode::*/ BackpropToSpecialization(const size_t inputIndex, const FrameRange& fr) override
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
         size_t rank = DetermineElementwiseTensorRank();
         auto gradient        =                     GradientTensorFor(rank, fr);
@@ -295,7 +295,7 @@ private:
     }
 
 public:
-    virtual void /*ComputationNode::*/ ForwardPropSpecialization(const FrameRange& fr) override
+    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
 
     {
         // If argument A is minibatch data, then this must be performed frame-by-frame, sequence-by-sequence, one GEMM call each.
@@ -320,7 +320,7 @@ public:
         output.AssignMatrixProductOf(false/*transC*/, input0, m_transpose/*transA*/, input1, false/*transB*/);
     }
 
-    virtual void /*ComputationNode::*/ BackpropToSpecialization(const size_t inputIndex, const FrameRange& fr) override
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
         // special treatment if A is minibatch data; see Forward() for comment
         if (!fr.IsOneColumnWrt(Input(0)->GetMBLayout()))
@@ -593,7 +593,7 @@ public:
     {
     }
 
-    virtual void /*ComputationNode::*/ BackpropToSpecialization(const size_t inputIndex, const FrameRange& fr) override
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
         if (inputIndex == 0) // left derivative
         {
@@ -619,7 +619,7 @@ public:
         return false;
     }
 
-    virtual void /*ComputationNode::*/ ForwardPropSpecialization(const FrameRange& fr) override
+    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
 
     {
         Matrix<ElemType> sliceInput1Value = Input(1)->ValueFor(fr);
@@ -819,7 +819,7 @@ private:
     }
 
 public:
-    virtual void /*ComputationNode::*/ ForwardPropSpecialization(const FrameRange& fr) override
+    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
 
     {
         size_t rank = DetermineElementwiseTensorRank();
@@ -828,7 +828,7 @@ public:
         output.AssignCopyOf(input);
     }
 
-    virtual void /*ComputationNode::*/ BackpropToSpecialization(const size_t inputIndex, const FrameRange& fr) override
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
         size_t rank = DetermineElementwiseTensorRank();
         auto outputGradient =                                GradientTensorFor(                         rank, fr);
@@ -897,7 +897,7 @@ public:
     {
     }
 
-    virtual void /*ComputationNode::*/ BackpropToSpecialization(const size_t inputIndex, const FrameRange& fr) override
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
         // functionValues, invNorm0, invNorm1 - output from the EvaluateNode() method
         // temp, rightTerm, leftTerm - temporary matrices
@@ -919,7 +919,7 @@ public:
         Input(inputIndex)->GradientFor(fr) += *m_leftTerm;
     }
 
-    virtual void /*ComputationNode::*/ ForwardPropSpecialization(const FrameRange& fr) override
+    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
 
     {
         Matrix<ElemType> sliceInput0Value = Input(0)->ValueFor(fr);
@@ -1027,7 +1027,7 @@ public:
     {
     }
 
-    virtual void /*ComputationNode::*/ BackpropToSpecialization(const size_t inputIndex, const FrameRange& fr) override
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
         Matrix<ElemType> sliceOutputGrad = GradientFor(fr);
 
@@ -1054,7 +1054,7 @@ public:
         return false;
     }
 
-    virtual void /*ComputationNode::*/ ForwardPropSpecialization(const FrameRange& fr) override
+    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
 
     {
         ValueFor(fr).AssignKhatriRaoProductOf(Input(0)->ValueFor(fr), Input(1)->ValueFor(fr));
@@ -1104,7 +1104,7 @@ public:
     {
     }
 
-    virtual void /*ComputationNode::*/ BackpropToSpecialization(const size_t inputIndex, const FrameRange& fr) override
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
         Matrix<ElemType> sliceInput0Value = Input(0)->ValueFor(fr);
         Matrix<ElemType> sliceInput1Value = Input(1)->ValueFor(fr);
@@ -1216,7 +1216,7 @@ public:
         }
     }
 
-    virtual void /*ComputationNode::*/ ForwardPropSpecialization(const FrameRange& fr) override
+    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
 
     {
         Matrix<ElemType> sliceInput0Value = Input(0)->ValueFor(fr);

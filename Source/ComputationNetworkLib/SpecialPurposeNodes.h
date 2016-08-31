@@ -40,9 +40,9 @@ public:
     virtual void Save(File& fstream) const override;
     virtual void Load(File& fstream, size_t modelVersion) override;
     virtual void /*IComputationNode::*/ BeginForwardProp() override;
-    virtual void /*ComputationNode::*/ ForwardPropSpecialization(const FrameRange& fr) override
+    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
 ;
-    virtual void /*ComputationNode::*/ BackpropToSpecialization(const size_t inputIndex, const FrameRange& fr) override;
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override;
     virtual void /*ComputationNode::*/ Validate(bool isFinalValidationPass) override;
 
     virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
@@ -90,7 +90,7 @@ public:
     {
     }
 
-    virtual void /*ComputationNode::*/ BackpropToSpecialization(const size_t inputIndex, const FrameRange& fr) override
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
         // get the right slice
         const size_t colsPrior = Input(0)->GetSampleMatrixNumCols();
@@ -245,7 +245,7 @@ public:
     }
 
     // input0=unnormedPrior, input1=mean, input2=logstddev, input3=feature
-    virtual void /*ComputationNode::*/ ForwardPropSpecialization(const FrameRange& fr) override
+    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
 
     {
         size_t colsPrior = Input(0)->GetSampleMatrixNumCols();

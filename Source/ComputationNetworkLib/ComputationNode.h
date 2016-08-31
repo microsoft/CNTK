@@ -731,21 +731,6 @@ public:
 #endif
     }
 
-    virtual void ForwardPropSpecialization(const FrameRange& fr) = 0;
-    virtual void ForwardProp(const FrameRange& fr) override final
-    {
-    	ForwardPropSpecialization(fr);
-
-
-    }
-
-
-    virtual void BackpropToSpecialization(const size_t inputIndex, const FrameRange& fr) = 0;
-    virtual void BackpropTo(const size_t inputIndex, const FrameRange& fr)
-    {
-    	BackpropToSpecialization(inputIndex, fr);
-    }
-
 
     // check whether a node is out of date w.r.t. its children, for lazy evaluation
     // If this returns true, node must be evaluated to update m_value.
@@ -1852,14 +1837,14 @@ public:
     }
 
     // these two implement the ComputationNode<> interface
-    void ForwardPropSpecialization(const FrameRange& fr) override final
+    void ForwardProp(const FrameRange& fr) override final
     {
         if (fr.IsAllFrames())
             ForwardPropNonLooping();
         else
             LogicError("%ls: %s node should never be in a loop.", Base::NodeDescription().c_str(), typeid(*this).name());
     }
-    void BackpropToSpecialization(const size_t inputIndex, const FrameRange& fr) override final
+    void BackpropTo(const size_t inputIndex, const FrameRange& fr) override final
     {
         if (fr.IsAllFrames())
             BackpropToNonLooping(inputIndex);

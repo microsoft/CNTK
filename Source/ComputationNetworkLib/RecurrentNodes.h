@@ -181,7 +181,7 @@ public:
             fstream >> m_initialActivationValue;
     }
 
-    virtual void /*ComputationNode::*/ BackpropToSpecialization(const size_t inputIndex, const FrameRange& fr) override
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
         // move the target matrix to the target device, since below it is accessed as slices which cannot move
         // TODO: change below accesses to TensorView, then this is no longer needed.
@@ -265,7 +265,7 @@ public:
 
     // This function assumes BeginForwardProp/EndForwardProp() to be called before/after the iteration loop.
     // TODO: In the future, there may be value for one more way of handling the boundary condition: Fill as 'NoInput'. Then we can use this to implement rolling windows (albeit inefficiently). Would require to unshare the layout.
-    virtual void ForwardPropSpecialization(const FrameRange& fr) override
+    virtual void ForwardProp(const FrameRange& fr) override
 
     {
         assert(m_pMBLayout);
@@ -940,7 +940,7 @@ private:
     }
 
 public:
-    virtual void ForwardPropSpecialization(const FrameRange& fr) override
+    virtual void ForwardProp(const FrameRange& fr) override
 
     {
         // for (size_t xx = 0; xx < 3; xx++)   // for testing the strange slow-down
@@ -996,7 +996,7 @@ public:
         }
     }
 
-    virtual void /*ComputationNode::*/ BackpropToSpecialization(const size_t inputIndex, const FrameRange& fr) override
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
         //     if (!fr.IsAllFrames())   // for measuring speed
         //         return;

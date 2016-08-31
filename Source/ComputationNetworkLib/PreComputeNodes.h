@@ -402,12 +402,12 @@ public:
     {
     }
 
-    virtual void /*ComputationNode::*/ BackpropToSpecialization(const size_t /*inputIndex*/, const FrameRange&) override
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t /*inputIndex*/, const FrameRange&) override
     {
         InvalidArgument("PerDimMeanVarNormalizationNode should only be called in the evaluation stage. Is any of its descendents a learnable parameter that requires gradient?");
     }
 
-    virtual void /*ComputationNode::*/ ForwardPropSpecialization(const FrameRange& fr) override
+    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
 
     {
         size_t rank = DetermineElementwiseTensorRank();
@@ -504,13 +504,13 @@ public:
     {
     }
 
-    virtual void /*ComputationNode::*/ BackpropToSpecialization(const size_t /*inputIndex*/, const FrameRange&) override
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t /*inputIndex*/, const FrameRange&) override
     {
         InvalidArgument("PerDimMeanVarDeNormalizationNode should only be called in the evaluation stage. Is any of its descendents a learnable parameter that requires gradient?");
     }
 
     // feature ./ invStdDev + mean
-    virtual void /*ComputationNode::*/ ForwardPropSpecialization(const FrameRange& fr) override
+    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
 
     {
         size_t rank = DetermineElementwiseTensorRank();

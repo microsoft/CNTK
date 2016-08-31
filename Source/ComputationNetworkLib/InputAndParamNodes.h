@@ -85,8 +85,8 @@ public:
 
     // computation functions don't do anything for parameter nodes
     virtual void UpdateFunctionMBSize() override;
-    virtual void /*ComputationNode::*/ ForwardPropSpecialization(const FrameRange&) override;
-    virtual void /*ComputationNode::*/ BackpropToSpecialization(const size_t /*inputIndex*/, const FrameRange&) override;
+    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange&) override;
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t /*inputIndex*/, const FrameRange&) override;
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override;
 
     // called from ComputationNode::ValidateInferInputDimsFrom()
@@ -137,12 +137,12 @@ public:
     {
     }
 
-    virtual void /*ComputationNode::*/ ForwardPropSpecialization(const FrameRange&) override
+    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange&) override
     {
         RuntimeError("%ls is a special node only to be used as input to the Input() node.", NodeDescription().c_str());
     }
 
-    virtual void /*ComputationNode::*/ BackpropToSpecialization(const size_t /*inputIndex*/, const FrameRange&)
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t /*inputIndex*/, const FrameRange&)
     {
         LogicError("%ls is a leaf node. BackpropTo() should never be called.", NodeDescription().c_str());
     }
@@ -290,12 +290,12 @@ public:
             LogicError("UpdateFunctionMBSize: m_value not matching m_sampleLayout");
     }
 
-    virtual void /*ComputationNode::*/ ForwardPropSpecialization(const FrameRange&) override
+    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange&) override
     {
         // we have been filled by the Reader
     }
 
-    virtual void /*ComputationNode::*/ BackpropToSpecialization(const size_t /*inputIndex*/, const FrameRange&)
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t /*inputIndex*/, const FrameRange&)
     {
         LogicError("%ls is a leaf node. BackpropTo() should never be called.", NodeName().c_str());
     }
@@ -507,7 +507,7 @@ public:
     {
     }
 
-    virtual void /*ComputationNode::*/ BackpropToSpecialization(const size_t inputIndex, const FrameRange& t) override
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& t) override
     {
         if (inputIndex == 0) // left derivative (embedding matrix)
         {
@@ -556,7 +556,7 @@ public:
         gradientValues.Reshape(rowsp, colsp);
     }
 
-    virtual void /*ComputationNode::*/ ForwardPropSpecialization(const FrameRange& t) override
+    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& t) override
     {
         // input0 is the weight (each column is an embedding of one word), input 1 contains m_nbrLooked words in each column (sample)
         Matrix<ElemType> functionValues =           ValueFor(t);
