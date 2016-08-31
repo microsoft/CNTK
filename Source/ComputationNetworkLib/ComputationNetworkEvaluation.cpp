@@ -144,7 +144,7 @@ ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(con
         {
             node->BeginForwardProp();
             std::string nodename = std::string(node->NodeName().begin(), node->NodeName().end());
-            if(node->GetNetworkInfoPtr() != nullptr) 
+            if(node->GetNetworkInfoPtr() != nullptr)
                 if (node->Is<ComputationNode<float>>())
                     node->GetNetworkInfoPtr()->GetSwapManager<float>()->BeginSynchronizeState(node.get(), true, node->Environment().IsTraining());
                 else
@@ -157,7 +157,7 @@ ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(con
 
             node->ForwardProp(fr.WithLayout(node->GetMBLayout()));
 
-            if(node->GetNetworkInfoPtr() != nullptr) 
+            if(node->GetNetworkInfoPtr() != nullptr)
                 if (node->Is<ComputationNode<float>>())
                     node->GetNetworkInfoPtr()->GetSwapManager<float>()->EndSynchronizeState(node.get(), true, node->Environment().IsTraining());
                 else
@@ -180,7 +180,7 @@ ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(con
         node->BeginBackprop();
         //m_syncFloat->BeginSynchronizeState(node.get(), false);
         std::string nodename = std::string(node->NodeName().begin(), node->NodeName().end());
-        if(node->GetNetworkInfoPtr() != nullptr) 
+        if(node->GetNetworkInfoPtr() != nullptr)
     if (node->Is<ComputationNode<float>>())
         node->GetNetworkInfoPtr()->GetSwapManager<float>()->BeginSynchronizeState(node.get(), false, node->Environment().IsTraining());
     else
@@ -197,7 +197,7 @@ ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(con
 
         node->Backprop(fr.WithLayout(node->GetMBLayout()), true /*childrenInThisLoop*/, true /*childrenInOuterLoop*/);
 
-        if(node->GetNetworkInfoPtr() != nullptr) 
+        if(node->GetNetworkInfoPtr() != nullptr)
             if (node->Is<ComputationNode<float>>())
                 node->GetNetworkInfoPtr()->GetSwapManager<float>()->EndSynchronizeState(node.get(), false, node->Environment().IsTraining());
             else
@@ -578,7 +578,7 @@ void ComputationNetwork::ResetMBLayouts()
         node->LinkToMBLayout(nullptr);
 
     // DynamicAxis nodes are (apart from the soon-to-be-deprecated network-wide MBLayout) the main holders of MBLayouts. Initialize them.
-    // The only other instances are nodes that change the MBLayout, like WhereNode. 
+    // The only other instances are nodes that change the MBLayout, like WhereNode.
     for (auto node : GetNodesWithType(L"DynamicAxis"))
         node->LinkToMBLayout(make_shared<MBLayout>(1, 0, node->GetName()));
 
@@ -851,51 +851,358 @@ void ComputationNetwork::MarkValueNonSharableNodes()
     }
 }
 
-template <class ElemType>
-void ComputationNetwork::PrintMemorySharingStructure(const std::vector<ComputationNodeBasePtr>& nodes)
+// print memory-sharing information to log
+void ComputationNetwork::PrintMemorySharingStructure(const vector<ComputationNodeBasePtr>& nodes)
 {
-    std::map <const Matrix<ElemType>*, std::set<wstring>> memSharingStructure;
-    for (auto& n : nodes)
+    map <const MatrixBase*, set<wstring>> memSharingStructure;
+    size_t numMatrices = 0;
+    for (const auto& node : nodes)
     {
-        ComputationNode<ElemType>* node = n->As<ComputationNode<ElemType>>();
-        std::set<std::pair<const Matrix<ElemType>*, const std::wstring>> matrixInfo = node->GetMatrixInfo();
-        for (const auto&item : matrixInfo)
+        set<pair<const MatrixBase*, wstring>> matrixInfo = node->GetMatrixInfo();
+        for (const auto& item : matrixInfo) // {value} or {value, gradient}
         {
-            const Matrix<ElemType>* matrix = item.first;
-            if (memSharingStructure.find(matrix) == memSharingStructure.end())
-                memSharingStructure.insert(std::pair<const Matrix<ElemType>*, std::set<wstring>>(matrix, std::set<wstring>()));
-
-            std::set<wstring>& s = memSharingStructure[matrix];
-            s.insert(item.second);
+            memSharingStructure[item.first].insert(item.second);
+            numMatrices++;
         }
     }
 
-    fprintf(stderr, "\nMemory Sharing Structure:\n\n");
+    // count shared/unshared
+    size_t numShared = 0;
+    size_t numUnshared = 0;
     for (const auto& item : memSharingStructure)
     {
-        const std::set<wstring>& s = item.second;
-        fprintf(stderr, "%p: {", item.first);
-        for (const auto& memShareInfo: s)
+        if (item.second.size() < 2) // only print actually shared matrices
+            numUnshared++;
+        else
+            numShared++;
+    }
+
+    fprintf(stderr, "\nMemory Sharing: Out of %d matrices, %d are shared as %d, and %d are not shared.\n\n", (int)numMatrices, (int)(numMatrices - numUnshared), (int)numShared, (int)numUnshared);
+    for (const auto& item : memSharingStructure)
+    {
+        if (item.second.size() < 2) // only print actually shared matrices
+            continue;
+        // Format:
+        // { node1
+        //   node2 }
+        // { node3
+        //   node4
+        //   node5 }
+        // where unshared nodes are not printed.
+        const char* delim = "\t{ ";
+        for (const auto& memShareInfo : item.second)
         {
-            fprintf(stderr, "[%ls] ", memShareInfo.c_str());
+            fprintf(stderr, "%s%ls", delim, memShareInfo.c_str());
+            delim = "\n\t  ";
         }
-        fprintf(stderr, "}\n");
+        fprintf(stderr, " }\n");
     }
     fprintf(stderr, "\n");
 }
 
+template void ComputationNetwork::InitMemorySwapping<double>(const std::vector<ComputationNodeBasePtr>& evalRootNodes,
+                                             const std::vector<ComputationNodeBasePtr>& outValueRootNodes,
+                                             ComputationNodeBasePtr trainRootNode);
+template void ComputationNetwork::InitMemorySwapping<float>(const std::vector<ComputationNodeBasePtr>& evalRootNodes,
+                                             const std::vector<ComputationNodeBasePtr>& outValueRootNodes,
+                                             ComputationNodeBasePtr trainRootNode);
+template <class ElemType>
+void ComputationNetwork::InitMemorySwapping(const std::vector<ComputationNodeBasePtr>& evalRootNodes,
+                                             const std::vector<ComputationNodeBasePtr>& outValueRootNodes,
+                                             ComputationNodeBasePtr trainRootNode)
+{
+    std::vector<ComputationNodeBasePtr> forwardPropRoots;
+    forwardPropRoots.insert(forwardPropRoots.end(), evalRootNodes.begin(), evalRootNodes.end());
+    forwardPropRoots.insert(forwardPropRoots.end(), outValueRootNodes.begin(), outValueRootNodes.end());
+    if (trainRootNode != nullptr)
+        forwardPropRoots.push_back(trainRootNode);
 
+    // Construct the composite forward prop eval order by enumerating the
+    // nodes corresponding to each of our roots and then arranging them in the
+    // relative order that they appear in the global evaluation order
+    const std::list<ComputationNodeBasePtr>& allNodesEvalOrder = GetEvalOrder(nullptr);
+    std::list<ComputationNodeBasePtr> nodesForForwardPropRoots = ComputationNodeBase::EnumerateNodes(forwardPropRoots);
+    std::vector<ComputationNodeBasePtr> compositeForwardPropEvalOrder;
+    for (auto& node : allNodesEvalOrder)
+    {
+        if (std::find(nodesForForwardPropRoots.cbegin(), nodesForForwardPropRoots.cend(), node) != nodesForForwardPropRoots.cend())
+        {
+            compositeForwardPropEvalOrder.push_back(node);
+        }
+    }
+
+    std::unordered_map<Matrix<ElemType>*, std::unordered_set<Matrix<ElemType>*>> parentsMapMatrix;
+    std::unordered_map<Matrix<ElemType>*, std::unordered_set<Matrix<ElemType>*>> matrix2LoopMembers;
+    std::unordered_map<Matrix<ElemType>*, bool> matrix2IsSwappedOut;
+    std::unordered_map<Matrix<ElemType>*, std::string> matrix2node;
+    for(auto node : compositeForwardPropEvalOrder)
+    {
+        Matrix<ElemType>* valueBuffer = (Matrix<ElemType>*)node->ValuePtr().get();
+        if (node->IsPartOfLoop())
+        {
+            shared_ptr<SEQTraversalFlowControlNode> recInfo = FindInRecurrentLoops(m_allSEQNodes, node);
+            assert(recInfo != nullptr);
+            for (auto& nodeLoopIter : recInfo->m_nestedNodes)
+            {
+                Matrix<ElemType> *loopValue = (Matrix<ElemType>*)nodeLoopIter->ValuePtr().get();
+                matrix2LoopMembers[valueBuffer].insert(loopValue);
+                matrix2IsSwappedOut[loopValue] = false;
+            }
+        }
+
+        matrix2LoopMembers[valueBuffer].insert(valueBuffer);
+        matrix2IsSwappedOut[valueBuffer] = false;
+
+        std::string parent = std::string(node->NodeName().begin(), node->NodeName().end());
+        matrix2node[valueBuffer] = parent;
+        cout << "composite forward order: " << parent << " part of loop: " << node->IsPartOfLoop() << endl;
+        for(int i = 0; i < node->GetNumInputs(); i++)
+        {
+            std::string nodename = std::string(node->Input(i)->NodeName().begin(), node->Input(i)->NodeName().end());
+            cout << nodename << " is child of " << parent << endl;
+            cout << node->Input(i)->ValuePtr().get() << " is child of " << node->ValuePtr().get() << endl;
+            Matrix<ElemType> *inputBuffer = (Matrix<ElemType>*)node->Input(i)->ValuePtr().get();
+            parentsMapMatrix[inputBuffer].insert(valueBuffer);
+            if(node->IsPartOfLoop())
+            {
+                //matrix2LoopMembers[valueBuffer].insert(inputBuffer);
+                //matrix2LoopMembers[inputBuffer].insert(valueBuffer);
+                matrix2IsSwappedOut[inputBuffer] = false;
+
+            }
+        }
+    }
+
+
+    std::unordered_map<ComputationNodeBase*, std::vector<Matrix<ElemType>*>> forwardSwapOutDependencyNode2matrices;
+    std::unordered_map<Matrix<ElemType>*, ComputationNodeBase*> matrix2SwapOutNode;
+    std::unordered_map<Matrix<ElemType>*, bool> matrix2IsReleased;
+    std::unordered_map<Matrix<ElemType>*, std::vector<ComputationNodeBasePtr>> matrix2Children;
+    std::vector<Matrix<ElemType>*>* SEQReference;
+    unordered_map<Matrix<ElemType>*, ComputationNodeBasePtr> matrix2LastUsageNodeForward;
+    std::unordered_map<Matrix<ElemType>*, bool> matrix2IsComputed;
+    for (auto& nodeIter : compositeForwardPropEvalOrder)
+    {
+        //std::string nodename = std::string(nodeIter->NodeName().begin(), nodeIter->NodeName().end());
+        Matrix<ElemType> *valueBuffer = (Matrix<ElemType>*)nodeIter->ValuePtr().get();
+        int numInputs = nodeIter->GetNumInputs();
+        for(int i = 0; i < numInputs; i++)
+        {
+            Matrix<ElemType> *buffer = (Matrix<ElemType>*)nodeIter->Input(i)->ValuePtr().get();
+            //std::string inputName = std::string(nodeIter->Input(i)->NodeName().begin(), nodeIter->Input(i)->NodeName().end());
+
+            // if these guards trigger we already have swapped out the buffer,
+            // or it is not legal to swapout the buffer
+            if(parentsMapMatrix.count(buffer) == 0){ continue; }
+            if(parentsMapMatrix[buffer].count(valueBuffer) == 0){ continue; }
+            if(parentsMapMatrix[buffer].size() == 0){ continue; }
+
+            // we remove the parent from the parent map
+            parentsMapMatrix[buffer].erase(std::find(parentsMapMatrix[buffer].begin(), parentsMapMatrix[buffer].end(), valueBuffer), parentsMapMatrix[buffer].end());
+
+            bool swapOut = true;
+            // if the input is part of the loop, wait for the whole loop to be finished
+            for(auto loopMember : matrix2LoopMembers[buffer])
+            {
+                if(parentsMapMatrix[loopMember].size() == 0){ swapOut &= true; }
+                else{ swapOut = false; }
+            }
+
+            // if the output is part of the loop, wait for the whole loop to be finished
+            for(auto loopMember : matrix2LoopMembers[valueBuffer])
+            {
+                if(parentsMapMatrix[loopMember].size() == 0){ swapOut &= true; }
+                else{ swapOut = false; }
+            }
+
+            // if all output and input dependencies are fulfilled proceed with swap-out
+            if(swapOut)
+            {
+                // swap out all members of the loop
+                for(auto loopMember : matrix2LoopMembers[buffer])
+                {
+
+                    matrix2SwapOutNode[loopMember] = nodeIter.get();
+                    matrix2IsSwappedOut[loopMember] = true;
+                }
+            }
+       }
+    }
+
+    unordered_map<Matrix<ElemType>*, ComputationNodeBasePtr> matrix2LastUsageNode;
+    unordered_map<Matrix<ElemType>*, ComputationNodeBasePtr> matrix2FirstUsageNode;
+    std::set<ComputationNodeBase*> nodesForBackProp;
+    // we use backprop if this is true
+    if (trainRootNode != nullptr)
+    {
+        // build up the backward pass
+        const std::list<ComputationNodeBasePtr>& backPropNodes = GetEvalOrder(trainRootNode);
+        for(auto node : backPropNodes)
+            nodesForBackProp.insert(node.get());
+
+        // swap-ins for backward pass
+        for (auto iter = backPropNodes.rbegin(); iter != backPropNodes.rend(); iter++)
+        {
+            auto n = *iter;
+            int numInputs = n->GetNumInputs();
+            Matrix<ElemType> *bufferValue;
+            Matrix<ElemType> *bufferGrad;
+
+            //std::string nodename = std::string(n->NodeName().begin(), n->NodeName().end());
+            // check swap-ins for the inputs of each respective node
+            for(int i = 0; i < numInputs; i++)
+            {
+                bufferValue = (Matrix<ElemType>*)n->Input(i)->ValuePtr().get();
+                bufferGrad = (Matrix<ElemType>*)n->Input(i)->GradientPtr().get();
+
+                if(bufferValue != NULL)
+                {
+                    for(auto loopMember : matrix2LoopMembers[bufferValue])
+                    {
+                        matrix2LastUsageNode[loopMember] = n;
+                        if(matrix2FirstUsageNode.count(loopMember) == 0)
+                            matrix2FirstUsageNode[loopMember] = n;
+                    }
+                }
+                // value from forward pass reused as a gradient; do not free this
+                if(bufferGrad != NULL && parentsMapMatrix.count(bufferGrad) > 0)
+                {
+                    for(auto loopMember : matrix2LoopMembers[bufferGrad])
+                        if(matrix2FirstUsageNode.count(loopMember) == 0)
+                            matrix2FirstUsageNode[loopMember] = n;
+                }
+            }
+            bufferValue = (Matrix<ElemType>*)n->ValuePtr().get();
+            bufferGrad = (Matrix<ElemType>*)n->GradientPtr().get();
+
+            // check swap in for the value and the gradien for each respective node
+            // the gradient can also be the same matrix pointer as a swapped out value ptr
+            if(bufferValue != NULL)
+            {
+                for(auto loopMember : matrix2LoopMembers[bufferValue])
+                {
+                    matrix2LastUsageNode[loopMember] = n;
+                    if(matrix2FirstUsageNode.count(loopMember) == 0)
+                        matrix2FirstUsageNode[loopMember] = n;
+                }
+            }
+            // value from forward pass reused as a gradient; do not free this
+            if(bufferGrad != NULL && parentsMapMatrix.count(bufferGrad) > 0)
+            {
+                for(auto loopMember : matrix2LoopMembers[bufferGrad])
+                    if(matrix2FirstUsageNode.count(loopMember) == 0)
+                        matrix2FirstUsageNode[loopMember] = n;
+            }
+        }
+
+    }
+
+    // do not free learningable parameters after backward pass because we need them
+    // during the gradient update
+    for(auto node :  GetNodesWithType(OperationNameOf(LearnableParameter)))
+    {
+        Matrix<ElemType> *buffer = (Matrix<ElemType>*)node->ValuePtr().get();
+        if(matrix2LastUsageNode.count(buffer) > 0)
+            matrix2LastUsageNode.erase(buffer);
+    }
+
+    // gather precompute nodes
+    vector<ComputationNodeBasePtr> PreComputedNodes;
+    vector<ComputationNodeBasePtr> allnodes = GetAllNodes();
+    for (const auto& n : allnodes)
+    {
+        if (n->RequiresPreCompute())
+            PreComputedNodes.push_back(n);
+    }
+
+    // remove precompute nodes
+    for(auto node :  PreComputedNodes)
+    {
+        Matrix<ElemType> *buffer = (Matrix<ElemType>*)node->ValuePtr().get();
+        std::string nodename = std::string(node->NodeName().begin(), node->NodeName().end());
+        if(matrix2SwapOutNode.count(buffer) > 0)
+            matrix2SwapOutNode.erase(buffer);
+
+        if(matrix2FirstUsageNode.count(buffer) > 0)
+            matrix2FirstUsageNode.erase(buffer);
+
+        if(matrix2LastUsageNode.count(buffer) > 0)
+            matrix2LastUsageNode.erase(buffer);
+    }
+
+    // remove sparse input nodes
+    for (auto node : InputNodes(nullptr))
+    {
+        Matrix<ElemType> *buffer = (Matrix<ElemType>*)node->ValuePtr().get();
+        if(matrix2SwapOutNode.count(buffer) > 0 && buffer->GetMatrixType() == MatrixType::SPARSE)
+            matrix2SwapOutNode.erase(buffer);
+    }
+
+    // remove criterion nodes; when we swap these out we need to swap them back in right
+    // away during backprop which makes little sense
+    for (auto& node : FinalCriterionNodes())
+    {
+        Matrix<ElemType> *buffer = (Matrix<ElemType>*)node->ValuePtr().get();
+        if(matrix2LastUsageNode.count(buffer) > 0)
+            matrix2LastUsageNode.erase(buffer);
+    }
+
+    // remove buffers which are swapped in, but never swapped out
+    std::vector<Matrix<ElemType>*> buffersToRemove;
+    for(auto pair : matrix2FirstUsageNode)
+    {
+       if(matrix2SwapOutNode.count(pair.first) == 0)
+            buffersToRemove.push_back(pair.first);
+    }
+
+    // is this necessary?
+    for(auto pair : matrix2LastUsageNode)
+    {
+       if(matrix2SwapOutNode.count(pair.first) == 0)
+            buffersToRemove.push_back(pair.first);
+    }
+
+    for(auto buffer : buffersToRemove)
+    {
+        if(matrix2FirstUsageNode.count(buffer) > 0)
+            matrix2FirstUsageNode.erase(buffer);
+
+        if(matrix2LastUsageNode.count(buffer) > 0)
+            matrix2LastUsageNode.erase(buffer);
+    }
+
+    unordered_map<ComputationNodeBase*, std::vector<Matrix<ElemType>*> > backwardSwapInDependencyNode2matrices;
+    unordered_map<ComputationNodeBase*, std::vector<Matrix<ElemType>*> > lastBackwardsDependencyNode2matrices;
+    // reverse association from matrix2node to node2matricies
+    for(auto pair : matrix2SwapOutNode)
+        forwardSwapOutDependencyNode2matrices[pair.second].push_back(pair.first);
+
+    for(auto pair : matrix2FirstUsageNode)
+        backwardSwapInDependencyNode2matrices[pair.second.get()].push_back(pair.first);
+
+    for(auto pair : matrix2LastUsageNode)
+        lastBackwardsDependencyNode2matrices[pair.second.get()].push_back(pair.first);
+
+    // remove nodes which exist in forward prop but not in backprop (swap out but no swap in)
+    auto itr = forwardSwapOutDependencyNode2matrices.begin();
+    while (itr != forwardSwapOutDependencyNode2matrices.end())
+    {
+        if (nodesForBackProp.count(itr->first) == 0)
+           itr = forwardSwapOutDependencyNode2matrices.erase(itr);
+        else
+           ++itr;
+    }
+
+    if (trainRootNode != nullptr)
+    m_networkInfo->GetSwapManager<ElemType>()->InitializeSwapping(
+                             forwardSwapOutDependencyNode2matrices,
+                             backwardSwapInDependencyNode2matrices,
+                             lastBackwardsDependencyNode2matrices);
+}
 // this function will need to be called before actual validation and execution to
 // predetermine how to share matrices to reduce memory usage.
 // TODO: find a simple topological order and allocateEvalMatrices on that order directly
 // without passing in eval, out, and train nodes.
-template void ComputationNetwork::AllocateAllMatrices<double>(const std::vector<ComputationNodeBasePtr>& evalRootNodes,
-                                             const std::vector<ComputationNodeBasePtr>& outValueRootNodes,
-                                             ComputationNodeBasePtr trainRootNode);
-template void ComputationNetwork::AllocateAllMatrices<float>(const std::vector<ComputationNodeBasePtr>& evalRootNodes,
-                                             const std::vector<ComputationNodeBasePtr>& outValueRootNodes,
-                                             ComputationNodeBasePtr trainRootNode);
-template <class ElemType>
 void ComputationNetwork::AllocateAllMatrices(const std::vector<ComputationNodeBasePtr>& evalRootNodes,
                                              const std::vector<ComputationNodeBasePtr>& outValueRootNodes,
                                              ComputationNodeBasePtr trainRootNode)
@@ -940,9 +1247,9 @@ void ComputationNetwork::AllocateAllMatrices(const std::vector<ComputationNodeBa
                 if (performingBackPropagation)
                 {
                     if (outputValueNeededDuringBackProp.find(input) == outputValueNeededDuringBackProp.end())
-                        outputValueNeededDuringBackProp[input] = input->OutputUsedInComputingInputNodesGradients();
+                        outputValueNeededDuringBackProp[input] = input->NeedsGradient() && input->OutputUsedInComputingInputNodesGradients();
 
-                    outputValueNeededDuringBackProp[input] |= node->InputUsedInComputingInputNodesGradients(i);
+                    outputValueNeededDuringBackProp[input] |= (node->NeedsGradient() && node->InputUsedInComputingInputNodesGradients(i));
                 }
                 else
                 {
@@ -1001,96 +1308,9 @@ void ComputationNetwork::AllocateAllMatrices(const std::vector<ComputationNodeBa
         }
     }
 
-    std::unordered_map<Matrix<ElemType>*, std::unordered_set<Matrix<ElemType>*>> parentsMapMatrix;
-    std::unordered_map<Matrix<ElemType>*, std::unordered_set<Matrix<ElemType>*>> matrix2LoopMembers;
-    completedEvaluate.clear();
-    for(auto node : compositeForwardPropEvalOrder)
-    {
-        Matrix<ElemType>* valueBuffer = (Matrix<ElemType>*)node->ValuePtr().get();
-        if (node->IsPartOfLoop())
-        {
-            shared_ptr<SEQTraversalFlowControlNode> recInfo = FindInRecurrentLoops(m_allSEQNodes, node);
-            assert(recInfo != nullptr);
-            for (auto& nodeLoopIter : recInfo->m_nestedNodes)
-            {
-                Matrix<ElemType> *loopValue = (Matrix<ElemType>*)nodeLoopIter->ValuePtr().get();
-                matrix2LoopMembers[valueBuffer].insert(loopValue);
-            }
-        }
-
-        matrix2LoopMembers[valueBuffer].insert(valueBuffer);
-        
-        std::string parent = std::string(node->NodeName().begin(), node->NodeName().end());
-        cout << "node: " << parent << " part of loop: " << node->IsPartOfLoop() << endl;
-        for(int i = 0; i < node->GetNumInputs(); i++)
-        {
-            std::string nodename = std::string(node->Input(i)->NodeName().begin(), node->Input(i)->NodeName().end());
-            cout << nodename << " is child of " << parent << endl;
-            cout << node->Input(i)->ValuePtr().get() << " is child of " << node->ValuePtr().get() << endl;
-            Matrix<ElemType> *inputBuffer = (Matrix<ElemType>*)node->Input(i)->ValuePtr().get();
-            parentsMapMatrix[inputBuffer].insert(valueBuffer);
-            if(node->IsPartOfLoop())
-            {
-                matrix2LoopMembers[valueBuffer].insert(inputBuffer);
-                matrix2LoopMembers[inputBuffer].insert(valueBuffer);
-            }
-        }
-    }
-
-
-    std::unordered_map<ComputationNodeBase*, std::vector<Matrix<ElemType>*>> forwardSwapOutDependencyNode2matrices;
-    std::unordered_map<Matrix<ElemType>*, ComputationNodeBase*> matrix2SwapOutNode;
-    std::unordered_map<Matrix<ElemType>*, bool> matrix2IsReleased;
-    std::unordered_map<Matrix<ElemType>*, std::vector<ComputationNodeBasePtr>> matrix2Children;
-    std::vector<Matrix<ElemType>*>* SEQReference;
-    unordered_map<Matrix<ElemType>*, ComputationNodeBasePtr> matrix2LastUsageNodeForward;
-    std::unordered_map<Matrix<ElemType>*, bool> matrix2IsComputed;
-    completedEvaluate.clear();
-    for (auto& nodeIter : compositeForwardPropEvalOrder)
-    {
-        std::string nodename = std::string(nodeIter->NodeName().begin(), nodeIter->NodeName().end());
-        Matrix<ElemType> *valueBuffer = (Matrix<ElemType>*)nodeIter->ValuePtr().get();
-        int numInputs = nodeIter->GetNumInputs();
-        for(int i = 0; i < numInputs; i++)
-        {
-            Matrix<ElemType> *buffer = (Matrix<ElemType>*)nodeIter->Input(i)->ValuePtr().get();
-
-            if(parentsMapMatrix.count(buffer) == 0){ continue; }
-            if(parentsMapMatrix[buffer].count(valueBuffer) == 0){ continue; }
-            if(parentsMapMatrix[buffer].size() == 0){ continue; }
-
-            parentsMapMatrix[buffer].erase(std::find(parentsMapMatrix[buffer].begin(), parentsMapMatrix[buffer].end(), valueBuffer), parentsMapMatrix[buffer].end());
-            cout << "input buffer: " << buffer << " child count: " << parentsMapMatrix[buffer].size() << endl;
-
-            bool swapOut = true;
-            for(auto loopMember : matrix2LoopMembers[buffer])
-            { 
-                cout << "input: " << buffer << " loopMember: " << loopMember << " num parents loopmember " << parentsMapMatrix[loopMember].size() << " num parents buffer: " << parentsMapMatrix[buffer].size() <<  "swapout: " << swapOut << endl;
-                if(parentsMapMatrix[loopMember].size() == 0){ swapOut &= true; }
-                else{ swapOut = false; }
-            }
-
-          
-            if(swapOut)
-            {
-                for(auto loopMember : matrix2LoopMembers[buffer])
-                {
-                    cout << "swapping out: " << loopMember << " at " << nodename << " after buffer " << buffer << endl;
-                    //forwardSwapOutDependencyNode2matrices[nodeIter.get()].push_back(loopMember);
-                    matrix2SwapOutNode[loopMember] = nodeIter.get();
-                }
-            }
-       }
-    }
-
-    unordered_map<Matrix<ElemType>*, ComputationNodeBasePtr> matrix2LastUsageNode;
-    unordered_map<Matrix<ElemType>*, ComputationNodeBasePtr> matrix2FirstUsageNode;
-    std::set<ComputationNodeBase*> nodesForBackProp;
     if (trainRootNode != nullptr)
     {
         const std::list<ComputationNodeBasePtr>& backPropNodes = GetEvalOrder(trainRootNode);
-        for(auto node : backPropNodes)
-            nodesForBackProp.insert(node.get());
 
         // now, simulate the gradient computation order to determine how to allocate matrices
         set<ComputationNodeBasePtr> completedGradient;
@@ -1121,171 +1341,15 @@ void ComputationNetwork::AllocateAllMatrices(const std::vector<ComputationNodeBa
                 n->AllocateGradientMatricesForInputs(m_matrixPool);
                 // Root node's information will be used and should not be shared with others, also it's small (1x1)
                 if ((n != trainRootNode) && n->NeedsGradient())
-                {
                     n->ReleaseMatricesAfterBackprop(m_matrixPool);
-                }
             }
         }
-
-        for (auto iter = backPropNodes.rbegin(); iter != backPropNodes.rend(); iter++) // for gradient computation, traverse in reverse order
-        {
-            auto n = *iter;
-            int numInputs = n->GetNumInputs();
-            Matrix<ElemType> *bufferValue;
-            Matrix<ElemType> *bufferGrad;
-            
-            std::string nodename = std::string(n->NodeName().begin(), n->NodeName().end());
-            for(int i = 0; i < numInputs; i++)
-            {
-                bufferValue = (Matrix<ElemType>*)n->Input(i)->ValuePtr().get();
-                bufferGrad = (Matrix<ElemType>*)n->Input(i)->GradientPtr().get();
-
-                if(bufferValue != NULL)
-                {
-                    for(auto loopMember : matrix2LoopMembers[bufferValue])
-                    {
-                        matrix2LastUsageNode[loopMember] = n;
-                        if(matrix2FirstUsageNode.count(loopMember) == 0)
-                            matrix2FirstUsageNode[loopMember] = n;
-                    }
-                }
-                // value from forward pass reused as a gradient; do not free this
-                if(bufferGrad != NULL && parentsMapMatrix.count(bufferGrad) > 0)
-                {
-                    for(auto loopMember : matrix2LoopMembers[bufferGrad])
-                        if(matrix2FirstUsageNode.count(loopMember) == 0)
-                            matrix2FirstUsageNode[loopMember] = n;
-                }
-            }
-            bufferValue = (Matrix<ElemType>*)n->ValuePtr().get();
-            bufferGrad = (Matrix<ElemType>*)n->GradientPtr().get();
-
-            if(bufferValue != NULL)
-            {
-                for(auto loopMember : matrix2LoopMembers[bufferValue])
-                {
-                    matrix2LastUsageNode[loopMember] = n;
-                    if(matrix2FirstUsageNode.count(loopMember) == 0)
-                        matrix2FirstUsageNode[loopMember] = n;
-                }
-            }
-            // value from forward pass reused as a gradient; do not free this
-            if(bufferGrad != NULL && parentsMapMatrix.count(bufferGrad) > 0)
-            {
-                for(auto loopMember : matrix2LoopMembers[bufferGrad])
-                    if(matrix2FirstUsageNode.count(loopMember) == 0)
-                        matrix2FirstUsageNode[loopMember] = n;
-            }
-        }
-
     }
-
-    unordered_map<ComputationNodeBase*, std::vector<Matrix<ElemType>*> > backwardSwapInDependencyNode2matrices;
-    unordered_map<ComputationNodeBase*, std::vector<Matrix<ElemType>*> > lastBackwardsDependencyNode2matrices;
-    for(auto node :  GetNodesWithType(OperationNameOf(LearnableParameter)))
-    {
-        Matrix<ElemType> *buffer = (Matrix<ElemType>*)node->ValuePtr().get();
-        if(matrix2LastUsageNode.count(buffer) > 0)
-            matrix2LastUsageNode.erase(buffer);
-    }
-
-    vector<ComputationNodeBasePtr> PreComputedNodes;
-    vector<ComputationNodeBasePtr> allnodes = GetAllNodes();
-    for (const auto& n : allnodes)
-    {
-        if (n->RequiresPreCompute())
-            PreComputedNodes.push_back(n);
-    }
-
-    for(auto node :  PreComputedNodes)
-    {
-        Matrix<ElemType> *buffer = (Matrix<ElemType>*)node->ValuePtr().get();
-        std::string nodename = std::string(node->NodeName().begin(), node->NodeName().end());
-        cout << "precomute node: " << nodename << endl;
-        if(matrix2SwapOutNode.count(buffer) > 0)
-            matrix2SwapOutNode.erase(buffer);
-
-        if(matrix2FirstUsageNode.count(buffer) > 0)
-            matrix2FirstUsageNode.erase(buffer);
-
-        if(matrix2LastUsageNode.count(buffer) > 0)
-            matrix2LastUsageNode.erase(buffer);
-    }
-
-
-    for (auto node : InputNodes(nullptr))
-    {
-        Matrix<ElemType> *buffer = (Matrix<ElemType>*)node->ValuePtr().get();
-        if(matrix2SwapOutNode.count(buffer) > 0)// && buffer->GetMatrixType() == MatrixType::SPARSE)
-            matrix2SwapOutNode.erase(buffer);
-    }
-
-    for (auto& node : FinalCriterionNodes())
-    {
-        Matrix<ElemType> *buffer = (Matrix<ElemType>*)node->ValuePtr().get();
-        if(matrix2LastUsageNode.count(buffer) > 0)
-            matrix2LastUsageNode.erase(buffer);
-    }
-
-    for(auto pair : matrix2SwapOutNode)
-        forwardSwapOutDependencyNode2matrices[pair.second].push_back(pair.first);
-
-    for(auto pair : matrix2FirstUsageNode)
-        backwardSwapInDependencyNode2matrices[pair.second.get()].push_back(pair.first);
-
-    for(auto pair : forwardSwapOutDependencyNode2matrices)
-    {
-        std::string nodename = std::string(pair.first->NodeName().begin(), pair.first->NodeName().end());
-        cout << "forward swap out for node: " << nodename << endl;
-        for(auto buffer : pair.second)
-            cout << buffer << endl;
-
-    }
-
-
-    for(auto pair : backwardSwapInDependencyNode2matrices)
-    {
-        std::string nodename = std::string(pair.first->NodeName().begin(), pair.first->NodeName().end());
-        cout << "backwards swap in for node: " << nodename << endl;
-        for(auto buffer : pair.second)
-            cout << buffer << endl;
-
-    }
-
-    for(auto pair : matrix2LastUsageNode)
-        lastBackwardsDependencyNode2matrices[pair.second.get()].push_back(pair.first);
-
-
-    auto itr = forwardSwapOutDependencyNode2matrices.begin();
-    while (itr != forwardSwapOutDependencyNode2matrices.end())
-    {
-        if (nodesForBackProp.count(itr->first) == 0)
-           itr = forwardSwapOutDependencyNode2matrices.erase(itr);
-        else
-           ++itr;
-    }
-
-
-
-    if (trainRootNode != nullptr)
-    m_networkInfo->GetSwapManager<ElemType>()->InitializeSwapping(
-                             forwardSwapOutDependencyNode2matrices, 
-                             backwardSwapInDependencyNode2matrices,
-                             lastBackwardsDependencyNode2matrices);
 
     m_areMatricesAllocated = true;
 
-    //print the memory sharing structure
-    std::vector<ComputationNodeBasePtr> allNodes = GetAllNodes();
-    if (allNodes.size() == 0)
-        LogicError("Network has no computation node.");
-
-    if (allNodes[0]->Is<ComputationNode<float>>())
-        PrintMemorySharingStructure<float>(allNodes);
-    else if (allNodes[0]->Is<ComputationNode<double>>())
-        PrintMemorySharingStructure<double>(allNodes);
-    else
-        LogicError("Unexpected node precision type.");
+    // print the memory sharing structure
+    PrintMemorySharingStructure(GetAllNodes());
 }
 
 bool ComputationNetwork::ReleaseMatricesAfterEvalForChildren(ComputationNodeBasePtr n, std::unordered_map<ComputationNodeBasePtr, int>& parentCount)

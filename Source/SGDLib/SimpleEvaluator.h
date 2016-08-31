@@ -34,13 +34,13 @@ class SimpleEvaluator
 public:
     SimpleEvaluator(ComputationNetworkPtr net, const MPIWrapperPtr& mpi, bool enableDistributedMBReading = false, const size_t numMBsToShowResult = 100, const size_t firstMBsToShowResult = 0, const int traceLevel = 0, const size_t maxSamplesInRAM = SIZE_MAX,
                     const size_t numSubminiBatches = 1) :
-        m_net(net), 
-        m_numMBsToShowResult(numMBsToShowResult), 
+        m_net(net),
+        m_numMBsToShowResult(numMBsToShowResult),
         m_firstMBsToShowResult(firstMBsToShowResult),
         m_traceLevel(traceLevel),
-        m_maxSamplesInRAM(maxSamplesInRAM), 
-        m_numSubminiBatches(numSubminiBatches), 
-        m_mpi(mpi), 
+        m_maxSamplesInRAM(maxSamplesInRAM),
+        m_numSubminiBatches(numSubminiBatches),
+        m_mpi(mpi),
         m_distGradAgg(nullptr),
         m_gradHeader(nullptr),
         m_enableDistributedMBReading(enableDistributedMBReading)
@@ -87,7 +87,7 @@ public:
         std::vector<EpochCriterion> evalResults(evalNodes.size(), EpochCriterion(0));
 
         // allocate memory for forward computation
-        m_net->AllocateAllMatrices<ElemType>(evalNodes, {}, nullptr);
+        m_net->AllocateAllMatrices(evalNodes, {}, nullptr);
 
         // prepare features and labels
         auto& featureNodes = m_net->FeatureNodes();
@@ -137,7 +137,7 @@ public:
             bool wasDataRead = DataReaderHelpers::GetMinibatchIntoNetwork<ElemType>(*dataReader, m_net, nullptr, useDistributedMBReading, useParallelTrain, inputMatrices, actualMBSize, m_mpi);
             // in case of distributed reading, we do a few more loops until all ranks have completed
             // end of epoch
-            if (!wasDataRead && (!useDistributedMBReading || noMoreSamplesToProcess)) 
+            if (!wasDataRead && (!useDistributedMBReading || noMoreSamplesToProcess))
                 break;
 
             // Note: If !wasDataRead then the data that GetMinibatchIntoNetwork() was supposed to full in are undefined.

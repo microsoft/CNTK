@@ -39,7 +39,7 @@
 #define CNTK_MODEL_VERSION_6 6 // Batch norm blending
 #define CNTK_MODEL_VERSION_7 7 // ElemType tag in model file
 #define CNTK_MODEL_VERSION_8 8 // DynamicAxis for inputs
-#define CNTK_MODEL_VERSION_9 9 // Transpose flag in ConvolutionNode to support deconvolution. 
+#define CNTK_MODEL_VERSION_9 9 // Transpose flag in ConvolutionNode to support deconvolution.
 #define CURRENT_CNTK_MODEL_VERSION CNTK_MODEL_VERSION_9
 
 extern bool g_shareNodeValueMatrices;
@@ -608,11 +608,11 @@ public:
 
     bool NeedsGradient() const { return m_needsGradient; }
 
-    void SetLearningRateMultiplier(float f) 
-    { 
+    void SetLearningRateMultiplier(float f)
+    {
         if (f < 0)
             InvalidArgument("%ls: LearningRateMultiplier should be non-negative. You are tring to set it to %f.", NodeDescription().c_str(), f);
-        m_learningRateMultiplier = f; 
+        m_learningRateMultiplier = f;
     }
     float GetLearningRateMultiplier() const { return m_learningRateMultiplier; }
     bool IsParameterUpdateRequired() const { return m_learningRateMultiplier > 0; }
@@ -628,6 +628,8 @@ public:
     }
     ComputationEnvironmentPtr GetEnvironmentPtr() const { return m_environment; }
     void SetEnvironment(ComputationEnvironmentPtr environment) { m_environment = environment; }
+    virtual std::set<std::pair<const MatrixBase*, std::wstring>> GetMatrixInfo() const = 0; // to be defined by <ElemType> version
+
 
     const NetworkInformation& NetworkInfo() const
     {
@@ -667,9 +669,9 @@ protected:
     void ValidateUnaryMap(bool isFinalValidationPass);
     void ValidateUnaryReduce(bool isFinalValidationPass);
     void ValidateInferBinaryInputDims();
-    void ValidateInferNaryInputDims(size_t numInputs);    
+    void ValidateInferNaryInputDims(size_t numInputs);
     void ValidateBinaryZip(bool isFinalValidationPass, bool allowBroadcast);
-    void ValidateBinaryReduce(bool isFinalValidationPass);    
+    void ValidateBinaryReduce(bool isFinalValidationPass);
     void ValidateNaryZip(bool isFinalValidationPass, bool allowBroadcast, size_t numInputs);
     void InferMBLayoutFromInputsForStandardCase(bool isFinalValidationPass);
     virtual void ValidateInferInputDimsFrom(const TensorShape&) = 0;    // (implemented by ComputationNode<ElemType>)
@@ -710,7 +712,7 @@ public:
     {
     	ForwardPropSpecialization(fr);
 
- 
+
     }
 
 
@@ -855,8 +857,8 @@ public:
 
     // Helper for generating error messages and the like
     const std::wstring NodeDescription() const
-    { 
-        return std::wstring(L"Node '") + NodeName().c_str() + L"' (" + OperationName().c_str() + L" operation)"; 
+    {
+        return std::wstring(L"Node '") + NodeName().c_str() + L"' (" + OperationName().c_str() + L" operation)";
     };
 
     // Helper that returns [a x b x c], including dynamic axes.
@@ -897,7 +899,7 @@ protected:
 typedef ComputationNodeBase::ComputationNodeBasePtr ComputationNodeBasePtr;
 
 // =======================================================================
-// NumInputs -- little helper interface to allow derived Node classes to 
+// NumInputs -- little helper interface to allow derived Node classes to
 // specify how many inputs they expect
 // =======================================================================
 
@@ -1478,11 +1480,12 @@ public:
 
     //this function is for displaying memeory sharing information
     //TODO: customize this function for all nodes that uses temp internal matrices.
-    virtual std::set<std::pair<const Matrix<ElemType>*, const std::wstring>> GetMatrixInfo()
+    virtual std::set<std::pair<const MatrixBase*, std::wstring>> GetMatrixInfo() const override
     {
-        std::set<std::pair<const Matrix<ElemType>*, const std::wstring>> matrixInfo;
-        matrixInfo.insert(make_pair(&Value(),    NodeName() + L" Value"    + msra::strfun::utf16(ShapeDescription())));
-        matrixInfo.insert(make_pair(&Gradient(), NodeName() + L" Gradient" + msra::strfun::utf16(ShapeDescription())));
+        std::set<std::pair<const MatrixBase*, std::wstring>> matrixInfo;
+        matrixInfo.insert    (make_pair(ValuePtr().get(),    NodeName() + L" : " + msra::strfun::utf16(ShapeDescription())));
+        if (GradientPtr())
+            matrixInfo.insert(make_pair(GradientPtr().get(), NodeName() + L" : " + msra::strfun::utf16(ShapeDescription()) + L" (gradient)"));
         return matrixInfo;
     }
 
@@ -1583,7 +1586,7 @@ public:
 
     // helper for SimpleOutWriter, living in here to be able to use in debugging
     void WriteMinibatchWithFormatting(FILE* f, const FrameRange& fr, size_t onlyUpToRow, size_t onlyUpToT, bool transpose, bool isCategoryLabel, bool isSparse,
-                                      const std::vector<std::string>& labelMapping, const std::string& sequenceSeparator, 
+                                      const std::vector<std::string>& labelMapping, const std::string& sequenceSeparator,
                                       const std::string& sequencePrologue, const std::string& sequenceEpilogue, const std::string& elementSeparator,
                                       const std::string& sampleSeparator, std::string valueFormatString,
                                       bool outputGradient = false) const;
@@ -1652,7 +1655,7 @@ protected:
     void PrintNodeValuesToFile(const bool printValues, const bool printMetadata, File& fstream) const
     {
         if (printValues)
-        { 
+        {
             if (printMetadata)
             {
                 fstream << wstring(L"\n");
@@ -1884,6 +1887,7 @@ public:
     virtual bool RequiresPreCompute() const override { return false; } // return true if the node's value should be computed before the normal training. e.g., mean and invStd of input features.
     virtual std::string FormatOperationPrototype(const std::string& extraArgs) const override { return ""; }
     virtual void DumpNodeInfo(const bool /*printValues*/, const bool /*printMetadata*/, File& fstream) const override {}
+    virtual std::set<std::pair<const MatrixBase*, std::wstring>> GetMatrixInfo() const override { NOT_IMPLEMENTED; }
 
 protected: public:                                     // needed in ComputationNetwork::FindInRecurrentLoops(), which really should be part of SEQTraversalFlowControlNode
     std::vector<ComputationNodeBasePtr> m_nestedNodes; // nodes tucked away in this node, in evaluation order
