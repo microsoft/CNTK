@@ -97,6 +97,7 @@ template <class ElemType>
 		Log(fr, true/*means log gradient*/);
 }
 
+
 // log value or gradient
 template <class ElemType>
 /*virtual*/ void TraceNode<ElemType>::Log(const FrameRange& fr, bool logGradientInstead) const
@@ -131,20 +132,8 @@ template <class ElemType>
     }
 }
 
-template <class ElemType>
-/*virtual*/ void TraceNode<ElemType>::BackpropTo(const size_t inputIndex, const FrameRange& fr) /*override*/
-{
-    assert(inputIndex == 0); inputIndex;
-
-    size_t rank = DetermineElementwiseTensorRank();
-    auto sliceOutputGrad =           GradientTensorFor(rank, fr);      // propagate from this one...
-    auto sliceInputGrad  = Input(0)->GradientTensorFor(rank, fr);      // ...to this one
-
-    sliceInputGrad.AddCopyOf(sliceOutputGrad);
-}
 
 template <class ElemType>
->>>>>>> Refactored BackpropTo into template method.
 /*virtual*/ void TraceNode<ElemType>::Validate(bool isFinalValidationPass) // override
 {
     ValidateUnaryMap(isFinalValidationPass);

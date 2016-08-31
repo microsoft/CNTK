@@ -1854,26 +1854,7 @@ public:
         if (m_savedInvStdDev->IsEmpty())
             LogicError("%ls: m_savedInvStdDev cannot be empty", NodeName().c_str());
 
-        FrameRange fr(Input(0)->GetMBLayout());
-        SynchronizationManager *sync = SynchronizationManager::GetSynchronizationManager();
-        if(!sync->IsExecuting() && sync->m_useMemorySwapping){ return; }
-        bool isExecuting = false;
-        bool useMemorySwapping = false;
-
-        if(std::is_same<ElemType, float>::value)
-        {
-            isExecuting = g_floatSynchronizationManager->IsExecuting();
-            useMemorySwapping = g_floatSynchronizationManager->m_useMemorySwapping;
-        }
-        else
-        {
-            isExecuting = g_doubleSynchronizationManager->IsExecuting();
-            useMemorySwapping = g_doubleSynchronizationManager->m_useMemorySwapping;
-        }
-
-        if(!isExecuting && useMemorySwapping){ return; }
-        SynchronizationManager<ElemType> *sync = SynchronizationManager<ElemType>::GetSynchronizationManager();
-        if(!sync->IsExecuting() && sync->m_useMemorySwapping){ return; }
+        FrameRange fr(Input(0)->GetMBLayout());       
 
         if (inputIndex == 0) // derivative with respect to the input.
         {
@@ -1930,16 +1911,7 @@ public:
     {
         Base::Validate(isFinalValidationPass);
         InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
-    	if (Environment().IsTraining())
-    	{
-			SynchronizationManager<ElemType> *sync = SynchronizationManager<ElemType>::GetSynchronizationManager();
-			if(sync->m_isInTrainingMode && !sync->IsExecuting() && sync->m_useMemorySwapping)
-			{
-				return;
-			}
-    	}
 
-        Matrix<ElemType> sliceInputValue = Input(0)->ValueFor(fr);
         const Matrix<ElemType>& scale = Input(1)->Value();
         const Matrix<ElemType>& bias = Input(2)->Value();
         Matrix<ElemType>& runMean = Input(3)->Value();

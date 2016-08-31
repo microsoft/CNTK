@@ -237,8 +237,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
     list<Matrix<ElemType>> smoothedGradients;
     size_t numParameters = 0;
 
-    vector<wstring> nodesToUpdateDescriptions; // for logging only
-    SynchronizationManager<ElemType> *sync = SynchronizationManager<ElemType>::GetSynchronizationManager();
+    vector<wstring> nodesToUpdateDescriptions; // for logging only   
     for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
     {
         ComputationNodePtr node = dynamic_pointer_cast<ComputationNode<ElemType>>(*nodeIter);
@@ -258,11 +257,6 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
     }
 
     std::map<const ComputationNodeBasePtr, std::list<ComputationNodeBasePtr>> allLearnableNodes = net->GetLearnableParameters();
-    for(auto pair : allLearnableNodes)
-    {
-    	for(auto ptr : pair.second)
-    		sync->m_bannedBuffers2bool[(Matrix<ElemType>*)ptr.get()->ValuePtr().get()];
-    }
     size_t numNeedsGradient = 0;
     for (let node : net->GetEvalOrder(criterionNodes[0]))
     {
