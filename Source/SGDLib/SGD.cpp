@@ -2707,7 +2707,6 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
                     {
                         InvalidArgument("It is only allowed to set blockSizePerWorker or blockSize, not both of them");
                     }
-<<<<<<< HEAD
                     else if (configBMSGD.Exists(L"blockSizePerWorker"))
                     {
                         m_modelAggregationBlockSize = configBMSGD(L"blockSizePerWorker");
