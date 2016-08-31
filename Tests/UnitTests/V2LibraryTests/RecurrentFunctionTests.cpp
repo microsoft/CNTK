@@ -56,7 +56,8 @@ void TestRecurrentNetworkCreation(const DeviceDescriptor& device, bool testSaveA
     if (LSTMClassifier->Outputs().size() != 3)
         throw std::runtime_error("TestFeedForwardNetworkCreation: Function does not have expected Output count");
 
-    if (LSTMClassifier->Parameters().size() != ((numLSTMLayers * 28) + 3))
+    const size_t numParameterVariablesPerLSTMLayer = 20;
+    if (LSTMClassifier->Parameters().size() != ((numLSTMLayers * numParameterVariablesPerLSTMLayer) + 3))
         throw std::runtime_error("TestFeedForwardNetworkCreation: Function does not have expected Parameter count");
 
     if (testSaveAndReLoad)

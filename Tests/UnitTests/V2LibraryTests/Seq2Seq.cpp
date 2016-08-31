@@ -154,7 +154,7 @@ void TrainSequenceToSequenceTranslator(const DeviceDescriptor& device, bool useS
         errs = errsVar;
     }
 
-    auto minibatchSource = CreateSeq2SeqMinibatchSource(L"cmudict-0.7b.train-dev-20-21.bsf.ctf.2", inputVocabDim, labelVocabDim);
+    auto minibatchSource = CreateSeq2SeqMinibatchSource(L"cmudict-0.7b.train-dev-20-21.ctf", inputVocabDim, labelVocabDim);
     auto rawInputStreamInfo = minibatchSource->StreamInfo(L"rawInput");
     auto rawLabelsStreamInfo = minibatchSource->StreamInfo(L"rawLabels");
 

@@ -117,15 +117,15 @@ template <typename ElementType>
 std::pair<CNTK::FunctionPtr, CNTK::FunctionPtr> LSTMPCellWithSelfStabilization(CNTK::Variable input, CNTK::Variable prevOutput, CNTK::Variable prevCellState, const CNTK::DeviceDescriptor& device)
 {
     if ((input.Shape().NumAxes() != 1) || (prevOutput.Shape().NumAxes() != 1) || (prevCellState.Shape().NumAxes() != 1))
-        LogicError("The LSTM implementation in the test library currently only supports 1D inputs and outputs");
+        std::runtime_error("The LSTM implementation in the test library currently only supports 1D inputs and outputs");
 
-    auto stabilize = [](const Variable& x) {
-        float scalarConstant = 4.0f;
-        auto f = Constant({}, scalarConstant);
-        auto fInv = Constant({}, 1.0f / scalarConstant);
+    auto stabilize = [](const CNTK::Variable& x) {
+        ElementType scalarConstant = 4.0f;
+        auto f = CNTK::Constant({}, scalarConstant);
+        auto fInv = CNTK::Constant({}, (ElementType)(1.0f / scalarConstant));
 
-        auto beta = ElementTimes(fInv, Log(Constant({}, 1.0f) + Exp(ElementTimes(f, Parameter({}, 0.99537863f /* 1/f*ln (e^f-1) */)))));
-        return ElementTimes(beta, x);
+        auto beta = CNTK::ElementTimes(fInv, CNTK::Log(CNTK::Constant({}, (ElementType)1.0f) + CNTK::Exp(CNTK::ElementTimes(f, CNTK::Parameter({}, (ElementType)0.99537863f /* 1/f*ln (e^f-1) */)))));
+        return CNTK::ElementTimes(beta, x);
     };
 
     size_t inputDim = input.Shape()[0];
@@ -149,25 +149,25 @@ std::pair<CNTK::FunctionPtr, CNTK::FunctionPtr> LSTMPCellWithSelfStabilization(C
     auto stabilizedPrevCellState = stabilize(prevCellState);
 
     auto projectInput = [input, cellDim, inputDim, createBiasParam, createProjectionParam]() {
-        return createBiasParam(cellDim) + Times(createProjectionParam(cellDim, inputDim), input);
+        return createBiasParam(cellDim) + CNTK::Times(createProjectionParam(cellDim, inputDim), input);
     };
 
     // Input gate
-    auto it = Sigmoid(projectInput() + Times(createProjectionParam(cellDim, outputDim), stabilizedPrevOutput) + ElementTimes(createDiagWeightParam(cellDim), stabilizedPrevCellState));
-    auto bit = ElementTimes(it, Tanh(projectInput() + Times(createProjectionParam(cellDim, outputDim), stabilizedPrevOutput)));
+    auto it = CNTK::Sigmoid(projectInput() + CNTK::Times(createProjectionParam(cellDim, outputDim), stabilizedPrevOutput) + CNTK::ElementTimes(createDiagWeightParam(cellDim), stabilizedPrevCellState));
+    auto bit = CNTK::ElementTimes(it, CNTK::Tanh(projectInput() + CNTK::Times(createProjectionParam(cellDim, outputDim), stabilizedPrevOutput)));
 
     // Forget-me-not gate
-    auto ft = Sigmoid(projectInput() + Times(createProjectionParam(cellDim, outputDim), stabilizedPrevOutput) + ElementTimes(createDiagWeightParam(cellDim), stabilizedPrevCellState));
-    auto bft = ElementTimes(ft, prevCellState);
+    auto ft = CNTK::Sigmoid(projectInput() + CNTK::Times(createProjectionParam(cellDim, outputDim), stabilizedPrevOutput) + ElementTimes(createDiagWeightParam(cellDim), stabilizedPrevCellState));
+    auto bft = CNTK::ElementTimes(ft, prevCellState);
 
     auto ct = bft + bit;
 
     // Output gate
-    auto ot = Sigmoid(projectInput() + Times(createProjectionParam(cellDim, outputDim), stabilizedPrevOutput) + ElementTimes(createDiagWeightParam(cellDim), stabilize(ct)));
-    auto ht = ElementTimes(ot, Tanh(ct));
+    auto ot = CNTK::Sigmoid(projectInput() + CNTK::Times(createProjectionParam(cellDim, outputDim), stabilizedPrevOutput) + CNTK::ElementTimes(createDiagWeightParam(cellDim), stabilize(ct)));
+    auto ht = CNTK::ElementTimes(ot, CNTK::Tanh(ct));
 
     auto c = ct;
-    auto h = (outputDim != cellDim) ? Times(createProjectionParam(outputDim, cellDim), stabilize(ht)) : ht;
+    auto h = (outputDim != cellDim) ? CNTK::Times(createProjectionParam(outputDim, cellDim), stabilize(ht)) : ht;
 
     return{ h, c };
 }
