@@ -479,7 +479,7 @@ def times(left, right, output_rank=1, name=''):
     Returns:
         :class:`cntk.Function`
     '''
-    from cntk import times      
+    from cntk import times
     left = sanitize_input(left, get_data_type(right))
     right = sanitize_input(right, get_data_type(left))
     return times(right, left, output_rank, name)        
@@ -1156,7 +1156,10 @@ def dropout(x, name=''):
 # variables_and_parameters ops
 ################################################################################
 
-def variable(shape, data_type=None, needs_gradient=False, is_sparse=False, name=''):
+from cntk.cntk_py import Axis
+
+def variable(shape, data_type=None, needs_gradient=False, is_sparse=False, 
+            dynamic_axes = [Axis.default_dynamic_axis(), Axis.default_batch_axis()], name=''):
     '''
     It creates an input node. The graph requires a separate reader that will be
     fed to this input.
@@ -1166,6 +1169,7 @@ def variable(shape, data_type=None, needs_gradient=False, is_sparse=False, name=
         data_type: np.float32 or np.float64
         needs_gradients (bool): whether to back-propagates to it or not
         is_sparse (bool): whether the variable is sparse
+        dynamic_axes (list): a list of dynamic axis (e.g., batch axis, time axis)
         name (str): the name of the node in the network
         
     Returns:
@@ -1175,7 +1179,7 @@ def variable(shape, data_type=None, needs_gradient=False, is_sparse=False, name=
 
     # TODO dynamic axis for numpy arrays
     # TODO sparse for numpy arrays
-    return Variable(shape, data_type, needs_gradient, is_sparse, name)
+    return Variable(shape, data_type, needs_gradient, is_sparse, dynamic_axes, name)
 
 def placeholder(shape, name=''):
     '''

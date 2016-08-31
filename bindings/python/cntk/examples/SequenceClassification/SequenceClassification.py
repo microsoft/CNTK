@@ -3,10 +3,14 @@ import sys
 import os
 import time
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..'))
-from cntk import learning_rates_per_sample, DeviceDescriptor, Trainer, sgdlearner
-from cntk.ops import variable, cross_entropy_with_softmax, combine, classification_error, sigmoid, element_times, constant, parameter, times
-from cntk.utils import create_minibatch_source, get_train_loss, cntk_device
-from cntk.examples.common.nn import LSTMP_component_with_self_stabilization, embedding
+from cntk import learning_rates_per_sample, DeviceDescriptor, Trainer, sgdlearner, Axis
+from cntk.ops import variable, cross_entropy_with_softmax, combine, classification_error, sigmoid, element_times, constant, parameter, times, slice
+from cntk.utils import  get_train_loss, cntk_device
+from cntk.examples.common.nn import LSTMP_component_with_self_stabilization, embedding, fully_connected_linear_layer
+from cntk.examples.common.mb import create_text_mb_source
+
+def select_last(operand):
+    return slice(operand, Axis.default_dynamic_axis(), -1, 0)
 
 def create_mb_source(input_dim, num_output_classes, epoch_size):
     features_config = dict()
@@ -41,12 +45,9 @@ def LSTM_sequence_classifer_net(input, num_output_classes, embedding_dim, LSTM_d
     LSTM_function = LSTMP_component_with_self_stabilization(embedding_function.output(), LSTM_dim, cell_dim, device)
     thought_vector_function = select_last(LSTM_function.output())
 
-    return fully_connected_linear_layer(thought_vector_function, num_output_classes, device)
+    return fully_connected_linear_layer(thought_vector_function.output(), num_output_classes, device)
 
-def train_sequence_classifier(device):
-
-    time.sleep(10)
-
+def train_sequence_classifier(device):   
     input_dim = 2000;
     cell_dim = 25;
     hidden_dim = 25;
@@ -56,29 +57,45 @@ def train_sequence_classifier(device):
     features = variable(shape=(input_dim,), is_sparse=True, name="features")
     classifier_output = LSTM_sequence_classifer_net(features, num_output_classes, embedding_dim, hidden_dim, cell_dim, device)
 
-    label = variable((num_output_classes,), name="labels", )
+    label = variable((num_output_classes,), dynamic_axes = [Axis.default_batch_axis()], name="labels")
     ce = cross_entropy_with_softmax(classifier_output.output(), label)
     pe = classification_error(classifier_output.output(), label)
     lstm_net = combine([ce, pe, classifier_output], "classifier_model")
+
+    rel_path = r"../../../../../Tests/EndToEndTests/Text/SequenceClassification/Data/Train.ctf"
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), rel_path)
+    cm = create_text_mb_source(path, input_dim, num_output_classes, 0, True, False, "x", "y");
+
+    stream_infos = cm.stream_infos()  
     
-    cm = create_mb_source(input_dim, num_output_classes, 0)
-    features_si = cm.stream_info('features')
-    labels_si = cm.stream_info('labels')
+    for si in stream_infos:
+        if si.m_name == 'features':
+            features_si = si
+        elif si.m_name == 'labels':
+            labels_si = si
 
     minibatch_size = 200
-    lr = 0.0005
-    trainer = cntk_py.Trainer(lstm_net, ce.output(), [cntk_py.sgdlearner(lstm_net.parameters(), lr)])
+    lr = lr = learning_rates_per_sample(0.0005)
+
+    minibatch_size_limits = dict()    
+    minibatch_size_limits[features_si] = (0,minibatch_size)
+    minibatch_size_limits[labels_si] = (0,minibatch_size)
+
+    trainer = Trainer(lstm_net, ce.output(), [sgdlearner(lstm_net.parameters(), lr)])
     
     freq = 20        
     i = 0;
+    cntk_dev = cntk_device(device)
+    #TODO: replace by while True, and add a stop condition inside the loop
     while True:
-        mb=cm.get_next_minibatch(minibatch_size, device)
-        
+        mb=cm.get_next_minibatch(minibatch_size_limits, cntk_dev)
+        if  len(mb) == 0:
+            break
         arguments = dict()
-        arguments[input] = mb[features_si].m_data
+        arguments[features] = mb[features_si].m_data
         arguments[label] = mb[labels_si].m_data
         
-        trainer.train_minibatch(arguments, device)
+        trainer.train_minibatch(arguments, cntk_dev)
 
         if i % freq == 0: 
             training_loss = get_train_loss(trainer)
@@ -87,5 +104,5 @@ def train_sequence_classifier(device):
         i += 1
 
 
-if __name__=='__main__':
-    train_sequence_classifier(0)
+if __name__=='__main__':    
+    train_sequence_classifier(-1)

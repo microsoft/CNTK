@@ -710,8 +710,8 @@ class Function(_object):
     def inputs(self):
         return _cntk_py.Function_inputs(self)
 
-    def output(self):
-        return _cntk_py.Function_output(self)
+    def output_internal(self):
+        return _cntk_py.Function_output_internal(self)
 
     def outputs(self):
         return _cntk_py.Function_outputs(self)
@@ -1285,6 +1285,13 @@ NDShape.__eq__ = lambda a,b: NDShape_eq(a,b)
 
 
 StreamInfo.__eq__ = lambda a,b: a.m_name==b.m_name and a.m_id==b.m_id and a.m_storage_format==b.m_storage_format and a.m_element_type==b.m_element_type and a.m_sample_layout.dimensions()==b.m_sample_layout.dimensions()
+
+
+def get_output_and_keep_reference(self):
+    variable = self.output_internal()    
+    variable.owner = self
+    return variable
+Function.output = lambda self:get_output_and_keep_reference(self)
 
 # This file is compatible with both classic and new-style classes.
 

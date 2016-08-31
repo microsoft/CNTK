@@ -9,14 +9,20 @@ import sys
 import os
 from cntk.utils import create_minibatch_source
 
-def create_text_mb_source(data_file, input_dim, num_output_classes, epoch_size):
+def create_text_mb_source(data_file, input_dim, num_output_classes, epoch_size, 
+                          is_feature_sparse=False, is_label_sparse=False,
+                          feature_alias=None, label_alias=None):
     features_config = dict()
     features_config["dim"] = input_dim
-    features_config["format"] = "dense"
+    features_config["format"] = "sparse" if is_feature_sparse else "dense"
+    if feature_alias:
+        features_config["alias"] = feature_alias
 
     labels_config = dict()
     labels_config["dim"] = num_output_classes
-    labels_config["format"] = "dense"
+    labels_config["format"] = "sparse" if is_label_sparse else "dense"
+    if label_alias:
+        labels_config["alias"] = label_alias
 
     input_config = dict()
     input_config["features"] = features_config

@@ -143,35 +143,34 @@ def LSTMP_cell_with_self_stabilization(input, prev_output, prev_cell_state, devi
     expsWmr = exp(sWmr)
 
     temp1 = element_times(expsWxi.output(), input)
-    Wxix = times(temp1.output(), Wxi)
+    Wxix = times(temp1.output(), Wxi)    
     Whidh = times(element_times(expsWhi.output(), prev_output).output(), Whi)
     Wcidc = element_times(Wci, element_times(expsWci.output(), prev_cell_state).output())
 
-    it = sigmoid(Wxix + Bi + Whidh + Wcidc)
-
+    #TODO: use (+) instead of plus, but we need to wrap output() so it return our inhereted classes    
+    it = sigmoid(plus(plus(Wxix.output(),Bi).output(),plus(Whidh.output(),Wcidc.output()).output()).output())
     Wxcx = times(element_times(expsWxc.output(), input).output(), Wxc)
     Whcdh = times(element_times(expsWhc.output(), prev_output).output(), Whc)
-    bit = element_times(it.output(), tanh(Wxcx + Whcdh + Bc).output())
-
+    bit = element_times(it.output(), tanh(plus(plus(Wxcx.output(), Whcdh.output()).output(), Bc).output()).output())
     Wxfx = times(element_times(expsWxf.output(), input).output(), Wxf)
     Whfdh = times(element_times(expsWhf.output(), prev_output).output(), Whf)
     Wcfdc = element_times(Wcf, element_times(expsWcf.output(), prev_cell_state).output())
+    
+    #TODO: use (+) instead of plus, but we need to wrap output() so it return our inherited classes
+    ft = sigmoid(plus(plus(Wxfx.output(),Bf).output(),plus(Whfdh.output(),Wcfdc.output()).output()).output())
+    bft = element_times(ft.output(), prev_cell_state)
 
-    ft = sigmoid(Wxfx + Bf + Whfdh + Wcfdc)
-
-    bft = element_times(ft, prev_cell_state)
-
-    ct = bft + bit
+    ct = plus(bft.output(), bit.output())
 
     Wxox = times(element_times(expsWxo.output(), input).output(), Wxo)
     Whodh = times(element_times(expsWho.output(), prev_output).output(), Who)
-    Wcoct = element_times(Wco, element_times(expsWco.output(), ct).output())
+    Wcoct = element_times(Wco, element_times(expsWco.output(), ct.output()).output())
 
-    ot = sigmoid(Wxox + Bo + Whodh + Wcoct)
+    #TODO: use (+) instead of plus, but we need to wrap output() so it return our inherited classes
+    ot = sigmoid(plus(plus(Wxox.output(),Bo).output(),plus(Whodh.output(),Wcoct.output()).output()).output())
 
-    mt = element_times(ot, tanh(ct).output())
-
-    return (times(element_times(expsWmr.output(), mt), Wmr).output(), ct)
+    mt = element_times(ot.output(), tanh(ct.output()).output())    
+    return (times(element_times(expsWmr.output(), mt.output()).output(), Wmr), ct)
 
 
 def LSTMP_component_with_self_stabilization(input, output_dim, cell_dim, device):
@@ -179,11 +178,10 @@ def LSTMP_component_with_self_stabilization(input, output_dim, cell_dim, device)
     dc = placeholder(shape=(cell_dim,))
 
     LSTMCell = LSTMP_cell_with_self_stabilization(input, dh, dc, device);
-
-    constant((out_feature_map_count,), 0.0, device_id=device)
-    actualDh = past_value(constant((), 0.0, device_id=device), LSTMCell[0], 1);
-    actualDc = past_value(constant((), 0.0, device_id=device), LSTMCell[1], 1);
+    
+    actualDh = past_value(constant((), 0.0, device_id=device), LSTMCell[0].output(), 1);
+    actualDc = past_value(constant((), 0.0, device_id=device), LSTMCell[1].output(), 1);
 
     # Form the recurrence loop by replacing the dh and dc placeholders with the actualDh and actualDc
-    return LSTMCell[0].replace_placeholders({ dh : actualDh, dc : actualDc})
+    return LSTMCell[0].replace_placeholders({ dh : actualDh.output(), dc : actualDc.output()})
 

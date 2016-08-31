@@ -11,6 +11,7 @@
 %include <attribute.i>
 %include <std_shared_ptr.i>
 
+%rename(output_internal) CNTK::Function::Output;
 // if we don't except RandomUniform the corresponding template functions will not be generated
 %rename("%(utitle)s", %$isfunction, notregexmatch$name="RandomUniform") "";
 %rename("%(utitle)s", %$isvariable) "";
@@ -1087,5 +1088,13 @@ StreamInfo.__eq__ = lambda a,b: a.m_name==b.m_name and a.m_id==b.m_id and a.m_st
         return std::hash<CNTK::StreamInfo>()(*$self);
     }
 }
+
+%pythoncode %{
+def get_output_and_keep_reference(self):
+    variable = self.output_internal()    
+    variable.owner = self
+    return variable
+Function.output = lambda self:get_output_and_keep_reference(self)
+%}
 
 

@@ -1,5 +1,5 @@
 import numpy as np
-from cntk import DATATYPE, NDArrayView, DeviceDescriptor_cpudevice, DeviceDescriptor_gpudevice, Variable, Parameter, ConstantFloat, ConstantDouble, Constant, Placeholder, DataType_Float, DataType_Double, ParameterFloat, ParameterDouble
+from cntk import DATATYPE, NDArrayView, DeviceDescriptor_cpudevice, DeviceDescriptor_gpudevice, Variable, Parameter, ConstantFloat, ConstantDouble, Constant, Placeholder, DataType_Float, DataType_Double, ParameterFloat, ParameterDouble, Axis
 from cntk.graph import TensorOpsMixin
 from .. import utils
 
@@ -35,8 +35,10 @@ def _sanitize_value(shape, value, dtype, device, is_param=False):
 
     return ndav
 
+#TODO: remove default values from all constructors' arguments 
 class Variable(Variable, TensorOpsMixin):
-    def __init__(self, shape=None, data_type=None, needs_gradient=False, is_sparse=False, name=''):
+    def __init__(self, shape=None, data_type=None, needs_gradient=False, is_sparse=False, 
+                    dynamic_axes = [Axis.default_dynamic_axis(), Axis.default_batch_axis()], name=''):
         if not np.isscalar(shape):
             # cntk uses column major, thus we reverse the shape    
             shape = tuple(reversed(shape))        
@@ -45,7 +47,7 @@ class Variable(Variable, TensorOpsMixin):
             data_type = FLOAT_32
         dtype = utils.sanitize_dtype_cntk(data_type)
 
-        super(Variable, self).__init__(shape, is_sparse, dtype, needs_gradient, name)
+        super(Variable, self).__init__(shape, is_sparse, dtype, needs_gradient, name, dynamic_axes)
 
 class Parameter(Parameter, TensorOpsMixin):
     def __init__(self, shape=None, value=None, data_type=None, device=None, name=''):
