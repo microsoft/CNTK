@@ -1,10 +1,10 @@
 dataDir: .
 
 tags:
-  # Linux GPU only, at this stage.
+  # GPU only, at this stage.
   # TODO move from e to separate leg, requires infra changes
-  - bvt-e (build_sku == 'gpu') and (device == 'gpu') and (os=='linux')
-  - nightly-e (build_sku == 'gpu') and (device == 'gpu') and (os=='linux')
+  - bvt-e (build_sku == 'gpu') and (device == 'gpu')
+  - nightly-e (build_sku == 'gpu') and (device == 'gpu')
 
 testCases:
   Test cases pass:
