@@ -790,7 +790,8 @@ public:
     // Approximates the expected number of occurences of a class in the sampled set.
     // Assuming (falsely) that the number of tries to get a sampled set with the requested number of distinct values is always estimatedNumTries
     // the probability that a specific class in in the sampled set is (1 - (1-p)^estimatedNumTries), where p is the probablity to pick the clas in one draw.
-    float EstimateCountOfClass(float p, long estimatedNumTries) const
+    // The estimate can be quite a bit of nut should but better than nothing. Better alternatives?
+    float EstimateCountOfClass(float p, float estimatedNumTries) const
     {
         if (m_allowDuplicates)
         {
@@ -812,11 +813,10 @@ public:
         if (m_estimateInclusionProbs)
         {
             valueMatrix.SwitchToMatrixType(DENSE, matrixFormatDense, false);
-            valueMatrix.Reset();
             float sumOfWeights = (float) m_samplingWeightsPrefixSum.back();
             const Matrix<ElemType>& samplingWeights = Input(0)->ValueAsMatrix();
 
-            long estimatedNumTries = GetNumberOfTries();
+            float estimatedNumTries = EstimateNumberOfTries();
             for (int iSample = 0; iSample < m_samplingWeightsPrefixSum.size(); iSample++)
             {
                 float pSample = (float)samplingWeights.GetValue(iSample, 0) / sumOfWeights;
@@ -828,7 +828,6 @@ public:
         {
             valueMatrix.SwitchToMatrixType(SPARSE, matrixFormatSparseCSC, false);
             valueMatrix.Reset();
-
 
             // Get vector with indices of randomly sampled classes
             const std::vector<int> samples = GetWeightedSamples();
@@ -865,11 +864,19 @@ public:
         return RunSampling(dummy);
     }
 
-    long GetNumberOfTries()
+    // Estimate the number of tries needed to find nSamples
+    float EstimateNumberOfTries()
     {
-        long nTries;
-        RunSampling(nTries);
-        return nTries;
+        // We estimate the average numver of tries by repeating a fixed number of experiments
+        int numExperiments = 10; // We choose 10 without any deep justification.
+        long totalTries = 0;
+        for (int iExperiment = 0; iExperiment < numExperiments; iExperiment++)
+        {
+            long nTries;
+            RunSampling(nTries);
+            totalTries += nTries;
+        }
+        return totalTries / (float)numExperiments;
     }
 
     const std::vector<int> RunSampling(long& nTries)
@@ -928,7 +935,17 @@ public:
         auto dims = shape.GetDims();
 
         size_t nClasses = dims[0];
-        SetDims(TensorShape(nClasses, m_nSamples), false);
+
+        if (m_estimateInclusionProbs)
+        {
+            // Output one vector containing the estimated inclusion probability for each class.
+            SetDims(TensorShape(nClasses, 1), false);
+        }
+        else /* sampling mode */
+        {
+            // Output one vector containing the estimated inclusion probability for each class.
+            SetDims(TensorShape(nClasses, m_nSamples), false);
+        }
     }
 
     virtual bool OutputUsedInComputingInputNodesGradients() const override
@@ -944,39 +961,27 @@ public:
     virtual bool IsOutOfDateWrtInputs() const override
     {
         // The only input are the sampling weights that typically will be constant. 
-        // Still we want the value of the node to be refreshed for each minibatch. 
-        return true;
+        // If we are in the mode to generate random samples (i.e. m_estimateInclusionProbs == false) we need to recompute the result for each mini-batch.
+        // If we are in the mode to estimate the inclusion probabilties for each class we don't need to recompute as long as the input doesn't change.
+        if (m_estimateInclusionProbs)
+        {
+            return Base::IsOutOfDateWrtInputs();
+        }
+        else
+        {
+            return true;
+        }
     }
 
 private:
     bool m_allowDuplicates;        // The node can create samples allowing for duplicates (sampling with replacement) or not (sampling without replacment).
     bool m_estimateInclusionProbs; // Control wether to create random samples or estimate inclusion probabilties.
-    int m_nSamples;              // Requested size of sample in case of run-mode = CREATE_SAMPLES.
+    int m_nSamples;                // Requested size of sample in case of run-mode = CREATE_SAMPLES.
     std::vector<double> m_samplingWeightsPrefixSum;
 };
 
 template class RandomSampleNode<float>;
 template class RandomSampleNode<double>;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 // -----------------------------------------------------------------------
 // ClassBasedCrossEntropyWithSoftmaxNode (labeldata(.,t), inputdata(.,t), embeddingMatrix, clsProbBeforeSoftmaxData(.,t))

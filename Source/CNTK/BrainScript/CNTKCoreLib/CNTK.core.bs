@@ -470,6 +470,13 @@ CNTK2 = [
                                                                                         allowDuplicates = sampleWithReplacement;
                                                                                         estimateInclusionProbs = false; 
                                                                                         inputs = _ /*plus the function args*/ ]
+
+    GetInclusionProb(_ ,numSamples, sampleWithReplacement, tag='') = new ComputationNode [ 
+                                                                                        operation = 'RandomSample' ; 
+                                                                                        nSamples = numSamples; 
+                                                                                        allowDuplicates = sampleWithReplacement;
+                                                                                        estimateInclusionProbs = true; 
+                                                                                        inputs = _ /*plus the function args*/ ]
 ]
 
 # Parameter{} can do several forms of initialization.
