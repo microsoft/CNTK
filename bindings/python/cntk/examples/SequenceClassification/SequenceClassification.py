@@ -83,7 +83,7 @@ def train_sequence_classifier(device):
 
     trainer = Trainer(lstm_net, ce.output(), [sgdlearner(lstm_net.parameters(), lr)])
     
-    freq = 20        
+    freq = 1   
     i = 0;
     cntk_dev = cntk_device(device)
     #TODO: replace by while True, and add a stop condition inside the loop
