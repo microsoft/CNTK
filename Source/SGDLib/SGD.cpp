@@ -2169,8 +2169,9 @@ wstring SGD<ElemType>::GetCheckPointFileNameForEpoch(const int epoch)
 template <class ElemType>
 wstring SGD<ElemType>::GetModelNameForEpoch(const int epoch, bool bLastModel)
 {
-	/*
+	
     int epoch1Base = epoch + 1;
+	/*
     if (epoch1Base == m_maxEpochs || bLastModel)
     {
         return m_modelPath;
