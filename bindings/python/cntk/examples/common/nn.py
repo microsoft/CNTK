@@ -9,12 +9,15 @@ import sys
 import os
 from cntk.ops import *
 
-def fully_connected_layer(input, output_dim, device_id, nonlinearity):        
-    input_dim = input.shape()[0]    
+def fully_connected_linear_layer(input, output_dim, device_id):        
+    input_dim = input.shape()[0]
     times_param = parameter(shape=(input_dim,output_dim))    
     t = times(input,times_param)
     plus_param = parameter(shape=(output_dim,))
-    p = plus(plus_param,t.output())    
+    return plus(plus_param,t.output())    
+
+def fully_connected_layer(input, output_dim, device_id, nonlinearity):        
+    p = fully_connected_linear_layer(input, output_dim, device_id)
     return nonlinearity(p.output());
 
 def fully_connected_classifier_net(input, num_output_classes, hidden_layer_dim, num_hidden_layers, device, nonlinearity):
@@ -68,3 +71,119 @@ def resnet_node2_inc(input, out_feature_map_count, kernel_width, kernel_height, 
     c_proj = proj_layer(w_proj, input, 2, 2, b_value, sc_value, bn_time_const, device)
     p = plus(c2.output(), c_proj.output())
     return relu(p.output())
+
+def embedding(input, embedding_dim, device):
+    input_dim = input.shape()[0];
+
+    embedding_parameters = parameter(shape=(input_dim, embedding_dim), device_id=device)
+    return times(input, embedding_parameters)
+
+def select_last(operand):
+    return slice(operand, axis.default_dynamic_axis, -1, 0)
+
+def LSTMP_cell_with_self_stabilization(input, prev_output, prev_cell_state, device):
+    input_dim = input.shape()[0]
+    output_dim = prev_output.shape()[0];
+    cell_dim = prev_cell_state.shape()[0];
+
+    Wxo = parameter(shape=(input_dim, cell_dim), device_id=device)
+    Wxi = parameter(shape=(input_dim, cell_dim), device_id=device)
+    Wxf = parameter(shape=(input_dim, cell_dim), device_id=device)
+    Wxc = parameter(shape=(input_dim, cell_dim), device_id=device)
+
+    Bo = parameter(shape=(cell_dim,), value=0, device_id=device)
+    Bc = parameter(shape=(cell_dim,), value=0, device_id=device)
+    Bi = parameter(shape=(cell_dim,), value=0, device_id=device)
+    Bf = parameter(shape=(cell_dim,), value=0, device_id=device)
+
+    Whi = parameter(shape=(output_dim, cell_dim), device_id=device)
+    Wci = parameter(shape=(cell_dim,), device_id=device)
+
+    Whf = parameter(shape=(output_dim, cell_dim), device_id=device)
+    Wcf = parameter(shape=(cell_dim,), device_id=device)
+
+    Who = parameter(shape=(output_dim, cell_dim), device_id=device)
+    Wco = parameter(shape=(cell_dim,), device_id=device)
+
+    Whc = parameter(shape=(output_dim, cell_dim), device_id=device)
+
+    Wmr = parameter(shape=(cell_dim, output_dim), device_id=device)
+
+    # Stabilization by routing input through an extra scalar parameter
+    sWxo = parameter(shape=(), value=0, device_id=device)
+    sWxi = parameter(shape=(), value=0, device_id=device)
+    sWxf = parameter(shape=(), value=0, device_id=device)
+    sWxc = parameter(shape=(), value=0, device_id=device)
+
+    sWhi = parameter(shape=(), value=0, device_id=device)
+    sWci = parameter(shape=(), value=0, device_id=device)
+
+    sWhf = parameter(shape=(), value=0, device_id=device)
+    sWcf = parameter(shape=(), value=0, device_id=device)
+    sWho = parameter(shape=(), value=0, device_id=device)
+    sWco = parameter(shape=(), value=0, device_id=device)
+    sWhc = parameter(shape=(), value=0, device_id=device)
+
+    sWmr = parameter(shape=(), value=0, device_id=device)
+
+    expsWxo = exp(sWxo)
+    expsWxi = exp(sWxi)
+    expsWxf = exp(sWxf)
+    expsWxc = exp(sWxc)
+
+    expsWhi = exp(sWhi)
+    expsWci = exp(sWci)
+
+    expsWhf = exp(sWhf)
+    expsWcf = exp(sWcf)
+    expsWho = exp(sWho)
+    expsWco = exp(sWco)
+    expsWhc = exp(sWhc)
+
+    expsWmr = exp(sWmr)
+
+    temp1 = element_times(expsWxi.output(), input)
+    Wxix = times(temp1.output(), Wxi)
+    Whidh = times(element_times(expsWhi.output(), prev_output).output(), Whi)
+    Wcidc = element_times(Wci, element_times(expsWci.output(), prev_cell_state).output())
+
+    it = sigmoid(Wxix + Bi + Whidh + Wcidc)
+
+    Wxcx = times(element_times(expsWxc.output(), input).output(), Wxc)
+    Whcdh = times(element_times(expsWhc.output(), prev_output).output(), Whc)
+    bit = element_times(it.output(), tanh(Wxcx + Whcdh + Bc).output())
+
+    Wxfx = times(element_times(expsWxf.output(), input).output(), Wxf)
+    Whfdh = times(element_times(expsWhf.output(), prev_output).output(), Whf)
+    Wcfdc = element_times(Wcf, element_times(expsWcf.output(), prev_cell_state).output())
+
+    ft = sigmoid(Wxfx + Bf + Whfdh + Wcfdc)
+
+    bft = element_times(ft, prev_cell_state)
+
+    ct = bft + bit
+
+    Wxox = times(element_times(expsWxo.output(), input).output(), Wxo)
+    Whodh = times(element_times(expsWho.output(), prev_output).output(), Who)
+    Wcoct = element_times(Wco, element_times(expsWco.output(), ct).output())
+
+    ot = sigmoid(Wxox + Bo + Whodh + Wcoct)
+
+    mt = element_times(ot, tanh(ct).output())
+
+    return (times(element_times(expsWmr.output(), mt), Wmr).output(), ct)
+
+
+def LSTMP_component_with_self_stabilization(input, output_dim, cell_dim, device):
+    dh = placeholder(shape=(output_dim,))
+    dc = placeholder(shape=(cell_dim,))
+
+    LSTMCell = LSTMP_cell_with_self_stabilization(input, dh, dc, device);
+
+    constant((out_feature_map_count,), 0.0, device_id=device)
+    actualDh = past_value(constant((), 0.0, device_id=device), LSTMCell[0], 1);
+    actualDc = past_value(constant((), 0.0, device_id=device), LSTMCell[1], 1);
+
+    # Form the recurrence loop by replacing the dh and dc placeholders with the actualDh and actualDc
+    return LSTMCell[0].replace_placeholders({ dh : actualDh, dc : actualDc})
+
