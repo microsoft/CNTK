@@ -46,7 +46,7 @@ public:
         std::vector<ComputationNodeBasePtr> inputNodes  = m_net->InputNodesForOutputs(outputNodeNames);
 
         // allocate memory for forward computation
-        m_net->AllocateAllMatrices<ElemType>({}, outputNodes, nullptr);
+        m_net->AllocateAllMatrices({}, outputNodes, nullptr);
 
         StreamMinibatchInputs inputMatrices = DataReaderHelpers::RetrieveInputMatrices(inputNodes);
 
@@ -103,7 +103,7 @@ public:
         std::vector<ComputationNodeBasePtr> outputNodes = m_net->OutputNodesByName(outputNodeNames);
 
         // allocate memory for forward computation
-        m_net->AllocateAllMatrices<ElemType>({}, outputNodes, nullptr);
+        m_net->AllocateAllMatrices({}, outputNodes, nullptr);
 
         m_net->StartEvaluateMinibatchLoop(outputNodes);
 
@@ -119,7 +119,7 @@ public:
         dataWriter.SaveData(0, outputMatrices, 1, 1, 0);
     }
 
-    void WriteMinibatch(FILE* f, ComputationNodePtr node, 
+    void WriteMinibatch(FILE* f, ComputationNodePtr node,
         const WriteFormattingOptions & formattingOptions, char formatChar, std::string valueFormatString, std::vector<std::string>& labelMapping,
         size_t numMBsRun, bool gradient)
     {
@@ -162,7 +162,7 @@ public:
 
         if (!nodeUnitTest)                                        // regular operation
         {
-            m_net->AllocateAllMatrices<ElemType>({}, outputNodes, nullptr); // don't allocate for backward pass
+            m_net->AllocateAllMatrices({}, outputNodes, nullptr); // don't allocate for backward pass
         }
         else                                                      // we mis-appropriate this code for unit testing of the back-prop path
         {
@@ -190,14 +190,14 @@ public:
 
             // Update the evaluation order, and other things.
             m_net->CompileNetwork();
-            
+
             // Allocate memory for forward and backward computation. In case of unit test, treat the output node
             // like a criterion node. Submitting a node as parameter 3 here will allocate the gradients.
-            m_net->AllocateAllMatrices<ElemType>({}, outputNodes, outputNodes[0]);
+            m_net->AllocateAllMatrices({}, outputNodes, outputNodes[0]);
         }
 
         StreamMinibatchInputs inputMatrices = DataReaderHelpers::RetrieveInputMatrices(inputNodes);
-        
+
         // load a label mapping if requested
         std::vector<std::string> labelMapping;
         if ((formattingOptions.isCategoryLabel || formattingOptions.isSparse) && !formattingOptions.labelMappingFile.empty())

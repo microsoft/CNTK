@@ -40,8 +40,8 @@ template <typename ElemType> SwapOutAction<ElemType>::SwapOutAction(Matrix<ElemT
 template SwapOutAction<float>::~SwapOutAction();
 template SwapOutAction<double>::~SwapOutAction();
 template <typename ElemType> SwapOutAction<ElemType>::~SwapOutAction()
-{ 
-    ReleaseMemory(); 
+{
+    ReleaseMemory();
 }
 
 template void SwapOutAction<double>::BeginAction();
@@ -49,7 +49,7 @@ template void SwapOutAction<float>::BeginAction();
 template <typename ElemType> void SwapOutAction<ElemType>::BeginAction()
 {
     // perform the actual asynchronous copy
-    if(this->m_rows != this->m_bufferGPU->GetNumRows() || 
+    if(this->m_rows != this->m_bufferGPU->GetNumRows() ||
        this->m_cols != this->m_bufferGPU->GetNumCols())
        {
             if(this->m_bytes > 0)
@@ -75,7 +75,7 @@ template <typename ElemType> void SwapOutAction<ElemType>::EndAction()
     this->m_rows = this->m_bufferGPU->GetNumRows();
     this->m_cols = this->m_bufferGPU->GetNumCols();
     this->m_bytes = this->m_rows*this->m_cols*sizeof(ElemType);
-    //cout << "Swapped out: " << this->m_bufferGPU << ", " << this->m_bufferGPU->GetNumRows() << "x" << this->m_bufferGPU->GetNumCols() << ", " << this->m_rows*this->m_cols*sizeof(ElemType)/1024./1024./1024. << "GB" << endl;
+    cout << "Swapped out: " << this->m_bufferGPU << ", " << this->m_bufferGPU->GetNumRows() << "x" << this->m_bufferGPU->GetNumCols() << ", " << this->m_rows*this->m_cols*sizeof(ElemType)/1024./1024./1024. << "GB" << endl;
     this->m_bufferGPU->Resize(0,0,0, false);
     m_hasDoneInitialSwap = true;
 

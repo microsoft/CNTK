@@ -46,7 +46,6 @@
 #define CNTK_MODEL_VERSION_13 13 // batch norm: switch running inverse std deviation -> variance, MB count -> samplesSeen; CuDNN v5
 #define CNTK_MODEL_VERSION_14 14 // axis parameter in OptimizedRNNStackNode
 #define CURRENT_CNTK_MODEL_VERSION CNTK_MODEL_VERSION_14
-
 extern bool g_shareNodeValueMatrices;
 
 // helper mode for debugging
@@ -632,11 +631,11 @@ public:
 
     bool NeedsGradient() const { return m_needsGradient; }
 
-    void SetLearningRateMultiplier(float f) 
-    { 
+    void SetLearningRateMultiplier(float f)
+    {
         if (f < 0)
             InvalidArgument("%ls: LearningRateMultiplier should be non-negative. You are tring to set it to %f.", NodeDescription().c_str(), f);
-        m_learningRateMultiplier = f; 
+        m_learningRateMultiplier = f;
     }
     float GetLearningRateMultiplier() const { return m_learningRateMultiplier; }
     bool IsParameterUpdateRequired() const { return m_learningRateMultiplier > 0; }
@@ -652,6 +651,8 @@ public:
     }
     ComputationEnvironmentPtr GetEnvironmentPtr() const { return m_environment; }
     void SetEnvironment(ComputationEnvironmentPtr environment) { m_environment = environment; }
+    virtual std::set<std::pair<const MatrixBase*, std::wstring>> GetMatrixInfo() const = 0; // to be defined by <ElemType> version
+
 
     virtual std::set<std::pair<const MatrixBase*, std::wstring>> GetMatrixInfo() const = 0; // to be defined by <ElemType> version
     const NetworkInformation& NetworkInfo() const
@@ -691,9 +692,9 @@ protected:
     void ValidateUnaryMap(bool isFinalValidationPass);
     void ValidateUnaryReduce(bool isFinalValidationPass);
     void ValidateInferBinaryInputDims();
-    void ValidateInferNaryInputDims(size_t numInputs);    
+    void ValidateInferNaryInputDims(size_t numInputs);
     void ValidateBinaryZip(bool isFinalValidationPass, bool allowBroadcast);
-    void ValidateBinaryReduce(bool isFinalValidationPass);    
+    void ValidateBinaryReduce(bool isFinalValidationPass);
     void ValidateNaryZip(bool isFinalValidationPass, bool allowBroadcast, size_t numInputs);
     void ValidateMBLayout(const ComputationNodeBasePtr which, const ComputationNodeBasePtr vsWhich) const;
     void InferMBLayoutFromInputsForStandardCase(bool isFinalValidationPass);
@@ -735,7 +736,7 @@ public:
     {
     	ForwardPropSpecialization(fr);
 
- 
+
     }
 
 
@@ -880,8 +881,8 @@ public:
 
     // Helper for generating error messages and the like
     const std::wstring NodeDescription() const
-    { 
-        return std::wstring(L"Node '") + NodeName().c_str() + L"' (" + OperationName().c_str() + L" operation)"; 
+    {
+        return std::wstring(L"Node '") + NodeName().c_str() + L"' (" + OperationName().c_str() + L" operation)";
     };
 
     // Helper that returns [a x b x c], including dynamic axes.
@@ -924,7 +925,7 @@ protected:
 typedef ComputationNodeBase::ComputationNodeBasePtr ComputationNodeBasePtr;
 
 // =======================================================================
-// NumInputs -- little helper interface to allow derived Node classes to 
+// NumInputs -- little helper interface to allow derived Node classes to
 // specify how many inputs they expect
 // =======================================================================
 
@@ -1611,7 +1612,7 @@ public:
 
     // helper for SimpleOutWriter, living in here to be able to use in debugging
     void WriteMinibatchWithFormatting(FILE* f, const FrameRange& fr, size_t onlyUpToRow, size_t onlyUpToT, bool transpose, bool isCategoryLabel, bool isSparse,
-                                      const std::vector<std::string>& labelMapping, const std::string& sequenceSeparator, 
+                                      const std::vector<std::string>& labelMapping, const std::string& sequenceSeparator,
                                       const std::string& sequencePrologue, const std::string& sequenceEpilogue, const std::string& elementSeparator,
                                       const std::string& sampleSeparator, std::string valueFormatString,
                                       bool outputGradient = false) const;
@@ -1680,7 +1681,7 @@ protected:
     void PrintNodeValuesToFile(const bool printValues, const bool printMetadata, File& fstream) const
     {
         if (printValues)
-        { 
+        {
             if (printMetadata)
             {
                 fstream << wstring(L"\n");
@@ -1913,8 +1914,6 @@ public:
     virtual std::string FormatOperationPrototype(const std::string& extraArgs) const override { return ""; }
     virtual void DumpNodeInfo(const bool /*printValues*/, const bool /*printMetadata*/, File& fstream) const override {}
     virtual std::set<std::pair<const MatrixBase*, std::wstring>> GetMatrixInfo() const override { NOT_IMPLEMENTED; }
-    virtual void ForwardProp(const FrameRange& fr) override {}
-    virtual void BackpropTo(const size_t inputIndex, const FrameRange& fr) override {}
 
 protected: public:                                     // needed in ComputationNetwork::FindInRecurrentLoops(), which really should be part of SEQTraversalFlowControlNode
     std::vector<ComputationNodeBasePtr> m_nestedNodes; // nodes tucked away in this node, in evaluation order

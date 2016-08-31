@@ -192,13 +192,12 @@ private:
     bool AreMatricesAllocated() const { return m_areMatricesAllocated; }
     void VerifyIsCompiled(const char* where) const;
 public:
-    template <class ElemType> void AllocateAllMatrices(const std::vector<ComputationNodeBasePtr>& evalRootNodes, const std::vector<ComputationNodeBasePtr>& outValueRootNodes, ComputationNodeBasePtr trainRootNode);
+    void AllocateAllMatrices(const std::vector<ComputationNodeBasePtr>& evalRootNodes, const std::vector<ComputationNodeBasePtr>& outValueRootNodes, ComputationNodeBasePtr trainRootNode);
 
-    template <class ElemType> void FindSwappingStructure(const std::vector<ComputationNodeBasePtr>& evalRootNodes, const std::vector<ComputationNodeBasePtr>& outValueRootNodes, ComputationNodeBasePtr trainRootNode);
+    template <class ElemType> void InitMemorySwapping(const std::vector<ComputationNodeBasePtr>& evalRootNodes, const std::vector<ComputationNodeBasePtr>& outValueRootNodes, ComputationNodeBasePtr trainRootNode);
 
 private:
     void PrintMemorySharingStructure(const std::vector<ComputationNodeBasePtr>& nodes);
-    template <class ElemType> void PrintMemorySharingStructure(const std::vector<ComputationNodeBasePtr>& nodes);
     bool ReleaseMatricesAfterEvalForChildren(ComputationNodeBasePtr n, std::unordered_map<ComputationNodeBasePtr, int>& parentCount);
     void AllocateGradientMatricesForInputs(ComputationNodeBasePtr parentNode);
 
@@ -454,7 +453,7 @@ public:
     static void SetDropoutRate(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const double dropoutRate, double& prevDropoutRate, size_t randSeedBase);
 
     template <class ElemType>
-    static void SetBatchNormalizationTimeConstants(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, 
+    static void SetBatchNormalizationTimeConstants(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode,
                                                    double normalizationTimeConstant, double& prevNormalizationTimeConstant,
                                                    double blendTimeConstant, double& prevBlendTimeConstant);
 
@@ -506,7 +505,7 @@ public:
         return std::vector<ComputationNodeBasePtr>{node};
     }
 
-    std::vector<ComputationNodeBasePtr> OutputNodesByName(const std::vector<std::wstring>& outputNodeNames) 
+    std::vector<ComputationNodeBasePtr> OutputNodesByName(const std::vector<std::wstring>& outputNodeNames)
     {
         std::vector<ComputationNodeBasePtr> outputNodes;
 
@@ -770,7 +769,7 @@ public:
     // Returns false if the node was already there.
     // If the network already contains a different node with the same name,
     //  - then the function will fail
-    //  - unless 'makeUniqueName=true', in which case it will patch the node's name to a unique name. 
+    //  - unless 'makeUniqueName=true', in which case it will patch the node's name to a unique name.
     bool AddNodeToNetIfNotYet(const ComputationNodeBasePtr& node, bool makeUniqueName = false)
     {
         auto result = m_nameToNodeMap.insert(make_pair(node->NodeName(), node));
@@ -1156,11 +1155,11 @@ public:
 
     void BecomeParentTo(DependencyNode* child)
     {
-        
+
         if(child->level > level+1)
             UpdateLevel(child->level-1);
         else if(child->level <= level)
-            child->UpdateLevel(level+1); 
+            child->UpdateLevel(level+1);
 
         children.push_back(child);
         child->parents.push_back(this);
@@ -1251,9 +1250,9 @@ public:
                 visited[nextNodes.front()] = true;
                 nextNodes.erase(nextNodes.begin());
         }
-        
+
         std::vector<DependencyNode<ElemType>*> roots(rootSet.begin(), rootSet.end());
-        return roots; 
+        return roots;
     }
 
     void PrintChildrenBuffers()

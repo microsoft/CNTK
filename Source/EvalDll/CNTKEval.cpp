@@ -59,7 +59,7 @@ void CNTKEvalBase<ElemType>::CreateNetwork(const std::string& networkDescription
 
     std::vector<wstring> outputNodeNames;
     this->m_net = GetModelFromConfig<ConfigParameters, ElemType>(config, L"outputNodeNames", outputNodeNames);
-    
+
     if (this->m_net == nullptr)
     {
         LogicError("Unable to construct network from description");
@@ -183,7 +183,7 @@ void CNTKEval<ElemType>::Evaluate(std::map<std::wstring, std::vector<ElemType>*>
     GetNodeDimensions(m_dimensions, nodeInput);
     m_reader->SetData(&inputs, &m_dimensions);
     m_reader->SetBoundary(m_start);
-    
+
     // create the writer if necessary
     if (m_writer == nullptr)
     {
@@ -242,7 +242,7 @@ template class CNTKEval<float>;
 // ----------------------------------------------------------------------------
 
 template<typename ElemType>
-VariableLayout CNTKEvalExtended<ElemType>::ToVariableLayout(const ComputationNodeBasePtr n) 
+VariableLayout CNTKEvalExtended<ElemType>::ToVariableLayout(const ComputationNodeBasePtr n)
 {
     auto matrix = dynamic_pointer_cast<Matrix<ElemType>>(n->ValuePtr());
     return VariableLayout
@@ -250,7 +250,7 @@ VariableLayout CNTKEvalExtended<ElemType>::ToVariableLayout(const ComputationNod
         /* name */          n->GetName(),
         /* type */          sizeof(ElemType) == sizeof(float) ? VariableLayout::Float32 : VariableLayout::Float64,
         /* storage */       matrix ? matrix->GetMatrixType() == MatrixType::DENSE ? VariableLayout::Dense :
-                                matrix->GetMatrixType() == MatrixType::SPARSE ? VariableLayout::Sparse : 
+                                matrix->GetMatrixType() == MatrixType::SPARSE ? VariableLayout::Sparse :
                                 VariableLayout::Undetermined :
                                 VariableLayout::Undetermined,
         /* dimension */     n->GetSampleLayout().GetNumElements()
@@ -265,7 +265,7 @@ void CNTKEvalExtended<ElemType>::StartForwardEvaluation(const std::vector<wstrin
     m_outputNodes  = this->m_net->OutputNodesByName(outputNodeNames);
     m_inputNodes = this->m_net->InputNodesForOutputs(outputNodeNames);
     // allocate memory for forward computation
-    this->m_net->AllocateAllMatrices<ElemType>({}, m_outputNodes, nullptr);
+    this->m_net->AllocateAllMatrices({}, m_outputNodes, nullptr);
     this->m_net->StartEvaluateMinibatchLoop(m_outputNodes);
     m_inputMatrices = DataReaderHelpers::RetrieveInputMatrices(m_inputNodes);
 
@@ -337,7 +337,7 @@ void CNTKEvalExtended<ElemType>::ForwardPassT(const std::vector<ValueBuffer<Elem
         if (type == MatrixType::DENSE)
         {
             if (buffer.m_buffer.size() % numRows != 0)
-                RuntimeError("Input %ls: Expected input data to be a multiple of %" PRIu64 ", but it is %" PRIu64 ".", 
+                RuntimeError("Input %ls: Expected input data to be a multiple of %" PRIu64 ", but it is %" PRIu64 ".",
                              m_inputNodes[i]->GetName().c_str(), numRows, buffer.m_buffer.size());
             if (buffer.m_buffer.size() == 0)
                 RuntimeError("Input %ls: Expected at least one element.", m_inputNodes[i]->GetName().c_str());
@@ -353,8 +353,8 @@ void CNTKEvalExtended<ElemType>::ForwardPassT(const std::vector<ValueBuffer<Elem
             if (buffer.m_colIndices[0] != 0)
                 RuntimeError("Input %ls: First element of column indices must be 0", m_inputNodes[i]->GetName().c_str());
             if (buffer.m_colIndices[buffer.m_colIndices.size() - 1] != buffer.m_indices.size())
-                RuntimeError("Input %ls: Last element of column indices must be equal to the size of indices (%ld), but was %d", 
-                             m_inputNodes[i]->GetName().c_str(), buffer.m_indices.size(), 
+                RuntimeError("Input %ls: Last element of column indices must be equal to the size of indices (%ld), but was %d",
+                             m_inputNodes[i]->GetName().c_str(), buffer.m_indices.size(),
                              buffer.m_colIndices[buffer.m_colIndices.size() - 1]);
         }
 
