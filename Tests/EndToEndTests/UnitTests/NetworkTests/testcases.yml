@@ -1,0 +1,23 @@
+dataDir: .
+
+tags:
+  # Linux GPU only, at this stage.
+  # TODO move from e to separate leg, requires infra changes
+  - bvt-e (build_sku == 'gpu') and (device == 'gpu') and (os=='linux')
+  - nightly-e (build_sku == 'gpu') and (device == 'gpu') and (os=='linux')
+
+testCases:
+  Test cases pass:
+    patterns:
+      - "Test case"
+      - "has passed with"
+
+  Test suites pass:
+    patterns:
+      - "Test suite"
+      - "has passed with"
+
+  Test module passed:
+    patterns:
+      - "Test module"
+      - "has passed with"

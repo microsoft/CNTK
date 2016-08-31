@@ -560,6 +560,8 @@ public:
     TransposeTimesNode(DEVICEID_TYPE deviceId, const wstring& name, size_t outputRank = 1)
         : Base(deviceId, name, outputRank, /*inferInputRankToMap=*/-1)
     {
+        if (outputRank != 1)
+            LogicError("TransposeTimes does not yet support outputRank other than 1");
     }
 };
 

@@ -100,6 +100,8 @@ namespace CNTK
     ///
     class DeviceDescriptor final
     {
+        static std::atomic<bool> s_defaultDeviceFrozen;
+        static std::shared_ptr<DeviceDescriptor> s_defaultDevice;
     public:
         ///
         /// Returns the Id of 'this' device.
@@ -126,6 +128,19 @@ namespace CNTK
         /// This device is used for all CNTK operations where a device needs to be specified and one is not explicitly specified.
         ///
         CNTK_API static DeviceDescriptor DefaultDevice();
+
+        ///
+        /// Static method to get the descriptor of the default device for the current process.
+        /// This device is used for all CNTK operations where a device needs to be specified and one is not explicitly specified.
+        /// Additionally after this method gets executed for the first time, it freezes the default device of the process disallowing
+        /// changing the default device by further calls to SetDefaultDevice.
+        ///
+        CNTK_API static DeviceDescriptor UseDefaultDevice();
+
+        ///
+        /// The default device can only be changed if it has not yet been implicitly used by any previous operation in the CNTK library.
+        ///
+        CNTK_API static void SetDefaultDevice(const DeviceDescriptor& newDefaultDevice);
 
     private:
         DeviceDescriptor(unsigned int deviceId, DeviceKind deviceType)
@@ -385,7 +400,7 @@ namespace CNTK
         /// assign the specified value to each element of the view.
         ///
         template <typename ElementType>
-        explicit NDArrayView(const ElementType& value, const NDShape& viewShape = { 1 }, const DeviceDescriptor& device = DeviceDescriptor::DefaultDevice(), bool readOnly = false)
+        explicit NDArrayView(const ElementType& value, const NDShape& viewShape = { 1 }, const DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice(), bool readOnly = false)
             : NDArrayView(AsDataType<ElementType>(), viewShape, device)
         {
             SetValue(value);
@@ -473,13 +488,13 @@ namespace CNTK
         /// Static method to construct a new NDArrayView object whose contents are drawn from a normal distribution with the specified mean and standard deviation..
         ///
         template <typename ElementType>
-        CNTK_API static NDArrayViewPtr RandomNormal(const NDShape& shape, double mean, double stdDev, unsigned long seed = 1, const DeviceDescriptor& device = DeviceDescriptor::DefaultDevice());
+        CNTK_API static NDArrayViewPtr RandomNormal(const NDShape& shape, double mean, double stdDev, unsigned long seed = 1, const DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice());
 
         ///
         /// Static method to construct a new NDArrayView object whose contents are drawn from a uniform distribution in the specified value range.
         ///
         template <typename ElementType>
-        CNTK_API static NDArrayViewPtr RandomUniform(const NDShape& shape, double rangeStart, double rangeEnd, unsigned long seed = 1, const DeviceDescriptor& device = DeviceDescriptor::DefaultDevice());
+        CNTK_API static NDArrayViewPtr RandomUniform(const NDShape& shape, double rangeStart, double rangeEnd, unsigned long seed = 1, const DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice());
 
     private:
         // Disallow copy and move construction and assignment
@@ -531,7 +546,7 @@ namespace CNTK
         ///
         /// Construct a new Mask object of specified shape
         /// 
-        CNTK_API explicit NDMask(const NDShape& shape, const DeviceDescriptor& device = DeviceDescriptor::DefaultDevice());
+        CNTK_API explicit NDMask(const NDShape& shape, const DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice());
 
         ///
         /// Destruct 'this' NDMask object
@@ -680,52 +695,47 @@ namespace CNTK
     ///
     class Axis final
     {
-        CNTK_API static const std::wstring s_staticAxisNamePrefix;
+        CNTK_API static const std::wstring StaticAxisNamePrefix;
+        static const size_t SentinelStaticAxisIndexValueForDynamicAxes = SIZE_MAX;
+
+        // TODO: Make this thread-safe
+        CNTK_API static std::unordered_set<std::wstring> s_allKnownDynamicAxisNames;
+
     public:
         ///
         /// Construct an Axis object denoting a static axis with the specified index.
         ///
         explicit Axis(size_t staticAxisIdx)
-            : m_staticAxisIdx(staticAxisIdx)
+            : m_staticAxisIdx(staticAxisIdx), m_isOrderedDynamicAxis(false)
         {
-            m_name = s_staticAxisNamePrefix + std::to_wstring(staticAxisIdx);
+            m_name = StaticAxisNamePrefix + std::to_wstring(staticAxisIdx);
         }
 
         ///
         /// Construct a dynamic axis with the specified name.
         ///
-        explicit Axis(const std::wstring& name)
-            : m_staticAxisIdx(SIZE_MAX), m_name(name)
+        explicit Axis(const std::wstring& name, bool isOrderedDynamicAxis = true)
+            : m_staticAxisIdx(SentinelStaticAxisIndexValueForDynamicAxes), m_name(name), m_isOrderedDynamicAxis(isOrderedDynamicAxis)
         {
-            if (m_name.length() > s_staticAxisNamePrefix.length())
-            {
-                auto prefix = m_name.substr(0, s_staticAxisNamePrefix.length());
-                auto suffix = m_name.substr(s_staticAxisNamePrefix.length(), m_name.length() - s_staticAxisNamePrefix.length());
-                if (prefix == s_staticAxisNamePrefix)
-                {
-                    if (suffix == L"0")
-                        *this = Axis(0);
-                    else
-                    {
-                        auto suffixVal = std::stoul(suffix);
-                        if (suffixVal != 0)
-                            *this = Axis(suffixVal);
-                    }
-                }
-            }
+            RegisterAxisName(name);
         }
 
         ///
         /// Returns a boolean indicating if 'this' Axis corresponds to a static axis
         ///
-        bool IsStaticAxis() const { return m_staticAxisIdx != SIZE_MAX; }
+        bool IsStaticAxis() const { return m_staticAxisIdx != SentinelStaticAxisIndexValueForDynamicAxes; }
 
         ///
-        /// Returns the axis index if 'this' Axis is a static axis. Throws an exception otherwise.
+        /// Returns a boolean indicating if 'this' Axis is ordered; i.e. if there is an ordering between the dimensions along this axis.
         ///
-        size_t StaticAxisIndex() const
+        bool IsOrdered() const { return IsStaticAxis() || m_isOrderedDynamicAxis; }
+
+        ///
+        /// Returns the axis index if 'this' Axis is a static axis. Throws an exception otherwise if checked == true.
+        ///
+        size_t StaticAxisIndex(bool checked = true) const
         {
-            if (!IsStaticAxis())
+            if (checked && !IsStaticAxis())
                 InvalidArgument("Cannot query the static axis index for a non-static axis");
 
             return m_staticAxisIdx;
@@ -742,6 +752,11 @@ namespace CNTK
         CNTK_API static const Axis& DefaultBatchAxis();
 
         ///
+        /// Returns a new unique Dynamic axis
+        ///
+        CNTK_API static Axis NewUniqueDynamicAxis(const std::wstring& axisNamePrefix, bool isOrderedDynamicAxis = true);
+
+        ///
         /// Name of 'this' axis
         ///
         const std::wstring& Name() const { return m_name; }
@@ -750,12 +765,16 @@ namespace CNTK
         /// Default constructor; results in an invalid axis object.
         ///
         Axis()
-            : m_staticAxisIdx(SIZE_MAX)
+            : m_staticAxisIdx(SentinelStaticAxisIndexValueForDynamicAxes)
         {}
+
+    private:
+        CNTK_API void RegisterAxisName(const std::wstring& axisName);
 
     private:
         size_t m_staticAxisIdx;
         std::wstring m_name;
+        bool m_isOrderedDynamicAxis;
     };
 
     inline bool operator==(const Axis& first, const Axis& second)
@@ -813,75 +832,77 @@ namespace CNTK
         template <typename T>
         friend struct std::hash;
 
-        CNTK_API static const std::vector<Axis> s_defaultInputVariableDynamicAxes;
+    public:
+        CNTK_API static const std::vector<Axis> DefaultInputVariableDynamicAxes;
+
     public:
         ///
         /// Create an 'Input' Variable.
         ///
-        Variable(const NDShape& shape, CNTK::DataType dataType, const std::vector<Axis>& dynamicAxes = s_defaultInputVariableDynamicAxes)
+        Variable(const NDShape& shape, CNTK::DataType dataType, const std::vector<Axis>& dynamicAxes = DefaultInputVariableDynamicAxes)
             : Variable(shape, dataType, L"", dynamicAxes)
         {}
 
         ///
         /// Create an 'Input' Variable.
         ///
-        Variable(const NDShape& shape, CNTK::DataType dataType, const wchar_t* name, const std::vector<Axis>& dynamicAxes = s_defaultInputVariableDynamicAxes)
+        Variable(const NDShape& shape, CNTK::DataType dataType, const wchar_t* name, const std::vector<Axis>& dynamicAxes = DefaultInputVariableDynamicAxes)
             : Variable(shape, dataType, std::wstring(name), dynamicAxes)
         {}
 
         ///
         /// Create an 'Input' Variable.
         ///
-        Variable(const NDShape& shape, CNTK::DataType dataType, const std::wstring& name, const std::vector<Axis>& dynamicAxes = s_defaultInputVariableDynamicAxes)
-            : Variable(shape, false, dataType, name, dynamicAxes)
+        Variable(const NDShape& shape, CNTK::DataType dataType, const std::wstring& name, const std::vector<Axis>& dynamicAxes = DefaultInputVariableDynamicAxes)
+            : Variable(shape, /*isSparse =*/ false, dataType, name, dynamicAxes)
         {}
 
         ///
         /// Create an 'Input' Variable denoting sparse data.
         ///
-        Variable(const NDShape& shape, bool isSparse, CNTK::DataType dataType, const std::vector<Axis>& dynamicAxes = s_defaultInputVariableDynamicAxes)
-            : Variable(shape, isSparse, dataType, false, L"", dynamicAxes)
+        Variable(const NDShape& shape, bool isSparse, CNTK::DataType dataType, const std::vector<Axis>& dynamicAxes = DefaultInputVariableDynamicAxes)
+            : Variable(shape, isSparse, dataType, /*needsGradient =*/ false, L"", dynamicAxes)
         {}
 
         ///
         /// Create an 'Input' Variable denoting sparse data.
         ///
-        Variable(const NDShape& shape, bool isSparse, CNTK::DataType dataType, const wchar_t* name, const std::vector<Axis>& dynamicAxes = s_defaultInputVariableDynamicAxes)
+        Variable(const NDShape& shape, bool isSparse, CNTK::DataType dataType, const wchar_t* name, const std::vector<Axis>& dynamicAxes = DefaultInputVariableDynamicAxes)
             : Variable(shape, isSparse, dataType, std::wstring(name), dynamicAxes)
         {}
 
         ///
         /// Create an 'Input' Variable denoting sparse data.
         ///
-        Variable(const NDShape& shape, bool isSparse, CNTK::DataType dataType, const std::wstring& name, const std::vector<Axis>& dynamicAxes = s_defaultInputVariableDynamicAxes)
-            : Variable(shape, isSparse, dataType, false, name, dynamicAxes)
+        Variable(const NDShape& shape, bool isSparse, CNTK::DataType dataType, const std::wstring& name, const std::vector<Axis>& dynamicAxes = DefaultInputVariableDynamicAxes)
+            : Variable(shape, isSparse, dataType, /*needsGradient =*/ false, name, dynamicAxes)
         {}
 
         ///
         /// Create an 'Input' Variable and specify if gradients are to be computed for this input
         ///
-        Variable(const NDShape& shape, CNTK::DataType dataType, bool needsGradient, const wchar_t* name, const std::vector<Axis>& dynamicAxes = s_defaultInputVariableDynamicAxes)
+        Variable(const NDShape& shape, CNTK::DataType dataType, bool needsGradient, const wchar_t* name, const std::vector<Axis>& dynamicAxes = DefaultInputVariableDynamicAxes)
             : Variable(shape, dataType, needsGradient, std::wstring(name), dynamicAxes)
         {}
 
         ///
         /// Create an 'Input' Variable and specify if gradients are to be computed for this input
         ///
-        Variable(const NDShape& shape, CNTK::DataType dataType, bool needsGradient, const std::wstring& name, const std::vector<Axis>& dynamicAxes = s_defaultInputVariableDynamicAxes)
-            : Variable(shape, false, dataType, needsGradient, name, dynamicAxes)
+        Variable(const NDShape& shape, CNTK::DataType dataType, bool needsGradient, const std::wstring& name, const std::vector<Axis>& dynamicAxes = DefaultInputVariableDynamicAxes)
+            : Variable(shape, /*isSparse =*/ false, dataType, needsGradient, name, dynamicAxes)
         {}
 
         ///
         /// Create an 'Input' Variable denoting sparse data and specify if gradients are to be computed for this input
         ///
-        Variable(const NDShape& shape, bool isSparse, CNTK::DataType dataType, bool needsGradient, const std::vector<Axis>& dynamicAxes = s_defaultInputVariableDynamicAxes)
+        Variable(const NDShape& shape, bool isSparse, CNTK::DataType dataType, bool needsGradient, const std::vector<Axis>& dynamicAxes = DefaultInputVariableDynamicAxes)
             : Variable(shape, isSparse, dataType, needsGradient, L"", dynamicAxes)
         {}
 
         ///
         /// Create an 'Input' Variable denoting sparse data and specify if gradients are to be computed for this input
         ///
-        Variable(const NDShape& shape, bool isSparse, CNTK::DataType dataType, bool needsGradient, const std::wstring& name, const std::vector<Axis>& dynamicAxes = s_defaultInputVariableDynamicAxes)
+        Variable(const NDShape& shape, bool isSparse, CNTK::DataType dataType, bool needsGradient, const std::wstring& name, const std::vector<Axis>& dynamicAxes = DefaultInputVariableDynamicAxes)
             : Variable(shape, VariableKind::Input, dataType, nullptr, nullptr, needsGradient, dynamicAxes, isSparse, name)
         {}
 
@@ -889,7 +910,7 @@ namespace CNTK
         /// Create an 'Output' variable
         ///
         Variable(const NDShape& shape, CNTK::DataType dataType, Function* ownerFunction, const std::vector<Axis>& dynamicAxes, const std::wstring& name = L"")
-            : Variable(shape, VariableKind::Output, dataType, ownerFunction, nullptr, false, dynamicAxes, false, name)
+            : Variable(shape, VariableKind::Output, dataType, ownerFunction, nullptr, /*needsGradient =*/ false, dynamicAxes, /*isSparse =*/ false, name)
         {}
 
         ///
@@ -897,6 +918,11 @@ namespace CNTK
         /// Throws an exception if called for a Function instance with multiple outputs
         ///
         CNTK_API Variable(const FunctionPtr& function);
+
+        ///
+        /// Implicit conversion to a FunctionPtr; creates a pass through primitive function
+        ///
+        CNTK_API operator FunctionPtr() const;
 
         /// 
         /// Default constructor for creating an invalid/null Variable instance. 
@@ -972,7 +998,7 @@ namespace CNTK
 
     protected:
         Variable(const NDShape& shape, VariableKind varType, CNTK::DataType dataType, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, const std::wstring& name)
-            : Variable(shape, varType, dataType, nullptr, value, needsGradient, dynamicAxes, false, name)
+            : Variable(shape, varType, dataType, nullptr, value, needsGradient, dynamicAxes, /*isSparse =*/ false, name)
         {}
 
         NDArrayViewPtr Value() const
@@ -1053,9 +1079,73 @@ namespace CNTK
         /// Construct a parameter of specified shape whose contents are initialized with the specified 'initValue'
         ///
         template<typename ElemType>
-        Parameter(const NDShape& shape, ElemType initValue, const DeviceDescriptor& device = DeviceDescriptor::DefaultDevice(), const std::wstring& name = L"")
+        Parameter(const NDShape& shape, ElemType initValue, const DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice(), const std::wstring& name = L"")
             : Variable(shape, VariableKind::Parameter, AsDataType<ElemType>(), MakeSharedObject<NDArrayView>(initValue, shape, device), true, {}, name)
         {}
+
+        ///
+        /// Create a Parameter initialized with random values drawn from a Uniform distribution in the range [-0.05, 0.05]
+        ///
+        static Parameter Uniform(const NDShape& shape, DataType type = DataType::Float, unsigned long seed = 1, const DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice(), const std::wstring& name = L"")
+        {
+            return UniformInitParameter(shape, type, 1.0/20, seed, device, name);
+        }
+
+        ///
+        /// Create a Parameter initialized with random values from a Uniform distribution in the range [-sqrt(6 / fanIn), sqrt(6 / fanIn)]
+        ///
+        static Parameter HeUniform(const NDShape& shape, DataType type = DataType::Float, unsigned long seed = 1, size_t fanOutRank = 1, const DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice(), const std::wstring& name = L"")
+        {
+            NDShape fanInShape = shape.SubShape(fanOutRank);
+            return UniformInitParameter(shape, type, std::sqrt(6.0/fanInShape.TotalSize()), seed, device, name);
+        }
+
+        ///
+        /// Create a Parameter initialized with random values from a Uniform distribution in the range [-sqrt(6 / (fanIn + fanOut)), sqrt(6 / (fanIn + fanOut))]
+        ///
+        static Parameter GlorotUniform(const NDShape& shape, DataType type = DataType::Float, unsigned long seed = 1, size_t fanOutRank = 1, const DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice(), const std::wstring& name = L"")
+        {
+            NDShape fanOutShape = shape.SubShape(0, fanOutRank);
+            NDShape fanInShape = shape.SubShape(fanOutRank);
+            return UniformInitParameter(shape, type, std::sqrt(6.0 / (fanInShape.TotalSize() + fanOutShape.TotalSize())), seed, device, name);
+        }
+
+        ///
+        /// Create a Parameter initialized with random values from a Uniform distribution in the range [-sqrt(3 / fanIn), sqrt(3 / fanIn)]
+        ///
+        static Parameter Xavier(const NDShape& shape, DataType type = DataType::Float, unsigned long seed = 1, size_t fanOutRank = 1, const DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice(), const std::wstring& name = L"")
+        {
+            NDShape fanInShape = shape.SubShape(fanOutRank);
+            return UniformInitParameter(shape, type, std::sqrt(3.0 / fanInShape.TotalSize()), seed, device, name);
+        }
+
+        ///
+        /// Create a Parameter initialized with random values drawn from a Gaussian distribution with [mean = 0, stdDev = sqrt(0.04 / fanIn)]
+        ///
+        static Parameter Gaussian(const NDShape& shape, DataType type = DataType::Float, unsigned long seed = 1, size_t fanOutRank = 1, const DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice(), const std::wstring& name = L"")
+        {
+            NDShape fanInShape = shape.SubShape(fanOutRank);
+            return NormalInitParameter(shape, type, std::sqrt(0.04 / fanInShape.TotalSize()), seed, device, name);
+        }
+
+        ///
+        /// Create a Parameter initialized with random values from a Gaussian distribution with [mean = 0, stdDev = sqrt(2 / fanIn)]
+        ///
+        static Parameter HeNormal(const NDShape& shape, DataType type = DataType::Float, unsigned long seed = 1, size_t fanOutRank = 1, const DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice(), const std::wstring& name = L"")
+        {
+            NDShape fanInShape = shape.SubShape(fanOutRank);
+            return NormalInitParameter(shape, type, std::sqrt(2.0 / fanInShape.TotalSize()), seed, device, name);
+        }
+
+        ///
+        /// Create a Parameter initialized with random values from a Gaussian distribution with [mean = 0, stdDev = sqrt(2 / (fanIn + fanOut))]
+        ///
+        static Parameter GlorotNormal(const NDShape& shape, DataType type = DataType::Float, unsigned long seed = 1, size_t fanOutRank = 1, const DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice(), const std::wstring& name = L"")
+        {
+            NDShape fanOutShape = shape.SubShape(0, fanOutRank);
+            NDShape fanInShape = shape.SubShape(fanOutRank);
+            return NormalInitParameter(shape, type, std::sqrt(2.0 / (fanInShape.TotalSize() + fanOutShape.TotalSize())), seed, device, name);
+        }
 
         ///
         /// DownCast a Variable to a Parameter. Only allowed if the VariableKind is Parameter and throws an exception otherwise.
@@ -1074,6 +1164,12 @@ namespace CNTK
         {
             return Variable::Value();
         }
+
+    private:
+
+        // Helper methods for Parameter construction
+        CNTK_API static Parameter UniformInitParameter(const NDShape& shape, DataType type, double range, unsigned long seed, const DeviceDescriptor& device, const std::wstring& name);
+        CNTK_API static Parameter NormalInitParameter(const NDShape& shape, DataType type, double stdDev, unsigned long seed, const DeviceDescriptor& device, const std::wstring& name);
     };
 
     // Implementation note: The Variable type is a value type and not polymorphic in nature. 
@@ -1104,7 +1200,7 @@ namespace CNTK
         /// Construct a constant of specified shape whose contents are initialized with the specified 'initValue'
         ///
         template<typename ElemType>
-        Constant(const NDShape& shape, ElemType initValue, const DeviceDescriptor& device = DeviceDescriptor::DefaultDevice(), const std::wstring& name = L"")
+        Constant(const NDShape& shape, ElemType initValue, const DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice(), const std::wstring& name = L"")
             : Variable(shape, VariableKind::Constant, AsDataType<ElemType>(), MakeSharedObject<NDArrayView>(initValue, shape, device), false, {}, name)
         {}
 
@@ -1148,8 +1244,8 @@ namespace CNTK
         ///
         /// Contruct a Placeholder with the specified NDShape
         ///
-        explicit Placeholder(const NDShape& shape, const std::wstring& name = L"")
-            : Variable(shape, VariableKind::Placeholder, DataType::Unknown, nullptr, false, { Axis::DefaultDynamicAxis(), Axis::DefaultBatchAxis() }, name)
+        explicit Placeholder(const NDShape& shape, const std::vector<Axis>& dynamicAxes = DefaultInputVariableDynamicAxes)
+            : Variable(shape, VariableKind::Placeholder, DataType::Unknown, nullptr, false, dynamicAxes, L"")
         {}
 
         ///
@@ -1262,7 +1358,7 @@ namespace CNTK
         ///
         CNTK_API virtual BackPropStatePtr Forward(const std::unordered_map<Variable, ValuePtr>& arguments,
                                                   std::unordered_map<Variable, ValuePtr>& outputs,
-                                                  const DeviceDescriptor& computeDevice = DeviceDescriptor::DefaultDevice(),
+                                                  const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice(),
                                                   const std::unordered_set<Variable>& outputsToRetainBackwardStateFor = {}) = 0;
 
         ///
@@ -1421,16 +1517,8 @@ namespace CNTK
                 if (uniqueOutputs.find(outputVar) != uniqueOutputs.end())
                     RuntimeError("Same variable appears multiple times in the outputs vector passed to Function constructor");
 
-                switch (outputVar.Kind())
-                {
-                case VariableKind::Output:
-                    m_outputs.push_back(outputVar);
-                    uniqueOutputs.insert(outputVar);
-                    break;
-                default:
-                    InvalidArgument("Function output has invalid VariableKind!");
-                    break;
-                }
+                m_outputs.push_back(outputVar);
+                uniqueOutputs.insert(outputVar);
             }
         }
 
@@ -1447,6 +1535,14 @@ namespace CNTK
     /// Create an instance of the CNTK built-in elementwise negate operation with the specified input operand.
     ///
     CNTK_API FunctionPtr Negate(const Variable& operand, const std::wstring& name = L"");
+
+    ///
+    /// Unary negation operator corresponding to the Negate operation
+    ///
+    inline FunctionPtr operator-(const Variable& operand)
+    {
+        return Negate(operand);
+    }
 
     ///
     /// Create an instance of the CNTK built-in elementwise sigmoid operation with the specified input operand.
@@ -1524,9 +1620,25 @@ namespace CNTK
     CNTK_API FunctionPtr TransposeAxes(const Variable& operand, const Axis& axis1, const Axis& axis2, const std::wstring& name = L"");
 
     ///
+    /// Create an instance of the CNTK built-in transpose operation on the specified 1D or 2D input operand
+    ///
+    CNTK_API FunctionPtr Transpose(const Variable& operand, const std::wstring& name = L"");
+
+    ///
     /// Create an instance of the slice operation on specified tensor input operand
     ///
     CNTK_API FunctionPtr Slice(const Variable& operand, const Axis& axis, int beginIndex, int endIndex, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the dropout operation on specified tensor input operand
+    ///
+    // TODO: The initial random seed should be specifiable
+    CNTK_API FunctionPtr Dropout(const Variable& operand, double dropoutRate, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the reshape operation on specified tensor input operand
+    ///
+    CNTK_API FunctionPtr Reshape(const Variable& operand, const NDShape& newShape, const std::wstring& name = L"");
 
     ///
     /// Create an instance of the CNTK built-in elementwise tensor addition operation with the specified input operands.
@@ -1534,10 +1646,26 @@ namespace CNTK
     CNTK_API FunctionPtr Plus(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name = L"");
 
     ///
+    /// Binary addition operator corresponding to the Plus operation
+    ///
+    inline FunctionPtr operator+(const Variable& leftOperand, const Variable& rightOperand)
+    {
+        return Plus(leftOperand, rightOperand);
+    }
+
+    ///
     /// Create an instance of the CNTK built-in elementwise tensor subtraction operation with the specified input operands.
     ///
     CNTK_API FunctionPtr Minus(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name = L"");
-    
+
+    ///
+    /// Binary minus operator corresponding to the Minus operation
+    ///
+    inline FunctionPtr operator-(const Variable& leftOperand, const Variable& rightOperand)
+    {
+        return Minus(leftOperand, rightOperand);
+    }
+
     ///
     /// Create an instance of the CNTK built-in elementwise multiplication operation on specified tensor input operands.
     ///
@@ -1582,14 +1710,14 @@ namespace CNTK
     /// Create an instance of the CNTK built-in matrix multiplication operation with the specified input operands.
     /// TODO: Specify the constraints on the shapes of the operands.
     ///
-    CNTK_API FunctionPtr Times(const Variable& leftOperand, const Variable& rightOperand, size_t numOutputAxes = 1, const std::wstring& name = L"");
+    CNTK_API FunctionPtr Times(const Variable& leftOperand, const Variable& rightOperand, size_t outputRank = 1, const std::wstring& name = L"");
 
     ///
     /// Create an instance of the CNTK built-in matrix multiplication operation with the transpose of the left input operand
     /// and the specified right operand. Only accepts left operands of ranks 1 or 2.
     /// TODO: Specify the constraints on the shapes of the operands.
     ///
-    CNTK_API FunctionPtr TransposeTimes(const Variable& leftOperand, const Variable& rightOperand, size_t numOutputAxes = 1, const std::wstring& name = L"");
+    CNTK_API FunctionPtr TransposeTimes(const Variable& leftOperand, const Variable& rightOperand, size_t outputRank = 1, const std::wstring& name = L"");
 
     ///
     /// Create an instance of the CNTK built-in operation to compute squared-error for specified input operands.
@@ -1610,14 +1738,14 @@ namespace CNTK
     /// Create an instance of the CNTK built-in operation for getting the past value along the lone dynamic axis of the specified operand.
     /// Throws an exception of the operand has more than one dynamic axis.
     ///
-    CNTK_API FunctionPtr PastValue(const Variable& initialState, const Variable& operand, size_t stepSize, const std::wstring& name = L"");
+    CNTK_API FunctionPtr PastValue(const Variable& operand, const Variable& initialState, size_t offset, const std::wstring& name = L"");
 
 
     ///
     /// Create an instance of the CNTK built-in operation for getting the future value along the lone dynamic axis of the specified operand.
     /// Throws an exception of the operand has more than one dynamic axis.
     ///
-    CNTK_API FunctionPtr FutureValue(const Variable& initialState, const Variable& operand, size_t stepSize, const std::wstring& name = L"");
+    CNTK_API FunctionPtr FutureValue(const Variable& operand, const Variable& initialState, size_t offset, const std::wstring& name = L"");
 
 
     ///
@@ -1634,6 +1762,21 @@ namespace CNTK
     /// Create an instance of the CNTK built-in LogSum reduction operation on specified tensor input operand along the specified axis
     ///
     CNTK_API FunctionPtr ReduceLogSum(const Variable& operand, const Axis& axis, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in Mean reduction operation on specified tensor input operand along the specified axis
+    ///
+    CNTK_API FunctionPtr ReduceMean(const Variable& operand, const Axis& axis, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in Max reduction operation on specified tensor input operand along the specified axis
+    ///
+    CNTK_API FunctionPtr ReduceMax(const Variable& operand, const Axis& axis, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in Min reduction operation on specified tensor input operand along the specified axis
+    ///
+    CNTK_API FunctionPtr ReduceMin(const Variable& operand, const Axis& axis, const std::wstring& name = L"");
 
     ///
     /// Per dimension mean-variance normalization of the specified input operand.
@@ -1678,17 +1821,33 @@ namespace CNTK
     ///
     /// TODO:
     ///
+    // TODO: Do we need a separate "spatial" parameter or can it be inferred from the tensor dimensions
     CNTK_API FunctionPtr BatchNormalization(const Variable& operand,
                                             const Variable& scale,
                                             const Variable& bias,
                                             const Variable& runningMean,
-                                            const Variable& runningStdDev,
+                                            const Variable& runningInvStd,
                                             bool spatial,
                                             double normalizationTimeConstant = 0,
                                             double blendTimeConstant = 0,
                                             double epsilon = 0.00001,
                                             bool useCuDNNEngine = false,
                                             const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in elementwise clip operation on the tensor operand
+    ///
+    CNTK_API FunctionPtr Clip(const Variable& operand, const Variable& min, const Variable& max, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in elementwise choice operation using a condition tensor for specified tensor operands.
+    ///
+    CNTK_API FunctionPtr ElementSelect(const Variable& condition, const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in splice operation to splice together all the specified tensor operands into a single output tensor
+    ///
+    CNTK_API FunctionPtr Splice(const std::vector<Variable>& operands, size_t axis, const std::wstring& name = L"");
 
     ///
     /// Create a new Function instance which just combines the outputs of the specified list of 'operands' Functions such that the 'Outputs' of the 
@@ -1698,11 +1857,26 @@ namespace CNTK
     ///
     CNTK_API FunctionPtr Combine(const std::vector<FunctionPtr>& operands, const std::wstring& name = L"");
 
+    namespace Sequence
+    {
+        CNTK_API FunctionPtr IsFirst(const Variable& operand, const std::wstring& name = L"");
+        CNTK_API FunctionPtr IsLast(const Variable& operand, const std::wstring& name = L"");
+
+        CNTK_API FunctionPtr First(const Variable& operand, const std::wstring& name = L"");
+        CNTK_API FunctionPtr Last(const Variable& operand, const std::wstring& name = L"");
+
+        CNTK_API FunctionPtr Where(const Variable& condition, const std::wstring& name = L"");
+        CNTK_API FunctionPtr Gather(const Variable& operand, const Variable& condition, const std::wstring& name = L"");
+        CNTK_API FunctionPtr Scatter(const Variable& operand, const Variable& condition, const std::wstring& name = L"");
+
+        CNTK_API FunctionPtr BroadcastAs(const Variable& operand, const Variable& broadcastAs, const std::wstring& name = L"");
+    }
+
     ///
     /// Load a legacy CNTK v1 format model
     ///
     template <typename ElementType>
-    CNTK_API FunctionPtr LoadLegacyModel(const std::wstring& modelFile, const DeviceDescriptor& computeDevice = DeviceDescriptor::DefaultDevice());
+    CNTK_API FunctionPtr LoadLegacyModel(const std::wstring& modelFile, const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice());
 
     /// 
     /// Save a Composite Function instance to a file in CNTK legacy model format
@@ -1716,7 +1890,10 @@ namespace CNTK
     /// b) Signed long integer
     /// c) Single and double precision floating point values
     /// d) NDShape
-    /// e) vector<DictionaryValue>
+    /// e) Axis
+    /// f) vector<DictionaryValue>
+    /// g) Dictionary
+    /// h) NDArrayView
     ///
     /// TODO: We need to have native support for DictionaryValue<vector> and DictionaryValue<NDArrayView>.
     class DictionaryValue final
@@ -1731,6 +1908,7 @@ namespace CNTK
             Double,
             String,
             NDShape,
+            Axis,
             Vector,
             Dictionary,
             NDArrayView,
@@ -1754,6 +1932,8 @@ namespace CNTK
                 return "String";
             case Type::NDShape:
                 return "NDShape";
+            case Type::Axis:
+                return "Axis";
             case Type::Vector:
                 return "Vector";
             case Type::Dictionary:
@@ -1803,11 +1983,12 @@ namespace CNTK
         template <typename T>
         DictionaryValue(const T& value) : m_valueType(GetValueType<T>())
         {
-            static_assert((std::is_same<T, NDShape>::value ||
-                std::is_same<T, std::wstring>::value ||
-                std::is_same<T, std::vector<DictionaryValue>>::value ||
-                std::is_same<T, Dictionary>::value ||
-                std::is_same<T, NDArrayView>::value),
+            static_assert(std::is_same<T, NDShape>::value ||
+                          std::is_same<T, Axis>::value ||
+                          std::is_same<T, std::wstring>::value ||
+                          std::is_same<T, std::vector<DictionaryValue>>::value ||
+                          std::is_same<T, Dictionary>::value ||
+                          std::is_same<T, NDArrayView>::value,
                           "Unsupported ValueType");
 
             AllocateDataPtr(value);
@@ -1836,15 +2017,17 @@ namespace CNTK
                 m_data = other.m_data;
 
                 if (other.m_valueType == Type::String)
-                    AllocateDataPtr(other.GetValue<std::wstring>());
+                    AllocateDataPtr(other.Value<std::wstring>());
                 else if (other.m_valueType == Type::NDShape)
-                    AllocateDataPtr(other.GetValue<NDShape>());
+                    AllocateDataPtr(other.Value<NDShape>());
+                else if (other.m_valueType == Type::Axis)
+                    AllocateDataPtr(other.Value<Axis>());
                 else if (other.m_valueType == Type::Vector)
-                    AllocateDataPtr(other.GetValue<std::vector<DictionaryValue>>());
+                    AllocateDataPtr(other.Value<std::vector<DictionaryValue>>());
                 else if (other.m_valueType == Type::Dictionary)
-                    AllocateDataPtr(other.GetValue<Dictionary>());
+                    AllocateDataPtr(other.Value<Dictionary>());
                 else if (other.m_valueType == Type::NDArrayView)
-                    AllocateDataPtr(other.GetValue<NDArrayView>());
+                    AllocateDataPtr(other.Value<NDArrayView>());
             }
 
             return *this;
@@ -1859,6 +2042,7 @@ namespace CNTK
 
             if (other.m_valueType == Type::String ||
                 other.m_valueType == Type::NDShape ||
+                other.m_valueType == Type::Axis ||
                 other.m_valueType == Type::Vector ||
                 other.m_valueType == Type::Dictionary ||
                 other.m_valueType == Type::NDArrayView)
@@ -1876,39 +2060,80 @@ namespace CNTK
         }
 
         template <typename T, typename std::enable_if<std::is_same<T, bool>::value>::type* = nullptr>
-        const T& GetValue() const
+        const T& Value() const
+        {
+            VerifyType<T>();
+            return m_data.m_boolean;
+        }
+
+        template <typename T, typename std::enable_if<std::is_same<T, bool>::value>::type* = nullptr>
+        T& Value()
         {
             VerifyType<T>();
             return m_data.m_boolean;
         }
 
         template <typename T, typename std::enable_if<std::is_same<T, size_t>::value>::type* = nullptr>
-        const T& GetValue() const
+        const T& Value() const
+        {
+            VerifyType<T>();
+            return m_data.m_sizeT;
+        }
+
+        template <typename T, typename std::enable_if<std::is_same<T, size_t>::value>::type* = nullptr>
+        T& Value()
         {
             VerifyType<T>();
             return m_data.m_sizeT;
         }
 
         template <typename T, typename std::enable_if<std::is_same<T, float>::value>::type* = nullptr>
-        const T& GetValue() const
+        const T& Value() const
+        {
+            VerifyType<T>();
+            return m_data.m_float;
+        }
+
+        template <typename T, typename std::enable_if<std::is_same<T, float>::value>::type* = nullptr>
+        T& Value()
         {
             VerifyType<T>();
             return m_data.m_float;
         }
 
         template <typename T, typename std::enable_if<std::is_same<T, double>::value>::type* = nullptr>
-        const T& GetValue() const
+        const T& Value() const
+        {
+            VerifyType<T>();
+            return m_data.m_double;
+        }
+
+        template <typename T, typename std::enable_if<std::is_same<T, double>::value>::type* = nullptr>
+        T& Value()
         {
             VerifyType<T>();
             return m_data.m_double;
         }
 
         template <typename T, typename std::enable_if<std::is_same<T, NDShape>::value ||
+                                                      std::is_same<T, Axis>::value ||
             std::is_same<T, std::wstring>::value ||
             std::is_same<T, std::vector<DictionaryValue>>::value ||
             std::is_same<T, Dictionary>::value ||
             std::is_same<T, NDArrayView>::value>::type* = nullptr>
-        const T& GetValue() const
+        const T& Value() const
+        {
+            VerifyType<T>();
+            return *(reinterpret_cast<T*>(m_data.m_ptr));
+        }
+
+        template <typename T, typename std::enable_if<std::is_same<T, NDShape>::value ||
+                                                      std::is_same<T, Axis>::value ||
+                                                      std::is_same<T, std::wstring>::value ||
+                                                      std::is_same<T, std::vector<DictionaryValue>>::value ||
+                                                      std::is_same<T, Dictionary>::value ||
+                                                      std::is_same<T, NDArrayView>::value>::type* = nullptr>
+        T& Value()
         {
             VerifyType<T>();
             return *(reinterpret_cast<T*>(m_data.m_ptr));
@@ -1934,15 +2159,16 @@ namespace CNTK
         template <typename T>
         static Type GetValueType()
         {
-            static_assert((std::is_same<T, bool>::value ||
+            static_assert(std::is_same<T, bool>::value ||
                           std::is_same<T, size_t>::value ||
                           std::is_same<T, float>::value ||
                           std::is_same<T, double>::value ||
                           std::is_same<T, std::wstring>::value ||
                           std::is_same<T, NDShape>::value ||
+                          std::is_same<T, Axis>::value ||
                 std::is_same<T, std::vector<DictionaryValue>>::value ||
                           std::is_same<T, Dictionary>::value ||
-                          std::is_same<T, NDArrayView>::value),
+                          std::is_same<T, NDArrayView>::value,
                           "Unsupported ValueType");
 
             if (std::is_same<T, bool>::value)                                      return Type::Bool;
@@ -1951,6 +2177,7 @@ namespace CNTK
             if (std::is_same<T, double>::value)                                    return Type::Double;
             if (std::is_same<T, std::wstring>::value)                              return Type::String;
             if (std::is_same<T, NDShape>::value)                                   return Type::NDShape;
+            if (std::is_same<T, Axis>::value)                                      return Type::Axis;
             if (std::is_same<T, std::vector<DictionaryValue>>::value)              return Type::Vector;
             if (std::is_same<T, Dictionary>::value)                                return Type::Dictionary;
             if (std::is_same<T, NDArrayView>::value)                               return Type::NDArrayView;
@@ -1975,6 +2202,8 @@ namespace CNTK
                 FreePtrAsType<std::wstring>();
             else if (m_valueType == Type::NDShape)
                 FreePtrAsType<NDShape>();
+            else if (m_valueType == Type::Axis)
+                FreePtrAsType<Axis>();
             else if (m_valueType == Type::Vector)
                 FreePtrAsType<std::vector<DictionaryValue>>();
             else if (m_valueType == Type::Dictionary)
@@ -2176,35 +2405,45 @@ namespace CNTK
     /// Create an instance of the CNTK built-in SGD learner.
     ///
     CNTK_API LearnerPtr SGDLearner(const std::unordered_set<Parameter>& parameters, 
-                                   const LearningRatesPerSample& learningRates);
+                                   const LearningRatesPerSample& learningRates,
+                                   double clippingThresholdPerSample = std::numeric_limits<double>::infinity(),
+                                   bool gradientClippingWithTruncation = true);
 
     ///
     /// Create an instance of the CNTK built-in Momentum SGD learner.
     ///
     CNTK_API LearnerPtr MomentumSGDLearner(const std::unordered_set<Parameter>& parameters, 
                                            const LearningRatesPerSample& learningRates,
-                                           const MomentumsPerSample& momentums);
+                                           const MomentumsPerSample& momentums,
+                                           double clippingThresholdPerSample = std::numeric_limits<double>::infinity(),
+                                           bool gradientClippingWithTruncation = true);
 
     ///
     /// Create an instance of the CNTK built-in Nesterov's accelerated SGD learner.
     ///
     CNTK_API LearnerPtr NesterovLearner(const std::unordered_set<Parameter>& parameters, 
                                         const LearningRatesPerSample& learningRates,
-                                        const MomentumsPerSample& momentums);
-
-    ///
-    /// Create an instance of the CNTK built-in AdaGrad learner.
-    ///
-    CNTK_API LearnerPtr AdaGradLearner(const std::unordered_set<Parameter>& parameters,
-                                       const LearningRatesPerSample& learningRates,
-                                       bool needAveMultiplier = true);
+                                        const MomentumsPerSample& momentums,
+                                        double clippingThresholdPerSample = std::numeric_limits<double>::infinity(),
+                                        bool gradientClippingWithTruncation = true);
 
     ///
     /// Create an instance of the CNTK built-in FSAdaGrad (improved AdaGrad) learner.
     ///
     CNTK_API LearnerPtr FSAdaGradLearner(const std::unordered_set<Parameter>& parameters,
                                          const LearningRatesPerSample& learningRates,
-                                         const MomentumsPerSample& momentums);
+                                         const MomentumsPerSample& momentums,
+                                         double clippingThresholdPerSample = std::numeric_limits<double>::infinity(),
+                                         bool gradientClippingWithTruncation = true);
+
+    ///
+    /// Create an instance of the CNTK built-in AdaGrad learner.
+    ///
+    CNTK_API LearnerPtr AdaGradLearner(const std::unordered_set<Parameter>& parameters,
+                                       const LearningRatesPerSample& learningRates,
+                                       bool needAveMultiplier = true,
+                                       double clippingThresholdPerSample = std::numeric_limits<double>::infinity(),
+                                       bool gradientClippingWithTruncation = true);
 
     ///
     /// Create an instance of the CNTK built-in RMSProp learner.
@@ -2216,7 +2455,9 @@ namespace CNTK
                                        double dec,
                                        double max,
                                        double min,
-                                       bool needAveMultiplier = true);
+                                       bool needAveMultiplier = true,
+                                       double clippingThresholdPerSample = std::numeric_limits<double>::infinity(),
+                                       bool gradientClippingWithTruncation = true);
 
     ///
     /// Trainer is the top-level abstraction responsible for the orchestration of the training of a model
@@ -2230,13 +2471,27 @@ namespace CNTK
         /// Construct a Trainer to train the specified 'model' with the specified 'trainingLoss' Variable as the training criterion
         /// and using the specified set of 'parameterLearners' for updating the model's parameters using computed gradients.
         ///
-        CNTK_API Trainer(const FunctionPtr& model, const Variable& trainingLoss, const std::unordered_set<LearnerPtr>& parameterLearners);
+        CNTK_API Trainer(const FunctionPtr& model, const FunctionPtr& lossFunction, const std::unordered_set<LearnerPtr>& parameterLearners);
+
+        ///
+        /// Construct a Trainer to train the specified 'model' with the specified 'trainingLoss' as the training criterion,
+        /// the specified 'evaluationFunction' as the criterion for evaluating the trained model's quality, and using the specified set
+        /// of 'parameterLearners' for updating the model's parameters using computed gradients.
+        ///
+        // TODO: Add overload for multiple evaluation criterion
+        CNTK_API Trainer(const FunctionPtr& model, const FunctionPtr& lossFunction, const FunctionPtr& evaluationFunction, const std::unordered_set<LearnerPtr>& parameterLearners);
 
         ///
         /// Optimize model parameters using the specified 'arguments' minibatch of training samples.
         /// Returns false if all parameter learners indicate end of learning (through their Update method's return value).
         ///
-        CNTK_API bool TrainMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, const DeviceDescriptor& computeDevice = DeviceDescriptor::DefaultDevice());
+        CNTK_API bool TrainMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice());
+
+        ///
+        /// Test the model on the specified batch of samples using the evaluation Function specified during construction of the Trainer
+        /// Returns the average evaluation criterion value per sample for the tested minibatch of samples
+        ///
+        CNTK_API double TestMinbatch(const std::unordered_map<Variable, ValuePtr>& arguments, const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice());
 
         ///
         /// Model being trained by 'this' Trainer.
@@ -2244,15 +2499,29 @@ namespace CNTK
         FunctionPtr Model() const { return m_model; }
 
         ///
-        /// Variable of the Trainer's model representing the training loss that is used as the optimization 
-        /// criterion for learning the model's parameters.
+        /// Loss function that is used as the optimization criterion for learning the model's parameters.
         ///
-        Variable TrainingLossVariable() const { return m_trainingLossVar; }
+        FunctionPtr LossFunction() const { return m_lossFunction; }
 
         ///
-        /// Returns the Value of the training loss variable of the model corresponding to the last minibatch trained with
+        /// Evaluation Function that is used as for the criterion for evaluating the trained model's quality.
         ///
-        ValuePtr PreviousMinibatchTrainingLossValue() const { return m_prevMinibatchTrainingLossValue; }
+        FunctionPtr EvaluationFunction() const { return m_evaluationFunction; }
+
+        ///
+        /// Returns the average training loss per sample for the last minibatch trained.
+        ///
+        CNTK_API double PreviousMinibatchLossAverage() const;
+
+        ///
+        /// Returns the average evaluation criterion value per sample for the last minibatch trained.
+        ///
+        CNTK_API double PreviousMinibatchEvaluationAverage() const;
+
+        ///
+        /// Returns the number of samples in the last minibatch trained with
+        ///
+        size_t PreviousMinibatchSampleCount() const { return m_prevMinibatchNumSamples; }
 
         ///
         /// Learners associated with this Trainer for updating the model's parameters using computed gradients.
@@ -2260,16 +2529,22 @@ namespace CNTK
         const std::unordered_set<LearnerPtr>& ParameterLearners() const { return m_parameterLearners; }
 
     private:
+        FunctionPtr m_combinedTrainingFunction;
         FunctionPtr m_model;
-        Variable m_trainingLossVar;
-        ValuePtr m_prevMinibatchTrainingLossValue;
+        FunctionPtr m_lossFunction;
+        FunctionPtr m_evaluationFunction;
+
         std::unordered_set<LearnerPtr> m_parameterLearners;
+
+        size_t m_prevMinibatchNumSamples;
+        ValuePtr m_prevMinibatchAggregateTrainingLossValue;
+        ValuePtr m_prevMinibatchAggregateEvalCriterionValue;
     };
 
     ///
     /// Describes an input stream: its name, element type, storage, etc.
     ///
-    struct StreamInfo
+    struct StreamInformation
     {
         std::wstring m_name;           // Unique name of the stream
         size_t m_id;                   // Unique identifier of the stream
@@ -2278,7 +2553,7 @@ namespace CNTK
         NDShape m_sampleLayout;        // Layout of the sample for the stream
     };
 
-    inline bool operator==(const StreamInfo& left, const StreamInfo& right)
+    inline bool operator==(const StreamInformation& left, const StreamInformation& right)
     {
         return ((left.m_id == right.m_id) &&
                 (left.m_name == right.m_name) &&
@@ -2289,9 +2564,9 @@ namespace CNTK
 }
 
 namespace std {
-    template <> struct hash<CNTK::StreamInfo>
+    template <> struct hash<CNTK::StreamInformation>
     {
-        size_t operator()(const CNTK::StreamInfo& x) const
+        size_t operator()(const CNTK::StreamInformation& x) const
         {
             return std::hash<size_t>()(x.m_id);
         }
@@ -2316,22 +2591,42 @@ namespace CNTK
         ///
         /// Describes the streams 'this' MinibatchSource produces.
         ///
-        virtual const std::unordered_set<StreamInfo>& StreamInfos() = 0;
+        virtual const std::unordered_set<StreamInformation>& StreamInfos() = 0;
 
         ///
-        /// Reads a minibatch that contains data across all input streams.
-        /// The minibatchData argument specifies the desired minibatch size for each stream of the reader either in terms of #sequences or 
-        /// #samples or both. In case the size is specified in terms of both #sequences and #samples, the smaller of the 2 is taken. The actual
-        /// returned size of the minibatch is the min across all streams. Also the requested MB size fields in the maps are updated by the 
-        /// MinibatchSource to contain the actual #sequences and #samples in the returned minibatch for the corresponding stream.
-        /// The return value indicates if the MinibatchSource will return any further data in subsequent calls of this function.
+        /// Reads a minibatch that contains data for all input streams.
+        /// The minibatch size is specified terms of #samples and/or #sequences for the primary input stream; value of 0 for #samples/#sequences means unspecified.
+        /// In case the size is specified in terms of both #sequences and #samples, the smaller of the 2 is taken.
+        /// An empty map is returned when the MinibatchSource has no more data to return.
         ///
-        virtual const std::unordered_map<StreamInfo, MinibatchData>& GetNextMinibatch(const std::unordered_map<StreamInfo, std::pair<size_t, size_t>>& perStreamMBSizeLimits,
-                                                                               const DeviceDescriptor& device = DeviceDescriptor::DefaultDevice()) = 0;
+        virtual const std::unordered_map<StreamInformation, MinibatchData>& GetNextMinibatch(size_t minibatchSizeInSamples,
+                                                                                             size_t minibatchSizeInSequences,
+                                                                                             const DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice()) = 0;
+
         ///
         /// Destruct this MinibatchSource.
         ///
         virtual ~MinibatchSource() {}
+
+    public:
+        ///
+        /// Gets the description of the stream with given name. 
+        /// Throws an exception of there are none or multiple streams with this same name.
+        ///
+        CNTK_API const StreamInformation& StreamInfo(const std::wstring& streamName);
+
+        ///
+        /// Gets the description of the stream that matches the attributes (Shape, DataType and StorageFormat) of the specified Variable object
+        /// Throws an exception if there are none or multiple streams matching the Variable's attributes
+        ///
+        CNTK_API const StreamInformation& StreamInfo(const Variable& variableToMatch);
+
+        ///
+        /// Reads a minibatch that contains data for all input streams.
+        /// The minibatch size is specified terms of #samples for the primary input stream.
+        /// An empty map is returned when the MinibatchSource has no more data to return.
+        ///
+        CNTK_API const std::unordered_map<StreamInformation, MinibatchData>& GetNextMinibatch(size_t minibatchSizeInSamples, const DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice());
 
         // TODO: Methods to save and restore from checkpoints
 
@@ -2351,6 +2646,6 @@ namespace CNTK
     /// Compute the per dimension means and variances for each of the specified streams using data from the specified minibatchSource.
     ///
     CNTK_API void ComputeInputPerDimMeansAndInvStdDevs(const MinibatchSourcePtr& minibatchSource,
-                                                       std::unordered_map<StreamInfo, std::pair<NDArrayViewPtr, NDArrayViewPtr>>& computedMeanAndVariances,
+                                                       std::unordered_map<StreamInformation, std::pair<NDArrayViewPtr, NDArrayViewPtr>>& computedMeanAndVariances,
                                                        const DeviceDescriptor& device = DeviceDescriptor::CPUDevice());
 }

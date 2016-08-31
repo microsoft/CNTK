@@ -94,6 +94,7 @@ namespace CNTK
     void DictionaryValue::AllocateDataPtr(const T& value)
     {
         static_assert(is_same<T, NDShape>::value ||
+                      is_same<T, Axis>::value ||
                       is_same<T, wstring>::value ||
                       is_same<T, vector<DictionaryValue>>::value ||
                       is_same<T, Dictionary>::value ||
@@ -184,6 +185,12 @@ namespace CNTK
             NDShape* shapePtr2 = reinterpret_cast<NDShape*>(other.m_data.m_ptr);
             return (*shapePtr1 == *shapePtr2);
         }
+        case DictionaryValue::Type::Axis:
+        {
+            Axis* axisPtr1 = reinterpret_cast<Axis*>(m_data.m_ptr);
+            Axis* axisPtr2 = reinterpret_cast<Axis*>(other.m_data.m_ptr);
+            return (*axisPtr1 == *axisPtr2);
+        }
         case DictionaryValue::Type::Vector:
         {   
             vector<DictionaryValue>* vectorPtr1 = reinterpret_cast<vector<DictionaryValue>*>(m_data.m_ptr);
@@ -230,6 +237,15 @@ namespace CNTK
         {
             stream << us[i];
         }
+        return stream;
+    }
+
+    BinaryOStreamWrapper& operator<<(BinaryOStreamWrapper& stream, const Axis& us)
+    {
+        stream << us.StaticAxisIndex(false);
+        stream << us.Name();
+        stream << us.IsOrdered();
+
         return stream;
     }
 
@@ -300,6 +316,26 @@ namespace CNTK
                 stream >> shapePtr->operator[](i);
             }
             us.m_data.m_ptr = shapePtr;
+            break;
+        }
+        case DictionaryValue::Type::Axis:
+        {
+            size_t staticAxisIdx;
+            stream >> staticAxisIdx;
+
+            std::wstring axisName;
+            stream >> axisName;
+
+            bool isOrderedDynamicAxis;
+            stream >> isOrderedDynamicAxis;
+
+            Axis* axisPtr = nullptr;
+            if (Axis(staticAxisIdx).IsStaticAxis())
+                axisPtr = new Axis(staticAxisIdx);
+            else
+                axisPtr = new Axis(axisName, isOrderedDynamicAxis);
+
+            us.m_data.m_ptr = axisPtr;
             break;
         }
         case DictionaryValue::Type::Vector:
@@ -389,6 +425,12 @@ namespace CNTK
         {
             NDShape* shapePtr = reinterpret_cast<NDShape*>(us.m_data.m_ptr);
             stream << *shapePtr;
+            break;
+        }
+        case DictionaryValue::Type::Axis:
+        {
+            Axis* axisPtr = reinterpret_cast<Axis*>(us.m_data.m_ptr);
+            stream << *axisPtr;
             break;
         }
         case DictionaryValue::Type::Vector:
@@ -559,12 +601,14 @@ namespace CNTK
     }
 
     template void DictionaryValue::AllocateDataPtr<NDShape>(const NDShape& value);
+    template void DictionaryValue::AllocateDataPtr<Axis>(const Axis& value);
     template void DictionaryValue::AllocateDataPtr<vector<DictionaryValue>>(const vector<DictionaryValue>& value);
     template void DictionaryValue::AllocateDataPtr<wstring>(const wstring& value);
     template void DictionaryValue::AllocateDataPtr<Dictionary>(const Dictionary& value);
     template void DictionaryValue::AllocateDataPtr<NDArrayView>(const NDArrayView& value);
 
     template void DictionaryValue::FreePtrAsType<NDShape>();
+    template void DictionaryValue::FreePtrAsType<Axis>();
     template void DictionaryValue::FreePtrAsType<vector<DictionaryValue>>();
     template void DictionaryValue::FreePtrAsType<wstring>();
     template void DictionaryValue::FreePtrAsType<Dictionary>();

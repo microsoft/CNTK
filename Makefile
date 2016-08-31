@@ -370,6 +370,7 @@ endif
 CNTKLIBRARY_SRC =\
 	$(SOURCEDIR)/CNTKv2LibraryDll/BackCompat.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/Common.cpp \
+	$(SOURCEDIR)/CNTKv2LibraryDll/ComputeInputStatistics.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/Function.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/MinibatchSource.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/NDArrayView.cpp \
@@ -415,6 +416,7 @@ CNTKLIBRARY_TESTS_SRC =\
 	Tests/UnitTests/V2LibraryTests/LearnerTests.cpp \
 	Tests/UnitTests/V2LibraryTests/FunctionTests.cpp \
 	Tests/UnitTests/V2LibraryTests/SequenceClassification.cpp \
+	Tests/UnitTests/V2LibraryTests/Seq2Seq.cpp \
 
 CNTKLIBRARY_TESTS:=$(BINDIR)/v2librarytests
 CNTKLIBRARY_TESTS_OBJ := $(patsubst %.cu, $(OBJDIR)/%.o, $(patsubst %.cpp, $(OBJDIR)/%.o, $(CNTKLIBRARY_TESTS_SRC)))

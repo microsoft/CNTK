@@ -29,7 +29,7 @@ namespace CNTK
 
         auto matrixDims = GetMatrixDimensions(viewShape);
         std::shared_ptr<Matrix<ElementType>> matrix = std::make_shared<Matrix<ElementType>>(matrixDims.first, matrixDims.second, (ElementType*)dataBuffer, AsCNTKImplDeviceId(device), matrixFlagDontOwnBuffer);
-        return new TensorView<ElementType>(matrix, AsTensorShape(viewShape));
+        return new TensorView<ElementType>(matrix, AsTensorViewShape(viewShape));
     }
 
     static void* AllocateTensorView(CNTK::DataType dataType,
@@ -61,7 +61,7 @@ namespace CNTK
                                                                                             AsCNTKImplDeviceId(device),
                                                                                             IsSparseStorageFormat(storageType) ? MatrixType::SPARSE : MatrixType::DENSE,
                                                                                             AsCNTKImplMatrixFormat(storageType));
-        return new TensorView<ElementType>(matrix, AsTensorShape(viewShape));
+        return new TensorView<ElementType>(matrix, AsTensorViewShape(viewShape));
     }
 
     static void* AllocateTensorView(CNTK::DataType dataType,
@@ -316,31 +316,31 @@ namespace CNTK
     }
 
     template <typename ElementType>
-    /*static*/ NDArrayViewPtr NDArrayView::RandomNormal(const NDShape& shape, double mean, double stdDev, unsigned long seed, const DeviceDescriptor& device /*= DeviceDescriptor::DefaultDevice()*/)
+    /*static*/ NDArrayViewPtr NDArrayView::RandomNormal(const NDShape& shape, double mean, double stdDev, unsigned long seed, const DeviceDescriptor& device /*= DeviceDescriptor::UseDefaultDevice()*/)
     {
         auto matrixDims = GetMatrixDimensions(shape);
         auto randomNormalMatrix = std::make_shared<Matrix<ElementType>>(Matrix<ElementType>::RandomGaussian(matrixDims.first, matrixDims.second, AsCNTKImplDeviceId(device), (ElementType)mean, (ElementType)stdDev, seed));
-        auto tensorView = new TensorView<ElementType>(randomNormalMatrix, AsTensorShape(shape));
+        auto tensorView = new TensorView<ElementType>(randomNormalMatrix, AsTensorViewShape(shape));
 
         return MakeSharedObject<NDArrayView>(AsDataType<ElementType>(), device, StorageFormat::Dense, shape, false, tensorView);
     }
 
     template <typename ElementType>
-    /*static*/ NDArrayViewPtr NDArrayView::RandomUniform(const NDShape& shape, double rangeBegin, double rangeEnd, unsigned long seed, const DeviceDescriptor& device/* = DeviceDescriptor::DefaultDevice()*/)
+    /*static*/ NDArrayViewPtr NDArrayView::RandomUniform(const NDShape& shape, double rangeBegin, double rangeEnd, unsigned long seed, const DeviceDescriptor& device/* = DeviceDescriptor::UseDefaultDevice()*/)
     {
         auto matrixDims = GetMatrixDimensions(shape);
         auto randomUniformMatrix = std::make_shared<Matrix<ElementType>>(Matrix<ElementType>::RandomUniform(matrixDims.first, matrixDims.second, AsCNTKImplDeviceId(device), (ElementType)rangeBegin, (ElementType)rangeEnd, seed));
-        auto tensorView = new TensorView<ElementType>(randomUniformMatrix, AsTensorShape(shape));
+        auto tensorView = new TensorView<ElementType>(randomUniformMatrix, AsTensorViewShape(shape));
 
         return MakeSharedObject<NDArrayView>(AsDataType<ElementType>(), device, StorageFormat::Dense, shape, false, tensorView);
     }
 
     // Explicit template instantiations
-    template CNTK_API NDArrayViewPtr NDArrayView::RandomUniform<float>(const NDShape& shape, double rangeBegin, double rangeEnd, unsigned long seed, const DeviceDescriptor& device/* = DeviceDescriptor::DefaultDevice()*/);
-    template CNTK_API NDArrayViewPtr NDArrayView::RandomUniform<double>(const NDShape& shape, double rangeBegin, double rangeEnd, unsigned long seed, const DeviceDescriptor& device/* = DeviceDescriptor::DefaultDevice()*/);
+    template CNTK_API NDArrayViewPtr NDArrayView::RandomUniform<float>(const NDShape& shape, double rangeBegin, double rangeEnd, unsigned long seed, const DeviceDescriptor& device/* = DeviceDescriptor::UseDefaultDevice()*/);
+    template CNTK_API NDArrayViewPtr NDArrayView::RandomUniform<double>(const NDShape& shape, double rangeBegin, double rangeEnd, unsigned long seed, const DeviceDescriptor& device/* = DeviceDescriptor::UseDefaultDevice()*/);
 
-    template CNTK_API NDArrayViewPtr NDArrayView::RandomNormal<float>(const NDShape& shape, double mean, double stdDev, unsigned long seed, const DeviceDescriptor& device/* = DeviceDescriptor::DefaultDevice()*/);
-    template CNTK_API NDArrayViewPtr NDArrayView::RandomNormal<double>(const NDShape& shape, double mean, double stdDev, unsigned long seed, const DeviceDescriptor& device/* = DeviceDescriptor::DefaultDevice()*/);
+    template CNTK_API NDArrayViewPtr NDArrayView::RandomNormal<float>(const NDShape& shape, double mean, double stdDev, unsigned long seed, const DeviceDescriptor& device/* = DeviceDescriptor::UseDefaultDevice()*/);
+    template CNTK_API NDArrayViewPtr NDArrayView::RandomNormal<double>(const NDShape& shape, double mean, double stdDev, unsigned long seed, const DeviceDescriptor& device/* = DeviceDescriptor::UseDefaultDevice()*/);
 
     template CNTK_API const float* NDArrayView::DataBuffer<float>() const;
     template CNTK_API const double* NDArrayView::DataBuffer<double>() const;

@@ -1524,6 +1524,8 @@ public:
         ReleaseMatrixToPool(m_maskOfDropout, matrixPool);
     }
 
+    double GetDropoutRate() const { return m_dropoutRate; }
+
 private:
     double m_dropoutRate;
     unsigned long m_randomSeed;
