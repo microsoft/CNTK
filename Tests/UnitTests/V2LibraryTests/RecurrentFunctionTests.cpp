@@ -10,10 +10,13 @@ static unsigned long seed = 1;
 template <typename ElementType>
 FunctionPtr LSTMNet(Variable features, size_t cellDim, size_t hiddenDim, size_t numOutputClasses, size_t numLSTMLayers, const DeviceDescriptor& device, const std::wstring& outputName)
 {
+    using namespace std::placeholders;
+
     assert(numLSTMLayers >= 1);
-    auto classifierRoot = LSTMPComponentWithSelfStabilization<ElementType>(features, hiddenDim, cellDim, device);
-    for (size_t i = 1; i < numLSTMLayers; ++i) {
-        classifierRoot = LSTMPComponentWithSelfStabilization<ElementType>(classifierRoot, hiddenDim, cellDim, device);
+    FunctionPtr classifierRoot = features;
+    auto pastValueRecurrenceHook = std::bind(PastValue, _1, CNTK::Constant({}, (ElementType)0.0), 1, L"");
+    for (size_t i = 0; i < numLSTMLayers; ++i) {
+        classifierRoot = LSTMPComponentWithSelfStabilization<ElementType>(classifierRoot, hiddenDim, cellDim, pastValueRecurrenceHook,  pastValueRecurrenceHook, device).first;
     }
 
     auto W = Parameter(NDArrayView::RandomUniform<ElementType>({ numOutputClasses, hiddenDim }, -0.5, 0.5, seed++, device));

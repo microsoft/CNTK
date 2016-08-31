@@ -9,10 +9,12 @@
 
 namespace CNTK
 {
-    Trainer::Trainer(const FunctionPtr& model, const Variable& trainingLoss, const std::unordered_set<LearnerPtr>& parameterLearners)
-        : m_model(model), m_trainingLossVar(trainingLoss), m_parameterLearners(parameterLearners), m_prevMinibatchNumSamples(1)
+    Trainer::Trainer(const FunctionPtr& model, const FunctionPtr& lossFunction, const FunctionPtr& evaluationFunction, const std::unordered_set<LearnerPtr>& parameterLearners)
+        : m_model(model), m_lossFunction(lossFunction), m_evaluationFunction(evaluationFunction), m_parameterLearners(parameterLearners), m_prevMinibatchNumSamples(1)
     {
-        auto modelParameters = model->Parameters();
+        m_combinedTrainingFunction = Combine({ model, lossFunction, evaluationFunction });
+
+        auto modelParameters = m_combinedTrainingFunction->Parameters();
         std::unordered_set<Parameter> learnerParameters;
         for (const auto& learner : parameterLearners)
         {
@@ -29,36 +31,97 @@ namespace CNTK
             InvalidArgument("Trainer ctor: Union of the parameters covered by the specified parameterLearners should match the specified model's parameters");
     }
 
+    Trainer::Trainer(const FunctionPtr& model, const FunctionPtr& lossFunction, const std::unordered_set<LearnerPtr>& parameterLearners)
+        : Trainer(model, lossFunction, nullptr, parameterLearners)
+    {}
+
+    static double GetScalarValue(const ValuePtr& value)
+    {
+        if (value->Mask())
+            LogicError("Scalar Value object cannot have an associated mask");
+
+        auto scalarData = value->Data();
+        if (scalarData->Shape().TotalSize() != 1)
+            LogicError("Scalar Value object's has a size > 1");
+
+        double scalar = std::numeric_limits<double>::quiet_NaN();
+        NDArrayViewPtr cpuData;
+        if (scalarData->Device() == DeviceDescriptor::CPUDevice())
+            cpuData = scalarData;
+        else
+        {
+            cpuData = std::make_shared<NDArrayView>(scalarData->GetDataType(), scalarData->Shape(), CNTK::DeviceDescriptor::CPUDevice());
+            cpuData->CopyFrom(*scalarData);
+        }
+
+        if (scalarData->GetDataType() == DataType::Float)
+            scalar = *(cpuData->DataBuffer<float>());
+        else if (scalarData->GetDataType() == DataType::Double)
+            scalar = *(cpuData->DataBuffer<double>());
+        else
+            LogicError("Unsupported DataType of training loss value");
+
+        return scalar;
+    }
+
+    static size_t GetSampleCountFromArguments(const Variable& evalOrLossArgument, const std::unordered_map<Variable, ValuePtr>& arguments)
+    {
+        // Find the argument whose dynamic axes match the criterion operation's dynamic axes (i.e. label dynamic axes)
+        // Then we determine the actual number of samples contributing to the training loss from the argument's Value object
+        auto argumentIter = std::find_if(arguments.begin(), arguments.end(), [evalOrLossArgument](const std::pair<Variable, ValuePtr>& currentPair) {
+            return (currentPair.first.DynamicAxes() == evalOrLossArgument.DynamicAxes());
+        });
+
+        auto argumentValue = argumentIter->second;
+        auto argumentVar = argumentIter->first;
+        auto argumentDataShape = argumentValue->Data()->Shape();
+        auto mask = argumentValue->Mask();
+        size_t numMaskedSamples = (mask != nullptr) ? mask->MaskedCount() : 0;
+        size_t numSamplesInDataArrayView = argumentDataShape.SubShape(argumentVar.Shape().NumAxes()).TotalSize();
+        if (numMaskedSamples > numSamplesInDataArrayView)
+            LogicError("Number of masked values cannot exceed the number of samples that the Value object's Data NDArrayView can hold");
+
+        return (numSamplesInDataArrayView - numMaskedSamples);
+    }
+
+    double Trainer::TestMinbatch(const std::unordered_map<Variable, ValuePtr>& arguments, const DeviceDescriptor& computeDevice /*= DeviceDescriptor::UseDefaultDevice()*/)
+    {
+        if (!m_evaluationFunction)
+            InvalidArgument("Trainer::TestMinbatch: Cannot test when no evaluation function was specified during 'this' trainer's construction");
+
+        // TODO: Should we refactor this code that is somewhat similar to the prologue of the TrainMinibatch function
+        std::unordered_map<Variable, ValuePtr> outputs = { { m_evaluationFunction, nullptr } };
+        m_combinedTrainingFunction->Forward(arguments, outputs, computeDevice);
+
+        auto sampleCount = GetSampleCountFromArguments(*(m_evaluationFunction->Arguments().begin()), arguments);
+        return (GetScalarValue(outputs[m_evaluationFunction]) / sampleCount);
+    }
+
     bool Trainer::TrainMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, const DeviceDescriptor& computeDevice /*= DeviceDescriptor::UseDefaultDevice()*/)
     {
-        std::unordered_map<Variable, ValuePtr> outputs = { { m_trainingLossVar, nullptr } };
-        auto backPropSate = m_model->Forward(arguments, outputs, computeDevice, { m_trainingLossVar });
-        m_prevMinibatchTrainingLossValue = outputs.begin()->second;
+        std::unordered_map<Variable, ValuePtr> outputs = { { m_lossFunction, nullptr } };
+        if (m_evaluationFunction)
+            outputs.insert({ m_evaluationFunction, nullptr });
 
-        ValuePtr rootGradientValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(m_trainingLossVar.GetDataType(), outputs.at(m_trainingLossVar)->Data()->Shape(), computeDevice), outputs.at(m_trainingLossVar)->Mask());
-        if (m_trainingLossVar.GetDataType() == DataType::Float)
+        auto backPropSate = m_combinedTrainingFunction->Forward(arguments, outputs, computeDevice, { m_lossFunction });
+        m_prevMinibatchAggregateTrainingLossValue = outputs[m_lossFunction];
+        if (m_evaluationFunction)
+            m_prevMinibatchAggregateEvalCriterionValue = outputs[m_evaluationFunction];
+
+        ValuePtr rootGradientValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(m_lossFunction->Output().GetDataType(), m_prevMinibatchAggregateTrainingLossValue->Data()->Shape(), computeDevice), outputs.at(m_lossFunction)->Mask());
+        if (m_lossFunction->Output().GetDataType() == DataType::Float)
             rootGradientValue->Data()->SetValue(1.0f);
         else
             rootGradientValue->Data()->SetValue(1.0);
 
-        auto modelParameters = m_model->Parameters();
+        auto modelParameters = m_combinedTrainingFunction->Parameters();
         std::unordered_map<Variable, ValuePtr> parameterGradients;
         for (const auto& parameter : modelParameters)
             parameterGradients[parameter] = nullptr;
 
-        m_model->Backward(backPropSate, { { m_trainingLossVar, rootGradientValue } }, parameterGradients);
+        m_combinedTrainingFunction->Backward(backPropSate, { { m_lossFunction, rootGradientValue } }, parameterGradients);
 
-        auto trainingLossArgument = *(m_trainingLossVar.Owner()->Arguments().begin());
-
-        // Find the argument whose dynamic axes match the criterion operation's dynamic axes (i.e. label dynamic axes)
-        // Then we determine the actual number of samples contributing to the training loss from the argument's Value object
-        auto argumentValue = std::find_if(arguments.begin(), arguments.end(), [trainingLossArgument](const std::pair<Variable, ValuePtr>& currentPair) {
-            return (currentPair.first.DynamicAxes() == trainingLossArgument.DynamicAxes());
-        })->second;
-        auto argumentData = argumentValue->Data();
-        auto argumentDataShape = argumentData->Shape();
-        auto mask = argumentValue->Mask();
-        m_prevMinibatchNumSamples = argumentDataShape[argumentDataShape.NumAxes() - 1] - ((mask != nullptr) ? mask->MaskedCount() : 0);
+        m_prevMinibatchNumSamples = GetSampleCountFromArguments(*(m_lossFunction->Arguments().begin()), arguments);
 
         bool anyUpdatesPerformed = false;
         for (auto learner : m_parameterLearners)
@@ -79,27 +142,16 @@ namespace CNTK
         return anyUpdatesPerformed;
     }
 
-    double Trainer::PreviousMinibatchAverageTrainingLoss() const
+    double Trainer::PreviousMinibatchLossAverage() const
     {
-        double trainLossValue = std::numeric_limits<double>::quiet_NaN();
-        auto prevMBTrainingLossValue = PreviousMinibatchTrainingLossValue()->Data();
+        return (GetScalarValue(m_prevMinibatchAggregateTrainingLossValue) / m_prevMinibatchNumSamples);
+    }
 
-        NDArrayViewPtr cpuTrainLossValue;
-        if (prevMBTrainingLossValue->Device() == DeviceDescriptor::CPUDevice())
-            cpuTrainLossValue = prevMBTrainingLossValue;
-        else
-        {
-            cpuTrainLossValue = std::make_shared<NDArrayView>(prevMBTrainingLossValue->GetDataType(), prevMBTrainingLossValue->Shape(), CNTK::DeviceDescriptor::CPUDevice());
-            cpuTrainLossValue->CopyFrom(*prevMBTrainingLossValue);
-        }
+    double Trainer::PreviousMinibatchEvaluationAverage() const
+    {
+        if (!m_evaluationFunction)
+            InvalidArgument("Trainer::PreviousMinibatchEvaluationAverage: Cannot get evaluation criterion value when no evaluation function was specified during 'this' trainer's construction");
 
-        if (prevMBTrainingLossValue->GetDataType() == DataType::Float)
-            trainLossValue = *(cpuTrainLossValue->DataBuffer<float>());
-        else if (prevMBTrainingLossValue->GetDataType() == DataType::Double)
-            trainLossValue = *(cpuTrainLossValue->DataBuffer<double>());
-        else
-            LogicError("Unsupported DataType of training loss value");
-
-        return (trainLossValue / m_prevMinibatchNumSamples);
+        return (GetScalarValue(m_prevMinibatchAggregateEvalCriterionValue) / m_prevMinibatchNumSamples);
     }
 }

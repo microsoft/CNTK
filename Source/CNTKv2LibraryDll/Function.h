@@ -46,6 +46,7 @@ namespace CNTK
         GreaterEqual,
         PackedIndex,
         GatherPacked,
+        ScatterPacked,
         Times,
         TransposeTimes,
         Convolution,
@@ -57,6 +58,7 @@ namespace CNTK
         ReduceElements,
         BatchNormalization,
         Clip,
+        Select,
         Splice,
         Combine,
     };
@@ -77,7 +79,7 @@ namespace CNTK
 {
     inline const char* PrimitiveOpTypeName(PrimitiveOpType opType)
     {
-        static std::unordered_map<PrimitiveOpType, const char*> primitiveOpNames = {
+        static const std::unordered_map<PrimitiveOpType, const char*> primitiveOpNames = {
             { PrimitiveOpType::Negate, "Negate" },
             { PrimitiveOpType::Sigmoid, "Sigmoid" },
             { PrimitiveOpType::Tanh, "Tanh" },
@@ -108,6 +110,7 @@ namespace CNTK
             { PrimitiveOpType::GreaterEqual, "GreaterEqual" },
             { PrimitiveOpType::PackedIndex, "PackedIndex" },
             { PrimitiveOpType::GatherPacked, "GatherPacked" },
+            { PrimitiveOpType::ScatterPacked, "ScatterPacked" },
             { PrimitiveOpType::Times, "Times" },
             { PrimitiveOpType::TransposeTimes, "TransposeTimes" },
             { PrimitiveOpType::Convolution, "Convolution" },
@@ -119,6 +122,7 @@ namespace CNTK
             { PrimitiveOpType::ReduceElements, "ReduceElements" },
             { PrimitiveOpType::BatchNormalization, "BatchNormalization" },
             { PrimitiveOpType::Clip, "Clip" },
+            { PrimitiveOpType::Select, "Select" },
             { PrimitiveOpType::Splice, "Splice" },
             { PrimitiveOpType::Combine, "Combine" }
         };
@@ -288,9 +292,9 @@ namespace CNTK
             {
                 if ((leftOperandShape[i] == NDShape::InferredDimension) && (rightOperandShape[i] == NDShape::InferredDimension))
                     outputDims[i] = NDShape::InferredDimension;
-                else if (leftOperandShape[i] == NDShape::InferredDimension)
+                else if ((leftOperandShape[i] == NDShape::InferredDimension) || (leftOperandShape[i] == 1))
                     outputDims[i] = rightOperandShape[i];
-                else if (rightOperandShape[i] == NDShape::InferredDimension)
+                else if ((rightOperandShape[i] == NDShape::InferredDimension) || (rightOperandShape[i] == 1))
                     outputDims[i] = leftOperandShape[i];
                 else
                 {
@@ -306,6 +310,18 @@ namespace CNTK
                 outputDims[i] = shapeWithLargerNumAxes[i];
 
             return NDShape(std::move(outputDims));
+        }
+
+        static NDShape NaryElementwiseOpOutputShape(PrimitiveOpType op, const std::vector<NDShape>& operandShapes, bool broadcastAllowed = true)
+        {
+            assert(!operandShapes.empty());
+
+            // TODO: Is this logic of transitively constructing the output shape from the operands correct?
+            NDShape outputShape = {};
+            for (auto& operandShape : operandShapes)
+                outputShape = BinaryElementwiseOpOutputShape(op, outputShape, operandShape, broadcastAllowed);
+
+            return outputShape;
         }
 
         static NDShape TimesOpOutputShape(const NDShape& leftOperandShape, const NDShape& rightOperandShape, size_t outputRank)
@@ -362,7 +378,7 @@ namespace CNTK
             else
                 computeOutputShapeFunc = &Microsoft::MSR::CNTK::ConvolveGeometry::ComputeInputShape;
 
-            return AsNDShape(computeOutputShapeFunc(AsTensorShape(operandShape, true), AsTensorShape(kernelShape, true), AsTensorShape(outputMapCount, true), AsTensorShape(strides, true), sharing, autoPad, AsTensorShape(lowerPad, true), AsTensorShape(upperPad, true)));
+            return AsNDShape(computeOutputShapeFunc(AsTensorShape(operandShape), AsTensorShape(kernelShape), AsTensorShape(outputMapCount), AsTensorShape(strides), sharing, autoPad, AsTensorShape(lowerPad), AsTensorShape(upperPad)));
         }
 
         // TODO: Reconcile this with the ComputationNode::Validate functionality in core CNTK to avoid duplication of inference logic
@@ -533,9 +549,9 @@ namespace CNTK
     inline std::vector<CNTK::Axis> DynamicAxesFromInternalDynamicAxisName(const std::wstring& internalDynamicAxisName)
     {
         std::vector<CNTK::Axis> inputVarDynamicAxes;
-        if (internalDynamicAxisName == CNTK::CompositeFunction::InternalDefaultDynamicAxisName)
+        if (internalDynamicAxisName.substr(0, CNTK::CompositeFunction::InternalDefaultDynamicAxisName.length()) == CNTK::CompositeFunction::InternalDefaultDynamicAxisName)
             inputVarDynamicAxes = { CNTK::Axis::DefaultDynamicAxis(), CNTK::Axis::DefaultBatchAxis() };
-        else if (internalDynamicAxisName == CNTK::CompositeFunction::InternalNoSequenceAxisName)
+        else if (internalDynamicAxisName.substr(0, CNTK::CompositeFunction::InternalNoSequenceAxisName.length()) == CNTK::CompositeFunction::InternalNoSequenceAxisName)
             inputVarDynamicAxes = { CNTK::Axis::DefaultBatchAxis() };
         else
             inputVarDynamicAxes = { CNTK::Axis(internalDynamicAxisName), CNTK::Axis::DefaultBatchAxis() };

@@ -119,19 +119,30 @@ namespace CNTK
         }
     }
 
-    inline Microsoft::MSR::CNTK::TensorShape AsTensorShape(const NDShape& viewShape, bool preserveRank = false)
+    inline Microsoft::MSR::CNTK::TensorShape AsTensorShape(const NDShape& viewShape)
     {
         const size_t maxNumAxesSupportedByTensorView = 12;
         if (viewShape.NumAxes() > maxNumAxesSupportedByTensorView)
             LogicError("The number of requested axes exceeds the currently supported limit");
 
-        // TensorShape is required to be at least 2D
-        size_t minRankSize = preserveRank ? viewShape.NumAxes() : 2;
+        // TensorShape is required to be at least 1D
+        size_t minRankSize = 1;
         Microsoft::MSR::CNTK::SmallVector<size_t> tensorViewShape(std::max<size_t>(minRankSize, viewShape.NumAxes()));
         for (size_t i = 0; i < tensorViewShape.size(); ++i)
             tensorViewShape[i] = (i < viewShape.NumAxes()) ? viewShape[i] : 1;
 
         return tensorViewShape;
+    }
+
+    inline Microsoft::MSR::CNTK::TensorShape AsTensorViewShape(const Microsoft::MSR::CNTK::TensorShape& viewShape)
+    {
+        // For TensorView shapes we pad the TensorShape to be at least rank 2
+        return viewShape.PadRank(std::max<size_t>(2, viewShape.GetRank()));
+    }
+
+    inline Microsoft::MSR::CNTK::TensorShape AsTensorViewShape(const NDShape& viewShape)
+    {
+        return AsTensorViewShape(AsTensorShape(viewShape));
     }
 
     inline std::string AsString(const NDShape& shape)
@@ -242,35 +253,39 @@ namespace CNTK
     }
 
     template <typename T>
-    inline std::vector<DictionaryValue> AsDictionaryValueVector(const std::vector<T>& basicElementTypeVector)
+    inline std::vector<DictionaryValue> AsDictionaryValueVector(const std::vector<T>& elementVector)
     {
         static_assert(std::is_same<T, bool>::value ||
                       std::is_same<T, size_t>::value ||
                       std::is_same<T, float>::value ||
                       std::is_same<T, double>::value ||
-                      std::is_same<T, std::wstring>::value, "Unsupported ValueType");
+                      std::is_same<T, Axis>::value ||
+                      std::is_same<T, std::wstring>::value,
+                      "Unsupported ValueType");
 
         std::vector<DictionaryValue> dictionaryValueVector;
-        for (auto value : basicElementTypeVector)
+        for (auto value : elementVector)
             dictionaryValueVector.push_back(value);
 
         return dictionaryValueVector;
     }
 
     template <typename T>
-    inline std::vector<T> AsBasicElementTypeVector(const std::vector<DictionaryValue>& dictionaryValueVector)
+    inline std::vector<T> AsVector(const std::vector<DictionaryValue>& dictionaryValueVector)
     {
         static_assert(std::is_same<T, bool>::value ||
-            std::is_same<T, size_t>::value ||
-            std::is_same<T, float>::value ||
-            std::is_same<T, double>::value ||
-            std::is_same<T, std::wstring>::value, "Unsupported ValueType");
+                      std::is_same<T, size_t>::value ||
+                      std::is_same<T, float>::value ||
+                      std::is_same<T, double>::value ||
+                      std::is_same<T, Axis>::value ||
+                      std::is_same<T, std::wstring>::value,
+                      "Unsupported ValueType");
 
-        std::vector<T> basicElementTypeVector;
+        std::vector<T> elementVector;
         for (auto value : dictionaryValueVector)
-            basicElementTypeVector.push_back(value.Value<T>());
+            elementVector.push_back(value.Value<T>());
 
-        return basicElementTypeVector;
+        return elementVector;
     }
 
     inline PoolingType AsPoolingType(Microsoft::MSR::CNTK::PoolKind cntkPoolingKind)

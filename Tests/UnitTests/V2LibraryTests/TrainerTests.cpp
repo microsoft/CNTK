@@ -35,28 +35,34 @@ void TrainSimpleFeedForwardClassifer(const DeviceDescriptor& device)
 
     auto outputTimesParam = Parameter(NDArrayView::RandomUniform<float>({ numOutputClasses, hiddenLayerDim }, -0.05, 0.05, 1, device));
     auto outputBiasParam = Parameter(NDArrayView::RandomUniform<float>({ numOutputClasses }, -0.05, 0.05, 1, device));
-    classifierOutput = Plus(outputBiasParam, Times(outputTimesParam, classifierOutput));
+    classifierOutput = Plus(outputBiasParam, Times(outputTimesParam, classifierOutput), L"classifierOutput");
 
     Variable labels({ numOutputClasses }, DataType::Float, L"labels");
     auto trainingLoss = CNTK::CrossEntropyWithSoftmax(classifierOutput, labels, L"lossFunction");;
     auto prediction = CNTK::ClassificationError(classifierOutput, labels, L"classificationError");
 
-    auto oneHiddenLayerClassifier = CNTK::Combine({ trainingLoss, prediction, classifierOutput }, L"classifierModel");
+    // Test save and reload of model
+    {
+        Variable classifierOutputVar = classifierOutput;
+        Variable trainingLossVar = trainingLoss;
+        Variable predictionVar = prediction;
+        auto combinedNet = Combine({ trainingLoss, prediction, classifierOutput }, L"feedForwardClassifier");
+        SaveAndReloadModel<float>(combinedNet, { &input, &labels, &trainingLossVar, &predictionVar, &classifierOutputVar }, device);
+
+        classifierOutput = classifierOutputVar;
+        trainingLoss = trainingLossVar;
+        prediction = predictionVar;
+    }
 
     double learningRatePerSample = 0.02;
     minibatchSource = CreateTextMinibatchSource(L"SimpleDataTrain_cntk_text.txt", (size_t)2, (size_t)2, SIZE_MAX);
-    Trainer trainer(oneHiddenLayerClassifier, trainingLoss, { SGDLearner(oneHiddenLayerClassifier->Parameters(), learningRatePerSample) });
+    Trainer trainer(classifierOutput, trainingLoss, prediction, { SGDLearner(classifierOutput->Parameters(), learningRatePerSample) });
     size_t outputFrequencyInMinibatches = 20;
     for (size_t i = 0; i < numMinibatchesToTrain; ++i)
     {
         auto minibatchData = minibatchSource->GetNextMinibatch(minibatchSize, device);
         trainer.TrainMinibatch({ { input, minibatchData[*featureStreamInfo].m_data }, { labels, minibatchData[*labelStreamInfo].m_data } }, device);
-
-        if ((i % outputFrequencyInMinibatches) == 0)
-        {
-            double trainLossValue = trainer.PreviousMinibatchAverageTrainingLoss();
-            printf("Minibatch %d: CrossEntropy loss = %.8g\n", (int)i, trainLossValue);
-        }
+        PrintTrainingProgress(trainer, i, outputFrequencyInMinibatches);
     }
 }
 
@@ -71,13 +77,24 @@ void TrainMNISTClassifier(const DeviceDescriptor& device)
     auto classifierOutput = FullyConnectedDNNLayer(scaledInput, hiddenLayerDim, device, std::bind(Sigmoid, _1, L""));
     auto outputTimesParam = Parameter(NDArrayView::RandomUniform<float>({ numOutputClasses, hiddenLayerDim }, -0.05, 0.05, 1, device));
     auto outputBiasParam = Parameter(NDArrayView::RandomUniform<float>({ numOutputClasses }, -0.05, 0.05, 1, device));
-    classifierOutput = Plus(outputBiasParam, Times(outputTimesParam, classifierOutput));
+    classifierOutput = Plus(outputBiasParam, Times(outputTimesParam, classifierOutput), L"classifierOutput");
 
     Variable labels({ numOutputClasses }, DataType::Float, L"labels");
     auto trainingLoss = CNTK::CrossEntropyWithSoftmax(classifierOutput, labels, L"lossFunction");;
     auto prediction = CNTK::ClassificationError(classifierOutput, labels, L"classificationError");
 
-    auto oneHiddenLayerClassifier = CNTK::Combine({ trainingLoss, prediction, classifierOutput }, L"classifierModel");
+    // Test save and reload of model
+    {
+        Variable classifierOutputVar = classifierOutput;
+        Variable trainingLossVar = trainingLoss;
+        Variable predictionVar = prediction;
+        auto combinedNet = Combine({ trainingLoss, prediction, classifierOutput }, L"MNISTClassifier");
+        SaveAndReloadModel<float>(combinedNet, { &input, &labels, &trainingLossVar, &predictionVar, &classifierOutputVar }, device);
+
+        classifierOutput = classifierOutputVar;
+        trainingLoss = trainingLossVar;
+        prediction = predictionVar;
+    }
 
     const size_t minibatchSize = 32;
     const size_t numSamplesPerSweep = 60000;
@@ -91,18 +108,14 @@ void TrainMNISTClassifier(const DeviceDescriptor& device)
     auto labelStreamInfo = std::find_if(streamInfos.begin(), streamInfos.end(), [](const StreamInformation& streamInfo) { return (streamInfo.m_name == L"labels"); });
 
     double learningRatePerSample = 0.003125;
-    Trainer trainer(oneHiddenLayerClassifier, trainingLoss, { SGDLearner(oneHiddenLayerClassifier->Parameters(), learningRatePerSample) });
+    Trainer trainer(classifierOutput, trainingLoss, prediction, { SGDLearner(classifierOutput->Parameters(), learningRatePerSample) });
+
     size_t outputFrequencyInMinibatches = 20;
     for (size_t i = 0; i < numMinibatchesToTrain; ++i)
     {
         auto minibatchData = minibatchSource->GetNextMinibatch(minibatchSize, device);
         trainer.TrainMinibatch({ { input, minibatchData[*featureStreamInfo].m_data }, { labels, minibatchData[*labelStreamInfo].m_data } }, device);
-
-        if ((i % outputFrequencyInMinibatches) == 0)
-        {
-            double trainLossValue = trainer.PreviousMinibatchAverageTrainingLoss();
-            printf("Minibatch %d: CrossEntropy loss = %.8g\n", (int)i, trainLossValue);
-        }
+        PrintTrainingProgress(trainer, i, outputFrequencyInMinibatches);
     }
 }
 

@@ -182,11 +182,17 @@ namespace CNTK
 
     namespace Internal
     {
+        // Create a new Function instance which just passes through specified list of 'operands'.
+        CNTK_API FunctionPtr Combine(const std::vector<Variable>& operands, const std::wstring& name = L"");
+
+        CNTK_API FunctionPtr IsWithin(const Variable& operand, int offset, const std::wstring& name = L"");
         CNTK_API FunctionPtr PackedIndex(const Variable& operand, const Variable& index, const std::wstring& name = L"");
         CNTK_API FunctionPtr GatherPacked(const Variable& operand, const Variable& packedIndex, const std::wstring& name = L"");
-        CNTK_API FunctionPtr IsWithin(const Variable& operand, int offset, const std::wstring& name = L"");
+        CNTK_API FunctionPtr ScatterPacked(const Variable& operand, const Variable& packedIndex, const Variable& condition, const std::wstring& name = L"");
+        CNTK_API FunctionPtr ZeroesLike(const Variable& operand);
         CNTK_API FunctionPtr Where(const Variable& condition, const std::vector<Axis>& newDynamicAxes, const std::wstring& name = L"");
         CNTK_API FunctionPtr Gather(const Variable& operand, const Variable& condition, const std::vector<Axis>& newDynamicAxes, const std::wstring& name = L"");
+        CNTK_API FunctionPtr Scatter(const Variable& operand, const Variable& condition, const std::vector<Axis>& newDynamicAxes, const std::wstring& name = L"");
         CNTK_API FunctionPtr Slice(const Variable& operand, const Axis& axis, int beginIndex, int endIndex, const std::wstring& name = L"");
         CNTK_API FunctionPtr ReduceElements(const Variable& operand, const std::wstring& reductionOpName, const Axis& axis, const std::wstring& name = L"");
     }

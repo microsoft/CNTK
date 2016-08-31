@@ -32,6 +32,8 @@ namespace CNTK
 
     /*static*/ const std::wstring Axis::StaticAxisNamePrefix = L"staticAxis_";
 
+    /*static*/ std::unordered_set<std::wstring> Axis::s_allKnownDynamicAxisNames;
+
     /*static*/ const Axis& Axis::DefaultDynamicAxis()
     {
         static const Axis s_defaultDynamicAxis(L"defaultDynamicAxis");
@@ -42,5 +44,23 @@ namespace CNTK
     {
         static const Axis s_defaultBatchAxis(L"defaultBatchAxis", false);
         return s_defaultBatchAxis;
+    }
+
+    /*static*/ Axis Axis::NewUniqueDynamicAxis(const std::wstring& axisNamePrefix, bool isOrderedDynamicAxis /*= true*/)
+    {
+        if (s_allKnownDynamicAxisNames.find(axisNamePrefix) == s_allKnownDynamicAxisNames.end())
+            return Axis(axisNamePrefix, isOrderedDynamicAxis);
+
+        for (size_t i = 1;; i++)
+        {
+            auto newDynamicAxisName = axisNamePrefix + std::to_wstring(i);
+            if (s_allKnownDynamicAxisNames.find(newDynamicAxisName) == s_allKnownDynamicAxisNames.end())
+                return Axis(newDynamicAxisName, isOrderedDynamicAxis);
+        }
+    }
+
+    void Axis::RegisterAxisName(const std::wstring& axisName)
+    {
+        s_allKnownDynamicAxisNames.insert(axisName);
     }
 }

@@ -116,114 +116,82 @@ inline CNTK::FunctionPtr FullyConnectedDNNLayer(CNTK::Variable input, size_t out
 template <typename ElementType>
 std::pair<CNTK::FunctionPtr, CNTK::FunctionPtr> LSTMPCellWithSelfStabilization(CNTK::Variable input, CNTK::Variable prevOutput, CNTK::Variable prevCellState, const CNTK::DeviceDescriptor& device)
 {
-    assert(input.Shape().NumAxes() == 1);
-    size_t inputDim = input.Shape()[0];
+    if ((input.Shape().NumAxes() != 1) || (prevOutput.Shape().NumAxes() != 1) || (prevCellState.Shape().NumAxes() != 1))
+        LogicError("The LSTM implementation in the test library currently only supports 1D inputs and outputs");
 
+    auto stabilize = [](const Variable& x) {
+        float scalarConstant = 4.0f;
+        auto f = Constant({}, scalarConstant);
+        auto fInv = Constant({}, 1.0f / scalarConstant);
+
+        auto beta = ElementTimes(fInv, Log(Constant({}, 1.0f) + Exp(ElementTimes(f, Parameter({}, 0.99537863f /* 1/f*ln (e^f-1) */)))));
+        return ElementTimes(beta, x);
+    };
+
+    size_t inputDim = input.Shape()[0];
     size_t outputDim = prevOutput.Shape()[0];
     size_t cellDim = prevCellState.Shape()[0];
 
+    auto createBiasParam = [device](size_t dim) {
+        return CNTK::Parameter({ dim }, (ElementType)0.0, device);
+    };
+
     unsigned long seed = 1;
+    auto createProjectionParam = [device, &seed](size_t outputDim, size_t inputDim) {
+        return CNTK::Parameter(CNTK::NDArrayView::RandomUniform<ElementType>({ outputDim, inputDim }, -0.5, 0.5, seed++, device));
+    };
 
-    auto Wxo = CNTK::Parameter(CNTK::NDArrayView::RandomUniform<ElementType>({ cellDim, inputDim }, -0.5, 0.5, seed++, device));
-    auto Wxi = CNTK::Parameter(CNTK::NDArrayView::RandomUniform<ElementType>({ cellDim, inputDim }, -0.5, 0.5, seed++, device));
-    auto Wxf = CNTK::Parameter(CNTK::NDArrayView::RandomUniform<ElementType>({ cellDim, inputDim }, -0.5, 0.5, seed++, device));
-    auto Wxc = CNTK::Parameter(CNTK::NDArrayView::RandomUniform<ElementType>({ cellDim, inputDim }, -0.5, 0.5, seed++, device));
+    auto createDiagWeightParam = [device, &seed](size_t dim) {
+        return CNTK::Parameter(CNTK::NDArrayView::RandomUniform<ElementType>({ dim }, -0.5, 0.5, seed++, device));
+    };
 
-    auto Bo = CNTK::Parameter({ cellDim }, (ElementType)0.0, device);
-    auto Bc = CNTK::Parameter({ cellDim }, (ElementType)0.0, device);
-    auto Bi = CNTK::Parameter({ cellDim }, (ElementType)0.0, device);
-    auto Bf = CNTK::Parameter({ cellDim }, (ElementType)0.0, device);
+    auto stabilizedPrevOutput = stabilize(prevOutput);
+    auto stabilizedPrevCellState = stabilize(prevCellState);
 
-    auto Whi = CNTK::Parameter(CNTK::NDArrayView::RandomUniform<ElementType>({ cellDim, outputDim }, -0.5, 0.5, seed++, device));
-    auto Wci = CNTK::Parameter(CNTK::NDArrayView::RandomUniform<ElementType>({ cellDim }, -0.5, 0.5, seed++, device));
+    auto projectInput = [input, cellDim, inputDim, createBiasParam, createProjectionParam]() {
+        return createBiasParam(cellDim) + Times(createProjectionParam(cellDim, inputDim), input);
+    };
 
-    auto Whf = CNTK::Parameter(CNTK::NDArrayView::RandomUniform<ElementType>({ cellDim, outputDim }, -0.5, 0.5, seed++, device));
-    auto Wcf = CNTK::Parameter(CNTK::NDArrayView::RandomUniform<ElementType>({ cellDim }, -0.5, 0.5, seed++, device));
+    // Input gate
+    auto it = Sigmoid(projectInput() + Times(createProjectionParam(cellDim, outputDim), stabilizedPrevOutput) + ElementTimes(createDiagWeightParam(cellDim), stabilizedPrevCellState));
+    auto bit = ElementTimes(it, Tanh(projectInput() + Times(createProjectionParam(cellDim, outputDim), stabilizedPrevOutput)));
 
-    auto Who = CNTK::Parameter(CNTK::NDArrayView::RandomUniform<ElementType>({ cellDim, outputDim }, -0.5, 0.5, seed++, device));
-    auto Wco = CNTK::Parameter(CNTK::NDArrayView::RandomUniform<ElementType>({ cellDim }, -0.5, 0.5, seed++, device));
+    // Forget-me-not gate
+    auto ft = Sigmoid(projectInput() + Times(createProjectionParam(cellDim, outputDim), stabilizedPrevOutput) + ElementTimes(createDiagWeightParam(cellDim), stabilizedPrevCellState));
+    auto bft = ElementTimes(ft, prevCellState);
 
-    auto Whc = CNTK::Parameter(CNTK::NDArrayView::RandomUniform<ElementType>({ cellDim, outputDim }, -0.5, 0.5, seed++, device));
+    auto ct = bft + bit;
 
-    auto Wmr = CNTK::Parameter(CNTK::NDArrayView::RandomUniform<ElementType>({ outputDim, cellDim }, -0.5, 0.5, seed++, device));
+    // Output gate
+    auto ot = Sigmoid(projectInput() + Times(createProjectionParam(cellDim, outputDim), stabilizedPrevOutput) + ElementTimes(createDiagWeightParam(cellDim), stabilize(ct)));
+    auto ht = ElementTimes(ot, Tanh(ct));
 
-    // Stabilization by routing input through an extra scalar parameter
-    auto sWxo = CNTK::Parameter({}, (ElementType)0.0, device);
-    auto sWxi = CNTK::Parameter({}, (ElementType)0.0, device);
-    auto sWxf = CNTK::Parameter({}, (ElementType)0.0, device);
-    auto sWxc = CNTK::Parameter({}, (ElementType)0.0, device);
+    auto c = ct;
+    auto h = (outputDim != cellDim) ? Times(createProjectionParam(outputDim, cellDim), stabilize(ht)) : ht;
 
-    auto sWhi = CNTK::Parameter({}, (ElementType)0.0, device);
-    auto sWci = CNTK::Parameter({}, (ElementType)0.0, device);
-
-    auto sWhf = CNTK::Parameter({}, (ElementType)0.0, device);
-    auto sWcf = CNTK::Parameter({}, (ElementType)0.0, device);
-    auto sWho = CNTK::Parameter({}, (ElementType)0.0, device);
-    auto sWco = CNTK::Parameter({}, (ElementType)0.0, device);
-    auto sWhc = CNTK::Parameter({}, (ElementType)0.0, device);
-
-    auto sWmr = CNTK::Parameter({}, (ElementType)0.0, device);
-
-    auto expsWxo = CNTK::Exp(sWxo);
-    auto expsWxi = CNTK::Exp(sWxi);
-    auto expsWxf = CNTK::Exp(sWxf);
-    auto expsWxc = CNTK::Exp(sWxc);
-
-    auto expsWhi = CNTK::Exp(sWhi);
-    auto expsWci = CNTK::Exp(sWci);
-
-    auto expsWhf = CNTK::Exp(sWhf);
-    auto expsWcf = CNTK::Exp(sWcf);
-    auto expsWho = CNTK::Exp(sWho);
-    auto expsWco = CNTK::Exp(sWco);
-    auto expsWhc = CNTK::Exp(sWhc);
-
-    auto expsWmr = CNTK::Exp(sWmr);
-
-    auto Wxix = CNTK::Times(Wxi, CNTK::ElementTimes(expsWxi, input));
-    auto Whidh = CNTK::Times(Whi, CNTK::ElementTimes(expsWhi, prevOutput));
-    auto Wcidc = CNTK::ElementTimes(Wci, CNTK::ElementTimes(expsWci, prevCellState));
-
-    auto it = CNTK::Sigmoid(CNTK::Plus(CNTK::Plus(CNTK::Plus(Wxix, Bi), Whidh), Wcidc));
-
-    auto Wxcx = CNTK::Times(Wxc, CNTK::ElementTimes(expsWxc, input));
-    auto Whcdh = CNTK::Times(Whc, CNTK::ElementTimes(expsWhc, prevOutput));
-    auto bit = CNTK::ElementTimes(it, CNTK::Tanh(CNTK::Plus(Wxcx, CNTK::Plus(Whcdh, Bc))));
-
-    auto Wxfx = CNTK::Times(Wxf, CNTK::ElementTimes(expsWxf, input));
-    auto Whfdh = CNTK::Times(Whf, CNTK::ElementTimes(expsWhf, prevOutput));
-    auto Wcfdc = CNTK::ElementTimes(Wcf, CNTK::ElementTimes(expsWcf, prevCellState));
-
-    auto ft = CNTK::Sigmoid(CNTK::Plus(CNTK::Plus(CNTK::Plus(Wxfx, Bf), Whfdh), Wcfdc));
-
-    auto bft = CNTK::ElementTimes(ft, prevCellState);
-
-    auto ct = CNTK::Plus(bft, bit);
-
-    auto Wxox = CNTK::Times(Wxo, CNTK::ElementTimes(expsWxo, input));
-    auto Whodh = CNTK::Times(Who, CNTK::ElementTimes(expsWho, prevOutput));
-    auto Wcoct = CNTK::ElementTimes(Wco, CNTK::ElementTimes(expsWco, ct));
-
-    auto ot = CNTK::Sigmoid(CNTK::Plus(CNTK::Plus(CNTK::Plus(Wxox, Bo), Whodh), Wcoct));
-
-    auto mt = CNTK::ElementTimes(ot, Tanh(ct));
-
-    return{ CNTK::Times(Wmr, CNTK::ElementTimes(expsWmr, mt)), ct };
+    return{ h, c };
 }
 
 template <typename ElementType>
-CNTK::FunctionPtr LSTMPComponentWithSelfStabilization(CNTK::Variable input, size_t outputDim, size_t cellDim, const CNTK::DeviceDescriptor& device)
+std::pair<CNTK::FunctionPtr, CNTK::FunctionPtr> LSTMPComponentWithSelfStabilization(CNTK::Variable input,
+                                                                                    size_t outputDim,
+                                                                                    size_t cellDim,
+                                                                                    const std::function<CNTK::FunctionPtr(const CNTK::Variable&)>& recurrenceHookH,
+                                                                                    const std::function<CNTK::FunctionPtr(const CNTK::Variable&)>& recurrenceHookC,
+                                                                                    const CNTK::DeviceDescriptor& device)
 {
-    auto dh = CNTK::Placeholder({ outputDim });
-    auto dc = CNTK::Placeholder({ cellDim });
+    auto dh = CNTK::Placeholder({ outputDim }, input.DynamicAxes());
+    auto dc = CNTK::Placeholder({ cellDim }, input.DynamicAxes());
 
     auto LSTMCell = LSTMPCellWithSelfStabilization<ElementType>(input, dh, dc, device);
 
-    auto actualDh = CNTK::PastValue(LSTMCell.first, CNTK::Constant({}, (ElementType)0.0, device), 1);
-    auto actualDc = CNTK::PastValue(LSTMCell.second, CNTK::Constant({}, (ElementType)0.0, device), 1);
+    auto actualDh = recurrenceHookH(LSTMCell.first);
+    auto actualDc = recurrenceHookC(LSTMCell.second);
 
     // Form the recurrence loop by replacing the dh and dc placeholders with the actualDh and actualDc
-    return LSTMCell.first->ReplacePlaceholders({ { dh, actualDh }, { dc, actualDc } });
+    LSTMCell.first->ReplacePlaceholders({ { dh, actualDh }, { dc, actualDc } });
+
+    return { LSTMCell.first, LSTMCell.second };
 }
 
 inline CNTK::MinibatchSourcePtr CreateTextMinibatchSource(const std::wstring& filePath,
@@ -355,4 +323,14 @@ inline void OpenStream(std::fstream& stream, const std::wstring& filename, bool 
     stream.open(wtocharpath(filename.c_str()).c_str(), mode);
     #endif
     stream.exceptions(std::ios_base::failbit | std::ios_base::badbit);  
+}
+
+inline void PrintTrainingProgress(const CNTK::Trainer& trainer, size_t minibatchIdx, size_t outputFrequencyInMinibatches)
+{
+    if ((minibatchIdx % outputFrequencyInMinibatches) == 0)
+    {
+        double trainLossValue = trainer.PreviousMinibatchLossAverage();
+        double evaluationValue = trainer.PreviousMinibatchEvaluationAverage();
+        printf("Minibatch %d: CrossEntropy loss = %.8g, Evaluation criterion = %.8g\n", (int)minibatchIdx, trainLossValue, evaluationValue);
+    }
 }

@@ -15,16 +15,12 @@ FunctionPtr Embedding(const Variable& input, size_t embeddingDim, const DeviceDe
     return Times(embeddingParameters, input);
 }
 
-FunctionPtr SelectLast(const Variable& operand)
-{
-    return Slice(operand, Axis::DefaultDynamicAxis(), -1, 0);
-}
-
 FunctionPtr LSTMSequenceClassiferNet(const Variable& input, size_t numOutputClasses, size_t embeddingDim, size_t LSTMDim, size_t cellDim, const DeviceDescriptor& device, const std::wstring& outputName)
 {
     auto embeddingFunction = Embedding(input, embeddingDim, device);
-    auto LSTMFunction = LSTMPComponentWithSelfStabilization<float>(embeddingFunction, LSTMDim, cellDim, device);
-    auto thoughtVectorFunction = SelectLast(LSTMFunction);
+    auto pastValueRecurrenceHook = std::bind(PastValue, _1, CNTK::Constant({}, 0.0f), 1, L"");
+    auto LSTMFunction = LSTMPComponentWithSelfStabilization<float>(embeddingFunction, LSTMDim, cellDim, pastValueRecurrenceHook, pastValueRecurrenceHook, device).first;
+    auto thoughtVectorFunction = Sequence::Last(LSTMFunction);
 
     return FullyConnectedLinearLayer(thoughtVectorFunction, numOutputClasses, device, outputName);
 }
@@ -38,27 +34,34 @@ void TrainLSTMSequenceClassifer(const DeviceDescriptor& device, bool testSaveAnd
     const size_t numOutputClasses = 5;
 
     Variable features({ inputDim }, true /*isSparse*/, DataType::Float, L"features");
-    auto classifierOutputFunction = LSTMSequenceClassiferNet(features, numOutputClasses, embeddingDim, hiddenDim, cellDim, device, L"classifierOutput");
-    Variable classifierOutput = classifierOutputFunction;
+    auto classifierOutput = LSTMSequenceClassiferNet(features, numOutputClasses, embeddingDim, hiddenDim, cellDim, device, L"classifierOutput");
 
     Variable labels({ numOutputClasses }, DataType::Float, L"labels", { Axis::DefaultBatchAxis() });
-    auto trainingLossFunction = CNTK::CrossEntropyWithSoftmax(classifierOutput, labels, L"lossFunction");
-    Variable trainingLoss = trainingLossFunction;
-    auto predictionFunction = CNTK::ClassificationError(classifierOutput, labels, L"classificationError");
-    Variable prediction = predictionFunction;
-
-    auto oneHiddenLayerClassifier = CNTK::Combine({ trainingLoss.Owner(), prediction.Owner(), classifierOutput.Owner() }, L"classifierModel");
+    auto trainingLoss = CNTK::CrossEntropyWithSoftmax(classifierOutput, labels, L"lossFunction");
+    auto prediction = CNTK::ClassificationError(classifierOutput, labels, L"classificationError");
 
     if (testSaveAndReLoad)
-        SaveAndReloadModel<float>(oneHiddenLayerClassifier, { &features, &labels, &trainingLoss, &prediction, &classifierOutput }, device);
+    {
+        Variable classifierOutputVar = classifierOutput;
+        Variable trainingLossVar = trainingLoss;
+        Variable predictionVar = prediction;
+        auto oneHiddenLayerClassifier = CNTK::Combine({ trainingLoss, prediction, classifierOutput }, L"classifierModel");
+        SaveAndReloadModel<float>(oneHiddenLayerClassifier, { &features, &labels, &trainingLossVar, &predictionVar, &classifierOutputVar }, device);
+
+        classifierOutput = classifierOutputVar;
+        trainingLoss = trainingLossVar;
+        prediction = predictionVar;
+    }
 
     auto minibatchSource = CreateTextMinibatchSource(L"Train.ctf", inputDim, numOutputClasses, 0, true, false, L"x", L"y");
     const size_t minibatchSize = 200;
     
     auto featureStreamInfo = minibatchSource->StreamInfo(features);
     auto labelStreamInfo = minibatchSource->StreamInfo(labels);
+
     double learningRatePerSample = 0.0005;
-    Trainer trainer(oneHiddenLayerClassifier, trainingLoss, { SGDLearner(oneHiddenLayerClassifier->Parameters(), learningRatePerSample) });
+    Trainer trainer(classifierOutput, trainingLoss, prediction, { SGDLearner(classifierOutput->Parameters(), learningRatePerSample) });
+
     size_t outputFrequencyInMinibatches = 1;
     for (size_t i = 0; true; i++)
     {
@@ -67,12 +70,7 @@ void TrainLSTMSequenceClassifer(const DeviceDescriptor& device, bool testSaveAnd
             break;
 
         trainer.TrainMinibatch({ { features, minibatchData[featureStreamInfo].m_data }, { labels, minibatchData[labelStreamInfo].m_data } }, device);
-
-        if ((i % outputFrequencyInMinibatches) == 0)
-        {
-            double trainLossValue = trainer.PreviousMinibatchAverageTrainingLoss();
-            printf("Minibatch %d: CrossEntropy loss = %.8g\n", (int)i, trainLossValue);
-        }
+        PrintTrainingProgress(trainer, i, outputFrequencyInMinibatches);
     }
 }
 

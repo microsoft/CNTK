@@ -132,24 +132,28 @@ void TrainResNetCifarClassifer(const DeviceDescriptor& device, bool testSaveAndR
     const size_t numOutputClasses = labelStreamInfo.m_sampleLayout[0];
 
     Variable imageInput(inputImageShape, imageStreamInfo.m_elementType, L"Images");
-    auto classifierOutputFunction = ResNetClassifier(imageInput, numOutputClasses, device, L"classifierOutput");
-    Variable classifierOutput = classifierOutputFunction;
+    auto classifierOutput = ResNetClassifier(imageInput, numOutputClasses, device, L"classifierOutput");
 
     auto labelsVar = Variable({ numOutputClasses }, labelStreamInfo.m_elementType, L"Labels");
-
-    auto trainingLossFunction = CrossEntropyWithSoftmax(classifierOutputFunction, labelsVar, L"lossFunction");
-    Variable trainingLoss = trainingLossFunction;
-    auto predictionFunction = ClassificationError(classifierOutputFunction, labelsVar, L"predictionError");
-    Variable prediction = predictionFunction;
-
-    auto imageClassifier = Combine({ trainingLossFunction, predictionFunction, classifierOutputFunction }, L"ImageClassifier");
+    auto trainingLoss = CrossEntropyWithSoftmax(classifierOutput, labelsVar, L"lossFunction");
+    auto prediction = ClassificationError(classifierOutput, labelsVar, L"predictionError");
 
     if (testSaveAndReLoad)
-        SaveAndReloadModel<float>(imageClassifier, { &imageInput, &labelsVar, &trainingLoss, &prediction, &classifierOutput }, device);
+    {
+        Variable classifierOutputVar = classifierOutput;
+        Variable trainingLossVar = trainingLoss;
+        Variable predictionVar = prediction;
+        auto imageClassifier = Combine({ trainingLoss, prediction, classifierOutput }, L"ImageClassifier");
+        SaveAndReloadModel<float>(imageClassifier, { &imageInput, &labelsVar, &trainingLossVar, &predictionVar, &classifierOutputVar }, device);
+
+        trainingLoss = trainingLossVar;
+        prediction = predictionVar;
+        classifierOutput = classifierOutputVar;
+    }
 
     double learningRatePerSample = 0.0078125;
+    Trainer trainer(classifierOutput, trainingLoss, prediction, { SGDLearner(classifierOutput->Parameters(), learningRatePerSample) });
 
-    Trainer trainer(imageClassifier, trainingLoss, { SGDLearner(imageClassifier->Parameters(), learningRatePerSample) });
     const size_t minibatchSize = 32;
     size_t numMinibatchesToTrain = 100;
     size_t outputFrequencyInMinibatches = 20;
@@ -157,12 +161,7 @@ void TrainResNetCifarClassifer(const DeviceDescriptor& device, bool testSaveAndR
     {
         auto minibatchData = minibatchSource->GetNextMinibatch(minibatchSize, device);
         trainer.TrainMinibatch({ { imageInput, minibatchData[imageStreamInfo].m_data }, { labelsVar, minibatchData[labelStreamInfo].m_data } }, device);
-
-        if ((i % outputFrequencyInMinibatches) == 0)
-        {
-            double trainLossValue = trainer.PreviousMinibatchAverageTrainingLoss();
-            printf("Minibatch %d: CrossEntropy loss = %.8g\n", (int)i, trainLossValue);
-        }
+        PrintTrainingProgress(trainer, i, outputFrequencyInMinibatches);
     }
 }
 

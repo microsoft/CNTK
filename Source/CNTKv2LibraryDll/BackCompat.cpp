@@ -54,12 +54,11 @@ namespace CNTK
         {
             if (node->Is<InputValueBase<ElementType>>())
             {
-                auto inputNode = node->As<InputValueBase<ElementType>>();
                 bool isSparse = node->Is<SparseInputValue<ElementType>>();
                 if (node->HasMBLayout())
                 {
                     // TODO: Currently only default dynamic axis is supported
-                    auto inputNodeInternalDynamicAxisName = inputNode->GetRequestedDynamicAxis();
+                    auto inputNodeInternalDynamicAxisName = node->GetMBLayout()->GetAxisName();
                     std::vector<Axis> inputVarDynamicAxes = DynamicAxesFromInternalDynamicAxisName(inputNodeInternalDynamicAxisName);
 
                     var = Variable(varShape, isSparse, AsDataType<ElementType>(), node->GetLearningRateMultiplier() != 0, node->GetName(), inputVarDynamicAxes);
@@ -74,7 +73,7 @@ namespace CNTK
             {
                 bool isConstant = (node->GetLearningRateMultiplier() == 0);
                 auto& matrix = node->As<ComputationNode<ElementType>>()->Value();
-                auto tensorView = new TensorView<ElementType>(std::make_shared<Matrix<ElementType>>(matrix.AsReference()), node->GetSampleLayout());
+                auto tensorView = new TensorView<ElementType>(std::make_shared<Matrix<ElementType>>(matrix.AsReference()), AsTensorViewShape(node->GetSampleLayout()));
                 NDArrayViewPtr parameterValue = MakeSharedObject<NDArrayView>(AsDataType<ElementType>(), AsDeviceDescriptor(matrix.GetDeviceId()), AsStorageFormat(matrix.GetFormat()), varShape, false, tensorView);
                 if (isConstant)
                     var = Constant(parameterValue, node->GetName());
@@ -87,7 +86,14 @@ namespace CNTK
         else
         {
             // This is a non-leaf node and maps to a primitive Function
-            auto placeholderVar = Placeholder(varShape);
+            std::vector<Axis> varDynamicAxes;;
+            if (node->HasMBLayout())
+            {
+                auto nodeInternalDynamicAxisName = node->GetMBLayout()->GetAxisName();
+                varDynamicAxes = DynamicAxesFromInternalDynamicAxisName(nodeInternalDynamicAxisName);
+            }
+
+            auto placeholderVar = Placeholder(varShape, varDynamicAxes);
             nodeToVariableMap[node] = placeholderVar;
 
             std::vector<Variable> inputVars(node->GetNumInputs());
@@ -134,14 +140,9 @@ namespace CNTK
             }
             else if (node->OperationName() == OperationNameOf(WhereNode))
             {
-                auto whereNode = node->As<WhereNode<ElementType>>();
-                auto internalDynamicAxisName = whereNode->DynamicAxisName();
+                auto internalDynamicAxisName = node->GetMBLayout()->GetAxisName();
                 std::vector<Axis> dynamicAxes = DynamicAxesFromInternalDynamicAxisName(internalDynamicAxisName);
-                std::vector<std::wstring> dynamicAxesNames;
-                for (auto axis : dynamicAxes)
-                    dynamicAxesNames.push_back(axis.Name());
-
-                primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameNewDynamicAxes] = AsDictionaryValueVector(dynamicAxesNames);
+                primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameNewDynamicAxes] = AsDictionaryValueVector(dynamicAxes);
 
                 opType = PrimitiveOpType::Where;
             }
@@ -195,6 +196,13 @@ namespace CNTK
                 // which is different from the corresponding V2 Function's ordering of the inputs
                 std::swap(inputVars[0], inputVars[1]);
                 opType = PrimitiveOpType::GatherPacked;
+            }
+            else if (node->OperationName() == OperationNameOf(ScatterPackedNode))
+            {
+                // The internal scatter node has layout as the first input and the actual source as the last operand
+                // which is different from the corresponding V2 Function's ordering of the inputs
+                std::swap(inputVars[0], inputVars[2]);
+                opType = PrimitiveOpType::ScatterPacked;
             }
             else if (node->OperationName() == OperationNameOf(TimesNode))
             {
@@ -296,6 +304,8 @@ namespace CNTK
 
                 opType = PrimitiveOpType::Clip;
             }
+            else if (node->OperationName() == OperationNameOf(IfNode))
+                opType = PrimitiveOpType::Select;
             else if (node->OperationName() == OperationNameOf(RowStackNode))
             {
                 // Internal CNTK SliceNode uses 1 based axis indices instead of 0 based
