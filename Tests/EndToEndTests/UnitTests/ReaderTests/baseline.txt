@@ -1,0 +1,1506 @@
+CPU info:
+    CPU Model Name: Intel(R) Xeon(R) CPU E5-2630 v2 @ 2.60GHz
+    Hardware threads: 24
+    Total Memory: 264172964 kB
+-------------------------------------------------------------------
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/build/gpu/release/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/build/gpu/release/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/build/gpu/release/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/build/gpu/release/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/build/gpu/release/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/build/gpu/release/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/build/gpu/release/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/build/gpu/release/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/build/gpu/release/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/build/gpu/release/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/build/gpu/release/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/build/gpu/release/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/build/gpu/release/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/build/gpu/release/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/build/gpu/release/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/build/gpu/release/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/build/gpu/release/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/build/gpu/release/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/build/gpu/release/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/build/gpu/release/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/build/gpu/release/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
+WARNING: Exhausted all input expected for the current sequence while reading a floating point value at offset 42 in the input file (missing_trailing_newline.txt).
+attempt: Reached the maximum number of allowed errors while reading the input file (missing_trailing_newline.txt)., retrying 2-th time out of 5...
+WARNING: Exhausted all input expected for the current sequence while reading a floating point value at offset 42 in the input file (missing_trailing_newline.txt).
+attempt: Reached the maximum number of allowed errors while reading the input file (missing_trailing_newline.txt)., retrying 3-th time out of 5...
+WARNING: Exhausted all input expected for the current sequence while reading a floating point value at offset 42 in the input file (missing_trailing_newline.txt).
+attempt: Reached the maximum number of allowed errors while reading the input file (missing_trailing_newline.txt)., retrying 4-th time out of 5...
+WARNING: Exhausted all input expected for the current sequence while reading a floating point value at offset 42 in the input file (missing_trailing_newline.txt).
+attempt: Reached the maximum number of allowed errors while reading the input file (missing_trailing_newline.txt)., retrying 5-th time out of 5...
+WARNING: Exhausted all input expected for the current sequence while reading a floating point value at offset 42 in the input file (missing_trailing_newline.txt).
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/build/gpu/release/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
+WARNING: Exhausted all input expected for the current sequence while reading a floating point value at offset 42 in the input file (missing_trailing_newline.txt).
+WARNING: Exhausted all input expected for the current sequence while reading an input row at offset 42 in the input file (missing_trailing_newline.txt). Possibly, a trailing newline is missing.
+WARNING: Could not read a row (# 2) while loading sequence (id = 1) at offset 42 in the input file (missing_trailing_newline.txt).
+WARNING: Exhausted all input expected for the current sequence (id = 1) at offset 42 in the input file (missing_trailing_newline.txt), but only read 1 out of 2 expected rows.
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/build/gpu/release/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
+WARNING: Empty input row at offset 17 in the input file (contains_blank_lines.txt).
+attempt: Reached the maximum number of allowed errors while reading the input file (contains_blank_lines.txt)., retrying 2-th time out of 5...
+WARNING: Empty input row at offset 17 in the input file (contains_blank_lines.txt).
+attempt: Reached the maximum number of allowed errors while reading the input file (contains_blank_lines.txt)., retrying 3-th time out of 5...
+WARNING: Empty input row at offset 17 in the input file (contains_blank_lines.txt).
+attempt: Reached the maximum number of allowed errors while reading the input file (contains_blank_lines.txt)., retrying 4-th time out of 5...
+WARNING: Empty input row at offset 17 in the input file (contains_blank_lines.txt).
+attempt: Reached the maximum number of allowed errors while reading the input file (contains_blank_lines.txt)., retrying 5-th time out of 5...
+WARNING: Empty input row at offset 17 in the input file (contains_blank_lines.txt).
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/build/gpu/release/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
+WARNING: Empty input row at offset 17 in the input file (contains_blank_lines.txt).
+WARNING: Could not read a row (# 2) while loading sequence (id = 1) at offset 17 in the input file (contains_blank_lines.txt).
+WARNING: Exhausted all input expected for the current sequence (id = 1) at offset 17 in the input file (contains_blank_lines.txt), but only read 1 out of 2 expected rows.
+WARNING: Maximum per-input number of samples for sequence (id = 1) at offset 17 in the input file (contains_blank_lines.txt) is less than expected (1 vs. 2).
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/build/gpu/release/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
+WARNING: Input row at offset 26 in the input file (duplicate_inputs.txt) contains more samples than expected (3 vs. 2).
+WARNING: Input ('features2') contains more samples than expected (2 vs. 1) for sequence (id = 1) at offset 26 in the input file (duplicate_inputs.txt).
+attempt: Reached the maximum number of allowed errors while reading the input file (duplicate_inputs.txt)., retrying 2-th time out of 5...
+WARNING: Input row at offset 26 in the input file (duplicate_inputs.txt) contains more samples than expected (3 vs. 2).
+WARNING: Input ('features2') contains more samples than expected (2 vs. 1) for sequence (id = 1) at offset 26 in the input file (duplicate_inputs.txt).
+attempt: Reached the maximum number of allowed errors while reading the input file (duplicate_inputs.txt)., retrying 3-th time out of 5...
+WARNING: Input row at offset 26 in the input file (duplicate_inputs.txt) contains more samples than expected (3 vs. 2).
+WARNING: Input ('features2') contains more samples than expected (2 vs. 1) for sequence (id = 1) at offset 26 in the input file (duplicate_inputs.txt).
+attempt: Reached the maximum number of allowed errors while reading the input file (duplicate_inputs.txt)., retrying 4-th time out of 5...
+WARNING: Input row at offset 26 in the input file (duplicate_inputs.txt) contains more samples than expected (3 vs. 2).
+WARNING: Input ('features2') contains more samples than expected (2 vs. 1) for sequence (id = 1) at offset 26 in the input file (duplicate_inputs.txt).
+attempt: Reached the maximum number of allowed errors while reading the input file (duplicate_inputs.txt)., retrying 5-th time out of 5...
+WARNING: Input row at offset 26 in the input file (duplicate_inputs.txt) contains more samples than expected (3 vs. 2).
+WARNING: Input ('features2') contains more samples than expected (2 vs. 1) for sequence (id = 1) at offset 26 in the input file (duplicate_inputs.txt).
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/build/gpu/release/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
+WARNING: A dense sample at offset 6 in the input file (empty_samples.txt) has a sparse suffix (expected size = 10, actual size = 0).
+WARNING: A dense sample at offset 61 in the input file (empty_samples.txt) has a sparse suffix (expected size = 10, actual size = 5).
+WARNING: A dense sample at offset 473 in the input file (empty_samples.txt) has a sparse suffix (expected size = 10, actual size = 1).
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/build/gpu/release/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/build/gpu/release/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/build/gpu/release/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/build/gpu/release/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/build/gpu/release/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/build/gpu/release/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/build/gpu/release/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests
+Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
+Set current path to: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+Current working directory is now: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+reading script file ./glob_0000.scp ... 948 entries
+total 132 state names in state list ./state.list
+htkmlfreader: reading MLF file ./glob_0000.mlf ... total 948 entries
+...............................................................................................feature set 0: 252734 frames in 948 out of 948 utterances
+label set 0: 129 classes
+minibatchutterancesource: 948 utterances grouped into 3 chunks, av. chunk size: 316.0 utterances, 84244.7 frames
+minibatchiterator: epoch 0: frames [0..500] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
+requiredata: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
+minibatchiterator: epoch 1: frames [500..1000] (first utterance at frame 500), data subset 0 of 1, with 1 datapasses
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/build/gpu/release/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests
+Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
+Set current path to: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+Current working directory is now: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+reading script file ./glob_0000.scp ... 948 entries
+total 132 state names in state list ./state.list
+htkmlfreader: reading MLF file ./glob_0000.mlf ... total 948 entries
+biggrowablevectorarray: creating disk backup store at '/tmp/temp.CNTK.1C88Ws'
+minibatchframesourcemulti: reading 1 feature sets and 1 label sets..................................................................................................
+minibatchframesourcemulti: read label set 0: 129 classes
+
+minibatchframesourcemulti: feature set 0: 252734 frames read from 948 utterances
+biggrowablevectorarray: disk backup store created, 252734 frames, 37748736 bytes
+minibatchiterator: epoch 0: frames [0..500] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
+recoverblock: recovering feature block 0 [0..65535)
+minibatchiterator: epoch 1: frames [500..1000] (first utterance at frame 500), data subset 0 of 1, with 1 datapasses
+biggrowablevectorarray: deleted disk backup store at '/tmp/temp.CNTK.1C88Ws'
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/build/gpu/release/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests
+Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
+Set current path to: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+Current working directory is now: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+reading script file ./glob_0000.scp ... 948 entries
+evaluate: reading 368 frames of An4/71/71/cen5-fjam-b.mfc
+evaluate: reading 438 frames of An4/213/213/cen4-fsaf2-b.mfc
+evaluate: reading 368 frames of An4/513/513/cen7-mgah-b.mfc
+evaluate: reading 248 frames of An4/614/614/cen7-mkdb-b.mfc
+evaluate: reading 248 frames of An4/507/507/cen1-mgah-b.mfc
+evaluate: reading 358 frames of An4/693/693/cen8-mmkw-b.mfc
+evaluate: reading 308 frames of An4/918/918/cen4-mtos-b.mfc
+evaluate: reading 608 frames of An4/477/477/an257-mewl-b.mfc
+evaluate: reading 78 frames of An4/454/454/an70-meht-b.mfc
+evaluate: reading 228 frames of An4/254/254/cen6-ftmj-b.mfc
+evaluate: reading 218 frames of An4/946/946/cen6-mwhw-b.mfc
+evaluate: reading 368 frames of An4/71/71/cen5-fjam-b.mfc
+evaluate: reading 438 frames of An4/213/213/cen4-fsaf2-b.mfc
+evaluate: reading 368 frames of An4/513/513/cen7-mgah-b.mfc
+evaluate: reading 248 frames of An4/614/614/cen7-mkdb-b.mfc
+evaluate: reading 248 frames of An4/507/507/cen1-mgah-b.mfc
+evaluate: reading 358 frames of An4/693/693/cen8-mmkw-b.mfc
+evaluate: reading 308 frames of An4/918/918/cen4-mtos-b.mfc
+evaluate: reading 608 frames of An4/477/477/an257-mewl-b.mfc
+evaluate: reading 78 frames of An4/454/454/an70-meht-b.mfc
+evaluate: reading 228 frames of An4/254/254/cen6-ftmj-b.mfc
+evaluate: reading 218 frames of An4/946/946/cen6-mwhw-b.mfc
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/build/gpu/release/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests
+Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
+Set current path to: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+Current working directory is now: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+reading script file ./glob_0000.scp ... 948 entries
+total 132 state names in state list ./state.list
+htkmlfreader: reading MLF file ./glob_0000.mlf ... total 948 entries
+...............................................................................................feature set 0: 252734 frames in 948 out of 948 utterances
+label set 0: 129 classes
+minibatchutterancesource: 948 utterances grouped into 3 chunks, av. chunk size: 316.0 utterances, 84244.7 frames
+minibatchiterator: epoch 0: frames [0..500] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
+requiredata: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
+minibatchiterator: epoch 1: frames [500..1000] (first utterance at frame 886), data subset 0 of 1, with 1 datapasses
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/build/gpu/release/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests
+Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
+Set current path to: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+Current working directory is now: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+reading script file ./glob_0000.scp ... 948 entries
+total 132 state names in state list ./state.list
+htkmlfreader: reading MLF file ./glob_0000.mlf ... total 948 entries
+...............................................................................................feature set 0: 252734 frames in 948 out of 948 utterances
+label set 0: 129 classes
+minibatchutterancesource: 948 utterances grouped into 3 chunks, av. chunk size: 316.0 utterances, 84244.7 frames
+minibatchiterator: epoch 0: frames [0..500] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
+requiredata: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
+minibatchiterator: epoch 1: frames [500..1000] (first utterance at frame 500), data subset 0 of 1, with 1 datapasses
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/build/gpu/release/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests
+Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
+Set current path to: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+Current working directory is now: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/build/gpu/release/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests
+Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
+Set current path to: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+Current working directory is now: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+reading script file ./glob_0000.scp ... 948 entries
+total 132 state names in state list ./state.list
+htkmlfreader: reading MLF file ./glob_0000.mlf ... total 948 entries
+...............................................................................................feature set 0: 252734 frames in 948 out of 948 utterances
+label set 0: 129 classes
+minibatchutterancesource: 948 utterances grouped into 3 chunks, av. chunk size: 316.0 utterances, 84244.7 frames
+minibatchiterator: epoch 0: frames [0..500] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
+requiredata: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
+minibatchiterator: epoch 1: frames [500..1000] (first utterance at frame 886), data subset 0 of 1, with 1 datapasses
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/build/gpu/release/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests
+Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
+Set current path to: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+Current working directory is now: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+reading script file ./glob_0000.scp ... 948 entries
+reading script file ./glob_0000.scp ... 948 entries
+total 132 state names in state list ./state.list
+htkmlfreader: reading MLF file ./glob_0000.mlf ... total 948 entries
+...............................................................................................feature set 0: 252734 frames in 948 out of 948 utterances
+label set 0: 129 classes
+minibatchutterancesource: 948 utterances grouped into 3 chunks, av. chunk size: 316.0 utterances, 84244.7 frames
+...............................................................................................feature set 1: 252734 frames in 948 out of 948 utterances
+minibatchutterancesource: 948 utterances grouped into 3 chunks, av. chunk size: 316.0 utterances, 84244.7 frames
+lazyrandomization: re-randomizing for sweep 0 in frame mode
+minibatchiterator: epoch 0: frames [0..500] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
+getbatch: getting randomized frames [0..250] (250 frames out of 250 requested) in sweep 0; chunks [0..0] -> chunk window [0..3)
+feature set 0: requirerandomizedchunk: paging in randomized chunk 0 (frame range [0..90233]), 1 resident in RAM
+requiredata: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
+requiredata: 328 utterances read
+feature set 1: requirerandomizedchunk: paging in randomized chunk 0 (frame range [0..90233]), 1 resident in RAM
+requiredata: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
+requiredata: 328 utterances read
+feature set 0: requirerandomizedchunk: paging in randomized chunk 1 (frame range [90234..180391]), 2 resident in RAM
+requiredata: 341 utterances read
+feature set 1: requirerandomizedchunk: paging in randomized chunk 1 (frame range [90234..180391]), 2 resident in RAM
+requiredata: 341 utterances read
+feature set 0: requirerandomizedchunk: paging in randomized chunk 2 (frame range [180392..252733]), 3 resident in RAM
+requiredata: 279 utterances read
+feature set 1: requirerandomizedchunk: paging in randomized chunk 2 (frame range [180392..252733]), 3 resident in RAM
+requiredata: 279 utterances read
+getbatch: getting randomized frames [250..500] (250 frames out of 250 requested) in sweep 0; chunks [0..0] -> chunk window [0..3)
+minibatchiterator: epoch 1: frames [500..1000] (first utterance at frame 500), data subset 0 of 1, with 1 datapasses
+getbatch: getting randomized frames [500..750] (250 frames out of 250 requested) in sweep 0; chunks [0..0] -> chunk window [0..3)
+getbatch: getting randomized frames [750..1000] (250 frames out of 250 requested) in sweep 0; chunks [0..0] -> chunk window [0..3)
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/build/gpu/release/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests
+Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
+Set current path to: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+Current working directory is now: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+reading script file ./glob_0000.scp ... 948 entries
+total 132 state names in state list ./state.list
+htkmlfreader: reading MLF file ./glob_0000.mlf ... total 948 entries
+...............................................................................................feature set 0: 252734 frames in 948 out of 948 utterances
+label set 0: 129 classes
+minibatchutterancesource: 948 utterances grouped into 3 chunks, av. chunk size: 316.0 utterances, 84244.7 frames
+minibatchiterator: epoch 0: frames [0..500] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
+requiredata: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
+minibatchiterator: epoch 1: frames [500..1000] (first utterance at frame 500), data subset 0 of 1, with 1 datapasses
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/build/gpu/release/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests
+Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
+Set current path to: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+Current working directory is now: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+reading script file ./glob_0000.scp ... 948 entries
+total 132 state names in state list ./state.list
+htkmlfreader: reading MLF file ./glob_0000.mlf ... total 948 entries
+biggrowablevectorarray: creating disk backup store at '/tmp/temp.CNTK.dfE4zJ'
+minibatchframesourcemulti: reading 1 feature sets and 1 label sets..................................................................................................
+minibatchframesourcemulti: read label set 0: 129 classes
+
+minibatchframesourcemulti: feature set 0: 252734 frames read from 948 utterances
+biggrowablevectorarray: disk backup store created, 252734 frames, 37748736 bytes
+minibatchiterator: epoch 0: frames [0..500] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
+recoverblock: recovering feature block 0 [0..65535)
+minibatchiterator: epoch 1: frames [500..1000] (first utterance at frame 500), data subset 0 of 1, with 1 datapasses
+biggrowablevectorarray: deleted disk backup store at '/tmp/temp.CNTK.dfE4zJ'
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/build/gpu/release/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests
+Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
+Set current path to: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+Current working directory is now: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+reading script file ./glob_0000.scp ... 948 entries
+evaluate: reading 368 frames of An4/71/71/cen5-fjam-b.mfc
+evaluate: reading 438 frames of An4/213/213/cen4-fsaf2-b.mfc
+evaluate: reading 368 frames of An4/513/513/cen7-mgah-b.mfc
+evaluate: reading 248 frames of An4/614/614/cen7-mkdb-b.mfc
+evaluate: reading 248 frames of An4/507/507/cen1-mgah-b.mfc
+evaluate: reading 358 frames of An4/693/693/cen8-mmkw-b.mfc
+evaluate: reading 308 frames of An4/918/918/cen4-mtos-b.mfc
+evaluate: reading 608 frames of An4/477/477/an257-mewl-b.mfc
+evaluate: reading 78 frames of An4/454/454/an70-meht-b.mfc
+evaluate: reading 228 frames of An4/254/254/cen6-ftmj-b.mfc
+evaluate: reading 218 frames of An4/946/946/cen6-mwhw-b.mfc
+evaluate: reading 368 frames of An4/71/71/cen5-fjam-b.mfc
+evaluate: reading 438 frames of An4/213/213/cen4-fsaf2-b.mfc
+evaluate: reading 368 frames of An4/513/513/cen7-mgah-b.mfc
+evaluate: reading 248 frames of An4/614/614/cen7-mkdb-b.mfc
+evaluate: reading 248 frames of An4/507/507/cen1-mgah-b.mfc
+evaluate: reading 358 frames of An4/693/693/cen8-mmkw-b.mfc
+evaluate: reading 308 frames of An4/918/918/cen4-mtos-b.mfc
+evaluate: reading 608 frames of An4/477/477/an257-mewl-b.mfc
+evaluate: reading 78 frames of An4/454/454/an70-meht-b.mfc
+evaluate: reading 228 frames of An4/254/254/cen6-ftmj-b.mfc
+evaluate: reading 218 frames of An4/946/946/cen6-mwhw-b.mfc
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/build/gpu/release/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests
+Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
+Set current path to: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+Current working directory is now: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+reading script file ./glob_0000.scp ... 948 entries
+total 132 state names in state list ./state.list
+htkmlfreader: reading MLF file ./glob_0000.mlf ... total 948 entries
+...............................................................................................feature set 0: 252734 frames in 948 out of 948 utterances
+label set 0: 129 classes
+minibatchutterancesource: 948 utterances grouped into 3 chunks, av. chunk size: 316.0 utterances, 84244.7 frames
+minibatchiterator: epoch 0: frames [0..500] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
+requiredata: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
+minibatchiterator: epoch 1: frames [500..1000] (first utterance at frame 886), data subset 0 of 1, with 1 datapasses
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/build/gpu/release/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests
+Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
+Set current path to: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+Current working directory is now: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+reading script file ./glob_0000.scp ... 948 entries
+total 132 state names in state list ./state.list
+htkmlfreader: reading MLF file ./glob_0000.mlf ... total 948 entries
+...............................................................................................feature set 0: 252734 frames in 948 out of 948 utterances
+label set 0: 129 classes
+minibatchutterancesource: 948 utterances grouped into 3 chunks, av. chunk size: 316.0 utterances, 84244.7 frames
+minibatchiterator: epoch 0: frames [0..500] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
+requiredata: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
+minibatchiterator: epoch 1: frames [500..1000] (first utterance at frame 500), data subset 0 of 1, with 1 datapasses
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/build/gpu/release/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests
+Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
+Set current path to: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+Current working directory is now: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+reading script file ./glob_0000.scp ... 948 entries
+total 132 state names in state list ./state.list
+htkmlfreader: reading MLF file ./glob_0000.mlf ... total 948 entries
+...............................................................................................feature set 0: 252734 frames in 948 out of 948 utterances
+label set 0: 129 classes
+minibatchutterancesource: 948 utterances grouped into 3 chunks, av. chunk size: 316.0 utterances, 84244.7 frames
+minibatchiterator: epoch 0: frames [0..2000] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
+requiredata: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/build/gpu/release/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests
+Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
+Set current path to: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+Current working directory is now: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+reading script file ./glob_0000.scp ... 948 entries
+reading script file ./glob_0000.scp ... 948 entries
+total 132 state names in state list ./state.list
+htkmlfreader: reading MLF file ./glob_0000.mlf ... total 948 entries
+...............................................................................................feature set 0: 252734 frames in 948 out of 948 utterances
+label set 0: 129 classes
+minibatchutterancesource: 948 utterances grouped into 3 chunks, av. chunk size: 316.0 utterances, 84244.7 frames
+...............................................................................................feature set 1: 252734 frames in 948 out of 948 utterances
+minibatchutterancesource: 948 utterances grouped into 3 chunks, av. chunk size: 316.0 utterances, 84244.7 frames
+lazyrandomization: re-randomizing for sweep 0 in frame mode
+minibatchiterator: epoch 0: frames [0..500] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
+getbatch: getting randomized frames [0..250] (250 frames out of 250 requested) in sweep 0; chunks [0..0] -> chunk window [0..3)
+feature set 0: requirerandomizedchunk: paging in randomized chunk 0 (frame range [0..90233]), 1 resident in RAM
+requiredata: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
+requiredata: 328 utterances read
+feature set 1: requirerandomizedchunk: paging in randomized chunk 0 (frame range [0..90233]), 1 resident in RAM
+requiredata: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
+requiredata: 328 utterances read
+feature set 0: requirerandomizedchunk: paging in randomized chunk 1 (frame range [90234..180391]), 2 resident in RAM
+requiredata: 341 utterances read
+feature set 1: requirerandomizedchunk: paging in randomized chunk 1 (frame range [90234..180391]), 2 resident in RAM
+requiredata: 341 utterances read
+feature set 0: requirerandomizedchunk: paging in randomized chunk 2 (frame range [180392..252733]), 3 resident in RAM
+requiredata: 279 utterances read
+feature set 1: requirerandomizedchunk: paging in randomized chunk 2 (frame range [180392..252733]), 3 resident in RAM
+requiredata: 279 utterances read
+getbatch: getting randomized frames [250..500] (250 frames out of 250 requested) in sweep 0; chunks [0..0] -> chunk window [0..3)
+minibatchiterator: epoch 1: frames [500..1000] (first utterance at frame 500), data subset 0 of 1, with 1 datapasses
+getbatch: getting randomized frames [500..750] (250 frames out of 250 requested) in sweep 0; chunks [0..0] -> chunk window [0..3)
+getbatch: getting randomized frames [750..1000] (250 frames out of 250 requested) in sweep 0; chunks [0..0] -> chunk window [0..3)
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/build/gpu/release/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests
+Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
+Set current path to: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+Current working directory is now: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+reading script file ./glob_0000.scp ... 948 entries
+total 132 state names in state list ./state.list
+htkmlfreader: reading MLF file ./glob_0000.mlf ... total 948 entries
+...............................................................................................feature set 0: 252734 frames in 948 out of 948 utterances
+label set 0: 129 classes
+minibatchutterancesource: 948 utterances grouped into 3 chunks, av. chunk size: 316.0 utterances, 84244.7 frames
+minibatchiterator: epoch 0: frames [0..500] (first utterance at frame 0), data subset 0 of 2, with 1 datapasses
+requiredata: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
+minibatchiterator: epoch 1: frames [500..1000] (first utterance at frame 500), data subset 0 of 2, with 1 datapasses
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/build/gpu/release/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests
+Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
+Set current path to: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+Current working directory is now: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+reading script file ./glob_0000.scp ... 948 entries
+total 132 state names in state list ./state.list
+htkmlfreader: reading MLF file ./glob_0000.mlf ... total 948 entries
+...............................................................................................feature set 0: 252734 frames in 948 out of 948 utterances
+label set 0: 129 classes
+minibatchutterancesource: 948 utterances grouped into 3 chunks, av. chunk size: 316.0 utterances, 84244.7 frames
+minibatchiterator: epoch 0: frames [0..500] (first utterance at frame 0), data subset 1 of 2, with 1 datapasses
+requiredata: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
+minibatchiterator: epoch 1: frames [500..1000] (first utterance at frame 500), data subset 1 of 2, with 1 datapasses
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/build/gpu/release/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests
+Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
+Set current path to: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+Current working directory is now: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+simplesenonehmm: reading './model.overalltying', './state.list', './model.transprob'
+simplesenonehmm: 83253 units with 45 unique HMMs, 132 tied states, and 45 trans matrices read
+reading script file ./glob_0000.scp ... 948 entries
+trainlayer: OOV-exclusion code enabled, but no unigram specified to derive the word set from, so you won't get OOV exclusion
+total 132 state names in state list ./state.list
+htkmlfreader: reading MLF file ./glob_0000.mlf ... total 948 entries
+archive: opening 80 lattice-archive TOC files ('./CY2SCH010061231_1369712653.numden.lats.toc' etc.).................................................................................. 923 total lattices referenced in 80 archive files
+. [no lattice for An4/454/454/an70-meht-b]....... [no lattice for An4/89/89/an6-fjmd-b].. [no lattice for An4/683/683/an364-mmkw-b].. [no lattice for An4/476/476/an256-mewl-b].... [no lattice for An4/2/2/an253-fash-b]...............................................................................feature set 0: 250814 frames in 923 out of 948 utterances
+minibatchutterancesource: out of 948 files, 0 files not found in label set and 25 have no lattice
+label set 0: 129 classes
+minibatchutterancesource: 923 utterances grouped into 3 chunks, av. chunk size: 307.7 utterances, 83604.7 frames
+lazyrandomization: re-randomizing for sweep 0 in utterance mode
+minibatchiterator: epoch 0: frames [0..5000] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
+feature set 0: requirerandomizedchunk: paging in randomized chunk 2 (frame range [180420..250813]), 1 resident in RAM
+requiredata: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
+getcachedidmap: reading 'CY2SCH070101111_1071091997.numden.lats.symlist'
+getcachedidmap: reading 'CY2SCH060060407_1233548343.numden.lats.symlist'
+getcachedidmap: reading 'CY2SCH040070546_2063363669.numden.lats.symlist'
+getcachedidmap: reading 'CY2SCH070081708_1067766888.numden.lats.symlist'
+getcachedidmap: reading 'CY2SCH110070803_1061569312.numden.lats.symlist'
+getcachedidmap: reading 'CY2SCH050090541_1705321237.numden.lats.symlist'
+getcachedidmap: reading 'CY2SCH040080519_2063294856.numden.lats.symlist'
+getcachedidmap: reading 'CY2SCH040031340_1350166299.numden.lats.symlist'
+getcachedidmap: reading 'CY2SCH050070531_1705536174.numden.lats.symlist'
+getcachedidmap: reading 'CY2SCH040121540_2063741403.numden.lats.symlist'
+getcachedidmap: reading 'CY2SCH090100302_1080239467.numden.lats.symlist'
+getcachedidmap: reading 'CY2SCH080071106_1143001388.numden.lats.symlist'
+getcachedidmap: reading 'CY2SCH070040324_1092265200.numden.lats.symlist'
+getcachedidmap: reading 'CY2SCH050091619_1705363705.numden.lats.symlist'
+getcachedidmap: reading 'CY2SCH050051308_1443335642.numden.lats.symlist'
+getcachedidmap: reading 'CY2SCH090090404_1123576357.numden.lats.symlist'
+getcachedidmap: reading 'CY2SCH050090827_1393311596.numden.lats.symlist'
+getcachedidmap: reading 'CY2SCH040051114_2063220700.numden.lats.symlist'
+getcachedidmap: reading 'CY2SCH050081506_1705673846.numden.lats.symlist'
+getcachedidmap: reading 'CY2SCH060091920_1713759019.numden.lats.symlist'
+getcachedidmap: reading 'CY2SCH070062507_2087712345.numden.lats.symlist'
+getcachedidmap: reading 'CY2SCH050051513_1110722876.numden.lats.symlist'
+getcachedidmap: reading 'CY2SCH080062603_966497326.numden.lats.symlist'
+getcachedidmap: reading 'CY2SCH050080342_1705448690.numden.lats.symlist'
+getcachedidmap: reading 'CY2SCH040090837_1205589951.numden.lats.symlist'
+getcachedidmap: reading 'CY2SCH070060121_1068947138.numden.lats.symlist'
+getcachedidmap: reading 'CY2SCH100092303_1769985203.numden.lats.symlist'
+getcachedidmap: reading 'CY2SCH040080404_2063355153.numden.lats.symlist'
+getcachedidmap: reading 'CY2SCH040120414_2063653575.numden.lats.symlist'
+getcachedidmap: reading 'CY2SCH060121820_1476601534.numden.lats.symlist'
+getcachedidmap: reading 'CY2SCH040030304_1783125393.numden.lats.symlist'
+getcachedidmap: reading 'CY2SCH070061523_1068809263.numden.lats.symlist'
+getcachedidmap: reading 'CY2SCH080110609_1362153092.numden.lats.symlist'
+getcachedidmap: reading 'CY2SCH050111321_1705093424.numden.lats.symlist'
+getcachedidmap: reading 'CY2SCH030061032_1628532606.numden.lats.symlist'
+getcachedidmap: reading 'CY2SCH070032203_1093924684.numden.lats.symlist'
+getcachedidmap: reading 'CY2SCH090121023_160495828.numden.lats.symlist'
+getcachedidmap: reading 'CY2SCH100092119_1769162281.numden.lats.symlist'
+getcachedidmap: reading 'CY2SCH040120646_805508469.numden.lats.symlist'
+getcachedidmap: reading 'CY2SCH060082605_403727641.numden.lats.symlist'
+getcachedidmap: reading 'CY2SCH030121606_1629053528.numden.lats.symlist'
+getcachedidmap: reading 'CY2SCH010061544_691164888.numden.lats.symlist'
+getcachedidmap: reading 'CY2SCH060062620_1679599206.numden.lats.symlist'
+getcachedidmap: reading 'CY2SCH070080320_1067791763.numden.lats.symlist'
+getcachedidmap: reading 'CY2SCH110070817_767763687.numden.lats.symlist'
+getcachedidmap: reading 'CY2SCH090052313_1116838701.numden.lats.symlist'
+getcachedidmap: reading 'CY2SCH100112501_1779035656.numden.lats.symlist'
+getcachedidmap: reading 'CY2SCH040121221_2063738606.numden.lats.symlist'
+getcachedidmap: reading 'CY2SCH080071106_1143018888.numden.lats.symlist'
+getcachedidmap: reading 'CY2SCH060050603_416427387.numden.lats.symlist'
+getcachedidmap: reading 'CY2SCH080041801_1024690842.numden.lats.symlist'
+getcachedidmap: reading 'CY2SCH050120722_1705080393.numden.lats.symlist'
+getcachedidmap: reading 'CY2SCH050110617_547221844.numden.lats.symlist'
+getcachedidmap: reading 'CY2SCH060062605_1536194576.numden.lats.symlist'
+getcachedidmap: reading 'CY2SCH050121330_1705081299.numden.lats.symlist'
+getcachedidmap: reading 'CY2SCH090081411_995585687.numden.lats.symlist'
+getcachedidmap: reading 'CY2SCH060032122_1764296812.numden.lats.symlist'
+getcachedidmap: reading 'CY2SCH110071501_1059265218.numden.lats.symlist'
+getcachedidmap: reading 'CY2SCH070061608_1068884372.numden.lats.symlist'
+getcachedidmap: reading 'CY2SCH050120821_1705096268.numden.lats.symlist'
+getcachedidmap: reading 'CY2SCH040081012_2063351544.numden.lats.symlist'
+getcachedidmap: reading 'CY2SCH040121314_2063679450.numden.lats.symlist'
+getcachedidmap: reading 'CY2SCH060050506_415705324.numden.lats.symlist'
+getcachedidmap: reading 'CY2SCH050121418_1697698502.numden.lats.symlist'
+getcachedidmap: reading 'CY2SCH010080244_1211145048.numden.lats.symlist'
+getcachedidmap: reading 'CY2SCH070111908_1069919341.numden.lats.symlist'
+getcachedidmap: reading 'CY2SCH110121120_1050992515.numden.lats.symlist'
+getcachedidmap: reading 'CY2SCH080040406_982069998.numden.lats.symlist'
+getcachedidmap: reading 'CY2SCH010061231_1369712653.numden.lats.symlist'
+getcachedidmap: reading 'CY2SCH040081222_2063295388.numden.lats.symlist'
+getcachedidmap: reading 'CY2SCH020071229_644244140.numden.lats.symlist'
+getcachedidmap: reading 'CY2SCH100090709_1765693687.numden.lats.symlist'
+getcachedidmap: reading 'CY2SCH060091323_1311139777.numden.lats.symlist'
+getcachedidmap: reading 'CY2SCH090090208_1064021467.numden.lats.symlist'
+requiredata: 268 utterances read
+getbatch: getting utterances 0..0 (348 subset of 348 frames out of 250 requested) in sweep 0
+feature set 0: requirerandomizedchunk: paging in randomized chunk 0 (frame range [0..90279]), 2 resident in RAM
+getcachedidmap: reading 'CY2SCH070081604_866394296.numden.lats.symlist'
+getcachedidmap: reading 'CY2SCH080061318_1080287029.numden.lats.symlist'
+getcachedidmap: reading 'CY2SCH060042707_1939966343.numden.lats.symlist'
+getcachedidmap: reading 'CY2SCH050111011_1704954393.numden.lats.symlist'
+getcachedidmap: reading 'CY2SCH070110213_1069879356.numden.lats.symlist'
+getcachedidmap: reading 'CY2SCH040011112_1027256127.numden.lats.symlist'
+requiredata: 320 utterances read
+getbatch: getting utterances 1..1 (198 subset of 198 frames out of 250 requested) in sweep 0
+getbatch: getting utterances 2..2 (348 subset of 348 frames out of 250 requested) in sweep 0
+getbatch: getting utterances 3..3 (208 subset of 208 frames out of 250 requested) in sweep 0
+feature set 0: requirerandomizedchunk: paging in randomized chunk 1 (frame range [90280..180419]), 3 resident in RAM
+requiredata: 335 utterances read
+getbatch: getting utterances 4..4 (618 subset of 618 frames out of 250 requested) in sweep 0
+getbatch: getting utterances 5..5 (318 subset of 318 frames out of 250 requested) in sweep 0
+getbatch: getting utterances 6..6 (88 subset of 88 frames out of 250 requested) in sweep 0
+getbatch: getting utterances 7..7 (428 subset of 428 frames out of 250 requested) in sweep 0
+getbatch: getting utterances 8..8 (158 subset of 158 frames out of 250 requested) in sweep 0
+getbatch: getting utterances 9..9 (318 subset of 318 frames out of 250 requested) in sweep 0
+getbatch: getting utterances 10..10 (188 subset of 188 frames out of 250 requested) in sweep 0
+getbatch: getting utterances 11..11 (258 subset of 258 frames out of 250 requested) in sweep 0
+getbatch: getting utterances 12..12 (468 subset of 468 frames out of 250 requested) in sweep 0
+getbatch: getting utterances 13..13 (88 subset of 88 frames out of 250 requested) in sweep 0
+getbatch: getting utterances 14..14 (368 subset of 368 frames out of 250 requested) in sweep 0
+getbatch: getting utterances 15..15 (288 subset of 288 frames out of 250 requested) in sweep 0
+getbatch: getting utterances 16..16 (268 subset of 268 frames out of 250 requested) in sweep 0
+getbatch: getting utterances 17..17 (328 subset of 328 frames out of 44 requested) in sweep 0
+minibatchiterator: epoch 1: frames [5000..10000] (first utterance at frame 5284), data subset 0 of 1, with 1 datapasses
+getbatch: getting utterances 18..18 (248 subset of 248 frames out of 250 requested) in sweep 0
+getbatch: getting utterances 19..19 (218 subset of 218 frames out of 250 requested) in sweep 0
+getbatch: getting utterances 20..20 (328 subset of 328 frames out of 250 requested) in sweep 0
+getbatch: getting utterances 21..21 (238 subset of 238 frames out of 250 requested) in sweep 0
+getbatch: getting utterances 22..22 (288 subset of 288 frames out of 250 requested) in sweep 0
+getbatch: getting utterances 23..23 (258 subset of 258 frames out of 250 requested) in sweep 0
+getbatch: getting utterances 24..24 (198 subset of 198 frames out of 250 requested) in sweep 0
+getbatch: getting utterances 25..25 (238 subset of 238 frames out of 250 requested) in sweep 0
+getbatch: getting utterances 26..26 (328 subset of 328 frames out of 250 requested) in sweep 0
+getbatch: getting utterances 27..27 (278 subset of 278 frames out of 250 requested) in sweep 0
+getbatch: getting utterances 28..28 (98 subset of 98 frames out of 250 requested) in sweep 0
+getbatch: getting utterances 29..29 (208 subset of 208 frames out of 250 requested) in sweep 0
+getbatch: getting utterances 30..30 (268 subset of 268 frames out of 250 requested) in sweep 0
+getbatch: getting utterances 31..31 (428 subset of 428 frames out of 250 requested) in sweep 0
+getbatch: getting utterances 32..32 (268 subset of 268 frames out of 250 requested) in sweep 0
+getbatch: getting utterances 33..33 (348 subset of 348 frames out of 250 requested) in sweep 0
+getbatch: getting utterances 34..34 (258 subset of 258 frames out of 250 requested) in sweep 0
+getbatch: getting utterances 35..35 (598 subset of 598 frames out of 220 requested) in sweep 0
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/build/gpu/release/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests
+Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
+Set current path to: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+Current working directory is now: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+Reading script file ./glob_0000.scp ... 948 entries
+HTKDataDeserializer::HTKDataDeserializer: selected 948 utterances grouped into 3 chunks, average chunk size: 316.0 utterances, 84244.7 frames (for I/O: 316.0 utterances, 84244.7 frames)
+HTKDataDeserializer::HTKDataDeserializer: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
+total 132 state names in state list ./state.list
+htkmlfreader: reading MLF file ./glob_0000.mlf ... total 948 entries
+MLFDataDeserializer::MLFDataDeserializer: 948 utterances with 252734 frames in 129 classes
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/build/gpu/release/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests
+Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
+Set current path to: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+Current working directory is now: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+Reading script file ./glob_0000.scp ... 948 entries
+HTKDataDeserializer::HTKDataDeserializer: selected 948 utterances grouped into 3 chunks, average chunk size: 316.0 utterances, 84244.7 frames (for I/O: 316.0 utterances, 84244.7 frames)
+HTKDataDeserializer::HTKDataDeserializer: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
+total 132 state names in state list ./state.list
+htkmlfreader: reading MLF file ./glob_0000.mlf ... total 948 entries
+MLFDataDeserializer::MLFDataDeserializer: 948 utterances with 252734 frames in 129 classes
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/build/gpu/release/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests
+Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
+Set current path to: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+Current working directory is now: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+Reading script file ./glob_0000.scp ... 948 entries
+HTKDataDeserializer::HTKDataDeserializer: selected 948 utterances grouped into 3 chunks, average chunk size: 316.0 utterances, 84244.7 frames (for I/O: 316.0 utterances, 84244.7 frames)
+HTKDataDeserializer::HTKDataDeserializer: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
+total 132 state names in state list ./state.list
+htkmlfreader: reading MLF file ./glob_0000.mlf ... total 948 entries
+MLFDataDeserializer::MLFDataDeserializer: 948 utterances with 252734 frames in 129 classes
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/build/gpu/release/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests
+Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
+Set current path to: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+Current working directory is now: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+Reading script file ./glob_0000.scp ... 948 entries
+HTKDataDeserializer::HTKDataDeserializer: selected 948 utterances grouped into 3 chunks, average chunk size: 316.0 utterances, 84244.7 frames (for I/O: 316.0 utterances, 84244.7 frames)
+HTKDataDeserializer::HTKDataDeserializer: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
+total 132 state names in state list ./state.list
+htkmlfreader: reading MLF file ./glob_0000.mlf ... total 948 entries
+MLFDataDeserializer::MLFDataDeserializer: 948 utterances with 252734 frames in 129 classes
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/build/gpu/release/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests
+Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
+Set current path to: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+Current working directory is now: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+Reading script file ./glob_0000.scp ... 948 entries
+HTKDataDeserializer::HTKDataDeserializer: selected 948 utterances grouped into 3 chunks, average chunk size: 316.0 utterances, 84244.7 frames (for I/O: 316.0 utterances, 84244.7 frames)
+HTKDataDeserializer::HTKDataDeserializer: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
+total 132 state names in state list ./state.list
+htkmlfreader: reading MLF file ./glob_0000.mlf ... total 948 entries
+MLFDataDeserializer::MLFDataDeserializer: 948 utterances with 252734 frames in 129 classes
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/build/gpu/release/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests
+Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
+Set current path to: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+Current working directory is now: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+Reading script file ./glob_0000.scp ... 948 entries
+HTKDataDeserializer::HTKDataDeserializer: selected 948 utterances grouped into 3 chunks, average chunk size: 316.0 utterances, 84244.7 frames (for I/O: 316.0 utterances, 84244.7 frames)
+HTKDataDeserializer::HTKDataDeserializer: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
+total 132 state names in state list ./state.list
+htkmlfreader: reading MLF file ./glob_0000.mlf ... total 948 entries
+MLFDataDeserializer::MLFDataDeserializer: 948 utterances with 252734 frames in 129 classes
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/build/gpu/release/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests
+Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
+Set current path to: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+Current working directory is now: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+Reading script file ./glob_0000.scp ... 948 entries
+HTKDataDeserializer::HTKDataDeserializer: selected 948 utterances grouped into 3 chunks, average chunk size: 316.0 utterances, 84244.7 frames (for I/O: 316.0 utterances, 84244.7 frames)
+HTKDataDeserializer::HTKDataDeserializer: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
+total 132 state names in state list ./state.list
+htkmlfreader: reading MLF file ./glob_0000.mlf ... total 948 entries
+MLFDataDeserializer::MLFDataDeserializer: 948 utterances with 252734 frames in 129 classes
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/build/gpu/release/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests
+Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
+Set current path to: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+Current working directory is now: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+Reading script file ./glob_0000.scp ... 948 entries
+HTKDataDeserializer::HTKDataDeserializer: selected 948 utterances grouped into 3 chunks, average chunk size: 316.0 utterances, 84244.7 frames (for I/O: 316.0 utterances, 84244.7 frames)
+HTKDataDeserializer::HTKDataDeserializer: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
+total 132 state names in state list ./state.list
+htkmlfreader: reading MLF file ./glob_0000.mlf ... total 948 entries
+MLFDataDeserializer::MLFDataDeserializer: 948 utterances with 252734 frames in 129 classes
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/build/gpu/release/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests
+Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
+Set current path to: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+Current working directory is now: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+Reading script file ./glob_0000.scp ... 948 entries
+HTKDataDeserializer::HTKDataDeserializer: selected 948 utterances grouped into 3 chunks, average chunk size: 316.0 utterances, 84244.7 frames (for I/O: 316.0 utterances, 84244.7 frames)
+HTKDataDeserializer::HTKDataDeserializer: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
+total 132 state names in state list ./state.list
+htkmlfreader: reading MLF file ./glob_0000.mlf ... total 948 entries
+MLFDataDeserializer::MLFDataDeserializer: 948 utterances with 252734 frames in 129 classes
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/build/gpu/release/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests
+Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
+Set current path to: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+Current working directory is now: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+reading script file ./glob_0000.scp ... 948 entries
+total 132 state names in state list ./state.list
+htkmlfreader: reading MLF file ./glob_0000.mlf ... total 948 entries
+...............................................................................................feature set 0: 252734 frames in 948 out of 948 utterances
+label set 0: 129 classes
+minibatchutterancesource: 948 utterances grouped into 3 chunks, av. chunk size: 316.0 utterances, 84244.7 frames
+minibatchiterator: epoch 0: frames [0..2000] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
+requiredata: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/build/gpu/release/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests
+Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
+Set current path to: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+Current working directory is now: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+Reading script file ./glob_0000.scp ... 948 entries
+HTKDataDeserializer::HTKDataDeserializer: selected 948 utterances grouped into 3 chunks, average chunk size: 316.0 utterances, 84244.7 frames (for I/O: 316.0 utterances, 84244.7 frames)
+HTKDataDeserializer::HTKDataDeserializer: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
+total 132 state names in state list ./state.list
+htkmlfreader: reading MLF file ./glob_0000.mlf ... total 948 entries
+MLFDataDeserializer::MLFDataDeserializer: 948 utterances with 252734 frames in 129 classes
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/build/gpu/release/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests
+Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
+Set current path to: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+Current working directory is now: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+Reading script file ./glob_0000.scp ... 948 entries
+HTKDataDeserializer::HTKDataDeserializer: selected 948 utterances grouped into 3 chunks, average chunk size: 316.0 utterances, 84244.7 frames (for I/O: 316.0 utterances, 84244.7 frames)
+HTKDataDeserializer::HTKDataDeserializer: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
+Reading script file ./glob_0000.scp ... 948 entries
+HTKDataDeserializer::HTKDataDeserializer: selected 948 utterances grouped into 3 chunks, average chunk size: 316.0 utterances, 84244.7 frames (for I/O: 316.0 utterances, 84244.7 frames)
+HTKDataDeserializer::HTKDataDeserializer: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
+total 132 state names in state list ./state.list
+htkmlfreader: reading MLF file ./glob_0000.mlf ... total 948 entries
+MLFDataDeserializer::MLFDataDeserializer: 948 utterances with 252734 frames in 129 classes
+Bundler::CreateChunkDescriptions(): started
+Bundler::CreateChunkDescriptions(): creating descriptions for 0 chunks
+Bundler::CreateChunkDescriptions(): starting to clean chunks
+Bundler::CreateChunkDescriptions(): finished cleaning of 3 chunks
+BlockRandomizer::PrepareNewSweepIfNeeded: re-randomizing for sweep 0
+SequenceRandomizer::RandomizeNextChunkIfNeeded(): chunk window [0..3), cursor 0, randomized window [0..1), randomization cursor 3
+SequenceRandomizer::Seek(): seeking offset 0 in sweep 0
+SequenceRandomizer::Seek(): offset is within randomized window
+SequenceRandomizer::Seek(): advancing cursor from 0 to 0
+HTKChunkDescription::RequireData: read physical chunk 0 (328 utterances, 90234 frames, 11910888 bytes)
+HTKChunkDescription::RequireData: read physical chunk 0 (328 utterances, 90234 frames, 11910888 bytes)
+HTKChunkDescription::RequireData: read physical chunk 1 (341 utterances, 90158 frames, 11900856 bytes)
+HTKChunkDescription::RequireData: read physical chunk 1 (341 utterances, 90158 frames, 11900856 bytes)
+HTKChunkDescription::RequireData: read physical chunk 2 (279 utterances, 72342 frames, 9549144 bytes)
+HTKChunkDescription::RequireData: read physical chunk 2 (279 utterances, 72342 frames, 9549144 bytes)
+BlockRandomizer::RetrieveDataChunks: 3 chunks paged-in from chunk window [0..2]
+SequenceRandomizer::Seek(): seeking offset 500 in sweep 0
+SequenceRandomizer::Seek(): offset is within randomized window
+SequenceRandomizer::Seek(): advancing cursor from 0 to 500
+BlockRandomizer::RetrieveDataChunks: 3 chunks paged-in from chunk window [0..2]
+HTKChunkDescription::ReleaseData: release physical chunk 2 (279 utterances, 72342 frames, 9549144 bytes)
+HTKChunkDescription::ReleaseData: release physical chunk 2 (279 utterances, 72342 frames, 9549144 bytes)
+HTKChunkDescription::ReleaseData: release physical chunk 1 (341 utterances, 90158 frames, 11900856 bytes)
+HTKChunkDescription::ReleaseData: release physical chunk 1 (341 utterances, 90158 frames, 11900856 bytes)
+HTKChunkDescription::ReleaseData: release physical chunk 0 (328 utterances, 90234 frames, 11910888 bytes)
+HTKChunkDescription::ReleaseData: release physical chunk 0 (328 utterances, 90234 frames, 11910888 bytes)
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/build/gpu/release/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests
+Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
+Set current path to: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+Current working directory is now: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+Reading script file ./glob_0000.scp ... 948 entries
+HTKDataDeserializer::HTKDataDeserializer: selected 948 utterances grouped into 3 chunks, average chunk size: 316.0 utterances, 84244.7 frames (for I/O: 316.0 utterances, 84244.7 frames)
+HTKDataDeserializer::HTKDataDeserializer: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
+Reading script file ./glob_0000.scp ... 948 entries
+HTKDataDeserializer::HTKDataDeserializer: selected 948 utterances grouped into 3 chunks, average chunk size: 316.0 utterances, 84244.7 frames (for I/O: 316.0 utterances, 84244.7 frames)
+HTKDataDeserializer::HTKDataDeserializer: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
+total 132 state names in state list ./state.list
+htkmlfreader: reading MLF file ./glob_0000.mlf ... total 948 entries
+MLFDataDeserializer::MLFDataDeserializer: 948 utterances with 252734 frames in 129 classes
+Bundler::CreateChunkDescriptions(): started
+Bundler::CreateChunkDescriptions(): creating descriptions for 0 chunks
+Bundler::CreateChunkDescriptions(): starting to clean chunks
+Bundler::CreateChunkDescriptions(): finished cleaning of 3 chunks
+BlockRandomizer::PrepareNewSweepIfNeeded: re-randomizing for sweep 0
+SequenceRandomizer::RandomizeNextChunkIfNeeded(): chunk window [0..3), cursor 0, randomized window [0..1), randomization cursor 3
+SequenceRandomizer::Seek(): seeking offset 0 in sweep 0
+SequenceRandomizer::Seek(): offset is within randomized window
+SequenceRandomizer::Seek(): advancing cursor from 0 to 0
+HTKChunkDescription::RequireData: read physical chunk 0 (328 utterances, 90234 frames, 11910888 bytes)
+HTKChunkDescription::RequireData: read physical chunk 0 (328 utterances, 90234 frames, 11910888 bytes)
+BlockRandomizer::RetrieveDataChunks: paged in randomized chunk 0 (original chunk: 0), now 1 chunks in memory
+HTKChunkDescription::RequireData: read physical chunk 1 (341 utterances, 90158 frames, 11900856 bytes)
+HTKChunkDescription::RequireData: read physical chunk 1 (341 utterances, 90158 frames, 11900856 bytes)
+BlockRandomizer::RetrieveDataChunks: paged in randomized chunk 1 (original chunk: 1), now 2 chunks in memory
+HTKChunkDescription::RequireData: read physical chunk 2 (279 utterances, 72342 frames, 9549144 bytes)
+HTKChunkDescription::RequireData: read physical chunk 2 (279 utterances, 72342 frames, 9549144 bytes)
+BlockRandomizer::RetrieveDataChunks: paged in randomized chunk 2 (original chunk: 2), now 3 chunks in memory
+BlockRandomizer::RetrieveDataChunks: 3 chunks paged-in from chunk window [0..2]
+SequenceRandomizer::Seek(): seeking offset 500 in sweep 0
+SequenceRandomizer::Seek(): offset is within randomized window
+SequenceRandomizer::Seek(): advancing cursor from 0 to 500
+BlockRandomizer::RetrieveDataChunks: 3 chunks paged-in from chunk window [0..2]
+HTKChunkDescription::ReleaseData: release physical chunk 2 (279 utterances, 72342 frames, 9549144 bytes)
+HTKChunkDescription::ReleaseData: release physical chunk 2 (279 utterances, 72342 frames, 9549144 bytes)
+HTKChunkDescription::ReleaseData: release physical chunk 1 (341 utterances, 90158 frames, 11900856 bytes)
+HTKChunkDescription::ReleaseData: release physical chunk 1 (341 utterances, 90158 frames, 11900856 bytes)
+HTKChunkDescription::ReleaseData: release physical chunk 0 (328 utterances, 90234 frames, 11910888 bytes)
+HTKChunkDescription::ReleaseData: release physical chunk 0 (328 utterances, 90234 frames, 11910888 bytes)
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/build/gpu/release/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests
+Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
+Set current path to: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+Current working directory is now: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+Reading script file ./glob_0000.scp ... 948 entries
+HTKDataDeserializer::HTKDataDeserializer: selected 948 utterances grouped into 3 chunks, average chunk size: 316.0 utterances, 84244.7 frames (for I/O: 316.0 utterances, 84244.7 frames)
+HTKDataDeserializer::HTKDataDeserializer: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/build/gpu/release/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests
+Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
+Set current path to: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+Current working directory is now: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+Reading script file NonExistingScpFile ...Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/build/gpu/release/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests
+Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
+Set current path to: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+Current working directory is now: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+Reading script file ./glob_0000.scp ... 948 entries
+HTKDataDeserializer::HTKDataDeserializer: selected 948 utterances grouped into 3 chunks, average chunk size: 316.0 utterances, 84244.7 frames (for I/O: 316.0 utterances, 84244.7 frames)
+HTKDataDeserializer::HTKDataDeserializer: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
+total 132 state names in state list ./state.list
+htkmlfreader: reading MLF file ./glob_0000.mlf ... total 948 entries
+MLFDataDeserializer::MLFDataDeserializer: 948 utterances with 252734 frames in 129 classes
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/build/gpu/release/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests
+Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
+Set current path to: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+Current working directory is now: /home/philly/data/CNTKTestData/Speech/AN4Corpus/v0
+Reading script file ./glob_0000.scp ... 948 entries
+HTKDataDeserializer::HTKDataDeserializer: selected 948 utterances grouped into 3 chunks, average chunk size: 316.0 utterances, 84244.7 frames (for I/O: 316.0 utterances, 84244.7 frames)
+HTKDataDeserializer::HTKDataDeserializer: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
+total 132 state names in state list ./state.list
+htkmlfreader: reading MLF file ./glob_0000.mlf ... total 948 entries
+MLFDataDeserializer::MLFDataDeserializer: 948 utterances with 252734 frames in 129 classes
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/build/gpu/release/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests/Data
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests/Data
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/build/gpu/release/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests/Data
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests/Data
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/build/gpu/release/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests/Data
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests/Data
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/build/gpu/release/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests/Data
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests/Data
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/build/gpu/release/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests/Data
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests/Data
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/build/gpu/release/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests/Data
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests/Data
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/build/gpu/release/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests/Data
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests/Data
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/build/gpu/release/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests/Data
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests/Data
+Sequence missing.jpg is not found in container images/simple.zip.
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/build/gpu/release/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests/Data
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests/Data
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/build/gpu/release/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests/Data
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests/Data
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/build/gpu/release/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests/Data
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests/Data
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/build/gpu/release/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests/Data
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests/Data
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/build/gpu/release/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests/Data
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests/Data
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/build/gpu/release/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests/Data
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests/Data
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/build/gpu/release/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests/Data
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests/Data
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/build/gpu/release/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests/Data
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests/Data
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/build/gpu/release/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests
+Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
+Set current path to: /home/philly/data/CNTKTestData/iVector
+Current working directory is now: /home/philly/data/CNTKTestData/iVector
+reading script file ./features.rscp ... 4963 entries
+total 9000 state names in state list ./labels.statelist
+htkmlfreader: reading MLF file ./labels.smlf ... total 4974 entries
+....................................................................................................feature set 0: 1669414 frames in 4963 out of 4963 utterances
+label set 0: 9000 classes
+minibatchutterancesource: 4963 utterances grouped into 19 chunks, av. chunk size: 261.2 utterances, 87863.9 frames
+minibatchiterator: epoch 0: frames [0..400] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
+requiredata: determined feature kind as 40-dimensional 'FBANK_Z' with frame shift 10.0 ms
+Reading script file ./features.rscp ... 4963 entries
+HTKDataDeserializer::HTKDataDeserializer: selected 4963 utterances grouped into 19 chunks, average chunk size: 261.2 utterances, 87863.9 frames (for I/O: 261.2 utterances, 87863.9 frames)
+HTKDataDeserializer::HTKDataDeserializer: determined feature kind as 40-dimensional 'FBANK_Z' with frame shift 10.0 ms
+total 9000 state names in state list ./labels.statelist
+htkmlfreader: reading MLF file ./labels.smlf ... total 4974 entries
+MLFDataDeserializer::MLFDataDeserializer: 4963 utterances with 1669414 frames in 9000 classes
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/build/gpu/release/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests
+Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
+Set current path to: /home/philly/data/CNTKTestData/iVector
+Current working directory is now: /home/philly/data/CNTKTestData/iVector
+reading script file ./features.rscp ... 4963 entries
+reading script file ./ivector.rscp ... 4963 entries
+total 9000 state names in state list ./labels.statelist
+htkmlfreader: reading MLF file ./labels.smlf ... total 4974 entries
+....................................................................................................feature set 0: 1669414 frames in 4963 out of 4963 utterances
+label set 0: 9000 classes
+minibatchutterancesource: 4963 utterances grouped into 19 chunks, av. chunk size: 261.2 utterances, 87863.9 frames
+....................................................................................................feature set 1: 1669414 frames in 4963 out of 4963 utterances
+minibatchutterancesource: 4963 utterances grouped into 19 chunks, av. chunk size: 261.2 utterances, 87863.9 frames
+minibatchiterator: epoch 0: frames [0..400] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
+requiredata: determined feature kind as 40-dimensional 'FBANK_Z' with frame shift 10.0 ms
+requiredata: determined feature kind as 100-dimensional 'USER' with frame shift 10.0 ms
+Reading script file ./features.rscp ... 4963 entries
+HTKDataDeserializer::HTKDataDeserializer: selected 4963 utterances grouped into 19 chunks, average chunk size: 261.2 utterances, 87863.9 frames (for I/O: 261.2 utterances, 87863.9 frames)
+HTKDataDeserializer::HTKDataDeserializer: determined feature kind as 40-dimensional 'FBANK_Z' with frame shift 10.0 ms
+Reading script file ./ivector.rscp ... 4963 entries
+HTKDataDeserializer::HTKDataDeserializer: selected 4963 utterances grouped into 1 chunks, average chunk size: 4963.0 utterances, 4963.0 frames (for I/O: 4963.0 utterances, 4963.0 frames)
+HTKDataDeserializer::HTKDataDeserializer: determined feature kind as 100-dimensional 'USER' with frame shift 10.0 ms
+total 9000 state names in state list ./labels.statelist
+htkmlfreader: reading MLF file ./labels.smlf ... total 4974 entries
+MLFDataDeserializer::MLFDataDeserializer: 4963 utterances with 1669414 frames in 9000 classes
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/build/gpu/release/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests
+Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
+Set current path to: /home/philly/data/CNTKTestData/iVector
+Current working directory is now: /home/philly/data/CNTKTestData/iVector
+reading script file ./features.rscp ... 4963 entries
+reading script file ./ivector.rscp ... 4963 entries
+total 9000 state names in state list ./labels.statelist
+htkmlfreader: reading MLF file ./labels.smlf ... total 4974 entries
+....................................................................................................feature set 0: 1669414 frames in 4963 out of 4963 utterances
+label set 0: 9000 classes
+minibatchutterancesource: 4963 utterances grouped into 19 chunks, av. chunk size: 261.2 utterances, 87863.9 frames
+....................................................................................................feature set 1: 1669414 frames in 4963 out of 4963 utterances
+minibatchutterancesource: 4963 utterances grouped into 19 chunks, av. chunk size: 261.2 utterances, 87863.9 frames
+minibatchiterator: epoch 0: frames [0..200] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
+requiredata: determined feature kind as 40-dimensional 'FBANK_Z' with frame shift 10.0 ms
+requiredata: determined feature kind as 100-dimensional 'USER' with frame shift 10.0 ms
+Reading script file ./features.rscp ... 4963 entries
+HTKDataDeserializer::HTKDataDeserializer: selected 4963 utterances grouped into 19 chunks, average chunk size: 261.2 utterances, 87863.9 frames (for I/O: 261.2 utterances, 87863.9 frames)
+HTKDataDeserializer::HTKDataDeserializer: determined feature kind as 40-dimensional 'FBANK_Z' with frame shift 10.0 ms
+Reading script file ./ivector.rscp ... 4963 entries
+HTKDataDeserializer::HTKDataDeserializer: selected 4963 utterances grouped into 1 chunks, average chunk size: 4963.0 utterances, 4963.0 frames (for I/O: 4963.0 utterances, 4963.0 frames)
+HTKDataDeserializer::HTKDataDeserializer: determined feature kind as 100-dimensional 'USER' with frame shift 10.0 ms
+total 9000 state names in state list ./labels.statelist
+htkmlfreader: reading MLF file ./labels.smlf ... total 4974 entries
+MLFDataDeserializer::MLFDataDeserializer: 4963 utterances with 1669414 frames in 9000 classes
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/build/gpu/release/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/ReaderTests
+Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
+Set current path to: /home/philly/data/CNTKTestData/iVector
+Current working directory is now: /home/philly/data/CNTKTestData/iVector
+reading script file ./features.rscp ... 4963 entries
+reading script file ./ivector.rscp ... 4963 entries
+total 9000 state names in state list ./labels.statelist
+htkmlfreader: reading MLF file ./labels.smlf ... total 4974 entries
+....................................................................................................feature set 0: 1669414 frames in 4963 out of 4963 utterances
+label set 0: 9000 classes
+minibatchutterancesource: 4963 utterances grouped into 19 chunks, av. chunk size: 261.2 utterances, 87863.9 frames
+....................................................................................................feature set 1: 1669414 frames in 4963 out of 4963 utterances
+minibatchutterancesource: 4963 utterances grouped into 19 chunks, av. chunk size: 261.2 utterances, 87863.9 frames
+minibatchiterator: epoch 0: frames [0..400] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
+requiredata: determined feature kind as 40-dimensional 'FBANK_Z' with frame shift 10.0 ms
+requiredata: determined feature kind as 100-dimensional 'USER' with frame shift 10.0 ms
+Reading script file ./features.rscp ... 4963 entries
+HTKDataDeserializer::HTKDataDeserializer: selected 4963 utterances grouped into 19 chunks, average chunk size: 261.2 utterances, 87863.9 frames (for I/O: 261.2 utterances, 87863.9 frames)
+HTKDataDeserializer::HTKDataDeserializer: determined feature kind as 40-dimensional 'FBANK_Z' with frame shift 10.0 ms
+Reading script file ./ivector.rscp ... 4963 entries
+HTKDataDeserializer::HTKDataDeserializer: selected 4963 utterances grouped into 1 chunks, average chunk size: 4963.0 utterances, 4963.0 frames (for I/O: 4963.0 utterances, 4963.0 frames)
+HTKDataDeserializer::HTKDataDeserializer: determined feature kind as 100-dimensional 'USER' with frame shift 10.0 ms
+total 9000 state names in state list ./labels.statelist
+htkmlfreader: reading MLF file ./labels.smlf ... total 4974 entries
+MLFDataDeserializer::MLFDataDeserializer: 4963 utterances with 1669414 frames in 9000 classes
+Legacy configuration is used for truncated BPTT mode, please adapt the config to explicitly specify truncationLength.
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/ReaderTests
+Running 96 test cases...
+
+Test module "ReaderTests" has passed with:
+  96 test cases out of 96 passed
+  16973532 assertions out of 16973532 passed
+
+  Test suite "ReaderTestSuite" has passed with:
+    83 test cases out of 83 passed
+    16971325 assertions out of 16971325 passed
+
+    Test case "ReaderTestSuite/CNTKTextFormatReader_Simple_dense" has passed with:
+      1 assertion out of 1 passed
+
+    Test case "ReaderTestSuite/CNTKTextFormatReader_MNIST_dense" has passed with:
+      1 assertion out of 1 passed
+
+    Test case "ReaderTestSuite/CNTKTextFormatReader_1x1_1_dense" has passed with:
+      1 assertion out of 1 passed
+
+    Test case "ReaderTestSuite/CNTKTextFormatReader_1x1_2_dense" has passed with:
+      1 assertion out of 1 passed
+
+    Test case "ReaderTestSuite/CNTKTextFormatReader_1x10_dense" has passed with:
+      1 assertion out of 1 passed
+
+    Test case "ReaderTestSuite/CNTKTextFormatReader_10x1_MI_2_dense" has passed with:
+      1 assertion out of 1 passed
+
+    Test case "ReaderTestSuite/CNTKTextFormatReader_1x10_MI_1_dense" has passed with:
+      1 assertion out of 1 passed
+
+    Test case "ReaderTestSuite/CNTKTextFormatReader_10x10_dense" has passed with:
+      1 assertion out of 1 passed
+
+    Test case "ReaderTestSuite/CNTKTextFormatReader_100x1_1_dense" has passed with:
+      1 assertion out of 1 passed
+
+    Test case "ReaderTestSuite/CNTKTextFormatReader_100x1_2_dense" has passed with:
+      1 assertion out of 1 passed
+
+    Test case "ReaderTestSuite/CNTKTextFormatReader_50x20_jagged_sequences_dense" has passed with:
+      1 assertion out of 1 passed
+
+    Test case "ReaderTestSuite/CNTKTextFormatReader_1x1_sparse" has passed with:
+      1 assertion out of 1 passed
+
+    Test case "ReaderTestSuite/CNTKTextFormatReader_1x2_sparse" has passed with:
+      1 assertion out of 1 passed
+
+    Test case "ReaderTestSuite/CNTKTextFormatReader_1x10_sparse" has passed with:
+      1 assertion out of 1 passed
+
+    Test case "ReaderTestSuite/CNTKTextFormatReader_10x10_sparse" has passed with:
+      1 assertion out of 1 passed
+
+    Test case "ReaderTestSuite/CNTKTextFormatReader_3x5_MI_sparse" has passed with:
+      1 assertion out of 1 passed
+
+    Test case "ReaderTestSuite/CNTKTextFormatReader_20x10_MI_jagged_samples_sparse" has passed with:
+      1 assertion out of 1 passed
+
+    Test case "ReaderTestSuite/CNTKTextFormatReader_50x20_jagged_sequences_sparse" has passed with:
+      1 assertion out of 1 passed
+
+    Test case "ReaderTestSuite/CNTKTextFormatReader_100x100_jagged_sparse" has passed with:
+      1 assertion out of 1 passed
+
+    Test case "ReaderTestSuite/CNTKTextFormatReader_space_separated" has passed with:
+      1 assertion out of 1 passed
+
+    Test case "ReaderTestSuite/CNTKTextFormatReader_missing_trailing_newline" has passed with:
+      1 assertion out of 1 passed
+
+    Test case "ReaderTestSuite/CNTKTextFormatReader_missing_trailing_newline_ignored" has passed with:
+      1 assertion out of 1 passed
+
+    Test case "ReaderTestSuite/CNTKTextFormatReader_blank_lines" has passed with:
+      1 assertion out of 1 passed
+
+    Test case "ReaderTestSuite/CNTKTextFormatReader_blank_lines_ignored" has passed with:
+      1 assertion out of 1 passed
+
+    Test case "ReaderTestSuite/CNTKTextFormatReader_duplicate_inputs" has passed with:
+      1 assertion out of 1 passed
+
+    Test case "ReaderTestSuite/CNTKTextFormatReader_empty_samples" has passed with:
+      1 assertion out of 1 passed
+
+    Test case "ReaderTestSuite/CNTKTextFormatReader_ref_data_with_escape_sequences" has passed with:
+      1 assertion out of 1 passed
+
+    Test case "ReaderTestSuite/CNTKTextFormatReader_invalid_inputs" has passed with:
+      1 assertion out of 1 passed
+
+    Test case "ReaderTestSuite/CNTKTextFormatReader_100x100x3" has passed with:
+      1 assertion out of 1 passed
+
+    Test case "ReaderTestSuite/CNTKTextFormatReader_200x200x2_seq2seq" has passed with:
+      1 assertion out of 1 passed
+
+    Test case "ReaderTestSuite/CompositeCNTKTextFormatReader_5x5_and_5x10_jagged_minibatch_10" has passed with:
+      2 assertions out of 2 passed
+
+    Test case "ReaderTestSuite/CompositeCNTKTextFormatReader_5x5_and_5x10_jagged_minibatch_21" has passed with:
+      2 assertions out of 2 passed
+
+    Test case "ReaderTestSuite/HTKMLFReaderSimpleDataLoop1" has passed with:
+      495001 assertions out of 495001 passed
+
+    Test case "ReaderTestSuite/HTKMLFReaderSimpleDataLoop2" has passed with:
+      1 assertion out of 1 passed
+
+    Test case "ReaderTestSuite/HTKMLFReaderSimpleDataLoop3" has passed with:
+      1 assertion out of 1 passed
+
+    Test case "ReaderTestSuite/HTKMLFReaderSimpleDataLoop4" has passed with:
+      1 assertion out of 1 passed
+
+    Test case "ReaderTestSuite/HTKMLFReaderSimpleDataLoop5" has passed with:
+      495001 assertions out of 495001 passed
+
+    Test case "ReaderTestSuite/HTKMLFReaderSimpleDataLoop7" has passed with:
+      1 assertion out of 1 passed
+
+    Test case "ReaderTestSuite/HTKMLFReaderSimpleDataLoop8" has passed with:
+      1 assertion out of 1 passed
+
+    Test case "ReaderTestSuite/HTKMLFReaderSimpleDataLoop10" has passed with:
+      858001 assertions out of 858001 passed
+
+    Test case "ReaderTestSuite/HTKMLFReaderSimpleDataLoop11" has passed with:
+      495001 assertions out of 495001 passed
+
+    Test case "ReaderTestSuite/HTKMLFReaderSimpleDataLoop12" has passed with:
+      1 assertion out of 1 passed
+
+    Test case "ReaderTestSuite/HTKMLFReaderSimpleDataLoop13" has passed with:
+      1 assertion out of 1 passed
+
+    Test case "ReaderTestSuite/HTKMLFReaderSimpleDataLoop14" has passed with:
+      1 assertion out of 1 passed
+
+    Test case "ReaderTestSuite/HTKMLFReaderSimpleDataLoop16" has passed with:
+      495001 assertions out of 495001 passed
+
+    Test case "ReaderTestSuite/HTKMLFReaderSimpleDataLoop19" has passed with:
+      1116721 assertions out of 1116721 passed
+
+    Test case "ReaderTestSuite/HTKMLFReaderSimpleDataLoop20" has passed with:
+      858001 assertions out of 858001 passed
+
+    Test case "ReaderTestSuite/HTKMLFReaderSimpleDataLoop21_0" has passed with:
+      1 assertion out of 1 passed
+
+    Test case "ReaderTestSuite/HTKMLFReaderSimpleDataLoop21_1" has passed with:
+      163846 assertions out of 163846 passed
+
+    Test case "ReaderTestSuite/HTKMLFReaderSimpleDataLoop22" has passed with:
+      5279671 assertions out of 5279671 passed
+
+    Test case "ReaderTestSuite/HTKDeserializersSimpleDataLoop1" has passed with:
+      495001 assertions out of 495001 passed
+
+    Test case "ReaderTestSuite/HTKDeserializersSimpleDataLoop5" has passed with:
+      495001 assertions out of 495001 passed
+
+    Test case "ReaderTestSuite/HTKDeserializersSimpleDataLoop11" has passed with:
+      495001 assertions out of 495001 passed
+
+    Test case "ReaderTestSuite/HTKDeserializersSimpleDataLoop21_0" has passed with:
+      1 assertion out of 1 passed
+
+    Test case "ReaderTestSuite/HTKDeserializersSimpleDataLoop21_1" has passed with:
+      163846 assertions out of 163846 passed
+
+    Test case "ReaderTestSuite/HTKDeserializersSimpleDataLoop4" has passed with:
+      1 assertion out of 1 passed
+
+    Test case "ReaderTestSuite/HTKDeserializersSimpleDataLoop8" has passed with:
+      1 assertion out of 1 passed
+
+    Test case "ReaderTestSuite/HTKDeserializersSimpleDataLoop14" has passed with:
+      1 assertion out of 1 passed
+
+    Test case "ReaderTestSuite/HTKDeserializersSimpleDataLoop9" has passed with:
+      1116721 assertions out of 1116721 passed
+
+    Test case "ReaderTestSuite/HTKMLFReaderSimpleDataLoop9" has passed with:
+      1116721 assertions out of 1116721 passed
+
+    Test case "ReaderTestSuite/HTKDeserializersSimpleDataLoop19" has passed with:
+      1116721 assertions out of 1116721 passed
+
+    Test case "ReaderTestSuite/HTKDeserializersSimpleDataLoop10" has passed with:
+      858001 assertions out of 858001 passed
+
+    Test case "ReaderTestSuite/HTKDeserializersSimpleDataLoop20" has passed with:
+      858001 assertions out of 858001 passed
+
+    Test case "ReaderTestSuite/HTKDeserializersSimpleDataLoop3" has passed with:
+      1 assertion out of 1 passed
+
+    Test case "ReaderTestSuite/HTKDeserializers_NonExistingScpFile" has passed with:
+      1 assertion out of 1 passed
+
+    Test case "ReaderTestSuite/HTKDeserializersSimpleDataLoop2" has passed with:
+      1 assertion out of 1 passed
+
+    Test case "ReaderTestSuite/HTKDeserializersSimpleDataLoop12" has passed with:
+      1 assertion out of 1 passed
+
+    Test case "ReaderTestSuite/ImageReaderSimple" has passed with:
+      1 assertion out of 1 passed
+
+    Test case "ReaderTestSuite/ImageAndTextReaderSimple" has passed with:
+      1 assertion out of 1 passed
+
+    Test case "ReaderTestSuite/ImageAndImageReaderSimple" has passed with:
+      1 assertion out of 1 passed
+
+    Test case "ReaderTestSuite/ImageReaderBadMap" has passed with:
+      1 assertion out of 1 passed
+
+    Test case "ReaderTestSuite/ImageReaderBadLabel" has passed with:
+      1 assertion out of 1 passed
+
+    Test case "ReaderTestSuite/ImageReaderLabelOutOfRange" has passed with:
+      1 assertion out of 1 passed
+
+    Test case "ReaderTestSuite/ImageReaderZip" has passed with:
+      1 assertion out of 1 passed
+
+    Test case "ReaderTestSuite/ImageReaderZipMissingFile" has passed with:
+      1 assertion out of 1 passed
+
+    Test case "ReaderTestSuite/ImageReaderMultiView" has passed with:
+      1 assertion out of 1 passed
+
+    Test case "ReaderTestSuite/ImageReaderIntensityTransform" has passed with:
+      1 assertion out of 1 passed
+
+    Test case "ReaderTestSuite/ImageReaderColorTransform" has passed with:
+      1 assertion out of 1 passed
+
+    Test case "ReaderTestSuite/ImageReaderGrayscale" has passed with:
+      1 assertion out of 1 passed
+
+    Test case "ReaderTestSuite/ImageReaderMissingImage" has passed with:
+      1 assertion out of 1 passed
+
+    Test case "ReaderTestSuite/ImageReaderEmptyTransforms" has passed with:
+      1 assertion out of 1 passed
+
+    Test case "ReaderTestSuite/ImageReaderInvalidEmptyTransforms" has passed with:
+      1 assertion out of 1 passed
+
+    Test case "ReaderTestSuite/ImageReaderMissingScaleTransforms" has passed with:
+      1 assertion out of 1 passed
+
+  Test suite "ReaderIVectorTestSuite" has passed with:
+    4 test cases out of 4 passed
+    8 assertions out of 8 passed
+
+    Test case "ReaderIVectorTestSuite/HTKNoIVector" has passed with:
+      2 assertions out of 2 passed
+
+    Test case "ReaderIVectorTestSuite/HTKIVectorFrame" has passed with:
+      2 assertions out of 2 passed
+
+    Test case "ReaderIVectorTestSuite/HTKIVectorSequence" has passed with:
+      2 assertions out of 2 passed
+
+    Test case "ReaderIVectorTestSuite/HTKIVectorBptt" has passed with:
+      2 assertions out of 2 passed
+
+  Test suite "ReaderLibTests" has passed with:
+    9 test cases out of 9 passed
+    2199 assertions out of 2199 passed
+
+    Test case "ReaderLibTests/BlockRandomizerInstantiate" has passed
+
+    Test case "ReaderLibTests/BlockRandomizerOneEpoch" has passed with:
+      68 assertions out of 68 passed
+
+    Test case "ReaderLibTests/BlockRandomizerOneEpochWithChunks1" has passed with:
+      68 assertions out of 68 passed
+
+    Test case "ReaderLibTests/BlockRandomizerOneEpochWithChunks2" has passed with:
+      128 assertions out of 128 passed
+
+    Test case "ReaderLibTests/BlockRandomizerChaosMonkey" has passed with:
+      1824 assertions out of 1824 passed
+
+    Test case "ReaderLibTests/BlockRandomizerOneEpochLegacyRandomization" has passed with:
+      68 assertions out of 68 passed
+
+    Test case "ReaderLibTests/NoRandomizerOneEpoch" has passed with:
+      35 assertions out of 35 passed
+
+    Test case "ReaderLibTests/DefaultCorpusDescriptor" has passed with:
+      2 assertions out of 2 passed
+
+    Test case "ReaderLibTests/CorpusDescriptorFromFile" has passed with:
+      6 assertions out of 6 passed
