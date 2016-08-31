@@ -1,0 +1,61 @@
+CPU info:
+    CPU Model Name: Intel(R) Xeon(R) CPU E5-2630 v2 @ 2.60GHz
+    Hardware threads: 24
+    Total Memory: 264172964 kB
+-------------------------------------------------------------------
+Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/NetworkTests
+Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/build/gpu/release/bin
+Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/NetworkTests
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/NetworkTests/Data
+Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/NetworkTests/Data
+NDLBuilder Using CPU
+Node 'v1' (LearnableParameter operation): Initializing Parameter[1 x 1] <- 0.000000.
+Node 'v1' (LearnableParameter operation): Initializing Parameter[1 x 1] <- 1.000000.
+Node 'v1' (LearnableParameter operation): Initializing Parameter[1 x 1] <- 1.000000.
+Node 'v1' (LearnableParameter operation): Initializing Parameter[1 x 1] <- 1.000000.
+
+Post-processing network...
+
+1 roots:
+	v2 = Plus()
+
+Validating network. 3 nodes to process in pass 1.
+
+Validating --> features = InputValue() :  -> [1 x 1 x *]
+Validating --> v1 = LearnableParameter() :  -> [1 x 1]
+Validating --> v2 = Plus (features, v1) : [1 x 1 x *], [1 x 1] -> [1 x 1 x *]
+
+Validating network. 1 nodes to process in pass 2.
+
+
+Validating network, final pass.
+
+
+
+1 out of 3 nodes do not share the minibatch layout with the input data.
+
+Post-processing network complete.
+
+
+
+Allocating matrices for forward and/or backward propagation.
+
+Memory Sharing: Out of 3 matrices, 0 are shared as 0, and 3 are not shared.
+
+
+Minibatch[0]: ActualMBSize = 1
+Written to ../Output/out.txt*
+Total Samples Evaluated = 1
+Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/NetworkTests
+Running 1 test case...
+
+Test module "NetworkTests" has passed with:
+  1 test case out of 1 passed
+  1 assertion out of 1 passed
+
+  Test suite "NetworkTestSuite" has passed with:
+    1 test case out of 1 passed
+    1 assertion out of 1 passed
+
+    Test case "NetworkTestSuite/NetworkOperatorPlus" has passed with:
+      1 assertion out of 1 passed
