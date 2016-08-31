@@ -8,6 +8,7 @@
 #include "SpecialPurposeNodes.h"        // for SequenceWithSoftmaxNode
 #include "DataReaderHelpers.h"
 #include "MatrixQuantizerImpl.h"
+#include <unordered_set>
 
 #ifdef CNTK_PARALLEL_TRAINING_SUPPORT
 //static inline bool operator==(const std::pair<double,size_t>& a, double b) { assert(b==0); return a.first == b; }
@@ -1079,9 +1080,18 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                 fprintf(stderr, "SGD: using true #samples %d instead of MB size %d\n", (int)numSamplesInMinibatch, (int)aggregateNumSamples);
 #endif
             auto smoothedGradientIter = smoothedGradients.begin();
+
+            // Set of updated nodes, used to prevent repetitive update of any node
+            unordered_set<wstring> updatedNodes = {};
+
             for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++, smoothedGradientIter++)
             {
                 ComputationNodeBasePtr node = *nodeIter;
+
+                // if the node has already been updated, skip
+                if (updatedNodes.find(node->GetName()) != updatedNodes.end())
+                    continue;
+
                 if (node->IsParameterUpdateRequired())
                 {
                     Matrix<ElemType>& smoothedGradient = *smoothedGradientIter;
@@ -1098,6 +1108,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                     if (dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Value().HasNan("TrainOneEpoch/UpdateWeights(): "))
                         LogicError("%ls %ls operation has NaNs in functionValues after parameter update.", node->NodeName().c_str(), node->OperationName().c_str());
 #endif
+                    updatedNodes.insert(node->GetName());
                 }
             }
         }
