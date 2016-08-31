@@ -904,7 +904,11 @@ public:
                 // * Binary tree with classes as leafes and branch probs on non-leafes.
                 nTries++;
                 if (alreadySampled.find(idx) != alreadySampled.end()) continue;
-                else samples.push_back(idx);
+                else
+                {
+                    samples.push_back(idx);
+                    alreadySampled.insert(idx);
+                }
             }
         }
         return samples;

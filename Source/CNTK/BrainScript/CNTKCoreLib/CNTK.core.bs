@@ -464,8 +464,12 @@ CNTK2 = [
     // 13. Others    
     Pass(_, tag='') = new ComputationNode [ operation = 'Pass' ; inputs = _ /*plus the function args*/ ]    
     Identity = Pass
-    RandomSample(_ ,numSamples , tag='') = new ComputationNode [ operation = 'RandomSample' ; nSamples = numSamples; inputs = _ /*plus the function args*/ ]
-
+    GetRandomSample(_ ,numSamples, sampleWithReplacement, tag='') = new ComputationNode [ 
+                                                                                        operation = 'RandomSample' ; 
+                                                                                        nSamples = numSamples; 
+                                                                                        allowDuplicates = sampleWithReplacement;
+                                                                                        estimateInclusionProbs = false; 
+                                                                                        inputs = _ /*plus the function args*/ ]
 ]
 
 # Parameter{} can do several forms of initialization.
