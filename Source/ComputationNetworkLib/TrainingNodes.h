@@ -714,22 +714,26 @@ protected:
     std::shared_ptr<RNGHandle> m_RNGHandle;
 };
 
-// -----------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------------------------------------------------------
 // RandomSampleNode: 
 // This node is intended to be used in context off sampled softmax, noise contrastive estimation etc.
-// The value is a sparse matrix of dimension num-classes * num-samples, where ich column is a one-hotr representation of the selected class.
-// The idea of this node is to have one set of random samples to be used for a whole mini-batch
-//Creates random samples of classes. To be used in context of different sampling based citerion functions like:
-// samples softmax, noise contrastive estimation and negative sampling.
-// This node does not create a minibatch but a raw matrix
-// Creates one sampled set per mini-batch to speed up calculations.
-// Result is a sparse matrix of shape nClasses * nSamples. We use this shape instead its transposed as the CSC representation will be much more compact.
-// Inputs:
-// Input(0) Sampling weight. (constant) matrix of shape (nClasses x 1) providing smapling weights > 0. Probablility draw a class will be proportional to the weight.
-// Remark: In context of sample softmax one might want to exclude the true class from the randomly sampled, we don't support that with this node
-// for the follwing reasons:
-// As this node drwas samples for the full minibatch will will typically have several 'true' classes in the  minibatch.
-// If we
+// In runs has two basic modes to be run, both taking a weight vector as input.
+// * estimateInclusionProbs = false:
+//   The nodes value is a set of nSample random samples represented as a (sparse) matrix of shape nClasses * nSamples.
+//   The samples arew drawn according to the weight vector p(w_i) = w_i / sum_k(w_k)
+//   We get one set of same for per minibatch.
+//
+// * estimateInclusionProbs = false:
+//   This estimaes of how often each class will occur in the sampled set on the average. If the sampling mode allowDuplicates = true is choosen
+//   this is trivial and exact. For allowDuplicates = false we get some rough estimate.
+
+// Parameters
+// Input(0) Sampling weight vector: Matrix of shape (nClasses x 1) providing smapling weights >= 0.
+// nSample: Size of the sampled set.
+// allowDuplicates: controlls if sampled set is allowed to contain duplicates
+// estimateInclusionProbs: Run mode, se above.
+// --------------------------------------------------------------------------------------------------------------------------------------------------
+
 template <class ElemType>
 class RandomSampleNode : public ComputationNodeNonLooping<ElemType>, public NumInputs<1>, public RngUser
 {
@@ -790,7 +794,7 @@ public:
     // Approximates the expected number of occurences of a class in the sampled set.
     // Assuming (falsely) that the number of tries to get a sampled set with the requested number of distinct values is always estimatedNumTries
     // the probability that a specific class in in the sampled set is (1 - (1-p)^estimatedNumTries), where p is the probablity to pick the clas in one draw.
-    // The estimate can be quite a bit of nut should but better than nothing. Better alternatives?
+    // The estimate can be quite a bit of but should but better than nothing. Better alternatives?
     float EstimateCountOfClass(float p, float estimatedNumTries) const
     {
         if (m_allowDuplicates)
@@ -960,21 +964,22 @@ public:
 
     virtual bool IsOutOfDateWrtInputs() const override
     {
-        // The only input are the sampling weights that typically will be constant. 
-        // If we are in the mode to generate random samples (i.e. m_estimateInclusionProbs == false) we need to recompute the result for each mini-batch.
-        // If we are in the mode to estimate the inclusion probabilties for each class we don't need to recompute as long as the input doesn't change.
+        // The only input is the sampling weight vector that typically will be constant. 
         if (m_estimateInclusionProbs)
         {
+            // If we are in the mode to estimate the inclusion probabilties for each class we don't need to recompute as long as the input doesn't change.
             return Base::IsOutOfDateWrtInputs();
         }
         else
         {
+            // If we are in the mode to generate random samples (i.e. m_estimateInclusionProbs == false) 
+            // we need to recompute the result for each mini-batch even if the weight vector didn't chnage.
             return true;
         }
     }
 
 private:
-    bool m_allowDuplicates;        // The node can create samples allowing for duplicates (sampling with replacement) or not (sampling without replacment).
+    bool m_allowDuplicates;        // The node can create samples allowing for duplicates (sampling with replacement) or not (sampling without replacement).
     bool m_estimateInclusionProbs; // Control wether to create random samples or estimate inclusion probabilties.
     int m_nSamples;                // Requested size of sample in case of run-mode = CREATE_SAMPLES.
     std::vector<double> m_samplingWeightsPrefixSum;
