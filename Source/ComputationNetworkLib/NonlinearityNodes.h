@@ -47,7 +47,7 @@ public:
     {
     }
 
-    virtual void /*ComputationNode::*/ ForwardPropSpecialization(const FrameRange& fr) override
+    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
 
     {
         size_t rank = DetermineElementwiseTensorRank();
@@ -56,7 +56,7 @@ public:
         result.DoUnaryOpOf(0, input, 1, opForward, opSum);
     }
 
-    virtual void /*ComputationNode::*/ BackpropToSpecialization(const size_t inputIndex, const FrameRange& fr) override
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
         assert(inputIndex == 0), inputIndex;
 
@@ -177,7 +177,7 @@ public:
     {
     }
 
-    virtual void /*ComputationNode::*/ BackpropToSpecialization(const size_t inputIndex, const FrameRange& fr) override
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
         assert(inputIndex == 0);
         inputIndex;
@@ -196,7 +196,7 @@ public:
     // derived class implement the actual non-linear operation
     virtual void BackpropToV(Matrix<ElemType>& gradient, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& functionValues) = 0;
 
-    virtual void /*ComputationNode::*/ ForwardPropSpecialization(const FrameRange& fr) override
+    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
 
     {
         // move the target matrix to the target device, since below it is accessed as slices which cannot move
@@ -463,7 +463,7 @@ public:
         ValidateNaryZip(isFinalValidationPass, /* allow broadcast */ true, /* num Inputs */ 3);
     }
 
-    virtual void /*ComputationNode::*/ ForwardPropSpecialization(const FrameRange& fr) override
+    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
 
     {
         size_t rank = DetermineElementwiseTensorRank();
@@ -474,7 +474,7 @@ public:
         result.AssignCondOf(input0, input1, input2);
     }
 
-    virtual void /*ComputationNode::*/ BackpropToSpecialization(const size_t inputIndex, const FrameRange& fr) override
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
         if (inputIndex == 0) // derivative of the first input (the flag) is always 0 => no action.
             return;
@@ -530,7 +530,7 @@ public:
     {
     }
 
-    virtual void /*ComputationNode::*/ ForwardPropSpecialization(const FrameRange& fr) override
+    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
 
     {
         size_t rank = DetermineElementwiseTensorRank();
@@ -542,7 +542,7 @@ public:
         result.AssignClipOf(input0, input1, input2);
     }
 
-    virtual void /*ComputationNode::*/ BackpropToSpecialization(const size_t inputIndex, const FrameRange& fr) override
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
         // there is only a gradient for the input tensor that is to be clipped
         if (inputIndex == 2)
@@ -608,7 +608,7 @@ public:
     virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex)  const override { return childIndex == 0; }
     virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
 
-    virtual void /*ComputationNode::*/ ForwardPropSpecialization(const FrameRange& fr) override
+    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
 
     {
         size_t rank = DetermineElementwiseTensorRank();
@@ -619,7 +619,7 @@ public:
         result.DoBinaryOpOf(0, input0, input1, 1.0f, static_cast<ElementWiseOperator> (ElementWiseOperator::opLess + index), ElementWiseOperator::opSum);
     }
 
-    virtual void /*ComputationNode::*/ BackpropToSpecialization(const size_t inputIndex, const FrameRange& fr) override
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
         // Function is piecewise constant --> gradient = 0
     }

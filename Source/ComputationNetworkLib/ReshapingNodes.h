@@ -148,13 +148,13 @@ public:
         SetDims(sampleLayout, HasMBLayout());
     }
 
-    virtual void /*ComputationNode::*/ ForwardPropSpecialization(const FrameRange& fr) override
+    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
 
     {
         ValueFor(fr).AssignValuesOf(Input(0)->ValueFor(fr));
     }
 
-    virtual void /*ComputationNode::*/ BackpropToSpecialization(const size_t inputIndex, const FrameRange& fr) override
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
         Input(inputIndex)->GradientFor(fr).AssignValuesOf(GradientFor(fr));
     }
@@ -212,9 +212,9 @@ public:
     virtual void /*ComputationNodeBase::*/ CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override;
     virtual void /*ComputationNodeBase::*/ Load(File& fstream, size_t modelVersion) override;
     virtual void /*ComputationNodeBase::*/ Save(File& fstream) const override;
-    virtual void /*ComputationNode::*/ ForwardPropSpecialization(const FrameRange& fr) override
+    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
 ;
-    virtual void /*ComputationNode::*/ BackpropToSpecialization(const size_t inputIndex, const FrameRange& fr) override;
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override;
     virtual bool /*ComputationNodeBase::*/ OutputUsedInComputingInputNodesGradients() const override;
     virtual bool /*ComputationNodeBase::*/ InputUsedInComputingInputNodesGradients(size_t childIndex) const override;
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override;
@@ -246,7 +246,7 @@ public:
     {
     }
 
-    virtual void /*ComputationNode::*/ ForwardPropSpecialization(const FrameRange& fr) override
+    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
 
     {
         // enforce compatibility of 'dataInput' with 'layoutInput'
@@ -262,7 +262,7 @@ public:
         // TODO: Once we do in-place, the above must include a copy-to-self check (either here or inside the matrix lib).
     }
 
-    virtual void /*ComputationNode::*/ BackpropToSpecialization(const size_t inputIndex, const FrameRange& fr) override
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
         if (inputIndex == 0)
             Input(0)->GradientFor(fr.WithLayout(Input(0)->GetMBLayout())) += GradientFor(fr);
@@ -356,7 +356,7 @@ private:
 
 public:
 
-    virtual void /*ComputationNode::*/ ForwardPropSpecialization(const FrameRange& fr) override
+    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
 
     {
         size_t rank = DetermineElementwiseTensorRank();
@@ -365,7 +365,7 @@ public:
         output.AssignCopyOf(input);
     }
 
-    virtual void /*ComputationNode::*/ BackpropToSpecialization(const size_t /*inputIndex*/, const FrameRange& fr) override
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t /*inputIndex*/, const FrameRange& fr) override
     {
         size_t rank = DetermineElementwiseTensorRank();
         let outputGrad =                                GradientTensorFor(           rank, fr);
@@ -461,7 +461,7 @@ private:
     }
 
 public:
-    virtual void /*ComputationNode::*/ ForwardPropSpecialization(const FrameRange& fr) override
+    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
 
     {
         size_t rank = DetermineElementwiseTensorRank();
@@ -476,7 +476,7 @@ public:
         }
     }
 
-    virtual void /*ComputationNode::*/ BackpropToSpecialization(const size_t inputIndex, const FrameRange& fr) override
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
         size_t rank = DetermineElementwiseTensorRank();
         let outputSlice = GetTensorSliceFor(rank, fr); // tensor slice that represents the entire output for FrameRange
@@ -610,13 +610,13 @@ public:
         SetDims(TensorShape(dims), HasMBLayout());
     }
 
-    virtual void /*ComputationNode::*/ ForwardPropSpecialization(const FrameRange& fr) override
+    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
 
     {
         ValueFor(fr).AssignRepeatOf(Input(0)->ValueFor(fr), m_numRepeat, 1);
     }
 
-    virtual void /*ComputationNode::*/ BackpropToSpecialization(const size_t /*inputIndex*/, const FrameRange& fr) override
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t /*inputIndex*/, const FrameRange& fr) override
     {
         Input(0)->GradientFor(fr).AddToRowRepeatValuesOf(GradientFor(fr), m_numRepeat);
     }
@@ -1077,7 +1077,7 @@ public:
     // notes:
     //  - input and output have different time base and different layouts (unless the canonical case of factor() == 1)
     //  - fr refers to *functionValues*, not the inputs
-    virtual void /*ComputationNode::*/ ForwardPropSpecialization(const FrameRange& fr) override
+    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
 
     {
         size_t rows = Input(0)->Value().GetNumRows(), cols = Input(0)->Value().GetNumCols();
@@ -1105,7 +1105,7 @@ public:
         }
     }
 
-    virtual void /*ComputationNode::*/ BackpropToSpecialization(const size_t /*inputIndex*/, const FrameRange& fr) override
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t /*inputIndex*/, const FrameRange& fr) override
     {
         size_t rows = Input(0)->Value().GetNumRows(), cols = Input(0)->Value().GetNumCols();
         size_t newCols = cols * rows / m_numTargetRows;

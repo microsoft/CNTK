@@ -1428,7 +1428,7 @@ public:
         m_randomSeed = (unsigned long) CreateUniqId();
     }
 
-    virtual void /*ComputationNode::*/ BackpropToSpecialization(const size_t inputIndex, const FrameRange& fr) override
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
         Matrix<ElemType> sliceInput0Grad = Input(0)->GradientFor(fr);
         Matrix<ElemType> sliceOutputGrad = GradientFor(fr);
@@ -1450,7 +1450,7 @@ public:
             m_maskOfDropout->Resize(Input(0)->Value());
     }
 
-    virtual void /*ComputationNode::*/ ForwardPropSpecialization(const FrameRange& fr) override
+    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
 
     {
         Matrix<ElemType> sliceInput0Value = Input(0)->ValueFor(fr);
@@ -1720,7 +1720,7 @@ public:
         }
     }
 
-    void BackpropToSpecialization(const size_t inputIndex, const FrameRange& fr) override
+    void BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
         if (inputIndex == 0) // derivative with respect to the input.
         {
@@ -1758,7 +1758,7 @@ public:
         return false;
     }
 
-    void ForwardPropSpecialization(const FrameRange& fr) override
+    void ForwardProp(const FrameRange& fr) override
 
     {
     
