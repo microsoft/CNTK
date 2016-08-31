@@ -252,8 +252,6 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
             nodesToUpdateDescriptions.push_back(node->NodeDescription() + L" : [" + msra::strfun::utf16(string(node->GetSampleLayout())) + L"]");
             numParameters += node->GetSampleLayout().GetNumElements();
         }
-
-
     }
 
     std::map<const ComputationNodeBasePtr, std::list<ComputationNodeBasePtr>> allLearnableNodes = net->GetLearnableParameters();
@@ -2639,7 +2637,7 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
         }
         else
         {
-            size_t numMPIWorkers = pMPI->NumNodesInUse();            
+            size_t numMPIWorkers = pMPI->NumNodesInUse();
             const ConfigRecordType& configParallelTrain(configSGD(L"ParallelTrain", ConfigRecordType::Record()));
             m_parallelizationMethod = ParseParallelizationMethod(configParallelTrain(L"parallelizationMethod", L"none"));
             m_parallelizationStartEpochNum = configParallelTrain(L"parallelizationStartEpoch", (int) 1) - 1; // Epoch numbers internally are 0 based
@@ -2709,6 +2707,7 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
                     {
                         InvalidArgument("It is only allowed to set blockSizePerWorker or blockSize, not both of them");
                     }
+<<<<<<< HEAD
                     else if (configBMSGD.Exists(L"blockSizePerWorker"))
                     {
                         m_modelAggregationBlockSize = configBMSGD(L"blockSizePerWorker");

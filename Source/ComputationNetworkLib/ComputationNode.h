@@ -652,6 +652,7 @@ public:
     ComputationEnvironmentPtr GetEnvironmentPtr() const { return m_environment; }
     void SetEnvironment(ComputationEnvironmentPtr environment) { m_environment = environment; }
     virtual std::set<std::pair<const MatrixBase*, std::wstring>> GetMatrixInfo() const = 0; // to be defined by <ElemType> version
+
     const NetworkInformation& NetworkInfo() const
     {
         if (!m_networkInfo)
