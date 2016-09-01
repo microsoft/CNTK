@@ -2,6 +2,8 @@
 
 . $TEST_ROOT_DIR/run-test-common
 
+# The following three statements are required to make the test runs deterministic
+# The OMP_NUM_THREADS=1 is required to get the SquareError computation on Linux CPU deterministic
 export MKL_NUM_THREADS=4
 export MKL_CBWR=COMPATIBLE
 export OMP_NUM_THREADS=1
