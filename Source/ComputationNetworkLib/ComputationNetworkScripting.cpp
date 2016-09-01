@@ -37,6 +37,8 @@ using namespace Microsoft::MSR::ScriptableObjects;
 // construction from config
 // ===================================================================
 
+const static set<wstring> nodeGroupNames{ L"feature", L"label", L"criterion", L"evaluation", L"output" };
+
 // construct a ComputationNetwork from a ConfigRecord
 ComputationNetwork::ComputationNetwork(const IConfigRecordPtr configp) :
     ComputationNetwork()
@@ -57,7 +59,16 @@ ComputationNetwork::ComputationNetwork(const IConfigRecordPtr configp) :
     {
         let& value = config[id];
         if (value.Is<ComputationNodeBase>())
-            workList.push_back((const ComputationNodeBasePtr&) value);
+        {
+            const ComputationNodeBasePtr& node = value;
+            // top-level defined record members get their top-level name
+            bool isSpecialNode = false;
+            for (let& nodeGroupName : nodeGroupNames)
+                isSpecialNode |= id == nodeGroupName + L"Nodes";
+            if (!isSpecialNode)
+                node->SetName(id);
+            workList.push_back(node);
+        }
     }
 
     // TODO: process "outputNodes" etc. arrays: Sync to node Tags, and make them all roots.
@@ -69,8 +80,6 @@ ComputationNetwork::ComputationNetwork(const IConfigRecordPtr configp) :
 // process the special-nodes parameters
 void ComputationNetwork::ProcessSpecialNodes(const ScriptableObjects::IConfigRecord& config, std::deque<ComputationNodeBasePtr>& workList)
 {
-    set<wstring> nodeGroupNames{ L"feature", L"label", L"criterion", L"evaluation", L"output" };
-
     for (let& id : config.GetMemberIds())
     {
         let pos = id.find(L"Nodes");
@@ -379,5 +388,296 @@ public:
 };
 
 ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<ComputationNetworkWithEdits> registerComputationNetworkWithEdits(L"ComputationNetworkWithEdits");
+
+// ===================================================================
+// CloneFunctionConfigLambda -- lambda to produce a clone of a network
+//  - creates a BrainScript function that carbon-copies a subsection of an existing network
+//  - the copy can be shallow or deep, where a deep copy gets its own copy of LearnableParameters
+//     - a shallow copy (parameters="shared") is a copy of all nodes that depend on the specified input(s),
+//       while all other nodes are shared from the original network section
+//     - a deep copy (parameters="lernable" or "constant") also copies all reachable LearnableParameters and their dependents
+//     - Input() nodes not listed as `inputNodes` are always shared
+//  - the source network may be a different network, e.g. loaded with BS.Network.Load()
+//  - a deep copy can be read-only (parameters="constant")
+//     - Note: multiple uses of the lambda will not share read-only parameters. This is trickier to implement that one might expect.
+//  - example use cases:
+//     - adaptation (KL): a frozen read-only copy of the starting model is used as a KL-regularizer
+//     - adaptation (DLR): an injected input transform is trained while the network is fixed
+//     - image: lower layers of ImageNet networks serve as immutable feature extractors for another image task
+//     - DSSM: applying the same network subsection to two inputs
+// Usage:
+//    f = CloneFunction (inputNodes, outputNodes, parameters="lernable" /*|"constant"|"shared"*/)
+// Parameters:
+//  - inputNodes:  single node or array of nodes that will become parameters of the function.
+//                 Commonly, this list will include all Input()s that the outputNode(s) depend on.
+//  - outputNodes: single node or dictionary of nodes that the function will emit
+// Example:
+//    # create a BS function by copying a piece of network
+//    net = CloneFunction (network.features, network.logP)
+//    # apply the copy to a new input
+//    out = net (myFeatures)
+//    # This will create a copy of the subsection from network.features to network.logP
+//    # where all links to network.features get replaced by links to myFeatures.
+// Example with multiple input and output nodes:
+//    # create a BS function by copying a piece of network
+//    # This specific example converts a network back into a BrainScript function.
+//    # It passes two input nodes --> the BS function will have 2 inputs;
+//    # and it passes a record of output nodes --> the BS function will return a record with the same member names
+//    network = BS.Network.Load ("some.dnn")
+//    net = CloneFunction ((network.features:network.labels), [ ce = network.ce ; errs = network.errs ])
+//    # create a network from the BS function
+//    features = Input (13)
+//    labels = Input (42)
+//    out = net (features, labels)
+//    criterionNodes = (out.ce)
+//    evaluationNodes = (out.errs)
+// A specific example: Adapting a network, while using the original network as a regularizer (KLD)
+//    # load network
+//    network = BS.Network.Load ("some.dnn")
+//    # create a trainable clone and a read-only reference clone
+//    adaptNet = CloneFunction (network.features, [ z = network.z ], readOnly=false)
+//    # create a read-only clone
+//    refNet = CloneFunction (network.features, [ z = network.z ], readOnly=true)
+//    # create the main network
+//    features = Input (42)
+//    labels = Input (9000)
+//    z = adaptNet (features).z
+//    zRef = refNet (features).z
+//    # training criterion
+//    refWeight = 0.9
+//    kldLabels = labels * (1-refWeight) + Softmax (zRef) * refWeight  # interpolate with ref output
+//    ce = CrossEntropyWithSoftmax (z, kldLabels)
+//    errs = ClassificationError (z, labels)
+//    criterionNodes = (ce)
+//    evaluationNodes = (errs)
+// ===================================================================
+
+class CloneFunctionConfigLambda : public ConfigLambda
+{
+    // how we treat the parameters in the clone
+    enum class ParameterTreatment
+    {
+        learnable, // parameters are copied and kept trainable
+        constant,  // parameters are copied and made immutable (e.g. for use of this as a fixed feature extractor)
+        shared     // parameters are shared with where they came from (e.g. for parallel identical paths through a network)
+    };
+public:
+    // -----------------------------------------------------------------------
+    // construction
+    // -----------------------------------------------------------------------
+
+    // Executing this function from BrainScript merely sets up a lambda, but does not actually create any clone.
+    // This is so that the function can be called multiple times in order to create multiple clones.
+    CloneFunctionConfigLambda(const IConfigRecordPtr configp) :
+        ConfigLambda(CreateParamNames(*configp), NamedParams(), [this](vector<ConfigValuePtr> &&args, NamedParams &&namedArgs, const std::wstring &exprName){ return this->DoClone(args, exprName); })
+    {
+        let& config = *configp;
+        // input nodes
+        inputNodes = GetInputNodes(config);
+        // output nodes
+        let outputNodesParam = config[L"outputNodes"];  // can be a node or a record
+        if (outputNodesParam.Is<ComputationNodeBase>()) // scalar case: result is a single node
+            outputNodes[L""] = outputNodesParam.AsPtr<ComputationNodeBase>(); // indicated by a "" node name in outputNodes[]
+        else                                            // multi-valued case: result is a record of nodes
+        {
+            let& outputNodesRecord = outputNodesParam.AsRef<IConfigRecord>();
+            for (let& nodeName : outputNodesRecord.GetMemberIds())
+                outputNodes[nodeName] = outputNodesRecord[nodeName].AsPtr<ComputationNodeBase>();
+            if (outputNodes.empty())
+                InvalidArgument("CloneFunction: At least one output nodes must be specified.");
+        }
+        // treatment of parameters
+        wstring parametersOption = config[L"parameters"];
+        if      (parametersOption == L"learnable") parameterTreatment = ParameterTreatment::learnable;
+        else if (parametersOption == L"constant")  parameterTreatment = ParameterTreatment::constant;
+        else if (parametersOption == L"shared")    parameterTreatment = ParameterTreatment::shared;
+        else InvalidArgument("CloneFunction: 'parameters' option must be 'learnable', 'constant', or 'shared'.");
+
+        // determine which nodes must be cloned
+        //  - intersection of:
+        //     - all indirect inputs of the specified outputs
+        //     - all dependents of leaves
+        //  - where leaves are:
+        //     - specified inputs
+        //     - unless parameters="shared": all parameters the specified outputs depend on
+
+        // determine all indirect inputs of the specified outputs
+        vector<ComputationNodeBasePtr> roots;
+        for (let& outputNodeKV : outputNodes)
+            roots.push_back(outputNodeKV.second);
+        let allInputs = ComputationNodeBase::EnumerateNodes(roots);
+
+        // take the chance to validate inputNodes
+        let allInputsSet = set<ComputationNodeBasePtr>(allInputs.begin(), allInputs.end());
+        for (let& input : inputNodes)
+            if (allInputsSet.find(input) == allInputsSet.end())
+                InvalidArgument("CloneFunction: No specified output depends on the specified input %ls.", input->NodeDescription().c_str());
+        // TODO: Is this really always an error? Are there valid cases where one would over-specify possible input nodes, even if they are not used/needed?
+
+        // determine all leaves and their dependents
+        dependentSet = set<ComputationNodeBasePtr>(inputNodes.begin(), inputNodes.end()); // start with the specified inputs
+        // determine all leaves and their dependents
+        for (let& node : allInputs)
+        {
+            // add parameters that are to be cloned to dependent set
+            if (parameterTreatment != ParameterTreatment::shared && node->Is<IFreezable>())
+                dependentSet.insert(node);
+            // if at least one input is in the dependent set then this node is, too
+            else
+                for (let& input : node->GetInputs())
+                    if (dependentSet.find(input) != dependentSet.end())
+                        dependentSet.insert(node);
+        }
+
+#if 0
+        for (let& node : dependentSet)
+            fprintf(stderr, "CloneFunction: cloning %ls\n", node->NodeDescription().c_str());
+#endif
+
+        // ensure none of the specified inputs reference back into the cloned set
+        // The function we extract must be separable.
+        for (let& input : inputNodes)
+            for (let& node : ComputationNodeBase::EnumerateNodes(vector<ComputationNodeBasePtr>{input})) // check all indirect inputs of each specified input
+            {
+                let iter = dependentSet.find(input);
+                if (iter != dependentSet.end() && *iter != input)
+                    InvalidArgument("CloneFunction: specified function input %ls recursively depends on %ls inside the function.", input->NodeDescription().c_str(), node->NodeDescription().c_str());
+            }
+    }
+
+private:
+    // get the input nodes from the config
+    static vector<ComputationNodeBasePtr> GetInputNodes(const IConfigRecord& config)
+    {
+        return ScriptableObjects::ConfigArray::FlattenedVectorFrom<ComputationNodeBasePtr>(config[L"inputNodes"]);
+    }
+    // create an array of parameter names for all inputs
+    // These names are never actually used, but required by the ConfigLambda constructor, and maybe useful for debugging.
+    static vector<wstring> CreateParamNames(const IConfigRecord& config)
+    {
+        let inputNodes = GetInputNodes(config);
+        vector<wstring> paramNames(inputNodes.size());
+        for (size_t i = 0; i < paramNames.size(); i++)
+            paramNames[i] = msra::strfun::wstrprintf(L"input_%d", (int)i);
+        return paramNames;
+    }
+
+private:
+    // -----------------------------------------------------------------------
+    // the cloning operation itself
+    // -----------------------------------------------------------------------
+
+    // execute the lambda
+    // This will clone all nodes that the outputNodes depend on, and rewire inputs matching inputNodes to inputArgs.
+    ConfigValuePtr DoClone(const vector<ConfigValuePtr>& inputValues, const std::wstring& exprName)
+    {
+        // resolve the input arguments
+        vector<ComputationNodeBasePtr> inputs;
+        for (let& inputValue : inputValues)
+            inputs.push_back(inputValue.ResolveValue());
+        assert(inputValues.size() == inputNodes.size()); // (this should have been checked by BrainScript)
+
+        // do some logging
+        fprintf(stderr, "CloneFunction: ");
+        for (size_t i = 0; i < inputs.size(); i++)
+            fprintf(stderr, "%s%ls : %ls", i == 0 ? "(" : ", ", inputs[i]->NodeName().c_str(), inputs[i]->OperationName().c_str());
+        fprintf(stderr, ") -> ");
+        let singleOutput = outputNodes.size() == 1 && outputNodes.begin()->first.empty();
+        if (singleOutput)
+            fprintf(stderr, "%ls\n", outputNodes.begin()->second->NodeDescription().c_str());
+        else
+        {
+            fprintf(stderr, "[\n");
+            for (let& outputNodesKV : outputNodes)
+                fprintf(stderr, "    %ls = %ls : %ls\n", outputNodesKV.first.c_str(), outputNodesKV.second->NodeName().c_str(), outputNodesKV.second->OperationName().c_str());
+            fprintf(stderr, "]\n");
+        }
+
+        // clone everything in the dependent set
+        //  - specified inputs get mapped to actual parameters
+        //  - all others get duplicated
+        // Note that at this point, the "shared" option has already been considered,
+        // and is reflected in whether parameters are included or not in 'dependentSet'.
+        map<ComputationNodeBasePtr, ComputationNodeBasePtr> clonedNodes;
+        size_t numCloned = 0;
+        for (size_t i = 0; i < inputNodes.size(); i++)
+            clonedNodes[inputNodes[i]] = inputs[i];
+        for (let& node : dependentSet)
+        {
+            // if already there then it's an input that we just mapped above
+            if (clonedNodes.find(node) != clonedNodes.end())
+                continue;
+            // clone
+            ComputationNodeBasePtr newNode;
+            let newName = exprName + L"." + node->GetName();
+            newNode = node->Duplicate(newName, CopyNodeFlags::copyNodeAll);
+            // make it read-only if desired
+            if (parameterTreatment == ParameterTreatment::constant && newNode->Is<IFreezable>())
+                newNode->As<IFreezable>()->FreezeParameters();
+            // and that's our cloned node
+            clonedNodes[node] = newNode;
+            numCloned++;
+        }
+#if 0
+        for (let& nodeKV : clonedNodes)
+            fprintf(stderr, "CloneFunction: cloning %ls -> %ls (%d -> %d)\n", nodeKV.first->NodeDescription().c_str(), nodeKV.second->NodeDescription().c_str(), (int)nodeKV.first->m_uniqueNumericId, (int)nodeKV.second->m_uniqueNumericId);
+#endif
+
+        // all cloned nodes' inputs must be redirected if they reference a node that has been cloned as well
+        size_t numRelinks = 0; // (statistics: how many inputs have we relinked?)
+        for (let& clonedNodesKV : clonedNodes)
+        {
+            let& node = clonedNodesKV.second;
+            let& inputs = node->GetInputs();
+            for (size_t i = 0; i < inputs.size(); i++)
+            {
+                fprintf(stderr, "%ls.inputs[%d] = %ls (%d)", node->NodeName().c_str(), (int)i, inputs[i]->NodeName().c_str(), (int)inputs[i]->m_uniqueNumericId);
+                let iter = clonedNodes.find(inputs[i]);
+                if (iter == clonedNodes.end())
+                    continue;
+                // input is also a cloned node: relink
+                node->SetInput(i, iter->second);
+                fprintf(stderr, " ==>  %ls (%d)\n", inputs[i]->NodeName().c_str(), (int)inputs[i]->m_uniqueNumericId);
+                numRelinks++;
+            }
+        }
+
+        fprintf(stderr, "CloneFunction: Cloned %d nodes and relinked %d inputs.\n", (int)numCloned, (int)numRelinks);
+
+        // return the result
+        //  - if outputNodes was specified as a single node, return a single node
+        //  - if specified as a record, then return a record with the specified names
+
+        if (singleOutput)
+        {
+            return NodeToConfigValuePtr(clonedNodes.find(outputNodes.begin()->second)->second);
+        }
+        else
+        {
+            auto record = make_shared<ConfigRecord>(nullptr, [](const std::wstring & msg){ RuntimeError("CloneFunction: %ls", msg.c_str()); });
+            for (let& outputNodesKV : outputNodes)
+                record->Add(outputNodesKV.first, [](const wstring&){}, move(NodeToConfigValuePtr(clonedNodes.find(outputNodesKV.second)->second)));
+            auto valuep = ConfigValuePtr(record, [](const std::wstring &) { LogicError("CloneFunction: Unexpected failure."); }, exprName);
+            return valuep;
+        }
+    }
+
+    ConfigValuePtr NodeToConfigValuePtr(ComputationNodeBasePtr node)
+    {
+        assert(node);
+        auto valuep = ConfigValuePtr(node, [](const std::wstring &) { LogicError("CloneFunction: Unexpected failure."); }, node->NodeName());
+        return valuep;
+    }
+
+private:
+    // parameters
+    vector<ComputationNodeBasePtr> inputNodes;
+    map<wstring, ComputationNodeBasePtr> outputNodes;
+    ParameterTreatment parameterTreatment;
+    // other
+    set<ComputationNodeBasePtr> dependentSet;                                     // set of nodes that outputNodes depend on
+};
+
+ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<CloneFunctionConfigLambda> registerCloneFunctionConfigLambda(L"CloneFunctionConfigLambda");
 
 }}}

@@ -1,49 +1,65 @@
+CPU info:
+    CPU Model Name: Intel(R) Xeon(R) CPU E5-2630 v2 @ 2.60GHz
+    Hardware threads: 24
+    Total Memory: 268381192 kB
+-------------------------------------------------------------------
 Looking for data in: /cygdrive/c/Data/CNTKTestData
 Copying test data to local directory
-=== Running /cygdrive/c/jenkins/workspace/CNTK-Test-Windows-W1/x64/release/cntk.exe configFile=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Image\Miscellaneous\CIFAR-10/03_ResNet.cntk currentDirectory=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503140043.234881\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu\TestData RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503140043.234881\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu DataDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503140043.234881\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu\TestData ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Image\Miscellaneous\CIFAR-10 OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503140043.234881\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu DeviceId=0 timestamping=true Train=[SGD=[maxEpochs=1]] Train=[SGD=[epochSize=128]] Train=[reader=[randomize=none]] Train=[SGD=[minibatchSize=16]] Test=[minibatchSize=16] stderr=-
+=== Running /cygdrive/c/jenkins/workspace/CNTK-Test-Windows-W1/x64/release/cntk.exe configFile=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Image\Miscellaneous\CIFAR-10/03_ResNet.cntk currentDirectory=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu\TestData RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu DataDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu\TestData ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Image\Miscellaneous\CIFAR-10 OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu DeviceId=0 timestamping=true Train=[SGD=[maxEpochs=1]] Train=[SGD=[epochSize=128]] Train=[reader=[randomize=none]] Train=[SGD=[minibatchSize=16]] Test=[minibatchSize=16] stderr=-
 -------------------------------------------------------------------
 Build info: 
 
-		Built time: May  3 2016 13:23:06
-		Last modified date: Mon Apr 18 00:00:12 2016
+		Built time: Aug 16 2016 02:54:53
+		Last modified date: Fri Aug 12 05:31:21 2016
 		Build type: Release
 		Build target: GPU
 		With 1bit-SGD: no
+		Math lib: mkl
 		CUDA_PATH: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.5
-		CUB_PATH: C:\src\cub-1.4.1
+		CUB_PATH: c:\src\cub-1.4.1
 		CUDNN_PATH: c:\NVIDIA\cudnn-4.0\cuda
 		Build Branch: HEAD
-		Build SHA1: af96f7cce6c3c78a4f1e9315e061291c79360e12
-		Built by svcphil on LIANA-09-w
-		Build Path: c:\jenkins\workspace\CNTK-Build-Windows\Source\CNTK\
+		Build SHA1: 026b1e772b963461e189f8f00aa7ed6951298f84
+		Built by svcphil on Philly-Pool3
+		Build Path: c:\Jenkins\workspace\CNTK-Build-Windows\Source\CNTK\
 -------------------------------------------------------------------
-Changed current directory to C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503140043.234881\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu\TestData
-05/03/2016 14:04:10: Redirecting stderr to file -_Train_Test.log
-05/03/2016 14:04:10: -------------------------------------------------------------------
-05/03/2016 14:04:10: Build info: 
+Changed current directory to C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu\TestData
+08/16/2016 03:02:40: Redirecting stderr to file -_Train_Test.log
+08/16/2016 03:02:40: -------------------------------------------------------------------
+08/16/2016 03:02:40: Build info: 
 
-05/03/2016 14:04:10: 		Built time: May  3 2016 13:23:06
-05/03/2016 14:04:10: 		Last modified date: Mon Apr 18 00:00:12 2016
-05/03/2016 14:04:10: 		Build type: Release
-05/03/2016 14:04:10: 		Build target: GPU
-05/03/2016 14:04:10: 		With 1bit-SGD: no
-05/03/2016 14:04:10: 		CUDA_PATH: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.5
-05/03/2016 14:04:10: 		CUB_PATH: C:\src\cub-1.4.1
-05/03/2016 14:04:10: 		CUDNN_PATH: c:\NVIDIA\cudnn-4.0\cuda
-05/03/2016 14:04:10: 		Build Branch: HEAD
-05/03/2016 14:04:10: 		Build SHA1: af96f7cce6c3c78a4f1e9315e061291c79360e12
-05/03/2016 14:04:10: 		Built by svcphil on LIANA-09-w
-05/03/2016 14:04:10: 		Build Path: c:\jenkins\workspace\CNTK-Build-Windows\Source\CNTK\
-05/03/2016 14:04:10: -------------------------------------------------------------------
+08/16/2016 03:02:40: 		Built time: Aug 16 2016 02:54:53
+08/16/2016 03:02:40: 		Last modified date: Fri Aug 12 05:31:21 2016
+08/16/2016 03:02:40: 		Build type: Release
+08/16/2016 03:02:40: 		Build target: GPU
+08/16/2016 03:02:40: 		With 1bit-SGD: no
+08/16/2016 03:02:40: 		Math lib: mkl
+08/16/2016 03:02:40: 		CUDA_PATH: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.5
+08/16/2016 03:02:40: 		CUB_PATH: c:\src\cub-1.4.1
+08/16/2016 03:02:40: 		CUDNN_PATH: c:\NVIDIA\cudnn-4.0\cuda
+08/16/2016 03:02:40: 		Build Branch: HEAD
+08/16/2016 03:02:40: 		Build SHA1: 026b1e772b963461e189f8f00aa7ed6951298f84
+08/16/2016 03:02:40: 		Built by svcphil on Philly-Pool3
+08/16/2016 03:02:40: 		Build Path: c:\Jenkins\workspace\CNTK-Build-Windows\Source\CNTK\
+08/16/2016 03:02:40: -------------------------------------------------------------------
+08/16/2016 03:02:41: -------------------------------------------------------------------
+08/16/2016 03:02:41: GPU info:
 
-05/03/2016 14:04:10: Running on DPHAIM-25 at 2016/05/03 14:04:10
-05/03/2016 14:04:10: Command line: 
-C:\jenkins\workspace\CNTK-Test-Windows-W1\x64\release\cntk.exe  configFile=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Image\Miscellaneous\CIFAR-10/03_ResNet.cntk  currentDirectory=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503140043.234881\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu\TestData  RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503140043.234881\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu  DataDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503140043.234881\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu\TestData  ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Image\Miscellaneous\CIFAR-10  OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503140043.234881\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu  DeviceId=0  timestamping=true  Train=[SGD=[maxEpochs=1]]  Train=[SGD=[epochSize=128]]  Train=[reader=[randomize=none]]  Train=[SGD=[minibatchSize=16]]  Test=[minibatchSize=16]  stderr=-
+08/16/2016 03:02:41: 		Device[0]: cores = 2880; computeCapability = 3.5; type = "GeForce GTX 780 Ti"; memory = 3072 MB
+08/16/2016 03:02:41: 		Device[1]: cores = 2880; computeCapability = 3.5; type = "GeForce GTX 780 Ti"; memory = 3072 MB
+08/16/2016 03:02:41: 		Device[2]: cores = 2880; computeCapability = 3.5; type = "GeForce GTX 780 Ti"; memory = 3072 MB
+08/16/2016 03:02:41: 		Device[3]: cores = 2880; computeCapability = 3.5; type = "GeForce GTX 780 Ti"; memory = 3072 MB
+08/16/2016 03:02:41: -------------------------------------------------------------------
+
+08/16/2016 03:02:41: Running on DPHAIM-24 at 2016/08/16 03:02:41
+08/16/2016 03:02:41: Command line: 
+C:\jenkins\workspace\CNTK-Test-Windows-W1\x64\release\cntk.exe  configFile=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Image\Miscellaneous\CIFAR-10/03_ResNet.cntk  currentDirectory=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu\TestData  RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu  DataDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu\TestData  ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Image\Miscellaneous\CIFAR-10  OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu  DeviceId=0  timestamping=true  Train=[SGD=[maxEpochs=1]]  Train=[SGD=[epochSize=128]]  Train=[reader=[randomize=none]]  Train=[SGD=[minibatchSize=16]]  Test=[minibatchSize=16]  stderr=-
 
 
 
-05/03/2016 14:04:10: >>>>>>>>>>>>>>>>>>>> RAW CONFIG (VARIABLES NOT RESOLVED) >>>>>>>>>>>>>>>>>>>>
-05/03/2016 14:04:10: RootDir = "."
+08/16/2016 03:02:41: >>>>>>>>>>>>>>>>>>>> RAW CONFIG (VARIABLES NOT RESOLVED) >>>>>>>>>>>>>>>>>>>>
+08/16/2016 03:02:41: makeMode = true
+RootDir = "."
 ConfigDir = "$RootDir$"
 DataDir = "$RootDir$"
 OutputDir = "$RootDir$/Output"
@@ -58,7 +74,6 @@ parallelTrain = "false"
 command = Train:Test
 stderr = "$OutputDir$/03_ResNet"
 traceLevel = 1
-numMBsToShowResult = 200
 Proj16to32Filename = "$ConfigDir$/16to32.txt"
 Proj32to64Filename = "$ConfigDir$/32to64.txt"
 Train = [
@@ -75,6 +90,8 @@ Train = [
         maxEpochs = 160
         L2RegWeight = 0.0001
         dropoutRate = 0
+        firstMBsToShowResult = 10
+        numMBsToShowResult = 200
         ParallelTrain = [
             parallelizationMethod = "DataParallelSGD"
             distributedMBReading = "true"
@@ -126,11 +143,11 @@ Test = [
         ]
     ]    
 ]
-currentDirectory=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503140043.234881\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu\TestData
-RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503140043.234881\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu
-DataDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503140043.234881\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu\TestData
+currentDirectory=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu\TestData
+RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu
+DataDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu\TestData
 ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Image\Miscellaneous\CIFAR-10
-OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503140043.234881\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu
+OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu
 DeviceId=0
 timestamping=true
 Train=[SGD=[maxEpochs=1]]
@@ -140,14 +157,15 @@ Train=[SGD=[minibatchSize=16]]
 Test=[minibatchSize=16]
 stderr=-
 
-05/03/2016 14:04:10: <<<<<<<<<<<<<<<<<<<< RAW CONFIG (VARIABLES NOT RESOLVED)  <<<<<<<<<<<<<<<<<<<<
+08/16/2016 03:02:41: <<<<<<<<<<<<<<<<<<<< RAW CONFIG (VARIABLES NOT RESOLVED)  <<<<<<<<<<<<<<<<<<<<
 
-05/03/2016 14:04:10: >>>>>>>>>>>>>>>>>>>> RAW CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
-05/03/2016 14:04:10: RootDir = "."
+08/16/2016 03:02:41: >>>>>>>>>>>>>>>>>>>> RAW CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
+08/16/2016 03:02:41: makeMode = true
+RootDir = "."
 ConfigDir = "."
 DataDir = "."
 OutputDir = "./Output"
-ModelDir = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503140043.234881\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu/Models"
+ModelDir = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu/Models"
 ndlMacros = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Image\Miscellaneous\CIFAR-10/Macros.ndl"
 precision = "float"
 deviceId = 0
@@ -156,14 +174,13 @@ initOnCPUOnly=true
 prefetch = "true"
 parallelTrain = "false"
 command = Train:Test
-stderr = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503140043.234881\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu/03_ResNet"
+stderr = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu/03_ResNet"
 traceLevel = 1
-numMBsToShowResult = 200
 Proj16to32Filename = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Image\Miscellaneous\CIFAR-10/16to32.txt"
 Proj32to64Filename = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Image\Miscellaneous\CIFAR-10/32to64.txt"
 Train = [
     action = "train"
-    modelPath = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503140043.234881\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu/Models/03_ResNet"
+    modelPath = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu/Models/03_ResNet"
      NDLNetworkBuilder = [
         networkDescription = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Image\Miscellaneous\CIFAR-10/03_ResNet.ndl"
     ]
@@ -175,6 +192,8 @@ Train = [
         maxEpochs = 160
         L2RegWeight = 0.0001
         dropoutRate = 0
+        firstMBsToShowResult = 10
+        numMBsToShowResult = 200
         ParallelTrain = [
             parallelizationMethod = "DataParallelSGD"
             distributedMBReading = "true"
@@ -186,7 +205,7 @@ Train = [
     ]
     reader = [
         readerType = "ImageReader"
-        file = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503140043.234881\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu\TestData/cifar-10-batches-py/train_map.txt"
+        file = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu\TestData/cifar-10-batches-py/train_map.txt"
         randomize = "auto"
         features = [
             width = 32
@@ -196,7 +215,7 @@ Train = [
             cropRatio = 0.8
             jitterType = "uniRatio"
             interpolations = "linear"
-            meanFile = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503140043.234881\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu\TestData/cifar-10-batches-py/CIFAR-10_mean.xml"
+            meanFile = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu\TestData/cifar-10-batches-py/CIFAR-10_mean.xml"
         ]
         labels = [
             labelDim = 10
@@ -205,11 +224,11 @@ Train = [
 ]
 Test = [
     action = "test"
-    modelPath = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503140043.234881\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu/Models/03_ResNet"
+    modelPath = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu/Models/03_ResNet"
     minibatchSize = 512
     reader = [
         readerType = "ImageReader"
-        file = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503140043.234881\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu\TestData/cifar-10-batches-py/test_map.txt"
+        file = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu\TestData/cifar-10-batches-py/test_map.txt"
         randomize = "none"
         features = [
             width = 32
@@ -219,18 +238,18 @@ Test = [
             cropRatio = 1
             jitterType = "uniRatio"
             interpolations = "linear"
-            meanFile = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503140043.234881\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu\TestData/cifar-10-batches-py/CIFAR-10_mean.xml"
+            meanFile = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu\TestData/cifar-10-batches-py/CIFAR-10_mean.xml"
         ]
         labels = [
             labelDim = 10
         ]
     ]    
 ]
-currentDirectory=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503140043.234881\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu\TestData
-RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503140043.234881\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu
-DataDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503140043.234881\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu\TestData
+currentDirectory=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu\TestData
+RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu
+DataDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu\TestData
 ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Image\Miscellaneous\CIFAR-10
-OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503140043.234881\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu
+OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu
 DeviceId=0
 timestamping=true
 Train=[SGD=[maxEpochs=1]]
@@ -240,35 +259,35 @@ Train=[SGD=[minibatchSize=16]]
 Test=[minibatchSize=16]
 stderr=-
 
-05/03/2016 14:04:10: <<<<<<<<<<<<<<<<<<<< RAW CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
+08/16/2016 03:02:42: <<<<<<<<<<<<<<<<<<<< RAW CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
 
-05/03/2016 14:04:10: >>>>>>>>>>>>>>>>>>>> PROCESSED CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
+08/16/2016 03:02:42: >>>>>>>>>>>>>>>>>>>> PROCESSED CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
 configparameters: 03_ResNet.cntk:command=Train:Test
 configparameters: 03_ResNet.cntk:ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Image\Miscellaneous\CIFAR-10
-configparameters: 03_ResNet.cntk:currentDirectory=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503140043.234881\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu\TestData
-configparameters: 03_ResNet.cntk:DataDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503140043.234881\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu\TestData
+configparameters: 03_ResNet.cntk:currentDirectory=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu\TestData
+configparameters: 03_ResNet.cntk:DataDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu\TestData
 configparameters: 03_ResNet.cntk:deviceId=0
 configparameters: 03_ResNet.cntk:imageLayout=cudnn
 configparameters: 03_ResNet.cntk:initOnCPUOnly=true
-configparameters: 03_ResNet.cntk:ModelDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503140043.234881\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu/Models
+configparameters: 03_ResNet.cntk:makeMode=true
+configparameters: 03_ResNet.cntk:ModelDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu/Models
 configparameters: 03_ResNet.cntk:ndlMacros=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Image\Miscellaneous\CIFAR-10/Macros.ndl
-configparameters: 03_ResNet.cntk:numMBsToShowResult=200
-configparameters: 03_ResNet.cntk:OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503140043.234881\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu
+configparameters: 03_ResNet.cntk:OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu
 configparameters: 03_ResNet.cntk:parallelTrain=false
 configparameters: 03_ResNet.cntk:precision=float
 configparameters: 03_ResNet.cntk:prefetch=true
 configparameters: 03_ResNet.cntk:Proj16to32Filename=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Image\Miscellaneous\CIFAR-10/16to32.txt
 configparameters: 03_ResNet.cntk:Proj32to64Filename=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Image\Miscellaneous\CIFAR-10/32to64.txt
 configparameters: 03_ResNet.cntk:RootDir=.
-configparameters: 03_ResNet.cntk:RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503140043.234881\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu
+configparameters: 03_ResNet.cntk:RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu
 configparameters: 03_ResNet.cntk:stderr=-
 configparameters: 03_ResNet.cntk:Test=[
     action = "test"
-    modelPath = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503140043.234881\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu/Models/03_ResNet"
+    modelPath = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu/Models/03_ResNet"
     minibatchSize = 512
     reader = [
         readerType = "ImageReader"
-        file = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503140043.234881\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu\TestData/cifar-10-batches-py/test_map.txt"
+        file = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu\TestData/cifar-10-batches-py/test_map.txt"
         randomize = "none"
         features = [
             width = 32
@@ -278,7 +297,7 @@ configparameters: 03_ResNet.cntk:Test=[
             cropRatio = 1
             jitterType = "uniRatio"
             interpolations = "linear"
-            meanFile = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503140043.234881\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu\TestData/cifar-10-batches-py/CIFAR-10_mean.xml"
+            meanFile = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu\TestData/cifar-10-batches-py/CIFAR-10_mean.xml"
         ]
         labels = [
             labelDim = 10
@@ -290,7 +309,7 @@ configparameters: 03_ResNet.cntk:timestamping=true
 configparameters: 03_ResNet.cntk:traceLevel=1
 configparameters: 03_ResNet.cntk:Train=[
     action = "train"
-    modelPath = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503140043.234881\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu/Models/03_ResNet"
+    modelPath = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu/Models/03_ResNet"
      NDLNetworkBuilder = [
         networkDescription = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Image\Miscellaneous\CIFAR-10/03_ResNet.ndl"
     ]
@@ -302,6 +321,8 @@ configparameters: 03_ResNet.cntk:Train=[
         maxEpochs = 160
         L2RegWeight = 0.0001
         dropoutRate = 0
+        firstMBsToShowResult = 10
+        numMBsToShowResult = 200
         ParallelTrain = [
             parallelizationMethod = "DataParallelSGD"
             distributedMBReading = "true"
@@ -313,7 +334,7 @@ configparameters: 03_ResNet.cntk:Train=[
     ]
     reader = [
         readerType = "ImageReader"
-        file = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503140043.234881\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu\TestData/cifar-10-batches-py/train_map.txt"
+        file = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu\TestData/cifar-10-batches-py/train_map.txt"
         randomize = "auto"
         features = [
             width = 32
@@ -323,7 +344,7 @@ configparameters: 03_ResNet.cntk:Train=[
             cropRatio = 0.8
             jitterType = "uniRatio"
             interpolations = "linear"
-            meanFile = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503140043.234881\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu\TestData/cifar-10-batches-py/CIFAR-10_mean.xml"
+            meanFile = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu\TestData/cifar-10-batches-py/CIFAR-10_mean.xml"
         ]
         labels = [
             labelDim = 10
@@ -331,30 +352,242 @@ configparameters: 03_ResNet.cntk:Train=[
     ]    
 ] [SGD=[maxEpochs=1]] [SGD=[epochSize=128]] [reader=[randomize=none]] [SGD=[minibatchSize=16]]
 
-05/03/2016 14:04:10: <<<<<<<<<<<<<<<<<<<< PROCESSED CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
-05/03/2016 14:04:10: Commands: Train Test
-05/03/2016 14:04:10: Precision = "float"
-05/03/2016 14:04:10: CNTKModelPath: C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503140043.234881\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu/Models/03_ResNet
-05/03/2016 14:04:10: CNTKCommandTrainInfo: Train : 1
-05/03/2016 14:04:10: CNTKCommandTrainInfo: CNTKNoMoreCommands_Total : 1
+08/16/2016 03:02:42: <<<<<<<<<<<<<<<<<<<< PROCESSED CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
+08/16/2016 03:02:42: Commands: Train Test
+08/16/2016 03:02:42: Precision = "float"
+08/16/2016 03:02:42: CNTKModelPath: C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu/Models/03_ResNet
+08/16/2016 03:02:42: CNTKCommandTrainInfo: Train : 1
+08/16/2016 03:02:42: CNTKCommandTrainInfo: CNTKNoMoreCommands_Total : 1
 
-05/03/2016 14:04:10: ##############################################################################
-05/03/2016 14:04:10: #                                                                            #
-05/03/2016 14:04:10: # Action "train"                                                             #
-05/03/2016 14:04:10: #                                                                            #
-05/03/2016 14:04:10: ##############################################################################
+08/16/2016 03:02:42: ##############################################################################
+08/16/2016 03:02:42: #                                                                            #
+08/16/2016 03:02:42: # Action "train"                                                             #
+08/16/2016 03:02:42: #                                                                            #
+08/16/2016 03:02:42: ##############################################################################
 
-05/03/2016 14:04:10: CNTKCommandTrainBegin: Train
+08/16/2016 03:02:42: CNTKCommandTrainBegin: Train
 NDLBuilder Using GPU 0
-
-05/03/2016 14:04:11: Creating virgin network.
+useParallelTrain option is not enabled. ParallelTrain config will be ignored.
+08/16/2016 03:02:43: Creating virgin network.
+Node 'conv1.c.W' (LearnableParameter operation): Initializing Parameter[16 x 27] <- 0.000000.
+Node 'conv1.c.c.b' (LearnableParameter operation): Initializing Parameter[16 x 1] <- 0.000000.
+Node 'conv1.c.c.sc' (LearnableParameter operation): Initializing Parameter[16 x 1] <- 0.000000.
+Node 'conv1.c.c.m' (LearnableParameter operation): Initializing Parameter[16 x 1] <- 0.000000.
+Node 'conv1.c.c.isd' (LearnableParameter operation): Initializing Parameter[16 x 1] <- 0.000000.
+Node 'rn1_1.c1.c.W' (LearnableParameter operation): Initializing Parameter[16 x 144] <- 0.000000.
+Node 'rn1_1.c1.c.c.b' (LearnableParameter operation): Initializing Parameter[16 x 1] <- 0.000000.
+Node 'rn1_1.c1.c.c.sc' (LearnableParameter operation): Initializing Parameter[16 x 1] <- 0.000000.
+Node 'rn1_1.c1.c.c.m' (LearnableParameter operation): Initializing Parameter[16 x 1] <- 0.000000.
+Node 'rn1_1.c1.c.c.isd' (LearnableParameter operation): Initializing Parameter[16 x 1] <- 0.000000.
+Node 'rn1_1.c2.W' (LearnableParameter operation): Initializing Parameter[16 x 144] <- 0.000000.
+Node 'rn1_1.c2.c.b' (LearnableParameter operation): Initializing Parameter[16 x 1] <- 0.000000.
+Node 'rn1_1.c2.c.sc' (LearnableParameter operation): Initializing Parameter[16 x 1] <- 0.000000.
+Node 'rn1_1.c2.c.m' (LearnableParameter operation): Initializing Parameter[16 x 1] <- 0.000000.
+Node 'rn1_1.c2.c.isd' (LearnableParameter operation): Initializing Parameter[16 x 1] <- 0.000000.
+Node 'rn1_2.c1.c.W' (LearnableParameter operation): Initializing Parameter[16 x 144] <- 0.000000.
+Node 'rn1_2.c1.c.c.b' (LearnableParameter operation): Initializing Parameter[16 x 1] <- 0.000000.
+Node 'rn1_2.c1.c.c.sc' (LearnableParameter operation): Initializing Parameter[16 x 1] <- 0.000000.
+Node 'rn1_2.c1.c.c.m' (LearnableParameter operation): Initializing Parameter[16 x 1] <- 0.000000.
+Node 'rn1_2.c1.c.c.isd' (LearnableParameter operation): Initializing Parameter[16 x 1] <- 0.000000.
+Node 'rn1_2.c2.W' (LearnableParameter operation): Initializing Parameter[16 x 144] <- 0.000000.
+Node 'rn1_2.c2.c.b' (LearnableParameter operation): Initializing Parameter[16 x 1] <- 0.000000.
+Node 'rn1_2.c2.c.sc' (LearnableParameter operation): Initializing Parameter[16 x 1] <- 0.000000.
+Node 'rn1_2.c2.c.m' (LearnableParameter operation): Initializing Parameter[16 x 1] <- 0.000000.
+Node 'rn1_2.c2.c.isd' (LearnableParameter operation): Initializing Parameter[16 x 1] <- 0.000000.
+Node 'rn1_3.c1.c.W' (LearnableParameter operation): Initializing Parameter[16 x 144] <- 0.000000.
+Node 'rn1_3.c1.c.c.b' (LearnableParameter operation): Initializing Parameter[16 x 1] <- 0.000000.
+Node 'rn1_3.c1.c.c.sc' (LearnableParameter operation): Initializing Parameter[16 x 1] <- 0.000000.
+Node 'rn1_3.c1.c.c.m' (LearnableParameter operation): Initializing Parameter[16 x 1] <- 0.000000.
+Node 'rn1_3.c1.c.c.isd' (LearnableParameter operation): Initializing Parameter[16 x 1] <- 0.000000.
+Node 'rn1_3.c2.W' (LearnableParameter operation): Initializing Parameter[16 x 144] <- 0.000000.
+Node 'rn1_3.c2.c.b' (LearnableParameter operation): Initializing Parameter[16 x 1] <- 0.000000.
+Node 'rn1_3.c2.c.sc' (LearnableParameter operation): Initializing Parameter[16 x 1] <- 0.000000.
+Node 'rn1_3.c2.c.m' (LearnableParameter operation): Initializing Parameter[16 x 1] <- 0.000000.
+Node 'rn1_3.c2.c.isd' (LearnableParameter operation): Initializing Parameter[16 x 1] <- 0.000000.
+Node 'rn2_1_Wproj' (LearnableParameter operation): Initializing Parameter[32 x 16] <- 0.000000.
+Node 'rn2_1.c1.c.W' (LearnableParameter operation): Initializing Parameter[32 x 144] <- 0.000000.
+Node 'rn2_1.c1.c.c.b' (LearnableParameter operation): Initializing Parameter[32 x 1] <- 0.000000.
+Node 'rn2_1.c1.c.c.sc' (LearnableParameter operation): Initializing Parameter[32 x 1] <- 0.000000.
+Node 'rn2_1.c1.c.c.m' (LearnableParameter operation): Initializing Parameter[32 x 1] <- 0.000000.
+Node 'rn2_1.c1.c.c.isd' (LearnableParameter operation): Initializing Parameter[32 x 1] <- 0.000000.
+Node 'rn2_1.c2.W' (LearnableParameter operation): Initializing Parameter[32 x 288] <- 0.000000.
+Node 'rn2_1.c2.c.b' (LearnableParameter operation): Initializing Parameter[32 x 1] <- 0.000000.
+Node 'rn2_1.c2.c.sc' (LearnableParameter operation): Initializing Parameter[32 x 1] <- 0.000000.
+Node 'rn2_1.c2.c.m' (LearnableParameter operation): Initializing Parameter[32 x 1] <- 0.000000.
+Node 'rn2_1.c2.c.isd' (LearnableParameter operation): Initializing Parameter[32 x 1] <- 0.000000.
+Node 'rn2_1.c_proj.b' (LearnableParameter operation): Initializing Parameter[32 x 1] <- 0.000000.
+Node 'rn2_1.c_proj.sc' (LearnableParameter operation): Initializing Parameter[32 x 1] <- 0.000000.
+Node 'rn2_1.c_proj.m' (LearnableParameter operation): Initializing Parameter[32 x 1] <- 0.000000.
+Node 'rn2_1.c_proj.isd' (LearnableParameter operation): Initializing Parameter[32 x 1] <- 0.000000.
+Node 'rn2_2.c1.c.W' (LearnableParameter operation): Initializing Parameter[32 x 288] <- 0.000000.
+Node 'rn2_2.c1.c.c.b' (LearnableParameter operation): Initializing Parameter[32 x 1] <- 0.000000.
+Node 'rn2_2.c1.c.c.sc' (LearnableParameter operation): Initializing Parameter[32 x 1] <- 0.000000.
+Node 'rn2_2.c1.c.c.m' (LearnableParameter operation): Initializing Parameter[32 x 1] <- 0.000000.
+Node 'rn2_2.c1.c.c.isd' (LearnableParameter operation): Initializing Parameter[32 x 1] <- 0.000000.
+Node 'rn2_2.c2.W' (LearnableParameter operation): Initializing Parameter[32 x 288] <- 0.000000.
+Node 'rn2_2.c2.c.b' (LearnableParameter operation): Initializing Parameter[32 x 1] <- 0.000000.
+Node 'rn2_2.c2.c.sc' (LearnableParameter operation): Initializing Parameter[32 x 1] <- 0.000000.
+Node 'rn2_2.c2.c.m' (LearnableParameter operation): Initializing Parameter[32 x 1] <- 0.000000.
+Node 'rn2_2.c2.c.isd' (LearnableParameter operation): Initializing Parameter[32 x 1] <- 0.000000.
+Node 'rn2_3.c1.c.W' (LearnableParameter operation): Initializing Parameter[32 x 288] <- 0.000000.
+Node 'rn2_3.c1.c.c.b' (LearnableParameter operation): Initializing Parameter[32 x 1] <- 0.000000.
+Node 'rn2_3.c1.c.c.sc' (LearnableParameter operation): Initializing Parameter[32 x 1] <- 0.000000.
+Node 'rn2_3.c1.c.c.m' (LearnableParameter operation): Initializing Parameter[32 x 1] <- 0.000000.
+Node 'rn2_3.c1.c.c.isd' (LearnableParameter operation): Initializing Parameter[32 x 1] <- 0.000000.
+Node 'rn2_3.c2.W' (LearnableParameter operation): Initializing Parameter[32 x 288] <- 0.000000.
+Node 'rn2_3.c2.c.b' (LearnableParameter operation): Initializing Parameter[32 x 1] <- 0.000000.
+Node 'rn2_3.c2.c.sc' (LearnableParameter operation): Initializing Parameter[32 x 1] <- 0.000000.
+Node 'rn2_3.c2.c.m' (LearnableParameter operation): Initializing Parameter[32 x 1] <- 0.000000.
+Node 'rn2_3.c2.c.isd' (LearnableParameter operation): Initializing Parameter[32 x 1] <- 0.000000.
+Node 'rn3_1_Wproj' (LearnableParameter operation): Initializing Parameter[64 x 32] <- 0.000000.
+Node 'rn3_1.c1.c.W' (LearnableParameter operation): Initializing Parameter[64 x 288] <- 0.000000.
+Node 'rn3_1.c1.c.c.b' (LearnableParameter operation): Initializing Parameter[64 x 1] <- 0.000000.
+Node 'rn3_1.c1.c.c.sc' (LearnableParameter operation): Initializing Parameter[64 x 1] <- 0.000000.
+Node 'rn3_1.c1.c.c.m' (LearnableParameter operation): Initializing Parameter[64 x 1] <- 0.000000.
+Node 'rn3_1.c1.c.c.isd' (LearnableParameter operation): Initializing Parameter[64 x 1] <- 0.000000.
+Node 'rn3_1.c2.W' (LearnableParameter operation): Initializing Parameter[64 x 576] <- 0.000000.
+Node 'rn3_1.c2.c.b' (LearnableParameter operation): Initializing Parameter[64 x 1] <- 0.000000.
+Node 'rn3_1.c2.c.sc' (LearnableParameter operation): Initializing Parameter[64 x 1] <- 0.000000.
+Node 'rn3_1.c2.c.m' (LearnableParameter operation): Initializing Parameter[64 x 1] <- 0.000000.
+Node 'rn3_1.c2.c.isd' (LearnableParameter operation): Initializing Parameter[64 x 1] <- 0.000000.
+Node 'rn3_1.c_proj.b' (LearnableParameter operation): Initializing Parameter[64 x 1] <- 0.000000.
+Node 'rn3_1.c_proj.sc' (LearnableParameter operation): Initializing Parameter[64 x 1] <- 0.000000.
+Node 'rn3_1.c_proj.m' (LearnableParameter operation): Initializing Parameter[64 x 1] <- 0.000000.
+Node 'rn3_1.c_proj.isd' (LearnableParameter operation): Initializing Parameter[64 x 1] <- 0.000000.
+Node 'rn3_2.c1.c.W' (LearnableParameter operation): Initializing Parameter[64 x 576] <- 0.000000.
+Node 'rn3_2.c1.c.c.b' (LearnableParameter operation): Initializing Parameter[64 x 1] <- 0.000000.
+Node 'rn3_2.c1.c.c.sc' (LearnableParameter operation): Initializing Parameter[64 x 1] <- 0.000000.
+Node 'rn3_2.c1.c.c.m' (LearnableParameter operation): Initializing Parameter[64 x 1] <- 0.000000.
+Node 'rn3_2.c1.c.c.isd' (LearnableParameter operation): Initializing Parameter[64 x 1] <- 0.000000.
+Node 'rn3_2.c2.W' (LearnableParameter operation): Initializing Parameter[64 x 576] <- 0.000000.
+Node 'rn3_2.c2.c.b' (LearnableParameter operation): Initializing Parameter[64 x 1] <- 0.000000.
+Node 'rn3_2.c2.c.sc' (LearnableParameter operation): Initializing Parameter[64 x 1] <- 0.000000.
+Node 'rn3_2.c2.c.m' (LearnableParameter operation): Initializing Parameter[64 x 1] <- 0.000000.
+Node 'rn3_2.c2.c.isd' (LearnableParameter operation): Initializing Parameter[64 x 1] <- 0.000000.
+Node 'rn3_3.c1.c.W' (LearnableParameter operation): Initializing Parameter[64 x 576] <- 0.000000.
+Node 'rn3_3.c1.c.c.b' (LearnableParameter operation): Initializing Parameter[64 x 1] <- 0.000000.
+Node 'rn3_3.c1.c.c.sc' (LearnableParameter operation): Initializing Parameter[64 x 1] <- 0.000000.
+Node 'rn3_3.c1.c.c.m' (LearnableParameter operation): Initializing Parameter[64 x 1] <- 0.000000.
+Node 'rn3_3.c1.c.c.isd' (LearnableParameter operation): Initializing Parameter[64 x 1] <- 0.000000.
+Node 'rn3_3.c2.W' (LearnableParameter operation): Initializing Parameter[64 x 576] <- 0.000000.
+Node 'rn3_3.c2.c.b' (LearnableParameter operation): Initializing Parameter[64 x 1] <- 0.000000.
+Node 'rn3_3.c2.c.sc' (LearnableParameter operation): Initializing Parameter[64 x 1] <- 0.000000.
+Node 'rn3_3.c2.c.m' (LearnableParameter operation): Initializing Parameter[64 x 1] <- 0.000000.
+Node 'rn3_3.c2.c.isd' (LearnableParameter operation): Initializing Parameter[64 x 1] <- 0.000000.
+Node 'OutputNodes.W' (LearnableParameter operation): Initializing Parameter[10 x 64] <- 0.000000.
+Node 'OutputNodes.b' (LearnableParameter operation): Initializing Parameter[10] <- 0.000000.
+Node 'conv1.c.W' (LearnableParameter operation): Initializing Parameter[16 x 27] <- gaussian(seed=1, range=0.038490*0.260000, onCPU=false).
 Microsoft::MSR::CNTK::GPUMatrix<ElemType>::SetGaussianRandomValue (GPU): creating curand object with seed 1, sizeof(ElemType)==4
+Node 'conv1.c.c.b' (LearnableParameter operation): Initializing Parameter[16 x 1] <- 0.000000.
+Node 'conv1.c.c.sc' (LearnableParameter operation): Initializing Parameter[16 x 1] <- 1.000000.
+Node 'conv1.c.c.m' (LearnableParameter operation): Initializing Parameter[16 x 1] <- 0.000000.
+Node 'conv1.c.c.isd' (LearnableParameter operation): Initializing Parameter[16 x 1] <- 0.000000.
+Node 'rn1_1.c1.c.W' (LearnableParameter operation): Initializing Parameter[16 x 144] <- gaussian(seed=2, range=0.016667*7.070000, onCPU=false).
+Node 'rn1_1.c1.c.c.b' (LearnableParameter operation): Initializing Parameter[16 x 1] <- 0.000000.
+Node 'rn1_1.c1.c.c.sc' (LearnableParameter operation): Initializing Parameter[16 x 1] <- 1.000000.
+Node 'rn1_1.c1.c.c.m' (LearnableParameter operation): Initializing Parameter[16 x 1] <- 0.000000.
+Node 'rn1_1.c1.c.c.isd' (LearnableParameter operation): Initializing Parameter[16 x 1] <- 0.000000.
+Node 'rn1_1.c2.W' (LearnableParameter operation): Initializing Parameter[16 x 144] <- gaussian(seed=3, range=0.016667*7.070000, onCPU=false).
+Node 'rn1_1.c2.c.b' (LearnableParameter operation): Initializing Parameter[16 x 1] <- 0.000000.
+Node 'rn1_1.c2.c.sc' (LearnableParameter operation): Initializing Parameter[16 x 1] <- 1.000000.
+Node 'rn1_1.c2.c.m' (LearnableParameter operation): Initializing Parameter[16 x 1] <- 0.000000.
+Node 'rn1_1.c2.c.isd' (LearnableParameter operation): Initializing Parameter[16 x 1] <- 0.000000.
+Node 'rn1_2.c1.c.W' (LearnableParameter operation): Initializing Parameter[16 x 144] <- gaussian(seed=4, range=0.016667*7.070000, onCPU=false).
+Node 'rn1_2.c1.c.c.b' (LearnableParameter operation): Initializing Parameter[16 x 1] <- 0.000000.
+Node 'rn1_2.c1.c.c.sc' (LearnableParameter operation): Initializing Parameter[16 x 1] <- 1.000000.
+Node 'rn1_2.c1.c.c.m' (LearnableParameter operation): Initializing Parameter[16 x 1] <- 0.000000.
+Node 'rn1_2.c1.c.c.isd' (LearnableParameter operation): Initializing Parameter[16 x 1] <- 0.000000.
+Node 'rn1_2.c2.W' (LearnableParameter operation): Initializing Parameter[16 x 144] <- gaussian(seed=5, range=0.016667*7.070000, onCPU=false).
+Node 'rn1_2.c2.c.b' (LearnableParameter operation): Initializing Parameter[16 x 1] <- 0.000000.
+Node 'rn1_2.c2.c.sc' (LearnableParameter operation): Initializing Parameter[16 x 1] <- 1.000000.
+Node 'rn1_2.c2.c.m' (LearnableParameter operation): Initializing Parameter[16 x 1] <- 0.000000.
+Node 'rn1_2.c2.c.isd' (LearnableParameter operation): Initializing Parameter[16 x 1] <- 0.000000.
+Node 'rn1_3.c1.c.W' (LearnableParameter operation): Initializing Parameter[16 x 144] <- gaussian(seed=6, range=0.016667*7.070000, onCPU=false).
+Node 'rn1_3.c1.c.c.b' (LearnableParameter operation): Initializing Parameter[16 x 1] <- 0.000000.
+Node 'rn1_3.c1.c.c.sc' (LearnableParameter operation): Initializing Parameter[16 x 1] <- 1.000000.
+Node 'rn1_3.c1.c.c.m' (LearnableParameter operation): Initializing Parameter[16 x 1] <- 0.000000.
+Node 'rn1_3.c1.c.c.isd' (LearnableParameter operation): Initializing Parameter[16 x 1] <- 0.000000.
+Node 'rn1_3.c2.W' (LearnableParameter operation): Initializing Parameter[16 x 144] <- gaussian(seed=7, range=0.016667*7.070000, onCPU=false).
+Node 'rn1_3.c2.c.b' (LearnableParameter operation): Initializing Parameter[16 x 1] <- 0.000000.
+Node 'rn1_3.c2.c.sc' (LearnableParameter operation): Initializing Parameter[16 x 1] <- 1.000000.
+Node 'rn1_3.c2.c.m' (LearnableParameter operation): Initializing Parameter[16 x 1] <- 0.000000.
+Node 'rn1_3.c2.c.isd' (LearnableParameter operation): Initializing Parameter[16 x 1] <- 0.000000.
+Node 'rn2_1.c1.c.W' (LearnableParameter operation): Initializing Parameter[32 x 144] <- gaussian(seed=8, range=0.016667*7.070000, onCPU=false).
+Node 'rn2_1.c1.c.c.b' (LearnableParameter operation): Initializing Parameter[32 x 1] <- 0.000000.
+Node 'rn2_1.c1.c.c.sc' (LearnableParameter operation): Initializing Parameter[32 x 1] <- 1.000000.
+Node 'rn2_1.c1.c.c.m' (LearnableParameter operation): Initializing Parameter[32 x 1] <- 0.000000.
+Node 'rn2_1.c1.c.c.isd' (LearnableParameter operation): Initializing Parameter[32 x 1] <- 0.000000.
+Node 'rn2_1.c2.W' (LearnableParameter operation): Initializing Parameter[32 x 288] <- gaussian(seed=9, range=0.011785*7.070000, onCPU=false).
+Node 'rn2_1.c2.c.b' (LearnableParameter operation): Initializing Parameter[32 x 1] <- 0.000000.
+Node 'rn2_1.c2.c.sc' (LearnableParameter operation): Initializing Parameter[32 x 1] <- 1.000000.
+Node 'rn2_1.c2.c.m' (LearnableParameter operation): Initializing Parameter[32 x 1] <- 0.000000.
+Node 'rn2_1.c2.c.isd' (LearnableParameter operation): Initializing Parameter[32 x 1] <- 0.000000.
+Node 'rn2_1.c_proj.b' (LearnableParameter operation): Initializing Parameter[32 x 1] <- 0.000000.
+Node 'rn2_1.c_proj.sc' (LearnableParameter operation): Initializing Parameter[32 x 1] <- 1.000000.
+Node 'rn2_1.c_proj.m' (LearnableParameter operation): Initializing Parameter[32 x 1] <- 0.000000.
+Node 'rn2_1.c_proj.isd' (LearnableParameter operation): Initializing Parameter[32 x 1] <- 0.000000.
+Node 'rn2_2.c1.c.W' (LearnableParameter operation): Initializing Parameter[32 x 288] <- gaussian(seed=10, range=0.011785*7.070000, onCPU=false).
+Node 'rn2_2.c1.c.c.b' (LearnableParameter operation): Initializing Parameter[32 x 1] <- 0.000000.
+Node 'rn2_2.c1.c.c.sc' (LearnableParameter operation): Initializing Parameter[32 x 1] <- 1.000000.
+Node 'rn2_2.c1.c.c.m' (LearnableParameter operation): Initializing Parameter[32 x 1] <- 0.000000.
+Node 'rn2_2.c1.c.c.isd' (LearnableParameter operation): Initializing Parameter[32 x 1] <- 0.000000.
+Node 'rn2_2.c2.W' (LearnableParameter operation): Initializing Parameter[32 x 288] <- gaussian(seed=11, range=0.011785*7.070000, onCPU=false).
+Node 'rn2_2.c2.c.b' (LearnableParameter operation): Initializing Parameter[32 x 1] <- 0.000000.
+Node 'rn2_2.c2.c.sc' (LearnableParameter operation): Initializing Parameter[32 x 1] <- 1.000000.
+Node 'rn2_2.c2.c.m' (LearnableParameter operation): Initializing Parameter[32 x 1] <- 0.000000.
+Node 'rn2_2.c2.c.isd' (LearnableParameter operation): Initializing Parameter[32 x 1] <- 0.000000.
+Node 'rn2_3.c1.c.W' (LearnableParameter operation): Initializing Parameter[32 x 288] <- gaussian(seed=12, range=0.011785*7.070000, onCPU=false).
+Node 'rn2_3.c1.c.c.b' (LearnableParameter operation): Initializing Parameter[32 x 1] <- 0.000000.
+Node 'rn2_3.c1.c.c.sc' (LearnableParameter operation): Initializing Parameter[32 x 1] <- 1.000000.
+Node 'rn2_3.c1.c.c.m' (LearnableParameter operation): Initializing Parameter[32 x 1] <- 0.000000.
+Node 'rn2_3.c1.c.c.isd' (LearnableParameter operation): Initializing Parameter[32 x 1] <- 0.000000.
+Node 'rn2_3.c2.W' (LearnableParameter operation): Initializing Parameter[32 x 288] <- gaussian(seed=13, range=0.011785*7.070000, onCPU=false).
+Node 'rn2_3.c2.c.b' (LearnableParameter operation): Initializing Parameter[32 x 1] <- 0.000000.
+Node 'rn2_3.c2.c.sc' (LearnableParameter operation): Initializing Parameter[32 x 1] <- 1.000000.
+Node 'rn2_3.c2.c.m' (LearnableParameter operation): Initializing Parameter[32 x 1] <- 0.000000.
+Node 'rn2_3.c2.c.isd' (LearnableParameter operation): Initializing Parameter[32 x 1] <- 0.000000.
+Node 'rn3_1.c1.c.W' (LearnableParameter operation): Initializing Parameter[64 x 288] <- gaussian(seed=14, range=0.011785*7.070000, onCPU=false).
+Node 'rn3_1.c1.c.c.b' (LearnableParameter operation): Initializing Parameter[64 x 1] <- 0.000000.
+Node 'rn3_1.c1.c.c.sc' (LearnableParameter operation): Initializing Parameter[64 x 1] <- 1.000000.
+Node 'rn3_1.c1.c.c.m' (LearnableParameter operation): Initializing Parameter[64 x 1] <- 0.000000.
+Node 'rn3_1.c1.c.c.isd' (LearnableParameter operation): Initializing Parameter[64 x 1] <- 0.000000.
+Node 'rn3_1.c2.W' (LearnableParameter operation): Initializing Parameter[64 x 576] <- gaussian(seed=15, range=0.008333*7.070000, onCPU=false).
+Node 'rn3_1.c2.c.b' (LearnableParameter operation): Initializing Parameter[64 x 1] <- 0.000000.
+Node 'rn3_1.c2.c.sc' (LearnableParameter operation): Initializing Parameter[64 x 1] <- 1.000000.
+Node 'rn3_1.c2.c.m' (LearnableParameter operation): Initializing Parameter[64 x 1] <- 0.000000.
+Node 'rn3_1.c2.c.isd' (LearnableParameter operation): Initializing Parameter[64 x 1] <- 0.000000.
+Node 'rn3_1.c_proj.b' (LearnableParameter operation): Initializing Parameter[64 x 1] <- 0.000000.
+Node 'rn3_1.c_proj.sc' (LearnableParameter operation): Initializing Parameter[64 x 1] <- 1.000000.
+Node 'rn3_1.c_proj.m' (LearnableParameter operation): Initializing Parameter[64 x 1] <- 0.000000.
+Node 'rn3_1.c_proj.isd' (LearnableParameter operation): Initializing Parameter[64 x 1] <- 0.000000.
+Node 'rn3_2.c1.c.W' (LearnableParameter operation): Initializing Parameter[64 x 576] <- gaussian(seed=16, range=0.008333*7.070000, onCPU=false).
+Node 'rn3_2.c1.c.c.b' (LearnableParameter operation): Initializing Parameter[64 x 1] <- 0.000000.
+Node 'rn3_2.c1.c.c.sc' (LearnableParameter operation): Initializing Parameter[64 x 1] <- 1.000000.
+Node 'rn3_2.c1.c.c.m' (LearnableParameter operation): Initializing Parameter[64 x 1] <- 0.000000.
+Node 'rn3_2.c1.c.c.isd' (LearnableParameter operation): Initializing Parameter[64 x 1] <- 0.000000.
+Node 'rn3_2.c2.W' (LearnableParameter operation): Initializing Parameter[64 x 576] <- gaussian(seed=17, range=0.008333*7.070000, onCPU=false).
+Node 'rn3_2.c2.c.b' (LearnableParameter operation): Initializing Parameter[64 x 1] <- 0.000000.
+Node 'rn3_2.c2.c.sc' (LearnableParameter operation): Initializing Parameter[64 x 1] <- 1.000000.
+Node 'rn3_2.c2.c.m' (LearnableParameter operation): Initializing Parameter[64 x 1] <- 0.000000.
+Node 'rn3_2.c2.c.isd' (LearnableParameter operation): Initializing Parameter[64 x 1] <- 0.000000.
+Node 'rn3_3.c1.c.W' (LearnableParameter operation): Initializing Parameter[64 x 576] <- gaussian(seed=18, range=0.008333*7.070000, onCPU=false).
+Node 'rn3_3.c1.c.c.b' (LearnableParameter operation): Initializing Parameter[64 x 1] <- 0.000000.
+Node 'rn3_3.c1.c.c.sc' (LearnableParameter operation): Initializing Parameter[64 x 1] <- 1.000000.
+Node 'rn3_3.c1.c.c.m' (LearnableParameter operation): Initializing Parameter[64 x 1] <- 0.000000.
+Node 'rn3_3.c1.c.c.isd' (LearnableParameter operation): Initializing Parameter[64 x 1] <- 0.000000.
+Node 'rn3_3.c2.W' (LearnableParameter operation): Initializing Parameter[64 x 576] <- gaussian(seed=19, range=0.008333*7.070000, onCPU=false).
+Node 'rn3_3.c2.c.b' (LearnableParameter operation): Initializing Parameter[64 x 1] <- 0.000000.
+Node 'rn3_3.c2.c.sc' (LearnableParameter operation): Initializing Parameter[64 x 1] <- 1.000000.
+Node 'rn3_3.c2.c.m' (LearnableParameter operation): Initializing Parameter[64 x 1] <- 0.000000.
+Node 'rn3_3.c2.c.isd' (LearnableParameter operation): Initializing Parameter[64 x 1] <- 0.000000.
+Node 'OutputNodes.W' (LearnableParameter operation): Initializing Parameter[10 x 64] <- gaussian(seed=20, range=0.025000*0.400000, onCPU=false).
+Node 'OutputNodes.b' (LearnableParameter operation): Initializing Parameter[10] <- 0.000000.
 
 Post-processing network...
 
 3 roots:
 	CE = CrossEntropyWithSoftmax()
-	Err = ErrorPrediction()
+	Err = ClassificationError()
 	OutputNodes.z = Plus()
 
 Validating network. 184 nodes to process in pass 1.
@@ -544,7 +777,7 @@ Validating --> OutputNodes.t = Times (OutputNodes.W, pool) : [10 x 1 x 1 x 64], 
 Validating --> OutputNodes.b = LearnableParameter() :  -> [10]
 Validating --> OutputNodes.z = Plus (OutputNodes.t, OutputNodes.b) : [10 x *], [10] -> [10 x *]
 Validating --> CE = CrossEntropyWithSoftmax (labels, OutputNodes.z) : [10 x *], [10 x *] -> [1]
-Validating --> Err = ErrorPrediction (labels, OutputNodes.z) : [10 x *], [10 x *] -> [1]
+Validating --> Err = ClassificationError (labels, OutputNodes.z) : [10 x *], [10 x *] -> [1]
 
 Validating network. 75 nodes to process in pass 2.
 
@@ -552,360 +785,370 @@ Validating network. 75 nodes to process in pass 2.
 Validating network, final pass.
 
 
-Using cuDNN convolution engine for geometry: Input: 32 x 32 x 3, Output: 32 x 32 x 16, Kernel: 3 x 3 x 3, Map: 1 x 1 x 16, Stride: 1 x 1 x 3, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+conv1.c.c.c: using cuDNN convolution engine for geometry: Input: 32 x 32 x 3, Output: 32 x 32 x 16, Kernel: 3 x 3 x 3, Map: 1 x 1 x 16, Stride: 1 x 1 x 3, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
 
 Using CNTK batch normalization engine.
 
-Using cuDNN convolution engine for geometry: Input: 32 x 32 x 16, Output: 32 x 32 x 16, Kernel: 3 x 3 x 16, Map: 1 x 1 x 16, Stride: 1 x 1 x 16, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+rn1_1.c1.c.c.c: using cuDNN convolution engine for geometry: Input: 32 x 32 x 16, Output: 32 x 32 x 16, Kernel: 3 x 3 x 16, Map: 1 x 1 x 16, Stride: 1 x 1 x 16, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
 
 Using CNTK batch normalization engine.
 
-Using cuDNN convolution engine for geometry: Input: 32 x 32 x 16, Output: 32 x 32 x 16, Kernel: 3 x 3 x 16, Map: 1 x 1 x 16, Stride: 1 x 1 x 16, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+rn1_1.c2.c.c: using cuDNN convolution engine for geometry: Input: 32 x 32 x 16, Output: 32 x 32 x 16, Kernel: 3 x 3 x 16, Map: 1 x 1 x 16, Stride: 1 x 1 x 16, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
 
 Using CNTK batch normalization engine.
 
-Using cuDNN convolution engine for geometry: Input: 32 x 32 x 16, Output: 32 x 32 x 16, Kernel: 3 x 3 x 16, Map: 1 x 1 x 16, Stride: 1 x 1 x 16, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+rn1_2.c1.c.c.c: using cuDNN convolution engine for geometry: Input: 32 x 32 x 16, Output: 32 x 32 x 16, Kernel: 3 x 3 x 16, Map: 1 x 1 x 16, Stride: 1 x 1 x 16, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
 
 Using CNTK batch normalization engine.
 
-Using cuDNN convolution engine for geometry: Input: 32 x 32 x 16, Output: 32 x 32 x 16, Kernel: 3 x 3 x 16, Map: 1 x 1 x 16, Stride: 1 x 1 x 16, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+rn1_2.c2.c.c: using cuDNN convolution engine for geometry: Input: 32 x 32 x 16, Output: 32 x 32 x 16, Kernel: 3 x 3 x 16, Map: 1 x 1 x 16, Stride: 1 x 1 x 16, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
 
 Using CNTK batch normalization engine.
 
-Using cuDNN convolution engine for geometry: Input: 32 x 32 x 16, Output: 32 x 32 x 16, Kernel: 3 x 3 x 16, Map: 1 x 1 x 16, Stride: 1 x 1 x 16, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+rn1_3.c1.c.c.c: using cuDNN convolution engine for geometry: Input: 32 x 32 x 16, Output: 32 x 32 x 16, Kernel: 3 x 3 x 16, Map: 1 x 1 x 16, Stride: 1 x 1 x 16, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
 
 Using CNTK batch normalization engine.
 
-Using cuDNN convolution engine for geometry: Input: 32 x 32 x 16, Output: 32 x 32 x 16, Kernel: 3 x 3 x 16, Map: 1 x 1 x 16, Stride: 1 x 1 x 16, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+rn1_3.c2.c.c: using cuDNN convolution engine for geometry: Input: 32 x 32 x 16, Output: 32 x 32 x 16, Kernel: 3 x 3 x 16, Map: 1 x 1 x 16, Stride: 1 x 1 x 16, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
 
 Using CNTK batch normalization engine.
 
-Using cuDNN convolution engine for geometry: Input: 32 x 32 x 16, Output: 16 x 16 x 32, Kernel: 3 x 3 x 16, Map: 1 x 1 x 32, Stride: 2 x 2 x 16, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+rn2_1.c1.c.c.c: using cuDNN convolution engine for geometry: Input: 32 x 32 x 16, Output: 16 x 16 x 32, Kernel: 3 x 3 x 16, Map: 1 x 1 x 32, Stride: 2 x 2 x 16, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
 
 Using CNTK batch normalization engine.
 
-Using cuDNN convolution engine for geometry: Input: 16 x 16 x 32, Output: 16 x 16 x 32, Kernel: 3 x 3 x 32, Map: 1 x 1 x 32, Stride: 1 x 1 x 32, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+rn2_1.c2.c.c: using cuDNN convolution engine for geometry: Input: 16 x 16 x 32, Output: 16 x 16 x 32, Kernel: 3 x 3 x 32, Map: 1 x 1 x 32, Stride: 1 x 1 x 32, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
 
 Using CNTK batch normalization engine.
 
-Using cuDNN convolution engine for geometry: Input: 32 x 32 x 16, Output: 16 x 16 x 32, Kernel: 1 x 1 x 16, Map: 1 x 1 x 32, Stride: 2 x 2 x 16, Sharing: (1), AutoPad: (0), LowerPad: 0, UpperPad: 0.
+rn2_1.c_proj.c: using cuDNN convolution engine for geometry: Input: 32 x 32 x 16, Output: 16 x 16 x 32, Kernel: 1 x 1 x 16, Map: 1 x 1 x 32, Stride: 2 x 2 x 16, Sharing: (1), AutoPad: (0), LowerPad: 0, UpperPad: 0.
 
 Using CNTK batch normalization engine.
 
-Using cuDNN convolution engine for geometry: Input: 16 x 16 x 32, Output: 16 x 16 x 32, Kernel: 3 x 3 x 32, Map: 1 x 1 x 32, Stride: 1 x 1 x 32, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+rn2_2.c1.c.c.c: using cuDNN convolution engine for geometry: Input: 16 x 16 x 32, Output: 16 x 16 x 32, Kernel: 3 x 3 x 32, Map: 1 x 1 x 32, Stride: 1 x 1 x 32, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
 
 Using CNTK batch normalization engine.
 
-Using cuDNN convolution engine for geometry: Input: 16 x 16 x 32, Output: 16 x 16 x 32, Kernel: 3 x 3 x 32, Map: 1 x 1 x 32, Stride: 1 x 1 x 32, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+rn2_2.c2.c.c: using cuDNN convolution engine for geometry: Input: 16 x 16 x 32, Output: 16 x 16 x 32, Kernel: 3 x 3 x 32, Map: 1 x 1 x 32, Stride: 1 x 1 x 32, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
 
 Using CNTK batch normalization engine.
 
-Using cuDNN convolution engine for geometry: Input: 16 x 16 x 32, Output: 16 x 16 x 32, Kernel: 3 x 3 x 32, Map: 1 x 1 x 32, Stride: 1 x 1 x 32, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+rn2_3.c1.c.c.c: using cuDNN convolution engine for geometry: Input: 16 x 16 x 32, Output: 16 x 16 x 32, Kernel: 3 x 3 x 32, Map: 1 x 1 x 32, Stride: 1 x 1 x 32, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
 
 Using CNTK batch normalization engine.
 
-Using cuDNN convolution engine for geometry: Input: 16 x 16 x 32, Output: 16 x 16 x 32, Kernel: 3 x 3 x 32, Map: 1 x 1 x 32, Stride: 1 x 1 x 32, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+rn2_3.c2.c.c: using cuDNN convolution engine for geometry: Input: 16 x 16 x 32, Output: 16 x 16 x 32, Kernel: 3 x 3 x 32, Map: 1 x 1 x 32, Stride: 1 x 1 x 32, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
 
 Using CNTK batch normalization engine.
 
-Using cuDNN convolution engine for geometry: Input: 16 x 16 x 32, Output: 8 x 8 x 64, Kernel: 3 x 3 x 32, Map: 1 x 1 x 64, Stride: 2 x 2 x 32, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+rn3_1.c1.c.c.c: using cuDNN convolution engine for geometry: Input: 16 x 16 x 32, Output: 8 x 8 x 64, Kernel: 3 x 3 x 32, Map: 1 x 1 x 64, Stride: 2 x 2 x 32, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
 
 Using CNTK batch normalization engine.
 
-Using cuDNN convolution engine for geometry: Input: 8 x 8 x 64, Output: 8 x 8 x 64, Kernel: 3 x 3 x 64, Map: 1 x 1 x 64, Stride: 1 x 1 x 64, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+rn3_1.c2.c.c: using cuDNN convolution engine for geometry: Input: 8 x 8 x 64, Output: 8 x 8 x 64, Kernel: 3 x 3 x 64, Map: 1 x 1 x 64, Stride: 1 x 1 x 64, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
 
 Using CNTK batch normalization engine.
 
-Using cuDNN convolution engine for geometry: Input: 16 x 16 x 32, Output: 8 x 8 x 64, Kernel: 1 x 1 x 32, Map: 1 x 1 x 64, Stride: 2 x 2 x 32, Sharing: (1), AutoPad: (0), LowerPad: 0, UpperPad: 0.
+rn3_1.c_proj.c: using cuDNN convolution engine for geometry: Input: 16 x 16 x 32, Output: 8 x 8 x 64, Kernel: 1 x 1 x 32, Map: 1 x 1 x 64, Stride: 2 x 2 x 32, Sharing: (1), AutoPad: (0), LowerPad: 0, UpperPad: 0.
 
 Using CNTK batch normalization engine.
 
-Using cuDNN convolution engine for geometry: Input: 8 x 8 x 64, Output: 8 x 8 x 64, Kernel: 3 x 3 x 64, Map: 1 x 1 x 64, Stride: 1 x 1 x 64, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+rn3_2.c1.c.c.c: using cuDNN convolution engine for geometry: Input: 8 x 8 x 64, Output: 8 x 8 x 64, Kernel: 3 x 3 x 64, Map: 1 x 1 x 64, Stride: 1 x 1 x 64, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
 
 Using CNTK batch normalization engine.
 
-Using cuDNN convolution engine for geometry: Input: 8 x 8 x 64, Output: 8 x 8 x 64, Kernel: 3 x 3 x 64, Map: 1 x 1 x 64, Stride: 1 x 1 x 64, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+rn3_2.c2.c.c: using cuDNN convolution engine for geometry: Input: 8 x 8 x 64, Output: 8 x 8 x 64, Kernel: 3 x 3 x 64, Map: 1 x 1 x 64, Stride: 1 x 1 x 64, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
 
 Using CNTK batch normalization engine.
 
-Using cuDNN convolution engine for geometry: Input: 8 x 8 x 64, Output: 8 x 8 x 64, Kernel: 3 x 3 x 64, Map: 1 x 1 x 64, Stride: 1 x 1 x 64, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+rn3_3.c1.c.c.c: using cuDNN convolution engine for geometry: Input: 8 x 8 x 64, Output: 8 x 8 x 64, Kernel: 3 x 3 x 64, Map: 1 x 1 x 64, Stride: 1 x 1 x 64, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
 
 Using CNTK batch normalization engine.
 
-Using cuDNN convolution engine for geometry: Input: 8 x 8 x 64, Output: 8 x 8 x 64, Kernel: 3 x 3 x 64, Map: 1 x 1 x 64, Stride: 1 x 1 x 64, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+rn3_3.c2.c.c: using cuDNN convolution engine for geometry: Input: 8 x 8 x 64, Output: 8 x 8 x 64, Kernel: 3 x 3 x 64, Map: 1 x 1 x 64, Stride: 1 x 1 x 64, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
 
 Using CNTK batch normalization engine.
 
-Using cuDNN convolution engine for geometry: Input: 8 x 8 x 64, Output: 1 x 1 x 64, Kernel: 8 x 8 x 1, Map: 1, Stride: 1 x 1 x 1, Sharing: (1), AutoPad: (0), LowerPad: 0, UpperPad: 0.
+pool: using cuDNN convolution engine for geometry: Input: 8 x 8 x 64, Output: 1 x 1 x 64, Kernel: 8 x 8 x 1, Map: 1, Stride: 1 x 1 x 1, Sharing: (1), AutoPad: (0), LowerPad: 0, UpperPad: 0.
 
 
 109 out of 184 nodes do not share the minibatch layout with the input data.
 
 Post-processing network complete.
 
-05/03/2016 14:04:12: Created model with 184 nodes on GPU 0.
+08/16/2016 03:02:44: Created model with 184 nodes on GPU 0.
 
-05/03/2016 14:04:12: Training criterion node(s):
-05/03/2016 14:04:12: 	CE = CrossEntropyWithSoftmax
+08/16/2016 03:02:44: Training criterion node(s):
+08/16/2016 03:02:44: 	CE = CrossEntropyWithSoftmax
 
-05/03/2016 14:04:12: Evaluation criterion node(s):
-
-05/03/2016 14:04:12: 	Err = ErrorPrediction
+08/16/2016 03:02:44: Evaluation criterion node(s):
+08/16/2016 03:02:44: 	Err = ClassificationError
 
 
 Allocating matrices for forward and/or backward propagation.
 
-Memory Sharing Structure:
+Memory Sharing: Out of 321 matrices, 160 are shared as 62, and 161 are not shared.
 
-0000000000000000: {[Err Gradient[1]] [conv1.c.c.isd Gradient[16 x 1]] [conv1.c.c.m Gradient[16 x 1]] [features Gradient[32 x 32 x 3 x *]] [labels Gradient[10 x *]] [rn1_1.c1.c.c.isd Gradient[16 x 1]] [rn1_1.c1.c.c.m Gradient[16 x 1]] [rn1_1.c2.c.isd Gradient[16 x 1]] [rn1_1.c2.c.m Gradient[16 x 1]] [rn1_2.c1.c.c.isd Gradient[16 x 1]] [rn1_2.c1.c.c.m Gradient[16 x 1]] [rn1_2.c2.c.isd Gradient[16 x 1]] [rn1_2.c2.c.m Gradient[16 x 1]] [rn1_3.c1.c.c.isd Gradient[16 x 1]] [rn1_3.c1.c.c.m Gradient[16 x 1]] [rn1_3.c2.c.isd Gradient[16 x 1]] [rn1_3.c2.c.m Gradient[16 x 1]] [rn2_1.c1.c.c.isd Gradient[32 x 1]] [rn2_1.c1.c.c.m Gradient[32 x 1]] [rn2_1.c2.c.isd Gradient[32 x 1]] [rn2_1.c2.c.m Gradient[32 x 1]] [rn2_1.c_proj.isd Gradient[32 x 1]] [rn2_1.c_proj.m Gradient[32 x 1]] [rn2_1_Wproj Gradient[32 x 16]] [rn2_2.c1.c.c.isd Gradient[32 x 1]] [rn2_2.c1.c.c.m Gradient[32 x 1]] [rn2_2.c2.c.isd Gradient[32 x 1]] [rn2_2.c2.c.m Gradient[32 x 1]] [rn2_3.c1.c.c.isd Gradient[32 x 1]] [rn2_3.c1.c.c.m Gradient[32 x 1]] [rn2_3.c2.c.isd Gradient[32 x 1]] [rn2_3.c2.c.m Gradient[32 x 1]] [rn3_1.c1.c.c.isd Gradient[64 x 1]] [rn3_1.c1.c.c.m Gradient[64 x 1]] [rn3_1.c2.c.isd Gradient[64 x 1]] [rn3_1.c2.c.m Gradient[64 x 1]] [rn3_1.c_proj.isd Gradient[64 x 1]] [rn3_1.c_proj.m Gradient[64 x 1]] [rn3_1_Wproj Gradient[64 x 32]] [rn3_2.c1.c.c.isd Gradient[64 x 1]] [rn3_2.c1.c.c.m Gradient[64 x 1]] [rn3_2.c2.c.isd Gradient[64 x 1]] [rn3_2.c2.c.m Gradient[64 x 1]] [rn3_3.c1.c.c.isd Gradient[64 x 1]] [rn3_3.c1.c.c.m Gradient[64 x 1]] [rn3_3.c2.c.isd Gradient[64 x 1]] [rn3_3.c2.c.m Gradient[64 x 1]] }
-0000002726FC6350: {[features Value[32 x 32 x 3 x *]] }
-000000272788ED30: {[labels Value[10 x *]] }
-000000272788EDD0: {[conv1.c.c.sc Value[16 x 1]] }
-000000272788EF10: {[rn1_1.c1.c.c.b Value[16 x 1]] }
-000000272788F190: {[rn1_1.c1.c.W Value[16 x 144]] }
-000000272788F2D0: {[rn1_1.c1.c.c.m Value[16 x 1]] }
-000000272788F410: {[rn1_1.c1.c.c.isd Value[16 x 1]] }
-000000272788F730: {[rn1_1.c2.W Value[16 x 144]] }
-000000272788F7D0: {[conv1.c.W Value[16 x 27]] }
-000000272788F9B0: {[rn1_1.c2.c.b Value[16 x 1]] }
-000000272788FA50: {[rn1_1.c1.c.c.sc Value[16 x 1]] }
-000000272788FD70: {[rn1_1.c2.c.isd Value[16 x 1]] }
-000000272788FFF0: {[conv1.c.c.isd Value[16 x 1]] }
-00000027278901D0: {[conv1.c.c.m Value[16 x 1]] }
-0000002727890450: {[rn1_1.c2.c.sc Value[16 x 1]] }
-0000002727890630: {[rn1_1.c2.c.m Value[16 x 1]] }
-0000002727890810: {[conv1.c.c.b Value[16 x 1]] }
-0000002727B8A4F0: {[rn2_1.c1.c.c.sc Value[32 x 1]] }
-0000002727B8A630: {[rn2_1.c2.c.sc Value[32 x 1]] }
-0000002727B8A770: {[rn2_1.c_proj.isd Value[32 x 1]] }
-0000002727B8A810: {[rn1_3.c2.c.m Value[16 x 1]] }
-0000002727B8A9F0: {[rn2_1.c2.c.m Value[32 x 1]] }
-0000002727B8AB30: {[rn2_1.c2.W Value[32 x 288]] }
-0000002727B8AD10: {[rn2_1.c1.c.W Value[32 x 144]] }
-0000002727B8B210: {[rn1_3.c2.c.isd Value[16 x 1]] }
-0000002727B8B490: {[rn2_1.c1.c.c.m Value[32 x 1]] }
-0000002727B8B5D0: {[rn2_1.c2.c.b Value[32 x 1]] }
-0000002727B8B670: {[rn2_1_Wproj Value[32 x 16]] }
-0000002727B8B7B0: {[rn2_1.c_proj.m Value[32 x 1]] }
-0000002727B8BC10: {[rn2_2.c1.c.W Value[32 x 288]] }
-0000002727B8BDF0: {[rn2_1.c2.c.isd Value[32 x 1]] }
-0000002727B8BFD0: {[rn2_1.c_proj.sc Value[32 x 1]] }
-0000002727B8C1B0: {[rn2_1.c_proj.b Value[32 x 1]] }
-0000002727B8C2F0: {[rn2_1.c1.c.c.b Value[32 x 1]] }
-0000002727B8C390: {[rn2_1.c1.c.c.isd Value[32 x 1]] }
-0000002727BA92A0: {[rn1_2.c2.c.isd Value[16 x 1]] }
-0000002727BA9340: {[rn1_3.c1.c.c.b Value[16 x 1]] }
-0000002727BA9480: {[rn1_2.c1.c.c.b Value[16 x 1]] }
-0000002727BA9520: {[rn1_2.c1.c.c.isd Value[16 x 1]] }
-0000002727BA9700: {[rn1_3.c1.c.c.m Value[16 x 1]] }
-0000002727BA9840: {[rn1_2.c2.c.m Value[16 x 1]] }
-0000002727BA9980: {[rn1_2.c1.c.c.sc Value[16 x 1]] }
-0000002727BA9B60: {[rn1_3.c1.c.c.sc Value[16 x 1]] }
-0000002727BA9D40: {[rn1_3.c2.W Value[16 x 144]] }
-0000002727BA9DE0: {[rn1_2.c2.W Value[16 x 144]] }
-0000002727BA9F20: {[rn1_3.c2.c.b Value[16 x 1]] }
-0000002727BAA100: {[rn1_2.c2.c.sc Value[16 x 1]] }
-0000002727BAA380: {[rn1_2.c2.c.b Value[16 x 1]] }
-0000002727BAA420: {[rn1_3.c2.c.sc Value[16 x 1]] }
-0000002727BAA7E0: {[rn1_3.c1.c.W Value[16 x 144]] }
-0000002727BAA920: {[rn1_2.c1.c.W Value[16 x 144]] }
-0000002727BAAA60: {[rn1_3.c1.c.c.isd Value[16 x 1]] }
-0000002727BAAF60: {[rn1_2.c1.c.c.m Value[16 x 1]] }
-000000273E6FFFC0: {[rn2_3.c1.c.c.sc Value[32 x 1]] }
-000000273E700100: {[rn2_3.c2.c.sc Value[32 x 1]] }
-000000273E700380: {[rn2_3.c2.c.isd Value[32 x 1]] }
-000000273E7004C0: {[rn2_2.c2.c.b Value[32 x 1]] }
-000000273E700600: {[rn2_2.c1.c.c.sc Value[32 x 1]] }
-000000273E7006A0: {[rn2_3.c2.c.b Value[32 x 1]] }
-000000273E700740: {[rn2_3.c1.c.c.m Value[32 x 1]] }
-000000273E700920: {[rn2_2.c2.c.sc Value[32 x 1]] }
-000000273E700B00: {[rn2_2.c1.c.c.m Value[32 x 1]] }
-000000273E700C40: {[rn2_2.c1.c.c.b Value[32 x 1]] }
-000000273E700D80: {[rn2_3.c1.c.c.isd Value[32 x 1]] }
-000000273E700EC0: {[rn2_2.c2.c.m Value[32 x 1]] }
-000000273E701460: {[rn2_3.c1.c.c.b Value[32 x 1]] }
-000000273E701640: {[rn2_3.c2.W Value[32 x 288]] }
-000000273E7016E0: {[rn2_3.c2.c.m Value[32 x 1]] }
-000000273E701820: {[rn2_2.c1.c.c.isd Value[32 x 1]] }
-000000273E701AA0: {[rn2_2.c2.W Value[32 x 288]] }
-000000273E701C80: {[rn2_3.c1.c.W Value[32 x 288]] }
-000000273E701DC0: {[rn2_2.c2.c.isd Value[32 x 1]] }
-000000273E70A710: {[rn3_1.c2.c.isd Value[64 x 1]] }
-000000273E70AA30: {[rn3_2.c1.c.c.m Value[64 x 1]] }
-000000273E70AB70: {[rn3_2.c1.c.c.isd Value[64 x 1]] }
-000000273E70AC10: {[rn3_1.c_proj.b Value[64 x 1]] }
-000000273E70AD50: {[rn3_1.c1.c.W Value[64 x 288]] }
-000000273E70AE90: {[rn3_1.c1.c.c.isd Value[64 x 1]] }
-000000273E70AFD0: {[rn3_1.c_proj.m Value[64 x 1]] }
-000000273E70B250: {[rn3_1.c2.c.sc Value[64 x 1]] }
-000000273E70B430: {[rn3_1.c2.W Value[64 x 576]] }
-000000273E70B610: {[rn3_1.c_proj.sc Value[64 x 1]] }
-000000273E70BB10: {[rn3_1.c1.c.c.b Value[64 x 1]] }
-000000273E70BCF0: {[rn3_2.c1.c.W Value[64 x 576]] }
-000000273E70BE30: {[rn3_2.c1.c.c.b Value[64 x 1]] }
-000000273E70BED0: {[rn3_2.c1.c.c.sc Value[64 x 1]] }
-000000273E70C010: {[rn3_1_Wproj Value[64 x 32]] }
-000000273E70C0B0: {[rn3_1.c1.c.c.sc Value[64 x 1]] }
-000000273E70C1F0: {[rn3_1.c2.c.b Value[64 x 1]] }
-000000273E70C290: {[rn3_1.c2.c.m Value[64 x 1]] }
-000000273E70C330: {[rn3_1.c_proj.isd Value[64 x 1]] }
-000000273E70C3D0: {[rn3_1.c1.c.c.m Value[64 x 1]] }
-000000273E7182F0: {[rn3_3.c1.c.c.b Value[64 x 1]] }
-000000273E718390: {[rn3_3.c1.c.c.m Value[64 x 1]] }
-000000273E7184D0: {[rn3_2.c2.c.isd Value[64 x 1]] }
-000000273E7186B0: {[OutputNodes.b Value[10]] }
-000000273E7187F0: {[rn3_2.c2.c.sc Value[64 x 1]] }
-000000273E718930: {[rn3_3.c2.c.m Value[64 x 1]] }
-000000273E718B10: {[rn3_3.c1.c.c.isd Value[64 x 1]] }
-000000273E718BB0: {[rn3_3.c2.c.sc Value[64 x 1]] }
-000000273E718C50: {[OutputNodes.W Value[10 x 1 x 1 x 64]] }
-000000273E718CF0: {[rn3_2.c2.c.b Value[64 x 1]] }
-000000273E718ED0: {[rn3_3.c1.c.W Value[64 x 576]] }
-000000273E718F70: {[rn3_3.c1.c.c.sc Value[64 x 1]] }
-000000273E719010: {[rn3_3.c2.c.b Value[64 x 1]] }
-000000273E7191F0: {[rn3_3.c2.W Value[64 x 576]] }
-000000273E719B50: {[rn3_3.c2.c.isd Value[64 x 1]] }
-000000273E719E70: {[rn3_2.c2.c.m Value[64 x 1]] }
-000000273E71A0F0: {[rn3_2.c2.W Value[64 x 576]] }
-0000002744394E30: {[rn1_2.c1.c.c.y Gradient[32 x 32 x 16 x *]] }
-0000002744394ED0: {[rn1_2.c2.c.y Value[32 x 32 x 16 x *]] }
-00000027443950B0: {[rn1_2.c2.W Gradient[16 x 144]] [rn1_3.c1.c.c.c Value[32 x 32 x 16 x *]] }
-00000027443951F0: {[rn1_1.c1.c.c.b Gradient[16 x 1]] }
-0000002744395330: {[CE Value[1]] }
-00000027443953D0: {[conv1.c.c.y Gradient[32 x 32 x 16 x *]] }
-0000002744395510: {[rn1_2.c2.c.b Gradient[16 x 1]] [rn1_3.c2.c.c Value[32 x 32 x 16 x *]] }
-00000027443955B0: {[rn1_3.c1.c.c.y Gradient[32 x 32 x 16 x *]] }
-0000002744395650: {[conv1.c.c.c Value[32 x 32 x 16 x *]] }
-00000027443956F0: {[rn1_1.c2.c.y Gradient[32 x 32 x 16 x *]] [rn1_1.y Value[32 x 32 x 16 x *]] }
-0000002744395830: {[rn1_1.c2.c.b Gradient[16 x 1]] [rn1_2.c2.c.c Value[32 x 32 x 16 x *]] }
-00000027443958D0: {[rn1_2.c2.c.sc Gradient[16 x 1]] [rn1_2.p Gradient[32 x 32 x 16 x *]] }
-0000002744395970: {[rn1_1.c1.c.c.c Value[32 x 32 x 16 x *]] }
-0000002744395A10: {[rn1_3.c1.c.c.y Value[32 x 32 x 16 x *]] }
-0000002744395AB0: {[rn1_3.c2.c.y Value[32 x 32 x 16 x *]] }
-0000002744395BF0: {[rn1_3.c1.c.c.b Gradient[16 x 1]] }
-0000002744395C90: {[rn1_3.c2.c.y Gradient[32 x 32 x 16 x *]] [rn1_3.y Value[32 x 32 x 16 x *]] }
-0000002744395E70: {[rn1_1.c1.c.c.y Value[32 x 32 x 16 x *]] }
-0000002744395F10: {[rn1_2.c1.c.c.b Gradient[16 x 1]] }
-0000002744395FB0: {[rn1_1.c2.c.y Value[32 x 32 x 16 x *]] }
-0000002744396050: {[conv1.c.c.y Value[32 x 32 x 16 x *]] }
-00000027443960F0: {[rn1_3.c1.c.W Gradient[16 x 144]] [rn1_3.c2.c.c Gradient[32 x 32 x 16 x *]] [rn1_3.p Value[32 x 32 x 16 x *]] }
-0000002744396230: {[rn1_1.c1.c.c.sc Gradient[16 x 1]] [rn1_1.c1.y Gradient[32 x 32 x 16 x *]] [rn1_1.y Gradient[32 x 32 x 16 x *]] [rn1_3.c1.c.c.c Gradient[32 x 32 x 16 x *]] [rn1_3.c1.y Value[32 x 32 x 16 x *]] }
-0000002744396370: {[Err Value[1]] }
-0000002744396550: {[conv1.c.W Gradient[16 x 27]] [rn1_1.c1.c.c.c Gradient[32 x 32 x 16 x *]] [rn1_1.c1.y Value[32 x 32 x 16 x *]] }
-00000027443965F0: {[rn1_1.c1.c.c.y Gradient[32 x 32 x 16 x *]] }
-0000002744396910: {[OutputNodes.z Value[10 x *]] }
-00000027443969B0: {[rn1_1.c2.c.sc Gradient[16 x 1]] [rn1_1.p Gradient[32 x 32 x 16 x *]] }
-0000002744396C30: {[rn1_1.c2.W Gradient[16 x 144]] [rn1_2.c1.c.c.c Value[32 x 32 x 16 x *]] }
-0000002744396CD0: {[rn1_2.c1.c.W Gradient[16 x 144]] [rn1_2.c2.c.c Gradient[32 x 32 x 16 x *]] [rn1_2.p Value[32 x 32 x 16 x *]] }
-0000002744396D70: {[rn1_2.c2.c.y Gradient[32 x 32 x 16 x *]] [rn1_2.y Value[32 x 32 x 16 x *]] }
-0000002744396EB0: {[conv1.c.c.c Gradient[32 x 32 x 16 x *]] [conv1.y Value[32 x 32 x 16 x *]] }
-0000002744396F50: {[rn1_1.c1.c.W Gradient[16 x 144]] [rn1_1.c2.c.c Gradient[32 x 32 x 16 x *]] [rn1_1.p Value[32 x 32 x 16 x *]] }
-0000002744397090: {[conv1.c.c.b Gradient[16 x 1]] [rn1_1.c2.c.c Value[32 x 32 x 16 x *]] }
-00000027443973B0: {[rn1_2.c1.c.c.y Value[32 x 32 x 16 x *]] }
-00000027443974F0: {[conv1.c.c.sc Gradient[16 x 1]] [conv1.y Gradient[32 x 32 x 16 x *]] [rn1_2.c1.c.c.c Gradient[32 x 32 x 16 x *]] [rn1_2.c1.y Value[32 x 32 x 16 x *]] }
-0000002744EEA310: {[rn2_1.c1.c.c.b Gradient[32 x 1]] }
-0000002744EEA450: {[rn2_2.c2.c.y Value[16 x 16 x 32 x *]] }
-0000002744EEA590: {[rn2_2.c2.c.y Gradient[16 x 16 x 32 x *]] [rn2_2.y Value[16 x 16 x 32 x *]] }
-0000002744EEA630: {[rn2_3.c1.c.c.y Value[16 x 16 x 32 x *]] }
-0000002744EEA770: {[rn2_2.c2.c.b Gradient[32 x 1]] [rn2_3.c2.c.c Value[16 x 16 x 32 x *]] }
-0000002744EEA8B0: {[rn2_1.c2.c.sc Gradient[32 x 1]] [rn2_1.c_proj.c Value[16 x 16 x 32 x *]] }
-0000002744EEA9F0: {[rn2_3.c1.c.c.y Gradient[16 x 16 x 32 x *]] }
-0000002744EEAA90: {[rn1_3.c2.W Gradient[16 x 144]] [rn2_1.c1.c.c.c Value[16 x 16 x 32 x *]] }
-0000002744EEAB30: {[rn2_2.c1.c.c.y Gradient[16 x 16 x 32 x *]] }
-0000002744EEABD0: {[rn2_1.c2.c.y Gradient[16 x 16 x 32 x *]] [rn2_1.y Value[16 x 16 x 32 x *]] }
-0000002744EEAC70: {[rn2_3.c2.c.sc Gradient[32 x 1]] [rn2_3.p Gradient[16 x 16 x 32 x *]] }
-0000002744EEAD10: {[rn3_1.c1.c.c.y Value[8 x 8 x 64 x *]] }
-0000002744EEADB0: {[rn2_2.c1.c.c.b Gradient[32 x 1]] }
-0000002744EEAE50: {[rn2_1.c1.c.W Gradient[32 x 144]] [rn2_1.c2.c.c Gradient[16 x 16 x 32 x *]] }
-0000002744EEAEF0: {[rn2_3.c2.c.y Gradient[16 x 16 x 32 x *]] [rn2_3.y Value[16 x 16 x 32 x *]] }
-0000002744EEAF90: {[rn2_2.c2.c.sc Gradient[32 x 1]] [rn2_2.p Gradient[16 x 16 x 32 x *]] }
-0000002744EEB030: {[rn3_1.c1.c.c.y Gradient[8 x 8 x 64 x *]] }
-0000002744EEB0D0: {[rn2_1.c2.c.b Gradient[32 x 1]] [rn2_1.c_proj.c Gradient[16 x 16 x 32 x *]] [rn2_1.p Value[16 x 16 x 32 x *]] }
-0000002744EEB170: {[rn2_1.c_proj.y Gradient[16 x 16 x 32 x *]] [rn2_2.c1.c.c.c Gradient[16 x 16 x 32 x *]] [rn2_2.c1.y Value[16 x 16 x 32 x *]] }
-0000002744EEB210: {[rn2_3.c1.c.W Gradient[32 x 288]] [rn2_3.c2.c.c Gradient[16 x 16 x 32 x *]] [rn2_3.p Value[16 x 16 x 32 x *]] }
-0000002744EEB2B0: {[rn3_1.c1.c.W Gradient[64 x 288]] [rn3_1.c2.c.c Gradient[8 x 8 x 64 x *]] }
-0000002744EEB3F0: {[rn2_1.c1.c.c.y Value[16 x 16 x 32 x *]] }
-0000002744EEB490: {[rn2_2.c2.W Gradient[32 x 288]] [rn2_3.c1.c.c.c Value[16 x 16 x 32 x *]] }
-0000002744EEB530: {[rn2_3.c1.c.c.b Gradient[32 x 1]] }
-0000002744EEB5D0: {[rn2_2.c1.c.c.sc Gradient[32 x 1]] [rn2_2.c1.y Gradient[16 x 16 x 32 x *]] [rn2_2.y Gradient[16 x 16 x 32 x *]] [rn3_1.c1.c.c.c Gradient[8 x 8 x 64 x *]] [rn3_1.c1.y Value[8 x 8 x 64 x *]] }
-0000002744EEB670: {[rn2_3.c2.W Gradient[32 x 288]] [rn3_1.c1.c.c.c Value[8 x 8 x 64 x *]] }
-0000002744EEB7B0: {[rn3_1.c2.c.y Gradient[8 x 8 x 64 x *]] [rn3_1.y Value[8 x 8 x 64 x *]] }
-0000002744EEB850: {[rn2_3.c2.c.y Value[16 x 16 x 32 x *]] }
-0000002744EEB8F0: {[rn1_3.c2.c.b Gradient[16 x 1]] [rn2_1.c2.c.c Value[16 x 16 x 32 x *]] }
-0000002744EEB990: {[rn2_2.c1.c.W Gradient[32 x 288]] [rn2_2.c2.c.c Gradient[16 x 16 x 32 x *]] [rn2_2.p Value[16 x 16 x 32 x *]] }
-0000002744EEBC10: {[rn3_1.c2.c.y Value[8 x 8 x 64 x *]] }
-0000002744EEBD50: {[rn3_1.c2.c.b Gradient[64 x 1]] [rn3_1.c_proj.c Gradient[8 x 8 x 64 x *]] [rn3_1.p Value[8 x 8 x 64 x *]] }
-0000002744EEBDF0: {[rn2_1.c2.c.y Value[16 x 16 x 32 x *]] }
-0000002744EEBE90: {[rn2_1.c1.c.c.y Gradient[16 x 16 x 32 x *]] }
-0000002744EEBF30: {[rn2_1.c1.c.c.sc Gradient[32 x 1]] [rn2_1.c1.y Gradient[16 x 16 x 32 x *]] [rn2_1.y Gradient[16 x 16 x 32 x *]] [rn2_3.c1.c.c.c Gradient[16 x 16 x 32 x *]] [rn2_3.c1.y Value[16 x 16 x 32 x *]] }
-0000002744EEBFD0: {[rn3_1.c1.c.c.b Gradient[64 x 1]] }
-0000002744EEC070: {[rn3_1.c2.c.sc Gradient[64 x 1]] [rn3_1.c_proj.c Value[8 x 8 x 64 x *]] }
-0000002744EEC110: {[rn2_1.c_proj.sc Gradient[32 x 1]] [rn2_1.p Gradient[16 x 16 x 32 x *]] }
-0000002744EEC1B0: {[rn3_1.c_proj.y Value[8 x 8 x 64 x *]] }
-0000002744EEC250: {[rn3_1.c2.W Gradient[64 x 576]] [rn3_2.c1.c.c.c Value[8 x 8 x 64 x *]] }
-0000002744EEC2F0: {[rn3_1.c_proj.sc Gradient[64 x 1]] [rn3_1.p Gradient[8 x 8 x 64 x *]] }
-0000002744EEC390: {[rn1_2.c1.c.c.sc Gradient[16 x 1]] [rn1_2.c1.y Gradient[32 x 32 x 16 x *]] [rn1_2.y Gradient[32 x 32 x 16 x *]] [rn2_1.c1.c.c.c Gradient[16 x 16 x 32 x *]] [rn2_1.c1.y Value[16 x 16 x 32 x *]] }
-0000002744EEC430: {[rn2_1.c_proj.y Value[16 x 16 x 32 x *]] }
-0000002744EEC4D0: {[rn2_1.c2.W Gradient[32 x 288]] [rn2_2.c1.c.c.c Value[16 x 16 x 32 x *]] }
-0000002744EEC610: {[rn1_3.c2.c.sc Gradient[16 x 1]] [rn1_3.p Gradient[32 x 32 x 16 x *]] }
-0000002744EEC6B0: {[rn2_2.c1.c.c.y Value[16 x 16 x 32 x *]] }
-0000002744EEC750: {[rn2_1.c_proj.b Gradient[32 x 1]] }
-0000002744EEC890: {[rn2_3.c2.c.b Gradient[32 x 1]] [rn3_1.c2.c.c Value[8 x 8 x 64 x *]] }
-0000002744EEC930: {[rn1_3.c1.c.c.sc Gradient[16 x 1]] [rn1_3.c1.y Gradient[32 x 32 x 16 x *]] [rn1_3.y Gradient[32 x 32 x 16 x *]] }
-0000002744EEC9D0: {[rn2_2.c2.c.c Value[16 x 16 x 32 x *]] }
-0000002744EECA70: {[rn3_2.c1.c.c.b Gradient[64 x 1]] }
-0000002744EECB10: {[rn3_2.c1.c.W Gradient[64 x 576]] [rn3_2.c2.c.c Gradient[8 x 8 x 64 x *]] [rn3_2.p Value[8 x 8 x 64 x *]] }
-0000002744EECC50: {[OutputNodes.t Value[10 x *]] [rn3_3.c1.c.c.sc Gradient[64 x 1]] [rn3_3.c1.y Gradient[8 x 8 x 64 x *]] [rn3_3.y Gradient[8 x 8 x 64 x *]] }
-0000002744EECE30: {[OutputNodes.t Gradient[10 x *]] [rn3_2.c1.c.c.sc Gradient[64 x 1]] [rn3_2.c1.y Gradient[8 x 8 x 64 x *]] [rn3_2.y Gradient[8 x 8 x 64 x *]] }
-0000002744EED010: {[rn2_3.c1.c.c.sc Gradient[32 x 1]] [rn2_3.c1.y Gradient[16 x 16 x 32 x *]] [rn2_3.y Gradient[16 x 16 x 32 x *]] }
-0000002744EED0B0: {[rn3_2.c2.c.y Gradient[8 x 8 x 64 x *]] [rn3_2.y Value[8 x 8 x 64 x *]] }
-0000002744EED290: {[pool Value[1 x 1 x 64 x *]] [rn3_3.c2.c.sc Gradient[64 x 1]] [rn3_3.p Gradient[8 x 8 x 64 x *]] }
-0000002744EED3D0: {[rn3_1.c1.c.c.sc Gradient[64 x 1]] [rn3_1.c1.y Gradient[8 x 8 x 64 x *]] [rn3_1.y Gradient[8 x 8 x 64 x *]] [rn3_3.c1.c.c.c Gradient[8 x 8 x 64 x *]] [rn3_3.c1.y Value[8 x 8 x 64 x *]] }
-0000002744EED650: {[rn3_2.c2.W Gradient[64 x 576]] [rn3_3.c1.c.c.c Value[8 x 8 x 64 x *]] }
-0000002744EED970: {[rn3_3.c1.c.W Gradient[64 x 576]] [rn3_3.c2.c.c Gradient[8 x 8 x 64 x *]] [rn3_3.p Value[8 x 8 x 64 x *]] }
-0000002744EEDBF0: {[rn3_1.c_proj.b Gradient[64 x 1]] }
-0000002744EEDC90: {[OutputNodes.W Gradient[10 x 1 x 1 x 64]] [OutputNodes.z Gradient[10 x *]] }
-0000002744EEDD30: {[OutputNodes.b Gradient[10]] }
-0000002744EEDFB0: {[CE Gradient[1]] }
-0000002744EEE050: {[rn3_3.c2.c.b Gradient[64 x 1]] }
-0000002744EEE0F0: {[rn3_2.c1.c.c.y Gradient[8 x 8 x 64 x *]] }
-0000002744EEE230: {[rn3_3.c1.c.c.y Value[8 x 8 x 64 x *]] }
-0000002744EEE690: {[rn3_2.c2.c.y Value[8 x 8 x 64 x *]] }
-0000002744EEE730: {[pool Gradient[1 x 1 x 64 x *]] [rn3_3.c2.W Gradient[64 x 576]] }
-0000002744EEE910: {[rn3_3.c1.c.c.y Gradient[8 x 8 x 64 x *]] }
-0000002744EEEB90: {[rn3_2.c2.c.c Value[8 x 8 x 64 x *]] }
-0000002744EEEC30: {[rn3_2.c2.c.sc Gradient[64 x 1]] [rn3_2.p Gradient[8 x 8 x 64 x *]] }
-0000002744EEECD0: {[rn3_2.c2.c.b Gradient[64 x 1]] [rn3_3.c2.c.c Value[8 x 8 x 64 x *]] }
-0000002744EEED70: {[rn3_1.c_proj.y Gradient[8 x 8 x 64 x *]] [rn3_2.c1.c.c.c Gradient[8 x 8 x 64 x *]] [rn3_2.c1.y Value[8 x 8 x 64 x *]] }
-0000002744EEEE10: {[rn3_2.c1.c.c.y Value[8 x 8 x 64 x *]] }
-0000002744EEEEB0: {[rn3_3.c2.c.y Value[8 x 8 x 64 x *]] }
-0000002744EEF130: {[rn3_3.c1.c.c.b Gradient[64 x 1]] }
-0000002744EEF1D0: {[rn3_3.c2.c.y Gradient[8 x 8 x 64 x *]] [rn3_3.y Value[8 x 8 x 64 x *]] }
-
-05/03/2016 14:04:12: No PreCompute nodes found, skipping PreCompute step.
-
-05/03/2016 14:04:12: Starting Epoch 1: learning rate per sample = 0.062500  effective momentum = 0.900000  momentum as time constant = 151.9 samples
-
-05/03/2016 14:04:12: Starting minibatch loop.
-05/03/2016 14:04:18: Finished Epoch[ 1 of 1]: [Training] CE = 2.57132506 * 128; Err = 0.92968750 * 128; totalSamplesSeen = 128; learningRatePerSample = 0.0625; epochTime=5.89365s
-05/03/2016 14:04:18: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160503140043.234881\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu/Models/03_ResNet'
-05/03/2016 14:04:19: CNTKCommandTrainEnd: Train
-
-05/03/2016 14:04:19: Action "train" complete.
+	{ rn1_1.c1.c.W : [16 x 144] (gradient)
+	  rn1_1.c2.c.c : [32 x 32 x 16 x *] (gradient)
+	  rn1_1.p : [32 x 32 x 16 x *] }
+	{ rn1_1.c2.W : [16 x 144] (gradient)
+	  rn1_2.c1.c.c.c : [32 x 32 x 16 x *] }
+	{ rn1_1.c2.c.sc : [16 x 1] (gradient)
+	  rn1_1.p : [32 x 32 x 16 x *] (gradient) }
+	{ conv1.c.W : [16 x 27] (gradient)
+	  rn1_1.c1.c.c.c : [32 x 32 x 16 x *] (gradient)
+	  rn1_1.c1.y : [32 x 32 x 16 x *] }
+	{ conv1.c.c.sc : [16 x 1] (gradient)
+	  conv1.y : [32 x 32 x 16 x *] (gradient)
+	  rn1_2.c1.c.c.c : [32 x 32 x 16 x *] (gradient)
+	  rn1_2.c1.y : [32 x 32 x 16 x *] }
+	{ rn1_1.c2.c.y : [32 x 32 x 16 x *] (gradient)
+	  rn1_1.y : [32 x 32 x 16 x *] }
+	{ rn1_2.c1.c.W : [16 x 144] (gradient)
+	  rn1_2.c2.c.c : [32 x 32 x 16 x *] (gradient)
+	  rn1_2.p : [32 x 32 x 16 x *] }
+	{ rn1_2.c2.c.y : [32 x 32 x 16 x *] (gradient)
+	  rn1_2.y : [32 x 32 x 16 x *] }
+	{ conv1.c.c.c : [32 x 32 x 16 x *] (gradient)
+	  conv1.y : [32 x 32 x 16 x *] }
+	{ rn1_1.c2.c.b : [16 x 1] (gradient)
+	  rn1_2.c2.c.c : [32 x 32 x 16 x *] }
+	{ conv1.c.c.b : [16 x 1] (gradient)
+	  rn1_1.c2.c.c : [32 x 32 x 16 x *] }
+	{ rn1_3.c1.c.c.sc : [16 x 1] (gradient)
+	  rn1_3.c1.y : [32 x 32 x 16 x *] (gradient)
+	  rn1_3.y : [32 x 32 x 16 x *] (gradient) }
+	{ rn2_3.c2.c.sc : [32 x 1] (gradient)
+	  rn2_3.p : [16 x 16 x 32 x *] (gradient) }
+	{ rn1_1.c1.c.c.sc : [16 x 1] (gradient)
+	  rn1_1.c1.y : [32 x 32 x 16 x *] (gradient)
+	  rn1_1.y : [32 x 32 x 16 x *] (gradient)
+	  rn1_3.c1.c.c.c : [32 x 32 x 16 x *] (gradient)
+	  rn1_3.c1.y : [32 x 32 x 16 x *] }
+	{ rn1_2.c2.W : [16 x 144] (gradient)
+	  rn1_3.c1.c.c.c : [32 x 32 x 16 x *] }
+	{ rn2_1.c_proj.sc : [32 x 1] (gradient)
+	  rn2_1.p : [16 x 16 x 32 x *] (gradient) }
+	{ rn2_2.c2.c.b : [32 x 1] (gradient)
+	  rn2_3.c2.c.c : [16 x 16 x 32 x *] }
+	{ rn2_1.c_proj.y : [16 x 16 x 32 x *] (gradient)
+	  rn2_2.c1.c.c.c : [16 x 16 x 32 x *] (gradient)
+	  rn2_2.c1.y : [16 x 16 x 32 x *] }
+	{ rn2_3.c1.c.W : [32 x 288] (gradient)
+	  rn2_3.c2.c.c : [16 x 16 x 32 x *] (gradient)
+	  rn2_3.p : [16 x 16 x 32 x *] }
+	{ rn2_2.c1.c.c.sc : [32 x 1] (gradient)
+	  rn2_2.c1.y : [16 x 16 x 32 x *] (gradient)
+	  rn2_2.y : [16 x 16 x 32 x *] (gradient)
+	  rn3_1.c1.c.c.c : [8 x 8 x 64 x *] (gradient)
+	  rn3_1.c1.y : [8 x 8 x 64 x *] }
+	{ rn2_3.c2.c.y : [16 x 16 x 32 x *] (gradient)
+	  rn2_3.y : [16 x 16 x 32 x *] }
+	{ rn2_3.c2.W : [32 x 288] (gradient)
+	  rn3_1.c1.c.c.c : [8 x 8 x 64 x *] }
+	{ rn2_2.c2.c.y : [16 x 16 x 32 x *] (gradient)
+	  rn2_2.y : [16 x 16 x 32 x *] }
+	{ rn2_3.c2.c.b : [32 x 1] (gradient)
+	  rn3_1.c2.c.c : [8 x 8 x 64 x *] }
+	{ rn1_3.c2.c.sc : [16 x 1] (gradient)
+	  rn1_3.p : [32 x 32 x 16 x *] (gradient) }
+	{ rn2_2.c1.c.W : [32 x 288] (gradient)
+	  rn2_2.c2.c.c : [16 x 16 x 32 x *] (gradient)
+	  rn2_2.p : [16 x 16 x 32 x *] }
+	{ rn2_1.c1.c.W : [32 x 144] (gradient)
+	  rn2_1.c2.c.c : [16 x 16 x 32 x *] (gradient) }
+	{ rn2_2.c2.c.sc : [32 x 1] (gradient)
+	  rn2_2.p : [16 x 16 x 32 x *] (gradient) }
+	{ rn2_1.c2.c.sc : [32 x 1] (gradient)
+	  rn2_1.c_proj.c : [16 x 16 x 32 x *] }
+	{ rn1_3.c2.W : [16 x 144] (gradient)
+	  rn2_1.c1.c.c.c : [16 x 16 x 32 x *] }
+	{ rn1_2.c2.c.b : [16 x 1] (gradient)
+	  rn1_3.c2.c.c : [32 x 32 x 16 x *] }
+	{ rn2_2.c2.W : [32 x 288] (gradient)
+	  rn2_3.c1.c.c.c : [16 x 16 x 32 x *] }
+	{ rn1_3.c2.c.y : [32 x 32 x 16 x *] (gradient)
+	  rn1_3.y : [32 x 32 x 16 x *] }
+	{ rn1_3.c2.c.b : [16 x 1] (gradient)
+	  rn2_1.c2.c.c : [16 x 16 x 32 x *] }
+	{ rn2_1.c2.c.b : [32 x 1] (gradient)
+	  rn2_1.c_proj.c : [16 x 16 x 32 x *] (gradient)
+	  rn2_1.p : [16 x 16 x 32 x *] }
+	{ rn2_1.c2.c.y : [16 x 16 x 32 x *] (gradient)
+	  rn2_1.y : [16 x 16 x 32 x *] }
+	{ rn1_2.c2.c.sc : [16 x 1] (gradient)
+	  rn1_2.p : [32 x 32 x 16 x *] (gradient) }
+	{ rn2_1.c2.W : [32 x 288] (gradient)
+	  rn2_2.c1.c.c.c : [16 x 16 x 32 x *] }
+	{ rn1_3.c1.c.W : [16 x 144] (gradient)
+	  rn1_3.c2.c.c : [32 x 32 x 16 x *] (gradient)
+	  rn1_3.p : [32 x 32 x 16 x *] }
+	{ rn1_2.c1.c.c.sc : [16 x 1] (gradient)
+	  rn1_2.c1.y : [32 x 32 x 16 x *] (gradient)
+	  rn1_2.y : [32 x 32 x 16 x *] (gradient)
+	  rn2_1.c1.c.c.c : [16 x 16 x 32 x *] (gradient)
+	  rn2_1.c1.y : [16 x 16 x 32 x *] }
+	{ rn2_1.c1.c.c.sc : [32 x 1] (gradient)
+	  rn2_1.c1.y : [16 x 16 x 32 x *] (gradient)
+	  rn2_1.y : [16 x 16 x 32 x *] (gradient)
+	  rn2_3.c1.c.c.c : [16 x 16 x 32 x *] (gradient)
+	  rn2_3.c1.y : [16 x 16 x 32 x *] }
+	{ OutputNodes.t : [10 x *] (gradient)
+	  rn3_2.c1.c.c.sc : [64 x 1] (gradient)
+	  rn3_2.c1.y : [8 x 8 x 64 x *] (gradient)
+	  rn3_2.y : [8 x 8 x 64 x *] (gradient) }
+	{ rn3_1.c_proj.y : [8 x 8 x 64 x *] (gradient)
+	  rn3_2.c1.c.c.c : [8 x 8 x 64 x *] (gradient)
+	  rn3_2.c1.y : [8 x 8 x 64 x *] }
+	{ rn3_3.c1.c.W : [64 x 576] (gradient)
+	  rn3_3.c2.c.c : [8 x 8 x 64 x *] (gradient)
+	  rn3_3.p : [8 x 8 x 64 x *] }
+	{ rn3_1.c_proj.sc : [64 x 1] (gradient)
+	  rn3_1.p : [8 x 8 x 64 x *] (gradient) }
+	{ rn3_2.c2.W : [64 x 576] (gradient)
+	  rn3_3.c1.c.c.c : [8 x 8 x 64 x *] }
+	{ rn3_2.c2.c.y : [8 x 8 x 64 x *] (gradient)
+	  rn3_2.y : [8 x 8 x 64 x *] }
+	{ rn2_3.c1.c.c.sc : [32 x 1] (gradient)
+	  rn2_3.c1.y : [16 x 16 x 32 x *] (gradient)
+	  rn2_3.y : [16 x 16 x 32 x *] (gradient) }
+	{ rn3_2.c2.c.sc : [64 x 1] (gradient)
+	  rn3_2.p : [8 x 8 x 64 x *] (gradient) }
+	{ rn3_1.c2.W : [64 x 576] (gradient)
+	  rn3_2.c1.c.c.c : [8 x 8 x 64 x *] }
+	{ rn3_1.c2.c.sc : [64 x 1] (gradient)
+	  rn3_1.c_proj.c : [8 x 8 x 64 x *] }
+	{ rn3_3.c2.c.y : [8 x 8 x 64 x *] (gradient)
+	  rn3_3.y : [8 x 8 x 64 x *] }
+	{ pool : [1 x 1 x 64 x *]
+	  rn3_3.c2.c.sc : [64 x 1] (gradient)
+	  rn3_3.p : [8 x 8 x 64 x *] (gradient) }
+	{ rn3_1.c2.c.y : [8 x 8 x 64 x *] (gradient)
+	  rn3_1.y : [8 x 8 x 64 x *] }
+	{ rn3_2.c1.c.W : [64 x 576] (gradient)
+	  rn3_2.c2.c.c : [8 x 8 x 64 x *] (gradient)
+	  rn3_2.p : [8 x 8 x 64 x *] }
+	{ rn3_1.c1.c.c.sc : [64 x 1] (gradient)
+	  rn3_1.c1.y : [8 x 8 x 64 x *] (gradient)
+	  rn3_1.y : [8 x 8 x 64 x *] (gradient)
+	  rn3_3.c1.c.c.c : [8 x 8 x 64 x *] (gradient)
+	  rn3_3.c1.y : [8 x 8 x 64 x *] }
+	{ OutputNodes.W : [10 x 1 x 1 x 64] (gradient)
+	  OutputNodes.z : [10 x *] (gradient) }
+	{ rn3_2.c2.c.b : [64 x 1] (gradient)
+	  rn3_3.c2.c.c : [8 x 8 x 64 x *] }
+	{ rn3_1.c2.c.b : [64 x 1] (gradient)
+	  rn3_1.c_proj.c : [8 x 8 x 64 x *] (gradient)
+	  rn3_1.p : [8 x 8 x 64 x *] }
+	{ rn3_1.c1.c.W : [64 x 288] (gradient)
+	  rn3_1.c2.c.c : [8 x 8 x 64 x *] (gradient) }
+	{ OutputNodes.t : [10 x *]
+	  rn3_3.c1.c.c.sc : [64 x 1] (gradient)
+	  rn3_3.c1.y : [8 x 8 x 64 x *] (gradient)
+	  rn3_3.y : [8 x 8 x 64 x *] (gradient) }
+	{ pool : [1 x 1 x 64 x *] (gradient)
+	  rn3_3.c2.W : [64 x 576] (gradient) }
 
 
-05/03/2016 14:04:19: ##############################################################################
-05/03/2016 14:04:19: #                                                                            #
-05/03/2016 14:04:19: # Action "test"                                                              #
-05/03/2016 14:04:19: #                                                                            #
-05/03/2016 14:04:19: ##############################################################################
+08/16/2016 03:02:44: Training 269914 parameters in 63 out of 63 parameter tensors and 137 nodes with gradient:
+
+08/16/2016 03:02:44: 	Node 'OutputNodes.W' (LearnableParameter operation) : [10 x 1 x 1 x 64]
+08/16/2016 03:02:44: 	Node 'OutputNodes.b' (LearnableParameter operation) : [10]
+08/16/2016 03:02:44: 	Node 'conv1.c.W' (LearnableParameter operation) : [16 x 27]
+08/16/2016 03:02:44: 	Node 'conv1.c.c.b' (LearnableParameter operation) : [16 x 1]
+08/16/2016 03:02:44: 	Node 'conv1.c.c.sc' (LearnableParameter operation) : [16 x 1]
+08/16/2016 03:02:44: 	Node 'rn1_1.c1.c.W' (LearnableParameter operation) : [16 x 144]
+08/16/2016 03:02:44: 	Node 'rn1_1.c1.c.c.b' (LearnableParameter operation) : [16 x 1]
+08/16/2016 03:02:44: 	Node 'rn1_1.c1.c.c.sc' (LearnableParameter operation) : [16 x 1]
+08/16/2016 03:02:44: 	Node 'rn1_1.c2.W' (LearnableParameter operation) : [16 x 144]
+08/16/2016 03:02:44: 	Node 'rn1_1.c2.c.b' (LearnableParameter operation) : [16 x 1]
+08/16/2016 03:02:44: 	Node 'rn1_1.c2.c.sc' (LearnableParameter operation) : [16 x 1]
+08/16/2016 03:02:44: 	Node 'rn1_2.c1.c.W' (LearnableParameter operation) : [16 x 144]
+08/16/2016 03:02:44: 	Node 'rn1_2.c1.c.c.b' (LearnableParameter operation) : [16 x 1]
+08/16/2016 03:02:44: 	Node 'rn1_2.c1.c.c.sc' (LearnableParameter operation) : [16 x 1]
+08/16/2016 03:02:44: 	Node 'rn1_2.c2.W' (LearnableParameter operation) : [16 x 144]
+08/16/2016 03:02:44: 	Node 'rn1_2.c2.c.b' (LearnableParameter operation) : [16 x 1]
+08/16/2016 03:02:44: 	Node 'rn1_2.c2.c.sc' (LearnableParameter operation) : [16 x 1]
+08/16/2016 03:02:44: 	Node 'rn1_3.c1.c.W' (LearnableParameter operation) : [16 x 144]
+08/16/2016 03:02:44: 	Node 'rn1_3.c1.c.c.b' (LearnableParameter operation) : [16 x 1]
+08/16/2016 03:02:44: 	Node 'rn1_3.c1.c.c.sc' (LearnableParameter operation) : [16 x 1]
+08/16/2016 03:02:44: 	Node 'rn1_3.c2.W' (LearnableParameter operation) : [16 x 144]
+08/16/2016 03:02:44: 	Node 'rn1_3.c2.c.b' (LearnableParameter operation) : [16 x 1]
+08/16/2016 03:02:44: 	Node 'rn1_3.c2.c.sc' (LearnableParameter operation) : [16 x 1]
+08/16/2016 03:02:44: 	Node 'rn2_1.c1.c.W' (LearnableParameter operation) : [32 x 144]
+08/16/2016 03:02:44: 	Node 'rn2_1.c1.c.c.b' (LearnableParameter operation) : [32 x 1]
+08/16/2016 03:02:44: 	Node 'rn2_1.c1.c.c.sc' (LearnableParameter operation) : [32 x 1]
+08/16/2016 03:02:44: 	Node 'rn2_1.c2.W' (LearnableParameter operation) : [32 x 288]
+08/16/2016 03:02:44: 	Node 'rn2_1.c2.c.b' (LearnableParameter operation) : [32 x 1]
+08/16/2016 03:02:44: 	Node 'rn2_1.c2.c.sc' (LearnableParameter operation) : [32 x 1]
+08/16/2016 03:02:44: 	Node 'rn2_1.c_proj.b' (LearnableParameter operation) : [32 x 1]
+08/16/2016 03:02:44: 	Node 'rn2_1.c_proj.sc' (LearnableParameter operation) : [32 x 1]
+08/16/2016 03:02:44: 	Node 'rn2_2.c1.c.W' (LearnableParameter operation) : [32 x 288]
+08/16/2016 03:02:44: 	Node 'rn2_2.c1.c.c.b' (LearnableParameter operation) : [32 x 1]
+08/16/2016 03:02:44: 	Node 'rn2_2.c1.c.c.sc' (LearnableParameter operation) : [32 x 1]
+08/16/2016 03:02:44: 	Node 'rn2_2.c2.W' (LearnableParameter operation) : [32 x 288]
+08/16/2016 03:02:44: 	Node 'rn2_2.c2.c.b' (LearnableParameter operation) : [32 x 1]
+08/16/2016 03:02:44: 	Node 'rn2_2.c2.c.sc' (LearnableParameter operation) : [32 x 1]
+08/16/2016 03:02:44: 	Node 'rn2_3.c1.c.W' (LearnableParameter operation) : [32 x 288]
+08/16/2016 03:02:44: 	Node 'rn2_3.c1.c.c.b' (LearnableParameter operation) : [32 x 1]
+08/16/2016 03:02:44: 	Node 'rn2_3.c1.c.c.sc' (LearnableParameter operation) : [32 x 1]
+08/16/2016 03:02:44: 	Node 'rn2_3.c2.W' (LearnableParameter operation) : [32 x 288]
+08/16/2016 03:02:44: 	Node 'rn2_3.c2.c.b' (LearnableParameter operation) : [32 x 1]
+08/16/2016 03:02:44: 	Node 'rn2_3.c2.c.sc' (LearnableParameter operation) : [32 x 1]
+08/16/2016 03:02:44: 	Node 'rn3_1.c1.c.W' (LearnableParameter operation) : [64 x 288]
+08/16/2016 03:02:44: 	Node 'rn3_1.c1.c.c.b' (LearnableParameter operation) : [64 x 1]
+08/16/2016 03:02:44: 	Node 'rn3_1.c1.c.c.sc' (LearnableParameter operation) : [64 x 1]
+08/16/2016 03:02:44: 	Node 'rn3_1.c2.W' (LearnableParameter operation) : [64 x 576]
+08/16/2016 03:02:44: 	Node 'rn3_1.c2.c.b' (LearnableParameter operation) : [64 x 1]
+08/16/2016 03:02:44: 	Node 'rn3_1.c2.c.sc' (LearnableParameter operation) : [64 x 1]
+08/16/2016 03:02:44: 	Node 'rn3_1.c_proj.b' (LearnableParameter operation) : [64 x 1]
+08/16/2016 03:02:44: 	Node 'rn3_1.c_proj.sc' (LearnableParameter operation) : [64 x 1]
+08/16/2016 03:02:44: 	Node 'rn3_2.c1.c.W' (LearnableParameter operation) : [64 x 576]
+08/16/2016 03:02:44: 	Node 'rn3_2.c1.c.c.b' (LearnableParameter operation) : [64 x 1]
+08/16/2016 03:02:44: 	Node 'rn3_2.c1.c.c.sc' (LearnableParameter operation) : [64 x 1]
+08/16/2016 03:02:44: 	Node 'rn3_2.c2.W' (LearnableParameter operation) : [64 x 576]
+08/16/2016 03:02:44: 	Node 'rn3_2.c2.c.b' (LearnableParameter operation) : [64 x 1]
+08/16/2016 03:02:44: 	Node 'rn3_2.c2.c.sc' (LearnableParameter operation) : [64 x 1]
+08/16/2016 03:02:44: 	Node 'rn3_3.c1.c.W' (LearnableParameter operation) : [64 x 576]
+08/16/2016 03:02:44: 	Node 'rn3_3.c1.c.c.b' (LearnableParameter operation) : [64 x 1]
+08/16/2016 03:02:44: 	Node 'rn3_3.c1.c.c.sc' (LearnableParameter operation) : [64 x 1]
+08/16/2016 03:02:44: 	Node 'rn3_3.c2.W' (LearnableParameter operation) : [64 x 576]
+08/16/2016 03:02:44: 	Node 'rn3_3.c2.c.b' (LearnableParameter operation) : [64 x 1]
+08/16/2016 03:02:44: 	Node 'rn3_3.c2.c.sc' (LearnableParameter operation) : [64 x 1]
+
+08/16/2016 03:02:44: No PreCompute nodes found, or all already computed. Skipping pre-computation step.
+
+08/16/2016 03:02:44: Starting Epoch 1: learning rate per sample = 0.062500  effective momentum = 0.900000  momentum as time constant = 151.9 samples
+
+08/16/2016 03:02:44: Starting minibatch loop.
+08/16/2016 03:02:51:  Epoch[ 1 of 1]-Minibatch[-198-   1, 12.50%]: CE = 2.28929901 * 16; Err = 0.93750000 * 16; time = 6.1759s; samplesPerSecond = 2.6
+08/16/2016 03:02:51:  Epoch[ 1 of 1]-Minibatch[-197-   2, 25.00%]: CE = 2.48783112 * 16; Err = 0.87500000 * 16; time = 0.0299s; samplesPerSecond = 534.7
+08/16/2016 03:02:51:  Epoch[ 1 of 1]-Minibatch[-196-   3, 37.50%]: CE = 2.45939255 * 16; Err = 1.00000000 * 16; time = 0.0241s; samplesPerSecond = 665.1
+08/16/2016 03:02:51:  Epoch[ 1 of 1]-Minibatch[-195-   4, 50.00%]: CE = 2.45850372 * 16; Err = 0.93750000 * 16; time = 0.3919s; samplesPerSecond = 40.8
+08/16/2016 03:02:51:  Epoch[ 1 of 1]-Minibatch[-194-   5, 62.50%]: CE = 2.81107521 * 16; Err = 1.00000000 * 16; time = 0.0296s; samplesPerSecond = 541.0
+08/16/2016 03:02:51:  Epoch[ 1 of 1]-Minibatch[-193-   6, 75.00%]: CE = 3.09775257 * 16; Err = 0.93750000 * 16; time = 0.0297s; samplesPerSecond = 538.5
+08/16/2016 03:02:51:  Epoch[ 1 of 1]-Minibatch[-192-   7, 87.50%]: CE = 2.75336170 * 16; Err = 0.87500000 * 16; time = 0.0298s; samplesPerSecond = 536.4
+08/16/2016 03:02:51:  Epoch[ 1 of 1]-Minibatch[-191-   8, 100.00%]: CE = 2.37117195 * 16; Err = 1.00000000 * 16; time = 0.0294s; samplesPerSecond = 543.9
+08/16/2016 03:02:51: Finished Epoch[ 1 of 1]: [Training] CE = 2.59104848 * 128; Err = 0.94531250 * 128; totalSamplesSeen = 128; learningRatePerSample = 0.0625; epochTime=6.74537s
+08/16/2016 03:02:51: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Examples\Image\Miscellaneous\CIFAR-10_03_ResNet@release_gpu/Models/03_ResNet'
+08/16/2016 03:02:52: CNTKCommandTrainEnd: Train
+
+08/16/2016 03:02:52: Action "train" complete.
+
+
+08/16/2016 03:02:52: ##############################################################################
+08/16/2016 03:02:52: #                                                                            #
+08/16/2016 03:02:52: # Action "test"                                                              #
+08/16/2016 03:02:52: #                                                                            #
+08/16/2016 03:02:52: ##############################################################################
 
 
 Post-processing network...
 
 3 roots:
 	CE = CrossEntropyWithSoftmax()
-	Err = ErrorPrediction()
+	Err = ClassificationError()
 	OutputNodes.z = Plus()
 
 Validating network. 184 nodes to process in pass 1.
@@ -1093,7 +1336,7 @@ Validating --> OutputNodes.t = Times (OutputNodes.W, pool) : [10 x 1 x 1 x 64], 
 Validating --> OutputNodes.b = LearnableParameter() :  -> [10]
 Validating --> OutputNodes.z = Plus (OutputNodes.t, OutputNodes.b) : [10 x *1], [10] -> [10 x *1]
 Validating --> CE = CrossEntropyWithSoftmax (labels, OutputNodes.z) : [10 x *1], [10 x *1] -> [1]
-Validating --> Err = ErrorPrediction (labels, OutputNodes.z) : [10 x *1], [10 x *1] -> [1]
+Validating --> Err = ClassificationError (labels, OutputNodes.z) : [10 x *1], [10 x *1] -> [1]
 
 Validating network. 75 nodes to process in pass 2.
 
@@ -1101,91 +1344,91 @@ Validating network. 75 nodes to process in pass 2.
 Validating network, final pass.
 
 
-Using cuDNN convolution engine for geometry: Input: 32 x 32 x 3, Output: 32 x 32 x 16, Kernel: 3 x 3 x 3, Map: 1 x 1 x 16, Stride: 1 x 1 x 3, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+conv1.c.c.c: using cuDNN convolution engine for geometry: Input: 32 x 32 x 3, Output: 32 x 32 x 16, Kernel: 3 x 3 x 3, Map: 1 x 1 x 16, Stride: 1 x 1 x 3, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
 
 Using CNTK batch normalization engine.
 
-Using cuDNN convolution engine for geometry: Input: 32 x 32 x 16, Output: 32 x 32 x 16, Kernel: 3 x 3 x 16, Map: 1 x 1 x 16, Stride: 1 x 1 x 16, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+rn1_1.c1.c.c.c: using cuDNN convolution engine for geometry: Input: 32 x 32 x 16, Output: 32 x 32 x 16, Kernel: 3 x 3 x 16, Map: 1 x 1 x 16, Stride: 1 x 1 x 16, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
 
 Using CNTK batch normalization engine.
 
-Using cuDNN convolution engine for geometry: Input: 32 x 32 x 16, Output: 32 x 32 x 16, Kernel: 3 x 3 x 16, Map: 1 x 1 x 16, Stride: 1 x 1 x 16, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+rn1_1.c2.c.c: using cuDNN convolution engine for geometry: Input: 32 x 32 x 16, Output: 32 x 32 x 16, Kernel: 3 x 3 x 16, Map: 1 x 1 x 16, Stride: 1 x 1 x 16, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
 
 Using CNTK batch normalization engine.
 
-Using cuDNN convolution engine for geometry: Input: 32 x 32 x 16, Output: 32 x 32 x 16, Kernel: 3 x 3 x 16, Map: 1 x 1 x 16, Stride: 1 x 1 x 16, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+rn1_2.c1.c.c.c: using cuDNN convolution engine for geometry: Input: 32 x 32 x 16, Output: 32 x 32 x 16, Kernel: 3 x 3 x 16, Map: 1 x 1 x 16, Stride: 1 x 1 x 16, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
 
 Using CNTK batch normalization engine.
 
-Using cuDNN convolution engine for geometry: Input: 32 x 32 x 16, Output: 32 x 32 x 16, Kernel: 3 x 3 x 16, Map: 1 x 1 x 16, Stride: 1 x 1 x 16, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+rn1_2.c2.c.c: using cuDNN convolution engine for geometry: Input: 32 x 32 x 16, Output: 32 x 32 x 16, Kernel: 3 x 3 x 16, Map: 1 x 1 x 16, Stride: 1 x 1 x 16, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
 
 Using CNTK batch normalization engine.
 
-Using cuDNN convolution engine for geometry: Input: 32 x 32 x 16, Output: 32 x 32 x 16, Kernel: 3 x 3 x 16, Map: 1 x 1 x 16, Stride: 1 x 1 x 16, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+rn1_3.c1.c.c.c: using cuDNN convolution engine for geometry: Input: 32 x 32 x 16, Output: 32 x 32 x 16, Kernel: 3 x 3 x 16, Map: 1 x 1 x 16, Stride: 1 x 1 x 16, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
 
 Using CNTK batch normalization engine.
 
-Using cuDNN convolution engine for geometry: Input: 32 x 32 x 16, Output: 32 x 32 x 16, Kernel: 3 x 3 x 16, Map: 1 x 1 x 16, Stride: 1 x 1 x 16, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+rn1_3.c2.c.c: using cuDNN convolution engine for geometry: Input: 32 x 32 x 16, Output: 32 x 32 x 16, Kernel: 3 x 3 x 16, Map: 1 x 1 x 16, Stride: 1 x 1 x 16, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
 
 Using CNTK batch normalization engine.
 
-Using cuDNN convolution engine for geometry: Input: 32 x 32 x 16, Output: 16 x 16 x 32, Kernel: 3 x 3 x 16, Map: 1 x 1 x 32, Stride: 2 x 2 x 16, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+rn2_1.c1.c.c.c: using cuDNN convolution engine for geometry: Input: 32 x 32 x 16, Output: 16 x 16 x 32, Kernel: 3 x 3 x 16, Map: 1 x 1 x 32, Stride: 2 x 2 x 16, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
 
 Using CNTK batch normalization engine.
 
-Using cuDNN convolution engine for geometry: Input: 16 x 16 x 32, Output: 16 x 16 x 32, Kernel: 3 x 3 x 32, Map: 1 x 1 x 32, Stride: 1 x 1 x 32, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+rn2_1.c2.c.c: using cuDNN convolution engine for geometry: Input: 16 x 16 x 32, Output: 16 x 16 x 32, Kernel: 3 x 3 x 32, Map: 1 x 1 x 32, Stride: 1 x 1 x 32, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
 
 Using CNTK batch normalization engine.
 
-Using cuDNN convolution engine for geometry: Input: 32 x 32 x 16, Output: 16 x 16 x 32, Kernel: 1 x 1 x 16, Map: 1 x 1 x 32, Stride: 2 x 2 x 16, Sharing: (1), AutoPad: (0), LowerPad: 0, UpperPad: 0.
+rn2_1.c_proj.c: using cuDNN convolution engine for geometry: Input: 32 x 32 x 16, Output: 16 x 16 x 32, Kernel: 1 x 1 x 16, Map: 1 x 1 x 32, Stride: 2 x 2 x 16, Sharing: (1), AutoPad: (0), LowerPad: 0, UpperPad: 0.
 
 Using CNTK batch normalization engine.
 
-Using cuDNN convolution engine for geometry: Input: 16 x 16 x 32, Output: 16 x 16 x 32, Kernel: 3 x 3 x 32, Map: 1 x 1 x 32, Stride: 1 x 1 x 32, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+rn2_2.c1.c.c.c: using cuDNN convolution engine for geometry: Input: 16 x 16 x 32, Output: 16 x 16 x 32, Kernel: 3 x 3 x 32, Map: 1 x 1 x 32, Stride: 1 x 1 x 32, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
 
 Using CNTK batch normalization engine.
 
-Using cuDNN convolution engine for geometry: Input: 16 x 16 x 32, Output: 16 x 16 x 32, Kernel: 3 x 3 x 32, Map: 1 x 1 x 32, Stride: 1 x 1 x 32, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+rn2_2.c2.c.c: using cuDNN convolution engine for geometry: Input: 16 x 16 x 32, Output: 16 x 16 x 32, Kernel: 3 x 3 x 32, Map: 1 x 1 x 32, Stride: 1 x 1 x 32, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
 
 Using CNTK batch normalization engine.
 
-Using cuDNN convolution engine for geometry: Input: 16 x 16 x 32, Output: 16 x 16 x 32, Kernel: 3 x 3 x 32, Map: 1 x 1 x 32, Stride: 1 x 1 x 32, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+rn2_3.c1.c.c.c: using cuDNN convolution engine for geometry: Input: 16 x 16 x 32, Output: 16 x 16 x 32, Kernel: 3 x 3 x 32, Map: 1 x 1 x 32, Stride: 1 x 1 x 32, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
 
 Using CNTK batch normalization engine.
 
-Using cuDNN convolution engine for geometry: Input: 16 x 16 x 32, Output: 16 x 16 x 32, Kernel: 3 x 3 x 32, Map: 1 x 1 x 32, Stride: 1 x 1 x 32, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+rn2_3.c2.c.c: using cuDNN convolution engine for geometry: Input: 16 x 16 x 32, Output: 16 x 16 x 32, Kernel: 3 x 3 x 32, Map: 1 x 1 x 32, Stride: 1 x 1 x 32, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
 
 Using CNTK batch normalization engine.
 
-Using cuDNN convolution engine for geometry: Input: 16 x 16 x 32, Output: 8 x 8 x 64, Kernel: 3 x 3 x 32, Map: 1 x 1 x 64, Stride: 2 x 2 x 32, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+rn3_1.c1.c.c.c: using cuDNN convolution engine for geometry: Input: 16 x 16 x 32, Output: 8 x 8 x 64, Kernel: 3 x 3 x 32, Map: 1 x 1 x 64, Stride: 2 x 2 x 32, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
 
 Using CNTK batch normalization engine.
 
-Using cuDNN convolution engine for geometry: Input: 8 x 8 x 64, Output: 8 x 8 x 64, Kernel: 3 x 3 x 64, Map: 1 x 1 x 64, Stride: 1 x 1 x 64, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+rn3_1.c2.c.c: using cuDNN convolution engine for geometry: Input: 8 x 8 x 64, Output: 8 x 8 x 64, Kernel: 3 x 3 x 64, Map: 1 x 1 x 64, Stride: 1 x 1 x 64, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
 
 Using CNTK batch normalization engine.
 
-Using cuDNN convolution engine for geometry: Input: 16 x 16 x 32, Output: 8 x 8 x 64, Kernel: 1 x 1 x 32, Map: 1 x 1 x 64, Stride: 2 x 2 x 32, Sharing: (1), AutoPad: (0), LowerPad: 0, UpperPad: 0.
+rn3_1.c_proj.c: using cuDNN convolution engine for geometry: Input: 16 x 16 x 32, Output: 8 x 8 x 64, Kernel: 1 x 1 x 32, Map: 1 x 1 x 64, Stride: 2 x 2 x 32, Sharing: (1), AutoPad: (0), LowerPad: 0, UpperPad: 0.
 
 Using CNTK batch normalization engine.
 
-Using cuDNN convolution engine for geometry: Input: 8 x 8 x 64, Output: 8 x 8 x 64, Kernel: 3 x 3 x 64, Map: 1 x 1 x 64, Stride: 1 x 1 x 64, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+rn3_2.c1.c.c.c: using cuDNN convolution engine for geometry: Input: 8 x 8 x 64, Output: 8 x 8 x 64, Kernel: 3 x 3 x 64, Map: 1 x 1 x 64, Stride: 1 x 1 x 64, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
 
 Using CNTK batch normalization engine.
 
-Using cuDNN convolution engine for geometry: Input: 8 x 8 x 64, Output: 8 x 8 x 64, Kernel: 3 x 3 x 64, Map: 1 x 1 x 64, Stride: 1 x 1 x 64, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+rn3_2.c2.c.c: using cuDNN convolution engine for geometry: Input: 8 x 8 x 64, Output: 8 x 8 x 64, Kernel: 3 x 3 x 64, Map: 1 x 1 x 64, Stride: 1 x 1 x 64, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
 
 Using CNTK batch normalization engine.
 
-Using cuDNN convolution engine for geometry: Input: 8 x 8 x 64, Output: 8 x 8 x 64, Kernel: 3 x 3 x 64, Map: 1 x 1 x 64, Stride: 1 x 1 x 64, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+rn3_3.c1.c.c.c: using cuDNN convolution engine for geometry: Input: 8 x 8 x 64, Output: 8 x 8 x 64, Kernel: 3 x 3 x 64, Map: 1 x 1 x 64, Stride: 1 x 1 x 64, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
 
 Using CNTK batch normalization engine.
 
-Using cuDNN convolution engine for geometry: Input: 8 x 8 x 64, Output: 8 x 8 x 64, Kernel: 3 x 3 x 64, Map: 1 x 1 x 64, Stride: 1 x 1 x 64, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+rn3_3.c2.c.c: using cuDNN convolution engine for geometry: Input: 8 x 8 x 64, Output: 8 x 8 x 64, Kernel: 3 x 3 x 64, Map: 1 x 1 x 64, Stride: 1 x 1 x 64, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
 
 Using CNTK batch normalization engine.
 
-Using cuDNN convolution engine for geometry: Input: 8 x 8 x 64, Output: 1 x 1 x 64, Kernel: 8 x 8 x 1, Map: 1, Stride: 1 x 1 x 1, Sharing: (1), AutoPad: (0), LowerPad: 0, UpperPad: 0.
+pool: using cuDNN convolution engine for geometry: Input: 8 x 8 x 64, Output: 1 x 1 x 64, Kernel: 8 x 8 x 1, Map: 1, Stride: 1 x 1 x 1, Sharing: (1), AutoPad: (0), LowerPad: 0, UpperPad: 0.
 
 
 109 out of 184 nodes do not share the minibatch layout with the input data.
@@ -1197,196 +1440,18 @@ evalNodeNames are not specified, using all the default evalnodes and training cr
 
 Allocating matrices for forward and/or backward propagation.
 
-Memory Sharing Structure:
+Memory Sharing: Out of 184 matrices, 0 are shared as 0, and 184 are not shared.
 
-0000000000000000: {[CE Gradient[1]] [Err Gradient[1]] [OutputNodes.W Gradient[10 x 1 x 1 x 64]] [OutputNodes.b Gradient[10]] [OutputNodes.t Gradient[10 x *1]] [OutputNodes.z Gradient[10 x *1]] [conv1.c.W Gradient[16 x 27]] [conv1.c.c.b Gradient[16 x 1]] [conv1.c.c.c Gradient[32 x 32 x 16 x *1]] [conv1.c.c.isd Gradient[16 x 1]] [conv1.c.c.m Gradient[16 x 1]] [conv1.c.c.sc Gradient[16 x 1]] [conv1.c.c.y Gradient[32 x 32 x 16 x *1]] [conv1.y Gradient[32 x 32 x 16 x *1]] [features Gradient[32 x 32 x 3 x *1]] [labels Gradient[10 x *1]] [pool Gradient[1 x 1 x 64 x *1]] [rn1_1.c1.c.W Gradient[16 x 144]] [rn1_1.c1.c.c.b Gradient[16 x 1]] [rn1_1.c1.c.c.c Gradient[32 x 32 x 16 x *1]] [rn1_1.c1.c.c.isd Gradient[16 x 1]] [rn1_1.c1.c.c.m Gradient[16 x 1]] [rn1_1.c1.c.c.sc Gradient[16 x 1]] [rn1_1.c1.c.c.y Gradient[32 x 32 x 16 x *1]] [rn1_1.c1.y Gradient[32 x 32 x 16 x *1]] [rn1_1.c2.W Gradient[16 x 144]] [rn1_1.c2.c.b Gradient[16 x 1]] [rn1_1.c2.c.c Gradient[32 x 32 x 16 x *1]] [rn1_1.c2.c.isd Gradient[16 x 1]] [rn1_1.c2.c.m Gradient[16 x 1]] [rn1_1.c2.c.sc Gradient[16 x 1]] [rn1_1.c2.c.y Gradient[32 x 32 x 16 x *1]] [rn1_1.p Gradient[32 x 32 x 16 x *1]] [rn1_1.y Gradient[32 x 32 x 16 x *1]] [rn1_2.c1.c.W Gradient[16 x 144]] [rn1_2.c1.c.c.b Gradient[16 x 1]] [rn1_2.c1.c.c.c Gradient[32 x 32 x 16 x *1]] [rn1_2.c1.c.c.isd Gradient[16 x 1]] [rn1_2.c1.c.c.m Gradient[16 x 1]] [rn1_2.c1.c.c.sc Gradient[16 x 1]] [rn1_2.c1.c.c.y Gradient[32 x 32 x 16 x *1]] [rn1_2.c1.y Gradient[32 x 32 x 16 x *1]] [rn1_2.c2.W Gradient[16 x 144]] [rn1_2.c2.c.b Gradient[16 x 1]] [rn1_2.c2.c.c Gradient[32 x 32 x 16 x *1]] [rn1_2.c2.c.isd Gradient[16 x 1]] [rn1_2.c2.c.m Gradient[16 x 1]] [rn1_2.c2.c.sc Gradient[16 x 1]] [rn1_2.c2.c.y Gradient[32 x 32 x 16 x *1]] [rn1_2.p Gradient[32 x 32 x 16 x *1]] [rn1_2.y Gradient[32 x 32 x 16 x *1]] [rn1_3.c1.c.W Gradient[16 x 144]] [rn1_3.c1.c.c.b Gradient[16 x 1]] [rn1_3.c1.c.c.c Gradient[32 x 32 x 16 x *1]] [rn1_3.c1.c.c.isd Gradient[16 x 1]] [rn1_3.c1.c.c.m Gradient[16 x 1]] [rn1_3.c1.c.c.sc Gradient[16 x 1]] [rn1_3.c1.c.c.y Gradient[32 x 32 x 16 x *1]] [rn1_3.c1.y Gradient[32 x 32 x 16 x *1]] [rn1_3.c2.W Gradient[16 x 144]] [rn1_3.c2.c.b Gradient[16 x 1]] [rn1_3.c2.c.c Gradient[32 x 32 x 16 x *1]] [rn1_3.c2.c.isd Gradient[16 x 1]] [rn1_3.c2.c.m Gradient[16 x 1]] [rn1_3.c2.c.sc Gradient[16 x 1]] [rn1_3.c2.c.y Gradient[32 x 32 x 16 x *1]] [rn1_3.p Gradient[32 x 32 x 16 x *1]] [rn1_3.y Gradient[32 x 32 x 16 x *1]] [rn2_1.c1.c.W Gradient[32 x 144]] [rn2_1.c1.c.c.b Gradient[32 x 1]] [rn2_1.c1.c.c.c Gradient[16 x 16 x 32 x *1]] [rn2_1.c1.c.c.isd Gradient[32 x 1]] [rn2_1.c1.c.c.m Gradient[32 x 1]] [rn2_1.c1.c.c.sc Gradient[32 x 1]] [rn2_1.c1.c.c.y Gradient[16 x 16 x 32 x *1]] [rn2_1.c1.y Gradient[16 x 16 x 32 x *1]] [rn2_1.c2.W Gradient[32 x 288]] [rn2_1.c2.c.b Gradient[32 x 1]] [rn2_1.c2.c.c Gradient[16 x 16 x 32 x *1]] [rn2_1.c2.c.isd Gradient[32 x 1]] [rn2_1.c2.c.m Gradient[32 x 1]] [rn2_1.c2.c.sc Gradient[32 x 1]] [rn2_1.c2.c.y Gradient[16 x 16 x 32 x *1]] [rn2_1.c_proj.b Gradient[32 x 1]] [rn2_1.c_proj.c Gradient[16 x 16 x 32 x *1]] [rn2_1.c_proj.isd Gradient[32 x 1]] [rn2_1.c_proj.m Gradient[32 x 1]] [rn2_1.c_proj.sc Gradient[32 x 1]] [rn2_1.c_proj.y Gradient[16 x 16 x 32 x *1]] [rn2_1.p Gradient[16 x 16 x 32 x *1]] [rn2_1.y Gradient[16 x 16 x 32 x *1]] [rn2_1_Wproj Gradient[32 x 16]] [rn2_2.c1.c.W Gradient[32 x 288]] [rn2_2.c1.c.c.b Gradient[32 x 1]] [rn2_2.c1.c.c.c Gradient[16 x 16 x 32 x *1]] [rn2_2.c1.c.c.isd Gradient[32 x 1]] [rn2_2.c1.c.c.m Gradient[32 x 1]] [rn2_2.c1.c.c.sc Gradient[32 x 1]] [rn2_2.c1.c.c.y Gradient[16 x 16 x 32 x *1]] [rn2_2.c1.y Gradient[16 x 16 x 32 x *1]] [rn2_2.c2.W Gradient[32 x 288]] [rn2_2.c2.c.b Gradient[32 x 1]] [rn2_2.c2.c.c Gradient[16 x 16 x 32 x *1]] [rn2_2.c2.c.isd Gradient[32 x 1]] [rn2_2.c2.c.m Gradient[32 x 1]] [rn2_2.c2.c.sc Gradient[32 x 1]] [rn2_2.c2.c.y Gradient[16 x 16 x 32 x *1]] [rn2_2.p Gradient[16 x 16 x 32 x *1]] [rn2_2.y Gradient[16 x 16 x 32 x *1]] [rn2_3.c1.c.W Gradient[32 x 288]] [rn2_3.c1.c.c.b Gradient[32 x 1]] [rn2_3.c1.c.c.c Gradient[16 x 16 x 32 x *1]] [rn2_3.c1.c.c.isd Gradient[32 x 1]] [rn2_3.c1.c.c.m Gradient[32 x 1]] [rn2_3.c1.c.c.sc Gradient[32 x 1]] [rn2_3.c1.c.c.y Gradient[16 x 16 x 32 x *1]] [rn2_3.c1.y Gradient[16 x 16 x 32 x *1]] [rn2_3.c2.W Gradient[32 x 288]] [rn2_3.c2.c.b Gradient[32 x 1]] [rn2_3.c2.c.c Gradient[16 x 16 x 32 x *1]] [rn2_3.c2.c.isd Gradient[32 x 1]] [rn2_3.c2.c.m Gradient[32 x 1]] [rn2_3.c2.c.sc Gradient[32 x 1]] [rn2_3.c2.c.y Gradient[16 x 16 x 32 x *1]] [rn2_3.p Gradient[16 x 16 x 32 x *1]] [rn2_3.y Gradient[16 x 16 x 32 x *1]] [rn3_1.c1.c.W Gradient[64 x 288]] [rn3_1.c1.c.c.b Gradient[64 x 1]] [rn3_1.c1.c.c.c Gradient[8 x 8 x 64 x *1]] [rn3_1.c1.c.c.isd Gradient[64 x 1]] [rn3_1.c1.c.c.m Gradient[64 x 1]] [rn3_1.c1.c.c.sc Gradient[64 x 1]] [rn3_1.c1.c.c.y Gradient[8 x 8 x 64 x *1]] [rn3_1.c1.y Gradient[8 x 8 x 64 x *1]] [rn3_1.c2.W Gradient[64 x 576]] [rn3_1.c2.c.b Gradient[64 x 1]] [rn3_1.c2.c.c Gradient[8 x 8 x 64 x *1]] [rn3_1.c2.c.isd Gradient[64 x 1]] [rn3_1.c2.c.m Gradient[64 x 1]] [rn3_1.c2.c.sc Gradient[64 x 1]] [rn3_1.c2.c.y Gradient[8 x 8 x 64 x *1]] [rn3_1.c_proj.b Gradient[64 x 1]] [rn3_1.c_proj.c Gradient[8 x 8 x 64 x *1]] [rn3_1.c_proj.isd Gradient[64 x 1]] [rn3_1.c_proj.m Gradient[64 x 1]] [rn3_1.c_proj.sc Gradient[64 x 1]] [rn3_1.c_proj.y Gradient[8 x 8 x 64 x *1]] [rn3_1.p Gradient[8 x 8 x 64 x *1]] [rn3_1.y Gradient[8 x 8 x 64 x *1]] [rn3_1_Wproj Gradient[64 x 32]] [rn3_2.c1.c.W Gradient[64 x 576]] [rn3_2.c1.c.c.b Gradient[64 x 1]] [rn3_2.c1.c.c.c Gradient[8 x 8 x 64 x *1]] [rn3_2.c1.c.c.isd Gradient[64 x 1]] [rn3_2.c1.c.c.m Gradient[64 x 1]] [rn3_2.c1.c.c.sc Gradient[64 x 1]] [rn3_2.c1.c.c.y Gradient[8 x 8 x 64 x *1]] [rn3_2.c1.y Gradient[8 x 8 x 64 x *1]] [rn3_2.c2.W Gradient[64 x 576]] [rn3_2.c2.c.b Gradient[64 x 1]] [rn3_2.c2.c.c Gradient[8 x 8 x 64 x *1]] [rn3_2.c2.c.isd Gradient[64 x 1]] [rn3_2.c2.c.m Gradient[64 x 1]] [rn3_2.c2.c.sc Gradient[64 x 1]] [rn3_2.c2.c.y Gradient[8 x 8 x 64 x *1]] [rn3_2.p Gradient[8 x 8 x 64 x *1]] [rn3_2.y Gradient[8 x 8 x 64 x *1]] [rn3_3.c1.c.W Gradient[64 x 576]] [rn3_3.c1.c.c.b Gradient[64 x 1]] [rn3_3.c1.c.c.c Gradient[8 x 8 x 64 x *1]] [rn3_3.c1.c.c.isd Gradient[64 x 1]] [rn3_3.c1.c.c.m Gradient[64 x 1]] [rn3_3.c1.c.c.sc Gradient[64 x 1]] [rn3_3.c1.c.c.y Gradient[8 x 8 x 64 x *1]] [rn3_3.c1.y Gradient[8 x 8 x 64 x *1]] [rn3_3.c2.W Gradient[64 x 576]] [rn3_3.c2.c.b Gradient[64 x 1]] [rn3_3.c2.c.c Gradient[8 x 8 x 64 x *1]] [rn3_3.c2.c.isd Gradient[64 x 1]] [rn3_3.c2.c.m Gradient[64 x 1]] [rn3_3.c2.c.sc Gradient[64 x 1]] [rn3_3.c2.c.y Gradient[8 x 8 x 64 x *1]] [rn3_3.p Gradient[8 x 8 x 64 x *1]] [rn3_3.y Gradient[8 x 8 x 64 x *1]] }
-000000272788EE70: {[rn3_3.y Value[8 x 8 x 64 x *1]] }
-000000272788F230: {[rn3_3.c2.c.c Value[8 x 8 x 64 x *1]] }
-000000272788F2D0: {[OutputNodes.t Value[10 x *1]] }
-000000272788F410: {[pool Value[1 x 1 x 64 x *1]] }
-000000272788F550: {[rn3_3.c2.c.y Value[8 x 8 x 64 x *1]] }
-000000272788F910: {[rn3_3.c1.y Value[8 x 8 x 64 x *1]] }
-000000272788FA50: {[rn3_2.c2.c.y Value[8 x 8 x 64 x *1]] }
-000000272788FB90: {[rn3_2.p Value[8 x 8 x 64 x *1]] }
-000000272788FC30: {[rn3_3.c1.c.c.y Value[8 x 8 x 64 x *1]] }
-000000272788FD70: {[rn3_3.p Value[8 x 8 x 64 x *1]] }
-000000272788FE10: {[rn3_3.c1.c.c.c Value[8 x 8 x 64 x *1]] }
-000000272788FFF0: {[rn3_2.c1.y Value[8 x 8 x 64 x *1]] }
-0000002727890090: {[OutputNodes.z Value[10 x *1]] }
-0000002727890590: {[rn3_2.y Value[8 x 8 x 64 x *1]] }
-0000002727890BD0: {[rn3_2.c2.c.c Value[8 x 8 x 64 x *1]] }
-0000002744394E30: {[rn2_2.y Value[16 x 16 x 32 x *1]] }
-0000002744394ED0: {[rn2_3.c1.c.c.c Value[16 x 16 x 32 x *1]] }
-0000002744395010: {[rn2_3.c1.c.c.y Value[16 x 16 x 32 x *1]] }
-00000027443950B0: {[rn2_3.c1.y Value[16 x 16 x 32 x *1]] }
-00000027443951F0: {[rn2_3.c2.c.c Value[16 x 16 x 32 x *1]] }
-0000002744395330: {[rn2_2.c1.c.c.y Value[16 x 16 x 32 x *1]] }
-00000027443953D0: {[rn2_3.c2.c.y Value[16 x 16 x 32 x *1]] }
-0000002744395470: {[rn2_3.p Value[16 x 16 x 32 x *1]] }
-00000027443955B0: {[rn3_1.c1.y Value[8 x 8 x 64 x *1]] }
-00000027443956F0: {[rn3_1.c2.c.y Value[8 x 8 x 64 x *1]] }
-0000002744395AB0: {[rn3_1.p Value[8 x 8 x 64 x *1]] }
-0000002744395B50: {[rn3_1.c1.c.c.y Value[8 x 8 x 64 x *1]] }
-0000002744395BF0: {[rn2_2.c2.c.c Value[16 x 16 x 32 x *1]] }
-0000002744396050: {[rn3_1.c_proj.c Value[8 x 8 x 64 x *1]] }
-0000002744396190: {[rn3_1.y Value[8 x 8 x 64 x *1]] }
-0000002744396370: {[rn3_1.c_proj.y Value[8 x 8 x 64 x *1]] }
-00000027443965F0: {[rn3_2.c1.c.c.c Value[8 x 8 x 64 x *1]] }
-0000002744396870: {[rn2_2.c1.y Value[16 x 16 x 32 x *1]] }
-0000002744396910: {[rn3_1.c1.c.c.c Value[8 x 8 x 64 x *1]] }
-00000027443969B0: {[rn2_2.c1.c.c.c Value[16 x 16 x 32 x *1]] }
-0000002744396CD0: {[rn2_3.y Value[16 x 16 x 32 x *1]] }
-0000002744396D70: {[rn2_2.p Value[16 x 16 x 32 x *1]] }
-0000002744396EB0: {[rn3_1.c2.c.c Value[8 x 8 x 64 x *1]] }
-0000002744397090: {[rn3_2.c1.c.c.y Value[8 x 8 x 64 x *1]] }
-00000027443974F0: {[rn2_2.c2.c.y Value[16 x 16 x 32 x *1]] }
-0000002744EEA450: {[rn1_2.c1.c.c.y Value[32 x 32 x 16 x *1]] }
-0000002744EEA4F0: {[rn1_1.c1.y Value[32 x 32 x 16 x *1]] }
-0000002744EEA590: {[rn1_1.y Value[32 x 32 x 16 x *1]] }
-0000002744EEA6D0: {[conv1.y Value[32 x 32 x 16 x *1]] }
-0000002744EEA810: {[rn1_2.c1.y Value[32 x 32 x 16 x *1]] }
-0000002744EEA8B0: {[rn1_3.c2.c.y Value[32 x 32 x 16 x *1]] }
-0000002744EEA950: {[rn1_1.c1.c.c.y Value[32 x 32 x 16 x *1]] }
-0000002744EEAA90: {[rn2_1.c1.y Value[16 x 16 x 32 x *1]] }
-0000002744EEAC70: {[rn2_1.c1.c.c.c Value[16 x 16 x 32 x *1]] }
-0000002744EEADB0: {[rn2_1.c2.c.c Value[16 x 16 x 32 x *1]] }
-0000002744EEAEF0: {[rn1_3.c2.c.c Value[32 x 32 x 16 x *1]] }
-0000002744EEAF90: {[rn2_1.c2.c.y Value[16 x 16 x 32 x *1]] }
-0000002744EEB0D0: {[rn1_2.p Value[32 x 32 x 16 x *1]] }
-0000002744EEB210: {[Err Value[1]] }
-0000002744EEB2B0: {[rn1_1.p Value[32 x 32 x 16 x *1]] }
-0000002744EEB530: {[conv1.c.c.y Value[32 x 32 x 16 x *1]] }
-0000002744EEB710: {[rn1_3.c1.y Value[32 x 32 x 16 x *1]] }
-0000002744EEB850: {[rn1_1.c1.c.c.c Value[32 x 32 x 16 x *1]] }
-0000002744EEB8F0: {[rn1_3.p Value[32 x 32 x 16 x *1]] }
-0000002744EEBC10: {[rn1_2.y Value[32 x 32 x 16 x *1]] }
-0000002744EEBCB0: {[rn2_1.c_proj.c Value[16 x 16 x 32 x *1]] }
-0000002744EEBE90: {[rn2_1.c_proj.y Value[16 x 16 x 32 x *1]] }
-0000002744EEBF30: {[CE Value[1]] }
-0000002744EEC070: {[rn1_2.c2.c.c Value[32 x 32 x 16 x *1]] }
-0000002744EEC110: {[rn1_2.c2.c.y Value[32 x 32 x 16 x *1]] }
-0000002744EEC1B0: {[rn1_3.c1.c.c.y Value[32 x 32 x 16 x *1]] }
-0000002744EEC390: {[rn1_3.y Value[32 x 32 x 16 x *1]] }
-0000002744EEC4D0: {[rn2_1.c1.c.c.y Value[16 x 16 x 32 x *1]] }
-0000002744EEC570: {[rn2_1.p Value[16 x 16 x 32 x *1]] }
-0000002744EEC610: {[rn1_1.c2.c.y Value[32 x 32 x 16 x *1]] }
-0000002744EEC6B0: {[rn1_2.c1.c.c.c Value[32 x 32 x 16 x *1]] }
-0000002744EEC890: {[conv1.c.c.c Value[32 x 32 x 16 x *1]] }
-0000002744EEC930: {[rn1_1.c2.c.c Value[32 x 32 x 16 x *1]] }
-0000002744EEC9D0: {[rn1_3.c1.c.c.c Value[32 x 32 x 16 x *1]] }
-0000002744EECB10: {[rn3_2.c1.c.c.sc Value[64 x 1]] }
-0000002744EECC50: {[rn3_2.c1.c.W Value[64 x 576]] }
-0000002744EECED0: {[rn2_3.c2.W Value[32 x 288]] }
-0000002744EED150: {[rn3_1.c_proj.b Value[64 x 1]] }
-0000002744EED470: {[rn2_3.c2.c.m Value[32 x 1]] }
-0000002744EED790: {[rn3_1.c_proj.isd Value[64 x 1]] }
-0000002744EED970: {[rn3_1.c2.c.b Value[64 x 1]] }
-0000002744EEDAB0: {[rn3_1.c1.c.c.isd Value[64 x 1]] }
-0000002744EEDB50: {[rn3_1.c1.c.c.b Value[64 x 1]] }
-0000002744EEDD30: {[rn3_2.c2.c.b Value[64 x 1]] }
-0000002744EEDDD0: {[rn3_1.c2.c.sc Value[64 x 1]] }
-0000002744EEE230: {[rn3_1.c2.c.m Value[64 x 1]] }
-0000002744EEE410: {[rn3_1.c_proj.m Value[64 x 1]] }
-0000002744EEE4B0: {[rn3_1_Wproj Value[64 x 32]] }
-0000002744EEE5F0: {[rn3_2.c1.c.c.b Value[64 x 1]] }
-0000002744EEE690: {[rn2_3.c2.c.sc Value[32 x 1]] }
-0000002744EEE910: {[rn3_1.c_proj.sc Value[64 x 1]] }
-0000002744EEEB90: {[rn3_1.c2.c.isd Value[64 x 1]] }
-0000002744EEEC30: {[rn3_1.c2.W Value[64 x 576]] }
-0000002744EEEF50: {[rn3_2.c1.c.c.isd Value[64 x 1]] }
-0000002744EEEFF0: {[rn3_1.c1.c.c.m Value[64 x 1]] }
-0000002744EEF090: {[rn3_1.c1.c.c.sc Value[64 x 1]] }
-0000002744EEF130: {[rn3_2.c1.c.c.m Value[64 x 1]] }
-0000002744EEF1D0: {[rn3_1.c1.c.W Value[64 x 288]] }
-0000002744EEF270: {[rn3_3.c1.c.W Value[64 x 576]] }
-0000002744EEFA90: {[rn3_3.c2.c.isd Value[64 x 1]] }
-0000002744EEFC70: {[rn3_3.c2.c.m Value[64 x 1]] }
-0000002744EEFD10: {[rn3_3.c2.c.sc Value[64 x 1]] }
-0000002744EF0030: {[rn3_3.c1.c.c.m Value[64 x 1]] }
-0000002744EF0170: {[rn3_3.c2.W Value[64 x 576]] }
-0000002744EF0670: {[rn3_3.c1.c.c.sc Value[64 x 1]] }
-0000002744EF0850: {[rn3_2.c2.c.m Value[64 x 1]] }
-0000002744EF0B70: {[rn3_3.c1.c.c.b Value[64 x 1]] }
-0000002744EF1070: {[rn3_2.c2.c.isd Value[64 x 1]] }
-0000002744EF12F0: {[rn3_2.c2.c.sc Value[64 x 1]] }
-0000002744EF1390: {[rn3_3.c2.c.b Value[64 x 1]] }
-0000002744EF1930: {[rn3_2.c2.W Value[64 x 576]] }
-0000002744EF19D0: {[rn3_3.c1.c.c.isd Value[64 x 1]] }
-0000002744EF20B0: {[rn2_1.y Value[16 x 16 x 32 x *1]] }
-00000027FFB2D090: {[rn1_2.c2.c.sc Value[16 x 1]] }
-00000027FFB2D270: {[rn1_2.c2.c.isd Value[16 x 1]] }
-00000027FFB2D450: {[rn2_1.c1.c.c.m Value[32 x 1]] }
-00000027FFB2D4F0: {[rn1_3.c1.c.c.m Value[16 x 1]] }
-00000027FFB2D770: {[rn2_1.c1.c.c.b Value[32 x 1]] }
-00000027FFB2D810: {[rn2_1.c1.c.W Value[32 x 144]] }
-00000027FFB2D950: {[rn2_1.c2.c.b Value[32 x 1]] }
-00000027FFB2D9F0: {[rn2_1.c2.c.isd Value[32 x 1]] }
-00000027FFB2DC70: {[rn2_1.c2.c.m Value[32 x 1]] }
-00000027FFB2DE50: {[rn1_2.c2.c.m Value[16 x 1]] }
-00000027FFB2E0D0: {[rn1_3.c1.c.W Value[16 x 144]] }
-00000027FFB2E170: {[rn1_3.c2.c.sc Value[16 x 1]] }
-00000027FFB2E2B0: {[rn1_3.c2.W Value[16 x 144]] }
-00000027FFB2E350: {[rn1_2.c1.c.W Value[16 x 144]] }
-00000027FFB2E670: {[rn1_3.c2.c.isd Value[16 x 1]] }
-00000027FFB2E850: {[rn1_3.c1.c.c.sc Value[16 x 1]] }
-00000027FFB2E8F0: {[rn1_3.c2.c.b Value[16 x 1]] }
-00000027FFB2EC10: {[rn1_2.c2.c.b Value[16 x 1]] }
-00000027FFB2ECB0: {[rn2_1.c1.c.c.isd Value[32 x 1]] }
-00000027FFB2EDF0: {[rn2_1.c1.c.c.sc Value[32 x 1]] }
-00000027FFB2F110: {[rn1_2.c2.W Value[16 x 144]] }
-00000027FFB2F4D0: {[rn1_3.c1.c.c.isd Value[16 x 1]] }
-00000027FFB2F610: {[rn1_3.c2.c.m Value[16 x 1]] }
-00000027FFB2F750: {[rn1_3.c1.c.c.b Value[16 x 1]] }
-00000027FFB2F890: {[rn2_2.c1.c.c.sc Value[32 x 1]] }
-00000027FFB2FA70: {[rn2_3.c1.c.c.sc Value[32 x 1]] }
-00000027FFB2FB10: {[rn2_2.c2.c.b Value[32 x 1]] }
-00000027FFB2FBB0: {[rn2_2.c2.c.m Value[32 x 1]] }
-00000027FFB2FCF0: {[rn2_1.c_proj.isd Value[32 x 1]] }
-00000027FFB2FD90: {[rn2_1.c_proj.m Value[32 x 1]] }
-00000027FFB2FE30: {[rn2_2.c2.c.isd Value[32 x 1]] }
-00000027FFB30010: {[rn2_3.c1.c.c.m Value[32 x 1]] }
-00000027FFB300B0: {[rn2_2.c1.c.W Value[32 x 288]] }
-00000027FFB301F0: {[rn2_3.c1.c.W Value[32 x 288]] }
-00000027FFB308D0: {[rn2_1_Wproj Value[32 x 16]] }
-00000027FFB30970: {[rn2_3.c2.c.b Value[32 x 1]] }
-00000027FFB30B50: {[rn2_3.c2.c.isd Value[32 x 1]] }
-00000027FFB30C90: {[rn2_1.c_proj.sc Value[32 x 1]] }
-00000027FFB30D30: {[rn2_2.c1.c.c.isd Value[32 x 1]] }
-00000027FFB30E70: {[rn2_1.c2.c.sc Value[32 x 1]] }
-00000027FFB30F10: {[rn2_1.c2.W Value[32 x 288]] }
-00000027FFB31190: {[rn2_1.c_proj.b Value[32 x 1]] }
-00000027FFB31230: {[rn2_2.c1.c.c.b Value[32 x 1]] }
-00000027FFB312D0: {[rn2_2.c1.c.c.m Value[32 x 1]] }
-00000027FFB31550: {[rn2_2.c2.c.sc Value[32 x 1]] }
-00000027FFB315F0: {[rn2_2.c2.W Value[32 x 288]] }
-00000027FFB319B0: {[rn2_3.c1.c.c.b Value[32 x 1]] }
-00000027FFB31A50: {[rn2_3.c1.c.c.isd Value[32 x 1]] }
-00000027FFB32090: {[conv1.c.c.m Value[16 x 1]] }
-00000027FFB32BD0: {[conv1.c.c.isd Value[16 x 1]] }
-00000027FFB32D10: {[OutputNodes.b Value[10]] }
-00000027FFB32E50: {[rn1_1.c1.c.c.m Value[16 x 1]] }
-00000027FFB330D0: {[rn1_1.c2.W Value[16 x 144]] }
-00000027FFB33210: {[conv1.c.c.b Value[16 x 1]] }
-00000027FFB332B0: {[labels Value[10 x *1]] }
-00000027FFB333F0: {[rn1_1.c1.c.c.sc Value[16 x 1]] }
-00000027FFB335D0: {[conv1.c.W Value[16 x 27]] }
-00000027FFB337B0: {[features Value[32 x 32 x 3 x *1]] }
-00000027FFB33850: {[OutputNodes.W Value[10 x 1 x 1 x 64]] }
-00000027FFB33990: {[rn1_1.c1.c.c.b Value[16 x 1]] }
-00000027FFB33C10: {[rn1_1.c2.c.b Value[16 x 1]] }
-00000027FFB33CB0: {[rn1_1.c1.c.W Value[16 x 144]] }
-00000027FFB33DF0: {[conv1.c.c.sc Value[16 x 1]] }
-00000027FFB33F30: {[rn1_1.c2.c.isd Value[16 x 1]] }
-00000027FFB34070: {[rn1_1.c2.c.m Value[16 x 1]] }
-00000027FFB34110: {[rn1_1.c2.c.sc Value[16 x 1]] }
-00000027FFB34390: {[rn1_1.c1.c.c.isd Value[16 x 1]] }
-00000027FFB34BB0: {[rn1_2.c1.c.c.b Value[16 x 1]] }
-00000027FFB34C50: {[rn1_2.c1.c.c.isd Value[16 x 1]] }
-00000027FFB34CF0: {[rn1_2.c1.c.c.m Value[16 x 1]] }
-00000027FFB34F70: {[rn1_2.c1.c.c.sc Value[16 x 1]] }
 
-05/03/2016 14:04:55: Final Results: Minibatch[1-625]: Err = 0.90000000 * 10000; CE = 2.30325554 * 10000; perplexity = 10.00670670
+08/16/2016 03:02:58: Minibatch[1-100]: Err = 0.90187500 * 1600; CE = 2.30284081 * 1600
+08/16/2016 03:02:58: Minibatch[101-200]: Err = 0.90125000 * 1600; CE = 2.30324179 * 1600
+08/16/2016 03:02:59: Minibatch[201-300]: Err = 0.88812500 * 1600; CE = 2.30240505 * 1600
+08/16/2016 03:02:59: Minibatch[301-400]: Err = 0.89562500 * 1600; CE = 2.30294870 * 1600
+08/16/2016 03:03:00: Minibatch[401-500]: Err = 0.90312500 * 1600; CE = 2.30448233 * 1600
+08/16/2016 03:03:00: Minibatch[501-600]: Err = 0.90937500 * 1600; CE = 2.30241966 * 1600
+08/16/2016 03:03:00: Minibatch[601-625]: Err = 0.90250000 * 400; CE = 2.30519349 * 400
+08/16/2016 03:03:00: Final Results: Minibatch[1-625]: Err = 0.90000000 * 10000; CE = 2.30314188 * 10000; perplexity = 10.00556937
 
-05/03/2016 14:04:55: Action "test" complete.
+08/16/2016 03:03:00: Action "test" complete.
 
-05/03/2016 14:04:55: __COMPLETED__
+08/16/2016 03:03:00: __COMPLETED__

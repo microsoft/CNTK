@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python
+#!/usr/bin/env python
 # ----------------------------------------------------------
 # Copyright (c) Microsoft Corporation.  All rights reserved.
 # ---------------------------------------------------------
@@ -593,7 +593,7 @@ def listCommand(args):
                    testsByTag[tag] = set([test.fullName])
   for tag in sorted(testsByTag.keys()):
     if tag=="*":
-      six.print_(' '.join(sorted(testsByTag[tag])))
+      six.print_(' \n'.join(sorted(testsByTag[tag])))
     else:
       six.print_(tag + ": " + ' '.join(sorted(testsByTag[tag])))
 

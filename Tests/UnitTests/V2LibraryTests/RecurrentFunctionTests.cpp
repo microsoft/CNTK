@@ -8,123 +8,15 @@ using namespace CNTK;
 static unsigned long seed = 1;
 
 template <typename ElementType>
-std::pair<FunctionPtr, FunctionPtr> LSTMPCellWithSelfStabilization(Variable input, Variable prevOutput, Variable prevCellState, const DeviceDescriptor& device)
+FunctionPtr LSTMNet(Variable features, size_t cellDim, size_t hiddenDim, size_t numOutputClasses, size_t numLSTMLayers, const DeviceDescriptor& device, const std::wstring& outputName)
 {
-    assert(input.Shape().NumAxes() == 1);
-    size_t inputDim = input.Shape()[0];
+    using namespace std::placeholders;
 
-    size_t outputDim = prevOutput.Shape()[0];
-    size_t cellDim = prevCellState.Shape()[0];
-
-    auto Wxo = Parameter(NDArrayView::RandomUniform<ElementType>({ cellDim, inputDim }, -0.5, 0.5, seed++, device));
-    auto Wxi = Parameter(NDArrayView::RandomUniform<ElementType>({ cellDim, inputDim }, -0.5, 0.5, seed++, device));
-    auto Wxf = Parameter(NDArrayView::RandomUniform<ElementType>({ cellDim, inputDim }, -0.5, 0.5, seed++, device));
-    auto Wxc = Parameter(NDArrayView::RandomUniform<ElementType>({ cellDim, inputDim }, -0.5, 0.5, seed++, device));
-
-    auto Bo = Parameter({ cellDim }, (ElementType)0.0, device);
-    auto Bc = Parameter({ cellDim }, (ElementType)0.0, device);
-    auto Bi = Parameter({ cellDim }, (ElementType)0.0, device);
-    auto Bf = Parameter({ cellDim }, (ElementType)0.0, device);
-
-    auto Whi = Parameter(NDArrayView::RandomUniform<ElementType>({ cellDim, outputDim }, -0.5, 0.5, seed++, device));
-    auto Wci = Parameter(NDArrayView::RandomUniform<ElementType>({ cellDim }, -0.5, 0.5, seed++, device));
-
-    auto Whf = Parameter(NDArrayView::RandomUniform<ElementType>({ cellDim, outputDim }, -0.5, 0.5, seed++, device));
-    auto Wcf = Parameter(NDArrayView::RandomUniform<ElementType>({ cellDim }, -0.5, 0.5, seed++, device));
-
-    auto Who = Parameter(NDArrayView::RandomUniform<ElementType>({ cellDim, outputDim }, -0.5, 0.5, seed++, device));
-    auto Wco = Parameter(NDArrayView::RandomUniform<ElementType>({ cellDim }, -0.5, 0.5, seed++, device));
-
-    auto Whc = Parameter(NDArrayView::RandomUniform<ElementType>({ cellDim, outputDim }, -0.5, 0.5, seed++, device));
-
-    auto Wmr = Parameter(NDArrayView::RandomUniform<ElementType>({ outputDim, cellDim }, -0.5, 0.5, seed++, device));
-
-    // Stabilization by routing input through an extra scalar parameter
-    auto sWxo = Parameter({}, (ElementType)0.0, device);
-    auto sWxi = Parameter({}, (ElementType)0.0, device);
-    auto sWxf = Parameter({}, (ElementType)0.0, device);
-    auto sWxc = Parameter({}, (ElementType)0.0, device);
-
-    auto sWhi = Parameter({}, (ElementType)0.0, device);
-    auto sWci = Parameter({}, (ElementType)0.0, device);
-
-    auto sWhf = Parameter({}, (ElementType)0.0, device);
-    auto sWcf = Parameter({}, (ElementType)0.0, device);
-    auto sWho = Parameter({}, (ElementType)0.0, device);
-    auto sWco = Parameter({}, (ElementType)0.0, device);
-    auto sWhc = Parameter({}, (ElementType)0.0, device);
-
-    auto sWmr = Parameter({}, (ElementType)0.0, device);
-
-    auto expsWxo = Exp(sWxo);
-    auto expsWxi = Exp(sWxi);
-    auto expsWxf = Exp(sWxf);
-    auto expsWxc = Exp(sWxc);
-
-    auto expsWhi = Exp(sWhi);
-    auto expsWci = Exp(sWci);
-
-    auto expsWhf = Exp(sWhf);
-    auto expsWcf = Exp(sWcf);
-    auto expsWho = Exp(sWho);
-    auto expsWco = Exp(sWco);
-    auto expsWhc = Exp(sWhc);
-
-    auto expsWmr = Exp(sWmr);
-
-    auto Wxix = Times(Wxi, ElementTimes(expsWxi, input));
-    auto Whidh = Times(Whi, ElementTimes(expsWhi, prevOutput));
-    auto Wcidc = ElementTimes(Wci, ElementTimes(expsWci, prevCellState));
-
-    auto it = Sigmoid(Plus(Plus(Plus(Wxix, Bi), Whidh), Wcidc));
-
-    auto Wxcx = Times(Wxc, ElementTimes(expsWxc, input));
-    auto Whcdh = Times(Whc, ElementTimes(expsWhc, prevOutput));
-    auto bit = ElementTimes(it, Tanh(Plus(Wxcx, Plus(Whcdh, Bc))));
-
-    auto Wxfx = Times(Wxf, ElementTimes(expsWxf, input));
-    auto Whfdh = Times(Whf, ElementTimes(expsWhf, prevOutput));
-    auto Wcfdc = ElementTimes(Wcf, ElementTimes(expsWcf, prevCellState));
-
-    auto ft = Sigmoid(Plus(Plus(Plus(Wxfx, Bf), Whfdh), Wcfdc));
-
-    auto bft = ElementTimes(ft, prevCellState);
-
-    auto ct = Plus(bft, bit);
-
-    auto Wxox = Times(Wxo, ElementTimes(expsWxo, input));
-    auto Whodh = Times(Who, ElementTimes(expsWho, prevOutput));
-    auto Wcoct = ElementTimes(Wco, ElementTimes(expsWco, ct));
-
-    auto ot = Sigmoid(Plus(Plus(Plus(Wxox, Bo), Whodh), Wcoct));
-
-    auto mt = ElementTimes(ot, Tanh(ct));
-
-    return{ Times(Wmr, ElementTimes(expsWmr, mt)), ct };
-}
-
-template <typename ElementType>
-FunctionPtr LSTMPComponentWithSelfStabilization(Variable input, size_t outputDim, size_t cellDim, const DeviceDescriptor& device)
-{
-    auto dh = Placeholder({ outputDim });
-    auto dc = Placeholder({ cellDim });
-
-    auto LSTMCell = LSTMPCellWithSelfStabilization<ElementType>(input, dh, dc, device);
-
-    auto actualDh = PastValue(Constant({}, (ElementType)0.0, device), LSTMCell.first, 1);
-    auto actualDc = PastValue(Constant({}, (ElementType)0.0, device), LSTMCell.second, 1);
-
-    // Form the recurrence loop by replacing the dh and dc placeholders with the actualDh and actualDc
-    return LSTMCell.first->ReplacePlaceholders({ { dh, actualDh }, { dc, actualDc } });
-}
-
-template <typename ElementType>
-FunctionPtr LSTMNet(Variable features, size_t cellDim, size_t hiddenDim, size_t numOutputClasses, size_t numLSTMLayers, const DeviceDescriptor& device)
-{
     assert(numLSTMLayers >= 1);
-    auto classifierRoot = LSTMPComponentWithSelfStabilization<ElementType>(features, hiddenDim, cellDim, device);
-    for (size_t i = 1; i < numLSTMLayers; ++i) {
-        classifierRoot = LSTMPComponentWithSelfStabilization<ElementType>(classifierRoot, hiddenDim, cellDim, device);
+    FunctionPtr classifierRoot = features;
+    auto pastValueRecurrenceHook = std::bind(PastValue, _1, CNTK::Constant({}, (ElementType)0.0), 1, L"");
+    for (size_t i = 0; i < numLSTMLayers; ++i) {
+        classifierRoot = LSTMPComponentWithSelfStabilization<ElementType>(classifierRoot, hiddenDim, cellDim, pastValueRecurrenceHook,  pastValueRecurrenceHook, device).first;
     }
 
     auto W = Parameter(NDArrayView::RandomUniform<ElementType>({ numOutputClasses, hiddenDim }, -0.5, 0.5, seed++, device));
@@ -133,11 +25,11 @@ FunctionPtr LSTMNet(Variable features, size_t cellDim, size_t hiddenDim, size_t 
     auto sW = Parameter({}, (ElementType)0.0, device);
     auto expsW = Exp(sW);
 
-    return Plus(Times(W, ElementTimes(expsW, classifierRoot)), b);
+    return Plus(Times(W, ElementTimes(expsW, classifierRoot)), b, outputName);
 }
 
 template <typename ElementType>
-void TestRecurrentNetworkCreation(const DeviceDescriptor& device)
+void TestRecurrentNetworkCreation(const DeviceDescriptor& device, bool testSaveAndReLoad)
 {
     const size_t inputDim = 937;
     const size_t numLSTMLayers = 3;
@@ -146,11 +38,14 @@ void TestRecurrentNetworkCreation(const DeviceDescriptor& device)
     const size_t numOutputClasses = 9304;
 
     Variable features({ inputDim }, AsDataType<ElementType>(), L"features");
-    auto classifierOutputFunction = LSTMNet<ElementType>(features, cellDim, hiddenDim, numOutputClasses, numLSTMLayers, device);
+    auto classifierOutputFunction = LSTMNet<ElementType>(features, cellDim, hiddenDim, numOutputClasses, numLSTMLayers, device, L"classifierOutput");
+    Variable classifierOutput = classifierOutputFunction;
 
     Variable labelsVar = Variable({ numOutputClasses }, AsDataType<ElementType>(), L"labels");
     auto trainingLossFunction = CrossEntropyWithSoftmax(classifierOutputFunction, labelsVar, L"lossFunction");
+    Variable trainingLoss = trainingLossFunction;
     auto predictionFunction = ClassificationError(classifierOutputFunction, labelsVar, L"classificationError");
+    Variable prediction = predictionFunction;
 
     auto LSTMClassifier = Combine({ trainingLossFunction, predictionFunction, classifierOutputFunction }, L"LSTMClassifier");
 
@@ -161,8 +56,12 @@ void TestRecurrentNetworkCreation(const DeviceDescriptor& device)
     if (LSTMClassifier->Outputs().size() != 3)
         throw std::runtime_error("TestFeedForwardNetworkCreation: Function does not have expected Output count");
 
-    if (LSTMClassifier->Parameters().size() != ((numLSTMLayers * 28) + 3))
+    const size_t numParameterVariablesPerLSTMLayer = 20;
+    if (LSTMClassifier->Parameters().size() != ((numLSTMLayers * numParameterVariablesPerLSTMLayer) + 3))
         throw std::runtime_error("TestFeedForwardNetworkCreation: Function does not have expected Parameter count");
+
+    if (testSaveAndReLoad)
+        SaveAndReloadModel<ElementType>(LSTMClassifier, { &features, &labelsVar, &trainingLoss, &prediction, &classifierOutput }, device);
 
     // Run Forward and backward a few times
     size_t iterationCount = 3;
@@ -172,26 +71,9 @@ void TestRecurrentNetworkCreation(const DeviceDescriptor& device)
     size_t maxAllowedSequenceLength = 11;
     for (size_t i = 0; i < iterationCount; ++i)
     {
-        std::vector<size_t> sequenceLengths(numSequences);
-        size_t maxActualSequenceLength = 0;
-        for (size_t i = 0; i < numSequences; ++i)
-        {
-            sequenceLengths[i] = (rand() % maxAllowedSequenceLength) + 1;
-            if (sequenceLengths[i] > maxActualSequenceLength)
-                maxActualSequenceLength = sequenceLengths[i];
-        }
-
-        std::vector<std::vector<ElementType>> inputSequences;
-        for (size_t i = 0; i < numSequences; ++i)
-        {
-            std::vector<ElementType> currentSequence(inputDim * sequenceLengths[i]);
-            for (size_t j = 0; j < currentSequence.size(); ++j)
-                currentSequence[j] = ((ElementType)rand()) / RAND_MAX;
-
-            inputSequences.push_back(std::move(currentSequence));
-        }
-
-        ValuePtr inputValue = Value::Create({ inputDim }, inputSequences, device, true);
+        std::vector<size_t> sequenceLengths = GenerateSequenceLengths(numSequences, maxAllowedSequenceLength);
+        
+        ValuePtr inputValue = GenerateSequences<ElementType>(sequenceLengths, inputDim, device, false);
 
         std::vector<std::vector<ElementType>> labelsData;
         for (size_t i = 0; i < numSequences; ++i)
@@ -206,11 +88,11 @@ void TestRecurrentNetworkCreation(const DeviceDescriptor& device)
         ValuePtr labelValue = Value::Create({ numOutputClasses }, labelsData, device, true);
 
         ValuePtr outputValue, predictionErrorValue;
-        std::unordered_map<Variable, ValuePtr> outputs = { { classifierOutputFunction->Output(), outputValue }, { predictionFunction->Output(), predictionErrorValue } };
-        auto backpropState = LSTMClassifier->Forward({ { features, inputValue }, { labelsVar, labelValue } }, outputs, device, { trainingLossFunction->Output() });
+        std::unordered_map<Variable, ValuePtr> outputs = { { classifierOutput, outputValue }, { prediction, predictionErrorValue } };
+        auto backpropState = LSTMClassifier->Forward({ { features, inputValue }, { labelsVar, labelValue } }, outputs, device, { trainingLoss });
 
         // Perform backprop
-        NDShape outputShape = trainingLossFunction->Output().Shape();
+        NDShape outputShape = trainingLoss.Shape();
         std::vector<ElementType> rootGradientsData(outputShape.TotalSize(), 1);
         ValuePtr rootGradientValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(outputShape, rootGradientsData.data(), rootGradientsData.size(), DeviceDescriptor::CPUDevice(), true));
         std::unordered_map<Variable, ValuePtr> paramGradients;
@@ -218,7 +100,7 @@ void TestRecurrentNetworkCreation(const DeviceDescriptor& device)
         for (auto iter = allParams.begin(); iter != allParams.end(); ++iter)
             paramGradients[*iter] = nullptr;
 
-        LSTMClassifier->Backward(backpropState, { { trainingLossFunction->Output(), rootGradientValue } }, paramGradients);
+        LSTMClassifier->Backward(backpropState, { { trainingLoss, rootGradientValue } }, paramGradients);
     }
 }
 
@@ -228,6 +110,7 @@ void TestSimpleRecurrence(size_t inputDim,
                           size_t maxAllowedSequenceLength,
                           size_t numSequences,
                           const DeviceDescriptor& device,
+                          bool testSaveAndReLoad,
                           size_t numIterations,
                           bool useFutureValue,
                           bool useSparseInputs,
@@ -237,24 +120,29 @@ void TestSimpleRecurrence(size_t inputDim,
     if (useOneHotSparseInputs && !useSparseInputs)
         throw std::runtime_error("useOneHotSparseInputs option can only be true when useSparseInputs is true");
 
-    Parameter timesParam(MakeSharedObject<NDArrayView>((ElementType)0.5, NDShape({ outputDim, inputDim }), device));
-    Parameter plusParam(MakeSharedObject<NDArrayView>((ElementType)0.1, std::initializer_list<size_t>({ outputDim }), device));
+    Parameter timesParam(MakeSharedObject<NDArrayView>((ElementType)0.5, NDShape({ outputDim, inputDim }), device), L"timesParameters");
+    Parameter plusParam(MakeSharedObject<NDArrayView>((ElementType)0.1, std::initializer_list<size_t>({ outputDim }), device), L"plusParameters");
 
     Variable inputVar({ inputDim }, useSparseInputs, AsDataType<ElementType>(), true, L"input");
 
     auto placeholder = Placeholder({ outputDim });
-    auto plusOutput = Plus(plusParam, Plus(placeholder, Times(timesParam, inputVar)));
+    auto plusOutputFunction = Plus(plusParam, Plus(placeholder, Times(timesParam, inputVar)), L"plusOutput");
     FunctionPtr placeholderReplacement;
     if (useFutureValue)
-        placeholderReplacement = FutureValue(Constant({}, (ElementType)0.0, device), plusOutput, 1);
+        placeholderReplacement = FutureValue(plusOutputFunction, Constant({}, (ElementType)0.0, device), 1);
     else
-        placeholderReplacement = PastValue(Constant({}, (ElementType)0.0, device), plusOutput, 1);
+        placeholderReplacement = PastValue(plusOutputFunction, Constant({}, (ElementType)0.0, device), 1);
 
-    plusOutput = plusOutput->ReplacePlaceholders({ { placeholder, placeholderReplacement } });
+    plusOutputFunction = plusOutputFunction->ReplacePlaceholders({ { placeholder, placeholderReplacement } });
+    Variable plusOutput = plusOutputFunction;
 
-    auto reducedOutput = ReduceSum(plusOutput);
+    auto reducedOutputFunction = ReduceSum(plusOutput, L"sum");
+    Variable reducedOutput = reducedOutputFunction;
 
-    auto rootFunc = Combine({ reducedOutput, plusOutput });
+    auto rootFunc = Combine({ reducedOutputFunction, plusOutputFunction });
+
+    if (testSaveAndReLoad)
+        SaveAndReloadModel<ElementType>(rootFunc, { &inputVar, &timesParam, &plusParam, &plusOutput, &reducedOutput }, device);
 
     srand(seed);
     for (size_t iterIdx = 0; iterIdx < numIterations; ++iterIdx)
@@ -268,7 +156,7 @@ void TestSimpleRecurrence(size_t inputDim,
                 maxActualSequenceLength = sequenceLengths[i];
         }
 
-        NDShape inputShape = { inputDim, maxActualSequenceLength, numSequences };
+        NDShape inputShape = inputVar.Shape().AppendShape({ maxActualSequenceLength, numSequences });
         ValuePtr inputValue;
         size_t totalNumInputSamples = maxActualSequenceLength * numSequences;
         std::vector<ElementType> inputData(inputDim * totalNumInputSamples, useSparseInputs ? 0 : std::numeric_limits<ElementType>::quiet_NaN());
@@ -330,12 +218,12 @@ void TestSimpleRecurrence(size_t inputDim,
         std::vector<ElementType> reducedOutputData(reducedOutputShape.TotalSize());
         ValuePtr reducedOutputValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(reducedOutputShape, reducedOutputData.data(), reducedOutputData.size(), DeviceDescriptor::CPUDevice(), false));
 
-        NDShape plusOutputShape = plusOutput->Output().Shape().AppendShape({ maxActualSequenceLength, numSequences });
+        NDShape plusOutputShape = plusOutput.Shape().AppendShape({ maxActualSequenceLength, numSequences });
         std::vector<ElementType> plusOutputData(plusOutputShape.TotalSize());
         ValuePtr plusOutputValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(plusOutputShape, plusOutputData.data(), plusOutputData.size(), DeviceDescriptor::CPUDevice(), false), MakeSharedObject<NDMask>(inputValue->Mask()->Shape(), inputValue->Mask()->Device()));
 
-        std::unordered_map<Variable, ValuePtr> outputs = { { reducedOutput->Output(), reducedOutputValue }, { plusOutput->Output(), plusOutputValue } };
-        auto backpropState = rootFunc->Forward({ { inputVar, inputValue } }, outputs, device, { plusOutput->Output() });
+        std::unordered_map<Variable, ValuePtr> outputs = { { reducedOutput, reducedOutputValue }, { plusOutput, plusOutputValue } };
+        auto backpropState = rootFunc->Forward({ { inputVar, inputValue } }, outputs, device, { plusOutput });
 
         // Perform backprop
         std::vector<ElementType> rootGradientsData(plusOutputShape.TotalSize(), std::numeric_limits<ElementType>::quiet_NaN());
@@ -362,7 +250,7 @@ void TestSimpleRecurrence(size_t inputDim,
         ValuePtr inputGradientValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(inputShape, inputGradientData.data(), inputGradientData.size(), DeviceDescriptor::CPUDevice(), false), inputValue->Mask()->DeepClone());
 
         std::unordered_map<Variable, ValuePtr> outGradients = { { inputVar, inputGradientValue }, { plusParam, plusParameterGradientValue }, { timesParam, timesParameterGradientValue } };
-        rootFunc->Backward(backpropState, { { plusOutput->Output(), rootGradientValue } }, outGradients);
+        rootFunc->Backward(backpropState, { { plusOutput, rootGradientValue } }, outGradients);
 
         // Verify forward prop results
         std::vector<ElementType> expectedPlusOutputData(plusOutputShape.TotalSize(), 0);
@@ -473,19 +361,19 @@ void TestSimpleRecurrence(size_t inputDim,
 
 void RecurrentFunctionTests()
 {
-    TestSimpleRecurrence<float>(2, 1, 4, 1, DeviceDescriptor::CPUDevice(), 3, false, false);
+    TestSimpleRecurrence<float>(2, 1, 4, 1, DeviceDescriptor::CPUDevice(), true, 3, false, false);
 #ifndef CPUONLY
-    TestSimpleRecurrence<double>(11, 9, 16, 7, DeviceDescriptor::GPUDevice(0), 5, true, false);
+    TestSimpleRecurrence<double>(11, 9, 16, 7, DeviceDescriptor::GPUDevice(0), true, 5, true, false);
 #endif
-    TestSimpleRecurrence<double>(1000, 9, 16, 3, DeviceDescriptor::CPUDevice(), 2, true, true);
+    TestSimpleRecurrence<double>(1000, 9, 16, 3, DeviceDescriptor::CPUDevice(), false, 2, true, true);
 #ifndef CPUONLY
-    TestSimpleRecurrence<float>(5000, 200, 19, 6, DeviceDescriptor::GPUDevice(0), 3, false, true);
-    TestSimpleRecurrence<double>(1000, 9, 16, 3, DeviceDescriptor::GPUDevice(0), 3, true, true, true);
+    TestSimpleRecurrence<float>(5000, 200, 19, 6, DeviceDescriptor::GPUDevice(0), false, 3, false, true);
+    TestSimpleRecurrence<double>(1000, 9, 16, 3, DeviceDescriptor::GPUDevice(0), true, 3, true, true, true);
 #endif
-    TestSimpleRecurrence<float>(5000, 200, 19, 6, DeviceDescriptor::CPUDevice(), 2, false, true, true);
+    TestSimpleRecurrence<float>(5000, 200, 19, 6, DeviceDescriptor::CPUDevice(), true, 2, false, true, true);
 
 #ifndef CPUONLY
-    TestRecurrentNetworkCreation<float>(DeviceDescriptor::GPUDevice(0));
+    TestRecurrentNetworkCreation<float>(DeviceDescriptor::GPUDevice(0), true);
 #endif
-    TestRecurrentNetworkCreation<double>(DeviceDescriptor::CPUDevice());
+    TestRecurrentNetworkCreation<double>(DeviceDescriptor::CPUDevice(), false);
 }

@@ -81,7 +81,7 @@
       <StackReserveSize>100000000</StackReserveSize>
     </Link>
     <PreBuildEvent>
-      <Command>prebuild.bat "$(Configuration)" "$(CudaPath)"</Command>
+      <Command>prebuild.bat "$(Configuration)" "$(CNTK_MKL)" "$(CNTK_MKL_SEQUENTIAL)" "$(CNTK_ENABLE_1BitSGD)" "$(CudaPath)" "$(CUDNN_PATH)" "$(CUB_PATH)"</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="$(ReleaseBuild)">
@@ -109,7 +109,7 @@
       <StackReserveSize>100000000</StackReserveSize>
     </Link>
     <PreBuildEvent>
-      <Command>prebuild.bat "$(Configuration)" "$(CudaPath)"</Command>
+      <Command>prebuild.bat "$(Configuration)" "$(CNTK_MKL)" "$(CNTK_MKL_SEQUENTIAL)" "$(CNTK_ENABLE_1BitSGD)" "$(CudaPath)" "$(CUDNN_PATH)" "$(CUB_PATH)"</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="$(CpuOnlyBuild)">
@@ -149,6 +149,7 @@
     <ClInclude Include="..\Common\Include\BestGpu.h" />
     <ClInclude Include="..\Common\Include\DataReader.h" />
     <ClInclude Include="..\Common\Include\ExceptionWithCallStack.h" />
+    <ClInclude Include="..\Common\Include\Globals.h" />
     <ClInclude Include="..\Common\Include\StringUtil.h" />
     <ClInclude Include="..\Common\Include\TensorShape.h" />
     <ClInclude Include="..\Common\Include\DataWriter.h" />
@@ -200,7 +201,6 @@
   <ItemGroup>
     <ClCompile Include="BrainScript\BrainScriptEvaluator.cpp" />
     <ClCompile Include="BrainScript\BrainScriptParser.cpp" />
-    <ClCompile Include="BrainScript\BrainScriptTest.cpp" />
     <ClCompile Include="CNTK.cpp" />
     <ClCompile Include="ModelEditLanguage.cpp" />
     <ClCompile Include="stdafx.cpp" />

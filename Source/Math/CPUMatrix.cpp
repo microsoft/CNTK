@@ -32,17 +32,13 @@
 #include <vld.h>
 #endif
 
+#pragma warning(disable : 4100) // unreferenced formal parameter; "struct TensorOpReduction<ElemType, OPFN, typename ReductionOp, N, -1>" trigger this
 #pragma warning(disable : 4127) // conditional expression is constant; "if (sizeof(ElemType)==sizeof(float))" triggers this
-#pragma warning(disable : 4702) // unreachable code; triggered for unknown reasons
+#pragma warning(disable : 4244) // unreachable code; triggered for unknown reasons
+#pragma warning(disable : 4702) // conversion from 'double' to 'float'
 
-#ifdef USE_ACML
-// Download ACML 5.3.1 (e.g., acml5.3.1-ifort64.exe) or above
-// from http://developer.amd.com/tools/cpu-development/amd-core-math-library-acml/acml-downloads-resources/
-// Install the ifort64_mp variant (compiled with intel compiler) of the library
-// Set Environment variable ACML_PATH to C:\AMD\acml5.3.1\ifort64_mp or the folder you installed acml
-// to point to your folder for the include file and link library
-#include <acml.h> // requires ACML 5.3.1 and above
-#elif defined(USE_MKL)
+
+#ifdef USE_MKL
 // requires MKL 10.0 and above
 #include <mkl.h>
 #else
@@ -53,12 +49,6 @@
 #endif
 #include <cblas.h>
 #include <lapacke.h>
-#endif
-
-#ifdef USE_ACML // MKL has one additional parameter for different matrix order
-#define BLAS_COLMAJOR
-#else
-#define BLAS_COLMAJOR (int) MatrixOrder::ColMajor,
 #endif
 
 #define SWAP(a, b)  \
@@ -910,11 +900,7 @@ void CPUMatrix<ElemType>::SetValue(const size_t numRows, const size_t numCols, E
 #pragma omp parallel for
                     foreach_column (j, us)
                     {
-#ifdef USE_ACML
-                        dcopy((int) numRows, reinterpret_cast<double*>(pArray + j), (int) numCols, reinterpret_cast<double*>(bufPtr + LocateColumn(j)), 1);
-#else
                         cblas_dcopy((int) numRows, reinterpret_cast<double*>(pArray + j), (int) numCols, reinterpret_cast<double*>(bufPtr + LocateColumn(j)), 1);
-#endif
                     }
                 }
                 else
@@ -924,11 +910,7 @@ void CPUMatrix<ElemType>::SetValue(const size_t numRows, const size_t numCols, E
                     {
                         {
 #pragma warning(suppress : 4244)
-#ifdef USE_ACML
-                            scopy((int) numRows, reinterpret_cast<float*>(pArray + j), (int) numCols, reinterpret_cast<float*>(bufPtr + LocateColumn(j)), 1);
-#else
                             cblas_scopy((int) numRows, reinterpret_cast<float*>(pArray + j), (int) numCols, reinterpret_cast<float*>(bufPtr + LocateColumn(j)), 1);
-#endif
                         }
                     }
                 }
@@ -2842,20 +2824,12 @@ ElemType CPUMatrix<ElemType>::SumOfAbsElements() const
 
     if (sizeof(ElemType) == sizeof(double))
     {
-#ifdef USE_ACML
-        return (ElemType) dasum((int) GetNumElements(), reinterpret_cast<double*>(Data()), 1);
-#else
         return (ElemType) cblas_dasum((int) GetNumElements(), reinterpret_cast<double*>(Data()), 1);
-#endif
     }
     else
     {
 #pragma warning(suppress : 4244)
-#ifdef USE_ACML
-        return sasum((int) GetNumElements(), reinterpret_cast<float*>(Data()), 1);
-#else
         return cblas_sasum((int) GetNumElements(), reinterpret_cast<float*>(Data()), 1);
-#endif
     }
 }
 
@@ -3026,11 +3000,7 @@ void CPUMatrix<ElemType>::VectorNorm2(CPUMatrix<ElemType>& c, const bool isColWi
 #pragma omp parallel for
             foreach_column (j, c)
             {
-#ifdef USE_ACML
-                c(0, j) = (ElemType) dnrm2(m, reinterpret_cast<double*>(bufPtr + us.LocateColumn(j)), 1);
-#else
                 c(0, j) = (ElemType) cblas_dnrm2(m, reinterpret_cast<double*>(bufPtr + us.LocateColumn(j)), 1);
-#endif
             }
         }
         else
@@ -3039,11 +3009,7 @@ void CPUMatrix<ElemType>::VectorNorm2(CPUMatrix<ElemType>& c, const bool isColWi
             foreach_column (j, c)
             {
 #pragma warning(suppress : 4244)
-#ifdef USE_ACML
-                c(0, j) = snrm2(m, reinterpret_cast<float*>(bufPtr + us.LocateColumn(j)), 1);
-#else
                 c(0, j) = cblas_snrm2(m, reinterpret_cast<float*>(bufPtr + us.LocateColumn(j)), 1);
-#endif
             }
         }
     }
@@ -3056,11 +3022,7 @@ void CPUMatrix<ElemType>::VectorNorm2(CPUMatrix<ElemType>& c, const bool isColWi
 #pragma omp parallel for
             foreach_row (i, c)
             {
-#ifdef USE_ACML
-                c(i, 0) = dnrm2(n, reinterpret_cast<double*>(bufPtr + i), m);
-#else
                 c(i, 0) = cblas_dnrm2(n, reinterpret_cast<double*>(bufPtr + i), m);
-#endif
             }
         }
         else
@@ -3069,11 +3031,7 @@ void CPUMatrix<ElemType>::VectorNorm2(CPUMatrix<ElemType>& c, const bool isColWi
             foreach_row (i, c)
             {
 #pragma warning(suppress : 4244)
-#ifdef USE_ACML
-                c(i, 0) = snrm2(n, reinterpret_cast<float*>(bufPtr + i), m);
-#else
                 c(i, 0) = cblas_snrm2(n, reinterpret_cast<float*>(bufPtr + i), m);
-#endif
             }
         }
     }
@@ -4414,16 +4372,17 @@ void CPUMatrix<ElemType>::AveragePoolingBackward(const CPUMatrix<int>& mpRowCol,
 }
 
 template <class ElemType>
-void CPUMatrix<ElemType>::BatchNormalizationForward(const CPUMatrix<ElemType>& scale, const CPUMatrix<ElemType>& bias, double expAvgFactor, double blendFactor,
-                                                    CPUMatrix<ElemType>& runMean, CPUMatrix<ElemType>& runInvStdDev, CPUMatrix<ElemType>& out, double epsilon,
+void CPUMatrix<ElemType>::BatchNormalizationForward(const CPUMatrix<ElemType>& scale, const CPUMatrix<ElemType>& bias, bool inferenceOnly, double expAvgFactor, double blendFactor,
+                                                    CPUMatrix<ElemType>& runMean, CPUMatrix<ElemType>& runVariance, CPUMatrix<ElemType>& out, double epsilon,
                                                     CPUMatrix<ElemType>& saveMean, CPUMatrix<ElemType>& saveInvStdDev) const
 {
-    UNUSED(epsilon); UNUSED(saveMean); UNUSED(saveInvStdDev);
-
     assert((GetNumRows() % scale.GetNumRows()) == 0);
 
-    if (expAvgFactor != 0 || blendFactor != 1)
+    if (!inferenceOnly || expAvgFactor != 0 || blendFactor != 1)
         RuntimeError("Batch normalization training on CPU is not yet implemented.");
+
+    saveMean.Resize(0, 0); // only doing inference: these two are not produced
+    saveInvStdDev.Resize(0, 0);
 
     bool spatial = GetNumRows() != scale.GetNumRows();
     if (spatial)
@@ -4435,7 +4394,8 @@ void CPUMatrix<ElemType>::BatchNormalizationForward(const CPUMatrix<ElemType>& s
             for (long irow = 0; irow < out.GetNumRows(); irow++)
             {
                 size_t imap = irow / spatialSize;
-                out(irow, icol) = scale(imap, 0) * ((*this)(irow, icol) - runMean(imap, 0)) * runInvStdDev(imap, 0) + bias(imap, 0);
+                ElemType stdDev = sqrt(runVariance(imap, 0) + epsilon);
+                out(irow, icol) = scale(imap, 0) * ((*this)(irow, icol) - runMean(imap, 0)) / stdDev + bias(imap, 0);
             }
         }
     }
@@ -4446,17 +4406,19 @@ void CPUMatrix<ElemType>::BatchNormalizationForward(const CPUMatrix<ElemType>& s
         {
             for (long irow = 0; irow < out.GetNumRows(); irow++)
             {
-                out(irow, icol) = scale(irow, 0) * ((*this)(irow, icol) - runMean(irow, 0)) * runInvStdDev(irow, 0) + bias(irow, 0);
+                ElemType stdDev = sqrt(runVariance(irow, 0) + epsilon);
+                out(irow, icol) = scale(irow, 0) * ((*this)(irow, icol) - runMean(irow, 0)) / stdDev + bias(irow, 0);
             }
         }
     }
 }
 
 template <class ElemType>
-void CPUMatrix<ElemType>::BatchNormalizationBackward(const CPUMatrix<ElemType>& in, CPUMatrix<ElemType>& grad, const CPUMatrix<ElemType>& scale, const CPUMatrix<ElemType>& saveMean, const CPUMatrix<ElemType>& saveInvStdDev,
+void CPUMatrix<ElemType>::BatchNormalizationBackward(const CPUMatrix<ElemType>& in, CPUMatrix<ElemType>& grad, const CPUMatrix<ElemType>& scale, double blendFactor,
+                                                     const CPUMatrix<ElemType>& saveMean, const CPUMatrix<ElemType>& saveInvStdDev,
                                                      CPUMatrix<ElemType>& scaleGrad, CPUMatrix<ElemType>& biasGrad) const
 {
-    UNUSED(in); UNUSED(grad); UNUSED(scale); UNUSED(saveMean); UNUSED(saveInvStdDev); UNUSED(scaleGrad); UNUSED(biasGrad);
+    UNUSED(in); UNUSED(grad); UNUSED(scale); UNUSED(blendFactor), UNUSED(saveMean); UNUSED(saveInvStdDev); UNUSED(scaleGrad); UNUSED(biasGrad);
     RuntimeError("Batch normalization training on CPU is not yet implemented.");
 }
 
@@ -4480,34 +4442,22 @@ void CPUMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const CPUMatrix
 
     int m, n, k, l;
     int lda, ldb, ldc;
-#ifdef USE_ACML
-    char transA, transB;
-#else
     CBLAS_TRANSPOSE mklTransA;
     CBLAS_TRANSPOSE mklTransB;
-#endif
 
     if (transposeA)
     {
         m = (int) a.GetNumCols();
         k = (int) a.GetNumRows();
         lda = k;
-#ifdef USE_ACML
-        transA = (char) MatrixTranspose::Trans;
-#else
         mklTransA = CBLAS_TRANSPOSE::CblasTrans;
-#endif
     }
     else
     {
         m = (int) a.GetNumRows();
         k = (int) a.GetNumCols();
         lda = m;
-#ifdef USE_ACML
-        transA = (char) MatrixTranspose::NoTrans;
-#else
         mklTransA = CBLAS_TRANSPOSE::CblasNoTrans;
-#endif
     }
 
     if (transposeB)
@@ -4515,22 +4465,14 @@ void CPUMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const CPUMatrix
         l = (int) b.GetNumCols();
         n = (int) b.GetNumRows();
         ldb = n;
-#ifdef USE_ACML
-        transB = (char) MatrixTranspose::Trans;
-#else
         mklTransB = CBLAS_TRANSPOSE::CblasTrans;
-#endif
     }
     else
     {
         l = (int) b.GetNumRows();
         n = (int) b.GetNumCols();
         ldb = l;
-#ifdef USE_ACML
-        transB = (char) MatrixTranspose::NoTrans;
-#else
         mklTransB = CBLAS_TRANSPOSE::CblasNoTrans;
-#endif
     }
 
     assert(m > 0 && k > 0 && l > 0 && n > 0); // converting from size_t to int may cause overflow
@@ -4547,20 +4489,12 @@ void CPUMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const CPUMatrix
 
     if (sizeof(ElemType) == sizeof(double))
     {
-#ifdef USE_ACML
-        dgemm(transA, transB, m, n, k, alpha, reinterpret_cast<double*>(a.Data()), lda, reinterpret_cast<double*>(b.Data()), ldb, beta, reinterpret_cast<double*>(c.Data()), ldc);
-#else
-        cblas_dgemm((CBLAS_ORDER) BLAS_COLMAJOR mklTransA, mklTransB, m, n, k, alpha, reinterpret_cast<double*>(a.Data()), lda, reinterpret_cast<double*>(b.Data()), ldb, beta, reinterpret_cast<double*>(c.Data()), ldc);
-#endif
+        cblas_dgemm((CBLAS_ORDER) (int)MatrixOrder::ColMajor, mklTransA, mklTransB, m, n, k, alpha, reinterpret_cast<double*>(a.Data()), lda, reinterpret_cast<double*>(b.Data()), ldb, beta, reinterpret_cast<double*>(c.Data()), ldc);
     }
     else
     {
 #pragma warning(suppress : 4244)
-#ifdef USE_ACML
-        sgemm(BLAS_COLMAJOR transA, transB, m, n, k, alpha, reinterpret_cast<float*>(a.Data()), lda, reinterpret_cast<float*>(b.Data()), ldb, beta, reinterpret_cast<float*>(c.Data()), ldc);
-#else
-        cblas_sgemm((CBLAS_ORDER) BLAS_COLMAJOR mklTransA, mklTransB, m, n, k, alpha, reinterpret_cast<float*>(a.Data()), lda, reinterpret_cast<float*>(b.Data()), ldb, beta, reinterpret_cast<float*>(c.Data()), ldc);
-#endif
+        cblas_sgemm((CBLAS_ORDER) (int)MatrixOrder::ColMajor, mklTransA, mklTransB, m, n, k, alpha, reinterpret_cast<float*>(a.Data()), lda, reinterpret_cast<float*>(b.Data()), ldb, beta, reinterpret_cast<float*>(c.Data()), ldc);
     }
 }
 
@@ -4605,9 +4539,7 @@ void CPUMatrix<ElemType>::SVD(const CPUMatrix<ElemType>& A, CPUMatrix<ElemType>&
 
     if (sizeof(ElemType) == sizeof(double))
     {
-#ifdef USE_ACML
-        dgesvd('A', 'A', (int) m, (int) n, reinterpret_cast<double*>(A.Data()), (int) lda, reinterpret_cast<double*>(SIGMA.Data()), reinterpret_cast<double*>(U.Data()), (int) ldu, reinterpret_cast<double*>(VT.Data()), (int) ldvt, &info);
-#elif defined(USE_MKL)
+#ifdef USE_MKL
         double wkopt;
         int lwork = -1;
         dgesvd("All", "All", &m, &n, reinterpret_cast<double*>(A.Data()), &lda, reinterpret_cast<double*>(SIGMA.Data()), reinterpret_cast<double*>(U.Data()), &ldu, reinterpret_cast<double*>(VT.Data()), &ldvt, &wkopt, &lwork, &info);
@@ -4616,16 +4548,13 @@ void CPUMatrix<ElemType>::SVD(const CPUMatrix<ElemType>& A, CPUMatrix<ElemType>&
         dgesvd("All", "All", &m, &n, reinterpret_cast<double*>(A.Data()), &lda, reinterpret_cast<double*>(SIGMA.Data()), reinterpret_cast<double*>(U.Data()), &ldu, reinterpret_cast<double*>(VT.Data()), &ldvt, reinterpret_cast<double*>(W.Data()), &lwork, &info);
 #else
         std::vector<double> superb(std::max(std::min(m, n) - 1, 1));
-        info = LAPACKE_dgesvd(BLAS_COLMAJOR 'A', 'A', (int) m, (int) n, reinterpret_cast<double*>(A.Data()), (int) lda, reinterpret_cast<double*>(SIGMA.Data()),
+        info = LAPACKE_dgesvd((int) MatrixOrder::ColMajor, 'A', 'A', (int) m, (int) n, reinterpret_cast<double*>(A.Data()), (int) lda, reinterpret_cast<double*>(SIGMA.Data()),
             reinterpret_cast<double*>(U.Data()), (int) ldu, reinterpret_cast<double*>(VT.Data()), (int) ldvt, &superb[0]);
 #endif
     }
     else
     {
-#ifdef USE_ACML
-#pragma warning(suppress : 4244)
-        sgesvd('A', 'A', (int) m, (int) n, reinterpret_cast<float*>(A.Data()), (int) lda, reinterpret_cast<float*>(SIGMA.Data()), reinterpret_cast<float*>(U.Data()), (int) ldu, reinterpret_cast<float*>(VT.Data()), (int) ldvt, &info);
-#elif defined(USE_MKL)
+#ifdef USE_MKL
         float wkopt;
         int lwork = -1;
         sgesvd("All", "All", &m, &n, reinterpret_cast<float*>(A.Data()), &lda, reinterpret_cast<float*>(SIGMA.Data()), reinterpret_cast<float*>(U.Data()), &ldu, reinterpret_cast<float*>(VT.Data()), &ldvt, &wkopt, &lwork, &info);
@@ -4634,7 +4563,7 @@ void CPUMatrix<ElemType>::SVD(const CPUMatrix<ElemType>& A, CPUMatrix<ElemType>&
         sgesvd("All", "All", &m, &n, reinterpret_cast<float*>(A.Data()), &lda, reinterpret_cast<float*>(SIGMA.Data()), reinterpret_cast<float*>(U.Data()), &ldu, reinterpret_cast<float*>(VT.Data()), &ldvt, reinterpret_cast<float*>(W.Data()), &lwork, &info);
 #else
         std::vector<float> superb(std::max(std::min(m, n) - 1, 1));
-        info = LAPACKE_sgesvd(BLAS_COLMAJOR 'A', 'A', (int) m, (int) n, reinterpret_cast<float*>(A.Data()), (int) lda, reinterpret_cast<float*>(SIGMA.Data()),
+        info = LAPACKE_sgesvd((int) MatrixOrder::ColMajor, 'A', 'A', (int) m, (int) n, reinterpret_cast<float*>(A.Data()), (int) lda, reinterpret_cast<float*>(SIGMA.Data()),
             reinterpret_cast<float*>(U.Data()), (int) ldu, reinterpret_cast<float*>(VT.Data()), (int) ldvt, &superb[0]);
 #endif
     }
@@ -4831,20 +4760,12 @@ void CPUMatrix<ElemType>::ScaleAndAdd(ElemType alpha, const CPUMatrix<ElemType>&
 
         if (sizeof(ElemType) == sizeof(double))
         {
-#ifdef USE_ACML
-            daxpy(len, alpha, reinterpret_cast<double*>(a.Data()), incx, reinterpret_cast<double*>(c.Data()), incy);
-#else
             cblas_daxpy(len, alpha, reinterpret_cast<double*>(a.Data()), incx, reinterpret_cast<double*>(c.Data()), incy);
-#endif
         }
         else
         {
 #pragma warning(suppress : 4244)
-#ifdef USE_ACML
-            saxpy(len, alpha, reinterpret_cast<float*>(a.Data()), incx, reinterpret_cast<float*>(c.Data()), incy);
-#else
             cblas_saxpy(len, alpha, reinterpret_cast<float*>(a.Data()), incx, reinterpret_cast<float*>(c.Data()), incy);
-#endif
         }
     }
     else if (a.GetNumElements() == 1) // scalar, add to all elements
@@ -4883,11 +4804,7 @@ void CPUMatrix<ElemType>::ScaleAndAdd(ElemType alpha, const CPUMatrix<ElemType>&
 #pragma omp parallel for
             foreach_column (j, c)
             {
-#ifdef USE_ACML
-                daxpy(m, alpha, reinterpret_cast<double*>(aBufPtr), 1, reinterpret_cast<double*>(cBufPtr + c.LocateColumn(j)), 1);
-#else
                 cblas_daxpy(m, alpha, reinterpret_cast<double*>(aBufPtr), 1, reinterpret_cast<double*>(cBufPtr + c.LocateColumn(j)), 1);
-#endif
             }
         }
         else
@@ -4896,11 +4813,7 @@ void CPUMatrix<ElemType>::ScaleAndAdd(ElemType alpha, const CPUMatrix<ElemType>&
             foreach_column (j, c)
             {
 #pragma warning(suppress : 4244)
-#ifdef USE_ACML
-                saxpy(m, alpha, reinterpret_cast<float*>(aBufPtr), 1, reinterpret_cast<float*>(cBufPtr + c.LocateColumn(j)), 1);
-#else
                 cblas_saxpy(m, alpha, reinterpret_cast<float*>(aBufPtr), 1, reinterpret_cast<float*>(cBufPtr + c.LocateColumn(j)), 1);
-#endif
             }
         }
     }
@@ -4919,11 +4832,7 @@ void CPUMatrix<ElemType>::ScaleAndAdd(ElemType alpha, const CPUMatrix<ElemType>&
 #pragma omp parallel for
             foreach_row (i, c)
             {
-#ifdef USE_ACML
-                daxpy(n, alpha, reinterpret_cast<double*>(aBufPtr), 1, reinterpret_cast<double*>(cBufPtr + i), m);
-#else
                 cblas_daxpy(n, alpha, reinterpret_cast<double*>(aBufPtr), 1, reinterpret_cast<double*>(cBufPtr + i), m);
-#endif
             }
         }
         else
@@ -4932,11 +4841,7 @@ void CPUMatrix<ElemType>::ScaleAndAdd(ElemType alpha, const CPUMatrix<ElemType>&
             foreach_row (i, c)
             {
 #pragma warning(suppress : 4244)
-#ifdef USE_ACML
-                saxpy(n, alpha, reinterpret_cast<float*>(aBufPtr), 1, reinterpret_cast<float*>(cBufPtr + i), m);
-#else
                 cblas_saxpy(n, alpha, reinterpret_cast<float*>(aBufPtr), 1, reinterpret_cast<float*>(cBufPtr + i), m);
-#endif
             }
         }
     }
@@ -5157,20 +5062,12 @@ template <class ElemType>
     }
     else if (sizeof(ElemType) == sizeof(double))
     {
-#ifdef USE_ACML
-        dscal(len, alpha, reinterpret_cast<double*>(a.Data()), incx); // TODO: Use overloads.
-#else
         cblas_dscal(len, alpha, reinterpret_cast<double*>(a.Data()), incx);
-#endif
     }
     else
     {
 #pragma warning(suppress : 4244)
-#ifdef USE_ACML
-        sscal(len, alpha, reinterpret_cast<float*>(a.Data()), incx);
-#else
         cblas_sscal(len, alpha, reinterpret_cast<float*>(a.Data()), incx);
-#endif
     }
 }
 
@@ -5218,11 +5115,7 @@ void CPUMatrix<ElemType>::InnerProduct(const CPUMatrix<ElemType>& a, const CPUMa
 #pragma omp parallel for
             foreach_column (j, c)
             {
-#ifdef USE_ACML
-                c(0, j) = (ElemType) ddot(m, reinterpret_cast<double*>(aBufPtr + a.LocateColumn(j)), 1, reinterpret_cast<double*>(bBufPtr + b.LocateColumn(j)), 1);
-#else
                 c(0, j) = (ElemType) cblas_ddot(m, reinterpret_cast<double*>(aBufPtr + a.LocateColumn(j)), 1, reinterpret_cast<double*>(bBufPtr + b.LocateColumn(j)), 1);
-#endif
             }
         }
         else
@@ -5231,11 +5124,7 @@ void CPUMatrix<ElemType>::InnerProduct(const CPUMatrix<ElemType>& a, const CPUMa
             foreach_column (j, c)
             {
 #pragma warning(suppress : 4244)
-#ifdef USE_ACML
-                c(0, j) = (ElemType) sdot(m, reinterpret_cast<float*>(aBufPtr + a.LocateColumn(j)), 1, reinterpret_cast<float*>(bBufPtr + b.LocateColumn(j)), 1);
-#else
                 c(0, j) = (ElemType) cblas_sdot(m, reinterpret_cast<float*>(aBufPtr + a.LocateColumn(j)), 1, reinterpret_cast<float*>(bBufPtr + b.LocateColumn(j)), 1);
-#endif
             }
         }
     }
@@ -5250,11 +5139,7 @@ void CPUMatrix<ElemType>::InnerProduct(const CPUMatrix<ElemType>& a, const CPUMa
 #pragma omp parallel for
             foreach_row (i, c)
             {
-#ifdef USE_ACML
-                c(i, 0) = ddot(n, reinterpret_cast<double*>(aBufPtr + i), m, reinterpret_cast<double*>(bBufPtr + i), m);
-#else
                 c(i, 0) = cblas_ddot(n, reinterpret_cast<double*>(aBufPtr + i), m, reinterpret_cast<double*>(bBufPtr + i), m);
-#endif
             }
         }
         else
@@ -5263,11 +5148,7 @@ void CPUMatrix<ElemType>::InnerProduct(const CPUMatrix<ElemType>& a, const CPUMa
             foreach_row (i, c)
             {
 #pragma warning(suppress : 4244)
-#ifdef USE_ACML
-                c(i, 0) = sdot(n, reinterpret_cast<float*>(aBufPtr + i), m, reinterpret_cast<float*>(bBufPtr + i), m);
-#else
                 c(i, 0) = cblas_sdot(n, reinterpret_cast<float*>(aBufPtr + i), m, reinterpret_cast<float*>(bBufPtr + i), m);
-#endif
             }
         }
     }
@@ -5292,20 +5173,12 @@ ElemType CPUMatrix<ElemType>::InnerProductOfMatrices(const CPUMatrix<ElemType>& 
 
     if (sizeof(ElemType) == sizeof(double))
     {
-#ifdef USE_ACML
-        return (ElemType) ddot((int) a.GetNumElements(), reinterpret_cast<double*>(a.Data()), 1, reinterpret_cast<double*>(b.Data()), 1);
-#else
         return (ElemType) cblas_ddot((int) a.GetNumElements(), reinterpret_cast<double*>(a.Data()), 1, reinterpret_cast<double*>(b.Data()), 1);
-#endif
     }
     else
     {
 #pragma warning(suppress : 4244)
-#ifdef USE_ACML
-        return (ElemType) sdot((int) a.GetNumElements(), reinterpret_cast<float*>(a.Data()), 1, reinterpret_cast<float*>(b.Data()), 1);
-#else
         return (ElemType) cblas_sdot((int) a.GetNumElements(), reinterpret_cast<float*>(a.Data()), 1, reinterpret_cast<float*>(b.Data()), 1);
-#endif
     }
 }
 
@@ -5533,21 +5406,13 @@ void CPUMatrix<ElemType>::InnerProductWithShiftNeg(const CPUMatrix<ElemType>& a,
         {
             for (long j = 0; j < n; j++)
             {
-#ifdef USE_ACML
-                c(0, j) = (ElemType) ddot(m, reinterpret_cast<double*>(aBufPtr + a.LocateColumn(j)), 1, reinterpret_cast<double*>(bBufPtr + b.LocateColumn(j)), 1);
-#else
                 c(0, j) = (ElemType) cblas_ddot(m, reinterpret_cast<double*>(aBufPtr + a.LocateColumn(j)), 1, reinterpret_cast<double*>(bBufPtr + b.LocateColumn(j)), 1);
-#endif
             }
             for (long j = 0; j < n; j++)
             {
                 for (long i = 1; i < negnumber + 1; i++)
                 {
-#ifdef USE_ACML
-                    c(i, j) = (ElemType) ddot(m, reinterpret_cast<double*>(aBufPtr + a.LocateColumn(j)), 1, reinterpret_cast<double*>(bBufPtr + b.LocateColumn((j + shift + i - 1) % n)), 1);
-#else
                     c(i, j) = (ElemType) cblas_ddot(m, reinterpret_cast<double*>(aBufPtr + a.LocateColumn(j)), 1, reinterpret_cast<double*>(bBufPtr + b.LocateColumn((j + shift + i - 1) % n)), 1);
-#endif
                 }
             }
         }
@@ -5555,21 +5420,13 @@ void CPUMatrix<ElemType>::InnerProductWithShiftNeg(const CPUMatrix<ElemType>& a,
         {
             for (long j = 0; j < n; j++)
             {
-#ifdef USE_ACML
-                c(0, j) = (ElemType) sdot(m, reinterpret_cast<float*>(aBufPtr + a.LocateColumn(j)), 1, reinterpret_cast<float*>(bBufPtr + b.LocateColumn(j)), 1);
-#else
                 c(0, j) = (ElemType) cblas_sdot(m, reinterpret_cast<float*>(aBufPtr + a.LocateColumn(j)), 1, reinterpret_cast<float*>(bBufPtr + b.LocateColumn(j)), 1);
-#endif
             }
             for (long j = 0; j < n; j++)
             {
                 for (long i = 1; i < negnumber + 1; i++)
                 {
-#ifdef USE_ACML
-                    c(i, j) = (ElemType) sdot(m, reinterpret_cast<float*>(aBufPtr + a.LocateColumn(j)), 1, reinterpret_cast<float*>(bBufPtr + b.LocateColumn((j + shift + i - 1) % n)), 1);
-#else
                     c(i, j) = (ElemType) cblas_sdot(m, reinterpret_cast<float*>(aBufPtr + a.LocateColumn(j)), 1, reinterpret_cast<float*>(bBufPtr + b.LocateColumn((j + shift + i - 1) % n)), 1);
-#endif
                 }
             }
         }
@@ -5587,11 +5444,7 @@ void CPUMatrix<ElemType>::InnerProductWithShiftNeg(const CPUMatrix<ElemType>& a,
 #pragma omp parallel for
             foreach_row (i, c)
             {
-#ifdef USE_ACML
-                c(i, 0) = (ElemType) ddot(n, reinterpret_cast<double*>(aBufPtr + i), m, reinterpret_cast<double*>(bBufPtr + i), m);
-#else
                 c(i, 0) = (ElemType) cblas_ddot(n, reinterpret_cast<double*>(aBufPtr + i), m, reinterpret_cast<double*>(bBufPtr + i), m);
-#endif
             }
         }
         else
@@ -5600,11 +5453,7 @@ void CPUMatrix<ElemType>::InnerProductWithShiftNeg(const CPUMatrix<ElemType>& a,
             foreach_row (i, c)
             {
 #pragma warning(suppress : 4244)
-#ifdef USE_ACML
-                c(i, 0) = sdot(n, reinterpret_cast<float*>(aBufPtr + i), m, reinterpret_cast<float*>(bBufPtr + i), m);
-#else
                 c(i, 0) = cblas_sdot(n, reinterpret_cast<float*>(aBufPtr + i), m, reinterpret_cast<float*>(bBufPtr + i), m);
-#endif
             }
         }
     }
@@ -6019,13 +5868,11 @@ int CPUMatrix<ElemType>::SetNumThreads(int numThreads)
     omp_set_num_threads(numThreads);
     numThreads = omp_get_max_threads();
 
-#ifdef USE_ACML
-    acmlsetnumthreads(numThreads);
-#elif defined(USE_MKL)
-    mkl_set_num_threads(numThreads);
-#elif defined(USE_OPENBLAS)
-    openblas_set_num_threads(numThreads);
-#endif
+    #ifdef USE_MKL
+        mkl_set_num_threads(numThreads);
+    #elif defined(USE_OPENBLAS)
+        openblas_set_num_threads(numThreads);
+    #endif
 #endif
     return numThreads;
 }
@@ -6042,35 +5889,38 @@ int CPUMatrix<ElemType>::SetNumThreads(int numThreads)
 
 // perform loop over reduction index m
 // This function is declared inside a wrapper struct to allow partial specialization (m = -1).
-template <class ElemType, typename OPFN, size_t N, int m>
+template <class ElemType, typename OPFN, typename ReductionOp, size_t N, int m>
 struct TensorOpReduction
 {
     // reduction case (non-reduction case is specialized)
-    static inline ElemType Loop(array<ElemType*, N> pointers, const OPFN& opfn,
+    static inline ElemType Loop(array<ElemType*, N> pointers, const OPFN& opfn, const ReductionOp& reductionOp,
                                 const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, N>& reducingStrides)
     {
         array<ptrdiff_t, N - 1> strides;   // N-1 because last one is the result pointer, which is unused in reduction
         for (size_t i = 0; i < N - 1; i++) // N = a small constant, this will be unrolled
             strides[i] = reducingStrides[i][(size_t) m];
-        double /*ElemType*/ aggregate = 0;
-        for (size_t dim = reducingOpDims[(size_t) m]; dim-- > 0;)
+
+        double aggregate = TensorOpReduction<ElemType, OPFN, ReductionOp, N, m - 1>::Loop(pointers, opfn, reductionOp, reducingOpDims, reducingStrides);
+        for (size_t dim = reducingOpDims[(size_t)m] - 1; dim-- > 0;)
         {
-            // need to descend into one loop deeper
-            aggregate += TensorOpReduction<ElemType, OPFN, N, m - 1>::Loop(pointers, opfn, reducingOpDims, reducingStrides);
             // advance the pointers
             for (size_t i = 0; i < N - 1; i++)
                 pointers[i] += strides[i]; // note: last pointer (result) is unused and untouched here
+
+            // need to descend into one loop deeper
+            aggregate = reductionOp(aggregate, TensorOpReduction<ElemType, OPFN, ReductionOp, N, m - 1>::Loop(pointers, opfn, reductionOp, reducingOpDims, reducingStrides));
         }
-        return (ElemType) aggregate;
+        // Actually it would be nicer to return double but we keep ElementType so that test don't return different numbers than previous implementation.
+        return static_cast<double>(aggregate);
     }
 };
 
 // perform loop over reduction index m
 // This is the specialized version for m = -1, which terminates the recursion.
-template <class ElemType, typename OPFN, size_t N>
-struct TensorOpReduction<ElemType, OPFN, N, -1>
+template <class ElemType, typename OPFN, typename ReductionOp, size_t N>
+struct TensorOpReduction<ElemType, OPFN, ReductionOp, N, -1>
 {
-    static inline ElemType Loop(array<ElemType*, N> pointers, const OPFN& opfn,
+    static inline ElemType Loop(array<ElemType*, N> pointers, const OPFN& opfn, const ReductionOp& reductionOp,
                                 const SmallVector<size_t>&, const array<SmallVector<ptrdiff_t>, N>&)
     {
         return opfn(pointers); // finally we are doing some work!!!
@@ -6082,10 +5932,10 @@ struct TensorOpReduction<ElemType, OPFN, N, -1>
 // -----------------------------------------------------------------------
 
 // perform loop over regular index k and reducing index m for N operands (counting the output)
-template <class ElemType, typename OPFN, size_t N, bool vectorizable, int m, int k>
+template <class ElemType, typename OPFN, typename ReductionOp, size_t N, bool vectorizable, int m, int k>
 struct TensorOpIteration
 {
-    static inline void Loop(ElemType beta, array<ElemType*, N> pointers, ElemType alpha, const OPFN& opfn,
+    static inline void Loop(ElemType beta, array<ElemType*, N> pointers, ElemType alpha, const OPFN& opfn, const ReductionOp& reductionOp,
                             const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, N>& regularStrides,
                             const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, N>& reducingStrides)
     {
@@ -6096,7 +5946,7 @@ struct TensorOpIteration
         for (size_t dim = regularOpDims[(size_t) k]; dim-- > 0;)
         {
             // need to descend into one loop deeper
-            TensorOpIteration<ElemType, OPFN, N, vectorizable, m, k - 1>::Loop(beta, pointers, alpha, opfn, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+            TensorOpIteration<ElemType, OPFN, ReductionOp, N, vectorizable, m, k - 1>::Loop(beta, pointers, alpha, opfn, reductionOp, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
             // advance the pointers
             for (size_t i = 0; i < N; i++)
                 pointers[i] += strides[i];
@@ -6106,10 +5956,10 @@ struct TensorOpIteration
 
 // Special version for innermost loop with strides all being 1 and no further reduction. Compiler can use SSE.
 // This is a very common case, e.g. adding vectors or computing the Sigmoid.
-template <class ElemType, typename OPFN>
-struct TensorOpIteration<ElemType, OPFN, 3, true /*vectorizable*/, -1 /*no reduction*/, 0 /*innermost loop*/>
+template <class ElemType, typename OPFN, typename ReductionOp>
+struct TensorOpIteration<ElemType, OPFN, ReductionOp, 3, true /*vectorizable*/, -1 /*no reduction*/, 0 /*innermost loop*/>
 {
-    static inline void Loop(ElemType beta, array<ElemType*, 3> pointers, ElemType alpha, const OPFN& opfn,
+    static inline void Loop(ElemType beta, array<ElemType*, 3> pointers, ElemType alpha, const OPFN& opfn, const ReductionOp& reductionOp,
                             const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, 3>& regularStrides,
                             const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, 3>& reducingStrides)
     {
@@ -6121,25 +5971,25 @@ struct TensorOpIteration<ElemType, OPFN, 3, true /*vectorizable*/, -1 /*no reduc
         if (beta != 0)
 #pragma omp parallel for
             for (int k = 0; k < (int) K; k++)
-                TensorOpIteration<ElemType, OPFN, 3, true /*vectorizable*/, -1 /*no reduction*/, -1 /*scalar*/>::Loop(beta, array<ElemType*, 3>{pa + k, pb + k, pc + k}, alpha, opfn, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+                TensorOpIteration<ElemType, OPFN, ReductionOp, 3, true /*vectorizable*/, -1 /*no reduction*/, -1 /*scalar*/>::Loop(beta, array<ElemType*, 3>{pa + k, pb + k, pc + k}, alpha, opfn, reductionOp, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
         else if (alpha != 1)
 #pragma omp parallel for
             for (int k = 0; k < (int) K; k++)
-                TensorOpIteration<ElemType, OPFN, 3, true /*vectorizable*/, -1 /*no reduction*/, -1 /*scalar*/>::Loop(0, array<ElemType*, 3>{pa + k, pb + k, pc + k}, alpha, opfn, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+                TensorOpIteration<ElemType, OPFN, ReductionOp, 3, true /*vectorizable*/, -1 /*no reduction*/, -1 /*scalar*/>::Loop(0, array<ElemType*, 3>{pa + k, pb + k, pc + k}, alpha, opfn, reductionOp, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
         else
 #pragma omp parallel for
             for (int k = 0; k < (int) K; k++)
-                TensorOpIteration<ElemType, OPFN, 3, true /*vectorizable*/, -1 /*no reduction*/, -1 /*scalar*/>::Loop(0, array<ElemType*, 3>{pa + k, pb + k, pc + k}, 1, opfn, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+                TensorOpIteration<ElemType, OPFN, ReductionOp, 3, true /*vectorizable*/, -1 /*no reduction*/, -1 /*scalar*/>::Loop(0, array<ElemType*, 3>{pa + k, pb + k, pc + k}, 1, opfn, reductionOp, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
         // TODO: According to Amit, the VS compiler is not able to vectorize into lambdas. Solution: change the lambda to take an N, or to implement the loop inside (with 1 element by default).
         // TODO: The signedness of k (required for omp) causes an extra sign-extend.
         // TODO: OMP adds LOTS of overhead. Do we need a guard, a min size when to use it?
     }
 };
 // and unary
-template <class ElemType, typename OPFN>
-struct TensorOpIteration<ElemType, OPFN, 2, true /*vectorizable*/, -1 /*no reduction*/, 0 /*innermost loop*/>
+template <class ElemType, typename OPFN, typename ReductionOp>
+struct TensorOpIteration<ElemType, OPFN, ReductionOp, 2, true /*vectorizable*/, -1 /*no reduction*/, 0 /*innermost loop*/>
 {
-    static inline void Loop(ElemType beta, array<ElemType*, 2> pointers, ElemType alpha, const OPFN& opfn,
+    static inline void Loop(ElemType beta, array<ElemType*, 2> pointers, ElemType alpha, const OPFN& opfn, const ReductionOp& reductionOp,
                             const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, 2>& regularStrides,
                             const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, 2>& reducingStrides)
     {
@@ -6150,27 +6000,27 @@ struct TensorOpIteration<ElemType, OPFN, 2, true /*vectorizable*/, -1 /*no reduc
         if (beta != 0)
 #pragma omp parallel for
             for (int k = 0; k < (int) K; k++)
-                TensorOpIteration<ElemType, OPFN, 2, true /*vectorizable*/, -1 /*no reduction*/, -1 /*scalar*/>::Loop(beta, array<ElemType*, 2>{pa + k, pb + k}, alpha, opfn, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+                TensorOpIteration<ElemType, OPFN, ReductionOp, 2, true /*vectorizable*/, -1 /*no reduction*/, -1 /*scalar*/>::Loop(beta, array<ElemType*, 2>{pa + k, pb + k}, alpha, opfn, reductionOp, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
         else if (alpha != 1)
 #pragma omp parallel for
             for (int k = 0; k < (int) K; k++)
-                TensorOpIteration<ElemType, OPFN, 2, true /*vectorizable*/, -1 /*no reduction*/, -1 /*scalar*/>::Loop(0, array<ElemType*, 2>{pa + k, pb + k}, alpha, opfn, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+                TensorOpIteration<ElemType, OPFN, ReductionOp, 2, true /*vectorizable*/, -1 /*no reduction*/, -1 /*scalar*/>::Loop(0, array<ElemType*, 2>{pa + k, pb + k}, alpha, opfn, reductionOp, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
         else
 #pragma omp parallel for
             for (int k = 0; k < (int) K; k++)
-                TensorOpIteration<ElemType, OPFN, 2, true /*vectorizable*/, -1 /*no reduction*/, -1 /*scalar*/>::Loop(0, array<ElemType*, 2>{pa + k, pb + k}, 1, opfn, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+                TensorOpIteration<ElemType, OPFN, ReductionOp, 2, true /*vectorizable*/, -1 /*no reduction*/, -1 /*scalar*/>::Loop(0, array<ElemType*, 2>{pa + k, pb + k}, 1, opfn, reductionOp, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
     }
 };
 
-template <class ElemType, typename OPFN, size_t N, bool vectorizable, int m>
-struct TensorOpIteration<ElemType, OPFN, N, vectorizable, m, -1>
+template <class ElemType, typename OPFN, typename ReductionOp, size_t N, bool vectorizable, int m>
+struct TensorOpIteration<ElemType, OPFN, ReductionOp, N, vectorizable, m, -1>
 {
-    static inline void Loop(ElemType beta, array<ElemType*, N> pointers, ElemType alpha, const OPFN& opfn,
+    static inline void Loop(ElemType beta, array<ElemType*, N> pointers, ElemType alpha, const OPFN& opfn, const ReductionOp& reductionOp,
                             const SmallVector<size_t>&, const array<SmallVector<ptrdiff_t>, N>&,
                             const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, N>& reducingStrides)
     {
         // we are at element level for the result: perform the op (there may still be reduction)
-        ElemType val = TensorOpReduction<ElemType, OPFN, N, m>::Loop(pointers, opfn, reducingOpDims, reducingStrides);
+        ElemType val = TensorOpReduction<ElemType, OPFN, ReductionOp, N, m>::Loop(pointers, opfn, reductionOp, reducingOpDims, reducingStrides);
         // scale
         val *= alpha;
         // combine with previous value in target matrix, then write it out
@@ -6188,8 +6038,8 @@ struct TensorOpIteration<ElemType, OPFN, N, vectorizable, m, -1>
 // -----------------------------------------------------------------------
 
 // tensor operation with k+1 dimensions (-1 means scalar)
-template <class ElemType, typename OPFN, size_t N, int k>
-static void TensorOpWithRegularLoop(ElemType beta, const array<ElemType*, N>& pointers, ElemType alpha, const OPFN& opfn,
+template <class ElemType, typename OPFN, typename ReductionOp, size_t N, int k>
+static void TensorOpWithRegularLoop(ElemType beta, const array<ElemType*, N>& pointers, ElemType alpha, const OPFN& opfn, ReductionOp reductionOp,
                                     const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, N>& regularStrides,
                                     const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, N>& reducingStrides)
 {
@@ -6197,9 +6047,9 @@ static void TensorOpWithRegularLoop(ElemType beta, const array<ElemType*, N>& po
     switch (dims)
     {
     case 2:
-        return TensorOpIteration<ElemType, OPFN, N, false /*vectorizable*/, 1, k>::Loop(beta, pointers, alpha, opfn, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+        return TensorOpIteration<ElemType, OPFN, ReductionOp, N, false /*vectorizable*/, 1, k>::Loop(beta, pointers, alpha, opfn, reductionOp, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
     case 1:
-        return TensorOpIteration<ElemType, OPFN, N, false /*vectorizable*/, 0, k>::Loop(beta, pointers, alpha, opfn, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+        return TensorOpIteration<ElemType, OPFN, ReductionOp, N, false /*vectorizable*/, 0, k>::Loop(beta, pointers, alpha, opfn, reductionOp, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
     case 0:
     {
         // if all leading dimensions are 1, we can let the compiler do some unrolling
@@ -6207,9 +6057,9 @@ static void TensorOpWithRegularLoop(ElemType beta, const array<ElemType*, N>& po
         for (size_t i = 0; i < N; i++)
             leadingAllOne &= k >= 0 && regularStrides[i][0] == 1;
         if (leadingAllOne) // special version that uses a hard-coded increment of 1 for all leading dimensions
-            return TensorOpIteration<ElemType, OPFN, N, true /*vectorizable*/, -1, k>::Loop(beta, pointers, alpha, opfn, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+            return TensorOpIteration<ElemType, OPFN, ReductionOp, N, true /*vectorizable*/, -1, k>::Loop(beta, pointers, alpha, opfn, reductionOp, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
         else
-            return TensorOpIteration<ElemType, OPFN, N, false /*vectorizable*/, -1, k>::Loop(beta, pointers, alpha, opfn, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+            return TensorOpIteration<ElemType, OPFN, ReductionOp, N, false /*vectorizable*/, -1, k>::Loop(beta, pointers, alpha, opfn, reductionOp, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
     }
     default:
         LogicError("TensorOp: %d non-flattened reduction dimensions are not supported.", (int) dims);
@@ -6218,11 +6068,11 @@ static void TensorOpWithRegularLoop(ElemType beta, const array<ElemType*, N>& po
 
 // tensor operation, generalized in number of arguments, operation already provided as a lambda
 // This function now expands into different k.
-template <class ElemType, typename OPFN, size_t N>
-static void TensorOpWithFn(ElemType beta, array<ElemType*, N> pointers, ElemType alpha, const OPFN& opfn,
-                           const array<size_t, N>& offsets,
-                           const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, N>& regularStrides,
-                           const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, N>& reducingStrides)
+template <class ElemType, typename OPFN, typename ReductionOp, size_t N>
+static void TensorOpWithFnAndReduction(ElemType beta, array<ElemType*, N> pointers, ElemType alpha, const OPFN& opfn, const ReductionOp& reductionOp,
+    const array<size_t, N>& offsets,
+    const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, N>& regularStrides,
+    const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, N>& reducingStrides)
 {
     for (size_t i = 0; i < N; i++) // N = a small constant, this will be unrolled
         pointers[i] += offsets[i];
@@ -6230,17 +6080,50 @@ static void TensorOpWithFn(ElemType beta, array<ElemType*, N> pointers, ElemType
     switch (dims)
     {
     case 4:
-        return TensorOpWithRegularLoop<ElemType, OPFN, N, 3>(beta, pointers, alpha, opfn, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+        return TensorOpWithRegularLoop<ElemType, OPFN, ReductionOp, N, 3>(beta, pointers, alpha, opfn, reductionOp, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
     case 3:
-        return TensorOpWithRegularLoop<ElemType, OPFN, N, 2>(beta, pointers, alpha, opfn, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+        return TensorOpWithRegularLoop<ElemType, OPFN, ReductionOp, N, 2>(beta, pointers, alpha, opfn, reductionOp, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
     case 2:
-        return TensorOpWithRegularLoop<ElemType, OPFN, N, 1>(beta, pointers, alpha, opfn, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+        return TensorOpWithRegularLoop<ElemType, OPFN, ReductionOp, N, 1>(beta, pointers, alpha, opfn, reductionOp, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
     case 1:
-        return TensorOpWithRegularLoop<ElemType, OPFN, N, 0>(beta, pointers, alpha, opfn, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+        return TensorOpWithRegularLoop<ElemType, OPFN, ReductionOp, N, 0>(beta, pointers, alpha, opfn, reductionOp, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
     case 0:
-        return TensorOpWithRegularLoop<ElemType, OPFN, N, -1>(beta, pointers, alpha, opfn, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+        return TensorOpWithRegularLoop<ElemType, OPFN, ReductionOp, N, -1>(beta, pointers, alpha, opfn, reductionOp, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
     default:
-        LogicError("TensorOp: %d non-flattened input dimensions are not supported.", (int) dims);
+        LogicError("TensorOp: %d non-flattened input dimensions are not supported.", (int)dims);
+    }
+}
+
+// tensor operation, generalized in number of arguments, operation already provided as a lambda
+// This function now expands into different reductionOps
+template <class ElemType, typename OPFN, size_t N>
+static void TensorOpWithFn(ElemType beta, array<ElemType*, N> pointers, ElemType alpha, const OPFN& opfn, ElementWiseOperator reductionOp,
+    const array<size_t, N>& offsets,
+    const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, N>& regularStrides,
+    const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, N>& reducingStrides)
+{
+// BUGBUG: Using always 'double' as type of aggregator even for ElemType==float. Reason: otherwise some e2e test would fail as historically we 
+// used double for aggregator of sum. But:
+// * for min and max reductions this is meaningless.
+// * It is not consitent with what we do on GPU, there we aggregate on ElemType.
+// * It costs performance.
+// TODO: apdapt e2e tests to run with aggregator of type ElemType.
+#define CaseTensorOpWithFnAndReduction(oper)                                                  \
+    case ElementWiseOperator::op##oper:                                                       \
+    return TensorOpWithFnAndReduction(beta, pointers, alpha, opfn, [](double a, double b)     \
+                                    {                                                         \
+                                    return Op##oper(a, b);                                    \
+                                    },                                                        \
+                                    offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides)
+
+    switch (reductionOp)
+    {
+        CaseTensorOpWithFnAndReduction(Sum);
+        CaseTensorOpWithFnAndReduction(LogSum);
+        CaseTensorOpWithFnAndReduction(Min);
+        CaseTensorOpWithFnAndReduction(Max);
+    default:
+        LogicError("Specified ElementWiseOperator op %d not suported as reduction operation.", (int)reductionOp);
     }
 }
 
@@ -6256,8 +6139,11 @@ void CPUMatrix<ElemType>::TensorOp(ElemType beta, const CPUMatrix<ElemType>& a, 
                                    const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, 2>& regularStrides,
                                    const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, 2>& reducingStrides)
 {
-    if (reductionOp != ElementWiseOperator::opSum) // TODO: enable the reduction ops
-        InvalidArgument("TensorOp: Unary reduction operations other than opSum not yet implemented.");
+    if (reductionOp != ElementWiseOperator::opSum    &&
+        reductionOp != ElementWiseOperator::opLogSum &&
+        reductionOp != ElementWiseOperator::opMin    &&
+        reductionOp != ElementWiseOperator::opMax)
+        InvalidArgument("TensorOp: Unary reduction operations other than opMax, opMin, opSum, and opLogSum are not implemented.");
 
 // TODO: Change the lambda to take a pointer and a number of elements, so that we can pass it 1 or 4 elements, in order for it to SSE-vectorize.
 #define CaseUnaryTensorOp(oper)                                                        \
@@ -6266,7 +6152,7 @@ void CPUMatrix<ElemType>::TensorOp(ElemType beta, const CPUMatrix<ElemType>& a, 
                               {                                                        \
                                   return Op##oper((*(pp[0])));                         \
                               },                                                       \
-                              offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides)
+                              reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides)
 
     array<ElemType*, 2> pointers = {a.Data(), Data()};
     switch (op)
@@ -6294,7 +6180,7 @@ void CPUMatrix<ElemType>::TensorOp(ElemType beta, const CPUMatrix<ElemType>& a, 
                               {                                                        \
                                   return Op##oper((*(pp[0])), (*(pp[1])));             \
                               },                                                       \
-                              offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides)
+                              reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides)
 
     array<ElemType*, 3> pointers = {a.Data(), b.Data(), Data()};
     switch (op)
@@ -6322,7 +6208,7 @@ void CPUMatrix<ElemType>::TensorOp(ElemType beta, const CPUMatrix<ElemType>& a, 
                               {                                                        \
                                   return Op##oper((*(pp[0])), (*(pp[1])), (*(pp[2]))); \
                               },                                                       \
-                              offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides)
+                              reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides)
 
     array<ElemType*, 4> pointers = {a.Data(), b.Data(), c.Data(), Data()};
     switch (op)
@@ -6359,11 +6245,33 @@ template void CPUMatrix<char>::SetValue(CPUMatrix<char> const&);
 template void CPUMatrix<char>::RequireSize(const size_t numRows, const size_t numCols, bool growOnly);
 template void CPUMatrix<char>::Resize(const size_t numRows, const size_t numCols, bool growOnly);
 template char* CPUMatrix<char>::CopyToArray(void) const;
-
 template void CPUMatrix<char>::CopySection(size_t numRows, size_t numCols, char* dst, size_t colStride) const;
 template void CPUMatrix<char>::Reshape(const size_t, const size_t);
+
+// Support <short>
+template CPUMatrix<short>::CPUMatrix(const size_t numRows, const size_t numCols);
+template CPUMatrix<short>::CPUMatrix(const size_t numRows, const size_t numCols, short* pArray, const size_t matrixFlags);
+template CPUMatrix<short>::CPUMatrix();
+template CPUMatrix<short>::CPUMatrix(CPUMatrix<short> const&);
+template CPUMatrix<short>::CPUMatrix(CPUMatrix<short>&&);
+template size_t CPUMatrix<short>::LocateElement(size_t, size_t) const;
+template CPUMatrix<short>::~CPUMatrix();
+template CPUMatrix<short> CPUMatrix<short>::ColumnSlice(size_t startColumn, size_t numCols) const;
+template CPUMatrix<short>& CPUMatrix<short>::operator=(CPUMatrix<short>&&);
+template void CPUMatrix<short>::SetValue(const short);
+template void CPUMatrix<short>::SetValue(const size_t numRows, const size_t numCols, short* pArray, size_t matrixFlags);
+template void CPUMatrix<short>::SetValue(CPUMatrix<short> const&);
+//template void CPUMatrix<short>::SetValue(GPUMatrix<short> const&);
+//template void CPUMatrix<short>::SetValue(CPUSparseMatrix<short> const&);
+//template void CPUMatrix<short>::SetValue(GPUSparseMatrix<short> const&);
+template void CPUMatrix<short>::RequireSize(const size_t numRows, const size_t numCols, bool growOnly);
+template void CPUMatrix<short>::Resize(const size_t numRows, const size_t numCols, bool growOnly);
+template short* CPUMatrix<short>::CopyToArray(void) const;
+template void CPUMatrix<short>::CopySection(size_t numRows, size_t numCols, short* dst, size_t colStride) const;
+template void CPUMatrix<short>::Reshape(const size_t, const size_t);
 
 template CPUMatrix<int>::CPUMatrix(const size_t, const size_t, int*, const size_t);
 template CPUMatrix<int>::~CPUMatrix();
 
 }}}
+

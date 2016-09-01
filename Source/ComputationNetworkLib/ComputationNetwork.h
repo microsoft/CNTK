@@ -190,7 +190,7 @@ public:
     void AllocateAllMatrices(const std::vector<ComputationNodeBasePtr>& evalRootNodes, const std::vector<ComputationNodeBasePtr>& outValueRootNodes, ComputationNodeBasePtr trainRootNode);
 
 private:
-    template <class ElemType> void PrintMemorySharingStructure(const std::vector<ComputationNodeBasePtr>& nodes);
+    void PrintMemorySharingStructure(const std::vector<ComputationNodeBasePtr>& nodes);
     void ReleaseMatricesAfterEvalForChildren(ComputationNodeBasePtr n, std::unordered_map<ComputationNodeBasePtr, int>& parentCount);
     void AllocateGradientMatricesForInputs(ComputationNodeBasePtr parentNode);
 
@@ -258,13 +258,20 @@ public:
         m_evalOrders[rootNode] = nodes;
     }
 
+    bool EvalOrderExists(const ComputationNodeBasePtr& rootNode) const
+    {
+        return m_evalOrders.find(rootNode) != m_evalOrders.end();
+    }
+
     // get depth-first traversal order
     // TODO: This is currently not immutable because it gets patched w.r.t. recurrent loops. Ideally we don't patch. Need to review and verify that it is sufficient.
     const std::list<ComputationNodeBasePtr>& GetEvalOrder(const ComputationNodeBasePtr& rootNode) const
     {
         auto iter = m_evalOrders.find(rootNode);
         if (iter == m_evalOrders.end())
+        {
             LogicError("GetEvalOrder: Called without prior call to FormEvalOrder() for %ls %ls operation", rootNode->NodeName().c_str(), rootNode->OperationName().c_str());
+        }
         return iter->second;
     }
 
@@ -332,14 +339,18 @@ public:
     // node construction
     // -----------------------------------------------------------------------
 
-    // non-static version needed because it accesses m_randomSeedOffset
-    // Excessively used by SimpleNetworkBuilder, but always after CreateLearnableParameter(), so we should really absorb it there
-    template <class ElemType>
+    // this function is only for use by NDL (deprecated)
     void InitLearnableParameters(const ComputationNodeBasePtr& node,
-                                 const bool uniformInit,
-                                 const unsigned long randomSeed,
-                                 const ElemType initValueScale,
-                                 bool initOnCPUOnly = false);
+                                 const wchar_t* initString, // "uniform"|"gaussian"|"fixedValue"
+                                 double initValue,          //  scale   | scale    | value
+                                 unsigned long randomSeed = 0,
+                                 bool initOnCPUOnly = false) const;
+    // non-static version needed because it accesses m_randomSeedOffset
+    // Legacy version that is for random only.
+    void RandomInitLearnableParameters(const ComputationNodeBasePtr& node, const bool uniformInit, const unsigned long randomSeed, const double initValueScale, bool initOnCPUOnly = false) const;
+
+    template <class ElemType>
+    void InitLearnableParametersWithBilinearFill(const ComputationNodeBasePtr& node, size_t kernelWidth, size_t kernelHeight);
 
     template <typename N>
     static shared_ptr<N> AsNodePtr(const ComputationNodeBasePtr& inode)
@@ -521,6 +532,8 @@ public:
         return inputNodes;
     }
 
+
+    const std::vector<ComputationNodeBasePtr>& RootNodes()           const { return m_allRoots; }
 
     // these are specified as such by the user
     const std::vector<ComputationNodeBasePtr>& FeatureNodes()        const { return m_featureNodes   ; }
@@ -751,7 +764,7 @@ public:
         while (!result.second/*if already there*/ && result.first->second != node)
         {
             if (!makeUniqueName || node->NodeName().find_first_of(L".[]") == wstring::npos)
-                RuntimeError("AddNodeToNetIfNotYet: Duplicated name for %ls %ls operation.", node->NodeName().c_str(), node->OperationName().c_str());
+                RuntimeError("AddNodeToNetIfNotYet: Duplicated name for %ls %ls operation (%d vs. %d).", node->NodeName().c_str(), node->OperationName().c_str(), (int)node->m_uniqueNumericId, (int)result.first->second->m_uniqueNumericId);
             node->SetName(L"_" + node->NodeName());
             result = m_nameToNodeMap.insert(make_pair(node->NodeName(), node));
         }
@@ -1034,7 +1047,7 @@ public:
     // data members
     // -----------------------------------------------------------------------
 
-    unsigned long GetRandomSeedOffset()
+    unsigned long GetRandomSeedOffset() const
     {
         return m_randomSeedOffset;
     }

@@ -39,19 +39,7 @@
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
     <UseOfMfc>false</UseOfMfc>
-  </PropertyGroup>
-  <Choose>
-    <When Condition="Exists('$(BOOST_INCLUDE_PATH)') And Exists('$(BOOST_LIB_PATH)')">
-      <PropertyGroup>
-        <HasBoost>true</HasBoost>
-      </PropertyGroup>
-    </When>
-    <Otherwise>
-      <PropertyGroup>
-        <HasBoost>false</HasBoost>
-      </PropertyGroup>
-    </Otherwise>
-  </Choose>
+  </PropertyGroup>  
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Condition="$(GpuBuild)" Label="ExtensionSettings">
     <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA $(CudaVersion).props" />
@@ -153,6 +141,7 @@
     <ClCompile Include="MatrixQuantizerTests.cpp" />
     <ClCompile Include="MatrixSparseDenseInteractionsTests.cpp" />
     <ClCompile Include="MatrixTests.cpp" />
+	<ClCompile Include="QuantizersTests.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
@@ -169,7 +158,7 @@
   </Target>
   <Target Name="CopyUnitTestDependencies" AfterTargets="Build">
     <PropertyGroup>
-      <CuDnnDll Condition="$(GpuBuild) And Exists('$(OutDir)..\cudnn64_4.dll')">$(OutDir)..\cudnn64_4.dll</CuDnnDll>
+      <CuDnnDll Condition="$(GpuBuild) And Exists('$(OutDir)..\cudnn64_5.dll')">$(OutDir)..\cudnn64_5.dll</CuDnnDll>
     </PropertyGroup>
     <ItemGroup>
       <UnitTestDependencies Include="$(OutDir)..\Math.dll;$(UnitTestDlls);" />

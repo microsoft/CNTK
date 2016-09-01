@@ -26,7 +26,7 @@ namespace CNTK
         m_matrixView = std::shared_ptr<Matrix<char>>(matrix, [](Matrix<char>* ptr) { delete ptr; });
     }
 
-    NDMask::NDMask(const NDShape& shape, const DeviceDescriptor& device/* = DeviceDescriptor::DefaultDevice()*/)
+    NDMask::NDMask(const NDShape& shape, const DeviceDescriptor& device/* = DeviceDescriptor::UseDefaultDevice()*/)
         : NDMask(shape, AllocateMatrix(shape, device))
     {
         if (shape.NumAxes() > 2)
@@ -79,6 +79,24 @@ namespace CNTK
     {
         // Clear the mask by marking all samples as Valid; i.e. a value of 1
         GetMatrix()->SetValue(1);
+    }
+
+    size_t NDMask::MaskedCount() const
+    {
+        auto maskMatrix = GetMatrix();
+        std::unique_ptr<char[]> maskData(maskMatrix->CopyToArray());
+        return std::count_if(maskData.get(), maskData.get() + maskMatrix->GetNumElements(), [](const char& val) {
+            return val == 0;
+        });
+    }
+
+    // TODO: This could actually be strided?
+    const char* NDMask::DataBuffer() const
+    {
+        // First make sure that the underlying matrix is on the right device
+        auto matrix = GetMatrix();
+        matrix->TransferToDeviceIfNotThere(AsCNTKImplDeviceId(m_device), true);
+        return matrix->Data();
     }
 
     Matrix<char>* NDMask::GetMatrix() const

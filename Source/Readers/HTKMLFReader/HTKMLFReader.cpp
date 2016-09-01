@@ -84,7 +84,7 @@ void HTKMLFReader<ElemType>::InitFromConfig(const ConfigRecordType& readerConfig
     wstring command(readerConfig(L"action", L"")); // look up in the config for the master command to determine whether we're writing output (inputs only) or training/evaluating (inputs and outputs)
 
     if (readerConfig.Exists(L"legacyMode"))
-        RuntimeError("legacy mode has been deprecated\n");
+        RuntimeError("legacy mode has been deprecated");
 
     if (command == L"write")
     {
@@ -307,7 +307,7 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
         m_hset.loadfromfile(cdphonetyingpaths[0], statelistpaths[0], transPspaths[0]);
 
     if (iFeat != scriptpaths.size() || iLabel != mlfpathsmulti.size())
-        RuntimeError("# of inputs files vs. # of inputs or # of output files vs # of outputs inconsistent\n");
+        RuntimeError("# of inputs files vs. # of inputs or # of output files vs # of outputs inconsistent");
 
     if (iFeat == numExpandToUtt)
         RuntimeError("At least one feature stream must be frame-based, not utterance-based");
@@ -342,7 +342,7 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
         InvalidArgument("'randomize' cannot be 'none' when 'readMethod' is 'blockRandomize'.");
 
     if (readMethod == L"rollingWindow" && numExpandToUtt>0)
-        RuntimeError("rollingWindow reader does not support expandToUtt. Change to blockRandomize.\n");
+        RuntimeError("rollingWindow reader does not support expandToUtt. Change to blockRandomize.");
 
     // read all input files (from multiple inputs)
     // TO DO: check for consistency (same number of files in each script file)
@@ -377,8 +377,8 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
 
             // second, remove trailing slash if there is any
             // TODO: when gcc -v is 4.9 or greater, this should be: std::regex_replace(rootpath, L"\\/+$", wstring());
-            size_t stringPos = 0;
-            for (stringPos = rootpath.length() - 1; stringPos >= 0; stringPos--) 
+            int stringPos = 0;
+            for (stringPos = (int) (rootpath.length() - 1); stringPos >= 0; stringPos--) 
             {
                 if (rootpath[stringPos] != L'/')
                 {
@@ -517,11 +517,11 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
         m_lattices->setverbosity(m_verbosity);
 
         // now get the frame source. This has better randomization and doesn't create temp files
-        bool minimizeReaderMemoryFootprint = readerConfig(L"minimizeReaderMemoryFootprint", true);
-        m_frameSource.reset(new msra::dbn::minibatchutterancesourcemulti(infilesmulti, labelsmulti, m_featDims, m_labelDims, 
+        bool useMersenneTwisterRand = readerConfig(L"useMersenneTwisterRand", false);
+        m_frameSource.reset(new msra::dbn::minibatchutterancesourcemulti(useMersenneTwisterRand, infilesmulti, labelsmulti, m_featDims, m_labelDims,
                                                                          numContextLeft, numContextRight, randomize, 
                                                                          *m_lattices, m_latticeMap, m_frameMode, 
-                                                                         minimizeReaderMemoryFootprint, m_expandToUtt));
+                                                                         m_expandToUtt));
         m_frameSource->setverbosity(m_verbosity);
     }
     else if (EqualCI(readMethod, L"rollingWindow"))
@@ -958,7 +958,7 @@ bool HTKMLFReader<ElemType>::GetMinibatchToTrainOrTest(StreamMinibatchInputs& ma
         {
             if (m_nameToTypeMap.find(iter->first) == m_nameToTypeMap.end())
             {
-                RuntimeError("minibatch requested for input node %ls not found in reader - cannot generate input\n", iter->first.c_str());
+                RuntimeError("minibatch requested for input node %ls not found in reader - cannot generate input", iter->first.c_str());
             }
         }
         m_checkDictionaryKeys = false;
@@ -1558,7 +1558,7 @@ bool HTKMLFReader<ElemType>::GetMinibatchToWrite(StreamMinibatchInputs& matrices
         for (auto iter=matrices.begin();iter!=matrices.end();iter++)
         {
         if (m_featureNameToIdMap.find(iter->first)==m_featureNameToIdMap.end())
-        RuntimeError(msra::strfun::strprintf("minibatch requested for input node %ws not found in reader - cannot generate input\n",iter->first.c_str()));
+        RuntimeError(msra::strfun::strprintf("minibatch requested for input node %ws not found in reader - cannot generate input",iter->first.c_str()));
         }
         */
         m_checkDictionaryKeys = false;

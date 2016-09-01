@@ -10,7 +10,6 @@
   <ItemGroup>
     <ClCompile Include="stdafx.cpp" />
     <ClCompile Include="HTKLMFReaderTests.cpp" />
-    <ClCompile Include="UCIFastReaderTests.cpp" />
     <ClCompile Include="ReaderLibTests.cpp" />
     <ClCompile Include="ImageReaderTests.cpp" />
     <ClCompile Include="CNTKTextFormatReaderTests.cpp" />
@@ -318,6 +317,12 @@
     <Text Include="Data\ImageReaderMissingImage_map.txt">
       <Filter>Data</Filter>
     </Text>
+    <Text Include="Data\ImageAndTextReaderSimple_labels.txt">
+      <Filter>Data</Filter>
+    </Text>
+    <Text Include="Data\ImageAndTextReaderSimple_map.txt">
+      <Filter>Data</Filter>
+    </Text>
   </ItemGroup>
   <ItemGroup>
     <Image Include="Data\images\black.jpg">
@@ -416,6 +421,12 @@
       <Filter>Config</Filter>
     </None>
     <None Include="Config\HTKDeserializersSimpleDataLoop11_Config.cntk">
+      <Filter>Config</Filter>
+    </None>
+    <None Include="Config\ImageAndImageReaderSimple_Config.cntk">
+      <Filter>Config</Filter>
+    </None>
+    <None Include="Config\ImageTransforms_Config.cntk">
       <Filter>Config</Filter>
     </None>
   </ItemGroup>

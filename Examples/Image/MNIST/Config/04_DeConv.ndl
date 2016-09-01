@@ -48,7 +48,7 @@ DNN=[
     deconv1 = DeconvReLULayer(unpool1, kW1, kH1, imageC, 25, cMap1, hStride1, vStride1, lpad1, upad1, wScale1, bValue1)
  
     mse = SquareError(featScaled, deconv1)
-    #err = ErrorPrediction(labels, ol)
+    #err = ClassificationError(labels, ol)
 
     # Special Nodes
     FeatureNodes = (features)
