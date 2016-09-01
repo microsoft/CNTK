@@ -9,6 +9,6 @@ using namespace std;
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-    atomic<bool> Globals::m_forceDeterministicAlgorithms = atomic<bool>(false);
+    std::atomic<bool> Globals::m_forceDeterministicAlgorithms(false);
 
 }}}
