@@ -145,9 +145,8 @@ def LSTMP_cell_with_self_stabilization(input, prev_output, prev_cell_state, devi
     Wxix = times(temp1, Wxi)    
     Whidh = times(element_times(expsWhi, prev_output), Whi)
     Wcidc = element_times(Wci, element_times(expsWci, prev_cell_state))
-
-    #TODO: use (+) instead of plus, but we need to wrap output() so it return our inhereted classes    
-    it = sigmoid(plus(plus(Wxix,Bi),plus(Whidh,Wcidc)))
+    
+    it = sigmoid(Wxix+Bi+Whidh+Wcidc)
     Wxcx = times(element_times(expsWxc, input), Wxc)
     Whcdh = times(element_times(expsWhc, prev_output), Whc)
     bit = element_times(it, tanh(plus(plus(Wxcx, Whcdh), Bc)))
@@ -155,8 +154,7 @@ def LSTMP_cell_with_self_stabilization(input, prev_output, prev_cell_state, devi
     Whfdh = times(element_times(expsWhf, prev_output), Whf)
     Wcfdc = element_times(Wcf, element_times(expsWcf, prev_cell_state))
     
-    #TODO: use (+) instead of plus, but we need to wrap output() so it return our inherited classes
-    ft = sigmoid(plus(plus(Wxfx,Bf),plus(Whfdh,Wcfdc)))
+    ft = sigmoid(Wxfx+Bf+Whfdh+Wcfdc)
     bft = element_times(ft, prev_cell_state)
 
     ct = plus(bft, bit)
@@ -164,9 +162,8 @@ def LSTMP_cell_with_self_stabilization(input, prev_output, prev_cell_state, devi
     Wxox = times(element_times(expsWxo, input), Wxo)
     Whodh = times(element_times(expsWho, prev_output), Who)
     Wcoct = element_times(Wco, element_times(expsWco, ct))
-
-    #TODO: use (+) instead of plus, but we need to wrap output() so it return our inherited classes
-    ot = sigmoid(plus(plus(Wxox,Bo),plus(Whodh,Wcoct)))
+    
+    ot = sigmoid(Wxox+Bo+Whodh+Wcoct)
 
     mt = element_times(ot, tanh(ct))    
     return (times(element_times(expsWmr, mt), Wmr), ct)

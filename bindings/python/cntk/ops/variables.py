@@ -34,7 +34,7 @@ def _sanitize_value(shape, value, dtype, device, is_param=False):
     return ndav
 
 #TODO: remove default values from all constructors' arguments 
-class Variable(Variable, TensorOpsMixin):
+class Variable(TensorOpsMixin,Variable):
     def __init__(self, shape=None, data_type=None, needs_gradient=False, is_sparse=False, 
                     dynamic_axes = [Axis.default_dynamic_axis(), Axis.default_batch_axis()], name=''):
         shape = utils.sanitize_shape(shape)
@@ -45,7 +45,7 @@ class Variable(Variable, TensorOpsMixin):
 
         super(Variable, self).__init__(shape, is_sparse, dtype, needs_gradient, name, dynamic_axes)
 
-class Parameter(Parameter, TensorOpsMixin):
+class Parameter(TensorOpsMixin,Parameter):
     def __init__(self, shape=None, value=None, data_type=None, device=None, name=''):
         
         if data_type is None:
@@ -79,7 +79,7 @@ def parameter_from_scalar(shape=None, value=None, data_type=None, device=None, n
     raise ValueError('unrecognized data_type: %s', dtype)
 
 # TODO: make this part of the above constructor
-class Constant(Constant, TensorOpsMixin):
+class Constant(TensorOpsMixin,Constant):
     def __init__(self, shape=None, value=None, data_type=None, device=None, name=''):
 
         if data_type is None:
@@ -114,7 +114,7 @@ def constant_from_scalar(shape=None, value=None, data_type=None, device=None, na
         return ConstantDouble(shape, value, device, name)
     raise ValueError('unrecognized data_type: %s', dtype)
 
-class Placeholder(Placeholder, TensorOpsMixin):    
+class Placeholder(TensorOpsMixin,Placeholder):
     def __init__(self, shape=None, name=''):
         shape = utils.sanitize_shape(shape)
         super(Placeholder, self).__init__(shape, name)

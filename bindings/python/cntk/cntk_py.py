@@ -545,9 +545,6 @@ class Variable(_object):
     def name(self):
         return _cntk_py.Variable_name(self)
 
-    def owner(self):
-        return _cntk_py.Variable_owner(self)
-
     def get_data_type(self):
         return _cntk_py.Variable_get_data_type(self)
 
@@ -1292,6 +1289,63 @@ def get_output_and_keep_reference(self):
     variable.owner = self
     return variable
 Function.output = lambda self:get_output_and_keep_reference(self)
+
+
+
+Variable.__add__ = lambda self, other: plus(self,other).output()
+Variable.__radd__ = lambda self, other: plus(other,self).output()
+Variable.__sub__ = lambda self, other: minus(self,other).output()
+Variable.__rsub__ = lambda self, other: minus(other,self).output()
+Variable.__mul__ = lambda self, other: element_times(self,other).output()  
+Variable.__rmul__ = lambda self, other: element_times(other,self).output()
+Variable.__matmul__ = lambda self, other: times(self,other).output()
+Variable.__rmatmul__ = lambda self, other: times(other,self).output()
+Variable.__truediv__ = lambda self, other: element_divide(self,other).output()   
+Variable.__rtruediv__ = lambda self, other: element_divide(other,self).output()
+Variable.__div__ = Variable.__truediv__
+Variable.__rdiv__ = Variable.__rtruediv__  
+
+
+Constant.__add__ = lambda self, other: plus(self,other).output()
+Constant.__radd__ = lambda self, other: plus(other,self).output()
+Constant.__sub__ = lambda self, other: minus(self,other).output()
+Constant.__rsub__ = lambda self, other: minus(other,self).output()
+Constant.__mul__ = lambda self, other: element_times(self,other).output()  
+Constant.__rmul__ = lambda self, other: element_times(other,self).output()
+Constant.__matmul__ = lambda self, other: times(self,other).output()
+Constant.__rmatmul__ = lambda self, other: times(other,self).output()
+Constant.__truediv__ = lambda self, other: element_divide(self,other).output()   
+Constant.__rtruediv__ = lambda self, other: element_divide(other,self).output()
+Constant.__div__ = Constant.__truediv__
+Constant.__rdiv__ = Constant.__rtruediv__  
+
+
+Parameter.__add__ = lambda self, other: plus(self,other).output()
+Parameter.__radd__ = lambda self, other: plus(other,self).output()
+Parameter.__sub__ = lambda self, other: minus(self,other).output()
+Parameter.__rsub__ = lambda self, other: minus(other,self).output()
+Parameter.__mul__ = lambda self, other: element_times(self,other).output()  
+Parameter.__rmul__ = lambda self, other: element_times(other,self).output()
+Parameter.__matmul__ = lambda self, other: times(self,other).output()
+Parameter.__rmatmul__ = lambda self, other: times(other,self).output()
+Parameter.__truediv__ = lambda self, other: element_divide(self,other).output()   
+Parameter.__rtruediv__ = lambda self, other: element_divide(other,self).output()
+Parameter.__div__ = Parameter.__truediv__
+Parameter.__rdiv__ = Parameter.__rtruediv__  
+
+
+Placeholder.__add__ = lambda self, other: plus(self,other).output()
+Placeholder.__radd__ = lambda self, other: plus(other,self).output()
+Placeholder.__sub__ = lambda self, other: minus(self,other).output()
+Placeholder.__rsub__ = lambda self, other: minus(other,self).output()
+Placeholder.__mul__ = lambda self, other: element_times(self,other).output()  
+Placeholder.__rmul__ = lambda self, other: element_times(other,self).output()
+Placeholder.__matmul__ = lambda self, other: times(self,other).output()
+Placeholder.__rmatmul__ = lambda self, other: times(other,self).output()
+Placeholder.__truediv__ = lambda self, other: element_divide(self,other).output()   
+Placeholder.__rtruediv__ = lambda self, other: element_divide(other,self).output()
+Placeholder.__div__ = Placeholder.__truediv__
+Placeholder.__rdiv__ = Placeholder.__rtruediv__  
 
 # This file is compatible with both classic and new-style classes.
 

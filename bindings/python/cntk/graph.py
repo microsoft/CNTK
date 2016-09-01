@@ -4,30 +4,10 @@
 # for full license information.
 # ==============================================================================
 
-# TODO: Formalize the naming convention and the transformation rules from
-# C++ to Python
+from . import ops
 
-# Ops for which forward references need to be supported
-LOOP_OPS = {'Delay', 'PastValue', 'FutureValue'}
+class TensorOpsMixin():    
 
-class TypeMixin(object):
-    def is_input(self): # TODO TEST
-        '''
-        Returns: True if this node is an input node.
-        '''
-        return isinstance(self, _InputTensorOpsMixinBase)
-
-    def is_forward_ref(self): # TODO Remove this as we now have placeholders
-        '''
-        Although the unrolled graph is a DAG, when we specify recurrence we
-        naturally have loops. We can resolve this by using forward references.
-        This method is checking whether the particular name and value of this
-        instance are actually one of those forward references.
-        '''
-        return self.op_name in LOOP_OPS
-
-
-class TensorOpsMixin(object):
     # operator overload for (+) where self is the left operand
     def __add__(self, other):
         return ops.plus(self, other)
@@ -135,25 +115,3 @@ class TensorOpsMixin(object):
             return node
         else:
             raise TypeError('index must be int or slice, not {}'.format(type(key).__name__))
-
-
-
-
-
-class _InputTensorOpsMixinBase(TensorOpsMixin):
-
-    '''
-    Base class for all non-image input nodes nodes and operators. 
-    '''
-    pass
-
-
-class _ImageInputTensorOpsMixinBase(TensorOpsMixin):
-
-    '''
-    Base class for all image input nodes nodes and operators. 
-    '''
-    pass
-
-# At the bottom to avoid circular import
-from . import ops

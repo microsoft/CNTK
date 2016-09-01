@@ -1096,6 +1096,33 @@ def get_output_and_keep_reference(self):
     variable.owner = self
     return variable
 Function.output = lambda self:get_output_and_keep_reference(self)
+  
 %}
 
+// this is a workaround to enable operators overload for Variable instances coming out of output() method. 
+// A long-term solution should add a Function class wrapper in python, such class would have a reference to 
+// the SWIG Function object, and it would override output() in order to return an instance of the class 
+//Variable of the python API (not the SWIG one).
 
+%define %operators_overload(DATA_TYPE)
+
+%pythoncode %{
+DATA_TYPE.__add__ = lambda self, other: plus(self,other).output()
+DATA_TYPE.__radd__ = lambda self, other: plus(other,self).output()
+DATA_TYPE.__sub__ = lambda self, other: minus(self,other).output()
+DATA_TYPE.__rsub__ = lambda self, other: minus(other,self).output()
+DATA_TYPE.__mul__ = lambda self, other: element_times(self,other).output()  
+DATA_TYPE.__rmul__ = lambda self, other: element_times(other,self).output()
+DATA_TYPE.__matmul__ = lambda self, other: times(self,other).output()
+DATA_TYPE.__rmatmul__ = lambda self, other: times(other,self).output()
+DATA_TYPE.__truediv__ = lambda self, other: element_divide(self,other).output()   
+DATA_TYPE.__rtruediv__ = lambda self, other: element_divide(other,self).output()
+DATA_TYPE.__div__ = DATA_TYPE.__truediv__
+DATA_TYPE.__rdiv__ = DATA_TYPE.__rtruediv__  
+%}
+%enddef
+
+%operators_overload(Variable)
+%operators_overload(Constant)
+%operators_overload(Parameter)
+%operators_overload(Placeholder)
