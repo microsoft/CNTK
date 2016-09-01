@@ -330,9 +330,10 @@ public:
 		}
 
 		// Push all batch normalization mean and std into learn params values for mpi update
-		std::vector<Matrix<ElemType>*> learnParamsValues;
+		std::vector<Matrix<ElemType>*> learnParamsValues(2, nullptr);
 
 		bool noMoreSamplesToProcess = false;
+		int nodeIter = 0;
 		for (auto& node : batchNormalNodes) {
 			shared_ptr<BatchNormalizationNode<ElemType>> batchNode =
 				static_pointer_cast<BatchNormalizationNode<ElemType>>(node);
@@ -363,6 +364,8 @@ public:
 				dataReader->DataEnd();
 			}
 
+			batchNode->SetPostBatchNormalizationEnd();
+
 			// Sync during or after all iters of a BN node are equivalent
 			if (useParallelTrain) {
 				if (m_gradHeader == nullptr)
@@ -370,36 +373,30 @@ public:
 					m_gradHeader.reset(DistGradHeader::Create(evalNodes.size()), [](DistGradHeader* ptr) {
 						DistGradHeader::Destroy(ptr);
 					});
-					m_distGradAgg = make_shared<SimpleDistGradAggregator<ElemType>>(m_mpi, false /*useAsyncAggregation*/, 0 /*syncStatsTrace*/);
 				}
+				SimpleDistGradAggregator<ElemType> distGradAgg(m_mpi, false /*useAsyncAggregation*/, 0 /*syncStatsTrace*/);
 
-				if (!learnParamsValues.size()) {
-					for (auto& node : batchNormalNodes) {
-						auto runMeanParameterPtr = node->GetInputs()[3];
-						auto runStdParameterPtr = node->GetInputs()[4];
+				auto runMeanParameterPtr = node->GetInputs()[3];
+				auto runStdParameterPtr = node->GetInputs()[4];
 
-						shared_ptr<ComputationNode<ElemType>> runMeanNode = static_pointer_cast<ComputationNode<ElemType>>(runMeanParameterPtr);
-						shared_ptr<ComputationNode<ElemType>> runStdNode = static_pointer_cast<ComputationNode<ElemType>>(runStdParameterPtr);
+				shared_ptr<ComputationNode<ElemType>> runMeanNode = static_pointer_cast<ComputationNode<ElemType>>(runMeanParameterPtr);
+				shared_ptr<ComputationNode<ElemType>> runStdNode = static_pointer_cast<ComputationNode<ElemType>>(runStdParameterPtr);
 
-						learnParamsValues.push_back(&(runMeanNode->Value()));
-						learnParamsValues.push_back(&(runStdNode->Value()));
-					}
-				}
+				learnParamsValues[0] = &(runMeanNode->Value());
+				learnParamsValues[1] = &(runStdNode->Value());
 
-				m_distGradAgg->AggregateGradients(learnParamsValues, m_gradHeader.get(), 0);
+				//distGradAgg.AggregateGradients(learnParamsValues, m_gradHeader.get(), nodeIter++);
 
-				for (auto& parameter : learnParamsValues) {
-					(*parameter) /= (ElemType)m_mpi->NumNodesInUse();
-				}
+				//for (auto& parameter : learnParamsValues) {
+				//	(*parameter) /= (ElemType)m_mpi->NumNodesInUse();
+				//}
 			}
-
-			batchNode->SetPostBatchNormalizationEnd();
 		}
 
 		// TODO parallel training weights update
 
 		// Save Model
-		m_net->Save(exportPath);
+		if(!useParallelTrain || m_mpi->CurrentNodeRank() == m_mpi->MainNodeRank()) m_net->Save(exportPath);
 
 		return;
 	}
