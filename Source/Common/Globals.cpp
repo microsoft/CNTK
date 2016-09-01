@@ -5,8 +5,10 @@
 
 #include "Globals.h"
 
+using namespace std;
+
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-    std::atomic<bool> Globals::m_forceDeterministicAlgorithms = false;
+    atomic<bool> Globals::m_forceDeterministicAlgorithms = atomic<bool>(false);
 
 }}}
