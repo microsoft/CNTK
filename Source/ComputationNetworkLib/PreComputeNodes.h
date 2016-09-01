@@ -7,13 +7,14 @@
 #include "Basics.h"
 #include "ComputationNode.h"
 #include "InputAndParamNodes.h"
+#include "LinearAlgebraNodes.h"
 #include "Matrix.h"
 
-#include <map>
-#include <string>
-#include <stdexcept>
-#include <list>
 #include <iostream>
+#include <list>
+#include <map>
+#include <stdexcept>
+#include <string>
 
 // this file will contain computation nodes that require several atomic computation.
 
@@ -241,25 +242,11 @@ public:
         if (!IsAccumulating())
             LogicError("%ls %ls operation: MarkComputed(false) has not been called.", NodeName().c_str(), OperationName().c_str());
 
-        // set gaps to zero, since we are reducing in time
-        InputRef(0).MaskMissingValueColumnsToZero(fr);
-
-        size_t numNewSamples = InputRef(0).GetMBLayout()->GetActualNumSamples();
-        size_t totalNumSamples = m_numSamples + numNewSamples;
-        if (totalNumSamples == 0)
-            totalNumSamples = 1; // 0/0=1 in this context
-        ElemType alpha =                   1.0f / totalNumSamples;
-        ElemType beta  = (ElemType)m_numSamples / totalNumSamples;
-
         size_t rank = DetermineElementwiseTensorRank();
         auto mean  =             ValueTensorFor(rank, FrameRange()); // mean is formed directly in our m_value
         auto input = InputRef(0).ValueTensorFor(rank, fr);
 
-        mean.DoCopyOf(beta, input, alpha);
-        // Note: We leverage that TensorView allows "broadcasting" the output,
-        // which really means a reduction.
-
-        m_numSamples += numNewSamples;
+        UpdateRunningAverage(InputRef(0), mean, m_numSamples);
     }
 };
 
