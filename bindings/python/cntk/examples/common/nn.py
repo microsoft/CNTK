@@ -14,22 +14,21 @@ def fully_connected_linear_layer(input, output_dim, device_id):
     times_param = parameter(shape=(input_dim,output_dim))    
     t = times(input,times_param)
     plus_param = parameter(shape=(output_dim,))
-    return plus(plus_param,t.output())    
+    return plus(plus_param,t)    
 
 def fully_connected_layer(input, output_dim, device_id, nonlinearity):        
     p = fully_connected_linear_layer(input, output_dim, device_id)
-    return nonlinearity(p.output());
+    return nonlinearity(p);
 
 def fully_connected_classifier_net(input, num_output_classes, hidden_layer_dim, num_hidden_layers, device, nonlinearity):
     classifier_root = fully_connected_layer(input, hidden_layer_dim, device, nonlinearity)
     for i in range(1, num_hidden_layers):
-        classifier_root = fully_connected_layer(classifier_root.output(), hidden_layer_dim, device, nonlinearity)
+        classifier_root = fully_connected_layer(classifier_root, hidden_layer_dim, device, nonlinearity)
     
     output_times_param = parameter(shape=(hidden_layer_dim,num_output_classes))
     output_plus_param = parameter(shape=(num_output_classes,))
-    t = times(classifier_root.output(),output_times_param)
-    classifier_root = plus(output_plus_param,t.output()) 
-    return classifier_root;
+    t = times(classifier_root,output_times_param)
+    return plus(output_plus_param,t)     
 
 def conv_bn_layer(input, out_feature_map_count, kernel_width, kernel_height, h_stride, v_stride, w_scale, b_value, sc_value, bn_time_const, device):
     num_in_channels = input.shape().dimensions()[0]        
@@ -41,17 +40,17 @@ def conv_bn_layer(input, out_feature_map_count, kernel_width, kernel_height, h_s
     scale_params = parameter(shape=(out_feature_map_count,), device_id=device)   
     running_mean = constant((out_feature_map_count,), 0.0, device_id=device)
     running_invstd = constant((out_feature_map_count,), 0.0, device_id=device)
-    return batch_normalization(conv_func.output(), scale_params, bias_params, running_mean, running_invstd, True, bn_time_const, 0.0, 0.000000001)    
+    return batch_normalization(conv_func, scale_params, bias_params, running_mean, running_invstd, True, bn_time_const, 0.0, 0.000000001)    
 
 def conv_bn_relu_layer(input, out_feature_map_count, kernel_width, kernel_height, h_stride, v_stride, w_scale, b_value, sc_value, bn_time_const, device):
     conv_bn_function = conv_bn_layer(input, out_feature_map_count, kernel_width, kernel_height, h_stride, v_stride, w_scale, b_value, sc_value, bn_time_const, device)
-    return relu(conv_bn_function.output())
+    return relu(conv_bn_function)
 
 def resnet_node2(input, out_feature_map_count, kernel_width, kernel_height, w_scale, b_value, sc_value, bn_time_const, device):
     c1 = conv_bn_relu_layer(input, out_feature_map_count, kernel_width, kernel_height, 1, 1, w_scale, b_value, sc_value, bn_time_const, device)
-    c2 =  conv_bn_layer(c1.output(), out_feature_map_count, kernel_width, kernel_height, 1, 1, w_scale, b_value, sc_value, bn_time_const, device)
-    p = plus(c2.output(), input)
-    return relu(p.output())
+    c2 =  conv_bn_layer(c1, out_feature_map_count, kernel_width, kernel_height, 1, 1, w_scale, b_value, sc_value, bn_time_const, device)
+    p = plus(c2, input)
+    return relu(p)
 
 def proj_layer(w_proj, input, h_stride, v_stride, b_value, sc_value, bn_time_const, device):
     out_feature_map_count = w_proj.shape().dimensions()[-1];
@@ -62,15 +61,15 @@ def proj_layer(w_proj, input, h_stride, v_stride, b_value, sc_value, bn_time_con
     running_invstd = constant((out_feature_map_count,), 0.0, device_id=device)
     num_in_channels = input.shape().dimensions()[0]        
     conv_func = convolution(w_proj, input, (num_in_channels, v_stride, h_stride))    
-    return batch_normalization(conv_func.output(), scale_params, bias_params, running_mean, running_invstd, True, bn_time_const)
+    return batch_normalization(conv_func, scale_params, bias_params, running_mean, running_invstd, True, bn_time_const)
 
 def resnet_node2_inc(input, out_feature_map_count, kernel_width, kernel_height, w_scale, b_value, sc_value, bn_time_const, w_proj, device):
     c1 = conv_bn_relu_layer(input, out_feature_map_count, kernel_width, kernel_height, 2, 2, w_scale, b_value, sc_value, bn_time_const, device)
-    c2 =  conv_bn_layer(c1.output(), out_feature_map_count, kernel_width, kernel_height, 1, 1, w_scale, b_value, sc_value, bn_time_const, device)
+    c2 =  conv_bn_layer(c1, out_feature_map_count, kernel_width, kernel_height, 1, 1, w_scale, b_value, sc_value, bn_time_const, device)
 
     c_proj = proj_layer(w_proj, input, 2, 2, b_value, sc_value, bn_time_const, device)
-    p = plus(c2.output(), c_proj.output())
-    return relu(p.output())
+    p = plus(c2, c_proj)
+    return relu(p)
 
 def embedding(input, embedding_dim, device):
     input_dim = input.shape()[0];
@@ -79,7 +78,7 @@ def embedding(input, embedding_dim, device):
     return times(input, embedding_parameters)
 
 def select_last(operand):
-    return slice(operand, axis.default_dynamic_axis, -1, 0)
+    return slice(operand, Axis.default_dynamic_axis(), -1, 0)
 
 def LSTMP_cell_with_self_stabilization(input, prev_output, prev_cell_state, device):
     input_dim = input.shape()[0]
@@ -142,35 +141,35 @@ def LSTMP_cell_with_self_stabilization(input, prev_output, prev_cell_state, devi
 
     expsWmr = exp(sWmr)
 
-    temp1 = element_times(expsWxi.output(), input)
-    Wxix = times(temp1.output(), Wxi)    
-    Whidh = times(element_times(expsWhi.output(), prev_output).output(), Whi)
-    Wcidc = element_times(Wci, element_times(expsWci.output(), prev_cell_state).output())
+    temp1 = element_times(expsWxi, input)
+    Wxix = times(temp1, Wxi)    
+    Whidh = times(element_times(expsWhi, prev_output), Whi)
+    Wcidc = element_times(Wci, element_times(expsWci, prev_cell_state))
 
     #TODO: use (+) instead of plus, but we need to wrap output() so it return our inhereted classes    
-    it = sigmoid(plus(plus(Wxix.output(),Bi).output(),plus(Whidh.output(),Wcidc.output()).output()).output())
-    Wxcx = times(element_times(expsWxc.output(), input).output(), Wxc)
-    Whcdh = times(element_times(expsWhc.output(), prev_output).output(), Whc)
-    bit = element_times(it.output(), tanh(plus(plus(Wxcx.output(), Whcdh.output()).output(), Bc).output()).output())
-    Wxfx = times(element_times(expsWxf.output(), input).output(), Wxf)
-    Whfdh = times(element_times(expsWhf.output(), prev_output).output(), Whf)
-    Wcfdc = element_times(Wcf, element_times(expsWcf.output(), prev_cell_state).output())
+    it = sigmoid(plus(plus(Wxix,Bi),plus(Whidh,Wcidc)))
+    Wxcx = times(element_times(expsWxc, input), Wxc)
+    Whcdh = times(element_times(expsWhc, prev_output), Whc)
+    bit = element_times(it, tanh(plus(plus(Wxcx, Whcdh), Bc)))
+    Wxfx = times(element_times(expsWxf, input), Wxf)
+    Whfdh = times(element_times(expsWhf, prev_output), Whf)
+    Wcfdc = element_times(Wcf, element_times(expsWcf, prev_cell_state))
     
     #TODO: use (+) instead of plus, but we need to wrap output() so it return our inherited classes
-    ft = sigmoid(plus(plus(Wxfx.output(),Bf).output(),plus(Whfdh.output(),Wcfdc.output()).output()).output())
-    bft = element_times(ft.output(), prev_cell_state)
+    ft = sigmoid(plus(plus(Wxfx,Bf),plus(Whfdh,Wcfdc)))
+    bft = element_times(ft, prev_cell_state)
 
-    ct = plus(bft.output(), bit.output())
+    ct = plus(bft, bit)
 
-    Wxox = times(element_times(expsWxo.output(), input).output(), Wxo)
-    Whodh = times(element_times(expsWho.output(), prev_output).output(), Who)
-    Wcoct = element_times(Wco, element_times(expsWco.output(), ct.output()).output())
+    Wxox = times(element_times(expsWxo, input), Wxo)
+    Whodh = times(element_times(expsWho, prev_output), Who)
+    Wcoct = element_times(Wco, element_times(expsWco, ct))
 
     #TODO: use (+) instead of plus, but we need to wrap output() so it return our inherited classes
-    ot = sigmoid(plus(plus(Wxox.output(),Bo).output(),plus(Whodh.output(),Wcoct.output()).output()).output())
+    ot = sigmoid(plus(plus(Wxox,Bo),plus(Whodh,Wcoct)))
 
-    mt = element_times(ot.output(), tanh(ct.output()).output())    
-    return (times(element_times(expsWmr.output(), mt.output()).output(), Wmr), ct)
+    mt = element_times(ot, tanh(ct))    
+    return (times(element_times(expsWmr, mt), Wmr), ct)
 
 
 def LSTMP_component_with_self_stabilization(input, output_dim, cell_dim, device):
@@ -179,9 +178,9 @@ def LSTMP_component_with_self_stabilization(input, output_dim, cell_dim, device)
 
     LSTMCell = LSTMP_cell_with_self_stabilization(input, dh, dc, device);
     
-    actualDh = past_value(constant((), 0.0, device_id=device), LSTMCell[0].output(), 1);
-    actualDc = past_value(constant((), 0.0, device_id=device), LSTMCell[1].output(), 1);
+    actualDh = past_value(constant((), 0.0, device_id=device), LSTMCell[0], 1);
+    actualDc = past_value(constant((), 0.0, device_id=device), LSTMCell[1], 1);
 
     # Form the recurrence loop by replacing the dh and dc placeholders with the actualDh and actualDc
-    return LSTMCell[0].replace_placeholders({ dh : actualDh.output(), dc : actualDc.output()})
+    return LSTMCell[0].owner.replace_placeholders({ dh : actualDh, dc : actualDc}).output()
 

@@ -26,12 +26,12 @@ def test_simple_mnist():
     label = variable((num_output_classes,), np.float32, needs_gradient=False, name="labels")
     
     dev = DeviceDescriptor.cpudevice()       
-    netout = fully_connected_classifier_net(scaled_input.output(), num_output_classes, hidden_layers_dim, num_hidden_layers, dev, sigmoid)  
+    netout = fully_connected_classifier_net(scaled_input, num_output_classes, hidden_layers_dim, num_hidden_layers, dev, sigmoid)  
         
-    ce = cross_entropy_with_softmax(netout.output(), label)
-    pe = classification_error(netout.output(), label)
+    ce = cross_entropy_with_softmax(netout, label)
+    pe = classification_error(netout, label)
 
-    ffnet = combine([ce, pe, netout], "classifier_model")        
+    ffnet = combine([ce.owner, pe.owner, netout.owner], "classifier_model")        
     rel_path = r"../../../../../Examples/Image/MNIST/Data/Train-28x28_cntk_text.txt"
     path = os.path.join(os.path.dirname(os.path.abspath(__file__)), rel_path)    
     cm = create_text_mb_source(path, input_dim, num_output_classes, epoch_size)
@@ -48,7 +48,7 @@ def test_simple_mnist():
     minibatch_size_limits[features_si] = (0,minibatch_size)
     minibatch_size_limits[labels_si] = (0,minibatch_size)
                          
-    trainer = Trainer(ffnet, ce.output(), [sgdlearner(ffnet.parameters(), lr)])          
+    trainer = Trainer(ffnet, ce, [sgdlearner(ffnet.parameters(), lr)])          
     
     for i in range(0,int(num_minibatches_to_train)):    
         mb=cm.get_next_minibatch(minibatch_size_limits, dev)

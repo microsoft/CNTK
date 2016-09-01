@@ -6,11 +6,8 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..'))
 from cntk import learning_rates_per_sample, DeviceDescriptor, Trainer, sgdlearner, Axis
 from cntk.ops import variable, cross_entropy_with_softmax, combine, classification_error, sigmoid, element_times, constant, parameter, times, slice
 from cntk.utils import  get_train_loss, cntk_device
-from cntk.examples.common.nn import LSTMP_component_with_self_stabilization, embedding, fully_connected_linear_layer
+from cntk.examples.common.nn import LSTMP_component_with_self_stabilization, embedding, fully_connected_linear_layer, select_last
 from cntk.examples.common.mb import create_text_mb_source
-
-def select_last(operand):
-    return slice(operand, Axis.default_dynamic_axis(), -1, 0)
 
 def create_mb_source(input_dim, num_output_classes, epoch_size):
     features_config = dict()
@@ -42,10 +39,10 @@ def create_mb_source(input_dim, num_output_classes, epoch_size):
 
 def LSTM_sequence_classifer_net(input, num_output_classes, embedding_dim, LSTM_dim, cell_dim, device):
     embedding_function = embedding(input, embedding_dim, device)
-    LSTM_function = LSTMP_component_with_self_stabilization(embedding_function.output(), LSTM_dim, cell_dim, device)
-    thought_vector_function = select_last(LSTM_function.output())
+    LSTM_function = LSTMP_component_with_self_stabilization(embedding_function, LSTM_dim, cell_dim, device)
+    thought_vector_function = select_last(LSTM_function)
 
-    return fully_connected_linear_layer(thought_vector_function.output(), num_output_classes, device)
+    return fully_connected_linear_layer(thought_vector_function, num_output_classes, device)
 
 def train_sequence_classifier(device):   
     input_dim = 2000;
@@ -58,9 +55,9 @@ def train_sequence_classifier(device):
     classifier_output = LSTM_sequence_classifer_net(features, num_output_classes, embedding_dim, hidden_dim, cell_dim, device)
 
     label = variable((num_output_classes,), dynamic_axes = [Axis.default_batch_axis()], name="labels")
-    ce = cross_entropy_with_softmax(classifier_output.output(), label)
-    pe = classification_error(classifier_output.output(), label)
-    lstm_net = combine([ce, pe, classifier_output], "classifier_model")
+    ce = cross_entropy_with_softmax(classifier_output, label)
+    pe = classification_error(classifier_output, label)
+    lstm_net = combine([ce.owner, pe.owner, classifier_output.owner], "classifier_model")
 
     rel_path = r"../../../../../Tests/EndToEndTests/Text/SequenceClassification/Data/Train.ctf"
     path = os.path.join(os.path.dirname(os.path.abspath(__file__)), rel_path)
@@ -81,7 +78,7 @@ def train_sequence_classifier(device):
     minibatch_size_limits[features_si] = (0,minibatch_size)
     minibatch_size_limits[labels_si] = (0,minibatch_size)
 
-    trainer = Trainer(lstm_net, ce.output(), [sgdlearner(lstm_net.parameters(), lr)])
+    trainer = Trainer(lstm_net, ce, [sgdlearner(lstm_net.parameters(), lr)])
     
     freq = 1   
     i = 0;

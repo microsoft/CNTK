@@ -23,6 +23,7 @@
 %template() std::vector<std::shared_ptr<CNTK::Function>>;
 
 %ignore CNTK::Internal::Slice;
+%ignore CNTK::Variable::Owner;
 
 %{
 #define SWIG_FILE_WITH_INIT

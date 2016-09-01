@@ -86,21 +86,21 @@ def resnet_classifer(input, num_classes, device, output_name):
     c_map1 = 16    
     
     conv1 = conv_bn_relu_layer(input, c_map1, kernel_width, kernel_height, 1, 1, conv1_w_scale, conv_b_value, sc_value, bn_time_const, device)
-    rn1_1 = resnet_node2(conv1.output(), c_map1, kernel_width, kernel_height, conv1_w_scale, conv_b_value, sc_value, bn_time_const, device)
-    rn1_2 = resnet_node2(rn1_1.output(), c_map1, kernel_width, kernel_height, conv1_w_scale, conv_b_value, sc_value, bn_time_const, device)
-    rn1_3 = resnet_node2(rn1_2.output(), c_map1, kernel_width, kernel_height, conv1_w_scale, conv_b_value, sc_value, bn_time_const, device)
+    rn1_1 = resnet_node2(conv1, c_map1, kernel_width, kernel_height, conv1_w_scale, conv_b_value, sc_value, bn_time_const, device)
+    rn1_2 = resnet_node2(rn1_1, c_map1, kernel_width, kernel_height, conv1_w_scale, conv_b_value, sc_value, bn_time_const, device)
+    rn1_3 = resnet_node2(rn1_2, c_map1, kernel_width, kernel_height, conv1_w_scale, conv_b_value, sc_value, bn_time_const, device)
         
     c_map2 = 32
     rn2_1_wProj=get_projection_map(c_map2, c_map1, device)    
-    rn2_1 = resnet_node2_inc(rn1_3.output(), c_map2, kernel_width, kernel_height, conv1_w_scale, conv_b_value, sc_value, bn_time_const, rn2_1_wProj, device)
-    rn2_2 = resnet_node2(rn2_1.output(), c_map2, kernel_width, kernel_height, conv1_w_scale, conv_b_value, sc_value, bn_time_const, device)
-    rn2_3 = resnet_node2(rn2_2.output(), c_map2, kernel_width, kernel_height, conv1_w_scale, conv_b_value, sc_value, bn_time_const, device)
+    rn2_1 = resnet_node2_inc(rn1_3, c_map2, kernel_width, kernel_height, conv1_w_scale, conv_b_value, sc_value, bn_time_const, rn2_1_wProj, device)
+    rn2_2 = resnet_node2(rn2_1, c_map2, kernel_width, kernel_height, conv1_w_scale, conv_b_value, sc_value, bn_time_const, device)
+    rn2_3 = resnet_node2(rn2_2, c_map2, kernel_width, kernel_height, conv1_w_scale, conv_b_value, sc_value, bn_time_const, device)
     
     c_map3 = 64
     rn3_1_wProj=get_projection_map(c_map3, c_map2, device)    
-    rn3_1 = resnet_node2_inc(rn2_3.output(), c_map3, kernel_width, kernel_height, conv1_w_scale, conv_b_value, sc_value, bn_time_const, rn3_1_wProj, device)
-    rn3_2 = resnet_node2(rn3_1.output(), c_map3, kernel_width, kernel_height, conv1_w_scale, conv_b_value, sc_value, bn_time_const, device)
-    rn3_3 = resnet_node2(rn3_2.output(), c_map3, kernel_width, kernel_height, conv1_w_scale, conv_b_value, sc_value, bn_time_const, device)
+    rn3_1 = resnet_node2_inc(rn2_3, c_map3, kernel_width, kernel_height, conv1_w_scale, conv_b_value, sc_value, bn_time_const, rn3_1_wProj, device)
+    rn3_2 = resnet_node2(rn3_1, c_map3, kernel_width, kernel_height, conv1_w_scale, conv_b_value, sc_value, bn_time_const, device)
+    rn3_3 = resnet_node2(rn3_2, c_map3, kernel_width, kernel_height, conv1_w_scale, conv_b_value, sc_value, bn_time_const, device)
 
     # Global average pooling    
     poolw = 8
@@ -108,11 +108,11 @@ def resnet_classifer(input, num_classes, device, output_name):
     poolh_stride = 1
     poolv_stride = 1
 
-    pool = pooling(rn3_3.output(), AVG_POOLING, (1, poolh, poolw), (1, poolv_stride, poolh_stride))
+    pool = pooling(rn3_3, AVG_POOLING, (1, poolh, poolw), (1, poolv_stride, poolh_stride))
     out_times_params = parameter(shape=(c_map3, 1, 1, num_classes), device_id=device)
     out_bias_params = parameter(shape=(num_classes,), device_id=device)
-    t = times(pool.output(), out_times_params)
-    return plus(t.output(), out_bias_params, output_name)    
+    t = times(pool, out_times_params)
+    return plus(t, out_bias_params, output_name)    
 
 def _test_cifar_resnet():
     dev = 0
@@ -135,12 +135,12 @@ def _test_cifar_resnet():
     classifer_output = resnet_classifer(image_input, num_classes, dev, "classifierOutput")
     label_var = variable((num_classes,), features_si.m_element_type, needs_gradient=False, name="Labels")
     
-    ce = cross_entropy_with_softmax(classifer_output.output(), label_var)
-    pe = classification_error(classifer_output.output(), label_var)
-    image_classifier = combine([ce, pe, classifer_output], "ImageClassifier")
+    ce = cross_entropy_with_softmax(classifer_output, label_var)
+    pe = classification_error(classifer_output, label_var)
+    image_classifier = combine([ce.owner, pe.owner, classifer_output.owner], "ImageClassifier")
 
     learning_rate_per_sample = learning_rates_per_sample(0.0078125)
-    trainer = Trainer(image_classifier, ce.output(), [sgdlearner(image_classifier.parameters(), learning_rate_per_sample)])
+    trainer = Trainer(image_classifier, ce, [sgdlearner(image_classifier.parameters(), learning_rate_per_sample)])
     
     mb_size = 32
     num_mbs = 1000
