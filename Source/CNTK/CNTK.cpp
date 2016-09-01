@@ -654,9 +654,9 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
             logpath += L"rank" + oss.str();
         }
         RedirectStdErr(logpath);
+        PrintBuiltInfo(); // one more, going into the log file
     }
 
-    PrintBuiltInfo(); // this one goes to log file
     PrintGpuInfo();
 
     std::string timestamp = TimeDateStamp();

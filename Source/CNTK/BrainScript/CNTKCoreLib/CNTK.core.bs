@@ -149,7 +149,7 @@ _AreElementsTheSame (arr, L) =
 # RecurrentLSTMLayer -- create a whole stack of LSTM layers
 RecurrentLSTMLayerStack {layerDims,  # an array of dimensions for each layer (last one is output dimension)
                          cellShapes = None, # if set then use a projection
-                         goBackwards = false,
+                         #bidirectional = false,    # TODO: add this
                          usePeepholes = false,
                          init = 'heNormal', initValueScale = 1,
                          enableSelfStabilization = false,
@@ -222,11 +222,20 @@ LayerNormalizationLayer {initScale = 1, initBias = 0} =
     }.val
 }.apply
 
-# StabilizerLayer -- create a scalar stabilizer [J. Droppo, 2014 -- TODO: get the reference]
+# StabilizerLayer -- create a scalar stabilizer ["Self-stabilized deep neural network," P. Ghahremani and J. Droppo, ICASSP 2016]
 StabilizerLayer{} =
 {
-    # BUGBUG: Calling f(x) twice will create a second set of parameters. Needs to refactor Stabilize() for this.
-    apply (x) = BS.Parameters.Stabilize (x)
+    # sharpened Softplus: 1/f ln(1+e^{f*beta})
+    # this behaves linear for weights around 1, yet guarantees positiveness
+
+    param = ParameterTensor ((1), initValue=0.99537863/* 1/f*ln (e^f-1) */)
+    f = ConstantTensor {4, (1)}
+
+    apply (x) = {
+        fInv = Reciprocal (f)
+        beta = fInv .* Log (BS.Constants.One + Exp (f .* param))
+        res  = beta .* x
+    }.res
 }.apply
 
 # FeatureMVNLayer -- create a corpus-level feature-normalization layer
@@ -928,18 +937,22 @@ RNNs =
 
         # parameter helpers
         # we group 4 matrices into one, gives 60% speed-up in some cases
-        # Not merging inputs since initialization would be off.
-        # note: invoked multiple times, each invocation comes with its own set of weights
-        B{} = ParameterTensor {(4 * cellDim),             initValue=0}       # a bias
-        W{} = ParameterTensor {(4 * cellDim : Inferred),  init=init, initValueScale=initValueScale}   # a input
-        A{} = ParameterTensor {(4 * cellDim : Inferred),  init=init, initValueScale=initValueScale}   # an aux input
-        H{} = ParameterTensor {(4 * cellDim : outputDim), init=init, initValueScale=initValueScale}   # a hidden-to-hidden
-        C{} = ParameterTensor {(    cellDim),             init=init, initValueScale=initValueScale}   # a cell-to-hiddden {note: applied elementwise}
+        # Not grouping inputs since random-init scaling would be incorrect.
+        # TODO: Remove the function call, just assign it.
+        B{}  = ParameterTensor {(4 * cellDim),             initValue=0}       # a bias
+        W{}  = ParameterTensor {(4 * cellDim : Inferred),  init=init, initValueScale=initValueScale}   # input
+        A{}  = ParameterTensor {(4 * cellDim : Inferred),  init=init, initValueScale=initValueScale}   # aux input (optional)
+        H{}  = ParameterTensor {(4 * cellDim : outputDim), init=init, initValueScale=initValueScale}   # hidden-to-hidden
+        Ci = ParameterTensor {(    cellDim),             init=init, initValueScale=initValueScale}   # cell-to-hiddden {note: applied elementwise}
+        Cf = ParameterTensor {(    cellDim),             init=init, initValueScale=initValueScale}   # cell-to-hiddden {note: applied elementwise}
+        Co = ParameterTensor {(    cellDim),             init=init, initValueScale=initValueScale}   # cell-to-hiddden {note: applied elementwise}
 
         Wmr = ParameterTensor {(outputDim : cellDim), init=init, initValueScale=initValueScale};  # final projection
 
-        S(x) = Parameters.Stabilize (x, enabled=enableSelfStabilization)
-        # BUGBUG: S() must not be a macro either, but also an object instance
+        Sdh = if enableSelfStabilization then StabilizerLayer{} else Identity
+        Sdc = if enableSelfStabilization then StabilizerLayer{} else Identity
+        Sct = if enableSelfStabilization then StabilizerLayer{} else Identity
+        Sht = if enableSelfStabilization then StabilizerLayer{} else Identity
 
         apply (x, prevState, aux=None) = {
             _ = {     // encapsulate the inner workings
@@ -947,40 +960,39 @@ RNNs =
                 dh = prevState.h // previous values
                 dc = prevState.c
 
-                dhs = S(dh) // previous values, stabilized
-                dcs = S(dc)
+                dhs = Sdh(dh) // previous values, stabilized
+                dcs = Sdc(dc)
                 # note: input does not get a stabilizer here, user is meant to do that outside
 
                 # projected contribution from input(s), hidden, and bias
-                proj() = if Constants.IsNone (aux)
+                proj4 = if Constants.IsNone (aux)
                         then B{} + W{} * x + H{} * dhs
                         else B{} + W{} * x + H{} * dhs + A{} * aux
 
-                # add peephole connection if requested
-                peep(x, c) = if usePeepholes then x + C{} .* c else x
-
-                proj4 = proj()  # do all 4 sub-networks at once (not using an extra tensor dim, for efficiency)
                 itProj  = Slice (0*cellDim, 1*cellDim, proj4, axis=1)
                 bitProj = Slice (1*cellDim, 2*cellDim, proj4, axis=1)
                 ftProj  = Slice (2*cellDim, 3*cellDim, proj4, axis=1)
                 otProj  = Slice (3*cellDim, 4*cellDim, proj4, axis=1)
 
-                it = Sigmoid (peep (itProj, dcs))            // input gate(t)
+                # add peephole connection if requested
+                peep(x, c, C) = if usePeepholes then x + C .* c else x
+
+                it = Sigmoid (peep (itProj, dcs, Ci))        // input gate(t)
                 bit = it .* Tanh (bitProj)                   // applied to tanh of input network
 
-                ft = Sigmoid (peep (ftProj, dcs))            // forget-me-not gate(t)
+                ft = Sigmoid (peep (ftProj, dcs, Cf))        // forget-me-not gate(t)
                 bft = ft .* dc                               // applied to cell(t-1)
 
                 ct = bft + bit                               // c(t) is sum of both
 
-                ot = Sigmoid (peep (otProj, S(ct)))          // output gate(t)
+                ot = Sigmoid (peep (otProj, Sct(ct), Co))    // output gate(t)
                 ht = ot .* Tanh (ct)                         // applied to tanh(cell(t))
             }
 
             # our return values
             c = _.ct          // cell value
             h = if outputDim != cellDim   // output/hidden state
-                then Wmr * S(_.ht)        // project
+                then Wmr * Sht(_.ht)      // project
                 else _.ht                 // no projection
             dim = outputDim
         } // end of apply (x, prevState)
