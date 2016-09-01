@@ -94,7 +94,7 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
         /// </summary>
         /// <param name="filePath">The file to check.</param>
         /// <param name="errorMsg">The message to write on console if the file does not exist.</param>
-        private static void ThrowIfFileNotExist(string filePath, string errorMsg = "")
+        private static void ThrowIfFileNotExist(string filePath, string errorMsg)
         {
             if (!File.Exists(filePath))
             {                

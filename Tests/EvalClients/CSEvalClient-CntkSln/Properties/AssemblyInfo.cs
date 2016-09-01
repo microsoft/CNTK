@@ -10,14 +10,16 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("CSEvalClient")]
+[assembly: AssemblyTitle("CSEvalClient-CntkSln")]
 [assembly: AssemblyDescription("Managed client using managed wrapper for CNTK evaluation model")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("Microsoft")]
-[assembly: AssemblyProduct("CSEvalClient")]
+[assembly: AssemblyProduct("CSEvalClient-CntkSln")]
 [assembly: AssemblyCopyright("Copyright ©  2016 Microsoft. All rights reserved.")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
+
+// remove ComVisible setting as it is not needed.
 
 // The following GUID is for the ID of the typelib if this project is exposed to COM
 [assembly: Guid("6ec08331-7554-4ebd-b663-b64ab6e719e2")]
