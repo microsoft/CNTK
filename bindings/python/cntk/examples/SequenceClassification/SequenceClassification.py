@@ -12,9 +12,9 @@ from cntk.examples.common.mb import create_text_mb_source
 def LSTM_sequence_classifer_net(input, num_output_classes, embedding_dim, LSTM_dim, cell_dim, device):
     embedding_function = embedding(input, embedding_dim, device)
     LSTM_function = LSTMP_component_with_self_stabilization(embedding_function, LSTM_dim, cell_dim, device)
-    thought_vector_function = select_last(LSTM_function)
+    thought_vector = select_last(LSTM_function)
 
-    return fully_connected_linear_layer(thought_vector_function, num_output_classes, device)
+    return fully_connected_linear_layer(thought_vector, num_output_classes, device)
 
 def train_sequence_classifier(device):   
     input_dim = 2000;
