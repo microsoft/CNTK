@@ -543,6 +543,8 @@ public:
         SetDims(TensorShape(dims), HasMBLayout());
     }
 
+    int GetSpliceDim() const { return m_spliceDim; }
+
 private:
     std::vector<size_t> m_firstIndices; // start row number in the stacked matrix of each input (child) (cumsum of matrix heights); plus one final entry that equals the total dimension
     int m_spliceDim;                    // tensor dimension according to which to stack (1-based)
