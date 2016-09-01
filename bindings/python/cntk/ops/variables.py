@@ -11,10 +11,8 @@ def _sanitize_value(shape, value, dtype, device, is_param=False):
     if value is None:
         if shape is None:
             raise ValueError('you need to specify at least shape or value')        
+        shape = utils.sanitize_shape(shape)
         if is_param:
-            if not np.isscalar(shape):
-                # cntk uses column major, thus we reverse the shape    
-                shape = tuple(reversed(shape))
             # TODO: expose the initialization params
             ndav = NDArrayView.random_uniform_float(shape, -0.05, 0.05, 1, device)        
         else:
@@ -39,9 +37,7 @@ def _sanitize_value(shape, value, dtype, device, is_param=False):
 class Variable(Variable, TensorOpsMixin):
     def __init__(self, shape=None, data_type=None, needs_gradient=False, is_sparse=False, 
                     dynamic_axes = [Axis.default_dynamic_axis(), Axis.default_batch_axis()], name=''):
-        if not np.isscalar(shape):
-            # cntk uses column major, thus we reverse the shape    
-            shape = tuple(reversed(shape))        
+        shape = utils.sanitize_shape(shape)
 
         if data_type is None:            
             data_type = FLOAT_32
@@ -120,10 +116,6 @@ def constant_from_scalar(shape=None, value=None, data_type=None, device=None, na
 
 class Placeholder(Placeholder, TensorOpsMixin):    
     def __init__(self, shape=None, name=''):
-
-        if not np.isscalar(shape):
-            # cntk uses column major, thus we reverse the shape    
-            shape = tuple(reversed(shape))
-
+        shape = utils.sanitize_shape(shape)
         super(Placeholder, self).__init__(shape, name)
         

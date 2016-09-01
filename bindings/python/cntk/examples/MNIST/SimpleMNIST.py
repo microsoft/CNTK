@@ -20,10 +20,10 @@ def test_simple_mnist():
     num_sweeps_to_train_with = 3
     num_minibatches_to_train = (num_samples_per_sweep * num_sweeps_to_train_with) / minibatch_size    
     lr = learning_rates_per_sample(0.003125)
-    input = variable((input_dim,), np.float32, needs_gradient=False, name="features")
+    input = variable(input_dim, np.float32, needs_gradient=False, name="features")
     scaled_input = element_times(constant((), 0.00390625), input)
 
-    label = variable((num_output_classes,), np.float32, needs_gradient=False, name="labels")
+    label = variable(num_output_classes, np.float32, needs_gradient=False, name="labels")
     
     dev = DeviceDescriptor.cpudevice()       
     netout = fully_connected_classifier_net(scaled_input, num_output_classes, hidden_layers_dim, num_hidden_layers, dev, sigmoid)  

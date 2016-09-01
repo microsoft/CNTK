@@ -45,14 +45,14 @@ def cntk_to_numpy_shape(shape):
     Removes the dynamic axis and returns a tuple representing the NumPy shape.
 
     Args:
-        shape (tuple): CNTK shape iterable
+        shape (tuple or int): CNTK shape iterable
 
     Returns:
         a tuple that describes the NumPy shape of a tensor
     '''
 
-    shape = tuple(int(s) for s in shape)
-
+    if np.isscalar(shape):
+        shape = (shape,)    
     shape = shape[:-1]
     if not shape:
         shape = (1,)
@@ -201,6 +201,14 @@ def get_temp_filename(directory=None):
     tf.close()
 
     return tf.name
+
+def sanitize_shape(shape):
+    """
+    if shape is scalar create a tuple out of it and reverse it as cntk uses column major
+    """
+    if np.isscalar(shape):
+        shape = (shape,)
+    return tuple(reversed(shape))
 
 def sanitize_input(arg, fallback_dtype=np.float32):
     """
@@ -419,9 +427,8 @@ def ones_like(batch, precision_numpy):
     return [np.ones_like(sample, dtype=precision_numpy) for sample in batch]
 
 def create_NDArrayView(shape, data_type=cntk_py.DataType_Float, dev=cntk_device(-1)):
-    if not np.isscalar(shape):
-    # cntk uses column major, thus we reverse the shape    
-        shape = tuple(reversed(shape))
+    shape = sanitize_shape(shape)
+
     # FIXME only dense supported so far
     view = cntk_py.NDArrayView(data_type, cntk_py.StorageFormat_Dense, shape, dev)
     return view

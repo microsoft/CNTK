@@ -51,10 +51,10 @@ def train_sequence_classifier(device):
     embedding_dim = 50;
     num_output_classes = 5;
 
-    features = variable(shape=(input_dim,), is_sparse=True, name="features")
+    features = variable(shape=input_dim, is_sparse=True, name="features")
     classifier_output = LSTM_sequence_classifer_net(features, num_output_classes, embedding_dim, hidden_dim, cell_dim, device)
 
-    label = variable((num_output_classes,), dynamic_axes = [Axis.default_batch_axis()], name="labels")
+    label = variable(num_output_classes, dynamic_axes = [Axis.default_batch_axis()], name="labels")
     ce = cross_entropy_with_softmax(classifier_output, label)
     pe = classification_error(classifier_output, label)
     lstm_net = combine([ce.owner, pe.owner, classifier_output.owner], "classifier_model")

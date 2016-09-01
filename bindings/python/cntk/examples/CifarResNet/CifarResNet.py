@@ -110,7 +110,7 @@ def resnet_classifer(input, num_classes, device, output_name):
 
     pool = pooling(rn3_3, AVG_POOLING, (1, poolh, poolw), (1, poolv_stride, poolh_stride))
     out_times_params = parameter(shape=(c_map3, 1, 1, num_classes), device_id=device)
-    out_bias_params = parameter(shape=(num_classes,), device_id=device)
+    out_bias_params = parameter(shape=(num_classes), device_id=device)
     t = times(pool, out_times_params)
     return plus(t, out_bias_params, output_name)    
 
@@ -133,7 +133,7 @@ def _test_cifar_resnet():
     
     image_input = variable(image_shape, features_si.m_element_type, needs_gradient=False, name="Images")    
     classifer_output = resnet_classifer(image_input, num_classes, dev, "classifierOutput")
-    label_var = variable((num_classes,), features_si.m_element_type, needs_gradient=False, name="Labels")
+    label_var = variable((num_classes), features_si.m_element_type, needs_gradient=False, name="Labels")
     
     ce = cross_entropy_with_softmax(classifer_output, label_var)
     pe = classification_error(classifer_output, label_var)

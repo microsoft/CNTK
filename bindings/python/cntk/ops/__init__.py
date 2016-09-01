@@ -4,7 +4,7 @@
 # ==============================================================================
 
 import numpy as np
-from ..utils import sanitize_input, get_data_type, cntk_device
+from ..utils import sanitize_input, sanitize_shape, get_data_type, cntk_device
 
 def combine(operands, name=''):
     '''
@@ -159,9 +159,13 @@ def pooling(operand, pooling_type, pooling_window_shape, strides=(1,), auto_padd
         :class:`cntk.Function`
     '''
     from cntk import pooling
-    operand = sanitize_input(operand)    
-    return pooling(operand, pooling_type, tuple(reversed(pooling_window_shape)), tuple(reversed(strides)), auto_padding,
-                    tuple(reversed(lower_pad)), tuple(reversed(upper_pad)), name).output()
+    operand = sanitize_input(operand)
+    pooling_window_shape = sanitize_shape(pooling_window_shape)
+    strides = sanitize_shape(strides)
+    lower_pad = sanitize_shape(lower_pad)
+    upper_pad = sanitize_shape(upper_pad)
+    return pooling(operand, pooling_type, pooling_window_shape, strides, auto_padding,
+                   lower_pad, upper_pad, name).output()
 
 def batch_normalization(operand, scale, bias, running_mean, running_inv_std, special,
                         normalization_time_constant=0, blend_time_constant=0,
@@ -959,7 +963,7 @@ def reshape(x, shape, name=''):
             
     Args:        
         x: tensor to be reshaped
-        shape (tuple): a tuple defining the resulting shape
+        shape (tuple or int): a tuple defining the resulting shape
         name (str): the name of the node in the network            
     Returns:
         :class:`cntk.Function`
@@ -1163,7 +1167,7 @@ def variable(shape, data_type=None, needs_gradient=False, is_sparse=False,
     fed to this input.
 
     Args:
-        shape (tuple): the shape of the input tensor     
+        shape (tuple or int): the shape of the input tensor     
         data_type: np.float32 or np.float64
         needs_gradients (bool): whether to back-propagates to it or not
         is_sparse (bool): whether the variable is sparse
@@ -1185,7 +1189,7 @@ def placeholder(shape, name=''):
     are unfolded, the place holder will get assigned a variable along the correspondent dynamic axis.
 
     Args:
-        shape (tuple): the shape of the variable tensor             
+        shape (tuple or int): the shape of the variable tensor             
         name (str): the name of the node in the network
         
     Returns:
@@ -1233,24 +1237,6 @@ def constant(shape=None, value=None, device_id=-1, name=''):
     if np.isscalar(value):        
         return constant_from_scalar(shape, value, None, cntk_device(device_id), name)   
     return Constant(shape, value, None, cntk_device(device_id), name)
-
-#TODO: check if we still need this as we can build dynamic axis by calling the wrapper constructor 
-def dynamic_axis(name=''):
-    '''
-    This function creates a dynamic axis object that can be connected to an input. 
-    For sequence-based inputs, this allows the sequences to be of arbitrary lengths 
-    and therefore allows networks to be setup without the need for padding.
-    
-    Example:
-        See Examples/LSTM/seqcla.py for a use of :func:`cntk.ops.dynamic_axis`.
-    
-    Args:
-        name (str): the name of the node in the network
-    Returns:
-        :class:`cntk.Function`
-    '''
-    
-    raise NotImplementedError("dynamic_axis is not implemented yet in V2")
 
 ################################################################################
 # normalization ops
