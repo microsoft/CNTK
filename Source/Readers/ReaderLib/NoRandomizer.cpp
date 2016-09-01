@@ -65,10 +65,6 @@ void NoRandomizer::StartEpoch(const EpochConfiguration& config)
     ChunkIdType chunkIndex = GetChunkIndexOf(sweepSamplePosition);
     if (chunkIndex != m_currentChunkPosition)
     {
-        // unloading everything.
-        m_currentChunkId = CHUNKID_MAX;
-        m_currentChunk = nullptr;
-
         // Need to load descriptions for the new current chunk.
         m_currentChunkPosition = chunkIndex;
         m_currentSequencePositionInChunk = 0;
@@ -173,28 +169,33 @@ Sequences NoRandomizer::GetNextSequences(size_t sampleCount)
 
     // Collect all the chunks that we need
     std::map<ChunkIdType, ChunkPtr> chunks;
-
-    if (m_currentChunk != nullptr)
-    {
-        chunks[m_currentChunkId] = m_currentChunk;
-    }
-
     for (int i = 0; i < subsetSize; ++i)
     {
         const auto& sequenceDescription = descriptions[start + i];
         auto it = chunks.find(sequenceDescription.m_chunkId);
         if (it == chunks.end())
         {
-            chunks[sequenceDescription.m_chunkId] = m_deserializer->GetChunk(sequenceDescription.m_chunkId);
+            auto old = m_chunks.find(sequenceDescription.m_chunkId);
+            if (old != m_chunks.end())
+            {
+                chunks.insert(std::make_pair(sequenceDescription.m_chunkId, old->second));
+            }
+            else
+            {
+                chunks[sequenceDescription.m_chunkId] = m_deserializer->GetChunk(sequenceDescription.m_chunkId);
+            }
         }
     }
+
+    // swap current chunks with new ones:
+    m_chunks.swap(chunks);
 
     auto process = [&](int i) -> void {
         std::vector<SequenceDataPtr> sequence;
         const auto& sequenceDescription = descriptions[start + i];
 
-        auto it = chunks.find(sequenceDescription.m_chunkId);
-        if (it == chunks.end())
+        auto it = m_chunks.find(sequenceDescription.m_chunkId);
+        if (it == m_chunks.end())
         {
             LogicError("Invalid chunk requested.");
         }
@@ -220,12 +221,6 @@ Sequences NoRandomizer::GetNextSequences(size_t sampleCount)
         for (int i = 0; i < subsetSize; ++i)
             process(i);
     }
-
-    // Keep the last chunk for next time
-    m_currentChunkId = descriptions[start + subsetSize - 1].m_chunkId;
-    auto it = chunks.find(m_currentChunkId);
-    assert(it != chunks.end());
-    m_currentChunk = it->second;
 
     return result;
 }
