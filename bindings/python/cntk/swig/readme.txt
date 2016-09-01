@@ -21,4 +21,10 @@ pip install wheel
 # go two levels up
 python .\setup.py build_ext -if -c msvc --plat-name=win-amd64 bdist_wheel
 
+#put the wheel file on some http server
 
+# from your machine, run pip install
+pip install http://your-url:your-port/cntk-0.0.0-cp34-cp34m-win_amd64.whl
+
+# check that it is loaded correctly
+import cntk

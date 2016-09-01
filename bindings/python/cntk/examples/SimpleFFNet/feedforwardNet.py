@@ -25,7 +25,7 @@ def test_ffnet():
     dev = -1   
     cntk_dev = cntk_device(dev)
     netout = fully_connected_classifier_net(input, num_output_classes, hidden_layers_dim, num_hidden_layers, dev, sigmoid)  
-        
+    
     ce = cross_entropy_with_softmax(netout, label)
     pe = classification_error(netout, label)
     #TODO: add save and load module code

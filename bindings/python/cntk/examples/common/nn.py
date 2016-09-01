@@ -10,8 +10,8 @@ import os
 from cntk.ops import *
 
 def fully_connected_linear_layer(input, output_dim, device_id):        
-    input_dim = input.shape()[0]
-    times_param = parameter(shape=(input_dim,output_dim), device_id=device_id)    
+    input_dim = input.shape()[0]    
+    times_param = parameter(shape=(input_dim,output_dim), device_id=device_id)        
     t = times(input,times_param)
     plus_param = parameter(shape=(output_dim,), device_id=device_id)
     return plus(plus_param,t)    

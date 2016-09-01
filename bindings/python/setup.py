@@ -13,6 +13,7 @@ print("Using CNTK libs at '%s'"%os.path.abspath(CNTK_LIB_PATH))
 
 print( os.path.join(CNTK_SOURCE_PATH, "CNTKv2LibraryDll", "API"))
 
+#Todo: trim down the list of libs
 libs=[
    os.path.join(CNTK_LIB_PATH, "CNTKLibrary-2.0"),
    os.path.join(CNTK_LIB_PATH, "BinaryReader"),
@@ -30,7 +31,15 @@ libs=[
    os.path.join(CNTK_LIB_PATH, "nvml"),
    os.path.join(CNTK_LIB_PATH, "SparsePCReader"),
    os.path.join(CNTK_LIB_PATH, "UCIFastReader"),
-   os.path.join(CNTK_LIB_PATH, "Math")
+   os.path.join(CNTK_LIB_PATH, "Math"),
+   os.path.join(CNTK_LIB_PATH, "mkl_cntk_p"),
+   os.path.join(CNTK_LIB_PATH, "libiomp5md"),
+   os.path.join(CNTK_LIB_PATH, "cusparse64_75"),
+   os.path.join(CNTK_LIB_PATH, "curand64_75"),
+   os.path.join(CNTK_LIB_PATH, "cudnn64_5"),
+   os.path.join(CNTK_LIB_PATH, "cudart64_75"),
+   os.path.join(CNTK_LIB_PATH, "cublas64_75"),
+   os.path.join(CNTK_LIB_PATH, "opencv_world310"),
    ]
 
 ext_modules = [
@@ -62,4 +71,5 @@ ext_modules = [
       )
     ]
 
+#TODO: do not copy the dlls to the root, try to find a better location that is accessible
 setup(name="cntk", ext_modules = ext_modules,  data_files = [('.\\', [ lib + ".dll" for lib in libs ])], packages=setuptools.find_packages())

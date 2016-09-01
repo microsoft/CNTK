@@ -12,9 +12,10 @@ def _sanitize_value(shape, value, dtype, device, is_param=False):
         if shape is None:
             raise ValueError('you need to specify at least shape or value')        
         shape = utils.sanitize_shape(shape)
-        if is_param:
-            # TODO: expose the initialization params
-            ndav = NDArrayView.random_uniform_float(shape, -0.05, 0.05, 1, device)        
+        
+        if is_param:            
+            # TODO: expose the initialization params            
+            ndav = NDArrayView.random_uniform_float(shape, -0.05, 0.05, 1, device)                    
         else:
             ndav = utils.create_NDArrayView(shape, cntk_dtype, device)
     
@@ -53,8 +54,8 @@ class Parameter(TensorOpsMixin,Parameter):
                 data_type = FLOAT_32
             else:
                 data_type = str(value.dtype)        
-
-        ndav = _sanitize_value(shape, value, data_type, device, True)
+        
+        ndav = _sanitize_value(shape, value, data_type, device, True)        
         super(Parameter, self).__init__(ndav, name)
 
 # TODO: make this part of the above constructor
