@@ -74,7 +74,6 @@ public:
         {
             DenseSequenceDataPtr sequence = make_shared<DenseSequenceData>();
             // We can't popuplate sequence->m_chunk here, so delay that for later
-            sequence->m_chunk           = nullptr;
             sequence->m_data            = (char*)data + c*m_numCols*elemSize;
             sequence->m_id              = startIndex + c;
             sequence->m_numberOfSamples = 1;
@@ -158,7 +157,6 @@ public:
         {
             SparseSequenceDataPtr sequence = make_shared<SparseSequenceData>();
             // We can't popuplate sequence->m_chunk here, so delay that for later
-            sequence->m_chunk           = nullptr;
             sequence->m_id              = startIndex + colIndex;
 
             // We know the number of elements in all of the samples, it's just this:
