@@ -115,23 +115,12 @@ void DoTrain(const ConfigRecordType& config)
     if (config.Exists(L"cvReader"))
         cvDataReader = CreateObject<DataReader>(config, L"cvReader");
 
-    shared_ptr<SGD<ElemType>> optimizer;
-    if (config.Exists(L"optimizer"))
-    {
-        optimizer = CreateObject<SGD<ElemType>>(config, L"optimizer");
-    }
-    else // legacy CNTK config syntax: needs a record called 'SGD'
-    {
-        const ConfigRecordType& configSGD(config(L"SGD"));
-        optimizer = make_shared<SGD<ElemType>>(configSGD);
-    }
-
     CudaProfilerTimer cudaProfilerTimer(config(L"cudaProfilerEnabled", false),
                                         config(L"cudaProfilerIterations", (int)1000),
                                         config(L"cudaProfilerMaxIterations", (int)-1));
 
     optimizer->InitMPI(MPIWrapper::GetInstance());
-    optimizer->Train(createNetworkFn, deviceId, dataReader.get(), cvDataReader.get(), cudaProfilerTimer, makeMode);
+    optimizer->Train(net, deviceId, dataReader.get(), cvDataReader.get(), startEpoch, loadNetworkFromCheckpoint, cudaProfilerTimer);
 }
 
 namespace Microsoft { namespace MSR { namespace ScriptableObjects {

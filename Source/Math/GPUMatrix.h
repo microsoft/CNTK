@@ -3,7 +3,6 @@
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
 
-
 #pragma once
 #include "Platform.h"
 #include "File.h"
@@ -35,8 +34,6 @@
 #include <pthread.h>
 #include <sched.h>
 #endif
-
-
 
 // predeclare cublasHandle_t
 struct cublasContext;
@@ -70,27 +67,6 @@ void MATH_API SetStream(cudaStream_t stream);
 cudaStream_t MATH_API GetStream();
 
 namespace Microsoft { namespace MSR { namespace CNTK {
-
-// -----------------------------------------------------------------------
-// SyncGuard -- synchronize around CUDA calls
-// -----------------------------------------------------------------------
-
-class SyncGuard
-{
-private:
-    static bool s_isSyncEnabled;
-
-    bool m_forceSync;
-#ifndef CPUONLY
-    cudaEvent_t m_done;
-#endif
-
-public:
-    static MATH_API void EnableSync();
-
-    SyncGuard(bool forceSync = false);
-    ~SyncGuard();
-};
 
 // -----------------------------------------------------------------------
 // DeviceBoundNumber -- This class represents a number which resides on a particular device. Use it to avoid unnecessary transfers between CPU and GPU
@@ -664,55 +640,8 @@ static void CudaCall(ERRTYPE retCode, const char* exprString, const char* libNam
 // -----------------------------------------------------------------------
 struct SyncCudaScope
 {
-    SyncCudaScope(const char* functionName, const char* description, cudaStream_t stream = (cudaStream_t)0)
-    {
-        bool syncEnabled;
-        bool profilingEnabled;
-        Microsoft::MSR::CNTK::SyncCudaScopeGetFlags(syncEnabled, profilingEnabled);
-
-        if (!syncEnabled) return;
-
-        CUDA_CALL(cudaEventCreate(&m_beginEvent));
-        CUDA_CALL(cudaEventCreate(&m_endEvent));
-
-        if (profilingEnabled)
-        {
-            // We want proper truncation on both Windows and Unix, with different snprintf behaviors
-            m_description[0] = 0;
-            snprintf(m_description, sizeof(m_description) - 1, "CUDA %s %s", functionName, description);
-            m_description[sizeof(m_description) - 1] = 0;
-        }
-
-        m_stream = stream;
-        CUDA_CALL(cudaEventRecord(m_beginEvent, m_stream));
-    }
-
-    ~SyncCudaScope()
-    {
-        bool syncEnabled;
-        bool profilingEnabled;
-        Microsoft::MSR::CNTK::SyncCudaScopeGetFlags(syncEnabled, profilingEnabled);
-
-        if(!syncEnabled) return;
-
-        if (!std::uncaught_exception())
-        {
-            // failures in a prior launch might be reported here
-            CUDA_CALL(cudaEventRecord(m_endEvent, m_stream));
-            CUDA_CALL(cudaEventSynchronize(m_endEvent));
-
-            if (profilingEnabled)
-            {
-                float deltaTime = 0.0f;
-                CUDA_CALL(cudaEventElapsedTime(&deltaTime, m_beginEvent, m_endEvent));
-
-                Microsoft::MSR::CNTK::ProfilerCudaTimeEnd(deltaTime / 1000.0f, m_description);
-            }
-        }
-
-        cudaEventDestroy(m_beginEvent);
-        cudaEventDestroy(m_endEvent);
-    }
+    SyncCudaScope(const char* functionName, const char* description, cudaStream_t stream = (cudaStream_t)0);
+    ~SyncCudaScope();
 
 private:
     cudaEvent_t         m_beginEvent;
@@ -730,47 +659,8 @@ private:
 // -----------------------------------------------------------------------
 struct AsyncGPUProfiler
 {
-    AsyncGPUProfiler()
-    {
-        m_workerThread = new std::thread([this]
-        {
-            const double minSyncDuration = 0.1;     // Number of ms for a sync duration to be valid
-            const int profilerGranurality = 1;      // Profiler frequency in ms
-            
-            while (!this->m_threadQuit)
-            {
-                Microsoft::MSR::CNTK::Timer tm;
-
-                auto stateId = Microsoft::MSR::CNTK::ProfilerTimeBegin();
-                tm.Start();
-                auto err = cudaDeviceSynchronize();
-                tm.Stop();
-
-                if (err == cudaSuccess && tm.ElapsedSeconds() > (minSyncDuration / 1000.0))
-                {
-                    Microsoft::MSR::CNTK::ProfilerTimeEnd(stateId, "GPU Busy");
-                }
-
-                Sleep(profilerGranurality);
-            }
-        });
-
-#ifdef _WIN32
-        SetThreadPriority((HANDLE)m_workerThread->native_handle(), THREAD_PRIORITY_TIME_CRITICAL);
-#else
-        int policy = SCHED_FIFO;
-        struct sched_param param;
-        param.sched_priority = sched_get_priority_max(policy);
-        pthread_setschedparam(m_workerThread->native_handle(), policy, &param);
-#endif
-    }
-
-    ~AsyncGPUProfiler()
-    {
-        m_threadQuit = true;
-        m_workerThread->join();
-        delete m_workerThread;
-    }
+    AsyncGPUProfiler();
+    ~AsyncGPUProfiler();
 
 private:
     std::thread*    m_workerThread;

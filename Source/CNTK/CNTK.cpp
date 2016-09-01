@@ -23,7 +23,7 @@
 #include "NDLNetworkBuilder.h"
 #include "ModelEditLanguage.h"
 #include "CPUMatrix.h" // used for SetNumThreads()
-#include "GPUMatrix.h" // used for SyncGuard::EnableSync()
+#include "GPUMatrix.h"
 #include "CommonMatrix.h"
 #include "SGD.h"
 #include "MPIWrapper.h"
@@ -79,11 +79,12 @@ void TestCn(const ConfigParameters& config);
 template <typename ConfigParamType>
 void SetupProfiling(ProfilerContext& profilerContext, const ConfigParamType& config, int nodeRank)
 {
-    if (config(L"profilerEnabled", true))
+    if (config(L"profilerEnabled", false))
     {
         profilerContext.Init(config(L"profilerDirectory", "./profiler").c_str(),
                              config(L"profilerBufferSize", static_cast<uint64_t>(32ull * 1024ull * 1024ull)),
-                             std::to_string(nodeRank).c_str(), config(L"profilerSyncGpu", false));
+                             std::to_string(nodeRank).c_str(), config(L"profilerSyncGpu", false),
+                             config(L"synchronizeCUDAKernelExecutions", false));
     }
 }
 
@@ -532,10 +533,6 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
     g_shareNodeValueMatrices = config(L"shareNodeValueMatrices", false);
 
     TracingGPUMemoryAllocator::SetTraceLevel(config(L"traceGPUMemoryAllocations", 0));
-
-    bool synchronizeCUDAKernelExecutions = config(L"synchronizeCUDAKernelExecutions", false);
-    if (synchronizeCUDAKernelExecutions)
-        SyncGuard::EnableSync();
 
     // logging
     wstring logpath = config(L"stderr", L"");

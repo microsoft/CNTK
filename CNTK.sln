@@ -374,8 +374,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "EvalDll", "Source\EvalDll\E
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Math", "Source\Math\Math.vcxproj", "{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}"
 	ProjectSection(ProjectDependencies) = postProject
-		{86883653-8A61-4038-81A0-2379FAE4200A} = {86883653-8A61-4038-81A0-2379FAE4200A}
 		{4B442D34-641A-4B37-9A4B-D18DBE28A979} = {4B442D34-641A-4B37-9A4B-D18DBE28A979}
+		{86883653-8A61-4038-81A0-2379FAE4200A} = {86883653-8A61-4038-81A0-2379FAE4200A}
 		{B3DD765E-694E-4494-BAD7-37BBF2942517} = {B3DD765E-694E-4494-BAD7-37BBF2942517}
 	EndProjectSection
 EndProject
@@ -1273,6 +1273,9 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CSEvalClientTest", "Tests\EndToEndTests\EvalClientTests\CSEvalClientTest\CSEvalClientTest.csproj", "{1C6E6C53-1AA7-4B69-913E-B97BB5A872CF}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "PerformanceProfilerDll", "Source\PerformanceProfilerDll\PerformanceProfilerDll.vcxproj", "{4B442D34-641A-4B37-9A4B-D18DBE28A979}"
+	ProjectSection(ProjectDependencies) = postProject
+		{86883653-8A61-4038-81A0-2379FAE4200A} = {86883653-8A61-4038-81A0-2379FAE4200A}
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

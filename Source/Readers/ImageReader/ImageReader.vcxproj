@@ -74,7 +74,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup>
     <ClCompile>
-      <AdditionalIncludeDirectories>$(SolutionDir)Source\Common\Include;$(SolutionDir)Source\Math;$(OpenCvInclude);$(ZipInclude);$(SolutionDir)Source\Readers\ReaderLib;$(SolutionDir)Source\PerformanceProfilerDll</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Source\Common\Include;$(SolutionDir)Source\Math;$(OpenCvInclude);$(ZipInclude);$(SolutionDir)Source\Readers\ReaderLib;$(SolutionDir)Source\PerformanceProfilerDll;$(BOOST_INCLUDE_PATH)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>$(OutDir);$(OpenCvLibPath);$(ZipLibPath)</AdditionalLibraryDirectories>

@@ -147,3 +147,4 @@ cv::Mat ZipByteReader::Read(size_t seqId, const std::string& path, bool grayscal
 }}}
 
 #endif
+

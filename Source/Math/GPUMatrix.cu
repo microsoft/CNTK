@@ -117,44 +117,6 @@ const char* CudaErrString<curandStatus>(curandStatus)
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-/*static*/ bool SyncGuard::s_isSyncEnabled = false;
-
-/*static*/ void SyncGuard::EnableSync()
-{
-    s_isSyncEnabled = true;
-}
-
-SyncGuard::SyncGuard(bool forceSync /*= false*/)
-    : m_forceSync(forceSync)
-{
-    m_done = nullptr;
-    if (m_forceSync || s_isSyncEnabled)
-    {
-        CUDA_CALL(cudaGetLastError());
-        CUDA_CALL(cudaEventCreate(&m_done));
-    }
-}
-
-SyncGuard::~SyncGuard()
-{
-    if (m_forceSync || s_isSyncEnabled)
-    {
-        // The regular use of this destructor is to synchronize the GPU, but also
-        // to check for errors. So this destructor is where CUDA errors would be thrown.
-        // If this destructor runs during stack unwinding, then a different error has
-        // already happened that should be reported; so we only clean up the resource.
-        if (std::uncaught_exception())
-            cudaEventDestroy(m_done);
-        else
-        {
-            // failures in a prior launch might be reported here
-            CUDA_CALL(cudaEventRecord(m_done));
-            CUDA_CALL(cudaEventSynchronize(m_done));
-            CUDA_CALL(cudaEventDestroy(m_done));
-        }
-    }
-}
-
 template <typename AllocatedElemType>
 AllocatedElemType* TracingGPUMemoryAllocator::Allocate(int deviceId, size_t numRows, size_t numCols)
 {
@@ -1423,7 +1385,7 @@ ElemType GPUMatrix<ElemType>::Adagrad(GPUMatrix<ElemType>& gradients, const bool
     {
         // BUGBUG: Should this use CUDA streams?
         PROFILE_CUDA("_adagrad");
-    _adagrad<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock>>>(Data(), gradients.Data(), n, multipliers);
+        _adagrad<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock>>>(Data(), gradients.Data(), n, multipliers);
     }
 
     if (!needAveMultiplier)
@@ -1533,7 +1495,7 @@ ElemType GPUMatrix<ElemType>::RmsProp(GPUMatrix<ElemType>& gradients,
 
     {
         PROFILE_CUDA("_rmsprop");
-    _rmsprop<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock>>>(avars, signs, steps, gradients.Data(), n,
+        _rmsprop<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock>>>(avars, signs, steps, gradients.Data(), n,
                                                                        RMS_GAMMA, RMS_WGT_INC, RMS_WGT_MAX, RMS_WGT_DEC, RMS_WGT_MIN,
                                                                        floor, upd_gpu, multipliers);
     }
@@ -2897,14 +2859,14 @@ void GPUMatrix<ElemType>::VectorMax(GPUMatrix<ElemType>& maxIndexes, GPUMatrix<E
     // If first param is nullptr then no actual work is done except writing result to cbtemp.
     {
         PROFILE_CUDA_STREAM("SortPairsDescending", t_stream);
-    CUDA_CALL(cub::DeviceRadixSort::SortPairsDescending(nullptr, cbtemp, inVal, outVal1, inIdx, outIdx, celt, 0, sizeof(ElemType) * 8, t_stream));
+        CUDA_CALL(cub::DeviceRadixSort::SortPairsDescending(nullptr, cbtemp, inVal, outVal1, inIdx, outIdx, celt, 0, sizeof(ElemType) * 8, t_stream));
     }
     size_t ctemp1 = (cbtemp + sizeof(ElemType) - 1) / sizeof(ElemType);
     // Determine temp buffer size needed for SortPairs to sort indices on the second pass.
     cbtemp = 0;
     {
         PROFILE_CUDA_STREAM("SortPairs", t_stream);
-    CUDA_CALL(cub::DeviceRadixSort::SortPairs(nullptr, cbtemp, outIdx, inIdx, outVal1, outVal2, celt, 0, 32, t_stream));
+        CUDA_CALL(cub::DeviceRadixSort::SortPairs(nullptr, cbtemp, outIdx, inIdx, outVal1, outVal2, celt, 0, 32, t_stream));
     }
     size_t ctemp2 = (cbtemp + sizeof(ElemType) - 1) / sizeof(ElemType);
     size_t ctemp = std::max(ctemp1, ctemp2);
@@ -2931,7 +2893,7 @@ void GPUMatrix<ElemType>::VectorMax(GPUMatrix<ElemType>& maxIndexes, GPUMatrix<E
     int cblock = (celt + ThreadsPerBlock - 1) / ThreadsPerBlock;
     {
         PROFILE_CUDA_STREAM("_initIndicesForSort", t_stream);
-    _initIndicesForSort<<<cblock, ThreadsPerBlock, 0, t_stream>>>(inIdx, m, n);
+        _initIndicesForSort<<<cblock, ThreadsPerBlock, 0, t_stream>>>(inIdx, m, n);
     }
     // Sort by values.
     {
@@ -4824,5 +4786,107 @@ int _ConvertSMVer2Cores(int major, int minor)
 //    else
 //        return (CUDA_LONG)free;
 //}
+
+
+// -----------------------------------------------------------------------
+// SyncCudaScope -- synchronize and time CUDA calls
+// -----------------------------------------------------------------------
+
+SyncCudaScope::SyncCudaScope(const char* functionName, const char* description, cudaStream_t stream)
+{
+    bool syncEnabled;
+    bool profilingEnabled;
+    Microsoft::MSR::CNTK::SyncCudaScopeGetFlags(syncEnabled, profilingEnabled);
+
+    if (!syncEnabled) return;
+
+    CUDA_CALL(cudaEventCreate(&m_beginEvent));
+    CUDA_CALL(cudaEventCreate(&m_endEvent));
+
+    if (profilingEnabled)
+    {
+        // We want proper truncation on both Windows and Unix, with different snprintf behaviors
+        m_description[0] = 0;
+        snprintf(m_description, sizeof(m_description) - 1, "CUDA %s %s", functionName, description);
+        m_description[sizeof(m_description) - 1] = 0;
+    }
+
+    m_stream = stream;
+    CUDA_CALL(cudaEventRecord(m_beginEvent, m_stream));
+}
+
+SyncCudaScope::~SyncCudaScope()
+{
+    bool syncEnabled;
+    bool profilingEnabled;
+    Microsoft::MSR::CNTK::SyncCudaScopeGetFlags(syncEnabled, profilingEnabled);
+
+    if (!syncEnabled) return;
+
+    if (!std::uncaught_exception())
+    {
+        // failures in a prior launch might be reported here
+        CUDA_CALL(cudaEventRecord(m_endEvent, m_stream));
+        CUDA_CALL(cudaEventSynchronize(m_endEvent));
+
+        if (profilingEnabled)
+        {
+            float deltaTime = 0.0f;
+            CUDA_CALL(cudaEventElapsedTime(&deltaTime, m_beginEvent, m_endEvent));
+
+            Microsoft::MSR::CNTK::ProfilerCudaTimeEnd(deltaTime / 1000.0f, m_description);
+        }
+    }
+
+    cudaEventDestroy(m_beginEvent);
+    cudaEventDestroy(m_endEvent);
+}
+
+// -----------------------------------------------------------------------
+// AsyncGPUProfiler -- Measure GPU consumption asynchronously
+// -----------------------------------------------------------------------
+
+AsyncGPUProfiler::AsyncGPUProfiler()
+{
+    // Create thread to measure GPU busy/idle time in the background
+    m_workerThread = new std::thread([this]
+    {
+        const double minSyncDuration = 0.1;     // Number of ms for a sync duration to be valid
+        const int profilerGranularity = 1;      // Profiler frequency in ms
+
+        while (!this->m_threadQuit)
+        {
+            Microsoft::MSR::CNTK::Timer tm;
+
+            auto stateId = Microsoft::MSR::CNTK::ProfilerTimeBegin();
+            tm.Start();
+            auto err = cudaDeviceSynchronize();
+            tm.Stop();
+
+            if (err == cudaSuccess && tm.ElapsedSeconds() > (minSyncDuration / 1000.0))
+            {
+                Microsoft::MSR::CNTK::ProfilerTimeEnd(stateId, "GPU Busy");
+            }
+
+            Sleep(profilerGranularity);
+        }
+    });
+
+#ifdef _WIN32
+    SetThreadPriority((HANDLE)m_workerThread->native_handle(), THREAD_PRIORITY_TIME_CRITICAL);
+#else
+    int policy = SCHED_FIFO;
+    struct sched_param param;
+    param.sched_priority = sched_get_priority_max(policy);
+    pthread_setschedparam(m_workerThread->native_handle(), policy, &param);
+#endif
+}
+
+AsyncGPUProfiler::~AsyncGPUProfiler()
+{
+    m_threadQuit = true;
+    m_workerThread->join();
+    delete m_workerThread;
+}
 
 #endif // CPUONLY

@@ -5,6 +5,29 @@
 // Real-time thread-safe profiler that generats a summary report and a detail profile log.
 // The profiler is highly performant and light weight and meant to be left on all the time.
 //
+// Profiler Usage
+//
+// To initialize and tear down the profiler, call ProfilerInit() and ProfilerClose(). The scoped
+// object, ProfilerContext can also be used for managing the lifetime of the profiler. The profiler
+// works by accumulating events in a pre-allocated buffer, up until the buffer is full. At the
+// time when the profiler is torn down, a summary report and a detailed log file is written to disk.
+//
+// When profiling code, two types of events can be used - fixed or custom. A fixed event is
+// predifined in the ProfilerEvents enum and by the FixedEventDesc struct. A custom event is
+// simply a string.
+//
+// To profile a section of code, call ProfilerTimeBegin() and ProfilerTimeEnd(), or the scoped
+// object ScopeProfile. When the GPU sync flag is set in the FixedEventDesc and in ProfilerInit(),
+// the GPU will be synced at the time ProfilerTimeEnd() is called, for fixed events only. For
+// custom events, ProfilerSyncGpu() can be called to sync the GPU.
+//
+// When profiling CUDA kernels, use the CUDA APIs to measure elapsed kernel time and call
+// ProfilerCudaTimeEnd() to record the event.
+//
+// When there is a need to profile I/O bandwidth (or throughput), the ProfilerThroughputBegin()
+// and ProfilerThroughputBegin() calls should be used. The throughput APIs can only be used
+// with fixed events.
+//
 
 #pragma once
 
@@ -28,10 +51,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 //
 enum ProfilerEvents
 {
-    // Main thread events
+    // Main thread header (dummy events)
     profilerSepMainThread = 0,
     profilerSepSpace0,
 
+    // Main thread events
     profilerEvtMainEpoch,
     profilerEvtMainMinibatch,
     profilerEvtMainGetMinibatch,
@@ -40,11 +64,12 @@ enum ProfilerEvents
     profilerEvtMainWeights,
     profilerEvtMainPost,
 
-    // MPI/Gradient aggregation multithreaded events
+    // MPI/Gradient header (dummy events)
     profilerSepSpace1,
     profilerSepMPI,
     profilerSepSpace2,
 
+    // MPI/Gradient aggregation multithreaded events
     profilerEvtGradient1,
     profilerEvtGradientAsyncComm11,
     profilerEvtGradientWaitGradients1,
@@ -61,11 +86,12 @@ enum ProfilerEvents
     profilerEvtGradientWaitGradients32,
     profilerEvtGradientWaitCompletion32,
 
-    // Data reader events
+    // Data reader header (dummy events)
     profilerSepSpace3,
     profilerSepDataReader,
     profilerSepSpace4,
 
+    // Data reader events
     profilerEvtReadMinibatch,
     profilerEvtZipReaderThroughput,
 
@@ -79,9 +105,10 @@ enum ProfilerEvents
 // customEventBufferBytes: Bytes to allocate for the custom event buffer.
 // logSuffix: Suffix string to append to log files.
 // syncGpu: Wait for GPU to complete processing for each profiling event.
+// syncCudaKernels: Synchronize every cuda kernel.
 //
 void PERF_PROFILER_API ProfilerInit(const char* profilerDir, const unsigned long long customEventBufferBytes,
-    const char* logSuffix, const bool syncGpu);
+    const char* logSuffix, const bool syncGpu, const bool syncCudaKernels);
 
 
 //
@@ -130,54 +157,26 @@ void PERF_PROFILER_API ProfilerClose();
 //
 // Scoped profiler instantiation.
 //
-struct ProfilerContext
+struct PERF_PROFILER_API ProfilerContext
 {
-    void Init(const char* profilerDir = nullptr, const unsigned long long customEventBufferBytes = (32 * 1024 * 1024), const char* logSuffix = "", const bool syncGpu = false)
-    {
-        ProfilerInit(profilerDir, customEventBufferBytes, logSuffix, syncGpu);
-    }
-
-    ~ProfilerContext()
-    {
-        ProfilerClose();
-    }
+    void Init(const char* profilerDir = nullptr, const unsigned long long customEventBufferBytes = (32 * 1024 * 1024), const char* logSuffix = "", const bool syncGpu = false, const bool syncCudaKernels = false);
+    ~ProfilerContext();
 };
 
 
 //
 // Scoped time profiling.
 //
-struct ScopeProfile
+struct PERF_PROFILER_API ScopeProfile
 {
-    ScopeProfile(int eventId)
-    {
-        m_eventId = eventId;
-        m_description = nullptr;
-        m_stateId = ProfilerTimeBegin();
-    }
-
-    ScopeProfile(const char* description)
-    {
-        m_description = (char*)description;
-        m_stateId = ProfilerTimeBegin();
-    }
-
-    ~ScopeProfile()
-    {
-        if (m_description)
-        {
-            ProfilerTimeEnd(m_stateId, m_description);
-        }
-        else
-        {
-            ProfilerTimeEnd(m_stateId, m_eventId);
-        }
-    }
+    ScopeProfile(int eventId);
+    ScopeProfile(const char* description);
+    ~ScopeProfile();
 
 private:
     unsigned long long  m_stateId;
     int                 m_eventId;
-    char*               m_description;
+    const char*         m_description;
 };
 
 #define PROFILE_SCOPE(eventId)      ScopeProfile __sp##eventId(eventId);
@@ -188,19 +187,10 @@ private:
 //
 // Scoped throughput profiling.
 //
-struct ScopeThroughput
+struct PERF_PROFILER_API ScopeThroughput
 {
-    ScopeThroughput(int eventId, long long bytes)
-    {
-        m_bytes = bytes;
-        m_eventId = eventId;
-        m_stateId = ProfilerThroughputBegin();
-    }
-
-    ~ScopeThroughput()
-    {
-        ProfilerThroughputEnd(m_stateId, m_eventId, m_bytes);
-    }
+    ScopeThroughput(int eventId, long long bytes);
+    ~ScopeThroughput();
 
 private:
     unsigned long long              m_stateId;
@@ -218,7 +208,7 @@ private:
 void PERF_PROFILER_API SyncCudaScopeSetFlags(bool syncEnabled, bool profilingEnabled);
 void PERF_PROFILER_API SyncCudaScopeGetFlags(bool& syncEnabled, bool& profilingEnabled);
 
-struct CudaProfilerTimer
+struct PERF_PROFILER_API CudaProfilerTimer
 {
     //
     // Setup the CUDA profiler.
@@ -227,36 +217,12 @@ struct CudaProfilerTimer
     // maxIterations: Stop syncing & profiling after this many iterations. -1 indicates to never stop.
     //                (ex: 1000 means that we stop after 1000 iterations)
     //
-    CudaProfilerTimer(bool enable, int syncIterations, int maxIterations)
-    {
-        m_enable = enable;
-        m_syncIterations = syncIterations;
-        m_maxIterations = maxIterations;
-        m_iterationCnt = 0;
-        m_iterationCntTotal = 0;
-        SyncCudaScopeSetFlags(false, false);
-    }
+    CudaProfilerTimer(bool enable, int syncIterations, int maxIterations);
 
     //
     // Main function that enables profiling, to be called at the beggining of each iteration.
     //
-    void Update()
-    {
-        if (!m_enable) return;
-
-        if (m_iterationCnt == m_syncIterations && (m_iterationCntTotal < m_maxIterations || m_maxIterations == -1))
-        {
-            SyncCudaScopeSetFlags(true, true);
-            m_iterationCnt = 0;
-        }
-        else
-        {
-            SyncCudaScopeSetFlags(false, false);
-        }
-
-        m_iterationCnt++;
-        m_iterationCntTotal++;
-    }
+    void Update();
 
 private:
     bool    m_enable;

@@ -11,6 +11,7 @@
 #endif
 #define _CRT_NONSTDC_NO_DEPRECATE // make VS accept POSIX functions without _
 
+#include "PerformanceProfiler.h"
 #include "Basics.h"
 #include "fileutil.h"
 #include <stdio.h>
@@ -29,13 +30,6 @@
 #include <sys/syscall.h>
 #endif 
 
-#ifndef CPUONLY
-#pragma comment(lib, "cuda.lib")
-#pragma comment(lib, "cudart.lib")
-#endif
-
-#include "PerformanceProfiler.h"
-
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -53,9 +47,9 @@ enum FixedEventType
 
 struct FixedEventDesc
 {
-	char			eventDescription[64];
-	FixedEventType	eventType;
-	bool			syncGpu;
+    char            eventDescription[64];
+    FixedEventType  eventType;
+    bool            syncGpu;
 };
 
 static const FixedEventDesc c_fixedEvtDesc[profilerEvtMax] = {
@@ -126,16 +120,21 @@ struct CustomEventRecord
 //
 struct ProfilerState
 {
-    bool                    init = false;
-    bool                    enabled = false;
-    bool                    syncGpu = false;
-    char                    profilerDir[256];
-    char                    logSuffix[64];
-    long long               clockFrequency;
-    FixedEventRecord        fixedEvents[profilerEvtMax];
+    bool                    init = false;               // Profiler initialized
+    bool                    initWarning = true;         // Initilize warning flag so that it prints once
+    bool                    enabled;                    // Profiler enabled (active)
+    bool                    syncGpu;                    // Sync GPU per each profiling event
+    bool                    syncCudaKernels;            // Sync GPU for each CUDA kernel
+    bool                    cudaSyncEnabled;            // Runtime state of CUDA kernel sync
+    bool                    cudaProfilingEnabled;       // Runtime state of profiling CUDA kernels
+    char                    profilerDir[256];           // Directory where reports/logs are saved
+    char                    logSuffix[64];              // Suffix to append to report/log file names
+    long long               clockFrequency;             // Timer frequency
+    FixedEventRecord        fixedEvents[profilerEvtMax]; // Profiling data for each fixed event
+    bool                    customEventBufferFull;      // Is custom event buffer full?
     unsigned long long      customEventBufferBytes;     // Number of bytes allocated for the custom event buffer
     unsigned long long      customEventPtr;             // Pointer to current place in buffer
-    char*                   customEventBuffer;
+    char*                   customEventBuffer;          // Pointer to custom event buffer
 };
 
 
@@ -169,15 +168,26 @@ struct ScopeLock
 };
 #define LOCK    ScopeLock sl;
 
+#define INIT_GUARD_CHECK    if (!g_profilerState.init) \
+                            { \
+                                if(g_profilerState.initWarning) \
+                                { \
+                                        fprintf(stderr, "Warning: %s: Profiler is not initialized, ProfilerInit() was not called.\n", __FUNCTION__); \
+                                        g_profilerState.initWarning = false; \
+                                } \
+                                return; \
+                            } \
+
 //
 // Initialize all resources to enable profiling.
 // profilerDir: Directory where the profiler logs will be saved. nullptr for default location.
 // customEventBufferBytes: Bytes to allocate for the custom event buffer.
 // logSuffix: Suffix string to append to log files.
 // syncGpu: Wait for GPU to complete processing for each profiling event.
+// syncCudaKernels: Synchronize every cuda kernel.
 //
-void PERF_PROFILER_API ProfilerInit(const char* profilerDir, const unsigned long long customEventBufferBytes, 
-                                    const char* logSuffix, const bool syncGpu)
+void PERF_PROFILER_API ProfilerInit(const char* profilerDir, const unsigned long long customEventBufferBytes,
+    const char* logSuffix, const bool syncGpu, const bool syncCudaKernels)
 {
     memset(&g_profilerState, 0, sizeof(g_profilerState));
 
@@ -196,13 +206,19 @@ void PERF_PROFILER_API ProfilerInit(const char* profilerDir, const unsigned long
     strncpy(g_profilerState.logSuffix, logSuffix, sizeof(g_profilerState.logSuffix) - 1);
     g_profilerState.logSuffix[sizeof(g_profilerState.logSuffix) - 1] = 0;
 
+    g_profilerState.customEventBufferFull = false;
     g_profilerState.customEventBufferBytes = customEventBufferBytes;
+    g_profilerState.customEventPtr = 0ull;
     g_profilerState.customEventBuffer = new char[customEventBufferBytes];
 
     g_profilerState.clockFrequency = GetClockFrequency();
 
     g_profilerState.syncGpu = syncGpu;
+    g_profilerState.syncCudaKernels = syncCudaKernels;
+    if (g_profilerState.syncCudaKernels) g_profilerState.cudaSyncEnabled = true;
+    g_profilerState.cudaProfilingEnabled = false;
     g_profilerState.enabled = false;
+    g_profilerState.initWarning = true;
     g_profilerState.init = true;
 }
 
@@ -212,10 +228,8 @@ void PERF_PROFILER_API ProfilerInit(const char* profilerDir, const unsigned long
 //
 void PERF_PROFILER_API ProfilerEnable(bool enable)
 {
-    if (g_profilerState.init)
-        g_profilerState.enabled = enable;
-    else
-        g_profilerState.enabled = false;
+    INIT_GUARD_CHECK
+    g_profilerState.enabled = enable;
 }
 
 
@@ -224,7 +238,8 @@ void PERF_PROFILER_API ProfilerEnable(bool enable)
 //
 void ProfilerTimeEndInt(const int eventId, const long long beginClock, const long long endClock)
 {
-    if (!g_profilerState.init || !g_profilerState.enabled) return;
+    if (!g_profilerState.enabled)
+        return;
 
     LOCK
 
@@ -243,13 +258,22 @@ void ProfilerTimeEndInt(const int eventId, const long long beginClock, const lon
 
 void ProfilerTimeEndInt(const char* eventDescription, const long long beginClock, const long long endClock)
 {
-    if (!g_profilerState.init || !g_profilerState.enabled) return;
+    if (!g_profilerState.enabled)
+        return;
 
     LOCK
 
     auto eventDescriptionBytes = strlen(eventDescription) + 1;
     auto requiredBufferBytes = eventDescriptionBytes + sizeof(CustomEventRecord);
-    if ((g_profilerState.customEventPtr + requiredBufferBytes) > g_profilerState.customEventBufferBytes) return;
+    if ((g_profilerState.customEventPtr + requiredBufferBytes) > g_profilerState.customEventBufferBytes)
+    {
+        if (!g_profilerState.customEventBufferFull)
+        {
+            fprintf(stderr, "Warning: Performance Profiler: Buffer is full, no more events will be recorded.\n");
+            g_profilerState.customEventBufferFull = true;
+        }
+        return;
+    }
 
     strcpy(g_profilerState.customEventBuffer + g_profilerState.customEventPtr, eventDescription);
     g_profilerState.customEventPtr += eventDescriptionBytes;
@@ -277,6 +301,7 @@ long long PERF_PROFILER_API ProfilerTimeBegin()
 
 void PERF_PROFILER_API ProfilerTimeEnd(const long long stateId, const int eventId)
 {
+    INIT_GUARD_CHECK
     if (c_fixedEvtDesc[eventId].syncGpu) ProfilerSyncGpu();
     long long endClock = GetClock();
     ProfilerTimeEndInt(eventId, stateId, endClock);
@@ -286,6 +311,7 @@ void PERF_PROFILER_API ProfilerTimeEnd(const long long stateId, const int eventI
 
 void PERF_PROFILER_API ProfilerTimeEnd(const long long stateId, const char* eventDescription)
 {
+    INIT_GUARD_CHECK
     ProfilerTimeEndInt(eventDescription, stateId, GetClock());
 }
 
@@ -297,7 +323,9 @@ void PERF_PROFILER_API ProfilerTimeEnd(const long long stateId, const char* even
 void PERF_PROFILER_API ProfilerSyncGpu()
 {
 #ifndef CPUONLY
-	if (!g_profilerState.init || !g_profilerState.enabled) return;
+    INIT_GUARD_CHECK
+    if(!g_profilerState.enabled)
+        return;
     if (g_profilerState.syncGpu) cudaDeviceSynchronize();
 #endif
 }
@@ -309,6 +337,7 @@ void PERF_PROFILER_API ProfilerSyncGpu()
 //
 void PERF_PROFILER_API ProfilerCudaTimeEnd(const float deltaSeconds, const char* eventDescription)
 {
+    INIT_GUARD_CHECK
     ProfilerTimeEndInt(eventDescription, 0ll, (long long)((double)deltaSeconds * (double)g_profilerState.clockFrequency));
 }
 
@@ -327,12 +356,15 @@ long long PERF_PROFILER_API ProfilerThroughputBegin()
 void PERF_PROFILER_API ProfilerThroughputEnd(const long long stateId, const int eventId, const long long bytes)
 {
     long long endClock = GetClock();
-    if (!g_profilerState.init || !g_profilerState.enabled) return;
+    INIT_GUARD_CHECK
+    if (!g_profilerState.enabled)
+        return;
 
     LOCK
 
     auto beginClock = stateId;
-    if (endClock == beginClock) return;
+    if (endClock == beginClock)
+        return;
 
     // Use KB rather than bytes to prevent overflow
     long long KBytesPerSec = ((bytes * g_profilerState.clockFrequency) / 1000) / (endClock - beginClock);
@@ -355,13 +387,17 @@ void PERF_PROFILER_API ProfilerThroughputEnd(const long long stateId, const int 
 //
 void PERF_PROFILER_API ProfilerClose()
 {
-    if (!g_profilerState.init) return;
+    INIT_GUARD_CHECK
     g_profilerState.init = false;
 
     LockClose();
 
     // Generate summary report
-    _wmkdir(s2ws(g_profilerState.profilerDir).c_str());
+    if (_wmkdir(s2ws(g_profilerState.profilerDir).c_str()) == ENOENT)
+    {
+        fprintf(stderr, "Error: ProfilerClose: Cannot create directory <%s>.\n", g_profilerState.profilerDir);
+        return;
+    }
 
     time_t currentTime;
     time(&currentTime);
@@ -386,32 +422,19 @@ void PERF_PROFILER_API ProfilerClose()
 // Helpers for CUDA call profiling.
 //
 
-#ifdef NO_SYNC
-static bool g_SyncCudaScope_syncEnabled = false;
-#else
-static bool g_SyncCudaScope_syncEnabled = true;
-#endif
-static bool g_SyncCudaScope_profilingEnabled = false;
-
 // Helper functions to set/get Sync flags.
 void PERF_PROFILER_API SyncCudaScopeSetFlags(bool syncEnabled, bool profilingEnabled)
 {
-#ifdef NO_SYNC
-    g_SyncCudaScope_syncEnabled = syncEnabled;
-#else
-    g_SyncCudaScope_syncEnabled = true;
-#endif
-    g_SyncCudaScope_profilingEnabled = profilingEnabled;
+    g_profilerState.cudaSyncEnabled = syncEnabled;
+    if (g_profilerState.syncCudaKernels) g_profilerState.cudaSyncEnabled = true;
+    g_profilerState.cudaProfilingEnabled = profilingEnabled;
 }
 
 void PERF_PROFILER_API SyncCudaScopeGetFlags(bool& syncEnabled, bool& profilingEnabled)
 {
-#ifdef NO_SYNC
-    syncEnabled = g_SyncCudaScope_syncEnabled;
-#else
-    syncEnabled = true;
-#endif
-    profilingEnabled = g_SyncCudaScope_profilingEnabled;
+    syncEnabled = g_profilerState.cudaSyncEnabled;
+    if (g_profilerState.syncCudaKernels) syncEnabled = true;
+    profilingEnabled = g_profilerState.cudaProfilingEnabled;
 }
 
 
@@ -469,7 +492,7 @@ long long GetClock()
 
 //
 // Locking primitives.
-// We avoid unnecessary memory allocations or initializations.
+// These are implemented directly here for best performance (rather than using STL).
 //
 
 #ifdef _WIN32
@@ -699,5 +722,91 @@ void ProfilerGenerateDetailFile(const char* fileName)
     fclose(f);
 }
 
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Scoped helpers.
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+void ProfilerContext::Init(const char* profilerDir, const unsigned long long customEventBufferBytes, const char* logSuffix, const bool syncGpu, const bool syncCudaKernels)
+{
+    ProfilerInit(profilerDir, customEventBufferBytes, logSuffix, syncGpu, syncCudaKernels);
+}
+
+ProfilerContext::~ProfilerContext()
+{
+    ProfilerClose();
+}
+
+
+ScopeProfile::ScopeProfile(int eventId)
+{
+    m_eventId = eventId;
+    m_description = nullptr;
+    m_stateId = ProfilerTimeBegin();
+}
+
+ScopeProfile::ScopeProfile(const char* description)
+{
+    m_description = description;
+    m_stateId = ProfilerTimeBegin();
+}
+
+ScopeProfile::~ScopeProfile()
+{
+    if (m_description)
+    {
+        ProfilerTimeEnd(m_stateId, m_description);
+    }
+    else
+    {
+        ProfilerTimeEnd(m_stateId, m_eventId);
+    }
+}
+
+
+ScopeThroughput::ScopeThroughput(int eventId, long long bytes)
+{
+    m_bytes = bytes;
+    m_eventId = eventId;
+    m_stateId = ProfilerThroughputBegin();
+}
+
+ScopeThroughput::~ScopeThroughput()
+{
+    ProfilerThroughputEnd(m_stateId, m_eventId, m_bytes);
+}
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Cuda profiling helper.
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+CudaProfilerTimer::CudaProfilerTimer(bool enable, int syncIterations, int maxIterations)
+{
+    m_enable = enable;
+    m_syncIterations = syncIterations;
+    m_maxIterations = maxIterations;
+    m_iterationCnt = 0;
+    m_iterationCntTotal = 0;
+    SyncCudaScopeSetFlags(false, false);
+}
+
+void CudaProfilerTimer::Update()
+{
+    if (!m_enable) return;
+
+    if (m_iterationCnt == m_syncIterations && (m_iterationCntTotal < m_maxIterations || m_maxIterations == -1))
+    {
+        SyncCudaScopeSetFlags(true, true);
+        m_iterationCnt = 0;
+    }
+    else
+    {
+        SyncCudaScopeSetFlags(false, false);
+    }
+
+    m_iterationCnt++;
+    m_iterationCntTotal++;
+}
 
 }}}

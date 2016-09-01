@@ -663,7 +663,6 @@ static void LaunchTensorOpWithReduction(ElemType beta, array<ElemType*, N> point
 
     // launch the kernel
     CUDA_LONG NN = (CUDA_LONG) numElements; // linear space identifying each individual output element
-    SyncGuard syncGuard;
 
     // do some optimization for reductions
     //  - example: 30 GPU procs, warp size 32 --> 960 GPU cores
@@ -690,6 +689,7 @@ static void LaunchTensorOpWithReduction(ElemType beta, array<ElemType*, N> point
         disableParallelReduction ||                              // (for debugging)
         reductionDim * numElements <= props.multiProcessorCount) // recursive call from reduction below
     {
+        PROFILE_CUDA_STREAM("_launchTensorOp", t_stream);
         // we got enough elements to generate: do one element per thread, and reduction inside
         _launchTensorOp<ElemType, N, M, K><<<grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream>>>(
             beta, pointers, alpha, op, reductionOp,
@@ -806,7 +806,6 @@ static void LaunchTensorOpWithReduction(ElemType beta, array<ElemType*, N> point
                 beta, pointerVector2, alpha, ElementWiseOperator::opCopy, reductionOp,
                 regularOpDims, regularStrideVectors2,
                 reducingOpDimVector2, reducingStrideVectors2);
-            // (note: ^^this will have a nested syncGuard, which is fine)
 
 #else
             _launchTensorOp<ElemType, N, M, K><<<grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream>>>(
@@ -836,9 +835,9 @@ static void LaunchTensorOpWithReduction(ElemType beta, array<ElemType*, N> point
             // no need to pre-scale; just add (common for gradients)
             _launchTensorOpWithReduction<ElemType, N, M, K><<<dim3(numBlocksX, numBlocksY, numBlocksZ), numThreadsX, numThreadsX * sizeof(ReduceElemType), t_stream>>>(beta, pointers, alpha, op, reductionOp, regularOpStrides, regularStrides, NN, reducingOpDims, reducingStrides, 0, reductionChunkSize);
             return;
-    }
-    else
-    {
+        }
+        else
+        {
             PROFILE_CUDA_STREAM("_launchTensorOpWithReduction", t_stream);
             // We need more than one chunk, we will use atomicAdd().
             // First reset/pre-multiply input; then do the remaining chunks using atomicAdd().
