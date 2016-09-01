@@ -285,7 +285,7 @@ void ImageDataDeserializer::CreateSequenceDescriptions(CorpusDescriptorPtr corpu
         if (cid >= labelDimension)
         {
             RuntimeError(
-                "Image '%s' has invalid class id '%" PRIu64 "'. Expected label dimension is '%" PRIu64 "'. Line %" PRIu64 " in file %s.",
+                "Image '%s' has invalid class id '%" PRIu64 "'. It is exceeding the label dimension of '%" PRIu64 "'. Line %" PRIu64 " in file %s.",
                 imagePath.c_str(), cid, labelDimension, lineIndex, mapPath.c_str());
         }
 
