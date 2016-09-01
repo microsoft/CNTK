@@ -94,6 +94,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             DecimateMinibatchInPlace<ElemType>(inputMatrices, mpi->NumNodesInUse(), mpi->CurrentNodeRank(), pMBLayout, useTwoPassTraining);
         }
 
+#if 0   // merge leftover?
+        // This will automatically discard a large fraction of the data, useful if the training data is known to be highly correlated
+        if (dataDecimationFactor)
+        {
+            auto& pMBLayout = net->GetMBLayoutPtrOfNetwork();
+
+            // Verify that there's indeed a single layout
+            for (const auto& iter : inputMatrices)
+            {
+                assert(iter.second.pMBLayout == pMBLayout);
+                // TODO: This must be a runtime check, not an assert().
+                UNUSED(iter);
+            }
+
+            DecimateMinibatchInPlace<ElemType>(inputMatrices, dataDecimationFactor, 0, pMBLayout);
+        }
+#endif
+
         NotifyChangedNodes<ElemType>(net, inputMatrices);
 
         // get MB size and tell Network to update its nodes' buffers based on what's in the input matrices

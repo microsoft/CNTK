@@ -4,6 +4,7 @@
 //
 // CPPEvalClient.cpp : Sample application using the evaluation interface from C++
 //
+#include <sys/stat.h>
 #include "Eval.h"
 #ifdef _WIN32
 #include "Windows.h"
@@ -52,10 +53,16 @@ int main(int argc, char* argv[])
     // This relative path assumes launching from CNTK's binary folder, e.g. build/release/bin/
     const std::string modelWorkingDirectory = path + "/../../../Examples/Image/MNIST/Data/";
 #endif
-    
-    GetEvalF(&model);
-
     const std::string modelFilePath = modelWorkingDirectory + "../Output/Models/01_OneHidden";
+
+    struct stat statBuf;
+    if (stat(modelFilePath.c_str(), &statBuf) != 0)
+    {
+        fprintf(stderr, "Error: The model %s does not exist. Please follow instructions in README.md in <CNTK>/Examples/Image/MNIST to create the model.\n", modelFilePath.c_str());
+        return(1);
+    }
+
+    GetEvalF(&model);    
 
     // Load model with desired outputs
     std::string networkConfiguration;

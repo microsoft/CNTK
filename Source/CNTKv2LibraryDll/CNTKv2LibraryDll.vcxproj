@@ -137,6 +137,7 @@
   <ItemGroup>
     <ClCompile Include="BackCompat.cpp" />
     <ClCompile Include="Common.cpp" />
+    <ClCompile Include="ComputeInputStatistics.cpp" />
     <ClCompile Include="dllmain.cpp">
       <CompileAsManaged>false</CompileAsManaged>
       <PrecompiledHeader>

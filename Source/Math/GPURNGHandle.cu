@@ -14,7 +14,9 @@ GPURNGHandle::GPURNGHandle(int deviceId, unsigned long seed)
     : RNGHandle(deviceId)
 {
     unsigned long long cudaSeed = seed;
+#ifdef _DEBUG
     fprintf(stderr, "(GPU): creating curand object with seed %llu\n", cudaSeed);
+#endif
 
     CURAND_CALL(curandCreateGenerator(&m_generator, CURAND_RNG_PSEUDO_XORWOW));
     CURAND_CALL(curandSetPseudoRandomGeneratorSeed(m_generator, cudaSeed));

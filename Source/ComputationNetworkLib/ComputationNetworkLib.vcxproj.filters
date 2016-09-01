@@ -43,6 +43,9 @@
     <ClCompile Include="LatticeFreeMMINode.cpp">
       <Filter>Nodes</Filter>
     </ClCompile>
+    <ClCompile Include="RNNNodes.cpp">
+      <Filter>Nodes</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Common\Include\fileutil.h">
@@ -136,6 +139,9 @@
       <Filter>Nodes</Filter>
     </ClInclude>
     <ClInclude Include="LatticeFreeMMINode.h">
+      <Filter>Nodes</Filter>
+    </ClInclude>
+    <ClInclude Include="RNNNodes.h">
       <Filter>Nodes</Filter>
     </ClInclude>
   </ItemGroup>

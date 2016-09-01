@@ -5600,7 +5600,7 @@ SWIGINTERN CNTK::NDArrayView *new_CNTK_NDArrayView__SWIG_17(PyObject *pyobj,CNTK
         for (int i=num_axes-1; i>=0; i--)
         {
             shape.push_back(np_shape[i]);
-            num_elements *= np_shape[i];            
+            num_elements *= np_shape[i];
         }
 
         int typecode = PyArray_TYPE(array);
@@ -5758,7 +5758,7 @@ SWIGINTERN size_t const CNTK_Placeholder___hash__(CNTK::Placeholder *self){
       }
     
 
-namespace swig {
+  namespace swig {
   template <> struct traits< bool > {
     typedef value_category category;
     static const char* type_name() { return"bool"; }
@@ -15894,7 +15894,7 @@ SWIGINTERN PyObject *_wrap_new_Variable__SWIG_2(PyObject *SWIGUNUSEDPARM(self), 
   PyObject * obj2 = 0 ;
   PyObject * obj3 = 0 ;
   CNTK::Variable *result = 0 ;
-  
+
   if (!PyArg_ParseTuple(args,(char *)"OOOO:new_Variable",&obj0,&obj1,&obj2,&obj3)) SWIG_fail;
   {
     if (PyTuple_Check(obj0)) {
@@ -16048,7 +16048,7 @@ SWIGINTERN PyObject *_wrap_new_Variable__SWIG_4(PyObject *SWIGUNUSEDPARM(self), 
       size_t num_axes = PyTuple_Size(obj0);
       for (int i=0; i<num_axes; i++)
       dimensions.push_back(PyLong_AsLong(PyTuple_GET_ITEM(obj0, i)));
-      
+
       // TODO cleans this up?
       arg1 = new CNTK::NDShape(dimensions);
     } else {
@@ -16352,7 +16352,7 @@ SWIGINTERN PyObject *_wrap_new_Variable__SWIG_8(PyObject *SWIGUNUSEDPARM(self), 
       size_t num_axes = PyTuple_Size(obj0);
       for (int i=0; i<num_axes; i++)
       dimensions.push_back(PyLong_AsLong(PyTuple_GET_ITEM(obj0, i)));
-      
+
       // TODO cleans this up?
       arg1 = new CNTK::NDShape(dimensions);
     } else {
@@ -17708,7 +17708,7 @@ SWIGINTERN PyObject *_wrap_new_Variable(PyObject *self, PyObject *args) {
       }
       if (_v) {
         int res = SWIG_ConvertPtr(argv[2], 0, SWIGTYPE_p_std__vectorT_CNTK__Axis_std__allocatorT_CNTK__Axis_t_t, 0);
-        _v = SWIG_CheckState(res);
+          _v = SWIG_CheckState(res);
         if (_v) {
           return _wrap_new_Variable__SWIG_0(self, args);
         }
@@ -17779,10 +17779,10 @@ SWIGINTERN PyObject *_wrap_new_Variable(PyObject *self, PyObject *args) {
           _v = SWIG_CheckState(res);
           if (_v) {
             return _wrap_new_Variable__SWIG_6(self, args);
-          }
         }
       }
     }
+  }
   }
   if (argc == 4) {
     int _v;
@@ -18008,24 +18008,24 @@ SWIGINTERN PyObject *_wrap_new_Variable(PyObject *self, PyObject *args) {
         int res = SWIG_AsVal_bool(argv[1], NULL);
         _v = SWIG_CheckState(res);
       }
-      if (_v) {
+          if (_v) {
         {
           int res = SWIG_AsVal_int(argv[2], NULL);
           _v = SWIG_CheckState(res);
-        }
+          }
         if (_v) {
           {
             int res = SWIG_AsVal_bool(argv[3], NULL);
             _v = SWIG_CheckState(res);
-          }
+        }
           if (_v) {
             int res = SWIG_ConvertPtr(argv[4], 0, SWIGTYPE_p_std__vectorT_CNTK__Axis_std__allocatorT_CNTK__Axis_t_t, 0);
             _v = SWIG_CheckState(res);
             if (_v) {
               return _wrap_new_Variable__SWIG_16(self, args);
-            }
-          }
-        }
+      }
+    }
+  }
       }
     }
   }
@@ -18236,7 +18236,7 @@ SWIGINTERN PyObject *_wrap_new_Variable(PyObject *self, PyObject *args) {
           {
             int res = SWIG_AsVal_bool(argv[3], NULL);
             _v = SWIG_CheckState(res);
-          }
+            }
           if (_v) {
             int res = SWIG_AsPtr_std_wstring(argv[4], (std::wstring**)(0));
             _v = SWIG_CheckState(res);
@@ -18245,11 +18245,11 @@ SWIGINTERN PyObject *_wrap_new_Variable(PyObject *self, PyObject *args) {
               _v = SWIG_CheckState(res);
               if (_v) {
                 return _wrap_new_Variable__SWIG_18(self, args);
-              }
-            }
           }
         }
       }
+    }
+  }
     }
   }
   
@@ -25122,7 +25122,7 @@ SWIGINTERN PyObject *_wrap_slice__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObjec
   PyObject * obj2 = 0 ;
   PyObject * obj3 = 0 ;
   CNTK::FunctionPtr result;
-  
+
   if (!PyArg_ParseTuple(args,(char *)"OOOO:slice",&obj0,&obj1,&obj2,&obj3)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res1)) {
@@ -27398,7 +27398,7 @@ SWIGINTERN PyObject *_wrap_transpose_times__SWIG_0(PyObject *SWIGUNUSEDPARM(self
   PyObject * obj2 = 0 ;
   PyObject * obj3 = 0 ;
   CNTK::FunctionPtr result;
-  
+
   if (!PyArg_ParseTuple(args,(char *)"OOOO:transpose_times",&obj0,&obj1,&obj2,&obj3)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_CNTK__Variable,  0  | 0);
   if (!SWIG_IsOK(res1)) {
@@ -29458,23 +29458,23 @@ SWIGINTERN PyObject *_wrap_convolution__SWIG_0(PyObject *SWIGUNUSEDPARM(self), P
   {
     std::vector<bool,std::allocator< bool > > *ptr = (std::vector<bool,std::allocator< bool > > *)0;
     res4 = swig::asptr(obj3, &ptr);
-    if (!SWIG_IsOK(res4)) {
-      SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "convolution" "', argument " "4"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
-    }
+  if (!SWIG_IsOK(res4)) {
+    SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "convolution" "', argument " "4"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+  }
     if (!ptr) {
-      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "convolution" "', argument " "4"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
-    }
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "convolution" "', argument " "4"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+  }
     arg4 = ptr;
   }
   {
     std::vector<bool,std::allocator< bool > > *ptr = (std::vector<bool,std::allocator< bool > > *)0;
     res5 = swig::asptr(obj4, &ptr);
-    if (!SWIG_IsOK(res5)) {
-      SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "convolution" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
-    }
+  if (!SWIG_IsOK(res5)) {
+    SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "convolution" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+  }
     if (!ptr) {
-      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "convolution" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
-    }
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "convolution" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+  }
     arg5 = ptr;
   }
   {
@@ -29625,23 +29625,23 @@ SWIGINTERN PyObject *_wrap_convolution__SWIG_1(PyObject *SWIGUNUSEDPARM(self), P
   {
     std::vector<bool,std::allocator< bool > > *ptr = (std::vector<bool,std::allocator< bool > > *)0;
     res4 = swig::asptr(obj3, &ptr);
-    if (!SWIG_IsOK(res4)) {
-      SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "convolution" "', argument " "4"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
-    }
+  if (!SWIG_IsOK(res4)) {
+    SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "convolution" "', argument " "4"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+  }
     if (!ptr) {
-      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "convolution" "', argument " "4"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
-    }
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "convolution" "', argument " "4"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+  }
     arg4 = ptr;
   }
   {
     std::vector<bool,std::allocator< bool > > *ptr = (std::vector<bool,std::allocator< bool > > *)0;
     res5 = swig::asptr(obj4, &ptr);
-    if (!SWIG_IsOK(res5)) {
-      SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "convolution" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
-    }
+  if (!SWIG_IsOK(res5)) {
+    SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "convolution" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+  }
     if (!ptr) {
-      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "convolution" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
-    }
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "convolution" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+  }
     arg5 = ptr;
   }
   {
@@ -29775,23 +29775,23 @@ SWIGINTERN PyObject *_wrap_convolution__SWIG_2(PyObject *SWIGUNUSEDPARM(self), P
   {
     std::vector<bool,std::allocator< bool > > *ptr = (std::vector<bool,std::allocator< bool > > *)0;
     res4 = swig::asptr(obj3, &ptr);
-    if (!SWIG_IsOK(res4)) {
-      SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "convolution" "', argument " "4"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
-    }
+  if (!SWIG_IsOK(res4)) {
+    SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "convolution" "', argument " "4"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+  }
     if (!ptr) {
-      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "convolution" "', argument " "4"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
-    }
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "convolution" "', argument " "4"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+  }
     arg4 = ptr;
   }
   {
     std::vector<bool,std::allocator< bool > > *ptr = (std::vector<bool,std::allocator< bool > > *)0;
     res5 = swig::asptr(obj4, &ptr);
-    if (!SWIG_IsOK(res5)) {
-      SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "convolution" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
-    }
+  if (!SWIG_IsOK(res5)) {
+    SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "convolution" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+  }
     if (!ptr) {
-      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "convolution" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
-    }
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "convolution" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+  }
     arg5 = ptr;
   }
   {
@@ -29916,23 +29916,23 @@ SWIGINTERN PyObject *_wrap_convolution__SWIG_3(PyObject *SWIGUNUSEDPARM(self), P
   {
     std::vector<bool,std::allocator< bool > > *ptr = (std::vector<bool,std::allocator< bool > > *)0;
     res4 = swig::asptr(obj3, &ptr);
-    if (!SWIG_IsOK(res4)) {
-      SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "convolution" "', argument " "4"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
-    }
+  if (!SWIG_IsOK(res4)) {
+    SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "convolution" "', argument " "4"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+  }
     if (!ptr) {
-      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "convolution" "', argument " "4"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
-    }
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "convolution" "', argument " "4"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+  }
     arg4 = ptr;
   }
   {
     std::vector<bool,std::allocator< bool > > *ptr = (std::vector<bool,std::allocator< bool > > *)0;
     res5 = swig::asptr(obj4, &ptr);
-    if (!SWIG_IsOK(res5)) {
-      SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "convolution" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
-    }
+  if (!SWIG_IsOK(res5)) {
+    SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "convolution" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+  }
     if (!ptr) {
-      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "convolution" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
-    }
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "convolution" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+  }
     arg5 = ptr;
   }
   {
@@ -30050,23 +30050,23 @@ SWIGINTERN PyObject *_wrap_convolution__SWIG_4(PyObject *SWIGUNUSEDPARM(self), P
   {
     std::vector<bool,std::allocator< bool > > *ptr = (std::vector<bool,std::allocator< bool > > *)0;
     res4 = swig::asptr(obj3, &ptr);
-    if (!SWIG_IsOK(res4)) {
-      SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "convolution" "', argument " "4"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
-    }
+  if (!SWIG_IsOK(res4)) {
+    SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "convolution" "', argument " "4"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+  }
     if (!ptr) {
-      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "convolution" "', argument " "4"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
-    }
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "convolution" "', argument " "4"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+  }
     arg4 = ptr;
   }
   {
     std::vector<bool,std::allocator< bool > > *ptr = (std::vector<bool,std::allocator< bool > > *)0;
     res5 = swig::asptr(obj4, &ptr);
-    if (!SWIG_IsOK(res5)) {
-      SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "convolution" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
-    }
+  if (!SWIG_IsOK(res5)) {
+    SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "convolution" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+  }
     if (!ptr) {
-      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "convolution" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
-    }
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "convolution" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+  }
     arg5 = ptr;
   }
   {
@@ -30169,23 +30169,23 @@ SWIGINTERN PyObject *_wrap_convolution__SWIG_5(PyObject *SWIGUNUSEDPARM(self), P
   {
     std::vector<bool,std::allocator< bool > > *ptr = (std::vector<bool,std::allocator< bool > > *)0;
     res4 = swig::asptr(obj3, &ptr);
-    if (!SWIG_IsOK(res4)) {
-      SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "convolution" "', argument " "4"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
-    }
+  if (!SWIG_IsOK(res4)) {
+    SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "convolution" "', argument " "4"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+  }
     if (!ptr) {
-      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "convolution" "', argument " "4"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
-    }
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "convolution" "', argument " "4"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+  }
     arg4 = ptr;
   }
   {
     std::vector<bool,std::allocator< bool > > *ptr = (std::vector<bool,std::allocator< bool > > *)0;
     res5 = swig::asptr(obj4, &ptr);
-    if (!SWIG_IsOK(res5)) {
-      SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "convolution" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
-    }
+  if (!SWIG_IsOK(res5)) {
+    SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "convolution" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+  }
     if (!ptr) {
-      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "convolution" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
-    }
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "convolution" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+  }
     arg5 = ptr;
   }
   {
@@ -30272,12 +30272,12 @@ SWIGINTERN PyObject *_wrap_convolution__SWIG_6(PyObject *SWIGUNUSEDPARM(self), P
   {
     std::vector<bool,std::allocator< bool > > *ptr = (std::vector<bool,std::allocator< bool > > *)0;
     res4 = swig::asptr(obj3, &ptr);
-    if (!SWIG_IsOK(res4)) {
-      SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "convolution" "', argument " "4"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
-    }
+  if (!SWIG_IsOK(res4)) {
+    SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "convolution" "', argument " "4"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+  }
     if (!ptr) {
-      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "convolution" "', argument " "4"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
-    }
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "convolution" "', argument " "4"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+  }
     arg4 = ptr;
   }
   {
@@ -30856,12 +30856,12 @@ SWIGINTERN PyObject *_wrap_pooling__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObj
   {
     std::vector<bool,std::allocator< bool > > *ptr = (std::vector<bool,std::allocator< bool > > *)0;
     res5 = swig::asptr(obj4, &ptr);
-    if (!SWIG_IsOK(res5)) {
-      SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "pooling" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
-    }
+  if (!SWIG_IsOK(res5)) {
+    SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "pooling" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+  }
     if (!ptr) {
-      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "pooling" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
-    }
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "pooling" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+  }
     arg5 = ptr;
   }
   {
@@ -31001,12 +31001,12 @@ SWIGINTERN PyObject *_wrap_pooling__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObj
   {
     std::vector<bool,std::allocator< bool > > *ptr = (std::vector<bool,std::allocator< bool > > *)0;
     res5 = swig::asptr(obj4, &ptr);
-    if (!SWIG_IsOK(res5)) {
-      SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "pooling" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
-    }
+  if (!SWIG_IsOK(res5)) {
+    SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "pooling" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+  }
     if (!ptr) {
-      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "pooling" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
-    }
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "pooling" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+  }
     arg5 = ptr;
   }
   {
@@ -31131,12 +31131,12 @@ SWIGINTERN PyObject *_wrap_pooling__SWIG_2(PyObject *SWIGUNUSEDPARM(self), PyObj
   {
     std::vector<bool,std::allocator< bool > > *ptr = (std::vector<bool,std::allocator< bool > > *)0;
     res5 = swig::asptr(obj4, &ptr);
-    if (!SWIG_IsOK(res5)) {
-      SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "pooling" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
-    }
+  if (!SWIG_IsOK(res5)) {
+    SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "pooling" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+  }
     if (!ptr) {
-      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "pooling" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
-    }
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "pooling" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+  }
     arg5 = ptr;
   }
   {
@@ -31246,12 +31246,12 @@ SWIGINTERN PyObject *_wrap_pooling__SWIG_3(PyObject *SWIGUNUSEDPARM(self), PyObj
   {
     std::vector<bool,std::allocator< bool > > *ptr = (std::vector<bool,std::allocator< bool > > *)0;
     res5 = swig::asptr(obj4, &ptr);
-    if (!SWIG_IsOK(res5)) {
-      SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "pooling" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
-    }
+  if (!SWIG_IsOK(res5)) {
+    SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "pooling" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+  }
     if (!ptr) {
-      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "pooling" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
-    }
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "pooling" "', argument " "5"" of type '" "std::vector< bool,std::allocator< bool > > const &""'"); 
+  }
     arg5 = ptr;
   }
   {
@@ -34652,7 +34652,7 @@ SWIGINTERN PyObject *_wrap_sgdlearner(PyObject *SWIGUNUSEDPARM(self), PyObject *
   res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_CNTK__TrainingParameterScheduleT_double_t,  0  | 0);
   if (!SWIG_IsOK(res2)) {
     SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "sgdlearner" "', argument " "2"" of type '" "CNTK::LearningRatesPerSample const &""'"); 
-  }
+  } 
   if (!argp2) {
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "sgdlearner" "', argument " "2"" of type '" "CNTK::LearningRatesPerSample const &""'"); 
   }
@@ -34950,7 +34950,7 @@ SWIGINTERN PyObject *_wrap_ada_grad_learner__SWIG_0(PyObject *SWIGUNUSEDPARM(sel
   res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_CNTK__TrainingParameterScheduleT_double_t,  0  | 0);
   if (!SWIG_IsOK(res2)) {
     SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "ada_grad_learner" "', argument " "2"" of type '" "CNTK::LearningRatesPerSample const &""'"); 
-  }
+  } 
   if (!argp2) {
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "ada_grad_learner" "', argument " "2"" of type '" "CNTK::LearningRatesPerSample const &""'"); 
   }
@@ -35103,9 +35103,9 @@ SWIGINTERN PyObject *_wrap_ada_grad_learner(PyObject *self, PyObject *args) {
       int res = SWIG_ConvertPtr(argv[1], 0, SWIGTYPE_p_CNTK__TrainingParameterScheduleT_double_t, 0);
       _v = SWIG_CheckState(res);
       if (_v) {
-        return _wrap_ada_grad_learner__SWIG_1(self, args);
-      }
+      return _wrap_ada_grad_learner__SWIG_1(self, args);
     }
+  }
   }
   if (argc == 3) {
     int _v;
@@ -35118,15 +35118,15 @@ SWIGINTERN PyObject *_wrap_ada_grad_learner(PyObject *self, PyObject *args) {
       int res = SWIG_ConvertPtr(argv[1], 0, SWIGTYPE_p_CNTK__TrainingParameterScheduleT_double_t, 0);
       _v = SWIG_CheckState(res);
       if (_v) {
-        {
+      {
           int res = SWIG_AsVal_bool(argv[2], NULL);
-          _v = SWIG_CheckState(res);
-        }
-        if (_v) {
-          return _wrap_ada_grad_learner__SWIG_0(self, args);
-        }
+        _v = SWIG_CheckState(res);
+      }
+      if (_v) {
+        return _wrap_ada_grad_learner__SWIG_0(self, args);
       }
     }
+  }
   }
   
 fail:
@@ -35322,7 +35322,7 @@ SWIGINTERN PyObject *_wrap_rmsprop_learner__SWIG_0(PyObject *SWIGUNUSEDPARM(self
   }
   if (!argp2) {
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "rmsprop_learner" "', argument " "2"" of type '" "CNTK::LearningRatesPerSample const &""'"); 
-  }
+  } 
   arg2 = reinterpret_cast< CNTK::LearningRatesPerSample * >(argp2);
   ecode3 = SWIG_AsVal_double(obj2, &val3);
   if (!SWIG_IsOK(ecode3)) {
@@ -35462,7 +35462,7 @@ SWIGINTERN PyObject *_wrap_rmsprop_learner__SWIG_1(PyObject *SWIGUNUSEDPARM(self
   }
   if (!argp2) {
     SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "rmsprop_learner" "', argument " "2"" of type '" "CNTK::LearningRatesPerSample const &""'"); 
-  }
+  } 
   arg2 = reinterpret_cast< CNTK::LearningRatesPerSample * >(argp2);
   ecode3 = SWIG_AsVal_double(obj2, &val3);
   if (!SWIG_IsOK(ecode3)) {
@@ -35540,7 +35540,7 @@ SWIGINTERN PyObject *_wrap_rmsprop_learner(PyObject *self, PyObject *args) {
     }
     if (_v) {
       int res = SWIG_ConvertPtr(argv[1], 0, SWIGTYPE_p_CNTK__TrainingParameterScheduleT_double_t, 0);
-      _v = SWIG_CheckState(res);
+        _v = SWIG_CheckState(res);
       if (_v) {
         {
           int res = SWIG_AsVal_double(argv[2], NULL);
@@ -35567,14 +35567,14 @@ SWIGINTERN PyObject *_wrap_rmsprop_learner(PyObject *self, PyObject *args) {
                   _v = SWIG_CheckState(res);
                 }
                 if (_v) {
-                  return _wrap_rmsprop_learner__SWIG_1(self, args);
-                }
+                return _wrap_rmsprop_learner__SWIG_1(self, args);
               }
             }
           }
         }
       }
     }
+  }
   }
   if (argc == 8) {
     int _v;
@@ -35585,7 +35585,7 @@ SWIGINTERN PyObject *_wrap_rmsprop_learner(PyObject *self, PyObject *args) {
     }
     if (_v) {
       int res = SWIG_ConvertPtr(argv[1], 0, SWIGTYPE_p_CNTK__TrainingParameterScheduleT_double_t, 0);
-      _v = SWIG_CheckState(res);
+        _v = SWIG_CheckState(res);
       if (_v) {
         {
           int res = SWIG_AsVal_double(argv[2], NULL);
@@ -35614,11 +35614,10 @@ SWIGINTERN PyObject *_wrap_rmsprop_learner(PyObject *self, PyObject *args) {
                 if (_v) {
                   {
                     int res = SWIG_AsVal_bool(argv[7], NULL);
-                    _v = SWIG_CheckState(res);
-                  }
-                  if (_v) {
-                    return _wrap_rmsprop_learner__SWIG_0(self, args);
-                  }
+                  _v = SWIG_CheckState(res);
+                }
+                if (_v) {
+                  return _wrap_rmsprop_learner__SWIG_0(self, args);
                 }
               }
             }
@@ -35626,6 +35625,7 @@ SWIGINTERN PyObject *_wrap_rmsprop_learner(PyObject *self, PyObject *args) {
         }
       }
     }
+  }
   }
   
 fail:
@@ -37379,7 +37379,7 @@ SWIGINTERN PyObject *_wrap_delete_MinibatchSource(PyObject *SWIGUNUSEDPARM(self)
   }
   {
     try {
-      (void)arg1; delete smartarg1; 
+    (void)arg1; delete smartarg1;
     }
     catch (Swig::DirectorException &e) {
       SWIG_exception(SWIG_RuntimeError,e.what()); 
@@ -37869,7 +37869,7 @@ SWIGINTERN PyObject *_wrap_new_learning_rates_per_sample__SWIG_0(PyObject *SWIGU
   int ecode1 = 0 ;
   PyObject * obj0 = 0 ;
   CNTK::TrainingParameterSchedule< double > *result = 0 ;
-  
+
   if (!PyArg_ParseTuple(args,(char *)"O:new_learning_rates_per_sample",&obj0)) SWIG_fail;
   ecode1 = SWIG_AsVal_double(obj0, &val1);
   if (!SWIG_IsOK(ecode1)) {

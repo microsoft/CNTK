@@ -182,4 +182,5 @@ void QuantizedMatrix<ElemType>::Print(const char* matrixName, size_t rowStart, s
 // Explicit instantiation
 template class QuantizedMatrix<float>;
 template class QuantizedMatrix<double>;
-} } }
+
+}}}

@@ -99,6 +99,7 @@
     <ClInclude Include="DeprecatedNodes.h" />
     <ClInclude Include="LatticeFreeMMINode.h" />
     <ClInclude Include="PreComputeNodes.h" />
+    <ClInclude Include="RNNNodes.h" />
     <ClInclude Include="SpecialPurposeNodes.h" />
     <ClInclude Include="EvaluationNodes.h" />
     <ClInclude Include="InputAndParamNodes.h" />
@@ -124,6 +125,7 @@
     <ClCompile Include="InputAndParamNodes.cpp" />
     <ClCompile Include="LatticeFreeMMINode.cpp" />
     <ClCompile Include="ReshapingNodes.cpp" />
+    <ClCompile Include="RNNNodes.cpp" />
     <ClCompile Include="SpecialPurposeNodes.cpp" />
     <ClCompile Include="stdafx.cpp" />
   </ItemGroup>

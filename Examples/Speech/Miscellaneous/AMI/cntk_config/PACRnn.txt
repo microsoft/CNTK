@@ -172,7 +172,7 @@ ndlCreateNetwork=[
     criterion = Plus(Scale(cr2,criterion2), Scale(cr1,criterion1), tag=Criteria)
 	
     #CE = SMBFF(Dout,labelDim,hiddenDim,labels,tag=Criteria)
-	Err = ErrorPrediction(labels,DNN_A_CE_BFF,tag=Eval)
+	Err = ClassificationError(labels,DNN_A_CE_BFF,tag=Eval)
     
     logPrior = LogPrior(labels)	 
 

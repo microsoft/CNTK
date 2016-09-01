@@ -32,15 +32,18 @@
 #define CNTK_MODEL_VERSION_1 1
 #define CNTK_MODEL_VERSION_2 2
 #define CNTK_MODEL_VERSION_3 3
-#define CNTK_MODEL_VERSION_4 4 // PastValue
-#define CNTK_MODEL_VERSION_5 5 // ND convolution and pooling
-#define CNTK_MODEL_VERSION_6 6 // Batch norm blending
-#define CNTK_MODEL_VERSION_7 7 // ElemType tag in model file
-#define CNTK_MODEL_VERSION_8 8 // DynamicAxis for inputs
-#define CNTK_MODEL_VERSION_9 9 // Transpose flag in ConvolutionNode to support deconvolution. 
-#define CNTK_MODEL_VERSION_10 10 // Learning rate multiplier for input nodes. 
-#define CNTK_MODEL_VERSION_11 11 // Dynamic axis name for where nodes. 
-#define CURRENT_CNTK_MODEL_VERSION CNTK_MODEL_VERSION_11
+#define CNTK_MODEL_VERSION_4 4   // PastValue
+#define CNTK_MODEL_VERSION_5 5   // ND convolution and pooling
+#define CNTK_MODEL_VERSION_6 6   // batch-norm blending
+#define CNTK_MODEL_VERSION_7 7   // ElemType tag in model file
+#define CNTK_MODEL_VERSION_8 8   // DynamicAxis for inputs
+#define CNTK_MODEL_VERSION_9 9   // transpose flag in ConvolutionNode to support deconvolution
+#define CNTK_MODEL_VERSION_10 10 // learning-rate multiplier for input nodes
+#define CNTK_MODEL_VERSION_11 11 // dynamic axis name for where nodes
+#define CNTK_MODEL_VERSION_12 12 // Times() m_inputRank to support parameter-rank inference
+#define CNTK_MODEL_VERSION_13 13 // batch norm: switch running inverse std deviation -> variance, MB count -> samplesSeen; CuDNN v5
+#define CNTK_MODEL_VERSION_14 14 // axis parameter in OptimizedRNNStackNode
+#define CURRENT_CNTK_MODEL_VERSION CNTK_MODEL_VERSION_14
 
 extern bool g_shareNodeValueMatrices;
 
