@@ -62,4 +62,4 @@ ext_modules = [
       )
     ]
 
-setup(name="cntk", ext_modules = ext_modules,  data_files = [(distutils.sysconfig.get_python_lib(), [ lib + ".dll" for lib in libs ])], packages=setuptools.find_packages())
+setup(name="cntk", ext_modules = ext_modules,  data_files = [('.\\', [ lib + ".dll" for lib in libs ])], packages=setuptools.find_packages())
