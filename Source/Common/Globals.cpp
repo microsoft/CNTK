@@ -7,6 +7,6 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-    bool Globals::m_forceDeterministicAlgorithms = false;
+    std::atomic<bool> Globals::m_forceDeterministicAlgorithms = false;
 
 }}}

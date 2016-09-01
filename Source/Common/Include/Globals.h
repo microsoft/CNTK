@@ -5,6 +5,8 @@
 
 #pragma once
 
+#include <atomic>
+
 namespace Microsoft { namespace MSR { namespace CNTK {
 
     // Class containing global configuration for CNTK.
@@ -22,6 +24,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
     private:
-        static bool m_forceDeterministicAlgorithms;
+        static std::atomic<bool> m_forceDeterministicAlgorithms;
     };
 }}}
