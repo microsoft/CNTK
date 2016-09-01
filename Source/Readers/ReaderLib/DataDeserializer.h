@@ -67,7 +67,6 @@ struct SequenceDataBase
     size_t m_id;
     uint32_t m_numberOfSamples;      // Number of samples in the sequence
 
-    ChunkPtr m_chunk;
     // A non-owned pointer. The actual size is provided for particular sequences,
     // i.e. see DenseSequenceData, or SparseSequenceData.
     void* m_data;
