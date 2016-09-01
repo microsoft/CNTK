@@ -257,7 +257,7 @@ public:
         return evalResults;
     }
 
-	void EvaluateBN(IDataReader* dataReader, const vector<wstring>& evalNodeNames, const wstring exportPath, const size_t mbSize, const size_t testSize = requestDataSize)
+	void EvaluateBN(IDataReader* dataReader, const vector<wstring>& evalNodeNames, const wstring exportPath, const size_t mbSize, const int iters = 240, const size_t testSize = requestDataSize)
 	{
 		ScopedNetworkOperationMode modeGuard(m_net, NetworkOperationMode::inferring);
 
@@ -292,9 +292,6 @@ public:
 			}
 		}
 
-		// initialize eval results
-		std::vector<EpochCriterion> evalResults(evalNodes.size(), EpochCriterion(0));
-
 		// allocate memory for forward computation
 		m_net->AllocateAllMatrices(evalNodes, {}, nullptr);
 
@@ -317,15 +314,9 @@ public:
 
 		m_net->StartEvaluateMinibatchLoop(evalNodes);
 
-		std::vector<Matrix<ElemType>*> learnParamsGradients;
-		DataReaderHelpers::SubminibatchDispatcher<ElemType> smbDispatcher;
-		size_t numSubminibatchesNeeded = DataReaderHelpers::GetNumSubminibatchesNeeded<ElemType>(dataReader, m_maxSamplesInRAM, m_numSubminiBatches, mbSize);
-
 		// Passing in two empty node lists so the dispatcher can work for the evalNodes.
 		std::list<ComputationNodeBasePtr> learnableNodes;
 		std::vector<ComputationNodeBasePtr> criterionNodes;
-		if (numSubminibatchesNeeded > 1)
-			smbDispatcher.Init(m_net, learnableNodes, criterionNodes, evalNodes);
 
 		// First, all batch normalization nodes should be marked.
 		std::vector<ComputationNodeBasePtr> batchNormalNodes;
@@ -338,6 +329,9 @@ public:
 			}
 		}
 
+		// Push all batch normalization mean and std into learn params values for mpi update
+		std::vector<Matrix<ElemType>*> learnParamsValues;
+
 		bool noMoreSamplesToProcess = false;
 		for (auto& node : batchNormalNodes) {
 			shared_ptr<BatchNormalizationNode<ElemType>> batchNode =
@@ -347,7 +341,7 @@ public:
 			LOGPRINTF(stderr, "Start evaluating: %ls\n", batchNode->GetName().c_str());
 
 			// Post batch normal iters, TODO add customize iter numbers
-			for (int iter = 0; iter < 30; iter++) {
+			for (int iter = 0; iter < iters; iter++) {
 				size_t actualMBSize = 0;
 				bool wasDataRead = DataReaderHelpers::GetMinibatchIntoNetwork<ElemType>(*dataReader, m_net, 
 					nullptr, useDistributedMBReading, useParallelTrain, inputMatrices, actualMBSize, m_mpi);
@@ -367,6 +361,36 @@ public:
 				m_net->ForwardProp(evalNodes[0], nullptr, node);
 
 				dataReader->DataEnd();
+			}
+
+			// Sync during or after all iters of a BN node are equivalent
+			if (useParallelTrain) {
+				if (m_gradHeader == nullptr)
+				{
+					m_gradHeader.reset(DistGradHeader::Create(evalNodes.size()), [](DistGradHeader* ptr) {
+						DistGradHeader::Destroy(ptr);
+					});
+					m_distGradAgg = make_shared<SimpleDistGradAggregator<ElemType>>(m_mpi, false /*useAsyncAggregation*/, 0 /*syncStatsTrace*/);
+				}
+
+				if (!learnParamsValues.size()) {
+					for (auto& node : batchNormalNodes) {
+						auto runMeanParameterPtr = node->GetInputs()[3];
+						auto runStdParameterPtr = node->GetInputs()[4];
+
+						shared_ptr<ComputationNode<ElemType>> runMeanNode = static_pointer_cast<ComputationNode<ElemType>>(runMeanParameterPtr);
+						shared_ptr<ComputationNode<ElemType>> runStdNode = static_pointer_cast<ComputationNode<ElemType>>(runStdParameterPtr);
+
+						learnParamsValues.push_back(&(runMeanNode->Value()));
+						learnParamsValues.push_back(&(runStdNode->Value()));
+					}
+				}
+
+				m_distGradAgg->AggregateGradients(learnParamsValues, m_gradHeader.get(), 0);
+
+				for (auto& parameter : learnParamsValues) {
+					(*parameter) /= (ElemType)m_mpi->NumNodesInUse();
+				}
 			}
 
 			batchNode->SetPostBatchNormalizationEnd();
