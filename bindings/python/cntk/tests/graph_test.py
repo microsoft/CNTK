@@ -18,7 +18,8 @@ I = variable
 
 
 def test_overload_exception():
-    c = C(list(range(0, 10)))
+    print ('here')
+    c = C(value=list(range(0, 10)))
 
     with pytest.raises(TypeError):
         c[:]
