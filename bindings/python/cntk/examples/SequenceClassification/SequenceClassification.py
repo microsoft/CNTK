@@ -29,6 +29,8 @@ def train_sequence_classifier(device):
     label = variable(num_output_classes, dynamic_axes = [Axis.default_batch_axis()], name="labels")
     ce = cross_entropy_with_softmax(classifier_output, label)
     pe = classification_error(classifier_output, label)
+    
+    #TODO: add save and load module code
     lstm_net = combine([ce.owner, pe.owner, classifier_output.owner], "classifier_model")
 
     rel_path = r"../../../../../Tests/EndToEndTests/Text/SequenceClassification/Data/Train.ctf"
@@ -45,19 +47,14 @@ def train_sequence_classifier(device):
 
     minibatch_size = 200
     lr = lr = learning_rates_per_sample(0.0005)
+   
+    trainer = Trainer(classifier_output.owner, ce.owner, pe.owner, [sgdlearner(classifier_output.owner.parameters(), lr)])                   
 
-    minibatch_size_limits = dict()    
-    minibatch_size_limits[features_si] = (0,minibatch_size)
-    minibatch_size_limits[labels_si] = (0,minibatch_size)
-
-    trainer = Trainer(lstm_net, ce, [sgdlearner(lstm_net.parameters(), lr)])
-    
     freq = 1   
     i = 0;
-    cntk_dev = cntk_device(device)
-    #TODO: replace by while True, and add a stop condition inside the loop
+    cntk_dev = cntk_device(device)    
     while True:
-        mb=cm.get_next_minibatch(minibatch_size_limits, cntk_dev)
+        mb=cm.get_next_minibatch(minibatch_size, cntk_dev)
         if  len(mb) == 0:
             break
         arguments = dict()
@@ -72,6 +69,5 @@ def train_sequence_classifier(device):
 
         i += 1
 
-
 if __name__=='__main__':    
-    train_sequence_classifier(-1)
+    train_sequence_classifier(0)

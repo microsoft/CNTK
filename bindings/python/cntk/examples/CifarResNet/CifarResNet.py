@@ -132,34 +132,34 @@ def _test_cifar_resnet():
     num_classes = labels_si.m_sample_layout.dimensions()[0]
     
     image_input = variable(image_shape, features_si.m_element_type, needs_gradient=False, name="Images")    
-    classifer_output = resnet_classifer(image_input, num_classes, dev, "classifierOutput")
+    classifier_output = resnet_classifer(image_input, num_classes, dev, "classifierOutput")
     label_var = variable((num_classes), features_si.m_element_type, needs_gradient=False, name="Labels")
     
-    ce = cross_entropy_with_softmax(classifer_output, label_var)
-    pe = classification_error(classifer_output, label_var)
-    image_classifier = combine([ce.owner, pe.owner, classifer_output.owner], "ImageClassifier")
+    ce = cross_entropy_with_softmax(classifier_output, label_var)
+    pe = classification_error(classifier_output, label_var)
 
-    learning_rate_per_sample = learning_rates_per_sample(0.0078125)
-    trainer = Trainer(image_classifier, ce, [sgdlearner(image_classifier.parameters(), learning_rate_per_sample)])
+    #TODO: add save and load module code
+    image_classifier = combine([ce.owner, pe.owner, classifier_output.owner], "ImageClassifier")
+
+    lr = learning_rates_per_sample(0.0078125)    
     
     mb_size = 32
     num_mbs = 1000
 
-    minibatch_size_limits = dict()    
-    minibatch_size_limits[features_si] = (0,mb_size)
-    minibatch_size_limits[labels_si] = (0, mb_size)
-    for i in range(0,num_mbs):    
-        mb=mbs.get_next_minibatch(minibatch_size_limits, cntk_dev)
-        
+    trainer = Trainer(classifier_output.owner, ce.owner, pe.owner, [sgdlearner(classifier_output.owner.parameters(), lr)])                   
+    
+    for i in range(0,num_mbs):
+        mb=mbs.get_next_minibatch(mb_size, cntk_dev)
+
         arguments = dict()
         arguments[image_input] = mb[features_si].m_data
         arguments[label_var] = mb[labels_si].m_data
-        
+            
         trainer.train_minibatch(arguments, cntk_dev)
-
         freq = 20
-        if i % freq == 0:
-            print(str(i+freq) + ": " + str(get_train_loss(trainer)))
+        if i % freq == 0: 
+            training_loss = get_train_loss(trainer)                   
+            print(str(i+freq) + ": " + str(training_loss))   
    
 if __name__=='__main__':         
     _test_cifar_resnet()

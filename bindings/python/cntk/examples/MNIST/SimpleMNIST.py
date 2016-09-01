@@ -4,7 +4,7 @@ import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..'))
 from cntk import learning_rates_per_sample, DeviceDescriptor, Trainer, sgdlearner
 from cntk.ops import variable, cross_entropy_with_softmax, combine, classification_error, sigmoid, element_times, constant
-from cntk.utils import create_minibatch_source, get_train_loss
+from cntk.utils import create_minibatch_source, get_train_loss, cntk_device
 from cntk.tests.test_utils import TOLERANCE_ABSOLUTE
 from cntk.examples.common.nn import fully_connected_classifier_net
 from cntk.examples.common.mb import create_text_mb_source
@@ -17,7 +17,7 @@ def test_simple_mnist():
     epoch_size = sys.maxsize
     minibatch_size = 32
     num_samples_per_sweep = 60000
-    num_sweeps_to_train_with = 3
+    num_sweeps_to_train_with = 1
     num_minibatches_to_train = (num_samples_per_sweep * num_sweeps_to_train_with) / minibatch_size    
     lr = learning_rates_per_sample(0.003125)
     input = variable(input_dim, np.float32, needs_gradient=False, name="features")
@@ -25,13 +25,16 @@ def test_simple_mnist():
 
     label = variable(num_output_classes, np.float32, needs_gradient=False, name="labels")
     
-    dev = DeviceDescriptor.cpudevice()       
+    dev = -1   
+    cntk_dev = cntk_device(dev)
     netout = fully_connected_classifier_net(scaled_input, num_output_classes, hidden_layers_dim, num_hidden_layers, dev, sigmoid)  
         
     ce = cross_entropy_with_softmax(netout, label)
     pe = classification_error(netout, label)
-
+    
+    #TODO: add save and load module code
     ffnet = combine([ce.owner, pe.owner, netout.owner], "classifier_model")        
+    
     rel_path = r"../../../../../Examples/Image/MNIST/Data/Train-28x28_cntk_text.txt"
     path = os.path.join(os.path.dirname(os.path.abspath(__file__)), rel_path)    
     cm = create_text_mb_source(path, input_dim, num_output_classes, epoch_size)
@@ -44,27 +47,22 @@ def test_simple_mnist():
         elif si.m_name == 'labels':
             labels_si = si
 
-    minibatch_size_limits = dict()    
-    minibatch_size_limits[features_si] = (0,minibatch_size)
-    minibatch_size_limits[labels_si] = (0,minibatch_size)
-                         
-    trainer = Trainer(ffnet, ce, [sgdlearner(ffnet.parameters(), lr)])          
+    trainer = Trainer(netout.owner, ce.owner, pe.owner, [sgdlearner(netout.owner.parameters(), lr)])                   
     
-    for i in range(0,int(num_minibatches_to_train)):    
-        mb=cm.get_next_minibatch(minibatch_size_limits, dev)
-        
+    for i in range(0,int(num_minibatches_to_train)):        
+        mb=cm.get_next_minibatch(minibatch_size, cntk_dev)
+
         arguments = dict()
         arguments[input] = mb[features_si].m_data
         arguments[label] = mb[labels_si].m_data
-        
-        trainer.train_minibatch(arguments, dev)
-
-        freq = 20        
+            
+        trainer.train_minibatch(arguments, cntk_dev)
+        freq = 20
         if i % freq == 0: 
             training_loss = get_train_loss(trainer)                   
-            print(str(i+freq) + ": " + str(training_loss)) 
+            print(str(i+freq) + ": " + str(training_loss))            
     #TODO: move the testing code into a separate test module ?
-    assert np.allclose(training_loss, 0.6142425537109375, atol=TOLERANCE_ABSOLUTE)               
+    assert np.allclose(training_loss, 0.05152595043182373, atol=TOLERANCE_ABSOLUTE)            
 
 if __name__=='__main__':      
     test_simple_mnist()

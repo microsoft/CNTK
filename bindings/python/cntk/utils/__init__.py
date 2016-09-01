@@ -523,10 +523,10 @@ def get_train_loss(trainer):
         trainer (:class:`Trainer`): the trainer used.        
     Returns: 
         the loss value
-    '''
-    ndav = create_NDArrayView(trainer.previous_minibatch_training_loss_value().data().shape().dimensions(), cntk_py.DataType_Float,cntk_device(-1))
-    ndav.copy_from(trainer.previous_minibatch_training_loss_value().data())        
-    return float(ndav.to_numpy())
+    '''    
+    import copy
+    #we copy the value so swig does not destroy it when we leave the scope
+    return copy.copy(trainer.previous_minibatch_loss_average())
 
 def eval(op, precision, device_id, input_map=None, backward_pass=False):
     '''

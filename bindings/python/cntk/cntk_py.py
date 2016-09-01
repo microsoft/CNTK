@@ -172,6 +172,10 @@ SwigPyIterator_swigregister(SwigPyIterator)
 SHARED_PTR_DISOWN = _cntk_py.SHARED_PTR_DISOWN
 InferredDimension = _cntk_py.InferredDimension
 
+def is_within(*args):
+    return _cntk_py.is_within(*args)
+is_within = _cntk_py.is_within
+
 def packed_index(*args):
     return _cntk_py.packed_index(*args)
 packed_index = _cntk_py.packed_index
@@ -180,17 +184,13 @@ def gather_packed(*args):
     return _cntk_py.gather_packed(*args)
 gather_packed = _cntk_py.gather_packed
 
-def is_within(*args):
-    return _cntk_py.is_within(*args)
-is_within = _cntk_py.is_within
+def scatter_packed(*args):
+    return _cntk_py.scatter_packed(*args)
+scatter_packed = _cntk_py.scatter_packed
 
-def where(*args):
-    return _cntk_py.where(*args)
-where = _cntk_py.where
-
-def gather(*args):
-    return _cntk_py.gather(*args)
-gather = _cntk_py.gather
+def zeroes_like(operand):
+    return _cntk_py.zeroes_like(operand)
+zeroes_like = _cntk_py.zeroes_like
 
 def reduce_elements(*args):
     return _cntk_py.reduce_elements(*args)
@@ -234,6 +234,14 @@ class DeviceDescriptor(_object):
         default_device = staticmethod(_cntk_py.DeviceDescriptor_default_device)
     else:
         default_device = _cntk_py.DeviceDescriptor_default_device
+    if _newclass:
+        use_default_device = staticmethod(_cntk_py.DeviceDescriptor_use_default_device)
+    else:
+        use_default_device = _cntk_py.DeviceDescriptor_use_default_device
+    if _newclass:
+        set_default_device = staticmethod(_cntk_py.DeviceDescriptor_set_default_device)
+    else:
+        set_default_device = _cntk_py.DeviceDescriptor_set_default_device
     __swig_destroy__ = _cntk_py.delete_DeviceDescriptor
     __del__ = lambda self: None
 DeviceDescriptor_swigregister = _cntk_py.DeviceDescriptor_swigregister
@@ -250,6 +258,14 @@ DeviceDescriptor_gpudevice = _cntk_py.DeviceDescriptor_gpudevice
 def DeviceDescriptor_default_device():
     return _cntk_py.DeviceDescriptor_default_device()
 DeviceDescriptor_default_device = _cntk_py.DeviceDescriptor_default_device
+
+def DeviceDescriptor_use_default_device():
+    return _cntk_py.DeviceDescriptor_use_default_device()
+DeviceDescriptor_use_default_device = _cntk_py.DeviceDescriptor_use_default_device
+
+def DeviceDescriptor_set_default_device(newDefaultDevice):
+    return _cntk_py.DeviceDescriptor_set_default_device(newDefaultDevice)
+DeviceDescriptor_set_default_device = _cntk_py.DeviceDescriptor_set_default_device
 
 class NDShape(_object):
     __swig_setmethods__ = {}
@@ -463,8 +479,11 @@ class Axis(_object):
     def is_static_axis(self):
         return _cntk_py.Axis_is_static_axis(self)
 
-    def static_axis_index(self):
-        return _cntk_py.Axis_static_axis_index(self)
+    def is_ordered(self):
+        return _cntk_py.Axis_is_ordered(self)
+
+    def static_axis_index(self, checked=True):
+        return _cntk_py.Axis_static_axis_index(self, checked)
     if _newclass:
         default_dynamic_axis = staticmethod(_cntk_py.Axis_default_dynamic_axis)
     else:
@@ -473,6 +492,10 @@ class Axis(_object):
         default_batch_axis = staticmethod(_cntk_py.Axis_default_batch_axis)
     else:
         default_batch_axis = _cntk_py.Axis_default_batch_axis
+    if _newclass:
+        new_unique_dynamic_axis = staticmethod(_cntk_py.Axis_new_unique_dynamic_axis)
+    else:
+        new_unique_dynamic_axis = _cntk_py.Axis_new_unique_dynamic_axis
 
     def name(self):
         return _cntk_py.Axis_name(self)
@@ -495,6 +518,10 @@ Axis_default_dynamic_axis = _cntk_py.Axis_default_dynamic_axis
 def Axis_default_batch_axis():
     return _cntk_py.Axis_default_batch_axis()
 Axis_default_batch_axis = _cntk_py.Axis_default_batch_axis
+
+def Axis_new_unique_dynamic_axis(axisNamePrefix, isOrderedDynamicAxis=True):
+    return _cntk_py.Axis_new_unique_dynamic_axis(axisNamePrefix, isOrderedDynamicAxis)
+Axis_new_unique_dynamic_axis = _cntk_py.Axis_new_unique_dynamic_axis
 
 VariableKind_Input = _cntk_py.VariableKind_Input
 VariableKind_Output = _cntk_py.VariableKind_Output
@@ -561,6 +588,8 @@ Variable_swigregister(Variable)
 def Variable_eq(first, second):
     return _cntk_py.Variable_eq(first, second)
 Variable_eq = _cntk_py.Variable_eq
+cvar = _cntk_py.cvar
+Variable.default_input_variable_dynamic_axes = _cntk_py.cvar.Variable_default_input_variable_dynamic_axes
 
 
 def __ne__(*args):
@@ -576,6 +605,34 @@ class Parameter(Variable):
         __swig_getmethods__.update(getattr(_s, '__swig_getmethods__', {}))
     __getattr__ = lambda self, name: _swig_getattr(self, Parameter, name)
     __repr__ = _swig_repr
+    if _newclass:
+        uniform = staticmethod(_cntk_py.Parameter_uniform)
+    else:
+        uniform = _cntk_py.Parameter_uniform
+    if _newclass:
+        he_uniform = staticmethod(_cntk_py.Parameter_he_uniform)
+    else:
+        he_uniform = _cntk_py.Parameter_he_uniform
+    if _newclass:
+        glorot_uniform = staticmethod(_cntk_py.Parameter_glorot_uniform)
+    else:
+        glorot_uniform = _cntk_py.Parameter_glorot_uniform
+    if _newclass:
+        xavier = staticmethod(_cntk_py.Parameter_xavier)
+    else:
+        xavier = _cntk_py.Parameter_xavier
+    if _newclass:
+        gaussian = staticmethod(_cntk_py.Parameter_gaussian)
+    else:
+        gaussian = _cntk_py.Parameter_gaussian
+    if _newclass:
+        he_normal = staticmethod(_cntk_py.Parameter_he_normal)
+    else:
+        he_normal = _cntk_py.Parameter_he_normal
+    if _newclass:
+        glorot_normal = staticmethod(_cntk_py.Parameter_glorot_normal)
+    else:
+        glorot_normal = _cntk_py.Parameter_glorot_normal
 
     def __init__(self, *args):
         this = _cntk_py.new_Parameter(*args)
@@ -593,6 +650,34 @@ class Parameter(Variable):
     __del__ = lambda self: None
 Parameter_swigregister = _cntk_py.Parameter_swigregister
 Parameter_swigregister(Parameter)
+
+def Parameter_uniform(*args):
+    return _cntk_py.Parameter_uniform(*args)
+Parameter_uniform = _cntk_py.Parameter_uniform
+
+def Parameter_he_uniform(*args):
+    return _cntk_py.Parameter_he_uniform(*args)
+Parameter_he_uniform = _cntk_py.Parameter_he_uniform
+
+def Parameter_glorot_uniform(*args):
+    return _cntk_py.Parameter_glorot_uniform(*args)
+Parameter_glorot_uniform = _cntk_py.Parameter_glorot_uniform
+
+def Parameter_xavier(*args):
+    return _cntk_py.Parameter_xavier(*args)
+Parameter_xavier = _cntk_py.Parameter_xavier
+
+def Parameter_gaussian(*args):
+    return _cntk_py.Parameter_gaussian(*args)
+Parameter_gaussian = _cntk_py.Parameter_gaussian
+
+def Parameter_he_normal(*args):
+    return _cntk_py.Parameter_he_normal(*args)
+Parameter_he_normal = _cntk_py.Parameter_he_normal
+
+def Parameter_glorot_normal(*args):
+    return _cntk_py.Parameter_glorot_normal(*args)
+Parameter_glorot_normal = _cntk_py.Parameter_glorot_normal
 
 def ParameterFloat(*args):
     val = _cntk_py.new_ParameterFloat(*args)
@@ -795,17 +880,37 @@ def transpose_axes(*args):
     return _cntk_py.transpose_axes(*args)
 transpose_axes = _cntk_py.transpose_axes
 
+def transpose(*args):
+    return _cntk_py.transpose(*args)
+transpose = _cntk_py.transpose
+
 def slice(*args):
     return _cntk_py.slice(*args)
 slice = _cntk_py.slice
+
+def dropout(*args):
+    return _cntk_py.dropout(*args)
+dropout = _cntk_py.dropout
+
+def reshape(*args):
+    return _cntk_py.reshape(*args)
+reshape = _cntk_py.reshape
 
 def plus(*args):
     return _cntk_py.plus(*args)
 plus = _cntk_py.plus
 
+def __add__(leftOperand, rightOperand):
+    return _cntk_py.__add__(leftOperand, rightOperand)
+__add__ = _cntk_py.__add__
+
 def minus(*args):
     return _cntk_py.minus(*args)
 minus = _cntk_py.minus
+
+def __sub__(*args):
+    return _cntk_py.__sub__(*args)
+__sub__ = _cntk_py.__sub__
 
 def element_times(*args):
     return _cntk_py.element_times(*args)
@@ -875,6 +980,18 @@ def reduce_log_sum(*args):
     return _cntk_py.reduce_log_sum(*args)
 reduce_log_sum = _cntk_py.reduce_log_sum
 
+def reduce_mean(*args):
+    return _cntk_py.reduce_mean(*args)
+reduce_mean = _cntk_py.reduce_mean
+
+def reduce_max(*args):
+    return _cntk_py.reduce_max(*args)
+reduce_max = _cntk_py.reduce_max
+
+def reduce_min(*args):
+    return _cntk_py.reduce_min(*args)
+reduce_min = _cntk_py.reduce_min
+
 def per_dim_mean_variance_normalize(*args):
     return _cntk_py.per_dim_mean_variance_normalize(*args)
 per_dim_mean_variance_normalize = _cntk_py.per_dim_mean_variance_normalize
@@ -893,9 +1010,53 @@ def batch_normalization(*args):
     return _cntk_py.batch_normalization(*args)
 batch_normalization = _cntk_py.batch_normalization
 
+def clip(*args):
+    return _cntk_py.clip(*args)
+clip = _cntk_py.clip
+
+def element_select(*args):
+    return _cntk_py.element_select(*args)
+element_select = _cntk_py.element_select
+
+def splice(*args):
+    return _cntk_py.splice(*args)
+splice = _cntk_py.splice
+
 def combine(*args):
     return _cntk_py.combine(*args)
 combine = _cntk_py.combine
+
+def is_first(*args):
+    return _cntk_py.is_first(*args)
+is_first = _cntk_py.is_first
+
+def is_last(*args):
+    return _cntk_py.is_last(*args)
+is_last = _cntk_py.is_last
+
+def first(*args):
+    return _cntk_py.first(*args)
+first = _cntk_py.first
+
+def last(*args):
+    return _cntk_py.last(*args)
+last = _cntk_py.last
+
+def where(*args):
+    return _cntk_py.where(*args)
+where = _cntk_py.where
+
+def gather(*args):
+    return _cntk_py.gather(*args)
+gather = _cntk_py.gather
+
+def scatter(*args):
+    return _cntk_py.scatter(*args)
+scatter = _cntk_py.scatter
+
+def broadcast_as(*args):
+    return _cntk_py.broadcast_as(*args)
+broadcast_as = _cntk_py.broadcast_as
 class DictionaryValue(_object):
     __swig_setmethods__ = {}
     __setattr__ = lambda self, name, value: _swig_setattr(self, DictionaryValue, name, value)
@@ -909,6 +1070,7 @@ class DictionaryValue(_object):
     Type_Double = _cntk_py.DictionaryValue_Type_Double
     Type_String = _cntk_py.DictionaryValue_Type_String
     Type_NDShape = _cntk_py.DictionaryValue_Type_NDShape
+    Type_Axis = _cntk_py.DictionaryValue_Type_Axis
     Type_Vector = _cntk_py.DictionaryValue_Type_Vector
     Type_Dictionary = _cntk_py.DictionaryValue_Type_Dictionary
     Type_NDArrayView = _cntk_py.DictionaryValue_Type_NDArrayView
@@ -1008,28 +1170,28 @@ Learner_swigregister = _cntk_py.Learner_swigregister
 Learner_swigregister(Learner)
 
 
-def sgdlearner(parameters, learningRates):
-    return _cntk_py.sgdlearner(parameters, learningRates)
+def sgdlearner(*args):
+    return _cntk_py.sgdlearner(*args)
 sgdlearner = _cntk_py.sgdlearner
 
-def momentum_sgdlearner(parameters, learningRates, momentums):
-    return _cntk_py.momentum_sgdlearner(parameters, learningRates, momentums)
+def momentum_sgdlearner(*args):
+    return _cntk_py.momentum_sgdlearner(*args)
 momentum_sgdlearner = _cntk_py.momentum_sgdlearner
 
-def nesterov_learner(parameters, learningRates, momentums):
-    return _cntk_py.nesterov_learner(parameters, learningRates, momentums)
+def nesterov_learner(*args):
+    return _cntk_py.nesterov_learner(*args)
 nesterov_learner = _cntk_py.nesterov_learner
 
-def ada_grad_learner(parameters, learningRates, needAveMultiplier=True):
-    return _cntk_py.ada_grad_learner(parameters, learningRates, needAveMultiplier)
-ada_grad_learner = _cntk_py.ada_grad_learner
-
-def fsada_grad_learner(parameters, learningRates, momentums):
-    return _cntk_py.fsada_grad_learner(parameters, learningRates, momentums)
+def fsada_grad_learner(*args):
+    return _cntk_py.fsada_grad_learner(*args)
 fsada_grad_learner = _cntk_py.fsada_grad_learner
 
-def rmsprop_learner(parameters, learningRates, gamma, inc, dec, max, min, needAveMultiplier=True):
-    return _cntk_py.rmsprop_learner(parameters, learningRates, gamma, inc, dec, max, min, needAveMultiplier)
+def ada_grad_learner(*args):
+    return _cntk_py.ada_grad_learner(*args)
+ada_grad_learner = _cntk_py.ada_grad_learner
+
+def rmsprop_learner(*args):
+    return _cntk_py.rmsprop_learner(*args)
 rmsprop_learner = _cntk_py.rmsprop_learner
 class Trainer(_object):
     __swig_setmethods__ = {}
@@ -1038,8 +1200,8 @@ class Trainer(_object):
     __getattr__ = lambda self, name: _swig_getattr(self, Trainer, name)
     __repr__ = _swig_repr
 
-    def __init__(self, model, trainingLoss, parameterLearners):
-        this = _cntk_py.new_Trainer(model, trainingLoss, parameterLearners)
+    def __init__(self, *args):
+        this = _cntk_py.new_Trainer(*args)
         try:
             self.this.append(this)
         except __builtin__.Exception:
@@ -1048,14 +1210,26 @@ class Trainer(_object):
     def train_minibatch(self, *args):
         return _cntk_py.Trainer_train_minibatch(self, *args)
 
+    def test_minbatch(self, *args):
+        return _cntk_py.Trainer_test_minbatch(self, *args)
+
     def model(self):
         return _cntk_py.Trainer_model(self)
 
-    def training_loss_variable(self):
-        return _cntk_py.Trainer_training_loss_variable(self)
+    def loss_function(self):
+        return _cntk_py.Trainer_loss_function(self)
 
-    def previous_minibatch_training_loss_value(self):
-        return _cntk_py.Trainer_previous_minibatch_training_loss_value(self)
+    def evaluation_function(self):
+        return _cntk_py.Trainer_evaluation_function(self)
+
+    def previous_minibatch_loss_average(self):
+        return _cntk_py.Trainer_previous_minibatch_loss_average(self)
+
+    def previous_minibatch_evaluation_average(self):
+        return _cntk_py.Trainer_previous_minibatch_evaluation_average(self)
+
+    def previous_minibatch_sample_count(self):
+        return _cntk_py.Trainer_previous_minibatch_sample_count(self)
 
     def parameter_learners(self):
         return _cntk_py.Trainer_parameter_learners(self)
@@ -1064,46 +1238,46 @@ class Trainer(_object):
 Trainer_swigregister = _cntk_py.Trainer_swigregister
 Trainer_swigregister(Trainer)
 
-class StreamInfo(_object):
+class StreamInformation(_object):
     __swig_setmethods__ = {}
-    __setattr__ = lambda self, name, value: _swig_setattr(self, StreamInfo, name, value)
+    __setattr__ = lambda self, name, value: _swig_setattr(self, StreamInformation, name, value)
     __swig_getmethods__ = {}
-    __getattr__ = lambda self, name: _swig_getattr(self, StreamInfo, name)
+    __getattr__ = lambda self, name: _swig_getattr(self, StreamInformation, name)
     __repr__ = _swig_repr
-    __swig_setmethods__["m_name"] = _cntk_py.StreamInfo_m_name_set
-    __swig_getmethods__["m_name"] = _cntk_py.StreamInfo_m_name_get
+    __swig_setmethods__["m_name"] = _cntk_py.StreamInformation_m_name_set
+    __swig_getmethods__["m_name"] = _cntk_py.StreamInformation_m_name_get
     if _newclass:
-        m_name = _swig_property(_cntk_py.StreamInfo_m_name_get, _cntk_py.StreamInfo_m_name_set)
-    __swig_setmethods__["m_id"] = _cntk_py.StreamInfo_m_id_set
-    __swig_getmethods__["m_id"] = _cntk_py.StreamInfo_m_id_get
+        m_name = _swig_property(_cntk_py.StreamInformation_m_name_get, _cntk_py.StreamInformation_m_name_set)
+    __swig_setmethods__["m_id"] = _cntk_py.StreamInformation_m_id_set
+    __swig_getmethods__["m_id"] = _cntk_py.StreamInformation_m_id_get
     if _newclass:
-        m_id = _swig_property(_cntk_py.StreamInfo_m_id_get, _cntk_py.StreamInfo_m_id_set)
-    __swig_setmethods__["m_storage_format"] = _cntk_py.StreamInfo_m_storage_format_set
-    __swig_getmethods__["m_storage_format"] = _cntk_py.StreamInfo_m_storage_format_get
+        m_id = _swig_property(_cntk_py.StreamInformation_m_id_get, _cntk_py.StreamInformation_m_id_set)
+    __swig_setmethods__["m_storage_format"] = _cntk_py.StreamInformation_m_storage_format_set
+    __swig_getmethods__["m_storage_format"] = _cntk_py.StreamInformation_m_storage_format_get
     if _newclass:
-        m_storage_format = _swig_property(_cntk_py.StreamInfo_m_storage_format_get, _cntk_py.StreamInfo_m_storage_format_set)
-    __swig_setmethods__["m_element_type"] = _cntk_py.StreamInfo_m_element_type_set
-    __swig_getmethods__["m_element_type"] = _cntk_py.StreamInfo_m_element_type_get
+        m_storage_format = _swig_property(_cntk_py.StreamInformation_m_storage_format_get, _cntk_py.StreamInformation_m_storage_format_set)
+    __swig_setmethods__["m_element_type"] = _cntk_py.StreamInformation_m_element_type_set
+    __swig_getmethods__["m_element_type"] = _cntk_py.StreamInformation_m_element_type_get
     if _newclass:
-        m_element_type = _swig_property(_cntk_py.StreamInfo_m_element_type_get, _cntk_py.StreamInfo_m_element_type_set)
-    __swig_setmethods__["m_sample_layout"] = _cntk_py.StreamInfo_m_sample_layout_set
-    __swig_getmethods__["m_sample_layout"] = _cntk_py.StreamInfo_m_sample_layout_get
+        m_element_type = _swig_property(_cntk_py.StreamInformation_m_element_type_get, _cntk_py.StreamInformation_m_element_type_set)
+    __swig_setmethods__["m_sample_layout"] = _cntk_py.StreamInformation_m_sample_layout_set
+    __swig_getmethods__["m_sample_layout"] = _cntk_py.StreamInformation_m_sample_layout_get
     if _newclass:
-        m_sample_layout = _swig_property(_cntk_py.StreamInfo_m_sample_layout_get, _cntk_py.StreamInfo_m_sample_layout_set)
+        m_sample_layout = _swig_property(_cntk_py.StreamInformation_m_sample_layout_get, _cntk_py.StreamInformation_m_sample_layout_set)
 
     def __hash__(self):
-        return _cntk_py.StreamInfo___hash__(self)
+        return _cntk_py.StreamInformation___hash__(self)
 
     def __init__(self):
-        this = _cntk_py.new_StreamInfo()
+        this = _cntk_py.new_StreamInformation()
         try:
             self.this.append(this)
         except __builtin__.Exception:
             self.this = this
-    __swig_destroy__ = _cntk_py.delete_StreamInfo
+    __swig_destroy__ = _cntk_py.delete_StreamInformation
     __del__ = lambda self: None
-StreamInfo_swigregister = _cntk_py.StreamInfo_swigregister
-StreamInfo_swigregister(StreamInfo)
+StreamInformation_swigregister = _cntk_py.StreamInformation_swigregister
+StreamInformation_swigregister(StreamInformation)
 
 
 def __eq__(*args):
@@ -1151,11 +1325,14 @@ class MinibatchSource(_object):
 
     def stream_infos(self):
         return _cntk_py.MinibatchSource_stream_infos(self)
+    __swig_destroy__ = _cntk_py.delete_MinibatchSource
+    __del__ = lambda self: None
+
+    def stream_info(self, *args):
+        return _cntk_py.MinibatchSource_stream_info(self, *args)
 
     def get_next_minibatch(self, *args):
         return _cntk_py.MinibatchSource_get_next_minibatch(self, *args)
-    __swig_destroy__ = _cntk_py.delete_MinibatchSource
-    __del__ = lambda self: None
 MinibatchSource_swigregister = _cntk_py.MinibatchSource_swigregister
 MinibatchSource_swigregister(MinibatchSource)
 
@@ -1281,7 +1458,7 @@ Parameter.__eq__ = lambda a,b: Variable_eq(a,b)
 NDShape.__eq__ = lambda a,b: NDShape_eq(a,b)
 
 
-StreamInfo.__eq__ = lambda a,b: a.m_name==b.m_name and a.m_id==b.m_id and a.m_storage_format==b.m_storage_format and a.m_element_type==b.m_element_type and a.m_sample_layout.dimensions()==b.m_sample_layout.dimensions()
+StreamInformation.__eq__ = lambda a,b: a.m_name==b.m_name and a.m_id==b.m_id and a.m_storage_format==b.m_storage_format and a.m_element_type==b.m_element_type and a.m_sample_layout.dimensions()==b.m_sample_layout.dimensions()
 
 
 def get_output_and_keep_reference(self):
