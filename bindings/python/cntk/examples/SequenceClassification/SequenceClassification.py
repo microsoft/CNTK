@@ -9,34 +9,6 @@ from cntk.utils import  get_train_loss, cntk_device
 from cntk.examples.common.nn import LSTMP_component_with_self_stabilization, embedding, fully_connected_linear_layer, select_last
 from cntk.examples.common.mb import create_text_mb_source
 
-def create_mb_source(input_dim, num_output_classes, epoch_size):
-    features_config = dict()
-    features_config["alias"] = "x"
-    features_config["dim"] = input_dim
-    features_config["format"] = "sparse"
-
-    labels_config = dict()
-    labels_config["alias"] = "y"
-    labels_config["dim"] = num_output_classes
-    labels_config["format"] = "dense"
-
-    input_config = dict()
-    input_config["features"] = features_config
-    input_config["labels"] = labels_config
-
-    deserializer_config = dict()
-    deserializer_config["type"] = "CNTKTextFormatDeserializer"
-    rel_path = r"../../../../../Tests/EndToEndTests/Text/SequenceClassification/Data/Train.ctf"
-    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), rel_path)
-    deserializer_config["file"] = path    
-    deserializer_config["input"] = input_config
-
-    minibatch_config = dict()
-    minibatch_config["epochSize"] = epoch_size  
-    minibatch_config["deserializers"] = [deserializer_config]
-
-    return create_minibatch_source(minibatch_config)
-
 def LSTM_sequence_classifer_net(input, num_output_classes, embedding_dim, LSTM_dim, cell_dim, device):
     embedding_function = embedding(input, embedding_dim, device)
     LSTM_function = LSTMP_component_with_self_stabilization(embedding_function, LSTM_dim, cell_dim, device)
