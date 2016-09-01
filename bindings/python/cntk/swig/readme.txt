@@ -1,3 +1,7 @@
+# not support yet for python 2.7
+# recommended python 3 version is 3.4
+# platform 64 bit
+
 # Set up compiler and its variant
 
 SET PATH=%PATH%;C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC;C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\bin
