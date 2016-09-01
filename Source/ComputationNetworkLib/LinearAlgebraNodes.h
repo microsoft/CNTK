@@ -238,8 +238,8 @@ class TimesNodeBase : public ComputationNode<ElemType>, public NumInputs<2>
     typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers; using Base::OperationName;                                                                                                                           \
 
 public:
-    TimesNodeBase(DEVICEID_TYPE deviceId, const wstring& name, size_t outputRank = 1)
-        : Base(deviceId, name), m_outputRank(outputRank)
+    TimesNodeBase(DEVICEID_TYPE deviceId, const wstring& name, size_t outputRank = 1, int inferInputRankToMap = -1)
+        : Base(deviceId, name), m_outputRank(outputRank), m_inferInputRankToMap(inferInputRankToMap)
     {
     }
 
@@ -249,7 +249,8 @@ public:
         if (flags & CopyNodeFlags::copyNodeValue)
         {
             auto node = dynamic_pointer_cast<TimesNodeBase<ElemType, m_transpose>>(nodeP);
-            node->m_outputRank = m_outputRank;
+            node->m_outputRank          = m_outputRank;
+            node->m_inferInputRankToMap = m_inferInputRankToMap;
         }
     }
 
@@ -257,6 +258,7 @@ public:
     {
         Base::Save(fstream);
         fstream << m_outputRank;
+        fstream << m_inferInputRankToMap;
     }
 
     virtual void Load(File& fstream, size_t modelVersion) override
@@ -266,6 +268,10 @@ public:
             fstream >> m_outputRank;
         else
             m_outputRank = 1;
+        if (modelVersion >= CNTK_MODEL_VERSION_11)
+            fstream >> m_inferInputRankToMap;
+        else
+            m_inferInputRankToMap = -1;
     }
 
 private:
@@ -420,19 +426,33 @@ public:
                 if (dimsA[k] == 0)
                     InvalidArgument("%ls %ls operation: The outputRank (%d) dimensions in left argument's shape [%s] must not be 0.", NodeName().c_str(), OperationName().c_str(), (int)m_outputRank, dimsAstring.c_str());
 
-            // if the last dimension of A is 0, then extend it to fully match B
-            // E.g. [I x 0] * [X x Y x Z x K] => infer as [I x X x Y x Z], not as [I x X].
-            // I.e. we cannot use inference to infer a matrix product on a part of an input tensor.
-            // We default to inferring the whole, as part of a tensor is a special use case.
-            assert (dimsA.size() == m_outputRank + numReductionDims);
-            while (numReductionDims < dimsB.size() && dimsA.back() == 0)
+            // infer rank of dimsA
+            // For purpose of dimension inference, Times() accepts an optional parameter inferInputRankToMap (default -1=unspecified).
+            // The last 'inferInputRankToMap' axes are considered those that the matrix product should keep (Times()
+            // is applied one by one, like a "map" operation) rather than reducing over.
+            // Specifically, inferInputRankToMap=0 means to reduce over all input axes, e.g. for an image input that
+            // should be flattened.
+            // Examples:
+            //  [I x Inferred] * [J x K],                    inferInputRankToMap=n/a --> Inferred  := J, result is [I x K]
+            //  [I x Inferred] * [W x H x C],                inferInputRankToMap=n/a --> Inferred  := W, result is [I x H x C] (not desired)
+            //  [I x Inferred x Inferred] * [W x H x C],     inferInputRankToMap=n/a --> Inf x Inf := [W x H], result is [I x C]
+            //  [I x Inferred] * [W x H x C],                inferInputRankToMap=0   --> Inferred  := W x H x C, result is [I] (desired)
+            //  [I x Inferred] * [W x H x C x R],            inferInputRankToMap=1   --> Inferred  := W x H x C, result is [I x R] (desired)
+            // If W's shape is too short, it will be padded with 0 (i.e. inferred in a subsequent step).
+            if (m_inferInputRankToMap >= 0) // if given, we pad if needed
             {
-                dimsA.push_back(0);
-                numReductionDims++;
+                if ((size_t)m_inferInputRankToMap >= dimsB.size() && isFinalValidationPass) // at least one axis must be left to reduce over
+                    InvalidArgument("%ls %ls operation: 'inferInputRankToMap' argument %d must be less than rank of second operand [%s].", NodeName().c_str(), OperationName().c_str(), m_inferInputRankToMap, dimsBstring.c_str());
+                assert(dimsA.size() == m_outputRank + numReductionDims);
+                while (numReductionDims + (size_t)m_inferInputRankToMap < dimsB.size())
+                {
+                    dimsA.push_back(0);
+                    numReductionDims++;
+                }
             }
 
             // fill in the missing ones
-            // We fill in dimensions given as 0. The tensor rank is not inferred.
+            // We fill in dimensions given as 0. The tensor rank is not inferred here (that is done above).
             for (size_t k = m_outputRank; k < dimsA.size(); k++)
             {
                 auto& dimA = dimsA[k];
@@ -478,6 +498,7 @@ public:
 
 private:
     size_t m_outputRank;
+    int m_inferInputRankToMap;  // -1 (not specified) or says how to expand shape of W, to keep this many mapping dims
 };
 
 // -----------------------------------------------------------------------
@@ -504,12 +525,12 @@ class TimesNode : public TimesNodeBase<ElemType, false>
     static const std::wstring TypeName() { return L"Times"; }
 
 public:
-    TimesNode(DEVICEID_TYPE deviceId, const wstring& name, size_t outputRank = 1)
-        : Base(deviceId, name, outputRank)
+    TimesNode(DEVICEID_TYPE deviceId, const wstring& name, size_t outputRank = 1, int inferInputRankToMap = -1)
+        : Base(deviceId, name, outputRank, inferInputRankToMap)
     {
     }
     TimesNode(const ScriptableObjects::IConfigRecordPtr configp)
-        : TimesNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"outputRank"))
+        : TimesNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"outputRank"), configp->Get(L"inferInputRankToMap"))
     {
         AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
     }
@@ -537,141 +558,15 @@ class TransposeTimesNode : public TimesNodeBase<ElemType, true>
 public:
     DeclareConstructorFromConfigWithNumInputs(TransposeTimesNode);
     TransposeTimesNode(DEVICEID_TYPE deviceId, const wstring& name, size_t outputRank = 1)
-        : Base(deviceId, name, outputRank)
+        : Base(deviceId, name, outputRank, /*inferInputRankToMap=*/-1)
     {
+        if (outputRank != 1)
+            LogicError("TransposeTimes does not yet support outputRank other than 1");
     }
 };
 
 template class TransposeTimesNode<float>;
 template class TransposeTimesNode<double>;
-
-// -----------------------------------------------------------------------
-// DiagTimesNode (vector representing the diagonal of a square matrix, data)
-// TODO: This is redundant with ElementTimes and should be removed (with a compat stub).
-// -----------------------------------------------------------------------
-
-template <class ElemType>
-class DiagTimesNode : public ComputationNode<ElemType>, public NumInputs<2>
-{
-    typedef ComputationNode<ElemType> Base;
-    UsingComputationNodeMembersBoilerplate;
-    static const std::wstring TypeName()
-    {
-        return L"DiagTimes";
-    }
-
-public:
-    DeclareConstructorFromConfigWithNumInputs(DiagTimesNode);
-    DiagTimesNode(DEVICEID_TYPE deviceId, const wstring& name)
-        : Base(deviceId, name)
-    {
-    }
-
-    virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
-    {
-        if (inputIndex == 0) // left derivative
-        {
-            Matrix<ElemType> sliceOutputGrad = MaskedGradientFor(fr); // use Masked- version since this is reducing over frames
-            Matrix<ElemType> sliceInput1Value = Input(1)->MaskedValueFor(fr);
-            m_innerproduct->AssignInnerProductOf(sliceOutputGrad, sliceInput1Value, false);
-            Input(0)->GradientAsMatrix() += *m_innerproduct;
-        }
-        else // right derivative
-        {
-            Matrix<ElemType> sliceOutputGrad = GradientFor(fr);
-            Matrix<ElemType> sliceInput1Grad = Input(1)->GradientFor(fr);
-            m_rightGradient->SetValue(sliceOutputGrad);
-            m_rightGradient->ColumnElementMultiplyWith(Input(0)->ValueAsMatrix());
-            sliceInput1Grad += *m_rightGradient;
-        }
-    }
-
-    virtual bool OutputUsedInComputingInputNodesGradients() const override
-    {
-        // The DiagTimesNode does not require its output value for computing
-        // the gradients of its input nodes
-        return false;
-    }
-
-    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
-    {
-        Matrix<ElemType> sliceInput1Value = Input(1)->ValueFor(fr);
-        Matrix<ElemType> sliceOutputValue = ValueFor(fr);
-
-        sliceOutputValue.AssignValuesOf(sliceInput1Value);
-        sliceOutputValue.ColumnElementMultiplyWith(Input(0)->ValueAsMatrix());
-    }
-
-    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
-    {
-        Base::Validate(isFinalValidationPass);
-        InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
-
-        size_t rows0 = Input(0)->GetAsMatrixNumRows();
-        size_t rows1 = Input(1)->HasMBLayout() ? Input(1)->GetSampleMatrixNumRows() : Input(1)->GetAsMatrixNumRows();
-
-        // if dimension not specified we assume two operands' dimensions should match
-        Input(0)->ValidateInferInputDimsFrom(TensorShape(rows1));
-
-        if (Input(1)->HasMBLayout())
-        {
-            // infer rows1 as rows0
-            Input(1)->ValidateInferInputDimsFrom(TensorShape(rows0));
-            SetDims(TensorShape(rows0), true);
-        }
-        else // multiplying two straight matrices
-        {
-            size_t cols1 = Input(1)->GetAsMatrixNumCols();
-            // infer rows1 as rows0
-            Input(1)->ValidateInferInputDimsFrom(TensorShape(rows0, cols1));
-            SetDims(TensorShape(rows0, cols1), false);
-        }
-
-        // update after inference
-        rows0 = Input(0)->GetAsMatrixNumRows();
-        rows1 = Input(1)->HasMBLayout() ? Input(1)->GetSampleMatrixNumRows() : Input(1)->GetAsMatrixNumRows();
-        if (isFinalValidationPass && rows0 != rows1)
-            InvalidArgument("The inner matrix dimension in the %ls %ls operation does not match (%d vs. %d).", NodeName().c_str(), OperationName().c_str(), (int) rows1, (int) rows0);
-        size_t cols0 = Input(0)->GetAsMatrixNumCols();
-        if (isFinalValidationPass && cols0 != 1)
-            InvalidArgument("The first matrix should be a column vector representing the diagonal of a square matrix in the DiagTimes operation.");
-
-        SetDims(Input(1));
-    }
-
-    virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
-    {
-        Base::CopyTo(nodeP, newName, flags);
-        if (flags & CopyNodeFlags::copyNodeValue)
-        {
-            auto node = dynamic_pointer_cast<DiagTimesNode<ElemType>>(nodeP);
-            node->m_innerproduct->SetValue(*m_innerproduct);
-            node->m_rightGradient->SetValue(*m_rightGradient);
-        }
-    }
-    // request matrices that are needed for gradient computation
-    virtual void RequestMatricesBeforeBackprop(MatrixPool& matrixPool)
-    {
-        Base::RequestMatricesBeforeBackprop(matrixPool);
-        RequestMatrixFromPool(m_innerproduct, matrixPool);
-        RequestMatrixFromPool(m_rightGradient, matrixPool);
-    }
-
-    // release gradient and temp matrices that no longer needed after all the children's gradients are computed.
-    virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
-    {
-        Base::ReleaseMatricesAfterBackprop(matrixPool);
-        ReleaseMatrixToPool(m_innerproduct, matrixPool);
-        ReleaseMatrixToPool(m_rightGradient, matrixPool);
-    }
-
-private:
-    shared_ptr<Matrix<ElemType>> m_innerproduct;
-    shared_ptr<Matrix<ElemType>> m_rightGradient;
-};
-
-template class DiagTimesNode<float>;
-template class DiagTimesNode<double>;
 
 // -----------------------------------------------------------------------
 // SumElementsNode (input)

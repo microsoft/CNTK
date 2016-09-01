@@ -24,11 +24,15 @@
     <NvmlLibPath>"c:\Program Files\NVIDIA Corporation\GDK\gdk_win7_amd64_release\nvml\lib"</NvmlLibPath>
 
     <CudaVersion/>
+    <CudaVersion Condition="Exists('$(CUDA_PATH_V8_0)') And '$(CudaVersion)' == ''">8.0</CudaVersion>
     <CudaVersion Condition="Exists('$(CUDA_PATH_V7_5)') And '$(CudaVersion)' == ''">7.5</CudaVersion>
     <CudaVersion Condition="Exists('$(CUDA_PATH_V7_0)') And '$(CudaVersion)' == ''">7.0</CudaVersion>
 
     <HasOpenCv>false</HasOpenCv>
     <HasOpenCv Condition="Exists('$(OPENCV_PATH)') Or Exists('$(OPENCV_PATH_V31)')">true</HasOpenCv>
+	
+	<HasBoost>false</HasBoost>
+    <HasBoost Condition="Exists('$(BOOST_INCLUDE_PATH)') And Exists('$(BOOST_LIB_PATH)')">true</HasBoost>
 
     <UseZip>false</UseZip>
     <UseZip Condition="Exists('$(ZLIB_PATH)')">true</UseZip>
@@ -82,6 +86,12 @@
     <OpenCvLib>$(OpenCvWorld).lib</OpenCvLib>
     <OpenCvLibPath>$(OpenCvPath)\x64\vc12\lib</OpenCvLibPath>
     <OpenCvBinPath>$(OpenCvPath)\x64\vc12\bin</OpenCvBinPath>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(CudaVersion)' == '8.0'">
+    <CudaPath>$(CUDA_PATH_V8_0)</CudaPath>
+    <CudaRuntimeDll>cudart64_80.dll</CudaRuntimeDll>
+    <CudaDlls>cublas64_80.dll;cusparse64_80.dll;curand64_80.dll;$(CudaRuntimeDll)</CudaDlls>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(CudaVersion)' == '7.5'">

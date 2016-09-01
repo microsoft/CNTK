@@ -332,6 +332,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
             "or an explicit learning rate must be specified in config for the starting epoch.");
     }
 
+    // TODO this assumes training is picked up with nodes with zero parameters
     double prevDropoutRate = 0;
     double prevNormalizationTimeConstant = 0;
     double prevNormalizationBlendTimeConstant = 0;
@@ -475,9 +476,12 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         double momentumAsTimeConstant = momentumPerSample == 0.0 ? 0.0
                                                                  : momentumPerSample >= 1.0 ? 0.0
                                                                                             : -1.0 / log(momentumPerSample);
+        if (m_traceLevel > 0)
+        {
         fprintf(stderr, "\n");
         LOGPRINTF(stderr, "Starting Epoch %d: learning rate per sample = %f  effective momentum = %f  momentum as time constant = %.1f samples\n",
                   i + 1, learnRatePerSample, MomentumPerMB(momentumPerSample, actualMinibatchSize), momentumAsTimeConstant);
+        }
 
         EpochCriterion epochCriterion; // criterion values are returned in this
         std::vector<EpochCriterion> epochEvalErrors(evaluationNodes.size());
@@ -692,6 +696,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
             {
                 SaveCheckPointInfo(i, totalTrainingSamplesSeen, learnRatePerSample, smoothedGradients, prevCriterion, chosenMinibatchSize);
                 auto modelName = GetModelNameForEpoch(i);
+                if (m_traceLevel > 0)
                 LOGPRINTF(stderr, "SGD: Saving checkpoint model '%ls'\n", modelName.c_str());
                 net->Save(modelName);
                 if (!m_keepCheckPointFiles)
@@ -853,6 +858,8 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
     // TODO: move the two-forward-pass support out of the reader, make a first-class citizen.
     AttemptUtteranceDerivativeFeatures(net, trainSetDataReader, featureNodes, inputMatrices);
 
+    if (m_traceLevel > 0)
+    {
     fprintf(stderr, "\n");
     LOGPRINTF(stderr, "Starting minibatch loop");
     if (useGradientAggregation)
@@ -861,15 +868,11 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                 (int) m_mpi->CurrentNodeRank(), (int) m_mpi->NumNodesInUse(), (int) m_numGradientBits);
 
         if (m_bufferedAsyncGradientAggregation)
-        {
             fprintf(stderr, ", BufferedAsyncGradientAggregation is ENABLED");
         }
-    }
 
     if (useDistributedMBReading)
-    {
         fprintf(stderr, ", distributed reading is ENABLED");
-    }
 
     if (numSubminibatchesNeeded > 1)
     {
@@ -879,6 +882,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             fprintf(stderr, ", with %d subminibatch", (int)numSubminibatchesNeeded);
     }
     fprintf(stderr, ".\n");
+    }
 
     Timer timer;
     timer.Start();
@@ -1162,7 +1166,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             if (useDistributedMBReading)
             {
                 noMoreSamplesToProcess = !wasDataRead;
-        }
+            }
 
             if (nSamplesSinceLastModelSync >= m_nFramesBetweenASGDSync[epochNumber])
             {
@@ -2685,9 +2689,9 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
             size_t numMPIWorkers = pMPI->NumNodesInUse();            
             const ConfigRecordType& configParallelTrain(configSGD(L"ParallelTrain", ConfigRecordType::Record()));
             m_parallelizationMethod = ParseParallelizationMethod(configParallelTrain(L"parallelizationMethod", L"none"));
-            m_parallelizationStartEpochNum = configParallelTrain(L"parallelizationStartEpoch", (int)1) - 1; // Epoch numbers internally are 0 based
+        m_parallelizationStartEpochNum = configParallelTrain(L"parallelizationStartEpoch", (int) 1) - 1; // Epoch numbers internally are 0 based
             m_enableDistributedMBReading = configParallelTrain(L"distributedMBReading", false);
-            m_syncStatsTrace = configParallelTrain(L"syncPerfStats", (int)0);
+        m_syncStatsTrace = configParallelTrain(L"syncPerfStats", (int) 0);
 
             if (configParallelTrain.Exists(L"DataParallelSGD"))
             {

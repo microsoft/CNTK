@@ -216,13 +216,13 @@ TIMIT_TrainSimple = new TrainAction [               // new: added TrainAction; t
             needPrior = true
             // the following two belong into SGD, so they were removed here
             //trainingCriterion = CrossEntropyWithSoftmax
-            //evalCriterion = ErrorPrediction
+            //evalCriterion = ClassificationError
             // new: connect to input stream from source; and expose the output layer
             input = source.features.data                        // these are also ComputeNodeRefs, exposed by the source
             output = ComputeNodeRef [ dim = source.labels.dim ] // SimpleNetworkBuilder will put top layer affine transform output (input to softmax) here
             // criteria are configurable here; these are ComputeNodes created here
             trainingCriterion = CrossEntropyWithSoftmax (source.labels.data, output)
-            evalCriterion = ErrorPrediction (source.labels.data, output)
+            evalCriterion = ClassificationError (source.labels.data, output)
             // new: (and half-baked) define Input nodes
             myFeatures=Input(featDim)               // reader stream will reference this
             myLabels=Input(labelDim)
@@ -245,7 +245,7 @@ TIMIT_TrainSimple = new TrainAction [               // new: added TrainAction; t
             //L2 = SBFF(L1,hiddenDim,hiddenDim)
             //L3 = SBFF(L2,hiddenDim,hiddenDim)
             //CE = SMBFF(L3,labelDim,hiddenDim,myLabels,tag=Criteria)
-            //Err = ErrorPrediction(myLabels,CE.BFF.FF.P,tag=Eval)
+            //Err = ClassificationError(myLabels,CE.BFF.FF.P,tag=Eval)
             //logPrior = LogPrior(myLabels)	 
             //ScaledLogLikelihood=Minus(CE.BFF.FF.P,logPrior,tag=Output)
 
@@ -279,7 +279,7 @@ TIMIT_TrainSimple = new TrainAction [               // new: added TrainAction; t
 
             // define criterion nodes
             CE = CrossEntropyWithSoftmax(myLabels, outZ)
-            Err = ErrorPrediction(myLabels, outZ)
+            Err = ClassificationError(myLabels, outZ)
 
             // define output node for decoding
             logPrior = LogPrior(myLabels)	 
@@ -392,7 +392,7 @@ network = new NDL [
 
     // define criterion nodes
     CE = CrossEntropyWithSoftmax(myLabels, outZ)
-    Err = ErrorPrediction(myLabels, outZ)
+    Err = ClassificationError(myLabels, outZ)
 
     // define output node for decoding
     logPrior = LogPrior(myLabels)	 

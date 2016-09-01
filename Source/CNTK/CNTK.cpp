@@ -93,26 +93,6 @@ std::string WCharToString(const wchar_t* wst)
     return s;
 }
 
-// TODO: This is an action, it should be moved into ActionsLib.
-template <typename ElemType>
-void DumpNodeInfo(const ConfigParameters& config)
-{
-    wstring modelPath = config(L"modelPath");
-    wstring nodeName = config(L"nodeName", L"__AllNodes__");
-    wstring nodeNameRegexStr = config(L"nodeNameRegex", L"");
-    wstring defOutFilePath = modelPath + L"." + nodeName + L".txt";
-    wstring outputFile = config(L"outputFile", defOutFilePath);
-    bool printValues = config(L"printValues", true);
-    bool printMetadata = config(L"printMetadata", true);
-    if (!printValues && !printMetadata)
-    {
-        InvalidArgument("printValues and printMetadata: Since both are set to false, there will be nothing to dump");
-    }
-
-    ComputationNetworkPtr net = ComputationNetwork::CreateFromFile<ElemType>(CPUDEVICE, modelPath);
-    net->DumpNodeInfoToFile(nodeName, printValues, printMetadata, outputFile, nodeNameRegexStr);
-}
-
 size_t GetMaxEpochs(const ConfigParameters& configParams)
 {
     ConfigParameters configSGD(configParams("SGD"));
@@ -286,9 +266,9 @@ void DoCommands(const ConfigParameters& config, const shared_ptr<MPIWrapper>& mp
                 {
                     TestCn<ElemType>(config); // for "devtest" action pass the root config instead
                 }
-                else if (thisAction == "dumpNode" /*deprecated:*/|| thisAction == "dumpnode")
+                else if (thisAction == "dumpNodes" /*deprecated:*/ || thisAction == "dumpNode" || thisAction == "dumpnode")
                 {
-                    DumpNodeInfo<ElemType>(commandParams);
+                    DoDumpNodes<ElemType>(commandParams);
                 }
                 else if (thisAction == "convertdbn")
                 {
@@ -685,28 +665,22 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
         fprintf(stderr, "%*s%ls", i > 0 ? 2 : 0, "", argv[i]); // use 2 spaces for better visual separability
     fprintf(stderr, "\n\n");
 
-#if 1 //def _DEBUG
+#ifdef _DEBUG
     // This simply merges all the different config parameters specified (eg, via config files or via command line directly),
     // and prints it.
-    fprintf(stderr, "\n\n");
-    LOGPRINTF(stderr, ">>>>>>>>>>>>>>>>>>>> RAW CONFIG (VARIABLES NOT RESOLVED) >>>>>>>>>>>>>>>>>>>>\n");
+    fprintf(stderr, "\nConfiguration, Raw:\n\n");
     LOGPRINTF(stderr, "%s\n", rawConfigString.c_str());
-    LOGPRINTF(stderr, "<<<<<<<<<<<<<<<<<<<< RAW CONFIG (VARIABLES NOT RESOLVED)  <<<<<<<<<<<<<<<<<<<<\n");
 
     // Same as above, but all variables are resolved.  If a parameter is set multiple times (eg, set in config, overridden at command line),
     // All of these assignments will appear, even though only the last assignment matters.
-    fprintf(stderr, "\n");
-    LOGPRINTF(stderr, ">>>>>>>>>>>>>>>>>>>> RAW CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>\n");
+    fprintf(stderr, "\nConfiguration After Variable Resolution:\n\n");
     LOGPRINTF(stderr, "%s\n", config.ResolveVariables(rawConfigString).c_str());
-    LOGPRINTF(stderr, "<<<<<<<<<<<<<<<<<<<< RAW CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<\n");
 
+#endif
     // This outputs the final value each variable/parameter is assigned to in config (so if a parameter is set multiple times, only the last
     // value it is set to will appear).
-    fprintf(stderr, "\n");
-    LOGPRINTF(stderr, ">>>>>>>>>>>>>>>>>>>> PROCESSED CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>\n");
+    fprintf(stderr, "\nConfiguration After Processing and Variable Resolution:\n\n");
     config.dumpWithResolvedVariables();
-    LOGPRINTF(stderr, "<<<<<<<<<<<<<<<<<<<< PROCESSED CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<\n");
-#endif
 
     LOGPRINTF(stderr, "Commands:");
     for (int i = 0; i < command.size(); i++)

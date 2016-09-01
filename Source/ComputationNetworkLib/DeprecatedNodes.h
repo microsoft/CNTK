@@ -166,4 +166,128 @@ public:
 template class PerDimMeanVarNormalizationNode<float>;
 template class PerDimMeanVarNormalizationNode<double>;
 
+// -----------------------------------------------------------------------
+// DiagTimesNode (vector representing the diagonal of a square matrix, data)
+// Deprecated because can be implemented with ElementTimes.
+// -----------------------------------------------------------------------
+
+template <class ElemType>
+class DiagTimesNode : public ComputationNode<ElemType>, public NumInputs<2>
+{
+    typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName() { return L"DiagTimes"; }
+
+public:
+    DeclareConstructorFromConfigWithNumInputs(DiagTimesNode);
+    DiagTimesNode(DEVICEID_TYPE deviceId, const wstring& name)
+        : Base(deviceId, name)
+    {
+    }
+
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
+    {
+        if (inputIndex == 0) // left derivative
+        {
+            Matrix<ElemType> sliceOutputGrad = MaskedGradientFor(fr); // use Masked- version since this is reducing over frames
+            Matrix<ElemType> sliceInput1Value = Input(1)->MaskedValueFor(fr);
+            m_innerproduct->AssignInnerProductOf(sliceOutputGrad, sliceInput1Value, false);
+            Input(0)->GradientAsMatrix() += *m_innerproduct;
+        }
+        else // right derivative
+        {
+            Matrix<ElemType> sliceOutputGrad = GradientFor(fr);
+            Matrix<ElemType> sliceInput1Grad = Input(1)->GradientFor(fr);
+            m_rightGradient->SetValue(sliceOutputGrad);
+            m_rightGradient->ColumnElementMultiplyWith(Input(0)->ValueAsMatrix());
+            sliceInput1Grad += *m_rightGradient;
+        }
+    }
+
+    virtual bool OutputUsedInComputingInputNodesGradients() const override
+    {
+        // The DiagTimesNode does not require its output value for computing
+        // the gradients of its input nodes
+        return false;
+    }
+
+    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
+    {
+        Matrix<ElemType> sliceInput1Value = Input(1)->ValueFor(fr);
+        Matrix<ElemType> sliceOutputValue = ValueFor(fr);
+
+        sliceOutputValue.AssignValuesOf(sliceInput1Value);
+        sliceOutputValue.ColumnElementMultiplyWith(Input(0)->ValueAsMatrix());
+    }
+
+    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
+    {
+        Base::Validate(isFinalValidationPass);
+        InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
+
+        size_t rows0 = Input(0)->GetAsMatrixNumRows();
+        size_t rows1 = Input(1)->HasMBLayout() ? Input(1)->GetSampleMatrixNumRows() : Input(1)->GetAsMatrixNumRows();
+
+        // if dimension not specified we assume two operands' dimensions should match
+        Input(0)->ValidateInferInputDimsFrom(TensorShape(rows1));
+
+        if (Input(1)->HasMBLayout())
+        {
+            // infer rows1 as rows0
+            Input(1)->ValidateInferInputDimsFrom(TensorShape(rows0));
+            SetDims(TensorShape(rows0), true);
+        }
+        else // multiplying two straight matrices
+        {
+            size_t cols1 = Input(1)->GetAsMatrixNumCols();
+            // infer rows1 as rows0
+            Input(1)->ValidateInferInputDimsFrom(TensorShape(rows0, cols1));
+            SetDims(TensorShape(rows0, cols1), false);
+        }
+
+        // update after inference
+        rows0 = Input(0)->GetAsMatrixNumRows();
+        rows1 = Input(1)->HasMBLayout() ? Input(1)->GetSampleMatrixNumRows() : Input(1)->GetAsMatrixNumRows();
+        if (isFinalValidationPass && rows0 != rows1)
+            InvalidArgument("The inner matrix dimension in the %ls %ls operation does not match (%d vs. %d).", NodeName().c_str(), OperationName().c_str(), (int) rows1, (int) rows0);
+        size_t cols0 = Input(0)->GetAsMatrixNumCols();
+        if (isFinalValidationPass && cols0 != 1)
+            InvalidArgument("The first matrix should be a column vector representing the diagonal of a square matrix in the DiagTimes operation.");
+
+        SetDims(Input(1));
+    }
+
+    virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
+    {
+        Base::CopyTo(nodeP, newName, flags);
+        if (flags & CopyNodeFlags::copyNodeValue)
+        {
+            auto node = dynamic_pointer_cast<DiagTimesNode<ElemType>>(nodeP);
+            node->m_innerproduct->SetValue(*m_innerproduct);
+            node->m_rightGradient->SetValue(*m_rightGradient);
+        }
+    }
+    // request matrices that are needed for gradient computation
+    virtual void RequestMatricesBeforeBackprop(MatrixPool& matrixPool)
+    {
+        Base::RequestMatricesBeforeBackprop(matrixPool);
+        RequestMatrixFromPool(m_innerproduct, matrixPool);
+        RequestMatrixFromPool(m_rightGradient, matrixPool);
+    }
+
+    // release gradient and temp matrices that no longer needed after all the children's gradients are computed.
+    virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
+    {
+        Base::ReleaseMatricesAfterBackprop(matrixPool);
+        ReleaseMatrixToPool(m_innerproduct, matrixPool);
+        ReleaseMatrixToPool(m_rightGradient, matrixPool);
+    }
+
+private:
+    shared_ptr<Matrix<ElemType>> m_innerproduct;
+    shared_ptr<Matrix<ElemType>> m_rightGradient;
+};
+
+template class DiagTimesNode<float>;
+template class DiagTimesNode<double>;
+
 }}}
