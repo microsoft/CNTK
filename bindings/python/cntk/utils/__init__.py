@@ -551,15 +551,15 @@ def eval(op, precision, device_id, input_map=None, backward_pass=False):
 
     forward_out_var_map =  {}
     forward_retain = set()
-    for v in op.outputs():
+    for v in op.owner.outputs():
         forward_out_var_map[v] = None # will be populated in Forward()
         forward_retain.add(v)
 
-    state = op.forward(forward_in_var_map, forward_out_var_map, device, forward_retain)
+    state = op.owner.forward(forward_in_var_map, forward_out_var_map, device, forward_retain)
 
     forward_output = {}
     forward_output_mask = {}
-    for v in op.outputs():
+    for v in op.owner.outputs():
         value = forward_out_var_map[v]
         np_data = value.data().to_numpy()         
         if value.mask():
@@ -578,7 +578,7 @@ def eval(op, precision, device_id, input_map=None, backward_pass=False):
 
         backward_var_map = dict((var, None) for var in forward_in_var_map)
 
-        op.backward(state, root_gradients, backward_var_map)
+        op.owner.backward(state, root_gradients, backward_var_map)
 
         backward_output = {}
         for var, value in backward_var_map.items():
