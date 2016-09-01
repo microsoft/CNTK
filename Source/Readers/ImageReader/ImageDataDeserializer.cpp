@@ -64,7 +64,7 @@ struct DeserializedImage : DenseSequenceData
 };
 
 // For image, chunks correspond to a single image.
-class ImageDataDeserializer::ImageChunk : public Chunk, public std::enable_shared_from_this<ImageChunk>
+class ImageDataDeserializer::ImageChunk : public Chunk
 {
     ImageSequenceDescription m_description;
     ImageDataDeserializer& m_parent;
@@ -107,11 +107,9 @@ public:
         image->m_sampleLayout = std::make_shared<TensorShape>(dimensions.AsTensorShape(HWC));
         image->m_id = sequenceId;
         image->m_numberOfSamples = 1;
-        image->m_chunk = shared_from_this();
         result.push_back(image);
 
         SparseSequenceDataPtr label = std::make_shared<SparseSequenceData>();
-        label->m_chunk = shared_from_this();
         m_parent.m_labelGenerator->CreateLabelFor(imageSequence.m_classId, *label);
         label->m_numberOfSamples = 1;
         result.push_back(label);
