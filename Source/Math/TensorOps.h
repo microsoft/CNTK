@@ -259,7 +259,7 @@ DefBinaryOp(SqrOfDifference, Sqr(a - b));
 
 DefTernaryOp(Cond, a ? b : c);
 DefTernaryOp(CopyIfEqual, a == b ? c : 0); // CopyIfEqual(a,b)(c) -- if a==b copy c, otherwise 0; used for gradient of clip, min, max, etc.
-DefTernaryOp(Clip, a < b ? b : (a > c ? c : a)); // Clip(data)(min,max) => a=data, b=min, c=max
+DefTernaryOp(Clip, c < a ? a : (c > b ? b : c)); // Clip(min,max)(data) => a=min, b=max, c=data
 DefTernaryOp(ElementwiseProductWithLogSumDerivative, a * Sigmoid(c - b));
 
 #pragma pop_macro("DefTernaryOp")
