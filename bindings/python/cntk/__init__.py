@@ -8,9 +8,9 @@ __version__ = '2.0'
 
 import os
 
-from . import graph
 from . import ops
 from .cntk_py import *
+from .utils import *
 
 import numpy as np
 

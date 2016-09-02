@@ -1,9 +1,8 @@
 import numpy as np
 import sys
 import os
-from cntk import learning_rates_per_sample, DeviceDescriptor, Trainer, sgdlearner
-from cntk.ops import variable, constant, parameter, cross_entropy_with_softmax, combine, classification_error, plus, times, relu, convolution, batch_normalization, pooling,AVG_POOLING
-from cntk.utils import create_minibatch_source, get_train_loss, get_train_eval_criterion, cntk_device, create_NDArrayView, create_NDArrayView_from_NumPy
+from cntk import learning_rates_per_sample, Trainer, sgdlearner, create_minibatch_source, get_train_loss, get_train_eval_criterion, cntk_device
+from cntk.ops import variable, constant, parameter, cross_entropy_with_softmax, combine, classification_error, plus, times, pooling,AVG_POOLING
 from examples.common.nn import conv_bn_relu_layer, conv_bn_layer, resnet_node2, resnet_node2_inc
 
 def create_mb_source(epoch_size):

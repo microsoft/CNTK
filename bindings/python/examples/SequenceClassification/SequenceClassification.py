@@ -2,9 +2,8 @@ import numpy as np
 import sys
 import os
 import time
-from cntk import learning_rates_per_sample, DeviceDescriptor, Trainer, sgdlearner, Axis
-from cntk.ops import variable, cross_entropy_with_softmax, combine, classification_error, sigmoid, element_times, constant, parameter, times, slice
-from cntk.utils import  get_train_loss, get_train_eval_criterion, cntk_device
+from cntk import learning_rates_per_sample, DeviceDescriptor, Trainer, sgdlearner, Axis, get_train_loss, get_train_eval_criterion, cntk_device
+from cntk.ops import variable, cross_entropy_with_softmax, combine, classification_error
 from examples.common.nn import LSTMP_component_with_self_stabilization, embedding, fully_connected_linear_layer, select_last
 from examples.common.mb import create_text_mb_source
 
