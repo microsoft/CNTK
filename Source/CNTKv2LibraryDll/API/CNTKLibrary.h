@@ -1983,12 +1983,12 @@ namespace CNTK
         template <typename T>
         DictionaryValue(const T& value) : m_valueType(GetValueType<T>())
         {
-            static_assert(std::is_same<T, NDShape>::value ||
+            static_assert((std::is_same<T, NDShape>::value ||
                           std::is_same<T, Axis>::value ||
                           std::is_same<T, std::wstring>::value ||
                           std::is_same<T, std::vector<DictionaryValue>>::value ||
                           std::is_same<T, Dictionary>::value ||
-                          std::is_same<T, NDArrayView>::value,
+                          std::is_same<T, NDArrayView>::value),
                           "Unsupported ValueType");
 
             AllocateDataPtr(value);
@@ -2159,7 +2159,7 @@ namespace CNTK
         template <typename T>
         static Type GetValueType()
         {
-            static_assert(std::is_same<T, bool>::value ||
+            static_assert((std::is_same<T, bool>::value ||
                           std::is_same<T, size_t>::value ||
                           std::is_same<T, float>::value ||
                           std::is_same<T, double>::value ||
@@ -2168,7 +2168,7 @@ namespace CNTK
                           std::is_same<T, Axis>::value ||
                 std::is_same<T, std::vector<DictionaryValue>>::value ||
                           std::is_same<T, Dictionary>::value ||
-                          std::is_same<T, NDArrayView>::value,
+                          std::is_same<T, NDArrayView>::value),
                           "Unsupported ValueType");
 
             if (std::is_same<T, bool>::value)                                      return Type::Bool;
