@@ -10,7 +10,7 @@ testCases:
   Test cases pass:
     patterns:
       - "Test case"
-      - "has passed with"
+      - "has passed"
 
   Test suites pass:
     patterns:
