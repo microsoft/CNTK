@@ -723,7 +723,7 @@ public:
                 for (typename std::vector<Url>::iterator iturlI = itqu->urls.begin(); iturlI != itqu->urls.end(); iturlI++)
                 {
                     Url& UrlI = *iturlI;
-                    size_t K = UrlI.K;
+                    size_t K = min((size_t)UrlI.K, (size_t)((itqu->urls.end() - iturlI)) - 1);
 
                     // discount
                     logKi = m_logWeights[UrlI.rk];
