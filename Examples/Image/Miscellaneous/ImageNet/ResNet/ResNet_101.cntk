@@ -41,6 +41,8 @@ Train=[
         gradUpdateType="None"
         L2RegWeight=0.0001
         dropoutRate=0
+
+        disableWkInBatchNormal=true
         
         ParallelTrain=[
             parallelizationMethod="DataParallelSGD"
