@@ -265,6 +265,7 @@ READER_SRC =\
 
 COMMON_SRC =\
 	$(SOURCEDIR)/Common/Config.cpp \
+	$(SOURCEDIR)/Common/Globals.cpp \
 	$(SOURCEDIR)/Common/DataReader.cpp \
 	$(SOURCEDIR)/Common/DataWriter.cpp \
 	$(SOURCEDIR)/Common/ExceptionWithCallStack.cpp \
