@@ -63,6 +63,7 @@ template <class ConfigRecordType>
 void HTKMLFReader<ElemType>::InitFromConfig(const ConfigRecordType& readerConfig)
 {
     m_truncated = readerConfig(L"truncated", false);
+    m_maxUtteranceLength = readerConfig(L"maxUtteranceLength", 10000);
     m_convertLabelsToTargets = false;
 
     intargvector numberOfuttsPerMinibatchForAllEpochs = readerConfig(L"nbruttsineachrecurrentiter", ConfigRecordType::Array(intargvector(vector<int>{1})));
@@ -1061,6 +1062,17 @@ bool HTKMLFReader<ElemType>::GetMinibatchToTrainOrTest(StreamMinibatchInputs& ma
                                     (int) framenum, (int) m_latticeBufferMultiUtt[i]->getnumframes(), m_latticeBufferMultiUtt[i]->getkey().c_str());
                             ReNewBufferForMultiIO(i);
                             needRenew = m_numFramesToProcess[i] > 0 && m_latticeBufferMultiUtt[i] && m_latticeBufferMultiUtt[i]->getnumframes() != m_numFramesToProcess[i];
+                        }
+                    }
+                    if (m_numFramesToProcess[i] > m_maxUtteranceLength)
+                    {
+                        bool needRenew = true;
+                        while (needRenew)
+                        {
+                            size_t framenum = m_numFramesToProcess[i];
+                            fprintf(stderr, "WARNING: number of frames %d is bigger than the max frame num %d\n",  (int)framenum, (int)m_maxUtteranceLength);
+                            ReNewBufferForMultiIO(i);
+                            needRenew = m_numFramesToProcess[i] > m_maxUtteranceLength;
                         }
                     }
                     m_numValidFrames[i] = m_numFramesToProcess[i];
