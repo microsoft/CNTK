@@ -23,6 +23,7 @@ template SwapOutAction<double>::SwapOutAction(Matrix<double> *GPUbuffer);
 template SwapOutAction<float>::SwapOutAction(Matrix<float> *GPUbuffer);
 template <typename ElemType> SwapOutAction<ElemType>::SwapOutAction(Matrix<ElemType> *GPUbuffer)
 {
+#ifndef CPUONLY
         this->m_bufferCPU = NULL;
         this->m_bufferGPU = GPUbuffer;
         this->m_hasDoneInitialSwap = false;
@@ -34,7 +35,8 @@ template <typename ElemType> SwapOutAction<ElemType>::SwapOutAction(Matrix<ElemT
         this->m_bytes = this->m_rows*this->m_cols*sizeof(ElemType);
 
         // do we already have a pinned, that is page-locked buffer?
-        if (!this->m_bufferCPU){ allocatePinnedBuffer(); }
+        if (!this->m_bufferCPU){ allocatePinnedBuffer(); 
+#endif
 }
 
 template SwapOutAction<float>::~SwapOutAction();
@@ -48,6 +50,7 @@ template void SwapOutAction<double>::BeginAction();
 template void SwapOutAction<float>::BeginAction();
 template <typename ElemType> void SwapOutAction<ElemType>::BeginAction()
 {
+#ifndef CPUONLY
     // perform the actual asynchronous copy
     if(this->m_rows != this->m_bufferGPU->GetNumRows() ||
        this->m_cols != this->m_bufferGPU->GetNumCols())
@@ -63,6 +66,7 @@ template <typename ElemType> void SwapOutAction<ElemType>::BeginAction()
 
     cout << "Begin swapping out: " << this->m_bufferGPU << ", " << this->m_bufferGPU->GetNumRows() << "x" << this->m_bufferGPU->GetNumCols() << ", " << this->m_rows*this->m_cols*sizeof(ElemType)/1024./1024./1024. << "GB" << endl;
     CUDA_CALL(cudaMemcpyAsync(this->m_bufferCPU, this->m_bufferGPU->Data(), this->m_bytes, cudaMemcpyDefault, this->m_streamAsync));
+#endif
 }
 
 
@@ -71,6 +75,7 @@ template void SwapOutAction<double>::EndAction();
 template void SwapOutAction<float>::EndAction();
 template <typename ElemType> void SwapOutAction<ElemType>::EndAction()
 {
+#ifndef CPUONLY
     CUDA_CALL(cudaStreamSynchronize(m_streamAsync));
     this->m_rows = this->m_bufferGPU->GetNumRows();
     this->m_cols = this->m_bufferGPU->GetNumCols();
@@ -78,6 +83,7 @@ template <typename ElemType> void SwapOutAction<ElemType>::EndAction()
     cout << "Swapped out: " << this->m_bufferGPU << ", " << this->m_bufferGPU->GetNumRows() << "x" << this->m_bufferGPU->GetNumCols() << ", " << this->m_rows*this->m_cols*sizeof(ElemType)/1024./1024./1024. << "GB" << endl;
     this->m_bufferGPU->Resize(0,0,0, false);
     m_hasDoneInitialSwap = true;
+#endif
 
 }
 
@@ -86,13 +92,20 @@ template void SwapOutAction<double>::allocatePinnedBuffer();
 template void SwapOutAction<float>::allocatePinnedBuffer();
 template <typename ElemType> void SwapOutAction<ElemType>::allocatePinnedBuffer()
 {
+#ifndef CPUONLY
     //cudaHostAllocPortable preservse the page-lock even across threads
     CUDA_CALL(cudaHostAlloc(&(this->m_bufferCPU), this->m_bytes, cudaHostAllocPortable));
+#endif
 }
 
 template void SwapOutAction<float>::ReleaseMemory();
 template void SwapOutAction<double>::ReleaseMemory();
-template <typename ElemType> void SwapOutAction<ElemType>::ReleaseMemory(){ CUDA_CALL(cudaFreeHost(this->m_bufferCPU)); }
+template <typename ElemType> void SwapOutAction<ElemType>::ReleaseMemory()
+{
+#ifndef CPUONLY
+    CUDA_CALL(cudaFreeHost(this->m_bufferCPU)); 
+#endif
+}
 
 }}}
 

@@ -23,6 +23,7 @@ template SwapInAction<float>::SwapInAction(SwapOutAction<float> *swpout, Matrix<
 template SwapInAction<double>::SwapInAction(SwapOutAction<double> *swpout, Matrix<double> *GPUBuffer);
 template <typename ElemType> SwapInAction<ElemType>::SwapInAction(SwapOutAction<ElemType> *swpout, Matrix<ElemType> *GPUBuffer)
 {
+#ifndef CPUONLY
     this->m_bufferCPU = swpout->GetCPUMatrix();
     this->m_bufferGPU = GPUBuffer;
     this->m_swpout = swpout;
@@ -33,6 +34,7 @@ template <typename ElemType> SwapInAction<ElemType>::SwapInAction(SwapOutAction<
     this->m_rows = this->m_bufferGPU->GetNumRows();
     this->m_cols = this->m_bufferGPU->GetNumCols();
     this->m_bytes = this->m_rows*this->m_cols*sizeof(ElemType);
+#endif
 }
 
  
@@ -41,12 +43,14 @@ template void SwapInAction<float>::BeginAction();
 template void SwapInAction<double>::BeginAction();
 template <typename ElemType> void SwapInAction<ElemType>::BeginAction()
 {
+#ifndef CPUONLY
    if(!this->m_swpout->m_hasDoneInitialSwap){ return; }
 
    this->m_bufferGPU->Resize(this->m_swpout->GetRows(),this->m_swpout->GetCols(), 0, false);
    size_t bytes = this->m_swpout->GetRows()*this->m_swpout->GetCols()*sizeof(ElemType);
 
    CUDA_CALL(cudaMemcpyAsync(this->m_bufferGPU->Data(), this->m_swpout->GetCPUMatrix(), bytes, cudaMemcpyDefault, this->m_swapInStream));
+#endif
 }
 
 
@@ -54,8 +58,10 @@ template void SwapInAction<double>::EndAction();
 template void SwapInAction<float>::EndAction();
 template <typename ElemType> void SwapInAction<ElemType>::EndAction()
 {
+#ifndef CPUONLY
     CUDA_CALL(cudaStreamSynchronize(this->m_swapInStream));
     cout << "Swapped in: " << this->m_bufferGPU << ", " << this->m_bufferGPU->BufferSize()/1024./1024./1024. << "GB" << endl;
+#endif
 }
 
 
