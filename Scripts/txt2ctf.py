@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# This script takes a list of dictionary files and a plain text file and converts this text input file to CNTK text format.
+# This script takes a list of dictionary files and a plain text utf-8 file and converts this text input file to CNTK text format.
 #
 # The input text file must contain N streams per line (N TAB-separated "columns") and should be accompanied by N dictionary files.
 # The input text file must be in the following form:
