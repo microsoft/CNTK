@@ -86,7 +86,7 @@ if __name__ == "__main__":
 # Tests
 #####################################################################################################
 try:
-    from StringIO import StringIO
+    import StringIO
 except ImportError:
     from io import StringIO
 import pytest
