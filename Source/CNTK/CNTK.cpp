@@ -35,6 +35,7 @@
 #include "ScriptableObjects.h"
 #include "BrainScriptEvaluator.h"
 #include "BrainScriptParser.h"
+#include "SwapManager.h"
 
 #include <string>
 #include <chrono>
@@ -64,7 +65,7 @@
 // node output value matrices. This will go away when the
 // sharing is ready to be enabled by default
 bool g_shareNodeValueMatrices = false;
-bool g_useMemorySwapping = true;
+extern bool g_useMemorySwapping;
 
 using namespace std;
 using namespace Microsoft::MSR;

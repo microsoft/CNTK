@@ -28,12 +28,13 @@
 #include "HeapMemoryProvider.h"
 #include "InputAndParamNodes.h"
 #include "latticearchive.h"
+#include "SwapManager.h"
 
 // TODO: Temporary mechanism to enable memory sharing for
 // node output value matrices. This will go away when the
 // sharing is ready to be enabled by default
 bool g_shareNodeValueMatrices = false;
-bool g_useMemorySwapping = true;
+extern bool g_useMemorySwapping;
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 

@@ -13,6 +13,7 @@
 #include <utility>
 #include <set>
 
+
 extern bool g_useMemorySwapping;
 
 namespace Microsoft { namespace MSR { namespace CNTK {

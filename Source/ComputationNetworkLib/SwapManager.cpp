@@ -15,6 +15,8 @@
 #include "ComputationNetwork.h"
 #include <cmath> 
 
+bool g_useMemorySwapping = false;
+
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 
