@@ -310,9 +310,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // TODO most of the time, we can advance to the right sequence here
             // (unless we need to go past the randomized chunk window)
         }
-        else
-        {
-        }
 
         // Advance sequence by sequence until the desire offset is reached.
         if (m_verbosity)
