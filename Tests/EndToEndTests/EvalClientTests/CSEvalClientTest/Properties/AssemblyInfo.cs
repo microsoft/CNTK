@@ -10,11 +10,11 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("CSEvalClient")]
+[assembly: AssemblyTitle("CSEvalClientTest")]
 [assembly: AssemblyDescription("Managed client using managed wrapper for CNTK evaluation model")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("Microsoft")]
-[assembly: AssemblyProduct("CSEvalClient")]
+[assembly: AssemblyProduct("CSEvalClientTest")]
 [assembly: AssemblyCopyright("Copyright ©  2016 Microsoft. All rights reserved.")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
