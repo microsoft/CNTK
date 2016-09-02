@@ -528,6 +528,18 @@ def get_train_loss(trainer):
     #we copy the value so swig does not destroy it when we leave the scope
     return copy.copy(trainer.previous_minibatch_loss_average())
 
+def get_train_eval_criterion(trainer):
+    '''
+    Fetch the train evaluation criterion (e.g., classification error) from the last minibatch and copy it to the CPU in case it is on the GPU.
+    Args:
+        trainer (:class:`Trainer`): the trainer used.        
+    Returns: 
+        the criterion value
+    '''    
+    import copy
+    #we copy the value so swig does not destroy it when we leave the scope
+    return copy.copy(trainer.previous_minibatch_evaluation_average())
+
 def eval(op, precision, device_id, input_map=None, backward_pass=False):
     '''
     It evaluates `op` on the data provided by the reader. This is useful

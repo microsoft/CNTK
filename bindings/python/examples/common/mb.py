@@ -9,7 +9,7 @@ import sys
 import os
 from cntk.utils import create_minibatch_source
 
-def create_text_mb_source(data_file, input_dim, num_output_classes, epoch_size, 
+def create_text_mb_source(data_file, input_dim, num_output_classes, epoch_size,
                           is_feature_sparse=False, is_label_sparse=False,
                           feature_alias=None, label_alias=None):
     features_config = dict()
@@ -30,12 +30,12 @@ def create_text_mb_source(data_file, input_dim, num_output_classes, epoch_size,
 
     deserializer_config = dict()
     deserializer_config["type"] = "CNTKTextFormatDeserializer"
-    deserializer_config["module"] = "CNTKTextFormatReader"    
-    deserializer_config["file"] = data_file    
+    deserializer_config["module"] = "CNTKTextFormatReader"
+    deserializer_config["file"] = data_file
     deserializer_config["input"] = input_config
 
     minibatch_config = dict()
-    minibatch_config["epochSize"] = epoch_size  
+    minibatch_config["epochSize"] = epoch_size
     minibatch_config["deserializers"] = [deserializer_config]
 
     return create_minibatch_source(minibatch_config)

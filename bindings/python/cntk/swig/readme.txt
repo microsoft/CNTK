@@ -13,22 +13,29 @@ vcvarsall amd64
 swig.bat
 
 
-# If you are just building to use it locally:
-# Build -> generate .pyd
-# go two levels up
-python .\setup.py build_ext -if -c msvc --plat-name=win-amd64
+# a) If you are just building to use it locally:
+    # Build -> generate .pyd
+    # 1) go two levels up
+    # 2) run the following:
+    python .\setup.py build_ext -if -c msvc --plat-name=win-amd64
 
-# If you want to package it:
-pip install twine
-pip install wheel
+    # 3) add to PATH the path to cntk dlls (e.g. e:\CNTK\x64\Release)
+    # 4) add to PYTHONPATH the path to the python api source (e.g. e:\CNTK\bindings\python\)
+    # 5) test by running any of the examples or running py.test from the inside bindings\python directory
 
-# go two levels up
-python .\setup.py build_ext -if -c msvc --plat-name=win-amd64 bdist_wheel
+# b) If you want to package it:
+    # 1) install the following:
+    pip install twine
+    pip install wheel
 
-#put the wheel file on some http server
+    # 2) go two levels up & run:
+    python .\setup.py build_ext -if -c msvc --plat-name=win-amd64 bdist_wheel
 
-# from your machine, run pip install
-pip install http://your-url:your-port/cntk-0.0.0-cp34-cp34m-win_amd64.whl
+    # 3) put the wheel file on some http server
 
-# check that it is loaded correctly
-import cntk
+    # 4) from your machine, run pip install
+    pip install http://your-url:your-port/cntk-0.0.0-cp34-cp34m-win_amd64.whl
+
+    # check that it is loaded correctly
+    python
+    >>> import cntk

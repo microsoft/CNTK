@@ -16,7 +16,7 @@ class PyCallback(cntk_py.Callback):
 
 
 def callback_test():
-    
+
     op = cntk_py.FunctionInCNTK()
 
     cpp_callback = cntk_py.Callback()

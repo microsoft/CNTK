@@ -2,12 +2,11 @@ import numpy as np
 import sys
 import os
 import time
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..'))
 from cntk import learning_rates_per_sample, DeviceDescriptor, Trainer, sgdlearner, Axis
 from cntk.ops import variable, cross_entropy_with_softmax, combine, classification_error, sigmoid, element_times, constant, parameter, times, slice
 from cntk.utils import  get_train_loss, cntk_device
-from cntk.examples.common.nn import LSTMP_component_with_self_stabilization, embedding, fully_connected_linear_layer, select_last
-from cntk.examples.common.mb import create_text_mb_source
+from examples.common.nn import LSTMP_component_with_self_stabilization, embedding, fully_connected_linear_layer, select_last
+from examples.common.mb import create_text_mb_source
 
 def LSTM_sequence_classifer_net(input, num_output_classes, embedding_dim, LSTM_dim, cell_dim, device):
     embedding_function = embedding(input, embedding_dim, device)
@@ -33,7 +32,7 @@ def train_sequence_classifier(device):
     #TODO: add save and load module code
     lstm_net = combine([ce.owner, pe.owner, classifier_output.owner], "classifier_model")
 
-    rel_path = r"../../../../../Tests/EndToEndTests/Text/SequenceClassification/Data/Train.ctf"
+    rel_path = r"../../../../Tests/EndToEndTests/Text/SequenceClassification/Data/Train.ctf"
     path = os.path.join(os.path.dirname(os.path.abspath(__file__)), rel_path)
     cm = create_text_mb_source(path, input_dim, num_output_classes, 0, True, False, "x", "y");
 

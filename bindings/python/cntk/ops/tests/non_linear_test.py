@@ -5,7 +5,7 @@
 # ==============================================================================
 
 """
-Unit tests for non-linear operations. Each operation is tested for 
+Unit tests for non-linear operations. Each operation is tested for
 the forward and the backward pass
 """
 
@@ -25,16 +25,16 @@ TENSORS = [
 ]
 
 @pytest.mark.parametrize("operand", TENSORS)
-def test_op_sigmoid(operand, device_id, precision):   
+def test_op_sigmoid(operand, device_id, precision):
     s = 1.0 / (1.0 + np.exp(-AA(operand, dtype=PRECISION_TO_TYPE[precision])))
     expected_forward = [AA([s])]
 
     expected_backward = {
-            'arg': [[s * (1 - s)]],            
+            'arg': [[s * (1 - s)]],
             }
 
-    from .. import sigmoid    
-    _test_unary_op(precision, device_id, sigmoid, operand, 
+    from .. import sigmoid
+    _test_unary_op(precision, device_id, sigmoid, operand,
         expected_forward, expected_backward)
 
 @pytest.mark.parametrize("operand", TENSORS)
@@ -43,22 +43,22 @@ def test_op_exp(operand, device_id, precision):
     expected_forward = [AA([e])]
 
     expected_backward = {
-            'arg': expected_forward,            
+            'arg': expected_forward,
             }
 
     from .. import exp
-    _test_unary_op(precision, device_id, exp, operand, 
+    _test_unary_op(precision, device_id, exp, operand,
         expected_forward, expected_backward)
 
 @pytest.mark.parametrize("operand", TENSORS)
-def test_op_tanh(operand, device_id, precision):    
+def test_op_tanh(operand, device_id, precision):
     t = np.tanh(AA(operand, dtype=PRECISION_TO_TYPE[precision]))
     expected_forward = [AA([t])]
 
     expected_backward = {
             'arg': [[1 - t**2]],
             }
-    
+
     from .. import tanh
-    _test_unary_op(precision, device_id, tanh, operand, 
+    _test_unary_op(precision, device_id, tanh, operand,
         expected_forward, expected_backward)

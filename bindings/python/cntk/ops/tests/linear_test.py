@@ -5,7 +5,7 @@
 # ==============================================================================
 
 """
-Unit tests for linear algebra operations, each operation is tested for 
+Unit tests for linear algebra operations, each operation is tested for
 the forward and the backward pass
 """
 
@@ -20,8 +20,8 @@ TENSOR_PAIRS = [
     ([[10.]], [[30.]]),
     ([[1.5, 2.1]], [[10., 20.]]),
     #([[100., 200.], [300., 400.], [10., 20.]],
-    #  [[10., 20.], [30., 40.], [1., 2.]]),    
-    
+    #  [[10., 20.], [30., 40.], [1., 2.]]),
+
     # Adding two 3x2 inputs of sequence length 1
     ([[30.,40.], [1.,2.], [0.1, 0.2]], [[10,20], [3,4], [-0.5, -0.4]]),
 ]
@@ -29,7 +29,7 @@ TENSOR_PAIRS = [
 # -- plus operation tests --
 
 @pytest.mark.parametrize("left_operand, right_operand", TENSOR_PAIRS)
-def test_op_plus(left_operand, right_operand, device_id, precision):        
+def test_op_plus(left_operand, right_operand, device_id, precision):
     expected_forward = [AA([left_operand]) + AA([right_operand])]
 
     expected_backward = {
@@ -38,11 +38,11 @@ def test_op_plus(left_operand, right_operand, device_id, precision):
             }
     from .. import plus
     _test_binary_op(precision, device_id, plus,
-            left_operand, right_operand, 
+            left_operand, right_operand,
             expected_forward, expected_backward)
 
     _test_binary_op(precision, device_id, '+',
-            left_operand, right_operand, 
+            left_operand, right_operand,
             expected_forward, expected_backward)
 
 SEQ_TENSOR_PAIRS = [
@@ -54,14 +54,14 @@ SEQ_TENSOR_PAIRS = [
      [[[ 3., -10]], [[ 4, -20], [ 5, -30]]]), # second batch with two sequences
 ]
 @pytest.mark.parametrize("left_batch, right_batch", SEQ_TENSOR_PAIRS)
-def test_op_plus_var_sequences_input_input(left_batch, right_batch, device_id, precision):        
+def test_op_plus_var_sequences_input_input(left_batch, right_batch, device_id, precision):
     assert len(left_batch) == len(right_batch)
     expected_forward = [AA(left_batch[i]) + AA(right_batch[i]) \
             for i in range(len(left_batch))]
 
-    expected_backward = { 
-            'left': ones_like(left_batch, PRECISION_TO_TYPE[precision]), 
-            'right': ones_like(right_batch, PRECISION_TO_TYPE[precision]) 
+    expected_backward = {
+            'left': ones_like(left_batch, PRECISION_TO_TYPE[precision]),
+            'right': ones_like(right_batch, PRECISION_TO_TYPE[precision])
             }
 
     left_value = [AA(sample, dtype=PRECISION_TO_TYPE[precision]) for sample in left_batch]
@@ -84,8 +84,8 @@ def test_op_plus_var_sequences_input_input(left_batch, right_batch, device_id, p
     output_shape = input_op_input.shape().dimensions()
     backward_input = { a: None, b: None }
     expected_backward = { a: expected_backward['left'], b: expected_backward['right'], }
-    unittest_helper(input_op_input, 
-        forward_input, expected_forward, 
+    unittest_helper(input_op_input,
+        forward_input, expected_forward,
         expected_backward,
         device_id, precision)
 
@@ -101,11 +101,11 @@ def test_op_minus(left_operand, right_operand, device_id, precision):
             }
     from .. import minus
     _test_binary_op(precision, device_id, minus,
-            left_operand, right_operand, 
+            left_operand, right_operand,
             expected_forward, expected_backward)
 
     _test_binary_op(precision, device_id, '-',
-            left_operand, right_operand, 
+            left_operand, right_operand,
             expected_forward, expected_backward)
 
 # -- element times tests --
@@ -118,14 +118,14 @@ def test_op_element_times(left_operand, right_operand, device_id, precision):
             'left_arg':  [[right_operand]],
             'right_arg': [[left_operand]]
             }
-    
+
     from .. import element_times
     _test_binary_op(precision, device_id, element_times,
-            left_operand, right_operand, 
+            left_operand, right_operand,
             expected_forward, expected_backward)
 
     _test_binary_op(precision, device_id, '*',
-            left_operand, right_operand, 
+            left_operand, right_operand,
             expected_forward, expected_backward)
 
 
@@ -142,11 +142,11 @@ def test_op_element_divide(left_operand, right_operand, device_id, precision):
 
     from .. import element_divide
     _test_binary_op(precision, device_id, element_divide,
-            left_operand, right_operand, 
+            left_operand, right_operand,
             expected_forward, expected_backward)
 
     _test_binary_op(precision, device_id, '/',
-            left_operand, right_operand, 
+            left_operand, right_operand,
             expected_forward, expected_backward)
 
 
@@ -165,10 +165,10 @@ def _test_op_identity(operand, device_id, precision):
     expected_forward = [AA([operand])]
 
     expected_backward = {
-            'arg': np.ones_like(expected_forward),            
+            'arg': np.ones_like(expected_forward),
             }
 
     from cntk.ops import identity
 
-    _test_unary_op(precision, device_id, identity, operand, 
+    _test_unary_op(precision, device_id, identity, operand,
         expected_forward, expected_backward)

@@ -8,7 +8,7 @@ REM Please change this
 REM set SWIG=c:\blis\PyCNTK\swigwin-3.0.10\swig
 set SWIG=E:\swigwin-3.0.10\swig
 
-%SWIG% -c++ -python -D_MSC_VER -I..\..\..\..\Source\CNTKv2LibraryDll\API\ cntk_py.i 
+%SWIG% -c++ -python -D_MSC_VER -I..\..\..\..\Source\CNTKv2LibraryDll\API\ cntk_py.i
 
 copy cntk_py.py ..\
 del cntk_py.py

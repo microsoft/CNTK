@@ -6,7 +6,7 @@
 
 from . import ops
 
-class TensorOpsMixin():    
+class TensorOpsMixin():
 
     # operator overload for (+) where self is the left operand
     def __add__(self, other):

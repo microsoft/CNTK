@@ -10,15 +10,15 @@ def _sanitize_value(shape, value, dtype, device, is_param=False):
     cntk_dtype  = utils.sanitize_dtype_cntk(dtype)
     if value is None:
         if shape is None:
-            raise ValueError('you need to specify at least shape or value')        
+            raise ValueError('you need to specify at least shape or value')
         shape = utils.sanitize_shape(shape)
-        
-        if is_param:            
-            # TODO: expose the initialization params            
-            ndav = NDArrayView.random_uniform_float(shape, -0.05, 0.05, 1, device)                    
+
+        if is_param:
+            # TODO: expose the initialization params
+            ndav = NDArrayView.random_uniform_float(shape, -0.05, 0.05, 1, device)
         else:
             ndav = utils.create_NDArrayView(shape, cntk_dtype, device)
-    
+
 
     else:
         if not isinstance(value, np.ndarray) or value.dtype!=np_dtype:
@@ -34,13 +34,13 @@ def _sanitize_value(shape, value, dtype, device, is_param=False):
 
     return ndav
 
-#TODO: remove default values from all constructors' arguments 
+#TODO: remove default values from all constructors' arguments
 class Variable(TensorOpsMixin,Variable):
-    def __init__(self, shape=None, data_type=None, needs_gradient=False, is_sparse=False, 
+    def __init__(self, shape=None, data_type=None, needs_gradient=False, is_sparse=False,
                     dynamic_axes = [Axis.default_dynamic_axis(), Axis.default_batch_axis()], name=''):
         shape = utils.sanitize_shape(shape)
 
-        if data_type is None:            
+        if data_type is None:
             data_type = FLOAT_32
         dtype = utils.sanitize_dtype_cntk(data_type)
 
@@ -48,26 +48,26 @@ class Variable(TensorOpsMixin,Variable):
 
 class Parameter(TensorOpsMixin,Parameter):
     def __init__(self, shape=None, value=None, data_type=None, device=None, name=''):
-        
+
         if data_type is None:
-            if not isinstance(value, np.ndarray):        
+            if not isinstance(value, np.ndarray):
                 data_type = FLOAT_32
             else:
-                data_type = str(value.dtype)        
-        
-        ndav = _sanitize_value(shape, value, data_type, device, True)        
+                data_type = str(value.dtype)
+
+        ndav = _sanitize_value(shape, value, data_type, device, True)
         super(Parameter, self).__init__(ndav, name)
 
 # TODO: make this part of the above constructor
 def parameter_from_scalar(shape=None, value=None, data_type=None, device=None, name=''):
     if not device:
-        device = DeviceDescriptor_cpudevice()            
+        device = DeviceDescriptor_cpudevice()
 
     if data_type is None:
-        if not isinstance(value, np.ndarray):        
+        if not isinstance(value, np.ndarray):
             data_type = 'float32'
         else:
-            data_type = str(value.dtype)     
+            data_type = str(value.dtype)
 
     dtype = utils.sanitize_dtype_cntk(data_type)
 
@@ -84,26 +84,26 @@ class Constant(TensorOpsMixin,Constant):
     def __init__(self, shape=None, value=None, data_type=None, device=None, name=''):
 
         if data_type is None:
-            if not isinstance(value, np.ndarray):        
+            if not isinstance(value, np.ndarray):
                 data_type = FLOAT_32
             else:
-                data_type = str(value.dtype)     
+                data_type = str(value.dtype)
 
         if not device:
-            device = DeviceDescriptor_cpudevice()            
+            device = DeviceDescriptor_cpudevice()
 
         ndav = _sanitize_value(shape, value, data_type, device)
         super(Constant, self).__init__(ndav, name)
 
 def constant_from_scalar(shape=None, value=None, data_type=None, device=None, name=''):
     if not device:
-        device = DeviceDescriptor_cpudevice()            
+        device = DeviceDescriptor_cpudevice()
 
     if data_type is None:
-        if not isinstance(value, np.ndarray):        
+        if not isinstance(value, np.ndarray):
             data_type = 'float32'
         else:
-            data_type = str(value.dtype)     
+            data_type = str(value.dtype)
 
     dtype = utils.sanitize_dtype_cntk(data_type)
 
@@ -119,4 +119,4 @@ class Placeholder(TensorOpsMixin,Placeholder):
     def __init__(self, shape=None, name=''):
         shape = utils.sanitize_shape(shape)
         super(Placeholder, self).__init__(shape, name)
-        
+
