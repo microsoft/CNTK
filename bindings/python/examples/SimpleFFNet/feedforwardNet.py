@@ -3,7 +3,7 @@ import sys
 import os
 from cntk import learning_rates_per_sample, DeviceDescriptor, Trainer, sgdlearner
 from cntk.ops import variable, cross_entropy_with_softmax, combine, classification_error, sigmoid
-from cntk.utils import get_train_loss, cntk_device
+from cntk.utils import get_train_loss, get_train_eval_criterion, cntk_device
 from cntk.tests.test_utils import TOLERANCE_ABSOLUTE
 from examples.common.nn import fully_connected_classifier_net
 from examples.common.mb import create_text_mb_source
@@ -55,7 +55,8 @@ def ffnet():
         freq = 20
         if i % freq == 0:
             training_loss = get_train_loss(trainer)
-            print(str(i+freq) + ": " + str(training_loss))
+            eval_crit = get_train_eval_criterion(trainer)
+            print ("Minibatch: {}, Train Loss: {}, Train Evaluation Criterion: {}".format(i, training_loss, eval_crit))
 
 if __name__=='__main__':
     ffnet()

@@ -4,7 +4,7 @@ import os
 import time
 from cntk import learning_rates_per_sample, DeviceDescriptor, Trainer, sgdlearner, Axis
 from cntk.ops import variable, cross_entropy_with_softmax, combine, classification_error, sigmoid, element_times, constant, parameter, times, slice
-from cntk.utils import  get_train_loss, cntk_device
+from cntk.utils import  get_train_loss, get_train_eval_criterion, cntk_device
 from examples.common.nn import LSTMP_component_with_self_stabilization, embedding, fully_connected_linear_layer, select_last
 from examples.common.mb import create_text_mb_source
 
@@ -64,7 +64,8 @@ def train_sequence_classifier(device):
 
         if i % freq == 0: 
             training_loss = get_train_loss(trainer)
-            print("Minibatch " + str(i) + ": CrossEntropy loss = " + str(training_loss)) 
+            eval_crit = get_train_eval_criterion(trainer)
+            print ("Minibatch: {}, Train Loss: {}, Train Evaluation Criterion: {}".format(i, training_loss, eval_crit))
 
         i += 1
 
