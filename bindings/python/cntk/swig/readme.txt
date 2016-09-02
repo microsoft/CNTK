@@ -10,6 +10,7 @@ SET DISTUTILS_USE_SDK=1
 vcvarsall amd64
 
 # Generate .cxx and .py out of .i. Please check the path to the SwigWin binaries inside swig.bat
+# run siwg.bat from within siwg folder
 swig.bat
 
 
