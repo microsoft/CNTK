@@ -37,6 +37,12 @@ swig.bat
     # 4) from your machine, run pip install
     pip install http://your-url:your-port/cntk-0.0.0-cp34-cp34m-win_amd64.whl
 
-    # check that it is loaded correctly
+    # 5) check that it is loaded correctly
     python
     >>> import cntk
+    
+    # 6) Running examples:
+        # Clone the python examples folder form cntk repository and add its path to PYTHONPATH    
+        # Try to run any of the examples, some examples come up with s script that fetches and prepares the data,
+        # other examples use data files that are checked in inside the cntk repository.
+    
