@@ -130,7 +130,7 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
                     ThrowIfFileNotExist(modelFilePath, 
                         string.Format("Error: The model '{0}' does not exist. Please follow instructions in README.md in <CNTK>/Examples/Image/MNIST to create the model.", modelFilePath));
 
-                    model.CreateNetwork(string.Format("modelPath='{0}'", modelFilePath), deviceId: -1);
+                    model.CreateNetwork(string.Format("modelPath=\"{0}\"", modelFilePath), deviceId: -1);
 
                     // Generate random input values in the appropriate structure and size
                     var inDims = model.GetNodeDimensions(NodeGroup.Input);
@@ -183,7 +183,7 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
                         string.Format("Error: The model '{0}' does not exist. Please follow instructions in README.md in <CNTK>/Examples/Image/MNIST to create the model.", modelFilePath));
 
                     var desiredOutputLayers = new List<string>() { hiddenLayerName, outputLayerName };
-                    model.CreateNetwork(string.Format("modelPath='{0}'", modelFilePath), deviceId: -1, outputNodeNames: desiredOutputLayers);
+                    model.CreateNetwork(string.Format("modelPath=\"{0}\"", modelFilePath), deviceId: -1, outputNodeNames: desiredOutputLayers);
 
                     // Generate random input values in the appropriate structure and size
                     var inDims = model.GetNodeDimensions(NodeGroup.Input);
@@ -466,7 +466,7 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
                     ThrowIfFileNotExist(modelFilePath, 
                         string.Format("Error: The model '{0}' does not exist. Please download the model from https://www.cntk.ai/resnet/ResNet_18.model and save it under ..\\..\\Examples\\Image\\Miscellaneous\\ImageNet\\ResNet.", modelFilePath));
                         
-                    model.CreateNetwork(string.Format("modelPath='{0}'", modelFilePath), deviceId: -1);
+                    model.CreateNetwork(string.Format("modelPath=\"{0}\"", modelFilePath), deviceId: -1);
 
                     // Prepare input value in the appropriate structure and size
                     var inDims = model.GetNodeDimensions(NodeGroup.Input);
