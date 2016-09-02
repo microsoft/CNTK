@@ -305,7 +305,7 @@ namespace CNTK
         m_sampleCount = checkpoint[L"sampleCount"].Value<size_t>();
         m_minibatchCount = checkpoint[L"minibatchCount"].Value<size_t>();
 
-        size_t version = checkpoint[L"minibatchCount"].Value<size_t>();
+        size_t version = checkpoint[L"checkpointVersion"].Value<size_t>();
         if (checkpointVersion != version)
         {
             // At the moment, we only support one version, so this should never happen.

@@ -77,7 +77,7 @@ namespace CNTK
         auto argumentDataShape = argumentValue->Data()->Shape();
         auto mask = argumentValue->Mask();
         size_t numMaskedSamples = (mask != nullptr) ? mask->MaskedCount() : 0;
-        size_t numSamplesInDataArrayView = argumentDataShape.SubShape(argumentVar.Shape().NumAxes()).TotalSize();
+        size_t numSamplesInDataArrayView = argumentDataShape.SubShape(argumentVar.Shape().Rank()).TotalSize();
         if (numMaskedSamples > numSamplesInDataArrayView)
             LogicError("Number of masked values cannot exceed the number of samples that the Value object's Data NDArrayView can hold");
 
@@ -140,6 +140,83 @@ namespace CNTK
         }
 
         return anyUpdatesPerformed;
+    }
+
+    static std::wstring GetTrainerStateCheckpointFilePath(const std::wstring& modelFilePath)
+    {
+        const wchar_t* checkpointExt = L".ckp";
+        return modelFilePath + checkpointExt;
+    }
+
+    std::shared_ptr<std::fstream> GetFstream(const std::wstring& filePath, bool readOnly)
+    {
+        std::ios_base::openmode mode = std::ios_base::binary | (readOnly ? std::ios_base::in : std::ios_base::out);
+#ifdef _MSC_VER
+        return std::make_shared<std::fstream>(filePath, mode);
+#else
+        return std::make_shared<std::fstream>(wtocharpath(filePath.c_str()).c_str(), mode);
+#endif
+    }
+
+    void Trainer::SaveCheckpoint(const std::wstring& modelFilePath)
+    {
+        LogicError("Trainer checkpointing is currently not supported");
+
+        SaveAsLegacyModel(m_combinedTrainingFunction, modelFilePath);
+
+        if (m_parameterLearners.size() > 1)
+            LogicError("Trainer::SaveCheckpoint: Checkpointing is currently unsupported for multiple learners");
+
+        auto learnerState = (*(m_parameterLearners.begin()))->GetCheckpointState();
+        std::wstring trainerStateCheckpointFilePath = GetTrainerStateCheckpointFilePath(modelFilePath);
+        auto ckpStream = GetFstream(trainerStateCheckpointFilePath, false);
+        *ckpStream << learnerState;
+        ckpStream->flush();
+    }
+
+    void Trainer::RestoreFromCheckpoint(const std::wstring& modelFilePath)
+    {
+        LogicError("Trainer checkpointing is currently not supported");
+
+        auto firstLearner = *(m_parameterLearners.begin());
+        auto device = firstLearner->Parameters().begin()->Value()->Device();
+
+        // Determine the indices of the model, loss and evaluation functions in the combined function's outputs to properly restore them after loading the model
+        auto findFunctionIdx = [](const FunctionPtr& combinedFunction, const FunctionPtr& functionToFind) {
+            if (functionToFind->Outputs().size() != 1)
+                LogicError("The trainer's model, loss or evaluation functions should have onlye 1 output");
+
+            auto combinedOutputs = combinedFunction->Outputs();
+            auto functionToFindOutput = functionToFind->Output();
+            for (size_t i = 0; i < combinedOutputs.size(); ++i)
+            {
+                if (combinedOutputs[i] == functionToFindOutput)
+                    return i;
+            }
+
+            LogicError("Specified model/loss/evaluation function not found within the trainer's combined root function");
+        };
+
+        size_t modelFunctionIdx = findFunctionIdx(m_combinedTrainingFunction, m_model);
+        size_t lossFunctionIndex = findFunctionIdx(m_combinedTrainingFunction, m_lossFunction);
+        size_t evaluationFunctionIdx = SIZE_MAX;
+        if (m_evaluationFunction)
+            evaluationFunctionIdx = findFunctionIdx(m_combinedTrainingFunction, m_evaluationFunction);
+
+        m_combinedTrainingFunction = LoadLegacyModel(m_combinedTrainingFunction->Outputs()[0].GetDataType(), modelFilePath, device);
+        m_model = Combine({ m_combinedTrainingFunction->Outputs()[modelFunctionIdx].Owner() });
+        m_lossFunction = Combine({ m_combinedTrainingFunction->Outputs()[lossFunctionIndex].Owner() });
+        if (m_evaluationFunction)
+            m_evaluationFunction = Combine({ m_combinedTrainingFunction->Outputs()[evaluationFunctionIdx].Owner() });
+
+        if (m_parameterLearners.size() > 1)
+            LogicError("Trainer::RestoreFromCheckpoint: Checkpointing is currently unsupported for multiple learners");
+
+        std::wstring trainerStateCheckpointFilePath = GetTrainerStateCheckpointFilePath(modelFilePath);
+        auto ckpStream = GetFstream(trainerStateCheckpointFilePath, true);
+        Dictionary learnerState;
+        *ckpStream >> learnerState;
+        firstLearner->RestoreFromCheckpoint(learnerState);
     }
 
     double Trainer::PreviousMinibatchLossAverage() const

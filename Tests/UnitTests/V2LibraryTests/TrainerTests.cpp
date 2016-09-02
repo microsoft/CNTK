@@ -27,7 +27,7 @@ void TrainSimpleFeedForwardClassifer(const DeviceDescriptor& device)
     ComputeInputPerDimMeansAndInvStdDevs(minibatchSource, inputMeansAndInvStdDevs);
 
     auto nonLinearity = std::bind(Sigmoid, _1, L"");
-    Variable input({ inputDim }, DataType::Float, L"features");
+    auto input = InputVariable({ inputDim }, DataType::Float, L"features");
     auto normalizedinput = PerDimMeanVarianceNormalize(input, inputMeansAndInvStdDevs[*featureStreamInfo].first, inputMeansAndInvStdDevs[*featureStreamInfo].second);
     auto classifierOutput = FullyConnectedDNNLayer(normalizedinput, hiddenLayerDim, device, nonLinearity);
     for (size_t i = 1; i < numHiddenLayers; ++i)
@@ -37,7 +37,7 @@ void TrainSimpleFeedForwardClassifer(const DeviceDescriptor& device)
     auto outputBiasParam = Parameter(NDArrayView::RandomUniform<float>({ numOutputClasses }, -0.05, 0.05, 1, device));
     classifierOutput = Plus(outputBiasParam, Times(outputTimesParam, classifierOutput), L"classifierOutput");
 
-    Variable labels({ numOutputClasses }, DataType::Float, L"labels");
+    auto labels = InputVariable({ numOutputClasses }, DataType::Float, L"labels");
     auto trainingLoss = CNTK::CrossEntropyWithSoftmax(classifierOutput, labels, L"lossFunction");;
     auto prediction = CNTK::ClassificationError(classifierOutput, labels, L"classificationError");
 
@@ -72,14 +72,14 @@ void TrainMNISTClassifier(const DeviceDescriptor& device)
     const size_t numOutputClasses = 10;
     const size_t hiddenLayerDim = 200;
 
-    Variable input({ inputDim }, DataType::Float, L"features");
-    auto scaledInput = ElementTimes(Constant({}, 0.00390625f, device), input);
+    auto input = InputVariable({ inputDim }, DataType::Float, L"features");
+    auto scaledInput = ElementTimes(Constant::Scalar(0.00390625f, device), input);
     auto classifierOutput = FullyConnectedDNNLayer(scaledInput, hiddenLayerDim, device, std::bind(Sigmoid, _1, L""));
     auto outputTimesParam = Parameter(NDArrayView::RandomUniform<float>({ numOutputClasses, hiddenLayerDim }, -0.05, 0.05, 1, device));
     auto outputBiasParam = Parameter(NDArrayView::RandomUniform<float>({ numOutputClasses }, -0.05, 0.05, 1, device));
     classifierOutput = Plus(outputBiasParam, Times(outputTimesParam, classifierOutput), L"classifierOutput");
 
-    Variable labels({ numOutputClasses }, DataType::Float, L"labels");
+    auto labels = InputVariable({ numOutputClasses }, DataType::Float, L"labels");
     auto trainingLoss = CNTK::CrossEntropyWithSoftmax(classifierOutput, labels, L"lossFunction");;
     auto prediction = CNTK::ClassificationError(classifierOutput, labels, L"classificationError");
 

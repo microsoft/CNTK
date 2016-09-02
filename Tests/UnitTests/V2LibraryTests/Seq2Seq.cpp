@@ -38,7 +38,7 @@ inline CNTK::MinibatchSourcePtr CreateSeq2SeqMinibatchSource(const std::wstring&
     return CreateCompositeMinibatchSource(minibatchSourceConfiguration);
 }
 
-void TrainSequenceToSequenceTranslator(const DeviceDescriptor& device, bool useSparseInputs, bool testSaveAndReLoad)
+void TrainSequenceToSequenceTranslator(const DeviceDescriptor& device, bool useSparseInputs, bool testSaveAndReLoad, bool testCheckpointing)
 {
     using namespace std::placeholders;
 
@@ -54,10 +54,10 @@ void TrainSequenceToSequenceTranslator(const DeviceDescriptor& device, bool useS
 
     /* Inputs */
     std::vector<Axis> inputDynamicAxes = { Axis(L"inputAxis"), Axis::DefaultBatchAxis() };
-    auto rawInput = Variable({ inputVocabDim }, useSparseInputs /*isSparse*/, DataType::Float, L"rawInput", inputDynamicAxes);
+    auto rawInput = InputVariable({ inputVocabDim }, useSparseInputs /*isSparse*/, DataType::Float, L"rawInput", inputDynamicAxes);
 
     std::vector<Axis> labelDynamicAxes = { Axis(L"labelAxis"), Axis::DefaultBatchAxis() };
-    auto rawLabels = Variable({ labelVocabDim }, useSparseInputs /*isSparse*/, DataType::Float, L"rawLabels", labelDynamicAxes);
+    auto rawLabels = InputVariable({ labelVocabDim }, useSparseInputs /*isSparse*/, DataType::Float, L"rawLabels", labelDynamicAxes);
 
     FunctionPtr inputSequence = rawInput;
 
@@ -78,19 +78,10 @@ void TrainSequenceToSequenceTranslator(const DeviceDescriptor& device, bool useS
     auto labelSentenceStartEmbedding = (!forceEmbedding && (labelVocabDim <= labelEmbeddingDim)) ? labelSentenceStart : Times(labelEmbeddingWeights, labelSentenceStart);
     auto labelSentenceStartEmbeddedScattered = Sequence::Scatter(labelSentenceStartEmbedding, isFirstLabel);
 
-    auto stabilize = [](const Variable& x) {
-        float scalarConstant = 4.0f;
-        auto f = Constant({}, scalarConstant);
-        auto fInv = Constant({}, 1.0f/scalarConstant);
-
-        auto beta = ElementTimes(fInv, Log(Constant({}, 1.0f) + Exp(ElementTimes(f, Parameter({}, 0.99537863f /* 1/f*ln (e^f-1) */)))));
-        return ElementTimes(beta, x);
-    };
-
     /* Encoder */
-    auto encoderOutputH = stabilize(inputEmbedding);
+    auto encoderOutputH = Stabilize<float>(inputEmbedding, device);
     FunctionPtr encoderOutputC;
-    auto futureValueRecurrenceHook = std::bind(FutureValue, _1, CNTK::Constant({}, 0.0f), 1, L"");
+    auto futureValueRecurrenceHook = [](const Variable& x) { return FutureValue(x); };
     for (size_t i = 0; i < numLayers; ++i)
         std::tie(encoderOutputH, encoderOutputC) = LSTMPComponentWithSelfStabilization<float>(encoderOutputH, hiddenDim, hiddenDim, futureValueRecurrenceHook, futureValueRecurrenceHook, device);
 
@@ -101,29 +92,34 @@ void TrainSequenceToSequenceTranslator(const DeviceDescriptor& device, bool useS
     auto thoughtVectorBroadcastC = Sequence::BroadcastAs(thoughtVectorC, labelEmbedding);
 
     /* Decoder */
+    bool addBeamSearchReorderingHook = false;
+    auto beamSearchReorderHook = Constant({ 1, 1 }, 1.0f);
     auto decoderHistoryFromGroundTruth = labelEmbedding;
-    auto decoderInput = ElementSelect(isFirstLabel, labelSentenceStartEmbeddedScattered, PastValue(decoderHistoryFromGroundTruth, Constant({}, 0.0f), 1));
+    auto decoderInput = ElementSelect(isFirstLabel, labelSentenceStartEmbeddedScattered, PastValue(decoderHistoryFromGroundTruth));
 
-    auto decoderOutputH = stabilize(decoderInput);
+    auto decoderOutputH = Stabilize<float>(decoderInput, device);
     FunctionPtr decoderOutputC;
-    auto pastValueRecurrenceHook = std::bind(PastValue, _1, CNTK::Constant({}, 0.0f), 1, L"");
+    auto pastValueRecurrenceHookWithBeamSearchReordering = [addBeamSearchReorderingHook, beamSearchReorderHook](const Variable& operand) {
+        return PastValue(addBeamSearchReorderingHook ? Times(operand, beamSearchReorderHook) : operand);
+    };
+
     for (size_t i = 0; i < numLayers; ++i)
     {
         std::function<FunctionPtr(const Variable&)> recurrenceHookH, recurrenceHookC;
         if (i == 0)
         {
-            recurrenceHookH = pastValueRecurrenceHook;
-            recurrenceHookC = pastValueRecurrenceHook;
+            recurrenceHookH = pastValueRecurrenceHookWithBeamSearchReordering;
+            recurrenceHookC = pastValueRecurrenceHookWithBeamSearchReordering;
         }
         else
         {
             auto isFirst = Sequence::IsFirst(labelEmbedding);
-            recurrenceHookH = [labelEmbedding, thoughtVectorBroadcastH, isFirst](const Variable& operand) {
-                return ElementSelect(isFirst, thoughtVectorBroadcastH, PastValue(operand, CNTK::Constant({}, 0.0f), 1, L""));
+            recurrenceHookH = [labelEmbedding, thoughtVectorBroadcastH, isFirst, addBeamSearchReorderingHook, beamSearchReorderHook](const Variable& operand) {
+                return ElementSelect(isFirst, thoughtVectorBroadcastH, PastValue(addBeamSearchReorderingHook ? Times(operand, beamSearchReorderHook) : operand));
             };
 
-            recurrenceHookC = [labelEmbedding, thoughtVectorBroadcastC, isFirst](const Variable& operand) {
-                return ElementSelect(isFirst, thoughtVectorBroadcastC, PastValue(operand, CNTK::Constant({}, 0.0f), 1, L""));
+            recurrenceHookC = [labelEmbedding, thoughtVectorBroadcastC, isFirst, addBeamSearchReorderingHook, beamSearchReorderHook](const Variable& operand) {
+                return ElementSelect(isFirst, thoughtVectorBroadcastC, PastValue(addBeamSearchReorderingHook ? Times(operand, beamSearchReorderHook) : operand));
             };
         }
 
@@ -137,7 +133,7 @@ void TrainSequenceToSequenceTranslator(const DeviceDescriptor& device, bool useS
     auto outputLayerProjWeights = Parameter(NDArrayView::RandomUniform<float>({ labelVocabDim, decoderDim }, -0.05, 0.05, 1, device));
     auto biasWeights = Parameter({ labelVocabDim }, 0.0f, device);
 
-    auto z = Plus(Times(outputLayerProjWeights, stabilize(decoderOutput)), biasWeights, L"classifierOutput");
+    auto z = Plus(Times(outputLayerProjWeights, Stabilize<float>(decoderOutput, device)), biasWeights, L"classifierOutput");
     auto ce = CrossEntropyWithSoftmax(z, labelSequence, L"lossFunction");
     auto errs = ClassificationError(z, labelSequence, L"classificationError");
 
@@ -167,21 +163,58 @@ void TrainSequenceToSequenceTranslator(const DeviceDescriptor& device, bool useS
 
     size_t outputFrequencyInMinibatches = 1;
     size_t minibatchSize = 72;
+    size_t numMinibatchesToCheckpointAfter = testCheckpointing ? 3 : SIZE_MAX;
+    size_t numMinibatchesToRestoreFromCheckpointAfter = testCheckpointing ? 6 : SIZE_MAX;
+    bool restorationDone = false;
+    const wchar_t* modelFile = L"seq2seq.model";
     for (size_t i = 0; true; i++)
     {
+        if (!restorationDone && (i == numMinibatchesToRestoreFromCheckpointAfter))
+        {
+            printf("Trainer restoring from checkpoint at path %S\n", modelFile);
+            auto inputs = trainer.LossFunction()->Inputs();
+            auto findInputVariableIndex = [&inputs](const Variable& inputVar) {
+                for (size_t i = 0; i < inputs.size(); ++i)
+                {
+                    if (inputs[i] == inputVar)
+                        return i;
+                }
+
+                LogicError("Specified variable is not an input of the loss function");
+            };
+
+            size_t rawInputIndex = findInputVariableIndex(rawInput);
+            size_t rawLabelsIndex = findInputVariableIndex(rawLabels);
+
+            trainer.RestoreFromCheckpoint(modelFile);
+
+            rawInput = trainer.LossFunction()->Inputs()[rawInputIndex];
+            rawLabels = trainer.LossFunction()->Inputs()[rawLabelsIndex];
+
+            i = numMinibatchesToCheckpointAfter;
+            restorationDone = true;
+        }
+
         auto minibatchData = minibatchSource->GetNextMinibatch(minibatchSize, device);
         if (minibatchData.empty())
             break;
 
         trainer.TrainMinibatch({ { rawInput, minibatchData[rawInputStreamInfo].m_data }, { rawLabels, minibatchData[rawLabelsStreamInfo].m_data } }, device);
         PrintTrainingProgress(trainer, i, outputFrequencyInMinibatches);
+
+        if ((i + 1) == numMinibatchesToCheckpointAfter)
+        {
+            printf("Trainer checkpointing to path %S\n", modelFile);
+            trainer.SaveCheckpoint(modelFile);
+        }
     }
 }
 
 void TrainSequenceToSequenceTranslator()
 {
     // TODO: Also test with sparse input variables in the graph
+    // TODO: Also test trainer checkpointing
 
-    TrainSequenceToSequenceTranslator(DeviceDescriptor::GPUDevice(0), false, true);
-    TrainSequenceToSequenceTranslator(DeviceDescriptor::CPUDevice(), false, false);
+    TrainSequenceToSequenceTranslator(DeviceDescriptor::GPUDevice(0), false, true, false);
+    TrainSequenceToSequenceTranslator(DeviceDescriptor::CPUDevice(), false, false, false);
 }

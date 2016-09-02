@@ -34,6 +34,8 @@ namespace CNTK
 
     /*static*/ std::unordered_set<std::wstring> Axis::s_allKnownDynamicAxisNames;
 
+    /*static*/ const std::vector<Axis> Axis::DefaultInputVariableDynamicAxes = { Axis::DefaultDynamicAxis(), Axis::DefaultBatchAxis() };
+
     /*static*/ const Axis& Axis::DefaultDynamicAxis()
     {
         static const Axis s_defaultDynamicAxis(L"defaultDynamicAxis");
