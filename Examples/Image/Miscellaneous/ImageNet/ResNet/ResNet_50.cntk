@@ -10,8 +10,7 @@ ndlMacros="$ConfigDir$/Macros.ndl"
 precision="float"
 deviceId="Auto"
 
-command=Train
-#command=PBN:CreateEval:Test
+command=Train:PBN:CreateEval:Test
 
 parallelTrain="false"
 
@@ -107,6 +106,7 @@ PBN=[
     modelPath="$ModelDir$/ResNet_50"
     # Set minibatch size for testing.
     minibatchSize=32
+    iters=30
 
     reader=[
         readerType="ImageReader"

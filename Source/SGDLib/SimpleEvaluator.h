@@ -20,6 +20,8 @@
 #include <string>
 #include <set>
 
+#include <iostream>
+
 using namespace std;
 
 namespace Microsoft { namespace MSR { namespace CNTK {
@@ -333,17 +335,16 @@ public:
 		std::vector<Matrix<ElemType>*> learnParamsValues(2, nullptr);
 
 		bool noMoreSamplesToProcess = false;
-		int nodeIter = 0;
 		for (auto& node : batchNormalNodes) {
 			shared_ptr<BatchNormalizationNode<ElemType>> batchNode =
 				static_pointer_cast<BatchNormalizationNode<ElemType>>(node);
 			batchNode->SetPostBatchNormalizationBegin();
+			size_t actualMBSize = 0;
 
 			LOGPRINTF(stderr, "Start evaluating: %ls\n", batchNode->GetName().c_str());
 
-			// Post batch normal iters, TODO add customize iter numbers
+			// Post batch normal iters
 			for (int iter = 0; iter < iters; iter++) {
-				size_t actualMBSize = 0;
 				bool wasDataRead = DataReaderHelpers::GetMinibatchIntoNetwork<ElemType>(*dataReader, m_net, 
 					nullptr, useDistributedMBReading, useParallelTrain, inputMatrices, actualMBSize, m_mpi);
 
@@ -385,15 +386,14 @@ public:
 				learnParamsValues[0] = &(runMeanNode->Value());
 				learnParamsValues[1] = &(runStdNode->Value());
 
-				//distGradAgg.AggregateGradients(learnParamsValues, m_gradHeader.get(), nodeIter++);
+				m_gradHeader->numSamples = actualMBSize ? 1 : actualMBSize;
+				distGradAgg.AggregateGradients(learnParamsValues, m_gradHeader.get(), 0);
 
-				//for (auto& parameter : learnParamsValues) {
-				//	(*parameter) /= (ElemType)m_mpi->NumNodesInUse();
-				//}
+				for (auto& parameter : learnParamsValues) {
+					(*parameter) /= (ElemType)m_mpi->NumNodesInUse();
+				}
 			}
 		}
-
-		// TODO parallel training weights update
 
 		// Save Model
 		if(!useParallelTrain || m_mpi->CurrentNodeRank() == m_mpi->MainNodeRank()) m_net->Save(exportPath);
