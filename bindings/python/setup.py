@@ -72,4 +72,4 @@ ext_modules = [
     ]
 
 #TODO: do not copy the dlls to the root, try to find a better location that is accessible
-setup(name="cntk", ext_modules = ext_modules,  data_files = [('.\\', [ lib + ".dll" for lib in libs ])], packages=setuptools.find_packages())
+setup(name="cntk", ext_modules = ext_modules,  data_files = [('.\\', [ lib + ".dll" for lib in libs ])], packages=[x for x in setuptools.find_packages() if x.startswith('cntk')])
