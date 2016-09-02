@@ -30,7 +30,7 @@ def simple_mnist():
     pe = classification_error(netout, label)
 
     #TODO: add save and load module code
-    ffnet = combine([ce.owner, pe.owner, netout.owner], "classifier_model")
+    ffnet = combine([ce, pe, netout], "classifier_model")
 
     rel_path = r"../../../../Examples/Image/MNIST/Data/Train-28x28_cntk_text.txt"
     path = os.path.join(os.path.dirname(os.path.abspath(__file__)), rel_path)
@@ -44,7 +44,7 @@ def simple_mnist():
         elif si.m_name == 'labels':
             labels_si = si
 
-    trainer = Trainer(netout.owner, ce.owner, pe.owner, [sgdlearner(netout.owner.parameters(), lr)])
+    trainer = Trainer(netout, ce, pe, [sgdlearner(netout.owner.parameters(), lr)])
 
     for i in range(0,int(num_minibatches_to_train)):
         mb=cm.get_next_minibatch(minibatch_size, cntk_dev)

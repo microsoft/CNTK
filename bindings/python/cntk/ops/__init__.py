@@ -15,13 +15,21 @@ def combine(operands, name=''):
      the two roots of the computation graph which can be "Combine"d to create a single Function
      with 2 outputs; viz. CrossEntropy loss and ClassificationError output.    
     Args:
-        operands (list): list of functions to combine
+        operands (list): list of functions or their variables to combine
         name (str): the name of the node in the network            
     Returns:
         :class:`cntk.Function`
     '''
     from cntk import combine
-    return combine(operands, name)
+    from cntk import Variable
+    converted_operands = list()
+    for o in operands:
+        if isinstance(o, Variable):            
+            converted_operands.append(o.owner)
+        else:
+            converted_operands.append(o)
+
+    return combine(converted_operands, name)
 
 ################################################################################
 # evaluation ops

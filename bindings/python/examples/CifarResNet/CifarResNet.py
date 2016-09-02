@@ -137,14 +137,14 @@ def cifar_resnet():
     pe = classification_error(classifier_output, label_var)
 
     #TODO: add save and load module code
-    image_classifier = combine([ce.owner, pe.owner, classifier_output.owner], "ImageClassifier")
+    image_classifier = combine([ce, pe, classifier_output], "ImageClassifier")
 
     lr = learning_rates_per_sample(0.0078125)
 
     mb_size = 32
     num_mbs = 1000
 
-    trainer = Trainer(classifier_output.owner, ce.owner, pe.owner, [sgdlearner(classifier_output.owner.parameters(), lr)])
+    trainer = Trainer(classifier_output, ce, pe, [sgdlearner(classifier_output.owner.parameters(), lr)])
 
     for i in range(0,num_mbs):
         mb=mbs.get_next_minibatch(mb_size, cntk_dev)

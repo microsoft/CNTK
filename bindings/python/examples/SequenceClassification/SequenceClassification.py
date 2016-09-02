@@ -29,7 +29,7 @@ def train_sequence_classifier(device):
     pe = classification_error(classifier_output, label)
     
     #TODO: add save and load module code
-    lstm_net = combine([ce.owner, pe.owner, classifier_output.owner], "classifier_model")
+    lstm_net = combine([ce, pe, classifier_output], "classifier_model")
 
     rel_path = r"../../../../Tests/EndToEndTests/Text/SequenceClassification/Data/Train.ctf"
     path = os.path.join(os.path.dirname(os.path.abspath(__file__)), rel_path)
@@ -46,7 +46,7 @@ def train_sequence_classifier(device):
     minibatch_size = 200
     lr = lr = learning_rates_per_sample(0.0005)
    
-    trainer = Trainer(classifier_output.owner, ce.owner, pe.owner, [sgdlearner(classifier_output.owner.parameters(), lr)])                   
+    trainer = Trainer(classifier_output, ce, pe, [sgdlearner(classifier_output.owner.parameters(), lr)])                   
 
     freq = 1   
     i = 0;
