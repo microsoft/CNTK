@@ -390,7 +390,7 @@ namespace CNTK
             if (leftOperandShape.SubShape(outputRank) != rightOperandShape.SubShape(0, numReductionAxes))
             {
                 InvalidArgument("The %d trailing dimensions of the left operand (%s) do not match the right operand's leading dimensions (%s)",
-                                numReductionAxes,
+                                (int)numReductionAxes,
                                 AsString(leftOperandShape.SubShape(outputRank)).c_str(),
                                 AsString(rightOperandShape).c_str());
             }

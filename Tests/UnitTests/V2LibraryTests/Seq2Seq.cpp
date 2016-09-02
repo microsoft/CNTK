@@ -99,7 +99,7 @@ void TrainSequenceToSequenceTranslator(const DeviceDescriptor& device, bool useS
 
     auto decoderOutputH = Stabilize<float>(decoderInput, device);
     FunctionPtr decoderOutputC;
-    auto pastValueRecurrenceHookWithBeamSearchReordering = [addBeamSearchReorderingHook, beamSearchReorderHook](const Variable& operand) {
+    auto pastValueRecurrenceHookWithBeamSearchReordering = [addBeamSearchReorderingHook, beamSearchReorderHook](const FunctionPtr& operand) {
         return PastValue(addBeamSearchReorderingHook ? Times(operand, beamSearchReorderHook) : operand);
     };
 
@@ -114,11 +114,11 @@ void TrainSequenceToSequenceTranslator(const DeviceDescriptor& device, bool useS
         else
         {
             auto isFirst = Sequence::IsFirst(labelEmbedding);
-            recurrenceHookH = [labelEmbedding, thoughtVectorBroadcastH, isFirst, addBeamSearchReorderingHook, beamSearchReorderHook](const Variable& operand) {
+            recurrenceHookH = [labelEmbedding, thoughtVectorBroadcastH, isFirst, addBeamSearchReorderingHook, beamSearchReorderHook](const FunctionPtr& operand) {
                 return ElementSelect(isFirst, thoughtVectorBroadcastH, PastValue(addBeamSearchReorderingHook ? Times(operand, beamSearchReorderHook) : operand));
             };
 
-            recurrenceHookC = [labelEmbedding, thoughtVectorBroadcastC, isFirst, addBeamSearchReorderingHook, beamSearchReorderHook](const Variable& operand) {
+            recurrenceHookC = [labelEmbedding, thoughtVectorBroadcastC, isFirst, addBeamSearchReorderingHook, beamSearchReorderHook](const FunctionPtr& operand) {
                 return ElementSelect(isFirst, thoughtVectorBroadcastC, PastValue(addBeamSearchReorderingHook ? Times(operand, beamSearchReorderHook) : operand));
             };
         }
