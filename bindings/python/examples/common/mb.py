@@ -7,7 +7,7 @@
 import numpy as np
 import sys
 import os
-from cntk.utils import create_minibatch_source
+from cntk import create_minibatch_source
 
 def create_text_mb_source(data_file, input_dim, num_output_classes, epoch_size,
                           is_feature_sparse=False, is_label_sparse=False,
