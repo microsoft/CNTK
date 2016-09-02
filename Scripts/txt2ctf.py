@@ -72,21 +72,23 @@ if __name__ == "__main__":
     # creating inputs
     inputs = [sys.stdin]
     if len(args.input) != 0:
-        inputs = [open(i) for i in args.input]
+        inputs = [open(i, encoding="utf-8") for i in args.input]
 
     # creating output
     output = sys.stdout
     if args.output != "":
         output = open(args.output, "w")
 
-    convert([open(d) for d in args.map], inputs, output, args.annotated == "True")
+    convert([open(d, encoding="utf-8") for d in args.map], inputs, output, args.annotated == "True")
 
 
 #####################################################################################################
 # Tests
 #####################################################################################################
-
-import StringIO
+try:
+    from StringIO import StringIO
+except ImportError:
+    from io import StringIO
 import pytest
 
 def test_simpleSanityCheck():
