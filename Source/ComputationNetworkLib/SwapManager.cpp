@@ -28,16 +28,12 @@ inline int SwapSampleSize(){ return 10; }
 inline float MeasurementUncertainty(){ return 1.15f; }
 
 
-template SwapManager<double>::SwapManager();
-template SwapManager<float>::SwapManager();
 template <typename ElemType> SwapManager<ElemType>::SwapManager()
 {
         m_timer = CUDATimer();
         m_useMemorySwapping = g_useMemorySwapping;
 }
 
-template void SwapManager<double>::CleanUp();
-template void SwapManager<float>::CleanUp();
 template <typename ElemType> void SwapManager<ElemType>::CleanUp()
 {
     for(auto pair : m_buffer2SwapOut)
@@ -45,8 +41,6 @@ template <typename ElemType> void SwapManager<ElemType>::CleanUp()
 }
 
 
-template void SwapManager<double>::BeginSynchronizeState(ComputationNodeBase *node, bool isForward, bool isTraining);
-template void SwapManager<float>::BeginSynchronizeState(ComputationNodeBase *node, bool isForward, bool isTraining);
 template<typename ElemType> void SwapManager<ElemType>::BeginSynchronizeState(ComputationNodeBase *node, bool isForward, bool isTraining)
 {
 
@@ -66,8 +60,6 @@ template<typename ElemType> void SwapManager<ElemType>::BeginSynchronizeState(Co
 }
 
 
-template void SwapManager<double>::EndSynchronizeState(ComputationNodeBase *node, bool isForward, bool isTraining);
-template void SwapManager<float>::EndSynchronizeState(ComputationNodeBase *node, bool isForward, bool isTraining);
 template<typename ElemType> void SwapManager<ElemType>::EndSynchronizeState(ComputationNodeBase *node, bool isForward, bool isTraining)
 {
 #ifndef CPUONLY
@@ -94,14 +86,6 @@ template<typename ElemType> void SwapManager<ElemType>::EndSynchronizeState(Comp
 }
 
 
-template void SwapManager<float>::InitializeSwapping(
-    std::unordered_map<ComputationNodeBase*, std::vector<Matrix<float>*> > forwardSwapOutNodes2matrices,
-    std::unordered_map<ComputationNodeBase*, std::vector<Matrix<float>*> > backwardSwapInNodes2matrices,
-    std::unordered_map<ComputationNodeBase*, std::vector<Matrix<float>*> > lastBackwardNodes2matrices);
-template void SwapManager<double>::InitializeSwapping(
-    std::unordered_map<ComputationNodeBase*, std::vector<Matrix<double>*> > forwardSwapOutNodes2matrices,
-    std::unordered_map<ComputationNodeBase*, std::vector<Matrix<double>*> > backwardSwapInNodes2matrices,
-    std::unordered_map<ComputationNodeBase*, std::vector<Matrix<double>*> > lastBackwardNodes2matrices);
 template <typename ElemType> void SwapManager<ElemType>::InitializeSwapping(
     std::unordered_map<ComputationNodeBase*, std::vector<Matrix<ElemType>*> > forwardSwapOutNodes2matrices,
     std::unordered_map<ComputationNodeBase*, std::vector<Matrix<ElemType>*> > backwardSwapInNodes2matrices,
@@ -147,8 +131,6 @@ template <typename ElemType> void SwapManager<ElemType>::InitializeSwapping(
 }
 
 
-template void SwapManager<float>::ClearActionsAndTheirMemory();
-template void SwapManager<double>::ClearActionsAndTheirMemory();
 template<typename ElemType> void SwapManager<ElemType>::ClearActionsAndTheirMemory()
 {
     cout << "Cleaning up!" << endl;
@@ -163,5 +145,7 @@ template<typename ElemType> void SwapManager<ElemType>::ClearActionsAndTheirMemo
 }
 
 
+template class SwapManager<double>;
+template class SwapManager<float>;
 
 }}}

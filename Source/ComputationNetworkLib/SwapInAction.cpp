@@ -19,8 +19,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 using std::cout;
 using std::endl;
 
-template SwapInAction<float>::SwapInAction(SwapOutAction<float> *swpout, Matrix<float> *GPUBuffer);
-template SwapInAction<double>::SwapInAction(SwapOutAction<double> *swpout, Matrix<double> *GPUBuffer);
 template <typename ElemType> SwapInAction<ElemType>::SwapInAction(SwapOutAction<ElemType> *swpout, Matrix<ElemType> *GPUBuffer)
 {
 #ifndef CPUONLY
@@ -38,9 +36,6 @@ template <typename ElemType> SwapInAction<ElemType>::SwapInAction(SwapOutAction<
 }
 
  
-
-template void SwapInAction<float>::BeginAction();
-template void SwapInAction<double>::BeginAction();
 template <typename ElemType> void SwapInAction<ElemType>::BeginAction()
 {
 #ifndef CPUONLY
@@ -54,8 +49,6 @@ template <typename ElemType> void SwapInAction<ElemType>::BeginAction()
 }
 
 
-template void SwapInAction<double>::EndAction();
-template void SwapInAction<float>::EndAction();
 template <typename ElemType> void SwapInAction<ElemType>::EndAction()
 {
 #ifndef CPUONLY
@@ -64,5 +57,7 @@ template <typename ElemType> void SwapInAction<ElemType>::EndAction()
 #endif
 }
 
+template class SwapInAction<double>;
+template class SwapInAction<float>;
 
 }}}

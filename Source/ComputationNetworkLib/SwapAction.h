@@ -17,8 +17,8 @@ class SwapAction
 protected:
     Matrix<ElemType> *m_bufferGPU;
     ElemType *m_bufferCPU;
-    int m_rows;
-    int m_cols;
+	size_t m_rows;
+	size_t m_cols;
     size_t m_bytes;
 
 public:
@@ -29,8 +29,8 @@ public:
     Matrix<ElemType> *GetGPUMatrix(){ return m_bufferGPU; }
     ElemType *GetCPUMatrix(){ return m_bufferCPU; }
 
-    int GetRows(){ return m_rows; };
-    int GetCols(){ return m_cols; };
+    size_t GetRows(){ return m_rows; };
+	size_t GetCols(){ return m_cols; };
 
 };
 

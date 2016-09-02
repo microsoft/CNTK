@@ -56,8 +56,7 @@ public:
 
 };
 
-template class SwapManager<float>;
-template class SwapManager<double>;
+
 
 
 }}}

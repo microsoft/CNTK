@@ -42,14 +42,15 @@
     </ClCompile>
     <ClCompile Include="RNNNodes.cpp">
       <Filter>Nodes</Filter>
+    </ClCompile>
     <ClCompile Include="SwapManager.cpp">
-      <Filter>Synchronization</Filter>
+      <Filter>Swapping</Filter>
     </ClCompile>
     <ClCompile Include="SwapInAction.cpp">
-      <Filter>Synchronization</Filter>
+      <Filter>Swapping</Filter>
     </ClCompile>
     <ClCompile Include="SwapOutAction.cpp">
-      <Filter>Synchronization</Filter>
+      <Filter>Swapping</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -145,17 +146,18 @@
     </ClInclude>
     <ClInclude Include="RNNNodes.h">
       <Filter>Nodes</Filter>
+    </ClInclude>
     <ClInclude Include="SwapManager.h">
-      <Filter>Synchronization</Filter>
+      <Filter>Swapping</Filter>
     </ClInclude>
     <ClInclude Include="SwapAction.h">
-      <Filter>Synchronization</Filter>
+      <Filter>Swapping</Filter>
     </ClInclude>
     <ClInclude Include="SwapInAction.h">
-      <Filter>Synchronization</Filter>
+      <Filter>Swapping</Filter>
     </ClInclude>
     <ClInclude Include="SwapOutAction.h">
-      <Filter>Synchronization</Filter>
+      <Filter>Swapping</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -183,7 +185,7 @@
     <Filter Include="Environment">
       <UniqueIdentifier>{ed685e39-b7dd-4546-a865-149664fa71a4}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Synchronization">
+    <Filter Include="Swapping">
       <UniqueIdentifier>{703b45cc-a4db-418d-9c06-8061dbd7c6d9}</UniqueIdentifier>
     </Filter>
   </ItemGroup>

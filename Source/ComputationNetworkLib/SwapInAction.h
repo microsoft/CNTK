@@ -30,7 +30,4 @@ private:
 
 };
 
-template class SwapInAction<double>;
-template class SwapInAction<float>;
-
 }}}

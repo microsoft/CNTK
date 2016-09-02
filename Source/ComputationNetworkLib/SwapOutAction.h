@@ -37,9 +37,6 @@ private:
 
 };
 
-template class SwapOutAction<double>;
-template class SwapOutAction<float>;
-
 }}}
 
 

@@ -1912,17 +1912,6 @@ public:
         Base::Validate(isFinalValidationPass);
         InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
 
-        const Matrix<ElemType>& scale = Input(1)->Value();
-        const Matrix<ElemType>& bias = Input(2)->Value();
-        Matrix<ElemType>& runMean = Input(3)->Value();
-        Matrix<ElemType>& runInvStdDev = Input(4)->Value();
-        assert(scale.GetNumRows() == bias.GetNumRows());
-        assert(scale.GetNumCols() == bias.GetNumCols());
-        assert(runMean.GetNumRows() == scale.GetNumRows());
-        assert(runMean.GetNumCols() == scale.GetNumCols());
-        assert(runMean.GetNumRows() == runInvStdDev.GetNumRows());
-        assert(runMean.GetNumCols() == runInvStdDev.GetNumCols());
-
         SetDims(Input(0));
 
         const auto& inputLayout = Input(0)->GetSampleLayout();

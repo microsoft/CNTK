@@ -19,8 +19,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 using std::cout;
 using std::endl;
 
-template SwapOutAction<double>::SwapOutAction(Matrix<double> *GPUbuffer);
-template SwapOutAction<float>::SwapOutAction(Matrix<float> *GPUbuffer);
 template <typename ElemType> SwapOutAction<ElemType>::SwapOutAction(Matrix<ElemType> *GPUbuffer)
 {
 #ifndef CPUONLY
@@ -35,19 +33,15 @@ template <typename ElemType> SwapOutAction<ElemType>::SwapOutAction(Matrix<ElemT
         this->m_bytes = this->m_rows*this->m_cols*sizeof(ElemType);
 
         // do we already have a pinned, that is page-locked buffer?
-        if (!this->m_bufferCPU){ allocatePinnedBuffer(); 
+		if (!this->m_bufferCPU){ allocatePinnedBuffer(); }
 #endif
 }
 
-template SwapOutAction<float>::~SwapOutAction();
-template SwapOutAction<double>::~SwapOutAction();
 template <typename ElemType> SwapOutAction<ElemType>::~SwapOutAction()
 {
     ReleaseMemory();
 }
 
-template void SwapOutAction<double>::BeginAction();
-template void SwapOutAction<float>::BeginAction();
 template <typename ElemType> void SwapOutAction<ElemType>::BeginAction()
 {
 #ifndef CPUONLY
@@ -70,9 +64,6 @@ template <typename ElemType> void SwapOutAction<ElemType>::BeginAction()
 }
 
 
-
-template void SwapOutAction<double>::EndAction();
-template void SwapOutAction<float>::EndAction();
 template <typename ElemType> void SwapOutAction<ElemType>::EndAction()
 {
 #ifndef CPUONLY
@@ -88,8 +79,6 @@ template <typename ElemType> void SwapOutAction<ElemType>::EndAction()
 }
 
 
-template void SwapOutAction<double>::allocatePinnedBuffer();
-template void SwapOutAction<float>::allocatePinnedBuffer();
 template <typename ElemType> void SwapOutAction<ElemType>::allocatePinnedBuffer()
 {
 #ifndef CPUONLY
@@ -98,8 +87,6 @@ template <typename ElemType> void SwapOutAction<ElemType>::allocatePinnedBuffer(
 #endif
 }
 
-template void SwapOutAction<float>::ReleaseMemory();
-template void SwapOutAction<double>::ReleaseMemory();
 template <typename ElemType> void SwapOutAction<ElemType>::ReleaseMemory()
 {
 #ifndef CPUONLY
@@ -107,6 +94,7 @@ template <typename ElemType> void SwapOutAction<ElemType>::ReleaseMemory()
 #endif
 }
 
+template class SwapOutAction<double>;
+template class SwapOutAction<float>;
+
 }}}
-
-

@@ -775,8 +775,6 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                                     const std::string& prefixMsg)
 {
     ScopedNetworkOperationMode modeGuard(net, NetworkOperationMode::training);
-    bool reloadBatch = false;
-    double learningRateTemp = learnRatePerSample;
 
     // bring our 'out' values into consistent state
     epochCriterion = EpochCriterion(0);
@@ -889,7 +887,6 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
     vector<EpochCriterion> epochEvalErrorsLastLogged = epochEvalErrors;
 
     bool noMoreSamplesToProcess = false;
-    bool dryRunCompleted = false;
     for (;;)
     {
         // Per-minibatch performance measurements; only enabled when perfTraceLevel > 0
