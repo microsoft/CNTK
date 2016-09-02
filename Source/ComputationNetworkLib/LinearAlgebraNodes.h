@@ -268,7 +268,7 @@ public:
             fstream >> m_outputRank;
         else
             m_outputRank = 1;
-        if (modelVersion >= CNTK_MODEL_VERSION_11)
+        if (modelVersion >= CNTK_MODEL_VERSION_12)
             fstream >> m_inferInputRankToMap;
         else
             m_inferInputRankToMap = -1;
