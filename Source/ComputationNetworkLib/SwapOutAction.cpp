@@ -21,16 +21,18 @@ using std::endl;
 
 template <typename ElemType> SwapOutAction<ElemType>::SwapOutAction(Matrix<ElemType> *GPUbuffer)
 {
-#ifndef CPUONLY
+
         this->m_bufferCPU = NULL;
         this->m_bufferGPU = GPUbuffer;
         this->m_hasDoneInitialSwap = false;
+		this->m_rows = this->m_bufferGPU->GetNumRows();
+		this->m_cols = this->m_bufferGPU->GetNumCols();
+		this->m_bytes = this->m_rows*this->m_cols*sizeof(ElemType);
+
+#ifndef CPUONLY
         cudaStream_t stream;
         CUDA_CALL(cudaStreamCreate(&stream));
         this->m_streamAsync = stream;
-        this->m_rows = this->m_bufferGPU->GetNumRows();
-        this->m_cols = this->m_bufferGPU->GetNumCols();
-        this->m_bytes = this->m_rows*this->m_cols*sizeof(ElemType);
 
         // do we already have a pinned, that is page-locked buffer?
 		if (!this->m_bufferCPU){ allocatePinnedBuffer(); }

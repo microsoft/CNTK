@@ -21,17 +21,18 @@ using std::endl;
 
 template <typename ElemType> SwapInAction<ElemType>::SwapInAction(SwapOutAction<ElemType> *swpout, Matrix<ElemType> *GPUBuffer)
 {
-#ifndef CPUONLY
-    this->m_bufferCPU = swpout->GetCPUMatrix();
-    this->m_bufferGPU = GPUBuffer;
-    this->m_swpout = swpout;
 
+	this->m_bufferGPU = GPUBuffer;
+	this->m_swpout = swpout;
+	this->m_bufferCPU = swpout->GetCPUMatrix();
+	this->m_rows = this->m_bufferGPU->GetNumRows();
+	this->m_cols = this->m_bufferGPU->GetNumCols();
+	this->m_bytes = this->m_rows*this->m_cols*sizeof(ElemType);
+
+#ifndef CPUONLY
     cudaStream_t stream;
     CUDA_CALL(cudaStreamCreate(&stream));
-    this->m_swapInStream = stream;
-    this->m_rows = this->m_bufferGPU->GetNumRows();
-    this->m_cols = this->m_bufferGPU->GetNumCols();
-    this->m_bytes = this->m_rows*this->m_cols*sizeof(ElemType);
+    this->m_swapInStream = stream;   
 #endif
 }
 
