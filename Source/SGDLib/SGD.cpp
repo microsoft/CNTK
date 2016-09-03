@@ -1606,8 +1606,8 @@ size_t SGD<ElemType>::AdaptiveMinibatchSizing(ComputationNetworkPtr net,
     {
         // newly started training: any previous MB size stored in the model is to be ignored
         // BUGBUG: %z is not supported in VS 2013, is it?
-        LOGPRINTF(stderr, "before epoch .2, previous minibatchSize %zd is considered invalid -> resetting\n",
-                  m_prevChosenMinibatchSize);
+        LOGPRINTF(stderr, "before epoch .2, previous minibatchSize %d is considered invalid -> resetting\n",
+                  (int)m_prevChosenMinibatchSize);
         m_prevChosenMinibatchSize = 0;
     }
 
@@ -1617,7 +1617,7 @@ size_t SGD<ElemType>::AdaptiveMinibatchSizing(ComputationNetworkPtr net,
         (epochNumber + 1) % m_minibatchSizeTuningFrequency != 0)
     {
         LOGPRINTF(stderr, "AdaptiveMinibatchSearch: Search for a better minibatchSize in epoch %d skipped, keeping minibatchSize of %zd\n",
-                  epochNumber + 1, m_prevChosenMinibatchSize);
+            (int)epochNumber + 1, (int)m_prevChosenMinibatchSize);
         chosenMinibatchSize = m_prevChosenMinibatchSize;
     }
     else
@@ -1639,8 +1639,8 @@ size_t SGD<ElemType>::AdaptiveMinibatchSizing(ComputationNetworkPtr net,
         {
             assert(m_prevChosenMinibatchSize >= chosenMinibatchSize);
 
-            LOGPRINTF(stderr, "AdaptiveMinibatchSearch: Limiting maxMinibatchSize to previous minibatchSize %zd*2\n",
-                      m_prevChosenMinibatchSize);
+            LOGPRINTF(stderr, "AdaptiveMinibatchSearch: Limiting maxMinibatchSize to previous minibatchSize %d*2\n",
+                      (int) m_prevChosenMinibatchSize);
             maxMinibatchSize = min(maxMinibatchSize, m_prevChosenMinibatchSize * 2);
         }
 
@@ -1706,9 +1706,8 @@ size_t SGD<ElemType>::SearchForBestMinibatchSize(ComputationNetworkPtr net,
     {
         // round mbsize to something meaningful
         trialMinibatchSize = RoundToMultipleOf64(trialMinibatchSizeFloat);
-
         fprintf(stderr, "\n");
-        LOGPRINTF(stderr, "AdaptiveMinibatchSearch Epoch[%d]: Evaluating trial minibatchSize=%d (search range: %d..%d) ...\n\n",
+        LOGPRINTF(stderr, "AdaptiveMinibatchSearch Epoch[%d]: Evaluating trial minibatchSize=%d (search range: %d..%d)...\n",
                   (int)epochNumber+1, (int)trialMinibatchSize, (int)RoundToMultipleOf64(minMinibatchSize), (int)RoundToMultipleOf64(maxMinibatchSize));
 
         std::vector<EpochCriterion> epochEvalErrors(evaluationNodes.size(), EpochCriterion::Infinity());
@@ -1789,7 +1788,7 @@ void SGD<ElemType>::TrainOneMiniEpochAndReloadModel(ComputationNetworkPtr net,
                   /*out*/ epochCriterion, /*out*/ epochEvalErrors,
                   prefixMsg);
 
-    LOGPRINTF(stderr, "Finished Mini-Epoch For LearnRate Selection: ");
+    LOGPRINTF(stderr, "Finished Mini-Epoch[%d]: ", (int)epochNumber+1);
     epochCriterion.LogCriterion(criterionNodes[0]->NodeName());
     for (size_t j = 0; j < epochEvalErrors.size(); j++)
         epochEvalErrors[j].LogCriterion(evaluationNodes[j]->NodeName());
@@ -1797,7 +1796,9 @@ void SGD<ElemType>::TrainOneMiniEpochAndReloadModel(ComputationNetworkPtr net,
 
     // go back to where we came from
     int baseModelEpoch = epochNumber - 1;
-    net->RereadPersistableParameters<ElemType>(GetModelNameForEpoch(baseModelEpoch));
+    let path = GetModelNameForEpoch(baseModelEpoch);
+    //fprintf(stderr, "Reverting parameters back to %ls\n", path.c_str());
+    net->RereadPersistableParameters<ElemType>(path);
 
     double dummyLearnRate;
     double dummyPrevCriterion;
@@ -2106,6 +2107,7 @@ void SGD<ElemType>::LoadCheckPointInfo(const size_t epochNumber,
                                        /*out*/ size_t& minibatchSize)
 {
     let checkPointFileName = GetCheckPointFileNameForEpoch(int(epochNumber));
+    //fprintf(stderr, "Loading checkpoint info from %ls\n", checkPointFileName.c_str());
     File fstream(checkPointFileName,
                  FileOptions::fileOptionsBinary | FileOptions::fileOptionsRead);
 
