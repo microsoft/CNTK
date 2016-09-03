@@ -938,10 +938,10 @@ RNNs =
         # we group 4 matrices into one, gives 60% speed-up in some cases
         # Not grouping inputs since random-init scaling would be incorrect.
         # TODO: Remove the function call, just assign it.
-        B{}  = ParameterTensor {(4 * cellDim),             initValue=0}       # a bias
-        W{}  = ParameterTensor {(4 * cellDim : Inferred),  init=init, initValueScale=initValueScale}   # input
-        A{}  = ParameterTensor {(4 * cellDim : Inferred),  init=init, initValueScale=initValueScale}   # aux input (optional)
-        H{}  = ParameterTensor {(4 * cellDim : outputDim), init=init, initValueScale=initValueScale}   # hidden-to-hidden
+        B  = ParameterTensor {(4 * cellDim),             initValue=0}       # a bias
+        W  = ParameterTensor {(4 * cellDim : Inferred),  init=init, initValueScale=initValueScale}   # input
+        A  = ParameterTensor {(4 * cellDim : Inferred),  init=init, initValueScale=initValueScale}   # aux input (optional)
+        H  = ParameterTensor {(4 * cellDim : outputDim), init=init, initValueScale=initValueScale}   # hidden-to-hidden
         Ci = ParameterTensor {(    cellDim),             init=init, initValueScale=initValueScale}   # cell-to-hiddden {note: applied elementwise}
         Cf = ParameterTensor {(    cellDim),             init=init, initValueScale=initValueScale}   # cell-to-hiddden {note: applied elementwise}
         Co = ParameterTensor {(    cellDim),             init=init, initValueScale=initValueScale}   # cell-to-hiddden {note: applied elementwise}
@@ -965,8 +965,8 @@ RNNs =
 
                 # projected contribution from input(s), hidden, and bias
                 proj4 = if Constants.IsNone (aux)
-                        then B{} + W{} * x + H{} * dhs
-                        else B{} + W{} * x + H{} * dhs + A{} * aux
+                        then B + W * x + H * dhs
+                        else B + W * x + H * dhs + A * aux
 
                 itProj  = Slice (0*cellDim, 1*cellDim, proj4, axis=1)
                 bitProj = Slice (1*cellDim, 2*cellDim, proj4, axis=1)
