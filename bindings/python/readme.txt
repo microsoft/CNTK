@@ -1,5 +1,7 @@
+# This file contains step-by-step instructions on how to build the Python API for CNTK
+
 # no support yet for python 2.7
-# recommended python version is 3.4
+# recommended python version is 3.4 (with numpy & scipy)
 # supported platform: 64 bit
 
 # Set up compiler and its variant
