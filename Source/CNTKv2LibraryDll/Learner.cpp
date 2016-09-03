@@ -421,9 +421,16 @@ namespace CNTK
         const auto& gradientMatrix = GetWritableMatrix<ElementType>(gradientValue);
         const auto& parameterMatrix = GetWritableMatrix<ElementType>(parameterValue);
         
-        auto learningRate = ElementType(m_learningRates[m_sampleCount]);
-        auto momentum = ElementType(MomentumPerMB(m_momentums[m_sampleCount], trainingSampleCount));
-        smoothedGradientMatrix->FSAdagrad(trainingSampleCount, *gradientMatrix, *parameterMatrix, learningRate, momentum);
+        auto learningRate = m_learningRates[m_sampleCount];
+        auto momentum = MomentumPerMB(m_momentums[m_sampleCount], trainingSampleCount);
+
+        const double targetAdagradAvDenom = 0.0025; // 1/400 magic constant
+        const size_t adagradT = 2 * 3600 * 100;
+
+        const double varMomentum = (exp(-1.0 * trainingSampleCount / adagradT));
+        static double smoothedCount = 0;  // BUGBUG!!! Carried over from Alexey's original implementation, needs to be fixed.
+
+        smoothedGradientMatrix->FSAdagradUpdate(trainingSampleCount, *gradientMatrix, *parameterMatrix, smoothedCount, learningRate, targetAdagradAvDenom, momentum, varMomentum);
     }
 
     LearnerRMSProp::LearnerRMSProp(const unordered_set<Parameter>& parameters, const LearningRatesPerSample& learningRates,

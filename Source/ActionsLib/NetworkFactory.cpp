@@ -91,10 +91,11 @@ bool TryGetNetworkFactory(const ConfigRecordType& config, function<ComputationNe
             L"network = %ls",             // source code of expression that evaluates to a ComputationNetwork
             (int)deviceId, ElemTypeName<ElemType>(), sourceOfNetwork.c_str());
         let expr = BS::ParseConfigDictFromString(sourceOfBS, L"BrainScriptNetworkBuilder", move(includePaths));
+        let traceLevel = config(L"traceLevel",(int)0);
 
         // the rest is done in a lambda that is only evaluated when a virgin network is needed
         // Note that evaluating the BrainScript *is* instantiating the network, so the evaluate call must be inside the lambda.
-        createNetworkFn = [expr](DEVICEID_TYPE /*deviceId*/)
+        createNetworkFn = [expr, traceLevel](DEVICEID_TYPE /*deviceId*/)
         {
             // evaluate the parse tree, particularly the top-level field 'network'
             // Evaluating it will create the network.
@@ -103,6 +104,7 @@ bool TryGetNetworkFactory(const ConfigRecordType& config, function<ComputationNe
             if (!network)
                 LogicError("BuildNetworkFromDescription: ComputationNetwork not what it was meant to be");
             // success
+            network->SetTraceLevel(traceLevel);
             return network;
         };
         return true;

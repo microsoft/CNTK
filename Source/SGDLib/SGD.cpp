@@ -1883,20 +1883,22 @@ void SGD<ElemType>::InitModelAggregationHandler(int traceLevel, DEVICEID_TYPE de
     }
 }
 // public:
-// UpdateWeightsS - static version of UpdateWeights()
-// not static since it wants to access protected methods on the SGD object
+// UpdateWeightsS - formerly static version of UpdateWeights()
+// TODO: This still mostly behaves like a static method. We should simplify it now that we have access to the instance.
 template <class ElemType>
-/*static*/ void SGD<ElemType>::UpdateWeightsS(const SGD<ElemType>* sgd, Matrix<ElemType>& functionValues,
-                                              Matrix<ElemType>& gradientValues,
-                                              Matrix<ElemType>& smoothedGradient,
-                                              const double learnRatePerSample,
-                                              const double momentumPerSample,
-                                              size_t actualMBSize,
-                                              const double L2RegWeight,
-                                              const double L1RegWeight,
-                                              const bool needAveMultiplier,
-                                              const bool useNesterovMomentum)
+void SGD<ElemType>::UpdateWeightsS(Matrix<ElemType>& functionValues,
+                                   Matrix<ElemType>& gradientValues,
+                                   Matrix<ElemType>& smoothedGradient,
+                                   const double learnRatePerSample,
+                                   const double momentumPerSample,
+                                   size_t actualMBSize,
+                                   const double L2RegWeight,
+                                   const double L1RegWeight,
+                                   const bool needAveMultiplier,
+                                   const bool useNesterovMomentum) const
 {
+    const SGD<ElemType>* sgd = this; // TODO: further refactor/simplify this
+
     // we use simple linear (instead of log linear) scaling here
     const double momentum = MomentumPerMB(momentumPerSample, actualMBSize);
 #if DUMPOUTPUT
@@ -1949,7 +1951,18 @@ template <class ElemType>
     }
     else if (adpType == GradientsUpdateType::FSAdaGrad)
     {
-        smoothedGradient.FSAdagrad(actualMBSize, gradientValues, functionValues, (ElemType) learnRatePerSample, (ElemType) momentum);
+        // TODO: The values of 'adagradT' and 'targetadagradavdenom' are currently hardcoded constants taken from DBN (empirically determined).
+        // These should be made configurable if needed
+        const double targetAdagradAvDenom = 0.0025; // 1/400 magic constant
+        const size_t adagradT = 2 * 3600 * 100;
+
+        const double varMomentum = (exp(-1.0 * actualMBSize / adagradT));
+        static double smoothedCount = 0;  // BUGBUG!!! Carried over from Alexey's original implementation, needs to be fixed.
+
+        smoothedGradient.FSAdagradUpdate(actualMBSize,
+                                         gradientValues, functionValues, smoothedCount,
+                                         learnRatePerSample, targetAdagradAvDenom,
+                                         momentum, varMomentum);
     }
     else if (adpType == GradientsUpdateType::RmsProp)
     {
@@ -1996,7 +2009,7 @@ void SGD<ElemType>::UpdateWeights(const ComputationNodeBasePtr& node,
         LogicError("UpdateWeights() called for a learnable ComputationNode which has m_learningRateMultiplier == 0!");
 
     double nodeDependentLearningRatePerSample = learnRatePerSample * node->GetLearningRateMultiplier();
-    UpdateWeightsS(this, dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Value(), dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Gradient(),
+    UpdateWeightsS(dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Value(), dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Gradient(),
                    smoothedGradient, nodeDependentLearningRatePerSample, momentumPerSample,
                    actualMBSize, L2RegWeight, L1RegWeight,
                    needAveMultiplier, m_useNesterovMomentum);

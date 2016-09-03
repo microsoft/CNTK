@@ -154,7 +154,7 @@ RecurrentLSTMLayerStack {layerDims,  # an array of dimensions for each layer (la
                          init = 'heNormal', initValueScale = 1,
                          enableSelfStabilization = false,
                          allowOptimizedEngine = false} =
-if allowOptimizedEngine && BS.Constants.IsNone (cellShapes) && !goBackwards && !usePeepholes && !enableSelfStabilization && _AreElementsTheSame (layerDims, Length(layerDims)) then
+if allowOptimizedEngine && BS.Constants.IsNone (cellShapes) && !usePeepholes && !enableSelfStabilization && _AreElementsTheSame (layerDims, Length(layerDims)) then
 {
     # use cudnn instead
     W = ParameterTensor {0:0, initOutputRank=-1, init=init, initValueScale=initValueScale}
@@ -164,7 +164,7 @@ else
     LayerStack {Length(layerDims), i => RecurrentLSTMLayer {
                                            layerDims[i],
                                            cellShape = if BS.Constants.IsNone (cellShapes) then None else cellShapes[i], # if set then use a projection
-                                           goBackwards = goBackwards,
+                                           goBackwards = false,
                                            usePeepholes = usePeepholes,
                                            init = init, initValueScale = initValueScale,
                                            enableSelfStabilization = enableSelfStabilization,

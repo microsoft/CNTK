@@ -473,17 +473,17 @@ protected:
     void InitDistGradAgg(int numEvalNodes, int traceLevel);
     void InitModelAggregationHandler(int traceLevel, DEVICEID_TYPE devID);
 public:
-    // UpdateWeightsS - static version of UpdateWeights()
-    static void UpdateWeightsS(const SGD* sgd, Matrix<ElemType>& functionValues,
-                               Matrix<ElemType>& gradientValues,
-                               Matrix<ElemType>& smoothedGradient,
-                               const double learnRatePerSample,
-                               const double momentumPerSample,
-                               size_t actualMBSize,
-                               const double L2RegWeight,
-                               const double L1RegWeight,
-                               const bool needAveMultiplier,
-                               const bool useNesterovMomentum);
+    // UpdateWeightsS - formerly static version of UpdateWeights()
+    void UpdateWeightsS(Matrix<ElemType>& functionValues,
+                        Matrix<ElemType>& gradientValues,
+                        Matrix<ElemType>& smoothedGradient,
+                        const double learnRatePerSample,
+                        const double momentumPerSample,
+                        size_t actualMBSize,
+                        const double L2RegWeight,
+                        const double L1RegWeight,
+                        const bool needAveMultiplier,
+                        const bool useNesterovMomentum) const;
     // return -1 if nothing exists
     int DetermineStartEpoch(const bool makeMode);
 

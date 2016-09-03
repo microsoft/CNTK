@@ -33,12 +33,19 @@ struct ComputationEnvironment
     bool IsTraining()     const { return m_networkOperationMode == NetworkOperationMode::training; }
     bool IsPreComputing() const { return m_networkOperationMode == NetworkOperationMode::preComputing; }
 
-    //set new value and return old one
+    // set new value and return old one
     NetworkOperationMode SetOperationMode(NetworkOperationMode mode)
     {
         NetworkOperationMode oldMode = m_networkOperationMode;
         m_networkOperationMode = mode;
         return oldMode;
+    }
+
+    // traceLevel
+    int m_traceLevel = 0;
+    void SetTraceLevel(int traceLevel)
+    {
+        m_traceLevel = traceLevel;
     }
     // more properties should be added here as needed
 };

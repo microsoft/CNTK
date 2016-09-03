@@ -804,6 +804,11 @@ public:
     // diagnostics
     // -----------------------------------------------------------------------
 
+    void SetTraceLevel(int traceLevel)
+    {
+        m_environment->SetTraceLevel(traceLevel);
+    }
+
     // call EnableNodeTracing() on the given nodes for real, category, and sparse printing
     void EnableNodeTracing(const std::vector<std::wstring>& traceNodeNamesReal,
                            const std::vector<std::wstring>& traceNodeNamesCategory,

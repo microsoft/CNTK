@@ -102,6 +102,8 @@ ComputationNodeBasePtr ComputationNetwork::GetNestedNetwork(const ComputationNod
 // concurrent computation in bulk CUDA launches.
 // -----------------------------------------------------------------------
 
+template<class ElemType> static bool DumpNode(ComputationNodeBasePtr nodep, bool dumpGradient);
+
 ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(const std::vector<shared_ptr<SEQTraversalFlowControlNode>>& recurrentInfo, const std::list<ComputationNodeBasePtr>& allNodes /*must be in eval order*/)
 {
     // traverse the network in evaluation order and create a new list that replaces all recurrence by a SEQTraversalFlowControlNode
@@ -145,6 +147,10 @@ ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(con
 
             node->BumpEvalTimeStamp();
         }
+
+        // more extreme tracing for the ultimate debugging experience. Make space on your disk.
+        if (node->GetEnvironmentPtr() && node->Environment().m_traceLevel >= 1000000) // very high number, since this spews like hell
+            DumpNode<float>(node, /*dumpGradient=*/false) || DumpNode<double>(node, false);
     }
 }
 
@@ -159,6 +165,10 @@ ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(con
         node->BeginBackprop();
         node->Backprop(fr.WithLayout(node->GetMBLayout()), true /*childrenInThisLoop*/, true /*childrenInOuterLoop*/);
         node->EndBackprop();
+
+        // more extreme tracing for the ultimate debugging experience. Make space on your disk.
+        if (node->GetEnvironmentPtr() && node->Environment().m_traceLevel >= 1000000 && node->NeedsGradient()) // very high number, since this spews like hell
+            DumpNode<float>(node, /*dumpGradient=*/true) || DumpNode<double>(node, true);
     }
 }
 /*virtual*/ void ComputationNetwork::PARTraversalFlowControlNode::RequestMatricesBeforeForwardProp(MatrixPool& matrixPool) /*override*/
@@ -175,6 +185,22 @@ ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(con
 }
 /*virtual*/ void ComputationNetwork::PARTraversalFlowControlNode::ReleaseMatricesAfterBackprop(MatrixPool& matrixPool) /*override*/
 {
+}
+// helper for logging
+template<class ElemType>
+static bool DumpNode(ComputationNodeBasePtr nodep, bool dumpGradient)
+{
+    let node = dynamic_pointer_cast<ComputationNode<ElemType>>(nodep);
+    if (!node)
+        return false;
+    let dataPtr = dumpGradient ? node->GradientPtr() : node->ValuePtr();
+    if (!dataPtr)
+        return true; // e.g. SEQ sentinel node
+    fprintf(stderr, "Dump --> %s%s\n", node->FormatOperationPrototype("").c_str(), dumpGradient ? " Grad" : "");
+    node->WriteMinibatchWithFormatting(stderr, FrameRange(), SIZE_MAX, SIZE_MAX, false/*transpose*/, /*isCategoryLabel=*/false, /*isSparse=*/false, std::vector<std::string>(),
+                                       ""/*sequenceSeparator*/, "  "/*sequencePrologue*/, "\n"/*sequenceEpilogue*/, " "/*elementSeparator*/, "\n  "/*sampleSeparator*/,
+                                       "%13.10f"/*valueFormatString*/, dumpGradient);
+    return true;
 }
 
 // -----------------------------------------------------------------------
