@@ -1090,11 +1090,19 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                     if (smoothedGradient.HasNan("TrainOneEpoch/UpdateWeights(): "))
                         LogicError("%ls %ls operation has NaNs in smoothedGradient.", node->NodeName().c_str(), node->OperationName().c_str());
 #endif
+                    if (!node->IsParameterUpdateRequired())
+                        LogicError("UpdateWeights() called for a learnable ComputationNode which has m_learningRateMultiplier == 0!");
+
+                    double nodeDependentLearningRatePerSample = learnRatePerSample * node->GetLearningRateMultiplier();
+                    double momentumPerSample = GetMomentumPerSample(epochNumber /*BUGBUG workaround:*/, net->GetMBLayoutPtrOfNetwork()->GetNumParallelSequences());
                     // BUGBUG (Issue #95): Access to net MBLayout can no longer be done if we have multiple input layouts
-                    UpdateWeights(node, smoothedGradient, learnRatePerSample,
-                                  GetMomentumPerSample(epochNumber /*BUGBUG workaround:*/, net->GetMBLayoutPtrOfNetwork()->GetNumParallelSequences()), numSamplesInMinibatch,
+                    UpdateWeights(dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Value(),
+                                  dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Gradient(),
+                                  smoothedGradient, nodeDependentLearningRatePerSample,
+                                  momentumPerSample, numSamplesInMinibatch,
                                   m_L2RegWeight, m_L1RegWeight,
                                   m_needAveMultiplier, m_useNesterovMomentum);
+                    node->BumpEvalTimeStamp();
 #ifdef _DEBUG
                     if (dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Value().HasNan("TrainOneEpoch/UpdateWeights(): "))
                         LogicError("%ls %ls operation has NaNs in functionValues after parameter update.", node->NodeName().c_str(), node->OperationName().c_str());
@@ -1882,20 +1890,17 @@ void SGD<ElemType>::InitModelAggregationHandler(int traceLevel, DEVICEID_TYPE de
 #endif 
     }
 }
+
 // public:
-// UpdateWeightsS - formerly static version of UpdateWeights()
-// TODO: This still mostly behaves like a static method. We should simplify it now that we have access to the instance.
+// UpdateWeights() - actual weight update, implementing various update rules
 template <class ElemType>
-void SGD<ElemType>::UpdateWeightsS(Matrix<ElemType>& functionValues,
-                                   Matrix<ElemType>& gradientValues,
-                                   Matrix<ElemType>& smoothedGradient,
-                                   const double learnRatePerSample,
-                                   const double momentumPerSample,
-                                   size_t actualMBSize,
-                                   const double L2RegWeight,
-                                   const double L1RegWeight,
-                                   const bool needAveMultiplier,
-                                   const bool useNesterovMomentum) const
+void SGD<ElemType>::UpdateWeights(Matrix<ElemType>& functionValues, Matrix<ElemType>& gradientValues,
+                                  Matrix<ElemType>& smoothedGradient,
+                                  const double learnRatePerSample, const double momentumPerSample,
+                                  size_t actualMBSize,
+                                  const double L2RegWeight, const double L1RegWeight,
+                                  const bool needAveMultiplier,
+                                  const bool useNesterovMomentum) const
 {
     // we use simple linear (instead of log linear) exponentiation here
     const double momentum = MomentumPerMB(momentumPerSample, actualMBSize);
@@ -1983,31 +1988,6 @@ void SGD<ElemType>::UpdateWeightsS(Matrix<ElemType>& functionValues,
 }
 
 // protected:
-
-// UpdateWeights - update the weights in
-template <class ElemType>
-void SGD<ElemType>::UpdateWeights(const ComputationNodeBasePtr& node,
-                                  Matrix<ElemType>& smoothedGradient,
-                                  const double learnRatePerSample,
-                                  const double momentumPerSample,
-                                  const size_t actualMBSize,
-                                  const double L2RegWeight, const double L1RegWeight,
-                                  const bool needAveMultiplier,
-                                  const bool useNesterovMomentum) const
-{
-#if DUMPOUTPUT
-    LOGPRINTF(stderr, "Update_%ls\n", node->NodeName().c_str());
-#endif
-    if (!node->IsParameterUpdateRequired())
-        LogicError("UpdateWeights() called for a learnable ComputationNode which has m_learningRateMultiplier == 0!");
-
-    double nodeDependentLearningRatePerSample = learnRatePerSample * node->GetLearningRateMultiplier();
-    UpdateWeightsS(dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Value(), dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Gradient(),
-                   smoothedGradient, nodeDependentLearningRatePerSample, momentumPerSample,
-                   actualMBSize, L2RegWeight, L1RegWeight,
-                   needAveMultiplier, m_useNesterovMomentum);
-    node->BumpEvalTimeStamp();
-}
 
 template <class ElemType>
 void SGD<ElemType>::ClipGradient(Matrix<ElemType>& gradient, const size_t actualMBSize) const

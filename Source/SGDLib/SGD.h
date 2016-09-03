@@ -472,33 +472,20 @@ protected:
     void InitDistGradAgg(int numEvalNodes, int traceLevel);
     void InitModelAggregationHandler(int traceLevel, DEVICEID_TYPE devID);
 public:
-    // UpdateWeightsS - formerly static version of UpdateWeights()
-    void UpdateWeightsS(Matrix<ElemType>& functionValues,
-                        Matrix<ElemType>& gradientValues,
-                        Matrix<ElemType>& smoothedGradient,
-                        const double learnRatePerSample,
-                        const double momentumPerSample,
-                        size_t actualMBSize,
-                        const double L2RegWeight,
-                        const double L1RegWeight,
-                        const bool needAveMultiplier,
-                        const bool useNesterovMomentum) const;
+    // UpdateWeights() - actual weight update, implementing various update rules
+    void UpdateWeights(Matrix<ElemType>& functionValues, Matrix<ElemType>& gradientValues,
+                       Matrix<ElemType>& smoothedGradient,
+                       const double learnRatePerSample, const double momentumPerSample,
+                       size_t actualMBSize,
+                       const double L2RegWeight, const double L1RegWeight,
+                       const bool needAveMultiplier,
+                       const bool useNesterovMomentum) const;
     // return -1 if nothing exists
     int DetermineStartEpoch(const bool makeMode);
 
     wstring GetModelNameForEpoch(const int epoch, bool bLastModel = false);
 
 protected:
-    // UpdateWeights - update the weights in
-    void UpdateWeights(const ComputationNodeBasePtr& node,
-                       Matrix<ElemType>& smoothedGradient,
-                       const double learnRatePerSample,
-                       const double momentumPerSample,
-                       const size_t actualMBSize,
-                       const double L2RegWeight, const double L1RegWeight,
-                       const bool needAveMultiplier,
-                       const bool useNesterovMomentum) const;
-
     void ClipGradient(Matrix<ElemType>& gradient, const size_t actualMBSize) const;
 
     void SaveCheckPointInfo(const size_t epoch, const size_t totalSamplesSeen, // TODO: combine totalSamplesSeen and prevCriterion into a EpochCriterion type
