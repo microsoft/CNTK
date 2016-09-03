@@ -384,7 +384,7 @@ protected:
                                   const std::vector<ComputationNodeBasePtr>& evaluationNodes,
                                   StreamMinibatchInputs* inputMatrices,
                                   const std::list<ComputationNodeBasePtr>& learnableNodes,
-                                  std::list<Matrix<ElemType>>& smoothedGradients,
+                                  std::list<Matrix<ElemType>>& smoothedGradients, std::vector<double> smoothedCounts,
                                   const bool learnRateInitialized,
                                   const double largestPrevLearnRatePerSample);
 
@@ -400,7 +400,7 @@ protected:
                                          const std::vector<ComputationNodeBasePtr>& evaluationNodes,
                                          StreamMinibatchInputs* inputMatrices,
                                          const std::list<ComputationNodeBasePtr>& learnableNodes,
-                                         std::list<Matrix<ElemType>>& smoothedGradients,
+                                         std::list<Matrix<ElemType>>& smoothedGradients, std::vector<double> smoothedCounts,
                                          /*out*/ EpochCriterion& epochCriterion,
                                          /*out*/ std::vector<EpochCriterion>& epochEvalErrors,
                                          std::string prefixMsg = "");
@@ -419,7 +419,7 @@ protected:
                                    const std::vector<ComputationNodeBasePtr>& evaluationNodes,
                                    StreamMinibatchInputs* inputMatrices,
                                    const std::list<ComputationNodeBasePtr>& learnableNodes,
-                                   std::list<Matrix<ElemType>>& smoothedGradients,
+                                   std::list<Matrix<ElemType>>& smoothedGradients, std::vector<double> smoothedCounts,
                                    const double learningRateAdjustmentFactor);
 
     // uses a small percentage of training data of minibatch to
@@ -437,7 +437,7 @@ protected:
                                       const std::vector<ComputationNodeBasePtr>& evaluationNodes,
                                       StreamMinibatchInputs* inputMatrices,
                                       const std::list<ComputationNodeBasePtr>& learnableNodes,
-                                      std::list<Matrix<ElemType>>& smoothedGradients,
+                                      std::list<Matrix<ElemType>>& smoothedGradients, std::vector<double> smoothedCounts,
                                       const size_t minMinibatchSize, const size_t maxMinibatchSize);
 
     // Attemps to compute the error signal for the whole utterance, which will
@@ -464,7 +464,7 @@ protected:
                          const std::vector<ComputationNodeBasePtr>& evaluationNodes,
                          StreamMinibatchInputs* inputMatrices,
                          const std::list<ComputationNodeBasePtr>& learnableNodes,
-                         std::list<Matrix<ElemType>>& smoothedGradients,
+                         std::list<Matrix<ElemType>>& smoothedGradients, std::vector<double>& smoothedCounts,
                          /*out*/ EpochCriterion& epochCriterion,
                          /*out*/ std::vector<EpochCriterion>& epochEvalErrors,
                          const std::string& prefixMsg = "");
@@ -474,7 +474,7 @@ protected:
 public:
     // UpdateWeights() - actual weight update, implementing various update rules
     void UpdateWeights(Matrix<ElemType>& functionValues, Matrix<ElemType>& gradientValues,
-                       Matrix<ElemType>& smoothedGradient,
+                       Matrix<ElemType>& smoothedGradient, double& smoothedCount,
                        const double learnRatePerSample, const double momentumPerSample,
                        size_t actualMBSize,
                        const double L2RegWeight, const double L1RegWeight,
