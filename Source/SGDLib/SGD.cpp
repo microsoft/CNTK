@@ -1897,15 +1897,13 @@ void SGD<ElemType>::UpdateWeightsS(Matrix<ElemType>& functionValues,
                                    const bool needAveMultiplier,
                                    const bool useNesterovMomentum) const
 {
-    const SGD<ElemType>* sgd = this; // TODO: further refactor/simplify this
-
-    // we use simple linear (instead of log linear) scaling here
+    // we use simple linear (instead of log linear) exponentiation here
     const double momentum = MomentumPerMB(momentumPerSample, actualMBSize);
 #if DUMPOUTPUT
     LOGPRINTF(stderr, "learnRatePerSample=%0.8f, momentum=%0.8f, actualMBSize=%ld\n",
               learnRatePerSample, momentum, actualMBSize);
-    LOGPRINTF(stderr, "sgd->GradUpdateType()=%d, sgd->GradientUpdateNoiseStd()=%0.8f\n",
-              sgd->GradUpdateType(), sgd->GradientUpdateNoiseStd());
+    LOGPRINTF(stderr, "GradUpdateType()=%d, GradientUpdateNoiseStd()=%0.8f\n",
+              GradUpdateType(), GradientUpdateNoiseStd());
     gradientValues.Print("Gradient Input");
     smoothedGradient.Print("Smoothed Gradient Input");
 #endif
@@ -1914,10 +1912,10 @@ void SGD<ElemType>::UpdateWeightsS(Matrix<ElemType>& functionValues,
     assert(actualMBSize > 0);
 
     // clipping gradients to prevent outliers
-    sgd->ClipGradient(gradientValues, actualMBSize);
+    ClipGradient(gradientValues, actualMBSize);
 
-    GradientsUpdateType adpType = sgd->GradUpdateType();
-    double noiseStd = sgd->GradientUpdateNoiseStd();
+    GradientsUpdateType adpType = GradUpdateType();
+    double noiseStd = GradientUpdateNoiseStd();
     Matrix<ElemType> sgdUpdateNoise((DEVICEID_TYPE) functionValues.GetDeviceId());
     if (noiseStd > 0)
     {
@@ -1951,24 +1949,19 @@ void SGD<ElemType>::UpdateWeightsS(Matrix<ElemType>& functionValues,
     }
     else if (adpType == GradientsUpdateType::FSAdaGrad)
     {
-        // TODO: The values of 'adagradT' and 'targetadagradavdenom' are currently hardcoded constants taken from DBN (empirically determined).
-        // These should be made configurable if needed
-        const double targetAdagradAvDenom = 0.0025; // 1/400 magic constant
-        const size_t adagradT = 2 * 3600 * 100;
-
-        const double varMomentum = (exp(-1.0 * actualMBSize / adagradT));
+        const double varMomentum = (exp(-1.0 * actualMBSize / m_gradType.varianceTimeConstant));
         static double smoothedCount = 0;  // BUGBUG!!! Carried over from Alexey's original implementation, needs to be fixed.
 
         smoothedGradient.FSAdagradUpdate(actualMBSize,
                                          gradientValues, functionValues, smoothedCount,
-                                         learnRatePerSample, targetAdagradAvDenom,
+                                         learnRatePerSample, m_gradType.targetAdagradAvDenom,
                                          momentum, varMomentum);
     }
     else if (adpType == GradientsUpdateType::RmsProp)
     {
-        double aveMultiplier = smoothedGradient.RmsProp(gradientValues, (ElemType) sgd->m_rpi.gamma,
-                                                        (ElemType) sgd->m_rpi.inc, (ElemType) sgd->m_rpi.max,
-                                                        (ElemType) sgd->m_rpi.dec, (ElemType) sgd->m_rpi.min, needAveMultiplier);
+        double aveMultiplier = smoothedGradient.RmsProp(gradientValues, (ElemType) m_rpi.gamma,
+                                                        (ElemType) m_rpi.inc, (ElemType) m_rpi.max,
+                                                        (ElemType) m_rpi.dec, (ElemType) m_rpi.min, needAveMultiplier);
         Matrix<ElemType>::ScaleAndAdd((ElemType)(-learnRatePerSample / aveMultiplier), gradientValues, functionValues);
     }
 
@@ -2472,9 +2465,12 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
     m_batchNormalizationBlendTimeConstant = configSGD(L"batchNormalizationBlendTimeConstant", ConfigRecordType::Array(doubleargvector(vector<double>{0})));
 
     GradientsUpdateType gradUpdateType = ParseGradUpdateType(configSGD(L"gradUpdateType", L"None"));
-    double gaussianNoiseInjecStd = configSGD(L"gaussianNoiseInjectStd", 0.0);
-    m_gradType.mType = gradUpdateType;
-    m_gradType.mGaussianNoiseInjectStd = (float) gaussianNoiseInjecStd;
+    m_gradType.type = gradUpdateType;
+    m_gradType.gaussianNoiseInjectStd = (float)configSGD(L"gaussianNoiseInjectStd", 0.0);
+
+    // parameters for FSAdaGrad
+    m_gradType.varianceTimeConstant = configSGD(L"varianceTimeConstant", 2 * 3600 * 100); // default originates from 2h of speech
+    m_gradType.targetAdagradAvDenom = configSGD(L"fsAdagradTargetAvDenom", 0.0025);         // default derived from speech data
 
     // extract RMSProp parameters from config, if they exist. Default to reasonable values.
     m_rpi.dec = configSGD(L"rms_wgt_dec", 0.75);
@@ -2487,14 +2483,9 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
     m_L2RegWeight = configSGD(L"L2RegWeight", 0.0);
     m_L1RegWeight = configSGD(L"L1RegWeight", 0.0);
 
-    // for backward support. future setup should use gradUpdateType=AdaGrad, instead of
-    // useAdagrad=true
-    bool useAdagrad = configSGD(L"useAdagrad", false);
-    if (useAdagrad)
-    {
-        gradUpdateType = GradientsUpdateType::AdaGrad;
-        m_gradType.mType = gradUpdateType;
-    }
+    // for backward support. future setups should use gradUpdateType='AdaGrad', instead of useAdagrad=true
+    if (configSGD(L"useAdagrad", false))
+        m_gradType.type = GradientsUpdateType::AdaGrad;
 
     m_adaptationRegType = ParseAdaptationRegType(configSGD(L"adaptationRegType", L"None"));
     m_adaptationRegWeight = configSGD(L"adaptationRegWeight", 0.0);

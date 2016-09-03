@@ -245,9 +245,6 @@ void LearnableParameter<ElemType>::InitRandom(const wstring& type,
         LogicError("InitRandom: Invalid initialization type '%ls'", type.c_str());
 
     // the random seed offset is set via the "randomSeedOffset" parameter in config
-    fprintf(stderr, "%ls: Initializing Parameter[%s] <- %ls(seed=%d, init dims=[%d x %d], range=%f*%f, onCPU=%s).\n",
-            NodeDescription().c_str(), string(GetSampleLayout()).c_str(), m_initString.c_str(),
-            (int)m_randomSeed, (int)fanOut, (int)fanIn, range, m_initValueScale, m_initOnCPUOnly ? "true" : "false");
     range *= initValueScale;
     if (initOnCPUOnly)
         Value().TransferToDeviceIfNotThere(CPUDEVICE, true);
@@ -255,8 +252,15 @@ void LearnableParameter<ElemType>::InitRandom(const wstring& type,
         Value().SetUniformRandomValue(-range, range, randomSeed);
     else
         Value().SetGaussianRandomValue(0, range, randomSeed);
+    fprintf(stderr, "%ls: Initializing Parameter[%s] <- %ls(seed=%d, init dims=[%d x %d], range=%f*%f, onCPU=%s)",
+            NodeDescription().c_str(), string(GetSampleLayout()).c_str(), m_initString.c_str(),
+            (int)m_randomSeed, (int)fanOut, (int)fanIn, range, m_initValueScale, m_initOnCPUOnly ? "true" : "false");
     if (initOnCPUOnly)
+    {
+        fprintf(stderr, " { %.8f, ... }\n", Value()(0, 0));
         Value().TransferToDeviceIfNotThere(m_deviceId, true);
+    }
+    fprintf(stderr, ".\n");
 }
 
 // Initialize with bilinear interpolation coefficients (useful for deconvolution layer).

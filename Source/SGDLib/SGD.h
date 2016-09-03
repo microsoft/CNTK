@@ -84,14 +84,13 @@ struct RMSPropInfo
 
 struct GradientUpdateInfo
 {
-    GradientsUpdateType mType;
-    float mGaussianNoiseInjectStd;
+    GradientsUpdateType type = GradientsUpdateType::AdaGrad;
+    float gaussianNoiseInjectStd = 0.0075f;
 
-    GradientUpdateInfo()
-    {
-        mType = GradientsUpdateType::AdaGrad;
-        mGaussianNoiseInjectStd = 0.0075f;
-    }
+    // for FSAdaGrad:
+    // Note: Currently these cannot be parameterized externally. Once they can, rethink they names!
+    double targetAdagradAvDenom = 0.0025; // 1/400 magic constant
+    size_t varianceTimeConstant = 2 * 3600 * 100;
 };
 
 // ---------------------------------------------------------------------------
@@ -525,11 +524,11 @@ protected:
 
     GradientsUpdateType GradUpdateType() const
     {
-        return m_gradType.mType;
+        return m_gradType.type;
     }
     double GradientUpdateNoiseStd() const
     {
-        return m_gradType.mGaussianNoiseInjectStd;
+        return m_gradType.gaussianNoiseInjectStd;
     }
 
 public:
