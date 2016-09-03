@@ -1,6 +1,6 @@
-# not support yet for python 2.7
-# recommended python 3 version is 3.4
-# platform 64 bit
+# no support yet for python 2.7
+# recommended python version is 3.4
+# supported platform: 64 bit
 
 # Set up compiler and its variant
 
