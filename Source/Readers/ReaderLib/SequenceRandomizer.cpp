@@ -284,7 +284,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (m_verbosity)
                 fprintf(stderr, "SequenceRandomizer::Seek(): starting over \n");
 
-            Reset(sweep + 1);
+            Reset(sweep);
         }
         else if (sweepSampleOffset < randomizedWindowEndInSamples)
         {
