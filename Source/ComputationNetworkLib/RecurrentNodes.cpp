@@ -34,18 +34,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType, int direction>
-    /*virtual*/ void DelayedValueNodeBase<ElemType,direction>::Save(File& fstream) const /*override*/
+    /*virtual*/ void DelayedValueNodeBase<ElemType,direction>::CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const /*override*/
     {
-        Base::Save(fstream);
-
-        fstream << m_timeStep;
-#if CURRENT_CNTK_MODEL_VERSION > CNTK_MODEL_VERSION_3
-        m_sampleLayout.Save(fstream);
-#else
-        fstream << GetSampleLayout().GetNumElements() << (size_t)0; // used to be (rows,cols); no need since inferred in Validate(), and wrong for non-matrix tensors
-#endif
-
-        fstream << m_initialActivationValue;
+        Base::CopyTo(nodeP, newName, flags);
+        if (flags & CopyNodeFlags::copyNodeValue)
+        {
+            auto node = dynamic_pointer_cast<DelayedValueNodeBase<ElemType, direction /*, SequenceStart_or_End*/>>(nodeP);
+            node->m_timeStep = m_timeStep;
+            node->m_initialActivationValue = m_initialActivationValue;
+            node->m_delayedValue.SetValue(m_delayedValue);
+            if (m_delayedActivationMBLayout)
+                (node->m_delayedActivationMBLayout = make_shared<MBLayout>())->CopyFrom(m_delayedActivationMBLayout);
+            else
+                node->m_delayedActivationMBLayout = nullptr;
+        }
     }
 
     template<class ElemType, int direction>
@@ -78,84 +80,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType, int direction>
-    /*virtual*/ void DelayedValueNodeBase<ElemType,direction>::/*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) /*override*/
+    /*virtual*/ void DelayedValueNodeBase<ElemType,direction>::Save(File& fstream) const /*override*/
     {
-        // move the target matrix to the target device, since below it is accessed as slices which cannot move
-        // TODO: change below accesses to TensorView, then this is no longer needed.
-        Input(0)->Gradient().TransferToDeviceIfNotThere(m_deviceId, /*isBeingMoved=*/ true);
+        Base::Save(fstream);
 
-        assert(inputIndex == 0);
-        inputIndex;
+        fstream << m_timeStep;
+#if CURRENT_CNTK_MODEL_VERSION > CNTK_MODEL_VERSION_3
+        m_sampleLayout.Save(fstream);
+#else
+        fstream << GetSampleLayout().GetNumElements() << (size_t)0; // used to be (rows,cols); no need since inferred in Validate(), and wrong for non-matrix tensors
+#endif
 
-        // special case: DelayedValueNodes may be used outside of loops
-        // TODO: this should be a bulk operation; this implementation is a quick hack
-        int dir = direction; // (this avoids a 'conditional expression is constant' warning)
-        if (fr.IsAllFrames())
-        {
-            // recursive call to ourselves
-            FrameRangeIteration range(m_pMBLayout, -dir);
-            for (auto t = range.rbegin(); t != range.rend(); t++) // note: reverse iterator
-                BackpropTo(inputIndex, t);
-            return;
-        }
-
-        // we backpropagated into the delayed frame
-        FrameRange frDelayed = fr.WithTimeOffset(direction * m_timeStep);
-
-        // if delayed input is within valid time range then add its gradient
-        size_t t = fr.t();
-        int t_delayed = (int) (t + direction * m_timeStep); // this might end up outside the current window
-        if (t_delayed >= 0 && t_delayed < GetNumTimeSteps())
-        {
-            // Boundary frames must not propagate. Gaps must also not propagate.
-            // if there is a boundary in this frame, we treat each stream separately; otherwise we do all in one go
-            // assert(m_pShiftedMBLayout->Is(t, SequenceStart_or_End | MinibatchPackingFlags::NoFeature) ==
-            //       m_pMBLayout->IsGap(fr) || m_pMBLayout->IsBeyondStartOrEnd(frDelayed));
-            if (m_pMBLayout->IsGap(fr) || m_pMBLayout->IsBeyondStartOrEnd(frDelayed)) // true if at least one parallel sequence has a boundary or gap
-            {
-                size_t mNbr = m_pMBLayout->GetNumParallelSequences();
-                for (size_t id = 0; id < mNbr; id++)
-                {
-                    // assert(m_pShiftedMBLayout->Is(id, t, SequenceStart_or_End | MinibatchPackingFlags::NoFeature) ==
-                    //       m_pMBLayout->IsGap(fr.Sequence(id)) || m_pMBLayout->IsBeyondStartOrEnd(frDelayed.Sequence(id)));
-                    if (!(m_pMBLayout->IsGap(fr.Sequence(id)) || m_pMBLayout->IsBeyondStartOrEnd(frDelayed.Sequence(id)))) // don't propagate boundary frames or gaps
-                    {
-                        Matrix<ElemType> frm = GradientFor(fr.Sequence(id));
-                        // TODO: use delayed FrameRange here as well
-                        // Matrix<ElemType> to = Input(0)->GradientFor(FrameRange(m_pMBLayout, t_delayed).Sequence(id));
-                        Matrix<ElemType> to = Input(0)->GradientFor(frDelayed.Sequence(id));
-                        to += frm;
-                    }
-                }
-            }
-            else // operate on entire time step in one go (over all parallel sequences)
-            {
-                Matrix<ElemType> frm = GradientFor(fr);
-                // TODO: use something like fr.WithDelay(t) instead, instead of recreating FrameRanges
-                // Matrix<ElemType> to = Input(0)->GradientFor(FrameRange(m_pMBLayout, t_delayed));
-                Matrix<ElemType> to = Input(0)->GradientFor(frDelayed);
-                to += frm;
-            }
-        }
-    }
-
-    template<class ElemType, int direction>
-    /*virtual*/ void DelayedValueNodeBase<ElemType,direction>::EndForwardProp() /*override*/ // called after last iteration step of ForwardProp()
-    {
-        // In truncated BPTT, we carry over left-to-right state across minibatches.
-        // It is kept in m_delayedValue, m_delayedActivationMBLayout.
-        // This could be optimized as follows:
-        //  - only keep the required number of frames (m_timeStep)
-        //  - we don't need to keep anything in full-sequence mode
-        //  - we don't need to keep anything if all sequences are closed (sentence end)
-        //    This condition includes full-sequence mode.
-        // TODO: Can we optimize this and only copy if there is a sequence spanning across the end of the MB? And add a check to BeginForwardProp() to make sure we got one if there is a boundary at the start?
-        m_delayedValue.SetValue(Input(0)->Value());
-        if (!m_delayedActivationMBLayout)
-            m_delayedActivationMBLayout = make_shared<MBLayout>();
-        m_delayedActivationMBLayout->CopyFrom(m_pMBLayout);
-
-        Base::EndForwardProp();
+        fstream << m_initialActivationValue;
     }
 
     // This function assumes BeginForwardProp/EndForwardProp() to be called before/after the iteration loop.
@@ -259,26 +195,90 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType, int direction>
-    /*virtual*/ void DelayedValueNodeBase<ElemType,direction>::/*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) /*override*/
+    /*virtual*/ void DelayedValueNodeBase<ElemType,direction>::EndForwardProp() /*override*/ // called after last iteration step of ForwardProp()
     {
-        ValidateUnaryMap(isFinalValidationPass);
+        // In truncated BPTT, we carry over left-to-right state across minibatches.
+        // It is kept in m_delayedValue, m_delayedActivationMBLayout.
+        // This could be optimized as follows:
+        //  - only keep the required number of frames (m_timeStep)
+        //  - we don't need to keep anything in full-sequence mode
+        //  - we don't need to keep anything if all sequences are closed (sentence end)
+        //    This condition includes full-sequence mode.
+        // TODO: Can we optimize this and only copy if there is a sequence spanning across the end of the MB? And add a check to BeginForwardProp() to make sure we got one if there is a boundary at the start?
+        m_delayedValue.SetValue(Input(0)->Value());
+        if (!m_delayedActivationMBLayout)
+            m_delayedActivationMBLayout = make_shared<MBLayout>();
+        m_delayedActivationMBLayout->CopyFrom(m_pMBLayout);
+
+        Base::EndForwardProp();
     }
 
     template<class ElemType, int direction>
-    /*virtual*/ void DelayedValueNodeBase<ElemType,direction>::CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const /*override*/
+    /*virtual*/ void DelayedValueNodeBase<ElemType,direction>::/*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) /*override*/
     {
-        Base::CopyTo(nodeP, newName, flags);
-        if (flags & CopyNodeFlags::copyNodeValue)
+        // move the target matrix to the target device, since below it is accessed as slices which cannot move
+        // TODO: change below accesses to TensorView, then this is no longer needed.
+        Input(0)->Gradient().TransferToDeviceIfNotThere(m_deviceId, /*isBeingMoved=*/ true);
+
+        assert(inputIndex == 0);
+        inputIndex;
+
+        // special case: DelayedValueNodes may be used outside of loops
+        // TODO: this should be a bulk operation; this implementation is a quick hack
+        int dir = direction; // (this avoids a 'conditional expression is constant' warning)
+        if (fr.IsAllFrames())
         {
-            auto node = dynamic_pointer_cast<DelayedValueNodeBase<ElemType, direction /*, SequenceStart_or_End*/>>(nodeP);
-            node->m_timeStep = m_timeStep;
-            node->m_initialActivationValue = m_initialActivationValue;
-            node->m_delayedValue.SetValue(m_delayedValue);
-            if (m_delayedActivationMBLayout)
-                (node->m_delayedActivationMBLayout = make_shared<MBLayout>())->CopyFrom(m_delayedActivationMBLayout);
-            else
-                node->m_delayedActivationMBLayout = nullptr;
+            // recursive call to ourselves
+            FrameRangeIteration range(m_pMBLayout, -dir);
+            for (auto t = range.rbegin(); t != range.rend(); t++) // note: reverse iterator
+                BackpropTo(inputIndex, t);
+            return;
         }
+
+        // we backpropagated into the delayed frame
+        FrameRange frDelayed = fr.WithTimeOffset(direction * m_timeStep);
+
+        // if delayed input is within valid time range then add its gradient
+        size_t t = fr.t();
+        int t_delayed = (int) (t + direction * m_timeStep); // this might end up outside the current window
+        if (t_delayed >= 0 && t_delayed < GetNumTimeSteps())
+        {
+            // Boundary frames must not propagate. Gaps must also not propagate.
+            // if there is a boundary in this frame, we treat each stream separately; otherwise we do all in one go
+            // assert(m_pShiftedMBLayout->Is(t, SequenceStart_or_End | MinibatchPackingFlags::NoFeature) ==
+            //       m_pMBLayout->IsGap(fr) || m_pMBLayout->IsBeyondStartOrEnd(frDelayed));
+            if (m_pMBLayout->IsGap(fr) || m_pMBLayout->IsBeyondStartOrEnd(frDelayed)) // true if at least one parallel sequence has a boundary or gap
+            {
+                size_t mNbr = m_pMBLayout->GetNumParallelSequences();
+                for (size_t id = 0; id < mNbr; id++)
+                {
+                    // assert(m_pShiftedMBLayout->Is(id, t, SequenceStart_or_End | MinibatchPackingFlags::NoFeature) ==
+                    //       m_pMBLayout->IsGap(fr.Sequence(id)) || m_pMBLayout->IsBeyondStartOrEnd(frDelayed.Sequence(id)));
+                    if (!(m_pMBLayout->IsGap(fr.Sequence(id)) || m_pMBLayout->IsBeyondStartOrEnd(frDelayed.Sequence(id)))) // don't propagate boundary frames or gaps
+                    {
+                        Matrix<ElemType> frm = GradientFor(fr.Sequence(id));
+                        // TODO: use delayed FrameRange here as well
+                        // Matrix<ElemType> to = Input(0)->GradientFor(FrameRange(m_pMBLayout, t_delayed).Sequence(id));
+                        Matrix<ElemType> to = Input(0)->GradientFor(frDelayed.Sequence(id));
+                        to += frm;
+                    }
+                }
+            }
+            else // operate on entire time step in one go (over all parallel sequences)
+            {
+                Matrix<ElemType> frm = GradientFor(fr);
+                // TODO: use something like fr.WithDelay(t) instead, instead of recreating FrameRanges
+                // Matrix<ElemType> to = Input(0)->GradientFor(FrameRange(m_pMBLayout, t_delayed));
+                Matrix<ElemType> to = Input(0)->GradientFor(frDelayed);
+                to += frm;
+            }
+        }
+    }
+
+    template<class ElemType, int direction>
+    /*virtual*/ void DelayedValueNodeBase<ElemType,direction>::/*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) /*override*/
+    {
+        ValidateUnaryMap(isFinalValidationPass);
     }
 
     template<class ElemType, int direction>
