@@ -12,7 +12,7 @@ namespace CNTK
     {
         size_t NewUniqueId()
         {
-            static std::atomic<unsigned long long> s_nextUniqueId = 0;
+            static std::atomic<unsigned long long> s_nextUniqueId(0);
             return s_nextUniqueId++;
         }
     }
