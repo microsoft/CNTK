@@ -220,7 +220,7 @@ void DoCommands(const ConfigParameters& config, const shared_ptr<MPIWrapper>& mp
         // get the configuration parameters that match the command
         ConfigParameters commandParams(config(command[i]));
         ConfigArray action = commandParams("action", "train");
-        int traceLevel = commandParams("traceLevel");
+        int traceLevel = commandParams("traceLevel", "0");
 
         if (progressTracing && ((mpi == nullptr) || mpi->IsMainNode()))
         {
@@ -670,21 +670,29 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
 
     if (logpath != L"")
     {
-#if 0   // this was done before 1.8; delete if noone needs it anymore
-        for (int i = 0; i < command.size(); i++)
+#if 1   // keep the ability to do it how it was done before 1.8; delete if noone needs it anymore
+        let useOldWay = ProgressTracing::GetTimestampingFlag(); // enable it when running in our server farm
+        if (useOldWay)
         {
-            logpath += L"_";
-            logpath += (wstring) command[i];
+            for (int i = 0; i < command.size(); i++) // append all 'command' entries
+            {
+                logpath += L"_";
+                logpath += (wstring)command[i];
+            }
+            logpath += L".log"; // append .log
         }
-        logpath += L".log";
-#endif
 
-        if (paralleltrain && mpi->CurrentNodeRank() != 0)
+        if (paralleltrain && useOldWay)
         {
             std::wostringstream oss;
             oss << mpi->CurrentNodeRank();
-            logpath += L".rank" + oss.str();
+            logpath += L"rank" + oss.str();
         }
+        else
+#endif
+        // for MPI workers except main, append .rankN
+        if (paralleltrain && mpi->CurrentNodeRank() != 0)
+            logpath += msra::strfun::wstrprintf(L".rank%d", mpi->CurrentNodeRank());
         RedirectStdErr(logpath);
         if (traceLevel == 0)
             PrintBanner(argc, argv, timestamp); // repeat simple banner into log file

@@ -150,7 +150,8 @@ LearnableParameter<ElemType>::LearnableParameter(const ScriptableObjects::IConfi
     // This will be repeated if the matrix gets resized due to dimension inference.
     LazyInitParameters();
 
-    if (configp->Find(L"traceLevel") && (int)configp->Get(L"traceLevel") > 0 && !m_initString.empty())
+    auto traceLevelParam = configp->Find(L"traceLevel");
+    if (traceLevelParam && (int)*traceLevelParam > 0 && !m_initString.empty())
         fprintf(stderr, "%ls: Initializating Parameter[%s] as %ls later when dimensions are fully known.\n", NodeDescription().c_str(), string(GetSampleLayout()).c_str(), m_initString.c_str());
 }
 

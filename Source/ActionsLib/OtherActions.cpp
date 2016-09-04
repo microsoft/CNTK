@@ -49,7 +49,7 @@ void DoCreateLabelMap(const ConfigParameters& config)
     ConfigParameters readerConfig(configSection("reader"));
     readerConfig.Insert("allowMapCreation", "true");
     size_t minibatchSize = config(L"minibatchSize", "2048");
-    int traceLevel = config(L"traceLevel", "0");
+    int traceLevel = config(L"traceLevel", 0);
     std::vector<std::wstring> featureNames;
     std::vector<std::wstring> labelNames;
     GetFileConfigNames(readerConfig, featureNames, labelNames);

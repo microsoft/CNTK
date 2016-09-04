@@ -85,7 +85,7 @@ bool TryGetNetworkFactory(const ConfigRecordType& config, function<ComputationNe
         // For back-compat, [ ] is allowed and means the same as { }
         if (sourceOfNetwork[0] == '{' || sourceOfNetwork[0] == '[') // if { } form then we turn it into ComputationNetwork by constructing a ComputationNetwork from it
             sourceOfNetwork = L"new ComputationNetwork " + sourceOfNetwork;
-        let traceLevel = config(L"traceLevel", (int)0);
+        int traceLevel = config(L"traceLevel", 0);
         let sourceOfBS = msra::strfun::wstrprintf(L"include \'cntk.core.bs\'\n" // include our core lib. Note: Using lowercase here to match the Linux name of the CNTK exe.
             L"deviceId = %d\n"            // deviceId as passed in
             L"traceLevel = %d\n"
