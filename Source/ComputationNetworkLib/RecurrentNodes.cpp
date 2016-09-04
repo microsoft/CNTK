@@ -9,6 +9,7 @@
 #include "Sequences.h"
 #include "Matrix.h"
 #include "TensorShape.h"
+#include "RecurrentNodes.h"
 
 #include <unordered_set>
 #include <map>
@@ -22,80 +23,8 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-// -----------------------------------------------------------------------
-// DelayedValueNodeState -- helper class for exporting/importing state from/to DelayedValueNodes.
-// This is used for sub-minibatching in case of truncated BPTT.
-// -----------------------------------------------------------------------
-
-template <class ElemType>
-class DelayedValueNodeState : public INodeState
-{
-public:
-    DelayedValueNodeState(int deviceID)
-        : m_cachedActivity((size_t) 0, (size_t) 0, deviceID),
-          m_delayedActivationMBLayout(nullptr),
-          m_isEmpty(true)
-    {
-    }
-    void CacheDelayedMBLayout(const MBLayoutPtr& pMBLayout)
-    {
-        m_delayedActivationMBLayout = make_shared<MBLayout>();
-        m_delayedActivationMBLayout->CopyFrom(pMBLayout);
-    }
-    void CacheState(const Matrix<ElemType>& cachedActivity)
-    {
-        m_cachedActivity.SetValue(cachedActivity);
-        m_isEmpty = false;
-    }
-    void ExportDelayedMBLayout(MBLayoutPtr& pMBLayout)
-    {
-        pMBLayout->CopyFrom(m_delayedActivationMBLayout);
-    }
-    bool IsEmpty()
-    {
-        return m_isEmpty;
-    }
-    const Matrix<ElemType>& ExportCachedActivity()
-    {
-        return m_cachedActivity;
-    }
-    ~DelayedValueNodeState()
-    {
-    }
-
-protected:
-    Matrix<ElemType> m_cachedActivity; // 1 column per parallel sequence
-    // MBLayoutPtr         m_shiftedMBLayout;
-    // Currently, we only support saving state for m_timeStep == 1
-    // there is no need for this m_shiftedMBLayout if m_timeStep == 1
-    MBLayoutPtr m_delayedActivationMBLayout;
-    bool m_isEmpty; // in some case
-                    // (e.g., at the boundary of sentence end or begin/full utterance mode), we don't need to store state (but we do need to need know m_delayedActivationMBLayout)
-};
-
-// -----------------------------------------------------------------------
-// DelayedValueNodeBase (input) -- abstract base class for PastValueNode and FutureValueNode to hold all shared code
-// The two differ in the step direction, some loop directions, and sequence-boundary flags.
-// This is an old node which will be replaced by ShiftNode (with Past/FutureValueNode being emulated).
-//
-// This is planned:
-//  - carrying over state at sentence boundaries from other nodes (for s2s)
-//  - ranges of neighbor frames as a secondary tensor dimension (i.e. can be used to implement a rolling window)
-//  - full support/efficiency of non-recurrent use (in which case the range can be from negative to positive, e.g. a symmetric rolling window)
-//  - denoting which tensor dimension to loop over (this may not be completed, but I will plant a seed)
-//  - support for Yongqiang's sub-minibatching with truncated BPTT (export/import state)
-//  - more efficient storage of carried-over state (only store the needed frames, not a full copy of the previous MB as currently; which will on the other hand also allow windows that reach back beyond a minibatch)
-// -----------------------------------------------------------------------
-
-// TODO: 'direction' is really too general. signOfTimeOffset?
-template <class ElemType, int direction /*-1 for Past/left-to-right or +1 for Future/right-to-left*/ /*, MinibatchPackingFlags SequenceStart_or_End/*-Start or -End*/>
-class DelayedValueNodeBase : public ComputationNode<ElemType>, public IRecurrentNode, public ILateAttachingNode, public IStatefulNode, public NumInputs<1>
-{
-    typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
-    typedef std::shared_ptr<DelayedValueNodeState<ElemType>> DelayedNodeStatePtr;
-
-private:
-    void Init(const TensorShape& sampleLayout, ElemType initialActivationValue)
+    template<class ElemType, int direction>
+    void DelayedValueNodeBase<ElemType,direction>::Init(const TensorShape& sampleLayout, ElemType initialActivationValue)
     {
         m_initialActivationValue = initialActivationValue;
         m_timeStep = 1;
@@ -104,42 +33,8 @@ private:
         m_value->SetValue(m_initialActivationValue); // is this needed?
     }
 
-protected:
-    DelayedValueNodeBase(DEVICEID_TYPE deviceId, const wstring& name)
-        : Base(deviceId, name),
-          m_delayedValue(deviceId)
-    {
-        Init(TensorShape(), (ElemType) DEFAULT_HIDDEN_ACTIVATION);
-    }
-    DelayedValueNodeBase(DEVICEID_TYPE deviceId, const wstring& name, ElemType initialActivationValue, const TensorShape& sampleLayout, size_t timeStep)
-        : Base(deviceId, name),
-          m_delayedValue(deviceId)
-    {
-        Init(sampleLayout, initialActivationValue);
-        m_timeStep = (int) timeStep; // TODO: pass this to Init() instead as well
-    }
-    DelayedValueNodeBase(const ScriptableObjects::IConfigRecordPtr configp)
-        : DelayedValueNodeBase(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"defaultHiddenActivation"), configp->Get(L"shape"), configp->Get(L"timeStep"))
-    {
-        // We do NOT attach the inputs, as we cannot resolve them without causing a circular reference.
-        // Instead, we capture them in a lambda, which will be called by ComputationNetwork during the build process through LateAttachInputs() below.
-        // This is a contract between ComputationNetwork and this specific node type.
-        m_attachInputsFn = [this, configp]() // This is the lambda to complete the process. Note that config captured as a shared_ptr.
-        {
-            AttachInputs(GetInputsFromConfig(configp)); // this is executed by network builder while iterating the nodes
-        };
-    }
-    virtual void /*ILateAttachingNode::*/ LateAttachInputs() override final
-    {
-        m_attachInputsFn();
-        m_attachInputsFn = []()
-        {
-            LogicError("LateAttachingNode::AttachInputs: must only be called once");
-        };
-    }
-
-public:
-    void Save(File& fstream) const
+    template<class ElemType, int direction>
+    /*virtual*/ void DelayedValueNodeBase<ElemType,direction>::Save(File& fstream) const /*override*/
     {
         Base::Save(fstream);
 
@@ -153,7 +48,8 @@ public:
         fstream << m_initialActivationValue;
     }
 
-    virtual void Load(File& fstream, size_t modelVersion) override
+    template<class ElemType, int direction>
+    /*virtual*/ void DelayedValueNodeBase<ElemType,direction>::Load(File& fstream, size_t modelVersion) /*override*/
     {
         // the node has already been initialized e.g. w.r.t. direction
         Base::Load(fstream, modelVersion);
@@ -181,7 +77,8 @@ public:
             fstream >> m_initialActivationValue;
     }
 
-    virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
+    template<class ElemType, int direction>
+    /*virtual*/ void DelayedValueNodeBase<ElemType,direction>::/*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) /*override*/
     {
         // move the target matrix to the target device, since below it is accessed as slices which cannot move
         // TODO: change below accesses to TensorView, then this is no longer needed.
@@ -242,10 +139,8 @@ public:
         }
     }
 
-    virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
-    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
-
-    virtual void EndForwardProp() override // called after last iteration step of ForwardProp()
+    template<class ElemType, int direction>
+    /*virtual*/ void DelayedValueNodeBase<ElemType,direction>::EndForwardProp() /*override*/ // called after last iteration step of ForwardProp()
     {
         // In truncated BPTT, we carry over left-to-right state across minibatches.
         // It is kept in m_delayedValue, m_delayedActivationMBLayout.
@@ -265,7 +160,8 @@ public:
 
     // This function assumes BeginForwardProp/EndForwardProp() to be called before/after the iteration loop.
     // TODO: In the future, there may be value for one more way of handling the boundary condition: Fill as 'NoInput'. Then we can use this to implement rolling windows (albeit inefficiently). Would require to unshare the layout.
-    virtual void ForwardProp(const FrameRange& fr) override
+    template<class ElemType, int direction>
+    /*virtual*/ void DelayedValueNodeBase<ElemType,direction>::ForwardProp(const FrameRange& fr) /*override*/
     {
         assert(m_pMBLayout);
 
@@ -362,17 +258,14 @@ public:
         }
     }
 
-    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
+    template<class ElemType, int direction>
+    /*virtual*/ void DelayedValueNodeBase<ElemType,direction>::/*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) /*override*/
     {
         ValidateUnaryMap(isFinalValidationPass);
     }
 
-    virtual int /*IRecurrentNode::*/ GetRecurrenceSteppingDirection() const override
-    {
-        return -direction;
-    }
-
-    virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
+    template<class ElemType, int direction>
+    /*virtual*/ void DelayedValueNodeBase<ElemType,direction>::CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const /*override*/
     {
         Base::CopyTo(nodeP, newName, flags);
         if (flags & CopyNodeFlags::copyNodeValue)
@@ -388,7 +281,8 @@ public:
         }
     }
 
-    virtual NodeStatePtr /*IStatefulNode::*/ ExportState() override
+    template<class ElemType, int direction>
+    /*virtual*/ NodeStatePtr DelayedValueNodeBase<ElemType, direction>::/*IStatefulNode::*/ ExportState() /*override*/
     {
         NodeStatePtr pExportedState;
         size_t nT = m_pMBLayout->GetNumTimeSteps();
@@ -438,7 +332,8 @@ public:
         return pExportedState;
     }
 
-    virtual void /*IStatefulNode::*/ ImportState(const NodeStatePtr& pImportedState) override
+    template<class ElemType, int direction>
+    /*virtual*/ void DelayedValueNodeBase<ElemType,direction>::/*IStatefulNode::*/ ImportState(const NodeStatePtr& pImportedState) /*override*/
     {
         DelayedNodeStatePtr pState = dynamic_pointer_cast<DelayedValueNodeState<ElemType>>(pImportedState);
 
@@ -463,97 +358,6 @@ public:
         else
             LogicError("Unrecognized direction in DelayedValueNodeBase");
     }
-
-    int TimeStep() const { return m_timeStep; }
-    ElemType InitialActivationValue() const { return m_initialActivationValue; }
-
-protected:
-    ElemType m_initialActivationValue;       // starting value for hidden activation vector at boundary
-    Matrix<ElemType> m_delayedValue;         // saves the activation of the previous step that this node points to
-    MBLayoutPtr m_delayedActivationMBLayout; // layout for m_delayedValue
-    int m_timeStep;                          // delay in frames (typ. 1)
-    function<void()> m_attachInputsFn;       // for late expansion of inputs (scripting)
-};
-
-#define UsingDelayedValueNodeMembers        \
-    UsingComputationNodeMembersBoilerplate; \
-    using Base::m_initialActivationValue;   \
-    using Base::m_delayedValue;             \
-    using Base::m_timeStep;
-
-// -----------------------------------------------------------------------
-// PastValueNode (input) -- delay node
-// TODO: Can this just be a typedef?
-// -----------------------------------------------------------------------
-
-template <class ElemType>
-class PastValueNode : public DelayedValueNodeBase<ElemType, -1 /*, MinibatchPackingFlags::SequenceStart*/>
-{
-    typedef DelayedValueNodeBase<ElemType, -1 /*, MinibatchPackingFlags::SequenceStart*/> Base;
-    UsingDelayedValueNodeMembers;
-    static const std::wstring TypeName()
-    {
-        return L"PastValue";
-    }
-
-public:
-    PastValueNode(DEVICEID_TYPE deviceId, const wstring& name)
-        : Base(deviceId, name)
-    {
-    }
-    PastValueNode(DEVICEID_TYPE deviceId, const wstring& name, ElemType initialActivationValue, const TensorShape& sampleLayout, size_t timeStep)
-        : Base(deviceId, name, initialActivationValue, sampleLayout, timeStep)
-    {
-    }
-    PastValueNode(DEVICEID_TYPE deviceId, const wstring& name, ElemType initialActivationValue, size_t numRows, size_t timeStep)
-        : PastValueNode(deviceId, name, initialActivationValue, TensorShape(numRows), timeStep)
-    {
-    }
-    PastValueNode(const ScriptableObjects::IConfigRecordPtr configp)
-        : Base(configp)
-    {
-    }
-};
-
-template class PastValueNode<float>;
-template class PastValueNode<double>;
-
-// -----------------------------------------------------------------------
-// FutureValueNode (input) -- delay node in future direction
-// -----------------------------------------------------------------------
-
-// get value from future (used in the bi-directional models)
-template <class ElemType>
-class FutureValueNode : public DelayedValueNodeBase<ElemType, +1 /*, MinibatchPackingFlags::SequenceEnd*/>
-{
-    typedef DelayedValueNodeBase<ElemType, +1 /*, MinibatchPackingFlags::SequenceEnd*/> Base;
-    UsingDelayedValueNodeMembers;
-    static const std::wstring TypeName()
-    {
-        return L"FutureValue";
-    }
-
-public:
-    FutureValueNode(DEVICEID_TYPE deviceId, const wstring& name)
-        : Base(deviceId, name)
-    {
-    }
-    FutureValueNode(DEVICEID_TYPE deviceId, const wstring& name, ElemType initialActivationValue, const TensorShape& sampleLayout, size_t timeStep)
-        : Base(deviceId, name, initialActivationValue, sampleLayout, timeStep)
-    {
-    }
-    FutureValueNode(DEVICEID_TYPE deviceId, const wstring& name, ElemType initialActivationValue, size_t numRows, size_t timeStep)
-        : FutureValueNode(deviceId, name, initialActivationValue, TensorShape(numRows), timeStep)
-    {
-    }
-    FutureValueNode(const ScriptableObjects::IConfigRecordPtr configp)
-        : Base(configp)
-    {
-    }
-};
-
-template class FutureValueNode<float>;
-template class FutureValueNode<double>;
 
 #ifdef COMING_SOON
 
