@@ -462,6 +462,7 @@ namespace CNTK
     class CompositeFunction final : public Function
     {
         friend class Function;
+        friend class Trainer;
         friend class CompositeMinibatchSource;
 
         template <typename T, typename ...CtorArgTypes>

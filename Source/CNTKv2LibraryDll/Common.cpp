@@ -8,6 +8,15 @@
 
 namespace CNTK
 {
+    namespace Internal
+    {
+        size_t NewUniqueId()
+        {
+            static std::atomic<unsigned long long> s_nextUniqueId = 0;
+            return s_nextUniqueId++;
+        }
+    }
+
     /*static*/ std::atomic<bool> DeviceDescriptor::s_defaultDeviceFrozen(false);
     /*static*/ std::shared_ptr<DeviceDescriptor> DeviceDescriptor::s_defaultDevice(new DeviceDescriptor(DeviceDescriptor::GPUDevice(0)));
 

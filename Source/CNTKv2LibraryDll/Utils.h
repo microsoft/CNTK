@@ -338,4 +338,45 @@ namespace CNTK
     {
         return std::pow(momentumPerSample, minibatchSize);
     }
+
+    template <typename SourceElementType, typename TargetElementType>
+    inline TargetElementType* Copy(const SourceElementType* src, size_t srcSize)
+    {
+        // Cast to double
+        TargetElementType* castValue = new TargetElementType[srcSize];
+        for (size_t i = 0; i < srcSize; ++i)
+            castValue[i] = (TargetElementType)src[i];
+
+        return castValue;
+    }
+
+    inline NDArrayViewPtr CloneAsDataType(const NDArrayViewPtr& source, DataType targetDataType, bool readOnly)
+    {
+        if (source->Device() != DeviceDescriptor::CPUDevice())
+            LogicError("CloneAsDataType currently does not support non-CPU source NDArrayView objects");
+
+        auto sourceDataType = source->GetDataType();
+        if (sourceDataType == targetDataType)
+            LogicError("CloneAsDataType: Source and target DataTypes are same");
+
+        if ((targetDataType != DataType::Float) && (targetDataType != DataType::Double))
+            LogicError("CloneAsDataType: Only Float and Double target DataTypes are supported");
+
+        NDArrayViewPtr newConstantValue;
+        auto sourceShape = source->Shape();
+        auto sourceSize = sourceShape.TotalSize();
+        if (sourceDataType == DataType::Float)
+        {
+            // Cast to double
+            double* castValue = Copy<float, double>(source->DataBuffer<float>(), sourceSize);
+            newConstantValue = MakeSharedObject<NDArrayView>(sourceShape, castValue, sourceSize, DeviceDescriptor::CPUDevice(), readOnly);
+        }
+        else
+        {
+            float* castValue = Copy<double, float>(source->DataBuffer<double>(), sourceSize);
+            newConstantValue = MakeSharedObject<NDArrayView>(sourceShape, castValue, sourceSize, DeviceDescriptor::CPUDevice(), readOnly);
+        }
+
+        return newConstantValue;
+    }
 }

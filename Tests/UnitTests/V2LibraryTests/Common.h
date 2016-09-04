@@ -59,12 +59,12 @@ inline void SaveAndReloadModel(CNTK::FunctionPtr& functionPtr, const std::vector
     if ((_wunlink(s_tempModelPath.c_str()) != 0) && (errno != ENOENT))
         std::runtime_error("Error deleting temp model file 'feedForward.net'");
 
-    std::unordered_map<std::wstring, CNTK::Variable*> inputVarNames;
+    std::unordered_map<std::wstring, CNTK::Variable*> inputVarUids;
     std::unordered_map<std::wstring, CNTK::Variable*> outputVarNames;
 
     for (auto varPtr : variables)
     {
-        auto retVal = varPtr->IsOutput() ? outputVarNames.insert({ varPtr->Owner()->Name(), varPtr }) : inputVarNames.insert({ varPtr->Name(), varPtr });
+        auto retVal = varPtr->IsOutput() ? outputVarNames.insert({ varPtr->Owner()->Name(), varPtr }) : inputVarUids.insert({ varPtr->Uid(), varPtr });
         if (!retVal.second)
             std::runtime_error("SaveAndReloadModel: Multiple variables having same name cannot be restored after save and reload");
     }
@@ -76,10 +76,10 @@ inline void SaveAndReloadModel(CNTK::FunctionPtr& functionPtr, const std::vector
          std::runtime_error("Error deleting temp model file 'feedForward.net'");
 
     auto inputs = functionPtr->Inputs();
-    for (auto inputVarInfo : inputVarNames)
+    for (auto inputVarInfo : inputVarUids)
     {
         auto newInputVar = *(std::find_if(inputs.begin(), inputs.end(), [inputVarInfo](const CNTK::Variable& var) {
-            return (var.Name() == inputVarInfo.first);
+            return (var.Uid() == inputVarInfo.first);
         }));
 
         *(inputVarInfo.second) = newInputVar;
@@ -194,43 +194,6 @@ std::pair<CNTK::FunctionPtr, CNTK::FunctionPtr> LSTMPComponentWithSelfStabilizat
     LSTMCell.first->ReplacePlaceholders({ { dh, actualDh }, { dc, actualDc } });
 
     return { LSTMCell.first, LSTMCell.second };
-}
-
-inline CNTK::MinibatchSourcePtr CreateTextMinibatchSource(const std::wstring& filePath,
-                                                          size_t featureDim,
-                                                          size_t labelDim,
-                                                          size_t epochSize,
-                                                          bool isFeatureSparse = false,
-                                                          bool isLabelSparse = false,
-                                                          const std::wstring& featureAlias = L"",
-                                                          const std::wstring& labelAlias = L"")
-{
-    CNTK::Dictionary featuresStreamConfig;
-    featuresStreamConfig[L"dim"] = featureDim;
-    featuresStreamConfig[L"format"] = isFeatureSparse ? L"sparse" : L"dense";
-    if (!featureAlias.empty())
-        featuresStreamConfig[L"alias"] = featureAlias;
-
-    CNTK::Dictionary labelsStreamConfig;
-    labelsStreamConfig[L"dim"] = labelDim;
-    labelsStreamConfig[L"format"] = isLabelSparse ? L"sparse" : L"dense";
-    if (!labelAlias.empty())
-        labelsStreamConfig[L"alias"] = labelAlias;
-
-    CNTK::Dictionary inputStreamsConfig;
-    inputStreamsConfig[L"features"] = featuresStreamConfig;
-    inputStreamsConfig[L"labels"] = labelsStreamConfig;
-
-    CNTK::Dictionary deserializerConfiguration;
-    deserializerConfiguration[L"type"] = L"CNTKTextFormatDeserializer";
-    deserializerConfiguration[L"file"] = filePath;
-    deserializerConfiguration[L"input"] = inputStreamsConfig;
-
-    CNTK::Dictionary minibatchSourceConfiguration;
-    minibatchSourceConfiguration[L"epochSize"] = epochSize;
-    minibatchSourceConfiguration[L"deserializers"] = std::vector<CNTK::DictionaryValue>({ deserializerConfiguration });
-
-    return CreateCompositeMinibatchSource(minibatchSourceConfiguration);
 }
 
 inline std::vector<size_t> GenerateSequenceLengths(size_t numSequences, size_t maxAllowedSequenceLength)

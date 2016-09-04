@@ -45,7 +45,7 @@ namespace CNTK
                     auto inputNodeInternalDynamicAxisName = node->GetMBLayout()->GetAxisName();
                     std::vector<Axis> inputVarDynamicAxes = DynamicAxesFromInternalDynamicAxisName(inputNodeInternalDynamicAxisName);
 
-                    var = Variable(varShape, isSparse, AsDataType<ElementType>(), node->GetLearningRateMultiplier() != 0, node->GetName(), inputVarDynamicAxes);
+                    var = Variable(varShape, isSparse, AsDataType<ElementType>(), node->GetLearningRateMultiplier() != 0, node->NodeName(), inputVarDynamicAxes, node->NodeName());
                 }
                 else
                 {
@@ -58,11 +58,11 @@ namespace CNTK
                 bool isConstant = (node->GetLearningRateMultiplier() == 0);
                 auto& matrix = node->As<ComputationNode<ElementType>>()->Value();
                 auto tensorView = new TensorView<ElementType>(std::make_shared<Matrix<ElementType>>(matrix.AsReference()), AsTensorViewShape(node->GetSampleLayout()));
-                NDArrayViewPtr parameterValue = MakeSharedObject<NDArrayView>(AsDataType<ElementType>(), AsDeviceDescriptor(matrix.GetDeviceId()), AsStorageFormat(matrix.GetFormat()), varShape, false, tensorView);
+                NDArrayViewPtr value = MakeSharedObject<NDArrayView>(AsDataType<ElementType>(), AsDeviceDescriptor(matrix.GetDeviceId()), AsStorageFormat(matrix.GetFormat()), varShape, false, tensorView);
                 if (isConstant)
-                    var = Constant(parameterValue, node->GetName());
+                    var = Constant(value, node->NodeName(), node->NodeName());
                 else
-                    var = Parameter(parameterValue, node->GetName());
+                    var = Parameter(value, node->NodeName(), node->NodeName());
             }
             else
                 LogicError("CNTK::LoadLegacyModel: Unsupported legacy CNTK node named '%S'", node->NodeName().c_str());
@@ -276,7 +276,7 @@ namespace CNTK
             // Let's reorder inputVars properly since the ordering of inputs of CNTK internal ComputationNode may be different from the PrimitiveFunction inputs ordering
             ReorderAsPrimitiveFunctionInputs(opType, inputVars);
 
-            FunctionPtr primitiveFunction = MakeSharedObject<PrimitiveFunction>(opType, inputVars, std::move(primitiveFunctionConfigParameters), node->GetName());
+            FunctionPtr primitiveFunction = MakeSharedObject<PrimitiveFunction>(opType, inputVars, std::move(primitiveFunctionConfigParameters), node->NodeName());
             allPrimitiveFunctions.insert(primitiveFunction);
             var = primitiveFunction->Output();
             if (placeholderReplacements.find(placeholderVar) != placeholderReplacements.end())

@@ -451,14 +451,10 @@ namespace CNTK
         std::shared_ptr<ComputationNode<ElementType>> computationNodePtr;
         if (variable.IsParameter() || variable.IsConstant())
         {
-            computationNodePtr = builder.CreateLearnableParameter(variable.Name(), AsTensorShape(variable.Shape()));
+            computationNodePtr = builder.CreateLearnableParameter(variable.Uid(), AsTensorShape(variable.Shape()));
             network->InitLearnableParameters(computationNodePtr, L"fixedValue", 0); // must call this to follow protocol; can overwrite later
             if (!variable.NeedsGradient())
                 computationNodePtr->SetLearningRateMultiplier(0.0);
-
-            // If the parameter variable does not have a name assign it the internal computation node name
-            if (variable.Name().empty())
-                variable.m_dataFields->m_name = computationNodePtr->NodeName();
 
             NDArrayViewPtr value = variable.IsConstant() ? Constant(variable).Value() : Parameter(variable).Value();
             std::shared_ptr<const Matrix<ElementType>> valueMatrix = variable.IsConstant() ? value->GetMatrix<ElementType>() : value->GetWritableMatrix<ElementType>();
@@ -493,9 +489,9 @@ namespace CNTK
                 network->AddNodeToNetAndAttachInputs(New<DynamicAxisNode<ElementType>>(network->GetDeviceId(), internalDynamicAxisName), {});
 
             if (IsSparseInput(variable))
-                computationNodePtr = builder.CreateSparseInputNode(variable.Name(), AsTensorShape(variable.Shape()), internalDynamicAxisName);
+                computationNodePtr = builder.CreateSparseInputNode(variable.Uid(), AsTensorShape(variable.Shape()), internalDynamicAxisName);
             else
-                computationNodePtr = builder.CreateInputNode(variable.Name(), AsTensorShape(variable.Shape()), internalDynamicAxisName);
+                computationNodePtr = builder.CreateInputNode(variable.Uid(), AsTensorShape(variable.Shape()), internalDynamicAxisName);
 
             if (variable.NeedsGradient())
             {
@@ -796,35 +792,10 @@ namespace CNTK
                 // If the inputVar is a constant and not the right DataType lets cast it to the right type
                 if (inputVar.IsConstant() && (nonConstInputDataType != DataType::Unknown) && (inputVar.GetDataType() != nonConstInputDataType))
                 {
-                    auto constantValue = Constant(inputVar).Value();
-                    NDArrayView constantValueCPU(constantValue->GetDataType(), constantValue->Shape(), DeviceDescriptor::CPUDevice());
-                    constantValueCPU.CopyFrom(*constantValue);
-
-                    NDArrayViewPtr newConstantValue;
-                    if (inputVar.GetDataType() == DataType::Float)
-                    {
-                        // Cast to double
-                        const float* buffer = constantValueCPU.DataBuffer<float>();
-                        double* castValue = new double[constantValueCPU.Shape().TotalSize()];
-                        for (size_t i = 0; i < constantValueCPU.Shape().TotalSize(); ++i)
-                            castValue[i] = buffer[i];
-
-                        newConstantValue = MakeSharedObject<NDArrayView>(constantValue->Shape(), castValue, constantValueCPU.Shape().TotalSize(), DeviceDescriptor::CPUDevice());
-                    }
-                    else
-                    {
-                        // Cast to float
-                        const double* buffer = constantValueCPU.DataBuffer<double>();
-                        float* castValue = new float[constantValueCPU.Shape().TotalSize()];
-                        for (size_t i = 0; i < constantValueCPU.Shape().TotalSize(); ++i)
-                            castValue[i] = (float)(buffer[i]);
-
-                        newConstantValue = MakeSharedObject<NDArrayView>(constantValue->Shape(), castValue, constantValueCPU.Shape().TotalSize(), DeviceDescriptor::CPUDevice());
-                    }
-
+                    auto constantValueCPU = Constant(inputVar).Value()->DeepClone(DeviceDescriptor::CPUDevice(), true);
+                    NDArrayViewPtr newConstantValue = CloneAsDataType(constantValueCPU, nonConstInputDataType, true);
                     inputVar = Constant(newConstantValue);
                 }
-
 
                 auto baseNodePtr = GetNode(inputVar, network, builder, variableToNodeMap, isVariableRootMap);
                 inputNodes.push_back((baseNodePtr != nullptr) ? baseNodePtr->template As<ComputationNode<ElementType>>()->shared_from_this() : nullptr);

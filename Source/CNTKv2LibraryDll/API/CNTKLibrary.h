@@ -501,10 +501,19 @@ namespace CNTK
         /// Fill 'this' NDArrayView with the specified value. The underlying DataType of 'this' view should be DataType::Double.
         ///
         CNTK_API void SetValue(double value);
+
+        ///
+        /// Creates a new NDArrayView with newly allocated storage on the specified device and copies 'this' view's contents into the newly allocated view.
+        ///
+        CNTK_API NDArrayViewPtr DeepClone(const DeviceDescriptor& device, bool readOnly = false) const;
+
         ///
         /// Creates a new NDArrayView with newly allocated storage on the same device as 'this' view and copies 'this' view's contents into the newly allocated view.
         ///
-        CNTK_API NDArrayViewPtr DeepClone(bool readOnly = false) const;
+        inline NDArrayViewPtr DeepClone(bool readOnly = false) const
+        {
+            return DeepClone(this->Device(), readOnly);
+        }
 
         ///
         /// Creates a new NDArrayView which is an alias of 'this' view; i.e. a new view of the same shape as 'this' over the same underlying data.
@@ -854,6 +863,33 @@ namespace CNTK
         Placeholder
     };
 
+    inline const wchar_t* VariableKindName(VariableKind variableKind)
+    {
+        switch (variableKind)
+        {
+        case VariableKind::Input:
+            return L"Input";
+        case VariableKind::Output:
+            return L"Output";
+        case VariableKind::Parameter:
+            return L"Parameter";
+        case VariableKind::Constant:
+            return L"Constant";
+        case VariableKind::Placeholder:
+            return L"Placeholder";
+        default:
+            LogicError("Unknown VariableKind");
+        }
+    }
+
+    namespace Internal
+    {
+        inline std::wstring GenerateUid(VariableKind varKind)
+        {
+            return std::wstring(VariableKindName(varKind)) + std::to_wstring(Internal::NewUniqueId());
+        }
+    }
+
     // Forward declarations
     inline Variable PlaceholderVariable(const NDShape& shape, const std::vector<Axis>& dynamicAxes = Axis::DefaultInputVariableDynamicAxes);
     inline Variable InputVariable(const NDShape& shape, bool isSparse, CNTK::DataType dataType, bool needsGradient, const std::wstring& name = L"", const std::vector<Axis>& dynamicAxes = Axis::DefaultInputVariableDynamicAxes);
@@ -874,18 +910,18 @@ namespace CNTK
         template <typename T>
         friend struct std::hash;
 
+        template <typename ElementType>
+        friend Variable GetVariable(const Microsoft::MSR::CNTK::ComputationNodeBasePtr& node,
+                                    std::unordered_map<Microsoft::MSR::CNTK::ComputationNodeBasePtr, Variable>& nodeToVariableMap,
+                                    std::unordered_map<Variable, Variable>& placeholderReplacements,
+                                    std::unordered_set<FunctionPtr>& allPrimitiveFunctions);
+
     private:
         friend inline Variable PlaceholderVariable(const NDShape& shape, const std::vector<Axis>& dynamicAxes /*= Axis::DefaultInputVariableDynamicAxes*/);
         friend inline Variable InputVariable(const NDShape& shape, bool isSparse, CNTK::DataType dataType, bool needsGradient, const std::wstring& name /*= L""*/, const std::vector<Axis>& dynamicAxes /*= Axis::DefaultInputVariableDynamicAxes*/);
         friend inline Variable OutputVariable(const NDShape& shape, CNTK::DataType dataType, Function* ownerFunction, const std::vector<Axis>& dynamicAxes, const std::wstring& name /*= L""*/);
-    public:
 
-        ///
-        /// Create an 'Input' Variable
-        ///
-        Variable(const NDShape& shape, bool isSparse, CNTK::DataType dataType, bool needsGradient, const std::wstring& name, const std::vector<Axis>& dynamicAxes = Axis::DefaultInputVariableDynamicAxes)
-            : Variable(shape, VariableKind::Input, dataType, nullptr, nullptr, needsGradient, dynamicAxes, isSparse, name)
-        {}
+    public:
 
         ///
         /// Create an 'Output' variable aliasing the output of the specified Function
@@ -955,6 +991,11 @@ namespace CNTK
         const std::wstring& Name() const { return m_dataFields->m_name; }
 
         ///
+        /// Returns the internally generated unique name of the variable
+        ///
+        const std::wstring& Uid() const { return m_dataFields->m_uid; }
+
+        ///
         /// Returns the Function object which 'this' variable is an ouptut of.
         /// Returns null when called for a Variable that is not of 'Output' VariableKind.
         ///
@@ -971,8 +1012,8 @@ namespace CNTK
         bool NeedsGradient() const { return m_dataFields->m_needsGradient; }
 
     protected:
-        Variable(const NDShape& shape, VariableKind varType, CNTK::DataType dataType, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, const std::wstring& name)
-            : Variable(shape, varType, dataType, nullptr, value, needsGradient, dynamicAxes, /*isSparse =*/ false, name)
+        Variable(const NDShape& shape, VariableKind varType, CNTK::DataType dataType, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, const std::wstring& name, const std::wstring& uid)
+            : Variable(shape, varType, dataType, nullptr, value, needsGradient, dynamicAxes, /*isSparse =*/ false, name, uid)
         {}
 
         NDArrayViewPtr Value() const
@@ -982,8 +1023,13 @@ namespace CNTK
         }
 
     private:
-        Variable(const NDShape& shape, VariableKind varType, CNTK::DataType dataType, Function* ownerFunction, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, bool isSparse, const std::wstring& name)
-            : m_dataFields(MakeSharedObject<VariableFields>(shape, varType, dataType, ownerFunction, value, needsGradient, dynamicAxes, isSparse, name))
+        Variable(const NDShape& shape, bool isSparse, CNTK::DataType dataType, bool needsGradient, const std::wstring& name, const std::vector<Axis>& dynamicAxes, const std::wstring& uid)
+            : Variable(shape, VariableKind::Input, dataType, nullptr, nullptr, needsGradient, dynamicAxes, isSparse, name, uid)
+        {}
+
+
+        Variable(const NDShape& shape, VariableKind varType, CNTK::DataType dataType, Function* ownerFunction, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, bool isSparse, const std::wstring& name, const std::wstring& uid)
+            : m_dataFields(MakeSharedObject<VariableFields>(shape, varType, dataType, ownerFunction, value, needsGradient, dynamicAxes, isSparse, name, uid))
         {}
 
     private:
@@ -1001,9 +1047,10 @@ namespace CNTK
             std::wstring m_name;
             std::vector<Axis> m_dynamicAxes;
             bool m_isSparse;
+            std::wstring m_uid;
 
-            VariableFields(const NDShape& shape, VariableKind varType, CNTK::DataType type, Function* ownerFunction, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, bool isSparse, const std::wstring& name)
-                : m_shape(shape), m_varKind(varType), m_dataType(type), m_ownerFunction(ownerFunction), m_value(value), m_needsGradient(needsGradient), m_dynamicAxes(dynamicAxes), m_isSparse(isSparse), m_name(name)
+            VariableFields(const NDShape& shape, VariableKind varType, CNTK::DataType type, Function* ownerFunction, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, bool isSparse, const std::wstring& name, const std::wstring& uid)
+                : m_shape(shape), m_varKind(varType), m_dataType(type), m_ownerFunction(ownerFunction), m_value(value), m_needsGradient(needsGradient), m_dynamicAxes(dynamicAxes), m_isSparse(isSparse), m_name(name), m_uid(uid)
             {
                 if (value && (type != value->GetDataType()))
                     InvalidArgument("The DataType of the Parameter/Constant Variable does not match the DataType of the associated Value");
@@ -1043,7 +1090,16 @@ namespace CNTK
     ///
     inline Variable PlaceholderVariable(const NDShape& shape, const std::vector<Axis>& dynamicAxes /*= Axis::DefaultInputVariableDynamicAxes*/)
     {
-        return Variable(shape, VariableKind::Placeholder, DataType::Unknown, nullptr, false, dynamicAxes, L"");
+        auto varKind = VariableKind::Placeholder;
+        return Variable(shape, varKind, DataType::Unknown, nullptr, false, dynamicAxes, L"", Internal::GenerateUid(varKind));
+    }
+
+    ///
+    /// Create an 'Input' Variable denoting sparse data and specify if gradients are to be computed for this input
+    ///
+    inline Variable InputVariable(const NDShape& shape, bool isSparse, CNTK::DataType dataType, bool needsGradient, const std::wstring& name /*= L""*/, const std::vector<Axis>& dynamicAxes /*= Axis::DefaultInputVariableDynamicAxes*/)
+    {
+        return Variable(shape, isSparse, dataType, needsGradient, name, dynamicAxes, Internal::GenerateUid(VariableKind::Input));
     }
 
     ///
@@ -1051,7 +1107,7 @@ namespace CNTK
     ///
     inline Variable InputVariable(const NDShape& shape, CNTK::DataType dataType, bool needsGradient, const std::wstring& name = L"", const std::vector<Axis>& dynamicAxes = Axis::DefaultInputVariableDynamicAxes)
     {
-        return Variable(shape, /*isSparse =*/ false, dataType, needsGradient, name, dynamicAxes);
+        return InputVariable(shape, /*isSparse =*/ false, dataType, needsGradient, name, dynamicAxes);
     }
 
     ///
@@ -1076,14 +1132,6 @@ namespace CNTK
     inline Variable InputVariable(const NDShape& shape, DataType dataType, const std::vector<Axis>& dynamicAxes = Axis::DefaultInputVariableDynamicAxes)
     {
         return InputVariable(shape, dataType, L"", dynamicAxes);
-    }
-
-    ///
-    /// Create an 'Input' Variable denoting sparse data and specify if gradients are to be computed for this input
-    ///
-    inline Variable InputVariable(const NDShape& shape, bool isSparse, CNTK::DataType dataType, bool needsGradient, const std::wstring& name /*= L""*/, const std::vector<Axis>& dynamicAxes /*= Axis::DefaultInputVariableDynamicAxes*/)
-    {
-        return Variable(shape, isSparse, dataType, needsGradient, name, dynamicAxes);
     }
 
     ///
@@ -1115,7 +1163,7 @@ namespace CNTK
     ///
     inline Variable OutputVariable(const NDShape& shape, CNTK::DataType dataType, Function* ownerFunction, const std::vector<Axis>& dynamicAxes, const std::wstring& name /*= L""*/)
     {
-        return Variable(shape, VariableKind::Output, dataType, ownerFunction, nullptr, /*needsGradient =*/ false, dynamicAxes, /*isSparse =*/ false, name);
+        return Variable(shape, VariableKind::Output, dataType, ownerFunction, nullptr, /*needsGradient =*/ false, dynamicAxes, /*isSparse =*/ false, name, Internal::GenerateUid(VariableKind::Output));
     }
 
     ///
@@ -1126,12 +1174,18 @@ namespace CNTK
         template <typename T>
         friend struct std::hash;
 
+        template <typename ElementType>
+        friend Variable GetVariable(const Microsoft::MSR::CNTK::ComputationNodeBasePtr& node,
+                                    std::unordered_map<Microsoft::MSR::CNTK::ComputationNodeBasePtr, Variable>& nodeToVariableMap,
+                                    std::unordered_map<Variable, Variable>& placeholderReplacements,
+                                    std::unordered_set<FunctionPtr>& allPrimitiveFunctions);
+
     public:
         ///
         /// Construct a parameter whose initial contents are a copy of the specified 'value'
         ///
         explicit Parameter(const NDArrayViewPtr& value, const std::wstring& name = L"")
-            : Variable(value->Shape(), VariableKind::Parameter, value->GetDataType(), value->DeepClone(), true, {}, name)
+            : Parameter(value, name, Internal::GenerateUid(VariableKind::Parameter))
         {}
 
         // TODO: Constructor to move a specified NDArrayView value
@@ -1141,14 +1195,14 @@ namespace CNTK
         ///
         template<typename ElemType>
         Parameter(const NDShape& shape, ElemType initValue, const DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice(), const std::wstring& name = L"")
-            : Variable(shape, VariableKind::Parameter, AsDataType<ElemType>(), MakeSharedObject<NDArrayView>(initValue, shape, device), true, {}, name)
+            : Variable(shape, VariableKind::Parameter, AsDataType<ElemType>(), MakeSharedObject<NDArrayView>(initValue, shape, device), true, {}, name, Internal::GenerateUid(VariableKind::Parameter))
         {}
 
         ///
         /// Construct a constant of specified shape whose contents are initialized with the specified 'initValue'
         ///
         Parameter(const NDShape& shape, DataType dataType, double initValue, const DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice(), const std::wstring& name = L"")
-            : Variable(shape, VariableKind::Parameter, dataType, MakeSharedObject<NDArrayView>(initValue, dataType, shape, device), true, {}, name)
+            : Variable(shape, VariableKind::Parameter, dataType, MakeSharedObject<NDArrayView>(initValue, dataType, shape, device), true, {}, name, Internal::GenerateUid(VariableKind::Parameter))
         {}
 
         ///
@@ -1234,6 +1288,11 @@ namespace CNTK
         }
 
     private:
+        explicit Parameter(const NDArrayViewPtr& value, const std::wstring& name, const std::wstring& uid)
+            : Variable(value->Shape(), VariableKind::Parameter, value->GetDataType(), value->DeepClone(), true, {}, name, uid)
+        {}
+
+    private:
 
         // Helper methods for Parameter construction
         CNTK_API static Parameter UniformInitParameter(const NDShape& shape, DataType type, double range, unsigned long seed, const DeviceDescriptor& device, const std::wstring& name);
@@ -1254,12 +1313,18 @@ namespace CNTK
         template <typename T>
         friend struct std::hash;
 
+        template <typename ElementType>
+        friend Variable GetVariable(const Microsoft::MSR::CNTK::ComputationNodeBasePtr& node,
+                                    std::unordered_map<Microsoft::MSR::CNTK::ComputationNodeBasePtr, Variable>& nodeToVariableMap,
+                                    std::unordered_map<Variable, Variable>& placeholderReplacements,
+                                    std::unordered_set<FunctionPtr>& allPrimitiveFunctions);
+
     public:
         ///
         /// Contruct a Constant whose initial contents are a copy of the specified value
         ///
         Constant(const NDArrayViewPtr& value, const std::wstring& name = L"")
-            : Variable(value->Shape(), VariableKind::Constant, value->GetDataType(), value->DeepClone(true), false, {}, name)
+            : Constant(value, name, Internal::GenerateUid(VariableKind::Constant))
         {}
 
         // TODO: Constructor to move a specified NDArrayView value
@@ -1269,14 +1334,14 @@ namespace CNTK
         ///
         template<typename ElemType>
         Constant(const NDShape& shape, ElemType initValue, const DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice(), const std::wstring& name = L"")
-            : Variable(shape, VariableKind::Constant, AsDataType<ElemType>(), MakeSharedObject<NDArrayView>(initValue, shape, device), false, {}, name)
+            : Variable(shape, VariableKind::Constant, AsDataType<ElemType>(), MakeSharedObject<NDArrayView>(initValue, shape, device), false, {}, name, Internal::GenerateUid(VariableKind::Constant))
         {}
 
         ///
         /// Construct a constant of specified shape whose contents are initialized with the specified 'initValue'
         ///
         Constant(const NDShape& shape, DataType dataType, double initValue, const DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice(), const std::wstring& name = L"")
-            : Variable(shape, VariableKind::Constant, dataType, MakeSharedObject<NDArrayView>(initValue, dataType, shape, device), false, {}, name)
+            : Variable(shape, VariableKind::Constant, dataType, MakeSharedObject<NDArrayView>(initValue, dataType, shape, device), false, {}, name, Internal::GenerateUid(VariableKind::Constant))
         {}
 
         ///
@@ -1313,6 +1378,11 @@ namespace CNTK
         {
             return Variable::Value();
         }
+
+    private:
+        Constant(const NDArrayViewPtr& value, const std::wstring& name, const std::wstring& uid)
+            : Variable(value->Shape(), VariableKind::Constant, value->GetDataType(), value->DeepClone(true), false, {}, name, uid)
+        {}
     };
 
     // Implementation note: The Variable type is a value type and not polymorphic in nature. 
@@ -1799,8 +1869,8 @@ namespace CNTK
     ///
     inline FunctionPtr PastValue(const Variable& operand, size_t offset = 1, const std::wstring& name = L"")
     {
-        const Variable& initialState = Constant::Scalar(0.0f);
-        return PastValue(operand, initialState, offset, name);
+        static const auto defaultInitialState = Constant::Scalar(0.0f);
+        return PastValue(operand, defaultInitialState, offset, name);
     }
 
     ///
@@ -1816,8 +1886,8 @@ namespace CNTK
     ///
     inline FunctionPtr FutureValue(const Variable& operand, size_t offset = 1, const std::wstring& name = L"")
     {
-        const Variable& initialState = Constant::Scalar(0.0f);
-        return FutureValue(operand, initialState, offset, name);
+        static const auto defaultInitialState = Constant::Scalar(0.0f);
+        return FutureValue(operand, defaultInitialState, offset, name);
     }
 
     ///
@@ -2721,6 +2791,53 @@ namespace CNTK
     /// Instantiate the CNTK built-in composite minibatch source.
     ///
     CNTK_API MinibatchSourcePtr CreateCompositeMinibatchSource(const Dictionary& configuration);
+
+    struct StreamConfiguration
+    {
+        StreamConfiguration(const std::wstring& streamName, size_t dim, bool isSparse = false, const std::wstring& streamAlias = L"")
+            : m_streamName(streamName), m_dim(dim), m_isSparse(isSparse), m_streamAlias(streamAlias)
+        {}
+
+        std::wstring m_streamName;
+        size_t m_dim;
+        bool m_isSparse;
+        std::wstring m_streamAlias;
+    };
+
+    /// 
+    /// Instantiate the CNTK buil-in test format minibatch source
+    ///
+    inline MinibatchSourcePtr TextFormatMinibatchSource(const std::wstring& dataFilePath, const std::vector<StreamConfiguration>& streamConfigs, size_t epochSize = SIZE_MAX)
+    {
+        CNTK::Dictionary minibatchSourceConfiguration;
+        minibatchSourceConfiguration[L"epochSize"] = epochSize;
+
+        CNTK::Dictionary deserializerConfiguration;
+        deserializerConfiguration[L"type"] = L"CNTKTextFormatDeserializer";
+        deserializerConfiguration[L"file"] = dataFilePath;
+
+        CNTK::Dictionary inputStreamsConfig;
+        for (auto streamConfig : streamConfigs)
+        {
+            std::wstring streamName = streamConfig.m_streamName;
+            size_t streamDim = streamConfig.m_dim;
+            bool isSparse = streamConfig.m_isSparse;
+            std::wstring streamAlias = streamConfig.m_streamAlias;
+
+            CNTK::Dictionary inputStreamConfig;
+            inputStreamConfig[L"dim"] = streamDim;
+            inputStreamConfig[L"format"] = isSparse ? L"sparse" : L"dense";
+            if (!streamAlias.empty())
+                inputStreamConfig[L"alias"] = streamAlias;
+
+            inputStreamsConfig[streamName] = inputStreamConfig;
+        }
+
+        deserializerConfiguration[L"input"] = inputStreamsConfig;
+        minibatchSourceConfiguration[L"deserializers"] = std::vector<CNTK::DictionaryValue>({ deserializerConfiguration });
+
+        return CreateCompositeMinibatchSource(minibatchSourceConfiguration);
+    }
 
     ///
     /// Compute the per dimension means and variances for each of the specified streams using data from the specified minibatchSource.

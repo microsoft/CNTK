@@ -6,38 +6,6 @@ using namespace CNTK;
 
 using namespace std::placeholders;
 
-inline CNTK::MinibatchSourcePtr CreateSeq2SeqMinibatchSource(const std::wstring& filePath, size_t inputVocabSize, size_t labelsVocabSize)
-{
-    CNTK::Dictionary inputStreamConfig;
-    inputStreamConfig[L"dim"] = inputVocabSize;
-    inputStreamConfig[L"format"] = L"sparse";
-    inputStreamConfig[L"alias"] = L"S0";
-
-    CNTK::Dictionary labelsStreamConfig;
-    labelsStreamConfig[L"dim"] = labelsVocabSize;
-    labelsStreamConfig[L"format"] = L"sparse";
-    labelsStreamConfig[L"alias"] = L"S1";
-
-    CNTK::Dictionary inputStreamsConfig;
-    inputStreamsConfig[L"rawInput"] = inputStreamConfig;
-    inputStreamsConfig[L"rawLabels"] = labelsStreamConfig;
-
-    CNTK::Dictionary deserializerConfiguration;
-    deserializerConfiguration[L"type"] = L"CNTKTextFormatDeserializer";
-    deserializerConfiguration[L"file"] = filePath;
-    deserializerConfiguration[L"input"] = inputStreamsConfig;
-    deserializerConfiguration[L"skipSequenceIds"] = L"false";
-    deserializerConfiguration[L"maxErrors"] = (size_t)100;
-    deserializerConfiguration[L"traceLevel"] = (size_t)1;
-    deserializerConfiguration[L"chunkSizeInBytes"] = (size_t)30000000;
-
-    CNTK::Dictionary minibatchSourceConfiguration;
-    minibatchSourceConfiguration[L"epochSize"] = (size_t)2000;
-    minibatchSourceConfiguration[L"deserializers"] = std::vector<CNTK::DictionaryValue>({ deserializerConfiguration });
-
-    return CreateCompositeMinibatchSource(minibatchSourceConfiguration);
-}
-
 void TrainSequenceToSequenceTranslator(const DeviceDescriptor& device, bool useSparseInputs, bool testSaveAndReLoad, bool testCheckpointing)
 {
     using namespace std::placeholders;
@@ -150,9 +118,14 @@ void TrainSequenceToSequenceTranslator(const DeviceDescriptor& device, bool useS
         errs = errsVar;
     }
 
-    auto minibatchSource = CreateSeq2SeqMinibatchSource(L"cmudict-0.7b.train-dev-20-21.ctf", inputVocabDim, labelVocabDim);
-    auto rawInputStreamInfo = minibatchSource->StreamInfo(L"rawInput");
-    auto rawLabelsStreamInfo = minibatchSource->StreamInfo(L"rawLabels");
+    auto featureStreamName = L"rawInput";
+    auto labelStreamName = L"rawLabels";
+    auto minibatchSource = TextFormatMinibatchSource(L"cmudict-0.7b.train-dev-20-21.ctf",
+                                                     { { featureStreamName, inputVocabDim, true, L"S0" }, {labelStreamName, labelVocabDim, true, L"S1" } },
+                                                     5000);
+
+    auto rawInputStreamInfo = minibatchSource->StreamInfo(featureStreamName);
+    auto rawLabelsStreamInfo = minibatchSource->StreamInfo(labelStreamName);
 
     double learningRatePerSample = 0.007;
     size_t momentumTimeConstant = 1100;
@@ -164,7 +137,7 @@ void TrainSequenceToSequenceTranslator(const DeviceDescriptor& device, bool useS
     size_t outputFrequencyInMinibatches = 1;
     size_t minibatchSize = 72;
     size_t numMinibatchesToCheckpointAfter = testCheckpointing ? 3 : SIZE_MAX;
-    size_t numMinibatchesToRestoreFromCheckpointAfter = testCheckpointing ? 6 : SIZE_MAX;
+    size_t numMinibatchesToRestoreFromCheckpointAfter = testCheckpointing ? 20 : SIZE_MAX;
     bool restorationDone = false;
     const wchar_t* modelFile = L"seq2seq.model";
     for (size_t i = 0; true; i++)
@@ -172,25 +145,7 @@ void TrainSequenceToSequenceTranslator(const DeviceDescriptor& device, bool useS
         if (!restorationDone && (i == numMinibatchesToRestoreFromCheckpointAfter))
         {
             printf("Trainer restoring from checkpoint at path %S\n", modelFile);
-            auto inputs = trainer.LossFunction()->Inputs();
-            auto findInputVariableIndex = [&inputs](const Variable& inputVar) {
-                for (size_t i = 0; i < inputs.size(); ++i)
-                {
-                    if (inputs[i] == inputVar)
-                        return i;
-                }
-
-                LogicError("Specified variable is not an input of the loss function");
-            };
-
-            size_t rawInputIndex = findInputVariableIndex(rawInput);
-            size_t rawLabelsIndex = findInputVariableIndex(rawLabels);
-
             trainer.RestoreFromCheckpoint(modelFile);
-
-            rawInput = trainer.LossFunction()->Inputs()[rawInputIndex];
-            rawLabels = trainer.LossFunction()->Inputs()[rawLabelsIndex];
-
             i = numMinibatchesToCheckpointAfter;
             restorationDone = true;
         }
@@ -213,8 +168,6 @@ void TrainSequenceToSequenceTranslator(const DeviceDescriptor& device, bool useS
 void TrainSequenceToSequenceTranslator()
 {
     // TODO: Also test with sparse input variables in the graph
-    // TODO: Also test trainer checkpointing
-
-    TrainSequenceToSequenceTranslator(DeviceDescriptor::GPUDevice(0), false, true, false);
-    TrainSequenceToSequenceTranslator(DeviceDescriptor::CPUDevice(), false, false, false);
+    TrainSequenceToSequenceTranslator(DeviceDescriptor::GPUDevice(0), false, false, true);
+    TrainSequenceToSequenceTranslator(DeviceDescriptor::CPUDevice(), false, true, false);
 }
