@@ -71,6 +71,7 @@ void DoTrain(const ConfigRecordType& config)
 {
     bool makeMode = config(L"makeMode", true);
     DEVICEID_TYPE deviceId = DeviceFromConfig(config);
+    int traceLevel = config(L"traceLevel", 0);
 
     shared_ptr<SGD<ElemType>> optimizer;
     if (config.Exists(L"optimizer"))
@@ -93,11 +94,10 @@ void DoTrain(const ConfigRecordType& config)
 
     wstring modelFileName = optimizer->GetModelNameForEpoch(int(startEpoch) - 1);
     bool loadNetworkFromCheckpoint = startEpoch >= 0;
-    fprintf(stderr, "\n");
     if (loadNetworkFromCheckpoint)
-        LOGPRINTF(stderr, "Starting from checkpoint. Loading network from '%ls'.\n", modelFileName.c_str());
-    else
-        LOGPRINTF(stderr, "Creating virgin network.\n");
+        LOGPRINTF(stderr, "\nStarting from checkpoint. Loading network from '%ls'.\n", modelFileName.c_str());
+    else if (traceLevel > 0)
+        LOGPRINTF(stderr, "\nCreating virgin network.\n");
 
     // determine the network-creation function
     // We have several ways to create that network.

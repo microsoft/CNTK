@@ -45,11 +45,11 @@ void SGD<ElemType>::Train(shared_ptr<ComputationNetwork> net, DEVICEID_TYPE devi
                           IDataReader* validationSetDataReader, int startEpoch, bool loadNetworkFromCheckpoint)
 {
     // log the device we are computing on
-    LOGPRINTF(stderr, "%s model with %d nodes", loadNetworkFromCheckpoint ? "Loaded" : "Created", (int)net->GetTotalNumberOfNodes());
+    LOGPRINTF(stderr, "\nModel has %d nodes. Using ", (int)net->GetTotalNumberOfNodes());
     if (net->GetDeviceId() < 0)
-        fprintf(stderr, " on CPU.\n");
+        fprintf(stderr, "CPU.\n");
     else
-        fprintf(stderr, " on GPU %d.\n", (int) net->GetDeviceId());
+        fprintf(stderr, "GPU %d.\n", (int) net->GetDeviceId());
 
     // TODO: BUGBUG: if not starting from checkpoint, need to synchronize initial model
     // strategy should be to run the initializer above on mpiRank==0, and then broadcast parameters.
@@ -134,15 +134,22 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
     let& criterionNodes = GetTrainCriterionNodes(net);
 
     fprintf(stderr, "\n");
-    LOGPRINTF(stderr, "Training criterion node(s):\n");
-    for (const auto& node : criterionNodes)
+    if (criterionNodes.size() == 1)
     {
-        LOGPRINTF(stderr, "\t%ls = %ls\n", node->NodeName().c_str(), node->OperationName().c_str());
+        LOGPRINTF(stderr, "Training criterion:   %ls = %ls\n", criterionNodes.front()->NodeName().c_str(), criterionNodes.front()->OperationName().c_str());
     }
-    if (criterionNodes.empty())
+    else
     {
-        LOGPRINTF(stderr, "\t(none)\n");
-        InvalidArgument("TrainOrAdaptModel: No criterion node was specified.");
+        LOGPRINTF(stderr, "Training criteria:\n");
+        for (const auto& node : criterionNodes)
+        {
+            LOGPRINTF(stderr, "\t%ls = %ls\n", node->NodeName().c_str(), node->OperationName().c_str());
+        }
+        if (criterionNodes.empty())
+        {
+            LOGPRINTF(stderr, "\t(none)\n");
+            InvalidArgument("TrainOrAdaptModel: No criterion node was specified.");
+        }
     }
 
     // determine evaluationNodes from GetEvalCriterionNodes(), ensuring each criterion is only logged once
@@ -157,10 +164,14 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
             if (criteriaLogged.insert(node).second)
                 evaluationNodes.push_back(node);
 
-        if (!evaluationNodes.empty())
+        if (evaluationNodes.size() == 1)
+        {
+            LOGPRINTF(stderr, "Evaluation criterion: %ls = %ls\n", evaluationNodes.front()->NodeName().c_str(), evaluationNodes.front()->OperationName().c_str());
+        }
+        else if (!evaluationNodes.empty())
         {
             fprintf(stderr, "\n");
-            LOGPRINTF(stderr, "Evaluation criterion node(s):\n");
+            LOGPRINTF(stderr, "Evaluation criteria:\n");
             for (const auto& node : evaluationNodes)
             {
                 LOGPRINTF(stderr, "\t%ls = %ls\n", node->NodeName().c_str(), node->OperationName().c_str());
@@ -258,12 +269,21 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
             numNeedsGradient++;
     }
     fprintf(stderr, "\n");
-    LOGPRINTF(stderr, "Training %.0f parameters in %d out of %d parameter tensors and %d nodes with gradient:\n\n",
-              (double)numParameters, (int)nodesToUpdateDescriptions.size(), (int)learnableNodes.size(), (int)numNeedsGradient);
-    for (let nodeDescription : nodesToUpdateDescriptions)
+    LOGPRINTF(stderr, "Training %.0f parameters in %d ",
+              (double)numParameters, (int)nodesToUpdateDescriptions.size());
+    if (m_traceLevel == 0)
+        fprintf(stderr, "parameter tensors.\n");
+    else
     {
-        LOGPRINTF(stderr, "\t%ls\n", nodeDescription.c_str());
+        fprintf(stderr, "out of %d parameter tensors and %d nodes with gradient:\n\n",
+            (int)learnableNodes.size(), (int)numNeedsGradient);
+        for (let nodeDescription : nodesToUpdateDescriptions)
+        {
+            LOGPRINTF(stderr, "\t%ls\n", nodeDescription.c_str());
+        }
     }
+
+    // one blank line before training progress log
     fprintf(stderr, "\n");
 
     double avgCriterion, lrControlCriterion;
@@ -1349,15 +1369,19 @@ bool SGD<ElemType>::PreCompute(ComputationNetworkPtr net,
 
     if (nodes.size() == 0)
     {
-        LOGPRINTF(stderr, "No PreCompute nodes found, or all already computed. Skipping pre-computation step.\n");
+        if (m_traceLevel > 0)
+            LOGPRINTF(stderr, "No PreCompute nodes found, or all already computed. Skipping pre-computation step.\n");
         return false;
     }
 
     fprintf(stderr, "\n");
     LOGPRINTF(stderr, "Precomputing --> %lu PreCompute nodes found.\n\n", nodes.size());
-    for (const auto & node : nodes)
+    if (m_traceLevel > 0)
     {
-        LOGPRINTF(stderr, "\t%ls = %ls()\n", node->NodeName().c_str(), node->OperationName().c_str());
+        for (const auto & node : nodes)
+        {
+            LOGPRINTF(stderr, "\t%ls = %ls()\n", node->NodeName().c_str(), node->OperationName().c_str());
+        }
     }
 
     // compute
@@ -1792,7 +1816,7 @@ void SGD<ElemType>::TrainOneMiniEpochAndReloadModel(ComputationNetworkPtr net,
     epochCriterion.LogCriterion(criterionNodes[0]->NodeName());
     for (size_t j = 0; j < epochEvalErrors.size(); j++)
         epochEvalErrors[j].LogCriterion(evaluationNodes[j]->NodeName());
-    fprintf(stderr, "learningRatePerSample = %.8g\n", learnRatePerSample);
+    fprintf(stderr, "learningRatePerSample = %.8g; minibatchSize = %d\n", learnRatePerSample, (int)minibatchSize);
 
     // go back to where we came from
     int baseModelEpoch = epochNumber - 1;
@@ -2601,9 +2625,9 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
         MPIWrapperPtr pMPI = MPIWrapper::GetInstance(); 
         if (!pMPI) 
         {
-            // some users may forget to specify useParallelTrain option 
+            // some users may forget to specify parallelTrain option 
             // in this case, falling back to normal SGD
-            fprintf(stderr, "useParallelTrain option is not enabled. ParallelTrain config will be ignored.");
+            fprintf(stderr, "parallelTrain option is not enabled. ParallelTrain config will be ignored.\n");
         }
         else
         {

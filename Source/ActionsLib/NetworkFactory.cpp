@@ -85,17 +85,18 @@ bool TryGetNetworkFactory(const ConfigRecordType& config, function<ComputationNe
         // For back-compat, [ ] is allowed and means the same as { }
         if (sourceOfNetwork[0] == '{' || sourceOfNetwork[0] == '[') // if { } form then we turn it into ComputationNetwork by constructing a ComputationNetwork from it
             sourceOfNetwork = L"new ComputationNetwork " + sourceOfNetwork;
+        let traceLevel = config(L"traceLevel", (int)0);
         let sourceOfBS = msra::strfun::wstrprintf(L"include \'cntk.core.bs\'\n" // include our core lib. Note: Using lowercase here to match the Linux name of the CNTK exe.
             L"deviceId = %d\n"            // deviceId as passed in
+            L"traceLevel = %d\n"
             L"precision = '%ls'\n"        // 'float' or 'double'
             L"network = %ls",             // source code of expression that evaluates to a ComputationNetwork
-            (int)deviceId, ElemTypeName<ElemType>(), sourceOfNetwork.c_str());
+            (int)deviceId, traceLevel, ElemTypeName<ElemType>(), sourceOfNetwork.c_str());
         let expr = BS::ParseConfigDictFromString(sourceOfBS, L"BrainScriptNetworkBuilder", move(includePaths));
-        let traceLevel = config(L"traceLevel",(int)0);
 
         // the rest is done in a lambda that is only evaluated when a virgin network is needed
         // Note that evaluating the BrainScript *is* instantiating the network, so the evaluate call must be inside the lambda.
-        createNetworkFn = [expr, traceLevel](DEVICEID_TYPE /*deviceId*/)
+        createNetworkFn = [expr](DEVICEID_TYPE /*deviceId*/)
         {
             // evaluate the parse tree, particularly the top-level field 'network'
             // Evaluating it will create the network.
@@ -103,8 +104,6 @@ bool TryGetNetworkFactory(const ConfigRecordType& config, function<ComputationNe
             let network = dynamic_pointer_cast<ComputationNetwork>(object); // cast it
             if (!network)
                 LogicError("BuildNetworkFromDescription: ComputationNetwork not what it was meant to be");
-            // success
-            network->SetTraceLevel(traceLevel);
             return network;
         };
         return true;

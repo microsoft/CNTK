@@ -89,8 +89,8 @@ struct GradientUpdateInfo
 
     // for FSAdaGrad:
     // Note: Currently these cannot be parameterized externally. Once they can, rethink they names!
-    double targetAdagradAvDenom = 1; // 1/400 magic constant
-    size_t varianceTimeConstant = 2 * 3600 * 100;
+    double targetAdagradAvDenom = 1;
+    size_t varianceTimeConstant = 2 * 3600 * 100; // originally was: 2h of speech
 };
 
 // ---------------------------------------------------------------------------

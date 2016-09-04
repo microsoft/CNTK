@@ -426,7 +426,8 @@ void ComputationNetwork::VerifyIsCompiled(const char* where) const
 // TODO: This is in a somewhat partial state in that we now have a global eval order (keyed by a nullptr), but don't use it yet.
 void ComputationNetwork::CompileNetwork()
 {
-    fprintf(stderr, "\nPost-processing network...\n");
+    if (TraceLevel() > 0)
+        fprintf(stderr, "\nPost-processing network...\n");
 
     // We may only get here if not !IsCompiled(). We could now verify each member to be virgin.
     // Or just invalidate it again, which is easier and safer.
@@ -435,9 +436,12 @@ void ComputationNetwork::CompileNetwork()
     // all steps below have to be repeated for all root nodes (=nodes without parents and PreComputeNodes)
     DetermineSetOfAllRoots();
 
-    fprintf(stderr, "\n%d roots:\n", (int)m_allRoots.size());
-    for (const auto& root : m_allRoots)
-        fprintf(stderr, "\t%ls = %ls()\n", root->NodeName().c_str(), root->OperationName().c_str());
+    if (TraceLevel() > 0)
+    {
+        fprintf(stderr, "\n%d roots:\n", (int)m_allRoots.size());
+        for (const auto& root : m_allRoots)
+            fprintf(stderr, "\t%ls = %ls()\n", root->NodeName().c_str(), root->OperationName().c_str());
+    }
 
     // Note: Steps below are loops over root nodes. We will gradually push those loops through to the functions,
     //       to reduce redundant operation on shared portions of the network.
@@ -481,7 +485,8 @@ void ComputationNetwork::CompileNetwork()
     // STEP: Some final details.
     ResetEvalTimeStamps(); // invalidate all m_value fields. Really belongs into StartEvaluateMinibatchLoop()
 
-    fprintf(stderr, "\nPost-processing network complete.\n\n");
+    if (TraceLevel() > 0)
+        fprintf(stderr, "\nPost-processing network complete.\n\n");
     m_isCompiled = true;
 }
 
@@ -624,11 +629,13 @@ void ComputationNetwork::ValidateNetwork()
     size_t toValidate = nodes.size();
     while (toValidate > 0)
     {
-        fprintf(stderr, "\nValidating network. %d nodes to process in pass %d.\n\n", (int) toValidate, (int) pass);
+        if (TraceLevel() > 0)
+            fprintf(stderr, "\nValidating network. %d nodes to process in pass %d.\n\n", (int) toValidate, (int) pass);
         toValidate = ValidateNodes(nodes, /*isFirstPass=*/pass == 1, false /*isFinalValidationPass*/);
         pass++;
     }
-    fprintf(stderr, "\nValidating network, final pass.\n\n");
+    if (TraceLevel() > 0)
+        fprintf(stderr, "\nValidating network, final pass.\n\n");
     toValidate = ValidateNodes(nodes, /*isFirstPass=*/pass == 1, true /*isFinalValidationPass*/);
     if (toValidate != 0)
         LogicError("ValidateSubNetwork: ValidateNodes(true) unexpectedly returned with work left to do.");
@@ -648,7 +655,8 @@ void ComputationNetwork::ValidateNetwork()
         if (node->GetSampleLayout().GetNumElements() == 0)
             RuntimeError("%ls operation has 0 elements", node->NodeName().c_str());
     }
-    fprintf(stderr, "\n\n");
+    if (TraceLevel() > 0)
+        fprintf(stderr, "\n\n");
 
     // logging the non-default-layout nodes
     vector<ComputationNodeBasePtr> nonDefaultNodes;
@@ -657,13 +665,15 @@ void ComputationNetwork::ValidateNetwork()
         if (!(node->GetMBLayout() == m_pMBLayoutOfNetwork))
             nonDefaultNodes.push_back(node);
     }
-    if (!nonDefaultNodes.empty())
+#if 0 // this message is no longer necessary
+    if (TraceLevel() > 0 && !nonDefaultNodes.empty())
     {
         fprintf(stderr, "%d out of %d nodes do not share the minibatch layout with the input data.\n", (int)nonDefaultNodes.size(), (int)nodes.size());
         // for (auto node : nonDefaultNodes)
         //    fprintf(stderr, "    %ls\n", node->NodeName().c_str());
         // fprintf(stderr, "\n\n");
     }
+#endif
 }
 
 // helper to discover dimension changes
@@ -741,7 +751,8 @@ size_t ComputationNetwork::ValidateNodes(list<ComputationNodeBasePtr> nodes, boo
 #else           // print prototype upon every change (useful for debugging)
                 if (isFirstPass || !unchanged || prevPrototype != updatedPrototype)
 #endif
-                    fprintf(stderr, "Validating --> %s\n", updatedPrototype.c_str());
+                    if (TraceLevel() > 0)
+                        fprintf(stderr, "Validating --> %s\n", updatedPrototype.c_str());
             }
             catch (...) // if validation failed then print the prototype anyway so one can see the input args
             {
@@ -891,7 +902,8 @@ void ComputationNetwork::AllocateAllMatrices(const std::vector<ComputationNodeBa
         return;
 
     // Allocate memory for forward/backward computation
-    fprintf(stderr, "\n\nAllocating matrices for forward and/or backward propagation.\n");
+    if (TraceLevel() > 0)
+        fprintf(stderr, "\n\nAllocating matrices for forward and/or backward propagation.\n");
 
     VerifyIsCompiled("AllocateAllMatrices");
 
@@ -1029,7 +1041,8 @@ void ComputationNetwork::AllocateAllMatrices(const std::vector<ComputationNodeBa
     m_areMatricesAllocated = true;
 
     // print the memory sharing structure
-    PrintMemorySharingStructure(GetAllNodes());
+    if (TraceLevel() > 0)
+        PrintMemorySharingStructure(GetAllNodes());
 }
 
 void ComputationNetwork::ReleaseMatricesAfterEvalForChildren(ComputationNodeBasePtr n, std::unordered_map<ComputationNodeBasePtr, int>& parentCount)
