@@ -150,7 +150,7 @@ LearnableParameter<ElemType>::LearnableParameter(const ScriptableObjects::IConfi
     // This will be repeated if the matrix gets resized due to dimension inference.
     LazyInitParameters();
 
-    if (!m_initString.empty())
+    if (configp->Find(L"traceLevel") && (int)configp->Get(L"traceLevel") > 0 && !m_initString.empty())
         fprintf(stderr, "%ls: Initializating Parameter[%s] as %ls later when dimensions are fully known.\n", NodeDescription().c_str(), string(GetSampleLayout()).c_str(), m_initString.c_str());
 }
 
@@ -252,15 +252,17 @@ void LearnableParameter<ElemType>::InitRandom(const wstring& type,
         Value().SetUniformRandomValue(-range, range, randomSeed);
     else
         Value().SetGaussianRandomValue(0, range, randomSeed);
-    fprintf(stderr, "%ls: Initializing Parameter[%s] <- %ls(seed=%d, init dims=[%d x %d], range=%f*%f, onCPU=%s)",
-            NodeDescription().c_str(), string(GetSampleLayout()).c_str(), m_initString.c_str(),
-            (int)m_randomSeed, (int)fanOut, (int)fanIn, range, m_initValueScale, m_initOnCPUOnly ? "true" : "false");
-    if (initOnCPUOnly)
-    {
+    bool log = GetEnvironmentPtr() && Environment().m_traceLevel > 0; // note: this will not log before node is part of network
+    if (log)
+        fprintf(stderr, "%ls: Initializing Parameter[%s] <- %ls(seed=%d, init dims=[%d x %d], range=%f*%f, onCPU=%s)",
+                NodeDescription().c_str(), string(GetSampleLayout()).c_str(), m_initString.c_str(),
+                (int)m_randomSeed, (int)fanOut, (int)fanIn, range, m_initValueScale, m_initOnCPUOnly ? "true" : "false");
+    if (log && (initOnCPUOnly || m_deviceId == CPUDEVICE))
         fprintf(stderr, " { %.8f, ... }\n", Value()(0, 0));
+    if (initOnCPUOnly)
         Value().TransferToDeviceIfNotThere(m_deviceId, true);
-    }
-    fprintf(stderr, ".\n");
+    if (log)
+        fprintf(stderr, ".\n");
 }
 
 // Initialize with bilinear interpolation coefficients (useful for deconvolution layer).
@@ -516,7 +518,8 @@ void LearnableParameter<ElemType>::LazyInitParameters()
     // OK, proceed
     if (m_initString == L"fromValue")
     {
-        fprintf(stderr, "%ls: Initializing Parameter[%s] <- %f.\n", NodeDescription().c_str(), string(GetSampleLayout()).c_str(), m_initValue);
+        if (GetEnvironmentPtr() && Environment().m_traceLevel > 0) // note: this will not log before node is part of network
+            fprintf(stderr, "%ls: Initializing Parameter[%s] <- %f.\n", NodeDescription().c_str(), string(GetSampleLayout()).c_str(), m_initValue);
         Value().SetValue(m_initValue);
     }
     else if (ParseRandomizationType(m_initString).second != 0)
