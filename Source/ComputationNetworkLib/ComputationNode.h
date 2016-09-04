@@ -1975,6 +1975,7 @@ protected:                                                                      
     using Base::GetAsMatrixNumCols;                                                                                                                      \
     using Base::GetAsMatrixNumRows;                                                                                                                      \
     using Base::GetDeviceId;                                                                                                                             \
+    using Base::GetEnvironmentPtr;                                                                                                                       \
     using Base::GetInputSampleLayout;                                                                                                                    \
     using Base::GetInputsFromConfig;                                                                                                                     \
     using Base::GetMBLayout;                                                                                                                             \
