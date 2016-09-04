@@ -1577,8 +1577,8 @@ double SGD<ElemType>::SearchForBestLearnRate(ComputationNetworkPtr net,
         bestLearnRatePerSample = (leftCriterion.Average() < rightCriterion.Average()) ? leftLearnRatePerSample : rightLearnRatePerSample;
     }
 
-    LOGPRINTF(stderr, "Best Learn Rate Per Sample for Epoch[%d] = %.10g  baseCriterion=%.10g\n",
-              epochNumber + 1, bestLearnRatePerSample, baseCriterion.Average());
+    LOGPRINTF(stderr, " SearchForBestLearnRate Epoch[%d]: Best learningRatePerSample = %.10g, baseCriterion=%.10g\n",
+              (int) epochNumber + 1, bestLearnRatePerSample, baseCriterion.Average());
 
     return bestLearnRatePerSample;
 }
@@ -1629,8 +1629,7 @@ size_t SGD<ElemType>::AdaptiveMinibatchSizing(ComputationNetworkPtr net,
     if (epochNumber < 2 && m_prevChosenMinibatchSize != 0)
     {
         // newly started training: any previous MB size stored in the model is to be ignored
-        // BUGBUG: %z is not supported in VS 2013, is it?
-        LOGPRINTF(stderr, "before epoch .2, previous minibatchSize %d is considered invalid -> resetting\n",
+        LOGPRINTF(stderr, " Before Epoch[2], previous minibatchSize %d is considered invalid -> resetting.\n",
                   (int)m_prevChosenMinibatchSize);
         m_prevChosenMinibatchSize = 0;
     }
@@ -1640,7 +1639,7 @@ size_t SGD<ElemType>::AdaptiveMinibatchSizing(ComputationNetworkPtr net,
         (epochNumber + 1) > m_minibatchSizeTuningFrequency &&
         (epochNumber + 1) % m_minibatchSizeTuningFrequency != 0)
     {
-        LOGPRINTF(stderr, "AdaptiveMinibatchSearch: Search for a better minibatchSize in epoch %d skipped, keeping minibatchSize of %zd\n",
+        LOGPRINTF(stderr, " AdaptiveMinibatchSearch: Search for a better minibatchSize in epoch %d skipped, keeping minibatchSize of %zd\n",
             (int)epochNumber + 1, (int)m_prevChosenMinibatchSize);
         chosenMinibatchSize = m_prevChosenMinibatchSize;
     }
@@ -1651,8 +1650,8 @@ size_t SGD<ElemType>::AdaptiveMinibatchSizing(ComputationNetworkPtr net,
             // if m_prevChosenMinibatchSize (the chosen minibatch size for the previous epoch) div 2
             // is higher than initialMinibatchSize (the minibatch size we start with for this epoch),
             // then start the search with m_prevChosenMinibatchSize/2 instead of initialMinibatchSize.
-            LOGPRINTF(stderr, "AdaptiveMinibatchSearch: Limiting minMinibatchSize to largest of previous minibatchSize = (%d / 2) or %d\n",
-                      (int) m_prevChosenMinibatchSize, (int) minMinibatchSize);
+            //LOGPRINTF(stderr, " AdaptiveMinibatchSearch: Limiting minMinibatchSize to largest of previous minibatchSize = (%d / 2) or %d\n",
+            //          (int) m_prevChosenMinibatchSize, (int) minMinibatchSize);
             minMinibatchSize = max(minMinibatchSize, m_prevChosenMinibatchSize / 2);
         }
 
@@ -1663,8 +1662,8 @@ size_t SGD<ElemType>::AdaptiveMinibatchSizing(ComputationNetworkPtr net,
         {
             assert(m_prevChosenMinibatchSize >= chosenMinibatchSize);
 
-            LOGPRINTF(stderr, "AdaptiveMinibatchSearch: Limiting maxMinibatchSize to previous minibatchSize %d*2\n",
-                      (int) m_prevChosenMinibatchSize);
+            //LOGPRINTF(stderr, " AdaptiveMinibatchSearch: Limiting maxMinibatchSize to previous minibatchSize %d*2\n",
+            //          (int) m_prevChosenMinibatchSize);
             maxMinibatchSize = min(maxMinibatchSize, m_prevChosenMinibatchSize * 2);
         }
 
@@ -1722,7 +1721,7 @@ size_t SGD<ElemType>::SearchForBestMinibatchSize(ComputationNetworkPtr net,
     // increase the minibatch size by a factor of sqrt(2) in each step.
     const float minibatchSizeTuningFactor = sqrtf(2.0f);
 
-    LOGPRINTF(stderr, "AdaptiveMinibatchSearch Epoch[%d]: Evaluating minibatchSizes %d..%d",
+    LOGPRINTF(stderr, " AdaptiveMinibatchSearch Epoch[%d]: Evaluating minibatchSizes %d..%d\n",
         (int)epochNumber + 1, (int)RoundToMultipleOf64(minMinibatchSize), (int)RoundToMultipleOf64(maxMinibatchSize));
 
     size_t lastTriedTrialMinibatchSize = 0;
@@ -1735,7 +1734,7 @@ size_t SGD<ElemType>::SearchForBestMinibatchSize(ComputationNetworkPtr net,
         trialMinibatchSize = RoundToMultipleOf64(trialMinibatchSizeFloat);
         if (m_traceLevel > 0)
         {
-            LOGPRINTF(stderr, "AdaptiveMinibatchSearch Epoch[%d]: Evaluating trial minibatchSize=%d (search range: %d..%d)...\n",
+            LOGPRINTF(stderr, " AdaptiveMinibatchSearch Epoch[%d]: Evaluating trial minibatchSize=%d (search range: %d..%d)...\n",
                       (int)epochNumber+1, (int)trialMinibatchSize, (int)RoundToMultipleOf64(minMinibatchSize), (int)RoundToMultipleOf64(maxMinibatchSize));
         }
         std::vector<EpochCriterion> epochEvalErrors(evaluationNodes.size(), EpochCriterion::Infinity());
@@ -1763,7 +1762,7 @@ size_t SGD<ElemType>::SearchForBestMinibatchSize(ComputationNetworkPtr net,
 
             if (m_traceLevel > 0)
             {
-                LOGPRINTF(stderr, "AdaptiveMinibatchSearch Epoch[%d]: Computed baseCriterion %.8f for minibatchSize=%d\n",
+                LOGPRINTF(stderr, " AdaptiveMinibatchSearch Epoch[%d]: Computed baseCriterion %.8f for minibatchSize=%d\n",
                           (int)epochNumber + 1, baseCriterion.Average(), (int)trialMinibatchSize);
             }
         }
@@ -1782,12 +1781,12 @@ size_t SGD<ElemType>::SearchForBestMinibatchSize(ComputationNetworkPtr net,
             lastTriedTrialEpochCriterion = epochCriterion;
             if (m_traceLevel > 0 && trialMinibatchSizeFloat * minibatchSizeTuningFactor <= maxMinibatchSize)
             {
-                LOGPRINTF(stderr, "AdaptiveMinibatchSearch Epoch[%d]: Keep searching... epochCriterion = %.8f vs. baseCriterion = %.8f\n",
+                LOGPRINTF(stderr, " AdaptiveMinibatchSearch Epoch[%d]: Keep searching... epochCriterion = %.8f vs. baseCriterion = %.8f\n",
                           (int)epochNumber+1, epochCriterion.Average(), baseCriterion.Average());
             }
         }
     }
-    LOGPRINTF(stderr, "AdaptiveMinibatchSearch Epoch[%d]: Search successful. New minibatchSize is %d. epochCriterion = %.8f vs baseCriterion = %.8f\n\n",
+    LOGPRINTF(stderr, " AdaptiveMinibatchSearch Epoch[%d]: Search successful. New minibatchSize is %d. epochCriterion = %.8f vs baseCriterion = %.8f\n",
               (int)epochNumber+1, (int) lastTriedTrialMinibatchSize, lastTriedTrialEpochCriterion.Average(), baseCriterion.Average());
 
     return lastTriedTrialMinibatchSize;
@@ -1817,9 +1816,9 @@ void SGD<ElemType>::TrainOneMiniEpochAndReloadModel(ComputationNetworkPtr net,
                   labelNodes, criterionNodes, evaluationNodes,
                   inputMatrices, learnableNodes, smoothedGradients, smoothedCounts,
                   /*out*/ epochCriterion, /*out*/ epochEvalErrors,
-                  prefixMsg);
+                  "  " + prefixMsg); // indent log msg by 2 (that is 1 more than the Finished message below)
 
-    LOGPRINTF(stderr, "Finished Mini-Epoch[%d]: ", (int)epochNumber+1);
+    LOGPRINTF(stderr, " Finished Mini-Epoch[%d]: ", (int)epochNumber+1);
     epochCriterion.LogCriterion(criterionNodes[0]->NodeName());
     for (size_t j = 0; j < epochEvalErrors.size(); j++)
         epochEvalErrors[j].LogCriterion(evaluationNodes[j]->NodeName());
@@ -2121,7 +2120,7 @@ bool SGD<ElemType>::TryLoadCheckPointInfo(const size_t epochNumber,
         prevCriterion = 0;
         minibatchSize = m_mbSize[epochNumber];
 
-        LOGPRINTF(stderr, "Warning: Checkpoint file is missing. Learning parameters will be initialized from 0\n");
+        LOGPRINTF(stderr, "Warning: Checkpoint file is missing. Parameter-learning state (such as momentum) will be reset.\n");
         return false;
     }
 

@@ -613,7 +613,7 @@ static void PrintBanner(int argc, wchar_t* argv[], const string& timestamp)
 {
     fprintf(stderr, "CNTK 1.7+ (");
 #ifdef _GIT_EXIST
-    fprintf(stderr, "%s %.6s", _BUILDBRANCH_, _BUILDSHA1_);
+    fprintf(stderr, "%s %.6s, ", _BUILDBRANCH_, _BUILDSHA1_);
 #endif
     fprintf(stderr, "%s %s", __DATE__, __TIME__); // build time
     fprintf(stderr, ") on %s at %s\n\n", GetHostName().c_str(), timestamp.c_str());
