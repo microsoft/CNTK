@@ -83,13 +83,13 @@ void ComputationNetwork::Backprop(const ComputationNodeBasePtr rootNode) // trai
 
 void ComputationNetwork::ForwardProp(const ComputationNodeBasePtr rootNode, const ComputationNodeBasePtr startNode, const ComputationNodeBasePtr endNode)
 {
-	VerifyIsCompiled("ForwardProp");
+    VerifyIsCompiled("ForwardProp");
 
-	// traverse partial nodes as inputs
-	shared_ptr<FlowControlNode> network = dynamic_pointer_cast<FlowControlNode>(GetNestedNetwork(rootNode));
-	assert(network);
+    // traverse partial nodes as inputs
+    shared_ptr<FlowControlNode> network = dynamic_pointer_cast<FlowControlNode>(GetNestedNetwork(rootNode));
+    assert(network);
 
-	network->ForwardProp(FrameRange(nullptr), startNode, endNode);
+    network->ForwardProp(FrameRange(nullptr), startNode, endNode);
 }
 
 void ComputationNetwork::FormNestedNetwork(const ComputationNodeBasePtr& rootNode)
@@ -191,30 +191,30 @@ ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(con
 }
 /*virtual*/ void ComputationNetwork::PARTraversalFlowControlNode::ForwardProp(const FrameRange & fr, ComputationNodeBasePtr startNode, ComputationNodeBasePtr endNode)
 {
-	// if start node is nullptr, forward will be enable
-	bool enableForward = startNode ? false : true;
+    // if start node is nullptr, forward will be enable
+    bool enableForward = startNode ? false : true;
 
-	for (auto& node : m_nestedNodes)
-	{
+    for (auto& node : m_nestedNodes)
+    {
 #if 0
-		if (dynamic_pointer_cast<LearnableParameter<float>>(node))
-			dynamic_pointer_cast<ComputationNode<float>>(node)->DebugLogMinibatch();
+        if (dynamic_pointer_cast<LearnableParameter<float>>(node))
+        dynamic_pointer_cast<ComputationNode<float>>(node)->DebugLogMinibatch();
 #endif
-		if (node->IsOutOfDateWrtInputs() && enableForward) {
-			node->BeginForwardProp();
-			node->ForwardProp(fr.WithLayout(node->GetMBLayout()));
-			node->EndForwardProp();
+        if (node->IsOutOfDateWrtInputs() && enableForward) {
+            node->BeginForwardProp();
+            node->ForwardProp(fr.WithLayout(node->GetMBLayout()));
+            node->EndForwardProp();
 
-			node->BumpEvalTimeStamp();
-		}
+            node->BumpEvalTimeStamp();
+        }
 
-		if (node == startNode) {
-			enableForward = true;
-		}
-		else if (node == endNode) {
-			break;
-		}
-	}
+        if (node == startNode) {
+            enableForward = true;
+        }
+        else if (node == endNode) {
+            break;
+        }
+    }
 }
 
 // -----------------------------------------------------------------------

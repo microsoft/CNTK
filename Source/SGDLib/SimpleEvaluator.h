@@ -20,8 +20,6 @@
 #include <string>
 #include <set>
 
-#include <iostream>
-
 using namespace std;
 
 namespace Microsoft { namespace MSR { namespace CNTK {
@@ -259,147 +257,144 @@ public:
         return evalResults;
     }
 
-	void EvaluateBN(IDataReader* dataReader, const vector<wstring>& evalNodeNames, const wstring exportPath, const size_t mbSize, const int iters = 240, const size_t testSize = requestDataSize)
-	{
-		ScopedNetworkOperationMode modeGuard(m_net, NetworkOperationMode::inferring);
+    void EvaluateBN(IDataReader* dataReader, const vector<wstring>& evalNodeNames, const wstring exportPath, const size_t mbSize, const int iters = 240, const size_t testSize = requestDataSize)
+    {
+        ScopedNetworkOperationMode modeGuard(m_net, NetworkOperationMode::inferring);
 
-		// determine nodes to evaluate
-		std::vector<ComputationNodeBasePtr> evalNodes;
+        // determine nodes to evaluate
+        std::vector<ComputationNodeBasePtr> evalNodes;
 
-		set<ComputationNodeBasePtr> criteriaLogged; // (keeps track ot duplicates to avoid we don't double-log critera)
-		if (evalNodeNames.size() == 0)
-		{
-			fprintf(stderr, "evalNodeNames are not specified, using all the default evalnodes and training criterion nodes.\n");
-			if (m_net->EvaluationNodes().empty() && m_net->FinalCriterionNodes().empty())
-				InvalidArgument("There is no default evaluation node or training criterion specified in the network.");
+        set<ComputationNodeBasePtr> criteriaLogged; // (keeps track ot duplicates to avoid we don't double-log critera)
+        if (evalNodeNames.size() == 0)
+        {
+            fprintf(stderr, "evalNodeNames are not specified, using all the default evalnodes and training criterion nodes.\n");
+            if (m_net->EvaluationNodes().empty() && m_net->FinalCriterionNodes().empty())
+                InvalidArgument("There is no default evaluation node or training criterion specified in the network.");
 
-			for (const auto& node : m_net->EvaluationNodes())
-				if (criteriaLogged.insert(node).second)
-					evalNodes.push_back(node);
+            for (const auto& node : m_net->EvaluationNodes())
+                if (criteriaLogged.insert(node).second)
+                    evalNodes.push_back(node);
 
-			for (const auto& node : m_net->FinalCriterionNodes())
-				if (criteriaLogged.insert(node).second)
-					evalNodes.push_back(node);
-		}
-		else
-		{
-			for (int i = 0; i < evalNodeNames.size(); i++)
-			{
-				const auto& node = m_net->GetNodeFromName(evalNodeNames[i]);
-				if (!criteriaLogged.insert(node).second)
-					continue;
-				if (node->GetSampleLayout().GetNumElements() != 1)
-					InvalidArgument("Criterion nodes to evaluate must have dimension 1x1.");
-				evalNodes.push_back(node);
-			}
-		}
+            for (const auto& node : m_net->FinalCriterionNodes())
+                if (criteriaLogged.insert(node).second)
+                    evalNodes.push_back(node);
+        }
+        else
+        {
+            for (int i = 0; i < evalNodeNames.size(); i++)
+            {
+                const auto& node = m_net->GetNodeFromName(evalNodeNames[i]);
+                if (!criteriaLogged.insert(node).second)
+                    continue;
+                if (node->GetSampleLayout().GetNumElements() != 1)
+                    InvalidArgument("Criterion nodes to evaluate must have dimension 1x1.");
+                evalNodes.push_back(node);
+            }
+        }
 
-		// allocate memory for forward computation
-		m_net->AllocateAllMatrices(evalNodes, {}, nullptr);
+        // allocate memory for forward computation
+        m_net->AllocateAllMatrices(evalNodes, {}, nullptr);
 
-		// prepare features and labels
-		auto& featureNodes = m_net->FeatureNodes();
-		auto& labelNodes = m_net->LabelNodes();
+        // prepare features and labels
+        auto& featureNodes = m_net->FeatureNodes();
+        auto& labelNodes = m_net->LabelNodes();
 
-		StreamMinibatchInputs inputMatrices;
-		for (auto& node : featureNodes)
-			inputMatrices.AddInput(node->NodeName(), node->ValuePtr(), node->GetMBLayout(), node->GetSampleLayout());
-		for (auto& node : labelNodes)
-			inputMatrices.AddInput(node->NodeName(), node->ValuePtr(), node->GetMBLayout(), node->GetSampleLayout());
+        StreamMinibatchInputs inputMatrices;
+        for (auto& node : featureNodes)
+            inputMatrices.AddInput(node->NodeName(), node->ValuePtr(), node->GetMBLayout(), node->GetSampleLayout());
+        for (auto& node : labelNodes)
+            inputMatrices.AddInput(node->NodeName(), node->ValuePtr(), node->GetMBLayout(), node->GetSampleLayout());
 
-		bool useParallelTrain = (m_mpi != nullptr);
-		bool useDistributedMBReading = useParallelTrain && m_enableDistributedMBReading && dataReader->SupportsDistributedMBRead();
-		if (useDistributedMBReading)
-			dataReader->StartDistributedMinibatchLoop(mbSize, 0, m_mpi->CurrentNodeRank(), m_mpi->NumNodesInUse(), testSize);
-		else
-			dataReader->StartMinibatchLoop(mbSize, 0, testSize);
+        bool useParallelTrain = (m_mpi != nullptr);
+        bool useDistributedMBReading = useParallelTrain && m_enableDistributedMBReading && dataReader->SupportsDistributedMBRead();
+        if (useDistributedMBReading)
+            dataReader->StartDistributedMinibatchLoop(mbSize, 0, m_mpi->CurrentNodeRank(), m_mpi->NumNodesInUse(), testSize);
+        else
+            dataReader->StartMinibatchLoop(mbSize, 0, testSize);
 
-		m_net->StartEvaluateMinibatchLoop(evalNodes);
+        m_net->StartEvaluateMinibatchLoop(evalNodes);
 
-		// Passing in two empty node lists so the dispatcher can work for the evalNodes.
-		std::list<ComputationNodeBasePtr> learnableNodes;
-		std::vector<ComputationNodeBasePtr> criterionNodes;
+        // Passing in two empty node lists so the dispatcher can work for the evalNodes.
+        std::list<ComputationNodeBasePtr> learnableNodes;
+        std::vector<ComputationNodeBasePtr> criterionNodes;
 
-		// First, all batch normalization nodes should be marked.
-		std::vector<ComputationNodeBasePtr> batchNormalNodes;
-		shared_ptr<FlowControlNode> nestedNetwork = static_pointer_cast<FlowControlNode>(m_net->GetNestedNetwork(evalNodes[0]));
-		for (auto& node : nestedNetwork->GetNestedNodes()) {
-			shared_ptr<BatchNormalizationNode<ElemType>> castNode =
-				dynamic_pointer_cast<BatchNormalizationNode<ElemType>>(node);
-			if (castNode) {
-				batchNormalNodes.push_back(node);
-			}
-		}
+        // First, all batch normalization nodes should be marked.
+        std::vector<ComputationNodeBasePtr> batchNormalNodes;
+        shared_ptr<FlowControlNode> nestedNetwork = static_pointer_cast<FlowControlNode>(m_net->GetNestedNetwork(evalNodes[0]));
+        for (auto& node : nestedNetwork->GetNestedNodes()) {
+            shared_ptr<BatchNormalizationNode<ElemType>> castNode =
+                dynamic_pointer_cast<BatchNormalizationNode<ElemType>>(node);
+            if (castNode) {
+                batchNormalNodes.push_back(node);
+            }
+        }
 
-		// Push all batch normalization mean and std into learn params values for mpi update
-		std::vector<Matrix<ElemType>*> learnParamsValues(2, nullptr);
+        // Push all batch normalization mean and std into learn params values for mpi update
+        std::vector<Matrix<ElemType>*> learnParamsValues(2, nullptr);
 
-		bool noMoreSamplesToProcess = false;
-		for (auto& node : batchNormalNodes) {
-			shared_ptr<BatchNormalizationNode<ElemType>> batchNode =
-				static_pointer_cast<BatchNormalizationNode<ElemType>>(node);
-			batchNode->SetPostBatchNormalizationBegin();
-			size_t actualMBSize = 0;
+        bool noMoreSamplesToProcess = false;
+        for (auto& node : batchNormalNodes) {
+            shared_ptr<BatchNormalizationNode<ElemType>> batchNode =
+                static_pointer_cast<BatchNormalizationNode<ElemType>>(node);
+            batchNode->SetPostBatchNormalizationBegin();
+            size_t actualMBSize = 0;
 
-			LOGPRINTF(stderr, "Start evaluating: %ls\n", batchNode->GetName().c_str());
+            LOGPRINTF(stderr, "Start evaluating: %ls\n", batchNode->GetName().c_str());
 
-			// Post batch normal iters
-			for (int iter = 0; iter < iters; iter++) {
-				bool wasDataRead = DataReaderHelpers::GetMinibatchIntoNetwork<ElemType>(*dataReader, m_net, 
-					nullptr, useDistributedMBReading, useParallelTrain, inputMatrices, actualMBSize, m_mpi);
+            // Post batch normal iters
+            for (int iter = 0; iter < iters; iter++) {
+                bool wasDataRead = DataReaderHelpers::GetMinibatchIntoNetwork<ElemType>(*dataReader, m_net, 
+                    nullptr, useDistributedMBReading, useParallelTrain, inputMatrices, actualMBSize, m_mpi);
 
-				if (!wasDataRead && (!useDistributedMBReading || noMoreSamplesToProcess))
-					break;
+                if (!wasDataRead && (!useDistributedMBReading || noMoreSamplesToProcess))
+                    break;
 
-				// TODO should handle it, since post BN exist no samples in iters
-				if (!wasDataRead)
-					actualMBSize = 0;
+                // TODO should handle it, since post BN exist no samples in iters
+                if (!wasDataRead)
+                    actualMBSize = 0;
 
-				// Batch Normalization Evaluate don't need to support subMinibatches
+                // Batch Normalization Evaluate don't need to support subMinibatches
+                ComputationNetwork::BumpEvalTimeStamp(featureNodes);
+                ComputationNetwork::BumpEvalTimeStamp(labelNodes);
 
-				ComputationNetwork::BumpEvalTimeStamp(featureNodes);
-				ComputationNetwork::BumpEvalTimeStamp(labelNodes);
+                m_net->ForwardProp(evalNodes[0], nullptr, node);
+                dataReader->DataEnd();
+            }
+            batchNode->SetPostBatchNormalizationEnd();
 
-				m_net->ForwardProp(evalNodes[0], nullptr, node);
+            // Sync during or after all iters of a BN node are equivalent
+            if (useParallelTrain) {
+                if (m_gradHeader == nullptr)
+                {
+                    m_gradHeader.reset(DistGradHeader::Create(evalNodes.size()), [](DistGradHeader* ptr) {
+                        DistGradHeader::Destroy(ptr);
+                    });
+                }
+                SimpleDistGradAggregator<ElemType> distGradAgg(m_mpi, false /*useAsyncAggregation*/, 0 /*syncStatsTrace*/);
 
-				dataReader->DataEnd();
-			}
+                auto runMeanParameterPtr = node->GetInputs()[3];
+                auto runStdParameterPtr = node->GetInputs()[4];
 
-			batchNode->SetPostBatchNormalizationEnd();
+                shared_ptr<ComputationNode<ElemType>> runMeanNode = static_pointer_cast<ComputationNode<ElemType>>(runMeanParameterPtr);
+                shared_ptr<ComputationNode<ElemType>> runStdNode = static_pointer_cast<ComputationNode<ElemType>>(runStdParameterPtr);
 
-			// Sync during or after all iters of a BN node are equivalent
-			if (useParallelTrain) {
-				if (m_gradHeader == nullptr)
-				{
-					m_gradHeader.reset(DistGradHeader::Create(evalNodes.size()), [](DistGradHeader* ptr) {
-						DistGradHeader::Destroy(ptr);
-					});
-				}
-				SimpleDistGradAggregator<ElemType> distGradAgg(m_mpi, false /*useAsyncAggregation*/, 0 /*syncStatsTrace*/);
+                learnParamsValues[0] = &(runMeanNode->Value());
+                learnParamsValues[1] = &(runStdNode->Value());
 
-				auto runMeanParameterPtr = node->GetInputs()[3];
-				auto runStdParameterPtr = node->GetInputs()[4];
+                m_gradHeader->numSamples = actualMBSize ? 1 : actualMBSize;
+                distGradAgg.AggregateGradients(learnParamsValues, m_gradHeader.get(), 0);
 
-				shared_ptr<ComputationNode<ElemType>> runMeanNode = static_pointer_cast<ComputationNode<ElemType>>(runMeanParameterPtr);
-				shared_ptr<ComputationNode<ElemType>> runStdNode = static_pointer_cast<ComputationNode<ElemType>>(runStdParameterPtr);
+                for (auto& parameter : learnParamsValues) {
+                    (*parameter) /= (ElemType)m_mpi->NumNodesInUse();
+                }
+            }
+        }
 
-				learnParamsValues[0] = &(runMeanNode->Value());
-				learnParamsValues[1] = &(runStdNode->Value());
+        // Save Model
+        if(!useParallelTrain || m_mpi->CurrentNodeRank() == m_mpi->MainNodeRank()) m_net->Save(exportPath);
 
-				m_gradHeader->numSamples = actualMBSize ? 1 : actualMBSize;
-				distGradAgg.AggregateGradients(learnParamsValues, m_gradHeader.get(), 0);
-
-				for (auto& parameter : learnParamsValues) {
-					(*parameter) /= (ElemType)m_mpi->NumNodesInUse();
-				}
-			}
-		}
-
-		// Save Model
-		if(!useParallelTrain || m_mpi->CurrentNodeRank() == m_mpi->MainNodeRank()) m_net->Save(exportPath);
-
-		return;
-	}
+        return;
+    }
 
 protected:
     void DisplayEvalStatistics(const size_t startMBNum, const size_t endMBNum, const size_t numSamplesLastLogged,

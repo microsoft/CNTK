@@ -85,39 +85,39 @@ static void DoEvalBase(const ConfigParameters& config, IDataReader& reader)
 template <typename ElemType>
 static void DoEvalBNBase(const ConfigParameters& config, IDataReader& reader)
 {
-	// DEVICEID_TYPE deviceId = DeviceFromConfig(config);
-	ConfigArray minibatchSize = config(L"minibatchSize", "40960");
-	size_t epochSize = config(L"epochSize", "0");
-	if (epochSize == 0)
-	{
-		epochSize = requestDataSize;
-	}
-	wstring modelPath = config(L"modelPath");
-	wstring exportPath = modelPath + L".PBN";
-	intargvector mbSize = minibatchSize;
+    // DEVICEID_TYPE deviceId = DeviceFromConfig(config);
+    ConfigArray minibatchSize = config(L"minibatchSize", "40960");
+    size_t epochSize = config(L"epochSize", "0");
+    if (epochSize == 0)
+    {
+        epochSize = requestDataSize;
+    }
+    wstring modelPath = config(L"modelPath");
+    wstring exportPath = modelPath + L".PBN";
+    intargvector mbSize = minibatchSize;
 
-	int iters = config(L"iters", 240);
+    int iters = config(L"iters", 240);
 
-	int traceLevel = config(L"traceLevel", "0");
-	size_t numMBsToShowResult = config(L"numMBsToShowResult", "100");
-	size_t firstMBsToShowResult = config(L"firstMBsToShowResult", "0");
-	size_t maxSamplesInRAM = config(L"maxSamplesInRAM", (size_t)SIZE_MAX);
-	size_t numSubminiBatches = config(L"numSubminibatches", (size_t)1);
+    int traceLevel = config(L"traceLevel", "0");
+    size_t numMBsToShowResult = config(L"numMBsToShowResult", "100");
+    size_t firstMBsToShowResult = config(L"firstMBsToShowResult", "0");
+    size_t maxSamplesInRAM = config(L"maxSamplesInRAM", (size_t)SIZE_MAX);
+    size_t numSubminiBatches = config(L"numSubminibatches", (size_t)1);
 
-	bool enableDistributedMBReading = config(L"distributedMBReading", false);
+    bool enableDistributedMBReading = config(L"distributedMBReading", false);
 
-	vector<wstring> evalNodeNamesVector;
+    vector<wstring> evalNodeNamesVector;
 
-	let net = GetModelFromConfig<ConfigParameters, ElemType>(config, L"evalNodeNames", evalNodeNamesVector);
+    let net = GetModelFromConfig<ConfigParameters, ElemType>(config, L"evalNodeNames", evalNodeNamesVector);
 
-	// set tracing flags
-	net->EnableNodeTracing(config(L"traceNodeNamesReal", ConfigParameters::Array(stringargvector())),
-		config(L"traceNodeNamesCategory", ConfigParameters::Array(stringargvector())),
-		config(L"traceNodeNamesSparse", ConfigParameters::Array(stringargvector())));
+    // set tracing flags
+    net->EnableNodeTracing(config(L"traceNodeNamesReal", ConfigParameters::Array(stringargvector())),
+        config(L"traceNodeNamesCategory", ConfigParameters::Array(stringargvector())),
+        config(L"traceNodeNamesSparse", ConfigParameters::Array(stringargvector())));
 
-	SimpleEvaluator<ElemType> eval(net, MPIWrapper::GetInstance(), enableDistributedMBReading, numMBsToShowResult,
-		firstMBsToShowResult, traceLevel, maxSamplesInRAM, numSubminiBatches);
-	eval.EvaluateBN(&reader, evalNodeNamesVector, exportPath, mbSize[0], iters, epochSize);
+    SimpleEvaluator<ElemType> eval(net, MPIWrapper::GetInstance(), enableDistributedMBReading, numMBsToShowResult,
+        firstMBsToShowResult, traceLevel, maxSamplesInRAM, numSubminiBatches);
+    eval.EvaluateBN(&reader, evalNodeNamesVector, exportPath, mbSize[0], iters, epochSize);
 }
 
 template <typename ElemType>
