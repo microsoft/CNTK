@@ -391,7 +391,8 @@ public:
         }
 
         // Save Model
-        if(!useParallelTrain || m_mpi->CurrentNodeRank() == m_mpi->MainNodeRank()) m_net->Save(exportPath);
+        if (!useParallelTrain || m_mpi->CurrentNodeRank() == m_mpi->MainNodeRank())
+            m_net->Save(exportPath);
 
         return;
     }
