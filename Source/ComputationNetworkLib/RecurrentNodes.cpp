@@ -147,6 +147,8 @@ template<class ElemType, int direction>
 /*private*/ TensorView<ElemType> DelayedValueNodeBase<ElemType, direction>::MakeMaskTensor(size_t rank) const
 {
     // send to Matrix object (likely living on a GPU)
+    // BUGBUG: This causes a CPU/GPU sync for every frame that requires masking.
+    //         For forward, this was fine; but for backprop, it kills perf (no longer faster than before).
     m_sourceFrameValidMatrix->SetValue(1, m_sourceFrameValid.size(), m_deviceId, const_cast<ElemType*>(m_sourceFrameValid.data()), matrixFlagNormal);
     // tensor shape is a 1-frame sequence, one element per parallel sequence.
     auto tensorShape = TensorShape(1).AppendInPlace(rank, GetMBLayout()->GetNumParallelSequences());
@@ -189,7 +191,7 @@ template<class ElemType, int direction>
     {
         if (!anyValid)
             ; // none valid: leave it uninitialized
-        else if (!m_delayedValue->IsEmpty())
+        else if (!m_delayedValue->IsEmpty()) // truncated BPTT
         {
             // truncated BPTT carry-over
             size_t T_delayedActivation = m_delayedActivationMBLayout ? m_delayedActivationMBLayout->GetNumTimeSteps() : 0; // (note: should never happen in full-sequence mode)
@@ -201,8 +203,13 @@ template<class ElemType, int direction>
         else
             LogicError("The delay node tries to access past values that are out of bound, possibly because there is no sentence start marker in the MBLayout.");
     }
-    else if (t_delayed >= GetNumTimeSteps())  // truncated BPTT goes left-to-right only
-        LogicError("The delay node tries to access future values that are out of bound, possibly because there is no sentence end marker in the MBLayout.");
+    else if (t_delayed >= GetNumTimeSteps())
+    {
+        if (!anyValid)
+            ; // none valid: leave it uninitialized
+        else  // truncated BPTT goes left-to-right only
+            LogicError("The delay node tries to access future values that are out of bound, possibly because there is no sentence end marker in the MBLayout.");
+    }
     else // regular case
         src = Input(0)->ValueTensorFor(rank, frDelayed);
 
@@ -217,13 +224,13 @@ template<class ElemType, int direction>
     {
         tgt.AssignCopyOf(src);
     }
-    else if (!anyValid) // no frame is valid: initialize from init value
-    {
-        tgt.AssignCopyOf(init);
-    }
-    else // some are valid, some are not: use a OpCond to select 'src' for valid and 'init' for invalid frames
+    else if (anyValid) // some are valid, some are not: use a OpCond to select 'src' for valid and 'init' for invalid frames
     {
         tgt.AssignCondOf(MakeMaskTensor(rank), src, init); // assign either input or init value, based on the mask
+    }
+    else // no frame is valid: initialize from init value
+    {
+        tgt.AssignCopyOf(init);
     }
 }
 
