@@ -787,6 +787,7 @@ inline bool MBLayout::IsGap(const FrameRange &fr) const
 }
 
 // test whether frame is exceeding the sentence boundaries
+// In case of a gap, this returns false.
 inline bool MBLayout::IsBeyondStartOrEnd(const FrameRange &fr) const
 {
     CheckIsValid();

@@ -29,17 +29,20 @@ class DelayedValueNodeBase : public ComputationNode<ElemType>, public IRecurrent
 
 private:
     void Init(const TensorShape& sampleLayout, ElemType initialActivationValue);
+    void SetUpdateMask(const FrameRange& frDelayed, bool& anyValid, bool& allValid);
 
 protected:
     DelayedValueNodeBase(DEVICEID_TYPE deviceId, const wstring& name)
         : Base(deviceId, name),
-          m_delayedValue(deviceId)
+          m_delayedValue(deviceId),
+          m_initialActivationValueMatrix(deviceId)
     {
         Init(TensorShape(), (ElemType) DEFAULT_HIDDEN_ACTIVATION);
     }
     DelayedValueNodeBase(DEVICEID_TYPE deviceId, const wstring& name, ElemType initialActivationValue, const TensorShape& sampleLayout, size_t timeStep)
         : Base(deviceId, name),
-          m_delayedValue(deviceId)
+        m_delayedValue(deviceId),
+        m_initialActivationValueMatrix(deviceId)
     {
         Init(sampleLayout, initialActivationValue);
         m_timeStep = (int) timeStep; // TODO: pass this to Init() instead as well
@@ -81,11 +84,17 @@ public:
     ElemType InitialActivationValue() const { return m_initialActivationValue; }
 
 protected:
-    ElemType m_initialActivationValue;       // starting value for hidden activation vector at boundary
-    Matrix<ElemType> m_delayedValue;         // saves the activation of the previous step that this node points to
-    MBLayoutPtr m_delayedActivationMBLayout; // layout for m_delayedValue
-    int m_timeStep;                          // delay in frames (typ. 1)
-    function<void()> m_attachInputsFn;       // for late expansion of inputs (scripting)
+    ElemType m_initialActivationValue;                    // starting value for hidden activation vector at boundary
+    Matrix<ElemType> m_initialActivationValueMatrix;      // ...and as a potentially GPU-side object
+    int m_timeStep;                                       // delay in frames (typ. 1)
+
+    function<void()> m_attachInputsFn;                    // for late expansion of inputs (scripting)
+
+    vector<ElemType> m_sourceFrameMask;                   // mask for copying/propagating source frames is prepared here...
+    shared_ptr<Matrix<ElemType>> m_sourceFrameMaskMatrix; // ...and used from here
+
+    Matrix<ElemType> m_delayedValue;                      // saves the activation of the previous step that this node points to
+    MBLayoutPtr m_delayedActivationMBLayout;              // layout for m_delayedValue
 };
 
 #define UsingDelayedValueNodeMembers        \
