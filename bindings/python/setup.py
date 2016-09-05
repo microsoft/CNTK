@@ -61,6 +61,7 @@ ext_modules = [
            language="c++",
 
            extra_compile_args=[
+               "-DSWIG",
                "-DUNICODE",
                "/EHsc",
                "/DEBUG", # TODO remove for release

@@ -97,8 +97,8 @@
 %typemap(in) CNTK::NDShape const & {
      if (PyTuple_Check($input)) {
         std::vector<size_t> dimensions;;
-        size_t num_axes = PyTuple_Size($input);
-        for (int i=0; i<num_axes; i++)
+        size_t rank = PyTuple_Size($input);
+        for (int i=0; i<rank; i++)
             dimensions.push_back(PyLong_AsLong(PyTuple_GET_ITEM($input, i)));
 
         // TODO cleans this up?
@@ -113,9 +113,9 @@
 %ignore CNTK::NDShape::Dimensions;
 
 %typemap(out) CNTK::NDShape {
-    size_t num_axes = $1.NumAxes();
-    $result = PyTuple_New(num_axes);
-    for (int i=0; i<num_axes; i++)
+    size_t rank = $1.Rank();
+    $result = PyTuple_New(rank);
+    for (int i=0; i<rank; i++)
     {
         size_t dim = (&$1)->operator[](i);
         PyTuple_SET_ITEM($result, i, PyInt_FromLong(dim));
@@ -129,13 +129,13 @@
 
     PyObject* dimensions() {        
         std::vector<size_t> dims = (*self).Dimensions();
-        size_t num_axes = (*self).NumAxes();
-        PyObject* result = PyTuple_New(num_axes);
+        size_t rank = (*self).Rank();
+        PyObject* result = PyTuple_New(rank);
         // CNTK uses column major, thus we reverse the shape
-        for (int i=0; i<num_axes; i++)
+        for (int i=0; i<rank; i++)
         {
             size_t dim = dims[i];
-            PyTuple_SET_ITEM(result, num_axes-1-i, PyInt_FromLong(dim));                       
+            PyTuple_SET_ITEM(result, rank-1-i, PyInt_FromLong(dim));                       
         }
         return result;
     }
@@ -931,8 +931,8 @@
 
         PyArrayObject* array = (PyArrayObject*)pyobj;
 
-        int num_axes = PyArray_NDIM(array); 
-        if (num_axes==0)
+        int rank = PyArray_NDIM(array); 
+        if (rank==0)
             throw std::logic_error("provided array is empty");
         
         npy_intp* np_shape = PyArray_SHAPE(array); 
@@ -940,7 +940,7 @@
 
         npy_intp num_elements = 1;
         // CNTK uses column major, thus we reverse the shape
-        for (int i=num_axes-1; i>=0; i--)
+        for (int i=rank-1; i>=0; i--)
         {
             shape.push_back(np_shape[i]);
             num_elements *= np_shape[i];            

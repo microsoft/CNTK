@@ -892,7 +892,7 @@ namespace CNTK
 
     // Forward declarations
     inline Variable PlaceholderVariable(const NDShape& shape, const std::vector<Axis>& dynamicAxes = Axis::DefaultInputVariableDynamicAxes);
-    inline Variable InputVariable(const NDShape& shape, bool isSparse, CNTK::DataType dataType, bool needsGradient, const std::wstring& name = L"", const std::vector<Axis>& dynamicAxes = Axis::DefaultInputVariableDynamicAxes);
+    inline Variable InputVariable(const NDShape& shape, bool isSparse, CNTK::DataType dataType, bool needsGradient, const std::wstring& name, const std::vector<Axis>& dynamicAxes = Axis::DefaultInputVariableDynamicAxes);
     inline Variable OutputVariable(const NDShape& shape, CNTK::DataType dataType, Function* ownerFunction, const std::vector<Axis>& dynamicAxes, const std::wstring& name = L"");
 
     ///
@@ -916,10 +916,12 @@ namespace CNTK
                                     std::unordered_map<Variable, Variable>& placeholderReplacements,
                                     std::unordered_set<FunctionPtr>& allPrimitiveFunctions);
 
+#ifndef SWIG
     private:
         friend inline Variable PlaceholderVariable(const NDShape& shape, const std::vector<Axis>& dynamicAxes /*= Axis::DefaultInputVariableDynamicAxes*/);
-        friend inline Variable InputVariable(const NDShape& shape, bool isSparse, CNTK::DataType dataType, bool needsGradient, const std::wstring& name /*= L""*/, const std::vector<Axis>& dynamicAxes /*= Axis::DefaultInputVariableDynamicAxes*/);
+        friend inline Variable InputVariable(const NDShape& shape, bool isSparse, CNTK::DataType dataType, bool needsGradient, const std::wstring& name, const std::vector<Axis>& dynamicAxes /*= Axis::DefaultInputVariableDynamicAxes*/);
         friend inline Variable OutputVariable(const NDShape& shape, CNTK::DataType dataType, Function* ownerFunction, const std::vector<Axis>& dynamicAxes, const std::wstring& name /*= L""*/);
+#endif
 
     public:
 
@@ -1012,10 +1014,14 @@ namespace CNTK
         bool NeedsGradient() const { return m_dataFields->m_needsGradient; }
 
     protected:
+#ifdef SWIG
+    public:
+#endif
         Variable(const NDShape& shape, VariableKind varType, CNTK::DataType dataType, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, const std::wstring& name, const std::wstring& uid)
             : Variable(shape, varType, dataType, nullptr, value, needsGradient, dynamicAxes, /*isSparse =*/ false, name, uid)
         {}
 
+    protected:
         NDArrayViewPtr Value() const
         {
             assert(m_dataFields->m_value != nullptr);
@@ -1023,6 +1029,9 @@ namespace CNTK
         }
 
     private:
+#ifdef SWIG
+    public:
+#endif
         Variable(const NDShape& shape, bool isSparse, CNTK::DataType dataType, bool needsGradient, const std::wstring& name, const std::vector<Axis>& dynamicAxes, const std::wstring& uid)
             : Variable(shape, VariableKind::Input, dataType, nullptr, nullptr, needsGradient, dynamicAxes, isSparse, name, uid)
         {}
@@ -1113,7 +1122,7 @@ namespace CNTK
     ///
     /// Create an 'Input' Variable.
     ///
-    inline Variable InputVariable(const NDShape& shape, DataType dataType, const std::wstring& name = L"", const std::vector<Axis>& dynamicAxes = Axis::DefaultInputVariableDynamicAxes)
+    inline Variable InputVariable(const NDShape& shape, DataType dataType, const std::wstring& name, const std::vector<Axis>& dynamicAxes = Axis::DefaultInputVariableDynamicAxes)
     {
         return InputVariable(shape, dataType, /*needsGradient =*/ false, name, dynamicAxes);
     }
@@ -1137,7 +1146,7 @@ namespace CNTK
     ///
     /// Create an 'Input' Variable denoting sparse data.
     ///
-    inline Variable InputVariable(const NDShape& shape, bool isSparse, CNTK::DataType dataType, const std::wstring& name = L"", const std::vector<Axis>& dynamicAxes = Axis::DefaultInputVariableDynamicAxes)
+    inline Variable InputVariable(const NDShape& shape, bool isSparse, CNTK::DataType dataType, const std::wstring& name, const std::vector<Axis>& dynamicAxes = Axis::DefaultInputVariableDynamicAxes)
     {
         return InputVariable(shape, isSparse, dataType, /*needsGradient =*/ false, name, dynamicAxes);
     }
