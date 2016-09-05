@@ -79,10 +79,10 @@ protected:
 
     function<void()> m_attachInputsFn;                           // for late expansion of inputs (scripting)
 
-    vector<ElemType> m_sourceFrameValid;                         // mask for copying/propagating source frames is prepared here...
+    vector<ElemType> m_sourceInvalidSequences;                   // mask for copying/propagating source frames is prepared here...
 
     shared_ptr<Matrix<ElemType>> m_initialActivationValueMatrix; // potentially GPU-side versions
-    shared_ptr<Matrix<ElemType>> m_sourceFrameValidMatrix;
+    shared_ptr<Matrix<ElemType>> m_sourceInvalidMatrix;
     shared_ptr<Matrix<ElemType>> m_zeroMatrix;                   // constant [1]-dimensional 0 used for backprop
 
     shared_ptr<Matrix<ElemType>> m_delayedValue;                 // saves the activation of the previous step that this node points to

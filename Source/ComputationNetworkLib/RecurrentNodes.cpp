@@ -28,7 +28,7 @@ DelayedValueNodeBase<ElemType, direction>::DelayedValueNodeBase(DEVICEID_TYPE de
                                                                 size_t timeStep) :
     Base(deviceId, name),
     m_initialActivationValueMatrix(make_shared<Matrix<ElemType>>(deviceId)),
-    m_sourceFrameValidMatrix(make_shared<Matrix<ElemType>>(deviceId)),
+    m_sourceInvalidMatrix(make_shared<Matrix<ElemType>>(deviceId)),
     m_zeroMatrix(make_shared<Matrix<ElemType>>(deviceId)),
     m_delayedValue(make_shared<Matrix<ElemType>>(deviceId))
 {
@@ -125,7 +125,7 @@ template<class ElemType, int direction>
     //  0 --> source frame invalid: do not copy/propagate
     //  1 --> source frame valid (or target is gap): copy/propagate
     let S = GetNumParallelSequences();
-    m_sourceFrameValid.resize(S);
+    m_sourceInvalidSequences.clear();
     size_t numValid = 0;
     for (size_t s = 0; s < S; s++)
     {
@@ -134,7 +134,8 @@ template<class ElemType, int direction>
         if (isSourceFrameValid)
             numValid++;
         anyValid |= isSourceFrameValid;
-        m_sourceFrameValid[s] = (ElemType)(isSourceFrameValid ? 1 : 0);
+        if (!isSourceFrameValid)
+            m_sourceInvalidSequences.push_back((ElemType)s);
     }
     anyValid = numValid > 0;
     allValid = numValid == S;
@@ -142,17 +143,21 @@ template<class ElemType, int direction>
         sin(1.0); // all valid (or gap): just copy all  --breakpoint has not been hit; that's not right (gaps!)
 }
 
-// convert the m_sourceFrameValid vector into a (potentially GPU-side) TensorView
+// convert the m_sourceInvalidSequences vector into a (potentially GPU-side) TensorView
 template<class ElemType, int direction>
 /*private*/ TensorView<ElemType> DelayedValueNodeBase<ElemType, direction>::MakeMaskTensor(size_t rank) const
 {
     // send to Matrix object (likely living on a GPU)
-    // BUGBUG: This causes a CPU/GPU sync for every frame that requires masking.
-    //         For forward, this was fine; but for backprop, it kills perf (no longer faster than before).
-    m_sourceFrameValidMatrix->SetValue(1, m_sourceFrameValid.size(), m_deviceId, const_cast<ElemType*>(m_sourceFrameValid.data()), matrixFlagNormal);
+    // This current implementation approach avoids SetValue(vector) as to not create a GPU sync point,
+    // but uses 1+one launch per invalid source, assuming the number of invalid frames is small.
+    let S = GetNumParallelSequences();
+    m_sourceInvalidMatrix->Resize(1, S);
+    m_sourceInvalidMatrix->SetValue(0);
+    for (let s : m_sourceInvalidSequences)
+        m_sourceInvalidMatrix->ColumnSlice ((size_t)s, 1).SetValue(1);
     // tensor shape is a 1-frame sequence, one element per parallel sequence.
     auto tensorShape = TensorShape(1).AppendInPlace(rank, GetMBLayout()->GetNumParallelSequences());
-    return TensorView<ElemType>(m_sourceFrameValidMatrix, tensorShape);
+    return TensorView<ElemType>(m_sourceInvalidMatrix, tensorShape);
 }
 
 // This function assumes EndForwardProp() to be called after the iteration loop.
@@ -226,7 +231,7 @@ template<class ElemType, int direction>
     }
     else if (anyValid) // some are valid, some are not: use a OpCond to select 'src' for valid and 'init' for invalid frames
     {
-        tgt.AssignCondOf(MakeMaskTensor(rank), src, init); // assign either input or init value, based on the mask
+        tgt.AssignCondOf(MakeMaskTensor(rank), init, src); // assign either input or init value, based on the mask
     }
     else // no frame is valid: initialize from init value
     {
@@ -299,7 +304,7 @@ template<class ElemType, int direction>
         }
         else if (anyValid) // // some are valid, some are not: use a OpCond tgt select 'src' for valid and 'zero' for invalid frames
         {
-            tgt.AddCondOf(MakeMaskTensor(rank), src, zero); // now add either source or zero value, based on the mask
+            tgt.AddCondOf(MakeMaskTensor(rank), zero, src); // now add either source or zero value, based on the mask
         }
         else // none valid: nothing tgt back-prop
             ;
@@ -1060,7 +1065,7 @@ public:
         m_state.m_shape = std::move(state->m_shape);
         m_state.m_delayedSequences = std::move(state->m_delayedSequences);
     }
-    m_sourceFrameValid
+    m_sourceInvalidSequences
 protected:
     // parameters remembered from construction
     int m_fromOffset;            // offset to pull from
