@@ -10,7 +10,7 @@ import os
 from cntk.ops import *
 
 def linear_layer(input, output_dim):
-    input_dim = input.shape()[0]
+    input_dim = input.shape().dimensions()[0]
     times_param = parameter(shape=(input_dim, output_dim))
     bias_param = parameter(shape=(output_dim))
 

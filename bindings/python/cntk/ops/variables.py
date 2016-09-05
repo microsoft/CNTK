@@ -26,7 +26,7 @@ def _sanitize_value(shape, value, dtype, device, is_param=False):
 
         #TODO: check whether this copy operation from cpu to gpu is not needed
         if device.type() != 0:
-            ndav_cpu = utils.create_NDArrayView_from_NumPy(value)
+            ndav_cpu = utils.create_NDArrayView_from_NumPy(value, dev=DeviceDescriptor.cpu_device())
             ndav = utils.create_NDArrayView(value.shape, data_type=cntk_dtype, dev=device)
             ndav.copy_from(ndav_cpu)
         else:
