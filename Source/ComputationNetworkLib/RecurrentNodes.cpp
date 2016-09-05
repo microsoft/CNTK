@@ -23,7 +23,13 @@
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 template<class ElemType, int direction>
-void DelayedValueNodeBase<ElemType,direction>::Init(const TensorShape& sampleLayout, ElemType initialActivationValue)
+DelayedValueNodeBase<ElemType, direction>::DelayedValueNodeBase(DEVICEID_TYPE deviceId, const wstring& name,
+                                                                ElemType initialActivationValue, const TensorShape& sampleLayout,
+                                                                size_t timeStep) :
+    Base(deviceId, name),
+    m_sourceFrameValidMatrix(make_shared<Matrix<ElemType>>(deviceId)),
+    m_delayedValue(make_shared<Matrix<ElemType>>(deviceId)),
+    m_initialActivationValueMatrix(make_shared<Matrix<ElemType>>(deviceId))
 {
     m_initialActivationValue = initialActivationValue;
     m_timeStep = 1;
@@ -31,6 +37,7 @@ void DelayedValueNodeBase<ElemType,direction>::Init(const TensorShape& sampleLay
     SetDims(sampleLayout, HasMBLayout() /*false at this point*/);
     m_initialActivationValueMatrix->Resize(1, 1);
     m_initialActivationValueMatrix->SetValue(m_initialActivationValue);
+    m_timeStep = (int)timeStep;
 }
 
 template<class ElemType, int direction>
@@ -98,7 +105,7 @@ template<class ElemType, int direction>
 // Remember that we ask about copying from the delayed position to the current position.
 // Gaps will be considered as "shall be copied", since that gives us a higher chance of collating all.
 template<class ElemType, int direction>
-/*private*/ void DelayedValueNodeBase<ElemType, direction>::SetUpdateMask(const FrameRange& frDelayed, bool& anyValid, bool& allValid)
+/*private*/ void DelayedValueNodeBase<ElemType, direction>::DetermineValidMask(const FrameRange& frDelayed, bool& anyValid, bool& allValid)
 {
     if (!m_pMBLayout->IsBeyondStartOrEnd(frDelayed)) // true if at least one sequence is outside
     {
@@ -124,15 +131,10 @@ template<class ElemType, int direction>
     anyValid = numValid > 0;
     allValid = numValid == S;
     if (allValid)
-        return; // all valid (or gap): just copy all
-    // create/update a GPU object with these values, as a row vector (one element per frame)
-    if (!m_sourceFrameValidMatrix)
-        m_sourceFrameValidMatrix = make_shared<Matrix<ElemType>>(m_deviceId);
-    m_sourceFrameValidMatrix->SetValue(1, m_sourceFrameValid.size(), m_deviceId, m_sourceFrameValid.data(), matrixFlagNormal);
+        return; // all valid (or gap): just copy all  --breakpoint has not been hit; that's not right (gaps!)
 }
 
-// This function assumes BeginForwardProp/EndForwardProp() to be called before/after the iteration loop.
-// TODO: In the future, there may be value for one more way of handling the boundary condition: Fill as 'NoInput'. Then we can use this to implement rolling windows (albeit inefficiently). Would require to unshare the layout.
+// This function assumes EndForwardProp() to be called after the iteration loop.
 template<class ElemType, int direction>
 /*virtual*/ void DelayedValueNodeBase<ElemType,direction>::ForwardProp(const FrameRange& fr) /*override*/
 {
@@ -153,23 +155,19 @@ template<class ElemType, int direction>
     // we forward prop from the previous frame to this frame
     FrameRange frDelayed = fr.WithTimeOffset(direction * m_timeStep);
 
-    size_t T = GetNumTimeSteps();
-    size_t T_delayedActivation = m_delayedActivationMBLayout ? m_delayedActivationMBLayout->GetNumTimeSteps() : 0; // (note: should never happen in full-sequence mode)
-
     // compute logical position of delayed value
     assert(m_timeStep > 0);
 
-    size_t t = fr.t();
-    int t_delayed = (int) (t + direction * m_timeStep); // this might end up outside the current window
+    //size_t t = fr.t();
 
-    // determine the situation we are in
+    // determine the parallel sequences to mask
     bool anyValid, allValid;
-    SetUpdateMask(frDelayed, anyValid, allValid);
+    DetermineValidMask(frDelayed, anyValid, allValid);
 
+    // source tensor --considering truncated BPTT
     size_t rank = DetermineElementwiseTensorRank();
-
-    // determine the source --considering truncated BPTT
     TensorView<ElemType> inp;
+    int t_delayed = (int)(fr.t() + direction * m_timeStep); // this might end up outside the current window
     if (t_delayed < 0) // handle special case of truncated BPTT
     {
         if (!anyValid)
@@ -177,6 +175,7 @@ template<class ElemType, int direction>
         else if (!m_delayedValue->IsEmpty())
         {
             // truncated BPTT carry-over
+            size_t T_delayedActivation = m_delayedActivationMBLayout ? m_delayedActivationMBLayout->GetNumTimeSteps() : 0; // (note: should never happen in full-sequence mode)
             auto tensorShape = GetTensorShape(rank);
             auto slice = TensorSliceWithMBLayoutFor(tensorShape.GetDims(), FrameRange(m_delayedActivationMBLayout, t_delayed/*<0*/ + T_delayedActivation), m_delayedActivationMBLayout);
             tensorShape.NarrowTo(slice);
@@ -185,22 +184,15 @@ template<class ElemType, int direction>
         else
             LogicError("The delay node tries to access past values that are out of bound, possibly because there is no sentence start marker in the MBLayout.");
     }
-    else if (t_delayed >= T)  // TODO: how can this case even exist? Truncated BPTT goes left-to-right only
-    {
-        //if (m_delayedValue->IsEmpty())
+    else if (t_delayed >= GetNumTimeSteps())  // truncated BPTT goes left-to-right only
         LogicError("The delay node tries to access future values that are out of bound, possibly because there is no sentence end marker in the MBLayout.");
-        //inp = DataWithMBLayoutFor(m_delayedValue, FrameRange(m_delayedActivationMBLayout, t_delayed - T), m_delayedActivationMBLayout);
-    }
     else // regular case
-    {
-        // TODO: use a mask here to only assign what is needed; otherwise, this is inefficient on CPU
         inp = Input(0)->ValueTensorFor(rank, frDelayed);
-    }
 
-    // determine the target
+    // target tensor
     auto out = ValueTensorFor(rank, fr);
 
-    // determine the init value (a [1] tensor with broadcasting)
+    // init value tensor (a [1] tensor with broadcasting)
     TensorView<ElemType> init(m_initialActivationValueMatrix, TensorShape(1));
 
     // now perform the copy operation
@@ -214,28 +206,12 @@ template<class ElemType, int direction>
     }
     else // some are valid, some are not: use a OpCond to select 'inp' for valid and 'init' for invalid frames
     {
-        // treat mask like a 1-frame sequence
+        // treat mask like a 1-frame sequence, one element per parallel sequence
+        m_sourceFrameValidMatrix->SetValue(1, m_sourceFrameValid.size(), m_deviceId, m_sourceFrameValid.data(), matrixFlagNormal);
         auto tensorShape = TensorShape(1).AppendInPlace(rank, GetMBLayout()->GetNumParallelSequences());
         TensorView<ElemType> cond(m_sourceFrameValidMatrix, tensorShape);
         // now assign either input or init value, based on the mask
         out.AssignCondOf(cond, inp, init);
-#if 0
-        // copy everything first if we got at least one valid source
-        if (anyValid)
-            out.AssignCopyOf(inp);
-
-        let S = GetNumParallelSequences();
-        for (size_t s = 0; s < S; s++)
-        {
-            if (m_pMBLayout->IsGap(fr.Sequence(s))) // if output is in a gap then don't bother filling it
-                continue;
-            else if (m_pMBLayout->IsBeyondStartOrEnd(frDelayed.Sequence(s)))
-            {
-                Matrix<ElemType> out = ValueFor(fr.Sequence(s));
-                out.SetValue(m_initialActivationValue); // crossed a boundary
-            }
-        }
-#endif
     }
 }
 

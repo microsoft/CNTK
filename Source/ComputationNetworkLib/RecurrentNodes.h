@@ -28,24 +28,13 @@ class DelayedValueNodeBase : public ComputationNode<ElemType>, public IRecurrent
     typedef std::shared_ptr<DelayedValueNodeState<ElemType>> DelayedNodeStatePtr;
 
 private:
-    void Init(const TensorShape& sampleLayout, ElemType initialActivationValue);
-    void SetUpdateMask(const FrameRange& frDelayed, bool& anyValid, bool& allValid);
+    void DetermineValidMask(const FrameRange& frDelayed, bool& anyValid, bool& allValid);
 
 protected:
+    DelayedValueNodeBase(DEVICEID_TYPE deviceId, const wstring& name, ElemType initialActivationValue, const TensorShape& sampleLayout, size_t timeStep);
     DelayedValueNodeBase(DEVICEID_TYPE deviceId, const wstring& name) :
-        Base(deviceId, name),
-        m_delayedValue(make_shared<Matrix<ElemType>>(deviceId)),
-        m_initialActivationValueMatrix(make_shared<Matrix<ElemType>>(deviceId))
+        DelayedValueNodeBase(deviceId, name, (ElemType)DEFAULT_HIDDEN_ACTIVATION, TensorShape(), 0)
     {
-        Init(TensorShape(), (ElemType) DEFAULT_HIDDEN_ACTIVATION);
-    }
-    DelayedValueNodeBase(DEVICEID_TYPE deviceId, const wstring& name, ElemType initialActivationValue, const TensorShape& sampleLayout, size_t timeStep)
-        : Base(deviceId, name),
-        m_delayedValue(make_shared<Matrix<ElemType>>(deviceId)),
-        m_initialActivationValueMatrix(make_shared<Matrix<ElemType>>(deviceId))
-    {
-        Init(sampleLayout, initialActivationValue);
-        m_timeStep = (int) timeStep; // TODO: pass this to Init() instead as well
     }
     DelayedValueNodeBase(const ScriptableObjects::IConfigRecordPtr configp) :
         DelayedValueNodeBase(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"defaultHiddenActivation"), configp->Get(L"shape"), configp->Get(L"timeStep"))
