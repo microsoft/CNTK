@@ -130,7 +130,7 @@ def cifar_resnet():
 
 if __name__=='__main__':
     # Specify the target device to be used for computing
-    target_device = DeviceDescriptor.gpudevice(0)
+    target_device = DeviceDescriptor.gpu_device(0)
     DeviceDescriptor.set_default_device(target_device)
 
     cifar_resnet()
