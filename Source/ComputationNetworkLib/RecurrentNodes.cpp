@@ -2,7 +2,6 @@
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
-#pragma once
 
 #include "Basics.h"
 #include "ComputationNode.h"
@@ -30,7 +29,8 @@ void DelayedValueNodeBase<ElemType,direction>::Init(const TensorShape& sampleLay
     m_timeStep = 1;
     CreateMatrixIfNull(m_value);
     SetDims(sampleLayout, HasMBLayout() /*false at this point*/);
-    m_initialActivationValueMatrix.SetValue(m_initialActivationValue);
+    m_initialActivationValueMatrix->Resize(1, 1);
+    m_initialActivationValueMatrix->SetValue(m_initialActivationValue);
 }
 
 template<class ElemType, int direction>
@@ -110,7 +110,7 @@ template<class ElemType, int direction>
     //  0 --> source frame invalid: do not copy/propagate
     //  1 --> source frame valid (or target is gap): copy/propagate
     let S = GetNumParallelSequences();
-    m_sourceFrameMask.resize(S);
+    m_sourceFrameValid.resize(S);
     size_t numValid = 0;
     for (size_t s = 0; s < S; s++)
     {
@@ -119,16 +119,16 @@ template<class ElemType, int direction>
         if (isSourceFrameValid)
             numValid++;
         anyValid |= isSourceFrameValid;
-        m_sourceFrameMask[s] = (ElemType)(isSourceFrameValid ? 1 : 0);
+        m_sourceFrameValid[s] = (ElemType)(isSourceFrameValid ? 1 : 0);
     }
     anyValid = numValid > 0;
     allValid = numValid == S;
     if (allValid)
         return; // all valid (or gap): just copy all
     // create/update a GPU object with these values, as a row vector (one element per frame)
-    if (!m_sourceFrameMaskMatrix)
-        m_sourceFrameMaskMatrix = make_shared<Matrix<ElemType>>(m_deviceId);
-    m_sourceFrameMaskMatrix->SetValue(1, m_sourceFrameMask.size(), m_deviceId, m_sourceFrameMask.data(), matrixFlagNormal);
+    if (!m_sourceFrameValidMatrix)
+        m_sourceFrameValidMatrix = make_shared<Matrix<ElemType>>(m_deviceId);
+    m_sourceFrameValidMatrix->SetValue(1, m_sourceFrameValid.size(), m_deviceId, m_sourceFrameValid.data(), matrixFlagNormal);
 }
 
 // This function assumes BeginForwardProp/EndForwardProp() to be called before/after the iteration loop.
@@ -172,17 +172,18 @@ template<class ElemType, int direction>
     TensorView<ElemType> inp;
     if (t_delayed < 0) // handle special case of truncated BPTT
     {
-        if (!m_delayedValue->IsEmpty())
+        if (!anyValid)
+            ; // none valid: leave it uninitialized
+        else if (!m_delayedValue->IsEmpty())
         {
+            // truncated BPTT carry-over
             auto tensorShape = GetTensorShape(rank);
             auto slice = TensorSliceWithMBLayoutFor(tensorShape.GetDims(), FrameRange(m_delayedActivationMBLayout, t_delayed/*<0*/ + T_delayedActivation), m_delayedActivationMBLayout);
             tensorShape.NarrowTo(slice);
             inp = TensorView<ElemType>(m_delayedValue, tensorShape);
         }
-        else if (anyValid)
-            LogicError("The delay node tries to access past values that are out of bound, possibly because there is no sentence start marker in the MBLayout.");
         else
-            ; // none valid: leave it uninitialized
+            LogicError("The delay node tries to access past values that are out of bound, possibly because there is no sentence start marker in the MBLayout.");
     }
     else if (t_delayed >= T)  // TODO: how can this case even exist? Truncated BPTT goes left-to-right only
     {
@@ -199,13 +200,26 @@ template<class ElemType, int direction>
     // determine the target
     auto out = ValueTensorFor(rank, fr);
 
-    // do it
-    if (allValid)
+    // determine the init value (a [1] tensor with broadcasting)
+    TensorView<ElemType> init(m_initialActivationValueMatrix, TensorShape(1));
+
+    // now perform the copy operation
+    if (allValid) // all frames are valid: copy as one tensor-copy operation
     {
         out.AssignCopyOf(inp);
     }
-    else // if any sequence at this time step has a boundary flag, then process one by one
+    else if (!anyValid) // no frame is valid: initialize from init value
     {
+        out.AssignCopyOf(init);
+    }
+    else // some are valid, some are not: use a OpCond to select 'inp' for valid and 'init' for invalid frames
+    {
+        // treat mask like a 1-frame sequence
+        auto tensorShape = TensorShape(1).AppendInPlace(rank, GetMBLayout()->GetNumParallelSequences());
+        TensorView<ElemType> cond(m_sourceFrameValidMatrix, tensorShape);
+        // now assign either input or init value, based on the mask
+        out.AssignCondOf(cond, inp, init);
+#if 0
         // copy everything first if we got at least one valid source
         if (anyValid)
             out.AssignCopyOf(inp);
@@ -221,6 +235,7 @@ template<class ElemType, int direction>
                 out.SetValue(m_initialActivationValue); // crossed a boundary
             }
         }
+#endif
     }
 }
 
@@ -1059,7 +1074,7 @@ public:
         m_state.m_shape = std::move(state->m_shape);
         m_state.m_delayedSequences = std::move(state->m_delayedSequences);
     }
-
+    m_sourceFrameValid
 protected:
     // parameters remembered from construction
     int m_fromOffset;            // offset to pull from
