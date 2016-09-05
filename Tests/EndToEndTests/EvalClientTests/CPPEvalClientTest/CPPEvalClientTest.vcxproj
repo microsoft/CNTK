@@ -21,8 +21,8 @@
   <PropertyGroup Label="Globals">
     <ProjectGuid>{CCC07E8E-F33A-4AF7-9F60-93E2AA61C75E}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
-    <RootNamespace>CPPEvalClient-CntkSln</RootNamespace>
-    <ProjectName>CPPEvalClient-CntkSln</ProjectName>
+    <RootNamespace>CPPEvalClientTest</RootNamespace>
+    <ProjectName>CPPEvalClientTest</ProjectName>
   </PropertyGroup>
   <Import Project="$(SolutionDir)\CNTK.Cpp.props" />
   <PropertyGroup Condition="$(DebugBuild)" Label="Configuration">
@@ -52,7 +52,7 @@
   <PropertyGroup>
     <!-- TODO intentional for all? -->
     <LinkIncremental>false</LinkIncremental>
-    <TargetName>CPPEvalClient-CntkSln</TargetName>
+    <TargetName>CPPEvalClientTest</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
@@ -106,7 +106,7 @@
     </ProjectReference>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\CPPEvalClient\CPPEvalClient.cpp" />
+    <ClCompile Include="..\..\..\..\Examples\Evaluation\CPPEvalClient\CPPEvalClient.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" />

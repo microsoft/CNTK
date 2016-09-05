@@ -111,15 +111,6 @@ Copy-Item $includeFile -Destination $baseIncludePath
 # Copy Examples
 Write-Verbose "Copying Examples ..."
 Copy-Item Examples -Recurse -Destination $baseDropPath\Examples
-# The following directories are only used by cntk.sln and should be included in the binary drop. Remove them.
-if (Test-Path $baseDropPath\Examples\Evaluation\CPPEvalClient-CntkSln)
-{
-    Remove-Item $baseDropPath\Examples\Evaluation\CPPEvalClient-CntkSln -Recurse
-}
-if (Test-Path $baseDropPath\Examples\Evaluation\CSEvalClient-CntkSln)
-{
-    Remove-Item $baseDropPath\Examples\Evaluation\CSEvalClient-CntkSln -Recurse
-}
 
 # Copy Scripts
 Write-Verbose "Copying Scripts ..."

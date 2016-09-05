@@ -168,9 +168,6 @@ CopyFilesFromList $includePath includeFiles[@] $baseIncludePath
 # Copy Examples
 echo "Copying Examples..." >&3
 cp -r Examples $baseDropPath
-# The following directories are only used by cntk.sln and should be included in the binary drop. Remove them.
-rm -rf $baseDropPath/Examples/Evaluation/CPPEvalClient-CntkSln
-rm -rf $baseDropPath/Examples/Evaluation/CSEvalClient-CntkSln
 
 # Copy Scripts (Scripts folder from the root of the Repo)
 echo "Copying Scripts..." >&3
