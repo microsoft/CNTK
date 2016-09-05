@@ -4,7 +4,7 @@
 # ==============================================================================
 
 import numpy as np
-from ..utils import sanitize_input, sanitize_shape, get_data_type, cntk_device
+from ..utils import sanitize_input, sanitize_shape, get_data_type
 
 def combine(operands, name=''):
     '''
@@ -1169,7 +1169,7 @@ def dropout(x, name=''):
 # variables_and_parameters ops
 ################################################################################
 
-from cntk.cntk_py import Axis
+from cntk.cntk_py import Axis, DeviceDescriptor
 
 #TODO: expose output_variable as well ?
 
@@ -1222,7 +1222,7 @@ def placeholder_variable(shape, dynamic_axes = [Axis.default_dynamic_axis(), Axi
     shape = sanitize_shape(shape)
     return placeholder_variable(shape)
     
-def parameter(shape=None, value=None, device_id=-1, name=''):
+def parameter(shape=None, value=None, device=None, name=''):
     '''
     It creates a parameter tensor. 
 
@@ -1230,7 +1230,7 @@ def parameter(shape=None, value=None, device_id=-1, name=''):
         shape (tuple or int, optional): the shape of the input tensor. If not provided, it will be inferred from ``value``.
         value (scalar or NumPy array, optional): a scalar initial value that would be replicated for every element in the tensor or NumPy array. 
         If ``None``, the tensor will be initialized uniformly random.
-        device_id (int): device id, -1 for CPU, 0 or higher for GPU                
+        device (:class:`cntk.DeviceDescriptor`): instance of DeviceDescriptor           
         name (str, optional): the name of the node in the network
 
     Returns:
@@ -1238,11 +1238,13 @@ def parameter(shape=None, value=None, device_id=-1, name=''):
     '''    
 
     from .variables import Parameter, parameter_from_scalar   
+    if not device:
+        device=DeviceDescriptor.use_default_device()
     if np.isscalar(value):        
-        return parameter_from_scalar(shape, value, None, cntk_device(device_id), name)   
-    return Parameter(shape, value, None, cntk_device(device_id), name)        
+        return parameter_from_scalar(shape, value, None, device, name)   
+    return Parameter(shape, value, None, device, name)        
 
-def constant(shape=None, value=None, device_id=-1, name=''):
+def constant(shape=None, value=None, device=None, name=''):
     '''
     It creates a constant tensor initialized from a numpy array
 
@@ -1250,16 +1252,17 @@ def constant(shape=None, value=None, device_id=-1, name=''):
         shape (tuple or int, optional): the shape of the input tensor. If not provided, it will be inferred from ``value``.
         value (scalar or NumPy array, optional): a scalar initial value that would be replicated for every element in the tensor or NumPy array. 
         If ``None``, the tensor will be initialized uniformly random.
-        device_id (int): device id, -1 for CPU, 0 or higher for GPU                
+        device (:class:`cntk.DeviceDescriptor`): instance of DeviceDescriptor                
         name (str, optional): the name of the node in the network
     Returns:
         :class:`cntk.Function`
     '''
     from .variables import Constant, constant_from_scalar
-
+    if not device:
+        device=DeviceDescriptor.use_default_device()
     if np.isscalar(value):        
-        return constant_from_scalar(shape, value, None, cntk_device(device_id), name)   
-    return Constant(shape, value, None, cntk_device(device_id), name)
+        return constant_from_scalar(shape, value, None, device, name)   
+    return Constant(shape, value, None, device, name)
 
 ################################################################################
 # normalization ops

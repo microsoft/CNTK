@@ -12,6 +12,11 @@
 %include <std_shared_ptr.i>
 
 %rename(output_internal) CNTK::Function::Output;
+%rename(replace_placeholders_internal) CNTK::Function::ReplacePlaceholders;
+%rename(sgd_learner) CNTK::SGDLearner;
+%rename(gpu_device) CNTK::DeviceDescriptor::GPUDevice;
+%rename(cpu_device) CNTK::DeviceDescriptor::CPUDevice;
+
 // if we don't except RandomUniform the corresponding template functions will not be generated
 %rename("%(utitle)s", %$isfunction, notregexmatch$name="RandomUniform") "";
 %rename("%(utitle)s", %$isvariable) "";
@@ -1095,12 +1100,13 @@ StreamInformation.__eq__ = lambda a,b: a.m_name==b.m_name and a.m_id==b.m_id and
 }
 
 %pythoncode %{
+# in case of multiple outputs return the function, not the variable
 def get_output_and_keep_reference(self):
     variable = self.output_internal()    
     variable.owner = self
     return variable
 Function.output = lambda self:get_output_and_keep_reference(self)
-  
+Function.replace_placeholders = lambda self, ph_map: self.replace_placeholders_internal(ph_map).output()
 %}
 
 // this is a workaround to enable operators overload for Variable instances coming out of output() method. 

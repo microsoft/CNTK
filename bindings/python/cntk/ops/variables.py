@@ -1,5 +1,5 @@
 import numpy as np
-from cntk import DATATYPE, NDArrayView, DeviceDescriptor_cpudevice, DeviceDescriptor_gpudevice, Variable, Parameter, ConstantFloat, ConstantDouble, Constant, DataType_Float, DataType_Double, ParameterFloat, ParameterDouble, Axis
+from cntk import DATATYPE, NDArrayView, DeviceDescriptor, Variable, Parameter, ConstantFloat, ConstantDouble, Constant, DataType_Float, DataType_Double, ParameterFloat, ParameterDouble, Axis
 from cntk.graph import TensorOpsMixin
 from .. import utils
 
@@ -25,7 +25,7 @@ def _sanitize_value(shape, value, dtype, device, is_param=False):
             value = np.asarray(value, dtype=np_dtype)
 
         #TODO: check whether this copy operation from cpu to gpu is not needed
-        if device != DeviceDescriptor_cpudevice():
+        if device.type() != 0:
             ndav_cpu = utils.create_NDArrayView_from_NumPy(value)
             ndav = utils.create_NDArrayView(value.shape, data_type=cntk_dtype, dev=device)
             ndav.copy_from(ndav_cpu)
@@ -47,7 +47,8 @@ class Variable(TensorOpsMixin,Variable):
         super(Variable, self).__init__(shape, is_sparse, dtype, needs_gradient, name, dynamic_axes)
 
 class Parameter(TensorOpsMixin,Parameter):
-    def __init__(self, shape=None, value=None, data_type=None, device=None, name=''):
+    def __init__(self, shape=None, value=None, data_type=None, 
+                    device=None, name=''):
 
         if data_type is None:
             if not isinstance(value, np.ndarray):
@@ -59,10 +60,8 @@ class Parameter(TensorOpsMixin,Parameter):
         super(Parameter, self).__init__(ndav, name)
 
 # TODO: make this part of the above constructor
-def parameter_from_scalar(shape=None, value=None, data_type=None, device=None, name=''):
-    if not device:
-        device = DeviceDescriptor_cpudevice()
-
+def parameter_from_scalar(shape=None, value=None, data_type=None, 
+                            device=None, name=''):
     if data_type is None:
         if not isinstance(value, np.ndarray):
             data_type = 'float32'
@@ -80,7 +79,8 @@ def parameter_from_scalar(shape=None, value=None, data_type=None, device=None, n
 
 # TODO: make this part of the above constructor
 class Constant(TensorOpsMixin,Constant):
-    def __init__(self, shape=None, value=None, data_type=None, device=None, name=''):
+    def __init__(self, shape=None, value=None, data_type=None, 
+                    device=None, name=''):
 
         if data_type is None:
             if not isinstance(value, np.ndarray):
@@ -88,16 +88,11 @@ class Constant(TensorOpsMixin,Constant):
             else:
                 data_type = str(value.dtype)
 
-        if not device:
-            device = DeviceDescriptor_cpudevice()
-
         ndav = _sanitize_value(shape, value, data_type, device)
         super(Constant, self).__init__(ndav, name)
 
-def constant_from_scalar(shape=None, value=None, data_type=None, device=None, name=''):
-    if not device:
-        device = DeviceDescriptor_cpudevice()
-
+def constant_from_scalar(shape=None, value=None, data_type=None,
+                         device=None, name=''):
     if data_type is None:
         if not isinstance(value, np.ndarray):
             data_type = 'float32'

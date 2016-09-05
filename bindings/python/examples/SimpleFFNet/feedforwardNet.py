@@ -7,7 +7,7 @@
 import numpy as np
 import sys
 import os
-from cntk import learning_rates_per_sample, DeviceDescriptor_cpudevice, DeviceDescriptor, Trainer, sgdlearner, print_training_progress, cntk_device, StreamConfiguration, text_format_minibatch_source
+from cntk import learning_rates_per_sample, DeviceDescriptor, Trainer, sgd_learner, print_training_progress, cntk_device, StreamConfiguration, text_format_minibatch_source
 from cntk.ops import input_variable, cross_entropy_with_softmax, combine, classification_error, sigmoid
 from examples.common.nn import fully_connected_classifier_net
 
@@ -42,7 +42,7 @@ def ffnet():
 
     # Instantiate the trainer object to drive the model training
     lr = learning_rates_per_sample(0.02)
-    trainer = Trainer(netout, ce, pe, [sgdlearner(netout.owner.parameters(), lr)])
+    trainer = Trainer(netout, ce, pe, [sgd_learner(netout.owner.parameters(), lr)])
 
     # Get minibatches of training data and perform model training
     minibatch_size = 25
@@ -62,7 +62,7 @@ def ffnet():
 if __name__=='__main__':
     # Specify the target device to be used for computing
 
-    target_device = DeviceDescriptor_cpudevice()
+    target_device = DeviceDescriptor.cpu_device()
     DeviceDescriptor.set_default_device(target_device)
 
     ffnet()

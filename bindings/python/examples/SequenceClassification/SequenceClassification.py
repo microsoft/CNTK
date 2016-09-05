@@ -8,7 +8,7 @@ import numpy as np
 import sys
 import os
 import time
-from cntk import learning_rates_per_sample, DeviceDescriptor, DeviceDescriptor_cpudevice, Trainer, sgdlearner, Axis, print_training_progress, text_format_minibatch_source, StreamConfiguration
+from cntk import learning_rates_per_sample, DeviceDescriptor, Trainer, sgd_learner, Axis, print_training_progress, text_format_minibatch_source, StreamConfiguration
 from cntk.ops import input_variable, cross_entropy_with_softmax, combine, classification_error
 from examples.common.nn import LSTMP_component_with_self_stabilization, embedding, linear_layer, select_last
 
@@ -52,7 +52,7 @@ def train_sequence_classifier():
 
     # Instantiate the trainer object to drive the model training
     lr = lr = learning_rates_per_sample(0.0005)
-    trainer = Trainer(classifier_output, ce, pe, [sgdlearner(classifier_output.owner.parameters(), lr)])                   
+    trainer = Trainer(classifier_output, ce, pe, [sgd_learner(classifier_output.owner.parameters(), lr)])                   
 
     # Get minibatches of sequences to train with and perform model training
     minibatch_size = 200
@@ -72,7 +72,7 @@ def train_sequence_classifier():
 
 if __name__=='__main__':    
     # Specify the target device to be used for computing
-    target_device = DeviceDescriptor_cpudevice()
+    target_device = DeviceDescriptor.cpu_device()
     DeviceDescriptor.set_default_device(target_device)
 
     train_sequence_classifier()

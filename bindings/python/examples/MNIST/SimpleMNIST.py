@@ -7,7 +7,7 @@
 import numpy as np
 import sys
 import os
-from cntk import learning_rates_per_sample, Trainer, sgdlearner, create_minibatch_source, get_train_loss, get_train_eval_criterion, print_training_progress, StreamConfiguration, DeviceDescriptor, DeviceDescriptor_cpudevice, DeviceDescriptor_gpudevice, text_format_minibatch_source
+from cntk import learning_rates_per_sample, Trainer, sgd_learner, create_minibatch_source, get_train_loss, get_train_eval_criterion, print_training_progress, StreamConfiguration, DeviceDescriptor, text_format_minibatch_source
 from cntk.ops import input_variable, cross_entropy_with_softmax, combine, classification_error, sigmoid, element_times, constant
 from examples.common.nn import fully_connected_classifier_net
 
@@ -42,7 +42,7 @@ def simple_mnist():
 
     # Instantiate the trainer object to drive the model training
     lr = learning_rates_per_sample(0.003125)
-    trainer = Trainer(netout, ce, pe, [sgdlearner(netout.owner.parameters(), lr)])
+    trainer = Trainer(netout, ce, pe, [sgd_learner(netout.owner.parameters(), lr)])
 
     # Get minibatches of images to train with and perform model training
     minibatch_size = 32
@@ -61,7 +61,7 @@ def simple_mnist():
 
 if __name__=='__main__':
     # Specify the target device to be used for computing
-    target_device = DeviceDescriptor_cpudevice()
+    target_device = DeviceDescriptor.gpu_device(0)
     DeviceDescriptor.set_default_device(target_device)
 
     simple_mnist()

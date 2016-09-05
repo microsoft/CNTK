@@ -7,7 +7,7 @@
 import numpy as np
 import sys
 import os
-from cntk import learning_rates_per_sample, Trainer, sgdlearner, create_minibatch_source, get_train_loss, get_train_eval_criterion, cntk_device
+from cntk import learning_rates_per_sample, Trainer, sgd_learner, create_minibatch_source, get_train_loss, get_train_eval_criterion, cntk_device, DeviceDescriptor
 from cntk.ops import input_variable, constant, parameter, cross_entropy_with_softmax, combine, classification_error, times, pooling, AVG_POOLING
 from examples.common.nn import conv_bn_relu_layer, conv_bn_layer, resnet_node2, resnet_node2_inc
 
@@ -24,13 +24,13 @@ def create_mb_source(image_height, image_width, num_channels, num_classes):
     mean_transform_config = {"type" : "Mean", "meanFile" : mean_file}
     all_transforms = [ crop_transform_config, scale_transform_config, mean_transform_config ]
 
-    features_stream_config = {"transforms", all_transforms}
+    features_stream_config = {"transforms": all_transforms}
     labels_stream_config = {"labelDim" : num_classes}
 
     input_streams_config = {"features" : features_stream_config, "labels" : labels_stream_config}
     deserializer_config = {"type" : "ImageDeserializer", "file" : map_file, "input" : input_streams_config}
 
-    minibatch_config = {"epochSize" : sys.maxsize, "deserializers" : deserializer_config}
+    minibatch_config = {"epochSize" : sys.maxsize, "deserializers" : [deserializer_config]}
 
     return create_minibatch_source(minibatch_config)
 
@@ -113,7 +113,7 @@ def cifar_resnet():
 
     # Instantiate the trainer object to drive the model training
     lr = learning_rates_per_sample(0.0078125)
-    trainer = Trainer(classifier_output, ce, pe, [sgdlearner(classifier_output.owner.parameters(), lr)])
+    trainer = Trainer(classifier_output, ce, pe, [sgd_learner(classifier_output.owner.parameters(), lr)])
 
     # Get minibatches of images to train with and perform model training
     mb_size = 32

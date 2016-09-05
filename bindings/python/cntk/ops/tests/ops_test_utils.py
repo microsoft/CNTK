@@ -14,7 +14,7 @@ import pytest
 from cntk.tests.test_utils import *
 
 from ...utils import sanitize_dtype_cntk
-from ...utils import eval as cntk_eval
+from ...utils import eval as cntk_eval, cntk_device
 from .. import constant, input_variable
 
 I = input_variable
@@ -107,7 +107,7 @@ def unittest_helper(root_node,
         device_id=-1, precision="float"):
     
     backward_pass = expected_backward is not None
-    forward, backward = cntk_eval(root_node, precision, device_id, forward_input, backward_pass)
+    forward, backward = cntk_eval(root_node, precision, cntk_device(device_id), forward_input, backward_pass)
 
     # for forward we always expect only one result
     assert len(forward)==1
