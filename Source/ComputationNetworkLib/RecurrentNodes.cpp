@@ -224,6 +224,7 @@ template<class ElemType, int direction>
     FrameRange frDelayed = fr.WithTimeOffset(direction * m_timeStep);
 
     // if delayed input is within valid time range then add its gradient
+    size_t rank = DetermineElementwiseTensorRank();
     size_t t = fr.t();
     int t_delayed = (int) (t + direction * m_timeStep);  // this might end up outside the current window
     if (t_delayed >= 0 && t_delayed < GetNumTimeSteps()) // only propagate if our source is inside the minibatch
@@ -237,21 +238,20 @@ template<class ElemType, int direction>
             {
                 if (!m_pMBLayout->IsGap(fr.Sequence(s)) && !m_pMBLayout->IsBeyondStartOrEnd(frDelayed.Sequence(s))) // don't propagate boundary frames or gaps
                 {
-                    Matrix<ElemType> frm = GradientFor(fr.Sequence(s));
+                    auto frm = GradientTensorFor(rank, fr.Sequence(s));
                     // TODO: use delayed FrameRange here as well
-                    Matrix<ElemType> to = Input(0)->GradientFor(frDelayed.Sequence(s));
-                    to += frm;
+                    auto to = Input(0)->GradientTensorFor(rank, frDelayed.Sequence(s));
+                    to.AddCopyOf(frm);
                 }
             }
         }
         else // operate on entire time step in one go (over all parallel sequences)
         {
             // TODO: change this to a TensorView operation
-            Matrix<ElemType> frm = GradientFor(fr);
+            auto frm = GradientTensorFor(rank, fr);
             // TODO: use something like fr.WithDelay(t) instead, instead of recreating FrameRanges
-            Matrix<ElemType> to = Input(0)->GradientFor(frDelayed);
-            // TODO: use TensorView, multiply incoming gradient with 1 or 0
-            to += frm;
+            auto to = Input(0)->GradientTensorFor(rank, frDelayed);
+            to.AddCopyOf(frm);
         }
     }
 }
