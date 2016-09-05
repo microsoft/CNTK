@@ -878,12 +878,15 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
     // If we can determine whether wk added or not for each node, then, discard this
     std::unordered_set<ComputationNodeBasePtr> batchNormalizationWeights;
     if (m_disableWkInBatchNormal) {
-        for (auto& evalNode : evaluationNodes) {
+        for (auto& evalNode : evaluationNodes) 
+        {
             shared_ptr<FlowControlNode> nestedNetwork = static_pointer_cast<FlowControlNode>(net->GetNestedNetwork(evalNode));
-            for (auto& node : nestedNetwork->GetNestedNodes()) {
+            for (auto& node : nestedNetwork->GetNestedNodes()) 
+            {
                 shared_ptr<BatchNormalizationNode<ElemType>> castNode =
                     dynamic_pointer_cast<BatchNormalizationNode<ElemType>>(node);
-                if (castNode) {
+                if (castNode) 
+                {
                     batchNormalizationWeights.insert(castNode->GetInputs()[1]);
                     batchNormalizationWeights.insert(castNode->GetInputs()[2]);
                 }

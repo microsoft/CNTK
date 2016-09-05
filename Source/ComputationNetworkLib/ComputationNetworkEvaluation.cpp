@@ -200,7 +200,8 @@ ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(con
         if (dynamic_pointer_cast<LearnableParameter<float>>(node))
         dynamic_pointer_cast<ComputationNode<float>>(node)->DebugLogMinibatch();
 #endif
-        if (node->IsOutOfDateWrtInputs() && enableForward) {
+        if (node->IsOutOfDateWrtInputs() && enableForward)
+        {
             node->BeginForwardProp();
             node->ForwardProp(fr.WithLayout(node->GetMBLayout()));
             node->EndForwardProp();
@@ -208,10 +209,12 @@ ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(con
             node->BumpEvalTimeStamp();
         }
 
-        if (node == startNode) {
+        if (node == startNode) 
+        {
             enableForward = true;
         }
-        else if (node == endNode) {
+        else if (node == endNode) 
+        {
             break;
         }
     }

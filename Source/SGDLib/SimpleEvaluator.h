@@ -321,10 +321,12 @@ public:
         // First, all batch normalization nodes should be marked.
         std::vector<ComputationNodeBasePtr> batchNormalNodes;
         shared_ptr<FlowControlNode> nestedNetwork = static_pointer_cast<FlowControlNode>(m_net->GetNestedNetwork(evalNodes[0]));
-        for (auto& node : nestedNetwork->GetNestedNodes()) {
+        for (auto& node : nestedNetwork->GetNestedNodes()) 
+        {
             shared_ptr<BatchNormalizationNode<ElemType>> castNode =
                 dynamic_pointer_cast<BatchNormalizationNode<ElemType>>(node);
-            if (castNode) {
+            if (castNode) 
+            {
                 batchNormalNodes.push_back(node);
             }
         }
@@ -333,7 +335,8 @@ public:
         std::vector<Matrix<ElemType>*> learnParamsValues(2, nullptr);
 
         bool noMoreSamplesToProcess = false;
-        for (auto& node : batchNormalNodes) {
+        for (auto& node : batchNormalNodes) 
+        {
             shared_ptr<BatchNormalizationNode<ElemType>> batchNode =
                 static_pointer_cast<BatchNormalizationNode<ElemType>>(node);
             batchNode->SetPostBatchNormalizationBegin();
@@ -342,7 +345,8 @@ public:
             LOGPRINTF(stderr, "Start evaluating: %ls\n", batchNode->GetName().c_str());
 
             // Post batch normal iters
-            for (int iter = 0; iter < iters; iter++) {
+            for (int iter = 0; iter < iters; iter++) 
+            {
                 bool wasDataRead = DataReaderHelpers::GetMinibatchIntoNetwork<ElemType>(*dataReader, m_net, 
                     nullptr, useDistributedMBReading, useParallelTrain, inputMatrices, actualMBSize, m_mpi);
 
@@ -363,10 +367,12 @@ public:
             batchNode->SetPostBatchNormalizationEnd();
 
             // Sync during or after all iters of a BN node are equivalent
-            if (useParallelTrain) {
+            if (useParallelTrain) 
+            {
                 if (m_gradHeader == nullptr)
                 {
-                    m_gradHeader.reset(DistGradHeader::Create(evalNodes.size()), [](DistGradHeader* ptr) {
+                    m_gradHeader.reset(DistGradHeader::Create(evalNodes.size()), [](DistGradHeader* ptr) 
+                    {
                         DistGradHeader::Destroy(ptr);
                     });
                 }
@@ -384,7 +390,8 @@ public:
                 m_gradHeader->numSamples = actualMBSize ? 1 : actualMBSize;
                 distGradAgg.AggregateGradients(learnParamsValues, m_gradHeader.get(), 0);
 
-                for (auto& parameter : learnParamsValues) {
+                for (auto& parameter : learnParamsValues) 
+                {
                     (*parameter) /= (ElemType)m_mpi->NumNodesInUse();
                 }
             }
