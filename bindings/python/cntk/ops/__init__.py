@@ -1173,6 +1173,8 @@ from cntk.cntk_py import Axis
 
 #TODO: expose output_variable as well ?
 
+#TODO: if we end up using only factory methods, we should get rid of the class Variable in variables.py
+
 def input_variable(shape, data_type=None, needs_gradient=False, is_sparse=False, 
             dynamic_axes = [Axis.default_dynamic_axis(), Axis.default_batch_axis()], name=''):
     '''

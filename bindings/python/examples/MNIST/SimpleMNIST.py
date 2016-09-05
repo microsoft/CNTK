@@ -61,7 +61,7 @@ def simple_mnist():
 
 if __name__=='__main__':
     # Specify the target device to be used for computing
-    target_device = DeviceDescriptor_gpudevice(0)
+    target_device = DeviceDescriptor_cpudevice()
     DeviceDescriptor.set_default_device(target_device)
 
     simple_mnist()
