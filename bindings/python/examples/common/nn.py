@@ -186,9 +186,3 @@ def LSTMP_component_with_self_stabilization(input, output_dim, cell_dim):
 
     # Form the recurrence loop by replacing the dh and dc placeholders with the actualDh and actualDc
     return LSTMCell[0].owner.replace_placeholders({ dh : actualDh, dc : actualDc})
-
-def print_training_progress(output_frequency, minibatch_number, trainer):
-    if minibatch_number % output_frequency == 0:
-        training_loss = trainer.previous_minibatch_loss_average()
-        eval_crit = trainer.previous_minibatch_evaluation_average()
-        print ("Minibatch: {}, Train Loss: {}, Train Evaluation Criterion: {}".format(minibatch_number, training_loss, eval_crit))
