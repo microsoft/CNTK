@@ -7,7 +7,7 @@
 import numpy as np
 import sys
 import os
-from cntk import learning_rates_per_sample, Trainer, sgd_learner, create_minibatch_source, get_train_loss, get_train_eval_criterion, DeviceDescriptor
+from cntk import learning_rates_per_sample, Trainer, sgd_learner, create_minibatch_source, get_train_loss, get_train_eval_criterion, DeviceDescriptor, print_training_progress
 from cntk.ops import input_variable, constant, parameter, cross_entropy_with_softmax, combine, classification_error, times, pooling, AVG_POOLING
 from examples.common.nn import conv_bn_relu_layer, conv_bn_layer, resnet_node2, resnet_node2_inc
 
@@ -126,7 +126,7 @@ def cifar_resnet():
         arguments = {image_input : mb[features_si].m_data, label_var : mb[labels_si].m_data}
         trainer.train_minibatch(arguments)
 
-        print_training_progress(training_progress_output_freq, i, trainer)
+        print_training_progress(i, trainer, training_progress_output_freq)
 
 if __name__=='__main__':
     # Specify the target device to be used for computing
