@@ -35,61 +35,61 @@ def combine(operands, name=''):
 # evaluation ops
 ################################################################################
 
-def cross_entropy_with_softmax(target_vector, output_vector, name=''):
+def cross_entropy_with_softmax(output_vector, target_vector, name=''):
     '''
     This operation computes the cross entropy over the softmax of the `output_vector`.
     It expects the `output_vector` as unscaled, and it computes softmax over 
     the `output_vector` internally.  Any `output_vector` input over which softmax is 
     already computed before passing to this operator will be incorrect.
     
-    :math:`cross\_entropy\_with\_softmax(t, o) = {-{\sum_{i \in \{1,len(t)\}} t_i \log(softmax(o_i)) }}`
+    :math:`cross\_entropy\_with\_softmax(o, t) = {-{\sum_{i \in \{1,len(t)\}} t_i \log(softmax(o_i)) }}`
     
     Example:
-        >>> C.eval(C.cross_entropy_with_softmax([0., 0., 0., 1.], [1., 1., 1., 50.]))
+        >>> C.eval(C.cross_entropy_with_softmax([1., 1., 1., 50.], [0., 0., 0., 1.]))
         #[0.]
         
-        >>> C.eval(C.cross_entropy_with_softmax([0.35, 0.15, 0.05, 0.45], [1., 2., 3., 4.]))
+        >>> C.eval(C.cross_entropy_with_softmax([1., 2., 3., 4.], [0.35, 0.15, 0.05, 0.45]))
         #[1.84]
     
     Args:
+        output_vector: the unscaled computed output values from the network
         target_vector: usually it is one-hot vector where the hot bit corresponds to the label index. 
         But it can be any probability distribution over the labels.
-        output_vector: the unscaled computed output values from the network
         name (str): the name of the node in the network            
     Returns:
         :class:`cntk.Function`
     '''
     from cntk import cross_entropy_with_softmax
-    target_vector = sanitize_input(target_vector, get_data_type(output_vector))
     output_vector = sanitize_input(output_vector, get_data_type(target_vector))
-    return cross_entropy_with_softmax(target_vector, output_vector, name).output()
+    target_vector = sanitize_input(target_vector, get_data_type(output_vector))
+    return cross_entropy_with_softmax(output_vector, target_vector, name).output()
 
-def square_error(target_matrix, output_matrix, name=''):
+def squared_error(output_matrix, target_matrix, name=''):
     '''
     This operation computes the sum of the squared difference between elements 
     in the two input matrices. The result is a scalar (i.e., one by one matrix). 
     This is often used as a training criterion node. 
     
     Example:
-        >>> C.eval(C.square_error([4., 6.], [2., 1.]))
+        >>> C.eval(C.square_error([2., 1.], [4., 6.]))
         #[29.]
         
         >>> C.eval(C.square_error([1., 2.], [1., 2.]))
         #[0.]
     
     Args:
-        target_matrix: target matrix, it is usually a one-hot vector where the hot bit corresponds to the label index
         output_matrix: the output values from the network
+        target_matrix: target matrix, it is usually a one-hot vector where the hot bit corresponds to the label index
         name (str): the name of the node in the network            
     Returns:
         :class:`cntk.Function`
     '''
-    from cntk import square_error
-    target_matrix = sanitize_input(target_matrix, get_data_type(output_matrix))
+    from cntk import squared_error
     output_matrix = sanitize_input(output_matrix, get_data_type(target_matrix))
-    return square_error(target_matrix, output_matrix, name).output()
+    target_matrix = sanitize_input(target_matrix, get_data_type(output_matrix))
+    return square_error(output_matrix, target_matrix, name).output()
 
-def classification_error(target_vector, output_vector, name=''):
+def classification_error(output_vector, target_vector, name=''):
     '''
     This operation computes the prediction error. It finds the index of the highest 
     value in the output_vector and compares it to the actual ground truth label
@@ -99,23 +99,23 @@ def classification_error(target_vector, output_vector, name=''):
     defined for it.
     
     Example:
-        >>> C.eval(C.classification_error([0., 0., 0., 1.], [1., 2., 3., 4.]))
+        >>> C.eval(C.classification_error([1., 2., 3., 4.], [0., 0., 0., 1.]))
         #[0.]
         
-        >>> C.eval(C.classification_error([0., 0., 1., 0.], [1., 2., 3., 4.]))
+        >>> C.eval(C.classification_error([1., 2., 3., 4.], [0., 0., 1., 0.]))
         #[1.]
     
     Args:
-        target_vector: it is one-hot vector where the hot bit corresponds to the label index
         output_vector: the output values from the network
+        target_vector: it is one-hot vector where the hot bit corresponds to the label index
         name (str): the name of the node in the network            
     Returns:
         :class:`cntk.Function`
     '''
     from cntk import classification_error
-    target_vector = sanitize_input(target_vector, get_data_type(output_vector))
     output_vector = sanitize_input(output_vector, get_data_type(target_vector))
-    return classification_error(target_vector, output_vector, name).output()
+    target_vector = sanitize_input(target_vector, get_data_type(output_vector))
+    return classification_error(output_vector, target_vector, name).output()
 
 ################################################################################
 # convolution ops
@@ -903,7 +903,7 @@ def cond(flag, value_if_true, value_if_false, name=''):
 # TODO: add default value for initial_state. It should be a constant scalar 
 # (0.0), using the default device
 
-def future_value(initial_state, x, time_step=1, name=''):
+def future_value(x, initial_state=None, time_step=1, name=''):
     '''
     This function returns the future value w.r.t. `x`. It is most often used when 
     creating RNNs. The resulting tensor has the same shape as the input but is 
@@ -915,20 +915,26 @@ def future_value(initial_state, x, time_step=1, name=''):
     Example:
         TBA    
     Args:        
+        x: the tensor (or its name) from which the future value is obtained. 
         initial_state: tensor or scalar representing the initial value to be
         used when the input tensor is shifted in time.
-        x: the tensor (or its name) from which the future value is obtained. 
         time_step (int): the number of time steps to look into the future (default 1)        
         name (str): the name of the node in the network
     Returns:
         :class:`cntk.Function`
     '''    
-    
+
+    from ..utils import sanitize_dtype_cntk
+    from ..cntk_py import Constant
     from cntk import future_value
+
+    if initial_state is None:
+        initial_state = Constant.scalar(sanitize_dtype_cntk(np.float32), 0.0)
+
     x = sanitize_input(x)
-    return future_value(initial_state, x, time_step, name).output()    
+    return future_value(x, initial_state, time_step, name).output()
     
-def past_value(initial_state, x, time_step=1, default_hidden_activation=0.1, name=''):
+def past_value(x, initial_state=None, time_step=1, name=''):
     '''
     This function returns the past value w.r.t. `x`. It is most often used when 
     creating RNNs. The resulting tensor has the same shape as the input but is 
@@ -940,18 +946,24 @@ def past_value(initial_state, x, time_step=1, default_hidden_activation=0.1, nam
     Example:
         TBA
     Args:        
+        x: the tensor (or its name) from which the past value is obtained
         initial_state: tensor or scalar representing the initial value to be
         used when the input tensor is shifted in time.
-        x: the tensor (or its name) from which the past value is obtained
         time_step (int): the number of time steps to look into the past (default 1)        
         name (str): the name of the node in the network
     Returns:
         :class:`cntk.Function`
     '''    
     
+    from ..utils import sanitize_dtype_cntk
+    from ..cntk_py import Constant
     from cntk import past_value
+
+    if initial_state is None:
+        initial_state = Constant.scalar(sanitize_dtype_cntk(np.float32), 0.0)
+
     x = sanitize_input(x)
-    return past_value(initial_state, x, time_step, name).output()    
+    return past_value(x, initial_state, time_step, name).output()
 
 ################################################################################
 # reshaping ops

@@ -19,11 +19,11 @@ def simple_mnist():
     hidden_layers_dim = 200
 
     # Input variables denoting the features and label data
-    input = input_variable(input_dim, np.float32, needs_gradient=False, name="features")
-    label = input_variable(num_output_classes, np.float32, needs_gradient=False, name="labels")
+    input = input_variable(input_dim, np.float32)
+    label = input_variable(num_output_classes, np.float32)
 
-    scaled_input = element_times(constant((), 0.00390625), input)
     # Instantiate the feedforward classification model
+    scaled_input = element_times(constant((), 0.00390625), input)
     netout = fully_connected_classifier_net(scaled_input, num_output_classes, hidden_layers_dim, num_hidden_layers, sigmoid)
 
     ce = cross_entropy_with_softmax(netout, label)

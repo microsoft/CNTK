@@ -7,7 +7,7 @@
 import numpy as np
 import sys
 import os
-from cntk import learning_rates_per_sample, Trainer, sgd_learner, create_minibatch_source, get_train_loss, get_train_eval_criterion, cntk_device, DeviceDescriptor
+from cntk import learning_rates_per_sample, Trainer, sgd_learner, create_minibatch_source, get_train_loss, get_train_eval_criterion, DeviceDescriptor
 from cntk.ops import input_variable, constant, parameter, cross_entropy_with_softmax, combine, classification_error, times, pooling, AVG_POOLING
 from examples.common.nn import conv_bn_relu_layer, conv_bn_layer, resnet_node2, resnet_node2_inc
 
@@ -103,7 +103,7 @@ def cifar_resnet():
 
     # Input variables denoting the features and label data
     image_input = input_variable((num_channels, image_height, image_width), features_si.m_element_type)
-    label_var = input_variable((num_classes), features_si.m_element_type, needs_gradient=False)
+    label_var = input_variable((num_classes), features_si.m_element_type)
 
     # Instantiate the resnet classification model
     classifier_output = resnet_classifer(image_input, num_classes)
@@ -124,14 +124,13 @@ def cifar_resnet():
 
         # Specify the mapping of input variables in the model to actual minibatch data to be trained with
         arguments = {image_input : mb[features_si].m_data, label_var : mb[labels_si].m_data}
-
         trainer.train_minibatch(arguments)
 
         print_training_progress(training_progress_output_freq, i, trainer)
 
 if __name__=='__main__':
     # Specify the target device to be used for computing
-    target_device = DeviceDescriptor.gpu_device(0)
+    target_device = DeviceDescriptor.gpudevice(0)
     DeviceDescriptor.set_default_device(target_device)
 
     cifar_resnet()

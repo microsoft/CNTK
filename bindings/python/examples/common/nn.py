@@ -81,6 +81,14 @@ def embedding(input, embedding_dim):
 def select_last(operand):
     return slice(operand, Axis.default_dynamic_axis(), -1, 0)
 
+def stabilize(operand):
+    scalar_constant = 4.0
+    f = Constant.scalar(scalar_constant);
+    fInv = Constant.scalar(f.get_data_type(), 1.0 / scalar_constant)
+
+    beta = element_times(fInv, log(Constant.scalar(f.get_data_type(), 1.0) + exp(element_times(f, parameter(shape=(), dtype=f.get_data_type(), init_value=0.99537863)))))
+    return element_times(beta, operand)
+
 def LSTMP_cell_with_self_stabilization(input, prev_output, prev_cell_state):
     input_dim = input.shape()[0]
     output_dim = prev_output.shape()[0];
@@ -173,8 +181,8 @@ def LSTMP_component_with_self_stabilization(input, output_dim, cell_dim):
     dc = placeholder_variable(shape=(cell_dim))
 
     LSTMCell = LSTMP_cell_with_self_stabilization(input, dh, dc)
-    actualDh = past_value(LSTMCell[0], constant((), 0.0), 1); 
-    actualDc = past_value(LSTMCell[1], constant((), 0.0), 1); 
+    actualDh = past_value(LSTMCell[0]); 
+    actualDc = past_value(LSTMCell[1]); 
 
     # Form the recurrence loop by replacing the dh and dc placeholders with the actualDh and actualDc
     return LSTMCell[0].owner.replace_placeholders({ dh : actualDh, dc : actualDc})

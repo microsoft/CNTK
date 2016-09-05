@@ -33,7 +33,6 @@ def ffnet():
     feature_stream_name = 'features'
     labels_stream_name = 'labels'
 
-
     mb_source = text_format_minibatch_source(path, list([
                     StreamConfiguration( feature_stream_name, input_dim ), 
                     StreamConfiguration( labels_stream_name, num_output_classes)]))
@@ -58,10 +57,8 @@ def ffnet():
         trainer.train_minibatch(arguments)
         print_training_progress(i, trainer, training_progress_output_freq)
 
-
 if __name__=='__main__':
     # Specify the target device to be used for computing
-
     target_device = DeviceDescriptor.cpu_device()
     DeviceDescriptor.set_default_device(target_device)
 
