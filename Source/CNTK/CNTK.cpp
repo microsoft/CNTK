@@ -163,12 +163,21 @@ void DoCommands(const ConfigParameters& config, const shared_ptr<MPIWrapper>& mp
 {
     ConfigArray command = config(L"command", "train");
 
-    int numCPUThreads = config(L"numCPUThreads", "0");
-    numCPUThreads = CPUMatrix<ElemType>::SetNumThreads(numCPUThreads);
-
-    if (numCPUThreads > 0)
+    if (Globals::ShouldForceDeterministicAlgorithms())
     {
-        LOGPRINTF(stderr, "Using %d CPU threads.\n", numCPUThreads);
+        LOGPRINTF(stderr, "forceDeterministcAlgorithms flag is specified. Using 1 CPU thread.\n");
+        CPUMatrix<ElemType>::SetNumThreads(1);
+        CPUMatrix<ElemType>::SetCompatibleMode();
+    }
+    else
+    {
+        // Setting specified number of threads.
+        int numCPUThreads = config(L"numCPUThreads", "0");
+        numCPUThreads = CPUMatrix<ElemType>::SetNumThreads(numCPUThreads);
+        if (numCPUThreads > 0)
+        {
+            LOGPRINTF(stderr, "Using %d CPU threads.\n", numCPUThreads);
+        }
     }
 
     bool progressTracing = config(L"progressTracing", false);
@@ -564,10 +573,19 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
 
     // execute the actions
     // std::string type = config(L"precision", "float");
-    int numCPUThreads = config(L"numCPUThreads", 0);
-    numCPUThreads = CPUMatrix<float /*any will do*/>::SetNumThreads(numCPUThreads);
-    if (numCPUThreads > 0)
-        LOGPRINTF(stderr, "Using %d CPU threads.\n", numCPUThreads);
+    if (Globals::ShouldForceDeterministicAlgorithms())
+    {
+        LOGPRINTF(stderr, "forceDeterministcAlgorithms flag is specified. Using 1 CPU thread.\n");
+        CPUMatrix<float /*any will do*/>::SetNumThreads(1);
+        CPUMatrix<float /*any will do*/>::SetCompatibleMode();
+    }
+    else
+    {
+        int numCPUThreads = config(L"numCPUThreads", 0);
+        numCPUThreads = CPUMatrix<float /*any will do*/>::SetNumThreads(numCPUThreads);
+        if (numCPUThreads > 0)
+            LOGPRINTF(stderr, "Using %d CPU threads.\n", numCPUThreads);
+    }
 
     bool progressTracing = config(L"progressTracing", false);
     size_t fullTotalMaxEpochs = 1; // BUGBUG: BS does not allow me to read out the max epochs parameters, as that would instantiate and thus execute the objects
