@@ -24,12 +24,12 @@ void TrainSimpleFeedForwardClassifer(const DeviceDescriptor& device)
     auto featureStreamInfo = minibatchSource->StreamInfo(featureStreamName);
     auto labelStreamInfo = minibatchSource->StreamInfo(labelsStreamName);
 
-    std::unordered_map<StreamInformation, std::pair<NDArrayViewPtr, NDArrayViewPtr>> inputMeansAndInvStdDevs = { { *featureStreamInfo, { nullptr, nullptr } } };
+    std::unordered_map<StreamInformation, std::pair<NDArrayViewPtr, NDArrayViewPtr>> inputMeansAndInvStdDevs = { { featureStreamInfo, { nullptr, nullptr } } };
     ComputeInputPerDimMeansAndInvStdDevs(minibatchSource, inputMeansAndInvStdDevs);
 
     auto nonLinearity = std::bind(Sigmoid, _1, L"");
     auto input = InputVariable({ inputDim }, DataType::Float, L"features");
-    auto normalizedinput = PerDimMeanVarianceNormalize(input, inputMeansAndInvStdDevs[*featureStreamInfo].first, inputMeansAndInvStdDevs[*featureStreamInfo].second);
+    auto normalizedinput = PerDimMeanVarianceNormalize(input, inputMeansAndInvStdDevs[featureStreamInfo].first, inputMeansAndInvStdDevs[featureStreamInfo].second);
     auto classifierOutput = FullyConnectedDNNLayer(normalizedinput, hiddenLayerDim, device, nonLinearity);
     for (size_t i = 1; i < numHiddenLayers; ++i)
         classifierOutput = FullyConnectedDNNLayer(classifierOutput, hiddenLayerDim, device, nonLinearity);
@@ -62,7 +62,7 @@ void TrainSimpleFeedForwardClassifer(const DeviceDescriptor& device)
     for (size_t i = 0; i < numMinibatchesToTrain; ++i)
     {
         auto minibatchData = minibatchSource->GetNextMinibatch(minibatchSize, device);
-        trainer.TrainMinibatch({ { input, minibatchData[*featureStreamInfo].m_data }, { labels, minibatchData[*labelStreamInfo].m_data } }, device);
+        trainer.TrainMinibatch({ { input, minibatchData[featureStreamInfo].m_data }, { labels, minibatchData[labelStreamInfo].m_data } }, device);
         PrintTrainingProgress(trainer, i, outputFrequencyInMinibatches);
     }
 }
