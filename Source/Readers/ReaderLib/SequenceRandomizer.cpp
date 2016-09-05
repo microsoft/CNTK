@@ -332,10 +332,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         while (m_currentSampleCursor < sweepSampleOffset)
         {
             GetNextSequenceDescriptions(1, window);
-            if (m_chunkWindowBegin < m_currentChunkCursor)
-            {
-                ReleaseChunks();
-            }
         }
 
         return m_currentSampleCursor;
