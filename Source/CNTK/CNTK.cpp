@@ -167,7 +167,6 @@ void DoCommands(const ConfigParameters& config, const shared_ptr<MPIWrapper>& mp
     {
         LOGPRINTF(stderr, "forceDeterministcAlgorithms flag is specified. Using 1 CPU thread.\n");
         CPUMatrix<ElemType>::SetNumThreads(1);
-        CPUMatrix<ElemType>::SetCompatibleMode();
     }
     else
     {
@@ -577,7 +576,6 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
     {
         LOGPRINTF(stderr, "forceDeterministcAlgorithms flag is specified. Using 1 CPU thread.\n");
         CPUMatrix<float /*any will do*/>::SetNumThreads(1);
-        CPUMatrix<float /*any will do*/>::SetCompatibleMode();
     }
     else
     {
