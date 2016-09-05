@@ -13,69 +13,11 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-// -----------------------------------------------------------------------
-// DelayedValueNodeState -- helper class for exporting/importing state from/to DelayedValueNodes.
-// This is used for sub-minibatching in case of truncated BPTT.
-// -----------------------------------------------------------------------
-
-template <class ElemType>
-class DelayedValueNodeState : public INodeState
-{
-public:
-    DelayedValueNodeState(int deviceID)
-        : m_cachedActivity((size_t) 0, (size_t) 0, deviceID),
-          m_delayedActivationMBLayout(nullptr),
-          m_isEmpty(true)
-    {
-    }
-    void CacheDelayedMBLayout(const MBLayoutPtr& pMBLayout)
-    {
-        m_delayedActivationMBLayout = make_shared<MBLayout>();
-        m_delayedActivationMBLayout->CopyFrom(pMBLayout);
-    }
-    void CacheState(const Matrix<ElemType>& cachedActivity)
-    {
-        m_cachedActivity.SetValue(cachedActivity);
-        m_isEmpty = false;
-    }
-    void ExportDelayedMBLayout(MBLayoutPtr& pMBLayout)
-    {
-        pMBLayout->CopyFrom(m_delayedActivationMBLayout);
-    }
-    bool IsEmpty()
-    {
-        return m_isEmpty;
-    }
-    const Matrix<ElemType>& ExportCachedActivity()
-    {
-        return m_cachedActivity;
-    }
-    ~DelayedValueNodeState()
-    {
-    }
-
-protected:
-    Matrix<ElemType> m_cachedActivity; // 1 column per parallel sequence
-    // MBLayoutPtr         m_shiftedMBLayout;
-    // Currently, we only support saving state for m_timeStep == 1
-    // there is no need for this m_shiftedMBLayout if m_timeStep == 1
-    MBLayoutPtr m_delayedActivationMBLayout;
-    bool m_isEmpty; // in some case
-                    // (e.g., at the boundary of sentence end or begin/full utterance mode), we don't need to store state (but we do need to need know m_delayedActivationMBLayout)
-};
+template <class ElemType> class DelayedValueNodeState;
 
 // -----------------------------------------------------------------------
-// DelayedValueNodeBase (input) -- abstract base class for PastValueNode and FutureValueNode to hold all shared code
+// DelayedValueNodeBase (input [, initialValue]) -- abstract base class for PastValueNode and FutureValueNode to hold all shared code
 // The two differ in the step direction, some loop directions, and sequence-boundary flags.
-// This is an old node which will be replaced by ShiftNode (with Past/FutureValueNode being emulated).
-//
-// This is planned:
-//  - carrying over state at sentence boundaries from other nodes (for s2s)
-//  - ranges of neighbor frames as a secondary tensor dimension (i.e. can be used to implement a rolling window)
-//  - full support/efficiency of non-recurrent use (in which case the range can be from negative to positive, e.g. a symmetric rolling window)
-//  - denoting which tensor dimension to loop over (this may not be completed, but I will plant a seed)
-//  - support for Yongqiang's sub-minibatching with truncated BPTT (export/import state)
-//  - more efficient storage of carried-over state (only store the needed frames, not a full copy of the previous MB as currently; which will on the other hand also allow windows that reach back beyond a minibatch)
 // -----------------------------------------------------------------------
 
 // TODO: 'direction' is really too general. signOfTimeOffset?
@@ -182,9 +124,6 @@ public:
     }
 };
 
-template class PastValueNode<float>;
-template class PastValueNode<double>;
-
 // -----------------------------------------------------------------------
 // FutureValueNode (input) -- delay node in future direction
 // -----------------------------------------------------------------------
@@ -214,8 +153,5 @@ public:
     {
     }
 };
-
-template class FutureValueNode<float>;
-template class FutureValueNode<double>;
 
 }}}

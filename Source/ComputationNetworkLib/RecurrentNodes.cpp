@@ -125,72 +125,57 @@ template<class ElemType, int direction>
     size_t t = fr.t();
     int t_delayed = (int) (t + direction * m_timeStep); // this might end up outside the current window
 
-    Matrix<ElemType> inp((DEVICEID_TYPE)m_value->GetDeviceId());
-
-    // if any sequence at this time step has a boundary flag, then process one by one
-    // TODO: Would there be an efficiency gain from grouping consecutive sequences with identical flags?
-    // assert(m_pShiftedMBLayout->Is(t, SequenceStart_or_End) == m_pMBLayout->IsBeyondStartOrEnd(frDelayed));
-    if (m_pMBLayout->IsBeyondStartOrEnd(frDelayed))
+    // determine the situation we are in
+    let frameNeedsReset = m_pMBLayout->IsBeyondStartOrEnd(frDelayed); // true if at least one sequence is outside
+    bool allSequencesNeedReset = t_delayed < 0 || t_delayed >= T;     // optimization: skip copying if all sequences need reset at start
+    for (size_t id = 0; allSequencesNeedReset && id < GetNumParallelSequences(); id++)
     {
-        for (size_t id = 0; id < GetNumParallelSequences(); id++)
-        {
-            if (m_pMBLayout->IsGap(fr.Sequence(id))) // if output is in a gap then don't bother filling it
-                continue;
-
-            Matrix<ElemType> out = ValueFor(fr.Sequence(id));
-
-            // assert(m_pShiftedMBLayout->Is(id, t, SequenceStart_or_End) == m_pMBLayout->IsBeyondStartOrEnd(frDelayed.Sequence(id)));
-            if (m_pMBLayout->IsBeyondStartOrEnd(frDelayed.Sequence(id)))
-                out.SetValue(m_initialActivationValue); // crossed a boundary
-            else                                        // not a boundary: just copy the delayed value
-            {
-                // inside the sequence: access delayed value
-                if (t_delayed < 0)
-                    inp = DataWithMBLayoutFor(m_delayedValue, FrameRange(m_delayedActivationMBLayout, t_delayed + T_delayedActivation).Sequence(id), m_delayedActivationMBLayout); // delay reaches in previous minibatch
-                else if (t_delayed >= T)
-                    inp = DataWithMBLayoutFor(m_delayedValue, FrameRange(m_delayedActivationMBLayout, t_delayed - T).Sequence(id), m_delayedActivationMBLayout); // delay reaches in previous minibatch
-                else
-                    inp = Input(0)->ValueFor(frDelayed.Sequence(id));
-                // inp = Input(0)->ValueFor(FrameRange(m_pMBLayout, t_delayed).Sequence(id));
-
-                out.AssignValuesOf(inp);
-            }
-        }
+        if (m_pMBLayout->IsGap(fr.Sequence(id))) // if output is in a gap then don't bother either way
+            continue;
+        allSequencesNeedReset = allSequencesNeedReset && m_pMBLayout->IsBeyondStartOrEnd(frDelayed.Sequence(id));
     }
-    else // frame has no boundary flags: use ValueFor directly (still may have a gap here)
+
+    // frame has no boundary flags: use ValueFor directly (still may have a gap here)
+    // copy everything first
+    if (!allSequencesNeedReset)
     {
         Matrix<ElemType> out = ValueFor(fr);
-
-        if (t_delayed < 0)
+        if (t_delayed < 0) // handle special case of truncated BPTT
         {
-            if (m_delayedValue.IsEmpty()) 
-            {
-                if (IsPartOfLoop())
-                    InvalidArgument("The delay node tries to access past values that are out of bound, possibly because there is no sentence start marker in the MBLayout.");
-                else //use first frame
-                    inp = Input(0)->ValueFor(FrameRange(m_pMBLayout, 0));
-            }
-            else
-                inp = DataWithMBLayoutFor(m_delayedValue, FrameRange(m_delayedActivationMBLayout, t_delayed + T_delayedActivation), m_delayedActivationMBLayout);
+            if (m_delayedValue.IsEmpty())
+                InvalidArgument("The delay node tries to access past values that are out of bound, possibly because there is no sentence start marker in the MBLayout.");
+            out.AssignValuesOf(DataWithMBLayoutFor(m_delayedValue, FrameRange(m_delayedActivationMBLayout, t_delayed + T_delayedActivation), m_delayedActivationMBLayout));
         }
-
-        else if (t_delayed >= T)
+        else if (t_delayed >= T)  // TODO: how can this case even exist?
         {
-            if (m_delayedValue.IsEmpty())  
-            {
-                if (IsPartOfLoop())
-                    InvalidArgument("The delay node tries to access future values that are out of bound, possibly because there is no sentence end marker in the MBLayout.");
-                else //use last frame
-                    inp = Input(0)->ValueFor(FrameRange(m_pMBLayout, T - 1));
-            }
-            else
-                inp = DataWithMBLayoutFor(m_delayedValue, FrameRange(m_delayedActivationMBLayout, t_delayed - T), m_delayedActivationMBLayout);
+            if (m_delayedValue.IsEmpty())
+                InvalidArgument("The delay node tries to access future values that are out of bound, possibly because there is no sentence end marker in the MBLayout.");
+            out.AssignValuesOf(DataWithMBLayoutFor(m_delayedValue, FrameRange(m_delayedActivationMBLayout, t_delayed - T), m_delayedActivationMBLayout));
         }
-        else
-            inp = Input(0)->ValueFor(frDelayed);
-        // inp = Input(0)->ValueFor(FrameRange(m_pMBLayout, t_delayed));
+        else // regular case
+        {
+            // TODO: use a mask here to only assign what is needed; otherwise, this is inefficient on CPU
+            out.AssignValuesOf(Input(0)->ValueFor(frDelayed));
+        }
+    }
 
-        out.AssignValuesOf(inp);
+    // if any sequence at this time step has a boundary flag, then process one by one
+    if (frameNeedsReset)
+    {
+        let S = GetNumParallelSequences();
+        for (size_t s = 0; s < S; s++)
+        {
+            if (m_pMBLayout->IsGap(fr.Sequence(s))) // if output is in a gap then don't bother filling it
+                continue;
+            else if (m_pMBLayout->IsBeyondStartOrEnd(frDelayed.Sequence(s)))
+            {
+                Matrix<ElemType> out = ValueFor(fr.Sequence(s));
+                // TODO:
+                //  - use mask
+                //  - get from explicit node
+                out.SetValue(m_initialActivationValue); // crossed a boundary
+            }
+        }
     }
 }
 
@@ -240,36 +225,32 @@ template<class ElemType, int direction>
 
     // if delayed input is within valid time range then add its gradient
     size_t t = fr.t();
-    int t_delayed = (int) (t + direction * m_timeStep); // this might end up outside the current window
-    if (t_delayed >= 0 && t_delayed < GetNumTimeSteps())
+    int t_delayed = (int) (t + direction * m_timeStep);  // this might end up outside the current window
+    if (t_delayed >= 0 && t_delayed < GetNumTimeSteps()) // only propagate if our source is inside the minibatch
     {
         // Boundary frames must not propagate. Gaps must also not propagate.
         // if there is a boundary in this frame, we treat each stream separately; otherwise we do all in one go
-        // assert(m_pShiftedMBLayout->Is(t, SequenceStart_or_End | MinibatchPackingFlags::NoFeature) ==
-        //       m_pMBLayout->IsGap(fr) || m_pMBLayout->IsBeyondStartOrEnd(frDelayed));
-        if (m_pMBLayout->IsGap(fr) || m_pMBLayout->IsBeyondStartOrEnd(frDelayed)) // true if at least one parallel sequence has a boundary or gap
+        if (m_pMBLayout->IsBeyondStartOrEnd(frDelayed)) // true if at least one parallel sequence we pull the gradient for has a boundary
         {
-            size_t mNbr = m_pMBLayout->GetNumParallelSequences();
-            for (size_t id = 0; id < mNbr; id++)
+            size_t S = m_pMBLayout->GetNumParallelSequences();
+            for (size_t s = 0; s < S; s++)
             {
-                // assert(m_pShiftedMBLayout->Is(id, t, SequenceStart_or_End | MinibatchPackingFlags::NoFeature) ==
-                //       m_pMBLayout->IsGap(fr.Sequence(id)) || m_pMBLayout->IsBeyondStartOrEnd(frDelayed.Sequence(id)));
-                if (!(m_pMBLayout->IsGap(fr.Sequence(id)) || m_pMBLayout->IsBeyondStartOrEnd(frDelayed.Sequence(id)))) // don't propagate boundary frames or gaps
+                if (!m_pMBLayout->IsGap(fr.Sequence(s)) && !m_pMBLayout->IsBeyondStartOrEnd(frDelayed.Sequence(s))) // don't propagate boundary frames or gaps
                 {
-                    Matrix<ElemType> frm = GradientFor(fr.Sequence(id));
+                    Matrix<ElemType> frm = GradientFor(fr.Sequence(s));
                     // TODO: use delayed FrameRange here as well
-                    // Matrix<ElemType> to = Input(0)->GradientFor(FrameRange(m_pMBLayout, t_delayed).Sequence(id));
-                    Matrix<ElemType> to = Input(0)->GradientFor(frDelayed.Sequence(id));
+                    Matrix<ElemType> to = Input(0)->GradientFor(frDelayed.Sequence(s));
                     to += frm;
                 }
             }
         }
         else // operate on entire time step in one go (over all parallel sequences)
         {
+            // TODO: change this to a TensorView operation
             Matrix<ElemType> frm = GradientFor(fr);
             // TODO: use something like fr.WithDelay(t) instead, instead of recreating FrameRanges
-            // Matrix<ElemType> to = Input(0)->GradientFor(FrameRange(m_pMBLayout, t_delayed));
             Matrix<ElemType> to = Input(0)->GradientFor(frDelayed);
+            // TODO: use TensorView, multiply incoming gradient with 1 or 0
             to += frm;
         }
     }
@@ -358,6 +339,64 @@ template<class ElemType, int direction>
     else
         LogicError("Unrecognized direction in DelayedValueNodeBase");
 }
+
+// instantiate the classes that derive from the above
+template class PastValueNode<float>;
+template class PastValueNode<double>;
+
+template class FutureValueNode<float>;
+template class FutureValueNode<double>;
+
+// -----------------------------------------------------------------------
+// DelayedValueNodeState -- helper class for exporting/importing state from/to DelayedValueNodes.
+// This is used for sub-minibatching in case of truncated BPTT.
+// -----------------------------------------------------------------------
+
+template <class ElemType>
+class DelayedValueNodeState : public INodeState
+{
+public:
+    DelayedValueNodeState(int deviceID)
+        : m_cachedActivity((size_t) 0, (size_t) 0, deviceID),
+          m_delayedActivationMBLayout(nullptr),
+          m_isEmpty(true)
+    {
+    }
+    void CacheDelayedMBLayout(const MBLayoutPtr& pMBLayout)
+    {
+        m_delayedActivationMBLayout = make_shared<MBLayout>();
+        m_delayedActivationMBLayout->CopyFrom(pMBLayout);
+    }
+    void CacheState(const Matrix<ElemType>& cachedActivity)
+    {
+        m_cachedActivity.SetValue(cachedActivity);
+        m_isEmpty = false;
+    }
+    void ExportDelayedMBLayout(MBLayoutPtr& pMBLayout)
+    {
+        pMBLayout->CopyFrom(m_delayedActivationMBLayout);
+    }
+    bool IsEmpty()
+    {
+        return m_isEmpty;
+    }
+    const Matrix<ElemType>& ExportCachedActivity()
+    {
+        return m_cachedActivity;
+    }
+    ~DelayedValueNodeState()
+    {
+    }
+
+protected:
+    Matrix<ElemType> m_cachedActivity; // 1 column per parallel sequence
+    // MBLayoutPtr         m_shiftedMBLayout;
+    // Currently, we only support saving state for m_timeStep == 1
+    // there is no need for this m_shiftedMBLayout if m_timeStep == 1
+    MBLayoutPtr m_delayedActivationMBLayout;
+    bool m_isEmpty; // in some case
+                    // (e.g., at the boundary of sentence end or begin/full utterance mode), we don't need to store state (but we do need to need know m_delayedActivationMBLayout)
+};
 
 #ifdef COMING_SOON
 
