@@ -42,7 +42,7 @@ template<class ElemType, int direction>
         auto node = dynamic_pointer_cast<DelayedValueNodeBase<ElemType, direction /*, SequenceStart_or_End*/>>(nodeP);
         node->m_timeStep = m_timeStep;
         node->m_initialActivationValue = m_initialActivationValue;
-        node->m_delayedValue.SetValue(m_delayedValue);
+        node->m_delayedValue->SetValue(*m_delayedValue);
         if (m_delayedActivationMBLayout)
             (node->m_delayedActivationMBLayout = make_shared<MBLayout>())->CopyFrom(m_delayedActivationMBLayout);
         else
@@ -73,7 +73,7 @@ template<class ElemType, int direction>
         //         these to 0 and rely on Validate(), but some unknown nodes in the loop don't do that right.
         SetDims(TensorShape(rows), HasMBLayout() /*may be true on reload (roll-back)*/); // tensor shape will be overwritten in Validate()
     }
-    m_delayedValue.Resize(m_sampleLayout.GetNumElements(), 0); // Note: If we try to access history in first minibatch, we shall crash. It would be a consequence of a missing sentence-begin flag
+    m_delayedValue->Resize(m_sampleLayout.GetNumElements(), 0); // Note: If we try to access history in first minibatch, we shall crash. It would be a consequence of a missing sentence-begin flag
 
     if (modelVersion >= CNTK_MODEL_VERSION_2)
         fstream >> m_initialActivationValue;
@@ -166,12 +166,19 @@ template<class ElemType, int direction>
     bool anyValid, allValid;
     SetUpdateMask(frDelayed, anyValid, allValid);
 
+    size_t rank = DetermineElementwiseTensorRank();
+
     // determine the source --considering truncated BPTT
-    Matrix/*ref*/<ElemType> inp(m_deviceId);
+    TensorView<ElemType> inp;
     if (t_delayed < 0) // handle special case of truncated BPTT
     {
-        if (!m_delayedValue.IsEmpty())
-            inp = DataWithMBLayoutFor(m_delayedValue, FrameRange(m_delayedActivationMBLayout, t_delayed + T_delayedActivation), m_delayedActivationMBLayout);
+        if (!m_delayedValue->IsEmpty())
+        {
+            auto tensorShape = GetTensorShape(rank);
+            auto slice = TensorSliceWithMBLayoutFor(tensorShape.GetDims(), FrameRange(m_delayedActivationMBLayout, t_delayed/*<0*/ + T_delayedActivation), m_delayedActivationMBLayout);
+            tensorShape.NarrowTo(slice);
+            inp = TensorView<ElemType>(m_delayedValue, tensorShape);
+        }
         else if (anyValid)
             LogicError("The delay node tries to access past values that are out of bound, possibly because there is no sentence start marker in the MBLayout.");
         else
@@ -179,29 +186,29 @@ template<class ElemType, int direction>
     }
     else if (t_delayed >= T)  // TODO: how can this case even exist? Truncated BPTT goes left-to-right only
     {
-        //if (m_delayedValue.IsEmpty())
+        //if (m_delayedValue->IsEmpty())
         LogicError("The delay node tries to access future values that are out of bound, possibly because there is no sentence end marker in the MBLayout.");
         //inp = DataWithMBLayoutFor(m_delayedValue, FrameRange(m_delayedActivationMBLayout, t_delayed - T), m_delayedActivationMBLayout);
     }
     else // regular case
     {
         // TODO: use a mask here to only assign what is needed; otherwise, this is inefficient on CPU
-        inp = Input(0)->ValueFor(frDelayed);
+        inp = Input(0)->ValueTensorFor(rank, frDelayed);
     }
 
     // determine the target
-    Matrix/*ref*/<ElemType> out = ValueFor(fr);
+    auto out = ValueTensorFor(rank, fr);
 
     // do it
     if (allValid)
     {
-        out.AssignValuesOf(inp);
+        out.AssignCopyOf(inp);
     }
     else // if any sequence at this time step has a boundary flag, then process one by one
     {
         // copy everything first if we got at least one valid source
         if (anyValid)
-            out.AssignValuesOf(inp);
+            out.AssignCopyOf(inp);
 
         let S = GetNumParallelSequences();
         for (size_t s = 0; s < S; s++)
@@ -228,7 +235,7 @@ template<class ElemType, int direction>
     //  - we don't need to keep anything if all sequences are closed (sentence end)
     //    This condition includes full-sequence mode.
     // TODO: Can we optimize this and only copy if there is a sequence spanning across the end of the MB? And add a check to BeginForwardProp() to make sure we got one if there is a boundary at the start?
-    m_delayedValue.SetValue(Input(0)->Value());
+    m_delayedValue->SetValue(Input(0)->Value());
     if (!m_delayedActivationMBLayout)
         m_delayedActivationMBLayout = make_shared<MBLayout>();
     m_delayedActivationMBLayout->CopyFrom(m_pMBLayout);
@@ -327,7 +334,7 @@ template<class ElemType, int direction>
         else
         {
             auto pState = make_shared<DelayedValueNodeState<ElemType>>(m_deviceId);
-            pState->CacheState(m_delayedValue.ColumnSlice((nT - 1) * nU, nU));
+            pState->CacheState(m_delayedValue->ColumnSlice((nT - 1) * nU, nU));
             pState->CacheDelayedMBLayout(m_delayedActivationMBLayout);
             pExportedState = pState;
         }
@@ -343,7 +350,7 @@ template<class ElemType, int direction>
         else
         {
             auto pState = make_shared<DelayedValueNodeState<ElemType>>(m_deviceId);
-            pState->CacheState(m_delayedValue.ColumnSlice((nT - 1) * nU, nU));
+            pState->CacheState(m_delayedValue->ColumnSlice((nT - 1) * nU, nU));
             pState->CacheDelayedMBLayout(m_delayedActivationMBLayout);
             pExportedState = pState;
         }
@@ -375,9 +382,9 @@ template<class ElemType, int direction>
 
     int dir = direction;
     if (dir == -1) // looking backward
-        m_delayedValue.SetColumnSlice(delayedActivation, (nT - 1) * nU, nU);
+        m_delayedValue->SetColumnSlice(delayedActivation, (nT - 1) * nU, nU);
     else if (dir == 1)
-        m_delayedValue.SetColumnSlice(delayedActivation, 0, nU);
+        m_delayedValue->SetColumnSlice(delayedActivation, 0, nU);
     else
         LogicError("Unrecognized direction in DelayedValueNodeBase");
 }

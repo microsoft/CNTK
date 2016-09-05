@@ -32,23 +32,23 @@ private:
     void SetUpdateMask(const FrameRange& frDelayed, bool& anyValid, bool& allValid);
 
 protected:
-    DelayedValueNodeBase(DEVICEID_TYPE deviceId, const wstring& name)
-        : Base(deviceId, name),
-          m_delayedValue(deviceId),
-          m_initialActivationValueMatrix(deviceId)
+    DelayedValueNodeBase(DEVICEID_TYPE deviceId, const wstring& name) :
+        Base(deviceId, name),
+        m_delayedValue(make_shared<Matrix<ElemType>>(deviceId)),
+        m_initialActivationValueMatrix(deviceId)
     {
         Init(TensorShape(), (ElemType) DEFAULT_HIDDEN_ACTIVATION);
     }
     DelayedValueNodeBase(DEVICEID_TYPE deviceId, const wstring& name, ElemType initialActivationValue, const TensorShape& sampleLayout, size_t timeStep)
         : Base(deviceId, name),
-        m_delayedValue(deviceId),
+        m_delayedValue(make_shared<Matrix<ElemType>>(deviceId)),
         m_initialActivationValueMatrix(deviceId)
     {
         Init(sampleLayout, initialActivationValue);
         m_timeStep = (int) timeStep; // TODO: pass this to Init() instead as well
     }
-    DelayedValueNodeBase(const ScriptableObjects::IConfigRecordPtr configp)
-        : DelayedValueNodeBase(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"defaultHiddenActivation"), configp->Get(L"shape"), configp->Get(L"timeStep"))
+    DelayedValueNodeBase(const ScriptableObjects::IConfigRecordPtr configp) :
+        DelayedValueNodeBase(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"defaultHiddenActivation"), configp->Get(L"shape"), configp->Get(L"timeStep"))
     {
         // We do NOT attach the inputs, as we cannot resolve them without causing a circular reference.
         // Instead, we capture them in a lambda, which will be called by ComputationNetwork during the build process through LateAttachInputs() below.
@@ -93,7 +93,7 @@ protected:
     vector<ElemType> m_sourceFrameMask;                   // mask for copying/propagating source frames is prepared here...
     shared_ptr<Matrix<ElemType>> m_sourceFrameMaskMatrix; // ...and used from here
 
-    Matrix<ElemType> m_delayedValue;                      // saves the activation of the previous step that this node points to
+    shared_ptr<Matrix<ElemType>> m_delayedValue;          // saves the activation of the previous step that this node points to
     MBLayoutPtr m_delayedActivationMBLayout;              // layout for m_delayedValue
 };
 
