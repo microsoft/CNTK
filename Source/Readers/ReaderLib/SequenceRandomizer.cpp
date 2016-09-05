@@ -79,9 +79,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         while (samples > 0 && m_currentChunkCursor < m_randomizedChunks.size())
         {
             size_t sequenceOffsetInsideChunk = m_currentSequenceCursor - m_randomizedChunks[m_currentChunkCursor].m_sequencePositionStart;
-            RandomizedSequenceDescription* sequence = &m_sequenceWindow[m_currentChunkCursor - m_chunkWindowBegin][sequenceOffsetInsideChunk];
+            const RandomizedSequenceDescription* sequence = &m_sequenceWindow[m_currentChunkCursor - m_chunkWindowBegin][sequenceOffsetInsideChunk];
+            int sequenceLength = (int)sequence->m_numberOfSamples;
 
-            if (firstSequence || samples >= (int)sequence->m_numberOfSamples)
+            if (firstSequence || samples >= sequenceLength)
             {
                 requiredChunks.m_begin = std::min(m_randomizedChunks[m_currentChunkCursor].m_randomizationWindow.m_begin, requiredChunks.m_begin);
                 requiredChunks.m_end = std::max(m_randomizedChunks[m_currentChunkCursor].m_randomizationWindow.m_end, requiredChunks.m_end);
@@ -89,17 +90,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 firstSequence = false;
                 result.push_back(*sequence);
                 m_currentSequenceCursor++;
-                m_currentSampleCursor += (int)sequence->m_numberOfSamples;
+                m_currentSampleCursor += sequenceLength;
 
                 if (sequenceOffsetInsideChunk + 1 >= m_randomizedChunks[m_currentChunkCursor].m_original->m_numberOfSequences)
                 {
-                    // Moving to the next chunk.
+                    // Moving to the next chunk,
+                    // Be careful, this invalidates the sequence from above.
                     MoveChunkCursor();
                 }
             }
 
             // Always decrease the available number of samples.
-            samples -= (int)sequence->m_numberOfSamples;
+            samples -= sequenceLength;
         }
 
         return result;
