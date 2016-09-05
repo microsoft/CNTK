@@ -27,7 +27,7 @@ ndlMacros = [
     scValue = 1
     
     # Batch normalization time constant.
-    bnTimeConst = 0
+    bnTimeConst = 4096
 ]
 
 DNN=[

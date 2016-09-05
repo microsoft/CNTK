@@ -14,7 +14,7 @@ command=Train:PBN:CreateEval:Test
 
 parallelTrain="false"
 
-stderr="$OutputDir$/ResNet_101"
+stderr="$OutputDir$/ResNet_50"
 traceLevel=1
 numMBsToShowResult=500
 
@@ -24,10 +24,10 @@ stride3x3=1
 
 Train=[
     action="train"
-    modelPath="$ModelDir$/ResNet_101"
+    modelPath="$ModelDir$/ResNet_50"
 
      NDLNetworkBuilder=[
-        networkDescription="$ConfigDir$/ResNet_101.ndl"
+        networkDescription="$ConfigDir$/ResNet_50.ndl"
     ]
     
     SGD=[
@@ -105,7 +105,7 @@ Train=[
 
 PBN=[
     action="pbn"
-    modelPath="$ModelDir$/ResNet_101"
+    modelPath="$ModelDir$/ResNet_50"
     # Set minibatch size for testing.
     minibatchSize=32
     iters=30
@@ -161,14 +161,14 @@ PBN=[
 
 CreateEval=[    
     action="edit"
-    CurModel="$ModelDir$/ResNet_101.PBN"
-    NewModel="$ModelDir$/ResNet_101.Eval"
+    CurModel="$ModelDir$/ResNet_50.PBN"
+    NewModel="$ModelDir$/ResNet_50.Eval"
     editPath="$ConfigDir$/CreateEvalModel.mel"
 ]
 
 Test=[
     action="test"
-    modelPath="$ModelDir$/ResNet_101.Eval"
+    modelPath="$ModelDir$/ResNet_50.Eval"
     # Set minibatch size for testing.
     minibatchSize=200
 

@@ -20,14 +20,14 @@ ndlMacros = [
     # Initial parameter values.
     convWScale = 7.07
     convBValue = 0
-
+    
     fcWScale = 2.26
     fcBValue = 0
-
+    
     scValue = 1
     
     # Batch normalization time constant.
-    bnTimeConst = 0
+    bnTimeConst = 4096
 ]
 
 DNN=[
@@ -45,7 +45,7 @@ DNN=[
     pool1H = 3
     pool1hs = 2
     pool1vs = 2
-    pool1 = MaxNDPooling(conv1, pool1W, pool1H, pool1hs, pool1vs)
+    pool1 = MaxPooling(conv1, pool1W, pool1H, pool1hs, pool1vs, imageLayout = "cudnn")
     
     rn1_1 = ResNetNode3BInc(pool1, cMap1, cMap1, cMap3, 576, convWScale, convBValue, scValue, bnTimeConst, 1, 1, 1)
     rn1_2 = ResNetNode3A(rn1_1, cMap3, cMap1, cMap3, 576, convWScale, convBValue, scValue, bnTimeConst)
@@ -61,15 +61,15 @@ DNN=[
     rn2_8 = ResNetNode3A(rn2_7, cMap4, cMap2, cMap4, 1152, convWScale, convBValue, scValue, bnTimeConst)
     
     rn3_1 = ResNetNode3BInc(rn2_8,  cMap4, cMap3, cMap5, 2304, convWScale, convBValue, scValue, bnTimeConst, 2, $stride1x1$, $stride3x3$)
-    rn3_2 = ResNetNode3A(rn3_1, cMap5, cMap3, cMap5, 2304, convWScale, convBValue, scValue, bnTimeConst)
-    rn3_3 = ResNetNode3A(rn3_2, cMap5, cMap3, cMap5, 2304, convWScale, convBValue, scValue, bnTimeConst)
-    rn3_4 = ResNetNode3A(rn3_3, cMap5, cMap3, cMap5, 2304, convWScale, convBValue, scValue, bnTimeConst)
-    rn3_5 = ResNetNode3A(rn3_4, cMap5, cMap3, cMap5, 2304, convWScale, convBValue, scValue, bnTimeConst)
-    rn3_6 = ResNetNode3A(rn3_5, cMap5, cMap3, cMap5, 2304, convWScale, convBValue, scValue, bnTimeConst)
-    rn3_7 = ResNetNode3A(rn3_6, cMap5, cMap3, cMap5, 2304, convWScale, convBValue, scValue, bnTimeConst)
-    rn3_8 = ResNetNode3A(rn3_7, cMap5, cMap3, cMap5, 2304, convWScale, convBValue, scValue, bnTimeConst)
-    rn3_9 = ResNetNode3A(rn3_8, cMap5, cMap3, cMap5, 2304, convWScale, convBValue, scValue, bnTimeConst)
-    rn3_10= ResNetNode3A(rn3_9, cMap5, cMap3, cMap5, 2304, convWScale, convBValue, scValue, bnTimeConst)
+    rn3_2 = ResNetNode3A(rn3_1,  cMap5, cMap3, cMap5, 2304, convWScale, convBValue, scValue, bnTimeConst)
+    rn3_3 = ResNetNode3A(rn3_2,  cMap5, cMap3, cMap5, 2304, convWScale, convBValue, scValue, bnTimeConst)
+    rn3_4 = ResNetNode3A(rn3_3,  cMap5, cMap3, cMap5, 2304, convWScale, convBValue, scValue, bnTimeConst)
+    rn3_5 = ResNetNode3A(rn3_4,  cMap5, cMap3, cMap5, 2304, convWScale, convBValue, scValue, bnTimeConst)
+    rn3_6 = ResNetNode3A(rn3_5,  cMap5, cMap3, cMap5, 2304, convWScale, convBValue, scValue, bnTimeConst)
+    rn3_7 = ResNetNode3A(rn3_6,  cMap5, cMap3, cMap5, 2304, convWScale, convBValue, scValue, bnTimeConst)
+    rn3_8 = ResNetNode3A(rn3_7,  cMap5, cMap3, cMap5, 2304, convWScale, convBValue, scValue, bnTimeConst)
+    rn3_9 = ResNetNode3A(rn3_8,  cMap5, cMap3, cMap5, 2304, convWScale, convBValue, scValue, bnTimeConst)
+    rn3_10= ResNetNode3A(rn3_9,  cMap5, cMap3, cMap5, 2304, convWScale, convBValue, scValue, bnTimeConst)
     rn3_11= ResNetNode3A(rn3_10, cMap5, cMap3, cMap5, 2304, convWScale, convBValue, scValue, bnTimeConst)
     rn3_12= ResNetNode3A(rn3_11, cMap5, cMap3, cMap5, 2304, convWScale, convBValue, scValue, bnTimeConst)
     rn3_13= ResNetNode3A(rn3_12, cMap5, cMap3, cMap5, 2304, convWScale, convBValue, scValue, bnTimeConst)
