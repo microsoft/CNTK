@@ -7,9 +7,9 @@
 import numpy as np
 import sys
 import os
-from cntk import learning_rates_per_sample, DeviceDescriptor, Trainer, sgdlearner, get_train_loss, get_train_eval_criterion, cntk_device
-from cntk.ops import variable, cross_entropy_with_softmax, combine, classification_error, sigmoid
-from examples.common.nn import fully_connected_layer
+from cntk import learning_rates_per_sample, DeviceDescriptor_cpudevice, DeviceDescriptor, Trainer, sgdlearner, print_training_progress, cntk_device, StreamConfiguration, text_format_minibatch_source
+from cntk.ops import input_variable, cross_entropy_with_softmax, combine, classification_error, sigmoid
+from examples.common.nn import fully_connected_classifier_net
 
 # Creates and trains a feedforward classification model
 def ffnet():
@@ -19,8 +19,8 @@ def ffnet():
     hidden_layers_dim = 50
 
     # Input variables denoting the features and label data
-    input = variable((input_dim), np.float32)
-    label = variable((num_output_classes), np.float32)
+    input = input_variable((input_dim), np.float32)
+    label = input_variable((num_output_classes), np.float32)
 
     # Instantiate the feedforward classification model
     netout = fully_connected_classifier_net(input, num_output_classes, hidden_layers_dim, num_hidden_layers, sigmoid)
@@ -33,7 +33,10 @@ def ffnet():
     feature_stream_name = 'features'
     labels_stream_name = 'labels'
 
-    mb_source = text_minibatch_source(path, [ ( feature_stream_name, input_dim ), ( labels_stream_name, num_output_classes) ])
+
+    mb_source = text_format_minibatch_source(path, list([
+                    StreamConfiguration( feature_stream_name, input_dim ), 
+                    StreamConfiguration( labels_stream_name, num_output_classes)]))
     features_si = mb_source.stream_info(feature_stream_name)
     labels_si = mb_source.stream_info(labels_stream_name)
 
@@ -47,18 +50,19 @@ def ffnet():
     num_sweeps_to_train_with = 2
     num_minibatches_to_train = (num_samples_per_sweep * num_sweeps_to_train_with) / minibatch_size
     training_progress_output_freq = 20
-    for i in range(0, num_minibatches_to_train):
+    for i in range(0, int(num_minibatches_to_train)):
         mb = mb_source.get_next_minibatch(minibatch_size)
 
         # Specify the mapping of input variables in the model to actual minibatch data to be trained with
         arguments = {input : mb[features_si].m_data, label : mb[labels_si].m_data}
         trainer.train_minibatch(arguments)
+        print_training_progress(i, trainer, training_progress_output_freq)
 
-        print_training_progress(training_progress_output_freq, i, trainer)
 
 if __name__=='__main__':
     # Specify the target device to be used for computing
-    target_device = DeviceDescriptor.cpu_device()
+
+    target_device = DeviceDescriptor_cpudevice()
     DeviceDescriptor.set_default_device(target_device)
 
     ffnet()

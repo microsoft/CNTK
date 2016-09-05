@@ -8,9 +8,9 @@ import numpy as np
 import sys
 import os
 import time
-from cntk import learning_rates_per_sample, DeviceDescriptor, Trainer, sgdlearner, Axis, get_train_loss, get_train_eval_criterion
-from cntk.ops import variable, cross_entropy_with_softmax, combine, classification_error
-from examples.common.nn import LSTMP_component_with_self_stabilization, embedding, fully_connected_linear_layer, select_last
+from cntk import learning_rates_per_sample, DeviceDescriptor, DeviceDescriptor_cpudevice, Trainer, sgdlearner, Axis, print_training_progress, text_format_minibatch_source, StreamConfiguration
+from cntk.ops import input_variable, cross_entropy_with_softmax, combine, classification_error
+from examples.common.nn import LSTMP_component_with_self_stabilization, embedding, linear_layer, select_last
 
 # Defines the LSTM model for classifying sequences
 def LSTM_sequence_classifer_net(input, num_output_classes, embedding_dim, LSTM_dim, cell_dim):
@@ -18,7 +18,7 @@ def LSTM_sequence_classifer_net(input, num_output_classes, embedding_dim, LSTM_d
     LSTM_function = LSTMP_component_with_self_stabilization(embedding_function, LSTM_dim, cell_dim)
     thought_vector = select_last(LSTM_function)
 
-    return fully_connected_linear_layer(thought_vector, num_output_classes)
+    return linear_layer(thought_vector, num_output_classes)
 
 # Creates and trains a LSTM sequence classification model
 def train_sequence_classifier():   
@@ -27,10 +27,11 @@ def train_sequence_classifier():
     hidden_dim = 25;
     embedding_dim = 50;
     num_output_classes = 5;
-
+    feature_stream_name = 'features'
+    labels_stream_name = 'labels'
     # Input variables denoting the features and label data
-    features = variable(shape=input_dim, is_sparse=True, name="features")
-    label = variable(num_output_classes, dynamic_axes = [Axis.default_batch_axis()], name="labels")
+    features = input_variable(shape=input_dim, is_sparse=True, name=feature_stream_name)
+    label = input_variable(num_output_classes, dynamic_axes = [Axis.default_batch_axis()], name=labels_stream_name)
 
     # Instantiate the sequence classification model
     classifier_output = LSTM_sequence_classifer_net(features, num_output_classes, embedding_dim, hidden_dim, cell_dim)
@@ -41,7 +42,11 @@ def train_sequence_classifier():
     rel_path = r"../../../../Tests/EndToEndTests/Text/SequenceClassification/Data/Train.ctf"
     path = os.path.join(os.path.dirname(os.path.abspath(__file__)), rel_path)
 
-    mb_source = text_minibatch_source(path, [ ( 'features', input_dim, True, 'x' ), ( 'labels', num_output_classes, False, 'y' ) ], 0);
+    mb_source = text_format_minibatch_source(path, list([
+                    StreamConfiguration( feature_stream_name, input_dim, True, 'x' ), 
+                    StreamConfiguration( labels_stream_name, num_output_classes, False, 'y')]), 0)
+
+
     features_si = mb_source.stream_info(features)
     labels_si = mb_source.stream_info(label)
 
@@ -61,14 +66,13 @@ def train_sequence_classifier():
         # Specify the mapping of input variables in the model to actual minibatch data to be trained with
         arguments = {features : mb[features_si].m_data, label : mb[labels_si].m_data}
         trainer.train_minibatch(arguments)
-
-        print_training_progress(training_progress_output_freq, i, trainer)
+        print_training_progress(i, trainer, training_progress_output_freq)
 
         i += 1
 
 if __name__=='__main__':    
     # Specify the target device to be used for computing
-    target_device = DeviceDescriptor.cpu_device()
+    target_device = DeviceDescriptor_cpudevice()
     DeviceDescriptor.set_default_device(target_device)
 
     train_sequence_classifier()

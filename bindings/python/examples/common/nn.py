@@ -169,16 +169,15 @@ def LSTMP_cell_with_self_stabilization(input, prev_output, prev_cell_state):
     return (times(element_times(expsWmr, mt), Wmr), ct)
 
 def LSTMP_component_with_self_stabilization(input, output_dim, cell_dim):
-    dh = placeholder(shape=(output_dim))
-    dc = placeholder(shape=(cell_dim))
+    dh = placeholder_variable(shape=(output_dim))
+    dc = placeholder_variable(shape=(cell_dim))
 
     LSTMCell = LSTMP_cell_with_self_stabilization(input, dh, dc)
-
-    actualDh = past_value(LSTMCell[0]);
-    actualDc = past_value(LSTMCell[1]);
+    actualDh = past_value(LSTMCell[0], constant((), 0.0), 1); 
+    actualDc = past_value(LSTMCell[1], constant((), 0.0), 1); 
 
     # Form the recurrence loop by replacing the dh and dc placeholders with the actualDh and actualDc
-    return LSTMCell[0].replace_placeholders({ dh : actualDh, dc : actualDc})
+    return LSTMCell[0].owner.replace_placeholders({ dh : actualDh, dc : actualDc})
 
 def print_training_progress(output_frequency, minibatch_number, trainer):
     if minibatch_number % output_frequency == 0:

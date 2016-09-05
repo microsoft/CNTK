@@ -1,5 +1,5 @@
 import numpy as np
-from cntk import DATATYPE, NDArrayView, DeviceDescriptor_cpudevice, DeviceDescriptor_gpudevice, Variable, Parameter, ConstantFloat, ConstantDouble, Constant, Placeholder, DataType_Float, DataType_Double, ParameterFloat, ParameterDouble, Axis
+from cntk import DATATYPE, NDArrayView, DeviceDescriptor_cpudevice, DeviceDescriptor_gpudevice, Variable, Parameter, ConstantFloat, ConstantDouble, Constant, DataType_Float, DataType_Double, ParameterFloat, ParameterDouble, Axis
 from cntk.graph import TensorOpsMixin
 from .. import utils
 
@@ -71,8 +71,7 @@ def parameter_from_scalar(shape=None, value=None, data_type=None, device=None, n
 
     dtype = utils.sanitize_dtype_cntk(data_type)
 
-    if not shape:
-        shape = ()
+    shape = utils.sanitize_shape(shape)
     if dtype == DataType_Float:
         return ParameterFloat(shape, value, device, name)
     elif dtype == DataType_Double:
@@ -106,17 +105,10 @@ def constant_from_scalar(shape=None, value=None, data_type=None, device=None, na
             data_type = str(value.dtype)
 
     dtype = utils.sanitize_dtype_cntk(data_type)
-
-    if not shape:
-        shape = ()
+    shape = utils.sanitize_shape(shape)
+    
     if dtype == DataType_Float:
         return ConstantFloat(shape, value, device, name)
     elif dtype == DataType_Double:
         return ConstantDouble(shape, value, device, name)
     raise ValueError('unrecognized data_type: %s', dtype)
-
-class Placeholder(TensorOpsMixin,Placeholder):
-    def __init__(self, shape=None, name=''):
-        shape = utils.sanitize_shape(shape)
-        super(Placeholder, self).__init__(shape, name)
-

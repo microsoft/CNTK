@@ -8,7 +8,7 @@ import numpy as np
 import sys
 import os
 from cntk import learning_rates_per_sample, Trainer, sgdlearner, create_minibatch_source, get_train_loss, get_train_eval_criterion, cntk_device
-from cntk.ops import variable, constant, parameter, cross_entropy_with_softmax, combine, classification_error, times, pooling, AVG_POOLING
+from cntk.ops import input_variable, constant, parameter, cross_entropy_with_softmax, combine, classification_error, times, pooling, AVG_POOLING
 from examples.common.nn import conv_bn_relu_layer, conv_bn_layer, resnet_node2, resnet_node2_inc
 
 # Instantiates the CNTK built-in minibatch source for reading images to be used for training the residual net
@@ -102,8 +102,8 @@ def cifar_resnet():
     labels_si = minibatch_source.stream_info('labels')
 
     # Input variables denoting the features and label data
-    image_input = variable((num_channels, image_height, image_width), features_si.m_element_type)
-    label_var = variable((num_classes), features_si.m_element_type, needs_gradient=False)
+    image_input = input_variable((num_channels, image_height, image_width), features_si.m_element_type)
+    label_var = input_variable((num_classes), features_si.m_element_type, needs_gradient=False)
 
     # Instantiate the resnet classification model
     classifier_output = resnet_classifer(image_input, num_classes)

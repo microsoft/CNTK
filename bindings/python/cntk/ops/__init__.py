@@ -900,6 +900,9 @@ def cond(flag, value_if_true, value_if_false, name=''):
 # recurrent ops
 ################################################################################
 
+# TODO: add default value for initial_state. It should be a constant scalar 
+# (0.0), using the default device
+
 def future_value(initial_state, x, time_step=1, name=''):
     '''
     This function returns the future value w.r.t. `x`. It is most often used when 
@@ -1168,7 +1171,9 @@ def dropout(x, name=''):
 
 from cntk.cntk_py import Axis
 
-def variable(shape, data_type=None, needs_gradient=False, is_sparse=False, 
+#TODO: expose output_variable as well ?
+
+def input_variable(shape, data_type=None, needs_gradient=False, is_sparse=False, 
             dynamic_axes = [Axis.default_dynamic_axis(), Axis.default_batch_axis()], name=''):
     '''
     It creates an input node. The graph requires a separate reader that will be
@@ -1185,27 +1190,35 @@ def variable(shape, data_type=None, needs_gradient=False, is_sparse=False,
     Returns:
         :class:`cntk.Function`
     '''
-    from .variables import Variable
+    from cntk import input_variable
+    from ..utils import sanitize_shape, sanitize_dtype_cntk
 
+    shape = sanitize_shape(shape)
+
+    if data_type is None:
+        data_type = np.float32
+    dtype = sanitize_dtype_cntk(data_type)
     # TODO dynamic axis for numpy arrays
     # TODO sparse for numpy arrays
-    return Variable(shape, data_type, needs_gradient, is_sparse, dynamic_axes, name)
 
-def placeholder(shape, name=''):
+    return input_variable(shape, is_sparse, dtype, needs_gradient, name, dynamic_axes)
+
+
+def placeholder_variable(shape, dynamic_axes = [Axis.default_dynamic_axis(), Axis.default_batch_axis()]):
     '''
     It creates a variable place holder for recurrence networks, when the network's dynamic axes
     are unfolded, the place holder will get assigned a variable along the correspondent dynamic axis.
 
     Args:
         shape (tuple or int): the shape of the variable tensor             
-        name (str): the name of the node in the network
+        dynamic_axes (list): the list of dynamic axes that the actual variable uses
         
     Returns:
         :class:`cntk.Function`
     '''
-    from .variables import Placeholder
-    
-    return Placeholder(shape, name)
+    from cntk import placeholder_variable
+    shape = sanitize_shape(shape)
+    return placeholder_variable(shape)
     
 def parameter(shape=None, value=None, device_id=-1, name=''):
     '''

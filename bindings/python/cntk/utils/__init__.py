@@ -226,14 +226,14 @@ def sanitize_input(arg, fallback_dtype=np.float32):
         Constant, if `arg` was a number or NumPy array. Variable otherwise.
     """
 
-    from cntk.ops.variables import Constant, Variable, Placeholder
+    from cntk.ops.variables import Constant, Variable
     from cntk.ops import constant
-    if isinstance(arg, (Constant, Variable, Placeholder, cntk_py.Constant, cntk_py.Variable, cntk_py.Placeholder)):
+    if isinstance(arg, (Constant, Variable, cntk_py.Constant, cntk_py.Variable)):
         return arg
 
     try:
         var_output = arg.output()
-        if isinstance(var_output, Variable):
+        if isinstance(var_output, (Variable, cntk_py.Variable)):
             return var_output
         else:
             raise ValueError('Cannot convert argument of type "%s" to Variable'%type(arg))
@@ -258,10 +258,10 @@ def get_data_type(arg):
         np.float32 or np.float64
     """
 
-    from cntk.ops.variables import Constant, Variable, Placeholder
+    from cntk.ops.variables import Constant, Variable
     from cntk.ops import constant    
 
-    if isinstance(arg, (Constant, Variable, Placeholder)):
+    if isinstance(arg, (Constant, Variable)):
         if cntk_py.DataType_Double == arg.get_data_type():
             return np.float64
     try:
@@ -469,7 +469,7 @@ def sanitize_dtype_numpy(dtype):
 
 def sanitize_dtype_cntk(dtype):           
     if dtype in (cntk_py.DataType_Float, cntk_py.DataType_Double,
-            cntk_py.DataType_Unknown):
+            cntk_py.DataType_Unknown):        
         return dtype
     if dtype in ('float', 'float32', np.float32):
         return cntk_py.DataType_Float
@@ -539,6 +539,12 @@ def get_train_eval_criterion(trainer):
     import copy
     #we copy the value so swig does not destroy it when we leave the scope
     return copy.copy(trainer.previous_minibatch_evaluation_average())
+
+def print_training_progress(mb, trainer, frequency):
+    if mb%frequency == 0:
+        training_loss = get_train_loss(trainer)
+        eval_crit = get_train_eval_criterion(trainer) 
+        print ("Minibatch: {}, Train Loss: {}, Train Evaluation Criterion: {}".format(mb, training_loss, eval_crit)) 
 
 def eval(op, precision, device_id, input_map=None, backward_pass=False):
     '''
