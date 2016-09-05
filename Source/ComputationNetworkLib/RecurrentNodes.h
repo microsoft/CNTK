@@ -29,6 +29,7 @@ class DelayedValueNodeBase : public ComputationNode<ElemType>, public IRecurrent
 
 private:
     void DetermineValidMask(const FrameRange& frDelayed, bool& anyValid, bool& allValid);
+    TensorView<ElemType> MakeMaskTensor(size_t rank) const;
 
 protected:
     DelayedValueNodeBase(DEVICEID_TYPE deviceId, const wstring& name, ElemType initialActivationValue, const TensorShape& sampleLayout, size_t timeStep);
@@ -74,13 +75,15 @@ public:
 
 protected:
     ElemType m_initialActivationValue;                           // starting value for hidden activation vector at boundary
-    shared_ptr<Matrix<ElemType>> m_initialActivationValueMatrix; // ...and as a potentially GPU-side object
     int m_timeStep;                                              // delay in frames (typ. 1)
 
     function<void()> m_attachInputsFn;                           // for late expansion of inputs (scripting)
 
     vector<ElemType> m_sourceFrameValid;                         // mask for copying/propagating source frames is prepared here...
-    shared_ptr<Matrix<ElemType>> m_sourceFrameValidMatrix;       // ...and used from here
+
+    shared_ptr<Matrix<ElemType>> m_initialActivationValueMatrix; // potentially GPU-side versions
+    shared_ptr<Matrix<ElemType>> m_sourceFrameValidMatrix;
+    shared_ptr<Matrix<ElemType>> m_zeroMatrix;                   // constant [1]-dimensional 0 used for backprop
 
     shared_ptr<Matrix<ElemType>> m_delayedValue;                 // saves the activation of the previous step that this node points to
     MBLayoutPtr m_delayedActivationMBLayout;                     // layout for m_delayedValue
