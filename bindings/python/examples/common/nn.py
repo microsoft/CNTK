@@ -53,10 +53,10 @@ def resnet_node2(input, out_feature_map_count, kernel_width, kernel_height, w_sc
     return relu(p)
 
 def proj_layer(w_proj, input, h_stride, v_stride, b_value, sc_value, bn_time_const):
-    num_in_channels = input.shape().dimensions()[-1]
+    num_in_channels = input.shape().dimensions()[0]
     conv_func = convolution(w_proj, input, (num_in_channels, v_stride, h_stride))
 
-    out_feature_map_count = w_proj.shape()[-1];
+    out_feature_map_count = w_proj.shape().dimensions()[-1];
     #TODO: initialize using b_value and sc_value, needs to be exposed in the python api
     bias_params = parameter(shape=(out_feature_map_count))
     scale_params = parameter(shape=(out_feature_map_count))
