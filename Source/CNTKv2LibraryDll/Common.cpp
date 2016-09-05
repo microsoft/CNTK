@@ -18,7 +18,7 @@ namespace CNTK
     }
 
     /*static*/ std::atomic<bool> DeviceDescriptor::s_defaultDeviceFrozen(false);
-    /*static*/ std::shared_ptr<DeviceDescriptor> DeviceDescriptor::s_defaultDevice(new DeviceDescriptor(DeviceDescriptor::GPUDevice(0)));
+    /*static*/ std::shared_ptr<DeviceDescriptor> DeviceDescriptor::s_defaultDevice(new DeviceDescriptor(DeviceDescriptor::CPUDevice()));
 
     /*static*/ DeviceDescriptor DeviceDescriptor::DefaultDevice()
     {

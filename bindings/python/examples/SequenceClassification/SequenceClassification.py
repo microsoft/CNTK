@@ -27,11 +27,10 @@ def train_sequence_classifier():
     hidden_dim = 25;
     embedding_dim = 50;
     num_output_classes = 5;
-    feature_stream_name = 'features'
-    labels_stream_name = 'labels'
+
     # Input variables denoting the features and label data
-    features = input_variable(shape=input_dim, is_sparse=True, name=feature_stream_name)
-    label = input_variable(num_output_classes, dynamic_axes = [Axis.default_batch_axis()], name=labels_stream_name)
+    features = input_variable(shape=input_dim, is_sparse=True)
+    label = input_variable(num_output_classes, dynamic_axes = [Axis.default_batch_axis()])
 
     # Instantiate the sequence classification model
     classifier_output = LSTM_sequence_classifer_net(features, num_output_classes, embedding_dim, hidden_dim, cell_dim)
@@ -41,11 +40,12 @@ def train_sequence_classifier():
     
     rel_path = r"../../../../Tests/EndToEndTests/Text/SequenceClassification/Data/Train.ctf"
     path = os.path.join(os.path.dirname(os.path.abspath(__file__)), rel_path)
+    feature_stream_name = 'features'
+    labels_stream_name = 'labels'
 
     mb_source = text_format_minibatch_source(path, list([
                     StreamConfiguration( feature_stream_name, input_dim, True, 'x' ), 
                     StreamConfiguration( labels_stream_name, num_output_classes, False, 'y')]), 0)
-
 
     features_si = mb_source.stream_info(features)
     labels_si = mb_source.stream_info(label)
@@ -66,13 +66,14 @@ def train_sequence_classifier():
         # Specify the mapping of input variables in the model to actual minibatch data to be trained with
         arguments = {features : mb[features_si].m_data, label : mb[labels_si].m_data}
         trainer.train_minibatch(arguments)
+
         print_training_progress(i, trainer, training_progress_output_freq)
 
         i += 1
 
 if __name__=='__main__':    
     # Specify the target device to be used for computing
-    target_device = DeviceDescriptor_cpudevice()
+    target_device = DeviceDescriptor.cpudevice()
     DeviceDescriptor.set_default_device(target_device)
 
     train_sequence_classifier()
