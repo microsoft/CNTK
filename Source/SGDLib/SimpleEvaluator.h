@@ -110,9 +110,9 @@ public:
         bool useParallelTrain = (m_mpi != nullptr);
         bool useDistributedMBReading = useParallelTrain && m_enableDistributedMBReading && dataReader->SupportsDistributedMBRead();
         if (useDistributedMBReading)
-            dataReader->StartDistributedMinibatchLoop(mbSize, 0, m_mpi->CurrentNodeRank(), m_mpi->NumNodesInUse(), testSize);
+            dataReader->StartDistributedMinibatchLoop(mbSize, 0, m_mpi->CurrentNodeRank(), m_mpi->NumNodesInUse(), inputMatrices.GetStreamDescriptions(), testSize);
         else
-        dataReader->StartMinibatchLoop(mbSize, 0, testSize);
+            dataReader->StartMinibatchLoop(mbSize, 0, inputMatrices.GetStreamDescriptions(), testSize);
 
         m_net->StartEvaluateMinibatchLoop(evalNodes);
 

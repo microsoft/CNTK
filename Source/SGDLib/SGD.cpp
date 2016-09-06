@@ -803,11 +803,11 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
     if (useDistributedMBReading)
     {
         trainSetDataReader->StartDistributedMinibatchLoop(tunedMBSize, epochNumber, m_mpi->CurrentNodeRank(),
-                                                          m_mpi->NumNodesInUse(), epochSize);
+            m_mpi->NumNodesInUse(), inputMatrices->GetStreamDescriptions(), epochSize);
     }
     else
     {
-        trainSetDataReader->StartMinibatchLoop(tunedMBSize, epochNumber, epochSize);
+        trainSetDataReader->StartMinibatchLoop(tunedMBSize, epochNumber, inputMatrices->GetStreamDescriptions(), epochSize);
     }
 
     net->StartEvaluateMinibatchLoop(evaluationNodes);
@@ -1357,9 +1357,9 @@ bool SGD<ElemType>::PreCompute(ComputationNetworkPtr net,
     // To support large dataset, we usually partition whole dataset into several epoch's,
     // so we need to use all the data to do precomputing
     if (m_useAllDataForPreComputedNode) // using all the data
-        trainSetDataReader->StartMinibatchLoop(m_mbSize[0], 0);
+        trainSetDataReader->StartMinibatchLoop(m_mbSize[0], 0, inputMatrices->GetStreamDescriptions());
     else // using only one epoch. Note: One epoch is often enough for feature mean/stddev, but not for estimating priors.
-        trainSetDataReader->StartMinibatchLoop(m_mbSize[0], 0, m_epochSize);
+        trainSetDataReader->StartMinibatchLoop(m_mbSize[0], 0, inputMatrices->GetStreamDescriptions(), m_epochSize);
     net->StartEvaluateMinibatchLoop(nodes);
 
     // initialize
