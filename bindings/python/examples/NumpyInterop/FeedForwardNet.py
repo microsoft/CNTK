@@ -11,6 +11,19 @@ from cntk import learning_rates_per_sample, DeviceDescriptor, Trainer, sgd_learn
 from cntk.ops import input_variable, cross_entropy_with_softmax, combine, classification_error, sigmoid
 from examples.common.nn import fully_connected_classifier_net, print_training_progress
 
+def generate_random_data(sample_dize, feature_dim, num_classes):
+    # Create synthetic data using NumPy. 
+    Y = np.random.randint(size=(sample_dize, 1), low=0, high=num_classes)
+
+    # Make sure that the data is separable
+    X = (np.random.randn(sample_dize, feature_dim)+3) * (Y+1)
+    X = X.astype(np.float32)    
+    # converting class 0 into the vector "1 0 0", 
+    # class 1 into vector "0 1 0", ...
+    class_ind = [Y==class_number for class_number in range(num_classes)]
+    Y = np.asarray(np.hstack(class_ind), dtype=np.float32)
+    return X, Y          
+
 # Creates and trains a feedforward classification model
 def ffnet():
     input_dim = 2
@@ -28,17 +41,6 @@ def ffnet():
     ce = cross_entropy_with_softmax(netout, label)
     pe = classification_error(netout, label)
 
-    rel_path = r"../../../../Examples/Other/Simple2d/Data/SimpleDataTrain_cntk_text.txt"
-    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), rel_path)
-    feature_stream_name = 'features'
-    labels_stream_name = 'labels'
-
-    mb_source = text_format_minibatch_source(path, [
-                    StreamConfiguration( feature_stream_name, input_dim ), 
-                    StreamConfiguration( labels_stream_name, num_output_classes)])
-    features_si = mb_source.stream_info(feature_stream_name)
-    labels_si = mb_source.stream_info(labels_stream_name)
-
     # Instantiate the trainer object to drive the model training
     lr = learning_rates_per_sample(0.02)
     trainer = Trainer(netout, ce, pe, [sgd_learner(netout.owner.parameters(), lr)])
@@ -50,11 +52,9 @@ def ffnet():
     num_minibatches_to_train = (num_samples_per_sweep * num_sweeps_to_train_with) / minibatch_size
     training_progress_output_freq = 20
     for i in range(0, int(num_minibatches_to_train)):
-        mb = mb_source.get_next_minibatch(minibatch_size)
-
+        features, labels = generate_random_data(minibatch_size, input_dim, num_output_classes)
         # Specify the mapping of input variables in the model to actual minibatch data to be trained with
-        arguments = {input : mb[features_si].m_data, label : mb[labels_si].m_data}
-        trainer.train_minibatch(arguments)
+        trainer.train_minibatch({input : features, label : labels})
         print_training_progress(trainer, i, training_progress_output_freq)
 
 if __name__=='__main__':
