@@ -7,10 +7,11 @@
 
 #pragma once
 
-#include "Basics.h"
-#include "Matrix.h"
 #include <vector>
 #include <memory> // for shared_ptr
+#include <atomic>
+#include "Basics.h"
+#include "Matrix.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -267,8 +268,12 @@ public:
     void SetAxisName(const std::wstring& name) { m_axisName = name; }
     void SetUniqueAxisName(std::wstring name) // helper for constructing
     {
-        static std::map<std::wstring, size_t> nameIndices;
-        size_t index = nameIndices[name]++;
+        static atomic_ullong index = ATOMIC_VAR_INIT(0);
+
+        // To make this function thread-safe, a global index is used instead of that is bound to a specific name.
+        // However, this means that the index for a specific name is not continuously.
+        atomic_fetch_add(&index, (unsigned long long int) 1);
+
         if (index > 0)
             name += msra::strfun::wstrprintf(L"%d", (int)index);
         SetAxisName(name);
