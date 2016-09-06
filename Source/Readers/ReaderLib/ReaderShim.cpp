@@ -65,6 +65,7 @@ void ReaderShim<ElemType>::StartDistributedMinibatchLoop(
     if (m_prefetchTask.valid())
     {
         m_prefetchTask.wait();
+        ThrowAnyPrefetcherException();
     }
 
     EpochConfiguration config;
@@ -82,7 +83,19 @@ void ReaderShim<ElemType>::StartDistributedMinibatchLoop(
     // return the result and kick off a new one.
     m_prefetchTask = std::async(m_launchType, [this]()
     {
-        return m_reader->ReadMinibatch();
+        Minibatch result;
+        try {
+            result = m_reader->ReadMinibatch();
+        }
+        catch (const exception& e)
+        {
+            m_prefetchTaskExceptionWhat = string(e.what());
+        }
+        catch (...)
+        {
+            m_prefetchTaskExceptionWhat = "An unknown exception was thrown";
+        }
+        return result;
     });
 }
 
@@ -124,6 +137,8 @@ bool ReaderShim<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
     assert(m_prefetchTask.valid());
 
     Minibatch minibatch = m_prefetchTask.get();
+    ThrowAnyPrefetcherException();
+
     if (minibatch.m_endOfEpoch)
     {
         m_endOfEpoch = true;
@@ -194,7 +209,19 @@ bool ReaderShim<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
         // return the result and kick off a new one.
         m_prefetchTask = std::async(m_launchType, [this]()
         {
-            return m_reader->ReadMinibatch();
+            Minibatch result;
+            try {
+                result = m_reader->ReadMinibatch();
+            }
+            catch (const exception& e)
+            {
+                m_prefetchTaskExceptionWhat = string(e.what());
+            }
+            catch (...)
+            {
+                m_prefetchTaskExceptionWhat = "An unknown exception was thrown";
+            }
+            return result;
         });
     }
 
@@ -252,6 +279,17 @@ size_t ReaderShim<ElemType>::GetNumParallelSequencesForFixingBPTTMode()
     // * SGD::AdaptiveMinibatchSizing  to compute learning rate per sample
     return m_numParallelSequences;
 }
+
+template <class ElemType>
+void ReaderShim<ElemType>::ThrowAnyPrefetcherException()
+{
+    if (!m_prefetchTaskExceptionWhat.empty())
+    {
+        RuntimeError("%s", m_prefetchTaskExceptionWhat.c_str());
+    }
+    m_prefetchTaskExceptionWhat.clear();
+}
+
 
 template class ReaderShim<float>;
 template class ReaderShim<double>;

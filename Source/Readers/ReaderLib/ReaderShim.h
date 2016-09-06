@@ -67,6 +67,9 @@ public:
 
 private:
     std::future<Minibatch> m_prefetchTask;
+    // Store exception reasons from prefetch task; working around gcc 4.8.4 problem that
+    // std::uncaught_exception() is not set properly after throws / re-throws from std::async.
+    std::string m_prefetchTaskExceptionWhat;
     ReaderPtr m_reader;
     ReaderFactory m_factory;
     bool m_endOfEpoch;
@@ -76,6 +79,8 @@ private:
     std::map<std::wstring, size_t> m_nameToStreamId;
     std::vector<StreamDescriptionPtr> m_streams;
     launch m_launchType;
+
+    void ThrowAnyPrefetcherException();
 
     static void FillMatrixFromStream(StorageType type, Matrix<ElemType>* matrix, size_t numRows, const StreamMinibatchPtr& stream);
 };
