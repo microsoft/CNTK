@@ -7,7 +7,9 @@
 import numpy as np
 import sys
 import os
+from cntk import Constant
 from cntk.ops import *
+from cntk.utils import sanitize_dtype_cntk, get_train_eval_criterion, get_train_loss
 
 def linear_layer(input, output_dim):
     input_dim = input.shape()[0]
@@ -30,7 +32,7 @@ def fully_connected_classifier_net(input, num_output_classes, hidden_layer_dim, 
     return linear_layer(r, num_output_classes)
 
 def conv_bn_layer(input, out_feature_map_count, kernel_width, kernel_height, h_stride, v_stride, w_scale, b_value, sc_value, bn_time_const):
-    num_in_channels = input.shape()[0]    
+    num_in_channels = input.shape()[0]
     #TODO: use RandomNormal to initialize, needs to be exposed in the python api
     conv_params = parameter(shape=(num_in_channels, kernel_height, kernel_width, out_feature_map_count))
     conv_func = convolution(conv_params, input, (num_in_channels, v_stride, h_stride))
@@ -55,7 +57,7 @@ def resnet_node2(input, out_feature_map_count, kernel_width, kernel_height, w_sc
 def proj_layer(w_proj, input, h_stride, v_stride, b_value, sc_value, bn_time_const):
     num_in_channels = input.shape()[0]
     conv_func = convolution(w_proj, input, (num_in_channels, v_stride, h_stride))
-    out_feature_map_count = w_proj.shape()[-1];    
+    out_feature_map_count = w_proj.shape()[-1];
     #TODO: initialize using b_value and sc_value, needs to be exposed in the python api
     bias_params = parameter(shape=(out_feature_map_count))
     scale_params = parameter(shape=(out_feature_map_count))
@@ -82,10 +84,10 @@ def select_last(operand):
 
 def stabilize(operand):
     scalar_constant = 4.0
-    f = Constant.scalar(scalar_constant);
-    fInv = Constant.scalar(f.get_data_type(), 1.0 / scalar_constant)
+    f = Constant.scalar(sanitize_dtype_cntk(np.float32), scalar_constant);
+    fInv = Constant.scalar(sanitize_dtype_cntk(np.float32), 1.0 / scalar_constant)
 
-    beta = element_times(fInv, log(Constant.scalar(f.get_data_type(), 1.0) + exp(element_times(f, parameter(shape=(), dtype=f.get_data_type(), init_value=0.99537863)))))
+    beta = element_times(fInv, log(Constant.scalar(sanitize_dtype_cntk(np.float32), 1.0) + exp(element_times(f, parameter(shape=(), value=0.99537863)))))
     return element_times(beta, operand)
 
 def LSTMP_cell_with_self_stabilization(input, prev_output, prev_cell_state):
@@ -175,14 +177,21 @@ def LSTMP_cell_with_self_stabilization(input, prev_output, prev_cell_state):
     mt = element_times(ot, tanh(ct))
     return (times(element_times(expsWmr, mt), Wmr), ct)
 
-def LSTMP_component_with_self_stabilization(input, output_dim, cell_dim):
-    dh = placeholder_variable(shape=(output_dim))
-    dc = placeholder_variable(shape=(cell_dim))
+def LSTMP_component_with_self_stabilization(input, output_dim, cell_dim, recurrence_hookH = past_value, recurrence_hookC = past_value):
+    dh = placeholder_variable(shape=(output_dim), dynamic_axes=input.dynamic_axes())
+    dc = placeholder_variable(shape=(cell_dim), dynamic_axes=input.dynamic_axes())
 
     LSTMCell = LSTMP_cell_with_self_stabilization(input, dh, dc)
-    actualDh = past_value(LSTMCell[0]); 
-    actualDc = past_value(LSTMCell[1]); 
+    actualDh = recurrence_hookH(LSTMCell[0]);
+    actualDc = recurrence_hookC(LSTMCell[1]);
 
     # Form the recurrence loop by replacing the dh and dc placeholders with the actualDh and actualDc
-    return LSTMCell[0].owner.replace_placeholders({ dh : actualDh, dc : actualDc})
-    
+    LSTMCell[0].owner.replace_placeholders({ dh : actualDh, dc : actualDc})
+    return (LSTMCell[0], LSTMCell[1])
+
+def print_training_progress(trainer, mb, frequency):
+
+    if mb%frequency == 0:
+        training_loss = get_train_loss(trainer)
+        eval_crit = get_train_eval_criterion(trainer)
+        print ("Minibatch: {}, Train Loss: {}, Train Evaluation Criterion: {}".format(mb, training_loss, eval_crit))

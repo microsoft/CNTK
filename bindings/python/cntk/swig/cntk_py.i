@@ -14,6 +14,7 @@
 %rename(output_internal) CNTK::Function::Output;
 %rename(replace_placeholders_internal) CNTK::Function::ReplacePlaceholders;
 %rename(sgd_learner) CNTK::SGDLearner;
+%rename(momentum_sgd_learner) CNTK::MomentumSGDLearner;
 %rename(gpu_device) CNTK::DeviceDescriptor::GPUDevice;
 %rename(cpu_device) CNTK::DeviceDescriptor::CPUDevice;
 
@@ -101,7 +102,7 @@
 
 %typemap(in) CNTK::NDShape const & {
      if (PyTuple_Check($input)) {
-        std::vector<size_t> dimensions;;
+        std::vector<size_t> dimensions;
         size_t rank = PyTuple_Size($input);
         for (int i=0; i<rank; i++)
             dimensions.push_back(PyLong_AsLong(PyTuple_GET_ITEM($input, i)));

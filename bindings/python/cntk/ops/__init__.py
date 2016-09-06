@@ -4,7 +4,10 @@
 # ==============================================================================
 
 import numpy as np
+from . import sequence
 from ..utils import sanitize_input, sanitize_shape, get_data_type
+
+#TODO: add wrappers for functions under cntk.sequence namespace in c++
 
 def combine(operands, name=''):
     '''
@@ -12,7 +15,7 @@ def combine(operands, name=''):
      'operands' Functions such that the 'Outputs' of the new 'Function' are union of the
      'Outputs' of each of the specified 'operands' Functions. E.g. When creating a classification
      model, typically the CrossEntropy loss Function and the ClassificationError Function comprise
-     the two roots of the computation graph which can be "Combine"d to create a single Function
+     the two roots of the computation graph which can be combined to create a single Function
      with 2 outputs; viz. CrossEntropy loss and ClassificationError output.    
     Args:
         operands (list): list of functions or their variables to combine
@@ -874,8 +877,7 @@ def reciprocal(x, name=''):
     x = sanitize_input(x)
     return reciprocal(x, name).output()    
 
-#TODO: enable when it is exposed in c++
-def cond(flag, value_if_true, value_if_false, name=''):
+def element_select(flag, value_if_true, value_if_false, name=''):
     '''
     return either value_if_true or value_if_false based on the value of flag.
     If flag != 0 value_if_true is returned, otherwise value_if_false.
@@ -894,7 +896,11 @@ def cond(flag, value_if_true, value_if_false, name=''):
     Returns:
         :class:`cntk.Function`
     '''    
-    raise NotImplementedError("cond is not implemented yet in V2")
+    from cntk import element_select
+    flag = sanitize_input(flag)
+    value_if_true = sanitize_input(value_if_true)
+    value_if_false = sanitize_input(value_if_false)
+    return element_select(flag, value_if_true, value_if_false, name).output()    
     
 ################################################################################
 # recurrent ops
@@ -1232,7 +1238,7 @@ def placeholder_variable(shape, dynamic_axes = [Axis.default_dynamic_axis(), Axi
     '''
     from cntk import placeholder_variable
     shape = sanitize_shape(shape)
-    return placeholder_variable(shape)
+    return placeholder_variable(shape, dynamic_axes)
     
 def parameter(shape=None, value=None, device=None, name=''):
     '''

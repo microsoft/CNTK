@@ -543,12 +543,6 @@ def get_train_eval_criterion(trainer):
     #we copy the value so swig does not destroy it when we leave the scope
     return copy.copy(trainer.previous_minibatch_evaluation_average())
 
-def print_training_progress(mb, trainer, frequency):
-    if mb%frequency == 0:
-        training_loss = get_train_loss(trainer)
-        eval_crit = get_train_eval_criterion(trainer) 
-        print ("Minibatch: {}, Train Loss: {}, Train Evaluation Criterion: {}".format(mb, training_loss, eval_crit)) 
-
 def eval(op, precision, device, input_map=None, backward_pass=False):
     '''
     It evaluates `op` on the data provided by the reader. This is useful

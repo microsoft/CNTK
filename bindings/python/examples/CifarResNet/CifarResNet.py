@@ -7,13 +7,13 @@
 import numpy as np
 import sys
 import os
-from cntk import learning_rates_per_sample, Trainer, sgd_learner, create_minibatch_source, get_train_loss, get_train_eval_criterion, DeviceDescriptor, print_training_progress
+from cntk import learning_rates_per_sample, Trainer, sgd_learner, create_minibatch_source, DeviceDescriptor
 from cntk.ops import input_variable, constant, parameter, cross_entropy_with_softmax, combine, classification_error, times, pooling, AVG_POOLING
-from examples.common.nn import conv_bn_relu_layer, conv_bn_layer, resnet_node2, resnet_node2_inc
+from examples.common.nn import conv_bn_relu_layer, conv_bn_layer, resnet_node2, resnet_node2_inc, print_training_progress
 
 # Instantiates the CNTK built-in minibatch source for reading images to be used for training the residual net
 # The minibatch source is configured using a hierarchical dictionary of key:value pairs
-def create_mb_source(image_height, image_width, num_channels, num_classes):
+def create_mb_source(features_stream_name, labels_stream_name, image_height, image_width, num_channels, num_classes):
     map_file_rel_path = r"../../../../Examples/Image/Miscellaneous/CIFAR-10/cifar-10-batches-py/train_map.txt"
     map_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), map_file_rel_path)
     mean_file_rel_path = r"../../../../Examples/Image/Miscellaneous/CIFAR-10/cifar-10-batches-py/CIFAR-10_mean.xml"
@@ -27,7 +27,7 @@ def create_mb_source(image_height, image_width, num_channels, num_classes):
     features_stream_config = {"transforms": all_transforms}
     labels_stream_config = {"labelDim" : num_classes}
 
-    input_streams_config = {"features" : features_stream_config, "labels" : labels_stream_config}
+    input_streams_config = {features_stream_name: features_stream_config, labels_stream_name: labels_stream_config}
     deserializer_config = {"type" : "ImageDeserializer", "file" : map_file, "input" : input_streams_config}
 
     minibatch_config = {"epochSize" : sys.maxsize, "deserializers" : [deserializer_config]}
@@ -96,10 +96,12 @@ def cifar_resnet():
     image_width = 32
     num_channels = 3
     num_classes = 10
-
-    minibatch_source = create_mb_source(image_height, image_width, num_channels, num_classes)
-    features_si = minibatch_source.stream_info('features')
-    labels_si = minibatch_source.stream_info('labels')
+    feats_stream_name = 'features'
+    labels_stream_name = 'labels'
+    minibatch_source = create_mb_source(feats_stream_name, labels_stream_name, 
+                        image_height, image_width, num_channels, num_classes)
+    features_si = minibatch_source.stream_info(feats_stream_name)
+    labels_si = minibatch_source.stream_info(labels_stream_name)
 
     # Input variables denoting the features and label data
     image_input = input_variable((num_channels, image_height, image_width), features_si.m_element_type)
@@ -126,7 +128,7 @@ def cifar_resnet():
         arguments = {image_input : mb[features_si].m_data, label_var : mb[labels_si].m_data}
         trainer.train_minibatch(arguments)
 
-        print_training_progress(i, trainer, training_progress_output_freq)
+        print_training_progress(trainer, i, training_progress_output_freq)
 
 if __name__=='__main__':
     # Specify the target device to be used for computing

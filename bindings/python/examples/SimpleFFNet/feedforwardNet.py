@@ -7,9 +7,9 @@
 import numpy as np
 import sys
 import os
-from cntk import learning_rates_per_sample, DeviceDescriptor, Trainer, sgd_learner, print_training_progress, cntk_device, StreamConfiguration, text_format_minibatch_source
+from cntk import learning_rates_per_sample, DeviceDescriptor, Trainer, sgd_learner, cntk_device, StreamConfiguration, text_format_minibatch_source
 from cntk.ops import input_variable, cross_entropy_with_softmax, combine, classification_error, sigmoid
-from examples.common.nn import fully_connected_classifier_net
+from examples.common.nn import fully_connected_classifier_net, print_training_progress
 
 # Creates and trains a feedforward classification model
 def ffnet():
@@ -33,9 +33,9 @@ def ffnet():
     feature_stream_name = 'features'
     labels_stream_name = 'labels'
 
-    mb_source = text_format_minibatch_source(path, list([
+    mb_source = text_format_minibatch_source(path, [
                     StreamConfiguration( feature_stream_name, input_dim ), 
-                    StreamConfiguration( labels_stream_name, num_output_classes)]))
+                    StreamConfiguration( labels_stream_name, num_output_classes)])
     features_si = mb_source.stream_info(feature_stream_name)
     labels_si = mb_source.stream_info(labels_stream_name)
 
@@ -55,7 +55,7 @@ def ffnet():
         # Specify the mapping of input variables in the model to actual minibatch data to be trained with
         arguments = {input : mb[features_si].m_data, label : mb[labels_si].m_data}
         trainer.train_minibatch(arguments)
-        print_training_progress(i, trainer, training_progress_output_freq)
+        print_training_progress(trainer, i, training_progress_output_freq)
 
 if __name__=='__main__':
     # Specify the target device to be used for computing

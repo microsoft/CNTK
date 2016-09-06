@@ -37,7 +37,6 @@ def callback_test():
 
 
 if __name__=='__main__':
-    import time
-    #time.sleep(20)
+    import time    
     callback_test()
     #cntk_py.exception_tester()
