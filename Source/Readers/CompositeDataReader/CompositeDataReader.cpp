@@ -21,6 +21,8 @@
 #include "CorpusDescriptor.h"
 #include "ConfigUtil.h"
 #include "StringUtil.h"
+#include "CudaMemoryProvider.h"
+#include "HeapMemoryProvider.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -29,8 +31,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 // For more information please see its header file.
 // This method composes together packers + randomizer + a set of transformers and deserializers.
 CompositeDataReader::CompositeDataReader(const ConfigParameters& config, MemoryProviderPtr provider) : m_layout(make_shared<MBLayout>()),
-    m_corpus(std::make_shared<CorpusDescriptor>()),
-    m_provider(provider)
+    m_corpus(std::make_shared<CorpusDescriptor>())
 {
     wstring action = config(L"action", L"");
     bool isActionWrite = AreEqualIgnoreCase(action, L"write");
@@ -125,6 +126,29 @@ CompositeDataReader::CompositeDataReader(const ConfigParameters& config, MemoryP
         }
         m_streams.push_back(stream);
         m_nameToStreamId.insert(std::make_pair(streamDescription->m_name, streamDescription->m_id));
+    }
+
+    switch (m_packingMode)
+    {
+    case PackingMode::sample:
+        m_packer = std::make_shared<FramePacker>(
+            m_sequenceEnumerator,
+            m_streams);
+        break;
+    case PackingMode::sequence:
+        m_packer = std::make_shared<SequencePacker>(
+            m_sequenceEnumerator,
+            m_streams);
+        break;
+    case PackingMode::truncated:
+    {
+        m_packer = std::make_shared<TruncatedBPTTPacker>(
+            m_sequenceEnumerator,
+            m_streams);
+        break;
+    }
+    default:
+        LogicError("Unsupported type of packer '%d'.", (int)m_packingMode);
     }
 }
 
@@ -249,46 +273,38 @@ TransformerPtr CompositeDataReader::CreateTransformer(const ConfigParameters& co
     return TransformerPtr(t);
 }
 
-void CompositeDataReader::StartEpoch(const EpochConfiguration& cfg)
+void CompositeDataReader::StartEpoch(const EpochConfiguration& cfg, const std::map<std::wstring, int>& inputDescriptions)
 {
     EpochConfiguration config = cfg;
+    if (m_packingMode == PackingMode::truncated)
+    {
+        config.m_truncationSize = m_truncationLength;
+    }
 
     if (config.m_totalEpochSizeInSamples <= 0)
     {
         RuntimeError("Unsupported epoch size '%d'.", (int)config.m_totalEpochSizeInSamples);
     }
 
+    if (inputDescriptions.size() != m_requiredInputs.size()
+        || !std::equal(inputDescriptions.begin(), inputDescriptions.end(), m_requiredInputs.begin()))
+    {
+        m_requiredInputs = inputDescriptions;
+
+        // Reallocating memory providers.
+        m_memoryProviders.resize(m_streams.size());
+        for (size_t i = 0; i < m_streams.size(); ++i)
+        {
+            int deviceId = m_requiredInputs[m_streams[i]->m_name];
+            if (deviceId < 0)
+                m_memoryProviders[i] = std::make_shared<HeapMemoryProvider>();
+            else
+                m_memoryProviders[i] = std::make_shared<CudaMemoryProvider>(deviceId);
+        }
+    }
+
     m_sequenceEnumerator->StartEpoch(config);
-
-    // TODO: As the next step the packers should be moved into the network.
-    switch (m_packingMode)
-    {
-    case PackingMode::sample:
-        m_packer = std::make_shared<FramePacker>(
-            m_provider,
-            m_sequenceEnumerator,
-            m_streams);
-        break;
-    case PackingMode::sequence:
-        m_packer = std::make_shared<SequencePacker>(
-            m_provider,
-            m_sequenceEnumerator,
-            m_streams);
-        break;
-    case PackingMode::truncated:
-    {
-        config.m_truncationSize = m_truncationLength;
-        m_packer = std::make_shared<TruncatedBPTTPacker>(
-            m_provider,
-            m_sequenceEnumerator,
-            m_streams);
-        break;
-    }
-    default:
-        LogicError("Unsupported type of packer '%d'.", (int)m_packingMode);
-    }
-
-    m_packer->StartEpoch(config);
+    m_packer->StartEpoch(config, m_memoryProviders);
 }
 
 }}}

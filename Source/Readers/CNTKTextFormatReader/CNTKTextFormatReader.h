@@ -18,14 +18,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 class CNTKTextFormatReader : public Reader
 {
 public:
-    CNTKTextFormatReader(MemoryProviderPtr provider,
-        const ConfigParameters& parameters);
+    CNTKTextFormatReader(const ConfigParameters& parameters);
 
     // Description of streams that this reader provides.
     std::vector<StreamDescriptionPtr> GetStreamDescriptions() override;
 
     // Starts a new epoch with the provided configuration.
-    void StartEpoch(const EpochConfiguration& config) override;
+    void StartEpoch(const EpochConfiguration& config, const std::map<std::wstring, int>& requiredStreams) override;
 
     // Reads a single minibatch.
     Minibatch ReadMinibatch() override;
@@ -39,8 +38,8 @@ private:
     // Packer.
     PackerPtr m_packer;
 
-    // Memory provider (TODO: this will possibly change in the near future.)
-    MemoryProviderPtr m_provider;
+    std::map<std::wstring, int> m_requiredInputs;
+    std::vector<MemoryProviderPtr> m_memoryProviders;
 };
 
 }}}

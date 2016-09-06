@@ -106,10 +106,9 @@ struct SequenceBuffer
 };
 
 TruncatedBPTTPacker::TruncatedBPTTPacker(
-    MemoryProviderPtr memoryProvider,
     SequenceEnumeratorPtr sequenceEnumerator,
     const vector<StreamDescriptionPtr>& streams)
-    : PackerBase(memoryProvider, sequenceEnumerator, streams),
+    : PackerBase(sequenceEnumerator, streams),
     m_truncationSize(0)
 {
     auto sparseOutput = find_if(m_outputStreamDescriptions.begin(), m_outputStreamDescriptions.end(), [](const StreamDescriptionPtr& s){ return s->m_storageType == StorageType::sparse_csc; });
@@ -128,8 +127,10 @@ TruncatedBPTTPacker::TruncatedBPTTPacker(
     }
 }
 
-void TruncatedBPTTPacker::StartEpoch(const EpochConfiguration& config)
+void TruncatedBPTTPacker::StartEpoch(const EpochConfiguration& config, const std::vector<MemoryProviderPtr>& memoryProviders)
 {
+    PackerBase::StartEpoch(config, memoryProviders);
+
     if (m_minibatchSize != config.m_minibatchSizeInSamples ||
         m_truncationSize != config.m_truncationSize)
     {

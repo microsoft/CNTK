@@ -14,15 +14,16 @@
 #include "FramePacker.h"
 #include <omp.h>
 #include "TransformController.h"
+#include "HeapMemoryProvider.h"
+#include "CudaMemoryProvider.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 // TODO: This class should go away eventually.
 // TODO: The composition of packer + randomizer + different deserializers in a generic manner is done in the CompositeDataReader.
 // TODO: Currently preserving this for backward compatibility with current configs.
-ImageReader::ImageReader(MemoryProviderPtr provider,
-                         const ConfigParameters& config)
-    : m_seed(0), m_provider(provider)
+ImageReader::ImageReader(const ConfigParameters& config)
+    : m_seed(0)
 {
     // In the future, deserializers and transformers will be dynamically loaded
     // from external libraries based on the configuration/brain script.
@@ -76,7 +77,6 @@ ImageReader::ImageReader(MemoryProviderPtr provider,
     m_sequenceEnumerator = std::make_shared<TransformController>(transformations, randomizer);
 
     m_packer = std::make_shared<FramePacker>(
-        m_provider,
         m_sequenceEnumerator,
         m_streams);
 }
@@ -87,15 +87,32 @@ std::vector<StreamDescriptionPtr> ImageReader::GetStreamDescriptions()
     return m_streams;
 }
 
-void ImageReader::StartEpoch(const EpochConfiguration& config)
+void ImageReader::StartEpoch(const EpochConfiguration& config, const std::map<std::wstring, int>& inputDescriptions)
 {
     if (config.m_totalEpochSizeInSamples == 0)
     {
         RuntimeError("Epoch size cannot be 0.");
     }
 
+    if (inputDescriptions.size() != m_requiredInputs.size()
+        || !std::equal(inputDescriptions.begin(), inputDescriptions.end(), m_requiredInputs.begin()))
+    {
+        m_requiredInputs = inputDescriptions;
+
+        // Reallocating memory providers.
+        m_memoryProviders.resize(m_streams.size());
+        for (size_t i = 0; i < m_streams.size(); ++i)
+        {
+            int deviceId = m_requiredInputs[m_streams[i]->m_name];
+            if (deviceId < 0)
+                m_memoryProviders[i] = std::make_shared<HeapMemoryProvider>();
+            else
+                m_memoryProviders[i] = std::make_shared<CudaMemoryProvider>(deviceId);
+        }
+    }
+
     m_sequenceEnumerator->StartEpoch(config);
-    m_packer->StartEpoch(config);
+    m_packer->StartEpoch(config, m_memoryProviders);
 }
 
 Minibatch ImageReader::ReadMinibatch()

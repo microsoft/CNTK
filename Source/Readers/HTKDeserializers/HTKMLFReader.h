@@ -20,14 +20,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 class HTKMLFReader : public Reader
 {
 public:
-    HTKMLFReader(MemoryProviderPtr provider,
-        const ConfigParameters& parameters);
+    HTKMLFReader(const ConfigParameters& parameters);
 
     // Description of streams that this reader provides.
     std::vector<StreamDescriptionPtr> GetStreamDescriptions() override;
 
     // Starts a new epoch with the provided configuration.
-    void StartEpoch(const EpochConfiguration& config) override;
+    void StartEpoch(const EpochConfiguration& config, const std::map<std::wstring, int>& requiredStreams) override;
 
     // Reads a single minibatch.
     Minibatch ReadMinibatch() override;
@@ -62,6 +61,9 @@ private:
 
     // Parallel sequences, used for legacy configs.
     intargvector m_numParallelSequencesForAllEpochs;
+
+    std::map<std::wstring, int> m_requiredInputs;
+    std::vector<MemoryProviderPtr> m_memoryProviders;
 };
 
 }}}

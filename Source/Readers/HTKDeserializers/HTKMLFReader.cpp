@@ -16,6 +16,8 @@
 #include "TruncatedBpttPacker.h"
 #include "BlockRandomizer.h"
 #include "NoRandomizer.h"
+#include <CudaMemoryProvider.h>
+#include <HeapMemoryProvider.h>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -61,9 +63,8 @@ std::vector<IDataDeserializerPtr> CreateDeserializers(const ConfigParameters& re
     return deserializers;
 }
 
-HTKMLFReader::HTKMLFReader(MemoryProviderPtr provider,
-    const ConfigParameters& readerConfig)
-    : m_seed(0), m_provider(provider)
+HTKMLFReader::HTKMLFReader(const ConfigParameters& readerConfig)
+    : m_seed(0)
 {
     // TODO: deserializers and transformers will be dynamically loaded
     // from external libraries based on the configuration/brain script.
@@ -152,13 +153,13 @@ HTKMLFReader::HTKMLFReader(MemoryProviderPtr provider,
     switch (m_packingMode)
     {
     case PackingMode::sample:
-        m_packer = std::make_shared<FramePacker>(m_provider, m_randomizer, m_streams);
+        m_packer = std::make_shared<FramePacker>(m_randomizer, m_streams);
         break;
     case PackingMode::sequence:
-        m_packer = std::make_shared<SequencePacker>(m_provider, m_randomizer, m_streams);
+        m_packer = std::make_shared<SequencePacker>(m_randomizer, m_streams);
         break;
     case PackingMode::truncated:
-        m_packer = std::make_shared<TruncatedBPTTPacker>(m_provider, m_randomizer, m_streams);
+        m_packer = std::make_shared<TruncatedBPTTPacker>(m_randomizer, m_streams);
         break;
     default:
         LogicError("Unsupported type of packer '%d'.", (int)m_packingMode);
@@ -171,14 +172,29 @@ std::vector<StreamDescriptionPtr> HTKMLFReader::GetStreamDescriptions()
     return m_streams;
 }
 
-void HTKMLFReader::StartEpoch(const EpochConfiguration& config)
+void HTKMLFReader::StartEpoch(const EpochConfiguration& config, const std::map<std::wstring, int>& requiredStreams)
 {
     if (config.m_totalEpochSizeInSamples == 0)
     {
         RuntimeError("Epoch size cannot be 0.");
     }
 
+    if (requiredStreams.size() != m_requiredInputs.size()
+        || !std::equal(requiredStreams.begin(), requiredStreams.end(), m_requiredInputs.begin()))
+    {
+        m_requiredInputs = requiredStreams;
 
+        // Reallocating memory providers.
+        m_memoryProviders.resize(m_streams.size());
+        for (size_t i = 0; i < m_streams.size(); ++i)
+        {
+            int deviceId = m_requiredInputs[m_streams[i]->m_name];
+            if (deviceId < 0)
+                m_memoryProviders[i] = std::make_shared<HeapMemoryProvider>();
+            else
+                m_memoryProviders[i] = std::make_shared<CudaMemoryProvider>(deviceId);
+        }
+    }
 
     if (m_packingMode == PackingMode::truncated)
     {
@@ -194,7 +210,7 @@ void HTKMLFReader::StartEpoch(const EpochConfiguration& config)
             size_t numParallelSequences = m_numParallelSequencesForAllEpochs[config.m_epochIndex];
             minibatchSize = numParallelSequences * truncationLength;
         }
-        
+
         EpochConfiguration bpttConfig;
         bpttConfig.m_numberOfWorkers = config.m_numberOfWorkers;
         bpttConfig.m_workerRank = config.m_workerRank;
@@ -204,12 +220,12 @@ void HTKMLFReader::StartEpoch(const EpochConfiguration& config)
         bpttConfig.m_truncationSize = truncationLength;
 
         m_randomizer->StartEpoch(bpttConfig);
-        m_packer->StartEpoch(bpttConfig);
+        m_packer->StartEpoch(bpttConfig, m_memoryProviders);
     }
     else
     {
         m_randomizer->StartEpoch(config);
-        m_packer->StartEpoch(config);
+        m_packer->StartEpoch(config, m_memoryProviders);
     }
 }
 

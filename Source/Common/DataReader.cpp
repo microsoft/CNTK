@@ -162,6 +162,12 @@ void DataReader::StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requeste
         m_dataReaders[m_ioNames[i]]->StartMinibatchLoop(mbSize, epoch, requestedEpochSamples);
 }
 
+void DataReader::StartMinibatchLoop(size_t mbSize, size_t epoch, const std::unordered_set<InputStreamDescription>& streamDescriptions, size_t requestedEpochSamples)
+{
+    for (size_t i = 0; i < m_ioNames.size(); i++)
+        m_dataReaders[m_ioNames[i]]->StartMinibatchLoop(mbSize, epoch, streamDescriptions, requestedEpochSamples);
+}
+
 //SupportsDistributedMBRead - Tells if the reader supports distributed minibatch reading for parallel training
 bool DataReader::SupportsDistributedMBRead() const
 {
@@ -188,6 +194,14 @@ void DataReader::StartDistributedMinibatchLoop(size_t mbSize, size_t epoch, size
     for (size_t i = 0; i < m_ioNames.size(); i++)
     {
         m_dataReaders[m_ioNames[i]]->StartDistributedMinibatchLoop(mbSize, epoch, subsetNum, numSubsets, requestedEpochSamples);
+    }
+}
+
+void DataReader::StartDistributedMinibatchLoop(size_t mbSize, size_t epoch, size_t subsetNum, size_t numSubsets, const std::unordered_set<InputStreamDescription>& streamDescriptions, size_t requestedEpochSamples /* = requestDataSize*/)
+{
+    for (size_t i = 0; i < m_ioNames.size(); i++)
+    {
+        m_dataReaders[m_ioNames[i]]->StartDistributedMinibatchLoop(mbSize, epoch, subsetNum, numSubsets, streamDescriptions, requestedEpochSamples);
     }
 }
 

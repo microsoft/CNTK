@@ -13,15 +13,15 @@
 #include "TextParser.h"
 #include "SequencePacker.h"
 #include "FramePacker.h"
+#include <CudaMemoryProvider.h>
+#include <HeapMemoryProvider.h>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 // TODO: This class should go away eventually.
 // TODO: The composition of packer + randomizer + different deserializers in a generic manner is done in the CompositeDataReader.
 // TODO: Currently preserving this for backward compatibility with current configs.
-CNTKTextFormatReader::CNTKTextFormatReader(MemoryProviderPtr provider,
-    const ConfigParameters& config) :
-    m_provider(provider)
+CNTKTextFormatReader::CNTKTextFormatReader(const ConfigParameters& config)
 {
     TextConfigHelper configHelper(config);
 
@@ -56,15 +56,13 @@ CNTKTextFormatReader::CNTKTextFormatReader(MemoryProviderPtr provider,
         if (configHelper.IsInFrameMode()) 
         {
             m_packer = std::make_shared<FramePacker>(
-                m_provider,
                 m_randomizer,
                 GetStreamDescriptions());
         }
         else
         {
-        m_packer = std::make_shared<SequencePacker>(
-            m_provider,
-            m_randomizer,
+            m_packer = std::make_shared<SequencePacker>(
+                m_randomizer,
             GetStreamDescriptions());
         }
     }
@@ -79,15 +77,33 @@ std::vector<StreamDescriptionPtr> CNTKTextFormatReader::GetStreamDescriptions()
     return m_deserializer->GetStreamDescriptions();
 }
 
-void CNTKTextFormatReader::StartEpoch(const EpochConfiguration& config)
+void CNTKTextFormatReader::StartEpoch(const EpochConfiguration& config, const std::map<std::wstring, int>& inputDescriptions)
 {
     if (config.m_totalEpochSizeInSamples == 0)
     {
         RuntimeError("Epoch size cannot be 0.");
     }
 
+    auto streams = GetStreamDescriptions();
+    if (inputDescriptions.size() != m_requiredInputs.size()
+        || !std::equal(inputDescriptions.begin(), inputDescriptions.end(), m_requiredInputs.begin()))
+    {
+        m_requiredInputs = inputDescriptions;
+
+        // Reallocating memory providers.
+        m_memoryProviders.resize(streams.size());
+        for (size_t i = 0; i < streams.size(); ++i)
+        {
+            int deviceId = m_requiredInputs[streams[i]->m_name];
+            if (deviceId < 0)
+                m_memoryProviders[i] = std::make_shared<HeapMemoryProvider>();
+            else
+                m_memoryProviders[i] = std::make_shared<CudaMemoryProvider>(deviceId);
+        }
+    }
+
     m_randomizer->StartEpoch(config);
-    m_packer->StartEpoch(config);
+    m_packer->StartEpoch(config, m_memoryProviders);
 }
 
 Minibatch CNTKTextFormatReader::ReadMinibatch()

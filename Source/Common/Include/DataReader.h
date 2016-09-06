@@ -41,7 +41,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     struct InputStreamDescription
     {
         std::wstring m_name;
-        size_t m_deviceId;
+        int m_deviceId;
     };
 
     inline bool operator ==(const InputStreamDescription& a, const InputStreamDescription& b)
@@ -357,9 +357,6 @@ class DataReader : public IDataReader, protected Plugin, public ScriptableObject
     // The reason why this is not just a destructor is that it goes across a DLL boundary.
     virtual void Destroy() override;
 public:
-    using IDataReader::StartDistributedMinibatchLoop;
-    using IDataReader::StartMinibatchLoop;
-
     // DataReader Constructor
     // config - [in] configuration parameters for the datareader
     template <class ConfigRecordType>
@@ -379,6 +376,9 @@ public:
 
     virtual bool SupportsDistributedMBRead() const override;
     virtual void StartDistributedMinibatchLoop(size_t mbSize, size_t epoch, size_t subsetNum, size_t numSubsets, size_t requestedEpochSamples = requestDataSize) override;
+
+    virtual void StartMinibatchLoop(size_t mbSize, size_t epoch, const std::unordered_set<InputStreamDescription>&, size_t requestedEpochSamples = requestDataSize) override;
+    virtual void StartDistributedMinibatchLoop(size_t mbSize, size_t epoch, size_t subsetNum, size_t numSubsets, const std::unordered_set<InputStreamDescription>&, size_t requestedEpochSamples = requestDataSize) override;
 
     // GetMinibatch - Get the next minibatch (features and labels)
     // matrices - [in] a map with named matrix types (i.e. 'features', 'labels') mapped to the corresponding matrix,

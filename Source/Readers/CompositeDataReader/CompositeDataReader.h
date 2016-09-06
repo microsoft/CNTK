@@ -61,7 +61,7 @@ public:
     std::vector<StreamDescriptionPtr> GetStreamDescriptions() override;
 
     // Starts a new epoch with the provided configuration
-    void StartEpoch(const EpochConfiguration& config) override;
+    void StartEpoch(const EpochConfiguration& config, const std::map<std::wstring, int>& inputDescriptions) override;
 
     // Reads a minibatch that contains data across all streams.
     Minibatch ReadMinibatch() override;
@@ -112,10 +112,6 @@ private:
     // Sequence provider.
     SequenceEnumeratorPtr m_sequenceEnumerator;
 
-    // TODO: Should be removed. We already have matrices on this level.
-    // Should just get the corresponding pinned memory.
-    MemoryProviderPtr m_provider;
-
     // Corpus descriptor that is shared between deserializers.
     CorpusDescriptorPtr m_corpus;
 
@@ -127,6 +123,9 @@ private:
 
     // Truncation length for BPTT mode.
     size_t m_truncationLength;
+
+    std::map<std::wstring, int> m_requiredInputs;
+    std::vector<MemoryProviderPtr> m_memoryProviders;
 };
 
 }}}
