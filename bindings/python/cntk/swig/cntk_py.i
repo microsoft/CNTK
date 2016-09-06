@@ -128,8 +128,14 @@
 }
 
 %extend CNTK::NDShape {
-    const size_t& __getitem__(size_t i) {
-        return (*self)[i];
+    const size_t& __getitem__(int i) {
+        // CNTK uses column major, thus we reverse the shape
+        size_t rank = (*self).Rank();
+        if (i<0)
+        {
+            return (*self)[-i-1];
+        }
+        return (*self)[rank-1-i];
     }
 
     PyObject* dimensions() {        

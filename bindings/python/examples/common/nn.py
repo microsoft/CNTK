@@ -10,7 +10,7 @@ import os
 from cntk.ops import *
 
 def linear_layer(input, output_dim):
-    input_dim = input.shape().dimensions()[0]
+    input_dim = input.shape()[0]
     times_param = parameter(shape=(input_dim, output_dim))
     bias_param = parameter(shape=(output_dim))
 
@@ -30,7 +30,7 @@ def fully_connected_classifier_net(input, num_output_classes, hidden_layer_dim, 
     return linear_layer(r, num_output_classes)
 
 def conv_bn_layer(input, out_feature_map_count, kernel_width, kernel_height, h_stride, v_stride, w_scale, b_value, sc_value, bn_time_const):
-    num_in_channels = input.shape().dimensions()[0]    
+    num_in_channels = input.shape()[0]    
     #TODO: use RandomNormal to initialize, needs to be exposed in the python api
     conv_params = parameter(shape=(num_in_channels, kernel_height, kernel_width, out_feature_map_count))
     conv_func = convolution(conv_params, input, (num_in_channels, v_stride, h_stride))
@@ -53,10 +53,9 @@ def resnet_node2(input, out_feature_map_count, kernel_width, kernel_height, w_sc
     return relu(p)
 
 def proj_layer(w_proj, input, h_stride, v_stride, b_value, sc_value, bn_time_const):
-    num_in_channels = input.shape().dimensions()[0]
+    num_in_channels = input.shape()[0]
     conv_func = convolution(w_proj, input, (num_in_channels, v_stride, h_stride))
-
-    out_feature_map_count = w_proj.shape().dimensions()[-1];
+    out_feature_map_count = w_proj.shape()[-1];    
     #TODO: initialize using b_value and sc_value, needs to be exposed in the python api
     bias_params = parameter(shape=(out_feature_map_count))
     scale_params = parameter(shape=(out_feature_map_count))
@@ -186,3 +185,4 @@ def LSTMP_component_with_self_stabilization(input, output_dim, cell_dim):
 
     # Form the recurrence loop by replacing the dh and dc placeholders with the actualDh and actualDc
     return LSTMCell[0].owner.replace_placeholders({ dh : actualDh, dc : actualDc})
+    
