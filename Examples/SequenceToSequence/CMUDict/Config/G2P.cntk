@@ -13,9 +13,9 @@
 
 # directory defaults (if not overridden)
 
-RunRootDir = "../.."      # default if not overridden
+RunRootDir = ".."      # default if not overridden
 DataDir    = "$RunRootDir$/Data"
-OutDir     = "$RunRootDir$/Out"
+ModelDir   = "$RunRootDir$/Out"
 
 # command to execute
 
@@ -34,8 +34,8 @@ ExpId = g2p-01-$deviceId$ # choose a meaningful id here. This is used for unique
 
 # model
 
-modelPath  = "$OutDir$/$ExpId$/G2P.dnn"
-stderr     = "$OutDir$/$ExpId$/G2P"
+modelPath  = "$ModelDir$/$ExpId$/G2P.dnn"
+stderr     = "$ModelDir$/$ExpId$/G2P"
 
 # decoding config  --used by the "write" command ("write" decodes and writes the result)
 
@@ -57,25 +57,25 @@ isBidirectional = false
 
 # comment/uncomment this or the next block to switch between readers
 # --- begin uncomment for LMSequenceReader ---
-readerType = "LMSequenceReader"
-useCNTKTextFormatReader = false
-inputVocabSize = 69
-labelVocabSize = 69
-mbSizes = 144:144:288*5:576
-shareEmbeddings = true
-fileExt = "txt"
+#readerType = "LMSequenceReader"
+#useCNTKTextFormatReader = false
+#inputVocabSize = 69
+#labelVocabSize = 69
+#mbSizes = 144:144:288*5:576
+#shareEmbeddings = true
+#fileExt = "txt"
 # --- end uncomment ---
 
 # --- begin uncomment for CNTKTextFormatReader ---
 # Note: Currently this configuration cannot reach the same result with CNTKTextFormatReader.
 # This is being investigated. For now, please use the LMSequenceReader.
-#readerType = "CNTKTextFormatReader"
-#useCNTKTextFormatReader = true
-#inputVocabSize = 29     # 26 letters plus start, end, apostrophe
-#labelVocabSize = 41     # 39 phonemes (~AX missing), plus start and end symbol (in index 0)
-#mbSizes = 72:72:144:288 # new reader is based on max(stream lengths) instead of sum(stream lengths)
-#shareEmbeddings = false
-#fileExt = "bsf.ctf"
+readerType = "CNTKTextFormatReader"
+useCNTKTextFormatReader = true
+inputVocabSize = 69     # 26 letters plus start, end, apostrophe (input and label use the same vector space)
+labelVocabSize = 69     # 39 phonemes (~AX missing), plus start and end symbol (in index 0)
+mbSizes = 72:72:144:288 # new reader is based on max(stream lengths) instead of sum(stream lengths)
+shareEmbeddings = false
+fileExt = "bsf.ctf"
 # --- end uncomment ---
 
 # corpus
@@ -89,7 +89,7 @@ mappingFile = "cmudict-0.7b.mapping"
 
 # some reader variables that occur multiple times
 
-cntkReaderInputDef             = [ rawInput = [ alias = "s" ; dim = $inputVocabSize$ ; format = "sparse" ] ; rawLabels = [ alias = "t" ;  dim = $labelVocabSize$ ;  format = "sparse" ] ]
+cntkReaderInputDef             = [ rawInput = [ alias = "S0" ; dim = $inputVocabSize$ ; format = "sparse" ] ; rawLabels = [ alias = "S1" ;  dim = $labelVocabSize$ ;  format = "sparse" ] ]
 lmSequenceReaderInputDef       = [ dim = 0 ]
 lmSequenceReaderInputLabelsDef = [ dim = 1 ; labelType = "category" ;  labelDim = "$inputVocabSize$" ; labelMappingFile = "$DataDir$/$mappingFile$" ; beginSequence = "</s>" ;  endSequence   = "</s>" ]
 
@@ -119,9 +119,11 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
     useNYUStyle   = false               # if true use thought vector for all inputs, NYU-style
 
     # dimensions
+    inputIsEmbedded = false  # if true, input vectors are embeddings
+    labelsIsEmbedded = false # if true, input labels are embeddings
     embeddingDim = 300
-    inputEmbeddingDim = if inputVocabDim < 300 then inputVocabDim else embeddingDim
-    labelEmbeddingDim = if labelVocabDim < 300 then labelVocabDim else embeddingDim
+    inputEmbeddingDim = if inputIsEmbedded then inputVocabDim else embeddingDim
+    labelEmbeddingDim = if labelsIsEmbedded then labelVocabDim else embeddingDim
 
     encoderDims[i:0..maxLayer] = hiddenDim # this defines the number of hidden layers in each
     decoderDims[i:0..maxLayer] = hiddenDim # both are one LSTM layer only for now
@@ -177,8 +179,8 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
     # note: this is assumed to be applied transposed, hence the swapped dimensions. Actually--why? Still needed?
     Einput  =                                     BS.Parameters.WeightParam (inputSequenceDim, inputEmbeddingDim)
     Elabels = if shareEmbeddings then Einput else BS.Parameters.WeightParam (labelSequenceDim, labelEmbeddingDim)
-    EmbedInput (x)  = if inputSequenceDim == inputEmbeddingDim then x else TransposeTimes (Einput, x)
-    EmbedLabels (x) = if labelSequenceDim == labelEmbeddingDim then x else TransposeTimes (Elabels, x)
+    EmbedInput (x)  = if inputIsEmbedded  then Pass(x) else TransposeTimes (Einput, x)
+    EmbedLabels (x) = if labelsIsEmbedded then Pass(x) else TransposeTimes (Elabels, x)
 
     inputEmbedded  = EmbedInput  (inputSequence)
     labelsEmbedded = EmbedLabels (labelSequence)
@@ -319,6 +321,10 @@ BrainScriptNetworkBuilder = (new ComputationNetwork [
     # score output for decoding
     scoreSequence = Pass (z)
 
+    # for prediction mode (without decoder) output score
+    score = ReduceLogSum (z)
+    outputNodes = score 
+
     #############################################################
     # some helper functions
     #############################################################
@@ -374,9 +380,9 @@ train = [
     reader = [
         readerType = "$readerType$"
         file = "$DataDir$/$trainFile$"
-        randomize = "auto"
 
         # specific to CNTKTextFormatReader
+        randomize = true
         skipSequenceIds = "false"
         maxErrors = 100
         traceLevel = 2
@@ -384,18 +390,18 @@ train = [
         input = $cntkReaderInputDef$
 
         # specific to LMSequenceReader
-        mode = "softmax"                    # TODO: find out what this means
-        nbruttsineachrecurrentiter = 0      # 0 means auto-fill given minibatch size
-        cacheBlockSize = 100000000          # read block size. This value is large enough to load entire corpus at once
-        rawInput = $lmSequenceReaderInputDef$
-        inputLabelsDef = $lmSequenceReaderInputLabelsDef$
-        outputDummy = [ labelType = "none" ]
+        #randomize = "none"
+        #mode = "softmax"                    # TODO: find out what this means
+        #nbruttsineachrecurrentiter = 0      # 0 means auto-fill given minibatch size
+        #cacheBlockSize = 100000000          # read block size. This value is large enough to load entire corpus at once
+        #rawInput = $lmSequenceReaderInputDef$
+        #inputLabelsDef = $lmSequenceReaderInputLabelsDef$
+        #outputDummy = [ labelType = "none" ]
     ]
 
     cvReader = [
         readerType = "$readerType$"
         file = "$DataDir$/$validFile$"
-        randomize = "none"
 
         # specific to CNTKTextFormatReader
         skipSequenceIds = "false"
@@ -472,6 +478,7 @@ write = [
         randomize = "none"
 
         # specific to CNTKTextFormatReader
+        randomize = false
         skipSequenceIds = "false"
         maxErrors = 100
         traceLevel = 2
