@@ -1,7 +1,10 @@
 dataDir: ../../../../../../Examples/Image/MNIST/Data
 
 tags:
+    # In BVT, run Release GPU
     - bvt-e (build_sku=='gpu') and (device=='gpu') and (flavor=='release') 
+    # In Nightly, additionally run Debug GPU
+    # Note: Batch normalization training on CPU is not yet implemented.
     - nightly-e (build_sku=='gpu') and (device=='gpu')
 
 testCases:
@@ -18,16 +21,16 @@ testCases:
   Epochs (with low train loss) must be finished with expected results:
     patterns:
       - Finished Epoch[{{integer}} of {{integer}}]
-      - ce = {{float,tolerance=0}} * {{integer}}
-      - errs = {{float,tolerance=0}}% * {{integer}}
+      - ce = {{float,tolerance=0.05}}
+      - errs = {{float,tolerance=0.5}}%
       - totalSamplesSeen = {{integer}}
       - learningRatePerSample = {{float,tolerance=0.1%}}
 
-  Per-minibatch training results must match:
+  Per-minibatch (with low train loss) training results must match:
     patterns:
       - Epoch[{{integer}} of {{integer}}]-Minibatch[{{integer}}-{{integer}}
-      - ce = {{float,tolerance=.1%}} * {{integer}}
-      - errs = {{float,tolerance=.1%}}% * {{integer}}
+      - ce = {{float,tolerance=0.05}} * {{integer}}
+      - errs = {{float,tolerance=0.5}}% * {{integer}}
 
   Final test results must match:
     patterns:

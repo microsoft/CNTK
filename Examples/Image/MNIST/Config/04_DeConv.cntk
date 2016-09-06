@@ -7,16 +7,16 @@ command = trainNetwork:testNetwork
 
 precision = "float"; traceLevel = 1 ; deviceId = "auto"
 
-rootDir = ".." ; configDir = "$rootDir$/Config" ; dataDir   = "$rootDir$/Data" ;
-outputDir = "$rootDir$/Output" ; modelDir  = "$outputDir$/Models"
+rootDir = ".." ; configDir = "$rootDir$/Config" ; dataDir = "$rootDir$/Data" ;
+outputDir = "$rootDir$/Output" ;
 
-modelPath = "$modelDir$/03_DeConv"
+modelPath = "$outputDir$/Models/03_DeConv"
 stderr = "$outputDir$/04_DeConv_bs_out"
 
 prefetch=true
 
 # TRAINING CONFIG
-trainNetwork = [
+trainNetwork = {
     action = "train"
 
     BrainScriptNetworkBuilder = {
@@ -41,18 +41,18 @@ trainNetwork = [
             # deconv1
             lpad = 2
             upad = 1
-                # weight[cMap1, kW1 * kH1 * inputChannels]
+                # weight{cMap1, kW1 * kH1 * inputChannels}
                 #imageC = 1
                 #cMap1 = 16
                 #deconv1 = DeconvReLULayer(unpool1, kW1, kH1, imageC, 25,       cMap1, hStride1, vStride1, lpad1, upad1, wScale1, bValue1)
-                #          DeconvReLULayer(inp,     kW,  kH,  inMap, inWCount, outMap, hStride,  vStride,  lpad,  upad,  wScale,  bValue) = [
+                #          DeconvReLULayer(inp,     kW,  kH,  inMap, inWCount, outMap, hStride,  vStride,  lpad,  upad,  wScale,  bValue) = {
                 #    W = LearnableParameter(outMap, inWCount, init="uniform", initValueScale=wScale, initOnCPUOnly=true)
                 #    act = RectifiedLinear(inp)
                 #    out = DeConv(W, act, kW, kH, inMap, outMap, hStride, vStride, lpad, upad)
-                #]
-                #          DeConv(w, inp, kW, kH, inMap, outMap, hStride, vStride, lpad, upad) = [
+                #}
+                #          DeConv(w, inp, kW, kH, inMap, outMap, hStride, vStride, lpad, upad) = {
                 #             c = Convolution(w, inp, {kW, kH, inMap}, mapCount=outMap, stride={hStride, vStride, inMap}, sharing={true, true, true}, autoPadding=false, lowerPad={lpad, lpad, 0}, upperPad={upad, upad, 0}, transpose=1, imageLayout=$imageLayout$)
-                #          ]
+                #          }
                 
                 #W = LearnableParameter(outMap, inWCount, init="uniform", initValueScale=wScale, initOnCPUOnly=true)
                 #W = LearnableParameter(1, 25, init="uniform", initValueScale=convWScale, initOnCPUOnly=true)
@@ -89,7 +89,7 @@ trainNetwork = [
         outputNodes     = (ol)
     }
     
-    SGD = [
+    SGD = {
         epochSize = 60000
         minibatchSize = 32
         maxEpochs = 10
@@ -97,42 +97,30 @@ trainNetwork = [
         momentumPerMB = 0.9                 # momentumAsTimeConstant = 
         
         numMBsToShowResult = 500
-    ]
+    }
 
-    reader = [
+    reader = {
         readerType = "CNTKTextFormatReader"
         # See ../REAMDE.md for details on getting the data (Train-28x28_cntk_text.txt).
         file = "$DataDir$/Train-28x28_cntk_text.txt"
-        input = [
-            features = [
-                dim = 784
-                format = "dense"
-            ]
-            labels = [
-                dim = 10
-                format = "dense"
-            ]
-        ]
-    ]    
-]
+        input = {
+            features = { dim = 784 ; format = "dense" }
+            labels =   { dim = 10  ; format = "dense" }
+        }
+    }    
+}
 
 # TEST CONFIG
-testNetwork = [
+testNetwork = {
     action = test
     minibatchSize = 16
     
-    reader = [
+    reader = {
         readerType = "CNTKTextFormatReader"
         file = "$DataDir$/Test-28x28_cntk_text.txt"
-        input = [
-            features = [
-            dim = 784
-            format = "dense"
-            ]
-            labels = [
-                dim = 10
-                format = "dense"
-            ]
-        ]
-    ]
-]
+        input = {
+            features = { dim = 784 ; format = "dense" }
+            labels =   { dim = 10  ; format = "dense" }
+        }
+    }
+}

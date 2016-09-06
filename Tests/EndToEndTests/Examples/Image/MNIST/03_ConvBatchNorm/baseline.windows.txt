@@ -1,0 +1,481 @@
+CPU info:
+    CPU Model Name: Intel(R) Xeon(R) CPU E5-2630 v2 @ 2.60GHz
+    Hardware threads: 24
+    Total Memory: 268381192 kB
+-------------------------------------------------------------------
+=== Running /cygdrive/c/jenkins/workspace/CNTK-Test-Windows-W1/x64/release/cntk.exe configFile=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Image\MNIST\Config/03_ConvBatchNorm.cntk currentDirectory=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160906081649.154800\Examples\Image\MNIST_03_ConvBatchNorm@release_gpu\TestData RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160906081649.154800\Examples\Image\MNIST_03_ConvBatchNorm@release_gpu DataDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160906081649.154800\Examples\Image\MNIST_03_ConvBatchNorm@release_gpu\TestData ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Image\MNIST\Config OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160906081649.154800\Examples\Image\MNIST_03_ConvBatchNorm@release_gpu DeviceId=0 timestamping=true forceDeterministicAlgorithms=true stderr=-
+-------------------------------------------------------------------
+Build info: 
+
+		Built time: Sep  6 2016 03:24:19
+		Last modified date: Tue Sep  6 03:03:00 2016
+		Build type: Release
+		Build target: GPU
+		With 1bit-SGD: no
+		Math lib: mkl
+		CUDA_PATH: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.5
+		CUB_PATH: C:\src\cub-1.4.1
+		CUDNN_PATH: c:\NVIDIA\cudnn-5.1\cuda
+		Build Branch: HEAD
+		Build SHA1: 208270d8f2e007f1da109a12d2db741bb172ee8e
+		Built by svcphil on liana-08-w
+		Build Path: c:\jenkins\workspace\CNTK-Build-Windows\Source\CNTK\
+-------------------------------------------------------------------
+Changed current directory to C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160906081649.154800\Examples\Image\MNIST_03_ConvBatchNorm@release_gpu\TestData
+09/06/2016 08:19:01: Redirecting stderr to file -_trainNetwork_testNetwork.log
+09/06/2016 08:19:01: -------------------------------------------------------------------
+09/06/2016 08:19:01: Build info: 
+
+09/06/2016 08:19:01: 		Built time: Sep  6 2016 03:24:19
+09/06/2016 08:19:01: 		Last modified date: Tue Sep  6 03:03:00 2016
+09/06/2016 08:19:01: 		Build type: Release
+09/06/2016 08:19:01: 		Build target: GPU
+09/06/2016 08:19:01: 		With 1bit-SGD: no
+09/06/2016 08:19:01: 		Math lib: mkl
+09/06/2016 08:19:01: 		CUDA_PATH: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.5
+09/06/2016 08:19:01: 		CUB_PATH: C:\src\cub-1.4.1
+09/06/2016 08:19:01: 		CUDNN_PATH: c:\NVIDIA\cudnn-5.1\cuda
+09/06/2016 08:19:01: 		Build Branch: HEAD
+09/06/2016 08:19:01: 		Build SHA1: 208270d8f2e007f1da109a12d2db741bb172ee8e
+09/06/2016 08:19:01: 		Built by svcphil on liana-08-w
+09/06/2016 08:19:01: 		Build Path: c:\jenkins\workspace\CNTK-Build-Windows\Source\CNTK\
+09/06/2016 08:19:01: -------------------------------------------------------------------
+09/06/2016 08:19:02: -------------------------------------------------------------------
+09/06/2016 08:19:02: GPU info:
+
+09/06/2016 08:19:02: 		Device[0]: cores = 2880; computeCapability = 3.5; type = "GeForce GTX 780 Ti"; memory = 3072 MB
+09/06/2016 08:19:02: 		Device[1]: cores = 2880; computeCapability = 3.5; type = "GeForce GTX 780 Ti"; memory = 3072 MB
+09/06/2016 08:19:02: 		Device[2]: cores = 2880; computeCapability = 3.5; type = "GeForce GTX 780 Ti"; memory = 3072 MB
+09/06/2016 08:19:02: -------------------------------------------------------------------
+
+09/06/2016 08:19:02: Running on DPHAIM-22 at 2016/09/06 08:19:02
+09/06/2016 08:19:02: Command line: 
+C:\jenkins\workspace\CNTK-Test-Windows-W1\x64\release\cntk.exe  configFile=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Image\MNIST\Config/03_ConvBatchNorm.cntk  currentDirectory=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160906081649.154800\Examples\Image\MNIST_03_ConvBatchNorm@release_gpu\TestData  RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160906081649.154800\Examples\Image\MNIST_03_ConvBatchNorm@release_gpu  DataDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160906081649.154800\Examples\Image\MNIST_03_ConvBatchNorm@release_gpu\TestData  ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Image\MNIST\Config  OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160906081649.154800\Examples\Image\MNIST_03_ConvBatchNorm@release_gpu  DeviceId=0  timestamping=true  forceDeterministicAlgorithms=true  stderr=-
+
+
+Configuration After Processing and Variable Resolution:
+
+configparameters: 03_ConvBatchNorm.cntk:command=trainNetwork:testNetwork
+configparameters: 03_ConvBatchNorm.cntk:configDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Image\MNIST\Config
+configparameters: 03_ConvBatchNorm.cntk:currentDirectory=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160906081649.154800\Examples\Image\MNIST_03_ConvBatchNorm@release_gpu\TestData
+configparameters: 03_ConvBatchNorm.cntk:dataDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160906081649.154800\Examples\Image\MNIST_03_ConvBatchNorm@release_gpu\TestData
+configparameters: 03_ConvBatchNorm.cntk:deviceId=0
+configparameters: 03_ConvBatchNorm.cntk:forceDeterministicAlgorithms=true
+configparameters: 03_ConvBatchNorm.cntk:modelDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160906081649.154800\Examples\Image\MNIST_03_ConvBatchNorm@release_gpu/Models
+configparameters: 03_ConvBatchNorm.cntk:modelPath=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160906081649.154800\Examples\Image\MNIST_03_ConvBatchNorm@release_gpu/Models/03_ConvBatchNorm
+configparameters: 03_ConvBatchNorm.cntk:outputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160906081649.154800\Examples\Image\MNIST_03_ConvBatchNorm@release_gpu
+configparameters: 03_ConvBatchNorm.cntk:precision=float
+configparameters: 03_ConvBatchNorm.cntk:rootDir=..
+configparameters: 03_ConvBatchNorm.cntk:RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160906081649.154800\Examples\Image\MNIST_03_ConvBatchNorm@release_gpu
+configparameters: 03_ConvBatchNorm.cntk:stderr=-
+configparameters: 03_ConvBatchNorm.cntk:testNetwork=[
+    action = test
+minibatchSize = 1024    
+    reader = [
+        readerType = "CNTKTextFormatReader"
+        file = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160906081649.154800\Examples\Image\MNIST_03_ConvBatchNorm@release_gpu\TestData/Test-28x28_cntk_text.txt"
+        input = [
+            features = [
+                dim = 784
+                format = "dense"
+            ]
+            labels = [
+                dim = 10
+                format = "dense"
+            ]
+        ]
+    ]
+]
+
+configparameters: 03_ConvBatchNorm.cntk:timestamping=true
+configparameters: 03_ConvBatchNorm.cntk:traceLevel=1
+configparameters: 03_ConvBatchNorm.cntk:trainNetwork=[
+    action = "train"
+    BrainScriptNetworkBuilder = {
+imageShape = 28:28:1                        
+        featScale = Constant(1/256)
+labelDim = 10                               
+convWScale = 10                             
+        ConvBnReluPool (x, depth, initValueScale) =
+        {
+            c = ConvolutionalLayer {depth, (5:5), pad=true, initValueScale=initValueScale} (x)
+            b = BatchNormalizationLayer {spatialRank = 2, normalizationTimeConstant = 1024} (c)
+            r = ReLU (b)
+            p = MaxPoolingLayer {(2:2), stride = (2:2)} (r)
+        }.p
+        model (features) = {
+            featNorm = features.* featScale
+            cbnr1 = ConvBnReluPool(featNorm, 16, convWScale)
+            cbnr2 = ConvBnReluPool(cbnr1,    32, convWScale)
+            h1 = LinearLayer {128} (cbnr2)
+            h1bn = BatchNormalizationLayer {normalizationTimeConstant = 1024} (h1)
+            h1bnr = ReLU (h1bn)
+            ol = LinearLayer {labelDim} (h1bnr)
+        }.ol
+        features = Input {imageShape}
+        labels = Input {labelDim}
+        ol = model (features)
+        ce   = CrossEntropyWithSoftmax (labels, ol)
+        errs = ClassificationError (labels, ol)
+        featureNodes    = (features)
+        labelNodes      = (labels)
+        criterionNodes  = (ce)
+        evaluationNodes = (errs)
+        outputNodes     = (ol)
+    }
+    SGD = [
+        epochSize = 60000
+        minibatchSize = 64
+        maxEpochs = 3
+        learningRatesPerSample = 0.02:0.005
+        momentumAsTimeConstant = 0
+        numMBsToShowResult = 500
+    ]
+    reader = [
+        readerType = "CNTKTextFormatReader"
+        file = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160906081649.154800\Examples\Image\MNIST_03_ConvBatchNorm@release_gpu\TestData/Train-28x28_cntk_text.txt"
+        input = [
+            features = [
+                dim = 784
+                format = "dense"
+            ]
+            labels = [
+                dim = 10
+                format = "dense"
+            ]
+        ]
+    ]    
+]
+
+09/06/2016 08:19:03: Commands: trainNetwork testNetwork
+09/06/2016 08:19:03: Precision = "float"
+09/06/2016 08:19:03: CNTKModelPath: C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160906081649.154800\Examples\Image\MNIST_03_ConvBatchNorm@release_gpu/Models/03_ConvBatchNorm
+09/06/2016 08:19:03: CNTKCommandTrainInfo: trainNetwork : 3
+09/06/2016 08:19:03: CNTKCommandTrainInfo: CNTKNoMoreCommands_Total : 3
+
+09/06/2016 08:19:03: ##############################################################################
+09/06/2016 08:19:03: #                                                                            #
+09/06/2016 08:19:03: # Action "train"                                                             #
+09/06/2016 08:19:03: #                                                                            #
+09/06/2016 08:19:03: ##############################################################################
+
+09/06/2016 08:19:03: CNTKCommandTrainBegin: trainNetwork
+
+09/06/2016 08:19:03: Creating virgin network.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[10 x 0] as heNormal later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[128 x 0] as heNormal later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[32 x 0] as heNormal later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[16 x 0] as heNormal later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1 x 1] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1 x 1] <- 0.003906.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1 x 1 x 16] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1 x 1 x 16] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1 x 1 x 32] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1 x 1 x 32] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[128] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[128] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[10] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[10] <- 0.000000.
+
+Post-processing network...
+
+3 roots:
+	ce = CrossEntropyWithSoftmax()
+	errs = ClassificationError()
+	ol = Plus()
+
+Validating network. 42 nodes to process in pass 1.
+
+Validating --> labels = InputValue() :  -> [10 x *]
+Validating --> ol.ol.W = LearnableParameter() :  -> [10 x 0]
+Validating --> ol.h1.W = LearnableParameter() :  -> [128 x 0]
+Validating --> ol.cbnr2.c.W = LearnableParameter() :  -> [32 x 0]
+Validating --> ol.cbnr1.c.W = LearnableParameter() :  -> [16 x 0]
+Validating --> features = InputValue() :  -> [28 x 28 x 1 x *]
+Validating --> featScale = LearnableParameter() :  -> [1 x 1]
+Validating --> ol.featNorm = ElementTimes (features, featScale) : [28 x 28 x 1 x *], [1 x 1] -> [28 x 28 x 1 x *]
+Node 'ol.cbnr1.c.W' (LearnableParameter operation) operation: Tensor shape was inferred as [16 x 25].
+Node 'ol.cbnr1.c.W' (LearnableParameter operation): Initializing Parameter[16 x 25] <- heNormal(seed=4, init dims=[16 x 25], range=0.282843*10.000000, onCPU=true).
+Validating --> ol.cbnr1.c.c = Convolution (ol.cbnr1.c.W, ol.featNorm) : [16 x 25], [28 x 28 x 1 x *] -> [28 x 28 x 16 x *]
+Validating --> ol.cbnr1.c.b = LearnableParameter() :  -> [1 x 1 x 16]
+Validating --> ol.cbnr1.c.res.x = Plus (ol.cbnr1.c.c, ol.cbnr1.c.b) : [28 x 28 x 16 x *], [1 x 1 x 16] -> [28 x 28 x 16 x *]
+Validating --> ol.cbnr1.b.scale = LearnableParameter() :  -> [0 x 1]
+Validating --> ol.cbnr1.b.bias = LearnableParameter() :  -> [0 x 1]
+Validating --> ol.cbnr1.b.runMean = LearnableParameter() :  -> [0 x 1]
+Validating --> ol.cbnr1.b.runVariance = LearnableParameter() :  -> [0 x 1]
+Node 'ol.cbnr1.b.scale' (LearnableParameter operation) operation: Tensor shape was inferred as [16 x 1].
+Node 'ol.cbnr1.b.scale' (LearnableParameter operation): Initializing Parameter[16 x 1] <- 1.000000.
+Node 'ol.cbnr1.b.bias' (LearnableParameter operation) operation: Tensor shape was inferred as [16 x 1].
+Node 'ol.cbnr1.b.bias' (LearnableParameter operation): Initializing Parameter[16 x 1] <- 0.000000.
+Node 'ol.cbnr1.b.runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [16 x 1].
+Node 'ol.cbnr1.b.runMean' (LearnableParameter operation): Initializing Parameter[16 x 1] <- 0.000000.
+Node 'ol.cbnr1.b.runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [16 x 1].
+Node 'ol.cbnr1.b.runVariance' (LearnableParameter operation): Initializing Parameter[16 x 1] <- 0.000000.
+Validating --> ol.cbnr1.b = BatchNormalization (ol.cbnr1.c.res.x, ol.cbnr1.b.scale, ol.cbnr1.b.bias, ol.cbnr1.b.runMean, ol.cbnr1.b.runVariance) : [28 x 28 x 16 x *], [16 x 1], [16 x 1], [16 x 1], [16 x 1] -> [28 x 28 x 16 x *]
+Validating --> ol.cbnr1.r = RectifiedLinear (ol.cbnr1.b) : [28 x 28 x 16 x *] -> [28 x 28 x 16 x *]
+Validating --> ol.cbnr1.p = Pooling (ol.cbnr1.r) : [28 x 28 x 16 x *] -> [14 x 14 x 16 x *]
+Node 'ol.cbnr2.c.W' (LearnableParameter operation) operation: Tensor shape was inferred as [32 x 400].
+Node 'ol.cbnr2.c.W' (LearnableParameter operation): Initializing Parameter[32 x 400] <- heNormal(seed=3, init dims=[32 x 400], range=0.070711*10.000000, onCPU=true).
+Validating --> ol.cbnr2.c.c = Convolution (ol.cbnr2.c.W, ol.cbnr1.p) : [32 x 400], [14 x 14 x 16 x *] -> [14 x 14 x 32 x *]
+Validating --> ol.cbnr2.c.b = LearnableParameter() :  -> [1 x 1 x 32]
+Validating --> ol.cbnr2.c.res.x = Plus (ol.cbnr2.c.c, ol.cbnr2.c.b) : [14 x 14 x 32 x *], [1 x 1 x 32] -> [14 x 14 x 32 x *]
+Validating --> ol.cbnr2.b.scale = LearnableParameter() :  -> [0 x 1]
+Validating --> ol.cbnr2.b.bias = LearnableParameter() :  -> [0 x 1]
+Validating --> ol.cbnr2.b.runMean = LearnableParameter() :  -> [0 x 1]
+Validating --> ol.cbnr2.b.runVariance = LearnableParameter() :  -> [0 x 1]
+Node 'ol.cbnr2.b.scale' (LearnableParameter operation) operation: Tensor shape was inferred as [32 x 1].
+Node 'ol.cbnr2.b.scale' (LearnableParameter operation): Initializing Parameter[32 x 1] <- 1.000000.
+Node 'ol.cbnr2.b.bias' (LearnableParameter operation) operation: Tensor shape was inferred as [32 x 1].
+Node 'ol.cbnr2.b.bias' (LearnableParameter operation): Initializing Parameter[32 x 1] <- 0.000000.
+Node 'ol.cbnr2.b.runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [32 x 1].
+Node 'ol.cbnr2.b.runMean' (LearnableParameter operation): Initializing Parameter[32 x 1] <- 0.000000.
+Node 'ol.cbnr2.b.runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [32 x 1].
+Node 'ol.cbnr2.b.runVariance' (LearnableParameter operation): Initializing Parameter[32 x 1] <- 0.000000.
+Validating --> ol.cbnr2.b = BatchNormalization (ol.cbnr2.c.res.x, ol.cbnr2.b.scale, ol.cbnr2.b.bias, ol.cbnr2.b.runMean, ol.cbnr2.b.runVariance) : [14 x 14 x 32 x *], [32 x 1], [32 x 1], [32 x 1], [32 x 1] -> [14 x 14 x 32 x *]
+Validating --> ol.cbnr2.r = RectifiedLinear (ol.cbnr2.b) : [14 x 14 x 32 x *] -> [14 x 14 x 32 x *]
+Validating --> ol.cbnr2.p = Pooling (ol.cbnr2.r) : [14 x 14 x 32 x *] -> [7 x 7 x 32 x *]
+Node 'ol.h1.W' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 7 x 7 x 32].
+Node 'ol.h1.W' (LearnableParameter operation): Initializing Parameter[128 x 7 x 7 x 32] <- heNormal(seed=2, init dims=[128 x 1568], range=0.035714*1.000000, onCPU=true).
+Validating --> ol.h1.PlusArgs[0] = Times (ol.h1.W, ol.cbnr2.p) : [128 x 7 x 7 x 32], [7 x 7 x 32 x *] -> [128 x *]
+Validating --> ol.h1.b = LearnableParameter() :  -> [128]
+Validating --> ol.h1 = Plus (ol.h1.PlusArgs[0], ol.h1.b) : [128 x *], [128] -> [128 x *]
+Validating --> ol.h1bn.scale = LearnableParameter() :  -> [0 x 1]
+Validating --> ol.h1bn.bias = LearnableParameter() :  -> [0 x 1]
+Validating --> ol.h1bn.runMean = LearnableParameter() :  -> [0 x 1]
+Validating --> ol.h1bn.runVariance = LearnableParameter() :  -> [0 x 1]
+Node 'ol.h1bn.scale' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node 'ol.h1bn.scale' (LearnableParameter operation): Initializing Parameter[128 x 1] <- 1.000000.
+Node 'ol.h1bn.bias' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node 'ol.h1bn.bias' (LearnableParameter operation): Initializing Parameter[128 x 1] <- 0.000000.
+Node 'ol.h1bn.runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node 'ol.h1bn.runMean' (LearnableParameter operation): Initializing Parameter[128 x 1] <- 0.000000.
+Node 'ol.h1bn.runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node 'ol.h1bn.runVariance' (LearnableParameter operation): Initializing Parameter[128 x 1] <- 0.000000.
+Validating --> ol.h1bn = BatchNormalization (ol.h1, ol.h1bn.scale, ol.h1bn.bias, ol.h1bn.runMean, ol.h1bn.runVariance) : [128 x *], [128 x 1], [128 x 1], [128 x 1], [128 x 1] -> [128 x *]
+Validating --> ol.h1bnr = RectifiedLinear (ol.h1bn) : [128 x *] -> [128 x *]
+Node 'ol.ol.W' (LearnableParameter operation) operation: Tensor shape was inferred as [10 x 128].
+Node 'ol.ol.W' (LearnableParameter operation): Initializing Parameter[10 x 128] <- heNormal(seed=1, init dims=[10 x 128], range=0.125000*1.000000, onCPU=true).
+Validating --> ol.ol.PlusArgs[0] = Times (ol.ol.W, ol.h1bnr) : [10 x 128], [128 x *] -> [10 x *]
+Validating --> ol.ol.b = LearnableParameter() :  -> [10]
+Validating --> ol = Plus (ol.ol.PlusArgs[0], ol.ol.b) : [10 x *], [10] -> [10 x *]
+Validating --> ce = CrossEntropyWithSoftmax (labels, ol) : [10 x *], [10 x *] -> [1]
+Validating --> errs = ClassificationError (labels, ol) : [10 x *], [10 x *] -> [1]
+
+Validating network. 19 nodes to process in pass 2.
+
+
+Validating network, final pass.
+
+ol.cbnr1.c.c: using cuDNN convolution engine for geometry: Input: 28 x 28 x 1, Output: 28 x 28 x 16, Kernel: 5 x 5 x 1, Map: 16, Stride: 1 x 1 x 1, Sharing: (1, 1, 1), AutoPad: (1, 1, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+Using CNTK batch normalization engine.
+ol.cbnr1.p: using cuDNN convolution engine for geometry: Input: 28 x 28 x 16, Output: 14 x 14 x 16, Kernel: 2 x 2 x 1, Map: 1, Stride: 2 x 2 x 1, Sharing: (1, 1, 1), AutoPad: (0, 0, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+ol.cbnr2.c.c: using cuDNN convolution engine for geometry: Input: 14 x 14 x 16, Output: 14 x 14 x 32, Kernel: 5 x 5 x 16, Map: 32, Stride: 1 x 1 x 16, Sharing: (1, 1, 1), AutoPad: (1, 1, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+Using CNTK batch normalization engine.
+ol.cbnr2.p: using cuDNN convolution engine for geometry: Input: 14 x 14 x 32, Output: 7 x 7 x 32, Kernel: 2 x 2 x 1, Map: 1, Stride: 2 x 2 x 1, Sharing: (1, 1, 1), AutoPad: (0, 0, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+Using CNTK batch normalization engine.
+
+
+23 out of 42 nodes do not share the minibatch layout with the input data.
+
+Post-processing network complete.
+
+09/06/2016 08:19:04: Created model with 42 nodes on GPU 0.
+
+09/06/2016 08:19:04: Training criterion node(s):
+09/06/2016 08:19:04: 	ce = CrossEntropyWithSoftmax
+
+09/06/2016 08:19:04: Evaluation criterion node(s):
+09/06/2016 08:19:04: 	errs = ClassificationError
+
+
+Allocating matrices for forward and/or backward propagation.
+
+Memory Sharing: Out of 73 matrices, 38 are shared as 16, and 35 are not shared.
+
+	{ ol.cbnr2.b.scale : [32 x 1] (gradient)
+	  ol.cbnr2.r : [14 x 14 x 32 x *] (gradient)
+	  ol.h1.PlusArgs[0] : [128 x *] }
+	{ ol.cbnr1.b.scale : [16 x 1] (gradient)
+	  ol.cbnr1.r : [28 x 28 x 16 x *] (gradient) }
+	{ ol.h1bn : [128 x *] (gradient)
+	  ol.ol.PlusArgs[0] : [10 x *] }
+	{ ol.cbnr2.c.W : [32 x 400] (gradient)
+	  ol.cbnr2.c.res.x : [14 x 14 x 32 x *] }
+	{ ol.cbnr1.c.b : [1 x 1 x 16] (gradient)
+	  ol.cbnr1.p : [14 x 14 x 16 x *] (gradient)
+	  ol.cbnr2.c.res.x : [14 x 14 x 32 x *] (gradient)
+	  ol.cbnr2.r : [14 x 14 x 32 x *] }
+	{ ol.cbnr1.c.res.x : [28 x 28 x 16 x *] (gradient)
+	  ol.cbnr1.r : [28 x 28 x 16 x *] }
+	{ ol.cbnr1.c.c : [28 x 28 x 16 x *] (gradient)
+	  ol.cbnr2.c.c : [14 x 14 x 32 x *] }
+	{ ol.h1 : [128 x *]
+	  ol.h1.W : [128 x 7 x 7 x 32] (gradient) }
+	{ ol.cbnr2.c.b : [1 x 1 x 32] (gradient)
+	  ol.cbnr2.p : [7 x 7 x 32 x *] (gradient)
+	  ol.h1 : [128 x *] (gradient)
+	  ol.h1bnr : [128 x *] }
+	{ ol.cbnr2.b : [14 x 14 x 32 x *] (gradient)
+	  ol.cbnr2.p : [7 x 7 x 32 x *] }
+	{ ol : [10 x *] (gradient)
+	  ol.ol.W : [10 x 128] (gradient) }
+	{ ol.cbnr1.b : [28 x 28 x 16 x *] (gradient)
+	  ol.cbnr1.p : [14 x 14 x 16 x *] }
+	{ ol.cbnr1.c.W : [16 x 25] (gradient)
+	  ol.cbnr1.c.res.x : [28 x 28 x 16 x *] }
+	{ ol.h1.b : [128] (gradient)
+	  ol.ol.PlusArgs[0] : [10 x *] (gradient) }
+	{ ol.cbnr1.b.bias : [16 x 1] (gradient)
+	  ol.cbnr2.c.c : [14 x 14 x 32 x *] (gradient)
+	  ol.h1.PlusArgs[0] : [128 x *] (gradient) }
+	{ ol.h1bn.scale : [128 x 1] (gradient)
+	  ol.h1bnr : [128 x *] (gradient) }
+
+
+09/06/2016 08:19:04: Training 215722 parameters in 14 out of 14 parameter tensors and 31 nodes with gradient:
+
+09/06/2016 08:19:04: 	Node 'ol.cbnr1.b.bias' (LearnableParameter operation) : [16 x 1]
+09/06/2016 08:19:04: 	Node 'ol.cbnr1.b.scale' (LearnableParameter operation) : [16 x 1]
+09/06/2016 08:19:04: 	Node 'ol.cbnr1.c.W' (LearnableParameter operation) : [16 x 25]
+09/06/2016 08:19:04: 	Node 'ol.cbnr1.c.b' (LearnableParameter operation) : [1 x 1 x 16]
+09/06/2016 08:19:04: 	Node 'ol.cbnr2.b.bias' (LearnableParameter operation) : [32 x 1]
+09/06/2016 08:19:04: 	Node 'ol.cbnr2.b.scale' (LearnableParameter operation) : [32 x 1]
+09/06/2016 08:19:04: 	Node 'ol.cbnr2.c.W' (LearnableParameter operation) : [32 x 400]
+09/06/2016 08:19:04: 	Node 'ol.cbnr2.c.b' (LearnableParameter operation) : [1 x 1 x 32]
+09/06/2016 08:19:04: 	Node 'ol.h1.W' (LearnableParameter operation) : [128 x 7 x 7 x 32]
+09/06/2016 08:19:04: 	Node 'ol.h1.b' (LearnableParameter operation) : [128]
+09/06/2016 08:19:04: 	Node 'ol.h1bn.bias' (LearnableParameter operation) : [128 x 1]
+09/06/2016 08:19:04: 	Node 'ol.h1bn.scale' (LearnableParameter operation) : [128 x 1]
+09/06/2016 08:19:04: 	Node 'ol.ol.W' (LearnableParameter operation) : [10 x 128]
+09/06/2016 08:19:04: 	Node 'ol.ol.b' (LearnableParameter operation) : [10]
+
+09/06/2016 08:19:04: No PreCompute nodes found, or all already computed. Skipping pre-computation step.
+
+09/06/2016 08:19:04: Starting Epoch 1: learning rate per sample = 0.020000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+
+09/06/2016 08:19:04: Starting minibatch loop.
+09/06/2016 08:19:10:  Epoch[ 1 of 3]-Minibatch[   1- 500, 53.33%]: ce = 0.15085176 * 32000; errs = 4.684% * 32000; time = 5.3912s; samplesPerSecond = 5935.5
+09/06/2016 08:19:13: Finished Epoch[ 1 of 3]: [Training] ce = 0.11202547 * 60000; errs = 3.475% * 60000; totalSamplesSeen = 60000; learningRatePerSample = 0.02; epochTime=8.55155s
+09/06/2016 08:19:13: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160906081649.154800\Examples\Image\MNIST_03_ConvBatchNorm@release_gpu/Models/03_ConvBatchNorm.1'
+
+09/06/2016 08:19:13: Starting Epoch 2: learning rate per sample = 0.005000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+
+09/06/2016 08:19:13: Starting minibatch loop.
+09/06/2016 08:19:16:  Epoch[ 2 of 3]-Minibatch[   1- 500, 53.33%]: ce = 0.02835182 * 32000; errs = 0.866% * 32000; time = 3.5804s; samplesPerSecond = 8937.5
+09/06/2016 08:19:19: Finished Epoch[ 2 of 3]: [Training] ce = 0.02882729 * 60000; errs = 0.897% * 60000; totalSamplesSeen = 120000; learningRatePerSample = 0.0049999999; epochTime=6.73011s
+09/06/2016 08:19:20: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160906081649.154800\Examples\Image\MNIST_03_ConvBatchNorm@release_gpu/Models/03_ConvBatchNorm.2'
+
+09/06/2016 08:19:20: Starting Epoch 3: learning rate per sample = 0.005000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+
+09/06/2016 08:19:20: Starting minibatch loop.
+09/06/2016 08:19:23:  Epoch[ 3 of 3]-Minibatch[   1- 500, 53.33%]: ce = 0.01901947 * 32000; errs = 0.569% * 32000; time = 3.5412s; samplesPerSecond = 9036.4
+09/06/2016 08:19:26: Finished Epoch[ 3 of 3]: [Training] ce = 0.02068776 * 60000; errs = 0.627% * 60000; totalSamplesSeen = 180000; learningRatePerSample = 0.0049999999; epochTime=6.67133s
+09/06/2016 08:19:26: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160906081649.154800\Examples\Image\MNIST_03_ConvBatchNorm@release_gpu/Models/03_ConvBatchNorm'
+09/06/2016 08:19:26: CNTKCommandTrainEnd: trainNetwork
+
+09/06/2016 08:19:26: Action "train" complete.
+
+
+09/06/2016 08:19:26: ##############################################################################
+09/06/2016 08:19:26: #                                                                            #
+09/06/2016 08:19:26: # Action "test"                                                              #
+09/06/2016 08:19:26: #                                                                            #
+09/06/2016 08:19:26: ##############################################################################
+
+
+Post-processing network...
+
+3 roots:
+	ce = CrossEntropyWithSoftmax()
+	errs = ClassificationError()
+	ol = Plus()
+
+Validating network. 42 nodes to process in pass 1.
+
+Validating --> labels = InputValue() :  -> [10 x *1]
+Validating --> ol.ol.W = LearnableParameter() :  -> [10 x 128]
+Validating --> ol.h1.W = LearnableParameter() :  -> [128 x 7 x 7 x 32]
+Validating --> ol.cbnr2.c.W = LearnableParameter() :  -> [32 x 400]
+Validating --> ol.cbnr1.c.W = LearnableParameter() :  -> [16 x 25]
+Validating --> features = InputValue() :  -> [28 x 28 x 1 x *1]
+Validating --> featScale = LearnableParameter() :  -> [1 x 1]
+Validating --> ol.featNorm = ElementTimes (features, featScale) : [28 x 28 x 1 x *1], [1 x 1] -> [28 x 28 x 1 x *1]
+Validating --> ol.cbnr1.c.c = Convolution (ol.cbnr1.c.W, ol.featNorm) : [16 x 25], [28 x 28 x 1 x *1] -> [28 x 28 x 16 x *1]
+Validating --> ol.cbnr1.c.b = LearnableParameter() :  -> [1 x 1 x 16]
+Validating --> ol.cbnr1.c.res.x = Plus (ol.cbnr1.c.c, ol.cbnr1.c.b) : [28 x 28 x 16 x *1], [1 x 1 x 16] -> [28 x 28 x 16 x *1]
+Validating --> ol.cbnr1.b.scale = LearnableParameter() :  -> [16 x 1]
+Validating --> ol.cbnr1.b.bias = LearnableParameter() :  -> [16 x 1]
+Validating --> ol.cbnr1.b.runMean = LearnableParameter() :  -> [16 x 1]
+Validating --> ol.cbnr1.b.runVariance = LearnableParameter() :  -> [16 x 1]
+Validating --> ol.cbnr1.b = BatchNormalization (ol.cbnr1.c.res.x, ol.cbnr1.b.scale, ol.cbnr1.b.bias, ol.cbnr1.b.runMean, ol.cbnr1.b.runVariance) : [28 x 28 x 16 x *1], [16 x 1], [16 x 1], [16 x 1], [16 x 1] -> [28 x 28 x 16 x *1]
+Validating --> ol.cbnr1.r = RectifiedLinear (ol.cbnr1.b) : [28 x 28 x 16 x *1] -> [28 x 28 x 16 x *1]
+Validating --> ol.cbnr1.p = Pooling (ol.cbnr1.r) : [28 x 28 x 16 x *1] -> [14 x 14 x 16 x *1]
+Validating --> ol.cbnr2.c.c = Convolution (ol.cbnr2.c.W, ol.cbnr1.p) : [32 x 400], [14 x 14 x 16 x *1] -> [14 x 14 x 32 x *1]
+Validating --> ol.cbnr2.c.b = LearnableParameter() :  -> [1 x 1 x 32]
+Validating --> ol.cbnr2.c.res.x = Plus (ol.cbnr2.c.c, ol.cbnr2.c.b) : [14 x 14 x 32 x *1], [1 x 1 x 32] -> [14 x 14 x 32 x *1]
+Validating --> ol.cbnr2.b.scale = LearnableParameter() :  -> [32 x 1]
+Validating --> ol.cbnr2.b.bias = LearnableParameter() :  -> [32 x 1]
+Validating --> ol.cbnr2.b.runMean = LearnableParameter() :  -> [32 x 1]
+Validating --> ol.cbnr2.b.runVariance = LearnableParameter() :  -> [32 x 1]
+Validating --> ol.cbnr2.b = BatchNormalization (ol.cbnr2.c.res.x, ol.cbnr2.b.scale, ol.cbnr2.b.bias, ol.cbnr2.b.runMean, ol.cbnr2.b.runVariance) : [14 x 14 x 32 x *1], [32 x 1], [32 x 1], [32 x 1], [32 x 1] -> [14 x 14 x 32 x *1]
+Validating --> ol.cbnr2.r = RectifiedLinear (ol.cbnr2.b) : [14 x 14 x 32 x *1] -> [14 x 14 x 32 x *1]
+Validating --> ol.cbnr2.p = Pooling (ol.cbnr2.r) : [14 x 14 x 32 x *1] -> [7 x 7 x 32 x *1]
+Validating --> ol.h1.PlusArgs[0] = Times (ol.h1.W, ol.cbnr2.p) : [128 x 7 x 7 x 32], [7 x 7 x 32 x *1] -> [128 x *1]
+Validating --> ol.h1.b = LearnableParameter() :  -> [128]
+Validating --> ol.h1 = Plus (ol.h1.PlusArgs[0], ol.h1.b) : [128 x *1], [128] -> [128 x *1]
+Validating --> ol.h1bn.scale = LearnableParameter() :  -> [128 x 1]
+Validating --> ol.h1bn.bias = LearnableParameter() :  -> [128 x 1]
+Validating --> ol.h1bn.runMean = LearnableParameter() :  -> [128 x 1]
+Validating --> ol.h1bn.runVariance = LearnableParameter() :  -> [128 x 1]
+Validating --> ol.h1bn = BatchNormalization (ol.h1, ol.h1bn.scale, ol.h1bn.bias, ol.h1bn.runMean, ol.h1bn.runVariance) : [128 x *1], [128 x 1], [128 x 1], [128 x 1], [128 x 1] -> [128 x *1]
+Validating --> ol.h1bnr = RectifiedLinear (ol.h1bn) : [128 x *1] -> [128 x *1]
+Validating --> ol.ol.PlusArgs[0] = Times (ol.ol.W, ol.h1bnr) : [10 x 128], [128 x *1] -> [10 x *1]
+Validating --> ol.ol.b = LearnableParameter() :  -> [10]
+Validating --> ol = Plus (ol.ol.PlusArgs[0], ol.ol.b) : [10 x *1], [10] -> [10 x *1]
+Validating --> ce = CrossEntropyWithSoftmax (labels, ol) : [10 x *1], [10 x *1] -> [1]
+Validating --> errs = ClassificationError (labels, ol) : [10 x *1], [10 x *1] -> [1]
+
+Validating network. 19 nodes to process in pass 2.
+
+
+Validating network, final pass.
+
+ol.cbnr1.c.c: using cuDNN convolution engine for geometry: Input: 28 x 28 x 1, Output: 28 x 28 x 16, Kernel: 5 x 5 x 1, Map: 16, Stride: 1 x 1 x 1, Sharing: (1, 1, 1), AutoPad: (1, 1, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+Using CNTK batch normalization engine.
+ol.cbnr1.p: using cuDNN convolution engine for geometry: Input: 28 x 28 x 16, Output: 14 x 14 x 16, Kernel: 2 x 2 x 1, Map: 1, Stride: 2 x 2 x 1, Sharing: (1, 1, 1), AutoPad: (0, 0, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+ol.cbnr2.c.c: using cuDNN convolution engine for geometry: Input: 14 x 14 x 16, Output: 14 x 14 x 32, Kernel: 5 x 5 x 16, Map: 32, Stride: 1 x 1 x 16, Sharing: (1, 1, 1), AutoPad: (1, 1, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+Using CNTK batch normalization engine.
+ol.cbnr2.p: using cuDNN convolution engine for geometry: Input: 14 x 14 x 32, Output: 7 x 7 x 32, Kernel: 2 x 2 x 1, Map: 1, Stride: 2 x 2 x 1, Sharing: (1, 1, 1), AutoPad: (0, 0, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+Using CNTK batch normalization engine.
+
+
+23 out of 42 nodes do not share the minibatch layout with the input data.
+
+Post-processing network complete.
+
+evalNodeNames are not specified, using all the default evalnodes and training criterion nodes.
+
+
+Allocating matrices for forward and/or backward propagation.
+
+Memory Sharing: Out of 42 matrices, 0 are shared as 0, and 42 are not shared.
+
+
+09/06/2016 08:19:27: Minibatch[1-10]: errs = 1.050% * 10000; ce = 0.03189874 * 10000
+09/06/2016 08:19:27: Final Results: Minibatch[1-10]: errs = 1.050% * 10000; ce = 0.03189874 * 10000; perplexity = 1.03241296
+
+09/06/2016 08:19:27: Action "test" complete.
+
+09/06/2016 08:19:27: __COMPLETED__

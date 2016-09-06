@@ -7,27 +7,28 @@ command = trainNetwork:testNetwork
 
 precision = "float"; traceLevel = 1 ; deviceId = "auto"
 
-rootDir = ".." ; configDir = "$rootDir$/Config" ; dataDir   = "$rootDir$/Data" ;
-outputDir = "$rootDir$/Output" ; modelDir  = "$outputDir$/Models"
+rootDir = ".." ; configDir = "$rootDir$/Config" ; dataDir = "$rootDir$/Data" ;
+outputDir = "$rootDir$/Output" ;
 
-modelPath = "$modelDir$/01_OneHidden"
+modelPath = "$outputDir$/Models/01_OneHidden"
 stderr = "$outputDir$/01_OneHidden_bs_out"
 
 # TRAINING CONFIG
-trainNetwork = [
+trainNetwork = {
     action = "train"
     
-    BrainScriptNetworkBuilder = [
+    BrainScriptNetworkBuilder = {
         imageShape = 28:28:1                        # image dimensions, 1 channel only
-        featScale = Constant(1/256)
         labelDim = 10                               # number of distinct labels
-
-        model (features) = {
-            featNorm = Scale(features, featScale)
-            h1 = DenseLayer {200, activation=Sigmoid} (featNorm)
-            ol = LinearLayer {labelDim} (h1)
-        }.ol
-
+        featScale = 1/256
+        Scale{f} = x => Constant(f) .* x
+        
+        model = Sequential (
+            Scale {featScale} :
+            DenseLayer {200, activation=Sigmoid} :
+            LinearLayer {labelDim}
+        )
+        
         # inputs
         features = Input {imageShape}
         labels = Input (labelDim)
@@ -45,9 +46,9 @@ trainNetwork = [
         criterionNodes  = (ce)
         evaluationNodes = (errs)
         outputNodes     = (ol)
-    ]
+    }
 
-    SGD = [
+    SGD = {
         epochSize = 60000
         minibatchSize = 64
         maxEpochs = 30
@@ -55,42 +56,30 @@ trainNetwork = [
         momentumAsTimeConstant = 0
         
         numMBsToShowResult = 500
-    ]
+    }
 
-    reader = [
+    reader = {
         readerType = "CNTKTextFormatReader"
         # See ../REAMDE.md for details on getting the data (Train-28x28_cntk_text.txt).
         file = "$DataDir$/Train-28x28_cntk_text.txt"
-        input = [
-            features = [
-                dim = 784
-                format = "dense"
-            ]
-            labels = [
-                dim = 10
-                format = "dense"
-            ]
-        ]
-    ]   
-]
+        input = {
+            features = { dim = 784 ; format = "dense" }
+            labels =   { dim = 10  ; format = "dense" }
+        }
+    }   
+}
 
 # TEST CONFIG
-testNetwork = [
+testNetwork = {
     action = "test"
     minibatchSize = 1024    # reduce this if you run out of memory
 
-    reader = [
+    reader = {
         readerType = "CNTKTextFormatReader"
         file = "$DataDir$/Test-28x28_cntk_text.txt"
-        input = [
-            features = [
-                dim = 784
-                format = "dense"
-            ]
-            labels = [
-                dim = 10
-                format = "dense"
-            ]
-        ]
-    ]
-]
+        input = {
+            features = { dim = 784 ; format = "dense" }
+            labels =   { dim = 10  ; format = "dense" }
+        }
+    }
+}

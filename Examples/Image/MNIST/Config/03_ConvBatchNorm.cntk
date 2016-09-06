@@ -7,14 +7,14 @@ command = trainNetwork:testNetwork
 
 precision = "float"; traceLevel = 1 ; deviceId = "auto"
 
-rootDir = ".." ; configDir = "$rootDir$/Config" ; dataDir   = "$rootDir$/Data" ;
-outputDir = "$rootDir$/Output" ; modelDir  = "$outputDir$/Models"
+rootDir = ".." ; configDir = "$rootDir$/Config" ; dataDir = "$rootDir$/Data" ;
+outputDir = "$rootDir$/Output" ;
 
-modelPath = "$modelDir$/03_ConvBatchNorm"
+modelPath = "$outputDir$/Models/03_ConvBatchNorm"
 stderr = "$outputDir$/03_ConvBatchNorm_bs_out"
 
 # TRAINING CONFIG
-trainNetwork = [
+trainNetwork = {
     action = "train"
 
     BrainScriptNetworkBuilder = {
@@ -64,7 +64,7 @@ trainNetwork = [
         outputNodes     = (ol)
     }
 
-    SGD = [
+    SGD = {
         epochSize = 60000
         minibatchSize = 64
         maxEpochs = 3
@@ -72,42 +72,30 @@ trainNetwork = [
         momentumAsTimeConstant = 0
         
         numMBsToShowResult = 500
-    ]
+    }
 
-    reader = [
+    reader = {
         readerType = "CNTKTextFormatReader"
         # See ../REAMDE.md for details on getting the data (Train-28x28_cntk_text.txt).
         file = "$DataDir$/Train-28x28_cntk_text.txt"
-        input = [
-            features = [
-                dim = 784
-                format = "dense"
-            ]
-            labels = [
-                dim = 10
-                format = "dense"
-            ]
-        ]
-    ]    
-]
+        input = {
+            features = { dim = 784 ; format = "dense" }
+            labels =   { dim = 10  ; format = "dense" }
+        }
+    }    
+}
 
 # TEST CONFIG
-testNetwork = [
+testNetwork = {
     action = test
     minibatchSize = 1024    # reduce this if you run out of memory
 
-    reader = [
+    reader = {
         readerType = "CNTKTextFormatReader"
         file = "$DataDir$/Test-28x28_cntk_text.txt"
-        input = [
-            features = [
-                dim = 784
-                format = "dense"
-            ]
-            labels = [
-                dim = 10
-                format = "dense"
-            ]
-        ]
-    ]
-]
+        input = {
+            features = { dim = 784 ; format = "dense" }
+            labels =   { dim = 10  ; format = "dense" }
+        }
+    }
+}
