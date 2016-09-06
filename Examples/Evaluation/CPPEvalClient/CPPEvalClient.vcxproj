@@ -51,22 +51,22 @@
     <TargetName>CPPEvalClient</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <LibraryPath>$(OpenCvLibPath);$(LibraryPath)</LibraryPath>
+    <LibraryPath>$(BOOST_LIB_PATH);$(OpenCvLibPath);$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <LibraryPath>$(OpenCvLibPath);$(LibraryPath)</LibraryPath>
+    <LibraryPath>$(BOOST_LIB_PATH);$(OpenCvLibPath);$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_CpuOnly|x64'">
-    <LibraryPath>$(OpenCvLibPath);$(LibraryPath)</LibraryPath>
+    <LibraryPath>$(BOOST_LIB_PATH);$(OpenCvLibPath);$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug_CpuOnly|x64'">
-    <LibraryPath>$(OpenCvLibPath);$(LibraryPath)</LibraryPath>
+    <LibraryPath>$(BOOST_LIB_PATH);$(OpenCvLibPath);$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level4</WarningLevel>
-      <AdditionalIncludeDirectories>$(SolutionDir)Source\Common\include;$(OpenCvInclude);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(BOOST_INCLUDE_PATH);$(SolutionDir)Source\Common\include;$(OpenCvInclude);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;UNICODE;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
