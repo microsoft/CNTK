@@ -16,7 +16,7 @@ cuda_check=include/cuda.h
 enable_cuda=
 
 # CNTK Custom MKL Version
-cntk_custom_mkl_version=1
+cntk_custom_mkl_version=2
 
 have_mkl=no
 mkl_path=
