@@ -663,7 +663,7 @@ private:
             auto record = make_shared<ConfigRecord>(nullptr, [](const std::wstring & msg){ RuntimeError("CloneFunction: %ls", msg.c_str()); });
             for (let& outputNodesKV : outputNodes)
                 record->Add(outputNodesKV.first, [](const wstring&){}, move(NodeToConfigValuePtr(clonedNodes.find(outputNodesKV.second)->second)));
-            auto valuep = ConfigValuePtr(record, [](const std::wstring &) { LogicError("CloneFunction: Unexpected failure."); }, exprName);
+            auto valuep = ConfigValuePtr(record, [](const std::wstring& msg) { LogicError("CloneFunction: Unexpected failure: %ls", msg.c_str()); }, exprName);
             return valuep;
         }
     }
@@ -671,7 +671,7 @@ private:
     ConfigValuePtr NodeToConfigValuePtr(ComputationNodeBasePtr node)
     {
         assert(node);
-        auto valuep = ConfigValuePtr(node, [](const std::wstring &) { LogicError("CloneFunction: Unexpected failure."); }, node->NodeName());
+        auto valuep = ConfigValuePtr(node, [](const std::wstring& msg) { LogicError("CloneFunction (NodeToConfigValuePtr): Unexpected failure: %ls", msg.c_str()); }, node->NodeName());
         return valuep;
     }
 
