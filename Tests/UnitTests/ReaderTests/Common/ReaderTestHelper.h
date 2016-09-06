@@ -225,11 +225,11 @@ struct ReaderFixture
         {
             if (numSubsets == 1)
             {
-                dataReader.StartMinibatchLoop(mbSize, epoch, epochSize);
+                dataReader.StartMinibatchLoop(mbSize, epoch, map.GetStreamDescriptions(), epochSize);
             }
             else
             {
-                dataReader.StartDistributedMinibatchLoop(mbSize, epoch, subsetNum, numSubsets, epochSize);
+                dataReader.StartDistributedMinibatchLoop(mbSize, epoch, subsetNum, numSubsets, map.GetStreamDescriptions(), epochSize);
             }
 
             for (auto cnt = 0; dataReader.GetMinibatch(map) && cnt < m_maxMiniBatchCount; cnt++)

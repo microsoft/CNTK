@@ -21,6 +21,8 @@
 #include "CorpusDescriptor.h"
 #include "ConfigUtil.h"
 #include "StringUtil.h"
+#include "CudaMemoryProvider.h"
+#include "HeapMemoryProvider.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -28,9 +30,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 // directly to the new Reader API. 
 // For more information please see its header file.
 // This method composes together packers + randomizer + a set of transformers and deserializers.
-CompositeDataReader::CompositeDataReader(const ConfigParameters& config, MemoryProviderPtr provider) : m_layout(make_shared<MBLayout>()),
-    m_corpus(std::make_shared<CorpusDescriptor>()),
-    m_provider(provider)
+CompositeDataReader::CompositeDataReader(const ConfigParameters& config) :
+    m_corpus(std::make_shared<CorpusDescriptor>())
 {
     wstring action = config(L"action", L"");
     bool isActionWrite = AreEqualIgnoreCase(action, L"write");
@@ -109,7 +110,7 @@ CompositeDataReader::CompositeDataReader(const ConfigParameters& config, MemoryP
 
     // In case when there are transforms, applying them to the data.
     m_sequenceEnumerator = m_transforms.empty()
-        ? m_sequenceEnumerator 
+        ? m_sequenceEnumerator
         : std::make_shared<TransformController>(m_transforms, m_sequenceEnumerator);
 
     // TODO: Creating output stream descriptions - this should come from the network so that we can check 
@@ -124,18 +125,35 @@ CompositeDataReader::CompositeDataReader(const ConfigParameters& config, MemoryP
             stream->m_storageType = StorageType::dense;
         }
         m_streams.push_back(stream);
-        m_nameToStreamId.insert(std::make_pair(streamDescription->m_name, streamDescription->m_id));
+    }
+
+    switch (m_packingMode)
+    {
+    case PackingMode::sample:
+        m_packer = std::make_shared<FramePacker>(
+            m_sequenceEnumerator,
+            m_streams);
+        break;
+    case PackingMode::sequence:
+        m_packer = std::make_shared<SequencePacker>(
+            m_sequenceEnumerator,
+            m_streams);
+        break;
+    case PackingMode::truncated:
+    {
+        m_packer = std::make_shared<TruncatedBPTTPacker>(
+            m_sequenceEnumerator,
+            m_streams);
+        break;
+    }
+    default:
+        LogicError("Unsupported type of packer '%d'.", (int)m_packingMode);
     }
 }
 
 std::vector<StreamDescriptionPtr> CompositeDataReader::GetStreamDescriptions()
 {
     return m_streams;
-}
-
-Minibatch CompositeDataReader::ReadMinibatch()
-{
-    return m_packer->ReadMinibatch();
 }
 
 // Create deserializers based on the specified configuration. 
@@ -249,46 +267,15 @@ TransformerPtr CompositeDataReader::CreateTransformer(const ConfigParameters& co
     return TransformerPtr(t);
 }
 
-void CompositeDataReader::StartEpoch(const EpochConfiguration& cfg)
+void CompositeDataReader::StartEpoch(const EpochConfiguration& cfg, const std::map<std::wstring, int>& inputDescriptions)
 {
     EpochConfiguration config = cfg;
-
-    if (config.m_totalEpochSizeInSamples <= 0)
-    {
-        RuntimeError("Unsupported epoch size '%d'.", (int)config.m_totalEpochSizeInSamples);
-    }
-
-    m_sequenceEnumerator->StartEpoch(config);
-
-    // TODO: As the next step the packers should be moved into the network.
-    switch (m_packingMode)
-    {
-    case PackingMode::sample:
-        m_packer = std::make_shared<FramePacker>(
-            m_provider,
-            m_sequenceEnumerator,
-            m_streams);
-        break;
-    case PackingMode::sequence:
-        m_packer = std::make_shared<SequencePacker>(
-            m_provider,
-            m_sequenceEnumerator,
-            m_streams);
-        break;
-    case PackingMode::truncated:
+    if (m_packingMode == PackingMode::truncated)
     {
         config.m_truncationSize = m_truncationLength;
-        m_packer = std::make_shared<TruncatedBPTTPacker>(
-            m_provider,
-            m_sequenceEnumerator,
-            m_streams);
-        break;
-    }
-    default:
-        LogicError("Unsupported type of packer '%d'.", (int)m_packingMode);
     }
 
-    m_packer->StartEpoch(config);
+    ReaderBase::StartEpoch(config, inputDescriptions);
 }
 
 }}}
