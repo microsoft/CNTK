@@ -11,12 +11,12 @@ from cntk import learning_rates_per_sample, DeviceDescriptor, Trainer, sgd_learn
 from cntk.ops import input_variable, cross_entropy_with_softmax, combine, classification_error, sigmoid
 from examples.common.nn import fully_connected_classifier_net, print_training_progress
 
-def generate_random_data(sample_dize, feature_dim, num_classes):
+def generate_random_data(sample_size, feature_dim, num_classes):
     # Create synthetic data using NumPy. 
-    Y = np.random.randint(size=(sample_dize, 1), low=0, high=num_classes)
+    Y = np.random.randint(size=(sample_size, 1), low=0, high=num_classes)
 
     # Make sure that the data is separable
-    X = (np.random.randn(sample_dize, feature_dim)+3) * (Y+1)
+    X = (np.random.randn(sample_size, feature_dim)+3) * (Y+1)
     X = X.astype(np.float32)    
     # converting class 0 into the vector "1 0 0", 
     # class 1 into vector "0 1 0", ...
