@@ -32,11 +32,11 @@ template <typename ElemType> SwapInAction<ElemType>::SwapInAction(SwapOutAction<
 #ifndef CPUONLY
     cudaStream_t stream;
     CUDA_CALL(cudaStreamCreate(&stream));
-    this->m_swapInStream = stream;   
+    this->m_swapInStream = stream;
 #endif
 }
 
- 
+
 template <typename ElemType> void SwapInAction<ElemType>::BeginAction()
 {
 #ifndef CPUONLY
@@ -54,7 +54,7 @@ template <typename ElemType> void SwapInAction<ElemType>::EndAction()
 {
 #ifndef CPUONLY
     CUDA_CALL(cudaStreamSynchronize(this->m_swapInStream));
-    cout << "Swapped in: " << this->m_bufferGPU << ", " << this->m_bufferGPU->BufferSize()/1024./1024./1024. << "GB" << endl;
+    //cout << "Swapped in: " << this->m_bufferGPU << ", " << this->m_bufferGPU->BufferSize()/1024./1024./1024. << "GB" << endl;
 #endif
 }
 

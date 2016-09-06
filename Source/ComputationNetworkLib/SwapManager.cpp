@@ -13,7 +13,7 @@
 #include "SwapInAction.h"
 #include "SwapOutAction.h"
 #include "ComputationNetwork.h"
-#include <cmath> 
+#include <cmath>
 
 bool g_useMemorySwapping = false;
 
@@ -32,6 +32,8 @@ template <typename ElemType> SwapManager<ElemType>::SwapManager()
 {
         m_timer = CUDATimer();
         m_useMemorySwapping = g_useMemorySwapping;
+        m_minFreeMemory = FreeGPUMemoryInGB();
+        cout << "FREE: " << m_minFreeMemory << endl;
 }
 
 template <typename ElemType> void SwapManager<ElemType>::CleanUp()
@@ -45,17 +47,23 @@ template<typename ElemType> void SwapManager<ElemType>::BeginSynchronizeState(Co
 {
 
 #ifndef CPUONLY
-	if(!m_useMemorySwapping){ return; }
+	if(!m_useMemorySwapping)
+    {
+       //cout << m_minFreeMemory << endl;
+        m_minFreeMemory = m_minFreeMemory < FreeGPUMemoryInGB() ? m_minFreeMemory : FreeGPUMemoryInGB();
+        return;
+    }
 
     std::string nodename = std::string(node->NodeName().begin(), node->NodeName().end());
     //cout << nodename << " + " << isForward << endl;
 
-    if(!isForward) 
+    if(!isForward)
         for(auto action : m_node2BackwardSwapin[node])
         {
             action->BeginAction();
             action->EndAction();
         }
+    m_minFreeMemory = m_minFreeMemory < FreeGPUMemoryInGB() ? m_minFreeMemory : FreeGPUMemoryInGB();
 #endif
 }
 
@@ -67,7 +75,7 @@ template<typename ElemType> void SwapManager<ElemType>::EndSynchronizeState(Comp
 
     std::string nodename = std::string(node->NodeName().begin(), node->NodeName().end());
     //cout << nodename << " + " << isForward << endl;
-    cout << "FORWARD: " << isForward << " " << " TRAINING: " << isTraining << endl;
+    //cout << "FORWARD: " << isForward << " " << " TRAINING: " << isTraining << endl;
 
     if(isForward && isTraining)
         for(auto action : m_node2ForwardSwapOut[node])
@@ -79,7 +87,7 @@ template<typename ElemType> void SwapManager<ElemType>::EndSynchronizeState(Comp
     else if(isTraining)
         for(auto matrix : m_node2BackwardFree[node])
         {
-            cout << "Freeing matrix during backprop: " << matrix << " " << matrix->GetNumRows() << "x" << matrix->GetNumCols() << endl;
+            //cout << "Freeing matrix during backprop: " << matrix << " " << matrix->GetNumRows() << "x" << matrix->GetNumCols() << endl;
             matrix->Resize(0,0,0,false);
         }
 #endif
@@ -134,6 +142,7 @@ template <typename ElemType> void SwapManager<ElemType>::InitializeSwapping(
 template<typename ElemType> void SwapManager<ElemType>::ClearActionsAndTheirMemory()
 {
     cout << "Cleaning up!" << endl;
+    cout << "FREE: " << m_minFreeMemory << endl;
     CleanUp();
 
     m_buffer2SwapIn.clear();
@@ -144,6 +153,12 @@ template<typename ElemType> void SwapManager<ElemType>::ClearActionsAndTheirMemo
     m_node2BackwardFree.clear();
 }
 
+template <typename ElemType> float SwapManager<ElemType>::FreeGPUMemoryInGB()
+{
+    size_t free, total;
+    CUDA_CALL(cudaMemGetInfo(&free, &total));
+    return free/1024.0f/1024.0f/1024.0f;
+}
 
 template class SwapManager<double>;
 template class SwapManager<float>;

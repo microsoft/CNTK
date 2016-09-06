@@ -237,7 +237,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
     list<Matrix<ElemType>> smoothedGradients;
     size_t numParameters = 0;
 
-    vector<wstring> nodesToUpdateDescriptions; // for logging only   
+    vector<wstring> nodesToUpdateDescriptions; // for logging only
     for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
     {
         ComputationNodePtr node = dynamic_pointer_cast<ComputationNode<ElemType>>(*nodeIter);
@@ -726,6 +726,8 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
     }
     // --- END OF MAIN EPOCH LOOP
 
+    net->NetworkInfo().GetSwapManager<ElemType>()->ClearActionsAndTheirMemory();
+
     // Synchronize all ranks before proceeding to ensure that
     // rank 0 has finished writing the model file
     if (m_mpi != nullptr)
@@ -1133,7 +1135,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             fprintf(stderr, "Perf trace: Worker MB size = %d, Read = %.5gs; Compute = %.5gs; Parameter update = %.5gs, Aggregate MB size = %d\n", (int)actualMBSize, readTime, computeTime, parameterUpdateTime, (int)aggregateNumSamples);
         }
 
-        // aggregation by model averaging or block momentum 
+        // aggregation by model averaging or block momentum
         if (useModelAggregation)
         {
             if (nSamplesSinceLastModelSync >= blockSizePerWorker)
@@ -2697,7 +2699,7 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
             if (configParallelTrain.Exists(L"BlockMomentumSGD"))
             {
     #ifndef CNTK_PARALLEL_TRAINING_SUPPORT
-                InvalidArgument("BlockMomentumSGD is not enabled in this version.\n"); 
+                InvalidArgument("BlockMomentumSGD is not enabled in this version.\n");
     #else
                 const ConfigRecordType& configBMSGD(configParallelTrain(L"BlockMomentumSGD", ConfigRecordType::Record()));
                     if (configBMSGD.Exists(L"blockSize") && configBMSGD.Exists(L"blockSizePerWorker"))
@@ -2728,10 +2730,10 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
                         m_modelAggregationBlockSize *= numMPIWorkers;
                         fprintf(stderr, "WARNING: option syncPeroid in BlockMomentumSGD is going to be deprecated. Please use blockSizePerWorker instead in the future.\n");
                     }
-    #endif 
+    #endif
                 m_resetSGDMomentum = configBMSGD(L"resetSGDMomentum", true);
                 m_useNesterovBlockMomentum = configBMSGD(L"useNesterovMomentum", true);
-                m_blockLearningRate = configBMSGD(L"blockLearningRate", 1.0); 
+                m_blockLearningRate = configBMSGD(L"blockLearningRate", 1.0);
 
                 if (configBMSGD.Exists(L"blockMomentumPerSync") && configBMSGD.Exists(L"blockMomentumAsTimeConstant"))
                 {
@@ -2739,21 +2741,21 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
                 }
                 else if (configBMSGD.Exists(L"blockMomentumAsTimeConstant"))
                 {
-                    m_blockMomentumAsTimeConstant = configBMSGD(L"blockMomentumAsTimeConstant"); 
+                    m_blockMomentumAsTimeConstant = configBMSGD(L"blockMomentumAsTimeConstant");
                 }
-    #if 1       // This option "blockMomentumPerSync" is going to be deprecated in the future 
+    #if 1       // This option "blockMomentumPerSync" is going to be deprecated in the future
                 else if (configBMSGD.Exists(L"blockMomentumPerSync"))
                 {
                     double blockMomentum = configBMSGD(L"blockMomentumPerSync");
                         m_blockMomentumAsTimeConstant = BlockMomentumSGD<double>::Momentum2TimeConstant(blockMomentum, m_modelAggregationBlockSize);
                 }
-    #endif 
+    #endif
                 else /*if (!configBMSGD.Exists(L"blockMomentumPerSync") && !configBMSGD.Exists(L"blockMomentumAsTimeConstant"))*/
                 {
                         double blockMomentum = 1.0 - 1.0 / (double)numMPIWorkers;   // this is a default value which ensures each block update contributes equally
                         m_blockMomentumAsTimeConstant = BlockMomentumSGD<double>::Momentum2TimeConstant(blockMomentum, m_modelAggregationBlockSize);
                 }
-    #endif 
+    #endif
                     InitializeAndCheckBlockMomentumSGDParameters();
             }
         } // if (!pMPI)

@@ -40,6 +40,8 @@ private:
 
     CUDATimer m_timer;
     void CleanUp();
+    float FreeGPUMemoryInGB();
+    float m_minFreeMemory;
 
 public:
     SwapManager();

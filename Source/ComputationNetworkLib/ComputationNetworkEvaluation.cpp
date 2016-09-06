@@ -149,10 +149,10 @@ ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(con
                     node->GetNetworkInfoPtr()->GetSwapManager<float>()->BeginSynchronizeState(node.get(), true, node->Environment().IsTraining());
                 else
                     node->GetNetworkInfoPtr()->GetSwapManager<double>()->BeginSynchronizeState(node.get(), true, node->Environment().IsTraining());
-                cout <<"PAR NETWORK FRONT: " << nodename << " needs gradient:" << node->NeedsGradient() << " " << node->ValuePtr() << " " << node->GradientPtr()<< endl;
+                //cout <<"PAR NETWORK FRONT: " << nodename << " needs gradient:" << node->NeedsGradient() << " " << node->ValuePtr() << " " << node->GradientPtr()<< endl;
                 for(auto inputNode : node->GetInputs())
                 {
-                    cout << "INPUT: " << inputNode->ValuePtr() << " " << inputNode->GradientPtr() << endl;
+                    //cout << "INPUT: " << inputNode->ValuePtr() << " " << inputNode->GradientPtr() << endl;
                 }
 
             node->ForwardProp(fr.WithLayout(node->GetMBLayout()));
@@ -187,10 +187,10 @@ ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(con
         node->GetNetworkInfoPtr()->GetSwapManager<double>()->BeginSynchronizeState(node.get(), false, node->Environment().IsTraining());
 
 
-        cout <<"PAR NETWORK BACK: " << nodename << " needs gradient:" << node->NeedsGradient() << " " << node->ValuePtr() << " " << node->GradientPtr()<< endl;
+        //cout <<"PAR NETWORK BACK: " << nodename << " needs gradient:" << node->NeedsGradient() << " " << node->ValuePtr() << " " << node->GradientPtr()<< endl;
         for(auto inputNode : node->GetInputs())
         {
-            cout << "INPUT: " << inputNode->ValuePtr() << " " << inputNode->GradientPtr() << endl;
+            //cout << "INPUT: " << inputNode->ValuePtr() << " " << inputNode->GradientPtr() << endl;
         }
 
 
@@ -1005,11 +1005,11 @@ void ComputationNetwork::InitMemorySwapping(const std::vector<ComputationNodeBas
             }
 
             // if the output is part of the loop, wait for the whole loop to be finished
-            for(auto loopMember : matrix2LoopMembers[valueBuffer])
-            {
-                if(parentsMapMatrix[loopMember].size() == 0){ swapOut &= true; }
-                else{ swapOut = false; }
-            }
+ //           for(auto loopMember : matrix2LoopMembers[valueBuffer])
+ //           {
+ //               if(parentsMapMatrix[loopMember].size() == 0){ swapOut &= true; }
+ //               else{ swapOut = false; }
+ //           }
 
             // if all output and input dependencies are fulfilled proceed with swap-out
             if(swapOut)
@@ -1127,7 +1127,7 @@ void ComputationNetwork::InitMemorySwapping(const std::vector<ComputationNodeBas
             matrix2LastUsageNode.erase(buffer);
     }
 
-    // remove sparse input nodes 
+    // remove sparse input nodes
     // BUGBUG: There is one tests Text/SparseDSSM that fails due to a dynamically changing input node, so we ignore input nodes altogether?!
     // probably this can be fixed by someone who understands the Text/SparseDSSM example better than I do
     for (auto node : InputNodes(nullptr))
@@ -1168,6 +1168,13 @@ void ComputationNetwork::InitMemorySwapping(const std::vector<ComputationNodeBas
 
         if(matrix2LastUsageNode.count(buffer) > 0)
             matrix2LastUsageNode.erase(buffer);
+    }
+
+
+    for(auto pair : matrix2SwapOutNode)
+    {
+        std::string nodename = std::string(pair.second->NodeName().begin(), pair.second->NodeName().end());
+        cout << "swapping out: " << pair.first << " at node : " << nodename << endl;
     }
 
     unordered_map<ComputationNodeBase*, std::vector<Matrix<ElemType>*>> forwardSwapOutDependencyNode2matrices;

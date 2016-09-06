@@ -1257,7 +1257,7 @@ public:
 
     void PrintChildrenBuffers()
     {
-       cout << level << ": " << buffer << endl;
+       //cout << level << ": " << buffer << endl;
        for(auto child : children)
             child->PrintChildrenBuffers();
     }
