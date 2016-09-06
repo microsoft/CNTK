@@ -260,6 +260,42 @@ BOOST_AUTO_TEST_CASE(RandRollbackToSameEpochInTheSweep)
     BOOST_CHECK_EQUAL_COLLECTIONS(thirdEpoch.begin(), thirdEpoch.end(), anotherThirdEpoch.begin(), anotherThirdEpoch.end());
 }
 
+BOOST_AUTO_TEST_CASE(RandRollbackToSameEpochInBigRandomizationWindow)
+{
+    size_t chunkSizeInSamples = 10000;
+    size_t sweepNumberOfSamples = 500000;
+    uint32_t maxSequenceLength = 300;
+    size_t randomizationWindow = sweepNumberOfSamples / 2;
+    auto deserializer = make_shared<SequentialDeserializer>(0, chunkSizeInSamples, sweepNumberOfSamples, maxSequenceLength);
+
+    // Let's randomize complete sweep, so that we have a baseline.
+    auto randomizer = make_shared<BlockRandomizer>(0, randomizationWindow, deserializer, true, BlockRandomizer::DecimationMode::chunk, false);
+
+    // Let's read all sequences from the first three sweeps in the randomized order.
+    auto firstSweep = ReadFullSweep(randomizer, 0, sweepNumberOfSamples);
+
+    // Ok, now let's run smaller epochs and check whether they are the same as full sweeps.
+    size_t epochSize = firstSweep.size() / 5;
+    auto firstEpoch = ReadFullEpoch(randomizer, epochSize, 0);
+    auto secondEpoch = ReadFullEpoch(randomizer, epochSize, 1);
+    auto thirdEpoch = ReadFullEpoch(randomizer, epochSize, 2);
+    auto fourthEpoch = ReadFullEpoch(randomizer, epochSize, 3);
+
+    // Now roll back to the third one.
+    auto current = ReadFullEpoch(randomizer, epochSize, 1);
+    BOOST_CHECK_EQUAL_COLLECTIONS(secondEpoch.begin(), secondEpoch.end(), current.begin(), current.end());
+
+    current = ReadFullEpoch(randomizer, epochSize, 3);
+    BOOST_CHECK_EQUAL_COLLECTIONS(fourthEpoch.begin(), fourthEpoch.end(), current.begin(), current.end());
+
+    current = ReadFullEpoch(randomizer, epochSize, 2);
+    BOOST_CHECK_EQUAL_COLLECTIONS(thirdEpoch.begin(), thirdEpoch.end(), current.begin(), current.end());
+
+    current = ReadFullEpoch(randomizer, epochSize, 2);
+    BOOST_CHECK_EQUAL_COLLECTIONS(thirdEpoch.begin(), thirdEpoch.end(), current.begin(), current.end());
+}
+
+
 BOOST_AUTO_TEST_CASE(BlockRandomizerInstantiate)
 {
     BlockRandomizerInstantiateTest(false);
