@@ -63,10 +63,7 @@ ext_modules = [
            extra_compile_args=[
                "-DSWIG",
                "-DUNICODE",
-               "/EHsc",
-               "/DEBUG", # TODO remove for release
-               "/Zi",     # TODO remove for release
-               "/Od"     # TODO remove for release
+               "/EHsc"
                ],
            extra_link_args=[ "/DEBUG"],
       )
