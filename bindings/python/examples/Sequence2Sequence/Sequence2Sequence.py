@@ -7,10 +7,11 @@
 import numpy as np
 import sys
 import os
+import math
 import time
-from cntk import learning_rates_per_sample, DeviceDescriptor, Trainer, sgdlearner, Axis, get_train_loss, get_train_eval_criterion
-from cntk.ops import variable, cross_entropy_with_softmax, classification_error
-from examples.common.nn import LSTMP_component_with_self_stabilization, embedding, fully_connected_linear_layer, select_last
+from cntk import learning_rates_per_sample, momentums_per_sample, DeviceDescriptor, Trainer, momentum_sgdlearner, Axis, text_format_minibatch_source, StreamConfiguration, print_training_progress
+from cntk.ops import input_variable, cross_entropy_with_softmax, classification_error, sequence, slice, past_value, future_value, element_select
+from examples.common.nn import LSTMP_component_with_self_stabilization, stabilize, linear_layer
 
 # Creates and trains a sequence to sequence translation model
 def train_sequence_to_sequence_translator():
@@ -28,124 +29,91 @@ def train_sequence_to_sequence_translator():
     label_dynamic_axes = [ Axis('labelAxis'), Axis.default_batch_axis() ]
     raw_labels = input_variable(shape=(label_vocab_dim), dynamic_axes = label_dynamic_axes)
 
+    # Instantiate the sequence to sequence translation model
     input_sequence = raw_input
 
     # Drop the sentence start token from the label, for decoder training
-    label_sequence = cntk.ops.slice(raw_labels, label_dynamic_axes[0], 1, 0)
-    label_sentence_start = Sequence.first(raw_labels)
+    label_sequence = slice(raw_labels, label_dynamic_axes[0], 1, 0)
+    label_sentence_start = sequence.first(raw_labels)
 
-    is_first_label = Sequence.is_first(label_sequence)
-
-    label_sentence_start_scattered = Sequence.scatter(label_sentence_start, is_first_label)
+    is_first_label = sequence.is_first(label_sequence)
+    label_sentence_start_scattered = sequence.scatter(label_sentence_start, is_first_label)
 
     # Encoder
-    encoderOutputH = stabilize<float>(inputEmbedding, device)
-    futureValueRecurrenceHook = [](const Variable& x) { return FutureValue(x) }
-    for (size_t i = 0 i < num_layers ++i)
-        std::tie(encoderOutputH, encoderOutputC) = LSTMPComponentWithSelfStabilization<float>(encoderOutputH, hidden_dim, hidden_dim, futureValueRecurrenceHook, futureValueRecurrenceHook, device)
+    encoder_outputH = stabilize(input_sequence)
+    for i in range(0, num_layers):
+        (encoder_outputH, encoder_outputC) = LSTMP_component_with_self_stabilization(encoder_outputH, hidden_dim, hidden_dim, future_value, future_value)
 
-    thoughtVectorH = Sequence::First(encoderOutputH)
-    thoughtVectorC = Sequence::First(encoderOutputC)
+    thought_vectorH = sequence.first(encoder_outputH)
+    thought_vectorC = sequence.first(encoder_outputC)
 
-    thoughtVectorBroadcastH = Sequence::BroadcastAs(thoughtVectorH, labelEmbedding)
-    thoughtVectorBroadcastC = Sequence::BroadcastAs(thoughtVectorC, labelEmbedding)
+    thought_vector_broadcastH = sequence.broadcast_as(thought_vectorH, label_sequence)
+    thought_vector_broadcastC = sequence.broadcast_as(thought_vectorC, label_sequence)
 
-    /* Decoder */
-    bool addBeamSearchReorderingHook = false
-    beamSearchReorderHook = Constant({ 1, 1 }, 1.0f)
-    decoderHistoryFromGroundTruth = labelEmbedding
-    decoderInput = ElementSelect(is_first_label, label_sentence_startEmbeddedScattered, PastValue(decoderHistoryFromGroundTruth))
+    decoder_history_from_ground_truth = label_sequence
+    decoder_input = element_select(is_first_label, label_sentence_start_scattered, past_value(decoder_history_from_ground_truth))
 
-    decoderOutputH = Stabilize<float>(decoderInput, device)
-    FunctionPtr decoderOutputC
-    pastValueRecurrenceHookWithBeamSearchReordering = [addBeamSearchReorderingHook, beamSearchReorderHook](const FunctionPtr& operand) {
-        return PastValue(addBeamSearchReorderingHook ? Times(operand, beamSearchReorderHook) : operand)
-    }
+    decoder_outputH = stabilize(decoder_input)
+    for i in range(0, num_layers):
+        if (i == 0):
+            recurrence_hookH = past_value
+            recurrence_hookC = past_value
+        else:
+            isFirst = sequence.is_first(label_sequence)
+            recurrence_hookH = lambda operand: element_select(isFirst, thought_vector_broadcastH, past_value(operand))
+            recurrence_hookC = lambda operand: element_select(isFirst, thought_vector_broadcastC, past_value(operand))
 
-    for (size_t i = 0 i < num_layers ++i)
-    {
-        std::function<FunctionPtr(const Variable&)> recurrenceHookH, recurrenceHookC
-        if (i == 0)
-        {
-            recurrenceHookH = pastValueRecurrenceHookWithBeamSearchReordering
-            recurrenceHookC = pastValueRecurrenceHookWithBeamSearchReordering
-        }
-        else
-        {
-            isFirst = Sequence::IsFirst(labelEmbedding)
-            recurrenceHookH = [labelEmbedding, thoughtVectorBroadcastH, isFirst, addBeamSearchReorderingHook, beamSearchReorderHook](const FunctionPtr& operand) {
-                return ElementSelect(isFirst, thoughtVectorBroadcastH, PastValue(addBeamSearchReorderingHook ? Times(operand, beamSearchReorderHook) : operand))
-            }
+        (decoder_outputH, encoder_outputC) = LSTMP_component_with_self_stabilization(decoder_outputH, hidden_dim, hidden_dim, recurrence_hookH, recurrence_hookC)
 
-            recurrenceHookC = [labelEmbedding, thoughtVectorBroadcastC, isFirst, addBeamSearchReorderingHook, beamSearchReorderHook](const FunctionPtr& operand) {
-                return ElementSelect(isFirst, thoughtVectorBroadcastC, PastValue(addBeamSearchReorderingHook ? Times(operand, beamSearchReorderHook) : operand))
-            }
-        }
+    decoder_output = decoder_outputH
+    decoder_dim = hidden_dim
 
-        std::tie(decoderOutputH, encoderOutputC) = LSTMPComponentWithSelfStabilization<float>(decoderOutputH, hidden_dim, hidden_dim, recurrenceHookH, recurrenceHookC, device)
-    }
+    # Softmax output layer
+    z = linear_layer(stabilize(decoder_output), label_vocab_dim)
+    ce = cross_entropy_with_softmax(z, label_sequence)
+    errs = classification_error(z, label_sequence)
 
-    decoderOutput = decoderOutputH
-    decoderDim = hidden_dim
-
-    /* Softmax output layer */
-    outputLayerProjWeights = Parameter(NDArrayView::RandomUniform<float>({ label_vocab_dim, decoderDim }, -0.05, 0.05, 1, device))
-    biasWeights = Parameter({ label_vocab_dim }, 0.0f, device)
-
-    z = Plus(Times(outputLayerProjWeights, Stabilize<float>(decoderOutput, device)), biasWeights, L"classifierOutput")
-    ce = CrossEntropyWithSoftmax(z, label_sequence, L"lossFunction")
-    errs = ClassificationError(z, label_sequence, L"classificationError")
-
-
-
-
-    input_dim = 2000
-    cell_dim = 25
-    hidden_dim = 25
-    embedding_dim = 50
-    num_output_classes = 5
-
-    # Input variables denoting the features and label data
-    features = variable(shape=input_dim, is_sparse=True, name="features")
-    label = variable(num_output_classes, dynamic_axes = [Axis.default_batch_axis()], name="labels")
-
-    # Instantiate the sequence classification model
-    classifier_output = LSTM_sequence_classifer_net(features, num_output_classes, embedding_dim, hidden_dim, cell_dim)
-
-    ce = cross_entropy_with_softmax(classifier_output, label)
-    pe = classification_error(classifier_output, label)
-    
-    rel_path = r"../../../../Tests/EndToEndTests/Text/SequenceClassification/Data/Train.ctf"
+    rel_path = r"../../../../Examples/SequenceToSequence/CMUDict/Data/cmudict-0.7b.train-dev-20-21.ctf"
     path = os.path.join(os.path.dirname(os.path.abspath(__file__)), rel_path)
+    feature_stream_name = 'features'
+    labels_stream_name = 'labels'
 
-    mb_source = text_minibatch_source(path, [ ( 'features', input_dim, True, 'x' ), ( 'labels', num_output_classes, False, 'y' ) ], 0)
-    features_si = mb_source.stream_info(features)
-    labels_si = mb_source.stream_info(label)
+    mb_source = text_format_minibatch_source(path, list([ 
+                    StreamConfiguration( feature_stream_name, input_vocab_dim, True, 'S0' ), 
+                    StreamConfiguration( labels_stream_name, label_vocab_dim, True, 'S1') ]), 10000)
+    features_si = mb_source.stream_info(feature_stream_name)
+    labels_si = mb_source.stream_info(labels_stream_name)
 
     # Instantiate the trainer object to drive the model training
-    lr = lr = learning_rates_per_sample(0.0005)
-    trainer = Trainer(classifier_output, ce, pe, [sgdlearner(classifier_output.owner.parameters(), lr)])                   
+    lr = learning_rates_per_sample(0.007)
+    momentum_time_constant = 1100
+    momentum_per_sample = momentums_per_sample(math.exp(-1.0 / momentum_time_constant))
+    clipping_threshold_per_sample = 2.3
+    gradient_clipping_with_truncation = True
+
+    trainer = Trainer(z, ce, errs, [momentum_sgdlearner(z.owner.parameters(), lr, momentum_per_sample, clipping_threshold_per_sample, gradient_clipping_with_truncation)])                   
 
     # Get minibatches of sequences to train with and perform model training
-    minibatch_size = 200
+    minibatch_size = 72
     training_progress_output_freq = 1  
-    i = 0
     while True:
         mb = mb_source.get_next_minibatch(minibatch_size)
         if  len(mb) == 0:
             break
 
         # Specify the mapping of input variables in the model to actual minibatch data to be trained with
-        arguments = {features : mb[features_si].m_data, label : mb[labels_si].m_data}
+        arguments = {raw_input : mb[features_si].m_data, raw_labels : mb[labels_si].m_data}
         trainer.train_minibatch(arguments)
 
-        print_training_progress(training_progress_output_freq, i, trainer)
+        print_training_progress(i, trainer, training_progress_output_freq)
 
         i += 1
 
-if __name__=='__main__':    
+if __name__=='__main__':
+
+    #time.sleep(10)
     # Specify the target device to be used for computing
     target_device = DeviceDescriptor.cpu_device()
     DeviceDescriptor.set_default_device(target_device)
 
-    train_sequence_classifier()
+    train_sequence_to_sequence_translator()

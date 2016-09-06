@@ -4,6 +4,7 @@
 # ==============================================================================
 
 import numpy as np
+from . import sequence
 from ..utils import sanitize_input, sanitize_shape, get_data_type
 
 def combine(operands, name=''):
@@ -874,8 +875,7 @@ def reciprocal(x, name=''):
     x = sanitize_input(x)
     return reciprocal(x, name).output()    
 
-#TODO: enable when it is exposed in c++
-def cond(flag, value_if_true, value_if_false, name=''):
+def element_select(flag, value_if_true, value_if_false, name=''):
     '''
     return either value_if_true or value_if_false based on the value of flag.
     If flag != 0 value_if_true is returned, otherwise value_if_false.
@@ -894,7 +894,11 @@ def cond(flag, value_if_true, value_if_false, name=''):
     Returns:
         :class:`cntk.Function`
     '''    
-    raise NotImplementedError("cond is not implemented yet in V2")
+    from cntk import element_select
+    flag = sanitize_input(flag)
+    value_if_true = sanitize_input(value_if_true)
+    value_if_false = sanitize_input(value_if_false)
+    return element_select(flag, value_if_true, value_if_false, name).output()    
     
 ################################################################################
 # recurrent ops
@@ -1232,7 +1236,7 @@ def placeholder_variable(shape, dynamic_axes = [Axis.default_dynamic_axis(), Axi
     '''
     from cntk import placeholder_variable
     shape = sanitize_shape(shape)
-    return placeholder_variable(shape)
+    return placeholder_variable(shape, dynamic_axes)
     
 def parameter(shape=None, value=None, device=None, name=''):
     '''

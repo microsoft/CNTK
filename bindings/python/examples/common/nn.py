@@ -7,7 +7,9 @@
 import numpy as np
 import sys
 import os
+from cntk import Constant
 from cntk.ops import *
+from cntk.utils import sanitize_dtype_cntk
 
 def linear_layer(input, output_dim):
     input_dim = input.shape().dimensions()[0]
@@ -83,10 +85,10 @@ def select_last(operand):
 
 def stabilize(operand):
     scalar_constant = 4.0
-    f = Constant.scalar(scalar_constant);
-    fInv = Constant.scalar(f.get_data_type(), 1.0 / scalar_constant)
+    f = Constant.scalar(sanitize_dtype_cntk(np.float32), scalar_constant);
+    fInv = Constant.scalar(sanitize_dtype_cntk(np.float32), 1.0 / scalar_constant)
 
-    beta = element_times(fInv, log(Constant.scalar(f.get_data_type(), 1.0) + exp(element_times(f, parameter(shape=(), dtype=f.get_data_type(), init_value=0.99537863)))))
+    beta = element_times(fInv, log(Constant.scalar(sanitize_dtype_cntk(np.float32), 1.0) + exp(element_times(f, parameter(shape=(), value=0.99537863)))))
     return element_times(beta, operand)
 
 def LSTMP_cell_with_self_stabilization(input, prev_output, prev_cell_state):
@@ -176,13 +178,14 @@ def LSTMP_cell_with_self_stabilization(input, prev_output, prev_cell_state):
     mt = element_times(ot, tanh(ct))
     return (times(element_times(expsWmr, mt), Wmr), ct)
 
-def LSTMP_component_with_self_stabilization(input, output_dim, cell_dim):
-    dh = placeholder_variable(shape=(output_dim))
-    dc = placeholder_variable(shape=(cell_dim))
+def LSTMP_component_with_self_stabilization(input, output_dim, cell_dim, recurrence_hookH = past_value, recurrence_hookC = past_value):
+    dh = placeholder_variable(shape=(output_dim), dynamic_axes=input.dynamic_axes())
+    dc = placeholder_variable(shape=(cell_dim), dynamic_axes=input.dynamic_axes())
 
     LSTMCell = LSTMP_cell_with_self_stabilization(input, dh, dc)
-    actualDh = past_value(LSTMCell[0]); 
-    actualDc = past_value(LSTMCell[1]); 
+    actualDh = recurrence_hookH(LSTMCell[0]); 
+    actualDc = recurrence_hookC(LSTMCell[1]); 
 
     # Form the recurrence loop by replacing the dh and dc placeholders with the actualDh and actualDc
-    return LSTMCell[0].owner.replace_placeholders({ dh : actualDh, dc : actualDc})
+    LSTMCell[0].owner.replace_placeholders({ dh : actualDh, dc : actualDc})
+    return (LSTMCell[0], LSTMCell[1])
