@@ -46,11 +46,47 @@ public:
     virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
     {
         FrameRange fr(Input(0)->GetMBLayout());
-        m_leftMinusRight->AssignDifferenceOf(Input(0)->ValueFor(fr), Input(1)->ValueFor(fr));
+
+        // We first ignore all labels that were originally labeled as NAN. Due to NAN being nasty in cuda,
+        // these NANs are translated to the lowest possible value for the ElemType in the deserializer.
+        // In order to do this, we first create a matrix "labeled" and set all lowest entries to 0 and the rest to 1
+        // TODO: If anyone knows how to do this with NAN instead, please go ahead! I tried hard but failed...
+        auto labeled = Input(0)->ValueFor(fr).DeepClone();
+        static const auto lowest = std::numeric_limits<ElemType>::lowest();
+        static const auto second_lowest = std::nextafter(lowest, ElemType(0));
+        labeled.InplaceTruncateTop(second_lowest);
+        labeled -= lowest; // -(-x) = +x
+        labeled /= second_lowest - lowest; // result is either zero or one
+
+        const ElemType num_labeled = labeled.MatrixNorm0();
+        const ElemType max_labeled = static_cast<ElemType>(labeled.GetNumElements());
+
+        assert(labeled.SumOfElements() == num_labeled); // really only zeros and ones
+
+        // We ignore unlabeled data while computing the loss (and later the gradient!).
+        // This must happen before computing the difference in order to avoid underflow in m_leftMinusRight
+        // E.g., "lowest - <anything positive>" => underflow => -INF * 0 is NAN and not zero => problems!
+        // Since the label vector is usually rather short compared to the rest of the network,
+        // the slight performance loss by doing it beforehand (twice instead of once) is not crucial though
+        m_leftMinusRight->AssignDifferenceOf(Input(0)->ValueFor(fr).ElementMultiplyWith(labeled), Input(1)->ValueFor(fr).ElementMultiplyWith(labeled));
+
         MaskMissingColumnsToZero(*m_leftMinusRight, Input(0)->GetMBLayout(), fr); // we are fine since it will only be called with full minibatch.
         ElemType v = m_leftMinusRight->FrobeniusNorm(); // v = sqrt( sum{ (I0[i] - I1[i])^2 } )
         Value().VerifySize(1, 1);
-        Value().SetValue(v * v);  // Value = sum{ (I0[i] - I1[i])^2 }
+
+        // Avoid division by zero. Could be checked in the deserializer already, but different 
+        // deserializers could be combined, so we need to check it here.
+        if (num_labeled == 0)
+            RuntimeError("Encountered all-NAN label while computing the loss.");
+
+        // We scale the loss so that it is still comparable.
+        // E.g., if only half of the data was actually labeled, the loss will be doubled
+        // If we didn't do that, we would sometimes get very high losses, sometimes very low,
+        // without any chance to see why.  With scaling, the loss is always (roughly) at the
+        // same level, so the output is meaningful again. Thus, a lower loss means that the network
+        // is "actually better" and not just because the minibatch randomly contained very few labels.
+        const ElemType scale = max_labeled / num_labeled;
+        Value().SetValue(v * v * scale);  // Value = sum{ (I0[i] - I1[i])^2 } * scale
 #if NANCHECK
         Value().HasNan("SquareError");
 #endif
