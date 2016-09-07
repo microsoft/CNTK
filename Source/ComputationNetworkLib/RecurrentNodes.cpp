@@ -124,21 +124,45 @@ template<class ElemType, int direction>
     //  - desired: we propagate from a gap
     //    This is, however, different between forward and backprop, so as a compromise, this is revised as:
     //  - actual: one of the two is a gap, but not both (if both, then it is considered valid again)
-    m_anyValid.resize(GetNumTimeSteps());
-    m_allValid.resize(GetNumTimeSteps());
-    m_inputInvalidMatrixTemp.assign(GetMBLayout()->GetNumCols(), 0);
+    m_inputAnySeqValid.assign(GetNumTimeSteps(), false); // start with assumptions which we update in the loop below
+    m_inputAllSeqValid.assign(GetNumTimeSteps(), true);
+    m_inputInvalidMatrixTemp.assign(m_inputInvalidMatrix->GetNumCols(), 0);
+
     let S = GetNumParallelSequences();
-    //size_t rank = DetermineElementwiseTensorRank();
     int dir = direction; // (this avoids a 'conditional expression is constant' warning)
     FrameRangeIteration range(m_pMBLayout, -dir);
     for (auto fr = range.begin(); fr != range.end(); fr++)
     {
+        let t = fr.t();
         FrameRange frDelayed = fr.WithTimeOffset(direction * m_timeStep);
-        DetermineInvalidSequences(frDelayed);
-        let t0 = fr.t() * S;
-        for (auto s : m_inputInvalidSequences)
-            m_inputInvalidMatrixTemp[t0 + s] = 1;
+
+        // first check in bulk for the frame--if all frames are good (most frequent case), take the quick path
+        if (!m_pMBLayout->IsBeyondStartOrEnd(frDelayed) &&
+            !m_pMBLayout->IsGap(fr))
+        {
+            m_inputAnySeqValid[t] = true;                  // no special case: just copy all
+            assert(m_inputAllSeqValid[t]);
+            continue;
+        }
+
+        // determine each sequence for the current frame that has a boundary condition or is a gap:
+        for (size_t s = 0; s < S; s++)
+        {
+            // source frame is either invalid or valid (or target frame is a gap, in which case we consider everything valid)
+            if (!m_pMBLayout->IsBeyondStartOrEnd(frDelayed.Sequence(s)) &&
+                !m_pMBLayout->IsGap(fr.Sequence(s)))
+            {
+                m_inputAnySeqValid[t] = true;
+            }
+            else
+            {
+                m_inputAllSeqValid[t] = false;
+                let j = fr.t() * S + s;
+                m_inputInvalidMatrixTemp[j] = 1; // invalid: exclude this in copy/backprop
+            }
+        }
     }
+    // move to GPU
     m_inputInvalidMatrix->SetValue(1, m_inputInvalidMatrixTemp.size(), m_deviceId, m_inputInvalidMatrixTemp.data(), matrixFlagNormal);
 }
 
@@ -153,73 +177,16 @@ template<class ElemType, int direction>
     m_inputInvalidMatrix->Resize(1, GetMBLayout()->GetNumCols());
 }
 
-// determine which parallel sequences have a valid source frame to be copied/propagated
-// Remember that we ask about copying from the delayed position to the current position.
-// This function also determines whether we can do it all (allValid) or none (!anyValid).
-// Gaps will be considered as "valid", since that gives us a higher chance of collating all.
+// retrieve the mask tensor for the current frame
 template<class ElemType, int direction>
-/*private*/ void DelayedValueNodeBase<ElemType, direction>::DetermineInvalidSequences(const FrameRange& frDelayed)
+/*private*/ TensorView<ElemType> DelayedValueNodeBase<ElemType, direction>::GetMaskTensor(size_t rank, const FrameRange& fr) const
 {
-    m_inputInvalidSequences.clear();
-    let fr = frDelayed.WithoutTimeOffset();
-    let t = frDelayed.WithoutTimeOffset().t();
-    if (!m_pMBLayout->IsBeyondStartOrEnd(frDelayed) && // true if at least one sequence is outside
-        !m_pMBLayout->IsGap(fr))
-    {
-        m_allValid[t] = true;                          // no special case: just copy all
-        m_anyValid[t] = true;
-        return;
-    }
-    // create a vector of 0 and 1 for every parallel sequence:
-    //  1 --> delayed frame is out of sequence bounds: do not copy/propagate
-    //        or current frame is a gap
-    //  0 --> delayed frame is valid and current is not a gap: copy/propagate
-    let S = GetNumParallelSequences();
-    for (size_t s = 0; s < S; s++)
-    {
-        // source frame is either invalid or valid (or target frame is a gap, in which case we consider everything valid)
-        auto isSourceFrameValid = !m_pMBLayout->IsBeyondStartOrEnd(frDelayed.Sequence(s)) &&
-                                  !m_pMBLayout->IsGap(fr.Sequence(s));
-        if (!isSourceFrameValid)
-            m_inputInvalidSequences.push_back(s);
-    }
-    m_allValid[t] = m_inputInvalidSequences.size() == 0;
-    m_anyValid[t] = m_inputInvalidSequences.size() < S; // at least one was not declared invalid
-    if (m_allValid[t])
-    {
-        fprintf(stderr, "x\n"); // all valid (or gap): just copy all  --breakpoint has not been hit; that's not right (gaps!)
-    }
-}
-
-// convert the m_inputInvalidSequences vector into a (potentially GPU-side) TensorView
-template<class ElemType, int direction>
-/*private*/ TensorView<ElemType> DelayedValueNodeBase<ElemType, direction>::MakeMaskTensor(size_t rank, const FrameRange& fr) const
-{
-    // send to Matrix object (likely living on a GPU)
-    // This current implementation approach avoids SetValue(vector) as to not create a GPU sync point,
-    // but uses 1+one launch per invalid source, assuming the number of invalid frames is small.
-
-#if 1
-    fr;
-    //m_inputInvalidMatrix->Resize(1, S);
-    //m_inputInvalidMatrix->SetValue(0); // TODO: This reset matters. Fix that first, but excluding gap-!gap
+    // TODO: We have proper functions to do what is done below here.
     let S = GetNumParallelSequences();
     let t0 = S * fr.t();
-    //for (let s : m_inputInvalidSequences)
-    //    m_inputInvalidMatrix->ColumnSlice(t0 + s, 1).SetValue(1);
-    // tensor shape is a 1-frame sequence, one element per parallel sequence.
     auto tensorShape = TensorShape(1).AppendInPlace(rank, GetMBLayout()->GetNumCols());
     tensorShape.NarrowTo(pair<vector<size_t>, vector<size_t>>({ 0, t0 }, { 1, t0 + S }));
     return TensorView<ElemType>(m_inputInvalidMatrix, tensorShape);
-#else
-    m_inputInvalidMatrix->SetValue(0);
-    for (let s : m_inputInvalidSequences)
-        Input(0)->DataFor(*m_inputInvalidMatrix, fr.Sequence(s)).SetValue(1);
-    // tensor shape is a 1-frame sequence, one element per parallel sequence.
-    //auto tensorShape = TensorShape(1).AppendInPlace(rank, GetMBLayout()->GetNumParallelSequences());
-    //return TensorView<ElemType>(m_inputInvalidMatrix, tensorShape);
-    return DataTensorFor(m_inputInvalidMatrix, rank, fr); // BUGBUG: What's the sample layout?
-#endif
 }
 
 // This function assumes EndForwardProp() to be called after the iteration loop.
@@ -246,16 +213,13 @@ template<class ElemType, int direction>
     // compute logical position of delayed value
     assert(m_timeStep > 0);
 
-    // determine the parallel sequences to mask
-    //DetermineInvalidSequences(frDelayed);
-
     // source tensor --considering truncated BPTT
     size_t rank = DetermineElementwiseTensorRank();
     TensorView<ElemType> src;
     int t_delayed = (int)(fr.t() + direction * m_timeStep); // this might end up outside the current window
     if (t_delayed < 0) // handle special case of truncated BPTT
     {
-        if (!m_anyValid[fr.t()])
+        if (!m_inputAnySeqValid[fr.t()])
             ; // none valid: leave it uninitialized
         else if (!m_delayedValue->IsEmpty()) // truncated BPTT
         {
@@ -271,7 +235,7 @@ template<class ElemType, int direction>
     }
     else if (t_delayed >= GetNumTimeSteps())
     {
-        if (!m_anyValid[fr.t()])
+        if (!m_inputAnySeqValid[fr.t()])
             ; // none valid: leave it uninitialized
         else  // truncated BPTT goes left-to-right only
             LogicError("The delay node tries to access future values that are out of bound, possibly because there is no sentence end marker in the MBLayout.");
@@ -288,10 +252,10 @@ template<class ElemType, int direction>
         : Input(1)->ValueTensorFor(rank, FrameRange());                   // initial state given as a tensor
 
     // now perform the copy operation
-    if (m_allValid[fr.t()]) // all frames are valid: copy as one tensor-copy operation
+    if (m_inputAllSeqValid[fr.t()]) // all frames are valid: copy as one tensor-copy operation
         tgt.AssignCopyOf(src);
-    else if (m_anyValid[fr.t()]) // some are valid, some are not: use a OpCond to select 'src' for valid and 'init' for invalid frames
-        tgt.AssignCondOf(MakeMaskTensor(rank, fr), init, src); // assign either input or init value, based on the mask
+    else if (m_inputAnySeqValid[fr.t()]) // some are valid, some are not: use a OpCond to select 'src' for valid and 'init' for invalid frames
+        tgt.AssignCondOf(GetMaskTensor(rank, fr), init, src); // assign either input or init value, based on the mask
     else // no frame is valid: initialize from init value
         tgt.AssignCopyOf(init);
 }
@@ -311,6 +275,7 @@ template<class ElemType, int direction>
     if (!m_delayedActivationMBLayout)
         m_delayedActivationMBLayout = make_shared<MBLayout>();
     m_delayedActivationMBLayout->CopyFrom(m_pMBLayout);
+    // Perf BUGBUG: ^^ This copies a matrix from CPU to GPU at each MB; we should short-circuit it
 
     Base::EndForwardProp();
 }
@@ -318,6 +283,8 @@ template<class ElemType, int direction>
 template<class ElemType, int direction>
 /*virtual*/ void DelayedValueNodeBase<ElemType,direction>::/*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) /*override*/
 {
+    // TODO: do backprop to history in bulk
+
     // move the target matrix to the target device, since below it is accessed as slices which cannot move
     // TODO: change below accesses to TensorView, then this is no longer needed.
     Input(0)->Gradient().TransferToDeviceIfNotThere(m_deviceId, /*isBeingMoved=*/ true);
@@ -339,16 +306,6 @@ template<class ElemType, int direction>
 
     FrameRange frDelayed = fr.WithTimeOffset(direction * m_timeStep); // target frame
 
-    // determine the parallel sequences to mask
-    // Perf BUGBUG: Learning the initial state is currently not efficient:
-    //  - we initialize the mask twice,
-    //  - explicitly mask gradients to zero, and
-    //  - should even come in here with FrameRange all.
-    // TODO: Solution [Amit]:
-    //  - pre-compute the mask for the entire MB; cache in MBLayout
-    //  - transfer only once
-    //DetermineInvalidSequences(frDelayed);
-
     TensorView<ElemType> zero(m_zeroMatrix, TensorShape(1));
 
     auto src = GradientTensorFor(rank, fr); // incoming gradient from top
@@ -359,10 +316,10 @@ template<class ElemType, int direction>
         {
             auto tgt = Input(inputIndex)->GradientTensorFor(rank, frDelayed); // target is outgoing gradient to input
 
-            if (m_allValid[fr.t()]) // all valid: just jam it over in one go
+            if (m_inputAllSeqValid[fr.t()]) // all valid: just jam it over in one go
                 tgt.AddCopyOf(src);
-            else if (m_anyValid[fr.t()]) // // some are valid, some are not: use a OpCond tgt select 'src' for valid and 'zero' for invalid frames
-                tgt.AddCondOf(MakeMaskTensor(rank, fr), zero, src); // now add either source or zero value, based on the mask
+            else if (m_inputAnySeqValid[fr.t()]) // // some are valid, some are not: use a OpCond tgt select 'src' for valid and 'zero' for invalid frames
+                tgt.AddCondOf(GetMaskTensor(rank, fr), zero, src); // now add either source or zero value, based on the mask
             else // none valid: nothing tgt back-prop
                 ;
         }
@@ -373,10 +330,10 @@ template<class ElemType, int direction>
 
         auto tgt = Input(inputIndex)->GradientTensorFor(rank, FrameRange()); // outgoing gradient to initial state
 
-        if (m_allValid[fr.t()]) // all valid: just jam it over in one go --this has a reduction
+        if (m_inputAllSeqValid[fr.t()]) // all valid: just jam it over in one go --this has a reduction
             tgt.AddCopyOf(src);
-        else if (m_anyValid[fr.t()]) // // some are valid, some are not: use a OpCond tgt select 'src' for valid and 'zero' for invalid frames
-            tgt.AddCondOf(MakeMaskTensor(rank, fr), src, zero); // when back-propping into initial state, we swap the args and propagate the invalid ones
+        else if (m_inputAnySeqValid[fr.t()]) // // some are valid, some are not: use a OpCond tgt select 'src' for valid and 'zero' for invalid frames
+            tgt.AddCondOf(GetMaskTensor(rank, fr), src, zero); // when back-propping into initial state, we swap the args and propagate the invalid ones
         else // none valid: nothing tgt back-prop
             ;
     }

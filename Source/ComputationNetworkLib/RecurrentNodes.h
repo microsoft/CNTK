@@ -28,8 +28,7 @@ class DelayedValueNodeBase : public ComputationNode<ElemType>, public IRecurrent
     typedef std::shared_ptr<DelayedValueNodeState<ElemType>> DelayedNodeStatePtr;
 
 private:
-    void DetermineInvalidSequences(const FrameRange& frDelayed);
-    TensorView<ElemType> MakeMaskTensor(size_t rank, const FrameRange& fr) const;
+    TensorView<ElemType> GetMaskTensor(size_t rank, const FrameRange& fr) const;
 
 protected:
     DelayedValueNodeBase(DEVICEID_TYPE deviceId, const wstring& name, ElemType initialState, const TensorShape& sampleLayout, size_t timeStep);
@@ -81,13 +80,12 @@ protected:
 
     function<void()> m_attachInputsFn;                      // for late expansion of inputs (scripting)
 
-    vector<size_t> m_inputInvalidSequences;                 // indices of invalid source frames
-    vector<ElemType> m_inputInvalidMatrixTemp;              // CPU-side buffer for constructing the mask matrix
-    vector<bool> m_anyValid, m_allValid;                    // [time index] denotes whether there are any valid frames at a time step, and if all are valid
+    vector<ElemType> m_inputInvalidMatrixTemp;              // [j] CPU-side buffer for constructing the mask matrix
+    vector<bool> m_inputAnySeqValid, m_inputAllSeqValid;    // [t] denotes whether there are any valid frames at a time step, and if all are valid
 
     shared_ptr<Matrix<ElemType>> m_initialStateValueMatrix; // potentially GPU-side versions
-    shared_ptr<Matrix<ElemType>> m_inputInvalidMatrix;
-    shared_ptr<Matrix<ElemType>> m_zeroMatrix;              // constant [1]-dimensional 0 used for backprop
+    shared_ptr<Matrix<ElemType>> m_inputInvalidMatrix;      // [0,j] contains 1 if matrix column belongs to an frame with boundary condition or a gap frame
+    shared_ptr<Matrix<ElemType>> m_zeroMatrix;              // constant [1]-dimensional 0 used for backprop  --TODO: could use a static map[deviceId]
 
     shared_ptr<Matrix<ElemType>> m_delayedValue;            // saves the activation of the previous step that this node points to
     MBLayoutPtr m_delayedActivationMBLayout;                // layout for m_delayedValue
