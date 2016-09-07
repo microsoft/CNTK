@@ -2,7 +2,7 @@ setlocal
 set CONFIG_DIR=%~dp0Tests\EndToEndTests\Image\AlexNet
 set RUN_DIR=%~dp0AlexNetBenchRunDir
 set CNTK_DIR=%~1
-if not defined CNTK_DIR CNTK_DIR=%~dp0
+if not defined CNTK_DIR set CNTK_DIR=%~dp0
 set BUILD_DIR=%BUILD_DIR%\x64\Release
 set CNTK=%CNTK_DIR%\x64\Release\cntk.exe
 if not exist "%CNTK%" echo ?Cannot find cntk.exe at %CNTK%&exit /b 1
