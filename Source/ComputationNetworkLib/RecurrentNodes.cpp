@@ -228,17 +228,11 @@ template<class ElemType, int direction>
 
     // now perform the copy operation
     if (allValid) // all frames are valid: copy as one tensor-copy operation
-    {
         tgt.AssignCopyOf(src);
-    }
     else if (anyValid) // some are valid, some are not: use a OpCond to select 'src' for valid and 'init' for invalid frames
-    {
         tgt.AssignCondOf(MakeMaskTensor(rank), init, src); // assign either input or init value, based on the mask
-    }
     else // no frame is valid: initialize from init value
-    {
         tgt.AssignCopyOf(init);
-    }
 }
 
 template<class ElemType, int direction>
@@ -267,9 +261,6 @@ template<class ElemType, int direction>
     // TODO: change below accesses to TensorView, then this is no longer needed.
     Input(0)->Gradient().TransferToDeviceIfNotThere(m_deviceId, /*isBeingMoved=*/ true);
 
-    assert(inputIndex == 0);
-    inputIndex;
-
     // special case: DelayedValueNodes may be used outside of loops
     // TODO: this should be a bulk operation; this implementation is a quick hack
     int dir = direction; // (this avoids a 'conditional expression is constant' warning)
@@ -289,27 +280,49 @@ template<class ElemType, int direction>
     if (t_delayed >= 0 && t_delayed < GetNumTimeSteps()) // only propagate if our source is inside the minibatch
     {
         // we backpropagated into the delayed frame
+        // TODO: Is this really necessary? Can the condition not also work the other way round? Then it'd be the same in fw and bw.
         FrameRange frTgt =    fr.WithTimeStep(t_delayed);                 // target frame
         FrameRange frSrc = frTgt.WithTimeOffset(direction * -m_timeStep); // source frame
 
         // determine the parallel sequences to mask
+        // Perf BUGBUG: Learning the initial state is currently not efficient:
+        //  - we initialize the mask twice,
+        //  - explicitly mask gradients to zero, and
+        //  - should even come in here with FrameRange all.
+        // TODO: Solution [Amit]:
+        //  - pre-compute the mask for the entire MB; cache in MBLayout
+        //  - transfer only once
         bool anyValid, allValid;
         DetermineInvalidSequences(frSrc, anyValid, allValid);
 
-        auto src =           GradientTensorFor(rank, frSrc); // incoming gradient from top
-        auto tgt = Input(0)->GradientTensorFor(rank, frTgt); // outgoing gradient to input
         TensorView<ElemType> zero(m_zeroMatrix, TensorShape(1));
 
-        if (allValid) // all valid: just jam it over in one go
+        auto src = GradientTensorFor(rank, frSrc); // incoming gradient from top
+
+        if (inputIndex == 0)
         {
-            tgt.AddCopyOf(src);
+            auto tgt = Input(inputIndex)->GradientTensorFor(rank, frTgt); // outgoing gradient to input
+
+            if (allValid) // all valid: just jam it over in one go
+                tgt.AddCopyOf(src);
+            else if (anyValid) // // some are valid, some are not: use a OpCond tgt select 'src' for valid and 'zero' for invalid frames
+                tgt.AddCondOf(MakeMaskTensor(rank), zero, src); // now add either source or zero value, based on the mask
+            else // none valid: nothing tgt back-prop
+                ;
         }
-        else if (anyValid) // // some are valid, some are not: use a OpCond tgt select 'src' for valid and 'zero' for invalid frames
+        else if (inputIndex == 1)
         {
-            tgt.AddCondOf(MakeMaskTensor(rank), zero, src); // now add either source or zero value, based on the mask
+            auto tgt = Input(inputIndex)->GradientTensorFor(rank, FrameRange()); // outgoing gradient to initial state
+
+            MaskMissingGradientColumnsToZero(frSrc); // MakeMaskTensor() declares gaps 'valid', so must mask (Note: only matters for gaps within; which don't exist, so can save this)
+
+            if (allValid) // all valid: just jam it over in one go --this has a reduction
+                tgt.AddCopyOf(src);
+            else if (anyValid) // // some are valid, some are not: use a OpCond tgt select 'src' for valid and 'zero' for invalid frames
+                tgt.AddCondOf(MakeMaskTensor(rank), src, zero); // when back-propping into initial state, we swap the args and propagate the invalid ones
+            else // none valid: nothing tgt back-prop
+                ;
         }
-        else // none valid: nothing tgt back-prop
-            ;
     }
 }
 
