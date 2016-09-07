@@ -24,20 +24,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 template<class ElemType, int direction>
 DelayedValueNodeBase<ElemType, direction>::DelayedValueNodeBase(DEVICEID_TYPE deviceId, const wstring& name,
-                                                                ElemType initialActivationValue, const TensorShape& sampleLayout,
+                                                                ElemType initialState, const TensorShape& sampleLayout,
                                                                 size_t timeStep) :
     Base(deviceId, name),
-    m_initialActivationValueMatrix(make_shared<Matrix<ElemType>>(deviceId)),
+    m_initialStateValueMatrix(make_shared<Matrix<ElemType>>(deviceId)),
     m_sourceInvalidMatrix(make_shared<Matrix<ElemType>>(deviceId)),
     m_zeroMatrix(make_shared<Matrix<ElemType>>(deviceId)),
     m_delayedValue(make_shared<Matrix<ElemType>>(deviceId))
 {
-    m_initialActivationValue = initialActivationValue;
+    m_initialStateValue = initialState;
     m_timeStep = 1;
     CreateMatrixIfNull(m_value);
     SetDims(sampleLayout, HasMBLayout() /*false at this point*/);
-    m_initialActivationValueMatrix->Resize(1, 1);
-    m_initialActivationValueMatrix->SetValue(m_initialActivationValue);
+    m_initialStateValueMatrix->Resize(1, 1);
+    m_initialStateValueMatrix->SetValue(m_initialStateValue);
     m_zeroMatrix->Resize(1, 1);
     m_zeroMatrix->SetValue((ElemType)0);
     m_timeStep = (int)timeStep;
@@ -51,8 +51,8 @@ template<class ElemType, int direction>
     {
         auto node = dynamic_pointer_cast<DelayedValueNodeBase<ElemType, direction /*, SequenceStart_or_End*/>>(nodeP);
         node->m_timeStep = m_timeStep;
-        node->m_initialActivationValue = m_initialActivationValue;
-        node->m_initialActivationValueMatrix->SetValue(m_initialActivationValue);
+        node->m_initialStateValue = m_initialStateValue;
+        node->m_initialStateValueMatrix->SetValue(m_initialStateValue);
         node->m_delayedValue->SetValue(*m_delayedValue);
         if (m_delayedActivationMBLayout)
             (node->m_delayedActivationMBLayout = make_shared<MBLayout>())->CopyFrom(m_delayedActivationMBLayout);
@@ -88,8 +88,8 @@ template<class ElemType, int direction>
 
     if (modelVersion >= CNTK_MODEL_VERSION_2)
     {
-        fstream >> m_initialActivationValue;
-        m_initialActivationValueMatrix->SetValue(m_initialActivationValue);
+        fstream >> m_initialStateValue;
+        m_initialStateValueMatrix->SetValue(m_initialStateValue);
     }
 }
 
@@ -105,7 +105,7 @@ template<class ElemType, int direction>
     fstream << GetSampleLayout().GetNumElements() << (size_t)0; // used to be (rows,cols); no need since inferred in Validate(), and wrong for non-matrix tensors
 #endif
 
-    fstream << m_initialActivationValue;
+    fstream << m_initialStateValue;
 }
 
 // determine which parallel sequences have a valid source frame to be copied/propagated
@@ -113,7 +113,7 @@ template<class ElemType, int direction>
 // This function also determines whether we can do it all (allValid) or none (!anyValid).
 // Gaps will be considered as "valid", since that gives us a higher chance of collating all.
 template<class ElemType, int direction>
-/*private*/ void DelayedValueNodeBase<ElemType, direction>::DetermineValidMask(const FrameRange& frDelayed, bool& anyValid, bool& allValid)
+/*private*/ void DelayedValueNodeBase<ElemType, direction>::DetermineInvalidSequences(const FrameRange& frDelayed, bool& anyValid, bool& allValid)
 {
     if (!m_pMBLayout->IsBeyondStartOrEnd(frDelayed)) // true if at least one sequence is outside
     {
@@ -186,7 +186,7 @@ template<class ElemType, int direction>
 
     // determine the parallel sequences to mask
     bool anyValid, allValid;
-    DetermineValidMask(frDelayed, anyValid, allValid);
+    DetermineInvalidSequences(frDelayed, anyValid, allValid);
 
     // source tensor --considering truncated BPTT
     size_t rank = DetermineElementwiseTensorRank();
@@ -222,7 +222,9 @@ template<class ElemType, int direction>
     auto tgt = ValueTensorFor(rank, fr);
 
     // init value tensor (a [1] tensor with broadcasting)
-    TensorView<ElemType> init(m_initialActivationValueMatrix, TensorShape(1));
+    auto init = m_inputs.size() == 1
+        ? TensorView<ElemType>(m_initialStateValueMatrix, TensorShape(1)) // old form: initial state given as C++ constant
+        : Input(1)->ValueTensorFor(rank, FrameRange());                   // initial state given as a tensor
 
     // now perform the copy operation
     if (allValid) // all frames are valid: copy as one tensor-copy operation
@@ -292,7 +294,7 @@ template<class ElemType, int direction>
 
         // determine the parallel sequences to mask
         bool anyValid, allValid;
-        DetermineValidMask(frSrc, anyValid, allValid);
+        DetermineInvalidSequences(frSrc, anyValid, allValid);
 
         auto src =           GradientTensorFor(rank, frSrc); // incoming gradient from top
         auto tgt = Input(0)->GradientTensorFor(rank, frTgt); // outgoing gradient to input
@@ -314,7 +316,18 @@ template<class ElemType, int direction>
 template<class ElemType, int direction>
 /*virtual*/ void DelayedValueNodeBase<ElemType,direction>::/*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) /*override*/
 {
-    ValidateUnaryMap(isFinalValidationPass);
+    if (m_inputs.size() == 1) // old form: initial activation passed as a C++ value at construction time
+        ValidateUnaryMap(isFinalValidationPass);
+    else if (m_inputs.size() == 2) // initial activation passed as a second input
+        ValidateBinaryZip(isFinalValidationPass, /*allowBroadcast=*/true);
+    else
+        InvalidArgument("%ls %ls operation accepts one or two inputs.", NodeName().c_str(), OperationName().c_str());
+
+    if (isFinalValidationPass && !Input(0)->HasMBLayout())
+        InvalidArgument("%ls %ls operation requires the main (first) input to have a dynamic axis.", NodeName().c_str(), OperationName().c_str());
+
+    if (isFinalValidationPass && m_inputs.size() >= 2 && Input(1)->HasMBLayout())
+        InvalidArgument("%ls %ls operation currently does not support the second input (initial state) to have a dynamic axis. It's coming though.", NodeName().c_str(), OperationName().c_str());
 }
 
 template<class ElemType, int direction>

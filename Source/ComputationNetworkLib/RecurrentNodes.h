@@ -16,23 +16,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 template <class ElemType> class DelayedValueNodeState;
 
 // -----------------------------------------------------------------------
-// DelayedValueNodeBase (input [, initialValue]) -- abstract base class for PastValueNode and FutureValueNode to hold all shared code
+// DelayedValueNodeBase (input [, initialState]) -- abstract base class for PastValueNode and FutureValueNode to hold all shared code
 // The two differ in the step direction, some loop directions, and sequence-boundary flags.
 // -----------------------------------------------------------------------
 
 // TODO: 'direction' is really too general. signOfTimeOffset?
 template <class ElemType, int direction /*-1 for Past/left-to-right or +1 for Future/right-to-left*/ /*, MinibatchPackingFlags SequenceStart_or_End/*-Start or -End*/>
-class DelayedValueNodeBase : public ComputationNode<ElemType>, public IRecurrentNode, public ILateAttachingNode, public IStatefulNode, public NumInputs<1>
+class DelayedValueNodeBase : public ComputationNode<ElemType>, public IRecurrentNode, public ILateAttachingNode, public IStatefulNode
 {
     typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     typedef std::shared_ptr<DelayedValueNodeState<ElemType>> DelayedNodeStatePtr;
 
 private:
-    void DetermineValidMask(const FrameRange& frDelayed, bool& anyValid, bool& allValid);
+    void DetermineInvalidSequences(const FrameRange& frDelayed, bool& anyValid, bool& allValid);
     TensorView<ElemType> MakeMaskTensor(size_t rank) const;
 
 protected:
-    DelayedValueNodeBase(DEVICEID_TYPE deviceId, const wstring& name, ElemType initialActivationValue, const TensorShape& sampleLayout, size_t timeStep);
+    DelayedValueNodeBase(DEVICEID_TYPE deviceId, const wstring& name, ElemType initialState, const TensorShape& sampleLayout, size_t timeStep);
     DelayedValueNodeBase(DEVICEID_TYPE deviceId, const wstring& name) :
         DelayedValueNodeBase(deviceId, name, (ElemType)DEFAULT_HIDDEN_ACTIVATION, TensorShape(), 0)
     {
@@ -71,27 +71,27 @@ public:
     virtual NodeStatePtr /*IStatefulNode::*/ ExportState() override;
     virtual void /*IStatefulNode::*/ ImportState(const NodeStatePtr& pImportedState) override;
     int TimeStep() const { return m_timeStep; }
-    ElemType InitialActivationValue() const { return m_initialActivationValue; }
+    ElemType InitialActivationValue() const { return m_initialStateValue; }
 
 protected:
-    ElemType m_initialActivationValue;                           // starting value for hidden activation vector at boundary
-    int m_timeStep;                                              // delay in frames (typ. 1)
+    ElemType m_initialStateValue;                           // starting value for hidden activation vector at boundary
+    int m_timeStep;                                         // delay in frames (typ. 1)
 
-    function<void()> m_attachInputsFn;                           // for late expansion of inputs (scripting)
+    function<void()> m_attachInputsFn;                      // for late expansion of inputs (scripting)
 
-    vector<ElemType> m_sourceInvalidSequences;                   // mask for copying/propagating source frames is prepared here...
+    vector<ElemType> m_sourceInvalidSequences;              // mask for copying/propagating source frames is prepared here...
 
-    shared_ptr<Matrix<ElemType>> m_initialActivationValueMatrix; // potentially GPU-side versions
+    shared_ptr<Matrix<ElemType>> m_initialStateValueMatrix; // potentially GPU-side versions
     shared_ptr<Matrix<ElemType>> m_sourceInvalidMatrix;
-    shared_ptr<Matrix<ElemType>> m_zeroMatrix;                   // constant [1]-dimensional 0 used for backprop
+    shared_ptr<Matrix<ElemType>> m_zeroMatrix;              // constant [1]-dimensional 0 used for backprop
 
-    shared_ptr<Matrix<ElemType>> m_delayedValue;                 // saves the activation of the previous step that this node points to
-    MBLayoutPtr m_delayedActivationMBLayout;                     // layout for m_delayedValue
+    shared_ptr<Matrix<ElemType>> m_delayedValue;            // saves the activation of the previous step that this node points to
+    MBLayoutPtr m_delayedActivationMBLayout;                // layout for m_delayedValue
 };
 
 #define UsingDelayedValueNodeMembers        \
     UsingComputationNodeMembersBoilerplate; \
-    using Base::m_initialActivationValue;   \
+    using Base::m_initialStateValue;   \
     using Base::m_delayedValue;             \
     using Base::m_timeStep;
 
@@ -111,12 +111,12 @@ public:
         : Base(deviceId, name)
     {
     }
-    PastValueNode(DEVICEID_TYPE deviceId, const wstring& name, ElemType initialActivationValue, const TensorShape& sampleLayout, size_t timeStep)
-        : Base(deviceId, name, initialActivationValue, sampleLayout, timeStep)
+    PastValueNode(DEVICEID_TYPE deviceId, const wstring& name, ElemType initialState, const TensorShape& sampleLayout, size_t timeStep)
+        : Base(deviceId, name, initialState, sampleLayout, timeStep)
     {
     }
-    PastValueNode(DEVICEID_TYPE deviceId, const wstring& name, ElemType initialActivationValue, size_t numRows, size_t timeStep)
-        : PastValueNode(deviceId, name, initialActivationValue, TensorShape(numRows), timeStep)
+    PastValueNode(DEVICEID_TYPE deviceId, const wstring& name, ElemType initialState, size_t numRows, size_t timeStep)
+        : PastValueNode(deviceId, name, initialState, TensorShape(numRows), timeStep)
     {
     }
     PastValueNode(const ScriptableObjects::IConfigRecordPtr configp)
@@ -141,12 +141,12 @@ public:
         : Base(deviceId, name)
     {
     }
-    FutureValueNode(DEVICEID_TYPE deviceId, const wstring& name, ElemType initialActivationValue, const TensorShape& sampleLayout, size_t timeStep)
-        : Base(deviceId, name, initialActivationValue, sampleLayout, timeStep)
+    FutureValueNode(DEVICEID_TYPE deviceId, const wstring& name, ElemType initialState, const TensorShape& sampleLayout, size_t timeStep)
+        : Base(deviceId, name, initialState, sampleLayout, timeStep)
     {
     }
-    FutureValueNode(DEVICEID_TYPE deviceId, const wstring& name, ElemType initialActivationValue, size_t numRows, size_t timeStep)
-        : FutureValueNode(deviceId, name, initialActivationValue, TensorShape(numRows), timeStep)
+    FutureValueNode(DEVICEID_TYPE deviceId, const wstring& name, ElemType initialState, size_t numRows, size_t timeStep)
+        : FutureValueNode(deviceId, name, initialState, TensorShape(numRows), timeStep)
     {
     }
     FutureValueNode(const ScriptableObjects::IConfigRecordPtr configp)

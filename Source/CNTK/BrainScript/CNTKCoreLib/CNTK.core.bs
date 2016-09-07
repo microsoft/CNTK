@@ -119,10 +119,11 @@ RecurrentLSTMLayer {outputDim,
                     cellShape = None, # if set then use a projection
                     goBackwards = false,
                     usePeepholes = false,
+                    trainInitialState = false,
                     init = 'heNormal', initValueScale = 1,
                     enableSelfStabilization = false,
                     allowOptimizedEngine = false} =
-if allowOptimizedEngine && BS.Constants.IsNone (cellShape) && !goBackwards && !usePeepholes && !enableSelfStabilization then
+if allowOptimizedEngine && BS.Constants.IsNone (cellShape) && !goBackwards && !usePeepholes && !trainInitialState && !enableSelfStabilization then
 {
     # use cudnn instead
     W = ParameterTensor {0:0, initOutputRank=-1, init=init, initValueScale=initValueScale}
@@ -130,7 +131,10 @@ if allowOptimizedEngine && BS.Constants.IsNone (cellShape) && !goBackwards && !u
 }.apply
 else
 {
-    previousHook = if goBackwards then BS.RNNs.NextHC else BS.RNNs.PreviousHC
+    previousHook =
+        if trainInitialState
+        then if goBackwards then BS.RNNs.NextHCWithTrainedInitialState{} else BS.RNNs.PreviousHCWithTrainedInitialState{}
+        else if goBackwards then BS.RNNs.NextHC else BS.RNNs.PreviousHC
     lstm = BS.RNNs.LSTMBlock {outputDim, cellShape=cellShape, usePeepholes=usePeepholes, enableSelfStabilization=enableSelfStabilization, init=init, initValueScale=initValueScale}
     apply (x) = {
         prevState = previousHook (lstmState) # recurrent memory. E.g. Previous or Next, with or without initial state, beam reordering etc.
@@ -488,8 +492,12 @@ EnvironmentInput(propertyName, tag='') = new ComputationNode [ operation = 'Envi
 # TODO: make 'dims' the first parameter, think ConstantTensor<dims> (val)
 ConstantTensor(val, dims, tag='') = ParameterTensor(dims, learningRateMultiplier = 0, initValue = val)
 Constant(val, rows = 1, cols = 1, tag='') = Parameter(rows, cols, learningRateMultiplier = 0, initValue = val)
-PastValue(dims, input, timeStep = 1, defaultHiddenActivation = 0.1, tag='') = new ComputationNode [ operation = 'PastValue' ; inputs = input ; shape = new TensorShape [ /*dims*/ ] /*plus the function args*/ ]
-FutureValue(dims, input, timeStep = 1, defaultHiddenActivation = 0.1, tag='') = new ComputationNode [ operation = 'FutureValue' ; inputs = input ; shape = new TensorShape [ /*dims*/ ] /*plus the function args*/ ]
+# in PastValue/FutureValue, initialState, if given, overrides defaultHiddenActivation
+# for back compat, we must keep this value of 0.1 for defaultHiddenActivation even if it is strange
+_PFValue   (pastOrFuture, dims, input, timeStep = 1, initialState = None, defaultHiddenActivation = 0.1, tag='') =
+    new ComputationNode { operation = pastOrFuture + 'Value' ; inputs = if BS.Constants.IsNone (initialState) then input else (input:initialState) ; shape = new TensorShape [ /*dims*/ ] /*plus the function args*/ }
+PastValue   (dims, input, timeStep = 1, initialState = None, defaultHiddenActivation = 0.1, tag='') = _PFValue ("Past",   dims, input, timeStep=timeStep, initialState=initialState, defaultHiddenActivation=defaultHiddenActivation, tag=tag)
+FutureValue (dims, input, timeStep = 1, initialState = None, defaultHiddenActivation = 0.1, tag='') = _PFValue ("Future", dims, input, timeStep=timeStep, initialState=initialState, defaultHiddenActivation=defaultHiddenActivation, tag=tag)
 Shift(input, fromOffset, boundaryValue, boundaryMode=-1/*context*/, dim=-1, tag='') = new ComputationNode [ operation = 'Shift' ; inputs = (input : boundaryValue) /*plus the function args*/ ]
 RowSlice(beginIndex, numRows, input, tag='') = Slice(beginIndex, beginIndex + numRows, input, axis = 1)
 RowRepeat(input, numRepeats, tag='') = new ComputationNode [ operation = 'RowRepeat' ; inputs = input /*plus the function args*/ ]
@@ -838,7 +846,7 @@ Sequences = [
 # These refer to the loop iteration itself.
 ##############################################################################
 
-Loop = [
+Loop = {
     # get the current iteration index w.r.t a node in a loop, such as a Delay node
     Iteration (x) = [
       agg = OnesLike (x) + PastValue(agg, defaultHiddenActivation=0) // a recurrence that sums up ones
@@ -859,9 +867,9 @@ Loop = [
     # flag whether a frame is within the first or last N frames
     _IsWithin (DelayFn/*PastValue or FutureValue*/, N, x) = DelayFn (0, Constants.ZeroesLike (x)/*false*/, timeStep=N, defaultHiddenActivation=Constants.True)
 
-    # opposite of Id's "next"
-    Previous (x) = PastValue   (0, x, timeStep=1)
-    Next (x)     = FutureValue (0, x, timeStep=1)
+    # opposite of Id's "next x = ..."
+    Previous (x, initialState=None) = PastValue   (0, x, initialState=initialState, timeStep=1)
+    Next     (x, initialState=None) = FutureValue (0, x, initialState=initialState, timeStep=1)
 
     PreviousOrDefault (x, defaultValue=Constant (0)) =   # a delay node with initial value  --TODO: merge the two, then do in C++
     [
@@ -878,7 +886,7 @@ Loop = [
                     /*then*/ BS.Sequences.Scatter (flags, defaultValue),
                     /*else*/ Next (x))
     ].out
-]
+}
 
 ##############################################################################
 # parameter definitions
@@ -1054,18 +1062,30 @@ RNNs =
 
     # helper function to delay h and c
     # Callers can provide their own, e.g. useful for beam decoding.
-    PreviousHC (lstmState, layerIndex=0) = [
-       h = Loop.Previous (lstmState.h)         // hidden state(t-1)
-       c = Loop.Previous (lstmState.c)         // cell(t-1)
+    PreviousHC (lstmState, initialState=None, layerIndex=0) = {
+       h = Loop.Previous (lstmState.h, initialState=if BS.Constants.IsNone (initialState) then None else initialState.h)  # hidden state(t-1)
+       c = Loop.Previous (lstmState.c, initialState=if BS.Constants.IsNone (initialState) then None else initialState.c)  # cell(t-1)
        dim = lstmState.dim
-    ]
+    }
 
     # pass previousHook=BS.RNNs.NextHC instead of PreviousHC to get a right-to-left recurrence
-    NextHC (lstmState, layerIndex=0) = [
-       h = Loop.Next (lstmState.h)             // hidden state(t-1)
-       c = Loop.Next (lstmState.c)             // cell(t-1)
+    NextHC (lstmState, initialState=None, layerIndex=0) = {
+       h = Loop.Next (lstmState.h, initialState=if BS.Constants.IsNone (initialState) then None else initialState.h)  # hidden state(t-1)
+       c = Loop.Next (lstmState.c, initialState=if BS.Constants.IsNone (initialState) then None else initialState.c)  # cell(t-1)
        dim = lstmState.dim
-    ]
+    }
+    
+    PreviousHCWithTrainedInitialState{shape=(0)} = {  # default (0) will infer to all elements for inputs of rank 0
+        initialH = ParameterTensor {shape, initValue=0}
+        initialC = ParameterTensor {shape, initValue=0}
+        apply (x) = PreviousHC (x, initialState={ h = initialH; c = initialC }, layerIndex=0)
+    }.apply
+
+    NextHCWithTrainedInitialState{shape=(0)} = {  # default (0) will infer to all elements for inputs of rank 0
+        initialH = ParameterTensor {shape, initValue=0}
+        initialC = ParameterTensor {shape, initValue=0}
+        apply (x) = NextHC (x, initialState={ h = initialH; c = initialC }, layerIndex=0)
+    }.apply
 
     NoAuxInputHook (input, lstmState) = Constants.None
 
