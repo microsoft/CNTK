@@ -19,31 +19,28 @@ trainNetwork = {
 
     BrainScriptNetworkBuilder = {
         imageShape = 28:28:1                        # image dimensions, 1 channel only
-        featScale = Constant(1/256)
         labelDim = 10                               # number of distinct labels
         convWScale = 10                             # the initial value scale for the conv layers
+        featScale = 1/256
+        Scale{f} = x => Constant(f) .* x
 
         # define a custom layer with 5x5 convolution, batch norm, relu and 2x2 max pooling
-        ConvBnReluPool (x, depth, initValueScale) =
-        {
-            c = ConvolutionalLayer {depth, (5:5), pad=true, initValueScale=initValueScale} (x)
-            b = BatchNormalizationLayer {spatialRank = 2, normalizationTimeConstant = 1024} (c)
-            r = ReLU (b)
-            p = MaxPoolingLayer {(2:2), stride = (2:2)} (r)
-        }.p
-
-        model (features) = {
-            featNorm = features.* featScale
-            
-            cbnr1 = ConvBnReluPool(featNorm, 16, convWScale)
-            cbnr2 = ConvBnReluPool(cbnr1,    32, convWScale)
-            
-            h1 = LinearLayer {128} (cbnr2)
-            h1bn = BatchNormalizationLayer {normalizationTimeConstant = 1024} (h1)
-            h1bnr = ReLU (h1bn)
-            
-            ol = LinearLayer {labelDim} (h1bnr)
-        }.ol
+        ConvBnReluPoolLayer {outChannels, initValueScale} = Sequential (
+            ConvolutionalLayer      {outChannels, (5:5), pad=true, initValueScale=initValueScale} :
+            BatchNormalizationLayer {spatialRank = 2} :
+            ReLU :
+            MaxPoolingLayer         {(2:2), stride = (2:2)} 
+        )
+        
+        model = Sequential (
+            Scale {featScale} :
+            ConvBnReluPoolLayer     {16, convWScale} :
+            ConvBnReluPoolLayer     {32, convWScale} :
+            LinearLayer             {128} :
+            BatchNormalizationLayer {} :
+            ReLU :
+            LinearLayer             {labelDim}
+        )
 
         # inputs
         features = Input {imageShape}
