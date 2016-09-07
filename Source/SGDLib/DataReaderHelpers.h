@@ -10,6 +10,7 @@
 #include <string>
 #include <map>
 #include <set>
+#include "TimerUtility.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -53,7 +54,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //  - SetActualMiniBatchSizeFromFeatures()  --tells Network to resize the nodes' buffers
         // with the special twist that in presence of parallelization, there is some decimation involved.
 
+        Timer fineGrainedPerfMeasurementTimer;
+        fineGrainedPerfMeasurementTimer.Start();
         bool wasDataRead = trainSetDataReader.GetMinibatch(inputMatrices); // fill in the minibatch data into the Input nodes' buffers directly
+        fineGrainedPerfMeasurementTimer.Stop();
+        double readTime = fineGrainedPerfMeasurementTimer.ElapsedSeconds();
+        fprintf(stderr, "Perf trace: read time of SGD GetMinibatch: %.5gs\n", readTime);
         // If this returns false, the matrices may contain garbage or not sized to 0 columns.
         // On the other hand, if it returns a 0-column matrix, that would be a perfectly cromulent minibatch (in case of data parallelism with distributed reading).
         // If a passed matrix does not match a reader section, that is an error.

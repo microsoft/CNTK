@@ -17,6 +17,7 @@
 #define DATAREADER_EXPORTS // creating the exports here
 #include "DataReader.h"
 #include "ReaderShim.h"
+#include "TimerUtility.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -95,7 +96,11 @@ void ReaderShim<ElemType>::StartDistributedMinibatchLoop(
     // Starting the prefetch task. There is always a single async read in flight.
     // When the network requests a new minibatch, we wait for the current async to finish,
     // return the result and kick off the new one.
-    m_prefetchTask = std::async(m_launchType, [this]() { return PrefetchMinibatch(); });
+    m_prefetchTask = std::async(m_launchType, 
+    [this]()
+    {
+        return PrefetchMinibatch();
+    });
 }
 
 string EnumerateInputs(const map<wstring, size_t> &nameToStreamId)
@@ -128,7 +133,6 @@ bool ReaderShim<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
 
     //TODO: Set proper format on matrices?
 
-
     // Check that all matrices have the same device id.
     // If not we should inject the IMemoryProvider per stream.
     int deviceId = matrices.begin()->second.matrix->GetDeviceId();
@@ -148,7 +152,11 @@ bool ReaderShim<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
         }
     }
 
+    Timer timer;
+    timer.Start();
     auto result = m_prefetchTask.get();
+    timer.Stop();
+    fprintf(stderr, "Waiting on the prefetch future: %.5gs\n", timer.ElapsedSeconds());
 
     // Ok, prefetch is done.
     m_endOfEpoch = result.first;
@@ -170,7 +178,6 @@ bool ReaderShim<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
     }
 
     // Let's take care of layouts now.
-
     // a map to generate error messages when checking layout constraints.
     map<wstring, wstring> layoutToInputMap;
 
@@ -204,7 +211,11 @@ bool ReaderShim<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
         // Starting the prefetch task. There is always a single async read in flight.
         // When the network requests a new minibatch, we wait for the current async to finish,
         // return the result and kick off the new one.
-        m_prefetchTask = std::async(m_launchType, [this]() { return PrefetchMinibatch(); });
+        m_prefetchTask = std::async(m_launchType, 
+            [this]()
+        {
+            return PrefetchMinibatch();
+        });
     }
 
     return dataNotEmpty;
@@ -214,8 +225,11 @@ template <class ElemType>
 std::pair<bool, bool> ReaderShim<ElemType>::PrefetchMinibatch()
 {
     Matrix<ElemType>::SetDevice(m_prefetchBuffer.begin()->second->GetDeviceId());
-
+    Timer timer;
+    timer.Start();
     Minibatch minibatch = m_reader->ReadMinibatch();
+    timer.Stop();
+    fprintf(stderr, "Reading time of the minibatch inside future: %.5gs\n", timer.ElapsedSeconds());
 
     // If there is no data we can simply return.
     if (minibatch.m_data.empty())
@@ -223,6 +237,7 @@ std::pair<bool, bool> ReaderShim<ElemType>::PrefetchMinibatch()
         return std::make_pair(minibatch.m_endOfEpoch, false);
     }
 
+    timer.Restart();
     // Ok we have some data. Let's load it to GPU.
     for (const auto& mx : m_prefetchBuffer)
     {
@@ -235,6 +250,9 @@ std::pair<bool, bool> ReaderShim<ElemType>::PrefetchMinibatch()
     }
 
     Matrix<ElemType>::SyncPendingRead(m_prefetchBuffer.begin()->second->GetDeviceId());
+
+    timer.Stop();
+    fprintf(stderr, "Copy time of the minibatch inside future: %.5gs\n", timer.ElapsedSeconds());
 
     return std::make_pair(minibatch.m_endOfEpoch, true);
 }
