@@ -10,57 +10,66 @@
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 template <class ElemType>
-void BatchNormEngine<ElemType>::Forward(const Mat& in, const Mat& scale, const Mat& bias, double expAvgFactor, double blendFactor, Mat& runMean, Mat& runInvStdDev,
-                                        Mat& out, double epsilon, Mat& saveMean, Mat& saveInvStdDev)
+void BatchNormEngine<ElemType>::Forward(const Mat& in, const Mat& scale, const Mat& bias, bool inferenceOnly, double expAvgFactor, double blendFactor, Mat& runMean, Mat& runVariance,
+                                        Mat& out, double epsilon, Mat& savedMean, Mat& savedInvStdDev)
 {
     assert(in.GetNumRows() == m_inOutT.GetNumElements());
     assert(out.GetNumRows() == m_inOutT.GetNumElements());
     assert(in.GetNumCols() == out.GetNumCols());
     assert(std::isfinite(expAvgFactor) && (0 <= expAvgFactor && expAvgFactor <= 1));
     assert(std::isfinite(blendFactor) && (0 <= blendFactor && blendFactor <= 1));
+    // In inference mode, must only use runnig statististics
+    assert(!inferenceOnly || ((expAvgFactor == 0.0) && (blendFactor == 1.0)));
     assert(std::isfinite(epsilon) && epsilon > 0);
     if (!m_spatial)
     {
         assert(m_inOutT.GetNumElements() == scale.GetNumRows());
         assert(m_inOutT.GetNumElements() == bias.GetNumRows());
         assert(m_inOutT.GetNumElements() == runMean.GetNumRows());
-        assert(m_inOutT.GetNumElements() == runInvStdDev.GetNumRows());
+        assert(m_inOutT.GetNumElements() == runVariance.GetNumRows());
     }
     else
     {
         assert((m_inOutT.GetNumElements() % scale.GetNumRows()) == 0);
         assert((m_inOutT.GetNumElements() % bias.GetNumRows()) == 0);
         assert((m_inOutT.GetNumElements() % runMean.GetNumRows()) == 0);
-        assert((m_inOutT.GetNumElements() % runInvStdDev.GetNumRows()) == 0);
+        assert((m_inOutT.GetNumElements() % runVariance.GetNumRows()) == 0);
     }
     assert(scale.GetNumCols() == 1);
     assert(bias.GetNumCols() == 1);
     assert(runMean.GetNumCols() == 1);
-    assert(runInvStdDev.GetNumCols() == 1);
+    assert(runVariance.GetNumCols() == 1);
 
     EnsureCompatible();
-    ForwardCore(in, scale, bias, expAvgFactor, blendFactor, runMean, runInvStdDev, out, epsilon, saveMean, saveInvStdDev);
+    ForwardCore(in, scale, bias, inferenceOnly, expAvgFactor, blendFactor, runMean, runVariance, out, epsilon, savedMean, savedInvStdDev);
 
-    if (!m_spatial)
+    if (!inferenceOnly)
     {
-        assert(saveMean.GetNumElements() == 0 || m_inOutT.GetNumElements() == saveMean.GetNumRows());
-        assert(saveInvStdDev.GetNumElements() == 0 || m_inOutT.GetNumElements() == saveInvStdDev.GetNumRows());
+        assert(!savedMean.IsEmpty());
+        assert(!savedInvStdDev.IsEmpty());
+        if (!m_spatial)
+        {
+            assert(m_inOutT.GetNumElements() == savedMean.GetNumRows());
+            assert(m_inOutT.GetNumElements() == savedInvStdDev.GetNumRows());
+        }
+        else
+        {
+            assert((m_inOutT.GetNumElements() % savedMean.GetNumRows()) == 0);
+            assert((m_inOutT.GetNumElements() % savedInvStdDev.GetNumRows()) == 0);
+        }
+        assert(savedMean.GetNumCols() == 1);
+        assert(savedInvStdDev.GetNumCols() == 1);
     }
-    else
-    {
-        assert(saveMean.GetNumElements() == 0 || (m_inOutT.GetNumElements() % saveMean.GetNumRows()) == 0);
-        assert(saveInvStdDev.GetNumElements() == 0 || (m_inOutT.GetNumElements() % saveInvStdDev.GetNumRows()) == 0);
-    }
-    assert(saveMean.GetNumElements() == 0 || saveMean.GetNumCols() == 1);
-    assert(saveInvStdDev.GetNumElements() == 0 || saveInvStdDev.GetNumCols() == 1);
 }
 
 template <class ElemType>
 void BatchNormEngine<ElemType>::Backward(const Mat& in, const Mat& srcGrad, Mat& grad, const Mat& scale, double blendFactor,
-                                         const Mat& saveMean, const Mat& saveInvStdDev, Mat& scaleGrad, Mat& biasGrad)
+                                         const Mat& savedMean, const Mat& savedInvStdDev, Mat& scaleGrad, Mat& biasGrad)
 {
+    assert(!savedMean.IsEmpty());
+    assert(!savedInvStdDev.IsEmpty());
     EnsureCompatible();
-    BackwardCore(in, srcGrad, grad, scale, blendFactor, saveMean, saveInvStdDev, scaleGrad, biasGrad);
+    BackwardCore(in, srcGrad, grad, scale, blendFactor, savedMean, savedInvStdDev, scaleGrad, biasGrad);
 }
 
 template <class ElemType>
@@ -89,24 +98,23 @@ protected:
             InvalidArgument("CNTK batch normalization supports only cudnn(CHW) layout.");
     }
 
-    void ForwardCore(const Mat& in, const Mat& scale, const Mat& bias, double expAvgFactor, double blendFactor, Mat& runMean, Mat& runInvStdDev,
-                     Mat& out, double epsilon, Mat& saveMean, Mat& saveInvStdDev) override
+    void ForwardCore(const Mat& in, const Mat& scale, const Mat& bias, bool inferenceOnly, double expAvgFactor, double blendFactor, Mat& runMean, Mat& runVariance,
+                     Mat& out, double epsilon, Mat& savedMean, Mat& savedInvStdDev) override
     {
-        in.BatchNormalizationForward(scale, bias, expAvgFactor, blendFactor, runMean, runInvStdDev, out, epsilon, saveMean, saveInvStdDev);
+        in.BatchNormalizationForward(scale, bias, inferenceOnly, expAvgFactor, blendFactor, runMean, runVariance, out, epsilon, savedMean, savedInvStdDev);
     }
 
-    void BackwardCore(const Mat& in, const Mat& srcGrad, Mat& grad, const Mat& scale, double blendFactor, const Mat& saveMean, const Mat& saveInvStdDev,
+    void BackwardCore(const Mat& in, const Mat& srcGrad, Mat& grad, const Mat& scale, double blendFactor, const Mat& savedMean, const Mat& savedInvStdDev,
                       Mat& scaleGrad, Mat& biasGrad) override
     {
-        srcGrad.BatchNormalizationBackward(in, grad, scale, blendFactor, saveMean, saveInvStdDev, scaleGrad, biasGrad);
+        srcGrad.BatchNormalizationBackward(in, grad, scale, blendFactor, savedMean, savedInvStdDev, scaleGrad, biasGrad);
     }
 };
 
 template class CntkBatchNormEngine<float>;
 template class CntkBatchNormEngine<double>;
 
-template <typename T>
-bool HasFlag(T src, T testFlag)
+template <typename T> bool HasFlag(T src, T testFlag)
 {
     return ((int)src & (int)testFlag) != 0;
 }

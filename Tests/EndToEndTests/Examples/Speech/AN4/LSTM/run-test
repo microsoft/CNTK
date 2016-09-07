@@ -5,5 +5,5 @@
 ConfigDir=$TEST_DIR/../../../../../../Examples/Speech/AN4/Config
 
 # cntkrun <CNTK config file name> <additional CNTK args>
-cntkrun LSTM-NDL.cntk "speechTrain=[SGD=[maxEpochs=1]] speechTrain=[SGD=[epochSize=64]] speechTrain=[reader=[useMersenneTwisterRand=true]] parallelTrain=false" || exit $?
+cntkrun LSTM-NDL_ndl_deprecated.cntk "speechTrain=[SGD=[maxEpochs=1]] speechTrain=[SGD=[epochSize=64]] speechTrain=[reader=[useMersenneTwisterRand=true]] parallelTrain=false" || exit $?
 

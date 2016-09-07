@@ -36,7 +36,9 @@ namespace CNTK
     protected:
         LearnerBase(const std::unordered_set<Parameter>& parameters, 
                     const LearningRatesPerSample& learningRates,
-                    bool allocateSmoothGradients = true);
+                    bool allocateSmoothGradients = true,
+                    double clippingThresholdPerSample = std::numeric_limits<double>::infinity(),
+                    bool gradientClippingWithTruncation = true);
 
         virtual void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const = 0;
 
@@ -104,11 +106,13 @@ namespace CNTK
     public:
         LearnerSGD(const std::unordered_set<Parameter>& parameters, 
                    const LearningRatesPerSample& learningRates, 
-                   bool allocateSmoothGradients = true)
-            : LearnerBase(parameters, learningRates, allocateSmoothGradients), 
+                   bool allocateSmoothGradients = true,
+                   double clippingThresholdPerSample = std::numeric_limits<double>::infinity(),
+                   bool gradientClippingWithTruncation = true)
+                   : LearnerBase(parameters, learningRates, allocateSmoothGradients, clippingThresholdPerSample, gradientClippingWithTruncation),
             m_momentums(0.0), 
             m_useNesterovAcceleration(false)
-        { }
+        {}
 
     protected:
 
@@ -129,8 +133,10 @@ namespace CNTK
         LearnerMomentumSGD(const std::unordered_set<Parameter>& parameters, 
                            const LearningRatesPerSample& learningRates,
                            const MomentumsPerSample& momentums,
-                           bool allocateSmoothGradients = true)
-            : LearnerSGD(parameters, learningRates, allocateSmoothGradients)
+                           bool allocateSmoothGradients = true,
+                           double clippingThresholdPerSample = std::numeric_limits<double>::infinity(),
+                           bool gradientClippingWithTruncation = true)
+                           : LearnerSGD(parameters, learningRates, allocateSmoothGradients, clippingThresholdPerSample, gradientClippingWithTruncation)
         {
             m_momentums = momentums;
         }
@@ -143,8 +149,10 @@ namespace CNTK
 
         LearnerNesterov(const std::unordered_set<Parameter>& parameters, 
                         const LearningRatesPerSample& learningRates,
-                        const MomentumsPerSample& momentums)
-            : LearnerMomentumSGD(parameters, learningRates, momentums)
+                        const MomentumsPerSample& momentums,
+                        double clippingThresholdPerSample = std::numeric_limits<double>::infinity(),
+                        bool gradientClippingWithTruncation = true)
+                        : LearnerMomentumSGD(parameters, learningRates, momentums, true, clippingThresholdPerSample, gradientClippingWithTruncation)
         {
             m_useNesterovAcceleration = true;
         }
@@ -156,7 +164,9 @@ namespace CNTK
 
         LearnerAdaGrad(const std::unordered_set<Parameter>& parameters, 
                        const LearningRatesPerSample& learningRates,
-                       bool needAveMultiplier);
+                       bool needAveMultiplier,
+                       double clippingThresholdPerSample = std::numeric_limits<double>::infinity(),
+                       bool gradientClippingWithTruncation = true);
 
     protected:
         bool m_needAveMultiplier;
@@ -173,7 +183,9 @@ namespace CNTK
 
         LearnerFSAdaGrad(const std::unordered_set<Parameter>& parameters,
                          const LearningRatesPerSample& learningRates,
-                         const MomentumsPerSample& momentums);
+                         const MomentumsPerSample& momentums,
+                         double clippingThresholdPerSample = std::numeric_limits<double>::infinity(),
+                         bool gradientClippingWithTruncation = true);
 
     protected:
 
@@ -190,7 +202,9 @@ namespace CNTK
         LearnerRMSProp(const std::unordered_set<Parameter>& parameters,
                        const LearningRatesPerSample& learningRates,
                        double gamma, double inc, double dec, double max, double min,
-                       bool needAveMultiplier);
+                       bool needAveMultiplier,
+                       double clippingThresholdPerSample = std::numeric_limits<double>::infinity(),
+                       bool gradientClippingWithTruncation = true);
 
     protected:
 

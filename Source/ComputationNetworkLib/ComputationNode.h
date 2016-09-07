@@ -41,7 +41,9 @@
 #define CNTK_MODEL_VERSION_10 10 // learning-rate multiplier for input nodes
 #define CNTK_MODEL_VERSION_11 11 // dynamic axis name for where nodes
 #define CNTK_MODEL_VERSION_12 12 // Times() m_inputRank to support parameter-rank inference
-#define CURRENT_CNTK_MODEL_VERSION CNTK_MODEL_VERSION_12
+#define CNTK_MODEL_VERSION_13 13 // batch norm: switch running inverse std deviation -> variance, MB count -> samplesSeen; CuDNN v5
+#define CNTK_MODEL_VERSION_14 14 // axis parameter in OptimizedRNNStackNode
+#define CURRENT_CNTK_MODEL_VERSION CNTK_MODEL_VERSION_14
 
 extern bool g_shareNodeValueMatrices;
 

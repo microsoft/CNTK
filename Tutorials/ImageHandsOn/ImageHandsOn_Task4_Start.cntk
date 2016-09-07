@@ -20,13 +20,13 @@ TrainConvNet = {
         MySubSampleBN (x, depth, stride) =
         {
             s = Splice ((MaxPoolingLayer {(1:1), stride = (stride:stride)} (x) : ConstantTensor (0, (1:1:depth/stride))), axis = 3)  # sub-sample and pad: [W x H x depth/2] --> [W/2 x H/2 x depth]
-            b = BatchNormalizationLayer {spatialRank = 2, normalizationTimeConstant = 4096} (s)
+            b = BatchNormalizationLayer {spatialRank = 2} (s)
         }.b
         MyConvBN (x, depth, initValueScale, stride) =
         {
             c = ConvolutionalLayer {depth, (3:3), pad = true, stride = (stride:stride), bias = false,
                                     init = "gaussian", initValueScale = initValueScale} (x)
-            b = BatchNormalizationLayer {spatialRank = 2, normalizationTimeConstant = 4096} (c)
+            b = BatchNormalizationLayer {spatialRank = 2} (c)
         }.b
         ResNetNode (x, depth) =
         {

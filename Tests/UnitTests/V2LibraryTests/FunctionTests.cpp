@@ -20,7 +20,7 @@ void TestReduceSum(const DeviceDescriptor& device)
             size_t maxActualSequenceLength = sequencesValue->Data()->Shape()[1];
             size_t numSequences = sequencesValue->Data()->Shape()[2];
 
-            Variable inputVar({ dim }, DataType::Float, L"input");
+            auto inputVar = InputVariable({ dim }, DataType::Float, L"input");
             FunctionPtr reduceSumFunc;
 
             if (reduceAll)
@@ -76,7 +76,7 @@ void TestReduceSum(const DeviceDescriptor& device)
             size_t maxActualSequenceLength = sequencesValue->Data()->Shape()[1];
             size_t numSequences = sequencesValue->Data()->Shape()[2];
 
-            Variable inputVar({ dim }, DataType::Float, L"input");
+            auto inputVar = InputVariable({ dim }, DataType::Float, L"input");
             FunctionPtr reduceSumFunc = ReduceSum(inputVar, axis);
 
             NDShape maskShape = { ((axis == Axis::DefaultBatchAxis()) ? maxActualSequenceLength : 1), ((axis == Axis::DefaultBatchAxis()) ? 1 : numSequences) };
@@ -130,7 +130,7 @@ void TestSlice(const DeviceDescriptor& device)
             size_t maxActualSequenceLength = sequencesValue->Data()->Shape()[1];
             size_t numSequences = sequencesValue->Data()->Shape()[2];
 
-            Variable inputVar({ dim }, DataType::Float, L"input");
+            auto inputVar = InputVariable({ dim }, DataType::Float, L"input");
             auto rowSliceFunc = Slice(inputVar, Axis(0), beginOffset, endOffset);
 
             NDShape outputShape = rowSliceFunc->Output().Shape().AppendShape({ maxActualSequenceLength, numSequences });
@@ -173,7 +173,7 @@ void TestSlice(const DeviceDescriptor& device)
 
             size_t sliceLength = endOffset - beginOffset;
 
-            Variable inputVar({ dim }, DataType::Float, L"input");
+            auto inputVar = InputVariable({ dim }, DataType::Float, L"input");
             auto sliceFunc = Slice(inputVar, axis, beginOffset, endOffset);
 
             size_t outputSequenceAxisLength = (axis == Axis::DefaultDynamicAxis()) ? sliceLength : maxActualSequenceLength;

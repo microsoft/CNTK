@@ -4,7 +4,7 @@ using namespace CNTK;
 
 inline FunctionPtr ConvBNLayer(Variable input, size_t outFeatureMapCount, size_t kernelWidth, size_t kernelHeight, size_t hStride, size_t vStride, double wScale, double bValue, double scValue, size_t bnTimeConst, const DeviceDescriptor& device)
 {
-    size_t numInputChannels = input.Shape()[input.Shape().NumAxes() - 1];
+    size_t numInputChannels = input.Shape()[input.Shape().Rank() - 1];
 
     auto convParams = Parameter(NDArrayView::RandomNormal<float>({ outFeatureMapCount, kernelWidth, kernelHeight, numInputChannels }, 0.0, wScale, 1, device));
     auto convFunction = Convolution(convParams, input, { hStride, vStride, numInputChannels });
@@ -28,12 +28,12 @@ inline FunctionPtr ProjLayer(Variable wProj, Variable input, size_t hStride, siz
     auto b = Parameter({ outFeatureMapCount }, (float)bValue, device);
     auto sc = Parameter({ outFeatureMapCount }, (float)scValue, device);
     auto m = Constant({ outFeatureMapCount }, 0.0f, device);
-    auto isd = Constant({ outFeatureMapCount }, 0.0f, device);
+    auto v = Constant({ outFeatureMapCount }, 0.0f, device);
 
-    size_t numInputChannels = input.Shape()[input.Shape().NumAxes() - 1];
+    size_t numInputChannels = input.Shape()[input.Shape().Rank() - 1];
 
     auto c = Convolution(wProj, input, { hStride, vStride, numInputChannels }, { true }, { false });
-    return BatchNormalization(c, sc, b, m, isd, true /*spatial*/, (double)bnTimeConst);
+    return BatchNormalization(c, sc, b, m, v, true /*spatial*/, (double)bnTimeConst);
 }
 
 inline FunctionPtr ResNetNode2(Variable input, size_t outFeatureMapCount, size_t kernelWidth, size_t kernelHeight, double wScale, double bValue, double scValue, size_t bnTimeConst, const DeviceDescriptor& device)

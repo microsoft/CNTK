@@ -94,6 +94,8 @@ DictionaryValue CreateDictionaryValue(DictionaryValue::Type type, size_t depth)
         return DictionaryValue(double_dist(rng));
     case DictionaryValue::Type::String:
         return DictionaryValue(to_wstring(rng()));
+    case DictionaryValue::Type::Axis:
+        return ((rng() % 2) == 0) ? DictionaryValue(Axis(0)) : DictionaryValue(Axis(L"newDynamicAxis_" + to_wstring(rng())));
     case DictionaryValue::Type::NDShape:
     {
         size_t size = rng() % maxNDShapeSize + 1;
@@ -205,8 +207,6 @@ void TestLearnerSerialization(int numParameters, const DeviceDescriptor& device)
     if (checkpoint1 != checkpoint2)
         throw std::runtime_error("TestLearnerSerialization: original and restored from a checkpoint learners diverge.");
 }
-
-
 
 void SerializationTests()
 {

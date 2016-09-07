@@ -22,7 +22,7 @@ TrainConvNet = {
             {
                 c = ConvolutionalLayer {depth, (5:5), pad = true,  ##### no activation=ReLU
                                         init = "gaussian", initValueScale = initValueScale} (x)
-                b = BatchNormalizationLayer {spatialRank = 2, normalizationTimeConstant = 4096} (c)
+                b = BatchNormalizationLayer {spatialRank = 2} (c)
                 r = ReLU (b)   ##### now called explicitly
                 p = MaxPoolingLayer {(3:3), stride = (2:2)} (r)
             }.p
