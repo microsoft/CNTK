@@ -17,10 +17,11 @@ using namespace std;
 void PackerBase::StreamBuffer::Resize(size_t newSize)
 {
     m_size = newSize;
-    m_data.reset(reinterpret_cast<char*>(m_memoryProvider->Alloc(1, newSize)),
-        [this](char* p)
+    auto provider = m_memoryProvider;
+    m_data.reset(reinterpret_cast<char*>(provider->Alloc(1, newSize)),
+        [provider](char* p)
     {
-        m_memoryProvider->Free(p);
+        provider->Free(p);
     });
 }
 
