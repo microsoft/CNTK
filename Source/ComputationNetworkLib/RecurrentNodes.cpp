@@ -126,7 +126,8 @@ template<class ElemType, int direction>
     //  - actual: one of the two is a gap, but not both (if both, then it is considered valid again)
     m_anyValid.resize(GetNumTimeSteps());
     m_allValid.resize(GetNumTimeSteps());
-#if 0
+    m_inputInvalidMatrixTemp.assign(GetMBLayout()->GetNumCols(), 0);
+    let S = GetNumParallelSequences();
     //size_t rank = DetermineElementwiseTensorRank();
     int dir = direction; // (this avoids a 'conditional expression is constant' warning)
     FrameRangeIteration range(m_pMBLayout, -dir);
@@ -134,10 +135,11 @@ template<class ElemType, int direction>
     {
         FrameRange frDelayed = fr.WithTimeOffset(direction * m_timeStep);
         DetermineInvalidSequences(frDelayed);
-        if (!allValid && anyValid)
-            MakeMaskTensor(rank, fr);
+        let t0 = fr.t() * S;
+        for (auto s : m_inputInvalidSequences)
+            m_inputInvalidMatrixTemp[t0 + s] = 1;
     }
-#endif
+    m_inputInvalidMatrix->SetValue(1, m_inputInvalidMatrixTemp.size(), m_deviceId, m_inputInvalidMatrixTemp.data(), matrixFlagNormal);
 }
 
 // update temporaries' column dimensions from MBLayout
@@ -158,10 +160,13 @@ template<class ElemType, int direction>
 template<class ElemType, int direction>
 /*private*/ void DelayedValueNodeBase<ElemType, direction>::DetermineInvalidSequences(const FrameRange& frDelayed)
 {
+    m_inputInvalidSequences.clear();
+    let fr = frDelayed.WithoutTimeOffset();
     let t = frDelayed.WithoutTimeOffset().t();
-    if (!m_pMBLayout->IsBeyondStartOrEnd(frDelayed)) // true if at least one sequence is outside
+    if (!m_pMBLayout->IsBeyondStartOrEnd(frDelayed) && // true if at least one sequence is outside
+        !m_pMBLayout->IsGap(fr))
     {
-        m_allValid[t] = true;                             // no special case: just copy all
+        m_allValid[t] = true;                          // no special case: just copy all
         m_anyValid[t] = true;
         return;
     }
@@ -170,12 +175,11 @@ template<class ElemType, int direction>
     //        or current frame is a gap
     //  0 --> delayed frame is valid and current is not a gap: copy/propagate
     let S = GetNumParallelSequences();
-    m_inputInvalidSequences.clear();
     for (size_t s = 0; s < S; s++)
     {
         // source frame is either invalid or valid (or target frame is a gap, in which case we consider everything valid)
         auto isSourceFrameValid = !m_pMBLayout->IsBeyondStartOrEnd(frDelayed.Sequence(s)) &&
-                                  !m_pMBLayout->IsGap(frDelayed.WithoutTimeOffset().Sequence(s));
+                                  !m_pMBLayout->IsGap(fr.Sequence(s));
         if (!isSourceFrameValid)
             m_inputInvalidSequences.push_back(s);
     }
@@ -201,8 +205,8 @@ template<class ElemType, int direction>
     //m_inputInvalidMatrix->SetValue(0); // TODO: This reset matters. Fix that first, but excluding gap-!gap
     let S = GetNumParallelSequences();
     let t0 = S * fr.t();
-    for (let s : m_inputInvalidSequences)
-        m_inputInvalidMatrix->ColumnSlice(t0 + s, 1).SetValue(1);
+    //for (let s : m_inputInvalidSequences)
+    //    m_inputInvalidMatrix->ColumnSlice(t0 + s, 1).SetValue(1);
     // tensor shape is a 1-frame sequence, one element per parallel sequence.
     auto tensorShape = TensorShape(1).AppendInPlace(rank, GetMBLayout()->GetNumCols());
     tensorShape.NarrowTo(pair<vector<size_t>, vector<size_t>>({ 0, t0 }, { 1, t0 + S }));
@@ -243,7 +247,7 @@ template<class ElemType, int direction>
     assert(m_timeStep > 0);
 
     // determine the parallel sequences to mask
-    DetermineInvalidSequences(frDelayed);
+    //DetermineInvalidSequences(frDelayed);
 
     // source tensor --considering truncated BPTT
     size_t rank = DetermineElementwiseTensorRank();
@@ -343,7 +347,7 @@ template<class ElemType, int direction>
     // TODO: Solution [Amit]:
     //  - pre-compute the mask for the entire MB; cache in MBLayout
     //  - transfer only once
-    DetermineInvalidSequences(frDelayed);
+    //DetermineInvalidSequences(frDelayed);
 
     TensorView<ElemType> zero(m_zeroMatrix, TensorShape(1));
 

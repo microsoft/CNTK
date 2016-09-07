@@ -82,6 +82,7 @@ protected:
     function<void()> m_attachInputsFn;                      // for late expansion of inputs (scripting)
 
     vector<size_t> m_inputInvalidSequences;                 // indices of invalid source frames
+    vector<ElemType> m_inputInvalidMatrixTemp;              // CPU-side buffer for constructing the mask matrix
     vector<bool> m_anyValid, m_allValid;                    // [time index] denotes whether there are any valid frames at a time step, and if all are valid
 
     shared_ptr<Matrix<ElemType>> m_initialStateValueMatrix; // potentially GPU-side versions
