@@ -28,6 +28,7 @@ public:
     cudaStream_t GetSwapSteam(){ return m_streamAsync; }
     void ReleaseMemory();
     bool m_hasDoneInitialSwap;
+    bool m_isSwappedOut;
 
 private:
     cudaStream_t m_streamAsync; 

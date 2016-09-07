@@ -87,7 +87,7 @@ template<typename ElemType> void SwapManager<ElemType>::EndSynchronizeState(Comp
     else if(isTraining)
         for(auto matrix : m_node2BackwardFree[node])
         {
-            //cout << "Freeing matrix during backprop: " << matrix << " " << matrix->GetNumRows() << "x" << matrix->GetNumCols() << endl;
+            cout << "Freeing matrix during backprop: " << matrix << " " << matrix->GetNumRows() << "x" << matrix->GetNumCols() << endl;
             matrix->Resize(0,0,0,false);
         }
 #endif
