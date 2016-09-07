@@ -1,0 +1,4 @@
+|labels 1 1
+|labels 2 3
+|labels 3 1
+|labels 0 3
