@@ -272,7 +272,7 @@ public:
             fstream >> m_outputRank;
         else
             m_outputRank = 1;
-        if (modelVersion >= CNTK_MODEL_VERSION_11)
+        if (modelVersion >= CNTK_MODEL_VERSION_12)
             fstream >> m_inferInputRankToMap;
         else
             m_inferInputRankToMap = -1;
@@ -565,6 +565,8 @@ public:
     TransposeTimesNode(DEVICEID_TYPE deviceId, const wstring& name, size_t outputRank = 1)
         : Base(deviceId, name, outputRank, /*inferInputRankToMap=*/-1)
     {
+        if (outputRank != 1)
+            LogicError("TransposeTimes does not yet support outputRank other than 1");
     }
 };
 

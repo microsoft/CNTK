@@ -1,10 +1,10 @@
 dataDir: ../../../../../../../Examples/Image/Miscellaneous/CIFAR-10
 
 tags:
-    # In BVT, run Release GPU
-    - bvt-e (build_sku=='gpu') and (device=='gpu') and (flavor=='release')
-    # TODO enable more for nightly:
-    - nightly-e (build_sku=='gpu') and (device=='gpu') and (flavor=='release')
+    # In BVT, run Release on GPU and CPU
+    - bvt-e (build_sku=='gpu') and (flavor=='release')
+    # In Nightly additionally run Debug GPU and CPU on Linux
+    - nightly-e (build_sku=='gpu') and ((flavor=='release') or ((os=='linux') and (flavor=='debug')))
 
 testCases:
   CNTK Run must be completed:
@@ -20,11 +20,11 @@ testCases:
   Epochs must be finished with expected results:
     patterns:
       - Finished Epoch
-      - rmse = {{float,tolerance=2.0%}} * {{integer}}
+      - rmse = {{float,tolerance=0.5%}} * {{integer}}
       - totalSamplesSeen = {{integer}}
       - learningRatePerSample = {{float,tolerance=0.001%}}
 
   Final test results must match:
     patterns:
       - "Final Results: Minibatch[{{integer}}-{{integer}}]"
-      - rmse = {{float,tolerance=2.0%}} * {{integer}}
+      - rmse = {{float,tolerance=0.5%}} * {{integer}}

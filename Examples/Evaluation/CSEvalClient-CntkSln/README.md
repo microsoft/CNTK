@@ -1,1 +1,0 @@
-This folder contains the C# project file used by cntk.sln to build CSEvalClient.exe. The C# source code used by the project is available in ..\CSEvalClient.
