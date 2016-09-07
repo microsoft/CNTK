@@ -10,6 +10,7 @@
 #include "Transformer.h"
 #include "SequenceEnumerator.h"
 #include "ExceptionCapture.h"
+#include "TimerUtility.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -65,12 +66,18 @@ public:
     virtual Sequences GetNextSequences(size_t sampleCount) override
     {
         assert(m_sequenceProvider != nullptr);
+        Timer t;
+        t.Start();
         Sequences sequences = m_sequenceProvider->GetNextSequences(sampleCount);
+        t.Stop();
+        double readTime = t.ElapsedSeconds();
+        fprintf(stderr, "GetNextSequences took: %.5gs\n", readTime);
         if (sequences.m_data.empty())
         {
             return sequences;
         }
 
+        t.Restart();
         ExceptionCapture capture;
 #pragma omp parallel for schedule(dynamic)
         for (int j = 0; j < sequences.m_data.front().size(); ++j)
@@ -83,6 +90,9 @@ public:
                 }
             }, j);
         }
+        t.Stop();
+        readTime = t.ElapsedSeconds();
+        fprintf(stderr, "Transformations took: %.5gs\n", readTime);
 
         capture.RethrowIfHappened();
         return sequences;
