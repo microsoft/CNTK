@@ -1805,7 +1805,7 @@ public:
         // In inference-only mode, m_savedMean and m_saveInvStdDev will not be
         // produced and BackpropToNonLooping() may not be called. In
         // non-inference (training) mode, saved statistics must be produced.
-        bool inferenceOnly = !Environment().IsTraining();
+        bool inferenceOnly = !Environment().IsTraining() && !m_postBatchNormalization;
         m_bnEng->Forward(/*in=*/ sliceInputValue, scale, bias,   // (in)
                          inferenceOnly, expAvgFactor, blendFactor,
                          runMean, runVariance,                   // (in/out) running estimates, updated from the current MB mean/variance
@@ -1867,6 +1867,14 @@ public:
             // BUGBUG: ^^ Also here, this should add the gradient, not overwrite it.
         }
         // No derivatives with respect to running mean and variance.
+    }
+
+    virtual void EndForwardProp() override
+    {
+        if(m_postBatchNormalization)
+            m_samplesSeen += GetMBLayout()->GetActualNumSamples();
+
+        Base::EndForwardProp();
     }
 
     virtual void EndBackprop() override
@@ -2029,7 +2037,6 @@ public:
     void SetPostBatchNormalizationEnd()
     {
         m_postBatchNormalization = false;
-        m_samplesSeen = 0;
         m_normTimeConst = m_swapNormTimeConst;
         m_blendTimeConst = m_swapBlendTimeConst;
     }
