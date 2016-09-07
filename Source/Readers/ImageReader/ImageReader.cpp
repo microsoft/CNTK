@@ -16,6 +16,7 @@
 #include "TransformController.h"
 #include "HeapMemoryProvider.h"
 #include "CudaMemoryProvider.h"
+#include <opencv2/opencv.hpp>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -33,6 +34,13 @@ ImageReader::ImageReader(const ConfigParameters& config)
     ImageConfigHelper configHelper(config);
     m_streams = configHelper.GetStreams();
     assert(m_streams.size() == 2);
+
+    fprintf(stderr, "cv::useOptimized:%d\n", cv::useOptimized());
+    fprintf(stderr, "cv::getNumberOfCPUs:%d\n", cv::getNumberOfCPUs());
+    fprintf(stderr, "cv::getNumThreads:%d\n", cv::getNumThreads());
+
+    // We multi-thread across OpenCV, so we let OpenCV only use one thread.
+    cv::setNumThreads(1);
 
     int threadCount = configHelper.GetCpuThreadCount();
     if (threadCount > 0)
