@@ -135,12 +135,14 @@ template<class ElemType, int direction>
             numValid++;
         anyValid |= isSourceFrameValid;
         if (!isSourceFrameValid)
-            m_sourceInvalidSequences.push_back((ElemType)s);
+            m_sourceInvalidSequences.push_back(s);
     }
     anyValid = numValid > 0;
     allValid = numValid == S;
     if (allValid)
-        sin(1.0); // all valid (or gap): just copy all  --breakpoint has not been hit; that's not right (gaps!)
+    {
+        fprintf(stderr, "x\n"); // all valid (or gap): just copy all  --breakpoint has not been hit; that's not right (gaps!)
+    }
 }
 
 // convert the m_sourceInvalidSequences vector into a (potentially GPU-side) TensorView
@@ -154,7 +156,7 @@ template<class ElemType, int direction>
     m_sourceInvalidMatrix->Resize(1, S);
     m_sourceInvalidMatrix->SetValue(0);
     for (let s : m_sourceInvalidSequences)
-        m_sourceInvalidMatrix->ColumnSlice ((size_t)s, 1).SetValue(1);
+        m_sourceInvalidMatrix->ColumnSlice (s, 1).SetValue(1);
     // tensor shape is a 1-frame sequence, one element per parallel sequence.
     auto tensorShape = TensorShape(1).AppendInPlace(rank, GetMBLayout()->GetNumParallelSequences());
     return TensorView<ElemType>(m_sourceInvalidMatrix, tensorShape);

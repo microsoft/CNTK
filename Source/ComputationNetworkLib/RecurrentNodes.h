@@ -79,7 +79,7 @@ protected:
 
     function<void()> m_attachInputsFn;                      // for late expansion of inputs (scripting)
 
-    vector<ElemType> m_sourceInvalidSequences;              // mask for copying/propagating source frames is prepared here...
+    vector<size_t> m_sourceInvalidSequences;                // indices of invalid source frames
 
     shared_ptr<Matrix<ElemType>> m_initialStateValueMatrix; // potentially GPU-side versions
     shared_ptr<Matrix<ElemType>> m_sourceInvalidMatrix;
