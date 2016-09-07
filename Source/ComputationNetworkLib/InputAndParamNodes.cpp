@@ -253,7 +253,7 @@ void LearnableParameter<ElemType>::InitRandom(const wstring& type,
         Value().SetUniformRandomValue(-range, range, randomSeed);
     else
         Value().SetGaussianRandomValue(0, range, randomSeed);
-    bool log = GetEnvironmentPtr() && Environment().m_traceLevel > 0; // note: this will not log before node is part of network
+    bool log = GetEnvironmentPtr() && Environment().traceLevel > 0; // note: this will not log before node is part of network
     if (log)
         fprintf(stderr, "%ls: Initializing Parameter[%s] <- %ls(seed=%d, init dims=[%d x %d], range=%f*%f, onCPU=%s)",
                 NodeDescription().c_str(), string(GetSampleLayout()).c_str(), m_initString.c_str(),
@@ -519,7 +519,7 @@ void LearnableParameter<ElemType>::LazyInitParameters()
     // OK, proceed
     if (m_initString == L"fromValue")
     {
-        if (GetEnvironmentPtr() && Environment().m_traceLevel > 0) // note: this will not log before node is part of network
+        if (GetEnvironmentPtr() && Environment().traceLevel > 0) // note: this will not log before node is part of network
             fprintf(stderr, "%ls: Initializing Parameter[%s] <- %f.\n", NodeDescription().c_str(), string(GetSampleLayout()).c_str(), m_initValue);
         Value().SetValue(m_initValue);
     }

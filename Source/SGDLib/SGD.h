@@ -88,7 +88,7 @@ struct GradientUpdateInfo
     float gaussianNoiseInjectStd = 0.0075f;
 
     // for FSAdaGrad:
-    // Note: Currently these cannot be parameterized externally. Once they can, rethink they names!
+    // Note: Currently these cannot be parameterized externally. Once they can, rethink their names!
     double targetAdagradAvDenom = 1;
     size_t varianceTimeConstant = 2 * 3600 * 100; // originally was: 2h of speech
 };

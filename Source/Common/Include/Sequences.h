@@ -449,6 +449,7 @@ public:
     // test boundary flags for a specific condition
     bool IsBeyondStartOrEnd(const FrameRange& fr) const;
     bool IsGap(const FrameRange& fr) const;
+    bool IsBeyondMinibatch(const FrameRange& fr) const;
 
     // test whether at least one sequence crosses the bounds of this minibatch
     bool HasSequenceBeyondBegin() const
@@ -784,6 +785,19 @@ inline bool MBLayout::IsGap(const FrameRange &fr) const
 
     // determine flags from matrices
     return m_distanceToStart(s, t) < 0; // value is -1 for gaps, non-negative otherwise
+}
+
+// test whether frame is exceeding the bounds of the MB
+inline bool MBLayout::IsBeyondMinibatch(const FrameRange& fr) const
+{
+    CheckIsValid();
+
+    if (fr.IsAllFrames())
+        LogicError("MBLayout::IsBeyondStartOrEnd() cannot be applied to FrameRange that specifies more than a single time step.");
+
+    const auto beginTime = (ptrdiff_t)fr.timeIdxInSeq + fr.m_timeOffset; // we test off the frame without offset
+    const auto endTime = beginTime + (ptrdiff_t)fr.m_timeRange;
+    return beginTime < 0 || endTime > (ptrdiff_t)GetNumTimeSteps();
 }
 
 // test whether frame is exceeding the sentence boundaries
