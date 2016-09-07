@@ -50,7 +50,9 @@ bool TryGetNetworkFactory(const ConfigRecordType& config, function<ComputationNe
         auto netBuilder = make_shared<SimpleNetworkBuilder<ElemType>>(simpleNetworkBuilderConfig); // parses the configuration and stores it in the SimpleNetworkBuilder object
         createNetworkFn = [netBuilder](DEVICEID_TYPE deviceId)
         {
-            return shared_ptr<ComputationNetwork>(netBuilder->BuildNetworkFromDescription()); // this operates based on the configuration saved above
+            auto net = shared_ptr<ComputationNetwork>(netBuilder->BuildNetworkFromDescription()); // this operates based on the configuration saved above
+            net->SetTraceLevel(config(L"traceLevel", 0));
+            return net;
         };
         return true;
     }
@@ -61,7 +63,9 @@ bool TryGetNetworkFactory(const ConfigRecordType& config, function<ComputationNe
         shared_ptr<NDLBuilder<ElemType>> netBuilder = make_shared<NDLBuilder<ElemType>>(ndlNetworkBuilderConfig);
         createNetworkFn = [netBuilder](DEVICEID_TYPE deviceId)
         {
-            return shared_ptr<ComputationNetwork>(netBuilder->BuildNetworkFromDescription());
+            auto net shared_ptr<ComputationNetwork>(netBuilder->BuildNetworkFromDescription());
+            net->SetTraceLevel(config(L"traceLevel", 0));
+            return net;
         };
         return true;
     }
@@ -174,6 +178,7 @@ ComputationNetworkPtr GetModelFromConfig(const ConfigRecordType& config, const w
         // We don't use CreateFromFile() here since the user might specify OutputNodeNames in the config.
         // By not compiling the network before patching, we avoid double log output for validation.
         net = make_shared<ComputationNetwork>(deviceId);
+        net->SetTraceLevel(config(L"traceLevel", 0));
         net->Read<ElemType>(modelPath);
         if (outputNodeNames.size() > 0)
             PatchOutputNodes(net, outputNodeNames, outputNodeNamesVector);

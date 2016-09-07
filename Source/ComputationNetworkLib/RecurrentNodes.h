@@ -29,7 +29,7 @@ class DelayedValueNodeBase : public ComputationNode<ElemType>, public IRecurrent
 
 private:
     void DetermineInvalidSequences(const FrameRange& frDelayed, bool gapsAreValid, bool& anyValid, bool& allValid);
-    TensorView<ElemType> MakeMaskTensor(size_t rank) const;
+    TensorView<ElemType> MakeMaskTensor(size_t rank, const FrameRange& fr) const;
 
 protected:
     DelayedValueNodeBase(DEVICEID_TYPE deviceId, const wstring& name, ElemType initialState, const TensorShape& sampleLayout, size_t timeStep);
@@ -61,6 +61,8 @@ public:
     virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override;
     virtual void Load(File& fstream, size_t modelVersion) override;
     virtual void Save(File& fstream) const override;
+    virtual void UpdateFunctionMBSize() override;
+    virtual void BeginForwardProp() override;
     virtual void ForwardProp(const FrameRange& fr) override;
     virtual void EndForwardProp() override;
     virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override;

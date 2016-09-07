@@ -1187,7 +1187,7 @@ public:
 private:
 
     template<class E>
-    void RethrowAs(const std::exception & e, const std::string & what)
+    void RethrowAs(const std::exception & e, const std::string & what) const
     {
         const auto * pe = dynamic_cast<const ExceptionWithCallStack<E> *>(&e);
         if (pe)
@@ -1199,7 +1199,7 @@ private:
     // rethrow an exception with added node-name information
     // Use this for exceptions we may get e.g. from the Matrix library, such as VerifySize().
     __declspec_noreturn
-    void Rethrow(const std::exception & e)
+    void Rethrow(const std::exception & e) const
     {
         string what = msra::strfun::strprintf("%ls: %s", NodeDescription().c_str(), e.what());
         RethrowAs<std::runtime_error>   (e, what);
@@ -1271,7 +1271,7 @@ public:
         return GradientFor(fr);
     }
     // tensor version of the above functions
-    TensorView<ElemType> DataTensorFor(const MatrixBasePtr& data, size_t rank, const FrameRange& fr)
+    TensorView<ElemType> DataTensorFor(const MatrixBasePtr& data, size_t rank, const FrameRange& fr) const
     {
         try
         {
