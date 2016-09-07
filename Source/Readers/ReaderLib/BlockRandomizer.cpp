@@ -316,7 +316,12 @@ void BlockRandomizer::LoadDataChunks(const ClosedOpenChunkInterval& windowRange)
                 m_prefetch.wait();
             }
 
+            Timer t;
+            t.Start();
             m_chunks[chunk.m_original->m_id] = m_deserializer->GetChunk(chunk.m_original->m_id);
+            t.Stop();
+            double readTime = t.ElapsedSeconds();
+            fprintf(stderr, "Loading chunk took: %.5gs\n", readTime);
             if (m_verbosity >= Information)
                 fprintf(stderr, "BlockRandomizer::RetrieveDataChunks: paged in randomized chunk %u (original chunk: %u), now %" PRIu64 " chunks in memory\n",
                 chunk.m_chunkId,
