@@ -1854,6 +1854,12 @@ void GPUMatrix<ElemType>::RNNBackwardWeights(const GPUMatrix<ElemType>& inputX, 
 {
 }
 
+template<class ElemType> void GPUMatrix<ElemType>::RecordComputeSyncPoint() { }
+template<class ElemType> void GPUMatrix<ElemType>::SyncComputeBeforeRead() { }
+template<class ElemType> void GPUMatrix<ElemType>::SyncPendingRead() { }
+template<class ElemType> void GPUMatrix<ElemType>::SyncPendingCompute() { }
+template<class ElemType> void GPUMatrix<ElemType>::EnableConcurrentRead(DEVICEID_TYPE devId) { }
+
 #pragma endregion Other helper functions
 
 #pragma region Static BLAS Functions

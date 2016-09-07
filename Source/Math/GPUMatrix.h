@@ -252,7 +252,7 @@ public:
     void SetValue(const GPUMatrix<ElemType>& deepCopyFrom);
     //void SetValue(const CPUSparseMatrix<ElemType>& deepCopyFrom);
     //void SetValue(const GPUSparseMatrix<ElemType>& deepCopyFrom);
-    void SetValue(const size_t numRows, const size_t numCols, int deviceId, ElemType* pArray, size_t matrixFlags = matrixFlagNormal);
+    void SetValue(const size_t numRows, const size_t numCols, int deviceId, ElemType* pArray, size_t matrixFlags = matrixFlagNormal, bool async = false);
 
     void SetDiagonalValue(const ElemType v);
     void SetDiagonalValue(const GPUMatrix<ElemType>& vector);
@@ -539,6 +539,14 @@ public:
     static ElemType GetLearnRateForBlock_Helper(const GPUMatrix<ElemType>& Gradients, const GPUMatrix<ElemType>& SmoothedGradients);
 
     ElemType LogSumOfElements() const;
+
+    // Functions for async copy of data to the matrix.
+public:
+    static void RecordComputeSyncPoint();
+    static void SyncComputeBeforeRead();
+    static void SyncPendingRead();
+    static void SyncPendingCompute();
+    static void EnableConcurrentRead(DEVICEID_TYPE devId);
 
 public:
     GPUMatrix<ElemType>& AssignElementProductOfWithShiftNeg(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, const size_t shift, const size_t nt);

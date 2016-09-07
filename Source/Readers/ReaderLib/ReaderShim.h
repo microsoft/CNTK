@@ -76,7 +76,9 @@ public:
     virtual size_t GetNumParallelSequencesForFixingBPTTMode() override;
 
 private:
-    std::future<Minibatch> m_prefetchTask;
+    std::pair<bool, bool> PrefetchMinibatch();
+
+    std::future<std::pair<bool, bool>> m_prefetchTask;
     ReaderPtr m_reader;
     ReaderFactory m_factory;
     bool m_endOfEpoch;
@@ -86,6 +88,11 @@ private:
     std::map<std::wstring, size_t> m_nameToStreamId;
     std::vector<StreamDescriptionPtr> m_streams;
     launch m_launchType;
+
+    std::map<std::wstring, std::shared_ptr<Matrix<ElemType>>> m_prefetchBuffer;
+    std::map<std::wstring, MBLayoutPtr> m_prefetchMbLayouts;
+
+    int m_deviceId;
 
     static void FillMatrixFromStream(StorageType type, Matrix<ElemType>* matrix, size_t numRows, const StreamMinibatchPtr& stream);
 };

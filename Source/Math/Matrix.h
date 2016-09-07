@@ -242,7 +242,7 @@ public:
     void SetValue      (const Matrix<ElemType>& deepCopyFrom);
     // AssignValuesOf respects the target matrix's information. It copies the values from the target into the memory of the source.
     void AssignValuesOf(const Matrix<ElemType>& deepCopyFrom);
-    void SetValue(const size_t numRows, const size_t numCols, int deviceId, ElemType* pArray, const size_t matrixFlags = matrixFlagNormal);
+    void SetValue(const size_t numRows, const size_t numCols, int deviceId, ElemType* pArray, const size_t matrixFlags = matrixFlagNormal, bool async = false);
     void SetValue(const size_t rIdx, const size_t cIdx, ElemType val); // set matrix sparsely
     void SetValue(const size_t numRows, const size_t numCols, std::initializer_list<ElemType> l) // SetValue(2,3, {1,2,3,  4,5,6});
     {
@@ -256,7 +256,7 @@ public:
         SetValue(MakeNan(__LINE__));
     }
     void SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYPE* h_CSCCol, const CPUSPARSE_INDEX_TYPE* h_Row, const ElemType* h_Val,
-                                const size_t nz, const size_t numRows, const size_t numCols);
+                                const size_t nz, const size_t numRows, const size_t numCols, bool async = false);
 
     void MaskColumnsValue(const Matrix<char>& columnsMask, ElemType val);
 
@@ -565,6 +565,28 @@ public:
                   const std::array<size_t, 4>& offsets,
                   const SmallVector<size_t>& regularOpDims, const std::array<SmallVector<ptrdiff_t>, 4>& regularStrides,
                   const SmallVector<size_t>& reducingOpDims, const std::array<SmallVector<ptrdiff_t>, 4>& reducingStrides);
+
+    // Functions for async copy of data to the matrix.
+public:
+    // This API records an event, in the case of GPU computation, that happens between two compute iterations
+    // (it's a compute delimiter between two minibatch iterations)
+    static void RecordComputeSyncPoint(DEVICEID_TYPE devId);
+
+    // This API ensures, in the case of GPU computation, that all compute is flushed before read decides to modify
+    // buffers, and potentially invalidate computation.
+    static void SyncComputeBeforeRead(DEVICEID_TYPE devId);
+
+    // This API ensures, in the case of GPU computation, that all async reads are finished before notifying compute
+    // that the read buffers are ready on the device.
+    static void SyncPendingRead(DEVICEID_TYPE devId);
+
+    // This API ensures, in the case of GPU computation, that all compute is flushed before transferring the criterion
+    // back to the host. This is a workaround for contention between two memcpy calls, one host-to-device and one
+    // device-to-host, which are for some reason getting serialized and cause big delays in compute.
+    static void SyncPendingCompute(DEVICEID_TYPE devId);
+
+    // This API ensures, in the case of GPU computation, creates a separate stream for reading data into GPU buffer.
+    static void EnableConcurrentRead(DEVICEID_TYPE devId);
 
 public:
     void Read(File& stream);
