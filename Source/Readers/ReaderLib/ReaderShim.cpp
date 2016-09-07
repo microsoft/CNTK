@@ -197,7 +197,7 @@ bool ReaderShim<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
             RuntimeError("Dynamic axis layout '%ls' is shared between inputs '%ls' and '%ls', but layouts generated "
                 "from the input data are incompatible on this axis. Are you using different sequence lengths? "
                 "Did you consider adding a DynamicAxis() to the Input nodes?",
-                layout->GetAxisName(), layoutToInputMap[layout->GetAxisName()].c_str(), i->first);
+                layout->GetAxisName(), layoutToInputMap[layout->GetAxisName()].c_str(), i->first.c_str());
         }
     }
 
