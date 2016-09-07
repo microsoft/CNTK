@@ -39,6 +39,7 @@ bool TryGetNetworkFactory(const ConfigRecordType& config, function<ComputationNe
 {
     DEVICEID_TYPE deviceId = DeviceFromConfig(config);
 
+    int traceLevel = config(L"traceLevel", 0);
     if (config.Exists(L"createNetwork"))
     {
         createNetworkFn = GetCreateNetworkFn(config); // (we need a separate function needed due to template code)
@@ -48,10 +49,10 @@ bool TryGetNetworkFactory(const ConfigRecordType& config, function<ComputationNe
     {
         const ConfigRecordType& simpleNetworkBuilderConfig(config(L"SimpleNetworkBuilder"));
         auto netBuilder = make_shared<SimpleNetworkBuilder<ElemType>>(simpleNetworkBuilderConfig); // parses the configuration and stores it in the SimpleNetworkBuilder object
-        createNetworkFn = [netBuilder](DEVICEID_TYPE deviceId)
+        createNetworkFn = [netBuilder, traceLevel](DEVICEID_TYPE deviceId)
         {
             auto net = shared_ptr<ComputationNetwork>(netBuilder->BuildNetworkFromDescription()); // this operates based on the configuration saved above
-            net->SetTraceLevel(config(L"traceLevel", 0));
+            net->SetTraceLevel(traceLevel);
             return net;
         };
         return true;
@@ -61,10 +62,10 @@ bool TryGetNetworkFactory(const ConfigRecordType& config, function<ComputationNe
     {
         const ConfigRecordType& ndlNetworkBuilderConfig(config(L"NDLNetworkBuilder"));
         shared_ptr<NDLBuilder<ElemType>> netBuilder = make_shared<NDLBuilder<ElemType>>(ndlNetworkBuilderConfig);
-        createNetworkFn = [netBuilder](DEVICEID_TYPE deviceId)
+        createNetworkFn = [netBuilder, traceLevel](DEVICEID_TYPE deviceId)
         {
-            auto net shared_ptr<ComputationNetwork>(netBuilder->BuildNetworkFromDescription());
-            net->SetTraceLevel(config(L"traceLevel", 0));
+            auto net = shared_ptr<ComputationNetwork>(netBuilder->BuildNetworkFromDescription());
+            net->SetTraceLevel(traceLevel);
             return net;
         };
         return true;
@@ -89,7 +90,6 @@ bool TryGetNetworkFactory(const ConfigRecordType& config, function<ComputationNe
         // For back-compat, [ ] is allowed and means the same as { }
         if (sourceOfNetwork[0] == '{' || sourceOfNetwork[0] == '[') // if { } form then we turn it into ComputationNetwork by constructing a ComputationNetwork from it
             sourceOfNetwork = L"new ComputationNetwork " + sourceOfNetwork;
-        int traceLevel = config(L"traceLevel", 0);
         let sourceOfBS = msra::strfun::wstrprintf(L"include \'cntk.core.bs\'\n" // include our core lib. Note: Using lowercase here to match the Linux name of the CNTK exe.
             L"deviceId = %d\n"            // deviceId as passed in
             L"traceLevel = %d\n"

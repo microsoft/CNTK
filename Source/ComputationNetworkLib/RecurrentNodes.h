@@ -28,7 +28,7 @@ class DelayedValueNodeBase : public ComputationNode<ElemType>, public IRecurrent
     typedef std::shared_ptr<DelayedValueNodeState<ElemType>> DelayedNodeStatePtr;
 
 private:
-    void DetermineInvalidSequences(const FrameRange& frDelayed, bool gapsAreValid, bool& anyValid, bool& allValid);
+    void DetermineInvalidSequences(const FrameRange& frDelayed);
     TensorView<ElemType> MakeMaskTensor(size_t rank, const FrameRange& fr) const;
 
 protected:
@@ -81,7 +81,8 @@ protected:
 
     function<void()> m_attachInputsFn;                      // for late expansion of inputs (scripting)
 
-    vector<size_t> m_inputInvalidSequences;                // indices of invalid source frames
+    vector<size_t> m_inputInvalidSequences;                 // indices of invalid source frames
+    vector<bool> m_anyValid, m_allValid;                    // [time index] denotes whether there are any valid frames at a time step, and if all are valid
 
     shared_ptr<Matrix<ElemType>> m_initialStateValueMatrix; // potentially GPU-side versions
     shared_ptr<Matrix<ElemType>> m_inputInvalidMatrix;

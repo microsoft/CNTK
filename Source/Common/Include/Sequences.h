@@ -670,6 +670,14 @@ public:
         return ret;
     }
 
+    // remove a time offset from a FrameRange
+    FrameRange WithoutTimeOffset() const
+    {
+        FrameRange ret = *this;
+        ret.m_timeOffset = 0;
+        return ret;
+    }
+
     // create a FrameRange with a time range > 1
     FrameRange WithTimeRange(size_t range) const
     {
