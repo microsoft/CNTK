@@ -175,7 +175,7 @@ template<class ElemType, int direction>
     {
         // source frame is either invalid or valid (or target frame is a gap, in which case we consider everything valid)
         auto isSourceFrameValid = !m_pMBLayout->IsBeyondStartOrEnd(frDelayed.Sequence(s)) &&
-                                  !m_pMBLayout->IsGap(frDelayed/*.WithoutTimeOffset()*/.Sequence(s));
+                                  !m_pMBLayout->IsGap(frDelayed.WithoutTimeOffset().Sequence(s));
         if (!isSourceFrameValid)
             m_inputInvalidSequences.push_back(s);
     }
