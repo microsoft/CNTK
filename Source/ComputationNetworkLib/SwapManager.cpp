@@ -155,9 +155,14 @@ template<typename ElemType> void SwapManager<ElemType>::ClearActionsAndTheirMemo
 
 template <typename ElemType> float SwapManager<ElemType>::FreeGPUMemoryInGB()
 {
-    size_t free, total;
+#ifndef CPUONLY
+	size_t free = 0, total = 0;
     CUDA_CALL(cudaMemGetInfo(&free, &total));
-    return free/1024.0f/1024.0f/1024.0f;
+	return free / 1024.0f / 1024.0f / 1024.0f;
+#else
+	return 0.0f;
+#endif
+    
 }
 
 template class SwapManager<double>;
