@@ -40,33 +40,6 @@ using GetEvalProc = void(*)(IEvaluateModel<ElemType>**);
 typedef std::pair<std::wstring, std::vector<float>*> MapEntry;
 typedef std::map<std::wstring, std::vector<float>*> Layer;
 
-/// <summary>Reads an RGB image from a file and saves it to a vector in the correct order</summary>
-/// <param name="filename">Path to file</param>
-/// <param name="array">Destination array to load the data</param>
-/// <param name="display">Boolean for an option to display an image</param>
-void ReadRGBImage(std::string filename, std::vector<float>& array, bool display)
-{
-	auto testImage = cv::imread(filename, CV_LOAD_IMAGE_COLOR);
-
-	// Display input image
-	if (display)
-	{
-		cv::imshow("input", testImage);
-		cv::waitKey(0);
-	}
-
-	// Split image into 3 channels and save values in the following order: height * width * channel
-	cv::Mat channel[3];
-	cv::split(testImage, channel);
-	for (auto ch : channel)
-	{
-		for (int i = 0; i < ch.rows; ++i)
-		{
-			array.insert(array.end(), ch.ptr<uchar>(i), ch.ptr<uchar>(i)+ch.cols);
-		}
-	}
-}
-
 /// <summary>Saves the provided image to a file</summary>
 /// <param name="mat">Source data</param>
 /// <param name="name">Destination filename with extension</param>
@@ -119,6 +92,71 @@ void SubstractMean(std::string filePath, std::vector<float>& array)
 	for (int i = 0; i < array.size(); i++) array[i] -= means[i];
 }
 
+/// <summary>Reads an input for MNIST example</summary>
+/// <param name="input">Input string (expected length 28*28 with integer values in range [0,255]</param>
+/// <param name="array">Destination array</param>
+/// <param name="display">Boolean for displaying an image</param>
+/// <param name="save">Boolean for savin an image</param>
+void ReadMNISTInput(std::string input, std::vector<float>& array, bool display, bool save)
+{
+	int imgDimensionX = 28;
+	int imgDimensionY = 28;
+	int scaleFactor = 3.0;
+	size_t step = sizeof(uchar)*imgDimensionX;
+
+	uchar* matData = new uchar[imgDimensionX*imgDimensionY];
+	std::istringstream iss(input);
+	int pos = 0;
+	for (std::string testImage; iss >> input;)
+	{
+		array.push_back((atoi(input.c_str())));
+		matData[pos] = (atoi(input.c_str()));
+		pos++;
+	}
+
+	cv::Mat img(cv::Size(imgDimensionX, imgDimensionY), CV_8UC1, matData, step);
+	cv::resize(img, img, cv::Size(), scaleFactor, scaleFactor, cv::INTER_NEAREST);
+
+	if (save)
+	{
+		SaveImage(img, "input.png");
+	}
+	if (display)
+	{
+		cv::imshow("input", img);
+	}
+}
+
+/// <summary>Reads an RGB image from a file and saves it to a vector in the correct order</summary>
+/// <param name="filename">Path to file</param>
+/// <param name="array">Destination array to load the data</param>
+/// <param name="display">Boolean for an option to display an image</param>
+void ReadRGBImage(std::string filename, std::vector<float>& array, bool display)
+{
+	auto testImage = cv::imread(filename, CV_LOAD_IMAGE_COLOR);
+
+	// Display input image
+	if (display)
+	{
+		cv::imshow("input", testImage);
+		cv::waitKey(0);
+	}
+
+	// Split image into 3 channels and save values in the following order: height * width * channel
+	cv::Mat channel[3];
+	cv::split(testImage, channel);
+	for (auto ch : channel)
+	{
+		for (int i = 0; i < ch.rows; ++i)
+		{
+			array.insert(array.end(), ch.ptr<uchar>(i), ch.ptr<uchar>(i)+ch.cols);
+		}
+	}
+
+	// Substract mean from each pixel value
+	SubstractMean("Models/ImageNet1K_mean.xml", array);
+}
+
 /// <summary>Maps a set of given numbers to [0,1] interval</summary>
 /// <param name="elems">Set of numbers</param>
 void ScaleTo01(std::vector<float>& elems)
@@ -169,7 +207,6 @@ void CreateImages(std::vector<uchar> layerOutput, std::vector<boost::variant<std
 	}
 }
 
-
 /// <summary>Displays images collected from layer activations</summary>
 /// <param name="name">Layer name</param>
 /// <param name="imgs">Images to display</param>
@@ -199,7 +236,7 @@ void VisualizeLayer(std::string name, std::vector<cv::Mat> imgs, std::vector<boo
 	{
 		// Calculate the size of the pane based on params
 		paneSize = cv::Size(gap*imgDimensionX*ceil(sqrt(depth))*scaleFactor, gap*imgDimensionY*scaleFactor*ceil(sqrt(depth)));
-		pane = cv::Mat(paneSize, CV_8SC1);
+		pane = cv::Mat(paneSize, CV_8SC1, cv::Scalar(255));
 		float column = 0;
 		float row = 0;
 		for (int i = 0; i < depth; i++)
@@ -225,6 +262,9 @@ void VisualizeLayer(std::string name, std::vector<cv::Mat> imgs, std::vector<boo
 	cv::imshow(layerPosition + "_" + name, pane);
 }
 
+/// <summary>Sets the dimensionality of network layers</summary>
+/// <param name="model">Model name</param>
+/// <param name="params">Destination dictionary of parameters</param>
 void SetNetworkParams(std::string model, std::map<std::wstring, std::vector<boost::variant<std::string, int>>>& params)
 {
 	// LayerName : {layerPosition, depth, imgDimensionX, imgDimensionY, scaleFactor}
@@ -246,7 +286,7 @@ void SetNetworkParams(std::string model, std::map<std::wstring, std::vector<boos
 		params[L"conv1.y"] = { "00", 64, 56, 56, 2 };
 		params[L"pool1"] = { "01", 64, 27, 27, 3 };
 		params[L"conv2.y"] = { "02", 192, 27, 27, 2 };
-		params[L"pool2"] = { "03", 192, 13, 13, 3 };
+		params[L"pool2.p"] = { "03", 192, 13, 13, 3 };
 		params[L"conv3.y"] = { "04", 384, 13, 13, 3 };
 		params[L"conv4.y"] = { "05", 256, 13, 13, 3 };
 		params[L"conv5.y"] = { "06", 256, 13, 13, 3 };
@@ -255,17 +295,33 @@ void SetNetworkParams(std::string model, std::map<std::wstring, std::vector<boos
 		params[L"h2.b"] = { "09", 1, 4096, 1, 8 };
 		params[L"OutputNodes.z"] = { "10", 1, 1000, 1, 20 };
 	}
+	else if(model.find("MNIST") != std::string::npos && model.find("02_Convolution") != std::string::npos)
+	{
+		params[L"conv1.out"] = { "00", 16, 28, 28, 3 };
+		params[L"pool1"] = { "01", 16, 14, 14, 6 };
+		params[L"conv2.out"] = { "02", 32, 14, 14, 6 };
+		params[L"pool2"] = { "03", 32, 7, 7, 12 };
+		params[L"h1.y"] = { "04", 1, 125, 1, 84 };
+		params[L"ol.z"] = { "05", 1, 10, 1, 84 };
+	}
+	else
+	{
+		fprintf(stderr, "Error: Parameters for the model %s are not specified yet", model.c_str());
+	}
 	
 }
 
-void VisualizeNetwork(std::string modelFilePath, std::string inputImagePath)
+/// <summary>Collects visualisation of specified network layers and displays then</summary>
+/// <param name="modelFilePath">Path to the network model file</param>
+/// <param name="inputImage">Input image</param>
+void VisualizeNetwork(std::string modelFilePath, std::string inputImage)
 {
 	IEvaluateModel<float> *model;
 
 	struct stat statBuf;
 	if (stat(modelFilePath.c_str(), &statBuf) != 0)
 	{
-		fprintf(stderr, "Error: The model %s does not exist. Please follow instructions in README.md in <CNTK>/Examples/Image/MNIST to create the model.\n", modelFilePath.c_str());
+		fprintf(stderr, "Error: The model %s does not exist. Please create a model first.\n", modelFilePath.c_str());
 	}
 
 	GetEvalF(&model);
@@ -296,10 +352,15 @@ void VisualizeNetwork(std::string modelFilePath, std::string inputImagePath)
 
 	auto inputLayerName = inDims.begin()->first;
 	std::vector<float> inputs;
-	ReadRGBImage(inputImagePath, inputs, 0);
-
-	// Substract mean from each pixel value
-	SubstractMean("Models/ImageNet1K_mean.xml", inputs);
+	
+	if (modelFilePath.find("AlexNet") != std::string::npos)
+	{
+		ReadRGBImage(inputImage, inputs, 0);
+	}
+	else if (modelFilePath.find("MNIST") != std::string::npos)
+	{
+		ReadMNISTInput(inputImage, inputs, 1, 1);
+	}
 
 	// Allocate the output values layer
 	std::vector<std::vector<float>> outputs(outDims.size());
@@ -339,22 +400,77 @@ int main(int argc, char* argv[])
 	std::string path;
 	size_t pos;
 
-#ifdef _WIN32
 	pos = app.rfind("\\");
 	path = (pos == std::string::npos) ? "." : app.substr(0, pos);
 
 	// This relative path assumes launching from CNTK's binary folder, e.g. x64\Release
-	const std::string modelWorkingDirectory = path + "/../../Examples/Evaluation/CPPEvalClient/";
-#else // on Linux
-	pos = app.rfind("/");
-	path = (pos == std::string::npos) ? "." : app.substr(0, pos);
+	std::string modelWorkingDirectory = path + "/../../";
+	std::string modelFilePath;
+	std::string customPath;
+	std::string inputImage;
+	char defaultPath;
+	std::cout << "Choose example to run: \n \
+				 1. MNIST \n \
+				 2. AlexNet \n ";
 
-	// This relative path assumes launching from CNTK's binary folder, e.g. build/release/bin/
-	const std::string modelWorkingDirectory = path + "/../../Examples/Evaluation/CPPEvalClient/";
-#endif
-	const std::string modelFilePath = modelWorkingDirectory + "Models/AlexNet.89";
-
-	auto inputImage = "val100/test2.JPG";
+	int option;
+	std::cin >> option;
+	switch (option)
+	{
+		case 1:
+			std::cout << "Use default model path? (y/n) (working directory \"cntk/Examples/Image/MNIST/Data\") \n " ;
+			std::cin >> defaultPath;
+			if (defaultPath == 'y')
+			{
+				modelWorkingDirectory += "Examples/Image/MNIST/Data/";
+				modelFilePath = modelWorkingDirectory + "../Output/Models/02_Convolution";
+			}
+			else
+			{
+				std::cout << "Specify model file path relative to CNTK root folder \n";
+				std::cin >> customPath;
+				modelFilePath = modelWorkingDirectory + customPath;
+			}
+			// MNIST sample input taken from MNIST/Data/Train-28x28_cntk_text.txt
+			inputImage = "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 \
+								0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 \
+								0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 \
+								0 0 0 0 0 0 0 0 0 0 38 43 105 255 253 253 253 253 253 174 6 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 43 139 224 \
+								226 252 253 252 252 252 252 252 252 158 14 0 0 0 0 0 0 0 0 0 0 0 0 0 0 178 252 252 252 252 253 252 252 \
+								252 252 252 252 252 59 0 0 0 0 0 0 0 0 0 0 0 0 0 0 109 252 252 230 132 133 132 132 189 252 252 252 252 \
+								59 0 0 0 0 0 0 0 0 0 0 0 0 0 0 4 29 29 24 0 0 0 0 14 226 252 252 172 7 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 \
+								0 0 0 0 0 0 85 243 252 252 144 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 88 189 252 252 252 14 0 0 0 \
+								0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 91 212 247 252 252 252 204 9 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 32 125 193 \
+								193 193 253 252 252 252 238 102 28 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 45 222 252 252 252 252 253 252 252 252 \
+								177 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 45 223 253 253 253 253 255 253 253 253 253 74 0 0 0 0 0 0 0 0 0 0 \
+								0 0 0 0 0 0 0 31 123 52 44 44 44 44 143 252 252 74 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 15 \
+								252 252 74 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 86 252 252 74 0 0 0 0 0 0 0 0 0 0 0 0 0 0 5 \
+								75 9 0 0 0 0 0 0 98 242 252 252 74 0 0 0 0 0 0 0 0 0 0 0 0 0 61 183 252 29 0 0 0 0 18 92 239 252 252 243 \
+								65 0 0 0 0 0 0 0 0 0 0 0 0 0 208 252 252 147 134 134 134 134 203 253 252 252 188 83 0 0 0 0 0 0 0 0 0 0 0 \
+								0 0 0 208 252 252 252 252 252 252 252 252 253 230 153 8 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 49 157 252 252 252 \
+								252 252 217 207 146 45 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 7 103 235 252 172 103 24 0 0 0 0 0 0 0 0 0 0 0 \
+								0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 \
+								0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0";
+			break;
+		case 2:
+			std::cout << "Use default model path? (y/n) (working directory \"cntk/Examples/Exaluation/CPPEvalClient/Models\") \n";
+			std::cin >> defaultPath;
+			if (defaultPath == 'y')
+			{
+				modelWorkingDirectory += "Examples/Evaluation/CPPEvalClient/";
+				modelFilePath = modelWorkingDirectory + "Models/AlexNet.89";
+			}
+			else
+			{
+				std::cout << "Specify model file path relative to CNTK root folder \n";
+				std::cin >> customPath;
+				modelFilePath = modelWorkingDirectory + customPath;
+			}
+			inputImage = "val100/test2.JPG";
+			break;
+		default:
+			fprintf(stderr, "Cannot match the choice");
+	}
 
 	VisualizeNetwork(modelFilePath, inputImage);
 	
