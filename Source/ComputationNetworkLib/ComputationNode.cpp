@@ -389,7 +389,7 @@ TensorShape ComputationNodeBase::GetTensorSliceFor(size_t rank, const FrameRange
 
     // determine the slice dimensions described by the FrameRange
     // Note: These are dimensions without strides.
-    auto slice = TensorSliceWithMBLayoutFor(tensorShape.GetDims(), fr, GetMBLayout());
+    let slice = TensorSliceWithMBLayoutFor(tensorShape.GetDims(), fr, GetMBLayout());
 
     // narrow the tensor
     // Note: Strides are honored correctly.

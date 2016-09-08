@@ -178,14 +178,18 @@ template<class ElemType, int direction>
 }
 
 // retrieve the mask tensor for the current frame
+// This function mimics GetTensorSliceFor().
 template<class ElemType, int direction>
 /*private*/ TensorView<ElemType> DelayedValueNodeBase<ElemType, direction>::GetMaskTensor(size_t rank, const FrameRange& fr) const
 {
-    // TODO: We have proper functions to do what is done below here.
-    let S = GetNumParallelSequences();
-    let t0 = S * fr.t();
-    auto tensorShape = TensorShape(1).AppendInPlace(rank, GetMBLayout()->GetNumCols());
-    tensorShape.NarrowTo(pair<vector<size_t>, vector<size_t>>({ 0, t0 }, { 1, t0 + S }));
+    // tensorShape of m_inputInvalidMatrix is [1 x S x T]
+    auto tensorShape = TensorShape(1);
+    tensorShape.AppendInPlace(rank++, GetMBLayout()->GetNumParallelSequences());
+    tensorShape.AppendInPlace(rank++, GetMBLayout()->GetNumTimeSteps());
+
+    let slice = TensorSliceWithMBLayoutFor(tensorShape.GetDims(), fr, GetMBLayout());
+    tensorShape.NarrowTo(slice);
+
     return TensorView<ElemType>(m_inputInvalidMatrix, tensorShape);
 }
 
