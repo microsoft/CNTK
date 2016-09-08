@@ -9,6 +9,9 @@ import sys
 import os
 from cntk import learning_rates_per_sample, Trainer, sgd_learner, create_minibatch_source, StreamConfiguration, DeviceDescriptor, text_format_minibatch_source
 from cntk.ops import input_variable, cross_entropy_with_softmax, combine, classification_error, sigmoid, element_times, constant
+
+abs_path = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(os.path.join(abs_path, "..", ".."))
 from examples.common.nn import fully_connected_classifier_net, print_training_progress
 
 # Creates and trains a feedforward classification model for MNIST images

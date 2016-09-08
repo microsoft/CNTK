@@ -9,15 +9,23 @@ import sys
 import os
 from cntk import learning_rates_per_sample, Trainer, sgd_learner, create_minibatch_source, DeviceDescriptor
 from cntk.ops import input_variable, constant, parameter, cross_entropy_with_softmax, combine, classification_error, times, pooling, AVG_POOLING
+
+abs_path = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(os.path.join(abs_path, "..", ".."))
 from examples.common.nn import conv_bn_relu_layer, conv_bn_layer, resnet_node2, resnet_node2_inc, print_training_progress
+
 
 # Instantiates the CNTK built-in minibatch source for reading images to be used for training the residual net
 # The minibatch source is configured using a hierarchical dictionary of key:value pairs
 def create_mb_source(features_stream_name, labels_stream_name, image_height, image_width, num_channels, num_classes):
-    map_file_rel_path = r"../../../../Examples/Image/Miscellaneous/CIFAR-10/cifar-10-batches-py/train_map.txt"
-    map_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), map_file_rel_path)
-    mean_file_rel_path = r"../../../../Examples/Image/Miscellaneous/CIFAR-10/cifar-10-batches-py/CIFAR-10_mean.xml"
-    mean_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), mean_file_rel_path)
+    map_file_rel_path = os.path.join(*"../../../../Examples/Image/Miscellaneous/CIFAR-10/cifar-10-batches-py/train_map.txt".split("/"))
+    map_file = os.path.join(abs_path, map_file_rel_path)
+    mean_file_rel_path = os.path.join(*"../../../../Examples/Image/Miscellaneous/CIFAR-10/cifar-10-batches-py/CIFAR-10_mean.xml".split("/"))
+    mean_file = os.path.join(abs_path, mean_file_rel_path)
+
+    if not os.path.exists(map_file) or not os.path.exists(mean_file):
+        cifar_py3 = "" if sys.version_info.major < 3 else "_py3" 
+        raise RuntimeError("File '%s' or '%s' do not exist. Please run CifarDownload%s.py and CifarConverter%s.py from CIFAR-10 to fetch them"%(map_file, mean_file, cifar_py3, cifar_py3))
 
     crop_transform_config = {"type" : "Crop", "cropType" : "Random", "cropRatio" : "0.8", "jitterType" : "uniRatio"}
     scale_transform_config = {"type" : "Scale", "width" : image_width, "height" : image_height, "channels" : num_channels, "interpolations" : "linear"}
