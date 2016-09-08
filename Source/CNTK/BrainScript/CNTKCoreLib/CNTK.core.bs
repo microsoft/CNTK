@@ -457,7 +457,7 @@ CNTK2 = [
 #  - initFromLiteral="..." (deprecated) --> parse a string literal (obsolete with value=array form)
 #  - init="fixedValue", value from 'value'
 # Warning: Current config will behave unexpected if user mistypes 'initValue' as 'value' (which will be ignored, defaulting to "uniform" init)
-Parameter {outputDim, inputDim, learningRateMultiplier = 1.0, init = ''/*|uniform|fixedValue|gaussian|fromFile|fromLiteral*/, initValueScale = 1, value = 0/*deprecated*/, initValue = '', initFromFilePath = '', initFromLiteral = ''/*deprecated*/, initOnCPUOnly=true, randomSeed=-1, tag=''} = new ComputationNode [ operation = 'LearnableParameter' ; initFilterRank = 0, initOutputRank = 1 ; shape = new TensorShape [ dims = (outputDim : inputDim) ] /*plus the function args*/ ]
+Parameter {outputDim, inputDim, learningRateMultiplier = 1.0, init = ''/*|uniform|fixedValue|gaussian|fromFile|fromLiteral*/, initValueScale = 1, value = 0/*deprecated*/, initValue = '', initFromFilePath = '', initFromLiteral = ''/*deprecated*/, initOnCPUOnly=true, randomSeed=-1, tag=''} = new ComputationNode [ operation = 'LearnableParameter' ; initFilterRank = 0 ; initOutputRank = 1 ; shape = new TensorShape [ dims = (outputDim : inputDim) ] /*plus the function args*/ ]
 
 LearnableParameter = Parameter  // deprecated
 
