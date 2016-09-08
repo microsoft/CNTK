@@ -1299,6 +1299,7 @@ public:
         m_classZeroLabels->Resize(Input(0)->Value());
         m_result->Resize(Input(0)->Value());
         m_temp->Resize(Input(0)->Value());
+        m_sumOfWeights->Resize(Value());
     }
 
     // -sum(left * log(right) + (1-left)*log(1-right)) (optionally * weight)
@@ -1310,7 +1311,7 @@ public:
         const Matrix<ElemType>& classOneProbabilities = Input(1)->ValueFor(fr);
         Matrix<ElemType>& classZeroLabels = *m_classZeroLabels;
 
-        Matrix<ElemType> ones = ConstOnes(classOneLabels.GetNumRows(), classOneLabels.GetNumCols(), classOneLabels.GetDeviceId()).DeepClone();
+        const Matrix<ElemType>& ones = ConstOnes(classOneLabels.GetNumRows(), classOneLabels.GetNumCols(), classOneLabels.GetDeviceId());
 
         // compute the indices for the class 0 indices
         classZeroLabels.AssignDifferenceOf(ones, classOneLabels);
@@ -1335,10 +1336,20 @@ public:
 
         // The error is the negative of the sum of the result
         if (m_inputs.size() == 2)
+        {
             Value().AssignSumOfElements(*m_temp);
+            Value() *= (-1);
+        }
         else
-            Value().AssignInnerProductOf(Input(2)->ValueFor(fr), *m_temp, false);
-        Value() *= (-1);
+        {
+            // sum of weights
+            m_sumOfWeights->AssignSumOfElements(Input(2)->ValueFor(fr));
+            // number of elements
+            ElemType numOfElements = (ElemType)ones.GetNumCols();
+            // sum of weighted log loss
+            Value().AssignInnerProductOf(Input(2)->ValueFor(fr), *m_temp, false).ElementDivideBy(*m_sumOfWeights);
+            Value() *= -numOfElements;
+        }
     }
 
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
@@ -1372,6 +1383,7 @@ public:
         RequestMatrixFromPool(m_classZeroLabels, matrixPool);
         RequestMatrixFromPool(m_result, matrixPool);
         RequestMatrixFromPool(m_temp, matrixPool);
+        RequestMatrixFromPool(m_sumOfWeights, matrixPool);
     }
 
     // release gradient and temp matrices that no longer needed after all the children's gradients are computed.
@@ -1381,6 +1393,7 @@ public:
         ReleaseMatrixToPool(m_classZeroLabels, matrixPool);
         ReleaseMatrixToPool(m_result, matrixPool);
         ReleaseMatrixToPool(m_temp, matrixPool);
+        ReleaseMatrixToPool(m_sumOfWeights, matrixPool);
     }
 
     virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
@@ -1392,6 +1405,7 @@ public:
             node->m_classZeroLabels->SetValue(*m_classZeroLabels);
             node->m_result->SetValue(*m_result);
             node->m_temp->SetValue(*m_temp);
+            node->m_sumOfWeights->SetValue(*m_sumOfWeights);
         }
     }
 
@@ -1399,6 +1413,9 @@ private:
     shared_ptr<Matrix<ElemType>> m_classZeroLabels;
     shared_ptr<Matrix<ElemType>> m_result;
     shared_ptr<Matrix<ElemType>> m_temp;
+
+    // for weighted log-loss
+    shared_ptr<Matrix<ElemType>> m_sumOfWeights;
 };
 
 template class LogisticNode<float>;
