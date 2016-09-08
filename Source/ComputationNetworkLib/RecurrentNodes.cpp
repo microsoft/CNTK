@@ -286,7 +286,23 @@ template<class ElemType, int direction>
 template<class ElemType, int direction>
 /*virtual*/ void DelayedValueNodeBase<ElemType,direction>::/*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) /*override*/
 {
-    TensorView<ElemType> zero(m_zeroMatrix, TensorShape(1));
+    // input 1 (initial state) can be done in bulk
+    if (inputIndex == 1)    
+    {
+        size_t rank = DetermineElementwiseTensorRank();
+
+        MaskMissingGradientColumnsToZero(fr); // we backprop invalid frames, including gaps; so zero them out
+
+        auto src =                    GradientTensorFor(rank, fr); // incoming gradient from top
+        auto tgt = Input(inputIndex)->GradientTensorFor(rank, FrameRange()); // outgoing gradient to initial state
+        TensorView<ElemType> zero(m_zeroMatrix, TensorShape(1));
+
+        tgt.AddCondOf(GetMaskTensor(rank, fr), src, zero); // when back-propping into initial state, we swap the args and propagate the invalid ones
+        // This will drag along the gaps as well, hence we mask them to zero above. --TODO : this is not optimal.
+        // Alternative is a targeted copy using indices. Also needed to support initial state from nodes with time dimension.
+
+        return; // and done
+    }
 
     // move the target matrix to the target device, since below it is accessed as slices which cannot move
     // TODO: change below accesses to TensorView, then this is no longer needed. This is now the case, but need to test it.
@@ -294,27 +310,27 @@ template<class ElemType, int direction>
 
     // special case: DelayedValueNodes may be used outside of loops
     // TODO: this should be a bulk operation; this implementation is a quick hack
-    int dir = direction; // (this avoids a 'conditional expression is constant' warning)
     if (fr.IsAllFrames())
     {
         // recursive call to ourselves
+        int dir = direction; // (this avoids a 'conditional expression is constant' warning)
         FrameRangeIteration range(m_pMBLayout, -dir);
         for (auto t = range.rbegin(); t != range.rend(); t++) // note: reverse iterator
             BackpropTo(inputIndex, t);
         return;
     }
 
-    // if delayed input is within valid time range then add its gradient
-    size_t rank = DetermineElementwiseTensorRank();
-
-    auto src = GradientTensorFor(rank, fr); // incoming gradient from top
-
     if (inputIndex == 0)
     {
+        // if delayed input is within valid time range then add its gradient
         FrameRange frDelayed = fr.WithTimeOffset(direction * m_timeStep); // target frame
         if (!m_pMBLayout->IsBeyondMinibatch(frDelayed)) // only propagate if our target is inside the minibatch
         {
+            size_t rank = DetermineElementwiseTensorRank();
+
+            auto src = GradientTensorFor(rank, fr); // incoming gradient from top
             auto tgt = Input(inputIndex)->GradientTensorFor(rank, frDelayed); // target is outgoing gradient to input
+            TensorView<ElemType> zero(m_zeroMatrix, TensorShape(1));
 
             if (m_inputAllSeqValid[fr.t()]) // all valid: just jam it over in one go
                 tgt.AddCopyOf(src);
@@ -323,19 +339,6 @@ template<class ElemType, int direction>
             else // none valid: nothing to back-prop
                 ;
         }
-    }
-    else if (inputIndex == 1)
-    {
-        MaskMissingGradientColumnsToZero(fr); // MakeMaskTensor() declares gaps 'valid', so must mask (Note: only matters for gaps within; which don't exist, so can save this)
-
-        auto tgt = Input(inputIndex)->GradientTensorFor(rank, FrameRange()); // outgoing gradient to initial state
-
-        if (m_inputAllSeqValid[fr.t()]) // all valid: just jam it over in one go --this has a reduction
-            ;
-        else if (m_inputAnySeqValid[fr.t()]) // some are valid, some are not: use a OpCond tgt select 'src' for valid and 'zero' for invalid frames
-            tgt.AddCondOf(GetMaskTensor(rank, fr), src, zero); // when back-propping into initial state, we swap the args and propagate the invalid ones
-        else // none valid: all go into initial state. This will drag along the gaps as well, hence we mask them to zero above. --TODO: this is not optimal
-            tgt.AddCopyOf(src);
     }
 }
 
