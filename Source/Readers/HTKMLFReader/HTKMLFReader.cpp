@@ -1064,17 +1064,7 @@ bool HTKMLFReader<ElemType>::GetMinibatchToTrainOrTest(StreamMinibatchInputs& ma
                             needRenew = m_numFramesToProcess[i] > 0 && m_latticeBufferMultiUtt[i] && m_latticeBufferMultiUtt[i]->getnumframes() != m_numFramesToProcess[i];
                         }
                     }
-                    if (m_numFramesToProcess[i] > m_maxUtteranceLength)
-                    {
-                        bool needRenew = true;
-                        while (needRenew)
-                        {
-                            size_t framenum = m_numFramesToProcess[i];
-                            fprintf(stderr, "WARNING: number of frames %d is bigger than the max frame num %d\n",  (int)framenum, (int)m_maxUtteranceLength);
-                            ReNewBufferForMultiIO(i);
-                            needRenew = m_numFramesToProcess[i] > m_maxUtteranceLength;
-                        }
-                    }
+                    
                     m_numValidFrames[i] = m_numFramesToProcess[i];
                     if (m_numValidFrames[i] > 0)
                     {
@@ -1732,6 +1722,18 @@ bool HTKMLFReader<ElemType>::ReNewBufferForMultiIO(size_t i)
         const msra::dbn::matrixstripe featOri = m_mbiter->frames(id);
         size_t fdim = featOri.rows();
         const size_t actualmbsizeOri = featOri.cols();
+        if (m_truncated == false && m_frameMode == false && actualmbsizeOri > m_maxUtteranceLength)
+        {
+            (*m_mbiter)++;
+            if (!(*m_mbiter))
+            {
+                m_noData = true;
+            }
+            fprintf(stderr, "WARNING: Utterance has length longer "
+                "than the %zd, skipping it.\n",
+                m_maxUtteranceLength);
+            return ReNewBufferForMultiIO(i);
+        }
         m_featuresStartIndexMultiUtt[id + i * numOfFea] = totalFeatNum;
         totalFeatNum = fdim * actualmbsizeOri + m_featuresStartIndexMultiUtt[id + i * numOfFea];
     }
