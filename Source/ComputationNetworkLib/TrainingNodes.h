@@ -1587,15 +1587,15 @@ class BatchNormalizationNode : public ComputationNodeNonLooping<ElemType>, publi
 public:
     BatchNormalizationNode(DEVICEID_TYPE deviceId, const wstring& name) :
         Base(deviceId, name), m_spatial(false), m_normTimeConst(0), m_blendTimeConst(0), m_epsilon(0), m_useCntkEngine(true),
-        m_samplesSeen(0), m_imageLayoutKind(ImageLayoutKind::CHW),
-        m_convertRunningVariancePending(false)
+        m_samplesSeen(0), m_imageLayoutKind(ImageLayoutKind::CHW), m_postBatchNormalization(false), m_swapNormTimeConst(0),
+        m_swapBlendTimeConst(0), m_convertRunningVariancePending(false)
     {
     }
     BatchNormalizationNode(DEVICEID_TYPE deviceId, const wstring& name, bool spatial, double normalizationTimeConstant, double blendTimeConstant,
                            double epsilon, bool useCntkEngine, ImageLayoutKind imageLayoutKind) :
         Base(deviceId, name), m_spatial(spatial), m_normTimeConst(normalizationTimeConstant), m_blendTimeConst(blendTimeConstant),
-        m_epsilon(epsilon), m_useCntkEngine(useCntkEngine), m_imageLayoutKind(imageLayoutKind), m_samplesSeen(0),
-        m_convertRunningVariancePending(false)
+        m_epsilon(epsilon), m_useCntkEngine(useCntkEngine), m_imageLayoutKind(imageLayoutKind), m_samplesSeen(0), m_postBatchNormalization(false),
+        m_swapNormTimeConst(0), m_swapBlendTimeConst(0), m_convertRunningVariancePending(false)
     {
     }
     BatchNormalizationNode(const ScriptableObjects::IConfigRecordPtr configp) :
@@ -1605,6 +1605,9 @@ public:
                                ImageLayoutKindFrom(configp->Get(L"imageLayout")))
     {
         AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
+        m_postBatchNormalization = false;
+        m_swapNormTimeConst = 0;
+        m_swapBlendTimeConst = 0;
     }
 
     void Save(File& fstream) const override
@@ -1721,7 +1724,7 @@ private: // time-constant conversions
     double ComputeExpAvgFactor() const
     {
         // in inference mode, only use long-term mean and do not update running estimates
-        if (!Environment().IsTraining())
+        if (!Environment().IsTraining() && !m_postBatchNormalization)
         {
             if (m_samplesSeen == 0)
                 RuntimeError("%ls: inference mode is used, but nothing has been trained.", NodeName().c_str());
@@ -1753,7 +1756,7 @@ private: // time-constant conversions
     double ComputeBlendFactor() const
     {
         // in inference mode, only use long-term mean and do not update running estimates
-        if (!Environment().IsTraining())
+        if (!Environment().IsTraining() && !m_postBatchNormalization)
         {
             if (m_samplesSeen == 0)
                 RuntimeError("%ls: inference mode is used, but nothing has been trained.", NodeName().c_str());
@@ -1802,7 +1805,7 @@ public:
         // In inference-only mode, m_savedMean and m_saveInvStdDev will not be
         // produced and BackpropToNonLooping() may not be called. In
         // non-inference (training) mode, saved statistics must be produced.
-        bool inferenceOnly = !Environment().IsTraining();
+        bool inferenceOnly = !Environment().IsTraining() && !m_postBatchNormalization;
         m_bnEng->Forward(/*in=*/ sliceInputValue, scale, bias,   // (in)
                          inferenceOnly, expAvgFactor, blendFactor,
                          runMean, runVariance,                   // (in/out) running estimates, updated from the current MB mean/variance
@@ -1864,6 +1867,14 @@ public:
             // BUGBUG: ^^ Also here, this should add the gradient, not overwrite it.
         }
         // No derivatives with respect to running mean and variance.
+    }
+
+    virtual void EndForwardProp() override
+    {
+        if(m_postBatchNormalization)
+            m_samplesSeen += GetMBLayout()->GetActualNumSamples();
+
+        Base::EndForwardProp();
     }
 
     virtual void EndBackprop() override
@@ -2014,6 +2025,22 @@ public:
     double Epsilon() const { return m_epsilon; }
     bool UseCNTKEngine() const { return m_useCntkEngine; }
 
+    void SetPostBatchNormalizationBegin()
+    {
+        m_postBatchNormalization = true;
+        m_samplesSeen = 0;
+        m_swapNormTimeConst = m_normTimeConst;
+        m_swapBlendTimeConst = m_blendTimeConst;
+        m_normTimeConst = -1;
+        m_blendTimeConst = 0;
+    }
+    void SetPostBatchNormalizationEnd()
+    {
+        m_postBatchNormalization = false;
+        m_normTimeConst = m_swapNormTimeConst;
+        m_blendTimeConst = m_swapBlendTimeConst;
+    }
+
 private:
     // Old versioning - do not use. Do not remove until we're sure there are no old models around.
     struct VersionInfo
@@ -2077,6 +2104,11 @@ private:
 
     std::unique_ptr<BatchNormEngine<ElemType>> m_bnEng;
 
+    // post batch normalization process mark
+    bool m_postBatchNormalization;
+
+    double m_swapNormTimeConst;
+    double m_swapBlendTimeConst;
     bool m_convertRunningVariancePending;
 };
 
