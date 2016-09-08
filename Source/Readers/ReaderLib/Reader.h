@@ -38,6 +38,7 @@ enum class ElementType
 {
     tfloat,  // single precision
     tdouble, // double precision
+    tuchar,  // unsigned char
     tatom    // sizeof(atom) == 1 constitute of blobs -> sequences of atoms (i.e. used for lattices, hmmm, etc.)
 };
 

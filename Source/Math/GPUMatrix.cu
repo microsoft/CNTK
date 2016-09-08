@@ -3088,9 +3088,9 @@ void GPUMatrix<ElemType>::RecordComputeSyncPoint()
 {
     if (t_computeEvent == nullptr)
     {
-        CUDA_CALL(cudaEventCreate(&t_computeEvent));
+        CUDA_CALL(cudaEventCreate(&t_computeEvent, cudaEventBlockingSync));
     }
-    CUDA_CALL(cudaEventRecord(t_computeEvent, t_stream));
+    CUDA_CALL(cudaEventRecord(t_computeEvent, t_dataCopyStream));
 }
 
 template<class ElemType>
@@ -3099,7 +3099,7 @@ void GPUMatrix<ElemType>::SyncComputeBeforeRead()
     assert(t_dataCopyStream != nullptr);
     if (t_computeEvent != nullptr)
     {
-        CUDA_CALL(cudaStreamWaitEvent(t_dataCopyStream, t_computeEvent, 0 /*flags must be 0*/));
+        CUDA_CALL(cudaEventSynchronize(t_computeEvent));
     }
 }
 

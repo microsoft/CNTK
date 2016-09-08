@@ -93,6 +93,7 @@ private:
     std::map<std::wstring, MBLayoutPtr> m_prefetchMbLayouts;
 
     int m_deviceId;
+    bool m_outstandingRead;
 
     static void FillMatrixFromStream(StorageType type, Matrix<ElemType>* matrix, size_t numRows, const StreamMinibatchPtr& stream);
 };

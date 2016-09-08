@@ -23,7 +23,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 template <class ElemType>
 ReaderShim<ElemType>::ReaderShim(ReaderFactory factory)
-    : m_factory(factory), m_deviceId(CPUDEVICE)
+    : m_factory(factory), m_deviceId(CPUDEVICE), m_outstandingRead(false)
 {
 }
 
@@ -81,6 +81,13 @@ void ReaderShim<ElemType>::StartDistributedMinibatchLoop(
 
     m_deviceId = device != inputs.end() ? device->m_deviceId : CPUDEVICE;
 
+    Matrix<ElemType>::EnableConcurrentRead(m_deviceId);
+
+    if (m_outstandingRead)
+    {
+        Matrix<ElemType>::SyncComputeBeforeRead(m_deviceId);
+        m_outstandingRead = false;
+    }
 
     for (const auto& i : inputs)
     {
@@ -88,15 +95,13 @@ void ReaderShim<ElemType>::StartDistributedMinibatchLoop(
         m_prefetchBuffer[i.m_name] = std::make_shared<Matrix<ElemType>>(i.m_deviceId);
     }
 
-    Matrix<ElemType>::EnableConcurrentRead(m_deviceId);
-
     m_reader->StartEpoch(config, inputDescriptions);
     m_endOfEpoch = false;
 
     // Starting the prefetch task. There is always a single async read in flight.
     // When the network requests a new minibatch, we wait for the current async to finish,
     // return the result and kick off the new one.
-    m_prefetchTask = std::async(m_launchType, 
+    m_prefetchTask = std::async(m_launchType,
     [this]()
     {
         return PrefetchMinibatch();
@@ -205,6 +210,9 @@ bool ReaderShim<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
     // So pick up the first one.
     m_numParallelSequences = matrices.begin()->second.pMBLayout->GetNumParallelSequences();
 
+    bool outstandingRead = m_outstandingRead;
+    m_outstandingRead = false;
+
     // It is time to issue the next prefetch.
     if (!m_endOfEpoch)
     {
@@ -218,6 +226,10 @@ bool ReaderShim<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
         });
     }
 
+    if(!outstandingRead)
+        LogicError("GPU prefetch logic is incorrect.");
+
+    Matrix<ElemType>::SyncComputeBeforeRead(deviceId);
     return dataNotEmpty;
 }
 
@@ -249,7 +261,8 @@ std::pair<bool, bool> ReaderShim<ElemType>::PrefetchMinibatch()
         FillMatrixFromStream(m_streams[streamId]->m_storageType, mx.second.get(), sampleSize, stream);
     }
 
-    Matrix<ElemType>::SyncPendingRead(m_prefetchBuffer.begin()->second->GetDeviceId());
+    m_outstandingRead = true;
+    Matrix<ElemType>::RecordComputeSyncPoint(m_deviceId);
 
     timer.Stop();
     fprintf(stderr, "Copy time of the minibatch inside future: %.5gs\n", timer.ElapsedSeconds());
