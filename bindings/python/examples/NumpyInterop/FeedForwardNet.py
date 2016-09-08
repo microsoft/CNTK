@@ -14,6 +14,9 @@ abs_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(abs_path, "..", ".."))
 from examples.common.nn import fully_connected_classifier_net, print_training_progress
 
+# make sure we get always the same "randomness"
+np.random.seed(0)
+
 def generate_random_data(sample_size, feature_dim, num_classes):
     # Create synthetic data using NumPy. 
     Y = np.random.randint(size=(sample_size, 1), low=0, high=num_classes)
