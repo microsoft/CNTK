@@ -24,7 +24,7 @@ template <class ElemType> class DelayedValueNodeState;
 template <class ElemType, int direction /*-1 for Past/left-to-right or +1 for Future/right-to-left*/ /*, MinibatchPackingFlags SequenceStart_or_End/*-Start or -End*/>
 class DelayedValueNodeBase : public ComputationNode<ElemType>, public IRecurrentNode, public ILateAttachingNode, public IStatefulNode
 {
-    typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+    typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers; using Base::OperationName;
     typedef std::shared_ptr<DelayedValueNodeState<ElemType>> DelayedNodeStatePtr;
 
 private:
@@ -93,7 +93,7 @@ protected:
 
 #define UsingDelayedValueNodeMembers        \
     UsingComputationNodeMembersBoilerplate; \
-    using Base::m_initialStateValue;   \
+    using Base::m_initialStateValue;        \
     using Base::m_delayedValue;             \
     using Base::m_timeStep;
 
