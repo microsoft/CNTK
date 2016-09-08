@@ -364,12 +364,6 @@ void ScaleTransformer::Apply(size_t id, cv::Mat &mat)
 {
     UNUSED(id);
 
-    // If matrix has not been converted to the right type, do it now as rescaling
-    // requires floating point type.
-    int type = m_precision == ElementType::tfloat ? CV_32F : CV_64F;
-    if (mat.type() != CV_MAKETYPE(type, m_imgChannels))
-        mat.convertTo(mat, type);
-
     auto seed = GetSeed();
     auto rng = m_rngs.pop_or_create([seed]() { return std::make_unique<std::mt19937>(seed); });
 
@@ -378,7 +372,15 @@ void ScaleTransformer::Apply(size_t id, cv::Mat &mat)
 
     // TODO skip cv::resize depending on interpolation only
     if (mat.cols != m_imgWidth || mat.rows != m_imgHeight)
+    {
+        // If matrix has not been converted to the right type, do it now as rescaling
+        // requires floating point type.
+        int type = m_precision == ElementType::tfloat ? CV_32F : CV_64F;
+
+        if (mat.type() != CV_MAKETYPE(type, m_imgChannels))
+            mat.convertTo(mat, type);
         cv::resize(mat, mat, cv::Size((int)m_imgWidth, (int)m_imgHeight), 0, 0, m_interp[index]);
+    }
 
     m_rngs.push(std::move(rng));
 }
