@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" InitialTargets="CheckDependencies" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|x64">
@@ -109,6 +109,10 @@ if exist "$(CuDnnDll)" xcopy /D /Y "$(CuDnnDll)" "$(OutputPath)"
   <ItemGroup>
     <ClInclude Include="..\Common\Include\File.h" />
     <ClInclude Include="..\Common\Include\fileutil.h" />
+    <ClInclude Include="SwapAction.h" />
+    <ClInclude Include="SwapInAction.h" />
+    <ClInclude Include="SwapManager.h" />
+    <ClInclude Include="SwapOutAction.h" />
     <ClInclude Include="CntkBatchNormalization.cuh" />
     <ClInclude Include="ColumnQuantizer.h" />
     <ClInclude Include="CommonMatrix.h" />
@@ -160,6 +164,9 @@ if exist "$(CuDnnDll)" xcopy /D /Y "$(CuDnnDll)" "$(OutputPath)"
     <CudaCompile Include="GPUWatcher.cu">
       <FileType>CppCode</FileType>
     </CudaCompile>
+    <CudaCompile Include="SwapInAction.cu" />
+    <CudaCompile Include="SwapManager.cu" />
+    <CudaCompile Include="SwapOutAction.cu" />
     <ClCompile Include="cudalattice.cpp" />
     <ClCompile Include="cudalib.cpp" />
     <CudaCompile Include="CuDnnConvolutionEngine.cu">

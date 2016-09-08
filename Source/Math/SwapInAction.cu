@@ -7,7 +7,6 @@
 
 #include "SwapInAction.h"
 #include "SwapOutAction.h"
-#include "GPUMatrix.h"
 #include <iostream>
 
 #ifndef CPUONLY

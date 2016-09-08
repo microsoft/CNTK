@@ -5,10 +5,12 @@
 
 #pragma once
 
-#include <CPUMatrix.h>
-#include <GPUMatrix.h>
+#include "GPUMatrix.h"
+#include "Matrix.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
+
+template <typename ElemType> class Matrix;
 
 template <typename ElemType>
 class SwapAction

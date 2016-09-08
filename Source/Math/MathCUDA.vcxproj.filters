@@ -33,6 +33,15 @@
     </CudaCompile>
     <CudaCompile Include="GPURNGHandle.cu">
       <Filter>GPU</Filter>
+    </CudaCompile>	
+    <CudaCompile Include="SwapOutAction.cu">
+      <Filter>GPU\Swapping</Filter>
+    </CudaCompile>
+    <CudaCompile Include="SwapManager.cu">
+      <Filter>GPU\Swapping</Filter>
+    </CudaCompile>
+    <CudaCompile Include="SwapInAction.cu">
+      <Filter>GPU\Swapping</Filter>
     </CudaCompile>
   </ItemGroup>
   <ItemGroup>
@@ -47,9 +56,6 @@
     </ClCompile>
     <ClCompile Include="GPUDataTransferer.cpp">
       <Filter>GPU</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Common\ExceptionWithCallStack.cpp">
-      <Filter>Misc</Filter>
     </ClCompile>
     <ClCompile Include="CuDnnCommon.cpp">
       <Filter>GPU\CuDnn</Filter>
@@ -134,6 +140,18 @@
     <ClInclude Include="CuDnnRNN.h">
       <Filter>GPU\RNN</Filter>
     </ClInclude>
+    <ClInclude Include="SwapInAction.h">
+      <Filter>GPU\Swapping</Filter>
+    </ClInclude>
+    <ClInclude Include="SwapManager.h">
+      <Filter>GPU\Swapping</Filter>
+    </ClInclude>
+    <ClInclude Include="SwapOutAction.h">
+      <Filter>GPU\Swapping</Filter>
+    </ClInclude>
+    <ClInclude Include="SwapAction.h">
+      <Filter>GPU\Swapping</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="GPUMatrix.h">
@@ -182,6 +200,9 @@
     </Filter>
     <Filter Include="GPU\RNN">
       <UniqueIdentifier>{da8154d0-d1f4-44a5-b64a-5e955ead56fa}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="GPU\Swapping">
+      <UniqueIdentifier>{44b992d1-6a17-46ce-b001-1a46efc39271}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

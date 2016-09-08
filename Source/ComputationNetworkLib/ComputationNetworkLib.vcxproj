@@ -108,10 +108,6 @@
     <ClInclude Include="RecurrentNodes.h" />
     <ClInclude Include="ReshapingNodes.h" />
     <ClInclude Include="stdafx.h" />
-    <ClInclude Include="SwapInAction.h" />
-    <ClInclude Include="SwapOutAction.h" />
-    <ClInclude Include="SwapAction.h" />
-    <ClInclude Include="SwapManager.h" />
     <ClInclude Include="targetver.h" />
     <ClInclude Include="TrainingNodes.h" />
   </ItemGroup>
@@ -130,9 +126,6 @@
     <ClCompile Include="RNNNodes.cpp" />
     <ClCompile Include="SpecialPurposeNodes.cpp" />
     <ClCompile Include="stdafx.cpp" />
-    <ClCompile Include="SwapInAction.cpp" />
-    <ClCompile Include="SwapOutAction.cpp" />
-    <ClCompile Include="SwapManager.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" />

@@ -5,15 +5,15 @@
 
 #define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
 
-
 #include "SwapManager.h"
-#include "ComputationNode.h"
+#include "SwapAction.h"
+#include "../ComputationNetworkLib/ComputationNode.h"
 #include "Sequences.h"
-#include <iostream>
 #include "SwapInAction.h"
 #include "SwapOutAction.h"
-#include "ComputationNetwork.h"
+
 #include <cmath>
+#include <iostream>
 
 bool g_useMemorySwapping = false;
 
@@ -30,7 +30,6 @@ inline float MeasurementUncertainty(){ return 1.15f; }
 
 template <typename ElemType> SwapManager<ElemType>::SwapManager()
 {
-        m_timer = CUDATimer();
         m_useMemorySwapping = g_useMemorySwapping;
         m_minFreeMemory = FreeGPUMemoryInGB();
         cout << "FREE: " << m_minFreeMemory << endl;

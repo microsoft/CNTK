@@ -525,8 +525,13 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
     TracingGPUMemoryAllocator::SetTraceLevel(config(L"traceGPUMemoryAllocations", 0));
 
     bool synchronizeCUDAKernelExecutions = config(L"synchronizeCUDAKernelExecutions", false);
-    if (synchronizeCUDAKernelExecutions)
-        SyncGuard::EnableSync();
+	if (synchronizeCUDAKernelExecutions)
+#ifndef CPUONLY
+		SyncGuard::s_isSyncEnabled = true;
+#else
+		SyncGuard::s_isSyncEnabled = false;
+#endif
+		
 
     // logging
     wstring logpath = config(L"stderr", L"");

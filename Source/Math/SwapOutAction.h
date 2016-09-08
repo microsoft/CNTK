@@ -6,7 +6,6 @@
 #pragma once
 
 #include "SwapAction.h"
-#include "GPUMatrix.h"
 
 #ifndef CPUONLY
     #include <cuda.h>

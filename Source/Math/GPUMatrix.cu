@@ -123,10 +123,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 /*static*/ bool SyncGuard::s_isSyncEnabled = false;
 
-/*static*/ void SyncGuard::EnableSync()
-{
-    s_isSyncEnabled = true;
-}
+
 
 SyncGuard::SyncGuard(bool forceSync /*= false*/)
     : m_forceSync(forceSync)

@@ -5,14 +5,12 @@
 
 #pragma once
 
-#include "SwapAction.h"
+
 #include <unordered_map>
 #include <memory>
 #include <string>
-#include "CUDATimer.h"
 #include <utility>
 #include <set>
-
 
 extern bool g_useMemorySwapping;
 
@@ -24,6 +22,8 @@ class ComputationNodeBase;
 class FrameRange;
 template <typename ElemType> class SwapInAction;
 template <typename ElemType> class SwapOutAction;
+template <typename ElemType> class SwapAction;
+template <typename ElemType> class Matrix;
 
 template <typename ElemType>
 class SwapManager
@@ -38,7 +38,6 @@ private:
     std::unordered_map<ComputationNodeBase*, std::vector<Matrix<ElemType>*> > m_node2BackwardFree;
     // singleton constructor
 
-    CUDATimer m_timer;
     void CleanUp();
     float FreeGPUMemoryInGB();
     float m_minFreeMemory;

@@ -68,7 +68,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 class SyncGuard
 {
 private:
-    static bool s_isSyncEnabled;
 
     bool m_forceSync;
 #ifndef CPUONLY
@@ -76,7 +75,7 @@ private:
 #endif
 
 public:
-    static MATH_API void EnableSync();
+	static bool s_isSyncEnabled;	
 
     SyncGuard(bool forceSync = false);
     ~SyncGuard();
