@@ -228,7 +228,7 @@ void LearnableParameter<ElemType>::InitRandom(const wstring& type,
         return;
 
     if (initFilterRank + abs(initOutputRank) > sampleLayout.GetRank())
-        InvalidArgument("InitRandom: initFilterRank=%d and initOutputRank=%d exceeds sampleLayout rank %d", initFilterRank, initOutputRank, (int)sampleLayout.GetRank());
+        InvalidArgument("InitRandom: initFilterRank=%d and initOutputRank=%d exceeds sampleLayout rank %d", (int)initFilterRank, initOutputRank, (int)sampleLayout.GetRank());
     // determine fan-in and fan-out
     // In the most generic case of convolution, sampleLayout should be in the form of [f1 x f2 x ... x fr x c1 x ... x cm x k1 x ... x kn],
     // where r is the filterRank, m is the input rank, and n is the output rank. In the above example, we should have initOutputRank = -n
