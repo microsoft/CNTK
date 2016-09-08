@@ -82,6 +82,9 @@ ImageReader::ImageReader(const ConfigParameters& config)
         transformations.push_back(Transformation{ std::make_shared<TransposeTransformer>(featureStream), featureName });
     }
 
+    // We should always have cast at the end.
+    transformations.push_back(Transformation{ std::make_shared<CastTransformer>(featureStream), featureName });
+
     m_sequenceEnumerator = std::make_shared<TransformController>(transformations, randomizer);
 
     m_packer = std::make_shared<FramePacker>(

@@ -53,7 +53,8 @@ protected:
     StreamDescription m_inputStream;
     StreamDescription m_outputStream;
     unsigned int m_seed;
-    int m_imageElementType;
+    //int m_imageElementType;
+    ElementType m_precision;
     conc_stack<std::unique_ptr<std::mt19937>> m_rngs;
 };
 
@@ -129,8 +130,7 @@ private:
 class TransposeTransformer : public Transformer
 {
 public:
-    explicit TransposeTransformer(const ConfigParameters&) {}
-
+    explicit TransposeTransformer(const ConfigParameters&);
     void StartEpoch(const EpochConfiguration&) override {}
 
     // Transformation of the stream.
@@ -140,11 +140,12 @@ public:
     SequenceDataPtr Transform(SequenceDataPtr sequence) override;
 
 private:
-    template <class TElement>
+    template <class TElementFrom, class TElementTo>
     SequenceDataPtr TypedTransform(SequenceDataPtr inputSequence);
 
     StreamDescription m_inputStream;
     StreamDescription m_outputStream;
+    ElementType m_precision;
 };
 
 // Intensity jittering based on PCA transform as described in original AlexNet paper
@@ -197,5 +198,29 @@ private:
     conc_stack<std::unique_ptr<std::mt19937>> m_rngs;
     conc_stack<std::unique_ptr<cv::Mat>> m_hsvTemp;
 };
+
+// Cast the input to a particular type if requested.
+class CastTransformer : public Transformer
+{
+public:
+    explicit CastTransformer(const ConfigParameters&);
+
+    void StartEpoch(const EpochConfiguration&) override {}
+
+    // Transformation of the stream.
+    StreamDescription Transform(const StreamDescription& inputStream) override;
+
+    // Transformation of the sequence.
+    SequenceDataPtr Transform(SequenceDataPtr sequence) override;
+
+private:
+    template <class TFromElemType, class TToElemType>
+    SequenceDataPtr TypedTransform(SequenceDataPtr inputSequence);
+
+    StreamDescription m_inputStream;
+    StreamDescription m_outputStream;
+    ElementType m_precision;
+};
+
 
 }}}

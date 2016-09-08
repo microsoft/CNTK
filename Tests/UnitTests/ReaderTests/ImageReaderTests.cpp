@@ -258,7 +258,7 @@ BOOST_AUTO_TEST_CASE(ImageReaderMissingImage)
 
 BOOST_AUTO_TEST_CASE(ImageReaderEmptyTransforms)
 {
-    HelperRunReaderTest<float>(
+    BOOST_REQUIRE_EXCEPTION(HelperRunReaderTest<float>(
         testDataPath() + "/Config/ImageTransforms_Config.cntk",
         testDataPath() + "/Control/ImageTransforms_Control.txt",
         testDataPath() + "/Control/ImageTransforms_Output.txt",
@@ -270,7 +270,12 @@ BOOST_AUTO_TEST_CASE(ImageReaderEmptyTransforms)
         1,
         0,
         0,
-        1);
+        1),
+        std::runtime_error,
+        [](const std::runtime_error& ex)
+        {
+            return string("Please specify the type of the 'features' stream. You can use 'Cast' transform for that.") == ex.what();
+        });
 }
 
 BOOST_AUTO_TEST_CASE(ImageReaderInvalidEmptyTransforms)
@@ -292,9 +297,7 @@ BOOST_AUTO_TEST_CASE(ImageReaderInvalidEmptyTransforms)
         std::runtime_error,
         [](const std::runtime_error& ex)
         {
-            return string("Packer currently does not support samples with varying shapes."
-                "Please make sure there is a transform that unifies the shape of samples"
-                " for input stream 'features' or the deserializer provides samples with the same shape.") == ex.what();
+            return string("Please specify the type of the 'features' stream. You can use 'Cast' transform for that.") == ex.what();
         });
 }
 

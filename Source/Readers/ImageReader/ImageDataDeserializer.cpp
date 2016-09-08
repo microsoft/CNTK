@@ -83,23 +83,28 @@ public:
         auto image = std::make_shared<DeserializedImage>();
         image->m_image = std::move(m_parent.ReadImage(m_description.m_id, imageSequence.m_path, m_parent.m_grayscale));
         auto& cvImage = image->m_image;
-
         if (!cvImage.data)
-        {
             RuntimeError("Cannot open file '%s'", imageSequence.m_path.c_str());
-        }
 
         // Convert element type.
-        int dataType = m_parent.m_featureElementType == ElementType::tfloat ? CV_32F : CV_64F;
-        if (cvImage.type() != CV_MAKETYPE(dataType, cvImage.channels()))
+        auto imageType = cvImage.type();
+        ElementType dataType;
+        if (imageType == CV_MAKETYPE(CV_8U, cvImage.channels()))
+            dataType = ElementType::tuchar;
+        else if (imageType == CV_MAKETYPE(CV_32F, cvImage.channels()))
+            dataType = ElementType::tfloat;
+        else if (imageType == CV_MAKETYPE(CV_64F, cvImage.channels()))
+            dataType = ElementType::tdouble;
+        else
         {
-            cvImage.convertTo(cvImage, dataType);
+            // Unsupported image type. Let's convert it to required precision.
+            int requiredType = m_parent.m_precision == ElementType::tfloat ? CV_32F : CV_64F;
+            cvImage.convertTo(cvImage, requiredType);
+            dataType = m_parent.m_precision;
         }
 
         if (!cvImage.isContinuous())
-        {
             cvImage = cvImage.clone();
-        }
         assert(cvImage.isContinuous());
 
         image->m_data = image->m_image.data;
@@ -108,6 +113,7 @@ public:
         image->m_id = sequenceId;
         image->m_numberOfSamples = 1;
         image->m_chunk = shared_from_this();
+        image->m_elementType = dataType;
         result.push_back(image);
 
         SparseSequenceDataPtr label = std::make_shared<SparseSequenceData>();
@@ -136,6 +142,8 @@ ImageDataDeserializer::ImageDataDeserializer(CorpusDescriptorPtr corpus, const C
     }
 
     string precision = (ConfigValue)config("precision", "float");
+    m_precision = AreEqualIgnoreCase(precision, "float") ? ElementType::tfloat : ElementType::tdouble;
+
     m_verbosity = config(L"verbosity", 0);
 
     // Feature stream.
@@ -144,9 +152,8 @@ ImageDataDeserializer::ImageDataDeserializer(CorpusDescriptorPtr corpus, const C
     features->m_id = 0;
     features->m_name = msra::strfun::utf16(featureSection.ConfigName());
     features->m_storageType = StorageType::dense;
-    features->m_elementType = AreEqualIgnoreCase(precision, "float") ? ElementType::tfloat : ElementType::tdouble;
+    features->m_elementType = ElementType::tvariant; // Images can be of different type.
     m_streams.push_back(features);
-    m_featureElementType = features->m_elementType;
 
     // Label stream.
     ConfigParameters label = inputs(labelNames[0]);
@@ -156,7 +163,7 @@ ImageDataDeserializer::ImageDataDeserializer(CorpusDescriptorPtr corpus, const C
     labels->m_name = msra::strfun::utf16(label.ConfigName());
     labels->m_sampleLayout = std::make_shared<TensorShape>(labelDimension);
     labels->m_storageType = StorageType::sparse_csc;
-    labels->m_elementType = AreEqualIgnoreCase(precision, "float") ? ElementType::tfloat : ElementType::tdouble;
+    labels->m_elementType = m_precision;
     m_streams.push_back(labels);
 
     m_labelGenerator = labels->m_elementType == ElementType::tfloat ?
@@ -184,6 +191,9 @@ ImageDataDeserializer::ImageDataDeserializer(const ConfigParameters& config)
 
     m_verbosity = config(L"verbosity", 0);
 
+    string precision = (ConfigValue)config("precision", "float");
+    m_precision = AreEqualIgnoreCase(precision, "float") ? ElementType::tfloat : ElementType::tdouble;
+
     // Expect data in HWC.
     ImageDimensions dimensions(*feature->m_sampleLayout, configHelper.GetDataFormat());
     feature->m_sampleLayout = std::make_shared<TensorShape>(dimensions.AsTensorShape(HWC));
@@ -191,7 +201,8 @@ ImageDataDeserializer::ImageDataDeserializer(const ConfigParameters& config)
     label->m_storageType = StorageType::sparse_csc;
     feature->m_storageType = StorageType::dense;
 
-    m_featureElementType = feature->m_elementType;
+    feature->m_elementType = ElementType::tvariant;
+
     size_t labelDimension = label->m_sampleLayout->GetDim(0);
 
     if (label->m_elementType == ElementType::tfloat)

@@ -63,6 +63,8 @@ extern "C" DATAREADER_API bool CreateTransformer(Transformer** transformer, cons
         *transformer = new MeanTransformer(config);
     else if (type == L"Transpose")
         *transformer = new TransposeTransformer(config);
+    else if (type == L"Cast")
+        *transformer = new CastTransformer(config);
     else
         // Unknown type.
         return false;
