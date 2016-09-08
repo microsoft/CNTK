@@ -34,13 +34,13 @@
     <CudaCompile Include="GPURNGHandle.cu">
       <Filter>GPU</Filter>
     </CudaCompile>	
-    <CudaCompile Include="SwapOutAction.cu">
+    <CudaCompile Include="SwapOutAction.cpp">
       <Filter>GPU\Swapping</Filter>
     </CudaCompile>
-    <CudaCompile Include="SwapManager.cu">
+    <CudaCompile Include="SwapManager.cpp">
       <Filter>GPU\Swapping</Filter>
     </CudaCompile>
-    <CudaCompile Include="SwapInAction.cu">
+    <CudaCompile Include="SwapInAction.cpp">
       <Filter>GPU\Swapping</Filter>
     </CudaCompile>
   </ItemGroup>

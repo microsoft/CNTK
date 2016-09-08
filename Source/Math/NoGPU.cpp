@@ -23,6 +23,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 // the reset below are dummy implementations
 
+/*static*/ bool SyncGuard::s_isSyncEnabled = false;
+
 void PrepareDevice(DEVICEID_TYPE deviceId);
 
 template <class ElemType>
