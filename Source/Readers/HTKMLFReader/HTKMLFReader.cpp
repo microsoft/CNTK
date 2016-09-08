@@ -997,6 +997,7 @@ bool HTKMLFReader<ElemType>::GetMinibatchToTrainOrTest(StreamMinibatchInputs& ma
             m_mbNumTimeSteps = m_numFramesToProcess[0];
             for (size_t i = 1; i < m_numSeqsPerMB; i++)
             {
+                // a stopgap
                 if (m_mbNumTimeSteps < m_numFramesToProcess[i])
                     m_mbNumTimeSteps = m_numFramesToProcess[i];
             }
@@ -1021,33 +1022,22 @@ bool HTKMLFReader<ElemType>::GetMinibatchToTrainOrTest(StreamMinibatchInputs& ma
             {
                 if (!skip)
                 {
-                    // a stopgap
-                    if (m_numFramesToProcess[i] > 0 && m_latticeBufferMultiUtt[i] && m_latticeBufferMultiUtt[i]->getnumframes() != m_numFramesToProcess[i])
+                   
+                if (m_numFramesToProcess[i] > 0 && m_latticeBufferMultiUtt[i] && m_latticeBufferMultiUtt[i]->getnumframes() != m_numFramesToProcess[i])
+                {
+                    // BUGBUG: we just found that (due to some bugs yet to be tracked down),
+                    // the filled number of frames is inconsistent with the number frames in lattices (though it rarely occurs)
+                    // This is just a stopgap, to be removed after the bugs are found and fixed
+                    bool needRenew = true;
+                    while (needRenew)
                     {
-                        // BUGBUG: we just found that (due to some bugs yet to be tracked down),
-                        // the filled number of frames is inconsistent with the number frames in lattices (though it rarely occurs)
-                        // This is just a stopgap, to be removed after the bugs are found and fixed
-                        bool needRenew = true;
-                        while (needRenew)
-                        {
-                            size_t framenum = m_numFramesToProcess[i];
-                            fprintf(stderr, "WARNING: mismatched number of frames filled in the reader: %d in data vs %d in lattices. Ignoring this utterance %ls\n",
-                                    (int) framenum, (int) m_latticeBufferMultiUtt[i]->getnumframes(), m_latticeBufferMultiUtt[i]->getkey().c_str());
-                            ReNewBufferForMultiIO(i);
-                            needRenew = m_numFramesToProcess[i] > 0 && m_latticeBufferMultiUtt[i] && m_latticeBufferMultiUtt[i]->getnumframes() != m_numFramesToProcess[i];
-                        }
+                        size_t framenum = m_numFramesToProcess[i];
+                        fprintf(stderr, "WARNING: mismatched number of frames filled in the reader: %d in data vs %d in lattices. Ignoring this utterance %ls\n",
+                            (int)framenum, (int)m_latticeBufferMultiUtt[i]->getnumframes(), m_latticeBufferMultiUtt[i]->getkey().c_str());
+                        ReNewBufferForMultiIO(i);
+                        needRenew = m_numFramesToProcess[i] > 0 && m_latticeBufferMultiUtt[i] && m_latticeBufferMultiUtt[i]->getnumframes() != m_numFramesToProcess[i];
                     }
-                    if (m_numFramesToProcess[i] > m_maxUtteranceLength)
-                    {
-                        bool needRenew = true;
-                        while (needRenew)
-                        {
-                            size_t framenum = m_numFramesToProcess[i];
-                            fprintf(stderr, "WARNING: number of frames %d is bigger than the max frame num %d\n",  (int)framenum, (int)m_maxUtteranceLength);
-                            ReNewBufferForMultiIO(i);
-                            needRenew = m_numFramesToProcess[i] > m_maxUtteranceLength;
-                        }
-                    }
+                }                
                     m_numValidFrames[i] = m_numFramesToProcess[i];
                     if (m_numValidFrames[i] > 0)
                     {
@@ -1703,6 +1693,18 @@ bool HTKMLFReader<ElemType>::ReNewBufferForMultiIO(size_t i)
         const msra::dbn::matrixstripe featOri = m_mbiter->frames(id);
         size_t fdim = featOri.rows();
         const size_t actualmbsizeOri = featOri.cols();
+        if (m_truncated == false && m_frameMode == false && actualmbsizeOri > m_maxUtteranceLength)
+        {
+            (*m_mbiter)++;
+            if (!(*m_mbiter))
+            {
+                m_noData = true;
+            }
+            fprintf(stderr, "WARNING: Utterance has length longer "
+                "than the %zd, skipping it.\n",
+                m_maxUtteranceLength);
+            return ReNewBufferForMultiIO(i);
+        }
         m_featuresStartIndexMultiUtt[id + i * numOfFea] = totalFeatNum;
         totalFeatNum = fdim * actualmbsizeOri + m_featuresStartIndexMultiUtt[id + i * numOfFea];
     }
