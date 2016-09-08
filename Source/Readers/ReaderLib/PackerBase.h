@@ -101,13 +101,14 @@ inline void PackerBase::PackSparseSampleAsDense(char* destination, SparseSequenc
     // m_indices stores the corresponding indices for each element. 
     // Iterate through non zero elements and copy from m_data them into the 
     // destination at the offset given by the corresponding row index (m_index).
+    const void* buffer = sequence->GetDataBuffer();
     for (size_t nonZeroIndex = 0; nonZeroIndex < nonZeroCount; ++nonZeroIndex)
     {
         auto sourceOffset = sampleOffset + nonZeroIndex;
         auto elementIndex = sequence->m_indices[sourceOffset];
         auto destinationOffset = elementIndex * elementSize;
         assert(destinationOffset < sampleSize);
-        const auto* source = (const char*)(sequence->m_data) + (sourceOffset)* elementSize;
+        const auto* source = (const char*)buffer + (sourceOffset)* elementSize;
         memcpy(destination + destinationOffset, source, elementSize);
     }
 }
@@ -115,7 +116,7 @@ inline void PackerBase::PackSparseSampleAsDense(char* destination, SparseSequenc
 inline void PackerBase::PackDenseSample(char* destination, SequenceDataPtr sequence, size_t sampleOffset, size_t sampleSize)
 {
     // Because the sample is dense - simply copying it to the output.
-    memcpy(destination, (const char*)(sequence->m_data) + sampleOffset, sampleSize);
+    memcpy(destination, (const char*)(sequence->GetDataBuffer()) + sampleOffset, sampleSize);
 }
 
 }}}

@@ -239,24 +239,28 @@ void CompositeDataReader::CreateTransforms(const ConfigParameters& deserializerC
         argvector<ConfigParameters> transforms = input("transforms");
         for (size_t j = 0; j < transforms.size(); ++j)
         {
-            TransformerPtr transformer = CreateTransformer(transforms[j], defaultModule);
+            TransformerPtr transformer = CreateTransformer(transforms[j], defaultModule, std::wstring());
             m_transforms.push_back(Transformation{transformer, inputName});
         }
-    }
 
+        // Let's add a cast transformer by default. It is noop if the type provided by others is float
+        // or double, but will do a proper cast if the type is uchar.
+        auto cast = CreateTransformer(input, defaultModule, std::wstring(L"Cast"));
+        m_transforms.push_back(Transformation{ cast, inputName });
+    }
 }
 
 // Create a transformer for a particular configuration. Loading it from the module of the deserializer if module is not specified, i.e.
 //     transforms = [
 //         [type = "Scale" width=...]:...
-TransformerPtr CompositeDataReader::CreateTransformer(const ConfigParameters& config, const string& defaultModule)
+TransformerPtr CompositeDataReader::CreateTransformer(const ConfigParameters& config, const string& defaultModule, const std::wstring& type)
 {
     typedef bool(*TransformerFactory) (Transformer** t, const std::wstring& type, const ConfigParameters& cfg);
 
     std::string transformerModule = config("module", defaultModule.c_str());
     TransformerFactory f = (TransformerFactory)Plugin::Load(transformerModule, "CreateTransformer");
 
-    std::wstring transformerType = config("type");
+    std::wstring transformerType = type.empty() ? config("type") : type;
     Transformer* t;
     if (!f(&t, transformerType, config))
     {
