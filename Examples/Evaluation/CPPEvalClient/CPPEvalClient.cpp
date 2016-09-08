@@ -227,7 +227,21 @@ void VisualizeLayer(std::string name, std::vector<cv::Mat> imgs, std::vector<boo
 
 void SetNetworkParams(std::string model, std::map<std::wstring, std::vector<boost::variant<std::string, int>>>& params)
 {
-	if (model == "AlexNet")
+	// LayerName : {layerPosition, depth, imgDimensionX, imgDimensionY, scaleFactor}
+	// <param name="layerPostion">A string that defines the order of network layers</param>
+	// <param name="depth">Equals the number of kernels on the layer</param>
+	// <param name="imgDimensionX">Equals the layer output's x-dimensionality</param>
+	// <param name="imgDimensionY">Equals the layer output's y-dimensionality</param>
+	// <param name="scaleFactor">Scales an output image when visualizing layer's ativations (defined by user)</param>
+	// One can get above parameters from the CNTK validation output
+	// For instance, the interpretation of the following lines is 
+	// Validating --> conv5.y = RectifiedLinear (conv5.z) : [13 x 13 x 256 x *] -> [13 x 13 x 256 x *]
+	// Validating--> pool3 = MaxPooling(conv5.y) : [13 x 13 x 256 x *] ->[6 x 6 x 256 x *]
+	// "pool3" follows "conv5" in the network stucture
+	// depth[conv5.y] = 256; imgDimensionX[conv5.y] = 13; imgDimensionY[conv5.y] = 13
+	// depth[pool3] = 256; imgDimensionX[pool3] = 6; imgDimensionY[pool3] = 6 
+
+	if (model.find("AlexNet") != std::string::npos)
 	{
 		params[L"conv1.y"] = { "00", 64, 56, 56, 2 };
 		params[L"pool1"] = { "01", 64, 27, 27, 3 };
@@ -323,7 +337,6 @@ int main(int argc, char* argv[])
 	argc = 0;
 	std::string app = argv[0];
 	std::string path;
-	IEvaluateModel<float> *model;
 	size_t pos;
 
 #ifdef _WIN32
@@ -341,100 +354,10 @@ int main(int argc, char* argv[])
 #endif
 	const std::string modelFilePath = modelWorkingDirectory + "Models/AlexNet.89";
 
-	struct stat statBuf;
-	if (stat(modelFilePath.c_str(), &statBuf) != 0)
-	{
-		fprintf(stderr, "Error: The model %s does not exist. Please follow instructions in README.md in <CNTK>/Examples/Image/MNIST to create the model.\n", modelFilePath.c_str());
-		return(1);
-	}
-
-	GetEvalF(&model);
-
-	// Define needed layer names and their dimensionality
-	// LayerName : {layerPosition, depth, imgDimensionX, imgDimensionY, scaleFactor}
-	// <param name="layerPostion">A string that defines the order of network layers</param>
-	// <param name="depth">Equals the number of kernels on the layer</param>
-	// <param name="imgDimensionX">Equals the layer output's x-dimensionality</param>
-	// <param name="imgDimensionY">Equals the layer output's y-dimensionality</param>
-	// <param name="scaleFactor">Scales an output image when visualizing layer's ativations (defined by user)</param>
-	// One can get above parameters from the CNTK validation output
-	// For instance, the interpretation of the following lines is 
-	// Validating --> conv5.y = RectifiedLinear (conv5.z) : [13 x 13 x 256 x *] -> [13 x 13 x 256 x *]
-	// Validating--> pool3 = MaxPooling(conv5.y) : [13 x 13 x 256 x *] ->[6 x 6 x 256 x *]
-	// "pool3" follows "conv5" in the network stucture
-	// depth[conv5.y] = 256; imgDimensionX[conv5.y] = 13; imgDimensionY[conv5.y] = 13
-	// depth[pool3] = 256; imgDimensionX[pool3] = 6; imgDimensionY[pool3] = 6 
-	std::map<std::wstring, std::vector<boost::variant<std::string, int>>> dimensions;
-	dimensions[L"conv1.y"] = { "00", 64, 56, 56, 2 };
-	dimensions[L"pool1"] = { "01", 64, 27, 27, 3 };
-	dimensions[L"conv2.y"] = { "02", 192, 27, 27, 2 };
-	dimensions[L"pool2"] = { "03", 192, 13, 13, 3 };
-	dimensions[L"conv3.y"] = { "04", 384, 13, 13, 3 };
-	dimensions[L"conv4.y"] = { "05", 256, 13, 13, 3 };
-	dimensions[L"conv5.y"] = { "06", 256, 13, 13, 3 };
-	dimensions[L"pool3"] = { "07", 256, 6, 6, 6 };
-	dimensions[L"h1.b"] = { "08", 1, 4096, 1, 8 };
-	dimensions[L"h2.b"] = { "09", 1, 4096, 1, 8 };
-	dimensions[L"OutputNodes.z"] = { "10", 1, 1000, 1, 20 };
-
-	// String with layer names
-	std::string layers;
-	for (auto dim : dimensions)
-	{
-		layers += std::string(dim.first.begin(), dim.first.end())+", ";
-	}
-
-	// Load model with desired outputs
-	std::string networkConfiguration;
-	// When specifying outputNodeNames in the configuration, it will REPLACE the list of output nodes 
-	// with the ones specified.
-	networkConfiguration += "outputNodeNames=\"" + layers + "\"\n";
-	networkConfiguration += "modelPath=\"" + modelFilePath + "\"";
-	model->CreateNetwork(networkConfiguration);
-
-	// get the model's layers dimensions
-	std::map<std::wstring, size_t> inDims;
-	std::map<std::wstring, size_t> outDims;
-	model->GetNodeDimensions(inDims, NodeGroup::nodeInput);
-	model->GetNodeDimensions(outDims, NodeGroup::nodeOutput);
-
-	// Read input image
 	auto inputImage = "val100/test2.JPG";
-	auto inputLayerName = inDims.begin()->first;
-	std::vector<float> inputs;
-	ReadRGBImage(inputImage, inputs, 0);
 
-	// Substract mean from each pixel value
-	SubstractMean("Models/ImageNet1K_mean.xml", inputs);
-
-	// Allocate the output values layer
-	std::vector<std::vector<float>> outputs(outDims.size());
-
-	// Setup the maps for inputs and output
-	Layer inputLayer;
-	inputLayer.insert(MapEntry(inputLayerName, &inputs));
-	Layer outputLayers;
-	int i = 0;
-	for (auto &layer : outDims)
-	{
-		auto outputLayerName = layer.first;
-		outputLayers.insert(MapEntry(outputLayerName, &outputs[i]));
-		i++;
-	}
-
-	// We can call the evaluate method and get back the results 
-	model->Evaluate(inputLayer, outputLayers);
-
-	for (auto outputLayer : outputLayers)
-	{
-		auto layerName = outputLayer.first;
-		auto output = *outputLayer.second;
-		ScaleTo01(output);
-		std::vector<uchar> outputChar = ConvertToUchar(output);
-		std::vector<cv::Mat> imgs;
-		CreateImages(outputChar, dimensions[layerName], imgs);
-		VisualizeLayer(std::string(layerName.begin(), layerName.end()), imgs, dimensions[layerName]);
-	}
+	VisualizeNetwork(modelFilePath, inputImage);
+	
 	cv::waitKey(0);
 
 	return 0;
