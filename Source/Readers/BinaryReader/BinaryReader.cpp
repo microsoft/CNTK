@@ -179,10 +179,14 @@ BinaryReader<ElemType>::~BinaryReader()
     }
     m_secFiles.clear();
 
+    int rc = 0;
     for (size_t i = 0; i < m_fStream.size(); i++)
     {
-        // TODO: Check for error code and throw if !std::uncaught_exception()
-        fclose(m_fStream[i]);
+        rc = fclose(m_fStream[i]);
+        if ((rc != 0) && !std::uncaught_exception())
+        {
+            RuntimeError("BinaryReader: failed to close stream %zu", i);
+        }
     }
 }
 

@@ -255,16 +255,24 @@ bool File::IsTextBased()
 // Note: this does not check for errors when the File corresponds to pipe stream. In this case, use Flush() before closing a file you are writing.
 File::~File(void)
 {
+    int rc = 0;
     if (m_pcloseNeeded)
     {
-        // TODO: Check for error code and throw if !std::uncaught_exception()     
-        _pclose(m_file);
+        rc = _pclose(m_file);
+
+        if ((rc == -1) && !std::uncaught_exception())
+        {
+            RuntimeError("File: failed to close file at %S", m_filename.c_str());
+        }
     }
     else if (m_file != stdin && m_file != stdout && m_file != stderr)
     {
-        int rc = fclose(m_file);
+        rc = fclose(m_file);
+    
         if ((rc != 0) && !std::uncaught_exception())
+        {
             RuntimeError("File: failed to close file at %S", m_filename.c_str());
+        }
     }
 }
 

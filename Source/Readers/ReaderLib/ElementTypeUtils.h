@@ -7,6 +7,12 @@
 
 #include <vector>
 #include <memory>
+#ifdef _WIN32
+#include <typeinfo.h>
+#endif
+#ifdef __unix__
+#include <typeinfo>
+#endif
 #include "Reader.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
@@ -23,7 +29,7 @@ inline size_t GetSizeByType(ElementType type)
     case ElementType::tatom:
         return sizeof(char);
     default:
-        RuntimeError("Unsupported type '%d'", type);
+        RuntimeError("Unsupported type '%s'", typeid(type).name());
     }
 }
 } } }

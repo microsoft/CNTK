@@ -1706,9 +1706,14 @@ public:
     }
     ~auto_find_handle()
     {
-        // TODO: Check for error code and throw if !std::uncaught_exception()
         if (h != INVALID_HANDLE_VALUE)
-            ::FindClose(h);
+        {
+            int rc = ::FindClose(h);
+            if ((rc == 0) && !std::uncaught_exception())
+            {
+                RuntimeError("Release: Failed to close handle: %d", ::GetLastError());
+            }
+        }
     }
     operator HANDLE() const
     {

@@ -91,8 +91,11 @@ BinaryFile::~BinaryFile()
         // the view
         iter = ReleaseView(iter, true);
     }
-    // TODO: Check for error code and throw if !std::uncaught_exception()
-    CloseHandle(m_hndMapped);
+    int rc = CloseHandle(m_hndMapped);
+    if ((rc == 0) && !std::uncaught_exception())
+    {
+        RuntimeError("BinaryFile: Failed to close handle: %d", ::GetLastError());
+    }
 
     // if we are writing the file, truncate to actual size
     if (m_writeFile)
@@ -100,7 +103,11 @@ BinaryFile::~BinaryFile()
         SetFilePointerEx(m_hndFile, *(LARGE_INTEGER*) &m_filePositionMax, NULL, FILE_BEGIN);
         SetEndOfFile(m_hndFile);
     }
-    CloseHandle(m_hndFile);
+    rc = CloseHandle(m_hndFile);
+    if ((rc == 0) && !std::uncaught_exception())
+    {
+        RuntimeError("BinaryFile: Failed to close handle: %d", ::GetLastError());
+    }
 }
 
 void BinaryFile::SetFilePositionMax(size_t filePositionMax)
