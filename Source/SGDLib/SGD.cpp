@@ -2487,7 +2487,7 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
 
     // parameters for FSAdaGrad
     m_gradType.varianceTimeConstant = configSGD(L"varianceTimeConstant", 2 * 3600 * 100); // default originates from 2h of speech
-    m_gradType.targetAdagradAvDenom = configSGD(L"fsAdagradTargetAvDenom", 1); // TODO: deprecated parameter kept for back compat (set to 0.0025 inconjunction with reenabling the static bug)
+    m_gradType.targetAdagradAvDenom = configSGD(L"fsAdagradTargetAvDenom", 1.0); // TODO: deprecated parameter kept for back compat (set to 0.0025 inconjunction with reenabling the static bug)
 
     // extract RMSProp parameters from config, if they exist. Default to reasonable values.
     m_rpi.dec = configSGD(L"rms_wgt_dec", 0.75);
