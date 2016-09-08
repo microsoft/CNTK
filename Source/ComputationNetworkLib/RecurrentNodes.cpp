@@ -162,6 +162,7 @@ template<class ElemType, int direction>
         }
     }
     // move to GPU
+    // TODO: move this to the MBLayout where this can be done together with the creation of the other mask and is likely to further improve performance.
     m_inputInvalidMatrix->SetValue(1, m_inputInvalidMatrixTemp.size(), m_deviceId, m_inputInvalidMatrixTemp.data(), matrixFlagNormal);
 }
 
@@ -328,7 +329,7 @@ template<class ElemType, int direction>
         {
             size_t rank = DetermineElementwiseTensorRank();
 
-            auto src = GradientTensorFor(rank, fr); // incoming gradient from top
+            auto src =                    GradientTensorFor(rank, fr); // incoming gradient from top
             auto tgt = Input(inputIndex)->GradientTensorFor(rank, frDelayed); // target is outgoing gradient to input
             TensorView<ElemType> zero(m_zeroMatrix, TensorShape(1));
 

@@ -12,6 +12,12 @@
 %include <std_shared_ptr.i>
 
 %rename(output_internal) CNTK::Function::Output;
+%rename(replace_placeholders_internal) CNTK::Function::ReplacePlaceholders;
+%rename(sgd_learner) CNTK::SGDLearner;
+%rename(momentum_sgd_learner) CNTK::MomentumSGDLearner;
+%rename(gpu_device) CNTK::DeviceDescriptor::GPUDevice;
+%rename(cpu_device) CNTK::DeviceDescriptor::CPUDevice;
+
 // if we don't except RandomUniform the corresponding template functions will not be generated
 %rename("%(utitle)s", %$isfunction, notregexmatch$name="RandomUniform") "";
 %rename("%(utitle)s", %$isvariable) "";
@@ -20,6 +26,7 @@
 %template() std::vector<bool>;
 %template() std::vector<CNTK::Variable>;
 %template() std::vector<CNTK::Axis>;
+%template() std::vector<CNTK::StreamConfiguration>;
 %template() std::vector<std::shared_ptr<CNTK::Function>>;
 
 // They are defined twice under CNTK::Internal and under CNTK namespace
@@ -47,7 +54,6 @@
 
 %eq_for(Variable, Variable_eq)
 %eq_for(Constant, Variable_eq)
-%eq_for(Placeholder, Variable_eq)
 %eq_for(Parameter, Variable_eq)
 %eq_for(NDShape, NDShape_eq)
 
@@ -96,9 +102,9 @@
 
 %typemap(in) CNTK::NDShape const & {
      if (PyTuple_Check($input)) {
-        std::vector<size_t> dimensions;;
-        size_t num_axes = PyTuple_Size($input);
-        for (int i=0; i<num_axes; i++)
+        std::vector<size_t> dimensions;
+        size_t rank = PyTuple_Size($input);
+        for (int i=0; i<rank; i++)
             dimensions.push_back(PyLong_AsLong(PyTuple_GET_ITEM($input, i)));
 
         // TODO cleans this up?
@@ -113,9 +119,9 @@
 %ignore CNTK::NDShape::Dimensions;
 
 %typemap(out) CNTK::NDShape {
-    size_t num_axes = $1.NumAxes();
-    $result = PyTuple_New(num_axes);
-    for (int i=0; i<num_axes; i++)
+    size_t rank = $1.Rank();
+    $result = PyTuple_New(rank);
+    for (int i=0; i<rank; i++)
     {
         size_t dim = (&$1)->operator[](i);
         PyTuple_SET_ITEM($result, i, PyInt_FromLong(dim));
@@ -123,19 +129,25 @@
 }
 
 %extend CNTK::NDShape {
-    const size_t& __getitem__(size_t i) {
-        return (*self)[i];
+    const size_t& __getitem__(int i) {
+        // CNTK uses column major, thus we reverse the shape
+        size_t rank = (*self).Rank();
+        if (i<0)
+        {
+            return (*self)[-i-1];
+        }
+        return (*self)[rank-1-i];
     }
 
     PyObject* dimensions() {        
         std::vector<size_t> dims = (*self).Dimensions();
-        size_t num_axes = (*self).NumAxes();
-        PyObject* result = PyTuple_New(num_axes);
+        size_t rank = (*self).Rank();
+        PyObject* result = PyTuple_New(rank);
         // CNTK uses column major, thus we reverse the shape
-        for (int i=0; i<num_axes; i++)
+        for (int i=0; i<rank; i++)
         {
             size_t dim = dims[i];
-            PyTuple_SET_ITEM(result, num_axes-1-i, PyInt_FromLong(dim));                       
+            PyTuple_SET_ITEM(result, rank-1-i, PyInt_FromLong(dim));                       
         }
         return result;
     }
@@ -738,31 +750,31 @@
      }
 }
 
-%typecheck(1000) const std::unordered_map<CNTK::Placeholder, CNTK::Variable>& {
+%typecheck(1000) const std::unordered_map<CNTK::Variable, CNTK::Variable>& {
     // '1000' is the typecheck precedence code. It means: check after basic
     // types, but before arrays. See: http://www.swig.org/Doc1.3/Typemaps.html#Typemaps_overloading
     $1 = PyDict_Check($input) ? 1 : 0;
 }
 
 
-%typemap(in) std::unordered_map<CNTK::Placeholder, CNTK::Variable>& {
+%typemap(in) std::unordered_map<CNTK::Variable, CNTK::Variable>& {
      if (PyDict_Check($input)) {
-        std::unordered_map<CNTK::Placeholder, CNTK::Variable>* args_map = new std::unordered_map<CNTK::Placeholder, CNTK::Variable>();
+        std::unordered_map<CNTK::Variable, CNTK::Variable>* args_map = new std::unordered_map<CNTK::Variable, CNTK::Variable>();
 
         PyObject *key, *value;
         Py_ssize_t pos = 0;
 
         while (PyDict_Next($input, &pos, &key, &value)) {
             void *raw_var = 0 ;
-            int res1 = SWIG_ConvertPtr(key, &raw_var, SWIGTYPE_p_CNTK__Placeholder,  0);
+            int res1 = SWIG_ConvertPtr(key, &raw_var, SWIGTYPE_p_CNTK__Variable,  0);
             if (!SWIG_IsOK(res1)) {
-                SWIG_exception_fail(SWIG_ArgError(res1), "cannot convert key of dictionary to CNTK::Placeholder"); 
+                SWIG_exception_fail(SWIG_ArgError(res1), "cannot convert key of dictionary to CNTK::Variable"); 
             }
             if (!raw_var) {
-                SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting key of dictionary to CNTK::Placeholder");
+                SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting key of dictionary to CNTK::Variable");
             }
 
-            CNTK::Placeholder* var = reinterpret_cast<CNTK::Placeholder*>(raw_var);
+            CNTK::Variable* var = reinterpret_cast<CNTK::Variable*>(raw_var);
 
             void *raw_value = 0;
             int res2 = SWIG_ConvertPtr(value, &raw_value, SWIGTYPE_p_CNTK__Variable,  0);
@@ -822,7 +834,6 @@
  
 %unordered_set_conversion(Variable, SWIGTYPE_p_CNTK__Variable)
 %unordered_set_conversion(Constant, SWIGTYPE_p_CNTK__Constant)
-%unordered_set_conversion(Placeholder, SWIGTYPE_p_CNTK__Placeholder)
 %unordered_set_conversion(Parameter, SWIGTYPE_p_CNTK__Parameter)
 
 %define %unordered_set_ref_conversion(DATA_TYPE, _SWIG_TYPE)
@@ -931,8 +942,8 @@
 
         PyArrayObject* array = (PyArrayObject*)pyobj;
 
-        int num_axes = PyArray_NDIM(array); 
-        if (num_axes==0)
+        int rank = PyArray_NDIM(array); 
+        if (rank==0)
             throw std::logic_error("provided array is empty");
         
         npy_intp* np_shape = PyArray_SHAPE(array); 
@@ -940,7 +951,7 @@
 
         npy_intp num_elements = 1;
         // CNTK uses column major, thus we reverse the shape
-        for (int i=num_axes-1; i>=0; i--)
+        for (int i=rank-1; i>=0; i--)
         {
             shape.push_back(np_shape[i]);
             num_elements *= np_shape[i];            
@@ -1081,7 +1092,6 @@ DATA_TYPE.__eq__ = lambda a,b: EQ(a,b)
 
 %py_hash_for(Variable, Variable_eq)
 %py_hash_for(Constant, Variable_eq)
-%py_hash_for(Placeholder, Variable_eq)
 %py_hash_for(Parameter, Variable_eq)
 %py_hash_for(NDShape, NDShape_eq)
 
@@ -1097,12 +1107,13 @@ StreamInformation.__eq__ = lambda a,b: a.m_name==b.m_name and a.m_id==b.m_id and
 }
 
 %pythoncode %{
+# in case of multiple outputs return the function, not the variable
 def get_output_and_keep_reference(self):
     variable = self.output_internal()    
     variable.owner = self
     return variable
 Function.output = lambda self:get_output_and_keep_reference(self)
-  
+Function.replace_placeholders = lambda self, ph_map: self.replace_placeholders_internal(ph_map).output()
 %}
 
 // this is a workaround to enable operators overload for Variable instances coming out of output() method. 
@@ -1131,4 +1142,4 @@ DATA_TYPE.__rdiv__ = DATA_TYPE.__rtruediv__
 %operators_overload(Variable)
 %operators_overload(Constant)
 %operators_overload(Parameter)
-%operators_overload(Placeholder)
+%operators_overload(Parameter)

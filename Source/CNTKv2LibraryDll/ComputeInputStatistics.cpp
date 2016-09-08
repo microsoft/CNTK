@@ -49,12 +49,12 @@ namespace CNTK
             if (currentStreamInfo.m_storageFormat != StorageFormat::Dense)
             {
                 inputNode = builder.CreateSparseInputNode(currentStreamInfo.m_name, inputTensorShape);
-                inputVariable = Variable(inputVariableShape, true, DataType::Float, currentStreamInfo.m_name);
+                inputVariable = InputVariable(inputVariableShape, /*isSparse*/  true, DataType::Float, currentStreamInfo.m_name);
             }
             else
             {
                 inputNode = builder.CreateInputNode(currentStreamInfo.m_name, inputTensorShape);
-                inputVariable = Variable(inputVariableShape, DataType::Float, currentStreamInfo.m_name);
+                inputVariable = InputVariable(inputVariableShape, DataType::Float, currentStreamInfo.m_name);
             }
 
             allInputNodes.push_back(inputNode);

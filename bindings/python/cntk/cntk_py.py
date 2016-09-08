@@ -195,9 +195,17 @@ zeroes_like = _cntk_py.zeroes_like
 def reduce_elements(*args):
     return _cntk_py.reduce_elements(*args)
 reduce_elements = _cntk_py.reduce_elements
+
+def new_unique_id():
+    return _cntk_py.new_unique_id()
+new_unique_id = _cntk_py.new_unique_id
 DataType_Unknown = _cntk_py.DataType_Unknown
 DataType_Float = _cntk_py.DataType_Float
 DataType_Double = _cntk_py.DataType_Double
+
+def data_type_name(dataType):
+    return _cntk_py.data_type_name(dataType)
+data_type_name = _cntk_py.data_type_name
 StorageFormat_Dense = _cntk_py.StorageFormat_Dense
 StorageFormat_SparseCSC = _cntk_py.StorageFormat_SparseCSC
 StorageFormat_SparseBlockCol = _cntk_py.StorageFormat_SparseBlockCol
@@ -223,13 +231,13 @@ class DeviceDescriptor(_object):
     def type(self):
         return _cntk_py.DeviceDescriptor_type(self)
     if _newclass:
-        cpudevice = staticmethod(_cntk_py.DeviceDescriptor_cpudevice)
+        cpu_device = staticmethod(_cntk_py.DeviceDescriptor_cpu_device)
     else:
-        cpudevice = _cntk_py.DeviceDescriptor_cpudevice
+        cpu_device = _cntk_py.DeviceDescriptor_cpu_device
     if _newclass:
-        gpudevice = staticmethod(_cntk_py.DeviceDescriptor_gpudevice)
+        gpu_device = staticmethod(_cntk_py.DeviceDescriptor_gpu_device)
     else:
-        gpudevice = _cntk_py.DeviceDescriptor_gpudevice
+        gpu_device = _cntk_py.DeviceDescriptor_gpu_device
     if _newclass:
         default_device = staticmethod(_cntk_py.DeviceDescriptor_default_device)
     else:
@@ -247,13 +255,13 @@ class DeviceDescriptor(_object):
 DeviceDescriptor_swigregister = _cntk_py.DeviceDescriptor_swigregister
 DeviceDescriptor_swigregister(DeviceDescriptor)
 
-def DeviceDescriptor_cpudevice():
-    return _cntk_py.DeviceDescriptor_cpudevice()
-DeviceDescriptor_cpudevice = _cntk_py.DeviceDescriptor_cpudevice
+def DeviceDescriptor_cpu_device():
+    return _cntk_py.DeviceDescriptor_cpu_device()
+DeviceDescriptor_cpu_device = _cntk_py.DeviceDescriptor_cpu_device
 
-def DeviceDescriptor_gpudevice(deviceId):
-    return _cntk_py.DeviceDescriptor_gpudevice(deviceId)
-DeviceDescriptor_gpudevice = _cntk_py.DeviceDescriptor_gpudevice
+def DeviceDescriptor_gpu_device(deviceId):
+    return _cntk_py.DeviceDescriptor_gpu_device(deviceId)
+DeviceDescriptor_gpu_device = _cntk_py.DeviceDescriptor_gpu_device
 
 def DeviceDescriptor_default_device():
     return _cntk_py.DeviceDescriptor_default_device()
@@ -281,8 +289,8 @@ class NDShape(_object):
         except __builtin__.Exception:
             self.this = this
 
-    def num_axes(self):
-        return _cntk_py.NDShape_num_axes(self)
+    def rank(self):
+        return _cntk_py.NDShape_rank(self)
 
     def sub_shape(self, *args):
         return _cntk_py.NDShape_sub_shape(self, *args)
@@ -343,8 +351,8 @@ class NDArrayView(_object):
     def set_value(self, *args):
         return _cntk_py.NDArrayView_set_value(self, *args)
 
-    def deep_clone(self, readOnly=False):
-        return _cntk_py.NDArrayView_deep_clone(self, readOnly)
+    def deep_clone(self, *args):
+        return _cntk_py.NDArrayView_deep_clone(self, *args)
 
     def alias(self, readOnly=False):
         return _cntk_py.NDArrayView_alias(self, readOnly)
@@ -510,6 +518,8 @@ class Axis(_object):
     __del__ = lambda self: None
 Axis_swigregister = _cntk_py.Axis_swigregister
 Axis_swigregister(Axis)
+cvar = _cntk_py.cvar
+Axis.default_input_variable_dynamic_axes = _cntk_py.cvar.Axis_default_input_variable_dynamic_axes
 
 def Axis_default_dynamic_axis():
     return _cntk_py.Axis_default_dynamic_axis()
@@ -528,19 +538,28 @@ VariableKind_Output = _cntk_py.VariableKind_Output
 VariableKind_Parameter = _cntk_py.VariableKind_Parameter
 VariableKind_Constant = _cntk_py.VariableKind_Constant
 VariableKind_Placeholder = _cntk_py.VariableKind_Placeholder
+
+def variable_kind_name(variableKind):
+    return _cntk_py.variable_kind_name(variableKind)
+variable_kind_name = _cntk_py.variable_kind_name
+
+def generate_uid(varKind):
+    return _cntk_py.generate_uid(varKind)
+generate_uid = _cntk_py.generate_uid
+
+def placeholder_variable(*args):
+    return _cntk_py.placeholder_variable(*args)
+placeholder_variable = _cntk_py.placeholder_variable
+
+def output_variable(*args):
+    return _cntk_py.output_variable(*args)
+output_variable = _cntk_py.output_variable
 class Variable(_object):
     __swig_setmethods__ = {}
     __setattr__ = lambda self, name, value: _swig_setattr(self, Variable, name, value)
     __swig_getmethods__ = {}
     __getattr__ = lambda self, name: _swig_getattr(self, Variable, name)
     __repr__ = _swig_repr
-
-    def __init__(self, *args):
-        this = _cntk_py.new_Variable(*args)
-        try:
-            self.this.append(this)
-        except __builtin__.Exception:
-            self.this = this
 
     def shape(self):
         return _cntk_py.Variable_shape(self)
@@ -572,11 +591,21 @@ class Variable(_object):
     def name(self):
         return _cntk_py.Variable_name(self)
 
+    def uid(self):
+        return _cntk_py.Variable_uid(self)
+
     def get_data_type(self):
         return _cntk_py.Variable_get_data_type(self)
 
     def needs_gradient(self):
         return _cntk_py.Variable_needs_gradient(self)
+
+    def __init__(self, *args):
+        this = _cntk_py.new_Variable(*args)
+        try:
+            self.this.append(this)
+        except __builtin__.Exception:
+            self.this = this
 
     def __hash__(self):
         return _cntk_py.Variable___hash__(self)
@@ -588,13 +617,15 @@ Variable_swigregister(Variable)
 def Variable_eq(first, second):
     return _cntk_py.Variable_eq(first, second)
 Variable_eq = _cntk_py.Variable_eq
-cvar = _cntk_py.cvar
-Variable.default_input_variable_dynamic_axes = _cntk_py.cvar.Variable_default_input_variable_dynamic_axes
 
 
 def __ne__(*args):
     return _cntk_py.__ne__(*args)
 __ne__ = _cntk_py.__ne__
+
+def input_variable(*args):
+    return _cntk_py.input_variable(*args)
+input_variable = _cntk_py.input_variable
 class Parameter(Variable):
     __swig_setmethods__ = {}
     for _s in [Variable]:
@@ -697,6 +728,10 @@ class Constant(Variable):
         __swig_getmethods__.update(getattr(_s, '__swig_getmethods__', {}))
     __getattr__ = lambda self, name: _swig_getattr(self, Constant, name)
     __repr__ = _swig_repr
+    if _newclass:
+        scalar = staticmethod(_cntk_py.Constant_scalar)
+    else:
+        scalar = _cntk_py.Constant_scalar
 
     def __init__(self, *args):
         this = _cntk_py.new_Constant(*args)
@@ -715,6 +750,10 @@ class Constant(Variable):
 Constant_swigregister = _cntk_py.Constant_swigregister
 Constant_swigregister(Constant)
 
+def Constant_scalar(*args):
+    return _cntk_py.Constant_scalar(*args)
+Constant_scalar = _cntk_py.Constant_scalar
+
 def ConstantFloat(*args):
     val = _cntk_py.new_ConstantFloat(*args)
     return val
@@ -722,31 +761,6 @@ def ConstantFloat(*args):
 def ConstantDouble(*args):
     val = _cntk_py.new_ConstantDouble(*args)
     return val
-
-class Placeholder(Variable):
-    __swig_setmethods__ = {}
-    for _s in [Variable]:
-        __swig_setmethods__.update(getattr(_s, '__swig_setmethods__', {}))
-    __setattr__ = lambda self, name, value: _swig_setattr(self, Placeholder, name, value)
-    __swig_getmethods__ = {}
-    for _s in [Variable]:
-        __swig_getmethods__.update(getattr(_s, '__swig_getmethods__', {}))
-    __getattr__ = lambda self, name: _swig_getattr(self, Placeholder, name)
-    __repr__ = _swig_repr
-
-    def __init__(self, *args):
-        this = _cntk_py.new_Placeholder(*args)
-        try:
-            self.this.append(this)
-        except __builtin__.Exception:
-            self.this = this
-
-    def __hash__(self):
-        return _cntk_py.Placeholder___hash__(self)
-    __swig_destroy__ = _cntk_py.delete_Placeholder
-    __del__ = lambda self: None
-Placeholder_swigregister = _cntk_py.Placeholder_swigregister
-Placeholder_swigregister(Placeholder)
 
 class BackPropState(_object):
     __swig_setmethods__ = {}
@@ -810,8 +824,8 @@ class Function(_object):
     def placeholders(self):
         return _cntk_py.Function_placeholders(self)
 
-    def replace_placeholders(self, placeholderReplacements):
-        return _cntk_py.Function_replace_placeholders(self, placeholderReplacements)
+    def replace_placeholders_internal(self, placeholderReplacements):
+        return _cntk_py.Function_replace_placeholders_internal(self, placeholderReplacements)
 Function_swigregister = _cntk_py.Function_swigregister
 Function_swigregister(Function)
 
@@ -1057,6 +1071,14 @@ scatter = _cntk_py.scatter
 def broadcast_as(*args):
     return _cntk_py.broadcast_as(*args)
 broadcast_as = _cntk_py.broadcast_as
+
+def load_legacy_model(*args):
+    return _cntk_py.load_legacy_model(*args)
+load_legacy_model = _cntk_py.load_legacy_model
+
+def save_as_legacy_model(rootFunction, modelFile):
+    return _cntk_py.save_as_legacy_model(rootFunction, modelFile)
+save_as_legacy_model = _cntk_py.save_as_legacy_model
 class DictionaryValue(_object):
     __swig_setmethods__ = {}
     __setattr__ = lambda self, name, value: _swig_setattr(self, DictionaryValue, name, value)
@@ -1170,13 +1192,13 @@ Learner_swigregister = _cntk_py.Learner_swigregister
 Learner_swigregister(Learner)
 
 
-def sgdlearner(*args):
-    return _cntk_py.sgdlearner(*args)
-sgdlearner = _cntk_py.sgdlearner
+def sgd_learner(*args):
+    return _cntk_py.sgd_learner(*args)
+sgd_learner = _cntk_py.sgd_learner
 
-def momentum_sgdlearner(*args):
-    return _cntk_py.momentum_sgdlearner(*args)
-momentum_sgdlearner = _cntk_py.momentum_sgdlearner
+def momentum_sgd_learner(*args):
+    return _cntk_py.momentum_sgd_learner(*args)
+momentum_sgd_learner = _cntk_py.momentum_sgd_learner
 
 def nesterov_learner(*args):
     return _cntk_py.nesterov_learner(*args)
@@ -1212,6 +1234,12 @@ class Trainer(_object):
 
     def test_minbatch(self, *args):
         return _cntk_py.Trainer_test_minbatch(self, *args)
+
+    def save_checkpoint(self, modelFilePath):
+        return _cntk_py.Trainer_save_checkpoint(self, modelFilePath)
+
+    def restore_from_checkpoint(self, modelFilePath):
+        return _cntk_py.Trainer_restore_from_checkpoint(self, modelFilePath)
 
     def model(self):
         return _cntk_py.Trainer_model(self)
@@ -1340,6 +1368,44 @@ MinibatchSource_swigregister(MinibatchSource)
 def create_composite_minibatch_source(configuration):
     return _cntk_py.create_composite_minibatch_source(configuration)
 create_composite_minibatch_source = _cntk_py.create_composite_minibatch_source
+class StreamConfiguration(_object):
+    __swig_setmethods__ = {}
+    __setattr__ = lambda self, name, value: _swig_setattr(self, StreamConfiguration, name, value)
+    __swig_getmethods__ = {}
+    __getattr__ = lambda self, name: _swig_getattr(self, StreamConfiguration, name)
+    __repr__ = _swig_repr
+
+    def __init__(self, *args):
+        this = _cntk_py.new_StreamConfiguration(*args)
+        try:
+            self.this.append(this)
+        except __builtin__.Exception:
+            self.this = this
+    __swig_setmethods__["m_stream_name"] = _cntk_py.StreamConfiguration_m_stream_name_set
+    __swig_getmethods__["m_stream_name"] = _cntk_py.StreamConfiguration_m_stream_name_get
+    if _newclass:
+        m_stream_name = _swig_property(_cntk_py.StreamConfiguration_m_stream_name_get, _cntk_py.StreamConfiguration_m_stream_name_set)
+    __swig_setmethods__["m_dim"] = _cntk_py.StreamConfiguration_m_dim_set
+    __swig_getmethods__["m_dim"] = _cntk_py.StreamConfiguration_m_dim_get
+    if _newclass:
+        m_dim = _swig_property(_cntk_py.StreamConfiguration_m_dim_get, _cntk_py.StreamConfiguration_m_dim_set)
+    __swig_setmethods__["m_is_sparse"] = _cntk_py.StreamConfiguration_m_is_sparse_set
+    __swig_getmethods__["m_is_sparse"] = _cntk_py.StreamConfiguration_m_is_sparse_get
+    if _newclass:
+        m_is_sparse = _swig_property(_cntk_py.StreamConfiguration_m_is_sparse_get, _cntk_py.StreamConfiguration_m_is_sparse_set)
+    __swig_setmethods__["m_stream_alias"] = _cntk_py.StreamConfiguration_m_stream_alias_set
+    __swig_getmethods__["m_stream_alias"] = _cntk_py.StreamConfiguration_m_stream_alias_get
+    if _newclass:
+        m_stream_alias = _swig_property(_cntk_py.StreamConfiguration_m_stream_alias_get, _cntk_py.StreamConfiguration_m_stream_alias_set)
+    __swig_destroy__ = _cntk_py.delete_StreamConfiguration
+    __del__ = lambda self: None
+StreamConfiguration_swigregister = _cntk_py.StreamConfiguration_swigregister
+StreamConfiguration_swigregister(StreamConfiguration)
+
+
+def text_format_minibatch_source(*args):
+    return _cntk_py.text_format_minibatch_source(*args)
+text_format_minibatch_source = _cntk_py.text_format_minibatch_source
 
 def compute_input_per_dim_means_and_inv_std_devs(*args):
     return _cntk_py.compute_input_per_dim_means_and_inv_std_devs(*args)
@@ -1449,9 +1515,6 @@ Variable.__eq__ = lambda a,b: Variable_eq(a,b)
 Constant.__eq__ = lambda a,b: Variable_eq(a,b)
 
 
-Placeholder.__eq__ = lambda a,b: Variable_eq(a,b)
-
-
 Parameter.__eq__ = lambda a,b: Variable_eq(a,b)
 
 
@@ -1461,12 +1524,13 @@ NDShape.__eq__ = lambda a,b: NDShape_eq(a,b)
 StreamInformation.__eq__ = lambda a,b: a.m_name==b.m_name and a.m_id==b.m_id and a.m_storage_format==b.m_storage_format and a.m_element_type==b.m_element_type and a.m_sample_layout.dimensions()==b.m_sample_layout.dimensions()
 
 
+# in case of multiple outputs return the function, not the variable
 def get_output_and_keep_reference(self):
     variable = self.output_internal()    
     variable.owner = self
     return variable
 Function.output = lambda self:get_output_and_keep_reference(self)
-
+Function.replace_placeholders = lambda self, ph_map: self.replace_placeholders_internal(ph_map).output()
 
 
 Variable.__add__ = lambda self, other: plus(self,other).output()
@@ -1511,18 +1575,18 @@ Parameter.__div__ = Parameter.__truediv__
 Parameter.__rdiv__ = Parameter.__rtruediv__  
 
 
-Placeholder.__add__ = lambda self, other: plus(self,other).output()
-Placeholder.__radd__ = lambda self, other: plus(other,self).output()
-Placeholder.__sub__ = lambda self, other: minus(self,other).output()
-Placeholder.__rsub__ = lambda self, other: minus(other,self).output()
-Placeholder.__mul__ = lambda self, other: element_times(self,other).output()  
-Placeholder.__rmul__ = lambda self, other: element_times(other,self).output()
-Placeholder.__matmul__ = lambda self, other: times(self,other).output()
-Placeholder.__rmatmul__ = lambda self, other: times(other,self).output()
-Placeholder.__truediv__ = lambda self, other: element_divide(self,other).output()   
-Placeholder.__rtruediv__ = lambda self, other: element_divide(other,self).output()
-Placeholder.__div__ = Placeholder.__truediv__
-Placeholder.__rdiv__ = Placeholder.__rtruediv__  
+Parameter.__add__ = lambda self, other: plus(self,other).output()
+Parameter.__radd__ = lambda self, other: plus(other,self).output()
+Parameter.__sub__ = lambda self, other: minus(self,other).output()
+Parameter.__rsub__ = lambda self, other: minus(other,self).output()
+Parameter.__mul__ = lambda self, other: element_times(self,other).output()  
+Parameter.__rmul__ = lambda self, other: element_times(other,self).output()
+Parameter.__matmul__ = lambda self, other: times(self,other).output()
+Parameter.__rmatmul__ = lambda self, other: times(other,self).output()
+Parameter.__truediv__ = lambda self, other: element_divide(self,other).output()   
+Parameter.__rtruediv__ = lambda self, other: element_divide(other,self).output()
+Parameter.__div__ = Parameter.__truediv__
+Parameter.__rdiv__ = Parameter.__rtruediv__  
 
 # This file is compatible with both classic and new-style classes.
 

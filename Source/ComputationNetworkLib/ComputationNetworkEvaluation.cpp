@@ -79,6 +79,17 @@ void ComputationNetwork::Backprop(const ComputationNodeBasePtr rootNode) // trai
     GetNestedNetwork(rootNode)->Backprop(FrameRange(nullptr), true, true);
 }
 
+void ComputationNetwork::ForwardProp(const ComputationNodeBasePtr rootNode, const ComputationNodeBasePtr startNode, const ComputationNodeBasePtr endNode)
+{
+    VerifyIsCompiled("ForwardProp");
+
+    // traverse partial nodes as inputs
+    shared_ptr<FlowControlNode> network = dynamic_pointer_cast<FlowControlNode>(GetNestedNetwork(rootNode));
+    assert(network);
+
+    network->ForwardProp(FrameRange(nullptr), startNode, endNode);
+}
+
 void ComputationNetwork::FormNestedNetwork(const ComputationNodeBasePtr& rootNode)
 {
     if (m_nestedNetworks.find(rootNode) != m_nestedNetworks.end())
@@ -185,6 +196,37 @@ ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(con
 }
 /*virtual*/ void ComputationNetwork::PARTraversalFlowControlNode::ReleaseMatricesAfterBackprop(MatrixPool& matrixPool) /*override*/
 {
+}
+// TODO: merge with the main ForwardProp() function.
+/*virtual*/ void ComputationNetwork::PARTraversalFlowControlNode::ForwardProp(const FrameRange & fr, ComputationNodeBasePtr startNode, ComputationNodeBasePtr endNode)
+{
+    // if start node is nullptr, forward will be enable
+    bool enableForward = startNode ? false : true;
+
+    for (auto& node : m_nestedNodes)
+    {
+#if 0
+        if (dynamic_pointer_cast<LearnableParameter<float>>(node))
+        dynamic_pointer_cast<ComputationNode<float>>(node)->DebugLogMinibatch();
+#endif
+        if (node->IsOutOfDateWrtInputs() && enableForward)
+        {
+            node->BeginForwardProp();
+            node->ForwardProp(fr.WithLayout(node->GetMBLayout()));
+            node->EndForwardProp();
+
+            node->BumpEvalTimeStamp();
+        }
+
+        if (node == startNode) 
+        {
+            enableForward = true;
+        }
+        else if (node == endNode) 
+        {
+            break;
+        }
+    }
 }
 // helper for logging
 template<class ElemType>
@@ -427,7 +469,7 @@ void ComputationNetwork::VerifyIsCompiled(const char* where) const
 void ComputationNetwork::CompileNetwork()
 {
     if (TraceLevel() > 0)
-        fprintf(stderr, "\nPost-processing network...\n");
+    fprintf(stderr, "\nPost-processing network...\n");
 
     // We may only get here if not !IsCompiled(). We could now verify each member to be virgin.
     // Or just invalidate it again, which is easier and safer.
@@ -438,9 +480,9 @@ void ComputationNetwork::CompileNetwork()
 
     if (TraceLevel() > 0)
     {
-        fprintf(stderr, "\n%d roots:\n", (int)m_allRoots.size());
-        for (const auto& root : m_allRoots)
-            fprintf(stderr, "\t%ls = %ls()\n", root->NodeName().c_str(), root->OperationName().c_str());
+    fprintf(stderr, "\n%d roots:\n", (int)m_allRoots.size());
+    for (const auto& root : m_allRoots)
+        fprintf(stderr, "\t%ls = %ls()\n", root->NodeName().c_str(), root->OperationName().c_str());
     }
 
     // Note: Steps below are loops over root nodes. We will gradually push those loops through to the functions,
@@ -486,7 +528,7 @@ void ComputationNetwork::CompileNetwork()
     ResetEvalTimeStamps(); // invalidate all m_value fields. Really belongs into StartEvaluateMinibatchLoop()
 
     if (TraceLevel() > 0)
-        fprintf(stderr, "\nPost-processing network complete.\n\n");
+    fprintf(stderr, "\nPost-processing network complete.\n\n");
     m_isCompiled = true;
 }
 
@@ -630,12 +672,12 @@ void ComputationNetwork::ValidateNetwork()
     while (toValidate > 0)
     {
         if (TraceLevel() > 0)
-            fprintf(stderr, "\nValidating network. %d nodes to process in pass %d.\n\n", (int) toValidate, (int) pass);
+        fprintf(stderr, "\nValidating network. %d nodes to process in pass %d.\n\n", (int) toValidate, (int) pass);
         toValidate = ValidateNodes(nodes, /*isFirstPass=*/pass == 1, false /*isFinalValidationPass*/);
         pass++;
     }
     if (TraceLevel() > 0)
-        fprintf(stderr, "\nValidating network, final pass.\n\n");
+    fprintf(stderr, "\nValidating network, final pass.\n\n");
     toValidate = ValidateNodes(nodes, /*isFirstPass=*/pass == 1, true /*isFinalValidationPass*/);
     if (toValidate != 0)
         LogicError("ValidateSubNetwork: ValidateNodes(true) unexpectedly returned with work left to do.");
@@ -656,7 +698,7 @@ void ComputationNetwork::ValidateNetwork()
             RuntimeError("%ls operation has 0 elements", node->NodeName().c_str());
     }
     if (TraceLevel() > 0)
-        fprintf(stderr, "\n\n");
+    fprintf(stderr, "\n\n");
 
     // logging the non-default-layout nodes
     vector<ComputationNodeBasePtr> nonDefaultNodes;
@@ -752,7 +794,7 @@ size_t ComputationNetwork::ValidateNodes(list<ComputationNodeBasePtr> nodes, boo
                 if (isFirstPass || !unchanged || prevPrototype != updatedPrototype)
 #endif
                     if (TraceLevel() > 0)
-                        fprintf(stderr, "Validating --> %s\n", updatedPrototype.c_str());
+                    fprintf(stderr, "Validating --> %s\n", updatedPrototype.c_str());
             }
             catch (...) // if validation failed then print the prototype anyway so one can see the input args
             {
@@ -903,7 +945,7 @@ void ComputationNetwork::AllocateAllMatrices(const std::vector<ComputationNodeBa
 
     // Allocate memory for forward/backward computation
     if (TraceLevel() > 0)
-        fprintf(stderr, "\n\nAllocating matrices for forward and/or backward propagation.\n");
+    fprintf(stderr, "\n\nAllocating matrices for forward and/or backward propagation.\n");
 
     VerifyIsCompiled("AllocateAllMatrices");
 
@@ -1042,7 +1084,7 @@ void ComputationNetwork::AllocateAllMatrices(const std::vector<ComputationNodeBa
 
     // print the memory sharing structure
     if (TraceLevel() > 0)
-        PrintMemorySharingStructure(GetAllNodes());
+    PrintMemorySharingStructure(GetAllNodes());
 }
 
 void ComputationNetwork::ReleaseMatricesAfterEvalForChildren(ComputationNodeBasePtr n, std::unordered_map<ComputationNodeBasePtr, int>& parentCount)

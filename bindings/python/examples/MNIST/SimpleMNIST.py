@@ -1,64 +1,67 @@
+# Copyright (c) Microsoft. All rights reserved.
+
+# Licensed under the MIT license. See LICENSE.md file in the project root
+# for full license information.
+# ==============================================================================
+
 import numpy as np
 import sys
 import os
-from cntk import learning_rates_per_sample, Trainer, sgdlearner, create_minibatch_source, get_train_loss, get_train_eval_criterion, cntk_device
-from cntk.ops import variable, cross_entropy_with_softmax, combine, classification_error, sigmoid, element_times, constant
-from examples.common.nn import fully_connected_classifier_net
-from examples.common.mb import create_text_mb_source
+from cntk import learning_rates_per_sample, Trainer, sgd_learner, create_minibatch_source, StreamConfiguration, DeviceDescriptor, text_format_minibatch_source
+from cntk.ops import input_variable, cross_entropy_with_softmax, combine, classification_error, sigmoid, element_times, constant
+from examples.common.nn import fully_connected_classifier_net, print_training_progress
 
+# Creates and trains a feedforward classification model for MNIST images
 def simple_mnist():
     input_dim = 784
     num_output_classes = 10
     num_hidden_layers = 1
     hidden_layers_dim = 200
-    epoch_size = sys.maxsize
-    minibatch_size = 32
-    num_samples_per_sweep = 60000
-    num_sweeps_to_train_with = 1
-    num_minibatches_to_train = (num_samples_per_sweep * num_sweeps_to_train_with) / minibatch_size
-    lr = learning_rates_per_sample(0.003125)
-    input = variable(input_dim, np.float32, needs_gradient=False, name="features")
+
+    # Input variables denoting the features and label data
+    input = input_variable(input_dim, np.float32)
+    label = input_variable(num_output_classes, np.float32)
+
+    # Instantiate the feedforward classification model
     scaled_input = element_times(constant((), 0.00390625), input)
-
-    label = variable(num_output_classes, np.float32, needs_gradient=False, name="labels")
-
-    dev = -1
-    cntk_dev = cntk_device(dev)
-    netout = fully_connected_classifier_net(scaled_input, num_output_classes, hidden_layers_dim, num_hidden_layers, dev, sigmoid)
+    netout = fully_connected_classifier_net(scaled_input, num_output_classes, hidden_layers_dim, num_hidden_layers, sigmoid)
 
     ce = cross_entropy_with_softmax(netout, label)
     pe = classification_error(netout, label)
 
-    #TODO: add save and load module code
-    ffnet = combine([ce, pe, netout], "classifier_model")
-
     rel_path = r"../../../../Examples/Image/MNIST/Data/Train-28x28_cntk_text.txt"
     path = os.path.join(os.path.dirname(os.path.abspath(__file__)), rel_path)
-    cm = create_text_mb_source(path, input_dim, num_output_classes, epoch_size)
+    feature_stream_name = 'features'
+    labels_stream_name = 'labels'
+    
+    mb_source = text_format_minibatch_source(path, [ 
+                    StreamConfiguration( feature_stream_name, input_dim ), 
+                    StreamConfiguration( labels_stream_name, num_output_classes) ])
+    features_si = mb_source.stream_info(feature_stream_name)
+    labels_si = mb_source.stream_info(labels_stream_name)
 
-    stream_infos = cm.stream_infos()
+    # Instantiate the trainer object to drive the model training
+    lr = learning_rates_per_sample(0.003125)
+    trainer = Trainer(netout, ce, pe, [sgd_learner(netout.owner.parameters(), lr)])
 
-    for si in stream_infos:
-        if si.m_name == 'features':
-            features_si = si
-        elif si.m_name == 'labels':
-            labels_si = si
+    # Get minibatches of images to train with and perform model training
+    minibatch_size = 32
+    num_samples_per_sweep = 60000
+    num_sweeps_to_train_with = 1
+    num_minibatches_to_train = (num_samples_per_sweep * num_sweeps_to_train_with) / minibatch_size
+    training_progress_output_freq = 20
+    for i in range(0, int(num_minibatches_to_train)):
+        mb = mb_source.get_next_minibatch(minibatch_size)
 
-    trainer = Trainer(netout, ce, pe, [sgdlearner(netout.owner.parameters(), lr)])
+        # Specify the mapping of input variables in the model to actual minibatch data to be trained with
+        arguments = {input : mb[features_si].m_data, label : mb[labels_si].m_data}
+        trainer.train_minibatch(arguments)
 
-    for i in range(0,int(num_minibatches_to_train)):
-        mb=cm.get_next_minibatch(minibatch_size, cntk_dev)
-
-        arguments = dict()
-        arguments[input] = mb[features_si].m_data
-        arguments[label] = mb[labels_si].m_data
-
-        trainer.train_minibatch(arguments, cntk_dev)
-        freq = 20
-        if i % freq == 0:
-            training_loss = get_train_loss(trainer)
-            eval_crit = get_train_eval_criterion(trainer)
-            print ("Minibatch: {}, Train Loss: {}, Train Evaluation Criterion: {}".format(i, training_loss, eval_crit))
+        print_training_progress(trainer, i, training_progress_output_freq)
 
 if __name__=='__main__':
+    # Specify the target device to be used for computing
+    target_device = DeviceDescriptor.gpu_device(0)
+    DeviceDescriptor.set_default_device(target_device)
+
     simple_mnist()

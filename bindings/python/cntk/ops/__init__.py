@@ -4,7 +4,10 @@
 # ==============================================================================
 
 import numpy as np
-from ..utils import sanitize_input, sanitize_shape, get_data_type, cntk_device
+from . import sequence
+from ..utils import sanitize_input, sanitize_shape, get_data_type
+
+#TODO: add wrappers for functions under cntk.sequence namespace in c++
 
 def combine(operands, name=''):
     '''
@@ -12,7 +15,7 @@ def combine(operands, name=''):
      'operands' Functions such that the 'Outputs' of the new 'Function' are union of the
      'Outputs' of each of the specified 'operands' Functions. E.g. When creating a classification
      model, typically the CrossEntropy loss Function and the ClassificationError Function comprise
-     the two roots of the computation graph which can be "Combine"d to create a single Function
+     the two roots of the computation graph which can be combined to create a single Function
      with 2 outputs; viz. CrossEntropy loss and ClassificationError output.    
     Args:
         operands (list): list of functions or their variables to combine
@@ -35,61 +38,61 @@ def combine(operands, name=''):
 # evaluation ops
 ################################################################################
 
-def cross_entropy_with_softmax(target_vector, output_vector, name=''):
+def cross_entropy_with_softmax(output_vector, target_vector, name=''):
     '''
     This operation computes the cross entropy over the softmax of the `output_vector`.
     It expects the `output_vector` as unscaled, and it computes softmax over 
     the `output_vector` internally.  Any `output_vector` input over which softmax is 
     already computed before passing to this operator will be incorrect.
     
-    :math:`cross\_entropy\_with\_softmax(t, o) = {-{\sum_{i \in \{1,len(t)\}} t_i \log(softmax(o_i)) }}`
+    :math:`cross\_entropy\_with\_softmax(o, t) = {-{\sum_{i \in \{1,len(t)\}} t_i \log(softmax(o_i)) }}`
     
     Example:
-        >>> C.eval(C.cross_entropy_with_softmax([0., 0., 0., 1.], [1., 1., 1., 50.]))
+        >>> C.eval(C.cross_entropy_with_softmax([1., 1., 1., 50.], [0., 0., 0., 1.]))
         #[0.]
         
-        >>> C.eval(C.cross_entropy_with_softmax([0.35, 0.15, 0.05, 0.45], [1., 2., 3., 4.]))
+        >>> C.eval(C.cross_entropy_with_softmax([1., 2., 3., 4.], [0.35, 0.15, 0.05, 0.45]))
         #[1.84]
     
     Args:
+        output_vector: the unscaled computed output values from the network
         target_vector: usually it is one-hot vector where the hot bit corresponds to the label index. 
         But it can be any probability distribution over the labels.
-        output_vector: the unscaled computed output values from the network
         name (str): the name of the node in the network            
     Returns:
         :class:`cntk.Function`
     '''
     from cntk import cross_entropy_with_softmax
-    target_vector = sanitize_input(target_vector, get_data_type(output_vector))
     output_vector = sanitize_input(output_vector, get_data_type(target_vector))
-    return cross_entropy_with_softmax(target_vector, output_vector, name).output()
+    target_vector = sanitize_input(target_vector, get_data_type(output_vector))
+    return cross_entropy_with_softmax(output_vector, target_vector, name).output()
 
-def square_error(target_matrix, output_matrix, name=''):
+def squared_error(output_matrix, target_matrix, name=''):
     '''
     This operation computes the sum of the squared difference between elements 
     in the two input matrices. The result is a scalar (i.e., one by one matrix). 
     This is often used as a training criterion node. 
     
     Example:
-        >>> C.eval(C.square_error([4., 6.], [2., 1.]))
+        >>> C.eval(C.square_error([2., 1.], [4., 6.]))
         #[29.]
         
         >>> C.eval(C.square_error([1., 2.], [1., 2.]))
         #[0.]
     
     Args:
-        target_matrix: target matrix, it is usually a one-hot vector where the hot bit corresponds to the label index
         output_matrix: the output values from the network
+        target_matrix: target matrix, it is usually a one-hot vector where the hot bit corresponds to the label index
         name (str): the name of the node in the network            
     Returns:
         :class:`cntk.Function`
     '''
-    from cntk import square_error
-    target_matrix = sanitize_input(target_matrix, get_data_type(output_matrix))
+    from cntk import squared_error
     output_matrix = sanitize_input(output_matrix, get_data_type(target_matrix))
-    return square_error(target_matrix, output_matrix, name).output()
+    target_matrix = sanitize_input(target_matrix, get_data_type(output_matrix))
+    return square_error(output_matrix, target_matrix, name).output()
 
-def classification_error(target_vector, output_vector, name=''):
+def classification_error(output_vector, target_vector, name=''):
     '''
     This operation computes the prediction error. It finds the index of the highest 
     value in the output_vector and compares it to the actual ground truth label
@@ -99,23 +102,23 @@ def classification_error(target_vector, output_vector, name=''):
     defined for it.
     
     Example:
-        >>> C.eval(C.classification_error([0., 0., 0., 1.], [1., 2., 3., 4.]))
+        >>> C.eval(C.classification_error([1., 2., 3., 4.], [0., 0., 0., 1.]))
         #[0.]
         
-        >>> C.eval(C.classification_error([0., 0., 1., 0.], [1., 2., 3., 4.]))
+        >>> C.eval(C.classification_error([1., 2., 3., 4.], [0., 0., 1., 0.]))
         #[1.]
     
     Args:
-        target_vector: it is one-hot vector where the hot bit corresponds to the label index
         output_vector: the output values from the network
+        target_vector: it is one-hot vector where the hot bit corresponds to the label index
         name (str): the name of the node in the network            
     Returns:
         :class:`cntk.Function`
     '''
     from cntk import classification_error
-    target_vector = sanitize_input(target_vector, get_data_type(output_vector))
     output_vector = sanitize_input(output_vector, get_data_type(target_vector))
-    return classification_error(target_vector, output_vector, name).output()
+    target_vector = sanitize_input(target_vector, get_data_type(output_vector))
+    return classification_error(output_vector, target_vector, name).output()
 
 ################################################################################
 # convolution ops
@@ -874,8 +877,7 @@ def reciprocal(x, name=''):
     x = sanitize_input(x)
     return reciprocal(x, name).output()    
 
-#TODO: enable when it is exposed in c++
-def cond(flag, value_if_true, value_if_false, name=''):
+def element_select(flag, value_if_true, value_if_false, name=''):
     '''
     return either value_if_true or value_if_false based on the value of flag.
     If flag != 0 value_if_true is returned, otherwise value_if_false.
@@ -894,13 +896,20 @@ def cond(flag, value_if_true, value_if_false, name=''):
     Returns:
         :class:`cntk.Function`
     '''    
-    raise NotImplementedError("cond is not implemented yet in V2")
+    from cntk import element_select
+    flag = sanitize_input(flag)
+    value_if_true = sanitize_input(value_if_true)
+    value_if_false = sanitize_input(value_if_false)
+    return element_select(flag, value_if_true, value_if_false, name).output()    
     
 ################################################################################
 # recurrent ops
 ################################################################################
 
-def future_value(initial_state, x, time_step=1, name=''):
+# TODO: add default value for initial_state. It should be a constant scalar 
+# (0.0), using the default device
+
+def future_value(x, initial_state=None, time_step=1, name=''):
     '''
     This function returns the future value w.r.t. `x`. It is most often used when 
     creating RNNs. The resulting tensor has the same shape as the input but is 
@@ -912,20 +921,26 @@ def future_value(initial_state, x, time_step=1, name=''):
     Example:
         TBA    
     Args:        
+        x: the tensor (or its name) from which the future value is obtained. 
         initial_state: tensor or scalar representing the initial value to be
         used when the input tensor is shifted in time.
-        x: the tensor (or its name) from which the future value is obtained. 
         time_step (int): the number of time steps to look into the future (default 1)        
         name (str): the name of the node in the network
     Returns:
         :class:`cntk.Function`
     '''    
-    
+
+    from ..utils import sanitize_dtype_cntk
+    from ..cntk_py import Constant
     from cntk import future_value
+
+    if initial_state is None:
+        initial_state = Constant.scalar(sanitize_dtype_cntk(np.float32), 0.0)
+
     x = sanitize_input(x)
-    return future_value(initial_state, x, time_step, name).output()    
+    return future_value(x, initial_state, time_step, name).output()
     
-def past_value(initial_state, x, time_step=1, default_hidden_activation=0.1, name=''):
+def past_value(x, initial_state=None, time_step=1, name=''):
     '''
     This function returns the past value w.r.t. `x`. It is most often used when 
     creating RNNs. The resulting tensor has the same shape as the input but is 
@@ -937,18 +952,24 @@ def past_value(initial_state, x, time_step=1, default_hidden_activation=0.1, nam
     Example:
         TBA
     Args:        
+        x: the tensor (or its name) from which the past value is obtained
         initial_state: tensor or scalar representing the initial value to be
         used when the input tensor is shifted in time.
-        x: the tensor (or its name) from which the past value is obtained
         time_step (int): the number of time steps to look into the past (default 1)        
         name (str): the name of the node in the network
     Returns:
         :class:`cntk.Function`
     '''    
     
+    from ..utils import sanitize_dtype_cntk
+    from ..cntk_py import Constant
     from cntk import past_value
+
+    if initial_state is None:
+        initial_state = Constant.scalar(sanitize_dtype_cntk(np.float32), 0.0)
+
     x = sanitize_input(x)
-    return past_value(initial_state, x, time_step, name).output()    
+    return past_value(x, initial_state, time_step, name).output()
 
 ################################################################################
 # reshaping ops
@@ -1166,9 +1187,13 @@ def dropout(x, name=''):
 # variables_and_parameters ops
 ################################################################################
 
-from cntk.cntk_py import Axis
+from cntk.cntk_py import Axis, DeviceDescriptor
 
-def variable(shape, data_type=None, needs_gradient=False, is_sparse=False, 
+#TODO: expose output_variable as well ?
+
+#TODO: if we end up using only factory methods, we should get rid of the class Variable in variables.py
+
+def input_variable(shape, data_type=None, needs_gradient=False, is_sparse=False, 
             dynamic_axes = [Axis.default_dynamic_axis(), Axis.default_batch_axis()], name=''):
     '''
     It creates an input node. The graph requires a separate reader that will be
@@ -1185,29 +1210,37 @@ def variable(shape, data_type=None, needs_gradient=False, is_sparse=False,
     Returns:
         :class:`cntk.Function`
     '''
-    from .variables import Variable
+    from cntk import input_variable
+    from ..utils import sanitize_shape, sanitize_dtype_cntk
 
+    shape = sanitize_shape(shape)
+
+    if data_type is None:
+        data_type = np.float32
+    dtype = sanitize_dtype_cntk(data_type)
     # TODO dynamic axis for numpy arrays
     # TODO sparse for numpy arrays
-    return Variable(shape, data_type, needs_gradient, is_sparse, dynamic_axes, name)
 
-def placeholder(shape, name=''):
+    return input_variable(shape, is_sparse, dtype, needs_gradient, name, dynamic_axes)
+
+
+def placeholder_variable(shape, dynamic_axes = [Axis.default_dynamic_axis(), Axis.default_batch_axis()]):
     '''
     It creates a variable place holder for recurrence networks, when the network's dynamic axes
     are unfolded, the place holder will get assigned a variable along the correspondent dynamic axis.
 
     Args:
         shape (tuple or int): the shape of the variable tensor             
-        name (str): the name of the node in the network
+        dynamic_axes (list): the list of dynamic axes that the actual variable uses
         
     Returns:
         :class:`cntk.Function`
     '''
-    from .variables import Placeholder
+    from cntk import placeholder_variable
+    shape = sanitize_shape(shape)
+    return placeholder_variable(shape, dynamic_axes)
     
-    return Placeholder(shape, name)
-    
-def parameter(shape=None, value=None, device_id=-1, name=''):
+def parameter(shape=None, value=None, device=None, name=''):
     '''
     It creates a parameter tensor. 
 
@@ -1215,7 +1248,7 @@ def parameter(shape=None, value=None, device_id=-1, name=''):
         shape (tuple or int, optional): the shape of the input tensor. If not provided, it will be inferred from ``value``.
         value (scalar or NumPy array, optional): a scalar initial value that would be replicated for every element in the tensor or NumPy array. 
         If ``None``, the tensor will be initialized uniformly random.
-        device_id (int): device id, -1 for CPU, 0 or higher for GPU                
+        device (:class:`cntk.DeviceDescriptor`): instance of DeviceDescriptor           
         name (str, optional): the name of the node in the network
 
     Returns:
@@ -1223,11 +1256,13 @@ def parameter(shape=None, value=None, device_id=-1, name=''):
     '''    
 
     from .variables import Parameter, parameter_from_scalar   
+    if not device:
+        device=DeviceDescriptor.use_default_device()
     if np.isscalar(value):        
-        return parameter_from_scalar(shape, value, None, cntk_device(device_id), name)   
-    return Parameter(shape, value, None, cntk_device(device_id), name)        
+        return parameter_from_scalar(shape, value, None, device, name)   
+    return Parameter(shape, value, None, device, name)        
 
-def constant(shape=None, value=None, device_id=-1, name=''):
+def constant(shape=None, value=None, device=None, name=''):
     '''
     It creates a constant tensor initialized from a numpy array
 
@@ -1235,16 +1270,17 @@ def constant(shape=None, value=None, device_id=-1, name=''):
         shape (tuple or int, optional): the shape of the input tensor. If not provided, it will be inferred from ``value``.
         value (scalar or NumPy array, optional): a scalar initial value that would be replicated for every element in the tensor or NumPy array. 
         If ``None``, the tensor will be initialized uniformly random.
-        device_id (int): device id, -1 for CPU, 0 or higher for GPU                
+        device (:class:`cntk.DeviceDescriptor`): instance of DeviceDescriptor                
         name (str, optional): the name of the node in the network
     Returns:
         :class:`cntk.Function`
     '''
     from .variables import Constant, constant_from_scalar
-
+    if not device:
+        device=DeviceDescriptor.use_default_device()
     if np.isscalar(value):        
-        return constant_from_scalar(shape, value, None, cntk_device(device_id), name)   
-    return Constant(shape, value, None, cntk_device(device_id), name)
+        return constant_from_scalar(shape, value, None, device, name)   
+    return Constant(shape, value, None, device, name)
 
 ################################################################################
 # normalization ops
