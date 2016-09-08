@@ -40,16 +40,20 @@ using GetEvalProc = void(*)(IEvaluateModel<ElemType>**);
 typedef std::pair<std::wstring, std::vector<float>*> MapEntry;
 typedef std::map<std::wstring, std::vector<float>*> Layer;
 
-/// <summary>Reads an RGB image from file and saves it to vector in correct order</summary>
+/// <summary>Reads an RGB image from a file and saves it to a vector in the correct order</summary>
 /// <param name="filename">Path to file</param>
 /// <param name="array">Destination array to load the data</param>
-void ReadRGBImage(std::string filename, std::vector<float>& array)
+/// <param name="display">Boolean for an option to display an image</param>
+void ReadRGBImage(std::string filename, std::vector<float>& array, bool display)
 {
 	auto testImage = cv::imread(filename, CV_LOAD_IMAGE_COLOR);
 
 	// Display input image
-	//cv::imshow("input", testImage);
-	//cv::waitKey(0);
+	if (display)
+	{
+		cv::imshow("input", testImage);
+		cv::waitKey(0);
+	}
 
 	// Split image into 3 channels and save values in the following order: height * width * channel
 	cv::Mat channel[3];
@@ -63,7 +67,7 @@ void ReadRGBImage(std::string filename, std::vector<float>& array)
 	}
 }
 
-/// <summary>Saves image to file</summary>
+/// <summary>Saves the provided image to a file</summary>
 /// <param name="mat">Source data</param>
 /// <param name="name">Destination filename with extension</param>
 void SaveImage(cv::Mat mat, std::string name)
@@ -84,7 +88,7 @@ void SaveImage(cv::Mat mat, std::string name)
 /// <summary>Reads floats from string and saves them to vector</summary>
 /// <param name="s">String to read from</param>
 /// <param name="elems">Destination vaector</param>
-void SplitString(const std::string &s, std::vector<float> &elems) 
+void SplitString(const std::string &s, std::vector<float> &elems)
 {
 	std::stringstream ss(s);
 	float f;
@@ -107,10 +111,11 @@ void SubstractMean(std::string filePath, std::vector<float>& array)
 	std::vector<float> means;
 	std::string dataString = pt.get_child("opencv_storage").get_child("MeanImg").get<std::string>("data");
 
-	// Clean and read the dataString
+	// Clean and read floats from the dataString
 	dataString.erase(std::remove(dataString.begin(), dataString.end(), '\n'), dataString.end());
 	SplitString(dataString, means);
 
+	// Substract means
 	for (int i = 0; i < array.size(); i++) array[i] -= means[i];
 }
 
@@ -134,19 +139,19 @@ std::vector<uchar> ConvertToUchar(std::vector<float> elems)
 
 /// <summary>Transforms layer output into cv::Mat</summary>
 /// <param name="layerOutput">Output of the network layer</param>
-/// <param name="params">{layerPosition, numberOfBatches, imgDimensionX, imgDimensionY, scaleFactor}</param>
+/// <param name="params">{layerPosition, depth, imgDimensionX, imgDimensionY, scaleFactor}</param>
 /// <param name="imgs">Destination vector</param>
 void CreateImages(std::vector<uchar> layerOutput, std::vector<boost::variant<std::string, int>> params, std::vector<cv::Mat>& imgs)
 {
-	auto numberOfBatches = boost::get<int>(params[1]);
+	auto depth = boost::get<int>(params[1]);
 	auto imgDimensionX = boost::get<int>(params[2]);
 	auto imgDimensionY = boost::get<int>(params[3]);
 	auto scaleFactor = boost::get<int>(params[4]);
 
-	uchar** outputArrays = new uchar*[numberOfBatches]; // stores images for each batch
+	uchar** outputArrays = new uchar*[depth]; // stores images for each batch
 	// Put elements in the correct order
 	int l = 0;
-	for (int i = 0; i < numberOfBatches; i++)
+	for (int i = 0; i < depth; i++)
 	{
 		outputArrays[i] = new uchar[imgDimensionX*imgDimensionY];
 		for (int j = 0; j < imgDimensionX*imgDimensionY; j++)
@@ -157,24 +162,26 @@ void CreateImages(std::vector<uchar> layerOutput, std::vector<boost::variant<std
 	}
 
 	auto step = sizeof(uchar)*imgDimensionX;
-	for (int i = 0; i < numberOfBatches; i++)
+	for (int i = 0; i < depth; i++)
 	{
 		imgs.push_back(cv::Mat(cv::Size(imgDimensionX, imgDimensionY), CV_8UC1, outputArrays[i], step));
 		if (imgDimensionY!=1) cv::resize(imgs[i], imgs[i], cv::Size(), scaleFactor, scaleFactor, cv::INTER_NEAREST);
 	}
 }
 
+
 /// <summary>Displays images collected from layer activations</summary>
 /// <param name="name">Layer name</param>
 /// <param name="imgs">Images to display</param>
-/// <param name="params">{layerPosition, numberOfBatches, imgDimensionX, imgDimensionY, scaleFactor}</param>
+/// <param name="params">{layerPosition, depth, imgDimensionX, imgDimensionY, scaleFactor}</param>
 void VisualizeLayer(std::string name, std::vector<cv::Mat> imgs, std::vector<boost::variant<std::string, int>> params)
 {
 	auto layerPosition = boost::get<std::string>(params[0]);
-	auto numberOfBatches = boost::get<int>(params[1]);
+	auto depth = boost::get<int>(params[1]);
 	auto imgDimensionX = boost::get<int>(params[2]);
 	auto imgDimensionY = boost::get<int>(params[3]);
 	auto scaleFactor = boost::get<int>(params[4]);
+	float gap = 1.05; // interrow/column gap width
 
 	// Create an empty pane for all images
 	cv::Mat pane;
@@ -182,7 +189,7 @@ void VisualizeLayer(std::string name, std::vector<cv::Mat> imgs, std::vector<boo
 	if (imgs.size()==1 && imgDimensionY==1) // classes propabilities vector
 	{
 		// Remap to square
-		auto side = ceil(sqrt(imgs[0].rows*imgs[0].cols));
+		size_t side = ceil(sqrt(imgs[0].rows*imgs[0].cols));
 		paneSize = cv::Size(side, side);
 		auto step = sizeof(uchar)*side;
 		pane = cv::Mat(paneSize, CV_8SC1, imgs[0].data, step);
@@ -191,23 +198,23 @@ void VisualizeLayer(std::string name, std::vector<cv::Mat> imgs, std::vector<boo
 	else
 	{
 		// Calculate the size of the pane based on params
-		paneSize = cv::Size(1.05*imgDimensionX*ceil(sqrt(numberOfBatches))*scaleFactor, 1.05*imgDimensionY*scaleFactor*ceil(sqrt(numberOfBatches)));
+		paneSize = cv::Size(gap*imgDimensionX*ceil(sqrt(depth))*scaleFactor, gap*imgDimensionY*scaleFactor*ceil(sqrt(depth)));
 		pane = cv::Mat(paneSize, CV_8SC1);
 		float column = 0;
 		float row = 0;
-		for (int i = 0; i < numberOfBatches; i++)
+		for (int i = 0; i < depth; i++)
 		{
 			if (imgs[i].cols*column > pane.cols - imgs[i].cols)
 			{
-				// Spacing between consequent rows
-				row = row + 1.05;
+				// Spacing between consecutive rows
+				row = row + gap;
 				// Start new row
 				column = 0;
 			}
 			// Insert image in the correct position on the pane
 			imgs[i].copyTo(pane(cv::Rect(imgs[i].cols*column, imgs[i].rows*row, imgs[i].cols, imgs[i].rows)));
-			// Spacing between consequent columns
-			column += 1.05;
+			// Spacing between consecutive columns
+			column += gap;
 		}
 	}
 
@@ -216,6 +223,98 @@ void VisualizeLayer(std::string name, std::vector<cv::Mat> imgs, std::vector<boo
 
 	// Display image
 	cv::imshow(layerPosition + "_" + name, pane);
+}
+
+void SetNetworkParams(std::string model, std::map<std::wstring, std::vector<boost::variant<std::string, int>>>& params)
+{
+	if (model == "AlexNet")
+	{
+		params[L"conv1.y"] = { "00", 64, 56, 56, 2 };
+		params[L"pool1"] = { "01", 64, 27, 27, 3 };
+		params[L"conv2.y"] = { "02", 192, 27, 27, 2 };
+		params[L"pool2"] = { "03", 192, 13, 13, 3 };
+		params[L"conv3.y"] = { "04", 384, 13, 13, 3 };
+		params[L"conv4.y"] = { "05", 256, 13, 13, 3 };
+		params[L"conv5.y"] = { "06", 256, 13, 13, 3 };
+		params[L"pool3"] = { "07", 256, 6, 6, 6 };
+		params[L"h1.b"] = { "08", 1, 4096, 1, 8 };
+		params[L"h2.b"] = { "09", 1, 4096, 1, 8 };
+		params[L"OutputNodes.z"] = { "10", 1, 1000, 1, 20 };
+	}
+	
+}
+
+void VisualizeNetwork(std::string modelFilePath, std::string inputImagePath)
+{
+	IEvaluateModel<float> *model;
+
+	struct stat statBuf;
+	if (stat(modelFilePath.c_str(), &statBuf) != 0)
+	{
+		fprintf(stderr, "Error: The model %s does not exist. Please follow instructions in README.md in <CNTK>/Examples/Image/MNIST to create the model.\n", modelFilePath.c_str());
+	}
+
+	GetEvalF(&model);
+
+	std::map<std::wstring, std::vector<boost::variant<std::string, int>>> params;
+	SetNetworkParams(modelFilePath, params);
+
+	// String with layer names
+	std::string layers;
+	for (auto layer : params)
+	{
+		layers += std::string(layer.first.begin(), layer.first.end()) + ", ";
+	}
+
+	// Load model with desired outputs
+	std::string networkConfiguration;
+	// When specifying outputNodeNames in the configuration, it will REPLACE the list of output nodes 
+	// with the ones specified.
+	networkConfiguration += "outputNodeNames=\"" + layers + "\"\n";
+	networkConfiguration += "modelPath=\"" + modelFilePath + "\"";
+	model->CreateNetwork(networkConfiguration);
+
+	// get the model's layers dimensions
+	std::map<std::wstring, size_t> inDims;
+	std::map<std::wstring, size_t> outDims;
+	model->GetNodeDimensions(inDims, NodeGroup::nodeInput);
+	model->GetNodeDimensions(outDims, NodeGroup::nodeOutput);
+
+	auto inputLayerName = inDims.begin()->first;
+	std::vector<float> inputs;
+	ReadRGBImage(inputImagePath, inputs, 0);
+
+	// Substract mean from each pixel value
+	SubstractMean("Models/ImageNet1K_mean.xml", inputs);
+
+	// Allocate the output values layer
+	std::vector<std::vector<float>> outputs(outDims.size());
+
+	// Setup the maps for inputs and output
+	Layer inputLayer;
+	inputLayer.insert(MapEntry(inputLayerName, &inputs));
+	Layer outputLayers;
+	int i = 0;
+	for (auto &layer : outDims)
+	{
+		auto outputLayerName = layer.first;
+		outputLayers.insert(MapEntry(outputLayerName, &outputs[i]));
+		i++;
+	}
+
+	// We can call the evaluate method and get back the results 
+	model->Evaluate(inputLayer, outputLayers);
+
+	for (auto outputLayer : outputLayers)
+	{
+		auto layerName = outputLayer.first;
+		auto output = *outputLayer.second;
+		ScaleTo01(output);
+		std::vector<uchar> outputChar = ConvertToUchar(output);
+		std::vector<cv::Mat> imgs;
+		CreateImages(outputChar, params[layerName], imgs);
+		VisualizeLayer(std::string(layerName.begin(), layerName.end()), imgs, params[layerName]);
+	}
 }
 
 int main(int argc, char* argv[])
@@ -252,8 +351,19 @@ int main(int argc, char* argv[])
 	GetEvalF(&model);
 
 	// Define needed layer names and their dimensionality
-	// LayerName : {layerPosition, numberOfBatches, imgDimensionX, imgDimensionY, scaleFactor}
-	// TODO: read values from network configuration?
+	// LayerName : {layerPosition, depth, imgDimensionX, imgDimensionY, scaleFactor}
+	// <param name="layerPostion">A string that defines the order of network layers</param>
+	// <param name="depth">Equals the number of kernels on the layer</param>
+	// <param name="imgDimensionX">Equals the layer output's x-dimensionality</param>
+	// <param name="imgDimensionY">Equals the layer output's y-dimensionality</param>
+	// <param name="scaleFactor">Scales an output image when visualizing layer's ativations (defined by user)</param>
+	// One can get above parameters from the CNTK validation output
+	// For instance, the interpretation of the following lines is 
+	// Validating --> conv5.y = RectifiedLinear (conv5.z) : [13 x 13 x 256 x *] -> [13 x 13 x 256 x *]
+	// Validating--> pool3 = MaxPooling(conv5.y) : [13 x 13 x 256 x *] ->[6 x 6 x 256 x *]
+	// "pool3" follows "conv5" in the network stucture
+	// depth[conv5.y] = 256; imgDimensionX[conv5.y] = 13; imgDimensionY[conv5.y] = 13
+	// depth[pool3] = 256; imgDimensionX[pool3] = 6; imgDimensionY[pool3] = 6 
 	std::map<std::wstring, std::vector<boost::variant<std::string, int>>> dimensions;
 	dimensions[L"conv1.y"] = { "00", 64, 56, 56, 2 };
 	dimensions[L"pool1"] = { "01", 64, 27, 27, 3 };
@@ -292,7 +402,7 @@ int main(int argc, char* argv[])
 	auto inputImage = "val100/test2.JPG";
 	auto inputLayerName = inDims.begin()->first;
 	std::vector<float> inputs;
-	ReadRGBImage(inputImage, inputs);
+	ReadRGBImage(inputImage, inputs, 0);
 
 	// Substract mean from each pixel value
 	SubstractMean("Models/ImageNet1K_mean.xml", inputs);
@@ -329,4 +439,3 @@ int main(int argc, char* argv[])
 
 	return 0;
 }
-
