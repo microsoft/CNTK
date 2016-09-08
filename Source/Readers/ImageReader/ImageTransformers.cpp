@@ -375,7 +375,10 @@ void ScaleTransformer::Apply(size_t id, cv::Mat &mat)
 
     auto index = UniIntT(0, static_cast<int>(m_interp.size()) - 1)(*rng);
     assert(m_interp.size() > 0);
-    cv::resize(mat, mat, cv::Size((int)m_imgWidth, (int)m_imgHeight), 0, 0, m_interp[index]);
+
+    // TODO skip cv::resize depending on interpolation only
+    if (mat.cols != m_imgWidth || mat.rows != m_imgHeight)
+        cv::resize(mat, mat, cv::Size((int)m_imgWidth, (int)m_imgHeight), 0, 0, m_interp[index]);
 
     m_rngs.push(std::move(rng));
 }

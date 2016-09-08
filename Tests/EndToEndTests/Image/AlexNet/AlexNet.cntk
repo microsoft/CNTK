@@ -15,7 +15,7 @@ Train=[
             channels=3
             # Below are the optional parameters.
             # Possible values: Center, Random. Default: Center
-            cropType=Random
+            cropType=Center # from NVidia
             # Horizontal random flip, will be enabled by default if cropType=Random
             #hflip=0
             # Crop scale ratio. Examples: cropRatio=0.9, cropRatio=0.7:0.9. Default: 1.
@@ -27,7 +27,7 @@ Train=[
             # Possible values: nearest, linear, cubic, lanczos. Default: linear.
             interpolations=Linear
             # Stores mean values for each pixel in OpenCV matrix XML format.
-            meanFile=$ConfigDir$/ImageNet1K_mean.xml
+            #meanFile=$ConfigDir$/ImageNet1K_mean.xml
         ]
         labels=[
             labelDim=1000

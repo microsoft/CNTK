@@ -7,15 +7,18 @@ set BUILD_DIR=%BUILD_DIR%\x64\Release
 set CNTK=%CNTK_DIR%\x64\Release\cntk.exe
 if not exist "%CNTK%" echo ?Cannot find cntk.exe at %CNTK%&exit /b 1
 
+if not defined DATA_DIR echo ?Specify path to val_256x256.zip in %%DATA_DIR%%%&exit /b 1
+
+if not defined CNTK_DIR set CNTK_DIR=%~dp0
 %CNTK% ^
   "configFile=%CONFIG_DIR%\AlexNetCommon.cntk" ^
   command=Train ^
   Train=[SGD=[maxEpochs=2]] ^
   Train=[SGD=[minibatchSize=48]] ^
   numMBsToShowResult=10 ^
-  "currentDirectory=%CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY%\private\Image\ResNet\Data\v0" ^
+  "currentDirectory=%DATA_DIR%" ^
   "RunDir=%RUN_DIR%" ^
-  "DataDir=%CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY%\private\Image\ResNet\Data\v0" ^
+  "DataDir=%DATA_DIR%" ^
   "ConfigDir=%CONFIG_DIR%" ^
   "OutputDir=%RUN_DIR%" ^
   DeviceId=0 ^
