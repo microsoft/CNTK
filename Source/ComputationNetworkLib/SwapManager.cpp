@@ -46,7 +46,7 @@ template<typename ElemType> void SwapManager<ElemType>::BeginSynchronizeState(Co
 {
 
 #ifndef CPUONLY
-	if(!m_useMemorySwapping)
+	if(!m_useMemorySwapping || !isTraining)
     {
        //cout << m_minFreeMemory << endl;
         m_minFreeMemory = m_minFreeMemory < FreeGPUMemoryInGB() ? m_minFreeMemory : FreeGPUMemoryInGB();
@@ -70,20 +70,20 @@ template<typename ElemType> void SwapManager<ElemType>::BeginSynchronizeState(Co
 template<typename ElemType> void SwapManager<ElemType>::EndSynchronizeState(ComputationNodeBase *node, bool isForward, bool isTraining)
 {
 #ifndef CPUONLY
-	if(!m_useMemorySwapping){ return; }
+	if(!m_useMemorySwapping || !isTraining){ return; }
 
     std::string nodename = std::string(node->NodeName().begin(), node->NodeName().end());
     //cout << nodename << " + " << isForward << endl;
     //cout << "FORWARD: " << isForward << " " << " TRAINING: " << isTraining << endl;
 
-    if(isForward && isTraining)
+    if(isForward)
         for(auto action : m_node2ForwardSwapOut[node])
         {
             CUDA_CALL(cudaDeviceSynchronize());
             action->BeginAction();
             action->EndAction();
         }
-    else if(isTraining)
+    else
         for(auto matrix : m_node2BackwardFree[node])
         {
             cout << "Freeing matrix during backprop: " << matrix << " " << matrix->GetNumRows() << "x" << matrix->GetNumCols() << endl;

@@ -1791,6 +1791,8 @@ void SGD<ElemType>::TrainOneMiniEpochAndReloadModel(ComputationNetworkPtr net,
                                                     /*out*/ std::vector<EpochCriterion>& epochEvalErrors,
                                                     std::string prefixMsg)
 {
+    bool temp = net->NetworkInfo().GetSwapManager<ElemType>()->m_useMemorySwapping;
+    net->NetworkInfo().GetSwapManager<ElemType>()->m_useMemorySwapping = false;
     TrainOneEpoch(net, refNet, refNode, epochNumber, epochSize,
                   trainSetDataReader, learnRatePerSample, minibatchSize, featureNodes,
                   labelNodes, criterionNodes, evaluationNodes,
@@ -1818,6 +1820,7 @@ void SGD<ElemType>::TrainOneMiniEpochAndReloadModel(ComputationNetworkPtr net,
                        smoothedGradients,
                        /*out*/ dummyPrevCriterion,
                        /*out*/ dummyMinibatchSize);
+    net->NetworkInfo().GetSwapManager<ElemType>()->m_useMemorySwapping = temp;
 }
 
 // Attemps to compute the error signal for the whole utterance, which will

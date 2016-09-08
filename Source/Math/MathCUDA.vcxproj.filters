@@ -143,9 +143,6 @@
     <ClInclude Include="SwapInAction.h">
       <Filter>GPU\Swapping</Filter>
     </ClInclude>
-    <ClInclude Include="SwapManager.h">
-      <Filter>GPU\Swapping</Filter>
-    </ClInclude>
     <ClInclude Include="SwapOutAction.h">
       <Filter>GPU\Swapping</Filter>
     </ClInclude>

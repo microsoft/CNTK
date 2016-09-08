@@ -111,7 +111,6 @@ if exist "$(CuDnnDll)" xcopy /D /Y "$(CuDnnDll)" "$(OutputPath)"
     <ClInclude Include="..\Common\Include\fileutil.h" />
     <ClInclude Include="SwapAction.h" />
     <ClInclude Include="SwapInAction.h" />
-    <ClInclude Include="SwapManager.h" />
     <ClInclude Include="SwapOutAction.h" />
     <ClInclude Include="CntkBatchNormalization.cuh" />
     <ClInclude Include="ColumnQuantizer.h" />

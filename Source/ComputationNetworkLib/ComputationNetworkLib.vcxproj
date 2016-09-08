@@ -110,6 +110,7 @@
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
     <ClInclude Include="TrainingNodes.h" />
+    <ClInclude Include="SwapManager.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\Common\BestGpu.cpp" />

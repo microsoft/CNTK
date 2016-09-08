@@ -351,7 +351,7 @@ COMPUTATION_NETWORK_LIB_SRC =\
 	$(SOURCEDIR)/ComputationNetworkLib/ComputationNetworkEditing.cpp \
 	$(SOURCEDIR)/ComputationNetworkLib/ComputationNetworkBuilder.cpp \
 	$(SOURCEDIR)/ComputationNetworkLib/ComputationNetworkScripting.cpp \
-	$(SOURCEDIR)/Math/SwapManager.cpp \
+	$(SOURCEDIR)/ComputationNetworkLib/SwapManager.cpp \
 	$(SOURCEDIR)/Math/SwapInAction.cpp \
 	$(SOURCEDIR)/Math/SwapOutAction.cpp \
 

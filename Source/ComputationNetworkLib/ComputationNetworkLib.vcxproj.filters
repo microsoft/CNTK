@@ -57,6 +57,9 @@
     <ClInclude Include="ComputationNode.h">
       <Filter>Nodes</Filter>
     </ClInclude>
+    <ClInclude Include="SwapManager.h">
+      <Filter>Swapping</Filter>
+    </ClInclude>
     <ClInclude Include="stdafx.h">
       <Filter>Misc</Filter>
     </ClInclude>
