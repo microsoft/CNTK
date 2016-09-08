@@ -7,12 +7,15 @@
 
 
 #include "SwapManager.h"
+#include "SwapAction.h"
 #include "ComputationNode.h"
 #include "Sequences.h"
-#include <iostream>
 #include "SwapInAction.h"
 #include "SwapOutAction.h"
 #include "ComputationNetwork.h"
+#include "GPUMatrix.h"
+
+#include <iostream>
 #include <cmath>
 
 bool g_useMemorySwapping = false;
@@ -34,6 +37,10 @@ template <typename ElemType> SwapManager<ElemType>::SwapManager()
         m_useMemorySwapping = g_useMemorySwapping;
         m_minFreeMemory = FreeGPUMemoryInGB();
         cout << "FREE: " << m_minFreeMemory << endl;
+        m_freed = 0.0f;
+        m_swappedOut = 0.0f;
+        m_swappedIn = 0.0f;
+        m_wasForward = true;
 }
 
 template <typename ElemType> void SwapManager<ElemType>::CleanUp()
@@ -42,11 +49,39 @@ template <typename ElemType> void SwapManager<ElemType>::CleanUp()
         pair.second->ReleaseMemory();
 }
 
+template <typename ElemType> void SwapManager<ElemType>::SwapOutNodes(ComputationNodeBase* node, bool isForward, bool isTraining, int n)
+{
+    if(m_node2Timestep.count(node) == 0){ return; }
+    int currentTimeStep = m_node2Timestep[node];
+    while(n > 0) 
+    {
+        // free / swapout previous layers, which are to the back for backprop, and in the front
+        // for forward prop
+        currentTimeStep += isForward ? -1 : 1;
+        n--;
+        if(m_timeStep2Node.count(currentTimeStep) == 0){ continue; }
+
+        BeginSynchronizeState(m_timeStep2Node[currentTimeStep], isForward, isTraining);
+        EndSynchronizeState(m_timeStep2Node[currentTimeStep], isForward, isTraining);
+    }
+    m_useMemorySwapping = true;
+    
+}
 
 template<typename ElemType> void SwapManager<ElemType>::BeginSynchronizeState(ComputationNodeBase *node, bool isForward, bool isTraining)
 {
 
 #ifndef CPUONLY
+    if(!m_wasForward && isForward)
+    {
+        m_freed = 0.0f;
+        m_swappedOut = 0.0f;
+        m_swappedIn = 0.0f;
+    }
+
+    cout << "free: " << m_freed << " swapped out: " << m_swappedOut << " swapped in: " << m_swappedIn << endl;
+
+
 	if(!m_useMemorySwapping)
     {
        //cout << m_minFreeMemory << endl;
@@ -60,8 +95,11 @@ template<typename ElemType> void SwapManager<ElemType>::BeginSynchronizeState(Co
     if(!isForward)
         for(auto action : m_node2BackwardSwapin[node])
         {
+            cout << FreeGPUMemoryInGB() << endl;
             action->BeginAction();
             action->EndAction();
+            cout << FreeGPUMemoryInGB() << endl;
+            m_swappedIn += ((float)action->GetGPUMatrix()->BufferSize())/1024./1024./1024.;
         }
     m_minFreeMemory = m_minFreeMemory < FreeGPUMemoryInGB() ? m_minFreeMemory : FreeGPUMemoryInGB();
 #endif
@@ -81,6 +119,7 @@ template<typename ElemType> void SwapManager<ElemType>::EndSynchronizeState(Comp
         for(auto action : m_node2ForwardSwapOut[node])
         {
             CUDA_CALL(cudaDeviceSynchronize());
+            m_swappedOut += ((float)action->GetGPUMatrix()->BufferSize())/1024./1024./1024.;
             action->BeginAction();
             action->EndAction();
         }
@@ -88,8 +127,12 @@ template<typename ElemType> void SwapManager<ElemType>::EndSynchronizeState(Comp
         for(auto matrix : m_node2BackwardFree[node])
         {
             cout << "Freeing matrix during backprop: " << matrix << " " << matrix->GetNumRows() << "x" << matrix->GetNumCols() << endl;
+            m_freed += ((float)matrix->BufferSize())/1024./1024./1024.;
+            cout << FreeGPUMemoryInGB() << endl;
             matrix->Resize(0,0,0,false);
+            cout << FreeGPUMemoryInGB() << endl;
         }
+    m_wasForward = isForward;
 #endif
 }
 
@@ -101,6 +144,7 @@ template <typename ElemType> void SwapManager<ElemType>::InitializeSwapping(
 {
 
     ClearActionsAndTheirMemory();
+    int timeStep = 0;
     for(auto pair : forwardSwapOutNodes2matrices)
     {
         for(auto buffer : pair.second)
@@ -113,7 +157,11 @@ template <typename ElemType> void SwapManager<ElemType>::InitializeSwapping(
                 m_buffer2SwapIn[buffer] = swpIn;
             }
 
+            // build timeline of nodes for later reference
             m_node2ForwardSwapOut[pair.first].push_back(m_buffer2SwapOut[buffer]);
+            m_node2Timestep[pair.first] = timeStep;
+            m_timeStep2Node[timeStep] = pair.first;
+            timeStep++;
         }
     }
 

@@ -155,7 +155,14 @@ ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(con
                     //cout << "INPUT: " << inputNode->ValuePtr() << " " << inputNode->GradientPtr() << endl;
                 }
 
-            node->ForwardProp(fr.WithLayout(node->GetMBLayout()));
+            try
+            {
+                node->ForwardProp(fr.WithLayout(node->GetMBLayout()));
+            }
+            catch(...)
+            {
+                cout << "caught exception forward" << endl;
+            }
 
             if(node->GetNetworkInfoPtr() != nullptr)
                 if (node->Is<ComputationNode<float>>())
@@ -195,7 +202,34 @@ ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(con
 
 
 
-        node->Backprop(fr.WithLayout(node->GetMBLayout()), true /*childrenInThisLoop*/, true /*childrenInOuterLoop*/);
+        try
+        {
+            node->Backprop(fr.WithLayout(node->GetMBLayout()), true /*childrenInThisLoop*/, true /*childrenInOuterLoop*/);
+        }
+        catch(...)
+        {
+            cout << "caught exception backprop" << endl;
+            float freeMemoryInGB = 0.0f;
+            if (node->Is<ComputationNode<float>>())
+                freeMemoryInGB = node->GetNetworkInfoPtr()->GetSwapManager<float>()->FreeGPUMemoryInGB();
+            else
+                freeMemoryInGB = node->GetNetworkInfoPtr()->GetSwapManager<double>()->FreeGPUMemoryInGB();
+
+            if(freeMemoryInGB < 1.0)
+            {
+                //rollback
+                cout << "ROLLBACK" << endl;
+            if (node->Is<ComputationNode<float>>())
+                node->GetNetworkInfoPtr()->GetSwapManager<float>()->SwapOutNodes(node.get(), false, node->Environment().IsTraining(), 5);
+            else
+                node->GetNetworkInfoPtr()->GetSwapManager<double>()->SwapOutNodes(node.get(), false, node->Environment().IsTraining(), 5);
+
+
+            }
+            else
+                throw;
+
+        }
 
         if(node->GetNetworkInfoPtr() != nullptr)
             if (node->Is<ComputationNode<float>>())
@@ -972,17 +1006,17 @@ void ComputationNetwork::InitMemorySwapping(const std::vector<ComputationNodeBas
             for (auto& nodeLoopIter : recInfo->m_nestedNodes)
             {
                 Matrix<ElemType> *loopValue = (Matrix<ElemType>*)nodeLoopIter->ValuePtr().get();
-                if(!node->IsValueSharable())
+                if(!(node->IsValueSharable() && g_shareNodeValueMatrices))
                     matrix2LoopMembers[valueBuffer].insert(loopValue);
             }
         }
 
        
-        if(!node->IsValueSharable())
+        if(!(node->IsValueSharable() && g_shareNodeValueMatrices))
             matrix2LoopMembers[valueBuffer].insert(valueBuffer);
 
         std::string parent = std::string(node->NodeName().begin(), node->NodeName().end());
-        cout << parent << node->RequiresPreCompute() << node->IsValueSharable() << endl;
+        cout << parent <<  "sharable "  << node->IsValueSharable() << endl;
         matrix2nodename[valueBuffer] = parent;
         for(int i = 0; i < node->GetNumInputs(); i++)
         {
