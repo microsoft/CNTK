@@ -87,13 +87,13 @@ public:
             RuntimeError("Cannot open file '%s'", imageSequence.m_path.c_str());
 
         // Convert element type.
-        auto imageType = cvImage.type();
+        auto depth = cvImage.depth();
         ElementType dataType;
-        if (imageType == CV_MAKETYPE(CV_8U, cvImage.channels()))
+        if (depth == CV_8U)
             dataType = ElementType::tuchar;
-        else if (imageType == CV_MAKETYPE(CV_32F, cvImage.channels()))
+        else if (depth == CV_32F)
             dataType = ElementType::tfloat;
-        else if (imageType == CV_MAKETYPE(CV_64F, cvImage.channels()))
+        else if (depth == CV_64F)
             dataType = ElementType::tdouble;
         else
         {

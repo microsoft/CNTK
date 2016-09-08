@@ -51,7 +51,7 @@ int GetOpenCVTypeFrom(ElementType type)
 
 ElementType GetElementTypeFromOpenCV(int type)
 {
-    switch (type%8)
+    switch (type)
     {
     case CV_64F:
         return ElementType::tdouble;
@@ -111,7 +111,7 @@ SequenceDataPtr ImageTransformerBase::Transform(SequenceDataPtr sequence)
     result->m_image = buffer;
     result->m_data = buffer.ptr();
     result->m_numberOfSamples = inputSequence.m_numberOfSamples;
-    result->m_elementType = GetElementTypeFromOpenCV(buffer.type());
+    result->m_elementType = GetElementTypeFromOpenCV(buffer.depth());
 
     ImageDimensions outputDimensions(buffer.cols, buffer.rows, buffer.channels());
     result->m_sampleLayout = std::make_shared<TensorShape>(outputDimensions.AsTensorShape(HWC));
@@ -585,6 +585,11 @@ void IntensityTransformer::Apply(size_t id, cv::Mat &mat)
     if (m_eigVal.empty() || m_eigVec.empty() || m_curStdDev == 0)
         return;
 
+    // Have to convert to float.
+    int type = m_precision == ElementType::tfloat ? CV_32F : CV_64F;
+    if (mat.type() != type)
+        mat.convertTo(mat, type);
+
     if (mat.type() == CV_64FC(mat.channels()))
         Apply<double>(mat);
     else if (mat.type() == CV_32FC(mat.channels()))
@@ -598,11 +603,6 @@ void IntensityTransformer::Apply(cv::Mat &mat)
 {
     auto seed = GetSeed();
     auto rng = m_rngs.pop_or_create([seed]() { return std::make_unique<std::mt19937>(seed); } );
-
-    // Have to convert to float.
-    int type = m_precision == ElementType::tfloat ? CV_32F : CV_64F;
-    if (mat.type() != type)
-        mat.convertTo(mat, type);
 
     // Using single precision as EigVal and EigVec matrices are single precision.
     boost::random::normal_distribution<float> d(0, (float)m_curStdDev);
