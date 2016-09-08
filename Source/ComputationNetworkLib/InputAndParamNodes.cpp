@@ -169,7 +169,7 @@ void LearnableParameter<ElemType>::PostInitParameters(const wstring& initString,
         m_initString = initString;
         m_randomSeed = randomSeed;
         m_initValueScale = initValue;
-        m_initFilterRank = 0; // default. Convolution layer should specify filter rank explicitly for accurate initialization. 
+        m_initFilterRank = 0; // default. NDL (deprecated) cannot specify a different value.  
         m_initOutputRank = 1; // default. NDL (deprecated) cannot specify a different value.
         m_initOnCPUOnly = initOnCPUOnly;
     }
@@ -230,10 +230,10 @@ void LearnableParameter<ElemType>::InitRandom(const wstring& type,
     if (initFilterRank + abs(initOutputRank) > sampleLayout.GetRank())
         InvalidArgument("InitRandom: initFilterRank=%d and initOutputRank=%d exceeds sampleLayout rank %d", initFilterRank, initOutputRank, (int)sampleLayout.GetRank());
     // determine fan-in and fan-out
-    // In the most generic case, sampleLayout should be in the form of [f1 x f2 x ... x fl x c1 x ... x cm x k1 x ... x kn],
-    // where l is the filterRank, m is the input rank, and n is the output rank. In the above example, we should have initOutputRank = -n
-    // If initOutputRank = n, the layout should be [[f1 x f2 x ... x fl x k1 x ... x kn x c1 x ... x cm], note filter dimensions stay in the front of the layout 
-    // in the case of dense layers, initFilterRank = l = 0. 
+    // In the most generic case of convolution, sampleLayout should be in the form of [f1 x f2 x ... x fr x c1 x ... x cm x k1 x ... x kn],
+    // where r is the filterRank, m is the input rank, and n is the output rank. In the above example, we should have initOutputRank = -n
+    // If initOutputRank = n, the layout should be [[f1 x f2 x ... x fr x k1 x ... x kn x c1 x ... x cm], note filter dimensions stay in the front of the layout 
+    // in the case of dense layers, initFilterRank = r = 0. 
     size_t filterSize = 1; 
     for (size_t k = 0; k < initFilterRank; k++)
         filterSize *= sampleLayout[k];

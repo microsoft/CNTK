@@ -9,10 +9,10 @@ RootDir = "." ; DataDir  = "$RootDir$" ; ModelDir = "$RootDir$/Output/Models"
 modelPath = "$ModelDir$/ConvNetBN"
 
 # Training with BN
-TrainConvNetWithBN = [
+TrainConvNetWithBN = {
     action = "train"
 
-    BrainScriptNetworkBuilder = [
+    BrainScriptNetworkBuilder = {
         imageShape = 32:32:3
         labelDim = 10
 
@@ -51,9 +51,9 @@ TrainConvNetWithBN = [
         criterionNodes  = (ce)
         evaluationNodes = (errs)
         outputNodes     = (z)
-    ]
+    }
 
-    SGD = [
+    SGD = {
         epochSize = 49984 ; minibatchSize = 64
 
         learningRatesPerSample = 0.00046875*5:0.00015625
@@ -63,29 +63,29 @@ TrainConvNetWithBN = [
         dropoutRate = 0
 
         firstMBsToShowResult = 10 ; numMBsToShowResult = 500
-    ]
+    }
 
-    reader = [
+    reader = {
         readerType = "CNTKTextFormatReader"
         file = "$DataDir$/Train_cntk_text.txt"
-        input = [
-            features = [ dim = 3072 ; format = "dense" ]
-            labels   = [ dim = 10 ;   format = "dense" ]
-        ]
-    ]
-]
+        input = {
+            features = { dim = 3072 ; format = "dense" }
+            labels   = { dim = 10 ;   format = "dense" }
+        }
+    }
+}
 
 # Eval action
-Eval = [
+Eval = {
     action = "eval"
     minibatchSize = 16
     evalNodeNames = errs:top5Errs  # also test top-5 error rate
-    reader = [
+    reader = {
         readerType = "CNTKTextFormatReader"
         file = "$DataDir$/Test_cntk_text.txt"
-        input = [
-            features = [ dim = 3072 ; format = "dense" ]
-            labels   = [ dim = 10 ;   format = "dense" ]
-        ]
-    ]
-]
+        input = {
+            features = { dim = 3072 ; format = "dense" }
+            labels   = { dim = 10 ;   format = "dense" }
+        }
+    }
+}
