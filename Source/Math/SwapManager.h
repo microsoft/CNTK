@@ -11,6 +11,7 @@
 #include <string>
 #include <utility>
 #include <set>
+#include <vector>
 
 extern bool g_useMemorySwapping;
 

@@ -1835,14 +1835,14 @@ public:
     }
 
     // these two implement the ComputationNode<> interface
-    void ForwardProp(const FrameRange& fr) override final
+    void ForwardProp(const FrameRange& fr) override
     {
         if (fr.IsAllFrames())
             ForwardPropNonLooping();
         else
             LogicError("%ls: %s node should never be in a loop.", Base::NodeDescription().c_str(), typeid(*this).name());
     }
-    void BackpropTo(const size_t inputIndex, const FrameRange& fr) override final
+    void BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
         if (fr.IsAllFrames())
             BackpropToNonLooping(inputIndex);
