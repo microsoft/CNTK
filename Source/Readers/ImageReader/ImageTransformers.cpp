@@ -664,6 +664,11 @@ void ColorTransformer::Apply(size_t id, cv::Mat &mat)
     if (m_curBrightnessRadius == 0 && m_curContrastRadius == 0 && m_curSaturationRadius == 0)
         return;
 
+    // Have to convert to float
+    int type = m_precision == ElementType::tfloat ? CV_32F : CV_64F;
+    if (mat.type() != type)
+        mat.convertTo(mat, type);
+
     if (mat.type() == CV_64FC(mat.channels()))
         Apply<double>(mat);
     else if (mat.type() == CV_32FC(mat.channels()))
@@ -677,11 +682,6 @@ void ColorTransformer::Apply(cv::Mat &mat)
 {
     auto seed = GetSeed();
     auto rng = m_rngs.pop_or_create([seed]() { return std::make_unique<std::mt19937>(seed); });
-
-    // Have to convert to float
-    int type = m_precision == ElementType::tfloat ? CV_32F : CV_64F;
-    if (mat.type() != type)
-        mat.convertTo(mat, type);
 
     if (m_curBrightnessRadius > 0 || m_curContrastRadius > 0)
     {
