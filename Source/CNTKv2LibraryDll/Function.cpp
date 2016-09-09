@@ -20,7 +20,7 @@
 using namespace Microsoft::MSR::CNTK;
 
 bool g_shareNodeValueMatrices = true;
-//extern bool g_useMemorySwapping;
+extern bool g_useMemorySwapping;
 
 namespace CNTK
 {
