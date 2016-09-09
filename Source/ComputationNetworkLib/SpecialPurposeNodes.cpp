@@ -72,8 +72,8 @@ template <class ElemType>
 /*virtual*/ void TraceNode<ElemType>::ForwardProp(const FrameRange& fr) /*override*/
 {
     size_t rank = DetermineElementwiseTensorRank();
-    auto result =           ValueTensorFor(rank, fr);
-    auto input  = Input(0)->ValueTensorFor(rank, fr);
+    auto result =             ValueTensorFor(rank, fr);
+    auto input  = InputRef(0).ValueTensorFor(rank, fr);
     result.AssignCopyOf(input);
 
 	// do the tracing
@@ -86,8 +86,8 @@ template <class ElemType>
     assert(inputIndex == 0); inputIndex;
 
     size_t rank = DetermineElementwiseTensorRank();
-    auto sliceOutputGrad =           GradientTensorFor(rank, fr);      // propagate from this one...
-    auto sliceInputGrad  = Input(0)->GradientTensorFor(rank, fr);      // ...to this one
+    auto sliceOutputGrad =             GradientTensorFor(rank, fr);      // propagate from this one...
+    auto sliceInputGrad  = InputRef(0).GradientTensorFor(rank, fr);      // ...to this one
 
     sliceInputGrad.AddCopyOf(sliceOutputGrad);
 
@@ -123,8 +123,8 @@ template <class ElemType>
             fprintf(stderr, "%d", (int)timeRange.first);
         else if (timeRange.second > timeRange.first + 1)
             fprintf(stderr, "%d..%d", (int)timeRange.first, (int)timeRange.second-1);
-        fprintf(stderr, "] %ls %s--> %s\n", m_message.c_str(), logGradientInstead ? "(gradient) " : "", Input(0)->FormatOperationPrototype("").c_str());
-        Input(0)->WriteMinibatchWithFormatting(stderr, fr, m_onlyUpToRow, m_onlyUpToT, m_formattingOptions.transpose, m_formattingOptions.isCategoryLabel, m_formattingOptions.isSparse, m_labelMapping,
+        fprintf(stderr, "] %ls %s--> %s\n", m_message.c_str(), logGradientInstead ? "(gradient) " : "", InputRef(0).FormatOperationPrototype("").c_str());
+        InputRef(0).WriteMinibatchWithFormatting(stderr, fr, m_onlyUpToRow, m_onlyUpToT, m_formattingOptions.transpose, m_formattingOptions.isCategoryLabel, m_formattingOptions.isSparse, m_labelMapping,
                                                sequenceSeparator, sequencePrologue, sequenceEpilogue, elementSeparator, sampleSeparator,
 											   valueFormatString, logGradientInstead);
     }

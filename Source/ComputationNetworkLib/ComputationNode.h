@@ -1103,6 +1103,13 @@ protected:
         return DownCast(m_inputs[inputIndex]);
     }
 
+    // Fast downcast without runtime type check.
+    inline ComputationNode<ElemType>& InputRef(const size_t inputIndex) const
+    {
+        return static_cast<ComputationNode<ElemType>&>(*m_inputs[inputIndex].get());
+    }
+
+
     void /*ComputationNodeBase::*/ SetInput(const size_t childIndex, const ComputationNodeBasePtr& inode) override
     {
         ClearConfigMemberCache();
@@ -1999,6 +2006,7 @@ protected:                                                                      
     using Base::HasMBLayout;                                                                                                                             \
     using Base::InferMBLayoutFromInputsForStandardCase;                                                                                                  \
     using Base::Input;                                                                                                                                   \
+    using Base::InputRef;                                                                                                                                \
     using Base::InputUsedInComputingInputNodesGradients;                                                                                                 \
     using Base::InvalidateMissingGradientColumns;                                                                                                        \
     using Base::InvalidateMissingValueColumns;                                                                                                           \
