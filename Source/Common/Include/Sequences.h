@@ -9,7 +9,7 @@
 
 #include <vector>
 #include <memory> // for shared_ptr
-#include <atomic>
+#include <mutex>
 #include "Basics.h"
 #include "Matrix.h"
 
@@ -268,11 +268,17 @@ public:
     void SetAxisName(const std::wstring& name) { m_axisName = name; }
     void SetUniqueAxisName(std::wstring name) // helper for constructing
     {
-        static atomic_ullong index = ATOMIC_VAR_INIT(0);
+        // Unfortunatelly, the following initialization of local static variables is not thread-safe in VS2013.
+        // The mutex is need to make access to nameIndices be thread-safe.
+        static std::mutex nameIndiciesMutex;
+        static std::map<std::wstring, size_t> nameIndices;
+        size_t index;
 
-        // To make this function thread-safe, a global index is used instead of that is bound to a specific name.
-        // However, this means that the index for a specific name is not continuously.
-        atomic_fetch_add(&index, (unsigned long long int) 1);
+        // Use the block to make sure that nameIndiciesMutex is unlocked as soon as possible.
+        {
+            std::unique_lock<std::mutex> lock(nameIndiciesMutex);
+            index = nameIndices[name]++;
+        }
 
         if (index > 0)
             name += msra::strfun::wstrprintf(L"%d", (int)index);
