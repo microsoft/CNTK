@@ -54,7 +54,7 @@ class NetworkInformation
         SwapManager<double> *m_syncManagerDouble;
         
     public:
-		NetworkInformation::NetworkInformation()
+		NetworkInformation()
 		{
 			m_syncManagerFloat = new SwapManager<float>();
 			m_syncManagerDouble = new SwapManager<double>();
