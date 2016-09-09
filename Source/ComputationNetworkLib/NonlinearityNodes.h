@@ -50,7 +50,7 @@ public:
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
         size_t rank = DetermineElementwiseTensorRank();
-        auto result =           ValueTensorFor(rank, fr);
+        auto result =             ValueTensorFor(rank, fr);
         auto input  = InputRef(0).ValueTensorFor(rank, fr);
         result.DoUnaryOpOf(0, input, 1, opForward, opSum);
     }
@@ -61,7 +61,7 @@ public:
 
         // get the args
         size_t rank = DetermineElementwiseTensorRank();
-        auto sliceOutputGrad =           GradientTensorFor(rank, fr); // propagate from this one...
+        auto sliceOutputGrad =             GradientTensorFor(rank, fr); // propagate from this one...
         auto sliceInputGrad  = InputRef(0).GradientTensorFor(rank, fr); // ...to this one
 
         GradientOperationType opTypeHolder = opType;  // preventing pragma warning C4127
@@ -544,10 +544,10 @@ public:
         if (inputIndex == 2)
         {
             size_t rank = DetermineElementwiseTensorRank();
-            auto gradient =                         GradientTensorFor(rank, fr);
+            auto gradient =                           GradientTensorFor(rank, fr);
             auto inputGradient = InputRef(inputIndex).GradientTensorFor(rank, fr.AllowBroadcast());
             auto input =         InputRef(inputIndex).ValueTensorFor(rank, fr.AllowBroadcast());
-            auto output =                           ValueTensorFor(rank, fr.AllowBroadcast());
+            auto output =                             ValueTensorFor(rank, fr.AllowBroadcast());
 
             inputGradient.AddCopyIfEqualOf(input, output, gradient);
         }        
