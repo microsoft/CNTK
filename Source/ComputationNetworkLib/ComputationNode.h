@@ -945,7 +945,7 @@ public:
     // public constructor
     // Note: use the New<> helper function that is declared next, which gives you the convenience of returning a shared_ptr
     ComputationNode(DEVICEID_TYPE deviceId, const wstring& name)
-        : ComputationNodeBase(deviceId, name)
+        : ComputationNodeBase(deviceId, name), m_valueView()
     {
     }
 
@@ -1277,7 +1277,7 @@ public:
         return GradientFor(fr);
     }
     // tensor version of the above functions
-    TensorView<ElemType> DataTensorFor(const MatrixBasePtr& data, size_t rank, const FrameRange& fr)
+    const TensorView<ElemType> DataTensorFor(const MatrixBasePtr& data, size_t rank, const FrameRange& fr)
     {
         try
         {
@@ -1288,10 +1288,31 @@ public:
             Rethrow(e);
         }
     }
-    TensorView<ElemType> ValueTensorFor(size_t rank, const FrameRange& fr)
+
+    // Optimization during forward pass.
+    TensorView<ElemType>& DataTensorRefFor(TensorView<ElemType>& view, size_t rank, const FrameRange& fr)
+    {
+        try
+        {
+            view.ReshapeTo(GetTensorSliceFor(rank, fr));
+            return view;
+        }
+        catch (const std::exception& e) // catch the error and rethrow it with the node name attached
+        {
+            Rethrow(e);
+        }
+    }
+
+    const TensorView<ElemType> ValueTensorFor(size_t rank, const FrameRange& fr)
     {
         return DataTensorFor(ValuePtr(), rank, fr);
     }
+
+    TensorView<ElemType>& ValueTensorRefFor(size_t rank, const FrameRange& fr)
+    {
+        return DataTensorRefFor(m_valueView, rank, fr);
+    }
+
     TensorView<ElemType> GradientTensorFor(size_t rank, const FrameRange& fr)
     {
         return DataTensorFor(GradientPtr(), rank, fr);
@@ -1493,6 +1514,7 @@ public:
             RequestMatrixFromPool(m_value, matrixPool);
         else
             CreateMatrixIfNull(m_value);
+        m_valueView = TensorView<ElemType>(m_value, TensorShape(array<size_t, 2>{m_value->GetNumRows(), m_value->GetNumCols()}));
     }
 
     // release temp matrices that are only used by forward computation
@@ -1755,6 +1777,9 @@ public:
 protected:
 
     shared_ptr<Matrix<ElemType>> m_value, m_gradient;
+
+    // Default view on the value
+    TensorView<ElemType> m_valueView;
 
     static std::map<size_t, std::map<size_t, shared_ptr<Matrix<ElemType>>>> s_constOnes;
 };
@@ -2046,6 +2071,7 @@ protected:                                                                      
     using Base::ValueFor;                                                                                                                                \
     using Base::ValuePtr;                                                                                                                                \
     using Base::ValueTensorFor;                                                                                                                          \
+    using Base::ValueTensorRefFor;                                                                                                                          \
     using Base::VerifyDataSize;                                                                                                                          \
     using Base::VerifyDims;                                                                                                                              \
     using Base::WriteMinibatchWithFormatting;                                                                                                            \

@@ -364,7 +364,7 @@ public:
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
         size_t rank = DetermineElementwiseTensorRank();
-        auto output =                                ValueTensorFor(           rank, fr);
+        auto output =                                ValueTensorRefFor(           rank, fr);
         let   input = TensorView<ElemType>(InputRef(0).ValuePtr(), GetInputSlice(rank, fr.AllowBroadcast()));
         output.AssignCopyOf(input);
     }
@@ -472,7 +472,7 @@ public:
 
         for (size_t inputIndex = 0; inputIndex < GetNumInputs(); inputIndex++)
         {
-            let input = InputRef(inputIndex).ValueTensorFor(rank, fr.AllowBroadcast());
+            let input = InputRef(inputIndex).ValueTensorRefFor(rank, fr.AllowBroadcast());
             let outputSubSlice = NarrowToStripe(outputSlice, inputIndex);
             auto output = TensorView<ElemType>(ValuePtr(), outputSubSlice);
             output.AssignCopyOf(input);

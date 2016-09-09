@@ -61,8 +61,8 @@ template <class ElemType>
 {
     // get the args
     size_t rank = DetermineElementwiseTensorRank();
-    auto result =             ValueTensorFor(rank, fr);
-    auto input  = InputRef(0).ValueTensorFor(rank, fr);
+    auto result =             ValueTensorRefFor(rank, fr);
+    auto input  = InputRef(0).ValueTensorRefFor(rank, fr);
 
     // the actual operation is a Copy with reduction, where the magic is in the reduction op
     // For "Mean", m_scale is 1/#elements, and 1 otherwise.
@@ -90,8 +90,8 @@ template <class ElemType>
 
     case ElementWiseOperator::opLogSum:
         {
-            auto input = InputRef(inputIndex).ValueTensorFor(rank, fr);
-            auto output = ValueTensorFor(rank, fr.AllowBroadcast());
+            auto input = InputRef(inputIndex).ValueTensorRefFor(rank, fr);
+            auto output = ValueTensorRefFor(rank, fr.AllowBroadcast());
             // Let: f(x, y, z) = log(exp x + exp y + exp z)
             // For the derivative we get:
             // df / dx = exp(x)/exp(f)
@@ -102,8 +102,8 @@ template <class ElemType>
 
     case ElementWiseOperator::opMin:
     case ElementWiseOperator::opMax:
-        auto input = InputRef(inputIndex).ValueTensorFor(rank, fr);
-        auto output = ValueTensorFor(rank, fr.AllowBroadcast());
+        auto input = InputRef(inputIndex).ValueTensorRefFor(rank, fr);
+        auto output = ValueTensorRefFor(rank, fr.AllowBroadcast());
 
         // POTENTIAL PROBLEM:
         // For ReduceMin/Max there are combinations of input values where the gradient is not defined because the function has an edge at these points.

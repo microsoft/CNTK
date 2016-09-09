@@ -103,7 +103,7 @@ void OptimizedRNNStackNode<ElemType>::ForwardProp(const FrameRange& fr)
     MBLayoutPtr mb = GetMBLayout();
     if (m_rnnAttributes.IsSpatialRecurrence())
     {
-        TensorView<ElemType> outputY = ValueTensorFor(SIZE_MAX, fr);
+        TensorView<ElemType> outputY = ValueTensorRefFor(SIZE_MAX, fr);
 
         // ensure enough storage.
         m_transposedOutput->Resize(           Value());
