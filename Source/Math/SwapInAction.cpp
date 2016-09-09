@@ -40,13 +40,14 @@ template <typename ElemType> SwapInAction<ElemType>::SwapInAction(SwapOutAction<
 template <typename ElemType> void SwapInAction<ElemType>::BeginAction()
 {
 #ifndef CPUONLY
-   if(!this->m_swpout->m_hasDoneInitialSwap){ return; }
-   if(!this->m_swpout->m_isSwappedOut){ return; }
+    // we do not need to swap in when nothing was swapped out
+    if(!this->m_swpout->m_isSwappedOut){ return; }
 
-   this->m_bufferGPU->Resize(this->m_swpout->GetRows(),this->m_swpout->GetCols(), 0, false);
-   size_t bytes = this->m_swpout->GetRows()*this->m_swpout->GetCols()*sizeof(ElemType);
+    // we remembered the dimension when we swapped this buffer out; use them now
+    this->m_bufferGPU->Resize(this->m_swpout->GetRows(),this->m_swpout->GetCols(), 0, false);
+    size_t bytes = this->m_swpout->GetRows()*this->m_swpout->GetCols()*sizeof(ElemType);
 
-   CUDA_CALL(cudaMemcpyAsync(this->m_bufferGPU->Data(), this->m_swpout->GetCPUMatrix(), bytes, cudaMemcpyDefault, this->m_swapInStream));
+    CUDA_CALL(cudaMemcpyAsync(this->m_bufferGPU->Data(), this->m_swpout->GetCPUMatrix(), bytes, cudaMemcpyDefault, this->m_swapInStream));
 #endif
 }
 
@@ -54,12 +55,12 @@ template <typename ElemType> void SwapInAction<ElemType>::BeginAction()
 template <typename ElemType> void SwapInAction<ElemType>::EndAction()
 {
 #ifndef CPUONLY
-   if(!this->m_swpout->m_hasDoneInitialSwap){ return; }
-   if(!this->m_swpout->m_isSwappedOut){ return; }
+    // we do not need to swap in when nothing was swapped out
+    if(!this->m_swpout->m_isSwappedOut){ return; }
 
+    // synchronize
     CUDA_CALL(cudaStreamSynchronize(this->m_swapInStream));
-    cout << "Swapped in: " << this->m_bufferGPU << ", " << this->m_bufferGPU->BufferSize()/1024./1024./1024. << "GB" << endl;
-   this->m_swpout->m_isSwappedOut = false;
+    this->m_swpout->m_isSwappedOut = false;
 #endif
 }
 

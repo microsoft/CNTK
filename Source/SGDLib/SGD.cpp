@@ -996,8 +996,6 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                 if (learnRatePerSample > 0.01 * m_minLearnRate) // only compute gradient when learning rate is large enough
                     net->Backprop(criterionNodes[0]);
 
-                //float t = m_timer->tock();
-                //cout << t << endl;
                 // house-keeping for sub-minibatching
                 if (actualNumSubminibatches > 1)
                     smbDispatcher.DoneWithCurrentSubMinibatch(ismb); // page state out
@@ -1791,8 +1789,6 @@ void SGD<ElemType>::TrainOneMiniEpochAndReloadModel(ComputationNetworkPtr net,
                                                     /*out*/ std::vector<EpochCriterion>& epochEvalErrors,
                                                     std::string prefixMsg)
 {
-    //bool temp = net->NetworkInfo().GetSwapManager<ElemType>()->m_useMemorySwapping;
-    //net->NetworkInfo().GetSwapManager<ElemType>()->m_useMemorySwapping = false;
     TrainOneEpoch(net, refNet, refNode, epochNumber, epochSize,
                   trainSetDataReader, learnRatePerSample, minibatchSize, featureNodes,
                   labelNodes, criterionNodes, evaluationNodes,
@@ -1820,7 +1816,6 @@ void SGD<ElemType>::TrainOneMiniEpochAndReloadModel(ComputationNetworkPtr net,
                        smoothedGradients,
                        /*out*/ dummyPrevCriterion,
                        /*out*/ dummyMinibatchSize);
-    //net->NetworkInfo().GetSwapManager<ElemType>()->m_useMemorySwapping = temp;
 }
 
 // Attemps to compute the error signal for the whole utterance, which will

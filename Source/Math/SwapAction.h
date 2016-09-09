@@ -10,8 +10,6 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-template <typename ElemType> class Matrix;
-
 template <typename ElemType>
 class SwapAction
 {
@@ -26,8 +24,8 @@ protected:
 public:
     ~SwapAction(){};
     virtual void BeginAction() = 0; // for starting asynchronous actions
-    virtual void EndAction() = 0; // for synchronization and cleanup
-    virtual void ReleaseMemory() = 0;
+    virtual void EndAction() = 0; // for synchronization
+    virtual void ReleaseMemory() = 0; // for cleanup
     Matrix<ElemType> *GetGPUMatrix(){ return m_bufferGPU; }
     ElemType *GetCPUMatrix(){ return m_bufferCPU; }
 

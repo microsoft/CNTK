@@ -36,18 +36,17 @@ class SwapManager
 {
 
 private:
+    // these keep track of all the buffers along with their actions
     std::unordered_map<Matrix<ElemType>*, SwapInAction<ElemType>*> m_buffer2SwapIn;
     std::unordered_map<Matrix<ElemType>*, SwapOutAction<ElemType>*> m_buffer2SwapOut;
 
     std::unordered_map<ComputationNodeBase*, std::vector<SwapAction<ElemType>*> > m_node2ForwardSwapOut;
     std::unordered_map<ComputationNodeBase*, std::vector<SwapAction<ElemType>*> > m_node2BackwardSwapin;
     std::unordered_map<ComputationNodeBase*, std::vector<Matrix<ElemType>*> > m_node2BackwardFree;
-    // singleton constructor
+
+    bool m_useMemorySwapping;
 
     void CleanUp();
-    float FreeGPUMemoryInGB();
-    float m_minFreeMemory;
-
 public:
     SwapManager();
     ~SwapManager(){};
@@ -55,7 +54,6 @@ public:
     void BeginSynchronizeState(ComputationNodeBase *node, bool isForward, bool isTraining);
     // this is called AFTER a ForwardProp / BackpropTo method call
     void EndSynchronizeState(ComputationNodeBase *node, bool isForward, bool isTraining);
-    bool m_useMemorySwapping;
     void ClearActionsAndTheirMemory();
     void InitializeSwapping(std::unordered_map<ComputationNodeBase*, std::vector<Matrix<ElemType>*> > forwardSwapOutNodes2matrices,
     std::unordered_map<ComputationNodeBase*, std::vector<Matrix<ElemType>*> > backwardSwapInNodes2matrices,

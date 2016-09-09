@@ -25,7 +25,6 @@ template <typename ElemType> SwapOutAction<ElemType>::SwapOutAction(Matrix<ElemT
 
         this->m_bufferCPU = NULL;
         this->m_bufferGPU = GPUbuffer;
-        this->m_hasDoneInitialSwap = false;
 		this->m_rows = this->m_bufferGPU->GetNumRows();
 		this->m_cols = this->m_bufferGPU->GetNumCols();
 		this->m_bytes = this->m_rows*this->m_cols*sizeof(ElemType);
@@ -36,7 +35,7 @@ template <typename ElemType> SwapOutAction<ElemType>::SwapOutAction(Matrix<ElemT
         CUDA_CALL(cudaStreamCreate(&stream));
         this->m_streamAsync = stream;
 
-        // do we already have a pinned, that is page-locked buffer?
+        // do we already have a pinned / page-locked buffer?
 		if (!this->m_bufferCPU){ allocatePinnedBuffer(); }
 #endif
 }
@@ -49,7 +48,6 @@ template <typename ElemType> SwapOutAction<ElemType>::~SwapOutAction()
 template <typename ElemType> void SwapOutAction<ElemType>::BeginAction()
 {
 #ifndef CPUONLY
-    // perform the actual asynchronous copy
     if(this->m_rows != this->m_bufferGPU->GetNumRows() ||
        this->m_cols != this->m_bufferGPU->GetNumCols())
        {
@@ -62,7 +60,7 @@ template <typename ElemType> void SwapOutAction<ElemType>::BeginAction()
             allocatePinnedBuffer();
        }
 
-    cout << "Begin swapping out: " << this->m_bufferGPU << ", " << this->m_bufferGPU->GetNumRows() << "x" << this->m_bufferGPU->GetNumCols() << ", " << this->m_rows*this->m_cols*sizeof(ElemType)/1024./1024./1024. << "GB" << endl;
+    // perform the actual asynchronous copy
     CUDA_CALL(cudaMemcpyAsync(this->m_bufferCPU, this->m_bufferGPU->Data(), this->m_bytes, cudaMemcpyDefault, this->m_streamAsync));
 #endif
 }
@@ -71,13 +69,14 @@ template <typename ElemType> void SwapOutAction<ElemType>::BeginAction()
 template <typename ElemType> void SwapOutAction<ElemType>::EndAction()
 {
 #ifndef CPUONLY
+    // synchronize the swap out
     CUDA_CALL(cudaStreamSynchronize(m_streamAsync));
     this->m_rows = this->m_bufferGPU->GetNumRows();
     this->m_cols = this->m_bufferGPU->GetNumCols();
     this->m_bytes = this->m_rows*this->m_cols*sizeof(ElemType);
-    //cout << "Swapped out: " << this->m_bufferGPU << ", " << this->m_bufferGPU->GetNumRows() << "x" << this->m_bufferGPU->GetNumCols() << ", " << this->m_rows*this->m_cols*sizeof(ElemType)/1024./1024./1024. << "GB" << endl;
+
+    // this frees the memory
     this->m_bufferGPU->Resize(0,0,0, false);
-    m_hasDoneInitialSwap = true;
     m_isSwappedOut = true;
 #endif
 
