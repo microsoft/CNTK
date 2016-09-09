@@ -606,8 +606,7 @@ def round(arg, name=''):
         :class:`cntk.Function`
     '''
     from cntk import round
-    left = sanitize_input(left, get_data_type(right))
-    right = sanitize_input(right, get_data_type(left))
+    arg = sanitize_input(arg, get_data_type(arg))
     return round(arg, name).output()
 
 ################################################################################
