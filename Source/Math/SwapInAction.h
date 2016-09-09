@@ -26,8 +26,6 @@ public:
 private:
     cudaStream_t m_swapInStream;
     SwapOutAction<ElemType> *m_swpout;
-    int m_batchSize;
-
 };
 
 }}}

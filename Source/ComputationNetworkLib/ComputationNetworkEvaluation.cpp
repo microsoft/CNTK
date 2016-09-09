@@ -150,12 +150,6 @@ ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(con
                     node->GetNetworkInfoPtr()->GetSwapManager<float>()->BeginSynchronizeState(node.get(), true, node->Environment().IsTraining());
                 else
                     node->GetNetworkInfoPtr()->GetSwapManager<double>()->BeginSynchronizeState(node.get(), true, node->Environment().IsTraining());
-				
-                //cout <<"PAR NETWORK FRONT: " << nodename << " needs gradient:" << node->NeedsGradient() << " " << node->ValuePtr() << " " << node->GradientPtr()<< endl;
-                for(auto inputNode : node->GetInputs())
-                {
-                    //cout << "INPUT: " << inputNode->ValuePtr() << " " << inputNode->GradientPtr() << endl;
-                }
 
             node->ForwardProp(fr.WithLayout(node->GetMBLayout()));
 
@@ -188,15 +182,6 @@ ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(con
 		else
 			node->GetNetworkInfoPtr()->GetSwapManager<double>()->BeginSynchronizeState(node.get(), false, node->Environment().IsTraining());
 		
-
-        //cout <<"PAR NETWORK BACK: " << nodename << " needs gradient:" << node->NeedsGradient() << " " << node->ValuePtr() << " " << node->GradientPtr()<< endl;
-        for(auto inputNode : node->GetInputs())
-        {
-            //cout << "INPUT: " << inputNode->ValuePtr() << " " << inputNode->GradientPtr() << endl;
-        }
-
-
-
         node->Backprop(fr.WithLayout(node->GetMBLayout()), true /*childrenInThisLoop*/, true /*childrenInOuterLoop*/);
 		
         if(node->GetNetworkInfoPtr() != nullptr)
@@ -901,6 +886,7 @@ void ComputationNetwork::PrintMemorySharingStructure(const vector<ComputationNod
     fprintf(stderr, "\n");
 }
 
+// Analysete void ComputationNetwork::InitMemorySwapping<double>(const std::vector<ComputationNodeBasePtr
 template void ComputationNetwork::InitMemorySwapping<double>(const std::vector<ComputationNodeBasePtr>& evalRootNodes,
                                              const std::vector<ComputationNodeBasePtr>& outValueRootNodes,
                                              ComputationNodeBasePtr trainRootNode);
@@ -960,11 +946,9 @@ void ComputationNetwork::InitMemorySwapping(const std::vector<ComputationNodeBas
     // create a child2parents map for all nodes
     std::unordered_map<Matrix<ElemType>*, std::unordered_set<Matrix<ElemType>*>> child2parents;
     std::unordered_map<Matrix<ElemType>*, std::unordered_set<Matrix<ElemType>*>> matrix2LoopMembers;
-    std::unordered_map<Matrix<ElemType>*, std::string> matrix2nodename;
     for(auto node : compositeForwardPropEvalOrder)
     {
         Matrix<ElemType>* valueBuffer = (Matrix<ElemType>*)node->ValuePtr().get();
-        //std::string nodename = std::string(node->NodeName().begin(), node->NodeName().end());
 
         if (node->IsPartOfLoop())
         {
@@ -973,37 +957,23 @@ void ComputationNetwork::InitMemorySwapping(const std::vector<ComputationNodeBas
             for (auto& nodeLoopIter : recInfo->m_nestedNodes)
             {
                 Matrix<ElemType> *loopValue = (Matrix<ElemType>*)nodeLoopIter->ValuePtr().get();
+                // we do not swap sharable buffers
                 if(!node->IsValueSharable())
                     matrix2LoopMembers[valueBuffer].insert(loopValue);
             }
         }
 
        
+        // we do not swap sharable buffers
         if(!node->IsValueSharable())
             matrix2LoopMembers[valueBuffer].insert(valueBuffer);
 
-        std::string parent = std::string(node->NodeName().begin(), node->NodeName().end());
-        cout << parent << " " << valueBuffer << " " << node->RequiresPreCompute() << " " << node->IsValueSharable() << " " << node->IsPartOfLoop() << endl;
-        matrix2nodename[valueBuffer] = parent;
         for(int i = 0; i < node->GetNumInputs(); i++)
         {
-            //std::string child = std::string(node->Input(i)->NodeName().begin(), node->Input(i)->NodeName().end());
             Matrix<ElemType> *inputBuffer = (Matrix<ElemType>*)node->Input(i)->ValuePtr().get();
             child2parents[inputBuffer].insert(valueBuffer);
         }
     }
-
-    //for (auto& nodeIter : compositeForwardPropEvalOrder)
-    //{
-    //    std::string nodename = std::string(nodeIter->NodeName().begin(), nodeIter->NodeName().end());
-    //    int numInputs = nodeIter->GetNumInputs();
-    //    for(int i = 0; i < numInputs; i++)
-    //    {
-    //        std::string inputName = std::string(nodeIter->Input(i)->NodeName().begin(), nodeIter->Input(i)->NodeName().end());
-
-    //        cout << nodename << " " << inputName << endl;
-    //    }
-    //}
 
     // 2a find when a buffer is no longer needed in the forward pass
     std::unordered_map<Matrix<ElemType>*, ComputationNodeBase*> matrix2SwapOutNode;
@@ -1026,8 +996,6 @@ void ComputationNetwork::InitMemorySwapping(const std::vector<ComputationNodeBas
             if(child2parents[buffer].size() == 0){ continue; }
 
             // we remove the parent from the parent map
-            //cout << "parent " << nodename << " " << valueBuffer << endl;
-            //cout << "parent " << nodename << " input " << inputName << " count " << child2parents[buffer].size() << endl;
             child2parents[buffer].erase(std::find(child2parents[buffer].begin(), child2parents[buffer].end(), valueBuffer), child2parents[buffer].end());
 
             bool swapOut = true;
@@ -1039,24 +1007,13 @@ void ComputationNetwork::InitMemorySwapping(const std::vector<ComputationNodeBas
                 else{ swapOut = false; }
             }
 
-            //cout << nodename << " member: " << matrix2LoopMembers[buffer].size() <<  " " << swapOut << endl;
-            // if the output is part of the loop, wait for the whole loop to be finished
- //           for(auto loopMember : matrix2LoopMembers[valueBuffer])
- //           {
- //               if(child2parents[loopMember].size() == 0){ swapOut &= true; }
- //               else{ swapOut = false; }
- //           }
-
-            // if all output and input dependencies are fulfilled proceed with swap-out
+            // if all output and dependencies are fulfilled proceed with swap-out the entire loop
             if(swapOut)
             {
                 // swap out all members of the loop
+                // if non-loops the loop will just contain the node valueptr itself
                 for(auto loopMember : matrix2LoopMembers[buffer])
-                {
-                    //cout << "loop: " << buffer << " " << loopMember << endl;
-
                     matrix2SwapOutNode[loopMember] = nodeIter.get();
-                }
             }
        }
     }
@@ -1073,7 +1030,7 @@ void ComputationNetwork::InitMemorySwapping(const std::vector<ComputationNodeBas
         for(auto node : backPropNodes)
             nodesForBackProp.insert(node.get());
 
-        // swap-ins for backward pass
+        // determine the swap-ins for the backward pass
         for (auto iter = backPropNodes.rbegin(); iter != backPropNodes.rend(); iter++)
         {
             auto n = *iter;
@@ -1081,7 +1038,6 @@ void ComputationNetwork::InitMemorySwapping(const std::vector<ComputationNodeBas
             Matrix<ElemType> *bufferValue;
             Matrix<ElemType> *bufferGrad;
 
-            //std::string nodename = std::string(n->NodeName().begin(), n->NodeName().end());
             // check swap-ins for the inputs of each respective node
             for(int i = 0; i < numInputs; i++)
             {
@@ -1131,6 +1087,8 @@ void ComputationNetwork::InitMemorySwapping(const std::vector<ComputationNodeBas
 
     }
 
+    // 3. begins here:
+    // 3. Some buffers must not be swapped (pre-compute) or freed (weights); remove these nodes
 
     // do not free learningable parameters after backward pass because we need them
     // during the gradient update
@@ -1142,10 +1100,11 @@ void ComputationNetwork::InitMemorySwapping(const std::vector<ComputationNodeBas
     }
 
     // remove precompute nodes
+    // precompute nodes can cause lot of problems and are not worth the trouble, because
+    // they are exchanged for constants which are usually small
     for(auto pair :  PreComputedNodes2bool)
     {
         Matrix<ElemType> *buffer = (Matrix<ElemType>*)pair.first->ValuePtr().get();
-        //std::string nodename = std::string(node->NodeName().begin(), node->NodeName().end());
         if(matrix2SwapOutNode.count(buffer) > 0)
             matrix2SwapOutNode.erase(buffer);
 
@@ -1156,8 +1115,9 @@ void ComputationNetwork::InitMemorySwapping(const std::vector<ComputationNodeBas
             matrix2LastUsageNode.erase(buffer);
     }
 
-    // remove sparse input nodes
-    // BUGBUG: There is one tests Text/SparseDSSM that fails due to a dynamically changing input node, so we ignore input nodes altogether?!
+    // remove input nodes
+    // InputNodes can cause problems with things happening outside of the Forward/Backprop functions.
+    // This is mainly done due to Text/SparseDSSM that fails due to a dynamically changing input node
     // probably this can be fixed by someone who understands the Text/SparseDSSM example better than I do
     for (auto node : InputNodes(nullptr))
     {
@@ -1165,14 +1125,6 @@ void ComputationNetwork::InitMemorySwapping(const std::vector<ComputationNodeBas
         if(matrix2SwapOutNode.count(buffer) > 0)// && buffer->GetMatrixType() == MatrixType::SPARSE)
             matrix2SwapOutNode.erase(buffer);
     }
-
-    //for (auto node : OutputNodes())
-    //{
-    //    Matrix<ElemType> *buffer = (Matrix<ElemType>*)node->ValuePtr().get();
-    //    if(matrix2SwapOutNode.count(buffer) > 0)// && buffer->GetMatrixType() == MatrixType::SPARSE)
-    //        matrix2SwapOutNode.erase(buffer);
-    //}
- 
 
     // remove criterion nodes; when we swap these out we need to swap them back in right
     // away during backprop which makes little sense
@@ -1210,7 +1162,7 @@ void ComputationNetwork::InitMemorySwapping(const std::vector<ComputationNodeBas
             buffersToRemove.push_back(pair.first);
     }
 
-    //BUGBUG: Is this necessary? Can we free buffers that we never swapped out? Should work but this needs to be tested first
+    //TODO: Is this necessary? Can we free buffers that we never swapped out? Should work but this needs to be tested first
     for(auto pair : matrix2LastUsageNode)
     {
        if(matrix2SwapOutNode.count(pair.first) == 0)
@@ -1224,13 +1176,6 @@ void ComputationNetwork::InitMemorySwapping(const std::vector<ComputationNodeBas
 
         if(matrix2LastUsageNode.count(buffer) > 0)
             matrix2LastUsageNode.erase(buffer);
-    }
-
-
-    for(auto pair : matrix2SwapOutNode)
-    {
-        std::string nodename = std::string(pair.second->NodeName().begin(), pair.second->NodeName().end());
-        cout << "swapping out: " << matrix2nodename[pair.first] << " at node : " << nodename << endl;
     }
 
     unordered_map<ComputationNodeBase*, std::vector<Matrix<ElemType>*>> forwardSwapOutDependencyNode2matrices;

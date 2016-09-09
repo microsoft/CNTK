@@ -1611,21 +1611,7 @@ public:
 
     void Save(File& fstream) const override
     {
-        Base::Save(fstream);
-
-        //if(m_saveMean != nullptr)
-        //{
-        //    m_saveMean.get()->SetValue(0);
-        //    m_saveInvStdDev.get()->SetValue(0);
-        //}
-
-        //const Matrix<ElemType>& mean = *m_saveMean.get();
-        //const Matrix<ElemType>& invStd = *m_saveInvStdDev.get();
-        //Matrix<ElemType>& mean = Input(3)->Value();
-        //Matrix<ElemType>& invStd = Input(4)->Value();
-
-        //cout << "save: " << mean.GetNumRows() << "x" << mean.GetNumCols() << endl;
-
+        Base::Save(fstream);      
         fstream << m_spatial;
         fstream << m_normTimeConst;
         fstream << m_blendTimeConst;
@@ -1633,8 +1619,6 @@ public:
         fstream << m_samplesSeen;
         fstream << m_epsilon;
         fstream << m_useCntkEngine;
-        //fstream << mean;
-        //fstream << invStd;
     }
 
     void Load(File& fstream, size_t modelVersion) override
@@ -1643,17 +1627,7 @@ public:
         Base::Load(fstream, modelVersion);
 
         if (modelVersion >= CNTK_MODEL_VERSION_6)
-        {
-            //if(m_saveMean != nullptr)
-            //{
-            //	m_saveMean.get()->SetValue(0);
-            //	m_saveInvStdDev.get()->SetValue(0);
-            //}
-            //Matrix<ElemType>& mean = *m_saveMean.get();
-            //Matrix<ElemType>& invStd = *m_saveInvStdDev.get();
-            //Matrix<ElemType>& mean = Input(3)->Value();
-            //Matrix<ElemType>& invStd = Input(4)->Value();
-
+        {            
             fstream >> m_spatial;
             fstream >> m_normTimeConst;
             fstream >> m_blendTimeConst;
@@ -1664,8 +1638,6 @@ public:
                 fstream >> mbCount; // converted below
             fstream >> m_epsilon;
             fstream >> m_useCntkEngine;
-            //fstream >> mean;
-            //fstream >> invStd;
 
         }
         else
