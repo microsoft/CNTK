@@ -222,7 +222,7 @@ private:
         if (headerCPU->numSamples == 0)
         {
             assert(headerCPU->criterion == 0.0);
-            assert(headerCPU->numSamplesWithLabels == 0);
+            assert(headerCPU->numSamplesWithLabel == 0);
             for (int i = 0; i < headerCPU->numEvalNode; ++i)
                 assert(headerCPU->evalErrors[i].first == 0 && headerCPU->evalErrors[i].second == 0);
 
