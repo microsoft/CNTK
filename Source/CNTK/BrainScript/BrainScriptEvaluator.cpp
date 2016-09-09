@@ -257,22 +257,50 @@ static ConfigValuePtr BoolOp(const ExpressionPtr &e, ConfigValuePtr leftVal, Con
     else if (e->op == L"^")  return MakePrimitiveConfigValuePtr(left ^ rightVal.AsRef<Bool>(), MakeFailFn(e->location), exprPath);
     else return CompOp<bool>(e, left, rightVal.AsRef<Bool>(), scope, exprPath);
 };
+// helper for NodeOp to cast a value to ComputationNode if not yet (from Double or Bool)
+static ConfigValuePtr CastToComputationNode(const ConfigValuePtr& val, const IConfigRecordPtr& parentConfig, const wstring &exprPath)
+{
+    // if already a ComputationNode, we are good
+    if (val.Is<ComputationNodeObject>())
+        return val;
+    // if not, construct a value
+    double dval;
+    if (val.Is<Double>())
+        dval = val;
+    else if (val.Is<Bool>())
+        dval = ((bool)val) ? 1 : 0;
+    // construct a Constant() off 'dval' in the ComputationNode constructor.
+    let valFailFn = val.GetFailFn();
+    auto constantConfig = make_shared<ConfigRecord>(parentConfig, valFailFn);
+    constantConfig->Add(L"operation", valFailFn, ConfigValuePtr(make_shared<String>(L"LearnableParameter"), valFailFn, exprPath));
+    constantConfig->Add(L"shape", valFailFn, MakePrimitiveConfigValuePtr((size_t)1, valFailFn, exprPath));
+    constantConfig->Add(L"initValue", valFailFn, val);
+    constantConfig->Add(L"learningRateMultiplier", valFailFn, MakePrimitiveConfigValuePtr(0.0f, valFailFn, exprPath));
+    let value = ConfigValuePtr(FindRuntimeTypeInfo(L"ComputationNode")->construct(constantConfig), valFailFn, exprPath);
+    let valueWithName = dynamic_cast<HasName *>(value.get());
+    if (valueWithName)
+        valueWithName->SetName(value.GetExpressionName());
+    return value; // and that's our type-cast value
+}
+
 // NodeOps handle the magic CNTK types, that is, infix operations between ComputeNode objects.
 // We get here if one or both arguments are a ComputationNode.
+// TODO: also use this with a third value (or rather, call a refactored function with a third arg from here)
 static ConfigValuePtr NodeOp(const ExpressionPtr &e, ConfigValuePtr leftVal, ConfigValuePtr rightVal, const IConfigRecordPtr &scope, const wstring &exprPath)
 {
     // special cases/overloads:
     //  - unary minus -> NegateNode
     //  - product with a scalar
     //  - boolean ops
+    //  - soon: 'if'
     let leftIsDouble  = leftVal.Is<Double>();
     let rightIsDouble = rightVal.Is<Double>();
     let leftIsBool  = leftVal.Is<Bool>();
     let rightIsBool = rightVal.Is<Bool>();
     let hasDouble = leftIsDouble || rightIsDouble;
     let hasBool   = leftIsBool || rightIsBool;
-    hasBool;
     wstring operationName;
+    bool takesBool = false; // instead of Double
     // need to tell whether op deals with bool or double
     if (e->op == L"-(")
     {
@@ -282,13 +310,13 @@ static ConfigValuePtr NodeOp(const ExpressionPtr &e, ConfigValuePtr leftVal, Con
     }
     else if (e->op == L"!(")
     {
-#if 1
-        InvalidInfixOpTypes(e); // TODO: implement this
-#else
+        // TODO: test this
         if (rightVal.get())
             LogicError("unexpected infix op");
-        operationName = L"Minus";  // implement as 1-X
-#endif
+        // transform into 1-x
+        swap(leftVal, rightVal); // -> scalar * ComputeNode
+        leftVal = MakePrimitiveConfigValuePtr(1.0, rightVal.GetFailFn(), exprPath);
+        operationName = L"Minus";  // implement as 1-x
     }
     else if (e->op == L"*")
     {
@@ -297,15 +325,23 @@ static ConfigValuePtr NodeOp(const ExpressionPtr &e, ConfigValuePtr leftVal, Con
     }
     else if (e->op == L"/")
     {
-#if 1
-        InvalidInfixOpTypes(e); // TODO: implement this
-#else
-        // TODO: x/constant --> multiply with inverse; 1/x --> implement as Reciprocal; others: forbid
-        if (rightVal.Is<Double>())   // ComputeNode * scalar
+        if (leftIsDouble) // Double/x --> only allow 1/x, implement as Reciprocal  --TODO: fix once we have ElementDivideBy
+        {
+            // TODO: test this
+            if ((double)leftVal != 1)
+                Fail(L"division by a ComputationNode is currently supported for the reciprocal, 1/x", e->location);
             swap(leftVal, rightVal); // -> scalar * ComputeNode
-        if (leftVal.Is<Double>()) operationName = L"ElementTimes"; // scalar * ComputeNode
-        else                      operationName = L"Times";        // ComputeNode * ComputeNode (matrix produt)
-#endif
+            rightVal = ConfigValuePtr(); // clear it out
+            operationName = L"Reciprocal";  // implement as Reciprocal(y)
+        }
+        else if (rightIsDouble) // x/Double --> implement as x .* (1/Double)
+        {
+            // TODO: test this
+            rightVal = MakePrimitiveConfigValuePtr(1.0 / (double)rightVal, rightVal.GetFailFn(), exprPath); // replace divisor by reciprocal
+            operationName = L"ElementTimes"; // and use multiplication
+        }
+        else
+            Fail(L"division with ComputationNode is currently supported for 1/x and x/'Double'", e->location);
     }
     // ComputeNode OP ComputeNode
     // numeric ops
@@ -321,16 +357,21 @@ static ConfigValuePtr NodeOp(const ExpressionPtr &e, ConfigValuePtr leftVal, Con
     else if (e->op == L"!=") operationName = L"NotEqual";
     else if (e->op == L"<=") operationName = L"LessEqual";
     // Boolean ops
-    else if (e->op == L"&&") operationName = L"ElementTimes"; // implemented as element product  --TODO: needs a C++ node
-    else if (e->op == L"||") InvalidInfixOpTypes(e); // TODO: implement this, needs a C++ node
-    else if (e->op == L"^")  InvalidInfixOpTypes(e); // TODO: implement this, needs a C++ node
+    else if (e->op == L"&&") { takesBool = true; operationName = L"ElementTimes"; } // implemented as element product  --TODO: needs a C++ node
+    else if (e->op == L"||") { takesBool = true; InvalidInfixOpTypes(e); } // TODO: implement this, needs a C++ node
+    else if (e->op == L"^")  { takesBool = true; InvalidInfixOpTypes(e); } // TODO: implement this, needs a C++ node
     else
         LogicError("unexpected infix op");
+    // check non-ComputationNode type
+    if (hasDouble && takesBool)
+        Fail(L"operator not applicable to type 'Double'", e->location);
+    else if (hasBool && !takesBool)
+        Fail(L"operator not applicable to type 'Bool'", e->location);
     // directly instantiate a ComputationNode for the magic operators * + and - that are automatically translated.
     // find creation lambda
     let rtInfo = FindRuntimeTypeInfo(L"ComputationNode");
     if (!rtInfo)
-        LogicError("unknown magic runtime-object class");
+        LogicError("unknown magic runtime-object class 'ComputationNode'");
     // form the ConfigRecord for the ComputeNode that corresponds to the operation
     auto config = make_shared<ConfigRecord>(scope, MakeFailFn(e->location));
     // Note on scope: This config holds the arguments of the XXXNode runtime-object instantiations.
@@ -339,33 +380,12 @@ static ConfigValuePtr NodeOp(const ExpressionPtr &e, ConfigValuePtr leftVal, Con
     config->Add(L"operation", MakeFailFn(e->location), ConfigValuePtr(make_shared<String>(operationName), MakeFailFn(e->location), exprPath));
     let leftFailFn = leftVal.GetFailFn(); // report any error for this Constant object as belonging to the scalar factor's expression
     vector<ConfigValuePtr> inputs;
-#if 0  // BUGBUG: rows,cols is no longer right, we need a TensorShape here
-    // TODO: Solve this by directly constructing Constant() off a 'double' input in the ComputationNode constructor.
-    if (operationName == L"Scale")
-    {
-        // if we scale, the first operand is a Double, and we must convert that into a 1x1 Constant
-        // TODO: apply this more generally to all operators
-        auto constantConfig = make_shared<ConfigRecord>(config, MakeFailFn(e->location));
-        constantConfig->Add(L"operation", leftFailFn, ConfigValuePtr(make_shared<String>(L"LearnableParameter"), leftFailFn, exprPath));
-        let one = MakePrimitiveConfigValuePtr(1.0, leftFailFn, exprPath);
-        constantConfig->Add(L"rows", leftFailFn, one);
-        constantConfig->Add(L"cols", leftFailFn, one);
-        //constantConfig->Add(L"shape", leftFailFn, one);
-        constantConfig->Add(L"value", leftFailFn, leftVal);
-        constantConfig->Add(L"learningRateMultiplier", leftFailFn, MakePrimitiveConfigValuePtr(0.0f, leftFailFn, exprPath));
-        let value = ConfigValuePtr(rtInfo->construct(constantConfig), leftFailFn, exprPath);
-        let valueWithName = dynamic_cast<HasName *>(value.get());
-        if (valueWithName)
-            valueWithName->SetName(value.GetExpressionName());
-        leftVal = value; // and that's our actual left value
-    }
-#endif
-    inputs.push_back(leftVal);
-    if (operationName != L"Negate") // Negate only has one input (rightVal is a nullptr)
-        inputs.push_back(rightVal);
+    inputs.push_back(CastToComputationNode(leftVal, config, exprPath));
+    if (rightVal.get()) // some ops only have one input (rightVal is a nullptr)
+        inputs.push_back(CastToComputationNode(rightVal, config, exprPath));
     config->Add(L"inputs", leftFailFn, ConfigValuePtr(make_shared<ConfigArray>(0, move(inputs)), leftFailFn, exprPath));
     config->Add(L"tag", leftFailFn, ConfigValuePtr(make_shared<String>(), leftFailFn, exprPath)); // infix nodes have no tag
-    if (operationName == L"Times")
+    if (operationName == L"Times") // Times needs extra parameters
     {
         let one = MakePrimitiveConfigValuePtr(1.0, leftFailFn, exprPath);
         config->Add(L"outputRank", leftFailFn, one);

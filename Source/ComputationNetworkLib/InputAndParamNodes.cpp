@@ -49,9 +49,10 @@ static pair<bool/*uniform*/, double/*stddev or range*/> ParseRandomizationType(c
 // The forms that infer the dimensions have different BrainScript names. TODO: need one for fromFile
 // TODO: All forms that require specified dimensions but contain zeroes (to be updated by graph)
 //       will need to do deferred initialization, or have a way to repeat it.
+static TensorShape ToTensorShape(const ScriptableObjects::ConfigValuePtr& val);
 template <class ElemType>
 LearnableParameter<ElemType>::LearnableParameter(const ScriptableObjects::IConfigRecordPtr configp) :
-    LearnableParameter(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"shape"))
+    LearnableParameter(configp->Get(L"deviceId"), L"<placeholder>", ToTensorShape(configp->Get(L"shape")))
 {
     AttachInputsFromConfig(configp, this->GetExpectedNumInputs()); // (we have none; this checks that none are provided)
     // Parameter{dims, other optional parameters: learningRateMultiplier=[1|0|float], init=[uniform|gaussian|], initValueScale=[1|float], initValue=[''|float], initFromFilePath=[''|string]}
@@ -153,6 +154,17 @@ LearnableParameter<ElemType>::LearnableParameter(const ScriptableObjects::IConfi
     auto traceLevelParam = configp->Find(L"traceLevel");
     if (traceLevelParam && (int)*traceLevelParam > 0 && !m_initString.empty())
         fprintf(stderr, "%ls: Initializating Parameter[%s] as %ls later when dimensions are fully known.\n", NodeDescription().c_str(), string(GetSampleLayout()).c_str(), m_initString.c_str());
+}
+
+// helper to cast a shape possibly given as a single size_t to a TensorShape object
+// This is specifically for use by BrainScript, which, for simplicity, is allowed to pass
+// a (size_t)1 when type-casting a scalar constant to a LearnableParameter.
+static TensorShape ToTensorShape(const ScriptableObjects::ConfigValuePtr& val)
+{
+    if (val.Is<TensorShape>())
+        return val.AsRef<TensorShape>();
+    else
+        return TensorShape(val);
 }
 
 // variant of above from NDL. Must be called right after plain constructor.

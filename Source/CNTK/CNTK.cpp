@@ -235,7 +235,7 @@ void DoCommands(const ConfigParameters& config, const shared_ptr<MPIWrapper>& mp
 
             // print a banner to visually separate each action in the log
             const char* delim = "##############################################################################";
-            string showActionAs = thisCommand + " " + thisAction + " action";
+            string showActionAs = thisCommand + " command (" + thisAction + " action)";
             fprintf(stderr, "\n");
             LOGPRINTF(stderr, "%s\n", delim);
             LOGPRINTF(stderr, "#%*s#\n", (int)(strlen(delim) - 2), "");
