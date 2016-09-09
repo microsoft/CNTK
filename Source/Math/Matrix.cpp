@@ -162,6 +162,7 @@ MatrixBase::~MatrixBase() { }
 template <class ElemType>
 void Matrix<ElemType>::InitFields(DEVICEID_TYPE deviceId)
 {
+    m_baseMatrix          = nullptr;
     m_matrixType          = MatrixType::UNDETERMINED;
     m_currentDataLocation = CurrentDataLocation::NONE;
 
@@ -264,9 +265,9 @@ void Matrix<ElemType>::SetDataLocation(CurrentDataLocation location, MatrixType 
     // set m_baseMatrix (if location is unchanged, this will not change the pointer)
     // Note: m_currentDataLocation may also be CurrentDataLocation::BOTH, in which case the base matrix will be GPU.
     if (m_matrixType == MatrixType::DENSE)
-        m_baseMatrix = ((m_currentDataLocation == CurrentDataLocation::CPU) ? dynamic_pointer_cast<BaseMatrix<ElemType>>(m_CPUMatrix) : dynamic_pointer_cast<BaseMatrix<ElemType>>(m_GPUMatrix));
+        m_baseMatrix = ((m_currentDataLocation == CurrentDataLocation::CPU) ? dynamic_cast<BaseMatrix<ElemType>*>(m_CPUMatrix.get()) : dynamic_cast<BaseMatrix<ElemType>*>(m_GPUMatrix.get()));
     else if (m_matrixType == MatrixType::SPARSE)
-        m_baseMatrix = ((m_currentDataLocation == CurrentDataLocation::CPU) ? dynamic_pointer_cast<BaseMatrix<ElemType>>(m_CPUSparseMatrix) : dynamic_pointer_cast<BaseMatrix<ElemType>>(m_GPUSparseMatrix));
+        m_baseMatrix = ((m_currentDataLocation == CurrentDataLocation::CPU) ? dynamic_cast<BaseMatrix<ElemType>*>(m_CPUSparseMatrix.get()) : dynamic_cast<BaseMatrix<ElemType>*>(m_GPUSparseMatrix.get()));
     // Note: Typecasts are necessary since C++ cannot figure out the common base type (probably due to shared_ptr).
     // sanity check
     if (!m_baseMatrix && m_matrixType != MatrixType::UNDETERMINED)
