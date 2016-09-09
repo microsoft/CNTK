@@ -1,0 +1,41 @@
+dataDir: ./
+tags:
+     # the complete suite (2 flavours x 2 devices) should take
+     # no longer than 60 seconds with the longest test (debug cpu)
+     # finishing in below 30 seconds.
+     # running on every BVT job in 'S' (Speech) leg
+     - bvt-s  (build_sku == 'gpu')
+     # running unconditionally on every Nightly job in 'S' leg
+     - nightly-s (build_sku == 'gpu')
+
+testCases:
+  CNTK Run must be completed:
+    patterns:
+      - __COMPLETED__
+
+  Must train epochs in exactly same order and parameters:
+    patterns:
+      - Starting Epoch {{integer}}
+      - learning rate per sample = {{float}}
+      - momentum = {{float}}
+
+  Epochs must be finished with expected results (validation set):
+    patterns:
+      - "Finished Epoch[{{integer}} of {{integer}}]: [Validate]"
+      - ce = {{float,tolerance=.1%}}
+      - err = {{float,tolerance=0.001%}}
+      
+  Epochs must be finished with expected results (training set):
+    patterns:
+      - "Finished Epoch[{{integer}} of {{integer}}]: [Training]"
+      - ce = {{float,tolerance=.1%}}
+      - totalSamplesSeen = {{integer}}
+      - err = {{float,tolerance=0.001%}}
+      - learningRatePerSample = {{float,tolerance=0.001%}}
+
+  Per-minibatch (with low train loss) training results must match:
+    patterns:
+      - Minibatch[{{integer}}-{{integer}}
+      - " * {{integer}}; "
+      - ce = {{float,tolerance=0.05}}
+      - perplexity = {{float,tolerance=0.05}}
