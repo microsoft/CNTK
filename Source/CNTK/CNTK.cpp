@@ -36,7 +36,6 @@
 #include "ScriptableObjects.h"
 #include "BrainScriptEvaluator.h"
 #include "BrainScriptParser.h"
-#include "SwapManager.h"
 
 #include <string>
 #include <chrono>
@@ -62,11 +61,15 @@
 #define let const auto
 #endif
 
+#ifdef CPUONLY
+	bool SyncGuard::s_isSyncEnabled = false;
+#endif
+
 // TODO: Temporary mechanism to enable memory sharing for
 // node output value matrices. This will go away when the
 // sharing is ready to be enabled by default
 bool g_shareNodeValueMatrices = false;
-extern bool g_useMemorySwapping;
+//extern bool g_useMemorySwapping;
 
 using namespace std;
 using namespace Microsoft::MSR;
@@ -520,18 +523,18 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
         mpi = MPIWrapper::GetInstance(true /*create*/);
 
     g_shareNodeValueMatrices = config(L"shareNodeValueMatrices", false);
-    g_useMemorySwapping = config(L"useMemorySwapping", true);
+    //g_useMemorySwapping = config(L"useMemorySwapping", true);
 
     TracingGPUMemoryAllocator::SetTraceLevel(config(L"traceGPUMemoryAllocations", 0));
 
     bool synchronizeCUDAKernelExecutions = config(L"synchronizeCUDAKernelExecutions", false);
 	if (synchronizeCUDAKernelExecutions)
+		//SyncGuard::EnableSync();
 #ifndef CPUONLY
 		SyncGuard::s_isSyncEnabled = true;
 #else
 		SyncGuard::s_isSyncEnabled = false;
 #endif
-		
 
     // logging
     wstring logpath = config(L"stderr", L"");
@@ -644,7 +647,7 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
         mpi = MPIWrapper::GetInstance(true /*create*/);
 
     g_shareNodeValueMatrices = config(L"shareNodeValueMatrices", false);
-    g_useMemorySwapping = config(L"useMemorySwapping", true);
+    //g_useMemorySwapping = config(L"useMemorySwapping", true);
 
     TracingGPUMemoryAllocator::SetTraceLevel(config(L"traceGPUMemoryAllocations", 0));
 

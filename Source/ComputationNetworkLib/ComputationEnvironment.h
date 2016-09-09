@@ -6,8 +6,8 @@
 #pragma once
 
 #include "Basics.h"
-#include <memory>
 #include "SwapManager.h"
+#include <memory>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -45,6 +45,8 @@ struct ComputationEnvironment
 };
 typedef std::shared_ptr<ComputationEnvironment> ComputationEnvironmentPtr;
 
+//template <typename ElemType> class SwapManager;
+
 class NetworkInformation
 {
     private:
@@ -52,11 +54,11 @@ class NetworkInformation
         SwapManager<double> *m_syncManagerDouble;
         
     public:
-        NetworkInformation()
-        {
-            m_syncManagerFloat = new SwapManager<float>();
-            m_syncManagerDouble = new SwapManager<double>();
-        };
+		NetworkInformation::NetworkInformation()
+		{
+			m_syncManagerFloat = new SwapManager<float>();
+			m_syncManagerDouble = new SwapManager<double>();
+		};
         ~NetworkInformation(){};
         template <typename ElemType> SwapManager<ElemType> *GetSwapManager();
 };

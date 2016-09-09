@@ -68,18 +68,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 class SyncGuard
 {
 private:
-
+	
     bool m_forceSync;
+
 #ifndef CPUONLY
     cudaEvent_t m_done;
 #endif
 
 public:
-	static bool s_isSyncEnabled;	
-
+	//static MATH_API void EnableSync();
+	static bool s_isSyncEnabled;
+	
     SyncGuard(bool forceSync = false);
     ~SyncGuard();
 };
+
+//bool SyncGuard::s_isSyncEnabled = false;
 
 // -----------------------------------------------------------------------
 // DeviceBoundNumber -- This class represents a number which resides on a particular device. Use it to avoid unnecessary transfers between CPU and GPU

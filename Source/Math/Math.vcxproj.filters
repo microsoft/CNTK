@@ -46,7 +46,13 @@
       <Filter>CPU</Filter>
     </ClCompile>
     <ClCompile Include="BlockHandlerSSE.cpp">
-        <Filter>CPU</Filter>
+      <Filter>CPU</Filter>
+    </ClCompile>
+    <ClCompile Include="SwapInAction.cpp">
+      <Filter>Swapping</Filter>
+    </ClCompile>
+    <ClCompile Include="SwapOutAction.cpp">
+      <Filter>Swapping</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -115,18 +121,28 @@
       <Filter>RNN</Filter>
     </ClInclude>
     <ClInclude Include="BlockHandlerAVX.h">
-        <Filter>CPU</Filter>
+      <Filter>CPU</Filter>
     </ClInclude>
     <ClInclude Include="BlockHandlerSSE.h">
-        <Filter>CPU</Filter>
+      <Filter>CPU</Filter>
     </ClInclude>
     <ClInclude Include="BlockMultiplier.h">
-        <Filter>CPU</Filter>
+      <Filter>CPU</Filter>
     </ClInclude>
     <ClInclude Include="BlockMultiplierPlatform.h">
-        <Filter>CPU</Filter>
+      <Filter>CPU</Filter>
     </ClInclude>
     <ClInclude Include="Quantizers.h" />
+    <ClInclude Include="BlockMultiplierMatrixUtil.h" />
+    <ClInclude Include="SwapAction.h">
+      <Filter>Swapping</Filter>
+    </ClInclude>
+    <ClInclude Include="SwapInAction.h">
+      <Filter>Swapping</Filter>
+    </ClInclude>
+    <ClInclude Include="SwapOutAction.h">
+      <Filter>Swapping</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="GPUMatrix.h">
@@ -178,6 +194,9 @@
     </Filter>
     <Filter Include="RNN">
       <UniqueIdentifier>{ee6bf704-73f0-488d-8432-0d23f034de88}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Swapping">
+      <UniqueIdentifier>{80026ffb-c890-4184-83c5-1b88958d19d3}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

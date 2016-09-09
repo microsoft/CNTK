@@ -144,11 +144,12 @@ ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(con
         {
             node->BeginForwardProp();
             std::string nodename = std::string(node->NodeName().begin(), node->NodeName().end());
-            if(node->GetNetworkInfoPtr() != nullptr)
+            if(node->GetNetworkInfoPtr() != nullptr)				
                 if (node->Is<ComputationNode<float>>())
                     node->GetNetworkInfoPtr()->GetSwapManager<float>()->BeginSynchronizeState(node.get(), true, node->Environment().IsTraining());
                 else
                     node->GetNetworkInfoPtr()->GetSwapManager<double>()->BeginSynchronizeState(node.get(), true, node->Environment().IsTraining());
+				
                 //cout <<"PAR NETWORK FRONT: " << nodename << " needs gradient:" << node->NeedsGradient() << " " << node->ValuePtr() << " " << node->GradientPtr()<< endl;
                 for(auto inputNode : node->GetInputs())
                 {
@@ -157,11 +158,12 @@ ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(con
 
             node->ForwardProp(fr.WithLayout(node->GetMBLayout()));
 
-            if(node->GetNetworkInfoPtr() != nullptr)
+            if(node->GetNetworkInfoPtr() != nullptr)				
                 if (node->Is<ComputationNode<float>>())
                     node->GetNetworkInfoPtr()->GetSwapManager<float>()->EndSynchronizeState(node.get(), true, node->Environment().IsTraining());
                 else
                     node->GetNetworkInfoPtr()->GetSwapManager<double>()->EndSynchronizeState(node.get(), true, node->Environment().IsTraining());
+				
             node->EndForwardProp();
 
             node->BumpEvalTimeStamp();
@@ -178,14 +180,13 @@ ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(con
         auto& node = *pnode;
 
         node->BeginBackprop();
-        //m_syncFloat->BeginSynchronizeState(node.get(), false);
         std::string nodename = std::string(node->NodeName().begin(), node->NodeName().end());
-        if(node->GetNetworkInfoPtr() != nullptr)
-    if (node->Is<ComputationNode<float>>())
-        node->GetNetworkInfoPtr()->GetSwapManager<float>()->BeginSynchronizeState(node.get(), false, node->Environment().IsTraining());
-    else
-        node->GetNetworkInfoPtr()->GetSwapManager<double>()->BeginSynchronizeState(node.get(), false, node->Environment().IsTraining());
-
+        if(node->GetNetworkInfoPtr() != nullptr)		
+		if (node->Is<ComputationNode<float>>())
+			node->GetNetworkInfoPtr()->GetSwapManager<float>()->BeginSynchronizeState(node.get(), false, node->Environment().IsTraining());
+		else
+			node->GetNetworkInfoPtr()->GetSwapManager<double>()->BeginSynchronizeState(node.get(), false, node->Environment().IsTraining());
+		
 
         //cout <<"PAR NETWORK BACK: " << nodename << " needs gradient:" << node->NeedsGradient() << " " << node->ValuePtr() << " " << node->GradientPtr()<< endl;
         for(auto inputNode : node->GetInputs())
@@ -196,15 +197,14 @@ ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(con
 
 
         node->Backprop(fr.WithLayout(node->GetMBLayout()), true /*childrenInThisLoop*/, true /*childrenInOuterLoop*/);
-
+		
         if(node->GetNetworkInfoPtr() != nullptr)
             if (node->Is<ComputationNode<float>>())
                 node->GetNetworkInfoPtr()->GetSwapManager<float>()->EndSynchronizeState(node.get(), false, node->Environment().IsTraining());
             else
                 node->GetNetworkInfoPtr()->GetSwapManager<double>()->EndSynchronizeState(node.get(), false, node->Environment().IsTraining());
 
-
-        //m_syncFloat->EndSynchronizeState(node.get(), false);
+		
         node->EndBackprop();
     }
 }
@@ -1236,12 +1236,13 @@ void ComputationNetwork::InitMemorySwapping(const std::vector<ComputationNodeBas
            ++itr;
     }
 
-    // pass to SwapManager if the network has a backward pass
+    // pass to SwapManager if the network has a backward pass	
     if (trainRootNode != nullptr)
         m_networkInfo->GetSwapManager<ElemType>()->InitializeSwapping(
                                  forwardSwapOutDependencyNode2matrices,
                                  backwardSwapInDependencyNode2matrices,
                                  lastBackwardsDependencyNode2matrices);
+	
 }
 // this function will need to be called before actual validation and execution to
 // predetermine how to share matrices to reduce memory usage.

@@ -21,9 +21,8 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-// the reset below are dummy implementations
 
-/*static*/ bool SyncGuard::s_isSyncEnabled = false;
+// the reset below are dummy implementations
 
 void PrepareDevice(DEVICEID_TYPE deviceId);
 
@@ -2294,6 +2293,12 @@ float CudaTimer::Elapsed()
 {
     return 0;
 }
+
+/*static*/ 
+//bool SyncGuard::s_isSyncEnabled = false;
+//void SyncGuard::EnableSync()
+//{
+//}
 
 } } }
 

@@ -28,13 +28,12 @@
 #include "HeapMemoryProvider.h"
 #include "InputAndParamNodes.h"
 #include "latticearchive.h"
-#include "SwapManager.h"
 
 // TODO: Temporary mechanism to enable memory sharing for
 // node output value matrices. This will go away when the
 // sharing is ready to be enabled by default
 bool g_shareNodeValueMatrices = false;
-extern bool g_useMemorySwapping;
+//extern bool g_useMemorySwapping;
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -46,7 +45,7 @@ void CNTKEvalBase<ElemType>::Init(const std::string& config)
     size_t nThreads = m_config("numCPUThreads", "1");
     CPUMatrix<ElemType>::SetNumThreads(nThreads);
     g_shareNodeValueMatrices = m_config(L"shareNodeValueMatrices", false);
-    g_useMemorySwapping = m_config(L"useMemorySwapping", true);
+    //g_useMemorySwapping = m_config(L"useMemorySwapping", true);
 }
 
 

@@ -14,14 +14,13 @@
 #include "TrainingNodes.h"
 #include "LinearAlgebraNodes.h"
 #include "InputAndParamNodes.h"
-#include "SwapManager.h"
 #include "NonlinearityNodes.h"
 #include "RecurrentNodes.h"
 
 using namespace Microsoft::MSR::CNTK;
 
 bool g_shareNodeValueMatrices = true;
-extern bool g_useMemorySwapping;
+//extern bool g_useMemorySwapping;
 
 namespace CNTK
 {

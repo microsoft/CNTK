@@ -15,10 +15,15 @@
 
 extern bool g_useMemorySwapping;
 
+#ifdef CPUONLY
+#pragma comment(lib, "Math.lib") // built by CNTKMathCUDA project
+#else
+#endif
+
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 
-// forward declarations
+// forward declarationsc
 class ComputationNodeBase;
 class FrameRange;
 template <typename ElemType> class SwapInAction;

@@ -19,7 +19,6 @@
 #include <random>
 #include "Profiler.h"
 #include "MASGD.h"
-#include "CUDATimer.h"
 
 using namespace std; // ugh! TODO: get rid of this from .h files!!!
 
@@ -328,7 +327,6 @@ public:
           m_gradHeader(nullptr)
     {
         msra::files::make_intermediate_dirs(m_modelPath);
-        m_timer = new CUDATimer();
     }
     // note: This must be in the header, as we cannot properly specialize this constructor in the CPP to make sure all versions are generated.
 
@@ -563,7 +561,6 @@ protected:
     shared_ptr<IMASGD<ElemType>> m_pMASGDHelper;
 
 private:
-    CUDATimer *m_timer;
     void MarkDropoutNodesEvalTimeStampAsOutdated(const ComputationNetworkPtr& net, const ComputationNodeBasePtr& criterionNode);
 
     bool UsingGradientAggregation(size_t epochNumber) const

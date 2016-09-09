@@ -91,6 +91,9 @@
     <ClInclude Include="..\Common\Include\Sequences.h" />
     <ClInclude Include="..\Common\Include\TimerUtility.h" />
     <ClInclude Include="..\Math\Matrix.h" />
+    <ClInclude Include="..\Math\SwapAction.h" />
+    <ClInclude Include="..\Math\SwapInAction.h" />
+    <ClInclude Include="..\Math\SwapOutAction.h" />
     <ClInclude Include="ComputationEnvironment.h" />
     <ClInclude Include="ComputationNetwork.h" />
     <ClInclude Include="ComputationNetworkBuilder.h" />
@@ -108,12 +111,14 @@
     <ClInclude Include="RecurrentNodes.h" />
     <ClInclude Include="ReshapingNodes.h" />
     <ClInclude Include="stdafx.h" />
+    <ClInclude Include="SwapManager.h" />
     <ClInclude Include="targetver.h" />
     <ClInclude Include="TrainingNodes.h" />
-    <ClInclude Include="SwapManager.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\Common\BestGpu.cpp" />
+    <ClCompile Include="..\Math\SwapInAction.cpp" />
+    <ClCompile Include="..\Math\SwapOutAction.cpp" />
     <ClCompile Include="ComputationNetwork.cpp" />
     <ClCompile Include="ComputationNetworkAnalysis.cpp" />
     <ClCompile Include="ComputationNetworkBuilder.cpp" />
@@ -127,6 +132,7 @@
     <ClCompile Include="RNNNodes.cpp" />
     <ClCompile Include="SpecialPurposeNodes.cpp" />
     <ClCompile Include="stdafx.cpp" />
+    <ClCompile Include="SwapManager.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" />

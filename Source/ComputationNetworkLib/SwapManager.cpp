@@ -79,7 +79,7 @@ template<typename ElemType> void SwapManager<ElemType>::EndSynchronizeState(Comp
     if(isForward)
         for(auto action : m_node2ForwardSwapOut[node])
         {
-            CUDA_CALL(cudaDeviceSynchronize());
+            //CUDA_CALL(cudaDeviceSynchronize());
             action->BeginAction();
             action->EndAction();
         }
@@ -154,6 +154,7 @@ template<typename ElemType> void SwapManager<ElemType>::ClearActionsAndTheirMemo
 
 template <typename ElemType> float SwapManager<ElemType>::FreeGPUMemoryInGB()
 {
+	/*
 #ifndef CPUONLY
 	size_t free = 0, total = 0;
     CUDA_CALL(cudaMemGetInfo(&free, &total));
@@ -161,6 +162,8 @@ template <typename ElemType> float SwapManager<ElemType>::FreeGPUMemoryInGB()
 #else
 	return 0.0f;
 #endif
+	*/
+	return 0.0f;
     
 }
 

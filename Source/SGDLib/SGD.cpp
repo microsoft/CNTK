@@ -726,7 +726,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
     }
     // --- END OF MAIN EPOCH LOOP
 
-    net->NetworkInfo().GetSwapManager<ElemType>()->ClearActionsAndTheirMemory();
+    //net->NetworkInfo().GetSwapManager<ElemType>()->ClearActionsAndTheirMemory();
 
     // Synchronize all ranks before proceeding to ensure that
     // rank 0 has finished writing the model file
@@ -1791,8 +1791,8 @@ void SGD<ElemType>::TrainOneMiniEpochAndReloadModel(ComputationNetworkPtr net,
                                                     /*out*/ std::vector<EpochCriterion>& epochEvalErrors,
                                                     std::string prefixMsg)
 {
-    bool temp = net->NetworkInfo().GetSwapManager<ElemType>()->m_useMemorySwapping;
-    net->NetworkInfo().GetSwapManager<ElemType>()->m_useMemorySwapping = false;
+    //bool temp = net->NetworkInfo().GetSwapManager<ElemType>()->m_useMemorySwapping;
+    //net->NetworkInfo().GetSwapManager<ElemType>()->m_useMemorySwapping = false;
     TrainOneEpoch(net, refNet, refNode, epochNumber, epochSize,
                   trainSetDataReader, learnRatePerSample, minibatchSize, featureNodes,
                   labelNodes, criterionNodes, evaluationNodes,
@@ -1820,7 +1820,7 @@ void SGD<ElemType>::TrainOneMiniEpochAndReloadModel(ComputationNetworkPtr net,
                        smoothedGradients,
                        /*out*/ dummyPrevCriterion,
                        /*out*/ dummyMinibatchSize);
-    net->NetworkInfo().GetSwapManager<ElemType>()->m_useMemorySwapping = temp;
+    //net->NetworkInfo().GetSwapManager<ElemType>()->m_useMemorySwapping = temp;
 }
 
 // Attemps to compute the error signal for the whole utterance, which will

@@ -33,16 +33,9 @@
     </CudaCompile>
     <CudaCompile Include="GPURNGHandle.cu">
       <Filter>GPU</Filter>
-    </CudaCompile>	
-    <CudaCompile Include="SwapOutAction.cpp">
-      <Filter>GPU\Swapping</Filter>
     </CudaCompile>
-    <CudaCompile Include="SwapManager.cpp">
-      <Filter>GPU\Swapping</Filter>
-    </CudaCompile>
-    <CudaCompile Include="SwapInAction.cpp">
-      <Filter>GPU\Swapping</Filter>
-    </CudaCompile>
+    <CudaCompile Include="SwapInAction.cpp" />
+    <CudaCompile Include="SwapOutAction.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="cudalattice.cpp">
@@ -140,13 +133,13 @@
     <ClInclude Include="CuDnnRNN.h">
       <Filter>GPU\RNN</Filter>
     </ClInclude>
+    <ClInclude Include="SwapAction.h">
+      <Filter>GPU\Swapping</Filter>
+    </ClInclude>
     <ClInclude Include="SwapInAction.h">
       <Filter>GPU\Swapping</Filter>
     </ClInclude>
     <ClInclude Include="SwapOutAction.h">
-      <Filter>GPU\Swapping</Filter>
-    </ClInclude>
-    <ClInclude Include="SwapAction.h">
       <Filter>GPU\Swapping</Filter>
     </ClInclude>
   </ItemGroup>
