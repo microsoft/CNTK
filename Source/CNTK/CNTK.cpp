@@ -218,7 +218,8 @@ void DoCommands(const ConfigParameters& config, const shared_ptr<MPIWrapper>& mp
     for (int i = 0; i < command.size(); i++)
     {
         // get the configuration parameters that match the command
-        ConfigParameters commandParams(config(command[i]));
+        const string thisCommand = command[i];
+        ConfigParameters commandParams(config(thisCommand));
         ConfigArray action = commandParams("action", "train");
         int traceLevel = commandParams("traceLevel", "0");
 
@@ -230,15 +231,15 @@ void DoCommands(const ConfigParameters& config, const shared_ptr<MPIWrapper>& mp
         // determine the action to perform, and do it
         for (int j = 0; j < action.size(); j++)
         {
-            string thisAction = action[j];
+            const string thisAction = action[j];
 
             // print a banner to visually separate each action in the log
             const char* delim = "##############################################################################";
-            const char* prefix = "Action ";
+            string showActionAs = thisCommand + " " + thisAction + " action";
             fprintf(stderr, "\n");
             LOGPRINTF(stderr, "%s\n", delim);
             LOGPRINTF(stderr, "#%*s#\n", (int)(strlen(delim) - 2), "");
-            LOGPRINTF(stderr, "# %s\"%s\"%*s #\n", prefix, thisAction.c_str(), (int)(strlen(delim) - strlen(prefix) - thisAction.size() - 6), "");
+            LOGPRINTF(stderr, "# %s%*s #\n", showActionAs.c_str(), (int)(strlen(delim) - showActionAs.size() - 4), "");
             LOGPRINTF(stderr, "#%*s#\n", (int)(strlen(delim) - 2), "");
             LOGPRINTF(stderr, "%s\n\n", delim);
 
