@@ -60,7 +60,7 @@ class MATH_API Matrix : public MatrixBase
 {
     typedef MatrixBase Base;
 private:
-    mutable shared_ptr<BaseMatrix     <ElemType>> m_baseMatrix;
+    mutable BaseMatrix<ElemType>*                 m_baseMatrix;
     mutable shared_ptr<GPUMatrix      <ElemType>> m_GPUMatrix;
     mutable shared_ptr<CPUMatrix      <ElemType>> m_CPUMatrix;
     mutable shared_ptr<GPUSparseMatrix<ElemType>> m_GPUSparseMatrix;
