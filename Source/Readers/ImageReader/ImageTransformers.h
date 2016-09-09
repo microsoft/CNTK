@@ -140,12 +140,24 @@ public:
     SequenceDataPtr Transform(SequenceDataPtr sequence) override;
 
 private:
-    template <class TElementFrom, class TElementTo>
-    SequenceDataPtr TypedTransform(SequenceDataPtr inputSequence);
-
     StreamDescription m_inputStream;
     StreamDescription m_outputStream;
     ElementType m_precision;
+
+    template <class TElementTo>
+    struct TypedTranspose
+    {
+        TransposeTransformer* m_parent;
+
+        TypedTranspose(TransposeTransformer* parent) : m_parent(parent) {}
+
+        template <class TElementFrom>
+        SequenceDataPtr Apply(SequenceDataPtr inputSequence);
+        conc_stack<std::vector<TElementTo>> m_memBuffers;
+    };
+
+    TypedTranspose<float> m_floatTransform;
+    TypedTranspose<double> m_doubleTransform;
 };
 
 // Intensity jittering based on PCA transform as described in original AlexNet paper
@@ -214,8 +226,20 @@ public:
     SequenceDataPtr Transform(SequenceDataPtr sequence) override;
 
 private:
-    template <class TFromElemType, class TToElemType>
-    SequenceDataPtr TypedTransform(SequenceDataPtr inputSequence);
+    template <class TElementTo>
+    struct TypedCast
+    {
+        CastTransformer* m_parent;
+
+        TypedCast(CastTransformer* parent) : m_parent(parent) {}
+
+        template <class TElementFrom>
+        SequenceDataPtr Apply(SequenceDataPtr inputSequence);
+        conc_stack<std::vector<TElementTo>> m_memBuffers;
+    };
+
+    TypedCast<float> m_floatTransform;
+    TypedCast<double> m_doubleTransform;
 
     StreamDescription m_inputStream;
     StreamDescription m_outputStream;
