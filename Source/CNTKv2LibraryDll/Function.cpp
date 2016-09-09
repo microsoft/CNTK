@@ -192,9 +192,9 @@ namespace CNTK
 
         return clonedFunction->Outputs()[outputVarIndex];
     }
-
     FunctionPtr Function::ReplacePlaceholders(const std::unordered_map<Variable, Variable>& placeholderReplacements)
     {
+
         std::unordered_set<const Function*> visitedFunctions;
         std::unordered_set<Variable> replacedPlaceholders;
         ReplacePlaceholdersInPlace(placeholderReplacements, visitedFunctions, replacedPlaceholders);
@@ -235,7 +235,7 @@ namespace CNTK
                 placeholderReplacements[clonedInput] = replacements.at(cloneeInput);
             }
             else
-            {
+                {
                 // This is not a replacement. Lets create a fresh clone
                 if (cloneeInput.IsInput() || cloneeInput.IsConstant() || cloneeInput.IsPlaceholder())
                 {
@@ -259,8 +259,8 @@ namespace CNTK
                         break;
                     default:
                         LogicError("Unknown ParameterCloningMethod");
-                    }
-                }
+            }
+        }
                 else
                 {
                     assert(cloneeInput.IsOutput());
@@ -610,9 +610,6 @@ namespace CNTK
             assert(inputs.size() == 2);
             Variable inputOperandVar = inputs[0];
             Variable initialStateVar = inputs[1];
-            // TODO: Current we only support a scalar initial state
-            if (!initialStateVar.IsConstant() || (initialStateVar.Shape().Rank() > 0))
-                LogicError("Currently PastValue/FutureValue Function only supports scalar initial state");
 
             // TODO: We currently only support input operand with 1 dynamic axis for PastValue/FutureValue
             if (inputOperandVar.DynamicAxes().size() != 2)
@@ -698,8 +695,8 @@ namespace CNTK
     // Replace any PlaceHolder Variables in the graph of Functions underlying 'this' CompositeFunction. All PlaceHolder variables
     // should have been replaced before performing any Forward compute of 'this' Function.
     /*virtual*/ void CompositeFunction::ReplacePlaceholdersInPlace(const std::unordered_map<Variable, Variable>& placeholderReplacements,
-                                                                   std::unordered_set<const Function*>& visitedFunctions,
-                                                                   std::unordered_set<Variable>& replacedPlaceholders)
+                                                            std::unordered_set<const Function*>& visitedFunctions,
+                                                            std::unordered_set<Variable>& replacedPlaceholders)
     {
         RootFunction()->ReplacePlaceholdersInPlace(placeholderReplacements, visitedFunctions, replacedPlaceholders);
 
@@ -974,15 +971,12 @@ namespace CNTK
             Variable inputOperandVar = functionInputs[0];
             Variable initialStateVar = functionInputs[1];
 
-            // Get the intial state of the PastValue/FutureValue operation
-            ElementType initStateValue;
-            NDArrayView tempView({}, &initStateValue, 1, DeviceDescriptor::CPUDevice());
-            tempView.CopyFrom(*(Constant(initialStateVar).Value()));
             size_t offset = primitiveFunction->Attributes()[PrimitiveFunction::AttributeNameOffset].Value<size_t>();
+            float dummyInitialStateValue = 0.0f; // Not really used but then why are we forced to pass this?
             if (op == PrimitiveOpType::PastValue)
-                computationNodePtr = New<PastValueNode<ElementType>>(network->GetDeviceId(), functionName, (float)initStateValue, AsTensorShape(inputOperandVar.Shape()), offset);
+                computationNodePtr = New<PastValueNode<ElementType>>(network->GetDeviceId(), functionName, dummyInitialStateValue, AsTensorShape(inputOperandVar.Shape()), offset);
             else
-                computationNodePtr = New<FutureValueNode<ElementType>>(network->GetDeviceId(), functionName, (float)initStateValue, AsTensorShape(inputOperandVar.Shape()), offset);
+                computationNodePtr = New<FutureValueNode<ElementType>>(network->GetDeviceId(), functionName, dummyInitialStateValue, AsTensorShape(inputOperandVar.Shape()), offset);
 
             break;
         }
@@ -1201,8 +1195,7 @@ namespace CNTK
             }
 
             if (allocateNetworkMatrices)
-                m_computationNetwork->AllocateAllMatrices(forwardRootNodes, {}, backpropRootNode);
-
+            m_computationNetwork->AllocateAllMatrices(forwardRootNodes, {}, backpropRootNode);
             m_networkMatricesAllocated = allocateNetworkMatrices;
         }
 
