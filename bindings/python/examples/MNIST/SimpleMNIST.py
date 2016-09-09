@@ -9,6 +9,9 @@ import sys
 import os
 from cntk import learning_rates_per_sample, Trainer, sgd_learner, create_minibatch_source, StreamConfiguration, DeviceDescriptor, text_format_minibatch_source
 from cntk.ops import input_variable, cross_entropy_with_softmax, combine, classification_error, sigmoid, element_times, constant
+
+abs_path = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(os.path.join(abs_path, "..", ".."))
 from examples.common.nn import fully_connected_classifier_net, print_training_progress
 
 # Creates and trains a feedforward classification model for MNIST images
@@ -29,8 +32,11 @@ def simple_mnist():
     ce = cross_entropy_with_softmax(netout, label)
     pe = classification_error(netout, label)
 
-    rel_path = r"../../../../Examples/Image/MNIST/Data/Train-28x28_cntk_text.txt"
-    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), rel_path)
+    rel_path = os.path.join(*"../../../../Examples/Image/MNIST/Data/Train-28x28_cntk_text.txt".split("/"))
+    path = os.path.normpath(os.path.join(abs_path, rel_path))
+    if not os.path.exists(path):
+        readme_file = os.path.normpath(os.path.join(os.path.dirname(path), "..", "README.md"))
+        raise RuntimeError("File '%s' does not exist. Please follow the instructions at %s to download and prepare it."%(path, readme_file))
     feature_stream_name = 'features'
     labels_stream_name = 'labels'
     
@@ -62,6 +68,8 @@ def simple_mnist():
 if __name__=='__main__':
     # Specify the target device to be used for computing
     target_device = DeviceDescriptor.gpu_device(0)
+    # If it is crashing, probably you don't have a GPU, so try with CPU:
+    # target_device = DeviceDescriptor.cpu_device()
     DeviceDescriptor.set_default_device(target_device)
 
     simple_mnist()
