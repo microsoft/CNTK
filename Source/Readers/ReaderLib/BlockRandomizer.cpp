@@ -166,7 +166,7 @@ Sequences BlockRandomizer::GetNextSequences(size_t sampleCount)
     if (m_multithreadedGetNextSequences)
     {
         ExceptionCapture capture;
-#pragma omp parallel for schedule(dynamic)
+#pragma omp parallel for schedule(runtime)
         for (int i = 0; i < decimated.size(); ++i)
             capture.SafeRun(process, i);
         capture.RethrowIfHappened();
