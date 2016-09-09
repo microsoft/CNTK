@@ -7,7 +7,7 @@ import numpy
 
 CNTK_PATH = os.path.join(os.path.dirname(__file__), "..", "..")
 CNTK_SOURCE_PATH = os.path.join(CNTK_PATH, "Source")
-CNTK_LIB_PATH = os.path.join(CNTK_PATH, "x64", "Release")
+CNTK_LIB_PATH = os.path.join(CNTK_PATH, "x64", "Release_CpuOnly")
 print("Using CNTK libs at '%s'"%os.path.abspath(CNTK_LIB_PATH))
 #CNTK_LIB_PATH = os.path.join(CNTK_PATH, "x64", "Debug_CpuOnly")
 
