@@ -51,6 +51,35 @@ def test_op_clip(min_value, max_value, x, device_id, precision):
     _test_unary_op(precision, device_id, clip, x,
             expected_forward, expected_backward, 
             {'min_value': min_value, 'max_value': max_value})
+
+# Manually setting the expectation since CNTK's round behaves differently than
+# NumPy's round (see operator's docstring).
+ROUND_TENSORS = [
+        ([0.2, 1.3, 4.0, 5.5, 0.0],
+         [0.0, 1.0, 4.0, 6.0, 0.0]),
+
+        ([[0.6, 3.3], [1.9, 5.6]],
+         [[1.0, 3.0], [2.0, 6.0]]),
+
+        ([-5.5, -4.2, -3., -0.7, 0],
+         [-5.0, -4.0, -3., -1.0, 0]),
+
+        ([[-0.6, -4.3], [1.9, -3.2]],
+         [[-1.0, -4.0], [2.0, -3.0]])
+]
+@pytest.mark.parametrize("operand,expected", ROUND_TENSORS)
+def test_op_round(operand, expected, device_id, precision):
+    operand, expected = AA(operand), AA(expected)
+
+    expected_forward = [[expected]]
+    expected_backward = {
+            'arg': [[np.zeros_like(expected)]],
+            }
+
+    from .. import round
+    _test_unary_op(precision, device_id, round, operand,
+        expected_forward, expected_backward)
+
 TENSORS = [
     ([[0, -0.1]]),
     ([[-100, -10], [-1, -0.1], [-0.01, -0.001],
