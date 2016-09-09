@@ -19,9 +19,9 @@ from examples.common.nn import conv_bn_relu_layer, conv_bn_layer, resnet_node2, 
 # The minibatch source is configured using a hierarchical dictionary of key:value pairs
 def create_mb_source(features_stream_name, labels_stream_name, image_height, image_width, num_channels, num_classes):
     map_file_rel_path = os.path.join(*"../../../../Examples/Image/Miscellaneous/CIFAR-10/cifar-10-batches-py/train_map.txt".split("/"))
-    map_file = os.path.join(abs_path, map_file_rel_path)
+    map_file = os.path.normpath(os.path.join(abs_path, map_file_rel_path))
     mean_file_rel_path = os.path.join(*"../../../../Examples/Image/Miscellaneous/CIFAR-10/cifar-10-batches-py/CIFAR-10_mean.xml".split("/"))
-    mean_file = os.path.join(abs_path, mean_file_rel_path)
+    mean_file = os.path.normpath(os.path.join(abs_path, mean_file_rel_path))
 
     if not os.path.exists(map_file) or not os.path.exists(mean_file):
         cifar_py3 = "" if sys.version_info.major < 3 else "_py3" 
