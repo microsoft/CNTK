@@ -79,17 +79,6 @@ void ComputationNetwork::Backprop(const ComputationNodeBasePtr rootNode) // trai
     GetNestedNetwork(rootNode)->Backprop(FrameRange(nullptr), true, true);
 }
 
-void ComputationNetwork::ForwardProp(const ComputationNodeBasePtr rootNode, const ComputationNodeBasePtr startNode, const ComputationNodeBasePtr endNode)
-{
-    VerifyIsCompiled("ForwardProp");
-
-    // traverse partial nodes as inputs
-    shared_ptr<FlowControlNode> network = dynamic_pointer_cast<FlowControlNode>(GetNestedNetwork(rootNode));
-    assert(network);
-
-    network->ForwardProp(FrameRange(nullptr), startNode, endNode);
-}
-
 void ComputationNetwork::FormNestedNetwork(const ComputationNodeBasePtr& rootNode)
 {
     if (m_nestedNetworks.find(rootNode) != m_nestedNetworks.end())
@@ -158,7 +147,6 @@ ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(con
         }
     }
 }
-
 /*virtual*/ void ComputationNetwork::PARTraversalFlowControlNode::Backprop(const FrameRange& fr, bool childrenInThisLoop, bool childrenInOuterLoop) /*override*/
 {
     childrenInThisLoop, childrenInOuterLoop; // TODO: think through what these mean when coming from PAR mode
@@ -187,36 +175,7 @@ ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(con
 /*virtual*/ void ComputationNetwork::PARTraversalFlowControlNode::ReleaseMatricesAfterBackprop(MatrixPool& matrixPool) /*override*/
 {
 }
-/*virtual*/ void ComputationNetwork::PARTraversalFlowControlNode::ForwardProp(const FrameRange & fr, ComputationNodeBasePtr startNode, ComputationNodeBasePtr endNode)
-{
-    // if start node is nullptr, forward will be enable
-    bool enableForward = startNode ? false : true;
 
-    for (auto& node : m_nestedNodes)
-    {
-#if 0
-        if (dynamic_pointer_cast<LearnableParameter<float>>(node))
-        dynamic_pointer_cast<ComputationNode<float>>(node)->DebugLogMinibatch();
-#endif
-        if (node->IsOutOfDateWrtInputs() && enableForward)
-        {
-            node->BeginForwardProp();
-            node->ForwardProp(fr.WithLayout(node->GetMBLayout()));
-            node->EndForwardProp();
-
-            node->BumpEvalTimeStamp();
-        }
-
-        if (node == startNode) 
-        {
-            enableForward = true;
-        }
-        else if (node == endNode) 
-        {
-            break;
-        }
-    }
-}
 
 // -----------------------------------------------------------------------
 // SEQTraversalFlowControlNode methods -- implements SEQ traversal (loop unrolling)

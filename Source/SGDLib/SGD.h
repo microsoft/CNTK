@@ -291,7 +291,10 @@ protected:
     double m_seqGammarCalcbMMIFactor;
     bool m_seqGammarCalcUsesMBR;
     
-    bool m_disableWkInBatchNormal;
+    // decide whether should apply L2 regularization into BatchNormalizationNode
+    // true: disable L2 Regularization
+    // false: enable L2 Regularization (default)
+    bool m_disableRegInBatchNormalization;
 };
 
 template <class ElemType>

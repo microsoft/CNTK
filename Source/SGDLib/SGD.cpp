@@ -8,6 +8,7 @@
 #include "SpecialPurposeNodes.h"        // for SequenceWithSoftmaxNode
 #include "DataReaderHelpers.h"
 #include "MatrixQuantizerImpl.h"
+#include "InputAndParamNodes.h"
 
 #ifdef CNTK_PARALLEL_TRAINING_SUPPORT
 //static inline bool operator==(const std::pair<double,size_t>& a, double b) { assert(b==0); return a.first == b; }
@@ -875,23 +876,13 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
     EpochCriterion         epochCriterionLastLogged  = epochCriterion;
     vector<EpochCriterion> epochEvalErrorsLastLogged = epochEvalErrors;
 
-    // Now, we need to use a switch to enable/disable wk in BatchNormalization.
-    // If we can determine whether wk added or not for each node, then, discard this
-    std::unordered_set<ComputationNodeBasePtr> batchNormalizationWeights;
-    if (m_disableWkInBatchNormal) {
-        for (auto& evalNode : evaluationNodes) 
+    // NOTE: For ResNet, the regularization in BatchNormalization should be disable.
+    if (m_disableRegInBatchNormalization) {
+        let bnNodes = net->GetNodesWithType(L"BatchNormalization");
+        for (auto &node : bnNodes)
         {
-            shared_ptr<FlowControlNode> nestedNetwork = static_pointer_cast<FlowControlNode>(net->GetNestedNetwork(evalNode));
-            for (auto& node : nestedNetwork->GetNestedNodes()) 
-            {
-                shared_ptr<BatchNormalizationNode<ElemType>> castNode =
-                    dynamic_pointer_cast<BatchNormalizationNode<ElemType>>(node);
-                if (castNode) 
-                {
-                    batchNormalizationWeights.insert(castNode->GetInputs()[1]);
-                    batchNormalizationWeights.insert(castNode->GetInputs()[2]);
-                }
-            }
+            let bnNode = dynamic_pointer_cast<BatchNormalizationNode<ElemType>>(node);
+            bnNode->DisableRegInBatchNormalization();
         }
     }
 
@@ -1110,11 +1101,10 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                     if (smoothedGradient.HasNan("TrainOneEpoch/UpdateWeights(): "))
                         LogicError("%ls %ls operation has NaNs in smoothedGradient.", node->NodeName().c_str(), node->OperationName().c_str());
 #endif
-                    double l2Factor = batchNormalizationWeights.find(node) == batchNormalizationWeights.end() ? 1.0 : 0.0;
                     // BUGBUG (Issue #95): Access to net MBLayout can no longer be done if we have multiple input layouts
                     UpdateWeights(node, smoothedGradient, learnRatePerSample,
                                   GetMomentumPerSample(epochNumber /*BUGBUG workaround:*/, net->GetMBLayoutPtrOfNetwork()->GetNumParallelSequences()), numSamplesInMinibatch,
-                                  m_L2RegWeight * l2Factor, m_L1RegWeight,
+                                  m_L2RegWeight, m_L1RegWeight,
                                   m_needAveMultiplier, m_useNesterovMomentum);
 #ifdef _DEBUG
                     if (dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Value().HasNan("TrainOneEpoch/UpdateWeights(): "))
@@ -2017,9 +2007,10 @@ void SGD<ElemType>::UpdateWeights(const ComputationNodeBasePtr& node,
         LogicError("UpdateWeights() called for a learnable ComputationNode which has m_learningRateMultiplier == 0!");
 
     double nodeDependentLearningRatePerSample = learnRatePerSample * node->GetLearningRateMultiplier();
+    double nodeDependentRegMultiplier = dynamic_pointer_cast<LearnableParameter<ElemType>>(node)->GetRegMultiplier();
     UpdateWeightsS(this, dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Value(), dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Gradient(),
                    smoothedGradient, nodeDependentLearningRatePerSample, momentumPerSample,
-                   actualMBSize, L2RegWeight, L1RegWeight,
+                   actualMBSize, L2RegWeight * nodeDependentRegMultiplier, L1RegWeight * nodeDependentRegMultiplier,
                    needAveMultiplier, m_useNesterovMomentum);
     node->BumpEvalTimeStamp();
 }
@@ -2475,7 +2466,7 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
     m_seqGammarCalcbMMIFactor = configSGD(L"seqGammarBMMIFactor", 0.0);
     m_seqGammarCalcWP = configSGD(L"seqGammarWordPen", 0.0);
     
-    m_disableWkInBatchNormal = configSGD(L"disableWkInBatchNormal", false);
+    m_disableRegInBatchNormalization = configSGD(L"disableRegInBatchNormalization", false);
 
     m_dropoutRates = configSGD(L"dropoutRate", ConfigRecordType::Array(doubleargvector(vector<double>{0.0})));
     m_batchNormalizationTimeConstant = configSGD(L"batchNormalizationTimeConstant", ConfigRecordType::Array(doubleargvector(vector<double>{0})));

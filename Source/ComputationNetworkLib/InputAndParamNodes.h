@@ -37,6 +37,7 @@ public:
         MarkValueNonSharable();
         m_initString = L"fromValue"; // default init is with 0; typically overwritten
         m_initValue = 0;
+        m_regMultiplier = 1.0f; // enable reg in update by default
     }
     LearnableParameter(DEVICEID_TYPE deviceId, const wstring& name, const TensorShape& shape) :
         LearnableParameter(deviceId, name)
@@ -101,6 +102,14 @@ public:
     // called from CloneFunction(..., parameters="constant")
     virtual void FreezeParameters() override; // from IFreezable
 
+    // Setting the reg multiplier for a learnable node, effecting L1Reg and L2Reg both.
+    void SetRegMultiplier(float regMultiplier)
+    {
+        m_regMultiplier = regMultiplier;
+    }
+    // called from SGD UpdateWeights, to adjust the reg for each node
+    float GetRegMultiplier() const { return m_regMultiplier; }
+
 private:
     // init parameters for deferred initialization (which happens in Validate())
     std::wstring m_initString; // if non-empty then deferred initialization is needed. Gets cleared upon completion of deferred init.
@@ -109,6 +118,9 @@ private:
     int m_initOutputRank;
     bool m_initOnCPUOnly;
     ElemType m_initValue;
+
+    // flags related to gradient update
+    float m_regMultiplier; // The multiplier to adjust the L1Reg and L2Reg for Learnable node
 };
 
 // -----------------------------------------------------------------------

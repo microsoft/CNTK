@@ -88,11 +88,11 @@ Train=[
 ]
 
 PBN=[
-    action="pbn"
+    action="bnstat"
     modelPath="$ModelDir$/ResNet_50"
     # Set minibatch size for testing.
     minibatchSize=256
-    iters=30
+    itersPerNode=30
 
     reader=[
         readerType="ImageReader"
