@@ -263,7 +263,7 @@ Current working directory is now: c:/Data/CNTKTestData/Speech/AN4Corpus/v0
 reading script file ./glob_0000.scp ... 948 entries
 total 132 state names in state list ./state.list
 htkmlfreader: reading MLF file ./glob_0000.mlf ... total 948 entries
-biggrowablevectorarray: creating disk backup store at 'C:\Users\svcphil\AppData\Local\Temp\CNTFE44.tmp'
+biggrowablevectorarray: creating disk backup store at 'C:\Users\svcphil\AppData\Local\Temp\CNTB9AF.tmp'
 minibatchframesourcemulti: reading 1 feature sets and 1 label sets..................................................................................................
 minibatchframesourcemulti: read label set 0: 129 classes
 
@@ -272,7 +272,7 @@ biggrowablevectorarray: disk backup store created, 252734 frames, 37748736 bytes
 minibatchiterator: epoch 0: frames [0..500] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
 recoverblock: recovering feature block 0 [0..65535)
 minibatchiterator: epoch 1: frames [500..1000] (first utterance at frame 500), data subset 0 of 1, with 1 datapasses
-biggrowablevectorarray: deleted disk backup store at 'C:\Users\svcphil\AppData\Local\Temp\CNTFE44.tmp'
+biggrowablevectorarray: deleted disk backup store at 'C:\Users\svcphil\AppData\Local\Temp\CNTB9AF.tmp'
 Set current path to: C:/jenkins/workspace/CNTK-Test-Windows-W1/Tests/EndToEndTests/UnitTests/ReaderTests
 Current working directory: C:/jenkins/workspace/CNTK-Test-Windows-W1/Tests/EndToEndTests/UnitTests/ReaderTests
 Executable path: C:/jenkins/workspace/CNTK-Test-Windows-W1/x64/release/unittests
@@ -421,7 +421,7 @@ Current working directory is now: c:/Data/CNTKTestData/Speech/AN4Corpus/v0
 reading script file ./glob_0000.scp ... 948 entries
 total 132 state names in state list ./state.list
 htkmlfreader: reading MLF file ./glob_0000.mlf ... total 948 entries
-biggrowablevectorarray: creating disk backup store at 'C:\Users\svcphil\AppData\Local\Temp\CNT7B16.tmp'
+biggrowablevectorarray: creating disk backup store at 'C:\Users\svcphil\AppData\Local\Temp\CNT39CD.tmp'
 minibatchframesourcemulti: reading 1 feature sets and 1 label sets..................................................................................................
 minibatchframesourcemulti: read label set 0: 129 classes
 
@@ -430,7 +430,7 @@ biggrowablevectorarray: disk backup store created, 252734 frames, 37748736 bytes
 minibatchiterator: epoch 0: frames [0..500] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
 recoverblock: recovering feature block 0 [0..65535)
 minibatchiterator: epoch 1: frames [500..1000] (first utterance at frame 500), data subset 0 of 1, with 1 datapasses
-biggrowablevectorarray: deleted disk backup store at 'C:\Users\svcphil\AppData\Local\Temp\CNT7B16.tmp'
+biggrowablevectorarray: deleted disk backup store at 'C:\Users\svcphil\AppData\Local\Temp\CNT39CD.tmp'
 Set current path to: C:/jenkins/workspace/CNTK-Test-Windows-W1/Tests/EndToEndTests/UnitTests/ReaderTests
 Current working directory: C:/jenkins/workspace/CNTK-Test-Windows-W1/Tests/EndToEndTests/UnitTests/ReaderTests
 Executable path: C:/jenkins/workspace/CNTK-Test-Windows-W1/x64/release/unittests
@@ -1188,7 +1188,7 @@ htkmlfreader: reading MLF file ./labels.smlf ... total 4974 entries
 ....................................................................................................feature set 0: 1669414 frames in 4963 out of 4963 utterances
 label set 0: 9000 classes
 minibatchutterancesource: 4963 utterances grouped into 19 chunks, av. chunk size: 261.2 utterances, 87863.9 frames
-....................................................................................................Running 99 test cases...
+....................................................................................................Running 100 test cases...
 feature set 1: 1669414 frames in 4963 out of 4963 utterances
 minibatchutterancesource: 4963 utterances grouped into 19 chunks, av. chunk size: 261.2 utterances, 87863.9 frames
 minibatchiterator: epoch 0: frames [0..400] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
@@ -1207,8 +1207,8 @@ Legacy configuration is used for truncated BPTT mode, please adapt the config to
 Set current path to: C:/jenkins/workspace/CNTK-Test-Windows-W1/Tests/EndToEndTests/UnitTests/ReaderTests
 
 Test module "ReaderTests" has passed with:
-  99 test cases out of 99 passed
-  16973537 assertions out of 16973537 passed
+  100 test cases out of 100 passed
+  16973541 assertions out of 16973541 passed
 
   Test suite "ReaderTestSuite" has passed with:
     83 test cases out of 83 passed
@@ -1480,8 +1480,8 @@ Test module "ReaderTests" has passed with:
       2 assertions out of 2 passed
 
   Test suite "ReaderLibTests" has passed with:
-    12 test cases out of 12 passed
-    2204 assertions out of 2204 passed
+    13 test cases out of 13 passed
+    2208 assertions out of 2208 passed
 
     Test case "ReaderLibTests/RandRollbackToEarlierEpochBetweenSweeps" has passed with:
       2 assertions out of 2 passed
@@ -1491,6 +1491,9 @@ Test module "ReaderTests" has passed with:
 
     Test case "ReaderLibTests/RandRollbackToSameEpochInTheSweep" has passed with:
       1 assertion out of 1 passed
+
+    Test case "ReaderLibTests/RandRollbackToSameEpochInBigRandomizationWindow" has passed with:
+      4 assertions out of 4 passed
 
     Test case "ReaderLibTests/BlockRandomizerInstantiate" has passed
 

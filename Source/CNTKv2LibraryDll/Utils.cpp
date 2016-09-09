@@ -231,7 +231,7 @@ namespace CNTK
     
     BinaryOStreamWrapper& operator<<(BinaryOStreamWrapper& stream, const NDShape& us)
     {
-        auto size = us.NumAxes();
+        auto size = us.Rank();
         stream << size;
         for (auto i = 0; i < size; i++)
         {

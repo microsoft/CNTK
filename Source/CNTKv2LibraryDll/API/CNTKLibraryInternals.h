@@ -11,6 +11,7 @@
 #define final
 #define explicit
 #define static_assert(condition, message)
+#define __attribute__(x)
 #endif
 
 #ifdef _WIN32
@@ -53,6 +54,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template <typename ElementType>
     class ComputationNode;
+
+    class ComputationNodeBase;
+    typedef std::shared_ptr<ComputationNodeBase> ComputationNodeBasePtr;
 }}}
 
 // TODO: The following should be reconciled with the equivalent code in the CNTK implementation
@@ -195,5 +199,7 @@ namespace CNTK
         CNTK_API FunctionPtr Scatter(const Variable& operand, const Variable& condition, const std::vector<Axis>& newDynamicAxes, const std::wstring& name = L"");
         CNTK_API FunctionPtr Slice(const Variable& operand, const Axis& axis, int beginIndex, int endIndex, const std::wstring& name = L"");
         CNTK_API FunctionPtr ReduceElements(const Variable& operand, const std::wstring& reductionOpName, const Axis& axis, const std::wstring& name = L"");
+
+        CNTK_API size_t NewUniqueId();
     }
 }

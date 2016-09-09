@@ -6,6 +6,7 @@
 #include "stdafx.h"
 #include "CNTKLibrary.h"
 #include "Utils.h"
+#include "Function.h"
 
 namespace CNTK
 {
@@ -77,7 +78,7 @@ namespace CNTK
         auto argumentDataShape = argumentValue->Data()->Shape();
         auto mask = argumentValue->Mask();
         size_t numMaskedSamples = (mask != nullptr) ? mask->MaskedCount() : 0;
-        size_t numSamplesInDataArrayView = argumentDataShape.SubShape(argumentVar.Shape().NumAxes()).TotalSize();
+        size_t numSamplesInDataArrayView = argumentDataShape.SubShape(argumentVar.Shape().Rank()).TotalSize();
         if (numMaskedSamples > numSamplesInDataArrayView)
             LogicError("Number of masked values cannot exceed the number of samples that the Value object's Data NDArrayView can hold");
 
@@ -140,6 +141,116 @@ namespace CNTK
         }
 
         return anyUpdatesPerformed;
+    }
+
+    static std::wstring GetTrainerStateCheckpointFilePath(const std::wstring& modelFilePath)
+    {
+        const wchar_t* checkpointExt = L".ckp";
+        return modelFilePath + checkpointExt;
+    }
+
+    std::shared_ptr<std::fstream> GetFstream(const std::wstring& filePath, bool readOnly)
+    {
+        std::ios_base::openmode mode = std::ios_base::binary | (readOnly ? std::ios_base::in : std::ios_base::out);
+#ifdef _MSC_VER
+        return std::make_shared<std::fstream>(filePath, mode);
+#else
+        return std::make_shared<std::fstream>(wtocharpath(filePath.c_str()).c_str(), mode);
+#endif
+    }
+
+    void Trainer::SaveCheckpoint(const std::wstring& modelFilePath)
+    {
+        SaveAsLegacyModel(m_combinedTrainingFunction, modelFilePath);
+
+        if (m_parameterLearners.size() > 1)
+            LogicError("Trainer::SaveCheckpoint: Checkpointing is currently unsupported for multiple learners");
+
+        auto learnerState = (*(m_parameterLearners.begin()))->GetCheckpointState();
+        std::wstring trainerStateCheckpointFilePath = GetTrainerStateCheckpointFilePath(modelFilePath);
+        auto ckpStream = GetFstream(trainerStateCheckpointFilePath, false);
+        *ckpStream << learnerState;
+        ckpStream->flush();
+    }
+
+    void Trainer::RestoreFromCheckpoint(const std::wstring& modelFilePath)
+    {
+        auto firstLearner = *(m_parameterLearners.begin());
+
+        auto loadedModelFunction = LoadLegacyModel(m_combinedTrainingFunction->Outputs()[0].GetDataType(), modelFilePath, DeviceDescriptor::CPUDevice());
+
+        // TODO: Make sure that the loaded model is the same as the trainer's model through UID matching in the V2 format
+        // TODO: For V1 format models make sure that the loaded model is isomorphic to the trainer's model
+        auto loadedModelLeafVariables = loadedModelFunction->Inputs();
+        auto trainerModelLeafVariables = m_combinedTrainingFunction->Inputs();
+        if (trainerModelLeafVariables.size() != loadedModelLeafVariables.size())
+            InvalidArgument("The loaded model's leaf variables do not match the trainer model's leaf variables");
+
+        std::map<std::wstring, Variable> loadedModelLeafVariablesMap;
+        for (auto leafVar : loadedModelLeafVariables)
+            loadedModelLeafVariablesMap[leafVar.Uid()] = leafVar;
+
+        std::map<std::wstring, Variable> trainerModelLeafVariablesMap;
+        for (auto leafVar : trainerModelLeafVariables)
+            trainerModelLeafVariablesMap[leafVar.Uid()] = leafVar;
+
+        // Remove the initial state inputs of PastValue and FutureValue functions from the maps if they are a scalar constant
+        // since these are not part of the internal CNTK serialized computation graph
+        auto removePastAndFutureValueInitialStateScalarConstants = [](const std::unordered_set<FunctionPtr>& allPrimitiveFunctions, std::map<std::wstring, Variable>& modelLeafVariableMap) {
+            for (auto funcPtr : allPrimitiveFunctions)
+            {
+                auto primitiveFunction = dynamic_cast<const PrimitiveFunction*>(funcPtr.get());
+                if ((primitiveFunction->OpType() == PrimitiveOpType::PastValue) || (primitiveFunction->OpType() == PrimitiveOpType::FutureValue))
+                {
+                    auto initialStateInput = primitiveFunction->Inputs()[1];
+                    if (initialStateInput.IsConstant() && (initialStateInput.Shape().TotalSize() == 1))
+                        modelLeafVariableMap.erase(initialStateInput.Uid());
+                }
+            }
+        };
+
+        auto loadedModelCompositeFunction = dynamic_cast<const CompositeFunction*>(loadedModelFunction.get());
+        removePastAndFutureValueInitialStateScalarConstants(loadedModelCompositeFunction->m_allPrimitiveFunctions, loadedModelLeafVariablesMap);
+
+        auto trainerModelCompositeFunction = dynamic_cast<const CompositeFunction*>(m_combinedTrainingFunction.get());
+        removePastAndFutureValueInitialStateScalarConstants(trainerModelCompositeFunction->m_allPrimitiveFunctions, trainerModelLeafVariablesMap);
+
+        // Now update the trainer's model parameters and constants with those from the loaded model
+        for (auto nameVarPair : trainerModelLeafVariablesMap)
+        {
+            auto trainerModelLeafVar = nameVarPair.second;
+
+            auto areVariablesEquivalent = [](const Variable& left, const Variable& right) {
+                return ((left.Kind() == right.Kind()) &&
+                    ((left.Shape() == right.Shape()) || (AsTensorShape(left.Shape()) == AsTensorShape(right.Shape()))) &&
+                    (left.GetDataType() == right.GetDataType()) &&
+                    (left.DynamicAxes().size() == right.DynamicAxes().size()) &&
+                    (left.NeedsGradient() == right.NeedsGradient()) &&
+                    (left.Uid() == right.Uid()) &&
+                    (left.IsSparse() == right.IsSparse()));
+            };
+
+            auto correspondingLoadedModelVar = loadedModelLeafVariablesMap.at(trainerModelLeafVar.Uid());
+
+            if (!areVariablesEquivalent(correspondingLoadedModelVar, trainerModelLeafVar))
+                InvalidArgument("The loaded model's leaf variables do not match the trainer model's leaf variables");
+
+            if (trainerModelLeafVar.IsConstant() || trainerModelLeafVar.IsParameter())
+            {
+                auto trainerModelVarValue = trainerModelLeafVar.IsConstant() ? Constant(trainerModelLeafVar).Value() : Parameter(trainerModelLeafVar).Value();
+                auto loadedModelVarValue = correspondingLoadedModelVar.IsConstant() ? Constant(correspondingLoadedModelVar).Value() : Parameter(correspondingLoadedModelVar).Value();
+                trainerModelVarValue->CopyFrom(*loadedModelVarValue);
+            }
+        }
+
+        if (m_parameterLearners.size() > 1)
+            LogicError("Trainer::RestoreFromCheckpoint: Checkpointing is currently unsupported for multiple learners");
+
+        std::wstring trainerStateCheckpointFilePath = GetTrainerStateCheckpointFilePath(modelFilePath);
+        auto ckpStream = GetFstream(trainerStateCheckpointFilePath, true);
+        Dictionary learnerState;
+        *ckpStream >> learnerState;
+        firstLearner->RestoreFromCheckpoint(learnerState);
     }
 
     double Trainer::PreviousMinibatchLossAverage() const

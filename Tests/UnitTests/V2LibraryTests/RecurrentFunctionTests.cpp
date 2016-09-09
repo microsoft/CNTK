@@ -14,7 +14,7 @@ FunctionPtr LSTMNet(Variable features, size_t cellDim, size_t hiddenDim, size_t 
 
     assert(numLSTMLayers >= 1);
     FunctionPtr classifierRoot = features;
-    auto pastValueRecurrenceHook = std::bind(PastValue, _1, CNTK::Constant({}, (ElementType)0.0), 1, L"");
+    auto pastValueRecurrenceHook = [](const Variable& x) { return PastValue(x); };
     for (size_t i = 0; i < numLSTMLayers; ++i) {
         classifierRoot = LSTMPComponentWithSelfStabilization<ElementType>(classifierRoot, hiddenDim, cellDim, pastValueRecurrenceHook,  pastValueRecurrenceHook, device).first;
     }
@@ -37,17 +37,14 @@ void TestRecurrentNetworkCreation(const DeviceDescriptor& device, bool testSaveA
     const size_t hiddenDim = 512;
     const size_t numOutputClasses = 9304;
 
-    Variable features({ inputDim }, AsDataType<ElementType>(), L"features");
-    auto classifierOutputFunction = LSTMNet<ElementType>(features, cellDim, hiddenDim, numOutputClasses, numLSTMLayers, device, L"classifierOutput");
-    Variable classifierOutput = classifierOutputFunction;
+    auto features = InputVariable({ inputDim }, AsDataType<ElementType>(), L"features");
+    auto classifierOutput = LSTMNet<ElementType>(features, cellDim, hiddenDim, numOutputClasses, numLSTMLayers, device, L"classifierOutput");
 
-    Variable labelsVar = Variable({ numOutputClasses }, AsDataType<ElementType>(), L"labels");
-    auto trainingLossFunction = CrossEntropyWithSoftmax(classifierOutputFunction, labelsVar, L"lossFunction");
-    Variable trainingLoss = trainingLossFunction;
-    auto predictionFunction = ClassificationError(classifierOutputFunction, labelsVar, L"classificationError");
-    Variable prediction = predictionFunction;
+    auto labelsVar = InputVariable({ numOutputClasses }, AsDataType<ElementType>(), L"labels");
+    auto trainingLoss = CrossEntropyWithSoftmax(classifierOutput, labelsVar, L"lossFunction");
+    auto prediction = ClassificationError(classifierOutput, labelsVar, L"classificationError");
 
-    auto LSTMClassifier = Combine({ trainingLossFunction, predictionFunction, classifierOutputFunction }, L"LSTMClassifier");
+    auto LSTMClassifier = Combine({ trainingLoss, prediction, classifierOutput }, L"LSTMClassifier");
 
     // Now test the structure
     if (LSTMClassifier->Arguments().size() != 2)
@@ -61,7 +58,17 @@ void TestRecurrentNetworkCreation(const DeviceDescriptor& device, bool testSaveA
         throw std::runtime_error("TestFeedForwardNetworkCreation: Function does not have expected Parameter count");
 
     if (testSaveAndReLoad)
-        SaveAndReloadModel<ElementType>(LSTMClassifier, { &features, &labelsVar, &trainingLoss, &prediction, &classifierOutput }, device);
+    {
+        Variable classifierOutputVar = classifierOutput;
+        Variable trainingLossVar = trainingLoss;
+        Variable predictionVar = prediction;
+
+        SaveAndReloadModel<ElementType>(LSTMClassifier, { &features, &labelsVar, &trainingLossVar, &predictionVar, &classifierOutputVar }, device);
+
+        classifierOutput = classifierOutputVar;
+        trainingLoss = trainingLossVar;
+        prediction = predictionVar;
+    }
 
     // Run Forward and backward a few times
     size_t iterationCount = 3;
@@ -92,7 +99,7 @@ void TestRecurrentNetworkCreation(const DeviceDescriptor& device, bool testSaveA
         auto backpropState = LSTMClassifier->Forward({ { features, inputValue }, { labelsVar, labelValue } }, outputs, device, { trainingLoss });
 
         // Perform backprop
-        NDShape outputShape = trainingLoss.Shape();
+        NDShape outputShape = trainingLoss->Output().Shape();
         std::vector<ElementType> rootGradientsData(outputShape.TotalSize(), 1);
         ValuePtr rootGradientValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(outputShape, rootGradientsData.data(), rootGradientsData.size(), DeviceDescriptor::CPUDevice(), true));
         std::unordered_map<Variable, ValuePtr> paramGradients;
@@ -123,26 +130,31 @@ void TestSimpleRecurrence(size_t inputDim,
     Parameter timesParam(MakeSharedObject<NDArrayView>((ElementType)0.5, NDShape({ outputDim, inputDim }), device), L"timesParameters");
     Parameter plusParam(MakeSharedObject<NDArrayView>((ElementType)0.1, std::initializer_list<size_t>({ outputDim }), device), L"plusParameters");
 
-    Variable inputVar({ inputDim }, useSparseInputs, AsDataType<ElementType>(), true, L"input");
+    auto inputVar = InputVariable({ inputDim }, useSparseInputs, AsDataType<ElementType>(), true, L"input");
 
-    auto placeholder = Placeholder({ outputDim });
-    auto plusOutputFunction = Plus(plusParam, Plus(placeholder, Times(timesParam, inputVar)), L"plusOutput");
+    auto placeholder = PlaceholderVariable({ outputDim });
+    auto plusOutput = Plus(plusParam, Plus(placeholder, Times(timesParam, inputVar)), L"plusOutput");
     FunctionPtr placeholderReplacement;
     if (useFutureValue)
-        placeholderReplacement = FutureValue(plusOutputFunction, Constant({}, (ElementType)0.0, device), 1);
+        placeholderReplacement = FutureValue(plusOutput);
     else
-        placeholderReplacement = PastValue(plusOutputFunction, Constant({}, (ElementType)0.0, device), 1);
+        placeholderReplacement = PastValue(plusOutput);
 
-    plusOutputFunction = plusOutputFunction->ReplacePlaceholders({ { placeholder, placeholderReplacement } });
-    Variable plusOutput = plusOutputFunction;
+    plusOutput = plusOutput->ReplacePlaceholders({ { placeholder, placeholderReplacement } });
 
-    auto reducedOutputFunction = ReduceSum(plusOutput, L"sum");
-    Variable reducedOutput = reducedOutputFunction;
-
-    auto rootFunc = Combine({ reducedOutputFunction, plusOutputFunction });
+    auto reducedOutput = ReduceSum(plusOutput, L"sum");
+    auto rootFunc = Combine({ reducedOutput, plusOutput });
 
     if (testSaveAndReLoad)
-        SaveAndReloadModel<ElementType>(rootFunc, { &inputVar, &timesParam, &plusParam, &plusOutput, &reducedOutput }, device);
+    {
+        Variable plusOutputVar = plusOutput;
+        Variable reducedOutputVar = reducedOutput;
+
+        SaveAndReloadModel<ElementType>(rootFunc, { &inputVar, &timesParam, &plusParam, &plusOutputVar, &reducedOutputVar }, device);
+
+        plusOutput = plusOutputVar;
+        reducedOutput = reducedOutputVar;
+    }
 
     srand(seed);
     for (size_t iterIdx = 0; iterIdx < numIterations; ++iterIdx)
@@ -218,7 +230,7 @@ void TestSimpleRecurrence(size_t inputDim,
         std::vector<ElementType> reducedOutputData(reducedOutputShape.TotalSize());
         ValuePtr reducedOutputValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(reducedOutputShape, reducedOutputData.data(), reducedOutputData.size(), DeviceDescriptor::CPUDevice(), false));
 
-        NDShape plusOutputShape = plusOutput.Shape().AppendShape({ maxActualSequenceLength, numSequences });
+        NDShape plusOutputShape = plusOutput->Output().Shape().AppendShape({ maxActualSequenceLength, numSequences });
         std::vector<ElementType> plusOutputData(plusOutputShape.TotalSize());
         ValuePtr plusOutputValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(plusOutputShape, plusOutputData.data(), plusOutputData.size(), DeviceDescriptor::CPUDevice(), false), MakeSharedObject<NDMask>(inputValue->Mask()->Shape(), inputValue->Mask()->Device()));
 
