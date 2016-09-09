@@ -1109,7 +1109,6 @@ protected:
         return static_cast<ComputationNode<ElemType>&>(*m_inputs[inputIndex].get());
     }
 
-
     void /*ComputationNodeBase::*/ SetInput(const size_t childIndex, const ComputationNodeBasePtr& inode) override
     {
         ClearConfigMemberCache();
