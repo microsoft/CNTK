@@ -62,6 +62,9 @@
 #endif
 
 #ifdef CPUONLY
+    // this caused a lot of trouble when compiling the memory swapping code on windows;
+    // if someone can figure out the Windows hierarchies to compile it in a better way
+    // feel free to change this
 	bool SyncGuard::s_isSyncEnabled = false;
 #endif
 
@@ -69,7 +72,7 @@
 // node output value matrices. This will go away when the
 // sharing is ready to be enabled by default
 bool g_shareNodeValueMatrices = false;
-//extern bool g_useMemorySwapping;
+extern bool g_useMemorySwapping;
 
 using namespace std;
 using namespace Microsoft::MSR;
@@ -523,13 +526,16 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
         mpi = MPIWrapper::GetInstance(true /*create*/);
 
     g_shareNodeValueMatrices = config(L"shareNodeValueMatrices", false);
-    //g_useMemorySwapping = config(L"useMemorySwapping", true);
+    g_useMemorySwapping = config(L"useMemorySwapping", true);
 
     TracingGPUMemoryAllocator::SetTraceLevel(config(L"traceGPUMemoryAllocations", 0));
 
     bool synchronizeCUDAKernelExecutions = config(L"synchronizeCUDAKernelExecutions", false);
 	if (synchronizeCUDAKernelExecutions)
 		//SyncGuard::EnableSync();
+        // this caused a lot of trouble when compiling the memory swapping code on windows;
+        // if someone can figure out the Windows hierarchies to compile it in a better way
+        // feel free to change this
 #ifndef CPUONLY
 		SyncGuard::s_isSyncEnabled = true;
 #else
@@ -647,7 +653,7 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
         mpi = MPIWrapper::GetInstance(true /*create*/);
 
     g_shareNodeValueMatrices = config(L"shareNodeValueMatrices", false);
-    //g_useMemorySwapping = config(L"useMemorySwapping", true);
+    g_useMemorySwapping = config(L"useMemorySwapping", true);
 
     TracingGPUMemoryAllocator::SetTraceLevel(config(L"traceGPUMemoryAllocations", 0));
 
