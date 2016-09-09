@@ -79,7 +79,7 @@ public:
 
         t.Restart();
         ExceptionCapture capture;
-#pragma omp parallel for schedule(runtime)
+#pragma omp parallel for schedule(dynamic)
         for (int j = 0; j < sequences.m_data.front().size(); ++j)
         {
             capture.SafeRun([this, &sequences](int sequenceId)
