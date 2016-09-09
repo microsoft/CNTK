@@ -76,8 +76,8 @@ template <class ElemType>
     auto input  = InputRef(0).ValueTensorFor(rank, fr);
     result.AssignCopyOf(input);
 
-	// do the tracing
-	Log(fr, false/*means log value*/);
+    // do the tracing
+    Log(fr, false/*means log value*/);
 }
 
 template <class ElemType>
@@ -91,9 +91,9 @@ template <class ElemType>
 
     sliceInputGrad.AddCopyOf(sliceOutputGrad);
 
-	// do the tracing
-	if (m_logGradientToo)
-		Log(fr, true/*means log gradient*/);
+    // do the tracing
+    if (m_logGradientToo)
+        Log(fr, true/*means log gradient*/);
 }
 
 // log value or gradient
