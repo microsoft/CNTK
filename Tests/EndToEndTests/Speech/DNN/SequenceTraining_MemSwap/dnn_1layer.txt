@@ -1,0 +1,38 @@
+load = ndlMacroDefine
+run = DNN
+
+ndlMacroDefine = [
+    # Macro definitions
+    MeanVarNorm(x) = [
+        xMean   = Mean(x);
+        xStdDev = InvStdDev(x)
+        xNorm = PerDimMeanVarNormalization(x, xMean, xStdDev)
+    ]
+]
+
+DNN = [
+    #define basic i/o
+    featDim = 363
+    labelDim = 132
+    hiddenDim = 512
+
+    features = Input(featDim, tag="feature")
+    labels   = Input(labelDim, tag="label")
+
+    globalMean   = Parameter(featDim,  1, init="fromFile", initFromFilePath="$globalMeanPath$",   computeGradient=false)
+    globalInvStd = Parameter(featDim,  1, init="fromFile", initFromFilePath="$globalInvStdPath$", computeGradient=false)
+    globalPrior  = Parameter(labelDim, 1, init="fromFile", initFromFilePath="$globalPriorPath$",  computeGradient=false)
+    logPrior = Log(globalPrior)
+
+    # define network
+    featNorm = PerDimMeanVarNormalization(features, globalMean, globalInvStd)
+
+    # layer 1   363 X 512
+    HL1 = DNNLayer(featDim, hiddenDim, featNorm); 
+    # last layer 512 X 132 
+    OL = DNNLastLayer(hiddenDim, labelDim, HL1);
+
+    ce  = CrossEntropyWithSoftmax(labels, OL, tag="criterion");
+    err = ClassificationError(labels, OL, tag="evaluation");
+    scaledLogLikelihood = Minus(OL, logPrior, tag="output")
+]

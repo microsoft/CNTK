@@ -1,0 +1,50 @@
+# The following script defines the same network structure as that in the
+# baseline dssm See details in
+# \\msrr-deep-02\hxd\DSSM\WWW14_Set\config_DSSM.ax.txt
+# Feature dimension is data dependent. Each time we changes the dataset, SDim_Q and SDim_D must be set accordingly. 
+# For the train.4M dataset, they are set to be 49288 and 49010.
+# Theoretically, we could set these values to the maximum feature size. We chose current way to make it consistent with DSSM.
+SDim_Q=49292
+SDim_D=49292
+HDim=288
+LDim=64
+NEG=50
+RC=51
+SHIFT=1
+GAMMA=10
+
+# Model learnable parameters
+WQ0=Parameter(HDim, SDim_Q)
+WQ1=Parameter(LDim, HDim)
+# Model learnable parameters
+WD0=Parameter(HDim, SDim_D)
+WD1=Parameter(LDim, HDim)
+# Below is for Q
+Query=SparseInput(SDim_Q)
+WQ0_Q=Times(WQ0, Query)
+WQ0_Q_Tanh=Tanh(WQ0_Q)
+WQ1_Q=Times(WQ1, WQ0_Q_Tanh)
+WQ1_Q_Tanh=Tanh(WQ1_Q)
+# Below is for D
+Keyword=SparseInput(SDim_D)
+WD0_D=Times(WD0, Keyword)
+WD0_D_Tanh=Tanh(WD0_D)
+WD1_D=Times(WD1, WD0_D_Tanh)
+WD1_D_Tanh=Tanh(WD1_D)
+# Below is for comparing Q and D
+S=Constant(SHIFT)
+N=Constant(NEG)
+G=Constant(GAMMA)
+# BUGBUG: DSSMLabel is a special input that LibSVMBinaryReader knows about
+# It fills this in automagically.
+DSSMLabel=Input(RC, 1)
+
+SIM=CosDistanceWithNegativeSamples(WQ1_Q_Tanh, WD1_D_Tanh, S, N)
+SIM_Scale=Scale(G,SIM)
+ce=CrossEntropyWithSoftmax(DSSMLabel, SIM_Scale)
+
+FeatureNodes=(Query,Keyword)
+LabelNodes=(DSSMLabel)
+CriterionNodes=(ce)
+EvalNodes=(ce)
+OutputNodes=(SIM)
