@@ -407,10 +407,12 @@ class MATH_API BaseMatrix
 {
 public:
     
-    BaseMatrix()
+    BaseMatrix(bool doNotInitializeFields = false)
     {
-        ZeroInit();
+        if (!doNotInitializeFields)
+            ZeroInit();
     }
+
     virtual ~BaseMatrix()
     {
         ZeroValues();

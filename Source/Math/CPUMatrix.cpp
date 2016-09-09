@@ -164,9 +164,18 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::operator=(const CPUMatrix<ElemType>& d
 //move constructor, shallow copy
 template <class ElemType>
 CPUMatrix<ElemType>::CPUMatrix(CPUMatrix<ElemType>&& moveFrom)
+    : Base(/* shallow */ true)
 {
     ShallowCopyFrom(moveFrom);
     moveFrom.ZeroValues();
+}
+
+// Shortcut of default constructor + shallow copy, to avoid one initialization
+template <class ElemType>
+CPUMatrix<ElemType>::CPUMatrix(const CPUMatrix<ElemType>& shallowCopyFrom, bool shallow)
+    : Base(shallow)
+{
+    ShallowCopyFrom(shallowCopyFrom);
 }
 
 //move assignment operator, shallow copy
@@ -180,12 +189,6 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::operator=(CPUMatrix<ElemType>&& moveFr
         moveFrom.ZeroValues();
     }
     return *this;
-}
-
-template <class ElemType>
-CPUMatrix<ElemType>::~CPUMatrix()
-{
-    Clear();
 }
 
 template <class ElemType>
@@ -204,9 +207,7 @@ CPUMatrix<ElemType> CPUMatrix<ElemType>::ColumnSlice(size_t startColumn, size_t 
     if (startColumn + numCols > m_numCols)
         InvalidArgument("The slice (%d+%d) is out of range of the source matrix (%d).", (int) startColumn, (int) numCols, (int) m_numCols);
 
-    CPUMatrix<ElemType> slice;
-
-    slice.ShallowCopyFrom(*this);
+    CPUMatrix<ElemType> slice(*this, /* shallow= */ true);
     slice.m_numCols = numCols;
     slice.m_sliceViewOffset = m_sliceViewOffset + startColumn * m_numRows;
 
