@@ -126,7 +126,7 @@ template <class ElemType>
         fprintf(stderr, "] %ls %s--> %s\n", m_message.c_str(), logGradientInstead ? "(gradient) " : "", InputRef(0).FormatOperationPrototype("").c_str());
         InputRef(0).WriteMinibatchWithFormatting(stderr, fr, m_onlyUpToRow, m_onlyUpToT, m_formattingOptions.transpose, m_formattingOptions.isCategoryLabel, m_formattingOptions.isSparse, m_labelMapping,
                                                sequenceSeparator, sequencePrologue, sequenceEpilogue, elementSeparator, sampleSeparator,
-											   valueFormatString, logGradientInstead);
+                                               valueFormatString, logGradientInstead);
     }
 }
 
