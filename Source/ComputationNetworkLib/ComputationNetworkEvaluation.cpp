@@ -10,6 +10,7 @@
 #include "ComputationNetwork.h"
 #include "RecurrentNodes.h"
 #include "InputAndParamNodes.h"
+#include "SpecialPurposeNodes.h"
 #include <string>
 #include <vector>
 #include <list>
@@ -982,7 +983,7 @@ void ComputationNetwork::InitMemorySwapping(const std::vector<ComputationNodeBas
             matrix2LoopMembers[valueBuffer].insert(valueBuffer);
 
         std::string parent = std::string(node->NodeName().begin(), node->NodeName().end());
-        cout << parent << node->RequiresPreCompute() << node->IsValueSharable() << endl;
+        cout << parent << " " << valueBuffer << " " << node->RequiresPreCompute() << " " << node->IsValueSharable() << " " << node->IsPartOfLoop() << endl;
         matrix2nodename[valueBuffer] = parent;
         for(int i = 0; i < node->GetNumInputs(); i++)
         {
@@ -1130,6 +1131,7 @@ void ComputationNetwork::InitMemorySwapping(const std::vector<ComputationNodeBas
 
     }
 
+
     // do not free learningable parameters after backward pass because we need them
     // during the gradient update
     for(auto node :  GetNodesWithType(OperationNameOf(LearnableParameter)))
@@ -1176,6 +1178,25 @@ void ComputationNetwork::InitMemorySwapping(const std::vector<ComputationNodeBas
     // away during backprop which makes little sense
     for (auto& node : FinalCriterionNodes())
     {
+        // this is a special case where the softmax itself it a sequence
+        // we need to preserve the inputs of the inputs in order for this to work
+        if(node->OperationName() == OperationNameOf(SequenceWithSoftmaxNode))
+        {
+            for(int i = 0; i < node->GetNumInputs(); i++)
+                for(int j = 0; j < node->Input(i)->GetNumInputs(); j++)
+                {
+                    Matrix<ElemType> *input = (Matrix<ElemType>*)node->Input(i)->ValuePtr().get();
+                    Matrix<ElemType> *inputInput = (Matrix<ElemType>*)node->Input(i)->Input(j)->ValuePtr().get();
+
+                    if(matrix2SwapOutNode.count(input) > 0)
+                        matrix2SwapOutNode.erase(input);
+
+                    if(matrix2SwapOutNode.count(inputInput) > 0)
+                        matrix2SwapOutNode.erase(inputInput);
+                }
+            
+        }
+
         Matrix<ElemType> *buffer = (Matrix<ElemType>*)node->ValuePtr().get();
         if(matrix2LastUsageNode.count(buffer) > 0)
             matrix2LastUsageNode.erase(buffer);
