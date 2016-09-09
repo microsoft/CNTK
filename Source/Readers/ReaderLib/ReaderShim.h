@@ -92,6 +92,8 @@ private:
     std::map<std::wstring, std::shared_ptr<Matrix<ElemType>>> m_prefetchBuffer;
     std::map<std::wstring, MBLayoutPtr> m_prefetchMbLayouts;
 
+    int m_verbosity;
+
     int m_deviceId;
     bool m_outstandingRead;
 

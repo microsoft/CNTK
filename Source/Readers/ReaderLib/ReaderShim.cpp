@@ -23,7 +23,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 template <class ElemType>
 ReaderShim<ElemType>::ReaderShim(ReaderFactory factory)
-    : m_factory(factory), m_deviceId(CPUDEVICE), m_outstandingRead(false)
+    : m_factory(factory), m_verbosity(0), m_deviceId(CPUDEVICE), m_outstandingRead(false)
 {
 }
 
@@ -32,6 +32,8 @@ void ReaderShim<ElemType>::Init(const ConfigParameters& config)
 {
     intargvector numberOfuttsPerMinibatchForAllEpochs =
         config(L"nbruttsineachrecurrentiter", ConfigParameters::Array(intargvector(vector<int> { 1 })));
+
+    m_verbosity = config(L"verbosity", 0);
 
     bool prefetch = config(L"prefetch", true);
     // if prefetch - launching asynchronously,
@@ -157,11 +159,7 @@ bool ReaderShim<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
         }
     }
 
-    Timer timer;
-    timer.Start();
     auto result = m_prefetchTask.get();
-    timer.Stop();
-    fprintf(stderr, "Waiting on the prefetch future: %.5gs\n", timer.ElapsedSeconds());
 
     // Ok, prefetch is done.
     m_endOfEpoch = result.first;
@@ -239,9 +237,8 @@ std::pair<bool, bool> ReaderShim<ElemType>::PrefetchMinibatch()
     Matrix<ElemType>::SetDevice(m_prefetchBuffer.begin()->second->GetDeviceId());
     Timer timer;
     timer.Start();
+
     Minibatch minibatch = m_reader->ReadMinibatch();
-    timer.Stop();
-    fprintf(stderr, "Reading time of the minibatch inside future: %.5gs\n", timer.ElapsedSeconds());
 
     // If there is no data we can simply return.
     if (minibatch.m_data.empty())
@@ -249,7 +246,6 @@ std::pair<bool, bool> ReaderShim<ElemType>::PrefetchMinibatch()
         return std::make_pair(minibatch.m_endOfEpoch, false);
     }
 
-    timer.Restart();
     // Ok we have some data. Let's load it to GPU.
     for (const auto& mx : m_prefetchBuffer)
     {
@@ -265,7 +261,8 @@ std::pair<bool, bool> ReaderShim<ElemType>::PrefetchMinibatch()
     Matrix<ElemType>::RecordComputeSyncPoint(m_deviceId);
 
     timer.Stop();
-    fprintf(stderr, "Copy time of the minibatch inside future: %.5gs\n", timer.ElapsedSeconds());
+    if (m_verbosity > 0)
+        fprintf(stderr, "PrefetchMinibatch took: %.5gs\n", timer.ElapsedSeconds());
 
     return std::make_pair(minibatch.m_endOfEpoch, true);
 }
