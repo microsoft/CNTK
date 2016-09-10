@@ -9,7 +9,13 @@ import sys
 import os
 from cntk import learning_rates_per_sample, DeviceDescriptor, Trainer, sgd_learner, cntk_device, StreamConfiguration, text_format_minibatch_source
 from cntk.ops import input_variable, cross_entropy_with_softmax, combine, classification_error, sigmoid
+
+abs_path = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(os.path.join(abs_path, "..", ".."))
 from examples.common.nn import fully_connected_classifier_net, print_training_progress
+
+# make sure we get always the same "randomness"
+np.random.seed(0)
 
 def generate_random_data(sample_size, feature_dim, num_classes):
     # Create synthetic data using NumPy. 
