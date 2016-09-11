@@ -81,4 +81,4 @@ BOOST_AUTO_TEST_CASE(ParseExpressionsAndCompareTree)
 
 BOOST_AUTO_TEST_SUITE_END()
 
-} } } }
+}}}}

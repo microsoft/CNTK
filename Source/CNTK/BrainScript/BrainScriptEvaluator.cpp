@@ -331,7 +331,6 @@ static ConfigValuePtr NodeOp(const ExpressionPtr &e, ConfigValuePtr leftVal, Con
     {
         if (leftIsDouble) // Double/x --> only allow 1/x, implement as Reciprocal  --TODO: fix once we have ElementDivideBy
         {
-            // TODO: test this
             if ((double)leftVal != 1)
                 Fail(L"division by a ComputationNode is currently supported for the reciprocal, 1/x", e->location);
             swap(leftVal, rightVal); // -> scalar * ComputeNode
@@ -340,7 +339,6 @@ static ConfigValuePtr NodeOp(const ExpressionPtr &e, ConfigValuePtr leftVal, Con
         }
         else if (rightIsDouble) // x/Double --> implement as x .* (1/Double)
         {
-            // TODO: test this
             rightVal = MakePrimitiveConfigValuePtr(1.0 / (double)rightVal, rightVal.GetFailFn(), exprPath); // replace divisor by reciprocal
             operationName = L"ElementTimes"; // and use multiplication
         }
