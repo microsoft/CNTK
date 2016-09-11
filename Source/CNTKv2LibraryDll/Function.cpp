@@ -322,9 +322,6 @@ namespace CNTK
             assert(inputs.size() == 2);
             Variable inputOperandVar = inputs[0];
             Variable initialStateVar = inputs[1];
-            // TODO: Current we only support a scalar initial state
-            if (!initialStateVar.IsConstant() || (initialStateVar.Shape().Rank() > 0))
-                LogicError("Currently PastValue/FutureValue Function only supports scalar initial state");
 
             // TODO: We currently only support input operand with 1 dynamic axis for PastValue/FutureValue
             if (inputOperandVar.DynamicAxes().size() != 2)
@@ -684,16 +681,12 @@ namespace CNTK
             Variable inputOperandVar = functionInputs[0];
             Variable initialStateVar = functionInputs[1];
 
-            // Get the intial state of the PastValue/FutureValue operation
-            ElementType initStateValue;
-            NDArrayView tempView({}, &initStateValue, 1, DeviceDescriptor::CPUDevice());
-            tempView.CopyFrom(*(Constant(initialStateVar).Value()));
-
             size_t offset = primitiveFunction->FunctionConfig()[PrimitiveFunction::AttributeNameOffset].Value<size_t>();
+            float dummyInitialStateValue = 0.0f; // Not really used but then why are we forced to pass this?
             if (op == PrimitiveOpType::PastValue)
-                computationNodePtr = New<PastValueNode<ElementType>>(network->GetDeviceId(), functionName, (float)initStateValue, AsTensorShape(inputOperandVar.Shape()), offset);
+                computationNodePtr = New<PastValueNode<ElementType>>(network->GetDeviceId(), functionName, dummyInitialStateValue, AsTensorShape(inputOperandVar.Shape()), offset);
             else
-                computationNodePtr = New<FutureValueNode<ElementType>>(network->GetDeviceId(), functionName, (float)initStateValue, AsTensorShape(inputOperandVar.Shape()), offset);
+                computationNodePtr = New<FutureValueNode<ElementType>>(network->GetDeviceId(), functionName, dummyInitialStateValue, AsTensorShape(inputOperandVar.Shape()), offset);
 
             break;
         }
@@ -751,8 +744,6 @@ namespace CNTK
 
         // Let's reorder inputNodesBasePtrs properly since the ordering of inputs of CNTK internal ComputationNode may be different from the PrimitiveFunction inputs ordering
         ReorderAsCNTKComputationNodeInputs(op, inputNodesBasePtrs);
-        inputNodesBasePtrs.resize(computationNodePtr->As<INumInputs>()->GetExpectedNumInputs());
-
         network->AddNodeToNetAndAttachInputs(computationNodePtr, inputNodesBasePtrs);
 
         return computationNodePtr;
