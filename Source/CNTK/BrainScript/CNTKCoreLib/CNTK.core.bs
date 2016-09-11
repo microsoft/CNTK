@@ -30,7 +30,7 @@
 
 # LinearLayer -- create a fully-connected linear projection layer
 # Note: outDim may describe a tensor as well.
-LinearLayer {outDim, bias = true, init='heNormal', initValueScale=1, inputRank=None, mapRank=None} =
+LinearLayer {outDim, bias = true, init='glorotUniform', initValueScale=1, inputRank=None, mapRank=None} =
 {
     # inputRank given: number of zeroes to add to W (mapRank must not be given)
     # mapRank   given: expand W to leave exactly mapRank axes (inputRank must not be given)
@@ -53,11 +53,11 @@ LinearLayer {outDim, bias = true, init='heNormal', initValueScale=1, inputRank=N
 }.apply
 
 # DenseLayer -- create a fully-connected layer with optional non-linearity
-DenseLayer{outDim, bias = true, activation=(x=>x), init='heNormal', initValueScale=1, inputRank=None, mapRank=None} = Sequential ( LinearLayer{outDim, bias=bias, init=init, initValueScale=initValueScale, inputRank=inputRank, mapRank=mapRank} : activation )
+DenseLayer{outDim, bias = true, activation=(x=>x), init='glorotUniform', initValueScale=1, inputRank=None, mapRank=None} = Sequential ( LinearLayer{outDim, bias=bias, init=init, initValueScale=initValueScale, inputRank=inputRank, mapRank=mapRank} : activation )
 
 # EmbeddingLayer -- create a linear embedding layer
 EmbeddingLayer {outDim,                                   # dimension of embedding
-                init='heNormal', initValueScale=1,
+                init='glorotUniform', initValueScale=1,
                 embeddingPath = '', transpose = false} =  # load a fixed embedding from a path instead
 {
     shape = if transpose then (Inferred : outDim) else (outDim : Inferred)
@@ -77,7 +77,7 @@ ConvolutionalLayer {numOutputChannels,   # e.g. (1) or BS.Constants.None
                     filterShape,         # e.g. (3:3)
                     bias = true,
                     activation = (x=>x),
-                    init = "heNormal",
+                    init = 'glorotUniform',
                     initValueScale = 1,          # TODO: rename to initScale
                     #reductionRank = 1,          # TODO: support this
                     stride = 1, pad = false,
@@ -90,8 +90,7 @@ ConvolutionalLayer {numOutputChannels,   # e.g. (1) or BS.Constants.None
     outputRank = Length (outputChannelsShape)
     filterRank = Length (filterShape)
     kernelShape = _ConcatArrays (filterShape, Repeat (reductionRank, Inferred)) # kernel := filter plus reductionDims
-    #W = ParameterTensor{_ConcatArrays (                kernelShape,      outputChannelsShape), init = init, initValueScale = initValueScale, initOutputRank = -1}  # [ W x H x C x K ]
-    W = ParameterTensor{(outputChannelsShape : Inferred), init = init, initValueScale = initValueScale}  # old-style for backwards-compatible random initialization
+    W = ParameterTensor{_ConcatArrays (kernelShape, outputChannelsShape), init = init, initValueScale = initValueScale, initFilterRank = filterRank, initOutputRank = -1}  # [ W x H x C x K ]
     b = ParameterTensor(_ConcatArrays (Repeat (Length (filterShape), 1), outputChannelsShape), initValue = 0)                                 # [ 1 x 1 x     K ]
     sharing = true    # TODO: support this
     transpose = false # TODO: support this
@@ -120,13 +119,13 @@ RecurrentLSTMLayer {outputDim,
                     goBackwards = false,
                     usePeepholes = false,
                     trainInitialState = false,
-                    init = 'heNormal', initValueScale = 1,
+                    init = 'glorotUniform', initValueScale = 1,
                     enableSelfStabilization = false,
                     allowOptimizedEngine = false} =
 if allowOptimizedEngine && BS.Constants.IsNone (cellShape) && !goBackwards && !usePeepholes && !trainInitialState && !enableSelfStabilization then
 {
     # use cudnn instead
-    W = ParameterTensor {0:0, initOutputRank=-1, init=init, initValueScale=initValueScale}
+    W = ParameterTensor {0:0, initFilterRank=0, initOutputRank=-1, init=init, initValueScale=initValueScale}
     apply (x) = OptimizedRNNStack (W, x, outputDim, numLayers=1)
 }.apply
 else
@@ -155,13 +154,13 @@ RecurrentLSTMLayerStack {layerDims,  # an array of dimensions for each layer (la
                          cellShapes = None, # if set then use a projection
                          #bidirectional = false,    # TODO: add this
                          usePeepholes = false,
-                         init = 'heNormal', initValueScale = 1,
+                         init = 'glorotUniform', initValueScale = 1,
                          enableSelfStabilization = false,
                          allowOptimizedEngine = false} =
 if allowOptimizedEngine && BS.Constants.IsNone (cellShapes) && !usePeepholes && !enableSelfStabilization && _AreElementsTheSame (layerDims, Length(layerDims)) then
 {
     # use cudnn instead
-    W = ParameterTensor {0:0, initOutputRank=-1, init=init, initValueScale=initValueScale}
+    W = ParameterTensor {0:0, initFilterRank=0, initOutputRank=-1, init=init, initValueScale=initValueScale}
     apply (x) = OptimizedRNNStack (W, x, layerDims[0], numLayers=Length(layerDims))
 }.apply
 else
@@ -359,7 +358,7 @@ CNTK2 = [
     // TODO: The API for Parameter is different in current 2.0 design, getting a constant as input for the initial values. 
     // This needs to be fixed to follow the way the Constant() is exposed in Python
     // Making this an internal node with "_" until we agree on the final interface:
-    _Parameter(shape, value = 0, initValue = '', learningRateMultiplier = 1.0, init = ''/*|uniform|fixedValue|gaussian|fromFile|fromLiteral*/, initValueScale = 1, initOutputRank = 1, initFromFilePath = '', initFromLiteral = '', initOnCPUOnly=true, randomSeed=-1, tag='') = new ComputationNode [ operation = 'LearnableParameter' ; shape = new TensorShape [ /*shape */ ] /*plus the function args*/ ]
+    _Parameter(shape, value = 0, initValue = '', learningRateMultiplier = 1.0, init = ''/*|uniform|fixedValue|gaussian|fromFile|fromLiteral*/, initValueScale = 1, initFilterRank = 0, initOutputRank = 1, initFromFilePath = '', initFromLiteral = '', initOnCPUOnly=true, randomSeed=-1, tag='') = new ComputationNode [ operation = 'LearnableParameter' ; shape = new TensorShape [ /*shape */ ] /*plus the function args*/ ]
 
     // 3. Shape operations
     // Changes: NewReshape -> Reshape, input -> _, dims -> shape
@@ -471,12 +470,12 @@ CNTK2 = [
 #  - initFromLiteral="..." (deprecated) --> parse a string literal (obsolete with value=array form)
 #  - init="fixedValue", value from 'value'
 # Warning: Current config will behave unexpected if user mistypes 'initValue' as 'value' (which will be ignored, defaulting to "uniform" init)
-Parameter {outputDim, inputDim, learningRateMultiplier = 1.0, init = ''/*|uniform|fixedValue|gaussian|fromFile|fromLiteral*/, initValueScale = 1, value = 0/*deprecated*/, initValue = '', initFromFilePath = '', initFromLiteral = ''/*deprecated*/, initOnCPUOnly=true, randomSeed=-1, tag=''} = new ComputationNode [ operation = 'LearnableParameter' ; initOutputRank = 1 ; shape = new TensorShape [ dims = (outputDim : inputDim) ] /*plus the function args*/ ]
+Parameter {outputDim, inputDim, learningRateMultiplier = 1.0, init = ''/*|uniform|fixedValue|gaussian|fromFile|fromLiteral*/, initValueScale = 1, value = 0/*deprecated*/, initValue = '', initFromFilePath = '', initFromLiteral = ''/*deprecated*/, initOnCPUOnly=true, randomSeed=-1, tag=''} = new ComputationNode [ operation = 'LearnableParameter' ; initFilterRank = 0 ; initOutputRank = 1 ; shape = new TensorShape [ dims = (outputDim : inputDim) ] /*plus the function args*/ ]
 
 LearnableParameter = Parameter  // deprecated
 
 # TODO: make Parameter take tensor dims?
-ParameterTensor {dims, learningRateMultiplier = 1.0, init = ''/*|uniform|fixedValue|gaussian|fromFile|fromLiteral*/, initValueScale = 1, value = 0, initValue = '', initOutputRank = 1, initFromFilePath = '', initFromLiteral = '', initOnCPUOnly=true, randomSeed=-1, tag=''} = new ComputationNode [ operation = 'LearnableParameter' ; shape = new TensorShape [ /*dims*/ ] /*plus the function args*/ ]
+ParameterTensor {dims, learningRateMultiplier = 1.0, init = ''/*|uniform|fixedValue|gaussian|fromFile|fromLiteral*/, initValueScale = 1, value = 0, initValue = '', initFilterRank = 0, initOutputRank = 1, initFromFilePath = '', initFromLiteral = '', initOnCPUOnly=true, randomSeed=-1, tag=''} = new ComputationNode [ operation = 'LearnableParameter' ; shape = new TensorShape [ /*dims*/ ] /*plus the function args*/ ]
 ConstantFromString(literal, tag='') = ParameterTensor((0)/*dim, will be inferred*/, initFromLiteral = literal, learningRateMultiplier = 0.0)
 # TODO: Deprecate ConstantFromString() in favor of Constant(array expression)
 DynamicAxis(tag='') = new ComputationNode [ operation = 'DynamicAxis' ; /*plus the function args*/  ]
@@ -938,7 +937,7 @@ RNNs =
     # This is the stateless version that takes the previous state as an input.
     # It returns a dictionary with three members: h and c, and dim=h.dim for convenience. prevState must have h and c.
     # This function also takes an optional auxiliary input, e.g. for suporting attention models.
-    LSTMBlock (outputDim, cellShape=None, usePeepholes=false, init='heNormal', initValueScale=1, enableSelfStabilization=false) =
+    LSTMBlock (outputDim, cellShape=None, usePeepholes=false, init='glorotUniform', initValueScale=1, enableSelfStabilization=false) =
     {
         cellDim = if Constants.IsNone (cellShape) then outputDim else cellShape
 

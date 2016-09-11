@@ -65,7 +65,7 @@ public:
 private:
     // initialize with random numbers
     // If 'initOnCPUOnly' then always init on CPU, making initialization consistent across both (for testing).
-    void InitRandom(const std::wstring& type, const unsigned long randomSeed, const ElemType initValueScale, const int initOutputRank, const bool initOnCPUOnly);
+    void InitRandom(const std::wstring& type, const unsigned long randomSeed, const ElemType initValueScale, const size_t initFilterRank, const int initOutputRank, const bool initOnCPUOnly);
 
     // helper to initialize from a matrix read from a text file or a string literal
     void InitFromArray(const std::vector<ElemType>& array, size_t numRows, size_t numCols);
@@ -106,6 +106,7 @@ private:
     std::wstring m_initString; // if non-empty then deferred initialization is needed. Gets cleared upon completion of deferred init.
     unsigned long m_randomSeed;
     ElemType m_initValueScale;
+    size_t m_initFilterRank;
     int m_initOutputRank;
     bool m_initOnCPUOnly;
     ElemType m_initValue;

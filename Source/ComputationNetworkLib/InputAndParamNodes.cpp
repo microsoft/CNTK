@@ -41,7 +41,7 @@ static pair<bool/*uniform*/, double/*stddev or range*/> ParseRandomizationType(c
 //  - init="fixedValue",  value from 'value'            --deprecated in favor of just specifying initValue
 //  - init="fromFile",    value from 'initFromFilePath' --deprecated in favor of just specifying 'initFromFilePath'
 //  - init="fromLiteral", value from 'initFromLiteral'  --deprecated in favor of initValue=array expression
-// Random initialization takes an additional optional parameter initOutputRank, default 1.
+// Random initialization takes two additional optional parameters: initFilterRank, default 0, and initOutputRank, default 1.
 // All dimensions that are not amongst the first 'initOutputRank' are considered inputs.
 // This is necessary e.g. for convolution.
 // 'initOutputRank' can also be negative to denote output dims on the right, to cater to the needs
@@ -97,6 +97,7 @@ LearnableParameter<ElemType>::LearnableParameter(const ScriptableObjects::IConfi
         int forcedRandomSeed = configp->Get(L"randomSeed"); // forcing a specific random seed is useful for testing to get repeatable initialization independent of evaluation order
         m_randomSeed = forcedRandomSeed < 0 ? randomSeed++ : (unsigned long)forcedRandomSeed;
         m_initValueScale = configp->Get(L"initValueScale");
+        m_initFilterRank = configp->Get(L"initFilterRank"); 
         m_initOutputRank = configp->Get(L"initOutputRank");
         m_initOnCPUOnly  = configp->Get(L"initOnCPUOnly");
     }
@@ -181,6 +182,7 @@ void LearnableParameter<ElemType>::PostInitParameters(const wstring& initString,
         m_initString = initString;
         m_randomSeed = randomSeed;
         m_initValueScale = initValue;
+        m_initFilterRank = 0; // default. NDL (deprecated) cannot specify a different value.  
         m_initOutputRank = 1; // default. NDL (deprecated) cannot specify a different value.
         m_initOnCPUOnly = initOnCPUOnly;
     }
@@ -227,6 +229,7 @@ template <class ElemType>
 void LearnableParameter<ElemType>::InitRandom(const wstring& type,
                                               const unsigned long randomSeed,
                                               const ElemType initValueScale,
+                                              const size_t initFilterRank,
                                               const int initOutputRank,
                                               const bool initOnCPUOnly)
 {
@@ -236,21 +239,25 @@ void LearnableParameter<ElemType>::InitRandom(const wstring& type,
     let numElements = sampleLayout.GetNumElements();
     if (numElements == 0)
         return;
+
+    if (initFilterRank + abs(initOutputRank) > sampleLayout.GetRank())
+        InvalidArgument("InitRandom: initFilterRank=%d and initOutputRank=%d exceeds sampleLayout rank %d", (int)initFilterRank, initOutputRank, (int)sampleLayout.GetRank());
     // determine fan-in and fan-out
-    // This is controlled by initOutputRank.
-    // For a normal matrix [I x J], fanOut = I, fanIn = J=inDim --> initOutputRank = +1
-    // For a convolution kernel [w x h x C x K], fanOut = K, fanIn = w*h*C. --> initOutputRank = -1, meaning count from back
-    if (abs(initOutputRank) > sampleLayout.GetRank())
-        InvalidArgument("InitRandom: initOutputRank=%d exceeds sampleLayout rank %d", initOutputRank, (int)sampleLayout.GetRank());
-    // fanIn is determined by multiplying a range of dimensions:
-    //  - initOutputRank >= 0: [ initOutputRank, rank )
-    //  - initOutputRank <  0: [ 0, rank-abs(initOutputRank) )
-    let inDimsBegin = (initOutputRank >= 0) ? (size_t)initOutputRank : 0;
-    let inDimsEnd   = (initOutputRank >= 0) ? sampleLayout.GetRank() : (size_t)((int)sampleLayout.GetRank() + initOutputRank);
-    size_t fanIn = 1;
+    // In the most generic case of convolution, sampleLayout should be in the form of [f1 x f2 x ... x fr x c1 x ... x cm x k1 x ... x kn],
+    // where r is the filterRank, m is the input rank, and n is the output rank. In the above example, we should have initOutputRank = -n
+    // If initOutputRank = n, the layout should be [[f1 x f2 x ... x fr x k1 x ... x kn x c1 x ... x cm], note filter dimensions stay in the front of the layout 
+    // in the case of dense layers, initFilterRank = r = 0. 
+    size_t filterSize = 1; 
+    for (size_t k = 0; k < initFilterRank; k++)
+        filterSize *= sampleLayout[k];
+
+    let inDimsBegin = initFilterRank + ((initOutputRank >= 0) ? (size_t)initOutputRank : 0);
+    let inDimsEnd = (initOutputRank >= 0) ? sampleLayout.GetRank() : (size_t)((int)sampleLayout.GetRank() + initOutputRank);
+    size_t fanIn = filterSize; 
     for (size_t k = inDimsBegin; k < inDimsEnd; k++)
         fanIn *= sampleLayout[k];
-    let fanOut = numElements / fanIn; // remaining dimensions
+    size_t fanOut = numElements * filterSize / fanIn;
+
     let opts = ParseRandomizationType(type, fanOut, fanIn);
     let isUniform = opts.first;
     ElemType range = (ElemType)opts.second;
@@ -461,6 +468,7 @@ template <class ElemType>
         node->m_initString     = m_initString;
         node->m_randomSeed     = m_randomSeed;
         node->m_initValueScale = m_initValueScale;
+        node->m_initFilterRank = m_initFilterRank; 
         node->m_initOutputRank = m_initOutputRank;
         node->m_initOnCPUOnly  = m_initOnCPUOnly;
         node->m_initValue      = m_initValue;
@@ -537,7 +545,7 @@ void LearnableParameter<ElemType>::LazyInitParameters()
     }
     else if (ParseRandomizationType(m_initString).second != 0)
     {
-        InitRandom(m_initString, m_randomSeed, m_initValueScale, m_initOutputRank, m_initOnCPUOnly);
+        InitRandom(m_initString, m_randomSeed, m_initValueScale, m_initFilterRank, m_initOutputRank, m_initOnCPUOnly);
     }
     else
         LogicError("LearnableParameter: Invalid value of m_initString '%ls' for deferred initialization for %ls.", m_initString.c_str(), NodeDescription().c_str());
