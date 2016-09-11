@@ -274,7 +274,7 @@ static ConfigValuePtr CastToComputationNode(const ConfigValuePtr& val, const ICo
     auto config = make_shared<ConfigRecord>(parentConfig, valFailFn);
     config->Add(L"operation", valFailFn, ConfigValuePtr(make_shared<String>(L"LearnableParameter"), valFailFn, exprPath));
     config->Add(L"shape", valFailFn, MakePrimitiveConfigValuePtr(1.0/*pass as a Double, like BS*/, valFailFn, exprPath));
-    config->Add(L"initValue", valFailFn, val);
+    config->Add(L"initValue", valFailFn, MakePrimitiveConfigValuePtr(dval/*Bool also passed as Double*/, valFailFn, exprPath));
     // additional parameters that are expected by the node
     config->Add(L"init", valFailFn, ConfigValuePtr(make_shared<String>(L""), valFailFn, exprPath));
     config->Add(L"initFromFilePath", valFailFn, ConfigValuePtr(make_shared<String>(L""), valFailFn, exprPath));
@@ -361,15 +361,27 @@ static ConfigValuePtr EvaluateNodeOp(const ExpressionPtr &e, ConfigValuePtr firs
     else if (e->op == L">=") operationName = L"GreaterEqual";
     else if (e->op == L"!=") operationName = L"NotEqual";
     else if (e->op == L"<=") operationName = L"LessEqual";
-    // Boolean ops
-    else if (e->op == L"&&") { takesBool = true; operationName = L"ElementTimes"; } // implemented as element product  --TODO: needs a C++ node
-    else if (e->op == L"||") { takesBool = true; InvalidInfixOpTypes(e); } // TODO: implement this, needs a C++ node
+    // Boolean ops  --short-circuit these before graph building (the node is already constructed, but will be dereferenced and tossed right away)
+    else if (e->op == L"&&")
+    {
+        if ((firstIsBool && !ToBoolean(firstVal, e->args[0])) || (secondIsBool && !ToBoolean(secondVal, e->args[1])))
+            return firstVal;
+        takesBool = true; operationName = L"ElementTimes";  // implemented as element product  --TODO: needs a C++ node
+    }
+    else if (e->op == L"||")
+    {
+        if ((firstIsBool && ToBoolean(firstVal, e->args[0])) || (secondIsBool && ToBoolean(secondVal, e->args[1])))
+            return firstVal;
+        takesBool = true; InvalidInfixOpTypes(e); // TODO: implement this, needs a C++ node
+    }
     // ternary ('if')
-    else if (e->op == L"if") { takesBool = true; operationName = L"If"; }
+    else if (e->op == L"if") operationName = L"If";
     else
         LogicError("unexpected infix op");
     // check non-ComputationNode type
-    if (hasDouble && takesBool)
+    if (operationName == L"If" && ((secondIsDouble && thirdIsBool) || (secondIsBool && thirdIsDouble))) // 'if' takes any but must match
+        Fail(L"'then' and 'else' arguments cannot mix 'Double' and' Bool'", e->location);
+    else if (hasDouble && takesBool)
         Fail(L"operator not applicable to type 'Double'", e->location);
     else if (hasBool && !takesBool)
         Fail(L"operator not applicable to type 'Bool'", e->location);
@@ -389,6 +401,8 @@ static ConfigValuePtr EvaluateNodeOp(const ExpressionPtr &e, ConfigValuePtr firs
     inputs.push_back(CastToComputationNode(firstVal, config, exprPath));
     if (secondVal.get()) // some ops only have one input (secondVal is a nullptr)
         inputs.push_back(CastToComputationNode(secondVal, config, exprPath));
+    if (thirdVal.get()) // most ops don't have the third arg
+        inputs.push_back(CastToComputationNode(thirdVal, config, exprPath));
     config->Add(L"inputs", firstFailFn, ConfigValuePtr(make_shared<ConfigArray>(0, move(inputs)), firstFailFn, exprPath));
     config->Add(L"tag", firstFailFn, ConfigValuePtr(make_shared<String>(), firstFailFn, exprPath)); // infix nodes have no tag
     if (operationName == L"Times") // Times needs extra parameters
@@ -526,11 +540,13 @@ static ConfigValuePtr Evaluate(const ExpressionPtr &e, const IConfigRecordPtr &s
         {
             let argValPtr = Evaluate(e->args[0], scope, exprPath, L"if");
             if (argValPtr.Is<ComputationNodeObject>()) // if ComputationNode becomes If(c,t,e)
-            {
-                NOT_IMPLEMENTED;
-            }
+                return EvaluateNodeOp(e,
+                                      argValPtr,
+                                      Evaluate(e->args[1], scope, exprPath, L"then"),
+                                      Evaluate(e->args[2], scope, exprPath, L"else"),
+                                      scope, exprPath);
             else if (ToBoolean(argValPtr, e->args[0]))
-                return Evaluate(e->args[1], scope, exprPath, L""); // pass exprName through 'if' since only of the two exists
+                return Evaluate(e->args[1], scope, exprPath, L""); // pass exprPath through 'if' since only of the two exists
             else
                 return Evaluate(e->args[2], scope, exprPath, L"");
         }
