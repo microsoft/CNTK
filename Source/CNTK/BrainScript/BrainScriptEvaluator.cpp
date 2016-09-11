@@ -271,12 +271,16 @@ static ConfigValuePtr CastToComputationNode(const ConfigValuePtr& val, const ICo
         dval = ((bool)val) ? 1 : 0;
     // construct a Constant() off 'dval' in the ComputationNode constructor.
     let valFailFn = val.GetFailFn();
-    auto constantConfig = make_shared<ConfigRecord>(parentConfig, valFailFn);
-    constantConfig->Add(L"operation", valFailFn, ConfigValuePtr(make_shared<String>(L"LearnableParameter"), valFailFn, exprPath));
-    constantConfig->Add(L"shape", valFailFn, MakePrimitiveConfigValuePtr((size_t)1, valFailFn, exprPath));
-    constantConfig->Add(L"initValue", valFailFn, val);
-    constantConfig->Add(L"learningRateMultiplier", valFailFn, MakePrimitiveConfigValuePtr(0.0f, valFailFn, exprPath));
-    let value = ConfigValuePtr(FindRuntimeTypeInfo(L"ComputationNode")->construct(constantConfig), valFailFn, exprPath);
+    auto config = make_shared<ConfigRecord>(parentConfig, valFailFn);
+    config->Add(L"operation", valFailFn, ConfigValuePtr(make_shared<String>(L"LearnableParameter"), valFailFn, exprPath));
+    config->Add(L"shape", valFailFn, MakePrimitiveConfigValuePtr(1.0/*pass as a Double, like BS*/, valFailFn, exprPath));
+    config->Add(L"initValue", valFailFn, val);
+    // additional parameters that are expected by the node
+    config->Add(L"init", valFailFn, ConfigValuePtr(make_shared<String>(L""), valFailFn, exprPath));
+    config->Add(L"initFromFilePath", valFailFn, ConfigValuePtr(make_shared<String>(L""), valFailFn, exprPath));
+    config->Add(L"tag",              valFailFn, ConfigValuePtr(make_shared<String>(L""), valFailFn, exprPath));
+    config->Add(L"learningRateMultiplier", valFailFn, MakePrimitiveConfigValuePtr(0.0, valFailFn, exprPath));
+    let value = ConfigValuePtr(FindRuntimeTypeInfo(L"ComputationNode")->construct(config), valFailFn, exprPath);
     let valueWithName = dynamic_cast<HasName *>(value.get());
     if (valueWithName)
         valueWithName->SetName(value.GetExpressionName());

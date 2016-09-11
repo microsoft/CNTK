@@ -164,7 +164,7 @@ static TensorShape ToTensorShape(const ScriptableObjects::ConfigValuePtr& val)
     if (val.Is<TensorShape>())
         return val.AsRef<TensorShape>();
     else
-        return TensorShape(val);
+        return TensorShape((size_t)val);
 }
 
 // variant of above from NDL. Must be called right after plain constructor.
