@@ -134,6 +134,7 @@
     <Text Include="Data\Parser\ExpectedOutput19.txt" />
     <Text Include="Data\Parser\ExpectedOutput2.txt" />
     <Text Include="Data\Parser\ExpectedOutput20.txt" />
+    <Text Include="Data\Parser\ExpectedOutput21.txt" />
     <Text Include="Data\Parser\ExpectedOutput3.txt" />
     <Text Include="Data\Parser\ExpectedOutput4.txt" />
     <Text Include="Data\Parser\ExpectedOutput5.txt" />
@@ -154,6 +155,7 @@
     <Text Include="Data\Parser\Input19.txt" />
     <Text Include="Data\Parser\Input2.txt" />
     <Text Include="Data\Parser\Input20.txt" />
+    <Text Include="Data\Parser\Input21.txt" />
     <Text Include="Data\Parser\Input3.txt" />
     <Text Include="Data\Parser\Input4.txt" />
     <Text Include="Data\Parser\Input5.txt" />

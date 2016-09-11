@@ -177,5 +177,11 @@
     <Text Include="Data\Parser\Input20.txt">
       <Filter>Data\Parser</Filter>
     </Text>
+    <Text Include="Data\Parser\Input21.txt">
+      <Filter>Data\Parser</Filter>
+    </Text>
+    <Text Include="Data\Parser\ExpectedOutput21.txt">
+      <Filter>Data\Parser</Filter>
+    </Text>
   </ItemGroup>
 </Project>
