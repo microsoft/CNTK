@@ -383,7 +383,7 @@ public:
     // --- access functions
 
     template <class C>
-    bool Is() const
+    bool Is() const // note: also works with null pointers (will return false)
     {
         EnsureIsResolved();
         const auto p = dynamic_cast<C *>(get());
