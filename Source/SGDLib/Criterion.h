@@ -147,7 +147,7 @@ public:
     // If 'numSamplesInMinibatch' is 0, then this means that the 'node' is invalid and should not be looked at.
     static size_t GetNumSamples(const ComputationNodeBasePtr& node, size_t numSamplesInMinibatch)
     {
-        if (numSamplesInMinibatch == 0) // empty MB: node is invalid
+        if (numSamplesInMinibatch == 0) // empty MB: node is invalid, MBLayout must not be looked at
             return 0;
         else if (node->HasMBLayout())
             return node->GetMBLayout()->GetActualNumSamples();
