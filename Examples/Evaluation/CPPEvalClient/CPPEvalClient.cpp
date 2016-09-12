@@ -59,8 +59,8 @@ void SaveImage(cv::Mat mat, std::string name)
 }
 
 /// <summary>Reads floats from a string and saves them to a vector</summary>
-/// <param name="s">String to read from</param>
-/// <param name="elems">Destination vaector</param>
+/// <param name="s">A string to read from</param>
+/// <param name="elems">A destination vector</param>
 void SplitString(const std::string &s, std::vector<float> &elems)
 {
     std::stringstream ss(s);
@@ -69,8 +69,8 @@ void SplitString(const std::string &s, std::vector<float> &elems)
 }
 
 /// <summary>Substracts mean value from a corresponding element in an array</summary>
-/// <param name="filePath">Path to XML file with the matrix of mean values</param>
-/// <param name="array">Input array</param>
+/// <param name="filePath">A path to XML file with the matrix of mean values</param>
+/// <param name="array">An input array</param>
 void SubstractMean(std::string filePath, std::vector<float>& array)
 {
     // Read XML file with means 
@@ -96,10 +96,10 @@ void SubstractMean(std::string filePath, std::vector<float>& array)
 }
 
 /// <summary>Reads an input for the MNIST example</summary>
-/// <param name="input">Input string (expected length 28*28 with integer values in range [0,255]</param>
-/// <param name="array">Destination array</param>
-/// <param name="display">Boolean for displaying an image</param>
-/// <param name="save">Boolean for saving an image</param>
+/// <param name="input">An input string (expected length 28*28 with integer values in range [0,255]</param>
+/// <param name="array">A destination array</param>
+/// <param name="display">A boolean for displaying an image</param>
+/// <param name="save">A boolean for saving an image</param>
 void ReadMNISTInput(std::string input, std::vector<float>& array, bool display, bool save)
 {
     int imgDimensionX = 28;
@@ -132,8 +132,8 @@ void ReadMNISTInput(std::string input, std::vector<float>& array, bool display, 
 
 /// <summary>Reads an RGB image from a file and saves it to a vector in the correct order</summary>
 /// <param name="filename">Path to file</param>
-/// <param name="array">Destination array to load the data</param>
-/// <param name="display">Boolean for an option to display an image</param>
+/// <param name="array">A destination array to load the data</param>
+/// <param name="display">A boolean for an option to display an image</param>
 void ReadRGBImage(std::string filename, std::vector<float>& array, bool display)
 {
     auto testImage = cv::imread(filename, CV_LOAD_IMAGE_COLOR);
@@ -161,7 +161,7 @@ void ReadRGBImage(std::string filename, std::vector<float>& array, bool display)
 }
 
 /// <summary>Maps a set of given numbers to [0,1]</summary>
-/// <param name="elems">Set of numbers</param>
+/// <param name="elems">A set of numbers</param>
 void ScaleTo01(std::vector<float>& elems)
 {
     auto minElement = *std::min_element(std::begin(elems), std::end(elems));
@@ -170,7 +170,7 @@ void ScaleTo01(std::vector<float>& elems)
 }
 
 /// <summary>Converts a set of floats in [0,1] to unsinged chars in [0,255].</summary>
-/// <param name="elems">Set of numbers</param>
+/// <param name="elems">A set of numbers</param>
 std::vector<uchar> ConvertToUchar(std::vector<float> elems)
 {
     std::vector<uchar> elemsChar;
@@ -181,7 +181,7 @@ std::vector<uchar> ConvertToUchar(std::vector<float> elems)
 /// <summary>Transforms a layer output into cv::Mat</summary>
 /// <param name="layerOutput">Output of the network layer</param>
 /// <param name="params">{layerPosition, depth, imgDimensionX, imgDimensionY, scaleFactor}</param>
-/// <param name="imgs">Destination vector</param>
+/// <param name="imgs">A destination vector</param>
 void CreateImages(std::vector<uchar> layerOutput, std::vector<boost::variant<std::string, int>> params, std::vector<cv::Mat>& imgs)
 {
     auto depth = boost::get<int>(params[1]);
@@ -267,7 +267,7 @@ void VisualizeLayer(std::string name, std::vector<cv::Mat> imgs, std::vector<boo
 
 /// <summary>Sets the dimensionality of network layers</summary>
 /// <param name="model">Model name</param>
-/// <param name="params">Destination dictionary of parameters</param>
+/// <param name="params">A destination dictionary of parameters</param>
 void SetNetworkParams(std::string model, std::map<std::wstring, std::vector<boost::variant<std::string, int>>>& params)
 {
     // LayerName : {layerPrefix, depth, imgDimensionX, imgDimensionY, scaleFactor}
@@ -316,7 +316,7 @@ void SetNetworkParams(std::string model, std::map<std::wstring, std::vector<boos
 
 /// <summary>Collects visualisation of specified network layers and displays it</summary>
 /// <param name="modelFilePath">Path to the network model file</param>
-/// <param name="inputImage">Input image</param>
+/// <param name="inputImage">An input image</param>
 void VisualizeNetwork(std::string modelFilePath, std::string inputImage)
 {
     IEvaluateModel<float> *model;
