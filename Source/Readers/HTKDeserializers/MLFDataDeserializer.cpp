@@ -96,6 +96,18 @@ MLFDataDeserializer::MLFDataDeserializer(CorpusDescriptorPtr corpus, const Confi
     InitializeStream(name, dimension);
 }
 
+struct StaticSparseSequenceData : SparseSequenceData
+{
+    void* GetDataBuffer() override
+    {
+        return m_data;
+    }
+
+    void *m_data;
+};
+
+typedef std::shared_ptr<StaticSparseSequenceData> StaticSparseSequenceDataPtr;
+
 // Currently we create a single chunk only.
 void MLFDataDeserializer::InitializeChunkDescriptions(CorpusDescriptorPtr corpus, const ConfigHelper& config, const wstring& stateListPath, size_t dimension)
 {
@@ -201,7 +213,7 @@ void MLFDataDeserializer::InitializeChunkDescriptions(CorpusDescriptorPtr corpus
     m_categoryIndices.reserve(dimension);
     for (size_t i = 0; i < dimension; ++i)
     {
-        SparseSequenceDataPtr category = make_shared<SparseSequenceData>();
+        StaticSparseSequenceDataPtr category = make_shared<StaticSparseSequenceData>();
         m_categoryIndices.push_back(static_cast<IndexType>(i));
         category->m_indices = &(m_categoryIndices[i]);
         category->m_nnzCounts.resize(1);
@@ -283,7 +295,11 @@ struct MLFSequenceData : SparseSequenceData
         m_numberOfSamples = (uint32_t) numberOfSamples;
         m_totalNnzCount = static_cast<IndexType>(numberOfSamples);
         m_indices = m_indicesPtr.get();
-        m_data = m_values.data();
+    }
+
+    void* GetDataBuffer() override
+    {
+        return m_values.data();
     }
 };
 

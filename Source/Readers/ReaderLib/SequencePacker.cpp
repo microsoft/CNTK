@@ -274,7 +274,7 @@ MBLayoutPtr SequencePacker::PackSparseStream(const StreamBatch& batch, size_t st
             // compute the sample offset in bytes.
             size_t sampleOffset = sequenceOffset * elementSize;
             // copy all nzz values from source sequence into the buffer.
-            const auto* dataSrc = reinterpret_cast<const char*>(sequence->m_data) + sampleOffset;
+            const auto* dataSrc = reinterpret_cast<const char*>(sequence->GetDataBuffer()) + sampleOffset;
             memcpy(dataDst, dataSrc, nnz * elementSize);
             dataDst += nnz * elementSize; // advance the destination pointer
 

@@ -18,6 +18,23 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+struct ImageSequenceData : DenseSequenceData
+{
+    cv::Mat m_image;
+    // In case we do not copy data - we have to preserve the original sequence.
+    //SequenceDataPtr m_original;
+
+    void* GetDataBuffer() override
+    {
+        if (!m_image.isContinuous())
+        {
+            m_image = m_image.clone();
+        }
+
+        return m_image.ptr();
+    }
+};
+
 class ConfigParameters;
 
 // Base class for image transformations based on OpenCV
@@ -152,7 +169,7 @@ private:
         TypedTranspose(TransposeTransformer* parent) : m_parent(parent) {}
 
         template <class TElementFrom>
-        SequenceDataPtr Apply(SequenceDataPtr inputSequence);
+        SequenceDataPtr Apply(ImageSequenceData* inputSequence);
         conc_stack<std::vector<TElementTo>> m_memBuffers;
     };
 

@@ -46,7 +46,7 @@ public:
         assert(m_chunkBegin <= sequenceId);
         assert(sequenceId < m_chunkEnd);
 
-        auto data = make_shared<DenseSequenceData>();
+        auto data = make_shared<MockDenseSequenceData>();
         data->m_data = &m_sequenceData[sequenceId][0];
         data->m_numberOfSamples = m_sequenceLength;
         data->m_sampleLayout = m_sampleLayout;
@@ -327,9 +327,9 @@ void BlockRandomizerOneEpochTest(bool prefetch)
         BOOST_CHECK_EQUAL(sequences.m_data.size(), 1 - (i / data.size()));
         if (i < data.size())
         {
-            auto data = reinterpret_cast<DenseSequenceData&>(*sequences.m_data[0][0]);
+            auto& data = reinterpret_cast<DenseSequenceData&>(*sequences.m_data[0][0]);
             BOOST_CHECK_EQUAL(data.m_numberOfSamples, 1u);
-            actual.push_back(*((float*)data.m_data));
+            actual.push_back(*((float*)data.GetDataBuffer()));
         }
         BOOST_CHECK_EQUAL(sequences.m_endOfEpoch, (data.size() <= i));
     }
@@ -368,9 +368,9 @@ void BlockRandomizerOneEpochWithChunks1Test(bool prefetch)
         BOOST_CHECK_EQUAL(sequences.m_data.size(), 1 - (i / data.size()));
         if (i < data.size())
         {
-            auto data = reinterpret_cast<DenseSequenceData&>(*sequences.m_data[0][0]);
+            auto& data = reinterpret_cast<DenseSequenceData&>(*sequences.m_data[0][0]);
             BOOST_CHECK_EQUAL(data.m_numberOfSamples, 1u);
-            actual.push_back(*((float*)data.m_data));
+            actual.push_back(*((float*)data.GetDataBuffer()));
         }
         BOOST_CHECK_EQUAL(sequences.m_endOfEpoch, (data.size() <= i));
     }
@@ -413,9 +413,9 @@ void BlockRandomizerOneEpochWithChunks2Test(bool prefetch)
         BOOST_CHECK_EQUAL(sequences.m_data.size(), 1 - (i / data.size()));
         if (i < data.size())
         {
-            auto data = reinterpret_cast<DenseSequenceData&>(*sequences.m_data[0][0]);
+            auto& data = reinterpret_cast<DenseSequenceData&>(*sequences.m_data[0][0]);
             BOOST_CHECK_EQUAL(data.m_numberOfSamples, 1u);
-            actual.push_back(*((float*)data.m_data));
+            actual.push_back(*((float*)data.GetDataBuffer()));
         }
         BOOST_CHECK_EQUAL(sequences.m_endOfEpoch, (data.size() <= i));
     }
@@ -519,9 +519,9 @@ void BlockRandomizerOneEpochLegacyRandomizationTest(bool prefetch)
         BOOST_CHECK_EQUAL(sequences.m_data.size(), 1 - (i / data.size()));
         if (i < 10)
         {
-            auto data = reinterpret_cast<DenseSequenceData&>(*sequences.m_data[0][0]);
+            auto& data = reinterpret_cast<DenseSequenceData&>(*sequences.m_data[0][0]);
             BOOST_CHECK_EQUAL(data.m_numberOfSamples, 1u);
-            actual.push_back(*((float*)data.m_data));
+            actual.push_back(*((float*)data.GetDataBuffer()));
 
         }
         BOOST_CHECK_EQUAL(sequences.m_endOfEpoch, (data.size() <= i));
@@ -561,9 +561,9 @@ BOOST_AUTO_TEST_CASE(NoRandomizerOneEpoch)
         BOOST_CHECK_EQUAL(sequences.m_data.size(), 1 - (i / data.size()));
         if (i < data.size())
         {
-            auto data = reinterpret_cast<DenseSequenceData&>(*sequences.m_data[0][0]);
+            auto& data = reinterpret_cast<DenseSequenceData&>(*sequences.m_data[0][0]);
             BOOST_CHECK_EQUAL(data.m_numberOfSamples, 1u);
-            actual.push_back(*((float*)data.m_data));
+            actual.push_back(*((float*)data.GetDataBuffer()));
         }
 
         BOOST_CHECK_EQUAL(sequences.m_endOfEpoch, (data.size() <= i));

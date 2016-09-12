@@ -51,6 +51,11 @@ private:
         }
 
         std::vector<ElemType> m_buffer;
+
+        void* GetDataBuffer() override
+        {
+            return m_buffer.data();
+        }
     };
 
     // In case of sparse input, we also need a vector of
@@ -61,6 +66,11 @@ private:
         SparseInputStreamBuffer()
         {
             m_totalNnzCount = 0;
+        }
+
+        void* GetDataBuffer() override
+        {
+            return m_buffer.data();
         }
 
         std::vector<IndexType> m_indicesBuffer;

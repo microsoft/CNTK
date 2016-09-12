@@ -14,13 +14,26 @@
 #include "StringUtil.h"
 #include "ConfigUtil.h"
 #include "TimerUtility.h"
+#include "ImageTransformers.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
+
+struct StaticSparseSequenceData : SparseSequenceData
+{
+    void* GetDataBuffer() override
+    {
+        return m_data;
+    }
+
+    void* m_data;
+};
+
+typedef std::shared_ptr<StaticSparseSequenceData> StaticSparseSequenceDataPtr;
 
 class ImageDataDeserializer::LabelGenerator
 {
 public:
-    virtual void CreateLabelFor(size_t classId, SparseSequenceData& data) = 0;
+    virtual void CreateLabelFor(size_t classId, StaticSparseSequenceData& data) = 0;
     virtual ~LabelGenerator() { }
 };
 
@@ -43,7 +56,7 @@ public:
         iota(m_indices.begin(), m_indices.end(), 0);
     }
 
-    virtual void CreateLabelFor(size_t classId, SparseSequenceData& data) override
+    virtual void CreateLabelFor(size_t classId, StaticSparseSequenceData& data) override
     {
         data.m_nnzCounts.resize(1);
         data.m_nnzCounts[0] = 1;
@@ -58,10 +71,10 @@ private:
 };
 
 // Used to keep track of the image. Accessed only using DenseSequenceData interface.
-struct DeserializedImage : DenseSequenceData
-{
-    cv::Mat m_image;
-};
+//struct DeserializedImage : DenseSequenceData
+//{
+//    cv::Mat m_image;
+//};
 
 // For image, chunks correspond to a single image.
 class ImageDataDeserializer::ImageChunk : public Chunk, public std::enable_shared_from_this<ImageChunk>
@@ -80,7 +93,7 @@ public:
         assert(sequenceId == m_description.m_id);
         const auto& imageSequence = m_description;
 
-        auto image = std::make_shared<DeserializedImage>();
+        auto image = std::make_shared<ImageSequenceData>();
         image->m_image = std::move(m_parent.ReadImage(m_description.m_id, imageSequence.m_path, m_parent.m_grayscale));
         auto& cvImage = image->m_image;
         if (!cvImage.data)
@@ -107,7 +120,6 @@ public:
             cvImage = cvImage.clone();
         assert(cvImage.isContinuous());
 
-        image->m_data = image->m_image.data;
         ImageDimensions dimensions(cvImage.cols, cvImage.rows, cvImage.channels());
         image->m_sampleLayout = std::make_shared<TensorShape>(dimensions.AsTensorShape(HWC));
         image->m_id = sequenceId;
@@ -116,7 +128,7 @@ public:
         image->m_elementType = dataType;
         result.push_back(image);
 
-        SparseSequenceDataPtr label = std::make_shared<SparseSequenceData>();
+        StaticSparseSequenceDataPtr label = std::make_shared<StaticSparseSequenceData>();
         label->m_chunk = shared_from_this();
         m_parent.m_labelGenerator->CreateLabelFor(imageSequence.m_classId, *label);
         label->m_numberOfSamples = 1;
