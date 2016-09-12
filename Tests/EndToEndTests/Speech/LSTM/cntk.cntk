@@ -2,7 +2,7 @@
 
 precision = "float" ; deviceId = $DeviceId$ ; traceLevel = 1 ; parallelTrain = false
 
-command = speechTrain
+command = speechCreate:speechTrain
 
 modelSelector = 1   # 0 = regression test; 1 = layers lib; 2 = OptimizedRecurrentStack; 3 = emulated 2
 
@@ -10,10 +10,17 @@ modelSelector = 1   # 0 = regression test; 1 = layers lib; 2 = OptimizedRecurren
 frameMode = false
 truncated = true
 
-# regression test for old version
-speechTrain = {
-    action = "train"
-    modelPath = "$RunDir$/models/cntkSpeech.dnn"
+modelPath = "$RunDir$/models/cntkSpeech.dnn"
+
+###############################################################
+# create model
+# Note: This does not need to be a separate action. This is done
+# as to act as a test case for this separate action.
+###############################################################
+speechCreate = {
+    action = "edit"
+
+    outputModelPath = "$modelPath$.initial"
 
     # define network using BrainScript
     BrainScriptNetworkBuilder = {
@@ -172,6 +179,16 @@ speechTrain = {
         evaluationNodes = (err)
         outputNodes = (scaledLogLikelihood)
     }
+}
+
+###############################################################
+# perform the training
+###############################################################
+speechTrain = {
+    action = "train"
+
+    # define network using BrainScript
+    BrainScriptNetworkBuilder = (BS.Network.Load("$modelPath$.initial"))
 
     SGD = {
         epochSize = 20480 ; maxEpochs = 4 ; minibatchSize = 20
