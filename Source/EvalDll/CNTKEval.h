@@ -39,6 +39,7 @@ public:
     virtual void CreateNetwork(const std::string& networkDescription);
     virtual void Init(const std::string& config);
     virtual void Destroy();
+    virtual void ResetState() = 0;
 };
 
 // ------------------------------------------------------------------------
@@ -90,7 +91,10 @@ template <typename ElemType>
 class CNTKEvalExtended : public CNTKEvalBase<ElemType>, public IEvaluateModelExtended<ElemType>
 {
 public:
-    CNTKEvalExtended() : CNTKEvalBase<ElemType>(), m_started(false) {}
+    CNTKEvalExtended() : CNTKEvalBase<ElemType>(), 
+        m_started(false),
+        m_SeqBeginTime(0),
+        m_SeqBeginTimeMin(0){}
 
     virtual VariableSchema GetOutputSchema() const override;
 
@@ -113,6 +117,9 @@ public:
     {
         CNTKEvalBase<ElemType>::Init(config);
     }
+
+    virtual void ResetState() override;
+
 private:
     static VariableLayout ToVariableLayout(const ComputationNodeBasePtr n);
     std::vector<ComputationNodeBasePtr> m_outputNodes;
@@ -124,5 +131,12 @@ private:
     template<template<typename> class ValueContainer> 
     void ForwardPassT(const std::vector < ValueBuffer<ElemType, ValueContainer> >& inputs,
                       std::vector < ValueBuffer<ElemType, ValueContainer> >& outputs);
+
+    // First time index in this minibatch. Note that this may be negative if the sequence started before this MB.
+    int m_SeqBeginTime;
+
+    // The min possible value of the first time index in this minibatch.
+    // For regular RNN/LSTM networks this should be -1.
+    int m_SeqBeginTimeMin;
 };
 } } }

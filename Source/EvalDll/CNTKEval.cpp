@@ -28,6 +28,7 @@
 #include "HeapMemoryProvider.h"
 #include "InputAndParamNodes.h"
 #include "latticearchive.h"
+#include <limits>
 
 // TODO: Temporary mechanism to enable memory sharing for
 // node output value matrices. This will go away when the
@@ -359,7 +360,10 @@ void CNTKEvalExtended<ElemType>::ForwardPassT(const std::vector<ValueBuffer<Elem
         int numCols = type == MatrixType::DENSE ? buffer.m_buffer.size() / numRows : buffer.m_colIndices.size() - 1;
         assert(numCols >= 1);
         inputNode->GetMBLayout()->Init(1, numCols);
-        inputNode->GetMBLayout()->AddSequence(0, 0, 0, numCols);
+        inputNode->GetMBLayout()->AddSequence(0, 0, INT_MIN, numCols);
+
+        if (m_SeqBeginTimeMin < m_SeqBeginTime)
+            m_SeqBeginTime--;
 
         if (type == MatrixType::DENSE)
             matrix->SetValue(numRows, numCols, matrix->GetDeviceId(), buffer.m_buffer.data(), matrixFlagNormal);
@@ -425,6 +429,13 @@ void CNTKEvalExtended<ElemType>::Destroy()
 {
     CNTKEvalBase<ElemType>::Destroy();
     delete this;
+}
+
+template <typename ElemType>
+void CNTKEvalExtended<ElemType>::ResetState()
+{
+    m_SeqBeginTime = 0;
+    m_SeqBeginTimeMin = INT_MIN;
 }
 
 template <typename ElemType>
