@@ -101,7 +101,7 @@ void ReadMNISTInput(std::string input, std::vector<float>& array, bool display, 
 {
 	int imgDimensionX = 28;
 	int imgDimensionY = 28;
-	int scaleFactor = 3.0;
+	int scaleFactor = 3;
 	size_t step = sizeof(uchar)*imgDimensionX;
 
 	uchar* matData = new uchar[imgDimensionX*imgDimensionY];
@@ -109,8 +109,8 @@ void ReadMNISTInput(std::string input, std::vector<float>& array, bool display, 
 	int pos = 0;
 	for (std::string testImage; iss >> input;)
 	{
-		array.push_back((atoi(input.c_str())));
-		matData[pos] = (atoi(input.c_str()));
+		array.push_back(static_cast<float>(atof(input.c_str())));
+		matData[pos] = static_cast<uchar> (atoi(input.c_str()));
 		pos++;
 	}
 
@@ -171,7 +171,7 @@ void ScaleTo01(std::vector<float>& elems)
 std::vector<uchar> ConvertToUchar(std::vector<float> elems)
 {
 	std::vector<uchar> elemsChar;
-	for (int i = 0; i < elems.size(); i++) elemsChar.push_back(round(255 * elems[i]));
+	for (int i = 0; i < elems.size(); i++) elemsChar.push_back(static_cast<uchar> (round(255 * elems[i])));
 	return elemsChar;
 }
 
@@ -226,7 +226,7 @@ void VisualizeLayer(std::string name, std::vector<cv::Mat> imgs, std::vector<boo
 	if (imgs.size()==1 && imgDimensionY==1) // classes propabilities vector
 	{
 		// Remap to square
-		size_t side = ceil(sqrt(imgs[0].rows*imgs[0].cols));
+		auto side = static_cast<int> (ceil(sqrt(imgs[0].rows*imgs[0].cols)));
 		paneSize = cv::Size(side, side);
 		auto step = sizeof(uchar)*side;
 		pane = cv::Mat(paneSize, CV_8SC1, imgs[0].data, step);
@@ -235,7 +235,7 @@ void VisualizeLayer(std::string name, std::vector<cv::Mat> imgs, std::vector<boo
 	else
 	{
 		// Calculate the size of the pane based on params
-		paneSize = cv::Size(gap*imgDimensionX*ceil(sqrt(depth))*scaleFactor, gap*imgDimensionY*scaleFactor*ceil(sqrt(depth)));
+		paneSize = cv::Size(static_cast<int> (gap*imgDimensionX*ceil(sqrt(depth))*scaleFactor), static_cast<int> (gap*imgDimensionY*scaleFactor*ceil(sqrt(depth))));
 		pane = cv::Mat(paneSize, CV_8SC1, cv::Scalar(255));
 		float column = 0;
 		float row = 0;
@@ -249,7 +249,7 @@ void VisualizeLayer(std::string name, std::vector<cv::Mat> imgs, std::vector<boo
 				column = 0;
 			}
 			// Insert image in the correct position on the pane
-			imgs[i].copyTo(pane(cv::Rect(imgs[i].cols*column, imgs[i].rows*row, imgs[i].cols, imgs[i].rows)));
+			imgs[i].copyTo(pane(cv::Rect((int) round(imgs[i].cols*column), (int) round(imgs[i].rows*row), imgs[i].cols, imgs[i].rows)));
 			// Spacing between consecutive columns
 			column += gap;
 		}
