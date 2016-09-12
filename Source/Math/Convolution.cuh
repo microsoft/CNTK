@@ -228,7 +228,7 @@ __device__ double Round(double a)
 
 // For each image, for each ROI, this function treats that ROI as an image
 // and does max pooling so that it has output size pooledHeight x pooledWidth.
-// The kernel operates on one location in the output tensor, computes which roi
+// The kernel operates on one location in the output tensor, computes which ROI
 // and image should populate that location, computes the subset of the image
 // corresponding to the ROI and which pixels in that subset should go into the
 // output location, then takes the max value over that window.
@@ -238,11 +238,11 @@ __device__ double Round(double a)
 template <typename ElemType>
 __global__ void kROIPoolingForward(const int totalIterations,
     const int numROIs, const int numImg,
-    const int channels, const int height, const int width,
-    const int pooledHeight, const int pooledWidth, const ElemType* src, 
+    const int channels, const int width, const int height,
+    const int pooledWidth, const int pooledHeight, const ElemType* src,
     const ElemType* roiData, ElemType* dst, ElemType* argmax)
 {
-    // index loops over all total_rois*c*pooled_height*pooled_width output locations.
+    // index loops over all totalRois*c*pooledHeight*pooledWidth output locations.
     for (int index = blockIdx.x * blockDim.x + threadIdx.x;
         index < (totalIterations); index += blockDim.x * gridDim.x) 
     {
@@ -251,8 +251,8 @@ __global__ void kROIPoolingForward(const int totalIterations,
         // n is the global ROI index (the new batch index)
         int pw = index % pooledWidth;
         int ph = (index / pooledWidth) % pooledHeight;
-        int c = (index / pooledWidth / pooledHeight) % channels;
-        int n = index / pooledWidth / pooledHeight / channels;
+        int c  = (index / pooledWidth / pooledHeight) % channels;
+        int n  =  index / pooledWidth / pooledHeight / channels;
 
         // each ROI is 4 elements: (x, y, w, h)
         roiData += n * 4;
@@ -264,7 +264,7 @@ __global__ void kROIPoolingForward(const int totalIterations,
         int roiHeight = (int)(max(Round(roiData[3] * height), 1.0));
         
         float winH = (float)roiHeight / (float)pooledHeight;
-        float winW = (float)roiWidth / (float)pooledWidth;
+        float winW = (float)roiWidth  / (float)pooledWidth;
         
         // compute window for this output location.
         int hstart = (int)((float)ph * winH);
@@ -272,11 +272,11 @@ __global__ void kROIPoolingForward(const int totalIterations,
         int hend   = (int)(ceilf((float)(ph + 1) * winH));
         int wend   = (int)(ceilf((float)(pw + 1) * winW));
         
-        // Add roi offsets and clip to input boundaries
+        // Add ROI offsets and clip to input boundaries
         hstart = min(max(hstart + roiStartH, 0), height);
-        hend   = min(max(hend + roiStartH, 0), height);
+        hend   = min(max(hend   + roiStartH, 0), height);
         wstart = min(max(wstart + roiStartW, 0), width);
-        wend   = min(max(wend + roiStartW, 0), width);
+        wend   = min(max(wend   + roiStartW, 0), width);
         
         bool isempty = (hend <= hstart) || (wend <= wstart);
         // Define an empty pooling region to be zero
@@ -309,8 +309,8 @@ __global__ void kROIPoolingForward(const int totalIterations,
 template <typename ElemType>
 __global__ void kROIPoolingBackward(const int totalIterations,
     const int numROIs, const int numImg,
-    const int channels, const int height, const int width,
-    const int pooledHeight, const int pooledWidth, const ElemType* pooledGrad,
+    const int channels, const int width, const int height,
+    const int pooledWidth, const int pooledHeight, const ElemType* pooledGrad,
     const ElemType* roiData, ElemType* grad, const ElemType* argmax)
 {
     // index loops over all input locations (locations in the original input tensor).
@@ -322,7 +322,7 @@ __global__ void kROIPoolingBackward(const int totalIterations,
         int w = index % width;
         int h = (index / width) % height;
         int c = (index / width / height) % channels;
-        int n = index / width / height / channels;
+        int n =  index / width / height  / channels;
 
         // compute range of ROIs corresponding to this image:
         int roiMin = n * numROIs;
@@ -335,7 +335,7 @@ __global__ void kROIPoolingBackward(const int totalIterations,
             // each ROI is 4 elements: (x, y, w, h)
             const ElemType* roiOffset = roiData + roiN * 4;
 
-            // roi data is relative to original image size
+            // ROI data is relative to original image size
             int roiStartW = (int)(Round(roiOffset[0] * width));
             int roiStartH = (int)(Round(roiOffset[1] * height));
             int roiWidth  = (int)(max(Round(roiOffset[2] * width), 1.0));
@@ -348,9 +348,10 @@ __global__ void kROIPoolingBackward(const int totalIterations,
                 continue;
 
             float winH = (float)roiHeight / (float)pooledHeight;
-            float winW = (float)roiWidth / (float)pooledWidth;
+            float winW = (float)roiWidth  / (float)pooledWidth;
 
             // what pooled nodes in the output for this ROI could have pooled this input location?
+            // we use int here since the computation can yield a negative result
             int phstart = (int)((float)(h - roiStartH) / winH);
             int pwstart = (int)((float)(w - roiStartW) / winW);
             int phend   = (int)(ceilf((float)(h - roiStartH + 1) / winH));

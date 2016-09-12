@@ -369,11 +369,11 @@ public:
                             const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIndices, const CPUMatrix<int>& indices,
                             CPUMatrix<ElemType>& grad) const;
 
-    void ROIPoolingForward(const int numRois, const int numImg, const int channels, const int height, const int width,
-                           const int pooledHeight, const int pooledWidth, const CPUMatrix<ElemType>& roiData, CPUMatrix<ElemType>& output, CPUMatrix<ElemType>& argmax) const;
+    void ROIPoolingForward(const size_t numRois, const size_t numImg, const size_t channels, const size_t width, const size_t height,
+                           const size_t pooledWidth, const size_t pooledHeight, const CPUMatrix<ElemType>& roiData, CPUMatrix<ElemType>& output, CPUMatrix<ElemType>& argmax) const;
 
-    void ROIPoolingBackward(const int numRois, const int numImg, const int channels, const int height, const int width,
-                            const int pooledHeight, const int pooledWidth, const CPUMatrix<ElemType>& roiData, CPUMatrix<ElemType>& grad, CPUMatrix<ElemType>& argmax) const;
+    void ROIPoolingBackward(const size_t numRois, const size_t numImg, const size_t channels, const size_t width, const size_t height,
+                            const size_t pooledWidth, const size_t pooledHeight, const CPUMatrix<ElemType>& roiData, CPUMatrix<ElemType>& grad, CPUMatrix<ElemType>& argmax) const;
 
     void MaxUnpooling(const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIndices, const CPUMatrix<int>& indices, const CPUMatrix<ElemType>& poolInput, CPUMatrix<ElemType>& input) const;
 

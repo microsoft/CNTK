@@ -4280,7 +4280,7 @@ void CPUMatrix<ElemType>::MaxPoolingBackward(const CPUMatrix<ElemType>& out, con
 
 // For each image, for each ROI, this function treats that ROI as an image
 // and does max pooling so that it has output size pooledHeight x pooledWidth.
-// It loops over each location in the output tensor, computes which roi
+// It loops over each location in the output tensor, computes which ROI
 // and image should populate that location, computes the subset of the image
 // corresponding to the ROI and which pixels in that subset should go into the
 // output location, then takes the max value over that window.
@@ -4288,19 +4288,21 @@ void CPUMatrix<ElemType>::MaxPoolingBackward(const CPUMatrix<ElemType>& out, con
 // dst: pooledWidth*pooledHeight*channels*numRois*numImg;
 // arranged as [W x H x C x R x N], where R = numROIs.
 template <class ElemType>
-void CPUMatrix<ElemType>::ROIPoolingForward(const int numRois, const int numImg, const int channels, const int height, const int width,
-                                            const int pooledHeight, const int pooledWidth, const CPUMatrix<ElemType>& roiData, CPUMatrix<ElemType>& output, 
+void CPUMatrix<ElemType>::ROIPoolingForward(const size_t numRois, const size_t numImg, const size_t channels, const size_t width, const size_t height,
+                                            const size_t pooledWidth, const size_t pooledHeight, const CPUMatrix<ElemType>& roiData, CPUMatrix<ElemType>& output, 
                                             CPUMatrix<ElemType>& argmax) const
 {
-    int roiOutputSize = pooledHeight * pooledWidth * channels;
+    size_t roiOutputSize = pooledHeight * pooledWidth * channels;
 
 #pragma omp parallel for
-    for (int imgIdx = 0; imgIdx < numImg; imgIdx++) {
+    for (int imgIdx = 0; imgIdx < numImg; imgIdx++)
+    {
         auto img = ColumnSlice(imgIdx, 1);
         auto rois = roiData.ColumnSlice(imgIdx, 1);
 #pragma omp parallel for
-        for (int roiIdx = 0; roiIdx < numRois; roiIdx++) {
-            // each roi is 4 elements: (x, y, w, h).
+        for (int roiIdx = 0; roiIdx < numRois; roiIdx++)
+        {
+            // each ROI is 4 elements: (x, y, w, h).
             int base = roiIdx * 4;
 
             // scaled ROI numbers (relative to original image size)
@@ -4311,10 +4313,10 @@ void CPUMatrix<ElemType>::ROIPoolingForward(const int numRois, const int numImg,
             double scH = rois(base + 3, 0);
 
             // compute actual spatial location of the ROI in our featuremap.
-            int x = (int)round(scX * width);
-            int y = (int)round(scY * height);
-            int roiW = (int)max(round(scW * width), 1.0);
-            int roiH = (int)max(round(scH * height), 1.0);
+            size_t x = (size_t)round(scX * width);
+            size_t y = (size_t)round(scY * height);
+            double roiW = (double)max(round(scW * width), 1.0);
+            double roiH = (double)max(round(scH * height), 1.0);
 
             const double winW = double(roiW) / double(pooledWidth);
             const double winH = double(roiH) / double(pooledHeight);
@@ -4323,39 +4325,42 @@ void CPUMatrix<ElemType>::ROIPoolingForward(const int numRois, const int numImg,
             // https://github.com/rbgirshick/fast-rcnn
             // loop over spatial locations in output.
 #pragma omp parallel for
-            for (int outw = 0; outw < pooledWidth; outw++) {
-                for (int outh = 0; outh < pooledHeight; outh++) {
+            for (int outw = 0; outw < pooledWidth; outw++)
+            {
+                for (int outh = 0; outh < pooledHeight; outh++)
+                {
                     // compute the top left corner of the input
                     // spatial window corresponding to this output unit
-                    int hstart = (int)floor(double(outh)*winH);
-                    int wstart = (int)floor(double(outw)*winW);
+                    size_t hstart = (size_t)floor(double(outh)*winH);
+                    size_t wstart = (size_t)floor(double(outw)*winW);
 
                     // compute bottom right corner (not included)
-                    int hend = (int)ceil(double(outh + 1) * winH);
-                    int wend = (int)ceil(double(outw + 1) * winW);
+                    size_t hend = (size_t)ceil(double(outh + 1) * winH);
+                    size_t wend = (size_t)ceil(double(outw + 1) * winW);
 
                     // offset window based on ROI top left corner.
                     // these indices are into the input slice.
-                    hstart = min(max(hstart + y, 0), height);
-                    wstart = min(max(wstart + x, 0), width);
-                    hend   = min(max(hend + y, 0), height);
-                    wend   = min(max(wend + x, 0), width);
+                    hstart = min(max(hstart + y, (size_t)0), height);
+                    wstart = min(max(wstart + x, (size_t)0), width);
+                    hend   = min(max(hend + y,   (size_t)0), height);
+                    wend   = min(max(wend + x,   (size_t)0), width);
 
                     bool isempty = (hend <= hstart) || (wend <= wstart);
 
-                    for (int c = 0; c < channels; c++) {
-                        // [W x H x C x R x N]; R = rois per image
-                        int outputIdx = roiIdx * roiOutputSize + outw + outh * pooledWidth + c * pooledHeight * pooledWidth;
-                        int maxidx = -1;
+                    for (size_t c = 0; c < channels; c++) 
+                    {
+                        // [W x H x C x R x N]; R = ROIs per image
+                        size_t outputIdx = roiIdx * roiOutputSize + outw + outh * pooledWidth + c * pooledHeight * pooledWidth;
+                        size_t maxidx = 0;
                         float maxval = isempty ? 0 : -FLT_MAX;
-                        int baseIdx = c * height * width;
+                        size_t baseIdx = c * height * width;
 
-                        for (int h = hstart; h < hend; h++)
+                        for (size_t h = hstart; h < hend; h++)
                         {
-                            for (int w = wstart; w < wend; w++)
+                            for (size_t w = wstart; w < wend; w++)
                             {
                                 // stored argmax indices are relative to the current channel.
-                                int dataIdx = w + h * width;
+                                size_t dataIdx = w + h * width;
                                 if (img(baseIdx + dataIdx, 0) > maxval)
                                 {
                                     maxval = img(baseIdx + dataIdx, 0);
@@ -4377,34 +4382,38 @@ void CPUMatrix<ElemType>::ROIPoolingForward(const int numRois, const int numImg,
 // in their output. For each ROI, it checks the argmax data to see if that ROI indeed chose
 // this pixel location as the maximum. If so, it increments the gradient term for the input location.
 template <class ElemType>
-void CPUMatrix<ElemType>::ROIPoolingBackward(const int numRois, const int numImg, const int channels, const int height, const int width,
-                                             const int pooledHeight, const int pooledWidth, const CPUMatrix<ElemType>& roiData, CPUMatrix<ElemType>& grad, 
+void CPUMatrix<ElemType>::ROIPoolingBackward(const size_t numRois, const size_t numImg, const size_t channels, const size_t width, const size_t height,
+                                             const size_t pooledWidth, const size_t pooledHeight, const CPUMatrix<ElemType>& roiData, CPUMatrix<ElemType>& grad, 
                                              CPUMatrix<ElemType>& argmax) const
 {
     // loop over images in the batch.
 #pragma omp parallel for
-    for (int imgIdx = 0; imgIdx < numImg; imgIdx++) {
-        // rois for this image. length 4*numRois;
+    for (int imgIdx = 0; imgIdx < numImg; imgIdx++) 
+    {
+        // ROIs for this image. length 4*numRois;
         auto rois = roiData.ColumnSlice(imgIdx, 1).Data();
-        // gradient values for all rois from this image. length numRois*pooledHeight*pooledWidth*channels;
+        // gradient values for all ROIs from this image. length numRois*pooledHeight*pooledWidth*channels;
         auto pooledGrad = ColumnSlice(imgIdx, 1).Data();
         auto argmaxCol = argmax.ColumnSlice(imgIdx, 1).Data();
 
         // loop over spatial locations in the image.
 #pragma omp parallel for
-        for (int w = 0; w < width; w++) {
+        for (int w = 0; w < width; w++) 
+        {
 #pragma omp parallel for
-            for (int h = 0; h < width; h++) {
-                // loop over the rois seeing which ones contain this location.
-                for (int roiN = 0; roiN < numRois; roiN++) {
-                    // each roi is 4 elements: (x, y, w, h).
+            for (int h = 0; h < width; h++) 
+            {
+                // loop over the ROIs seeing which ones contain this location.
+                for (int roiN = 0; roiN < numRois; roiN++) 
+                {
+                    // each ROI is 4 elements: (x, y, w, h).
                     int roiOffset = roiN * 4;
 
-                    // roi data is relative to original image size
-                    int roiStartW = (int)round(rois[roiOffset + 0] * width);
-                    int roiStartH = (int)round(rois[roiOffset + 1] * height);
-                    int roiWidth  = max((int)round(rois[roiOffset + 2] * width), 1);
-                    int roiHeight = max((int)round(rois[roiOffset + 3] * height), 1);
+                    // ROI data is relative to original image size
+                    size_t roiStartW = (size_t)round(rois[roiOffset + 0] * width);
+                    size_t roiStartH = (size_t)round(rois[roiOffset + 1] * height);
+                    size_t roiWidth  = max((size_t)round(rois[roiOffset + 2] * width), (size_t)1);
+                    size_t roiHeight = max((size_t)round(rois[roiOffset + 3] * height), (size_t)1);
 
                     // skip this ROI if it doesn't contain the current input location.
                     const bool inROI = (w >= roiStartW && w < roiStartW + roiWidth &&
@@ -4416,29 +4425,30 @@ void CPUMatrix<ElemType>::ROIPoolingBackward(const int numRois, const int numImg
                     float winW = (float)roiWidth / (float)pooledWidth;
 
                     // what pooled nodes in the output for this ROI could have pooled this input location?
-                    int phstart = (int)((float)(h - roiStartH) / winH);
-                    int pwstart = (int)((float)(w - roiStartW) / winW);
-                    int phend   = (int)(ceil((float)(h - roiStartH + 1) / winH));
-                    int pwend   = (int)(ceil((float)(w - roiStartW + 1) / winW));
+                    size_t phstart = (size_t)((float)(h - roiStartH) / winH);
+                    size_t pwstart = (size_t)((float)(w - roiStartW) / winW);
+                    size_t phend   = (size_t)(ceil((float)(h - roiStartH + 1) / winH));
+                    size_t pwend   = (size_t)(ceil((float)(w - roiStartW + 1) / winW));
 
-                    phstart = min(max(phstart, 0), pooledHeight);
-                    phend   = min(max(phend, 0), pooledHeight);
-                    pwstart = min(max(pwstart, 0), pooledWidth);
-                    pwend   = min(max(pwend, 0), pooledWidth);
+                    phstart = min(max(phstart, (size_t)0), pooledHeight);
+                    phend   = min(max(phend, (size_t)0), pooledHeight);
+                    pwstart = min(max(pwstart, (size_t)0), pooledWidth);
+                    pwend   = min(max(pwend, (size_t)0), pooledWidth);
 
-                    for (int c = 0; c < channels; c++) {
+                    for (size_t c = 0; c < channels; c++) 
+                    {
                         ElemType gradient = 0;
                         // [W x H x C x N]
-                        int index = w + h*width + c*height*width;
+                        size_t index = w + h*width + c*height*width;
                         // go right up to channel c of the current ROI.
-                        int offset = (roiN * channels + c) * pooledWidth * pooledHeight;
+                        size_t offset = (roiN * channels + c) * pooledWidth * pooledHeight;
                         const ElemType* offsetPoolGrad = pooledGrad + offset;
                         const ElemType* offsetArgmax = argmaxCol + offset;
-                        for (int ph = phstart; ph < phend; ph++)
+                        for (size_t ph = phstart; ph < phend; ph++)
                         {
-                            for (int pw = pwstart; pw < pwend; pw++)
+                            for (size_t pw = pwstart; pw < pwend; pw++)
                             {
-                                if ((int)offsetArgmax[ph * pooledWidth + pw] == (w + h * width))
+                                if ((size_t)offsetArgmax[ph * pooledWidth + pw] == (w + h * width))
                                     gradient += offsetPoolGrad[ph * pooledWidth + pw];
                             }
                         }

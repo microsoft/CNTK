@@ -469,12 +469,12 @@ public:
                             GPUMatrix<ElemType>& grad) const;
     void MaxUnpooling(const GPUMatrix<int>& mpRowCol, const GPUMatrix<int>& mpRowIndices, const GPUMatrix<int>& indices, const GPUMatrix<ElemType>& poolInput, GPUMatrix<ElemType>& input) const;
 
-    void ROIPoolingForward(const int numRois, const int numImg, const int channels, const int height, const int width,
-                           const int pooledHeight, const int pooledWidth, const GPUMatrix<ElemType>& roiData, GPUMatrix<ElemType>& output, 
+    void ROIPoolingForward(const size_t numRois, const size_t numImg, const size_t channels, const size_t width, const size_t height,
+                           const size_t pooledWidth, const size_t pooledHeight, const GPUMatrix<ElemType>& roiData, GPUMatrix<ElemType>& output, 
                            GPUMatrix<ElemType>& argmax) const;
 
-    void ROIPoolingBackward(const int numRois, const int numImg, const int channels, const int height, const int width,
-                            const int pooledHeight, const int pooledWidth, const GPUMatrix<ElemType>& roiData, GPUMatrix<ElemType>& grad, 
+    void ROIPoolingBackward(const size_t numRois, const size_t numImg, const size_t channels, const size_t width, const size_t height,
+                            const size_t pooledWidth, const size_t pooledHeight, const GPUMatrix<ElemType>& roiData, GPUMatrix<ElemType>& grad, 
                             GPUMatrix<ElemType>& argmax) const;
 
     void AveragePoolingForward(const GPUMatrix<int>& mpRowCol, const GPUMatrix<int>& mpRowIndices, const GPUMatrix<int>& indices, GPUMatrix<ElemType>& output) const;

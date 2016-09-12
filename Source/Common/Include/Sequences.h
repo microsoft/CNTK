@@ -313,9 +313,8 @@ public:
             return true;
         bool res =
             m_numTimeSteps == other.m_numTimeSteps &&
-            m_numParallelSequences == other.m_numParallelSequences;// &&
-            //m_sequences == other.m_sequences;
-        //fprintf(stderr, "res: %d\n", (int)res);
+            m_numParallelSequences == other.m_numParallelSequences &&
+            m_sequences == other.m_sequences;
         return res;
     }
     bool operator!=(const MBLayout &other) const

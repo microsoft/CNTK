@@ -196,8 +196,10 @@ protected:
     PoolKind m_poolKind;
     bool m_transpose; // means de-convolution ...I think
     ImageLayoutKind m_imageLayout;
+    
     size_t m_maxTempMemSizeInSamples;
     shared_ptr<Matrix<ElemType>> m_tempMatrix;
+
     std::unique_ptr<ConvolutionEngine<ElemType>> m_convEng;
 };
 
@@ -490,7 +492,7 @@ protected:
 
 
 // -----------------------------------------------------------------------
-// ROIPoolingNode (inputROIs, inputFeatures)--pooling for object detection.
+// ROIPoolingNode (inputFeatures, inputROIs)--pooling for object detection.
 
 // Each input image has a fixed number of regions of interest (ROIs),
 // specified as bounding boxes (x, y, w, h) that are relative to the
@@ -501,15 +503,13 @@ protected:
 // we can get a label for it. The ROIs have different spatial sizes,
 // so this node does Max Pooling, but with an adaptive pooling window,
 // so that each ROI output has the spatial size expected by the first
-// fully-connected layer. ROIs are Input(0). Images are Input(1).
+// fully-connected layer. Images are Input(0). ROIs are Input(1). 
 
 // ROI inputs should be [4 * ROIs per image x Batch Size]. Images are
 // [W*H*C x Batch Size]. The output shape of this node is [Pooled
-// Width x Pooled Height x Channels x ROIs Per Image x Batch Size],
-// which the CNTK Matrix represents as [Pooled Width * Pooled Height *
-// Channels * ROIs Per Image x Batch Size]. However, we want the fully
-// connected layers to interpret /each ROI/ as an image, so this node
-// is followed by a reshape node that changes the batch dimension, giving:
+// Width x Pooled Height x Channels x ROIs Per Image x Batch Size].
+// However, we want the fully connected layers to interpret 
+// /each ROI/ as an image, so giving:
 // [Pooled Width * Pooled Height * Channels x ROIs Per Image * Batch
 // Size].
 
@@ -531,13 +531,13 @@ public:
         : Base(deviceId, name), m_argmaxData(Matrix<ElemType>::Zeros(1,1,deviceId))
     {
     }
-    ROIPoolingNode(DEVICEID_TYPE deviceId, const wstring& name, const size_t height, const size_t width, ImageLayoutKind imageLayoutKind)
-        : Base(deviceId, name), m_outH(height), m_outW(width), m_imageLayout(imageLayoutKind), m_argmaxData(Matrix<ElemType>::Zeros(1, 1, deviceId))
+    ROIPoolingNode(DEVICEID_TYPE deviceId, const wstring& name, const size_t width, const size_t height, ImageLayoutKind imageLayoutKind)
+        : Base(deviceId, name), m_outW(width), m_outH(height), m_imageLayout(imageLayoutKind), m_argmaxData(Matrix<ElemType>::Zeros(1, 1, deviceId))
     {
     }
 
     ROIPoolingNode(const ScriptableObjects::IConfigRecordPtr configp)
-        : ROIPoolingNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"H"), configp->Get(L"W"),
+        : ROIPoolingNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"W"), configp->Get(L"H"),
         ImageLayoutKindFrom(configp->Get(L"imageLayout")))
     {
         AttachInputsFromConfig(configp, GetExpectedNumInputs());
@@ -572,26 +572,26 @@ public:
     // interpret each ROI as a sample.
     void ForwardProp(const FrameRange& fr) override
     {
-        // first dimension is roi_size (4) * rois/image, second is mb size
-        int rois_per_image = GetInputSampleLayout(0)[0] / 4;
+        // first dimension is roiSize (4) * rois/image, second is mb size
+        int roisPerImage = GetInputSampleLayout(1)[0] / 4;
 
-        auto inputShape = GetInputSampleLayout(1);
-        Matrix<ElemType> inputSlice = Input(1)->ValueFor(fr);
-        Matrix<ElemType> ROIs = Input(0)->ValueFor(fr);
+        auto inputShape = GetInputSampleLayout(0);
+        Matrix<ElemType> inputSlice = Input(0)->ValueFor(fr);
+        Matrix<ElemType> ROIs = Input(1)->ValueFor(fr);
 
         // our output slice for this minibatch.
         Matrix<ElemType> outputSlice = ValueFor(fr);
 
         // input slice is c*h*w x bsz; cols are images.
-        // rois is rois_per_image*4 x bsz; cols are rois for different images.
+        // ROIs is roisPerImage*4 x bsz; cols are ROIs for different images.
         // each ROI is (x, y, w, h) relative to original image size.
-        int input_w = inputShape[0];
-        int input_h = inputShape[1];
-        int num_channels = inputShape[2];
+        int inputW = inputShape[0];
+        int inputH = inputShape[1];
+        int numChannels = inputShape[2];
 
-        m_tempMatrix->Resize(m_outH * m_outW * num_channels * rois_per_image, inputSlice.GetNumCols());
-        inputSlice.ROIPoolingForward(rois_per_image, inputSlice.GetNumCols(), 
-            num_channels, input_h, input_w, m_outH, m_outW, ROIs, outputSlice, *m_tempMatrix);
+        m_tempMatrix->Resize(m_outH * m_outW * numChannels * roisPerImage, inputSlice.GetNumCols());
+        inputSlice.ROIPoolingForward(roisPerImage, inputSlice.GetNumCols(), 
+            numChannels, inputW, inputH, m_outW, m_outH, ROIs, outputSlice, *m_tempMatrix);
     }
 
     void Save(File& fstream) const override
@@ -614,8 +614,8 @@ public:
         Base::Validate(isFinalValidationPass);
         InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
 
-        auto inDims = ImageDimensions(GetInputSampleLayout(1), m_imageLayout);
-        size_t rois_per_image = GetInputSampleLayout(0)[0] / 4;
+        auto inDims = ImageDimensions(GetInputSampleLayout(0), m_imageLayout);
+        size_t roisPerImage = GetInputSampleLayout(1)[0] / 4;
 
         if (isFinalValidationPass && m_imageLayout != ImageLayoutKind::CHW)
             InvalidArgument("ROIPoolingNode only supports CHW image layout.");
@@ -623,7 +623,7 @@ public:
         if (isFinalValidationPass && (inDims.m_width < m_outW || inDims.m_height < m_outH))
             InvalidArgument("ROIPoolingNode: inputWidth must >= windowWidth and inputHeight must >= windowHeight.");
         // hack for use with LegacyReshape...4D tensor.
-        SetDims(TensorShape(m_outW, m_outH, inDims.m_numChannels, rois_per_image), HasMBLayout());
+        SetDims(TensorShape(m_outW, m_outH, inDims.m_numChannels, roisPerImage), HasMBLayout());
     }
 
     // similar to usual MaxPooling backpropagation. Send gradients
@@ -634,22 +634,21 @@ public:
     // term.
     void BackpropTo(const size_t /*inputIndex*/, const FrameRange& fr) override
     {
-        auto inputShape = GetInputSampleLayout(1);
-        Matrix<ElemType> inputSlice = Input(1)->ValueFor(fr);
+        auto inputShape = GetInputSampleLayout(0);
+        Matrix<ElemType> inputSlice = Input(0)->ValueFor(fr);
 
-        int input_w = inputShape[0];
-        int input_h = inputShape[1];
-        int num_channels = inputShape[2];
+        int inputW = inputShape[0];
+        int inputH = inputShape[1];
+        int numChannels = inputShape[2];
 
-        //auto& input_grad = Input(1)->GradientAsMatrix();
-        auto inputGrad = Input(1)->GradientFor(fr);
+        auto inputGrad = Input(0)->GradientFor(fr);
         auto pooledGrad = GradientFor(fr);
 
-        int rois_per_image = GetInputSampleLayout(0)[0] / 4;
-        auto roi_data = Input(0)->ValueFor(fr);
+        int roisPerImage = GetInputSampleLayout(1)[0] / 4;
+        auto roiData = Input(1)->ValueFor(fr);
 
-        pooledGrad.ROIPoolingBackward(rois_per_image, inputSlice.GetNumCols(), num_channels, 
-            input_h, input_w, m_outH, m_outW, roi_data, inputGrad, *m_tempMatrix);
+        pooledGrad.ROIPoolingBackward(roisPerImage, inputSlice.GetNumCols(), numChannels, 
+            inputW, inputH, m_outW, m_outH, roiData, inputGrad, *m_tempMatrix);
     }
 
     void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override

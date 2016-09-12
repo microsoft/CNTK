@@ -268,7 +268,6 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
             nodePtr = builder.LegacyReshape(NULL, num_rows, ImageDimensions::AsTensorShape(img_width, img_height, img_channels, imageLayoutKind), name);
         }
     }
-
     else if (cnNodeType == OperationNameOf(ReconcileDynamicAxisNode))
     {
         nodeParamCount = 2;
@@ -508,13 +507,13 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
     }
     else if (cnNodeType == OperationNameOf(ROIPoolingNode))
     {
-
+        // setup the parameter position of children so we can hook them up later
+        // parameters are height and width
         nodeParamCount = 2;
         nodeParamStart = 0;
 
         if (pass == ndlPassInitial)
         {
-
             int id = 2; // skip inputValueNode and inputROINode
 
             // evaluate only scalar parameters
@@ -526,7 +525,7 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
 
             ImageLayoutKind imageLayoutKind = ImageLayoutKindFrom(node->GetOptionalParameter("imageLayout", "CHW"));
 
-            nodePtr = builder.ROIPooling(NULL, NULL, H, W, imageLayoutKind, name);
+            nodePtr = builder.ROIPooling(NULL, NULL, W, H, imageLayoutKind, name);
         }
     }
     else if (cnNodeType == OperationNameOf(BatchNormalizationNode))

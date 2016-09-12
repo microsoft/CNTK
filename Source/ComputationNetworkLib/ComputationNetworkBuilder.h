@@ -63,7 +63,7 @@ public:
                                          ImageLayoutKind imageLayout);
     ComputationNodePtr CreateMaxPoolingNode(const std::wstring& nodeName, const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample, ImageLayoutKind imageLayoutKind);
     ComputationNodePtr CreateAveragePoolingNode(const std::wstring& nodeName, const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample, ImageLayoutKind imageLayoutKind);
-    ComputationNodePtr CreateROIPoolingNode(const std::wstring& nodeName, const size_t H, const size_t W, ImageLayoutKind imageLayoutKind);
+    ComputationNodePtr CreateROIPoolingNode(const std::wstring& nodeName, const size_t W, const size_t H, ImageLayoutKind imageLayoutKind);
     ComputationNodePtr CreateReconcileDynamicAxisNode(const std::wstring& nodeName);
     // this is the catch-all for all cases not covered as special cases above
     // Unlike the specialized ones above, this one creates nodes by type given as a string.
@@ -102,7 +102,7 @@ public:
     ComputationNodePtr AveragePooling(const ComputationNodePtr inputValues,
                                       const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample, ImageLayoutKind imageLayoutKind,
                                       const std::wstring nodeName = L"");
-    ComputationNodePtr ROIPooling(const ComputationNodePtr inputROIs, const ComputationNodePtr inputValues, const size_t H, const size_t W, ImageLayoutKind imageLayoutKind, const std::wstring nodeName = L"");
+    ComputationNodePtr ROIPooling(const ComputationNodePtr inputValues, const ComputationNodePtr inputROIs, const size_t W, const size_t H, ImageLayoutKind imageLayoutKind, const std::wstring nodeName = L"");
     ComputationNodePtr ReconcileDynamicAxis(const ComputationNodePtr dataInput, const ComputationNodePtr layoutInput, const std::wstring nodeName = L"");
 
 #ifdef COMING_SOON

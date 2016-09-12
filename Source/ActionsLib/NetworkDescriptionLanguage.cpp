@@ -154,8 +154,8 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
     bool ret = false;
          if (EqualInsensitive(nodeType, OperationNameOf(AbsNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(AveragePoolingNode))) ret = true;
-	else if (EqualInsensitive(nodeType, OperationNameOf(ROIPoolingNode))) ret = true;
-	else if (EqualInsensitive(nodeType, OperationNameOf(ReconcileDynamicAxisNode))) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(ROIPoolingNode))) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(ReconcileDynamicAxisNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(BatchNormalizationNode))) ret = true;
 #ifdef COMING_SOON
     else if (EqualInsensitive(nodeType, OperationNameOf(CRFNode), L"CRF")) ret = true;
