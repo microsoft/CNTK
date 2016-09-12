@@ -42,7 +42,13 @@ CNTKBinaryReader::CNTKBinaryReader(MemoryProviderPtr provider,
             // Verbosity is a general config parameter, not specific to the binary format reader.
             fprintf(stderr, " | randomizing with window: %d", (int)window);
             int verbosity = config(L"verbosity", 2);
-            m_randomizer = make_shared<BlockRandomizer>(verbosity, window, m_deserializer);
+            m_randomizer = make_shared<BlockRandomizer>(verbosity, 
+                /* randomizationRangeInSamples */ window, 
+                /* deserializer */ m_deserializer,
+                /* shouldPrefetch */ true, 
+                /* decimationMode */ BlockRandomizer::DecimationMode::chunk,
+                /* useLegacyRandomization */ false,
+                /* multithreadedGetNextSequences */ false);
         }
         else
         {
