@@ -288,9 +288,9 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Creat
 }
 
 template <class ElemType>
-shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::CreateROIPoolingNode(const std::wstring& nodeName, const size_t W, const size_t H, ImageLayoutKind imageLayoutKind)
+shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::CreateROIPoolingNode(const std::wstring& nodeName, const size_t W, const size_t H)
 {
-    return net.AddNodeToNetWithElemType(New<ROIPoolingNode<ElemType>>(net.GetDeviceId(), nodeName, W, H, imageLayoutKind));
+    return net.AddNodeToNetWithElemType(New<ROIPoolingNode<ElemType>>(net.GetDeviceId(), nodeName, W, H));
 }
 
 template <class ElemType>
@@ -386,9 +386,9 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Avera
 }
 
 template <class ElemType>
-shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::ROIPooling(const ComputationNodePtr inputValues, const ComputationNodePtr inputROIs, const size_t W, const size_t H, ImageLayoutKind imageLayoutKind, const std::wstring nodeName)
+shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::ROIPooling(const ComputationNodePtr inputValues, const ComputationNodePtr inputROIs, const size_t W, const size_t H, const std::wstring nodeName)
 {
-    return net.AddNodeToNetAndAttachInputs(New<ROIPoolingNode<ElemType>>(net.GetDeviceId(), nodeName, W, H, imageLayoutKind), { inputValues, inputROIs });
+    return net.AddNodeToNetAndAttachInputs(New<ROIPoolingNode<ElemType>>(net.GetDeviceId(), nodeName, W, H), { inputValues, inputROIs });
 }
 
 template <class ElemType>

@@ -4284,9 +4284,11 @@ void CPUMatrix<ElemType>::MaxPoolingBackward(const CPUMatrix<ElemType>& out, con
 // and image should populate that location, computes the subset of the image
 // corresponding to the ROI and which pixels in that subset should go into the
 // output location, then takes the max value over that window.
-// roiData: 4*numROIs*numImg. src: width*height*channels*numImg; arranged [W x H x C x N].
-// dst: pooledWidth*pooledHeight*channels*numRois*numImg;
-// arranged as [W x H x C x R x N], where R = numROIs.
+// src: Images              [W x H x C x N]
+// roiData: ROIs            [4 x numROIs x N], 
+// dst: Pooled ROIs         [PW x PH x C x numROIs x N]
+// argmax: max positions    [PW x PH x C x numROIs x N]
+// where PW = Pooled Width, PH = Pooled Height, C = Channels, N = Batch Size
 template <class ElemType>
 void CPUMatrix<ElemType>::ROIPoolingForward(const size_t numRois, const size_t numImg, const size_t channels, const size_t width, const size_t height,
                                             const size_t pooledWidth, const size_t pooledHeight, const CPUMatrix<ElemType>& roiData, CPUMatrix<ElemType>& output, 
@@ -4307,19 +4309,19 @@ void CPUMatrix<ElemType>::ROIPoolingForward(const size_t numRois, const size_t n
 
             // scaled ROI numbers (relative to original image size)
             // roi points are doubles that represent location relative to image
-            double scX = rois(base, 0);
-            double scY = rois(base + 1, 0);
-            double scW = rois(base + 2, 0);
-            double scH = rois(base + 3, 0);
+            ElemType scX = rois(base, (ElemType)0);
+            ElemType scY = rois(base + (ElemType)1, (ElemType)0);
+            ElemType scW = rois(base + (ElemType)2, (ElemType)0);
+            ElemType scH = rois(base + (ElemType)3, (ElemType)0);
 
             // compute actual spatial location of the ROI in our featuremap.
             size_t x = (size_t)round(scX * width);
             size_t y = (size_t)round(scY * height);
-            double roiW = (double)max(round(scW * width), 1.0);
-            double roiH = (double)max(round(scH * height), 1.0);
+            ElemType roiW = (ElemType)max(round(scW * width),  (ElemType)1);
+            ElemType roiH = (ElemType)max(round(scH * height), (ElemType)1);
 
-            const double winW = double(roiW) / double(pooledWidth);
-            const double winH = double(roiH) / double(pooledHeight);
+            const ElemType winW = roiW / (ElemType)pooledWidth;
+            const ElemType winH = roiH / (ElemType)pooledHeight;
 
             // from Ross Girshick fast-rcnn caffe cpu:
             // https://github.com/rbgirshick/fast-rcnn
@@ -4331,12 +4333,12 @@ void CPUMatrix<ElemType>::ROIPoolingForward(const size_t numRois, const size_t n
                 {
                     // compute the top left corner of the input
                     // spatial window corresponding to this output unit
-                    size_t hstart = (size_t)floor(double(outh)*winH);
-                    size_t wstart = (size_t)floor(double(outw)*winW);
+                    size_t hstart = (size_t)floor(outh * winH);
+                    size_t wstart = (size_t)floor(outw * winW);
 
                     // compute bottom right corner (not included)
-                    size_t hend = (size_t)ceil(double(outh + 1) * winH);
-                    size_t wend = (size_t)ceil(double(outw + 1) * winW);
+                    size_t hend = (size_t)ceil((outh + 1) * winH);
+                    size_t wend = (size_t)ceil((outw + 1) * winW);
 
                     // offset window based on ROI top left corner.
                     // these indices are into the input slice.
@@ -4352,7 +4354,7 @@ void CPUMatrix<ElemType>::ROIPoolingForward(const size_t numRois, const size_t n
                         // [W x H x C x R x N]; R = ROIs per image
                         size_t outputIdx = roiIdx * roiOutputSize + outw + outh * pooledWidth + c * pooledHeight * pooledWidth;
                         size_t maxidx = 0;
-                        float maxval = isempty ? 0 : -FLT_MAX;
+                        ElemType maxval = isempty ? (ElemType)0 : -FLT_MAX;
                         size_t baseIdx = c * height * width;
 
                         for (size_t h = hstart; h < hend; h++)
@@ -4410,9 +4412,9 @@ void CPUMatrix<ElemType>::ROIPoolingBackward(const size_t numRois, const size_t 
                     int roiOffset = roiN * 4;
 
                     // ROI data is relative to original image size
-                    size_t roiStartW = (size_t)round(rois[roiOffset + 0] * width);
-                    size_t roiStartH = (size_t)round(rois[roiOffset + 1] * height);
-                    size_t roiWidth  = max((size_t)round(rois[roiOffset + 2] * width), (size_t)1);
+                    size_t roiStartW =     (size_t)round(rois[roiOffset + 0] * width);
+                    size_t roiStartH =     (size_t)round(rois[roiOffset + 1] * height);
+                    size_t roiWidth  = max((size_t)round(rois[roiOffset + 2] * width),  (size_t)1);
                     size_t roiHeight = max((size_t)round(rois[roiOffset + 3] * height), (size_t)1);
 
                     // skip this ROI if it doesn't contain the current input location.
@@ -4421,19 +4423,19 @@ void CPUMatrix<ElemType>::ROIPoolingBackward(const size_t numRois, const size_t 
                     if (!inROI)
                         continue;
 
-                    float winH = (float)roiHeight / (float)pooledHeight;
-                    float winW = (float)roiWidth / (float)pooledWidth;
+                    ElemType winH = (ElemType)roiHeight / (ElemType)pooledHeight;
+                    ElemType winW = (ElemType)roiWidth  / (ElemType)pooledWidth;
 
                     // what pooled nodes in the output for this ROI could have pooled this input location?
-                    size_t phstart = (size_t)((float)(h - roiStartH) / winH);
-                    size_t pwstart = (size_t)((float)(w - roiStartW) / winW);
-                    size_t phend   = (size_t)(ceil((float)(h - roiStartH + 1) / winH));
-                    size_t pwend   = (size_t)(ceil((float)(w - roiStartW + 1) / winW));
+                    size_t phstart = (size_t)((h - roiStartH) / winH);
+                    size_t pwstart = (size_t)((w - roiStartW) / winW);
+                    size_t phend   = (size_t)(ceil((h - roiStartH + 1) / winH));
+                    size_t pwend   = (size_t)(ceil((w - roiStartW + 1) / winW));
 
                     phstart = min(max(phstart, (size_t)0), pooledHeight);
-                    phend   = min(max(phend, (size_t)0), pooledHeight);
+                    phend   = min(max(phend,   (size_t)0), pooledHeight);
                     pwstart = min(max(pwstart, (size_t)0), pooledWidth);
-                    pwend   = min(max(pwend, (size_t)0), pooledWidth);
+                    pwend   = min(max(pwend,   (size_t)0), pooledWidth);
 
                     for (size_t c = 0; c < channels; c++) 
                     {

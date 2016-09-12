@@ -493,7 +493,7 @@ protected:
 
 // -----------------------------------------------------------------------
 // ROIPoolingNode (inputFeatures, inputROIs)--pooling for object detection.
-
+//
 // Each input image has a fixed number of regions of interest (ROIs),
 // specified as bounding boxes (x, y, w, h) that are relative to the
 // image size [W x H]. This node is meant as a replacement for the
@@ -504,15 +504,12 @@ protected:
 // so this node does Max Pooling, but with an adaptive pooling window,
 // so that each ROI output has the spatial size expected by the first
 // fully-connected layer. Images are Input(0). ROIs are Input(1). 
-
-// ROI inputs should be [4 * ROIs per image x Batch Size]. Images are
-// [W*H*C x Batch Size]. The output shape of this node is [Pooled
-// Width x Pooled Height x Channels x ROIs Per Image x Batch Size].
-// However, we want the fully connected layers to interpret 
-// /each ROI/ as an image, so giving:
-// [Pooled Width * Pooled Height * Channels x ROIs Per Image * Batch
-// Size].
-
+//
+// Input0: Images       [W x H x C x N]
+// Input1: ROIs         [4 x roisPerImage x N], 
+// output: Pooled ROIs  [PW x PH x C x roisPerImage x N]
+// where PW = Pooled Width, PH = Pooled Height, C = Channels, N = Batch Size
+//
 // See http://arxiv.org/abs/1504.08083
 // -----------------------------------------------------------------------
 template <class ElemType>
@@ -531,14 +528,13 @@ public:
         : Base(deviceId, name), m_argmaxData(Matrix<ElemType>::Zeros(1,1,deviceId))
     {
     }
-    ROIPoolingNode(DEVICEID_TYPE deviceId, const wstring& name, const size_t width, const size_t height, ImageLayoutKind imageLayoutKind)
-        : Base(deviceId, name), m_outW(width), m_outH(height), m_imageLayout(imageLayoutKind), m_argmaxData(Matrix<ElemType>::Zeros(1, 1, deviceId))
+    ROIPoolingNode(DEVICEID_TYPE deviceId, const wstring& name, const size_t width, const size_t height)
+        : Base(deviceId, name), m_outW(width), m_outH(height), m_argmaxData(Matrix<ElemType>::Zeros(1, 1, deviceId))
     {
     }
 
     ROIPoolingNode(const ScriptableObjects::IConfigRecordPtr configp)
-        : ROIPoolingNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"W"), configp->Get(L"H"),
-        ImageLayoutKindFrom(configp->Get(L"imageLayout")))
+        : ROIPoolingNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"W"), configp->Get(L"H"))
     {
         AttachInputsFromConfig(configp, GetExpectedNumInputs());
     }
@@ -555,11 +551,13 @@ public:
         ReleaseMatrixToPool(m_tempMatrix, matrixPool);
     }
 
-    // input: ROIs [4 * ROIs Per Image x Batch Size], Images: [W*H*C x Batch Size]
-    // output: Pooled ROIs, stacked along the batch dimension: 
-    // [Pooled Width * Pooled Height * Channels * ROIs Per Image x Batch Size]
-    // Explanation: this node has a target output shape of [Pooled
-    // Width x Pooled Height x Channels], as does any pooling
+    // Input0: Images       [W x H x C x N]
+    // Input1: ROIs         [4 x roisPerImage x N], 
+    // output: Pooled ROIs  [PW x PH x C x roisPerImage x N]
+    // where PW = Pooled Width, PH = Pooled Height, C = Channels, N = Batch Size
+    //
+    // Explanation: this node has a target output shape of 
+    // [Pooled Width x Pooled Height x Channels], as does any pooling
     // layer. However, we want each /ROI/ to have that output size,
     // not each image. After this node, operations in the network
     // should be on ROIs, not on the full images. The forward pass
@@ -567,13 +565,14 @@ public:
     // every ROI, it treats the subset of the image specified by that
     // ROI as a full image and does max pooling over that subset,
     // using whatever window size will correspond to an output of
-    // [Pooled Width x Pooled Height x Channels]. A reshape node then
-    // changes the batch dimension so that the following nodes
-    // interpret each ROI as a sample.
+    // [Pooled Width x Pooled Height x Channels]. Hence, 
+    // the output tensor is [PW x PH x C x roisPerImage x N]
+    // An example validation output looks like this:
+    // Validating --> z.roiOut = ROIPooling (z.conv5Out.conv5.y, rois) : [61 x 61 x 256 x *], [4 x 64 x *] -> [6 x 6 x 256 x 64 x *]
     void ForwardProp(const FrameRange& fr) override
     {
-        // first dimension is roiSize (4) * rois/image, second is mb size
-        int roisPerImage = GetInputSampleLayout(1)[0] / 4;
+        // [4 x RPI x N] -- first dimension is roiSize (4), second is rois-per-image, third is mb size
+        int roisPerImage = GetInputSampleLayout(1)[1];
 
         auto inputShape = GetInputSampleLayout(0);
         Matrix<ElemType> inputSlice = Input(0)->ValueFor(fr);
@@ -582,8 +581,8 @@ public:
         // our output slice for this minibatch.
         Matrix<ElemType> outputSlice = ValueFor(fr);
 
-        // input slice is c*h*w x bsz; cols are images.
-        // ROIs is roisPerImage*4 x bsz; cols are ROIs for different images.
+        // input slice is [W x H x C x N]; cols are images.
+        // ROIs is [4 x roisPerImage x N]; cols are ROIs for different images.
         // each ROI is (x, y, w, h) relative to original image size.
         int inputW = inputShape[0];
         int inputH = inputShape[1];
@@ -594,35 +593,27 @@ public:
             numChannels, inputW, inputH, m_outW, m_outH, ROIs, outputSlice, *m_tempMatrix);
     }
 
-    void Save(File& fstream) const override
-    {
-        Base::Save(fstream);
-        uint32_t imageLayoutKind = (uint32_t)m_imageLayout;
-        fstream << imageLayoutKind << m_outW << m_outH;
-    }
-
-    void Load(File& fstream, size_t modelVersion) override
-    {
-        Base::Load(fstream, modelVersion);
-        uint32_t imageLayoutKind;
-        fstream >> imageLayoutKind >> m_outW >> m_outH;
-        m_imageLayout = (ImageLayoutKind)imageLayoutKind;
-    }
-
     void Validate(bool isFinalValidationPass) override
     {
         Base::Validate(isFinalValidationPass);
         InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
 
-        auto inDims = ImageDimensions(GetInputSampleLayout(0), m_imageLayout);
-        size_t roisPerImage = GetInputSampleLayout(1)[0] / 4;
+        auto inDims = ImageDimensions(GetInputSampleLayout(0), ImageLayoutKind::CHW);
+        size_t roisPerImage = GetInputSampleLayout(1)[1];
 
-        if (isFinalValidationPass && m_imageLayout != ImageLayoutKind::CHW)
-            InvalidArgument("ROIPoolingNode only supports CHW image layout.");
-        
         if (isFinalValidationPass && (inDims.m_width < m_outW || inDims.m_height < m_outH))
             InvalidArgument("ROIPoolingNode: inputWidth must >= windowWidth and inputHeight must >= windowHeight.");
-        // hack for use with LegacyReshape...4D tensor.
+
+        if (isFinalValidationPass && (inDims.m_numChannels < 1))
+            InvalidArgument("ROIPoolingNode: input must have at least one channel ([W x H x C]).");
+
+        if (isFinalValidationPass && (roisPerImage < 1))
+            InvalidArgument("ROIPoolingNode: ROI input must contain at least one ROI ([4 x roisPerImage]).");
+
+        if (isFinalValidationPass && (GetInputSampleLayout(1)[0] != 4))
+            InvalidArgument("ROIPoolingNode: ROI input must have the following shape: [4 x roisPerImage].");
+
+        // set output dimensions to [W x H x C x RPI]
         SetDims(TensorShape(m_outW, m_outH, inDims.m_numChannels, roisPerImage), HasMBLayout());
     }
 
@@ -644,7 +635,7 @@ public:
         auto inputGrad = Input(0)->GradientFor(fr);
         auto pooledGrad = GradientFor(fr);
 
-        int roisPerImage = GetInputSampleLayout(1)[0] / 4;
+        int roisPerImage = GetInputSampleLayout(1)[1];
         auto roiData = Input(1)->ValueFor(fr);
 
         pooledGrad.ROIPoolingBackward(roisPerImage, inputSlice.GetNumCols(), numChannels, 
@@ -659,13 +650,11 @@ public:
             auto node = dynamic_pointer_cast<ROIPoolingNode<ElemType>>(nodeP);
             node->m_outW = m_outW;
             node->m_outH = m_outH;
-            node->m_imageLayout = m_imageLayout;
         }
     }
 
 protected:
     size_t m_outH, m_outW;
-    ImageLayoutKind m_imageLayout; // how to interpret the tensor (which dimensions are X/Y and C)
     shared_ptr<Matrix<ElemType>> m_tempMatrix;
     Matrix<ElemType> m_argmaxData;
 };

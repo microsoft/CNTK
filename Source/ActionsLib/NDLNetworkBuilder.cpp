@@ -523,9 +523,7 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
             size_t H = ((NDLNode<ElemType>*) params[id++])->GetScalar();
             size_t W = ((NDLNode<ElemType>*) params[id++])->GetScalar();
 
-            ImageLayoutKind imageLayoutKind = ImageLayoutKindFrom(node->GetOptionalParameter("imageLayout", "CHW"));
-
-            nodePtr = builder.ROIPooling(NULL, NULL, W, H, imageLayoutKind, name);
+            nodePtr = builder.ROIPooling(NULL, NULL, W, H, name);
         }
     }
     else if (cnNodeType == OperationNameOf(BatchNormalizationNode))
