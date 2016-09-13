@@ -156,17 +156,11 @@ def test_op_dropout(shape, dropout_rate, device_id, precision):
             max_off)
     
 @pytest.mark.parametrize("dropout_rate", [-0.1, 1.0, 100])
-def test_op_dropout_bad_input(dropout_rate, device_id, precision):
+def test_op_dropout_bad_input(dropout_rate):
     from cntk import input_variable, dropout
     from cntk.utils import eval, sanitize_dtype_cntk, cntk_device
 
-    shape = (1,2)
-    value = np.ones(shape=shape, dtype=PRECISION_TO_TYPE[precision])
-
-    a = I(shape=value.shape,
-            data_type=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]),
-            needs_gradient=True,
-            name='a')
+    a = I(shape=(1,2), data_type='float', needs_gradient=True, name='a')
 
     with pytest.raises(ValueError):
         dropout_node = dropout(a, dropout_rate=dropout_rate)
