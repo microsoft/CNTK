@@ -28,7 +28,7 @@ def right_matrix_type(request):
     return request.param
 
 def _test_unary_op(precision, device_id, op_func,
-        operand, expected_forward, expected_backward_all):
+        operand, expected_forward, expected_backward_all, op_param_dict=None):
     
     value = AA(operand, dtype=PRECISION_TO_TYPE[precision]) 
     
@@ -40,7 +40,11 @@ def _test_unary_op(precision, device_id, op_func,
     # create batch
     value.shape = (1,1) + value.shape    
 
-    input_op = op_func(a)
+    if op_param_dict:
+        input_op = op_func(a, **op_param_dict)
+    else:
+        input_op = op_func(a)
+
     forward_input = {a:value}    
     expected_backward = { a: expected_backward_all['arg'], }
     unittest_helper(input_op, 
