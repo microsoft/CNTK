@@ -1,4 +1,4 @@
-from cntk import Function
+from cntk.cntk_py import Function
 from cntk import DATATYPE
 from cntk.graph import TensorOpsMixin
 

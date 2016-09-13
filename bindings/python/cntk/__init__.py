@@ -9,14 +9,23 @@ __version__ = '2.0'
 import os
 
 from . import ops
-from .cntk_py import *
+from . import cntk_py
 from .utils import *
+from .ops import *
+
+# pulling elements from the wrapper into cntk namespace that do not require
+# special wrapping
+from .cntk_py import learning_rates_per_sample, sgd_learner, \
+    DeviceDescriptor, Constant, StreamConfiguration, \
+    text_format_minibatch_source, momentums_per_sample, momentum_sgd_learner, \
+    Axis
+
 
 import numpy as np
 
 DATATYPE = np.float32
 
-class Trainer(Trainer):
+class Trainer(cntk_py.Trainer):
     '''
     Trainer to train the specified 'model' with the specified `training_loss` as the training criterion,
     the specified `evaluation_function` as the criterion for evaluating the trained model's quality, and using the specified set
@@ -62,3 +71,4 @@ class Trainer(Trainer):
             device=DeviceDescriptor.use_default_device()        
         arguments = sanitize_var_map(arguments, add_batch_axis=True)
         super(Trainer, self).train_minibatch(arguments, device)
+

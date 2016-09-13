@@ -1,5 +1,6 @@
 import numpy as np
-from cntk import DATATYPE, NDArrayView, DeviceDescriptor, Variable, Parameter, ConstantFloat, ConstantDouble, Constant, DataType_Float, DataType_Double, ParameterFloat, ParameterDouble, Axis
+from cntk.cntk_py import NDArrayView, DeviceDescriptor, Variable, Parameter, ConstantFloat, ConstantDouble, Constant, DataType_Float, DataType_Double, ParameterFloat, ParameterDouble, Axis
+from cntk import DATATYPE
 from cntk.graph import TensorOpsMixin
 from .. import utils
 
