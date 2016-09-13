@@ -456,7 +456,19 @@ CNTK2 = [
     // No changes here - we said the default input would be the label sequence here, against which the 
     // empirical sequence is compared to. Keeping this for now.
     CrossEntropyWithSoftmax(_, outProbVectorSequence, tag='') = new ComputationNode [ operation = 'CrossEntropyWithSoftmax' ; inputs = _AsNodes (_ : outProbVectorSequence) /*plus the function args*/ ]
-    ClassificationError(_, outVectorSequence, topN=1, tag='') = new ComputationNode [ operation = 'ClassificationError' ; inputs = _AsNodes (if topN == 1 then (_ : outVectorSequence) else  (_ : outVectorSequence : Constant (topN))) /*plus the function args*/ ]
+    # Classification error along a specific axis: account only for missed labels, i.e.
+    # strictly check whether at the one “1” location in labels we find a value equal to the max
+    ClassificationError(labelSequence, outVectorSequence, topN=1, axis=0, tag='') =
+        if axis==0 then new ComputationNode [ operation = 'ClassificationError' ; inputs = _AsNodes (if topN == 1 then (labelSequence : outVectorSequence) else  (labelSequence : outVectorSequence : Constant (topN))) /*plus the function args*/ ]
+        else if topN != 1 then Fail ("ClassificationError() along a specific axis does not support topN.")
+        else {
+            axmax = ReduceMax (outVectorSequence, axis=axis)    # max value along competition axis
+            pred = Equal(outVectorSequence, axmax)              # 1 for all values that are max
+            wrongPred = NotEqual (labelSequence, pred)          # look up all wrong predictions {label index}
+            axErr = ReduceSum(wrongPred, axis=axis)             # sum up wrong predictions  along competition axis
+            capErr = GreaterEqual (axErr, Constant(1))          # only count maximally one error per prediction
+            err = ReduceMean (capErr, tag=tag)                  # average into a single number per sample
+        }.err
     ErrorPrediction = ClassificationError  # legacy
     # TODO: replace with this (need to deal with topN thing):
     # (_new will be removed once the change is made)
@@ -547,6 +559,7 @@ MaxUnpooling(unpoolInput, poolInput, kernelDims, stride=1, autoPadding = true, l
 # 2D pooling
 MaxPooling(input, windowWidth, windowHeight, horizontalSubsample, verticalSubsample, imageLayout='CHW', tag='') = new ComputationNode [ operation = 'MaxPooling' ; inputs = _AsNodes (input) /*plus the function args*/ ]
 AveragePooling(input, windowWidth, windowHeight, horizontalSubsample, verticalSubsample, imageLayout='CHW', tag='') = new ComputationNode [ operation = 'AveragePooling' ; inputs = _AsNodes (input) /*plus the function args*/ ]
+ROIPooling (input, ROIs, shape) = new ComputationNode { operation = 'ROIPooling' ; inputs = (input:ROIs) ; W = shape[0] ; H = shape[1] ; tag='' /*plus the function args*/ } 
 ColumnwiseCrossProduct = KhatriRaoProduct // deprecated 
 ErrorPrediction = ClassificationError   # legacy name
 Delay = PastValue 
@@ -561,8 +574,8 @@ CosDistanceWithNegativeSamples(aVectorSequence, anotherVectorSequence, numShifts
 Cosine(x, tag='') = new ComputationNode [ operation = 'Cosine' ; inputs = _AsNodes (x) /*plus the function args*/ ]
 CrossEntropy(refProbVectorSequence, outProbVectorSequence, tag='') = new ComputationNode [ operation = 'CrossEntropy' ; inputs = _AsNodes (refProbVectorSequence : outProbVectorSequence) /*plus the function args*/ ]
 # once ReduceLogSum becomes proper C++, CrossEntropyWithSoftmax() will become this:
-NewCrossEntropyWithSoftmax (labelSequence, z, tag='') = [ tag1 = tag; out = Minus (ReduceLogSum (z), ReduceSum (labelSequence .* z), tag=tag1) ].out
-DiagTimes(diagonalMatrixAsColumnVector, matrix, tag='') = new ComputationNode [ operation = 'DiagTimes' ; inputs = _AsNodes (diagonalMatrixAsColumnVector : matrix) /*plus the function args*/ ]
+NewCrossEntropyWithSoftmax(labelSequence, outVectorSequence, axis=0, tag='') = [ tag1 = tag; out = Minus (ReduceLogSum (outVectorSequence, axis=axis), ReduceSum (labelSequence .* outVectorSequence, axis=axis), tag=tag1) ].out
+DiagTimes(diagonalMatrixAsColumnVector, matrix, tag='') = new ComputationNode [ operation = 'DiagTimes' ; inputs = (diagonalMatrixAsColumnVector : matrix) /*plus the function args*/ ]
 // TODO: DiagTimes = ElementTimes
 GatherPacked(indexSequence, sourceData, tag='') = new ComputationNode [ operation = 'GatherPacked' ; inputs = _AsNodes (indexSequence : sourceData) /*plus the function args*/ ]
 GMMLogLikelihood(unnormalizedPriorVector, meansAsRows, logStdDevAsRows, dataVectorSequence, tag='') = new ComputationNode [ operation = 'GMMLogLikelihood' ; inputs = _AsNodes (unnormalizedPriorVector : meansAsRows : logStdDevAsRows : dataVectorSequence) /*plus the function args*/ ]

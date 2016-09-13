@@ -490,7 +490,6 @@ protected:
     bool m_convolution2D;
 };
 
-
 // -----------------------------------------------------------------------
 // ROIPoolingNode (inputFeatures, inputROIs)--pooling for object detection.
 //
@@ -571,7 +570,7 @@ public:
     // Validating --> z.roiOut = ROIPooling (z.conv5Out.conv5.y, rois) : [61 x 61 x 256 x *], [4 x 64 x *] -> [6 x 6 x 256 x 64 x *]
     void ForwardProp(const FrameRange& fr) override
     {
-        // [4 x RPI x N] -- first dimension is roiSize (4), second is rois-per-image, third is mb size
+        // [4 x roisPerImage x N] -- first dimension is roiSize (4), second is rois-per-image, third is mb size
         int roisPerImage = GetInputSampleLayout(1)[1];
 
         auto inputShape = GetInputSampleLayout(0);
@@ -602,7 +601,7 @@ public:
         size_t roisPerImage = GetInputSampleLayout(1)[1];
 
         if (isFinalValidationPass && (inDims.m_width < m_outW || inDims.m_height < m_outH))
-            InvalidArgument("ROIPoolingNode: inputWidth must >= windowWidth and inputHeight must >= windowHeight.");
+        InvalidArgument("ROIPoolingNode: inputWidth must >= windowWidth and inputHeight must >= windowHeight.");
 
         if (isFinalValidationPass && (inDims.m_numChannels < 1))
             InvalidArgument("ROIPoolingNode: input must have at least one channel ([W x H x C]).");
@@ -613,7 +612,7 @@ public:
         if (isFinalValidationPass && (GetInputSampleLayout(1)[0] != 4))
             InvalidArgument("ROIPoolingNode: ROI input must have the following shape: [4 x roisPerImage].");
 
-        // set output dimensions to [W x H x C x RPI]
+        // set output dimensions to [W x H x C x roisPerImage]
         SetDims(TensorShape(m_outW, m_outH, inDims.m_numChannels, roisPerImage), HasMBLayout());
     }
 
@@ -621,8 +620,7 @@ public:
     // back through to the locations that were used as the "max." Only
     // difference: needs to sum gradients over all the ROIs that may
     // have used that location. One image location could be in
-    // multiple ROIs--in that case each ROI may contribute a gradient
-    // term.
+    // multiple ROIs--in that case each ROI may contribute a gradient term.
     void BackpropTo(const size_t /*inputIndex*/, const FrameRange& fr) override
     {
         auto inputShape = GetInputSampleLayout(0);
