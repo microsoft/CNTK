@@ -27,6 +27,7 @@ enum class NetworkOperationMode
 // or what the seq-2-seq decoder feedback signal is.
 struct ComputationEnvironment
 {
+    // TODO: change the data member names back to m_ syntax, or get team consensus to not do that
     // networkOperationMode tells whether we are training or inferring, which affects some nodes' behavior
     NetworkOperationMode networkOperationMode = NetworkOperationMode::inferring; // by default, a network is always able to infer
     bool IsInferring()     const { return networkOperationMode == NetworkOperationMode::inferring; }

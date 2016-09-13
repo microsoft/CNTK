@@ -31,7 +31,7 @@ private:
     TensorView<ElemType> GetMaskTensor(size_t rank, const FrameRange& fr) const;
 
 protected:
-    DelayedValueNodeBase(DEVICEID_TYPE deviceId, const wstring& name, ElemType initialState, const TensorShape& sampleLayout, size_t timeStep);
+    DelayedValueNodeBase(DEVICEID_TYPE deviceId, const wstring& name, ElemType fixedInitialStateScalarValue, const TensorShape& sampleLayout, size_t timeStep);
     DelayedValueNodeBase(DEVICEID_TYPE deviceId, const wstring& name) :
         DelayedValueNodeBase(deviceId, name, (ElemType)DEFAULT_HIDDEN_ACTIVATION, TensorShape(), 0)
     {
@@ -113,12 +113,12 @@ public:
         : Base(deviceId, name)
     {
     }
-    PastValueNode(DEVICEID_TYPE deviceId, const wstring& name, ElemType initialState, const TensorShape& sampleLayout, size_t timeStep)
-        : Base(deviceId, name, initialState, sampleLayout, timeStep)
+    PastValueNode(DEVICEID_TYPE deviceId, const wstring& name, ElemType fixedInitialStateScalarValue, const TensorShape& sampleLayout, size_t timeStep)
+        : Base(deviceId, name, fixedInitialStateScalarValue, sampleLayout, timeStep)
     {
     }
-    PastValueNode(DEVICEID_TYPE deviceId, const wstring& name, ElemType initialState, size_t numRows, size_t timeStep)
-        : PastValueNode(deviceId, name, initialState, TensorShape(numRows), timeStep)
+    PastValueNode(DEVICEID_TYPE deviceId, const wstring& name, ElemType fixedInitialStateScalarValue, size_t numRows, size_t timeStep)
+        : PastValueNode(deviceId, name, fixedInitialStateScalarValue, TensorShape(numRows), timeStep)
     {
     }
     PastValueNode(const ScriptableObjects::IConfigRecordPtr configp)
@@ -143,12 +143,12 @@ public:
         : Base(deviceId, name)
     {
     }
-    FutureValueNode(DEVICEID_TYPE deviceId, const wstring& name, ElemType initialState, const TensorShape& sampleLayout, size_t timeStep)
-        : Base(deviceId, name, initialState, sampleLayout, timeStep)
+    FutureValueNode(DEVICEID_TYPE deviceId, const wstring& name, ElemType fixedInitialStateScalarValue, const TensorShape& sampleLayout, size_t timeStep)
+        : Base(deviceId, name, fixedInitialStateScalarValue, sampleLayout, timeStep)
     {
     }
-    FutureValueNode(DEVICEID_TYPE deviceId, const wstring& name, ElemType initialState, size_t numRows, size_t timeStep)
-        : FutureValueNode(deviceId, name, initialState, TensorShape(numRows), timeStep)
+    FutureValueNode(DEVICEID_TYPE deviceId, const wstring& name, ElemType fixedInitialStateScalarValue, size_t numRows, size_t timeStep)
+        : FutureValueNode(deviceId, name, fixedInitialStateScalarValue, TensorShape(numRows), timeStep)
     {
     }
     FutureValueNode(const ScriptableObjects::IConfigRecordPtr configp)
