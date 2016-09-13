@@ -3,12 +3,12 @@ CPU info:
     Hardware threads: 24
     Total Memory: 264172964 kB
 -------------------------------------------------------------------
-=== Running /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/release/bin/cntk configFile=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Examples/Image/MNIST/03_ConvBatchNorm/../../../../../../Examples/Image/MNIST/Config/03_ConvBatchNorm.cntk currentDirectory=/tmp/cntk-test-20160906151422.766743/Examples/Image/MNIST_03_ConvBatchNorm@release_gpu/TestData RunDir=/tmp/cntk-test-20160906151422.766743/Examples/Image/MNIST_03_ConvBatchNorm@release_gpu DataDir=/tmp/cntk-test-20160906151422.766743/Examples/Image/MNIST_03_ConvBatchNorm@release_gpu/TestData ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Examples/Image/MNIST/03_ConvBatchNorm/../../../../../../Examples/Image/MNIST/Config OutputDir=/tmp/cntk-test-20160906151422.766743/Examples/Image/MNIST_03_ConvBatchNorm@release_gpu DeviceId=0 timestamping=true forceDeterministicAlgorithms=true stderr=-
+=== Running /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/release/bin/cntk configFile=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Examples/Image/MNIST/03_ConvBatchNorm/../../../../../../Examples/Image/MNIST/Config/03_ConvBatchNorm.cntk currentDirectory=/tmp/cntk-test-20160913152002.850159/Examples/Image/MNIST_03_ConvBatchNorm@release_gpu/TestData RunDir=/tmp/cntk-test-20160913152002.850159/Examples/Image/MNIST_03_ConvBatchNorm@release_gpu DataDir=/tmp/cntk-test-20160913152002.850159/Examples/Image/MNIST_03_ConvBatchNorm@release_gpu/TestData ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Examples/Image/MNIST/03_ConvBatchNorm/../../../../../../Examples/Image/MNIST/Config OutputDir=/tmp/cntk-test-20160913152002.850159/Examples/Image/MNIST_03_ConvBatchNorm@release_gpu DeviceId=0 timestamping=true forceDeterministicAlgorithms=true stderr=-
 -------------------------------------------------------------------
 Build info: 
 
-		Built time: Sep  6 2016 10:03:39
-		Last modified date: Tue Sep  6 10:02:09 2016
+		Built time: Sep 13 2016 15:15:10
+		Last modified date: Tue Sep 13 15:13:37 2016
 		Build type: release
 		Build target: GPU
 		With 1bit-SGD: no
@@ -17,102 +17,94 @@ Build info:
 		CUB_PATH: /usr/local/cub-1.4.1
 		CUDNN_PATH: /usr/local/cudnn-5.1
 		Build Branch: HEAD
-		Build SHA1: 208270d8f2e007f1da109a12d2db741bb172ee8e
+		Build SHA1: dc27f22964e37ed721e445787ed58be17efe8f24
 		Built by philly on bba8a3f9d1fe
 		Build Path: /home/philly/jenkins/workspace/CNTK-Build-Linux
 -------------------------------------------------------------------
-Changed current directory to /tmp/cntk-test-20160906151422.766743/Examples/Image/MNIST_03_ConvBatchNorm@release_gpu/TestData
-09/06/2016 15:15:38: Redirecting stderr to file -_trainNetwork_testNetwork.log
-09/06/2016 15:15:38: -------------------------------------------------------------------
-09/06/2016 15:15:38: Build info: 
+Changed current directory to /tmp/cntk-test-20160913152002.850159/Examples/Image/MNIST_03_ConvBatchNorm@release_gpu/TestData
+09/13/2016 15:21:57: Redirecting stderr to file -_trainNetwork_testNetwork.log
+09/13/2016 15:21:57: -------------------------------------------------------------------
+09/13/2016 15:21:57: Build info: 
 
-09/06/2016 15:15:38: 		Built time: Sep  6 2016 10:03:39
-09/06/2016 15:15:38: 		Last modified date: Tue Sep  6 10:02:09 2016
-09/06/2016 15:15:38: 		Build type: release
-09/06/2016 15:15:38: 		Build target: GPU
-09/06/2016 15:15:38: 		With 1bit-SGD: no
-09/06/2016 15:15:38: 		Math lib: mkl
-09/06/2016 15:15:38: 		CUDA_PATH: /usr/local/cuda-7.5
-09/06/2016 15:15:38: 		CUB_PATH: /usr/local/cub-1.4.1
-09/06/2016 15:15:38: 		CUDNN_PATH: /usr/local/cudnn-5.1
-09/06/2016 15:15:38: 		Build Branch: HEAD
-09/06/2016 15:15:38: 		Build SHA1: 208270d8f2e007f1da109a12d2db741bb172ee8e
-09/06/2016 15:15:38: 		Built by philly on bba8a3f9d1fe
-09/06/2016 15:15:38: 		Build Path: /home/philly/jenkins/workspace/CNTK-Build-Linux
-09/06/2016 15:15:38: -------------------------------------------------------------------
-09/06/2016 15:15:39: -------------------------------------------------------------------
-09/06/2016 15:15:39: GPU info:
+09/13/2016 15:21:57: 		Built time: Sep 13 2016 15:15:10
+09/13/2016 15:21:57: 		Last modified date: Tue Sep 13 15:13:37 2016
+09/13/2016 15:21:57: 		Build type: release
+09/13/2016 15:21:57: 		Build target: GPU
+09/13/2016 15:21:57: 		With 1bit-SGD: no
+09/13/2016 15:21:57: 		Math lib: mkl
+09/13/2016 15:21:57: 		CUDA_PATH: /usr/local/cuda-7.5
+09/13/2016 15:21:57: 		CUB_PATH: /usr/local/cub-1.4.1
+09/13/2016 15:21:57: 		CUDNN_PATH: /usr/local/cudnn-5.1
+09/13/2016 15:21:57: 		Build Branch: HEAD
+09/13/2016 15:21:57: 		Build SHA1: dc27f22964e37ed721e445787ed58be17efe8f24
+09/13/2016 15:21:57: 		Built by philly on bba8a3f9d1fe
+09/13/2016 15:21:57: 		Build Path: /home/philly/jenkins/workspace/CNTK-Build-Linux
+09/13/2016 15:21:57: -------------------------------------------------------------------
+09/13/2016 15:21:58: -------------------------------------------------------------------
+09/13/2016 15:21:58: GPU info:
 
-09/06/2016 15:15:39: 		Device[0]: cores = 2880; computeCapability = 3.5; type = "GeForce GTX 780 Ti"; memory = 3071 MB
-09/06/2016 15:15:39: 		Device[1]: cores = 2880; computeCapability = 3.5; type = "GeForce GTX 780 Ti"; memory = 3071 MB
-09/06/2016 15:15:39: 		Device[2]: cores = 2880; computeCapability = 3.5; type = "GeForce GTX 780 Ti"; memory = 3071 MB
-09/06/2016 15:15:39: 		Device[3]: cores = 2880; computeCapability = 3.5; type = "GeForce GTX 780 Ti"; memory = 3071 MB
-09/06/2016 15:15:39: -------------------------------------------------------------------
+09/13/2016 15:21:58: 		Device[0]: cores = 2880; computeCapability = 3.5; type = "GeForce GTX 780 Ti"; memory = 3071 MB
+09/13/2016 15:21:58: 		Device[1]: cores = 2880; computeCapability = 3.5; type = "GeForce GTX 780 Ti"; memory = 3071 MB
+09/13/2016 15:21:58: 		Device[2]: cores = 2880; computeCapability = 3.5; type = "GeForce GTX 780 Ti"; memory = 3071 MB
+09/13/2016 15:21:58: 		Device[3]: cores = 2880; computeCapability = 3.5; type = "GeForce GTX 780 Ti"; memory = 3071 MB
+09/13/2016 15:21:58: -------------------------------------------------------------------
 
-09/06/2016 15:15:39: Running on localhost at 2016/09/06 15:15:39
-09/06/2016 15:15:39: Command line: 
-/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/release/bin/cntk  configFile=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Examples/Image/MNIST/03_ConvBatchNorm/../../../../../../Examples/Image/MNIST/Config/03_ConvBatchNorm.cntk  currentDirectory=/tmp/cntk-test-20160906151422.766743/Examples/Image/MNIST_03_ConvBatchNorm@release_gpu/TestData  RunDir=/tmp/cntk-test-20160906151422.766743/Examples/Image/MNIST_03_ConvBatchNorm@release_gpu  DataDir=/tmp/cntk-test-20160906151422.766743/Examples/Image/MNIST_03_ConvBatchNorm@release_gpu/TestData  ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Examples/Image/MNIST/03_ConvBatchNorm/../../../../../../Examples/Image/MNIST/Config  OutputDir=/tmp/cntk-test-20160906151422.766743/Examples/Image/MNIST_03_ConvBatchNorm@release_gpu  DeviceId=0  timestamping=true  forceDeterministicAlgorithms=true  stderr=-
+09/13/2016 15:21:58: Running on localhost at 2016/09/13 15:21:58
+09/13/2016 15:21:58: Command line: 
+/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/release/bin/cntk  configFile=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Examples/Image/MNIST/03_ConvBatchNorm/../../../../../../Examples/Image/MNIST/Config/03_ConvBatchNorm.cntk  currentDirectory=/tmp/cntk-test-20160913152002.850159/Examples/Image/MNIST_03_ConvBatchNorm@release_gpu/TestData  RunDir=/tmp/cntk-test-20160913152002.850159/Examples/Image/MNIST_03_ConvBatchNorm@release_gpu  DataDir=/tmp/cntk-test-20160913152002.850159/Examples/Image/MNIST_03_ConvBatchNorm@release_gpu/TestData  ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Examples/Image/MNIST/03_ConvBatchNorm/../../../../../../Examples/Image/MNIST/Config  OutputDir=/tmp/cntk-test-20160913152002.850159/Examples/Image/MNIST_03_ConvBatchNorm@release_gpu  DeviceId=0  timestamping=true  forceDeterministicAlgorithms=true  stderr=-
 
 
 Configuration After Processing and Variable Resolution:
 
 configparameters: 03_ConvBatchNorm.cntk:command=trainNetwork:testNetwork
 configparameters: 03_ConvBatchNorm.cntk:configDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Examples/Image/MNIST/03_ConvBatchNorm/../../../../../../Examples/Image/MNIST/Config
-configparameters: 03_ConvBatchNorm.cntk:currentDirectory=/tmp/cntk-test-20160906151422.766743/Examples/Image/MNIST_03_ConvBatchNorm@release_gpu/TestData
-configparameters: 03_ConvBatchNorm.cntk:dataDir=/tmp/cntk-test-20160906151422.766743/Examples/Image/MNIST_03_ConvBatchNorm@release_gpu/TestData
+configparameters: 03_ConvBatchNorm.cntk:currentDirectory=/tmp/cntk-test-20160913152002.850159/Examples/Image/MNIST_03_ConvBatchNorm@release_gpu/TestData
+configparameters: 03_ConvBatchNorm.cntk:dataDir=/tmp/cntk-test-20160913152002.850159/Examples/Image/MNIST_03_ConvBatchNorm@release_gpu/TestData
 configparameters: 03_ConvBatchNorm.cntk:deviceId=0
 configparameters: 03_ConvBatchNorm.cntk:forceDeterministicAlgorithms=true
-configparameters: 03_ConvBatchNorm.cntk:modelDir=/tmp/cntk-test-20160906151422.766743/Examples/Image/MNIST_03_ConvBatchNorm@release_gpu/Models
-configparameters: 03_ConvBatchNorm.cntk:modelPath=/tmp/cntk-test-20160906151422.766743/Examples/Image/MNIST_03_ConvBatchNorm@release_gpu/Models/03_ConvBatchNorm
-configparameters: 03_ConvBatchNorm.cntk:outputDir=/tmp/cntk-test-20160906151422.766743/Examples/Image/MNIST_03_ConvBatchNorm@release_gpu
+configparameters: 03_ConvBatchNorm.cntk:modelPath=/tmp/cntk-test-20160913152002.850159/Examples/Image/MNIST_03_ConvBatchNorm@release_gpu/Models/03_ConvBatchNorm
+configparameters: 03_ConvBatchNorm.cntk:outputDir=/tmp/cntk-test-20160913152002.850159/Examples/Image/MNIST_03_ConvBatchNorm@release_gpu
 configparameters: 03_ConvBatchNorm.cntk:precision=float
 configparameters: 03_ConvBatchNorm.cntk:rootDir=..
-configparameters: 03_ConvBatchNorm.cntk:RunDir=/tmp/cntk-test-20160906151422.766743/Examples/Image/MNIST_03_ConvBatchNorm@release_gpu
+configparameters: 03_ConvBatchNorm.cntk:RunDir=/tmp/cntk-test-20160913152002.850159/Examples/Image/MNIST_03_ConvBatchNorm@release_gpu
 configparameters: 03_ConvBatchNorm.cntk:stderr=-
-configparameters: 03_ConvBatchNorm.cntk:testNetwork=[
+configparameters: 03_ConvBatchNorm.cntk:testNetwork={
     action = test
 minibatchSize = 1024    
-    reader = [
+    reader = {
         readerType = "CNTKTextFormatReader"
-        file = "/tmp/cntk-test-20160906151422.766743/Examples/Image/MNIST_03_ConvBatchNorm@release_gpu/TestData/Test-28x28_cntk_text.txt"
-        input = [
-            features = [
-                dim = 784
-                format = "dense"
-            ]
-            labels = [
-                dim = 10
-                format = "dense"
-            ]
-        ]
-    ]
-]
+        file = "/tmp/cntk-test-20160913152002.850159/Examples/Image/MNIST_03_ConvBatchNorm@release_gpu/TestData/Test-28x28_cntk_text.txt"
+        input = {
+            features = { dim = 784 ; format = "dense" }
+            labels =   { dim = 10  ; format = "dense" }
+        }
+    }
+}
 
 configparameters: 03_ConvBatchNorm.cntk:timestamping=true
 configparameters: 03_ConvBatchNorm.cntk:traceLevel=1
-configparameters: 03_ConvBatchNorm.cntk:trainNetwork=[
+configparameters: 03_ConvBatchNorm.cntk:trainNetwork={
     action = "train"
     BrainScriptNetworkBuilder = {
 imageShape = 28:28:1                        
-        featScale = Constant(1/256)
 labelDim = 10                               
-convWScale = 10                             
-        ConvBnReluPool (x, depth, initValueScale) =
-        {
-            c = ConvolutionalLayer {depth, (5:5), pad=true, initValueScale=initValueScale} (x)
-            b = BatchNormalizationLayer {spatialRank = 2, normalizationTimeConstant = 1024} (c)
-            r = ReLU (b)
-            p = MaxPoolingLayer {(2:2), stride = (2:2)} (r)
-        }.p
-        model (features) = {
-            featNorm = features.* featScale
-            cbnr1 = ConvBnReluPool(featNorm, 16, convWScale)
-            cbnr2 = ConvBnReluPool(cbnr1,    32, convWScale)
-            h1 = LinearLayer {128} (cbnr2)
-            h1bn = BatchNormalizationLayer {normalizationTimeConstant = 1024} (h1)
-            h1bnr = ReLU (h1bn)
-            ol = LinearLayer {labelDim} (h1bnr)
-        }.ol
+        featScale = 1/256
+        Scale{f} = x => Constant(f) .* x
+        ConvBnReluPoolLayer {outChannels} = Sequential (
+            ConvolutionalLayer      {outChannels, (5:5), pad=true, bias=false} :
+            BatchNormalizationLayer {spatialRank = 2} :
+            ReLU :
+            MaxPoolingLayer         {(2:2), stride = (2:2)} 
+        )
+        model = Sequential (
+            Scale {featScale} :
+            ConvBnReluPoolLayer     {16} :
+            ConvBnReluPoolLayer     {32} :
+            LinearLayer             {128} :
+            BatchNormalizationLayer {} :
+            ReLU :
+            LinearLayer             {labelDim}
+        )
         features = Input {imageShape}
         labels = Input {labelDim}
         ol = model (features)
@@ -124,59 +116,49 @@ convWScale = 10
         evaluationNodes = (errs)
         outputNodes     = (ol)
     }
-    SGD = [
+    SGD = {
         epochSize = 60000
         minibatchSize = 64
         maxEpochs = 3
         learningRatesPerSample = 0.02:0.005
         momentumAsTimeConstant = 0
         numMBsToShowResult = 500
-    ]
-    reader = [
+    }
+    reader = {
         readerType = "CNTKTextFormatReader"
-        file = "/tmp/cntk-test-20160906151422.766743/Examples/Image/MNIST_03_ConvBatchNorm@release_gpu/TestData/Train-28x28_cntk_text.txt"
-        input = [
-            features = [
-                dim = 784
-                format = "dense"
-            ]
-            labels = [
-                dim = 10
-                format = "dense"
-            ]
-        ]
-    ]    
-]
+        file = "/tmp/cntk-test-20160913152002.850159/Examples/Image/MNIST_03_ConvBatchNorm@release_gpu/TestData/Train-28x28_cntk_text.txt"
+        input = {
+            features = { dim = 784 ; format = "dense" }
+            labels =   { dim = 10  ; format = "dense" }
+        }
+    }    
+}
 
-09/06/2016 15:15:39: Commands: trainNetwork testNetwork
-09/06/2016 15:15:39: Precision = "float"
-09/06/2016 15:15:39: CNTKModelPath: /tmp/cntk-test-20160906151422.766743/Examples/Image/MNIST_03_ConvBatchNorm@release_gpu/Models/03_ConvBatchNorm
-09/06/2016 15:15:39: CNTKCommandTrainInfo: trainNetwork : 3
-09/06/2016 15:15:39: CNTKCommandTrainInfo: CNTKNoMoreCommands_Total : 3
+09/13/2016 15:21:58: Commands: trainNetwork testNetwork
+09/13/2016 15:21:58: Precision = "float"
+09/13/2016 15:21:58: CNTKModelPath: /tmp/cntk-test-20160913152002.850159/Examples/Image/MNIST_03_ConvBatchNorm@release_gpu/Models/03_ConvBatchNorm
+09/13/2016 15:21:58: CNTKCommandTrainInfo: trainNetwork : 3
+09/13/2016 15:21:58: CNTKCommandTrainInfo: CNTKNoMoreCommands_Total : 3
 
-09/06/2016 15:15:39: ##############################################################################
-09/06/2016 15:15:39: #                                                                            #
-09/06/2016 15:15:39: # Action "train"                                                             #
-09/06/2016 15:15:39: #                                                                            #
-09/06/2016 15:15:39: ##############################################################################
+09/13/2016 15:21:58: ##############################################################################
+09/13/2016 15:21:58: #                                                                            #
+09/13/2016 15:21:58: # Action "train"                                                             #
+09/13/2016 15:21:58: #                                                                            #
+09/13/2016 15:21:58: ##############################################################################
 
-09/06/2016 15:15:39: CNTKCommandTrainBegin: trainNetwork
+09/13/2016 15:21:58: CNTKCommandTrainBegin: trainNetwork
 
-09/06/2016 15:15:39: Creating virgin network.
-Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[10 x 0] as heNormal later when dimensions are fully known.
-Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[128 x 0] as heNormal later when dimensions are fully known.
-Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[32 x 0] as heNormal later when dimensions are fully known.
-Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[16 x 0] as heNormal later when dimensions are fully known.
+09/13/2016 15:21:58: Creating virgin network.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[10 x 0] as glorotUniform later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[128 x 0] as glorotUniform later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[5 x 5 x 0 x 32] as glorotUniform later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[5 x 5 x 0 x 16] as glorotUniform later when dimensions are fully known.
 Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1 x 1] <- 0.000000.
 Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1 x 1] <- 0.003906.
-Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1 x 1 x 16] <- 0.000000.
-Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1 x 1 x 16] <- 0.000000.
 Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
 Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
 Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
 Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
-Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1 x 1 x 32] <- 0.000000.
-Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1 x 1 x 32] <- 0.000000.
 Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
 Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
 Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
@@ -197,203 +179,191 @@ Post-processing network...
 	errs = ClassificationError()
 	ol = Plus()
 
-Validating network. 42 nodes to process in pass 1.
+Validating network. 38 nodes to process in pass 1.
 
 Validating --> labels = InputValue() :  -> [10 x *]
-Validating --> ol.ol.W = LearnableParameter() :  -> [10 x 0]
-Validating --> ol.h1.W = LearnableParameter() :  -> [128 x 0]
-Validating --> ol.cbnr2.c.W = LearnableParameter() :  -> [32 x 0]
-Validating --> ol.cbnr1.c.W = LearnableParameter() :  -> [16 x 0]
+Validating --> model.arrayOfFunctions[6].W = LearnableParameter() :  -> [10 x 0]
+Validating --> model.arrayOfFunctions[3].W = LearnableParameter() :  -> [128 x 0]
+Validating --> model.arrayOfFunctions[2].arrayOfFunctions[0].W = LearnableParameter() :  -> [5 x 5 x 0 x 32]
+Validating --> model.arrayOfFunctions[1].arrayOfFunctions[0].W = LearnableParameter() :  -> [5 x 5 x 0 x 16]
+Validating --> ol.x._.x.x.x.x.ElementTimesArgs[0] = LearnableParameter() :  -> [1 x 1]
 Validating --> features = InputValue() :  -> [28 x 28 x 1 x *]
-Validating --> featScale = LearnableParameter() :  -> [1 x 1]
-Validating --> ol.featNorm = ElementTimes (features, featScale) : [28 x 28 x 1 x *], [1 x 1] -> [28 x 28 x 1 x *]
-Node 'ol.cbnr1.c.W' (LearnableParameter operation) operation: Tensor shape was inferred as [16 x 25].
-Node 'ol.cbnr1.c.W' (LearnableParameter operation): Initializing Parameter[16 x 25] <- heNormal(seed=4, init dims=[16 x 25], range=0.282843*10.000000, onCPU=true).
-Validating --> ol.cbnr1.c.c = Convolution (ol.cbnr1.c.W, ol.featNorm) : [16 x 25], [28 x 28 x 1 x *] -> [28 x 28 x 16 x *]
-Validating --> ol.cbnr1.c.b = LearnableParameter() :  -> [1 x 1 x 16]
-Validating --> ol.cbnr1.c.res.x = Plus (ol.cbnr1.c.c, ol.cbnr1.c.b) : [28 x 28 x 16 x *], [1 x 1 x 16] -> [28 x 28 x 16 x *]
-Validating --> ol.cbnr1.b.scale = LearnableParameter() :  -> [0 x 1]
-Validating --> ol.cbnr1.b.bias = LearnableParameter() :  -> [0 x 1]
-Validating --> ol.cbnr1.b.runMean = LearnableParameter() :  -> [0 x 1]
-Validating --> ol.cbnr1.b.runVariance = LearnableParameter() :  -> [0 x 1]
-Node 'ol.cbnr1.b.scale' (LearnableParameter operation) operation: Tensor shape was inferred as [16 x 1].
-Node 'ol.cbnr1.b.scale' (LearnableParameter operation): Initializing Parameter[16 x 1] <- 1.000000.
-Node 'ol.cbnr1.b.bias' (LearnableParameter operation) operation: Tensor shape was inferred as [16 x 1].
-Node 'ol.cbnr1.b.bias' (LearnableParameter operation): Initializing Parameter[16 x 1] <- 0.000000.
-Node 'ol.cbnr1.b.runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [16 x 1].
-Node 'ol.cbnr1.b.runMean' (LearnableParameter operation): Initializing Parameter[16 x 1] <- 0.000000.
-Node 'ol.cbnr1.b.runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [16 x 1].
-Node 'ol.cbnr1.b.runVariance' (LearnableParameter operation): Initializing Parameter[16 x 1] <- 0.000000.
-Validating --> ol.cbnr1.b = BatchNormalization (ol.cbnr1.c.res.x, ol.cbnr1.b.scale, ol.cbnr1.b.bias, ol.cbnr1.b.runMean, ol.cbnr1.b.runVariance) : [28 x 28 x 16 x *], [16 x 1], [16 x 1], [16 x 1], [16 x 1] -> [28 x 28 x 16 x *]
-Validating --> ol.cbnr1.r = RectifiedLinear (ol.cbnr1.b) : [28 x 28 x 16 x *] -> [28 x 28 x 16 x *]
-Validating --> ol.cbnr1.p = Pooling (ol.cbnr1.r) : [28 x 28 x 16 x *] -> [14 x 14 x 16 x *]
-Node 'ol.cbnr2.c.W' (LearnableParameter operation) operation: Tensor shape was inferred as [32 x 400].
-Node 'ol.cbnr2.c.W' (LearnableParameter operation): Initializing Parameter[32 x 400] <- heNormal(seed=3, init dims=[32 x 400], range=0.070711*10.000000, onCPU=true).
-Validating --> ol.cbnr2.c.c = Convolution (ol.cbnr2.c.W, ol.cbnr1.p) : [32 x 400], [14 x 14 x 16 x *] -> [14 x 14 x 32 x *]
-Validating --> ol.cbnr2.c.b = LearnableParameter() :  -> [1 x 1 x 32]
-Validating --> ol.cbnr2.c.res.x = Plus (ol.cbnr2.c.c, ol.cbnr2.c.b) : [14 x 14 x 32 x *], [1 x 1 x 32] -> [14 x 14 x 32 x *]
-Validating --> ol.cbnr2.b.scale = LearnableParameter() :  -> [0 x 1]
-Validating --> ol.cbnr2.b.bias = LearnableParameter() :  -> [0 x 1]
-Validating --> ol.cbnr2.b.runMean = LearnableParameter() :  -> [0 x 1]
-Validating --> ol.cbnr2.b.runVariance = LearnableParameter() :  -> [0 x 1]
-Node 'ol.cbnr2.b.scale' (LearnableParameter operation) operation: Tensor shape was inferred as [32 x 1].
-Node 'ol.cbnr2.b.scale' (LearnableParameter operation): Initializing Parameter[32 x 1] <- 1.000000.
-Node 'ol.cbnr2.b.bias' (LearnableParameter operation) operation: Tensor shape was inferred as [32 x 1].
-Node 'ol.cbnr2.b.bias' (LearnableParameter operation): Initializing Parameter[32 x 1] <- 0.000000.
-Node 'ol.cbnr2.b.runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [32 x 1].
-Node 'ol.cbnr2.b.runMean' (LearnableParameter operation): Initializing Parameter[32 x 1] <- 0.000000.
-Node 'ol.cbnr2.b.runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [32 x 1].
-Node 'ol.cbnr2.b.runVariance' (LearnableParameter operation): Initializing Parameter[32 x 1] <- 0.000000.
-Validating --> ol.cbnr2.b = BatchNormalization (ol.cbnr2.c.res.x, ol.cbnr2.b.scale, ol.cbnr2.b.bias, ol.cbnr2.b.runMean, ol.cbnr2.b.runVariance) : [14 x 14 x 32 x *], [32 x 1], [32 x 1], [32 x 1], [32 x 1] -> [14 x 14 x 32 x *]
-Validating --> ol.cbnr2.r = RectifiedLinear (ol.cbnr2.b) : [14 x 14 x 32 x *] -> [14 x 14 x 32 x *]
-Validating --> ol.cbnr2.p = Pooling (ol.cbnr2.r) : [14 x 14 x 32 x *] -> [7 x 7 x 32 x *]
-Node 'ol.h1.W' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 7 x 7 x 32].
-Node 'ol.h1.W' (LearnableParameter operation): Initializing Parameter[128 x 7 x 7 x 32] <- heNormal(seed=2, init dims=[128 x 1568], range=0.035714*1.000000, onCPU=true).
-Validating --> ol.h1.PlusArgs[0] = Times (ol.h1.W, ol.cbnr2.p) : [128 x 7 x 7 x 32], [7 x 7 x 32 x *] -> [128 x *]
-Validating --> ol.h1.b = LearnableParameter() :  -> [128]
-Validating --> ol.h1 = Plus (ol.h1.PlusArgs[0], ol.h1.b) : [128 x *], [128] -> [128 x *]
-Validating --> ol.h1bn.scale = LearnableParameter() :  -> [0 x 1]
-Validating --> ol.h1bn.bias = LearnableParameter() :  -> [0 x 1]
-Validating --> ol.h1bn.runMean = LearnableParameter() :  -> [0 x 1]
-Validating --> ol.h1bn.runVariance = LearnableParameter() :  -> [0 x 1]
-Node 'ol.h1bn.scale' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
-Node 'ol.h1bn.scale' (LearnableParameter operation): Initializing Parameter[128 x 1] <- 1.000000.
-Node 'ol.h1bn.bias' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
-Node 'ol.h1bn.bias' (LearnableParameter operation): Initializing Parameter[128 x 1] <- 0.000000.
-Node 'ol.h1bn.runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
-Node 'ol.h1bn.runMean' (LearnableParameter operation): Initializing Parameter[128 x 1] <- 0.000000.
-Node 'ol.h1bn.runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
-Node 'ol.h1bn.runVariance' (LearnableParameter operation): Initializing Parameter[128 x 1] <- 0.000000.
-Validating --> ol.h1bn = BatchNormalization (ol.h1, ol.h1bn.scale, ol.h1bn.bias, ol.h1bn.runMean, ol.h1bn.runVariance) : [128 x *], [128 x 1], [128 x 1], [128 x 1], [128 x 1] -> [128 x *]
-Validating --> ol.h1bnr = RectifiedLinear (ol.h1bn) : [128 x *] -> [128 x *]
-Node 'ol.ol.W' (LearnableParameter operation) operation: Tensor shape was inferred as [10 x 128].
-Node 'ol.ol.W' (LearnableParameter operation): Initializing Parameter[10 x 128] <- heNormal(seed=1, init dims=[10 x 128], range=0.125000*1.000000, onCPU=true).
-Validating --> ol.ol.PlusArgs[0] = Times (ol.ol.W, ol.h1bnr) : [10 x 128], [128 x *] -> [10 x *]
-Validating --> ol.ol.b = LearnableParameter() :  -> [10]
-Validating --> ol = Plus (ol.ol.PlusArgs[0], ol.ol.b) : [10 x *], [10] -> [10 x *]
+Validating --> _ol.x._.x.x.x.x = ElementTimes (ol.x._.x.x.x.x.ElementTimesArgs[0], features) : [1 x 1], [28 x 28 x 1 x *] -> [28 x 28 x 1 x *]
+Node 'model.arrayOfFunctions[1].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [5 x 5 x 1 x 16].
+Node 'model.arrayOfFunctions[1].arrayOfFunctions[0].W' (LearnableParameter operation): Initializing Parameter[5 x 5 x 1 x 16] <- glorotUniform(seed=4, init dims=[400 x 25], range=0.118818*1.000000, onCPU=true).
+Validating --> ol.x._.x.x.x.x._.x.c = Convolution (model.arrayOfFunctions[1].arrayOfFunctions[0].W, _ol.x._.x.x.x.x) : [5 x 5 x 1 x 16], [28 x 28 x 1 x *] -> [28 x 28 x 16 x *]
+Validating --> model.arrayOfFunctions[1].arrayOfFunctions[1].scale = LearnableParameter() :  -> [0 x 1]
+Validating --> model.arrayOfFunctions[1].arrayOfFunctions[1].bias = LearnableParameter() :  -> [0 x 1]
+Validating --> model.arrayOfFunctions[1].arrayOfFunctions[1].runMean = LearnableParameter() :  -> [0 x 1]
+Validating --> model.arrayOfFunctions[1].arrayOfFunctions[1].runVariance = LearnableParameter() :  -> [0 x 1]
+Node 'model.arrayOfFunctions[1].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [16 x 1].
+Node 'model.arrayOfFunctions[1].arrayOfFunctions[1].scale' (LearnableParameter operation): Initializing Parameter[16 x 1] <- 1.000000.
+Node 'model.arrayOfFunctions[1].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [16 x 1].
+Node 'model.arrayOfFunctions[1].arrayOfFunctions[1].bias' (LearnableParameter operation): Initializing Parameter[16 x 1] <- 0.000000.
+Node 'model.arrayOfFunctions[1].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [16 x 1].
+Node 'model.arrayOfFunctions[1].arrayOfFunctions[1].runMean' (LearnableParameter operation): Initializing Parameter[16 x 1] <- 0.000000.
+Node 'model.arrayOfFunctions[1].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [16 x 1].
+Node 'model.arrayOfFunctions[1].arrayOfFunctions[1].runVariance' (LearnableParameter operation): Initializing Parameter[16 x 1] <- 0.000000.
+Validating --> ol.x._.x.x.x.x._ = BatchNormalization (ol.x._.x.x.x.x._.x.c, model.arrayOfFunctions[1].arrayOfFunctions[1].scale, model.arrayOfFunctions[1].arrayOfFunctions[1].bias, model.arrayOfFunctions[1].arrayOfFunctions[1].runMean, model.arrayOfFunctions[1].arrayOfFunctions[1].runVariance) : [28 x 28 x 16 x *], [16 x 1], [16 x 1], [16 x 1], [16 x 1] -> [28 x 28 x 16 x *]
+Validating --> ol.x._.x.x.x.x = RectifiedLinear (ol.x._.x.x.x.x._) : [28 x 28 x 16 x *] -> [28 x 28 x 16 x *]
+Validating --> _ol.x._.x.x.x = Pooling (ol.x._.x.x.x.x) : [28 x 28 x 16 x *] -> [14 x 14 x 16 x *]
+Node 'model.arrayOfFunctions[2].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [5 x 5 x 16 x 32].
+Node 'model.arrayOfFunctions[2].arrayOfFunctions[0].W' (LearnableParameter operation): Initializing Parameter[5 x 5 x 16 x 32] <- glorotUniform(seed=3, init dims=[800 x 400], range=0.070711*1.000000, onCPU=true).
+Validating --> ol.x._.x.x.x._.x.c = Convolution (model.arrayOfFunctions[2].arrayOfFunctions[0].W, _ol.x._.x.x.x) : [5 x 5 x 16 x 32], [14 x 14 x 16 x *] -> [14 x 14 x 32 x *]
+Validating --> model.arrayOfFunctions[2].arrayOfFunctions[1].scale = LearnableParameter() :  -> [0 x 1]
+Validating --> model.arrayOfFunctions[2].arrayOfFunctions[1].bias = LearnableParameter() :  -> [0 x 1]
+Validating --> model.arrayOfFunctions[2].arrayOfFunctions[1].runMean = LearnableParameter() :  -> [0 x 1]
+Validating --> model.arrayOfFunctions[2].arrayOfFunctions[1].runVariance = LearnableParameter() :  -> [0 x 1]
+Node 'model.arrayOfFunctions[2].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [32 x 1].
+Node 'model.arrayOfFunctions[2].arrayOfFunctions[1].scale' (LearnableParameter operation): Initializing Parameter[32 x 1] <- 1.000000.
+Node 'model.arrayOfFunctions[2].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [32 x 1].
+Node 'model.arrayOfFunctions[2].arrayOfFunctions[1].bias' (LearnableParameter operation): Initializing Parameter[32 x 1] <- 0.000000.
+Node 'model.arrayOfFunctions[2].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [32 x 1].
+Node 'model.arrayOfFunctions[2].arrayOfFunctions[1].runMean' (LearnableParameter operation): Initializing Parameter[32 x 1] <- 0.000000.
+Node 'model.arrayOfFunctions[2].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [32 x 1].
+Node 'model.arrayOfFunctions[2].arrayOfFunctions[1].runVariance' (LearnableParameter operation): Initializing Parameter[32 x 1] <- 0.000000.
+Validating --> ol.x._.x.x.x._ = BatchNormalization (ol.x._.x.x.x._.x.c, model.arrayOfFunctions[2].arrayOfFunctions[1].scale, model.arrayOfFunctions[2].arrayOfFunctions[1].bias, model.arrayOfFunctions[2].arrayOfFunctions[1].runMean, model.arrayOfFunctions[2].arrayOfFunctions[1].runVariance) : [14 x 14 x 32 x *], [32 x 1], [32 x 1], [32 x 1], [32 x 1] -> [14 x 14 x 32 x *]
+Validating --> ol.x._.x.x.x = RectifiedLinear (ol.x._.x.x.x._) : [14 x 14 x 32 x *] -> [14 x 14 x 32 x *]
+Validating --> ol.x._.x.x = Pooling (ol.x._.x.x.x) : [14 x 14 x 32 x *] -> [7 x 7 x 32 x *]
+Node 'model.arrayOfFunctions[3].W' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 7 x 7 x 32].
+Node 'model.arrayOfFunctions[3].W' (LearnableParameter operation): Initializing Parameter[128 x 7 x 7 x 32] <- glorotUniform(seed=2, init dims=[128 x 1568], range=0.059479*1.000000, onCPU=true).
+Validating --> ol.x._.x.PlusArgs[0] = Times (model.arrayOfFunctions[3].W, ol.x._.x.x) : [128 x 7 x 7 x 32], [7 x 7 x 32 x *] -> [128 x *]
+Validating --> model.arrayOfFunctions[3].b = LearnableParameter() :  -> [128]
+Validating --> ol.x._.x = Plus (ol.x._.x.PlusArgs[0], model.arrayOfFunctions[3].b) : [128 x *], [128] -> [128 x *]
+Validating --> model.arrayOfFunctions[4].scale = LearnableParameter() :  -> [0 x 1]
+Validating --> model.arrayOfFunctions[4].bias = LearnableParameter() :  -> [0 x 1]
+Validating --> model.arrayOfFunctions[4].runMean = LearnableParameter() :  -> [0 x 1]
+Validating --> model.arrayOfFunctions[4].runVariance = LearnableParameter() :  -> [0 x 1]
+Node 'model.arrayOfFunctions[4].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node 'model.arrayOfFunctions[4].scale' (LearnableParameter operation): Initializing Parameter[128 x 1] <- 1.000000.
+Node 'model.arrayOfFunctions[4].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node 'model.arrayOfFunctions[4].bias' (LearnableParameter operation): Initializing Parameter[128 x 1] <- 0.000000.
+Node 'model.arrayOfFunctions[4].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node 'model.arrayOfFunctions[4].runMean' (LearnableParameter operation): Initializing Parameter[128 x 1] <- 0.000000.
+Node 'model.arrayOfFunctions[4].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 1].
+Node 'model.arrayOfFunctions[4].runVariance' (LearnableParameter operation): Initializing Parameter[128 x 1] <- 0.000000.
+Validating --> ol.x._ = BatchNormalization (ol.x._.x, model.arrayOfFunctions[4].scale, model.arrayOfFunctions[4].bias, model.arrayOfFunctions[4].runMean, model.arrayOfFunctions[4].runVariance) : [128 x *], [128 x 1], [128 x 1], [128 x 1], [128 x 1] -> [128 x *]
+Validating --> ol.x = RectifiedLinear (ol.x._) : [128 x *] -> [128 x *]
+Node 'model.arrayOfFunctions[6].W' (LearnableParameter operation) operation: Tensor shape was inferred as [10 x 128].
+Node 'model.arrayOfFunctions[6].W' (LearnableParameter operation): Initializing Parameter[10 x 128] <- glorotUniform(seed=1, init dims=[10 x 128], range=0.208514*1.000000, onCPU=true).
+Validating --> ol.PlusArgs[0] = Times (model.arrayOfFunctions[6].W, ol.x) : [10 x 128], [128 x *] -> [10 x *]
+Validating --> model.arrayOfFunctions[6].b = LearnableParameter() :  -> [10]
+Validating --> ol = Plus (ol.PlusArgs[0], model.arrayOfFunctions[6].b) : [10 x *], [10] -> [10 x *]
 Validating --> ce = CrossEntropyWithSoftmax (labels, ol) : [10 x *], [10 x *] -> [1]
 Validating --> errs = ClassificationError (labels, ol) : [10 x *], [10 x *] -> [1]
 
-Validating network. 19 nodes to process in pass 2.
+Validating network. 17 nodes to process in pass 2.
 
 
 Validating network, final pass.
 
-ol.cbnr1.c.c: using cuDNN convolution engine for geometry: Input: 28 x 28 x 1, Output: 28 x 28 x 16, Kernel: 5 x 5 x 1, Map: 16, Stride: 1 x 1 x 1, Sharing: (1, 1, 1), AutoPad: (1, 1, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+ol.x._.x.x.x.x._.x.c: using cuDNN convolution engine for geometry: Input: 28 x 28 x 1, Output: 28 x 28 x 16, Kernel: 5 x 5 x 1, Map: 16, Stride: 1 x 1 x 1, Sharing: (1, 1, 1), AutoPad: (1, 1, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
 Using CNTK batch normalization engine.
-ol.cbnr1.p: using cuDNN convolution engine for geometry: Input: 28 x 28 x 16, Output: 14 x 14 x 16, Kernel: 2 x 2 x 1, Map: 1, Stride: 2 x 2 x 1, Sharing: (1, 1, 1), AutoPad: (0, 0, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
-ol.cbnr2.c.c: using cuDNN convolution engine for geometry: Input: 14 x 14 x 16, Output: 14 x 14 x 32, Kernel: 5 x 5 x 16, Map: 32, Stride: 1 x 1 x 16, Sharing: (1, 1, 1), AutoPad: (1, 1, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+_ol.x._.x.x.x: using cuDNN convolution engine for geometry: Input: 28 x 28 x 16, Output: 14 x 14 x 16, Kernel: 2 x 2 x 1, Map: 1, Stride: 2 x 2 x 1, Sharing: (1, 1, 1), AutoPad: (0, 0, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+ol.x._.x.x.x._.x.c: using cuDNN convolution engine for geometry: Input: 14 x 14 x 16, Output: 14 x 14 x 32, Kernel: 5 x 5 x 16, Map: 32, Stride: 1 x 1 x 16, Sharing: (1, 1, 1), AutoPad: (1, 1, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
 Using CNTK batch normalization engine.
-ol.cbnr2.p: using cuDNN convolution engine for geometry: Input: 14 x 14 x 32, Output: 7 x 7 x 32, Kernel: 2 x 2 x 1, Map: 1, Stride: 2 x 2 x 1, Sharing: (1, 1, 1), AutoPad: (0, 0, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+ol.x._.x.x: using cuDNN convolution engine for geometry: Input: 14 x 14 x 32, Output: 7 x 7 x 32, Kernel: 2 x 2 x 1, Map: 1, Stride: 2 x 2 x 1, Sharing: (1, 1, 1), AutoPad: (0, 0, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
 Using CNTK batch normalization engine.
 
 
-23 out of 42 nodes do not share the minibatch layout with the input data.
+21 out of 38 nodes do not share the minibatch layout with the input data.
 
 Post-processing network complete.
 
-09/06/2016 15:15:39: Created model with 42 nodes on GPU 0.
+09/13/2016 15:21:59: Created model with 38 nodes on GPU 0.
 
-09/06/2016 15:15:39: Training criterion node(s):
-09/06/2016 15:15:39: 	ce = CrossEntropyWithSoftmax
+09/13/2016 15:21:59: Training criterion node(s):
+09/13/2016 15:21:59: 	ce = CrossEntropyWithSoftmax
 
-09/06/2016 15:15:39: Evaluation criterion node(s):
-09/06/2016 15:15:39: 	errs = ClassificationError
+09/13/2016 15:21:59: Evaluation criterion node(s):
+09/13/2016 15:21:59: 	errs = ClassificationError
 
 
 Allocating matrices for forward and/or backward propagation.
 
-Memory Sharing: Out of 73 matrices, 38 are shared as 16, and 35 are not shared.
+Memory Sharing: Out of 65 matrices, 32 are shared as 14, and 33 are not shared.
 
-	{ ol.cbnr1.c.W : [16 x 25] (gradient)
-	  ol.cbnr1.c.res.x : [28 x 28 x 16 x *] }
-	{ ol.cbnr1.c.res.x : [28 x 28 x 16 x *] (gradient)
-	  ol.cbnr1.r : [28 x 28 x 16 x *] }
-	{ ol.cbnr1.b : [28 x 28 x 16 x *] (gradient)
-	  ol.cbnr1.p : [14 x 14 x 16 x *] }
-	{ ol.cbnr1.c.c : [28 x 28 x 16 x *] (gradient)
-	  ol.cbnr2.c.c : [14 x 14 x 32 x *] }
-	{ ol.cbnr1.b.scale : [16 x 1] (gradient)
-	  ol.cbnr1.r : [28 x 28 x 16 x *] (gradient) }
-	{ ol.cbnr2.c.W : [32 x 400] (gradient)
-	  ol.cbnr2.c.res.x : [14 x 14 x 32 x *] }
-	{ ol.cbnr1.c.b : [1 x 1 x 16] (gradient)
-	  ol.cbnr1.p : [14 x 14 x 16 x *] (gradient)
-	  ol.cbnr2.c.res.x : [14 x 14 x 32 x *] (gradient)
-	  ol.cbnr2.r : [14 x 14 x 32 x *] }
-	{ ol.cbnr2.b : [14 x 14 x 32 x *] (gradient)
-	  ol.cbnr2.p : [7 x 7 x 32 x *] }
-	{ ol.cbnr2.b.scale : [32 x 1] (gradient)
-	  ol.cbnr2.r : [14 x 14 x 32 x *] (gradient)
-	  ol.h1.PlusArgs[0] : [128 x *] }
-	{ ol.h1 : [128 x *]
-	  ol.h1.W : [128 x 7 x 7 x 32] (gradient) }
-	{ ol.cbnr2.c.b : [1 x 1 x 32] (gradient)
-	  ol.cbnr2.p : [7 x 7 x 32 x *] (gradient)
-	  ol.h1 : [128 x *] (gradient)
-	  ol.h1bnr : [128 x *] }
-	{ ol.h1bn : [128 x *] (gradient)
-	  ol.ol.PlusArgs[0] : [10 x *] }
-	{ ol : [10 x *] (gradient)
-	  ol.ol.W : [10 x 128] (gradient) }
-	{ ol.h1.b : [128] (gradient)
-	  ol.ol.PlusArgs[0] : [10 x *] (gradient) }
-	{ ol.h1bn.scale : [128 x 1] (gradient)
-	  ol.h1bnr : [128 x *] (gradient) }
-	{ ol.cbnr1.b.bias : [16 x 1] (gradient)
-	  ol.cbnr2.c.c : [14 x 14 x 32 x *] (gradient)
-	  ol.h1.PlusArgs[0] : [128 x *] (gradient) }
+	{ ol.x._.x.x.x.x : [28 x 28 x 16 x *]
+	  ol.x._.x.x.x.x._.x.c : [28 x 28 x 16 x *] (gradient) }
+	{ _ol.x._.x.x.x : [14 x 14 x 16 x *]
+	  ol.x._.x.x.x.x._ : [28 x 28 x 16 x *] (gradient) }
+	{ model.arrayOfFunctions[1].arrayOfFunctions[0].W : [5 x 5 x 1 x 16] (gradient)
+	  ol.x._.x.x.x._.x.c : [14 x 14 x 32 x *] }
+	{ model.arrayOfFunctions[1].arrayOfFunctions[1].scale : [16 x 1] (gradient)
+	  ol.x._.x.x.x.x : [28 x 28 x 16 x *] (gradient) }
+	{ model.arrayOfFunctions[1].arrayOfFunctions[1].bias : [16 x 1] (gradient)
+	  ol.x._.x.x.x : [14 x 14 x 32 x *]
+	  ol.x._.x.x.x._.x.c : [14 x 14 x 32 x *] (gradient) }
+	{ ol.x._.x.x : [7 x 7 x 32 x *]
+	  ol.x._.x.x.x._ : [14 x 14 x 32 x *] (gradient) }
+	{ model.arrayOfFunctions[2].arrayOfFunctions[1].scale : [32 x 1] (gradient)
+	  ol.x._.x.PlusArgs[0] : [128 x *]
+	  ol.x._.x.x.x : [14 x 14 x 32 x *] (gradient) }
+	{ model.arrayOfFunctions[3].W : [128 x 7 x 7 x 32] (gradient)
+	  ol.x._.x : [128 x *] }
+	{ _ol.x._.x.x.x : [14 x 14 x 16 x *] (gradient)
+	  ol.x : [128 x *]
+	  ol.x._.x : [128 x *] (gradient)
+	  ol.x._.x.x : [7 x 7 x 32 x *] (gradient) }
+	{ ol.PlusArgs[0] : [10 x *]
+	  ol.x._ : [128 x *] (gradient) }
+	{ model.arrayOfFunctions[6].W : [10 x 128] (gradient)
+	  ol : [10 x *] (gradient) }
+	{ model.arrayOfFunctions[3].b : [128] (gradient)
+	  ol.PlusArgs[0] : [10 x *] (gradient) }
+	{ model.arrayOfFunctions[4].scale : [128 x 1] (gradient)
+	  ol.x : [128 x *] (gradient) }
+	{ model.arrayOfFunctions[2].arrayOfFunctions[0].W : [5 x 5 x 16 x 32] (gradient)
+	  ol.x._.x.PlusArgs[0] : [128 x *] (gradient) }
 
 
-09/06/2016 15:15:39: Training 215722 parameters in 14 out of 14 parameter tensors and 31 nodes with gradient:
+09/13/2016 15:21:59: Training 215674 parameters in 12 out of 12 parameter tensors and 27 nodes with gradient:
 
-09/06/2016 15:15:39: 	Node 'ol.cbnr1.b.bias' (LearnableParameter operation) : [16 x 1]
-09/06/2016 15:15:39: 	Node 'ol.cbnr1.b.scale' (LearnableParameter operation) : [16 x 1]
-09/06/2016 15:15:39: 	Node 'ol.cbnr1.c.W' (LearnableParameter operation) : [16 x 25]
-09/06/2016 15:15:39: 	Node 'ol.cbnr1.c.b' (LearnableParameter operation) : [1 x 1 x 16]
-09/06/2016 15:15:39: 	Node 'ol.cbnr2.b.bias' (LearnableParameter operation) : [32 x 1]
-09/06/2016 15:15:39: 	Node 'ol.cbnr2.b.scale' (LearnableParameter operation) : [32 x 1]
-09/06/2016 15:15:39: 	Node 'ol.cbnr2.c.W' (LearnableParameter operation) : [32 x 400]
-09/06/2016 15:15:39: 	Node 'ol.cbnr2.c.b' (LearnableParameter operation) : [1 x 1 x 32]
-09/06/2016 15:15:39: 	Node 'ol.h1.W' (LearnableParameter operation) : [128 x 7 x 7 x 32]
-09/06/2016 15:15:39: 	Node 'ol.h1.b' (LearnableParameter operation) : [128]
-09/06/2016 15:15:39: 	Node 'ol.h1bn.bias' (LearnableParameter operation) : [128 x 1]
-09/06/2016 15:15:39: 	Node 'ol.h1bn.scale' (LearnableParameter operation) : [128 x 1]
-09/06/2016 15:15:39: 	Node 'ol.ol.W' (LearnableParameter operation) : [10 x 128]
-09/06/2016 15:15:39: 	Node 'ol.ol.b' (LearnableParameter operation) : [10]
+09/13/2016 15:21:59: 	Node 'model.arrayOfFunctions[1].arrayOfFunctions[0].W' (LearnableParameter operation) : [5 x 5 x 1 x 16]
+09/13/2016 15:21:59: 	Node 'model.arrayOfFunctions[1].arrayOfFunctions[1].bias' (LearnableParameter operation) : [16 x 1]
+09/13/2016 15:21:59: 	Node 'model.arrayOfFunctions[1].arrayOfFunctions[1].scale' (LearnableParameter operation) : [16 x 1]
+09/13/2016 15:21:59: 	Node 'model.arrayOfFunctions[2].arrayOfFunctions[0].W' (LearnableParameter operation) : [5 x 5 x 16 x 32]
+09/13/2016 15:21:59: 	Node 'model.arrayOfFunctions[2].arrayOfFunctions[1].bias' (LearnableParameter operation) : [32 x 1]
+09/13/2016 15:21:59: 	Node 'model.arrayOfFunctions[2].arrayOfFunctions[1].scale' (LearnableParameter operation) : [32 x 1]
+09/13/2016 15:21:59: 	Node 'model.arrayOfFunctions[3].W' (LearnableParameter operation) : [128 x 7 x 7 x 32]
+09/13/2016 15:21:59: 	Node 'model.arrayOfFunctions[3].b' (LearnableParameter operation) : [128]
+09/13/2016 15:21:59: 	Node 'model.arrayOfFunctions[4].bias' (LearnableParameter operation) : [128 x 1]
+09/13/2016 15:21:59: 	Node 'model.arrayOfFunctions[4].scale' (LearnableParameter operation) : [128 x 1]
+09/13/2016 15:21:59: 	Node 'model.arrayOfFunctions[6].W' (LearnableParameter operation) : [10 x 128]
+09/13/2016 15:21:59: 	Node 'model.arrayOfFunctions[6].b' (LearnableParameter operation) : [10]
 
-09/06/2016 15:15:39: No PreCompute nodes found, or all already computed. Skipping pre-computation step.
+09/13/2016 15:21:59: No PreCompute nodes found, or all already computed. Skipping pre-computation step.
 
-09/06/2016 15:15:39: Starting Epoch 1: learning rate per sample = 0.020000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+09/13/2016 15:21:59: Starting Epoch 1: learning rate per sample = 0.020000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
 
-09/06/2016 15:15:39: Starting minibatch loop.
-09/06/2016 15:15:43:  Epoch[ 1 of 3]-Minibatch[   1- 500, 53.33%]: ce = 0.15652516 * 32000; errs = 4.862% * 32000; time = 4.0458s; samplesPerSecond = 7909.5
-09/06/2016 15:15:46: Finished Epoch[ 1 of 3]: [Training] ce = 0.11691030 * 60000; errs = 3.640% * 60000; totalSamplesSeen = 60000; learningRatePerSample = 0.02; epochTime=6.68996s
-09/06/2016 15:15:46: SGD: Saving checkpoint model '/tmp/cntk-test-20160906151422.766743/Examples/Image/MNIST_03_ConvBatchNorm@release_gpu/Models/03_ConvBatchNorm.1'
+09/13/2016 15:21:59: Starting minibatch loop.
+09/13/2016 15:22:03:  Epoch[ 1 of 3]-Minibatch[   1- 500, 53.33%]: ce = 0.14108546 * 32000; errs = 4.487% * 32000; time = 3.9132s; samplesPerSecond = 8177.6
+09/13/2016 15:22:05: Finished Epoch[ 1 of 3]: [Training] ce = 0.10146025 * 60000; errs = 3.203% * 60000; totalSamplesSeen = 60000; learningRatePerSample = 0.02; epochTime=6.44303s
+09/13/2016 15:22:05: SGD: Saving checkpoint model '/tmp/cntk-test-20160913152002.850159/Examples/Image/MNIST_03_ConvBatchNorm@release_gpu/Models/03_ConvBatchNorm.1'
 
-09/06/2016 15:15:46: Starting Epoch 2: learning rate per sample = 0.005000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+09/13/2016 15:22:05: Starting Epoch 2: learning rate per sample = 0.005000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
 
-09/06/2016 15:15:46: Starting minibatch loop.
-09/06/2016 15:15:49:  Epoch[ 2 of 3]-Minibatch[   1- 500, 53.33%]: ce = 0.03097714 * 32000; errs = 0.900% * 32000; time = 2.9944s; samplesPerSecond = 10686.5
-09/06/2016 15:15:52: Finished Epoch[ 2 of 3]: [Training] ce = 0.03089322 * 60000; errs = 0.922% * 60000; totalSamplesSeen = 120000; learningRatePerSample = 0.0049999999; epochTime=5.63108s
-09/06/2016 15:15:52: SGD: Saving checkpoint model '/tmp/cntk-test-20160906151422.766743/Examples/Image/MNIST_03_ConvBatchNorm@release_gpu/Models/03_ConvBatchNorm.2'
+09/13/2016 15:22:05: Starting minibatch loop.
+09/13/2016 15:22:08:  Epoch[ 2 of 3]-Minibatch[   1- 500, 53.33%]: ce = 0.02519639 * 32000; errs = 0.775% * 32000; time = 2.8866s; samplesPerSecond = 11085.7
+09/13/2016 15:22:11: Finished Epoch[ 2 of 3]: [Training] ce = 0.02545530 * 60000; errs = 0.802% * 60000; totalSamplesSeen = 120000; learningRatePerSample = 0.0049999999; epochTime=5.40777s
+09/13/2016 15:22:11: SGD: Saving checkpoint model '/tmp/cntk-test-20160913152002.850159/Examples/Image/MNIST_03_ConvBatchNorm@release_gpu/Models/03_ConvBatchNorm.2'
 
-09/06/2016 15:15:52: Starting Epoch 3: learning rate per sample = 0.005000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+09/13/2016 15:22:11: Starting Epoch 3: learning rate per sample = 0.005000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
 
-09/06/2016 15:15:52: Starting minibatch loop.
-09/06/2016 15:15:55:  Epoch[ 3 of 3]-Minibatch[   1- 500, 53.33%]: ce = 0.02179573 * 32000; errs = 0.666% * 32000; time = 3.0094s; samplesPerSecond = 10633.3
-09/06/2016 15:15:58: Finished Epoch[ 3 of 3]: [Training] ce = 0.02274576 * 60000; errs = 0.718% * 60000; totalSamplesSeen = 180000; learningRatePerSample = 0.0049999999; epochTime=5.64246s
-09/06/2016 15:15:58: SGD: Saving checkpoint model '/tmp/cntk-test-20160906151422.766743/Examples/Image/MNIST_03_ConvBatchNorm@release_gpu/Models/03_ConvBatchNorm'
-09/06/2016 15:15:58: CNTKCommandTrainEnd: trainNetwork
+09/13/2016 15:22:11: Starting minibatch loop.
+09/13/2016 15:22:13:  Epoch[ 3 of 3]-Minibatch[   1- 500, 53.33%]: ce = 0.01834255 * 32000; errs = 0.584% * 32000; time = 2.8801s; samplesPerSecond = 11110.6
+09/13/2016 15:22:16: Finished Epoch[ 3 of 3]: [Training] ce = 0.01970603 * 60000; errs = 0.617% * 60000; totalSamplesSeen = 180000; learningRatePerSample = 0.0049999999; epochTime=5.40211s
+09/13/2016 15:22:16: SGD: Saving checkpoint model '/tmp/cntk-test-20160913152002.850159/Examples/Image/MNIST_03_ConvBatchNorm@release_gpu/Models/03_ConvBatchNorm'
+09/13/2016 15:22:16: CNTKCommandTrainEnd: trainNetwork
 
-09/06/2016 15:15:58: Action "train" complete.
+09/13/2016 15:22:17: Action "train" complete.
 
 
-09/06/2016 15:15:58: ##############################################################################
-09/06/2016 15:15:58: #                                                                            #
-09/06/2016 15:15:58: # Action "test"                                                              #
-09/06/2016 15:15:58: #                                                                            #
-09/06/2016 15:15:58: ##############################################################################
+09/13/2016 15:22:17: ##############################################################################
+09/13/2016 15:22:17: #                                                                            #
+09/13/2016 15:22:17: # Action "test"                                                              #
+09/13/2016 15:22:17: #                                                                            #
+09/13/2016 15:22:17: ##############################################################################
 
 
 Post-processing network...
@@ -403,66 +373,62 @@ Post-processing network...
 	errs = ClassificationError()
 	ol = Plus()
 
-Validating network. 42 nodes to process in pass 1.
+Validating network. 38 nodes to process in pass 1.
 
 Validating --> labels = InputValue() :  -> [10 x *1]
-Validating --> ol.ol.W = LearnableParameter() :  -> [10 x 128]
-Validating --> ol.h1.W = LearnableParameter() :  -> [128 x 7 x 7 x 32]
-Validating --> ol.cbnr2.c.W = LearnableParameter() :  -> [32 x 400]
-Validating --> ol.cbnr1.c.W = LearnableParameter() :  -> [16 x 25]
+Validating --> model.arrayOfFunctions[6].W = LearnableParameter() :  -> [10 x 128]
+Validating --> model.arrayOfFunctions[3].W = LearnableParameter() :  -> [128 x 7 x 7 x 32]
+Validating --> model.arrayOfFunctions[2].arrayOfFunctions[0].W = LearnableParameter() :  -> [5 x 5 x 16 x 32]
+Validating --> model.arrayOfFunctions[1].arrayOfFunctions[0].W = LearnableParameter() :  -> [5 x 5 x 1 x 16]
+Validating --> ol.x._.x.x.x.x.ElementTimesArgs[0] = LearnableParameter() :  -> [1 x 1]
 Validating --> features = InputValue() :  -> [28 x 28 x 1 x *1]
-Validating --> featScale = LearnableParameter() :  -> [1 x 1]
-Validating --> ol.featNorm = ElementTimes (features, featScale) : [28 x 28 x 1 x *1], [1 x 1] -> [28 x 28 x 1 x *1]
-Validating --> ol.cbnr1.c.c = Convolution (ol.cbnr1.c.W, ol.featNorm) : [16 x 25], [28 x 28 x 1 x *1] -> [28 x 28 x 16 x *1]
-Validating --> ol.cbnr1.c.b = LearnableParameter() :  -> [1 x 1 x 16]
-Validating --> ol.cbnr1.c.res.x = Plus (ol.cbnr1.c.c, ol.cbnr1.c.b) : [28 x 28 x 16 x *1], [1 x 1 x 16] -> [28 x 28 x 16 x *1]
-Validating --> ol.cbnr1.b.scale = LearnableParameter() :  -> [16 x 1]
-Validating --> ol.cbnr1.b.bias = LearnableParameter() :  -> [16 x 1]
-Validating --> ol.cbnr1.b.runMean = LearnableParameter() :  -> [16 x 1]
-Validating --> ol.cbnr1.b.runVariance = LearnableParameter() :  -> [16 x 1]
-Validating --> ol.cbnr1.b = BatchNormalization (ol.cbnr1.c.res.x, ol.cbnr1.b.scale, ol.cbnr1.b.bias, ol.cbnr1.b.runMean, ol.cbnr1.b.runVariance) : [28 x 28 x 16 x *1], [16 x 1], [16 x 1], [16 x 1], [16 x 1] -> [28 x 28 x 16 x *1]
-Validating --> ol.cbnr1.r = RectifiedLinear (ol.cbnr1.b) : [28 x 28 x 16 x *1] -> [28 x 28 x 16 x *1]
-Validating --> ol.cbnr1.p = Pooling (ol.cbnr1.r) : [28 x 28 x 16 x *1] -> [14 x 14 x 16 x *1]
-Validating --> ol.cbnr2.c.c = Convolution (ol.cbnr2.c.W, ol.cbnr1.p) : [32 x 400], [14 x 14 x 16 x *1] -> [14 x 14 x 32 x *1]
-Validating --> ol.cbnr2.c.b = LearnableParameter() :  -> [1 x 1 x 32]
-Validating --> ol.cbnr2.c.res.x = Plus (ol.cbnr2.c.c, ol.cbnr2.c.b) : [14 x 14 x 32 x *1], [1 x 1 x 32] -> [14 x 14 x 32 x *1]
-Validating --> ol.cbnr2.b.scale = LearnableParameter() :  -> [32 x 1]
-Validating --> ol.cbnr2.b.bias = LearnableParameter() :  -> [32 x 1]
-Validating --> ol.cbnr2.b.runMean = LearnableParameter() :  -> [32 x 1]
-Validating --> ol.cbnr2.b.runVariance = LearnableParameter() :  -> [32 x 1]
-Validating --> ol.cbnr2.b = BatchNormalization (ol.cbnr2.c.res.x, ol.cbnr2.b.scale, ol.cbnr2.b.bias, ol.cbnr2.b.runMean, ol.cbnr2.b.runVariance) : [14 x 14 x 32 x *1], [32 x 1], [32 x 1], [32 x 1], [32 x 1] -> [14 x 14 x 32 x *1]
-Validating --> ol.cbnr2.r = RectifiedLinear (ol.cbnr2.b) : [14 x 14 x 32 x *1] -> [14 x 14 x 32 x *1]
-Validating --> ol.cbnr2.p = Pooling (ol.cbnr2.r) : [14 x 14 x 32 x *1] -> [7 x 7 x 32 x *1]
-Validating --> ol.h1.PlusArgs[0] = Times (ol.h1.W, ol.cbnr2.p) : [128 x 7 x 7 x 32], [7 x 7 x 32 x *1] -> [128 x *1]
-Validating --> ol.h1.b = LearnableParameter() :  -> [128]
-Validating --> ol.h1 = Plus (ol.h1.PlusArgs[0], ol.h1.b) : [128 x *1], [128] -> [128 x *1]
-Validating --> ol.h1bn.scale = LearnableParameter() :  -> [128 x 1]
-Validating --> ol.h1bn.bias = LearnableParameter() :  -> [128 x 1]
-Validating --> ol.h1bn.runMean = LearnableParameter() :  -> [128 x 1]
-Validating --> ol.h1bn.runVariance = LearnableParameter() :  -> [128 x 1]
-Validating --> ol.h1bn = BatchNormalization (ol.h1, ol.h1bn.scale, ol.h1bn.bias, ol.h1bn.runMean, ol.h1bn.runVariance) : [128 x *1], [128 x 1], [128 x 1], [128 x 1], [128 x 1] -> [128 x *1]
-Validating --> ol.h1bnr = RectifiedLinear (ol.h1bn) : [128 x *1] -> [128 x *1]
-Validating --> ol.ol.PlusArgs[0] = Times (ol.ol.W, ol.h1bnr) : [10 x 128], [128 x *1] -> [10 x *1]
-Validating --> ol.ol.b = LearnableParameter() :  -> [10]
-Validating --> ol = Plus (ol.ol.PlusArgs[0], ol.ol.b) : [10 x *1], [10] -> [10 x *1]
+Validating --> _ol.x._.x.x.x.x = ElementTimes (ol.x._.x.x.x.x.ElementTimesArgs[0], features) : [1 x 1], [28 x 28 x 1 x *1] -> [28 x 28 x 1 x *1]
+Validating --> ol.x._.x.x.x.x._.x.c = Convolution (model.arrayOfFunctions[1].arrayOfFunctions[0].W, _ol.x._.x.x.x.x) : [5 x 5 x 1 x 16], [28 x 28 x 1 x *1] -> [28 x 28 x 16 x *1]
+Validating --> model.arrayOfFunctions[1].arrayOfFunctions[1].scale = LearnableParameter() :  -> [16 x 1]
+Validating --> model.arrayOfFunctions[1].arrayOfFunctions[1].bias = LearnableParameter() :  -> [16 x 1]
+Validating --> model.arrayOfFunctions[1].arrayOfFunctions[1].runMean = LearnableParameter() :  -> [16 x 1]
+Validating --> model.arrayOfFunctions[1].arrayOfFunctions[1].runVariance = LearnableParameter() :  -> [16 x 1]
+Validating --> ol.x._.x.x.x.x._ = BatchNormalization (ol.x._.x.x.x.x._.x.c, model.arrayOfFunctions[1].arrayOfFunctions[1].scale, model.arrayOfFunctions[1].arrayOfFunctions[1].bias, model.arrayOfFunctions[1].arrayOfFunctions[1].runMean, model.arrayOfFunctions[1].arrayOfFunctions[1].runVariance) : [28 x 28 x 16 x *1], [16 x 1], [16 x 1], [16 x 1], [16 x 1] -> [28 x 28 x 16 x *1]
+Validating --> ol.x._.x.x.x.x = RectifiedLinear (ol.x._.x.x.x.x._) : [28 x 28 x 16 x *1] -> [28 x 28 x 16 x *1]
+Validating --> _ol.x._.x.x.x = Pooling (ol.x._.x.x.x.x) : [28 x 28 x 16 x *1] -> [14 x 14 x 16 x *1]
+Validating --> ol.x._.x.x.x._.x.c = Convolution (model.arrayOfFunctions[2].arrayOfFunctions[0].W, _ol.x._.x.x.x) : [5 x 5 x 16 x 32], [14 x 14 x 16 x *1] -> [14 x 14 x 32 x *1]
+Validating --> model.arrayOfFunctions[2].arrayOfFunctions[1].scale = LearnableParameter() :  -> [32 x 1]
+Validating --> model.arrayOfFunctions[2].arrayOfFunctions[1].bias = LearnableParameter() :  -> [32 x 1]
+Validating --> model.arrayOfFunctions[2].arrayOfFunctions[1].runMean = LearnableParameter() :  -> [32 x 1]
+Validating --> model.arrayOfFunctions[2].arrayOfFunctions[1].runVariance = LearnableParameter() :  -> [32 x 1]
+Validating --> ol.x._.x.x.x._ = BatchNormalization (ol.x._.x.x.x._.x.c, model.arrayOfFunctions[2].arrayOfFunctions[1].scale, model.arrayOfFunctions[2].arrayOfFunctions[1].bias, model.arrayOfFunctions[2].arrayOfFunctions[1].runMean, model.arrayOfFunctions[2].arrayOfFunctions[1].runVariance) : [14 x 14 x 32 x *1], [32 x 1], [32 x 1], [32 x 1], [32 x 1] -> [14 x 14 x 32 x *1]
+Validating --> ol.x._.x.x.x = RectifiedLinear (ol.x._.x.x.x._) : [14 x 14 x 32 x *1] -> [14 x 14 x 32 x *1]
+Validating --> ol.x._.x.x = Pooling (ol.x._.x.x.x) : [14 x 14 x 32 x *1] -> [7 x 7 x 32 x *1]
+Validating --> ol.x._.x.PlusArgs[0] = Times (model.arrayOfFunctions[3].W, ol.x._.x.x) : [128 x 7 x 7 x 32], [7 x 7 x 32 x *1] -> [128 x *1]
+Validating --> model.arrayOfFunctions[3].b = LearnableParameter() :  -> [128]
+Validating --> ol.x._.x = Plus (ol.x._.x.PlusArgs[0], model.arrayOfFunctions[3].b) : [128 x *1], [128] -> [128 x *1]
+Validating --> model.arrayOfFunctions[4].scale = LearnableParameter() :  -> [128 x 1]
+Validating --> model.arrayOfFunctions[4].bias = LearnableParameter() :  -> [128 x 1]
+Validating --> model.arrayOfFunctions[4].runMean = LearnableParameter() :  -> [128 x 1]
+Validating --> model.arrayOfFunctions[4].runVariance = LearnableParameter() :  -> [128 x 1]
+Validating --> ol.x._ = BatchNormalization (ol.x._.x, model.arrayOfFunctions[4].scale, model.arrayOfFunctions[4].bias, model.arrayOfFunctions[4].runMean, model.arrayOfFunctions[4].runVariance) : [128 x *1], [128 x 1], [128 x 1], [128 x 1], [128 x 1] -> [128 x *1]
+Validating --> ol.x = RectifiedLinear (ol.x._) : [128 x *1] -> [128 x *1]
+Validating --> ol.PlusArgs[0] = Times (model.arrayOfFunctions[6].W, ol.x) : [10 x 128], [128 x *1] -> [10 x *1]
+Validating --> model.arrayOfFunctions[6].b = LearnableParameter() :  -> [10]
+Validating --> ol = Plus (ol.PlusArgs[0], model.arrayOfFunctions[6].b) : [10 x *1], [10] -> [10 x *1]
 Validating --> ce = CrossEntropyWithSoftmax (labels, ol) : [10 x *1], [10 x *1] -> [1]
 Validating --> errs = ClassificationError (labels, ol) : [10 x *1], [10 x *1] -> [1]
 
-Validating network. 19 nodes to process in pass 2.
+Validating network. 17 nodes to process in pass 2.
 
 
 Validating network, final pass.
 
-ol.cbnr1.c.c: using cuDNN convolution engine for geometry: Input: 28 x 28 x 1, Output: 28 x 28 x 16, Kernel: 5 x 5 x 1, Map: 16, Stride: 1 x 1 x 1, Sharing: (1, 1, 1), AutoPad: (1, 1, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+ol.x._.x.x.x.x._.x.c: using cuDNN convolution engine for geometry: Input: 28 x 28 x 1, Output: 28 x 28 x 16, Kernel: 5 x 5 x 1, Map: 16, Stride: 1 x 1 x 1, Sharing: (1, 1, 1), AutoPad: (1, 1, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
 Using CNTK batch normalization engine.
-ol.cbnr1.p: using cuDNN convolution engine for geometry: Input: 28 x 28 x 16, Output: 14 x 14 x 16, Kernel: 2 x 2 x 1, Map: 1, Stride: 2 x 2 x 1, Sharing: (1, 1, 1), AutoPad: (0, 0, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
-ol.cbnr2.c.c: using cuDNN convolution engine for geometry: Input: 14 x 14 x 16, Output: 14 x 14 x 32, Kernel: 5 x 5 x 16, Map: 32, Stride: 1 x 1 x 16, Sharing: (1, 1, 1), AutoPad: (1, 1, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+_ol.x._.x.x.x: using cuDNN convolution engine for geometry: Input: 28 x 28 x 16, Output: 14 x 14 x 16, Kernel: 2 x 2 x 1, Map: 1, Stride: 2 x 2 x 1, Sharing: (1, 1, 1), AutoPad: (0, 0, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+ol.x._.x.x.x._.x.c: using cuDNN convolution engine for geometry: Input: 14 x 14 x 16, Output: 14 x 14 x 32, Kernel: 5 x 5 x 16, Map: 32, Stride: 1 x 1 x 16, Sharing: (1, 1, 1), AutoPad: (1, 1, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
 Using CNTK batch normalization engine.
-ol.cbnr2.p: using cuDNN convolution engine for geometry: Input: 14 x 14 x 32, Output: 7 x 7 x 32, Kernel: 2 x 2 x 1, Map: 1, Stride: 2 x 2 x 1, Sharing: (1, 1, 1), AutoPad: (0, 0, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+ol.x._.x.x: using cuDNN convolution engine for geometry: Input: 14 x 14 x 32, Output: 7 x 7 x 32, Kernel: 2 x 2 x 1, Map: 1, Stride: 2 x 2 x 1, Sharing: (1, 1, 1), AutoPad: (0, 0, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
 Using CNTK batch normalization engine.
 
 
-23 out of 42 nodes do not share the minibatch layout with the input data.
+21 out of 38 nodes do not share the minibatch layout with the input data.
 
 Post-processing network complete.
 
@@ -471,12 +437,12 @@ evalNodeNames are not specified, using all the default evalnodes and training cr
 
 Allocating matrices for forward and/or backward propagation.
 
-Memory Sharing: Out of 42 matrices, 0 are shared as 0, and 42 are not shared.
+Memory Sharing: Out of 38 matrices, 0 are shared as 0, and 38 are not shared.
 
 
-09/06/2016 15:15:58: Minibatch[1-10]: errs = 1.100% * 10000; ce = 0.03087470 * 10000
-09/06/2016 15:15:58: Final Results: Minibatch[1-10]: errs = 1.100% * 10000; ce = 0.03087470 * 10000; perplexity = 1.03135627
+09/13/2016 15:22:17: Minibatch[1-10]: errs = 0.750% * 10000; ce = 0.02402579 * 10000
+09/13/2016 15:22:17: Final Results: Minibatch[1-10]: errs = 0.750% * 10000; ce = 0.02402579 * 10000; perplexity = 1.02431673
 
-09/06/2016 15:15:58: Action "test" complete.
+09/13/2016 15:22:17: Action "test" complete.
 
-09/06/2016 15:15:58: __COMPLETED__
+09/13/2016 15:22:17: __COMPLETED__
