@@ -206,9 +206,9 @@ struct InfixOps
     InfixOp StringsOp;     // string OP string -> string
     InfixOp BoolOp;        // bool OP bool -> bool
     InfixOp ComputeNodeOp; // one operand is ComputeNode -> ComputeNode
-    InfixOp DictOp;        // dict OP dict
-    InfixOps(const wchar_t *name, InfixOp NumbersOp, InfixOp StringsOp, InfixOp BoolOp, InfixOp ComputeNodeOp, InfixOp DictOp)
-        : prettyName(name), NumbersOp(NumbersOp), StringsOp(StringsOp), BoolOp(BoolOp), ComputeNodeOp(ComputeNodeOp), DictOp(DictOp)
+    InfixOp OtherOp;       // other OP other
+    InfixOps(const wchar_t *name, InfixOp NumbersOp, InfixOp StringsOp, InfixOp BoolOp, InfixOp ComputeNodeOp, InfixOp OtherOp)
+        : prettyName(name), NumbersOp(NumbersOp), StringsOp(StringsOp), BoolOp(BoolOp), ComputeNodeOp(ComputeNodeOp), OtherOp(OtherOp)
     {
     }
 };
@@ -424,17 +424,69 @@ static ConfigValuePtr NodeOp(const ExpressionPtr &e, ConfigValuePtr leftVal, Con
 {
     return EvaluateNodeOp(e, leftVal, rightVal, ConfigValuePtr(), scope, exprPath);
 }
-static ConfigValuePtr DictOp(const ExpressionPtr &e, ConfigValuePtr leftVal, ConfigValuePtr rightVal, const IConfigRecordPtr &scope, const wstring &exprPath)
+static ConfigValuePtr OtherOp(const ExpressionPtr &e, ConfigValuePtr leftVal, ConfigValuePtr rightVal, const IConfigRecordPtr &scope, const wstring &exprPath)
 {
-    if (e->op != L"with")
-        LogicError("unexpected infix op");
-    let left = leftVal.AsPtr<ConfigRecord>();
-    let right = rightVal.AsPtr<ConfigRecord>();
-    left;
-    right;
-    scope;
-    exprPath; // TODO: create a composite dictionary
-    return leftVal;
+    // forward composition
+    // F >> G  ===  G(F(.))
+    // The new function has the same signature as F, i.e. multiple inputs are allowed to the first one.
+    if (e->op == L">>" && leftVal.Is<ConfigLambda>() && rightVal.Is<ConfigLambda>())
+    {
+        let F = leftVal.AsPtr<ConfigLambda>();
+        let G = rightVal.AsPtr<ConfigLambda>();
+        // create a C++ lambda that executes this function
+        let f = [F, G](vector<ConfigValuePtr> &&args, ConfigLambda::NamedParams &&namedArgs, const wstring &callerExprPath)->ConfigValuePtr
+        {
+            // execute F
+            let y = F->Apply(move(args), move(namedArgs), callerExprPath + L".arg");
+            // execute G
+            let z = G->Apply(move(vector<ConfigValuePtr>{ y }), ConfigLambda::NamedParams(), callerExprPath);
+            return z;
+        };
+        // create a BrainScript lambda that has the same signature as F
+        auto paramNames  = F->GetParamNames();
+        let& namedParamsRef = F->GetNamedParams();
+        // We must resolve the named parameters, since otherwise we are not allowed to duplicate them.
+        // Not 100% our normal late-evaluation semantics, but (1) we cannot wrap it in a lambda
+        // since that lambda would have to capture the value (same problem) and (2) we don't know what
+        // optional parameters will or will not be provided upon use. So resolve all now.
+        for (let& kvp : namedParamsRef)
+            kvp.second.ResolveValue();
+        auto namedParams = namedParamsRef;
+        return ConfigValuePtr(make_shared<ConfigLambda>(move(paramNames), move(namedParams), f), MakeFailFn(e->location), exprPath);
+    }
+    // array shift
+    // Array << N
+    else if (e->op == L"<<" && leftVal.Is<ConfigArray>() && rightVal.Is<Double>())
+    {
+        // TODO: test this
+        // useful for implementing recursions over arrays without having to pass the number around, e.g.
+        // sum(arr) = if Length(arr) == 0 then 0 else arr[0] + sum(arr << 1)
+        ConfigArray arr = leftVal;
+        size_t n = rightVal;
+        let failFn = MakeFailFn(e->location);
+        // copy all elements through
+        // Note: This will fail for non-0 based arrays. Should it? What is the right semantics?
+        // Note: If n is too large, it will silently create an empty array. I.e. shifting an empty array keeps an empty array.
+        let result = make_shared<ConfigArray>();
+        for (size_t i = n; i < arr.GetSize(leftVal.GetFailFn()); i++)
+            result->Append(arr.At((int)i, failFn));
+        return ConfigValuePtr(result, failFn, exprPath); // location will be that of the first ':', not sure if that is best way
+    }
+    // dictionary 'with' dictionary
+    // TODO: implement this; also as basis for overriding parameters from the cmd line
+    else if (e->op == L"with" && leftVal.Is<ConfigRecord>() && rightVal.Is<ConfigRecord>())
+    {
+        let left  = leftVal.AsPtr<ConfigRecord>();
+        let right = rightVal.AsPtr<ConfigRecord>();
+        left;
+        right;
+        scope;
+        exprPath; // TODO: create a composite dictionary
+        NOT_IMPLEMENTED;
+        return leftVal;
+    }
+    // we get here if the types are not OK
+    InvalidInfixOpTypes(e);
 };
 static ConfigValuePtr BadOp(const ExpressionPtr &e, ConfigValuePtr, ConfigValuePtr, const IConfigRecordPtr &, const wstring &)
 {
@@ -445,26 +497,25 @@ static ConfigValuePtr BadOp(const ExpressionPtr &e, ConfigValuePtr, ConfigValueP
 // This lists all infix operators with lambdas for evaluating them.
 static map<wstring, InfixOps> infixOps =
 {
-    // TODO: change DictOp into "all other"
-    // TODO: add "<<" (array shift) and ">>" (function composition)
-    // symbol  PrettyName                NumbersOp StringsOp BoolOp  ComputeNodeOp DictOp
-    { L"with", InfixOps(L"With",         NumOp,    BadOp,    BadOp,  NodeOp,       DictOp) }, // not actually implemented
-    { L"*",    InfixOps(L"Times",        NumOp,    BadOp,    BadOp,  NodeOp,       BadOp)  },
-    { L"/",    InfixOps(L"Div",          NumOp,    BadOp,    BadOp,  NodeOp,       BadOp)  },
-    { L".*",   InfixOps(L"ElementTimes", BadOp,    BadOp,    BadOp,  NodeOp,       BadOp)  },
-    { L"**",   InfixOps(L"Pow",          NumOp,    BadOp,    BadOp,  NodeOp,       BadOp)  },
-    { L"%",    InfixOps(L"Mod",          NumOp,    BadOp,    BadOp,  BadOp,        BadOp)  },
-    { L"+",    InfixOps(L"Plus",         NumOp,    StrOp,    BadOp,  NodeOp,       BadOp)  },
-    { L"-",    InfixOps(L"Minus",        NumOp,    BadOp,    BadOp,  NodeOp,       BadOp)  },
-    { L"<",    InfixOps(L"LT",           NumOp,    StrOp,    BoolOp, NodeOp,       BadOp)  },
-    { L"==",   InfixOps(L"Equal",        NumOp,    StrOp,    BoolOp, NodeOp,       BadOp)  },
-    { L">",    InfixOps(L"GT",           NumOp,    StrOp,    BoolOp, NodeOp,       BadOp)  },
-    { L">=",   InfixOps(L"GT",           NumOp,    StrOp,    BoolOp, NodeOp,       BadOp)  },
-    { L"!=",   InfixOps(L"NotEqual",     NumOp,    StrOp,    BoolOp, NodeOp,       BadOp)  },
-    { L"<=",   InfixOps(L"LE",           NumOp,    StrOp,    BoolOp, NodeOp,       BadOp)  },
-    { L"&&",   InfixOps(L"And",          BadOp,    BadOp,    BoolOp, NodeOp,       BadOp)  },
-    { L"||",   InfixOps(L"Or",           BadOp,    BadOp,    BoolOp, NodeOp,       BadOp)  },
-    { L"^",    InfixOps(L"Xor",          BadOp,    BadOp,    BoolOp, NodeOp,       BadOp)  }
+    // symbol  PrettyName                NumbersOp StringsOp BoolOp  ComputeNodeOp OtherOp
+    { L"with", InfixOps(L"With",         NumOp,    BadOp,    BadOp,  NodeOp,       OtherOp) },
+    { L"*",    InfixOps(L"Times",        NumOp,    BadOp,    BadOp,  NodeOp,       BadOp)   },
+    { L"/",    InfixOps(L"Div",          NumOp,    BadOp,    BadOp,  NodeOp,       BadOp)   },
+    { L".*",   InfixOps(L"ElementTimes", BadOp,    BadOp,    BadOp,  NodeOp,       BadOp)   },
+    { L"**",   InfixOps(L"Pow",          NumOp,    BadOp,    BadOp,  NodeOp,       BadOp)   },
+    { L"%",    InfixOps(L"Mod",          NumOp,    BadOp,    BadOp,  BadOp,        BadOp)   },
+    { L"+",    InfixOps(L"Plus",         NumOp,    StrOp,    BadOp,  NodeOp,       BadOp)   },
+    { L"-",    InfixOps(L"Minus",        NumOp,    BadOp,    BadOp,  NodeOp,       BadOp)   },
+    { L"<",    InfixOps(L"LT",           NumOp,    StrOp,    BoolOp, NodeOp,       BadOp)   },
+    { L"==",   InfixOps(L"Equal",        NumOp,    StrOp,    BoolOp, NodeOp,       BadOp)   },
+    { L">",    InfixOps(L"GT",           NumOp,    StrOp,    BoolOp, NodeOp,       BadOp)   },
+    { L">=",   InfixOps(L"GT",           NumOp,    StrOp,    BoolOp, NodeOp,       BadOp)   },
+    { L"!=",   InfixOps(L"NotEqual",     NumOp,    StrOp,    BoolOp, NodeOp,       BadOp)   },
+    { L"<=",   InfixOps(L"LE",           NumOp,    StrOp,    BoolOp, NodeOp,       BadOp)   },
+    { L"&&",   InfixOps(L"And",          BadOp,    BadOp,    BoolOp, NodeOp,       BadOp)   },
+    { L"||",   InfixOps(L"Or",           BadOp,    BadOp,    BoolOp, NodeOp,       BadOp)   },
+    { L">>",   InfixOps(L"FwdCompose",   BadOp,    BadOp,    BoolOp, NodeOp,       OtherOp) },
+    { L"<<",   InfixOps(L"Shift",        BadOp,    BadOp,    BoolOp, NodeOp,       OtherOp) }
 };
 
 // -----------------------------------------------------------------------
@@ -583,7 +634,7 @@ static ConfigValuePtr Evaluate(const ExpressionPtr &e, const IConfigRecordPtr &s
                     let argName = argList[i]; // parameter name
                     if (argName->op != L"id")
                         LogicError("function parameter list must consist of identifiers");
-                    auto argVal = move(args[i]); // value of the parameter
+                    auto argVal = move(args[i]); // value of the parameter  --TODO: Is this ever unresolved?
                     let failfn = argVal.GetFailFn();
                     argScope->Add(argName->id, MakeFailFn(argName->location), move(argVal));
                     // note: these are expressions for the parameter values; so they must be evaluated in the current scope
@@ -811,10 +862,8 @@ static ConfigValuePtr Evaluate(const ExpressionPtr &e, const IConfigRecordPtr &s
             // ComputationNode is "magic" in that we map infix operators like *, +, ==, && to know classes of fixed names.
             else if (leftValPtr.Is<ComputationNodeObject>() || rightValPtr.Is<ComputationNodeObject>())
                 return functions.ComputeNodeOp(e, leftValPtr, rightValPtr, scope, exprPath);
-            else if (leftValPtr.Is<ConfigRecord>() && rightValPtr.Is<ConfigRecord>())
-                return functions.DictOp(e, leftValPtr, rightValPtr, scope, exprPath); // TODO: turn this into "any other"
             else
-                InvalidInfixOpTypes(e);
+                return functions.OtherOp(e, leftValPtr, rightValPtr, scope, exprPath);
         }
     }
     catch (ConfigException &err)

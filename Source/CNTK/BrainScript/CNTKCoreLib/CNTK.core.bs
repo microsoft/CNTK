@@ -267,11 +267,14 @@ Inferred = 0  # denotes a dimension that is to be inferred
 ##############################################################################
 
 # Sequential -- composite that applies a sequence of functions onto an input
+# Sequential (F:G:H) === F >> G >> H
 Sequential (arrayOfFunctions) =
 {
     fs = _AsArray (arrayOfFunctions)  # make sure it works with a single function that is not an array
-    Apply (x, N) = if N == 0 then x else fs[N-1](Apply (x, N-1))  # we do that recursively
-    apply (x) = Apply (x, Length (fs))
+    #Apply (x, N) = if N == 0 then x else fs[N-1](Apply (x, N-1))  # we do that recursively
+    #apply (x) = Apply (x, Length (fs))
+    Apply (N) = if N == 0 then Identity else Apply (N-1) >> fs[N-1]  # we do that recursively
+    apply = Apply (Length (fs))
 }.apply
 # Parallel -- composite that applies several functions to the same input and combines the result
 Parallel (arrayOfFunctions, combineFunction) =
