@@ -17,6 +17,44 @@ EPS_IN_LOG = 1e-37        # 1e-37 is the highest guaranteed precision
 BACKWARD_RESULST_FOR_LOG_EPS = 9.08782e+36 # the backward result returned by CNTK log() for epsilon
 LOG_OF_EPS_IN_LOG =  -85.1 # log(EPS_IN_LOG)
 
+TENSORS = [
+        ([12.3, -12.3]), 
+        ([10.2, -10.2]), 
+        ([0.5, -0.5]), 
+        ([0.01, -0.01]), 
+        ([0.499, -0.499]), 
+        ([5.0, -5.0]), 
+        ([0.0]),
+        ([[2.1, 9.9], [4.7, 5.3]])
+]
+@pytest.mark.parametrize("operand", TENSORS)
+def test_op_floor(operand, device_id, precision):
+    operand = AA(operand)
+    expected = np.floor(operand)
+
+    expected_forward = [[expected]]
+    expected_backward = {
+            'arg': [[np.zeros_like(expected)]],
+            }
+
+    from .. import floor
+    _test_unary_op(precision, device_id, floor, operand,
+        expected_forward, expected_backward)
+
+@pytest.mark.parametrize("operand", TENSORS)
+def test_op_ceil(operand, device_id, precision):
+    operand = AA(operand)
+    expected = np.ceil(operand)
+
+    expected_forward = [[expected]]
+    expected_backward = {
+            'arg': [[np.zeros_like(expected)]],
+            }
+
+    from .. import ceil
+    _test_unary_op(precision, device_id, ceil, operand,
+        expected_forward, expected_backward)
+
 # Manually setting the expectation since CNTK's round behaves differently than
 # NumPy's round (see operator's docstring).
 ROUND_TENSORS = [

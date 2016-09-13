@@ -548,8 +548,7 @@ def floor(arg, name=''):
         :class:`cntk.Function`
     '''
     from cntk import floor
-    left = sanitize_input(left, get_data_type(right))
-    right = sanitize_input(right, get_data_type(left))
+    arg = sanitize_input(arg, get_data_type(arg))
     return floor(arg, name).output()    
 
 def ceil(arg, name=''):
@@ -572,8 +571,7 @@ def ceil(arg, name=''):
         :class:`cntk.Function`
     '''
     from cntk import ceil
-    left = sanitize_input(left, get_data_type(right))
-    right = sanitize_input(right, get_data_type(left))
+    arg = sanitize_input(arg, get_data_type(arg))
     return ceil(arg, name).output()
 
 def round(arg, name=''):
