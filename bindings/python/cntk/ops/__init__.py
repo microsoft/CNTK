@@ -1165,40 +1165,30 @@ def reduce_log_sum(inputs, name=''):
 # training ops
 ################################################################################
 
-#TODO: enable when it is exposed in c++
-def dropout(x, name=''):
-
+def dropout(x, dropout_rate=0.0, name=''):
     '''
+    Compute a new tensor that randomly sets `dropout_rate`*100 percent of the
+    nodes to zero. This is commonly used to prevent overfitting during the training 
+    process.
 
-    Compute a new tensor with `dropoutRate` perecent set to zero. The values 
-
-    that are set to zero are randomly chosen. This is commonly used to prevent 
-
-    overfitting during the training process.
-
-
-
-    The output tensor has the same shape as `x`, but with `dropoutRate` of the
-
-    elements set to zero (droped out).
-
+    The output tensor has the same shape as `x`, but with `dropout_rate` of the
+    elements set to zero (dropped out).
             
-
     Args:        
-
         x: source tensor
-
+        dropout_rate (float, [0,1)): fraction of nodes to be set to zero 
         name (str): the name of the node in the network
-
                 
-
     Returns:
-
-        :class:`cntk.Function`
-
+        FIXME also in all of the other cases :class:`cntk.Function` 
     '''    
+    if dropout_rate<0.0 or dropout_rate>=1.0:
+        raise ValueError('dropout_rate must be in the interval [0,1)')
 
-    raise NotImplementedError("dropout is not implemented yet in V2")
+    from cntk.cntk_py import dropout
+    x = sanitize_input(x)
+    
+    return dropout(x, dropout_rate, name).output()    
 
 ################################################################################
 # variables_and_parameters ops

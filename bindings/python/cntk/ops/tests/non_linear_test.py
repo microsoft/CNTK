@@ -114,3 +114,60 @@ def test_op_tanh(operand, device_id, precision):
     from .. import tanh
     _test_unary_op(precision, device_id, tanh, operand,
         expected_forward, expected_backward)
+
+@pytest.mark.parametrize("shape", [(3,9), (10,20,30)])
+@pytest.mark.parametrize("dropout_rate", [0.0, 0.2, 0.5, 0.8])
+def test_op_dropout(shape, dropout_rate, device_id, precision):
+    from cntk import input_variable, dropout
+    from cntk.utils import eval, sanitize_dtype_cntk, cntk_device
+
+    count = 10
+    resulted_non_zeros = 0
+
+    # As the dropout node is stochastic, we run it a couple times and aggregate
+    # over the results to get more stable tests.
+    for i in range(count):
+        value = np.ones(shape=shape, dtype=PRECISION_TO_TYPE[precision])
+
+        a = I(shape=value.shape,
+                data_type=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]),
+                needs_gradient=True,
+                name='a')
+
+        dropout_node = dropout(a, dropout_rate=dropout_rate)
+
+        value.shape = (1,1) + value.shape    
+        forward_input = {a:value}    
+
+        forward, backward = eval(dropout_node, 
+                precision, 
+                cntk_device(device_id), 
+                forward_input, 
+                backward_pass=True)
+
+        resulted_non_zeros += np.count_nonzero(forward[dropout_node])
+
+    resulted_non_zeros /= count
+    num_elements = np.multiply.reduce(shape)
+    expected_non_zeros = num_elements * (1-dropout_rate) 
+    max_off = 0.2*num_elements
+
+    assert(abs(resulted_non_zeros-expected_non_zeros) <
+            max_off)
+    
+@pytest.mark.parametrize("dropout_rate", [-0.1, 1.0, 100])
+def test_op_dropout_bad_input(dropout_rate, device_id, precision):
+    from cntk import input_variable, dropout
+    from cntk.utils import eval, sanitize_dtype_cntk, cntk_device
+
+    shape = (1,2)
+    value = np.ones(shape=shape, dtype=PRECISION_TO_TYPE[precision])
+
+    a = I(shape=value.shape,
+            data_type=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]),
+            needs_gradient=True,
+            name='a')
+
+    with pytest.raises(ValueError):
+        dropout_node = dropout(a, dropout_rate=dropout_rate)
+
