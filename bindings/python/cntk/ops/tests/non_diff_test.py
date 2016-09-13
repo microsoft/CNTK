@@ -13,6 +13,7 @@ import numpy as np
 import pytest
 from .ops_test_utils import unittest_helper, _test_unary_op, _test_binary_op, AA, I, precision, PRECISION_TO_TYPE 
 
+<<<<<<< HEAD
 TENSORS = [
         ([12.3, -12.3]), 
         ([10.2, -10.2]), 
@@ -50,6 +51,11 @@ def test_op_ceil(operand, device_id, precision):
     from .. import ceil
     _test_unary_op(precision, device_id, ceil, operand,
         expected_forward, expected_backward)
+=======
+EPS_IN_LOG = 1e-37        # 1e-37 is the highest guaranteed precision
+BACKWARD_RESULST_FOR_LOG_EPS = 9.08782e+36 # the backward result returned by CNTK log() for epsilon
+LOG_OF_EPS_IN_LOG =  -85.1 # log(EPS_IN_LOG)
+>>>>>>> 712c192... Add forgotten test file
 
 # Manually setting the expectation since CNTK's round behaves differently than
 # NumPy's round (see operator's docstring).
