@@ -325,10 +325,7 @@ def sanitize_batch(batch, data_type=None, dev=None):
 
     num_seq = len(batch)
 
-    try:
-        seq_lens = [len(seq) for seq in batch]
-    except:
-        import ipdb;ipdb.set_trace()
+    seq_lens = [len(seq) for seq in batch]
     
     use_mask = len(set(seq_lens))!=1    
     if use_mask:
