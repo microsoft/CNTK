@@ -65,10 +65,16 @@ def cross_entropy_with_softmax(output_vector, target_vector, name=''):
         :class:`cntk.Function`
     '''
     from cntk.cntk_py import cross_entropy_with_softmax
+<<<<<<< HEAD
     dtype = get_data_type(output_vector, target_vector)
     output_vector = sanitize_input(output_vector, dtype)
     target_vector = sanitize_input(target_vector, dtype)
     return cross_entropy_with_softmax(output_vector, target_vector, name)
+=======
+    output_vector = sanitize_input(output_vector, get_data_type(target_vector))
+    target_vector = sanitize_input(target_vector, get_data_type(output_vector))
+    return cross_entropy_with_softmax(output_vector, target_vector, name).output()
+>>>>>>> 201801b... Importing from cntk_py only explicitly
 
 def squared_error(output_matrix, target_matrix, name=''):
     '''
@@ -92,10 +98,16 @@ def squared_error(output_matrix, target_matrix, name=''):
         :class:`cntk.Function`
     '''
     from cntk.cntk_py import squared_error
+<<<<<<< HEAD
     dtype = get_data_type(output_matrix, target_matrix)
     output_matrix = sanitize_input(output_matrix, dtype)
     target_matrix = sanitize_input(target_matrix, dtype)
     return square_error(output_matrix, target_matrix, name)
+=======
+    output_matrix = sanitize_input(output_matrix, get_data_type(target_matrix))
+    target_matrix = sanitize_input(target_matrix, get_data_type(output_matrix))
+    return square_error(output_matrix, target_matrix, name).output()
+>>>>>>> 201801b... Importing from cntk_py only explicitly
 
 def classification_error(output_vector, target_vector, name=''):
     '''
@@ -121,10 +133,16 @@ def classification_error(output_vector, target_vector, name=''):
         :class:`cntk.Function`
     '''
     from cntk.cntk_py import classification_error
+<<<<<<< HEAD
     dtype = get_data_type(output_vector, target_vector)
     output_vector = sanitize_input(output_vector, dtype)
     target_vector = sanitize_input(target_vector, dtype)
     return classification_error(output_vector, target_vector, name)
+=======
+    output_vector = sanitize_input(output_vector, get_data_type(target_vector))
+    target_vector = sanitize_input(target_vector, get_data_type(output_vector))
+    return classification_error(output_vector, target_vector, name).output()
+>>>>>>> 201801b... Importing from cntk_py only explicitly
 
 ################################################################################
 # convolution ops
@@ -245,10 +263,16 @@ def less(left, right, name=''):
         :class:`cntk.Function`
     '''
     from cntk.cntk_py import less
+<<<<<<< HEAD
     dtype = get_data_type(left, right)
     left = sanitize_input(left, dtype)
     right = sanitize_input(right, dtype)   
     return less(left, right, name)
+=======
+    left = sanitize_input(left, get_data_type(right))
+    right = sanitize_input(right, get_data_type(left))
+    return less(left, right, name).output()
+>>>>>>> 201801b... Importing from cntk_py only explicitly
 
 def equal(left, right, name=''):
     '''
@@ -269,10 +293,16 @@ def equal(left, right, name=''):
         :class:`cntk.Function`
     '''
     from cntk.cntk_py import equal
+<<<<<<< HEAD
     dtype = get_data_type(left, right)
     left = sanitize_input(left, dtype)
     right = sanitize_input(right, dtype)   
     return equal(left, right, name)   
+=======
+    left = sanitize_input(left, get_data_type(right))
+    right = sanitize_input(right, get_data_type(left))
+    return equal(left, right, name).output()   
+>>>>>>> 201801b... Importing from cntk_py only explicitly
 
 def greater(left, right, name=''):
     '''
@@ -293,10 +323,16 @@ def greater(left, right, name=''):
         :class:`cntk.Function`
     '''
     from cntk.cntk_py import greater
+<<<<<<< HEAD
     dtype = get_data_type(left, right)
     left = sanitize_input(left, dtype)
     right = sanitize_input(right, dtype)   
     return greater(left, right, name)  
+=======
+    left = sanitize_input(left, get_data_type(right))
+    right = sanitize_input(right, get_data_type(left))
+    return greater(left, right, name).output()  
+>>>>>>> 201801b... Importing from cntk_py only explicitly
 
 def greater_equal(left, right, name=''):
     '''
@@ -317,10 +353,16 @@ def greater_equal(left, right, name=''):
         :class:`cntk.Function`
     '''
     from cntk.cntk_py import greater_equal
+<<<<<<< HEAD
     dtype = get_data_type(left, right)
     left = sanitize_input(left, dtype)
     right = sanitize_input(right, dtype)   
     return greater_equal(left, right, name) 
+=======
+    left = sanitize_input(left, get_data_type(right))
+    right = sanitize_input(right, get_data_type(left))
+    return greater_equal(left, right, name).output() 
+>>>>>>> 201801b... Importing from cntk_py only explicitly
 
 def not_equal(left, right, name=''):
     '''
@@ -341,10 +383,16 @@ def not_equal(left, right, name=''):
         :class:`cntk.Function`
     '''
     from cntk.cntk_py import not_equal
+<<<<<<< HEAD
     dtype = get_data_type(left, right)
     left = sanitize_input(left, dtype)
     right = sanitize_input(right, dtype)   
     return not_equal(left, right, name)
+=======
+    left = sanitize_input(left, get_data_type(right))
+    right = sanitize_input(right, get_data_type(left))
+    return not_equal(left, right, name).output()
+>>>>>>> 201801b... Importing from cntk_py only explicitly
 
 def less_equal(left, right, name=''):
     '''
@@ -365,10 +413,16 @@ def less_equal(left, right, name=''):
         :class:`cntk.Function`
     '''
     from cntk.cntk_py import less_equal
+<<<<<<< HEAD
     dtype = get_data_type(left, right)
     left = sanitize_input(left, dtype)
     right = sanitize_input(right, dtype)   
     return less_equal(left, right, name)
+=======
+    left = sanitize_input(left, get_data_type(right))
+    right = sanitize_input(right, get_data_type(left))
+    return less_equal(left, right, name).output()
+>>>>>>> 201801b... Importing from cntk_py only explicitly
 
 ################################################################################
 # linear ops
@@ -395,10 +449,16 @@ def plus(left, right, name=''):
         :class:`cntk.Function`
     '''
     from cntk.cntk_py import plus
+<<<<<<< HEAD
     dtype = get_data_type(left, right)
     left = sanitize_input(left, dtype)
     right = sanitize_input(right, dtype)   
     return plus(left, right, name)
+=======
+    left = sanitize_input(left, get_data_type(right))
+    right = sanitize_input(right, get_data_type(left))   
+    return plus(left, right, name).output()
+>>>>>>> 201801b... Importing from cntk_py only explicitly
 
 def minus(left, right, name=''):
     '''
@@ -423,10 +483,16 @@ def minus(left, right, name=''):
     '''
 
     from cntk.cntk_py import minus
+<<<<<<< HEAD
     dtype = get_data_type(left, right)
     left = sanitize_input(left, dtype)
     right = sanitize_input(right, dtype)   
     return minus(left, right, name)
+=======
+    left = sanitize_input(left, get_data_type(right))
+    right = sanitize_input(right, get_data_type(left))
+    return minus(left, right, name).output()
+>>>>>>> 201801b... Importing from cntk_py only explicitly
 
 def element_times(left, right, name=''):
     '''
@@ -450,10 +516,16 @@ def element_times(left, right, name=''):
         :class:`cntk.Function`
     '''
     from cntk.cntk_py import element_times
+<<<<<<< HEAD
     dtype = get_data_type(left, right)
     left = sanitize_input(left, dtype)
     right = sanitize_input(right, dtype)   
     return element_times(left, right, name)       
+=======
+    left = sanitize_input(left, get_data_type(right))
+    right = sanitize_input(right, get_data_type(left))
+    return element_times(left, right, name).output()       
+>>>>>>> 201801b... Importing from cntk_py only explicitly
 
 def element_divide(left, right, name=''):
     '''
@@ -480,10 +552,16 @@ def element_divide(left, right, name=''):
         :class:`cntk.Function`
     '''
     from cntk.cntk_py import element_divide
+<<<<<<< HEAD
     dtype = get_data_type(left, right)
     left = sanitize_input(left, dtype)
     right = sanitize_input(right, dtype)   
     return element_divide(left, right, name)        
+=======
+    left = sanitize_input(left, get_data_type(right))
+    right = sanitize_input(right, get_data_type(left))
+    return element_divide(left, right, name).output()        
+>>>>>>> 201801b... Importing from cntk_py only explicitly
 
 def times(left, right, output_rank=1, name=''):
     '''
@@ -521,10 +599,16 @@ def times(left, right, output_rank=1, name=''):
         :class:`cntk.Function`
     '''
     from cntk.cntk_py import times
+<<<<<<< HEAD
     dtype = get_data_type(left, right)
     left = sanitize_input(left, dtype)
     right = sanitize_input(right, dtype)   
     return times(right, left, output_rank, name)        
+=======
+    left = sanitize_input(left, get_data_type(right))
+    right = sanitize_input(right, get_data_type(left))
+    return times(right, left, output_rank, name).output()        
+>>>>>>> 201801b... Importing from cntk_py only explicitly
 
 #TODO: enable when it is exposed in c++
 def identity(x, name=''):
@@ -1301,11 +1385,13 @@ def dropout(x, dropout_rate=0.0, name=''):
     The output tensor has the same shape as `x`, but with `dropout_rate` of the
     elements set to zero (dropped out).
             
+
     Args:        
         x: input tensor
         dropout_rate (float, [0,1)): fraction of nodes to be set to zero 
         name (`str`, optional): the name of the node in the network
                 
+
     Returns:
         FIXME also in all of the other cases :class:`cntk.Function` 
     '''    
