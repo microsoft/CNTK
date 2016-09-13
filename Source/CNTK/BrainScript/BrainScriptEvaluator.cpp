@@ -850,8 +850,16 @@ static ConfigValuePtr Evaluate(const ExpressionPtr &e, const IConfigRecordPtr &s
             let &functions = opIter->second;
             let &leftArg = e->args[0];
             let &rightArg = e->args[1];
-            let leftValPtr = Evaluate(leftArg, scope, exprPath, functions.prettyName + L"Args[0]");
+#if 1
+            let leftValPtr  = Evaluate(leftArg,  scope, exprPath, functions.prettyName + L"Args[0]");
             let rightValPtr = Evaluate(rightArg, scope, exprPath, functions.prettyName + L"Args[1]");
+#else       // This does not actually work.  --TODO: find out why
+            // In the special case of >>, we evaluate the right arg first, as to mimic the same behavior
+            // as writing the functions as a direct nested evaluation.
+            let rightValPtr1 = e->op == L">>" ? Evaluate(rightArg, scope, exprPath, functions.prettyName + L"Args[1]") : ConfigValuePtr();
+            let leftValPtr   =                  Evaluate(leftArg,  scope, exprPath, functions.prettyName + L"Args[0]");
+            let rightValPtr  = e->op != L">>" ? Evaluate(rightArg, scope, exprPath, functions.prettyName + L"Args[1]") : rightValPtr1;
+#endif
             if (leftValPtr.Is<Double>() && rightValPtr.Is<Double>())
                 return functions.NumbersOp(e, leftValPtr, rightValPtr, scope, exprPath);
             else if (leftValPtr.Is<String>() && rightValPtr.Is<String>())
@@ -1062,6 +1070,8 @@ public:
 // CompareFunctions
 //  - IsSameObject()
 //  - IsArray()
+//  - IsDouble()
+//  - IsBool()
 class CompareFunction : public BoxOf<Bool>
 {
 public:
@@ -1079,13 +1089,21 @@ public:
             auto range = args.GetIndexBeginEnd();
             if (range.second != range.first + 2)
                 argsArg.Fail(L"IsSameObject expects two arguments");
-            let arg1 = args.At(range.first    ).AsPtr<Object>();
+            let arg1 = args.At(range.first).AsPtr<Object>();
             let arg2 = args.At(range.first + 1).AsPtr<Object>();
             us = arg1.get() == arg2.get();
         }
         else if (what == L"IsArray")
         {
             us = argsArg.Is<ConfigArray>();
+        }
+        else if (what == L"IsDouble")
+        {
+            us = argsArg.Is<Double>();
+        }
+        else if (what == L"IsBool")
+        {
+            us = argsArg.Is<Bool>();
         }
         else
             whatArg.Fail(L"Unknown 'what' value to CompareFunction: " + what);
