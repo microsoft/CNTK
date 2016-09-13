@@ -585,8 +585,6 @@ def eval(op, precision, device, input_map=None, backward_pass=False):
         forward_output[v] = np_data
         forward_output_mask[v] = value.mask()
 
-    assert backward_pass
-    
     if backward_pass:    
         root_gradients = {} 
         for v, o in forward_output.items():
