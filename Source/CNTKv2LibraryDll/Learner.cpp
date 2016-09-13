@@ -216,12 +216,12 @@ namespace CNTK
             const auto& gradientValue = gradientValues.at(parameter);
 // TODO: make this a runtime parameter.
 #if DUMPOUTPUT
-            LOGPRINTF(stderr, "Update_%ls\n", parameter.Name().c_str());
+            LOGPRINTF(stderr, "Update_%ls\n", parameter.Uid().c_str());
 #endif
 
 #ifdef _DEBUG
             if (HasNan(smoothedGradientValue, "TrainOneEpoch/UpdateWeights/Learner::Update(): "))
-                LogicError("%ls has NaNs in smoothedGradient.", parameter.Name().c_str());
+                LogicError("%ls has NaNs in smoothedGradient.", parameter.Uid().c_str());
 #endif
 
 #if DUMPOUTPUT
@@ -243,7 +243,7 @@ namespace CNTK
 #ifdef _DEBUG
             const auto& parameterValue = parameter.Value();
             if (HasNan(parameterValue, "TrainOneEpoch/UpdateWeights/Learner::Update(): "))
-                LogicError("%ls has NaNs in parameter values after parameter update.", parameter.Name().c_str());
+                LogicError("%ls has NaNs in parameter values after parameter update.", parameter.Uid().c_str());
 #endif
         }
         m_sampleCount += trainingSampleCount;
@@ -286,16 +286,13 @@ namespace CNTK
 
         for (const auto& parameter : Parameters())
         {
-            // TODO: parameter name is not guaranteed to be unique. Instead, all serializable objects
-            // need to expose "UId" property -- a persistent unique internal name.
-            // Switch to UId as soon as it's available.
-            if (checkpoint.Contains(parameter.Name()))
+            if (checkpoint.Contains(parameter.Uid()))
             {
                 LogicError("Parameter names must be unique");
             }
 
             const auto& smoothedGradientValue = m_smoothedGradientValues.at(parameter);
-            checkpoint[parameter.Name()] = *smoothedGradientValue;
+            checkpoint[parameter.Uid()] = *smoothedGradientValue;
         }
         return checkpoint;
     }
@@ -305,7 +302,7 @@ namespace CNTK
         m_sampleCount = checkpoint[L"sampleCount"].Value<size_t>();
         m_minibatchCount = checkpoint[L"minibatchCount"].Value<size_t>();
 
-        size_t version = checkpoint[L"minibatchCount"].Value<size_t>();
+        size_t version = checkpoint[L"checkpointVersion"].Value<size_t>();
         if (checkpointVersion != version)
         {
             // At the moment, we only support one version, so this should never happen.
@@ -314,24 +311,24 @@ namespace CNTK
 
         for (const auto& parameter : Parameters())
         {
-            if (!checkpoint.Contains(parameter.Name()))
+            if (!checkpoint.Contains(parameter.Uid()))
             {
-                LogicError("Checkpoint does not contain state for parameter %ls", parameter.Name().c_str());
+                LogicError("Checkpoint does not contain state for parameter %ls", parameter.Uid().c_str());
             }
 
             const auto& smoothedGradientValue = m_smoothedGradientValues.at(parameter);
-            const NDArrayView& checkpointedValue = checkpoint[parameter.Name()].Value<NDArrayView>();
+            const NDArrayView& checkpointedValue = checkpoint[parameter.Uid()].Value<NDArrayView>();
             
             if (smoothedGradientValue->GetDataType() != checkpointedValue.GetDataType())
             {
                 LogicError("A value restored from a checkpoint for the smoothed gradient data type for parameter %ls does not match the expected value",
-                           parameter.Name().c_str());
+                           parameter.Uid().c_str());
             }
 
             if (smoothedGradientValue->Shape() != checkpointedValue.Shape())
             {
                 LogicError("A value restored from a checkpoint for the smoothed gradient shape for parameter %ls does not match the expected value",
-                           parameter.Name().c_str());
+                           parameter.Uid().c_str());
             }
 
             smoothedGradientValue->CopyFrom(checkpointedValue);

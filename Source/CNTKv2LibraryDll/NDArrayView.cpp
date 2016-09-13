@@ -212,9 +212,9 @@ namespace CNTK
         return const_cast<TensorView<ElementType>*>(GetTensorView<ElementType>());
     }
 
-    NDArrayViewPtr NDArrayView::DeepClone(bool readOnly/* = false*/) const
+    NDArrayViewPtr NDArrayView::DeepClone(const DeviceDescriptor& device, bool readOnly/* = false*/) const
     {
-        NDArrayViewPtr newView = MakeSharedObject<NDArrayView>(this->GetDataType(), this->GetStorageFormat(), this->Shape(), this->Device());
+        NDArrayViewPtr newView = MakeSharedObject<NDArrayView>(this->GetDataType(), this->GetStorageFormat(), this->Shape(), device);
         switch (m_dataType)
         {
         case DataType::Float:
@@ -242,7 +242,7 @@ namespace CNTK
 
     void NDArrayView::CopyFrom(const NDArrayView& source)
     {
-        if (source.Shape() != Shape())
+        if ((source.Shape() != Shape()) && (AsTensorShape(source.Shape()) != AsTensorShape(Shape())))
             InvalidArgument("NDArrayView::CopyFrom: The 'source' view's shape must be same as the shape of this NDArrayView");
 
         if (IsReadOnly())

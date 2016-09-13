@@ -305,6 +305,8 @@ protected:
     double m_seqGammarCalcWP;
     double m_seqGammarCalcbMMIFactor;
     bool m_seqGammarCalcUsesMBR;
+    
+    bool m_disableWkInBatchNormal;
 };
 
 template <class ElemType>
