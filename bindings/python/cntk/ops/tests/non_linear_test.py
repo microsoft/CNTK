@@ -79,6 +79,24 @@ def test_op_exp(operand, device_id, precision):
         expected_forward, expected_backward)
 
 @pytest.mark.parametrize("operand", TENSORS)
+def test_op_abs(operand, device_id, precision):
+    t = np.abs(AA(operand, dtype=PRECISION_TO_TYPE[precision]))
+
+    expected_forward = [AA([t])]
+
+    # For 0 NumPy gives a gradient non, while CNTK gives 0
+    backward = operand / np.abs(operand)
+    backward[np.isnan(backward)] = 0
+    expected_backward = {
+            'arg': [[backward]]
+            }
+
+    from .. import abs
+    _test_unary_op(precision, device_id, abs, operand,
+        expected_forward, expected_backward)
+
+
+@pytest.mark.parametrize("operand", TENSORS)
 def test_op_tanh(operand, device_id, precision):
     t = np.tanh(AA(operand, dtype=PRECISION_TO_TYPE[precision]))
     expected_forward = [AA([t])]
