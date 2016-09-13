@@ -130,21 +130,35 @@ void ReadMNISTInput(std::string input, std::vector<float>& array, bool display, 
     }
 }
 
-/// <summary>Reads an RGB image from a file and saves it to a vector in the correct order</summary>
+/// <summary>Reads an RGB image from a file, crops to 224*224, and saves it to a vector in the correct order</summary>
 /// <param name="filename">Path to file</param>
 /// <param name="array">A destination array to load the data</param>
 /// <param name="display">A boolean for an option to display an image</param>
-void ReadRGBImage(std::string filename, std::vector<float>& array, bool display)
+void ReadRGBImage(std::string filename, std::vector<float>& array, bool display, bool save)
 {
     auto testImage = cv::imread(filename, CV_LOAD_IMAGE_COLOR);
 
-    // Display input image
+	// resize and center crop
+	auto biggerSide = (testImage.rows > testImage.cols) ? testImage.rows : testImage.cols;
+	auto smallerSide = (testImage.rows > testImage.cols) ? testImage.cols : testImage.rows;
+	if (smallerSide != 224 || biggerSide != 224)
+	{
+		auto newCols = 224 * biggerSide / smallerSide;
+		auto newSize = (testImage.rows > testImage.cols) ? cv::Size(224, newCols) : cv::Size(newCols, 224);
+		cv::resize(testImage, testImage, newSize, 0, 0, cv::INTER_NEAREST);
+		auto cropX = (testImage.rows > testImage.cols) ? 0 : newCols / 2 - 112;
+		auto cropY = (testImage.rows < testImage.cols) ? 0 : newCols / 2 - 112;
+		testImage = testImage(cv::Rect(cropX, cropY, 224, 224));
+	}
+
     if (display)
     {
         cv::imshow("input", testImage);
-        cv::waitKey(0);
     }
-
+	if (save)
+	{
+		SaveImage(testImage, "input.png");
+	}
     // Split image into 3 channels and save values in the following order: height * width * channel
     cv::Mat channel[3];
     cv::split(testImage, channel);
@@ -358,7 +372,7 @@ void VisualizeNetwork(std::string modelFilePath, std::string inputImage)
     
     if (modelFilePath.find("AlexNet") != std::string::npos)
     {
-        ReadRGBImage(inputImage, inputs, 0);
+        ReadRGBImage(inputImage, inputs, 1,1);
     }
     else if (modelFilePath.find("MNIST") != std::string::npos)
     {
@@ -424,7 +438,7 @@ int main(int argc, char* argv[])
         case 1:
 			userPath = "Examples/Image/MNIST/Data/";
 			std::cout << "Use default model path? (y/n) (working directory \"" << userPath << "\")\n";
-            std::cin >> defaultPath;
+			std::cin >> defaultPath;
             if (defaultPath == 'y')
             {
                 modelWorkingDirectory += userPath;
@@ -437,26 +451,8 @@ int main(int argc, char* argv[])
                 modelFilePath = modelWorkingDirectory + userPath;
             }
             // MNIST sample input taken from MNIST/Data/Train-28x28_cntk_text.txt
-            inputImage = "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 \
-                                0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 \
-                                0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 \
-                                0 0 0 0 0 0 0 0 0 0 38 43 105 255 253 253 253 253 253 174 6 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 43 139 224 \
-                                226 252 253 252 252 252 252 252 252 158 14 0 0 0 0 0 0 0 0 0 0 0 0 0 0 178 252 252 252 252 253 252 252 \
-                                252 252 252 252 252 59 0 0 0 0 0 0 0 0 0 0 0 0 0 0 109 252 252 230 132 133 132 132 189 252 252 252 252 \
-                                59 0 0 0 0 0 0 0 0 0 0 0 0 0 0 4 29 29 24 0 0 0 0 14 226 252 252 172 7 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 \
-                                0 0 0 0 0 0 85 243 252 252 144 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 88 189 252 252 252 14 0 0 0 \
-                                0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 91 212 247 252 252 252 204 9 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 32 125 193 \
-                                193 193 253 252 252 252 238 102 28 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 45 222 252 252 252 252 253 252 252 252 \
-                                177 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 45 223 253 253 253 253 255 253 253 253 253 74 0 0 0 0 0 0 0 0 0 0 \
-                                0 0 0 0 0 0 0 31 123 52 44 44 44 44 143 252 252 74 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 15 \
-                                252 252 74 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 86 252 252 74 0 0 0 0 0 0 0 0 0 0 0 0 0 0 5 \
-                                75 9 0 0 0 0 0 0 98 242 252 252 74 0 0 0 0 0 0 0 0 0 0 0 0 0 61 183 252 29 0 0 0 0 18 92 239 252 252 243 \
-                                65 0 0 0 0 0 0 0 0 0 0 0 0 0 208 252 252 147 134 134 134 134 203 253 252 252 188 83 0 0 0 0 0 0 0 0 0 0 0 \
-                                0 0 0 208 252 252 252 252 252 252 252 252 253 230 153 8 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 49 157 252 252 252 \
-                                252 252 217 207 146 45 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 7 103 235 252 172 103 24 0 0 0 0 0 0 0 0 0 0 0 \
-                                0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 \
-                                0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0";
-            break;
+            inputImage = "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 5 63 197 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 20 254 230 24 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 20 254 254 48 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 20 254 255 48 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 20 254 254 57 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 20 254 254 108 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 16 239 254 143 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 178 254 143 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 178 254 143 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 178 254 162 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 178 254 240 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 113 254 240 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 83 254 245 31 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 79 254 246 38 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 214 254 150 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 144 241 8 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 144 240 2 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 144 254 82 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 230 247 40 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 168 209 31 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0";
+			break;
         case 2:
 			userPath = "Examples/Evaluation/CPPEvalClient/";
             std::cout << "Use default model path? (y/n) (working directory \"" << userPath << "\")\n";
@@ -472,9 +468,8 @@ int main(int argc, char* argv[])
                 std::cin >> userPath;
 				modelFilePath = modelWorkingDirectory + userPath;
             }
-			std::cout << "Provide test file path relative to your working directory \nIt is expected to be a 224*224 image \n";
+			std::cout << "Provide test file path relative to  \"Examples/Evaluation/CPPEvalClient/\" \n";
 			std::cin >> inputImage;
-            inputImage = "val100/test2.JPG";
             break;
         default:
             fprintf(stderr, "Cannot match the choice\n");
