@@ -20,18 +20,17 @@ trainNetwork = {
     BrainScriptNetworkBuilder = {
         imageShape = 28:28:1                        # image dimensions, 1 channel only
         labelDim = 10                               # number of distinct labels
-        convWScale = 10                             # the initial value scale for the conv layers
         featScale = 1/256
         Scale{f} = x => Constant(f) .* x
         
         model = Sequential (
             Scale {featScale} :
-            ConvolutionalLayer {16, (5:5), pad = true, initValueScale=convWScale} : ReLU : 
+            ConvolutionalLayer {16, (5:5), pad = true} : ReLU : 
             MaxPoolingLayer    {(2:2), stride=(2:2)} :
-            ConvolutionalLayer {32, (5:5), pad = true, initValueScale=convWScale} : ReLU : 
+            ConvolutionalLayer {32, (5:5), pad = true} : ReLU : 
             MaxPoolingLayer    {(2:2), stride=(2:2)} :
-            DenseLayer         {128, activation=Sigmoid} : #, init='uniform'} :
-            LinearLayer        {labelDim} #, init='uniform'}
+            DenseLayer         {128, activation=Sigmoid} :
+            LinearLayer        {labelDim}
         )
 
         # inputs

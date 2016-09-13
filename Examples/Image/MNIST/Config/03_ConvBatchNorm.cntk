@@ -20,13 +20,12 @@ trainNetwork = {
     BrainScriptNetworkBuilder = {
         imageShape = 28:28:1                        # image dimensions, 1 channel only
         labelDim = 10                               # number of distinct labels
-        convWScale = 10                             # the initial value scale for the conv layers
         featScale = 1/256
         Scale{f} = x => Constant(f) .* x
 
         # define a custom layer with 5x5 convolution, batch norm, relu and 2x2 max pooling
-        ConvBnReluPoolLayer {outChannels, initValueScale} = Sequential (
-            ConvolutionalLayer      {outChannels, (5:5), pad=true, initValueScale=initValueScale} :
+        ConvBnReluPoolLayer {outChannels} = Sequential (
+            ConvolutionalLayer      {outChannels, (5:5), pad=true, bias=false} :
             BatchNormalizationLayer {spatialRank = 2} :
             ReLU :
             MaxPoolingLayer         {(2:2), stride = (2:2)} 
@@ -34,8 +33,8 @@ trainNetwork = {
         
         model = Sequential (
             Scale {featScale} :
-            ConvBnReluPoolLayer     {16, convWScale} :
-            ConvBnReluPoolLayer     {32, convWScale} :
+            ConvBnReluPoolLayer     {16} :
+            ConvBnReluPoolLayer     {32} :
             LinearLayer             {128} :
             BatchNormalizationLayer {} :
             ReLU :
