@@ -458,18 +458,17 @@ static ConfigValuePtr OtherOp(const ExpressionPtr &e, ConfigValuePtr leftVal, Co
     // Array << N
     else if (e->op == L"<<" && leftVal.Is<ConfigArray>() && rightVal.Is<Double>())
     {
-        // TODO: test this
         // useful for implementing recursions over arrays without having to pass the number around, e.g.
         // sum(arr) = if Length(arr) == 0 then 0 else arr[0] + sum(arr << 1)
-        ConfigArray arr = leftVal;
+        let arr = leftVal.AsPtr<ConfigArray>();
         size_t n = rightVal;
         let failFn = MakeFailFn(e->location);
         // copy all elements through
         // Note: This will fail for non-0 based arrays. Should it? What is the right semantics?
         // Note: If n is too large, it will silently create an empty array. I.e. shifting an empty array keeps an empty array.
         let result = make_shared<ConfigArray>();
-        for (size_t i = n; i < arr.GetSize(leftVal.GetFailFn()); i++)
-            result->Append(arr.At((int)i, failFn));
+        for (size_t i = n; i < arr->GetSize(leftVal.GetFailFn()); i++)
+            result->Append(arr->At((int)i, failFn));
         return ConfigValuePtr(result, failFn, exprPath); // location will be that of the first ':', not sure if that is best way
     }
     // dictionary 'with' dictionary
@@ -514,7 +513,7 @@ static map<wstring, InfixOps> infixOps =
     { L"<=",   InfixOps(L"LE",           NumOp,    StrOp,    BoolOp, NodeOp,       BadOp)   },
     { L"&&",   InfixOps(L"And",          BadOp,    BadOp,    BoolOp, NodeOp,       BadOp)   },
     { L"||",   InfixOps(L"Or",           BadOp,    BadOp,    BoolOp, NodeOp,       BadOp)   },
-    { L">>",   InfixOps(L"FwdCompose",   BadOp,    BadOp,    BoolOp, NodeOp,       OtherOp) },
+    { L">>",   InfixOps(L"Before",       BadOp,    BadOp,    BoolOp, NodeOp,       OtherOp) },
     { L"<<",   InfixOps(L"Shift",        BadOp,    BadOp,    BoolOp, NodeOp,       OtherOp) }
 };
 
