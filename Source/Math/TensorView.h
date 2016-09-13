@@ -146,15 +146,15 @@ public:
     shared_ptr<Matrix<ElemType>> AsMatrix() const;
     const TensorShape& GetShape() const { return m_shape; }
 
-private:
     // -------------------------------------------------------------------
     // accessors
     // -------------------------------------------------------------------
 
     const Matrix<ElemType>& GetSOB() const { return *m_sob; }
-    Matrix<ElemType>&       GetSOB()       { return *m_sob; }    
+    Matrix<ElemType>&       GetSOB()       { return *m_sob; }
     friend Test::TensorTest<ElemType>;
 
+private:
     // -------------------------------------------------------------------
     // sob members
     // -------------------------------------------------------------------

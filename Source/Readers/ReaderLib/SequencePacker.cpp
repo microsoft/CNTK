@@ -52,6 +52,12 @@ Minibatch SequencePacker::ReadMinibatch()
     for (int streamIndex = 0; streamIndex < batch.size(); ++streamIndex)
     {
         const auto& streamBatch = batch[streamIndex];
+
+        if (m_checkSampleShape[streamIndex])
+        {
+            CheckSampleShape(streamBatch, m_outputStreamDescriptions[streamIndex]);
+        }
+
         const auto& type = m_outputStreamDescriptions[streamIndex]->m_storageType;
         auto pMBLayout = (type == StorageType::dense) ?
             PackDenseStream(streamBatch, streamIndex) : PackSparseStream(streamBatch, streamIndex);
@@ -67,12 +73,41 @@ Minibatch SequencePacker::ReadMinibatch()
     return minibatch;
 }
 
+void SequencePacker::CheckSampleShape(const std::vector<SequenceDataPtr>& minibatch, StreamDescriptionPtr outputStream)
+{
+    assert(!minibatch.empty());
+
+    // TODO: This should come from the network - layout that network expects.
+    // TODO: In this case we can make outputStream const.
+    // Currently it is not coming from SGD/Network, so we assume the first one is correct.
+    if (outputStream->m_sampleLayout == nullptr)
+    {
+        outputStream->m_sampleLayout = minibatch.front()->m_sampleLayout;
+    }
+
+    for (const auto& s : minibatch)
+    {
+        if (s->m_sampleLayout == nullptr)
+        {
+            LogicError("Unknown shape of the sequence in stream '%ls'.", outputStream->m_name.c_str());
+        }
+
+        if (*s->m_sampleLayout != *outputStream->m_sampleLayout)
+        {
+            RuntimeError("Packer currently does not support samples with varying shapes."
+                "Please make sure there is a transform that unifies the shape of samples for input stream '%ls' "
+                "or the deserializer provides samples with the same shape.",
+                outputStream->m_name.c_str());
+        }
+    }
+}
+
 MBLayoutPtr SequencePacker::PackDenseStream(const StreamBatch& batch, size_t streamIndex)
 {
     assert(m_outputStreamDescriptions[streamIndex]->m_storageType == StorageType::dense);
     const auto& stream = m_inputStreamDescriptions[streamIndex];
     auto& buffer = m_streamBuffers[streamIndex];
-    size_t sampleSize = GetSampleSize(stream);
+    size_t sampleSize = GetSampleSize(m_outputStreamDescriptions[streamIndex]);
     auto pMBLayout = CreateMBLayout(batch);
     size_t requiredSize = pMBLayout->GetNumCols() * sampleSize;
     if (buffer.m_size < requiredSize)
@@ -115,7 +150,7 @@ MBLayoutPtr SequencePacker::PackDenseStream(const StreamBatch& batch, size_t str
                 assert(sampleOffset == sampleIndex * sampleSize);
                 PackDenseSample(destination, sequence, sampleOffset, sampleSize);
                 sampleOffset += sampleSize;
-    }
+            }
             else if (stream->m_storageType == StorageType::sparse_csc)
             {
                 // TODO: make type casts members of the SparseSequenceData

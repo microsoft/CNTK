@@ -4,6 +4,7 @@
 WorkDir = work
 DataDir = data
 
+makeMode = false
 modelPath = $WorkDir$/ATIS.slot.lstm
 parallelTrain = true
 
@@ -59,15 +60,16 @@ Train = [
         outputs = W * LSTMoutput + b
         
         cr = CrossEntropyWithSoftmax(labels, outputs)
+        errs = ClassificationError(labels, outputs)
 
         criterionNodes = (cr)
-        evaluationNodes = (cr)
+        evaluationNodes = (errs)
         outputNodes = (outputs)
     ]
 
     SGD = [
         # maximum number of epochs
-        maxEpochs = 1   # set to 1 so this can be added to regression test. Increase to 20 get a good accuracy
+        maxEpochs = 20   # set to 1 so this can be added to regression test. Increase to 20 get a good accuracy
 
         # for each epoch, maximum number of input samples(words) is set below
         epochSize = 36000   
@@ -189,7 +191,7 @@ Test = [
         labels = Input($labelCount$, tag = "label")
         modelAsTrained = BS.Network.Load ("$modelPath$")
         final = Hardmax(modelAsTrained.outputs)
-        errorRate = ErrorPrediction(labels, final, tag='evaluation')
+        errorRate = ClassificationError(labels, final, tag='evaluation')
     ]
     
     evalNodeNames  = errorRate

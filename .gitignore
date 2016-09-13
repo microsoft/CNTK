@@ -65,6 +65,7 @@ ipch/
 *.opensdf
 *.sdf
 *.cachefile
+*.userosscache
 
 # Visual Studio profiler
 *.psess
@@ -190,6 +191,10 @@ Source/CNTK/buildinfo.h$$
 # Unit test output
 Tests/UnitTests/ReaderTests/Control/**/*_Output.txt
 Tests/UnitTests/NetworkTests/Output/
+Tests/EndToEndTests/UnitTests/MathTests/M.txt
+Tests/EndToEndTests/UnitTests/MathTests/MCPU.txt
+Tests/EndToEndTests/UnitTests/MathTests/MGPU.txt
+Tests/EndToEndTests/UnitTests/MathTests/MS.txt
 
 Dependencies/CNTKCustomMKL/Publish
 Dependencies/CNTKCustomMKL/CNTKCustomMKL-Linux-*.tgz

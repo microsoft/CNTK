@@ -7,6 +7,8 @@
 #include <algorithm>
 #include <unordered_map>
 #include <random>
+#include <boost/random/bernoulli_distribution.hpp>
+#include <boost/random/normal_distribution.hpp>
 #include "ImageTransformers.h"
 #include "Config.h"
 #include "ConcStack.h"
@@ -116,6 +118,12 @@ CropTransformer::CropTransformer(const ConfigParameters& config) : ImageTransfor
         m_hFlip = config(L"hflip");
     }
 
+    // for MultiView10 we need to set m_hflip = false, otherwise we might not get 5 unflipped image (see CropTransformer::Apply below)
+    if (m_cropType == CropType::MultiView10)
+    {
+        m_hFlip = false;
+    }
+
     m_aspectRatioRadius = config(L"aspectRatioRadius", ConfigParameters::Array(doubleargvector(vector<double>{0.0})));
 }
 
@@ -156,7 +164,8 @@ void CropTransformer::Apply(size_t id, cv::Mat &mat)
     int viewIndex = m_cropType == CropType::MultiView10 ? (int)(id % 10) : 0;
 
     mat = mat(GetCropRect(m_cropType, viewIndex, mat.rows, mat.cols, ratio, *rng));
-    if ((m_hFlip && std::bernoulli_distribution()(*rng)) ||
+    // for MultiView10 m_hFlip is false, hence the first 5 will be unflipped, the later 5 will be flipped
+    if ((m_hFlip && boost::random::bernoulli_distribution<>()(*rng)) ||
         viewIndex >= 5)
     {
         cv::flip(mat, mat, 1);
@@ -208,7 +217,7 @@ cv::Rect CropTransformer::GetCropRect(CropType type, int viewIndex, int crow, in
         double factor = 1.0 + UniRealT(-m_curAspectRatioRadius, m_curAspectRatioRadius)(rng);
         double area = cropSize * cropSize;
         double newArea = area * factor;
-        if (std::bernoulli_distribution()(rng))
+        if (boost::random::bernoulli_distribution<>()(rng))
         {
             cropSizeX = (int)std::sqrt(newArea);
             cropSizeY = (int)(area / cropSizeX);
@@ -399,9 +408,12 @@ StreamDescription TransposeTransformer::Transform(const StreamDescription& input
     }
 
     // Changing from NHWC to NCHW
-    ImageDimensions dimensions(*m_inputStream.m_sampleLayout, HWC);
     m_outputStream = m_inputStream;
-    m_outputStream.m_sampleLayout = std::make_shared<TensorShape>(dimensions.AsTensorShape(CHW));
+    if (m_inputStream.m_sampleLayout != nullptr)
+    {
+        ImageDimensions dimensions(*m_inputStream.m_sampleLayout, HWC);
+        m_outputStream.m_sampleLayout = std::make_shared<TensorShape>(dimensions.AsTensorShape(CHW));
+    }
     return m_outputStream;
 }
 
@@ -432,15 +444,27 @@ struct DenseSequenceWithBuffer : DenseSequenceData
 template <class TElemType>
 SequenceDataPtr TransposeTransformer::TypedTransform(SequenceDataPtr sequence)
 {
+    TensorShapePtr shape = m_inputStream.m_sampleLayout;
+    if (shape == nullptr)
+    {
+        // Taking the shape from the sequence.
+        shape = sequence->m_sampleLayout;
+    }
+
+    if (shape == nullptr)
+    {
+        RuntimeError("Unknown shape of the sample in stream '%ls'.", m_inputStream.m_name.c_str());
+    }
+
     auto inputSequence = static_cast<DenseSequenceData&>(*sequence);
     assert(inputSequence.m_numberOfSamples == 1);
 
-    size_t count = m_inputStream.m_sampleLayout->GetNumElements() * GetSizeByType(m_inputStream.m_elementType);
+    size_t count = shape->GetNumElements() * GetSizeByType(m_inputStream.m_elementType);
 
     auto result = std::make_shared<DenseSequenceWithBuffer>();
     result->m_buffer.resize(count);
 
-    ImageDimensions dimensions(*m_inputStream.m_sampleLayout, ImageLayoutKind::HWC);
+    ImageDimensions dimensions(*shape, ImageLayoutKind::HWC);
     size_t rowCount = dimensions.m_height * dimensions.m_width;
     size_t channelCount = dimensions.m_numChannels;
 
@@ -455,7 +479,9 @@ SequenceDataPtr TransposeTransformer::TypedTransform(SequenceDataPtr sequence)
         }
     }
 
-    result->m_sampleLayout = m_outputStream.m_sampleLayout;
+    result->m_sampleLayout = m_outputStream.m_sampleLayout != nullptr ?
+        m_outputStream.m_sampleLayout :
+        std::make_shared<TensorShape>(dimensions.AsTensorShape(CHW));;
     result->m_data = result->m_buffer.data();
     result->m_numberOfSamples = inputSequence.m_numberOfSamples;
     return result;
@@ -516,7 +542,7 @@ void IntensityTransformer::Apply(cv::Mat &mat)
     auto rng = m_rngs.pop_or_create([seed]() { return std::make_unique<std::mt19937>(seed); } );
 
     // Using single precision as EigVal and EigVec matrices are single precision.
-    std::normal_distribution<float> d(0, (float)m_curStdDev);
+    boost::random::normal_distribution<float> d(0, (float)m_curStdDev);
     cv::Mat alphas(1, 3, CV_32FC1);
     assert(m_eigVal.rows == 1 && m_eigVec.cols == 3);
     alphas.at<float>(0) = d(*rng) * m_eigVal.at<float>(0);

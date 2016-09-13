@@ -1,0 +1,10 @@
+boosttestrun()
+{
+  name=$1
+  local testpath=$TEST_BIN_DIR
+  if [ "$OS" == "Windows_NT" ]; then
+    testpath+=/unittests
+  fi
+
+  $testpath/$name --report_level=detailed
+}

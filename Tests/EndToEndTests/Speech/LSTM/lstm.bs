@@ -1,5 +1,7 @@
-# these are defined outside, but currently this is not implemented (we need the "with" operator)
+# This file is a sketch on how a full BS integration for all of CNTK would look like.
+# This used to work, but is not maintained presently.
 
+# these are defined outside, but currently this is not implemented (we need the "with" operator)
 stderr='..\RunDir\LSTM\Truncated\models\cntkSpeech.dnn.log'
 RunDir='..\RunDir\LSTM\Truncated'
 NdlDir='..\LSTM'
@@ -122,7 +124,7 @@ speechTrain = new TrainAction [
 
         // training
         cr = CrossEntropyWithSoftmax(labels, LSTMoutputW, tag='criterion')  // this is the objective
-        Err = ErrorPrediction(labels, LSTMoutputW, tag='evaluation')              // this also gets tracked
+        Err = ClassificationError(labels, LSTMoutputW, tag='evaluation')              // this also gets tracked
 
         // decoding
         logPrior = LogPrior(labels)	 

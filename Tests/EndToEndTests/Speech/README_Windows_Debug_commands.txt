@@ -15,7 +15,7 @@ COMMAND:    currentDirectory=$(SolutionDir)Tests\EndToEndTests\Speech\Data  conf
 
 --- Speech\LSTM\Truncated:
 
-COMMAND:     currentDirectory=$(SolutionDir)Tests\EndToEndTests\Speech\Data  configFile=$(SolutionDir)Tests\EndToEndTests\Speech\LSTM\cntk.cntk  stderr=$(SolutionDir)Tests\EndToEndTests\Speech\RunDir\LSTM\Truncated\models\cntkSpeech.dnn.log  RunDir=$(SolutionDir)Tests\EndToEndTests\Speech\RunDir\LSTM\Truncated  NdlDir=$(SolutionDir)Tests\EndToEndTests\Speech\LSTM  DataDir=.  DeviceId=auto  makeMode=false
+COMMAND:     currentDirectory=$(SolutionDir)Tests\EndToEndTests\Speech\Data  configFile=$(SolutionDir)Tests\EndToEndTests\Speech\LSTM\cntk.cntk  stderr=$(SolutionDir)Tests\EndToEndTests\Speech\RunDir\LSTM\Truncated\models\cntkSpeech.dnn.log  RunDir=$(SolutionDir)Tests\EndToEndTests\Speech\RunDir\LSTM\Truncated  NdlDir=$(SolutionDir)Tests\EndToEndTests\Speech\LSTM  DataDir=.  DeviceId=auto  speechTrain=[SGD=[momentumAsTimeConstant=0:6074.4]]  modelSelector=0  makeMode=false
 
 Linux:      bin/cntk  currentDirectory=Tests/EndToEndTests/Speech/Data  configFile=../LSTM/cntk.cntk  stderr=../RunDir/LSTM/Truncated/models/cntkSpeech.dnn.log  RunDir=../RunDir/LSTM/Truncated  NdlDir=../LSTM  DataDir=.  DeviceId=auto  makeMode=false
 
@@ -25,7 +25,7 @@ COMMAND:    --cd $(SolutionDir)Tests\EndToEndTests\Speech\Data  -f $(SolutionDir
 
 --- Speech\LSTM\FullUtterance:
 
-COMMAND:     currentDirectory=$(SolutionDir)Tests\EndToEndTests\Speech\Data  configFile=$(SolutionDir)Tests\EndToEndTests\Speech\LSTM\cntk.cntk  stderr=$(SolutionDir)Tests\EndToEndTests\Speech\RunDir\LSTM\FullUtterance\models\cntkSpeech.dnn.log  RunDir=$(SolutionDir)Tests\EndToEndTests\Speech\RunDir\LSTM\FullUtterance  NdlDir=$(SolutionDir)Tests\EndToEndTests\Speech\LSTM  DataDir=.  DeviceId=auto  Truncated=false  speechTrain=[reader=[nbruttsineachrecurrentiter=1]] speechTrain=[SGD=[epochSize=2560]]  speechTrain=[SGD=[maxEpochs=2]]  speechTrain=[SGD=[numMBsToShowResult=1]]  makeMode=false
+COMMAND:     currentDirectory=$(SolutionDir)Tests\EndToEndTests\Speech\Data  configFile=$(SolutionDir)Tests\EndToEndTests\Speech\LSTM\cntk.cntk  stderr=$(SolutionDir)Tests\EndToEndTests\Speech\RunDir\LSTM\FullUtterance\models\cntkSpeech.dnn.log  RunDir=$(SolutionDir)Tests\EndToEndTests\Speech\RunDir\LSTM\FullUtterance  NdlDir=$(SolutionDir)Tests\EndToEndTests\Speech\LSTM  DataDir=.  DeviceId=auto  Truncated=false  speechTrain=[reader=[nbruttsineachrecurrentiter=1]] speechTrain=[SGD=[epochSize=2560]]  speechTrain=[SGD=[maxEpochs=2]]  speechTrain=[SGD=[numMBsToShowResult=1]]  speechTrain=[SGD=[momentumAsTimeConstant=0:189.8]]  modelSelector=0  makeMode=false
 
 Using parallel sequences (difference to above: nbruttsineachrecurrentiter=4). Note that this will produce a different result since we are confused about what MB size means:
 
@@ -39,7 +39,7 @@ COMMAND:     --cd $(SolutionDir)Tests\EndToEndTests\Speech\Data  -f $(SolutionDi
 
 --- Speech\AN4:
 
-COMMAND:    configFile=$(SolutionDir)Examples\Speech\AN4\Config\LSTM-NDL.cntk  currentDirectory=$(SolutionDir)Examples\Speech\AN4\Data  RunDir=$(SolutionDir)Examples\RunDir\Speech\AN4  DataDir=$(SolutionDir)Examples\Speech\AN4\Data  ConfigDir=$(SolutionDir)Examples\Speech\AN4\Config  OutputDir=$(SolutionDir)Examples\RunDir\Speech\AN4  stderr=$(SolutionDir)Examples\RunDir\Speech\AN4\cntkSpeech.dnn.log  DeviceId=auto  speechTrain=[SGD=[maxEpochs=1]]  speechTrain=[SGD=[epochSize=64]]  parallelTrain=false  makeMode=false
+COMMAND:    configFile=$(SolutionDir)Examples\Speech\AN4\Config\LSTM-NDL_ndl_deprecated.cntk  currentDirectory=$(SolutionDir)Examples\Speech\AN4\Data  RunDir=$(SolutionDir)Examples\RunDir\Speech\AN4  DataDir=$(SolutionDir)Examples\Speech\AN4\Data  ConfigDir=$(SolutionDir)Examples\Speech\AN4\Config  OutputDir=$(SolutionDir)Examples\RunDir\Speech\AN4  stderr=$(SolutionDir)Examples\RunDir\Speech\AN4\cntkSpeech.dnn.log  DeviceId=auto  speechTrain=[SGD=[maxEpochs=1]]  speechTrain=[SGD=[epochSize=64]]  parallelTrain=false  makeMode=false
 
 --- Speech\DiscriminativePreTraining:  --currently fails with MEL error 'Parameter name could not be resolved 'HL2.y'
 
@@ -52,9 +52,9 @@ COMMAND:    currentDirectory=\\storage.ccp.philly.selfhost.corp.microsoft.com\pu
 
 --- MNIST:
 
-COMMAND:    configFile=$(SolutionDir)Examples/Image/MNIST/Config/01_OneHidden.cntk  currentDirectory=$(SolutionDir)Tests/EndToEndTests/Image/Data  RunDir=$(SolutionDir)Tests/EndToEndTests/RunDir/Image/MNIST_01_OneHidden  DataDir=$(SolutionDir)Tests/EndToEndTests/Image/Data  ConfigDir=$(SolutionDir)Examples/Image/MNIST/Config  OutputDir=$(SolutionDir)Tests/EndToEndTests/RunDir/Image/MNIST_01_OneHidden  DeviceId=0  train=[reader=[file=$(SolutionDir)Tests/EndToEndTests/Image/Data/Train.txt]]  test=[reader=[file=$(SolutionDir)Tests/EndToEndTests/Image/Data/Test.txt]]  train=[SGD=[maxEpochs=1]]  train=[SGD=[epochSize=100]]  train=[reader=[randomize=none]]  imageLayout="cudnn"  makeMode=false
+COMMAND:    configFile=$(SolutionDir)Examples/Image/MNIST/Config/01_OneHidden_ndl_deprecated.cntk  currentDirectory=$(SolutionDir)Tests/EndToEndTests/Image/Data  RunDir=$(SolutionDir)Tests/EndToEndTests/RunDir/Image/MNIST_01_OneHidden  DataDir=$(SolutionDir)Tests/EndToEndTests/Image/Data  ConfigDir=$(SolutionDir)Examples/Image/MNIST/Config  OutputDir=$(SolutionDir)Tests/EndToEndTests/RunDir/Image/MNIST_01_OneHidden  DeviceId=0  train=[reader=[file=$(SolutionDir)Tests/EndToEndTests/Image/Data/Train.txt]]  test=[reader=[file=$(SolutionDir)Tests/EndToEndTests/Image/Data/Test.txt]]  train=[SGD=[maxEpochs=1]]  train=[SGD=[epochSize=100]]  train=[reader=[randomize=none]]  imageLayout="cudnn"  makeMode=false
 
-COMMAND:    configFile=$(SolutionDir)Examples/Image/MNIST/Config/02_Convolution.cntk  currentDirectory=$(SolutionDir)Tests/EndToEndTests/Image/Data  RunDir=$(SolutionDir)Tests/EndToEndTests/RunDir/Image/MNIST_02_Convolution  DataDir=$(SolutionDir)Tests/EndToEndTests/Image/Data  ConfigDir=$(SolutionDir)Examples/Image/MNIST/Config  OutputDir=$(SolutionDir)Tests/EndToEndTests/RunDir/Image/MNIST_02_Convolution  DeviceId=0  train=[reader=[file=$(SolutionDir)Tests/EndToEndTests/Image/Data/Train.txt]]  test=[reader=[file=$(SolutionDir)Tests/EndToEndTests/Image/Data/Test.txt]]  train=[SGD=[maxEpochs=1]]  train=[SGD=[epochSize=100]]  train=[reader=[randomize=none]]  imageLayout="cudnn"  makeMode=false
+COMMAND:    configFile=$(SolutionDir)Examples/Image/MNIST/Config/02_Convolution_ndl_deprecated.cntk  currentDirectory=$(SolutionDir)Tests/EndToEndTests/Image/Data  RunDir=$(SolutionDir)Tests/EndToEndTests/RunDir/Image/MNIST_02_Convolution  DataDir=$(SolutionDir)Tests/EndToEndTests/Image/Data  ConfigDir=$(SolutionDir)Examples/Image/MNIST/Config  OutputDir=$(SolutionDir)Tests/EndToEndTests/RunDir/Image/MNIST_02_Convolution  DeviceId=0  train=[reader=[file=$(SolutionDir)Tests/EndToEndTests/Image/Data/Train.txt]]  test=[reader=[file=$(SolutionDir)Tests/EndToEndTests/Image/Data/Test.txt]]  train=[SGD=[maxEpochs=1]]  train=[SGD=[epochSize=100]]  train=[reader=[randomize=none]]  imageLayout="cudnn"  makeMode=false
 
 TODO out-of-date:
 COMMAND:     currentDirectory=$(SolutionDir)ExampleSetups\Image\MNIST  configFile=02_Conv.cntk configName=02_Conv
@@ -71,6 +71,11 @@ COMMAND:     configFile=$(SolutionDir)Examples/Other/Simple2d/Config/Simple.cntk
 
 COMMAND:    configFile=$(SolutionDir)Examples/Text/PennTreebank/Config/rnn.cntk  RunDir=$(SolutionDir)Examples/Text/PennTreebank/_run  RootDir=$(SolutionDir)Examples/Text/PennTreebank/_run  DataDir=$(SolutionDir)Examples/Text/PennTreebank/Data  ConfigDir=$(SolutionDir)Examples/Text/PennTreebank/Config  stderr=$(SolutionDir)Examples/Text/PennTreebank/_run/Simple.log  train=[SGD=[maxEpochs=1]]  confVocabSize=1000  DeviceId=-1  makeMode=false
 # append this for small set: trainFile=ptb.small.train.txt  validFile=ptb.small.valid.txt testFile=ptb.small.test.txt
+
+--- Text/SeqCla:
+
+COMMAND:    configFile=$(SolutionDir)Tests/EndToEndTests/Text/SequenceClassification/Config/seqcla.cntk  currentDirectory=$(SolutionDir)Tests/EndToEndTests/Text/SequenceClassification/Data  RunDir=$(SolutionDir)Tests/EndToEndTests/Text/SequenceClassification/_run  DataDir=$(SolutionDir)Tests/EndToEndTests/Text/SequenceClassification/Data  ConfigDir=$(SolutionDir)Tests/EndToEndTests/Text/SequenceClassification/Config  OutputDir=$(SolutionDir)Tests/EndToEndTests/Text/SequenceClassification/_out  DeviceId=auto
+
 
 Simple test
 -----------

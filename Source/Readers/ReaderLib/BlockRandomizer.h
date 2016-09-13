@@ -11,6 +11,7 @@
 #include "DataDeserializer.h"
 #include "ChunkRandomizer.h"
 #include "SequenceRandomizer.h"
+#include <future>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -45,6 +46,7 @@ public:
         int verbosity,
         size_t randomizationRangeInSamples,
         IDataDeserializerPtr deserializer,
+        bool shouldPrefetch,
         DecimationMode decimationMode = DecimationMode::chunk,
         bool useLegacyRandomization = false,
         bool multithreadedGetNextSequences = false);
@@ -61,19 +63,33 @@ public:
         return m_deserializer->GetStreamDescriptions();
     }
 
+    ~BlockRandomizer()
+    {
+        if (m_prefetch.valid())
+        {
+            m_prefetch.wait();
+        }
+    }
+
 private:
-    // Retrieve data for chunks.
-    void RetrieveDataChunks();
+    // Load data for chunks if needed.
+    void LoadDataChunks(const ClosedOpenChunkInterval& windowRange);
 
     // Get next sequence descriptions that do not exceed sample count.
     // Returns true if epoch end is reached.
-    bool GetNextSequenceDescriptions(size_t sampleCount, std::vector<RandomizedSequenceDescription>& result);
+    bool GetNextSequenceDescriptions(size_t sampleCount, std::vector<RandomizedSequenceDescription>& result, ClosedOpenChunkInterval& windowRange);
 
     // Decimates sequence descriptions and loads chunks of data.
     void Decimate(const std::vector<RandomizedSequenceDescription>& all, std::vector<RandomizedSequenceDescription>& decimated);
 
     // Prepares a new sweep if needed.
     void PrepareNewSweepIfNeeded(size_t samplePosition);
+
+    // Performs io prefetch of the specified chunk if needed.
+    void Prefetch(ChunkIdType chunkId);
+
+    // Returns next candidate for the prefetch in the given range.
+    ChunkIdType GetChunkToPrefetch(const ClosedOpenChunkInterval& windowRange);
 
     // Global sample position on the timeline.
     size_t m_globalSamplePosition;
@@ -110,9 +126,6 @@ private:
     // A map of data chunks from original chunk id into chunk.
     std::map<size_t, ChunkPtr> m_chunks;
 
-    // Last seen data chunk id.
-    ChunkIdType m_lastSeenChunkId;
-
     // Decimation mode.
     DecimationMode m_decimationMode;
 
@@ -131,6 +144,16 @@ private:
     };
 
     int m_verbosity;
+
+    // Prefetch future.
+    std::future<ChunkPtr> m_prefetch;
+    // Whether to have async or deferred prefetch.
+    launch m_launchType;
+    // Prefetched original chunk id.
+    ChunkIdType m_prefetchedChunk;
+
+    // Current loaded chunks.
+    ClosedOpenChunkInterval m_currentWindowRange;
 };
 
 }}}

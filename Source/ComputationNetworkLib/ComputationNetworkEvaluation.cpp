@@ -79,6 +79,17 @@ void ComputationNetwork::Backprop(const ComputationNodeBasePtr rootNode) // trai
     GetNestedNetwork(rootNode)->Backprop(FrameRange(nullptr), true, true);
 }
 
+void ComputationNetwork::ForwardProp(const ComputationNodeBasePtr rootNode, const ComputationNodeBasePtr startNode, const ComputationNodeBasePtr endNode)
+{
+    VerifyIsCompiled("ForwardProp");
+
+    // traverse partial nodes as inputs
+    shared_ptr<FlowControlNode> network = dynamic_pointer_cast<FlowControlNode>(GetNestedNetwork(rootNode));
+    assert(network);
+
+    network->ForwardProp(FrameRange(nullptr), startNode, endNode);
+}
+
 void ComputationNetwork::FormNestedNetwork(const ComputationNodeBasePtr& rootNode)
 {
     if (m_nestedNetworks.find(rootNode) != m_nestedNetworks.end())
@@ -175,6 +186,36 @@ ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(con
 }
 /*virtual*/ void ComputationNetwork::PARTraversalFlowControlNode::ReleaseMatricesAfterBackprop(MatrixPool& matrixPool) /*override*/
 {
+}
+/*virtual*/ void ComputationNetwork::PARTraversalFlowControlNode::ForwardProp(const FrameRange & fr, ComputationNodeBasePtr startNode, ComputationNodeBasePtr endNode)
+{
+    // if start node is nullptr, forward will be enable
+    bool enableForward = startNode ? false : true;
+
+    for (auto& node : m_nestedNodes)
+    {
+#if 0
+        if (dynamic_pointer_cast<LearnableParameter<float>>(node))
+        dynamic_pointer_cast<ComputationNode<float>>(node)->DebugLogMinibatch();
+#endif
+        if (node->IsOutOfDateWrtInputs() && enableForward)
+        {
+            node->BeginForwardProp();
+            node->ForwardProp(fr.WithLayout(node->GetMBLayout()));
+            node->EndForwardProp();
+
+            node->BumpEvalTimeStamp();
+        }
+
+        if (node == startNode) 
+        {
+            enableForward = true;
+        }
+        else if (node == endNode) 
+        {
+            break;
+        }
+    }
 }
 
 // -----------------------------------------------------------------------
@@ -803,35 +844,51 @@ void ComputationNetwork::MarkValueNonSharableNodes()
     }
 }
 
-template <class ElemType>
-void ComputationNetwork::PrintMemorySharingStructure(const std::vector<ComputationNodeBasePtr>& nodes)
+// print memory-sharing information to log
+void ComputationNetwork::PrintMemorySharingStructure(const vector<ComputationNodeBasePtr>& nodes)
 {
-    std::map <const Matrix<ElemType>*, std::set<wstring>> memSharingStructure;
-    for (auto& n : nodes)
+    map <const MatrixBase*, set<wstring>> memSharingStructure;
+    size_t numMatrices = 0;
+    for (const auto& node : nodes)
     {
-        ComputationNode<ElemType>* node = n->As<ComputationNode<ElemType>>();
-        std::set<std::pair<const Matrix<ElemType>*, const std::wstring>> matrixInfo = node->GetMatrixInfo();
-        for (const auto&item : matrixInfo)
+        set<pair<const MatrixBase*, wstring>> matrixInfo = node->GetMatrixInfo();
+        for (const auto& item : matrixInfo) // {value} or {value, gradient}
         {
-            const Matrix<ElemType>* matrix = item.first;
-            if (memSharingStructure.find(matrix) == memSharingStructure.end())
-                memSharingStructure.insert(std::pair<const Matrix<ElemType>*, std::set<wstring>>(matrix, std::set<wstring>()));
-
-            std::set<wstring>& s = memSharingStructure[matrix];
-            s.insert(item.second);
+            memSharingStructure[item.first].insert(item.second);
+            numMatrices++;
         }
     }
 
-    fprintf(stderr, "\nMemory Sharing Structure:\n\n");
+    // count shared/unshared
+    size_t numShared = 0;
+    size_t numUnshared = 0;
     for (const auto& item : memSharingStructure)
     {
-        const std::set<wstring>& s = item.second;
-        fprintf(stderr, "%p: {", item.first);
-        for (const auto& memShareInfo: s)
+        if (item.second.size() < 2) // only print actually shared matrices
+            numUnshared++;
+        else
+            numShared++;
+    }
+
+    fprintf(stderr, "\nMemory Sharing: Out of %d matrices, %d are shared as %d, and %d are not shared.\n\n", (int)numMatrices, (int)(numMatrices - numUnshared), (int)numShared, (int)numUnshared);
+    for (const auto& item : memSharingStructure)
+    {
+        if (item.second.size() < 2) // only print actually shared matrices
+            continue;
+        // Format:
+        // { node1
+        //   node2 }
+        // { node3
+        //   node4
+        //   node5 }
+        // where unshared nodes are not printed.
+        const char* delim = "\t{ ";
+        for (const auto& memShareInfo : item.second)
         {
-            fprintf(stderr, "[%ls] ", memShareInfo.c_str());
+            fprintf(stderr, "%s%ls", delim, memShareInfo.c_str());
+            delim = "\n\t  ";
         }
-        fprintf(stderr, "}\n");
+        fprintf(stderr, " }\n");
     }
     fprintf(stderr, "\n");
 }
@@ -885,9 +942,9 @@ void ComputationNetwork::AllocateAllMatrices(const std::vector<ComputationNodeBa
                 if (performingBackPropagation)
                 {
                     if (outputValueNeededDuringBackProp.find(input) == outputValueNeededDuringBackProp.end())
-                        outputValueNeededDuringBackProp[input] = input->OutputUsedInComputingInputNodesGradients();
+                        outputValueNeededDuringBackProp[input] = input->NeedsGradient() && input->OutputUsedInComputingInputNodesGradients();
 
-                    outputValueNeededDuringBackProp[input] |= node->InputUsedInComputingInputNodesGradients(i);
+                    outputValueNeededDuringBackProp[input] |= (node->NeedsGradient() && node->InputUsedInComputingInputNodesGradients(i));
                 }
                 else
                 {
@@ -986,17 +1043,8 @@ void ComputationNetwork::AllocateAllMatrices(const std::vector<ComputationNodeBa
 
     m_areMatricesAllocated = true;
 
-    //print the memory sharing structure
-    std::vector<ComputationNodeBasePtr> allNodes = GetAllNodes();
-    if (allNodes.size() == 0)
-        LogicError("Network has no computation node.");
-
-    if (allNodes[0]->Is<ComputationNode<float>>())
-        PrintMemorySharingStructure<float>(allNodes);
-    else if (allNodes[0]->Is<ComputationNode<double>>())
-        PrintMemorySharingStructure<double>(allNodes);
-    else
-        LogicError("Unexpected node precision type.");
+    // print the memory sharing structure
+    PrintMemorySharingStructure(GetAllNodes());
 }
 
 void ComputationNetwork::ReleaseMatricesAfterEvalForChildren(ComputationNodeBasePtr n, std::unordered_map<ComputationNodeBasePtr, int>& parentCount)
@@ -1009,4 +1057,5 @@ void ComputationNetwork::ReleaseMatricesAfterEvalForChildren(ComputationNodeBase
             pNode->ReleaseMatricesAfterForwardProp(m_matrixPool);
     }
 }
-} } }
+
+}}}

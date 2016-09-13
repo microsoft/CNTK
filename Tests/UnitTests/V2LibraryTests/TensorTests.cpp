@@ -20,8 +20,8 @@ void TestTensorPlus(size_t numAxesLeftOperand, size_t numAxesRightOperand, const
     for (size_t i = std::min(numAxesLeftOperand, numAxesRightOperand); i < numAxesRightOperand; ++i)
         rightInputShape[i] = (rand() % maxDimSize) + 1;
 
-    Variable leftInputVar(leftInputShape, AsDataType<ElementType>(), L"leftInput");
-    Variable rightInputVar(rightInputShape, AsDataType<ElementType>(), L"rightInput");
+    auto leftInputVar = InputVariable(leftInputShape, AsDataType<ElementType>(), true, L"leftInput");
+    auto rightInputVar = InputVariable(rightInputShape, AsDataType<ElementType>(), true, L"rightInput");
 
     auto plusFunc = Plus(leftInputVar, rightInputVar);
 

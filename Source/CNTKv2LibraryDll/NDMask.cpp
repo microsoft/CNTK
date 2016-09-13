@@ -26,10 +26,10 @@ namespace CNTK
         m_matrixView = std::shared_ptr<Matrix<char>>(matrix, [](Matrix<char>* ptr) { delete ptr; });
     }
 
-    NDMask::NDMask(const NDShape& shape, const DeviceDescriptor& device/* = DeviceDescriptor::DefaultDevice()*/)
+    NDMask::NDMask(const NDShape& shape, const DeviceDescriptor& device/* = DeviceDescriptor::UseDefaultDevice()*/)
         : NDMask(shape, AllocateMatrix(shape, device))
     {
-        if (shape.NumAxes() > 2)
+        if (shape.Rank() > 2)
             LogicError("NDMask instances with more than 2 axes are currently unsupported");
 
         Clear();
@@ -44,17 +44,17 @@ namespace CNTK
         // TODO: Implement batching of masking operation for masks residing on GPUs to avoid making
         // GPU invocations for each MaskSection call.
 
-        if (sectionOffset.size() > m_maskShape.NumAxes())
+        if (sectionOffset.size() > m_maskShape.Rank())
             LogicError("NDMask::MaskSection: The sectionOffset cannot have dimensionality higher than the number of axes of 'this' mask");
 
-        if (sectionShape.NumAxes() > m_maskShape.NumAxes())
+        if (sectionShape.Rank() > m_maskShape.Rank())
             LogicError("NDMask::MaskSection: The section shape cannot have an axes count higher than the number of axes of 'this' mask");
 
-        std::vector<size_t> offset(m_maskShape.NumAxes(), 0);
+        std::vector<size_t> offset(m_maskShape.Rank(), 0);
         for (size_t i = 0; i < sectionOffset.size(); ++i)
             offset[i] = sectionOffset[i];
 
-        NDShape shape = sectionShape.AppendShape(NDShape(m_maskShape.NumAxes() - sectionShape.NumAxes(), NDShape::InferredDimension));
+        NDShape shape = sectionShape.AppendShape(NDShape(m_maskShape.Rank() - sectionShape.Rank(), NDShape::InferredDimension));
 
         auto maskMatrix = GetMatrix();
         size_t rowOffset = offset[0];
@@ -79,6 +79,24 @@ namespace CNTK
     {
         // Clear the mask by marking all samples as Valid; i.e. a value of 1
         GetMatrix()->SetValue(1);
+    }
+
+    size_t NDMask::MaskedCount() const
+    {
+        auto maskMatrix = GetMatrix();
+        std::unique_ptr<char[]> maskData(maskMatrix->CopyToArray());
+        return std::count_if(maskData.get(), maskData.get() + maskMatrix->GetNumElements(), [](const char& val) {
+            return val == 0;
+        });
+    }
+
+    // TODO: This could actually be strided?
+    const char* NDMask::DataBuffer() const
+    {
+        // First make sure that the underlying matrix is on the right device
+        auto matrix = GetMatrix();
+        matrix->TransferToDeviceIfNotThere(AsCNTKImplDeviceId(m_device), true);
+        return matrix->Data();
     }
 
     Matrix<char>* NDMask::GetMatrix() const

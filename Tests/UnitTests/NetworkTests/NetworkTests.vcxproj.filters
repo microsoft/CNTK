@@ -10,31 +10,10 @@
   <ItemGroup>
     <ClCompile Include="stdafx.cpp" />
     <ClCompile Include="OperatorEvaluation.cpp" />
-    <ClCompile Include="..\..\..\Source\Common\ExceptionWithCallStack.cpp">
-      <Filter>Common</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\Source\Common\Config.cpp">
-      <Filter>Common</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\Source\Common\DataReader.cpp">
-      <Filter>Common</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\Source\Common\CompositeDataReader.cpp">
-      <Filter>Common</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\Source\Common\DataWriter.cpp">
-      <Filter>Common</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\Source\Common\MPIWrapper.cpp">
-      <Filter>Common</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\..\Source\CNTK\BrainScript\BrainScriptParser.cpp">
       <Filter>From BrainScript</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\Source\CNTK\BrainScript\BrainScriptEvaluator.cpp">
-      <Filter>From BrainScript</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\Source\CNTK\BrainScript\BrainScriptTest.cpp">
       <Filter>From BrainScript</Filter>
     </ClCompile>
   </ItemGroup>

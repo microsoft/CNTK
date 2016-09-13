@@ -83,10 +83,12 @@ public:
         }
         else
         {
+            // make the range asymmetrical, so we get a 0 slot
+            size_t usedrangeend = rangeend - (Nbits > 1); // TODO: make this a parameter
             // precompute this for quantize() (see comment there)
-            qfactor = rangeend / (quantimax - quantimin);
+            qfactor = usedrangeend / (quantimax - quantimin);
             // and for unquantize()
-            ufactor = (quantimax - quantimin) / rangeend;
+            ufactor = (quantimax - quantimin) / usedrangeend;
         }
 
         // set the quantization threshold for the special case of 1-bit
@@ -127,6 +129,7 @@ public:
     // unquantize one value
     cudasharedcode ElemType Unquantize(QWordVal u) const
     {
+        // special branch that does not quantize at all, for testing
         if (Nbits == QWordNumBits)
         {
             return *(ElemType*) &u;

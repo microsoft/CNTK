@@ -18,9 +18,9 @@ ndlMacroDefine = [
     ]
 
     LSTMPComponent(inputDim, outputDim, cellDim, inputx, cellDimX2, cellDimX3, cellDimX4) = [
-        wx = Parameter(cellDimX4, inputDim,  init="uniform", initValueScale=1);
-        b = Parameter(cellDimX4,  1,         init="fixedValue", value=0.0);
-        Wh = Parameter(cellDimX4, outputDim, init="uniform", initValueScale=1);
+        wx = Parameter(cellDimX4, 0, init="uniform", initValueScale=1);
+        b  = Parameter(cellDimX4, 1, init="fixedValue", value=0.0);
+        Wh = Parameter(cellDimX4, 0, init="uniform", initValueScale=1);
 
         Wci = Parameter(cellDim, init="uniform", initValueScale=1);
         Wcf = Parameter(cellDim, init="uniform", initValueScale=1);
@@ -63,9 +63,9 @@ ndlMacroDefine = [
     ]
     
     LSTMPComponentBetter(inputDim, outputDim, cellDim, inputx, cellDimX2, cellDimX3, cellDimX4) = [
-        wx = Parameter(cellDimX4, inputDim,  init="uniform", initValueScale=1);
-        b = Parameter(cellDimX4,  1,         init="fixedValue", value=0.0);
-        Wh = Parameter(cellDimX4, outputDim, init="uniform", initValueScale=1);
+        wx = Parameter(cellDimX4, 0, init="uniform", initValueScale=1);
+        b  = Parameter(cellDimX4, 1, init="fixedValue", value=0.0);
+        Wh = Parameter(cellDimX4, 0, init="uniform", initValueScale=1);
 
         Wci = Parameter(cellDim, init="uniform", initValueScale=1);
         Wcf = Parameter(cellDim, init="uniform", initValueScale=1);
@@ -112,26 +112,26 @@ ndlMacroDefine = [
     ]
 
     LSTMPComponentNaive(inputDim, outputDim, cellDim, inputx) = [
-        Wxo = Parameter(cellDim, inputDim, init="uniform", initValueScale=1);
-        Wxi = Parameter(cellDim, inputDim, init="uniform", initValueScale=1);
-        Wxf = Parameter(cellDim, inputDim, init="uniform", initValueScale=1);
-        Wxc = Parameter(cellDim, inputDim, init="uniform", initValueScale=1);
+        Wxo = Parameter(cellDim, 0, init="uniform", initValueScale=1);
+        Wxi = Parameter(cellDim, 0, init="uniform", initValueScale=1);
+        Wxf = Parameter(cellDim, 0, init="uniform", initValueScale=1);
+        Wxc = Parameter(cellDim, 0, init="uniform", initValueScale=1);
 
         bo = Parameter(cellDim, init="fixedValue", value=0.0);
         bc = Parameter(cellDim, init="fixedValue", value=0.0);
         bi = Parameter(cellDim, init="fixedValue", value=0.0);
         bf = Parameter(cellDim, init="fixedValue", value=0.0);
 
-        Whi = Parameter(cellDim, outputDim, init="uniform", initValueScale=1);
+        Whi = Parameter(cellDim, 0, init="uniform", initValueScale=1);
 
         Wci = Parameter(cellDim, init="uniform", initValueScale=1);
 
 
-        Whf = Parameter(cellDim, outputDim, init="uniform", initValueScale=1);
+        Whf = Parameter(cellDim, 0, init="uniform", initValueScale=1);
         Wcf = Parameter(cellDim, init="uniform", initValueScale=1);
-        Who = Parameter(cellDim, outputDim, init="uniform", initValueScale=1);
+        Who = Parameter(cellDim, 0, init="uniform", initValueScale=1);
         Wco = Parameter(cellDim, init="uniform", initValueScale=1);
-        Whc = Parameter(cellDim, outputDim, init="uniform", initValueScale=1);
+        Whc = Parameter(cellDim, 0, init="uniform", initValueScale=1);
 
         dh = PastValue(outputDim, output, timeStep=1);
         dc = PastValue(cellDim, ct, timeStep=1);
@@ -194,12 +194,12 @@ ndlCreateNetwork_LSTMP_c1024_p256_x3 = [
     # layer 3 
     LSTMoutput3 = LSTMPComponent(hiddenDim, hiddenDim, cellDim, LSTMoutput2, cellDimX2, cellDimX3, cellDimX4);
 
-    W = Parameter(labelDim, hiddenDim, init="uniform", initValueScale=1);
-    b = Parameter(labelDim, 1,         init="fixedValue", value=0);
+    W = Parameter(labelDim, 0, init="uniform", initValueScale=1);
+    b = Parameter(labelDim, 1, init="fixedValue", value=0);
     LSTMoutputW = Plus(Times(W, LSTMoutput3), b);
 
     ce = CrossEntropyWithSoftmax(labels, LSTMoutputW);
-    err = ErrorPrediction(labels, LSTMoutputW);
+    err = ClassificationError(labels, LSTMoutputW);
     
     logPrior = LogPrior(labels)
     scaledLogLikelihood = Minus(LSTMoutputW, logPrior)

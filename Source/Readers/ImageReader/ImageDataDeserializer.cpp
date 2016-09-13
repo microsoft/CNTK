@@ -13,6 +13,7 @@
 #include "ImageConfigHelper.h"
 #include "StringUtil.h"
 #include "ConfigUtil.h"
+#include "TimerUtility.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -135,6 +136,7 @@ ImageDataDeserializer::ImageDataDeserializer(CorpusDescriptorPtr corpus, const C
     }
 
     string precision = (ConfigValue)config("precision", "float");
+    m_verbosity = config(L"verbosity", 0);
 
     // Feature stream.
     ConfigParameters featureSection = inputs(featureNames[0]);
@@ -144,6 +146,7 @@ ImageDataDeserializer::ImageDataDeserializer(CorpusDescriptorPtr corpus, const C
     features->m_storageType = StorageType::dense;
     features->m_elementType = AreEqualIgnoreCase(precision, "float") ? ElementType::tfloat : ElementType::tdouble;
     m_streams.push_back(features);
+    m_featureElementType = features->m_elementType;
 
     // Label stream.
     ConfigParameters label = inputs(labelNames[0]);
@@ -178,6 +181,8 @@ ImageDataDeserializer::ImageDataDeserializer(const ConfigParameters& config)
     m_grayscale = configHelper.UseGrayscale();
     const auto& label = m_streams[configHelper.GetLabelStreamId()];
     const auto& feature = m_streams[configHelper.GetFeatureStreamId()];
+
+    m_verbosity = config(L"verbosity", 0);
 
     // Expect data in HWC.
     ImageDimensions dimensions(*feature->m_sampleLayout, configHelper.GetDataFormat());
@@ -240,8 +245,12 @@ void ImageDataDeserializer::CreateSequenceDescriptions(CorpusDescriptorPtr corpu
     size_t curId = 0;
     std::string line;
     PathReaderMap knownReaders;
+    ReaderSequenceMap readerSequences;
     ImageSequenceDescription description;
     description.m_numberOfSamples = 1;
+
+    Timer timer;
+    timer.Start();
 
     auto& stringRegistry = corpus->GetStringRegistry();
     for (size_t lineIndex = 0; std::getline(mapFile, line); ++lineIndex)
@@ -276,7 +285,7 @@ void ImageDataDeserializer::CreateSequenceDescriptions(CorpusDescriptorPtr corpu
         if (cid >= labelDimension)
         {
             RuntimeError(
-                "Image '%s' has invalid class id '%" PRIu64 "'. Expected label dimension is '%" PRIu64 "'. Line %" PRIu64 " in file %s.",
+                "Image '%s' has invalid class id '%" PRIu64 "'. It is exceeding the label dimension of '%" PRIu64 "'. Line %" PRIu64 " in file %s.",
                 imagePath.c_str(), cid, labelDimension, lineIndex, mapPath.c_str());
         }
 
@@ -296,8 +305,19 @@ void ImageDataDeserializer::CreateSequenceDescriptions(CorpusDescriptorPtr corpu
 
             m_keyToSequence[description.m_key.m_sequence] = m_imageSequences.size();
             m_imageSequences.push_back(description);
-            RegisterByteReader(description.m_id, description.m_path, knownReaders);
+            RegisterByteReader(description.m_id, description.m_path, knownReaders, readerSequences);
         }
+    }
+
+    for (auto& reader : knownReaders)
+    {
+        reader.second->Register(readerSequences[reader.first]);
+    }
+
+    timer.Stop();
+    if (m_verbosity > 1)
+    {
+        fprintf(stderr, "ImageDeserializer: Read information about %d images in %.6g seconds\n", (int)m_imageSequences.size(), timer.ElapsedSeconds());
     }
 }
 
@@ -307,7 +327,7 @@ ChunkPtr ImageDataDeserializer::GetChunk(ChunkIdType chunkId)
     return std::make_shared<ImageChunk>(sequenceDescription, *this);
 }
 
-void ImageDataDeserializer::RegisterByteReader(size_t seqId, const std::string& path, PathReaderMap& knownReaders)
+void ImageDataDeserializer::RegisterByteReader(size_t seqId, const std::string& path, PathReaderMap& knownReaders, ReaderSequenceMap& readerSequences)
 {
     assert(!path.empty());
 
@@ -330,16 +350,19 @@ void ImageDataDeserializer::RegisterByteReader(size_t seqId, const std::string& 
     {
         reader = std::make_shared<ZipByteReader>(containerPath);
         knownReaders[containerPath] = reader;
+        readerSequences[containerPath] = std::map<std::string, size_t>();
     }
     else
     {
         reader = (*r).second;
     }
-    reader->Register(seqId, itemPath);
+
+    readerSequences[containerPath][itemPath] = seqId;
     m_readers[seqId] = reader;
 #else
     UNUSED(seqId);
     UNUSED(knownReaders);
+    UNUSED(readerSequences);
     RuntimeError("The code is built without zip container support. Only plain image files are supported.");
 #endif
 }

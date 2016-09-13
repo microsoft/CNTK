@@ -23,7 +23,7 @@ BOOST_AUTO_TEST_CASE(ElementwiseAddition)
     // elementwise sum
     tensorTester.OneTensorTest("elementwise addition", 1e-8, [&tensorTester](DEVICEID_TYPE deviceId)
     {
-        return tensorTester.BroadcastingTest(TensorShape{ 512, 256 }, TensorShape({ 512, 256 }), deviceId);
+        return tensorTester.BroadcastingTest(TensorShape{ 512, 256 }, TensorShape{ 512, 256 }, deviceId);
     });
 }
 
@@ -36,7 +36,7 @@ BOOST_AUTO_TEST_CASE(AdditionWithSimpleBroadcasting)
     // simple broadcasting
     tensorTester.OneTensorTest("addition wth simple broadcasting", 1e-8, [&tensorTester](DEVICEID_TYPE deviceId)
     {
-        return tensorTester.BroadcastingTest(TensorShape{ 3, 2 }, TensorShape({ 3, 1 }), deviceId);
+        return tensorTester.BroadcastingTest(TensorShape{ 3, 2 }, TensorShape{ 3, 1 }, deviceId);
     });
 }
 
@@ -47,7 +47,7 @@ BOOST_AUTO_TEST_CASE(BiasAddition)
     // typical bias for convolutional layer
     tensorTester.OneTensorTest("bias addition (broadcasting)", 1e-8, [&tensorTester](DEVICEID_TYPE deviceId)
     {
-        return tensorTester.BroadcastingTest(TensorShape{ 28, 28, 128, 32 }, TensorShape({ 1, 1, 128 }), deviceId);
+        return tensorTester.BroadcastingTest(TensorShape{ 28, 28, 128, 32 }, TensorShape{ 1, 1, 128 }, deviceId);
     });
 }
 
@@ -58,7 +58,7 @@ BOOST_AUTO_TEST_CASE(BiasAddition2)
     //         Something fishy going on. Dimension overflow?
     tensorTester.OneTensorTest("bias addition (broadcasting)", 1e-8, [&tensorTester](DEVICEID_TYPE deviceId)
     {
-        return tensorTester.BroadcastingTest(TensorShape{ 256, 256, 64, 32 }, TensorShape({ 1, 1, 64 }), deviceId);
+        return tensorTester.BroadcastingTest(TensorShape{ 256, 256, 64, 32 }, TensorShape{ 1, 1, 64 }, deviceId);
     });
 }
 
@@ -81,7 +81,7 @@ BOOST_AUTO_TEST_CASE(BiasGradient2)
     // typical bias gradient (reduction) for convolutional layer
     tensorTester.OneTensorTest("bias gradient (reduction)", 1e-1, [&tensorTester](DEVICEID_TYPE deviceId)
     {
-        return tensorTester.BiasGradientTest(TensorShape{ 256, 256, 64, 32 }, TensorShape({ 1, 1, 64 }), deviceId);
+        return tensorTester.BiasGradientTest(TensorShape{ 256, 256, 64, 32 }, TensorShape{ 1, 1, 64 }, deviceId);
     });
 }
 
@@ -102,4 +102,4 @@ BOOST_AUTO_TEST_CASE(OldRnnForwardProp)
 
 BOOST_AUTO_TEST_SUITE_END()
 
-} } } }
+}}}}

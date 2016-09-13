@@ -32,13 +32,18 @@
 #define CNTK_MODEL_VERSION_1 1
 #define CNTK_MODEL_VERSION_2 2
 #define CNTK_MODEL_VERSION_3 3
-#define CNTK_MODEL_VERSION_4 4 // PastValue
-#define CNTK_MODEL_VERSION_5 5 // ND convolution and pooling
-#define CNTK_MODEL_VERSION_6 6 // Batch norm blending
-#define CNTK_MODEL_VERSION_7 7 // ElemType tag in model file
-#define CNTK_MODEL_VERSION_8 8 // DynamicAxis for inputs
-#define CNTK_MODEL_VERSION_9 9 // Transpose flag in ConvolutionNode to support deconvolution. 
-#define CURRENT_CNTK_MODEL_VERSION CNTK_MODEL_VERSION_9
+#define CNTK_MODEL_VERSION_4 4   // PastValue
+#define CNTK_MODEL_VERSION_5 5   // ND convolution and pooling
+#define CNTK_MODEL_VERSION_6 6   // batch-norm blending
+#define CNTK_MODEL_VERSION_7 7   // ElemType tag in model file
+#define CNTK_MODEL_VERSION_8 8   // DynamicAxis for inputs
+#define CNTK_MODEL_VERSION_9 9   // transpose flag in ConvolutionNode to support deconvolution
+#define CNTK_MODEL_VERSION_10 10 // learning-rate multiplier for input nodes
+#define CNTK_MODEL_VERSION_11 11 // dynamic axis name for where nodes
+#define CNTK_MODEL_VERSION_12 12 // Times() m_inputRank to support parameter-rank inference
+#define CNTK_MODEL_VERSION_13 13 // batch norm: switch running inverse std deviation -> variance, MB count -> samplesSeen; CuDNN v5
+#define CNTK_MODEL_VERSION_14 14 // axis parameter in OptimizedRNNStackNode
+#define CURRENT_CNTK_MODEL_VERSION CNTK_MODEL_VERSION_14
 
 extern bool g_shareNodeValueMatrices;
 
@@ -184,7 +189,7 @@ protected:                // TODO: should be fully encapsulated here
     bool m_needsGradient; // true if this node or any children need a gradient to be computed (for own consumption or propagation to somewhere in the child tree)
 
     bool m_valueSharable; // a flag is needed for memory share.
-                          // If it is false (e.g., learnableParameters/InputValue and those nodes are solely induced by learnableParameters),
+                          // If it is false (e.g., LearnableParameters/InputValue and those nodes are solely induced by LearnableParameters),
                           // it will never be released to memory pool
 private:
     bool m_isPartOfLoop; // true if this loop is part of a recurrent loop
@@ -289,6 +294,9 @@ public:
         m_gradientInitialized(false), m_nodeName(name == L"" ? CreateUniqNodeName() : name)
     {
         // TODO: should m_learningRateMultiplier be set to 0? Or should every node have a way to add its own say on the learning rate for all its inputs?
+        // we store a unique numeric number for every node that is constructed, as a debugging aid
+        static size_t uniqueNumericId = 0;
+        m_uniqueNumericId = uniqueNumericId++;
     }
     virtual ~ComputationNodeBase()
     {
@@ -429,7 +437,18 @@ private:
     {
         if (HasMBLayout())
             LogicError("%ls: Minibatch data cannot be interpreted as a single 2D tensor.", NodeDescription().c_str());
-        else if (m_sampleLayout.GetRank() < 1 || m_sampleLayout.GetRank() > 2) // note: scalars are not stored as tensors of rank 0, but rather as 1-dim vectors. TODO: clean this up some day
+
+        bool notFlattenableTo2D = false;
+        for (size_t i = 2; i < m_sampleLayout.GetRank(); ++i)
+        {
+            if (!m_sampleLayout.CanFlatten(i))
+            {
+                notFlattenableTo2D = true;
+                break;
+            }
+        }
+
+        if (m_sampleLayout.GetRank() < 1 || ((m_sampleLayout.GetRank() > 2) && notFlattenableTo2D)) // note: scalars are not stored as tensors of rank 0, but rather as 1-dim vectors. TODO: clean this up some day
             LogicError("%ls: Sample [%s] is not a column vector or matrix (1D or 2D tensor).", NodeDescription().c_str(), string(m_sampleLayout).c_str());
     }
 public:
@@ -441,7 +460,11 @@ public:
     size_t GetAsMatrixNumCols() const
     {
         CheckTensorIsMatrix();
-        return m_sampleLayout.GetRank() > 1 ? m_sampleLayout[1] : 1; // a column vector is also a Matrix
+        auto flattenedLayout = m_sampleLayout;
+        if (flattenedLayout.GetRank() > 2)
+            flattenedLayout.FlattenTo2DInPlace(1, "GetAsMatrixNumCols()");
+
+        return flattenedLayout.GetRank() > 1 ? flattenedLayout[1] : 1; // a column vector is also a Matrix
     }
 
     // setting/updating the dimensions of the node
@@ -574,8 +597,8 @@ public:
             else // a whole vector
             {
                 ScriptableObjects::ConfigArrayPtr inputsArray = *inputsArg;
-                const auto range = inputsArray->GetIndexRange();
-                for (int i = range.first; i <= range.second; i++) // pull them. This will resolve all of them.
+                const auto range = inputsArray->GetIndexBeginEnd();
+                for (int i = range.first; i < range.second; i++) // pull them. This will resolve all of them.
                     inputs.push_back(inputsArray->At(i, [](const wstring&) { LogicError("GetInputs: out of bounds index while iterating??"); }));
             }
         }
@@ -626,6 +649,8 @@ public:
     ComputationEnvironmentPtr GetEnvironmentPtr() const { return m_environment; }
     void SetEnvironment(ComputationEnvironmentPtr environment) { m_environment = environment; }
 
+    virtual std::set<std::pair<const MatrixBase*, std::wstring>> GetMatrixInfo() const = 0; // to be defined by <ElemType> version
+
     // -----------------------------------------------------------------------
     // validation
     // -----------------------------------------------------------------------
@@ -658,6 +683,7 @@ protected:
     void ValidateBinaryZip(bool isFinalValidationPass, bool allowBroadcast);
     void ValidateBinaryReduce(bool isFinalValidationPass);    
     void ValidateNaryZip(bool isFinalValidationPass, bool allowBroadcast, size_t numInputs);
+    void ValidateMBLayout(const ComputationNodeBasePtr which, const ComputationNodeBasePtr vsWhich) const;
     void InferMBLayoutFromInputsForStandardCase(bool isFinalValidationPass);
     virtual void ValidateInferInputDimsFrom(const TensorShape&) = 0;    // (implemented by ComputationNode<ElemType>)
 
@@ -833,6 +859,8 @@ public:
     // Helper that returns [a x b x c], including dynamic axes.
     const std::string ShapeDescription() const;
 
+    // debugging helper
+    size_t m_uniqueNumericId; // (a unique handle for debugging)
 protected:
 
     // -----------------------------------------------------------------------
@@ -1441,13 +1469,14 @@ public:
     // memory sharing
     // -----------------------------------------------------------------------
 
-    //this function is for displaying memeory sharing information
-    //TODO: customize this function for all nodes that uses temp internal matrices.
-    virtual std::set<std::pair<const Matrix<ElemType>*, const std::wstring>> GetMatrixInfo()
+    // helper function for formatting memory sharing information
+    // TODO: customize this function for all nodes that uses temp internal matrices.
+    virtual std::set<std::pair<const MatrixBase*, std::wstring>> GetMatrixInfo() const override
     {
-        std::set<std::pair<const Matrix<ElemType>*, const std::wstring>> matrixInfo;
-        matrixInfo.insert(make_pair(&Value(),    NodeName() + L" Value"    + msra::strfun::utf16(ShapeDescription())));
-        matrixInfo.insert(make_pair(&Gradient(), NodeName() + L" Gradient" + msra::strfun::utf16(ShapeDescription())));
+        std::set<std::pair<const MatrixBase*, std::wstring>> matrixInfo;
+        matrixInfo.insert    (make_pair(ValuePtr().get(),    NodeName() + L" : " + msra::strfun::utf16(ShapeDescription())));
+        if (GradientPtr())
+            matrixInfo.insert(make_pair(GradientPtr().get(), NodeName() + L" : " + msra::strfun::utf16(ShapeDescription()) + L" (gradient)"));
         return matrixInfo;
     }
 
@@ -1847,6 +1876,11 @@ public:
     virtual bool RequiresPreCompute() const override { return false; } // return true if the node's value should be computed before the normal training. e.g., mean and invStd of input features.
     virtual std::string FormatOperationPrototype(const std::string& extraArgs) const override { return ""; }
     virtual void DumpNodeInfo(const bool /*printValues*/, const bool /*printMetadata*/, File& fstream) const override {}
+    virtual std::set<std::pair<const MatrixBase*, std::wstring>> GetMatrixInfo() const override { NOT_IMPLEMENTED; }
+
+    virtual void ForwardProp(const FrameRange&, const ComputationNodeBasePtr, const ComputationNodeBasePtr) { NOT_IMPLEMENTED; }
+
+    std::vector<ComputationNodeBasePtr> GetNestedNodes() { return m_nestedNodes; }
 
 protected: public:                                     // needed in ComputationNetwork::FindInRecurrentLoops(), which really should be part of SEQTraversalFlowControlNode
     std::vector<ComputationNodeBasePtr> m_nestedNodes; // nodes tucked away in this node, in evaluation order
@@ -1890,6 +1924,13 @@ public:
 // =======================================================================
 
 struct IRecurrentNode { virtual int GetRecurrenceSteppingDirection() const = 0; };
+
+// =======================================================================
+// IFreezable -- nodes that have parameters that can be frozen
+// e.g. if a trained model is to be used as a fixed feature extractor for another
+// =======================================================================
+
+struct IFreezable { virtual void FreezeParameters() { } };
 
 // =======================================================================
 // PreComputedNodeBase -- interface implemented by ComputationNodes that precompute

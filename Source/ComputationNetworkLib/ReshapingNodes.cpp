@@ -34,9 +34,10 @@ template <class ElemType>
     if (flags & CopyNodeFlags::copyNodeValue)
     {
         auto node = dynamic_pointer_cast<ReduceElementsNode<ElemType>>(nodeP);
-        node->m_axis      = m_axis;
-        node->m_operation = m_operation;
-        node->m_op        = m_op;
+        node->m_axis        = m_axis;
+        node->m_operation   = m_operation;
+        node->m_reductionOp = m_reductionOp;
+        node->m_scale       = m_scale;
     }
 }
 
@@ -64,8 +65,8 @@ template <class ElemType>
     auto input  = Input(0)->ValueTensorFor(rank, fr);
 
     // the actual operation is a Copy with reduction, where the magic is in the reduction op
-    result.DoUnaryOpOf(0, input, 1, ElementWiseOperator::opCopy, m_op);
-    // note: we can implement "Mean" by passing 1/dim for alpha
+    // For "Mean", m_scale is 1/#elements, and 1 otherwise.
+    result.DoUnaryOpOf(0, input, m_scale, ElementWiseOperator::opCopy, m_reductionOp);
 }
 
 template <class ElemType>
@@ -79,32 +80,60 @@ template <class ElemType>
     auto sliceInputGrad  = Input(0)->GradientTensorFor(rank, fr); // ...to this one
 
     // gradients are not as simple as passing an op-code, unfortunately
-    switch (m_op)
+    switch (m_reductionOp)
     {
     case ElementWiseOperator::opSum:
-        // "Sum": broadcast the gradient
-        sliceInputGrad.AddCopyOf(sliceOutputGrad);
+        // "Sum":  broadcast the gradient
+        // "Mean": same as "Sum" with scaling by 1/#dims
+        sliceInputGrad.AddCopyOf(sliceOutputGrad, m_scale);
+        break;
+
+    case ElementWiseOperator::opLogSum:
+        {
+            auto input = Input(inputIndex)->ValueTensorFor(rank, fr);
+            auto output = ValueTensorFor(rank, fr.AllowBroadcast());
+            // Let: f(x, y, z) = log(exp x + exp y + exp z)
+            // For the derivative we get:
+            // df / dx = exp(x)/exp(f)
+            //         = exp(x – f)
+            sliceInputGrad.AddElementwiseProductWithExpOfDiffOf(sliceOutputGrad, input, output);
+    }
+        break;
+
+    case ElementWiseOperator::opMin:
+    case ElementWiseOperator::opMax:
+        auto input = Input(inputIndex)->ValueTensorFor(rank, fr);
+        auto output = ValueTensorFor(rank, fr.AllowBroadcast());
+
+        // POTENTIAL PROBLEM:
+        // For ReduceMin/Max there are combinations of input values where the gradient is not defined because the function has an edge at these points.
+        // E.g. for ReduceMin this is the case when the minimum input value is attained by several inputs at the same time.
+        // In these cases there is no correct gradient.The question is if this could lead to any problems.
+        // Let's look at two scenarios where this might happen:
+        //
+        // * Scenario 1: The input comes from a layer of nodes like e.g. ReLU and some of them might operate in the regime where they clip to a constant value.
+        //   In this case it's not a problem that the input gradient is kind of bad as the derivative of the concerning input nodes will be zero anyway.
+        //
+        // * Scenario 2: The input data is directly coming from training data. Here bad gradients don't matter as we wouldn't wan't to propagate gradients to the training data.
+        //
+        // So as we don't have a better solution yet and it probably doesn't have impact let's stay with the current solution.
+        // Also note that for Clip , Min, Max and ReLU we have the same kind of problem.
+        sliceInputGrad.AddCopyIfEqualOf(input, output, sliceOutputGrad);
         break;
 
         // more coming
-
-        // "LogPlus": softmax
-        //   f(x) = log(sum_i exp x_i), hence gradient is:
-        //   df / dx_i = 1 / (sum_j exp x_j) * exp x_i = (Softmax(x))_i = exp(x_i  - ReduceLogPlus(x))
-        // targetGradient = gradientFromTop .* Exp (inputValue - outputValue)   --TODO: verify
-        // i.e. compute dfference if input and output, then Exp in-place. No, would need temp memory. So needs its own opcode AddScaledExpOfDiff(). Ternary.
-
-        // "Max": Copy the gradient only to the max value. targetGradient += gradientFromTop .* (outputValue == inputValue). Needs its own opcode. --TODO : verify
     }
 }
 
 template <class ElemType>
 /*virtual*/ bool ReduceElementsNode<ElemType>::OutputUsedInComputingInputNodesGradients() const /*override*/
 {
-    switch (m_op)
+    switch (m_reductionOp)
     {
-    case ElementWiseOperator::opSum: return false;
-    // will be different e.g. for LogPlus, Max, and Min
+    case ElementWiseOperator::opSum:    return false;
+    case ElementWiseOperator::opLogSum: return true;
+    case ElementWiseOperator::opMin:    return true;
+    case ElementWiseOperator::opMax:    return true;
     }
     LogicError("Should not get here.");
 }
@@ -112,25 +141,32 @@ template <class ElemType>
 template <class ElemType>
 /*virtual*/ bool ReduceElementsNode<ElemType>::InputUsedInComputingInputNodesGradients(size_t inputIndex) const /*override*/
 {
-    switch (m_op)
+    switch (m_reductionOp)
     {
-    case ElementWiseOperator::opSum: return false;
-    // will be different for LogPlus, Max, and Min
+    case ElementWiseOperator::opSum:    return false;
+    case ElementWiseOperator::opLogSum: return true;
+    case ElementWiseOperator::opMin:    return true;
+    case ElementWiseOperator::opMax:    return true;
     }
     LogicError("Should not get here.");
 }
 
-// map the operation specific as a string to an ElementWiseOperator to pass to 
+// map the operation specified as a string to an ElementWiseOperator value.
 template <class ElemType>
 void ReduceElementsNode<ElemType>::ValidateOp()
 {
 #if 1 // legacy with initial experiments, delete this soon
-    if (m_operation == L"Plus") m_op = ElementWiseOperator::opSum;
+    if (m_operation == L"Plus") m_reductionOp = ElementWiseOperator::opSum;
     else
 #endif
-    if (m_operation == L"Sum") m_op = ElementWiseOperator::opSum;
+    if      (m_operation == L"Sum")    m_reductionOp = ElementWiseOperator::opSum;
+    else if (m_operation == L"Mean")   m_reductionOp = ElementWiseOperator::opSum;
+    else if (m_operation == L"LogSum") m_reductionOp = ElementWiseOperator::opLogSum;
+    else if (m_operation == L"Min")    m_reductionOp = ElementWiseOperator::opMin;
+    else if (m_operation == L"Max")    m_reductionOp = ElementWiseOperator::opMax;
+
     // more here
-    else InvalidArgument("%ls was given an invalid operation code '%ls'. Allowed are: 'Sum'. And a few more soon.", NodeDescription().c_str(), m_operation.c_str());
+    else InvalidArgument("%ls was given an invalid operation code '%ls'. Allowed are: 'Sum', 'Max', 'Min'.", NodeDescription().c_str(), m_operation.c_str());
 }
 
 template <class ElemType>
@@ -144,12 +180,25 @@ template <class ElemType>
 
     let shape = Input(0)->GetSampleLayout();
     auto dims = shape.GetDims();
+    size_t reducedDim = 0; // (init to keep compiler happy)
     if (m_axis == 0)
+    {
+        reducedDim = shape.GetNumElements();
         dims = { 1 };                       // entire sample is reduced to a scalar
+    }
     else if (m_axis - 1 >= 0 && m_axis - 1 < dims.size())
+    {
+        reducedDim = dims[m_axis - 1];
         dims[m_axis - 1] = 1;               // one axis is reduced to a scalar
+    }
     else if (isFinalValidationPass)
         InvalidArgument("The shape of %ls [%s] has no axis %d", NodeDescription().c_str(), string(shape).c_str(), m_axis);
+
+    // for "Mean", we must divide by #elements
+    if (isFinalValidationPass && m_operation == L"Mean")
+        m_scale = (ElemType)(1.0 / reducedDim);
+    else
+        m_scale = (ElemType)1;
 
     SetDims(TensorShape(dims), Input(0)->HasMBLayout());
 }
@@ -251,7 +300,7 @@ template <class ElemType>
     if (!m_pMBLayout)
     {
         m_pMBLayout = make_shared<MBLayout>(); // this generates a new layout
-        m_pMBLayout->SetUniqueAxisName(L"WhereNodeAxis");
+        m_pMBLayout->SetUniqueAxisName(m_dynamicAxisName);
     }
     // we map scalars to scalars
     if (isFinalValidationPass && Input(0)->GetSampleLayout().GetNumElements() != 1)

@@ -1,0 +1,2 @@
+images/black.jpg	0
+images/multi.png	1
