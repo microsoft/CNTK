@@ -638,7 +638,11 @@ def clip(x, min_value, max_value, name=''):
     Returns:
         :class:`cntk.Function`
     '''    
-    raise NotImplementedError("clip is not implemented yet in V2")
+    from cntk import clip
+    x = sanitize_input(x, get_data_type(x))
+    min_value = sanitize_input(min_value, get_data_type(min_value))
+    max_value = sanitize_input(max_value, get_data_type(max_value))
+    return clip(x, min_value, max_value, name).output()
 
 def relu(x, name=''):
     '''

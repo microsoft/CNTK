@@ -18,6 +18,40 @@ EPS_IN_LOG = 1e-37        # 1e-37 is the highest guaranteed precision
 BACKWARD_RESULST_FOR_LOG_EPS = 9.08782e+36 # the backward result returned by CNTK log() for epsilon
 LOG_OF_EPS_IN_LOG =  -85.1 # log(EPS_IN_LOG)
 
+CLIP_TUPLES = [
+    ([1.0], [2.0], [1.5]), # value shouldn't be clipped; gradient is [1.0]
+    ([1.0], [2.0], [0.5]), # value should be clipped to 1.0; gradient is [0.0]
+    ([1.0], [2.0], [2.5]), # value should be clipped to 2.0; gradient is [0.0]
+    
+    # should clip to [1.5, 2.0, 1.0]; gradient is [[1.0, 0.0, 0.0]]
+    ([1.0], [2.0], [[1.5, 2.1, 0.9]]),
+
+    # should clip to [[1.0, 2.0], [1.0, 2.0], [1.5, 2.0]];
+    # gradient is [[0.0, 0.0], [1.0, 1.0], [1.0, 0.0]]
+    ([1.0], [2.0], [[0.0, 3.0], [1.0, 2.0], [1.5, 2.5]]),
+     
+    # test what happens if a user puts a higher "min" value than their "max" value
+    # should clip to [[5.0, 5.0, 5.0, 5.0, 5.0]] because min is evaluated first
+    # gradient should be all zeros: [[0.0, 0.0, 0.0, 0.0, 0.0]]
+    ([5.0], [0.5], [[1.5, 2.1, 0.9, -1.0, -2.0]]),
+     
+    # test a more complicated broadcasting scenario
+    ([[1.5, 2.0], [2.5, 3.0]], [[-2.0, 2.5], [2.5, 3.5]], [[-1.0, 2.0], [3.0, 4.0]]),
+    ]
+@pytest.mark.parametrize("min_value, max_value, x", CLIP_TUPLES)
+def test_op_clip(min_value, max_value, x, device_id, precision):    
+    from .. import clip
+
+    expected_forward = [np.clip(AA([x], dtype=PRECISION_TO_TYPE[precision]), AA(min_value, dtype=PRECISION_TO_TYPE[precision]), AA(max_value, dtype=PRECISION_TO_TYPE[precision]))]
+
+    expected_backward = {
+            'arg': [[np.array(np.logical_not(np.logical_or(np.greater(x, max_value), np.less(x, min_value))), dtype=PRECISION_TO_TYPE[precision])]]
+            }
+
+    _test_unary_op(precision, device_id, clip, x,
+            expected_forward, expected_backward, 
+            {'min_value': min_value, 'max_value': max_value})
+
 TENSORS = [
     ([[0, -0.1]]),
     ([[-100, -10], [-1, -0.1], [-0.01, -0.001],
