@@ -1341,20 +1341,15 @@ public:
             Value() *= (-1);
         }
         else
-<<<<<<< HEAD
         {
             // sum of weights
-            m_sumOfWeights->AssignSumOfElements(Input(2)->ValueFor(fr));
+            m_sumOfWeights->AssignSumOfElements(InputRef(2).ValueFor(fr));
             // number of elements
             ElemType numOfElements = (ElemType)ones.GetNumCols();
             // sum of weighted log loss
-            Value().AssignInnerProductOf(Input(2)->ValueFor(fr), *m_temp, false).ElementDivideBy(*m_sumOfWeights);
+            Value().AssignInnerProductOf(InputRef(2).ValueFor(fr), *m_temp, false).ElementDivideBy(*m_sumOfWeights);
             Value() *= -numOfElements;
         }
-=======
-            Value().AssignInnerProductOf(InputRef(2).ValueFor(fr), *m_temp, false);
-        Value() *= (-1);
->>>>>>> 8cc2328... InputRef
     }
 
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override

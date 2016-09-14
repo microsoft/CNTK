@@ -1103,7 +1103,8 @@ protected:
         return DownCast(m_inputs[inputIndex]);
     }
 
-    // Fast downcast without runtime type check.
+    // Fast downcast without runtime type check of dynamic_pointer_cast.
+    // Meant to be used in Forward and BackPropTo, assuming that Validate() has already used Input() which validated the correct types.
     inline ComputationNode<ElemType>& InputRef(const size_t inputIndex) const
     {
         return static_cast<ComputationNode<ElemType>&>(*m_inputs[inputIndex].get());
