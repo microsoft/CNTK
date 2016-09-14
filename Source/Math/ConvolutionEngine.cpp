@@ -640,7 +640,7 @@ protected:
 
             // cudnn layout uses row-major kernel weight matrix.
             auto kern = kernel.ColumnSlice(0, kernel.GetNumCols());
-            kern.Reshape(kernel.GetNumCols(), kernel.GetNumRows());
+            kern.Reshape(unrollCols, kernel.GetNumElements()/unrollCols);
 
             // Perform matrix multiplication of unrolled inputs with weights.
             // If there is just one sample in the sub-batch then compute result directly to the output matrix.
@@ -712,8 +712,9 @@ protected:
         workspace.Resize(1, kernCols + unrollRows * (unrollCols + (subBatchSize > 1 ? mapInCount : 0)));
 
         auto kern = kernel.ColumnSlice(0, kernel.GetNumCols());
+        size_t kernTCols = kernT.GetNumElements(); 
         // cudnn layout uses row-major kernel weight matrix.
-        kern.Reshape(kernel.GetNumCols(), kernel.GetNumRows());
+        kern.Reshape(kernTCols, kernCols/kernTCols);
         // Now transpose and reshape to [KXY x C].
         auto kernTran = workspace.ColumnSlice(0, kernCols);
         // Reshape to transpose shape, AssignTransposeOf requires that.
@@ -721,7 +722,7 @@ protected:
         kernTran.AssignTransposeOf(kern);
         kern = kernTran.ColumnSlice(0, kernTran.GetNumCols());
         // Reshape to final shape.
-        kern.Reshape(kernel.GetNumElements() / mapInCount, mapInCount);
+        kern.Reshape(unrollCols, mapInCount);
 
         for (size_t start = 0; start < batchSize; start += subBatchSize)
         {
@@ -833,7 +834,7 @@ protected:
 
             // cudnn layout uses row-major kernel weight matrix.
             auto kernGrad = kernelGrad.ColumnSlice(0, kernelGrad.GetNumCols());
-            kernGrad.Reshape(kernelGrad.GetNumCols(), kernelGrad.GetNumRows());
+            kernGrad.Reshape(unrollRows, kernGrad.GetNumElements() / unrollRows); 
             // 3. Multiply.
             Mat::MultiplyAndAdd(unrolledInputSlice, true, srcGradSlice, false, kernGrad);
         }
@@ -850,7 +851,7 @@ public:
 template <class ElemType>
 std::unique_ptr<ConvolutionEngine<ElemType>> ConvolutionEngine<ElemType>::Create(ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId,
                                                                                  ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, PoolKind poolKind,
-                                                                                 ConvolutionEngineKind enabledEngines, std::wstring logPrefix)
+                                                                                 ConvolutionEngineKind enabledEngines, std::wstring logPrefix, bool forceDeterministicAlgorithms)
 {
     if (!logPrefix.empty())
         logPrefix += L": ";
@@ -875,7 +876,7 @@ std::unique_ptr<ConvolutionEngine<ElemType>> ConvolutionEngine<ElemType>::Create
         CuDnnConvolutionEngineFactory<ElemType>::IsSupported(deviceId, geometry, poolKind))
     {
         fprintf(stderr, "%lsusing cuDNN convolution engine for geometry: %s.\n", logPrefix.c_str(), engStr.c_str());
-        return CuDnnConvolutionEngineFactory<ElemType>::Create(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind);
+        return CuDnnConvolutionEngineFactory<ElemType>::Create(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind, forceDeterministicAlgorithms);
     }
 
     if (isEnabled(ConvolutionEngineKind::Gemm) && GemmConvolutionEngine<ElemType>::IsSupported(deviceId, geometry))

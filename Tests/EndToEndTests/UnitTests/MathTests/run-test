@@ -1,0 +1,6 @@
+#!/bin/bash
+
+. $TEST_ROOT_DIR/run-test-common
+. $TEST_DIR/../run-boost-test-common
+
+boosttestrun mathtests

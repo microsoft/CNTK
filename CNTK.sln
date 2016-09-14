@@ -463,34 +463,34 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "AdditionalFiles", "Addition
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Config", "Config", "{6E5A252C-ACCE-42E0-9819-FF4DEF6D739E}"
 	ProjectSection(SolutionItems) = preProject
-		Examples\Image\MNIST\Config\01_OneHidden.cntk = Examples\Image\MNIST\Config\01_OneHidden.cntk
 		Examples\Image\MNIST\Config\01_OneHidden.ndl = Examples\Image\MNIST\Config\01_OneHidden.ndl
-		Examples\Image\MNIST\Config\02_Convolution.cntk = Examples\Image\MNIST\Config\02_Convolution.cntk
+		Examples\Image\MNIST\Config\01_OneHidden_ndl_deprecated.cntk = Examples\Image\MNIST\Config\01_OneHidden_ndl_deprecated.cntk
 		Examples\Image\MNIST\Config\02_Convolution.ndl = Examples\Image\MNIST\Config\02_Convolution.ndl
-		Examples\Image\MNIST\Config\03_ConvBatchNorm.cntk = Examples\Image\MNIST\Config\03_ConvBatchNorm.cntk
+		Examples\Image\MNIST\Config\02_Convolution_ndl_deprecated.cntk = Examples\Image\MNIST\Config\02_Convolution_ndl_deprecated.cntk
 		Examples\Image\MNIST\Config\03_ConvBatchNorm.ndl = Examples\Image\MNIST\Config\03_ConvBatchNorm.ndl
+		Examples\Image\MNIST\Config\03_ConvBatchNorm_ndl_deprecated.cntk = Examples\Image\MNIST\Config\03_ConvBatchNorm_ndl_deprecated.cntk
 		Examples\Image\MNIST\Config\Macros.ndl = Examples\Image\MNIST\Config\Macros.ndl
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "CIFAR-10", "CIFAR-10", "{77125562-3BF2-45D2-9B73-72CA8E03C78C}"
 	ProjectSection(SolutionItems) = preProject
-		Examples\Image\Miscellaneous\CIFAR-10\01_Conv.cntk = Examples\Image\Miscellaneous\CIFAR-10\01_Conv.cntk
+		Examples\Image\Miscellaneous\CIFAR-10\01_Conv_ndl_deprecated.cntk = Examples\Image\Miscellaneous\CIFAR-10\01_Conv_ndl_deprecated.cntk
 		Examples\Image\Miscellaneous\CIFAR-10\01_Convolution.ndl = Examples\Image\Miscellaneous\CIFAR-10\01_Convolution.ndl
-		Examples\Image\Miscellaneous\CIFAR-10\02_BatchNormConv.cntk = Examples\Image\Miscellaneous\CIFAR-10\02_BatchNormConv.cntk
 		Examples\Image\Miscellaneous\CIFAR-10\02_BatchNormConv.mel = Examples\Image\Miscellaneous\CIFAR-10\02_BatchNormConv.mel
 		Examples\Image\Miscellaneous\CIFAR-10\02_BatchNormConv.ndl = Examples\Image\Miscellaneous\CIFAR-10\02_BatchNormConv.ndl
+		Examples\Image\Miscellaneous\CIFAR-10\02_BatchNormConv_ndl_deprecated.cntk = Examples\Image\Miscellaneous\CIFAR-10\02_BatchNormConv_ndl_deprecated.cntk
 		Examples\Image\Miscellaneous\CIFAR-10\03_ProjWeightsGen.py = Examples\Image\Miscellaneous\CIFAR-10\03_ProjWeightsGen.py
-		Examples\Image\Miscellaneous\CIFAR-10\03_ResNet.cntk = Examples\Image\Miscellaneous\CIFAR-10\03_ResNet.cntk
 		Examples\Image\Miscellaneous\CIFAR-10\03_ResNet.mel = Examples\Image\Miscellaneous\CIFAR-10\03_ResNet.mel
 		Examples\Image\Miscellaneous\CIFAR-10\03_ResNet.ndl = Examples\Image\Miscellaneous\CIFAR-10\03_ResNet.ndl
-		Examples\Image\Miscellaneous\CIFAR-10\04_ResNet_56.cntk = Examples\Image\Miscellaneous\CIFAR-10\04_ResNet_56.cntk
+		Examples\Image\Miscellaneous\CIFAR-10\03_ResNet_ndl_deprecated.cntk = Examples\Image\Miscellaneous\CIFAR-10\03_ResNet_ndl_deprecated.cntk
 		Examples\Image\Miscellaneous\CIFAR-10\04_ResNet_56.ndl = Examples\Image\Miscellaneous\CIFAR-10\04_ResNet_56.ndl
+		Examples\Image\Miscellaneous\CIFAR-10\04_ResNet_56_ndl_deprecated.cntk = Examples\Image\Miscellaneous\CIFAR-10\04_ResNet_56_ndl_deprecated.cntk
 		Examples\Image\Miscellaneous\CIFAR-10\16to32.txt = Examples\Image\Miscellaneous\CIFAR-10\16to32.txt
 		Examples\Image\Miscellaneous\CIFAR-10\32to64.txt = Examples\Image\Miscellaneous\CIFAR-10\32to64.txt
-		Examples\Image\Miscellaneous\CIFAR-10\CifarDownload.py = Examples\Image\Miscellaneous\CIFAR-10\CifarDownload.py
-		Examples\Image\Miscellaneous\CIFAR-10\CifarDownload_py3.py = Examples\Image\Miscellaneous\CIFAR-10\CifarDownload_py3.py
 		Examples\Image\Miscellaneous\CIFAR-10\CifarConverter.py = Examples\Image\Miscellaneous\CIFAR-10\CifarConverter.py
 		Examples\Image\Miscellaneous\CIFAR-10\CifarConverter_py3.py = Examples\Image\Miscellaneous\CIFAR-10\CifarConverter_py3.py
+		Examples\Image\Miscellaneous\CIFAR-10\CifarDownload.py = Examples\Image\Miscellaneous\CIFAR-10\CifarDownload.py
+		Examples\Image\Miscellaneous\CIFAR-10\CifarDownload_py3.py = Examples\Image\Miscellaneous\CIFAR-10\CifarDownload_py3.py
 		Examples\Image\Miscellaneous\CIFAR-10\labelsmap.txt = Examples\Image\Miscellaneous\CIFAR-10\labelsmap.txt
 		Examples\Image\Miscellaneous\CIFAR-10\Macros.ndl = Examples\Image\Miscellaneous\CIFAR-10\Macros.ndl
 		Examples\Image\Miscellaneous\CIFAR-10\readme.txt = Examples\Image\Miscellaneous\CIFAR-10\readme.txt
@@ -501,8 +501,8 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "AlexNet", "AlexNet", "{D29DC402-98A3-40C7-B683-4CC84DEC5C18}"
 	ProjectSection(SolutionItems) = preProject
 		Examples\Image\Miscellaneous\ImageNet\AlexNet\add_top5_layer.mel = Examples\Image\Miscellaneous\ImageNet\AlexNet\add_top5_layer.mel
-		Examples\Image\Miscellaneous\ImageNet\AlexNet\AlexNet.cntk = Examples\Image\Miscellaneous\ImageNet\AlexNet\AlexNet.cntk
 		Examples\Image\Miscellaneous\ImageNet\AlexNet\AlexNet.ndl = Examples\Image\Miscellaneous\ImageNet\AlexNet\AlexNet.ndl
+		Examples\Image\Miscellaneous\ImageNet\AlexNet\AlexNet_ndl_deprecated.cntk = Examples\Image\Miscellaneous\ImageNet\AlexNet\AlexNet_ndl_deprecated.cntk
 		Examples\Image\Miscellaneous\ImageNet\AlexNet\Macros.ndl = Examples\Image\Miscellaneous\ImageNet\AlexNet\Macros.ndl
 	EndProjectSection
 EndProject
@@ -511,12 +511,12 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "VGG", "VGG", "{BC0D6DFF-80C
 		Examples\Image\Miscellaneous\ImageNet\VGG\add_top5_layer.mel = Examples\Image\Miscellaneous\ImageNet\VGG\add_top5_layer.mel
 		Examples\Image\Miscellaneous\ImageNet\VGG\ImageNet1K_mean.xml = Examples\Image\Miscellaneous\ImageNet\VGG\ImageNet1K_mean.xml
 		Examples\Image\Miscellaneous\ImageNet\VGG\Macros.ndl = Examples\Image\Miscellaneous\ImageNet\VGG\Macros.ndl
-		Examples\Image\Miscellaneous\ImageNet\VGG\VGG_A.cntk = Examples\Image\Miscellaneous\ImageNet\VGG\VGG_A.cntk
 		Examples\Image\Miscellaneous\ImageNet\VGG\VGG_A.ndl = Examples\Image\Miscellaneous\ImageNet\VGG\VGG_A.ndl
-		Examples\Image\Miscellaneous\ImageNet\VGG\VGG_E.cntk = Examples\Image\Miscellaneous\ImageNet\VGG\VGG_E.cntk
+		Examples\Image\Miscellaneous\ImageNet\VGG\VGG_A_ndl_deprecated.cntk = Examples\Image\Miscellaneous\ImageNet\VGG\VGG_A_ndl_deprecated.cntk
 		Examples\Image\Miscellaneous\ImageNet\VGG\VGG_E.ndl = Examples\Image\Miscellaneous\ImageNet\VGG\VGG_E.ndl
-		Examples\Image\Miscellaneous\ImageNet\VGG\VGG_E_BN.cntk = Examples\Image\Miscellaneous\ImageNet\VGG\VGG_E_BN.cntk
 		Examples\Image\Miscellaneous\ImageNet\VGG\VGG_E_BN.ndl = Examples\Image\Miscellaneous\ImageNet\VGG\VGG_E_BN.ndl
+		Examples\Image\Miscellaneous\ImageNet\VGG\VGG_E_BN_ndl_deprecated.cntk = Examples\Image\Miscellaneous\ImageNet\VGG\VGG_E_BN_ndl_deprecated.cntk
+		Examples\Image\Miscellaneous\ImageNet\VGG\VGG_E_ndl_deprecated.cntk = Examples\Image\Miscellaneous\ImageNet\VGG\VGG_E_ndl_deprecated.cntk
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Other", "Other", "{CCD56F12-BA17-4753-B5EE-4995FE682995}"
@@ -535,8 +535,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "NdlExamples", "NdlExamples"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Config", "Config", "{1E37CE40-556D-4693-B58C-F8D4CE349BB7}"
 	ProjectSection(SolutionItems) = preProject
-		Examples\Other\Simple2d\Config\AddOperatorConstant.cntk = Examples\Other\Simple2d\Config\AddOperatorConstant.cntk
-		Examples\Other\Simple2d\Config\AddOperatorConstantNoInput.cntk = Examples\Other\Simple2d\Config\AddOperatorConstantNoInput.cntk
+		Examples\Other\Simple2d\Config\AddOperatorConstant_ndl_deprecated.cntk = Examples\Other\Simple2d\Config\AddOperatorConstant_ndl_deprecated.cntk
+		Examples\Other\Simple2d\Config\AddOperatorConstantNoInput_ndl_deprecated.cntk = Examples\Other\Simple2d\Config\AddOperatorConstantNoInput_ndl_deprecated.cntk
 		Examples\Other\Simple2d\Config\Multigpu.cntk = Examples\Other\Simple2d\Config\Multigpu.cntk
 		Examples\Other\Simple2d\Config\Simple.cntk = Examples\Other\Simple2d\Config\Simple.cntk
 	EndProjectSection
@@ -553,7 +553,7 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Config", "Config", "{B3E3AF4A-FEF5-46AB-A72A-19AF4F1FDD49}"
 	ProjectSection(SolutionItems) = preProject
 		Examples\Speech\AN4\Config\FeedForward.cntk = Examples\Speech\AN4\Config\FeedForward.cntk
-		Examples\Speech\AN4\Config\LSTM-NDL.cntk = Examples\Speech\AN4\Config\LSTM-NDL.cntk
+		Examples\Speech\AN4\Config\LSTM-NDL_ndl_deprecated.cntk = Examples\Speech\AN4\Config\LSTM-NDL_ndl_deprecated.cntk
 		Examples\Speech\AN4\Config\lstmp-3layer-opt.ndl = Examples\Speech\AN4\Config\lstmp-3layer-opt.ndl
 	EndProjectSection
 EndProject
@@ -578,12 +578,12 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "cntk_config", "cntk_config"
 		Examples\Speech\Miscellaneous\AMI\cntk_config\80fbank.conf = Examples\Speech\Miscellaneous\AMI\cntk_config\80fbank.conf
 		Examples\Speech\Miscellaneous\AMI\cntk_config\Align.cntk = Examples\Speech\Miscellaneous\AMI\cntk_config\Align.cntk
 		Examples\Speech\Miscellaneous\AMI\cntk_config\CNTK.cntk = Examples\Speech\Miscellaneous\AMI\cntk_config\CNTK.cntk
-		Examples\Speech\Miscellaneous\AMI\cntk_config\CNTK2.cntk = Examples\Speech\Miscellaneous\AMI\cntk_config\CNTK2.cntk
-		Examples\Speech\Miscellaneous\AMI\cntk_config\CNTK2_dnn.cntk = Examples\Speech\Miscellaneous\AMI\cntk_config\CNTK2_dnn.cntk
+		Examples\Speech\Miscellaneous\AMI\cntk_config\CNTK2_dnn_ndl_deprecated.cntk = Examples\Speech\Miscellaneous\AMI\cntk_config\CNTK2_dnn_ndl_deprecated.cntk
 		Examples\Speech\Miscellaneous\AMI\cntk_config\CNTK2_dnn_smbr.mel = Examples\Speech\Miscellaneous\AMI\cntk_config\CNTK2_dnn_smbr.mel
-		Examples\Speech\Miscellaneous\AMI\cntk_config\CNTK2_lstmp.cntk = Examples\Speech\Miscellaneous\AMI\cntk_config\CNTK2_lstmp.cntk
-		Examples\Speech\Miscellaneous\AMI\cntk_config\CNTK2_lstmp_smbr.cntk = Examples\Speech\Miscellaneous\AMI\cntk_config\CNTK2_lstmp_smbr.cntk
-		Examples\Speech\Miscellaneous\AMI\cntk_config\CNTK2_smbr.cntk = Examples\Speech\Miscellaneous\AMI\cntk_config\CNTK2_smbr.cntk
+		Examples\Speech\Miscellaneous\AMI\cntk_config\CNTK2_lstmp_ndl_deprecated.cntk = Examples\Speech\Miscellaneous\AMI\cntk_config\CNTK2_lstmp_ndl_deprecated.cntk
+		Examples\Speech\Miscellaneous\AMI\cntk_config\CNTK2_lstmp_smbr_ndl_deprecated.cntk = Examples\Speech\Miscellaneous\AMI\cntk_config\CNTK2_lstmp_smbr_ndl_deprecated.cntk
+		Examples\Speech\Miscellaneous\AMI\cntk_config\CNTK2_ndl_deprecated.cntk = Examples\Speech\Miscellaneous\AMI\cntk_config\CNTK2_ndl_deprecated.cntk
+		Examples\Speech\Miscellaneous\AMI\cntk_config\CNTK2_smbr_ndl_deprecated.cntk = Examples\Speech\Miscellaneous\AMI\cntk_config\CNTK2_smbr_ndl_deprecated.cntk
 		Examples\Speech\Miscellaneous\AMI\cntk_config\CNTK2_write.cntk = Examples\Speech\Miscellaneous\AMI\cntk_config\CNTK2_write.cntk
 		Examples\Speech\Miscellaneous\AMI\cntk_config\CNTK_write.cntk = Examples\Speech\Miscellaneous\AMI\cntk_config\CNTK_write.cntk
 		Examples\Speech\Miscellaneous\AMI\cntk_config\default_macros.ndl = Examples\Speech\Miscellaneous\AMI\cntk_config\default_macros.ndl
@@ -618,27 +618,27 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "config", "config", "{1C7D22
 		Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_AdaptLearnRate.cntk = Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_AdaptLearnRate.cntk
 		Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_CrossValidateSimpleNetwork.cntk = Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_CrossValidateSimpleNetwork.cntk
 		Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_EvalSimpleNetwork.cntk = Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_EvalSimpleNetwork.cntk
-		Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_TrainAutoEncoder.cntk = Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_TrainAutoEncoder.cntk
-		Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_TrainLSTM.cntk = Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_TrainLSTM.cntk
-		Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_TrainMultiInput.cntk = Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_TrainMultiInput.cntk
-		Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_TrainMultiTask.cntk = Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_TrainMultiTask.cntk
-		Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_TrainNDLNetwork.cntk = Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_TrainNDLNetwork.cntk
+		Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_TrainAutoEncoder_ndl_deprecated.cntk = Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_TrainAutoEncoder_ndl_deprecated.cntk
+		Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_TrainLSTM_ndl_deprecated.cntk = Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_TrainLSTM_ndl_deprecated.cntk
+		Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_TrainMultiInput_ndl_deprecated.cntk = Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_TrainMultiInput_ndl_deprecated.cntk
+		Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_TrainMultiTask_ndl_deprecated.cntk = Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_TrainMultiTask_ndl_deprecated.cntk
+		Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_TrainNDLNetwork_ndl_deprecated.cntk = Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_TrainNDLNetwork_ndl_deprecated.cntk
 		Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_TrainSimpleNetwork.cntk = Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_TrainSimpleNetwork.cntk
-		Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_TrainWithPreTrain.cntk = Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_TrainWithPreTrain.cntk
+		Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_TrainWithPreTrain_ndl_deprecated.cntk = Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_TrainWithPreTrain_ndl_deprecated.cntk
 		Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_WriteBottleneck.cntk = Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_WriteBottleneck.cntk
 		Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_WriteScaledLogLike.cntk = Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_WriteScaledLogLike.cntk
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "CPU", "CPU", "{5ED4F5DC-E016-4E10-BACD-6A760A0CDE89}"
 	ProjectSection(SolutionItems) = preProject
-		Examples\Speech\Miscellaneous\TIMIT\CPU\TIMIT_DNN.cntk = Examples\Speech\Miscellaneous\TIMIT\CPU\TIMIT_DNN.cntk
-		Examples\Speech\Miscellaneous\TIMIT\CPU\TIMIT_LSTM.cntk = Examples\Speech\Miscellaneous\TIMIT\CPU\TIMIT_LSTM.cntk
+		Examples\Speech\Miscellaneous\TIMIT\CPU\TIMIT_DNN_ndl_deprecated.cntk = Examples\Speech\Miscellaneous\TIMIT\CPU\TIMIT_DNN_ndl_deprecated.cntk
+		Examples\Speech\Miscellaneous\TIMIT\CPU\TIMIT_LSTM_ndl_deprecated.cntk = Examples\Speech\Miscellaneous\TIMIT\CPU\TIMIT_LSTM_ndl_deprecated.cntk
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "GPU", "GPU", "{35CFD8E3-7206-4243-AB5C-AAF610109A5C}"
 	ProjectSection(SolutionItems) = preProject
-		Examples\Speech\Miscellaneous\TIMIT\GPU\TIMIT_DNN.cntk = Examples\Speech\Miscellaneous\TIMIT\GPU\TIMIT_DNN.cntk
-		Examples\Speech\Miscellaneous\TIMIT\GPU\TIMIT_LSTM.cntk = Examples\Speech\Miscellaneous\TIMIT\GPU\TIMIT_LSTM.cntk
+		Examples\Speech\Miscellaneous\TIMIT\GPU\TIMIT_DNN_ndl_deprecated.cntk = Examples\Speech\Miscellaneous\TIMIT\GPU\TIMIT_DNN_ndl_deprecated.cntk
+		Examples\Speech\Miscellaneous\TIMIT\GPU\TIMIT_LSTM_ndl_deprecated.cntk = Examples\Speech\Miscellaneous\TIMIT\GPU\TIMIT_LSTM_ndl_deprecated.cntk
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "PennTreebank", "PennTreebank", "{6F4125B5-220F-4FB7-B6C4-85A966A0268C}"
@@ -672,12 +672,12 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ResNet", "ResNet", "{06D2C6
 		Examples\Image\Miscellaneous\ImageNet\ResNet\create_eval_model.mel = Examples\Image\Miscellaneous\ImageNet\ResNet\create_eval_model.mel
 		Examples\Image\Miscellaneous\ImageNet\ResNet\Macros.ndl = Examples\Image\Miscellaneous\ImageNet\ResNet\Macros.ndl
 		Examples\Image\Miscellaneous\ImageNet\ResNet\ProjWeightsGen.py = Examples\Image\Miscellaneous\ImageNet\ResNet\ProjWeightsGen.py
-		Examples\Image\Miscellaneous\ImageNet\ResNet\ResNet_152.cntk = Examples\Image\Miscellaneous\ImageNet\ResNet\ResNet_152.cntk
 		Examples\Image\Miscellaneous\ImageNet\ResNet\ResNet_152.ndl = Examples\Image\Miscellaneous\ImageNet\ResNet\ResNet_152.ndl
-		Examples\Image\Miscellaneous\ImageNet\ResNet\ResNet_34.cntk = Examples\Image\Miscellaneous\ImageNet\ResNet\ResNet_34.cntk
+		Examples\Image\Miscellaneous\ImageNet\ResNet\ResNet_152_ndl_deprecated.cntk = Examples\Image\Miscellaneous\ImageNet\ResNet\ResNet_152_ndl_deprecated.cntk
 		Examples\Image\Miscellaneous\ImageNet\ResNet\ResNet_34.ndl = Examples\Image\Miscellaneous\ImageNet\ResNet\ResNet_34.ndl
-		Examples\Image\Miscellaneous\ImageNet\ResNet\ResNet_50.cntk = Examples\Image\Miscellaneous\ImageNet\ResNet\ResNet_50.cntk
+		Examples\Image\Miscellaneous\ImageNet\ResNet\ResNet_34_ndl_deprecated.cntk = Examples\Image\Miscellaneous\ImageNet\ResNet\ResNet_34_ndl_deprecated.cntk
 		Examples\Image\Miscellaneous\ImageNet\ResNet\ResNet_50.ndl = Examples\Image\Miscellaneous\ImageNet\ResNet\ResNet_50.ndl
+		Examples\Image\Miscellaneous\ImageNet\ResNet\ResNet_50_ndl_deprecated.cntk = Examples\Image\Miscellaneous\ImageNet\ResNet\ResNet_50_ndl_deprecated.cntk
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Extensibility", "Extensibility", "{60F87E25-BC87-4782-8E20-1621AAEBB113}"
@@ -1141,21 +1141,12 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Scripts", "Scripts", "{6826
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ManagedEvalTests", "Tests\UnitTests\ManagedEvalTests\ManagedEvalTests.csproj", "{CC8DDDCB-D53A-4B30-8596-AEF1C493DB31}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Evaluation", "Evaluation", "{3385EBEA-5F97-4B2B-9F30-0E6D7F91B9CA}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CSEvalClient-CntkSln", "Examples\Evaluation\CSEvalClient-CntkSln\CSEvalClient-CntkSln.csproj", "{1C6E6C53-1AA7-4B69-913E-B97BB5A872CF}"
-EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CPPEvalClient-CntkSln", "Examples\Evaluation\CPPEvalClient-CntkSln\CPPEvalClient-CntkSln.vcxproj", "{CCC07E8E-F33A-4AF7-9F60-93E2AA61C75E}"
-	ProjectSection(ProjectDependencies) = postProject
-		{482999D1-B7E2-466E-9F8D-2119F93EAFD9} = {482999D1-B7E2-466E-9F8D-2119F93EAFD9}
-	EndProjectSection
-EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "BrainScriptTests", "Tests\UnitTests\BrainScriptTests\BrainScriptTests.vcxproj", "{9F999212-AFC5-4EAC-AA78-F7247D46C456}"
 	ProjectSection(ProjectDependencies) = postProject
-		{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5} = {60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}
 		{928ABD1B-4D3B-4017-AEF1-0FA1B4467513} = {928ABD1B-4D3B-4017-AEF1-0FA1B4467513}
-		{EAD17188-072C-4726-B840-A769C36DAD1B} = {EAD17188-072C-4726-B840-A769C36DAD1B}
+		{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5} = {60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}
 		{86883653-8A61-4038-81A0-2379FAE4200A} = {86883653-8A61-4038-81A0-2379FAE4200A}
+		{EAD17188-072C-4726-B840-A769C36DAD1B} = {EAD17188-072C-4726-B840-A769C36DAD1B}
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tutorials", "Tutorials", "{8BE0642A-A3AA-4A64-95D0-C78FB285B2A4}"
@@ -1259,6 +1250,15 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Truncated-Kaldi", "Truncate
 		Tests\EndToEndTests\Speech\LSTM\Truncated-Kaldi\run-test = Tests\EndToEndTests\Speech\LSTM\Truncated-Kaldi\run-test
 		Tests\EndToEndTests\Speech\LSTM\Truncated-Kaldi\testcases.yml = Tests\EndToEndTests\Speech\LSTM\Truncated-Kaldi\testcases.yml
 	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "EvalClientTests", "EvalClientTests", "{05E45AF7-C069-4057-BC16-0A532D068CE4}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CPPEvalClientTest", "Tests\EndToEndTests\EvalClientTests\CPPEvalClientTest\CPPEvalClientTest.vcxproj", "{CCC07E8E-F33A-4AF7-9F60-93E2AA61C75E}"
+	ProjectSection(ProjectDependencies) = postProject
+		{482999D1-B7E2-466E-9F8D-2119F93EAFD9} = {482999D1-B7E2-466E-9F8D-2119F93EAFD9}
+	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CSEvalClientTest", "Tests\EndToEndTests\EvalClientTests\CSEvalClientTest\CSEvalClientTest.csproj", "{1C6E6C53-1AA7-4B69-913E-B97BB5A872CF}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -1522,22 +1522,6 @@ Global
 		{CC8DDDCB-D53A-4B30-8596-AEF1C493DB31}.Release_CpuOnly|x64.Build.0 = Release_CpuOnly|x64
 		{CC8DDDCB-D53A-4B30-8596-AEF1C493DB31}.Release|x64.ActiveCfg = Release|x64
 		{CC8DDDCB-D53A-4B30-8596-AEF1C493DB31}.Release|x64.Build.0 = Release|x64
-		{1C6E6C53-1AA7-4B69-913E-B97BB5A872CF}.Debug_CpuOnly|x64.ActiveCfg = Debug_CpuOnly|x64
-		{1C6E6C53-1AA7-4B69-913E-B97BB5A872CF}.Debug_CpuOnly|x64.Build.0 = Debug_CpuOnly|x64
-		{1C6E6C53-1AA7-4B69-913E-B97BB5A872CF}.Debug|x64.ActiveCfg = Debug|x64
-		{1C6E6C53-1AA7-4B69-913E-B97BB5A872CF}.Debug|x64.Build.0 = Debug|x64
-		{1C6E6C53-1AA7-4B69-913E-B97BB5A872CF}.Release_CpuOnly|x64.ActiveCfg = Release_CpuOnly|x64
-		{1C6E6C53-1AA7-4B69-913E-B97BB5A872CF}.Release_CpuOnly|x64.Build.0 = Release_CpuOnly|x64
-		{1C6E6C53-1AA7-4B69-913E-B97BB5A872CF}.Release|x64.ActiveCfg = Release|x64
-		{1C6E6C53-1AA7-4B69-913E-B97BB5A872CF}.Release|x64.Build.0 = Release|x64
-		{CCC07E8E-F33A-4AF7-9F60-93E2AA61C75E}.Debug_CpuOnly|x64.ActiveCfg = Debug_CpuOnly|x64
-		{CCC07E8E-F33A-4AF7-9F60-93E2AA61C75E}.Debug_CpuOnly|x64.Build.0 = Debug_CpuOnly|x64
-		{CCC07E8E-F33A-4AF7-9F60-93E2AA61C75E}.Debug|x64.ActiveCfg = Debug|x64
-		{CCC07E8E-F33A-4AF7-9F60-93E2AA61C75E}.Debug|x64.Build.0 = Debug|x64
-		{CCC07E8E-F33A-4AF7-9F60-93E2AA61C75E}.Release_CpuOnly|x64.ActiveCfg = Release_CpuOnly|x64
-		{CCC07E8E-F33A-4AF7-9F60-93E2AA61C75E}.Release_CpuOnly|x64.Build.0 = Release_CpuOnly|x64
-		{CCC07E8E-F33A-4AF7-9F60-93E2AA61C75E}.Release|x64.ActiveCfg = Release|x64
-		{CCC07E8E-F33A-4AF7-9F60-93E2AA61C75E}.Release|x64.Build.0 = Release|x64
 		{9F999212-AFC5-4EAC-AA78-F7247D46C456}.Debug_CpuOnly|x64.ActiveCfg = Debug_CpuOnly|x64
 		{9F999212-AFC5-4EAC-AA78-F7247D46C456}.Debug_CpuOnly|x64.Build.0 = Debug_CpuOnly|x64
 		{9F999212-AFC5-4EAC-AA78-F7247D46C456}.Debug|x64.ActiveCfg = Debug|x64
@@ -1546,6 +1530,22 @@ Global
 		{9F999212-AFC5-4EAC-AA78-F7247D46C456}.Release_CpuOnly|x64.Build.0 = Release_CpuOnly|x64
 		{9F999212-AFC5-4EAC-AA78-F7247D46C456}.Release|x64.ActiveCfg = Release|x64
 		{9F999212-AFC5-4EAC-AA78-F7247D46C456}.Release|x64.Build.0 = Release|x64
+		{CCC07E8E-F33A-4AF7-9F60-93E2AA61C75E}.Debug_CpuOnly|x64.ActiveCfg = Debug_CpuOnly|x64
+		{CCC07E8E-F33A-4AF7-9F60-93E2AA61C75E}.Debug_CpuOnly|x64.Build.0 = Debug_CpuOnly|x64
+		{CCC07E8E-F33A-4AF7-9F60-93E2AA61C75E}.Debug|x64.ActiveCfg = Debug|x64
+		{CCC07E8E-F33A-4AF7-9F60-93E2AA61C75E}.Debug|x64.Build.0 = Debug|x64
+		{CCC07E8E-F33A-4AF7-9F60-93E2AA61C75E}.Release_CpuOnly|x64.ActiveCfg = Release_CpuOnly|x64
+		{CCC07E8E-F33A-4AF7-9F60-93E2AA61C75E}.Release_CpuOnly|x64.Build.0 = Release_CpuOnly|x64
+		{CCC07E8E-F33A-4AF7-9F60-93E2AA61C75E}.Release|x64.ActiveCfg = Release|x64
+		{CCC07E8E-F33A-4AF7-9F60-93E2AA61C75E}.Release|x64.Build.0 = Release|x64
+		{1C6E6C53-1AA7-4B69-913E-B97BB5A872CF}.Debug_CpuOnly|x64.ActiveCfg = Debug_CpuOnly|x64
+		{1C6E6C53-1AA7-4B69-913E-B97BB5A872CF}.Debug_CpuOnly|x64.Build.0 = Debug_CpuOnly|x64
+		{1C6E6C53-1AA7-4B69-913E-B97BB5A872CF}.Debug|x64.ActiveCfg = Debug|x64
+		{1C6E6C53-1AA7-4B69-913E-B97BB5A872CF}.Debug|x64.Build.0 = Debug|x64
+		{1C6E6C53-1AA7-4B69-913E-B97BB5A872CF}.Release_CpuOnly|x64.ActiveCfg = Release_CpuOnly|x64
+		{1C6E6C53-1AA7-4B69-913E-B97BB5A872CF}.Release_CpuOnly|x64.Build.0 = Release_CpuOnly|x64
+		{1C6E6C53-1AA7-4B69-913E-B97BB5A872CF}.Release|x64.ActiveCfg = Release|x64
+		{1C6E6C53-1AA7-4B69-913E-B97BB5A872CF}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -1701,9 +1701,6 @@ Global
 		{E5606ECE-48CA-4464-BB12-09D81D02B9EF} = {DD043083-71A4-409A-AA91-F9C548DCF7EC}
 		{F4CC3AB2-0DB2-4281-929A-2E68E30F0F6E} = {6F19321A-65E7-4829-B00C-3886CD6C6EDE}
 		{CC8DDDCB-D53A-4B30-8596-AEF1C493DB31} = {6F19321A-65E7-4829-B00C-3886CD6C6EDE}
-		{3385EBEA-5F97-4B2B-9F30-0E6D7F91B9CA} = {47755F2E-D674-4175-9E38-8EA053455072}
-		{1C6E6C53-1AA7-4B69-913E-B97BB5A872CF} = {3385EBEA-5F97-4B2B-9F30-0E6D7F91B9CA}
-		{CCC07E8E-F33A-4AF7-9F60-93E2AA61C75E} = {3385EBEA-5F97-4B2B-9F30-0E6D7F91B9CA}
 		{9F999212-AFC5-4EAC-AA78-F7247D46C456} = {6F19321A-65E7-4829-B00C-3886CD6C6EDE}
 		{2230BF3D-4317-4A3F-A743-DDD6160503F8} = {8BE0642A-A3AA-4A64-95D0-C78FB285B2A4}
 		{CC143D08-567D-4DAC-9E14-264749C19039} = {8BE0642A-A3AA-4A64-95D0-C78FB285B2A4}
@@ -1719,5 +1716,8 @@ Global
 		{D293C7C7-B7D7-47CE-A796-45262C16F980} = {19EE975B-232D-49F0-94C7-6F1C6424FB53}
 		{4F534076-39A5-40E2-BF87-64EC464C52B2} = {19EE975B-232D-49F0-94C7-6F1C6424FB53}
 		{31263D7F-F590-475E-B4F0-7DFA4E4FF4B8} = {19EE975B-232D-49F0-94C7-6F1C6424FB53}
+		{05E45AF7-C069-4057-BC16-0A532D068CE4} = {6E565B48-1923-49CE-9787-9BBB9D96F4C5}
+		{CCC07E8E-F33A-4AF7-9F60-93E2AA61C75E} = {05E45AF7-C069-4057-BC16-0A532D068CE4}
+		{1C6E6C53-1AA7-4B69-913E-B97BB5A872CF} = {05E45AF7-C069-4057-BC16-0A532D068CE4}
 	EndGlobalSection
 EndGlobal

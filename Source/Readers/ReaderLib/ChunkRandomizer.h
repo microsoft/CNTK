@@ -14,9 +14,29 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // Represents an interval of chunks closed on the left and opened on the right.
     struct ClosedOpenChunkInterval
     {
+        ClosedOpenChunkInterval() : m_begin{ 0 }, m_end{ 0 } {}
+
+        friend bool operator== (const ClosedOpenChunkInterval &a, const ClosedOpenChunkInterval &b);
+        friend bool operator!= (const ClosedOpenChunkInterval &a, const ClosedOpenChunkInterval &b);
+
+        size_t Size() const
+        {
+            return m_end - m_begin;
+        }
+
         ChunkIdType m_begin;
         ChunkIdType m_end;
     };
+
+    inline bool operator== (const ClosedOpenChunkInterval &a, const ClosedOpenChunkInterval &b)
+    {
+        return a.m_begin == b.m_begin && a.m_end == b.m_end;
+    }
+
+    inline bool operator!= (const ClosedOpenChunkInterval &a, const ClosedOpenChunkInterval &b)
+    {
+        return !(a == b);
+    }
 
     // Information about randomized chunk.
     struct RandomizedChunk

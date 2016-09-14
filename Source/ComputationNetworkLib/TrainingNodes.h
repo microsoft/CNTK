@@ -1606,6 +1606,7 @@ public:
         m_classZeroLabels->Resize(Input(0)->Value());
         m_result->Resize(Input(0)->Value());
         m_temp->Resize(Input(0)->Value());
+        m_sumOfWeights->Resize(Value());
     }
 
     // -sum(left * log(right) + (1-left)*log(1-right)) (optionally * weight)
@@ -1617,7 +1618,7 @@ public:
         const Matrix<ElemType>& classOneProbabilities = Input(1)->ValueFor(fr);
         Matrix<ElemType>& classZeroLabels = *m_classZeroLabels;
 
-        Matrix<ElemType> ones = ConstOnes(classOneLabels.GetNumRows(), classOneLabels.GetNumCols(), classOneLabels.GetDeviceId()).DeepClone();
+        const Matrix<ElemType>& ones = ConstOnes(classOneLabels.GetNumRows(), classOneLabels.GetNumCols(), classOneLabels.GetDeviceId());
 
         // compute the indices for the class 0 indices
         classZeroLabels.AssignDifferenceOf(ones, classOneLabels);
@@ -1642,10 +1643,20 @@ public:
 
         // The error is the negative of the sum of the result
         if (m_inputs.size() == 2)
+        {
             Value().AssignSumOfElements(*m_temp);
+            Value() *= (-1);
+        }
         else
-            Value().AssignInnerProductOf(Input(2)->ValueFor(fr), *m_temp, false);
-        Value() *= (-1);
+        {
+            // sum of weights
+            m_sumOfWeights->AssignSumOfElements(Input(2)->ValueFor(fr));
+            // number of elements
+            ElemType numOfElements = (ElemType)ones.GetNumCols();
+            // sum of weighted log loss
+            Value().AssignInnerProductOf(Input(2)->ValueFor(fr), *m_temp, false).ElementDivideBy(*m_sumOfWeights);
+            Value() *= -numOfElements;
+        }
     }
 
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
@@ -1679,6 +1690,7 @@ public:
         RequestMatrixFromPool(m_classZeroLabels, matrixPool);
         RequestMatrixFromPool(m_result, matrixPool);
         RequestMatrixFromPool(m_temp, matrixPool);
+        RequestMatrixFromPool(m_sumOfWeights, matrixPool);
     }
 
     // release gradient and temp matrices that no longer needed after all the children's gradients are computed.
@@ -1688,6 +1700,7 @@ public:
         ReleaseMatrixToPool(m_classZeroLabels, matrixPool);
         ReleaseMatrixToPool(m_result, matrixPool);
         ReleaseMatrixToPool(m_temp, matrixPool);
+        ReleaseMatrixToPool(m_sumOfWeights, matrixPool);
     }
 
     virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
@@ -1699,6 +1712,7 @@ public:
             node->m_classZeroLabels->SetValue(*m_classZeroLabels);
             node->m_result->SetValue(*m_result);
             node->m_temp->SetValue(*m_temp);
+            node->m_sumOfWeights->SetValue(*m_sumOfWeights);
         }
     }
 
@@ -1706,6 +1720,9 @@ private:
     shared_ptr<Matrix<ElemType>> m_classZeroLabels;
     shared_ptr<Matrix<ElemType>> m_result;
     shared_ptr<Matrix<ElemType>> m_temp;
+
+    // for weighted log-loss
+    shared_ptr<Matrix<ElemType>> m_sumOfWeights;
 };
 
 template class LogisticNode<float>;
@@ -1831,6 +1848,8 @@ public:
         ReleaseMatrixToPool(m_maskOfDropout, matrixPool);
     }
 
+    double GetDropoutRate() const { return m_dropoutRate; }
+
 private:
     double m_dropoutRate;
     unsigned long m_randomSeed;
@@ -1892,15 +1911,15 @@ class BatchNormalizationNode : public ComputationNodeNonLooping<ElemType>, publi
 public:
     BatchNormalizationNode(DEVICEID_TYPE deviceId, const wstring& name) :
         Base(deviceId, name), m_spatial(false), m_normTimeConst(0), m_blendTimeConst(0), m_epsilon(0), m_useCntkEngine(true),
-        m_samplesSeen(0), m_imageLayoutKind(ImageLayoutKind::CHW),
-        m_convertRunningVariancePending(false)
+        m_samplesSeen(0), m_imageLayoutKind(ImageLayoutKind::CHW), m_postBatchNormalization(false), m_swapNormTimeConst(0),
+        m_swapBlendTimeConst(0), m_convertRunningVariancePending(false)
     {
     }
     BatchNormalizationNode(DEVICEID_TYPE deviceId, const wstring& name, bool spatial, double normalizationTimeConstant, double blendTimeConstant,
                            double epsilon, bool useCntkEngine, ImageLayoutKind imageLayoutKind) :
         Base(deviceId, name), m_spatial(spatial), m_normTimeConst(normalizationTimeConstant), m_blendTimeConst(blendTimeConstant),
-        m_epsilon(epsilon), m_useCntkEngine(useCntkEngine), m_imageLayoutKind(imageLayoutKind), m_samplesSeen(0),
-        m_convertRunningVariancePending(false)
+        m_epsilon(epsilon), m_useCntkEngine(useCntkEngine), m_imageLayoutKind(imageLayoutKind), m_samplesSeen(0), m_postBatchNormalization(false),
+        m_swapNormTimeConst(0), m_swapBlendTimeConst(0), m_convertRunningVariancePending(false)
     {
     }
     BatchNormalizationNode(const ScriptableObjects::IConfigRecordPtr configp) :
@@ -1910,6 +1929,9 @@ public:
                                ImageLayoutKindFrom(configp->Get(L"imageLayout")))
     {
         AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
+        m_postBatchNormalization = false;
+        m_swapNormTimeConst = 0;
+        m_swapBlendTimeConst = 0;
     }
 
     void Save(File& fstream) const override
@@ -2026,7 +2048,7 @@ private: // time-constant conversions
     double ComputeExpAvgFactor() const
     {
         // in inference mode, only use long-term mean and do not update running estimates
-        if (!Environment().IsTraining())
+        if (!Environment().IsTraining() && !m_postBatchNormalization)
         {
             if (m_samplesSeen == 0)
                 RuntimeError("%ls: inference mode is used, but nothing has been trained.", NodeName().c_str());
@@ -2058,7 +2080,7 @@ private: // time-constant conversions
     double ComputeBlendFactor() const
     {
         // in inference mode, only use long-term mean and do not update running estimates
-        if (!Environment().IsTraining())
+        if (!Environment().IsTraining() && !m_postBatchNormalization)
         {
             if (m_samplesSeen == 0)
                 RuntimeError("%ls: inference mode is used, but nothing has been trained.", NodeName().c_str());
@@ -2107,7 +2129,7 @@ public:
         // In inference-only mode, m_savedMean and m_saveInvStdDev will not be
         // produced and BackpropToNonLooping() may not be called. In
         // non-inference (training) mode, saved statistics must be produced.
-        bool inferenceOnly = !Environment().IsTraining();
+        bool inferenceOnly = !Environment().IsTraining() && !m_postBatchNormalization;
         m_bnEng->Forward(/*in=*/ sliceInputValue, scale, bias,   // (in)
                          inferenceOnly, expAvgFactor, blendFactor,
                          runMean, runVariance,                   // (in/out) running estimates, updated from the current MB mean/variance
@@ -2169,6 +2191,14 @@ public:
             // BUGBUG: ^^ Also here, this should add the gradient, not overwrite it.
         }
         // No derivatives with respect to running mean and variance.
+    }
+
+    virtual void EndForwardProp() override
+    {
+        if(m_postBatchNormalization)
+            m_samplesSeen += GetMBLayout()->GetActualNumSamples();
+
+        Base::EndForwardProp();
     }
 
     virtual void EndBackprop() override
@@ -2319,6 +2349,22 @@ public:
     double Epsilon() const { return m_epsilon; }
     bool UseCNTKEngine() const { return m_useCntkEngine; }
 
+    void SetPostBatchNormalizationBegin()
+    {
+        m_postBatchNormalization = true;
+        m_samplesSeen = 0;
+        m_swapNormTimeConst = m_normTimeConst;
+        m_swapBlendTimeConst = m_blendTimeConst;
+        m_normTimeConst = -1;
+        m_blendTimeConst = 0;
+    }
+    void SetPostBatchNormalizationEnd()
+    {
+        m_postBatchNormalization = false;
+        m_normTimeConst = m_swapNormTimeConst;
+        m_blendTimeConst = m_swapBlendTimeConst;
+    }
+
 private:
     // Old versioning - do not use. Do not remove until we're sure there are no old models around.
     struct VersionInfo
@@ -2382,6 +2428,11 @@ private:
 
     std::unique_ptr<BatchNormEngine<ElemType>> m_bnEng;
 
+    // post batch normalization process mark
+    bool m_postBatchNormalization;
+
+    double m_swapNormTimeConst;
+    double m_swapBlendTimeConst;
     bool m_convertRunningVariancePending;
 };
 
