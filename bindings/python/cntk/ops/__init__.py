@@ -1057,7 +1057,7 @@ def slice(x, axis, begin_index, end_index, name=''):
 
     Args:
         x: input tensor
-        axis (:class:`cntk.Axis`): axis along which `begin_index` and `end_index` will be used. 
+        axis (`int` or :class:`cntk.Axis`): axis along which `begin_index` and `end_index` will be used. If it is of type `int` it will be used as a static axis.
         begin_index (int): the index along axis where the slicing starts
         end_index (int): the index along axis where the slicing ends        
         name (str, optional): the name of the node in the network
@@ -1070,6 +1070,11 @@ def slice(x, axis, begin_index, end_index, name=''):
     '''
     from cntk.cntk_py import slice
     x = sanitize_input(x)
+    if type(axis) == int:
+        from cntk import Axis
+        # FIXME: use Amit's sanitizer function instead
+        axis = Axis(axis+1)
+
     return slice(x, axis, begin_index, end_index, name).output()     
 
 #TODO: enable when it is exposed in c++
@@ -1096,14 +1101,20 @@ def splice(inputs, axis=0, name=''):
                  [50, 60]]])]        
 
     Args:
-        inputs (list): tuple of input tensors
+        inputs (`list`): tuple of input tensors
         axis (:class:`cntk.Axis`): axis along which the concatenation will be performed
-        name (str, optional): the name of the node in the network
+        name (`str`, optional): the name of the node in the network
 
     Returns:
         :class:`cntk.Function`
     '''
-    raise NotImplementedError("splice is not implemented yet in V2") 
+    from cntk.cntk_py import splice
+    if type(inputs) not in (list, tuple):
+        raise ValueError('inputs has to be an iterable')
+
+    inputs = [sanitize_input(x) for x in inputs]
+
+    return splice(inputs, axis, name).output()     
 
 ################################################################################
 # reduction ops
@@ -1233,6 +1244,10 @@ def input_variable(shape, data_type=None, needs_gradient=False, is_sparse=False,
     if data_type is None:
         data_type = np.float32
     dtype = sanitize_dtype_cntk(data_type)
+
+    if not type(dynamic_axes) == list:
+        dynamic_axes = [dynamic_axes]
+
     # TODO dynamic axis for numpy arrays
     # TODO sparse for numpy arrays
 

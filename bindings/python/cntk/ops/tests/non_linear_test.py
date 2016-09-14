@@ -118,7 +118,7 @@ def test_op_tanh(operand, device_id, precision):
 @pytest.mark.parametrize("shape", [(3,9), (10,20,30)])
 @pytest.mark.parametrize("dropout_rate", [0.0, 0.2, 0.5, 0.8])
 def test_op_dropout(shape, dropout_rate, device_id, precision):
-    from cntk import input_variable, dropout
+    from cntk import dropout
     from cntk.utils import eval, sanitize_dtype_cntk, cntk_device
 
     count = 10
@@ -157,7 +157,7 @@ def test_op_dropout(shape, dropout_rate, device_id, precision):
     
 @pytest.mark.parametrize("dropout_rate", [-0.1, 1.0, 100])
 def test_op_dropout_bad_input(dropout_rate):
-    from cntk import input_variable, dropout
+    from cntk import dropout
     from cntk.utils import eval, sanitize_dtype_cntk, cntk_device
 
     a = I(shape=(1,2), data_type='float', needs_gradient=True, name='a')
