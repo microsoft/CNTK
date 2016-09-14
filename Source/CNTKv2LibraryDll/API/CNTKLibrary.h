@@ -27,6 +27,7 @@
 #include <sstream>
 #include <iosfwd>
 #include<algorithm>
+#include <mutex>
 
 namespace CNTK
 {
@@ -740,8 +741,41 @@ namespace CNTK
         CNTK_API static const std::wstring StaticAxisNamePrefix;
         static const size_t SentinelStaticAxisIndexValueForDynamicAxes = SIZE_MAX;
 
-        // TODO: Make this thread-safe
-        CNTK_API static std::unordered_set<std::wstring> s_allKnownDynamicAxisNames;
+        class UniqueDynamicAxesNames
+        {
+        public:
+            bool RegisterAxisName(const std::wstring& axisName)
+            {
+                std::unique_lock<std::mutex> lock(m_mutex);
+                return m_allKnownDynamicAxisNames.insert(axisName).second;
+            }
+
+            std::wstring NewUniqueDynamicAxisName(const std::wstring& axisNamePrefix)
+            {
+                std::unique_lock<std::mutex> lock(m_mutex);
+                if (m_allKnownDynamicAxisNames.find(axisNamePrefix) == m_allKnownDynamicAxisNames.end())
+                {
+                    m_allKnownDynamicAxisNames.insert(axisNamePrefix);
+                    return axisNamePrefix;
+                }
+
+                for (size_t i = 1;; i++)
+                {
+                    auto newDynamicAxisName = axisNamePrefix + std::to_wstring(i);
+                    if (m_allKnownDynamicAxisNames.find(newDynamicAxisName) == m_allKnownDynamicAxisNames.end())
+                    {
+                        m_allKnownDynamicAxisNames.insert(newDynamicAxisName);
+                        return newDynamicAxisName;
+                    }
+                }
+            }
+
+        private:
+            std::unordered_set<std::wstring> m_allKnownDynamicAxisNames;
+            std::mutex m_mutex;
+        };
+
+        CNTK_API static UniqueDynamicAxesNames s_uniqueDynamicAxisNames;
 
     public:
         CNTK_API static const std::vector<Axis> DefaultInputVariableDynamicAxes;
@@ -1041,6 +1075,14 @@ namespace CNTK
             : m_dataFields(MakeSharedObject<VariableFields>(shape, varType, dataType, ownerFunction, value, needsGradient, dynamicAxes, isSparse, name, uid))
         {}
 
+        Variable Clone() const
+        {
+            Variable clonedVariable;
+            clonedVariable.m_dataFields = m_dataFields->Clone();
+
+            return clonedVariable;
+        }
+
     private:
 
         struct VariableFields final : public std::enable_shared_from_this<VariableFields>
@@ -1050,7 +1092,7 @@ namespace CNTK
             NDShape m_shape;
             VariableKind m_varKind;
             CNTK::DataType m_dataType;
-            Function* m_ownerFunction; // Variable does not keep the Function alive
+            Function* const m_ownerFunction; // Variable does not keep the Function alive
             NDArrayViewPtr m_value;
             bool m_needsGradient;
             std::wstring m_name;
@@ -1072,6 +1114,23 @@ namespace CNTK
                     if (!retVal.second)
                         InvalidArgument("Dynamic axis named %S is specified more than once for Variable object", currentDynamicAxis.Name().c_str());
                 }
+            }
+
+            std::shared_ptr<VariableFields> Clone() const
+            {
+                if (m_ownerFunction != nullptr)
+                    InvalidArgument("Output variables cannot be cloned");
+
+                return MakeSharedObject<VariableFields>(m_shape,
+                                                        m_varKind,
+                                                        m_dataType,
+                                                        m_ownerFunction,
+                                                        (m_value) ? m_value->DeepClone() : nullptr,
+                                                        m_needsGradient,
+                                                        m_dynamicAxes,
+                                                        m_isSparse,
+                                                        m_name,
+                                                        Internal::GenerateUid(m_varKind));
             }
 
         private:
@@ -1440,6 +1499,396 @@ namespace std {
 namespace CNTK
 {
     ///
+    /// A serializable value represents one of:
+    /// a) Boolean
+    /// b) Signed long integer
+    /// c) Single and double precision floating point values
+    /// d) NDShape
+    /// e) Axis
+    /// f) vector<DictionaryValue>
+    /// g) Dictionary
+    /// h) NDArrayView
+    ///
+    /// TODO: We need to have native support for DictionaryValue<vector> and DictionaryValue<NDArrayView>.
+    class DictionaryValue final
+    {
+    public:
+        enum class Type : unsigned int
+        {
+            None,
+            Bool,
+            SizeT,
+            Float,
+            Double,
+            String,
+            NDShape,
+            Axis,
+            Vector,
+            Dictionary,
+            NDArrayView,
+        };
+
+        static const char* TypeName(Type type)
+        {
+            switch (type)
+            {
+            case Type::None:
+                return "None";
+            case Type::Bool:
+                return "Bool";
+            case Type::SizeT:
+                return "SizeT";
+            case Type::Float:
+                return "Float";
+            case Type::Double:
+                return "Double";
+            case Type::String:
+                return "String";
+            case Type::NDShape:
+                return "NDShape";
+            case Type::Axis:
+                return "Axis";
+            case Type::Vector:
+                return "Vector";
+            case Type::Dictionary:
+                return "Dictionary";
+            case Type::NDArrayView:
+                return "NDArrayView";
+            default:
+                LogicError("Unknown DictionaryValue::Type");
+            }
+        }
+
+    public:
+        DictionaryValue() : m_valueType(Type::None)
+        {
+        }
+
+        DictionaryValue(bool value) : m_valueType(GetValueType<bool>())
+        {
+            m_data.m_boolean = value;
+        }
+
+        DictionaryValue(size_t value) : m_valueType(GetValueType<size_t>())
+        {
+            m_data.m_sizeT = value;
+        }
+
+        DictionaryValue(float value) : m_valueType(GetValueType<float>())
+        {
+            m_data.m_float = value;
+        }
+
+        DictionaryValue(double value) : m_valueType(GetValueType<double>())
+        {
+            m_data.m_double = value;
+        }
+
+        DictionaryValue(const wchar_t* value)
+            : DictionaryValue(std::wstring(value))
+        {}
+
+        // Due to SWIG we had to flatten this template for vector<DictionaryValue>
+        DictionaryValue(const std::vector<CNTK::DictionaryValue>& value) : m_valueType(GetValueType<std::vector<CNTK::DictionaryValue>>())
+        {
+            AllocateDataPtr(value);
+        }
+
+        template <typename T>
+        DictionaryValue(const T& value) : m_valueType(GetValueType<T>())
+        {
+            static_assert((std::is_same<T, NDShape>::value ||
+                std::is_same<T, Axis>::value ||
+                std::is_same<T, std::wstring>::value ||
+                std::is_same<T, std::vector<DictionaryValue>>::value ||
+                std::is_same<T, Dictionary>::value ||
+                std::is_same<T, NDArrayView>::value),
+                "Unsupported ValueType");
+
+            AllocateDataPtr(value);
+        }
+
+        DictionaryValue(const DictionaryValue& other) : m_valueType(Type::Bool)
+        {
+            // The m_valueType must have been set to a non-ptr type to prevent an attempt to interpret
+            // the underlying underlying uninitialized value as a ptr and free it.
+            *this = other;
+        }
+
+        DictionaryValue(DictionaryValue&& other) : m_valueType(Type::Bool)
+        {
+            // The m_valueType must have been set to a non-ptr type to prevent an attempt to interpret
+            // the underlying underlying uninitialized value as a ptr and free it.
+            *this = std::move(other);
+        }
+        DictionaryValue& operator=(const DictionaryValue& other)
+        {
+            if (this != &other)
+            {
+                FreeDataPtr();
+
+                m_valueType = other.m_valueType;
+                m_data = other.m_data;
+
+                if (other.m_valueType == Type::String)
+                    AllocateDataPtr(other.Value<std::wstring>());
+                else if (other.m_valueType == Type::NDShape)
+                    AllocateDataPtr(other.Value<NDShape>());
+                else if (other.m_valueType == Type::Axis)
+                    AllocateDataPtr(other.Value<Axis>());
+                else if (other.m_valueType == Type::Vector)
+                    AllocateDataPtr(other.Value<std::vector<DictionaryValue>>());
+                else if (other.m_valueType == Type::Dictionary)
+                    AllocateDataPtr(other.Value<Dictionary>());
+                else if (other.m_valueType == Type::NDArrayView)
+                    AllocateDataPtr(other.Value<NDArrayView>());
+            }
+
+            return *this;
+        }
+
+        DictionaryValue& operator=(DictionaryValue&& other)
+        {
+            FreeDataPtr();
+
+            m_valueType = other.m_valueType;
+            m_data = other.m_data;
+
+            if (other.m_valueType == Type::String ||
+                other.m_valueType == Type::NDShape ||
+                other.m_valueType == Type::Axis ||
+                other.m_valueType == Type::Vector ||
+                other.m_valueType == Type::Dictionary ||
+                other.m_valueType == Type::NDArrayView)
+            {
+                other.m_data.m_ptr = nullptr;
+            }
+
+            other.m_valueType = Type::None;
+
+            return *this;
+        }
+        ~DictionaryValue()
+        {
+            FreeDataPtr();
+        }
+
+        template <typename T, typename std::enable_if<std::is_same<T, bool>::value>::type* = nullptr>
+        const T& Value() const
+        {
+            VerifyType<T>();
+            return m_data.m_boolean;
+        }
+
+        template <typename T, typename std::enable_if<std::is_same<T, bool>::value>::type* = nullptr>
+        T& Value()
+        {
+            VerifyType<T>();
+            return m_data.m_boolean;
+        }
+
+        template <typename T, typename std::enable_if<std::is_same<T, size_t>::value>::type* = nullptr>
+        const T& Value() const
+        {
+            VerifyType<T>();
+            return m_data.m_sizeT;
+        }
+
+        template <typename T, typename std::enable_if<std::is_same<T, size_t>::value>::type* = nullptr>
+        T& Value()
+        {
+            VerifyType<T>();
+            return m_data.m_sizeT;
+        }
+
+        template <typename T, typename std::enable_if<std::is_same<T, float>::value>::type* = nullptr>
+        const T& Value() const
+        {
+            VerifyType<T>();
+            return m_data.m_float;
+        }
+
+        template <typename T, typename std::enable_if<std::is_same<T, float>::value>::type* = nullptr>
+        T& Value()
+        {
+            VerifyType<T>();
+            return m_data.m_float;
+        }
+
+        template <typename T, typename std::enable_if<std::is_same<T, double>::value>::type* = nullptr>
+        const T& Value() const
+        {
+            VerifyType<T>();
+            return m_data.m_double;
+        }
+
+        template <typename T, typename std::enable_if<std::is_same<T, double>::value>::type* = nullptr>
+        T& Value()
+        {
+            VerifyType<T>();
+            return m_data.m_double;
+        }
+
+        template <typename T, typename std::enable_if<std::is_same<T, NDShape>::value ||
+            std::is_same<T, Axis>::value ||
+            std::is_same<T, std::wstring>::value ||
+            std::is_same<T, std::vector<DictionaryValue>>::value ||
+            std::is_same<T, Dictionary>::value ||
+            std::is_same<T, NDArrayView>::value>::type* = nullptr>
+            const T& Value() const
+        {
+            VerifyType<T>();
+            return *(reinterpret_cast<T*>(m_data.m_ptr));
+        }
+
+        template <typename T, typename std::enable_if<std::is_same<T, NDShape>::value ||
+            std::is_same<T, Axis>::value ||
+            std::is_same<T, std::wstring>::value ||
+            std::is_same<T, std::vector<DictionaryValue>>::value ||
+            std::is_same<T, Dictionary>::value ||
+            std::is_same<T, NDArrayView>::value>::type* = nullptr>
+            T& Value()
+        {
+            VerifyType<T>();
+            return *(reinterpret_cast<T*>(m_data.m_ptr));
+        }
+
+        bool HasValue() const
+        {
+            return m_valueType != Type::None;
+        }
+
+        Type ValueType() const
+        {
+            return m_valueType;
+        }
+
+        CNTK_API bool operator==(const DictionaryValue& other) const;
+        CNTK_API bool operator!=(const DictionaryValue& other) const;
+
+        friend CNTK_API std::istream& operator>>(std::istream& stream, DictionaryValue& us);
+        friend CNTK_API std::ostream& operator<<(std::ostream& stream, const DictionaryValue& us);
+
+    private:
+        template <typename T>
+        static Type GetValueType()
+        {
+            static_assert((std::is_same<T, bool>::value ||
+                std::is_same<T, size_t>::value ||
+                std::is_same<T, float>::value ||
+                std::is_same<T, double>::value ||
+                std::is_same<T, std::wstring>::value ||
+                std::is_same<T, NDShape>::value ||
+                std::is_same<T, Axis>::value ||
+                std::is_same<T, std::vector<DictionaryValue>>::value ||
+                std::is_same<T, Dictionary>::value ||
+                std::is_same<T, NDArrayView>::value),
+                "Unsupported ValueType");
+
+            if (std::is_same<T, bool>::value)                                      return Type::Bool;
+            if (std::is_same<T, size_t>::value)                                    return Type::SizeT;
+            if (std::is_same<T, float>::value)                                     return Type::Float;
+            if (std::is_same<T, double>::value)                                    return Type::Double;
+            if (std::is_same<T, std::wstring>::value)                              return Type::String;
+            if (std::is_same<T, NDShape>::value)                                   return Type::NDShape;
+            if (std::is_same<T, Axis>::value)                                      return Type::Axis;
+            if (std::is_same<T, std::vector<DictionaryValue>>::value)              return Type::Vector;
+            if (std::is_same<T, Dictionary>::value)                                return Type::Dictionary;
+            if (std::is_same<T, NDArrayView>::value)                               return Type::NDArrayView;
+        }
+
+        template <typename T>
+        void VerifyType() const
+        {
+            if (GetValueType<T>() != m_valueType)
+                RuntimeError("Reading a DictionaryValue as the wrong type; Reading as type %s when actual type is %s", typeid(T).name(), DictionaryValue::TypeName(m_valueType));
+        }
+
+        template <typename T>
+        CNTK_API void AllocateDataPtr(const T& value);
+
+        template <typename T>
+        CNTK_API void FreePtrAsType();
+
+        CNTK_API void FreeDataPtr()
+        {
+            if (m_valueType == Type::String)
+                FreePtrAsType<std::wstring>();
+            else if (m_valueType == Type::NDShape)
+                FreePtrAsType<NDShape>();
+            else if (m_valueType == Type::Axis)
+                FreePtrAsType<Axis>();
+            else if (m_valueType == Type::Vector)
+                FreePtrAsType<std::vector<DictionaryValue>>();
+            else if (m_valueType == Type::Dictionary)
+                FreePtrAsType<Dictionary>();
+            else if (m_valueType == Type::Dictionary)
+                FreePtrAsType<NDArrayView>();
+        }
+
+        Type m_valueType;
+
+        union ValueData
+        {
+            bool m_boolean;
+            size_t m_sizeT;
+            float m_float;
+            double m_double;
+            void* m_ptr;
+        } m_data;
+
+        const size_t version = 1;
+    };
+
+    ///
+    /// A type denoting a dictionary (keyed by Unicode strings) of serializable values (dynamically typed).
+    ///
+    class Dictionary final
+    {
+        friend inline void AddConfigString(std::wstringstream& s, const DictionaryValue& value, size_t numIndentationSpaces);
+        friend class CompositeMinibatchSource;
+    public:
+        CNTK_API Dictionary();
+        CNTK_API ~Dictionary();
+
+        CNTK_API Dictionary(const Dictionary&);
+        CNTK_API Dictionary& operator=(const Dictionary&);
+
+        CNTK_API Dictionary(Dictionary&& other);
+        CNTK_API Dictionary& operator=(Dictionary&& other);
+
+        CNTK_API DictionaryValue& operator[](const wchar_t* key);
+        DictionaryValue& operator[](const std::wstring& key)
+        {
+            return operator[](key.c_str());
+        }
+
+        CNTK_API DictionaryValue operator[](const wchar_t* key) const;
+
+        DictionaryValue operator[](const std::wstring& key) const
+        {
+            return operator[](key.c_str());
+        }
+
+        CNTK_API bool Contains(const wchar_t* key) const;
+
+        bool Contains(const std::wstring& key) const
+        {
+            return Contains(key.c_str());
+        }
+
+        CNTK_API bool operator==(const Dictionary& other) const;
+        CNTK_API bool operator!=(const Dictionary& other) const;
+
+        friend CNTK_API std::istream& operator>>(std::istream& stream, Dictionary& us);
+        friend CNTK_API std::ostream& operator<<(std::ostream& stream, const Dictionary& us);
+
+    private:
+        std::shared_ptr<std::unordered_map<std::wstring, DictionaryValue>> m_dictionaryData;
+        const size_t version = 1;
+    };
+
+    ///
     /// Encapsulates the internal computation state of a Function computed as part of the 'Forward' call on a Function
     /// that must be passed to a subsequent 'Backward' call on the same Function to backpropagate gradient values
     /// for the same computation backwards through the Function
@@ -1462,6 +1911,29 @@ namespace CNTK
     typedef std::shared_ptr<BackPropState> BackPropStatePtr;
 
     ///
+    /// How are Parameters handled when cloning a Function
+    ///
+    enum class ParameterCloningMethod
+    {
+        ///
+        /// Parameters are shared between the Function being cloned and the new clone
+        ///
+        Share,
+
+        ///
+        /// New learnable Parameters are created and initialied with the current values of the
+        /// corresponding Parameters of the Function being cloned
+        ///
+        Clone,
+
+        ///
+        /// Parameters are cloned and made immutable; i.e. Constants in the new clone 
+        /// (e.g. for use as a fixed feature extractor)
+        ///
+        Freeze,
+    };
+
+    ///
     /// Represents a function (optionally differentiable w.r.t. its inputs)
     /// A Function denotes a symbolic computation with zero or more input arguments and one or more outputs. 
     /// A Function may be primitive or composite (comprised of other function instances whose inputs and outputs are wired together).
@@ -1471,6 +1943,7 @@ namespace CNTK
     class Function : public std::enable_shared_from_this<Function>
     {
         friend class CompositeFunction;
+        friend class Trainer;
 
     public:
         ///
@@ -1513,6 +1986,8 @@ namespace CNTK
         /// Destruct this Function.
         ///
         virtual ~Function() {}
+
+        CNTK_API FunctionPtr Clone(ParameterCloningMethod parameterCloneMethod = ParameterCloningMethod::Clone, const std::unordered_map<Variable, Variable>& replacements = {}) const;
 
     public:
         ///
@@ -1593,6 +2068,11 @@ namespace CNTK
             });
         }
 
+        const Dictionary& Attributes() const
+        {
+            return m_attributes;
+        }
+
         CNTK_API FunctionPtr ReplacePlaceholders(const std::unordered_map<Variable, Variable>& placeholderReplacements);
 
     private:
@@ -1614,9 +2094,18 @@ namespace CNTK
 
         CNTK_API std::shared_ptr<std::vector<Variable>> InputsImpl() const;
 
-        virtual void ReplacePlaceholders(const std::unordered_map<Variable, Variable>& placeholderReplacements,
-                                         std::unordered_set<const Function*>& visitedFunctions,
-                                         std::unordered_set<Variable>& replacedPlaceholders);
+        void ValidateOrUpdateOutputs(std::unordered_map<const Function*, size_t>& visitedFunctions);
+
+        virtual void ReplacePlaceholdersInPlace(const std::unordered_map<Variable, Variable>& placeholderReplacements,
+                                                std::unordered_set<const Function*>& visitedFunctions,
+                                                std::unordered_set<Variable>& replacedPlaceholders);
+
+        static FunctionPtr Clone(const FunctionPtr& clonee,
+                                 ParameterCloningMethod parameterCloneMethod,
+                                 const std::unordered_map<Variable, Variable>& replacements,
+                                 std::unordered_map<const Function*, FunctionPtr>& cloneMap,
+                                 std::unordered_map<Variable, Variable>& leafVariablesCloneMap,
+                                 std::unordered_map<Variable, Variable>& placeholderReplacements);
 
         // Disallow copy and move construction and assignment
         Function(const Function&) = delete; Function(Function&&) = delete; Function& operator=(const Function&) = delete; Function& operator=(Function&&) = delete;
@@ -1625,8 +2114,8 @@ namespace CNTK
         ///
         /// Protected constructor for derived 'Function' types to specify the actual input and output variables for the Function instance.
         ///
-        Function(const std::vector<Variable>& inputs, const std::vector<Variable>& outputs, const FunctionPtr& rootFunction = nullptr, const std::wstring& name = L"")
-            : m_rootFunction(rootFunction), m_name(name)
+        Function(const std::vector<Variable>& inputs, const std::vector<Variable>& outputs, Dictionary&& functionConfig, const FunctionPtr& rootFunction = nullptr, const std::wstring& name = L"")
+            : m_rootFunction(rootFunction), m_name(name), m_attributes(std::move(functionConfig))
         {
             for (auto inputVar : inputs)
             {
@@ -1654,12 +2143,16 @@ namespace CNTK
         }
 
     private:
+        void RestoreFromLegacyModel(const std::wstring& modelFilePath);
+
+    private:
 
         std::vector<Variable> m_inputs;
         std::vector<Variable> m_outputs;
 
         FunctionPtr m_rootFunction; // nullptr for primitive function instances
         std::wstring m_name;
+        Dictionary m_attributes;
     };
 
     ///
@@ -2034,396 +2527,6 @@ namespace CNTK
     CNTK_API void SaveAsLegacyModel(const FunctionPtr& rootFunction, const std::wstring& modelFile);
 
     ///
-    /// A serializable value represents one of:
-    /// a) Boolean
-    /// b) Signed long integer
-    /// c) Single and double precision floating point values
-    /// d) NDShape
-    /// e) Axis
-    /// f) vector<DictionaryValue>
-    /// g) Dictionary
-    /// h) NDArrayView
-    ///
-    /// TODO: We need to have native support for DictionaryValue<vector> and DictionaryValue<NDArrayView>.
-    class DictionaryValue final
-    {
-    public:
-        enum class Type : unsigned int
-        {
-            None,
-            Bool,
-            SizeT,
-            Float,
-            Double,
-            String,
-            NDShape,
-            Axis,
-            Vector,
-            Dictionary,
-            NDArrayView,
-        };
-
-        static const char* TypeName(Type type)
-        {
-            switch (type)
-            {
-            case Type::None:
-                return "None";
-            case Type::Bool:
-                return "Bool";
-            case Type::SizeT:
-                return "SizeT";
-            case Type::Float:
-                return "Float";
-            case Type::Double:
-                return "Double";
-            case Type::String:
-                return "String";
-            case Type::NDShape:
-                return "NDShape";
-            case Type::Axis:
-                return "Axis";
-            case Type::Vector:
-                return "Vector";
-            case Type::Dictionary:
-                return "Dictionary";
-            case Type::NDArrayView:
-                return "NDArrayView";
-            default:
-                LogicError("Unknown DictionaryValue::Type");
-            }
-        }
-
-    public:
-        DictionaryValue() : m_valueType(Type::None)
-        {
-        }
-
-        DictionaryValue(bool value) : m_valueType(GetValueType<bool>())
-        {
-            m_data.m_boolean = value;
-        }
-
-        DictionaryValue(size_t value) : m_valueType(GetValueType<size_t>())
-        {
-            m_data.m_sizeT = value;
-        }
-
-        DictionaryValue(float value) : m_valueType(GetValueType<float>())
-        {
-            m_data.m_float = value;
-        }
-
-        DictionaryValue(double value) : m_valueType(GetValueType<double>())
-        {
-            m_data.m_double = value;
-        }
-
-        DictionaryValue(const wchar_t* value) 
-            : DictionaryValue(std::wstring(value))
-        {}
-
-        // Due to SWIG we had to flatten this template for vector<DictionaryValue>
-        DictionaryValue(const std::vector<CNTK::DictionaryValue>& value) : m_valueType(GetValueType<std::vector<CNTK::DictionaryValue>>())
-        {
-            AllocateDataPtr(value);
-        }
-
-        template <typename T>
-        DictionaryValue(const T& value) : m_valueType(GetValueType<T>())
-        {
-            static_assert((std::is_same<T, NDShape>::value ||
-                          std::is_same<T, Axis>::value ||
-                          std::is_same<T, std::wstring>::value ||
-                          std::is_same<T, std::vector<DictionaryValue>>::value ||
-                          std::is_same<T, Dictionary>::value ||
-                          std::is_same<T, NDArrayView>::value),
-                          "Unsupported ValueType");
-
-            AllocateDataPtr(value);
-        }
-
-        DictionaryValue(const DictionaryValue& other) : m_valueType(Type::Bool)
-        {
-            // The m_valueType must have been set to a non-ptr type to prevent an attempt to interpret
-            // the underlying underlying uninitialized value as a ptr and free it.
-            *this = other;
-        }
-
-        DictionaryValue(DictionaryValue&& other) : m_valueType(Type::Bool)
-        {
-            // The m_valueType must have been set to a non-ptr type to prevent an attempt to interpret
-            // the underlying underlying uninitialized value as a ptr and free it.
-            *this = std::move(other);
-        }
-        DictionaryValue& operator=(const DictionaryValue& other)
-        {
-            if (this != &other)
-            {
-                FreeDataPtr();
-
-                m_valueType = other.m_valueType;
-                m_data = other.m_data;
-
-                if (other.m_valueType == Type::String)
-                    AllocateDataPtr(other.Value<std::wstring>());
-                else if (other.m_valueType == Type::NDShape)
-                    AllocateDataPtr(other.Value<NDShape>());
-                else if (other.m_valueType == Type::Axis)
-                    AllocateDataPtr(other.Value<Axis>());
-                else if (other.m_valueType == Type::Vector)
-                    AllocateDataPtr(other.Value<std::vector<DictionaryValue>>());
-                else if (other.m_valueType == Type::Dictionary)
-                    AllocateDataPtr(other.Value<Dictionary>());
-                else if (other.m_valueType == Type::NDArrayView)
-                    AllocateDataPtr(other.Value<NDArrayView>());
-            }
-
-            return *this;
-        }
-
-        DictionaryValue& operator=(DictionaryValue&& other)
-        {
-            FreeDataPtr();
-
-            m_valueType = other.m_valueType;
-            m_data = other.m_data;
-
-            if (other.m_valueType == Type::String ||
-                other.m_valueType == Type::NDShape ||
-                other.m_valueType == Type::Axis ||
-                other.m_valueType == Type::Vector ||
-                other.m_valueType == Type::Dictionary ||
-                other.m_valueType == Type::NDArrayView)
-            {
-                other.m_data.m_ptr = nullptr;
-            }
-
-            other.m_valueType = Type::None;
-
-            return *this;
-        }
-        ~DictionaryValue()
-        {
-            FreeDataPtr();
-        }
-
-        template <typename T, typename std::enable_if<std::is_same<T, bool>::value>::type* = nullptr>
-        const T& Value() const
-        {
-            VerifyType<T>();
-            return m_data.m_boolean;
-        }
-
-        template <typename T, typename std::enable_if<std::is_same<T, bool>::value>::type* = nullptr>
-        T& Value()
-        {
-            VerifyType<T>();
-            return m_data.m_boolean;
-        }
-
-        template <typename T, typename std::enable_if<std::is_same<T, size_t>::value>::type* = nullptr>
-        const T& Value() const
-        {
-            VerifyType<T>();
-            return m_data.m_sizeT;
-        }
-
-        template <typename T, typename std::enable_if<std::is_same<T, size_t>::value>::type* = nullptr>
-        T& Value()
-        {
-            VerifyType<T>();
-            return m_data.m_sizeT;
-        }
-
-        template <typename T, typename std::enable_if<std::is_same<T, float>::value>::type* = nullptr>
-        const T& Value() const
-        {
-            VerifyType<T>();
-            return m_data.m_float;
-        }
-
-        template <typename T, typename std::enable_if<std::is_same<T, float>::value>::type* = nullptr>
-        T& Value()
-        {
-            VerifyType<T>();
-            return m_data.m_float;
-        }
-
-        template <typename T, typename std::enable_if<std::is_same<T, double>::value>::type* = nullptr>
-        const T& Value() const
-        {
-            VerifyType<T>();
-            return m_data.m_double;
-        }
-
-        template <typename T, typename std::enable_if<std::is_same<T, double>::value>::type* = nullptr>
-        T& Value()
-        {
-            VerifyType<T>();
-            return m_data.m_double;
-        }
-
-        template <typename T, typename std::enable_if<std::is_same<T, NDShape>::value ||
-                                                      std::is_same<T, Axis>::value ||
-            std::is_same<T, std::wstring>::value ||
-            std::is_same<T, std::vector<DictionaryValue>>::value ||
-            std::is_same<T, Dictionary>::value ||
-            std::is_same<T, NDArrayView>::value>::type* = nullptr>
-        const T& Value() const
-        {
-            VerifyType<T>();
-            return *(reinterpret_cast<T*>(m_data.m_ptr));
-        }
-
-        template <typename T, typename std::enable_if<std::is_same<T, NDShape>::value ||
-                                                      std::is_same<T, Axis>::value ||
-                                                      std::is_same<T, std::wstring>::value ||
-                                                      std::is_same<T, std::vector<DictionaryValue>>::value ||
-                                                      std::is_same<T, Dictionary>::value ||
-                                                      std::is_same<T, NDArrayView>::value>::type* = nullptr>
-        T& Value()
-        {
-            VerifyType<T>();
-            return *(reinterpret_cast<T*>(m_data.m_ptr));
-        }
-
-        bool HasValue() const
-        {
-            return m_valueType != Type::None;
-        }
-
-        Type ValueType() const
-        {
-            return m_valueType;
-        }
-
-        CNTK_API bool operator==(const DictionaryValue& other) const;
-        CNTK_API bool operator!=(const DictionaryValue& other) const;
-
-        friend CNTK_API std::istream& operator>>(std::istream& stream, DictionaryValue& us);
-        friend CNTK_API std::ostream& operator<<(std::ostream& stream, const DictionaryValue& us);
-
-    private:
-        template <typename T>
-        static Type GetValueType()
-        {
-            static_assert((std::is_same<T, bool>::value ||
-                          std::is_same<T, size_t>::value ||
-                          std::is_same<T, float>::value ||
-                          std::is_same<T, double>::value ||
-                          std::is_same<T, std::wstring>::value ||
-                          std::is_same<T, NDShape>::value ||
-                          std::is_same<T, Axis>::value ||
-                std::is_same<T, std::vector<DictionaryValue>>::value ||
-                          std::is_same<T, Dictionary>::value ||
-                          std::is_same<T, NDArrayView>::value),
-                          "Unsupported ValueType");
-
-            if (std::is_same<T, bool>::value)                                      return Type::Bool;
-            if (std::is_same<T, size_t>::value)                                    return Type::SizeT;
-            if (std::is_same<T, float>::value)                                     return Type::Float;
-            if (std::is_same<T, double>::value)                                    return Type::Double;
-            if (std::is_same<T, std::wstring>::value)                              return Type::String;
-            if (std::is_same<T, NDShape>::value)                                   return Type::NDShape;
-            if (std::is_same<T, Axis>::value)                                      return Type::Axis;
-            if (std::is_same<T, std::vector<DictionaryValue>>::value)              return Type::Vector;
-            if (std::is_same<T, Dictionary>::value)                                return Type::Dictionary;
-            if (std::is_same<T, NDArrayView>::value)                               return Type::NDArrayView;
-        }
-
-        template <typename T>
-        void VerifyType() const
-        {
-            if (GetValueType<T>() != m_valueType)
-                RuntimeError("Reading a DictionaryValue as the wrong type; Reading as type %s when actual type is %s", typeid(T).name(), DictionaryValue::TypeName(m_valueType));
-        }
-
-        template <typename T>
-        CNTK_API void AllocateDataPtr(const T& value);
-
-        template <typename T>
-        CNTK_API void FreePtrAsType();
-
-        CNTK_API void FreeDataPtr()
-        {
-            if (m_valueType == Type::String)
-                FreePtrAsType<std::wstring>();
-            else if (m_valueType == Type::NDShape)
-                FreePtrAsType<NDShape>();
-            else if (m_valueType == Type::Axis)
-                FreePtrAsType<Axis>();
-            else if (m_valueType == Type::Vector)
-                FreePtrAsType<std::vector<DictionaryValue>>();
-            else if (m_valueType == Type::Dictionary)
-                FreePtrAsType<Dictionary>();
-            else if (m_valueType == Type::Dictionary)
-                FreePtrAsType<NDArrayView>();
-        }
-
-        Type m_valueType;
-
-        union ValueData
-        {
-            bool m_boolean;
-            size_t m_sizeT;
-            float m_float;
-            double m_double;
-            void* m_ptr;
-        } m_data;
-
-        const size_t version = 1;
-    };
-
-    ///
-    /// A type denoting a dictionary (keyed by Unicode strings) of serializable values (dynamically typed).
-    ///
-    class Dictionary final
-    {
-        friend inline void AddConfigString(std::wstringstream& s, const DictionaryValue& value, size_t numIndentationSpaces);
-        friend class CompositeMinibatchSource;
-    public:
-        CNTK_API Dictionary();
-        CNTK_API ~Dictionary();
-
-        CNTK_API Dictionary(const Dictionary&);
-        CNTK_API Dictionary& operator=(const Dictionary&);
-
-        CNTK_API Dictionary(Dictionary&& other);
-        CNTK_API Dictionary& operator=(Dictionary&& other);
-
-        CNTK_API DictionaryValue& operator[](const wchar_t* key);
-        DictionaryValue& operator[](const std::wstring& key)
-        {
-            return operator[](key.c_str());
-        }
-
-        CNTK_API DictionaryValue operator[](const wchar_t* key) const;
-
-        DictionaryValue operator[](const std::wstring& key) const
-        {
-            return operator[](key.c_str());
-        }
-
-        CNTK_API bool Contains(const wchar_t* key) const;
-
-        bool Contains(const std::wstring& key) const
-        {
-            return Contains(key.c_str());
-        }
-
-        CNTK_API bool operator==(const Dictionary& other) const;
-        CNTK_API bool operator!=(const Dictionary& other) const;
-
-        friend CNTK_API std::istream& operator>>(std::istream& stream, Dictionary& us);
-        friend CNTK_API std::ostream& operator<<(std::ostream& stream, const Dictionary& us);
-
-    private:
-        std::shared_ptr<std::unordered_map<std::wstring, DictionaryValue>> m_dictionaryData;
-        const size_t version = 1;
-    };
-
-    ///
     /// Abstraction for learning a subset of parameters of a learnable function using first order gradient values
     /// For e.g momentum, AdaGrad, RMSProp etc. are different types of learners with their own algorithms for
     /// learning parameter values using first order gradients.
@@ -2635,6 +2738,15 @@ namespace CNTK
         /// Returns false if all parameter learners indicate end of learning (through their Update method's return value).
         ///
         CNTK_API bool TrainMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice());
+
+        ///
+        /// Optimize model parameters using the specified 'arguments' minibatch of training samples.
+        /// The variables specified in the 'outputsToFetch' map denote the subset of 'this' Function's output variables that the caller wants to obtain values of. 
+        /// Callers may specify the storage to be used for storing the 'outputs' Values or pass null in which case the implementation allocates the actual storage
+        /// for the 'outputs' for which the ValuePtr mapping was left null by the caller.
+        /// Returns false if all parameter learners indicate end of learning (through their Update method's return value).
+        ///
+        CNTK_API bool TrainMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, std::unordered_map<Variable, ValuePtr>& outputsToFetch, const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice());
 
         ///
         /// Test the model on the specified batch of samples using the evaluation Function specified during construction of the Trainer

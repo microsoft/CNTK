@@ -135,20 +135,17 @@ namespace CNTK
         return AsTensorViewShape(AsTensorShape(viewShape));
     }
 
-    inline std::string AsString(const NDShape& shape)
+    inline std::wstring AsStringForErrorReporting(const NDShape& shape)
     {
-        std::string shapeString = "[";
-        bool notIsFirst = false;
-        for (size_t i = 0; i < shape.Rank(); ++i)
+        bool invertShape = Internal::IsPythonTensorShapeReorderingEnabled();
+        auto displayShape = shape;
+        if (invertShape)
         {
-            if (notIsFirst)
-                shapeString += ", ";
-
-            shapeString += std::to_string(shape[i]);
-            notIsFirst = true;
+            for (size_t i = 0, j = shape.Rank() - 1; i < shape.Rank(); ++i, --j)
+                displayShape[i] = shape[j];
         }
 
-        return shapeString + "]";
+        return displayShape.AsString();
     }
 
     inline std::pair<size_t, size_t> GetMatrixDimensions(const NDShape& viewShape)
@@ -359,24 +356,14 @@ namespace CNTK
         if (sourceDataType == targetDataType)
             LogicError("CloneAsDataType: Source and target DataTypes are same");
 
-        if ((targetDataType != DataType::Float) && (targetDataType != DataType::Double))
-            LogicError("CloneAsDataType: Only Float and Double target DataTypes are supported");
+        if (targetDataType != DataType::Double)
+            LogicError("CloneAsDataType: Only Double target DataType is supported");
 
-        NDArrayViewPtr newConstantValue;
         auto sourceShape = source->Shape();
         auto sourceSize = sourceShape.TotalSize();
-        if (sourceDataType == DataType::Float)
-        {
-            // Cast to double
-            double* castValue = Copy<float, double>(source->DataBuffer<float>(), sourceSize);
-            newConstantValue = MakeSharedObject<NDArrayView>(sourceShape, castValue, sourceSize, DeviceDescriptor::CPUDevice(), readOnly);
-        }
-        else
-        {
-            float* castValue = Copy<double, float>(source->DataBuffer<double>(), sourceSize);
-            newConstantValue = MakeSharedObject<NDArrayView>(sourceShape, castValue, sourceSize, DeviceDescriptor::CPUDevice(), readOnly);
-        }
 
-        return newConstantValue;
+        // Cast to double
+        double* castValue = Copy<float, double>(source->DataBuffer<float>(), sourceSize);
+        return MakeSharedObject<NDArrayView>(sourceShape, castValue, sourceSize, DeviceDescriptor::CPUDevice(), readOnly);
     }
 }

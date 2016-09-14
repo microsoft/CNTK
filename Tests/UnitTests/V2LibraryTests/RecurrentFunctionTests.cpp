@@ -16,7 +16,7 @@ FunctionPtr LSTMNet(Variable features, size_t cellDim, size_t hiddenDim, size_t 
     FunctionPtr classifierRoot = features;
     auto pastValueRecurrenceHook = [](const Variable& x) { return PastValue(x); };
     for (size_t i = 0; i < numLSTMLayers; ++i) {
-        classifierRoot = LSTMPComponentWithSelfStabilization<ElementType>(classifierRoot, hiddenDim, cellDim, pastValueRecurrenceHook,  pastValueRecurrenceHook, device).first;
+        classifierRoot = LSTMPComponentWithSelfStabilization<ElementType>(classifierRoot, { hiddenDim }, { cellDim }, pastValueRecurrenceHook, pastValueRecurrenceHook, device).first;
     }
 
     auto W = Parameter(NDArrayView::RandomUniform<ElementType>({ numOutputClasses, hiddenDim }, -0.5, 0.5, seed++, device));

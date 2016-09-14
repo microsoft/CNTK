@@ -15,6 +15,17 @@ namespace CNTK
             static std::atomic<unsigned long long> s_nextUniqueId(0);
             return s_nextUniqueId++;
         }
+
+        std::atomic<bool> s_enablePythonTensorShapeReordering(false);
+        void EnablePythonTensorShapeReordering()
+        {
+            s_enablePythonTensorShapeReordering.store(true);
+        }
+
+        bool IsPythonTensorShapeReorderingEnabled()
+        {
+            return s_enablePythonTensorShapeReordering.load();
+        }
     }
 
     /*static*/ std::atomic<bool> DeviceDescriptor::s_defaultDeviceFrozen(false);
@@ -41,7 +52,7 @@ namespace CNTK
 
     /*static*/ const std::wstring Axis::StaticAxisNamePrefix = L"staticAxis_";
 
-    /*static*/ std::unordered_set<std::wstring> Axis::s_allKnownDynamicAxisNames;
+    /*static*/ Axis::UniqueDynamicAxesNames Axis::s_uniqueDynamicAxisNames;
 
     /*static*/ const std::vector<Axis> Axis::DefaultInputVariableDynamicAxes = { Axis::DefaultDynamicAxis(), Axis::DefaultBatchAxis() };
 
@@ -59,19 +70,11 @@ namespace CNTK
 
     /*static*/ Axis Axis::NewUniqueDynamicAxis(const std::wstring& axisNamePrefix, bool isOrderedDynamicAxis /*= true*/)
     {
-        if (s_allKnownDynamicAxisNames.find(axisNamePrefix) == s_allKnownDynamicAxisNames.end())
-            return Axis(axisNamePrefix, isOrderedDynamicAxis);
-
-        for (size_t i = 1;; i++)
-        {
-            auto newDynamicAxisName = axisNamePrefix + std::to_wstring(i);
-            if (s_allKnownDynamicAxisNames.find(newDynamicAxisName) == s_allKnownDynamicAxisNames.end())
-                return Axis(newDynamicAxisName, isOrderedDynamicAxis);
-        }
+        return Axis(s_uniqueDynamicAxisNames.NewUniqueDynamicAxisName(axisNamePrefix), isOrderedDynamicAxis);
     }
 
     void Axis::RegisterAxisName(const std::wstring& axisName)
     {
-        s_allKnownDynamicAxisNames.insert(axisName);
+        s_uniqueDynamicAxisNames.RegisterAxisName(axisName);
     }
 }
