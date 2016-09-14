@@ -8,8 +8,17 @@
 
 namespace CNTK
 {
+    namespace Internal
+    {
+        size_t NewUniqueId()
+        {
+            static std::atomic<unsigned long long> s_nextUniqueId(0);
+            return s_nextUniqueId++;
+        }
+    }
+
     /*static*/ std::atomic<bool> DeviceDescriptor::s_defaultDeviceFrozen(false);
-    /*static*/ std::shared_ptr<DeviceDescriptor> DeviceDescriptor::s_defaultDevice(new DeviceDescriptor(DeviceDescriptor::GPUDevice(0)));
+    /*static*/ std::shared_ptr<DeviceDescriptor> DeviceDescriptor::s_defaultDevice(new DeviceDescriptor(DeviceDescriptor::CPUDevice()));
 
     /*static*/ DeviceDescriptor DeviceDescriptor::DefaultDevice()
     {
@@ -33,6 +42,8 @@ namespace CNTK
     /*static*/ const std::wstring Axis::StaticAxisNamePrefix = L"staticAxis_";
 
     /*static*/ std::unordered_set<std::wstring> Axis::s_allKnownDynamicAxisNames;
+
+    /*static*/ const std::vector<Axis> Axis::DefaultInputVariableDynamicAxes = { Axis::DefaultDynamicAxis(), Axis::DefaultBatchAxis() };
 
     /*static*/ const Axis& Axis::DefaultDynamicAxis()
     {

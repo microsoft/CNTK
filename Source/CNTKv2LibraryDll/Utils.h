@@ -71,16 +71,6 @@ namespace CNTK
             return DeviceDescriptor::GPUDevice(deviceId);
     }
 
-    inline const char* DataTypeName(DataType dataType)
-    {
-        if (dataType == DataType::Float)
-            return "Float";
-        else if (dataType == DataType::Double)
-            return "Double";
-        else
-            LogicError("Unknown DataType");
-    }
-
     inline NDShape AsNDShape(const Microsoft::MSR::CNTK::TensorShape& tensorShape)
     {
         // The TensorShape should be flattenable to 1D
@@ -122,14 +112,14 @@ namespace CNTK
     inline Microsoft::MSR::CNTK::TensorShape AsTensorShape(const NDShape& viewShape)
     {
         const size_t maxNumAxesSupportedByTensorView = 12;
-        if (viewShape.NumAxes() > maxNumAxesSupportedByTensorView)
+        if (viewShape.Rank() > maxNumAxesSupportedByTensorView)
             LogicError("The number of requested axes exceeds the currently supported limit");
 
         // TensorShape is required to be at least 1D
         size_t minRankSize = 1;
-        Microsoft::MSR::CNTK::SmallVector<size_t> tensorViewShape(std::max<size_t>(minRankSize, viewShape.NumAxes()));
+        Microsoft::MSR::CNTK::SmallVector<size_t> tensorViewShape(std::max<size_t>(minRankSize, viewShape.Rank()));
         for (size_t i = 0; i < tensorViewShape.size(); ++i)
-            tensorViewShape[i] = (i < viewShape.NumAxes()) ? viewShape[i] : 1;
+            tensorViewShape[i] = (i < viewShape.Rank()) ? viewShape[i] : 1;
 
         return tensorViewShape;
     }
@@ -149,7 +139,7 @@ namespace CNTK
     {
         std::string shapeString = "[";
         bool notIsFirst = false;
-        for (size_t i = 0; i < shape.NumAxes(); ++i)
+        for (size_t i = 0; i < shape.Rank(); ++i)
         {
             if (notIsFirst)
                 shapeString += ", ";
@@ -167,8 +157,8 @@ namespace CNTK
         if (viewShape.HasInferredDimension())
             InvalidArgument("Cannot create an NDArrayView using a view shape that has unknown dimensions for any of it's axes!");
 
-        size_t matrixRowSize = (viewShape.NumAxes() > 0) ? viewShape[0] : 1;
-        size_t matrixColSize = (viewShape.NumAxes() > 0) ? viewShape.SubShape(1).TotalSize() : 1;
+        size_t matrixRowSize = (viewShape.Rank() > 0) ? viewShape[0] : 1;
+        size_t matrixColSize = (viewShape.Rank() > 0) ? viewShape.SubShape(1).TotalSize() : 1;
 
         return{ matrixRowSize, matrixColSize };
     }
@@ -332,30 +322,61 @@ namespace CNTK
 
     inline std::pair<NDShape, NDShape> GetConvolutionOutputMapCountAndKernelShape(const NDShape& convolutionMapShape, const NDShape& operandShape)
     {
-        auto outputMapCount = convolutionMapShape.SubShape(0, convolutionMapShape.NumAxes() - operandShape.NumAxes());
-        NDShape paddedOutputMapCount(operandShape.NumAxes(), 1);
-        for (size_t i = 0; i < outputMapCount.NumAxes(); ++i)
-            paddedOutputMapCount[paddedOutputMapCount.NumAxes() - 1 - i] = outputMapCount[outputMapCount.NumAxes() - 1 - i];
-        //for (size_t i = 0; i < outputMapCount.NumAxes(); ++i)
+        auto outputMapCount = convolutionMapShape.SubShape(0, convolutionMapShape.Rank() - operandShape.Rank());
+        NDShape paddedOutputMapCount(operandShape.Rank(), 1);
+        for (size_t i = 0; i < outputMapCount.Rank(); ++i)
+            paddedOutputMapCount[paddedOutputMapCount.Rank() - 1 - i] = outputMapCount[outputMapCount.Rank() - 1 - i];
+        //for (size_t i = 0; i < outputMapCount.Rank(); ++i)
         //    paddedOutputMapCount[i] = outputMapCount[i];
 
-        NDShape kernelShape = convolutionMapShape.SubShape(outputMapCount.NumAxes());
+        NDShape kernelShape = convolutionMapShape.SubShape(outputMapCount.Rank());
 
         return{ paddedOutputMapCount, kernelShape };
-    }
-
-    inline CNTK::Constant ScalarConstant(CNTK::DataType dataType, float value, const CNTK::DeviceDescriptor& device = CNTK::DeviceDescriptor::CPUDevice())
-    {
-        if (dataType == CNTK::DataType::Float)
-            return CNTK::Constant({}, value, device);
-        else if (dataType == CNTK::DataType::Double)
-            return CNTK::Constant({}, (double)value, device);
-        else
-            LogicError("CNTK::ScalarConstant: Unsupported DataType %s", DataTypeName(dataType));
     }
 
     inline double MomentumPerMB(double momentumPerSample, size_t minibatchSize)
     {
         return std::pow(momentumPerSample, minibatchSize);
+    }
+
+    template <typename SourceElementType, typename TargetElementType>
+    inline TargetElementType* Copy(const SourceElementType* src, size_t srcSize)
+    {
+        // Cast to double
+        TargetElementType* castValue = new TargetElementType[srcSize];
+        for (size_t i = 0; i < srcSize; ++i)
+            castValue[i] = (TargetElementType)src[i];
+
+        return castValue;
+    }
+
+    inline NDArrayViewPtr CloneAsDataType(const NDArrayViewPtr& source, DataType targetDataType, bool readOnly)
+    {
+        if (source->Device() != DeviceDescriptor::CPUDevice())
+            LogicError("CloneAsDataType currently does not support non-CPU source NDArrayView objects");
+
+        auto sourceDataType = source->GetDataType();
+        if (sourceDataType == targetDataType)
+            LogicError("CloneAsDataType: Source and target DataTypes are same");
+
+        if ((targetDataType != DataType::Float) && (targetDataType != DataType::Double))
+            LogicError("CloneAsDataType: Only Float and Double target DataTypes are supported");
+
+        NDArrayViewPtr newConstantValue;
+        auto sourceShape = source->Shape();
+        auto sourceSize = sourceShape.TotalSize();
+        if (sourceDataType == DataType::Float)
+        {
+            // Cast to double
+            double* castValue = Copy<float, double>(source->DataBuffer<float>(), sourceSize);
+            newConstantValue = MakeSharedObject<NDArrayView>(sourceShape, castValue, sourceSize, DeviceDescriptor::CPUDevice(), readOnly);
+        }
+        else
+        {
+            float* castValue = Copy<double, float>(source->DataBuffer<double>(), sourceSize);
+            newConstantValue = MakeSharedObject<NDArrayView>(sourceShape, castValue, sourceSize, DeviceDescriptor::CPUDevice(), readOnly);
+        }
+
+        return newConstantValue;
     }
 }

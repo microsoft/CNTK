@@ -185,7 +185,7 @@ public:
     {
         // move the target matrix to the target device, since below it is accessed as slices which cannot move
         // TODO: change below accesses to TensorView, then this is no longer needed.
-        Input(0)->Gradient().TransferToDeviceIfNotThere(m_deviceId, /*isBeingMoved=*/ true);
+        InputRef(0).Gradient().TransferToDeviceIfNotThere(m_deviceId, /*isBeingMoved=*/ true);
 
         assert(inputIndex == 0);
         inputIndex;
@@ -225,8 +225,8 @@ public:
                     {
                         Matrix<ElemType> frm = GradientFor(fr.Sequence(id));
                         // TODO: use delayed FrameRange here as well
-                        // Matrix<ElemType> to = Input(0)->GradientFor(FrameRange(m_pMBLayout, t_delayed).Sequence(id));
-                        Matrix<ElemType> to = Input(0)->GradientFor(frDelayed.Sequence(id));
+                        // Matrix<ElemType> to = InputRef(0).GradientFor(FrameRange(m_pMBLayout, t_delayed).Sequence(id));
+                        Matrix<ElemType> to = InputRef(0).GradientFor(frDelayed.Sequence(id));
                         to += frm;
                     }
                 }
@@ -235,8 +235,8 @@ public:
             {
                 Matrix<ElemType> frm = GradientFor(fr);
                 // TODO: use something like fr.WithDelay(t) instead, instead of recreating FrameRanges
-                // Matrix<ElemType> to = Input(0)->GradientFor(FrameRange(m_pMBLayout, t_delayed));
-                Matrix<ElemType> to = Input(0)->GradientFor(frDelayed);
+                // Matrix<ElemType> to = InputRef(0).GradientFor(FrameRange(m_pMBLayout, t_delayed));
+                Matrix<ElemType> to = InputRef(0).GradientFor(frDelayed);
                 to += frm;
             }
         }
@@ -255,7 +255,7 @@ public:
         //  - we don't need to keep anything if all sequences are closed (sentence end)
         //    This condition includes full-sequence mode.
         // TODO: Can we optimize this and only copy if there is a sequence spanning across the end of the MB? And add a check to BeginForwardProp() to make sure we got one if there is a boundary at the start?
-        m_delayedValue.SetValue(Input(0)->Value());
+        m_delayedValue.SetValue(InputRef(0).Value());
         if (!m_delayedActivationMBLayout)
             m_delayedActivationMBLayout = make_shared<MBLayout>();
         m_delayedActivationMBLayout->CopyFrom(m_pMBLayout);
@@ -318,8 +318,8 @@ public:
                     else if (t_delayed >= T)
                         inp = DataWithMBLayoutFor(m_delayedValue, FrameRange(m_delayedActivationMBLayout, t_delayed - T).Sequence(id), m_delayedActivationMBLayout); // delay reaches in previous minibatch
                     else
-                        inp = Input(0)->ValueFor(frDelayed.Sequence(id));
-                    // inp = Input(0)->ValueFor(FrameRange(m_pMBLayout, t_delayed).Sequence(id));
+                        inp = InputRef(0).ValueFor(frDelayed.Sequence(id));
+                    // inp = InputRef(0).ValueFor(FrameRange(m_pMBLayout, t_delayed).Sequence(id));
 
                     out.AssignValuesOf(inp);
                 }
@@ -336,7 +336,7 @@ public:
                     if (IsPartOfLoop())
                         InvalidArgument("The delay node tries to access past values that are out of bound, possibly because there is no sentence start marker in the MBLayout.");
                     else //use first frame
-                        inp = Input(0)->ValueFor(FrameRange(m_pMBLayout, 0));
+                        inp = InputRef(0).ValueFor(FrameRange(m_pMBLayout, 0));
                 }
                 else
                     inp = DataWithMBLayoutFor(m_delayedValue, FrameRange(m_delayedActivationMBLayout, t_delayed + T_delayedActivation), m_delayedActivationMBLayout);
@@ -349,14 +349,14 @@ public:
                     if (IsPartOfLoop())
                         InvalidArgument("The delay node tries to access future values that are out of bound, possibly because there is no sentence end marker in the MBLayout.");
                     else //use last frame
-                        inp = Input(0)->ValueFor(FrameRange(m_pMBLayout, T - 1));
+                        inp = InputRef(0).ValueFor(FrameRange(m_pMBLayout, T - 1));
                 }
                 else
                     inp = DataWithMBLayoutFor(m_delayedValue, FrameRange(m_delayedActivationMBLayout, t_delayed - T), m_delayedActivationMBLayout);
             }
             else
-                inp = Input(0)->ValueFor(frDelayed);
-            // inp = Input(0)->ValueFor(FrameRange(m_pMBLayout, t_delayed));
+                inp = InputRef(0).ValueFor(frDelayed);
+            // inp = InputRef(0).ValueFor(FrameRange(m_pMBLayout, t_delayed));
 
             out.AssignValuesOf(inp);
         }
@@ -698,7 +698,7 @@ private:
     {
         // get the slice bounds for the given FrameRange
         outShape = GetTensorShape(rank); // describes the full tensor including sequence and time dimensions
-        inShape = Input(0)->GetTensorShape(rank);
+        inShape = InputRef(0).GetTensorShape(rank);
 
         // determine the logical in and out slices
         // This may now have bounds that fall outside, which we need to split off next.
@@ -979,7 +979,7 @@ public:
             }
             if (inSliceMain.second[m_shiftDim] > inSliceMain.first[m_shiftDim])
             {
-                auto from = DataTensorFor(Input(0)->Value(), inShape, inSliceMain);
+                auto from = DataTensorFor(InputRef(0).Value(), inShape, inSliceMain);
                 auto to = DataTensorFor(Value(), outShape, outSliceMain);
                 to.AssignCopyOf(from);
             }
@@ -1022,8 +1022,8 @@ public:
 
             if (inSliceMain.second[m_shiftDim] > inSliceMain.first[m_shiftDim])
             {
-                Input(0)->MaskMissingGradientColumnsToZero(fr); // zero out gaps, which will leak (note: we really only need to zero out gaps close enough to boundaries)
-                auto from = DataTensorFor(Input(0)->Gradient(), inShape, inSliceMain);
+                InputRef(0).MaskMissingGradientColumnsToZero(fr); // zero out gaps, which will leak (note: we really only need to zero out gaps close enough to boundaries)
+                auto from = DataTensorFor(InputRef(0).Gradient(), inShape, inSliceMain);
                 auto to = DataTensorFor(Gradient(), outShape, outSliceMain);
                 from.AddCopyOf(to);
 

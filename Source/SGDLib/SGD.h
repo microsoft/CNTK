@@ -292,6 +292,8 @@ protected:
     bool m_seqGammarCalcUsesMBR;
 
     bool m_useTwoPassTraining;
+    
+    bool m_disableWkInBatchNormal;
 };
 
 template <class ElemType>

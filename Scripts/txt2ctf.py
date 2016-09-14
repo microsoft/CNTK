@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# This script takes a list of dictionary files and a plain text file and converts this text input file to CNTK text format.
+# This script takes a list of dictionary files and a plain text utf-8 file and converts this text input file to CNTK text format.
 #
 # The input text file must contain N streams per line (N TAB-separated "columns") and should be accompanied by N dictionary files.
 # The input text file must be in the following form:
@@ -72,21 +72,23 @@ if __name__ == "__main__":
     # creating inputs
     inputs = [sys.stdin]
     if len(args.input) != 0:
-        inputs = [open(i) for i in args.input]
+        inputs = [open(i, encoding="utf-8") for i in args.input]
 
     # creating output
     output = sys.stdout
     if args.output != "":
         output = open(args.output, "w")
 
-    convert([open(d) for d in args.map], inputs, output, args.annotated == "True")
+    convert([open(d, encoding="utf-8") for d in args.map], inputs, output, args.annotated == "True")
 
 
 #####################################################################################################
 # Tests
 #####################################################################################################
-
-import StringIO
+try:
+    import StringIO
+except ImportError:
+    from io import StringIO
 import pytest
 
 def test_simpleSanityCheck():

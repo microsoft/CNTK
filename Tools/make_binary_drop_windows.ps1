@@ -84,17 +84,17 @@ If (Test-Path $baseDropPath\cntk\CNTKLibrary-2.0.dll)
 {
 	Remove-Item $baseDropPath\cntk\CNTKLibrary-2.0.dll
 }
-If (Test-Path $baseDropPath\cntk\CPPEvalClient.exe)
+If (Test-Path $baseDropPath\cntk\CPPEvalClientTest.exe)
 {
-	Remove-Item $baseDropPath\cntk\CPPEvalClient.exe
+	Remove-Item $baseDropPath\cntk\CPPEvalClientTest.exe
 }
-If (Test-Path $baseDropPath\cntk\CSEvalClient.exe)
+If (Test-Path $baseDropPath\cntk\CSEvalClientTest.exe)
 {
-	Remove-Item $baseDropPath\cntk\CSEvalClient.exe
+	Remove-Item $baseDropPath\cntk\CSEvalClientTest.exe
 }
-If (Test-Path $baseDropPath\cntk\CSEvalClient.exe.config)
+If (Test-Path $baseDropPath\cntk\CSEvalClientTest.exe.config)
 {
-	Remove-Item $baseDropPath\cntk\CSEvalClient.exe.config
+	Remove-Item $baseDropPath\cntk\CSEvalClientTest.exe.config
 }
 If (Test-Path $baseDropPath\cntk\CommandEval.exe)
 {
@@ -111,15 +111,6 @@ Copy-Item $includeFile -Destination $baseIncludePath
 # Copy Examples
 Write-Verbose "Copying Examples ..."
 Copy-Item Examples -Recurse -Destination $baseDropPath\Examples
-# The following directories are only used by cntk.sln and should be included in the binary drop. Remove them.
-if (Test-Path $baseDropPath\Examples\Evaluation\CPPEvalClient-CntkSln)
-{
-    Remove-Item $baseDropPath\Examples\Evaluation\CPPEvalClient-CntkSln -Recurse
-}
-if (Test-Path $baseDropPath\Examples\Evaluation\CSEvalClient-CntkSln)
-{
-    Remove-Item $baseDropPath\Examples\Evaluation\CSEvalClient-CntkSln -Recurse
-}
 
 # Copy Scripts
 Write-Verbose "Copying Scripts ..."

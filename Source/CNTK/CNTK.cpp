@@ -154,7 +154,7 @@ static void DisableLegacyUsage(const ConfigParameters& TopLevelConfig, const Con
 
 // When running in parallel with MPI, only commands in 'commandstoRunOnAllRanks' should
 // be run in parallel across multiple ranks. Others should only run on rank 0
-const std::set<std::string> commandstoRunOnAllRanks = { "train", "trainRNN", "adapt", "test", "eval", "cv", "devtest" };
+const std::set<std::string> commandstoRunOnAllRanks = { "train", "trainRNN", "adapt", "test", "eval", "cv", "devtest", "pbn" };
 
 // process the command
 template <typename ElemType>
@@ -242,6 +242,10 @@ void DoCommands(const ConfigParameters& config, const shared_ptr<MPIWrapper>& mp
                     DoTrain<ConfigParameters, ElemType>(commandParams);
                     LOGPRINTF(stderr, "CNTKCommandTrainEnd: %s\n", command[i].c_str());
                     fullEpochsOffset += GetMaxEpochs(commandParams);
+                }
+                else if (thisAction == "pbn")
+                {
+                    DoEvalBN<ElemType>(commandParams);
                 }
                 else if (thisAction == "adapt")
                 {

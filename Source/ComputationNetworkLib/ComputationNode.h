@@ -1103,6 +1103,13 @@ protected:
         return DownCast(m_inputs[inputIndex]);
     }
 
+    // Fast downcast without runtime type check of dynamic_pointer_cast.
+    // Meant to be used in Forward and BackPropTo, assuming that Validate() has already used Input() which validated the correct types.
+    inline ComputationNode<ElemType>& InputRef(const size_t inputIndex) const
+    {
+        return static_cast<ComputationNode<ElemType>&>(*m_inputs[inputIndex].get());
+    }
+
     void /*ComputationNodeBase::*/ SetInput(const size_t childIndex, const ComputationNodeBasePtr& inode) override
     {
         ClearConfigMemberCache();
@@ -1878,6 +1885,10 @@ public:
     virtual void DumpNodeInfo(const bool /*printValues*/, const bool /*printMetadata*/, File& fstream) const override {}
     virtual std::set<std::pair<const MatrixBase*, std::wstring>> GetMatrixInfo() const override { NOT_IMPLEMENTED; }
 
+    virtual void ForwardProp(const FrameRange&, const ComputationNodeBasePtr, const ComputationNodeBasePtr) { NOT_IMPLEMENTED; }
+
+    std::vector<ComputationNodeBasePtr> GetNestedNodes() { return m_nestedNodes; }
+
 protected: public:                                     // needed in ComputationNetwork::FindInRecurrentLoops(), which really should be part of SEQTraversalFlowControlNode
     std::vector<ComputationNodeBasePtr> m_nestedNodes; // nodes tucked away in this node, in evaluation order
 };
@@ -1995,6 +2006,7 @@ protected:                                                                      
     using Base::HasMBLayout;                                                                                                                             \
     using Base::InferMBLayoutFromInputsForStandardCase;                                                                                                  \
     using Base::Input;                                                                                                                                   \
+    using Base::InputRef;                                                                                                                                \
     using Base::InputUsedInComputingInputNodesGradients;                                                                                                 \
     using Base::InvalidateMissingGradientColumns;                                                                                                        \
     using Base::InvalidateMissingValueColumns;                                                                                                           \
