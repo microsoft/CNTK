@@ -270,7 +270,10 @@ Inferred = 0  # denotes a dimension that is to be inferred
 Sequential (arrayOfFunctions) =
 {
     fs = _AsArray (arrayOfFunctions)  # make sure it works with a single function that is not an array
-    apply = if Length(fs) == 0 then Identity else fs[0] >> Sequential(fs << 1)
+    Apply (x, N) = if N == 0 then x else fs[N-1](Apply (x, N-1))  # we do that recursively
+    apply (x) = Apply (x, Length (fs))
+    # TODO: change to this once '>>' has been changed to evaluate in the same order (right first)
+    #apply = if Length(fs) == 0 then Identity else fs[0] >> Sequential(fs << 1)
 }.apply
 # Parallel -- composite that applies several functions to the same input and combines the result
 # TODO: remove combineFunction; instead create an array of values
