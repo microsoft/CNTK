@@ -22,6 +22,7 @@ def combine(operands, name=''):
     Args:
         operands (`list`): list of functions or their variables to combine
         name (`str`, optional): the name of the node in the network            
+
     Returns:
         :class:`cntk.Function`
     '''
