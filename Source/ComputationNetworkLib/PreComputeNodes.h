@@ -252,8 +252,8 @@ public:
         ElemType beta  = (ElemType)m_numSamples / totalNumSamples;
 
         size_t rank = DetermineElementwiseTensorRank();
-        auto mean  =             ValueTensorRefFor(rank, FrameRange()); // mean is formed directly in our m_value
-        auto input = InputRef(0).ValueTensorRefFor(rank, fr);
+        auto mean  =             SetValueView(rank, FrameRange()); // mean is formed directly in our m_value
+        auto input = InputRef(0).SetValueView(rank, fr);
 
         mean.DoCopyOf(beta, input, alpha);
         // Note: We leverage that TensorView allows "broadcasting" the output,
@@ -333,10 +333,10 @@ public:
         ElemType beta  = (ElemType)m_numSamples / totalNumSamples;
 
         size_t rank = DetermineElementwiseTensorRank();
-        auto input    = InputRef(0).ValueTensorRefFor(        rank, fr);
-        auto mean     =            DataTensorFor(m_mean, rank, FrameRange());
-        auto temp     =            DataTensorFor(m_temp, rank, FrameRange());
-        auto var      =            DataTensorFor(m_var,  rank, FrameRange());
+        auto input = InputRef(0).SetValueView(               rank, fr);
+        auto mean  =             DataTensorFor(m_mean, rank, FrameRange());
+        auto temp =              DataTensorFor(m_temp, rank, FrameRange());
+        auto var   =             DataTensorFor(m_var,  rank, FrameRange());
 
         // preserve the old mean value for the next step
         temp.AssignCopyOf(mean);
@@ -406,10 +406,10 @@ public:
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
         size_t rank = DetermineElementwiseTensorRank();
-        auto output    =             ValueTensorRefFor(rank, fr);
-        auto input     = InputRef(0).ValueTensorRefFor(rank, fr);
-        auto mean      = InputRef(1).ValueTensorRefFor(rank, fr.AllowBroadcast());
-        auto invStdDev = InputRef(2).ValueTensorRefFor(rank, fr.AllowBroadcast());
+        auto output    =             SetValueView(rank, fr);
+        auto input     = InputRef(0).SetValueView(rank, fr);
+        auto mean      = InputRef(1).SetValueView(rank, fr.AllowBroadcast());
+        auto invStdDev = InputRef(2).SetValueView(rank, fr.AllowBroadcast());
 
         output.AssignElementwiseQuotientOf(input, invStdDev); // output = input / invStdDev
         output.AddCopyOf(mean);                               // output += mean

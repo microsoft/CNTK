@@ -42,9 +42,9 @@ public:
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
         size_t rank = DetermineElementwiseTensorRank();
-        auto result =             ValueTensorRefFor(rank, fr);
-        auto input0 = InputRef(0).ValueTensorRefFor(rank, fr.AllowBroadcast());
-        auto input1 = InputRef(1).ValueTensorRefFor(rank, fr.AllowBroadcast());
+        auto result =             SetValueView(rank, fr);
+        auto input0 = InputRef(0).SetValueView(rank, fr.AllowBroadcast());
+        auto input1 = InputRef(1).SetValueView(rank, fr.AllowBroadcast());
         result.AssignSumOf(input0, input1);
     }
 
@@ -87,9 +87,9 @@ public:
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
         size_t rank = DetermineElementwiseTensorRank();
-        auto result =             ValueTensorRefFor(rank, fr);
-        auto input0 = InputRef(0).ValueTensorRefFor(rank, fr.AllowBroadcast());
-        auto input1 = InputRef(1).ValueTensorRefFor(rank, fr.AllowBroadcast());
+        auto result =             SetValueView(rank, fr);
+        auto input0 = InputRef(0).SetValueView(rank, fr.AllowBroadcast());
+        auto input1 = InputRef(1).SetValueView(rank, fr.AllowBroadcast());
         result.AssignLogSumOf(input0, input1);
     }
 
@@ -143,9 +143,9 @@ public:
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
         size_t rank = DetermineElementwiseTensorRank();
-        auto result =             ValueTensorRefFor(rank, fr);
-        auto input0 = InputRef(0).ValueTensorRefFor(rank, fr.AllowBroadcast());
-        auto input1 = InputRef(1).ValueTensorRefFor(rank, fr.AllowBroadcast());
+        auto result =             SetValueView(rank, fr);
+        auto input0 = InputRef(0).SetValueView(rank, fr.AllowBroadcast());
+        auto input1 = InputRef(1).SetValueView(rank, fr.AllowBroadcast());
         result.AssignDifferenceOf(input0, input1);
     }
 
@@ -193,9 +193,9 @@ public:
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
         size_t rank = DetermineElementwiseTensorRank();
-        auto result =             ValueTensorRefFor(rank, fr);
-        auto input0 = InputRef(0).ValueTensorRefFor(rank, fr.AllowBroadcast());
-        auto input1 = InputRef(1).ValueTensorRefFor(rank, fr.AllowBroadcast());
+        auto result =             SetValueView(rank, fr);
+        auto input0 = InputRef(0).SetValueView(rank, fr.AllowBroadcast());
+        auto input1 = InputRef(1).SetValueView(rank, fr.AllowBroadcast());
         result.AssignElementwiseProductOf(input0, input1);
     }
 
@@ -689,7 +689,7 @@ public:
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
         size_t rank = DetermineElementwiseTensorRank();
-        auto output =                                  ValueTensorRefFor(                         rank, fr);
+        auto output =                                 SetValueView(                            rank, fr);
         auto input  = TensorView<ElemType>(InputRef(0).ValuePtr(), GetTransposedTensorSliceFor(rank, fr));
         output.AssignCopyOf(input);
     }

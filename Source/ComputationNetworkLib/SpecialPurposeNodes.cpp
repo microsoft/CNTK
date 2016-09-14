@@ -72,8 +72,8 @@ template <class ElemType>
 /*virtual*/ void TraceNode<ElemType>::ForwardProp(const FrameRange& fr) /*override*/
 {
     size_t rank = DetermineElementwiseTensorRank();
-    auto result =             ValueTensorRefFor(rank, fr);
-    auto input  = InputRef(0).ValueTensorRefFor(rank, fr);
+    auto result =             SetValueView(rank, fr);
+    auto input  = InputRef(0).SetValueView(rank, fr);
     result.AssignCopyOf(input);
 
     // do the tracing

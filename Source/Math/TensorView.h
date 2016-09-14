@@ -49,10 +49,20 @@ public:
     {
     }
 
+    TensorView()
+    {
+
+    }
+
     // reshaped view
     TensorView<ElemType> Reshaped(const TensorShape& shape) const
     {
         return TensorView(*this, shape);
+    }
+
+    void ReshapeTo(const TensorShape& shape)
+    {
+        m_shape = shape;
     }
 
     // -------------------------------------------------------------------

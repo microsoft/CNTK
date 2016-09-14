@@ -945,7 +945,7 @@ public:
     // public constructor
     // Note: use the New<> helper function that is declared next, which gives you the convenience of returning a shared_ptr
     ComputationNode(DEVICEID_TYPE deviceId, const wstring& name)
-        : ComputationNodeBase(deviceId, name), m_valueView()
+        : ComputationNodeBase(deviceId, name)
     {
     }
 
@@ -1277,7 +1277,7 @@ public:
         return GradientFor(fr);
     }
     // tensor version of the above functions
-    const TensorView<ElemType> DataTensorFor(const MatrixBasePtr& data, size_t rank, const FrameRange& fr)
+    TensorView<ElemType> DataTensorFor(const MatrixBasePtr& data, size_t rank, const FrameRange& fr)
     {
         try
         {
@@ -1290,7 +1290,7 @@ public:
     }
 
     // Optimization during forward pass.
-    TensorView<ElemType>& DataTensorRefFor(TensorView<ElemType>& view, size_t rank, const FrameRange& fr)
+    const TensorView<ElemType>& UpdateTensorViewTo(TensorView<ElemType>& view, size_t rank, const FrameRange& fr)
     {
         try
         {
@@ -1308,9 +1308,12 @@ public:
         return DataTensorFor(ValuePtr(), rank, fr);
     }
 
-    TensorView<ElemType>& ValueTensorRefFor(size_t rank, const FrameRange& fr)
+    // Set default view on the value. Can be used by downstream ForwardPass() functions
+    // to avoid temporary copies (as long as processing is not multithreaded, or there are other reasons
+    // why more than one view on the value would exist).
+    const TensorView<ElemType>& SetValueView(size_t rank, const FrameRange& fr)
     {
-        return DataTensorRefFor(m_valueView, rank, fr);
+        return UpdateTensorViewTo(m_valueView, rank, fr);
     }
 
     TensorView<ElemType> GradientTensorFor(size_t rank, const FrameRange& fr)
@@ -2057,6 +2060,7 @@ protected:                                                                      
     using Base::SetDims;                                                                                                                                 \
     using Base::SetInput;                                                                                                                                \
     using Base::SetLearningRateMultiplier;                                                                                                               \
+    using Base::SetValueView;                                                                                                                            \
     using Base::UpdateFunctionMBSize;                                                                                                                    \
     using Base::UpdateFunctionValuesSize;                                                                                                                \
     using Base::Validate;                                                                                                                                \
@@ -2071,7 +2075,6 @@ protected:                                                                      
     using Base::ValueFor;                                                                                                                                \
     using Base::ValuePtr;                                                                                                                                \
     using Base::ValueTensorFor;                                                                                                                          \
-    using Base::ValueTensorRefFor;                                                                                                                          \
     using Base::VerifyDataSize;                                                                                                                          \
     using Base::VerifyDims;                                                                                                                              \
     using Base::WriteMinibatchWithFormatting;                                                                                                            \
@@ -2086,7 +2089,7 @@ protected:                                                                      
     using Base::m_value;                                                                                                                                 \
     using Base::m_valueSharable;                                                                                                                         \
     using Base::shared_from_this;                                                                                                                        \
-    \
+\
 public:                                                                                                                                                  \
     using Base::AttachInputs;                                                                                                                            \
     using Base::AttachInputsFromConfig;                                                                                                                  \

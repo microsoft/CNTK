@@ -95,10 +95,10 @@ public:
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
         size_t rank = DetermineElementwiseTensorRank();
-        auto output    =             ValueTensorRefFor(rank, fr);
-        auto input     = InputRef(0).ValueTensorRefFor(rank, fr);
-        auto mean      = InputRef(1).ValueTensorRefFor(rank, fr.AllowBroadcast());
-        auto invStdDev = InputRef(2).ValueTensorRefFor(rank, fr.AllowBroadcast());
+        auto output =          this->SetValueView(rank, fr);
+        auto input =     InputRef(0).SetValueView(rank, fr);
+        auto mean =      InputRef(1).SetValueView(rank, fr.AllowBroadcast());
+        auto invStdDev = InputRef(2).SetValueView(rank, fr.AllowBroadcast());
 
         output.AssignDifferenceOf(input, mean);               // output = input - mean
         output.AssignElementwiseProductOf(output, invStdDev); // output *= invStdDev
