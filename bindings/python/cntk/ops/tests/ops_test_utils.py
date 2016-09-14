@@ -28,9 +28,9 @@ def right_matrix_type(request):
     return request.param
 
 def _test_unary_op(precision, device_id, op_func,
-        operand, expected_forward, expected_backward_all, op_param_dict=None):
+        value, expected_forward, expected_backward_all, op_param_dict=None):
     
-    value = AA(operand, dtype=PRECISION_TO_TYPE[precision]) 
+    value = AA(value, dtype=PRECISION_TO_TYPE[precision]) 
     
     a = I(shape=value.shape,
             data_type=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]),
@@ -111,7 +111,8 @@ def unittest_helper(root_node,
         device_id=-1, precision="float"):
     
     backward_pass = expected_backward is not None
-    forward, backward = cntk_eval(root_node, precision, cntk_device(device_id), forward_input, backward_pass)
+    forward, backward = cntk_eval(root_node, precision, cntk_device(device_id),
+            forward_input, backward_pass)
 
     # for forward we always expect only one result
     assert len(forward)==1
