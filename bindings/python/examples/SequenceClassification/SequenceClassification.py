@@ -10,6 +10,9 @@ import os
 import time
 from cntk import learning_rates_per_sample, DeviceDescriptor, Trainer, sgd_learner, Axis, text_format_minibatch_source, StreamConfiguration
 from cntk.ops import input_variable, cross_entropy_with_softmax, combine, classification_error
+
+abs_path = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(os.path.join(abs_path, "..", ".."))
 from examples.common.nn import LSTMP_component_with_self_stabilization, embedding, linear_layer, select_last, print_training_progress
 
 # Defines the LSTM model for classifying sequences

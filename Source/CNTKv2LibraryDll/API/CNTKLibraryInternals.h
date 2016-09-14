@@ -11,6 +11,7 @@
 #define final
 #define explicit
 #define static_assert(condition, message)
+#define __attribute__(x)
 #endif
 
 #ifdef _WIN32
