@@ -147,6 +147,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 MatrixBase::~MatrixBase() { }
 
+#pragma region BufferManagement
+
+std::unordered_map<DEVICEID_TYPE, std::unique_ptr<BufferManagement>> BufferManagement::m_instances;
+
+template <>
+std::multimap<size_t, float*>& BufferManagement::BufferContainer<float>() { return m_bufferFloatContainer; }
+template <>
+std::multimap<size_t, double*>& BufferManagement::BufferContainer<double>() { return m_bufferDoubleContainer; }
+template <>
+std::multimap<size_t, char*>& BufferManagement::BufferContainer<char>() { return m_bufferCharContainer; }
+template <>
+std::multimap<size_t, short*>& BufferManagement::BufferContainer<short>() { return m_bufferShortContainer; }
+template <>
+std::multimap<size_t, int*>& BufferManagement::BufferContainer<int>() { return m_bufferIntContainer; }
+
+#pragma endregion
+
 #pragma region Constructors, destructors and other static matrix builders
 
 
@@ -155,8 +172,10 @@ MatrixBase::~MatrixBase() { }
 //            { Cpu code },
 //            { GPU code },
 //            ...
+
+// By default, the CachedMatrixBuffer is disable
 template <class ElemType>
-bool Matrix<ElemType>::m_useCachedMatrixBuffer = false;
+bool Matrix<ElemType>::m_useCachedResize = false;
 
 // Initialize all members over virgin memory.
 //This function will only initialize default bland matrix. The actual matrices need to allocated
@@ -282,6 +301,9 @@ void Matrix<ElemType>::SetDataLocation(CurrentDataLocation location, MatrixType 
     if (!m_baseMatrix && m_matrixType != MatrixType::UNDETERMINED)
         LogicError("SetDataLocation: New m_baseMatrix must not be NULL.");
 }
+
+template <class ElemType>
+void Matrix<ElemType>::UseCachedResizeOrNot(bool useCachedResize) { m_useCachedResize = useCachedResize; }
 
 //this is a private constructor only used internally to initialize a blank matrix
 template <class ElemType>
@@ -450,18 +472,6 @@ template <class ElemType>
 Matrix<ElemType> Matrix<ElemType>::DeepClone() const
 {
     return Matrix<ElemType>(*this, GetDeviceId());
-}
-
-template<class ElemType>
-void Matrix<ElemType>::SetUseCachedMatrixBuffer(bool useCachedMatrixBuffer)
-{
-    m_useCachedMatrixBuffer = useCachedMatrixBuffer;
-}
-
-template<class ElemType>
-bool Matrix<ElemType>::GetUseCachedMatrixBuffer()
-{
-    return m_useCachedMatrixBuffer;
 }
 
 template <class ElemType>
@@ -1588,23 +1598,12 @@ void Matrix<ElemType>::Reshape(const size_t numRows, const size_t numCols)
 template <class ElemType>
 void Matrix<ElemType>::Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve /*=0*/, bool growOnly /*=true*/)
 {
-    if (GetUseCachedMatrixBuffer())
-    {
-        // TODO: should this function test whether the size is changing, and skip if it isn't? We have at least one explicit test for this code calling this (recurrent node)
-        DISPATCH_MATRIX_ON_FLAG_USEBOTH_4BOTH(this,
-            { m_CPUMatrix->Resize(numRows, numCols, growOnly); },
-            { m_GPUMatrix->CachedResize(numRows, numCols, false/*growOnly*/); },
-            { m_CPUSparseMatrix->RequireSizeAndAllocate(numRows, numCols, numNZElemToReserve, growOnly, false); },
-            { m_GPUSparseMatrix->RequireSizeAndAllocate(numRows, numCols, numNZElemToReserve, growOnly, false); });
-    }
-    else
-    {
-        DISPATCH_MATRIX_ON_FLAG_USEBOTH_4BOTH(this,
-            { m_CPUMatrix->Resize(numRows, numCols, growOnly); },
-            { m_GPUMatrix->Resize(numRows, numCols, growOnly); },
-            { m_CPUSparseMatrix->RequireSizeAndAllocate(numRows, numCols, numNZElemToReserve, growOnly, false); },
-            { m_GPUSparseMatrix->RequireSizeAndAllocate(numRows, numCols, numNZElemToReserve, growOnly, false); });
-    }
+    // TODO: should this function test whether the size is changing, and skip if it isn't? We have at least one explicit test for this code calling this (recurrent node)
+    DISPATCH_MATRIX_ON_FLAG_USEBOTH_4BOTH(this,
+        { m_CPUMatrix->Resize(numRows, numCols, growOnly); },
+        { m_GPUMatrix->Resize(numRows, numCols, growOnly, m_useCachedResize); },
+        { m_CPUSparseMatrix->RequireSizeAndAllocate(numRows, numCols, numNZElemToReserve, growOnly, false); },
+        { m_GPUSparseMatrix->RequireSizeAndAllocate(numRows, numCols, numNZElemToReserve, growOnly, false); });
 #ifdef _DEBUG
     if (GetMatrixType() != MatrixType::SPARSE)
         Invalidate(); // Fill the matrix with NaNs to detect using the content which is undefined. Unfortunately this won't work for sparse matrices.

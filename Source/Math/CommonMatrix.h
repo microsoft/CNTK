@@ -14,6 +14,7 @@
 #endif
 
 #include "Basics.h"
+#include "basetypes.h"
 #include <string>
 #include <stdint.h>
 #include <memory>
@@ -40,7 +41,7 @@ typedef unsigned char byte;
 #define GPUSPARSE_INDEX_TYPE int // cuSparse only supports int array indexes
 #define CPUSPARSE_INDEX_TYPE int // to be consistent with cuSparse but limited the possible size of the matrix.
 
-#define MEM_MAX_LIMIT_TIMES 2
+#define MEM_MAX_LIMIT_TIMES 2 // The maximum times allowed a cached memory block allocated to a request
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -62,6 +63,8 @@ public:
     template <typename AllocatedElemType>
     static void Free(int deviceId, AllocatedElemType* bufferPtr, bool ignoreCUDARetCode = false);
 
+    // Let it be public method, the memory manager could check the totoal free memory and decide whether to physically
+    // release all the cached memory.
     static std::pair<size_t, size_t> GetFreeAndTotalMemoryInMBs(int deviceId);
 
 private:
@@ -208,92 +211,109 @@ enum MatrixFlags
 
 
 // -----------------------------------------------------------------------
-// BufferManager -- to controal all buffer allocation
+// BufferManagement -- to control the allocation and release of memory
+// 
+// 1. The goal of buffer management
+// The best way to save memory is releasing memory right after no longer used in the rest of the mini-batch, which makes 
+// the extra cost on memory operation and slows down the speed. An option to solve that is building the static link between 
+// all nodes in pre-computing process and making memory re-use in the runtime, known as shared node value matrices in CNTK. 
+// The other option is using a buffer pool to take over the allocation and release request. Whereas the physical operation on 
+// memory, logical operation will make nearly no cost on allocation or release. Since the second option, achieved as 
+// BufferManagement below, could control all the memory operation, including some trivial ones, like the workspace in convolutions, 
+// and more flexible, allocating based on size and being easy to implement new algorithm, it is usually more powerful than the
+// first method.
+// 2. How it works?
+// First, it should be called in Resize function. In Resize function, using Request and LogicalReleaseFunction to replace the original 
+// request and release functions. Since BufferManagement is singleton for deviceId, just call the GetManagementInstance. And in Resize, 
+// there is a flag named growthOnly, which will request only the size increases to save the allocation cost. In the case, since the 
+// buffer pool, nearly no cost on allocation, the growth only will be disable in BufferManagement mode.
 // -----------------------------------------------------------------------
-class BufferManager
+class BufferManagement
 {
 private:
-    BufferManager() = default;
-    ~BufferManager() 
-    {
-        for (auto &iter : m_instances) 
-        {
-            delete iter.second;
-            iter.second = nullptr;
-        }
-        m_instances.clear();
-    }
+    BufferManagement() = default;
 	
     // Disable all the copy & move functions to keep the instance safely
-    BufferManager(const BufferManager&) = delete;
-    BufferManager(BufferManager&&) = delete;
-    BufferManager& operator= (const BufferManager &) = delete;
-    BufferManager& operator= (BufferManager &&) = delete;
+    DISABLE_COPY_AND_MOVE(BufferManagement);
 
 public:
-    static BufferManager* GetManagerInstance(DEVICEID_TYPE deviceId)
+    static BufferManagement& GetManagerInstance(DEVICEID_TYPE deviceId)
     {
+        static std::mutex instancLock;
         auto instance = m_instances.find(deviceId);
-        // BUGBUG: don't consider thread safe here, should we?
         if (instance == m_instances.end()) 
         {
-            instance = m_instances.insert(std::pair<DEVICEID_TYPE, BufferManager*>
-                (deviceId, new BufferManager())).first;
-            instance->second->m_deviceId = deviceId;
-            instance->second->m_totalManageSize = 0;
-            instance->second->m_totalAllocSize = 0;
+            std::lock_guard<std::mutex> lock(instancLock);
+            if (instance == m_instances.end())
+            {
+                instance = m_instances.insert(std::make_pair(deviceId, std::unique_ptr<BufferManagement>(
+                    new BufferManagement()))).first;
+                instance->second->m_deviceId = deviceId;
+                instance->second->m_totalManageSize = 0;
+                instance->second->m_totalAllocSize = 0;
+            }
         }
-        return instance->second;
+        return *(instance->second);
     }
 
-    // Request buffer from the buffer pool, or re-allocate a new memory
+    // for requesting, find in buffer container first, if failed, allocate a new one
+    // if allocating from buffer, the size will be modified to the real buffer size
     template<class ElemType>
-    ElemType* RequestBuffer(size_t size)
+    ElemType* RequestBuffer(size_t& size)
     {
         ElemType* bufferPtr = nullptr;
-        auto& bufferContainor = BufferContainor<ElemType>();
+        auto& bufferContainer = BufferContainer<ElemType>();
 
-        auto bufferHint = bufferContainor.lower_bound(size);
-
-        if (bufferHint != bufferContainor.end() && bufferHint->first < size * MEM_MAX_LIMIT_TIMES) 
+        // simply allocating based on size, more efficient and complex algorithm could be implemented here
+        auto bufferHint = bufferContainer.lower_bound(size);
+        if (bufferHint != bufferContainer.end() && bufferHint->first < size * MEM_MAX_LIMIT_TIMES) 
         {
             bufferPtr = bufferHint->second;
-            m_totalManageSize -= bufferHint->first;
-            bufferContainor.erase(bufferHint);
+            size = bufferHint->first;
+            m_totalManageSize -= size;
+            bufferContainer.erase(bufferHint);
             return bufferPtr;
         }
-
-        m_totalAllocSize += size;
 
         if (m_deviceId >= 0) {
 #ifndef CPUONLY
             auto deviceSize = TracingGPUMemoryAllocator::GetFreeAndTotalMemoryInMBs(m_deviceId);
-            float utilizeRatio = (float)deviceSize.first / deviceSize.second;
-            if (utilizeRatio < 0.05f) 
+            float freeMemoryRatio = (float)deviceSize.first / deviceSize.second;
+            if (freeMemoryRatio < 0.05f || (deviceSize.first << 20) / sizeof(ElemType) < size) 
             {
                 PhysicalReleaseAllBuffer<ElemType>();
             }
             bufferPtr = TracingGPUMemoryAllocator::Allocate<ElemType>(m_deviceId, size);
+            m_totalAllocSize += size;
 #endif
         }
         else 
         {
-            bufferPtr = new ElemType[size];
+            // first, try no-throw allocation.
+            // if failed, empty the buffer and re-try a throwing allocation
+            // if failed again, let system throw the bad_alloc exception
+            bufferPtr = new (std::nothrow) ElemType[size];
+            if (!bufferPtr) 
+            {
+                PhysicalReleaseAllBuffer<ElemType>();
+                bufferPtr = new ElemType[size];
+            }
+            m_totalAllocSize += size;
         }
 
         return bufferPtr;
     }
 
-    // Release targeting buffer into buffer pool
+    // insert the header of buffer into the buffer container
     template<class ElemType>
     void LogicalReleaseBuffer(ElemType* buffer, size_t size)
     {
-        auto& bufferContainor = BufferContainor<ElemType>();
-        bufferContainor.insert(std::pair<size_t, ElemType*>(size, buffer));
+        auto& bufferContainer = BufferContainer<ElemType>();
+        bufferContainer.insert(std::make_pair(size, buffer));
         m_totalManageSize += size;
     }
 
-    // Release targeting buffer in buffer pool
+    // physical release the buffer
     template<class ElemType>
     void PhysicalReleaseBuffer(ElemType* buffer)
     {
@@ -308,34 +328,36 @@ public:
         }
     }
 
-    // Release all buffer cache in buffer pool
+    // empty all the cached buffer
     template<class ElemType>
     void PhysicalReleaseAllBuffer()
     {
-        auto& bufferContainor = BufferContainor<ElemType>();
+        auto& bufferContainer = BufferContainer<ElemType>();
 
-        for (auto& iter : bufferContainor) 
+        for (auto& iter : bufferContainer) 
         {
             PhysicalReleaseBuffer<ElemType>(iter.second);
         }
 
-        bufferContainor.clear();
+        bufferContainer.clear();
+        m_totalManageSize = 0;
     }
 
 private:
-    static std::unordered_map<DEVICEID_TYPE, BufferManager*> m_instances;
+    static std::unordered_map<DEVICEID_TYPE, std::unique_ptr<BufferManagement>> m_instances;
 
     template <class ElemType>
-    std::multimap<size_t, ElemType*>& BufferContainor();
+    std::multimap<size_t, ElemType*>& BufferContainer();
     DEVICEID_TYPE m_deviceId;
     size_t m_totalManageSize;
     size_t m_totalAllocSize;
 
     // map to store all the temp buffer handle
-    std::multimap<size_t, float*> m_bufferFloatContainor;
-    std::multimap<size_t, double*> m_bufferDoubleContainor;
-    std::multimap<size_t, char*> m_bufferCharContainor;
-    std::multimap<size_t, short*> m_bufferShortContainor;
+    std::multimap<size_t, float*> m_bufferFloatContainer;
+    std::multimap<size_t, double*> m_bufferDoubleContainer;
+    std::multimap<size_t, char*> m_bufferCharContainer;
+    std::multimap<size_t, short*> m_bufferShortContainer;
+    std::multimap<size_t, int*> m_bufferIntContainer;
 };
 
 

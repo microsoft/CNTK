@@ -11,4 +11,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     std::atomic<bool> Globals::m_forceDeterministicAlgorithms(false);
 
+    std::atomic<bool> Globals::m_enableShareNodeValueMatrices(false);
+
+    std::atomic<bool> Globals::m_enableHyperCompressMemory(false);
+
 }}}

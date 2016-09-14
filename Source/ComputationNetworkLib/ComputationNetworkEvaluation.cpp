@@ -923,7 +923,7 @@ void ComputationNetwork::AllocateAllMatrices(const std::vector<ComputationNodeBa
     // Due to special topology, if a node is solely induced by parameters, its function value should not be shared
     MarkValueNonSharableNodes();
 
-    bool performingBackPropagation = (trainRootNode != nullptr);
+    bool performingBackPropagation = (trainRootNode != nullptr) || (Globals::ShouldEnableHyperCompressMemory());
 
     // Create a composite Eval order with the specified nodes as roots
     // For each node determine parents and whether the output of the

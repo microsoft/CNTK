@@ -12,6 +12,7 @@
 #include "TensorShape.h"
 #include "MatrixPool.h"
 #include "ComputationEnvironment.h"
+#include "Globals.h"
 
 #include <unordered_set>
 #include <map>
@@ -44,9 +45,6 @@
 #define CNTK_MODEL_VERSION_13 13 // batch norm: switch running inverse std deviation -> variance, MB count -> samplesSeen; CuDNN v5
 #define CNTK_MODEL_VERSION_14 14 // axis parameter in OptimizedRNNStackNode
 #define CURRENT_CNTK_MODEL_VERSION CNTK_MODEL_VERSION_14
-
-extern bool g_shareNodeValueMatrices;
-extern bool g_hyperCompressMemory;
 
 // helper mode for debugging
 // If TRACK_GAP_NANS is defined then initialize layout gaps to NaN and do NaN checks. Also do detailed logging of node computations.
@@ -764,8 +762,11 @@ public:
     virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const { return true; }
 
     void SetOutputNeededDuringBackprop(bool f) { m_outputNeededDuringBackprop = f; }
-    bool IsOutputNeededDuringBackprop() const { return !g_shareNodeValueMatrices || m_outputNeededDuringBackprop; }
-    bool IsHyperCompressMemory() const { return g_hyperCompressMemory; }
+    bool IsOutputNeededDuringBackprop() const 
+    { 
+        return (!Globals::ShouldEnableShareNodeValueMatrices() && !Globals::ShouldEnableHyperCompressMemory())
+            || m_outputNeededDuringBackprop; 
+    }
 
     // -----------------------------------------------------------------------
     // helpers for network traversal
@@ -1400,12 +1401,17 @@ public:
         // tracing
         Trace();
 
-        for (auto& input : GetInputs()) 
+        // Any memory not needed could resize to zero immediately when HyperCompressMemory active. Since the memory won't really release,
+        // all these memory blocks are gathered into a memory pool. When the next request coming, the best fitting block will be chosen.
+        if (Globals::ShouldEnableHyperCompressMemory()) 
         {
-            if (!input->IsOutputNeededDuringBackprop() && IsHyperCompressMemory()) 
+            for (auto& input : GetInputs())
             {
-                shared_ptr<Matrix<ElemType>> inputMatrix = static_pointer_cast<Matrix<ElemType>>(input->ValuePtr());
-                inputMatrix->Resize(0, 0);
+                if (!input->IsOutputNeededDuringBackprop())
+                {
+                    auto inputNodePtr = DownCast(input);
+                    inputNodePtr->Value().Resize(0, 0);
+                }
             }
         }
     }
@@ -1434,15 +1440,15 @@ public:
         }
 #endif
 #endif
-        if (IsValueSharable() && IsHyperCompressMemory())
+        // We could release the gradient of value sharable nodes and all no-longer used memory generated in forward.
+        if (IsValueSharable() && Globals::ShouldEnableHyperCompressMemory())
         {
-            if (GradientPtr()) Gradient().Resize(0, 0);
+            if (GradientPtr()) 
+                Gradient().Resize(0, 0);
 
             // canceling the graph dependency
             if (IsOutputNeededDuringBackprop()) 
-            {
                 Value().Resize(0, 0);
-            }
         }
     }
 

@@ -14,6 +14,7 @@
 #endif
 
 #include "CNTKLibraryInternals.h"
+#include "Globals.h"
 
 #include <memory>
 #include <vector>
@@ -26,7 +27,7 @@
 #include <string>
 #include <sstream>
 #include <iosfwd>
-#include<algorithm>
+#include <algorithm>
 
 namespace CNTK
 {
@@ -1628,6 +1629,8 @@ namespace CNTK
         Function(const std::vector<Variable>& inputs, const std::vector<Variable>& outputs, const FunctionPtr& rootFunction = nullptr, const std::wstring& name = L"")
             : m_rootFunction(rootFunction), m_name(name)
         {
+            Microsoft::MSR::CNTK::Globals::EnableShareNodeValueMatrices();
+
             for (auto inputVar : inputs)
             {
                 m_inputs.push_back(inputVar);

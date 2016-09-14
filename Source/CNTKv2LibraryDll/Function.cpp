@@ -16,11 +16,9 @@
 #include "InputAndParamNodes.h"
 #include "NonlinearityNodes.h"
 #include "RecurrentNodes.h"
+#include "Globals.h"
 
 using namespace Microsoft::MSR::CNTK;
-
-bool g_shareNodeValueMatrices = true;
-bool g_hyperCompressMemory = false;
 
 namespace CNTK
 {

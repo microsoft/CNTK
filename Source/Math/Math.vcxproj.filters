@@ -48,7 +48,6 @@
     <ClCompile Include="BlockHandlerSSE.cpp">
       <Filter>CPU</Filter>
     </ClCompile>
-    <ClCompile Include="CommonMatrix.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CommonMatrix.h" />

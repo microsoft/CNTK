@@ -29,12 +29,6 @@
 #include "InputAndParamNodes.h"
 #include "latticearchive.h"
 
-// TODO: Temporary mechanism to enable memory sharing for
-// node output value matrices. This will go away when the
-// sharing is ready to be enabled by default
-bool g_shareNodeValueMatrices = false;
-bool g_hyperCompressMemory = false;
-
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 
@@ -44,8 +38,10 @@ void CNTKEvalBase<ElemType>::Init(const std::string& config)
     m_config.Parse(config);
     size_t nThreads = m_config("numCPUThreads", "1");
     CPUMatrix<ElemType>::SetNumThreads(nThreads);
-    g_shareNodeValueMatrices = m_config(L"shareNodeValueMatrices", false);
-    g_hyperCompressMemory = m_config(L"hyperCompressMemory", false);
+    if (m_config(L"shareNodeValueMatrices", false))
+        Globals::EnableShareNodeValueMatrices();
+    if (m_config(L"hyperCompressMemory", false))
+        Globals::EnableHyperCompressMemory();
 }
 
 

@@ -199,7 +199,6 @@
     <ClCompile Include="BatchNormalizationEngine.cpp" />
     <ClCompile Include="BlockHandlerAVX.cpp" />
     <ClCompile Include="BlockHandlerSSE.cpp" />
-    <ClCompile Include="CommonMatrix.cpp" />
     <ClCompile Include="ConvolutionEngine.cpp" />
     <ClCompile Include="CPURNGHandle.cpp" />
     <ClCompile Include="CPUSparseMatrix.cpp" />

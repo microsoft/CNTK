@@ -288,7 +288,6 @@ MATH_SRC =\
 	$(SOURCEDIR)/Math/QuantizedMatrix.cpp \
 	$(SOURCEDIR)/Math/RNGHandle.cpp \
 	$(SOURCEDIR)/Math/TensorView.cpp \
-	$(SOURCEDIR)/Math/CommonMatrix.cpp \
 
 ifdef SUPPORT_AVX2
 MATH_SRC +=\
