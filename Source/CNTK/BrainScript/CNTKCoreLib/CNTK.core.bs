@@ -30,7 +30,7 @@
 
 # LinearLayer -- create a fully-connected linear projection layer
 # Note: outDim may describe a tensor as well.
-LinearLayer {outDim, bias = true, init='heNormal', initValueScale=1, inputRank=None, mapRank=None} =
+LinearLayer {outDim, bias = true, init='glorotUniform', initValueScale=1, inputRank=None, mapRank=None} =
 {
     # inputRank given: number of zeroes to add to W (mapRank must not be given)
     # mapRank   given: expand W to leave exactly mapRank axes (inputRank must not be given)
@@ -53,15 +53,16 @@ LinearLayer {outDim, bias = true, init='heNormal', initValueScale=1, inputRank=N
 }.apply
 
 # DenseLayer -- create a fully-connected layer with optional non-linearity
-DenseLayer{outDim, bias = true, activation=(x=>x), init='heNormal', initValueScale=1, inputRank=None, mapRank=None} = Sequential ( LinearLayer{outDim, bias=bias, init=init, initValueScale=initValueScale, inputRank=inputRank, mapRank=mapRank} : activation )
+DenseLayer{outDim, bias = true, activation=(x=>x), init='glorotUniform', initValueScale=1, inputRank=None, mapRank=None} = Sequential ( LinearLayer{outDim, bias=bias, init=init, initValueScale=initValueScale, inputRank=inputRank, mapRank=mapRank} : activation )
 
 # EmbeddingLayer -- create a linear embedding layer
 EmbeddingLayer {outDim,                                   # dimension of embedding
+                init='glorotUniform', initValueScale=1,
                 embeddingPath = '', transpose = false} =  # load a fixed embedding from a path instead
 {
     shape = if transpose then (Inferred : outDim) else (outDim : Inferred)
     E = if embeddingPath == ''
-        then ParameterTensor {shape, init='heNormal'}  # learnable
+        then ParameterTensor {shape, init=init, initValueScale=initValueScale}  # learnable
         else ParameterTensor {shape, initFromFilePath = embeddingPath, learningRateMultiplier = 0}  # fixed from file
     TimesOp = if transpose then TransposeTimes else Times
     apply (x) = TimesOp (E, x)    # x is expected to be sparse one-hot
@@ -76,7 +77,7 @@ ConvolutionalLayer {numOutputChannels,   # e.g. (1) or BS.Constants.None
                     filterShape,         # e.g. (3:3)
                     bias = true,
                     activation = (x=>x),
-                    init = "heNormal",
+                    init = 'glorotUniform',
                     initValueScale = 1,          # TODO: rename to initScale
                     #reductionRank = 1,          # TODO: support this
                     stride = 1, pad = false,
@@ -89,8 +90,7 @@ ConvolutionalLayer {numOutputChannels,   # e.g. (1) or BS.Constants.None
     outputRank = Length (outputChannelsShape)
     filterRank = Length (filterShape)
     kernelShape = _ConcatArrays (filterShape, Repeat (reductionRank, Inferred)) # kernel := filter plus reductionDims
-    #W = ParameterTensor{_ConcatArrays (                kernelShape,      outputChannelsShape), init = init, initValueScale = initValueScale, initOutputRank = -1}  # [ W x H x C x K ]
-    W = ParameterTensor{(outputChannelsShape : Inferred), init = init, initValueScale = initValueScale}  # old-style for backwards-compatible random initialization
+    W = ParameterTensor{_ConcatArrays (kernelShape, outputChannelsShape), init = init, initValueScale = initValueScale, initFilterRank = filterRank, initOutputRank = -1}  # [ W x H x C x K ]
     b = ParameterTensor(_ConcatArrays (Repeat (Length (filterShape), 1), outputChannelsShape), initValue = 0)                                 # [ 1 x 1 x     K ]
     sharing = true    # TODO: support this
     transpose = false # TODO: support this
@@ -115,13 +115,22 @@ AveragePoolingLayer {filterShape, stride = 1, pad = false, lowerPad = 0, upperPa
 
 # RecurrentLSTMLayer -- create an LSTM layer
 RecurrentLSTMLayer {outputDim,
-                    cellShape = BS.Constants.None, # if set then use a projection
+                    cellShape = None, # if set then use a projection
                     goBackwards = false,
-                    init='heNormal', initValueScale=1,
-                    enableSelfStabilization = false} =
+                    usePeepholes = false,
+                    init = 'glorotUniform', initValueScale = 1,
+                    enableSelfStabilization = false,
+                    allowOptimizedEngine = false} =
+if allowOptimizedEngine && BS.Constants.IsNone (cellShape) && !goBackwards && !usePeepholes && !enableSelfStabilization then
+{
+    # use cudnn instead
+    W = ParameterTensor {0:0, initFilterRank=0, initOutputRank=-1, init=init, initValueScale=initValueScale}
+    apply (x) = OptimizedRNNStack (W, x, outputDim, numLayers=1)
+}.apply
+else
 {
     previousHook = if goBackwards then BS.RNNs.NextHC else BS.RNNs.PreviousHC
-    lstm = BS.RNNs.LSTMBlock {outputDim, cellShape = cellShape, enableSelfStabilization = enableSelfStabilization, init=init, initValueScale=initValueScale}
+    lstm = BS.RNNs.LSTMBlock {outputDim, cellShape=cellShape, usePeepholes=usePeepholes, enableSelfStabilization=enableSelfStabilization, init=init, initValueScale=initValueScale}
     apply (x) = {
         prevState = previousHook (lstmState) # recurrent memory. E.g. Previous or Next, with or without initial state, beam reordering etc.
 
@@ -130,6 +139,35 @@ RecurrentLSTMLayer {outputDim,
         lstmState = lstm (x, prevState)
     }.lstmState.h // that's the value we return
 }.apply
+
+# helper to check whether all elements of an array are the same
+_AreElementsTheSame (arr, L) =
+    if L < 2 then true
+    else arr[L-1] == arr[L-2] && _AreElementsTheSame (arr, L-1)
+
+# RecurrentLSTMLayer -- create a whole stack of LSTM layers
+RecurrentLSTMLayerStack {layerDims,  # an array of dimensions for each layer (last one is output dimension)
+                         cellShapes = None, # if set then use a projection
+                         goBackwards = false,
+                         usePeepholes = false,
+                         init = 'glorotUniform', initValueScale = 1,
+                         enableSelfStabilization = false,
+                         allowOptimizedEngine = false} =
+if allowOptimizedEngine && BS.Constants.IsNone (cellShapes) && !goBackwards && !usePeepholes && !enableSelfStabilization && _AreElementsTheSame (layerDims, Length(layerDims)) then
+{
+    # use cudnn instead
+    W = ParameterTensor {0:0, initFilterRank=0, initOutputRank=-1, init=init, initValueScale=initValueScale}
+    apply (x) = OptimizedRNNStack (W, x, layerDims[0], numLayers=Length(layerDims))
+}.apply
+else
+    LayerStack {Length(layerDims), i => RecurrentLSTMLayer {
+                                           layerDims[i],
+                                           cellShape = if BS.Constants.IsNone (cellShapes) then None else cellShapes[i], # if set then use a projection
+                                           goBackwards = goBackwards,
+                                           usePeepholes = usePeepholes,
+                                           init = init, initValueScale = initValueScale,
+                                           enableSelfStabilization = enableSelfStabilization,
+                                           allowOptimizedEngine = allowOptimizedEngine}}
 
 # DelayLayer -- delay input
 DelayLayer {T=1, defaultHiddenActivation=0} =
@@ -150,22 +188,25 @@ DelayLayer {T=1, defaultHiddenActivation=0} =
 # BatchNormalizationLayer -- create a batch-normalization layer
 BatchNormalizationLayer {spatialRank = 0,  # reduce over these dims. E.g. 2 to reduce over (w,h) in a [W x H x C]-shaped input
                          initialScale = 1,
-                         normalizationTimeConstant = 0, blendTimeConstant = 0,  # TODO: normTimeConst should be INF, not 0
+                         normalizationTimeConstant = 5000, blendTimeConstant = 0,
                          epsilon = 0.00001, useCntkEngine = true} =
 {
-    #normShape = _ConcatArrays (Repeat (spatialRank, 1), 0) # spatial dims get a dimension of 1 (broadcasting, while all others are inferred from input)
-    normShape = (0:1)  # TODO: Update this once we support broadcasting-style parameters.
-    scale        = ParameterTensor {normShape, initValue = initialScale}
-    bias         = ParameterTensor {normShape, initValue = 0}
-    runMean      = ParameterTensor {normShape, initValue = 0, learningRateMultiplier = 0} # note: disable learning since these are updated differently
-    runInvStdDev = ParameterTensor {normShape, initValue = 0, learningRateMultiplier = 0}
-    apply (x) = BatchNormalization (x, scale, bias, runMean, runInvStdDev, spatialRank > 0, normalizationTimeConstant = normalizationTimeConstant, blendTimeConstant = blendTimeConstant, epsilon = epsilon, useCntkEngine = useCntkEngine)
+    #normShape   = _ConcatArrays (Repeat (spatialRank, 1), 0) # spatial dims get a dimension of 1 (broadcasting, while all others are inferred from input)
+    normShape   = (0:1)  # TODO: Update this once we support broadcasting-style parameters.
+    scale       = ParameterTensor {normShape, initValue = initialScale}
+    bias        = ParameterTensor {normShape, initValue = 0}
+    runMean     = ParameterTensor {normShape, initValue = 0, learningRateMultiplier = 0} # note: disable learning since these are updated differently
+    runVariance = ParameterTensor {normShape, initValue = 0, learningRateMultiplier = 0}
+    apply (x)   = BatchNormalization (x, scale, bias, runMean, runVariance, spatialRank > 0, normalizationTimeConstant = normalizationTimeConstant, blendTimeConstant = blendTimeConstant, epsilon = epsilon, useCntkEngine = useCntkEngine)
 }.apply
 
 # LayerNormalizationLayer -- create a layer-normalization layer
 LayerNormalizationLayer {initScale = 1, initBias = 0} =
 {
-    gain = ParameterTensor{(1), initValue = initScale}
+    gain = ParameterTensor{(1), initValue = initScale}  # TODO: offer Softplus version for protection, as for Stabilizer
+    #        f = ConstantTensor (4, (1))
+    #        fInv = Reciprocal (f)
+    #        gain = fInv .* Log (BS.Constants.One + Exp (f .* ParameterTensor ((1), initValue=0.99537863/* 1/f*ln (e^f-1) */))) # init value is 1
     bias = ParameterTensor{(1), initValue = initBias}
 
     apply (x) = {
@@ -304,7 +345,7 @@ CNTK2 = [
     // TODO: The API for Parameter is different in current 2.0 design, getting a constant as input for the initial values. 
     // This needs to be fixed to follow the way the Constant() is exposed in Python
     // Making this an internal node with "_" until we agree on the final interface:
-    _Parameter(shape, value = 0, initValue = '', learningRateMultiplier = 1.0, init = ''/*|uniform|fixedValue|gaussian|fromFile|fromLiteral*/, initValueScale = 1, initOutputRank = 1, initFromFilePath = '', initFromLiteral = '', initOnCPUOnly=true, randomSeed=-1, tag='') = new ComputationNode [ operation = 'LearnableParameter' ; shape = new TensorShape [ /*shape */ ] /*plus the function args*/ ]
+    _Parameter(shape, value = 0, initValue = '', learningRateMultiplier = 1.0, init = ''/*|uniform|fixedValue|gaussian|fromFile|fromLiteral*/, initValueScale = 1, initFilterRank = 0, initOutputRank = 1, initFromFilePath = '', initFromLiteral = '', initOnCPUOnly=true, randomSeed=-1, tag='') = new ComputationNode [ operation = 'LearnableParameter' ; shape = new TensorShape [ /*shape */ ] /*plus the function args*/ ]
 
     // 3. Shape operations
     // Changes: NewReshape -> Reshape, input -> _, dims -> shape
@@ -416,12 +457,12 @@ CNTK2 = [
 #  - initFromLiteral="..." (deprecated) --> parse a string literal (obsolete with value=array form)
 #  - init="fixedValue", value from 'value'
 # Warning: Current config will behave unexpected if user mistypes 'initValue' as 'value' (which will be ignored, defaulting to "uniform" init)
-Parameter {outputDim, inputDim, learningRateMultiplier = 1.0, init = ''/*|uniform|fixedValue|gaussian|fromFile|fromLiteral*/, initValueScale = 1, value = 0/*deprecated*/, initValue = '', initFromFilePath = '', initFromLiteral = ''/*deprecated*/, initOnCPUOnly=true, randomSeed=-1, tag=''} = new ComputationNode [ operation = 'LearnableParameter' ; initOutputRank = 1 ; shape = new TensorShape [ dims = (outputDim : inputDim) ] /*plus the function args*/ ]
+Parameter {outputDim, inputDim, learningRateMultiplier = 1.0, init = ''/*|uniform|fixedValue|gaussian|fromFile|fromLiteral*/, initValueScale = 1, value = 0/*deprecated*/, initValue = '', initFromFilePath = '', initFromLiteral = ''/*deprecated*/, initOnCPUOnly=true, randomSeed=-1, tag=''} = new ComputationNode [ operation = 'LearnableParameter' ; initFilterRank = 0 ; initOutputRank = 1 ; shape = new TensorShape [ dims = (outputDim : inputDim) ] /*plus the function args*/ ]
 
 LearnableParameter = Parameter  // deprecated
 
 # TODO: make Parameter take tensor dims?
-ParameterTensor {dims, learningRateMultiplier = 1.0, init = ''/*|uniform|fixedValue|gaussian|fromFile|fromLiteral*/, initValueScale = 1, value = 0, initValue = '', initOutputRank = 1, initFromFilePath = '', initFromLiteral = '', initOnCPUOnly=true, randomSeed=-1, tag=''} = new ComputationNode [ operation = 'LearnableParameter' ; shape = new TensorShape [ /*dims*/ ] /*plus the function args*/ ]
+ParameterTensor {dims, learningRateMultiplier = 1.0, init = ''/*|uniform|fixedValue|gaussian|fromFile|fromLiteral*/, initValueScale = 1, value = 0, initValue = '', initFilterRank = 0, initOutputRank = 1, initFromFilePath = '', initFromLiteral = '', initOnCPUOnly=true, randomSeed=-1, tag=''} = new ComputationNode [ operation = 'LearnableParameter' ; shape = new TensorShape [ /*dims*/ ] /*plus the function args*/ ]
 ConstantFromString(literal, tag='') = ParameterTensor((0)/*dim, will be inferred*/, initFromLiteral = literal, learningRateMultiplier = 0.0)
 # TODO: Deprecate ConstantFromString() in favor of Constant(array expression)
 DynamicAxis(tag='') = new ComputationNode [ operation = 'DynamicAxis' ; /*plus the function args*/  ]
@@ -478,7 +519,7 @@ ColumnwiseCrossProduct = KhatriRaoProduct // deprecated
 ErrorPrediction = ClassificationError   # legacy name
 Delay = PastValue 
 
-BatchNormalization(input, scale, bias, runMean, runInvStdDev, spatial, normalizationTimeConstant = 0, blendTimeConstant = 0, epsilon = 0.00001, useCntkEngine = true, imageLayout='CHW', tag='') = new ComputationNode [ operation = 'BatchNormalization' ; inputs = (input : scale : bias : runMean : runInvStdDev) /*plus the function args*/ ]
+BatchNormalization(input, scale, bias, runMean, runVariance, spatial, normalizationTimeConstant = 0, blendTimeConstant = 0, epsilon = 0.00001, useCntkEngine = true, imageLayout='CHW', tag='') = new ComputationNode [ operation = 'BatchNormalization' ; inputs = (input : scale : bias : runMean : runVariance) /*plus the function args*/ ]
 ClassBasedCrossEntropyWithSoftmax(labelClassDescriptorVectorSequence, mainInputInfo, mainWeight, classLogProbsBeforeSoftmax, tag='') = new ComputationNode [ operation = 'ClassBasedCrossEntropyWithSoftmax' ; inputs = (labelClassDescriptorVectorSequence : mainInputInfo : mainWeight : classLogProbsBeforeSoftmax) /*plus the function args*/ ]
 Clip(minValue, maxValue, x, tag='') = new ComputationNode [ operation = 'Clip' ; inputs = (minValue : maxValue : x) /* plus the function args*/ ]
 ColumnElementTimes(aVectorSequence, anotherVectorSequence, tag='') = new ComputationNode [ operation = 'ColumnElementTimes' ; inputs = (aVectorSequence : anotherVectorSequence) /*plus the function args*/ ]
@@ -508,6 +549,10 @@ PerDimMeanVarDeNormalization(dataVectorSequence, meanVector, invStdDevVector, ta
 PerDimMeanVarNormalization (x, mean, invStdDev) = (x - mean) .* invStdDev
 Reciprocal(z, tag='') = new ComputationNode [ operation = 'Reciprocal' ; inputs = z /*plus the function args*/ ]
 //# the following is a temporary workaround until we have the C++ version
+# TODO: change hiddenDims to hiddenShape and pass as a TensorShape (currently, the node only supports rank-1 data)
+OptimizedRNNStack(weights, input, hiddenDims, numLayers=1, bidirectional=false, recurrentOp='lstm', axis=-1, tag='') = new ComputationNode [ operation = 'OptimizedRNNStack' ; inputs = ( weights : input ) /*plus the function args*/ ]
+# legacy:
+RNNStack(x, W, hiddenSize=10, numLayers=1, bidirectional=false, rnnMode='lstm', tag='') = OptimizedRNNStack(W, x, hiddenSize, numLayers=1, bidirectional=false, recurrentOp=rnnMode, tag='')
 Scale(scalarScalingFactor, matrix, tag='') = new ComputationNode [ operation = 'Scale' ; inputs = (scalarScalingFactor : matrix) /*plus the function args*/ ]
 # TODO: Scale = ElementTimes
 ScatterPacked(cond, indexSequence, sourceData, tag='') = new ComputationNode [ operation = 'ScatterPacked' ; inputs = (cond : indexSequence : sourceData) /*plus the function args*/ ]
@@ -875,17 +920,19 @@ RNNs =
     # This is the stateless version that takes the previous state as an input.
     # It returns a dictionary with three members: h and c, and dim=h.dim for convenience. prevState must have h and c.
     # This function also takes an optional auxiliary input, e.g. for suporting attention models.
-    LSTMBlock (outputDim, cellShape=None, init='heNormal', initValueScale=1, enableSelfStabilization=false) =
+    LSTMBlock (outputDim, cellShape=None, usePeepholes=false, init='glorotUniform', initValueScale=1, enableSelfStabilization=false) =
     {
         cellDim = if Constants.IsNone (cellShape) then outputDim else cellShape
 
         # parameter helpers
+        # we group 4 matrices into one, gives 60% speed-up in some cases
+        # Not merging inputs since initialization would be off.
         # note: invoked multiple times, each invocation comes with its own set of weights
-        B{} = ParameterTensor {(cellDim),             initValue=0}       # a bias
-        W{} = ParameterTensor {(cellDim : Inferred),  init=init, initValueScale=initValueScale}   # a input
-        A{} = ParameterTensor {(cellDim : Inferred),  init=init, initValueScale=initValueScale}   # an aux input
-        H{} = ParameterTensor {(cellDim : outputDim), init=init, initValueScale=initValueScale}   # a hidden-to-hidden
-        C{} = ParameterTensor {(cellDim),             init=init, initValueScale=initValueScale}   # a cell-to-hiddden {note: applied elementwise}
+        B{} = ParameterTensor {(4 * cellDim),             initValue=0}       # a bias
+        W{} = ParameterTensor {(4 * cellDim : Inferred),  init=init, initValueScale=initValueScale}   # a input
+        A{} = ParameterTensor {(4 * cellDim : Inferred),  init=init, initValueScale=initValueScale}   # an aux input
+        H{} = ParameterTensor {(4 * cellDim : outputDim), init=init, initValueScale=initValueScale}   # a hidden-to-hidden
+        C{} = ParameterTensor {(    cellDim),             init=init, initValueScale=initValueScale}   # a cell-to-hiddden {note: applied elementwise}
 
         Wmr = ParameterTensor {(outputDim : cellDim), init=init, initValueScale=initValueScale};  # final projection
 
@@ -902,21 +949,30 @@ RNNs =
                 dcs = S(dc)
                 # note: input does not get a stabilizer here, user is meant to do that outside
 
-                # projected contribution from input(s) and bias
-                pin() = if Constants.IsNone (aux)
-                        then B{} + W{} * x
-                        else B{} + W{} * x + A{} * aux
+                # projected contribution from input(s), hidden, and bias
+                proj() = if Constants.IsNone (aux)
+                        then B{} + W{} * x + H{} * dhs
+                        else B{} + W{} * x + H{} * dhs + A{} * aux
 
-                it = Sigmoid (pin() + H{} * dhs + C{} .* dcs)           // input gate(t)
-                bit = it .* Tanh (pin() + H{} * dhs)                    // applied to tanh of input network
+                # add peephole connection if requested
+                peep(x, c) = if usePeepholes then x + C{} .* c else x
 
-                ft = Sigmoid (pin() + H{} * dhs + C{} .* dcs)           // forget-me-not gate(t)
-                bft = ft .* dc                                          // applied to cell(t-1)
+                proj4 = proj()  # do all 4 sub-networks at once (not using an extra tensor dim, for efficiency)
+                itProj  = Slice (0*cellDim, 1*cellDim, proj4, axis=1)
+                bitProj = Slice (1*cellDim, 2*cellDim, proj4, axis=1)
+                ftProj  = Slice (2*cellDim, 3*cellDim, proj4, axis=1)
+                otProj  = Slice (3*cellDim, 4*cellDim, proj4, axis=1)
 
-                ct = bft + bit                                          // c(t) is sum of both
+                it = Sigmoid (peep (itProj, dcs))            // input gate(t)
+                bit = it .* Tanh (bitProj)                   // applied to tanh of input network
 
-                ot = Sigmoid (pin() + H{} * dhs + C{} .* S(ct))         // output gate(t)
-                ht = ot .* Tanh (ct)                                    // applied to tanh(cell(t))
+                ft = Sigmoid (peep (ftProj, dcs))            // forget-me-not gate(t)
+                bft = ft .* dc                               // applied to cell(t-1)
+
+                ct = bft + bit                               // c(t) is sum of both
+
+                ot = Sigmoid (peep (otProj, S(ct)))          // output gate(t)
+                ht = ot .* Tanh (ct)                         // applied to tanh(cell(t))
             }
 
             # our return values
@@ -1038,7 +1094,7 @@ RNNs =
 
     # a stack of recurrent LSTMs (bidirectional)
     # TODO: Should we define layerDims as the total (sum of both forward and backward direction)?
-    RecurrentBirectionalLSTMPStack (layerDims, cellDims=layerDims, input, inputDim=input.dim, previousHook=PreviousHC, nextHook=NextHC, enableSelfStabilization=false) = [
+    RecurrentBidirectionalLSTMPStack (layerDims, cellDims=layerDims, input, inputDim=input.dim, previousHook=PreviousHC, nextHook=NextHC, enableSelfStabilization=false) = [
         previousHook1 = previousHook ; nextHook1 = nextHook ; useStabilizer = enableSelfStabilization
         layers[i:0..Length (layerDims)-1] =
         [
@@ -1152,7 +1208,7 @@ RNNs =
 
     # a stack of recurrent GRUs (bidirectional)
     # TODO: Should we define layerDims as the total (sum of both forward and backward direction)?
-    RecurrentBirectionalGRUStack (layerDims, cellDims=layerDims, input, inputDim=input.dim, previousHook=PreviousHC, nextHook=NextHC, enableSelfStabilization=false) = [
+    RecurrentBidirectionalGRUStack (layerDims, cellDims=layerDims, input, inputDim=input.dim, previousHook=PreviousHC, nextHook=NextHC, enableSelfStabilization=false) = [
         previousHook1 = previousHook ; nextHook1 = nextHook ; useStabilizer = enableSelfStabilization
         layers[i:0..Length (layerDims)-1] =
         [

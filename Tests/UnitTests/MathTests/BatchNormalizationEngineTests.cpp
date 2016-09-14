@@ -62,7 +62,7 @@ std::vector<std::tuple<TensorShape, size_t, bool, double, double>> GenerateBNTes
         res.push_back(std::make_tuple(TensorShape(2, 2, 2048), 64, true, expAvgFactor, blendFactor));
     }
 
-    // Test running mean/isd.
+    // Test running mean/variance.
     expAvgFactor = 0.1;
     res.push_back(std::make_tuple(TensorShape(2, 2, 2), 8, false, expAvgFactor, 0));
     res.push_back(std::make_tuple(TensorShape(2, 2, 2), 8, true, expAvgFactor, 0));
@@ -76,6 +76,7 @@ BOOST_AUTO_TEST_SUITE(BatchNormalizationSuite)
 
 BOOST_AUTO_TEST_CASE(BatchNormalizationForward)
 {
+    // TODO tests for expAvgFactor 0?
     std::mt19937 rng(0);
     boost::random::normal_distribution<float> nd;
 
@@ -100,6 +101,7 @@ BOOST_AUTO_TEST_CASE(BatchNormalizationForward)
             double expAvg = std::get<3>(cfg);
             double blendFactor = 0; // cuDNN supports blendFactor == 0 (train) or 1 (eval) only.
             double eps = 1e-5; // CUDNN_BN_MIN_EPSILON
+            bool inferenceOnly = false;
 
             auto engCudnn = BNEng::Create(baseDeviceId, inOutT, spatial, ImageLayoutKind::CHW, BatchNormEngineKind::CuDnn);
             auto engCntk = BNEng::Create(deviceId, inOutT, spatial, ImageLayoutKind::CHW, BatchNormEngineKind::Cntk);
@@ -142,12 +144,12 @@ BOOST_AUTO_TEST_CASE(BatchNormalizationForward)
 
             CudaTimer time1;
             time1.Start();
-            engCntk->Forward(in, scale, bias, expAvg, blendFactor, runMean, runInvStdDev, out, eps, saveMean, saveInvStdDev);
+            engCntk->Forward(in, scale, bias, inferenceOnly, expAvg, blendFactor, runMean, runInvStdDev, out, eps, saveMean, saveInvStdDev);
             time1.Stop();
 
             CudaTimer time2;
             time2.Start();
-            engCudnn->Forward(inB, scaleB, biasB, expAvg, blendFactor, runMeanB, runInvStdDevB, outB, eps, saveMeanB, saveInvStdDevB);
+            engCudnn->Forward(inB, scaleB, biasB, inferenceOnly, expAvg, blendFactor, runMeanB, runInvStdDevB, outB, eps, saveMeanB, saveInvStdDevB);
             time2.Stop();
             
             std::stringstream tmsg;
@@ -187,7 +189,7 @@ BOOST_AUTO_TEST_CASE(BatchNormalizationForward)
 #ifndef _DEBUG
             float elapsedCntk = time1.Elapsed();
             float elapsedCudnn = time2.Elapsed();
-            // Check performance. Current version of cuDNN (v4 RC) is significanlty slower than CNTK implementation.
+            // Check performance. Current version of cuDNN (v4 RC) is significantly slower than CNTK implementation.
             // For optimal cases (vectorSize % 32 == 0 and batchSize % 32 == 0), CNTK implementation can be >5x faster than cuDNN.
             // Production version is about the same.
             if (crow >= 32 && ccol >= 32)
