@@ -874,24 +874,41 @@ SequenceDataPtr CastTransformer::TypedCast<TElementTo>::Apply(SequenceDataPtr se
         RuntimeError("Unknown shape of the sample in stream '%ls'.", m_parent->m_inputStream.m_name.c_str());
     }
 
-    auto& inputSequence = static_cast<DenseSequenceData&>(*sequence);
+    auto inputSequence = dynamic_cast<ImageSequenceData*>(sequence.get());
+    if (inputSequence == nullptr)
+        RuntimeError("Unexpected sequence provided");
+
     size_t count = shape->GetNumElements() * sequence->m_numberOfSamples;
     auto result = std::make_shared<DenseSequenceWithBuffer<TElementTo>>(m_memBuffers);
     result->m_buffer = m_memBuffers.pop_or_create([count]() { return vector<TElementTo>(count); });
 
     result->m_buffer.resize(count);
 
-    auto src = reinterpret_cast<TElementFrom*>(inputSequence.GetDataBuffer());
+    //auto src = reinterpret_cast<TElementFrom*>(inputSequence.GetDataBuffer());
     auto dst = reinterpret_cast<TElementTo*>(result->m_buffer.data());
 
+    size_t nRows = inputSequence->m_image.rows;
+    size_t nCols = inputSequence->m_image.cols;
+
+    size_t dst_index = 0;
+    for (size_t i = 0; i < nRows; ++i)
+    {
+        auto* x = inputSequence->m_image.ptr<TElementFrom>((int)i);
+        for (size_t j = 0; j < nCols; ++j)
+        {
+            dst[dst_index] = static_cast<TElementTo>(x[j]);
+            dst_index++;
+        }
+    }
+    /*
     for (size_t i = 0; i < count; i++)
     {
         dst[i] = static_cast<TElementTo>(src[i]);
-    }
+    }*/
 
     result->m_sampleLayout = shape;
     //result->m_data = result->m_buffer.data();
-    result->m_numberOfSamples = inputSequence.m_numberOfSamples;
+    result->m_numberOfSamples = inputSequence->m_numberOfSamples;
     return result;
 }
 
