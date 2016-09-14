@@ -85,10 +85,10 @@ namespace CNTK
         return (numSamplesInDataArrayView - numMaskedSamples);
     }
 
-    double Trainer::TestMinbatch(const std::unordered_map<Variable, ValuePtr>& arguments, const DeviceDescriptor& computeDevice /*= DeviceDescriptor::UseDefaultDevice()*/)
+    double Trainer::TestMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, const DeviceDescriptor& computeDevice /*= DeviceDescriptor::UseDefaultDevice()*/)
     {
         if (!m_evaluationFunction)
-            InvalidArgument("Trainer::TestMinbatch: Cannot test when no evaluation function was specified during 'this' trainer's construction");
+            InvalidArgument("Trainer::TestMinibatch: Cannot test when no evaluation function was specified during 'this' trainer's construction");
 
         // TODO: Should we refactor this code that is somewhat similar to the prologue of the TrainMinibatch function
         std::unordered_map<Variable, ValuePtr> outputs = { { m_evaluationFunction, nullptr } };

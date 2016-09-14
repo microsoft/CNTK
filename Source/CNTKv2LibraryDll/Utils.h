@@ -137,7 +137,7 @@ namespace CNTK
 
     inline std::wstring AsStringForErrorReporting(const NDShape& shape)
     {
-        bool invertShape = Internal::IsPythonTensorShapeReorderingEnabled();
+        bool invertShape = Internal::IsReversingTensorShapesInErrorMessagesEnabled();
         auto displayShape = shape;
         if (invertShape)
         {

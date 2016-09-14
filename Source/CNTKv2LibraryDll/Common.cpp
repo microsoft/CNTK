@@ -16,15 +16,15 @@ namespace CNTK
             return s_nextUniqueId++;
         }
 
-        std::atomic<bool> s_enablePythonTensorShapeReordering(false);
-        void EnablePythonTensorShapeReordering()
+        std::atomic<bool> s_reverseTensorShapesInErrorMessages(false);
+        void EnableReversingTensorShapesInErrorMessages()
         {
-            s_enablePythonTensorShapeReordering.store(true);
+            s_reverseTensorShapesInErrorMessages.store(true);
         }
 
-        bool IsPythonTensorShapeReorderingEnabled()
+        bool IsReversingTensorShapesInErrorMessagesEnabled()
         {
-            return s_enablePythonTensorShapeReordering.load();
+            return s_reverseTensorShapesInErrorMessages.load();
         }
     }
 

@@ -202,7 +202,7 @@ namespace CNTK
 
         CNTK_API size_t NewUniqueId();
 
-        CNTK_API void EnablePythonTensorShapeReordering();
-        bool IsPythonTensorShapeReorderingEnabled();
+        CNTK_API void EnableReversingTensorShapesInErrorMessages();
+        bool IsReversingTensorShapesInErrorMessagesEnabled();
     }
 }

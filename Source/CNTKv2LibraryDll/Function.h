@@ -374,7 +374,7 @@ namespace CNTK
                 InvalidArgument("Output rank of times operation should be at least one");
 
             if (outputRank > leftOperandShape.Rank())
-                InvalidArgument("Output rank of times operation can at most be the rank of the %s operand", Internal::IsPythonTensorShapeReorderingEnabled() ? "right" : "left");
+                InvalidArgument("Output rank of times operation can at most be the rank of the %s operand", Internal::IsReversingTensorShapesInErrorMessagesEnabled() ? "right" : "left");
 
             size_t numReductionAxes = leftOperandShape.Rank() - outputRank;
 
@@ -382,15 +382,17 @@ namespace CNTK
             // dimensions of the right operand
 
             if (rightOperandShape.Rank() < numReductionAxes)
-                RuntimeError("The %s operand's rank in a times operation should be less than #axes being reduced over!", Internal::IsPythonTensorShapeReorderingEnabled() ? "left" : "right");
+                RuntimeError("The %s operand's rank in a times operation should not be less than #axes being reduced over!", Internal::IsReversingTensorShapesInErrorMessagesEnabled() ? "left" : "right");
 
             if (leftOperandShape.SubShape(outputRank) != rightOperandShape.SubShape(0, numReductionAxes))
             {
-                InvalidArgument("The %d trailing dimensions of the %s operand (%S) do not match the %s operand's leading dimensions (%S)",
+                InvalidArgument("The %d %s dimensions of the %s operand (%S) do not match the %s operand's %s dimensions (%S)",
                                 (int)numReductionAxes,
-                                Internal::IsPythonTensorShapeReorderingEnabled() ? "right" : "left",
+                                Internal::IsReversingTensorShapesInErrorMessagesEnabled() ? "leading" : "trailing",
+                                Internal::IsReversingTensorShapesInErrorMessagesEnabled() ? "right" : "left",
                                 AsStringForErrorReporting(leftOperandShape.SubShape(outputRank)).c_str(),
-                                Internal::IsPythonTensorShapeReorderingEnabled() ? "left" : "right",
+                                Internal::IsReversingTensorShapesInErrorMessagesEnabled() ? "left" : "right",
+                                Internal::IsReversingTensorShapesInErrorMessagesEnabled() ? "trailing" : "leading",
                                 AsStringForErrorReporting(rightOperandShape).c_str());
             }
 

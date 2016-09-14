@@ -2752,7 +2752,7 @@ namespace CNTK
         /// Test the model on the specified batch of samples using the evaluation Function specified during construction of the Trainer
         /// Returns the average evaluation criterion value per sample for the tested minibatch of samples
         ///
-        CNTK_API double TestMinbatch(const std::unordered_map<Variable, ValuePtr>& arguments, const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice());
+        CNTK_API double TestMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice());
 
         ///
         /// Checkpoint the model and other Trainer state at the specified file location

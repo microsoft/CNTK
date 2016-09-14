@@ -556,7 +556,7 @@ namespace CNTK
 
             auto numLeftOperandAxes = inputs[0].Shape().Rank();
             if (numLeftOperandAxes > 2)
-                LogicError("TransposeTimes operation currently only supports %s operands of rank 1 or 2", Internal::IsPythonTensorShapeReorderingEnabled() ? "right" : "left");
+                LogicError("TransposeTimes operation currently only supports %s operands of rank 1 or 2", Internal::IsReversingTensorShapesInErrorMessagesEnabled() ? "right" : "left");
 
             NDShape transposedLeftOperandShape(2, 1);
             for (size_t i = 0; i < numLeftOperandAxes; ++i)
@@ -1040,7 +1040,9 @@ namespace CNTK
 
         // Let's reorder inputNodesBasePtrs properly since the ordering of inputs of CNTK internal ComputationNode may be different from the PrimitiveFunction inputs ordering
         ReorderAsCNTKComputationNodeInputs(op, inputNodesBasePtrs);
-        inputNodesBasePtrs.resize(computationNodePtr->As<INumInputs>()->GetExpectedNumInputs());
+        if (computationNodePtr->Is<INumInputs>())
+            inputNodesBasePtrs.resize(computationNodePtr->As<INumInputs>()->GetExpectedNumInputs());
+
         network->AddNodeToNetAndAttachInputs(computationNodePtr, inputNodesBasePtrs);
 
         return computationNodePtr;
@@ -1077,7 +1079,7 @@ namespace CNTK
             std::vector<std::shared_ptr<ComputationNode<ElementType>>> inputNodes;
             for (auto& inputVar : functionInputs)
             {
-                // If the inputVar is a constant and not the right DataType lets coerce it to the right type
+                // If the inputVar is a constant and not the right DataType let's coerce it to the right type
                 if (inputVar.IsConstant() && (nonConstInputDataType != DataType::Unknown) && (inputVar.GetDataType() != nonConstInputDataType))
                 {
                     auto constantValueCPU = Constant(inputVar).Value()->DeepClone(DeviceDescriptor::CPUDevice(), true);
