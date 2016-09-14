@@ -245,7 +245,7 @@ template<class ElemType, int direction>
             LogicError("The delay node tries to access future values that are out of bound, possibly because there is no sentence end marker in the MBLayout.");
     }
     else // regular case
-        src = Input(0)->ValueTensorFor(rank, frDelayed);
+        src = InputRef(0).ValueTensorFor(rank, frDelayed);
 
     // target tensor
     auto tgt = ValueTensorFor(rank, fr);
@@ -253,7 +253,7 @@ template<class ElemType, int direction>
     // init value tensor (a [1] tensor with broadcasting)
     auto init = m_inputs.size() == 1
         ? TensorView<ElemType>(m_initialStateValueMatrix, TensorShape(1)) // old form: initial state given as C++ constant
-        : Input(1)->ValueTensorFor(rank, FrameRange());                   // initial state given as a tensor
+        : InputRef(1).ValueTensorFor(rank, FrameRange());                 // initial state given as a tensor
 
     // now perform the copy operation
     if (m_inputAllSeqValid[fr.t()]) // all frames are valid: copy as one tensor-copy operation
@@ -275,7 +275,7 @@ template<class ElemType, int direction>
     //  - we don't need to keep anything if all sequences are closed (sentence end)
     //    This condition includes full-sequence mode.
     // TODO: Can we optimize this and only copy if there is a sequence spanning across the end of the MB? And add a check to BeginForwardProp() to make sure we got one if there is a boundary at the start?
-    m_delayedValue->SetValue(Input(0)->Value());
+    m_delayedValue->SetValue(InputRef(0).Value());
     if (!m_delayedActivationMBLayout)
         m_delayedActivationMBLayout = make_shared<MBLayout>();
     m_delayedActivationMBLayout->CopyFrom(m_pMBLayout);
@@ -294,8 +294,8 @@ template<class ElemType, int direction>
 
         MaskMissingGradientColumnsToZero(fr); // we backprop invalid frames, including gaps; so zero them out
 
-        auto src =                    GradientTensorFor(rank, fr); // incoming gradient from top
-        auto tgt = Input(inputIndex)->GradientTensorFor(rank, FrameRange()); // outgoing gradient to initial state
+        auto src =                      GradientTensorFor(rank, fr); // incoming gradient from top
+        auto tgt = InputRef(inputIndex).GradientTensorFor(rank, FrameRange()); // outgoing gradient to initial state
         TensorView<ElemType> zero(m_zeroMatrix, TensorShape(1));
 
         tgt.AddCondOf(GetMaskTensor(rank, fr), src, zero); // when back-propping into initial state, we swap the args and propagate the invalid ones
@@ -307,7 +307,7 @@ template<class ElemType, int direction>
 
     // move the target matrix to the target device, since below it is accessed as slices which cannot move
     // TODO: change below accesses to TensorView, then this is no longer needed. This is now the case, but need to test it.
-    Input(0)->Gradient().TransferToDeviceIfNotThere(m_deviceId, /*isBeingMoved=*/ true);
+    InputRef(0).Gradient().TransferToDeviceIfNotThere(m_deviceId, /*isBeingMoved=*/ true);
 
     // special case: DelayedValueNodes may be used outside of loops
     // TODO: this should be a bulk operation; this implementation is a quick hack
@@ -329,8 +329,8 @@ template<class ElemType, int direction>
         {
             size_t rank = DetermineElementwiseTensorRank();
 
-            auto src =                    GradientTensorFor(rank, fr); // incoming gradient from top
-            auto tgt = Input(inputIndex)->GradientTensorFor(rank, frDelayed); // target is outgoing gradient to input
+            auto src =                      GradientTensorFor(rank, fr); // incoming gradient from top
+            auto tgt = InputRef(inputIndex).GradientTensorFor(rank, frDelayed); // target is outgoing gradient to input
             TensorView<ElemType> zero(m_zeroMatrix, TensorShape(1));
 
             if (m_inputAllSeqValid[fr.t()]) // all valid: just jam it over in one go
