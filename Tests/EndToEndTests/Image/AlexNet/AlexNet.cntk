@@ -9,6 +9,7 @@ Train=[
         # Randomize images before every epoch. Possible values: None, Auto. Default: Auto.
         randomize=Auto
         features=[
+            mbFormat=nhwc
             # Below are the required parameters.
             width=224
             height=224

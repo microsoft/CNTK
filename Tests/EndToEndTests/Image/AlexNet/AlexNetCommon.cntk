@@ -6,7 +6,7 @@ ndlMacros=$ConfigDir$/Macros.ndl
 precision=float
 deviceId=Auto
 
-command=Train:AddTop5Eval:Test
+command=Train
 
 parallelTrain=false
 
@@ -17,9 +17,47 @@ Train=[
     action=train
     modelPath=$ModelDir$/AlexNet
 
-    NDLNetworkBuilder=[
-        networkDescription=$ConfigDir$/AlexNet.ndl
-    ]
+    BrainScriptNetworkBuilder = {
+        imageShape = 3:224:224
+        labelDim = 1000
+        
+        model = Sequential (
+            ConvolutionalLayer {64, (11:11), stride=(4:4), pad = true} : ReLU : 
+            MaxPoolingLayer    {(3:3), stride=(2:2)} :
+            ConvolutionalLayer {192, (5:5), pad = true} : ReLU : 
+            MaxPoolingLayer    {(3:3), stride=(2:2)} :
+            ConvolutionalLayer {384, (3:3), pad = true} : ReLU : 
+            ConvolutionalLayer {256, (3:3), pad = true} : ReLU : 
+            ConvolutionalLayer {256, (3:3), pad = true} : ReLU : 
+            MaxPoolingLayer    {(3:3), stride=(2:2)} :
+            DenseLayer         {4096, activation=ReLU} : Dropout :
+            DenseLayer         {4096, activation=ReLU} : Dropout :
+            LinearLayer        {labelDim}
+        )
+
+        # inputs
+        features = Input {imageShape}
+        labels = Input {labelDim}
+
+        # transpose features (50176 = 224 * 224)
+        flatFeatures = NewReshape (features, (3:50176))
+        transFeatures = Transpose(flatFeatures)
+        newFeatures = NewReshape (transFeatures, (224:224:3))
+        
+        # apply model to features
+        ol = model (newFeatures)
+
+        # loss and error computation
+        ce   = CrossEntropyWithSoftmax (labels, ol)
+        errs = ClassificationError (labels, ol)
+
+        # declare special nodes
+        featureNodes    = (features)
+        labelNodes      = (labels)
+        criterionNodes  = (ce)
+        evaluationNodes = (errs)
+        outputNodes     = (ol)
+    }
     
     SGD=[
         epochSize=0
@@ -40,7 +78,7 @@ Train=[
             ]
         ]
         
-        numMBsToShowResult=100
+        numMBsToShowResult=1
     ]
 ]
 

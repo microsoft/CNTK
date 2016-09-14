@@ -820,16 +820,18 @@ StreamDescription CastTransformer::Transform(const StreamDescription& inputStrea
 
 SequenceDataPtr CastTransformer::Transform(SequenceDataPtr sequence)
 {
-    if (m_inputStream.m_elementType == m_precision || sequence->m_elementType == m_precision)
+    ElementType inputType = m_inputStream.m_elementType != ElementType::tvariant
+        ? m_inputStream.m_elementType
+        : sequence->m_elementType;
+
+    if (inputType == m_precision)
     {
         // No need to do anything, exit.
         return sequence;
     }
 
     SequenceDataPtr result;
-    ElementType inputType = m_inputStream.m_elementType != ElementType::tvariant 
-        ? m_inputStream.m_elementType 
-        : sequence->m_elementType;
+    
 
     switch (m_precision)
     {
