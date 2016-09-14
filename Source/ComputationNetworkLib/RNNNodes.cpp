@@ -100,7 +100,7 @@ void OptimizedRNNStackNode<ElemType>::ForwardProp(const FrameRange& fr)
     }
 
     // The parameters are stored in a column matrix
-    Matrix<ElemType>& paramW = Input(0)->Value();
+    Matrix<ElemType>& paramW = InputRef(0).Value();
 
     MBLayoutPtr mb = GetMBLayout();
     if (m_rnnAttributes.IsSpatialRecurrence())
@@ -108,15 +108,15 @@ void OptimizedRNNStackNode<ElemType>::ForwardProp(const FrameRange& fr)
         TensorView<ElemType> outputY = ValueTensorFor(SIZE_MAX, fr);
 
         // ensure enough storage.
-        m_transposedOutput->Resize(         Value());
-        m_transposedInput->Resize(Input(1)->Value());
+        m_transposedOutput->Resize(           Value());
+        m_transposedInput->Resize(InputRef(1).Value());
 
         // For windowed LSTM, CNTK is providing data with the second dimension being time-like and the third dimension
         // being minibatch index. CuDnn expects the second dimension to be minibatch index, and the third dimension
         // to be time-like. This sequence of operations creates a transposed copy of the data in m_transposedInput
         // and shapeXT
 
-        TransposeHelper(Input(1)->ValuePtr(), Input(1)->GetTensorSliceFor(SIZE_MAX, fr), m_transposedInput, shapeXT);
+        TransposeHelper(InputRef(1).ValuePtr(), InputRef(1).GetTensorSliceFor(SIZE_MAX, fr), m_transposedInput, shapeXT);
 
         // Similarly, we will eventually need to transpose the output. Generate the necessary shape here, and do
         // the transposition after RNNForward() returns.
@@ -141,11 +141,11 @@ void OptimizedRNNStackNode<ElemType>::ForwardProp(const FrameRange& fr)
         if (mb->GetNumTimeSteps() == 1)
             RuntimeError("OptimizedRNNStackNode configured for sequence mode, but minibatch only has one time step.");
 
-        shapeXT = TensorShape(Input(1)->GetTensorSliceFor(SIZE_MAX, fr));
+        shapeXT = TensorShape(InputRef(1).GetTensorSliceFor(SIZE_MAX, fr));
         shapeYT = TensorShape(          GetTensorSliceFor(SIZE_MAX, fr));
 
-        // This changes the data from "minibatch paking" in Input(0)->Value() to "dense CuDNN packing" in m_transposedInput
-        this->PackSequencesForCuDNN(Input(1)->Value(), *m_transposedInput, numSequencesForFrame);
+        // This changes the data from "minibatch paking" in InputRef(0).Value() to "dense CuDNN packing" in m_transposedInput
+        this->PackSequencesForCuDNN(InputRef(1).Value(), *m_transposedInput, numSequencesForFrame);
 
         // ensure enough storage
         m_transposedOutput->Resize(this->Value().GetNumRows(), m_transposedInput->GetNumCols());
@@ -164,7 +164,7 @@ void OptimizedRNNStackNode<ElemType>::BackpropTo(const size_t inputIndex, const 
     // ensure BackwardData is the first method called, as required by CuDnn API
     if (!m_BackwardDataCalledYet)
     {
-        Matrix<ElemType>& paramW = Input(0)->Value();
+        Matrix<ElemType>& paramW = InputRef(0).Value();
 
         if (m_rnnAttributes.IsSpatialRecurrence())
         {
@@ -179,7 +179,7 @@ void OptimizedRNNStackNode<ElemType>::BackpropTo(const size_t inputIndex, const 
         }
 
         // Ensure enough space for the result
-        m_transposedDInput->Resize(Input(1)->Value().GetNumRows(), m_transposedDOutput->GetNumCols());
+        m_transposedDInput->Resize(InputRef(1).Value().GetNumRows(), m_transposedDOutput->GetNumCols());
 
         // Do the work
         m_transposedOutput->RNNBackwardData(*m_transposedDOutput, paramW, *m_transposedDInput, m_rnnAttributes, *m_reserve, *m_workspace);
@@ -187,7 +187,7 @@ void OptimizedRNNStackNode<ElemType>::BackpropTo(const size_t inputIndex, const 
     }
     if (inputIndex == 0) // parameters
     {
-        Matrix<ElemType>& paramDW = Input(0)->Gradient();
+        Matrix<ElemType>& paramDW = InputRef(0).Gradient();
         m_transposedOutput->RNNBackwardWeights(*m_transposedInput, *m_transposedOutput, paramDW, m_rnnAttributes, *m_reserve, *m_workspace);
     }
     else if (inputIndex == 1) // data
@@ -196,11 +196,11 @@ void OptimizedRNNStackNode<ElemType>::BackpropTo(const size_t inputIndex, const 
         if (m_rnnAttributes.IsSpatialRecurrence())
         {
             TensorShape tmp;
-            TransposeHelper(m_transposedDInput, shapeXT, Input(1)->GradientPtr(), tmp);
+            TransposeHelper(m_transposedDInput, shapeXT, InputRef(1).GradientPtr(), tmp);
         }
         else
         {
-            Input(1)->Gradient().DoScatterColumnsOf(1.0, *(this->m_packingIndex), *m_transposedDInput, 1.0);
+            InputRef(1).Gradient().DoScatterColumnsOf(1.0, *(this->m_packingIndex), *m_transposedDInput, 1.0);
         }
     }
 }
