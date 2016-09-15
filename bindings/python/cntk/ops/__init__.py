@@ -17,9 +17,10 @@ def combine(operands, name=''):
      model, typically the CrossEntropy loss Function and the ClassificationError Function comprise
      the two roots of the computation graph which can be combined to create a single Function
      with 2 outputs; viz. CrossEntropy loss and ClassificationError output.    
+
     Args:
-        operands (list): list of functions or their variables to combine
-        name (str, optional): the name of the node in the network            
+        operands (`list`): list of functions or their variables to combine
+        name (`str`, optional): the name of the node in the network            
     Returns:
         :class:`cntk.Function`
     '''
@@ -58,7 +59,7 @@ def cross_entropy_with_softmax(output_vector, target_vector, name=''):
         output_vector: the unscaled computed output values from the network
         target_vector: usually it is one-hot vector where the hot bit corresponds to the label index. 
         But it can be any probability distribution over the labels.
-        name (str, optional): the name of the node in the network            
+        name (`str`, optional): the name of the node in the network            
     Returns:
         :class:`cntk.Function`
     '''
@@ -83,7 +84,7 @@ def squared_error(output_matrix, target_matrix, name=''):
     Args:
         output_matrix: the output values from the network
         target_matrix: target matrix, it is usually a one-hot vector where the hot bit corresponds to the label index
-        name (str, optional): the name of the node in the network            
+        name (`str`, optional): the name of the node in the network            
     Returns:
         :class:`cntk.Function`
     '''
@@ -111,7 +112,7 @@ def classification_error(output_vector, target_vector, name=''):
     Args:
         output_vector: the output values from the network
         target_vector: it is one-hot vector where the hot bit corresponds to the label index
-        name (str, optional): the name of the node in the network            
+        name (`str`, optional): the name of the node in the network            
     Returns:
         :class:`cntk.Function`
     '''
@@ -139,7 +140,7 @@ def convolution(convolution_map, operand, strides=(1,), sharing=[True],
         upper_pad:
         transpose:
         max_temp_mem_size_in_samples:
-        name (str, optional): the name of the node in the network
+        name (`str`, optional): the name of the node in the network
     Returns:
         :class:`cntk.Function`
     '''
@@ -165,7 +166,7 @@ def pooling(operand, pooling_type, pooling_window_shape, strides=(1,), auto_padd
         auto_padding:
         lower_pad:
         upper_pad:
-        name (str, optional): the name of the node in the network
+        name (`str`, optional): the name of the node in the network
     Returns:
         :class:`cntk.Function`
     '''
@@ -194,7 +195,7 @@ def batch_normalization(operand, scale, bias, running_mean, running_inv_std, spe
         blend_time_constant:
         epsilon:
         use_cudnn_engine:
-        name (str, optional): the name of the node in the network
+        name (`str`, optional): the name of the node in the network
     Returns:
         :class:`cntk.Function`
     '''
@@ -222,7 +223,7 @@ def less(left, right, name=''):
     Args:
         left: left side tensor
         right: right side tensor
-        name (str, optional): the name of the node in the network            
+        name (`str`, optional): the name of the node in the network            
     Returns:
         :class:`cntk.Function`
     '''
@@ -245,7 +246,7 @@ def equal(left, right, name=''):
     Args:
         left: left side tensor
         right: right side tensor
-        name (str, optional): the name of the node in the network            
+        name (`str`, optional): the name of the node in the network            
     Returns:
         :class:`cntk.Function`
     '''
@@ -268,7 +269,7 @@ def greater(left, right, name=''):
     Args:
         left: left side tensor
         right: right side tensor
-        name (str, optional): the name of the node in the network            
+        name (`str`, optional): the name of the node in the network            
     Returns:
         :class:`cntk.Function`
     '''
@@ -291,7 +292,7 @@ def greater_equal(left, right, name=''):
     Args:
         left: left side tensor
         right: right side tensor
-        name (str, optional): the name of the node in the network            
+        name (`str`, optional): the name of the node in the network            
     Returns:
         :class:`cntk.Function`
     '''
@@ -314,7 +315,7 @@ def not_equal(left, right, name=''):
     Args:
         left: left side tensor
         right: right side tensor
-        name (str, optional): the name of the node in the network            
+        name (`str`, optional): the name of the node in the network            
     Returns:
         :class:`cntk.Function`
     '''
@@ -337,7 +338,7 @@ def less_equal(left, right, name=''):
     Args:
         left: left side tensor
         right: right side tensor
-        name (str, optional): the name of the node in the network            
+        name (`str`, optional): the name of the node in the network            
     Returns:
         :class:`cntk.Function`
     '''
@@ -366,7 +367,7 @@ def plus(left, right, name=''):
     Args:
         left: left side tensor
         right: right side tensor
-        name (str, optional): the name of the node in the network            
+        name (`str`, optional): the name of the node in the network            
     Returns:
         :class:`cntk.Function`
     '''
@@ -392,7 +393,7 @@ def minus(left, right, name=''):
     Args:
         left: left side tensor
         right: right side tensor
-        name (str, optional): the name of the node in the network            
+        name (`str`, optional): the name of the node in the network            
     Returns:
         :class:`cntk.Function`
     '''
@@ -419,7 +420,7 @@ def element_times(left, right, name=''):
     Args:
         left: left side tensor
         right: right side tensor
-        name (str, optional): the name of the node in the network            
+        name (`str`, optional): the name of the node in the network            
     Returns:
         :class:`cntk.Function`
     '''
@@ -448,7 +449,7 @@ def element_divide(left, right, name=''):
     Args:
         left: left side tensor
         right: right side tensor
-        name (str, optional): the name of the node in the network            
+        name (`str`, optional): the name of the node in the network            
     Returns:
         :class:`cntk.Function`
     '''
@@ -484,10 +485,10 @@ def times(left, right, output_rank=1, name=''):
     Args:
         left: left side matrix or tensor
         right: right side matrix or tensor
-        output_rank (int): in case we have tensors as arguemnts, output_rank represents
+        output_rank (`int`): in case we have tensors as arguemnts, output_rank represents
             the number of axes to be collapsed in order to transform the tensors
             into matrices, perform the operation and then reshape back (explode the axes)
-        name (str, optional): the name of the node in the network            
+        name (`str`, optional): the name of the node in the network            
 
     Returns:
         :class:`cntk.Function`
@@ -510,7 +511,7 @@ def identity(x, name=''):
 
     Args:
         x: numpy array or any :class:`cntk.Function` that outputs a tensor
-        name (str, optional): the name of the node in the network
+        name (`str`, optional): the name of the node in the network
     Returns:
         :class:`cntk.Function`
     '''
@@ -543,7 +544,7 @@ def floor(arg, name=''):
 
     Args:
         arg: input tensor
-        name (str, optional): the name of the node in the network (optional)
+        name (`str`, optional): the name of the node in the network (optional)
     Returns:
         :class:`cntk.Function`
     '''
@@ -566,7 +567,7 @@ def ceil(arg, name=''):
 
     Args:
         arg: input tensor
-        name (str, optional): the name of the node in the network (optional)
+        name (`str`, optional): the name of the node in the network (optional)
     Returns:
         :class:`cntk.Function`
     '''
@@ -599,7 +600,7 @@ def round(arg, name=''):
 
     Args:
         arg: input tensor
-        name (str, optional): the name of the node in the network (optional)
+        name (`str`, optional): the name of the node in the network (optional)
     Returns:
         :class:`cntk.Function`
     '''
@@ -632,9 +633,9 @@ def clip(x, min_value, max_value, name=''):
     
     Args:        
         x: tensor to be clipped
-        min_value: a scalar or a tensor which represents the minimum value to clip element values to
-        max_value: a scalar or a tensor which represents the maximum value to clip element values to
-        name (str, optional): the name of the node in the network            
+        min_value (`float`): a scalar or a tensor which represents the minimum value to clip element values to
+        max_value (`float`): a scalar or a tensor which represents the maximum value to clip element values to
+        name (`str`, optional): the name of the node in the network            
     Returns:
         :class:`cntk.Function`
     '''    
@@ -657,7 +658,7 @@ def relu(x, name=''):
     
     Args:
         x: numpy array or any :class:`cntk.Function` that outputs a tensor
-        name (str, optional): the name of the node in the network
+        name (`str`, optional): the name of the node in the network
     Returns:
         :class:`cntk.Function`
     '''
@@ -679,7 +680,7 @@ def sigmoid(x, name=''):
     
     Args:
         x: numpy array or any :class:`cntk.Function` that outputs a tensor
-        name (str, optional): the name of the node in the network
+        name (`str`, optional): the name of the node in the network
     Returns:
         :class:`cntk.Function`
     '''
@@ -700,7 +701,7 @@ def tanh(x, name=''):
     
     Args:
         x: numpy array or any :class:`cntk.Function` that outputs a tensor
-        name (str, optional): the name of the node in the network
+        name (`str`, optional): the name of the node in the network
     Returns:
         :class:`cntk.Function`
     '''
@@ -726,7 +727,7 @@ def softmax(x, name=''):
 
     Args:
         x: numpy array or any :class:`cntk.Function` that outputs a tensor
-        name (str, optional): the name of the node in the network
+        name (`str`, optional): the name of the node in the network
     Returns:
         :class:`cntk.Function`
     '''
@@ -742,7 +743,7 @@ def hardmax(x, name=''):
 
     Args:
         x: numpy array or any :class:`cntk.Function` that outputs a tensor
-        name (str): the name of the node in the network
+        name (`str`): the name of the node in the network
     Returns:
         :class:`cntk.Function`
     '''
@@ -762,7 +763,7 @@ def exp(x, name=''):
 
     Args:
         x: numpy array or any :class:`cntk.Function` that outputs a tensor
-        name (str, optional): the name of the node in the network
+        name (`str`, optional): the name of the node in the network
     Returns:
         :class:`cntk.Function`
     '''
@@ -780,7 +781,7 @@ def log(x, name=''):
 
     Args:
         x: numpy array or any :class:`cntk.Function` that outputs a tensor
-        name (str, optional): the name of the node in the network
+        name (`str`, optional): the name of the node in the network
     Returns:
         :class:`cntk.Function`
                 
@@ -806,7 +807,7 @@ def sqrt(x, name=''):
 
     Args:
         x: numpy array or any :class:`cntk.Function` that outputs a tensor
-        name (str, optional): the name of the node in the network
+        name (`str`, optional): the name of the node in the network
     Returns:
         :class:`cntk.Function`        
         
@@ -828,7 +829,7 @@ def square(x, name=''):
 
     Args:
         x: numpy array or any :class:`cntk.Function` that outputs a tensor
-        name (str, optional): the name of the node in the network
+        name (`str`, optional): the name of the node in the network
     Returns:
         :class:`cntk.Function`
     '''
@@ -848,7 +849,7 @@ def abs(x, name=''):
 
     Args:
         x: numpy array or any :class:`cntk.Function` that outputs a tensor
-        name (str, optional): the name of the node in the network
+        name (`str`, optional): the name of the node in the network
     Returns:
         :class:`cntk.Function`
     '''
@@ -868,7 +869,7 @@ def negate(x, name=''):
 
     Args:
         x: numpy array or any :class:`cntk.Function` that outputs a tensor
-        name (str, optional): the name of the node in the network
+        name (`str`, optional): the name of the node in the network
     Returns:
         :class:`cntk.Function`
     '''
@@ -886,7 +887,7 @@ def reciprocal(x, name=''):
 
     Args:
         x: numpy array or any :class:`cntk.Function` that outputs a tensor
-        name (str, optional): the name of the node in the network
+        name (`str`, optional): the name of the node in the network
     Returns:
         :class:`cntk.Function`
     '''
@@ -909,7 +910,7 @@ def element_select(flag, value_if_true, value_if_false, name=''):
         flag: tensor
         value_if_true: tensor
         value_if_false: tensor
-        name (str, optional): the name of the node in the network          
+        name (`str`, optional): the name of the node in the network          
     Returns:
         :class:`cntk.Function`
     '''    
@@ -941,8 +942,8 @@ def future_value(x, initial_state=None, time_step=1, name=''):
         x: the tensor (or its name) from which the future value is obtained. 
         initial_state: tensor or scalar representing the initial value to be
         used when the input tensor is shifted in time.
-        time_step (int): the number of time steps to look into the future (default 1)        
-        name (str, optional): the name of the node in the network
+        time_step (`int`): the number of time steps to look into the future (default 1)        
+        name (`str`, optional): the name of the node in the network
     Returns:
         :class:`cntk.Function`
     '''    
@@ -972,8 +973,8 @@ def past_value(x, initial_state=None, time_step=1, name=''):
         x: the tensor (or its name) from which the past value is obtained
         initial_state: tensor or scalar representing the initial value to be
         used when the input tensor is shifted in time.
-        time_step (int): the number of time steps to look into the past (default 1)        
-        name (str, optional): the name of the node in the network
+        time_step (`int`): the number of time steps to look into the past (default 1)        
+        name (`str`, optional): the name of the node in the network
     Returns:
         :class:`cntk.Function`
     '''    
@@ -1009,8 +1010,8 @@ def reshape(x, shape, name=''):
             
     Args:        
         x: tensor to be reshaped
-        shape (tuple): a tuple defining the resulting shape
-        name (str, optional): the name of the node in the network            
+        shape (`tuple`): a tuple defining the resulting shape
+        name (`str`, optional): the name of the node in the network            
     Returns:
         :class:`cntk.Function`
     '''    
@@ -1036,9 +1037,9 @@ def transpose(x, axis1=0, axis2=1, name=''):
             
     Args:        
         x: tensor to be transposed
-        axis1 (integer or :class:`cntk.Axis`): the axis to swap with axis2
-        axis2 (integer or :class:`cntk.Axis`): the axis to swap with axis1
-        name (str, optional): the name of the node in the network
+        axis1 (`int` or :class:`cntk.Axis`): the axis to swap with axis2
+        axis2 (`int` or :class:`cntk.Axis`): the axis to swap with axis1
+        name (`str`, optional): the name of the node in the network
     Returns:
         :class:`cntk.Function`
     '''    
@@ -1078,9 +1079,9 @@ def slice(x, axis, begin_index, end_index, name=''):
     Args:
         x: input tensor
         axis (`int` or :class:`cntk.Axis`): axis along which `begin_index` and `end_index` will be used. If it is of type `int` it will be used as a static axis.
-        begin_index (int): the index along axis where the slicing starts
-        end_index (int): the index along axis where the slicing ends        
-        name (str, optional): the name of the node in the network
+        begin_index (`int`): the index along axis where the slicing starts
+        end_index (`int`): the index along axis where the slicing ends        
+        name (`str`, optional): the name of the node in the network
         
     See also:
         Indexing in NumPy: http://docs.scipy.org/doc/numpy/reference/arrays.indexing.html
@@ -1165,8 +1166,8 @@ def reduce_sum(x, axis=None, name=''):
 
     Args:
         x: input tensor
-        axis (integer or :class:`cntk.Axis`): axis along which the reduction will be performed
-        name (str, optional): the name of the node in the network
+        axis (`int` or :class:`cntk.Axis`): axis along which the reduction will be performed
+        name (`str`, optional): the name of the node in the network
 
     Returns:
         :class:`cntk.Function`
@@ -1185,8 +1186,8 @@ def reduce_log_sum(x, axis, name=''):
         
     Args:
         x: input tensor
-        axis (integer or :class:`cntk.Axis`): axis along which the reduction will be performed
-        name (str): the name of the node in the network
+        axis (`int` or :class:`cntk.Axis`): axis along which the reduction will be performed
+        name (`str`): the name of the node in the network
 
     Returns:
         :class:`cntk.Function`
@@ -1205,8 +1206,8 @@ def reduce_mean(x, axis, name=''):
 
     Args:
         x: input tensor        
-        axis (integer or :class:`cntk.Axis`): axis along which the reduction will be performed
-        name (str, optional): the name of the node in the network
+        axis (`int` or :class:`cntk.Axis`): axis along which the reduction will be performed
+        name (`str`, optional): the name of the node in the network
 
     Returns:
         :class:`cntk.Function`
@@ -1225,8 +1226,8 @@ def reduce_max(x, axis, name=''):
 
     Args:
         x: input tensor
-        axis (integer or :class:`cntk.Axis`): axis along which the reduction will be performed
-        name (str): the name of the node in the network
+        axis (`int` or :class:`cntk.Axis`): axis along which the reduction will be performed
+        name (`str`): the name of the node in the network
 
     Returns:
         :class:`cntk.Function`
@@ -1245,8 +1246,8 @@ def reduce_min(x, axis, name=''):
 
     Args:
         x: input tensor
-        axis (integer or :class:`cntk.Axis`): axis along which the reduction will be performed
-        name (str): the name of the node in the network
+        axis (`int` or :class:`cntk.Axis`): axis along which the reduction will be performed
+        name (`str`): the name of the node in the network
 
     Returns:
         :class:`cntk.Function`
@@ -1272,7 +1273,7 @@ def dropout(x, dropout_rate=0.0, name=''):
     Args:        
         x: source tensor
         dropout_rate (float, [0,1)): fraction of nodes to be set to zero 
-        name (str, optional): the name of the node in the network
+        name (`str`, optional): the name of the node in the network
                 
     Returns:
         FIXME also in all of the other cases :class:`cntk.Function` 
@@ -1301,9 +1302,9 @@ def input_variable(shape, data_type=np.float32, needs_gradient=True, is_sparse=F
     It creates an input node. 
 
     Args:
-        shape (tuple or int): the shape of the input tensor     
+        shape (`tuple` or `int`): the shape of the input tensor     
         data_type (`type`, optional): np.float32 (default) or np.float64
-        needs_gradients (bool, optional): whether to back-propagates to it or not. True by default.
+        needs_gradients (`bool`, optional): whether to back-propagates to it or not. True by default.
         is_sparse (`bool`, optional): whether the variable is sparse (`False` by default)
         dynamic_axes (`list`, default): a list of dynamic axis (e.g., batch axis, time axis)
         name (`str`, optional): the name of the node in the network
@@ -1333,8 +1334,8 @@ def placeholder_variable(shape, dynamic_axes = [Axis.default_dynamic_axis(), Axi
     are unfolded, the place holder will get assigned a variable along the correspondent dynamic axis.
 
     Args:
-        shape (tuple or int): the shape of the variable tensor             
-        dynamic_axes (list): the list of dynamic axes that the actual variable uses
+        shape (`tuple` or `int`): the shape of the variable tensor             
+        dynamic_axes (`list`): the list of dynamic axes that the actual variable uses
         
     Returns:
         :class:`cntk.Function`
@@ -1348,11 +1349,11 @@ def parameter(shape=None, value=None, device=None, name=''):
     It creates a parameter tensor. 
 
     Args:
-        shape (tuple or int, optional): the shape of the input tensor. If not provided, it will be inferred from ``value``.
+        shape (`tuple` or `int`, optional): the shape of the input tensor. If not provided, it will be inferred from ``value``.
         value (scalar or NumPy array, optional): a scalar initial value that would be replicated for every element in the tensor or NumPy array. 
-        If ``None``, the tensor will be initialized uniformly random.
+        If `None`, the tensor will be initialized uniformly random.
         device (:class:`cntk.DeviceDescriptor`): instance of DeviceDescriptor           
-        name (str, optional): the name of the node in the network
+        name (`str`, optional): the name of the node in the network
 
     Returns:
         :class:`cntk.Function`
@@ -1370,11 +1371,11 @@ def constant(shape=None, value=None, device=None, name=''):
     It creates a constant tensor initialized from a numpy array
 
     Args:
-        shape (tuple or int, optional): the shape of the input tensor. If not provided, it will be inferred from ``value``.
+        shape (`tuple` or `int`, optional): the shape of the input tensor. If not provided, it will be inferred from ``value``.
         value (scalar or NumPy array, optional): a scalar initial value that would be replicated for every element in the tensor or NumPy array. 
         If ``None``, the tensor will be initialized uniformly random.
         device (:class:`cntk.DeviceDescriptor`): instance of DeviceDescriptor                
-        name (str, optional): the name of the node in the network
+        name (`str`, optional): the name of the node in the network
     Returns:
         :class:`cntk.Function`
     '''
@@ -1397,11 +1398,13 @@ def per_dim_mean_variance_normalize(operand, mean, inv_stddev, name=''):
     
     Args:
         operand: the variable to be normalized
-        mean: per dimension mean to use for the normalization
-        inv_stddev: per dimension standard deviation to use for the normalization
-        name (str, optional): the name of the node in the network
+        mean (NumPy array): per dimension mean to use for the normalization
+        inv_stddev (NumPy array): per dimension standard deviation to use for the normalization
+        name (`str`, optional): the name of the node in the network
     Returns:
         :class:`cntk.Function`                    
     '''
     from cntk.cntk_py import per_dim_mean_variance_normalize    
+    mean = sanitize_input(mean, get_data_type(mean))
+    inv_stddev = sanitize_input(inv_stddev, get_data_type(inv_stddev))
     return per_dim_mean_variance_normalize(operand, mean, inv_stddev, name)    
