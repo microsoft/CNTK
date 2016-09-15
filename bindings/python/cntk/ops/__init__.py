@@ -782,6 +782,22 @@ def hardmax(x, name=''):
     x = sanitize_input(x)
     return hardmax(x)
 
+def hardmax(x, name=''):
+    '''
+    TBA
+    Example:
+        TBA
+
+    Args:
+        x: numpy array or any :class:`cntk.Function` that outputs a tensor
+        name (str): the name of the node in the network
+    Returns:
+        :class:`cntk.Function`
+    '''
+    from cntk.cntk_py import hardmax
+    x = sanitize_input(x)
+    return hardmax(x).output()
+
 def exp(x, name=''):
     '''
     Computes the element-wise exponential of `x`: 
