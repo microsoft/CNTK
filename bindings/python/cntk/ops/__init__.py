@@ -1297,7 +1297,7 @@ from cntk.cntk_py import Axis, DeviceDescriptor
 #TODO: if we end up using only factory methods, we should get rid of the class Variable in variables.py
 
 def input_variable(shape, data_type=np.float32, needs_gradient=True, is_sparse=False, 
-            dynamic_axes = [Axis.default_dynamic_axis(), Axis.default_batch_axis()], name=''):
+            dynamic_axes = Axis.default_input_variable_dynamic_axes, name=''):
     '''
     It creates an input node. 
 
@@ -1320,7 +1320,7 @@ def input_variable(shape, data_type=np.float32, needs_gradient=True, is_sparse=F
     if data_type is None:
         data_type = np.float32
     dtype = sanitize_dtype_cntk(data_type)
-    if not type(dynamic_axes) == list:
+    if not type(dynamic_axes) in (list, tuple):
         dynamic_axes = [dynamic_axes]
     # TODO dynamic axis for numpy arrays
     # TODO sparse for numpy arrays
