@@ -794,7 +794,7 @@ void CPUSparseMatrix<ElemType>::Reset()
 }
 
 // Implements product of one sparse and one dense matrix updating a third dense matrix. Input matrices are optionally transposed.
-template <class ElemType, bool DenseTimesSparse /* false means SparseTimesDense */, bool transposeA, bool transposeB>
+template <class ElemType, bool denseTimesSparse /* false means SparseTimesDense */, bool transposeA, bool transposeB>
 class MultiplyDenseAndSparse{
 public:
     static void MultiplyAndWeightedAdd(ElemType alpha, const CPUSparseMatrix<ElemType>& sparse, const CPUMatrix<ElemType>& dense, ElemType beta, CPUMatrix<ElemType>& c)
@@ -805,8 +805,8 @@ public:
         if (dense.IsEmpty())
             LogicError("MultiplyAndWeightedAdd: dense input matrix is empty.");
 
-        const BaseMatrix<ElemType>* lhs = DenseTimesSparse ? (const BaseMatrix<ElemType>*) &dense  : (const BaseMatrix<ElemType>*) &sparse;
-        const BaseMatrix<ElemType>* rhs = DenseTimesSparse ? (const BaseMatrix<ElemType>*) &sparse : (const BaseMatrix<ElemType>*) &dense;
+        const BaseMatrix<ElemType>* lhs = denseTimesSparse ? (const BaseMatrix<ElemType>*) &dense  : (const BaseMatrix<ElemType>*) &sparse;
+        const BaseMatrix<ElemType>* rhs = denseTimesSparse ? (const BaseMatrix<ElemType>*) &sparse : (const BaseMatrix<ElemType>*) &dense;
 
         // C(m:n) is the product of matrices X * Y where we have the shapes X(m:k) and Y(l:n)
         size_t m = transposeA ? lhs->GetNumCols() : lhs->GetNumRows();
@@ -815,27 +815,22 @@ public:
         size_t n = transposeB ? rhs->GetNumRows() : rhs->GetNumCols();
 
         if (k != l)
-        {
-            InvalidArgument("CPUSparseMatrix::MultiplyAndWeightedAdd: The inner dimensions of a and b must match.");
-        }
+            InvalidArgument("CPUSparseMatrix::MultiplyAndWeightedAdd: The inner dimensions of a (= %d) and b (= %d) don't match.", k, l);
 
         // Determine the dimension of the outer index of the dense matrix.
         size_t outerDimensionDense;
-        if      ( DenseTimesSparse && !transposeA) outerDimensionDense = dense.GetNumRows();
-        else if ( DenseTimesSparse &&  transposeA) outerDimensionDense = dense.GetNumCols();
-        else if (!DenseTimesSparse && !transposeB) outerDimensionDense = dense.GetNumCols();
-        else if (!DenseTimesSparse &&  transposeB) outerDimensionDense = dense.GetNumRows();
+        if      ( denseTimesSparse && !transposeA) outerDimensionDense = dense.GetNumRows();
+        else if ( denseTimesSparse &&  transposeA) outerDimensionDense = dense.GetNumCols();
+        else if (!denseTimesSparse && !transposeB) outerDimensionDense = dense.GetNumCols();
+        else if (!denseTimesSparse &&  transposeB) outerDimensionDense = dense.GetNumRows();
 
         if (beta == 0)
             c.RequireSize(m, n);
         else
             c.VerifySize(m, n); // Can't resize if beta != 0
 
-
         if (beta == 0)
-        {
             memset(c.Data(), 0, sizeof(ElemType)* c.GetNumElements());
-        }
         else if (beta != 1)
         {
 #pragma omp parallel for
@@ -844,23 +839,29 @@ public:
                 c(i, j) = beta * c(i, j);
             }
         }
+        else /* beta == 1*/
+            ; // We keep the previous value of c before adding the matrix product.
 
         // TODO: Implement CSR as a transposition of b, like we do for GPU.
         if (sparse.GetFormat() != matrixFormatSparseCSC)
             NOT_IMPLEMENTED;
 
-        // Do the actual multiplication.
-        ElemType* valueBuffer = sparse.Buffer() + *sparse.SecondaryIndexLocation(); // Points to the value buffer of the current  view (i.e. buffer containing indices of non-zero elements)
-        int* rowIndexBuffer = sparse.MajorIndexLocation();                          // Points to the index buffer of the current view. (i.e. buffer containing indices of non-zero elements)
-        int iNonzero = 0;                                                           // Number of nonzero elements handled so far for curent slice view.
+        // Up to here we have:
+        // * checked that the matrices are compatible in size
+        // * Initialized the output matrix c
+
+        // Now do the actual multiplication.
+        ElemType* valueBuffer = sparse.Buffer() + *sparse.SecondaryIndexLocation(); // Points to the value buffer of the current view (i.e. buffer containing values of non-zero elements).
+        int* rowIndexBuffer = sparse.MajorIndexLocation();                          // Points to the index buffer of the current view (i.e. buffer containing indices of non-zero elements).
+        size_t iNonzero = 0;                                                           // Number of nonzero elements handled so far for curent slice view.
         int numPreviosNonzero = sparse.SecondaryIndexLocation()[0];                 // Total number of nonzero values handled in previous slices.
 
         // Loop over columns of the sparse matrix
         for (size_t colSparse = 0; colSparse < sparse.GetNumCols(); colSparse++)
         {
-            size_t end = sparse.SecondaryIndexLocation()[colSparse + 1] - numPreviosNonzero;
+            size_t numNonzeroInSparseCol = sparse.SecondaryIndexLocation()[colSparse + 1] - numPreviosNonzero;
             // Loop over the nonzero rows of the current column of the sparse matrix
-            for (; iNonzero < end; iNonzero++)
+            for (; iNonzero < numNonzeroInSparseCol; iNonzero++)
             {
                 size_t rowSparse = rowIndexBuffer[iNonzero]; // RowLocation
                 ElemType sparseVal = valueBuffer[iNonzero];
@@ -868,24 +869,26 @@ public:
                 // Determine the index of the 'outer' dimension of the sparse matrix and the common inner index.
                 size_t outerIndexSparse;
                 size_t innerIndex;
-                if      ( DenseTimesSparse && !transposeB) { outerIndexSparse = colSparse; innerIndex = rowSparse; }
-                else if ( DenseTimesSparse &&  transposeB) { outerIndexSparse = rowSparse; innerIndex = colSparse; }
-                else if (!DenseTimesSparse && !transposeA) { outerIndexSparse = rowSparse; innerIndex = colSparse; }
-                else if (!DenseTimesSparse &&  transposeA) { outerIndexSparse = colSparse; innerIndex = rowSparse; }
+                // Below if-statements are evaluated at compile time.
+                if      ( denseTimesSparse && !transposeB) { outerIndexSparse = colSparse; innerIndex = rowSparse; }
+                else if ( denseTimesSparse &&  transposeB) { outerIndexSparse = rowSparse; innerIndex = colSparse; }
+                else if (!denseTimesSparse && !transposeA) { outerIndexSparse = rowSparse; innerIndex = colSparse; }
+                else if (!denseTimesSparse &&  transposeA) { outerIndexSparse = colSparse; innerIndex = rowSparse; }
 
                 // Loop over the outer index of the dense matrix
                 for (size_t outerIndexDense = 0; outerIndexDense < outerDimensionDense; outerIndexDense++)
                 {
-                    // Determine the row index of the dense input matrix
+                    // Determine the row index of the dense input matrix.
+                    // Below if-statements are evaluated at compile time.
                     ElemType denseVal;
-                    if      ( DenseTimesSparse && !transposeA) denseVal = dense(outerIndexDense,      innerIndex);
-                    else if ( DenseTimesSparse &&  transposeA) denseVal = dense(     innerIndex, outerIndexDense);
-                    else if (!DenseTimesSparse && !transposeB) denseVal = dense(     innerIndex, outerIndexDense);
-                    else if (!DenseTimesSparse &&  transposeB) denseVal = dense(outerIndexDense,      innerIndex);
+                    if      ( denseTimesSparse && !transposeA) denseVal = dense(outerIndexDense,      innerIndex);
+                    else if ( denseTimesSparse &&  transposeA) denseVal = dense(     innerIndex, outerIndexDense);
+                    else if (!denseTimesSparse && !transposeB) denseVal = dense(     innerIndex, outerIndexDense);
+                    else if (!denseTimesSparse &&  transposeB) denseVal = dense(outerIndexDense,      innerIndex);
                     
 
                     // Update matrix c.
-                    if (DenseTimesSparse)
+                    if (denseTimesSparse)
                         c(outerIndexDense, outerIndexSparse) += alpha * denseVal * sparseVal;
                     else /*Sparse times dense */
                         c(outerIndexSparse, outerIndexDense) += alpha * denseVal * sparseVal;
@@ -901,6 +904,7 @@ template <class ElemType>
 void CPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const CPUMatrix<ElemType>& a, const bool transposeA,
                                                        const CPUSparseMatrix<ElemType>& b, const bool transposeB, ElemType beta, CPUMatrix<ElemType>& c)
 {
+    // Mapping variables to compile time template parameters for efficiency
     if      ( transposeA &&  transposeB)
         MultiplyDenseAndSparse<ElemType, true /* dense times sparse */,  true /* transposeA */,  true  /*transposeB*/>::MultiplyAndWeightedAdd(alpha, b /*sparse*/, a /* dense */, beta, c /* matrix beeing updated */);
     else if ( transposeA && !transposeB)
@@ -917,6 +921,7 @@ template <class ElemType>
 void CPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const CPUSparseMatrix<ElemType>& a, const bool transposeA,
     const CPUMatrix<ElemType>& b, const bool transposeB, ElemType beta, CPUMatrix<ElemType>& c)
 {
+    // Mapping variables to compile time template parameters for efficiency
     if (transposeA &&  transposeB)
         MultiplyDenseAndSparse<ElemType, false /* dense times sparse */,  true /* transposeA */,  true /*transposeB*/>::MultiplyAndWeightedAdd(alpha, a /*sparse*/, b /* dense */, beta, c /* matrix beeing updated */);
     else if (transposeA && !transposeB)
@@ -950,7 +955,7 @@ void CPUSparseMatrix<ElemType>::MultiplyAndAdd(ElemType alpha, const CPUMatrix<E
     assert(k == l);
     if (k != l)
     {
-        InvalidArgument("CPUSparseMatrix::MultiplyAndAdd: The inner dimensions of a and b must match.");
+        InvalidArgument("CPUSparseMatrix::MultiplyAndAdd: The inner dimensions of a (= %d) and b (= %d) don't match.", k, l);
     }
 
     c.Reset();
