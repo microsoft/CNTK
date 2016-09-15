@@ -103,6 +103,16 @@ size_t GetMaxEpochs(const ConfigParameters& configParams)
     return maxEpochs;
 }
 
+// Currently we force determinism by setting compatibility mode for different CPU versions
+// and limiting computation to a single CPU thread.
+// TODO: Clarify how a single thread restriction can be lifted.
+void ForceDeterministicAlgorithmsOnCPU()
+{
+    LOGPRINTF(stderr, "WARNING: forceDeterministcAlgorithms flag is specified. Using 1 CPU thread for processing.\n");
+    CPUMatrix<float /*any type will do*/>::SetNumThreads(1);
+    CPUMatrix<float /*any type will do*/>::SetCompatibleMode();
+}
+
 #ifndef CPUONLY
 // abort execution is GPU is not supported (e.g. compute capability not supported)
 void CheckSupportForGpu(DEVICEID_TYPE deviceId)
@@ -164,11 +174,7 @@ void DoCommands(const ConfigParameters& config, const shared_ptr<MPIWrapper>& mp
     ConfigArray command = config(L"command", "train");
 
     if (Globals::ShouldForceDeterministicAlgorithms())
-    {
-        LOGPRINTF(stderr, "forceDeterministcAlgorithms flag is specified. Using 1 CPU thread.\n");
-        CPUMatrix<ElemType>::SetNumThreads(1);
-        CPUMatrix<ElemType>::SetCompatibleMode();
-    }
+        ForceDeterministicAlgorithmsOnCPU();
     else
     {
         // Setting specified number of threads.
@@ -574,11 +580,7 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
     // execute the actions
     // std::string type = config(L"precision", "float");
     if (Globals::ShouldForceDeterministicAlgorithms())
-    {
-        LOGPRINTF(stderr, "forceDeterministcAlgorithms flag is specified. Using 1 CPU thread.\n");
-        CPUMatrix<float /*any will do*/>::SetNumThreads(1);
-        CPUMatrix<float /*any will do*/>::SetCompatibleMode();
-    }
+        ForceDeterministicAlgorithmsOnCPU();
     else
     {
         int numCPUThreads = config(L"numCPUThreads", 0);
