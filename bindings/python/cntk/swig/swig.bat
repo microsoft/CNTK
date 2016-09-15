@@ -5,7 +5,7 @@ set PYTHON_LIB=c:\anaconda3\libs\python34.lib
 rem set PYTHON_LIB=E:\WinPython-64bit-3.4.3.7\python-3.4.3.amd64\libs
 
 REM Please change this
-set SWIG=c:\blis\swigwin-3.0.10\swig
+set SWIG=f:\swigwin-3.0.10\swig
 rem set SWIG=E:\swigwin-3.0.10\swig
 
 %SWIG% -c++ -python -D_MSC_VER -I..\..\..\..\Source\CNTKv2LibraryDll\API\ cntk_py.i
