@@ -405,8 +405,8 @@ protected:
 template <class ElemType>
 class MATH_API BaseMatrix
 {
-public:
-    
+protected:    
+    // Default constructor. Copy/Move constructors might set doNotInitialize to true to avoid double initialization.
     BaseMatrix(bool doNotInitializeFields = false)
     {
         if (!doNotInitializeFields)
@@ -417,7 +417,7 @@ public:
     {
         ZeroValues();
     }
-
+public:
     void VerifyResizable(const char* function) const 
     { 
         if (!m_sob.unique())
