@@ -797,6 +797,8 @@ void CPUSparseMatrix<ElemType>::Reset()
 template <class ElemType, bool denseTimesSparse /* false means SparseTimesDense */, bool transposeA, bool transposeB>
 class MultiplyDenseAndSparse{
 public:
+    // Note: Below the ordering of the matrix parameters 'sparse' and 'dense' does not imply the order of the matrices in the product which is instead controlled
+    // by the value of the boolean template parameter 'denseTimesSparse'.
     static void MultiplyAndWeightedAdd(ElemType alpha, const CPUSparseMatrix<ElemType>& sparse, const CPUMatrix<ElemType>& dense, ElemType beta, CPUMatrix<ElemType>& c)
     {
         if (sparse.IsEmpty())
@@ -815,7 +817,7 @@ public:
         size_t n = transposeB ? rhs->GetNumRows() : rhs->GetNumCols();
 
         if (k != l)
-            InvalidArgument("CPUSparseMatrix::MultiplyAndWeightedAdd: The inner dimensions of a (= %llu) and b (= %llu) don't match.", k, l);
+            InvalidArgument("CPUSparseMatrix::MultiplyAndWeightedAdd: The inner dimensions of a (= %lu) and b (= %lu) don't match.", k, l);
 
         // Determine the dimension of the outer index of the dense matrix.
         size_t outerDimensionDense;
@@ -955,7 +957,7 @@ void CPUSparseMatrix<ElemType>::MultiplyAndAdd(ElemType alpha, const CPUMatrix<E
     assert(k == l);
     if (k != l)
     {
-        InvalidArgument("CPUSparseMatrix::MultiplyAndAdd: The inner dimensions of a (= %d) and b (= %d) don't match.", k, l);
+        InvalidArgument("CPUSparseMatrix::MultiplyAndAdd: The inner dimensions of a (= %lu) and b (= %lu) don't match.", k, l);
     }
 
     c.Reset();
