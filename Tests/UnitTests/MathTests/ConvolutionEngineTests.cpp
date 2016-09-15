@@ -226,7 +226,7 @@ BOOST_AUTO_TEST_CASE(ConvolutionForward)
             std::string emsg;
 
             BOOST_REQUIRE_MESSAGE(!out.HasNan("out"), "out" << msgNan);
-            BOOST_REQUIRE_MESSAGE(CheckEqual(out, outB, emsg, relErr * 4, absErr * 10), "out" << msg << ". " << emsg);
+            BOOST_REQUIRE_MESSAGE(CheckEqual(out, outB, emsg, relErr * 4, absErr * 14), "out" << msg << ". " << emsg);
             BOOST_REQUIRE_MESSAGE(CountNans(outBuf) == crowOut * 2 * n, "out" << msgNotNan);
         }
     }

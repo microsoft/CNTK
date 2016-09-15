@@ -13,6 +13,7 @@ void FunctionTests();
 void TrainLSTMSequenceClassifer();
 void SerializationTests();
 void LearnerTests();
+void TrainSequenceToSequenceTranslator();
 
 int main()
 {
@@ -29,6 +30,8 @@ int main()
 
     TestCifarResnet();
     TrainLSTMSequenceClassifer();
+
+    TrainSequenceToSequenceTranslator();
 
     fprintf(stderr, "\nCNTKv2Library tests: Passed\n");
     fflush(stderr);

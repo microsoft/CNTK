@@ -4372,15 +4372,13 @@ void CPUMatrix<ElemType>::AveragePoolingBackward(const CPUMatrix<int>& mpRowCol,
 }
 
 template <class ElemType>
-void CPUMatrix<ElemType>::BatchNormalizationForward(const CPUMatrix<ElemType>& scale, const CPUMatrix<ElemType>& bias, double expAvgFactor, double blendFactor,
-                                                    CPUMatrix<ElemType>& runMean, CPUMatrix<ElemType>& runInvStdDev, CPUMatrix<ElemType>& out, double epsilon,
+void CPUMatrix<ElemType>::BatchNormalizationForward(const CPUMatrix<ElemType>& scale, const CPUMatrix<ElemType>& bias, bool inferenceOnly, double expAvgFactor, double blendFactor,
+                                                    CPUMatrix<ElemType>& runMean, CPUMatrix<ElemType>& runVariance, CPUMatrix<ElemType>& out, double epsilon,
                                                     CPUMatrix<ElemType>& saveMean, CPUMatrix<ElemType>& saveInvStdDev) const
 {
-    UNUSED(epsilon);
-
     assert((GetNumRows() % scale.GetNumRows()) == 0);
 
-    if (expAvgFactor != 0 || blendFactor != 1)
+    if (!inferenceOnly || expAvgFactor != 0 || blendFactor != 1)
         RuntimeError("Batch normalization training on CPU is not yet implemented.");
 
     saveMean.Resize(0, 0); // only doing inference: these two are not produced
@@ -4396,7 +4394,8 @@ void CPUMatrix<ElemType>::BatchNormalizationForward(const CPUMatrix<ElemType>& s
             for (long irow = 0; irow < out.GetNumRows(); irow++)
             {
                 size_t imap = irow / spatialSize;
-                out(irow, icol) = scale(imap, 0) * ((*this)(irow, icol) - runMean(imap, 0)) * runInvStdDev(imap, 0) + bias(imap, 0);
+                ElemType stdDev = sqrt(runVariance(imap, 0) + epsilon);
+                out(irow, icol) = scale(imap, 0) * ((*this)(irow, icol) - runMean(imap, 0)) / stdDev + bias(imap, 0);
             }
         }
     }
@@ -4407,7 +4406,8 @@ void CPUMatrix<ElemType>::BatchNormalizationForward(const CPUMatrix<ElemType>& s
         {
             for (long irow = 0; irow < out.GetNumRows(); irow++)
             {
-                out(irow, icol) = scale(irow, 0) * ((*this)(irow, icol) - runMean(irow, 0)) * runInvStdDev(irow, 0) + bias(irow, 0);
+                ElemType stdDev = sqrt(runVariance(irow, 0) + epsilon);
+                out(irow, icol) = scale(irow, 0) * ((*this)(irow, icol) - runMean(irow, 0)) / stdDev + bias(irow, 0);
             }
         }
     }

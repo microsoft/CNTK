@@ -8,23 +8,73 @@
 
 namespace CNTK
 {
-    /*static*/ DeviceDescriptor DeviceDescriptor::DefaultDevice()
+    namespace Internal
     {
-        // TODO: Should return the global default device.
-        return GPUDevice(0);
+        size_t NewUniqueId()
+        {
+            static std::atomic<unsigned long long> s_nextUniqueId(0);
+            return s_nextUniqueId++;
+        }
+
+        std::atomic<bool> s_reverseTensorShapesInErrorMessages(false);
+        void EnableReversingTensorShapesInErrorMessages()
+        {
+            s_reverseTensorShapesInErrorMessages.store(true);
+        }
+
+        bool IsReversingTensorShapesInErrorMessagesEnabled()
+        {
+            return s_reverseTensorShapesInErrorMessages.load();
+        }
     }
 
-    /*static*/ const std::wstring Axis::s_staticAxisNamePrefix = L"staticAxis_";
+    /*static*/ std::atomic<bool> DeviceDescriptor::s_defaultDeviceFrozen(false);
+    /*static*/ std::shared_ptr<DeviceDescriptor> DeviceDescriptor::s_defaultDevice(new DeviceDescriptor(DeviceDescriptor::CPUDevice()));
+
+    /*static*/ DeviceDescriptor DeviceDescriptor::DefaultDevice()
+    {
+        return *s_defaultDevice;
+    }
+
+    /*static*/ DeviceDescriptor DeviceDescriptor::UseDefaultDevice()
+    {
+        s_defaultDeviceFrozen.store(true);
+        return DefaultDevice();
+    }
+
+    /*static*/ void DeviceDescriptor::SetDefaultDevice(const DeviceDescriptor& newDefaultDevice)
+    {
+        if (s_defaultDeviceFrozen.load())
+            RuntimeError("Process wide default device cannot be changed since it has been frozen by being implicitly used as the default device in a CNTK API call");
+
+        s_defaultDevice.reset(new DeviceDescriptor(newDefaultDevice));
+    }
+
+    /*static*/ const std::wstring Axis::StaticAxisNamePrefix = L"staticAxis_";
+
+    /*static*/ Axis::UniqueDynamicAxesNames Axis::s_uniqueDynamicAxisNames;
+
+    /*static*/ const std::vector<Axis> Axis::DefaultInputVariableDynamicAxes = { Axis::DefaultDynamicAxis(), Axis::DefaultBatchAxis() };
 
     /*static*/ const Axis& Axis::DefaultDynamicAxis()
     {
-        static Axis s_defaultDynamicAxis(L"defaultDynamicAxis");
+        static const Axis s_defaultDynamicAxis(L"defaultDynamicAxis");
         return s_defaultDynamicAxis;
     }
 
     /*static*/ const Axis& Axis::DefaultBatchAxis()
     {
-        static Axis s_batchAxis(L"defaultBatchAxis");
-        return s_batchAxis;
+        static const Axis s_defaultBatchAxis(L"defaultBatchAxis", false);
+        return s_defaultBatchAxis;
+    }
+
+    /*static*/ Axis Axis::NewUniqueDynamicAxis(const std::wstring& axisNamePrefix, bool isOrderedDynamicAxis /*= true*/)
+    {
+        return Axis(s_uniqueDynamicAxisNames.NewUniqueDynamicAxisName(axisNamePrefix), isOrderedDynamicAxis);
+    }
+
+    void Axis::RegisterAxisName(const std::wstring& axisName)
+    {
+        s_uniqueDynamicAxisNames.RegisterAxisName(axisName);
     }
 }

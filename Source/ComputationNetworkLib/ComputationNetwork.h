@@ -136,6 +136,10 @@ public:
     // main entry point for backprop
     void Backprop(const ComputationNodeBasePtr rootNode);
 
+    // partial forward entry
+    void ForwardProp(const ComputationNodeBasePtr rootNode, const ComputationNodeBasePtr startNode, 
+	    const ComputationNodeBasePtr endNode);
+
     template <class NODESET> // version that takes multiple nodes
     void ForwardProp(const NODESET& nodes)
     {
@@ -1034,6 +1038,8 @@ protected:
         virtual void AllocateGradientMatricesForInputs(MatrixPool& matrixPool);
         virtual void RequestMatricesBeforeBackprop(MatrixPool& matrixPool);
         virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool);
+        
+        virtual void ForwardProp(const FrameRange&, const ComputationNodeBasePtr, const ComputationNodeBasePtr) override;
 
     public:
         // this special constructor constructs the top-level network node

@@ -13,6 +13,7 @@
 #endif 
 
 #include "Basics.h"
+#include "Globals.h"
 #include "Actions.h"
 #include "ComputationNetwork.h"
 #include "ComputationNode.h"
@@ -153,7 +154,7 @@ static void DisableLegacyUsage(const ConfigParameters& TopLevelConfig, const Con
 
 // When running in parallel with MPI, only commands in 'commandstoRunOnAllRanks' should
 // be run in parallel across multiple ranks. Others should only run on rank 0
-const std::set<std::string> commandstoRunOnAllRanks = { "train", "trainRNN", "adapt", "test", "eval", "cv", "devtest" };
+const std::set<std::string> commandstoRunOnAllRanks = { "train", "trainRNN", "adapt", "test", "eval", "cv", "devtest", "pbn" };
 
 // process the command
 template <typename ElemType>
@@ -241,6 +242,10 @@ void DoCommands(const ConfigParameters& config, const shared_ptr<MPIWrapper>& mp
                     DoTrain<ConfigParameters, ElemType>(commandParams);
                     LOGPRINTF(stderr, "CNTKCommandTrainEnd: %s\n", command[i].c_str());
                     fullEpochsOffset += GetMaxEpochs(commandParams);
+                }
+                else if (thisAction == "pbn")
+                {
+                    DoEvalBN<ElemType>(commandParams);
                 }
                 else if (thisAction == "adapt")
                 {
@@ -480,6 +485,9 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
     let valp = BS::Evaluate(expr);                                // evaluate parse into a dictionary
     let& config = valp.AsRef<ScriptableObjects::IConfigRecord>(); // this is the dictionary
 
+    if (config(L"forceDeterministicAlgorithms", false))
+        Globals::ForceDeterministicAlgorithms();
+
 #ifndef CPUONLY
     auto valpp = config.Find(L"deviceId");
     if (valpp)
@@ -612,6 +620,9 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
     {
         ProgressTracing::SetTimestampingFlag();
     }
+
+    if (config(L"forceDeterministicAlgorithms", false))
+        Globals::ForceDeterministicAlgorithms();
 
     // get the command param set they want
     wstring logpath = config(L"stderr", L"");
