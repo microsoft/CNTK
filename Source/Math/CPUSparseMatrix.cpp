@@ -794,6 +794,7 @@ void CPUSparseMatrix<ElemType>::Reset()
 }
 
 // Implements product of one sparse and one dense matrix updating a third dense matrix. Input matrices are optionally transposed.
+// NOTE: The only for using a class template instead of a function template was that I couldn't make the function template compile.
 template <class ElemType, bool denseTimesSparse /* false means SparseTimesDense */, bool transposeA, bool transposeB>
 class MultiplyDenseAndSparse{
 public:
