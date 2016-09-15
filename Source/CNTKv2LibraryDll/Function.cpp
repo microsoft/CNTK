@@ -972,11 +972,10 @@ namespace CNTK
             Variable initialStateVar = functionInputs[1];
 
             size_t offset = primitiveFunction->Attributes()[PrimitiveFunction::AttributeNameOffset].Value<size_t>();
-            float dummyInitialStateValue = 0.0f; // Not really used but then why are we forced to pass this?
             if (op == PrimitiveOpType::PastValue)
-                computationNodePtr = New<PastValueNode<ElementType>>(network->GetDeviceId(), functionName, dummyInitialStateValue, AsTensorShape(inputOperandVar.Shape()), offset);
+                computationNodePtr = New<PastValueNode<ElementType>>(network->GetDeviceId(), functionName, AsTensorShape(inputOperandVar.Shape()), offset);
             else
-                computationNodePtr = New<FutureValueNode<ElementType>>(network->GetDeviceId(), functionName, dummyInitialStateValue, AsTensorShape(inputOperandVar.Shape()), offset);
+                computationNodePtr = New<FutureValueNode<ElementType>>(network->GetDeviceId(), functionName, AsTensorShape(inputOperandVar.Shape()), offset);
 
             break;
         }

@@ -117,6 +117,10 @@ public:
         : Base(deviceId, name, fixedInitialStateScalarValue, sampleLayout, timeStep)
     {
     }
+    PastValueNode(DEVICEID_TYPE deviceId, const wstring& name, const TensorShape& sampleLayout, size_t timeStep)
+        : Base(deviceId, name, (ElemType)0, sampleLayout, timeStep)
+    {
+    }
     PastValueNode(DEVICEID_TYPE deviceId, const wstring& name, ElemType fixedInitialStateScalarValue, size_t numRows, size_t timeStep)
         : PastValueNode(deviceId, name, fixedInitialStateScalarValue, TensorShape(numRows), timeStep)
     {
@@ -145,6 +149,10 @@ public:
     }
     FutureValueNode(DEVICEID_TYPE deviceId, const wstring& name, ElemType fixedInitialStateScalarValue, const TensorShape& sampleLayout, size_t timeStep)
         : Base(deviceId, name, fixedInitialStateScalarValue, sampleLayout, timeStep)
+    {
+    }
+    FutureValueNode(DEVICEID_TYPE deviceId, const wstring& name, const TensorShape& sampleLayout, size_t timeStep)
+        : Base(deviceId, name, (ElemType)0, sampleLayout, timeStep)
     {
     }
     FutureValueNode(DEVICEID_TYPE deviceId, const wstring& name, ElemType fixedInitialStateScalarValue, size_t numRows, size_t timeStep)
