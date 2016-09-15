@@ -78,7 +78,8 @@ def test_op_reshape_bad_input():
 SLICE_TEST_CASES_STATIC = [
     #(input_data, slice_params(beg_index, end_index,axis), expected_result)
     ([[1,2],[-3,4]], (1,2,0), [[-3,4]]),
-    #FIXME ([[1,2],[-3,4]], (1,2,1), [[2],[4]]),
+    # FIXME slicing on axes >0 is not supported yet
+    # ([[1,2],[-3,4]], (1,2,1), [[2],[4]]),
 ]
 @pytest.mark.parametrize("input_data, slice_params, expected_result",
         SLICE_TEST_CASES_STATIC)

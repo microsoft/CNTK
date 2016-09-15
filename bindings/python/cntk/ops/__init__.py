@@ -1091,10 +1091,7 @@ def slice(x, axis, begin_index, end_index, name=''):
     '''
     from cntk.cntk_py import slice
     x = sanitize_input(x)
-    if type(axis) == int:
-        from cntk import Axis
-        # FIXME: use Amit's sanitizer function instead
-        axis = Axis(axis+1)
+    axis = sanitize_axis(x.shape().rank(), axis)
     return slice(x, axis, begin_index, end_index, name).output()     
 
 #TODO: enable when it is exposed in c++
@@ -1133,6 +1130,9 @@ def splice(inputs, axis=0, name=''):
         raise ValueError('inputs has to be an iterable')
 
     inputs = [sanitize_input(x) for x in inputs]
+
+    rank = max([x.shape().rank() for x in inputs])
+    axis = sanitize_axis(rank, axis)
 
     return splice(inputs, axis, name).output()     
 
@@ -1174,7 +1174,7 @@ def reduce_sum(x, axis=None, name=''):
     '''
     from cntk.cntk_py import reduce_sum
     x = sanitize_input(x)
-    axis = sanitize_axis(x.rank(), axis)
+    axis = sanitize_axis(x.shape().rank(), axis)
     return reduce_sum(x, axis, name).output()    
 
 def reduce_log_sum(x, axis, name=''): 
@@ -1194,7 +1194,7 @@ def reduce_log_sum(x, axis, name=''):
     '''
     from cntk.cntk_py import reduce_log_sum
     x = sanitize_input(x)
-    axis = sanitize_axis(x.rank(), axis)
+    axis = sanitize_axis(x.shape().rank(), axis)
     return reduce_log_sum(x, axis, name).output()
 
 def reduce_mean(x, axis, name=''): 
@@ -1214,7 +1214,7 @@ def reduce_mean(x, axis, name=''):
     '''
     from cntk.cntk_py import reduce_mean
     x = sanitize_input(x)
-    axis = sanitize_axis(x.rank(), axis)
+    axis = sanitize_axis(x.shape().rank(), axis)
     return reduce_mean(x, axis, name).output()
 
 def reduce_max(x, axis, name=''): 
@@ -1234,7 +1234,7 @@ def reduce_max(x, axis, name=''):
     '''
     from cntk.cntk_py import reduce_max
     x = sanitize_input(x)
-    axis = sanitize_axis(x.rank(), axis)
+    axis = sanitize_axis(x.shape().rank(), axis)
     return reduce_max(x, axis, name).output()
 
 def reduce_min(x, axis, name=''): 
@@ -1254,7 +1254,7 @@ def reduce_min(x, axis, name=''):
     '''
     from cntk.cntk_py import reduce_min
     x = sanitize_input(x)
-    axis = sanitize_axis(x.rank(), axis)
+    axis = sanitize_axis(x.shape().rank(), axis)
     return reduce_min(x, axis, name).output()
 
 ################################################################################
@@ -1271,7 +1271,7 @@ def dropout(x, dropout_rate=0.0, name=''):
     elements set to zero (dropped out).
             
     Args:        
-        x: source tensor
+        x: input tensor
         dropout_rate (float, [0,1)): fraction of nodes to be set to zero 
         name (`str`, optional): the name of the node in the network
                 
