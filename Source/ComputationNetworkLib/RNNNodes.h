@@ -81,11 +81,8 @@ public:
 #endif
     }
 
-    // Is the output value of the computation node needed for computing
     virtual bool OutputUsedInComputingInputNodesGradients() const { return false; }
-
-    // Is the output value of the specified  input node needed for computing
-    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const { return false; }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const { return 0 == childIndex; }
 
 protected:
     bool m_BackwardDataCalledYet;
