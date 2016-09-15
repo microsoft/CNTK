@@ -6,7 +6,7 @@ using namespace CNTK;
 
 using namespace std::placeholders;
 
-void TrainSequenceToSequenceTranslator(const DeviceDescriptor& device, bool useSparseInputs, bool testSaveAndReLoad, bool testCheckpointing)
+void TrainSequenceToSequenceTranslator(const DeviceDescriptor& device, bool useSparseInputs, bool testSaveAndReLoad, bool testCheckpointing, bool addBeamSearchReorderingHook)
 {
     using namespace std::placeholders;
 
@@ -51,16 +51,20 @@ void TrainSequenceToSequenceTranslator(const DeviceDescriptor& device, bool useS
     FunctionPtr encoderOutputC;
     auto futureValueRecurrenceHook = [](const Variable& x) { return FutureValue(x); };
     for (size_t i = 0; i < numLayers; ++i)
-        std::tie(encoderOutputH, encoderOutputC) = LSTMPComponentWithSelfStabilization<float>(encoderOutputH, hiddenDim, hiddenDim, futureValueRecurrenceHook, futureValueRecurrenceHook, device);
+        std::tie(encoderOutputH, encoderOutputC) = LSTMPComponentWithSelfStabilization<float>(encoderOutputH, { hiddenDim }, { hiddenDim }, futureValueRecurrenceHook, futureValueRecurrenceHook, device);
 
     auto thoughtVectorH = Sequence::First(encoderOutputH);
     auto thoughtVectorC = Sequence::First(encoderOutputC);
+    if (addBeamSearchReorderingHook)
+    {
+        thoughtVectorH = Reshape(thoughtVectorH, thoughtVectorH->Output().Shape().AppendShape({ 1 }));
+        thoughtVectorC = Reshape(thoughtVectorC, thoughtVectorC->Output().Shape().AppendShape({ 1 }));
+    }
 
     auto thoughtVectorBroadcastH = Sequence::BroadcastAs(thoughtVectorH, labelEmbedding);
     auto thoughtVectorBroadcastC = Sequence::BroadcastAs(thoughtVectorC, labelEmbedding);
 
     /* Decoder */
-    bool addBeamSearchReorderingHook = false;
     auto beamSearchReorderHook = Constant({ 1, 1 }, 1.0f);
     auto decoderHistoryFromGroundTruth = labelEmbedding;
     auto decoderInput = ElementSelect(isFirstLabel, labelSentenceStartEmbeddedScattered, PastValue(decoderHistoryFromGroundTruth));
@@ -91,7 +95,14 @@ void TrainSequenceToSequenceTranslator(const DeviceDescriptor& device, bool useS
             };
         }
 
-        std::tie(decoderOutputH, encoderOutputC) = LSTMPComponentWithSelfStabilization<float>(decoderOutputH, hiddenDim, hiddenDim, recurrenceHookH, recurrenceHookC, device);
+        NDShape outDims = { hiddenDim };
+        NDShape cellDims = { hiddenDim };
+        if (addBeamSearchReorderingHook)
+        {
+            outDims = outDims.AppendShape({ 1 });
+            cellDims = cellDims.AppendShape({ 1 });
+        }
+        std::tie(decoderOutputH, encoderOutputC) = LSTMPComponentWithSelfStabilization<float>(decoderOutputH, outDims, cellDims, recurrenceHookH, recurrenceHookC, device);
     }
 
     auto decoderOutput = decoderOutputH;
@@ -168,6 +179,6 @@ void TrainSequenceToSequenceTranslator(const DeviceDescriptor& device, bool useS
 void TrainSequenceToSequenceTranslator()
 {
     // TODO: Also test with sparse input variables in the graph
-    TrainSequenceToSequenceTranslator(DeviceDescriptor::GPUDevice(0), false, false, true);
-    TrainSequenceToSequenceTranslator(DeviceDescriptor::CPUDevice(), false, true, false);
+    TrainSequenceToSequenceTranslator(DeviceDescriptor::GPUDevice(0), false, false, true, false);
+    TrainSequenceToSequenceTranslator(DeviceDescriptor::CPUDevice(), false, true, false, true);
 }

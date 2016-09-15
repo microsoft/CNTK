@@ -338,15 +338,18 @@ namespace CNTK
         switch (dataType)
         {
         case DataType::Float:
-            computationNetwork = compositeFunction->GetComputationNetwork<float>(device, {});
+            computationNetwork = compositeFunction->GetComputationNetwork<float>(device, {}, false);
             break;
         case DataType::Double:
-            computationNetwork = compositeFunction->GetComputationNetwork<double>(device, {});
+            computationNetwork = compositeFunction->GetComputationNetwork<double>(device, {}, false);
             break;
         default:
             LogicError("Unknown DataType %s", DataTypeName(dataType));
         }
 
         computationNetwork->Save(modelFile);
+
+        if (!compositeFunction->NetworkMatricesAllocated())
+            compositeFunction->PurgeComputationNetwork();
     }
 }
