@@ -288,6 +288,8 @@ protected:
     double m_seqGammarCalcWP;
     double m_seqGammarCalcbMMIFactor;
     bool m_seqGammarCalcUsesMBR;
+
+    bool m_useTwoPassTraining; // TODO: comment?
     
     bool m_disableWkInBatchNormal;  // TODO: comment?
 };
@@ -477,9 +479,9 @@ public:
     void UpdateWeights(Matrix<ElemType>& functionValues, Matrix<ElemType>& gradientValues,
                        Matrix<ElemType>& smoothedGradient, double& smoothedCount,
                        const double learnRatePerSample, const double momentumPerSample,
-                       size_t actualMBSize,
+                               size_t actualMBSize,
                        const double L2RegWeight, const double L1RegWeight,
-                       const bool needAveMultiplier,
+                               const bool needAveMultiplier,
                        const bool useNesterovMomentum) const;
     // return -1 if nothing exists
     int DetermineStartEpoch(const bool makeMode);
