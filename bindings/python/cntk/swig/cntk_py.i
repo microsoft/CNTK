@@ -1,4 +1,3 @@
-
 %module(directors="1") cntk_py
 
 %include "stl.i"
@@ -35,8 +34,8 @@
 %ignore CNTK::Internal::Gather;
 %ignore CNTK::Internal::Scatter;
 %ignore CNTK::Internal::Slice;
+
 %ignore CNTK::Internal::IsReversingTensorShapesInErrorMessagesEnabled;
-%ignore CNTK::Internal::IsSettingDefaultDeviceAlwaysAllowed;
 
 %ignore CNTK::Variable::Owner;
 

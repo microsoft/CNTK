@@ -199,6 +199,10 @@ reduce_elements = _cntk_py.reduce_elements
 def new_unique_id():
     return _cntk_py.new_unique_id()
 new_unique_id = _cntk_py.new_unique_id
+
+def enable_reversing_tensor_shapes_in_error_messages():
+    return _cntk_py.enable_reversing_tensor_shapes_in_error_messages()
+enable_reversing_tensor_shapes_in_error_messages = _cntk_py.enable_reversing_tensor_shapes_in_error_messages
 DataType_Unknown = _cntk_py.DataType_Unknown
 DataType_Float = _cntk_py.DataType_Float
 DataType_Double = _cntk_py.DataType_Double
@@ -607,6 +611,9 @@ class Variable(_object):
         except __builtin__.Exception:
             self.this = this
 
+    def clone(self):
+        return _cntk_py.Variable_clone(self)
+
     def __hash__(self):
         return _cntk_py.Variable___hash__(self)
     __swig_destroy__ = _cntk_py.delete_Variable
@@ -762,6 +769,92 @@ def ConstantDouble(*args):
     val = _cntk_py.new_ConstantDouble(*args)
     return val
 
+class DictionaryValue(_object):
+    __swig_setmethods__ = {}
+    __setattr__ = lambda self, name, value: _swig_setattr(self, DictionaryValue, name, value)
+    __swig_getmethods__ = {}
+    __getattr__ = lambda self, name: _swig_getattr(self, DictionaryValue, name)
+    __repr__ = _swig_repr
+    Type__None = _cntk_py.DictionaryValue_Type__None
+    Type_Bool = _cntk_py.DictionaryValue_Type_Bool
+    Type_SizeT = _cntk_py.DictionaryValue_Type_SizeT
+    Type_Float = _cntk_py.DictionaryValue_Type_Float
+    Type_Double = _cntk_py.DictionaryValue_Type_Double
+    Type_String = _cntk_py.DictionaryValue_Type_String
+    Type_NDShape = _cntk_py.DictionaryValue_Type_NDShape
+    Type_Axis = _cntk_py.DictionaryValue_Type_Axis
+    Type_Vector = _cntk_py.DictionaryValue_Type_Vector
+    Type_Dictionary = _cntk_py.DictionaryValue_Type_Dictionary
+    Type_NDArrayView = _cntk_py.DictionaryValue_Type_NDArrayView
+    if _newclass:
+        type_name = staticmethod(_cntk_py.DictionaryValue_type_name)
+    else:
+        type_name = _cntk_py.DictionaryValue_type_name
+
+    def __init__(self, *args):
+        this = _cntk_py.new_DictionaryValue(*args)
+        try:
+            self.this.append(this)
+        except __builtin__.Exception:
+            self.this = this
+    __swig_destroy__ = _cntk_py.delete_DictionaryValue
+    __del__ = lambda self: None
+
+    def has_value(self):
+        return _cntk_py.DictionaryValue_has_value(self)
+
+    def value_type(self):
+        return _cntk_py.DictionaryValue_value_type(self)
+
+    def __eq__(self, other):
+        return _cntk_py.DictionaryValue___eq__(self, other)
+
+    def __ne__(self, other):
+        return _cntk_py.DictionaryValue___ne__(self, other)
+DictionaryValue_swigregister = _cntk_py.DictionaryValue_swigregister
+DictionaryValue_swigregister(DictionaryValue)
+
+def DictionaryValue_type_name(type):
+    return _cntk_py.DictionaryValue_type_name(type)
+DictionaryValue_type_name = _cntk_py.DictionaryValue_type_name
+
+def DictionaryValueFromDict(value):
+    val = _cntk_py.new_DictionaryValueFromDict(value)
+    return val
+
+class Dictionary(_object):
+    __swig_setmethods__ = {}
+    __setattr__ = lambda self, name, value: _swig_setattr(self, Dictionary, name, value)
+    __swig_getmethods__ = {}
+    __getattr__ = lambda self, name: _swig_getattr(self, Dictionary, name)
+    __repr__ = _swig_repr
+    __swig_destroy__ = _cntk_py.delete_Dictionary
+    __del__ = lambda self: None
+
+    def __init__(self, *args):
+        this = _cntk_py.new_Dictionary(*args)
+        try:
+            self.this.append(this)
+        except __builtin__.Exception:
+            self.this = this
+
+    def contains(self, *args):
+        return _cntk_py.Dictionary_contains(self, *args)
+
+    def __eq__(self, other):
+        return _cntk_py.Dictionary___eq__(self, other)
+
+    def __ne__(self, other):
+        return _cntk_py.Dictionary___ne__(self, other)
+
+    def __getitem__(self, key):
+        return _cntk_py.Dictionary___getitem__(self, key)
+
+    def __setitem__(self, key, value):
+        return _cntk_py.Dictionary___setitem__(self, key, value)
+Dictionary_swigregister = _cntk_py.Dictionary_swigregister
+Dictionary_swigregister(Dictionary)
+
 class BackPropState(_object):
     __swig_setmethods__ = {}
     __setattr__ = lambda self, name, value: _swig_setattr(self, BackPropState, name, value)
@@ -779,6 +872,9 @@ class BackPropState(_object):
 BackPropState_swigregister = _cntk_py.BackPropState_swigregister
 BackPropState_swigregister(BackPropState)
 
+ParameterCloningMethod_Share = _cntk_py.ParameterCloningMethod_Share
+ParameterCloningMethod_Clone = _cntk_py.ParameterCloningMethod_Clone
+ParameterCloningMethod_Freeze = _cntk_py.ParameterCloningMethod_Freeze
 class Function(_object):
     __swig_setmethods__ = {}
     __setattr__ = lambda self, name, value: _swig_setattr(self, Function, name, value)
@@ -796,6 +892,9 @@ class Function(_object):
         return _cntk_py.Function_backward(self, state, rootGradientValues, backPropagatedGradientValuesForInputs)
     __swig_destroy__ = _cntk_py.delete_Function
     __del__ = lambda self: None
+
+    def clone(self, *args):
+        return _cntk_py.Function_clone(self, *args)
 
     def name(self):
         return _cntk_py.Function_name(self)
@@ -823,6 +922,9 @@ class Function(_object):
 
     def placeholders(self):
         return _cntk_py.Function_placeholders(self)
+
+    def attributes(self):
+        return _cntk_py.Function_attributes(self)
 
     def replace_placeholders_internal(self, placeholderReplacements):
         return _cntk_py.Function_replace_placeholders_internal(self, placeholderReplacements)
@@ -1079,92 +1181,6 @@ load_legacy_model = _cntk_py.load_legacy_model
 def save_as_legacy_model(rootFunction, modelFile):
     return _cntk_py.save_as_legacy_model(rootFunction, modelFile)
 save_as_legacy_model = _cntk_py.save_as_legacy_model
-class DictionaryValue(_object):
-    __swig_setmethods__ = {}
-    __setattr__ = lambda self, name, value: _swig_setattr(self, DictionaryValue, name, value)
-    __swig_getmethods__ = {}
-    __getattr__ = lambda self, name: _swig_getattr(self, DictionaryValue, name)
-    __repr__ = _swig_repr
-    Type__None = _cntk_py.DictionaryValue_Type__None
-    Type_Bool = _cntk_py.DictionaryValue_Type_Bool
-    Type_SizeT = _cntk_py.DictionaryValue_Type_SizeT
-    Type_Float = _cntk_py.DictionaryValue_Type_Float
-    Type_Double = _cntk_py.DictionaryValue_Type_Double
-    Type_String = _cntk_py.DictionaryValue_Type_String
-    Type_NDShape = _cntk_py.DictionaryValue_Type_NDShape
-    Type_Axis = _cntk_py.DictionaryValue_Type_Axis
-    Type_Vector = _cntk_py.DictionaryValue_Type_Vector
-    Type_Dictionary = _cntk_py.DictionaryValue_Type_Dictionary
-    Type_NDArrayView = _cntk_py.DictionaryValue_Type_NDArrayView
-    if _newclass:
-        type_name = staticmethod(_cntk_py.DictionaryValue_type_name)
-    else:
-        type_name = _cntk_py.DictionaryValue_type_name
-
-    def __init__(self, *args):
-        this = _cntk_py.new_DictionaryValue(*args)
-        try:
-            self.this.append(this)
-        except __builtin__.Exception:
-            self.this = this
-    __swig_destroy__ = _cntk_py.delete_DictionaryValue
-    __del__ = lambda self: None
-
-    def has_value(self):
-        return _cntk_py.DictionaryValue_has_value(self)
-
-    def value_type(self):
-        return _cntk_py.DictionaryValue_value_type(self)
-
-    def __eq__(self, other):
-        return _cntk_py.DictionaryValue___eq__(self, other)
-
-    def __ne__(self, other):
-        return _cntk_py.DictionaryValue___ne__(self, other)
-DictionaryValue_swigregister = _cntk_py.DictionaryValue_swigregister
-DictionaryValue_swigregister(DictionaryValue)
-
-def DictionaryValue_type_name(type):
-    return _cntk_py.DictionaryValue_type_name(type)
-DictionaryValue_type_name = _cntk_py.DictionaryValue_type_name
-
-def DictionaryValueFromDict(value):
-    val = _cntk_py.new_DictionaryValueFromDict(value)
-    return val
-
-class Dictionary(_object):
-    __swig_setmethods__ = {}
-    __setattr__ = lambda self, name, value: _swig_setattr(self, Dictionary, name, value)
-    __swig_getmethods__ = {}
-    __getattr__ = lambda self, name: _swig_getattr(self, Dictionary, name)
-    __repr__ = _swig_repr
-    __swig_destroy__ = _cntk_py.delete_Dictionary
-    __del__ = lambda self: None
-
-    def __init__(self, *args):
-        this = _cntk_py.new_Dictionary(*args)
-        try:
-            self.this.append(this)
-        except __builtin__.Exception:
-            self.this = this
-
-    def contains(self, *args):
-        return _cntk_py.Dictionary_contains(self, *args)
-
-    def __eq__(self, other):
-        return _cntk_py.Dictionary___eq__(self, other)
-
-    def __ne__(self, other):
-        return _cntk_py.Dictionary___ne__(self, other)
-
-    def __getitem__(self, key):
-        return _cntk_py.Dictionary___getitem__(self, key)
-
-    def __setitem__(self, key, value):
-        return _cntk_py.Dictionary___setitem__(self, key, value)
-Dictionary_swigregister = _cntk_py.Dictionary_swigregister
-Dictionary_swigregister(Dictionary)
-
 class Learner(_object):
     __swig_setmethods__ = {}
     __setattr__ = lambda self, name, value: _swig_setattr(self, Learner, name, value)
@@ -1232,8 +1248,8 @@ class Trainer(_object):
     def train_minibatch(self, *args):
         return _cntk_py.Trainer_train_minibatch(self, *args)
 
-    def test_minbatch(self, *args):
-        return _cntk_py.Trainer_test_minbatch(self, *args)
+    def test_minibatch(self, *args):
+        return _cntk_py.Trainer_test_minibatch(self, *args)
 
     def save_checkpoint(self, modelFilePath):
         return _cntk_py.Trainer_save_checkpoint(self, modelFilePath)
