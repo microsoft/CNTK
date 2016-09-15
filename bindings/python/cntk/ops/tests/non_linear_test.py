@@ -51,7 +51,6 @@ def test_op_clip(min_value, max_value, x, device_id, precision):
     _test_unary_op(precision, device_id, clip, x,
             expected_forward, expected_backward, 
             {'min_value': min_value, 'max_value': max_value})
-
 TENSORS = [
     ([[0, -0.1]]),
     ([[-100, -10], [-1, -0.1], [-0.01, -0.001],
@@ -114,7 +113,6 @@ def test_op_tanh(operand, device_id, precision):
     from .. import tanh
     _test_unary_op(precision, device_id, tanh, operand,
         expected_forward, expected_backward)
-
 @pytest.mark.parametrize("shape", [(3,9), (10,20,30)])
 @pytest.mark.parametrize("dropout_rate", [0.0, 0.2, 0.5, 0.8])
 def test_op_dropout(shape, dropout_rate, device_id, precision):

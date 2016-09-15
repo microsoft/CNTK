@@ -5,7 +5,7 @@
 
 import numpy as np
 from . import sequence
-from ..utils import sanitize_input, sanitize_shape, get_data_type
+from ..utils import sanitize_input, sanitize_shape, get_data_type, sanitize_axis
 
 #TODO: add wrappers for functions under cntk.sequence namespace in c++
 
@@ -734,6 +734,22 @@ def softmax(x, name=''):
     x = sanitize_input(x)
     return softmax(x).output()    
 
+def hardmax(x, name=''):
+    '''
+    TBA
+    Example:
+        TBA
+
+    Args:
+        x: numpy array or any :class:`cntk.Function` that outputs a tensor
+        name (str): the name of the node in the network
+    Returns:
+        :class:`cntk.Function`
+    '''
+    from cntk.cntk_py import hardmax
+    x = sanitize_input(x)
+    return hardmax(x).output()
+
 def exp(x, name=''):
     '''
     Computes the element-wise exponential of `x`: 
@@ -1008,8 +1024,7 @@ def reshape(x, shape, name=''):
 
     return reshape(x, shape, name).output()
 
-#TODO: enable when it is exposed in c++  
-def transpose_dimensions(x, axis1, axis2, name=''):
+def transpose(x, axis1=0, axis2=1, name=''):
     '''
     Reverses two axes of the tensor. The output tensor has the same data but with
     axis1 and axis2 swapped.    
@@ -1020,14 +1035,19 @@ def transpose_dimensions(x, axis1, axis2, name=''):
                  [ 2.,  1.,  5.]]])]
             
     Args:        
-        x: tensor to be reshaped
-        axis (:class:`cntk.Axis`): the axis to swap with axis2
-        axis (:class:`cntk.Axis`): the axis to swap with axis1
+        x: tensor to be transposed
+        axis1 (integer or :class:`cntk.Axis`): the axis to swap with axis2
+        axis2 (integer or :class:`cntk.Axis`): the axis to swap with axis1
         name (str, optional): the name of the node in the network
     Returns:
         :class:`cntk.Function`
     '''    
-    raise NotImplementedError("transpose_dimensions is not implemented yet in V2")
+    from cntk.cntk_py import transpose_axes
+    x = sanitize_input(x)
+    rank = max(x.shape().rank(), 2)
+    axis1 = sanitize_axis(rank, axis1)
+    axis2 = sanitize_axis(rank, axis2)
+    return transpose_axes(x, axis1, axis2, name).output()
 
 def slice(x, axis, begin_index, end_index, name=''): 
     '''
@@ -1074,7 +1094,6 @@ def slice(x, axis, begin_index, end_index, name=''):
         from cntk import Axis
         # FIXME: use Amit's sanitizer function instead
         axis = Axis(axis+1)
-
     return slice(x, axis, begin_index, end_index, name).output()     
 
 #TODO: enable when it is exposed in c++
@@ -1120,10 +1139,10 @@ def splice(inputs, axis=0, name=''):
 # reduction ops
 ################################################################################
 
-def reduce_sum(x, axis=0, name=''): 
+def reduce_sum(x, axis=None, name=''): 
     '''
-    Computes the sum of the input tensor's elements across one axis. if `axis==rank`,
-    then the sum will be computed over all axes, that is, the output is a scalar,
+    Computes the sum of the input tensor's elements across one axis. If the axis parameter
+    is not specified then the sum will be computed over all axes, that is, the output is a scalar,
     which is the sum of tensor's elements.
 
     Examples:
@@ -1146,7 +1165,7 @@ def reduce_sum(x, axis=0, name=''):
 
     Args:
         x: input tensor
-        axis (:class:`cntk.Axis`): axis along which the reduction will be performed
+        axis (integer or :class:`cntk.Axis`): axis along which the reduction will be performed
         name (str, optional): the name of the node in the network
 
     Returns:
@@ -1154,31 +1173,88 @@ def reduce_sum(x, axis=0, name=''):
     '''
     from cntk.cntk_py import reduce_sum
     x = sanitize_input(x)
+    axis = sanitize_axis(x.rank(), axis)
     return reduce_sum(x, axis, name).output()    
 
-#TODO: enable when it is exposed in c++
-def reduce_log_sum(inputs, name=''): 
+def reduce_log_sum(x, axis, name=''): 
     '''
-    Computes the log sum of the input tensor's elements. The output is a scalar,
-    which is the log sum of tensor's elements.
+    Computes the log sum of the input tensor's elements across the specified axis.
 
     Examples:
-        >>> # create 3x2 matrix in a sequence of length 1 in a batch of one sample
-        >>> data = [[10, 20],[30, 40],[50, 60]]        
+        TBA
         
-        >>> # reduce over the all axes
-        >>> C.eval(C.reduce_sum(data))
-        [array([[ 60.000046]])]       
+    Args:
+        x: input tensor
+        axis (integer or :class:`cntk.Axis`): axis along which the reduction will be performed
+        name (str): the name of the node in the network
+
+    Returns:
+        :class:`cntk.Function`
+    '''
+    from cntk.cntk_py import reduce_log_sum
+    x = sanitize_input(x)
+    axis = sanitize_axis(x.rank(), axis)
+    return reduce_log_sum(x, axis, name).output()
+
+def reduce_mean(x, axis, name=''): 
+    '''
+    Computes the mean of the input tensor's elements across the specified axis.
+
+    Examples:
+        TBA
 
     Args:
         x: input tensor        
+        axis (integer or :class:`cntk.Axis`): axis along which the reduction will be performed
         name (str, optional): the name of the node in the network
 
     Returns:
         :class:`cntk.Function`
     '''
-    raise NotImplementedError("reduce_log_sum is not implemented yet in V2")
+    from cntk.cntk_py import reduce_mean
+    x = sanitize_input(x)
+    axis = sanitize_axis(x.rank(), axis)
+    return reduce_mean(x, axis, name).output()
 
+def reduce_max(x, axis, name=''): 
+    '''
+    Computes the max of the input tensor's elements across the specified axis.
+
+    Examples:
+        TBA
+
+    Args:
+        x: input tensor
+        axis (integer or :class:`cntk.Axis`): axis along which the reduction will be performed
+        name (str): the name of the node in the network
+
+    Returns:
+        :class:`cntk.Function`
+    '''
+    from cntk.cntk_py import reduce_max
+    x = sanitize_input(x)
+    axis = sanitize_axis(x.rank(), axis)
+    return reduce_max(x, axis, name).output()
+
+def reduce_min(x, axis, name=''): 
+    '''
+    Computes the min of the input tensor's elements across the specified axis.
+
+    Examples:
+        TBA
+
+    Args:
+        x: input tensor
+        axis (integer or :class:`cntk.Axis`): axis along which the reduction will be performed
+        name (str): the name of the node in the network
+
+    Returns:
+        :class:`cntk.Function`
+    '''
+    from cntk.cntk_py import reduce_min
+    x = sanitize_input(x)
+    axis = sanitize_axis(x.rank(), axis)
+    return reduce_min(x, axis, name).output()
 
 ################################################################################
 # training ops
@@ -1243,10 +1319,8 @@ def input_variable(shape, data_type=np.float32, needs_gradient=True, is_sparse=F
     if data_type is None:
         data_type = np.float32
     dtype = sanitize_dtype_cntk(data_type)
-
     if not type(dynamic_axes) == list:
         dynamic_axes = [dynamic_axes]
-
     # TODO dynamic axis for numpy arrays
     # TODO sparse for numpy arrays
 

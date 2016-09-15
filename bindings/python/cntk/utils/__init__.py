@@ -6,6 +6,7 @@
 
 import os
 import sys
+import numbers
 import numpy as np
 import scipy.sparse
 from cntk import cntk_py
@@ -491,6 +492,16 @@ def sanitize_dtype_cntk(dtype):
     else:
         raise ValueError('data type "%s" is not supported'%dtype)
 
+def sanitize_axis(rank, axis):
+    if axis is None:
+        return axis
+    elif isinstance(axis, numbers.Integral):
+        return cntk_py.Axis(rank - 1 - axis)
+    elif axis.is_static_axis():
+        return cntk_py.Axis(rank - 1 - axis.static_axis_index())
+    else:
+        return axis
+     
 def _py_dict_to_cntk_dict(py_dict):
     '''
     Converts a Python dictionary into a CNTK Dictionary whose values are CNTK DictionaryValue instances.
