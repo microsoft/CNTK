@@ -889,15 +889,15 @@ SequenceDataPtr CastTransformer::TypedCast<TElementTo>::Apply(SequenceDataPtr se
 
     size_t nRows = inputSequence->m_image.rows;
     size_t nCols = inputSequence->m_image.cols;
+    size_t nColsAndChannels = nCols * 3;
 
     size_t dst_index = 0;
     for (size_t i = 0; i < nRows; ++i)
     {
         auto* x = inputSequence->m_image.ptr<TElementFrom>((int)i);
-        for (size_t j = 0; j < nCols * 3; ++j)
+        for (size_t j = 0; j < nColsAndChannels; ++j)
         {
-            dst[dst_index] = static_cast<TElementTo>(x[j]);
-            dst_index++;
+            dst[dst_index++] = static_cast<TElementTo>(x[j]);
         }
     }
     /*
