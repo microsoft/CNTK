@@ -152,16 +152,11 @@ MatrixBase::~MatrixBase() { }
 //            { GPU code },
 //            ...
 
-// Initialize members other than the shared_ptrs.
-// This method is only called from constructors. shared_ptrs are initialized with nullptr by their default constructor.
-// Thus, they are not initialized a second time. If they need to be reset, a call to ReleaseMemory() is necessary.
+// Initialize members 
 template <class ElemType>
-void Matrix<ElemType>::InitFields(DEVICEID_TYPE deviceId)
+void Matrix<ElemType>::Init(DEVICEID_TYPE deviceId)
 {
-    m_baseMatrix          = nullptr;
-    m_matrixType          = MatrixType::UNDETERMINED;
-    m_currentDataLocation = CurrentDataLocation::NONE;
-
+    ReleaseMemory();
     m_preferredDeviceId = deviceId;
     m_numTimesDeviceChanged = 0;
     m_numTimesMatrixTypeChanged = 0;
@@ -274,7 +269,7 @@ void Matrix<ElemType>::SetDataLocation(CurrentDataLocation location, MatrixType 
 template <class ElemType>
 Matrix<ElemType>::Matrix(const MatrixFlags matrixFlags, const MatrixType matrixType, const MatrixFormat matrixFormat, DEVICEID_TYPE deviceID)
 {
-    InitFields(deviceID);
+    Init(deviceID);
 
     if (!(matrixFlags & matrixFlagDontOwnBuffer))
         SwitchToMatrixType(matrixType, matrixFormat, false);
@@ -284,7 +279,7 @@ Matrix<ElemType>::Matrix(const MatrixFlags matrixFlags, const MatrixType matrixT
 template <class ElemType>
 Matrix<ElemType>::Matrix(const MatrixFlags matrixFlags, const MatrixType matrixType, DEVICEID_TYPE deviceID)
 {
-    InitFields(deviceID);
+    Init(deviceID);
 
     if (!(matrixFlags & matrixFlagDontOwnBuffer))
         SwitchToMatrixType(matrixType, matrixType == MatrixType::DENSE ? MatrixFormat::matrixFormatDense : MatrixFormat::matrixFormatSparseCSC, false);
@@ -294,7 +289,7 @@ Matrix<ElemType>::Matrix(const MatrixFlags matrixFlags, const MatrixType matrixT
 template <class ElemType>
 Matrix<ElemType>::Matrix(const MatrixFlags matrixFlags, DEVICEID_TYPE deviceID)
 {
-    InitFields(deviceID);
+    Init(deviceID);
 
     if (!(matrixFlags & matrixFlagDontOwnBuffer))
         SwitchToMatrixType(MatrixType::DENSE, MatrixFormat::matrixFormatDense, false);
@@ -303,7 +298,7 @@ Matrix<ElemType>::Matrix(const MatrixFlags matrixFlags, DEVICEID_TYPE deviceID)
 template <class ElemType>
 Matrix<ElemType>::Matrix(DEVICEID_TYPE deviceID)
 {
-    InitFields(deviceID);
+    Init(deviceID);
 
     SwitchToMatrixType(MatrixType::DENSE, MatrixFormat::matrixFormatDense, false);
 }
@@ -317,7 +312,7 @@ Matrix<ElemType>::Matrix(DEVICEID_TYPE deviceID)
 template <class ElemType>
 Matrix<ElemType>::Matrix(shared_ptr<BaseMatrix<ElemType>> baseMatrix, ElemType* pArray, DEVICEID_TYPE deviceId) // constructor for setting Matrix from a base matrix
 {
-    InitFields(deviceId);
+    Init(deviceId);
 
     if (baseMatrix->GetFormat() & matrixFormatSparse)
     {
@@ -353,7 +348,7 @@ Matrix<ElemType>::Matrix(shared_ptr<BaseMatrix<ElemType>> baseMatrix, ElemType* 
 template <class ElemType>
 Matrix<ElemType>::Matrix(const size_t numRows, const size_t numCols, DEVICEID_TYPE deviceId, const MatrixType matrixType, const MatrixFormat matrixFormat)
 {
-    InitFields(deviceId);
+    Init(deviceId);
 
     if (matrixType == MatrixType::SPARSE)
     {
@@ -393,7 +388,7 @@ Matrix<ElemType>::Matrix(const size_t numRows, const size_t numCols, DEVICEID_TY
 template <class ElemType>
 Matrix<ElemType>::Matrix(const size_t numRows, const size_t numCols, ElemType* pArray, DEVICEID_TYPE deviceId, const size_t matrixFlags, const size_t nnz)
 {
-    InitFields(deviceId);
+    Init(deviceId);
 
     if (m_preferredDeviceId == CPUDEVICE)
     {
@@ -444,7 +439,7 @@ Matrix<ElemType>::Matrix(const Matrix<ElemType>& deepCopyFrom, DEVICEID_TYPE dev
 {
     int origCopyFromDeviceId = deepCopyFrom.GetDeviceId();
 
-    InitFields(deviceId); // will set m_preferredDeviceId
+    Init(deviceId); // will set m_preferredDeviceId
 
     deepCopyFrom._transferToDevice(m_preferredDeviceId, true);
 
@@ -466,7 +461,7 @@ Matrix<ElemType>::Matrix(const Matrix<ElemType>& deepCopyFrom, DEVICEID_TYPE dev
 template <class ElemType>
 Matrix<ElemType>::Matrix(Matrix<ElemType>&& moveFrom)
 {
-    InitFields((DEVICEID_TYPE)moveFrom.GetDeviceId());
+    Init((DEVICEID_TYPE)moveFrom.GetDeviceId());
 
 #if 1
     operator=(move(moveFrom));
@@ -492,8 +487,7 @@ Matrix<ElemType>& Matrix<ElemType>::operator=(Matrix<ElemType>&& moveFrom)
     // shallow-copy all members
     ShallowCopyFrom(moveFrom);
     // virgin-init the source
-    moveFrom.ReleaseMemory();
-    moveFrom.InitFields(CPUDEVICE);
+    moveFrom.Init(CPUDEVICE);
 #else
     m_preferredDeviceId = moveFrom.m_preferredDeviceId;
 
@@ -518,11 +512,16 @@ Matrix<ElemType>& Matrix<ElemType>::operator=(Matrix<ElemType>&& moveFrom)
 template <class ElemType>
 void Matrix<ElemType>::ReleaseMemory()
 {
-    m_CPUMatrix       = nullptr;
-    m_GPUMatrix       = nullptr;
-    m_GPUSparseMatrix = nullptr;
-    m_CPUSparseMatrix = nullptr;
-
+    m_baseMatrix = nullptr;
+    // Perf: Avoid unnecessary assignments which are a superfluous swap() operation.
+    if (m_GPUMatrix.get() != nullptr)
+        m_GPUMatrix = nullptr;
+    if (m_CPUMatrix.get() != nullptr)
+        m_CPUMatrix = nullptr;
+    if (m_GPUSparseMatrix.get() != nullptr)
+        m_GPUSparseMatrix = nullptr;
+    if (m_CPUSparseMatrix.get() != nullptr)
+        m_CPUSparseMatrix = nullptr;
     m_matrixType = MatrixType::UNDETERMINED;
     m_currentDataLocation = CurrentDataLocation::NONE;
 }
