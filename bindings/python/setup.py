@@ -7,8 +7,8 @@ import numpy
 
 CNTK_PATH = os.path.join(os.path.dirname(__file__), "..", "..")
 CNTK_SOURCE_PATH = os.path.join(CNTK_PATH, "Source")
-#CNTK_LIB_PATH = os.path.join(CNTK_PATH, "x64", "Release_CpuOnly")
-CNTK_LIB_PATH = os.path.join(CNTK_PATH, "x64", "Debug_CpuOnly")
+CNTK_LIB_PATH = os.path.join(CNTK_PATH, "x64", "Release_CpuOnly")
+#CNTK_LIB_PATH = os.path.join(CNTK_PATH, "x64", "Debug_CpuOnly")
 print("Using CNTK libs at '%s'"%os.path.abspath(CNTK_LIB_PATH))
 
 print( os.path.join(CNTK_SOURCE_PATH, "CNTKv2LibraryDll", "API"))
@@ -64,8 +64,10 @@ ext_modules = [
                "-DSWIG",
                "-DUNICODE",
                "/EHsc"
+               "/DEBUG",
+               "/Zi"
                ],
-           extra_link_args=[ "/DEBUG"],
+           #extra_link_args=[ "/DEBUG"],
       )
     ]
 
