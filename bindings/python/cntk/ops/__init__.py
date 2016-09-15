@@ -790,7 +790,7 @@ def hardmax(x, name=''):
 
     Args:
         x: numpy array or any :class:`cntk.Function` that outputs a tensor
-        name (str): the name of the node in the network
+        name (`str`): the name of the node in the network
     Returns:
         :class:`cntk.Function`
     '''
