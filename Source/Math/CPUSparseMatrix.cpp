@@ -815,7 +815,7 @@ public:
         size_t n = transposeB ? rhs->GetNumRows() : rhs->GetNumCols();
 
         if (k != l)
-            InvalidArgument("CPUSparseMatrix::MultiplyAndWeightedAdd: The inner dimensions of a (= %d) and b (= %d) don't match.", k, l);
+            InvalidArgument("CPUSparseMatrix::MultiplyAndWeightedAdd: The inner dimensions of a (= %llu) and b (= %llu) don't match.", k, l);
 
         // Determine the dimension of the outer index of the dense matrix.
         size_t outerDimensionDense;
