@@ -19,27 +19,26 @@ TrainConvNet = {
 
         MySubSampleBN (x, depth, stride) =
         {
-            s = Splice ((MaxPoolingLayer {(1:1), stride = (stride:stride)} (x) : ConstantTensor (0, (1:1:depth/stride))), axis = 3)  # sub-sample and pad: [W x H x depth/2] --> [W/2 x H/2 x depth]
-            b = BatchNormalizationLayer {spatialRank = 2} (s)
+            s = Splice ((MaxPoolingLayer {(1:1), stride=(stride:stride)} (x) : ConstantTensor (0, (1:1:depth/stride))), axis = 3)  # sub-sample and pad: [W x H x depth/2] --> [W/2 x H/2 x depth]
+            b = BatchNormalizationLayer {spatialRank=2} (s)
         }.b
-        MyConvBN (x, depth, initValueScale, stride) =
+        MyConvBN (x, depth, stride) =
         {
-            c = ConvolutionalLayer {depth, (3:3), pad = true, stride = (stride:stride), bias = false,
-                                    init = "gaussian", initValueScale = initValueScale} (x)
-            b = BatchNormalizationLayer {spatialRank = 2} (c)
+            c = ConvolutionalLayer {depth, (3:3), pad=true, stride=(stride:stride), bias=false} (x)
+            b = BatchNormalizationLayer {spatialRank=2} (c)
         }.b
         ResNetNode (x, depth) =
         {
-            c1 = MyConvBN (x,  depth, 7.07, 1)
+            c1 = MyConvBN (x,  depth, 1)
             r1 = ReLU (c1)
-            c2 = MyConvBN (r1, depth, 7.07, 1)
+            c2 = MyConvBN (r1, depth, 1)
             r  = ReLU (x + c2)
         }.r
         ResNetIncNode (x, depth) =
         {
-            c1 = MyConvBN (x,  depth, 7.07, 2)  # note the 2
+            c1 = MyConvBN (x,  depth, 2)  # note the 2
             r1 = ReLU (c1)
-            c2 = MyConvBN (r1, depth, 7.07, 1)
+            c2 = MyConvBN (r1, depth, 1)
 
             xs = MySubSampleBN (x, depth, 2)
 
@@ -53,7 +52,7 @@ TrainConvNet = {
         }.r
         model (features) =
         {
-            conv1 = ReLU (MyConvBN (features, 16, 0.26, 1))
+            conv1 = ReLU (MyConvBN (features, 16, 1))
             rn1   = ResNetNodeStack (conv1, 16, 3)  ##### replaced
 
             rn2_1 = ResNetIncNode (rn1, 32)
@@ -64,7 +63,7 @@ TrainConvNet = {
 
             pool = AveragePoolingLayer {(8:8)} (rn3)
 
-            z = LinearLayer {labelDim, init = "gaussian", initValueScale = 0.4} (pool)
+            z = LinearLayer {labelDim} (pool)
         }.z
 
         # inputs
@@ -76,7 +75,7 @@ TrainConvNet = {
 
         # connect to system
         ce       = CrossEntropyWithSoftmax (labels, z)
-        errs     = ClassificationError         (labels, z)
+        errs     = ClassificationError     (labels, z)
 
         featureNodes    = (features)
         labelNodes      = (labels)
