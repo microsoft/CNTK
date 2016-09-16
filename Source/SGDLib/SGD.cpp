@@ -841,6 +841,13 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
     bool useModelAggregation = UsingModelAggregation(epochNumber);
     bool useParallelTrain = UsingParallelTrain(epochNumber);
 
+    // Find all evaluation nodes that accumulate error on their own.
+    auto evaluationNodesWhichAccumulateResult = net->ExtractNodesWhichAccumulateResult(
+        set<ComputationNodeBasePtr>(evaluationNodes.begin(), evaluationNodes.end()));
+    auto ContainsAccumulatedResult = [&evaluationNodesWhichAccumulateResult](ComputationNodeBasePtr node) {
+        return evaluationNodesWhichAccumulateResult.find(node) != evaluationNodesWhichAccumulateResult.end();
+    };
+
     // MA-related variables
     size_t nSamplesSinceLastModelSync = 0;
     size_t blockSizePerWorker = 0;
@@ -925,8 +932,10 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
     // NOTE: the following two local matrices are not used in distGradAgg path
     // assume only one training criterion node for each epoch.
     // The criterion values are accumulated here over the minibatches (without having to pull them off the GPU).
-    CriterionAccumulator<ElemType> localEpochCriterion(1, net->GetDeviceId());
-    CriterionAccumulator<ElemType> localEpochEvalErrors(epochEvalErrors.size(), net->GetDeviceId());
+    CriterionAccumulator<ElemType> localEpochCriterion(criterionNodes, net->GetDeviceId());
+    CriterionAccumulator<ElemType> localEpochEvalErrors(
+        evaluationNodes, net->GetDeviceId(),
+        {evaluationNodesWhichAccumulateResult.begin(), evaluationNodesWhichAccumulateResult.end()});
 
     // --- MAIN MINIBATCH LOOP
 
@@ -1109,9 +1118,9 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             // accumulate criterion values (objective, eval)
             assert(wasDataRead || numSamplesWithLabelOfNetwork == 0);
             // criteria are in Value()(0,0), we accumulate into another 1x1 Matrix (to avoid having to pull the values off the GPU)
-            localEpochCriterion.Add(criterionNodes, 0, numSamplesWithLabelOfNetwork);
+            localEpochCriterion.Add(0, numSamplesWithLabelOfNetwork);
             for (size_t i = 0; i < evaluationNodes.size(); i++)
-                localEpochEvalErrors.Add(evaluationNodes, i, numSamplesWithLabelOfNetwork);
+                localEpochEvalErrors.Add(i, numSamplesWithLabelOfNetwork);
         }
         else
         {
@@ -1141,9 +1150,9 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             }
 
             // hoist the criterion into CPU space for all-reduce
-            localEpochCriterion.Assign(criterionNodes, 0, numSamplesWithLabelOfNetwork);
+            localEpochCriterion.Assign(0, numSamplesWithLabelOfNetwork);
             for (size_t i = 0; i < evaluationNodes.size(); i++)
-                localEpochEvalErrors.Assign(evaluationNodes, i, numSamplesWithLabelOfNetwork);
+                localEpochEvalErrors.Assign(i, numSamplesWithLabelOfNetwork);
 
             // copy all values to be aggregated into the header
             m_gradHeader->numSamples = aggregateNumSamples;
@@ -1163,7 +1172,16 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             aggregateNumSamplesWithLabel = m_gradHeader->numSamplesWithLabel;
             epochCriterion += EpochCriterion(m_gradHeader->criterion, m_gradHeader->numSamplesWithLabel);
             for (size_t i = 0; i < epochEvalErrors.size(); i++)
-                epochEvalErrors[i] += m_gradHeader->evalErrors[i];
+            {
+                if (ContainsAccumulatedResult(evaluationNodes[i]))
+                {
+                    // We don't accumulate error in epoch criterion as this node has already accumulated error for
+                    // all samples that passed through network in forward pass.
+                    epochEvalErrors[i] = m_gradHeader->evalErrors[i];
+                }
+                else
+                    epochEvalErrors[i] += m_gradHeader->evalErrors[i];
+            }
         }
 
         // update model parameters
@@ -1300,7 +1318,21 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                 fprintf(stderr, "]: ");
                 epochCriterionSinceLastLogged.LogCriterion(criterionNodes[0]->NodeName());
                 for (size_t i = 0; i < epochEvalErrors.size(); i++)
-                    (epochEvalErrors[i] - epochEvalErrorsLastLogged[i]).LogCriterion(evaluationNodes[i]->NodeName());
+                {
+                    const std::wstring& nodeName = evaluationNodes[i]->NodeName();
+                    if (ContainsAccumulatedResult(evaluationNodes[i]))
+                    {
+                        // For aggregation nodes, we don't report per minibatch error. These nodes calculate
+                        // aggregated error for all samples that passed through network, instead of calculating per
+                        // sample error. Aggregated error for all samples will be reported for these nodes.
+                        epochEvalErrors[i].LogCriterion(nodeName);
+                    }
+                    else
+                    {
+                        // Report per minibatch error.
+                        (epochEvalErrors[i] - epochEvalErrorsLastLogged[i]).LogCriterion(nodeName);
+                    }
+                }
 
                 fprintf(stderr, ("time = " + GeneratePaddedFloatOrExpFormat(0, 4, totalTimeInMBs) + "s; samplesPerSecond = %.1f\n").c_str(),
                         totalTimeInMBs, trainSamplesSinceLastLogged / totalTimeInMBs);
@@ -1320,6 +1352,15 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             epochCriterionLastLogged  = epochCriterion;
             epochEvalErrorsLastLogged = epochEvalErrors;
             numMBsRunSinceLastLogged = numMBsRun;
+            for (size_t i = 0; i < epochEvalErrors.size(); i++)
+            {
+                if (ContainsAccumulatedResult(evaluationNodes[i]))
+                {
+                    // For nodes that accumulate result we report accumulated error for all samples that passed through
+                    // network so far, instead of per minibatch error. So, we reset last logged error here.
+                    epochEvalErrorsLastLogged[i] = EpochCriterion(0);
+                }
+            }
 
             totalTimeInMBs = 0;
         }
