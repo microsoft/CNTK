@@ -1,6 +1,4 @@
-from cntk.cntk_py import Function
-from cntk import DATATYPE
-from cntk.graph import TensorOpsMixin
+from cntk import cntk_py
 
-class Function(Function, TensorOpsMixin):
+class Function(cntk_py.Function):
     pass

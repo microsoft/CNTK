@@ -229,19 +229,21 @@ def sanitize_input(arg, fallback_dtype=np.float32):
 
     from cntk.ops.variables import Constant, Variable
     from cntk.ops import constant
+
+    # is it a Variable?
     if isinstance(arg, (Constant, Variable, cntk_py.Constant, cntk_py.Variable)):
         return arg
 
-    try:
-        var_output = arg.output()
-        if isinstance(var_output, (Variable, cntk_py.Variable)):
-            return var_output
-        else:
-            raise ValueError('Cannot convert argument of type "%s" to Variable'%type(arg))
-    except AttributeError:
-        # no function or function with more then one output
-        pass
-    
+    # or a Function?
+    # FIXME soon to be replaced by Function
+    #if isinstance(arg, (Function, cntk_py.Function)):
+    if isinstance(arg, cntk_py.Function):
+        try:
+            return arg.output()
+        except RuntimeError:
+            raise ValueError('the argument has more than one output, please provide the one you want')
+
+    # maybe a Python list that we can interpret as a NumPy array?
     if isinstance(arg, list) and not arg:
         raise ValueError('input is empty')
 
@@ -584,15 +586,15 @@ def eval(op, precision, device, input_map=None, backward_pass=False):
 
     forward_out_var_map =  {}
     forward_retain = set()
-    for v in op.owner.outputs():
+    for v in op.outputs():
         forward_out_var_map[v] = None # will be populated in Forward()
         forward_retain.add(v)
 
-    state = op.owner.forward(forward_in_var_map, forward_out_var_map, device, forward_retain)
+    state = op.forward(forward_in_var_map, forward_out_var_map, device, forward_retain)
 
     forward_output = {}
     forward_output_mask = {}
-    for v in op.owner.outputs():
+    for v in op.outputs():
         value = forward_out_var_map[v]
         np_data = value.data().to_numpy()         
         if value.mask():
@@ -608,7 +610,7 @@ def eval(op, precision, device, input_map=None, backward_pass=False):
 
         backward_var_map = dict((var, None) for var in forward_in_var_map)
 
-        op.owner.backward(state, root_gradients, backward_var_map)
+        op.backward(state, root_gradients, backward_var_map)
 
         backward_output = {}
         for var, value in backward_var_map.items():
