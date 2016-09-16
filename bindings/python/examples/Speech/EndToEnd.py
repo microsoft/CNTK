@@ -16,6 +16,24 @@ sys.path.append(os.path.join(abs_path, "..", ".."))
 from examples.common.nn import fully_connected_classifier_net, print_training_progress
 import examples.common.layers
 
+# Instantiates the CNTK built-in minibatch source for reading images to be used for training the residual net
+# The minibatch source is configured using a hierarchical dictionary of key:value pairs
+def create_mb_source(features_stream_name, labels_stream_name, image_height, image_width, num_channels, num_classes):
+    #map_file_rel_path = os.path.join(*"../../../../Examples/Image/Miscellaneous/CIFAR-10/cifar-10-batches-py/train_map.txt".split("/"))
+    #map_file = os.path.normpath(os.path.join(abs_path, map_file_rel_path))
+    #mean_file_rel_path = os.path.join(*"../../../../Examples/Image/Miscellaneous/CIFAR-10/cifar-10-batches-py/CIFAR-10_mean.xml".split("/"))
+    #mean_file = os.path.normpath(os.path.join(abs_path, mean_file_rel_path))
+
+    features_stream_config = {"transforms": []}
+    labels_stream_config = {"labelDim" : num_classes}
+
+    input_streams_config = {features_stream_name: features_stream_config, labels_stream_name: labels_stream_config}
+    deserializer_config = {"type" : "ImageDeserializer", "file" : map_file, "input" : input_streams_config}
+
+    minibatch_config = {"epochSize" : sys.maxsize, "deserializers" : [deserializer_config]}
+
+    return create_minibatch_source(minibatch_config)
+
 # Creates and trains a feedforward classification model for MNIST images
 def simple_mnist():
     input_dim = 784
