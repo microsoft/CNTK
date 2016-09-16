@@ -219,7 +219,7 @@ void OptimizedRNNStackNode<ElemType>::Validate(bool isFinalValidationPass)
 
     // ComputationNode derived classes are guaranteed to have a MBLayout
     if (isFinalValidationPass && !HasMBLayout())
-        InvalidArgument("%ls: Input [%s] must operate on minibatches.", NodeDescription().c_str());
+        InvalidArgument("%ls: Input [%s] must operate on minibatches.", NodeDescription().c_str(), string(shapeB).c_str());
 
     // validate and infer
     if (isFinalValidationPass || (dimsA.size() > 0 && dimsB.size() > 0)) // only if we got at least some input dimensions to work with or need to wrap up
