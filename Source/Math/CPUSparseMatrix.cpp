@@ -802,12 +802,6 @@ public:
     // by the value of the boolean template parameter 'denseTimesSparse'.
     static void MultiplyAndWeightedAdd(ElemType alpha, const CPUSparseMatrix<ElemType>& sparse, const CPUMatrix<ElemType>& dense, ElemType beta, CPUMatrix<ElemType>& c)
     {
-        if (sparse.IsEmpty())
-            LogicError("MultiplyAndWeightedAdd: sparse input matrix is empty.");
-
-        if (dense.IsEmpty())
-            LogicError("MultiplyAndWeightedAdd: dense input matrix is empty.");
-
         const BaseMatrix<ElemType>* lhs = denseTimesSparse ? (const BaseMatrix<ElemType>*) &dense  : (const BaseMatrix<ElemType>*) &sparse;
         const BaseMatrix<ElemType>* rhs = denseTimesSparse ? (const BaseMatrix<ElemType>*) &sparse : (const BaseMatrix<ElemType>*) &dense;
 
@@ -844,6 +838,10 @@ public:
         }
         else /* beta == 1*/
             ; // We keep the previous value of c before adding the matrix product.
+
+        // In case one factor in the matrix product is empty there is nothing to add to the output c so we can exit here.
+        if (sparse.IsEmpty() || dense.IsEmpty())
+            return;
 
         // TODO: Implement CSR as a transposition of b, like we do for GPU.
         if (sparse.GetFormat() != matrixFormatSparseCSC)
