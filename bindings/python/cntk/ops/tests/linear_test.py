@@ -50,10 +50,9 @@ def test_op_plus(left_operand, right_operand, device_id, precision):
             left_operand, right_operand,
             expected_forward, expected_backward)
 
-    if False: # FIXME
-        _test_binary_op(precision, device_id, '+',
-                left_operand, right_operand,
-                expected_forward, expected_backward)
+    _test_binary_op(precision, device_id, '+',
+            left_operand, right_operand,
+            expected_forward, expected_backward)
 
 SEQ_TENSOR_PAIRS = [
     # two inputs each having sequences of length 1 and 2
@@ -115,10 +114,9 @@ def test_op_minus(left_operand, right_operand, device_id, precision):
             left_operand, right_operand,
             expected_forward, expected_backward)
 
-    if False: # FIXME
-        _test_binary_op(precision, device_id, '-',
-                left_operand, right_operand,
-                expected_forward, expected_backward)
+    _test_binary_op(precision, device_id, '-',
+            left_operand, right_operand,
+            expected_forward, expected_backward)
 
 # -- element times tests --
 
@@ -136,10 +134,9 @@ def test_op_element_times(left_operand, right_operand, device_id, precision):
             left_operand, right_operand,
             expected_forward, expected_backward)
 
-    if False: # FIXME
-        _test_binary_op(precision, device_id, '*',
-                left_operand, right_operand,
-                expected_forward, expected_backward)
+    _test_binary_op(precision, device_id, '*',
+            left_operand, right_operand,
+            expected_forward, expected_backward)
 
 
 # -- element divide tests --
@@ -158,10 +155,9 @@ def test_op_element_divide(left_operand, right_operand, device_id, precision):
             left_operand, right_operand,
             expected_forward, expected_backward)
 
-    if False: # FIXME
-        _test_binary_op(precision, device_id, '/',
-                left_operand, right_operand,
-                expected_forward, expected_backward)
+    _test_binary_op(precision, device_id, '/',
+            left_operand, right_operand,
+            expected_forward, expected_backward)
 
 
 # -- identity function tests --

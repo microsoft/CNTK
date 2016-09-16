@@ -1546,63 +1546,11 @@ def get_output_and_keep_reference(self):
     variable.owner = self
     return variable
 Function.output = lambda self:get_output_and_keep_reference(self)
-Function.replace_placeholders = lambda self, ph_map: self.replace_placeholders_internal(ph_map).output()
+Function.replace_placeholders = lambda self, ph_map: self.replace_placeholders_internal(ph_map)
 
-
-Variable.__add__ = lambda self, other: plus(self,other).output()
-Variable.__radd__ = lambda self, other: plus(other,self).output()
-Variable.__sub__ = lambda self, other: minus(self,other).output()
-Variable.__rsub__ = lambda self, other: minus(other,self).output()
-Variable.__mul__ = lambda self, other: element_times(self,other).output()  
-Variable.__rmul__ = lambda self, other: element_times(other,self).output()
-Variable.__matmul__ = lambda self, other: times(self,other).output()
-Variable.__rmatmul__ = lambda self, other: times(other,self).output()
-Variable.__truediv__ = lambda self, other: element_divide(self,other).output()   
-Variable.__rtruediv__ = lambda self, other: element_divide(other,self).output()
-Variable.__div__ = Variable.__truediv__
-Variable.__rdiv__ = Variable.__rtruediv__  
-
-
-Constant.__add__ = lambda self, other: plus(self,other).output()
-Constant.__radd__ = lambda self, other: plus(other,self).output()
-Constant.__sub__ = lambda self, other: minus(self,other).output()
-Constant.__rsub__ = lambda self, other: minus(other,self).output()
-Constant.__mul__ = lambda self, other: element_times(self,other).output()  
-Constant.__rmul__ = lambda self, other: element_times(other,self).output()
-Constant.__matmul__ = lambda self, other: times(self,other).output()
-Constant.__rmatmul__ = lambda self, other: times(other,self).output()
-Constant.__truediv__ = lambda self, other: element_divide(self,other).output()   
-Constant.__rtruediv__ = lambda self, other: element_divide(other,self).output()
-Constant.__div__ = Constant.__truediv__
-Constant.__rdiv__ = Constant.__rtruediv__  
-
-
-Parameter.__add__ = lambda self, other: plus(self,other).output()
-Parameter.__radd__ = lambda self, other: plus(other,self).output()
-Parameter.__sub__ = lambda self, other: minus(self,other).output()
-Parameter.__rsub__ = lambda self, other: minus(other,self).output()
-Parameter.__mul__ = lambda self, other: element_times(self,other).output()  
-Parameter.__rmul__ = lambda self, other: element_times(other,self).output()
-Parameter.__matmul__ = lambda self, other: times(self,other).output()
-Parameter.__rmatmul__ = lambda self, other: times(other,self).output()
-Parameter.__truediv__ = lambda self, other: element_divide(self,other).output()   
-Parameter.__rtruediv__ = lambda self, other: element_divide(other,self).output()
-Parameter.__div__ = Parameter.__truediv__
-Parameter.__rdiv__ = Parameter.__rtruediv__  
-
-
-Parameter.__add__ = lambda self, other: plus(self,other).output()
-Parameter.__radd__ = lambda self, other: plus(other,self).output()
-Parameter.__sub__ = lambda self, other: minus(self,other).output()
-Parameter.__rsub__ = lambda self, other: minus(other,self).output()
-Parameter.__mul__ = lambda self, other: element_times(self,other).output()  
-Parameter.__rmul__ = lambda self, other: element_times(other,self).output()
-Parameter.__matmul__ = lambda self, other: times(self,other).output()
-Parameter.__rmatmul__ = lambda self, other: times(other,self).output()
-Parameter.__truediv__ = lambda self, other: element_divide(self,other).output()   
-Parameter.__rtruediv__ = lambda self, other: element_divide(other,self).output()
-Parameter.__div__ = Parameter.__truediv__
-Parameter.__rdiv__ = Parameter.__rtruediv__  
+from .tensor import add_tensor_ops
+for klass in [Function, Variable, Constant, ConstantFloat, ConstantDouble, Parameter, ParameterFloat, ParameterDouble]:
+    add_tensor_ops(klass)
 
 # This file is compatible with both classic and new-style classes.
 
