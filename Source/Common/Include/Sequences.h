@@ -273,7 +273,7 @@ public:
         // Todo: when upgraded to VS2013, change back to use the local static mutex, and remove also Sequences.cpp.
         // The mutex is need to make access to nameIndices be thread-safe.
         // static std::mutex nameIndiciesMutex;
-        static std::map<std::wstring, size_t> nameIndices;
+        // static std::map<std::wstring, size_t> nameIndices;
         size_t index;
 
         // Use the block to make sure that nameIndiciesMutex is unlocked as soon as possible.
@@ -579,8 +579,9 @@ private:
     std::wstring m_axisName;
 
     // The mutex to searilize the access to nameIndices in SetUniqueAxisName().
-    // Todo: after upgraded to VS2015, move this static variable into SetUnqiueAxisName() as local static variable there.
+    // Todo: after upgraded to VS2015, move both static variables into SetUnqiueAxisName() as local static variables there.
     static std::mutex nameIndiciesMutex;
+    static std::map<std::wstring, size_t> nameIndices;
 
 public:
 
