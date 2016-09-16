@@ -56,7 +56,7 @@ static void DoEvalBase(const ConfigParameters& config, IDataReader& reader)
     wstring modelPath = config(L"modelPath");
     intargvector mbSize = minibatchSize;
 
-    int traceLevel = config(L"traceLevel", "0");
+    int traceLevel = config(L"traceLevel", 0);
     size_t numMBsToShowResult = config(L"numMBsToShowResult", "100");
     size_t firstMBsToShowResult = config(L"firstMBsToShowResult", "0");
     size_t maxSamplesInRAM = config(L"maxSamplesInRAM", (size_t)SIZE_MAX);
@@ -177,7 +177,7 @@ void DoCrossValidate(const ConfigParameters& config)
 
     size_t sleepSecondsBetweenRuns = config(L"sleepTimeBetweenRuns", "0");
 
-    int traceLevel = config(L"traceLevel", "0");
+    int traceLevel = config(L"traceLevel", 0);
     size_t numMBsToShowResult = config(L"numMBsToShowResult", "100");
     size_t firstMBsToShowResult = config(L"firstMBsToShowResult", "0");
     size_t maxSamplesInRAM    = config(L"maxSamplesInRAM", (size_t)SIZE_MAX);

@@ -68,7 +68,9 @@ template<class ElemType>
 void OptimizedRNNStackNode<ElemType>::Load(File& fstream, size_t modelVersion)
 {
     Base::Load(fstream, modelVersion);
-    m_rnnAttributes.Read(fstream, /*readAxis=*/ modelVersion >= CNTK_MODEL_VERSION_14);
+    bool isLegacyVersion = modelVersion < CNTK_MODEL_VERSION_14; // (to support an internal legacy version)
+    m_legacySwapInputsPending = isLegacyVersion;
+    m_rnnAttributes.Read(fstream, /*readAxis=*/ !isLegacyVersion);
 }
 
 template<class ElemType>
@@ -91,12 +93,6 @@ void OptimizedRNNStackNode<ElemType>::TransposeHelper(const MatrixBasePtr matX, 
 template<class ElemType>
 void OptimizedRNNStackNode<ElemType>::ForwardProp(const FrameRange& fr)
 {
-    // ComputationNode derived classes are guaranteed to have a MBLayout
-    if (!HasMBLayout())
-    {
-        LogicError("OptimizedRNNStackNode must operate on minibatches");
-    }
-
     // The parameters are stored in a column matrix
     Matrix<ElemType>& paramW = InputRef(0).Value();
 
@@ -177,7 +173,7 @@ void OptimizedRNNStackNode<ElemType>::BackpropTo(const size_t inputIndex, const 
         }
 
         // Ensure enough space for the result
-        m_transposedDInput->Resize(InputRef(1).Value().GetNumRows(), m_transposedDOutput->GetNumCols());
+        m_transposedDInput->Resize(InputRef(1).GetSampleLayout().GetNumElements(), m_transposedDOutput->GetNumCols());
 
         // Do the work
         m_transposedOutput->RNNBackwardData(*m_transposedDOutput, paramW, *m_transposedDInput, m_rnnAttributes, *m_reserve, *m_workspace);
@@ -206,6 +202,12 @@ void OptimizedRNNStackNode<ElemType>::BackpropTo(const size_t inputIndex, const 
 template<class ElemType>
 void OptimizedRNNStackNode<ElemType>::Validate(bool isFinalValidationPass)
 {
+    // support an internal legacy version
+    if (m_legacySwapInputsPending)
+    {
+        ::swap(m_inputs[0], m_inputs[1]);
+        m_legacySwapInputsPending = false;
+    }
     // N.B.: I need both of these lines.
     Base::Validate(isFinalValidationPass);
     InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
@@ -222,6 +224,10 @@ void OptimizedRNNStackNode<ElemType>::Validate(bool isFinalValidationPass)
     {
         InvalidArgument("%ls: Input [%s] must have rank 1 for axis=-1 and rank 2 for axis=2.", NodeDescription().c_str(), string(shapeB).c_str());
     }
+
+    // ComputationNode derived classes are guaranteed to have a MBLayout
+    if (isFinalValidationPass && !HasMBLayout())
+        InvalidArgument("%ls: Input [%s] must operate on minibatches.", NodeDescription().c_str(), string(shapeB).c_str());
 
     // validate and infer
     if (isFinalValidationPass || (dimsA.size() > 0 && dimsB.size() > 0)) // only if we got at least some input dimensions to work with or need to wrap up

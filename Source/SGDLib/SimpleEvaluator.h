@@ -257,6 +257,7 @@ public:
         return evalResults;
     }
 
+    // TODO: remove code dup w.r.t. Evaluate()
     void EvaluateBN(IDataReader* dataReader, const vector<wstring>& evalNodeNames, const wstring exportPath, const size_t mbSize, const int iters = 240, const size_t testSize = requestDataSize)
     {
         ScopedNetworkOperationMode modeGuard(m_net, NetworkOperationMode::inferring);
