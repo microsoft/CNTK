@@ -17,23 +17,21 @@ void TrainSequenceToSequenceTranslator();
 
 int main()
 {
-
-    // NDArrayViewTests();
-    // TensorTests();
-    // FunctionTests();
+    NDArrayViewTests();
+    TensorTests();
+    FunctionTests();
 
     FeedForwardTests();
-    // RecurrentFunctionTests();
+    RecurrentFunctionTests();
 
-    // TrainerTests();
-    // SerializationTests();
-    // LearnerTests();
+    TrainerTests();
+    SerializationTests();
+    LearnerTests();
 
-    // TestCifarResnet();
-    // TrainLSTMSequenceClassifer();
+    TestCifarResnet();
+    TrainLSTMSequenceClassifer();
 
-    // TrainSequenceToSequenceTranslator();
-
+    TrainSequenceToSequenceTranslator();
 
     fprintf(stderr, "\nCNTKv2Library tests: Passed\n");
     fflush(stderr);
