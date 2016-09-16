@@ -19,15 +19,15 @@ TrainTagger = {
         embDim = 150
         hiddenDim = 300
 
-        LookaheadLayer (x) = Splice (x : FutureValue (0, x, defaultHiddenActivation=0))
+        OneWordLookahead (x) = Splice (x : DelayLayer {T=-1} (x))
 
         model = Sequential (
-            EmbeddingLayer {embDim, init='uniform'} :                            # embedding
-            LookaheadLayer :                   ##### added
-            BatchNormalizationLayer {normalizationTimeConstant=2048} :
-            RecurrentLSTMLayer {hiddenDim, goBackwards=false, init='uniform'} :  # LSTM
-            BatchNormalizationLayer {normalizationTimeConstant=2048} :
-            DenseLayer {labelDim, init='uniform', initValueScale=7}              # output layer
+            EmbeddingLayer {embDim} :                            # embedding
+            OneWordLookahead :                   ##### added
+            BatchNormalizationLayer {} :
+            RecurrentLSTMLayer {hiddenDim, goBackwards=false} :  # LSTM
+            BatchNormalizationLayer {} :
+            DenseLayer {labelDim}                                # output layer
         )
 
         # features
@@ -53,8 +53,8 @@ TrainTagger = {
 
         minibatchSize = 70
 
-        learningRatesPerSample = 0.01*2:0.005*12:0.001
-        gradUpdateType = "FSAdaGrad"
+        learningRatesPerSample = 0.003*2:0.0015*12:0.0003
+        gradUpdateType = "fsAdaGrad"
         gradientClippingWithTruncation = true ; clippingThresholdPerSample = 15.0
 
         firstMBsToShowResult = 10 ; numMBsToShowResult = 100
