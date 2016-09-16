@@ -277,7 +277,7 @@ static ConfigValuePtr NodeOp(const ExpressionPtr &e, ConfigValuePtr leftVal, Con
         if (rightVal.Is<Double>())   // ComputeNode * scalar
             swap(leftVal, rightVal); // -> scalar * ComputeNode
         if (leftVal.Is<Double>())
-            operationName = L"Scale"; // scalar * ComputeNode
+            operationName = L"ElementTimes"; // scalar * ComputeNode
         else
             operationName = L"Times"; // ComputeNode * ComputeNode (matrix produt)
     }
@@ -305,6 +305,8 @@ static ConfigValuePtr NodeOp(const ExpressionPtr &e, ConfigValuePtr leftVal, Con
     config->Add(L"operation", MakeFailFn(e->location), ConfigValuePtr(make_shared<String>(operationName), MakeFailFn(e->location), exprPath));
     let leftFailFn = leftVal.GetFailFn(); // report any error for this Constant object as belonging to the scalar factor's expression
     vector<ConfigValuePtr> inputs;
+#if 0  // BUGBUG: rows,cols is no longer right, we need a TensorShape here
+    // TODO: Solve this by directly constructing Constant() off a 'double' input in the ComputationNode constructor.
     if (operationName == L"Scale")
     {
         // if we scale, the first operand is a Double, and we must convert that into a 1x1 Constant
@@ -314,7 +316,7 @@ static ConfigValuePtr NodeOp(const ExpressionPtr &e, ConfigValuePtr leftVal, Con
         let one = MakePrimitiveConfigValuePtr(1.0, leftFailFn, exprPath);
         constantConfig->Add(L"rows", leftFailFn, one);
         constantConfig->Add(L"cols", leftFailFn, one);
-        //constantConfig->Add(L"shape", leftFailFn, one);  // BUGBUG: rows,cols is no longer right, we need a TensorShape here
+        //constantConfig->Add(L"shape", leftFailFn, one);
         constantConfig->Add(L"value", leftFailFn, leftVal);
         constantConfig->Add(L"learningRateMultiplier", leftFailFn, MakePrimitiveConfigValuePtr(0.0f, leftFailFn, exprPath));
         let value = ConfigValuePtr(rtInfo->construct(constantConfig), leftFailFn, exprPath);
@@ -323,6 +325,7 @@ static ConfigValuePtr NodeOp(const ExpressionPtr &e, ConfigValuePtr leftVal, Con
             valueWithName->SetName(value.GetExpressionName());
         leftVal = value; // and that's our actual left value
     }
+#endif
     inputs.push_back(leftVal);
     if (operationName != L"Negate") // Negate only has one input (rightVal is a nullptr)
         inputs.push_back(rightVal);
@@ -332,6 +335,8 @@ static ConfigValuePtr NodeOp(const ExpressionPtr &e, ConfigValuePtr leftVal, Con
     {
         let one = MakePrimitiveConfigValuePtr(1.0, leftFailFn, exprPath);
         config->Add(L"outputRank", leftFailFn, one);
+        let minusOne = MakePrimitiveConfigValuePtr(-1.0, leftFailFn, exprPath);
+        config->Add(L"inferInputRankToMap", leftFailFn, minusOne);
     }
     // instantiate the ComputationNode
     let value = ConfigValuePtr(rtInfo->construct(config), MakeFailFn(e->location), exprPath);

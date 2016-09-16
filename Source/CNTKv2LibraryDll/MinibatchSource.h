@@ -17,16 +17,18 @@ namespace CNTK
     public:
         CompositeMinibatchSource(const Dictionary& configuration);
 
-        virtual const std::unordered_set<StreamInfo>& StreamInfos() override { return m_streamInfos; }
+        virtual const std::unordered_set<StreamInformation>& StreamInfos() override { return m_streamInfos; }
 
-        virtual std::unordered_map<StreamInfo, MinibatchData> GetNextMinibatch(const std::unordered_map<StreamInfo, std::pair<size_t, size_t>>& perStreamMBSizeLimits,
-                                                                               const DeviceDescriptor& device = DeviceDescriptor::DefaultDevice()) override;
+        virtual const std::unordered_map<StreamInformation, MinibatchData>& GetNextMinibatch(size_t minibatchSizeInSamples,
+                                                                                      size_t minibatchSizeInSequences,
+                                                                                      const DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice()) override;
 
     private: 
-        std::unordered_set<StreamInfo> m_streamInfos;
+        std::unordered_set<StreamInformation> m_streamInfos;
         std::shared_ptr<Microsoft::MSR::CNTK::Reader> m_compositeDataReader;
         bool m_epochEndReached;
         size_t m_prevMinibatchSize;
         size_t m_epochSize;
+        std::unordered_map<StreamInformation, MinibatchData> m_minibatchData;
     };
 }

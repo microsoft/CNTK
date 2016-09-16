@@ -127,7 +127,7 @@ BOOST_AUTO_TEST_CASE(ImageReaderLabelOutOfRange)
             0,
             1),
             std::runtime_error,
-            [](std::runtime_error const& ex) { return string("Image 'images\\red.jpg' has invalid class id '10'. Expected label dimension is '4'. Line 3 in file ./ImageReaderLabelOutOfRange_map.txt.") == ex.what(); });
+            [](std::runtime_error const& ex) { return string("Image 'images/red.jpg' has invalid class id '10'. It is exceeding the label dimension of '4'. Line 3 in file ./ImageReaderLabelOutOfRange_map.txt.") == ex.what(); });
 }
 
 BOOST_AUTO_TEST_CASE(ImageReaderZip)
@@ -164,7 +164,7 @@ BOOST_AUTO_TEST_CASE(ImageReaderZipMissingFile)
             0,
             1),
             std::runtime_error,
-            [](std::runtime_error const& ex) { return string("Failed to get file info of missing.jpg, zip library error: Unknown error -1") == ex.what(); });
+            [](std::runtime_error const& ex) { return string("Cannot retrieve image data for some sequences. For more detail, please see the log file.") == ex.what(); });
 }
 
 BOOST_AUTO_TEST_CASE(ImageReaderMultiView)
@@ -253,7 +253,74 @@ BOOST_AUTO_TEST_CASE(ImageReaderMissingImage)
         0,
         1),
         std::runtime_error,
-        [](const std::runtime_error& ex) { return string("Cannot open file 'imageDoesNotExists\\black.jpg'") == ex.what(); });
+        [](const std::runtime_error& ex) { return string("Cannot open file 'imageDoesNotExists/black.jpg'") == ex.what(); });
+}
+
+BOOST_AUTO_TEST_CASE(ImageReaderEmptyTransforms)
+{
+    HelperRunReaderTest<float>(
+        testDataPath() + "/Config/ImageTransforms_Config.cntk",
+        testDataPath() + "/Control/ImageTransforms_Control.txt",
+        testDataPath() + "/Control/ImageTransforms_Output.txt",
+        "SameShapeEmptyTransforms_Test",
+        "reader",
+        1,
+        2,
+        1,
+        1,
+        0,
+        0,
+        1);
+}
+
+BOOST_AUTO_TEST_CASE(ImageReaderInvalidEmptyTransforms)
+{
+    BOOST_REQUIRE_EXCEPTION(
+        HelperRunReaderTest<float>(
+        testDataPath() + "/Config/ImageTransforms_Config.cntk",
+        testDataPath() + "/Control/ImageReaderInvalidEmptyTransforms.txt",
+        testDataPath() + "/Control/ImageReaderInvalidEmptyTransforms_Output.txt",
+        "DifferentShapeEmptyTransforms_Test",
+        "reader",
+        2,
+        2,
+        1,
+        1,
+        0,
+        0,
+        1),
+        std::runtime_error,
+        [](const std::runtime_error& ex)
+        {
+            return string("Packer currently does not support samples with varying shapes."
+                "Please make sure there is a transform that unifies the shape of samples"
+                " for input stream 'features' or the deserializer provides samples with the same shape.") == ex.what();
+        });
+}
+
+BOOST_AUTO_TEST_CASE(ImageReaderMissingScaleTransforms)
+{
+    BOOST_REQUIRE_EXCEPTION(
+        HelperRunReaderTest<float>(
+        testDataPath() + "/Config/ImageTransforms_Config.cntk",
+        testDataPath() + "/Control/ImageReaderMissingScaleTransforms.txt",
+        testDataPath() + "/Control/ImageReaderMissingScaleTransforms_Output.txt",
+        "NoScaleTransforms_Test",
+        "reader",
+        2,
+        2,
+        1,
+        1,
+        0,
+        0,
+        1),
+        std::runtime_error,
+        [](const std::runtime_error& ex)
+        {
+            return string("Packer currently does not support samples with varying shapes."
+                "Please make sure there is a transform that unifies the shape of samples"
+                " for input stream 'features' or the deserializer provides samples with the same shape.") == ex.what();
+        });
 }
 
 BOOST_AUTO_TEST_SUITE_END()

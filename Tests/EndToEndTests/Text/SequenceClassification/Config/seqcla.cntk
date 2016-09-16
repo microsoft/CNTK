@@ -32,9 +32,9 @@ Train=[
         model = Sequential
         (
             EmbeddingLayer {embedDim, embeddingPath='embeddingmatrix.txt', transpose=true} :  # load the pre-learned word embedding matrix
-            RecurrentLSTMLayer {lstmDim, cellDim=cellDim} :
+            RecurrentLSTMLayer {lstmDim, cellShape=cellDim, init="gaussian"} :
             BS.Sequences.Last :
-            DenseLayer {numLabels}
+            DenseLayer {numLabels, init="gaussian"}  # using "gaussian" for back compat/regresson tests only
         )
 
         # inputs
@@ -50,7 +50,7 @@ Train=[
 
         # training criteria
         ce  = CrossEntropyWithSoftmax (labels, zp)  // this is the training objective
-        err = ErrorPrediction         (labels, zp)  // this also gets tracked
+        err = ClassificationError     (labels, zp)  // this also gets tracked
 
         # connect to system
         featureNodes    = (features)

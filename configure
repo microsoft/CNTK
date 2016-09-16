@@ -15,10 +15,6 @@ cuda_path=
 cuda_check=include/cuda.h
 enable_cuda=
 
-have_acml=no
-acml_path=
-acml_check=include/acml.h
-
 # CNTK Custom MKL Version
 cntk_custom_mkl_version=1
 
@@ -79,7 +75,6 @@ enable_code_coverage=$default_use_code_coverage
 default_path_list="/usr /usr/local /opt /opt/local"
 
 # List from best to worst choice
-default_acmls="acml5.3.1/ifort64_mp"
 default_mkls="CNTKCustomMKL"
 default_openblas=""
 
@@ -91,7 +86,7 @@ default_kaldis="kaldi-trunk kaldi-c024e8aa"
 default_gdk_includes="include/nvidia/gdk"
 default_gdk_nvml_libs="src/gdk/nvml/lib"
 default_cubs="cub-1.4.1"
-default_cudnns="cudnn-4.0"
+default_cudnns="cudnn-5.1 cudnn-5.0"
 default_opencvs="opencv-3.1.0 opencv-3.0.0"
 default_libzips="libzip-1.1.2"
 
@@ -129,11 +124,6 @@ function find_dir ()
             fi
         done
     done
-}
-
-function find_acml ()
-{
-    find_dir "$default_acmls" "$acml_check"
 }
 
 function find_mkl ()
@@ -237,7 +227,6 @@ function show_help ()
     echo "  --with-gdk-include[=directory] $(show_default $(find_gdk_include))"
     echo "  --with-gdk-nvml-lib[=directory] $(show_default $(find_gdk_nvml_lib))"
     echo "  --with-cudnn[=directory] $(show_default $(find_cudnn))"
-    echo "  --with-acml[=directory] $(show_default $(find_acml))"
     echo "  --with-mkl[=directory] $(show_default $(find_mkl))"
     echo "  --with-mkl-sequential[=directory] $(show_default $(find_mkl))"
     echo "  --with-openblas[=directory] (experimental) $(show_default $(find_openblas))"
@@ -422,28 +411,6 @@ do
                 fi
             fi
             ;;
-        --with-acml*)
-            have_acml=yes
-            mathlib=acml
-            if test x$optarg = x
-            then
-                acml_path=$(find_acml)
-                if test x$acml_path = x
-                then
-                    echo "Cannot find acml directory"
-                    echo "Please specify a value for --with-acml"
-                    exit 1
-                fi
-            else
-                if test $(check_dir $optarg $acml_check) = yes
-                then
-                    acml_path=$optarg
-                else
-                    echo "Invalid acml directory $optarg"
-                    exit 1
-                fi
-            fi
-            ;;
         --with-mkl*)
             have_mkl=yes
             mathlib=mkl
@@ -603,24 +570,18 @@ then
     echo Defaulting to --with-buildtype=release
 fi
 
-# If no math library was specified, search for acml and then mkl
-if test x$have_acml = xno && test x$have_mkl = xno && test x$have_openblas = xno
+# If no math library was specified, search for mkl
+if test x$have_mkl = xno && test x$have_openblas = xno
 then
-    acml_path=$(find_acml)
-    if test x$acml_path = x
-    then
-        mkl_path=$(find_mkl)
-        if test x$mkl_path = x
-        then
-            echo "Cannot find a CPU math library."
-            echo "Please specify --with-acml, --with-mkl, --with-mkl-sequential, --with-openblas with a path."
-            exit 1
-        else
-            mathlib=mkl
-        fi
-    else
-        mathlib=acml
-    fi
+	mkl_path=$(find_mkl)
+	if test x$mkl_path = x
+	then
+		echo "Cannot find a CPU math library."
+		echo "Please specify --with-mkl, --with-mkl-sequential, --with-openblas with a path."
+		exit 1
+	else
+		mathlib=mkl
+	fi
 fi
 
 # If no cuda library specified, search for one
@@ -723,7 +684,7 @@ then
     if test x$boost_path = x
     then
         echo Cannot locate Boost libraries
-        echo Unit tests will NOT be built.
+        echo ImageReader and Unit tests will NOT be built.
     else
         echo Found Boost at $boost_path
     fi
@@ -735,9 +696,6 @@ echo "#Configuration file for cntk" > $config
 echo BUILDTYPE=$buildtype >> $config
 echo MATHLIB=$mathlib >> $config
 case $mathlib in
-    acml)
-        echo ACML_PATH=$acml_path >> $config
-        ;;
     mkl)
         echo MKL_PATH=$mkl_path >> $config
         echo MKL_THREADING=$mkl_threading >> $config

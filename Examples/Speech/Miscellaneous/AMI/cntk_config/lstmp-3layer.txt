@@ -112,7 +112,7 @@ ndlCreateNetwork_LSTMP_c1024_p256_x3=[
 
 	
     cr = CrossEntropyWithSoftmax(labels, LSTMoutputW,tag=Criteria);
-    Err = ErrorPrediction(labels,LSTMoutputW,tag=Eval);
+    Err = ClassificationError(labels,LSTMoutputW,tag=Eval);
     
     logPrior = LogPrior(labels)	 
     ScaledLogLikelihood=Minus(LSTMoutputW,logPrior,tag=Output)

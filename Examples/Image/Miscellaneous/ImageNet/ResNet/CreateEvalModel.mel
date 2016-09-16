@@ -2,6 +2,6 @@ m1=LoadModel($CurModel$, format=cntk)
 SetDefaultModel(m1)
 
 # Add top-5 error prediction node.
-ErrTop5 = ErrorPrediction(labels, OutputNodes.z, Const(5), tag = Eval)
+ErrTop5 = ClassificationError(labels, OutputNodes.z, Const(5), tag = Eval)
 
 SaveModel(m1, $NewModel$, format=cntk)

@@ -12,6 +12,7 @@
 #include "LinearAlgebraNodes.h"
 #include "RecurrentNodes.h"
 #include "ConvolutionalNodes.h"
+#include "RNNNodes.h"
 #include "NonlinearityNodes.h"
 #include "ReshapingNodes.h"
 #include "InputAndParamNodes.h"
@@ -154,6 +155,13 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
                 m_net->InitLearnableParameters(nodePtr, L"uniform",  initValueScale, forcedRandomSeed < 0 ? randomSeed++ : (unsigned long)forcedRandomSeed, initOnCPUOnly);
             else if (EqualCI(initString, L"gaussian"))
                 m_net->InitLearnableParameters(nodePtr, L"gaussian", initValueScale, forcedRandomSeed < 0 ? randomSeed++ : (unsigned long)forcedRandomSeed, initOnCPUOnly);
+            else if (EqualCI(initString, L"bilinear"))
+            {
+                const size_t kernelWidth = node->GetOptionalParameter("kernelWidth", "0");
+                const size_t kernelHeight = node->GetOptionalParameter("kernelHeight", "0");
+                assert(kernelWidth > 0 && kernelHeight > 0);
+                m_net->InitLearnableParametersWithBilinearFill<ElemType>(nodePtr, kernelWidth, kernelHeight);
+            }
             else if (EqualCI(initString, L"fromFile"))
             {
                 std::string initFromFilePath = node->GetOptionalParameter("initFromFilePath", "");
@@ -491,7 +499,7 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
     else if (cnNodeType == OperationNameOf(BatchNormalizationNode))
     {
         if (parameter.size() != 5)
-            RuntimeError("%ls should have 5 fixed parameters[inputValueNodeName, scale, bias, runMean, runInvStdDev].", cnNodeType.c_str());
+            RuntimeError("%ls should have 5 fixed parameters[inputValueNodeName, scale, bias, runMean, runVariance].", cnNodeType.c_str());
 
         // setup the parameter position of children so we can hook them up later
         nodeParamCount = 5;
@@ -499,7 +507,7 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
 
         if (pass == ndlPassInitial)
         {
-            int id = 5; // skip inputValueNode, scale and bias, runMean, runInvStdDev.
+            int id = 5; // skip inputValueNode, scale and bias, runMean, runVariance.
             // evaluate only scalar parameters
             vector<void*> params = EvaluateParameters(node, baseName, id, parameter.size() - id, pass);
 

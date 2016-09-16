@@ -8,123 +8,15 @@ using namespace CNTK;
 static unsigned long seed = 1;
 
 template <typename ElementType>
-std::pair<FunctionPtr, FunctionPtr> LSTMPCellWithSelfStabilization(Variable input, Variable prevOutput, Variable prevCellState, const DeviceDescriptor& device)
-{
-    assert(input.Shape().NumAxes() == 1);
-    size_t inputDim = input.Shape()[0];
-
-    size_t outputDim = prevOutput.Shape()[0];
-    size_t cellDim = prevCellState.Shape()[0];
-
-    auto Wxo = Parameter(NDArrayView::RandomUniform<ElementType>({ cellDim, inputDim }, -0.5, 0.5, seed++, device));
-    auto Wxi = Parameter(NDArrayView::RandomUniform<ElementType>({ cellDim, inputDim }, -0.5, 0.5, seed++, device));
-    auto Wxf = Parameter(NDArrayView::RandomUniform<ElementType>({ cellDim, inputDim }, -0.5, 0.5, seed++, device));
-    auto Wxc = Parameter(NDArrayView::RandomUniform<ElementType>({ cellDim, inputDim }, -0.5, 0.5, seed++, device));
-
-    auto Bo = Parameter({ cellDim }, (ElementType)0.0, device);
-    auto Bc = Parameter({ cellDim }, (ElementType)0.0, device);
-    auto Bi = Parameter({ cellDim }, (ElementType)0.0, device);
-    auto Bf = Parameter({ cellDim }, (ElementType)0.0, device);
-
-    auto Whi = Parameter(NDArrayView::RandomUniform<ElementType>({ cellDim, outputDim }, -0.5, 0.5, seed++, device));
-    auto Wci = Parameter(NDArrayView::RandomUniform<ElementType>({ cellDim }, -0.5, 0.5, seed++, device));
-
-    auto Whf = Parameter(NDArrayView::RandomUniform<ElementType>({ cellDim, outputDim }, -0.5, 0.5, seed++, device));
-    auto Wcf = Parameter(NDArrayView::RandomUniform<ElementType>({ cellDim }, -0.5, 0.5, seed++, device));
-
-    auto Who = Parameter(NDArrayView::RandomUniform<ElementType>({ cellDim, outputDim }, -0.5, 0.5, seed++, device));
-    auto Wco = Parameter(NDArrayView::RandomUniform<ElementType>({ cellDim }, -0.5, 0.5, seed++, device));
-
-    auto Whc = Parameter(NDArrayView::RandomUniform<ElementType>({ cellDim, outputDim }, -0.5, 0.5, seed++, device));
-
-    auto Wmr = Parameter(NDArrayView::RandomUniform<ElementType>({ outputDim, cellDim }, -0.5, 0.5, seed++, device));
-
-    // Stabilization by routing input through an extra scalar parameter
-    auto sWxo = Parameter({}, (ElementType)0.0, device);
-    auto sWxi = Parameter({}, (ElementType)0.0, device);
-    auto sWxf = Parameter({}, (ElementType)0.0, device);
-    auto sWxc = Parameter({}, (ElementType)0.0, device);
-
-    auto sWhi = Parameter({}, (ElementType)0.0, device);
-    auto sWci = Parameter({}, (ElementType)0.0, device);
-
-    auto sWhf = Parameter({}, (ElementType)0.0, device);
-    auto sWcf = Parameter({}, (ElementType)0.0, device);
-    auto sWho = Parameter({}, (ElementType)0.0, device);
-    auto sWco = Parameter({}, (ElementType)0.0, device);
-    auto sWhc = Parameter({}, (ElementType)0.0, device);
-
-    auto sWmr = Parameter({}, (ElementType)0.0, device);
-
-    auto expsWxo = Exp(sWxo);
-    auto expsWxi = Exp(sWxi);
-    auto expsWxf = Exp(sWxf);
-    auto expsWxc = Exp(sWxc);
-
-    auto expsWhi = Exp(sWhi);
-    auto expsWci = Exp(sWci);
-
-    auto expsWhf = Exp(sWhf);
-    auto expsWcf = Exp(sWcf);
-    auto expsWho = Exp(sWho);
-    auto expsWco = Exp(sWco);
-    auto expsWhc = Exp(sWhc);
-
-    auto expsWmr = Exp(sWmr);
-
-    auto Wxix = Times(Wxi, ElementTimes(expsWxi, input));
-    auto Whidh = Times(Whi, ElementTimes(expsWhi, prevOutput));
-    auto Wcidc = ElementTimes(Wci, ElementTimes(expsWci, prevCellState));
-
-    auto it = Sigmoid(Plus(Plus(Plus(Wxix, Bi), Whidh), Wcidc));
-
-    auto Wxcx = Times(Wxc, ElementTimes(expsWxc, input));
-    auto Whcdh = Times(Whc, ElementTimes(expsWhc, prevOutput));
-    auto bit = ElementTimes(it, Tanh(Plus(Wxcx, Plus(Whcdh, Bc))));
-
-    auto Wxfx = Times(Wxf, ElementTimes(expsWxf, input));
-    auto Whfdh = Times(Whf, ElementTimes(expsWhf, prevOutput));
-    auto Wcfdc = ElementTimes(Wcf, ElementTimes(expsWcf, prevCellState));
-
-    auto ft = Sigmoid(Plus(Plus(Plus(Wxfx, Bf), Whfdh), Wcfdc));
-
-    auto bft = ElementTimes(ft, prevCellState);
-
-    auto ct = Plus(bft, bit);
-
-    auto Wxox = Times(Wxo, ElementTimes(expsWxo, input));
-    auto Whodh = Times(Who, ElementTimes(expsWho, prevOutput));
-    auto Wcoct = ElementTimes(Wco, ElementTimes(expsWco, ct));
-
-    auto ot = Sigmoid(Plus(Plus(Plus(Wxox, Bo), Whodh), Wcoct));
-
-    auto mt = ElementTimes(ot, Tanh(ct));
-
-    return{ Times(Wmr, ElementTimes(expsWmr, mt)), ct };
-}
-
-template <typename ElementType>
-FunctionPtr LSTMPComponentWithSelfStabilization(Variable input, size_t outputDim, size_t cellDim, const DeviceDescriptor& device)
-{
-    auto dh = Placeholder({ outputDim });
-    auto dc = Placeholder({ cellDim });
-
-    auto LSTMCell = LSTMPCellWithSelfStabilization<ElementType>(input, dh, dc, device);
-
-    auto actualDh = PastValue(Constant({}, (ElementType)0.0, device), LSTMCell.first, 1);
-    auto actualDc = PastValue(Constant({}, (ElementType)0.0, device), LSTMCell.second, 1);
-
-    // Form the recurrence loop by replacing the dh and dc placeholders with the actualDh and actualDc
-    return LSTMCell.first->ReplacePlaceholders({ { dh, actualDh }, { dc, actualDc } });
-}
-
-template <typename ElementType>
 FunctionPtr LSTMNet(Variable features, size_t cellDim, size_t hiddenDim, size_t numOutputClasses, size_t numLSTMLayers, const DeviceDescriptor& device, const std::wstring& outputName)
 {
+    using namespace std::placeholders;
+
     assert(numLSTMLayers >= 1);
-    auto classifierRoot = LSTMPComponentWithSelfStabilization<ElementType>(features, hiddenDim, cellDim, device);
-    for (size_t i = 1; i < numLSTMLayers; ++i) {
-        classifierRoot = LSTMPComponentWithSelfStabilization<ElementType>(classifierRoot, hiddenDim, cellDim, device);
+    FunctionPtr classifierRoot = features;
+    auto pastValueRecurrenceHook = std::bind(PastValue, _1, CNTK::Constant({}, (ElementType)0.0), 1, L"");
+    for (size_t i = 0; i < numLSTMLayers; ++i) {
+        classifierRoot = LSTMPComponentWithSelfStabilization<ElementType>(classifierRoot, hiddenDim, cellDim, pastValueRecurrenceHook,  pastValueRecurrenceHook, device).first;
     }
 
     auto W = Parameter(NDArrayView::RandomUniform<ElementType>({ numOutputClasses, hiddenDim }, -0.5, 0.5, seed++, device));
@@ -164,7 +56,8 @@ void TestRecurrentNetworkCreation(const DeviceDescriptor& device, bool testSaveA
     if (LSTMClassifier->Outputs().size() != 3)
         throw std::runtime_error("TestFeedForwardNetworkCreation: Function does not have expected Output count");
 
-    if (LSTMClassifier->Parameters().size() != ((numLSTMLayers * 28) + 3))
+    const size_t numParameterVariablesPerLSTMLayer = 20;
+    if (LSTMClassifier->Parameters().size() != ((numLSTMLayers * numParameterVariablesPerLSTMLayer) + 3))
         throw std::runtime_error("TestFeedForwardNetworkCreation: Function does not have expected Parameter count");
 
     if (testSaveAndReLoad)
@@ -178,26 +71,9 @@ void TestRecurrentNetworkCreation(const DeviceDescriptor& device, bool testSaveA
     size_t maxAllowedSequenceLength = 11;
     for (size_t i = 0; i < iterationCount; ++i)
     {
-        std::vector<size_t> sequenceLengths(numSequences);
-        size_t maxActualSequenceLength = 0;
-        for (size_t i = 0; i < numSequences; ++i)
-        {
-            sequenceLengths[i] = (rand() % maxAllowedSequenceLength) + 1;
-            if (sequenceLengths[i] > maxActualSequenceLength)
-                maxActualSequenceLength = sequenceLengths[i];
-        }
-
-        std::vector<std::vector<ElementType>> inputSequences;
-        for (size_t i = 0; i < numSequences; ++i)
-        {
-            std::vector<ElementType> currentSequence(inputDim * sequenceLengths[i]);
-            for (size_t j = 0; j < currentSequence.size(); ++j)
-                currentSequence[j] = ((ElementType)rand()) / RAND_MAX;
-
-            inputSequences.push_back(std::move(currentSequence));
-        }
-
-        ValuePtr inputValue = Value::Create({ inputDim }, inputSequences, device, true);
+        std::vector<size_t> sequenceLengths = GenerateSequenceLengths(numSequences, maxAllowedSequenceLength);
+        
+        ValuePtr inputValue = GenerateSequences<ElementType>(sequenceLengths, inputDim, device, false);
 
         std::vector<std::vector<ElementType>> labelsData;
         for (size_t i = 0; i < numSequences; ++i)
@@ -253,9 +129,9 @@ void TestSimpleRecurrence(size_t inputDim,
     auto plusOutputFunction = Plus(plusParam, Plus(placeholder, Times(timesParam, inputVar)), L"plusOutput");
     FunctionPtr placeholderReplacement;
     if (useFutureValue)
-        placeholderReplacement = FutureValue(Constant({}, (ElementType)0.0, device), plusOutputFunction, 1);
+        placeholderReplacement = FutureValue(plusOutputFunction, Constant({}, (ElementType)0.0, device), 1);
     else
-        placeholderReplacement = PastValue(Constant({}, (ElementType)0.0, device), plusOutputFunction, 1);
+        placeholderReplacement = PastValue(plusOutputFunction, Constant({}, (ElementType)0.0, device), 1);
 
     plusOutputFunction = plusOutputFunction->ReplacePlaceholders({ { placeholder, placeholderReplacement } });
     Variable plusOutput = plusOutputFunction;

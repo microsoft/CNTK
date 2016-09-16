@@ -55,6 +55,8 @@ typedef std::shared_ptr<SequenceDescription> SequenceDescriptionPtr;
 // Currently CNTK supports dense and sparse sequences (csc).
 // The storageType in the corresponding stream description identifies what type of SequenceData
 // data deserializer or transformer can provide provides.
+// The layout of samples are described in the sampleLayout.
+// All samples in the sequence should have the same layout.
 // TODO: add type casts (As<T>() or AsRef<>() or AsPtr<>()) to subclasses as members here.
 struct SequenceDataBase
 {
@@ -69,16 +71,15 @@ struct SequenceDataBase
     // A non-owned pointer. The actual size is provided for particular sequences,
     // i.e. see DenseSequenceData, or SparseSequenceData.
     void* m_data;
+
+    TensorShapePtr m_sampleLayout; // Sample layout, can be shared by several sequences.
 };
 typedef std::shared_ptr<SequenceDataBase> SequenceDataPtr;
 
 // Dense sequence. Should be returned by the deserializer for streams with storage type StorageType::dense.
 // All samples are stored in the 'data' member as a contiguous array.
-// The layout of samples are described in the sampleLayout.
-// All samples in the sequence should have the same layout.
 struct DenseSequenceData : SequenceDataBase
 {
-    TensorShapePtr m_sampleLayout; // Sample layout, can be shared by several sequences.
 };
 typedef std::shared_ptr<DenseSequenceData> DenseSequenceDataPtr;
 

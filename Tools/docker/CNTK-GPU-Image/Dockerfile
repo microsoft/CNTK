@@ -1,4 +1,4 @@
-FROM nvidia/cuda:7.5-cudnn4-devel
+FROM nvidia/cuda:7.5-cudnn5-devel
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
         autotools-dev \
@@ -144,7 +144,7 @@ RUN git clone --depth=1 -b master https://github.com/Microsoft/CNTK.git . && \
     make -j"$(nproc)" all
 
 RUN cd Examples/Image/Miscellaneous/CIFAR-10 && \
-    python CIFAR_convert.py && \
+    python CifarDownload.py && \
     python CifarConverter.py cifar-10-batches-py && \
     cd ../../../..
 

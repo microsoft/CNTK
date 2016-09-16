@@ -92,13 +92,13 @@ public:
     void MaskColumnsValue(const CPUMatrix<char>& columnsMask, ElemType val);
 
     CPUSparseMatrix<ElemType>& DoGatherColumnsOf(ElemType beta, const CPUMatrix<ElemType>& idx, const CPUSparseMatrix<ElemType>& a, ElemType alpha);
+    CPUSparseMatrix<ElemType>& DoScatterColumnsOf(ElemType beta, const CPUMatrix<ElemType>& idx, const CPUSparseMatrix<ElemType>& a, ElemType alpha);
 
     size_t BufferSize() const
     {
         return GetSizeAllocated() * sizeof(ElemType);
     }
     ElemType* Data() const;
-    ElemType* Data();
     inline size_t GetNumElemAllocated() const
     {
         return GetSizeAllocated();
@@ -262,21 +262,28 @@ public:
 
     CPUSPARSE_INDEX_TYPE* MajorIndexLocation() const
     {
-        return GetUnCompIndex() + GetCompIndex()[m_sliceViewOffset];
+        return (GetUnCompIndex() + 
+            ((GetFormat() == matrixFormatSparseCSC || GetFormat() == matrixFormatSparseCSR) ? GetCompIndex()[m_sliceViewOffset] : 0));
     } // this is the major index, row/col ids in CSC/CSR format
+
     size_t MajorIndexCount() const
     {
         return NzCount();
     }
+
     size_t MajorIndexSize() const
     {
         return sizeof(CPUSPARSE_INDEX_TYPE) * MajorIndexCount();
     } // actual number of major index bytes in use
 
+    // Returns the start of the secondary index valid for the slice-view.
+    // Secondary index provides the offset to the data buffer for the values.
+    // E.g. for CSC the the first nonzero value of column k is Buffer(SecondaryIndexLocation[k])
     CPUSPARSE_INDEX_TYPE* SecondaryIndexLocation() const
     {
         return GetCompIndex() + m_sliceViewOffset;
-    } // this is the compressed index, col/row in CSC/CSR format
+    }
+    
     size_t SecondaryIndexCount() const
     {
         if (GetFormat() & matrixFormatCompressed)
