@@ -30,7 +30,7 @@ TrainTagger = {
             BatchNormalizationLayer {} :
             BiRecurrentLSTMLayer {hiddenDim} :
             BatchNormalizationLayer {} :
-            DenseLayer {intentDim}
+            DenseLayer {intentDim}                      ##### different dimension
         )
 
         # features
@@ -55,7 +55,7 @@ TrainTagger = {
     SGD = {
         maxEpochs = 8 ; epochSize = 36000
 
-        minibatchSize = 800
+        minibatchSize = 70
 
         learningRatesPerSample = 0.003*2:0.0015*12:0.0003
         gradUpdateType = "fsAdaGrad"
@@ -68,12 +68,13 @@ TrainTagger = {
             distributedMBReading = true
             dataParallelSGD = { gradientBits = 2 }
         }
-        AutoAdjust = {
-            autoAdjustMinibatch = true        # enable automatic growing of minibatch size
-            minibatchSizeTuningFrequency = 10 # try to enlarge after this many epochs
-            numMiniBatch4LRSearch = 200
-            minibatchSizeTuningMax = 15000    # out of memory above this
-        }
+        # for larger configurations, use this:
+        #AutoAdjust = {
+        #    autoAdjustMinibatch = true        # enable automatic growing of minibatch size
+        #    minibatchSizeTuningFrequency = 10 # try to enlarge after this many epochs
+        #    numMiniBatch4LRSearch = 200
+        #    minibatchSizeTuningMax = 15000    # out of memory above this
+        #}
     }
 
     reader = {
