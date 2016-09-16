@@ -29,16 +29,16 @@ public:
     explicit ImageDataDeserializer(const ConfigParameters& config);
 
     // Gets sequences by specified ids. Order of returned sequences corresponds to the order of provided ids.
-    virtual ChunkPtr GetChunk(size_t chunkId) override;
+    virtual ChunkPtr GetChunk(ChunkIdType chunkId) override;
 
     // Gets chunk descriptions.
     virtual ChunkDescriptions GetChunkDescriptions() override;
 
     // Gets sequence descriptions for the chunk.
-    virtual void GetSequencesForChunk(size_t, std::vector<SequenceDescription>&) override;
+    virtual void GetSequencesForChunk(ChunkIdType, std::vector<SequenceDescription>&) override;
 
     // Gets sequence description by key.
-    void GetSequenceDescriptionByKey(const KeyType&, SequenceDescription&) override;
+    bool GetSequenceDescriptionByKey(const KeyType&, SequenceDescription&) override;
 
 private:
     // Creates a set of sequence descriptions.
@@ -72,7 +72,8 @@ private:
 
     // Not using nocase_compare here as it's not correct on Linux.
     using PathReaderMap = std::unordered_map<std::string, std::shared_ptr<ByteReader>>;
-    void RegisterByteReader(size_t seqId, const std::string& path, PathReaderMap& knownReaders);
+    using ReaderSequenceMap = std::map<std::string, std::map<std::string, size_t>>;
+    void RegisterByteReader(size_t seqId, const std::string& path, PathReaderMap& knownReaders, ReaderSequenceMap& readerSequences);
     cv::Mat ReadImage(size_t seqId, const std::string& path, bool grayscale);
 
     // REVIEW alexeyk: can potentially use vector instead of map. Need to handle default reader and resizing though.
@@ -80,6 +81,7 @@ private:
     SeqReaderMap m_readers;
 
     FileByteReader m_defaultReader;
+    int m_verbosity;
 };
 
 }}}

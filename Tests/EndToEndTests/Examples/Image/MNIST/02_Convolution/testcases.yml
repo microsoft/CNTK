@@ -1,9 +1,7 @@
 dataDir: ../../../../../../Examples/Image/MNIST/Data
 
 tags:
-    # In BVT, run Release GPU (~ 60 - 90 sec)
     - bvt-e (build_sku=='gpu') and (device=='gpu') and (flavor=='release') 
-    # In Nightly on Linux, run Debug GPU in addition (~ 100 - 240 sec).
     - nightly-e (build_sku=='gpu') and (device=='gpu')
 
 testCases:
@@ -17,19 +15,22 @@ testCases:
       - learning rate per sample = {{float}}
       - momentum = {{float}}
 
-# TODO destabilized by integration of 16b606c
-#  Epochs (with low train loss) must be finished with expected results:
-#    patterns:
-#      - Finished Epoch[{{integer}} of {{integer}}]
-#      - ce = {{float,tolerance=0.05}}
-#      - err = {{float,tolerance=0.005}}
-#      - learningRatePerSample = {{float,tolerance=0.1%}}
-
-  Per-minibatch (with low train loss) training results must match:
+  Epochs (with low train loss) must be finished with expected results:
     patterns:
-      # Ignores first set of minibatches at start of epoch, which sometimes has a larger deviation:
-      - 01-
+      - Finished Epoch[{{integer}} of {{integer}}]
+      - ce = {{float,tolerance=1%}} * {{integer}}
+      - errs = {{float,tolerance=1%}}% * {{integer}}
+      - totalSamplesSeen = {{integer}}
+      - learningRatePerSample = {{float,tolerance=0.1%}}
+
+  Per-minibatch training results must match:
+    patterns:
       - Epoch[{{integer}} of {{integer}}]-Minibatch[{{integer}}-{{integer}}
-      - " * {{integer}}; "
-      - ce = {{float,tolerance=0.05}}
-      - err = {{float,tolerance=0.005}}
+      - ce = {{float,tolerance=1%}} * {{integer}}
+      - errs = {{float,tolerance=1%}}% * {{integer}}
+
+  Final test results must match:
+    patterns:
+      - "Final Results: Minibatch[{{integer}}-{{integer}}]"
+      - errs = {{float,tolerance=1%}}% * {{integer}}
+      - ce = {{float,tolerance=1%}} * {{integer}}

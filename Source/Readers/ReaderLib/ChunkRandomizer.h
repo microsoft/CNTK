@@ -7,21 +7,42 @@
 
 #include <vector>
 #include "DataDeserializer.h"
+#include <random>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-    // Represents an interval closed on the left and opened on the right.
-    struct ClosedOpenInterval
+    // Represents an interval of chunks closed on the left and opened on the right.
+    struct ClosedOpenChunkInterval
     {
-        size_t m_begin;
-        size_t m_end;
+        ClosedOpenChunkInterval() : m_begin{ 0 }, m_end{ 0 } {}
+
+        friend bool operator== (const ClosedOpenChunkInterval &a, const ClosedOpenChunkInterval &b);
+        friend bool operator!= (const ClosedOpenChunkInterval &a, const ClosedOpenChunkInterval &b);
+
+        size_t Size() const
+        {
+            return m_end - m_begin;
+        }
+
+        ChunkIdType m_begin;
+        ChunkIdType m_end;
     };
+
+    inline bool operator== (const ClosedOpenChunkInterval &a, const ClosedOpenChunkInterval &b)
+    {
+        return a.m_begin == b.m_begin && a.m_end == b.m_end;
+    }
+
+    inline bool operator!= (const ClosedOpenChunkInterval &a, const ClosedOpenChunkInterval &b)
+    {
+        return !(a == b);
+    }
 
     // Information about randomized chunk.
     struct RandomizedChunk
     {
         // Chunk id.
-        size_t m_chunkId;
+        ChunkIdType m_chunkId;
         // Pointer to the original chunk.
         const ChunkDescription* m_original;
         // Position of the first sample of the chunk in the input.
@@ -29,7 +50,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // Position of the first sequence of the chunk in the input.
         size_t m_sequencePositionStart;
         // Randomization window for this chunk.
-        ClosedOpenInterval m_randomizationWindow;
+        ClosedOpenChunkInterval m_randomizationWindow;
 
         // Position of the last sample of the chunk in the input.
         size_t SampleEndPosition() const
@@ -68,6 +89,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         bool m_legacy;
         // Randomization range in samples.
         size_t m_randomizationRangeInSamples;
+
+        std::mt19937_64 m_rng;
     };
 
     typedef std::shared_ptr<ChunkRandomizer> ChunkRandomizerPtr;

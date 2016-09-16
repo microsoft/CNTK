@@ -59,7 +59,10 @@ template <class C>
 shared_ptr<C> CreateObject(const ConfigParameters& config, const wchar_t* id)
 {
     ConfigParameters readerConfig(config(id));
-    readerConfig.Insert("traceLevel", config(L"traceLevel", "0")); // TODO: fix this by adding it to all config blocks. Easy to fix in BS as 'config with [ traceLevel = 0 ]'.
+    if (!readerConfig.ExistsCurrent("traceLevel")) // do not overwrite "traceLevel" if it's already present
+    {
+        readerConfig.Insert("traceLevel", config(L"traceLevel", "0")); // TODO: fix this by adding it to all config blocks. Easy to fix in BS as 'config with [ traceLevel = 0 ]'.
+    }
     return make_shared<C>(readerConfig);                           // old CNTK config specifies a dictionary which then must be explicitly instantiated
 }
 
@@ -68,18 +71,6 @@ void DoTrain(const ConfigRecordType& config)
 {
     bool makeMode = config(L"makeMode", true);
     DEVICEID_TYPE deviceId = DeviceFromConfig(config);
-
-    // determine the network-creation function
-    // We have several ways to create that network.
-    function<ComputationNetworkPtr(DEVICEID_TYPE)> createNetworkFn;
-
-    createNetworkFn = GetNetworkFactory<ConfigRecordType, ElemType>(config);
-
-    auto dataReader = CreateObject<DataReader>(config, L"reader");
-
-    shared_ptr<DataReader> cvDataReader;
-    if (config.Exists(L"cvReader"))
-        cvDataReader = CreateObject<DataReader>(config, L"cvReader");
 
     shared_ptr<SGD<ElemType>> optimizer;
     if (config.Exists(L"optimizer"))
@@ -92,8 +83,39 @@ void DoTrain(const ConfigRecordType& config)
         optimizer = make_shared<SGD<ElemType>>(configSGD);
     }
 
+    // determine which epoch to start with, including recovering a checkpoint if any and 'makeMode' enabled
+    int startEpoch = optimizer->DetermineStartEpoch(makeMode);
+    if (startEpoch == optimizer->GetMaxEpochs())
+    {
+        LOGPRINTF(stderr, "No further training is necessary.\n");
+        return;
+    }
+
+    wstring modelFileName = optimizer->GetModelNameForEpoch(int(startEpoch) - 1);
+    bool loadNetworkFromCheckpoint = startEpoch >= 0;
+    fprintf(stderr, "\n");
+    if (loadNetworkFromCheckpoint)
+        LOGPRINTF(stderr, "Starting from checkpoint. Loading network from '%ls'.\n", modelFileName.c_str());
+    else
+        LOGPRINTF(stderr, "Creating virgin network.\n");
+
+    // determine the network-creation function
+    // We have several ways to create that network.
+    function<ComputationNetworkPtr(DEVICEID_TYPE)> createNetworkFn;
+
+    createNetworkFn = GetNetworkFactory<ConfigRecordType, ElemType>(config);
+
+    // create or load from checkpoint
+    shared_ptr<ComputationNetwork> net = !loadNetworkFromCheckpoint ? createNetworkFn(deviceId) : ComputationNetwork::CreateFromFile<ElemType>(deviceId, modelFileName);
+
+    auto dataReader = CreateObject<DataReader>(config, L"reader");
+
+    shared_ptr<DataReader> cvDataReader;
+    if (config.Exists(L"cvReader"))
+        cvDataReader = CreateObject<DataReader>(config, L"cvReader");
+
     optimizer->InitMPI(MPIWrapper::GetInstance());
-    optimizer->Train(createNetworkFn, deviceId, dataReader.get(), cvDataReader.get(), makeMode);
+    optimizer->Train(net, deviceId, dataReader.get(), cvDataReader.get(), startEpoch, loadNetworkFromCheckpoint);
 }
 
 namespace Microsoft { namespace MSR { namespace ScriptableObjects {
@@ -168,6 +190,30 @@ void DoAdapt(const ConfigParameters& config)
 
 template void DoAdapt<float>(const ConfigParameters& config);
 template void DoAdapt<double>(const ConfigParameters& config);
+
+// ===========================================================================
+// DoDumpNodes() - implements CNTK "dumpNode" command
+// ===========================================================================
+
+template <typename ElemType>
+void DoDumpNodes(const ConfigParameters& config)
+{
+    wstring modelPath        = config(L"modelPath");
+    wstring nodeName         = config(L"nodeName", L"__AllNodes__");
+    wstring nodeNameRegexStr = config(L"nodeNameRegex", L"");
+    wstring defOutFilePath   = modelPath + L"." + nodeName + L".txt";
+    wstring outputFile       = config(L"outputFile", defOutFilePath);
+    bool printValues         = config(L"printValues", true);
+    bool printMetadata       = config(L"printMetadata", true);
+    if (!printValues && !printMetadata)
+        InvalidArgument("printValues and printMetadata: Since both are set to false, there will be nothing to dump");
+
+    ComputationNetworkPtr net = ComputationNetwork::CreateFromFile<ElemType>(CPUDEVICE, modelPath);
+    net->DumpNodeInfoToFile(nodeName, printValues, printMetadata, outputFile, nodeNameRegexStr);
+}
+
+template void DoDumpNodes<float>(const ConfigParameters& config);
+template void DoDumpNodes<double>(const ConfigParameters& config);
 
 // ===========================================================================
 // DoEdit() - implements CNTK "edit" command

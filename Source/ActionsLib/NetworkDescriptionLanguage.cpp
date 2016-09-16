@@ -11,6 +11,7 @@
 #include "NDLNetworkBuilder.h"
 
 #include "ConvolutionalNodes.h"
+#include "RNNNodes.h"
 #include "DeprecatedNodes.h"
 #include "EvaluationNodes.h"
 #include "InputAndParamNodes.h"
@@ -158,12 +159,13 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
     else if (EqualInsensitive(nodeType, OperationNameOf(CRFNode), L"CRF")) ret = true;
 #endif
     else if (EqualInsensitive(nodeType, OperationNameOf(ClassBasedCrossEntropyWithSoftmaxNode), L"CBCEWithSM")) ret = true;
-	else if (EqualInsensitive(nodeType, OperationNameOf(ComparisonEqualNode))) ret = true;
-	else if (EqualInsensitive(nodeType, OperationNameOf(ComparisonGreaterEqualNode))) ret = true;
-	else if (EqualInsensitive(nodeType, OperationNameOf(ComparisonGreaterNode))) ret = true;
-	else if (EqualInsensitive(nodeType, OperationNameOf(ComparisonLessEqualNode))) ret = true;
-	else if (EqualInsensitive(nodeType, OperationNameOf(ComparsionLessNode))) ret = true;
-	else if (EqualInsensitive(nodeType, OperationNameOf(ComparisonNotEqualNode))) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(ClassificationErrorNode), L"ErrorPrediction")) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(EqualNode))) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(GreaterEqualNode))) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(GreaterNode))) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(LessEqualNode))) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(LessNode))) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(NotEqualNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(ClipNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(ConvolutionNode), L"Convolve")) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(PoolingNode))) ret = true;
@@ -177,7 +179,6 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
     else if (EqualInsensitive(nodeType, OperationNameOf(DropoutNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(DummyCriterionNode), L"DummyCriterion")) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(ElementTimesNode))) ret = true;
-    else if (EqualInsensitive(nodeType, OperationNameOf(ErrorPredictionNode), L"ClassificationError")) ret = true;    
     else if (EqualInsensitive(nodeType, OperationNameOf(ExpNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(FloorNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(FutureValueNode))) ret = true;
@@ -191,12 +192,14 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
     else if (EqualInsensitive(nodeType, OperationNameOf(KhatriRaoProductNode), L"ColumnwiseCrossProduct")) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(LearnableParameter), L"Parameter")) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(LogNode))) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(LogPlusNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(LogSoftmaxNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(LogisticNode), L"Logistic")) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(LookupTableNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(MatrixL1RegNode), L"L1Reg")) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(MatrixL2RegNode), L"L2Reg")) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(MaxPoolingNode))) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(MaxUnpoolingNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(MeanNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(MinusNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(NegateNode))) ret = true;
@@ -263,4 +266,5 @@ template class NDLNode<double>;
 
 template class NDLScript<float>;
 template class NDLScript<double>;
-} } }
+
+}}}

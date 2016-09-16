@@ -599,7 +599,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
         std::string paramPath = params[1];
 
         NetNdl<ElemType>* netNdl;
-        vector<ComputationNodeBasePtr> nodes = FindSymbols(params[0], netNdl);
+        vector<ComputationNodeBasePtr> nodes = FindSymbols(nodeName, netNdl);
 
         for (auto& pNodes : nodes)
         {

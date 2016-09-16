@@ -48,6 +48,9 @@ public:
     virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
 
 private:
+	void Log(const FrameRange& fr, bool logGradientInstead) const;
+
+private:
     // configuration
     std::wstring m_message;
     size_t m_logFrequency = 0; // Note: This can be changed in the debugger on the fly.

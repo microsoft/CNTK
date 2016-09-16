@@ -5,6 +5,7 @@
 #pragma once
 
 #include "Basics.h"
+#include "Globals.h"
 #include "Matrix.h"
 #include "ComputationNode.h"
 #include "ConvolutionEngine.h"
@@ -24,15 +25,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 //    This follows "high performance convolutional neural networks for document processing" by Kumar Chellapilla, Sidde Puri, and Patrice Simard.
 //    Each sample is stored as a column-major matrix (height, width) of float[numChannels] (r00, g00, b00, r10, g10, b10, r01, g01, b01, r11, g11, b11).
 //
-//     - input :  [C  x W  x H      x T]  or  ARRAY[1..T] OF                ARRAY[1..H]  OF ARRAY[1..W]  OF ARRAY[1..C]
-//     - output : [C' x W' x H'     x T]  or  ARRAY[1..T] OF                ARRAY[1..H'] OF ARRAY[1..W'] OF ARRAY[1..C']
-//     - filter : [C' x W" x H" x C    ]  or                 ARRAY[1..C] OF ARRAY[1..H"] OF ARRAY[1..W"] OF ARRAY[1..C']
+//     - input :  [C x W  x H      x T]  or  ARRAY[1..T] OF                ARRAY[1..H]  OF ARRAY[1..W]  OF ARRAY[1..C]
+//     - output : [K x W' x H'     x T]  or  ARRAY[1..T] OF                ARRAY[1..H'] OF ARRAY[1..W'] OF ARRAY[1..K]
+//     - filter : [K x W" x H" x C    ]  or                 ARRAY[1..C] OF ARRAY[1..H"] OF ARRAY[1..W"] OF ARRAY[1..K]
 //
 // * cudnn ("CHW") mode (works both GPU and CPU): Channels are planes
 //
-//     - input :   [W  x H  x C       x T]   or  ARRAY[1..T] OF                 ARRAY[1..C]  OF ARRAY[1..H]  OF ARRAY[1..W]
-//     - output :  [W' x H' x      C' x T]   or  ARRAY[1..T] OF ARRAY[1..C'] OF                 ARRAY[1..H'] OF ARRAY[1..W']
-//     - filter :  [W" x H" x C  x C'    ]   or                 ARRAY[1..C'] OF ARRAY[1..C]  OF ARRAY[1..H]  OF ARRAY[1..W]
+//     - input :   [W  x H  x C      x T]   or  ARRAY[1..T] OF                ARRAY[1..C]  OF ARRAY[1..H]  OF ARRAY[1..W]
+//     - output :  [W' x H' x      K x T]   or  ARRAY[1..T] OF ARRAY[1..K] OF                 ARRAY[1..H'] OF ARRAY[1..W']
+//     - filter :  [W" x H" x C  x K    ]   or                 ARRAY[1..K] OF ARRAY[1..C]  OF ARRAY[1..H]  OF ARRAY[1..W]
 //
 // where:
 //  - using ' for output and " for filter
@@ -41,7 +42,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 //  - C = input channels
 //     - 3 for color images, 1 for B&W images
 //     - for hidden layer: dimension of activation vector for each pixel
-//  - C' = output channels = dimension of activation vector for each pixel (also called N by NVidia, inconsistently)
+//  - K = output channels = dimension of activation vector for each pixel (also called N by NVidia, inconsistently)
 //
 // For ND-convolution/pooling only second format ('cudnn') is supported.
 // 
@@ -52,15 +53,15 @@ class ConvolutionNodeBase : public ComputationNode<ElemType>
 
 public:
     ConvolutionNodeBase(DEVICEID_TYPE deviceId, const wstring& name)
-        : Base(deviceId, name), m_poolKind(PoolKind::None), m_maxTempMemSizeInSamples(0)
+        : Base(deviceId, name), m_poolKind(PoolKind::None), m_transpose(false), m_maxTempMemSizeInSamples(0)
     {
     }
     ConvolutionNodeBase(DEVICEID_TYPE deviceId, const wstring& name, const TensorShape& kernelShape, const TensorShape& mapCount, const TensorShape& strideShape,
-                    const std::vector<bool>& sharing, const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad,
-                    PoolKind poolKind, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples)
-                    : Base(deviceId, name), m_kernelShape(kernelShape), m_mapCount(mapCount), m_stride(strideShape), m_sharing(sharing),
-                    m_autoPad(autoPadding), m_lowerPad(lowerPad), m_upperPad(upperPad), m_poolKind(poolKind),
-                    m_imageLayout(imageLayout), m_maxTempMemSizeInSamples(maxTempMemSizeInSamples)
+                        const std::vector<bool>& sharing, const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad,
+                        PoolKind poolKind, bool transpose, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples)
+                        : Base(deviceId, name), m_kernelShape(kernelShape), m_mapCount(mapCount), m_stride(strideShape), m_sharing(sharing),
+                        m_autoPad(autoPadding), m_lowerPad(lowerPad), m_upperPad(upperPad), m_poolKind(poolKind), m_transpose(transpose),
+                        m_imageLayout(imageLayout), m_maxTempMemSizeInSamples(maxTempMemSizeInSamples)
     {
     }
 
@@ -79,6 +80,7 @@ public:
         fstream << (int32_t)m_poolKind;
         fstream << (int32_t)m_imageLayout;
         fstream << m_maxTempMemSizeInSamples;
+        fstream << m_transpose;
     }
 
     void Load(File& fstream, size_t modelVersion) override
@@ -102,7 +104,11 @@ public:
             fstream >> layout;
             m_imageLayout = (ImageLayoutKind)layout;
             fstream >> m_maxTempMemSizeInSamples;
-    }
+        }
+        if (modelVersion >= CNTK_MODEL_VERSION_9)
+        {
+            fstream >> m_transpose;
+        }
     }
 
     void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
@@ -119,61 +125,9 @@ public:
             node->m_lowerPad = m_lowerPad;
             node->m_upperPad = m_upperPad;
             node->m_poolKind = m_poolKind;
+            node->m_transpose = m_transpose;
             node->m_imageLayout = m_imageLayout;
             node->m_maxTempMemSizeInSamples = m_maxTempMemSizeInSamples;
-        }
-    }
-
-    void BackpropTo(const size_t inputIndex, const FrameRange& fr) override
-    {
-        auto sliceOutputGrad = GradientFor(fr);
-
-        if (m_poolKind == PoolKind::None)
-        {
-        if (inputIndex == 0) // derivative with respect to the weight matrix
-        {
-            auto& grad = Input(0)->GradientAsMatrix();
-                auto sliceInput1Value = Input(1)->ValueFor(fr);
-                m_convEng->BackwardKernel(sliceOutputGrad, sliceInput1Value, grad, fr.IsAllFrames(), *m_tempMatrix);
-        }
-        else if (inputIndex == 1) // derivative with respect to the input feature
-        {
-            auto& input0 = Input(0)->ValueAsMatrix();
-            auto sliceInput1Grad = Input(1)->GradientFor(fr);
-                m_convEng->BackwardData(sliceOutputGrad, input0, sliceInput1Grad, *m_tempMatrix);
-        }
-    }
-        else
-        {
-            Matrix<ElemType> sliceInput0Grad = Input(0)->GradientFor(fr);
-
-            Matrix<ElemType> sliceInput0Value = Input(0)->ValueFor(fr);
-            Matrix<ElemType> sliceOutputValue = ValueFor(fr);
-
-            m_convEng->BackwardPooling(sliceOutputValue, sliceOutputGrad, sliceInput0Value, sliceInput0Grad);
-        }
-    }
-
-    bool OutputUsedInComputingInputNodesGradients() const override
-    {
-        // The ConvolutionNode requires output values only for max pooling.
-        return m_poolKind == PoolKind::Max;
-    }
-
-    void ForwardProp(const FrameRange& fr) override
-    {
-        Matrix<ElemType> sliceOutputValue = ValueFor(fr);
-
-        if (m_poolKind == PoolKind::None)
-        {
-        const Matrix<ElemType>& input0 = Input(0)->ValueAsMatrix();
-        Matrix<ElemType> sliceInput1Value = Input(1)->ValueFor(fr);
-            m_convEng->Forward(sliceInput1Value, input0, sliceOutputValue, *m_tempMatrix);
-        }
-        else
-        {
-            const Matrix<ElemType>& input0 = Input(0)->ValueFor(fr);
-            m_convEng->ForwardPooling(input0, sliceOutputValue);
         }
     }
 
@@ -186,6 +140,51 @@ public:
         fstream << "PoolKind: " << (int)m_poolKind << "\n";
     }
 
+    TensorShape KernelShape() const { return m_kernelShape; }
+    TensorShape Strides() const { return m_stride; }
+    std::vector<bool> Sharing() const { return m_sharing; }
+    std::vector<bool> AutoPad() const { return m_autoPad; }
+    TensorShape LowerPad() const { return m_lowerPad; }
+    TensorShape UpperPad() const { return m_upperPad; }
+    bool Transpose() const { return m_transpose; }
+    size_t MaxTempMemSizeInSamples() const { return m_maxTempMemSizeInSamples; }
+    PoolKind PoolingKind() const { return m_poolKind; }
+
+private:
+    // bottomlessly expand shape to filterRank, then expand to inputRank using defaults or given 'from' values
+    template<class V, typename T>
+    static void FixVectorShape(size_t filterRank, size_t inputRank, V& shape, T deflt, const V& from = V())
+    {
+        if (shape.size() == 0)
+            return; // let ComputeOutputShape() deal with this special case
+        // repeat the last value until we have the same rank as the filter
+        while (shape.size() < filterRank)
+            shape.push_back(shape.back());
+        // increase to input rank
+        // If 'from' is given then clone the value from there. This is meant to be the input dimensions for convolution.
+        while (shape.size() < inputRank)
+            shape.push_back(shape.size() < from.size() ? from[shape.size()] : deflt);
+    }
+    static void FixTensorShape(size_t filterRank, size_t inputRank, TensorShape& shape, size_t deflt, const TensorShape& from = TensorShape())
+    {
+        auto dims = shape.GetDims();
+        FixVectorShape(filterRank, inputRank, dims, deflt, from.GetDims());
+        shape = TensorShape(dims);
+    }
+protected:
+    // infer reduction dimensions if not given
+    void InferReductionDims(const TensorShape& inputShape, const TensorShape& fromShape)
+    {
+        // If kernel has a lower rank than the input then the remaining dimensions are to be reduced over.
+        size_t filterRank = m_kernelShape.size();
+        FixTensorShape(filterRank, inputShape.size(), m_kernelShape, 1,     fromShape); // convolve over red dim; pool over 1
+        FixTensorShape(filterRank, inputShape.size(), m_stride,      1,     fromShape); // stride for reduction dims is red dim or 1
+        FixVectorShape(filterRank, inputShape.size(), m_autoPad,     false);            // no padding for reduction dims
+        FixTensorShape(filterRank, inputShape.size(), m_lowerPad,    0);
+        FixTensorShape(filterRank, inputShape.size(), m_upperPad,    0);
+        FixVectorShape(filterRank, inputShape.size(), m_sharing,     true);
+    }
+
 protected:
     TensorShape m_kernelShape;
     TensorShape m_mapCount;
@@ -195,6 +194,7 @@ protected:
     TensorShape m_lowerPad;
     TensorShape m_upperPad;
     PoolKind m_poolKind;
+    bool m_transpose; // means de-convolution ...I think
     ImageLayoutKind m_imageLayout;
 
     size_t m_maxTempMemSizeInSamples;
@@ -214,10 +214,12 @@ protected:                                  \
     using Base::m_lowerPad;                 \
     using Base::m_upperPad;                 \
     using Base::m_poolKind;                 \
+    using Base::m_transpose;                \
     using Base::m_imageLayout;              \
     using Base::m_maxTempMemSizeInSamples;  \
     using Base::m_tempMatrix;               \
     using Base::m_convEng;                  \
+    using Base::InferReductionDims;         \
 public:
 
 // -----------------------------------------------------------------------
@@ -227,13 +229,8 @@ public:
 template <class ElemType>
 class ConvolutionNode : public ConvolutionNodeBase<ElemType>, public NumInputs<2>
 {
-    typedef ConvolutionNodeBase<ElemType> Base;
-    UsingConvolutionNodeBaseMembers;
-    static const std::wstring TypeName()
-    {
-        return L"Convolution";
-    }
-
+    typedef ConvolutionNodeBase<ElemType> Base; UsingConvolutionNodeBaseMembers;
+    static const std::wstring TypeName() { return L"Convolution"; }
 public:
     ConvolutionNode(DEVICEID_TYPE deviceId, const wstring& name)
         : Base(deviceId, name)
@@ -241,8 +238,8 @@ public:
     }
     ConvolutionNode(DEVICEID_TYPE deviceId, const wstring& name, const TensorShape& kernelShape, const TensorShape& mapCount, const TensorShape& strideShape,
                     const std::vector<bool>& sharing, const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad,
-                    ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples)
-                    : Base(deviceId, name, kernelShape, mapCount, strideShape, sharing, autoPadding, lowerPad, upperPad, PoolKind::None, imageLayout, maxTempMemSizeInSamples),
+                    bool transpose, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples)
+                    : Base(deviceId, name, kernelShape, mapCount, strideShape, sharing, autoPadding, lowerPad, upperPad, PoolKind::None, transpose, imageLayout, maxTempMemSizeInSamples),
                     m_convolution2D(false)
     {
     }
@@ -250,16 +247,16 @@ public:
                     const size_t horizontalSubsample, const size_t verticalSubsample, ImageLayoutKind imageLayout,
                     bool zeroPadding, size_t maxTempMemSizeInSamples)
                     : ConvolutionNode(deviceId, name, TensorShape(kernelWidth, kernelHeight, 1), TensorShape(1, 1, outputChannels),
-                                      TensorShape(horizontalSubsample, verticalSubsample, 1), vector<bool>{true}, 
+                                      TensorShape(horizontalSubsample, verticalSubsample, 1), vector<bool>{true},
                                       vector<bool>{zeroPadding}, TensorShape(0), TensorShape(0),
-                                      imageLayout, maxTempMemSizeInSamples)
+                                      false, imageLayout, maxTempMemSizeInSamples)
     {
         m_convolution2D = true;
     }
     ConvolutionNode(const ScriptableObjects::IConfigRecordPtr configp)
         : ConvolutionNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"kernelShape"), configp->Get(L"mapCount"), configp->Get(L"strideShape"),
                           configp->Get(L"dimSharing"), configp->Get(L"dimPadding"), configp->Get(L"dimPadLower"), configp->Get(L"dimPadUpper"),
-                          ImageLayoutKindFrom(configp->Get(L"imageLayout")), configp->Get(L"maxTempMemSizeInSamples"))
+                          configp->Get(L"transpose"), ImageLayoutKindFrom(configp->Get(L"imageLayout")), configp->Get(L"maxTempMemSizeInSamples"))
     {
         AttachInputsFromConfig(configp, GetExpectedNumInputs());
     }
@@ -317,6 +314,48 @@ public:
         }
     }
 
+    void ForwardProp(const FrameRange& fr) override
+    {
+        Matrix<ElemType> sliceOutputValue = ValueFor(fr);
+        const Matrix<ElemType>& input0 = InputRef(0).ValueAsMatrix();
+        Matrix<ElemType> sliceInput1Value = InputRef(1).ValueFor(fr);
+        if (!m_transpose)
+            m_convEng->Forward(sliceInput1Value, input0, sliceOutputValue, *m_tempMatrix);
+        else
+        {
+            // BackwardData adds results to the output so need to zero them out first.
+            // REVIEW alexeyk: should be rolled into BackwardData itself.
+            sliceOutputValue.SetValue(0);
+            m_convEng->BackwardData(sliceInput1Value, input0, sliceOutputValue, *m_tempMatrix);
+        }
+    }
+
+    void BackpropTo(const size_t inputIndex, const FrameRange& fr) override
+    {
+        auto sliceOutputGrad = GradientFor(fr);
+        if (inputIndex == 0) // derivative with respect to the weight matrix
+        {
+            auto& grad = InputRef(0).GradientAsMatrix();
+            auto sliceInput1Value = InputRef(1).ValueFor(fr);
+            if (!m_transpose)
+                m_convEng->BackwardKernel(sliceOutputGrad, sliceInput1Value, grad, fr.IsAllFrames(), *m_tempMatrix);
+            else
+                m_convEng->BackwardKernel(sliceInput1Value, sliceOutputGrad, grad, fr.IsAllFrames(), *m_tempMatrix);
+        }
+        else if (inputIndex == 1) // derivative with respect to the input feature
+        {
+            auto& input0 = InputRef(0).ValueAsMatrix();
+            auto sliceInput1Grad = InputRef(1).GradientFor(fr);
+            if (!m_transpose)
+                m_convEng->BackwardData(sliceOutputGrad, input0, sliceInput1Grad, *m_tempMatrix);
+            else
+            {
+                // REVIEW alexeyk: Forward overwrites values in sliceInput1Grad. Should handle correctly instead.
+                m_convEng->Forward(sliceOutputGrad, input0, sliceInput1Grad, *m_tempMatrix);
+            }
+        }
+    }
+
     void Validate(bool isFinalValidationPass) override
     {
         Base::Validate(isFinalValidationPass);
@@ -324,7 +363,10 @@ public:
 
         size_t inputIdx = GetExpectedNumInputs() - 1;
         TensorShape inputShape;
+        TensorShape outputShape;
+        // If 2D convolution syntax is used then some of the tensor dimensions need to be inferred.
         if (m_convolution2D)
+        // NOTE: when m_convolution2D is true, it's a legacy branch. Code should not enter here any more. 
         {
             // Need to update some tensors with correct input dims.
             auto inDims = ImageDimensions(GetInputSampleLayout(inputIdx), m_imageLayout);
@@ -340,51 +382,86 @@ public:
             size_t mapCount = m_mapCount.GetNumElements();
             size_t weightCols = kW * kH * inDims.m_numChannels;
 
+            // if mapCount is 0 then take it from the input matrix
+            if (mapCount == 0)
+                Input(0)->GetAsMatrixNumRows();
+
             // check/infer input [0] (weights)
             // BUGBUG: For now, we treat the weights as a 2D matrix. They should be a tensor proper.
             Input(0)->ValidateInferInputDimsFrom(TensorShape(mapCount, weightCols));
 
             if (isFinalValidationPass && (Input(0)->GetAsMatrixNumCols() != weightCols || Input(0)->GetAsMatrixNumRows() != mapCount))
             {
-                LogicError("Convolution weight matrix %ls should have dimension [%d, %d] which is [outputChannels, kernelWidth * kernelHeight * inputChannels]", 
+                LogicError("Convolution weight matrix %ls should have dimension [%d, %d] which is [outputChannels, kernelWidth * kernelHeight * inputChannels]",
                            Input(0)->NodeName().c_str(), (int)mapCount, (int)weightCols);
             }
 
-            auto outDims = ConvolveGeometry::ComputeOutputShape(inputShape, m_kernelShape, m_mapCount, m_stride,
-                                                                 m_sharing, m_autoPad, m_lowerPad, m_upperPad);
+            outputShape = ConvolveGeometry::ComputeOutputShape(inputShape, m_kernelShape, m_mapCount, m_stride,
+                                                                m_sharing, m_autoPad, m_lowerPad, m_upperPad);
             // ConvolveGeometry always uses CHW.
-            SetDims(ImageDimensions(outDims, ImageLayoutKind::CHW).AsTensorShape(m_imageLayout), HasMBLayout());
+            SetDims(ImageDimensions(outputShape, ImageLayoutKind::CHW).AsTensorShape(m_imageLayout), HasMBLayout());
         }
         else
         {
-            if (m_imageLayout != ImageLayoutKind::CHW)
-            {
-                InvalidArgument(
-                    "%ls %ls supports only cuDNN (CHW) data layout. "
-                    "Please specify imageLayout=\"cudnn\" in %ls node in your script "
-                    "and make sure input data layout is CHW", NodeName().c_str(), OperationName().c_str(), NodeName().c_str());
-            }
             inputShape = GetInputSampleLayout(inputIdx);
-            auto outDims = ConvolveGeometry::ComputeOutputShape(inputShape, m_kernelShape, m_mapCount, m_stride,
-                                                                m_sharing, m_autoPad, m_lowerPad, m_upperPad);
-            SetDims(outDims, HasMBLayout());
+            // infer reduction dimensions if not given
+            InferReductionDims(inputShape, inputShape);
+            if (!m_transpose)
+            {
+                outputShape = ConvolveGeometry::ComputeOutputShape(inputShape, m_kernelShape, m_mapCount, m_stride,
+                                                                    m_sharing, m_autoPad, m_lowerPad, m_upperPad);
+            }
+            else
+            {
+                // In case of transpose (deconvolution), node input (inputShape) is really the output of the convolution
+                // and node output (outDims) is convolution input. ConvolveGeometry does not care about deconvolutions (it does not have to).
+                outputShape = ConvolveGeometry::ComputeInputShape(inputShape, m_kernelShape, m_mapCount, m_stride,
+                                                                   m_sharing, m_autoPad, m_lowerPad, m_upperPad);
+            }
+
+            if (m_imageLayout == ImageLayoutKind::CHW) 
+                SetDims(outputShape, HasMBLayout());
+            else    // legacy format 
+                SetDims(ImageDimensions(outputShape, ImageLayoutKind::CHW).AsTensorShape(m_imageLayout), HasMBLayout());
+        }
+
+        // update LearnableParameter if it has 0 dimensions (to be inferred)
+        // Typically this would be the #inputChannels (C).
+        if (Input(0)->GetSampleLayout().GetNumElements() == 0)
+        {
+            // BUGBUG: Inference does not support sharing. Problem is that we have the information too late.
+            //         In this case, users will have to specify the correct dimensions. Good luck.
+#if 1       // old style for back compat with previous results. Randomization will differ.
+            if (Input(0)->GetSampleLayout().GetRank() == 2)
+                Input(0)->ValidateInferInputDimsFrom(TensorShape(m_mapCount.GetNumElements(), m_kernelShape.GetNumElements()));
+            else
+#endif
+            {
+                auto weightShape = m_kernelShape.GetDims();
+                for (auto outDim : m_mapCount.GetDims())
+                    weightShape.push_back(outDim);
+                Input(0)->ValidateInferInputDimsFrom(TensorShape(weightShape));
+            }
         }
 
         if (isFinalValidationPass)
         {
             if (m_convEng == nullptr)
             {
-                auto geometry = std::make_shared<ConvolveGeometry>(inputShape, m_kernelShape, m_mapCount, m_stride,
+                auto geometry = std::make_shared<ConvolveGeometry>(!m_transpose ? inputShape : outputShape,
+                                                                   m_kernelShape, m_mapCount, m_stride, 
                                                                    m_sharing, m_autoPad, m_lowerPad, m_upperPad);
                 m_convEng = ConvolutionEngine<ElemType>::Create(geometry, m_deviceId, m_imageLayout,
-                                                                m_maxTempMemSizeInSamples, m_poolKind);
+                                                                m_maxTempMemSizeInSamples, m_poolKind,
+                                                                ConvolutionEngineKind::All, NodeName(), Globals::ShouldForceDeterministicAlgorithms());
             }
 
-            if (Input(0)->GetAsMatrixNumCols() != m_kernelShape.GetNumElements() ||
-                Input(0)->GetAsMatrixNumRows() != m_convEng->Geometry()->KernelCount())
+            if (Input(0)->GetSampleLayout().GetNumElements() != m_kernelShape.GetNumElements() * m_convEng->Geometry()->KernelCount())
             {
-                LogicError("Convolution weight matrix %ls should have dimension [%d, %d] which is [kernelCount, kernelWidth * kernelHeight * inputChannels]",
-                           Input(0)->NodeName().c_str(), (int)m_convEng->Geometry()->KernelCount(), (int)m_kernelShape.GetNumElements());
+                //LogicError("Convolution weight matrix %ls should have dimension [%d, %d] which is [kernelCount, kernelWidth * kernelHeight * inputChannels]",
+                //           Input(0)->NodeName().c_str(), (int)m_convEng->Geometry()->KernelCount(), (int)m_kernelShape.GetNumElements());
+                LogicError("Convolution weight matrix %ls should have dimension [(filter shape) x (input channels) x (output channels)]",
+                           Input(0)->NodeName().c_str());
             }
         }
     }
@@ -409,32 +486,29 @@ public:
     }
 
 protected:
+    // Flag that indicates whether the node is created using 2D-syntax.
     bool m_convolution2D;
 };
 
 // -----------------------------------------------------------------------
 // PoolingNode (inputFeature)
+// Performs max or average ND pooling.
 // -----------------------------------------------------------------------
 
 template <class ElemType>
 class PoolingNode : public ConvolutionNodeBase<ElemType>, public NumInputs<1>
 {
-    typedef ConvolutionNodeBase<ElemType> Base;
-    UsingConvolutionNodeBaseMembers;
-    static const std::wstring TypeName()
-    {
-        return L"Pooling";
-    }
-
+    typedef ConvolutionNodeBase<ElemType> Base; UsingConvolutionNodeBaseMembers;
+    static const std::wstring TypeName() { return L"Pooling"; }
 public:
     PoolingNode(DEVICEID_TYPE deviceId, const wstring& name)
         : Base(deviceId, name)
     {
     }
     PoolingNode(DEVICEID_TYPE deviceId, const wstring& name, PoolKind pool, const TensorShape& kernelShape, const TensorShape& strideShape,
-                    const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad,
-                    ImageLayoutKind imageLayout)
-                    : Base(deviceId, name, kernelShape, TensorShape(1), strideShape, vector<bool>{true}, autoPadding, lowerPad, upperPad, pool, imageLayout, 0)
+                const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad,
+                ImageLayoutKind imageLayout)
+                : Base(deviceId, name, kernelShape, TensorShape(1), strideShape, vector<bool>{true}, autoPadding, lowerPad, upperPad, pool, false, imageLayout, 0)
     {
     }
     PoolingNode(const ScriptableObjects::IConfigRecordPtr configp)
@@ -444,6 +518,30 @@ public:
                       ImageLayoutKindFrom(configp->Get(L"imageLayout")))
     {
         AttachInputsFromConfig(configp, GetExpectedNumInputs());
+    }
+
+public:
+    void ForwardProp(const FrameRange& fr) override
+    {
+        Matrix<ElemType> sliceOutputValue = ValueFor(fr);
+        const Matrix<ElemType>& input0 = InputRef(0).ValueFor(fr);
+        m_convEng->ForwardPooling(input0, sliceOutputValue);
+    }
+
+    void BackpropTo(const size_t inputIndex, const FrameRange& fr) override
+    {
+        auto sliceOutputGrad = GradientFor(fr);
+        Matrix<ElemType> sliceInput0Grad = InputRef(0).GradientFor(fr);
+        Matrix<ElemType> sliceInput0Value = InputRef(0).ValueFor(fr);
+        Matrix<ElemType> sliceOutputValue = ValueFor(fr);
+
+        m_convEng->BackwardPooling(sliceOutputValue, sliceOutputGrad, sliceInput0Value, sliceInput0Grad);
+    }
+
+    bool OutputUsedInComputingInputNodesGradients() const override
+    {
+        // The PoolingNode requires output values only for max pooling.
+        return m_poolKind == PoolKind::Max;
     }
 
 public:
@@ -460,11 +558,14 @@ public:
                 "and make sure input data layout is CHW", NodeName().c_str(), OperationName().c_str(), NodeName().c_str());
         }
 
-        auto inputShape = GetInputSampleLayout(0);
+        const auto& inputShape = GetInputSampleLayout(0);
+
+        // infer reduction dimensions if not given
+        InferReductionDims(inputShape, TensorShape());
+
         auto outDims = ConvolveGeometry::ComputeOutputShape(inputShape, m_kernelShape, m_mapCount, m_stride,
                                                             m_sharing, m_autoPad, m_lowerPad, m_upperPad);
         SetDims(outDims, HasMBLayout());
-
         if (isFinalValidationPass)
         {
             if (m_convEng == nullptr)
@@ -472,7 +573,110 @@ public:
                 auto geometry = std::make_shared<ConvolveGeometry>(inputShape, m_kernelShape, m_mapCount, m_stride,
                                                                    m_sharing, m_autoPad, m_lowerPad, m_upperPad);
                 m_convEng = ConvolutionEngine<ElemType>::Create(geometry, m_deviceId, m_imageLayout,
-                                                                m_maxTempMemSizeInSamples, m_poolKind);
+                                                                m_maxTempMemSizeInSamples, m_poolKind,
+                                                                ConvolutionEngineKind::All, NodeName());
+            }
+        }
+    }
+};
+
+// -----------------------------------------------------------------------
+// MaxUnpoolingNode (unpoolInputValues, poolInputValues)
+// Performs "max unpooling" operation. Max unpooling mirrors the operation
+// performed by max pooling node and depends on the values provided to
+// the max pooling node (so unlike deconvolution operation, it is not
+// completely independent). Unpooling takes 2 inputs: features to be unpooled,
+// which tensor has the same shape as corresponding max pooling node output
+// and inputs for the original pooling node. Unpooling node
+// produces an output which has the same dimensions as input to the
+// corresponding max pooling node (i.e. poolInputValues).
+// TODO: need to add support for other pooling types, for example,
+// average unpooling. Note that in this case, generic unpooling operation
+// will take different number of inputs depending on pooling type.
+// -----------------------------------------------------------------------
+
+template <class ElemType>
+class MaxUnpoolingNode : public ConvolutionNodeBase<ElemType>, public NumInputs<2>
+{
+    typedef ConvolutionNodeBase<ElemType> Base;
+    UsingConvolutionNodeBaseMembers;
+    static const std::wstring TypeName() { return L"MaxUnpooling"; }
+
+public:
+    MaxUnpoolingNode(DEVICEID_TYPE deviceId, const wstring& name)
+        : Base(deviceId, name)
+    {
+    }
+    MaxUnpoolingNode(DEVICEID_TYPE deviceId, const wstring& name, const TensorShape& kernelShape, const TensorShape& strideShape,
+                       const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad,
+                       ImageLayoutKind imageLayout)
+                       : Base(deviceId, name, kernelShape, TensorShape(1), strideShape, vector<bool>{true}, autoPadding, lowerPad, upperPad, PoolKind::Max, true, imageLayout, 0)
+    {
+    }
+    MaxUnpoolingNode(const ScriptableObjects::IConfigRecordPtr configp)
+        : MaxUnpoolingNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"kernelShape"),
+                           configp->Get(L"strideShape"), configp->Get(L"dimPadding"), configp->Get(L"dimPadLower"), configp->Get(L"dimPadUpper"),
+                           ImageLayoutKindFrom(configp->Get(L"imageLayout")))
+    {
+        AttachInputsFromConfig(configp, GetExpectedNumInputs());
+    }
+
+public:
+    void ForwardProp(const FrameRange& fr) override
+    {
+        const Matrix<ElemType>& unpoolInput = InputRef(0).ValueFor(fr);
+        const Matrix<ElemType>& poolInput = InputRef(1).ValueFor(fr);
+        Matrix<ElemType> sliceOutputValue = ValueFor(fr);
+        m_convEng->MaxUnpooling(unpoolInput, poolInput, sliceOutputValue);
+    }
+
+    void BackpropTo(const size_t inputIndex, const FrameRange& fr) override
+    {
+        if (inputIndex != 0)
+            return;
+
+        auto sliceOutputGrad = GradientFor(fr);
+        Matrix<ElemType> sliceInput0Grad = InputRef(0).GradientFor(fr);
+        // BUGBUG: ForwardPooling overwrites values in sliceInput1Grad. Should handle correctly instead.
+        m_convEng->ForwardPooling(sliceOutputGrad, sliceInput0Grad);
+    }
+
+    bool OutputUsedInComputingInputNodesGradients() const override { return false; }
+
+    void Validate(bool isFinalValidationPass) override
+    {
+        Base::Validate(isFinalValidationPass);
+        InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
+
+        if (m_imageLayout != ImageLayoutKind::CHW)
+        {
+            InvalidArgument(
+                "%ls %ls supports only cuDNN (CHW) data layout. "
+                "Please specify imageLayout=\"cudnn\" in %ls node in your script "
+                "and make sure input data layout is CHW", NodeName().c_str(), OperationName().c_str(), NodeName().c_str());
+        }
+
+        auto inputShape = GetInputSampleLayout(0);
+
+        // infer reduction dimensions if not given
+        InferReductionDims(inputShape, TensorShape());
+
+        // Same as in case of deconvolution, node input (inputShape) is really the output of the max pooling
+        // and node output (outDims) is pooling input.
+        auto outputShape = ConvolveGeometry::ComputeInputShape(inputShape, m_kernelShape, m_mapCount, m_stride,
+                                                               m_sharing, m_autoPad, m_lowerPad, m_upperPad);
+        SetDims(outputShape, HasMBLayout());
+        if (isFinalValidationPass)
+        {
+            if (m_convEng == nullptr)
+            {
+                auto geometry = std::make_shared<ConvolveGeometry>(outputShape, m_kernelShape, m_mapCount, m_stride,
+                                                                   m_sharing, m_autoPad, m_lowerPad, m_upperPad);
+                // Create reference engine as it's the only engine that implements unpooling.
+                m_convEng = ConvolutionEngine<ElemType>::Create(geometry, m_deviceId, m_imageLayout,
+                                                                m_maxTempMemSizeInSamples, m_poolKind,
+                                                                ConvolutionEngineKind::Reference,
+                                                                NodeName());
             }
         }
     }
@@ -491,20 +695,20 @@ class PoolingNodeBase : public ComputationNode<ElemType>, public NumInputs<1>
 public:
     PoolingNodeBase(DEVICEID_TYPE deviceId, const wstring& name)
         : Base(deviceId, name),
-          m_windowWidth(SIZE_MAX),
-          m_windowHeight(SIZE_MAX),
-          m_horizontalSubsample(SIZE_MAX),
-          m_verticalSubsample(SIZE_MAX),
-          m_imageLayoutKind(ImageLayoutKind::HWC)
+        m_windowWidth(SIZE_MAX),
+        m_windowHeight(SIZE_MAX),
+        m_horizontalSubsample(SIZE_MAX),
+        m_verticalSubsample(SIZE_MAX),
+        m_imageLayoutKind(ImageLayoutKind::HWC)
     {
     }
     PoolingNodeBase(DEVICEID_TYPE deviceId, const wstring& name, const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample, ImageLayoutKind imageLayoutKind)
         : Base(deviceId, name),
-          m_windowWidth(windowWidth),
-          m_windowHeight(windowHeight),
-          m_horizontalSubsample(horizontalSubsample),
-          m_verticalSubsample(verticalSubsample),
-          m_imageLayoutKind(imageLayoutKind)
+        m_windowWidth(windowWidth),
+        m_windowHeight(windowHeight),
+        m_horizontalSubsample(horizontalSubsample),
+        m_verticalSubsample(verticalSubsample),
+        m_imageLayoutKind(imageLayoutKind)
     {
     }
     PoolingNodeBase(const ScriptableObjects::IConfigRecordPtr configp)
@@ -517,8 +721,8 @@ public:
     void Save(File& fstream) const override
     {
         Base::Save(fstream);
-        uint32_t imageLayoutKind = (uint32_t) m_imageLayoutKind;
-        uint32_t windowWidth = (uint32_t) m_windowWidth;
+        uint32_t imageLayoutKind = (uint32_t)m_imageLayoutKind;
+        uint32_t windowWidth = (uint32_t)m_windowWidth;
         fstream << windowWidth << imageLayoutKind << m_windowHeight << m_horizontalSubsample << m_verticalSubsample;
     }
 
@@ -551,23 +755,23 @@ public:
         }
     }
 
-    void BackpropTo(const size_t /*inputIndex*/, const FrameRange& fr) override
-    {
-        Matrix<ElemType> sliceInput0Grad = Input(0)->GradientFor(fr);
-        Matrix<ElemType> sliceOutputGrad = GradientFor(fr);
-
-        Matrix<ElemType> sliceInput0Value = Input(0)->ValueFor(fr);
-        Matrix<ElemType> sliceOutputValue = ValueFor(fr);
-
-        m_convEng->BackwardPooling(sliceOutputValue, sliceOutputGrad, sliceInput0Value, sliceInput0Grad);
-    }
-
     void ForwardProp(const FrameRange& fr) override
     {
-        Matrix<ElemType> sliceInput0Value = Input(0)->ValueFor(fr);
+        Matrix<ElemType> sliceInput0Value = InputRef(0).ValueFor(fr);
         Matrix<ElemType> sliceOutputValue = ValueFor(fr);
 
         m_convEng->ForwardPooling(sliceInput0Value, sliceOutputValue);
+    }
+
+    void BackpropTo(const size_t /*inputIndex*/, const FrameRange& fr) override
+    {
+        Matrix<ElemType> sliceInput0Grad = InputRef(0).GradientFor(fr);
+        Matrix<ElemType> sliceOutputGrad = GradientFor(fr);
+
+        Matrix<ElemType> sliceInput0Value = InputRef(0).ValueFor(fr);
+        Matrix<ElemType> sliceOutputValue = ValueFor(fr);
+
+        m_convEng->BackwardPooling(sliceOutputValue, sliceOutputGrad, sliceInput0Value, sliceInput0Grad);
     }
 
     void Validate(bool isFinalValidationPass) override
@@ -686,7 +890,11 @@ public:
     {
         Base::Validate(isFinalValidationPass);
         if (isFinalValidationPass && m_convEng == nullptr)
-            m_convEng = ConvolutionEngine<ElemType>::Create(m_geometry, m_deviceId, m_imageLayoutKind, 0, PoolKind::Max);
+        {
+            m_convEng = ConvolutionEngine<ElemType>::Create(m_geometry, m_deviceId, m_imageLayoutKind,
+                                                            0, PoolKind::Max,
+                                                            ConvolutionEngineKind::All, NodeName());
+        }
     }
 };
 
@@ -722,7 +930,11 @@ public:
     {
         Base::Validate(isFinalValidationPass);
         if (isFinalValidationPass && m_convEng == nullptr)
-            m_convEng = ConvolutionEngine<ElemType>::Create(m_geometry, m_deviceId, m_imageLayoutKind, 0, PoolKind::Average);
+        {
+            m_convEng = ConvolutionEngine<ElemType>::Create(m_geometry, m_deviceId, m_imageLayoutKind,
+                                                            0, PoolKind::Average, 
+                                                            ConvolutionEngineKind::All, NodeName());
+        }
     }
 };
 

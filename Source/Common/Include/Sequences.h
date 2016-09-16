@@ -196,7 +196,6 @@ public:
     // packing algorithm
     //  - width: maximum width of structure; set to maximum over sequence lengths
     //  - inputSequences: vector of input SequenceInfo records (only seqId and GetNumTimeSteps() are used)
-    //  - [out] *pMBLayout: MBLayout that describes the created packed sequence set
     //  - placement, rowAllocations: temp buffers (passed in to be able to optimize memory allocations)
     template<typename SequenceInfoVector>
     void InitAsPackedSequences(const SequenceInfoVector& inputSequences,
@@ -255,6 +254,12 @@ public:
 
     size_t GetNumTimeSteps() const { return m_numTimeSteps; }
     size_t GetNumParallelSequences() const { return m_numParallelSequences; }
+    size_t GetNumSequences() const
+    {
+        return std::count_if(m_sequences.begin(), m_sequences.end(), [](const SequenceInfo& sequence) {
+            return sequence.seqId != GAP_SEQUENCE_ID;
+        });
+    }
 
     // axis names are for now only a debugging aid
     // In the future, there will be a mechanism to denote that axes are meant to be the same.
@@ -948,8 +953,9 @@ static inline std::pair<size_t, size_t> ColumnRangeWithMBLayoutFor(size_t numCol
 {
     // MBLayout of data and of FrameRange must be identical pointers,
     // or in case of broadcasting, respective parent pointers.
-    // MBLayouts that are identical in content but not object identity (pointer) are not admissible.
-    // For those cases, use a ReconcileDynamicAxis node.
+    // MBLayouts that are identical in content but not object identity (pointer) are admissible.
+    // We rely on a runtime check. If this is inefficient, use a ReconcileDynamicAxis node.
+    // (Note: Earlier versions of CNTK did not accept same-content MBLayouts.)
     if (fr.m_pMBLayout != pMBLayout)
     {
         // if broadcast allowed then it is allowed to broadcast from an outer-loop value
@@ -957,7 +963,7 @@ static inline std::pair<size_t, size_t> ColumnRangeWithMBLayoutFor(size_t numCol
         if (fr.m_broadcastAllowed && !pMBLayout && numCols == 1)
             return std::pair<size_t, size_t>(0, numCols);
         if (fr.m_pMBLayout && pMBLayout && *fr.m_pMBLayout == *pMBLayout)
-            LogicError("DataFor: FrameRange's dynamic axis is inconsistent with matrix. They are compatible though--are you missing a ReconcileDynamicAxis operation?");
+            ; // layouts are compatible--you may proceed
         else
             LogicError("DataFor: FrameRange's dynamic axis is inconsistent with matrix.");
     }
@@ -1041,8 +1047,9 @@ static inline std::pair<DimensionVector, DimensionVector> TensorSliceWithMBLayou
 
     // MBLayout of data and of FrameRange must be identical pointers,
     // or in case of broadcasting, respective parent pointers.
-    // MBLayouts that are identical in content but not object identity (pointer) are not admissible.
-    // For those cases, use a ReconcileDynamicAxis node.
+    // MBLayouts that are identical in content but not object identity (pointer) are admissible.
+    // We rely on a runtime check. If this is inefficient, use a ReconcileDynamicAxis node.
+    // (Note: Earlier versions of CNTK did not accept same-content MBLayouts.)
     if (isTimeIteration && fr.m_pMBLayout != pMBLayout)
     {
         // if broadcast allowed then it is allowed to broadcast from an outer-loop value
@@ -1050,8 +1057,7 @@ static inline std::pair<DimensionVector, DimensionVector> TensorSliceWithMBLayou
         if (fr.m_pMBLayout /*get data for a loop*/ && !pMBLayout /*'data' is not samples*/ && fr.m_broadcastAllowed /*we're OK with that*/)
             ; // the time dimension is broadcasting--leave it as is
         else if (fr.m_pMBLayout && pMBLayout && *fr.m_pMBLayout == *pMBLayout)
-            LogicError("DataFor: FrameRange's dynamic axis is inconsistent with matrix. They are compatible though--are you missing a ReconcileDynamicAxis operation? %s vs. %s", 
-                       static_cast<string>(*(fr.m_pMBLayout)).c_str(), static_cast<string>(*(pMBLayout)).c_str());
+            ; // layouts are compatible--you may proceed
         else
             LogicError("DataFor: FrameRange's dynamic axis is inconsistent with matrix: %s vs. %s", 
                        static_cast<string>(*(fr.m_pMBLayout)).c_str(), static_cast<string>(*(pMBLayout)).c_str());

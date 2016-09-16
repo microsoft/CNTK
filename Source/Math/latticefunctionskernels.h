@@ -479,251 +479,133 @@ struct latticefunctionskernels
         size_t ae = (j + 1) < edges.size() ? (size_t) edges[j + 1].firstalign : aligns.size();
         if (as == ae) // the last empty alignment
             return;
-        size_t ts = nodes[edges[j].S].t;
-
-        float fwscore = 0.0f;                // score passed across phone boundaries
+        size_t ts = nodes[edges[j].S].t;        
         size_t alignindex = alignoffsets[j]; // index to set (result)
+        backptroffsets;
+        spalignunitid;
+        silalignunitid;
 #ifndef PARALLEL_SIL
         const bool isSil = (aligns[as].unit == silalignunitid || aligns[ae - 1].unit == silalignunitid);
         if (isSil)
             return; // we do not support silence edge now, which is computed by cpu, may change when we support it
 #endif
         // Viterbi alignment
+        float pathscores[3];
+        float pathscores2[3];
+        size_t senoneIDs[3];
+        short *backpointers = (short *)(&backptrstorage[alignindex * 3]);
+
+        short fwbackpointer = -1;
+        float fwscore = 0.0f;
+        const int invalidbp = -2;
+
         for (size_t k = as; k < ae; k++)
         {
             const aligninfo align = aligns[k];
             const size_t numframes = align.frames;
-            const bool isSp = (align.unit == spalignunitid);
-            const bool isSil = (align.unit == silalignunitid);
-
+            const size_t te = ts + numframes;
             const lrhmmdef hmm = hmms[align.unit];
             const lr3transP transP = transPs[hmm.transPindex];
+            size_t senonenum = (size_t)hmm.numstates;
 
-            // pre-fetch senone ids into registers
-            size_t senoneid0 = hmm.senoneids[0];
-            size_t senoneid1 = 0;
-            size_t senoneid2 = 0;
-            if (!isSp) // fetch only if needed--may save some memory cycles
+            fwbackpointer = -1;
+            for (size_t sid = 0; sid < senonenum; sid++)
             {
-                senoneid1 = hmm.senoneids[1];
-                senoneid2 = hmm.senoneids[2];
+                //printf("senone id %d\n", hmm.senoneids[sid]);
+                senoneIDs[sid] = (size_t)(hmm.senoneids[sid]);
+                pathscores[sid] = LOGZERO;
             }
-
-            const size_t te = ts + numframes; // end time of current unit
-
-            size_t state1step0to1 = te; // inflection point from state 0 to 1, record in state 1
-                                        // size_t state1stepm1to1 = te;
-            size_t state2step0to1 = te; // inflection point from state 0 to 1, record in state 2
-            // size_t state2stepm1to1 = te;                    // inflection point from state 0 to 1, record in state 2
-            size_t state2step1to2 = te; // inflection point from state 1 to 2, record in state 2
-            size_t state2step0to2 = te;
-
-            // now we only support transition from -1 to 0 or 2 for sil
-            float pathscore0 = fwscore; // log pp in state 0
-            float pathscore1 = fwscore; // log pp in state 1
-            float pathscore2 = fwscore; // log pp in state 2
-
+            //printf("begin align\n");
             // first frame
             if (ts != te) // for t = ts, initialization
             {
-                /*    if (isSil)                                                              // for sil, -1 to 2 and -1 to 0 is permitted
+                for (size_t sid = 0; sid < senonenum; sid++)
                 {
-                    pathscore0 += getlogtransp(transP,-1,0) + logLLs(senoneid0,ts);
-                    pathscore2 += getlogtransp(transP,-1,2) + logLLs(senoneid2,ts);
+                    pathscores[sid] = getlogtransp(transP, -1, (int)sid) + logLLs(senoneIDs[sid], ts) + fwscore;
+                    backpointers[sid] = fwbackpointer;
                 }
-                else                                                                    // for others, only -1 to 0 is permitted
-                {
-                    pathscore0 += getlogtransp(transP, -1, 0) + logLLs(senoneid0, ts);
-                    pathscore1 += getlogtransp(transP, -1, 1) + logLLs(senoneid1, ts);
-
-                }*/
-                pathscore2 += getlogtransp(transP, -1, 2) + logLLs(senoneid2, ts);
-                pathscore1 += getlogtransp(transP, -1, 1) + logLLs(senoneid1, ts);
-                // state1stepm1to1 = ts;
-                pathscore0 += getlogtransp(transP, -1, 0) + logLLs(senoneid0, ts);
             }
 
-            float pathscore2last = pathscore2; // allocate last for state 2 because the order of computation below is 2->1->0, last state 2 is needed because from 2 to 0 or 1 is permitedted for sil.
-            float pathscore1last = pathscore1; // allocate last for state 1 because the order of computation below is 2->1->0, last state 1 is needed because from 1 to 0 is permitedted for sil.
-
-            size_t backptroffset = backptroffsets[j]; // we make use of backptrstorage in backptroffsets[j] for viterbi of ergodic model (silence)
-
-            bpmatrixref backptrmatrix(&backptrstorage[backptroffset], hmm.MAXSTATES, numframes);
             // subsequent frames
             for (size_t t = ts + 1; t < te; t++)
             {
-                if (!isSp)
+                for (size_t sid = senonenum - 1; sid + 1 >= 1; sid--)
                 {
-                    // state [2]
-                    pathscore2 += getlogtransp(transP, 2, 2); // log pp from state 2 to 2
-                    if (isSil)
-                        backptrmatrix(2, t - ts - 1) = 2;
-                    const float pathscore12 = pathscore1 + getlogtransp(transP, 1, 2); // log pp from state 1 to 2
-                    if (pathscore12 >= pathscore2)                                     // if state 1->2
+                    pathscores2[sid] = pathscores[sid] + getlogtransp(transP, (int)sid, (int)sid);
+                    backpointers[(t - ts) * senonenum + sid] = (short)sid;
+                    for (size_t sid2 = 0; sid2 < senonenum ; sid2++)
                     {
-                        pathscore2 = pathscore12;
-                        state2step0to1 = state1step0to1; // record the inflection point
-                                                         // state2stepm1to1 = state1stepm1to1;
-                        state2step1to2 = t;              // record the inflection point
-                        state2step0to2 = te;
-                        if (isSil)
-                            backptrmatrix(2, t - ts - 1) = 1;
-                    }
-                    // if (isSil)                                                                  // only silence have path from 0 to 2
-                    {
-                        const float pathscore02 = pathscore0 + getlogtransp(transP, 0, 2); // log pp from state 0 to 2
-                        if (pathscore02 >= pathscore2)                                     // if state 0->2
+                        if (sid2 != sid)
                         {
-                            pathscore2 = pathscore02;
-                            if (isSil)
-                                backptrmatrix(2, t - ts - 1) = 0;
-                            state2step0to2 = t;
-                            state2step1to2 = te;
+                            const float alphaitm1 = pathscores[sid2];
+                            const float pathscore = alphaitm1 + getlogtransp(transP, (int)sid2, (int)sid);
+                            if (pathscore > pathscores2[sid])
+                            {
+                                pathscores2[sid] = pathscore;
+                                backpointers[(t - ts) * senonenum + sid] = (short)sid2;
+                            }
                         }
                     }
-
-                    // state [1]
-                    pathscore1 += getlogtransp(transP, 1, 1); // log pp from state 1 to 1
-                    if (isSil)
-                        backptrmatrix(1, t - ts - 1) = 1;
-                    const float pathscore01 = pathscore0 + getlogtransp(transP, 0, 1); // log pp from state 0 to 1
-                    if (pathscore01 >= pathscore1)                                     // if state 0 -> 1
-                    {
-                        pathscore1 = pathscore01;
-                        state1step0to1 = t; // record the inflection point
-                                            // state1stepm1to1 = te;
-                        if (isSil)
-                            backptrmatrix(1, t - ts - 1) = 0;
-                    }
-
-                    if (isSil) // only silence have path from 2 to 1
-                    {
-                        const float pathscore21 = pathscore2last + getlogtransp(transP, 2, 1);
-                        if (pathscore21 >= pathscore1) // if state 2 -> 1
-                        {
-                            pathscore1 = pathscore21;
-                            backptrmatrix(1, t - ts - 1) = 2;
-                        }
-                    }
+                    pathscores2[sid] += logLLs(senoneIDs[sid], t);
                 }
-                // state [0]
-                pathscore0 += getlogtransp(transP, 0, 0);
-                if (isSil) // only silence have path from 2 or 1 to 0
-                {
-                    backptrmatrix(0, t - ts - 1) = 0;
-                    const float pathscore20 = pathscore2last + getlogtransp(transP, 2, 0); // log pp from state 2 to 0
-                    if (pathscore20 >= pathscore0)
-                    {
-                        pathscore0 = pathscore20;
-                        backptrmatrix(0, t - ts - 1) = 2;
-                    }
-                    const float pathscore10 = pathscore1last + getlogtransp(transP, 1, 0); // log pp from state 1 to 0
-                    if (pathscore10 >= pathscore0)
-                    {
-                        pathscore0 = pathscore10;
-                        backptrmatrix(0, t - ts - 1) = 1;
-                    }
-                }
-
-                // add log LLs
-                pathscore0 += logLLs(senoneid0, t);
-                if (!isSp) // only fetch if needed, saves mem access
-                {
-                    pathscore1 += logLLs(senoneid1, t);
-                    pathscore2 += logLLs(senoneid2, t);
-                }
-                pathscore1last = pathscore1; // update pathscore1last
-                pathscore2last = pathscore2; // update pathscore2last
+                for (size_t sid2 = 0; sid2 < senonenum; sid2++)
+                    pathscores[sid2] = pathscores2[sid2];
             }
-
-            // final 'next' transition that exits from last frame
-
-            if (ts == te) // if sp tee model, will not in next loop
+            
+            //get the exit senone
+            float exitscore = LOGZERO;
+            int exitbackpointer = invalidbp;
+            if (te - ts == 0) // tee transition
             {
-                pathscore2 = pathscore0 + getlogtransp(transP, -1, 1);
+                exitscore = fwscore + getlogtransp(transP, -1, (int)senonenum);
+                exitbackpointer = fwbackpointer;
             }
-            else if (isSp)
+            else // not tee: expand all last states
             {
-                pathscore2 = pathscore0 + getlogtransp(transP, 0, 1); // sp model, from 0 to 1
-                // printf(" sp, %f\n", pathscore2);
-            }
-
-            else if (isSil) // for sil, the exit state can be 0 or 2.
-            {
-                const float pathscore03 = pathscore0 + getlogtransp(transP, 0, 3);
-                pathscore2 += getlogtransp(transP, 2, 3);
-                if (pathscore03 > pathscore2)
+                for (size_t sid = 0; sid < senonenum; sid++)
                 {
-                    pathscore2 = pathscore03;
-                }
-            }
-            else
-                pathscore2 += getlogtransp(transP, 2, 3);
 
-            fwscore = pathscore2; // propagate across phone boundaries
-
-            // emit alignment
-
-            if (!isSil)
-            {
-                if (state2step0to2 < te) // from 0 to 2
-                {
-                    state2step0to2 += alignindex - ts;
-                    for (size_t t = alignindex; t < alignindex + numframes; t++) // set the final alignment
+                    const float alphaitm1 = pathscores[sid]; // newly computed path score, transiting to t=te
+                    const float pathscore = alphaitm1 + getlogtransp(transP, (int)sid, (int)senonenum);
+                    if (pathscore > exitscore)
                     {
-                        size_t senoneid;
-                        if (t < state2step0to2) // in state 0
-                            senoneid = senoneid0;
-                        else // in state 2
-                            senoneid = senoneid2;
-                        alignresult[t] = (unsigned short) senoneid;
-                    }
-                }
-                else // from 1 to 2
-                {
-                    state2step0to1 += alignindex - ts; // convert to align measure
-                    state2step1to2 += alignindex - ts;
-                    for (size_t t = alignindex; t < alignindex + numframes; t++) // set the final alignment
-                    {
-                        size_t senoneid;
-                        if (state2step0to1 < alignindex - ts + te && t < state2step0to1)
-                            senoneid = senoneid0;
-                        else if (t < state2step1to2) // in state 1
-                            senoneid = senoneid1;
-                        else // in state 2
-                            senoneid = senoneid2;
-                        alignresult[t] = (unsigned short) senoneid;
+                        exitscore = pathscore;
+                        exitbackpointer = (int)sid;
                     }
                 }
             }
-            else // for silence
+            if (exitbackpointer == invalidbp)
+                printf("error,exitbackpointer came up empty\n");
+            fwscore = exitscore;             // score passed on to next unit
+            fwbackpointer = (short)exitbackpointer;
+            
+            // traceback & gamma update            
+            if (te > ts)
             {
-                size_t lastpointer = 2;
-                const float pathscore03 = pathscore0 + getlogtransp(transP, 0, 3);
-                if (pathscore03 >= pathscore2) // exit state is 0
-                {
-                    alignresult[alignindex + numframes - 1] = (unsigned short) senoneid0;
-                    lastpointer = 0;
-                }
-                else // exit state is 2
-                    alignresult[alignindex + numframes - 1] = (unsigned short) senoneid2;
+                int bpl = (int)fwbackpointer;
 
-                for (size_t t = alignindex + numframes - 2; (t + 1) > alignindex; t--) // set the final alignment
+                for (size_t t = te - 1; t + 1 > ts; t--)
                 {
-                    lastpointer = backptrmatrix(lastpointer, t - alignindex);
-                    size_t senoneid = (size_t)(-1);
-                    if (lastpointer == 0)
-                        senoneid = senoneid0;
-                    else if (lastpointer == 1)
-                        senoneid = senoneid1;
-                    else if (lastpointer == 2)
-                        senoneid = senoneid2;
-                    alignresult[t] = (unsigned short) senoneid;
+                    if (bpl < (int)0 || bpl >= (int)senonenum)
+                    {
+                        printf("%d error,invalid backpointer resulting in state index out of range\n", j);
+                        //printf("bpl%d\n", bpl);
+                    }
+
+                    int bp = (int)backpointers[(t - ts) * senonenum + bpl]; // save the backpointer before overwriting it (gammas and backpointers are aliases of each other)
+                    // thisedgealignmentsj[t] = (unsigned short)hmm.getsenoneid(j - js);
+                    
+                    alignresult[alignindex + t - ts] = (unsigned short)senoneIDs[bpl];
+                    if (bp == invalidbp)
+                        printf("error,deltabackpointer not initialized\n");
+                    bpl = bp; // trace back one step
                 }
+                alignindex += te - ts;
+                ts = te;
+
             }
-            ts = te;
-            alignindex += numframes;
-        }
+        }        
+        
         edgeacscores[j] = fwscore;
     }
 

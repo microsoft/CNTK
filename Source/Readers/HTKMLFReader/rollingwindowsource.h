@@ -15,6 +15,7 @@
 #include "minibatchiterator.h"
 #include "biggrowablevectors.h"
 #include "ssematrix.h"
+#include "RandomOrdering.h"
 
 namespace msra { namespace dbn {
 
@@ -265,11 +266,11 @@ class minibatchframesource : public minibatchsource
     string featkind;
     size_t featdim;
     // cache
-    biggrowablevectorarray frames;            // [t][i] all features concatenated
-    std::vector<char> boundaryflags;          // [t] -1 for first and +1 for last frame, 0 else (for augmentneighbors())
-    std::vector<CLASSIDTYPE> classids;        // [t] the state that the frame belongs to
-    size_t numframes;                         // total frames (==frames.size()==boundaryflags.size()==classids.size()) unless special modes vdim == 0 and/or no labels
-    msra::dbn::randomordering randomordering; // [t] -> t'
+    biggrowablevectorarray frames;                         // [t][i] all features concatenated
+    std::vector<char> boundaryflags;                       // [t] -1 for first and +1 for last frame, 0 else (for augmentneighbors())
+    std::vector<CLASSIDTYPE> classids;                     // [t] the state that the frame belongs to
+    size_t numframes;                                      // total frames (==frames.size()==boundaryflags.size()==classids.size()) unless special modes vdim == 0 and/or no labels
+    Microsoft::MSR::CNTK::RandomOrdering m_randomOrdering; // [t] -> t'
     double timegetbatch;
     int verbosity;
 
@@ -310,10 +311,10 @@ public:
             wstring key;
             if (!labels.empty()) // empty means unsupervised mode (don't load any)
             {
-#ifdef _MSC_VER
+#ifdef _WIN32
                 key = regex_replace((wstring) ppath, wregex(L"\\.[^\\.\\\\/:]*$"), wstring()); // delete extension (or not if none)
 #else
-                key = removeExtension(basename(ppath));
+                key = removeExtension(ppath);
 #endif
                 if (labels.find(key) == labels.end())
                 {
@@ -413,7 +414,7 @@ public:
 
         // initialize randomizer
         if (numframes > 0)
-            randomordering.resize(numframes, randomizationrange);
+            m_randomOrdering.Resize(numframes, randomizationrange);
     }
     virtual ~minibatchframesource()
     {
@@ -471,11 +472,11 @@ public:
 
         // get random sequence (each time index occurs exactly once)
         // If the sweep changes, this will re-cache the sequence. We optimize for rare, monotonous sweep changes.
-        const auto &tmap = randomordering(sweep);
+        const auto &tmap = m_randomOrdering(sweep);
 
         // page in the needed range of frames
         const size_t extent = augmentationextent(frames.dim(), vdim);
-        bool readfromdisk = frames.require(randomordering.bounds(max(ts, extent) - extent, te + 1 + extent));
+        bool readfromdisk = frames.require(m_randomOrdering.Bounds(max(ts, extent) - extent, te + 1 + extent));
 
         // generate features and uids
         feat.resize(vdim, te - ts); // note: special mode vdim == 0 means no features to be loaded
@@ -485,7 +486,7 @@ public:
             uids.clear();
         for (size_t t = ts; t < te; t++)
         {
-            size_t trand = tmap[t]; // the random-sequence sample point for this point in time
+            size_t trand = m_randomOrdering.IsRandomizationDisabled() ? t : tmap[t]; // the random-sequence sample point for this point in time
             if (vdim != 0)
             {
                 auto v_t = feat.col(t - ts); // the vector to fill in
@@ -553,7 +554,7 @@ class minibatchframesourcemulti : public minibatchsource
     std::vector<char> boundaryflags;                         // [t] -1 for first and +1 for last frame, 0 else (for augmentneighbors())
     std::vector<std::vector<CLASSIDTYPE>> classids;          // [t] the state that the frame belongs to
     size_t numframes;                                        // total frames (==frames.size()==boundaryflags.size()==classids.size()) unless special modes vdim == 0 and/or no labels
-    msra::dbn::randomordering randomordering;                // [t] -> t'
+    Microsoft::MSR::CNTK::RandomOrdering m_randomOrdering;   // [t] -> t'
     double timegetbatch;
     int verbosity;
 
@@ -629,9 +630,8 @@ public:
                     {
 #ifdef _WIN32
                         key = regex_replace((wstring) ppath, wregex(L"\\.[^\\.\\\\/:]*$"), wstring()); // delete extension (or not if none)
-#endif
-#ifdef __unix__
-                        key = removeExtension(basename(ppath));
+#else
+                        key = removeExtension(ppath);
 #endif
                         if (labels[0].find(key) == labels[0].end())
                         {
@@ -753,7 +753,7 @@ public:
 
         // initialize randomizer
         if (numframes > 0)
-            randomordering.resize(numframes, randomizationrange);
+            m_randomOrdering.Resize(numframes, randomizationrange);
     }
     virtual ~minibatchframesourcemulti()
     {
@@ -814,7 +814,7 @@ public:
 
         // get random sequence (each time index occurs exactly once)
         // If the sweep changes, this will re-cache the sequence. We optimize for rare, monotonous sweep changes.
-        const auto &tmap = randomordering(sweep);
+        const auto &tmap = m_randomOrdering(sweep);
 
         feat.resize(pframes.size());
         uids.resize(classids.size());
@@ -833,7 +833,7 @@ public:
                 leftextent = leftcontext[i];
                 rightextent = rightcontext[i];
             }
-            readfromdisk = pframes[i]->require(randomordering.bounds(max(ts, leftextent) - leftextent, te + 1 + rightextent));
+            readfromdisk = pframes[i]->require(m_randomOrdering.Bounds(max(ts, leftextent) - leftextent, te + 1 + rightextent));
             // generate features and uids
             feat[i].resize(vdim[i], te - ts); // note: special mode vdim == 0 means no features to be loaded
             if (issupervised())               // empty means unsupervised training -> return empty uids
@@ -844,7 +844,7 @@ public:
 
             for (size_t t = ts; t < te; t++)
             {
-                size_t trand = tmap[t]; // the random-sequence sample point for this point in time
+                size_t trand = m_randomOrdering.IsRandomizationDisabled() ? t : tmap[t]; // the random-sequence sample point for this point in time
                 if (vdim[i] != 0)
                 {
                     auto v_t = feat[i].col(t - ts); // the vector to fill in

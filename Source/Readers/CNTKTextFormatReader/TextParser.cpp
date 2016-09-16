@@ -16,6 +16,11 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+inline bool IsDigit(char c)
+{
+    return '0' <= c && c <= '9';
+}
+
 enum State
 {
     Init = 0,
@@ -38,10 +43,10 @@ public:
     void GetSequence(size_t sequenceId, std::vector<SequenceDataPtr>& result) override;
 
     // A map from sequence ids to the sequence data.
-    std::map<size_t, SequenceBuffer> m_sequenceMap;
+    std::vector<SequenceBuffer> m_sequenceMap;
 
     // chunk id (copied from the descriptor)
-    size_t m_id;
+    ChunkIdType m_id;
 
     // a non-owned pointer to the parser that created this chunk
     TextParser* m_parser;
@@ -206,7 +211,7 @@ ChunkDescriptions TextParser<ElemType>::GetChunkDescriptions()
 }
 
 template <class ElemType>
-void TextParser<ElemType>::GetSequencesForChunk(size_t chunkId, std::vector<SequenceDescription>& result)
+void TextParser<ElemType>::GetSequencesForChunk(ChunkIdType chunkId, std::vector<SequenceDescription>& result)
 {
     const auto& index = m_indexer->GetIndex();
     const auto& chunk = index.m_chunks[chunkId];
@@ -219,7 +224,6 @@ void TextParser<ElemType>::GetSequencesForChunk(size_t chunkId, std::vector<Sequ
             s.m_id,
             s.m_numberOfSamples,
             s.m_chunkId,
-            s.m_isValid,
             s.m_key
         });
     }
@@ -235,44 +239,15 @@ TextParser<ElemType>::TextDataChunk::TextDataChunk(const ChunkDescriptor& descri
 template <class ElemType>
 void TextParser<ElemType>::TextDataChunk::GetSequence(size_t sequenceId, std::vector<SequenceDataPtr>& result)
 {
-    auto it = m_sequenceMap.find(sequenceId);
-    assert(it != m_sequenceMap.end());
+    assert(sequenceId < m_sequenceMap.size());
     result.reserve(m_parser->m_streamInfos.size());
-    const auto& sequenceData = it->second;
-    for (size_t j = 0; j < m_parser->m_streamInfos.size(); ++j)
-    {
-        InputStreamBuffer* input = sequenceData[j].get();
-        const StreamInfo& stream = m_parser->m_streamInfos[j];
-        SequenceDataPtr data;
-        if (stream.m_type == StorageType::dense)
-        {
-            auto denseData = make_shared<DenseSequenceData>();
-            denseData->m_sampleLayout = m_parser->m_streams[j]->m_sampleLayout;
-            data = denseData;
-        }
-        else
-        {
-            auto sparseData = make_shared<SparseSequenceData>();
-            SparseInputStreamBuffer* sparseInput = static_cast<SparseInputStreamBuffer*>(input);
-            sparseData->m_indices = sparseInput->m_indices.data();
-            sparseData->m_nnzCounts.reserve(sparseInput->m_nnzCounts.size());
-            copy(sparseInput->m_nnzCounts.begin(), sparseInput->m_nnzCounts.end(),
-                back_inserter(sparseData->m_nnzCounts));
-            sparseData->m_totalNnzCount = sparseInput->m_totalNnzCount;
-            assert(input->m_numberOfSamples == sparseInput->m_nnzCounts.size());
-            data = sparseData;
-        }
 
-        data->m_data = input->m_buffer.data();
-        data->m_numberOfSamples = input->m_numberOfSamples;
-        data->m_chunk = shared_from_this();
-        data->m_id = sequenceId;
-        result.push_back(data);
-    }
+    const auto& sequenceData = m_sequenceMap[sequenceId];
+    result.insert(result.end(), sequenceData.begin(), sequenceData.end());
 }
 
 template <class ElemType>
-ChunkPtr TextParser<ElemType>::GetChunk(size_t chunkId)
+ChunkPtr TextParser<ElemType>::GetChunk(ChunkIdType chunkId)
 {
     const auto& chunkDescriptor = m_indexer->GetIndex().m_chunks[chunkId];
     auto textChunk = make_shared<TextDataChunk>(chunkDescriptor, this);
@@ -293,11 +268,10 @@ ChunkPtr TextParser<ElemType>::GetChunk(size_t chunkId)
 template <class ElemType>
 void TextParser<ElemType>::LoadChunk(TextChunkPtr& chunk, const ChunkDescriptor& descriptor)
 {
+    chunk->m_sequenceMap.resize(descriptor.m_sequences.size());
     for (const auto& sequenceDescriptor : descriptor.m_sequences)
     {
-        chunk->m_sequenceMap.insert(make_pair(
-            sequenceDescriptor.m_id,
-            LoadSequence(sequenceDescriptor)));
+        chunk->m_sequenceMap[sequenceDescriptor.m_id] = LoadSequence(sequenceDescriptor);
     }
 }
 
@@ -399,7 +373,7 @@ typename TextParser<ElemType>::SequenceBuffer TextParser<ElemType>::LoadSequence
             {
                 fprintf(stderr,
                     "WARNING: Could not read a row (# %" PRIu64 ")"
-                    " while loading sequence (id = %ls) %ls.\n",
+                    " while loading sequence (id = %s) %ls.\n",
                     i + 1,
                     GetSequenceKey(sequenceDsc).c_str(),
                     GetFileInfo().c_str());
@@ -412,7 +386,7 @@ typename TextParser<ElemType>::SequenceBuffer TextParser<ElemType>::LoadSequence
             {
                 fprintf(stderr,
                     "WARNING: Exhausted all input"
-                    " expected for the current sequence (id = %ls) %ls,"
+                    " expected for the current sequence (id = %s) %ls,"
                     " but only read %" PRIu64 " out of %" PRIu64 " expected rows.\n",
                     GetSequenceKey(sequenceDsc).c_str(),
                     GetFileInfo().c_str(), numRowsRead, expectedRowCount);
@@ -424,13 +398,13 @@ typename TextParser<ElemType>::SequenceBuffer TextParser<ElemType>::LoadSequence
     // Double check if there are empty input streams.
     // TODO this handling needs to be graceful, but currently CNTK complains when we return empty sequences.
     bool hasEmptyInputs = false, hasDuplicateInputs = false;
-    size_t maxInputLength = 0;
+    uint32_t maxInputLength = 0;
     for (size_t i = 0; i < sequence.size(); ++i)
     {
         if (sequence[i]->m_numberOfSamples == 0)
         {
             fprintf(stderr,
-                "ERROR: Input ('%ls') is empty in sequence (id = %ls) %ls.\n",
+                "ERROR: Input ('%ls') is empty in sequence (id = %s) %ls.\n",
                 m_streams[i]->m_name.c_str(), GetSequenceKey(sequenceDsc).c_str(), GetFileInfo().c_str());
             hasEmptyInputs = true;
         }
@@ -442,7 +416,7 @@ typename TextParser<ElemType>::SequenceBuffer TextParser<ElemType>::LoadSequence
             {
                 fprintf(stderr,
                     "WARNING: Input ('%ls') contains more samples than expected"
-                    " (%" PRIu64 " vs. %" PRIu64 ") for sequence (id = %ls) %ls.\n",
+                    " (%u vs. %" PRIu64 ") for sequence (id = %s) %ls.\n",
                     m_streams[i]->m_name.c_str(), sequence[i]->m_numberOfSamples, expectedRowCount,
                     GetSequenceKey(sequenceDsc).c_str(), GetFileInfo().c_str());
             }
@@ -465,8 +439,8 @@ typename TextParser<ElemType>::SequenceBuffer TextParser<ElemType>::LoadSequence
         if (ShouldWarn())
         {
             fprintf(stderr,
-                "WARNING: Maximum per-input number of samples for sequence (id = %ls) %ls"
-                " is less than expected (%" PRIu64 " vs. %" PRIu64 ").\n",
+                "WARNING: Maximum per-input number of samples for sequence (id = %s) %ls"
+                " is less than expected (%u vs. %" PRIu64 ").\n",
                 GetSequenceKey(sequenceDsc).c_str(),
                 GetFileInfo().c_str(), maxInputLength, expectedRowCount);
         }
@@ -476,18 +450,44 @@ typename TextParser<ElemType>::SequenceBuffer TextParser<ElemType>::LoadSequence
     if (m_traceLevel >= Info)
     {
         fprintf(stderr,
-            "INFO: Finished loading sequence (id = %ls) %ls,"
+            "INFO: Finished loading sequence (id = %s) %ls,"
             " successfully read %" PRIu64 " out of expected %" PRIu64 " rows.\n",
             GetSequenceKey(sequenceDsc).c_str(), GetFileInfo().c_str(), numRowsRead, expectedRowCount);
     }
 
+    FillSequenceMetadata(sequence, sequenceDsc.m_id);
     return sequence;
+}
+
+template<class ElemType>
+void TextParser<ElemType>::FillSequenceMetadata(SequenceBuffer& sequenceData, size_t sequenceId)
+{
+    for (size_t j = 0; j < m_streamInfos.size(); ++j)
+    {
+        const StreamInfo& stream = m_streamInfos[j];
+        SequenceDataBase* data = sequenceData[j].get();
+        if (stream.m_type == StorageType::dense)
+        {
+            auto denseData = static_cast<DenseInputStreamBuffer*>(data);
+            denseData->m_sampleLayout = m_streams[j]->m_sampleLayout;
+            data->m_data = denseData->m_buffer.data();
+        }
+        else
+        {
+            auto sparseData = static_cast<SparseInputStreamBuffer*>(data);
+            sparseData->m_indices = sparseData->m_indicesBuffer.data();
+            assert(data->m_numberOfSamples == sparseData->m_nnzCounts.size());
+            data->m_data = sparseData->m_buffer.data();
+        }
+
+        data->m_id = sequenceId;
+    }
 }
 
 template <class ElemType>
 bool TextParser<ElemType>::TryReadRow(SequenceBuffer& sequence, size_t& bytesToRead)
 {
-    while (bytesToRead && CanRead() && isdigit(*m_pos))
+    while (bytesToRead && CanRead() && IsDigit(*m_pos))
     {
         // skip sequence ids
         ++m_pos;
@@ -617,7 +617,7 @@ bool TextParser<ElemType>::TryReadSample(SequenceBuffer& sequence, size_t& bytes
     {
         SparseInputStreamBuffer* data = reinterpret_cast<SparseInputStreamBuffer*>(sequence[id].get());
         vector<ElemType>& values = data->m_buffer;
-        vector<IndexType>& indices = data->m_indices;
+        vector<IndexType>& indices = data->m_indicesBuffer;
         assert(values.size() == indices.size());
         size_t size = values.size();
         if (!TryReadSparseSample(values, indices, stream.m_sampleDimension, bytesToRead))
@@ -674,8 +674,9 @@ bool TextParser<ElemType>::TryGetInputId(size_t& id, size_t& bytesToRead)
                 if (ShouldWarn())
                 {
                     fprintf(stderr,
-                        "WARNING: Invalid input name ('%s') %ls.\n",
-                        name.c_str(), GetFileInfo().c_str());
+                        "WARNING: Invalid input ('%s') %ls. "
+                        "Input name '%s' was not specified in the reader config section.\n",
+                        name.c_str(), GetFileInfo().c_str(), name.c_str());
                 }
             }
             else if (ShouldWarn())
@@ -919,7 +920,7 @@ bool TextParser<ElemType>::TryReadUint64(size_t& value, size_t& bytesToRead)
     {
         char c = *m_pos;
 
-        if (!isdigit(c))
+        if (!IsDigit(c))
         {
             return found;
         }
@@ -977,7 +978,7 @@ bool TextParser<ElemType>::TryReadRealNumber(ElemType& value, size_t& bytesToRea
         {
         case State::Init:
             // the number must either start with a number or a sign
-            if (isdigit(c))
+            if (IsDigit(c))
             {
                 state = IntegralPart;
                 number = (c - '0');
@@ -1001,7 +1002,7 @@ bool TextParser<ElemType>::TryReadRealNumber(ElemType& value, size_t& bytesToRea
             break;
         case Sign:
             // the sign must be followed by a number
-            if (isdigit(c))
+            if (IsDigit(c))
             {
                 state = IntegralPart;
                 number = (c - '0');
@@ -1019,7 +1020,7 @@ bool TextParser<ElemType>::TryReadRealNumber(ElemType& value, size_t& bytesToRea
             }
             break;
         case IntegralPart:
-            if (isdigit(c))
+            if (IsDigit(c))
             {
                 number = number * 10 + (c - '0');
             }
@@ -1040,7 +1041,7 @@ bool TextParser<ElemType>::TryReadRealNumber(ElemType& value, size_t& bytesToRea
             }
             break;
         case Period:
-            if (isdigit(c))
+            if (IsDigit(c))
             {
                 state = FractionalPart;
                 coefficient = number;
@@ -1054,7 +1055,7 @@ bool TextParser<ElemType>::TryReadRealNumber(ElemType& value, size_t& bytesToRea
             }
             break;
         case FractionalPart:
-            if (isdigit(c))
+            if (IsDigit(c))
             {
                 // TODO: ignore if number of precision digits > FLT_[MANT_]DIG/DBL_[MANT_]DIG
                 // no state change
@@ -1079,7 +1080,7 @@ bool TextParser<ElemType>::TryReadRealNumber(ElemType& value, size_t& bytesToRea
             break;
         case TheLetterE:
             // followed with optional minus or plus sign and nonempty sequence of decimal digits
-            if (isdigit(c))
+            if (IsDigit(c))
             {
                 state = Exponent;
                 negative = false;
@@ -1104,7 +1105,7 @@ bool TextParser<ElemType>::TryReadRealNumber(ElemType& value, size_t& bytesToRea
             break;
         case ExponentSign:
             // exponent sign must be followed by a number
-            if (isdigit(c))
+            if (IsDigit(c))
             {
                 state = Exponent;
                 number = (c - '0');
@@ -1122,7 +1123,7 @@ bool TextParser<ElemType>::TryReadRealNumber(ElemType& value, size_t& bytesToRea
             }
             break;
         case Exponent:
-            if (isdigit(c))
+            if (IsDigit(c))
             {
                 // no state change
                 number = number * 10 + (c - '0');
@@ -1192,24 +1193,22 @@ std::wstring TextParser<ElemType>::GetFileInfo()
     return info.str();
 }
 
-static SequenceDescription s_InvalidSequence{0, 0, 0, false, {0, 0}};
-
 template <class ElemType>
-void TextParser<ElemType>::GetSequenceDescriptionByKey(const KeyType& key, SequenceDescription& result)
+bool TextParser<ElemType>::GetSequenceDescriptionByKey(const KeyType& key, SequenceDescription& result)
 {
     const auto& keys = m_indexer->GetIndex().m_keyToSequenceInChunk;
     auto sequenceLocation = keys.find(key.m_sequence);
     if (sequenceLocation == keys.end())
     {
-        result = s_InvalidSequence;
-        return;
+        return false;
     }
 
     result = m_indexer->GetIndex().m_chunks[sequenceLocation->second.first].m_sequences[sequenceLocation->second.second];
+    return true;
 }
 
 template <class ElemType>
-const wstring& TextParser<ElemType>::GetSequenceKey(const SequenceDescriptor& s) const
+const string& TextParser<ElemType>::GetSequenceKey(const SequenceDescriptor& s) const
 {
     return m_corpus->GetStringRegistry()[s.m_key.m_sequence];
 }

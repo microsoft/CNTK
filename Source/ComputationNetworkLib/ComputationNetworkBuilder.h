@@ -54,7 +54,7 @@ public:
     ComputationNodePtr CreateSparseInputNode(const std::wstring& inputName, const TensorShape& sampleLayout, const wstring& dynamicAxisName = L"");
     ComputationNodePtr CreateConvolutionNode(const std::wstring& nodeName, const TensorShape& kernelShape, const TensorShape& mapCount, const TensorShape& strideShape,
                                              const std::vector<bool>& sharing, const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad,
-                                             ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples);
+                                             bool transpose, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples);
     ComputationNodePtr CreateConvolutionNode(const std::wstring& nodeName, const size_t kernelWidth, const size_t kernelHeight, const size_t outputChannels, 
                                              const size_t horizontalSubsample, const size_t verticalSubsample, 
                                              ImageLayoutKind imageLayoutKind, const bool zeroPadding = false, const size_t maxTempMemSizeInSamples = 0);
@@ -69,7 +69,7 @@ public:
     // The following functions create nodes and link them to the network and their inputs.
     // TODO: Do we need both this set and the one above that does not add inputs? Can they share more code?
     ComputationNodePtr BatchNormalization(const ComputationNodePtr input, const ComputationNodePtr scale, const ComputationNodePtr bias,
-                                          const ComputationNodePtr runMean, const ComputationNodePtr runInvStdDev, bool spatial = false, double normalizationTimeConstant = 0, double blendTimeConstant = 0, double epsilon = 1e-5, bool useCntkEngine = true,
+                                          const ComputationNodePtr runMean, const ComputationNodePtr runVariance, bool spatial = false, double normalizationTimeConstant = 0, double blendTimeConstant = 0, double epsilon = 1e-5, bool useCntkEngine = true,
                                           ImageLayoutKind imageLayoutKind = ImageLayoutKind::CHW, const std::wstring nodeName = L"");
     ComputationNodePtr Convolution(const ComputationNodePtr weight,
                                    const ComputationNodePtr inputValues,
@@ -81,13 +81,19 @@ public:
                                    const ComputationNodePtr inputValues,
                                    const TensorShape& kernelShape, const TensorShape& mapCount, const TensorShape& strideShape,
                                    const std::vector<bool>& sharing, const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad,
-                                   ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples,
+                                   bool transpose, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples,
                                    const std::wstring nodeName = L"");
     ComputationNodePtr Pooling(const ComputationNodePtr inputValues, 
                                PoolKind poolKind, const TensorShape& kernelShape, const TensorShape& strideShape,
                                const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad,
                                ImageLayoutKind imageLayout,
                                const std::wstring nodeName = L"");
+    ComputationNodePtr MaxUnpooling(const ComputationNodePtr unpoolInputValues,
+                                    const ComputationNodePtr poolInputValues,
+                                    const TensorShape& kernelShape, const TensorShape& strideShape,
+                                    const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad,
+                                    ImageLayoutKind imageLayout,
+                                    const std::wstring nodeName = L"");
     ComputationNodePtr MaxPooling(const ComputationNodePtr inputValues,
                                   const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample, ImageLayoutKind imageLayoutKind,
                                   const std::wstring nodeName = L"");
@@ -117,7 +123,7 @@ public:
     ComputationNodePtr DummyCriterion(const ComputationNodePtr objectives, const ComputationNodePtr derivatives, const ComputationNodePtr prediction, const std::wstring nodeName = L"");
     ComputationNodePtr ElementTimes(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"");
     ComputationNodePtr DynamicAxis(const ComputationNodePtr a, const std::wstring& nodeName = L"");
-    ComputationNodePtr ErrorPrediction(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"");
+    ComputationNodePtr ClassificationError(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"");
     ComputationNodePtr Exp(const ComputationNodePtr a, const std::wstring nodeName = L"");
     ComputationNodePtr Floor(const ComputationNodePtr a, const std::wstring nodeName = L"");
     ComputationNodePtr FutureValue(const ComputationNodePtr a, const float initHiddenActivity, const size_t row_size, size_t timeStep, const std::wstring nodeName = L"");
@@ -129,6 +135,7 @@ public:
     ComputationNodePtr InvStdDev(const ComputationNodePtr a, const std::wstring nodeName = L"");
     ComputationNodePtr KhatriRaoProduct(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"");
     ComputationNodePtr Log(const ComputationNodePtr a, const std::wstring nodeName = L"");
+    ComputationNodePtr LogPlus(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"");
     ComputationNodePtr LogSoftmax(const ComputationNodePtr a, const std::wstring nodeName = L"");
     ComputationNodePtr Logistic(const ComputationNodePtr a, const ComputationNodePtr b, const ComputationNodePtr c, const std::wstring nodeName = L"");
     ComputationNodePtr Logistic(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"");

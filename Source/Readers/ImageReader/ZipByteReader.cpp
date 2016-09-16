@@ -8,6 +8,7 @@
 #include "ByteReader.h"
 
 #ifdef USE_ZIP
+#include <File.h>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -44,16 +45,46 @@ ZipByteReader::ZipPtr ZipByteReader::OpenZip()
     });
 }
 
-void ZipByteReader::Register(size_t seqId, const std::string& path)
+void ZipByteReader::Register(const std::map<std::string, size_t>& sequences)
 {
     auto zipFile = m_zips.pop_or_create([this]() { return OpenZip(); });
     zip_stat_t stat;
     zip_stat_init(&stat);
-    int err = zip_stat(zipFile.get(), path.c_str(), 0, &stat);
-    if (ZIP_ER_OK != err)
-        RuntimeError("Failed to get file info of %s, zip library error: %s", path.c_str(), GetZipError(err).c_str());
-    m_seqIdToIndex[seqId] = std::make_pair(stat.index, stat.size);
+
+    size_t numberOfEntries = 0;
+    size_t numEntries = zip_get_num_entries(zipFile.get(), 0);
+    for (size_t i = 0; i < numEntries; ++i) {
+        int err = zip_stat_index(zipFile.get(), i, 0, &stat);
+        if (ZIP_ER_OK != err)
+            RuntimeError("Failed to get file info for index %d, zip library error: %s", (int)i, GetZipError(err).c_str());
+
+        auto sequenceId = sequences.find(std::string(stat.name));
+        if (sequenceId == sequences.end())
+        {
+            continue;
+        }
+        else
+        {
+            m_seqIdToIndex[sequenceId->second] = std::make_pair(stat.index, stat.size);
+            numberOfEntries++;
+        }
+    }
     m_zips.push(std::move(zipFile));
+
+    if (numberOfEntries != sequences.size())
+    {
+        // Not all sequences have been found. Let's print them out and throw.
+        for (const auto& s : sequences)
+        {
+            auto index = m_seqIdToIndex.find(s.second);
+            if (index == m_seqIdToIndex.end())
+            {
+                fprintf(stderr, "Sequence %s is not found in container %s.\n", s.first.c_str(), m_zipPath.c_str());
+            }
+        }
+
+        RuntimeError("Cannot retrieve image data for some sequences. For more detail, please see the log file.");
+    }
 }
 
 cv::Mat ZipByteReader::Read(size_t seqId, const std::string& path, bool grayscale)
@@ -70,6 +101,7 @@ cv::Mat ZipByteReader::Read(size_t seqId, const std::string& path, bool grayscal
     if (contents.size() < size)
         contents.resize(size);
     auto zipFile = m_zips.pop_or_create([this]() { return OpenZip(); });
+    attempt(5, [&zipFile, &contents, &path, index, seqId, size]()
     {
         std::unique_ptr<zip_file_t, void(*)(zip_file_t*)> file(
             zip_fopen_index(zipFile.get(), index, 0),
@@ -96,7 +128,7 @@ cv::Mat ZipByteReader::Read(size_t seqId, const std::string& path, bool grayscal
             RuntimeError("Bytes read %lu != expected %lu while reading file %s",
                          (long)bytesRead, (long)size, path.c_str());
         }
-    }
+    });
     m_zips.push(std::move(zipFile));
 
     cv::Mat img; 

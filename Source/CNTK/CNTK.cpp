@@ -8,7 +8,12 @@
 #define _CRT_NONSTDC_NO_DEPRECATE // make VS accept POSIX functions without _
 
 #include "stdafx.h"
+#ifdef _WIN32
+#include <crtdbg.h>
+#endif 
+
 #include "Basics.h"
+#include "Globals.h"
 #include "Actions.h"
 #include "ComputationNetwork.h"
 #include "ComputationNode.h"
@@ -18,6 +23,7 @@
 #include "NDLNetworkBuilder.h"
 #include "ModelEditLanguage.h"
 #include "CPUMatrix.h" // used for SetNumThreads()
+#include "GPUMatrix.h" // used for SyncGuard::EnableSync()
 #include "CommonMatrix.h"
 #include "SGD.h"
 #include "MPIWrapper.h"
@@ -88,27 +94,6 @@ std::string WCharToString(const wchar_t* wst)
     return s;
 }
 
-// TODO: This is an action, it should be moved into ActionsLib.
-template <typename ElemType>
-void DumpNodeInfo(const ConfigParameters& config)
-{
-    wstring modelPath = config(L"modelPath");
-    wstring nodeName = config(L"nodeName", L"__AllNodes__");
-    wstring nodeNameRegexStr = config(L"nodeNameRegex", L"");
-    wstring defOutFilePath = modelPath + L"." + nodeName + L".txt";
-    wstring outputFile = config(L"outputFile", defOutFilePath);
-    bool printValues = config(L"printValues", true);
-    bool printMetadata = config(L"printMetadata", true);
-    if (!printValues && !printMetadata)
-    {
-        InvalidArgument("printValues and printMetadata: Since both are set to false, there will be nothing to dump");
-    }
-
-    ComputationNetwork net(-1);    // always use CPU
-    net.Load<ElemType>(modelPath); // TODO: we have a function now to combine this and the previous line
-    net.DumpNodeInfoToFile(nodeName, printValues, printMetadata, outputFile, nodeNameRegexStr);
-}
-
 size_t GetMaxEpochs(const ConfigParameters& configParams)
 {
     ConfigParameters configSGD(configParams("SGD"));
@@ -116,6 +101,23 @@ size_t GetMaxEpochs(const ConfigParameters& configParams)
 
     return maxEpochs;
 }
+
+#ifndef CPUONLY
+// abort execution is GPU is not supported (e.g. compute capability not supported)
+void CheckSupportForGpu(DEVICEID_TYPE deviceId)
+{
+    auto gpuData = GetGpuData(deviceId);
+    if (gpuData.validity == GpuValidity::ComputeCapabilityNotSupported)
+    {
+        InvalidArgument("CNTK: The GPU (%s) has compute capability %d.%d.  CNTK is only supported on GPUs with compute capability 3.0 or greater", 
+                        gpuData.name.c_str(), gpuData.versionMajor, gpuData.versionMinor);
+    }
+    else if (gpuData.validity == GpuValidity::UnknownDevice)
+    {
+        InvalidArgument("CNTK: Unknown GPU with Device ID %d.", gpuData.deviceId);
+    }
+}
+#endif
 
 // special temporary function to guard against a now invalid usage of "truncated" which exists in some IPG production setups
 static void DisableLegacyTruncationSettings(const ConfigParameters& TopLevelConfig, const ConfigParameters& commandConfig)
@@ -152,7 +154,7 @@ static void DisableLegacyUsage(const ConfigParameters& TopLevelConfig, const Con
 
 // When running in parallel with MPI, only commands in 'commandstoRunOnAllRanks' should
 // be run in parallel across multiple ranks. Others should only run on rank 0
-const std::set<std::string> commandstoRunOnAllRanks = { "train", "trainRNN", "adapt", "test", "eval", "cv", "devtest" };
+const std::set<std::string> commandstoRunOnAllRanks = { "train", "trainRNN", "adapt", "test", "eval", "cv", "devtest", "pbn" };
 
 // process the command
 template <typename ElemType>
@@ -241,6 +243,10 @@ void DoCommands(const ConfigParameters& config, const shared_ptr<MPIWrapper>& mp
                     LOGPRINTF(stderr, "CNTKCommandTrainEnd: %s\n", command[i].c_str());
                     fullEpochsOffset += GetMaxEpochs(commandParams);
                 }
+                else if (thisAction == "pbn")
+                {
+                    DoEvalBN<ElemType>(commandParams);
+                }
                 else if (thisAction == "adapt")
                 {
                     DoAdapt<ElemType>(commandParams);
@@ -265,9 +271,9 @@ void DoCommands(const ConfigParameters& config, const shared_ptr<MPIWrapper>& mp
                 {
                     TestCn<ElemType>(config); // for "devtest" action pass the root config instead
                 }
-                else if (thisAction == "dumpnode")
+                else if (thisAction == "dumpNodes" /*deprecated:*/ || thisAction == "dumpNode" || thisAction == "dumpnode")
                 {
-                    DumpNodeInfo<ElemType>(commandParams);
+                    DoDumpNodes<ElemType>(commandParams);
                 }
                 else if (thisAction == "convertdbn")
                 {
@@ -370,6 +376,30 @@ void PrintUsageInfo()
     LOGPRINTF(stderr, "-------------------------------------------------------------------\n");
 }
 
+// print gpu info for current gpu devices (e.g. Device[0]: cores = 2496; computeCapability = 5.2; type = "Quadro M4000"; memory = 8192 MB)
+void PrintGpuInfo()
+{
+#ifndef CPUONLY
+    std::vector<GpuData> gpusData = GetAllGpusData();
+
+    if (gpusData.empty())
+    {
+        LOGPRINTF(stderr, "No GPUs found\n");
+        return;
+    }
+
+    LOGPRINTF(stderr, "-------------------------------------------------------------------\n");
+    LOGPRINTF(stderr, "GPU info:\n\n");
+
+    for (GpuData& data : gpusData)
+    {
+        LOGPRINTF(stderr, "\t\tDevice[%d]: cores = %d; computeCapability = %d.%d; type = \"%s\"; memory = %lu MB\n",
+                  data.deviceId, data.cudaCores, data.versionMajor, data.versionMinor, data.name.c_str(), data.totalMemory);
+    }
+    LOGPRINTF(stderr, "-------------------------------------------------------------------\n");
+#endif
+}
+
 // ---------------------------------------------------------------------------
 // main() for use with BrainScript
 // ---------------------------------------------------------------------------
@@ -398,11 +428,6 @@ static wstring PathToBSStringLiteral(const wstring& path) // quote a pathname fo
     else
         return L'"' + path + L'"';
 }
-
-// TODO: decide where these should go. Also, do we need three variables?
-//extern wstring standardFunctions;
-//extern wstring commonMacros;
-//extern wstring computationNodes;
 
 int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapper that catches & reports Win32 exceptions
 {
@@ -447,7 +472,6 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
     bs += L"include \'cntk.core.bs'"; // start with including the standard macros
 
     // Note: Using lowercase ^^ here to match the Linux name of the CNTK exe.
-    //bs += standardFunctions + computationNodes + commonMacros + L"\n";
     for (const auto& sourceFile : sourceFiles)
         bs += L"include " + PathToBSStringLiteral(sourceFile) + L"\n";
     bs += L"\n]\n";
@@ -461,6 +485,24 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
     let valp = BS::Evaluate(expr);                                // evaluate parse into a dictionary
     let& config = valp.AsRef<ScriptableObjects::IConfigRecord>(); // this is the dictionary
 
+    if (config(L"forceDeterministicAlgorithms", false))
+        Globals::ForceDeterministicAlgorithms();
+
+#ifndef CPUONLY
+    auto valpp = config.Find(L"deviceId");
+    if (valpp)
+    {
+        auto valp = *valpp;
+        if (!valp.Is<ScriptableObjects::String>()) // if it's not string 'auto' or 'cpu', then it's a gpu
+        {
+            if (static_cast<int>(valp) >= 0) // gpu (id >= 0)
+            {
+                CheckSupportForGpu(valp); // throws if gpu is not supported
+            }
+        }
+    }
+#endif
+
     // legacy parameters that have changed spelling
     if (config.Find(L"DoneFile")) // variables follow camel case (start with lower-case letters)
         InvalidArgument("Legacy spelling of 'DoneFile' no longer allowed. Use 'doneFile'.");
@@ -473,6 +515,7 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
 
     // parallel training
     shared_ptr<Microsoft::MSR::CNTK::MPIWrapper> mpi;
+    auto ensureMPIWrapperCleanup = MakeScopeExit(&MPIWrapper::DeleteInstance);
     bool paralleltrain = config(L"parallelTrain", false);
     if (paralleltrain)
         mpi = MPIWrapper::GetInstance(true /*create*/);
@@ -480,6 +523,10 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
     g_shareNodeValueMatrices = config(L"shareNodeValueMatrices", false);
 
     TracingGPUMemoryAllocator::SetTraceLevel(config(L"traceGPUMemoryAllocations", 0));
+
+    bool synchronizeCUDAKernelExecutions = config(L"synchronizeCUDAKernelExecutions", false);
+    if (synchronizeCUDAKernelExecutions)
+        SyncGuard::EnableSync();
 
     // logging
     wstring logpath = config(L"stderr", L"");
@@ -497,6 +544,9 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
 
     // echo config info to log
     PrintBuiltInfo();
+
+    // echo gpu info to log
+    PrintGpuInfo();
 
     // execute the actions
     // std::string type = config(L"precision", "float");
@@ -521,13 +571,11 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
     if (actionsVal.Is<ScriptableObjects::ConfigArray>())
     {
         const ScriptableObjects::ConfigArray& actions = actionsVal;
-        for (int i = actions.GetIndexRange().first; i <= actions.GetIndexRange().second; i++)
+        for (int i = actions.GetIndexBeginEnd().first; i < actions.GetIndexBeginEnd().second; i++)
         {
             // TODO: When running in parallel with MPI, only commands in 'commandstoRunOnAllRanks' should
             // be run in parallel across multiple ranks. Others should only run on rank 0
-            actions.At(i, [](const wstring&)
-                       {
-                       }); // this will evaluate and thus execute the action
+            actions.At(i, [](const wstring&){}); // this will evaluate and thus execute the action
         }
     }
     // else action has already been executed, see comment above
@@ -544,7 +592,6 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
     LOGPRINTF(stderr, "__COMPLETED__\n");
     fflush(stderr);
 
-    MPIWrapper::DeleteInstance();
     return EXIT_SUCCESS;
 }
 
@@ -556,11 +603,26 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
 {
     ConfigParameters config;
     std::string rawConfigString = ConfigParameters::ParseCommandLine(argc, argv, config);    // get the command param set they want
+
+#ifndef CPUONLY
+    ConfigValue val = config("deviceId", "auto");
+    if (!EqualCI(val, "cpu") && !EqualCI(val, "auto"))
+    {
+        if (static_cast<int>(val) >= 0) // gpu (id >= 0)
+        {
+            CheckSupportForGpu(static_cast<int>(val)); // throws if gpu is not supported
+        }
+    }
+#endif
+
     bool timestamping = config(L"timestamping", false);
     if (timestamping)
     {
         ProgressTracing::SetTimestampingFlag();
     }
+
+    if (config(L"forceDeterministicAlgorithms", false))
+        Globals::ForceDeterministicAlgorithms();
 
     // get the command param set they want
     wstring logpath = config(L"stderr", L"");
@@ -571,6 +633,7 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
 
     // paralleltrain training
     shared_ptr<Microsoft::MSR::CNTK::MPIWrapper> mpi;
+    auto ensureMPIWrapperCleanup = MakeScopeExit(&MPIWrapper::DeleteInstance);
     bool paralleltrain = config(L"parallelTrain", "false");
     if (paralleltrain)
         mpi = MPIWrapper::GetInstance(true /*create*/);
@@ -598,6 +661,8 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
     }
 
     PrintBuiltInfo(); // this one goes to log file
+    PrintGpuInfo();
+
     std::string timestamp = TimeDateStamp();
 
     // dump config info
@@ -608,28 +673,22 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
         fprintf(stderr, "%*s%ls", i > 0 ? 2 : 0, "", argv[i]); // use 2 spaces for better visual separability
     fprintf(stderr, "\n\n");
 
-#if 1 //def _DEBUG
+#ifdef _DEBUG
     // This simply merges all the different config parameters specified (eg, via config files or via command line directly),
     // and prints it.
-    fprintf(stderr, "\n\n");
-    LOGPRINTF(stderr, ">>>>>>>>>>>>>>>>>>>> RAW CONFIG (VARIABLES NOT RESOLVED) >>>>>>>>>>>>>>>>>>>>\n");
+    fprintf(stderr, "\nConfiguration, Raw:\n\n");
     LOGPRINTF(stderr, "%s\n", rawConfigString.c_str());
-    LOGPRINTF(stderr, "<<<<<<<<<<<<<<<<<<<< RAW CONFIG (VARIABLES NOT RESOLVED)  <<<<<<<<<<<<<<<<<<<<\n");
 
     // Same as above, but all variables are resolved.  If a parameter is set multiple times (eg, set in config, overridden at command line),
     // All of these assignments will appear, even though only the last assignment matters.
-    fprintf(stderr, "\n");
-    LOGPRINTF(stderr, ">>>>>>>>>>>>>>>>>>>> RAW CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>\n");
+    fprintf(stderr, "\nConfiguration After Variable Resolution:\n\n");
     LOGPRINTF(stderr, "%s\n", config.ResolveVariables(rawConfigString).c_str());
-    LOGPRINTF(stderr, "<<<<<<<<<<<<<<<<<<<< RAW CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<\n");
 
+#endif
     // This outputs the final value each variable/parameter is assigned to in config (so if a parameter is set multiple times, only the last
     // value it is set to will appear).
-    fprintf(stderr, "\n");
-    LOGPRINTF(stderr, ">>>>>>>>>>>>>>>>>>>> PROCESSED CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>\n");
+    fprintf(stderr, "\nConfiguration After Processing and Variable Resolution:\n\n");
     config.dumpWithResolvedVariables();
-    LOGPRINTF(stderr, "<<<<<<<<<<<<<<<<<<<< PROCESSED CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<\n");
-#endif
 
     LOGPRINTF(stderr, "Commands:");
     for (int i = 0; i < command.size(); i++)
@@ -662,7 +721,6 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
     LOGPRINTF(stderr, "__COMPLETED__\n");
     fflush(stderr);
 
-    MPIWrapper::DeleteInstance();
     return EXIT_SUCCESS;
 }
 
@@ -750,15 +808,38 @@ static void LogDelayLoadError(PEXCEPTION_POINTERS pExcPointers)
     }
 }
 
+#if _DEBUG
+// in case of asserts in debug mode, print the message into stderr and throw exception
+int HandleDebugAssert(int,               // reportType  - ignoring reportType, printing message and aborting for all reportTypes
+                      char *message,     // message     - fully assembled debug user message
+                      int * returnValue) // returnValue - retVal value of zero continues execution
+{
+    fprintf(stderr, "C-Runtime: %s\n", message);
+
+    if (returnValue) {
+        *returnValue = 0;   // return value of 0 will continue operation and NOT start the debugger
+    }
+
+    return TRUE;            // returning TRUE will make sure no message box is displayed
+}
+#endif
+
 int wmain(int argc, wchar_t* argv[]) // wmain wrapper that reports Win32 exceptions
 {
     set_terminate(TerminateThis);    // insert a termination handler to ensure stderr gets flushed before actually terminating
-    _set_error_mode(_OUT_TO_STDERR); // make sure there are no CRT prompts when CNTK is executing
 
-    // Note: this does not seem to work--processes with this seem to just hang instead of terminating
     __try
     {
-        return wmain1(argc, argv);
+        // in case of asserts in debug mode, print the message into stderr and throw exception
+        if (_CrtSetReportHook2(_CRT_RPTHOOK_INSTALL, HandleDebugAssert) == -1) {
+            LOGPRINTF(stderr, "CNTK: _CrtSetReportHook2 failed.\n");
+            return -1;
+        }
+
+        int mainReturn = wmain1(argc, argv);
+        _CrtSetReportHook2(_CRT_RPTHOOK_REMOVE, HandleDebugAssert);
+
+        return mainReturn;
     }
     __except (LogDelayLoadError(GetExceptionInformation()), EXCEPTION_EXECUTE_HANDLER)
     {

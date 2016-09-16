@@ -4,7 +4,14 @@
 //
 #include "stdafx.h"
 #include <algorithm>
+#ifdef _WIN32
 #include <io.h>
+#else // On Linux
+#define _dup2 dup2
+#define _dup dup
+#define _close close
+#define _fileno fileno
+#endif
 #include <cstdio>
 #include <boost/scope_exit.hpp>
 #include "Common/ReaderTestHelper.h"
@@ -606,7 +613,7 @@ BOOST_AUTO_TEST_CASE(CNTKTextFormatReader_ref_data_with_escape_sequences)
 };
 
 // input contains a number of empty sparse samples
-BOOST_AUTO_TEST_CASE(CNTKTextFormatReader_invalid_input)
+BOOST_AUTO_TEST_CASE(CNTKTextFormatReader_invalid_inputs)
 {
     vector<StreamDescriptor> streams(2);
     streams[0].m_alias = "A";
@@ -619,9 +626,9 @@ BOOST_AUTO_TEST_CASE(CNTKTextFormatReader_invalid_input)
     streams[1].m_storageType = StorageType::sparse_csc;
     streams[1].m_sampleDimension = 10;
 
-    CNTKTextFormatReaderTestRunner<float> testRunner("invalid_input.txt", streams, 99999);
+    CNTKTextFormatReaderTestRunner<float> testRunner("invalid_inputs.txt", streams, 99999);
 
-    auto output = testDataPath() + "/Control/CNTKTextFormatReader/invalid_input_Output.txt";
+    auto output = testDataPath() + "/Control/CNTKTextFormatReader/invalid_inputs_Output.txt";
 
     boost::filesystem::remove(output);
 
@@ -657,7 +664,7 @@ BOOST_AUTO_TEST_CASE(CNTKTextFormatReader_invalid_input)
         testRunner.LoadChunk();
     }
 
-    auto control = testDataPath() + "/Control/CNTKTextFormatReader/invalid_input_Control.txt";
+    auto control = testDataPath() + "/Control/CNTKTextFormatReader/invalid_inputs_Control.txt";
 
     CheckFilesEquivalent(control, output);
 };

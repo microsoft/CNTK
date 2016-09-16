@@ -54,9 +54,9 @@ def train_eval_logistic_regression_with_numpy(criterion_name=None,
     y = C.input_numpy(train_y)
 
     # define our network -- one weight tensor and a bias
-    W = C.parameter(value=np.zeros(shape=(num_classes, feature_dim)))
-    b = C.parameter(value=np.zeros(shape=(num_classes, 1)))
-    out = C.times(W, X) + b
+    W = C.parameter(value=np.zeros(shape=(feature_dim, num_classes)))
+    b = C.parameter(value=np.zeros(shape=(1, num_classes)))
+    out = C.times(X, W) + b
 
     ce = C.cross_entropy_with_softmax(y, out)
     ce.tag = 'criterion'

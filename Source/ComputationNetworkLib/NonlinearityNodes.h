@@ -50,8 +50,8 @@ public:
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
         size_t rank = DetermineElementwiseTensorRank();
-        auto result =           ValueTensorFor(rank, fr);
-        auto input  = Input(0)->ValueTensorFor(rank, fr);
+        auto result =             ValueTensorFor(rank, fr);
+        auto input  = InputRef(0).ValueTensorFor(rank, fr);
         result.DoUnaryOpOf(0, input, 1, opForward, opSum);
     }
 
@@ -61,8 +61,8 @@ public:
 
         // get the args
         size_t rank = DetermineElementwiseTensorRank();
-        auto sliceOutputGrad =           GradientTensorFor(rank, fr); // propagate from this one...
-        auto sliceInputGrad  = Input(0)->GradientTensorFor(rank, fr); // ...to this one
+        auto sliceOutputGrad =             GradientTensorFor(rank, fr); // propagate from this one...
+        auto sliceInputGrad  = InputRef(0).GradientTensorFor(rank, fr); // ...to this one
 
         GradientOperationType opTypeHolder = opType;  // preventing pragma warning C4127
 
@@ -79,7 +79,7 @@ public:
             // If gradient can be compute from output rather than input, then that's better for mem sharing (and faster in most cases).
             // Not possible for Cos().
             auto sliceValue = (opType == binaryWithOutputGradient) ? ValueTensorFor(rank, fr) : // using input or output value
-                Input(0)->ValueTensorFor(rank, fr);
+                InputRef(0).ValueTensorFor(rank, fr);
             sliceInputGrad.DoBinaryOpOf(1, sliceOutputGrad, sliceValue, 1, opBackward, opSum);
         }
     }
@@ -184,8 +184,8 @@ public:
         // get the args
         // Some do not consume input and/or output values. Don't touch those, pass dummies instead, since memshare may have taken them away already.
         auto sliceOutputGrad = GradientFor(fr);          // propagate from this one...
-        auto sliceInputGrad = Input(0)->GradientFor(fr); // ...to this one
-        auto sliceInputValue = InputUsedInComputingInputNodesGradients(0) ? Input(0)->ValueFor(fr) : Matrix<ElemType>(sliceInputGrad.GetDeviceId());
+        auto sliceInputGrad = InputRef(0).GradientFor(fr); // ...to this one
+        auto sliceInputValue = InputUsedInComputingInputNodesGradients(0) ? InputRef(0).ValueFor(fr) : Matrix<ElemType>(sliceInputGrad.GetDeviceId());
         auto sliceOutputValue = OutputUsedInComputingInputNodesGradients() ? ValueFor(fr) : Matrix<ElemType>(sliceInputGrad.GetDeviceId());
 
         // do the actual operation
@@ -199,10 +199,10 @@ public:
     {
         // move the target matrix to the target device, since below it is accessed as slices which cannot move
         // TODO: once this gets reimplemented using TensorView, then this is no longer needed.
-        Input(0)->Value().TransferToDeviceIfNotThere(Value().GetDeviceId(), /*isBeingMoved=*/ false);
+        InputRef(0).Value().TransferToDeviceIfNotThere(Value().GetDeviceId(), /*isBeingMoved=*/ false);
 
         auto values = ValueFor(fr);
-        ForwardPropV(values, Input(0)->ValueFor(fr));
+        ForwardPropV(values, InputRef(0).ValueFor(fr));
     }
 
     // derived class implement the actual non-linear operation
@@ -465,9 +465,9 @@ public:
     {
         size_t rank = DetermineElementwiseTensorRank();
         auto result =           ValueTensorFor(rank, fr);
-        auto input0 = Input(0)->ValueTensorFor(rank, fr.AllowBroadcast());
-        auto input1 = Input(1)->ValueTensorFor(rank, fr.AllowBroadcast());
-        auto input2 = Input(2)->ValueTensorFor(rank, fr.AllowBroadcast());
+        auto input0 = InputRef(0).ValueTensorFor(rank, fr.AllowBroadcast());
+        auto input1 = InputRef(1).ValueTensorFor(rank, fr.AllowBroadcast());
+        auto input2 = InputRef(2).ValueTensorFor(rank, fr.AllowBroadcast());
         result.AssignCondOf(input0, input1, input2);
     }
 
@@ -478,11 +478,11 @@ public:
 
         size_t rank = DetermineElementwiseTensorRank();
         auto gradient      =                    GradientTensorFor(rank, fr);
-        auto input0        = Input(0)->            ValueTensorFor(rank, fr.AllowBroadcast());
-        auto inputGradient = Input(inputIndex)->GradientTensorFor(rank, fr.AllowBroadcast());
+        auto input0        = InputRef(0).            ValueTensorFor(rank, fr.AllowBroadcast());
+        auto inputGradient = InputRef(inputIndex).GradientTensorFor(rank, fr.AllowBroadcast());
 
         // if reduction then mask the respective input(s) (zero out the gaps)
-        if (Input(inputIndex)->ReducesInTimeWrt(shared_from_this()))
+        if (InputRef(inputIndex).ReducesInTimeWrt(shared_from_this()))
             MaskMissingGradientColumnsToZero(fr);
 
         if (inputIndex == 1)
@@ -530,10 +530,10 @@ public:
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
         size_t rank = DetermineElementwiseTensorRank();
-        auto result =           ValueTensorFor(rank, fr);
-        auto input0 = Input(0)->ValueTensorFor(rank, fr.AllowBroadcast());
-        auto input1 = Input(1)->ValueTensorFor(rank, fr.AllowBroadcast());
-        auto input2 = Input(2)->ValueTensorFor(rank, fr.AllowBroadcast());
+        auto result =             ValueTensorFor(rank, fr);
+        auto input0 = InputRef(0).ValueTensorFor(rank, fr.AllowBroadcast());
+        auto input1 = InputRef(1).ValueTensorFor(rank, fr.AllowBroadcast());
+        auto input2 = InputRef(2).ValueTensorFor(rank, fr.AllowBroadcast());
 
         result.AssignClipOf(input0, input1, input2);
     }
@@ -544,10 +544,10 @@ public:
         if (inputIndex == 2)
         {
             size_t rank = DetermineElementwiseTensorRank();
-            auto gradient =                         GradientTensorFor(rank, fr);
-            auto inputGradient = Input(inputIndex)->GradientTensorFor(rank, fr.AllowBroadcast());
-            auto input =         Input(inputIndex)->ValueTensorFor(rank, fr.AllowBroadcast());
-            auto output =                           ValueTensorFor(rank, fr.AllowBroadcast());
+            auto gradient =                           GradientTensorFor(rank, fr);
+            auto inputGradient = InputRef(inputIndex).GradientTensorFor(rank, fr.AllowBroadcast());
+            auto input =         InputRef(inputIndex).ValueTensorFor(rank, fr.AllowBroadcast());
+            auto output =                             ValueTensorFor(rank, fr.AllowBroadcast());
 
             inputGradient.AddCopyIfEqualOf(input, output, gradient);
         }        
@@ -578,20 +578,20 @@ private:
     // Index corresponds to different comparison operations. 
     const static int index = 1 + compType + 3 * polarity;
 
-	// The operations are indexed in the same order they appear in enum ElementWiseOperator: "Less", "Equal", "Greater", "GreaterEqual", "NotEqual", "LessEqual".
-	// This ordering is checked below:
-	static_assert(1 == ElementWiseOperator::opEqual         - ElementWiseOperator::opLess, "ElementWiseOperator::opEQ has wrong value relative to ElementWiseOperator::opLess");
-    static_assert(2 == ElementWiseOperator::opGreater       - ElementWiseOperator::opLess, "ElementWiseOperator::opGT has wrong value relative to ElementWiseOperator::opLess");
-    static_assert(3 == ElementWiseOperator::opGreaterEqual  - ElementWiseOperator::opLess, "ElementWiseOperator::opGE has wrong value relative to ElementWiseOperator::opLess");
-    static_assert(4 == ElementWiseOperator::opNotEqual      - ElementWiseOperator::opLess, "ElementWiseOperator::opNE has wrong value relative to ElementWiseOperator::opLess");
-    static_assert(5 == ElementWiseOperator::opLessEqual     - ElementWiseOperator::opLess, "ElementWiseOperator::opLE has wrong value relative to ElementWiseOperator::opLess");
+    // The operations are indexed in the same order they appear in enum ElementWiseOperator: "Less", "Equal", "Greater", "GreaterEqual", "NotEqual", "LessEqual".
+    // This ordering is checked below:
+    static_assert(1 == ElementWiseOperator::opEqual         - ElementWiseOperator::opLess, "ElementWiseOperator::opEqual has wrong value relative to ElementWiseOperator::opLess");
+    static_assert(2 == ElementWiseOperator::opGreater       - ElementWiseOperator::opLess, "ElementWiseOperator::opGreater has wrong value relative to ElementWiseOperator::opLess");
+    static_assert(3 == ElementWiseOperator::opGreaterEqual  - ElementWiseOperator::opLess, "ElementWiseOperator::opGreaterEqual has wrong value relative to ElementWiseOperator::opLess");
+    static_assert(4 == ElementWiseOperator::opNotEqual      - ElementWiseOperator::opLess, "ElementWiseOperator::opNotEqual has wrong value relative to ElementWiseOperator::opLess");
+    static_assert(5 == ElementWiseOperator::opLessEqual     - ElementWiseOperator::opLess, "ElementWiseOperator::opLessEqual has wrong value relative to ElementWiseOperator::opLess");
 
 public:
     typedef BinaryElementWiseNode<ElemType> Base; UsingBinaryElementwiseNodeBaseMembers;
 
     static const std::wstring TypeName()
     {
-		const wchar_t* names[] = { L"Less", L"Equal", L"Greater", L"GreaterEqual", L"NotEqual", L"LessEqual" };
+    const wchar_t* names[] = { L"Less", L"Equal", L"Greater", L"GreaterEqual", L"NotEqual", L"LessEqual" };
         return names[index];
     }
 
@@ -607,9 +607,9 @@ public:
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
         size_t rank = DetermineElementwiseTensorRank();
-        auto result =           ValueTensorFor(rank, fr);
-        auto input0 = Input(0)->ValueTensorFor(rank, fr.AllowBroadcast());
-        auto input1 = Input(1)->ValueTensorFor(rank, fr.AllowBroadcast());
+        auto result =             ValueTensorFor(rank, fr);
+        auto input0 = InputRef(0).ValueTensorFor(rank, fr.AllowBroadcast());
+        auto input1 = InputRef(1).ValueTensorFor(rank, fr.AllowBroadcast());
 
         result.DoBinaryOpOf(0, input0, input1, 1.0f, static_cast<ElementWiseOperator> (ElementWiseOperator::opLess + index), ElementWiseOperator::opSum);
     }
@@ -634,17 +634,17 @@ public:                                                                 \
     DeclareConstructorFromConfigWithNumInputs(ClassName);               \
     ClassName(DEVICEID_TYPE deviceId, const wstring& name)              \
             : Base(deviceId, name)                                      \
-        {                                                               \
-        }                                                               \
+    {                                                                   \
+    }                                                                   \
 };                                                                      \
                                                                         \
 template class ClassName<float>;                                        \
 template class ClassName<double>;
 
-DefineComparisonNode(ComparsionLessNode,         -1, 0)
-DefineComparisonNode(ComparisonEqualNode,         0, 0)
-DefineComparisonNode(ComparisonGreaterNode,       1, 0)
-DefineComparisonNode(ComparisonGreaterEqualNode, -1, 1)
-DefineComparisonNode(ComparisonNotEqualNode,      0, 1)
-DefineComparisonNode(ComparisonLessEqualNode,     1, 1)
+DefineComparisonNode(LessNode,         -1, 0)
+DefineComparisonNode(EqualNode,         0, 0)
+DefineComparisonNode(GreaterNode,       1, 0)
+DefineComparisonNode(GreaterEqualNode, -1, 1)
+DefineComparisonNode(NotEqualNode,      0, 1)
+DefineComparisonNode(LessEqualNode,     1, 1)
 }}}

@@ -27,7 +27,7 @@ ndlMacros = [
     scValue = 1
     
     # Batch normalization time constant.
-    bnTimeConst = 4096
+    bnTimeConst = 0
 ]
 
 DNN=[
@@ -77,6 +77,6 @@ DNN=[
     ol = DnnLayer(cMap6, labelDim, pool2, fcWScale, fcBValue)
     
     CE = CrossEntropyWithSoftmax(labels, ol, tag = Criteria)
-    Err = ErrorPrediction(labels, ol, tag = Eval)
+    Err = ClassificationError(labels, ol, tag = Eval)
     OutputNodes = ol
 ]

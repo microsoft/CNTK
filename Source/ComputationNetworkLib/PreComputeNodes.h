@@ -234,7 +234,7 @@ public:
 
     virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
     {
-        FrameRange fr(Input(0)->GetMBLayout());
+        FrameRange fr(InputRef(0).GetMBLayout());
         if (m_hasComputed)
             return; // not accumulating
 
@@ -242,9 +242,9 @@ public:
             LogicError("%ls %ls operation: MarkComputed(false) has not been called.", NodeName().c_str(), OperationName().c_str());
 
         // set gaps to zero, since we are reducing in time
-        Input(0)->MaskMissingValueColumnsToZero(fr);
+        InputRef(0).MaskMissingValueColumnsToZero(fr);
 
-        size_t numNewSamples = Input(0)->GetMBLayout()->GetActualNumSamples();
+        size_t numNewSamples = InputRef(0).GetMBLayout()->GetActualNumSamples();
         size_t totalNumSamples = m_numSamples + numNewSamples;
         if (totalNumSamples == 0)
             totalNumSamples = 1; // 0/0=1 in this context
@@ -252,8 +252,8 @@ public:
         ElemType beta  = (ElemType)m_numSamples / totalNumSamples;
 
         size_t rank = DetermineElementwiseTensorRank();
-        auto mean  =           ValueTensorFor(rank, FrameRange()); // mean is formed directly in our m_value
-        auto input = Input(0)->ValueTensorFor(rank, fr);
+        auto mean  =             ValueTensorFor(rank, FrameRange()); // mean is formed directly in our m_value
+        auto input = InputRef(0).ValueTensorFor(rank, fr);
 
         mean.DoCopyOf(beta, input, alpha);
         // Note: We leverage that TensorView allows "broadcasting" the output,
@@ -315,7 +315,7 @@ public:
 
     virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
     {
-        FrameRange fr(Input(0)->GetMBLayout());
+        FrameRange fr(InputRef(0).GetMBLayout());
         if (m_hasComputed)
             return; // not accumulating
 
@@ -323,9 +323,9 @@ public:
             LogicError("%ls %ls operation: MarkComputed(false) has not been called.", NodeName().c_str(), OperationName().c_str());
 
         // set gaps to zero, since we are reducing in time
-        Input(0)->MaskMissingValueColumnsToZero(fr);
+        InputRef(0).MaskMissingValueColumnsToZero(fr);
 
-        size_t numNewSamples = Input(0)->GetMBLayout()->GetActualNumSamples();
+        size_t numNewSamples = InputRef(0).GetMBLayout()->GetActualNumSamples();
         size_t totalNumSamples = m_numSamples + numNewSamples;
         if (totalNumSamples == 0)
             totalNumSamples = 1; // 0/0=1 in this context
@@ -333,7 +333,7 @@ public:
         ElemType beta  = (ElemType)m_numSamples / totalNumSamples;
 
         size_t rank = DetermineElementwiseTensorRank();
-        auto input    = Input(0)->ValueTensorFor(        rank, fr);
+        auto input    = InputRef(0).ValueTensorFor(        rank, fr);
         auto mean     =            DataTensorFor(m_mean, rank, FrameRange());
         auto temp     =            DataTensorFor(m_temp, rank, FrameRange());
         auto var      =            DataTensorFor(m_var,  rank, FrameRange());
@@ -352,7 +352,7 @@ public:
         // var += (input - mean)^2
         var.DoSqrOfDifferenceOf(beta, input, mean, alpha); // this reduces as well
 
-        m_numSamples += Input(0)->GetMBLayout()->GetActualNumSamples();
+        m_numSamples += InputRef(0).GetMBLayout()->GetActualNumSamples();
     }
 
     virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
@@ -377,116 +377,11 @@ template class InvStdDevNode<float>;
 template class InvStdDevNode<double>;
 
 // -----------------------------------------------------------------------
-// PerDimMeanVarNormalizationNode (feature, mean, invStdDev)
-// Computes
-//   output = (feature - mean) .* invStdDev
-// where mean and invStdDev are meant to be single elements while features
-// is minibatch data.
-// TODO: Why do we need this? Why not use Plus and ElementTimes?
-// -----------------------------------------------------------------------
-
-template <class ElemType>
-class PerDimMeanVarNormalizationNode : public ComputationNode<ElemType>, public NumInputs<3>
-{
-    typedef ComputationNode<ElemType> Base;
-    UsingComputationNodeMembersBoilerplate;
-    static const std::wstring TypeName()
-    {
-        return L"PerDimMeanVarNormalization";
-    }
-
-public:
-    DeclareConstructorFromConfigWithNumInputs(PerDimMeanVarNormalizationNode);
-    PerDimMeanVarNormalizationNode(DEVICEID_TYPE deviceId, const wstring& name)
-        : Base(deviceId, name)
-    {
-    }
-
-    virtual void /*ComputationNode::*/ BackpropTo(const size_t /*inputIndex*/, const FrameRange&) override
-    {
-        InvalidArgument("PerDimMeanVarNormalizationNode should only be called in the evaluation stage. Is any of its descendents a learnable parameter that requires gradient?");
-    }
-
-    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
-    {
-        size_t rank = DetermineElementwiseTensorRank();
-        auto output    =           ValueTensorFor(rank, fr);
-        auto input     = Input(0)->ValueTensorFor(rank, fr);
-        auto mean      = Input(1)->ValueTensorFor(rank, fr.AllowBroadcast());
-        auto invStdDev = Input(2)->ValueTensorFor(rank, fr.AllowBroadcast());
-
-        output.AssignDifferenceOf(input, mean);               // output = input - mean
-        output.AssignElementwiseProductOf(output, invStdDev); // output *= invStdDev
-    }
-
-    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
-    {
-        Base::Validate(isFinalValidationPass);
-        InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
-
-        Input(1)->ValidateInferInputDimsFrom(Input(0)->GetSampleLayout());
-        Input(2)->ValidateInferInputDimsFrom(Input(0)->GetSampleLayout());
-
-
-#if 1
-        // support for legacy models when the mean and variance vectors were stored as column vectors (N,1)
-        // This code will copy the shape of Input(0) (source) to Input(1) and Input(2) (target) if:
-        //   1. The source is a 3-tensor with shape 1x1xM
-        //   2. The target is a vector (i.e., a 2-tensor with shape Nx1)
-        //   3. Both targets have the same number of elements
-        //   4. The number of elements in the target (N) is the same as the number of elements in the source (M)
-        // Note: This is somewhat ugly [Jasha Droppo].
-
-        auto dimsA = Input(0)->GetSampleLayout().GetDims();
-        auto dimsB = Input(1)->GetSampleLayout().GetDims();
-        auto dimsC = Input(2)->GetSampleLayout().GetDims();
-
-        if (
-            // Test condition 1.
-            (dimsA.size() == 3 && dimsA[0] == 1 && dimsA[1] == 1) &&
-            // Test condition 2.
-            (dimsB.size() == 2 && dimsB[1] == 1) &&
-            (dimsC.size() == 2 && dimsC[1] == 1) &&
-            // Test condition 3. and condition 4.
-            (dimsB[0] == dimsC[0] && dimsB[0] == dimsA[2])
-            )
-        {
-            // for error messages
-            string dimsBstring = string(Input(1)->GetSampleLayout());
-            string dimsCstring = string(Input(2)->GetSampleLayout());
-
-            // reshape Input(1)
-            Input(1)->SetDims(TensorShape(dimsA), false);
-            fprintf(stderr, "\n%ls %ls operation: For legacy compatibility, the sample layout of second input (%ls %ls operation) was patched to [%s] (from [%s])\n",
-                NodeName().c_str(), OperationName().c_str(), Input(1)->NodeName().c_str(), Input(1)->OperationName().c_str(), string(Input(1)->GetSampleLayout()).c_str(), dimsBstring.c_str());
-
-            // reshape Input(2)
-            Input(2)->SetDims(TensorShape(dimsA), false);
-            fprintf(stderr, "\n%ls %ls operation: For legacy compatibility, the sample layout of third input (%ls %ls operation) was patched to [%s] (from [%s])\n",
-                NodeName().c_str(), OperationName().c_str(), Input(2)->NodeName().c_str(), Input(2)->OperationName().c_str(), string(Input(2)->GetSampleLayout()).c_str(), dimsCstring.c_str());
-        }
-
-#endif
-
-        if (isFinalValidationPass)
-        {
-            if (!Input(0)->GetSampleLayout().IsElementwiseCompatibleWith(Input(1)->GetSampleLayout()) || !Input(0)->GetSampleLayout().IsElementwiseCompatibleWith(Input(2)->GetSampleLayout()))
-                InvalidArgument("PerDimMeanVarNormalizationNode: All inputs should have same sample layout.");
-        }
-
-        SetDims(Input(0));
-    }
-};
-
-template class PerDimMeanVarNormalizationNode<float>;
-template class PerDimMeanVarNormalizationNode<double>;
-
-// -----------------------------------------------------------------------
 // PerDimMeanVarDeNormalizationNode (feature, mean, invStdDev)
 // Computes
 //   output = feature ./ invStdDev + mean
 // with parameters the same as PerDimMeanVarNormalizationNode.
-// TODO: Why do we need this? Why not use Plus and ElementDividedBy?
+// TODO: Deprecate like PerDimMeanVarNormalizationNode as soon as we have a test case. Or just delete it.
 // -----------------------------------------------------------------------
 
 template <class ElemType>
@@ -511,10 +406,10 @@ public:
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
         size_t rank = DetermineElementwiseTensorRank();
-        auto output    =           ValueTensorFor(rank, fr);
-        auto input     = Input(0)->ValueTensorFor(rank, fr);
-        auto mean      = Input(1)->ValueTensorFor(rank, fr.AllowBroadcast());
-        auto invStdDev = Input(2)->ValueTensorFor(rank, fr.AllowBroadcast());
+        auto output    =             ValueTensorFor(rank, fr);
+        auto input     = InputRef(0).ValueTensorFor(rank, fr);
+        auto mean      = InputRef(1).ValueTensorFor(rank, fr.AllowBroadcast());
+        auto invStdDev = InputRef(2).ValueTensorFor(rank, fr.AllowBroadcast());
 
         output.AssignElementwiseQuotientOf(input, invStdDev); // output = input / invStdDev
         output.AddCopyOf(mean);                               // output += mean

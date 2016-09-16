@@ -1,18 +1,28 @@
 # CNTK
 
 ## Latest news
-*2016-05-16.* An example illustrating [Using CNTK with ResNet](https://github.com/Microsoft/CNTK/tree/master/Examples/Image/Miscellaneous/ImageNet/ResNet) is added to the codebase. The example contains some pre-trained models that can be used in various applications.
+*2016-08-31.* V 1.7 Binary release  
+Highlights of this Release:
+* Improvements in BrainScript (New library of predefined common layer types, Support of cuDNN5 RNN and Common random-initialization types, improved handling of GRUs)
+* Support of NVIDIA cuDNN 5.1
+* Improvements in Readers and Deserializers
+* Additions to Evaluator Library (Eval Client Sample, Strong Name for EvalWrapper)
+* New in Unit Tests (Linux support, Randomization engines)
+* Python API Preview (since V.1.5)
+* Multiple bug fixes
 
-*2016-05-16.* CNTK Wiki now has [FAQ Page](https://github.com/Microsoft/CNTK/wiki/CNTK-FAQ)
+See more in the [Release Notes](https://github.com/Microsoft/CNTK/wiki/CNTK_1_7_Release_Notes)  
+Get the Release from the [CNTK Releases page](https://github.com/Microsoft/CNTK/releases)
 
-*2016-05-05.* CNTK now supports *BlockMomentum* Stochastic Gradient Descent (SGD) algorithm. 
-See the details in the [Multiple GPUs and machines Wiki section](https://github.com/Microsoft/CNTK/wiki/Multiple-GPUs-and-machines)
+*2016-08-29.* Two new Tutorials are available:  
+[Image recognition](https://github.com/Microsoft/CNTK/wiki/Hands-On-Labs-Image-Recognition) (CIFAR-10) and [Language understanding](https://github.com/Microsoft/CNTK/wiki/Hands-On-Labs-Image-Recognition) (ATIS).
 
-*2016-05-03.* New transformations are implemented for **Image Reader**. 
-See the description in the [Image Reader Wiki section](https://github.com/Microsoft/CNTK/wiki/Image-reader)
+*2016-08-10.* We have significantly simplified handling of **Gated Recurrent Units (GRU)**. Read more in the [corresponding article](https://github.com/Microsoft/CNTK/wiki/GRUs-on-CNTK-with-BrainScript).
 
-*2016-04-25.* V 1.1 Binary release
-CNTK v.1.1 binaries are on the [CNTK Releases page](https://github.com/Microsoft/CNTK/releases/tag/v1.1)
+*2016-07-15.* V 1.6 Binary release  
+CNTK v.1.6 binaries are on the [CNTK Releases page](https://github.com/Microsoft/CNTK/releases)
+
+*2016-07-12.* We have further expanded Licensing options for CNTK 1bit-SGD and related components. See the details at the [Wiki page](https://github.com/microsoft/cntk/wiki/CNTK-1bit-SGD-License). These new options are an extension of the new CNTK 1bit-SGD License that we have announced on Jun 23, 2016.
 
 See [all news](https://github.com/Microsoft/CNTK/wiki/News).
 
@@ -45,3 +55,8 @@ Amit Agarwal, Eldar Akchurin, Chris Basoglu, Guoguo Chen, Scott Cyphers, Jasha D
 ## Disclaimer 
 
 CNTK is in active use at Microsoft and constantly evolving. There will be bugs.
+
+
+## Microsoft Open Source Code of Conduct
+
+This project has adopted the [Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/). For more information see the [Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/) or contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additional questions or comments.

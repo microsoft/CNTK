@@ -54,6 +54,9 @@
     <ClCompile Include="CuDnnCommon.cpp">
       <Filter>GPU\CuDnn</Filter>
     </ClCompile>
+    <ClCompile Include="CuDnnRNN.cpp">
+      <Filter>GPU\RNN</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Common\Include\File.h">
@@ -128,6 +131,9 @@
     <ClInclude Include="GPURNGHandle.h">
       <Filter>GPU</Filter>
     </ClInclude>
+    <ClInclude Include="CuDnnRNN.h">
+      <Filter>GPU\RNN</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="GPUMatrix.h">
@@ -173,6 +179,9 @@
     </Filter>
     <Filter Include="GPU\CuDnn">
       <UniqueIdentifier>{05351afa-de95-40c8-830a-d70eede55dc0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="GPU\RNN">
+      <UniqueIdentifier>{da8154d0-d1f4-44a5-b64a-5e955ead56fa}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

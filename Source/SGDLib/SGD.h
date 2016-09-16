@@ -110,6 +110,7 @@ struct SGDParams : public ScriptableObjects::Object
 
     // SGDParams(SGDParams&&) = default; // (does not compile in VS 2013; not critical)
 
+    size_t GetMaxEpochs() { return m_maxEpochs; }
 
 protected:
     // learning rate per sample provided outside
@@ -163,6 +164,8 @@ protected:
         return m_parallelizationMethod;
     }
 
+    // helper function to initialize and check BlockMomentumSGD related parameters
+    void InitializeAndCheckBlockMomentumSGDParameters();
     // only true when the user specify LearningRatePerMB and the number of parallel utterances in Reader > 1
     // bool m_needToNormalizeLRByParallUtterance;          // TODO: should go away
     // bool m_needToNormalizeMomentumByParallUtterance;
@@ -248,6 +251,8 @@ protected:
 
     bool m_useAllDataForPreComputedNode;
 
+    int m_perfTraceLevel;
+
     // Parallel training
     MPIWrapperPtr m_mpi;
 
@@ -267,7 +272,7 @@ protected:
     bool m_zeroThresholdFor1Bit;
 
     // Parallel training related with MA / BM
-    size_t m_nFramesBetweenMASync;
+    size_t m_modelAggregationBlockSize;
     bool   m_resetSGDMomentum; 
     bool   m_useNesterovBlockMomentum;
     double m_blockLearningRate; 
@@ -286,7 +291,7 @@ protected:
     double m_seqGammarCalcbMMIFactor;
     bool m_seqGammarCalcUsesMBR;
     size_t m_blankNum;
-
+    bool m_disableWkInBatchNormal;
 };
 
 template <class ElemType>
@@ -342,19 +347,11 @@ public:
 
         if (m_mpi == nullptr)
             m_parallelizationMethod = ParallelizationMethod::none;
-
-        if (m_parallelizationMethod == ParallelizationMethod::blockMomentumSGD)
-        {
-            // This is used to finish initializing BlockMomentumSGD parameter 
-            // since some of the parameter may not be specified by the users 
-            InitializeAndCheckBlockMomentumSGDParameters(); 
-        }
     }
 
-    void Train(function<ComputationNetworkPtr(DEVICEID_TYPE)> createNetworkFn, DEVICEID_TYPE deviceId,
+    void Train(shared_ptr<ComputationNetwork> net, DEVICEID_TYPE deviceId,
                IDataReader* trainSetDataReader,
-               IDataReader* validationSetDataReader,
-               const bool makeMode = true);
+               IDataReader* validationSetDataReader, int startEpoch, bool loadNetworkFromCheckpoint);
     void Adapt(wstring origModelFileName, wstring refNodeName,
                IDataReader* trainSetDataReader,
                IDataReader* validationSetDataReader,
@@ -493,6 +490,10 @@ public:
                                const double L1RegWeight,
                                const bool needAveMultiplier,
                                const bool useNesterovMomentum);
+    // return -1 if nothing exists
+    int DetermineStartEpoch(const bool makeMode);
+
+    wstring GetModelNameForEpoch(const int epoch, bool bLastModel = false);
 
 protected:
     // UpdateWeights - update the weights in
@@ -527,10 +528,6 @@ protected:
                             /*out*/ size_t& minibatchSize);
 
     wstring GetCheckPointFileNameForEpoch(const int epoch);
-    wstring GetModelNameForEpoch(const int epoch, bool bLastModel = false);
-
-    // return -1 if nothing exists
-    int DetermineStartEpoch(const bool makeMode);
 
     GradientsUpdateType GradUpdateType() const
     {
@@ -571,21 +568,18 @@ protected:
 
 
 private:
-    void InitializeAndCheckBlockMomentumSGDParameters();
     void MarkDropoutNodesEvalTimeStampAsOutdated(const ComputationNetworkPtr& net, const ComputationNodeBasePtr& criterionNode);
 
     bool UsingGradientAggregation(size_t epochNumber) const
     {
         return ((GetParallelizationMethod() == ParallelizationMethod::dataParallelSGD) && (epochNumber >= m_parallelizationStartEpochNum));
     }
-
     bool UsingModelAggregation(size_t epochNumber) const
     {
         return ((GetParallelizationMethod() == ParallelizationMethod::modelAveragingSGD ||
                  GetParallelizationMethod() == ParallelizationMethod::blockMomentumSGD) &&
                 (epochNumber >= m_parallelizationStartEpochNum));
     }
-
     bool UsingParallelTrain(size_t epochNumber) const
     {
         return UsingGradientAggregation(epochNumber) || UsingModelAggregation(epochNumber);

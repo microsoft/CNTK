@@ -306,35 +306,8 @@ static void FlattenToMatrix(TensorShape& shape, bool trans, size_t splitPoint)
 {
     if (trans)
         splitPoint = shape.GetRank() - splitPoint;
-    // check & print meaningful error message
-    SmallVector<bool> dimsToDrop(shape.GetRank(), false);
-    for (size_t k = 1; k < shape.GetRank(); k++)
-        if (k != splitPoint)
-            if (!shape.CanFlatten(k))
-                InvalidArgument("DoMatrixProductOf: Shape [%s] is not dense at dimension %d.", string(shape).c_str(), (int)k);
-            else
-                dimsToDrop[k - 1] = true;
-    // handle case where last dimension missing, e.g. u'v where u and v are column vectors
-    if (splitPoint == shape.GetRank())
-    {
-        shape.PadRankInPlace(splitPoint + 1);
-        dimsToDrop.resize(splitPoint + 1, false);
-    }
-    // flatten the dimensions
-    for (size_t k = 1; k < shape.GetRank(); k++)
-        if (dimsToDrop[k - 1])
-            shape.FlattenInPlace(k);
-    shape.DropDimsInPlace(dimsToDrop);
-    // handle edge case where first dimension missing, e.g. u'v where both are scalars
-    if (splitPoint == 0)
-    {
-        // we must insert a 1 dimension at the start
-        assert(shape.GetRank() == 1); // we have reduced everything after the split point at this point
-        shape.PadRankInPlace(2);      // append a 1
-        shape.SwapDimsInPlace(0, 1);  // and swap--this preserves the stride of the second dimension
-    }
-    // now we have a matrix
-    assert(shape.GetRank() == 2);
+
+    shape.FlattenTo2DInPlace(splitPoint, "DoMatrixProductOf");
 }
 
 // convert tensor into a Matrix object

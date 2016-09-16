@@ -23,15 +23,7 @@
 
 #pragma warning(disable : 4127) // conditional expression is constant; "if (sizeof(ElemType)==sizeof(float))" triggers this
 
-#ifdef USE_ACML
-// use ACML as default.
-// Download ACML 5.3.0 (e.g., acml5.3.0-ifort64.exe) or above
-// from http://developer.amd.com/tools/cpu-development/amd-core-math-library-acml/acml-downloads-resources/
-// Install the ifort64 variant (compiled with intel compiler) of the library
-// Set Environment variable ACML_PATH to C:\AMD\acml5.3.0\ifort64_mp or the folder you installed acml
-// to point to your folder for the include file and link library
-#include <acml.h> // requires ACML 5.3.0 and above
-#elif defined(USE_MKL)
+#ifdef USE_MKL
 // requires MKL 10.0 and above
 #include <mkl.h>
 #else
@@ -52,12 +44,6 @@
 //{
 //    return 42;
 //}
-
-#ifdef USE_ACML // MKL has one additional parameter for different matrix order
-#define BLAS_COLMAJOR
-#else
-#define BLAS_COLMAJOR (int) MatrixOrder::ColMajor,
-#endif
 
 // TODO: Move to CommonMatrix.h
 #define IDX2C(i, j, ld) (((j) * (ld)) + (i)) // 0 based indexing
@@ -205,6 +191,9 @@ void CPUSparseMatrix<ElemType>::SetValue(const size_t row, const size_t col, con
         LogicError("CPUSparseMatrix:  unsupported SetValue() call.");
     }
 
+    if ((GetFormat() == MatrixFormat::matrixFormatSparseCSC) && ((*this)(row, col) == v))
+        return;
+
     let nz = NzCount();
     if (GetSizeAllocated() < nz + 1) // automatic resize
     {
@@ -258,11 +247,23 @@ void CPUSparseMatrix<ElemType>::SetValue(const CPUSparseMatrix<ElemType>& v)
     RequireSizeAndAllocate(v.GetNumRows(), v.GetNumCols(), v.NzSize());
     let nz = v.NzCount();
 
+    auto matrixFormat = v.GetFormat();
+    if (((matrixFormat == matrixFormatSparseBlockCol) || (matrixFormat == matrixFormatSparseBlockRow)) && (v.GetBlockIdShift() > 0))
+        NOT_IMPLEMENTED;
+
     if (nz > 0)
     {
         memcpy(NzValues(),    v.NzValues(),    v.NzSize());
-        memcpy(RowLocation(), v.RowLocation(), v.RowSize());
-        memcpy(ColLocation(), v.ColLocation(), v.ColSize());
+
+        if ((matrixFormat == matrixFormatSparseCSC) || (matrixFormat == matrixFormatSparseCSR))
+        {
+            memcpy(RowLocation(), v.RowLocation(), v.RowSize());
+            memcpy(ColLocation(), v.ColLocation(), v.ColSize());
+        }
+        else
+        {
+            memcpy(GetBlockIds(), v.GetBlockIds(), v.GetBlockSize());
+        }
     }
     if (v.m_sliceViewOffset > 0)
     {
@@ -325,6 +326,121 @@ void CPUSparseMatrix<ElemType>::MaskColumnsValue(const CPUMatrix<char>& columnsM
 #endif
 }
 
+template <class ElemType>
+CPUSparseMatrix<ElemType>& CPUSparseMatrix<ElemType>::DoGatherColumnsOf(ElemType beta, const CPUMatrix<ElemType>& idx, const CPUSparseMatrix<ElemType>& a, ElemType alpha)
+{
+    VerifyWritable(__func__);
+
+    if ((a.GetFormat() != matrixFormatSparseCSC) || (GetFormat() != matrixFormatSparseCSC))
+        NOT_IMPLEMENTED;
+
+    if (idx.GetNumRows() != 1) // index is 1-dimensional only
+        InvalidArgument("DoGatherColumnsOf: Map must be a row vector.");
+
+    if (beta != 0)
+        NOT_IMPLEMENTED;
+
+    // Determine the number of non-zero elements
+    size_t numCols = idx.GetNumCols();
+    size_t numNonZeroElements = 0;
+    // TODO: Does it make sense to parallelize this?
+    for (long j = 0; j < numCols; j++)
+    {
+        auto jInF = idx(0, j); // this is the column we need to get
+        if (::isnan(jInF) || (jInF < 0))     // negative index means gap
+            continue;
+        size_t jIn = (size_t)jInF;
+
+        auto start = a.SecondaryIndexLocation()[jIn];
+        auto end = a.SecondaryIndexLocation()[jIn + 1];
+        numNonZeroElements += (end - start);
+    }
+
+    if (beta == 0)
+        RequireSizeAndAllocate(a.GetNumRows(), idx.GetNumCols(), numNonZeroElements); // output has same column format as a, but number of columns comes from idx
+
+    size_t offset = SecondaryIndexLocation()[0];
+    // TODO: Does it make sense to parallelize this?
+    for (long j = 0; j < numCols; j++)
+    {
+        auto jInF = idx(0, j); // this is the column we need to get
+        if (::isnan(jInF) || (jInF < 0))     // negative index means gap
+            continue;
+        size_t jIn = (size_t)jInF;
+
+        auto start = a.SecondaryIndexLocation()[jIn];
+        auto end = a.SecondaryIndexLocation()[jIn + 1];
+        for (auto p = start; p < end; p++, offset++)
+        {
+            GetUnCompIndex()[offset] = a.GetUnCompIndex()[p];
+            Buffer()[offset] = a.Buffer()[p] * alpha;
+        }
+
+        SecondaryIndexLocation()[j + 1] = CPUSPARSE_INDEX_TYPE(offset);
+    }
+
+    return *this;
+}
+
+// *this[:,idx[j]] = a[:,j] * alpha + *this[:,idx[j]] * beta
+template <class ElemType>
+CPUSparseMatrix<ElemType>& CPUSparseMatrix<ElemType>::DoScatterColumnsOf(ElemType beta, const CPUMatrix<ElemType>& idx, const CPUSparseMatrix<ElemType>& a, ElemType alpha)
+{
+    VerifyWritable(__func__);
+
+    if ((a.GetFormat() != matrixFormatSparseCSC) || (GetFormat() != matrixFormatSparseCSC))
+        NOT_IMPLEMENTED;
+
+    if (idx.GetNumRows() != 1) // index is 1-dimensional only
+        InvalidArgument("DoScatterColumnsOf: Map must be a row vector.");
+
+    if (beta != 0)
+        NOT_IMPLEMENTED;
+
+    if (NzCount() != 0)
+        InvalidArgument("CPUSparseMatrix::DoScatterColumnsOf: The target matrix cannot have pre-existing non-zero values when being scattered into");
+
+    size_t numNonZeroElements = a.NzCount();
+
+    if (beta == 0)
+        RequireSizeAndAllocate(GetNumRows(), GetNumCols(), numNonZeroElements);
+
+    // Setup the Secondary index
+    std::vector<int> columnElementCounts(GetNumCols(), 0);
+    size_t numColsToWrite = idx.GetNumCols();
+    for (long j = 0; j < numColsToWrite; j++)
+    {
+        auto jOutF = idx(0, j); // this is the column we need to write to
+        if (::isnan(jOutF) || (jOutF < 0))     // negative index means gap
+            continue;
+        size_t jOut = (size_t)jOutF;
+        columnElementCounts[jOut] = a.SecondaryIndexLocation()[j + 1] - a.SecondaryIndexLocation()[j];
+    }
+
+    // TODO: Replace with std::exclusive_scan when we switch to C++17
+    for (size_t i = 1; i <= GetNumCols(); ++i)
+        SecondaryIndexLocation()[i] = SecondaryIndexLocation()[i - 1] + columnElementCounts[i - 1];
+    
+    size_t offset = a.SecondaryIndexLocation()[0];
+    // TODO: Does it make sense to parallelize this?
+    for (long j = 0; j < numColsToWrite; j++)
+    {
+        auto jOutF = idx(0, j); // this is the column we need to write to
+        if (::isnan(jOutF) || (jOutF < 0))     // negative index means gap
+            continue;
+        size_t jOut = (size_t)jOutF;
+
+        auto start = SecondaryIndexLocation()[jOut];
+        auto end = SecondaryIndexLocation()[jOut + 1];
+        for (auto p = start; p < end; p++, offset++)
+        {
+            GetUnCompIndex()[p] = a.GetUnCompIndex()[offset];
+            Buffer()[p] = a.Buffer()[offset] * alpha;
+        }
+    }
+
+    return *this;
+}
 
 template <class ElemType>
 void CPUSparseMatrix<ElemType>::Print(const char* matrixName) const
@@ -372,48 +488,51 @@ CPUSparseMatrix<ElemType> CPUSparseMatrix<ElemType>::ColumnSlice(size_t startCol
     CPUSparseMatrix<ElemType> slice(GetFormat());
     slice.ShallowCopyFrom(*this);
 
-    slice.m_numCols             = numCols;
-    if (GetFormat() == MatrixFormat::matrixFormatSparseCSC)
+    if ((startColumn != 0) || (slice.m_numCols != numCols))
     {
-        slice.m_sliceViewOffset   = m_sliceViewOffset + startColumn;
-    }
-    else if (GetFormat() == MatrixFormat::matrixFormatSparseBlockCol)
-    {
-        long long startColBlock = 0, endColBlock = 0;
-        bool foundStart = false, foundEnd = false;
-        for (size_t j = 0; j < GetBlockSize(); j++)
+        slice.m_numCols = numCols;
+        if (GetFormat() == MatrixFormat::matrixFormatSparseCSC)
         {
-            if (j > 0)
+            slice.m_sliceViewOffset = m_sliceViewOffset + startColumn;
+        }
+        else if (GetFormat() == MatrixFormat::matrixFormatSparseBlockCol)
+        {
+            long long startColBlock = 0, endColBlock = 0;
+            bool foundStart = false, foundEnd = false;
+            for (size_t j = 0; j < GetBlockSize(); j++)
             {
-                assert(GetBlockIds()[j] > GetBlockIds()[j - 1]); // assume ids are increasing.Is this valid?
+                if (j > 0)
+                {
+                    assert(GetBlockIds()[j] > GetBlockIds()[j - 1]); // assume ids are increasing.Is this valid?
+                }
+
+                if (!foundStart && (long long)GetBlockIds()[j] - (long long)GetBlockIdShift() >= (long long)startColumn) // start column with values
+                {
+                    startColBlock = j;
+                    foundStart = true;
+                }
+                else if ((long long)GetBlockIds()[j] - (long long)GetBlockIdShift() >= (long long)(startColumn + numCols)) // end column with values
+                {
+                    endColBlock = j;
+                    foundEnd = true;
+                    break;
+                }
+            }
+            if (!foundStart)
+            {
+                startColBlock = (long long)GetBlockSize();
+            }
+            if (!foundEnd)
+            {
+                endColBlock = (long long)GetBlockSize();
             }
 
-            if (!foundStart && (long long) GetBlockIds()[j] - (long long) GetBlockIdShift() >= (long long) startColumn) // start column with values
-            {
-                startColBlock = j;
-                foundStart = true;
-            }
-            else if ((long long) GetBlockIds()[j] - (long long) GetBlockIdShift() >= (long long) (startColumn + numCols)) // end column with values
-            {
-                endColBlock = j;
-                foundEnd = true;
-                break;
-            }
-        }
-        if (!foundStart)
-        {
-            startColBlock = (long long) GetBlockSize();
-        }
-        if (!foundEnd)
-        {
-            endColBlock = (long long) GetBlockSize();
-        }
+            slice.m_sliceViewOffset = startColBlock;
 
-        slice.m_sliceViewOffset = startColBlock;
-
-        slice.SetBlockIds((size_t*)GetBlockIds() + startColBlock); // the value stored in the block id is based on the original column numbers
-        slice.SetBlockSize((size_t) max((long long) 0, endColBlock - startColBlock));
-        slice.SetBlockIdShift(GetBlockIdShift() + startColumn);
+            slice.SetBlockIds((size_t*)GetBlockIds() + startColBlock); // the value stored in the block id is based on the original column numbers
+            slice.SetBlockSize((size_t)max((long long)0, endColBlock - startColBlock));
+            slice.SetBlockIdShift(GetBlockIdShift() + startColumn);
+        }
     }
 
     return slice;
@@ -425,27 +544,47 @@ void CPUSparseMatrix<ElemType>::AssignColumnSliceToDense(CPUMatrix<ElemType>& sl
     if (startColumn + numCols > m_numCols)
         InvalidArgument("The slice (%d+%d) is out of range of the source matrix (%d).", (int) startColumn, (int) numCols, (int) m_numCols);
 
-    if (GetFormat() != MatrixFormat::matrixFormatSparseCSC)
+    if ((GetFormat() != MatrixFormat::matrixFormatSparseCSC) && (GetFormat() != MatrixFormat::matrixFormatSparseBlockCol))
         NOT_IMPLEMENTED;
 
     // We can either error out or RequireSize. Because RequireSize will error out if it's not allowed, I think this makes more sense.
     slice.RequireSize(m_numRows, numCols);
 
     memset(slice.Data(), 0, sizeof(ElemType) * slice.GetNumElements());
-#pragma omp parallel for
-    for (long j = 0; j < numCols; j++)
-    {
-        long start = (long) SecondaryIndexLocation()[startColumn + j];
-        long end = (long)SecondaryIndexLocation()[startColumn + j + 1];
 
-        for (long p = start; p < end; p++)
+    if (GetFormat() == MatrixFormat::matrixFormatSparseCSC)
+    {
+#pragma omp parallel for
+        for (long j = 0; j < numCols; j++)
         {
-            size_t i = GetUnCompIndex()[p];
-            ElemType value = Buffer()[(size_t) p];
-            slice(i, (size_t) j) = value;
+            long start = (long)SecondaryIndexLocation()[startColumn + j];
+            long end = (long)SecondaryIndexLocation()[startColumn + j + 1];
+
+            for (long p = start; p < end; p++)
+            {
+                size_t i = GetUnCompIndex()[p];
+                ElemType value = Buffer()[(size_t)p];
+                slice(i, (size_t)j) = value;
+            }
         }
     }
-
+    else
+    {
+        CPUSparseMatrix<ElemType> sparseSlice = ColumnSlice(startColumn, numCols);
+        size_t numColumnsWithNonZeroValues = sparseSlice.GetBlockSize();
+#pragma omp parallel for
+        for (long j = 0; j < numColumnsWithNonZeroValues; j++)
+        {
+            size_t i = sparseSlice.GetBlockIds()[j] - sparseSlice.GetBlockIdShift();
+            size_t len = sparseSlice.GetNumRows();
+            size_t start = j * len;
+            for (size_t p = start; p < start + len; p++)
+            {
+                ElemType val = sparseSlice.Buffer()[p];
+                slice(p - start, i) = val;
+            }
+        }
+    }
 }
 template <class ElemType>
 CPUMatrix<ElemType> CPUSparseMatrix<ElemType>::CopyColumnSliceToDense(size_t startColumn, size_t numCols) const
@@ -506,15 +645,10 @@ void CPUSparseMatrix<ElemType>::SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYP
 }
 
 template <class ElemType>
-ElemType* CPUSparseMatrix<ElemType>::Data() const
+ElemType* CPUSparseMatrix<ElemType>::Data()  const
 {
-    return Buffer() + GetCompIndex()[m_sliceViewOffset];
-}
-
-template <class ElemType>
-ElemType* CPUSparseMatrix<ElemType>::Data() 
-{
-    return Buffer() + GetCompIndex()[m_sliceViewOffset];
+    return (Buffer() + 
+        ((GetFormat() == matrixFormatSparseCSC || GetFormat() == matrixFormatSparseCSR) ? GetCompIndex()[m_sliceViewOffset] : 0));
 }
 
 // WARNING: When memory is reallocated, existing information will be lost.
@@ -659,97 +793,148 @@ void CPUSparseMatrix<ElemType>::Reset()
     SetBlockIdShift(0);
 }
 
-// c = alpha*op(lhs) * op(rhs) + beta*c
-// dense x sparse = dense
-template <class ElemType>
-void CPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const CPUMatrix<ElemType>& lhs, const bool transposeA,
-                                                       const CPUSparseMatrix<ElemType>& rhs, const bool transposeB, ElemType beta, CPUMatrix<ElemType>& c)
-{
-    if (lhs.IsEmpty() || rhs.IsEmpty())
-        LogicError("MultiplyAndWeightedAdd:  one of the input matrix is empty.");
-
-    int m = transposeA ? (int) lhs.GetNumCols() : (int) lhs.GetNumRows();
-    int k = transposeA ? (int) lhs.GetNumRows() : (int) lhs.GetNumCols();
-    int l = transposeB ? (int) rhs.GetNumCols() : (int) rhs.GetNumRows();
-    int n = transposeB ? (int) rhs.GetNumRows() : (int) rhs.GetNumCols();
-
-    assert(m > 0 && k > 0 && l > 0 && n > 0); // converting from size_t to int may cause overflow
-    assert(k == l);
-    if (k != l)
+// Implements product of one sparse and one dense matrix updating a third dense matrix. Input matrices are optionally transposed.
+// NOTE: The only for using a class template instead of a function template was that I couldn't make the function template compile.
+template <class ElemType, bool denseTimesSparse /* false means SparseTimesDense */, bool transposeA, bool transposeB>
+class MultiplyDenseAndSparse{
+public:
+    // Note: Below the ordering of the matrix parameters 'sparse' and 'dense' does not imply the order of the matrices in the product which is instead controlled
+    // by the value of the boolean template parameter 'denseTimesSparse'.
+    static void MultiplyAndWeightedAdd(ElemType alpha, const CPUSparseMatrix<ElemType>& sparse, const CPUMatrix<ElemType>& dense, ElemType beta, CPUMatrix<ElemType>& c)
     {
-        InvalidArgument("CPUSparseMatrix::MultiplyAndWeightedAdd: The inner dimensions of a and b must match.");
-    }
+        const BaseMatrix<ElemType>* lhs = denseTimesSparse ? (const BaseMatrix<ElemType>*) &dense  : (const BaseMatrix<ElemType>*) &sparse;
+        const BaseMatrix<ElemType>* rhs = denseTimesSparse ? (const BaseMatrix<ElemType>*) &sparse : (const BaseMatrix<ElemType>*) &dense;
 
-    if (beta == 0)
-        c.RequireSize(m, n);
-    else
-        c.VerifySize(m, n); // Can't resize if beta != 0
+        // C(m:n) is the product of matrices X * Y where we have the shapes X(m:k) and Y(l:n)
+        size_t m = transposeA ? lhs->GetNumCols() : lhs->GetNumRows();
+        size_t k = transposeA ? lhs->GetNumRows() : lhs->GetNumCols();
+        size_t l = transposeB ? rhs->GetNumCols() : rhs->GetNumRows();
+        size_t n = transposeB ? rhs->GetNumRows() : rhs->GetNumCols();
 
+        if (k != l)
+            InvalidArgument("CPUSparseMatrix::MultiplyAndWeightedAdd: The inner dimensions of a (= %lu) and b (= %lu) don't match.", k, l);
 
-    if (beta == 0)
-    {
-        memset(c.Buffer(), 0, sizeof(ElemType) * c.GetNumElements());
-    }
-    else if (beta != 1)
-    {
+        // Determine the dimension of the outer index of the dense matrix.
+        size_t outerDimensionDense;
+        if      ( denseTimesSparse && !transposeA) outerDimensionDense = dense.GetNumRows();
+        else if ( denseTimesSparse &&  transposeA) outerDimensionDense = dense.GetNumCols();
+        else if (!denseTimesSparse && !transposeB) outerDimensionDense = dense.GetNumCols();
+        else if (!denseTimesSparse &&  transposeB) outerDimensionDense = dense.GetNumRows();
+
+        if (beta == 0)
+            c.RequireSize(m, n);
+        else
+            c.VerifySize(m, n); // Can't resize if beta != 0
+
+        if (beta == 0)
+            memset(c.Data(), 0, sizeof(ElemType)* c.GetNumElements());
+        else if (beta != 1)
+        {
 #pragma omp parallel for
-        foreach_coord (i, j, c)
-        {
-            c(i, j) = beta * c(i, j);
-        }
-    }
-
-    if (rhs.GetFormat() != matrixFormatSparseCSC)
-        NOT_IMPLEMENTED;
-
-    if (!transposeA && !transposeB)
-    {
-        for (size_t j = 0; j < rhs.GetNumCols(); j++)
-        {
-            size_t start = rhs.SecondaryIndexLocation()[j]; // ColLocation
-            size_t end = rhs.SecondaryIndexLocation()[j + 1];
-            for (size_t p = start; p < end; p++)
+            foreach_coord(i, j, c)
             {
-                size_t i = rhs.MajorIndexLocation()[p]; // RowLocation
-                ElemType val = rhs.Buffer()[p];
+                c(i, j) = beta * c(i, j);
+            }
+        }
+        else /* beta == 1*/
+            ; // We keep the previous value of c before adding the matrix product.
 
-                for (size_t h = 0; h < lhs.GetNumRows(); h++)
+        // In case one factor in the matrix product is empty there is nothing to add to the output c so we can exit here.
+        if (sparse.IsEmpty() || dense.IsEmpty())
+            return;
+
+        // TODO: Implement CSR as a transposition of b, like we do for GPU.
+        if (sparse.GetFormat() != matrixFormatSparseCSC)
+            NOT_IMPLEMENTED;
+
+        // Up to here we have:
+        // * checked that the matrices are compatible in size
+        // * Initialized the output matrix c
+
+        // Now do the actual multiplication.
+        ElemType* valueBuffer = sparse.Buffer() + *sparse.SecondaryIndexLocation(); // Points to the value buffer of the current view (i.e. buffer containing values of non-zero elements).
+        int* rowIndexBuffer = sparse.MajorIndexLocation();                          // Points to the index buffer of the current view (i.e. buffer containing indices of non-zero elements).
+        size_t iNonzero = 0;                                                           // Number of nonzero elements handled so far for curent slice view.
+        int numPreviosNonzero = sparse.SecondaryIndexLocation()[0];                 // Total number of nonzero values handled in previous slices.
+
+        // Loop over columns of the sparse matrix
+        for (size_t colSparse = 0; colSparse < sparse.GetNumCols(); colSparse++)
+        {
+            size_t numNonzeroInSparseCol = sparse.SecondaryIndexLocation()[colSparse + 1] - numPreviosNonzero;
+            // Loop over the nonzero rows of the current column of the sparse matrix
+            for (; iNonzero < numNonzeroInSparseCol; iNonzero++)
+            {
+                size_t rowSparse = rowIndexBuffer[iNonzero]; // RowLocation
+                ElemType sparseVal = valueBuffer[iNonzero];
+
+                // Determine the index of the 'outer' dimension of the sparse matrix and the common inner index.
+                size_t outerIndexSparse;
+                size_t innerIndex;
+                // Below if-statements are evaluated at compile time.
+                if      ( denseTimesSparse && !transposeB) { outerIndexSparse = colSparse; innerIndex = rowSparse; }
+                else if ( denseTimesSparse &&  transposeB) { outerIndexSparse = rowSparse; innerIndex = colSparse; }
+                else if (!denseTimesSparse && !transposeA) { outerIndexSparse = rowSparse; innerIndex = colSparse; }
+                else if (!denseTimesSparse &&  transposeA) { outerIndexSparse = colSparse; innerIndex = rowSparse; }
+
+                // Loop over the outer index of the dense matrix
+                for (size_t outerIndexDense = 0; outerIndexDense < outerDimensionDense; outerIndexDense++)
                 {
-                    c(h, j) += alpha * lhs(h, i) * val;
+                    // Determine the row index of the dense input matrix.
+                    // Below if-statements are evaluated at compile time.
+                    ElemType denseVal;
+                    if      ( denseTimesSparse && !transposeA) denseVal = dense(outerIndexDense,      innerIndex);
+                    else if ( denseTimesSparse &&  transposeA) denseVal = dense(     innerIndex, outerIndexDense);
+                    else if (!denseTimesSparse && !transposeB) denseVal = dense(     innerIndex, outerIndexDense);
+                    else if (!denseTimesSparse &&  transposeB) denseVal = dense(outerIndexDense,      innerIndex);
+                    
+
+                    // Update matrix c.
+                    if (denseTimesSparse)
+                        c(outerIndexDense, outerIndexSparse) += alpha * denseVal * sparseVal;
+                    else /*Sparse times dense */
+                        c(outerIndexSparse, outerIndexDense) += alpha * denseVal * sparseVal;
                 }
             }
         }
     }
-    else if (!transposeA && transposeB)
-    {
-        for (size_t j = 0; j < rhs.GetNumCols(); j++)
-        {
-            size_t start = rhs.SecondaryIndexLocation()[j];
-            size_t end = rhs.SecondaryIndexLocation()[j + 1];
+};
 
-            for (size_t p = start; p < end; p++)
-            {
-                size_t i = rhs.MajorIndexLocation()[p];
-                ElemType val = rhs.Buffer()[p];
-                for (size_t h = 0; h < lhs.GetNumRows(); h++)
-                {
-                    c(h, i) += alpha * lhs(h, j) * val;
-                }
-            }
-        }
-    }
-    else if (transposeA && !transposeB)
-    {
-        NOT_IMPLEMENTED;
-    }
-    else
-    {
-        NOT_IMPLEMENTED;
-    }
+// c = alpha * lhs * rhs + beta * c
+// dense * sparse -> dense
+template <class ElemType>
+void CPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const CPUMatrix<ElemType>& a, const bool transposeA,
+                                                       const CPUSparseMatrix<ElemType>& b, const bool transposeB, ElemType beta, CPUMatrix<ElemType>& c)
+{
+    // Mapping variables to compile time template parameters for efficiency
+    if      ( transposeA &&  transposeB)
+        MultiplyDenseAndSparse<ElemType, true /* dense times sparse */,  true /* transposeA */,  true  /*transposeB*/>::MultiplyAndWeightedAdd(alpha, b /*sparse*/, a /* dense */, beta, c /* matrix beeing updated */);
+    else if ( transposeA && !transposeB)
+        MultiplyDenseAndSparse<ElemType, true /* dense times sparse */,  true /* transposeA */, false  /*transposeB*/>::MultiplyAndWeightedAdd(alpha, b /*sparse*/, a /* dense */, beta, c /* matrix beeing updated */);
+    else if (!transposeA &&  transposeB)
+        MultiplyDenseAndSparse<ElemType, true /* dense times sparse */, false /* transposeA */,  true  /*transposeB*/>::MultiplyAndWeightedAdd(alpha, b /*sparse*/, a /* dense */, beta, c /* matrix beeing updated */);
+    else if (!transposeA && !transposeB)
+        MultiplyDenseAndSparse<ElemType, true /* dense times sparse */, false /* transposeA */, false  /*transposeB*/>::MultiplyAndWeightedAdd(alpha, b /*sparse*/, a /* dense */, beta, c /* matrix beeing updated */);
 }
 
-// dense x sparse = sparse
-// c = alpha * op(lhs) * op(rhs)
+// c = alpha * lhs * rhs + beta * c
+// sparse * dense -> dense
+template <class ElemType>
+void CPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const CPUSparseMatrix<ElemType>& a, const bool transposeA,
+    const CPUMatrix<ElemType>& b, const bool transposeB, ElemType beta, CPUMatrix<ElemType>& c)
+{
+    // Mapping variables to compile time template parameters for efficiency
+    if (transposeA &&  transposeB)
+        MultiplyDenseAndSparse<ElemType, false /* dense times sparse */,  true /* transposeA */,  true /*transposeB*/>::MultiplyAndWeightedAdd(alpha, a /*sparse*/, b /* dense */, beta, c /* matrix beeing updated */);
+    else if (transposeA && !transposeB)
+        MultiplyDenseAndSparse<ElemType, false /* dense times sparse */,  true /* transposeA */, false /*transposeB*/>::MultiplyAndWeightedAdd(alpha, a /*sparse*/, b /* dense */, beta, c /* matrix beeing updated */);
+    else if (!transposeA &&  transposeB)
+        MultiplyDenseAndSparse<ElemType, false /* dense times sparse */, false /* transposeA */,  true /*transposeB*/>::MultiplyAndWeightedAdd(alpha, a /*sparse*/, b /* dense */, beta, c /* matrix beeing updated */);
+    else if (!transposeA && !transposeB)
+        MultiplyDenseAndSparse<ElemType, false /* dense times sparse */, false /* transposeA */, false /*transposeB*/>::MultiplyAndWeightedAdd(alpha, a /*sparse*/, b /* dense */, beta, c /* matrix beeing updated */);
+}
+
+// c = alpha * lhs * rhs
+// dense * sparse -> sparse
 template <class ElemType>
 void CPUSparseMatrix<ElemType>::MultiplyAndAdd(ElemType alpha, const CPUMatrix<ElemType>& lhs, const bool transposeA,
                                                const CPUSparseMatrix<ElemType>& rhs, const bool transposeB, CPUSparseMatrix<ElemType>& c)
@@ -771,7 +956,7 @@ void CPUSparseMatrix<ElemType>::MultiplyAndAdd(ElemType alpha, const CPUMatrix<E
     assert(k == l);
     if (k != l)
     {
-        InvalidArgument("CPUSparseMatrix::MultiplyAndAdd: The inner dimensions of a and b must match.");
+        InvalidArgument("CPUSparseMatrix::MultiplyAndAdd: The inner dimensions of a (= %lu) and b (= %lu) don't match.", k, l);
     }
 
     c.Reset();
@@ -1227,20 +1412,12 @@ ElemType CPUSparseMatrix<ElemType>::SumOfAbsElements() const
 
     if (sizeof(ElemType) == sizeof(double))
     {
-#ifdef USE_ACML
-        return (ElemType) dasum((int) this->NzCount(), reinterpret_cast<double*>(Data()), 1);
-#else
         return (ElemType) cblas_dasum((int) this->NzCount(), reinterpret_cast<double*>(Data()), 1);
-#endif
     }
     else
     {
 #pragma warning(suppress : 4244)
-#ifdef USE_ACML
-        return sasum((int) this->NzCount(), reinterpret_cast<float*>(Data()), 1);
-#else
         return cblas_sasum((int) this->NzCount(), reinterpret_cast<float*>(Data()), 1);
-#endif
     }
 }
 
@@ -1382,7 +1559,6 @@ template void CPUSparseMatrix<char>::SetValue(size_t, size_t, char);
 template void CPUSparseMatrix<char>::SetValue(CPUSparseMatrix<char> const&);
 //template void CPUSparseMatrix<char>::SetValue(GPUSparseMatrix<char> const&);
 template char* CPUSparseMatrix<char>::Data() const;
-template char* CPUSparseMatrix<char>::Data();
 template void CPUSparseMatrix<char>::Reset(void);
 template void CPUSparseMatrix<char>::Resize(const size_t, const size_t, const size_t, const bool);
 template void CPUSparseMatrix<char>::RequireSizeAndAllocate(const size_t, const size_t, const size_t, const bool, bool);
@@ -1392,6 +1568,28 @@ template CPUSparseMatrix<char> CPUSparseMatrix<char>::ColumnSlice(size_t startCo
 template CPUMatrix<char> CPUSparseMatrix<char>::CopyColumnSliceToDense(size_t startColumn, size_t numCols) const;
 template void CPUSparseMatrix<char>::AssignColumnSliceToDense(CPUMatrix<char>&, size_t startColumn, size_t numCols) const;
 template CPUSparseMatrix<char>& CPUSparseMatrix<char>::operator=(const CPUSparseMatrix<char>& deepCopyFrom);
+
+// Support <short>
+template CPUSparseMatrix<short>::CPUSparseMatrix(const MatrixFormat format, const size_t numRows, const size_t numCols, const size_t size);
+template CPUSparseMatrix<short>::CPUSparseMatrix(MatrixFormat);
+template CPUSparseMatrix<short>::CPUSparseMatrix(CPUSparseMatrix<short> const&);
+template CPUSparseMatrix<short>::CPUSparseMatrix(CPUSparseMatrix<short>&&);
+template CPUSparseMatrix<short>& CPUSparseMatrix<short>::operator=(CPUSparseMatrix<short>&& moveFrom);
+template void CPUSparseMatrix<short>::SetValue(size_t, size_t, short);
+//template void CPUSparseMatrix<short>::SetValue(CPUMatrix<short> const&);
+//template void CPUSparseMatrix<short>::SetValue(GPUMatrix<short> const&);
+template void CPUSparseMatrix<short>::SetValue(CPUSparseMatrix<short> const&);
+//template void CPUSparseMatrix<short>::SetValue(GPUSparseMatrix<short> const&);
+template short* CPUSparseMatrix<short>::Data() const;
+template void CPUSparseMatrix<short>::Reset(void);
+template void CPUSparseMatrix<short>::Resize(const size_t, const size_t, const size_t, const bool);
+template void CPUSparseMatrix<short>::RequireSizeAndAllocate(const size_t, const size_t, const size_t, const bool, bool);
+template void CPUSparseMatrix<short>::RequireSizeAndAllocate(const size_t, const size_t, const size_t, const MatrixFormat, const bool, bool);
+template CPUSparseMatrix<short>::~CPUSparseMatrix();
+template CPUSparseMatrix<short> CPUSparseMatrix<short>::ColumnSlice(size_t startColumn, size_t numCols) const;
+template CPUMatrix<short> CPUSparseMatrix<short>::CopyColumnSliceToDense(size_t startColumn, size_t numCols) const;
+template void CPUSparseMatrix<short>::AssignColumnSliceToDense(CPUMatrix<short>&, size_t startColumn, size_t numCols) const;
+template CPUSparseMatrix<short>& CPUSparseMatrix<short>::operator=(const CPUSparseMatrix<short>& deepCopyFrom);
 
 template CPUSparseMatrix<int>::CPUSparseMatrix(const MatrixFormat, const size_t, const size_t, const size_t);
 template CPUSparseMatrix<int>::~CPUSparseMatrix();

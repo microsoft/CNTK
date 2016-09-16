@@ -53,7 +53,6 @@ public:
 
 __declspec_noreturn static inline void EvaluationError(const wstring &msg, TextLocation where)
 {
-    //Microsoft::MSR::CNTK::DebugUtil::PrintCallStack();
     throw EvaluationException(msg, where);
 }
 
@@ -278,7 +277,7 @@ static ConfigValuePtr NodeOp(const ExpressionPtr &e, ConfigValuePtr leftVal, Con
         if (rightVal.Is<Double>())   // ComputeNode * scalar
             swap(leftVal, rightVal); // -> scalar * ComputeNode
         if (leftVal.Is<Double>())
-            operationName = L"Scale"; // scalar * ComputeNode
+            operationName = L"ElementTimes"; // scalar * ComputeNode
         else
             operationName = L"Times"; // ComputeNode * ComputeNode (matrix produt)
     }
@@ -306,6 +305,8 @@ static ConfigValuePtr NodeOp(const ExpressionPtr &e, ConfigValuePtr leftVal, Con
     config->Add(L"operation", MakeFailFn(e->location), ConfigValuePtr(make_shared<String>(operationName), MakeFailFn(e->location), exprPath));
     let leftFailFn = leftVal.GetFailFn(); // report any error for this Constant object as belonging to the scalar factor's expression
     vector<ConfigValuePtr> inputs;
+#if 0  // BUGBUG: rows,cols is no longer right, we need a TensorShape here
+    // TODO: Solve this by directly constructing Constant() off a 'double' input in the ComputationNode constructor.
     if (operationName == L"Scale")
     {
         // if we scale, the first operand is a Double, and we must convert that into a 1x1 Constant
@@ -315,7 +316,7 @@ static ConfigValuePtr NodeOp(const ExpressionPtr &e, ConfigValuePtr leftVal, Con
         let one = MakePrimitiveConfigValuePtr(1.0, leftFailFn, exprPath);
         constantConfig->Add(L"rows", leftFailFn, one);
         constantConfig->Add(L"cols", leftFailFn, one);
-        //constantConfig->Add(L"shape", leftFailFn, one);  // BUGBUG: rows,cols is no longer right, we need a TensorShape here
+        //constantConfig->Add(L"shape", leftFailFn, one);
         constantConfig->Add(L"value", leftFailFn, leftVal);
         constantConfig->Add(L"learningRateMultiplier", leftFailFn, MakePrimitiveConfigValuePtr(0.0f, leftFailFn, exprPath));
         let value = ConfigValuePtr(rtInfo->construct(constantConfig), leftFailFn, exprPath);
@@ -324,6 +325,7 @@ static ConfigValuePtr NodeOp(const ExpressionPtr &e, ConfigValuePtr leftVal, Con
             valueWithName->SetName(value.GetExpressionName());
         leftVal = value; // and that's our actual left value
     }
+#endif
     inputs.push_back(leftVal);
     if (operationName != L"Negate") // Negate only has one input (rightVal is a nullptr)
         inputs.push_back(rightVal);
@@ -333,6 +335,8 @@ static ConfigValuePtr NodeOp(const ExpressionPtr &e, ConfigValuePtr leftVal, Con
     {
         let one = MakePrimitiveConfigValuePtr(1.0, leftFailFn, exprPath);
         config->Add(L"outputRank", leftFailFn, one);
+        let minusOne = MakePrimitiveConfigValuePtr(-1.0, leftFailFn, exprPath);
+        config->Add(L"inferInputRankToMap", leftFailFn, minusOne);
     }
     // instantiate the ComputationNode
     let value = ConfigValuePtr(rtInfo->construct(config), MakeFailFn(e->location), exprPath);
@@ -536,8 +540,13 @@ static ConfigValuePtr Evaluate(const ExpressionPtr &e, const IConfigRecordPtr &s
             }
             return ConfigValuePtr(make_shared<ConfigLambda>(move(paramNames), move(namedParams), f), MakeFailFn(e->location), exprPath);
         }
-        else if (e->op == L"(") // === apply a function to its arguments
+        else if (e->op == L"(" || e->op == L"{") // === apply a function to its arguments
         {
+            // Note: "{" is experimental and currently ignored as a distinction. To do it more completely, we need
+            //  - remember how a function was declared (currently not possible for lambdas)
+            //  - make sure the invocation matches declaration
+            //  - disallow calling Parameter() or any other creating functions as "()"
+            //  - disallow calling "{}"-declared functions from inside a "()"
             let &lambdaExpr = e->args[0]; // [0] = function
             let &argsExpr = e->args[1];   // [1] = arguments passed to the function ("()" expression of expressions)
             let lambda = AsPtr<ConfigLambda>(Evaluate(lambdaExpr, scope, exprPath, L"" /*macros are not visible in expression names*/), lambdaExpr, L"function");
@@ -848,8 +857,8 @@ static wstring FormatConfigValue(ConfigValuePtr arg, const wstring &how)
     {
         let arr = arg.AsPtr<ConfigArray>();
         wstring result;
-        let range = arr->GetIndexRange();
-        for (int i = range.first; i <= range.second; i++)
+        let range = arr->GetIndexBeginEnd();
+        for (int i = range.first; i < range.second; i++)
         {
             if (i > range.first)
                 result.append(L"\n");
@@ -890,20 +899,20 @@ public:
                 else // otherwise expect an array
                 {
                     let & arr = arg.AsRef<ConfigArray>();
-                    let range = arr.GetIndexRange();
-                    us = (double)(range.second + 1 - range.first);
+                    let range = arr.GetSize(arg.GetFailFn());
+                    us = (double)range;
                 }
             }
         }
-        else if (what == L"Mod" || what == L"IntDiv")  //two-arg int functions
+        else if (what == L"Mod" || what == L"IntDiv")  // two-arg int functions
         {
             let argsArg = config[L"args"];
             let& args = argsArg.AsRef<ConfigArray>();
-            auto range = args.GetIndexRange();
-            if (range.second != range.first + 1)
+            auto range = args.GetIndexBeginEnd();
+            if (range.second != range.first + 2)
                 argsArg.Fail(L"Mod/IntDiv expects two arguments");
             let arg1 = (int)args.At(range.first);
-            let arg2 = (int)args.At(range.second);
+            let arg2 = (int)args.At(range.first + 1);
 
             if (what == L"Mod")
                 us = (int)(arg1 % arg2);
@@ -918,6 +927,7 @@ public:
 
 // CompareFunctions
 //  - IsSameObject()
+//  - IsArray()
 class CompareFunction : public BoxOf<Bool>
 {
 public:
@@ -932,12 +942,16 @@ public:
         if (what == L"IsSameObject")
         {
             let& args = argsArg.AsRef<ConfigArray>();
-            auto range = args.GetIndexRange();
-            if (range.second != range.first+1)
+            auto range = args.GetIndexBeginEnd();
+            if (range.second != range.first + 2)
                 argsArg.Fail(L"IsSameObject expects two arguments");
-            let arg1 = args.At(range.first ).AsPtr<Object>();
-            let arg2 = args.At(range.second).AsPtr<Object>();
+            let arg1 = args.At(range.first    ).AsPtr<Object>();
+            let arg2 = args.At(range.first + 1).AsPtr<Object>();
             us = arg1.get() == arg2.get();
+        }
+        else if (what == L"IsArray")
+        {
+            us = argsArg.Is<ConfigArray>();
         }
         else
             whatArg.Fail(L"Unknown 'what' value to CompareFunction: " + what);

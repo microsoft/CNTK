@@ -555,7 +555,7 @@ struct parallelstateimpl
         nodesgpu->assign(nodes, false);
         aligngpu->assign(align, false);
         alignoffsetsgpu->assign(edgeAlignments.getalignoffsets(), false);
-        backptrstoragegpu->allocate(backPointers.getbackptrstoragesize());
+        //backptrstoragegpu->allocate(backPointers.getbackptrstoragesize());
         backptroffsetsgpu->assign(backPointers.getbackptroffsets(), false);
 
 #ifndef PARALLEL_SIL
@@ -563,6 +563,7 @@ struct parallelstateimpl
         edgeacscoresgpu->assign(edgeacscores, false);
 #else
         alignresult->allocate(edgeAlignments.getalignbuffersize());
+        backptrstoragegpu->allocate(edgeAlignments.getalignbuffersize()*3);
         edgeacscoresgpu->allocate(edges.size());
         edgeacscores; // reference to make compilor happy
 #endif

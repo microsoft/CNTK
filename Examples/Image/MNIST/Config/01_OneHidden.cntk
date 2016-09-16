@@ -2,94 +2,84 @@
 # for example: cntk configFile=myConfigFile RootDir=../.. 
 # For running from Visual Studio add
 # currentDirectory=$(SolutionDir)/<path to corresponding data folder> 
-RootDir = ".."
 
-ConfigDir = "$RootDir$/Config"
-DataDir   = "$RootDir$/Data"
-OutputDir = "$RootDir$/Output"
-ModelDir  = "$OutputDir$/Models"
+command = trainNetwork:testNetwork
 
-deviceId = 0
-imageLayout = "cudnn"
-# override the above as follows when running on CPU:
-# deviceId = -1
+precision = "float"; traceLevel = 1 ; deviceId = "auto"
 
-command = train:test
+rootDir = ".." ; configDir = "$rootDir$/Config" ; dataDir = "$rootDir$/Data" ;
+outputDir = "$rootDir$/Output" ;
 
-precision = "float"
-modelPath = "$ModelDir$/01_OneHidden"
-ndlMacros = "$ConfigDir$/Macros.ndl"
+modelPath = "$outputDir$/Models/01_OneHidden"
+stderr = "$outputDir$/01_OneHidden_bs_out"
 
-# uncomment the following line to write logs to a file 
-# stderr = "$OutputDir$/01_OneHidden_out"
-traceLevel=1
-numMBsToShowResult=500
-
-# If set to true, always initialize the network on CPU, making initialization consistent across CPU and GPU targets (for testing).
-initOnCPUOnly=true
-
-#######################################
-#  TRAINING CONFIG                    #
-#######################################
-
-train = [
+# TRAINING CONFIG
+trainNetwork = {
     action = "train"
-
-    NDLNetworkBuilder = [
-        networkDescription = "$ConfigDir$/01_OneHidden.ndl"
-    ]
     
-    SGD = [
+    BrainScriptNetworkBuilder = {
+        imageShape = 28:28:1                        # image dimensions, 1 channel only
+        labelDim = 10                               # number of distinct labels
+        featScale = 1/256
+        Scale{f} = x => Constant(f) .* x
+        
+        model = Sequential (
+            Scale {featScale} :
+            DenseLayer {200, activation=Sigmoid} :
+            LinearLayer {labelDim}
+        )
+        
+        # inputs
+        features = Input {imageShape}
+        labels = Input (labelDim)
+
+        # apply model to features
+        ol = model (features)
+
+        # loss and error computation
+        ce   = CrossEntropyWithSoftmax (labels, ol)
+        errs = ClassificationError (labels, ol)
+
+        # declare special nodes
+        featureNodes    = (features)
+        labelNodes      = (labels)
+        criterionNodes  = (ce)
+        evaluationNodes = (errs)
+        outputNodes     = (ol)
+    }
+
+    SGD = {
         epochSize = 60000
-        minibatchSize = 32
-        learningRatesPerMB = 0.1
-        momentumPerMB = 0
+        minibatchSize = 64
         maxEpochs = 30
-    ]
-    
-    # Note: this reader crashes if randomization is turned on.
-    reader = [
-        readerType = "UCIFastReader"
-        # To get the data (Train-28x28.txt) please run `python mnist_convert.py` 
-        # from the 'AdditionalFiles' folder. See REAMDE.md for details.
-        file = "$DataDir$/Train-28x28.txt"
+        learningRatesPerSample = 0.01*5:0.005
+        momentumAsTimeConstant = 0
         
-        features = [
-            dim = 784
-            start = 1
-        ]
-        
-        labels = [
-            dim = 1
-            start = 0
-            labelDim = 10
-            labelMappingFile = "$DataDir$/labelsmap.txt"
-        ]
-    ]    
-]
+        numMBsToShowResult = 500
+    }
 
-#######################################
-#  TEST CONFIG                        #
-#######################################
+    reader = {
+        readerType = "CNTKTextFormatReader"
+        # See ../REAMDE.md for details on getting the data (Train-28x28_cntk_text.txt).
+        file = "$DataDir$/Train-28x28_cntk_text.txt"
+        input = {
+            features = { dim = 784 ; format = "dense" }
+            labels =   { dim = 10  ; format = "dense" }
+        }
+    }   
+}
 
-test = [
+# TEST CONFIG
+testNetwork = {
     action = "test"
-    minibatchSize = 16
+    minibatchSize = 1024    # reduce this if you run out of memory
 
-    reader = [
-        readerType = "UCIFastReader"
-        file = "$DataDir$/Test-28x28.txt"
-        
-        features = [
-            dim = 784
-            start = 1
-        ]
-        
-        labels = [
-            dim = 1
-            start = 0
-            labelDim = 10
-            labelMappingFile = "$DataDir$/labelsmap.txt"
-        ]
-    ]    
-]
+    reader = {
+        readerType = "CNTKTextFormatReader"
+        file = "$DataDir$/Test-28x28_cntk_text.txt"
+        input = {
+            features = { dim = 784 ; format = "dense" }
+            labels =   { dim = 10  ; format = "dense" }
+        }
+    }
+}

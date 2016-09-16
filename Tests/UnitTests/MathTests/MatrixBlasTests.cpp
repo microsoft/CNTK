@@ -4,7 +4,9 @@
 //
 #include "stdafx.h"
 #include <math.h>
+#ifdef _WIN32
 #include <crtdefs.h>
+#endif 
 #include "../../../Source/Math/Matrix.h"
 #include "../../../Source/Math/CPUMatrix.h"
 
@@ -119,7 +121,8 @@ BOOST_FIXTURE_TEST_CASE(MatrixMultiplyAndPlusAndMinus, RandomSeedFixture)
 
 BOOST_FIXTURE_TEST_CASE(MatrixScaleAndAdd, RandomSeedFixture)
 {
-    const int seed = rand();
+    std::mt19937 rng(0);
+    const int seed = rng();
     const SingleMatrix singleMatrixA = SingleMatrix::RandomUniform(1024, 512, c_deviceIdZero , - 12.34f, 55.2312f, seed + 0);
     const SingleMatrix singleMatrixB = SingleMatrix::RandomUniform(1024, 512, c_deviceIdZero, -12.34f, 55.2312f, seed + 1);
     SingleMatrix singleMatrixC(singleMatrixB.DeepClone());
@@ -159,7 +162,8 @@ BOOST_FIXTURE_TEST_CASE(MatrixScaleAndAdd, RandomSeedFixture)
 
 BOOST_FIXTURE_TEST_CASE(MatrixScaleAndAdd_double, RandomSeedFixture)
 {
-    const int seed = rand();
+    std::mt19937 rng(0);
+    const int seed = rng();
     DoubleMatrix matrixA = DoubleMatrix::RandomUniform(1024, 512, c_deviceIdZero, -12.34, 55.2312, seed + 0);
     DoubleMatrix matrixB = DoubleMatrix::RandomUniform(1024, 512, c_deviceIdZero, -12.34, 55.2312, seed + 1);
     DoubleMatrix matrixC(matrixB.DeepClone());

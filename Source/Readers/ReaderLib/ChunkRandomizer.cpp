@@ -6,41 +6,15 @@
 
 #include "ChunkRandomizer.h"
 #include <random>
+#include "RandomOrdering.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
-
-    // NOTE: This is an old code, used for legacy randomization to make sure we preserve the same behavior for the tests.
-    // TODO: Deprecate when the new randomizer is in place.
-    static inline size_t rand(const size_t begin, const size_t end)
-    {
-        // still only covers 32-bit range
-        const size_t randomNumber = ::rand() * RAND_MAX + ::rand();
-        return begin + randomNumber % (end - begin);
-    }
-
-    // NOTE: This is an old code, used for legacy randomization to make sure we preserve the same behavior for the tests.
-    // TODO: Deprecate when the new randomizer is in place.
-    template <typename TVector>
-    void RandomShuffle(TVector& v, size_t randomSeed)
-    {
-        if (v.size() > RAND_MAX * static_cast<size_t>(RAND_MAX))
-        {
-            RuntimeError("RandomShuffle: too large set: need to change to different random generator!");
-        }
-
-        srand(static_cast<unsigned int>(randomSeed));
-        foreach_index(currentLocation, v)
-        {
-            // Pick a random location a location and swap with current
-            const size_t randomLocation = rand(0, v.size());
-            std::swap(v[currentLocation], v[randomLocation]);
-        }
-    }
 
     ChunkRandomizer::ChunkRandomizer(IDataDeserializerPtr deserializer, size_t randomizationRangeInSamples, bool legacy) :
         m_deserializer(deserializer), m_legacy(legacy), m_randomizationRangeInSamples(randomizationRangeInSamples)
     {
         m_originalChunks = m_deserializer->GetChunkDescriptions();
+        assert(m_originalChunks.size() < CHUNKID_MAX);
     }
 
     // Gets randomized chunks.
@@ -52,29 +26,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // Randomizes chunks depending on the mode (legacy or not) and calculates randomization windows.
     void ChunkRandomizer::Randomize(unsigned int seed)
     {
-        std::vector<size_t> randomizedChunkIndices;
+        std::vector<ChunkIdType> randomizedChunkIndices;
         randomizedChunkIndices.reserve(m_originalChunks.size());
-        for (size_t i = 0; i < m_originalChunks.size(); i++)
+        for (ChunkIdType i = 0; i < m_originalChunks.size(); i++)
         {
             randomizedChunkIndices.push_back(i);
         }
 
-        if (m_legacy)
-        {
-            RandomShuffle(randomizedChunkIndices, seed);
-        }
-        else
-        {
-            std::mt19937 m_rng(static_cast<int>(seed));
-            std::shuffle(randomizedChunkIndices.begin(), randomizedChunkIndices.end(), m_rng);
-        }
+        m_rng.seed(seed);
+        RandomShuffleMT(randomizedChunkIndices, m_rng);
 
         // Place randomized chunks on the timeline
         m_randomizedChunks.clear();
         m_randomizedChunks.reserve(m_originalChunks.size());
         size_t samplePosition = 0;
         size_t sequencePosition = 0;
-        for (size_t chunkIndex = 0; chunkIndex < m_originalChunks.size(); chunkIndex++)
+        for (ChunkIdType chunkIndex = 0; chunkIndex < m_originalChunks.size(); chunkIndex++)
         {
             const size_t originalChunkIndex = randomizedChunkIndices[chunkIndex];
             const size_t numberOfSamples = m_originalChunks[originalChunkIndex]->m_numberOfSamples;
@@ -92,7 +59,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // For each chunk, compute the randomization range (w.r.t. the randomized chunk sequence)
         size_t halfWindowRange = m_randomizationRangeInSamples / 2;
-        for (size_t chunkId = 0; chunkId < m_originalChunks.size(); chunkId++)
+        for (ChunkIdType chunkId = 0; chunkId < m_originalChunks.size(); chunkId++)
         {
             auto& chunk = m_randomizedChunks[chunkId];
 
