@@ -2,19 +2,34 @@ import setuptools
 from distutils.core import setup, Extension
 import distutils.sysconfig
 import os
+import platform
 import numpy
 
+IS_WINDOWS = platform.system() == 'Windows'
 
-CNTK_PATH = os.path.join(os.path.dirname(__file__), "..", "..")
-CNTK_SOURCE_PATH = os.path.join(CNTK_PATH, "Source")
-CNTK_LIB_PATH = os.path.join(CNTK_PATH, "x64", "Release_CpuOnly")
-#CNTK_LIB_PATH = os.path.join(CNTK_PATH, "x64", "Debug_CpuOnly")
+if 'CNTK_LIB_PATH' in os.environ:
+    CNTK_LIB_PATH = os.environ['CNTK_LIB_PATH']
+    CNTK_SOURCE_PATH = os.environ['CNTK_SOURCE_PATH']
+else:
+    CNTK_PATH = os.path.join(os.path.dirname(__file__), "..", "..")
+    CNTK_SOURCE_PATH = os.path.join(CNTK_PATH, "Source")
+    CNTK_LIB_PATH = os.path.join(CNTK_PATH, "x64", "Release")
+
+print("Using CNTK sources at '%s'"%os.path.abspath(CNTK_SOURCE_PATH))
 print("Using CNTK libs at '%s'"%os.path.abspath(CNTK_LIB_PATH))
 
-print( os.path.join(CNTK_SOURCE_PATH, "CNTKv2LibraryDll", "API"))
-
 #Todo: trim down the list of libs
-libs=[
+
+if IS_WINDOWS:
+    libs=[
+       os.path.join(CNTK_LIB_PATH, "CNTKLibrary-2.0"),
+    ]
+else:
+    libs=[
+       os.path.join(CNTK_LIB_PATH, "libcntklibrary-2.0"),
+    ]
+
+libs += [
    os.path.join(CNTK_LIB_PATH, "CNTKLibrary-2.0"),
    os.path.join(CNTK_LIB_PATH, "BinaryReader"),
    os.path.join(CNTK_LIB_PATH, "CNTKTextFormatReader"),
@@ -65,11 +80,30 @@ ext_modules = [
                "-DUNICODE",
                "/EHsc"
                "/DEBUG",
-               "/Zi"
+               "/Zi" if IS_WINDOWS else '',
+               "/EHsc" if IS_WINDOWS else '',
+               '--std=c++11' if not IS_WINDOWS else '',
                ],
            #extra_link_args=[ "/DEBUG"],
       )
     ]
 
+#import pdb;pdb.set_trace()
 #TODO: do not copy the dlls to the root, try to find a better location that is accessible
-setup(name="cntk", ext_modules = ext_modules,  data_files = [('.\\', [ lib + ".dll" for lib in libs ])], packages=[x for x in setuptools.find_packages() if x.startswith('cntk')])
+if IS_WINDOWS:
+    data_files = [('.\\', [ lib + ".dll" for lib in libs ])] 
+else:
+    data_files = [('./', [ lib + ".so" for lib in libs ])] 
+    #os.environ["CC"] = "/usr/bin/gcc-4.8" 
+    #os.environ["CXX"] = "/usr/bin/gcc-4.8"
+    os.environ["CC"] = "/usr/local/openmpi-1.10.1/bin/mpic++" 
+    os.environ["CXX"] = "/usr/local/openmpi-1.10.1/bin/mpic++"
+
+packages = [x for x in setuptools.find_packages() if x.startswith('cntk')]
+
+import distutils.debug
+distutils.debug.DEBUG = True
+setup(name="cntk", 
+    ext_modules = ext_modules,  
+    data_files = data_files,
+    packages=packages)

@@ -7,13 +7,6 @@
 
 #pragma once
 
-#ifdef SWIG
-#define final
-#define explicit
-#define static_assert(condition, message)
-#endif
-
-#include "CNTKLibraryInternals.h"
 
 #include <memory>
 #include <vector>
@@ -28,6 +21,15 @@
 #include <iosfwd>
 #include<algorithm>
 #include <mutex>
+
+
+#ifdef SWIG
+#define final
+#define explicit
+#define static_assert(condition, message)
+#endif
+
+#include "CNTKLibraryInternals.h"
 
 namespace CNTK
 {
