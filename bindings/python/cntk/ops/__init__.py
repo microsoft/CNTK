@@ -796,7 +796,7 @@ def hardmax(x, name=''):
     '''
     from cntk.cntk_py import hardmax
     x = sanitize_input(x)
-    return hardmax(x).output()
+    return hardmax(x)
 
 def exp(x, name=''):
     '''
