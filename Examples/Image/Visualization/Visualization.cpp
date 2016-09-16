@@ -427,9 +427,7 @@ int main(int argc, char* argv[])
 	std::string inputImage;
 	std::string userPath;
 	char defaultPath;
-	std::cout << "Choose example to run: \n \
-				                  1. MNIST \n \
-								  2. AlexNet \n ";
+	std::cout << "Choose example to run: \n1. MNIST \n2. AlexNet \n";
 
 	int option;
 	std::cin >> option;
