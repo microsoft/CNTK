@@ -35,30 +35,11 @@ namespace CNTK
         return std::shared_ptr<std::vector<Variable>>(new std::vector<Variable>(std::move(inputs)), [](std::vector<Variable>* ptr) { delete ptr; });
     }
 
-    FunctionPtr Function::ReplacePlaceholders(const std::unordered_map<Variable, Variable>& placeholderReplacements)
-    {
-        // Cannot be called on primitive functions
-        if (RootFunction() == nullptr)
-            InvalidArgument("ReplacePlaceholders should never be called on primitive functions");
-
-        std::unordered_set<const Function*> visitedFunctions;
-        std::unordered_set<Variable> replacedPlaceholders;
-        ReplacePlaceholders(placeholderReplacements, visitedFunctions, replacedPlaceholders);
-
-        for (auto replacementPair : placeholderReplacements)
-        {
-            if (replacedPlaceholders.find(replacementPair.first) == replacedPlaceholders.end())
-                InvalidArgument("At least one of the placeholders specified for replacement was not found in the function");
-        }
-
-        return this->shared_from_this();
-    }
-
     // Placeholders can be replaced incrementally - i.e. not all placeholders need to replaced in one go.
     // The only requirement is that they must all be replaced before making any 'Forward' calls on the Function instance.
-    /*virtual*/ void Function::ReplacePlaceholders(const std::unordered_map<Variable, Variable>& placeholderReplacements,
-                                                   std::unordered_set<const Function*>& visitedFunctions,
-                                                   std::unordered_set<Variable>& replacedPlaceholders)
+    /*virtual*/ void Function::ReplacePlaceholdersInPlace(const std::unordered_map<Variable, Variable>& placeholderReplacements,
+                                                          std::unordered_set<const Function*>& visitedFunctions,
+                                                          std::unordered_set<Variable>& replacedPlaceholders)
     {
         visitedFunctions.insert(this);
 
@@ -74,8 +55,317 @@ namespace CNTK
                 }
             }
             else if (inputVar.IsOutput() && (visitedFunctions.find(inputVar.Owner().get()) == visitedFunctions.end()))
-                inputVar.Owner()->ReplacePlaceholders(placeholderReplacements, visitedFunctions, replacedPlaceholders);
+                inputVar.Owner()->ReplacePlaceholdersInPlace(placeholderReplacements, visitedFunctions, replacedPlaceholders);
         }
+    }
+
+    void Function::ValidateOrUpdateOutputs(std::unordered_map<const Function*, size_t>& visitedFunctions)
+    {
+        auto primitiveFunction = dynamic_cast<PrimitiveFunction*>(this);
+        if (primitiveFunction == nullptr)
+            LogicError("ValidateOrUpdateOutputs currently only supported for PrimitiveFunction instances");
+
+        assert(visitedFunctions.find(this) == visitedFunctions.end());
+        visitedFunctions[this] = 1;
+
+        // Validate each of the inputs first
+        for (auto input : m_inputs)
+        {
+            if (input.IsOutput())
+            {
+                auto owner = input.Owner().get();
+                if (visitedFunctions.find(owner) == visitedFunctions.end())
+                    owner->ValidateOrUpdateOutputs(visitedFunctions);
+                else
+                    visitedFunctions[owner]++;
+            }
+        }
+
+        auto outputsUsingNewInputs = PrimitiveFunction::GetOutputVariables(primitiveFunction->OpType(), m_inputs, this, primitiveFunction->Attributes());
+        auto currentOutputs = Outputs();
+        for (size_t i = 0; i < currentOutputs.size(); ++i)
+        {
+            auto newOutputVar = outputsUsingNewInputs[i];
+            auto currentOutputVar = currentOutputs[i];
+            if (visitedFunctions[this] > 1)
+            {
+                if ((currentOutputVar.m_dataFields->m_shape != newOutputVar.m_dataFields->m_shape) ||
+                    (currentOutputVar.m_dataFields->m_dataType != newOutputVar.m_dataFields->m_dataType) ||
+                    (currentOutputVar.m_dataFields->m_dynamicAxes != newOutputVar.m_dataFields->m_dynamicAxes))
+                {
+                    InvalidArgument("Inconsistency in output variable shape, DataType or Dynamic axes computed after replaced placeholders vs. existing output properties, for the Recurrent Function");
+                }
+            }
+            else
+            {
+                currentOutputVar.m_dataFields->m_shape = newOutputVar.m_dataFields->m_shape;
+                currentOutputVar.m_dataFields->m_dataType = newOutputVar.m_dataFields->m_dataType;
+                currentOutputVar.m_dataFields->m_dynamicAxes = newOutputVar.m_dataFields->m_dynamicAxes;
+            }
+        }
+    }
+
+    void Function::RestoreFromLegacyModel(const std::wstring& modelFilePath)
+    {
+        auto loadedModelFunction = LoadLegacyModel(Outputs()[0].GetDataType(), modelFilePath, DeviceDescriptor::CPUDevice());
+
+        // TODO: Make sure that the loaded model is the same as the trainer's model through UID matching in the V2 format
+        // TODO: For V1 format models make sure that the loaded model is isomorphic to the trainer's model
+        auto loadedModelLeafVariables = loadedModelFunction->Inputs();
+        auto trainerModelLeafVariables = Inputs();
+        if (trainerModelLeafVariables.size() != loadedModelLeafVariables.size())
+            InvalidArgument("The loaded model's leaf variables do not match the trainer model's leaf variables");
+
+        std::map<std::wstring, Variable> loadedModelLeafVariablesMap;
+        for (auto leafVar : loadedModelLeafVariables)
+            loadedModelLeafVariablesMap[leafVar.Uid()] = leafVar;
+
+        std::map<std::wstring, Variable> trainerModelLeafVariablesMap;
+        for (auto leafVar : trainerModelLeafVariables)
+            trainerModelLeafVariablesMap[leafVar.Uid()] = leafVar;
+
+        // Remove the initial state inputs of PastValue and FutureValue functions from the maps if they are a scalar constant
+        // since these are not part of the internal CNTK serialized computation graph
+        auto removePastAndFutureValueInitialStateScalarConstants = [](const std::unordered_set<FunctionPtr>& allPrimitiveFunctions, std::map<std::wstring, Variable>& modelLeafVariableMap) {
+            for (auto funcPtr : allPrimitiveFunctions)
+            {
+                auto primitiveFunction = dynamic_cast<const PrimitiveFunction*>(funcPtr.get());
+                if ((primitiveFunction->OpType() == PrimitiveOpType::PastValue) || (primitiveFunction->OpType() == PrimitiveOpType::FutureValue))
+                {
+                    auto initialStateInput = primitiveFunction->Inputs()[1];
+                    if (initialStateInput.IsConstant() && (initialStateInput.Shape().TotalSize() == 1))
+                        modelLeafVariableMap.erase(initialStateInput.Uid());
+                }
+            }
+        };
+
+        auto loadedModelCompositeFunction = dynamic_cast<const CompositeFunction*>(loadedModelFunction.get());
+        removePastAndFutureValueInitialStateScalarConstants(loadedModelCompositeFunction->m_allPrimitiveFunctions, loadedModelLeafVariablesMap);
+
+        auto trainerModelCompositeFunction = dynamic_cast<const CompositeFunction*>(this);
+        removePastAndFutureValueInitialStateScalarConstants(trainerModelCompositeFunction->m_allPrimitiveFunctions, trainerModelLeafVariablesMap);
+
+        // Now update the trainer's model parameters and constants with those from the loaded model
+        for (auto nameVarPair : trainerModelLeafVariablesMap)
+        {
+            auto trainerModelLeafVar = nameVarPair.second;
+
+            auto areVariablesEquivalent = [](const Variable& left, const Variable& right) {
+                bool areDynamicAxesCompatible = (left.DynamicAxes().size() == right.DynamicAxes().size());
+                auto numAxes = left.DynamicAxes().size();
+                for (size_t i = 0; areDynamicAxesCompatible && (i < numAxes); ++i)
+                    areDynamicAxesCompatible = (left.DynamicAxes()[i].IsOrdered() == right.DynamicAxes()[i].IsOrdered());
+
+                return ((left.Kind() == right.Kind()) &&
+                    ((left.Shape() == right.Shape()) || (AsTensorShape(left.Shape()) == AsTensorShape(right.Shape()))) &&
+                    (left.GetDataType() == right.GetDataType()) &&
+                    areDynamicAxesCompatible &&
+                    (left.NeedsGradient() == right.NeedsGradient()) &&
+                    (left.Uid() == right.Uid()) &&
+                    (left.IsSparse() == right.IsSparse()));
+            };
+
+            auto correspondingLoadedModelVar = loadedModelLeafVariablesMap.at(trainerModelLeafVar.Uid());
+
+            if (!areVariablesEquivalent(correspondingLoadedModelVar, trainerModelLeafVar))
+                InvalidArgument("The loaded model's leaf variables do not match the trainer model's leaf variables");
+
+            if (trainerModelLeafVar.IsConstant() || trainerModelLeafVar.IsParameter())
+            {
+                auto trainerModelVarValue = trainerModelLeafVar.IsConstant() ? Constant(trainerModelLeafVar).Value() : Parameter(trainerModelLeafVar).Value();
+                auto loadedModelVarValue = correspondingLoadedModelVar.IsConstant() ? Constant(correspondingLoadedModelVar).Value() : Parameter(correspondingLoadedModelVar).Value();
+                trainerModelVarValue->CopyFrom(*loadedModelVarValue);
+            }
+        }
+    }
+
+    static Variable GetCorrespondingOutputVariableFromClone(const Variable& cloneeOutput, const FunctionPtr& cloneeFunction, const FunctionPtr& clonedFunction)
+    {
+        size_t outputVarIndex = 0;
+        for (auto output : cloneeFunction->Outputs())
+        {
+            if (output == cloneeOutput)
+                break;
+
+            outputVarIndex++;
+        }
+
+        return clonedFunction->Outputs()[outputVarIndex];
+    }
+
+    FunctionPtr Function::ReplacePlaceholders(const std::unordered_map<Variable, Variable>& placeholderReplacements)
+    {
+        std::unordered_set<const Function*> visitedFunctions;
+        std::unordered_set<Variable> replacedPlaceholders;
+        ReplacePlaceholdersInPlace(placeholderReplacements, visitedFunctions, replacedPlaceholders);
+
+        for (auto replacementPair : placeholderReplacements)
+        {
+            if (replacedPlaceholders.find(replacementPair.first) == replacedPlaceholders.end())
+                InvalidArgument("At least one of the placeholders specified for replacement was not found in the function");
+        }
+
+        return this->shared_from_this();
+    }
+
+    FunctionPtr Function::Clone(const FunctionPtr& clonee,
+                                ParameterCloningMethod parameterCloneMethod,
+                                const std::unordered_map<Variable, Variable>& replacements,
+                                std::unordered_map<const Function*, FunctionPtr>& cloneMap,
+                                std::unordered_map<Variable, Variable>& leafVariablesCloneMap,
+                                std::unordered_map<Variable, Variable>& placeholderReplacements)
+    {
+        const PrimitiveFunction* primitiveFunction = dynamic_cast<const PrimitiveFunction*>(clonee.get());
+        if (primitiveFunction == nullptr)
+            LogicError("Currently cloning of user defined Functions is unsupported");
+
+        if (cloneMap.find(clonee.get()) != cloneMap.end())
+            LogicError("Cloning an already visited Function");
+
+        cloneMap[clonee.get()] = nullptr;
+
+        std::vector<Variable> inputs;
+        auto cloneeInputs = clonee->Inputs();
+        for (auto cloneeInput : cloneeInputs)
+        {
+            Variable clonedInput;
+            if (replacements.find(cloneeInput) != replacements.end())
+            {
+                clonedInput = PlaceholderVariable(cloneeInput.Shape(), cloneeInput.DynamicAxes());
+                placeholderReplacements[clonedInput] = replacements.at(cloneeInput);
+            }
+            else
+            {
+                // This is not a replacement. Lets create a fresh clone
+                if (cloneeInput.IsInput() || cloneeInput.IsConstant() || cloneeInput.IsPlaceholder())
+                {
+                    clonedInput = cloneeInput.Clone();
+                    leafVariablesCloneMap[cloneeInput] = clonedInput;
+                }
+                else if (cloneeInput.IsParameter())
+                {
+                    switch (parameterCloneMethod)
+                    {
+                    case ParameterCloningMethod::Clone:
+                        clonedInput = cloneeInput.Clone();
+                        leafVariablesCloneMap[cloneeInput] = clonedInput;
+                        break;
+                    case ParameterCloningMethod::Share:
+                        clonedInput = cloneeInput;
+                        break;
+                    case ParameterCloningMethod::Freeze:
+                        clonedInput = Constant(Parameter(cloneeInput).Value(), cloneeInput.Name());
+                        leafVariablesCloneMap[cloneeInput] = clonedInput;
+                        break;
+                    default:
+                        LogicError("Unknown ParameterCloningMethod");
+                    }
+                }
+                else
+                {
+                    assert(cloneeInput.IsOutput());
+
+                    // If this is an already visited Function's output then we use a placeholder
+                    if (cloneMap.find(cloneeInput.Owner().get()) != cloneMap.end())
+                    {
+                        if (cloneMap.at(cloneeInput.Owner().get()) == nullptr)
+                        {
+                            // See if we already created a placeholder for this already visited Function's output
+                            auto existingPlaceholderReplacement = std::find_if(placeholderReplacements.begin(), placeholderReplacements.end(), [cloneeInput](const std::pair<Variable, Variable>& placeholderReplacement) {
+                                return (placeholderReplacement.second == cloneeInput);
+                            });
+
+                            if (existingPlaceholderReplacement == placeholderReplacements.end())
+                            {
+                                clonedInput = PlaceholderVariable(cloneeInput.Shape(), cloneeInput.DynamicAxes());
+                                placeholderReplacements[clonedInput] = cloneeInput;
+                            }
+                            else
+                                clonedInput = existingPlaceholderReplacement->first;
+                        }
+                        else
+                            clonedInput = GetCorrespondingOutputVariableFromClone(cloneeInput, cloneeInput.Owner(), cloneMap.at(cloneeInput.Owner().get()));
+                    }
+                    else
+                    {
+                        auto clonedFunction = Clone(cloneeInput.Owner(), parameterCloneMethod, replacements, cloneMap, leafVariablesCloneMap, placeholderReplacements);
+                        clonedInput = GetCorrespondingOutputVariableFromClone(cloneeInput, cloneeInput.Owner(), clonedFunction);
+                    }
+                }
+            }
+
+            inputs.push_back(clonedInput);
+        }
+
+        Dictionary attributesCopy(primitiveFunction->Attributes());
+        auto clonedFunction = MakeSharedObject<PrimitiveFunction>(primitiveFunction->OpType(), inputs, std::move(attributesCopy), primitiveFunction->Name());
+        cloneMap[primitiveFunction] = clonedFunction;
+
+        return clonedFunction;
+    }
+
+    FunctionPtr Function::Clone(ParameterCloningMethod parameterCloneMethod, const std::unordered_map<Variable, Variable>& replacements) const
+    {
+        const CompositeFunction* compositeFunction = dynamic_cast<const CompositeFunction*>(this);
+        if (compositeFunction == nullptr)
+            LogicError("Currently only cloning of composite functions is supported");
+
+        std::unordered_map<const Function*, FunctionPtr> cloneMap;
+        std::unordered_map<Variable, Variable> leafVariablesCloneMap;
+        std::unordered_map<Variable, Variable> placeholderReplacements;
+        auto clonedRootFunction = Function::Clone(compositeFunction->RootFunction(), parameterCloneMethod, replacements, cloneMap, leafVariablesCloneMap, placeholderReplacements);
+
+        // Patch the values in the placeholderReplacements map with newly cloned Variables where applicable
+        std::unordered_set<FunctionPtr> replacementClones;
+        for (auto& varPair : placeholderReplacements)
+        {
+            if (varPair.second.IsOutput())
+            {
+                if (cloneMap.find(varPair.second.Owner().get()) != cloneMap.end())
+                    placeholderReplacements[varPair.first] = GetCorrespondingOutputVariableFromClone(varPair.second, varPair.second.Owner(), cloneMap.at(varPair.second.Owner().get()));
+                else
+                {
+                    // Check if any of the inputs or intermediate functions in the graph underneath the replacement
+                    // are one of the cloned Functions or inputs; if so then we should clone the graph underneath
+                    // this replacement too
+                    std::unordered_set<FunctionPtr> visitedFunctions;
+                    auto visitedLeaves = CompositeFunction::DetermineInputs(varPair.second.Owner(), visitedFunctions);
+                    std::unordered_map<Variable, Variable> cloningReplacementsForPlaceholderReplacement;
+                    for (auto visitedLeaf : visitedLeaves)
+                    {
+                        if (leafVariablesCloneMap.find(visitedLeaf) != leafVariablesCloneMap.end())
+                            cloningReplacementsForPlaceholderReplacement[visitedLeaf] = leafVariablesCloneMap[visitedLeaf];
+                    }
+
+                    for (auto visitedFunction : visitedFunctions)
+                    {
+                        if (cloneMap.find(visitedFunction.get()) != cloneMap.end())
+                        {
+                            auto visitedFunctionOutputs = visitedFunction->Outputs();
+                            for (auto visitedFunctionOutput : visitedFunctionOutputs)
+                                cloningReplacementsForPlaceholderReplacement[visitedFunctionOutput] = GetCorrespondingOutputVariableFromClone(visitedFunctionOutput, visitedFunction, cloneMap.at(visitedFunction.get()));
+                        }
+                    }
+
+                    if (!cloningReplacementsForPlaceholderReplacement.empty())
+                    {
+                        auto replacementToClone = CompositeFunction::Create(varPair.second.Owner());
+                        auto replacementClone = replacementToClone->Clone(parameterCloneMethod, cloningReplacementsForPlaceholderReplacement);
+                        replacementClones.insert(replacementClone);
+                        placeholderReplacements[varPair.first] = GetCorrespondingOutputVariableFromClone(varPair.second, varPair.second.Owner(), replacementClone->RootFunction());
+                    }
+                }
+            }
+            else
+            {
+                if (leafVariablesCloneMap.find(varPair.second) != leafVariablesCloneMap.end())
+                    placeholderReplacements[varPair.first] = leafVariablesCloneMap.at(varPair.second);
+            }
+        }
+
+        auto clonedComposite = CompositeFunction::Create(clonedRootFunction, compositeFunction->Name());
+        clonedComposite->ReplacePlaceholders(placeholderReplacements);
+        return clonedComposite;
     }
 
     // Names for the reduction operations as used by the CNTK ReduceElementsNode
@@ -119,7 +409,7 @@ namespace CNTK
         if (op == PrimitiveOpType::Combine)
             return inputs;
 
-        // TODO: We are just using the input[0]'s DataType as output node's DataType. This is not always correct
+        // TODO: We are just using the primary operand's DataType as output node's DataType. Is this always correct?
         DataType outputDataType = DataType::Unknown;
         NDShape outputShape;
         size_t i = 0;
@@ -127,7 +417,7 @@ namespace CNTK
             outputDataType = inputs[i++].GetDataType();
 
         if (outputDataType == DataType::Unknown)
-            InvalidArgument("The DataType of all the input operands of primitive function named %S with op type %s are unknown", owner->Name().c_str(), PrimitiveOpTypeName(op));
+            InvalidArgument("The DataType of all the input operands of primitive function with op type %s are unknown", PrimitiveOpTypeName(op));
 
         // We currently require that the inputs' dynamic axes if any match
         std::vector<Axis> outputDynamicAxes;
@@ -172,8 +462,6 @@ namespace CNTK
         case PrimitiveOpType::Dropout:
         case PrimitiveOpType::Where:
             assert(inputs.size() == 1);
-            if (((op == PrimitiveOpType::Softmax) || (op == PrimitiveOpType::Hardmax)) && (inputs[0].Shape().Rank() > 1))
-                LogicError("Softmax/Hardmax operation can currently only be applied to a 1D input");
 
             outputShape = UnaryElementwiseOpOutputShape(inputs[0].Shape());
             break;
@@ -206,12 +494,12 @@ namespace CNTK
             int realBeginIndex = (beginIndex >= 0) ? beginIndex : beginIndex + sliceAxisDim;
             int realEndIndex = (endIndex > 0) ? endIndex : endIndex + sliceAxisDim;
             if ((sliceAxisDim < realEndIndex) || (realEndIndex < realBeginIndex) || (realBeginIndex < 0))
-                RuntimeError("Slice operation: Index range [%d,%d), interpreted as [%d,%d), is invalid for input ([%S]).",
+                RuntimeError("Slice operation: Index range [%d,%d), interpreted as [%d,%d), is invalid for input's shape ([%S]).",
                 beginIndex,
                 endIndex,
                 realBeginIndex,
                 realEndIndex,
-                inputs[0].Shape().AsString().c_str());
+                AsStringForErrorReporting(inputs[0].Shape()).c_str());
 
             auto outputTensorShape = AsTensorShape(inputs[0].Shape());
 
@@ -268,7 +556,7 @@ namespace CNTK
 
             auto numLeftOperandAxes = inputs[0].Shape().Rank();
             if (numLeftOperandAxes > 2)
-                LogicError("TransposeTimes operation currently only supports left operands of rank 1 or 2");
+                LogicError("TransposeTimes operation currently only supports %s operands of rank 1 or 2", Internal::IsReversingTensorShapesInErrorMessagesEnabled() ? "right" : "left");
 
             NDShape transposedLeftOperandShape(2, 1);
             for (size_t i = 0; i < numLeftOperandAxes; ++i)
@@ -307,7 +595,7 @@ namespace CNTK
             auto predictionShape = inputs[0].Shape();
             auto labelsShape = inputs[1].Shape();
             if (predictionShape != labelsShape)
-                RuntimeError("Prediction output operand's shape %s is incompatible with label operand's shape %s for the %s operation", AsString(predictionShape).c_str(), AsString(labelsShape).c_str(), PrimitiveOpTypeName(op));
+                RuntimeError("Prediction output operand's shape %S is incompatible with label operand's shape %S for the %s operation", AsStringForErrorReporting(predictionShape).c_str(), AsStringForErrorReporting(labelsShape).c_str(), PrimitiveOpTypeName(op));
 
             std::vector<size_t> reductionAxes;
             for (size_t i = 0; i < inputs[0].Shape().Rank(); ++i)
@@ -409,11 +697,11 @@ namespace CNTK
 
     // Replace any PlaceHolder Variables in the graph of Functions underlying 'this' CompositeFunction. All PlaceHolder variables
     // should have been replaced before performing any Forward compute of 'this' Function.
-    /*virtual*/ void CompositeFunction::ReplacePlaceholders(const std::unordered_map<Variable, Variable>& placeholderReplacements,
-                                                            std::unordered_set<const Function*>& visitedFunctions,
-                                                            std::unordered_set<Variable>& replacedPlaceholders)
+    /*virtual*/ void CompositeFunction::ReplacePlaceholdersInPlace(const std::unordered_map<Variable, Variable>& placeholderReplacements,
+                                                                   std::unordered_set<const Function*>& visitedFunctions,
+                                                                   std::unordered_set<Variable>& replacedPlaceholders)
     {
-        RootFunction()->ReplacePlaceholders(placeholderReplacements, visitedFunctions, replacedPlaceholders);
+        RootFunction()->ReplacePlaceholdersInPlace(placeholderReplacements, visitedFunctions, replacedPlaceholders);
 
         // If any of the placeholders were replaced with Output variables, let's add the graph of function underneath each of those to 'm_allPrimitiveFunctions' set
         for (auto replacedPlaceholder : replacedPlaceholders)
@@ -429,6 +717,8 @@ namespace CNTK
                 m_allPrimitiveFunctions.insert(visitedFunctions.begin(), visitedFunctions.end());
             }
         }
+        std::unordered_map<const Function*, size_t> functionVisitCounts;
+        RootFunction()->ValidateOrUpdateOutputs(functionVisitCounts);
     }
 
     // Recursively create a sub-network of ComputationNode instances corresponding to the graph of Functions 
@@ -521,7 +811,7 @@ namespace CNTK
         ComputationNodeBasePtr computationNodePtr;
 
         auto functionName = primitiveFunction->Name();
-        auto& functionConfig = primitiveFunction->FunctionConfig();
+        auto& functionConfig = primitiveFunction->Attributes();
         auto functionInputs = primitiveFunction->Inputs();
         PrimitiveOpType op = primitiveFunction->OpType();
 
@@ -688,8 +978,7 @@ namespace CNTK
             ElementType initStateValue;
             NDArrayView tempView({}, &initStateValue, 1, DeviceDescriptor::CPUDevice());
             tempView.CopyFrom(*(Constant(initialStateVar).Value()));
-
-            size_t offset = primitiveFunction->FunctionConfig()[PrimitiveFunction::AttributeNameOffset].Value<size_t>();
+            size_t offset = primitiveFunction->Attributes()[PrimitiveFunction::AttributeNameOffset].Value<size_t>();
             if (op == PrimitiveOpType::PastValue)
                 computationNodePtr = New<PastValueNode<ElementType>>(network->GetDeviceId(), functionName, (float)initStateValue, AsTensorShape(inputOperandVar.Shape()), offset);
             else
@@ -751,7 +1040,8 @@ namespace CNTK
 
         // Let's reorder inputNodesBasePtrs properly since the ordering of inputs of CNTK internal ComputationNode may be different from the PrimitiveFunction inputs ordering
         ReorderAsCNTKComputationNodeInputs(op, inputNodesBasePtrs);
-        inputNodesBasePtrs.resize(computationNodePtr->As<INumInputs>()->GetExpectedNumInputs());
+        if (computationNodePtr->Is<INumInputs>())
+            inputNodesBasePtrs.resize(computationNodePtr->As<INumInputs>()->GetExpectedNumInputs());
 
         network->AddNodeToNetAndAttachInputs(computationNodePtr, inputNodesBasePtrs);
 
@@ -789,7 +1079,7 @@ namespace CNTK
             std::vector<std::shared_ptr<ComputationNode<ElementType>>> inputNodes;
             for (auto& inputVar : functionInputs)
             {
-                // If the inputVar is a constant and not the right DataType lets cast it to the right type
+                // If the inputVar is a constant and not the right DataType let's coerce it to the right type
                 if (inputVar.IsConstant() && (nonConstInputDataType != DataType::Unknown) && (inputVar.GetDataType() != nonConstInputDataType))
                 {
                     auto constantValueCPU = Constant(inputVar).Value()->DeepClone(DeviceDescriptor::CPUDevice(), true);
@@ -815,7 +1105,7 @@ namespace CNTK
     }
 
     template <typename ElementType>
-    ComputationNetworkPtr CompositeFunction::GetComputationNetwork(const DeviceDescriptor& device, const std::unordered_set<Variable>& backpropRoots)
+    ComputationNetworkPtr CompositeFunction::GetComputationNetwork(const DeviceDescriptor& device, const std::unordered_set<Variable>& backpropRoots, bool allocateNetworkMatrices)
     {
         if (m_computationNetwork != nullptr)
         {
@@ -830,7 +1120,7 @@ namespace CNTK
                 LogicError("Changing device across different Forward calls on a CNTK composite Function is currently unsupported");
         }
 
-        if (m_computationNetwork == nullptr)
+        else
         {
             m_computationNetwork = std::make_shared<ComputationNetwork>(AsCNTKImplDeviceId(device));
 
@@ -905,12 +1195,15 @@ namespace CNTK
                     if (((outputShape.Rank() == 0) && (computationNodeSampleLayout[0] != 1)) ||
                         ((outputShape.Rank() != 0) && (computationNodeSampleLayout != AsTensorViewShape(outputShape)) && (computationNodeSampleLayout != AsTensorShape(outputShape))))
                     {
-                        LogicError("The output Variable shape %s does not match the SampleLayout shape %s of the corresponding ComputationNode in the network", AsString(outputShape).c_str(), ((std::string)computationNodeSampleLayout).c_str());
+                        LogicError("The output Variable shape %S does not match the SampleLayout shape %s of the corresponding ComputationNode in the network", outputShape.AsString().c_str(), ((std::string)computationNodeSampleLayout).c_str());
                     }
                 }
             }
 
-            m_computationNetwork->AllocateAllMatrices(forwardRootNodes, {}, backpropRootNode);
+            if (allocateNetworkMatrices)
+                m_computationNetwork->AllocateAllMatrices(forwardRootNodes, {}, backpropRootNode);
+
+            m_networkMatricesAllocated = allocateNetworkMatrices;
         }
 
         return m_computationNetwork;
@@ -1237,7 +1530,7 @@ namespace CNTK
         {
             // TODO: The shape of the specified output Value object must match the actual output shape
             if (varValue->Data()->Shape() != valueShape)
-                InvalidArgument("The shape %s of the specified Value object for %s does not match the actual shape %s", AsString(varValue->Data()->Shape()).c_str(), getGradient ? "gradient" : "output", AsString(valueShape).c_str());
+                InvalidArgument("The shape %S of the specified Value object for %s does not match the actual shape %S", AsStringForErrorReporting(varValue->Data()->Shape()).c_str(), getGradient ? "gradient" : "output", AsStringForErrorReporting(valueShape).c_str());
         }
 
         ValuePtr nodeValue;
@@ -1303,9 +1596,9 @@ namespace CNTK
         // TODO: We need a better way to determine the ElementType for the network
         auto dataType = arguments.begin()->second->Data()->GetDataType();
         if (dataType == DataType::Float)
-            GetComputationNetwork<float>(computeDevice, outputsToRetainBackwardStateFor);
+            GetComputationNetwork<float>(computeDevice, outputsToRetainBackwardStateFor, true);
         else
-            GetComputationNetwork<double>(computeDevice, outputsToRetainBackwardStateFor);
+            GetComputationNetwork<double>(computeDevice, outputsToRetainBackwardStateFor, true);
 
         // TODO: Avoid copying the data when possible
 
@@ -1635,13 +1928,11 @@ namespace CNTK
     FunctionPtr CrossEntropyWithSoftmax(const Variable& prediction, const Variable& labels, const std::wstring& name/* = L""*/)
     {
         return ReduceSum(Minus(ReduceLogSum(prediction, Axis(0)), TransposeTimes(labels, prediction)), name);
-        //return BinaryOp(PrimitiveOpType::CrossEntropyWithSoftmax, prediction, labels, Dictionary(), name);
     }
 
     FunctionPtr ClassificationError(const Variable& prediction, const Variable& labels, const std::wstring& name/* = L""*/)
     {
         return ReduceSum(Minus(Constant::Scalar(prediction.GetDataType(), 1.0), TransposeTimes(labels, Hardmax(prediction))), name);
-        //return BinaryOp(PrimitiveOpType::ClassificationError, prediction, labels, Dictionary(), name);
     }
 
     FunctionPtr PastValue(const Variable& operand, const Variable& initialState, size_t offset, const std::wstring& name)
@@ -1864,7 +2155,7 @@ namespace CNTK
         {
             auto dataPadded = Internal::Scatter(operand, Sequence::IsFirst(broadcastAs), broadcastAs.DynamicAxes());
             auto placeHolderOutput = PlaceholderVariable(operand.Shape(), broadcastAs.DynamicAxes());
-            auto output = ElementSelect(Sequence::IsFirst(dataPadded), dataPadded, PastValue(placeHolderOutput), name);
+            auto output = ElementSelect(Sequence::IsFirst(broadcastAs), dataPadded, PastValue(placeHolderOutput), name);
             return output->ReplacePlaceholders({ { placeHolderOutput, output } });
         }
     }

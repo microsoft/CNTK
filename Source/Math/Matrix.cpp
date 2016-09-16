@@ -4411,75 +4411,66 @@ void Matrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const Matrix<ElemT
 
     if (c.GetDeviceId() < 0) // CPU
     {
-        if (a.GetMatrixType() == MatrixType::SPARSE)
-            NOT_IMPLEMENTED;
-        if (b.GetMatrixType() == MatrixType::SPARSE)
+        if (a.GetMatrixType() == MatrixType::SPARSE) // CPU, SPARSE * ANY -> ANY
         {
-            if (c.GetMatrixType() == MatrixType::DENSE)
+            if (b.GetMatrixType() == MatrixType::DENSE && c.GetMatrixType() == MatrixType::DENSE) // CPU, SPARSE * DENSE -> DENSE
             {
-                CPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(alpha, *a.m_CPUMatrix, transposeA, *b.m_CPUSparseMatrix, transposeB, beta, *c.m_CPUMatrix);
+                CPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(alpha, *a.m_CPUSparseMatrix, transposeA, *b.m_CPUMatrix, transposeB, beta, *c.m_CPUMatrix);
                 c.SetDataLocation(CPU, DENSE);
             }
-            else if (c.GetMatrixType() == MatrixType::SPARSE)
-            {
-                CPUSparseMatrix<ElemType>::MultiplyAndAdd(alpha, *a.m_CPUMatrix, transposeA, *b.m_CPUSparseMatrix, transposeB, *c.m_CPUSparseMatrix);
-                c.SetDataLocation(CPU, SPARSE);
-            }
-            else
+            else{
                 NOT_IMPLEMENTED;
+            }
         }
-        else
+        else  // CPU, DENSE  * ANY -> ANY
         {
-            c.SwitchToMatrixType(MatrixType::DENSE, matrixFormatDense, false);
-            CPUMatrix<ElemType>::MultiplyAndWeightedAdd(alpha, *a.m_CPUMatrix, transposeA, *b.m_CPUMatrix, transposeB, beta, *c.m_CPUMatrix);
-            c.SetDataLocation(CPU, DENSE);
+            if (b.GetMatrixType() == MatrixType::SPARSE) // CPU, DENSE * SPARSE -> ANY
+            {
+                if (c.GetMatrixType() == MatrixType::DENSE) // CPU, DENSE * SPARSE -> DENSE
+                {
+                    CPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(alpha, *a.m_CPUMatrix, transposeA, *b.m_CPUSparseMatrix, transposeB, beta, *c.m_CPUMatrix);
+                    c.SetDataLocation(CPU, DENSE);
+                }
+                else if (c.GetMatrixType() == MatrixType::SPARSE) // CPU, DENSE * SPARSE -> SPARSE
+                {
+                    CPUSparseMatrix<ElemType>::MultiplyAndAdd(alpha, *a.m_CPUMatrix, transposeA, *b.m_CPUSparseMatrix, transposeB, *c.m_CPUSparseMatrix);
+                    c.SetDataLocation(CPU, SPARSE);
+                }
+                else
+                    NOT_IMPLEMENTED; // CPU, DENSE * SPARSE -> UNDETERMINED ?
+            }
+            else // CPU, DENSE * DENSE -> DENSE (matrix c enforced to be DENSE)
+            {
+                c.SwitchToMatrixType(MatrixType::DENSE, matrixFormatDense, false);
+                CPUMatrix<ElemType>::MultiplyAndWeightedAdd(alpha, *a.m_CPUMatrix, transposeA, *b.m_CPUMatrix, transposeB, beta, *c.m_CPUMatrix);
+                c.SetDataLocation(CPU, DENSE);
+            }
         }
     }
     else // GPU operations
     {
-        if (a.m_matrixType == b.m_matrixType && b.m_matrixType == c.m_matrixType && a.m_matrixType == MatrixType::DENSE) // All dense
+        if (a.m_matrixType == MatrixType::DENSE && b.m_matrixType == MatrixType::DENSE && c.m_matrixType == MatrixType::DENSE) // GPU, DENSE * DENSE -> DENSE
         {
             GPUMatrix<ElemType>::MultiplyAndWeightedAdd(alpha, *a.m_GPUMatrix, transposeA, *b.m_GPUMatrix, transposeB, beta, *c.m_GPUMatrix);
             c.SetDataLocation(GPU, DENSE);
         }
-        else if (a.m_matrixType == MatrixType::SPARSE && b.m_matrixType == c.m_matrixType && b.m_matrixType == MatrixType::DENSE) // Sparse*Dense+Dense
+        else if (a.m_matrixType == MatrixType::SPARSE && b.m_matrixType == MatrixType::DENSE && c.m_matrixType == MatrixType::DENSE) // GPU, SPARSE * DENSE -> DENSE
         {
             GPUMatrix<ElemType> second = transposeB ? b.m_GPUMatrix->Transpose() : *b.m_GPUMatrix;
             GPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(alpha, *a.m_GPUSparseMatrix, transposeA, second, false, beta, *c.m_GPUMatrix);
             c.SetDataLocation(GPU, DENSE);
         }
-        else if (a.m_matrixType == MatrixType::DENSE && b.m_matrixType == MatrixType::SPARSE && c.m_matrixType == MatrixType::DENSE) // Dense*Sparse + Dense
+        else if (a.m_matrixType == MatrixType::DENSE && b.m_matrixType == MatrixType::SPARSE && c.m_matrixType == MatrixType::DENSE) // GPU, DENSE * SPARSE -> DENSE
         {
-            // if (b.m_GPUSparseMatrix->GetFormat() == MatrixFormat::matrixFormatSparseCSR)
-            // {
             GPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(alpha, *a.m_GPUMatrix, transposeA, *b.m_GPUSparseMatrix, transposeB, beta, *c.m_GPUMatrix);
-            // }
-            // else
-            // {
-            //    GPUMatrix<ElemType> firstDummy = transposeA ? a.m_GPUMatrix->Transpose()*alpha : (*a.m_GPUMatrix)*alpha;
-            //    GPUMatrix<ElemType> & first= firstDummy;                // GCC does not support mixing refs and non-refs
-            //    GPUSparseMatrix<ElemType> secondDummy = transposeB ? b.m_GPUSparseMatrix->Transpose() : *b.m_GPUSparseMatrix;
-            //    GPUSparseMatrix<ElemType> & second = secondDummy;
-            //    if (beta==0)
-            //    {
-            //        GPUSparseMatrix<ElemType>::Multiply(first,second,*c.m_GPUMatrix);
-            //    }
-            //    else
-            //    {
-            //        Matrix<ElemType> tmp(c.GetNumRows(),c.GetNumCols(),(DEVICEID_TYPE)c.GetDeviceId());
-            //        GPUSparseMatrix<ElemType>::Multiply(first,second,*tmp.m_GPUMatrix);
-            //        c=tmp+c*beta;
-            //    }
-            // }
             c.SetDataLocation(GPU, DENSE);
         }
-        else if (a.m_matrixType == MatrixType::DENSE && b.m_matrixType == MatrixType::SPARSE && c.m_matrixType == MatrixType::SPARSE) // h -> u0
+        else if (a.m_matrixType == MatrixType::DENSE && b.m_matrixType == MatrixType::SPARSE && c.m_matrixType == MatrixType::SPARSE) // GPU, DENSE * SPARSE -> SPARSE
         {
-            // new GPU sparse matrix code
             GPUSparseMatrix<ElemType>::MultiplyAndAdd(alpha, *a.m_GPUMatrix, transposeA, *b.m_GPUSparseMatrix, transposeB, *c.m_GPUSparseMatrix);
             c.SetDataLocation(GPU, SPARSE);
         }
-        else if (a.m_matrixType == b.m_matrixType && b.m_matrixType == c.m_matrixType && a.m_matrixType == MatrixType::SPARSE)
+        else if (a.m_matrixType == MatrixType::SPARSE && b.m_matrixType == MatrixType::SPARSE && c.m_matrixType == MatrixType::SPARSE) // GPU, SPARSE * SPARSE -> SPARSE
         {
             GPUSparseMatrix<ElemType> firstDummy = alpha == 1 ? *a.m_GPUSparseMatrix : (*a.m_GPUSparseMatrix) * alpha;
             GPUSparseMatrix<ElemType>& first = firstDummy; // By Malcolm.. gcc doesn't support auto
@@ -4496,7 +4487,7 @@ void Matrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const Matrix<ElemT
                 c.SetDataLocation(GPU, SPARSE);
             }
         }
-        else if (a.m_matrixType == b.m_matrixType && a.m_matrixType == MatrixType::DENSE && c.m_matrixType == MatrixType::SPARSE)
+        else if (a.m_matrixType == MatrixType::DENSE && b.m_matrixType == MatrixType::DENSE && c.m_matrixType == MatrixType::SPARSE) // GPU, DENSE * DENSE -> SPARSE
         {
             GPUMatrix<ElemType> tmp(a.m_GPUMatrix->GetComputeDeviceId());
             GPUSparseMatrix<ElemType> tmpSparse(a.m_GPUMatrix->GetComputeDeviceId());
@@ -4505,8 +4496,18 @@ void Matrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const Matrix<ElemT
             *c.m_GPUSparseMatrix = tmpSparse + (*c.m_GPUSparseMatrix) * beta;
             c.SetDataLocation(GPU, SPARSE);
         }
-        else
+        else if (a.m_matrixType == MatrixType::SPARSE && b.m_matrixType == MatrixType::SPARSE && c.m_matrixType == MatrixType::DENSE) // GPU, SPARSE * SPARSE -> DENSE
+        {
             NOT_IMPLEMENTED;
+        }
+        else if (a.m_matrixType == MatrixType::SPARSE && b.m_matrixType == MatrixType::DENSE && c.m_matrixType == MatrixType::SPARSE) // GPU, SPARSE * DENSE -> SPARSE
+        {
+            NOT_IMPLEMENTED;
+        }
+        else // No combination left
+        {
+            NOT_IMPLEMENTED;
+        }
     }
 }
 
