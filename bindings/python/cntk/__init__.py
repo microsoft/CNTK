@@ -20,7 +20,6 @@ from .cntk_py import learning_rates_per_sample, sgd_learner, \
     text_format_minibatch_source, momentums_per_sample, momentum_sgd_learner, \
     Axis
 
-
 import numpy as np
 
 DATATYPE = np.float32

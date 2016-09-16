@@ -68,15 +68,9 @@ def _test_binary_op(precision, device_id, op_func,
             needs_gradient=True,
             name='b')
     
-    #TODO Enable the tests op(variable, numpy_array) with overloaded ops
-    # Since now we build variables using the factory (input_variable) we don't have
-    # access to the constructor and we cannot therefore inherit from it in order 
-    # to overload operators
-    is_op_overload = False
     if (type(op_func) == str):
-        #input_op_constant = eval('a %s right_operand'%op_func)
-        #constant_op_input = eval('left_operand %s b'%op_func)
-        is_op_overload = True
+        input_op_constant = eval('a %s right_operand'%op_func)
+        constant_op_input = eval('left_operand %s b'%op_func)
         input_op_input = eval('a %s b'%op_func)
     else:
         input_op_constant = op_func(a, right_value)
@@ -87,18 +81,18 @@ def _test_binary_op(precision, device_id, op_func,
     # putting it into a batch of one sample
     left_value.shape = (1,1) + left_value.shape
     right_value.shape = (1,1) + right_value.shape
-    if not is_op_overload : #see the todo above
-        forward_input = {a:left_value}    
-        expected_backward = { a: expected_backward_all['left_arg'], }
-        unittest_helper(input_op_constant, 
-                forward_input, expected_forward, expected_backward,
-                device_id=device_id, precision=precision)
-        
-        forward_input = {b:right_value}    
-        expected_backward = { b: expected_backward_all['right_arg'], }
-        unittest_helper(constant_op_input, 
-                forward_input, expected_forward, expected_backward,
-                device_id=device_id, precision=precision) 
+
+    forward_input = {a:left_value}    
+    expected_backward = { a: expected_backward_all['left_arg'], }
+    unittest_helper(input_op_constant, 
+            forward_input, expected_forward, expected_backward,
+            device_id=device_id, precision=precision)
+
+    forward_input = {b:right_value}    
+    expected_backward = { b: expected_backward_all['right_arg'], }
+    unittest_helper(constant_op_input, 
+            forward_input, expected_forward, expected_backward,
+            device_id=device_id, precision=precision) 
 
     forward_input = {a:left_value, b:right_value}    
     expected_backward = { a: expected_backward_all['left_arg'], b: expected_backward_all['right_arg'], }

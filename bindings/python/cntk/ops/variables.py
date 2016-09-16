@@ -1,7 +1,7 @@
 import numpy as np
 from cntk.cntk_py import NDArrayView, DeviceDescriptor, Variable, Parameter, ConstantFloat, ConstantDouble, Constant, DataType_Float, DataType_Double, ParameterFloat, ParameterDouble, Axis
 from cntk import DATATYPE
-from cntk.graph import TensorOpsMixin
+from cntk.tensor import TensorOpsMixin
 from .. import utils
 
 FLOAT_32='float32'
@@ -36,7 +36,7 @@ def _sanitize_value(shape, value, dtype, device, is_param=False):
     return ndav
 
 #TODO: remove default values from all constructors' arguments
-class Variable(TensorOpsMixin,Variable):
+class ____Variable(TensorOpsMixin,Variable):
     def __init__(self, shape=None, data_type=None, needs_gradient=False, is_sparse=False,
                     dynamic_axes = [Axis.default_dynamic_axis(), Axis.default_batch_axis()], name=''):
         shape = utils.sanitize_shape(shape)
@@ -47,7 +47,7 @@ class Variable(TensorOpsMixin,Variable):
 
         super(Variable, self).__init__(shape, is_sparse, dtype, needs_gradient, name, dynamic_axes)
 
-class Parameter(TensorOpsMixin,Parameter):
+class ____Parameter(TensorOpsMixin,Parameter):
     def __init__(self, shape=None, value=None, data_type=None, 
                     device=None, name=''):
 

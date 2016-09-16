@@ -252,11 +252,12 @@ def sanitize_input(arg, fallback_dtype=np.float32):
 
     return constant(value=arg)
 
-def get_data_type(arg):
+def get_data_type(*args):
     """
-    Return the numpy datatype of `arg`
+    Returns the highest precision numpy datatype of the provided parameters
+
     Args:
-        arg (number, list, NumPy array, `Variable`, or `Function`): input       
+        args (number, list, NumPy array, `Variable`, or `Function`): input
     Returns:
         np.float32 or np.float64
     """
@@ -264,19 +265,31 @@ def get_data_type(arg):
     from cntk.ops.variables import Constant, Variable
     from cntk.ops import constant    
 
-    if isinstance(arg, (Constant, Variable)):
-        if cntk_py.DataType_Double == arg.get_data_type():
-            return np.float64
-    try:
-        var_output = arg.output()
-        if isinstance(var_output, Variable):
+    dtypes = set()
+    for arg in args:
+        if isinstance(arg, (Constant, Variable)):
+            if cntk_py.DataType_Double == arg.get_data_type():
+                dtypes.add(np.float64)
+            elif cntk_py.DataType_Float == arg.get_data_type():
+                dtypes.add(np.float32)
+            else:
+                raise ValueError('unknown data type')
+        try:
+            var_outputs = arg.outputs()
+            if len(var_outputs)>1:
+                raise ValueError('expected single output, but got %i'%len(var_outputs))
+
+            var_output = var_outputs[0]
             if cntk_py.DataType_Double == var_output.get_data_type():
-                return np.float64
-    except AttributeError:
-        # no function or function with more then one output
-        pass
-    
-    return np.float32
+                dtypes.add(np.float64)
+        except AttributeError:
+            # no function or function with more then one output
+            pass
+
+    if np.float64 in dtypes:
+        return np.float64
+    else:
+        return np.float32
 
 def pad_to_dense(batch):
     """Appends the minimal required amount of zeroes at the end of each sample

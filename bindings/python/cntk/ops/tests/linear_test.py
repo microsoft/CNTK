@@ -41,10 +41,9 @@ def test_op_plus(left_operand, right_operand, device_id, precision):
             left_operand, right_operand,
             expected_forward, expected_backward)
 
-    if False: # FIXME
-        _test_binary_op(precision, device_id, '+',
-                left_operand, right_operand,
-                expected_forward, expected_backward)
+    _test_binary_op(precision, device_id, '+',
+            left_operand, right_operand,
+            expected_forward, expected_backward)
 
 SEQ_TENSOR_PAIRS = [
     # two inputs each having sequences of length 1 and 2
@@ -95,7 +94,7 @@ def test_op_plus_var_sequences_input_input(left_batch, right_batch, device_id, p
 #TODO: enable once the function is exposed
 @pytest.mark.parametrize("left_operand, right_operand", TENSOR_PAIRS)
 def test_op_minus(left_operand, right_operand, device_id, precision):
-    expected_forward = [AA([left_operand]) - AA([right_operand])]
+    expected_forward = [AA([left_operand], dtype=PRECISION_TO_TYPE[precision]) - AA([right_operand], dtype=PRECISION_TO_TYPE[precision])]
 
     expected_backward = {
             'left_arg':  [[[np.ones_like(x, dtype=PRECISION_TO_TYPE[precision]) for x in left_operand]]],
@@ -106,10 +105,9 @@ def test_op_minus(left_operand, right_operand, device_id, precision):
             left_operand, right_operand,
             expected_forward, expected_backward)
 
-    if False: # FIXME
-        _test_binary_op(precision, device_id, '-',
-                left_operand, right_operand,
-                expected_forward, expected_backward)
+    _test_binary_op(precision, device_id, '-',
+            left_operand, right_operand,
+            expected_forward, expected_backward)
 
 # -- element times tests --
 
@@ -127,10 +125,9 @@ def test_op_element_times(left_operand, right_operand, device_id, precision):
             left_operand, right_operand,
             expected_forward, expected_backward)
 
-    if False: # FIXME
-        _test_binary_op(precision, device_id, '*',
-                left_operand, right_operand,
-                expected_forward, expected_backward)
+    _test_binary_op(precision, device_id, '*',
+            left_operand, right_operand,
+            expected_forward, expected_backward)
 
 
 # -- element divide tests --
@@ -149,10 +146,9 @@ def test_op_element_divide(left_operand, right_operand, device_id, precision):
             left_operand, right_operand,
             expected_forward, expected_backward)
 
-    if False: # FIXME
-        _test_binary_op(precision, device_id, '/',
-                left_operand, right_operand,
-                expected_forward, expected_backward)
+    _test_binary_op(precision, device_id, '/',
+            left_operand, right_operand,
+            expected_forward, expected_backward)
 
 
 # -- identity function tests --
