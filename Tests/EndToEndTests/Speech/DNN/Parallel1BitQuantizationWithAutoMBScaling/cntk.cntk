@@ -1,0 +1,72 @@
+precision = "double"
+command = speechTrain
+deviceId = $DeviceId$
+
+parallelTrain = true
+
+speechTrain = [
+    action = "train"
+    modelPath = "$RunDir$/models/cntkSpeech.dnn"
+    deviceId = $DeviceId$
+    traceLevel = 1
+
+    SimpleNetworkBuilder = [
+        layerSizes = 363:512:512:132
+        trainingCriterion = "CrossEntropyWithSoftmax"
+        evalCriterion = "ClassificationError"
+        layerTypes = "Sigmoid"
+        initValueScale = 1.0
+        applyMeanVarNorm = true
+        uniformInit = true
+        needPrior = true
+    ]
+
+    SGD = [
+        epochSize = 81920
+        minibatchSize = 64
+        learningRatesPerSample = 0.001953125
+        numMBsToShowResult = 10
+        momentumAsTimeConstant = 1024
+        dropoutRate = 0.0
+        maxEpochs = 3
+        keepCheckPointFiles = true
+        clippingThresholdPerSample = 1#INF
+
+        ParallelTrain = [
+            parallelizationMethod = "DataParallelSGD"
+            distributedMBReading = true
+            DataParallelSGD = [
+                gradientBits = 2
+            ]
+        ]
+
+        AutoAdjust = [
+            autoAdjustMinibatch = true
+            numMiniBatch4LRSearch = 160
+            minibatchSizeTuningFrequency = 1
+            minibatchSizeTuningMax = 8192
+            minibatchSearchCriterionErrorMargin = 1
+        ]
+    ]
+    reader = [
+        readerType = "HTKMLFReader"
+        readMethod = "blockRandomize"
+        miniBatchMode = "partial"
+        randomize = "auto"
+        verbosity = 0
+        useMersenneTwisterRand=true
+
+        features = [
+            dim = 363
+            type = "real"
+            scpFile = "glob_0000.scp"
+        ]
+    
+        labels = [
+            mlfFile = "$DataDir$/glob_0000.mlf"
+            labelMappingFile = "$DataDir$/state.list"
+            labelDim = 132
+            labelType = "category"
+        ]
+    ]
+]
