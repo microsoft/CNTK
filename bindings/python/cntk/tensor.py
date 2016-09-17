@@ -155,7 +155,9 @@ class EvalMixin(object):
         if input_map is None:
             input_map = {}
 
-        return utils_eval(self, None, device, input_map, False)
+        result, _ = utils_eval(self, None, device, input_map, False)
+        return result.popitem()[1]
+
 
 def _add_eval(klass):
     overload_name = 'eval'
