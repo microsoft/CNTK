@@ -1548,9 +1548,11 @@ def get_output_and_keep_reference(self):
 Function.output = lambda self:get_output_and_keep_reference(self)
 Function.replace_placeholders = lambda self, ph_map: self.replace_placeholders_internal(ph_map)
 
-from .tensor import add_tensor_ops
-for klass in [Function, Variable, Constant, ConstantFloat, ConstantDouble, Parameter, ParameterFloat, ParameterDouble]:
-    add_tensor_ops(klass)
+from .tensor import _add_tensor_ops, _add_eval
+for klass in [Function, Variable]:
+    _add_tensor_ops(klass)
+
+_add_eval(Function)
 
 # This file is compatible with both classic and new-style classes.
 

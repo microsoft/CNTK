@@ -30,7 +30,7 @@ def _sanitize_value(shape, value, dtype, device, is_param=False):
     return ndav
 
 #TODO: remove default values from all constructors' arguments
-class ____Variable(TensorOpsMixin,Variable):
+class Variable(TensorOpsMixin,Variable):
     def __init__(self, shape=None, data_type=None, needs_gradient=False, is_sparse=False,
                     dynamic_axes = [Axis.default_dynamic_axis(), Axis.default_batch_axis()], name=''):
         shape = utils.sanitize_shape(shape)
@@ -41,7 +41,7 @@ class ____Variable(TensorOpsMixin,Variable):
 
         super(Variable, self).__init__(shape, is_sparse, dtype, needs_gradient, name, dynamic_axes)
 
-class ____Parameter(TensorOpsMixin,Parameter):
+class Parameter(TensorOpsMixin,Parameter):
     def __init__(self, shape=None, value=None, data_type=None, 
                     device=None, name=''):
 
