@@ -49,7 +49,7 @@ def ffnet():
 
     # Instantiate the trainer object to drive the model training
     lr = learning_rates_per_sample(0.02)
-    trainer = Trainer(netout, ce, pe, [sgd_learner(netout.owner.parameters(), lr)])
+    trainer = Trainer(netout, ce, pe, [sgd_learner(netout.parameters(), lr)])
 
     # Get minibatches of training data and perform model training
     minibatch_size = 25

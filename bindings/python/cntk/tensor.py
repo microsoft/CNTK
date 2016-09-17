@@ -131,13 +131,38 @@ AVAILABLE_TENSOR_OPS = ['abs', 'add', 'div', 'getitem', 'matmul', 'mul',
         'radd', 'rdiv', 'rmatmul', 'rmul', 'rsub', 'rtruediv', 'sub',
         'truediv'] 
 
-def add_tensor_ops(klass):
+def _add_tensor_ops(klass):
     for op_name in AVAILABLE_TENSOR_OPS:
-        if getattr(klass, op_name, None):
-            raise ValueError('class "%s" already has operator "%s"'%\
-                    (klass, op))
-        
         overload_name = '__%s__'%op_name
-        setattr(klass, overload_name, 
-                getattr(TensorOpsMixin, overload_name))
+
+        if getattr(klass, overload_name, None):
+            raise ValueError('class "%s" already has operator overload "%s"'%\
+                    (klass, overload_name))
+        
+        setattr(klass, overload_name, getattr(TensorOpsMixin, overload_name))
+
+class EvalMixin(object):
+    def eval(self, input_map=None, device=None):
+        from .utils import eval as utils_eval
+
+        if device is None:
+            from . import DeviceDescriptor
+            device = DeviceDescriptor.use_default_device()
+
+        if len(self.outputs())!=1:
+            raise ValueError('only operators with exactly one output can be evaluated')
+
+        if input_map is None:
+            input_map = {}
+
+        return utils_eval(self, None, device, input_map, False)
+
+def _add_eval(klass):
+    overload_name = 'eval'
+
+    if getattr(klass, overload_name, None):
+        raise ValueError('class "%s" already has operator overload "%s"'%\
+                (klass, overload_name))
+    
+    setattr(klass, overload_name, getattr(EvalMixin, overload_name))
 

@@ -21,7 +21,7 @@ def linear_layer(input, output_dim):
 
 def fully_connected_layer(input, output_dim, nonlinearity):
     p = linear_layer(input, output_dim)
-    return nonlinearity(p);
+    return nonlinearity(p).output()
 
 # Defines a multilayer feedforward classification model
 def fully_connected_classifier_net(input, num_output_classes, hidden_layer_dim, num_hidden_layers, nonlinearity):
