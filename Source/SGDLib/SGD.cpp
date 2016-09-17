@@ -382,19 +382,19 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
     // --- MAIN EPOCH LOOP
     for (int i = startEpoch; i < (int) m_maxEpochs; i++) // TODO: why is this an int, and not a size_t?
     {
+        // Synchronize all ranks before proceeding to ensure that
+        // rank 0 has finished writing the previous model file
+        if (m_mpi != nullptr)
+        {
+            m_mpi->WaitAll();
+        }
+
         // (re-)initialize 1-bit SGD
         if (GetParallelizationMethod() == ParallelizationMethod::dataParallelSGD &&
             currentNumGradientBits != m_numGradientBits[i])
         {
             currentNumGradientBits = m_numGradientBits[i];
             InitDistGradAgg(evaluationNodes.size(), currentNumGradientBits, m_traceLevel);
-        }
-
-        // Synchronize all ranks before proceeding to ensure that
-        // rank 0 has finished writing the previous model file
-        if (m_mpi != nullptr)
-        {
-            m_mpi->WaitAll();
         }
 
         Timer timer;
@@ -2708,26 +2708,14 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
         if (configParallelTrain.Exists(L"DataParallelSGD"))
         {
             const ConfigRecordType& configDataParallelSGD(configParallelTrain(L"DataParallelSGD", ConfigRecordType::Record()));
-            size_t defaultGradientBits = 8 * sizeofElemType;
-            m_numGradientBits = configDataParallelSGD(L"gradientBits", defaultGradientBits);
+            let defaultGradientBits = 8 * (int)sizeofElemType;
+            m_numGradientBits = configDataParallelSGD(L"gradientBits", ConfigRecordType::Array(intargvector(vector<int>{defaultGradientBits})));
             m_zeroThresholdFor1Bit = configDataParallelSGD(L"useZeroThresholdFor1BitQuantization", true);
             m_bufferedAsyncGradientAggregation = configDataParallelSGD(L"useBufferedAsyncGradientAggregation", false);
-                if ( m_numGradientBits < 1 || m_numGradientBits > (8 * sizeofElemType) )
+            for (size_t i = 0; i < m_numGradientBits.size(); i++)
             {
-<<<<<<< HEAD
-                InvalidArgument("gradientBits must be in the range [1, 32] when using precision=float and in range [1, 64] when using precision=double!");
-=======
-                const ConfigRecordType& configDataParallelSGD(configParallelTrain(L"DataParallelSGD", ConfigRecordType::Record()));
-                let defaultGradientBits = 8 * (int)sizeofElemType;
-                m_numGradientBits = configDataParallelSGD(L"gradientBits", ConfigRecordType::Array(intargvector(vector<int>{defaultGradientBits})));
-                m_zeroThresholdFor1Bit = configDataParallelSGD(L"useZeroThresholdFor1BitQuantization", true);
-                m_bufferedAsyncGradientAggregation = configDataParallelSGD(L"useBufferedAsyncGradientAggregation", false);
-                for (size_t i = 0; i < m_numGradientBits.size(); i++)
-                {
-                    if (m_numGradientBits[i] < 1 || m_numGradientBits[i] > defaultGradientBits)
-                        InvalidArgument("gradientBits values must be in the range [1, 32] when using precision=float and in range [1, 64] when using precision=double.");
-                }
->>>>>>> 5316380... numGradientBits is now a vector;
+                if (m_numGradientBits[i] < 1 || m_numGradientBits[i] > defaultGradientBits)
+                    InvalidArgument("gradientBits values must be in the range [1, 32] when using precision=float and in range [1, 64] when using precision=double.");
             }
         }
         if (configParallelTrain.Exists(L"ModelAveragingSGD"))
