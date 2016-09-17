@@ -1845,7 +1845,7 @@ size_t SGD<ElemType>::SearchForBestMinibatchSize(ComputationNetworkPtr net,
         EpochCriterion epochCriterion(EpochCriterion::Infinity());
         TrainOneMiniEpochAndReloadModel(net, refNet, refNode, epochNumber,
                                         numFramesToUseInSearch, trainSetDataReader,
-                                        learnRatePerSample, trialMinibatchSize, featureNodes,
+                                        learnRatePerSample, lastGoodMinibatchSize, featureNodes,
                                         labelNodes, criterionNodes,
                                         evaluationNodes, inputMatrices,
                                         learnableNodes, smoothedGradients, smoothedCounts,
