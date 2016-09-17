@@ -278,8 +278,8 @@ public:
 
         // Use the block to make sure that nameIndiciesMutex is unlocked as soon as possible.
         {
-            std::unique_lock<std::mutex> lock(nameIndiciesMutex);
-            index = nameIndices[name]++;
+            std::unique_lock<std::mutex> lock(s_nameIndiciesMutex);
+            index = s_nameIndices[name]++;
         }
 
         if (index > 0)
@@ -580,8 +580,8 @@ private:
 
     // The mutex to searilize the access to nameIndices in SetUniqueAxisName().
     // Todo: after upgraded to VS2015, move both static variables into SetUnqiueAxisName() as local static variables there.
-    static std::mutex nameIndiciesMutex;
-    static std::map<std::wstring, size_t> nameIndices;
+    static std::mutex s_nameIndiciesMutex;
+    static std::map<std::wstring, size_t> s_nameIndices;
 
 public:
 

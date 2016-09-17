@@ -12,7 +12,7 @@
 namespace Microsoft { namespace MSR { namespace CNTK {
 
     // Todo: After upgrade to VS2015, remove them after both statics are moved into SetUnqiueAxisName as local static variables.
-    std::mutex MBLayout::nameIndiciesMutex;
-    std::map<std::wstring, size_t> MBLayout::nameIndices;
+    std::mutex MBLayout::s_nameIndiciesMutex;
+    std::map<std::wstring, size_t> MBLayout::s_nameIndices;
 
 }}}
