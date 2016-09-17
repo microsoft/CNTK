@@ -474,9 +474,8 @@ namespace CNTK
             if (!axis1.IsStaticAxis() || !axis2.IsStaticAxis())
                 LogicError("TransposeAxes operation currently does not support transposing dynamic axes");
 
-            auto transposedTensorShape = AsTensorShape(inputs[0].Shape());
-            transposedTensorShape.SwapDimsInPlace(axis1.StaticAxisIndex(), axis2.StaticAxisIndex());
-            outputShape = AsNDShape(transposedTensorShape);
+            outputShape = inputs[0].Shape();
+            std::swap(outputShape[axis1.StaticAxisIndex()], outputShape[axis2.StaticAxisIndex()]);
             break;
         }
         case PrimitiveOpType::Slice:
@@ -507,7 +506,7 @@ namespace CNTK
             if ((axis.StaticAxisIndex() < outputTensorShape.GetRank()) && (0 <= realBeginIndex) && (realBeginIndex <= realEndIndex) && (realEndIndex <= sliceAxisDim))
                 outputTensorShape.NarrowTo(axis.StaticAxisIndex(), realBeginIndex, realEndIndex);
 
-            outputShape = AsNDShape(outputTensorShape);
+            outputShape = AsNDShape(outputTensorShape, /*allowNonFlattenableTensorShapes = */ true);
             break;
         }
         case PrimitiveOpType::Reshape:
@@ -611,15 +610,11 @@ namespace CNTK
             Variable inputOperandVar = inputs[0];
             Variable initialStateVar = inputs[1];
 
-            // TODO: Current we only support a scalar initial state
-            if (!initialStateVar.IsConstant() || (initialStateVar.Shape().Rank() > 0))
-                LogicError("Currently PastValue/FutureValue Function only supports scalar initial state");
-
             // TODO: We currently only support input operand with 1 dynamic axis for PastValue/FutureValue
             if (inputOperandVar.DynamicAxes().size() != 2)
                 LogicError("Currently PastValue/FutureValue Function only supports input operand with with 2 dynamic axis (1 sequence-axis and 1 batch-axis)");
 
-            outputShape = UnaryElementwiseOpOutputShape(inputs[0].Shape());
+            outputShape = BinaryElementwiseOpOutputShape(op, inputs[0].Shape(), inputs[1].Shape());
             break;
         }
         case PrimitiveOpType::ReduceElements:
@@ -975,16 +970,11 @@ namespace CNTK
             Variable inputOperandVar = functionInputs[0];
             Variable initialStateVar = functionInputs[1];
 
-            // Get the intial state of the PastValue/FutureValue operation
-            ElementType initStateValue;
-            NDArrayView tempView({}, &initStateValue, 1, DeviceDescriptor::CPUDevice());
-            tempView.CopyFrom(*(Constant(initialStateVar).Value()));
-
             size_t offset = primitiveFunction->Attributes()[PrimitiveFunction::AttributeNameOffset].Value<size_t>();
             if (op == PrimitiveOpType::PastValue)
-                computationNodePtr = New<PastValueNode<ElementType>>(network->GetDeviceId(), functionName, (float)initStateValue, AsTensorShape(inputOperandVar.Shape()), offset);
+                computationNodePtr = New<PastValueNode<ElementType>>(network->GetDeviceId(), functionName, AsTensorShape(inputOperandVar.Shape()), offset);
             else
-                computationNodePtr = New<FutureValueNode<ElementType>>(network->GetDeviceId(), functionName, (float)initStateValue, AsTensorShape(inputOperandVar.Shape()), offset);
+                computationNodePtr = New<FutureValueNode<ElementType>>(network->GetDeviceId(), functionName, AsTensorShape(inputOperandVar.Shape()), offset);
 
             break;
         }
@@ -1043,9 +1033,14 @@ namespace CNTK
         // Let's reorder inputNodesBasePtrs properly since the ordering of inputs of CNTK internal ComputationNode may be different from the PrimitiveFunction inputs ordering
         ReorderAsCNTKComputationNodeInputs(op, inputNodesBasePtrs);
         if (computationNodePtr->Is<INumInputs>())
-            inputNodesBasePtrs.resize(computationNodePtr->As<INumInputs>()->GetExpectedNumInputs());
-        else if ((op == PrimitiveOpType::PastValue) || (op == PrimitiveOpType::FutureValue)) // TODO: Temporary hack to be replaced with support for non-scalar ininital state value operands
-            inputNodesBasePtrs.resize(1);
+        {
+            auto computationNodeExpectedInputCount = computationNodePtr->As<INumInputs>()->GetExpectedNumInputs();
+            if (computationNodeExpectedInputCount != inputNodesBasePtrs.size())
+                LogicError("Input count mismatch: The Primitive function for op %s has %d inputs while the corresponding ComputationNode has %d inputs",
+                           PrimitiveOpTypeName(op),
+                           inputNodesBasePtrs.size(),
+                           computationNodeExpectedInputCount);
+        }
 
         network->AddNodeToNetAndAttachInputs(computationNodePtr, inputNodesBasePtrs);
 
@@ -1185,6 +1180,9 @@ namespace CNTK
                 }
             }
 
+#ifdef _DEBUG
+            m_computationNetwork->SetTraceLevel(1);
+#endif
             m_computationNetwork->CompileNetwork();
 
             // Verify that the shapes of the output Variables that we computed match the corresponding nodes in the ComputationNetwork
@@ -1237,6 +1235,14 @@ namespace CNTK
         if (var.DynamicAxes().size() > 2)
             LogicError("More than 2 dynamic axis for a variable is currently unsupported");
 
+        //if (value->Data()->Shape().SubShape(0, var.Shape().Rank()) != var.Shape())
+        //{
+        //    InvalidArgument("The %s dimensions of the Value shape (%s) do not match the shape of the variable (%s) that it corresponds to!", 
+        //                    Internal::IsReversingTensorShapesInErrorMessagesEnabled() ? "trailing" : "leading",
+        //                    AsStringForErrorReporting(value->Data()->Shape()).c_str()),
+        //                    AsStringForErrorReporting(var.Shape()).c_str()));
+        //}
+
         size_t maxNumTimeSteps = value->Data()->Shape()[var.Shape().Rank()];
         size_t numSequences = value->Data()->Shape()[var.Shape().Rank() + 1];
 
@@ -1280,9 +1286,7 @@ namespace CNTK
                             currentSequenceLength++;
                         }
                         else
-                        {
                             currentSequenceEndAlreadyFound = true;
-                        }
                     }
 
                     sequenceLengths[i] = currentSequenceLength;
@@ -1595,13 +1599,36 @@ namespace CNTK
                                                             const DeviceDescriptor& computeDevice,
                                                             const std::unordered_set<Variable>& outputsToRetainBackwardStateFor)
     {
-        // TODO: How about zero argument functions?
+        // Validate arguments and outputs
+        if (outputs.empty())
+            InvalidArgument("CompositeFunction::Forward: At least one output has to be specified!");
+
+        // Make sure that the DataType of the variables and corresponding values match
         // TODO: We need a better way to determine the ElementType for the network
-        auto dataType = arguments.begin()->second->Data()->GetDataType();
+        auto dataType = DataType::Unknown;
+        for (auto variableValuePair : arguments)
+        {
+            if (dataType == DataType::Unknown)
+                dataType = variableValuePair.first.GetDataType();
+            else if (dataType != variableValuePair.first.GetDataType())
+                LogicError("CompositeFunction::Forward: The DataType of all arguments of the Function must be same");
+        }
+
+        if (dataType == DataType::Unknown)
+        {
+            for (auto variableValuePair : outputs)
+            {
+                if (dataType == DataType::Unknown)
+                    dataType = variableValuePair.first.GetDataType();
+            }
+        }
+
         if (dataType == DataType::Float)
             GetComputationNetwork<float>(computeDevice, outputsToRetainBackwardStateFor, true);
-        else
+        else if (dataType == DataType::Double)
             GetComputationNetwork<double>(computeDevice, outputsToRetainBackwardStateFor, true);
+        else
+            InvalidArgument("Unsupported DataType %s", DataTypeName(dataType));
 
         // TODO: Avoid copying the data when possible
 
@@ -2075,10 +2102,13 @@ namespace CNTK
         return CompositeFunction::Create(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::Select, std::vector<Variable>({ condition, leftOperand, rightOperand }), Dictionary(), name), name);
     }
 
-    FunctionPtr Splice(const std::vector<Variable>& operands, size_t axis, const std::wstring& name /*= L""*/)
+    FunctionPtr Splice(const std::vector<Variable>& operands, const Axis& axis, const std::wstring& name /*= L""*/)
     {
+        if (!axis.IsStaticAxis())
+            LogicError("Splice: Currently only splicing along a static axis is supported");
+
         auto additionalProperties = Dictionary();
-        additionalProperties[PrimitiveFunction::AttributeNameAxis] = Axis(axis);
+        additionalProperties[PrimitiveFunction::AttributeNameAxis] = axis;
 
         return CompositeFunction::Create(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::Splice, operands, std::move(additionalProperties), name), name);
     }
@@ -2209,15 +2239,23 @@ namespace CNTK
 
         FunctionPtr ZeroesLike(const Variable& operand)
         {
-            if (operand.Shape().Rank() > 1)
-                LogicError("Internal::ZeroesLike: Currently only 1D inputs are supported!");
-
             if (operand.IsSparse())
+            {
+                if (operand.Shape().Rank() > 1)
+                    LogicError("Internal::ZeroesLike: Currently only 1D sparse inputs are supported!");
+
                 return Times(Constant({ 1, operand.Shape()[0] }, operand.GetDataType(), 0.0), operand);
+            }
             else
             {
                 auto rowSliceFunc = Internal::Slice(operand, Axis(0), 0, 1);
-                return Minus(rowSliceFunc, rowSliceFunc);
+                auto output = Minus(rowSliceFunc, rowSliceFunc);
+
+                // Reduce away all but the static axis 0
+                for (size_t i = 1; i < output->Output().Shape().Rank(); ++i)
+                    output = ReduceSum(output, Axis(i));
+
+                return output;
             }
         }
 

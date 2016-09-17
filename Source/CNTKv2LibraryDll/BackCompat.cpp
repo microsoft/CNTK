@@ -195,8 +195,6 @@ namespace CNTK
                     auto initialStateVar = Constant::Scalar(node->As<PastValueNode<ElementType>>()->InitialActivationValue(), AsDeviceDescriptor(node->GetDeviceId()));
                     inputVars.push_back(initialStateVar);
                 }
-                else
-                    LogicError("LoadLegacyModel: Currently loading models with non-scalar initial value for PastValueNode/FutureValueNode is unsupported");
 
                 primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameOffset] = (size_t)node->As<PastValueNode<ElementType>>()->TimeStep();
                 opType = PrimitiveOpType::PastValue;
@@ -208,8 +206,6 @@ namespace CNTK
                     auto initialStateVar = Constant::Scalar(node->As<FutureValueNode<ElementType>>()->InitialActivationValue(), AsDeviceDescriptor(node->GetDeviceId()));
                     inputVars.push_back(initialStateVar);
                 }
-                else
-                    LogicError("LoadLegacyModel: Currently loading models with non-scalar initial value for PastValueNode/FutureValueNode is unsupported");
 
                 primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameOffset] = (size_t)node->As<FutureValueNode<ElementType>>()->TimeStep();
                 opType = PrimitiveOpType::FutureValue;

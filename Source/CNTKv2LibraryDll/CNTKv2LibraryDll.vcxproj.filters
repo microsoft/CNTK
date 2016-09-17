@@ -32,6 +32,7 @@
     <ClInclude Include="API\CNTKLibraryExperimental.h">
       <Filter>API</Filter>
     </ClInclude>
+    <ClInclude Include="Value.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="API">

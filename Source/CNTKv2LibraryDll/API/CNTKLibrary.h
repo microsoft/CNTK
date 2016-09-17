@@ -286,7 +286,8 @@ namespace CNTK
         ///
         std::wstring AsString() const
         {
-            std::wstringstream wStrStream(L"{");
+            std::wstringstream wStrStream;
+            wStrStream << L"{";
             for (size_t i = 0; i < Rank(); i++)
             {
                 if (i != 0)
@@ -2491,7 +2492,7 @@ namespace CNTK
     ///
     /// Create an instance of the CNTK built-in splice operation to splice together all the specified tensor operands into a single output tensor
     ///
-    CNTK_API FunctionPtr Splice(const std::vector<Variable>& operands, size_t axis, const std::wstring& name = L"");
+    CNTK_API FunctionPtr Splice(const std::vector<Variable>& operands, const Axis& axis, const std::wstring& name = L"");
 
     ///
     /// Create a new Function instance which just combines the outputs of the specified list of 'operands' Functions such that the 'Outputs' of the 
