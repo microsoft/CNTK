@@ -67,7 +67,7 @@ private:
 
 template<typename T>
 struct ArrayTableOption {
-  ArrayTableOption(size_t s) : size(s) {}
+  explicit ArrayTableOption(size_t s) : size(s) {}
   size_t size;
   DEFINE_TABLE_TYPE(T, ArrayWorker, ArrayServer);
 };

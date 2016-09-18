@@ -1,20 +1,25 @@
 #ifndef MULTIVERSO_KV_TABLE_H_
 #define MULTIVERSO_KV_TABLE_H_
 
-#include "multiverso/table_interface.h"
-#include "multiverso/util/log.h"
-
 #include <unordered_map>
 #include <vector>
 
+#include "multiverso/multiverso.h"
+#include "multiverso/table_interface.h"
+#include "multiverso/util/log.h"
+
 namespace multiverso {
 
-// A distributed shared std::unordered_map<Key, Val> table
+template <typename Key, typename Val>
+struct KVTableOption;
 
+// A distributed shared std::unordered_map<Key, Val> table
 // Key, Val should be the basic type
 template <typename Key, typename Val>
 class KVWorkerTable : public WorkerTable {
 public:
+  explicit KVWorkerTable(const KVTableOption<Key, Val>&) {}
+
   void Get(Key key) { WorkerTable::Get(Blob(&key, sizeof(Key))); }
 
   void Get(std::vector<Key>& keys) {
@@ -76,6 +81,8 @@ private:
 template <typename Key, typename Val>
 class KVServerTable : public ServerTable {
 public:
+  explicit KVServerTable(const KVTableOption<Key, Val>&) {}
+
   void ProcessGet(const std::vector<Blob>& data, 
                   std::vector<Blob>* result) override {
     CHECK(data.size() == 1);
@@ -98,30 +105,24 @@ public:
     }
   }
 
-  void Store(Stream* s) override{
-    // size_t size = table_.size();
-    // s->Write(&size, sizeof(size_t));
-    // for (auto& i : table_){
-    //   s->Write(&i.first, sizeof(Key));
-    //   s->Write(&i.second, sizeof(Val));
-    // }
+  void Store(Stream*) override {
+    Log::Fatal("Not implemented yet\n");
   }
-  void Load(Stream* s) override{
-    // size_t count;
-    // Key k;
-    // Val v;
-    // s->Read(&count, sizeof(size_t));
-    // for (int i = 0; i < count; ++i){
-    //   s->Read(&k, sizeof(Key));
-    //   s->Read(&v, sizeof(Val));
-    //   table_[k] = v;
-    // }
+
+  void Load(Stream*) override {
+    Log::Fatal("Not implemented yet\n");
   }
 
 private:
   std::unordered_map<Key, Val> table_;
 };
 
-}
+template <typename Key, typename Val>
+struct KVTableOption {
+  typedef KVWorkerTable<Key, Val> WorkerTableType;
+  typedef KVServerTable<Key, Val> ServerTableType;
+};
+
+}  // namespace multiverso
 
 #endif // MULTIVERSO_KV_TABLE_H_

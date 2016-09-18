@@ -138,8 +138,8 @@ public:
   int size() const override { return size_; }
   std::string name() const override { return "ZeroMQ"; }
 
-  size_t Send(MessagePtr& msg) override {
-    size_t size = 0;
+  int Send(MessagePtr& msg) override {
+    int size = 0;
     int dst = msg->dst();
     void* socket = senders_[dst].socket;
     CHECK_NOTNULL(socket);
@@ -157,14 +157,14 @@ public:
       send_size = zmq_send(socket, blob.data(), static_cast<int>(blob.size()),
         i == msg->data().size() - 1 ? 0 : ZMQ_SNDMORE);
       CHECK(send_size == blob_size);
-      size += blob_size + sizeof(size_t);
+      size += static_cast<int>(blob_size + sizeof(size_t));
     }
     return size;
   }
 
-  size_t Recv(MessagePtr* msg_ptr) override {
+  int Recv(MessagePtr* msg_ptr) override {
     if (!msg_ptr->get()) msg_ptr->reset(new Message());
-    size_t size = 0;
+    int size = 0;
     int recv_size;
     size_t blob_size;
     int more;

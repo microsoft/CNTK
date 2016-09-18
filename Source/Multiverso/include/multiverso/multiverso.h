@@ -24,6 +24,10 @@ int  MV_ServerId();
 int  MV_WorkerIdToRank(int worker_id);
 int  MV_ServerIdToRank(int server_id);
 
+template <typename T>
+void MV_SetFlag(const std::string& name, const T& value);
+
+
 // create server table and worker table
 // \param option for table initiate
 // \return worker table pointer if this node is worker

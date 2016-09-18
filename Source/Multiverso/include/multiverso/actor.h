@@ -48,10 +48,13 @@ protected:
   // message handlers function
   std::unordered_map<int, Handler> handlers_;
   bool is_working_;
+
 private:
   std::string name_;
-
   std::unique_ptr<std::thread> thread_;
+
+  Actor(const Actor&) = delete;
+  void operator=(const Actor&) = delete;
 };
 
 namespace actor {

@@ -4,6 +4,8 @@
 #include <string>
 #include <unordered_map>
 
+#include "multiverso/util/log.h"
+
 namespace multiverso {
 
 namespace configure {
