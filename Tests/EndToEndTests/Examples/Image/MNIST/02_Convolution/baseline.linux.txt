@@ -1,480 +1,379 @@
-=== Running /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/release/bin/cntk configFile=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/CNTKTextFormatReader/Examples/Image/MNIST/02_Convolution/../../../../../../../Examples/Image/MNIST/Config/../../../../Tests/EndToEndTests/CNTKTextFormatReader/Examples/Image/MNIST/Config/02_Convolution.cntk currentDirectory=/tmp/cntk-test-20160513145544.775982/CNTKTextFormatReader/Examples/Image/MNIST_02_Convolution@release_gpu/TestData RunDir=/tmp/cntk-test-20160513145544.775982/CNTKTextFormatReader/Examples/Image/MNIST_02_Convolution@release_gpu DataDir=/tmp/cntk-test-20160513145544.775982/CNTKTextFormatReader/Examples/Image/MNIST_02_Convolution@release_gpu/TestData ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/CNTKTextFormatReader/Examples/Image/MNIST/02_Convolution/../../../../../../../Examples/Image/MNIST/Config OutputDir=/tmp/cntk-test-20160513145544.775982/CNTKTextFormatReader/Examples/Image/MNIST_02_Convolution@release_gpu DeviceId=0 timestamping=true train=[SGD=[maxEpochs=3]] imageLayout="cudnn"
+CPU info:
+    CPU Model Name: Intel(R) Xeon(R) CPU E5-2630 v2 @ 2.60GHz
+    Hardware threads: 1
+    Total Memory: 264172964 kB
+-------------------------------------------------------------------
+=== Running /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/release/bin/cntk configFile=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Examples/Image/MNIST/02_Convolution/../../../../../../Examples/Image/MNIST/Config/02_Convolution.cntk currentDirectory=/tmp/cntk-test-20160914143654.764232/Examples/Image/MNIST_02_Convolution@release_gpu/TestData RunDir=/tmp/cntk-test-20160914143654.764232/Examples/Image/MNIST_02_Convolution@release_gpu DataDir=/tmp/cntk-test-20160914143654.764232/Examples/Image/MNIST_02_Convolution@release_gpu/TestData ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Examples/Image/MNIST/02_Convolution/../../../../../../Examples/Image/MNIST/Config OutputDir=/tmp/cntk-test-20160914143654.764232/Examples/Image/MNIST_02_Convolution@release_gpu DeviceId=0 timestamping=true forceDeterministicAlgorithms=true stderr=- trainNetwork=[SGD=[maxEpochs=6]]
 -------------------------------------------------------------------
 Build info: 
 
-		Built time: May 13 2016 14:50:25
-		Last modified date: Thu May 12 14:00:37 2016
+		Built time: Sep 14 2016 14:31:59
+		Last modified date: Wed Sep 14 10:34:00 2016
 		Build type: release
 		Build target: GPU
 		With 1bit-SGD: no
-		Math lib: acml
+		Math lib: mkl
 		CUDA_PATH: /usr/local/cuda-7.5
 		CUB_PATH: /usr/local/cub-1.4.1
-		CUDNN_PATH: /usr/local/cudnn-4.0
+		CUDNN_PATH: /usr/local/cudnn-5.1
 		Build Branch: HEAD
-		Build SHA1: 35fadc316f045d843bbd9b85061250a959268787
-		Built by philly on d8dc82703b0f
+		Build SHA1: 219ef43c816894f38699d83f36bd200a5bf82995
+		Built by philly on bba8a3f9d1fe
 		Build Path: /home/philly/jenkins/workspace/CNTK-Build-Linux
 -------------------------------------------------------------------
-Changed current directory to /tmp/cntk-test-20160513145544.775982/CNTKTextFormatReader/Examples/Image/MNIST_02_Convolution@release_gpu/TestData
-05/13/2016 15:10:11: -------------------------------------------------------------------
-05/13/2016 15:10:11: Build info: 
+Changed current directory to /tmp/cntk-test-20160914143654.764232/Examples/Image/MNIST_02_Convolution@release_gpu/TestData
+09/14/2016 14:37:46: Redirecting stderr to file -_trainNetwork_testNetwork.log
+09/14/2016 14:37:46: -------------------------------------------------------------------
+09/14/2016 14:37:46: Build info: 
 
-05/13/2016 15:10:11: 		Built time: May 13 2016 14:50:25
-05/13/2016 15:10:11: 		Last modified date: Thu May 12 14:00:37 2016
-05/13/2016 15:10:11: 		Build type: release
-05/13/2016 15:10:11: 		Build target: GPU
-05/13/2016 15:10:11: 		With 1bit-SGD: no
-05/13/2016 15:10:11: 		Math lib: acml
-05/13/2016 15:10:11: 		CUDA_PATH: /usr/local/cuda-7.5
-05/13/2016 15:10:11: 		CUB_PATH: /usr/local/cub-1.4.1
-05/13/2016 15:10:11: 		CUDNN_PATH: /usr/local/cudnn-4.0
-05/13/2016 15:10:11: 		Build Branch: HEAD
-05/13/2016 15:10:11: 		Build SHA1: 35fadc316f045d843bbd9b85061250a959268787
-05/13/2016 15:10:11: 		Built by philly on d8dc82703b0f
-05/13/2016 15:10:11: 		Build Path: /home/philly/jenkins/workspace/CNTK-Build-Linux
-05/13/2016 15:10:11: -------------------------------------------------------------------
+09/14/2016 14:37:46: 		Built time: Sep 14 2016 14:31:59
+09/14/2016 14:37:46: 		Last modified date: Wed Sep 14 10:34:00 2016
+09/14/2016 14:37:46: 		Build type: release
+09/14/2016 14:37:46: 		Build target: GPU
+09/14/2016 14:37:46: 		With 1bit-SGD: no
+09/14/2016 14:37:46: 		Math lib: mkl
+09/14/2016 14:37:46: 		CUDA_PATH: /usr/local/cuda-7.5
+09/14/2016 14:37:46: 		CUB_PATH: /usr/local/cub-1.4.1
+09/14/2016 14:37:46: 		CUDNN_PATH: /usr/local/cudnn-5.1
+09/14/2016 14:37:46: 		Build Branch: HEAD
+09/14/2016 14:37:46: 		Build SHA1: 219ef43c816894f38699d83f36bd200a5bf82995
+09/14/2016 14:37:46: 		Built by philly on bba8a3f9d1fe
+09/14/2016 14:37:46: 		Build Path: /home/philly/jenkins/workspace/CNTK-Build-Linux
+09/14/2016 14:37:46: -------------------------------------------------------------------
+09/14/2016 14:37:47: -------------------------------------------------------------------
+09/14/2016 14:37:47: GPU info:
 
-05/13/2016 15:10:11: Running on localhost at 2016/05/13 15:10:11
-05/13/2016 15:10:11: Command line: 
-/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/release/bin/cntk  configFile=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/CNTKTextFormatReader/Examples/Image/MNIST/02_Convolution/../../../../../../../Examples/Image/MNIST/Config/../../../../Tests/EndToEndTests/CNTKTextFormatReader/Examples/Image/MNIST/Config/02_Convolution.cntk  currentDirectory=/tmp/cntk-test-20160513145544.775982/CNTKTextFormatReader/Examples/Image/MNIST_02_Convolution@release_gpu/TestData  RunDir=/tmp/cntk-test-20160513145544.775982/CNTKTextFormatReader/Examples/Image/MNIST_02_Convolution@release_gpu  DataDir=/tmp/cntk-test-20160513145544.775982/CNTKTextFormatReader/Examples/Image/MNIST_02_Convolution@release_gpu/TestData  ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/CNTKTextFormatReader/Examples/Image/MNIST/02_Convolution/../../../../../../../Examples/Image/MNIST/Config  OutputDir=/tmp/cntk-test-20160513145544.775982/CNTKTextFormatReader/Examples/Image/MNIST_02_Convolution@release_gpu  DeviceId=0  timestamping=true  train=[SGD=[maxEpochs=3]]  imageLayout="cudnn"
+09/14/2016 14:37:47: 		Device[0]: cores = 2880; computeCapability = 3.5; type = "GeForce GTX 780 Ti"; memory = 3071 MB
+09/14/2016 14:37:47: 		Device[1]: cores = 2880; computeCapability = 3.5; type = "GeForce GTX 780 Ti"; memory = 3071 MB
+09/14/2016 14:37:47: 		Device[2]: cores = 2880; computeCapability = 3.5; type = "GeForce GTX 780 Ti"; memory = 3071 MB
+09/14/2016 14:37:47: 		Device[3]: cores = 2880; computeCapability = 3.5; type = "GeForce GTX 780 Ti"; memory = 3071 MB
+09/14/2016 14:37:47: -------------------------------------------------------------------
+
+09/14/2016 14:37:47: Running on localhost at 2016/09/14 14:37:47
+09/14/2016 14:37:47: Command line: 
+/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/release/bin/cntk  configFile=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Examples/Image/MNIST/02_Convolution/../../../../../../Examples/Image/MNIST/Config/02_Convolution.cntk  currentDirectory=/tmp/cntk-test-20160914143654.764232/Examples/Image/MNIST_02_Convolution@release_gpu/TestData  RunDir=/tmp/cntk-test-20160914143654.764232/Examples/Image/MNIST_02_Convolution@release_gpu  DataDir=/tmp/cntk-test-20160914143654.764232/Examples/Image/MNIST_02_Convolution@release_gpu/TestData  ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Examples/Image/MNIST/02_Convolution/../../../../../../Examples/Image/MNIST/Config  OutputDir=/tmp/cntk-test-20160914143654.764232/Examples/Image/MNIST_02_Convolution@release_gpu  DeviceId=0  timestamping=true  forceDeterministicAlgorithms=true  stderr=-  trainNetwork=[SGD=[maxEpochs=6]]
 
 
+Configuration After Processing and Variable Resolution:
 
-05/13/2016 15:10:11: >>>>>>>>>>>>>>>>>>>> RAW CONFIG (VARIABLES NOT RESOLVED) >>>>>>>>>>>>>>>>>>>>
-05/13/2016 15:10:11: RootDir = ".."
-ConfigDir = "$RootDir$/Config"
-DataDir   = "$RootDir$/Data"
-OutputDir = "$RootDir$/Output"
-ModelDir  = "$OutputDir$/Models"
-deviceId = 0
-imageLayout = "cudnn"
-command = train:test
-precision = "float"
-modelPath = "$ModelDir$/02_Convolution"
-ndlMacros = "$ConfigDir$/Macros.ndl"
-traceLevel=1
-numMBsToShowResult=500
-prefetch=true
-initOnCPUOnly=true
-train = [
-    action = "train"
-    NDLNetworkBuilder = [
-        networkDescription = "$ConfigDir$/02_Convolution.ndl"
-    ]
-    SGD = [
-        epochSize = 60000
-        minibatchSize = 32
-        learningRatesPerMB = 0.1*5:0.3
-        momentumPerMB = 0*10:0.7
-        maxEpochs = 15
-    ]
-    reader = [
-        readerType = "CNTKTextFormatReader"
-        file = "$DataDir$/Train-28x28_cntk_text.txt"
-        input = [
-            features = [
-                dim = 784
-                format = "dense"
-            ]
-            labels = [
-                dim = 10
-                format = "dense"
-            ]
-        ]
-    ]
-]
-test = [
-    action = test
-    minibatchSize = 16
-    NDLNetworkBuilder = [
-        networkDescription = "$ConfigDir$/02_Convolution.ndl"
-    ]
-    reader = [
-        readerType = "CNTKTextFormatReader"
-        file = "$DataDir$/Test-28x28_cntk_text.txt"
-        input = [
-            features = [
-                dim = 784
-                format = "dense"
-            ]
-            labels = [
-                dim = 10
-                format = "dense"
-            ]
-        ]
-    ]
-]
-currentDirectory=/tmp/cntk-test-20160513145544.775982/CNTKTextFormatReader/Examples/Image/MNIST_02_Convolution@release_gpu/TestData
-RunDir=/tmp/cntk-test-20160513145544.775982/CNTKTextFormatReader/Examples/Image/MNIST_02_Convolution@release_gpu
-DataDir=/tmp/cntk-test-20160513145544.775982/CNTKTextFormatReader/Examples/Image/MNIST_02_Convolution@release_gpu/TestData
-ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/CNTKTextFormatReader/Examples/Image/MNIST/02_Convolution/../../../../../../../Examples/Image/MNIST/Config
-OutputDir=/tmp/cntk-test-20160513145544.775982/CNTKTextFormatReader/Examples/Image/MNIST_02_Convolution@release_gpu
-DeviceId=0
-timestamping=true
-train=[SGD=[maxEpochs=3]]
-imageLayout="cudnn"
-
-05/13/2016 15:10:11: <<<<<<<<<<<<<<<<<<<< RAW CONFIG (VARIABLES NOT RESOLVED)  <<<<<<<<<<<<<<<<<<<<
-
-05/13/2016 15:10:11: >>>>>>>>>>>>>>>>>>>> RAW CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
-05/13/2016 15:10:11: RootDir = ".."
-ConfigDir = "../Config"
-DataDir   = "../Data"
-OutputDir = "../Output"
-ModelDir  = "/tmp/cntk-test-20160513145544.775982/CNTKTextFormatReader/Examples/Image/MNIST_02_Convolution@release_gpu/Models"
-deviceId = 0
-imageLayout = "cudnn"
-command = train:test
-precision = "float"
-modelPath = "/tmp/cntk-test-20160513145544.775982/CNTKTextFormatReader/Examples/Image/MNIST_02_Convolution@release_gpu/Models/02_Convolution"
-ndlMacros = "/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/CNTKTextFormatReader/Examples/Image/MNIST/02_Convolution/../../../../../../../Examples/Image/MNIST/Config/Macros.ndl"
-traceLevel=1
-numMBsToShowResult=500
-prefetch=true
-initOnCPUOnly=true
-train = [
-    action = "train"
-    NDLNetworkBuilder = [
-        networkDescription = "/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/CNTKTextFormatReader/Examples/Image/MNIST/02_Convolution/../../../../../../../Examples/Image/MNIST/Config/02_Convolution.ndl"
-    ]
-    SGD = [
-        epochSize = 60000
-        minibatchSize = 32
-        learningRatesPerMB = 0.1*5:0.3
-        momentumPerMB = 0*10:0.7
-        maxEpochs = 15
-    ]
-    reader = [
-        readerType = "CNTKTextFormatReader"
-        file = "/tmp/cntk-test-20160513145544.775982/CNTKTextFormatReader/Examples/Image/MNIST_02_Convolution@release_gpu/TestData/Train-28x28_cntk_text.txt"
-        input = [
-            features = [
-                dim = 784
-                format = "dense"
-            ]
-            labels = [
-                dim = 10
-                format = "dense"
-            ]
-        ]
-    ]
-]
-test = [
-    action = test
-    minibatchSize = 16
-    NDLNetworkBuilder = [
-        networkDescription = "/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/CNTKTextFormatReader/Examples/Image/MNIST/02_Convolution/../../../../../../../Examples/Image/MNIST/Config/02_Convolution.ndl"
-    ]
-    reader = [
-        readerType = "CNTKTextFormatReader"
-        file = "/tmp/cntk-test-20160513145544.775982/CNTKTextFormatReader/Examples/Image/MNIST_02_Convolution@release_gpu/TestData/Test-28x28_cntk_text.txt"
-        input = [
-            features = [
-                dim = 784
-                format = "dense"
-            ]
-            labels = [
-                dim = 10
-                format = "dense"
-            ]
-        ]
-    ]
-]
-currentDirectory=/tmp/cntk-test-20160513145544.775982/CNTKTextFormatReader/Examples/Image/MNIST_02_Convolution@release_gpu/TestData
-RunDir=/tmp/cntk-test-20160513145544.775982/CNTKTextFormatReader/Examples/Image/MNIST_02_Convolution@release_gpu
-DataDir=/tmp/cntk-test-20160513145544.775982/CNTKTextFormatReader/Examples/Image/MNIST_02_Convolution@release_gpu/TestData
-ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/CNTKTextFormatReader/Examples/Image/MNIST/02_Convolution/../../../../../../../Examples/Image/MNIST/Config
-OutputDir=/tmp/cntk-test-20160513145544.775982/CNTKTextFormatReader/Examples/Image/MNIST_02_Convolution@release_gpu
-DeviceId=0
-timestamping=true
-train=[SGD=[maxEpochs=3]]
-imageLayout="cudnn"
-
-05/13/2016 15:10:11: <<<<<<<<<<<<<<<<<<<< RAW CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
-
-05/13/2016 15:10:11: >>>>>>>>>>>>>>>>>>>> PROCESSED CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
-configparameters: 02_Convolution.cntk:command=train:test
-configparameters: 02_Convolution.cntk:ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/CNTKTextFormatReader/Examples/Image/MNIST/02_Convolution/../../../../../../../Examples/Image/MNIST/Config
-configparameters: 02_Convolution.cntk:currentDirectory=/tmp/cntk-test-20160513145544.775982/CNTKTextFormatReader/Examples/Image/MNIST_02_Convolution@release_gpu/TestData
-configparameters: 02_Convolution.cntk:DataDir=/tmp/cntk-test-20160513145544.775982/CNTKTextFormatReader/Examples/Image/MNIST_02_Convolution@release_gpu/TestData
+configparameters: 02_Convolution.cntk:command=trainNetwork:testNetwork
+configparameters: 02_Convolution.cntk:configDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Examples/Image/MNIST/02_Convolution/../../../../../../Examples/Image/MNIST/Config
+configparameters: 02_Convolution.cntk:currentDirectory=/tmp/cntk-test-20160914143654.764232/Examples/Image/MNIST_02_Convolution@release_gpu/TestData
+configparameters: 02_Convolution.cntk:dataDir=/tmp/cntk-test-20160914143654.764232/Examples/Image/MNIST_02_Convolution@release_gpu/TestData
 configparameters: 02_Convolution.cntk:deviceId=0
-configparameters: 02_Convolution.cntk:imageLayout=cudnn
-configparameters: 02_Convolution.cntk:initOnCPUOnly=true
-configparameters: 02_Convolution.cntk:ModelDir=/tmp/cntk-test-20160513145544.775982/CNTKTextFormatReader/Examples/Image/MNIST_02_Convolution@release_gpu/Models
-configparameters: 02_Convolution.cntk:modelPath=/tmp/cntk-test-20160513145544.775982/CNTKTextFormatReader/Examples/Image/MNIST_02_Convolution@release_gpu/Models/02_Convolution
-configparameters: 02_Convolution.cntk:ndlMacros=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/CNTKTextFormatReader/Examples/Image/MNIST/02_Convolution/../../../../../../../Examples/Image/MNIST/Config/Macros.ndl
-configparameters: 02_Convolution.cntk:numMBsToShowResult=500
-configparameters: 02_Convolution.cntk:OutputDir=/tmp/cntk-test-20160513145544.775982/CNTKTextFormatReader/Examples/Image/MNIST_02_Convolution@release_gpu
+configparameters: 02_Convolution.cntk:forceDeterministicAlgorithms=true
+configparameters: 02_Convolution.cntk:modelPath=/tmp/cntk-test-20160914143654.764232/Examples/Image/MNIST_02_Convolution@release_gpu/Models/02_Convolution
+configparameters: 02_Convolution.cntk:outputDir=/tmp/cntk-test-20160914143654.764232/Examples/Image/MNIST_02_Convolution@release_gpu
 configparameters: 02_Convolution.cntk:precision=float
-configparameters: 02_Convolution.cntk:prefetch=true
-configparameters: 02_Convolution.cntk:RootDir=..
-configparameters: 02_Convolution.cntk:RunDir=/tmp/cntk-test-20160513145544.775982/CNTKTextFormatReader/Examples/Image/MNIST_02_Convolution@release_gpu
-configparameters: 02_Convolution.cntk:test=[
+configparameters: 02_Convolution.cntk:rootDir=..
+configparameters: 02_Convolution.cntk:RunDir=/tmp/cntk-test-20160914143654.764232/Examples/Image/MNIST_02_Convolution@release_gpu
+configparameters: 02_Convolution.cntk:stderr=-
+configparameters: 02_Convolution.cntk:testNetwork={
     action = test
-    minibatchSize = 16
-    NDLNetworkBuilder = [
-        networkDescription = "/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/CNTKTextFormatReader/Examples/Image/MNIST/02_Convolution/../../../../../../../Examples/Image/MNIST/Config/02_Convolution.ndl"
-    ]
-    reader = [
+minibatchSize = 1024    
+    reader = {
         readerType = "CNTKTextFormatReader"
-        file = "/tmp/cntk-test-20160513145544.775982/CNTKTextFormatReader/Examples/Image/MNIST_02_Convolution@release_gpu/TestData/Test-28x28_cntk_text.txt"
-        input = [
-            features = [
-                dim = 784
-                format = "dense"
-            ]
-            labels = [
-                dim = 10
-                format = "dense"
-            ]
-        ]
-    ]
-]
+        file = "/tmp/cntk-test-20160914143654.764232/Examples/Image/MNIST_02_Convolution@release_gpu/TestData/Test-28x28_cntk_text.txt"
+        input = {
+            features = { dim = 784 ; format = "dense" }
+            labels =   { dim = 10  ; format = "dense" }
+        }
+    }
+}
 
 configparameters: 02_Convolution.cntk:timestamping=true
 configparameters: 02_Convolution.cntk:traceLevel=1
-configparameters: 02_Convolution.cntk:train=[
+configparameters: 02_Convolution.cntk:trainNetwork={
     action = "train"
-    NDLNetworkBuilder = [
-        networkDescription = "/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/CNTKTextFormatReader/Examples/Image/MNIST/02_Convolution/../../../../../../../Examples/Image/MNIST/Config/02_Convolution.ndl"
-    ]
-    SGD = [
+    BrainScriptNetworkBuilder = {
+imageShape = 28:28:1                        
+labelDim = 10                               
+        featScale = 1/256
+        Scale{f} = x => Constant(f) .* x
+        model = Sequential (
+            Scale {featScale} :
+            ConvolutionalLayer {16, (5:5), pad = true} : ReLU : 
+            MaxPoolingLayer    {(2:2), stride=(2:2)} :
+            ConvolutionalLayer {32, (5:5), pad = true} : ReLU : 
+            MaxPoolingLayer    {(2:2), stride=(2:2)} :
+            DenseLayer         {128, activation=Sigmoid} :
+            LinearLayer        {labelDim}
+        )
+        features = Input {imageShape}
+        labels = Input {labelDim}
+        ol = model (features)
+        ce   = CrossEntropyWithSoftmax (labels, ol)
+        errs = ClassificationError (labels, ol)
+        featureNodes    = (features)
+        labelNodes      = (labels)
+        criterionNodes  = (ce)
+        evaluationNodes = (errs)
+        outputNodes     = (ol)
+    }
+    SGD = {
         epochSize = 60000
-        minibatchSize = 32
-        learningRatesPerMB = 0.1*5:0.3
-        momentumPerMB = 0*10:0.7
+        minibatchSize = 64
         maxEpochs = 15
-    ]
-    reader = [
+        learningRatesPerSample = 0.001*5:0.0005
+        momentumAsTimeConstant = 0*5:1024
+        numMBsToShowResult = 500
+    }
+    reader = {
         readerType = "CNTKTextFormatReader"
-        file = "/tmp/cntk-test-20160513145544.775982/CNTKTextFormatReader/Examples/Image/MNIST_02_Convolution@release_gpu/TestData/Train-28x28_cntk_text.txt"
-        input = [
-            features = [
-                dim = 784
-                format = "dense"
-            ]
-            labels = [
-                dim = 10
-                format = "dense"
-            ]
-        ]
-    ]
-] [SGD=[maxEpochs=3]]
+        file = "/tmp/cntk-test-20160914143654.764232/Examples/Image/MNIST_02_Convolution@release_gpu/TestData/Train-28x28_cntk_text.txt"
+        input = {
+            features = { dim = 784 ; format = "dense" }
+            labels =   { dim = 10  ; format = "dense" }
+        }
+    }    
+} [SGD=[maxEpochs=6]]
 
-05/13/2016 15:10:11: <<<<<<<<<<<<<<<<<<<< PROCESSED CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
-05/13/2016 15:10:11: Commands: train test
-05/13/2016 15:10:11: Precision = "float"
-05/13/2016 15:10:11: CNTKModelPath: /tmp/cntk-test-20160513145544.775982/CNTKTextFormatReader/Examples/Image/MNIST_02_Convolution@release_gpu/Models/02_Convolution
-05/13/2016 15:10:11: CNTKCommandTrainInfo: train : 3
-05/13/2016 15:10:11: CNTKCommandTrainInfo: CNTKNoMoreCommands_Total : 3
+09/14/2016 14:37:47: Commands: trainNetwork testNetwork
+09/14/2016 14:37:47: Precision = "float"
+09/14/2016 14:37:47: CNTKModelPath: /tmp/cntk-test-20160914143654.764232/Examples/Image/MNIST_02_Convolution@release_gpu/Models/02_Convolution
+09/14/2016 14:37:47: CNTKCommandTrainInfo: trainNetwork : 6
+09/14/2016 14:37:47: CNTKCommandTrainInfo: CNTKNoMoreCommands_Total : 6
 
-05/13/2016 15:10:11: ##############################################################################
-05/13/2016 15:10:11: #                                                                            #
-05/13/2016 15:10:11: # Action "train"                                                             #
-05/13/2016 15:10:11: #                                                                            #
-05/13/2016 15:10:11: ##############################################################################
+09/14/2016 14:37:47: ##############################################################################
+09/14/2016 14:37:47: #                                                                            #
+09/14/2016 14:37:47: # Action "train"                                                             #
+09/14/2016 14:37:47: #                                                                            #
+09/14/2016 14:37:47: ##############################################################################
 
-05/13/2016 15:10:11: CNTKCommandTrainBegin: train
-NDLBuilder Using GPU 0
+09/14/2016 14:37:47: CNTKCommandTrainBegin: trainNetwork
 
-05/13/2016 15:10:11: Creating virgin network.
+09/14/2016 14:37:47: Creating virgin network.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[10 x 0] as glorotUniform later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[128 x 0] as glorotUniform later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[5 x 5 x 0 x 32] as glorotUniform later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[5 x 5 x 0 x 16] as glorotUniform later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1 x 1] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1 x 1] <- 0.003906.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1 x 1 x 16] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1 x 1 x 16] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1 x 1 x 32] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1 x 1 x 32] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[128] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[128] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[10] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[10] <- 0.000000.
 
 Post-processing network...
 
 3 roots:
 	ce = CrossEntropyWithSoftmax()
-	err = ErrorPrediction()
-	ol.z = Plus()
+	errs = ClassificationError()
+	ol = Plus()
 
 Validating network. 27 nodes to process in pass 1.
 
 Validating --> labels = InputValue() :  -> [10 x *]
-Validating --> ol.W = LearnableParameter() :  -> [10 x 128]
-Validating --> h1.W = LearnableParameter() :  -> [128 x 7 x 7 x 32]
-Validating --> conv2.w.W = LearnableParameter() :  -> [32 x 400]
-Validating --> conv1.w.W = LearnableParameter() :  -> [16 x 25]
-Validating --> featScale = LearnableParameter() :  -> [1 x 1]
+Validating --> model.arrayOfFunctions[8].W = LearnableParameter() :  -> [10 x 0]
+Validating --> model.arrayOfFunctions[7].arrayOfFunctions[0].W = LearnableParameter() :  -> [128 x 0]
+Validating --> model.arrayOfFunctions[4].W = LearnableParameter() :  -> [5 x 5 x 0 x 32]
+Validating --> model.arrayOfFunctions[1].W = LearnableParameter() :  -> [5 x 5 x 0 x 16]
+Validating --> ol.x.x.x._.x.x._.x.ElementTimesArgs[0] = LearnableParameter() :  -> [1 x 1]
 Validating --> features = InputValue() :  -> [28 x 28 x 1 x *]
-Validating --> featScaled = ElementTimes (featScale, features) : [1 x 1], [28 x 28 x 1 x *] -> [28 x 28 x 1 x *]
-Validating --> conv1.c.c = Convolution (conv1.w.W, featScaled) : [16 x 25], [28 x 28 x 1 x *] -> [28 x 28 x 16 x *]
-Validating --> conv1.b.b = LearnableParameter() :  -> [1 x 1 x 16]
-Validating --> conv1.cpb = Plus (conv1.c.c, conv1.b.b) : [28 x 28 x 16 x *], [1 x 1 x 16] -> [28 x 28 x 16 x *]
-Validating --> conv1.out = RectifiedLinear (conv1.cpb) : [28 x 28 x 16 x *] -> [28 x 28 x 16 x *]
-Validating --> pool1 = MaxPooling (conv1.out) : [28 x 28 x 16 x *] -> [14 x 14 x 16 x *]
-Validating --> conv2.c.c = Convolution (conv2.w.W, pool1) : [32 x 400], [14 x 14 x 16 x *] -> [14 x 14 x 32 x *]
-Validating --> conv2.b.b = LearnableParameter() :  -> [1 x 1 x 32]
-Validating --> conv2.cpb = Plus (conv2.c.c, conv2.b.b) : [14 x 14 x 32 x *], [1 x 1 x 32] -> [14 x 14 x 32 x *]
-Validating --> conv2.out = RectifiedLinear (conv2.cpb) : [14 x 14 x 32 x *] -> [14 x 14 x 32 x *]
-Validating --> pool2.p = Pooling (conv2.out) : [14 x 14 x 32 x *] -> [7 x 7 x 32 x *]
-Validating --> h1.t = Times (h1.W, pool2.p) : [128 x 7 x 7 x 32], [7 x 7 x 32 x *] -> [128 x *]
-Validating --> h1.b = LearnableParameter() :  -> [128 x 1]
-Validating --> h1.z = Plus (h1.t, h1.b) : [128 x *], [128 x 1] -> [128 x 1 x *]
-Validating --> h1.y = Sigmoid (h1.z) : [128 x 1 x *] -> [128 x 1 x *]
-Validating --> ol.t = Times (ol.W, h1.y) : [10 x 128], [128 x 1 x *] -> [10 x 1 x *]
-Validating --> ol.b = LearnableParameter() :  -> [10 x 1]
-Validating --> ol.z = Plus (ol.t, ol.b) : [10 x 1 x *], [10 x 1] -> [10 x 1 x *]
-Validating --> ce = CrossEntropyWithSoftmax (labels, ol.z) : [10 x *], [10 x 1 x *] -> [1]
-Validating --> err = ErrorPrediction (labels, ol.z) : [10 x *], [10 x 1 x *] -> [1]
+Validating --> ol.x.x.x._.x.x._.x = ElementTimes (ol.x.x.x._.x.x._.x.ElementTimesArgs[0], features) : [1 x 1], [28 x 28 x 1 x *] -> [28 x 28 x 1 x *]
+Node 'model.arrayOfFunctions[1].W' (LearnableParameter operation) operation: Tensor shape was inferred as [5 x 5 x 1 x 16].
+Node 'model.arrayOfFunctions[1].W' (LearnableParameter operation): Initializing Parameter[5 x 5 x 1 x 16] <- glorotUniform(seed=4, init dims=[400 x 25], range=0.118818*1.000000, onCPU=true).
+Validating --> ol.x.x.x._.x.x._.c = Convolution (model.arrayOfFunctions[1].W, ol.x.x.x._.x.x._.x) : [5 x 5 x 1 x 16], [28 x 28 x 1 x *] -> [28 x 28 x 16 x *]
+Validating --> model.arrayOfFunctions[1].b = LearnableParameter() :  -> [1 x 1 x 16]
+Validating --> ol.x.x.x._.x.x._.res.x = Plus (ol.x.x.x._.x.x._.c, model.arrayOfFunctions[1].b) : [28 x 28 x 16 x *], [1 x 1 x 16] -> [28 x 28 x 16 x *]
+Validating --> ol.x.x.x._.x.x = RectifiedLinear (ol.x.x.x._.x.x._.res.x) : [28 x 28 x 16 x *] -> [28 x 28 x 16 x *]
+Validating --> ol.x.x.x._.x = Pooling (ol.x.x.x._.x.x) : [28 x 28 x 16 x *] -> [14 x 14 x 16 x *]
+Node 'model.arrayOfFunctions[4].W' (LearnableParameter operation) operation: Tensor shape was inferred as [5 x 5 x 16 x 32].
+Node 'model.arrayOfFunctions[4].W' (LearnableParameter operation): Initializing Parameter[5 x 5 x 16 x 32] <- glorotUniform(seed=3, init dims=[800 x 400], range=0.070711*1.000000, onCPU=true).
+Validating --> ol.x.x.x._.c = Convolution (model.arrayOfFunctions[4].W, ol.x.x.x._.x) : [5 x 5 x 16 x 32], [14 x 14 x 16 x *] -> [14 x 14 x 32 x *]
+Validating --> model.arrayOfFunctions[4].b = LearnableParameter() :  -> [1 x 1 x 32]
+Validating --> ol.x.x.x._.res.x = Plus (ol.x.x.x._.c, model.arrayOfFunctions[4].b) : [14 x 14 x 32 x *], [1 x 1 x 32] -> [14 x 14 x 32 x *]
+Validating --> ol.x.x.x = RectifiedLinear (ol.x.x.x._.res.x) : [14 x 14 x 32 x *] -> [14 x 14 x 32 x *]
+Validating --> ol.x.x = Pooling (ol.x.x.x) : [14 x 14 x 32 x *] -> [7 x 7 x 32 x *]
+Node 'model.arrayOfFunctions[7].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 7 x 7 x 32].
+Node 'model.arrayOfFunctions[7].arrayOfFunctions[0].W' (LearnableParameter operation): Initializing Parameter[128 x 7 x 7 x 32] <- glorotUniform(seed=2, init dims=[128 x 1568], range=0.059479*1.000000, onCPU=true).
+Validating --> ol.x._.PlusArgs[0] = Times (model.arrayOfFunctions[7].arrayOfFunctions[0].W, ol.x.x) : [128 x 7 x 7 x 32], [7 x 7 x 32 x *] -> [128 x *]
+Validating --> model.arrayOfFunctions[7].arrayOfFunctions[0].b = LearnableParameter() :  -> [128]
+Validating --> ol.x._ = Plus (ol.x._.PlusArgs[0], model.arrayOfFunctions[7].arrayOfFunctions[0].b) : [128 x *], [128] -> [128 x *]
+Validating --> ol.x = Sigmoid (ol.x._) : [128 x *] -> [128 x *]
+Node 'model.arrayOfFunctions[8].W' (LearnableParameter operation) operation: Tensor shape was inferred as [10 x 128].
+Node 'model.arrayOfFunctions[8].W' (LearnableParameter operation): Initializing Parameter[10 x 128] <- glorotUniform(seed=1, init dims=[10 x 128], range=0.208514*1.000000, onCPU=true).
+Validating --> ol.PlusArgs[0] = Times (model.arrayOfFunctions[8].W, ol.x) : [10 x 128], [128 x *] -> [10 x *]
+Validating --> model.arrayOfFunctions[8].b = LearnableParameter() :  -> [10]
+Validating --> ol = Plus (ol.PlusArgs[0], model.arrayOfFunctions[8].b) : [10 x *], [10] -> [10 x *]
+Validating --> ce = CrossEntropyWithSoftmax (labels, ol) : [10 x *], [10 x *] -> [1]
+Validating --> errs = ClassificationError (labels, ol) : [10 x *], [10 x *] -> [1]
 
 Validating network. 16 nodes to process in pass 2.
 
 
 Validating network, final pass.
 
-
-Using cuDNN convolution engine for geometry: Input: 28 x 28 x 1, Output: 28 x 28 x 16, Kernel: 5 x 5 x 1, Map: 1 x 1 x 16, Stride: 1 x 1 x 1, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
-
-Using cuDNN convolution engine for geometry: Input: 28 x 28 x 16, Output: 14 x 14 x 16, Kernel: 2 x 2 x 1, Map: 1, Stride: 2 x 2 x 1, Sharing: (1), AutoPad: (0), LowerPad: 0, UpperPad: 0.
-
-Using cuDNN convolution engine for geometry: Input: 14 x 14 x 16, Output: 14 x 14 x 32, Kernel: 5 x 5 x 16, Map: 32, Stride: 1 x 1 x 16, Sharing: (1, 1, 1), AutoPad: (1, 1, 0), LowerPad: 0, UpperPad: 0.
-
-Using cuDNN convolution engine for geometry: Input: 14 x 14 x 32, Output: 7 x 7 x 32, Kernel: 2 x 2 x 1, Map: 1, Stride: 2 x 2 x 1, Sharing: (1), AutoPad: (1, 1, 0), LowerPad: 0, UpperPad: 0.
+ol.x.x.x._.x.x._.c: using cuDNN convolution engine for geometry: Input: 28 x 28 x 1, Output: 28 x 28 x 16, Kernel: 5 x 5 x 1, Map: 16, Stride: 1 x 1 x 1, Sharing: (1, 1, 1), AutoPad: (1, 1, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+ol.x.x.x._.x: using cuDNN convolution engine for geometry: Input: 28 x 28 x 16, Output: 14 x 14 x 16, Kernel: 2 x 2 x 1, Map: 1, Stride: 2 x 2 x 1, Sharing: (1, 1, 1), AutoPad: (0, 0, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+ol.x.x.x._.c: using cuDNN convolution engine for geometry: Input: 14 x 14 x 16, Output: 14 x 14 x 32, Kernel: 5 x 5 x 16, Map: 32, Stride: 1 x 1 x 16, Sharing: (1, 1, 1), AutoPad: (1, 1, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+ol.x.x: using cuDNN convolution engine for geometry: Input: 14 x 14 x 32, Output: 7 x 7 x 32, Kernel: 2 x 2 x 1, Map: 1, Stride: 2 x 2 x 1, Sharing: (1, 1, 1), AutoPad: (0, 0, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
 
 
 11 out of 27 nodes do not share the minibatch layout with the input data.
 
 Post-processing network complete.
 
-05/13/2016 15:10:11: Created model with 27 nodes on GPU 0.
+09/14/2016 14:37:48: Created model with 27 nodes on GPU 0.
 
-05/13/2016 15:10:11: Training criterion node(s):
-05/13/2016 15:10:11: 	ce = CrossEntropyWithSoftmax
+09/14/2016 14:37:48: Training criterion node(s):
+09/14/2016 14:37:48: 	ce = CrossEntropyWithSoftmax
 
-05/13/2016 15:10:11: Evaluation criterion node(s):
-
-05/13/2016 15:10:11: 	err = ErrorPrediction
+09/14/2016 14:37:48: Evaluation criterion node(s):
+09/14/2016 14:37:48: 	errs = ClassificationError
 
 
 Allocating matrices for forward and/or backward propagation.
 
-Memory Sharing Structure:
+Memory Sharing: Out of 49 matrices, 29 are shared as 13, and 20 are not shared.
 
-(nil): {[err Gradient[1]] [featScale Gradient[1 x 1]] [featScaled Gradient[28 x 28 x 1 x *]] [features Gradient[28 x 28 x 1 x *]] [labels Gradient[10 x *]] }
-0x132d628: {[features Value[28 x 28 x 1 x *]] }
-0x1854138: {[featScale Value[1 x 1]] }
-0x1ca8388: {[labels Value[10 x *]] }
-0x1ca8b18: {[conv1.w.W Value[16 x 25]] }
-0x1ca9778: {[conv1.b.b Value[1 x 1 x 16]] }
-0x1caaa88: {[conv2.w.W Value[32 x 400]] }
-0x1cac278: {[conv2.b.b Value[1 x 1 x 32]] }
-0x1cb04f8: {[h1.W Value[128 x 7 x 7 x 32]] }
-0x1cb1728: {[h1.b Value[128 x 1]] }
-0x1cb2318: {[ol.W Value[10 x 128]] }
-0x1cb3468: {[ol.b Value[10 x 1]] }
-0x7f427f204c08: {[conv1.c.c Value[28 x 28 x 16 x *]] }
-0x7f427f20bd48: {[h1.b Gradient[128 x 1]] [h1.y Gradient[128 x 1 x *]] }
-0x7f427f4d3118: {[err Value[1]] }
-0x7f427f4e3b08: {[featScaled Value[28 x 28 x 1 x *]] }
-0x7f427f4e3db8: {[conv1.cpb Value[28 x 28 x 16 x *]] [conv1.w.W Gradient[16 x 25]] }
-0x7f427f4e42d8: {[conv1.c.c Gradient[28 x 28 x 16 x *]] [conv1.out Value[28 x 28 x 16 x *]] }
-0x7f427f4e4498: {[conv1.cpb Gradient[28 x 28 x 16 x *]] [pool1 Value[14 x 14 x 16 x *]] }
-0x7f427f4e4658: {[conv2.c.c Value[14 x 14 x 32 x *]] }
-0x7f427f4e4818: {[conv1.b.b Gradient[1 x 1 x 16]] [conv1.out Gradient[28 x 28 x 16 x *]] }
-0x7f427f4e49d8: {[conv2.cpb Value[14 x 14 x 32 x *]] [conv2.w.W Gradient[32 x 400]] }
-0x7f427f4e4b98: {[conv2.c.c Gradient[14 x 14 x 32 x *]] [conv2.out Value[14 x 14 x 32 x *]] }
-0x7f427f4e4d58: {[conv2.cpb Gradient[14 x 14 x 32 x *]] [pool1 Gradient[14 x 14 x 16 x *]] [pool2.p Value[7 x 7 x 32 x *]] }
-0x7f427f4e4f18: {[conv2.b.b Gradient[1 x 1 x 32]] [conv2.out Gradient[14 x 14 x 32 x *]] [h1.t Value[128 x *]] }
-0x7f427f4e50d8: {[h1.W Gradient[128 x 7 x 7 x 32]] [h1.z Value[128 x 1 x *]] }
-0x7f427f4e5298: {[h1.t Gradient[128 x *]] [h1.y Value[128 x 1 x *]] }
-0x7f427f4e5458: {[h1.z Gradient[128 x 1 x *]] [ol.t Value[10 x 1 x *]] [pool2.p Gradient[7 x 7 x 32 x *]] }
-0x7f427f4e5f38: {[ce Gradient[1]] }
-0x7f427f4e60f8: {[ol.W Gradient[10 x 128]] [ol.z Gradient[10 x 1 x *]] }
-0x7f427f4e62b8: {[ol.t Gradient[10 x 1 x *]] }
-0x7f427f4e6478: {[ol.b Gradient[10 x 1]] }
-0x7f427f4ff658: {[ce Value[1]] }
-0x7f427f4ffea8: {[ol.z Value[10 x 1 x *]] }
-
-05/13/2016 15:10:11: No PreCompute nodes found, skipping PreCompute step.
-
-05/13/2016 15:10:11: Starting Epoch 1: learning rate per sample = 0.003125  effective momentum = 0.000000  momentum as time constant = 0.0 samples
-
-05/13/2016 15:10:11: Starting minibatch loop.
-05/13/2016 15:10:13: Epoch[ 1 of 3]-Minibatch[1-500, 26.67%]: ce = 1.05460791 * 16000; errs = 35.2563% * 16000; time = 2.0377s; samplesPerSecond = 7852.2
-05/13/2016 15:10:14: Epoch[ 1 of 3]-Minibatch[501-1000, 53.33%]: ce = 0.16176135 * 16000; errs = 4.425% * 16000; time = 0.9884s; samplesPerSecond = 16187.9
-05/13/2016 15:10:15: Epoch[ 1 of 3]-Minibatch[1001-1500, 80.00%]: ce = 0.10889783 * 16000; errs = 3.04375% * 16000; time = 0.9868s; samplesPerSecond = 16214.2
-05/13/2016 15:10:16: Finished Epoch[ 1 of 3]: [Training] ce = 0.37214827 * 60000; errs = 11.9817% * 60000; totalSamplesSeen = 60000; learningRatePerSample = 0.003125; epochTime=4.77593s
-05/13/2016 15:10:16: SGD: Saving checkpoint model '/tmp/cntk-test-20160513145544.775982/CNTKTextFormatReader/Examples/Image/MNIST_02_Convolution@release_gpu/Models/02_Convolution.1'
-
-05/13/2016 15:10:16: Starting Epoch 2: learning rate per sample = 0.003125  effective momentum = 0.000000  momentum as time constant = 0.0 samples
-
-05/13/2016 15:10:16: Starting minibatch loop.
-05/13/2016 15:10:17: Epoch[ 2 of 3]-Minibatch[1-500, 26.67%]: ce = 0.07178102 * 16000; errs = 2.20625% * 16000; time = 0.9982s; samplesPerSecond = 16029.6
-05/13/2016 15:10:18: Epoch[ 2 of 3]-Minibatch[501-1000, 53.33%]: ce = 0.06225394 * 16000; errs = 1.8% * 16000; time = 0.9949s; samplesPerSecond = 16082.6
-05/13/2016 15:10:19: Epoch[ 2 of 3]-Minibatch[1001-1500, 80.00%]: ce = 0.06624252 * 16000; errs = 2.025% * 16000; time = 0.9961s; samplesPerSecond = 16062.5
-05/13/2016 15:10:19: Finished Epoch[ 2 of 3]: [Training] ce = 0.06652122 * 60000; errs = 1.995% * 60000; totalSamplesSeen = 120000; learningRatePerSample = 0.003125; epochTime=3.74643s
-05/13/2016 15:10:20: SGD: Saving checkpoint model '/tmp/cntk-test-20160513145544.775982/CNTKTextFormatReader/Examples/Image/MNIST_02_Convolution@release_gpu/Models/02_Convolution.2'
-
-05/13/2016 15:10:20: Starting Epoch 3: learning rate per sample = 0.003125  effective momentum = 0.000000  momentum as time constant = 0.0 samples
-
-05/13/2016 15:10:20: Starting minibatch loop.
-05/13/2016 15:10:21: Epoch[ 3 of 3]-Minibatch[1-500, 26.67%]: ce = 0.04257084 * 16000; errs = 1.25625% * 16000; time = 0.9942s; samplesPerSecond = 16093.1
-05/13/2016 15:10:21: Epoch[ 3 of 3]-Minibatch[501-1000, 53.33%]: ce = 0.04675156 * 16000; errs = 1.41875% * 16000; time = 0.9927s; samplesPerSecond = 16118.2
-05/13/2016 15:10:22: Epoch[ 3 of 3]-Minibatch[1001-1500, 80.00%]: ce = 0.04904524 * 16000; errs = 1.475% * 16000; time = 0.9901s; samplesPerSecond = 16160.8
-05/13/2016 15:10:23: Finished Epoch[ 3 of 3]: [Training] ce = 0.04529028 * 60000; errs = 1.36667% * 60000; totalSamplesSeen = 180000; learningRatePerSample = 0.003125; epochTime=3.73418s
-05/13/2016 15:10:23: SGD: Saving checkpoint model '/tmp/cntk-test-20160513145544.775982/CNTKTextFormatReader/Examples/Image/MNIST_02_Convolution@release_gpu/Models/02_Convolution'
-05/13/2016 15:10:23: CNTKCommandTrainEnd: train
-
-05/13/2016 15:10:23: Action "train" complete.
+	{ model.arrayOfFunctions[1].W : [5 x 5 x 1 x 16] (gradient)
+	  ol.x.x.x._.x.x._.res.x : [28 x 28 x 16 x *] }
+	{ ol.x.x.x._.x.x : [28 x 28 x 16 x *]
+	  ol.x.x.x._.x.x._.c : [28 x 28 x 16 x *] (gradient) }
+	{ ol.x.x.x._.x : [14 x 14 x 16 x *]
+	  ol.x.x.x._.x.x._.res.x : [28 x 28 x 16 x *] (gradient) }
+	{ model.arrayOfFunctions[1].b : [1 x 1 x 16] (gradient)
+	  ol.x.x.x._.x.x : [28 x 28 x 16 x *] (gradient) }
+	{ model.arrayOfFunctions[4].W : [5 x 5 x 16 x 32] (gradient)
+	  ol.x.x.x._.res.x : [14 x 14 x 32 x *] }
+	{ ol.x.x.x : [14 x 14 x 32 x *]
+	  ol.x.x.x._.c : [14 x 14 x 32 x *] (gradient) }
+	{ ol.x.x : [7 x 7 x 32 x *]
+	  ol.x.x.x._.res.x : [14 x 14 x 32 x *] (gradient)
+	  ol.x.x.x._.x : [14 x 14 x 16 x *] (gradient) }
+	{ model.arrayOfFunctions[4].b : [1 x 1 x 32] (gradient)
+	  ol.x._.PlusArgs[0] : [128 x *]
+	  ol.x.x.x : [14 x 14 x 32 x *] (gradient) }
+	{ model.arrayOfFunctions[7].arrayOfFunctions[0].W : [128 x 7 x 7 x 32] (gradient)
+	  ol.x._ : [128 x *] }
+	{ ol.x : [128 x *]
+	  ol.x._.PlusArgs[0] : [128 x *] (gradient) }
+	{ ol.PlusArgs[0] : [10 x *]
+	  ol.x._ : [128 x *] (gradient)
+	  ol.x.x : [7 x 7 x 32 x *] (gradient) }
+	{ model.arrayOfFunctions[8].W : [10 x 128] (gradient)
+	  ol : [10 x *] (gradient) }
+	{ model.arrayOfFunctions[7].arrayOfFunctions[0].b : [128] (gradient)
+	  ol.x : [128 x *] (gradient) }
 
 
-05/13/2016 15:10:23: ##############################################################################
-05/13/2016 15:10:23: #                                                                            #
-05/13/2016 15:10:23: # Action "test"                                                              #
-05/13/2016 15:10:23: #                                                                            #
-05/13/2016 15:10:23: ##############################################################################
+09/14/2016 14:37:48: Training 215370 parameters in 8 out of 8 parameter tensors and 22 nodes with gradient:
+
+09/14/2016 14:37:48: 	Node 'model.arrayOfFunctions[1].W' (LearnableParameter operation) : [5 x 5 x 1 x 16]
+09/14/2016 14:37:48: 	Node 'model.arrayOfFunctions[1].b' (LearnableParameter operation) : [1 x 1 x 16]
+09/14/2016 14:37:48: 	Node 'model.arrayOfFunctions[4].W' (LearnableParameter operation) : [5 x 5 x 16 x 32]
+09/14/2016 14:37:48: 	Node 'model.arrayOfFunctions[4].b' (LearnableParameter operation) : [1 x 1 x 32]
+09/14/2016 14:37:48: 	Node 'model.arrayOfFunctions[7].arrayOfFunctions[0].W' (LearnableParameter operation) : [128 x 7 x 7 x 32]
+09/14/2016 14:37:48: 	Node 'model.arrayOfFunctions[7].arrayOfFunctions[0].b' (LearnableParameter operation) : [128]
+09/14/2016 14:37:48: 	Node 'model.arrayOfFunctions[8].W' (LearnableParameter operation) : [10 x 128]
+09/14/2016 14:37:48: 	Node 'model.arrayOfFunctions[8].b' (LearnableParameter operation) : [10]
+
+09/14/2016 14:37:48: No PreCompute nodes found, or all already computed. Skipping pre-computation step.
+
+09/14/2016 14:37:48: Starting Epoch 1: learning rate per sample = 0.001000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+
+09/14/2016 14:37:48: Starting minibatch loop.
+09/14/2016 14:37:52:  Epoch[ 1 of 6]-Minibatch[   1- 500, 53.33%]: ce = 0.71870331 * 32000; errs = 21.769% * 32000; time = 3.7555s; samplesPerSecond = 8520.8
+09/14/2016 14:37:54: Finished Epoch[ 1 of 6]: [Training] ce = 0.47387959 * 60000; errs = 14.235% * 60000; totalSamplesSeen = 60000; learningRatePerSample = 0.001; epochTime=6.16028s
+09/14/2016 14:37:54: SGD: Saving checkpoint model '/tmp/cntk-test-20160914143654.764232/Examples/Image/MNIST_02_Convolution@release_gpu/Models/02_Convolution.1'
+
+09/14/2016 14:37:54: Starting Epoch 2: learning rate per sample = 0.001000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+
+09/14/2016 14:37:54: Starting minibatch loop.
+09/14/2016 14:37:57:  Epoch[ 2 of 6]-Minibatch[   1- 500, 53.33%]: ce = 0.13549445 * 32000; errs = 3.894% * 32000; time = 2.7333s; samplesPerSecond = 11707.5
+09/14/2016 14:37:59: Finished Epoch[ 2 of 6]: [Training] ce = 0.12418366 * 60000; errs = 3.587% * 60000; totalSamplesSeen = 120000; learningRatePerSample = 0.001; epochTime=5.13428s
+09/14/2016 14:37:59: SGD: Saving checkpoint model '/tmp/cntk-test-20160914143654.764232/Examples/Image/MNIST_02_Convolution@release_gpu/Models/02_Convolution.2'
+
+09/14/2016 14:37:59: Starting Epoch 3: learning rate per sample = 0.001000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+
+09/14/2016 14:37:59: Starting minibatch loop.
+09/14/2016 14:38:02:  Epoch[ 3 of 6]-Minibatch[   1- 500, 53.33%]: ce = 0.08903642 * 32000; errs = 2.566% * 32000; time = 2.7375s; samplesPerSecond = 11689.3
+09/14/2016 14:38:05: Finished Epoch[ 3 of 6]: [Training] ce = 0.08509002 * 60000; errs = 2.482% * 60000; totalSamplesSeen = 180000; learningRatePerSample = 0.001; epochTime=5.14181s
+09/14/2016 14:38:05: SGD: Saving checkpoint model '/tmp/cntk-test-20160914143654.764232/Examples/Image/MNIST_02_Convolution@release_gpu/Models/02_Convolution.3'
+
+09/14/2016 14:38:05: Starting Epoch 4: learning rate per sample = 0.001000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+
+09/14/2016 14:38:05: Starting minibatch loop.
+09/14/2016 14:38:07:  Epoch[ 4 of 6]-Minibatch[   1- 500, 53.33%]: ce = 0.06824014 * 32000; errs = 1.969% * 32000; time = 2.7494s; samplesPerSecond = 11638.8
+09/14/2016 14:38:10: Finished Epoch[ 4 of 6]: [Training] ce = 0.06719082 * 60000; errs = 1.935% * 60000; totalSamplesSeen = 240000; learningRatePerSample = 0.001; epochTime=5.15108s
+09/14/2016 14:38:10: SGD: Saving checkpoint model '/tmp/cntk-test-20160914143654.764232/Examples/Image/MNIST_02_Convolution@release_gpu/Models/02_Convolution.4'
+
+09/14/2016 14:38:10: Starting Epoch 5: learning rate per sample = 0.001000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+
+09/14/2016 14:38:10: Starting minibatch loop.
+09/14/2016 14:38:12:  Epoch[ 5 of 6]-Minibatch[   1- 500, 53.33%]: ce = 0.05704977 * 32000; errs = 1.656% * 32000; time = 2.7323s; samplesPerSecond = 11711.9
+09/14/2016 14:38:15: Finished Epoch[ 5 of 6]: [Training] ce = 0.05617987 * 60000; errs = 1.627% * 60000; totalSamplesSeen = 300000; learningRatePerSample = 0.001; epochTime=5.12392s
+09/14/2016 14:38:15: SGD: Saving checkpoint model '/tmp/cntk-test-20160914143654.764232/Examples/Image/MNIST_02_Convolution@release_gpu/Models/02_Convolution.5'
+
+09/14/2016 14:38:15: Starting Epoch 6: learning rate per sample = 0.000500  effective momentum = 0.939413  momentum as time constant = 1024.0 samples
+
+09/14/2016 14:38:15: Starting minibatch loop.
+09/14/2016 14:38:18:  Epoch[ 6 of 6]-Minibatch[   1- 500, 53.33%]: ce = 0.05010939 * 32000; errs = 1.428% * 32000; time = 2.7250s; samplesPerSecond = 11743.1
+09/14/2016 14:38:20: Finished Epoch[ 6 of 6]: [Training] ce = 0.04600405 * 60000; errs = 1.277% * 60000; totalSamplesSeen = 360000; learningRatePerSample = 0.00050000002; epochTime=5.1183s
+09/14/2016 14:38:20: SGD: Saving checkpoint model '/tmp/cntk-test-20160914143654.764232/Examples/Image/MNIST_02_Convolution@release_gpu/Models/02_Convolution'
+09/14/2016 14:38:20: CNTKCommandTrainEnd: trainNetwork
+
+09/14/2016 14:38:20: Action "train" complete.
+
+
+09/14/2016 14:38:20: ##############################################################################
+09/14/2016 14:38:20: #                                                                            #
+09/14/2016 14:38:20: # Action "test"                                                              #
+09/14/2016 14:38:20: #                                                                            #
+09/14/2016 14:38:20: ##############################################################################
 
 
 Post-processing network...
 
 3 roots:
 	ce = CrossEntropyWithSoftmax()
-	err = ErrorPrediction()
-	ol.z = Plus()
+	errs = ClassificationError()
+	ol = Plus()
 
 Validating network. 27 nodes to process in pass 1.
 
 Validating --> labels = InputValue() :  -> [10 x *1]
-Validating --> ol.W = LearnableParameter() :  -> [10 x 128]
-Validating --> h1.W = LearnableParameter() :  -> [128 x 7 x 7 x 32]
-Validating --> conv2.w.W = LearnableParameter() :  -> [32 x 400]
-Validating --> conv1.w.W = LearnableParameter() :  -> [16 x 25]
-Validating --> featScale = LearnableParameter() :  -> [1 x 1]
+Validating --> model.arrayOfFunctions[8].W = LearnableParameter() :  -> [10 x 128]
+Validating --> model.arrayOfFunctions[7].arrayOfFunctions[0].W = LearnableParameter() :  -> [128 x 7 x 7 x 32]
+Validating --> model.arrayOfFunctions[4].W = LearnableParameter() :  -> [5 x 5 x 16 x 32]
+Validating --> model.arrayOfFunctions[1].W = LearnableParameter() :  -> [5 x 5 x 1 x 16]
+Validating --> ol.x.x.x._.x.x._.x.ElementTimesArgs[0] = LearnableParameter() :  -> [1 x 1]
 Validating --> features = InputValue() :  -> [28 x 28 x 1 x *1]
-Validating --> featScaled = ElementTimes (featScale, features) : [1 x 1], [28 x 28 x 1 x *1] -> [28 x 28 x 1 x *1]
-Validating --> conv1.c.c = Convolution (conv1.w.W, featScaled) : [16 x 25], [28 x 28 x 1 x *1] -> [28 x 28 x 16 x *1]
-Validating --> conv1.b.b = LearnableParameter() :  -> [1 x 1 x 16]
-Validating --> conv1.cpb = Plus (conv1.c.c, conv1.b.b) : [28 x 28 x 16 x *1], [1 x 1 x 16] -> [28 x 28 x 16 x *1]
-Validating --> conv1.out = RectifiedLinear (conv1.cpb) : [28 x 28 x 16 x *1] -> [28 x 28 x 16 x *1]
-Validating --> pool1 = MaxPooling (conv1.out) : [28 x 28 x 16 x *1] -> [14 x 14 x 16 x *1]
-Validating --> conv2.c.c = Convolution (conv2.w.W, pool1) : [32 x 400], [14 x 14 x 16 x *1] -> [14 x 14 x 32 x *1]
-Validating --> conv2.b.b = LearnableParameter() :  -> [1 x 1 x 32]
-Validating --> conv2.cpb = Plus (conv2.c.c, conv2.b.b) : [14 x 14 x 32 x *1], [1 x 1 x 32] -> [14 x 14 x 32 x *1]
-Validating --> conv2.out = RectifiedLinear (conv2.cpb) : [14 x 14 x 32 x *1] -> [14 x 14 x 32 x *1]
-Validating --> pool2.p = Pooling (conv2.out) : [14 x 14 x 32 x *1] -> [7 x 7 x 32 x *1]
-Validating --> h1.t = Times (h1.W, pool2.p) : [128 x 7 x 7 x 32], [7 x 7 x 32 x *1] -> [128 x *1]
-Validating --> h1.b = LearnableParameter() :  -> [128 x 1]
-Validating --> h1.z = Plus (h1.t, h1.b) : [128 x *1], [128 x 1] -> [128 x 1 x *1]
-Validating --> h1.y = Sigmoid (h1.z) : [128 x 1 x *1] -> [128 x 1 x *1]
-Validating --> ol.t = Times (ol.W, h1.y) : [10 x 128], [128 x 1 x *1] -> [10 x 1 x *1]
-Validating --> ol.b = LearnableParameter() :  -> [10 x 1]
-Validating --> ol.z = Plus (ol.t, ol.b) : [10 x 1 x *1], [10 x 1] -> [10 x 1 x *1]
-Validating --> ce = CrossEntropyWithSoftmax (labels, ol.z) : [10 x *1], [10 x 1 x *1] -> [1]
-Validating --> err = ErrorPrediction (labels, ol.z) : [10 x *1], [10 x 1 x *1] -> [1]
+Validating --> ol.x.x.x._.x.x._.x = ElementTimes (ol.x.x.x._.x.x._.x.ElementTimesArgs[0], features) : [1 x 1], [28 x 28 x 1 x *1] -> [28 x 28 x 1 x *1]
+Validating --> ol.x.x.x._.x.x._.c = Convolution (model.arrayOfFunctions[1].W, ol.x.x.x._.x.x._.x) : [5 x 5 x 1 x 16], [28 x 28 x 1 x *1] -> [28 x 28 x 16 x *1]
+Validating --> model.arrayOfFunctions[1].b = LearnableParameter() :  -> [1 x 1 x 16]
+Validating --> ol.x.x.x._.x.x._.res.x = Plus (ol.x.x.x._.x.x._.c, model.arrayOfFunctions[1].b) : [28 x 28 x 16 x *1], [1 x 1 x 16] -> [28 x 28 x 16 x *1]
+Validating --> ol.x.x.x._.x.x = RectifiedLinear (ol.x.x.x._.x.x._.res.x) : [28 x 28 x 16 x *1] -> [28 x 28 x 16 x *1]
+Validating --> ol.x.x.x._.x = Pooling (ol.x.x.x._.x.x) : [28 x 28 x 16 x *1] -> [14 x 14 x 16 x *1]
+Validating --> ol.x.x.x._.c = Convolution (model.arrayOfFunctions[4].W, ol.x.x.x._.x) : [5 x 5 x 16 x 32], [14 x 14 x 16 x *1] -> [14 x 14 x 32 x *1]
+Validating --> model.arrayOfFunctions[4].b = LearnableParameter() :  -> [1 x 1 x 32]
+Validating --> ol.x.x.x._.res.x = Plus (ol.x.x.x._.c, model.arrayOfFunctions[4].b) : [14 x 14 x 32 x *1], [1 x 1 x 32] -> [14 x 14 x 32 x *1]
+Validating --> ol.x.x.x = RectifiedLinear (ol.x.x.x._.res.x) : [14 x 14 x 32 x *1] -> [14 x 14 x 32 x *1]
+Validating --> ol.x.x = Pooling (ol.x.x.x) : [14 x 14 x 32 x *1] -> [7 x 7 x 32 x *1]
+Validating --> ol.x._.PlusArgs[0] = Times (model.arrayOfFunctions[7].arrayOfFunctions[0].W, ol.x.x) : [128 x 7 x 7 x 32], [7 x 7 x 32 x *1] -> [128 x *1]
+Validating --> model.arrayOfFunctions[7].arrayOfFunctions[0].b = LearnableParameter() :  -> [128]
+Validating --> ol.x._ = Plus (ol.x._.PlusArgs[0], model.arrayOfFunctions[7].arrayOfFunctions[0].b) : [128 x *1], [128] -> [128 x *1]
+Validating --> ol.x = Sigmoid (ol.x._) : [128 x *1] -> [128 x *1]
+Validating --> ol.PlusArgs[0] = Times (model.arrayOfFunctions[8].W, ol.x) : [10 x 128], [128 x *1] -> [10 x *1]
+Validating --> model.arrayOfFunctions[8].b = LearnableParameter() :  -> [10]
+Validating --> ol = Plus (ol.PlusArgs[0], model.arrayOfFunctions[8].b) : [10 x *1], [10] -> [10 x *1]
+Validating --> ce = CrossEntropyWithSoftmax (labels, ol) : [10 x *1], [10 x *1] -> [1]
+Validating --> errs = ClassificationError (labels, ol) : [10 x *1], [10 x *1] -> [1]
 
 Validating network. 16 nodes to process in pass 2.
 
 
 Validating network, final pass.
 
-
-Using cuDNN convolution engine for geometry: Input: 28 x 28 x 1, Output: 28 x 28 x 16, Kernel: 5 x 5 x 1, Map: 1 x 1 x 16, Stride: 1 x 1 x 1, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
-
-Using cuDNN convolution engine for geometry: Input: 28 x 28 x 16, Output: 14 x 14 x 16, Kernel: 2 x 2 x 1, Map: 1, Stride: 2 x 2 x 1, Sharing: (1), AutoPad: (0), LowerPad: 0, UpperPad: 0.
-
-Using cuDNN convolution engine for geometry: Input: 14 x 14 x 16, Output: 14 x 14 x 32, Kernel: 5 x 5 x 16, Map: 32, Stride: 1 x 1 x 16, Sharing: (1, 1, 1), AutoPad: (1, 1, 0), LowerPad: 0, UpperPad: 0.
-
-Using cuDNN convolution engine for geometry: Input: 14 x 14 x 32, Output: 7 x 7 x 32, Kernel: 2 x 2 x 1, Map: 1, Stride: 2 x 2 x 1, Sharing: (1), AutoPad: (1, 1, 0), LowerPad: 0, UpperPad: 0.
+ol.x.x.x._.x.x._.c: using cuDNN convolution engine for geometry: Input: 28 x 28 x 1, Output: 28 x 28 x 16, Kernel: 5 x 5 x 1, Map: 16, Stride: 1 x 1 x 1, Sharing: (1, 1, 1), AutoPad: (1, 1, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+ol.x.x.x._.x: using cuDNN convolution engine for geometry: Input: 28 x 28 x 16, Output: 14 x 14 x 16, Kernel: 2 x 2 x 1, Map: 1, Stride: 2 x 2 x 1, Sharing: (1, 1, 1), AutoPad: (0, 0, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+ol.x.x.x._.c: using cuDNN convolution engine for geometry: Input: 14 x 14 x 16, Output: 14 x 14 x 32, Kernel: 5 x 5 x 16, Map: 32, Stride: 1 x 1 x 16, Sharing: (1, 1, 1), AutoPad: (1, 1, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+ol.x.x: using cuDNN convolution engine for geometry: Input: 14 x 14 x 32, Output: 7 x 7 x 32, Kernel: 2 x 2 x 1, Map: 1, Stride: 2 x 2 x 1, Sharing: (1, 1, 1), AutoPad: (0, 0, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
 
 
 11 out of 27 nodes do not share the minibatch layout with the input data.
@@ -486,39 +385,12 @@ evalNodeNames are not specified, using all the default evalnodes and training cr
 
 Allocating matrices for forward and/or backward propagation.
 
-Memory Sharing Structure:
+Memory Sharing: Out of 27 matrices, 0 are shared as 0, and 27 are not shared.
 
-(nil): {[ce Gradient[1]] [conv1.b.b Gradient[1 x 1 x 16]] [conv1.c.c Gradient[28 x 28 x 16 x *1]] [conv1.cpb Gradient[28 x 28 x 16 x *1]] [conv1.out Gradient[28 x 28 x 16 x *1]] [conv1.w.W Gradient[16 x 25]] [conv2.b.b Gradient[1 x 1 x 32]] [conv2.c.c Gradient[14 x 14 x 32 x *1]] [conv2.cpb Gradient[14 x 14 x 32 x *1]] [conv2.out Gradient[14 x 14 x 32 x *1]] [conv2.w.W Gradient[32 x 400]] [err Gradient[1]] [featScale Gradient[1 x 1]] [featScaled Gradient[28 x 28 x 1 x *1]] [features Gradient[28 x 28 x 1 x *1]] [h1.W Gradient[128 x 7 x 7 x 32]] [h1.b Gradient[128 x 1]] [h1.t Gradient[128 x *1]] [h1.y Gradient[128 x 1 x *1]] [h1.z Gradient[128 x 1 x *1]] [labels Gradient[10 x *1]] [ol.W Gradient[10 x 128]] [ol.b Gradient[10 x 1]] [ol.t Gradient[10 x 1 x *1]] [ol.z Gradient[10 x 1 x *1]] [pool1 Gradient[14 x 14 x 16 x *1]] [pool2.p Gradient[7 x 7 x 32 x *1]] }
-0x7f4274adf028: {[conv1.b.b Value[1 x 1 x 16]] }
-0x7f4274adfe98: {[h1.b Value[128 x 1]] }
-0x7f427ae42308: {[err Value[1]] }
-0x7f427ae62498: {[featScaled Value[28 x 28 x 1 x *1]] }
-0x7f427ae62748: {[conv1.c.c Value[28 x 28 x 16 x *1]] }
-0x7f427ae62c08: {[conv1.cpb Value[28 x 28 x 16 x *1]] }
-0x7f427ae62dc8: {[conv1.out Value[28 x 28 x 16 x *1]] }
-0x7f427ae62f88: {[pool1 Value[14 x 14 x 16 x *1]] }
-0x7f427ae63148: {[conv2.c.c Value[14 x 14 x 32 x *1]] }
-0x7f427ae634c8: {[conv2.cpb Value[14 x 14 x 32 x *1]] }
-0x7f427ae63688: {[conv2.out Value[14 x 14 x 32 x *1]] }
-0x7f427ae63848: {[pool2.p Value[7 x 7 x 32 x *1]] }
-0x7f427ae646a8: {[labels Value[10 x *1]] }
-0x7f427ae64b18: {[ol.b Value[10 x 1]] }
-0x7f427ae668a8: {[conv2.w.W Value[32 x 400]] }
-0x7f427ae72368: {[h1.W Value[128 x 7 x 7 x 32]] }
-0x7f427f20cb08: {[ol.W Value[10 x 128]] }
-0x7f427f20e888: {[featScale Value[1 x 1]] }
-0x7f427f20ea48: {[features Value[28 x 28 x 1 x *1]] }
-0x7f427f4d37a8: {[conv1.w.W Value[16 x 25]] }
-0x7f427f4d3968: {[conv2.b.b Value[1 x 1 x 32]] }
-0x7f427f4e2108: {[ce Value[1]] }
-0x7f427f4fcea8: {[h1.t Value[128 x *1]] }
-0x7f427f4fd068: {[h1.z Value[128 x 1 x *1]] }
-0x7f427f4fd228: {[h1.y Value[128 x 1 x *1]] }
-0x7f427f4fd3e8: {[ol.t Value[10 x 1 x *1]] }
-0x7f427f4fd5a8: {[ol.z Value[10 x 1 x *1]] }
 
-05/13/2016 15:10:28: Final Results: Minibatch[1-10]: errs = 1.46% * 10000; ce = 0.04549626 * 10000; perplexity = 1.04654709
+09/14/2016 14:38:20: Minibatch[1-10]: errs = 1.370% * 10000; ce = 0.04414196 * 10000
+09/14/2016 14:38:20: Final Results: Minibatch[1-10]: errs = 1.370% * 10000; ce = 0.04414196 * 10000; perplexity = 1.04513071
 
-05/13/2016 15:10:28: Action "test" complete.
+09/14/2016 14:38:20: Action "test" complete.
 
-05/13/2016 15:10:28: __COMPLETED__
+09/14/2016 14:38:20: __COMPLETED__

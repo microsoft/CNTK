@@ -5,6 +5,7 @@
 // Tests for sparse and dense matrix interaction should go here
 //
 #include "stdafx.h"
+#include <random>
 #include "../../../Source/Math/Matrix.h"
 
 using namespace Microsoft::MSR::CNTK;
@@ -191,6 +192,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixSparseTimesSparse, RandomSeedFixture)
 
 BOOST_FIXTURE_TEST_CASE(MatrixSparsePlusSparse, RandomSeedFixture)
 {
+    std::mt19937 rng(0);
     Matrix<float> mAdense(c_deviceIdZero);
     mAdense.AssignTruncateBottomOf(Matrix<float>::RandomUniform(dim1, dim2, c_deviceIdZero, -3.0f, 0.1f, IncrementCounter()), 0);
     Matrix<float> mAsparse(mAdense.DeepClone());
@@ -199,7 +201,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixSparsePlusSparse, RandomSeedFixture)
     mBdense.AssignTruncateBottomOf(Matrix<float>::RandomUniform(dim1, dim2, c_deviceIdZero, -5.0f, 0.4f, IncrementCounter()), 0);
     Matrix<float> mBsparse(mBdense.DeepClone());
 
-    float alpha = 1.0f * rand() / RAND_MAX;
+    float alpha = 1.0f * rng() / rng.max();
     Matrix<float>::ScaleAndAdd(alpha, mAdense, mBdense);
 
     mAsparse.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseCSR, true);
@@ -212,6 +214,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixSparsePlusSparse, RandomSeedFixture)
 
 BOOST_FIXTURE_TEST_CASE(MatrixDensePlusSparse, RandomSeedFixture)
 {
+    std::mt19937 rng(0);
     Matrix<float> mAdense(c_deviceIdZero);
     mAdense.AssignTruncateBottomOf(Matrix<float>::RandomUniform(dim1, dim2, c_deviceIdZero, -3.0f, 0.1f, IncrementCounter()), 0);
 
@@ -219,7 +222,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixDensePlusSparse, RandomSeedFixture)
     mBdense.AssignTruncateBottomOf(Matrix<float>::RandomUniform(dim1, dim2, c_deviceIdZero, -5.0f, 0.4f, IncrementCounter()), 0);
     Matrix<float> mBsparse(mBdense.DeepClone());
 
-    float alpha = 1.0f * rand() / RAND_MAX;
+    float alpha = 1.0f * rng() / rng.max();
     Matrix<float>::ScaleAndAdd(alpha, mAdense, mBdense);
 
     mBsparse.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseCSR, true);
@@ -231,6 +234,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixDensePlusSparse, RandomSeedFixture)
 
 BOOST_FIXTURE_TEST_CASE(MatrixSparsePlusDense, RandomSeedFixture)
 {
+    std::mt19937 rng(0);
     Matrix<float> mAdense(c_deviceIdZero);
     mAdense.AssignTruncateBottomOf(Matrix<float>::RandomUniform(dim1, dim2, c_deviceIdZero, -3.0f, 0.1f, IncrementCounter()), 0);
     Matrix<float> mAsparse(mAdense.DeepClone());
@@ -239,7 +243,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixSparsePlusDense, RandomSeedFixture)
     mBdense.AssignTruncateBottomOf(Matrix<float>::RandomUniform(dim1, dim2, c_deviceIdZero, -5.0f, 0.4f, IncrementCounter()), 0);
     Matrix<float> Bd1(mBdense.DeepClone());
 
-    float alpha = 1.0f * rand() / RAND_MAX;
+    float alpha = 1.0f * rng() / rng.max();
     Matrix<float>::ScaleAndAdd(alpha, mAdense, mBdense);
 
     mAsparse.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseCSR, true);

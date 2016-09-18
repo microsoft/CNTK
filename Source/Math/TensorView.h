@@ -48,6 +48,10 @@ public:
         : m_sob(other.m_sob), m_shape(other.m_shape)
     {
     }
+    // dummy constructor; this is an invalid object
+    TensorView()
+    {
+    }
 
     // reshaped view
     TensorView<ElemType> Reshaped(const TensorShape& shape) const
@@ -146,7 +150,6 @@ public:
     shared_ptr<Matrix<ElemType>> AsMatrix() const;
     const TensorShape& GetShape() const { return m_shape; }
 
-private:
     // -------------------------------------------------------------------
     // accessors
     // -------------------------------------------------------------------
@@ -155,6 +158,7 @@ private:
     Matrix<ElemType>&       GetSOB()       { return *m_sob; }
     friend Test::TensorTest<ElemType>;
 
+private:
     // -------------------------------------------------------------------
     // sob members
     // -------------------------------------------------------------------

@@ -713,11 +713,11 @@ bool BestGpu::LockDevice(int deviceId, bool trial)
     }
     else
     {
-        fprintf(stderr, "LockDevice: Locked GPU %d %s.\n", deviceId, trial ? "to test availability" : "for exclusive use");
+        //fprintf(stderr, "LockDevice: Locked GPU %d %s.\n", deviceId, trial ? "to test availability" : "for exclusive use");
         if (!trial)
             m_GPUMutex[deviceId] = std::move(mutex);
-        else
-            fprintf(stderr, "LockDevice: Unlocked GPU %d after testing.\n", deviceId);
+        //else
+        //    fprintf(stderr, "LockDevice: Unlocked GPU %d after testing.\n", deviceId);
     }
     return true;
 }

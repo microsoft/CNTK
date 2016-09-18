@@ -84,14 +84,12 @@ struct RMSPropInfo
 
 struct GradientUpdateInfo
 {
-    GradientsUpdateType mType;
-    float mGaussianNoiseInjectStd;
+    GradientsUpdateType type = GradientsUpdateType::AdaGrad;
+    float gaussianNoiseInjectStd = 0.0075f;
 
-    GradientUpdateInfo()
-    {
-        mType = GradientsUpdateType::AdaGrad;
-        mGaussianNoiseInjectStd = 0.0075f;
-    }
+    // for FSAdaGrad:
+    double targetAdagradAvDenom = 1;
+    size_t varianceTimeConstant = 2 * 3600 * 100; // originally was: 2h of speech
 };
 
 // ---------------------------------------------------------------------------
@@ -109,6 +107,8 @@ struct SGDParams : public ScriptableObjects::Object
     SGDParams(const ScriptableObjects::IConfigRecordPtr configp);
 
     // SGDParams(SGDParams&&) = default; // (does not compile in VS 2013; not critical)
+
+    size_t GetMaxEpochs() { return m_maxEpochs; }
 
 protected:
     // learning rate per sample provided outside
@@ -288,6 +288,8 @@ protected:
     double m_seqGammarCalcWP;
     double m_seqGammarCalcbMMIFactor;
     bool m_seqGammarCalcUsesMBR;
+    
+    bool m_disableWkInBatchNormal;  // TODO: comment?
 };
 
 template <class ElemType>
@@ -342,10 +344,9 @@ public:
             m_parallelizationMethod = ParallelizationMethod::none;
     }
 
-    void Train(function<ComputationNetworkPtr(DEVICEID_TYPE)> createNetworkFn, DEVICEID_TYPE deviceId,
+    void Train(shared_ptr<ComputationNetwork> net, DEVICEID_TYPE deviceId,
                IDataReader* trainSetDataReader,
-               IDataReader* validationSetDataReader,
-               const bool makeMode = true);
+               IDataReader* validationSetDataReader, int startEpoch, bool loadNetworkFromCheckpoint);
     void Adapt(wstring origModelFileName, wstring refNodeName,
                IDataReader* trainSetDataReader,
                IDataReader* validationSetDataReader,
@@ -384,7 +385,7 @@ protected:
                                   const std::vector<ComputationNodeBasePtr>& evaluationNodes,
                                   StreamMinibatchInputs* inputMatrices,
                                   const std::list<ComputationNodeBasePtr>& learnableNodes,
-                                  std::list<Matrix<ElemType>>& smoothedGradients,
+                                  std::list<Matrix<ElemType>>& smoothedGradients, std::vector<double> smoothedCounts,
                                   const bool learnRateInitialized,
                                   const double largestPrevLearnRatePerSample);
 
@@ -400,7 +401,7 @@ protected:
                                          const std::vector<ComputationNodeBasePtr>& evaluationNodes,
                                          StreamMinibatchInputs* inputMatrices,
                                          const std::list<ComputationNodeBasePtr>& learnableNodes,
-                                         std::list<Matrix<ElemType>>& smoothedGradients,
+                                         std::list<Matrix<ElemType>>& smoothedGradients, std::vector<double> smoothedCounts,
                                          /*out*/ EpochCriterion& epochCriterion,
                                          /*out*/ std::vector<EpochCriterion>& epochEvalErrors,
                                          std::string prefixMsg = "");
@@ -419,7 +420,7 @@ protected:
                                    const std::vector<ComputationNodeBasePtr>& evaluationNodes,
                                    StreamMinibatchInputs* inputMatrices,
                                    const std::list<ComputationNodeBasePtr>& learnableNodes,
-                                   std::list<Matrix<ElemType>>& smoothedGradients,
+                                   std::list<Matrix<ElemType>>& smoothedGradients, std::vector<double> smoothedCounts,
                                    const double learningRateAdjustmentFactor);
 
     // uses a small percentage of training data of minibatch to
@@ -437,7 +438,7 @@ protected:
                                       const std::vector<ComputationNodeBasePtr>& evaluationNodes,
                                       StreamMinibatchInputs* inputMatrices,
                                       const std::list<ComputationNodeBasePtr>& learnableNodes,
-                                      std::list<Matrix<ElemType>>& smoothedGradients,
+                                      std::list<Matrix<ElemType>>& smoothedGradients, std::vector<double> smoothedCounts,
                                       const size_t minMinibatchSize, const size_t maxMinibatchSize);
 
     // Attemps to compute the error signal for the whole utterance, which will
@@ -464,7 +465,7 @@ protected:
                          const std::vector<ComputationNodeBasePtr>& evaluationNodes,
                          StreamMinibatchInputs* inputMatrices,
                          const std::list<ComputationNodeBasePtr>& learnableNodes,
-                         std::list<Matrix<ElemType>>& smoothedGradients,
+                         std::list<Matrix<ElemType>>& smoothedGradients, std::vector<double>& smoothedCounts,
                          /*out*/ EpochCriterion& epochCriterion,
                          /*out*/ std::vector<EpochCriterion>& epochEvalErrors,
                          const std::string& prefixMsg = "");
@@ -472,29 +473,20 @@ protected:
     void InitDistGradAgg(int numEvalNodes, int traceLevel);
     void InitModelAggregationHandler(int traceLevel, DEVICEID_TYPE devID);
 public:
-    // UpdateWeightsS - static version of UpdateWeights()
-    static void UpdateWeightsS(const SGD* sgd, Matrix<ElemType>& functionValues,
-                               Matrix<ElemType>& gradientValues,
-                               Matrix<ElemType>& smoothedGradient,
-                               const double learnRatePerSample,
-                               const double momentumPerSample,
-                               size_t actualMBSize,
-                               const double L2RegWeight,
-                               const double L1RegWeight,
-                               const bool needAveMultiplier,
-                               const bool useNesterovMomentum);
-
-protected:
-    // UpdateWeights - update the weights in
-    void UpdateWeights(const ComputationNodeBasePtr& node,
-                       Matrix<ElemType>& smoothedGradient,
-                       const double learnRatePerSample,
-                       const double momentumPerSample,
-                       const size_t actualMBSize,
+    // UpdateWeights() - actual weight update, implementing various update rules
+    void UpdateWeights(Matrix<ElemType>& functionValues, Matrix<ElemType>& gradientValues,
+                       Matrix<ElemType>& smoothedGradient, double& smoothedCount,
+                       const double learnRatePerSample, const double momentumPerSample,
+                       size_t actualMBSize,
                        const double L2RegWeight, const double L1RegWeight,
                        const bool needAveMultiplier,
                        const bool useNesterovMomentum) const;
+    // return -1 if nothing exists
+    int DetermineStartEpoch(const bool makeMode);
 
+    wstring GetModelNameForEpoch(const int epoch, bool bLastModel = false);
+
+protected:
     void ClipGradient(Matrix<ElemType>& gradient, const size_t actualMBSize) const;
 
     void SaveCheckPointInfo(const size_t epoch, const size_t totalSamplesSeen, // TODO: combine totalSamplesSeen and prevCriterion into a EpochCriterion type
@@ -517,18 +509,14 @@ protected:
                             /*out*/ size_t& minibatchSize);
 
     wstring GetCheckPointFileNameForEpoch(const int epoch);
-    wstring GetModelNameForEpoch(const int epoch, bool bLastModel = false);
-
-    // return -1 if nothing exists
-    int DetermineStartEpoch(const bool makeMode);
 
     GradientsUpdateType GradUpdateType() const
     {
-        return m_gradType.mType;
+        return m_gradType.type;
     }
     double GradientUpdateNoiseStd() const
     {
-        return m_gradType.mGaussianNoiseInjectStd;
+        return m_gradType.gaussianNoiseInjectStd;
     }
 
 public:

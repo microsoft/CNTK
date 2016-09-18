@@ -1,8 +1,12 @@
 #!/bin/bash
 
+export MKL_NUM_THREADS=4
+export MKL_CBWR=COMPATIBLE
+export OMP_NUM_THREADS=1
+
 . $TEST_DIR/../run-test-common
 
-cntkrun  01_OneHidden.cntk "train=[SGD=[maxEpochs=3]] imageLayout=\"$imageLayout\""
+cntkrun  01_OneHidden.cntk "forceDeterministicAlgorithms=true stderr=- trainNetwork=[SGD=[maxEpochs=3]]"
 ExitCode=$?
 
 # Delete the test data if copied

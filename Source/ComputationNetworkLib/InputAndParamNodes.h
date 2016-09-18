@@ -56,13 +56,16 @@ public:
                             unsigned long randomSeed = 0,
                             bool initOnCPUOnly = false);
 
+    // Initialize with bilinear interpolation coefficients (useful for deconvolution layer).
+    void InitBilinear(size_t kernelWidth, size_t kernelHeight);
+
     // initialize by reading a matrix from a text file
     void InitFromFile(const std::wstring& initFromFilePath);
 
 private:
     // initialize with random numbers
     // If 'initOnCPUOnly' then always init on CPU, making initialization consistent across both (for testing).
-    void InitRandom(const std::wstring& type, const unsigned long randomSeed, const ElemType initValueScale, bool initOnCPUOnly);
+    void InitRandom(const std::wstring& type, const unsigned long randomSeed, const ElemType initValueScale, const size_t initFilterRank, const int initOutputRank, const bool initOnCPUOnly);
 
     // helper to initialize from a matrix read from a text file or a string literal
     void InitFromArray(const std::vector<ElemType>& array, size_t numRows, size_t numCols);
@@ -103,6 +106,8 @@ private:
     std::wstring m_initString; // if non-empty then deferred initialization is needed. Gets cleared upon completion of deferred init.
     unsigned long m_randomSeed;
     ElemType m_initValueScale;
+    size_t m_initFilterRank;
+    int m_initOutputRank;
     bool m_initOnCPUOnly;
     ElemType m_initValue;
 };
@@ -508,17 +513,17 @@ public:
         if (inputIndex == 0) // left derivative (embedding matrix)
         {
             // This is a reduction operation, hence we need to mask out gaps.
-            Matrix<ElemType> sliceInput1Value = Input(1)->MaskedValueFor(t);
+            Matrix<ElemType> sliceInput1Value = InputRef(1).MaskedValueFor(t);
             Matrix<ElemType> sliceOutputGrad = MaskedGradientFor(t);
 
-            BackpropToLeft(sliceInput1Value, Input(0)->GradientAsMatrix(), sliceOutputGrad);
+            BackpropToLeft(sliceInput1Value, InputRef(0).GradientAsMatrix(), sliceOutputGrad);
         }
         else if (inputIndex == 1) // right derivative (input)
         {
-            Matrix<ElemType> sliceInput1Grad = Input(1)->GradientFor(t);
+            Matrix<ElemType> sliceInput1Grad = InputRef(1).GradientFor(t);
             Matrix<ElemType> sliceOutputGrad = GradientFor(t);
 
-            BackpropToRight(Input(0)->ValueAsMatrix(), sliceInput1Grad, sliceOutputGrad);
+            BackpropToRight(InputRef(0).ValueAsMatrix(), sliceInput1Grad, sliceOutputGrad);
         }
     }
 
@@ -556,8 +561,8 @@ public:
     {
         // input0 is the weight (each column is an embedding of one word), input 1 contains m_nbrLooked words in each column (sample)
         Matrix<ElemType> functionValues =           ValueFor(t);
-        const Matrix<ElemType>&  input0 = Input(0)->ValueAsMatrix();
-        Matrix<ElemType>         input1 = Input(1)->ValueFor(t);
+        const Matrix<ElemType>&  input0 = InputRef(0).ValueAsMatrix();
+        Matrix<ElemType>         input1 = InputRef(1).ValueFor(t);
 
         size_t rows1 = input1.GetNumRows(), cols1 = input1.GetNumCols();
         size_t cols0 = input0.GetNumCols();

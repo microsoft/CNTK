@@ -119,7 +119,7 @@ declare -a libzipFiles=("libzip.so")
 declare -a cudaFiles=("libcudart.so.7.5" "libcublas.so.7.5" "libcurand.so.7.5" "libcusparse.so.7.5")
 
 # cuDNN
-declare -a cudnnFiles=("libcudnn.so.4")
+declare -a cudnnFiles=("libcudnn.so.5")
 
 # Include files
 declare -a includeFiles=("Eval.h")
@@ -129,7 +129,7 @@ mklPath="/usr/local/CNTKCustomMKL/1/x64/parallel"
 opencvPath="/usr/local/opencv-3.1.0/lib"
 libzipPath="/usr/local/lib"
 cudaPath="/usr/local/cuda/lib64"
-cudnnPath="/usr/local/cudnn-4.0/cuda/lib64"
+cudnnPath="/usr/local/cudnn-5.1/cuda/lib64"
 
 # Set build paths
 buildPath="build/$targetConfig/release"
@@ -149,8 +149,13 @@ mkdir -p $baseBinariesPath
 echo "Copying build binaries..." >&3
 cp -r $buildPath/* $baseBinariesPath
 # Remove unnessesary file(s) if exist(s)
-rm -f $baseBinariesPath/bin/v2librarytests
+rm -f $baseBinariesPath/bin/brainscripttests
 rm -f $baseBinariesPath/bin/cppevalclient
+rm -f $baseBinariesPath/bin/evaltests
+rm -f $baseBinariesPath/bin/mathtests
+rm -f $baseBinariesPath/bin/networktests
+rm -f $baseBinariesPath/bin/readertests
+rm -f $baseBinariesPath/bin/v2librarytests
 rm -f $baseBinariesPath/lib/libcntklibrary-2.0.so
 
 # Make Include directory

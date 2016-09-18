@@ -92,13 +92,13 @@ public:
     void MaskColumnsValue(const CPUMatrix<char>& columnsMask, ElemType val);
 
     CPUSparseMatrix<ElemType>& DoGatherColumnsOf(ElemType beta, const CPUMatrix<ElemType>& idx, const CPUSparseMatrix<ElemType>& a, ElemType alpha);
+    CPUSparseMatrix<ElemType>& DoScatterColumnsOf(ElemType beta, const CPUMatrix<ElemType>& idx, const CPUSparseMatrix<ElemType>& a, ElemType alpha);
 
     size_t BufferSize() const
     {
         return GetSizeAllocated() * sizeof(ElemType);
     }
     ElemType* Data() const;
-    ElemType* Data();
     inline size_t GetNumElemAllocated() const
     {
         return GetSizeAllocated();
@@ -118,9 +118,15 @@ public:
     void SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYPE* h_CSCCol, const CPUSPARSE_INDEX_TYPE* h_Row, const ElemType* h_Val,
                                 const size_t nz, const size_t numRows, const size_t numCols);
 
+    // Dense * Sparse -> Dense
     static void MultiplyAndWeightedAdd(ElemType alpha, const CPUMatrix<ElemType>& lhs, const bool transposeA,
                                        const CPUSparseMatrix<ElemType>& rhs, const bool transposeB, ElemType beta, CPUMatrix<ElemType>& c);
 
+    // Sparse * Dense -> Dense
+    static void MultiplyAndWeightedAdd(ElemType alpha, const CPUSparseMatrix<ElemType>& lhs, const bool transposeA,
+                                       const CPUMatrix<ElemType>& rhs, const bool transposeB, ElemType beta, CPUMatrix<ElemType>& c);
+
+    // Dense * Sparse -> Sparse
     static void MultiplyAndAdd(ElemType alpha, const CPUMatrix<ElemType>& lhs, const bool transposeA,
                                const CPUSparseMatrix<ElemType>& rhs, const bool transposeB, CPUSparseMatrix<ElemType>& c);
 
@@ -262,7 +268,8 @@ public:
 
     CPUSPARSE_INDEX_TYPE* MajorIndexLocation() const
     {
-        return GetUnCompIndex() + GetCompIndex()[m_sliceViewOffset];
+        return (GetUnCompIndex() + 
+            ((GetFormat() == matrixFormatSparseCSC || GetFormat() == matrixFormatSparseCSR) ? GetCompIndex()[m_sliceViewOffset] : 0));
     } // this is the major index, row/col ids in CSC/CSR format
 
     size_t MajorIndexCount() const
