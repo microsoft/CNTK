@@ -195,6 +195,9 @@ namespace CNTK
                     auto initialStateVar = Constant::Scalar(node->As<PastValueNode<ElementType>>()->InitialActivationValue(), AsDeviceDescriptor(node->GetDeviceId()));
                     inputVars.push_back(initialStateVar);
                 }
+                else
+                    LogicError("LoadLegacyModel: Currently loading models with non-scalar initial value for PastValueNode/FutureValueNode is unsupported");
+
                 primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameOffset] = (size_t)node->As<PastValueNode<ElementType>>()->TimeStep();
                 opType = PrimitiveOpType::PastValue;
             }
@@ -205,6 +208,9 @@ namespace CNTK
                     auto initialStateVar = Constant::Scalar(node->As<FutureValueNode<ElementType>>()->InitialActivationValue(), AsDeviceDescriptor(node->GetDeviceId()));
                     inputVars.push_back(initialStateVar);
                 }
+                else
+                    LogicError("LoadLegacyModel: Currently loading models with non-scalar initial value for PastValueNode/FutureValueNode is unsupported");
+
                 primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameOffset] = (size_t)node->As<FutureValueNode<ElementType>>()->TimeStep();
                 opType = PrimitiveOpType::FutureValue;
             }
@@ -338,15 +344,18 @@ namespace CNTK
         switch (dataType)
         {
         case DataType::Float:
-            computationNetwork = compositeFunction->GetComputationNetwork<float>(device, {});
+            computationNetwork = compositeFunction->GetComputationNetwork<float>(device, {}, false);
             break;
         case DataType::Double:
-            computationNetwork = compositeFunction->GetComputationNetwork<double>(device, {});
+            computationNetwork = compositeFunction->GetComputationNetwork<double>(device, {}, false);
             break;
         default:
             LogicError("Unknown DataType %s", DataTypeName(dataType));
         }
 
         computationNetwork->Save(modelFile);
+
+        if (!compositeFunction->NetworkMatricesAllocated())
+            compositeFunction->PurgeComputationNetwork();
     }
 }

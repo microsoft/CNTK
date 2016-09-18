@@ -209,6 +209,141 @@ void TestSlice(const DeviceDescriptor& device)
     }
 }
 
+void CompareFunctions(const FunctionPtr& first, const FunctionPtr& second, ParameterCloningMethod parameterCloningMethod, const std::unordered_map<Variable, Variable>& replacements, std::unordered_set<FunctionPtr>& visitedFunctions)
+{
+    if ((first->RootFunction() == nullptr) != (second->RootFunction() == nullptr))
+        throw std::runtime_error("CompareFunctions: Both functions should be primitives or both should be composites");
+
+    if (first->Name() != second->Name())
+        throw std::runtime_error("CompareFunctions: Both functions' names should match");
+
+    if (first->Attributes() != second->Attributes())
+        throw std::runtime_error("CompareFunctions: Both functions' attributes should match");
+
+    auto firstPrimitive = (first->RootFunction() == nullptr) ? first : first->RootFunction();
+    auto secondPrimitive = (second->RootFunction() == nullptr) ? second : second->RootFunction();
+
+    // All the outputs must be equivalent
+    if (firstPrimitive->Outputs().size() != secondPrimitive->Outputs().size())
+        throw std::runtime_error("CompareFunctions: Both functions' should have same number of outputs");
+
+    visitedFunctions.insert(firstPrimitive);
+
+    for (size_t i = 0; i < firstPrimitive->Outputs().size(); ++i)
+    {
+        auto firstFunctionOutput = firstPrimitive->Outputs()[i];
+        auto secondFunctionOutput = secondPrimitive->Outputs()[i];
+
+        if ((firstFunctionOutput.Name() != secondFunctionOutput.Name()) ||
+            (firstFunctionOutput.DynamicAxes() != secondFunctionOutput.DynamicAxes()) ||
+            (firstFunctionOutput.GetDataType() != secondFunctionOutput.GetDataType()) ||
+            (firstFunctionOutput.IsSparse() != secondFunctionOutput.IsSparse()) ||
+            (firstFunctionOutput.Kind() != secondFunctionOutput.Kind()) ||
+            (firstFunctionOutput.Shape() != secondFunctionOutput.Shape()))
+        {
+            throw std::runtime_error("CompareFunctions: Both functions' outputs should match");
+        }
+    }
+
+    // All of the inputs must be identical
+    if (firstPrimitive->Inputs().size() != secondPrimitive->Inputs().size())
+        throw std::runtime_error("CompareFunctions: Both functions' should have same number of inputs");
+
+    for (size_t i = 0; i < firstPrimitive->Inputs().size(); ++i)
+    {
+        auto firstFunctionInput = firstPrimitive->Inputs()[i];
+        auto secondFunctionInput = secondPrimitive->Inputs()[i];
+
+        if (replacements.find(firstFunctionInput) != replacements.end())
+        {
+            if (replacements.at(firstFunctionInput) != secondFunctionInput)
+                throw std::runtime_error("CompareFunctions: The 2nd function does not have the expected replacement");
+        }
+        else
+        {
+            if (firstFunctionInput.IsOutput())
+            {
+                if (visitedFunctions.find(firstFunctionInput.Owner()) == visitedFunctions.end())
+                    CompareFunctions(firstFunctionInput.Owner(), secondFunctionInput.Owner(), parameterCloningMethod, replacements, visitedFunctions);
+            }
+            else
+            {
+                if ((firstFunctionInput.Name() != secondFunctionInput.Name()) ||
+                    (firstFunctionInput.DynamicAxes() != secondFunctionInput.DynamicAxes()) ||
+                    (firstFunctionInput.IsSparse() != secondFunctionInput.IsSparse()) ||
+                    (firstFunctionInput.Shape() != secondFunctionInput.Shape()) ||
+                    (firstFunctionInput.GetDataType() != secondFunctionInput.GetDataType()))
+                {
+                    throw std::runtime_error("CompareFunctions: The leaves of the functions are not equivalent");
+                }
+
+                if ((firstFunctionInput.Kind() != VariableKind::Parameter) && ((firstFunctionInput.Kind() != secondFunctionInput.Kind()) || (firstFunctionInput.NeedsGradient() != secondFunctionInput.NeedsGradient())))
+                    throw std::runtime_error("CompareFunctions: The leaves of the functions are not equivalent");
+
+                switch (firstFunctionInput.Kind())
+                {
+                case VariableKind::Parameter:
+                    if ((parameterCloningMethod == ParameterCloningMethod::Share) && (firstFunctionInput != secondFunctionInput))
+                        throw std::runtime_error("CompareFunctions: The parameters of the functions are not equivalent per the specified cloning method");
+
+                    if ((parameterCloningMethod == ParameterCloningMethod::Clone) &&
+                        ((firstFunctionInput == secondFunctionInput) || (DictionaryValue(*(Parameter(firstFunctionInput).Value())) != DictionaryValue(*(Parameter(secondFunctionInput).Value())))))
+                    {
+                        throw std::runtime_error("CompareFunctions: The parameters of the functions are not equivalent per the specified cloning method");
+                    }
+
+                    if ((parameterCloningMethod == ParameterCloningMethod::Freeze) &&
+                        ((firstFunctionInput == secondFunctionInput) || !secondFunctionInput.IsConstant() || (DictionaryValue(*(Parameter(firstFunctionInput).Value())) != DictionaryValue(*(Constant(secondFunctionInput).Value())))))
+                    {
+                        throw std::runtime_error("CompareFunctions: The parameters of the functions are not equivalent per the specified cloning method");
+                    }
+
+                    break;
+                case VariableKind::Constant:
+                    if (DictionaryValue(*(Constant(firstFunctionInput).Value())) != DictionaryValue(*(Constant(secondFunctionInput).Value())))
+                        throw std::runtime_error("CompareFunctions: The constants of the functions are not equivalent");
+
+                    break;
+                }
+            }
+        }
+    }
+}
+
+void TestRecurrentFunctionCloning()
+{
+    size_t inputDim = 2;
+    size_t outputDim = 3;
+    auto device = DeviceDescriptor::CPUDevice();
+    Parameter timesParam(MakeSharedObject<NDArrayView>(0.5f, NDShape({ outputDim, inputDim }), device), L"timesParameters");
+    Parameter plusParam(MakeSharedObject<NDArrayView>(0.1f, std::initializer_list<size_t>({ outputDim }), device), L"plusParameters");
+
+    auto inputVar = InputVariable({ inputDim }, false, DataType::Float, true, L"input");
+
+    auto placeholder = PlaceholderVariable({ outputDim });
+    auto plusOutput = Plus(plusParam, Plus(placeholder, Times(timesParam, inputVar)), L"plusOutput");
+    auto placeholderReplacement = PastValue(plusOutput);
+    plusOutput = plusOutput->ReplacePlaceholders({ { placeholder, placeholderReplacement } });
+
+    auto reducedOutput = ReduceSum(plusOutput, L"sum");
+    auto rootFuncOriginal = Combine({ reducedOutput, plusOutput });
+
+    std::unordered_set<FunctionPtr> visitedFunctions;
+
+    auto clonedFunctionWithParametersCloned = rootFuncOriginal->Clone();
+    CompareFunctions(rootFuncOriginal, clonedFunctionWithParametersCloned, ParameterCloningMethod::Clone, {}, visitedFunctions);
+
+    visitedFunctions.clear();
+    auto clonedFunctionWithParametersShared = clonedFunctionWithParametersCloned->Clone(ParameterCloningMethod::Share);
+    CompareFunctions(clonedFunctionWithParametersCloned, clonedFunctionWithParametersShared, ParameterCloningMethod::Share, {}, visitedFunctions);
+
+    visitedFunctions.clear();
+    auto replacementInputVar = InputVariable({ inputDim }, true, DataType::Double, false, L"input2");
+    std::unordered_map<Variable, Variable> cloningReplacements = { { *(clonedFunctionWithParametersShared->Arguments().begin()), replacementInputVar } };
+    auto clonedFunctionWithParametersFrozen = clonedFunctionWithParametersShared->Clone(ParameterCloningMethod::Freeze, cloningReplacements);
+    CompareFunctions(clonedFunctionWithParametersShared, clonedFunctionWithParametersFrozen, ParameterCloningMethod::Freeze, cloningReplacements, visitedFunctions);
+}
+
 void FunctionTests()
 {
     TestSlice(DeviceDescriptor::CPUDevice());
@@ -216,4 +351,6 @@ void FunctionTests()
 
     TestReduceSum(DeviceDescriptor::CPUDevice());
     TestReduceSum(DeviceDescriptor::GPUDevice(0));
+
+    TestRecurrentFunctionCloning();
 }
