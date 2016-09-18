@@ -1,19 +1,18 @@
 # Simple CIFAR-10 convnet, without and with BatchNormalization.
 
 command = TrainConvNet:Eval
-#command = TrainConvNetWithBN:Eval
 
 makeMode = false ; traceLevel = 1 ; deviceId = 0
 
 RootDir = "." ; DataDir  = "$RootDir$" ; ModelDir = "$RootDir$/Output/Models"
 
-modelPath = "$ModelDir$/01_Convolution"
+modelPath = "$ModelDir$/ConvNet"
 
 # Training without BN
-TrainConvNet = [
+TrainConvNet = {
     action = "train"
 
-    BrainScriptNetworkBuilder = [
+    BrainScriptNetworkBuilder = {
         imageShape = 32:32:3
         labelDim = 10
 
@@ -21,15 +20,15 @@ TrainConvNet = [
 
         model = Sequential (
             Subtract128 :
-            ConvolutionalLayer {32, (5:5), pad = true, activation = ReLU, init = "gaussian", initValueScale = 0.0043} :
+            ConvolutionalLayer {32, (5:5), pad = true, activation = ReLU, init = 'glorotUniform', initValueScale=0.00390625} :
               MaxPoolingLayer {(3:3), stride = (2:2)} :
-            ConvolutionalLayer {32, (5:5), pad = true, activation = ReLU, init = "gaussian", initValueScale = 1.414} :
+            ConvolutionalLayer {32, (5:5), pad = true, activation = ReLU, init = 'glorotUniform'} :
               MaxPoolingLayer {(3:3), stride = (2:2)} :
-            ConvolutionalLayer {64, (5:5), pad = true, activation = ReLU, init = "gaussian", initValueScale = 1.414} :
+            ConvolutionalLayer {64, (5:5), pad = true, activation = ReLU, init = 'glorotUniform'} :
               MaxPoolingLayer {(3:3), stride = (2:2)} :
-            DenseLayer {64, activation = ReLU, init = "gaussian", initValueScale = 12} :
+            DenseLayer {64, activation = ReLU, init = 'glorotUniform', initValueScale=0.1} :
               Dropout :
-            LinearLayer {labelDim, init = "gaussian", initValueScale = 1.5}
+            LinearLayer {labelDim, init = 'glorotUniform', initValueScale=0.1}
         )
 
         # inputs
@@ -41,17 +40,17 @@ TrainConvNet = [
 
         # connect to system
         ce       = CrossEntropyWithSoftmax (labels, z)
-        errs     = ErrorPrediction         (labels, z)
-        top5Errs = ErrorPrediction         (labels, z, topN=5)  # only used in Eval action
+        errs     = ClassificationError         (labels, z)
+        top5Errs = ClassificationError         (labels, z, topN=5)  # only used in Eval action
 
         featureNodes    = (features)
         labelNodes      = (labels)
         criterionNodes  = (ce)
         evaluationNodes = (errs)  # top5Errs only used in Eval
         outputNodes     = (z)
-    ]
+    }
 
-    SGD = [
+    SGD = {
         epochSize = 49984 ; minibatchSize = 64
 
         learningRatesPerSample = 0.00015625*10:0.000046875*10:0.000015625
@@ -61,97 +60,29 @@ TrainConvNet = [
         dropoutRate = 0*5:0.5
 
         firstMBsToShowResult = 10 ; numMBsToShowResult = 500
-    ]
+    }
 
-    reader = [
+    reader = {
         readerType = "CNTKTextFormatReader"
         file = "$DataDir$/Train_cntk_text.txt"
-        input = [
-            features = [ dim = 3072 ; format = "dense" ]
-            labels   = [ dim = 10 ;   format = "dense" ]
-        ]
-    ]
-]
-
-# Training with BN
-# Not working well on this small set. Overtrains.
-TrainConvNetWithBN = [
-    action = "train"
-
-    BrainScriptNetworkBuilder = [
-        imageShape = 32:32:3
-        labelDim = 10
-
-        Subtract128 (x) = x - Constant (128)
-
-        model = Sequential (
-            Subtract128 :
-            ConvolutionalLayer {32, (5:5), pad = true, bias = false, init = "gaussian", initValueScale = 0.0043} :
-              BatchNormalizationLayer {spatialRank = 2, normalizationTimeConstant = 4096} : ReLU :
-                MaxPoolingLayer {(3:3), stride = (2:2)} :
-            ConvolutionalLayer {32, (5:5), pad = true, bias = false, init = "gaussian", initValueScale = 1.414} :
-              BatchNormalizationLayer {spatialRank = 2, normalizationTimeConstant = 4096} : ReLU :
-                MaxPoolingLayer {(3:3), stride = (2:2)} :
-            ConvolutionalLayer {64, (5:5), pad = true, bias = false, init = "gaussian", initValueScale = 1.414} :
-              BatchNormalizationLayer {spatialRank = 2, normalizationTimeConstant = 4096} : ReLU :
-                MaxPoolingLayer {(3:3), stride = (2:2)} :
-            LinearLayer {64, bias = false, init = "gaussian", initValueScale = 12} :
-              BatchNormalizationLayer {normalizationTimeConstant = 4096} : ReLU :
-            LinearLayer {labelDim, init = "gaussian", initValueScale = 1.5}
-        )
-
-        # inputs
-        features = Input {imageShape}
-        labels   = Input {labelDim}
-
-        # apply model to features
-        z = model (features)
-
-        # connect to system
-        ce       = CrossEntropyWithSoftmax (labels, z)
-        errs     = ErrorPrediction         (labels, z)
-        top5Errs = ErrorPrediction         (labels, z, topN=5)
-
-        featureNodes    = (features)
-        labelNodes      = (labels)
-        criterionNodes  = (ce)
-        evaluationNodes = (errs)
-        outputNodes     = (z)
-    ]
-
-    SGD = [
-        epochSize = 49984 ; minibatchSize = 64
-
-        learningRatesPerSample = 0.00046875*7:0.00015625
-        momentumAsTimeConstant = 0
-        maxEpochs = 10
-        L2RegWeight = 0
-        dropoutRate = 0
-
-        firstMBsToShowResult = 10 ; numMBsToShowResult = 500
-    ]
-
-    reader = [
-        readerType = "CNTKTextFormatReader"
-        file = "$DataDir$/Train_cntk_text.txt"
-        input = [
-            features = [ dim = 3072 ; format = "dense" ]
-            labels   = [ dim = 10 ;   format = "dense" ]
-        ]
-    ]
-]
+        input = {
+            features = { dim = 3072 ; format = "dense" }
+            labels   = { dim = 10 ;   format = "dense" }
+        }
+    }
+}
 
 # Eval action
-Eval = [
+Eval = {
     action = "eval"
     minibatchSize = 16
     evalNodeNames = errs:top5Errs  # also test top-5 error rate
-    reader = [
+    reader = {
         readerType = "CNTKTextFormatReader"
         file = "$DataDir$/Test_cntk_text.txt"
-        input = [
-            features = [ dim = 3072 ; format = "dense" ]
-            labels   = [ dim = 10 ;   format = "dense" ]
-        ]
-    ]
-]
+        input = {
+            features = { dim = 3072 ; format = "dense" }
+            labels   = { dim = 10 ;   format = "dense" }
+        }
+    }
+}

@@ -111,6 +111,9 @@
     <ClInclude Include="CPURNGHandle.h">
       <Filter>CPU</Filter>
     </ClInclude>
+    <ClInclude Include="RNNCommon.h">
+      <Filter>RNN</Filter>
+    </ClInclude>
     <ClInclude Include="BlockHandlerAVX.h">
         <Filter>CPU</Filter>
     </ClInclude>
@@ -172,6 +175,9 @@
     </Filter>
     <Filter Include="BatchNormalization">
       <UniqueIdentifier>{8f982dac-298d-4e48-b060-8e6cba5ff554}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="RNN">
+      <UniqueIdentifier>{ee6bf704-73f0-488d-8432-0d23f034de88}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

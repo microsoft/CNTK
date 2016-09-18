@@ -13,7 +13,7 @@
   "B1" [ label = "B1 [512 x 1]\nLearnableParameter" ] ;
   "B2" [ label = "B2 [132 x 1]\nLearnableParameter" ] ;
   "CrossEntropyWithSoftmax" [ label = "CrossEntropyWithSoftmax [1]\nCrossEntropyWithSoftmax" ] ;
-  "EvalErrorPrediction" [ label = "EvalErrorPrediction [1]\nErrorPrediction" ] ;
+  "EvalClassificationError" [ label = "EvalClassificationError [1]\nClassificationError" ] ;
   "features" [ label = "features [363 x *]\nInputValue" ] ;
   "H1" [ label = "H1 [512 x 1 x *]\nSigmoid" ] ;
   "H2" [ label = "H2 [512 x 1 x *]\nSigmoid" ] ;
@@ -38,7 +38,7 @@
  		 rank=source ;  "features"  
 }
  subgraph {
- 		 rank=sink ;  "CrossEntropyWithSoftmax" "ScaledLogLikelihood" "EvalErrorPrediction"  
+ 		 rank=sink ;  "CrossEntropyWithSoftmax" "ScaledLogLikelihood" "EvalClassificationError"  
 }
  "labels" -> "CrossEntropyWithSoftmax" ; 
  "HLast" -> "CrossEntropyWithSoftmax" ; 
@@ -61,8 +61,8 @@
  "InvStdOfFeatures" -> "MVNormalizedFeatures" ; 
  "features" -> "InvStdOfFeatures" ; 
  "features" -> "MeanOfFeatures" ; 
- "labels" -> "EvalErrorPrediction" ; 
- "HLast" -> "EvalErrorPrediction" ; 
+ "labels" -> "EvalClassificationError" ; 
+ "HLast" -> "EvalClassificationError" ; 
  "HLast" -> "ScaledLogLikelihood" ; 
  "LogOfPrior" -> "ScaledLogLikelihood" ; 
  "Prior" -> "LogOfPrior" ; 

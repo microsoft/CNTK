@@ -31,6 +31,8 @@ namespace CNTK
         TransposeAxes,
         Where,
         Slice,
+        Dropout,
+        Reshape,
         Pooling,
         SumAll,
         Plus,
@@ -44,6 +46,7 @@ namespace CNTK
         GreaterEqual,
         PackedIndex,
         GatherPacked,
+        ScatterPacked,
         Times,
         TransposeTimes,
         Convolution,
@@ -54,6 +57,9 @@ namespace CNTK
         FutureValue,
         ReduceElements,
         BatchNormalization,
+        Clip,
+        Select,
+        Splice,
         Combine,
     };
 }
@@ -73,7 +79,7 @@ namespace CNTK
 {
     inline const char* PrimitiveOpTypeName(PrimitiveOpType opType)
     {
-        static std::unordered_map<PrimitiveOpType, const char*> primitiveOpNames = {
+        static const std::unordered_map<PrimitiveOpType, const char*> primitiveOpNames = {
             { PrimitiveOpType::Negate, "Negate" },
             { PrimitiveOpType::Sigmoid, "Sigmoid" },
             { PrimitiveOpType::Tanh, "Tanh" },
@@ -89,6 +95,8 @@ namespace CNTK
             { PrimitiveOpType::TransposeAxes, "TransposeAxes" },
             { PrimitiveOpType::Where, "Where" },
             { PrimitiveOpType::Slice, "Slice" },
+            { PrimitiveOpType::Dropout, "Dropout" },
+            { PrimitiveOpType::Reshape, "Reshape" },
             { PrimitiveOpType::Pooling, "Pooling" },
             { PrimitiveOpType::SumAll, "SumAll" },
             { PrimitiveOpType::Plus, "Plus" },
@@ -102,6 +110,7 @@ namespace CNTK
             { PrimitiveOpType::GreaterEqual, "GreaterEqual" },
             { PrimitiveOpType::PackedIndex, "PackedIndex" },
             { PrimitiveOpType::GatherPacked, "GatherPacked" },
+            { PrimitiveOpType::ScatterPacked, "ScatterPacked" },
             { PrimitiveOpType::Times, "Times" },
             { PrimitiveOpType::TransposeTimes, "TransposeTimes" },
             { PrimitiveOpType::Convolution, "Convolution" },
@@ -112,6 +121,9 @@ namespace CNTK
             { PrimitiveOpType::FutureValue, "FutureValue" },
             { PrimitiveOpType::ReduceElements, "ReduceElements" },
             { PrimitiveOpType::BatchNormalization, "BatchNormalization" },
+            { PrimitiveOpType::Clip, "Clip" },
+            { PrimitiveOpType::Select, "Select" },
+            { PrimitiveOpType::Splice, "Splice" },
             { PrimitiveOpType::Combine, "Combine" }
         };
 
@@ -121,8 +133,56 @@ namespace CNTK
         return primitiveOpNames.find(opType)->second;
     }
 
+    inline std::unordered_map<size_t, size_t> GetPrimitiveFunctionInputsToCNTKNodeInputsIndexMap(PrimitiveOpType op, size_t numFunctionInputs)
+    {
+        std::unordered_map<size_t, size_t> indexMap;
+        if ((op == PrimitiveOpType::CrossEntropyWithSoftmax) || (op == PrimitiveOpType::ClassificationError) || (op == PrimitiveOpType::GatherPacked))
+            indexMap = std::unordered_map<size_t, size_t>({ { 0, 1 }, { 1, 0 } });
+        else if (op == PrimitiveOpType::ScatterPacked)
+            indexMap = std::unordered_map<size_t, size_t>({ { 0, 2 }, { 1, 1 }, { 2, 0 } });
+        else if (op == PrimitiveOpType::Clip)
+            indexMap = std::unordered_map<size_t, size_t>({ { 0, 2 }, { 1, 0 }, { 2, 1 } });
+        else
+        {
+            for (size_t i = 0; i < numFunctionInputs; ++i)
+                indexMap.insert(std::make_pair(i, i));
+        }
+
+        if (indexMap.size() != numFunctionInputs)
+            LogicError("Size of the PrimitiveFunctionInputsToCNTKNodeInputsIndexMap does not match the actual number of Inputs of the PrimitiveFunction");
+
+        for (auto indexPair : indexMap)
+        {
+            if ((indexPair.first >= numFunctionInputs) || (indexPair.second >= numFunctionInputs))
+                LogicError("The index values in the PrimitiveFunctionInputsToCNTKNodeInputsIndexMap cannot be >= the number of Inputs of the PrimitiveFunction");
+        }
+
+        return indexMap;
+    }
+
+    template <typename T>
+    inline void ReorderAsCNTKComputationNodeInputs(PrimitiveOpType op, std::vector<T>& vec)
+    {
+        auto indexMap = GetPrimitiveFunctionInputsToCNTKNodeInputsIndexMap(op, vec.size());
+        auto vecCopy = vec;
+
+        for (auto indexPair : indexMap)
+            vec[indexPair.second] = vecCopy[indexPair.first];
+    }
+
+    inline void ReorderAsPrimitiveFunctionInputs(PrimitiveOpType op, std::vector<Variable>& vec)
+    {
+        auto indexMap = GetPrimitiveFunctionInputsToCNTKNodeInputsIndexMap(op, vec.size());
+        auto vecCopy = vec;
+
+        for (auto indexPair : indexMap)
+            vec[indexPair.first] = vecCopy[indexPair.second];
+    }
+
     class PrimitiveFunction final : public Function
     {
+        friend class Function;
+
     public:
         static const std::wstring InternalSumReductionOpName;
         static const std::wstring InternalLogSumReductionOpName;
@@ -132,9 +192,35 @@ namespace CNTK
         static const std::wstring InternalAllReductionOpName;
         static const std::wstring InternalAnyReductionOpName;
 
+        static const std::wstring AttributeNameAxis;
+        static const std::wstring AttributeNameAxis1;
+        static const std::wstring AttributeNameAxis2;
+        static const std::wstring AttributeNameDropoutRate;
+        static const std::wstring AttributeNameNewShape;
+        static const std::wstring AttributeNameOutputRank;
+        static const std::wstring AttributeNameOffset;
+        static const std::wstring AttributeNameStrides;
+        static const std::wstring AttributeNameSharing;
+        static const std::wstring AttributeNameAutoPadding;
+        static const std::wstring AttributeNameLowerPad;
+        static const std::wstring AttributeNameUpperPad;
+        static const std::wstring AttributeNameTranspose;
+        static const std::wstring AttributeNameMaxTempMemSizeInSamples;
+        static const std::wstring AttributeNamePoolingType;
+        static const std::wstring AttributeNamePoolingWindowShape;
+        static const std::wstring AttributeNameSpatial;
+        static const std::wstring AttributeNameNormalizationTimeConstant;
+        static const std::wstring AttributeNameBlendTimeConstant;
+        static const std::wstring AttributeNameEpsilon;
+        static const std::wstring AttributeNameUseCuDNNEngine;
+        static const std::wstring AttributeNameNewDynamicAxes;
+        static const std::wstring AttributeNameBeginIndex;
+        static const std::wstring AttributeNameEndIndex;
+        static const std::wstring AttributeNameReductionOpName;
+
     public:
         PrimitiveFunction(PrimitiveOpType op, const std::vector<Variable>& inputs, Dictionary&& functionConfig, const std::wstring& functionName = L"")
-            : Function(inputs, GetOutputVariables(op, inputs, this, functionConfig), nullptr, functionName), m_op(op), m_functionConfig(std::move(functionConfig))
+            : Function(inputs, GetOutputVariables(op, inputs, this, functionConfig), std::move(functionConfig), nullptr, functionName), m_op(op)
         {
         }
 
@@ -153,14 +239,10 @@ namespace CNTK
             NOT_IMPLEMENTED;
         }
 
+    public:
         PrimitiveOpType OpType() const
         {
             return m_op;
-        }
-
-        const Dictionary& FunctionConfig() const
-        {
-            return m_functionConfig;
         }
 
     private:
@@ -171,68 +253,160 @@ namespace CNTK
             return operandShape;
         }
 
+        static NDShape ReshapeOutputShape(const NDShape& operandShape, const NDShape& newShape)
+        {
+            size_t inputElementsCount = 1;
+            for (size_t k = 0; k < operandShape.Rank(); k++)
+                inputElementsCount *= operandShape[k];
+
+            auto outputShape = newShape;
+            size_t targetElementsCount = 1;
+            size_t inferredAxisIndex = SIZE_MAX;
+            for (size_t k = 0; k < outputShape.Rank(); k++)
+            {
+                if (outputShape[k] != NDShape::InferredDimension)
+                    targetElementsCount *= outputShape[k];
+                else if (inferredAxisIndex == SIZE_MAX)
+                    inferredAxisIndex = k;
+                else
+                    InvalidArgument("CNTK::Reshape: More than one axis's dimension was specified as Inferred in the replacement shape (%S]", AsStringForErrorReporting(outputShape).c_str());
+            }
+            if (inferredAxisIndex != SIZE_MAX)
+                outputShape[inferredAxisIndex] = inputElementsCount / targetElementsCount;
+
+            return outputShape;
+        }
+
+        static NDShape SpliceOutputShape(const std::vector<Variable>& inputs, size_t axis)
+        {
+            // We must fuse all tensor shapes
+
+            // Determine maximum rank (we can stack tensors with lower rank, which will have their dimensions paded to max automatically)
+            size_t index = axis;
+            size_t maxRank = axis + 1; // spliceDim may exceed all of them, which will create a new dimension, e.g. stacking column vectors into a matrix
+            for (int i = 0; i < inputs.size(); i++)
+            {
+                auto inputAxesCount = inputs[i].Shape().Rank();
+                if (maxRank < inputAxesCount)
+                    maxRank = inputAxesCount;
+            }
+
+            // The following loop does multiple things:
+            //  - Count total dimension along index
+            //  - Verify all other dimension's compatibility (we allow broadcasting)
+
+            // dimensions padded to max rank; start with dims of first input
+            auto outputDims = inputs[0].Shape().AppendShape(NDShape(maxRank - inputs[0].Shape().Rank(), 1));
+
+            // This dimension is created, while all others are verified for consistency
+            outputDims[index] = 0;
+            for (int i = 0; i < inputs.size(); i++)
+            {
+                // check/fuse dims and accumulate the spliced dimension
+                auto& shape = inputs[i].Shape();
+                for (size_t k = 0; k < maxRank; k++)
+                {
+                    size_t dim = (k >= shape.Rank()) ? 1 : shape[k];
+                    // accumulate the spliced dimension
+                    if (k == index)
+                        outputDims[index] += dim;
+                    else
+                    {
+                        // check/fuse dimensions
+                        if (dim != outputDims[k] && dim != 1 && outputDims[k] != 1)
+                            InvalidArgument("CNTK::Splice: Conflicting dimension of axis %d between operand #%d (%d) and other(s) (%d)", (int)k, i, (int)dim, (int)outputDims[k]);
+
+                        // Broadcast
+                        if (outputDims[k] == 1)
+                            outputDims[k] = dim;
+                    }
+                }
+            }
+
+            return outputDims;
+        }
+
         static NDShape BinaryElementwiseOpOutputShape(PrimitiveOpType op, const NDShape& leftOperandShape, const NDShape& rightOperandShape, bool broadcastAllowed = true)
         {
-            const auto& shapeWithSmallerNumAxes = (leftOperandShape.NumAxes() > rightOperandShape.NumAxes()) ? rightOperandShape : leftOperandShape;
-            const auto& shapeWithLargerNumAxes = (leftOperandShape.NumAxes() > rightOperandShape.NumAxes()) ? leftOperandShape : rightOperandShape;
-            size_t numOutputAxes = shapeWithLargerNumAxes.NumAxes();
+            const auto& shapeWithSmallerNumAxes = (leftOperandShape.Rank() > rightOperandShape.Rank()) ? rightOperandShape : leftOperandShape;
+            const auto& shapeWithLargerNumAxes = (leftOperandShape.Rank() > rightOperandShape.Rank()) ? leftOperandShape : rightOperandShape;
+            size_t numOutputAxes = shapeWithLargerNumAxes.Rank();
             std::vector<size_t> outputDims(numOutputAxes);
-            for (size_t i = 0; i < shapeWithSmallerNumAxes.NumAxes(); ++i)
+            for (size_t i = 0; i < shapeWithSmallerNumAxes.Rank(); ++i)
             {
                 if ((leftOperandShape[i] == NDShape::InferredDimension) && (rightOperandShape[i] == NDShape::InferredDimension))
                     outputDims[i] = NDShape::InferredDimension;
-                else if (leftOperandShape[i] == NDShape::InferredDimension)
+                else if ((leftOperandShape[i] == NDShape::InferredDimension) || (leftOperandShape[i] == 1))
                     outputDims[i] = rightOperandShape[i];
-                else if (rightOperandShape[i] == NDShape::InferredDimension)
+                else if ((rightOperandShape[i] == NDShape::InferredDimension) || (rightOperandShape[i] == 1))
                     outputDims[i] = leftOperandShape[i];
                 else
                 {
                     if (leftOperandShape[i] != rightOperandShape[i])
-                        RuntimeError("Left operand's shape %s is not compatible with right operand's shape %s for the binary elementwise operation %s", AsString(leftOperandShape).c_str(), AsString(rightOperandShape).c_str(), PrimitiveOpTypeName(op));
+                        RuntimeError("Left operand's shape %S is not compatible with right operand's shape %S for the binary elementwise operation %s", AsStringForErrorReporting(leftOperandShape).c_str(), AsStringForErrorReporting(rightOperandShape).c_str(), PrimitiveOpTypeName(op));
 
                     outputDims[i] = leftOperandShape[i];
                 }
             }
 
             // Broadcast in remaining axes
-            for (size_t i = shapeWithSmallerNumAxes.NumAxes(); i < numOutputAxes; ++i)
+            for (size_t i = shapeWithSmallerNumAxes.Rank(); i < numOutputAxes; ++i)
                 outputDims[i] = shapeWithLargerNumAxes[i];
 
             return NDShape(std::move(outputDims));
         }
 
-        static NDShape TimesOpOutputShape(const NDShape& leftOperandShape, const NDShape& rightOperandShape, size_t numOutputAxes)
+        static NDShape NaryElementwiseOpOutputShape(PrimitiveOpType op, const std::vector<NDShape>& operandShapes, bool broadcastAllowed = true)
         {
-            if (numOutputAxes == 0)
-                InvalidArgument("Output #axes of times operation should be at least one");
+            assert(!operandShapes.empty());
 
-            if (numOutputAxes > leftOperandShape.NumAxes())
-                InvalidArgument("Output #axes of times operation can at most be the #axes of the left operand");
+            // TODO: Is this logic of transitively constructing the output shape from the operands correct?
+            NDShape outputShape = {};
+            for (auto& operandShape : operandShapes)
+                outputShape = BinaryElementwiseOpOutputShape(op, outputShape, operandShape, broadcastAllowed);
 
-            size_t numReductionAxes = leftOperandShape.NumAxes() - numOutputAxes;
+            return outputShape;
+        }
+
+        static NDShape TimesOpOutputShape(const NDShape& leftOperandShape, const NDShape& rightOperandShape, size_t outputRank)
+        {
+            if (outputRank == 0)
+                InvalidArgument("Output rank of times operation should be at least one");
+
+            if (outputRank > leftOperandShape.Rank())
+                InvalidArgument("Output rank of times operation can at most be the rank of the %s operand", Internal::IsReversingTensorShapesInErrorMessagesEnabled() ? "right" : "left");
+
+            size_t numReductionAxes = leftOperandShape.Rank() - outputRank;
 
             // The 'numReductionAxes' trailing dimensions of the left operand's shape must match the corresponding leading
             // dimensions of the right operand
 
-            if (rightOperandShape.NumAxes() != numReductionAxes)
-                RuntimeError("The right operand's #axes in a times operation should equal #axes being reduced over!");
+            if (rightOperandShape.Rank() < numReductionAxes)
+                RuntimeError("The %s operand's rank in a times operation should not be less than #axes being reduced over!", Internal::IsReversingTensorShapesInErrorMessagesEnabled() ? "left" : "right");
 
-            if (leftOperandShape.SubShape(numOutputAxes) != rightOperandShape)
-                InvalidArgument("The trailing dimensions of the left operand (%s) do not match the right operand's dimensions (%s)",
-                                AsString(leftOperandShape.SubShape(numOutputAxes)).c_str(),
-                                AsString(rightOperandShape).c_str());
+            if (leftOperandShape.SubShape(outputRank) != rightOperandShape.SubShape(0, numReductionAxes))
+            {
+                InvalidArgument("The %d %s dimensions of the %s operand (%S) do not match the %s operand's %s dimensions (%S)",
+                                (int)numReductionAxes,
+                                Internal::IsReversingTensorShapesInErrorMessagesEnabled() ? "leading" : "trailing",
+                                Internal::IsReversingTensorShapesInErrorMessagesEnabled() ? "right" : "left",
+                                AsStringForErrorReporting(leftOperandShape.SubShape(outputRank)).c_str(),
+                                Internal::IsReversingTensorShapesInErrorMessagesEnabled() ? "left" : "right",
+                                Internal::IsReversingTensorShapesInErrorMessagesEnabled() ? "trailing" : "leading",
+                                AsStringForErrorReporting(rightOperandShape).c_str());
+            }
 
-            return leftOperandShape.SubShape(0, numOutputAxes);
+            return leftOperandShape.SubShape(0, outputRank).AppendShape(rightOperandShape.SubShape(numReductionAxes));
         }
 
         static NDShape ReductionOpOutputShape(PrimitiveOpType op, const NDShape& operandShape, const std::vector<size_t>& reductionAxes)
         {
-            if (reductionAxes.size() > operandShape.NumAxes())
-                RuntimeError("The number of reduction axes %d exceeds the number of axes in the operand shape %s of the reduction operation %s", (int)reductionAxes.size(), AsString(operandShape).c_str(), PrimitiveOpTypeName(op));
+            if (reductionAxes.size() > operandShape.Rank())
+                RuntimeError("The number of reduction axes %d exceeds the number of axes in the operand shape %S of the reduction operation %s", (int)reductionAxes.size(), AsStringForErrorReporting(operandShape).c_str(), PrimitiveOpTypeName(op));
 
-            size_t numOutputAxes = operandShape.NumAxes() - reductionAxes.size();
+            size_t numOutputAxes = operandShape.Rank() - reductionAxes.size();
             std::vector<size_t> outputDims(numOutputAxes);
-            for (size_t i = 0, j = 0; i < operandShape.NumAxes(); ++i)
+            for (size_t i = 0, j = 0; i < operandShape.Rank(); ++i)
             {
                 // Skip axes being reduced over
                 if (std::find(reductionAxes.begin(), reductionAxes.end(), i) != reductionAxes.end())
@@ -255,283 +429,14 @@ namespace CNTK
             else
                 computeOutputShapeFunc = &Microsoft::MSR::CNTK::ConvolveGeometry::ComputeInputShape;
 
-            return AsNDShape(computeOutputShapeFunc(AsTensorShape(operandShape, true), AsTensorShape(kernelShape, true), AsTensorShape(outputMapCount, true), AsTensorShape(strides, true), sharing, autoPad, AsTensorShape(lowerPad, true), AsTensorShape(upperPad, true)));
+            return AsNDShape(computeOutputShapeFunc(AsTensorShape(operandShape), AsTensorShape(kernelShape), AsTensorShape(outputMapCount), AsTensorShape(strides), sharing, autoPad, AsTensorShape(lowerPad), AsTensorShape(upperPad)));
         }
 
         // TODO: Reconcile this with the ComputationNode::Validate functionality in core CNTK to avoid duplication of inference logic
-        static std::vector<Variable> GetOutputVariables(PrimitiveOpType op, const std::vector<Variable>& inputs, Function* owner, const Dictionary& functionConfig)
-        {
-            std::vector<Variable> outputs;
-
-            // TODO: We are just using the input[0]'s DataType as output node's DataType. This is not always correct
-            DataType outputDataType = inputs[0].GetDataType();
-
-            // We currently require that the inputs' dynamic axes if any match
-            std::vector<Axis> outputDynamicAxes;
-            if (op == PrimitiveOpType::Where)
-                ;
-            else if ((op == PrimitiveOpType::PackedIndex) || (op == PrimitiveOpType::GatherPacked))
-            {
-                outputDynamicAxes = inputs[1].DynamicAxes();
-            }
-            else
-            {
-                outputDynamicAxes = inputs[0].DynamicAxes();
-                for (auto inputVar : inputs)
-                {
-                    auto currentInputDynamicAxes = inputVar.DynamicAxes();
-                    if (outputDynamicAxes.empty())
-                        outputDynamicAxes = currentInputDynamicAxes;
-                    else
-                    {
-                        if (!currentInputDynamicAxes.empty() && (currentInputDynamicAxes != outputDynamicAxes))
-                            LogicError("Currently if an operand of a binary elementwise operation has any dynamic axes, those must match the dynamic axes of the other operand");
-                    }
-                }
-            }
-
-            switch (op)
-            {
-            case PrimitiveOpType::Negate:
-            case PrimitiveOpType::Sigmoid:
-            case PrimitiveOpType::Tanh:
-            case PrimitiveOpType::ReLU:
-            case PrimitiveOpType::Exp:
-            case PrimitiveOpType::Log:
-            case PrimitiveOpType::Sqrt:
-            case PrimitiveOpType::Floor:
-            case PrimitiveOpType::Abs:
-            case PrimitiveOpType::Reciprocal:
-            case PrimitiveOpType::Softmax:
-            case PrimitiveOpType::Hardmax:
-                assert(inputs.size() == 1);
-                if (((op == PrimitiveOpType::Softmax) || (op == PrimitiveOpType::Hardmax)) && (inputs[0].Shape().NumAxes() > 1))
-                    InvalidArgument("Softmax/Hardmax operation can only be applied to a 1D input");
-
-                outputs.push_back(Variable(UnaryElementwiseOpOutputShape(inputs[0].Shape()), outputDataType, owner, outputDynamicAxes));
-                break;
-            case PrimitiveOpType::TransposeAxes:
-            {
-                assert(inputs.size() == 1);
-                auto axis1 = Axis(functionConfig[L"axis1"].GetValue<std::wstring>());
-                auto axis2 = Axis(functionConfig[L"axis2"].GetValue<std::wstring>());
-
-                if (!axis1.IsStaticAxis() || !axis2.IsStaticAxis())
-                    LogicError("TransposeAxes operation currently does not support transposing dynamic axes");
-
-                auto transposedTensorShape = AsTensorShape(inputs[0].Shape(), true);
-                transposedTensorShape.SwapDimsInPlace(axis1.StaticAxisIndex(), axis2.StaticAxisIndex());
-                outputs.push_back(Variable(AsNDShape(transposedTensorShape), outputDataType, owner, outputDynamicAxes));
-                break;
-            }
-            case PrimitiveOpType::Where:
-            {
-                assert(inputs.size() == 1);
-                std::vector<Axis> newDynamicAxes;
-                auto newDynamicAxesNames = AsBasicElementTypeVector<std::wstring>(functionConfig[L"newDynamicAxes"].GetValue<std::vector<DictionaryValue>>());
-                for (auto axisName : newDynamicAxesNames)
-                    newDynamicAxes.push_back(Axis(axisName));
-
-                outputs.push_back(Variable(UnaryElementwiseOpOutputShape(inputs[0].Shape()), outputDataType, owner, newDynamicAxes));
-                break;
-            }
-            case PrimitiveOpType::Pooling:
-            {
-                assert(inputs.size() == 1);
-                auto poolingWindowsShape = functionConfig[L"poolingWindowShape"].GetValue<NDShape>();
-                auto strides = functionConfig[L"strides"].GetValue<NDShape>();
-                auto lowerPad = functionConfig[L"lowerPad"].GetValue<NDShape>();
-                auto upperPad = functionConfig[L"upperPad"].GetValue<NDShape>();
-                auto autoPadding = AsBasicElementTypeVector<bool>(functionConfig[L"autoPadding"].GetValue<std::vector<DictionaryValue>>());
-                outputs.push_back(Variable(ConvolutionOpOutputShape(inputs[0].Shape(), poolingWindowsShape, { 1 }, strides, { true }, autoPadding, lowerPad, upperPad, false), outputDataType, owner, outputDynamicAxes));
-                break;
-            }
-            case PrimitiveOpType::SumAll:
-                assert(inputs.size() == 1);
-                outputs.push_back(Variable({}, outputDataType, owner, std::vector<Axis>({})));
-                break;
-            case PrimitiveOpType::Plus:
-            case PrimitiveOpType::Minus:
-            case PrimitiveOpType::ElementTimes:
-            case PrimitiveOpType::Equal:
-            case PrimitiveOpType::NotEqual:
-            case PrimitiveOpType::Less:
-            case PrimitiveOpType::LessEqual:
-            case PrimitiveOpType::Greater:
-            case PrimitiveOpType::GreaterEqual:
-                assert(inputs.size() == 2);
-                outputs.push_back(Variable(BinaryElementwiseOpOutputShape(op, inputs[0].Shape(), inputs[1].Shape()), outputDataType, owner, outputDynamicAxes));
-                break;
-            case PrimitiveOpType::Times:
-            {
-                assert(inputs.size() == 2);
-                size_t numOutputAxes = functionConfig[L"numOutputAxes"].GetValue<size_t>();
-                outputs.push_back(Variable(TimesOpOutputShape(inputs[0].Shape(), inputs[1].Shape(), numOutputAxes), outputDataType, owner, outputDynamicAxes));
-                break;
-            }
-            case PrimitiveOpType::TransposeTimes:
-            {
-                assert(inputs.size() == 2);
-
-                auto numLeftOperandAxes = inputs[0].Shape().NumAxes();
-                if (numLeftOperandAxes > 2)
-                    InvalidArgument("TransposeTimes operation only supports left operands of rank 1 or 2");
-
-                NDShape transposedLeftOperandShape(2, 1);
-                for (size_t i = 0; i < numLeftOperandAxes; ++i)
-                    transposedLeftOperandShape[transposedLeftOperandShape.NumAxes() - i - 1] = inputs[0].Shape()[i];
-
-                size_t numOutputAxes = functionConfig[L"numOutputAxes"].GetValue<size_t>();
-                outputs.push_back(Variable(TimesOpOutputShape(transposedLeftOperandShape, inputs[1].Shape(), numOutputAxes), outputDataType, owner, outputDynamicAxes));
-                break;
-            }
-            case PrimitiveOpType::Convolution:
-            {
-                assert(inputs.size() == 2);
-                auto strides = functionConfig[L"strides"].GetValue<NDShape>();
-                auto lowerPad = functionConfig[L"lowerPad"].GetValue<NDShape>();
-                auto upperPad = functionConfig[L"upperPad"].GetValue<NDShape>();
-                auto sharing = AsBasicElementTypeVector<bool>(functionConfig[L"sharing"].GetValue<std::vector<DictionaryValue>>());
-                auto autoPadding = AsBasicElementTypeVector<bool>(functionConfig[L"autoPadding"].GetValue<std::vector<DictionaryValue>>());
-                bool transpose = functionConfig[L"transpose"].GetValue<bool>();
-                if (inputs[0].Shape().NumAxes() < inputs[1].Shape().NumAxes())
-                    InvalidArgument("The convolution map should have at least as many axes as the shape of the input it operates on!");
-
-                NDShape outputMapCount, kernelShape;
-                std::tie(outputMapCount, kernelShape) = GetConvolutionOutputMapCountAndKernelShape(inputs[0].Shape(), inputs[1].Shape());
-                outputs.push_back(Variable(ConvolutionOpOutputShape(inputs[1].Shape(), kernelShape, outputMapCount, strides, sharing, autoPadding, lowerPad, upperPad, transpose), outputDataType, owner, outputDynamicAxes));
-                break;
-            }
-            case PrimitiveOpType::SquaredError:
-            case PrimitiveOpType::CrossEntropyWithSoftmax:
-            case PrimitiveOpType::ClassificationError:
-            {
-                assert(inputs.size() == 2);
-
-                if ((inputs[0].Shape().NumAxes() > 2) || ((inputs[0].Shape().NumAxes() > 1) && (inputs[0].Shape()[1] != 1)))
-                    InvalidArgument("The shape of input operands for the %s operation should have at most one axis", PrimitiveOpTypeName(op));
-
-                auto predictionShape = inputs[0].Shape();
-                auto labelsShape = inputs[1].Shape();
-                if (predictionShape != labelsShape)
-                    RuntimeError("Prediction output operand's shape %s is incompatible with label operand's shape %s for the %s operation", AsString(predictionShape).c_str(), AsString(labelsShape).c_str(), PrimitiveOpTypeName(op));
-
-                std::vector<size_t> reductionAxes;
-                for (size_t i = 0; i < inputs[0].Shape().NumAxes(); ++i)
-                    reductionAxes.push_back(i);
-
-                outputs.push_back(Variable(ReductionOpOutputShape(op, predictionShape, reductionAxes), outputDataType, owner, std::vector<Axis>({})));
-                break;
-            }
-            case PrimitiveOpType::PastValue:
-            case PrimitiveOpType::FutureValue:
-            {
-                assert(inputs.size() == 2);
-                Variable initialStateVar = inputs[0];
-                Variable inputOperandVar = inputs[1];
-                // TODO: Current we only support a scalar initial state
-                if (!initialStateVar.IsConstant() || (initialStateVar.Shape().NumAxes() > 0))
-                    LogicError("Currently PastValue/FutureValue Function only supports scalar initial state");
-
-                // TODO: We currently only support input operand with 1 static axis for PastValue/FutureValue
-                if (inputOperandVar.Shape().NumAxes() > 1)
-                    LogicError("Currently PastValue/FutureValue Function only supports input operand with <= 1 static axis");
-
-                // TODO: We currently only support input operand with 1 dynamic axis for PastValue/FutureValue
-                if (inputOperandVar.DynamicAxes().size() != 2)
-                    LogicError("Currently PastValue/FutureValue Function only supports input operand with with 2 dynamic axis (1 sequence-axis and 1 batch-axis)");
-
-                outputs.push_back(Variable(UnaryElementwiseOpOutputShape(inputs[1].Shape()), outputDataType, owner, outputDynamicAxes));
-                break;
-            }
-            case PrimitiveOpType::ReduceElements:
-            {
-                assert(inputs.size() == 1);
-                auto CNTKInternalReductionAxisIndex = functionConfig[L"CNTKInternalReductionAxisIndex"].GetValue<size_t>();
-                std::vector<size_t> reductionAxes;
-                // TODO: Do not use a integer literal for the special value of axis id that indicates all static axes
-                if (CNTKInternalReductionAxisIndex == 0)
-                {
-                    for (size_t i = 0; i < inputs[0].Shape().NumAxes(); ++i)
-                        reductionAxes.push_back(i);
-                }
-                else
-                    reductionAxes.push_back(CNTKInternalReductionAxisIndex - 1);
-
-                outputs.push_back(Variable(ReductionOpOutputShape(op, inputs[0].Shape(), reductionAxes), outputDataType, owner, inputs[0].DynamicAxes()));
-                break;
-            }
-            case PrimitiveOpType::BatchNormalization:
-                outputs.push_back(Variable(UnaryElementwiseOpOutputShape(inputs[0].Shape()), outputDataType, owner, outputDynamicAxes));
-                break;
-            case PrimitiveOpType::Combine:
-                outputs = inputs;
-                break;
-            case PrimitiveOpType::PackedIndex:
-                outputs.push_back(Variable(UnaryElementwiseOpOutputShape(inputs[1].Shape()), outputDataType, owner, outputDynamicAxes));
-                break;
-            case PrimitiveOpType::GatherPacked:
-            {
-                bool sourceHasDynamicAxis = !inputs[0].DynamicAxes().empty();
-                NDShape outputShape;
-
-                // inherit tensor dimension from sourceData, minus the last (column or time) dimension. TODO this needs to become simpler...
-                if (sourceHasDynamicAxis)
-                    outputShape = inputs[0].Shape();
-                else
-                {
-                    if (inputs[0].Shape().NumAxes() > 1)
-                        outputShape = outputShape.SubShape(0, outputShape.NumAxes() - 1);
-                    else
-                        outputShape = {};
-                }
-
-                outputs.push_back(Variable(outputShape, outputDataType, owner, outputDynamicAxes));
-                break;
-            }
-            case PrimitiveOpType::Slice:
-            {
-                auto axis = Axis(functionConfig[L"axis"].GetValue<std::wstring>());
-                int beginIndex = functionConfig[L"beginIndex"].GetValue<size_t>();
-                int endIndex = functionConfig[L"endIndex"].GetValue<size_t>();
-                if (!axis.IsStaticAxis())
-                    LogicError("Built-in Slice operation currently does not support slicing along dynamic axis");
-
-                if (axis.StaticAxisIndex() >= inputs[0].Shape().NumAxes())
-                    InvalidArgument("The specified axis index (%d) for the Slice operation is outside the bounds of the available axes of the input", (int)axis.StaticAxisIndex());
-
-                size_t sliceAxisDim = inputs[0].Shape()[axis.StaticAxisIndex()];
-                int realBeginIndex = (beginIndex >= 0) ? beginIndex : beginIndex + sliceAxisDim;
-                int realEndIndex = (endIndex > 0) ? endIndex : endIndex + sliceAxisDim;
-                if ((sliceAxisDim < realEndIndex) || (realEndIndex < realBeginIndex) || (realBeginIndex < 0))
-                    RuntimeError("Slice operation: Index range [%d,%d), interpreted as [%d,%d), is invalid for input ([%S]).",
-                                 beginIndex,
-                                 endIndex,
-                                 realBeginIndex,
-                                 realEndIndex,
-                                 inputs[0].Shape().AsString().c_str());
-
-                auto outputTensorShape = AsTensorShape(inputs[0].Shape(), true);
-
-                // propagate as much as we can
-                if ((axis.StaticAxisIndex() < outputTensorShape.GetRank()) && (0 <= realBeginIndex) && (realBeginIndex <= realEndIndex) && (realEndIndex <= sliceAxisDim))
-                    outputTensorShape.NarrowTo(axis.StaticAxisIndex(), realBeginIndex, realEndIndex);
-
-
-                outputs.push_back(Variable(AsNDShape(outputTensorShape), outputDataType, owner, outputDynamicAxes));
-                break;
-            }
-            default:
-                LogicError("Specified op %s not yet supported", PrimitiveOpTypeName(op));
-                break;
-            }
-
-            return outputs;
-        }
+        static std::vector<Variable> GetOutputVariables(PrimitiveOpType op, const std::vector<Variable>& inputs, Function* owner, const Dictionary& functionConfig);
 
     private:
         PrimitiveOpType m_op;
-        Dictionary m_functionConfig;
     };
 
     class CNTKBackPropState final : public BackPropState
@@ -557,27 +462,27 @@ namespace CNTK
     class CompositeFunction final : public Function
     {
         friend class Function;
+        friend class Trainer;
         friend class CompositeMinibatchSource;
 
         template <typename T, typename ...CtorArgTypes>
         friend inline std::shared_ptr<T> MakeSharedObject(CtorArgTypes&& ...ctorArgs);
 
-        template <typename ElementType>
         friend void SaveAsLegacyModel(const FunctionPtr& rootFunction, const std::wstring& modelFile);
 
         friend void ComputeInputPerDimMeansAndInvStdDevs(const MinibatchSourcePtr& minibatchSource,
-                                                         std::unordered_map<StreamInfo, std::pair<NDArrayViewPtr, NDArrayViewPtr>>& computedMeanAndInvStdDevs,
+                                                         std::unordered_map<StreamInformation, std::pair<NDArrayViewPtr, NDArrayViewPtr>>& computedMeanAndInvStdDevs,
                                                          const DeviceDescriptor& device /*= DeviceDescriptor::CPUDevice()*/);
 
     public:
-        static std::wstring s_internalDefaultDynamicAxisName;
-        static std::wstring s_internalNoSequenceAxisName;
+        static const std::wstring InternalDefaultDynamicAxisName;
+        static const std::wstring InternalNoSequenceAxisName;
 
         static Axis NextAutoGeneratedDynamicAxis()
         {
             static std::atomic<unsigned int> nextAutoGeneratedDynamicAxis(0);
-            static const std::wstring autoGeneratedDynamicAxisNamePrefix = L"autoGeneratedDynamicAxis_";
-            return Axis(autoGeneratedDynamicAxisNamePrefix + std::to_wstring(nextAutoGeneratedDynamicAxis++));
+            static const std::wstring s_autoGeneratedDynamicAxisNamePrefix = L"autoGeneratedDynamicAxis_";
+            return Axis(s_autoGeneratedDynamicAxisNamePrefix + std::to_wstring(nextAutoGeneratedDynamicAxis++));
         }
 
     public:
@@ -600,15 +505,25 @@ namespace CNTK
                               const std::unordered_map<Variable, ValuePtr>& rootGradientValues,
                               std::unordered_map<Variable, ValuePtr>& backPropagatedGradientValuesForInputs) override;
 
+    public:
+        bool NetworkMatricesAllocated() const 
+        {
+            return (m_computationNetwork != nullptr) && m_networkMatricesAllocated; 
+        }
+
+        void PurgeComputationNetwork()
+        {
+            m_computationNetwork = nullptr;
+        }
+
     private:
-        virtual void ReplacePlaceholders(const std::unordered_map<Placeholder, Variable>& placeholderReplacements,
-                                         std::unordered_set<const Function*>& visitedFunctions,
-                                         std::unordered_set<Placeholder>& replacedPlaceholders) override;
+        virtual void ReplacePlaceholdersInPlace(const std::unordered_map<Variable, Variable>& placeholderReplacements,
+                                                std::unordered_set<const Function*>& visitedFunctions,
+                                                std::unordered_set<Variable>& replacedPlaceholders) override;
 
         CompositeFunction(const FunctionPtr& rootFunction, std::unordered_set<FunctionPtr>&& allPrimitiveFunctions, const std::wstring& name)
-            : Function({}, rootFunction->Outputs(), rootFunction, name), m_allPrimitiveFunctions(std::move(allPrimitiveFunctions))
-        {
-        }
+            : Function({}, rootFunction->Outputs(), Dictionary(), rootFunction, name), m_allPrimitiveFunctions(std::move(allPrimitiveFunctions))
+        {}
 
         std::vector<Variable> DetermineInputs() const
         {
@@ -639,13 +554,27 @@ namespace CNTK
         }
 
         template <typename ElementType>
-        Microsoft::MSR::CNTK::ComputationNetworkPtr GetComputationNetwork(const DeviceDescriptor& device, const std::unordered_set<Variable>& backpropRoots);
+        Microsoft::MSR::CNTK::ComputationNetworkPtr GetComputationNetwork(const DeviceDescriptor& device, const std::unordered_set<Variable>& backpropRoots, bool allocateNetworkMatrices);
 
         template <typename ElementType>
-        static Microsoft::MSR::CNTK::ComputationNodeBasePtr GetOutputVariableNode(const Variable& variable, Microsoft::MSR::CNTK::ComputationNetworkPtr& network, Microsoft::MSR::CNTK::ComputationNetworkBuilder<ElementType>& builder, std::unordered_map<Variable, Microsoft::MSR::CNTK::ComputationNodeBasePtr>& variableToNodeMap, std::unordered_map<Variable, bool>& isVariableRootMap);
+        static Microsoft::MSR::CNTK::ComputationNodeBasePtr CreateComputationNode(const Variable& variable,
+                                                                                  PrimitiveFunction* primitiveFunction,
+                                                                                  const std::vector<std::shared_ptr<Microsoft::MSR::CNTK::ComputationNode<ElementType>>>& inputNodes,
+                                                                                  Microsoft::MSR::CNTK::ComputationNetworkPtr& network,
+                                                                                  std::unordered_map<Variable, Microsoft::MSR::CNTK::ComputationNodeBasePtr>& variableToNodeMap);
 
         template <typename ElementType>
-        static Microsoft::MSR::CNTK::ComputationNodeBasePtr GetNode(const Variable& variable, Microsoft::MSR::CNTK::ComputationNetworkPtr& network, Microsoft::MSR::CNTK::ComputationNetworkBuilder<ElementType>& builder, std::unordered_map<Variable, Microsoft::MSR::CNTK::ComputationNodeBasePtr>& variableToNodeMap, std::unordered_map<Variable, bool>& isVariableRootMap);
+        static Microsoft::MSR::CNTK::ComputationNodeBasePtr GetOutputVariableNode(const Variable& variable,
+                                                                                  Microsoft::MSR::CNTK::ComputationNetworkPtr& network,
+                                                                                  Microsoft::MSR::CNTK::ComputationNetworkBuilder<ElementType>& builder,
+                                                                                  std::unordered_map<Variable, Microsoft::MSR::CNTK::ComputationNodeBasePtr>& variableToNodeMap,
+                                                                                  std::unordered_map<Variable, bool>& isVariableRootMap);
+
+        template <typename ElementType>
+        static Microsoft::MSR::CNTK::ComputationNodeBasePtr GetNode(const Variable& variable, Microsoft::MSR::CNTK::ComputationNetworkPtr& network,
+                                                                    Microsoft::MSR::CNTK::ComputationNetworkBuilder<ElementType>& builder,
+                                                                    std::unordered_map<Variable, Microsoft::MSR::CNTK::ComputationNodeBasePtr>& variableToNodeMap,
+                                                                    std::unordered_map<Variable, bool>& isVariableRootMap);
 
         template <typename ElementType>
         static void PopulateComputationNodeValue(const std::pair<Variable, ValuePtr>& variableValue, Microsoft::MSR::CNTK::ComputationNodeBasePtr& computationNode);
@@ -686,18 +615,34 @@ namespace CNTK
         // states from the previos Forward call to be able to backpropagate gradients backwards from in
         // the next 'Backward' call.
         std::unordered_set<Variable> m_currentBackpropRoots;
+
+        bool m_networkMatricesAllocated;
     };
 
     inline std::vector<CNTK::Axis> DynamicAxesFromInternalDynamicAxisName(const std::wstring& internalDynamicAxisName)
     {
         std::vector<CNTK::Axis> inputVarDynamicAxes;
-        if (internalDynamicAxisName == CNTK::CompositeFunction::s_internalDefaultDynamicAxisName)
+        if (internalDynamicAxisName.substr(0, CNTK::CompositeFunction::InternalDefaultDynamicAxisName.length()) == CNTK::CompositeFunction::InternalDefaultDynamicAxisName)
             inputVarDynamicAxes = { CNTK::Axis::DefaultDynamicAxis(), CNTK::Axis::DefaultBatchAxis() };
-        else if (internalDynamicAxisName == CNTK::CompositeFunction::s_internalNoSequenceAxisName)
+        else if (internalDynamicAxisName.substr(0, CNTK::CompositeFunction::InternalNoSequenceAxisName.length()) == CNTK::CompositeFunction::InternalNoSequenceAxisName)
             inputVarDynamicAxes = { CNTK::Axis::DefaultBatchAxis() };
         else
             inputVarDynamicAxes = { CNTK::Axis(internalDynamicAxisName), CNTK::Axis::DefaultBatchAxis() };
 
         return inputVarDynamicAxes;
+    }
+
+    // Construct the dynamic axis name to be used internally for the CNTK InputNodes
+    inline std::wstring InternalDynamicAxisNameFromDynamicAxes(const std::vector<Axis>& dynamicAxes)
+    {
+        if (dynamicAxes.empty())
+            LogicError("Empty dynamic axes set");
+
+        if (dynamicAxes == std::vector<Axis>({ Axis::DefaultBatchAxis() }))
+            return CompositeFunction::InternalNoSequenceAxisName;
+        else if (dynamicAxes == std::vector<Axis>({ Axis::DefaultDynamicAxis(), Axis::DefaultBatchAxis() }))
+            return CompositeFunction::InternalDefaultDynamicAxisName;
+        else
+            return dynamicAxes[0].Name();
     }
 }

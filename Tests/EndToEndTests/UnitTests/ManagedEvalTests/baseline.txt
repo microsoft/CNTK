@@ -1,0 +1,20 @@
+CPU info:
+    CPU Model Name: Intel(R) Core(TM) i7-6820HQ CPU @ 2.70GHz
+    Hardware threads: 8
+    Total Memory: 33417320 kB
+-------------------------------------------------------------------
+Microsoft (R) Test Execution Command Line Tool Version 12.0.30723.0
+Copyright (c) Microsoft Corporation.  All rights reserved.
+
+Starting test execution, please wait...
+Passed   EvalManagedValuesBufferTest
+Passed   EvalManagedVariableSchemaTest
+Passed   EvalManagedConstantNetworkTest
+Passed   EvalManagedScalarTimesTest
+Passed   EvalManagedSparseTimesTest
+Passed   EvalManagedScalarTimesDualOutputTest
+Passed   EvalManagedCrossAppDomainExceptionTest
+
+Total tests: 7. Passed: 7. Failed: 0. Skipped: 0.
+Test Run Successful.
+Test execution time: 0.4305 Seconds

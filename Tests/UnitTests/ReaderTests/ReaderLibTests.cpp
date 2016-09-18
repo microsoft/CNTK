@@ -4,14 +4,14 @@
 //
 
 #include "stdafx.h"
-
+#include <numeric>
+#include <random>
+#include <boost/random/uniform_int_distribution.hpp>
 #include "NoRandomizer.h"
 #include "DataDeserializer.h"
 #include "BlockRandomizer.h"
 #include "CorpusDescriptor.h"
-
-#include <numeric>
-#include <random>
+#include "SequentialDeserializer.h"
 
 using namespace Microsoft::MSR::CNTK;
 using namespace std;
@@ -163,6 +163,139 @@ void BlockRandomizerInstantiateTest(bool prefetch)
     auto randomizer = make_shared<BlockRandomizer>(0, SIZE_MAX, mockDeserializer, prefetch, BlockRandomizer::DecimationMode::chunk, false);
 }
 
+
+BOOST_AUTO_TEST_CASE(RandRollbackToEarlierEpochBetweenSweeps)
+{
+    size_t chunkSizeInSamples = 10000;
+    size_t sweepNumberOfSamples = 500000;
+    uint32_t maxSequenceLength = 300;
+    size_t randomizationWindow = chunkSizeInSamples * 5;
+    auto deserializer = make_shared<SequentialDeserializer>(0, chunkSizeInSamples, sweepNumberOfSamples, maxSequenceLength);
+
+    // Let's randomize complete sweep, so that we have a baseline.
+    auto randomizer = make_shared<BlockRandomizer>(0, randomizationWindow, deserializer, true, BlockRandomizer::DecimationMode::chunk, false);
+
+    // Let's read all sequences from the first three sweeps in the randomized order.
+    auto firstSweep = ReadFullSweep(randomizer, 0, sweepNumberOfSamples);
+    auto secondSweep = ReadFullSweep(randomizer, 1, sweepNumberOfSamples);
+    auto thirdSweep = ReadFullSweep(randomizer, 2, sweepNumberOfSamples);
+
+    // Now let's merge the global timeline of these three sweeps.
+    std::vector<float> threeSweeps = Concat(std::vector<vector<float>>{ firstSweep, secondSweep, thirdSweep });
+
+    // Ok, now let's run smaller epochs and check whether they are the same as full sweeps.
+    size_t epochSize = threeSweeps.size() / 5;
+    auto firstEpoch = ReadFullEpoch(randomizer, epochSize, 0);
+    auto secondEpoch = ReadFullEpoch(randomizer, epochSize, 1);
+    auto thirdEpoch = ReadFullEpoch(randomizer, epochSize, 2);
+    auto fourthEpoch = ReadFullEpoch(randomizer, epochSize, 3);
+    auto fifthEpoch = ReadFullEpoch(randomizer, epochSize, 4);
+    std::vector<float> anotherThreeSweeps = Concat(std::vector<vector<float>>{ firstEpoch, secondEpoch, thirdEpoch, fourthEpoch, fifthEpoch });
+
+    // Check that data is the same.
+    BOOST_CHECK_EQUAL_COLLECTIONS(threeSweeps.begin(), threeSweeps.end(), anotherThreeSweeps.begin(), anotherThreeSweeps.end());
+
+    // Now roll back to the third one.
+    auto anotherThirdEpoch = ReadFullEpoch(randomizer, epochSize, 2);
+
+    // Check that it is the same.
+    BOOST_CHECK_EQUAL_COLLECTIONS(thirdEpoch.begin(), thirdEpoch.end(), anotherThirdEpoch.begin(), anotherThirdEpoch.end());
+}
+
+BOOST_AUTO_TEST_CASE(RandRollbackToEarlierEpochInTheSweep)
+{
+    size_t chunkSizeInSamples = 10000;
+    size_t sweepNumberOfSamples = 500000;
+    uint32_t maxSequenceLength = 300;
+    size_t randomizationWindow = chunkSizeInSamples * 3;
+    auto deserializer = make_shared<SequentialDeserializer>(0, chunkSizeInSamples, sweepNumberOfSamples, maxSequenceLength);
+
+    // Let's randomize complete sweep, so that we have a baseline.
+    auto randomizer = make_shared<BlockRandomizer>(0, randomizationWindow, deserializer, true, BlockRandomizer::DecimationMode::chunk, false);
+
+    // Let's read all sequences from the first three sweeps in the randomized order.
+    auto firstSweep = ReadFullSweep(randomizer, 0, sweepNumberOfSamples);
+
+    // Ok, now let's run smaller epochs and check whether they are the same as full sweeps.
+    size_t epochSize = firstSweep.size() / 3;
+    auto firstEpoch = ReadFullEpoch(randomizer, epochSize, 0);
+    auto secondEpoch = ReadFullEpoch(randomizer, epochSize, 1);
+    auto thirdEpoch = ReadFullEpoch(randomizer, epochSize, 2);
+    std::vector<float> anotherThreeSweeps = Concat(std::vector<vector<float>>{ firstEpoch, secondEpoch, thirdEpoch });
+
+    // Check that data is the same.
+    BOOST_CHECK_EQUAL_COLLECTIONS(firstSweep.begin(), firstSweep.end(), anotherThreeSweeps.begin(), anotherThreeSweeps.end());
+
+    // Now roll back to the second one.
+    auto anotherSecondEpoch = ReadFullEpoch(randomizer, epochSize, 1);
+
+    // Check that it is the same.
+    BOOST_CHECK_EQUAL_COLLECTIONS(secondEpoch.begin(), secondEpoch.end(), anotherSecondEpoch.begin(), anotherSecondEpoch.end());
+}
+
+BOOST_AUTO_TEST_CASE(RandRollbackToSameEpochInTheSweep)
+{
+    size_t chunkSizeInSamples = 10000;
+    size_t sweepNumberOfSamples = 500000;
+    uint32_t maxSequenceLength = 300;
+    size_t randomizationWindow = chunkSizeInSamples * 3;
+    auto deserializer = make_shared<SequentialDeserializer>(0, chunkSizeInSamples, sweepNumberOfSamples, maxSequenceLength);
+
+    // Let's randomize complete sweep, so that we have a baseline.
+    auto randomizer = make_shared<BlockRandomizer>(0, randomizationWindow, deserializer, true, BlockRandomizer::DecimationMode::chunk, false);
+
+    // Let's read all sequences from the first three sweeps in the randomized order.
+    auto firstSweep = ReadFullSweep(randomizer, 0, sweepNumberOfSamples);
+
+    // Ok, now let's run smaller epochs and check whether they are the same as full sweeps.
+    size_t epochSize = firstSweep.size() / 4;
+    auto firstEpoch = ReadFullEpoch(randomizer, epochSize, 0);
+    auto secondEpoch = ReadFullEpoch(randomizer, epochSize, 1);
+    auto thirdEpoch = ReadFullEpoch(randomizer, epochSize, 2);
+
+    // Now roll back to the third one.
+    auto anotherThirdEpoch = ReadFullEpoch(randomizer, epochSize, 2);
+
+    // Check that it is the same.
+    BOOST_CHECK_EQUAL_COLLECTIONS(thirdEpoch.begin(), thirdEpoch.end(), anotherThirdEpoch.begin(), anotherThirdEpoch.end());
+}
+
+BOOST_AUTO_TEST_CASE(RandRollbackToSameEpochInBigRandomizationWindow)
+{
+    size_t chunkSizeInSamples = 10000;
+    size_t sweepNumberOfSamples = 500000;
+    uint32_t maxSequenceLength = 300;
+    size_t randomizationWindow = sweepNumberOfSamples / 2;
+    auto deserializer = make_shared<SequentialDeserializer>(0, chunkSizeInSamples, sweepNumberOfSamples, maxSequenceLength);
+
+    // Let's randomize complete sweep, so that we have a baseline.
+    auto randomizer = make_shared<BlockRandomizer>(0, randomizationWindow, deserializer, true, BlockRandomizer::DecimationMode::chunk, false);
+
+    // Let's read all sequences from the first three sweeps in the randomized order.
+    auto firstSweep = ReadFullSweep(randomizer, 0, sweepNumberOfSamples);
+
+    // Ok, now let's run smaller epochs and check whether they are the same as full sweeps.
+    size_t epochSize = firstSweep.size() / 5;
+    auto firstEpoch = ReadFullEpoch(randomizer, epochSize, 0);
+    auto secondEpoch = ReadFullEpoch(randomizer, epochSize, 1);
+    auto thirdEpoch = ReadFullEpoch(randomizer, epochSize, 2);
+    auto fourthEpoch = ReadFullEpoch(randomizer, epochSize, 3);
+
+    // Now roll back to the third one.
+    auto current = ReadFullEpoch(randomizer, epochSize, 1);
+    BOOST_CHECK_EQUAL_COLLECTIONS(secondEpoch.begin(), secondEpoch.end(), current.begin(), current.end());
+
+    current = ReadFullEpoch(randomizer, epochSize, 3);
+    BOOST_CHECK_EQUAL_COLLECTIONS(fourthEpoch.begin(), fourthEpoch.end(), current.begin(), current.end());
+
+    current = ReadFullEpoch(randomizer, epochSize, 2);
+    BOOST_CHECK_EQUAL_COLLECTIONS(thirdEpoch.begin(), thirdEpoch.end(), current.begin(), current.end());
+
+    current = ReadFullEpoch(randomizer, epochSize, 2);
+    BOOST_CHECK_EQUAL_COLLECTIONS(thirdEpoch.begin(), thirdEpoch.end(), current.begin(), current.end());
+}
+
+
 BOOST_AUTO_TEST_CASE(BlockRandomizerInstantiate)
 {
     BlockRandomizerInstantiateTest(false);
@@ -305,8 +438,8 @@ void BlockRandomizerChaosMonkeyTest(bool prefetch)
     const int windowSize = 18;
     vector<float> data(numChunks * numSequencesPerChunk);
     iota(data.begin(), data.end(), 0.0f);
-    mt19937 rng(seed);
-    uniform_int_distribution<int> distr(1, 10);
+    std::mt19937 rng(seed);
+    boost::random::uniform_int_distribution<int> distr(1, 10);
 
     auto mockDeserializer = make_shared<MockDeserializer>(numChunks, numSequencesPerChunk, data, sequenceLength);
 
@@ -443,8 +576,8 @@ BOOST_AUTO_TEST_CASE(NoRandomizerOneEpoch)
 BOOST_AUTO_TEST_CASE(DefaultCorpusDescriptor)
 {
     const int seed = 13;
-    mt19937 rng(seed);
-    uniform_int_distribution<int> distr(50, 60);
+    std::mt19937 rng(seed);
+    boost::random::uniform_int_distribution<int> distr(50, 60);
 
     string randomKey(10, (char)distr(rng));
 

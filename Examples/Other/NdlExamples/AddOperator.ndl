@@ -1,5 +1,5 @@
 # This file is a sample ndl script for a single operator (Plus) adding a constant to an input
-# It is used by the Extensibility\CSEvalClient program
+# It is used by the Examples\Evaluation\CSEvalClient program
 deviceId=0
 run=AddOne
 AddOne=[

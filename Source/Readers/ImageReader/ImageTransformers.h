@@ -13,6 +13,8 @@
 #include "ConcStack.h"
 #include "Config.h"
 #include "ImageConfigHelper.h"
+#include <boost/random/uniform_int_distribution.hpp>
+#include <boost/random/uniform_real_distribution.hpp>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -41,8 +43,8 @@ protected:
     }
 
     using Base = Transformer;
-    using UniRealT = std::uniform_real_distribution<double>;
-    using UniIntT = std::uniform_int_distribution<int>;
+    using UniRealT = boost::random::uniform_real_distribution<double>;
+    using UniIntT = boost::random::uniform_int_distribution<int>;
 
     // The only function that should be redefined by the inherited classes.
     virtual void Apply(size_t id, cv::Mat &from) = 0;

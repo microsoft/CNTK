@@ -25,11 +25,7 @@
     <ProjectName>NetworkTests</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
-  <Import Project="$(SolutionDir)\CNTK.Cpp.props" />
-  <PropertyGroup>
-    <HasBoost>false</HasBoost>
-    <HasBoost Condition="Exists('$(BOOST_INCLUDE_PATH)') And Exists('$(BOOST_LIB_PATH)')">true</HasBoost>
-  </PropertyGroup>
+  <Import Project="$(SolutionDir)\CNTK.Cpp.props" />  
   <PropertyGroup Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <PlatformToolset>v120</PlatformToolset>
@@ -134,7 +130,7 @@
   </Target>
   <Target Name="CopyUnitTestDependencies" AfterTargets="Build">
     <PropertyGroup>
-      <CuDnnDll Condition="$(GpuBuild) And Exists('$(OutDir)..\cudnn64_4.dll')">$(OutDir)..\cudnn64_4.dll</CuDnnDll>
+      <CuDnnDll Condition="$(GpuBuild) And Exists('$(OutDir)..\cudnn64_5.dll')">$(OutDir)..\cudnn64_5.dll</CuDnnDll>
     </PropertyGroup>
     <ItemGroup>
       <UnitTestDependencies Include="$(OutDir)..\Math.dll;$(UnitTestDlls);$(CuDnnDll)" />
