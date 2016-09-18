@@ -1,0 +1,59 @@
+CPU info:
+    CPU Model Name: Intel(R) Xeon(R) CPU E5-2680 v2 @ 2.80GHz
+    Hardware threads: 40
+    Total Memory: 264118512 kB
+-------------------------------------------------------------------
+Running 8 test cases...
+
+Test suite "multiverso" passed with:
+  83 assertions out of 83 passed
+  8 test cases out of 8 passed
+
+  Test suite "array_test" passed with:
+    34 assertions out of 34 passed
+    2 test cases out of 2 passed
+
+    Test case "array_access" passed with:
+      20 assertions out of 20 passed
+
+    Test case "array_partition" passed with:
+      14 assertions out of 14 passed
+
+  Test suite "blob" passed with:
+    7 assertions out of 7 passed
+    2 test cases out of 2 passed
+
+    Test case "blob_constructor_test" passed with:
+      3 assertions out of 3 passed
+
+    Test case "blob_access_test" passed with:
+      4 assertions out of 4 passed
+
+  Test suite "test_kv" passed with:
+    3 assertions out of 3 passed
+    1 test case out of 1 passed
+
+    Test case "access" passed with:
+      3 assertions out of 3 passed
+
+  Test suite "message" passed with:
+    11 assertions out of 11 passed
+    1 test case out of 1 passed
+
+    Test case "message_access" passed with:
+      11 assertions out of 11 passed
+
+  Test suite "node" passed with:
+    8 assertions out of 8 passed
+    1 test case out of 1 passed
+
+    Test case "node_role" passed with:
+      8 assertions out of 8 passed
+
+  Test suite "test_sync" passed with:
+    20 assertions out of 20 passed
+    1 test case out of 1 passed
+
+    Test case "sync" passed with:
+      20 assertions out of 20 passed
+
