@@ -407,17 +407,22 @@ void TestTranspose(size_t numAxes, size_t axis1, size_t axis2, const DeviceDescr
 
     FloatingPointVectorCompare(outputData, expectedOutputValues, "TestTimesAndPlus: Forward prop results do not match expected results");
 }
-
 void FunctionTests()
 {
     TestSlice(2, DeviceDescriptor::CPUDevice());
+#ifndef CPUONLY
     TestSlice(1, DeviceDescriptor::GPUDevice(0));
+#endif
 
     TestReduceSum(DeviceDescriptor::CPUDevice());
+#ifndef CPUONLY
     TestReduceSum(DeviceDescriptor::GPUDevice(0));
+#endif
 
     TestRecurrentFunctionCloning();
 
     TestTranspose(2, 0, 1, DeviceDescriptor::CPUDevice());
+#ifndef CPUONLY
     TestTranspose(3, 1, 2, DeviceDescriptor::GPUDevice(0));
+#endif
 }

@@ -671,37 +671,37 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::LogPl
 template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Less(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName)
 {
-	return net.AddNodeToNetAndAttachInputs(New<LessNode<ElemType>>(net.GetDeviceId(), nodeName), { a, b });
+    return net.AddNodeToNetAndAttachInputs(New<LessNode<ElemType>>(net.GetDeviceId(), nodeName), { a, b });
 }
 
 template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Equal(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName)
 {
-	return net.AddNodeToNetAndAttachInputs(New<EqualNode<ElemType>>(net.GetDeviceId(), nodeName), { a, b });
+    return net.AddNodeToNetAndAttachInputs(New<EqualNode<ElemType>>(net.GetDeviceId(), nodeName), { a, b });
 }
 
 template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Greater(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName)
 {
-	return net.AddNodeToNetAndAttachInputs(New<GreaterNode<ElemType>>(net.GetDeviceId(), nodeName), { a, b });
+    return net.AddNodeToNetAndAttachInputs(New<GreaterNode<ElemType>>(net.GetDeviceId(), nodeName), { a, b });
 }
 
 template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::GreaterEqual(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName)
 {
-	return net.AddNodeToNetAndAttachInputs(New<LessNode<ElemType>>(net.GetDeviceId(), nodeName), { a, b });
+    return net.AddNodeToNetAndAttachInputs(New<LessNode<ElemType>>(net.GetDeviceId(), nodeName), { a, b });
 }
 
 template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::NotEqual(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName)
 {
-	return net.AddNodeToNetAndAttachInputs(New<EqualNode<ElemType>>(net.GetDeviceId(), nodeName), { a, b });
+    return net.AddNodeToNetAndAttachInputs(New<EqualNode<ElemType>>(net.GetDeviceId(), nodeName), { a, b });
 }
 
 template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::LessEqual(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName)
 {
-	return net.AddNodeToNetAndAttachInputs(New<GreaterNode<ElemType>>(net.GetDeviceId(), nodeName), { a, b });
+    return net.AddNodeToNetAndAttachInputs(New<GreaterNode<ElemType>>(net.GetDeviceId(), nodeName), { a, b });
 }
 
 template <class ElemType>

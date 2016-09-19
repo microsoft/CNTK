@@ -150,7 +150,7 @@ template <class ElemType>
 CPUMatrix<ElemType>::CPUMatrix(const CPUMatrix<ElemType>& deepCopyFrom)
 {
     ZeroInit();
-	SetValue(deepCopyFrom);
+    SetValue(deepCopyFrom);
 }
 
 //assignment operator, deep copy
@@ -840,7 +840,7 @@ void CPUMatrix<ElemType>::SetValue(const CPUMatrix<ElemType>& deepCopyFrom)
     if (this == &deepCopyFrom)
         return;
 
-	SetValue(deepCopyFrom.GetNumRows(), deepCopyFrom.GetNumCols(), deepCopyFrom.Data(), 0);
+    SetValue(deepCopyFrom.GetNumRows(), deepCopyFrom.GetNumCols(), deepCopyFrom.Data(), 0);
 }
 
 #if 0
@@ -876,7 +876,7 @@ void CPUMatrix<ElemType>::SetValue(const size_t numRows, const size_t numCols, E
     if (matrixFlags & matrixFlagDontOwnBuffer)
     {
         // free previous array allocation if any before overwriting
-		delete[] Buffer();
+        delete[] Buffer();
 
         m_numRows = numRows;
         m_numCols = numCols;
@@ -1359,7 +1359,7 @@ template <class ElemType>
 void CPUMatrix<ElemType>::RequireSize(const size_t numRows, const size_t numCols, bool growOnly /*=true*/)
 {
     if (GetNumRows() != numRows || GetNumCols() != numCols)
-		Resize(numRows, numCols, growOnly);
+        Resize(numRows, numCols, growOnly);
 }
 
 // Resize() -- change matrix size
@@ -2990,7 +2990,7 @@ void CPUMatrix<ElemType>::VectorNorm2(CPUMatrix<ElemType>& c, const bool isColWi
 
     assert(m > 0 && n > 0); // converting from size_t to int may cause overflow
 
-	ElemType* bufPtr = us.Data();
+    ElemType* bufPtr = us.Data();
     if (isColWise) // col-wise
     {
         c.RequireSize(1, n);
@@ -4867,9 +4867,9 @@ void CPUMatrix<ElemType>::AddScaledDifference(const ElemType alpha, const CPUMat
     if (a.IsEmpty())
         LogicError("AddScaledDifference:  Input matrix a is empty.");
 
-	ElemType* aBufPtr = a.Data();
-	ElemType* bBufPtr = b.Data();
-	ElemType* cBufPtr = c.Data();
+    ElemType* aBufPtr = a.Data();
+    ElemType* bBufPtr = b.Data();
+    ElemType* cBufPtr = c.Data();
     long m = (long) c.GetNumElements();
 #pragma omp parallel for
     // four-way unrolling
@@ -4909,9 +4909,9 @@ void CPUMatrix<ElemType>::AssignScaledDifference(const ElemType alpha, const CPU
     if (&c != &a && &c != &b)
         c.RequireSize(a.GetNumRows(), a.GetNumCols());
 
-	ElemType* aBufPtr = a.Data();
-	ElemType* bBufPtr = b.Data();
-	ElemType* cBufPtr = c.Data();
+    ElemType* aBufPtr = a.Data();
+    ElemType* bBufPtr = b.Data();
+    ElemType* cBufPtr = c.Data();
     long m = (long) c.GetNumElements();
 #pragma omp parallel for
     // four-way unrolling
@@ -5014,8 +5014,8 @@ template <class ElemType>
     assert(m > 0 && n > 0); // converting from size_t to int may cause overflow
     c.RequireSize(m, n);
 
-	ElemType* aBufPtr = a.Data();
-	ElemType* cBufPtr = c.Data();
+    ElemType* aBufPtr = a.Data();
+    ElemType* cBufPtr = c.Data();
 
     if (alpha == 0)
     {
@@ -5108,8 +5108,8 @@ void CPUMatrix<ElemType>::InnerProduct(const CPUMatrix<ElemType>& a, const CPUMa
     {
         c.RequireSize(1, n);
 
-		ElemType* aBufPtr = a.Data();
-		ElemType* bBufPtr = b.Data();
+        ElemType* aBufPtr = a.Data();
+        ElemType* bBufPtr = b.Data();
         if (sizeof(ElemType) == sizeof(double))
         {
 #pragma omp parallel for
@@ -5132,8 +5132,8 @@ void CPUMatrix<ElemType>::InnerProduct(const CPUMatrix<ElemType>& a, const CPUMa
     {
         c.RequireSize(m, 1);
 
-		ElemType* aBufPtr = a.Data();
-		ElemType* bBufPtr = b.Data();
+        ElemType* aBufPtr = a.Data();
+        ElemType* bBufPtr = b.Data();
         if (sizeof(ElemType) == sizeof(double))
         {
 #pragma omp parallel for
@@ -5603,7 +5603,7 @@ template <class ElemType>
 ElemType CPUMatrix<ElemType>::LogSumOfElements() const
 {
     ElemType fAlpha = (ElemType) LZERO;
-	ElemType* bufPtr = Data();
+    ElemType* bufPtr = Data();
     for (int k = 0; k < GetNumElements(); k++)
         fAlpha = (ElemType) LogAddD(fAlpha, bufPtr[k]);
     return fAlpha;
