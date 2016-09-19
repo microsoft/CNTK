@@ -108,7 +108,7 @@ In the example above, we first create a synthetic data set of 500 samples, each 
 one-hot vector representing 0 (``[1 0]``) or 1 (``[0 1]``). We then begin describing the topology of our network 
 by setting up the data inputs. This is typically done using the :class:`cntk.reader.CNTKTextFormatReader` by reading data 
 in from a file, but for interactive experimentation and small examples we can use the ``input_numpy`` reader to 
-access numpy data.
+access NumPy data.
 
 Next, we define our network. In this case it's a simple 1-layer network with a weight tensor and a bias. 
 We multiply our data `x` with the weight tensor `W` and add the bias `b`. We then input the model prediction 
@@ -287,31 +287,31 @@ Examples section.
 How to pass Python data as train/test data
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The Python CNTK API allows to pass training / testing data either by specifing external input files or by using Python data directly to CNTK.
-This second alternative - using internal Python data - is usefull especially if you want to do some quick experimentation with small synthetic data sets.
+The Python CNTK API allows to pass training / testing data either by specifying external input files or by using Python data directly to CNTK.
+This second alternative - using internal Python data - is useful especially if you want to do some quick experimentation with small synthetic data sets.
 In what follows you will learn in what structure these data has to be provided.
 
 Let us start with a scenario coming from one of our code examples (`logreg_numpy.py <https://github.com/Microsoft/CNTK/tree/master/contrib/Python/cntk/examples/LogReg/logreg_numpy.py>`_).
-In this example we want to classify a 250 dimensional feature vector into one of two classes. In this case whe have two *inputs*:
+In this example we want to classify a 250 dimensional feature vector into one of two classes. In this case we have two *inputs*:
  - The features values for each training item. In the example these are 500 vectors each of dimension 250. 
- - The expected class. In this example the class is encoded with a two-dimensonal vector where the element for expected class is set to 1 and the other to 0.
+ - The expected class. In this example the class is encoded with a two-dimensional vector where the element for expected class is set to 1 and the other to 0.
 
 For each of these inputs we have to provide one data structure containing all training instances. 
 
 You might notice that this is conceptually different to the case where we provide the data from external files using the CNTKTextReader. 
-In the input file for CNTKTextReader we provide data for different *inputs* of one instance on the same line, so the data from different inputs are much more interwined.
+In the input file for CNTKTextReader we provide data for different *inputs* of one instance on the same line, so the data from different inputs are much more intertwined.
 
-In Python the feature data are reprensented by a NumPy array of dimension ``number_of_instances X dimension_of_feature_space`` so in out example its a NumPy array of dimension ``500 X 250``.
-Likewise the expected output is reprensented by another NumPy array of dimension ``500 X 2``.
+In Python the feature data are represented by a NumPy array of dimension ``number_of_instances X dimension_of_feature_space`` so in out example its a NumPy array of dimension ``500 X 250``.
+Likewise the expected output is represented by another NumPy array of dimension ``500 X 2``.
 
 Passing sequence data from Python
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 CNTK can handle sequences with arbitrary maximal length. This feature is also called *dynamic-axis*.
 To represent an input with a dynamic-axis in Python you have to provide each sequence as a NumPy-array where the first axis has a dimension equal to the sequence length.
-The complete dataset is then just a normal one-dimensional numpy array of these sequences.
+The complete dataset is then just a normal one-dimensional NumPy array of these sequences.
 
-Take as an artifical example a sentence classification problem. Each sentence has a different number of words, i.e. it is a *sequence* of words. The individual words might each be represented by some lantent vector.
+Take as an artificial example a sentence classification problem. Each sentence has a different number of words, i.e. it is a *sequence* of words. The individual words might each be represented by some latent vector.
 So each sentence is represented by a NumPy array of dimension ``sequence_length X embedding_dimension``. The whole set of instances (sentences) is then represented by putting them into a one-dimensional array with the size equal to the number of instances.
 
  
