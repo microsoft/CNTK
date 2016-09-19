@@ -10,7 +10,10 @@ IS_WINDOWS = platform.system() == 'Windows'
 
 CNTK_PATH = os.path.join(os.path.dirname(__file__), "..", "..")
 CNTK_SOURCE_PATH = os.path.join(CNTK_PATH, "Source")
+<<<<<<< HEAD
 PROJ_LIB_PATH = os.path.join(os.path.dirname(__file__), "cntk", "libs")
+=======
+>>>>>>> 3ec0740... Further Linux improvements
 
 if 'CNTK_LIB_PATH' in os.environ:
     CNTK_LIB_PATH = os.environ['CNTK_LIB_PATH']
@@ -33,6 +36,7 @@ def strip_ext(fn):
     return os.path.splitext(fn)[0]
 
 if IS_WINDOWS:
+<<<<<<< HEAD
     libname_rt_ext = '.dll'
 
     link_libs = [strip_ext(strip_path(fn)) for fn in
@@ -41,6 +45,30 @@ else:
     link_libs=[
        "cntklibrary-2.0",
        "cntkmath"
+=======
+    libs=[
+       os.path.join(CNTK_LIB_PATH, "CNTKLibrary-2.0"),
+       os.path.join(CNTK_LIB_PATH, "Math"),
+       os.path.join(CNTK_LIB_PATH, "BinaryReader"),
+       os.path.join(CNTK_LIB_PATH, "DSSMReader"),
+       os.path.join(CNTK_LIB_PATH, "EvalDll"),
+       os.path.join(CNTK_LIB_PATH, "EvalWrapper"),
+       os.path.join(CNTK_LIB_PATH, "nvml"),
+       os.path.join(CNTK_LIB_PATH, "mkl_cntk_p"),
+       os.path.join(CNTK_LIB_PATH, "libiomp5md"),
+       os.path.join(CNTK_LIB_PATH, "cusparse64_75"),
+       os.path.join(CNTK_LIB_PATH, "curand64_75"),
+       os.path.join(CNTK_LIB_PATH, "cudnn64_5"),
+       os.path.join(CNTK_LIB_PATH, "cudart64_75"),
+       os.path.join(CNTK_LIB_PATH, "cublas64_75"),
+       os.path.join(CNTK_LIB_PATH, "opencv_world310"),
+    ]
+else:
+    libs=[
+       os.path.join(CNTK_LIB_PATH, "libcntklibrary-2.0"),
+       os.path.join(CNTK_LIB_PATH, "libcntkmath"),
+       os.path.join(CNTK_LIB_PATH, "libeval"),
+>>>>>>> 3ec0740... Further Linux improvements
     ]
     libname_rt_ext = '.so'
 
@@ -52,6 +80,7 @@ rt_libs = [strip_path(fn) for fn in glob(os.path.join(CNTK_LIB_PATH,
 if os.path.exists(PROJ_LIB_PATH):
     shutil.rmtree(PROJ_LIB_PATH)
 
+<<<<<<< HEAD
 os.mkdir(PROJ_LIB_PATH)
 
 for fn in rt_libs:
@@ -63,6 +92,22 @@ for fn in rt_libs:
 rt_libs = [os.path.join('libs', fn) for fn in rt_libs]
 
 extra_compile_args = [
+=======
+libs += [
+   os.path.join(CNTK_LIB_PATH, "CNTKTextFormatReader"),
+   os.path.join(CNTK_LIB_PATH, "CompositeDataReader"),
+   os.path.join(CNTK_LIB_PATH, "HTKDeserializers"),
+   os.path.join(CNTK_LIB_PATH, "HTKMLFReader"),
+   os.path.join(CNTK_LIB_PATH, "ImageReader"),
+   os.path.join(CNTK_LIB_PATH, "LibSVMBinaryReader"),
+   os.path.join(CNTK_LIB_PATH, "LMSequenceReader"),
+   os.path.join(CNTK_LIB_PATH, "LUSequenceReader"),
+   os.path.join(CNTK_LIB_PATH, "SparsePCReader"),
+   os.path.join(CNTK_LIB_PATH, "UCIFastReader"),
+   ]
+
+extra_compile_args=[
+>>>>>>> 3ec0740... Further Linux improvements
 	"-DSWIG",
 	"-DUNICODE"
     ]
