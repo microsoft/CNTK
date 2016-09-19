@@ -57,6 +57,22 @@ libs += [
    os.path.join(CNTK_LIB_PATH, "opencv_world310"),
    ]
 
+extra_compile_args=[
+	"-DSWIG",
+	"-DUNICODE"]
+	       
+if IS_WINDOWS:
+    extra_compile_args += [
+	"/EHsc",
+	"/DEBUG",
+	"/Zi",
+	"/EHsc",
+    ]
+else:
+    extra_compile_args += [
+	'--std=c++11',
+    ]
+
 ext_modules = [
     Extension(
            name="_cntk_py",
@@ -73,17 +89,10 @@ ext_modules = [
                numpy.get_include(),
                ],
 
+            extra_compile_args = extra_compile_args,
+
            language="c++",
 
-           extra_compile_args=[
-               "-DSWIG",
-               "-DUNICODE",
-               "/EHsc"
-               "/DEBUG",
-               "/Zi" if IS_WINDOWS else '',
-               "/EHsc" if IS_WINDOWS else '',
-               '--std=c++11' if not IS_WINDOWS else '',
-               ],
            #extra_link_args=[ "/DEBUG"],
       )
     ]
