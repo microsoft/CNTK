@@ -1,13 +1,9 @@
 import os
-<<<<<<< HEAD
 import shutil
 from glob import glob
 import platform
 from warnings import warn
 from setuptools import setup, Extension, find_packages
-=======
-import platform
->>>>>>> b5d38a1... Linux setup
 import numpy
 
 IS_WINDOWS = platform.system() == 'Windows'
@@ -121,7 +117,6 @@ else:
     # On Windows copy all runtime libs to the base folder of Python
     kwargs = dict(data_files = [('.', [ os.path.join('cntk', lib) for lib in rt_libs ])])
 
-<<<<<<< HEAD
 setup(name="cntk", 
       version="2.0a2",
       url="http://cntk.ai",
@@ -133,24 +128,3 @@ setup(name="cntk",
       ],
       **kwargs
      )
-=======
-#import pdb;pdb.set_trace()
-#TODO: do not copy the dlls to the root, try to find a better location that is accessible
-if IS_WINDOWS:
-    data_files = [('.\\', [ lib + ".dll" for lib in libs ])] 
-else:
-    data_files = [('./', [ lib + ".so" for lib in libs ])] 
-    #os.environ["CC"] = "/usr/bin/gcc-4.8" 
-    #os.environ["CXX"] = "/usr/bin/gcc-4.8"
-    os.environ["CC"] = "/usr/local/openmpi-1.10.1/bin/mpic++" 
-    os.environ["CXX"] = "/usr/local/openmpi-1.10.1/bin/mpic++"
-
-packages = [x for x in setuptools.find_packages() if x.startswith('cntk')]
-
-import distutils.debug
-distutils.debug.DEBUG = True
-setup(name="cntk", 
-    ext_modules = ext_modules,  
-    data_files = data_files,
-    packages=packages)
->>>>>>> b5d38a1... Linux setup
