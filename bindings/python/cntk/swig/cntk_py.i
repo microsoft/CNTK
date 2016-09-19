@@ -943,11 +943,9 @@
 
         PyArrayObject* array = (PyArrayObject*)pyobj;
 
-/*
         int rank = PyArray_NDIM(array); 
         if (rank==0)
             throw std::logic_error("provided array is empty");
-            */
         
         npy_intp* np_shape = PyArray_SHAPE(array); 
         std::vector<size_t> shape;
