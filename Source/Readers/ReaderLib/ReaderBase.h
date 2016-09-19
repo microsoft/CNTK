@@ -12,7 +12,7 @@
 namespace Microsoft { namespace MSR { namespace CNTK {
 
     // Base class for the reader.
-    // Used for code sharing between differernt reader.
+    // Used for code sharing between different readers.
     // In the end there will be only composite reader, but we have to support other types of configuration 
     // currently as well.
     class ReaderBase : public Reader

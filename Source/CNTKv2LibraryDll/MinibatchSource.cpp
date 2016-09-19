@@ -131,7 +131,7 @@ namespace CNTK
                 std::map<std::wstring, int> requiredStreams;
                 for (const auto& s : m_streamInfos)
                     // Allocating all on CPU for now.
-                    requiredStreams[s.m_name] = -1;
+                    requiredStreams[s.m_name] = CPUDEVICE;
 
                 m_compositeDataReader->StartEpoch(epochConfig, requiredStreams);
                 m_prevMinibatchSize = minibatchSizeInSamples;

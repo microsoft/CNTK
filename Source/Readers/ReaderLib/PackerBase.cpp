@@ -28,10 +28,10 @@ void PackerBase::StreamBuffer::Resize(size_t newSize)
 void PackerBase::StartEpoch(const EpochConfiguration& config, const std::vector<MemoryProviderPtr>& memoryProviders)
 {
     // Let's check that memory providers did not change at the start of new epoch.
-    bool equal = m_memoryProviders.size() == memoryProviders.size() &&
+    bool equalMemoryProviders = m_memoryProviders.size() == memoryProviders.size() &&
         std::equal(memoryProviders.begin(), memoryProviders.end(), m_memoryProviders.begin());
 
-    if (!equal)
+    if (!equalMemoryProviders)
     {
         // If they change we have to reinitialize the buffers with the new memory providers, one per stream.
         m_memoryProviders = memoryProviders;
