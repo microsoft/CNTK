@@ -124,5 +124,7 @@ void TrainMNISTClassifier(const DeviceDescriptor& device)
 void TrainerTests()
 {
     TrainSimpleFeedForwardClassifer(DeviceDescriptor::CPUDevice());
+#ifndef CPUONLY
     TrainMNISTClassifier(DeviceDescriptor::GPUDevice(0));
+#endif
 }
