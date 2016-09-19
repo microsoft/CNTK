@@ -347,10 +347,14 @@ void TestRecurrentFunctionCloning()
 void FunctionTests()
 {
     TestSlice(DeviceDescriptor::CPUDevice());
+#ifndef CPUONLY
     TestSlice(DeviceDescriptor::GPUDevice(0));
+#endif
 
     TestReduceSum(DeviceDescriptor::CPUDevice());
+#ifndef CPUONLY
     TestReduceSum(DeviceDescriptor::GPUDevice(0));
+#endif
 
     TestRecurrentFunctionCloning();
 }
