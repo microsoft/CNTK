@@ -317,8 +317,8 @@ public:
     void ForwardProp(const FrameRange& fr) override
     {
         Matrix<ElemType> sliceOutputValue = ValueFor(fr);
-        const Matrix<ElemType>& input0 = Input(0)->ValueAsMatrix();
-        Matrix<ElemType> sliceInput1Value = Input(1)->ValueFor(fr);
+        const Matrix<ElemType>& input0 = InputRef(0).ValueAsMatrix();
+        Matrix<ElemType> sliceInput1Value = InputRef(1).ValueFor(fr);
         if (!m_transpose)
             m_convEng->Forward(sliceInput1Value, input0, sliceOutputValue, *m_tempMatrix);
         else
@@ -335,8 +335,8 @@ public:
         auto sliceOutputGrad = GradientFor(fr);
         if (inputIndex == 0) // derivative with respect to the weight matrix
         {
-            auto& grad = Input(0)->GradientAsMatrix();
-            auto sliceInput1Value = Input(1)->ValueFor(fr);
+            auto& grad = InputRef(0).GradientAsMatrix();
+            auto sliceInput1Value = InputRef(1).ValueFor(fr);
             if (!m_transpose)
                 m_convEng->BackwardKernel(sliceOutputGrad, sliceInput1Value, grad, fr.IsAllFrames(), *m_tempMatrix);
             else
@@ -344,8 +344,8 @@ public:
         }
         else if (inputIndex == 1) // derivative with respect to the input feature
         {
-            auto& input0 = Input(0)->ValueAsMatrix();
-            auto sliceInput1Grad = Input(1)->GradientFor(fr);
+            auto& input0 = InputRef(0).ValueAsMatrix();
+            auto sliceInput1Grad = InputRef(1).GradientFor(fr);
             if (!m_transpose)
                 m_convEng->BackwardData(sliceOutputGrad, input0, sliceInput1Grad, *m_tempMatrix);
             else
@@ -524,15 +524,15 @@ public:
     void ForwardProp(const FrameRange& fr) override
     {
         Matrix<ElemType> sliceOutputValue = ValueFor(fr);
-        const Matrix<ElemType>& input0 = Input(0)->ValueFor(fr);
+        const Matrix<ElemType>& input0 = InputRef(0).ValueFor(fr);
         m_convEng->ForwardPooling(input0, sliceOutputValue);
     }
 
     void BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
         auto sliceOutputGrad = GradientFor(fr);
-        Matrix<ElemType> sliceInput0Grad = Input(0)->GradientFor(fr);
-        Matrix<ElemType> sliceInput0Value = Input(0)->ValueFor(fr);
+        Matrix<ElemType> sliceInput0Grad = InputRef(0).GradientFor(fr);
+        Matrix<ElemType> sliceInput0Value = InputRef(0).ValueFor(fr);
         Matrix<ElemType> sliceOutputValue = ValueFor(fr);
 
         m_convEng->BackwardPooling(sliceOutputValue, sliceOutputGrad, sliceInput0Value, sliceInput0Grad);
@@ -624,8 +624,8 @@ public:
 public:
     void ForwardProp(const FrameRange& fr) override
     {
-        const Matrix<ElemType>& unpoolInput = Input(0)->ValueFor(fr);
-        const Matrix<ElemType>& poolInput = Input(1)->ValueFor(fr);
+        const Matrix<ElemType>& unpoolInput = InputRef(0).ValueFor(fr);
+        const Matrix<ElemType>& poolInput = InputRef(1).ValueFor(fr);
         Matrix<ElemType> sliceOutputValue = ValueFor(fr);
         m_convEng->MaxUnpooling(unpoolInput, poolInput, sliceOutputValue);
     }
@@ -636,7 +636,7 @@ public:
             return;
 
         auto sliceOutputGrad = GradientFor(fr);
-        Matrix<ElemType> sliceInput0Grad = Input(0)->GradientFor(fr);
+        Matrix<ElemType> sliceInput0Grad = InputRef(0).GradientFor(fr);
         // BUGBUG: ForwardPooling overwrites values in sliceInput1Grad. Should handle correctly instead.
         m_convEng->ForwardPooling(sliceOutputGrad, sliceInput0Grad);
     }
@@ -757,7 +757,7 @@ public:
 
     void ForwardProp(const FrameRange& fr) override
     {
-        Matrix<ElemType> sliceInput0Value = Input(0)->ValueFor(fr);
+        Matrix<ElemType> sliceInput0Value = InputRef(0).ValueFor(fr);
         Matrix<ElemType> sliceOutputValue = ValueFor(fr);
 
         m_convEng->ForwardPooling(sliceInput0Value, sliceOutputValue);
@@ -765,10 +765,10 @@ public:
 
     void BackpropTo(const size_t /*inputIndex*/, const FrameRange& fr) override
     {
-        Matrix<ElemType> sliceInput0Grad = Input(0)->GradientFor(fr);
+        Matrix<ElemType> sliceInput0Grad = InputRef(0).GradientFor(fr);
         Matrix<ElemType> sliceOutputGrad = GradientFor(fr);
 
-        Matrix<ElemType> sliceInput0Value = Input(0)->ValueFor(fr);
+        Matrix<ElemType> sliceInput0Value = InputRef(0).ValueFor(fr);
         Matrix<ElemType> sliceOutputValue = ValueFor(fr);
 
         m_convEng->BackwardPooling(sliceOutputValue, sliceOutputGrad, sliceInput0Value, sliceInput0Grad);

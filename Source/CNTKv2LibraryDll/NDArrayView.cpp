@@ -207,7 +207,7 @@ namespace CNTK
     TensorView<ElementType>* NDArrayView::GetWritableTensorView()
     {
         if (IsReadOnly())
-            LogicError("NDArrayView::GetWritableTensorView: Cannot get writable TensorView from a read-only NDArrayView");
+            InvalidArgument("NDArrayView::GetWritableTensorView: Cannot get writable TensorView from a read-only NDArrayView");
 
         return const_cast<TensorView<ElementType>*>(GetTensorView<ElementType>());
     }
@@ -294,7 +294,7 @@ namespace CNTK
     ElementType* NDArrayView::WritableDataBuffer()
     {
         if (IsReadOnly())
-            LogicError("NDArrayView::WritableDataBuffer: Cannot get writable data buffer from a read-only NDArrayView");
+            InvalidArgument("NDArrayView::WritableDataBuffer: Cannot get writable data buffer from a read-only NDArrayView");
 
         return const_cast<ElementType*>(DataBuffer<ElementType>());
     }
@@ -304,7 +304,7 @@ namespace CNTK
     const ElementType* NDArrayView::DataBuffer() const
     {
         if (AsDataType<ElementType>() != m_dataType)
-            LogicError("The specified ElementType %s does not match the DataType %s", typeid(ElementType).name(), DataTypeName(m_dataType));
+            InvalidArgument("The specified ElementType %s does not match the DataType %s", typeid(ElementType).name(), DataTypeName(m_dataType));
 
         if (IsSparse())
             InvalidArgument("DataBuffer/WritableDataBuffer methods can only be called for NDArrayiew objects with dense storage format");

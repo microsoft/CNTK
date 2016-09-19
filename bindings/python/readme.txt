@@ -45,6 +45,8 @@ swig.bat
     
     # 6) Running examples:
         # Clone the python examples folder form cntk repository and add its path to PYTHONPATH    
+        # (e.g. setx PYTHONPATH %PYTHONPATH%;C:\work\cntk\bindings\python\examples in an Admin shell,
+        # or rather setx PYTHONPATH C:\work\cntk\bindings\python\examples if no PYTHONPATH defined yet).
         # Try to run any of the examples, some examples come up with s script that fetches and prepares the data,
         # other examples use data files that are checked in inside the cntk repository.
     

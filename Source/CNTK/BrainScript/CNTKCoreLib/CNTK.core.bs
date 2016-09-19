@@ -118,10 +118,11 @@ RecurrentLSTMLayer {outputDim,
                     cellShape = None, # if set then use a projection
                     goBackwards = false,
                     usePeepholes = false,
+                    trainInitialState = false,
                     init = 'glorotUniform', initValueScale = 1,
                     enableSelfStabilization = false,
                     allowOptimizedEngine = false} =
-if allowOptimizedEngine && BS.Constants.IsNone (cellShape) && !goBackwards && !usePeepholes && !enableSelfStabilization then
+if allowOptimizedEngine && BS.Constants.IsNone (cellShape) && !goBackwards && !usePeepholes && !trainInitialState && !enableSelfStabilization then
 {
     # use cudnn instead
     W = ParameterTensor {0:0, initFilterRank=0, initOutputRank=-1, init=init, initValueScale=initValueScale}
@@ -129,7 +130,10 @@ if allowOptimizedEngine && BS.Constants.IsNone (cellShape) && !goBackwards && !u
 }.apply
 else
 {
-    previousHook = if goBackwards then BS.RNNs.NextHC else BS.RNNs.PreviousHC
+    previousHook =
+        if trainInitialState
+        then if goBackwards then BS.RNNs.NextHCWithTrainedInitialState{} else BS.RNNs.PreviousHCWithTrainedInitialState{}
+        else if goBackwards then BS.RNNs.NextHC else BS.RNNs.PreviousHC
     lstm = BS.RNNs.LSTMBlock {outputDim, cellShape=cellShape, usePeepholes=usePeepholes, enableSelfStabilization=enableSelfStabilization, init=init, initValueScale=initValueScale}
     apply (x) = {
         prevState = previousHook (lstmState) # recurrent memory. E.g. Previous or Next, with or without initial state, beam reordering etc.
@@ -148,12 +152,12 @@ _AreElementsTheSame (arr, L) =
 # RecurrentLSTMLayer -- create a whole stack of LSTM layers
 RecurrentLSTMLayerStack {layerDims,  # an array of dimensions for each layer (last one is output dimension)
                          cellShapes = None, # if set then use a projection
-                         goBackwards = false,
+                         #bidirectional = false,    # TODO: add this
                          usePeepholes = false,
                          init = 'glorotUniform', initValueScale = 1,
                          enableSelfStabilization = false,
                          allowOptimizedEngine = false} =
-if allowOptimizedEngine && BS.Constants.IsNone (cellShapes) && !goBackwards && !usePeepholes && !enableSelfStabilization && _AreElementsTheSame (layerDims, Length(layerDims)) then
+if allowOptimizedEngine && BS.Constants.IsNone (cellShapes) && !usePeepholes && !enableSelfStabilization && _AreElementsTheSame (layerDims, Length(layerDims)) then
 {
     # use cudnn instead
     W = ParameterTensor {0:0, initFilterRank=0, initOutputRank=-1, init=init, initValueScale=initValueScale}
@@ -163,7 +167,7 @@ else
     LayerStack {Length(layerDims), i => RecurrentLSTMLayer {
                                            layerDims[i],
                                            cellShape = if BS.Constants.IsNone (cellShapes) then None else cellShapes[i], # if set then use a projection
-                                           goBackwards = goBackwards,
+                                           goBackwards = false,
                                            usePeepholes = usePeepholes,
                                            init = init, initValueScale = initValueScale,
                                            enableSelfStabilization = enableSelfStabilization,
@@ -221,11 +225,19 @@ LayerNormalizationLayer {initScale = 1, initBias = 0} =
     }.val
 }.apply
 
-# StabilizerLayer -- create a scalar stabilizer [J. Droppo, 2014 -- TODO: get the reference]
-StabilizerLayer{} =
+# StabilizerLayer -- create a scalar stabilizer ["Self-stabilized deep neural network," P. Ghahremani and J. Droppo, ICASSP 2016]
+# seems the parameter matters
+StabilizerLayer{steepness=4} =
 {
-    # BUGBUG: Calling f(x) twice will create a second set of parameters. Needs to refactor Stabilize() for this.
-    apply (x) = BS.Parameters.Stabilize (x)
+    # sharpened Softplus: 1/steepness ln(1+e^{steepness*beta})
+    # this behaves linear for weights around 1, yet guarantees positiveness
+
+    param = ParameterTensor ((1), initValue=0.99537863/* 1/steepness*ln (e^steepness-1) for steepness==4 */)
+
+    apply (x) = {
+        beta = Log (1 + Exp (steepness .* param)) / steepness
+        res  = beta .* x
+    }.res
 }.apply
 
 # FeatureMVNLayer -- create a corpus-level feature-normalization layer
@@ -254,13 +266,17 @@ Inferred = 0  # denotes a dimension that is to be inferred
 ##############################################################################
 
 # Sequential -- composite that applies a sequence of functions onto an input
+# Sequential (F:G:H) === F >> G >> H
 Sequential (arrayOfFunctions) =
 {
     fs = _AsArray (arrayOfFunctions)  # make sure it works with a single function that is not an array
     Apply (x, N) = if N == 0 then x else fs[N-1](Apply (x, N-1))  # we do that recursively
     apply (x) = Apply (x, Length (fs))
+    # TODO: change to this once '>>' has been changed to evaluate in the same order (right first)
+    #apply = if Length(fs) == 0 then Identity else fs[0] >> Sequential(fs << 1)
 }.apply
 # Parallel -- composite that applies several functions to the same input and combines the result
+# TODO: remove combineFunction; instead create an array of values
 Parallel (arrayOfFunctions, combineFunction) =
 {
     fs = _AsArray (arrayOfFunctions)
@@ -317,6 +333,18 @@ Sigmoid                 = CNTK2.Sigmoid
 # ComputationNodes
 ##############################################################################
 
+# helper to cast inputs that are Doubles to ComputationNodes
+_AsNodes (inputs) = {
+    inArr = _AsArray(inputs)
+    arr[i:0..Length(inArr)-1] =
+    {
+        val = inArr[i]
+        res = if      IsDouble(val) then Constant {val}
+              else if IsBool(val)   then Constant {if val then 1 else 0}
+              else val
+    }.res
+}.arr
+
 ##############################################################################
 # "Stable API" with the purpose of staying compatible towards 2.0. 
 # - Use only tensors as concept. Move away from matrices.
@@ -349,7 +377,7 @@ CNTK2 = [
 
     // 3. Shape operations
     // Changes: NewReshape -> Reshape, input -> _, dims -> shape
-    Reshape(_, shape, beginAxis=0, endAxis=0, tag='') = new ComputationNode [ operation = 'Reshape' ; inputs = _ ; shape = new TensorShape [ /*shape*/ ] /*plus the function args*/ ]
+    Reshape(_, shape, beginAxis=0, endAxis=0, tag='') = new ComputationNode [ operation = 'Reshape' ; inputs = _AsNodes (_) ; shape = new TensorShape [ /*shape*/ ] /*plus the function args*/ ]
     Slice(_, beginIndex, endIndex, axis=1, tag='') =
         if axis < 0 then [ # time axis: specify -1
             beginFlags = if beginIndex > 0 then BS.Boolean.Not (BS.Loop.IsFirstN (beginIndex, _)) else                 BS.Loop.IsLastN  (-beginIndex, _)
@@ -361,7 +389,7 @@ CNTK2 = [
                   then _
                   else BS.Sequences.Gather (flags, _)
         ].out
-        else new ComputationNode [ operation = 'Slice' ; inputs = _ /*plus the function args*/ ] # non-time axis
+        else new ComputationNode [ operation = 'Slice' ; inputs = _AsNodes (_) /*plus the function args*/ ] # non-time axis
 
     Splice (_, axis=1, tag='') = # TODO: This is a workaround. RowStack itself shall interpret 'axis' and be renamed to Splice().
         if axis < 1 then Fail('Splice does not yet implement splicing the time axis.')
@@ -374,37 +402,37 @@ CNTK2 = [
         ].out
 
     // Swap two axes of a tensor
-    TransposeDimensions(_, axis1, axis2, tag='') = new ComputationNode [ operation = 'TransposeDimensions' ; inputs = _ /*plus the function args*/ ]
+    TransposeDimensions(_, axis1, axis2, tag='') = new ComputationNode [ operation = 'TransposeDimensions' ; inputs = _AsNodes (_) /*plus the function args*/ ]
 
     // 4. Tensor operations
     // Changes: Matrix -> Tensor. A -> x, B -> y. Data must come on y ("default parameter") hence not using _
-    Times(x, y, outputRank=1, inferInputRankToMap=-1, tag='') = new ComputationNode [ operation = 'Times' ; inputs = ( x : y ) /*plus the function args*/ ]
+    Times(x, y, outputRank=1, inferInputRankToMap=-1, tag='') = new ComputationNode [ operation = 'Times' ; inputs = _AsNodes (x : y) /*plus the function args*/ ]
 
     // 5. Elementwise operations.
     // Changes: "Matrix" -> "Tensor"; left input -> _; Clip: move input to front. ElementDivide/Times: anotherTensor -> y
-    Abs(_, tag='') = new ComputationNode [ operation = 'Abs' ; inputs = _ /*plus the function args*/ ]
+    Abs(_, tag='') = new ComputationNode [ operation = 'Abs' ; inputs = _AsNodes (_) /*plus the function args*/ ]
     Ceil(_, tag='') = Negate(Floor(Negate(_)), tag=tag)
-    Clip(_, minValue, maxValue, tag='') = new ComputationNode [ operation = 'Clip' ; inputs = (minValue : maxValue : _) /* plus the function args*/ ]
+    Clip(_, minValue, maxValue, tag='') = new ComputationNode [ operation = 'Clip' ; inputs = _AsNodes (minValue : maxValue : _) /* plus the function args*/ ]
     # TODO: Make ElementDivide a proper operation
     ElementDivide(_, y, tag='') = ElementTimes(_, Reciprocal(y), tag=tag)
-    ElementTimes(_, y, tag='') = new ComputationNode [ operation = 'ElementTimes' ; inputs = (_ : y) /*plus the function args*/ ]
-    Exp(_, tag='') = new ComputationNode [ operation = 'Exp' ; inputs = _ /*plus the function args*/ ]
-    Floor(_, tag='') = new ComputationNode [ operation = 'Floor' ; inputs = _ /*plus the function args*/ ]
-    Log(_, tag='') = new ComputationNode [ operation = 'Log' ; inputs = _ /*plus the function args*/ ]
-    Minus(_, y, tag='') = new ComputationNode [ operation = 'Minus' ; inputs = (_ : y) /*plus the function args*/ ]
-    Plus(_, y, tag='') = new ComputationNode [ operation = 'Plus' ; inputs = (_ : y) /*plus the function args*/ ]
+    ElementTimes(_, y, tag='') = new ComputationNode [ operation = 'ElementTimes' ; inputs = _AsNodes (_ : y) /*plus the function args*/ ]
+    Exp(_, tag='') = new ComputationNode [ operation = 'Exp' ; inputs = _AsNodes (_) /*plus the function args*/ ]
+    Floor(_, tag='') = new ComputationNode [ operation = 'Floor' ; inputs = _AsNodes (_) /*plus the function args*/ ]
+    Log(_, tag='') = new ComputationNode [ operation = 'Log' ; inputs = _AsNodes (_) /*plus the function args*/ ]
+    Minus(_, y, tag='') = new ComputationNode [ operation = 'Minus' ; inputs = _AsNodes (_ : y) /*plus the function args*/ ]
+    Plus(_, y, tag='') = new ComputationNode [ operation = 'Plus' ; inputs = _AsNodes (_ : y) /*plus the function args*/ ]
     Round(_, tag='') = Floor(Plus(_, ConstantTensor(0.5, (1))), tag=tag)
-    Sqrt(_, tag='') = new ComputationNode [ operation = 'Sqrt' ; inputs = _ /*plus the function args*/ ]
+    Sqrt(_, tag='') = new ComputationNode [ operation = 'Sqrt' ; inputs = _AsNodes (_) /*plus the function args*/ ]
     Square(_, tag='') = ElementTimes(_, _, tag=tag)
-    Tanh(_, tag='') = new ComputationNode [ operation = 'Tanh' ; inputs = _ /*plus the function args*/ ]
+    Tanh(_, tag='') = new ComputationNode [ operation = 'Tanh' ; inputs = _AsNodes (_) /*plus the function args*/ ]
 
     // 6. Reductions    
-    ReduceSum   (_, axis=None, tag='') = { axis1 = if BS.Constants.IsNone (axis) then 0 else axis ; r = new ComputationNode [ operation = 'ReduceElements' ; inputs = _ ; axis = axis1 ; reductionOp = "Sum"    /*plus the function args*/ ]}.r
-    ReduceLogSum(_, axis=None, tag='') = { axis1 = if BS.Constants.IsNone (axis) then 0 else axis ; r = new ComputationNode [ operation = 'ReduceElements' ; inputs = _ ; axis = axis1 ; reductionOp = "LogSum" /*plus the function args*/ ]}.r
-    ReduceMean  (_, axis=None, tag='') = { axis1 = if BS.Constants.IsNone (axis) then 0 else axis ; r = new ComputationNode [ operation = 'ReduceElements' ; inputs = _ ; axis = axis1 ; reductionOp = "Mean"   /*plus the function args*/ ]}.r
-    ReduceMin   (_, axis=None, tag='') = { axis1 = if BS.Constants.IsNone (axis) then 0 else axis ; r = new ComputationNode [ operation = 'ReduceElements' ; inputs = _ ; axis = axis1 ; reductionOp = "Min"    /*plus the function args*/ ]}.r
-    ReduceMax   (_, axis=None, tag='') = { axis1 = if BS.Constants.IsNone (axis) then 0 else axis ; r = new ComputationNode [ operation = 'ReduceElements' ; inputs = _ ; axis = axis1 ; reductionOp = "Max"    /*plus the function args*/ ]}.r
-    
+    ReduceSum   (_, axis=None, tag='') = { axis1 = if BS.Constants.IsNone (axis) then 0 else axis ; r = new ComputationNode [ operation = 'ReduceElements' ; inputs = _AsNodes (_) ; axis = axis1 ; reductionOp = "Sum"    /*plus the function args*/ ]}.r
+    ReduceLogSum(_, axis=None, tag='') = { axis1 = if BS.Constants.IsNone (axis) then 0 else axis ; r = new ComputationNode [ operation = 'ReduceElements' ; inputs = _AsNodes (_) ; axis = axis1 ; reductionOp = "LogSum" /*plus the function args*/ ]}.r
+    ReduceMean  (_, axis=None, tag='') = { axis1 = if BS.Constants.IsNone (axis) then 0 else axis ; r = new ComputationNode [ operation = 'ReduceElements' ; inputs = _AsNodes (_) ; axis = axis1 ; reductionOp = "Mean"   /*plus the function args*/ ]}.r
+    ReduceMin   (_, axis=None, tag='') = { axis1 = if BS.Constants.IsNone (axis) then 0 else axis ; r = new ComputationNode [ operation = 'ReduceElements' ; inputs = _AsNodes (_) ; axis = axis1 ; reductionOp = "Min"    /*plus the function args*/ ]}.r
+    ReduceMax   (_, axis=None, tag='') = { axis1 = if BS.Constants.IsNone (axis) then 0 else axis ; r = new ComputationNode [ operation = 'ReduceElements' ; inputs = _AsNodes (_) ; axis = axis1 ; reductionOp = "Max"    /*plus the function args*/ ]}.r
+
     // 7. Control flow (if, composite etc.)
     // None so far
 
@@ -413,22 +441,22 @@ CNTK2 = [
 
     // 9. Recurrent operations
     // Changes: input first; input -> _
-    FutureValue(_, shape, timeStep = 1, defaultHiddenActivation = 0.1, tag='') = new ComputationNode [ operation = 'FutureValue' ; inputs = _ ; shape = new TensorShape [ /*shape*/ ] /*plus the function args*/ ]
-    PastValue(_, shape, timeStep = 1, defaultHiddenActivation = 0.1, tag='') = new ComputationNode [ operation = 'PastValue' ; inputs = _ ; shape = new TensorShape [ /*shape*/ ] /*plus the function args*/ ]
+    FutureValue(_, shape, timeStep = 1, defaultHiddenActivation = 0.1, tag='') = new ComputationNode [ operation = 'FutureValue' ; inputs = _AsNodes (_) ; shape = new TensorShape [ /*shape*/ ] /*plus the function args*/ ]
+    PastValue(_, shape, timeStep = 1, defaultHiddenActivation = 0.1, tag='') = new ComputationNode [ operation = 'PastValue' ; inputs = _AsNodes (_) ; shape = new TensorShape [ /*shape*/ ] /*plus the function args*/ ]
 
     // 10. NN-specific operations
     // Changes: input -> _, RectifiedLinear -> ReLU
-    ReLU(_, tag='') = new ComputationNode [ operation = 'RectifiedLinear' ; inputs = _ /*plus the function args*/ ]
+    ReLU(_, tag='') = new ComputationNode [ operation = 'RectifiedLinear' ; inputs = _AsNodes (_) /*plus the function args*/ ]
     Relu = ReLU // [Use Relu to arrive at relu() in snake_case]
-    Sigmoid(_, tag='') = new ComputationNode [ operation = 'Sigmoid' ; inputs = _ /*plus the function args*/ ]
-    Softmax(_, tag='') = new ComputationNode [ operation = 'Softmax' ; inputs = _ /*plus the function args*/ ]
-    Dropout(_, tag='') = new ComputationNode [ operation = 'Dropout' ; inputs = _ /*plus the function args*/ ]
+    Sigmoid(_, tag='') = new ComputationNode [ operation = 'Sigmoid' ; inputs = _AsNodes (_) /*plus the function args*/ ]
+    Softmax(_, tag='') = new ComputationNode [ operation = 'Softmax' ; inputs = _AsNodes (_) /*plus the function args*/ ]
+    Dropout(_, tag='') = new ComputationNode [ operation = 'Dropout' ; inputs = _AsNodes (_) /*plus the function args*/ ]
 
     // 11. Criterion nodes
     // No changes here - we said the default input would be the label sequence here, against which the 
     // empirical sequence is compared to. Keeping this for now.
-    CrossEntropyWithSoftmax(_, outProbVectorSequence, tag='') = new ComputationNode [ operation = 'CrossEntropyWithSoftmax' ; inputs = (_ : outProbVectorSequence) /*plus the function args*/ ]
-    ClassificationError(_, outVectorSequence, topN=1, tag='') = new ComputationNode [ operation = 'ClassificationError' ; inputs = if topN == 1 then (_ : outVectorSequence) else  (_ : outVectorSequence : Constant (topN)) /*plus the function args*/ ]
+    CrossEntropyWithSoftmax(_, outProbVectorSequence, tag='') = new ComputationNode [ operation = 'CrossEntropyWithSoftmax' ; inputs = _AsNodes (_ : outProbVectorSequence) /*plus the function args*/ ]
+    ClassificationError(_, outVectorSequence, topN=1, tag='') = new ComputationNode [ operation = 'ClassificationError' ; inputs = _AsNodes (if topN == 1 then (_ : outVectorSequence) else  (_ : outVectorSequence : Constant (topN))) /*plus the function args*/ ]
     ErrorPrediction = ClassificationError  # legacy
     # TODO: replace with this (need to deal with topN thing):
     # (_new will be removed once the change is made)
@@ -451,22 +479,22 @@ CNTK2 = [
 
                                         wT = Times(TrWeights, labels) /* dimension nHidden * 1 */
                                         zT = Times(TrWT, hiddenLayer) +  Times(TrBiasMinusLogPrior, labels) /* here we don't need an additional transpose as the output is already scalar */
-                                        
+
                                         zSReduced = ReduceLogSum(zS)
                                         ce = LogPlus(zT, zSReduced) - zT
                                        ].ce
 
 
     // 12. Comparison nodes
-    Less(_, y, tag='')         = new ComputationNode [ operation = 'Less'         ; inputs = (_ : y) /*plus the function args*/ ]
-    Equal(_, y, tag='')        = new ComputationNode [ operation = 'Equal'        ; inputs = (_ : y) /*plus the function args*/ ]
-    Greater(_, y, tag='')      = new ComputationNode [ operation = 'Greater'      ; inputs = (_ : y) /*plus the function args*/ ]
-    GreaterEqual(_, y, tag='') = new ComputationNode [ operation = 'GreaterEqual' ; inputs = (_ : y) /*plus the function args*/ ]
-    NotEqual(_, y, tag='')     = new ComputationNode [ operation = 'NotEqual'     ; inputs = (_ : y) /*plus the function args*/ ]
-    LessEqual(_, y, tag='')    = new ComputationNode [ operation = 'LessEqual'    ; inputs = (_ : y) /*plus the function args*/ ]
+    Less(_, y, tag='')         = new ComputationNode [ operation = 'Less'         ; inputs = _AsNodes (_ : y) /*plus the function args*/ ]
+    Equal(_, y, tag='')        = new ComputationNode [ operation = 'Equal'        ; inputs = _AsNodes (_ : y) /*plus the function args*/ ]
+    Greater(_, y, tag='')      = new ComputationNode [ operation = 'Greater'      ; inputs = _AsNodes (_ : y) /*plus the function args*/ ]
+    GreaterEqual(_, y, tag='') = new ComputationNode [ operation = 'GreaterEqual' ; inputs = _AsNodes (_ : y) /*plus the function args*/ ]
+    NotEqual(_, y, tag='')     = new ComputationNode [ operation = 'NotEqual'     ; inputs = _AsNodes (_ : y) /*plus the function args*/ ]
+    LessEqual(_, y, tag='')    = new ComputationNode [ operation = 'LessEqual'    ; inputs = _AsNodes (_ : y) /*plus the function args*/ ]
 
     // 13. Others    
-    Pass(_, tag='') = new ComputationNode [ operation = 'Pass' ; inputs = _ /*plus the function args*/ ]    
+    Pass(_, tag='') = new ComputationNode [ operation = 'Pass' ; inputs = _AsNodes (_) /*plus the function args*/ ]    
     Identity = Pass
     GetRandomSample(_ ,numSamples, sampleWithReplacement, tag='') = new ComputationNode [ 
                                                                                         operation = 'RandomSample' ; 
@@ -513,11 +541,15 @@ EnvironmentInput(propertyName, tag='') = new ComputationNode [ operation = 'Envi
 # TODO: make 'dims' the first parameter, think ConstantTensor<dims> (val)
 ConstantTensor(val, dims, tag='') = ParameterTensor(dims, learningRateMultiplier = 0, initValue = val)
 Constant(val, rows = 1, cols = 1, tag='') = Parameter(rows, cols, learningRateMultiplier = 0, initValue = val)
-PastValue(dims, input, timeStep = 1, defaultHiddenActivation = 0.1, tag='') = new ComputationNode [ operation = 'PastValue' ; inputs = input ; shape = new TensorShape [ /*dims*/ ] /*plus the function args*/ ]
-FutureValue(dims, input, timeStep = 1, defaultHiddenActivation = 0.1, tag='') = new ComputationNode [ operation = 'FutureValue' ; inputs = input ; shape = new TensorShape [ /*dims*/ ] /*plus the function args*/ ]
-Shift(input, fromOffset, boundaryValue, boundaryMode=-1/*context*/, dim=-1, tag='') = new ComputationNode [ operation = 'Shift' ; inputs = (input : boundaryValue) /*plus the function args*/ ]
+# in PastValue/FutureValue, initialState, if given, overrides defaultHiddenActivation
+# for back compat, we must keep this value of 0.1 for defaultHiddenActivation even if it is strange
+_PFValue   (pastOrFuture, dims, input, timeStep = 1, initialState = None, defaultHiddenActivation = 0.1, tag='') =
+    new ComputationNode { operation = pastOrFuture + 'Value' ; inputs = _AsNodes (if BS.Constants.IsNone (initialState) then input else (input:initialState)) ; shape = new TensorShape [ /*dims*/ ] /*plus the function args*/ }
+PastValue   (dims, input, timeStep = 1, initialState = None, defaultHiddenActivation = 0.1, tag='') = _PFValue ("Past",   dims, input, timeStep=timeStep, initialState=initialState, defaultHiddenActivation=defaultHiddenActivation, tag=tag)
+FutureValue (dims, input, timeStep = 1, initialState = None, defaultHiddenActivation = 0.1, tag='') = _PFValue ("Future", dims, input, timeStep=timeStep, initialState=initialState, defaultHiddenActivation=defaultHiddenActivation, tag=tag)
+Shift(input, fromOffset, boundaryValue, boundaryMode=-1/*context*/, dim=-1, tag='') = new ComputationNode [ operation = 'Shift' ; inputs = _AsNodes (input : boundaryValue) /*plus the function args*/ ]
 RowSlice(beginIndex, numRows, input, tag='') = Slice(beginIndex, beginIndex + numRows, input, axis = 1)
-RowRepeat(input, numRepeats, tag='') = new ComputationNode [ operation = 'RowRepeat' ; inputs = input /*plus the function args*/ ]
+RowRepeat(input, numRepeats, tag='') = new ComputationNode [ operation = 'RowRepeat' ; inputs = _AsNodes (input) /*plus the function args*/ ]
 RowStack(inputs, tag='') = new ComputationNode [ operation = 'RowStack' /*plus the function args*/ ]
 Slice(beginIndex, endIndex, input, axis=1, tag='') =
     if axis < 0 then [ # time axis: specify -1
@@ -530,70 +562,70 @@ Slice(beginIndex, endIndex, input, axis=1, tag='') =
               then input
               else BS.Sequences.Gather (flags, input)
     ].out
-    else new ComputationNode [ operation = 'Slice' ; inputs = input /*plus the function args*/ ] # non-time axis
-Reshape(input, numRows, imageWidth = 0, imageHeight = 0, imageChannels = 0, tag='') = new ComputationNode [ operation = 'LegacyReshape' ; inputs = input /*plus the function args*/ ]
-NewReshape(input, dims, beginAxis=0, endAxis=0, tag='') = new ComputationNode [ operation = 'Reshape' ; inputs = input ; shape = new TensorShape [ /*dims*/ ] /*plus the function args*/ ]
+    else new ComputationNode [ operation = 'Slice' ; inputs = _AsNodes (input) /*plus the function args*/ ] # non-time axis
+Reshape(input, numRows, imageWidth = 0, imageHeight = 0, imageChannels = 0, tag='') = new ComputationNode [ operation = 'LegacyReshape' ; inputs = _AsNodes (input) /*plus the function args*/ ]
+NewReshape(input, dims, beginAxis=0, endAxis=0, tag='') = new ComputationNode [ operation = 'Reshape' ; inputs = _AsNodes (input) ; shape = new TensorShape [ /*dims*/ ] /*plus the function args*/ ]
 ReshapeDimension(x, axis, tensorShape) = NewReshape(x, tensorShape, beginAxis=axis, endAxis=axis + 1) 
 FlattenDimensions(x, axis, num) = NewReshape(x, 0, beginAxis=axis, endAxis=axis + num) 
 SplitDimension(x, axis, N) = ReshapeDimension(x, axis, 0:N) 
 # TODO: make input the last arg!
 Transpose(x) = TransposeDimensions(x, 1, 2)
-Logistic(label, probability, tag='') = new ComputationNode [ operation = 'Logistic' ; inputs = (label : probability) /*plus the function args*/ ]
-WeightedLogistic(label, probability, instanceWeight, tag='') = new ComputationNode [ operation = 'Logistic' ; inputs = (label : probability : instanceWeight) /*plus the function args*/ ]
-ReconcileDynamicAxis(dataInput, layoutInput, tag='') = new ComputationNode [ operation = 'ReconcileDynamicAxis' ; inputs = (dataInput : layoutInput) /*plus the function args*/ ]
+Logistic(label, probability, tag='') = new ComputationNode [ operation = 'Logistic' ; inputs = _AsNodes (label : probability) /*plus the function args*/ ]
+WeightedLogistic(label, probability, instanceWeight, tag='') = new ComputationNode [ operation = 'Logistic' ; inputs = _AsNodes (label : probability : instanceWeight) /*plus the function args*/ ]
+ReconcileDynamicAxis(dataInput, layoutInput, tag='') = new ComputationNode [ operation = 'ReconcileDynamicAxis' ; inputs = _AsNodes (dataInput : layoutInput) /*plus the function args*/ ]
 ReconcileMBLayout = ReconcileDynamicAxis # back compat
 CastAs (type, data) = ReconcileDynamicAxis (data, type) # read as CastAs<type>(data) where the cast may consist of rearranging the data w.r.t. MBLayout or broadcasting across sequence items
 # ND convo & pooling/unpooling   --why is autoPadding true? Normally one would want to reduce dimensions, no?
-Convolution(weightNode, inputValueNode, kernelDims, mapDims = 0, stride = 1, sharing = true, autoPadding = true, lowerPad = 0, upperPad = 0, transpose=false, imageLayout='CHW', maxTempMemSizeInSamples = 0, tag='') = new ComputationNode [ operation = 'Convolution' ; inputs = (weightNode : inputValueNode); kernelShape = new TensorShape [ dims = kernelDims ] ; mapCount = new TensorShape [ dims = mapDims ] ; strideShape = new TensorShape [ dims = stride ] ; dimSharing = new BoolVector [ items = sharing ] ; dimPadding = new BoolVector [ items = autoPadding ] ; dimPadLower = new TensorShape [ dims = lowerPad ] ; dimPadUpper = new TensorShape [ dims = upperPad ] /*plus the function args*/ ]
-Pooling(input, poolKind/*'max'|'average'*/, kernelDims, stride=1, autoPadding = true, lowerPad = 0, upperPad = 0, imageLayout='CHW', tag='') = new ComputationNode [ operation = 'Pooling' ; inputs = (input); pool = poolKind ; kernelShape = new TensorShape [ dims = kernelDims ] ; strideShape = new TensorShape [ dims = stride ] ; dimPadding = new BoolVector [ items = autoPadding ] ; dimPadLower = new TensorShape [ dims = lowerPad ] ; dimPadUpper = new TensorShape [ dims = upperPad ] /*plus the function args*/ ]
-MaxUnpooling(unpoolInput, poolInput, kernelDims, stride=1, autoPadding = true, lowerPad = 0, upperPad = 0, imageLayout='CHW', tag='') = new ComputationNode [ operation = 'MaxUnpooling' ; inputs = (unpoolInput : poolInput); kernelShape = new TensorShape [ dims = kernelDims ] ; strideShape = new TensorShape [ dims = stride ] ; dimPadding = new BoolVector [ items = autoPadding ] ; dimPadLower = new TensorShape [ dims = lowerPad ] ; dimPadUpper = new TensorShape [ dims = upperPad ] /*plus the function args*/ ]
+Convolution(weightNode, inputValueNode, kernelDims, mapDims = 0, stride = 1, sharing = true, autoPadding = true, lowerPad = 0, upperPad = 0, transpose=false, imageLayout='CHW', maxTempMemSizeInSamples = 0, tag='') = new ComputationNode [ operation = 'Convolution' ; inputs = _AsNodes (weightNode : inputValueNode); kernelShape = new TensorShape [ dims = kernelDims ] ; mapCount = new TensorShape [ dims = mapDims ] ; strideShape = new TensorShape [ dims = stride ] ; dimSharing = new BoolVector [ items = sharing ] ; dimPadding = new BoolVector [ items = autoPadding ] ; dimPadLower = new TensorShape [ dims = lowerPad ] ; dimPadUpper = new TensorShape [ dims = upperPad ] /*plus the function args*/ ]
+Pooling(input, poolKind/*'max'|'average'*/, kernelDims, stride=1, autoPadding = true, lowerPad = 0, upperPad = 0, imageLayout='CHW', tag='') = new ComputationNode [ operation = 'Pooling' ; inputs = _AsNodes (input); pool = poolKind ; kernelShape = new TensorShape [ dims = kernelDims ] ; strideShape = new TensorShape [ dims = stride ] ; dimPadding = new BoolVector [ items = autoPadding ] ; dimPadLower = new TensorShape [ dims = lowerPad ] ; dimPadUpper = new TensorShape [ dims = upperPad ] /*plus the function args*/ ]
+MaxUnpooling(unpoolInput, poolInput, kernelDims, stride=1, autoPadding = true, lowerPad = 0, upperPad = 0, imageLayout='CHW', tag='') = new ComputationNode [ operation = 'MaxUnpooling' ; inputs = _AsNodes (unpoolInput : poolInput); kernelShape = new TensorShape [ dims = kernelDims ] ; strideShape = new TensorShape [ dims = stride ] ; dimPadding = new BoolVector [ items = autoPadding ] ; dimPadLower = new TensorShape [ dims = lowerPad ] ; dimPadUpper = new TensorShape [ dims = upperPad ] /*plus the function args*/ ]
 # 2D pooling
-MaxPooling(input, windowWidth, windowHeight, horizontalSubsample, verticalSubsample, imageLayout='CHW', tag='') = new ComputationNode [ operation = 'MaxPooling' ; inputs = input /*plus the function args*/ ]
-AveragePooling(input, windowWidth, windowHeight, horizontalSubsample, verticalSubsample, imageLayout='CHW', tag='') = new ComputationNode [ operation = 'AveragePooling' ; inputs = input /*plus the function args*/ ]
+MaxPooling(input, windowWidth, windowHeight, horizontalSubsample, verticalSubsample, imageLayout='CHW', tag='') = new ComputationNode [ operation = 'MaxPooling' ; inputs = _AsNodes (input) /*plus the function args*/ ]
+AveragePooling(input, windowWidth, windowHeight, horizontalSubsample, verticalSubsample, imageLayout='CHW', tag='') = new ComputationNode [ operation = 'AveragePooling' ; inputs = _AsNodes (input) /*plus the function args*/ ]
 ColumnwiseCrossProduct = KhatriRaoProduct // deprecated 
 ErrorPrediction = ClassificationError   # legacy name
 Delay = PastValue 
 
-BatchNormalization(input, scale, bias, runMean, runVariance, spatial, normalizationTimeConstant = 0, blendTimeConstant = 0, epsilon = 0.00001, useCntkEngine = true, imageLayout='CHW', tag='') = new ComputationNode [ operation = 'BatchNormalization' ; inputs = (input : scale : bias : runMean : runVariance) /*plus the function args*/ ]
-ClassBasedCrossEntropyWithSoftmax(labelClassDescriptorVectorSequence, mainInputInfo, mainWeight, classLogProbsBeforeSoftmax, tag='') = new ComputationNode [ operation = 'ClassBasedCrossEntropyWithSoftmax' ; inputs = (labelClassDescriptorVectorSequence : mainInputInfo : mainWeight : classLogProbsBeforeSoftmax) /*plus the function args*/ ]
-Clip(minValue, maxValue, x, tag='') = new ComputationNode [ operation = 'Clip' ; inputs = (minValue : maxValue : x) /* plus the function args*/ ]
-ColumnElementTimes(aVectorSequence, anotherVectorSequence, tag='') = new ComputationNode [ operation = 'ColumnElementTimes' ; inputs = (aVectorSequence : anotherVectorSequence) /*plus the function args*/ ]
+BatchNormalization(input, scale, bias, runMean, runVariance, spatial, normalizationTimeConstant = 0, blendTimeConstant = 0, epsilon = 0.00001, useCntkEngine = true, imageLayout='CHW', tag='') = new ComputationNode [ operation = 'BatchNormalization' ; inputs = _AsNodes (input : scale : bias : runMean : runVariance) /*plus the function args*/ ]
+ClassBasedCrossEntropyWithSoftmax(labelClassDescriptorVectorSequence, mainInputInfo, mainWeight, classLogProbsBeforeSoftmax, tag='') = new ComputationNode [ operation = 'ClassBasedCrossEntropyWithSoftmax' ; inputs = _AsNodes (labelClassDescriptorVectorSequence : mainInputInfo : mainWeight : classLogProbsBeforeSoftmax) /*plus the function args*/ ]
+Clip(minValue, maxValue, x, tag='') = new ComputationNode [ operation = 'Clip' ; inputs = _AsNodes (minValue : maxValue : x) /* plus the function args*/ ]
+ColumnElementTimes(aVectorSequence, anotherVectorSequence, tag='') = new ComputationNode [ operation = 'ColumnElementTimes' ; inputs = _AsNodes (aVectorSequence : anotherVectorSequence) /*plus the function args*/ ]
 // TODO: ColumnElementTimes = ElementTimes
-CosDistance(aVectorSequence, anotherVectorSequence, tag='') = new ComputationNode [ operation = 'CosDistance' ; inputs = (aVectorSequence : anotherVectorSequence) /*plus the function args*/ ]
-CosDistanceWithNegativeSamples(aVectorSequence, anotherVectorSequence, numShifts, numNegSamples, tag='') = new ComputationNode [ operation = 'CosDistanceWithNegativeSamples' ; inputs = (aVectorSequence : anotherVectorSequence : numShifts : numNegSamples) /*plus the function args*/ ]
-Cosine(x, tag='') = new ComputationNode [ operation = 'Cosine' ; inputs = x /*plus the function args*/ ]
-CrossEntropy(refProbVectorSequence, outProbVectorSequence, tag='') = new ComputationNode [ operation = 'CrossEntropy' ; inputs = (refProbVectorSequence : outProbVectorSequence) /*plus the function args*/ ]
+CosDistance(aVectorSequence, anotherVectorSequence, tag='') = new ComputationNode [ operation = 'CosDistance' ; inputs = _AsNodes (aVectorSequence : anotherVectorSequence) /*plus the function args*/ ]
+CosDistanceWithNegativeSamples(aVectorSequence, anotherVectorSequence, numShifts, numNegSamples, tag='') = new ComputationNode [ operation = 'CosDistanceWithNegativeSamples' ; inputs = _AsNodes (aVectorSequence : anotherVectorSequence : numShifts : numNegSamples) /*plus the function args*/ ]
+Cosine(x, tag='') = new ComputationNode [ operation = 'Cosine' ; inputs = _AsNodes (x) /*plus the function args*/ ]
+CrossEntropy(refProbVectorSequence, outProbVectorSequence, tag='') = new ComputationNode [ operation = 'CrossEntropy' ; inputs = _AsNodes (refProbVectorSequence : outProbVectorSequence) /*plus the function args*/ ]
 # once ReduceLogSum becomes proper C++, CrossEntropyWithSoftmax() will become this:
 NewCrossEntropyWithSoftmax (labelSequence, z, tag='') = [ tag1 = tag; out = Minus (ReduceLogSum (z), ReduceSum (labelSequence .* z), tag=tag1) ].out
-DiagTimes(diagonalMatrixAsColumnVector, matrix, tag='') = new ComputationNode [ operation = 'DiagTimes' ; inputs = (diagonalMatrixAsColumnVector : matrix) /*plus the function args*/ ]
+DiagTimes(diagonalMatrixAsColumnVector, matrix, tag='') = new ComputationNode [ operation = 'DiagTimes' ; inputs = _AsNodes (diagonalMatrixAsColumnVector : matrix) /*plus the function args*/ ]
 // TODO: DiagTimes = ElementTimes
-GatherPacked(indexSequence, sourceData, tag='') = new ComputationNode [ operation = 'GatherPacked' ; inputs = (indexSequence : sourceData) /*plus the function args*/ ]
-GMMLogLikelihood(unnormalizedPriorVector, meansAsRows, logStdDevAsRows, dataVectorSequence, tag='') = new ComputationNode [ operation = 'GMMLogLikelihood' ; inputs = (unnormalizedPriorVector : meansAsRows : logStdDevAsRows : dataVectorSequence) /*plus the function args*/ ]
-InvStdDev(dataVectorSequence, tag='') = new ComputationNode [ operation = 'InvStdDev' ; inputs = dataVectorSequence /*plus the function args*/ ]
-KhatriRaoProduct(leftMatrix, rightMatrix, tag='') = new ComputationNode [ operation = 'KhatriRaoProduct' ; inputs = (leftMatrix : rightMatrix) /*plus the function args*/ ]
-LogPlus(leftMatrix, rightMatrix, tag='') = new ComputationNode [ operation = 'LogPlus' ; inputs = (leftMatrix : rightMatrix) /*plus the function args*/ ]
-LogSoftmax(z, tag='') = new ComputationNode [ operation = 'LogSoftmax' ; inputs = z /*plus the function args*/ ]
+GatherPacked(indexSequence, sourceData, tag='') = new ComputationNode [ operation = 'GatherPacked' ; inputs = _AsNodes (indexSequence : sourceData) /*plus the function args*/ ]
+GMMLogLikelihood(unnormalizedPriorVector, meansAsRows, logStdDevAsRows, dataVectorSequence, tag='') = new ComputationNode [ operation = 'GMMLogLikelihood' ; inputs = _AsNodes (unnormalizedPriorVector : meansAsRows : logStdDevAsRows : dataVectorSequence) /*plus the function args*/ ]
+InvStdDev(dataVectorSequence, tag='') = new ComputationNode [ operation = 'InvStdDev' ; inputs = _AsNodes (dataVectorSequence) /*plus the function args*/ ]
+KhatriRaoProduct(leftMatrix, rightMatrix, tag='') = new ComputationNode [ operation = 'KhatriRaoProduct' ; inputs = _AsNodes (leftMatrix : rightMatrix) /*plus the function args*/ ]
+LogPlus(leftMatrix, rightMatrix, tag='') = new ComputationNode [ operation = 'LogPlus' ; inputs = _AsNodes (leftMatrix : rightMatrix) /*plus the function args*/ ]
+LogSoftmax(z, tag='') = new ComputationNode [ operation = 'LogSoftmax' ; inputs = _AsNodes (z) /*plus the function args*/ ]
 # TODO: ^^ along axis, like Softmax
-MatrixL1Reg(matrix, tag='') = new ComputationNode [ operation = 'MatrixL1Reg' ; inputs = matrix /*plus the function args*/ ]
-MatrixL2Reg(matrix, tag='') = new ComputationNode [ operation = 'MatrixL2Reg' ; inputs = matrix /*plus the function args*/ ]
-Mean(dataVectorSequence, tag='') = new ComputationNode [ operation = 'Mean' ; inputs = dataVectorSequence /*plus the function args*/ ]
-Negate(input, tag='') = new ComputationNode [ operation = 'Negate' ; inputs = input /*plus the function args*/ ]
-PackedIndex(targetObject, indexSequence, tag='') = new ComputationNode [ operation = 'PackedIndex' ; inputs = (targetObject : indexSequence) /*plus the function args*/ ]
-PerDimMeanVarDeNormalization(dataVectorSequence, meanVector, invStdDevVector, tag='') = new ComputationNode [ operation = 'PerDimMeanVarDeNormalization' ; inputs = (dataVectorSequence : meanVector : invStdDevVector) /*plus the function args*/ ]
-#PerDimMeanVarNormalization(dataVectorSequence, meanVector, invStdDevVector, tag='') = new ComputationNode [ operation = 'PerDimMeanVarNormalization' ; inputs = (dataVectorSequence : meanVector : invStdDevVector) /*plus the function args*/ ]
+MatrixL1Reg(matrix, tag='') = new ComputationNode [ operation = 'MatrixL1Reg' ; inputs = _AsNodes (matrix) /*plus the function args*/ ]
+MatrixL2Reg(matrix, tag='') = new ComputationNode [ operation = 'MatrixL2Reg' ; inputs = _AsNodes (matrix) /*plus the function args*/ ]
+Mean(dataVectorSequence, tag='') = new ComputationNode [ operation = 'Mean' ; inputs = _AsNodes (dataVectorSequence) /*plus the function args*/ ]
+Negate(input, tag='') = new ComputationNode [ operation = 'Negate' ; inputs = _AsNodes (input) /*plus the function args*/ ]
+PackedIndex(targetObject, indexSequence, tag='') = new ComputationNode [ operation = 'PackedIndex' ; inputs = _AsNodes (targetObject : indexSequence) /*plus the function args*/ ]
+PerDimMeanVarDeNormalization(dataVectorSequence, meanVector, invStdDevVector, tag='') = new ComputationNode [ operation = 'PerDimMeanVarDeNormalization' ; inputs = _AsNodes (dataVectorSequence : meanVector : invStdDevVector) /*plus the function args*/ ]
+#PerDimMeanVarNormalization(dataVectorSequence, meanVector, invStdDevVector, tag='') = new ComputationNode [ operation = 'PerDimMeanVarNormalization' ; inputs = _AsNodes (dataVectorSequence : meanVector : invStdDevVector) /*plus the function args*/ ]
 PerDimMeanVarNormalization (x, mean, invStdDev) = (x - mean) .* invStdDev
-Reciprocal(z, tag='') = new ComputationNode [ operation = 'Reciprocal' ; inputs = z /*plus the function args*/ ]
+Reciprocal(z, tag='') = new ComputationNode [ operation = 'Reciprocal' ; inputs = _AsNodes (z) /*plus the function args*/ ]
 //# the following is a temporary workaround until we have the C++ version
 # TODO: change hiddenDims to hiddenShape and pass as a TensorShape (currently, the node only supports rank-1 data)
-OptimizedRNNStack(weights, input, hiddenDims, numLayers=1, bidirectional=false, recurrentOp='lstm', axis=-1, tag='') = new ComputationNode [ operation = 'OptimizedRNNStack' ; inputs = ( weights : input ) /*plus the function args*/ ]
+OptimizedRNNStack(weights, input, hiddenDims, numLayers=1, bidirectional=false, recurrentOp='lstm', axis=-1, tag='') = new ComputationNode [ operation = 'OptimizedRNNStack' ; inputs = _AsNodes (weights : input) /*plus the function args*/ ]
 # legacy:
 RNNStack(x, W, hiddenSize=10, numLayers=1, bidirectional=false, rnnMode='lstm', tag='') = OptimizedRNNStack(W, x, hiddenSize, numLayers=1, bidirectional=false, recurrentOp=rnnMode, tag='')
-Scale(scalarScalingFactor, matrix, tag='') = new ComputationNode [ operation = 'Scale' ; inputs = (scalarScalingFactor : matrix) /*plus the function args*/ ]
+Scale(scalarScalingFactor, matrix, tag='') = new ComputationNode [ operation = 'Scale' ; inputs = _AsNodes (scalarScalingFactor : matrix) /*plus the function args*/ ]
 # TODO: Scale = ElementTimes
-ScatterPacked(cond, indexSequence, sourceData, tag='') = new ComputationNode [ operation = 'ScatterPacked' ; inputs = (cond : indexSequence : sourceData) /*plus the function args*/ ]
-Sin(z, tag='') = new ComputationNode [ operation = 'Sin' ; inputs = z /*plus the function args*/ ]
+ScatterPacked(cond, indexSequence, sourceData, tag='') = new ComputationNode [ operation = 'ScatterPacked' ; inputs = _AsNodes (cond : indexSequence : sourceData) /*plus the function args*/ ]
+Sin(z, tag='') = new ComputationNode [ operation = 'Sin' ; inputs = _AsNodes (z) /*plus the function args*/ ]
 Softmax (z, axis=0, tag='') =  # TODO: replace this with more efficient version below once we have ReduceLogSum
-    if axis == 0 then new ComputationNode [ operation = 'Softmax' ; inputs = z /*plus the function args*/ ]
+    if axis == 0 then new ComputationNode [ operation = 'Softmax' ; inputs = _AsNodes (z) /*plus the function args*/ ]
     else
     [
         numerator = Softmax (z)  # do a first Softmax to bring it into harmless numeric range
@@ -604,17 +636,17 @@ Softmax (z, axis=0, tag='') =  # TODO: replace this with more efficient version 
         #Z = ReduceLogSum (axis=axis0, z) # reduce along axis
         #P = Exp (z - Z)
     ].P
-Hardmax(z, tag='') = new ComputationNode [ operation = 'Hardmax' ; inputs = z /*plus the function args*/ ]
-Sqrt(z, tag='') = new ComputationNode [ operation = 'Sqrt' ; inputs = z /*plus the function args*/ ]
-SquareError(aMatrix, anotherMatrix, tag='') = new ComputationNode [ operation = 'SquareError' ; inputs = (aMatrix : anotherMatrix) /*plus the function args*/ ]
-SumColumnElements(z, tag='') = new ComputationNode [ operation = 'SumColumnElements' ; inputs = z /*plus the function args*/ ] # deprecated
-SumElements(matrix, tag='') = new ComputationNode [ operation = 'SumElements' ; inputs = matrix /*plus the function args*/ ]
+Hardmax(z, tag='') = new ComputationNode [ operation = 'Hardmax' ; inputs = _AsNodes (z) /*plus the function args*/ ]
+Sqrt(z, tag='') = new ComputationNode [ operation = 'Sqrt' ; inputs = _AsNodes (z) /*plus the function args*/ ]
+SquareError(aMatrix, anotherMatrix, tag='') = new ComputationNode [ operation = 'SquareError' ; inputs = _AsNodes (aMatrix : anotherMatrix) /*plus the function args*/ ]
+SumColumnElements(z, tag='') = new ComputationNode [ operation = 'SumColumnElements' ; inputs = _AsNodes (z) /*plus the function args*/ ] # deprecated
+SumElements(matrix, tag='') = new ComputationNode [ operation = 'SumElements' ; inputs = _AsNodes (matrix) /*plus the function args*/ ]
 # ^^ TODO: Rename to ReduceSumMB?
-Tanh(z, tag='') = new ComputationNode [ operation = 'Tanh' ; inputs = z /*plus the function args*/ ]
-TimeReverse(vectorSequence, tag='') = new ComputationNode [ operation = 'TimeReverse' ; inputs = vectorSequence /*plus the function args*/ ]
-Trace (node, say='', logFrequency=100, logFirst=10, logGradientToo=false, onlyUpToRow=100000000, onlyUpToT=100000000, format=[], tag='') = new ComputationNode [ operation = 'Trace' ; inputs = node ]
-TransposeTimes(leftMatrix, rightMatrix, tag='') = new ComputationNode [ operation = 'TransposeTimes' ; inputs = (leftMatrix : rightMatrix) /*plus the function args*/ ]
-Where(cond, tag='') = new ComputationNode [ operation = 'Where' ; inputs = cond /*plus the function args*/ ]
+Tanh(z, tag='') = new ComputationNode [ operation = 'Tanh' ; inputs = _AsNodes (z) /*plus the function args*/ ]
+TimeReverse(vectorSequence, tag='') = new ComputationNode [ operation = 'TimeReverse' ; inputs = _AsNodes (vectorSequence) /*plus the function args*/ ]
+Trace (node, say='', logFrequency=100, logFirst=10, logGradientToo=false, onlyUpToRow=100000000, onlyUpToT=100000000, format=[], tag='') = new ComputationNode [ operation = 'Trace' ; inputs = _AsNodes (node) ]
+TransposeTimes(leftMatrix, rightMatrix, tag='') = new ComputationNode [ operation = 'TransposeTimes' ; inputs = _AsNodes (leftMatrix : rightMatrix) /*plus the function args*/ ]
+Where(cond, tag='') = new ComputationNode [ operation = 'Where' ; inputs = _AsNodes (cond) /*plus the function args*/ ]
 
 ##############################################################################
 # non-neural-network functions
@@ -646,7 +678,9 @@ Min(a,b) = if a < b then a else b
 Max(a,b) = if a > b then a else b
 Fac(n) = if n > 1 then Fac(n-1) * n else 1
 IsSameObject(a,b) = new CompareFunction [ what = 'IsSameObject' ; args = (a : b) ]
-IsArray(a) = new CompareFunction [ what = 'IsArray' ; args = a ]
+IsArray(a)  = new CompareFunction [ what = 'IsArray'  ; args = a ]
+IsDouble(a) = new CompareFunction [ what = 'IsDouble' ; args = a ]
+IsBool(a)   = new CompareFunction [ what = 'IsBool'   ; args = a ]
 Mod(x, y)  = new NumericFunction [ what = 'Mod' ;  args = (x:y) ]
 IntDiv(x, y) = new NumericFunction [ what = 'IntDiv' ;  args = (x:y) ]
 
@@ -728,8 +762,7 @@ Boolean = [
 
     # select a value
     # Note: This will be replaced by BrainScript 'if cond then thenVal else elseVal' and SwitchNode
-    If (cond, thenVal, elseVal, tag='') =  new ComputationNode [ operation = 'If' ; inputs = (cond : thenVal : elseVal) /*plus the function args*/ ]
-    #If (cond, thenVal, elseVal) = cond .* thenVal + Not (cond) .* elseVal
+    If (cond, thenVal, elseVal, tag='') =  new ComputationNode [ operation = 'If' ; inputs = _AsNodes (cond : thenVal : elseVal) /*plus the function args*/ ]
 ]
 
 ##############################################################################
@@ -863,7 +896,7 @@ Sequences = [
 # These refer to the loop iteration itself.
 ##############################################################################
 
-Loop = [
+Loop = {
     # get the current iteration index w.r.t a node in a loop, such as a Delay node
     Iteration (x) = [
       agg = OnesLike (x) + PastValue(agg, defaultHiddenActivation=0) // a recurrence that sums up ones
@@ -884,9 +917,9 @@ Loop = [
     # flag whether a frame is within the first or last N frames
     _IsWithin (DelayFn/*PastValue or FutureValue*/, N, x) = DelayFn (0, Constants.ZeroesLike (x)/*false*/, timeStep=N, defaultHiddenActivation=Constants.True)
 
-    # opposite of Id's "next"
-    Previous (x) = PastValue   (0, x, timeStep=1)
-    Next (x)     = FutureValue (0, x, timeStep=1)
+    # opposite of Id's "next x = ..."
+    Previous (x, initialState=None) = PastValue   (0, x, initialState=initialState, timeStep=1)
+    Next     (x, initialState=None) = FutureValue (0, x, initialState=initialState, timeStep=1)
 
     PreviousOrDefault (x, defaultValue=Constant (0)) =   # a delay node with initial value  --TODO: merge the two, then do in C++
     [
@@ -903,7 +936,7 @@ Loop = [
                     /*then*/ BS.Sequences.Scatter (flags, defaultValue),
                     /*else*/ Next (x))
     ].out
-]
+}
 
 ##############################################################################
 # parameter definitions
@@ -961,18 +994,22 @@ RNNs =
 
         # parameter helpers
         # we group 4 matrices into one, gives 60% speed-up in some cases
-        # Not merging inputs since initialization would be off.
-        # note: invoked multiple times, each invocation comes with its own set of weights
-        B{} = ParameterTensor {(4 * cellDim),             initValue=0}       # a bias
-        W{} = ParameterTensor {(4 * cellDim : Inferred),  init=init, initValueScale=initValueScale}   # a input
-        A{} = ParameterTensor {(4 * cellDim : Inferred),  init=init, initValueScale=initValueScale}   # an aux input
-        H{} = ParameterTensor {(4 * cellDim : outputDim), init=init, initValueScale=initValueScale}   # a hidden-to-hidden
-        C{} = ParameterTensor {(    cellDim),             init=init, initValueScale=initValueScale}   # a cell-to-hiddden {note: applied elementwise}
+        # Not grouping inputs since random-init scaling would be incorrect.
+        # TODO: Remove the function call, just assign it.
+        B  = ParameterTensor {(4 * cellDim),             initValue=0}       # a bias
+        W  = ParameterTensor {(4 * cellDim : Inferred),  init=init, initValueScale=initValueScale}   # input
+        A  = ParameterTensor {(4 * cellDim : Inferred),  init=init, initValueScale=initValueScale}   # aux input (optional)
+        H  = ParameterTensor {(4 * cellDim : outputDim), init=init, initValueScale=initValueScale}   # hidden-to-hidden
+        Ci = ParameterTensor {(    cellDim),             init=init, initValueScale=initValueScale}   # cell-to-hiddden {note: applied elementwise}
+        Cf = ParameterTensor {(    cellDim),             init=init, initValueScale=initValueScale}   # cell-to-hiddden {note: applied elementwise}
+        Co = ParameterTensor {(    cellDim),             init=init, initValueScale=initValueScale}   # cell-to-hiddden {note: applied elementwise}
 
         Wmr = ParameterTensor {(outputDim : cellDim), init=init, initValueScale=initValueScale};  # final projection
 
-        S(x) = Parameters.Stabilize (x, enabled=enableSelfStabilization)
-        # BUGBUG: S() must not be a macro either, but also an object instance
+        Sdh = if enableSelfStabilization then StabilizerLayer{} else Identity
+        Sdc = if enableSelfStabilization then StabilizerLayer{} else Identity
+        Sct = if enableSelfStabilization then StabilizerLayer{} else Identity
+        Sht = if enableSelfStabilization then StabilizerLayer{} else Identity
 
         apply (x, prevState, aux=None) = {
             _ = {     // encapsulate the inner workings
@@ -980,40 +1017,39 @@ RNNs =
                 dh = prevState.h // previous values
                 dc = prevState.c
 
-                dhs = S(dh) // previous values, stabilized
-                dcs = S(dc)
+                dhs = Sdh(dh) // previous values, stabilized
+                dcs = Sdc(dc)
                 # note: input does not get a stabilizer here, user is meant to do that outside
 
                 # projected contribution from input(s), hidden, and bias
-                proj() = if Constants.IsNone (aux)
-                        then B{} + W{} * x + H{} * dhs
-                        else B{} + W{} * x + H{} * dhs + A{} * aux
+                proj4 = if Constants.IsNone (aux)
+                        then B + W * x + H * dhs
+                        else B + W * x + H * dhs + A * aux
 
-                # add peephole connection if requested
-                peep(x, c) = if usePeepholes then x + C{} .* c else x
-
-                proj4 = proj()  # do all 4 sub-networks at once (not using an extra tensor dim, for efficiency)
                 itProj  = Slice (0*cellDim, 1*cellDim, proj4, axis=1)
                 bitProj = Slice (1*cellDim, 2*cellDim, proj4, axis=1)
                 ftProj  = Slice (2*cellDim, 3*cellDim, proj4, axis=1)
                 otProj  = Slice (3*cellDim, 4*cellDim, proj4, axis=1)
 
-                it = Sigmoid (peep (itProj, dcs))            // input gate(t)
+                # add peephole connection if requested
+                peep(x, c, C) = if usePeepholes then x + C .* c else x
+
+                it = Sigmoid (peep (itProj, dcs, Ci))        // input gate(t)
                 bit = it .* Tanh (bitProj)                   // applied to tanh of input network
 
-                ft = Sigmoid (peep (ftProj, dcs))            // forget-me-not gate(t)
+                ft = Sigmoid (peep (ftProj, dcs, Cf))        // forget-me-not gate(t)
                 bft = ft .* dc                               // applied to cell(t-1)
 
                 ct = bft + bit                               // c(t) is sum of both
 
-                ot = Sigmoid (peep (otProj, S(ct)))          // output gate(t)
+                ot = Sigmoid (peep (otProj, Sct(ct), Co))    // output gate(t)
                 ht = ot .* Tanh (ct)                         // applied to tanh(cell(t))
             }
 
             # our return values
             c = _.ct          // cell value
             h = if outputDim != cellDim   // output/hidden state
-                then Wmr * S(_.ht)        // project
+                then Wmr * Sht(_.ht)      // project
                 else _.ht                 // no projection
             dim = outputDim
         } // end of apply (x, prevState)
@@ -1076,18 +1112,30 @@ RNNs =
 
     # helper function to delay h and c
     # Callers can provide their own, e.g. useful for beam decoding.
-    PreviousHC (lstmState, layerIndex=0) = [
-       h = Loop.Previous (lstmState.h)         // hidden state(t-1)
-       c = Loop.Previous (lstmState.c)         // cell(t-1)
+    PreviousHC (lstmState, initialState=None, layerIndex=0) = {
+       h = Loop.Previous (lstmState.h, initialState=if BS.Constants.IsNone (initialState) then None else initialState.h)  # hidden state(t-1)
+       c = Loop.Previous (lstmState.c, initialState=if BS.Constants.IsNone (initialState) then None else initialState.c)  # cell(t-1)
        dim = lstmState.dim
-    ]
+    }
 
     # pass previousHook=BS.RNNs.NextHC instead of PreviousHC to get a right-to-left recurrence
-    NextHC (lstmState, layerIndex=0) = [
-       h = Loop.Next (lstmState.h)             // hidden state(t-1)
-       c = Loop.Next (lstmState.c)             // cell(t-1)
+    NextHC (lstmState, initialState=None, layerIndex=0) = {
+       h = Loop.Next (lstmState.h, initialState=if BS.Constants.IsNone (initialState) then None else initialState.h)  # hidden state(t-1)
+       c = Loop.Next (lstmState.c, initialState=if BS.Constants.IsNone (initialState) then None else initialState.c)  # cell(t-1)
        dim = lstmState.dim
-    ]
+    }
+    
+    PreviousHCWithTrainedInitialState{shape=(0)} = {  # default (0) will infer to all elements for inputs of rank 0
+        initialH = ParameterTensor {shape, initValue=0}
+        initialC = ParameterTensor {shape, initValue=0}
+        apply (x) = PreviousHC (x, initialState={ h = initialH; c = initialC }, layerIndex=0)
+    }.apply
+
+    NextHCWithTrainedInitialState{shape=(0)} = {  # default (0) will infer to all elements for inputs of rank 0
+        initialH = ParameterTensor {shape, initValue=0}
+        initialC = ParameterTensor {shape, initValue=0}
+        apply (x) = NextHC (x, initialState={ h = initialH; c = initialC }, layerIndex=0)
+    }.apply
 
     NoAuxInputHook (input, lstmState) = Constants.None
 

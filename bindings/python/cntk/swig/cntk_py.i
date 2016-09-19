@@ -135,7 +135,7 @@
         if (i<0)
         {
             return (*self)[-i-1];
-    }
+        }
         return (*self)[rank-1-i];
     }
 
@@ -954,7 +954,7 @@
         for (int i=rank-1; i>=0; i--)
         {
             shape.push_back(np_shape[i]);
-            num_elements *= np_shape[i];
+            num_elements *= np_shape[i];            
         }
 
         int typecode = PyArray_TYPE(array);
