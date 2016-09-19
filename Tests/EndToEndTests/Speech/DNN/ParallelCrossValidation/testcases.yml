@@ -44,6 +44,6 @@ testCases:
       - Starting minibatch loop
       - DataParallelSGD training
       - myRank = {{integer}}
-      - NumNodes = 2
-      - NumGradientBits = 64
+      - numNodes = 2
+      - numGradientBits = 64
       - distributed reading is ENABLED
