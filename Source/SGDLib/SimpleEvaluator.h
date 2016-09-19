@@ -201,7 +201,7 @@ public:
 
                 // Using SimpleDistAggregator for eval results only. At some point we should rename the class to be just
                 // IDistAggregator and SimpleDistAggregator.
-                bool samplesProcessed = m_distGradAgg->AggregateGradients(learnParamsGradients, m_gradHeader.get(), 0);
+                bool samplesProcessed = m_distGradAgg->AggregateGradients(learnParamsGradients, m_gradHeader.get(), /*resetState =*/ false);
                 noMoreSamplesToProcess = !samplesProcessed;
 
                 aggregateNumSamplesWithLabel = m_gradHeader->numSamplesWithLabel;
@@ -389,7 +389,7 @@ public:
                 learnParamsValues[1] = &(runStdNode->Value());
 
                 m_gradHeader->numSamples = actualMBSize ? 1 : actualMBSize;
-                distGradAgg.AggregateGradients(learnParamsValues, m_gradHeader.get(), 0);
+                distGradAgg.AggregateGradients(learnParamsValues, m_gradHeader.get(), /*resetState =*/ false);
 
                 for (auto& parameter : learnParamsValues) 
                 {
