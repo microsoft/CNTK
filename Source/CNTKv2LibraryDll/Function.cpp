@@ -1038,8 +1038,8 @@ namespace CNTK
             if (computationNodeExpectedInputCount != inputNodesBasePtrs.size())
                 LogicError("Input count mismatch: The Primitive function for op %s has %d inputs while the corresponding ComputationNode has %d inputs",
                            PrimitiveOpTypeName(op),
-                           inputNodesBasePtrs.size(),
-                           computationNodeExpectedInputCount);
+                           (int)inputNodesBasePtrs.size(),
+                           (int)computationNodeExpectedInputCount);
         }
 
         network->AddNodeToNetAndAttachInputs(computationNodePtr, inputNodesBasePtrs);
