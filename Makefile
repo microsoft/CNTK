@@ -431,6 +431,8 @@ $(CNTKLIBRARY_TESTS): $(CNTKLIBRARY_TESTS_OBJ) | $(CNTKLIBRARY_LIB)
 	@mkdir -p $(dir $@)
 	@echo building output for $(ARCH) with build type $(BUILDTYPE)
 	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH)) $(patsubst %,$(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -l$(CNTKLIBRARY) -l$(CNTKMATH)
+ 
+
 
 ########################################
 # LibEval
@@ -464,11 +466,11 @@ EVAL_LIB:=$(LIBDIR)/lib$(EVAL).so
 ALL+=$(EVAL_LIB)
 SRC+=$(EVAL_SRC)
 
-$(EVAL_LIB): $(EVAL_OBJ) | $(CNTKMATH_LIB)
+$(EVAL_LIB): $(EVAL_OBJ) | $(CNTKMATH_LIB) $(MULTIVERSO_LIB)
 	@echo $(SEPARATOR)
 	@mkdir -p $(dir $@)
 	@echo Building $(EVAL_LIB) for $(ARCH) with build type $(BUILDTYPE)
-	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -l$(CNTKMATH) 
+	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -l$(CNTKMATH) -lmultiverso
 
 ########################################
 # Eval Sample client
@@ -770,6 +772,7 @@ endif
   # temporarily adding to 1bit, need to work with others to fix it
 endif
 
+ 
 ########################################
 # ASGD(multiverso) setup
 ########################################
@@ -780,11 +783,28 @@ ifeq (,$(wildcard Source/Multiverso/include/multiverso/*.h))
   $(error Build with Multiverso was requested but cannot find the code. Please check https://github.com/Microsoft/DMTK to learn more.)
 endif
 
-  INCLUDEPATH += $(SOURCEDIR)/Multiverso/include
-  LIBPATH += $(SOURCEDIR)/Multiverso/x64/$(BUILDTYPE)
-  LIBS += -lmultiverso -ldl
+INCLUDEPATH += $(SOURCEDIR)/Multiverso/include
+LIBPATH += $(LIBDIR)
+LIBS += -lmultiverso -ldl
+COMMON_FLAGS += -DMULTIVERSO_SUPPORT
 
-  COMMON_FLAGS += -DMULTIVERSO_SUPPORT
+MULTIVERSO_LIB:=$(LIBDIR)/libmultiverso.so
+MULTIVERSO_TEST:=$(BINDIR)/multiversotests
+
+ALL+=$(MULTIVERSO_LIB)
+ALL+=$(MULTIVERSO_TEST)
+
+MULTIVERSO: 
+	@echo "Build Multiverso lib and unit tests"
+	@mkdir -p $(SOURCEDIR)/Multiverso/build
+	@sh $(SOURCEDIR)/../Tools/setup_mv.sh
+
+$(MULTIVERSO_LIB): MULTIVERSO
+	@cp $(SOURCEDIR)/Multiverso/build/src/libmultiverso.so $(MULTIVERSO_LIB)
+
+$(MULTIVERSO_TEST): MULTIVERSO
+	@cp $(SOURCEDIR)/Multiverso/build/Test/unittests/multiverso.ut $(MULTIVERSO_TEST)
+
 endif
 
 ########################################
