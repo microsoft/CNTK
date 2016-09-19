@@ -936,6 +936,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
     }
 
     bool noMoreSamplesToProcess = false;
+    bool isFirstMinibatch = true;
     for (;;)
     {
         // Per-minibatch performance measurements; only enabled when perfTraceLevel > 0
@@ -1121,7 +1122,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
             // aggregate
             m_gradHeader->numEvalNode = evaluationNodes.size(); // TODO: rename numEvalNode (plural)
-            bool samplesProcessed = m_distGradAgg->AggregateGradients(learnParamsGradients, m_gradHeader.get(), epochNumber);
+            bool samplesProcessed = m_distGradAgg->AggregateGradients(learnParamsGradients, m_gradHeader.get(), isFirstMinibatch);
             noMoreSamplesToProcess = !samplesProcessed;
 
             // read out the header--now everything is aggregated
@@ -1306,6 +1307,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         AttemptUtteranceDerivativeFeatures(net, trainSetDataReader, featureNodes, inputMatrices);
 
         profiler.NextSample();
+        isFirstMinibatch = false;
     }
 
     // --- END MAIN MINIBATCH LOOP
