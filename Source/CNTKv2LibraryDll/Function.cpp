@@ -1674,8 +1674,13 @@ namespace CNTK
         GetNetworkOutputs(outputs);
 
         // TODO: How to deal with the specified 'computeDevice'
+        Variable evalTimeStampVariable;
+        if (arguments.empty())
+            evalTimeStampVariable = Inputs()[0];
+        else
+            evalTimeStampVariable = arguments.begin()->first;
 
-        return (outputsToRetainBackwardStateFor.size() > 0) ? MakeSharedObject<CNTKBackPropState>(this->shared_from_this(), std::make_pair(arguments.begin()->first, m_variableToNodeMap[arguments.begin()->first]->GetEvalTimeStamp())) : nullptr;
+        return (outputsToRetainBackwardStateFor.size() > 0) ? MakeSharedObject<CNTKBackPropState>(this->shared_from_this(), std::make_pair(evalTimeStampVariable, m_variableToNodeMap[evalTimeStampVariable]->GetEvalTimeStamp())) : nullptr;
     }
 
     /*virtual*/ void CompositeFunction::Backward(const BackPropStatePtr& state,
