@@ -224,7 +224,7 @@ function show_help ()
     echo "  --with-build-top=directory build directory $(show_default $build_top)"
     echo "  --add directory add directory to library search path"
     echo "  --1bitsgd[=(yes|no)] use 1Bit SGD $(show_default $(default_use_1bitsgd))"
-	echo "  --asgd[=(yes|no)] use asgd powered by Multiverso $(show_default $(default_use_asgd))"
+    echo "  --asgd[=(yes|no)] use asgd powered by Multiverso $(show_default $(default_use_asgd))"
     echo "  --cuda[=(yes|no)] use cuda GPU $(show_default $(default_use_cuda))"
     echo "  --with-cuda[=directory] $(show_default $(find_cuda))"
     echo "  --with-cub[=directory] $(show_default $(find_cub))"
