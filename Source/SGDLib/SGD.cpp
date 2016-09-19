@@ -1769,7 +1769,6 @@ size_t SGD<ElemType>::SearchForBestMinibatchSize(ComputationNetworkPtr net,
         (int)epochNumber + 1, (int)RoundToMultipleOf64(minMinibatchSize), (int)RoundToMultipleOf64(maxMinibatchSize));
 
     size_t lastGoodMinibatchSize = 0;
-    size_t lastTriedMinibatchSize = 0;
     EpochCriterion lastGoodEpochCriterion(0);
     for (float trialMinibatchSizeFloat = (float) minMinibatchSize;
          trialMinibatchSizeFloat <= maxMinibatchSize;
@@ -1787,7 +1786,6 @@ size_t SGD<ElemType>::SearchForBestMinibatchSize(ComputationNetworkPtr net,
 
         // Train on a few minibatches and so we can observe the epochCriterion as we try increasing
         // minibatches with iteration of this loop.
-        lastTriedMinibatchSize = trialMinibatchSize;
         TrainOneMiniEpochAndReloadModel(net, refNet, refNode, epochNumber,
                                         numFramesToUseInSearch, trainSetDataReader,
                                         learnRatePerSample, trialMinibatchSize, featureNodes,
@@ -1796,7 +1794,6 @@ size_t SGD<ElemType>::SearchForBestMinibatchSize(ComputationNetworkPtr net,
                                         learnableNodes, smoothedGradients, smoothedCounts,
                                         /*out*/ epochCriterion, /*out*/ epochEvalErrors,
                                         isFirstIteration ? "BaseAdaptiveMinibatchSearch:" : "AdaptiveMinibatchSearch:");
-        lastTriedMinibatchSize = trialMinibatchSize;
 
         if (isFirstIteration)
         {
@@ -1838,21 +1835,6 @@ size_t SGD<ElemType>::SearchForBestMinibatchSize(ComputationNetworkPtr net,
         LOGPRINTF(stderr, " AdaptiveMinibatchSearch Epoch[%d]: Search successful. New minibatchSize is %d. epochCriterion = %.8f vs baseCriterion = %.8f\n",
                   (int)epochNumber + 1, (int)lastGoodMinibatchSize, lastGoodEpochCriterion.Average(), baseCriterion.Average());
     }
-#if 1 // BUGBUG: Somehow state leaks across trials. Workaround: redo the last known good one to reset that. Helps somewhat until we fix this.
-    if (lastTriedMinibatchSize != lastGoodMinibatchSize)
-    {
-        std::vector<EpochCriterion> epochEvalErrors(evaluationNodes.size(), EpochCriterion::Infinity());
-        EpochCriterion epochCriterion(EpochCriterion::Infinity());
-        TrainOneMiniEpochAndReloadModel(net, refNet, refNode, epochNumber,
-                                        numFramesToUseInSearch, trainSetDataReader,
-                                        learnRatePerSample, lastGoodMinibatchSize, featureNodes,
-                                        labelNodes, criterionNodes,
-                                        evaluationNodes, inputMatrices,
-                                        learnableNodes, smoothedGradients, smoothedCounts,
-                                        /*out*/ epochCriterion, /*out*/ epochEvalErrors,
-                                        "FixMinibatchSearch:");
-    }
-#endif
     return lastGoodMinibatchSize;
 }
 
