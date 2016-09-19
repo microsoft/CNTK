@@ -123,15 +123,15 @@ static void DoEvalBNBase(const ConfigParameters& config, IDataReader& reader)
 template <typename ElemType>
 void DoEvalBN(const ConfigParameters& config)
 {
-	// evaluate batch normalization mean and various
-	ConfigParameters readerConfig(config(L"reader"));
+        // evaluate batch normalization mean and various
+        ConfigParameters readerConfig(config(L"reader"));
 
-	// Should trace level to zero in Post BN?
-	//readerConfig.Insert("traceLevel", config(L"traceLevel", "0"));
+        // Should trace level to zero in Post BN?
+        //readerConfig.Insert("traceLevel", config(L"traceLevel", "0"));
 
-	DataReader evaBNDataReader(readerConfig);
+        DataReader evaBNDataReader(readerConfig);
 
-	DoEvalBNBase<ElemType>(config, evaBNDataReader);
+        DoEvalBNBase<ElemType>(config, evaBNDataReader);
 }
 
 template <typename ElemType>

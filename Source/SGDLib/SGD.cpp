@@ -2699,8 +2699,9 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
             size_t numMPIWorkers = pMPI->NumNodesInUse();            
         const ConfigRecordType& configParallelTrain(configSGD(L"ParallelTrain", ConfigRecordType::Record()));
         m_parallelizationMethod = ParseParallelizationMethod(configParallelTrain(L"parallelizationMethod", L"none"));
-        m_parallelizationStartEpochNum = configParallelTrain(L"parallelizationStartEpoch", (int) 1) - 1; // Epoch numbers internally are 0 based
+        m_parallelizationStartEpochNum = configParallelTrain(L"parallelizationStartEpoch", (int) 1) - 1; // Internally, epoch numbers are 0-based
         if (m_parallelizationStartEpochNum < 0 /* sic */)
+            // Be explicit that user-facing epoch numbers are 1-based
             InvalidArgument("parallelizationStartEpoch must be greater or equal to 1");
         m_enableDistributedMBReading = configParallelTrain(L"distributedMBReading", false);
         m_syncStatsTrace = configParallelTrain(L"syncPerfStats", (int) 0);
