@@ -88,7 +88,7 @@ void DoCreateLabelMap(const ConfigParameters& config)
         fprintf(stderr, "CreateLabelMap: Creating the mapping file '%s' \n", labelMappingFile.c_str());
 
         DataReader dataReader(readerConfig);
-        dataReader.StartMinibatchLoop(minibatchSize, 0, requestDataSize);
+        dataReader.StartMinibatchLoop(minibatchSize, 0, matrices.GetStreamDescriptions(), requestDataSize);
         int count = 0;
         while (dataReader.GetMinibatch(matrices))
         {
@@ -97,7 +97,7 @@ void DoCreateLabelMap(const ConfigParameters& config)
             if (traceLevel > 1)
                 fprintf(stderr, "."); // progress meter
         }
-        dataReader.StartMinibatchLoop(minibatchSize, 1, requestDataSize);
+        dataReader.StartMinibatchLoop(minibatchSize, 1, matrices.GetStreamDescriptions(), requestDataSize);
 
         // print the results
         if (traceLevel > 0)

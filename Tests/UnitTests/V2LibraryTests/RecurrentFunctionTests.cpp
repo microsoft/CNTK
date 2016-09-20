@@ -80,7 +80,7 @@ void TestRecurrentNetworkCreation(const DeviceDescriptor& device, bool testSaveA
     {
         std::vector<size_t> sequenceLengths = GenerateSequenceLengths(numSequences, maxAllowedSequenceLength);
         
-        ValuePtr inputValue = GenerateSequences<ElementType>(sequenceLengths, inputDim, device, false);
+        ValuePtr inputValue = GenerateSequences<ElementType>(sequenceLengths, { inputDim }, device, false);
 
         std::vector<std::vector<ElementType>> labelsData;
         for (size_t i = 0; i < numSequences; ++i)

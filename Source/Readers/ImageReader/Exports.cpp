@@ -21,7 +21,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 auto factory = [](const ConfigParameters& parameters) -> ReaderPtr
 {
-    return std::make_shared<ImageReader>(std::make_shared<HeapMemoryProvider>(), parameters);
+    return std::make_shared<ImageReader>(parameters);
 };
 
 extern "C" DATAREADER_API void GetReaderF(IDataReader** preader)

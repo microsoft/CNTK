@@ -48,9 +48,9 @@ void ReaderShim<ElemType>::Init(const ConfigParameters& config)
 }
 
 template <class ElemType>
-void ReaderShim<ElemType>::StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples)
+void ReaderShim<ElemType>::StartMinibatchLoop(size_t mbSize, size_t epoch, const std::unordered_set<InputStreamDescription>& inputs, size_t requestedEpochSamples)
 {
-    return StartDistributedMinibatchLoop(mbSize, epoch, 0, 1, requestedEpochSamples);
+    return StartDistributedMinibatchLoop(mbSize, epoch, 0, 1, inputs, requestedEpochSamples);
 }
 
 template <class ElemType>
@@ -59,6 +59,7 @@ void ReaderShim<ElemType>::StartDistributedMinibatchLoop(
     size_t epoch,
     size_t subsetNum,
     size_t numSubsets,
+    const std::unordered_set<InputStreamDescription>& inputs,
     size_t requestedEpochSamples /*= requestDataSize*/)
 {
     // For adaptive minibatch, make sure there are no outstanding reads.
@@ -74,7 +75,11 @@ void ReaderShim<ElemType>::StartDistributedMinibatchLoop(
     config.m_totalEpochSizeInSamples = requestedEpochSamples;
     config.m_epochIndex = epoch;
 
-    m_reader->StartEpoch(config);
+    std::map<std::wstring, int> inputDescriptions;
+    for (const auto& i : inputs)
+        inputDescriptions[i.m_name] = i.m_deviceId;
+
+    m_reader->StartEpoch(config, inputDescriptions);
     m_endOfEpoch = false;
 
     // Starting the prefetch task. There is always a single async read in flight.

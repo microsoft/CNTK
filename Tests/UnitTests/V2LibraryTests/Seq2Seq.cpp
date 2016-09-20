@@ -59,6 +59,8 @@ void TrainSequenceToSequenceTranslator(const DeviceDescriptor& device, bool useS
     {
         thoughtVectorH = Reshape(thoughtVectorH, thoughtVectorH->Output().Shape().AppendShape({ 1 }));
         thoughtVectorC = Reshape(thoughtVectorC, thoughtVectorC->Output().Shape().AppendShape({ 1 }));
+        labelEmbedding = Reshape(labelEmbedding, labelEmbedding->Output().Shape().AppendShape({ 1 }));
+        labelSentenceStartEmbeddedScattered = Reshape(labelSentenceStartEmbeddedScattered, labelSentenceStartEmbeddedScattered->Output().Shape().AppendShape({ 1 }));
     }
 
     auto thoughtVectorBroadcastH = Sequence::BroadcastAs(thoughtVectorH, labelEmbedding);

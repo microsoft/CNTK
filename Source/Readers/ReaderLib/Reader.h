@@ -9,6 +9,7 @@
 #include <memory>
 #include "Sequences.h"
 #include "TensorShape.h"
+#include <unordered_set>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -103,7 +104,7 @@ public:
     virtual std::vector<StreamDescriptionPtr> GetStreamDescriptions() = 0;
 
     // Starts a new epoch with the provided configuration
-    virtual void StartEpoch(const EpochConfiguration& config) = 0;
+    virtual void StartEpoch(const EpochConfiguration& config, const std::map<std::wstring, int>& inputDescriptions) = 0;
 
     // Reads a minibatch that contains data across all streams.
     virtual Minibatch ReadMinibatch() = 0;
