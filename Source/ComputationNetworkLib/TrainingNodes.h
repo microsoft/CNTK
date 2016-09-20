@@ -51,7 +51,7 @@ public:
         // these NANs are translated to the lowest possible value for the ElemType in the deserializer.
         // In order to do this, we first create a matrix "labeled" and set all lowest entries to 0 and the rest to 1
         // TODO: If anyone knows how to do this with NAN instead, please go ahead! I tried hard but failed...
-        auto labeled = InputRef(0)->ValueFor(fr).DeepClone();
+        auto labeled = InputRef(0).ValueFor(fr).DeepClone();
         static const auto lowest = std::numeric_limits<ElemType>::lowest();
         static const auto second_lowest = std::nextafter(lowest, ElemType(0));
         labeled.InplaceTruncateTop(second_lowest);
