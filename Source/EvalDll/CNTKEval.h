@@ -39,7 +39,6 @@ public:
     virtual void CreateNetwork(const std::string& networkDescription);
     virtual void Init(const std::string& config);
     virtual void Destroy();
-    virtual void ResetState() = 0;
 };
 
 // ------------------------------------------------------------------------
@@ -92,9 +91,7 @@ class CNTKEvalExtended : public CNTKEvalBase<ElemType>, public IEvaluateModelExt
 {
 public:
     CNTKEvalExtended() : CNTKEvalBase<ElemType>(), 
-        m_started(false),
-        m_SeqBeginTime(0),
-        m_SeqBeginTimeMin(0){}
+        m_started(false){}
 
     virtual VariableSchema GetOutputSchema() const override;
 
@@ -104,7 +101,11 @@ public:
 
     virtual void ForwardPass(const Values<ElemType>& inputs, Values<ElemType>& output) override;
 
+    virtual void ForwardPass(const Values<ElemType>& inputs, Values<ElemType>& output, bool resetRNN) override;
+
     virtual void ForwardPass(const ValueRefs<ElemType>& inputs, ValueRefs<ElemType>& output) override;
+
+    virtual void ForwardPass(const ValueRefs<ElemType>& inputs, ValueRefs<ElemType>& output, bool resetRNN) override;
 
     virtual void Destroy() override;
 
@@ -118,8 +119,6 @@ public:
         CNTKEvalBase<ElemType>::Init(config);
     }
 
-    virtual void ResetState() override;
-
 private:
     static VariableLayout ToVariableLayout(const ComputationNodeBasePtr n);
     std::vector<ComputationNodeBasePtr> m_outputNodes;
@@ -130,13 +129,7 @@ private:
 
     template<template<typename> class ValueContainer> 
     void ForwardPassT(const std::vector < ValueBuffer<ElemType, ValueContainer> >& inputs,
-                      std::vector < ValueBuffer<ElemType, ValueContainer> >& outputs);
+                      std::vector < ValueBuffer<ElemType, ValueContainer> >& outputs, bool resetRNN);
 
-    // First time index in this minibatch. Note that this may be negative if the sequence started before this MB.
-    int m_SeqBeginTime;
-
-    // The min possible value of the first time index in this minibatch.
-    // For regular RNN/LSTM networks this should be -1.
-    int m_SeqBeginTimeMin;
 };
 } } }

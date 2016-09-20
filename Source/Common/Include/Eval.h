@@ -49,12 +49,6 @@ public:
     // Free resources
     //
     virtual void Destroy() = 0;
-
-    //
-    // Reset initial state of all Recurrence loops (RNNs) in the model.
-    // Call this before processing the first sequence or whenever need to reset the memory cells to default value.
-    //
-    virtual void ResetState() = 0;
 };
 
 // ------------------------------------------------------------------------
@@ -102,6 +96,11 @@ public:
     // happen during evaluation
     //
     virtual void Evaluate(std::map<std::wstring, std::vector<ElemType>*>& outputs) = 0;
+
+    //
+    // Reset initial state of all Recurrence loops (RNNs) in the model.
+    //
+    virtual void ResetState() = 0;
 };
 
 
@@ -340,10 +339,22 @@ public:
     virtual void ForwardPass(const Values<ElemType>& inputs, Values<ElemType>& output) = 0;
 
     //
+    // Same as above, and
+    // resetRNN - flags whether to reset memory cells of RNN. 
+    //
+    virtual void ForwardPass(const Values<ElemType>& inputs, Values<ElemType>& output, bool resetRNN) = 0;
+
+    //
     // Same as above, but takes references to static arrays instead of std::vector 
     // (e.g. when vectors are manages by .net)
     // 
     virtual void ForwardPass(const ValueRefs<ElemType>& inputs, ValueRefs<ElemType>& output) = 0;
+
+    //
+    // Same as above, and
+    // resetRNN - flags whether to reset memory cells of RNN. 
+    //
+    virtual void ForwardPass(const ValueRefs<ElemType>& inputs, ValueRefs<ElemType>& output, bool resetRNN) = 0;
 };
 
 template <typename ElemType>
