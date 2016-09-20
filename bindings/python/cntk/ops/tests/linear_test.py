@@ -37,7 +37,8 @@ def test_op_plus(left_operand, right_operand, device_id, precision):
     if np.isscalar(right_operand):
         expected_backward = {
                 'left_arg':  [[[np.ones_like(x, dtype=PRECISION_TO_TYPE[precision]) for x in left_operand]]], 
-                'right_arg': [[1]]
+                # gradients are accumulated
+                'right_arg': [[AA([left_operand]).size]] 
                 }
     else:
         expected_backward = {
