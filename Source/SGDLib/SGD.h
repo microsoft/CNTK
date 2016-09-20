@@ -264,7 +264,7 @@ protected:
     int m_syncStatsTrace;
 
     // Data parallel SGD training parameters
-    int m_numGradientBits;
+    intargvector m_numGradientBits;
     bool m_bufferedAsyncGradientAggregation;
     bool m_zeroThresholdFor1Bit;
 
@@ -470,7 +470,7 @@ protected:
                          /*out*/ std::vector<EpochCriterion>& epochEvalErrors,
                          const std::string& prefixMsg = "");
 
-    void InitDistGradAgg(int numEvalNodes, int traceLevel);
+    void InitDistGradAgg(int numEvalNodes, int numGradientBits, int traceLevel);
     void InitModelAggregationHandler(int traceLevel, DEVICEID_TYPE devID);
 public:
     // UpdateWeights() - actual weight update, implementing various update rules

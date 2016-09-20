@@ -553,7 +553,7 @@ MPI Rank 0:
 MPI Rank 0: 08/16/2016 09:58:24: Starting Epoch 2: learning rate per sample = 0.001953  effective momentum = 0.900000  momentum as time constant = 2429.8 samples
 MPI Rank 0: minibatchiterator: epoch 1: frames [20480..40960] (first utterance at frame 20480), data subset 0 of 2, with 1 datapasses
 MPI Rank 0: 
-MPI Rank 0: 08/16/2016 09:58:24: Starting minibatch loop, DataParallelSGD training (MyRank = 0, NumNodes = 2, NumGradientBits = 32), distributed reading is ENABLED.
+MPI Rank 0: 08/16/2016 09:58:24: Starting minibatch loop, DataParallelSGD training (myRank = 0, numNodes = 2, numGradientBits = 32), distributed reading is ENABLED.
 MPI Rank 0: (GPU): creating curand object with seed 4
 MPI Rank 0: (GPU): creating curand object with seed 5
 MPI Rank 0: (GPU): creating curand object with seed 6
@@ -573,7 +573,7 @@ MPI Rank 0:
 MPI Rank 0: 08/16/2016 09:58:24: Starting Epoch 3: learning rate per sample = 0.001953  effective momentum = 0.900000  momentum as time constant = 2429.8 samples
 MPI Rank 0: minibatchiterator: epoch 2: frames [40960..61440] (first utterance at frame 40960), data subset 0 of 2, with 1 datapasses
 MPI Rank 0: 
-MPI Rank 0: 08/16/2016 09:58:24: Starting minibatch loop, DataParallelSGD training (MyRank = 0, NumNodes = 2, NumGradientBits = 32), distributed reading is ENABLED.
+MPI Rank 0: 08/16/2016 09:58:24: Starting minibatch loop, DataParallelSGD training (myRank = 0, numNodes = 2, numGradientBits = 32), distributed reading is ENABLED.
 MPI Rank 0: (GPU): creating curand object with seed 8
 MPI Rank 0: (GPU): creating curand object with seed 9
 MPI Rank 0: (GPU): creating curand object with seed 10
@@ -592,7 +592,7 @@ MPI Rank 0:
 MPI Rank 0: 08/16/2016 09:58:25: Starting Epoch 4: learning rate per sample = 0.001953  effective momentum = 0.900000  momentum as time constant = 2429.8 samples
 MPI Rank 0: minibatchiterator: epoch 3: frames [61440..81920] (first utterance at frame 61440), data subset 0 of 2, with 1 datapasses
 MPI Rank 0: 
-MPI Rank 0: 08/16/2016 09:58:25: Starting minibatch loop, DataParallelSGD training (MyRank = 0, NumNodes = 2, NumGradientBits = 32), distributed reading is ENABLED.
+MPI Rank 0: 08/16/2016 09:58:25: Starting minibatch loop, DataParallelSGD training (myRank = 0, numNodes = 2, numGradientBits = 32), distributed reading is ENABLED.
 MPI Rank 0: (GPU): creating curand object with seed 12
 MPI Rank 0: (GPU): creating curand object with seed 13
 MPI Rank 0: (GPU): creating curand object with seed 14
@@ -612,7 +612,7 @@ MPI Rank 0:
 MPI Rank 0: 08/16/2016 09:58:26: Starting Epoch 5: learning rate per sample = 0.001953  effective momentum = 0.900000  momentum as time constant = 2429.8 samples
 MPI Rank 0: minibatchiterator: epoch 4: frames [81920..102400] (first utterance at frame 81920), data subset 0 of 2, with 1 datapasses
 MPI Rank 0: 
-MPI Rank 0: 08/16/2016 09:58:26: Starting minibatch loop, DataParallelSGD training (MyRank = 0, NumNodes = 2, NumGradientBits = 32), distributed reading is ENABLED.
+MPI Rank 0: 08/16/2016 09:58:26: Starting minibatch loop, DataParallelSGD training (myRank = 0, numNodes = 2, numGradientBits = 32), distributed reading is ENABLED.
 MPI Rank 0: 08/16/2016 09:58:26:  Epoch[ 5 of 5]-Minibatch[   1-  10, 12.50%]: ce = 2.62055426 * 2560; err = 0.64882812 * 2560; time = 0.0643s; samplesPerSecond = 39801.6
 MPI Rank 0: 08/16/2016 09:58:26:  Epoch[ 5 of 5]-Minibatch[  11-  20, 25.00%]: ce = 2.61482008 * 2560; err = 0.66875000 * 2560; time = 0.0622s; samplesPerSecond = 41125.2
 MPI Rank 0: 08/16/2016 09:58:26:  Epoch[ 5 of 5]-Minibatch[  21-  30, 37.50%]: ce = 2.50300923 * 2560; err = 0.64531250 * 2560; time = 0.0617s; samplesPerSecond = 41475.0
@@ -1121,7 +1121,7 @@ MPI Rank 1:
 MPI Rank 1: 08/16/2016 09:58:24: Starting Epoch 2: learning rate per sample = 0.001953  effective momentum = 0.900000  momentum as time constant = 2429.8 samples
 MPI Rank 1: minibatchiterator: epoch 1: frames [20480..40960] (first utterance at frame 20480), data subset 1 of 2, with 1 datapasses
 MPI Rank 1: 
-MPI Rank 1: 08/16/2016 09:58:24: Starting minibatch loop, DataParallelSGD training (MyRank = 1, NumNodes = 2, NumGradientBits = 32), distributed reading is ENABLED.
+MPI Rank 1: 08/16/2016 09:58:24: Starting minibatch loop, DataParallelSGD training (myRank = 1, numNodes = 2, numGradientBits = 32), distributed reading is ENABLED.
 MPI Rank 1: (GPU): creating curand object with seed 24
 MPI Rank 1: (GPU): creating curand object with seed 25
 MPI Rank 1: (GPU): creating curand object with seed 26
@@ -1140,7 +1140,7 @@ MPI Rank 1:
 MPI Rank 1: 08/16/2016 09:58:24: Starting Epoch 3: learning rate per sample = 0.001953  effective momentum = 0.900000  momentum as time constant = 2429.8 samples
 MPI Rank 1: minibatchiterator: epoch 2: frames [40960..61440] (first utterance at frame 40960), data subset 1 of 2, with 1 datapasses
 MPI Rank 1: 
-MPI Rank 1: 08/16/2016 09:58:24: Starting minibatch loop, DataParallelSGD training (MyRank = 1, NumNodes = 2, NumGradientBits = 32), distributed reading is ENABLED.
+MPI Rank 1: 08/16/2016 09:58:24: Starting minibatch loop, DataParallelSGD training (myRank = 1, numNodes = 2, numGradientBits = 32), distributed reading is ENABLED.
 MPI Rank 1: (GPU): creating curand object with seed 28
 MPI Rank 1: (GPU): creating curand object with seed 29
 MPI Rank 1: (GPU): creating curand object with seed 30
@@ -1158,7 +1158,7 @@ MPI Rank 1:
 MPI Rank 1: 08/16/2016 09:58:25: Starting Epoch 4: learning rate per sample = 0.001953  effective momentum = 0.900000  momentum as time constant = 2429.8 samples
 MPI Rank 1: minibatchiterator: epoch 3: frames [61440..81920] (first utterance at frame 61440), data subset 1 of 2, with 1 datapasses
 MPI Rank 1: 
-MPI Rank 1: 08/16/2016 09:58:25: Starting minibatch loop, DataParallelSGD training (MyRank = 1, NumNodes = 2, NumGradientBits = 32), distributed reading is ENABLED.
+MPI Rank 1: 08/16/2016 09:58:25: Starting minibatch loop, DataParallelSGD training (myRank = 1, numNodes = 2, numGradientBits = 32), distributed reading is ENABLED.
 MPI Rank 1: (GPU): creating curand object with seed 32
 MPI Rank 1: (GPU): creating curand object with seed 33
 MPI Rank 1: (GPU): creating curand object with seed 34
@@ -1177,7 +1177,7 @@ MPI Rank 1:
 MPI Rank 1: 08/16/2016 09:58:26: Starting Epoch 5: learning rate per sample = 0.001953  effective momentum = 0.900000  momentum as time constant = 2429.8 samples
 MPI Rank 1: minibatchiterator: epoch 4: frames [81920..102400] (first utterance at frame 81920), data subset 1 of 2, with 1 datapasses
 MPI Rank 1: 
-MPI Rank 1: 08/16/2016 09:58:26: Starting minibatch loop, DataParallelSGD training (MyRank = 1, NumNodes = 2, NumGradientBits = 32), distributed reading is ENABLED.
+MPI Rank 1: 08/16/2016 09:58:26: Starting minibatch loop, DataParallelSGD training (myRank = 1, numNodes = 2, numGradientBits = 32), distributed reading is ENABLED.
 MPI Rank 1: 08/16/2016 09:58:26:  Epoch[ 5 of 5]-Minibatch[   1-  10, 12.50%]: ce = 2.62055426 * 2560; err = 0.64882812 * 2560; time = 0.0646s; samplesPerSecond = 39645.1
 MPI Rank 1: 08/16/2016 09:58:26:  Epoch[ 5 of 5]-Minibatch[  11-  20, 25.00%]: ce = 2.61482008 * 2560; err = 0.66875000 * 2560; time = 0.0624s; samplesPerSecond = 41004.0
 MPI Rank 1: 08/16/2016 09:58:26:  Epoch[ 5 of 5]-Minibatch[  21-  30, 37.50%]: ce = 2.50300923 * 2560; err = 0.64531250 * 2560; time = 0.0617s; samplesPerSecond = 41497.1
@@ -1699,7 +1699,7 @@ MPI Rank 0: 08/16/2016 09:58:31: Starting Epoch 4: learning rate per sample = 0.
 MPI Rank 0: minibatchiterator: epoch 3: frames [61440..81920] (first utterance at frame 61440), data subset 0 of 2, with 1 datapasses
 MPI Rank 0: requiredata: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
 MPI Rank 0: 
-MPI Rank 0: 08/16/2016 09:58:32: Starting minibatch loop, DataParallelSGD training (MyRank = 0, NumNodes = 2, NumGradientBits = 32), distributed reading is ENABLED.
+MPI Rank 0: 08/16/2016 09:58:32: Starting minibatch loop, DataParallelSGD training (myRank = 0, numNodes = 2, numGradientBits = 32), distributed reading is ENABLED.
 MPI Rank 0: (GPU): creating curand object with seed 12
 MPI Rank 0: (GPU): creating curand object with seed 13
 MPI Rank 0: (GPU): creating curand object with seed 14
@@ -1719,7 +1719,7 @@ MPI Rank 0:
 MPI Rank 0: 08/16/2016 09:58:32: Starting Epoch 5: learning rate per sample = 0.001953  effective momentum = 0.900000  momentum as time constant = 2429.8 samples
 MPI Rank 0: minibatchiterator: epoch 4: frames [81920..102400] (first utterance at frame 81920), data subset 0 of 2, with 1 datapasses
 MPI Rank 0: 
-MPI Rank 0: 08/16/2016 09:58:32: Starting minibatch loop, DataParallelSGD training (MyRank = 0, NumNodes = 2, NumGradientBits = 32), distributed reading is ENABLED.
+MPI Rank 0: 08/16/2016 09:58:32: Starting minibatch loop, DataParallelSGD training (myRank = 0, numNodes = 2, numGradientBits = 32), distributed reading is ENABLED.
 MPI Rank 0: 08/16/2016 09:58:32:  Epoch[ 5 of 5]-Minibatch[   1-  10, 12.50%]: ce = 2.62055426 * 2560; err = 0.64882812 * 2560; time = 0.0631s; samplesPerSecond = 40566.7
 MPI Rank 0: 08/16/2016 09:58:32:  Epoch[ 5 of 5]-Minibatch[  11-  20, 25.00%]: ce = 2.61482008 * 2560; err = 0.66875000 * 2560; time = 0.0615s; samplesPerSecond = 41624.0
 MPI Rank 0: 08/16/2016 09:58:32:  Epoch[ 5 of 5]-Minibatch[  21-  30, 37.50%]: ce = 2.50300923 * 2560; err = 0.64531250 * 2560; time = 0.0617s; samplesPerSecond = 41518.7
@@ -2183,7 +2183,7 @@ MPI Rank 1: 08/16/2016 09:58:31: Starting Epoch 4: learning rate per sample = 0.
 MPI Rank 1: minibatchiterator: epoch 3: frames [61440..81920] (first utterance at frame 61440), data subset 1 of 2, with 1 datapasses
 MPI Rank 1: requiredata: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
 MPI Rank 1: 
-MPI Rank 1: 08/16/2016 09:58:32: Starting minibatch loop, DataParallelSGD training (MyRank = 1, NumNodes = 2, NumGradientBits = 32), distributed reading is ENABLED.
+MPI Rank 1: 08/16/2016 09:58:32: Starting minibatch loop, DataParallelSGD training (myRank = 1, numNodes = 2, numGradientBits = 32), distributed reading is ENABLED.
 MPI Rank 1: (GPU): creating curand object with seed 32
 MPI Rank 1: (GPU): creating curand object with seed 33
 MPI Rank 1: (GPU): creating curand object with seed 34
@@ -2202,7 +2202,7 @@ MPI Rank 1:
 MPI Rank 1: 08/16/2016 09:58:32: Starting Epoch 5: learning rate per sample = 0.001953  effective momentum = 0.900000  momentum as time constant = 2429.8 samples
 MPI Rank 1: minibatchiterator: epoch 4: frames [81920..102400] (first utterance at frame 81920), data subset 1 of 2, with 1 datapasses
 MPI Rank 1: 
-MPI Rank 1: 08/16/2016 09:58:32: Starting minibatch loop, DataParallelSGD training (MyRank = 1, NumNodes = 2, NumGradientBits = 32), distributed reading is ENABLED.
+MPI Rank 1: 08/16/2016 09:58:32: Starting minibatch loop, DataParallelSGD training (myRank = 1, numNodes = 2, numGradientBits = 32), distributed reading is ENABLED.
 MPI Rank 1: 08/16/2016 09:58:32:  Epoch[ 5 of 5]-Minibatch[   1-  10, 12.50%]: ce = 2.62055426 * 2560; err = 0.64882812 * 2560; time = 0.0633s; samplesPerSecond = 40438.5
 MPI Rank 1: 08/16/2016 09:58:32:  Epoch[ 5 of 5]-Minibatch[  11-  20, 25.00%]: ce = 2.61482008 * 2560; err = 0.66875000 * 2560; time = 0.0615s; samplesPerSecond = 41657.2
 MPI Rank 1: 08/16/2016 09:58:32:  Epoch[ 5 of 5]-Minibatch[  21-  30, 37.50%]: ce = 2.50300923 * 2560; err = 0.64531250 * 2560; time = 0.0618s; samplesPerSecond = 41426.6

@@ -545,7 +545,7 @@ BlockRandomizer::StartEpoch: epoch 0: frames [0..10000] (first sequence at sampl
 08/16/2016 10:01:28: Starting Epoch 2: learning rate per sample = 0.008000  effective momentum = 0.900000  momentum as time constant = 237.3 samples
 BlockRandomizer::StartEpoch: epoch 1: frames [10000..20000] (first sequence at sample 10000), data subset 0 of 1
 
-08/16/2016 10:01:28: Starting minibatch loop, DataParallelSGD training (MyRank = 0, NumNodes = 1, NumGradientBits = 1).
+08/16/2016 10:01:28: Starting minibatch loop, DataParallelSGD training (myRank = 0, numNodes = 1, numGradientBits = 1).
 08/16/2016 10:01:28:  Epoch[ 2 of 3]-Minibatch[   1-  10, 2.50%]: CrossEntropyWithSoftmax = 0.50722371 * 250; EvalClassificationError = 0.14800000 * 250; time = 0.0397s; samplesPerSecond = 6295.5
 08/16/2016 10:01:28:  Epoch[ 2 of 3]-Minibatch[  11-  20, 5.00%]: CrossEntropyWithSoftmax = 0.45786101 * 250; EvalClassificationError = 0.12800000 * 250; time = 0.0285s; samplesPerSecond = 8776.9
 08/16/2016 10:01:28:  Epoch[ 2 of 3]-Minibatch[  21-  30, 7.50%]: CrossEntropyWithSoftmax = 0.37902995 * 250; EvalClassificationError = 0.09200000 * 250; time = 0.0178s; samplesPerSecond = 14020.5
@@ -592,7 +592,7 @@ BlockRandomizer::StartEpoch: epoch 1: frames [10000..20000] (first sequence at s
 08/16/2016 10:01:29: Starting Epoch 3: learning rate per sample = 0.008000  effective momentum = 0.900000  momentum as time constant = 237.3 samples
 BlockRandomizer::StartEpoch: epoch 2: frames [20000..30000] (first sequence at sample 20000), data subset 0 of 1
 
-08/16/2016 10:01:29: Starting minibatch loop, DataParallelSGD training (MyRank = 0, NumNodes = 1, NumGradientBits = 1).
+08/16/2016 10:01:29: Starting minibatch loop, DataParallelSGD training (myRank = 0, numNodes = 1, numGradientBits = 1).
 08/16/2016 10:01:29:  Epoch[ 3 of 3]-Minibatch[   1-  10, 2.50%]: CrossEntropyWithSoftmax = 0.18478506 * 250; EvalClassificationError = 0.09600000 * 250; time = 0.0216s; samplesPerSecond = 11585.3
 08/16/2016 10:01:29:  Epoch[ 3 of 3]-Minibatch[  11-  20, 5.00%]: CrossEntropyWithSoftmax = 0.12741733 * 250; EvalClassificationError = 0.04400000 * 250; time = 0.0184s; samplesPerSecond = 13576.6
 08/16/2016 10:01:29:  Epoch[ 3 of 3]-Minibatch[  21-  30, 7.50%]: CrossEntropyWithSoftmax = 0.17535235 * 250; EvalClassificationError = 0.08400000 * 250; time = 0.0235s; samplesPerSecond = 10656.9
