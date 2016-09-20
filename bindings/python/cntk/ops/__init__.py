@@ -1377,8 +1377,11 @@ def parameter(shape=None, value=None, device=None, name=''):
     from .variables import Parameter, parameter_from_scalar   
     if not device:
         device=DeviceDescriptor.use_default_device()
-    if np.isscalar(value):        
-        return parameter_from_scalar(shape, value, None, device, name)   
+
+    if np.isscalar(value):
+        assert shape is None or shape == ()
+        return parameter_from_scalar(value, None, device, name)   
+
     return Parameter(shape, value, None, device, name)        
 
 def constant(shape=None, value=None, device=None, name=''):
@@ -1397,8 +1400,9 @@ def constant(shape=None, value=None, device=None, name=''):
     from .variables import Constant, constant_from_scalar
     if not device:
         device=DeviceDescriptor.use_default_device()
-    if np.isscalar(value):        
-        return constant_from_scalar(shape, value, None, device, name)   
+    if np.isscalar(value):
+        assert shape is None or shape == ()
+        return constant_from_scalar(value, None, device, name)   
     return Constant(shape, value, None, device, name)
 
 ################################################################################

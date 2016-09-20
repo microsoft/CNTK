@@ -61,7 +61,7 @@ class Parameter(TensorOpsMixin,Parameter):
         super(Parameter, self).__init__(ndav, name)
 
 # TODO: make this part of the above constructor
-def parameter_from_scalar(shape=None, value=None, data_type=None, 
+def parameter_from_scalar(value=None, data_type=None, 
                             device=None, name=''):
     if data_type is None:
         if not isinstance(value, np.ndarray):
@@ -71,11 +71,10 @@ def parameter_from_scalar(shape=None, value=None, data_type=None,
 
     dtype = utils.sanitize_dtype_cntk(data_type)
 
-    shape = utils.sanitize_shape(shape)
     if dtype == DataType_Float:
-        return ParameterFloat(shape, value, device, name)
+        return ParameterFloat((), value, device, name)
     elif dtype == DataType_Double:
-        return ParameterDouble(shape, value, device, name)
+        return ParameterDouble((), value, device, name)
     raise ValueError('unrecognized data_type: %s', dtype)
 
 # TODO: make this part of the above constructor
@@ -92,7 +91,7 @@ class Constant(TensorOpsMixin,Constant):
         ndav = _sanitize_value(shape, value, data_type, device)
         super(Constant, self).__init__(ndav, name)
 
-def constant_from_scalar(shape=None, value=None, data_type=None,
+def constant_from_scalar(value=None, data_type=None,
                          device=None, name=''):
     if data_type is None:
         if not isinstance(value, np.ndarray):
@@ -101,10 +100,9 @@ def constant_from_scalar(shape=None, value=None, data_type=None,
             data_type = str(value.dtype)
 
     dtype = utils.sanitize_dtype_cntk(data_type)
-    shape = utils.sanitize_shape(shape)
     
     if dtype == DataType_Float:
-        return ConstantFloat(shape, value, device, name)
+        return ConstantFloat((), value, device, name)
     elif dtype == DataType_Double:
-        return ConstantDouble(shape, value, device, name)
+        return ConstantDouble((), value, device, name)
     raise ValueError('unrecognized data_type: %s', dtype)

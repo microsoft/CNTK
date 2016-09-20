@@ -19,7 +19,6 @@ TENSOR_PAIRS = [
     ([30.], [10.]),
     ([[10.]], [[30.]]),
     ([[1.5, 2.1]], [[10., 20.]]),
-    ([[1.5, 2.1]], 2),
     #([[100., 200.], [300., 400.], [10., 20.]],
     #  [[10., 20.], [30., 40.], [1., 2.]]),
 
@@ -28,15 +27,17 @@ TENSOR_PAIRS = [
 ]
 
 # -- plus operation tests --
+TENSOR_PAIRS_SCALAR = TENSOR_PAIRS + [(left, np.random.rand()) for left,right
+        in TENSOR_PAIRS]
 
-@pytest.mark.parametrize("left_operand, right_operand", TENSOR_PAIRS)
+@pytest.mark.parametrize("left_operand, right_operand", TENSOR_PAIRS_SCALAR)
 def test_op_plus(left_operand, right_operand, device_id, precision):
     expected_forward = [AA([left_operand]) + AA([right_operand])]
 
     if np.isscalar(right_operand):
         expected_backward = {
                 'left_arg':  [[[np.ones_like(x, dtype=PRECISION_TO_TYPE[precision]) for x in left_operand]]], 
-                'right_arg': [[[1]]]
+                'right_arg': [[1]]
                 }
     else:
         expected_backward = {
