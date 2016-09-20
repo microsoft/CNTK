@@ -1,0 +1,14 @@
+#!/bin/bash
+
+. $TEST_ROOT_DIR/run-test-common
+
+if [ "$OS" == "Windows_NT" ]; then
+  cd $TEST_BIN_DIR
+  ./CSEvalClientTest.exe || exit $?
+else
+  echo "CSEvalClientTest can only run on Windows";
+  exit 1;
+fi
+
+grep -i "Inner Exception" $TEST_RUN_DIR/output.txt && exit 1	
+exit 0

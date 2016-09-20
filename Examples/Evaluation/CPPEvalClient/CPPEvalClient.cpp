@@ -107,5 +107,7 @@ int main(int argc, char* argv[])
         fprintf(stderr, "%f\n", value);
     }
 
+    // This pattern is used by End2EndTests to check whether the program runs to complete.
+    fprintf(stderr, "Evaluation complete.\n");
     return 0;
 }

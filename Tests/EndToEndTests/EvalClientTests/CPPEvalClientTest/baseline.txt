@@ -1,0 +1,17 @@
+CPU info:
+    CPU Model Name: Intel(R) Core(TM) i7-6820HQ CPU @ 2.70GHz
+    Hardware threads: 8
+    Total Memory: 33417320 kB
+-------------------------------------------------------------------
+Layer 'ol.z' output:
+-0.974019
+-8.009192
+2.313841
+8.612350
+-6.217941
+8.185100
+-7.889941
+-0.908542
+5.206570
+0.534331
+Evaluation complete.
