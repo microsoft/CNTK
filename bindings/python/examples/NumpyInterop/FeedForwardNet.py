@@ -31,7 +31,7 @@ def generate_random_data(sample_size, feature_dim, num_classes):
     return X, Y          
 
 # Creates and trains a feedforward classification model
-def ffnet():
+def ffnet(debug_output=True):
     input_dim = 2
     num_output_classes = 2
     num_hidden_layers = 2
@@ -61,11 +61,25 @@ def ffnet():
         features, labels = generate_random_data(minibatch_size, input_dim, num_output_classes)
         # Specify the mapping of input variables in the model to actual minibatch data to be trained with
         trainer.train_minibatch({input : features, label : labels})
-        print_training_progress(trainer, i, training_progress_output_freq)
+        if debug_output:
+            print_training_progress(trainer, i, training_progress_output_freq)
+
+    test_features, test_labels = generate_random_data(minibatch_size, input_dim, num_output_classes)
+    avg_error = trainer.test_minibatch({input : test_features, label : test_labels})
+    return avg_error
+
+def test_accuracy(device_id):
+    #FIXME: need a backdor to work around the limitation of changing the default device not possible 
+    #from cntk.utils import cntk_device
+    #DeviceDescriptor.set_default_device(cntk_device(device_id))
+
+    avg_error = ffnet(debug_output=False)
+    assert avg_error == 0.12
 
 if __name__=='__main__':
     # Specify the target device to be used for computing
     target_device = DeviceDescriptor.cpu_device()
     DeviceDescriptor.set_default_device(target_device)
 
-    ffnet()
+    accuracy = ffnet()
+    print("test: %f"%accuracy)

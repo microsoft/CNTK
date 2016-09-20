@@ -69,5 +69,5 @@ class Trainer(cntk_py.Trainer):
         if not device:
             device=DeviceDescriptor.use_default_device()        
         arguments = sanitize_var_map(arguments, add_batch_axis=True)
-        super(Trainer, self).train_minibatch(arguments, device)
+        return super(Trainer, self).test_minibatch(arguments, device)
 
