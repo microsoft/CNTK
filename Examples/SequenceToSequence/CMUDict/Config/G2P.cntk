@@ -28,7 +28,7 @@ traceLevel = 1
 
 # experiment id
 
-deviceId = 0              # set the GPU device here, or "auto" to auto-select; or override from the command line.
+deviceId = auto              # set the GPU device here, or "auto" to auto-select; or override from the command line.
 ExpId = g2p-01-$deviceId$ # choose a meaningful id here. This is used for unique directory and filenames.
 #ExpId = g2p-01-0         # change to different id when decoding a different model
 

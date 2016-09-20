@@ -540,6 +540,7 @@ protected:
         ZeroInit(defFmt, compDev);
     }
 
+public:
     void ZeroValues()
     {
         m_numRows           = 0;

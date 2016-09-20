@@ -119,6 +119,7 @@ public:
     static void SetDevice(DEVICEID_TYPE deviceId); // TODO: unify with PrepareDevice()
 
     void ReleaseMemory();
+    void Clear();
     ~Matrix();
 
     // workaround to bugs in BOTH implementation: force to collapse to home location

@@ -42,12 +42,12 @@ class MATH_API CPUMatrix : public BaseMatrix<ElemType>
     using Base::SetSizeAllocated;
     using Base::GetSizeAllocated;
     using Base::ZeroInit;
-    using Base::ZeroValues;
     using Base::m_sob;
     using Base::ShallowCopyFrom;
     using Base::VerifyResizable;
 
 public:
+    using Base::ZeroValues;
     using Base::VerifyWritable;
     using Base::GetComputeDeviceId;
     using Base::Buffer;

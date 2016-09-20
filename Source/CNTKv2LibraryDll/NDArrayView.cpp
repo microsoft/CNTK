@@ -147,7 +147,7 @@ namespace CNTK
     {
         auto tensorShape = tensorView->GetShape();
         if (tensorShape.GetRank() <= 2)
-            return tensorView->AsMatrix();
+            return tensorView->AsMatrixPtr();
 
         size_t splitPoint = rowColSplitPoint;
         if (splitPoint == NDArrayView::AutoSelectRowColSplitPoint)
@@ -179,7 +179,7 @@ namespace CNTK
 
         tensorShape.FlattenTo2DInPlace(splitPoint, "NDArrayView::GetMatrix");
 
-        return tensorView->Reshaped(tensorShape).AsMatrix();
+        return tensorView->Reshaped(tensorShape).AsMatrixPtr();
     }
 
     template <typename ElementType>

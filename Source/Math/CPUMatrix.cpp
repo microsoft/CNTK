@@ -222,7 +222,8 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignColumnSlice(const CPUMatrix<Elem
     if (startColumn + numCols > fromMatrix.m_numCols)
         InvalidArgument("The slice (%d+%d) is out of range of the source matrix (%d).", (int) startColumn, (int) numCols, (int) fromMatrix.m_numCols);
 
-    Clear();
+    //ZeroValues();
+    //Clear();
 
     ShallowCopyFrom(fromMatrix);
     m_numCols = numCols;

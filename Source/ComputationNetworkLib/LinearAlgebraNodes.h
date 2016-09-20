@@ -243,6 +243,18 @@ public:
     {
     }
 
+    // request matrices needed to do node function value evaluation
+    virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
+    {
+        Base::RequestMatricesBeforeForwardProp(matrixPool);
+    }
+
+    // release gradient and temp matrices that no longer needed after all the children's gradients are computed.
+    virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
+    {
+        Base::ReleaseMatricesAfterBackprop(matrixPool);
+    }
+
     virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
     {
         Base::CopyTo(nodeP, newName, flags);
@@ -291,7 +303,16 @@ private:
     }
 
 public:
+
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
+    {
+        ForwardProp2(fr);
+        a->Clear();
+        b->Clear();
+        c->Clear();
+    }
+
+    void /*ComputationNode::*/ ForwardProp2(const FrameRange& fr) 
     {
         // If argument A is minibatch data, then this must be performed frame-by-frame, sequence-by-sequence, one GEMM call each.
         // This will be inefficient. We hope this will be the baseline of a future, more efficient TensorView-based implementation.
@@ -302,7 +323,7 @@ public:
             auto sequenceRange = fr.GetSequenceRange();
             for (auto t = timeRange.first; t < timeRange.second; t++)
                 for (auto s = sequenceRange.first; s < sequenceRange.second; s++)
-                    ForwardProp(fr.WithTimeStep(t).Sequence(s));
+                    ForwardProp2(fr.WithTimeStep(t).Sequence(s));
             return;
         }
 
@@ -312,10 +333,18 @@ public:
         auto input0 = OneSampleTensorFor(0,  /*gradient=*/false, fr.AllowBroadcast());
         auto input1 = OneSampleTensorFor(1,  /*gradient=*/false, fr.AllowBroadcast());
         auto output = OneSampleTensorFor(-1, /*gradient=*/false, fr);
-        output.AssignMatrixProductOf(false/*transC*/, input0, m_transpose/*transA*/, input1, false/*transB*/);
+        output.AssignMatrixProductOf(false/*transC*/, input0, *a, m_transpose/*transA*/, input1, *b, false/*transB*/, *c);
     }
 
     virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
+    {
+        BackpropTo2(inputIndex, fr);
+        a->Clear();
+        b->Clear();
+        c->Clear();
+    }
+
+    void /*ComputationNode::*/ BackpropTo2(const size_t inputIndex, const FrameRange& fr) 
     {
         // special treatment if A is minibatch data; see Forward() for comment
         if (!fr.IsOneColumnWrt(InputRef(0).GetMBLayout()))
@@ -324,7 +353,7 @@ public:
             auto sequenceRange = fr.GetSequenceRange();
             for (auto t = timeRange.first; t < timeRange.second; t++) // step left to right to allow to build a sparse matrix
                 for (auto s = sequenceRange.first; s < sequenceRange.second; s++)
-                    BackpropTo(inputIndex, fr.WithTimeStep(t).Sequence(s));
+                    BackpropTo2(inputIndex, fr.WithTimeStep(t).Sequence(s));
             return;
         }
 
@@ -344,14 +373,14 @@ public:
             auto input0Gradient = OneSampleTensorFor(0,  /*gradient=*/true,  fr.AllowBroadcast());
             auto input1         = OneSampleTensorFor(1,  /*gradient=*/false, fr.AllowBroadcast());
             auto outputGradient = OneSampleTensorFor(-1, /*gradient=*/true,  fr);
-            input0Gradient.AddMatrixProductOf(m_transpose/*transC*/, outputGradient, false/*transA*/, input1, true/*transB*/);
+            input0Gradient.AddMatrixProductOf(m_transpose/*transC*/, outputGradient, *a, false/*transA*/, input1, *b, true/*transB*/, *c);
         }
         else if (inputIndex == 1) // right derivative
         {
             auto input0         = OneSampleTensorFor(0,  /*gradient=*/false, fr.AllowBroadcast());
             auto input1Gradient = OneSampleTensorFor(1,  /*gradient=*/true,  fr.AllowBroadcast());
             auto outputGradient = OneSampleTensorFor(-1, /*gradient=*/true, fr);
-            input1Gradient.AddMatrixProductOf(false/*transC*/, input0, !m_transpose/*transA*/, outputGradient, false/*transB*/);
+            input1Gradient.AddMatrixProductOf(false/*transC*/, input0, *a, !m_transpose/*transA*/, outputGradient, *b, false/*transB*/, *c);
         }
     }
 
@@ -360,6 +389,12 @@ public:
 
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
     {
+        if (a == nullptr)
+        {
+            a = make_shared<Matrix<ElemType>>(Input(0)->GetDeviceId());
+            b = make_shared<Matrix<ElemType>>(Input(0)->GetDeviceId());
+            c = make_shared<Matrix<ElemType>>(Input(0)->GetDeviceId());
+        }
         Base::Validate(isFinalValidationPass);
         InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
 
@@ -499,6 +534,10 @@ public:
 private:
     size_t m_outputRank;
     int m_inferInputRankToMap;  // -1 (not specified) or says how to expand shape of W, to keep this many mapping dims
+    shared_ptr<Matrix<ElemType>> a;
+    shared_ptr<Matrix<ElemType>> b; //= make_shared<Matrix<ElemType>>(Input(0)->GetDeviceId());
+    shared_ptr<Matrix<ElemType>> c;// = make_shared<Matrix<ElemType>>(Input(0)->GetDeviceId());
+
 };
 
 // -----------------------------------------------------------------------

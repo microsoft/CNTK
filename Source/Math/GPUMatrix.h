@@ -132,7 +132,6 @@ class MATH_API GPUMatrix : public BaseMatrix<ElemType>
     using Base::SetBuffer;
     using Base::SetComputeDeviceId;
     using Base::ZeroInit;
-    using Base::ZeroValues;
     using Base::m_sob;
     using Base::ShallowCopyFrom;
     using Base::ReleaseStorageMemory;
@@ -143,6 +142,7 @@ class MATH_API GPUMatrix : public BaseMatrix<ElemType>
     friend class GPUMatrix;
 
 public:
+    using Base::ZeroValues;
     using Base::GetComputeDeviceId;
     using Base::Buffer;
     using Base::GetNumRows;

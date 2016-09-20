@@ -149,11 +149,12 @@ public:
     // If beta == 0, c is not read out, i.e. it can be uninitialized or contain NaNs.
     // -------------------------------------------------------------------
 
-    void DoMatrixProductOf    (ElemType beta, bool transC, const TensorView& a, bool transA, const TensorView& b, bool transB, ElemType alpha);
-    void AssignMatrixProductOf(               bool transC, const TensorView& a, bool transA, const TensorView& b, bool transB, ElemType alpha = 1.0f) { DoMatrixProductOf(0,    transC, a, transA, b, transB, alpha); }
-    void AddMatrixProductOf   (               bool transC, const TensorView& a, bool transA, const TensorView& b, bool transB, ElemType alpha = 1.0f) { DoMatrixProductOf(1.0f, transC, a, transA, b, transB, alpha); }
+    void DoMatrixProductOf    (ElemType beta, bool transC, const TensorView& a, Matrix<ElemType>& tempA, bool transA, const TensorView& b, Matrix<ElemType>& tempB, bool transB, Matrix<ElemType>& tempC, ElemType alpha);
+    void AssignMatrixProductOf(               bool transC, const TensorView& a, Matrix<ElemType>& tempA, bool transA, const TensorView& b, Matrix<ElemType>& tempB, bool transB, Matrix<ElemType>& tempC, ElemType alpha = 1.0f) { DoMatrixProductOf(0,    transC, a, tempA, transA, b, tempB, transB, tempC, alpha); }
+    void AddMatrixProductOf   (               bool transC, const TensorView& a, Matrix<ElemType>& tempA, bool transA, const TensorView& b, Matrix<ElemType>& tempB, bool transB, Matrix<ElemType>& tempC, ElemType alpha = 1.0f) { DoMatrixProductOf(1.0f, transC, a, tempA, transA, b, tempB, transB, tempC, alpha); }
 
-    shared_ptr<Matrix<ElemType>> AsMatrix() const;
+    shared_ptr<Matrix<ElemType>> AsMatrixPtr() const;
+    Matrix<ElemType>& AsMatrix(Matrix<ElemType>& temp) const;
     const TensorShape& GetShape() const { return m_shape; }
 
     // -------------------------------------------------------------------

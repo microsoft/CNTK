@@ -531,6 +531,23 @@ void Matrix<ElemType>::ReleaseMemory()
 }
 
 template <class ElemType>
+void Matrix<ElemType>::Clear()
+{
+    m_baseMatrix = nullptr;
+    // Perf: Avoid unnecessary assignments which are a superfluous swap() operation.
+    if (m_GPUMatrix.get() != nullptr)
+        m_GPUMatrix->ZeroValues();
+    if (m_CPUMatrix.get() != nullptr)
+        m_CPUMatrix->ZeroValues();
+    if (m_GPUSparseMatrix.get() != nullptr)
+        m_GPUSparseMatrix->ZeroValues();
+    if (m_CPUSparseMatrix.get() != nullptr)
+        m_CPUSparseMatrix->ZeroValues();
+    m_matrixType = MatrixType::UNDETERMINED;
+    m_currentDataLocation = CurrentDataLocation::NONE;
+}
+
+template <class ElemType>
 Matrix<ElemType>::~Matrix(void)
 {
     ReleaseMemory();
@@ -769,7 +786,6 @@ Matrix<ElemType> Matrix<ElemType>::ColumnSlice(size_t startColumn, size_t numCol
 template <class ElemType>
 Matrix<ElemType>& Matrix<ElemType>::AssignColumnSlice(const Matrix<ElemType>& fromMatrix, size_t startColumn, size_t numCols)
 {
-    ReleaseMemory();
     m_preferredDeviceId = fromMatrix.m_preferredDeviceId;
 
     DISPATCH_MATRIX_ON_FLAG(&fromMatrix,
