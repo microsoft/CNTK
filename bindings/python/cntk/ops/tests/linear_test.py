@@ -200,3 +200,40 @@ def test_op_negate(operand, device_id, precision):
 
     _test_unary_op(precision, device_id, '-', operand,
         expected_forward, expected_backward)
+
+TIMES_PAIRS = [
+    ([[30.]], [[10.]]),
+    ([[1.5, 2.1]], [[10.], [20.]]),
+    ([[100., 200.]], [[10.], [20.]]),
+    ([[100., 200.], [300., 400.]], [[10.], [20.]]),
+    ([[100., 200.], [300., 400.]], [[10., 20.], [20., 30.]])
+]
+
+#TODO: Handle sparse matrices
+@pytest.mark.parametrize("left_operand, right_operand", TIMES_PAIRS)
+def test_op_times(left_operand, right_operand, device_id, precision,
+        left_matrix_type, right_matrix_type):
+    dt_precision = PRECISION_TO_TYPE[precision]
+
+    a = AA(left_operand, dtype=dt_precision)
+    b = AA(right_operand, dtype=dt_precision)
+
+    expected_forward = [[np.dot(a, b)]]
+
+    assert len(a.shape) == len(b.shape) == 2
+
+    left_backward = np.zeros_like(a)
+    left_backward[:,:] = b.sum(axis = 1)
+
+    right_backward = np.zeros_like(b)
+    right_backward[:,:] = np.transpose([a.sum(axis = 0)])
+
+    expected_backward = {
+            'left_arg':  [[left_backward]],
+            'right_arg': [[right_backward]]
+            }
+
+    from cntk import times
+
+    _test_binary_op(precision, device_id, times,
+            left_operand, right_operand, expected_forward, expected_backward)
