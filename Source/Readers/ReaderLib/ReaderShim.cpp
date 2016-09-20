@@ -77,7 +77,7 @@ void ReaderShim<ElemType>::StartDistributedMinibatchLoop(
     config.m_epochIndex = epoch;
 
     // Let's check that there is no outstanding copies.
-    // Wait on all events if there are any pending copy operations are in flight.
+    // Wait on all events if there are any pending copy operations in flight.
     if (m_dataTransferers[m_currentDataTransferIndex])
         m_dataTransferers[m_currentDataTransferIndex]->WaitForCopyCPUToGPU();
 
@@ -116,13 +116,14 @@ void ReaderShim<ElemType>::StartDistributedMinibatchLoop(
     m_endOfEpoch = false;
     m_reader->StartEpoch(config, inputDescriptions);
 
+    auto localCurrentDataTransferIndex = m_currentDataTransferIndex;
     // Starting the prefetch task. There is always a single async read in flight.
     // When the network requests a new minibatch, we wait for the current async to finish, swap the buffers
     // and kick off the new prefetch.
     m_prefetchTask = std::async(m_launchType,
-    [this]()
+    [this, localCurrentDataTransferIndex]()
     {
-        return PrefetchMinibatch();
+        return PrefetchMinibatch(localCurrentDataTransferIndex);
     });
 }
 
@@ -186,12 +187,12 @@ bool ReaderShim<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
     }
 
     // Remember current data transfer, async memcpy for it already started on the prefetch thread.
-    auto currentDataTransfer = m_currentDataTransferIndex;
+    auto currentDataTransferIndex = m_currentDataTransferIndex;
 
     // Let's update the current data transferer.
     m_currentDataTransferIndex = (m_currentDataTransferIndex + 1) % 2;
 
-    // We need to make sure that the compute for the current transfer is finished before we start prefetch.
+    // Record an event that prefetch can wait on to ensure that prior compute has finished.
     if (m_dataTransferers[m_currentDataTransferIndex])
         m_dataTransferers[m_currentDataTransferIndex]->RecordComputeStreamSyncPoint();
 
@@ -208,7 +209,7 @@ bool ReaderShim<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
     // a map to generate error messages when checking layout constraints.
     map<wstring, wstring> layoutToInputMap;
 
-    // Let's now check the layouts and throw if the same layout is beeing assigned twice.
+    // Let's now check the layouts and throw if the same layout is being assigned twice.
     for (auto i = matrices.begin(); i != matrices.end(); ++i)
     {
         auto streamLayout = m_prefetchBuffers[i->first].m_mbLayout;
@@ -232,25 +233,25 @@ bool ReaderShim<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
     // So pick up the first one.
     m_numParallelSequences = matrices.begin()->second.pMBLayout->GetNumParallelSequences();
 
-    
     // It is time to issue the next prefetch.
     if (!m_endOfEpoch)
     {
         // Starting the prefetch task. There is always a single async read in flight.
         // When the network requests a new minibatch, we wait for the current async to finish, swap the buffers
         // and kick off the new prefetch.
-        m_prefetchTask = std::async(m_launchType, [this]() { return PrefetchMinibatch(); });
+        auto localCurrentDataTransferIndex = m_currentDataTransferIndex;
+        m_prefetchTask = std::async(m_launchType, [this, localCurrentDataTransferIndex]() { return PrefetchMinibatch(localCurrentDataTransferIndex); });
     }
 
     // Let's wait till the previous memcopy has finished.
-    if (m_dataTransferers[currentDataTransfer])
-        m_dataTransferers[currentDataTransfer]->WaitForCopyCPUToGPU();
+    if (m_dataTransferers[currentDataTransferIndex])
+        m_dataTransferers[currentDataTransferIndex]->WaitForCopyCPUToGPU();
 
     return result.m_isDataAvailable;
 }
 
 template <class ElemType>
-typename ReaderShim<ElemType>::PrefetchResult ReaderShim<ElemType>::PrefetchMinibatch()
+typename ReaderShim<ElemType>::PrefetchResult ReaderShim<ElemType>::PrefetchMinibatch(size_t currentDataTransferIndex)
 {
     Minibatch minibatch = m_reader->ReadMinibatch();
 
@@ -262,8 +263,8 @@ typename ReaderShim<ElemType>::PrefetchResult ReaderShim<ElemType>::PrefetchMini
     // But before we need to make sure that corresponding compute has already finished from the last iteration.
 
     // We need to make sure that the compute for the current transfer is finished before we start prefetch.
-    if (m_dataTransferers[m_currentDataTransferIndex])
-        m_dataTransferers[m_currentDataTransferIndex]->WaitForSyncPointOnAssignStreamAsync();
+    if (m_dataTransferers[currentDataTransferIndex])
+        m_dataTransferers[currentDataTransferIndex]->WaitForSyncPointOnAssignStreamAsync();
 
     for (auto& mx : m_prefetchBuffers)
     {
@@ -272,12 +273,12 @@ typename ReaderShim<ElemType>::PrefetchResult ReaderShim<ElemType>::PrefetchMini
         mx.second.m_mbLayout = stream->m_layout;
 
         size_t sampleSize = m_streams[streamId]->m_sampleLayout->GetNumElements();
-        FillMatrixFromStream(m_streams[streamId]->m_storageType, mx.second.m_matrix.get(), sampleSize, stream, m_dataTransferers[m_currentDataTransferIndex].get());
+        FillMatrixFromStream(m_streams[streamId]->m_storageType, mx.second.m_matrix.get(), sampleSize, stream, m_dataTransferers[currentDataTransferIndex].get());
     }
 
     // Let's record that we started the copy, so that the main thread can wait afterwards.
-    if (m_dataTransferers[m_currentDataTransferIndex])
-        m_dataTransferers[m_currentDataTransferIndex]->RecordCPUToGPUCopy();
+    if (m_dataTransferers[currentDataTransferIndex])
+        m_dataTransferers[currentDataTransferIndex]->RecordCPUToGPUCopy();
 
     return PrefetchResult{ minibatch.m_endOfEpoch, true };
 }

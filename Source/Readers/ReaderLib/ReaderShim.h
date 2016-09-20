@@ -84,7 +84,7 @@ private:
         bool m_isDataAvailable;
     };
 
-    PrefetchResult PrefetchMinibatch();
+    PrefetchResult PrefetchMinibatch(size_t currentDataTransferIndex);
 
     std::future<PrefetchResult> m_prefetchTask;
     ReaderPtr m_reader;
@@ -113,7 +113,9 @@ private:
     // currently waiting on the main thread and the one that can be started by the prefetch thread 
     // in the meantime.
     std::vector<DataTransfererPtr> m_dataTransferers;
+
     // Current data transfer. Flips 0 and 1.
+    // Can be changed only from the main thread with no ongoing prefetch.
     size_t m_currentDataTransferIndex; 
 
     // Device id.
