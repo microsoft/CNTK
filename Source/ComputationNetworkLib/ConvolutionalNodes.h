@@ -514,26 +514,15 @@ protected:
 template <class ElemType>
 class ROIPoolingNode : public ComputationNode<ElemType>, public NumInputs<2>
 {
-    typedef ComputationNode<ElemType> Base;
-    UsingComputationNodeMembersBoilerplate;
-
-    static const std::wstring TypeName()
-    {
-        return L"ROIPooling";
-    }
+    typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName() { return L"ROIPooling"; }
 public:
-
-    ROIPoolingNode(DEVICEID_TYPE deviceId, const wstring& name)
-        : Base(deviceId, name), m_argmaxData(Matrix<ElemType>::Zeros(1,1,deviceId))
+    ROIPoolingNode(DEVICEID_TYPE deviceId, const wstring& name, const TensorShape& outputShape = TensorShape())
+        : Base(deviceId, name), m_outputShape(outputShape), m_argmaxData(Matrix<ElemType>::Zeros(1, 1, deviceId))
     {
     }
-    ROIPoolingNode(DEVICEID_TYPE deviceId, const wstring& name, const size_t width, const size_t height)
-        : Base(deviceId, name), m_outW(width), m_outH(height), m_argmaxData(Matrix<ElemType>::Zeros(1, 1, deviceId))
-    {
-    }
-
     ROIPoolingNode(const ScriptableObjects::IConfigRecordPtr configp)
-        : ROIPoolingNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"W"), configp->Get(L"H"))
+        : ROIPoolingNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"outputShape"))
     {
         AttachInputsFromConfig(configp, GetExpectedNumInputs());
     }
@@ -571,7 +560,7 @@ public:
     void ForwardProp(const FrameRange& fr) override
     {
         // [4 x roisPerImage x N] -- first dimension is roiSize (4), second is rois-per-image, third is mb size
-        int roisPerImage = GetInputSampleLayout(1)[1];
+        size_t roisPerImage = (size_t)GetInputSampleLayout(1)[1];
 
         auto inputShape = GetInputSampleLayout(0);
         Matrix<ElemType> inputSlice = Input(0)->ValueFor(fr);
@@ -583,13 +572,27 @@ public:
         // input slice is [W x H x C x N]; cols are images.
         // ROIs is [4 x roisPerImage x N]; cols are ROIs for different images.
         // each ROI is (x, y, w, h) relative to original image size.
-        int inputW = inputShape[0];
-        int inputH = inputShape[1];
-        int numChannels = inputShape[2];
+        size_t inputW = (size_t)inputShape[0];
+        size_t inputH = (size_t)inputShape[1];
+        size_t numChannels = (size_t)inputShape[2];
+        size_t outW = m_outputShape[0];
+        size_t outH = m_outputShape[1];
 
-        m_tempMatrix->Resize(m_outH * m_outW * numChannels * roisPerImage, inputSlice.GetNumCols());
+        m_tempMatrix->Resize(outW * outH * numChannels * roisPerImage, inputSlice.GetNumCols());
         inputSlice.ROIPoolingForward(roisPerImage, inputSlice.GetNumCols(), 
-            numChannels, inputW, inputH, m_outW, m_outH, ROIs, outputSlice, *m_tempMatrix);
+            numChannels, inputW, inputH, outW, outH, ROIs, outputSlice, *m_tempMatrix);
+    }
+
+    void Save(File& fstream) const override
+    {
+        Base::Save(fstream);
+        m_outputShape.Save(fstream);
+    }
+
+    void Load(File& fstream, size_t modelVersion) override
+    {
+        Base::Load(fstream, modelVersion);
+        m_outputShape.Load(fstream);
     }
 
     void Validate(bool isFinalValidationPass) override
@@ -597,23 +600,26 @@ public:
         Base::Validate(isFinalValidationPass);
         InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
 
-        auto inDims = ImageDimensions(GetInputSampleLayout(0), ImageLayoutKind::CHW);
-        size_t roisPerImage = GetInputSampleLayout(1)[1];
+        auto inShape = GetInputSampleLayout(0);   // layout of input shape is width x height x numChannels
+        auto roiShape = GetInputSampleLayout(1); // layout of ROI shape is 4 x roisPerImage
 
-        if (isFinalValidationPass && (inDims.m_width < m_outW || inDims.m_height < m_outH))
-        InvalidArgument("ROIPoolingNode: inputWidth must >= windowWidth and inputHeight must >= windowHeight.");
+        if (isFinalValidationPass && (m_outputShape.size() != 2))
+            InvalidArgument("ROIPoolingNode: output shape must have two dimensions ([W x H]).");
 
-        if (isFinalValidationPass && (inDims.m_numChannels < 1))
+        if (isFinalValidationPass && (inShape[0] < m_outputShape[0] || inShape[1] < m_outputShape[1]))
+            InvalidArgument("ROIPoolingNode: inputWidth must >= windowWidth and inputHeight must >= windowHeight.");
+
+        if (isFinalValidationPass && (inShape[2] < 1))
             InvalidArgument("ROIPoolingNode: input must have at least one channel ([W x H x C]).");
 
-        if (isFinalValidationPass && (roisPerImage < 1))
-            InvalidArgument("ROIPoolingNode: ROI input must contain at least one ROI ([4 x roisPerImage]).");
-
-        if (isFinalValidationPass && (GetInputSampleLayout(1)[0] != 4))
+        if (isFinalValidationPass && (roiShape[0] != 4))
             InvalidArgument("ROIPoolingNode: ROI input must have the following shape: [4 x roisPerImage].");
 
+        if (isFinalValidationPass && (roiShape[1] < 1))
+            InvalidArgument("ROIPoolingNode: ROI input must contain at least one ROI ([4 x roisPerImage]).");
+
         // set output dimensions to [W x H x C x roisPerImage]
-        SetDims(TensorShape(m_outW, m_outH, inDims.m_numChannels, roisPerImage), HasMBLayout());
+        SetDims(TensorShape(m_outputShape[0], m_outputShape[1], inShape[2], roiShape[1]), HasMBLayout());
     }
 
     // similar to usual MaxPooling backpropagation. Send gradients
@@ -637,7 +643,7 @@ public:
         auto roiData = Input(1)->ValueFor(fr);
 
         pooledGrad.ROIPoolingBackward(roisPerImage, inputSlice.GetNumCols(), numChannels, 
-            inputW, inputH, m_outW, m_outH, roiData, inputGrad, *m_tempMatrix);
+            inputW, inputH, m_outputShape[0], m_outputShape[1], roiData, inputGrad, *m_tempMatrix);
     }
 
     void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
@@ -646,13 +652,12 @@ public:
         if (flags & CopyNodeFlags::copyNodeValue)
         {
             auto node = dynamic_pointer_cast<ROIPoolingNode<ElemType>>(nodeP);
-            node->m_outW = m_outW;
-            node->m_outH = m_outH;
+            node->m_outputShape = m_outputShape;
         }
     }
 
 protected:
-    size_t m_outH, m_outW;
+    TensorShape m_outputShape;
     shared_ptr<Matrix<ElemType>> m_tempMatrix;
     Matrix<ElemType> m_argmaxData;
 };
@@ -949,7 +954,7 @@ public:
         // get input tensor shape and interpret as image dimensions
         auto inDims = ImageDimensions(GetInputSampleLayout(0), m_imageLayoutKind);
 
-        if (isFinalValidationPass && (inDims.m_width < m_windowWidth || inDims.m_height < m_windowHeight))
+        if (isFinalValidationPass && (inDims.m_width < m_windowWidth || inDims.m_height < m_windowHeight)) 
             InvalidArgument("PoolingNodeBase: inputWidth must >= windowWidth and inputHeight must >= windowHeight.");
 
         // determine output tensor shape

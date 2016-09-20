@@ -3150,9 +3150,9 @@ void GPUMatrix<ElemType>::ROIPoolingForward(const size_t numRois, const size_t n
     SyncGuard syncGuard;
 
     int count = numRois * numImg * channels * pooledHeight * pooledWidth;
-    const int BlockSize = GridDim::maxThreadsPerBlock;
-    auto numThreads = dim3((int)floor((double)(count + BlockSize - 1) / BlockSize));
-    kROIPoolingForward<<<numThreads, BlockSize, 0, t_stream>>>(count, numRois, numImg, channels, width, height, 
+    const int blockSize = GridDim::maxThreadsPerBlock;
+    auto numThreads = dim3((int)floor((double)(count + blockSize - 1) / blockSize));
+    kROIPoolingForward<<<numThreads, blockSize, 0, t_stream>>>(count, numRois, numImg, channels, width, height, 
                                                                pooledWidth, pooledHeight, Data(), roiData.Data(), output.Data(), argmax.Data());
 }
 
@@ -3165,9 +3165,9 @@ void GPUMatrix<ElemType>::ROIPoolingBackward(const size_t numRois, const size_t 
     SyncGuard syncGuard;
 
     int count = numImg * channels * height * width;
-    const int BlockSize = GridDim::maxThreadsPerBlock;
-    auto numThreads = dim3((int)floor((double)(count + BlockSize - 1) / BlockSize));
-    kROIPoolingBackward<<<numThreads, BlockSize, 0, t_stream>>>(count, numRois, numImg, channels, width, height, 
+    const int blockSize = GridDim::maxThreadsPerBlock;
+    auto numThreads = dim3((int)floor((double)(count + blockSize - 1) / blockSize));
+    kROIPoolingBackward<<<numThreads, blockSize, 0, t_stream>>>(count, numRois, numImg, channels, width, height, 
                                                                 pooledWidth, pooledHeight, Data(), roiData.Data(), grad.Data(), argmax.Data());
 }
 

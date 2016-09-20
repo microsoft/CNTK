@@ -506,27 +506,6 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
                                              horizontalSubsample, verticalSubsample, imageLayoutKind, name);
         }
     }
-    else if (cnNodeType == OperationNameOf(ROIPoolingNode))
-    {
-        // setup the parameter position of children so we can hook them up later
-        // parameters are height and width
-        nodeParamCount = 2;
-        nodeParamStart = 0;
-
-        if (pass == ndlPassInitial)
-        {
-            int id = 2; // skip inputValueNode and inputROINode
-
-            // evaluate only scalar parameters
-            vector<void*> params = EvaluateParameters(node, baseName, id, parameter.size() - id, pass);
-
-            id = 0; // reset counter because the params array starts at zero
-            size_t H = ((NDLNode<ElemType>*) params[id++])->GetScalar();
-            size_t W = ((NDLNode<ElemType>*) params[id++])->GetScalar();
-
-            nodePtr = builder.ROIPooling(NULL, NULL, W, H, name);
-        }
-    }
     else if (cnNodeType == OperationNameOf(BatchNormalizationNode))
     {
         if (parameter.size() != 5)

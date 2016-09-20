@@ -216,12 +216,12 @@ __global__ void kMaxPoolingBackward(int batchSize, const ElemType* out, const El
     }
 }
 
-__device__ float Round(float a)
+__device__ float round_(float a)
 {
     return roundf(a);
 }
 
-__device__ double Round(double a)
+__device__ double round_(double a)
 {
     return round(a);
 }
@@ -246,31 +246,31 @@ __global__ void kROIPoolingForward(const int totalIterations,
 {
     // index loops over all totalRois*c*pooledHeight*pooledWidth output locations.
     for (int index = blockIdx.x * blockDim.x + threadIdx.x;
-        index < (totalIterations); index += blockDim.x * gridDim.x) 
+         index < (totalIterations); index += blockDim.x * gridDim.x) 
     {
         
         // output is [W x H x C x N]
         // n is the global ROI index (the new batch index)
-        int pw = index % pooledWidth;
+        int pw =  index % pooledWidth;
         int ph = (index / pooledWidth) % pooledHeight;
-        int c  = (index / pooledWidth / pooledHeight) % channels;
-        int n  =  index / pooledWidth / pooledHeight / channels;
+        int c  = (index / pooledWidth  / pooledHeight) % channels;
+        int n  =  index / pooledWidth  / pooledHeight  / channels;
 
         // each ROI is 4 elements: (x, y, w, h)
         roiData += n * 4;
 
         // roi data is relative to original image size
-        int roiStartW = (int)(Round(roiData[0] * width));
-        int roiStartH = (int)(Round(roiData[1] * height));
-        int roiWidth  = (int)(max(Round(roiData[2] * width),  (ElemType)1));
-        int roiHeight = (int)(max(Round(roiData[3] * height), (ElemType)1));
+        int roiStartW = (int)(    round_(roiData[0] * width));
+        int roiStartH = (int)(    round_(roiData[1] * height));
+        int roiWidth  = (int)(max(round_(roiData[2] * width),  (ElemType)1));
+        int roiHeight = (int)(max(round_(roiData[3] * height), (ElemType)1));
         
         ElemType winH = (ElemType)roiHeight / (ElemType)pooledHeight;
         ElemType winW = (ElemType)roiWidth / (ElemType)pooledWidth;
         
         // compute window for this output location.
-        int hstart = (int)(ph * winH);
-        int wstart = (int)(pw * winW);
+        int hstart = (int)(       ph * winH);
+        int wstart = (int)(       pw * winW);
         int hend   = (int)(ceilf((ph + 1) * winH));
         int wend   = (int)(ceilf((pw + 1) * winW));
         
@@ -321,10 +321,10 @@ __global__ void kROIPoolingBackward(const int totalIterations,
     {
         // images are laid out [W x H x C x N]
         // (n, c, h, w) is an element in the input image
-        int w = index % width;
+        int w =  index % width;
         int h = (index / width) % height;
-        int c = (index / width / height) % channels;
-        int n =  index / width / height  / channels;
+        int c = (index / width  / height) % channels;
+        int n =  index / width  / height  / channels;
 
         // compute range of ROIs corresponding to this image:
         int roiMin = n * numROIs;
@@ -338,10 +338,10 @@ __global__ void kROIPoolingBackward(const int totalIterations,
             const ElemType* roiOffset = roiData + roiN * 4;
 
             // ROI data is relative to original image size
-            int roiStartW = (int)(Round(roiOffset[0] * width));
-            int roiStartH = (int)(Round(roiOffset[1] * height));
-            int roiWidth  = (int)(max(Round(roiOffset[2] * width), 1.0));
-            int roiHeight = (int)(max(Round(roiOffset[3] * height), 1.0));
+            int roiStartW = (int)(    round_(roiOffset[0] * width));
+            int roiStartH = (int)(    round_(roiOffset[1] * height));
+            int roiWidth  = (int)(max(round_(roiOffset[2] * width), 1.0));
+            int roiHeight = (int)(max(round_(roiOffset[3] * height), 1.0));
 
             // skip this ROI if it doesn't contain our input location.
             const bool inROI = (w >= roiStartW && w < roiStartW + roiWidth &&
@@ -354,8 +354,8 @@ __global__ void kROIPoolingBackward(const int totalIterations,
 
             // what pooled nodes in the output for this ROI could have pooled this input location?
             // we use int here since the computation can yield a negative result
-            int phstart = (int)((float)(h - roiStartH) / winH);
-            int pwstart = (int)((float)(w - roiStartW) / winW);
+            int phstart = (int)(      (float)(h - roiStartH)     / winH);
+            int pwstart = (int)(      (float)(w - roiStartW)     / winW);
             int phend   = (int)(ceilf((float)(h - roiStartH + 1) / winH));
             int pwend   = (int)(ceilf((float)(w - roiStartW + 1) / winW));
 

@@ -1,8 +1,17 @@
 # Fast-RCNN configuration for CNTK
 # For algorithm and details see http://arxiv.org/abs/1504.08083
+# Overview:
+# The Fast-RCNN algorithm uses a DNN that takes as inputs a set of images 
+# and for each image a set of ROIs (Regions of interest). It first computes
+# a convolutional feature map for the entire image using a series of
+# of convolutional layers (usually from a pretrained network). Then it 
+# employs ROI pooling to crop out the part of the conv feature map 
+# that corresponds to an ROI and resizes it to the input size expected
+# by the following layer (usually a set of pretrained fully connected layers).
+# Classification error and evaluation criterion are computed for each ROI.
 
-command=Train:Test
-#command=Write
+command = Train:Test
+#command = Write
 
 deviceId = "Auto"
 precision = "float"
@@ -10,7 +19,7 @@ parallelTrain = "false"
 traceLevel = 1
 
 rootDir = "." 
-dataDir  = "$rootDir$/data/"
+dataDir = "$rootDir$/data/"
 outputDir = "$rootDir$/Output"
 
 modelPath = "$outputDir$/Fast-RCNN"
@@ -30,6 +39,14 @@ NumTestROIs = 200
 TestROIDim = 800
 TestROILabelDim = 4200
 
+# For training we load a pretrained AlexNet model (AlexNet.89) and clone three parts of it.
+# For the first part (up to pool1) we keep the weights fixed. The middle part contains the
+# remaining convolutional and pooling layers and the last part are the FC layers. 
+# In the model we apply the first two cloned parts, then an ROI pooling layer and 
+# finally the pretrained FC layers followed by a new FC layer that maps to the new 
+# label dimensionality of 21 classes. 
+# The inputs are images (1000 x 1000 x 3), ROIs (64 ROIs x 4 coordinates (x, y, w, h))
+# and ground truht labels per ROI (64 ROIs x 21 classes).
 Train = {
     action = "train"
     
@@ -39,29 +56,29 @@ Train = {
         ROIShape   = 4:$NumTrainROIs$                   # 4:64
 
         network     = BS.Network.Load ("AlexNet.89")
-        pool1       = BS.Network.CloneFunction(network.features, network.pool1, parameters="constant")
+        pool1       = BS.Network.CloneFunction(network.features, network.pool1, parameters = "constant")
         convLayers  = BS.Network.CloneFunction(network.pool1, network.conv5_y)
         fcLayers    = BS.Network.CloneFunction(network.pool3, network.h2_d)
 
         model (features, rois) = {
-            featNorm = features - Constant (114)
+            featNorm = features - 114
             pool1Out = pool1 (featNorm)
             conv5Out = convLayers (pool1Out)
             roiOut   = ROIPooling (conv5Out, rois, (6:6))
             fcOut    = fcLayers (roiOut)
-            W        = ParameterTensor((21:4096))
-            b        = ParameterTensor(21, init='zero')
-            z        = Times(W, fcOut) + b
+            W        = ParameterTensor{(21:4096)}
+            b        = ParameterTensor{21, init = 'zero'}
+            z        = W * fcOut + b
         }.z
 
-        features = Input (imageShape)
-        roiLabels = Input (labelShape)
-        rois = Input (ROIShape)
+        features = Input {imageShape}
+        roiLabels = Input {labelShape}
+        rois = Input {ROIShape}
 
         z = model (features, rois)
         
-        ce = NewCrossEntropyWithSoftmax(roiLabels, z, axis=1)
-        errs = ClassificationError(roiLabels, z, axis=1)
+        ce = CrossEntropyWithSoftmax(roiLabels, z, axis = 1)
+        errs = ClassificationError(roiLabels, z, axis = 1)
         
         featureNodes    = (features:rois)
         labelNodes      = (roiLabels)
@@ -96,26 +113,30 @@ Train = {
             input = { roiLabels = { dim = $TrainROILabelDim$ ; format = "dense" } }
         }:{
             type = "ImageDeserializer" ; module = "ImageReader"
-            file="$dataDir$/tv2012pad.txt"
+            file = "$dataDir$/tv2012pad.txt"
             input = {
                 features = { transforms = (
                     { type = "ScaleSide" ; target = $ImageW$ ; side = "max" }:
                     { type = "Pad" ; width = $ImageW$ ; height = $ImageH$; channels = $ImageC$; value = 114 }:
                     { type = "Transpose" }
                 )}
-                ignored={labelDim=1000}
+                ignored = {labelDim = 1000}
             }
         })
     }
 }
 
-Test={
-    action="test"
-    minibatchSize=1
+# For testing we load the trained Fast-RCNN model and modify the input size,
+# such that the network accepts 200 ROIs per image. To this end we load and 
+# clone the entire network and define new inputs with the desired size 
+# corresponding to 200 ROIs. 
+Test = {
+    action = "test"
+    minibatchSize = 1
 
     # use this for write action
-    # action="write"
-    # outputPath="$OutputDir$/fastrcnnNetOutput"
+    # action = "write"
+    # outputPath = "$OutputDir$/fastrcnnNetOutput"
     
     BrainScriptNetworkBuilder = {
         imageShape = $ImageH$:$ImageW$:$ImageC$        # 1000:1000:3
@@ -124,16 +145,16 @@ Test={
 
         # load network
         network = BS.Network.Load ("$modelPath$")
-        clonedNet = BS.Network.CloneFunction ((network.features:network.rois), { z = network.z }, parameters="constant")
+        clonedNet = BS.Network.CloneFunction ((network.features:network.rois), { z = network.z }, parameters = "constant")
 
-        features = Input (imageShape)
-        roiLabels = Input (labelShape)
-        rois = Input (ROIShape)
+        features = Input {imageShape}
+        roiLabels = Input {labelShape}
+        rois = Input {ROIShape}
 
         z = clonedNet(features, rois).z
         
-        ce = NewCrossEntropyWithSoftmax (roiLabels, z, axis=1)
-        errs = ClassificationError(z, roiLabels, axis=1)
+        ce = CrossEntropyWithSoftmax (roiLabels, z, axis = 1)
+        errs = ClassificationError(z, roiLabels, axis = 1)
         
         featureNodes    = (features:rois)
         labelNodes      = (roiLabels)
@@ -155,14 +176,14 @@ Test={
             input = { roiLabels = { dim = $TestROILabelDim$ ; format = "dense" } }
         }:{
             type = "ImageDeserializer" ; module = "ImageReader"
-            file="$dataDir$/test2007pad_all.txt"
+            file = "$dataDir$/test2007pad_all.txt"
             input = {
                 features = { transforms = (
                     { type = "ScaleSide" ; target = $ImageW$ ; side = "max" }:
                     { type = "Pad" ; width = $ImageW$ ; height = $ImageH$; channels = $ImageC$; value = 114 }:
                     { type = "Transpose" }
                 )}
-                ignored={labelDim=1000}
+                ignored = {labelDim = 1000}
             }
         })
     }

@@ -4323,8 +4323,7 @@ void CPUMatrix<ElemType>::ROIPoolingForward(const size_t numRois, const size_t n
             const ElemType winW = roiW / (ElemType)pooledWidth;
             const ElemType winH = roiH / (ElemType)pooledHeight;
 
-            // from Ross Girshick fast-rcnn caffe cpu:
-            // https://github.com/rbgirshick/fast-rcnn
+            // inspired by Ross Girshick fast-rcnn caffe cpu: https://github.com/rbgirshick/fast-rcnn
             // loop over spatial locations in output.
 #pragma omp parallel for
             for (int outw = 0; outw < pooledWidth; outw++)
