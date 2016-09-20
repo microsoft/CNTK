@@ -19,6 +19,7 @@ TENSOR_PAIRS = [
     ([30.], [10.]),
     ([[10.]], [[30.]]),
     ([[1.5, 2.1]], [[10., 20.]]),
+    ([[1.5, 2.1]], 2),
     #([[100., 200.], [300., 400.], [10., 20.]],
     #  [[10., 20.], [30., 40.], [1., 2.]]),
 
@@ -32,10 +33,16 @@ TENSOR_PAIRS = [
 def test_op_plus(left_operand, right_operand, device_id, precision):
     expected_forward = [AA([left_operand]) + AA([right_operand])]
 
-    expected_backward = {
-            'left_arg':  [[[np.ones_like(x, dtype=PRECISION_TO_TYPE[precision]) for x in left_operand]]], 
-            'right_arg': [[[np.ones_like(x, dtype=PRECISION_TO_TYPE[precision]) for x in right_operand]]]
-            }
+    if np.isscalar(right_operand):
+        expected_backward = {
+                'left_arg':  [[[np.ones_like(x, dtype=PRECISION_TO_TYPE[precision]) for x in left_operand]]], 
+                'right_arg': [[[1]]]
+                }
+    else:
+        expected_backward = {
+                'left_arg':  [[[np.ones_like(x, dtype=PRECISION_TO_TYPE[precision]) for x in left_operand]]], 
+                'right_arg': [[[np.ones_like(x, dtype=PRECISION_TO_TYPE[precision]) for x in right_operand]]]
+                }
     from .. import plus
     _test_binary_op(precision, device_id, plus,
             left_operand, right_operand,
