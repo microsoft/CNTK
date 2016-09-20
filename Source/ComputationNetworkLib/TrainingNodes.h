@@ -110,12 +110,8 @@ template class SquareErrorNode<double>;
 template <class ElemType>
 class CrossEntropyWithSoftmaxNode : public ComputationNodeNonLooping /*ComputationNode*/<ElemType>, public NumInputs<2>
 {
-    typedef ComputationNodeNonLooping<ElemType> Base;
-    UsingComputationNodeMembersBoilerplate;
-    static const std::wstring TypeName()
-    {
-        return L"CrossEntropyWithSoftmax";
-    }
+    typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName() { return L"CrossEntropyWithSoftmax"; }
 
 public:
     DeclareConstructorFromConfigWithNumInputs(CrossEntropyWithSoftmaxNode);

@@ -30,7 +30,7 @@ int main()
 
     TestCifarResnet();
     TrainLSTMSequenceClassifer();
-    
+
     TrainSequenceToSequenceTranslator();
 
     fprintf(stderr, "\nCNTKv2Library tests: Passed\n");

@@ -84,14 +84,12 @@ struct RMSPropInfo
 
 struct GradientUpdateInfo
 {
-    GradientsUpdateType mType;
-    float mGaussianNoiseInjectStd;
+    GradientsUpdateType type = GradientsUpdateType::AdaGrad;
+    float gaussianNoiseInjectStd = 0.0075f;
 
-    GradientUpdateInfo()
-    {
-        mType = GradientsUpdateType::AdaGrad;
-        mGaussianNoiseInjectStd = 0.0075f;
-    }
+    // for FSAdaGrad:
+    double targetAdagradAvDenom = 1;
+    size_t varianceTimeConstant = 2 * 3600 * 100; // originally was: 2h of speech
 };
 
 // ---------------------------------------------------------------------------
@@ -293,7 +291,7 @@ protected:
 
     bool m_useTwoPassTraining;
     
-    bool m_disableWkInBatchNormal;
+    bool m_disableWkInBatchNormal;  // TODO: comment?
 };
 
 template <class ElemType>
@@ -389,7 +387,7 @@ protected:
                                   const std::vector<ComputationNodeBasePtr>& evaluationNodes,
                                   StreamMinibatchInputs* inputMatrices,
                                   const std::list<ComputationNodeBasePtr>& learnableNodes,
-                                  std::list<Matrix<ElemType>>& smoothedGradients,
+                                  std::list<Matrix<ElemType>>& smoothedGradients, std::vector<double> smoothedCounts,
                                   const bool learnRateInitialized,
                                   const double largestPrevLearnRatePerSample);
 
@@ -405,7 +403,7 @@ protected:
                                          const std::vector<ComputationNodeBasePtr>& evaluationNodes,
                                          StreamMinibatchInputs* inputMatrices,
                                          const std::list<ComputationNodeBasePtr>& learnableNodes,
-                                         std::list<Matrix<ElemType>>& smoothedGradients,
+                                         std::list<Matrix<ElemType>>& smoothedGradients, std::vector<double> smoothedCounts,
                                          /*out*/ EpochCriterion& epochCriterion,
                                          /*out*/ std::vector<EpochCriterion>& epochEvalErrors,
                                          std::string prefixMsg = "");
@@ -424,7 +422,7 @@ protected:
                                    const std::vector<ComputationNodeBasePtr>& evaluationNodes,
                                    StreamMinibatchInputs* inputMatrices,
                                    const std::list<ComputationNodeBasePtr>& learnableNodes,
-                                   std::list<Matrix<ElemType>>& smoothedGradients,
+                                   std::list<Matrix<ElemType>>& smoothedGradients, std::vector<double> smoothedCounts,
                                    const double learningRateAdjustmentFactor);
 
     // uses a small percentage of training data of minibatch to
@@ -442,7 +440,7 @@ protected:
                                       const std::vector<ComputationNodeBasePtr>& evaluationNodes,
                                       StreamMinibatchInputs* inputMatrices,
                                       const std::list<ComputationNodeBasePtr>& learnableNodes,
-                                      std::list<Matrix<ElemType>>& smoothedGradients,
+                                      std::list<Matrix<ElemType>>& smoothedGradients, std::vector<double> smoothedCounts,
                                       const size_t minMinibatchSize, const size_t maxMinibatchSize);
 
     // Attemps to compute the error signal for the whole utterance, which will
@@ -469,7 +467,7 @@ protected:
                          const std::vector<ComputationNodeBasePtr>& evaluationNodes,
                          StreamMinibatchInputs* inputMatrices,
                          const std::list<ComputationNodeBasePtr>& learnableNodes,
-                         std::list<Matrix<ElemType>>& smoothedGradients,
+                         std::list<Matrix<ElemType>>& smoothedGradients, std::vector<double>& smoothedCounts,
                          /*out*/ EpochCriterion& epochCriterion,
                          /*out*/ std::vector<EpochCriterion>& epochEvalErrors,
                          const std::string& prefixMsg = "");
@@ -477,33 +475,20 @@ protected:
     void InitDistGradAgg(int numEvalNodes, int traceLevel);
     void InitModelAggregationHandler(int traceLevel, DEVICEID_TYPE devID);
 public:
-    // UpdateWeightsS - static version of UpdateWeights()
-    static void UpdateWeightsS(const SGD* sgd, Matrix<ElemType>& functionValues,
-                               Matrix<ElemType>& gradientValues,
-                               Matrix<ElemType>& smoothedGradient,
-                               const double learnRatePerSample,
-                               const double momentumPerSample,
-                               size_t actualMBSize,
-                               const double L2RegWeight,
-                               const double L1RegWeight,
-                               const bool needAveMultiplier,
-                               const bool useNesterovMomentum);
+    // UpdateWeights() - actual weight update, implementing various update rules
+    void UpdateWeights(Matrix<ElemType>& functionValues, Matrix<ElemType>& gradientValues,
+                       Matrix<ElemType>& smoothedGradient, double& smoothedCount,
+                       const double learnRatePerSample, const double momentumPerSample,
+                       size_t actualMBSize,
+                       const double L2RegWeight, const double L1RegWeight,
+                       const bool needAveMultiplier,
+                       const bool useNesterovMomentum) const;
     // return -1 if nothing exists
     int DetermineStartEpoch(const bool makeMode);
 
     wstring GetModelNameForEpoch(const int epoch, bool bLastModel = false);
 
 protected:
-    // UpdateWeights - update the weights in
-    void UpdateWeights(const ComputationNodeBasePtr& node,
-                       Matrix<ElemType>& smoothedGradient,
-                       const double learnRatePerSample,
-                       const double momentumPerSample,
-                       const size_t actualMBSize,
-                       const double L2RegWeight, const double L1RegWeight,
-                       const bool needAveMultiplier,
-                       const bool useNesterovMomentum) const;
-
     void ClipGradient(Matrix<ElemType>& gradient, const size_t actualMBSize) const;
 
     void SaveCheckPointInfo(const size_t epoch, const size_t totalSamplesSeen, // TODO: combine totalSamplesSeen and prevCriterion into a EpochCriterion type
@@ -529,11 +514,11 @@ protected:
 
     GradientsUpdateType GradUpdateType() const
     {
-        return m_gradType.mType;
+        return m_gradType.type;
     }
     double GradientUpdateNoiseStd() const
     {
-        return m_gradType.mGaussianNoiseInjectStd;
+        return m_gradType.gaussianNoiseInjectStd;
     }
 
 public:

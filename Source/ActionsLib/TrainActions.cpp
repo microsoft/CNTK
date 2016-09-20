@@ -71,6 +71,7 @@ void DoTrain(const ConfigRecordType& config)
 {
     bool makeMode = config(L"makeMode", true);
     DEVICEID_TYPE deviceId = DeviceFromConfig(config);
+    int traceLevel = config(L"traceLevel", 0);
 
     shared_ptr<SGD<ElemType>> optimizer;
     if (config.Exists(L"optimizer"))
@@ -93,11 +94,10 @@ void DoTrain(const ConfigRecordType& config)
 
     wstring modelFileName = optimizer->GetModelNameForEpoch(int(startEpoch) - 1);
     bool loadNetworkFromCheckpoint = startEpoch >= 0;
-    fprintf(stderr, "\n");
     if (loadNetworkFromCheckpoint)
-        LOGPRINTF(stderr, "Starting from checkpoint. Loading network from '%ls'.\n", modelFileName.c_str());
-    else
-        LOGPRINTF(stderr, "Creating virgin network.\n");
+        LOGPRINTF(stderr, "\nStarting from checkpoint. Loading network from '%ls'.\n", modelFileName.c_str());
+    else if (traceLevel > 0)
+        LOGPRINTF(stderr, "\nCreating virgin network.\n");
 
     // determine the network-creation function
     // We have several ways to create that network.
@@ -155,6 +155,8 @@ template void DoTrain<ConfigParameters, double>(const ConfigParameters& config);
 
 // ===========================================================================
 // DoAdapt() - implements CNTK "adapt" command
+// BUGBUG: This no longer works, use the CloneFunction() approach for KL.
+// TODO: remove this
 // ===========================================================================
 
 template <typename ElemType>
@@ -219,9 +221,31 @@ template void DoDumpNodes<double>(const ConfigParameters& config);
 // DoEdit() - implements CNTK "edit" command
 // ===========================================================================
 
+// this command supports two very different edit variants:
+//  - create a new model with a BrainScript editing action
+//  - MEL (deprecated)
 template <typename ElemType>
 void DoEdit(const ConfigParameters& config)
 {
+    // BrainScript editing
+    if (config.Exists(L"BrainScriptNetworkBuilder"))
+    {
+        bool makeMode = config(L"makeMode", true);
+        wstring outputPathname = config(L"outputModelPath");
+        // in makeMode, if output file exists, we are done
+        if (makeMode && File::Exists(outputPathname))
+        {
+            LOGPRINTF(stderr, "'%ls' exists, skipping. Specify makeMode=false to force executing the action.\n", outputPathname.c_str());
+            return;
+        }
+        DEVICEID_TYPE deviceId = DeviceFromConfig(config);
+        let createNetworkFn = GetNetworkFactory<ConfigParameters, ElemType>(config);
+        let net = createNetworkFn(deviceId);
+        net->Save(outputPathname);
+        LOGPRINTF(stderr, "\nModel with %d nodes saved as '%ls'.\n", (int)net->GetTotalNumberOfNodes(), outputPathname.c_str());
+        return;
+    }
+    // legacy model editing
     wstring editPath = config(L"editPath");
     wstring ndlMacros = config(L"ndlMacros", "");
     NDLScript<ElemType> ndlScript;

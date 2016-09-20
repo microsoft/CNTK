@@ -86,13 +86,13 @@ struct CriterionAccumulator
     }
     // 'i' is the index of the element we add into (multiple eval criteria share the same matrix object)
     // Use 'reset=true' to not accumulate but overwrite.
-    const CriterionAccumulator& Add(const std::vector<ComputationNodeBasePtr>& nodes, size_t i, size_t legacyNumSamples)
+    const CriterionAccumulator& Add(const std::vector<ComputationNodeBasePtr>& nodes, size_t i, size_t numSamplesInMinibatch)
     {
-        return Accumulate</*reset=*/false>(nodes, i, legacyNumSamples);
+        return Accumulate</*reset=*/false>(nodes, i, numSamplesInMinibatch);
     }
-    const CriterionAccumulator& Assign(const std::vector<ComputationNodeBasePtr>& nodes, size_t i, size_t legacyNumSamples)
+    const CriterionAccumulator& Assign(const std::vector<ComputationNodeBasePtr>& nodes, size_t i, size_t numSamplesInMinibatch)
     {
-        return Accumulate</*reset=*/true>(nodes, i, legacyNumSamples);
+        return Accumulate</*reset=*/true>(nodes, i, numSamplesInMinibatch);
     }
     // retrieve an accumulated result as a pair (numerator, denominator)
     EpochCriterion GetCriterion(size_t i) const
@@ -107,13 +107,14 @@ struct CriterionAccumulator
 
 private:
     // shared part of Add() and Assign()
-    // This code assumes that if number of samples is 0, the criterion value is also 0 and does not need to be fetched from the GPU.
+    // This code assumes that if number of samples is 0, the criterion value is invalid and must not be fetched from the GPU or otherwise looked at.
     template<bool reset>
-    const CriterionAccumulator& Accumulate(const std::vector<ComputationNodeBasePtr>& nodes, size_t i, size_t legacyNumSamples)
+    const CriterionAccumulator& Accumulate(const std::vector<ComputationNodeBasePtr>& nodes, size_t i, size_t numSamplesInMinibatch)
     {
         const auto& node = nodes[i]; // multiple nodes are managed by this struct
         size_t beta = reset ? 0 : 1;
-        size_t numSamples = GetNumSamples(nodes[i], legacyNumSamples);
+        size_t numSamples = GetNumSamples(nodes[i], numSamplesInMinibatch);
+        // Note: numSamples == 0 if numSamplesInMinibatch == 0 meaning empty minibatch.
 
         // For criterion nodes that emit criteria per frame, we will at this point
         // do masking and an implicit reduction.
@@ -127,10 +128,10 @@ private:
         shape.NarrowTo(1, i, i + 1); // narrow to the single element that corresponds to the accumulator value
         auto criterionAccumulator = TensorView<ElemType>(m_aggregateCriterionValues, shape);
 
-        if (numSamples > 0) // (if MB is empty, matrix may not have the correct row dmension)
+        // accumulate
+        if (numSamples > 0) // (if MB is empty, we must not look at the matrix)
         {
             auto criterionValue = node->As<ComputationNode<ElemType>>()->ValueTensorFor(SIZE_MAX, fr);
-            // accumulate
             // Note: If criterion is > [1 x 1] then inverse broadcasting will kick in and aggregate.
             // If count is zero, we lazily consider the numerator as zero as well.
             criterionAccumulator.DoCopyOf(m_aggregateSampleCounts[i] ? (float)beta : 0, criterionValue, 1);
@@ -141,12 +142,17 @@ private:
 
 public:
     // get the number of samples
-    static size_t GetNumSamples(const ComputationNodeBasePtr& node, size_t legacyNumSamples)
+    // 'numSamplesInMinibatch' is the "generic" number of samples in the minibatch, which
+    // we will use if the node has no MBLayout.
+    // If 'numSamplesInMinibatch' is 0, then this means that the 'node' is invalid and should not be looked at.
+    static size_t GetNumSamples(const ComputationNodeBasePtr& node, size_t numSamplesInMinibatch)
     {
-        if (node->HasMBLayout())
+        if (numSamplesInMinibatch == 0) // empty MB: node is invalid, MBLayout must not be looked at
+            return 0;
+        else if (node->HasMBLayout())
             return node->GetMBLayout()->GetActualNumSamples();
         else
-            return legacyNumSamples;
+            return numSamplesInMinibatch;
     }
 
 private:

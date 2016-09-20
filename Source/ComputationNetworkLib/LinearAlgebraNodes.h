@@ -348,6 +348,7 @@ public:
         }
         else if (inputIndex == 1) // right derivative
         {
+            // BUGBUG: Above block produces case of sparse second input a sparse gradient gor first input. We should either have corresponding code here or not at all.
             auto input0         = OneSampleTensorFor(0,  /*gradient=*/false, fr.AllowBroadcast());
             auto input1Gradient = OneSampleTensorFor(1,  /*gradient=*/true,  fr.AllowBroadcast());
             auto outputGradient = OneSampleTensorFor(-1, /*gradient=*/true, fr);
