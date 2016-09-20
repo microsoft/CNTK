@@ -113,6 +113,7 @@ def test_op_tanh(operand, device_id, precision):
     from .. import tanh
     _test_unary_op(precision, device_id, tanh, operand,
         expected_forward, expected_backward)
+
 @pytest.mark.parametrize("shape", [(3,9), (10,20,30)])
 @pytest.mark.parametrize("dropout_rate", [0.0, 0.2, 0.5, 0.8])
 def test_op_dropout(shape, dropout_rate, device_id, precision):
@@ -163,3 +164,73 @@ def test_op_dropout_bad_input(dropout_rate):
     with pytest.raises(ValueError):
         dropout_node = dropout(a, dropout_rate=dropout_rate)
 
+@pytest.mark.parametrize("operand", TENSORS)
+def test_op_sqrt(operand, device_id, precision):
+    t = np.sqrt(AA(operand, dtype=PRECISION_TO_TYPE[precision]))
+    t[np.isnan(t)] = 0
+    expected_forward = [AA([t])]
+
+    backward = 1 / (2 * t)
+
+    expected_backward = {
+            'arg': [[backward]]
+            }
+
+    from cntk import sqrt
+    _test_unary_op(precision, device_id, sqrt, operand,
+        expected_forward, expected_backward)
+
+@pytest.mark.parametrize("operand", TENSORS)
+def test_op_square(operand, device_id, precision):
+    s = AA(operand, dtype=PRECISION_TO_TYPE[precision]) * AA(operand, dtype=PRECISION_TO_TYPE[precision])
+    expected_forward = [AA([s])]
+
+    backward = 2 * AA(operand, dtype=PRECISION_TO_TYPE[precision])
+    expected_backward = {
+           'arg': [[backward]]
+            }
+
+    from cntk import square
+
+    _test_unary_op(precision, device_id, square, operand,
+        expected_forward, expected_backward)
+
+@pytest.mark.parametrize("operand", TENSORS)
+def test_op_log(operand, device_id, precision):
+    t = np.log(AA(operand, dtype=PRECISION_TO_TYPE[precision]))
+    t[np.isnan(t)] = LOG_OF_EPS_IN_LOG
+    t[np.isneginf(t)] = LOG_OF_EPS_IN_LOG
+
+    expected_forward = [AA([t])]
+
+    backward = 1 / AA(operand, dtype=PRECISION_TO_TYPE[precision])
+    backward[np.isnan(backward)] = "inf"
+
+    backward[np.isinf(backward)] = BACKWARD_RESULST_FOR_LOG_EPS
+    backward[backward<=0] = BACKWARD_RESULST_FOR_LOG_EPS
+
+    expected_backward = {
+           'arg': [[backward]]
+            }
+
+    from cntk import log
+
+    _test_unary_op(precision, device_id, log, operand,
+        expected_forward, expected_backward)
+
+@pytest.mark.parametrize("operand", TENSORS)
+def test_op_reciprocal(operand, device_id, precision):
+    t = 1 / AA(operand, dtype=PRECISION_TO_TYPE[precision])
+    t[np.isinf(t)] = 0
+    expected_forward = [AA([t])]
+
+    backward = -1 * t * t
+
+    expected_backward = {
+           'arg': [[backward]]
+            }
+
+    from cntk import reciprocal
+
+    _test_unary_op(precision, device_id, reciprocal, operand,
+        expected_forward, expected_backward)

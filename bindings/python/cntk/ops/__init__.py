@@ -876,10 +876,10 @@ def negate(x, name=''):
     '''
     Computes the element-wise negation of `x`: 
 
-    :math:`abs(x) = -x`
+    :math:`negate(x) = -x`
 
     Example:
-        >>> C.eval(C.abs([-1, 1, -2, 3]))
+        >>> C.eval(C.negate([-1, 1, -2, 3]))
         [array([[ 1.,  -1.,  2.,  -3.]])]
 
     Args:
@@ -897,7 +897,7 @@ def reciprocal(x, name=''):
     Computes the element-wise reciprocal of `x`: 
 
     Example:
-        >>> C.eval(C.abs([-1/3, 1/5, -2, 3]))
+        >>> C.eval(C.reciprocal([-1/3, 1/5, -2, 3]))
         [array([[ -3.,  5.,  -1/2.,  1/3.]])]
 
     Args:

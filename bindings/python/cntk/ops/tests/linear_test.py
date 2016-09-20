@@ -182,3 +182,21 @@ def _test_op_identity(operand, device_id, precision):
 
     _test_unary_op(precision, device_id, identity, operand,
         expected_forward, expected_backward)
+
+@pytest.mark.parametrize("operand", IDENTITY_TENSORS)
+def test_op_negate(operand, device_id, precision):
+    t = -1 * AA(operand, dtype=PRECISION_TO_TYPE[precision])
+
+    expected_forward = [AA([t])]
+
+    expected_backward = {
+           'arg': [[-1*np.ones_like(operand, PRECISION_TO_TYPE[precision])]]
+            }
+
+    from cntk import negate
+
+    _test_unary_op(precision, device_id, negate, operand,
+        expected_forward, expected_backward)
+
+    _test_unary_op(precision, device_id, '-', operand,
+        expected_forward, expected_backward)

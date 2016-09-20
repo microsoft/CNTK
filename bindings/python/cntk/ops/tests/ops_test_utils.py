@@ -29,9 +29,9 @@ def right_matrix_type(request):
 
 def _test_unary_op(precision, device_id, op_func,
         value, expected_forward, expected_backward_all, op_param_dict=None):
-    
-    value = AA(value, dtype=PRECISION_TO_TYPE[precision]) 
-    
+
+    value = AA(value, dtype=PRECISION_TO_TYPE[precision])
+
     a = I(shape=value.shape,
             data_type=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]),
             needs_gradient=True,
@@ -40,7 +40,9 @@ def _test_unary_op(precision, device_id, op_func,
     # create batch
     value.shape = (1,1) + value.shape    
 
-    if op_param_dict:
+    if (type(op_func) == str):
+        input_op = eval('%s a'%op_func)
+    elif op_param_dict:
         input_op = op_func(a, **op_param_dict)
     else:
         input_op = op_func(a)

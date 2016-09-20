@@ -68,8 +68,11 @@ class TensorOpsMixin(object):
     def __abs__(self):
         from . import ops
         return ops.abs(self)
+    def __neg__(self):
+        from . import ops
+        return ops.negate(self)
 
-    # TODO __lt__, __le__, __gt__, __ge__, __and__, __rand__, __or__, __ror__, __xor__, __rxor__, __pow__, __rpow__,  __invert__, __neg__
+    # TODO __lt__, __le__, __gt__, __ge__, __and__, __rand__, __or__, __ror__, __xor__, __rxor__, __pow__, __rpow__,  __invert__
 
     def __getitem__(self, key):
         from . import ops
@@ -129,7 +132,7 @@ class TensorOpsMixin(object):
 
 AVAILABLE_TENSOR_OPS = ['abs', 'add', 'div', 'getitem', 'matmul', 'mul',
         'radd', 'rdiv', 'rmatmul', 'rmul', 'rsub', 'rtruediv', 'sub',
-        'truediv'] 
+        'truediv', 'neg']
 
 def _add_tensor_ops(klass):
     for op_name in AVAILABLE_TENSOR_OPS:
