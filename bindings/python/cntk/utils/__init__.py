@@ -525,6 +525,14 @@ def sanitize_axis(rank, axis):
         return cntk_py.Axis(rank - 1 - axis.static_axis_index())
     else:
         return axis
+
+def sanitize_dynamic_axes(axes):
+    if axes is not cntk_py.Axis.default_input_variable_dynamic_axes:
+        if not type(axes) in (list, tuple):
+            axes = [axes]
+        else:
+            axes = tuple(reversed(axes))
+    return axes
      
 def _py_dict_to_cntk_dict(py_dict):
     '''

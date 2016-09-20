@@ -6,7 +6,7 @@
 import numpy as np
 from . import sequence
 from .functions import Function
-from ..utils import sanitize_input, sanitize_shape, get_data_type, sanitize_axis
+from ..utils import sanitize_input, sanitize_shape, get_data_type, sanitize_axis, sanitize_dynamic_axes
 
 #TODO: add wrappers for functions under cntk.sequence namespace in c++
 
@@ -1321,7 +1321,7 @@ def input_variable(shape, data_type=np.float32, needs_gradient=True, is_sparse=F
         data_type (`type`, optional): np.float32 (default) or np.float64
         needs_gradients (`bool`, optional): whether to back-propagates to it or not. True by default.
         is_sparse (`bool`, optional): whether the variable is sparse (`False` by default)
-        dynamic_axes (`list`, default): a list of dynamic axis (e.g., batch axis, time axis)
+        dynamic_axes (`list` or `tuple`, default): a list of dynamic axis (e.g., batch axis, time axis)
         name (`str`, optional): the name of the node in the network
         
     Returns:
@@ -1335,8 +1335,8 @@ def input_variable(shape, data_type=np.float32, needs_gradient=True, is_sparse=F
     if data_type is None:
         data_type = np.float32
     dtype = sanitize_dtype_cntk(data_type)
-    if not type(dynamic_axes) in (list, tuple):
-        dynamic_axes = [dynamic_axes]
+    dynamic_axes = sanitize_dynamic_axes(dynamic_axes)
+
     # TODO dynamic axis for numpy arrays
     # TODO sparse for numpy arrays
 
@@ -1357,6 +1357,7 @@ def placeholder_variable(shape, dynamic_axes = [Axis.default_dynamic_axis(), Axi
     '''
     from cntk.cntk_py import placeholder_variable
     shape = sanitize_shape(shape)
+    dynamic_axes = sanitize_dynamic_axes(dynamic_axes)
     return placeholder_variable(shape, dynamic_axes)
     
 def parameter(shape=None, value=None, device=None, name=''):

@@ -142,23 +142,29 @@ def test_op_slice(input_data, slice_params, expected_result, device_id, precisio
 
 SLICE_TEST_CASES_DYNAMIC = [
     #(input_data, slice_params(beg_index, end_index), expected_result)
-    ([[[1,2,3]],[[-4,5,6]],[[7,8,9]]], (0,2), [[[1,2,3]],[[-4,5,6]]]),
+    # Note that input_data contains sequences
+    ([[[1,2,3]],[[-4,5,6]],[[7,8,9]]], 
+        (0,2), 
+        [[[1,2,3]],[[-4,5,6]]]),
     ([[[1,2,3],[11,12,13]],[[-4,5,6],[-14,15,16]],[[7,8,9],[17,18,19]]], 
-        (0,2), [[[1,2,3],[11,12,13]],[[-4,5,6],[-14,15,16]]]),
+        (0,2), 
+        [[[1,2,3],[11,12,13]],[[-4,5,6],[-14,15,16]]]),
     ([[[1,2,3],[11,12,13]],[[-4,5,6],[-14,15,16]],[[7,8,9],[17,18,19]]], 
-        (1,2), [[[-4,5,6],[-14,15,16]]]),
+        (1,2), 
+        [[[-4,5,6],[-14,15,16]]]),
 ]
 @pytest.mark.parametrize("input_data, slice_params, expected_result",
         SLICE_TEST_CASES_DYNAMIC)
 #FIXME enable once the ZeroesLike RuntimeError is fixed
-def _test_op_slice_sequence(input_data, slice_params, expected_result, device_id, precision):
+def test_op_slice_sequence(input_data, slice_params, expected_result, device_id, precision):
     input_data = AA(input_data, dtype=PRECISION_TO_TYPE[precision])
 
     t = C.Axis.new_unique_dynamic_axis('t')
-    a = I(shape=input_data.shape,
+    sample_shape = input_data.shape[1:]
+    a = I(shape=sample_shape,
             data_type=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]),
             needs_gradient=True,
-            dynamic_axes=[t],
+            dynamic_axes=[C.Axis.default_batch_axis(), t],
             name='a')
 
     result = C.slice(a, axis=t, begin_index=slice_params[0], end_index=slice_params[1])
@@ -170,16 +176,18 @@ def _test_op_slice_sequence(input_data, slice_params, expected_result, device_id
 
     expected_gradient = grad_slice(np.asarray(input_data), *slice_params)
     
-    expected_forward = [AA([expected_result], dtype=PRECISION_TO_TYPE[precision])]
+    expected_forward = AA([expected_result], dtype=PRECISION_TO_TYPE[precision])
     expected_backward = {
-            'arg': [[grad_slice(np.asarray(input_data), *slice_params)]]
+            a: [grad_slice(np.asarray(input_data), *slice_params)]
             }
     
-    _test_unary_op(precision, device_id, C.slice, input_data,
-            expected_forward, expected_backward, 
-              { 'begin_index': slice_params[0],
-                'end_index': slice_params[1],
-                'axis': slice_params[2] })
+    # create batch
+    input_data.shape = (1,) + input_data.shape    
+
+    forward_input = {a:input_data}    
+    unittest_helper(result, 
+            forward_input, expected_forward, expected_backward,
+            device_id=device_id, precision=precision)
 
 # FIXME once the overloads are in place, integrate test_op_slice_overload from
 # F:\CNTKv2\contrib\Python\cntk\ops\tests\reshaping_test.py
