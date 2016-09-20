@@ -113,6 +113,7 @@ def test_op_tanh(operand, device_id, precision):
     from .. import tanh
     _test_unary_op(precision, device_id, tanh, operand,
         expected_forward, expected_backward)
+
 @pytest.mark.parametrize("shape", [(3,9), (10,20,30)])
 @pytest.mark.parametrize("dropout_rate", [0.0, 0.2, 0.5, 0.8])
 def test_op_dropout(shape, dropout_rate, device_id, precision):
