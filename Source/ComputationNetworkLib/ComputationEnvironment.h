@@ -27,19 +27,23 @@ enum class NetworkOperationMode
 // or what the seq-2-seq decoder feedback signal is.
 struct ComputationEnvironment
 {
+    // TODO: change the data member names back to m_ syntax, or get team consensus to not do that
     // networkOperationMode tells whether we are training or inferring, which affects some nodes' behavior
-    NetworkOperationMode m_networkOperationMode = NetworkOperationMode::inferring; // by default, a network is always able to infer
-    bool IsInferring()     const { return m_networkOperationMode == NetworkOperationMode::inferring; }
-    bool IsTraining()     const { return m_networkOperationMode == NetworkOperationMode::training; }
-    bool IsPreComputing() const { return m_networkOperationMode == NetworkOperationMode::preComputing; }
+    NetworkOperationMode networkOperationMode = NetworkOperationMode::inferring; // by default, a network is always able to infer
+    bool IsInferring()     const { return networkOperationMode == NetworkOperationMode::inferring; }
+    bool IsTraining()      const { return networkOperationMode == NetworkOperationMode::training; }
+    bool IsPreComputing()  const { return networkOperationMode == NetworkOperationMode::preComputing; }
 
-    //set new value and return old one
+    // helper to set new value and return old one
     NetworkOperationMode SetOperationMode(NetworkOperationMode mode)
     {
-        NetworkOperationMode oldMode = m_networkOperationMode;
-        m_networkOperationMode = mode;
+        NetworkOperationMode oldMode = networkOperationMode;
+        networkOperationMode = mode;
         return oldMode;
     }
+
+    // traceLevel
+    int traceLevel = 0;
     // more properties should be added here as needed
 };
 typedef std::shared_ptr<ComputationEnvironment> ComputationEnvironmentPtr;

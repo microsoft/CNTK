@@ -11,6 +11,7 @@
 #define final
 #define explicit
 #define static_assert(condition, message)
+#define __attribute__(x)
 #endif
 
 #ifdef _WIN32
@@ -200,5 +201,8 @@ namespace CNTK
         CNTK_API FunctionPtr ReduceElements(const Variable& operand, const std::wstring& reductionOpName, const Axis& axis, const std::wstring& name = L"");
 
         CNTK_API size_t NewUniqueId();
+
+        CNTK_API void EnableReversingTensorShapesInErrorMessages();
+        bool IsReversingTensorShapesInErrorMessagesEnabled();
     }
 }

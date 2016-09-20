@@ -18,8 +18,7 @@ TrainConvNet = {
         labelDim = 10
 
         model (features) = {
-            # TODO: update these new config values in all _Solution files and web page
-            featNorm = features - Constant (128)   # TODO: suspicious that we don't normalize by stddev (~74 if uniform distr.)
+            featNorm = features - 128
             l1 = ConvolutionalLayer {32, (5:5), pad=true, activation=ReLU, initValueScale=0.1557/256} (featNorm)
             p1 = MaxPoolingLayer {(3:3), stride=(2:2)} (l1)
             l2 = ConvolutionalLayer {32, (5:5), pad=true, activation=ReLU, initValueScale=0.2} (p1)
