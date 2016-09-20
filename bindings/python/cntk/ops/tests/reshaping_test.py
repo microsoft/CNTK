@@ -195,7 +195,7 @@ SPLICE_TEST_CASES = [
      [[[1,2],[3,4]],[[5,6],[7,8]],[[10,20],[30,40]]]),    
 ]
 @pytest.mark.parametrize("input_data1, input_data2, axis, expected_result", SPLICE_TEST_CASES)
-def _test_op_splice(input_data1, input_data2, axis, expected_result, device_id, precision):
+def test_op_splice(input_data1, input_data2, axis, expected_result, device_id, precision):
     # FIXME This test currently fails in C++ with 
     # RuntimeError: Node 'splice_ab' (RowStack operation): Attempted to type-cast node to struct Microsoft::MSR::CNTK::INumInputs, which is not possible.
 
