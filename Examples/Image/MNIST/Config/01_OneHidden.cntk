@@ -27,7 +27,7 @@ trainNetwork = {
         model = x => {
             s1 = x * featScale
             h1 = DenseLayer {200, activation=Sigmoid} (s1)
-            out = LinearLayer {labelDim} (h1)
+            outl = LinearLayer {labelDim} (h1)
         }
         
         # inputs
@@ -35,18 +35,18 @@ trainNetwork = {
         labels = Input (labelDim)
 
         # apply model to features
-        net = model (features)
+        out = model (features)
 
         # loss and error computation
-        ce   = CrossEntropyWithSoftmax (labels, net.out)
-        errs = ClassificationError (labels, net.out)
+        ce   = CrossEntropyWithSoftmax (labels, out.outl)
+        errs = ClassificationError (labels, out.outl)
 
         # declare special nodes
         featureNodes    = (features)
         labelNodes      = (labels)
         criterionNodes  = (ce)
         evaluationNodes = (errs)
-        outputNodes     = (net.out)
+        outputNodes     = (out.outl)
     }
 
     SGD = {
