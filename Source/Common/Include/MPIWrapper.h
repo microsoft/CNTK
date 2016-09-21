@@ -321,29 +321,29 @@ public:
         size_t totalnumelements = accumulator.size();
 
         // use MPI to compute the sum over all elements in (dataptr, totalnumelements) and redistribute to all nodes
-        AllReduce(dataptr, totalnumelements);
+        AllReduce<VECTORLIKEOBJECT::value_type>(dataptr, totalnumelements);
     }
 
     // for raw pointer
     template <class ElemType>
-    void AllReduce(ElemType* sendData, size_t numElements, MPI_Op op = MPI_SUM)
+    void AllReduce(ElemType* sendData, size_t numElements, MPI_Op op = MPI_SUM) const
     {
-        AllReduce(MPI_IN_PLACE, sendData, numElements, op);
+        AllReduce<ElemType>(static_cast<ElemType*>(MPI_IN_PLACE), sendData, numElements, op);
     }
 
     template <class ElemType>
-    void AllReduce(ElemType *sendData, ElemType *receiveData, size_t numElements, MPI_Op op = MPI_SUM)
+    void AllReduce(ElemType *sendData, ElemType *receiveData, size_t numElements, MPI_Op op = MPI_SUM) const
     {
         if ((NumNodesInUse() > 1 && (Communicator() != MPI_COMM_NULL)))
         {
-            MPI_Allreduce(sendData, receiveData, numElements, GetDataType(sendData), op, Communicator()) || MpiFail("AllReduce: MPI_Allreduce");
+            MPI_Allreduce(sendData, receiveData, (int) numElements, GetDataType(sendData), op, Communicator()) || MpiFail("AllReduce: MPI_Allreduce");
         }
     }
 
     template <class ElemType> 
-    void AllReduceAsync(ElemType* sendData, size_t numElements, MPI_Request* request, MPI_Op op = MPI_SUM)
+    void AllReduceAsync(ElemType* sendData, size_t numElements, MPI_Request* request, MPI_Op op = MPI_SUM) const
     {
-        AllReduceAsync(MPI_IN_PLACE, sendData, numElements, request, op);
+        AllReduceAsync<ElemType>(static_cast<ElemType*>(MPI_IN_PLACE), sendData, numElements, request, op);
     }
 
     template <class ElemType>
