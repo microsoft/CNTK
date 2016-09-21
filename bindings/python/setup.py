@@ -1,5 +1,6 @@
 import os
 import shutil
+from glob import glob
 import platform
 from warnings import warn
 from setuptools import setup, Extension, find_packages
@@ -19,47 +20,33 @@ else:
 print("Using CNTK sources at '%s'"%os.path.abspath(CNTK_SOURCE_PATH))
 print("Using CNTK libs at '%s'"%os.path.abspath(CNTK_LIB_PATH))
 
-#Todo: trim down the list of libs
-
 def lib_path(fn):
     return os.path.normpath(os.path.join(CNTK_LIB_PATH, fn))
-    #return os.path.join(CNTK_LIB_PATH, fn)
 
 def proj_lib_path(fn):
     return os.path.normpath(os.path.join(PROJ_LIB_PATH, fn))
 
-dep_libs_names = ["CNTKTextFormatReader", "CompositeDataReader", "HTKDeserializers", "HTKMLFReader", "ImageReader", "LibSVMBinaryReader", "LMSequenceReader", "LUSequenceReader", "SparsePCReader",
-"UCIFastReader"]
+def strip_path(fn):
+    return os.path.split(fn)[1]
+
+def strip_ext(fn):
+    return os.path.splitext(fn)[0]
 
 if IS_WINDOWS:
-    libs=[
-       "CNTKLibrary-2.0",
-       "Math",
-       "BinaryReader",
-       "DSSMReader",
-       "EvalDll",
-       "EvalWrapper",
-       "nvml",
-       "mkl_cntk_p",
-       "libiomp5md",
-       "cusparse64_75",
-       "curand64_75",
-       "cudnn64_5",
-       "cudart64_75",
-       "cublas64_75",
-       "opencv_world310",
-    ]
-    libname_prefix = ''
-    libname_ext = '.dll'
+    libname_rt_ext = '.dll'
+
+    link_libs = [strip_ext(strip_path(fn)) for fn in
+            glob(os.path.join(CNTK_LIB_PATH, '*.lib'))]
 else:
-    libs=[
+    link_libs=[
        "cntklibrary-2.0",
        "cntkmath"
     ]
-    libname_prefix = 'lib'
-    libname_ext = '.so'
+    libname_rt_ext = '.so'
 
-dep_libs_names = [l+libname_ext for l in dep_libs_names + [libname_prefix+l for l in libs]]
+
+rt_libs = [strip_path(fn) for fn in glob(os.path.join(CNTK_LIB_PATH,
+    '*'+libname_rt_ext))]
 
 # copy over the libraries to the cntk base directory so that the rpath is correctly set
 if os.path.exists(PROJ_LIB_PATH):
@@ -67,16 +54,13 @@ if os.path.exists(PROJ_LIB_PATH):
 
 os.mkdir(PROJ_LIB_PATH)
 
-for fn in dep_libs_names:
+for fn in rt_libs:
     src_file = lib_path(fn)
     tgt_file = proj_lib_path(fn)
-    if os.path.exists(src_file):
-        shutil.copy(src_file, tgt_file)
-    else:
-        warn("Didn't find library file %s"%src_file)
+    shutil.copy(src_file, tgt_file)
 
-# for package_data we need to have names relative to the cntk module
-dep_libs = [os.path.join('libs', fn) for fn in dep_libs_names]
+# For package_data we need to have names relative to the cntk module.
+rt_libs = [os.path.join('libs', fn) for fn in rt_libs]
 
 extra_compile_args = [
 	"-DSWIG",
@@ -91,46 +75,52 @@ if IS_WINDOWS:
 	"/EHsc",
     ]
     runtime_library_dirs = []
-    #TODO: do not copy the dlls to the root, try to find a better location that is accessible
 else:
     extra_compile_args += [
 	'--std=c++11',
     ]
-    # expecting the dependent libs (libcntklibrary-2.0.so, etc.) inside site-package/cntk
+
+    # Expecting the dependent libs (libcntklibrary-2.0.so, etc.) inside
+    # site-packages/cntk/libs.
     runtime_library_dirs = ['$ORIGIN/cntk/libs']
     os.environ["CXX"] = "mpic++"
 
 cntk_module = Extension(
-           name="_cntk_py",
+        name="_cntk_py",
 
-           sources=[os.path.join("cntk", "swig", "cntk_py_wrap.cxx")],
+        sources=[os.path.join("cntk", "swig", "cntk_py_wrap.cxx")],
 
-           libraries=libs,
-           library_dirs=[CNTK_LIB_PATH],
+        libraries=link_libs,
+        library_dirs=[CNTK_LIB_PATH],
 
-           runtime_library_dirs=runtime_library_dirs,
+        runtime_library_dirs=runtime_library_dirs,
 
-           include_dirs=[
-               os.path.join(CNTK_SOURCE_PATH, "CNTKv2LibraryDll", "API"),
-               os.path.join(CNTK_SOURCE_PATH, "Math"),
-               os.path.join(CNTK_SOURCE_PATH, "Common", "Include"),
-               numpy.get_include(),
-               ],
+        include_dirs=[
+           os.path.join(CNTK_SOURCE_PATH, "CNTKv2LibraryDll", "API"),
+           os.path.join(CNTK_SOURCE_PATH, "Math"),
+           os.path.join(CNTK_SOURCE_PATH, "Common", "Include"),
+           numpy.get_include(),
+           ],
 
-            extra_compile_args = extra_compile_args,
+        extra_compile_args = extra_compile_args,
 
-           language="c++",
-      )
+        language="c++",
+    )
 
 # do not include tests and examples
 packages = [x for x in find_packages() if x.startswith('cntk')]
 
 setup(name="cntk", 
-      version="2.0.a2",
+      version="2.0a2",
       url="http://cntk.ai",
       ext_modules = [cntk_module],  
       packages=packages,
-      package_data = { 'cntk': dep_libs },
+
+      # On Linux copy all runtime libs into the cntk/lib folder. 
+      package_data = { 'cntk': rt_libs }, 
+      # On Windows copy all runtime libs to the base folder of Python
+      data_files = [('.', [ os.path.join('cntk', lib) for lib in rt_libs ])],
+
       install_requires=[
         'numpy>=0.17',
         'scipy>=0.11'
