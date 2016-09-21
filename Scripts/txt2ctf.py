@@ -103,7 +103,7 @@ def test_simpleSanityCheck():
     input = StringIO.StringIO("hello my\tclear about\nworld of\tit let clear\n")
     output = StringIO.StringIO()
 
-    convert([dictionary1, dictionary2], [input], output, False)
+    convert([dictionary1, dictionary2], [input], output, None, False)
 
     expectedOutput = StringIO.StringIO()
     expectedOutput.write("0\t|S0 0:1\t|S1 3:1\n")
@@ -120,5 +120,5 @@ def test_nonExistingWord():
     output = StringIO.StringIO()
 
     with pytest.raises(Exception) as info:
-        convert([dictionary1], [input], output, False)
+        convert([dictionary1], [input], output, None, False)
     assert info.value.message == "Token 'nonexistent' cannot be found in the dictionary for stream 0"
