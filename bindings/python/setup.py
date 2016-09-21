@@ -110,19 +110,21 @@ cntk_module = Extension(
 # do not include tests and examples
 packages = [x for x in find_packages() if x.startswith('cntk')]
 
+if IS_WINDOWS:
+    # On Linux copy all runtime libs into the cntk/lib folder. 
+    kwargs = dict(package_data = { 'cntk': rt_libs })
+else:
+    # On Windows copy all runtime libs to the base folder of Python
+    kwargs = dict(data_files = [('.', [ os.path.join('cntk', lib) for lib in rt_libs ])])
+
 setup(name="cntk", 
       version="2.0a2",
       url="http://cntk.ai",
       ext_modules = [cntk_module],  
       packages=packages,
-
-      # On Linux copy all runtime libs into the cntk/lib folder. 
-      package_data = { 'cntk': rt_libs }, 
-      # On Windows copy all runtime libs to the base folder of Python
-      data_files = [('.', [ os.path.join('cntk', lib) for lib in rt_libs ])],
-
       install_requires=[
         'numpy>=0.17',
         'scipy>=0.11'
       ],
+      **kwargs
      )
