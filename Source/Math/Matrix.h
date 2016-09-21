@@ -60,7 +60,7 @@ class MATH_API Matrix : public MatrixBase
 {
     typedef MatrixBase Base;
 private:
-    mutable shared_ptr<BaseMatrix     <ElemType>> m_baseMatrix;
+    mutable BaseMatrix<ElemType>*                 m_baseMatrix;
     mutable shared_ptr<GPUMatrix      <ElemType>> m_GPUMatrix;
     mutable shared_ptr<CPUMatrix      <ElemType>> m_CPUMatrix;
     mutable shared_ptr<GPUSparseMatrix<ElemType>> m_GPUSparseMatrix;
@@ -131,7 +131,7 @@ private:
     Matrix(const MatrixFlags matrixFlags, const MatrixType matrixType, const MatrixFormat matrixFormat, DEVICEID_TYPE deviceID); // only used internally to initialize a blank matrix
     Matrix(const MatrixFlags matrixFlags, const MatrixType matrixType, DEVICEID_TYPE deviceID);                                  // only used internally to initialize a blank matrix
     Matrix(const MatrixFlags matrixFlags, DEVICEID_TYPE deviceID);                                                               // only used internally to initialize a blank matrix
-    void Init(DEVICEID_TYPE deviceID);                                                                                           // only used internally to initialize a blank matrix
+    void Init(DEVICEID_TYPE deviceID);
     void SetDataLocation(CurrentDataLocation location, MatrixType type = UNDETERMINED) const;
     void ShallowCopyFrom(const Matrix<ElemType>& other);
 

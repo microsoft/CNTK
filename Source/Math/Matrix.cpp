@@ -152,23 +152,11 @@ MatrixBase::~MatrixBase() { }
 //            { GPU code },
 //            ...
 
-// Initialize all members over virgin memory.
-//This function will only initialize default bland matrix. The actual matrices need to allocated
-//after calling this function and flags need to set correctly by calling SetDataLocation.
-// This clears out the entire object and brings it into destructable state.
-// Note: Keep this in sync with member definition and ShallowCopyFrom().
+// Initialize members 
 template <class ElemType>
 void Matrix<ElemType>::Init(DEVICEID_TYPE deviceId)
 {
-    m_baseMatrix      = nullptr;
-    m_GPUMatrix       = nullptr;
-    m_CPUMatrix       = nullptr;
-    m_GPUSparseMatrix = nullptr;
-    m_CPUSparseMatrix = nullptr;
-
-    m_matrixType          = MatrixType::UNDETERMINED;
-    m_currentDataLocation = CurrentDataLocation::NONE;
-
+    ReleaseMemory();
     m_preferredDeviceId = deviceId;
     m_numTimesDeviceChanged = 0;
     m_numTimesMatrixTypeChanged = 0;
@@ -268,9 +256,9 @@ void Matrix<ElemType>::SetDataLocation(CurrentDataLocation location, MatrixType 
     // set m_baseMatrix (if location is unchanged, this will not change the pointer)
     // Note: m_currentDataLocation may also be CurrentDataLocation::BOTH, in which case the base matrix will be GPU.
     if (m_matrixType == MatrixType::DENSE)
-        m_baseMatrix = ((m_currentDataLocation == CurrentDataLocation::CPU) ? dynamic_pointer_cast<BaseMatrix<ElemType>>(m_CPUMatrix) : dynamic_pointer_cast<BaseMatrix<ElemType>>(m_GPUMatrix));
+        m_baseMatrix = ((m_currentDataLocation == CurrentDataLocation::CPU) ? dynamic_cast<BaseMatrix<ElemType>*>(m_CPUMatrix.get()) : dynamic_cast<BaseMatrix<ElemType>*>(m_GPUMatrix.get()));
     else if (m_matrixType == MatrixType::SPARSE)
-        m_baseMatrix = ((m_currentDataLocation == CurrentDataLocation::CPU) ? dynamic_pointer_cast<BaseMatrix<ElemType>>(m_CPUSparseMatrix) : dynamic_pointer_cast<BaseMatrix<ElemType>>(m_GPUSparseMatrix));
+        m_baseMatrix = ((m_currentDataLocation == CurrentDataLocation::CPU) ? dynamic_cast<BaseMatrix<ElemType>*>(m_CPUSparseMatrix.get()) : dynamic_cast<BaseMatrix<ElemType>*>(m_GPUSparseMatrix.get()));
     // Note: Typecasts are necessary since C++ cannot figure out the common base type (probably due to shared_ptr).
     // sanity check
     if (!m_baseMatrix && m_matrixType != MatrixType::UNDETERMINED)
@@ -473,7 +461,7 @@ Matrix<ElemType>::Matrix(const Matrix<ElemType>& deepCopyFrom, DEVICEID_TYPE dev
 template <class ElemType>
 Matrix<ElemType>::Matrix(Matrix<ElemType>&& moveFrom)
 {
-    Init((DEVICEID_TYPE) moveFrom.GetDeviceId());
+    Init((DEVICEID_TYPE)moveFrom.GetDeviceId());
 
 #if 1
     operator=(move(moveFrom));
@@ -524,11 +512,17 @@ Matrix<ElemType>& Matrix<ElemType>::operator=(Matrix<ElemType>&& moveFrom)
 template <class ElemType>
 void Matrix<ElemType>::ReleaseMemory()
 {
-    m_CPUMatrix       = nullptr;
-    m_GPUMatrix       = nullptr;
-    m_GPUSparseMatrix = nullptr;
-    m_CPUSparseMatrix = nullptr;
-
+    m_baseMatrix = nullptr;
+    // Perf: Avoid assignments to shared_ptr unless necessary. In certain versions of the standard library
+    // they cause ref counting, and this piece of code is called often..
+    if (m_GPUMatrix.get() != nullptr)
+        m_GPUMatrix = nullptr;
+    if (m_CPUMatrix.get() != nullptr)
+        m_CPUMatrix = nullptr;
+    if (m_GPUSparseMatrix.get() != nullptr)
+        m_GPUSparseMatrix = nullptr;
+    if (m_CPUSparseMatrix.get() != nullptr)
+        m_CPUSparseMatrix = nullptr;
     m_matrixType = MatrixType::UNDETERMINED;
     m_currentDataLocation = CurrentDataLocation::NONE;
 }
