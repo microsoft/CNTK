@@ -20,32 +20,33 @@ trainNetwork = {
     BrainScriptNetworkBuilder = {
         imageShape = 28:28:1                        # image dimensions, 1 channel only
         labelDim = 10                               # number of distinct labels
-        featScale = 1/256
-        Scale{f} = x => Constant(f) .* x
+        featScale = 1/256     
         
-        model = Sequential (
-            Scale {featScale} :
-            DenseLayer {200, activation=Sigmoid} :
-            LinearLayer {labelDim}
-        )
+		# Define hidden layer name. The name is used by
+		# eval examples to illustrate output of hiddlen layers.
+        model = x => {
+            s1 = x * featScale
+            h1 = DenseLayer {200, activation=Sigmoid} (s1)
+            out = LinearLayer {labelDim} (h1)
+        }
         
         # inputs
         features = Input {imageShape}
         labels = Input (labelDim)
 
         # apply model to features
-        ol = model (features)
+        net = model (features)
 
         # loss and error computation
-        ce   = CrossEntropyWithSoftmax (labels, ol)
-        errs = ClassificationError (labels, ol)
+        ce   = CrossEntropyWithSoftmax (labels, net.out)
+        errs = ClassificationError (labels, net.out)
 
         # declare special nodes
         featureNodes    = (features)
         labelNodes      = (labels)
         criterionNodes  = (ce)
         evaluationNodes = (errs)
-        outputNodes     = (ol)
+        outputNodes     = (net.out)
     }
 
     SGD = {
