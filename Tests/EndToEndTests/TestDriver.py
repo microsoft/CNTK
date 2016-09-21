@@ -615,6 +615,9 @@ def runCommand(args):
   devices = args.devices
   flavors = args.flavors
 
+  if args.func == runCommand and args.prepend_path:
+    os.environ["PATH"] = os.pathsep.join([cygpath(y) for y in args.prepend_path.split(',')]) + os.pathsep + os.environ["PATH"]
+
   os.environ["TEST_ROOT_DIR"] = os.path.dirname(os.path.realpath(sys.argv[0]))
 
   print ("CNTK Test Driver is started")
@@ -703,6 +706,7 @@ if __name__ == "__main__":
   runSubparser.add_argument("-d", "--device", help="cpu|gpu - run on a specified device")
   runSubparser.add_argument("-f", "--flavor", help="release|debug - run only a specified flavor")
   runSubparser.add_argument("-s", "--build-sku", default=defaultBuildSKU, help="cpu|gpu|1bitsgd - run tests only for a specified build SKU")
+  runSubparser.add_argument("-pp", "--prepend-path", help="comma-separated paths to prepend when running test script")
   tmpDir = os.getenv("TEMP") if windows else "/tmp"
   defaultRunDir=os.path.join(tmpDir, "cntk-test-{0}.{1}".format(time.strftime("%Y%m%d%H%M%S"), random.randint(0,1000000)))
   runSubparser.add_argument("-r", "--run-dir", default=defaultRunDir, help="directory where to store test output, default: a random dir within /tmp")
