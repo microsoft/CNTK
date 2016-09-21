@@ -321,19 +321,37 @@ public:
         size_t totalnumelements = accumulator.size();
 
         // use MPI to compute the sum over all elements in (dataptr, totalnumelements) and redistribute to all nodes
-        if ((NumNodesInUse() > 1) && (Communicator() != MPI_COMM_NULL))
-        {
-            MPI_Allreduce(MPI_IN_PLACE, dataptr, (int) totalnumelements, GetDataType(dataptr), MPI_SUM, Communicator()) || MpiFail("allreduce: MPI_Allreduce");
-        }
+        AllReduce(dataptr, totalnumelements);
     }
 
     // for raw pointer
     template <class ElemType>
-    void AllReduce(ElemType *pData, size_t nData)
+    void AllReduce(ElemType* sendData, size_t numElements, MPI_Op op = MPI_SUM)
+    {
+        AllReduce(MPI_IN_PLACE, sendData, numElements, op);
+    }
+
+    template <class ElemType>
+    void AllReduce(ElemType *sendData, ElemType *receiveData, size_t numElements, MPI_Op op = MPI_SUM)
     {
         if ((NumNodesInUse() > 1 && (Communicator() != MPI_COMM_NULL)))
         {
-            MPI_Allreduce(MPI_IN_PLACE, pData, (int) nData, GetDataType(pData), MPI_SUM, Communicator()) || MpiFail("Allreduce: MPI_Allreduce");
+            MPI_Allreduce(sendData, receiveData, numElements, GetDataType(sendData), op, Communicator()) || MpiFail("AllReduce: MPI_Allreduce");
+        }
+    }
+
+    template <class ElemType> 
+    void AllReduceAsync(ElemType* sendData, size_t numElements, MPI_Request* request, MPI_Op op = MPI_SUM)
+    {
+        AllReduceAsync(MPI_IN_PLACE, sendData, numElements, request, op);
+    }
+
+    template <class ElemType>
+    void AllReduceAsync(ElemType *sendData, ElemType *receiveData, size_t numElements, MPI_Request* request, MPI_Op op = MPI_SUM)
+    {
+        if ((NumNodesInUse() > 1 && (Communicator() != MPI_COMM_NULL)))
+        {
+            MPI_Iallreduce(sendData, receiveData, (int) numElements, GetDataType(sendData), op, Communicator(), request) || MpiFail("AllReduceAsync: MPI_Iallreduce");
         }
     }
 
@@ -346,11 +364,20 @@ public:
         }
     }
 
+    // wait for an async request to finish
+    void Wait(MPI_Request* request)
+    {
+        MPI_Wait(request, MPI_STATUSES_IGNORE) || MpiFail("Wait: MPI_Wait");
+    }
+
     // wait for all ranks to reach here
     void WaitAll()
     {
         MPI_Barrier(m_currentComm) || MpiFail("waitall: MPI_Barrier");
     }
+
+
+    
 };
 
 }}}

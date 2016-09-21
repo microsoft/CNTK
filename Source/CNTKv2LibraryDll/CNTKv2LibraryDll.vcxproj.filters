@@ -15,6 +15,7 @@
     <ClCompile Include="Trainer.cpp" />
     <ClCompile Include="MinibatchSource.cpp" />
     <ClCompile Include="ComputeInputStatistics.cpp" />
+    <ClCompile Include="DistributedCommunicator.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h" />
@@ -33,6 +34,7 @@
       <Filter>API</Filter>
     </ClInclude>
     <ClInclude Include="Value.h" />
+    <ClInclude Include="DistributedCommunicator.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="API">

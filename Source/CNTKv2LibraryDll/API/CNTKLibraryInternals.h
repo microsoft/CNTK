@@ -184,6 +184,9 @@ namespace CNTK
     class MinibatchSource;
     typedef std::shared_ptr<MinibatchSource> MinibatchSourcePtr;
 
+    class DistributedCommunicator;
+    typedef std::shared_ptr<DistributedCommunicator> DistributedCommunicatorPtr;
+
     namespace Internal
     {
         // Create a new Function instance which just passes through specified list of 'operands'.
