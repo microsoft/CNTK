@@ -50,8 +50,8 @@ int main(int argc, char* argv[])
     pos = app.rfind("/");
     path = (pos == std::string::npos) ? "." : app.substr(0, pos);
 
-    // This relative path assumes launching from CNTK's binary folder, e.g. build/release/bin/
-    const std::string modelWorkingDirectory = path + "/../../../Examples/Image/MNIST/Data/";
+    // This relative path assumes launching from CNTK's binary folder, e.g. build/cpu/release/bin/
+    const std::string modelWorkingDirectory = path + "/../../../../Examples/Image/MNIST/Data/";
 #endif
     const std::string modelFilePath = modelWorkingDirectory + "../Output/Models/01_OneHidden";
 

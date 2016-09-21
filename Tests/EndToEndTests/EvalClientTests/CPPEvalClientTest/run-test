@@ -2,10 +2,37 @@
 
 . $TEST_ROOT_DIR/run-test-common
 
+
+# The eval test uses some pretrained models which is not part of the CNTK repository itself
+# We use the dataset from an external location specified using an environment variable
+if [[ "$CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY" == "" || ! -d "$CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY" ]]; then
+  echo 'This test uses external data that is not part of the CNTK repository. Environment variable CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY must be set to point to the external test data location'
+  exit 1
+fi
+
+if [ "$OS" == "Windows_NT" ]; then
+    ModelSourceDir=`cygpath -au $CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY`/PreTrainedModels
+else
+    ModelSourceDir=$CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY/PreTrainedModels
+fi
+
+# Copy pretrained models to the appropriate directories
+ImageDir=$TEST_ROOT_DIR/../../Examples/Image
+MnistModelDir=$ImageDir/MNIST/Output/Models
+mkdir -p $MnistModelDir
+
+cp $ModelSourceDir/MNIST_01_OneHidden $MnistModelDir/01_OneHidden || exit $?
+
 if [ "$OS" == "Windows_NT" ]; then
   $TEST_BIN_DIR/CPPEvalClientTest.exe
 else
   $TEST_BIN_DIR/cppevalclient
 fi
-exit $?
+
+ExitCode=$?
+
+#Delete Model data
+rm -rf $ImageDir/MNIST/Output
+
+exit $ExitCode
 
