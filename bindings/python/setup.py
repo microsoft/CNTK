@@ -1,7 +1,8 @@
-from setuptools import setup, Extension, find_packages
 import os
 import shutil
 import platform
+from warnings import warn
+from setuptools import setup, Extension, find_packages
 import numpy
 
 IS_WINDOWS = platform.system() == 'Windows'
@@ -48,16 +49,17 @@ if IS_WINDOWS:
        "cublas64_75",
        "opencv_world310",
     ]
-    fn_ext = '.dll'
+    libname_prefix = ''
+    libname_ext = '.dll'
 else:
     libs=[
        "cntklibrary-2.0",
        "cntkmath"
     ]
-    fn_ext = '.so'
+    libname_prefix = 'lib'
+    libname_ext = '.so'
 
-dep_libs_names = [l+fn_ext for l in dep_libs_names + ['lib'+l for l in libs]]
-
+dep_libs_names = [l+libname_ext for l in dep_libs_names + [libname_prefix+l for l in libs]]
 
 # copy over the libraries to the cntk base directory so that the rpath is correctly set
 if os.path.exists(PROJ_LIB_PATH):
@@ -66,7 +68,12 @@ if os.path.exists(PROJ_LIB_PATH):
 os.mkdir(PROJ_LIB_PATH)
 
 for fn in dep_libs_names:
-    shutil.copy(lib_path(fn), proj_lib_path(fn))
+    src_file = lib_path(fn)
+    tgt_file = proj_lib_path(fn)
+    if os.path.exists(src_file):
+        shutil.copy(src_file, tgt_file)
+    else:
+        warn("Didn't find library file %s"%src_file)
 
 # for package_data we need to have names relative to the cntk module
 dep_libs = [os.path.join('libs', fn) for fn in dep_libs_names]
