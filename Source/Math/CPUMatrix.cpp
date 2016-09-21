@@ -6255,7 +6255,6 @@ template CPUMatrix<short>::CPUMatrix();
 template CPUMatrix<short>::CPUMatrix(CPUMatrix<short> const&);
 template CPUMatrix<short>::CPUMatrix(CPUMatrix<short>&&);
 template size_t CPUMatrix<short>::LocateElement(size_t, size_t) const;
-template CPUMatrix<short>::~CPUMatrix();
 template CPUMatrix<short> CPUMatrix<short>::ColumnSlice(size_t startColumn, size_t numCols) const;
 template CPUMatrix<short>& CPUMatrix<short>::operator=(CPUMatrix<short>&&);
 template void CPUMatrix<short>::SetValue(const short);
@@ -6271,7 +6270,6 @@ template void CPUMatrix<short>::CopySection(size_t numRows, size_t numCols, shor
 template void CPUMatrix<short>::Reshape(const size_t, const size_t);
 
 template CPUMatrix<int>::CPUMatrix(const size_t, const size_t, int*, const size_t);
-template CPUMatrix<int>::~CPUMatrix();
 
 }}}
 
