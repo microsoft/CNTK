@@ -287,16 +287,16 @@ namespace CNTK
         std::wstring AsString() const
         {
             std::wstringstream wStrStream;
-            wStrStream << L"{";
+            wStrStream << L"[";
             for (size_t i = 0; i < Rank(); i++)
             {
                 if (i != 0)
-                    wStrStream << L", ";
+                    wStrStream << L" x ";
 
                 wStrStream << m_shapeDims[i];
             }
 
-            wStrStream << L"}";
+            wStrStream << L"]";
             return wStrStream.str();
         }
 
@@ -1988,6 +1988,10 @@ namespace CNTK
         ///
         virtual ~Function() {}
 
+        ///
+        /// Clones 'this' Function. The parameters of the Function are either cloned, shared or frozen as specified by the parameterCloneMethod argument and
+        /// any variable replacements requested are applied in the cloned Function instance.
+        ///
         CNTK_API FunctionPtr Clone(ParameterCloningMethod parameterCloneMethod = ParameterCloningMethod::Clone, const std::unordered_map<Variable, Variable>& replacements = {}) const;
 
     public:
@@ -2032,7 +2036,7 @@ namespace CNTK
         ///
         /// Returns a set comprising of all input variables of 'this' Function's variables that are not of kind 'Parameter' or 'Constant'.
         ///
-        std::unordered_set<Variable> Arguments() const
+        std::vector<Variable> Arguments() const
         {
             return FilteredInputs<Variable>([](const Variable& var) {
                 return (var.IsInput() || var.IsOutput());
@@ -2042,7 +2046,7 @@ namespace CNTK
         ///
         /// Returns the set of all Parameter variables of 'this' Function.
         ///
-        std::unordered_set<Parameter> Parameters() const
+        std::vector<Parameter> Parameters() const
         {
             return FilteredInputs<Parameter>([](const Variable& var) {
                 return var.IsParameter();
@@ -2052,7 +2056,7 @@ namespace CNTK
         ///
         /// Returns the set of all Constant variables of 'this' Function.
         ///
-        std::unordered_set<Constant> Constants() const
+        std::vector<Constant> Constants() const
         {
             return FilteredInputs<Constant>([](const Variable& var) {
                 return var.IsConstant();
@@ -2062,35 +2066,47 @@ namespace CNTK
         ///
         /// Returns the set of all Constant variables of 'this' Function.
         ///
-        std::unordered_set<Variable> Placeholders() const
+        std::vector<Variable> Placeholders() const
         {
             return FilteredInputs<Variable>([](const Variable& var) {
                 return var.IsPlaceholder();
             });
         }
 
-        const Dictionary& Attributes() const
-        {
-            return m_attributes;
-        }
+        ///
+        /// Returns the dictionary of attributes of 'this' Function
+        ///
+        const Dictionary& Attributes() const { return m_attributes; }
 
+        ///
+        /// In-place replace specified placeholders in the Function graph with the specified replacements in the map
+        ///
         CNTK_API FunctionPtr ReplacePlaceholders(const std::unordered_map<Variable, Variable>& placeholderReplacements);
+
+        ///
+        /// In-place replace the only placeholder in the Function graph with the specified replacements in the map
+        /// Throws an exception if 'this' Function has multiple placeholders
+        ///
+        CNTK_API FunctionPtr ReplacePlaceholder(const Variable& placeholderReplacement);
 
     private:
 
         template <typename VariableType, typename FilterFunction>
-        std::unordered_set<VariableType> FilteredInputs(FilterFunction&& filterFunc) const
+        std::vector<VariableType> FilteredInputs(FilterFunction&& filterFunc) const
         {
-            std::unordered_set<VariableType> filteredInputs;
+            std::vector<VariableType> filteredInputs;
+            std::unordered_set<Variable> uniqueFilteredInputs;
             auto inputs = Inputs();
             for (auto inputVar : inputs)
             {
-                if (filterFunc(inputVar))
-                    filteredInputs.insert(VariableType(inputVar));
+                if (filterFunc(inputVar) && (uniqueFilteredInputs.find(inputVar) == uniqueFilteredInputs.end()))
+                {
+                    uniqueFilteredInputs.insert(inputVar);
+                    filteredInputs.push_back(VariableType(inputVar));
+                }
             }
 
             return filteredInputs;
-
         }
 
         CNTK_API std::shared_ptr<std::vector<Variable>> InputsImpl() const;
@@ -2564,8 +2580,8 @@ namespace CNTK
         virtual ~Learner() {}
 
     protected:
-        Learner(const std::unordered_set<Parameter>& parameters)
-            : m_parameters(parameters)
+        Learner(const std::vector<Parameter>& parameters)
+            : m_parameters(parameters.begin(), parameters.end())
         {}
 
         std::unordered_set<Parameter> m_parameters;
@@ -2657,7 +2673,7 @@ namespace CNTK
     ///
     /// Create an instance of the CNTK built-in SGD learner.
     ///
-    CNTK_API LearnerPtr SGDLearner(const std::unordered_set<Parameter>& parameters, 
+    CNTK_API LearnerPtr SGDLearner(const std::vector<Parameter>& parameters,
                                    const LearningRatesPerSample& learningRates,
                                    double clippingThresholdPerSample = std::numeric_limits<double>::infinity(),
                                    bool gradientClippingWithTruncation = true);
@@ -2665,7 +2681,7 @@ namespace CNTK
     ///
     /// Create an instance of the CNTK built-in Momentum SGD learner.
     ///
-    CNTK_API LearnerPtr MomentumSGDLearner(const std::unordered_set<Parameter>& parameters, 
+    CNTK_API LearnerPtr MomentumSGDLearner(const std::vector<Parameter>& parameters,
                                            const LearningRatesPerSample& learningRates,
                                            const MomentumsPerSample& momentums,
                                            double clippingThresholdPerSample = std::numeric_limits<double>::infinity(),
@@ -2674,7 +2690,7 @@ namespace CNTK
     ///
     /// Create an instance of the CNTK built-in Nesterov's accelerated SGD learner.
     ///
-    CNTK_API LearnerPtr NesterovLearner(const std::unordered_set<Parameter>& parameters, 
+    CNTK_API LearnerPtr NesterovLearner(const std::vector<Parameter>& parameters,
                                         const LearningRatesPerSample& learningRates,
                                         const MomentumsPerSample& momentums,
                                         double clippingThresholdPerSample = std::numeric_limits<double>::infinity(),
@@ -2683,7 +2699,7 @@ namespace CNTK
     ///
     /// Create an instance of the CNTK built-in FSAdaGrad (improved AdaGrad) learner.
     ///
-    CNTK_API LearnerPtr FSAdaGradLearner(const std::unordered_set<Parameter>& parameters,
+    CNTK_API LearnerPtr FSAdaGradLearner(const std::vector<Parameter>& parameters,
                                          const LearningRatesPerSample& learningRates,
                                          const MomentumsPerSample& momentums,
                                          double clippingThresholdPerSample = std::numeric_limits<double>::infinity(),
@@ -2692,7 +2708,7 @@ namespace CNTK
     ///
     /// Create an instance of the CNTK built-in AdaGrad learner.
     ///
-    CNTK_API LearnerPtr AdaGradLearner(const std::unordered_set<Parameter>& parameters,
+    CNTK_API LearnerPtr AdaGradLearner(const std::vector<Parameter>& parameters,
                                        const LearningRatesPerSample& learningRates,
                                        bool needAveMultiplier = true,
                                        double clippingThresholdPerSample = std::numeric_limits<double>::infinity(),
@@ -2701,7 +2717,7 @@ namespace CNTK
     ///
     /// Create an instance of the CNTK built-in RMSProp learner.
     ///
-    CNTK_API LearnerPtr RMSPropLearner(const std::unordered_set<Parameter>& parameters,
+    CNTK_API LearnerPtr RMSPropLearner(const std::vector<Parameter>& parameters,
                                        const LearningRatesPerSample& learningRates,
                                        double gamma,
                                        double inc,
