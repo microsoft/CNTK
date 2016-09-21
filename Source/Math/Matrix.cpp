@@ -513,7 +513,8 @@ template <class ElemType>
 void Matrix<ElemType>::ReleaseMemory()
 {
     m_baseMatrix = nullptr;
-    // Perf: Avoid unnecessary assignments which are a superfluous swap() operation.
+    // Perf: Avoid assignments to shared_ptr unless necessary. In certain versions of the standard library
+    // they cause ref counting, and this piece of code is called often..
     if (m_GPUMatrix.get() != nullptr)
         m_GPUMatrix = nullptr;
     if (m_CPUMatrix.get() != nullptr)
