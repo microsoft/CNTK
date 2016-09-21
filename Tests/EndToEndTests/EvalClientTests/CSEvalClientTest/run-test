@@ -25,7 +25,7 @@ mkdir -p $MnistModelDir
 cp $TestDataDir/PreTrainedModels/MNIST_01_OneHidden $MnistModelDir/01_OneHidden || exit $?
 cp $TestDataDir/PreTrainedModels/MNIST_02_Convolution $MnistModelDir/02_Convolution || exit $?
 cp $TestDataDir/Image/MNIST/v0/Test-28x28_cntk_text.txt $MnistDataDir || exit $?
-cp $ModelSourceDir/ResNet_18.model $ResnetModelDir/ || exit $?
+cp $TestDataDir/PreTrainedModels/ResNet_18.model $ResnetModelDir/ || exit $?
 
 if [ "$OS" == "Windows_NT" ]; then
   cd $TEST_BIN_DIR
