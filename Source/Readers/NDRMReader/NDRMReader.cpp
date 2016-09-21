@@ -137,6 +137,7 @@ void NDRMReader<ElemType>::InitFromConfig(const ConfigRecordType& readerConfig)
     m_vectorSize = readerConfig(L"vectorSize", (size_t)200);
     m_docLengthBinSize = readerConfig(L"docLengthBinSize", (int)100);
     m_numPreTrainEpochs = readerConfig(L"numPreTrainEpochs", (int)0);
+    m_resetOffsetEveryEpoch = readerConfig(L"resetOffsetEveryEpoch", (size_t)0);
     m_bytesPerSample = sizeof(int32_t) * (m_numWordsPerQuery + m_numDocs * m_numWordsPerDoc);
     m_bytesPerVector = sizeof(ElemType) * m_vectorSize;
     m_currOffset = 0;
@@ -306,6 +307,9 @@ void NDRMReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t epoch, size_
     m_shift = (m_numPreTrainEpochs > epoch ? 1 : 0);
     m_numSamplesPerEpoch = requestedEpochSamples;
     m_numSamplesCurrEpoch = 0;
+
+    if (m_resetOffsetEveryEpoch > 0)
+        m_currOffset = 0;
 }
 
 // GetMinibatch - Get the next minibatch (features and labels)

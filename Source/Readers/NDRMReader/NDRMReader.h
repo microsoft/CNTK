@@ -40,6 +40,7 @@ class NDRMReader : public DataReaderBase
     size_t m_miniBatchSize;
     size_t m_bytesPerSample;
     size_t m_bytesPerVector;
+    size_t m_resetOffsetEveryEpoch;
     char* m_dIdValues;
     char* m_embXValues;
     char* m_qEmbValues;
