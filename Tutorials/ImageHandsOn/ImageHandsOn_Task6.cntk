@@ -98,7 +98,7 @@ TrainConvNet = {
             parallelizationMethod = "DataParallelSGD"
             parallelizationStartEpoch = 1
             distributedMBReading = true
-            dataParallelSGD = { gradientBits = 2 }
+            dataParallelSGD = { gradientBits = 2:1 }
         }
         AutoAdjust = {
             autoAdjustMinibatch = true        # enable automatic growing of minibatch size
