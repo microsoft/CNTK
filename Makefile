@@ -800,9 +800,11 @@ MULTIVERSO:
 	@sh $(SOURCEDIR)/../Tools/setup_mv.sh
 
 $(MULTIVERSO_LIB): MULTIVERSO
+	@mkdir -p $(dir $@)
 	@cp $(SOURCEDIR)/Multiverso/build/src/libmultiverso.so $(MULTIVERSO_LIB)
 
 $(MULTIVERSO_TEST): MULTIVERSO
+	@mkdir -p $(dir $@)
 	@cp $(SOURCEDIR)/Multiverso/build/Test/unittests/multiverso.ut $(MULTIVERSO_TEST)
 
 endif
