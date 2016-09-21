@@ -68,7 +68,7 @@ void* CUDAPageLockedMemAllocator::Malloc(size_t)
 
 void* CUDAPageLockedMemAllocator::Malloc(size_t, int)
 {
-	return nullptr;
+    return nullptr;
 }
 
 void CUDAPageLockedMemAllocator::Free(void*)

@@ -513,17 +513,17 @@ public:
         if (inputIndex == 0) // left derivative (embedding matrix)
         {
             // This is a reduction operation, hence we need to mask out gaps.
-            Matrix<ElemType> sliceInput1Value = Input(1)->MaskedValueFor(t);
+            Matrix<ElemType> sliceInput1Value = InputRef(1).MaskedValueFor(t);
             Matrix<ElemType> sliceOutputGrad = MaskedGradientFor(t);
 
-            BackpropToLeft(sliceInput1Value, Input(0)->GradientAsMatrix(), sliceOutputGrad);
+            BackpropToLeft(sliceInput1Value, InputRef(0).GradientAsMatrix(), sliceOutputGrad);
         }
         else if (inputIndex == 1) // right derivative (input)
         {
-            Matrix<ElemType> sliceInput1Grad = Input(1)->GradientFor(t);
+            Matrix<ElemType> sliceInput1Grad = InputRef(1).GradientFor(t);
             Matrix<ElemType> sliceOutputGrad = GradientFor(t);
 
-            BackpropToRight(Input(0)->ValueAsMatrix(), sliceInput1Grad, sliceOutputGrad);
+            BackpropToRight(InputRef(0).ValueAsMatrix(), sliceInput1Grad, sliceOutputGrad);
         }
     }
 
@@ -561,8 +561,8 @@ public:
     {
         // input0 is the weight (each column is an embedding of one word), input 1 contains m_nbrLooked words in each column (sample)
         Matrix<ElemType> functionValues =           ValueFor(t);
-        const Matrix<ElemType>&  input0 = Input(0)->ValueAsMatrix();
-        Matrix<ElemType>         input1 = Input(1)->ValueFor(t);
+        const Matrix<ElemType>&  input0 = InputRef(0).ValueAsMatrix();
+        Matrix<ElemType>         input1 = InputRef(1).ValueFor(t);
 
         size_t rows1 = input1.GetNumRows(), cols1 = input1.GetNumCols();
         size_t cols0 = input0.GetNumCols();

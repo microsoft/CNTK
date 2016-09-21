@@ -32,8 +32,7 @@ protected:
         void Resize(size_t newSize);
     };
 
-    PackerBase(MemoryProviderPtr memoryProvider,
-               SequenceEnumeratorPtr sequenceEnumerator,
+    PackerBase(SequenceEnumeratorPtr sequenceEnumerator,
                const std::vector<StreamDescriptionPtr>& streams);
 
     typedef std::vector<SequenceDataPtr> StreamBatch;
@@ -73,9 +72,12 @@ protected:
     // For which streams there should be a shape check for each sequence.
     std::vector<bool> m_checkSampleShape;
 
+    // Memory providers. Each stream has its own memory provider.
+    std::vector<MemoryProviderPtr> m_memoryProviders;
+
 public:
     // Sets current epoch configuration.
-    virtual void StartEpoch(const EpochConfiguration& config) override;
+    virtual void StartEpoch(const EpochConfiguration& config, const std::vector<MemoryProviderPtr>& memoryProviders) override;
 };
 
 inline void PackerBase::PackSparseSampleAsDense(char* destination, SparseSequenceDataPtr sequence,

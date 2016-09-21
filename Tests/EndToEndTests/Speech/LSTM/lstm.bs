@@ -127,7 +127,7 @@ speechTrain = new TrainAction [
         Err = ClassificationError(labels, LSTMoutputW, tag='evaluation')              // this also gets tracked
 
         // decoding
-        logPrior = LogPrior(labels)	 
+        logPrior = LogPrior(labels)
         ScaledLogLikelihood = Minus(LSTMoutputW, logPrior, tag='output')    // sadly we can't say x - y since we want to assign a tag
     ]
 ]

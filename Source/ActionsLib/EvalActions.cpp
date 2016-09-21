@@ -56,7 +56,7 @@ static void DoEvalBase(const ConfigParameters& config, IDataReader& reader)
     wstring modelPath = config(L"modelPath");
     intargvector mbSize = minibatchSize;
 
-    int traceLevel = config(L"traceLevel", "0");
+    int traceLevel = config(L"traceLevel", 0);
     size_t numMBsToShowResult = config(L"numMBsToShowResult", "100");
     size_t firstMBsToShowResult = config(L"firstMBsToShowResult", "0");
     size_t maxSamplesInRAM = config(L"maxSamplesInRAM", (size_t)SIZE_MAX);
@@ -123,15 +123,15 @@ static void DoEvalBNBase(const ConfigParameters& config, IDataReader& reader)
 template <typename ElemType>
 void DoEvalBN(const ConfigParameters& config)
 {
-	// evaluate batch normalization mean and various
-	ConfigParameters readerConfig(config(L"reader"));
+        // evaluate batch normalization mean and various
+        ConfigParameters readerConfig(config(L"reader"));
 
-	// Should trace level to zero in Post BN?
-	//readerConfig.Insert("traceLevel", config(L"traceLevel", "0"));
+        // Should trace level to zero in Post BN?
+        //readerConfig.Insert("traceLevel", config(L"traceLevel", "0"));
 
-	DataReader evaBNDataReader(readerConfig);
+        DataReader evaBNDataReader(readerConfig);
 
-	DoEvalBNBase<ElemType>(config, evaBNDataReader);
+        DoEvalBNBase<ElemType>(config, evaBNDataReader);
 }
 
 template <typename ElemType>
@@ -177,7 +177,7 @@ void DoCrossValidate(const ConfigParameters& config)
 
     size_t sleepSecondsBetweenRuns = config(L"sleepTimeBetweenRuns", "0");
 
-    int traceLevel = config(L"traceLevel", "0");
+    int traceLevel = config(L"traceLevel", 0);
     size_t numMBsToShowResult = config(L"numMBsToShowResult", "100");
     size_t firstMBsToShowResult = config(L"firstMBsToShowResult", "0");
     size_t maxSamplesInRAM    = config(L"maxSamplesInRAM", (size_t)SIZE_MAX);

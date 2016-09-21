@@ -20,11 +20,11 @@ TrainTagger = {
         hiddenDim = 300
 
         model = Sequential (
-            EmbeddingLayer {embDim, init='uniform'} :                            # embedding
-            BatchNormalizationLayer {normalizationTimeConstant=2048} :           ##### added
-            RecurrentLSTMLayer {hiddenDim, goBackwards=false, init='uniform'} :  # LSTM
-            BatchNormalizationLayer {normalizationTimeConstant=2048} :           ##### added
-            DenseLayer {labelDim, init='uniform', initValueScale=7}              # output layer
+            EmbeddingLayer {embDim} :                            # embedding
+            BatchNormalizationLayer {} :           ##### added
+            RecurrentLSTMLayer {hiddenDim, goBackwards=false} :  # LSTM
+            BatchNormalizationLayer {} :           ##### added
+            DenseLayer {labelDim}                                # output layer
         )
 
         # features
@@ -50,8 +50,8 @@ TrainTagger = {
 
         minibatchSize = 70
 
-        learningRatesPerSample = 0.01*2:0.005*12:0.001
-        gradUpdateType = "FSAdaGrad"
+        learningRatesPerSample = 0.003*2:0.0015*12:0.0003
+        gradUpdateType = "fsAdaGrad"
         gradientClippingWithTruncation = true ; clippingThresholdPerSample = 15.0
 
         firstMBsToShowResult = 10 ; numMBsToShowResult = 100

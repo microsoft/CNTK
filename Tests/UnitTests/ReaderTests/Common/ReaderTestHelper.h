@@ -35,10 +35,10 @@ struct ReaderFixture
         fprintf(stderr, "Executable path: %s\n", m_parentPath.c_str());
 
 #ifdef _WIN32
-	// The executable path on Windows is e.g. <cntk>/x64/Debug/Unittests/
+        // The executable path on Windows is e.g. <cntk>/x64/Debug/Unittests/
         m_testDataPath = m_parentPath + "/../../../Tests/UnitTests/ReaderTests";
 #else
-	// The executable path on Linux is e.g. <cntk>/build/cpu/release/bin/
+        // The executable path on Linux is e.g. <cntk>/build/cpu/release/bin/
         m_testDataPath = m_parentPath + "/../../../../Tests/UnitTests/ReaderTests";
 #endif
         boost::filesystem::path absTestPath(m_testDataPath);
@@ -225,11 +225,11 @@ struct ReaderFixture
         {
             if (numSubsets == 1)
             {
-                dataReader.StartMinibatchLoop(mbSize, epoch, epochSize);
+                dataReader.StartMinibatchLoop(mbSize, epoch, map.GetStreamDescriptions(), epochSize);
             }
             else
             {
-                dataReader.StartDistributedMinibatchLoop(mbSize, epoch, subsetNum, numSubsets, epochSize);
+                dataReader.StartDistributedMinibatchLoop(mbSize, epoch, subsetNum, numSubsets, map.GetStreamDescriptions(), epochSize);
             }
 
             for (auto cnt = 0; dataReader.GetMinibatch(map) && cnt < m_maxMiniBatchCount; cnt++)

@@ -1183,7 +1183,7 @@ template <class ElemType>
 void GPUMatrix<ElemType>::SetValue(const size_t numRows, const size_t numCols, int deviceId, ElemType* pArray, size_t matrixFlags)
 {
     // handle externally managed case
-	// BUGBUG: This is super super ugly, and needs to be fixed, but if matrixFlags has the right value, then we can't free anything,
+    // BUGBUG: This is super super ugly, and needs to be fixed, but if matrixFlags has the right value, then we can't free anything,
     // and everything gets wonky. This should be fixed, and would go away if it is made a shared_ptr.
     if (matrixFlags & matrixFlagDontOwnBuffer)
     {

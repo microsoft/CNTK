@@ -71,13 +71,16 @@ namespace CNTK
             return DeviceDescriptor::GPUDevice(deviceId);
     }
 
-    inline NDShape AsNDShape(const Microsoft::MSR::CNTK::TensorShape& tensorShape)
+    inline NDShape AsNDShape(const Microsoft::MSR::CNTK::TensorShape& tensorShape, bool allowNonFlattenableTensorShapes = false)
     {
-        // The TensorShape should be flattenable to 1D
-        for (size_t i = 1; i < tensorShape.GetRank(); ++i)
+        if (!allowNonFlattenableTensorShapes)
         {
-            if (!tensorShape.CanFlatten(i))
-                InvalidArgument("AsNDShape() can only be called for TensorShapes that can be flattened to 1D");
+            // The TensorShape should be flattenable to 1D
+            for (size_t i = 1; i < tensorShape.GetRank(); ++i)
+            {
+                if (!tensorShape.CanFlatten(i))
+                    InvalidArgument("AsNDShape() can only be called for TensorShapes that can be flattened to 1D");
+            }
         }
 
         return std::vector<size_t>(tensorShape.GetDims().begin(), tensorShape.GetDims().end());
@@ -135,20 +138,17 @@ namespace CNTK
         return AsTensorViewShape(AsTensorShape(viewShape));
     }
 
-    inline std::string AsString(const NDShape& shape)
+    inline std::wstring AsStringForErrorReporting(const NDShape& shape)
     {
-        std::string shapeString = "[";
-        bool notIsFirst = false;
-        for (size_t i = 0; i < shape.Rank(); ++i)
+        bool invertShape = Internal::IsReversingTensorShapesInErrorMessagesEnabled();
+        auto displayShape = shape;
+        if (invertShape)
         {
-            if (notIsFirst)
-                shapeString += ", ";
-
-            shapeString += std::to_string(shape[i]);
-            notIsFirst = true;
+            for (size_t i = 0, j = shape.Rank() - 1; i < shape.Rank(); ++i, --j)
+                displayShape[i] = shape[j];
         }
 
-        return shapeString + "]";
+        return displayShape.AsString();
     }
 
     inline std::pair<size_t, size_t> GetMatrixDimensions(const NDShape& viewShape)
@@ -359,24 +359,14 @@ namespace CNTK
         if (sourceDataType == targetDataType)
             LogicError("CloneAsDataType: Source and target DataTypes are same");
 
-        if ((targetDataType != DataType::Float) && (targetDataType != DataType::Double))
-            LogicError("CloneAsDataType: Only Float and Double target DataTypes are supported");
+        if (targetDataType != DataType::Double)
+            LogicError("CloneAsDataType: Only Double target DataType is supported");
 
-        NDArrayViewPtr newConstantValue;
         auto sourceShape = source->Shape();
         auto sourceSize = sourceShape.TotalSize();
-        if (sourceDataType == DataType::Float)
-        {
-            // Cast to double
-            double* castValue = Copy<float, double>(source->DataBuffer<float>(), sourceSize);
-            newConstantValue = MakeSharedObject<NDArrayView>(sourceShape, castValue, sourceSize, DeviceDescriptor::CPUDevice(), readOnly);
-        }
-        else
-        {
-            float* castValue = Copy<double, float>(source->DataBuffer<double>(), sourceSize);
-            newConstantValue = MakeSharedObject<NDArrayView>(sourceShape, castValue, sourceSize, DeviceDescriptor::CPUDevice(), readOnly);
-        }
 
-        return newConstantValue;
+        // Cast to double
+        double* castValue = Copy<float, double>(source->DataBuffer<float>(), sourceSize);
+        return MakeSharedObject<NDArrayView>(sourceShape, castValue, sourceSize, DeviceDescriptor::CPUDevice(), readOnly);
     }
 }

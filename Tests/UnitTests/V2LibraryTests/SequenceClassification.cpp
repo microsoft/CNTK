@@ -19,7 +19,7 @@ FunctionPtr LSTMSequenceClassiferNet(const Variable& input, size_t numOutputClas
 {
     auto embeddingFunction = Embedding(input, embeddingDim, device);
     auto pastValueRecurrenceHook = [](const Variable& x) { return PastValue(x); };
-    auto LSTMFunction = LSTMPComponentWithSelfStabilization<float>(embeddingFunction, LSTMDim, cellDim, pastValueRecurrenceHook, pastValueRecurrenceHook, device).first;
+    auto LSTMFunction = LSTMPComponentWithSelfStabilization<float>(embeddingFunction, { LSTMDim }, { cellDim }, pastValueRecurrenceHook, pastValueRecurrenceHook, device).first;
     auto thoughtVectorFunction = Sequence::Last(LSTMFunction);
 
     return FullyConnectedLinearLayer(thoughtVectorFunction, numOutputClasses, device, outputName);
@@ -78,6 +78,8 @@ void TrainLSTMSequenceClassifer(const DeviceDescriptor& device, bool testSaveAnd
 
 void TrainLSTMSequenceClassifer()
 {
+#ifndef CPUONLY
     TrainLSTMSequenceClassifer(DeviceDescriptor::GPUDevice(0), true);
+#endif
     TrainLSTMSequenceClassifer(DeviceDescriptor::CPUDevice(), false);
 }

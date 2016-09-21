@@ -5,6 +5,7 @@
 
 #include "stdafx.h"
 #include "CNTKLibrary.h"
+#include "Utils.h"
 
 namespace CNTK
 {
@@ -25,7 +26,7 @@ namespace CNTK
                 InvalidArgument("The number of axes (%d) of the mask of a Value object cannot exceed the number of axes (%d) of the data NDArrayView object", (int)maskShape.Rank(), (int)dataShape.Rank());
 
             if (dataShape.SubShape(dataShape.Rank() - maskShape.Rank()) != maskShape)
-                InvalidArgument("Invalid Value object; the data and mask are incompatible. The trailing dimensions of the data (%S) do not match the dimensions of the mask (%S)", dataShape.AsString().c_str(), maskShape.AsString().c_str());
+                InvalidArgument("Invalid Value object; the data and mask are incompatible. The trailing dimensions of the data (%S) do not match the dimensions of the mask (%S)", AsStringForErrorReporting(dataShape).c_str(), AsStringForErrorReporting(maskShape).c_str());
         }
     }
 

@@ -9,7 +9,7 @@
 #include <string>
 #include <future>
 #include "DataReader.h"
-#include "Reader.h"
+#include "ReaderBase.h"
 #include "Transformer.h"
 #include "TransformController.h"
 
@@ -52,19 +52,16 @@ struct Minibatch;
 // to external developers. The actual "reader developer" now has to provide deserializer(s) only.
 // TODO: Implement proper corpus descriptor.
 // TODO: Change this interface when SGD is changed.
-class CompositeDataReader : public Reader, protected Plugin
+class CompositeDataReader : public ReaderBase, protected Plugin
 {
 public:
-    CompositeDataReader(const ConfigParameters& parameters, MemoryProviderPtr provider);
+    CompositeDataReader(const ConfigParameters& parameters);
 
     // Describes the streams this reader produces.
     std::vector<StreamDescriptionPtr> GetStreamDescriptions() override;
 
     // Starts a new epoch with the provided configuration
-    void StartEpoch(const EpochConfiguration& config) override;
-
-    // Reads a minibatch that contains data across all streams.
-    Minibatch ReadMinibatch() override;
+    void StartEpoch(const EpochConfiguration& config, const std::map<std::wstring, int>& inputDescriptions) override;
 
 private:
     void CreateDeserializers(const ConfigParameters& readerConfig);
@@ -84,22 +81,6 @@ private:
     // Packing mode.
     PackingMode m_packingMode;
 
-    // Pre-fetch task.
-    std::future<Minibatch> m_prefetchTask;
-
-    // Launch type of prefetch - async or sync.
-    launch m_launchType;
-
-    // Flag indicating end of the epoch.
-    bool m_endOfEpoch;
-
-    // MBLayout of the reader. 
-    // TODO: Will be taken from the StreamMinibatchInputs.
-    MBLayoutPtr m_layout;
-
-    // Stream name to id mapping.
-    std::map<std::wstring, size_t> m_nameToStreamId;
-
     // All streams this reader provides.
     std::vector<StreamDescriptionPtr> m_streams;
 
@@ -109,18 +90,8 @@ private:
     // A list of transformers.
     std::vector<Transformation> m_transforms;
 
-    // Sequence provider.
-    SequenceEnumeratorPtr m_sequenceEnumerator;
-
-    // TODO: Should be removed. We already have matrices on this level.
-    // Should just get the corresponding pinned memory.
-    MemoryProviderPtr m_provider;
-
     // Corpus descriptor that is shared between deserializers.
     CorpusDescriptorPtr m_corpus;
-
-    // Packer.
-    PackerPtr m_packer;
 
     // Precision - "float" or "double".
     std::string m_precision;
