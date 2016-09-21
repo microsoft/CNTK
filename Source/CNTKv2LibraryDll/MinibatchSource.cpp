@@ -175,7 +175,7 @@ namespace CNTK
                     size_t sampleSize = currentStreamDesc->m_sampleLayout->GetNumElements();
 
                     // TODO: Eliminate the unnecessary CPU to CPU copy
-                    ReaderShim<float>::FillMatrixFromStream(currentStreamDesc->m_storageType, dataMatrix.get(), sampleSize, currentStreamMinibatchData);
+                    ReaderShim<float>::FillMatrixFromStream(currentStreamDesc->m_storageType, dataMatrix.get(), sampleSize, currentStreamMinibatchData, nullptr);
                     minibatchValuePtr = CompositeFunction::GetValueObjectFromCNTKImplMatrixAndMBLayout<float>(sampleShape, *dataMatrix, currentStreamMinibatchData->m_layout, false);
 
                     size_t numSamples = currentStreamMinibatchData->m_layout->GetActualNumSamples();

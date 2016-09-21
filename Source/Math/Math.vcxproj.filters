@@ -46,8 +46,9 @@
       <Filter>CPU</Filter>
     </ClCompile>
     <ClCompile Include="BlockHandlerSSE.cpp">
-        <Filter>CPU</Filter>
+      <Filter>CPU</Filter>
     </ClCompile>
+    <ClCompile Include="DataTransferer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CommonMatrix.h" />
@@ -115,18 +116,20 @@
       <Filter>RNN</Filter>
     </ClInclude>
     <ClInclude Include="BlockHandlerAVX.h">
-        <Filter>CPU</Filter>
+      <Filter>CPU</Filter>
     </ClInclude>
     <ClInclude Include="BlockHandlerSSE.h">
-        <Filter>CPU</Filter>
+      <Filter>CPU</Filter>
     </ClInclude>
     <ClInclude Include="BlockMultiplier.h">
-        <Filter>CPU</Filter>
+      <Filter>CPU</Filter>
     </ClInclude>
     <ClInclude Include="BlockMultiplierPlatform.h">
-        <Filter>CPU</Filter>
+      <Filter>CPU</Filter>
     </ClInclude>
     <ClInclude Include="Quantizers.h" />
+    <ClInclude Include="BlockMultiplierMatrixUtil.h" />
+    <ClInclude Include="DataTransferer.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="GPUMatrix.h">

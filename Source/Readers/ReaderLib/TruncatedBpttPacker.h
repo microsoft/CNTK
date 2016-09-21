@@ -22,7 +22,8 @@ class TruncatedBPTTPacker : public PackerBase
 public:
     TruncatedBPTTPacker(
         SequenceEnumeratorPtr sequenceEnumerator,
-        const std::vector<StreamDescriptionPtr>& streams);
+        const std::vector<StreamDescriptionPtr>& streams,
+        size_t numberOfBuffers = 2);
 
     virtual Minibatch ReadMinibatch() override;
 

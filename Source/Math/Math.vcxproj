@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" InitialTargets="CheckDependencies" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|x64">
@@ -171,6 +171,7 @@
     <ClInclude Include="ConvolveGeometry.h" />
     <ClInclude Include="CPUMatrix.h" />
     <ClInclude Include="CPURNGHandle.h" />
+    <ClInclude Include="DataTransferer.h" />
     <ClInclude Include="MatrixQuantizerImpl.h" />
     <ClInclude Include="RNGHandle.h" />
     <ClInclude Include="RNNCommon.h" />
@@ -203,6 +204,7 @@
     <ClCompile Include="CPURNGHandle.cpp" />
     <ClCompile Include="CPUSparseMatrix.cpp" />
     <ClCompile Include="CUDAPageLockedMemAllocator.cpp" />
+    <ClCompile Include="DataTransferer.cpp" />
     <ClCompile Include="dllmain.cpp">
       <CompileAsManaged>false</CompileAsManaged>
       <PrecompiledHeader>

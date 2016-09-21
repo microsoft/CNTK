@@ -287,6 +287,7 @@ MATH_SRC =\
 	$(SOURCEDIR)/Math/MatrixQuantizerCPU.cpp \
 	$(SOURCEDIR)/Math/Matrix.cpp \
 	$(SOURCEDIR)/Math/QuantizedMatrix.cpp \
+	$(SOURCEDIR)/Math/DataTransferer.cpp \
 	$(SOURCEDIR)/Math/RNGHandle.cpp \
 	$(SOURCEDIR)/Math/TensorView.cpp \
 
