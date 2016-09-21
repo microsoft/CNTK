@@ -140,7 +140,8 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
     foreach_index (i, featureNames)
     {
         const ConfigRecordType& thisFeature = readerConfig(featureNames[i]);
-        m_featDims.push_back(thisFeature(L"dim"));
+
+        size_t featDimInFile = thisFeature(L"dim");
 
         bool expandToUtt = thisFeature(L"expandToUtterance", false); // should feature be processed as an ivector?
         m_expandToUtt.push_back(expandToUtt);
@@ -173,7 +174,10 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
 
         // update m_featDims to reflect the total input dimension (featDim x contextWindow), not the native feature dimension
         // that is what the lower level feature readers expect
-        m_featDims[i] = m_featDims[i] * (1 + numContextLeft[i] + numContextRight[i]);
+
+        size_t contextWindowSize = 1 + numContextLeft[i] + numContextRight[i];
+        m_featDims.push_back(featDimInFile * contextWindowSize);
+        m_featDimsInFile.push_back(featDimInFile);
 
         wstring type = thisFeature(L"type", L"real");
         if (EqualCI(type, L"real"))
@@ -521,7 +525,7 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
         m_frameSource.reset(new msra::dbn::minibatchutterancesourcemulti(useMersenneTwisterRand, infilesmulti, labelsmulti, m_featDims, m_labelDims,
                                                                          numContextLeft, numContextRight, randomize, 
                                                                          *m_lattices, m_latticeMap, m_frameMode, 
-                                                                         m_expandToUtt));
+                                                                         m_expandToUtt, m_featDimsInFile));
         m_frameSource->setverbosity(m_verbosity);
     }
     else if (EqualCI(readMethod, L"rollingWindow"))
@@ -587,7 +591,7 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
         const bool mayhavenoframe = false;
         int addEnergy = 0;
 
-        m_frameSource.reset(new msra::dbn::minibatchframesourcemulti(infilesmulti, labelsmulti, m_featDims, m_labelDims, 
+        m_frameSource.reset(new msra::dbn::minibatchframesourcemulti(infilesmulti, labelsmulti, m_featDims, m_labelDims, m_featDimsInFile,
                                                                      numContextLeft, numContextRight, randomize, 
                                                                      pagePaths, mayhavenoframe, addEnergy));
         m_frameSource->setverbosity(m_verbosity);
@@ -597,6 +601,7 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
         RuntimeError("readMethod must be 'rollingWindow' or 'blockRandomize'");
     }
 }
+
 
 // Load all input and output data.
 // Note that the terms features imply be real-valued quantities and
@@ -627,7 +632,7 @@ void HTKMLFReader<ElemType>::PrepareForWriting(const ConfigRecordType& readerCon
     foreach_index (i, featureNames)
     {
         const ConfigRecordType& thisFeature = readerConfig(featureNames[i]);
-        realDims.push_back(thisFeature(L"dim"));
+        size_t featDimInFile = thisFeature(L"dim");
 
         intargvector contextWindow = thisFeature(L"contextWindow", ConfigRecordType::Array(intargvector(vector<int>{1})));
         if (contextWindow.size() == 1) // symmetric
@@ -654,7 +659,9 @@ void HTKMLFReader<ElemType>::PrepareForWriting(const ConfigRecordType& readerCon
 
         // update m_featDims to reflect the total input dimension (featDim x contextWindow), not the native feature dimension
         // that is what the lower level feature readers expect
-        realDims[i] = realDims[i] * (1 + numContextLeft[i] + numContextRight[i]);
+        size_t contextWindowSize = 1 + numContextLeft[i] + numContextRight[i];
+        realDims.push_back(featDimInFile * contextWindowSize);
+        m_featDimsInFile.push_back(featDimInFile);
 
         wstring type = thisFeature(L"type", L"real");
         if (EqualCI(type, L"real"))
@@ -1581,7 +1588,7 @@ bool HTKMLFReader<ElemType>::GetMinibatchToWrite(StreamMinibatchInputs& matrices
             unsigned int sampperiod;
             msra::util::attempt(5, [&]()
             {
-                reader.read(path, featkind, sampperiod, feat); // whole file read as columns of feature vectors
+                reader.read(path, featkind, sampperiod, feat, m_featDimsInFile[i]); // whole file read as columns of feature vectors
             });
 
             if (i == 0)

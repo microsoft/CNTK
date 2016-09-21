@@ -88,6 +88,7 @@ protected:
         int sampperiod;
         unsigned short sampsize;
         short sampkind;
+
         void read(FILE* f)
         {
             nsamples = fgetint(f);
@@ -97,7 +98,8 @@ protected:
         }
 
         // read header of idx feature cach
-        void idxRead(FILE* f)
+        //specifieddim is the dim passed in from outside. it overwrites what in header
+        void idxRead(FILE* f, size_t specifieddim)
         {
             int magic = swapint(fgetint(f));
             if (magic != 2051)
@@ -109,7 +111,7 @@ protected:
             int nCols = swapint(fgetint(f));
             int rawsampsize = nRows * nCols;
             sampsize = (unsigned short) rawsampsize; // features are stored as bytes;
-            if (sampsize != rawsampsize)
+            if (sampsize != rawsampsize && specifieddim == 0)
                 RuntimeError("reading idx feature cache header: sample size overflow");
         }
 
@@ -215,7 +217,7 @@ public:
 
 public:
     // open the file for writing
-    htkfeatwriter(wstring path, string kind, size_t dim, unsigned int period)
+    htkfeatwriter(wstring path, string kind, size_t dim, unsigned int period, bool allowSampleSizeOverflow)
     {
         setkind(kind, dim, period, path);
         // write header
@@ -225,7 +227,7 @@ public:
         const int bytesPerValue = sizeof(float); // we do not support compression for now
         size_t rawsampsize = featdim * bytesPerValue;
         H.sampsize = (unsigned short) rawsampsize;
-        if (H.sampsize != rawsampsize)
+        if (H.sampsize != rawsampsize && !allowSampleSizeOverflow)
             RuntimeError("htkfeatwriter: sample size overflow");
         H.sampkind = parsekind(kind);
         if (needbyteswapping)
@@ -273,7 +275,7 @@ public:
     // Matrix type needs to have operator(i,j) and resize(n,m).
     // We write to a tmp file first to ensure we don't leave broken files that would confuse make mode.
     template <class MATRIX>
-    static void write(const wstring& path, const string& kindstr, unsigned int period, const MATRIX& feat)
+    static void write(const wstring& path, const string& kindstr, unsigned int period, const MATRIX& feat, bool allowSampleSizeOverflow)
     {
         wstring tmppath = path + L"$$"; // tmp path for make-mode compliant
         unlinkOrDie(path);              // delete if old file is already there
@@ -281,7 +283,7 @@ public:
         size_t featdim = feat.rows();
         size_t numframes = feat.cols();
         vector<float> v(featdim);
-        htkfeatwriter W(tmppath, kindstr, feat.rows(), period);
+        htkfeatwriter W(tmppath, kindstr, feat.rows(), period, allowSampleSizeOverflow);
 #ifdef SAMPLING_EXPERIMENT
         for (size_t i = 0; i < numframes; i++)
         {
@@ -489,7 +491,7 @@ public:
 private:
     // open the physical HTK file
     // This is different from the logical (virtual) path name in the case of an archive.
-    void openphysical(const parsedpath& ppath)
+    void openphysical(const parsedpath& ppath, size_t specifieddim)
     {
         wstring physpath = ppath.physicallocation();
         // auto_file_ptr f = fopenOrDie (physpath, L"rbS");
@@ -501,7 +503,7 @@ private:
         if (!isidxformat)
             H.read(f);
         else // read header of idxfile
-            H.idxRead(f);
+            H.idxRead(f, specifieddim);
 
         // take a guess as to whether we need byte swapping or not
         bool needbyteswapping = ((unsigned int) swapint(H.sampperiod) < (unsigned int) H.sampperiod);
@@ -563,9 +565,19 @@ private:
         // other checks
         size_t bytesPerValue = isidxformat ? 1 : (compressed ? sizeof(short) : sizeof(float));
 
-        if (H.sampsize % bytesPerValue != 0)
+        bool sampsizeoverflowed = H.sampsize % bytesPerValue != 0; 
+        bool specifieddimisshort = (short)(specifieddim * bytesPerValue) == specifieddim * bytesPerValue;  //we read dim from header if specifieddim is short
+        if (sampsizeoverflowed && specifieddimisshort)
             RuntimeError("htkfeatreader:sample size not multiple of dimension");
+
         size_t dim = H.sampsize / bytesPerValue;
+        if (specifieddim > 0)
+        {
+            if (specifieddimisshort && dim != specifieddim)
+                RuntimeError("htkfeatreader:specifieddim passed in, although is short, is different from dim read from header.");
+            else   //use specifieddim if specifieddim can not be represented as short
+                dim = specifieddim;
+        }
 
         // read the values for decompressing
         vector<float> a, b;
@@ -593,7 +605,10 @@ private:
         this->compressed = compressed;
         this->a.swap(a);
         this->b.swap(b);
-        this->vecbytesize = H.sampsize;
+        if (specifieddim > 0)
+            this->vecbytesize = specifieddim * bytesPerValue;
+        else
+            this->vecbytesize = H.sampsize;
         this->hascrcc = hascrcc;
     }
     void close() // force close the open file --use this in case of read failure
@@ -619,11 +634,11 @@ public:
     // read a feature file
     // Returns number of frames in that file.
     // This understands the more complex syntax a=b[s,e] and optimizes a little
-    size_t open(const parsedpath& ppath)
+    size_t open(const parsedpath& ppath, size_t specifieddim)
     {
         // do not reopen the file if it is the same; use fsetpos() instead
         if (f == NULL || ppath.physicallocation() != physicalpath)
-            openphysical(ppath);
+            openphysical(ppath, specifieddim);
 
         if (ppath.isarchive) // reading a sub-range from an archive
         {
@@ -647,9 +662,9 @@ public:
     }
     // get dimension and type information for a feature file
     // This will alter the state of this object in that it opens the file. It is efficient to read it right afterwards
-    void getinfo(const parsedpath& ppath, string& featkind, size_t& featdim, unsigned int& featperiod)
+    void getinfo(const parsedpath& ppath, string& featkind, size_t& featdim, unsigned int& featperiod, size_t specifieddim)
     {
-        open(ppath);
+        open(ppath, specifieddim);
         featkind = this->featkind;
         featdim = this->featdim;
         featperiod = this->featperiod;
@@ -729,10 +744,10 @@ public:
     // read an entire utterance into an already allocated matrix
     // Matrix type needs to have operator(i,j)
     template <class MATRIX>
-    void read(const parsedpath& ppath, const string& kindstr, const unsigned int period, MATRIX& feat, bool needsExpansion=false)
+    void read(const parsedpath& ppath, const string& kindstr, const unsigned int period, MATRIX& feat, size_t specifieddim, bool needsExpansion=false)
     {
         // open the file and check dimensions
-        size_t numframes = open(ppath);
+        size_t numframes = open(ppath, specifieddim);
         if (needsExpansion)
         {
             if (numframes != 1)
@@ -772,10 +787,10 @@ public:
     // read an entire utterance into a virgen, allocatable matrix
     // Matrix type needs to have operator(i,j) and resize(n,m)
     template <class MATRIX>
-    void read(const parsedpath& ppath, string& kindstr, unsigned int& period, MATRIX& feat)
+    void read(const parsedpath& ppath, string& kindstr, unsigned int& period, MATRIX& feat, size_t specifieddim)
     {
         // get the file
-        size_t numframes = open(ppath);
+        size_t numframes = open(ppath, specifieddim);
         feat.resize(featdim + energyElements, numframes); // result matrix--columns are features
 
         // read vectors from file and push to our target structure

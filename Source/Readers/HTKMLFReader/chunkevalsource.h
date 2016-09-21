@@ -66,7 +66,7 @@ private:
             // save it
             msra::util::attempt(5, [&]()
                                 {
-                                    msra::asr::htkfeatwriter::write(outfile, "USER", sampperiod, thispred);
+                                    msra::asr::htkfeatwriter::write(outfile, "USER", sampperiod, thispred, false);
                                 });
             firstframe += n;
         }
@@ -195,7 +195,7 @@ private:
             // save it
             msra::util::attempt(5, [&]()
                                 {
-                                    msra::asr::htkfeatwriter::write(outfile, "USER", sampperiod, thispred);
+                                    msra::asr::htkfeatwriter::write(outfile, "USER", sampperiod, thispred, false);
                                 });
             firstframe += n;
         }

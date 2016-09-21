@@ -39,6 +39,9 @@ void HTKMLFWriter<ElemType>::InitFromConfig(const ConfigRecordType& writerConfig
     size_t numFiles;
     size_t firstfilesonly = SIZE_MAX; // set to a lower value for testing
 
+    //allow sample size to be truncated to unsigned short in the header?
+    allowSampleSizeOverflow = writerConfig(L"allowSampleSizeOverflow", false); 
+
     vector<wstring> outputNames = writerConfig(L"outputNodeNames", ConfigRecordType::Array(stringargvector()));
     if (outputNames.size() < 1)
         RuntimeError("writer needs at least one outputNodeName specified in config");
@@ -160,7 +163,7 @@ void HTKMLFWriter<ElemType>::Save(std::wstring& outputFile, Matrix<ElemType>& ou
     msra::files::make_intermediate_dirs(outputFile);
     msra::util::attempt(5, [&]()
                         {
-                            msra::asr::htkfeatwriter::write(outputFile, "USER", this->sampPeriod, output);
+                            msra::asr::htkfeatwriter::write(outputFile, "USER", this->sampPeriod, output, allowSampleSizeOverflow);
                         });
 
     fprintf(stderr, "evaluate: writing %d frames of %ls\n", (int) output.cols(), outputFile.c_str());

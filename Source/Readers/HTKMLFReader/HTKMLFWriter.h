@@ -29,6 +29,8 @@ private:
     ElemType* m_tempArray;
     size_t m_tempArraySize;
 
+    bool allowSampleSizeOverflow;
+
     enum OutputTypes
     {
         outputReal,

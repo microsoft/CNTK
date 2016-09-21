@@ -278,7 +278,7 @@ public:
     // constructor
     // Pass empty labels to denote unsupervised training (so getbatch() will not return uids).
     minibatchframesource(const std::vector<wstring> &infiles, const map<wstring, std::vector<msra::asr::htkmlfentry>> &labels,
-                         size_t vdim, size_t udim, size_t randomizationrange, const wstring &pagepath, const bool mayhavenoframe = false, int addEnergy = 0)
+                         size_t vdim, size_t udim, size_t featdiminfile, size_t randomizationrange, const wstring &pagepath, const bool mayhavenoframe = false, int addEnergy = 0)
         : vdim(vdim), sampperiod(0), featdim(0), numframes(0), frames(pagepath), timegetbatch(0), verbosity(2)
     {
         if (vdim == 0 && labels.empty())
@@ -330,7 +330,7 @@ public:
             {
                 msra::util::attempt(5, [&]()
                                     {
-                                        reader.read(ppath, featkind, sampperiod, feat); // whole file read as columns of feature vectors
+                                        reader.read(ppath, featkind, sampperiod, feat, featdiminfile); // whole file read as columns of feature vectors
                                     });
                 if (featdim == 0) // first time
                     featdim = feat.rows();
@@ -542,6 +542,7 @@ public:
 class minibatchframesourcemulti : public minibatchsource
 {
     std::vector<size_t> vdim;         // feature dimension after augmenting neighhors (0: don't read features)
+    std::vector<size_t> featdimsinfile;  //feature dimention before augmenting neighbors
     std::vector<size_t> leftcontext;  // number of frames to the left of the target frame in the context window
     std::vector<size_t> rightcontext; // number of frames to the right of the target frame in the context window
     unsigned int sampperiod;          // (for reference and to check against model)
@@ -562,8 +563,8 @@ public:
     // constructor
     // Pass empty labels to denote unsupervised training (so getbatch() will not return uids).
     minibatchframesourcemulti(const std::vector<std::vector<wstring>> &infiles, const std::vector<map<std::wstring, std::vector<msra::asr::htkmlfentry>>> &labels,
-                              std::vector<size_t> vdim, std::vector<size_t> udim, std::vector<size_t> leftcontext, std::vector<size_t> rightcontext, size_t randomizationrange, const std::vector<wstring> &pagepath, const bool mayhavenoframe = false, int addEnergy = 0)
-        : vdim(vdim), leftcontext(leftcontext), rightcontext(rightcontext), sampperiod(0), featdim(0), numframes(0), timegetbatch(0), verbosity(2), maxvdim(0)
+        std::vector<size_t> vdim, std::vector<size_t> udim, std::vector<size_t> featdiminfile, std::vector<size_t> leftcontext, std::vector<size_t> rightcontext, size_t randomizationrange, const std::vector<wstring> &pagepath, const bool mayhavenoframe = false, int addEnergy = 0)
+        : vdim(vdim), leftcontext(leftcontext), rightcontext(rightcontext), sampperiod(0), featdim(0), numframes(0), timegetbatch(0), verbosity(2), maxvdim(0), featdimsinfile(featdiminfile)
     {
 
         if (vdim[0] == 0 && labels.empty())
@@ -647,7 +648,7 @@ public:
                 {
                     msra::util::attempt(5, [&]()
                                         {
-                                            reader.read(ppath, featkind, sampperiod, feat); // whole file read as columns of feature vectors
+                                            reader.read(ppath, featkind, sampperiod, feat, featdimsinfile[m]); // whole file read as columns of feature vectors
                                         });
                     if (featdim == 0) // first time
                         featdim = feat.rows();

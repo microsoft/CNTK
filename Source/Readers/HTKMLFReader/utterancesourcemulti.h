@@ -31,6 +31,7 @@ class minibatchutterancesourcemulti : public minibatchsource
     std::vector<unsigned int> sampperiod;                       // (for reference and to check against model)
     std::vector<string> featkind;
     std::vector<size_t> featdim;
+    std::vector<size_t> featdimsinfile;
     std::vector<bool> expandToUtt;           // indicator of whether features should be applied to entire utterance, e.g. ivectors
     const bool framemode;                    // true -> actually return frame-level randomized frames (not possible in lattice mode)
     std::vector<std::vector<size_t>> counts; // [s] occurence count for all states (used for priors)
@@ -149,7 +150,7 @@ class minibatchutterancesourcemulti : public minibatchsource
         }
         // page in data for this chunk
         // We pass in the feature info variables by ref which will be filled lazily upon first read
-        void requiredata(string &featkind, size_t &featdim, unsigned int &sampperiod, const latticesource &latticesource, int verbosity = 0) const
+        void requiredata(string &featkind, size_t &featdim, unsigned int &sampperiod, const latticesource &latticesource, size_t featdiminfile, int verbosity = 0) const
         {
             if (numutterances() == 0)
                 LogicError("requiredata: cannot page in virgin block");
@@ -164,7 +165,7 @@ class minibatchutterancesourcemulti : public minibatchsource
                 // if this is the first feature read ever, we explicitly open the first file to get the information such as feature dimension
                 if (featdim == 0)
                 {
-                    reader.getinfo(utteranceset[0].parsedpath, featkind, featdim, sampperiod);
+                    reader.getinfo(utteranceset[0].parsedpath, featkind, featdim, sampperiod, featdiminfile);
                     fprintf(stderr, "requiredata: determined feature kind as %d-dimensional '%s' with frame shift %.1f ms\n", (int) featdim, featkind.c_str(), sampperiod / 1e4);
                 }
                 // read all utterances; if they are in the same archive, htkfeatreader will be efficient in not closing the file
@@ -176,7 +177,7 @@ class minibatchutterancesourcemulti : public minibatchsource
                     // fprintf (stderr, ".");
                     // read features for this file
                     auto uttframes = getutteranceframes(i);                                                    // matrix stripe for this utterance (currently unfilled)
-                    reader.read(utteranceset[i].parsedpath, (const string &)featkind, sampperiod, uttframes, utteranceset[i].needsExpansion);  // note: file info here used for checkuing only
+                    reader.read(utteranceset[i].parsedpath, (const string &)featkind, sampperiod, uttframes, featdiminfile, utteranceset[i].needsExpansion);  // note: file info here used for checkuing only
                     // page in lattice data
                     if (!latticesource.empty())
                         latticesource.getlattices(utteranceset[i].key(), lattices[i], uttframes.cols());
@@ -881,8 +882,8 @@ public:
     // This mode requires utterances with time stamps.
     minibatchutterancesourcemulti(bool useMersenneTwister, const std::vector<std::vector<wstring>> &infiles, const std::vector<map<wstring, std::vector<msra::asr::htkmlfentry>>> &labels,
                                   std::vector<size_t> vdim, std::vector<size_t> udim, std::vector<size_t> leftcontext, std::vector<size_t> rightcontext, size_t randomizationrange,
-                                  const latticesource &lattices, const map<wstring, msra::lattices::lattice::htkmlfwordsequence> &allwordtranscripts, const bool framemode, std::vector<bool> expandToUtt)
-                                  : vdim(vdim), leftcontext(leftcontext), rightcontext(rightcontext), sampperiod(0), featdim(0), randomizationrange(randomizationrange), currentsweep(SIZE_MAX), lattices(lattices), allwordtranscripts(allwordtranscripts), framemode(framemode), chunksinram(0), timegetbatch(0), verbosity(2), m_generatePhoneBoundaries(!lattices.empty()), m_frameRandomizer(randomizedchunks, useMersenneTwister), expandToUtt(expandToUtt),
+                                  const latticesource &lattices, const map<wstring, msra::lattices::lattice::htkmlfwordsequence> &allwordtranscripts, const bool framemode, std::vector<bool> expandToUtt, std::vector<size_t> featdiminfile)
+                                  : vdim(vdim), leftcontext(leftcontext), rightcontext(rightcontext), sampperiod(0), featdim(0), randomizationrange(randomizationrange), currentsweep(SIZE_MAX), lattices(lattices), allwordtranscripts(allwordtranscripts), framemode(framemode), chunksinram(0), timegetbatch(0), verbosity(2), m_generatePhoneBoundaries(!lattices.empty()), m_frameRandomizer(randomizedchunks, useMersenneTwister), expandToUtt(expandToUtt), featdimsinfile(featdiminfile),
                                     m_useMersenneTwister(useMersenneTwister)
     // [v-hansu] change framemode (lattices.empty()) into framemode (false) to run utterance mode without lattice
     // you also need to change another line, search : [v-hansu] comment out to run utterance mode without lattice
@@ -1502,7 +1503,7 @@ private:
                     fprintf(stderr, "feature set %d: requirerandomizedchunk: paging in randomized chunk %d (frame range [%d..%d]), %d resident in RAM\n", m, (int) chunkindex, (int) chunk.globalts, (int) (chunk.globalte() - 1), (int) (chunksinram + 1));
                 msra::util::attempt(5, [&]() // (reading from network)
                                     {
-                                        chunkdata.requiredata(featkind[m], featdim[m], sampperiod[m], this->lattices, verbosity);
+                                        chunkdata.requiredata(featkind[m], featdim[m], sampperiod[m], this->lattices, featdimsinfile[m], verbosity);
                                     });
             }
             chunksinram++;
