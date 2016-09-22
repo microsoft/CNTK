@@ -62,7 +62,7 @@ int main(int argc, char* argv[])
         return(1);
     }
 
-    GetEvalF(&model);    
+    GetEvalF(&model);
 
     // Load model with desired outputs
     std::string networkConfiguration;
