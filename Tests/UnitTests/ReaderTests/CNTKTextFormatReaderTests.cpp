@@ -557,7 +557,7 @@ BOOST_AUTO_TEST_CASE(CNTKTextFormatReader_duplicate_inputs)
         1,  // epoch size
         1,  // mb size  
         1,  // num epochs
-        1,
+        2,
         0,
         0,
         1),

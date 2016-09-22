@@ -33,7 +33,8 @@ protected:
     };
 
     PackerBase(SequenceEnumeratorPtr sequenceEnumerator,
-               const std::vector<StreamDescriptionPtr>& streams);
+               const std::vector<StreamDescriptionPtr>& streams,
+               size_t numberOfBuffers);
 
     typedef std::vector<SequenceDataPtr> StreamBatch;
 
@@ -63,8 +64,17 @@ protected:
     // Output stream descriptions expected by the network.
     std::vector<StreamDescriptionPtr> m_inputStreamDescriptions;
 
-    // Buffers for allocated data.
-    std::vector<StreamBuffer> m_streamBuffers;
+    // Indicates how many internal buffers with pinned memory are supported.
+    // If N - then N sequential calls to PackMinibatch are valid, and N+1 call will overwrite 
+    // the memory of the first call.
+    size_t m_numberOfBuffers;
+
+    // Buffers for allocated data. Outer vector size == m_numberOfBuffers, 
+    // inner vector contains buffers for all streams.
+    std::vector<std::vector<StreamBuffer>> m_streamBuffers;
+
+    // Cyclic index of the current buffer. m_currentBufferIndex < m_numberOfBuffers;
+    size_t m_currentBufferIndex;
 
     // Minibatch size in samples.
     size_t m_minibatchSize;

@@ -63,14 +63,13 @@ public:
 
 public:
     CPUMatrix();
+    CPUMatrix(const CPUMatrix<ElemType>& shallowCopyFrom, bool shallow);     // copy constructor, shallow
     CPUMatrix(const size_t numRows, const size_t numCols);
     CPUMatrix(const size_t numRows, const size_t numCols, ElemType* pArray, const size_t matrixFlags = matrixFlagNormal);
     CPUMatrix(const CPUMatrix<ElemType>& deepCopyFrom);                      // copy constructor, deep copy
     CPUMatrix<ElemType>& operator=(const CPUMatrix<ElemType>& deepCopyFrom); // assignment operator, deep copy
     CPUMatrix(CPUMatrix<ElemType>&& moveFrom);                               // move constructor, shallow copy
     CPUMatrix<ElemType>& operator=(CPUMatrix<ElemType>&& moveFrom);          // move assignment operator, shallow copy
-
-    ~CPUMatrix();
 
 public:
     size_t BufferSize() const
