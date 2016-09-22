@@ -21,7 +21,6 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-template <class ElemType>
 class MATH_API GPUDataTransferer
 {
 public:
@@ -31,10 +30,14 @@ public:
     // Disallow copy and move construction and assignment
     DISABLE_COPY_AND_MOVE(GPUDataTransferer);
 
+    template <class ElemType>
     void CopyGPUToCPUAsync(ElemType* gpuBuffer, size_t numElements, ElemType* cpuBuffer);
+    void CopyGPUToCPUAsync(void* gpuBuffer, size_t totalSize, void* cpuBuffer);
     void WaitForCopyGPUToCPUAsync();
 
+    template <class ElemType>
     void CopyCPUToGPUAsync(ElemType* cpuBuffer, size_t numElements, ElemType* gpuBuffer);
+    void CopyCPUToGPUAsync(void* cpuBuffer, size_t totalSize, void* gpuBuffer);
     void WaitForCopyCPUToGPUAsync();
 
 #ifndef CPUONLY
@@ -57,4 +60,5 @@ private:
 
     int m_deviceId;
 };
+
 } } }

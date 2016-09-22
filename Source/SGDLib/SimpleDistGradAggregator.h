@@ -147,7 +147,7 @@ private:
 
                 if (deviceId != CPUDEVICE)
                 {
-                    m_gpuDataTransferers.push_back(std::unique_ptr<GPUDataTransferer<ElemType>>(new GPUDataTransferer<ElemType>(deviceId, m_useAsyncAggregation)));
+                    m_gpuDataTransferers.push_back(std::unique_ptr<GPUDataTransferer>(new GPUDataTransferer(deviceId, m_useAsyncAggregation)));
                     m_intermediateCPUBuffers.push_back(AllocateIntermediateBuffer(deviceId, gradients[i]->GetNumElements()));
                 }
 
@@ -219,7 +219,7 @@ private:
         if (deviceId >= 0)
         {
             for (size_t i = 0; i < numGradMatrices; ++i)
-                m_gpuDataTransferers[i]->CopyGPUToCPUAsync(gradients[i]->Data(), gradients[i]->GetNumElements(), m_intermediateCPUBuffers[i].get());
+                m_gpuDataTransferers[i]->CopyGPUToCPUAsync<ElemType>(gradients[i]->Data(), gradients[i]->GetNumElements(), m_intermediateCPUBuffers[i].get());
         }
 
         // Initiate receive of the header on the main node
@@ -297,7 +297,7 @@ private:
         {
             MPI_Wait(&allReduceRequests[i], MPI_STATUSES_IGNORE) || MpiFail("MPI_Wait");
             if (deviceId >= 0)
-                m_gpuDataTransferers[i]->CopyCPUToGPUAsync(m_intermediateCPUBuffers[i].get(), gradients[i]->GetNumElements(), gradients[i]->Data());
+                m_gpuDataTransferers[i]->CopyCPUToGPUAsync<ElemType>(m_intermediateCPUBuffers[i].get(), gradients[i]->GetNumElements(), gradients[i]->Data());
         }
 
         // Wait to receive aggregate header
@@ -329,7 +329,7 @@ private:
     std::unique_ptr<CUDAPageLockedMemAllocator> m_allocator;
     std::vector<std::shared_ptr<ElemType>> m_intermediateCPUBuffers;
 
-    std::vector<std::unique_ptr<GPUDataTransferer<ElemType>>> m_gpuDataTransferers;
+    std::vector<std::unique_ptr<GPUDataTransferer>> m_gpuDataTransferers;
 
     std::vector<DistGradHeader*> m_recvHeaders;
 

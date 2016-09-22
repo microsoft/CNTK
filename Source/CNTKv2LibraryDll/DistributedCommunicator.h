@@ -8,6 +8,8 @@
 #include "stdafx.h"
 #include "CNTKLibrary.h"
 #include "MPIWrapper.h"
+#include "GPUDataTransferer.h"
+#include "CUDAPageLockedMemAllocator.h"
 
 namespace CNTK
 {
@@ -46,6 +48,21 @@ namespace CNTK
                                 const std::unordered_set<Value>& aggregatedOutputs,
                                 const std::unordered_set<Value>& newQuantizationResidues) override;
     private:
+
+        std::vector<size_t> Prepare(const std::vector<ValuePtr>& values);
+
+        struct Buffer
+        {
+            std::shared_ptr<void> data = nullptr;
+            size_t totalSize = 0;
+        };
+
+        static Buffer AllocateIntermediateBuffer(int deviceID, size_t totalSize);
+
         Microsoft::MSR::CNTK::MPIWrapperPtr m_mpi;
+
+        // these two are always parallel, merge them together?
+        std::vector<std::unique_ptr<GPUDataTransferer>> m_gpuDataTransferers;
+        std::vector<Buffer> m_intermediateCPUBuffers;
     };
 }

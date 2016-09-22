@@ -370,6 +370,11 @@ public:
         MPI_Wait(request, MPI_STATUSES_IGNORE) || MpiFail("Wait: MPI_Wait");
     }
 
+    void WaitAny(MPI_Request* requests, int numRequests, int* index)
+    {
+        MPI_Waitany(numRequests, requests, index, MPI_STATUSES_IGNORE) || MpiFail("WaitAny: MPI_Waitany");
+    }
+
     // wait for all ranks to reach here
     void WaitAll()
     {

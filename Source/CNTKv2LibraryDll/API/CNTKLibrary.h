@@ -82,6 +82,16 @@ namespace CNTK
             LogicError("Unknown DataType");
     }
 
+    inline size_t DataTypeSize(DataType dataType)
+    {
+        if (dataType == DataType::Float)
+            return sizeof(float);
+        else if (dataType == DataType::Double)
+            return sizeof(double);
+        else
+            LogicError("Unknown DataType");
+    }
+
     ///
     /// Enumeration type denoting the format of storage underlying an instance of a NDArrayView.
     ///
