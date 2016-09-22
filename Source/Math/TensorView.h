@@ -154,7 +154,7 @@ public:
     void AddMatrixProductOf   (               bool transC, const TensorView& a, Matrix<ElemType>& tempA, bool transA, const TensorView& b, Matrix<ElemType>& tempB, bool transB, Matrix<ElemType>& tempC, ElemType alpha = 1.0f) { DoMatrixProductOf(1.0f, transC, a, tempA, transA, b, tempB, transB, tempC, alpha); }
 
     shared_ptr<Matrix<ElemType>> AsMatrixPtr() const;
-    Matrix<ElemType>& AsMatrix(Matrix<ElemType>& temp) const;
+    void AsMatrix(Matrix<ElemType>& temp) const;
     const TensorShape& GetShape() const { return m_shape; }
 
     // -------------------------------------------------------------------

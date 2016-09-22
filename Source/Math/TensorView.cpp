@@ -313,14 +313,14 @@ static void FlattenToMatrix(TensorShape& shape, bool trans, size_t splitPoint)
 template <class ElemType>
 shared_ptr<Matrix<ElemType>> TensorView<ElemType>::AsMatrixPtr() const
 {
-    Matrix<ElemType> matA(CPUDEVICE);
-    //let& temp = AsMatrix(matA);
-    shared_ptr<Matrix<ElemType>> ptr = make_shared<Matrix<ElemType>>(CPUDEVICE);
-    return ptr;
+    shared_ptr<Matrix<ElemType>> matA = make_shared<Matrix<ElemType>>(CPUDEVICE); 
+    AsMatrix(*matA);
+    return matA;
 }
+
 // convert tensor into a Matrix object
 template <class ElemType>
-Matrix<ElemType>& TensorView<ElemType>::AsMatrix(Matrix<ElemType>& val) const
+void TensorView<ElemType>::AsMatrix(Matrix<ElemType>& val) const
 {
     assert(m_shape.GetRank() == 2);
     if (m_shape.GetStrides()[0] != 1 && m_shape[0] != 1)
@@ -350,21 +350,17 @@ Matrix<ElemType>& TensorView<ElemType>::AsMatrix(Matrix<ElemType>& val) const
     // As a consequence, some configurations will simply not work currently.
     // We minimize the chance of this by using the original storage object whenever possible.
     if (!needsSlicing && !needsReshaping)     // no need to mess with the storage object: pass it on as it is. Full support for moving devices.
-        return *m_sob;
+        val.ShallowCopyFrom(*m_sob);
     else if (needsSlicing && !needsReshaping) // slicing is supported for sparse as well
     {
-        //m_sob->AssignColumnSlice(val, firstColumn, numColumns);
         val.AssignColumnSlice(*m_sob, firstColumn, numColumns);
-        return val;
     }
     else if (m_sob->GetMatrixType() != MatrixType::DENSE) // needsReshaping: not allowed for sparse matrices
         RuntimeError("AsMatrix: Sparse tensors are not supported unless they are 1D or 2D matrices.");
     else                                                  // dense can slice and reshape neutrally, but will also fail if output matrix needs to move devices
     {
-        //m_sob->AssignColumnSlice(val, firstColumn, numColumns);
         val.AssignColumnSlice(*m_sob, firstColumn, numColumns);
         val.Reshaped(m_shape[0], m_shape[1]);
-        return val;
     }
 }
 
@@ -395,14 +391,14 @@ void TensorView<ElemType>::DoMatrixProductOf(ElemType beta, bool transC, const T
         InvalidArgument("DoMatrixProductOf: Flattened tensor dimensions %s mismatch.", MatrixProductFormat(shapeA, transA, shapeB, transB, shapeC, transC).c_str());
     }
     // create Matrix objects out of this
-    let&  A = a.Reshaped(shapeA).AsMatrix(tempA);
-    let&  B = b.Reshaped(shapeB).AsMatrix(tempB);
-    auto& C =   Reshaped(shapeC).AsMatrix(tempC);
+    a.Reshaped(shapeA).AsMatrix(tempA);
+    b.Reshaped(shapeB).AsMatrix(tempB);
+      Reshaped(shapeC).AsMatrix(tempC);
     // and go
     if (!transC)
-        Matrix<ElemType>::MultiplyAndWeightedAdd(alpha, A, transA, B, transB, beta, C);
+        Matrix<ElemType>::MultiplyAndWeightedAdd(alpha, tempA, transA, tempB, transB, beta, tempC);
     else // C' = A * B  <==>  C = (A * B)' = B' * A'
-        Matrix<ElemType>::MultiplyAndWeightedAdd(alpha, B, !transB, A, !transA, beta, C);
+        Matrix<ElemType>::MultiplyAndWeightedAdd(alpha, tempB, !transB, tempA, !transA, beta, tempC);
 }
 
 template class TensorView<float>;

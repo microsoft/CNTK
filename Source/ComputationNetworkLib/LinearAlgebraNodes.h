@@ -243,18 +243,6 @@ public:
     {
     }
 
-    // request matrices needed to do node function value evaluation
-    virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
-    {
-        Base::RequestMatricesBeforeForwardProp(matrixPool);
-    }
-
-    // release gradient and temp matrices that no longer needed after all the children's gradients are computed.
-    virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
-    {
-        Base::ReleaseMatricesAfterBackprop(matrixPool);
-    }
-
     virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
     {
         Base::CopyTo(nodeP, newName, flags);
@@ -312,7 +300,7 @@ public:
         c->Clear();
     }
 
-    void /*ComputationNode::*/ ForwardProp2(const FrameRange& fr) 
+    void /*ComputationNode::*/ ForwardProp2(const FrameRange& fr)
     {
         // If argument A is minibatch data, then this must be performed frame-by-frame, sequence-by-sequence, one GEMM call each.
         // This will be inefficient. We hope this will be the baseline of a future, more efficient TensorView-based implementation.
@@ -344,7 +332,7 @@ public:
         c->Clear();
     }
 
-    void /*ComputationNode::*/ BackpropTo2(const size_t inputIndex, const FrameRange& fr) 
+    void /*ComputationNode::*/ BackpropTo2(const size_t inputIndex, const FrameRange& fr)
     {
         // special treatment if A is minibatch data; see Forward() for comment
         if (!fr.IsOneColumnWrt(InputRef(0).GetMBLayout()))
@@ -535,8 +523,8 @@ private:
     size_t m_outputRank;
     int m_inferInputRankToMap;  // -1 (not specified) or says how to expand shape of W, to keep this many mapping dims
     shared_ptr<Matrix<ElemType>> a;
-    shared_ptr<Matrix<ElemType>> b; //= make_shared<Matrix<ElemType>>(Input(0)->GetDeviceId());
-    shared_ptr<Matrix<ElemType>> c;// = make_shared<Matrix<ElemType>>(Input(0)->GetDeviceId());
+    shared_ptr<Matrix<ElemType>> b;
+    shared_ptr<Matrix<ElemType>> c;
 
 };
 
