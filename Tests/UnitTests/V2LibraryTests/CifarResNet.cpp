@@ -124,10 +124,7 @@ void TrainResNetCifarClassifer(const DeviceDescriptor& device, bool testSaveAndR
     auto imageStreamInfo = minibatchSource->StreamInfo(L"features");
     auto labelStreamInfo = minibatchSource->StreamInfo(L"labels");
 
-    // Change the input shape [C x H x W] to [W x H x C] form
     auto inputImageShape = imageStreamInfo.m_sampleLayout;
-    inputImageShape = { inputImageShape[2], inputImageShape[1], inputImageShape[0] };
-
     const size_t numOutputClasses = labelStreamInfo.m_sampleLayout[0];
 
     auto imageInput = InputVariable(inputImageShape, imageStreamInfo.m_elementType, L"Images");
@@ -154,7 +151,7 @@ void TrainResNetCifarClassifer(const DeviceDescriptor& device, bool testSaveAndR
     Trainer trainer(classifierOutput, trainingLoss, prediction, { SGDLearner(classifierOutput->Parameters(), learningRatePerSample) });
 
     const size_t minibatchSize = 32;
-    size_t numMinibatchesToTrain = 100;
+    size_t numMinibatchesToTrain = 2000;
     size_t outputFrequencyInMinibatches = 20;
     for (size_t i = 0; i < numMinibatchesToTrain; ++i)
     {

@@ -10,9 +10,9 @@ namespace CNTK
 {
     namespace Internal
     {
+        static std::atomic<unsigned long long> s_nextUniqueId(0);
         size_t NewUniqueId()
         {
-            static std::atomic<unsigned long long> s_nextUniqueId(0);
             return s_nextUniqueId++;
         }
 
@@ -25,6 +25,17 @@ namespace CNTK
         bool IsReversingTensorShapesInErrorMessagesEnabled()
         {
             return s_reverseTensorShapesInErrorMessages.load();
+        }
+
+        std::atomic<bool> s_alwaysAllowSettingDefaultDevice(false);
+        void AlwaysAllowSettingDefaultDevice()
+        {
+            s_alwaysAllowSettingDefaultDevice.store(true);
+        }
+
+        bool IsSettingDefaultDeviceAlwaysAllowed()
+        {
+            return s_alwaysAllowSettingDefaultDevice.load();
         }
     }
 
@@ -44,7 +55,8 @@ namespace CNTK
 
     /*static*/ void DeviceDescriptor::SetDefaultDevice(const DeviceDescriptor& newDefaultDevice)
     {
-        if (s_defaultDeviceFrozen.load())
+        // As a testing backdoor we allow changing the default device even after being "used/frozen"
+        if (!Internal::IsSettingDefaultDeviceAlwaysAllowed() && s_defaultDeviceFrozen.load())
             RuntimeError("Process wide default device cannot be changed since it has been frozen by being implicitly used as the default device in a CNTK API call");
 
         s_defaultDevice.reset(new DeviceDescriptor(newDefaultDevice));
