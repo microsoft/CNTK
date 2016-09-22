@@ -144,7 +144,7 @@ namespace CNTK
             auto kernelWidth = initConfig[KernelWidthAttributeName].Value<size_t>();
             auto kernelHeight = initConfig[KernelHeightAttributeName].Value<size_t>();
 
-            Microsoft::MSR::CNTK::LearnableParameter<ElementType>::InitBilinear(*valueMatrix, AsTensorShape(shape), kernelWidth, kernelHeight);
+            Microsoft::MSR::CNTK::LearnableParameter<ElementType>::InitBilinear(*valueMatrix, AsTensorShape(shape), kernelWidth, kernelHeight, AsCNTKImplDeviceId(device));
         }
         else
         {
@@ -157,7 +157,7 @@ namespace CNTK
                 filterRank = (int)initConfig[FilterRankAttributeName].Value<size_t>();
             }
 
-            Microsoft::MSR::CNTK::LearnableParameter<ElementType>::InitRandom(*valueMatrix, AsTensorShape(shape), initializerType, randomSeed, (ElementType)scale, filterRank, outputRank, false);
+            Microsoft::MSR::CNTK::LearnableParameter<ElementType>::InitRandom(*valueMatrix, AsTensorShape(shape), initializerType, randomSeed, (ElementType)scale, filterRank, outputRank, false, AsCNTKImplDeviceId(device));
         }
 
         return value;

@@ -68,7 +68,7 @@ public:
     // Initialize with bilinear interpolation coefficients (useful for deconvolution layer).
     void InitBilinear(size_t kernelWidth, size_t kernelHeight)
     {
-        InitBilinear(Value(), GetSampleLayout(), kernelWidth, kernelHeight);
+        InitBilinear(Value(), GetSampleLayout(), kernelWidth, kernelHeight, m_deviceId);
     }
 
     // initialize by reading a matrix from a text file
@@ -84,28 +84,26 @@ public:
                                                            const ElemType initValueScale,
                                                            const size_t initFilterRank,
                                                            const int initOutputRank,
-                                                           const bool initOnCPUOnly);
+                                                           const bool initOnCPUOnly,
+                                                           DEVICEID_TYPE deviceId);
 
-    static void InitBilinear(Matrix<ElemType>& valueMatrix, const TensorShape& sampleShape, size_t kernelWidth, size_t kernelHeight);
+    static void InitBilinear(Matrix<ElemType>& valueMatrix, const TensorShape& sampleShape, size_t kernelWidth, size_t kernelHeight, DEVICEID_TYPE deviceId);
 
 private:
     void InitRandom(const std::wstring& type, const unsigned long randomSeed, const ElemType initValueScale, const size_t initFilterRank, const int initOutputRank, const bool initOnCPUOnly)
     {
         size_t fanOut, fanIn;
         ElemType range;
-        std::tie(fanOut, fanIn, range) = InitRandom(Value(), GetSampleLayout(), type, randomSeed, initValueScale, initFilterRank, initOutputRank, initOnCPUOnly);
+        std::tie(fanOut, fanIn, range) = InitRandom(Value(), GetSampleLayout(), type, randomSeed, initValueScale, initFilterRank, initOutputRank, initOnCPUOnly, m_deviceId);
+        if (fanOut == 0) // Shape not yet initialized
+            return;
 
         bool log = GetEnvironmentPtr() && Environment().traceLevel > 0; // note: this will not log before node is part of network
         if (log)
         {
-            fprintf(stderr, "%ls: Initializing Parameter[%s] <- %ls(seed=%d, init dims=[%d x %d], range=%f*%f, onCPU=%s)",
+            fprintf(stderr, "%ls: Initializing Parameter[%s] <- %ls(seed=%d, init dims=[%d x %d], range=%f*%f, onCPU=%s.\n)",
                     NodeDescription().c_str(), string(GetSampleLayout()).c_str(), m_initString.c_str(),
                     (int)randomSeed, (int)fanOut, (int)fanIn, range, initValueScale, initOnCPUOnly ? "true" : "false");
-
-            if (initOnCPUOnly || (m_deviceId == CPUDEVICE))
-                fprintf(stderr, " { %.8f, ... }\n", Value()(0, 0));
-
-            fprintf(stderr, ".\n");
         }
     }
 

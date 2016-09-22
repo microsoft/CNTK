@@ -233,7 +233,8 @@ std::tuple<size_t, size_t, ElemType> LearnableParameter<ElemType>::InitRandom(Ma
                                                                               const ElemType initValueScale,
                                                                               const size_t initFilterRank,
                                                                               const int initOutputRank,
-                                                                              const bool initOnCPUOnly)
+                                                                              const bool initOnCPUOnly,
+                                                                              DEVICEID_TYPE deviceId)
 {
     let& sampleLayout = sampleShape;
     let numElements = sampleLayout.GetNumElements();
@@ -266,7 +267,6 @@ std::tuple<size_t, size_t, ElemType> LearnableParameter<ElemType>::InitRandom(Ma
 
     // the random seed offset is set via the "randomSeedOffset" parameter in config
     range *= initValueScale;
-    auto deviceId = valueMatrix.GetDeviceId();
     if (initOnCPUOnly)
         valueMatrix.TransferToDeviceIfNotThere(CPUDEVICE, true);
     if (isUniform)
@@ -281,13 +281,12 @@ std::tuple<size_t, size_t, ElemType> LearnableParameter<ElemType>::InitRandom(Ma
 
 // Initialize with bilinear interpolation coefficients (useful for deconvolution layer).
 template <class ElemType>
-void LearnableParameter<ElemType>::InitBilinear(Matrix<ElemType>& valueMatrix, const TensorShape& sampleShape, size_t kernelWidth, size_t kernelHeight)
+void LearnableParameter<ElemType>::InitBilinear(Matrix<ElemType>& valueMatrix, const TensorShape& sampleShape, size_t kernelWidth, size_t kernelHeight, DEVICEID_TYPE deviceId)
 {
     if (kernelHeight != kernelWidth)
         LogicError("Filter for bilinear interpolation must be square.");
 
     // Transfer to CPU as GPU initialization is still not supported.
-    auto deviceId = valueMatrix.GetDeviceId();
     valueMatrix.TransferToDeviceIfNotThere(CPUDEVICE, true);
 
     const SmallVector<size_t>& dims = sampleShape.GetDims();
