@@ -160,7 +160,7 @@ ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(con
         }
 
         // more extreme tracing for the ultimate debugging experience. Make space on your disk.
-        if (node->GetEnvironmentPtr() && node->Environment().traceLevel >= 1000000) // very high number, since this spews like hell
+        if (node->HasEnvironmentPtr() && node->Environment().traceLevel >= 1000000) // very high number, since this spews like hell
             DumpNode<float>(node, /*dumpGradient=*/false) || DumpNode<double>(node, false);
     }
 }
@@ -178,7 +178,7 @@ ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(con
         node->EndBackprop();
 
         // more extreme tracing for the ultimate debugging experience. Make space on your disk.
-        if (node->GetEnvironmentPtr() && node->Environment().traceLevel >= 1000000 && node->NeedsGradient()) // very high number, since this spews like hell
+        if (node->HasEnvironmentPtr() && node->Environment().traceLevel >= 1000000 && node->NeedsGradient()) // very high number, since this spews like hell
             DumpNode<float>(node, /*dumpGradient=*/true) || DumpNode<double>(node, true);
     }
 }
@@ -290,6 +290,15 @@ static bool DumpNode(ComputationNodeBasePtr nodep, bool dumpGradient)
         {
             node->ForwardProp(t);
             node->BumpEvalTimeStamp();
+        }
+    }
+
+    // more extreme tracing for the ultimate debugging experience. Make space on your disk.
+    for (auto& node : m_nestedNodes)
+    {
+        if (node->HasEnvironmentPtr() && node->Environment().traceLevel >= 1000000) // very high number, since this spews like hell
+        {
+            DumpNode<float>(node, /*dumpGradient=*/false) || DumpNode<double>(node, false);
         }
     }
 }
