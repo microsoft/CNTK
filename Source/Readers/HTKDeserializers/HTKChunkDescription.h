@@ -142,7 +142,7 @@ public:
             {
                 // read features for this file
                 auto framesWrapper = GetUtteranceFrames(i);
-                reader.read(m_utterances[i].GetPath(), featureKind, samplePeriod, framesWrapper);
+                reader.read(m_utterances[i].GetPath(), featureKind, samplePeriod, framesWrapper, 0);
             }
 
             if (verbosity)

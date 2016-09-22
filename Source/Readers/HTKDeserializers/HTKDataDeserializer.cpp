@@ -227,7 +227,7 @@ void HTKDataDeserializer::InitializeFeatureInformation()
     msra::util::attempt(5, [&]()
     {
         msra::asr::htkfeatreader reader;
-        reader.getinfo(m_chunks.front().GetUtterance(0)->GetPath(), m_featureKind, m_ioFeatureDimension, m_samplePeriod);
+        reader.getinfo(m_chunks.front().GetUtterance(0)->GetPath(), m_featureKind, m_ioFeatureDimension, m_samplePeriod, 0);
         fprintf(stderr, "HTKDataDeserializer::HTKDataDeserializer: determined feature kind as %d-dimensional '%s' with frame shift %.1f ms\n",
             (int)m_ioFeatureDimension, m_featureKind.c_str(), m_samplePeriod / 1e4);
     });
