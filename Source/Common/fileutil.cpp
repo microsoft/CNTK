@@ -58,8 +58,11 @@
 using namespace std;
 using namespace Microsoft::MSR::CNTK;
 
-const int BUF_SIZE = 1000000;               // Default buffer size 
-const int LARGE_BUF_SIZE = 10 * BUF_SIZE;   // Larger buffer used by fopenOrDie
+// All sizes are in bytes
+const int BUF_SIZE = 1000000;                       // Default buffer size 
+const int LARGE_BUF_SIZE = 10 * BUF_SIZE;           // Used by fopenOrDie
+const DWORD READ_SIZE_LIMIT = 15 * 1024 * 1024;     // Used by freadOrDie
+const DWORD WRITE_SIZE_LIMIT = 16 * 1024 * 1024;    // Used by fwriteOrDie
 
 // ----------------------------------------------------------------------------
 // some mappings for non-Windows builds
@@ -293,12 +296,12 @@ void fsetmode(FILE* f, char type)
 
 void freadOrDie(void* ptr, size_t size, size_t count, FILE* f)
 {
-    size_t SIZE_LIMIT = 15 * 1024 * 1024 / size;  // Normalize by size, as fread() expects units, not bytes
+    size_t limit = READ_SIZE_LIMIT / size;  // Normalize by size, as fread() expects units, not bytes
 
     // \\XXX\C$ reads are limited, with some randomness (e.g. 48 MB), on Windows 7 32 bit, so we break this into chunks of some MB. Meh.
     while (count > 0)
     {
-        size_t chunkn = min(count, SIZE_LIMIT);
+        size_t chunkn = min(count, limit);
         size_t n = fread(ptr, size, chunkn, f);
         if (n != chunkn)
             RuntimeError("error reading from file: %s", strerror(errno));
@@ -310,12 +313,10 @@ void freadOrDie(void* ptr, size_t size, size_t count, FILE* f)
 #ifdef _WIN32
 void freadOrDie(void* ptr, size_t size, size_t count, const HANDLE f)
 {
-    const DWORD SIZE_LIMIT = 15 * 1024 * 1024;  // Bytes
-
     // \\XXX\C$ reads are limited, with some randomness (e.g. 48 MB), on Windows 7 32 bit, so we break this into chunks of some MB. Meh.
     while (count > 0)
     {
-        DWORD chunkn = min((DWORD)(count * size), SIZE_LIMIT);
+        DWORD chunkn = min((DWORD)(count * size), READ_SIZE_LIMIT);
         DWORD n;
         ReadFile(f, ptr, chunkn, &n, NULL);
         if (n != chunkn)
@@ -335,14 +336,13 @@ void freadOrDie(void* ptr, size_t size, size_t count, const HANDLE f)
 void fwriteOrDie(const void* ptr, size_t size, size_t count, FILE* f)
 {
     const char* p1 = (const char*) ptr;
-    const DWORD LIMIT = 16 * 1024 * 1024;   // Limit to 16 MB at a time
     size_t totalBytes = size * count;
     while (totalBytes > 0)
     {
         size_t wantWrite = totalBytes;
-        if (wantWrite > LIMIT)
+        if (wantWrite > WRITE_SIZE_LIMIT)
         {
-            wantWrite = LIMIT;
+            wantWrite = WRITE_SIZE_LIMIT;
         }
         size_t n = fwrite((const void*) p1, 1, wantWrite, f);
         if (n != wantWrite)
@@ -361,14 +361,13 @@ void fwriteOrDie(const void* ptr, size_t size, size_t count, FILE* f)
 void fwriteOrDie(const void* ptr, size_t size, size_t count, const HANDLE f)
 {
     const char* p1 = (const char*) ptr;
-    const DWORD LIMIT = 16 * 1024 * 1024;   // Limit to 16 MB at a time
     DWORD totalBytes = (DWORD)(size * count);
     while (totalBytes > 0)
     {
         DWORD wantWrite = totalBytes;
-        if (wantWrite > LIMIT)
+        if (wantWrite > WRITE_SIZE_LIMIT)
         {
-            wantWrite = LIMIT;
+            wantWrite = WRITE_SIZE_LIMIT;
         }
         DWORD byteWritten = 0;
         if (WriteFile(f, (const void*) p1, wantWrite, &byteWritten, NULL) == false)
