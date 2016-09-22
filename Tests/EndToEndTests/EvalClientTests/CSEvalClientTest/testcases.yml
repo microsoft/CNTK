@@ -1,8 +1,8 @@
 dataDir: .
 
 tags: 
-  - bvt-l ((build_sku == 'gpu') or (build_sku == 'cpu')) and (os == 'windows') 
-  - nightly-l ((build_sku == 'gpu') or (build_sku == 'cpu')) and (os == 'windows')
+  - bvt-l (build_sku == 'cpu') and (os == 'windows')
+  - nightly-l (build_sku == 'cpu') and (os == 'windows')
 
 testCases:
   Test case SingleLayer:

@@ -2,7 +2,7 @@ dataDir: .
 
 tags:  
   - bvt-l (build_sku == 'gpu') or (build_sku == 'cpu') 
-  - nightly-l (build_sku == 'gpu') or (build_sku == 'cpu')
+  - nightly-l 
 
 testCases:
   Test run must be completed:

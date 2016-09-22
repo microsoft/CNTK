@@ -15,32 +15,46 @@ else
     TestDataDir=$CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
 fi
 
-# Copy pretrained models to the appropriate directories
-ImageDir=$TEST_ROOT_DIR/../../Examples/Image
-MnistModelDir=$ImageDir/MNIST/Output/Models
-MnistDataDir=$ImageDir/MNIST/Data
-ResnetModelDir=$ImageDir/Miscellaneous/ImageNet/ResNet
-mkdir -p $MnistModelDir
-
-cp $TestDataDir/PreTrainedModels/MNIST_01_OneHidden $MnistModelDir/01_OneHidden || exit $?
-cp $TestDataDir/PreTrainedModels/MNIST_02_Convolution $MnistModelDir/02_Convolution || exit $?
-cp $TestDataDir/Image/MNIST/v0/Test-28x28_cntk_text.txt $MnistDataDir || exit $?
-cp $TestDataDir/PreTrainedModels/ResNet_18.model $ResnetModelDir/ || exit $?
-
 if [ "$OS" == "Windows_NT" ]; then
+
+  # Copy pretrained models and data
+  ImageDir=$TEST_ROOT_DIR/../../Examples/Image
+  MnistDir=$ImageDir/MNIST
+  DataDir=$MnistDir/Data
+  ConfigDir=$MnistDir/Config
+  OutputDir=$MnistDir/Output
+  ResnetModelDir=$ImageDir/Miscellaneous/ImageNet/ResNet
+
+  cp $TestDataDir/Image/MNIST/v0/Test-28x28_cntk_text.txt $DataDir || exit $?
+  cp $TestDataDir/PreTrainedModels/ResNet_18.model $ResnetModelDir/ || exit $?
+
+  # Train model for evaluation
+  [ -d $OutputDir ] || mkdir $OutputDir || exit 1
+  [ -d $OutputDir/Models ] && rm -rf $OutputDir/Models
+  DeleteModelsAfterTest=0
+
+  [ -f $ConfigDir/01_OneHidden.cntk ] || exit 1
+  [ -f $ConfigDir/02_Convolution.cntk ] || exit 1
+
+  cntkrun 01_OneHidden.cntk "command=trainNetwork trainNetwork=[SGD=[maxEpochs=1]]" || exit 1
+  cntkrun 02_Convolution.cntk "command=trainNetwork trainNetwork=[SGD=[maxEpochs=1]]" || exit 1
+
+  # Run the evaluation test
   cd $TEST_BIN_DIR
   ./CSEvalClientTest.exe || exit $?
+
+  # Check whether any exceptions encountered
+  grep -i "Inner Exception" $TEST_RUN_DIR/output.txt && exit 1
+  ExitCode=0
+
+  #Delete Model data
+  rm -rf $OutputDir
+  rm -f $DataDir/Test-28x28_cntk_text.txt
+  rm -f $ResnetModelDir/ResNet_18.model
+
+  exit $ExitCode
+
 else
   echo "CSEvalClientTest can only run on Windows";
   exit 1;
 fi
-
-grep -i "Inner Exception" $TEST_RUN_DIR/output.txt && exit 1	
-ExitCode=0
-
-#Delete Model data
-rm -rf $ImageDir/MNIST/Output
-rm -f  $MnistDataDir/Test-28x28_cntk_text.txt
-rm -f $ResnetModelDir/ResNet_18.model
-
-exit $ExitCode

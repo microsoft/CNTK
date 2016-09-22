@@ -3,233 +3,235 @@ CPU info:
     Hardware threads: 8
     Total Memory: 33417320 kB
 -------------------------------------------------------------------
+=== Running /cygdrive/c/repos/cntk/x64/release_CpuOnly/cntk.exe configFile=C:\repos\cntk\Examples\Image\MNIST\Config/01_OneHidden.cntk currentDirectory=C:\repos\cntk\Examples\Image\MNIST\Data RunDir=C:\cygwin64\tmp\cntk-test-20160922105729.645925\EvalClientTests_CSEvalClientTest@release_cpu DataDir=C:\repos\cntk\Examples\Image\MNIST\Data ConfigDir=C:\repos\cntk\Examples\Image\MNIST\Config OutputDir=C:\repos\cntk\Examples\Image\MNIST\Output DeviceId=-1 timestamping=true command=trainNetwork trainNetwork=[SGD=[maxEpochs=1]]
+=== Running /cygdrive/c/repos/cntk/x64/release_CpuOnly/cntk.exe configFile=C:\repos\cntk\Examples\Image\MNIST\Config/02_Convolution.cntk currentDirectory=C:\repos\cntk\Examples\Image\MNIST\Data RunDir=C:\cygwin64\tmp\cntk-test-20160922105729.645925\EvalClientTests_CSEvalClientTest@release_cpu DataDir=C:\repos\cntk\Examples\Image\MNIST\Data ConfigDir=C:\repos\cntk\Examples\Image\MNIST\Config OutputDir=C:\repos\cntk\Examples\Image\MNIST\Output DeviceId=-1 timestamping=true command=trainNetwork trainNetwork=[SGD=[maxEpochs=1]]
 ====== EvaluateModelSingleLayer ========
-Output layer: ol.z
-1.393877
--5.642941
--1.382189
-3.220235
--1.996545
-3.212492
--1.781321
--4.858734
-7.015332
-1.546929
+Output layer: out.outl
+1.414399
+-5.176279
+3.924661
+6.099018
+-4.797585
+2.481884
+-3.531567
+-3.515519
+4.463887
+-1.259706
 
 ====== EvaluateModelMultipleLayers ========
 --- Output results ---
-Output layer: h1.z
--0.7691326
--1.985416
-4.071097
-10.23639
--4.339223
--3.078151
--11.33438
--11.66616
-2.025589
--4.678555
--1.488238
-2.182327
--2.615161
--0.8664491
--0.8732775
--5.973803
-0.8733901
--13.4461
--10.50629
--0.1797565
--0.4503037
--3.879863
--0.5388066
--5.213472
--2.085825
-0.1320624
--4.764053
--6.280387
--2.39447
-4.670367
--1.344455
-0.9984082
-4.819681
-3.777224
-1.47878
-0.6769744
--1.440106
--0.7272705
-4.50701
--9.192522
--5.786692
--2.079176
--2.488521
--2.244988
--8.549644
--7.591912
--2.021943
-3.918235
--4.088286
-4.661872
-2.053658
--6.682264
--1.703073
--5.055904
--2.824197
--3.24262
--0.5067884
--5.292641
--5.786932
--4.603216
--12.87698
--1.786443
--0.5034361
--4.832907
-0.9002331
-0.2249236
--2.772878
-4.328679
--2.644748
-4.847592
--6.568574
--10.14238
--2.803729
--6.502609
-10.76015
--0.9616541
--3.827692
--3.158356
-5.60449
--1.641281
-4.817557
-0.009860829
-2.716737
--9.83774
-2.756936
--3.711195
-3.215264
-9.7081
-7.439578
--4.92262
--4.779964
--5.568285
--4.077856
--5.371621
--3.388438
--3.570688
--2.958463
--0.7428898
-0.4317182
-4.242318
--9.869987
--2.406077
--5.166058
-4.036012
--0.2266189
--6.47099
--2.232178
--2.337143
--2.316059
-3.347055
-0.344143
--1.575741
-3.123921
--5.848997
--5.086116
--6.193788
--2.033795
--0.96679
--2.156767
--0.2156782
--2.379694
--3.553321
--3.17339
--3.394867
-9.690066
-0.1686272
--8.385692
--1.043749
--1.49935
--10.71613
--6.157293
--1.359136
-0.733931
-1.184028
-4.21524
-0.8844709
--0.8162594
-1.803968
--6.196443
-1.368233
-1.112888
--3.325753
--3.719294
--4.632395
--9.119879
-0.7914124
-7.123704
-4.259304
-1.048896
-0.4713166
--0.4112511
--4.118305
--1.207518
--3.419654
--2.894746
--1.416536
--6.277814
-4.136108
-2.774922
--5.918463
--1.331526
--8.429527
--1.907164
--6.393184
--0.234251
-1.98149
-0.9426388
--5.357351
--1.233979
--6.92059
--0.1915669
-1.455067
--6.580205
-11.76852
--2.919783
--2.926296
-5.571811
--1.342495
--2.522115
--2.213431
-1.526224
-5.517385
--5.355047
--3.281346
--8.647779
-2.544132
-3.571625
-0.8024518
-2.743036
--3.328449
--5.776638
--2.165405
--3.668759
-2.731511
-0.6129026
--4.362889
--7.315672
--6.505345
-2.727452
--1.471651
-Output layer: ol.z
--0.1716499
--3.859124
-1.553862
-4.557417
--3.065751
-4.800106
--3.579172
--5.416284
-7.458717
--1.579214
+Output layer: out.h1
+0.2097613
+0.07676829
+0.01541218
+0.8928535
+0.04504137
+0.01788441
+0.3991941
+0.2865594
+0.03612139
+0.1379458
+0.06205076
+0.1636866
+0.04632271
+0.02890775
+0.1426958
+0.0369243
+0.02011909
+0.07538979
+0.1795756
+0.7740535
+0.1967259
+0.008820859
+0.2208338
+0.8577109
+0.1304698
+0.9813607
+0.1191354
+0.01962696
+0.02377788
+0.1191651
+0.03215705
+0.05427098
+0.05306826
+0.07475922
+0.14741
+0.07792524
+0.03575848
+0.2308147
+0.07858481
+0.08098438
+0.05200427
+0.07032215
+0.4105953
+0.3757282
+0.10253
+0.1995416
+0.03190761
+0.005488408
+0.532114
+0.0317916
+0.195484
+0.01859432
+0.0794337
+0.5749424
+0.9012089
+0.02288558
+0.007444972
+0.2844629
+0.4865565
+0.04699298
+0.06193774
+0.006434934
+0.01165941
+0.1375834
+0.1545573
+0.7941819
+0.9975924
+0.03924648
+0.04492693
+0.4128448
+0.04536366
+0.005843497
+0.9659749
+0.9640736
+0.01555697
+0.0725017
+0.0993867
+0.01447409
+0.2155721
+0.359107
+0.0228322
+0.1288442
+0.04421185
+0.02786572
+0.5245139
+0.413497
+0.2021731
+0.1249977
+0.01355912
+0.2288909
+0.0444341
+0.07891594
+0.05609014
+0.128856
+0.5524877
+0.0653424
+0.0313746
+0.1121839
+0.00300595
+0.2555467
+0.1464353
+0.2359597
+0.4928888
+0.05569302
+0.3662801
+0.1963231
+0.002629916
+0.04840164
+0.2279084
+0.1908186
+0.234357
+0.02750125
+0.03314618
+0.4605994
+0.415696
+0.2890486
+0.01466852
+0.1482403
+0.02148642
+0.09235676
+0.0520298
+0.1687351
+0.004343993
+0.06966926
+0.1665656
+0.3201918
+0.01634727
+0.06354645
+0.3251995
+0.02158917
+0.00118698
+0.0422558
+0.003312405
+0.1226982
+0.06791434
+0.01195944
+0.2876121
+0.1859816
+0.07647704
+0.6803842
+0.1087471
+0.5100266
+0.1186106
+0.06902251
+0.1009843
+0.2580486
+0.5326818
+0.1163795
+0.0313374
+0.006253551
+0.007785441
+0.4864254
+0.4993798
+0.003019585
+0.1112893
+0.037295
+0.0491524
+0.2984143
+0.09782527
+0.02550863
+0.2256729
+0.02523763
+0.1559039
+0.8823627
+0.04795203
+0.7799502
+0.006688789
+0.6981522
+0.08775169
+0.3181931
+0.04633947
+0.9163752
+0.03520088
+0.1092597
+0.01354088
+0.923658
+0.07357301
+0.6292024
+0.2766472
+0.1301624
+0.4033531
+0.1830168
+0.402455
+0.09556478
+0.08615583
+0.09023818
+0.1180997
+0.107063
+0.1236033
+0.1067941
+0.2397799
+0.1924452
+0.03516676
+0.03497669
+0.08829511
+0.3627994
+0.8231524
+0.04839836
+0.001398725
+0.1663637
+Output layer: out.outl
+2.481787
+-4.744626
+4.059851
+6.031582
+-5.077604
+2.57068
+-3.625556
+-3.748138
+4.292468
+-2.351954
 
 ====== EvaluateNetworkSingleLayer ========
 Output layer: ol
@@ -244,49 +246,49 @@ Expected values: 2 - 3
 Actual Values  : 2 - 3
 
 ====== EvaluateMultipleModels ========
-The file Test-28x28_cntk_text.txt was processed using 4 concurrent model(s) with an error rate of: 0.80 % (80 error(s) out of 10000 record(s)), and a throughput of 89.20 records/sec
+NDLBuilder Using CPU
+
+
+Allocating matrices for forward and/or backward propagation.
+
+Memory Sharing: Out of 3 matrices, 0 are shared as 0, and 3 are not shared.
+
+
+NDLBuilder Using CPU
+
+
+Allocating matrices for forward and/or backward propagation.
+
+Memory Sharing: Out of 3 matrices, 0 are shared as 0, and 3 are not shared.
+
+
+NDLBuilder Using CPU
+
+
+Allocating matrices for forward and/or backward propagation.
+
+Memory Sharing: Out of 3 matrices, 0 are shared as 0, and 3 are not shared.
+
+
+ol.x.x.x._.x.x._.c: using GEMM convolution engine for geometry: Input: 28 x 28 x 1, Output: 28 x 28 x 16, Kernel: 5 x 5 x 1, Map: 16, Stride: 1 x 1 x 1, Sharing: (1, 1, 1), AutoPad: (1, 1, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+ol.x.x.x._.x: using GEMM convolution engine for geometry: Input: 28 x 28 x 16, Output: 14 x 14 x 16, Kernel: 2 x 2 x 1, Map: 1, Stride: 2 x 2 x 1, Sharing: (1, 1, 1), AutoPad: (0, 0, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+ol.x.x.x._.c: using GEMM convolution engine for geometry: Input: 14 x 14 x 16, Output: 14 x 14 x 32, Kernel: 5 x 5 x 16, Map: 32, Stride: 1 x 1 x 16, Sharing: (1, 1, 1), AutoPad: (1, 1, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+ol.x.x: using GEMM convolution engine for geometry: Input: 14 x 14 x 32, Output: 7 x 7 x 32, Kernel: 2 x 2 x 1, Map: 1, Stride: 2 x 2 x 1, Sharing: (1, 1, 1), AutoPad: (0, 0, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+ol.x.x.x._.x.x._.c: using GEMM convolution engine for geometry: Input: 28 x 28 x 1, Output: 28 x 28 x 16, Kernel: 5 x 5 x 1, Map: 16, Stride: 1 x 1 x 1, Sharing: (1, 1, 1), AutoPad: (1, 1, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+ol.x.x.x._.x: using GEMM convolution engine for geometry: Input: 28 x 28 x 16, Output: 14 x 14 x 16, Kernel: 2 x 2 x 1, Map: 1, Stride: 2 x 2 x 1, Sharing: (1, 1, 1), AutoPad: (0, 0, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+ol.x.x.x._.c: using GEMM convolution engine for geometry: Input: 14 x 14 x 16, Output: 14 x 14 x 32, Kernel: 5 x 5 x 16, Map: 32, Stride: 1 x 1 x 16, Sharing: (1, 1, 1), AutoPad: (1, 1, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+ol.x.x: using GEMM convolution engine for geometry: Input: 14 x 14 x 32, Output: 7 x 7 x 32, Kernel: 2 x 2 x 1, Map: 1, Stride: 2 x 2 x 1, Sharing: (1, 1, 1), AutoPad: (0, 0, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+ol.x.x.x._.x.x._.c: using GEMM convolution engine for geometry: Input: 28 x 28 x 1, Output: 28 x 28 x 16, Kernel: 5 x 5 x 1, Map: 16, Stride: 1 x 1 x 1, Sharing: (1, 1, 1), AutoPad: (1, 1, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+ol.x.x.x._.x: using GEMM convolution engine for geometry: Input: 28 x 28 x 16, Output: 14 x 14 x 16, Kernel: 2 x 2 x 1, Map: 1, Stride: 2 x 2 x 1, Sharing: (1, 1, 1), AutoPad: (0, 0, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+ol.x.x.x._.c: using GEMM convolution engine for geometry: Input: 14 x 14 x 16, Output: 14 x 14 x 32, Kernel: 5 x 5 x 16, Map: 32, Stride: 1 x 1 x 16, Sharing: (1, 1, 1), AutoPad: (1, 1, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+ol.x.x: using GEMM convolution engine for geometry: Input: 14 x 14 x 32, Output: 7 x 7 x 32, Kernel: 2 x 2 x 1, Map: 1, Stride: 2 x 2 x 1, Sharing: (1, 1, 1), AutoPad: (0, 0, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+ol.x.x.x._.x.x._.c: using GEMM convolution engine for geometry: Input: 28 x 28 x 1, Output: 28 x 28 x 16, Kernel: 5 x 5 x 1, Map: 16, Stride: 1 x 1 x 1, Sharing: (1, 1, 1), AutoPad: (1, 1, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+ol.x.x.x._.x: using GEMM convolution engine for geometry: Input: 28 x 28 x 16, Output: 14 x 14 x 16, Kernel: 2 x 2 x 1, Map: 1, Stride: 2 x 2 x 1, Sharing: (1, 1, 1), AutoPad: (0, 0, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+ol.x.x.x._.c: using GEMM convolution engine for geometry: Input: 14 x 14 x 16, Output: 14 x 14 x 32, Kernel: 5 x 5 x 16, Map: 32, Stride: 1 x 1 x 16, Sharing: (1, 1, 1), AutoPad: (1, 1, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+ol.x.x: using GEMM convolution engine for geometry: Input: 14 x 14 x 32, Output: 7 x 7 x 32, Kernel: 2 x 2 x 1, Map: 1, Stride: 2 x 2 x 1, Sharing: (1, 1, 1), AThe file Test-28x28_cntk_text.txt was processed using 4 concurrent model(s) with an error rate of: 4.51 % (451 error(s) out of 10000 record(s)), and a throughput of 3,136.55 records/sec
 
 ====== EvaluateModelImageInput ========
-NDLBuilder Using CPU
-
-
-Allocating matrices for forward and/or backward propagation.
-
-Memory Sharing: Out of 3 matrices, 0 are shared as 0, and 3 are not shared.
-
-
-NDLBuilder Using CPU
-
-
-Allocating matrices for forward and/or backward propagation.
-
-Memory Sharing: Out of 3 matrices, 0 are shared as 0, and 3 are not shared.
-
-
-NDLBuilder Using CPU
-
-
-Allocating matrices for forward and/or backward propagation.
-
-Memory Sharing: Out of 3 matrices, 0 are shared as 0, and 3 are not shared.
-
-
-conv1.c.c: using GEMM convolution engine for geometry: Input: 28 x 28 x 1, Output: 28 x 28 x 16, Kernel: 5 x 5 x 1, Map: 1 x 1 x 16, Stride: 1 x 1 x 1, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
-pool1: using GEMM convolution engine for geometry: Input: 28 x 28 x 16, Output: 14 x 14 x 16, Kernel: 2 x 2 x 1, Map: 1, Stride: 2 x 2 x 1, Sharing: (1), AutoPad: (0), LowerPad: 0, UpperPad: 0.
-conv2.c.c: using GEMM convolution engine for geometry: Input: 14 x 14 x 16, Output: 14 x 14 x 32, Kernel: 5 x 5 x 16, Map: 32, Stride: 1 x 1 x 16, Sharing: (1, 1, 1), AutoPad: (1, 1, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
-pool2.p: using GEMM convolution engine for geometry: Input: 14 x 14 x 32, Output: 7 x 7 x 32, Kernel: 2 x 2 x 1, Map: 1, Stride: 2 x 2 x 1, Sharing: (1, 1, 1), AutoPad: (1, 1, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
-conv1.c.c: using GEMM convolution engine for geometry: Input: 28 x 28 x 1, Output: 28 x 28 x 16, Kernel: 5 x 5 x 1, Map: 1 x 1 x 16, Stride: 1 x 1 x 1, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
-pool1: using GEMM convolution engine for geometry: Input: 28 x 28 x 16, Output: 14 x 14 x 16, Kernel: 2 x 2 x 1, Map: 1, Stride: 2 x 2 x 1, Sharing: (1), AutoPad: (0), LowerPad: 0, UpperPad: 0.
-conv2.c.c: using GEMM convolution engine for geometry: Input: 14 x 14 x 16, Output: 14 x 14 x 32, Kernel: 5 x 5 x 16, Map: 32, Stride: 1 x 1 x 16, Sharing: (1, 1, 1), AutoPad: (1, 1, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
-pool2.p: using GEMM convolution engine for geometry: Input: 14 x 14 x 32, Output: 7 x 7 x 32, Kernel: 2 x 2 x 1, Map: 1, Stride: 2 x 2 x 1, Sharing: (1, 1, 1), AutoPad: (1, 1, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
-conv1.c.c: using GEMM convolution engine for geometry: Input: 28 x 28 x 1, Output: 28 x 28 x 16, Kernel: 5 x 5 x 1, Map: 1 x 1 x 16, Stride: 1 x 1 x 1, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
-pool1: using GEMM convolution engine for geometry: Input: 28 x 28 x 16, Output: 14 x 14 x 16, Kernel: 2 x 2 x 1, Map: 1, Stride: 2 x 2 x 1, Sharing: (1), AutoPad: (0), LowerPad: 0, UpperPad: 0.
-conv2.c.c: using GEMM convolution engine for geometry: Input: 14 x 14 x 16, Output: 14 x 14 x 32, Kernel: 5 x 5 x 16, Map: 32, Stride: 1 x 1 x 16, Sharing: (1, 1, 1), AutoPad: (1, 1, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
-pool2.p: using GEMM convolution engine for geometry: Input: 14 x 14 x 32, Output: 7 x 7 x 32, Kernel: 2 x 2 x 1, Map: 1, Stride: 2 x 2 x 1, Sharing: (1, 1, 1), AutoPad: (1, 1, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
-conv1.c.c: using GEMM convolution engine for geometry: Input: 28 x 28 x 1, Output: 28 x 28 x 16, Kernel: 5 x 5 x 1, Map: 1 x 1 x 16, Stride: 1 x 1 x 1, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
-pool1: using GEMM convolution engine for geometry: Input: 28 x 28 x 16, Output: 14 x 14 x 16, Kernel: 2 x 2 x 1, Map: 1, Stride: 2 x 2 x 1, Sharing: (1), AutoPad: (0), LowerPad: 0, UpperPad: 0.
-conv2.c.c: using GEMM convolution engine for geometry: Input: 14 x 14 x 16, Output: 14 x 14 x 32, Kernel: 5 x 5 x 16, Map: 32, Stride: 1 x 1 x 16, Sharing: (1, 1, 1), AutoPad: (1, 1, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
-pool2.p: using GEMM convolution engine for geometry: Input: 14 x 14 x 32, Output: 7 x 7 x 32, Kernel: 2 x 2 x 1, Map: 1, Stride: 2 x 2 x 1, Sharing: (1, 1, 1), AutoPad: (1, 1, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+utoPad: (0, 0, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
 INFO: conv1.c.y.y: loading pre-CuDNNv5 model: approximated mini-batch count of 625625 as 10010000 trained samples.
       Statistics in further training may be biased; consider re-training instead.
 INFO: rn1_1.c1.c.y.y: loading pre-CuDNNv5 model: approximated mini-batch count of 625625 as 10010000 trained samples.
@@ -6246,7 +6248,10 @@ WARNING: rn4_3.c2.y.y: loading pre-CuDNNv5 model: approximately converting varia
 0.0084222583	
 0.0077846837	
 0.0083437543	
-0.0082905088	
+0.008Outcome: 340
+
+====== Evaluation Complete ========
+2905088	
 0.0092486944	
 0.0071504535	
 0.0087066069	
@@ -6265,10 +6270,7 @@ WARNING: rn4_3.c2.y.y: loading pre-CuDNNv5 model: approximately converting varia
 0.0082095843	
 0.0108512808	
 0.0082600005	
-0.0Outcome: 340
-
-====== Evaluation Complete ========
-089799538	
+0.0089799538	
 0.0078349756	
 0.0088242842	
 0.0085650962	
@@ -6291,4 +6293,5 @@ WARNING: rn4_3.c2.y.y: loading pre-CuDNNv5 model: approximately converting varia
 0.0090203714	
 0.0117387921	
 Using CNTK batch normalization engine.
-pool5: using GEMM convolution engine for geometry: Input: 7 x 7 x 512, Output: 1 x 1 x 512, Kernel: 7 x 7 x 1, Map: 1, Stride: 1 x 1 x 1, Sharing: (1), AutoPad: (0), LowerPad: 0, UpperPad: 0.
+pool5: using GEMM convolution engine for geometry: Input: 7 x 7 x 512, Output: 1 x 1 x 512, Kernel: 7 x 7 x 1, Map: 1, Stride: 1 x 1 x 1, Sharing: (1), AutoPad: (0), LowerPad: 0, UpperPad: 0.
+rm: cannot remove '/cygdrive/c/repos/cntk/Tests/EndToEndTests/../../Examples/Image/Miscellaneous/ImageNet/ResNet/ResNet_18.model': Device or resource busy
