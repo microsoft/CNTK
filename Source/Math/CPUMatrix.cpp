@@ -4261,8 +4261,8 @@ void CPUMatrix<ElemType>::MaxPoolingBackward(const CPUMatrix<ElemType>& out, con
             int i0 = mpRowIndices(row, 0);
             int size = indices(i0++, 0);
             assert(size > 0);
-            ElemType g = (*this)(row, sample);
             ElemType m = out(row, sample);
+            ElemType count = 0; 
             for (int i = 0; i < size; i++)
             {
                 int dcol = indices(i0 + i, 0);
@@ -4296,29 +4296,19 @@ void CPUMatrix<ElemType>::MaxUnpooling(const CPUMatrix<int>& mpRowCol, const CPU
             assert(size > 0);
 
             ElemType curMax = poolInput(colBase + indices(i0, 0), sample);
-            ElemType prevMax = curMax;
-            int imax = 0;
             for (int i = 1; i < size; i++)
             {
                 int dcol = indices(i0 + i, 0);
                 assert(0 <= colBase + dcol && colBase + dcol < poolInput.GetNumRows());
                 curMax = std::max(curMax, poolInput(colBase + dcol, sample));
-                if (curMax > prevMax)
-                {
-                    prevMax = curMax;
-                    imax = i;
-                }
             }
-
-            int dcol = indices(i0 + imax, 0);
-            assert(0 <= colBase + dcol && colBase + dcol < input.GetNumRows());
-            input(colBase + dcol, sample) = (*this)(row, sample);
-
-            //int i = (int)poolIn(row, sample);
-            //assert(0 <= i && i < size);
-            //int dcol = indices(i0 + i, 0);
-            //assert(0 <= colBase + dcol && colBase + dcol < input.GetNumRows());
-            //input(colBase + dcol, sample) = (*this)(row, sample);
+            for (int i = 0; i < size; i++)
+            {
+                int dcol = indices(i0 + i, 0);
+                if (poolInput(colBase + dcol, sample) >= curMax) 
+                    input(colBase + dcol, sample) = (*this)(row, sample);   // this should have no issue if we are unpooling features. 
+                                                                            // if (*this) contains gradient, the unpooling operator with overlapped pooling is not clearly defined 
+            }
         }
     }
 }
