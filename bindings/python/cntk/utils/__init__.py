@@ -468,10 +468,14 @@ def create_NDArrayView(shape, data_type=cntk_py.DataType_Float, dev=None):
     return view
 
 def create_NDArrayView_from_NumPy(nd, dev=None):
+    ndav_cpu = cntk_py.NDArrayView(nd, cntk_py.DeviceDescriptor.cpu_device(), False)
+
     if not dev:
         dev = cntk_py.DeviceDescriptor.use_default_device()    
-    view = cntk_py.NDArrayView(nd, dev, False)
-    return view
+
+    ndav = ensure_dev(ndav_cpu, dev)
+
+    return ndav
 
 def create_Value_for_Variable(var, shape=None, dev=None, mask=None):
     if not dev:
@@ -594,6 +598,19 @@ def get_train_eval_criterion(trainer):
     #we copy the value so swig does not destroy it when we leave the scope
     return copy.copy(trainer.previous_minibatch_evaluation_average())
 
+def ensure_dev(ndav, dev):
+
+    if ndav.device() != dev:
+
+        ndav_on_target = create_NDArrayView(ndav.shape().dimensions(), data_type=ndav.get_data_type(), dev=dev)
+        ndav_on_target.copy_from(ndav)
+        ndav = ndav_on_target
+
+    return ndav
+
+def ensure_cpu(ndav):
+    return ensure_dev(ndav, cntk_py.DeviceDescriptor.cpu_device())
+
 def eval(op, precision, device, input_map=None, backward_pass=False):
     '''
     It evaluates `op` on the data provided by the reader. This is useful
@@ -627,9 +644,9 @@ def eval(op, precision, device, input_map=None, backward_pass=False):
     forward_output_mask = {}
     for v in op.outputs():
         value = forward_out_var_map[v]
-        np_data = value.data().to_numpy()         
+        np_data = ensure_cpu(value.data()).to_numpy()         
         if value.mask():
-            np_data = remove_masked_elements(np_data, value.mask().to_numpy())
+            np_data = remove_masked_elements(np_data, ensure_cpu(value.mask()).to_numpy())
         forward_output[v] = np_data
         forward_output_mask[v] = value.mask()
 
@@ -645,9 +662,9 @@ def eval(op, precision, device, input_map=None, backward_pass=False):
 
         backward_output = {}
         for var, value in backward_var_map.items():
-            np_data = value.data().to_numpy()             
+            np_data = ensure_cpu(value.data()).to_numpy()             
             if value.mask():
-                np_data = remove_masked_elements(np_data, value.mask().to_numpy())
+                np_data = remove_masked_elements(np_data, ensure_cpu(value.mask()).to_numpy())
             backward_output[var] = np_data
 
         return forward_output, backward_output

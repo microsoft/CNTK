@@ -25,13 +25,7 @@ def _sanitize_value(shape, value, dtype, device, is_param=False):
         if not isinstance(value, np.ndarray) or value.dtype!=np_dtype:
             value = np.asarray(value, dtype=np_dtype)
 
-        #TODO: check whether this copy operation from cpu to gpu is not needed
-        if device.type() != 0:
-            ndav_cpu = utils.create_NDArrayView_from_NumPy(value, dev=DeviceDescriptor.cpu_device())
-            ndav = utils.create_NDArrayView(value.shape, data_type=cntk_dtype, dev=device)
-            ndav.copy_from(ndav_cpu)
-        else:
-            ndav = utils.create_NDArrayView_from_NumPy(value, device)
+        ndav = utils.create_NDArrayView_from_NumPy(value, device)
 
     return ndav
 

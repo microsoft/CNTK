@@ -78,7 +78,7 @@ def test_accuracy(device_id):
 
 if __name__=='__main__':
     # Specify the target device to be used for computing
-    target_device = DeviceDescriptor.cpu_device()
+    target_device = DeviceDescriptor.gpu_device(0)
     DeviceDescriptor.set_default_device(target_device)
 
     accuracy = ffnet()
