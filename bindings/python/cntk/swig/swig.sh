@@ -1,7 +1,11 @@
 #!/bin/bash
 
-# Please change this
-SWIG=swig-3.0.10/root/bin/swig
+SWIG=${SWIG-swig-3.0.10/root/bin/swig}
 
-${SWIG} -c++ -python -I../../../../Source/CNTKv2LibraryDll/API/ cntk_py.i
-
+if [[ -x "$SWIG" ]]; then
+  ${SWIG} -c++ -python -I../../../../Source/CNTKv2LibraryDll/API/ cntk_py.i
+else
+  printf "Error: Cannot find executable at '%s'\n" $SWIG
+  printf "       Please install swig (>= 3.0.10), and let the \$SWIG environment\n"
+  printf "       variable to point to the SWIG binary location.\n"
+fi
