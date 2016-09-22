@@ -15,6 +15,16 @@ else
     TestDataDir=$CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
 fi
 
+cleanupAndExit()
+{
+  #Delete Model data
+  rm -rf $OutputDir
+  rm -f $DataDir/Test-28x28_cntk_text.txt
+  rm -f $ResnetModelDir/ResNet_18.model
+  
+  exit $1
+}
+
 if [ "$OS" == "Windows_NT" ]; then
 
   # Copy pretrained models and data
@@ -25,34 +35,29 @@ if [ "$OS" == "Windows_NT" ]; then
   OutputDir=$MnistDir/Output
   ResnetModelDir=$ImageDir/Miscellaneous/ImageNet/ResNet
 
-  cp $TestDataDir/Image/MNIST/v0/Test-28x28_cntk_text.txt $DataDir || exit $?
-  cp $TestDataDir/PreTrainedModels/ResNet_18.model $ResnetModelDir/ || exit $?
+  cp $TestDataDir/Image/MNIST/v0/Test-28x28_cntk_text.txt $DataDir || cleanupAndExit 1
+  cp $TestDataDir/PreTrainedModels/ResNet_18.model $ResnetModelDir/ || cleanupAndExit 1 
 
   # Train model for evaluation
-  [ -d $OutputDir ] || mkdir $OutputDir || exit 1
+  [ -d $OutputDir ] || mkdir $OutputDir || cleanupAndExit 1
   [ -d $OutputDir/Models ] && rm -rf $OutputDir/Models
   DeleteModelsAfterTest=0
 
-  [ -f $ConfigDir/01_OneHidden.cntk ] || exit 1
-  [ -f $ConfigDir/02_Convolution.cntk ] || exit 1
+  [ -f $ConfigDir/01_OneHidden.cntk ] || cleanupAndExit 1 
+  [ -f $ConfigDir/02_Convolution.cntk ] || cleanupAndExit 1 
 
-  cntkrun 01_OneHidden.cntk "command=trainNetwork trainNetwork=[SGD=[maxEpochs=1]]" || exit 1
-  cntkrun 02_Convolution.cntk "command=trainNetwork trainNetwork=[SGD=[maxEpochs=1]]" || exit 1
+  cntkrun 01_OneHidden.cntk "command=trainNetwork trainNetwork=[SGD=[maxEpochs=1]]" || cleanupAndExit $?
+  cntkrun 02_Convolution.cntk "command=trainNetwork trainNetwork=[SGD=[maxEpochs=1]]" || cleanupAndExit $?
 
   # Run the evaluation test
   cd $TEST_BIN_DIR
-  ./CSEvalClientTest.exe || exit $?
+  ./CSEvalClientTest.exe || cleanupAndExit $?
 
   # Check whether any exceptions encountered
-  grep -i "Inner Exception" $TEST_RUN_DIR/output.txt && exit 1
-  ExitCode=0
-
-  #Delete Model data
-  rm -rf $OutputDir
-  rm -f $DataDir/Test-28x28_cntk_text.txt
-  rm -f $ResnetModelDir/ResNet_18.model
-
-  exit $ExitCode
+  grep -i "Inner Exception" $TEST_RUN_DIR/output.txt && cleanupAndExit 1 
+  # Wait until the model files are freed.
+  Sleep 2
+  cleanupAndExit 0
 
 else
   echo "CSEvalClientTest can only run on Windows";
