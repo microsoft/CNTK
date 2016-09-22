@@ -137,7 +137,7 @@ namespace CNTK
     {
         auto dataType = AsDataType<ElementType>();
         auto value = MakeSharedObject<NDArrayView>(dataType, shape, device);
-        auto valueMatrix = value->GetWritableMatrix<ElementType>();
+        auto valueMatrix = value->template GetWritableMatrix<ElementType>();
         auto initializerType = initConfig[InitializerTypeAttributeName].Value<std::wstring>();
         if (initializerType == Microsoft::MSR::CNTK::BilinearInitializerTypeName)
         {
