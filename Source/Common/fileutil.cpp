@@ -58,6 +58,9 @@
 using namespace std;
 using namespace Microsoft::MSR::CNTK;
 
+const int BUF_SIZE = 1000000;               // Default buffer size 
+const int LARGE_BUF_SIZE = 10 * BUF_SIZE;   // Larger buffer used by fopenOrDie
+
 // ----------------------------------------------------------------------------
 // some mappings for non-Windows builds
 // ----------------------------------------------------------------------------
@@ -240,8 +243,9 @@ FILE* fopenOrDie(const string& pathname, const char* mode)
         RuntimeError("error opening file '%s': %s", pathname.c_str(), strerror(errno));
     }
     if (strchr(mode, 'S'))
-    {                                       // if optimized for sequential access then use large buffer
-        setvbuf(f, NULL, _IOFBF, 10000000); // OK if it fails
+    {
+        // If optimized for sequential access, then use large buffer. OK if it fails
+        setvbuf(f, NULL, _IOFBF, LARGE_BUF_SIZE);
     }
     return f;
 }
@@ -254,8 +258,9 @@ FILE* fopenOrDie(const wstring& pathname, const wchar_t* mode)
         RuntimeError("error opening file '%ls': %s", pathname.c_str(), strerror(errno));
     }
     if (strchr(mode, 'S'))
-    {                                       // if optimized for sequential access then use large buffer
-        setvbuf(f, NULL, _IOFBF, 10000000); // OK if it fails
+    {
+        // If optimized for sequential access, then use large buffer. OK if it fails
+        setvbuf(f, NULL, _IOFBF, LARGE_BUF_SIZE);
     }
     return f;
 }
@@ -288,10 +293,12 @@ void fsetmode(FILE* f, char type)
 
 void freadOrDie(void* ptr, size_t size, size_t count, FILE* f)
 {
+    size_t SIZE_LIMIT = 15 * 1024 * 1024 / size;  // Normalize by size, as fread() expects units, not bytes
+
     // \\XXX\C$ reads are limited, with some randomness (e.g. 48 MB), on Windows 7 32 bit, so we break this into chunks of some MB. Meh.
     while (count > 0)
     {
-        size_t chunkn = min(count, (size_t) 15 * 1024 * 1024); // BUGBUG: I surely meant this limit to be bytes, not units of 'size'...
+        size_t chunkn = min(count, SIZE_LIMIT);
         size_t n = fread(ptr, size, chunkn, f);
         if (n != chunkn)
             RuntimeError("error reading from file: %s", strerror(errno));
@@ -303,12 +310,14 @@ void freadOrDie(void* ptr, size_t size, size_t count, FILE* f)
 #ifdef _WIN32
 void freadOrDie(void* ptr, size_t size, size_t count, const HANDLE f)
 {
+    const DWORD SIZE_LIMIT = 15 * 1024 * 1024;  // Bytes
+
     // \\XXX\C$ reads are limited, with some randomness (e.g. 48 MB), on Windows 7 32 bit, so we break this into chunks of some MB. Meh.
     while (count > 0)
     {
-        size_t chunkn = min(count * size, (size_t) 15 * 1024 * 1024);
+        DWORD chunkn = min((DWORD)(count * size), SIZE_LIMIT);
         DWORD n;
-        ReadFile(f, ptr, (DWORD) chunkn, &n, NULL);
+        ReadFile(f, ptr, chunkn, &n, NULL);
         if (n != chunkn)
             RuntimeError("error number for reading from file: %s", GetLastError());
         count -= (size_t)(n / size);
@@ -326,11 +335,11 @@ void freadOrDie(void* ptr, size_t size, size_t count, const HANDLE f)
 void fwriteOrDie(const void* ptr, size_t size, size_t count, FILE* f)
 {
     const char* p1 = (const char*) ptr;
+    const DWORD LIMIT = 16 * 1024 * 1024;   // Limit to 16 MB at a time
     size_t totalBytes = size * count;
     while (totalBytes > 0)
     {
         size_t wantWrite = totalBytes;
-#define LIMIT (16 * 1024 * 1024) // limit to 16 MB at a time
         if (wantWrite > LIMIT)
         {
             wantWrite = LIMIT;
@@ -352,11 +361,11 @@ void fwriteOrDie(const void* ptr, size_t size, size_t count, FILE* f)
 void fwriteOrDie(const void* ptr, size_t size, size_t count, const HANDLE f)
 {
     const char* p1 = (const char*) ptr;
+    const DWORD LIMIT = 16 * 1024 * 1024;   // Limit to 16 MB at a time
     DWORD totalBytes = (DWORD)(size * count);
     while (totalBytes > 0)
     {
         DWORD wantWrite = totalBytes;
-#define LIMIT (16 * 1024 * 1024) // limit to 16 MB at a time
         if (wantWrite > LIMIT)
         {
             wantWrite = LIMIT;
@@ -816,28 +825,28 @@ CHAR* fgetline(FILE* f, CHAR* buf, int size)
 // STL string version
 std::string fgetline(FILE* f)
 {
-    vector<char> buf(1000000);
+    vector<char> buf(BUF_SIZE);
     return fgetline(f, &buf[0], (int) buf.size());
 }
 
 // STL string version
 std::wstring fgetlinew(FILE* f)
 {
-    vector<wchar_t> buf(1000000);
+    vector<wchar_t> buf(BUF_SIZE);
     return fgetline(f, &buf[0], (int) buf.size());
 }
 
 // STL string version avoiding most memory allocations
 void fgetline(FILE* f, std::string& s, std::vector<char>& buf)
 {
-    buf.resize(1000000); // enough? // KIT: increased to 1M to be safe
+    buf.resize(BUF_SIZE);
     const char* p = fgetline(f, &buf[0], (int) buf.size());
     s.assign(p);
 }
 
 void fgetline(FILE* f, std::wstring& s, std::vector<wchar_t>& buf)
 {
-    buf.resize(1000000); // enough? // KIT: increased to 1M to be safe
+    buf.resize(BUF_SIZE);
     const wchar_t* p = fgetline(f, &buf[0], (int) buf.size());
     s.assign(p);
 }
@@ -845,7 +854,6 @@ void fgetline(FILE* f, std::wstring& s, std::vector<wchar_t>& buf)
 // char buffer version
 void fgetline(FILE* f, std::vector<char>& buf)
 {
-    const int BUF_SIZE = 1000000; // enough? // KIT: increased to 1M to be safe
     buf.resize(BUF_SIZE);
     fgetline(f, &buf[0], (int) buf.size());
     buf.resize(strnlen(&buf[0], BUF_SIZE) + 1); // SECURITY NOTE: string use has been reviewed
@@ -853,7 +861,6 @@ void fgetline(FILE* f, std::vector<char>& buf)
 
 void fgetline(FILE* f, std::vector<wchar_t>& buf)
 {
-    const int BUF_SIZE = 1000000; // enough? // KIT: increased to 1M to be safe
     buf.resize(BUF_SIZE);
     fgetline(f, &buf[0], (int) buf.size());
     buf.resize(wcsnlen(&buf[0], BUF_SIZE) + 1); // SECURITY NOTE: string use has been reviewed
