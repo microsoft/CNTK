@@ -16,20 +16,20 @@ stderr = "$outputDir$/01_OneHidden_bs_out"
 # TRAINING CONFIG
 trainNetwork = {
     action = "train"
-    
+
     BrainScriptNetworkBuilder = {
         imageShape = 28:28:1                        # image dimensions, 1 channel only
         labelDim = 10                               # number of distinct labels
         featScale = 1/256     
-        
-		# Define hidden layer name. The name is used by
-		# eval examples to illustrate output of hiddlen layers.
+
+        # Define hidden layer name. The name is used by
+        # eval examples to illustrate output of hiddlen layers.
         model = x => {
             s1 = x * featScale
             h1 = DenseLayer {200, activation=Sigmoid} (s1)
             outl = LinearLayer {labelDim} (h1)
         }
-        
+
         # inputs
         features = Input {imageShape}
         labels = Input (labelDim)
