@@ -179,6 +179,7 @@ ComputationNetworkPtr GetModelFromConfig(const ConfigRecordType& config, const w
         // By not compiling the network before patching, we avoid double log output for validation.
         net = make_shared<ComputationNetwork>(deviceId);
         net->SetTraceLevel(config(L"traceLevel", 0));
+        fprintf(stderr, "Loading model %ls\n", modelPath.c_str());
         net->Read<ElemType>(modelPath);
         if (outputNodeNames.size() > 0)
             PatchOutputNodes(net, outputNodeNames, outputNodeNamesVector);

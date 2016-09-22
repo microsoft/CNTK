@@ -702,11 +702,11 @@ private:
 };
 
 // -----------------------------------------------------------------------
-// PackedIndexNode(targetObject, indexSequence) -- convert sequence indices
-// to internal packed column indices w.r.t. targetObject.
+// PackedIndexNode(nodeWithLayoutToPackFor, indexSequence) -- convert sequence indices
+// to internal packed column indices w.r.t. the MBLayout of result (denoted as nodeWithLayoutToPackFor).
 // Intended use is
-//  - Gather  (cond, x) = GatherPacked  (PackedIndex (x, Where (xCond)), x)
-//  - Scatter (cond, y) = ScatterPacked (yCond, PackedIndex (y, Where (yCond)), y)
+//  - Gather  (mask, x) = GatherPacked  (PackedIndex (/*layout of*/ x, Where (mask)), x)
+//  - Scatter (mask, y) = ScatterPacked (/*layout of*/ mask, PackedIndex (/*layout of*/ mask, Where (mask)), y)
 // This maps sequence-specific time indices t to GetColumnIndex(seq,t),
 // as input for subsequent GatherPacked() or ScatterPacked() operations.
 // -----------------------------------------------------------------------
@@ -718,8 +718,8 @@ class PackedIndexNode : public ComputationNodeNonLooping<ElemType>, public NumIn
     static const std::wstring TypeName() { return L"PackedIndex"; }
 
     // our inputs
-    static const size_t SOURCEDATA = 0;
-    static const size_t INDEXDATA  = 1;
+    static const size_t DATAWITHLAYOUTTOPACKFOR = 0;
+    static const size_t INDEXDATA               = 1;
 
 public:
     DeclareConstructorFromConfigWithNumInputs(PackedIndexNode);

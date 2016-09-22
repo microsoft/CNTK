@@ -46,4 +46,4 @@ protected:                                        \
     using IDistGradAggregator<ElemType>::m_mpi;   \
     using IDistGradAggregator<ElemType>::NumProc; \
     using IDistGradAggregator<ElemType>::MyRank
-} } }
+}}}

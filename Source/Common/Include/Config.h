@@ -839,6 +839,7 @@ public:
         auto bracesEnd = FindBraces(stringParse, tokenStart);
 
         // if braces found, we modify the token end according to braces
+        bool doNotTrim = false;
         if (bracesEnd != npos)
         {
             // include the trailing brace
@@ -849,7 +850,8 @@ public:
             if (stringParse[tokenStart] == '"')
             {
                 tokenStart++;
-                substrSize -= 2; // take out the quotes
+                substrSize -= 2;  // take out the quotes
+                doNotTrim = true; // and do not trim
             }
             //else if (substrSize == 0)
             //{
@@ -865,7 +867,8 @@ public:
 
         // get the value
         value = stringParse.substr(tokenStart, substrSize);
-        Trim(value);
+        if (!doNotTrim)
+            Trim(value);
 
         // add the value to the dictionary
         if (!key.empty()) // in NDL macro definitions, we get called with cursor on the '='

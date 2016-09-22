@@ -117,6 +117,7 @@ AveragePoolingLayer {filterShape, stride = 1, pad = false, lowerPad = 0, upperPa
 RecurrentLSTMLayer {outputDim,
                     cellShape = None, # if set then use a projection
                     goBackwards = false,
+                    #bidirectional = false,    # TODO: add this to Optimized engine
                     usePeepholes = false,
                     trainInitialState = false,
                     init = 'glorotUniform', initValueScale = 1,
@@ -128,6 +129,14 @@ if allowOptimizedEngine && BS.Constants.IsNone (cellShape) && !goBackwards && !u
     W = ParameterTensor {0:0, initFilterRank=0, initOutputRank=-1, init=init, initValueScale=initValueScale}
     apply (x) = OptimizedRNNStack (W, x, outputDim, numLayers=1)
 }.apply
+#else if bidirectional then
+#{
+#    # we call ourselves recursively
+#    F = RecurrentLSTMLayer {outputDim, cellShape=cellShape, goBackwards=false, usePeepholes=usePeepholes, trainInitialState=trainInitialState, init=init, initValueScale=initValueScale, enableSelfStabilization=enableSelfStabilization}
+#    G = RecurrentLSTMLayer {outputDim, cellShape=cellShape, goBackwards=true,  usePeepholes=usePeepholes, trainInitialState=trainInitialState, init=init, initValueScale=initValueScale, enableSelfStabilization=enableSelfStabilization}
+#    # the output will have dimension 2*outputDim
+#    apply (x) = Splice (F(x):G(x))
+#}.apply
 else
 {
     previousHook =
@@ -163,6 +172,7 @@ if allowOptimizedEngine && BS.Constants.IsNone (cellShapes) && !usePeepholes && 
     W = ParameterTensor {0:0, initFilterRank=0, initOutputRank=-1, init=init, initValueScale=initValueScale}
     apply (x) = OptimizedRNNStack (W, x, layerDims[0], numLayers=Length(layerDims))
 }.apply
+#else if bidirectional then Fail("RecurrentLSTMLayerStack only supports bidirectional with optimized engine.")
 else
     LayerStack {Length(layerDims), i => RecurrentLSTMLayer {
                                            layerDims[i],
@@ -576,7 +586,7 @@ MatrixL1Reg(matrix, tag='') = new ComputationNode [ operation = 'MatrixL1Reg' ; 
 MatrixL2Reg(matrix, tag='') = new ComputationNode [ operation = 'MatrixL2Reg' ; inputs = _AsNodes (matrix) /*plus the function args*/ ]
 Mean(dataVectorSequence, tag='') = new ComputationNode [ operation = 'Mean' ; inputs = _AsNodes (dataVectorSequence) /*plus the function args*/ ]
 Negate(input, tag='') = new ComputationNode [ operation = 'Negate' ; inputs = _AsNodes (input) /*plus the function args*/ ]
-PackedIndex(targetObject, indexSequence, tag='') = new ComputationNode [ operation = 'PackedIndex' ; inputs = _AsNodes (targetObject : indexSequence) /*plus the function args*/ ]
+PackedIndex(nodeWithLayoutToPackFor, indexSequence, tag='') = new ComputationNode [ operation = 'PackedIndex' ; inputs = _AsNodes (nodeWithLayoutToPackFor : indexSequence) /*plus the function args*/ ]
 PerDimMeanVarDeNormalization(dataVectorSequence, meanVector, invStdDevVector, tag='') = new ComputationNode [ operation = 'PerDimMeanVarDeNormalization' ; inputs = _AsNodes (dataVectorSequence : meanVector : invStdDevVector) /*plus the function args*/ ]
 #PerDimMeanVarNormalization(dataVectorSequence, meanVector, invStdDevVector, tag='') = new ComputationNode [ operation = 'PerDimMeanVarNormalization' ; inputs = _AsNodes (dataVectorSequence : meanVector : invStdDevVector) /*plus the function args*/ ]
 PerDimMeanVarNormalization (x, mean, invStdDev) = (x - mean) .* invStdDev

@@ -92,7 +92,10 @@ try:
     import StringIO
 except ImportError:
     from io import StringIO
-import pytest
+try:
+    import pytest
+except ImportError:
+    pass
 
 def test_simpleSanityCheck():
     dictionary1 = StringIO.StringIO("hello\nmy\nworld\nof\nnothing\n")

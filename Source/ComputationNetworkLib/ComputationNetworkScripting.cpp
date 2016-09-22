@@ -247,8 +247,7 @@ public:
         SetDeviceId((DEVICEID_TYPE)(int)config[L"deviceId"]);
 
         wstring pathName = config[L"pathName"];
-        if (TraceLevel() > 0)
-            fprintf(stderr, "Load: Loading model file: %ls", pathName.c_str());
+        fprintf(stderr, "Loading model %ls\n", pathName.c_str());
         Load<ElemType>(pathName); // note that for CNTK_MODEL_VERSION_7 and above, 'ElemType' is ignored
     }
 };

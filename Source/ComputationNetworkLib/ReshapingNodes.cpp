@@ -312,16 +312,16 @@ template class WhereNode<float>;
 template class WhereNode<double>;
 
 // -----------------------------------------------------------------------
-// PackedIndexNode(targetObject, indexSequence) -- map sequence
+// PackedIndexNode(nodeWithLayoutToPackFor, indexSequence) -- map sequence
 // -----------------------------------------------------------------------
 
 template <class ElemType>
 /*virtual*/ void PackedIndexNode<ElemType>::ForwardPropNonLooping() /*override*/
 {
-    let& sourceMBLayout = InputRef(SOURCEDATA).GetMBLayout(); // only used for index conversion
+    let& sourceMBLayout = InputRef(DATAWITHLAYOUTTOPACKFOR).GetMBLayout(); // only used for index conversion
     let& indexMBLayout  = InputRef(INDEXDATA).GetMBLayout();
     let&  index  = InputRef(INDEXDATA).Value(); // per-seq index values that are to be mapped
-    auto& result =                   Value(); // packed index values as mapped to sourceData's layout
+    auto& result =                     Value(); // packed index values as mapped to layout of node to pack for
     // loop over sourceSequences
     // Input matrix contains time indices for each sequence that refer to frames inside that sequence.
     // We replace every per-sequence index by the resolved column index w.r.t. the same MBLayout.
@@ -360,7 +360,7 @@ template <class ElemType>
     // inherit both MBLayout and sample dimension (scalar) from indexData
     // Because we map (per-seq) index sequence to (packed) index sequence. Target is only for index calculation.
     m_pMBLayout = Input(INDEXDATA)->GetMBLayout();
-    if (isFinalValidationPass && (!Input(INDEXDATA)->HasMBLayout() || !Input(SOURCEDATA)->HasMBLayout()))
+    if (isFinalValidationPass && (!Input(INDEXDATA)->HasMBLayout() || !Input(DATAWITHLAYOUTTOPACKFOR)->HasMBLayout()))
         LogicError("%ls %ls operation requires both inputs to be minibatch data (must have MBLayouts).", NodeName().c_str(), OperationName().c_str());
 
     if (isFinalValidationPass && Input(INDEXDATA)->GetSampleLayout().GetNumElements() != 1)

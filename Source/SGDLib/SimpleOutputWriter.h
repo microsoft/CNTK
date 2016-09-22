@@ -206,6 +206,10 @@ public:
         // open output files
         File::MakeIntermediateDirs(outputPath);
         std::map<ComputationNodeBasePtr, shared_ptr<File>> outputStreams; // TODO: why does unique_ptr not work here? Complains about non-existent default_delete()
+        fprintf(stderr, "Writing to %ls", outputPath.c_str());
+        if (outputPath != L"-")
+            fprintf(stderr, ".%ls", allOutputNodes.size() == 1 ? allOutputNodes.front()->NodeName().c_str() : L"*");
+        fprintf(stderr, "\n");
         for (auto & onode : allOutputNodes)
         {
             std::wstring nodeOutputPath = outputPath;
@@ -285,7 +289,7 @@ public:
             fprintfOrDie(f, "%s", formattingOptions.epilogue.c_str());
         }
 
-        fprintf(stderr, "Written to %ls*\nTotal Samples Evaluated = %lu\n", outputPath.c_str(), totalEpochSamples);
+        fprintf(stderr, "Total Samples Evaluated = %lu\n", totalEpochSamples);
 
         // flush all files (where we can catch errors) so that we can then destruct the handle cleanly without error
         for (auto & iter : outputStreams)

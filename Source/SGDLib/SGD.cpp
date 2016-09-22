@@ -701,14 +701,14 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                 for (int j = 1; j < m_learnRateAdjustInterval; j++)
                 {
                     int epochToDelete = i - j;
-                    LOGPRINTF(stderr, "SGD: removing model and checkpoint files for epoch %d after rollback to epoch %lu\n", epochToDelete + 1, (size_t)(i - m_learnRateAdjustInterval) + 1);  // report 1 based epoch number
+                    LOGPRINTF(stderr, "SGD: Removing model and checkpoint files for epoch %d after rollback to epoch %lu.\n", epochToDelete + 1, (size_t)(i - m_learnRateAdjustInterval) + 1);  // report 1 based epoch number
                     _wunlink(GetModelNameForEpoch(epochToDelete).c_str());
                     _wunlink(GetCheckPointFileNameForEpoch(epochToDelete).c_str());
                 }
 
                 // Set i back to the loaded model
                 i -= m_learnRateAdjustInterval;
-                LOGPRINTF(stderr, "SGD: revoke back to and update checkpoint file for epoch %d\n", i+1); // report 1 based epoch number
+                LOGPRINTF(stderr, "SGD: Reverting back to (and updating) checkpoint file for epoch %d\n", i+1); // report 1 based epoch number
                 SaveCheckPointInfo(i, totalTrainingSamplesSeen, learnRatePerSample, smoothedGradients, prevCriterion, chosenMinibatchSize);
             }
             else
@@ -725,15 +725,19 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                     {
                         if (epochsSinceLastLearnRateAdjust != 1)
                         {
+                            // TODO: do something like this for main model files as well
+                            //_wunlink(GetModelNameForEpoch(i - 1).c_str());
                             _wunlink(GetCheckPointFileNameForEpoch(i - 1).c_str());
                         }
                         if (epochsSinceLastLearnRateAdjust == m_learnRateAdjustInterval)
                         {
+                            //_wunlink(GetModelNameForEpoch(i - m_learnRateAdjustInterval).c_str());
                             _wunlink(GetCheckPointFileNameForEpoch(i - m_learnRateAdjustInterval).c_str());
                         }
                     }
                     else
                     {
+                        //_wunlink(GetModelNameForEpoch(i - 1).c_str());
                         _wunlink(GetCheckPointFileNameForEpoch(i - 1).c_str());
                     }
                 }
@@ -1444,23 +1448,26 @@ bool SGD<ElemType>::PreCompute(ComputationNetworkPtr net,
                                const std::vector<ComputationNodeBasePtr>& labelNodes,
                                StreamMinibatchInputs* inputMatrices)
 {
-    std::list<ComputationNodeBasePtr> nodes = net->GetNodesRequiringPreComputation(); // this tests all HasComputed() flags
+    let numNodes = net->GetNodesRequiringPreComputation(nullptr, /*checkComputed=*/false).size();
+    if (numNodes == 0) // if no precompute node present then done, quietly
+        return false;
 
+    let nodes = net->GetNodesRequiringPreComputation(nullptr, /*checkComputed=*/true); // this tests all HasComputed() flags
     if (nodes.size() == 0)
     {
         if (m_traceLevel > 0)
-        LOGPRINTF(stderr, "No PreCompute nodes found, or all already computed. Skipping pre-computation step.\n");
+            LOGPRINTF(stderr, "Precomputing --> All %d precompute nodes have already been computed.\n", (int)numNodes);
         return false;
     }
 
     fprintf(stderr, "\n");
-    LOGPRINTF(stderr, "Precomputing --> %lu PreCompute nodes found.\n\n", nodes.size());
+    LOGPRINTF(stderr, "Precomputing --> %d precompute nodes found.\n\n", (int)nodes.size());
     if (m_traceLevel > 0)
     {
-    for (const auto & node : nodes)
-    {
-        LOGPRINTF(stderr, "\t%ls = %ls()\n", node->NodeName().c_str(), node->OperationName().c_str());
-    }
+        for (const auto & node : nodes)
+        {
+            LOGPRINTF(stderr, "\t%ls = %ls()\n", node->NodeName().c_str(), node->OperationName().c_str());
+        }
     }
 
     // compute
