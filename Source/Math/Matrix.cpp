@@ -16,6 +16,7 @@
 #include <math.h>
 #include "GPUWatcher.h" // bring in this class as well so that it gets exported from this DLL
 #include <memory>
+#include <atomic>
 #ifndef CPUONLY
 #pragma comment(lib, "MathCUDA.lib") // built by CNTKMathCUDA project
 #endif
@@ -140,6 +141,18 @@
     }
 
 namespace Microsoft { namespace MSR { namespace CNTK {
+
+std::atomic<int> m_mathLibTraceLevel(0);
+
+void SetMathLibTraceLevel(int traceLevel)
+{
+    m_mathLibTraceLevel.store(traceLevel);
+}
+
+int GetMathLibTraceLevel()
+{
+    return m_mathLibTraceLevel.load();
+}
 
 MatrixBase::~MatrixBase() { }
 

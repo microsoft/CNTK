@@ -14,13 +14,16 @@
 #include "StringUtil.h"
 #include "ConfigUtil.h"
 #include "TimerUtility.h"
+#include "ImageTransformers.h"
+#include "SequenceData.h"
+#include "ImageUtil.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 class ImageDataDeserializer::LabelGenerator
 {
 public:
-    virtual void CreateLabelFor(size_t classId, SparseSequenceData& data) = 0;
+    virtual void CreateLabelFor(size_t classId, CategorySequenceData& data) = 0;
     virtual ~LabelGenerator() { }
 };
 
@@ -43,7 +46,7 @@ public:
         iota(m_indices.begin(), m_indices.end(), 0);
     }
 
-    virtual void CreateLabelFor(size_t classId, SparseSequenceData& data) override
+    virtual void CreateLabelFor(size_t classId, CategorySequenceData& data) override
     {
         data.m_nnzCounts.resize(1);
         data.m_nnzCounts[0] = 1;
@@ -55,12 +58,6 @@ public:
 private:
     TElement m_value;
     vector<IndexType> m_indices;
-};
-
-// Used to keep track of the image. Accessed only using DenseSequenceData interface.
-struct DeserializedImage : DenseSequenceData
-{
-    cv::Mat m_image;
 };
 
 // For image, chunks correspond to a single image.
@@ -80,41 +77,46 @@ public:
         assert(sequenceId == m_description.m_id);
         const auto& imageSequence = m_description;
 
-        auto image = std::make_shared<DeserializedImage>();
+        auto image = std::make_shared<ImageSequenceData>();
         image->m_image = std::move(m_parent.ReadImage(m_description.m_id, imageSequence.m_path, m_parent.m_grayscale));
         auto& cvImage = image->m_image;
-
         if (!cvImage.data)
-        {
             RuntimeError("Cannot open file '%s'", imageSequence.m_path.c_str());
-        }
 
         // Convert element type.
-        int dataType = m_parent.m_featureElementType == ElementType::tfloat ? CV_32F : CV_64F;
-        if (cvImage.type() != CV_MAKETYPE(dataType, cvImage.channels()))
-        {
-            cvImage.convertTo(cvImage, dataType);
-        }
-
+        ElementType dataType = ConvertImageToSupportedDataType(cvImage);
         if (!cvImage.isContinuous())
-        {
             cvImage = cvImage.clone();
-        }
         assert(cvImage.isContinuous());
 
-        image->m_data = image->m_image.data;
         ImageDimensions dimensions(cvImage.cols, cvImage.rows, cvImage.channels());
         image->m_sampleLayout = std::make_shared<TensorShape>(dimensions.AsTensorShape(HWC));
         image->m_id = sequenceId;
         image->m_numberOfSamples = 1;
         image->m_chunk = shared_from_this();
+        image->m_elementType = dataType;
         result.push_back(image);
 
-        SparseSequenceDataPtr label = std::make_shared<SparseSequenceData>();
+        auto label = std::make_shared<CategorySequenceData>();
         label->m_chunk = shared_from_this();
         m_parent.m_labelGenerator->CreateLabelFor(imageSequence.m_classId, *label);
         label->m_numberOfSamples = 1;
         result.push_back(label);
+    }
+
+private:
+    ElementType ConvertImageToSupportedDataType(cv::Mat& image)
+    {
+        ElementType resultType;
+        if (!IdentifyElementTypeFromOpenCVType(image.depth(), resultType))
+        {
+            // Could not identify element type.
+            // Natively unsupported image type. Let's convert it to required precision.
+            int requiredType = m_parent.m_precision == ElementType::tfloat ? CV_32F : CV_64F;
+            image.convertTo(image, requiredType);
+            resultType = m_parent.m_precision;
+        }
+        return resultType;
     }
 };
 
@@ -136,6 +138,8 @@ ImageDataDeserializer::ImageDataDeserializer(CorpusDescriptorPtr corpus, const C
     }
 
     string precision = (ConfigValue)config("precision", "float");
+    m_precision = AreEqualIgnoreCase(precision, "float") ? ElementType::tfloat : ElementType::tdouble;
+
     m_verbosity = config(L"verbosity", 0);
 
     // Feature stream.
@@ -144,9 +148,10 @@ ImageDataDeserializer::ImageDataDeserializer(CorpusDescriptorPtr corpus, const C
     features->m_id = 0;
     features->m_name = msra::strfun::utf16(featureSection.ConfigName());
     features->m_storageType = StorageType::dense;
-    features->m_elementType = AreEqualIgnoreCase(precision, "float") ? ElementType::tfloat : ElementType::tdouble;
+
+    // Due to performance, now we support images of different types.
+    features->m_elementType = ElementType::tvariant;
     m_streams.push_back(features);
-    m_featureElementType = features->m_elementType;
 
     // Label stream.
     ConfigParameters label = inputs(labelNames[0]);
@@ -156,7 +161,7 @@ ImageDataDeserializer::ImageDataDeserializer(CorpusDescriptorPtr corpus, const C
     labels->m_name = msra::strfun::utf16(label.ConfigName());
     labels->m_sampleLayout = std::make_shared<TensorShape>(labelDimension);
     labels->m_storageType = StorageType::sparse_csc;
-    labels->m_elementType = AreEqualIgnoreCase(precision, "float") ? ElementType::tfloat : ElementType::tdouble;
+    labels->m_elementType = m_precision;
     m_streams.push_back(labels);
 
     m_labelGenerator = labels->m_elementType == ElementType::tfloat ?
@@ -184,6 +189,9 @@ ImageDataDeserializer::ImageDataDeserializer(const ConfigParameters& config)
 
     m_verbosity = config(L"verbosity", 0);
 
+    string precision = (ConfigValue)config("precision", "float");
+    m_precision = AreEqualIgnoreCase(precision, "float") ? ElementType::tfloat : ElementType::tdouble;
+
     // Expect data in HWC.
     ImageDimensions dimensions(*feature->m_sampleLayout, configHelper.GetDataFormat());
     feature->m_sampleLayout = std::make_shared<TensorShape>(dimensions.AsTensorShape(HWC));
@@ -191,7 +199,9 @@ ImageDataDeserializer::ImageDataDeserializer(const ConfigParameters& config)
     label->m_storageType = StorageType::sparse_csc;
     feature->m_storageType = StorageType::dense;
 
-    m_featureElementType = feature->m_elementType;
+    // Due to performance, now we support images of different types.
+    feature->m_elementType = ElementType::tvariant;
+
     size_t labelDimension = label->m_sampleLayout->GetDim(0);
 
     if (label->m_elementType == ElementType::tfloat)

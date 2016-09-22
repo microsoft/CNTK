@@ -78,6 +78,13 @@ PackerBase::PackerBase(SequenceEnumeratorPtr sequenceEnumerator,
         const auto& stream = m_outputStreamDescriptions[i];
         UNUSED(stream);
 
+        // Check the input.
+        if(m_inputStreamDescriptions[i]->m_elementType != ElementType::tdouble &&
+            m_inputStreamDescriptions[i]->m_elementType != ElementType::tfloat)
+        {
+            RuntimeError("Please specify the type of the '%ls' stream. You can use 'Cast' transform for that.", m_inputStreamDescriptions[i]->m_name.c_str());
+        }
+
         // Input and output should match in everything except for sparse/dense storage type.
         assert(stream->m_elementType == ElementType::tfloat || stream->m_elementType == ElementType::tdouble);
         assert(stream->m_name == m_inputStreamDescriptions[i]->m_name);

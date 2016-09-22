@@ -47,6 +47,8 @@
     <ClInclude Include="ChunkRandomizer.h" />
     <ClInclude Include="ExceptionCapture.h" />
     <ClInclude Include="ReaderBase.h" />
+    <ClInclude Include="SequenceData.h" />
+    <ClInclude Include="TransformBase.h" />
     <ClInclude Include="TransformController.h" />
     <ClInclude Include="DataDeserializerBase.h" />
     <ClInclude Include="BlockRandomizer.h" />
