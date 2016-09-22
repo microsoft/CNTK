@@ -68,7 +68,7 @@ private:
     void CreateTransforms(const ConfigParameters& deserializerConfig);
 
     IDataDeserializerPtr CreateDeserializer(const ConfigParameters& readerConfig, bool primary);
-    TransformerPtr CreateTransformer(const ConfigParameters& config, const std::string& defaultModule);
+    TransformerPtr CreateTransformer(const ConfigParameters& config, const std::string& defaultModule, const std::wstring& transformerType);
 
 
     enum class PackingMode

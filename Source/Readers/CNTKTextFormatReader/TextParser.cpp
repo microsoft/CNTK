@@ -470,14 +470,12 @@ void TextParser<ElemType>::FillSequenceMetadata(SequenceBuffer& sequenceData, si
         {
             auto denseData = static_cast<DenseInputStreamBuffer*>(data);
             denseData->m_sampleLayout = m_streams[j]->m_sampleLayout;
-            data->m_data = denseData->m_buffer.data();
         }
         else
         {
             auto sparseData = static_cast<SparseInputStreamBuffer*>(data);
             sparseData->m_indices = sparseData->m_indicesBuffer.data();
             assert(data->m_numberOfSamples == sparseData->m_nnzCounts.size());
-            data->m_data = sparseData->m_buffer.data();
         }
 
         data->m_id = sequenceId;
