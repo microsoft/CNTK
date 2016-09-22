@@ -85,7 +85,8 @@ def squared_error(output_matrix, target_matrix, name=''):
     
     Args:
         output_matrix: the output values from the network
-        target_matrix: target matrix, it is usually a one-hot vector where the hot bit corresponds to the label index
+        target_matrix: target matrix, it is usually a one-hot vector where the hot bit
+         corresponds to the label index
         name (`str`, optional): the name of the node in the network            
     Returns:
         :class:`cntk.Function`
@@ -151,8 +152,8 @@ def convolution(convolution_map, operand, strides=(1,), sharing=[True],
     from cntk.cntk_py import convolution
     operand = sanitize_input(operand)    
     return convolution(convolution_map, operand, tuple(reversed(strides)), sharing, auto_padding, 
-                        tuple(reversed(lower_pad)), tuple(reversed(upper_pad)), transpose, max_temp_mem_size_in_samples,
-                        name)
+                        tuple(reversed(lower_pad)), tuple(reversed(upper_pad)), transpose,
+                        max_temp_mem_size_in_samples, name)
 
 from cntk.cntk_py import PoolingType_Max,PoolingType_Average
 MAX_POOLING=PoolingType_Max
@@ -183,29 +184,41 @@ def pooling(operand, pooling_type, pooling_window_shape, strides=(1,), auto_padd
     return pooling(operand, pooling_type, pooling_window_shape, strides, auto_padding,
                    lower_pad, upper_pad, name)
 
-def batch_normalization(operand, scale, bias, running_mean, running_inv_std, special,
+def batch_normalization(operand, scale, bias, running_mean, running_inv_std, spatial,
                         normalization_time_constant=0, blend_time_constant=0,
                         epsilon=0.00001, use_cudnn_engine=False, name=''):
     '''
-    TODO: 
-    Args:                
-        operand:
-        scale:   
-        bias:
-        running_mean:
-        running_inv_std:
-        special:
-        normalization_time_constant:
-        blend_time_constant:
-        epsilon:
-        use_cudnn_engine:
+    Normalizes layer outputs for every minibatch for each output (feature) independently
+    and applies affine transformation to preserve representation of the layer.
+
+    TODO: Example
+
+    Args:
+        operand: input of the batch normalization node
+        scale: parameter tensor that holds the learned componentwise-scaling factors
+        bias: parameter tensor that holds the learned bias. ``scale`` and ``bias`` must have the same
+         dimensions which must be equal to the input dimensions in case of ``spatial`` = False or
+         number of output convolution feature maps in case of ``spatial`` = True
+        running_mean: running mean which is used during evaluation phase and might be used during
+         training as well. You must pass a parameter tensor with initial value 0 and the same dimensions
+         as ``scale`` and `bias``
+        running_inv_std: running variance. Represented as ``running_mean``
+        spatial(`bool`): flag that indicates whether to compute mean/var for each feature in a minibatch
+         independently or, in case of convolutional layers, per future map
+        normalization_time_constant(`float`, default 0): time constant for computing running average of
+         mean and variance as a low-pass filtered version of the batch statistics. Note: the default is not
+         typically what you want
+        blend_time_constant(`float`, default 0): constant for smoothing batch estimates with the running
+         statistics
+        epsilon: conditioner constant added to the variance when computing the inverse standard deviation
+        use_cudnn_engine(`bool`, default True):
         name (`str`, optional): the name of the node in the network
     Returns:
         :class:`cntk.Function`
     '''
     from cntk.cntk_py import batch_normalization
     operand = sanitize_input(operand)    
-    return batch_normalization(operand, scale, bias, running_mean, running_inv_std, special,
+    return batch_normalization(operand, scale, bias, running_mean, running_inv_std, spatial,
                                 normalization_time_constant, blend_time_constant,
                                 epsilon, use_cudnn_engine, name)
 
@@ -462,7 +475,7 @@ def element_divide(left, right, name=''):
     Args:
         left: left side tensor
         right: right side tensor
-        name (`str`, optional): the name of the node in the network            
+        name (`str`, optional): the name of the node in the network
     Returns:
         :class:`cntk.Function`
     '''
@@ -482,11 +495,11 @@ def times(left, right, output_rank=1, name=''):
         >>> C.eval(C.times([[1,2],[3,4]], [5,6]))
         [array([[ 17.,  39.]])]
         
-        >>> C.eval(cntk.times(np.reshape(np.arange(8), (2,2,2)),np.reshape(np.arange(8), (2,2,2)), output_rank=1))        
+        >>> C.eval(cntk.times(np.reshape(np.arange(8), (2,2,2)),np.reshape(np.arange(8), (2,2,2)), output_rank=1))
         [array([[[ 28.,  34.],
         [ 76.,  98.]]])]
         
-        >>> C.eval(cntk.times(np.reshape(np.arange(8), (2,2,2)),np.reshape(np.arange(8), (2,2,2)), output_rank=2))        
+        >>> C.eval(cntk.times(np.reshape(np.arange(8), (2,2,2)),np.reshape(np.arange(8), (2,2,2)), output_rank=2))
         [array([[[[[  4.,   5.],
                    [  6.,   7.]],
                   [[ 12.,  17.],
@@ -648,8 +661,10 @@ def clip(x, min_value, max_value, name=''):
     
     Args:        
         x: tensor to be clipped
-        min_value (`float`): a scalar or a tensor which represents the minimum value to clip element values to
-        max_value (`float`): a scalar or a tensor which represents the maximum value to clip element values to
+        min_value (`float`): a scalar or a tensor which represents the minimum value to clip element
+         values to
+        max_value (`float`): a scalar or a tensor which represents the maximum value to clip element
+         values to
         name (`str`, optional): the name of the node in the network            
     Returns:
         :class:`cntk.Function`
@@ -1093,7 +1108,8 @@ def slice(x, axis, begin_index, end_index, name=''):
 
     Args:
         x: input tensor
-        axis (`int` or :class:`cntk.Axis`): axis along which `begin_index` and `end_index` will be used. If it is of type `int` it will be used as a static axis.
+        axis (`int` or :class:`cntk.Axis`): axis along which `begin_index` and `end_index`
+         will be used. If it is of type `int` it will be used as a static axis.
         begin_index (`int`): the index along axis where the slicing starts
         end_index (`int`): the index along axis where the slicing ends        
         name (`str`, optional): the name of the node in the network
@@ -1365,10 +1381,12 @@ def parameter(shape=None, value=None, device=None, name=''):
     It creates a parameter tensor. 
 
     Args:
-        shape (`tuple` or `int`, optional): the shape of the input tensor. If not provided, it will be inferred from ``value``.
-        value (scalar or NumPy array, optional): a scalar initial value that would be replicated for every element in the tensor or NumPy array. 
-        If `None`, the tensor will be initialized uniformly random.
-        device (:class:`cntk.DeviceDescriptor`): instance of DeviceDescriptor           
+        shape (`tuple` or `int`, optional): the shape of the input tensor. If not provided, it
+         will be inferred from ``value``.
+        value (scalar or NumPy array, optional): a scalar initial value that would be replicated
+         for every element in the tensor or NumPy array.
+         If `None`, the tensor will be initialized uniformly random.
+        device (:class:`cntk.DeviceDescriptor`): instance of DeviceDescriptor
         name (`str`, optional): the name of the node in the network
 
     Returns:
@@ -1390,10 +1408,12 @@ def constant(shape=None, value=None, device=None, name=''):
     It creates a constant tensor initialized from a numpy array
 
     Args:
-        shape (`tuple` or `int`, optional): the shape of the input tensor. If not provided, it will be inferred from ``value``.
-        value (scalar or NumPy array, optional): a scalar initial value that would be replicated for every element in the tensor or NumPy array. 
-        If ``None``, the tensor will be initialized uniformly random.
-        device (:class:`cntk.DeviceDescriptor`): instance of DeviceDescriptor                
+        shape (`tuple` or `int`, optional): the shape of the input tensor. If not provided, it will
+         be inferred from ``value``.
+        value (scalar or NumPy array, optional): a scalar initial value that would be replicated for
+         every element in the tensor or NumPy array.
+         If ``None``, the tensor will be initialized uniformly random.
+        device (:class:`cntk.DeviceDescriptor`): instance of DeviceDescriptor
         name (`str`, optional): the name of the node in the network
     Returns:
         :class:`cntk.Function`

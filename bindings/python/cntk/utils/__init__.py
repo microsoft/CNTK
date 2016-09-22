@@ -13,12 +13,13 @@ from cntk import cntk_py
 
 def precision_numpy(precision):
     '''
-    Converts string precision to numpy precision 
+    Converts string precision to NumPy precision
+
     Args:
-        precision (str): string precision
+        precision (str): string precision ("float" or "double")
 
     Returns:
-        numpy precision
+        NumPy precision
     '''
     if precision == 'float':
         return np.float32
@@ -30,6 +31,7 @@ def precision_numpy(precision):
 def cntk_device(device_id):
     '''
     Converts device ID to CNTK DeviceDescriptor instance
+
     Args:
         device_id (int): device id, -1 for CPU, 0 or higher for GPU
 
@@ -46,14 +48,14 @@ def cntk_to_numpy_shape(shape):
     Removes the dynamic axis and returns a tuple representing the NumPy shape.
 
     Args:
-        shape (tuple or int): CNTK shape iterable
+        shape (`tuple` or `int`): CNTK shape iterable
 
     Returns:
-        a tuple that describes the NumPy shape of a tensor
+        NumPy shape of a tensor
     '''
 
     if np.isscalar(shape):
-        shape = (shape,)    
+        shape = (shape,)
     shape = shape[:-1]
     if not shape:
         shape = (1,)
@@ -71,7 +73,7 @@ def is_string(value):
 
 
 def with_metaclass(meta, *bases):
-    """Create a base class with a metaclass."""
+    """Creates a base class with a metaclass."""
     # This requires a bit of explanation: the basic idea is to make a dummy
     # metaclass for one level of class instantiation that replaces itself with
     # the actual metaclass.
@@ -98,7 +100,7 @@ def tensors_to_text_format(sample_idx, alias_tensor_map):
     Args:
         sample_idx (int): number of current sample
         alias_tensor_map (dict): maps alias (str) to tensor (ndarray). Tensors
-        are assumed to have dynamic axis.
+          are assumed to have dynamic axis.
 
     Returns:
         String representation in CNTKTextReader format

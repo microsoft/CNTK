@@ -69,7 +69,7 @@ def _test_binary_op(precision, device_id, op_func,
             data_type=sanitize_dtype_cntk(precision),
             needs_gradient=True,
             name='b')
-    
+
     if (type(op_func) == str):
         input_op_constant = eval('a %s right_operand'%op_func)
         constant_op_input = eval('left_operand %s b'%op_func)
@@ -189,7 +189,7 @@ def test_batch_dense_to_sparse_full():
             [10,40,20,50,30,60]
             ]
     assert s == (2,3)
-    
+
     i, v, s = batch_dense_to_sparse([[1]])
     assert i == [[0]]
     assert v == [[1]]
@@ -210,6 +210,3 @@ def test_batch_dense_to_sparse_zeros():
             [40,50,60]
             ]
     assert s == (2,3)
-    
-
-

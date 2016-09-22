@@ -220,7 +220,7 @@ In CNTK the computational nodes have a number of properties. Some of these can o
 - **tag** - This is a string that is attached to the node and has to be set for 
   certain nodes. There purpouse is not documentary but controls the behaviour of 
   CNTK. Namely, the SGD algorithm or output writers query the network for certain 
-  node tags to decide which nodes to treat as root nodes:
+  node tags to decide which nodes to treat as root nodes::
 
     S1 = sigmoid(P1, name='S1') # Elementwise sigmoid function
     S1.tag = 'output'
