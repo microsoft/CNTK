@@ -824,14 +824,14 @@ bool TextParser<ElemType>::TryReadSparseSample(std::vector<ElemType>& values, st
             return false;
         }
 
-        if (index > sampleSize)
+        if (index >= sampleSize)
         {
             if (ShouldWarn())
             {
                 fprintf(stderr,
                     "WARNING: Sparse index value (%" PRIu64 ") %ls"
-                    " exceeds the expected sample size (%" PRIu64 ").\n",
-                    index, GetFileInfo().c_str(), sampleSize);
+                    " exceeds the maximum expected value (%" PRIu64 ").\n",
+                    index, GetFileInfo().c_str(), sampleSize - 1);
             }
             // bail out.
             return false;
