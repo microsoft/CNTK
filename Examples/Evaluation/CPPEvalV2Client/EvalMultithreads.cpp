@@ -156,26 +156,3 @@ void TestEvalMultiThreadsWithNewNetwork(const DeviceDescriptor& device, const in
         fflush(stderr);
     }
 }
-
-int main(int argc, char* argv[])
-{
-    unsigned int threadCount;
-
-    if (argc <= 1)
-    {
-        // Multi-thread evaluation currently only supports CPU version.
-        TestEvalMultiThreadsWithNewNetwork(DeviceDescriptor::CPUDevice(), 2);
-    }
-    else
-    {
-        for (int i = 1; i < argc; i++)
-        {
-            threadCount = atoi(argv[i]);
-            if (threadCount > 0)
-            {
-                // Multi-thread evaluation currently only supports CPU version.
-                TestEvalMultiThreadsWithNewNetwork(DeviceDescriptor::CPUDevice(), threadCount);
-            }
-        }
-    }
-}
