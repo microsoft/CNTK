@@ -48,6 +48,14 @@
     import_array();
 %}
 
+//
+// Whenever a tuple of dynamic axes is returned we need to reverse it
+//
+%feature("shadow") CNTK::Variable::DynamicAxes %{
+def dynamic_axes(self):
+    return tuple(reversed($action(self)))
+%}
+
 %apply (float* OUT_ARRAY1, int DIM1) {(float* py_data, int len)}
 
 %define %eq_for(DATA_TYPE, EQ)
