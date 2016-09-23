@@ -35,6 +35,7 @@ int main()
     TrainSequenceToSequenceTranslator();
 
     // Test multi-threads evaluation
+    // Todo: Also test on GPUDevice()
     EvalMultiThreadsWithNewNetwork(DeviceDescriptor::CPUDevice(), 2);
 
     fprintf(stderr, "\nCNTKv2Library tests: Passed\n");
