@@ -6,7 +6,7 @@ inline FunctionPtr ConvBNLayer(Variable input, size_t outFeatureMapCount, size_t
 {
     size_t numInputChannels = input.Shape()[input.Shape().Rank() - 1];
 
-    auto convParams = Parameter(NDArrayView::RandomNormal<float>({ outFeatureMapCount, kernelWidth, kernelHeight, numInputChannels }, 0.0, wScale, 1, device));
+    auto convParams = Parameter({ outFeatureMapCount, kernelWidth, kernelHeight, numInputChannels }, DataType::Float, GlorotUniformInitializer(-1, 2, wScale));
     auto convFunction = Convolution(convParams, input, { hStride, vStride, numInputChannels });
 
     auto biasParams = Parameter({ outFeatureMapCount }, (float)bValue, device);
@@ -75,4 +75,3 @@ inline FunctionPtr ResNetNode2BInc(Variable input, size_t outFeatureMapCount, si
     auto cProj = ConvBNLayer(input, outFeatureMapCount, 1, 1, 2, 2, wScale, bValue, scValue, bnTimeConst, device);
     return ReLU(Plus(conv2, cProj));
 }
-

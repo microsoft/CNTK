@@ -4,7 +4,7 @@
 using namespace CNTK;
 
 template <typename ElementType>
-void TestTensorPlus(size_t numAxesLeftOperand, size_t numAxesRightOperand, const DeviceDescriptor& device)
+void TestTensorPlus(size_t numAxesLeftOperand, size_t numAxesRightOperand, const DeviceDescriptor& device, bool useConstantInputsOnly)
 {
     srand(1);
 
@@ -20,31 +20,50 @@ void TestTensorPlus(size_t numAxesLeftOperand, size_t numAxesRightOperand, const
     for (size_t i = std::min(numAxesLeftOperand, numAxesRightOperand); i < numAxesRightOperand; ++i)
         rightInputShape[i] = (rand() % maxDimSize) + 1;
 
-    auto leftInputVar = InputVariable(leftInputShape, AsDataType<ElementType>(), true, L"leftInput");
-    auto rightInputVar = InputVariable(rightInputShape, AsDataType<ElementType>(), true, L"rightInput");
-
-    auto plusFunc = Plus(leftInputVar, rightInputVar);
-
     std::vector<ElementType> leftInputData(leftInputShape.TotalSize());
     for (size_t i = 0; i < leftInputData.size(); ++i)
         leftInputData[i] = ((ElementType)rand()) / RAND_MAX;
 
     auto leftInputValueShape = leftInputShape.AppendShape({ 1, 1 });
-    ValuePtr leftInputValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(leftInputValueShape, leftInputData, true));
+    auto leftInputValue = MakeSharedObject<NDArrayView>(leftInputValueShape, leftInputData, true);
 
     std::vector<ElementType> rightInputData(rightInputShape.TotalSize());
     for (size_t i = 0; i < rightInputData.size(); ++i)
         rightInputData[i] = ((ElementType)rand()) / RAND_MAX;
 
     auto rightInputValueShape = rightInputShape.AppendShape({ 1, 1 });
-    ValuePtr rightInputValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(rightInputValueShape, rightInputData, true));
+    auto rightInputValue = MakeSharedObject<NDArrayView>(rightInputValueShape, rightInputData, true);
 
-    NDShape outputShape = plusFunc->Output().Shape().AppendShape({ 1, 1 });
+    Variable leftInputVar, rightInputVar;
+    if (useConstantInputsOnly)
+    {
+        leftInputValue = leftInputValue->DeepClone(device, true);
+        rightInputValue = rightInputValue->DeepClone(device, true);
+
+        leftInputVar = Parameter(leftInputValue, L"leftInput");
+        rightInputVar = Parameter(rightInputValue, L"rightInput");
+    }
+    else
+    {
+        leftInputVar = InputVariable(leftInputShape, AsDataType<ElementType>(), true, L"leftInput");
+        rightInputVar = InputVariable(rightInputShape, AsDataType<ElementType>(), true, L"rightInput");
+    }
+
+    auto plusFunc = Plus(leftInputVar, rightInputVar);
+
+    NDShape outputShape = plusFunc->Output().Shape();
+    if (!useConstantInputsOnly)
+        outputShape = outputShape.AppendShape({ 1, 1 });
+
     std::vector<ElementType> outputData(outputShape.TotalSize());
     ValuePtr outputValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(outputShape, outputData, false));
 
     std::unordered_map<Variable, ValuePtr> outputs = { { plusFunc->Output(), outputValue } };
-    auto backPropState = plusFunc->Forward({ { leftInputVar, leftInputValue }, { rightInputVar, rightInputValue } }, outputs, device, { plusFunc->Output() });
+    BackPropStatePtr backPropState;
+    if (useConstantInputsOnly)
+        backPropState = plusFunc->Forward({}, outputs, device, { plusFunc->Output() });
+    else
+        backPropState = plusFunc->Forward({ { leftInputVar, MakeSharedObject<Value>(leftInputValue) }, { rightInputVar, MakeSharedObject<Value>(rightInputValue) } }, outputs, device, { plusFunc->Output() });
 
     // Perform backprop
     std::vector<ElementType> rootGradientsData(outputShape.TotalSize(), 1);
@@ -78,13 +97,32 @@ void TestTensorPlus(size_t numAxesLeftOperand, size_t numAxesRightOperand, const
     FloatingPointVectorCompare(largerInputGradients, expectedLargerInputGradientValues, "TestTimesAndPlus: Backward prop results do not match expected results");
 }
 
+void TestInfAndNans()
+{
+    auto device = DeviceDescriptor::CPUDevice();
+
+    // Test 1/0 == INF
+    auto divideFunc = ElementDivide(Constant::Scalar(1.0f, device), Constant::Scalar(0.0f, device));
+    std::vector<float> outputData(1, 0.2f);
+    auto outputValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(NDShape(0), outputData));
+
+    std::unordered_map<Variable, ValuePtr> outputs = { { divideFunc->Output(), outputValue } };
+    divideFunc->Forward({}, outputs, device);
+
+    if (outputData[0] != std::numeric_limits<float>::infinity())
+        throw std::runtime_error("1/0 != Infinity");
+}
+
 void TensorTests()
 {
-    TestTensorPlus<float>(0, 3, DeviceDescriptor::CPUDevice());
+    // TODO: Enable after the core engine reciprocal bug of 1/0 not being INF is fixed
+    //TestInfAndNans();
+
+    TestTensorPlus<float>(0, 3, DeviceDescriptor::CPUDevice(), false);
 #ifndef CPUONLY
-    TestTensorPlus<double>(4, 1, DeviceDescriptor::GPUDevice(0));
-    TestTensorPlus<float>(1, 3, DeviceDescriptor::GPUDevice(0));
-    TestTensorPlus<double>(2, 0, DeviceDescriptor::GPUDevice(0));
-    TestTensorPlus<float>(0, 0, DeviceDescriptor::GPUDevice(0));
+    TestTensorPlus<double>(4, 1, DeviceDescriptor::GPUDevice(0), true);
+    TestTensorPlus<float>(1, 3, DeviceDescriptor::GPUDevice(0), false);
+    TestTensorPlus<double>(2, 0, DeviceDescriptor::GPUDevice(0), false);
+    TestTensorPlus<float>(0, 0, DeviceDescriptor::GPUDevice(0), false);
 #endif
 }

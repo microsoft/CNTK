@@ -51,7 +51,7 @@ public:
         StreamMinibatchInputs inputMatrices = DataReaderHelpers::RetrieveInputMatrices(inputNodes);
 
         // evaluate with minibatches
-        dataReader.StartMinibatchLoop(mbSize, 0, numOutputSamples);
+        dataReader.StartMinibatchLoop(mbSize, 0, inputMatrices.GetStreamDescriptions(), numOutputSamples);
         if (!dataWriter.SupportMultiUtterances())
             dataReader.SetNumParallelSequences(1);
         m_net->StartEvaluateMinibatchLoop(outputNodes);
@@ -220,7 +220,7 @@ public:
         }
 
         // evaluate with minibatches
-        dataReader.StartMinibatchLoop(mbSize, 0, numOutputSamples);
+        dataReader.StartMinibatchLoop(mbSize, 0, inputMatrices.GetStreamDescriptions(), numOutputSamples);
 
         m_net->StartEvaluateMinibatchLoop(outputNodes);
 

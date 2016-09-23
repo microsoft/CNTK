@@ -71,13 +71,16 @@ namespace CNTK
             return DeviceDescriptor::GPUDevice(deviceId);
     }
 
-    inline NDShape AsNDShape(const Microsoft::MSR::CNTK::TensorShape& tensorShape)
+    inline NDShape AsNDShape(const Microsoft::MSR::CNTK::TensorShape& tensorShape, bool allowNonFlattenableTensorShapes = false)
     {
-        // The TensorShape should be flattenable to 1D
-        for (size_t i = 1; i < tensorShape.GetRank(); ++i)
+        if (!allowNonFlattenableTensorShapes)
         {
-            if (!tensorShape.CanFlatten(i))
-                InvalidArgument("AsNDShape() can only be called for TensorShapes that can be flattened to 1D");
+            // The TensorShape should be flattenable to 1D
+            for (size_t i = 1; i < tensorShape.GetRank(); ++i)
+            {
+                if (!tensorShape.CanFlatten(i))
+                    InvalidArgument("AsNDShape() can only be called for TensorShapes that can be flattened to 1D");
+            }
         }
 
         return std::vector<size_t>(tensorShape.GetDims().begin(), tensorShape.GetDims().end());

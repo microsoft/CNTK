@@ -128,7 +128,7 @@ void TestReader(const ConfigParameters& configBase)
     epochs *= 2;
     for (int epoch = 0; epoch < epochs; epoch++)
     {
-        dataReader.StartMinibatchLoop(mbSize, epoch, epochSize);
+        dataReader.StartMinibatchLoop(mbSize, epoch, matrices.GetStreamDescriptions(), epochSize);
         int i = 0;
         while (dataReader.GetMinibatch(matrices))
         {
@@ -191,7 +191,7 @@ void TestSequenceReader(const ConfigParameters& configBase)
         epochs *= 2;
         for (int epoch = 0; epoch < epochs; epoch++)
         {
-            dataReader.StartMinibatchLoop(mbSize, epoch, epochSize);
+            dataReader.StartMinibatchLoop(mbSize, epoch, matrices.GetStreamDescriptions(), epochSize);
             for (int i = 0; dataReader.GetMinibatch(matrices); i++)
             {
                 auto& features = matrices.GetInputMatrix<ElemType>(featureNames[0]);

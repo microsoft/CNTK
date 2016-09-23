@@ -387,7 +387,7 @@ train = [
         mode = "softmax"                    # TODO: find out what this means
         nbruttsineachrecurrentiter = 0      # 0 means auto-fill given minibatch size
         cacheBlockSize = 100000000          # read block size. This value is large enough to load entire corpus at once
-        rawInput = $lmSequenceReaderInputDef$
+        rawLabels = $lmSequenceReaderInputDef$
         inputLabelsDef = $lmSequenceReaderInputLabelsDef$
         outputDummy = [ labelType = "none" ]
     ]
@@ -407,7 +407,7 @@ train = [
         mode = "softmax"                    # TODO: find out what this means
         nbruttsineachrecurrentiter = 0      # 0 means auto-fill given minibatch size
         cacheBlockSize = 100000000          # read block size. This value is large enough to load entire corpus at once
-        rawInput = $lmSequenceReaderInputDef$
+        rawLabels = $lmSequenceReaderInputDef$
         inputLabelsDef = $lmSequenceReaderInputLabelsDef$
         outputDummy = [ labelType = "none" ]
     ]

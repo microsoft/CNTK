@@ -100,7 +100,11 @@ public:
 
     virtual void ForwardPass(const Values<ElemType>& inputs, Values<ElemType>& output) override;
 
+    virtual void ForwardPass(const Values<ElemType>& inputs, Values<ElemType>& output, bool resetRNN) override;
+
     virtual void ForwardPass(const ValueRefs<ElemType>& inputs, ValueRefs<ElemType>& output) override;
+
+    virtual void ForwardPass(const ValueRefs<ElemType>& inputs, ValueRefs<ElemType>& output, bool resetRNN) override;
 
     virtual void Destroy() override;
 
@@ -113,6 +117,7 @@ public:
     {
         CNTKEvalBase<ElemType>::Init(config);
     }
+
 private:
     static VariableLayout ToVariableLayout(const ComputationNodeBasePtr n);
     std::vector<ComputationNodeBasePtr> m_outputNodes;
@@ -123,6 +128,7 @@ private:
 
     template<template<typename> class ValueContainer> 
     void ForwardPassT(const std::vector < ValueBuffer<ElemType, ValueContainer> >& inputs,
-                      std::vector < ValueBuffer<ElemType, ValueContainer> >& outputs);
+                      std::vector < ValueBuffer<ElemType, ValueContainer> >& outputs, bool resetRNN);
+
 };
-} } }
+}}}

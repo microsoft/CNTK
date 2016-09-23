@@ -35,7 +35,7 @@ testCases:
       - Starting minibatch loop
       - DataParallelSGD training
       - myRank = {{integer}}
-      - NumNodes = 3
-      - NumGradientBits = 64
+      - numNodes = 3
+      - numGradientBits = 64
       - distributed reading is ENABLED
       - BufferedAsyncGradientAggregation is ENABLED

@@ -726,6 +726,8 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
     }
 #endif
 
+    SetMathLibTraceLevel(traceLevel);
+
     // This outputs the final value each variable/parameter is assigned to in config (so if a parameter is set multiple times, only the last
     // value it is set to will appear).
     if (traceLevel > 0)

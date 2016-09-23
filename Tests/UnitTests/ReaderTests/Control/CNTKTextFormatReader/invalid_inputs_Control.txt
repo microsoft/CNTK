@@ -1,4 +1,4 @@
-WARNING: Sparse index value (11) at offset 90 in the input file (invalid_inputs.txt) exceeds the expected sample size (10).
+WARNING: Sparse index value (10) at offset 90 in the input file (invalid_inputs.txt) exceeds the maximum expected value (9).
 WARNING: Dense sample (size = 2) at offset 165 in the input file (invalid_inputs.txt) exceeds the expected size (1).
 WARNING: Maximum per-input number of samples for sequence (id = 1) at offset 199 in the input file (invalid_inputs.txt) is less than expected (2 vs. 3).
 INFO: Finished loading sequence (id = 1) at offset 199 in the input file (invalid_inputs.txt), successfully read 3 out of expected 3 rows.

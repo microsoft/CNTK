@@ -28,7 +28,8 @@ namespace CNTK
             }
         }
 
-        if (modelParameters != learnerParameters)
+        std::unordered_set<Parameter> modelParametersSet(modelParameters.begin(), modelParameters.end());
+        if (modelParametersSet != learnerParameters)
             InvalidArgument("Trainer ctor: Union of the parameters covered by the specified parameterLearners should match the specified model's parameters");
     }
 

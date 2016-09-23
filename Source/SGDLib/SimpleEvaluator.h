@@ -112,9 +112,9 @@ public:
         bool useParallelTrain = (m_mpi != nullptr);
         bool useDistributedMBReading = useParallelTrain && m_enableDistributedMBReading && dataReader->SupportsDistributedMBRead();
         if (useDistributedMBReading)
-            dataReader->StartDistributedMinibatchLoop(mbSize, 0, m_mpi->CurrentNodeRank(), m_mpi->NumNodesInUse(), testSize);
+            dataReader->StartDistributedMinibatchLoop(mbSize, 0, m_mpi->CurrentNodeRank(), m_mpi->NumNodesInUse(), inputMatrices.GetStreamDescriptions(), testSize);
         else
-            dataReader->StartMinibatchLoop(mbSize, 0, testSize);
+            dataReader->StartMinibatchLoop(mbSize, 0, inputMatrices.GetStreamDescriptions(), testSize);
 
         m_net->StartEvaluateMinibatchLoop(evalNodes);
 
@@ -148,7 +148,7 @@ public:
             bool wasDataRead = DataReaderHelpers::GetMinibatchIntoNetwork<ElemType>(*dataReader, m_net, nullptr, useDistributedMBReading, useParallelTrain, inputMatrices, actualMBSize, m_mpi, m_useTwoPassTraining);
             // in case of distributed reading, we do a few more loops until all ranks have completed
             // end of epoch
-            if (!wasDataRead && (!useDistributedMBReading || noMoreSamplesToProcess))
+            if (!wasDataRead && (!useDistributedMBReading || noMoreSamplesToProcess)) 
                 break;
 
             // Note: If !wasDataRead then the data that GetMinibatchIntoNetwork() was supposed to full in are undefined.
@@ -157,7 +157,7 @@ public:
                 actualMBSize = 0; // (undefined if !wasDataRead)
 
             if (actualMBSize > 0)
-            {
+        {
                 if (m_useTwoPassTraining)
                 {
                     // BUGBUG: The error message is incorrect, size_t is never larger than SIZE_MAX. What does this really mean?
@@ -171,26 +171,26 @@ public:
                     }
                 }
 
-                size_t actualNumSubminibatches = numSubminibatchesNeeded <= 1 ? 1 : smbDispatcher.GetMinibatchIntoCache(*dataReader, *m_net, inputMatrices, numSubminibatchesNeeded);
-                for (size_t ismb = 0; ismb < actualNumSubminibatches; ismb++)
-                {
-                    if (actualNumSubminibatches > 1)
-                    {
-                        smbDispatcher.GetSubMinibatchToNet(ismb); // get sub-minibatch from full-size one
-                    }
-
-                    ComputationNetwork::BumpEvalTimeStamp(featureNodes);
-                    ComputationNetwork::BumpEvalTimeStamp(labelNodes);
-
-                    m_net->ForwardProp(evalNodes);
-
-                    // house-keeping for sub-minibatching
-                    if (actualNumSubminibatches > 1)
-                        smbDispatcher.DoneWithCurrentSubMinibatch(ismb); // page state out
-                } // end sub-minibatch loop
-
+            size_t actualNumSubminibatches = numSubminibatchesNeeded <= 1 ? 1 : smbDispatcher.GetMinibatchIntoCache(*dataReader, *m_net, inputMatrices, numSubminibatchesNeeded);
+            for (size_t ismb = 0; ismb < actualNumSubminibatches; ismb++)
+            {
                 if (actualNumSubminibatches > 1)
-                    smbDispatcher.DoneWithCurrentMinibatch();
+                {
+                    smbDispatcher.GetSubMinibatchToNet(ismb); // get sub-minibatch from full-size one
+                }
+
+                ComputationNetwork::BumpEvalTimeStamp(featureNodes);
+                ComputationNetwork::BumpEvalTimeStamp(labelNodes);
+
+                m_net->ForwardProp(evalNodes);
+
+                // house-keeping for sub-minibatching
+                if (actualNumSubminibatches > 1)
+                    smbDispatcher.DoneWithCurrentSubMinibatch(ismb); // page state out
+            } // end sub-minibatch loop
+
+            if (actualNumSubminibatches > 1)
+                smbDispatcher.DoneWithCurrentMinibatch();
             } // if (actualMBSize > 0)
 
             // BUGBUG (Issue #95): Once we have multiple layouts, this must be done on a per-node basis.
@@ -224,7 +224,7 @@ public:
 
                 // Using SimpleDistAggregator for eval results only. At some point we should rename the class to be just
                 // IDistAggregator and SimpleDistAggregator.
-                bool samplesProcessed = m_distGradAgg->AggregateGradients(learnParamsGradients, m_gradHeader.get(), 0);
+                bool samplesProcessed = m_distGradAgg->AggregateGradients(learnParamsGradients, m_gradHeader.get(), /*resetState =*/ false);
                 noMoreSamplesToProcess = !samplesProcessed;
 
                 aggregateNumSamplesWithLabel = m_gradHeader->numSamplesWithLabel;
@@ -235,8 +235,8 @@ public:
             {
                 if (actualMBSize != 0)
                 {
-                    for (int i = 0; i < evalNodes.size(); i++)
-                        evalResults[i] += localEpochEvalErrors.Assign(evalNodes, i, numSamplesWithLabel).GetCriterion(i);
+                for (int i = 0; i < evalNodes.size(); i++)
+                    evalResults[i] += localEpochEvalErrors.Assign(evalNodes, i, numSamplesWithLabel).GetCriterion(i);
                 }
             }
 
@@ -412,7 +412,7 @@ public:
                 learnParamsValues[1] = &(runStdNode->Value());
 
                 m_gradHeader->numSamples = actualMBSize ? 1 : actualMBSize;
-                distGradAgg.AggregateGradients(learnParamsValues, m_gradHeader.get(), 0);
+                distGradAgg.AggregateGradients(learnParamsValues, m_gradHeader.get(), /*resetState =*/ false);
 
                 for (auto& parameter : learnParamsValues) 
                 {

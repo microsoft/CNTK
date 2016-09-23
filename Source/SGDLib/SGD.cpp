@@ -142,15 +142,15 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
     else
     {
         LOGPRINTF(stderr, "Training criteria:\n");
-    for (const auto& node : criterionNodes)
-    {
-        LOGPRINTF(stderr, "\t%ls = %ls\n", node->NodeName().c_str(), node->OperationName().c_str());
-    }
-    if (criterionNodes.empty())
-    {
-        LOGPRINTF(stderr, "\t(none)\n");
-        InvalidArgument("TrainOrAdaptModel: No criterion node was specified.");
-    }
+        for (const auto& node : criterionNodes)
+        {
+            LOGPRINTF(stderr, "\t%ls = %ls\n", node->NodeName().c_str(), node->OperationName().c_str());
+        }
+        if (criterionNodes.empty())
+        {
+            LOGPRINTF(stderr, "\t(none)\n");
+            InvalidArgument("TrainOrAdaptModel: No criterion node was specified.");
+        }
     }
 
     // determine evaluationNodes from GetEvalCriterionNodes(), ensuring each criterion is only logged once
@@ -278,10 +278,10 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
     {
         fprintf(stderr, "out of %d parameter tensors and %d nodes with gradient:\n\n",
             (int)learnableNodes.size(), (int)numNeedsGradient);
-    for (let nodeDescription : nodesToUpdateDescriptions)
-    {
-        LOGPRINTF(stderr, "\t%ls\n", nodeDescription.c_str());
-    }
+        for (let nodeDescription : nodesToUpdateDescriptions)
+        {
+            LOGPRINTF(stderr, "\t%ls\n", nodeDescription.c_str());
+        }
     }
 
     // one blank line before training progress log
@@ -316,7 +316,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
     {
         InitModelAggregationHandler(m_syncStatsTrace, net->GetDeviceId());
     }
-    
+
     // precompute mean and invStdDev nodes and save initial model
     // When no precompute, only save if we did not load the model from a 
     // checkpoint but instead built it from a network description
@@ -495,7 +495,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                                         ? 0.0
                                         : momentumPerSample >= 1.0
                                             ? 0.0
-                                                                                            : -1.0 / log(momentumPerSample);
+                                            : -1.0 / log(momentumPerSample);
         if (m_traceLevel > 0)
         {
             fprintf(stderr, "\n");
@@ -847,11 +847,11 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
     if (useDistributedMBReading)
     {
         trainSetDataReader->StartDistributedMinibatchLoop(tunedMBSize, epochNumber, m_mpi->CurrentNodeRank(),
-                                                          m_mpi->NumNodesInUse(), epochSize);
+            m_mpi->NumNodesInUse(), inputMatrices->GetStreamDescriptions(), epochSize);
     }
     else
     {
-        trainSetDataReader->StartMinibatchLoop(tunedMBSize, epochNumber, epochSize);
+        trainSetDataReader->StartMinibatchLoop(tunedMBSize, epochNumber, inputMatrices->GetStreamDescriptions(), epochSize);
     }
 
     net->StartEvaluateMinibatchLoop(evaluationNodes);
@@ -942,6 +942,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
     bool noMoreSamplesToProcess = false;
     auto lfMMINode = dynamic_cast<LatticeFreeMMINode<ElemType>*>(criterionNodes[0].get());
+    bool isFirstMinibatch = true;
     for (;;)
     {
         // Per-minibatch performance measurements; only enabled when perfTraceLevel > 0
@@ -1160,7 +1161,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
             // aggregate
             m_gradHeader->numEvalNode = evaluationNodes.size(); // TODO: rename numEvalNode (plural)
-            bool samplesProcessed = m_distGradAgg->AggregateGradients(learnParamsGradients, m_gradHeader.get(), epochNumber);
+            bool samplesProcessed = m_distGradAgg->AggregateGradients(learnParamsGradients, m_gradHeader.get(), isFirstMinibatch);
             noMoreSamplesToProcess = !samplesProcessed;
 
             // read out the header--now everything is aggregated
@@ -1345,6 +1346,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         AttemptUtteranceDerivativeFeatures(net, trainSetDataReader, featureNodes, inputMatrices);
 
         profiler.NextSample();
+        isFirstMinibatch = false;
     }
 
     // --- END MAIN MINIBATCH LOOP
@@ -1464,10 +1466,10 @@ bool SGD<ElemType>::PreCompute(ComputationNetworkPtr net,
     LOGPRINTF(stderr, "Precomputing --> %d precompute nodes found.\n\n", (int)nodes.size());
     if (m_traceLevel > 0)
     {
-        for (const auto & node : nodes)
-        {
-            LOGPRINTF(stderr, "\t%ls = %ls()\n", node->NodeName().c_str(), node->OperationName().c_str());
-        }
+    for (const auto & node : nodes)
+    {
+        LOGPRINTF(stderr, "\t%ls = %ls()\n", node->NodeName().c_str(), node->OperationName().c_str());
+    }
     }
 
     // compute
@@ -1478,9 +1480,9 @@ bool SGD<ElemType>::PreCompute(ComputationNetworkPtr net,
     // To support large dataset, we usually partition whole dataset into several epoch's,
     // so we need to use all the data to do precomputing
     if (m_useAllDataForPreComputedNode) // using all the data
-        trainSetDataReader->StartMinibatchLoop(m_mbSize[0], 0);
+        trainSetDataReader->StartMinibatchLoop(m_mbSize[0], 0, inputMatrices->GetStreamDescriptions());
     else // using only one epoch. Note: One epoch is often enough for feature mean/stddev, but not for estimating priors.
-        trainSetDataReader->StartMinibatchLoop(m_mbSize[0], 0, m_epochSize);
+        trainSetDataReader->StartMinibatchLoop(m_mbSize[0], 0, inputMatrices->GetStreamDescriptions(), m_epochSize);
     net->StartEvaluateMinibatchLoop(nodes);
 
     // initialize
@@ -1811,7 +1813,6 @@ size_t SGD<ElemType>::SearchForBestMinibatchSize(ComputationNetworkPtr net,
         (int)epochNumber + 1, (int)RoundToMultipleOf64(minMinibatchSize), (int)RoundToMultipleOf64(maxMinibatchSize));
 
     size_t lastGoodMinibatchSize = 0;
-    size_t lastTriedMinibatchSize = 0;
     EpochCriterion lastGoodEpochCriterion(0);
     for (float trialMinibatchSizeFloat = (float) minMinibatchSize;
          trialMinibatchSizeFloat <= maxMinibatchSize;
@@ -1829,7 +1830,6 @@ size_t SGD<ElemType>::SearchForBestMinibatchSize(ComputationNetworkPtr net,
 
         // Train on a few minibatches and so we can observe the epochCriterion as we try increasing
         // minibatches with iteration of this loop.
-        lastTriedMinibatchSize = trialMinibatchSize;
         TrainOneMiniEpochAndReloadModel(net, refNet, refNode, epochNumber,
                                         numFramesToUseInSearch, trainSetDataReader,
                                         learnRatePerSample, trialMinibatchSize, featureNodes,
@@ -1838,7 +1838,6 @@ size_t SGD<ElemType>::SearchForBestMinibatchSize(ComputationNetworkPtr net,
                                         learnableNodes, smoothedGradients, smoothedCounts,
                                         /*out*/ epochCriterion, /*out*/ epochEvalErrors,
                                         isFirstIteration ? "BaseAdaptiveMinibatchSearch:" : "AdaptiveMinibatchSearch:");
-        lastTriedMinibatchSize = trialMinibatchSize;
 
         if (isFirstIteration)
         {
@@ -1853,7 +1852,7 @@ size_t SGD<ElemType>::SearchForBestMinibatchSize(ComputationNetworkPtr net,
             {
                 LOGPRINTF(stderr, " AdaptiveMinibatchSearch Epoch[%d]: Computed baseCriterion %.8f for minibatchSize=%d\n",
                           (int)epochNumber + 1, baseCriterion.Average(), (int)trialMinibatchSize);
-        }
+            }
         }
         else if (!epochCriterion.IsNan() &&
                  epochCriterion.Average() > (baseCriterion.Average() * (1.0 + (m_minibatchSearchCriterionErrorMargin / 100.0))))
@@ -1880,21 +1879,6 @@ size_t SGD<ElemType>::SearchForBestMinibatchSize(ComputationNetworkPtr net,
         LOGPRINTF(stderr, " AdaptiveMinibatchSearch Epoch[%d]: Search successful. New minibatchSize is %d. epochCriterion = %.8f vs baseCriterion = %.8f\n",
                   (int)epochNumber + 1, (int)lastGoodMinibatchSize, lastGoodEpochCriterion.Average(), baseCriterion.Average());
     }
-#if 1 // BUGBUG: Somehow state leaks across trials. Workaround: redo the last known good one to reset that. Helps somewhat until we fix this.
-    if (lastTriedMinibatchSize != lastGoodMinibatchSize)
-    {
-        std::vector<EpochCriterion> epochEvalErrors(evaluationNodes.size(), EpochCriterion::Infinity());
-        EpochCriterion epochCriterion(EpochCriterion::Infinity());
-        TrainOneMiniEpochAndReloadModel(net, refNet, refNode, epochNumber,
-                                        numFramesToUseInSearch, trainSetDataReader,
-                                        learnRatePerSample, lastGoodMinibatchSize, featureNodes,
-                                        labelNodes, criterionNodes,
-                                        evaluationNodes, inputMatrices,
-                                        learnableNodes, smoothedGradients, smoothedCounts,
-                                        /*out*/ epochCriterion, /*out*/ epochEvalErrors,
-                                        "FixMinibatchSearch:");
-    }
-#endif
     return lastGoodMinibatchSize;
 }
 
@@ -2745,8 +2729,9 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
             size_t numMPIWorkers = pMPI->NumNodesInUse();            
         const ConfigRecordType& configParallelTrain(configSGD(L"ParallelTrain", ConfigRecordType::Record()));
         m_parallelizationMethod = ParseParallelizationMethod(configParallelTrain(L"parallelizationMethod", L"none"));
-        m_parallelizationStartEpochNum = configParallelTrain(L"parallelizationStartEpoch", (int) 1) - 1; // Epoch numbers internally are 0 based
+        m_parallelizationStartEpochNum = configParallelTrain(L"parallelizationStartEpoch", (int) 1) - 1; // Internally, epoch numbers are 0-based
         if (m_parallelizationStartEpochNum < 0 /* sic */)
+            // Be explicit that user-facing epoch numbers are 1-based
             InvalidArgument("parallelizationStartEpoch must be greater or equal to 1");
         m_enableDistributedMBReading = configParallelTrain(L"distributedMBReading", false);
         m_syncStatsTrace = configParallelTrain(L"syncPerfStats", (int) 0);
