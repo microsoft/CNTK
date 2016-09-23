@@ -96,7 +96,7 @@ def squared_error(output_matrix, target_matrix, name=''):
     dtype = get_data_type(output_matrix, target_matrix)
     output_matrix = sanitize_input(output_matrix, dtype)
     target_matrix = sanitize_input(target_matrix, dtype)
-    return square_error(output_matrix, target_matrix, name)
+    return squared_error(output_matrix, target_matrix, name)
 
 def classification_error(output_vector, target_vector, name=''):
     '''
@@ -135,17 +135,40 @@ def convolution(convolution_map, operand, strides=(1,), sharing=[True],
                 auto_padding=[True], lower_pad=(0,), upper_pad=(0,), transpose=False, 
                 max_temp_mem_size_in_samples=0, name=''):
     '''
-    TODO: 
+    Computes the convolution of a weight matrix with an image or tensor. This operation is used in image-processing applications
+    and language processing. It supports any dimensions, stride, sharing or padding.
+
+    This function operates on input tensors of the form [M1 x M2 x ... x Mn x inChannels]. This can be understood as a rank-n
+    object, where each entry consists of a inChannels-dimensional vector. For example, an RGB image would have dimensions
+    [W x H x 3], i.e. a [W x H]-sized structure, where each entry (pixel) consists of a 3-tuple (note, however, that the
+    memory-storage format is the concatenation of 3 planes of size [W x H]).
+
+    `convolution` convolves the input with n+1-dimensional filters, where the first n dimensions are the spatial extent of the
+    filter, and the last one must be equal to inChannels. There are outChannels filters. I.e. for each output position, a vector of
+    dimension outChannels is computed. Hence, the total number of filter parameters is (M1*M2*...*Mn) * inChannels * outChannels.
+
+    TODO: Review and example!
     Args:        
-        convolution_map:
-        operand:
-        strides:
-        sharing:
-        auto_padding:
-        lower_pad:
-        upper_pad:
-        transpose:
-        max_temp_mem_size_in_samples:
+        convolution_map: convolution filter weights, stored as a matrix of dimensions [outChannels, (M1*M2*...*Mn)],
+         where (M1*M2*...*Mn) must be the product of the kernel dimensions, e.g. 75 for a [5 x 5]-sized filter on 3
+         input channels.
+        operand: convolution input. A tensor with dimensions [M1 x M2 x ... x Mn x inChannels].
+        strides (optional): stride dimensions. A stride > 1 means that only pixel positions that are multiples of the stride value are computed.
+         For example, a stride of 2 will lead to a halving of the dimensions. The last stride dimension that lines up with the number
+         of input channels must be equal to the number of input channels.
+        sharing (bool): sharing flags for each input dimension
+        auto_padding (bool): flags for each input dimension whether it should be padded automatically (that is,
+         symmetrically) or not padded at all. Padding means that the convolution kernel is applied to all pixel positions, where all
+         pixels outside the area are assumed zero ("padded with zeroes"). Without padding, the kernels are only shifted over
+         positions where all inputs to the kernel still fall inside the area. In this case, the output dimension will be less than
+         the input dimension. The last value that lines up with the number of input channels must be false.
+        lower_pad: precise lower padding for each input dimension.
+        upper_pad : precise upper padding for each input dimension.
+        transpose (bool): set to true for deconvolution.
+        max_temp_mem_size_in_samples (int): maximum amount of auxiliary memory (in samples) that should be reserved to perform convolution
+         operations. Some convolution engines (e.g. cuDNN and GEMM-based engines) can benefit from using workspace as it may improve
+         performance. However, sometimes this may lead to higher memory utilization. Default is 0 which means the same as the inpu
+         samples.
         name (`str`, optional): the name of the node in the network
     Returns:
         :class:`cntk.Function`
@@ -163,15 +186,20 @@ AVG_POOLING=PoolingType_Average
 def pooling(operand, pooling_type, pooling_window_shape, strides=(1,), auto_padding=[False], 
             lower_pad=(0,), upper_pad=(0,), name=''):
     '''
-    TODO: 
+    The pooling operations compute a new matrix by selecting the maximum (max pooling) or average value in the pooling input.
+    In the case of average pooling, count of average does not include padded values.
+
+    N-dimensional pooling allows to create max or average pooling of any dimensions, stride or padding.
+
+    TODO: Review and example!
     Args:                
-        operand:
-        pooling_type:   
-        pooling_window_shape:
-        strides:
-        auto_padding:
-        lower_pad:
-        upper_pad:
+        operand: pooling input
+        pooling_type(str): "max" or "average"
+        pooling_window_shape: dimensions of the pooling window
+        strides (default 1): strides.
+        auto_padding: automatic padding flags for each input dimension.
+        lower_pad: precise lower padding for each input dimension
+        upper_pad: precise upper padding for each input dimension
         name (`str`, optional): the name of the node in the network
     Returns:
         :class:`cntk.Function`
@@ -192,7 +220,7 @@ def batch_normalization(operand, scale, bias, running_mean, running_inv_std, spa
     Normalizes layer outputs for every minibatch for each output (feature) independently
     and applies affine transformation to preserve representation of the layer.
 
-    TODO: Example
+    TODO: Review and Example
 
     Args:
         operand: input of the batch normalization node
@@ -202,7 +230,7 @@ def batch_normalization(operand, scale, bias, running_mean, running_inv_std, spa
          number of output convolution feature maps in case of ``spatial`` = True
         running_mean: running mean which is used during evaluation phase and might be used during
          training as well. You must pass a parameter tensor with initial value 0 and the same dimensions
-         as ``scale`` and `bias``
+         as ``scale`` and ``bias``
         running_inv_std: running variance. Represented as ``running_mean``
         spatial(`bool`): flag that indicates whether to compute mean/var for each feature in a minibatch
          independently or, in case of convolutional layers, per future map
@@ -232,10 +260,10 @@ def less(left, right, name=''):
     Elementwise 'less' comparison of two tensors. Result is 1 if left < right else 0. 
 
     Example:
-       >>> C.eval(C.less([41., 42., 43.], [42., 42., 42.]))
+       >>> C.less([41., 42., 43.], [42., 42., 42.]).eval()
          [array([[1., 0., 0.]])]
         
-        >>> C.eval(C.eq([-1,0,1], [0]))
+        >>> C.less([-1,0,1], [0]).eval()
         [array([[1., 0., 0.]])]
 
     Args:
@@ -256,11 +284,11 @@ def equal(left, right, name=''):
     Elementwise 'equal' comparison of two tensors. Result is 1 if values are equal 0 otherwise. 
 
     Example:
-        >>> C.eval(C.equal([41., 42., 43.], [42., 42., 42.]))
+        >>> C.equal([41., 42., 43.], [42., 42., 42.]).eval()
         [array([[0., 1., 0.]])]
         
-        >>> C.eval(C.eq([-1,0,1], [1]))
-        [array([[0., 1., 0.]])]
+        >>> C.equal([-1,0,1], [1]).eval()
+        [array([[0., 0., 1.]])]
 
     Args:
         left: left side tensor
@@ -277,19 +305,19 @@ def equal(left, right, name=''):
 
 def greater(left, right, name=''):
     '''
-    Elementwise 'greater' comparison of two tensors. Result is 1 if left > right else 0. 
+    Elementwise 'greater' comparison of two tensors. Result is 1 if left > right else 0.
 
     Example:
-        >>> C.eval(C.greater([41., 42., 43.], [42., 42., 42.]))
+        >>> C.greater([41., 42., 43.], [42., 42., 42.]).eval()
         [array([[0., 0., 1.]])]
         
-        >>> C.eval(C.greater([-1,0,1], [0]))
+        >>> C.greater([-1,0,1], [0]).eval()
         [array([[1., 0., 1.]])]
 
     Args:
         left: left side tensor
         right: right side tensor
-        name (`str`, optional): the name of the node in the network            
+        name (`str`, optional): the name of the node in the network
     Returns:
         :class:`cntk.Function`
     '''
@@ -304,10 +332,10 @@ def greater_equal(left, right, name=''):
     Elementwise 'greater equal' comparison of two tensors. Result is 1 if left >= right else 0. 
 
     Example:
-        >>> C.eval(C.greater_equal([41., 42., 43.], [42., 42., 42.]))
+        >>> C.greater_equal([41., 42., 43.], [42., 42., 42.]).eval()
         [array([[0., 1., 1.]])]
         
-        >>> C.eval(C.greater_equal([-1,0,1], [0]))
+        >>> C.greater_equal([-1,0,1], [0]).eval()
         [array([[0., 1., 1.]])]
 
     Args:
@@ -328,10 +356,10 @@ def not_equal(left, right, name=''):
     Elementwise 'not equal' comparison of two tensors. Result is 1 if left != right else 0. 
 
     Example:
-        >>> C.eval(C.not_equal([41., 42., 43.], [42., 42., 42.]))
+        >>> C.not_equal([41., 42., 43.], [42., 42., 42.]).eval()
         [array([[1., 0., 1.]])]
         
-        >>> C.eval(C.eq([-1,0,1], [0]))
+        >>> C.not_equal([-1,0,1], [0]).eval()
         [array([[1., 0., 1.]])]
 
     Args:
@@ -352,10 +380,10 @@ def less_equal(left, right, name=''):
     Elementwise 'less equal' comparison of two tensors. Result is 1 if left <= right else 0. 
 
     Example:
-        >>> C.eval(C.less_equal([41., 42., 43.], [42., 42., 42.]))
+        >>> C.less_equal([41., 42., 43.], [42., 42., 42.]).eval()
         [array([[1., 1., 0.]])]
         
-        >>> C.eval(C.eq([-1,0,1], [0]))
+        >>> C.less_equal([-1,0,1], [0]).eval()
         [array([[1., 1., 0.]])]
 
     Args:
@@ -382,10 +410,10 @@ def plus(left, right, name=''):
     The operator (+) has been overloaded and can equally be used instead of plus()
 
     Example:
-        >>> C.eval(C.plus([1, 2, 3], [4, 5, 6]))
+        >>> C.plus([1, 2, 3], [4, 5, 6]).eval()
         [array([[ 5.,  7.,  9.]])]
         
-        >>> C.eval(C.plus([-5, -4, -3, -2, -1], [10]))
+        >>> C.plus([-5, -4, -3, -2, -1], [10]).eval()
         [array([[ 5.,  6.,  7.,  8.,  9.]])]
 
     Args:
@@ -408,10 +436,10 @@ def minus(left, right, name=''):
     The operator (-) has been overloaded and can equally be used instead of minus()
 
     Example:
-        >>> C.eval(C.minus([1, 2, 3], [4, 5, 6]))
+        >>> C.minus([1, 2, 3], [4, 5, 6]).eval()
         [array([[-3., -3., -3.]])]
         
-        >>> C.eval(C.minus([[1,2],[3,4]], 1))
+        >>> C.minus([[1,2],[3,4]], 1).eval()
         [array([[[ 0.,  1.],
                  [ 2.,  3.]]])]
 
@@ -431,16 +459,16 @@ def minus(left, right, name=''):
 
 def element_times(left, right, name=''):
     '''
-    The output of this operation is the element-wise product of the two input 
-    tensors. It supports broadcasting. In case of scalars its backward pass to left propagates right 
+    The output of this operation is the element-wise product of the two input
+    tensors. It supports broadcasting. In case of scalars its backward pass to left propagates right
     times the received gradient and vice versa.
-    The operator (*) has been overloaded and can equally be used instead of element_times().    
+    The operator (*) has been overloaded and can equally be used instead of element_times().
     
     Example:
-        >>> C.eval(C.element_times([1., 1., 1., 1.], [0.5, 0.25, 0.125, 0.]))
+        >>> C.element_times([1., 1., 1., 1.], [0.5, 0.25, 0.125, 0.]).eval()
         [array([[ 0.5  ,  0.25 ,  0.125,  0.   ]])]
         
-        >>> C.eval(C.element_times([5., 10., 15., 30.], [2.]))
+        >>> C.element_times([5., 10., 15., 30.], [2.]).eval()
         [array([[ 10.,  20.,  30.,  60.]])]
     
     Args:
@@ -458,19 +486,19 @@ def element_times(left, right, name=''):
 
 def element_divide(left, right, name=''):
     '''
-    The output of this operation is the element-wise division of the two input 
-    tensors. It supports broadcasting. In case of scalars its backward pass to 
-    left propagates :math:`1/right` times the received gradient, and the backward 
-    pass to right propagates. 
+    The output of this operation is the element-wise division of the two input
+    tensors. It supports broadcasting. In case of scalars its backward pass to
+    left propagates :math:`1/right` times the received gradient, and the backward
+    pass to right propagates.
     The operator (/) has been overloaded and can equally be used instead of element_divide().
     :math:`(-left/right^2)` times the received gradient. 
     
 
     Example:
-        >>> C.eval(C.element_divide([1., 1., 1., 1.], [0.5, 0.25, 0.125, 0.]))
+        >>> C.element_divide([1., 1., 1., 1.], [0.5, 0.25, 0.125, 0.]).eval()
         [array([[ 2.,  4.,  8.,  0.]])]
         
-        >>> C.eval(C.element_divide([5., 10., 15., 30.], [2.]))
+        >>> C.element_divide([5., 10., 15., 30.], [2.]).eval()
         [array([[  2.5,   5. ,   7.5,  15. ]])]
 
     Args:
@@ -493,14 +521,15 @@ def times(left, right, output_rank=1, name=''):
     The operator '@' has been overloaded such that in Python 3.5 and later X @ W equals times(X, W).
 
     Example:
-        >>> C.eval(C.times([[1,2],[3,4]], [5,6]))
-        [array([[ 17.,  39.]])]
+        >>> C.times([[1,2],[3,4]], [[5],[6]]).eval()
+        array([[ 17.],
+               [ 39.]])
         
-        >>> C.eval(cntk.times(np.reshape(np.arange(8), (2,2,2)),np.reshape(np.arange(8), (2,2,2)), output_rank=1))
+        >>> C.times(1.*np.reshape(np.arange(8), (2.,2.,2.)),1.*np.reshape(np.arange(8), (2.,2.,2.)), output_rank=1).eval()
         [array([[[ 28.,  34.],
-        [ 76.,  98.]]])]
+                 [ 76.,  98.]]])]
         
-        >>> C.eval(cntk.times(np.reshape(np.arange(8), (2,2,2)),np.reshape(np.arange(8), (2,2,2)), output_rank=2))
+        >>> C.times(1.*np.reshape(np.arange(8), (2,2,2)),1.*np.reshape(np.arange(8), (2,2,2)), output_rank=2).eval()
         [array([[[[[  4.,   5.],
                    [  6.,   7.]],
                   [[ 12.,  17.],
@@ -557,17 +586,17 @@ def floor(arg, name=''):
     integer less than or equal to the input.
 
     Example:
-        >>> C.eval(C.floor([0.2, 1.3, 4., 5.5, 0.0]))
+        >>> C.floor([0.2, 1.3, 4., 5.5, 0.0]).eval()
         [array([[ 0.,  1.,  4.,  5.,  0.]])]
 
-        >>> C.eval(C.floor([[0.6, 3.3], [1.9, 5.6]]))
+        >>> C.floor([[0.6, 3.3], [1.9, 5.6]]).eval()
         [array([[[ 0.,  3.],
                  [ 1.,  5.]]])]
 
-        >>> C.eval(C.floor([-5.5, -4.2, -3., -0.7, 0]))
+        >>> C.floor([-5.5, -4.2, -3., -0.7, 0]).eval()
         [array([[-6., -5., -3., -1.,  0.]])]
 
-        >>> C.eval(C.floor([[-0.6, -4.3], [1.9, -3.2]]))
+        >>> C.floor([[-0.6, -4.3], [1.9, -3.2]]).eval()
         [array([[[-1., -5.],
                  [ 1., -4.]]])]
 
@@ -583,14 +612,14 @@ def floor(arg, name=''):
 
 def ceil(arg, name=''):
     '''
-    The output of this operation is the element wise value rounded to the smallest 
+    The output of this operation is the element wise value rounded to the smallest
     integer greater than or equal to the input.
 
     Example:
-        >>> C.eval(C.ceil([0.2, 1.3, 4., 5.5, 0.0]))
+        >>> C.ceil([0.2, 1.3, 4., 5.5, 0.0]).eval()
         [array([[ 1.,  2.,  4.,  6.,  0.]])]
         
-        >>> C.eval(C.ceil([[0.6, 3.3], [1.9, 5.6]]))
+        >>> C.ceil([[0.6, 3.3], [1.9, 5.6]]).eval()
         [array([[[ 1.,  4.],
                  [ 2.,  6.]]])]
 
@@ -606,24 +635,24 @@ def ceil(arg, name=''):
 
 def round(arg, name=''):
     '''
-    The output of this operation is the element wise value rounded to the nearest integer. 
+    The output of this operation is the element wise value rounded to the nearest integer.
     In case of tie, where element can have exact fractional part of 0.5
     this operation follows "round half-up" tie breaking strategy.
     This is different from the round operation of numpy which follows
     round half to even.
 
     Example:
-        >>> C.eval(C.round([0.2, 1.3, 4., 5.5, 0.0]))
+        >>> C.round([0.2, 1.3, 4., 5.5, 0.0]).eval()
         [array([[ 0.,  1.,  4.,  6.,  0.]])]
 
-        >>> C.eval(C.round([[0.6, 3.3], [1.9, 5.6]]))
+        >>> C.round([[0.6, 3.3], [1.9, 5.6]]).eval()
         [array([[[ 1.,  3.],
                  [ 2.,  6.]]])]
 
-        >>> C.eval(C.round([-5.5, -4.2, -3., -0.7, 0]))
+        >>> C.round([-5.5, -4.2, -3., -0.7, 0]).eval()
         [array([[-5., -4., -3., -1.,  0.]])]
 
-        >>> C.eval(C.round([[-0.6, -4.3], [1.9, -3.2]]))
+        >>> C.round([[-0.6, -4.3], [1.9, -3.2]]).eval()
         [array([[[-1., -4.],
                  [ 2., -3.]]])]
 
