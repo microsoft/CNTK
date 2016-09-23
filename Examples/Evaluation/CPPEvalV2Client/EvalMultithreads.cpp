@@ -1,6 +1,5 @@
 #include <functional>
 #include <thread>
-#include <mutex>
 #include <iostream>
 #include "CNTKLibrary.h"
 
@@ -42,8 +41,6 @@ FunctionPtr FullyConnectedFeedForwardClassifierNetWithSharedParameters(Variable 
     return classifierRoot;
 }
 
-std::atomic<bool> AllThreadsReady(false);
-
 void EvaluationNewNetworkWithSharedParameters(size_t inputDim,
                                               size_t numOutputClasses,
                                               size_t numHiddenLayers,
@@ -55,12 +52,6 @@ void EvaluationNewNetworkWithSharedParameters(size_t inputDim,
                                               const DeviceDescriptor& computeDevice)
 {
     using namespace std::placeholders;
-
-    // wait for ready signal
-    while (!AllThreadsReady)
-    {
-        std::this_thread::yield();
-    }
 
     // Create network using shared parameters
     auto inputVar = InputVariable({inputDim}, DataType::Float, L"Features");
@@ -147,7 +138,6 @@ void EvalMultiThreadsWithNewNetwork(const DeviceDescriptor& device, const int th
     {
         threadList[th] = std::thread(EvaluationNewNetworkWithSharedParameters, inputDim, numOutputClasses, numHiddenLayers, inputTimesParam, inputPlusParam, hiddenLayerTimesParam, hiddenLayerPlusParam, outputTimesParam, device);
     }
-    AllThreadsReady = true;
 
     for (int th = 0; th < threadCount; ++th)
     {
