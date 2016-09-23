@@ -174,8 +174,8 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
                 using (var model = new IEvaluateModelManagedF())
                 {
                     // Desired output layers
-                    const string hiddenLayerName = "h1.z";
-                    const string outputLayerName = "ol.z";
+                    const string hiddenLayerName = "out.h1";
+                    const string outputLayerName = "out.z";
 
                     // Load model
                     string modelFilePath = Path.Combine(Environment.CurrentDirectory, @"..\Output\Models\01_OneHidden");
