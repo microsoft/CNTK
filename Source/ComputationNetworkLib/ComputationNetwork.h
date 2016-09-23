@@ -703,30 +703,16 @@ public:
     // construction
     // -----------------------------------------------------------------------
 
-protected:
-
     // Copy constructor, should never be called.
-#pragma warning(push)
-#pragma warning(disable : 4702) // this function is flagged but unclear why
-    ComputationNetwork(const ComputationNetwork& /*deepCopyFrom*/)
-    {
-        // TODO: can we just define it as private without implementation?
-        LogicError("'ComputationNetwork(const ComputationNetwork& deepCopyFrom)' should never be called.");
-    }
-#pragma warning(pop)
+    ComputationNetwork(const ComputationNetwork& /*deepCopyFrom*/) = delete;
 
     // Assignment operator, should never be called.
-    ComputationNetwork& operator=(const ComputationNetwork& /*deepCopyFrom*/)
-    {
-        // TODO: can we just define it as private without implementation?
-        LogicError("'ComputationNetwork& operator=(const ComputationNetwork& deepCopyFrom)' should never be called.");
-    }
+    ComputationNetwork& operator=(const ComputationNetwork& /*deepCopyFrom*/) = delete;
 
     // -----------------------------------------------------------------------
     // node creation
     // -----------------------------------------------------------------------
 
-public:
     // TODO: move these to ComputationNetworkBuilder.cpp
 
     // add a node to m_nameToNodeMap[], which is our node holder
