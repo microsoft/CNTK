@@ -53,8 +53,6 @@ if "%p_CNTK_MKL_SEQUENTIAL%" == "1" (
 )
 
 echo #define _BUILDER_ "%USERNAME%"     >> buildinfo.h$$
-
-echo #define _BUILDER_ "%USERNAME%"     >> buildinfo.h$$
 echo #define _BUILDMACHINE_ "%HOST%"    >> buildinfo.h$$
 
 set l_scriptpath=%~dp0
