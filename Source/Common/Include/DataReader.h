@@ -30,10 +30,43 @@
 #include <map>
 #include <string>
 #include <memory>
+#include <unordered_set>
 
 // forward-declare these lattice-related types to avoid having to include and pollute everything with lattice-related headers
 namespace msra { namespace dbn {  class latticepair; class latticesource; } }
 namespace msra { namespace asr {  class simplesenonehmm; } } 
+
+namespace Microsoft { namespace MSR { namespace CNTK {
+
+    // This class contains input stream descriptions, 
+    // the network can request less streams than the reader provides.
+    // TODO: Should be unified with StreamDescription from the new reader API
+    struct InputStreamDescription
+    {
+        // Stream name.
+        std::wstring m_name;
+
+        // Device identifier for the resulting matrix of this stream.
+        int m_deviceId;
+    };
+
+    inline bool operator == (const InputStreamDescription& a, const InputStreamDescription& b)
+    {
+        return a.m_name == b.m_name && a.m_deviceId == b.m_deviceId;
+    };
+}}}
+
+namespace std
+{
+    template <> struct hash<Microsoft::MSR::CNTK::InputStreamDescription>
+    {
+        size_t operator()(const Microsoft::MSR::CNTK::InputStreamDescription& x) const
+        {
+            // Input name is unique, simply return the hash of the input stream.
+            return std::hash<std::wstring>()(x.m_name);
+        }
+    };
+}
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -123,6 +156,17 @@ public:
     void clear() { inputs.clear(); }
     // only used by test code:
     void insert(std::pair<wstring, Input> pair) { inputs.insert(pair); }
+
+    // Returns description of required streams for the minibatch.
+    std::unordered_set<InputStreamDescription> GetStreamDescriptions() const
+    {
+        std::unordered_set<InputStreamDescription> streamDescriptions;
+        for (auto input = begin(); input != end(); ++input)
+        {
+            streamDescriptions.insert(InputStreamDescription{ input->first, input->second.matrix->GetDeviceId() });
+        }
+        return streamDescriptions;
+    }
 };
 
 // Data Reader interface
@@ -143,12 +187,23 @@ public:
 protected:
     virtual ~IDataReader() { }
 public:
+    virtual void StartMinibatchLoop(size_t mbSize, size_t epoch, const std::unordered_set<InputStreamDescription>& /*requiredStreams*/, size_t requestedEpochSamples = requestDataSize)
+    {
+        StartMinibatchLoop(mbSize, epoch, requestedEpochSamples);
+    }
+
+    virtual void StartDistributedMinibatchLoop(size_t mbSize, size_t epoch, size_t subsetNum, size_t numSubsets, const std::unordered_set<InputStreamDescription>& /*requiredStreams*/, size_t requestedEpochSamples = requestDataSize)
+    {
+        StartDistributedMinibatchLoop(mbSize, epoch, subsetNum, numSubsets, requestedEpochSamples);
+    }
+
     virtual void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples = requestDataSize) = 0;
 
     virtual bool SupportsDistributedMBRead() const
     {
         return false;
     };
+
     virtual void StartDistributedMinibatchLoop(size_t mbSize, size_t epoch, size_t subsetNum, size_t numSubsets, size_t requestedEpochSamples = requestDataSize)
     {
         if (SupportsDistributedMBRead() || (numSubsets != 1) || (subsetNum != 0))
@@ -328,6 +383,9 @@ public:
 
     virtual bool SupportsDistributedMBRead() const override;
     virtual void StartDistributedMinibatchLoop(size_t mbSize, size_t epoch, size_t subsetNum, size_t numSubsets, size_t requestedEpochSamples = requestDataSize) override;
+
+    virtual void StartMinibatchLoop(size_t mbSize, size_t epoch, const std::unordered_set<InputStreamDescription>&, size_t requestedEpochSamples = requestDataSize) override;
+    virtual void StartDistributedMinibatchLoop(size_t mbSize, size_t epoch, size_t subsetNum, size_t numSubsets, const std::unordered_set<InputStreamDescription>&, size_t requestedEpochSamples = requestDataSize) override;
 
     // GetMinibatch - Get the next minibatch (features and labels)
     // matrices - [in] a map with named matrix types (i.e. 'features', 'labels') mapped to the corresponding matrix,

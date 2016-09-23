@@ -59,6 +59,8 @@ void TrainSequenceToSequenceTranslator(const DeviceDescriptor& device, bool useS
     {
         thoughtVectorH = Reshape(thoughtVectorH, thoughtVectorH->Output().Shape().AppendShape({ 1 }));
         thoughtVectorC = Reshape(thoughtVectorC, thoughtVectorC->Output().Shape().AppendShape({ 1 }));
+        labelEmbedding = Reshape(labelEmbedding, labelEmbedding->Output().Shape().AppendShape({ 1 }));
+        labelSentenceStartEmbeddedScattered = Reshape(labelSentenceStartEmbeddedScattered, labelSentenceStartEmbeddedScattered->Output().Shape().AppendShape({ 1 }));
     }
 
     auto thoughtVectorBroadcastH = Sequence::BroadcastAs(thoughtVectorH, labelEmbedding);
@@ -179,6 +181,8 @@ void TrainSequenceToSequenceTranslator(const DeviceDescriptor& device, bool useS
 void TrainSequenceToSequenceTranslator()
 {
     // TODO: Also test with sparse input variables in the graph
+#ifndef CPUONLY
     TrainSequenceToSequenceTranslator(DeviceDescriptor::GPUDevice(0), false, false, true, false);
+#endif
     TrainSequenceToSequenceTranslator(DeviceDescriptor::CPUDevice(), false, true, false, true);
 }

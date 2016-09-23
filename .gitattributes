@@ -112,7 +112,7 @@ TIMIT*.statelist text
 TIMIT*.tfsa text
 TIMIT*.transitions text
 
-Examples/Text/ATIS/data/ATIS.* text
+Examples/Text/ATIS/Data/ATIS.* text
 
 Examples/SequenceToSequence/CMUDict/Data/cmudict-0.7b* text
 

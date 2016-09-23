@@ -617,7 +617,7 @@ MatrixL1Reg(matrix, tag='') = new ComputationNode [ operation = 'MatrixL1Reg' ; 
 MatrixL2Reg(matrix, tag='') = new ComputationNode [ operation = 'MatrixL2Reg' ; inputs = _AsNodes (matrix) /*plus the function args*/ ]
 Mean(dataVectorSequence, tag='') = new ComputationNode [ operation = 'Mean' ; inputs = _AsNodes (dataVectorSequence) /*plus the function args*/ ]
 Negate(input, tag='') = new ComputationNode [ operation = 'Negate' ; inputs = _AsNodes (input) /*plus the function args*/ ]
-PackedIndex(targetObject, indexSequence, tag='') = new ComputationNode [ operation = 'PackedIndex' ; inputs = _AsNodes (targetObject : indexSequence) /*plus the function args*/ ]
+PackedIndex(nodeWithLayoutToPackFor, indexSequence, tag='') = new ComputationNode [ operation = 'PackedIndex' ; inputs = _AsNodes (nodeWithLayoutToPackFor : indexSequence) /*plus the function args*/ ]
 PerDimMeanVarDeNormalization(dataVectorSequence, meanVector, invStdDevVector, tag='') = new ComputationNode [ operation = 'PerDimMeanVarDeNormalization' ; inputs = _AsNodes (dataVectorSequence : meanVector : invStdDevVector) /*plus the function args*/ ]
 #PerDimMeanVarNormalization(dataVectorSequence, meanVector, invStdDevVector, tag='') = new ComputationNode [ operation = 'PerDimMeanVarNormalization' ; inputs = _AsNodes (dataVectorSequence : meanVector : invStdDevVector) /*plus the function args*/ ]
 PerDimMeanVarNormalization (x, mean, invStdDev) = (x - mean) .* invStdDev
@@ -844,8 +844,8 @@ Sequences = [
 
     # Gather and Scatter
     # We go through 3 nodes each to take advantage of x
-    Gather  (cond, x) =  GatherPacked (      PackedIndex (x, Where (cond)), x) # 'cond' matches 'x'
-    Scatter (cond, y) = ScatterPacked (cond, PackedIndex (y, Where (cond)), y) # 'cond' matches the result
+    Gather  (cond, x) =  GatherPacked (      PackedIndex (/*layout of*/ x, Where (cond)), x)                  # 'cond' matches 'x'
+    Scatter (cond, y) = ScatterPacked (/*layout of*/ cond, PackedIndex (/*layout of*/ cond, Where (cond)), y) # 'cond' matches the result
 
     # sequence-altering LINQ-like operators
     # These generate new data packing (MBLayouts)

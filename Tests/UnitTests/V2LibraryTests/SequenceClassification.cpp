@@ -78,6 +78,8 @@ void TrainLSTMSequenceClassifer(const DeviceDescriptor& device, bool testSaveAnd
 
 void TrainLSTMSequenceClassifer()
 {
+#ifndef CPUONLY
     TrainLSTMSequenceClassifer(DeviceDescriptor::GPUDevice(0), true);
+#endif
     TrainLSTMSequenceClassifer(DeviceDescriptor::CPUDevice(), false);
 }

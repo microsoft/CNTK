@@ -32,9 +32,9 @@ protected:
         void Resize(size_t newSize);
     };
 
-    PackerBase(MemoryProviderPtr memoryProvider,
-               SequenceEnumeratorPtr sequenceEnumerator,
-               const std::vector<StreamDescriptionPtr>& streams);
+    PackerBase(SequenceEnumeratorPtr sequenceEnumerator,
+               const std::vector<StreamDescriptionPtr>& streams,
+               size_t numberOfBuffers);
 
     typedef std::vector<SequenceDataPtr> StreamBatch;
 
@@ -64,8 +64,17 @@ protected:
     // Output stream descriptions expected by the network.
     std::vector<StreamDescriptionPtr> m_inputStreamDescriptions;
 
-    // Buffers for allocated data.
-    std::vector<StreamBuffer> m_streamBuffers;
+    // Indicates how many internal buffers with pinned memory are supported.
+    // If N - then N sequential calls to PackMinibatch are valid, and N+1 call will overwrite 
+    // the memory of the first call.
+    size_t m_numberOfBuffers;
+
+    // Buffers for allocated data. Outer vector size == m_numberOfBuffers, 
+    // inner vector contains buffers for all streams.
+    std::vector<std::vector<StreamBuffer>> m_streamBuffers;
+
+    // Cyclic index of the current buffer. m_currentBufferIndex < m_numberOfBuffers;
+    size_t m_currentBufferIndex;
 
     // Minibatch size in samples.
     size_t m_minibatchSize;
@@ -73,9 +82,12 @@ protected:
     // For which streams there should be a shape check for each sequence.
     std::vector<bool> m_checkSampleShape;
 
+    // Memory providers. Each stream has its own memory provider.
+    std::vector<MemoryProviderPtr> m_memoryProviders;
+
 public:
     // Sets current epoch configuration.
-    virtual void StartEpoch(const EpochConfiguration& config) override;
+    virtual void StartEpoch(const EpochConfiguration& config, const std::vector<MemoryProviderPtr>& memoryProviders) override;
 };
 
 inline void PackerBase::PackSparseSampleAsDense(char* destination, SparseSequenceDataPtr sequence,
@@ -89,13 +101,14 @@ inline void PackerBase::PackSparseSampleAsDense(char* destination, SparseSequenc
     // m_indices stores the corresponding indices for each element. 
     // Iterate through non zero elements and copy from m_data them into the 
     // destination at the offset given by the corresponding row index (m_index).
+    const void* buffer = sequence->GetDataBuffer();
     for (size_t nonZeroIndex = 0; nonZeroIndex < nonZeroCount; ++nonZeroIndex)
     {
         auto sourceOffset = sampleOffset + nonZeroIndex;
         auto elementIndex = sequence->m_indices[sourceOffset];
         auto destinationOffset = elementIndex * elementSize;
         assert(destinationOffset < sampleSize);
-        const auto* source = (const char*)(sequence->m_data) + (sourceOffset)* elementSize;
+        const auto* source = (const char*)buffer + (sourceOffset)* elementSize;
         memcpy(destination + destinationOffset, source, elementSize);
     }
 }
@@ -103,7 +116,7 @@ inline void PackerBase::PackSparseSampleAsDense(char* destination, SparseSequenc
 inline void PackerBase::PackDenseSample(char* destination, SequenceDataPtr sequence, size_t sampleOffset, size_t sampleSize)
 {
     // Because the sample is dense - simply copying it to the output.
-    memcpy(destination, (const char*)(sequence->m_data) + sampleOffset, sampleSize);
+    memcpy(destination, (const char*)(sequence->GetDataBuffer()) + sampleOffset, sampleSize);
 }
 
 }}}

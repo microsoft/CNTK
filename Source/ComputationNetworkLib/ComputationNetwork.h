@@ -138,7 +138,7 @@ public:
 
     // partial forward entry
     void ForwardProp(const ComputationNodeBasePtr rootNode, const ComputationNodeBasePtr startNode, 
-	    const ComputationNodeBasePtr endNode);
+                     const ComputationNodeBasePtr endNode);
 
     template <class NODESET> // version that takes multiple nodes
     void ForwardProp(const NODESET& nodes)
