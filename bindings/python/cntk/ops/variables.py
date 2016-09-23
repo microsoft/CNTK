@@ -19,8 +19,6 @@ def _sanitize_value(shape, value, dtype, device, is_param=False):
             ndav = NDArrayView.random_uniform_float(shape, -0.05, 0.05, 1, device)
         else:
             ndav = utils.create_NDArrayView(shape, cntk_dtype, device)
-
-
     else:
         if not isinstance(value, np.ndarray) or value.dtype!=np_dtype:
             if np.isscalar(value) and shape:
@@ -32,7 +30,6 @@ def _sanitize_value(shape, value, dtype, device, is_param=False):
 
     return ndav
 
-#TODO: remove default values from all constructors' arguments
 class Variable(TensorOpsMixin,Variable):
     def __init__(self, shape=None, data_type=None, needs_gradient=False, is_sparse=False,
                     dynamic_axes = [Axis.default_dynamic_axis(), Axis.default_batch_axis()], name=''):

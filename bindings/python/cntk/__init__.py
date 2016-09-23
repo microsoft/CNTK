@@ -50,30 +50,38 @@ class Trainer(cntk_py.Trainer):
         Args:
             arguments (dict): map from input variables to the data, data should be either numpy
              arrays or cntk.Value instances returned by a minibatch source
-            device (:class:`cntk.DeviceDescriptor`): the device descriptor that contains the type and id of the device
+            device (:class:`cntk.DeviceDescriptor`): the device descriptor that
+             contains the type and id of the device on which the computation is
+             to be performed.
 
         Returns:
-            bool
+            `bool`: `True` if updates have been performed
         '''
         if not device:
             device=DeviceDescriptor.use_default_device()        
         arguments = sanitize_var_map(arguments, add_batch_axis=True)
-        super(Trainer, self).train_minibatch(arguments, device)
+
+        return super(Trainer, self).train_minibatch(arguments, device)
 
     def test_minibatch(self, arguments, device=None):
         '''
-        Test the model on the specified batch of samples using the evaluation Function specified during construction of the Trainer
-        Returns the average evaluation criterion value per sample for the tested minibatch of samples
+        Test the model on the specified batch of samples using the evaluation
+        Function specified during construction of the Trainer. 
+        of samples.
 
         Args:
             arguments (dict): map from input variables to the data, data should be either numpy
              arrays or cntk.Value instances returned by a minibatch source
-            device (:class:`cntk.DeviceDescriptor`): the device descriptor that contains the type and id of the device
+            device (:class:`cntk.DeviceDescriptor`): the device descriptor that
+            contains the type and id of the device on which the computation is
+            to be performed.
         Returns:
-            float
+            `float`: the average evaluation criterion value per sample for the
+             tested minibatch.
         '''
         if not device:
             device=DeviceDescriptor.use_default_device()        
         arguments = sanitize_var_map(arguments, add_batch_axis=True)
+
         return super(Trainer, self).test_minibatch(arguments, device)
 
