@@ -18,7 +18,10 @@ PROJ_LIB_PATH = os.path.join(os.path.dirname(__file__), "cntk", "libs")
 if 'CNTK_LIB_PATH' in os.environ:
     CNTK_LIB_PATH = os.environ['CNTK_LIB_PATH']
 else:
-    CNTK_LIB_PATH = os.path.join(CNTK_PATH, "x64", "Release")
+    if IS_WINDOWS:
+        CNTK_LIB_PATH = os.path.join(CNTK_PATH, "x64", "Release")
+    else:
+        CNTK_LIB_PATH = os.path.join(CNTK_PATH, "build", "gpu", "release", "lib")
 
 print("Using CNTK sources at '%s'"%os.path.abspath(CNTK_SOURCE_PATH))
 print("Using CNTK libs at '%s'"%os.path.abspath(CNTK_LIB_PATH))
