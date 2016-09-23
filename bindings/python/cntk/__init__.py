@@ -15,10 +15,11 @@ from .ops import *
 
 # pulling elements from the wrapper into cntk namespace that do not require
 # special wrapping
-from .cntk_py import learning_rates_per_sample, sgd_learner, \
-    DeviceDescriptor, Constant, StreamConfiguration, \
-    text_format_minibatch_source, momentums_per_sample, momentum_sgd_learner, \
+from .cntk_py import DeviceDescriptor, Constant, StreamConfiguration, \
+    text_format_minibatch_source, momentums_per_sample, \
     Axis
+
+from .learner import sgd_learner, momentum_sgd_learner
 
 import numpy as np
 
@@ -43,9 +44,10 @@ class Trainer(cntk_py.Trainer):
         '''
         Optimize model parameters using the specified 'arguments' minibatch of training samples.
         Returns false if all parameter learners indicate end of learning (through their Update method's return value).
+
         Args:
             arguments (dict): map from input variables to the data, data should be either numpy
-            arrays or cntk.Value instances returned by a minibatch source
+             arrays or cntk.Value instances returned by a minibatch source
             device (:class:`cntk.DeviceDescriptor`): the device descriptor that contains the type and id of the device
         Returns:
             bool
@@ -59,9 +61,10 @@ class Trainer(cntk_py.Trainer):
         '''
         Test the model on the specified batch of samples using the evaluation Function specified during construction of the Trainer
         Returns the average evaluation criterion value per sample for the tested minibatch of samples
+
         Args:
             arguments (dict): map from input variables to the data, data should be either numpy
-            arrays or cntk.Value instances returned by a minibatch source
+             arrays or cntk.Value instances returned by a minibatch source
             device (:class:`cntk.DeviceDescriptor`): the device descriptor that contains the type and id of the device
         Returns:
             float

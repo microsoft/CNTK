@@ -23,7 +23,10 @@ def _sanitize_value(shape, value, dtype, device, is_param=False):
 
     else:
         if not isinstance(value, np.ndarray) or value.dtype!=np_dtype:
-            value = np.asarray(value, dtype=np_dtype)
+            if np.isscalar(value) and shape:
+                value = np.full(shape, value, dtype=np_dtype)
+            else:
+                value = np.asarray(value, dtype=np_dtype)
 
         ndav = utils.create_NDArrayView_from_NumPy(value, device)
 

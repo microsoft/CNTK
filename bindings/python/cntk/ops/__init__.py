@@ -1415,11 +1415,19 @@ def parameter(shape=None, value=None, device=None, name=''):
     if not device:
         device=DeviceDescriptor.use_default_device()
 
-    if np.isscalar(value):
-        assert shape is None or shape == ()
-        return parameter_from_scalar(value, None, device, name)   
+    if np.isscalar(value) and not shape:
+        shape = ()
+        if isinstance(value, np.ndarray):
+            data_type = str(value.dtype)
+        else:
+            data_type = 'float32'
 
-    return Parameter(shape, value, None, device, name)        
+        #assert shape is None or shape == ()
+        #return parameter_from_scalar(value, None, device, name)   
+    else:
+        data_type = None
+
+    return Parameter(shape, value, data_type, device, name)        
 
 def constant(shape=None, value=None, device=None, name=''):
     '''

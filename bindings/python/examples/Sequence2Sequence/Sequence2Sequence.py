@@ -26,17 +26,21 @@ def train_sequence_to_sequence_translator():
     num_layers = 2
 
     # Source and target inputs to the model
-    input_dynamic_axes = [ Axis('inputAxis'), Axis.default_batch_axis() ]
+    batch_axis = Axis.default_batch_axis()
+    input_seq_axis = Axis('inputAxis')
+    label_seq_axis = Axis('labelAxis')
+
+    input_dynamic_axes = [ batch_axis, input_seq_axis ]
     raw_input = input_variable(shape=(input_vocab_dim), dynamic_axes = input_dynamic_axes)
 
-    label_dynamic_axes = [ Axis('labelAxis'), Axis.default_batch_axis() ]
+    label_dynamic_axes = [ batch_axis, label_seq_axis ]
     raw_labels = input_variable(shape=(label_vocab_dim), dynamic_axes = label_dynamic_axes)
 
     # Instantiate the sequence to sequence translation model
     input_sequence = raw_input
 
     # Drop the sentence start token from the label, for decoder training
-    label_sequence = slice(raw_labels, label_dynamic_axes[0], 1, 0)
+    label_sequence = slice(raw_labels, label_seq_axis, 1, 0)
     label_sentence_start = sequence.first(raw_labels)
 
     is_first_label = sequence.is_first(label_sequence)
@@ -45,7 +49,7 @@ def train_sequence_to_sequence_translator():
     # Encoder
     encoder_outputH = stabilize(input_sequence)
     for i in range(0, num_layers):
-        (encoder_outputH, encoder_outputC) = LSTMP_component_with_self_stabilization(encoder_outputH, hidden_dim, hidden_dim, future_value, future_value)
+        (encoder_outputH, encoder_outputC) = LSTMP_component_with_self_stabilization(encoder_outputH.output(), hidden_dim, hidden_dim, future_value, future_value)
 
     thought_vectorH = sequence.first(encoder_outputH)
     thought_vectorC = sequence.first(encoder_outputC)
@@ -67,7 +71,7 @@ def train_sequence_to_sequence_translator():
             recurrence_hookH = lambda operand: element_select(isFirst, thought_vector_broadcastH, past_value(operand))
             recurrence_hookC = lambda operand: element_select(isFirst, thought_vector_broadcastC, past_value(operand))
 
-        (decoder_outputH, encoder_outputC) = LSTMP_component_with_self_stabilization(decoder_outputH, hidden_dim, hidden_dim, recurrence_hookH, recurrence_hookC)
+        (decoder_outputH, encoder_outputC) = LSTMP_component_with_self_stabilization(decoder_outputH.output(), hidden_dim, hidden_dim, recurrence_hookH, recurrence_hookC)
 
     decoder_output = decoder_outputH
     decoder_dim = hidden_dim
@@ -95,7 +99,7 @@ def train_sequence_to_sequence_translator():
     clipping_threshold_per_sample = 2.3
     gradient_clipping_with_truncation = True
 
-    trainer = Trainer(z, ce, errs, [momentum_sgd_learner(z.owner.parameters(), lr, momentum_per_sample, clipping_threshold_per_sample, gradient_clipping_with_truncation)])                   
+    trainer = Trainer(z, ce, errs, [momentum_sgd_learner(z.parameters(), lr, momentum_per_sample, clipping_threshold_per_sample, gradient_clipping_with_truncation)])                   
 
     # Get minibatches of sequences to train with and perform model training
     minibatch_size = 72

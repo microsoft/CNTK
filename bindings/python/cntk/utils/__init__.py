@@ -273,10 +273,8 @@ def get_data_type(*args):
         if isinstance(arg, (cntk_py.Variable, cntk_py.Constant, cntk_py.Parameter)):
             if cntk_py.DataType_Double == arg.get_data_type():
                 dtypes.add(np.float64)
-            elif cntk_py.DataType_Float == arg.get_data_type():
-                dtypes.add(np.float32)
             else:
-                raise ValueError('unknown data type')
+                dtypes.add(np.float32)
         elif isinstance(arg, np.ndarray):
             if arg.dtype not in (np.float32, np.float64):
                 raise ValueError('NumPy type "%s" is not supported'%arg.dtype)

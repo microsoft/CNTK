@@ -11,17 +11,23 @@ from cntk import Constant
 from cntk.ops import *
 from cntk.utils import sanitize_dtype_cntk, get_train_eval_criterion, get_train_loss
 
-def linear_layer(input, output_dim):
-    input_dim = input.shape()[0]
+def linear_layer(input_var, output_dim):
+    try:
+        shape = input_var.shape()
+    except AttributeError:
+        input_var = input_var.output()
+        shape = input_var.shape()
+
+    input_dim = shape[0]
     times_param = parameter(shape=(input_dim, output_dim))
     bias_param = parameter(shape=(output_dim))
 
-    t = times(input, times_param)
+    t = times(input_var, times_param)
     return bias_param + t
 
 def fully_connected_layer(input, output_dim, nonlinearity):
     p = linear_layer(input, output_dim)
-    return nonlinearity(p).output()
+    return nonlinearity(p)
 
 # Defines a multilayer feedforward classification model
 def fully_connected_classifier_net(input, num_output_classes, hidden_layer_dim, num_hidden_layers, nonlinearity):
@@ -87,7 +93,7 @@ def stabilize(operand):
     f = Constant.scalar(sanitize_dtype_cntk(np.float32), scalar_constant);
     fInv = Constant.scalar(sanitize_dtype_cntk(np.float32), 1.0 / scalar_constant)
 
-    beta = element_times(fInv, log(Constant.scalar(sanitize_dtype_cntk(np.float32), 1.0) + exp(element_times(f, parameter(shape=(), value=0.99537863)))))
+    beta = element_times(fInv, log(Constant.scalar(sanitize_dtype_cntk(np.float32), 1.0) + exp(element_times(f, parameter(value=0.99537863)))))
     return element_times(beta, operand)
 
 def LSTMP_cell_with_self_stabilization(input, prev_output, prev_cell_state):
@@ -119,21 +125,21 @@ def LSTMP_cell_with_self_stabilization(input, prev_output, prev_cell_state):
     Wmr = parameter(shape=(cell_dim, output_dim))
 
     # Stabilization by routing input through an extra scalar parameter
-    sWxo = parameter(shape=(), value=0)
-    sWxi = parameter(shape=(), value=0)
-    sWxf = parameter(shape=(), value=0)
-    sWxc = parameter(shape=(), value=0)
+    sWxo = parameter(value=0)
+    sWxi = parameter(value=0)
+    sWxf = parameter(value=0)
+    sWxc = parameter(value=0)
 
-    sWhi = parameter(shape=(), value=0)
-    sWci = parameter(shape=(), value=0)
+    sWhi = parameter(value=0)
+    sWci = parameter(value=0)
 
-    sWhf = parameter(shape=(), value=0)
-    sWcf = parameter(shape=(), value=0)
-    sWho = parameter(shape=(), value=0)
-    sWco = parameter(shape=(), value=0)
-    sWhc = parameter(shape=(), value=0)
+    sWhf = parameter(value=0)
+    sWcf = parameter(value=0)
+    sWho = parameter(value=0)
+    sWco = parameter(value=0)
+    sWhc = parameter(value=0)
 
-    sWmr = parameter(shape=(), value=0)
+    sWmr = parameter(value=0)
 
     expsWxo = exp(sWxo)
     expsWxi = exp(sWxi)
@@ -186,7 +192,7 @@ def LSTMP_component_with_self_stabilization(input, output_dim, cell_dim, recurre
     actualDc = recurrence_hookC(LSTMCell[1]);
 
     # Form the recurrence loop by replacing the dh and dc placeholders with the actualDh and actualDc
-    LSTMCell[0].owner.replace_placeholders({ dh : actualDh, dc : actualDc})
+    LSTMCell[0].replace_placeholders({ dh : actualDh.output(), dc : actualDc.output()})
     return (LSTMCell[0], LSTMCell[1])
 
 def print_training_progress(trainer, mb, frequency):
