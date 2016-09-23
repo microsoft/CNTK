@@ -12,14 +12,13 @@ import numpy as np
 from . import ops
 from . import cntk_py
 
-# pulling elements from the wrapper into cntk namespace that do not require
-# special wrapping
-from .cntk_py import DeviceDescriptor, momentums_per_sample
 from .utils import *
 from .ops import *
 from .io import *
 from .learner import *
 
+# TODO wrap
+from .cntk_py import DeviceDescriptor, momentums_per_sample
 
 DATATYPE = np.float32
 

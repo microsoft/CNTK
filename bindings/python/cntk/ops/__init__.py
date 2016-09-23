@@ -51,10 +51,10 @@ def cross_entropy_with_softmax(output_vector, target_vector, name=''):
     :math:`cross\_entropy\_with\_softmax(o, t) = {-{\sum_{i \in \{1,len(t)\}} t_i \log(softmax(o_i)) }}`
     
     Example:
-        >>> C.eval(C.cross_entropy_with_softmax([1., 1., 1., 50.], [0., 0., 0., 1.]))
+        >>> C.cross_entropy_with_softmax([1., 1., 1., 50.], [0., 0., 0., 1.]).eval()
         #[0.]
         
-        >>> C.eval(C.cross_entropy_with_softmax([1., 2., 3., 4.], [0.35, 0.15, 0.05, 0.45]))
+        >>> C.cross_entropy_with_softmax([1., 2., 3., 4.], [0.35, 0.15, 0.05, 0.45]).eval()
         #[1.84]
     
     Args:
@@ -78,10 +78,10 @@ def squared_error(output_matrix, target_matrix, name=''):
     This is often used as a training criterion node. 
     
     Example:
-        >>> C.eval(C.square_error([2., 1.], [4., 6.]))
+        >>> C.square_error([2., 1.], [4., 6.]).eval()
         #[29.]
         
-        >>> C.eval(C.square_error([1., 2.], [1., 2.]))
+        >>> C.square_error([1., 2.], [1., 2.]).eval()
         #[0.]
     
     Args:
@@ -108,10 +108,10 @@ def classification_error(output_vector, target_vector, name=''):
     defined for it.
     
     Example:
-        >>> C.eval(C.classification_error([1., 2., 3., 4.], [0., 0., 0., 1.]))
+        >>> C.classification_error([1., 2., 3., 4.], [0., 0., 0., 1.]).eval()
         #[0.]
         
-        >>> C.eval(C.classification_error([1., 2., 3., 4.], [0., 0., 1., 0.]))
+        >>> C.classification_error([1., 2., 3., 4.], [0., 0., 1., 0.]).eval()
         #[1.]
     
     Args:
@@ -564,7 +564,7 @@ def identity(x, name=''):
     :math:`pass_tensor(x) = x`
 
     Example:
-        >>> C.eval(C.pass_tensor([0., 1.]))
+        >>> C.pass_tensor([0., 1.]).eval()
         [array([[ 0.      ,  1.]])]
 
     Args:
@@ -683,10 +683,10 @@ def clip(x, min_value, max_value, name=''):
     and 0 if the value was clipped.
     
     Example:
-        >>> C.eval(C.clip([1., 2.1, 3.0, 4.1], 2., 4.))
+        >>> C.clip([1., 2.1, 3.0, 4.1], 2., 4.).eval()
         [array([[ 2. ,  2.1,  3. ,  4. ]])]
         
-        >>> C.eval(C.clip([-10., -5., 0., 5., 10.], [-5., -4., 0., 3., 5.], [5., 4., 1., 4., 9.]))
+        >>> C.clip([-10., -5., 0., 5., 10.], [-5., -4., 0., 3., 5.], [5., 4., 1., 4., 9.]).eval()
         [array([[-5., -4.,  0.,  4.,  9.]])]
     
     Args:        
@@ -713,7 +713,7 @@ def relu(x, name=''):
     The output tensor has the same shape as `x`.
 
     Example:
-        >>> C.eval(C.relu([[-1, -0.5, 0, 1, 2]]))
+        >>> C.relu([[-1, -0.5, 0, 1, 2]]).eval()
         [array([[[ 0.,  0.,  0.,  1.,  2.]]])]
     
     Args:
@@ -735,7 +735,7 @@ def sigmoid(x, name=''):
     The output tensor has the same shape as `x`.
     
     Example:
-        >>> C.eval(C.sigmoid([-2, -1., 0., 1., 2.]))
+        >>> C.sigmoid([-2, -1., 0., 1., 2.]).eval()
         [array([[ 0.119203,  0.268941,  0.5     ,  0.731059,  0.880797]])]
     
     Args:
@@ -755,7 +755,7 @@ def tanh(x, name=''):
     The output tensor has the same shape as `x`.
     
     Example:
-        >>> C.eval(C.tanh([[1,2],[3,4]]))
+        >>> C.tanh([[1,2],[3,4]]).eval()
         [array([[[ 0.761594,  0.964028],
                  [ 0.995055,  0.999329]]])]
     
@@ -779,10 +779,10 @@ def softmax(x, name=''):
     stability.
 
     Example:
-        >>> C.eval(C.softmax([[1, 1, 2, 3]]))
+        >>> C.softmax([[1, 1, 2, 3]]).eval()
         [array([[[ 0.082595,  0.082595,  0.224515,  0.610296]]])]
 
-        >>> C.eval(C.softmax([1, 1]))
+        >>> C.softmax([1, 1]).eval()
         [array([[ 0.5,  0.5]])]
 
     Args:
@@ -834,7 +834,7 @@ def exp(x, name=''):
     :math:`exp(x) = {e^x}`
 
     Example:
-        >>> C.eval(C.exp([0., 1.]))
+        >>> C.exp([0., 1.]).eval()
         [array([[ 1.      ,  2.718282]])]
 
     Args:
@@ -852,7 +852,7 @@ def log(x, name=''):
     Computes the element-wise the natural logarithm of `x`: 
     
     Example:
-        >>> C.eval(C.log([1., 2.]))
+        >>> C.log([1., 2.]).eval()
         [array([[ 0.      ,  0.69314718056]])]
 
     Args:
@@ -878,7 +878,7 @@ def sqrt(x, name=''):
     :math:`sqrt(x) = {\sqrt[2]{x}}`
 
     Example:
-        >>> C.eval(C.sqrt([0., 4.]))
+        >>> C.sqrt([0., 4.]).eval()
         [array([[ 0.      ,  2.]])]
 
     Args:
@@ -900,7 +900,7 @@ def square(x, name=''):
     Computes the element-wise square of `x`:     
 
     Example:
-        >>> C.eval(C.square([1., 10.]))
+        >>> C.square([1., 10.]).eval()
         [array([[ 1.      ,  100.]])]
 
     Args:
@@ -920,7 +920,7 @@ def abs(x, name=''):
     :math:`abs(x) = |x|`
 
     Example:
-        >>> C.eval(C.abs([-1, 1, -2, 3]))
+        >>> C.abs([-1, 1, -2, 3]).eval()
         [array([[ 1.,  1.,  2.,  3.]])]
 
     Args:
@@ -940,7 +940,7 @@ def negate(x, name=''):
     :math:`negate(x) = -x`
 
     Example:
-        >>> C.eval(C.negate([-1, 1, -2, 3]))
+        >>> C.negate([-1, 1, -2, 3]).eval()
         [array([[ 1.,  -1.,  2.,  -3.]])]
 
     Args:
@@ -958,7 +958,7 @@ def reciprocal(x, name=''):
     Computes the element-wise reciprocal of `x`: 
 
     Example:
-        >>> C.eval(C.reciprocal([-1/3, 1/5, -2, 3]))
+        >>> C.reciprocal([-1/3, 1/5, -2, 3]).eval()
         [array([[ -3.,  5.,  -1/2.,  1/3.]])]
 
     Args:
@@ -978,7 +978,7 @@ def element_select(flag, value_if_true, value_if_false, name=''):
     Behaves analogously to numpy.where(...).
 
     Example:
-        >>> C.eval(C.cond([-10, -1, 0, 0.3, 100], [1, 10, 100, 1000, 10000], [ 2, 20, 200, 2000, 20000]))
+        >>> C.cond([-10, -1, 0, 0.3, 100], [1, 10, 100, 1000, 10000], [ 2, 20, 200, 2000, 20000]).eval()
         [array([[  1.00000000e+00,   1.00000000e+01,   2.00000000e+02,
                    1.00000000e+03,   1.00000000e+04]])]
 
@@ -1080,7 +1080,7 @@ def reshape(x, shape, name=''):
     The backward pass propagates the received gradient for the output-shape to the input shape.
     
     Examples:
-        >>> C.eval(C.reshape([[0,1],[2,3],[4,5]], (2,3)))
+        >>> C.reshape([[0,1],[2,3],[4,5]], (2,3)).eval()
         [array([[[ 0.,  4.,  3.],
                  [ 2.,  1.,  5.]]])]
             
@@ -1107,7 +1107,7 @@ def transpose(x, axis1=0, axis2=1, name=''):
     `axis1` and `axis2` swapped.    
         
     Examples:
-        >>> C.eval(C.transpose([[0,1],[2,3],[4,5]], 1,2))
+        >>> C.transpose([[0,1],[2,3],[4,5]], 1,2).eval()
         [array([[[ 0.,  4.,  3.],
                  [ 2.,  1.,  5.]]])]
             
@@ -1136,19 +1136,19 @@ def slice(x, axis, begin_index, end_index, name=''):
         ...                     [4, 5,  6]]])
         >>> x = C.input_numpy(data)
         >>> # slice index 1 (second) at first axis
-        >>> C.eval(C.slice(x, 1, 2, 0))
+        >>> C.slice(x, 1, 2, 0).eval()
         [array([[[ 4.,  5.,  6.]]])]
         >>> # slice index 0 (first) at second axis
-        >>> C.eval(C.slice(x, 0, 1, 1))
+        >>> C.slice(x, 0, 1, 1).eval()
         [array([[[ 1.],
                  [ 4.]]])]        
 
     NumPy's way of slicing works, too:
 
     Examples:
-        >>> C.eval(x[1])
+        >>> x[1].eval()
         [array([[[ 4.,  5.,  6.]]])]
-        >>> C.eval(x[:,:2,:])
+        >>> x[:,:2,:].eval()
         [array([[[ 1.,  2.],
                  [ 4.,  5.]]])]
 
@@ -1187,7 +1187,7 @@ def splice(inputs, axis=0, name=''):
         ...                     [50, 60]]])
         >>> y = C.input_numpy(data2)
         >>> # splice both inputs on axis=0 returns a 5x2 matrix
-        >>> C.eval(C.splice((x,y), 0))
+        >>> C.splice((x,y), 0).eval()
         [array([[[1, 2],
                  [4, 5],
                  [10, 20],
@@ -1228,17 +1228,17 @@ def reduce_sum(x, axis=None, name=''):
         >>> data = [[10, 20],[30, 40],[50, 60]]        
         
         >>> # reduce over the first axis
-        >>> C.eval(C.reduce_sum(data, 0))
+        >>> C.reduce_sum(data, 0).eval()
         [array([[[  90.,  120.]]])]     
         
         >>> # reduce over the second axis
-        >>> C.eval(C.reduce_sum(data, 1))
+        >>> C.reduce_sum(data, 1).eval()
         [array([[[  30.],
                  [  70.],
                  [ 110.]]])]        
         
         >>> # reduce over the all axes
-        >>> C.eval(C.reduce_sum(data, 2))
+        >>> C.reduce_sum(data, 2).eval()
         [array([[ 210.]])]       
 
     Args:

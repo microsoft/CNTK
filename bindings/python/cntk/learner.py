@@ -167,3 +167,4 @@ def rmsprop_learner(parameters, lr,
 
     return cntk_py.rmsprop_learner(parameters, lr, gamma, inc, dec, max, min,
             need_ave_multiplier, clipping_threshold_per_sample, gradient_clipping_with_truncation)
+
