@@ -7,7 +7,7 @@
 import numpy as np
 import sys
 import os
-from cntk import learning_rates_per_sample, Trainer, sgd_learner, create_minibatch_source, StreamConfiguration, DeviceDescriptor, text_format_minibatch_source
+from cntk import Trainer, sgd_learner, create_minibatch_source, StreamConfiguration, DeviceDescriptor, text_format_minibatch_source
 from cntk.ops import input_variable, cross_entropy_with_softmax, combine, classification_error, sigmoid, element_times, constant
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
@@ -47,8 +47,8 @@ def simple_mnist():
     labels_si = mb_source.stream_info(labels_stream_name)
 
     # Instantiate the trainer object to drive the model training
-    lr = learning_rates_per_sample(0.003125)
-    trainer = Trainer(netout, ce, pe, [sgd_learner(netout.owner.parameters(), lr)])
+    trainer = Trainer(netout, ce, pe, [sgd_learner(netout.owner.parameters(),
+        lr=0.003125)])
 
     # Get minibatches of images to train with and perform model training
     minibatch_size = 32

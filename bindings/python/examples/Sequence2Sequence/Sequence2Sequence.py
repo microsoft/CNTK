@@ -9,7 +9,7 @@ import sys
 import os
 import math
 import time
-from cntk import learning_rates_per_sample, momentums_per_sample, DeviceDescriptor, Trainer, momentum_sgd_learner, Axis, text_format_minibatch_source, StreamConfiguration
+from cntk import momentums_per_sample, DeviceDescriptor, Trainer, momentum_sgd_learner, Axis, text_format_minibatch_source, StreamConfiguration
 from cntk.ops import input_variable, cross_entropy_with_softmax, classification_error, sequence, slice, past_value, future_value, element_select
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
@@ -89,7 +89,7 @@ def train_sequence_to_sequence_translator():
     labels_si = mb_source.stream_info(labels_stream_name)
 
     # Instantiate the trainer object to drive the model training
-    lr = learning_rates_per_sample(0.007)
+    lr = 0.007
     momentum_time_constant = 1100
     momentum_per_sample = momentums_per_sample(math.exp(-1.0 / momentum_time_constant))
     clipping_threshold_per_sample = 2.3

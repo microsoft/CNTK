@@ -8,7 +8,7 @@ import numpy as np
 import sys
 import os
 import time
-from cntk import learning_rates_per_sample, DeviceDescriptor, Trainer, sgd_learner, Axis, text_format_minibatch_source, StreamConfiguration
+from cntk import DeviceDescriptor, Trainer, sgd_learner, Axis, text_format_minibatch_source, StreamConfiguration
 from cntk.ops import input_variable, cross_entropy_with_softmax, combine, classification_error
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
@@ -54,8 +54,8 @@ def train_sequence_classifier():
     labels_si = mb_source.stream_info(label)
 
     # Instantiate the trainer object to drive the model training
-    lr = lr = learning_rates_per_sample(0.0005)
-    trainer = Trainer(classifier_output, ce, pe, [sgd_learner(classifier_output.owner.parameters(), lr)])
+    trainer = Trainer(classifier_output, ce, pe,
+            [sgd_learner(classifier_output.owner.parameters(), lr=0.0005)])
 
     # Get minibatches of sequences to train with and perform model training
     minibatch_size = 200

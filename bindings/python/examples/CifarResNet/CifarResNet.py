@@ -7,7 +7,7 @@
 import numpy as np
 import sys
 import os
-from cntk import learning_rates_per_sample, Trainer, sgd_learner, create_minibatch_source, DeviceDescriptor
+from cntk import Trainer, sgd_learner, create_minibatch_source, DeviceDescriptor
 from cntk.ops import input_variable, constant, parameter, cross_entropy_with_softmax, combine, classification_error, times, pooling, AVG_POOLING
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
@@ -122,8 +122,8 @@ def cifar_resnet():
     pe = classification_error(classifier_output, label_var)
 
     # Instantiate the trainer object to drive the model training
-    lr = learning_rates_per_sample(0.0078125)
-    trainer = Trainer(classifier_output, ce, pe, [sgd_learner(classifier_output.owner.parameters(), lr)])
+    trainer = Trainer(classifier_output, ce, pe,
+            [sgd_learner(classifier_output.owner.parameters(), lr=0.0078125)])
 
     # Get minibatches of images to train with and perform model training
     mb_size = 32
