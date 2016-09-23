@@ -3,7 +3,7 @@ dataDir: .
 tags:  
   # This test also runs in debug mode, as the debug version of EvalDll is also included in the NuGet package.
   - bvt-l (build_sku == 'gpu') or (build_sku == 'cpu')
-  - nightly-l (build_sku == 'gpu') or (build_sku == 'cpu') 
+  - nightly-l (build_sku == 'gpu') or (build_sku == 'cpu')
 
 testCases:
   Test run must be completed:
