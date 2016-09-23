@@ -82,6 +82,12 @@
     <ClInclude Include="ReaderBase.h">
       <Filter>Utils</Filter>
     </ClInclude>
+    <ClInclude Include="SequenceData.h">
+      <Filter>Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="TransformBase.h">
+      <Filter>Transformers</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="NoRandomizer.cpp">

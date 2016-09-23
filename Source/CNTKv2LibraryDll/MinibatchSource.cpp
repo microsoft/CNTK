@@ -82,6 +82,27 @@ namespace CNTK
 
             auto& deserializerConfigDict = deserializerConfig.Value<Dictionary>();
             auto deserializerTypeName = deserializerConfigDict[L"type"].Value<std::wstring>();
+            if (deserializerTypeName == L"ImageDeserializer")
+            {
+                // Add a transpose transform since the image data in read in HWC (CWH in column major format) form while 
+                // the CNTK convolution engive supports WHC (in column-major format)
+                auto& inputStreamsConfig = deserializerConfigDict[L"input"].Value<Dictionary>();
+                auto& streamsMap = *(inputStreamsConfig.m_dictionaryData);
+                for (auto& inputStreamEntry : streamsMap)
+                {
+                    auto& inputStreamConfig = inputStreamEntry.second.Value<Dictionary>();
+                    if (inputStreamConfig.Contains(L"transforms"))
+                    {
+                        auto& transforms = inputStreamConfig[L"transforms"].Value<std::vector<DictionaryValue>>();
+
+                        // Add the transpose transform
+                        Dictionary transposeTransform;
+                        transposeTransform[L"type"] = L"Transpose";
+                        transforms.push_back(transposeTransform);
+                    }
+                }
+
+            }
             deserializerConfigDict[L"module"] = deserializerTypeNameToModuleNameMap.at(deserializerTypeName);
         }
 

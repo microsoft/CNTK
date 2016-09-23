@@ -50,6 +50,11 @@ private:
             m_buffer.reserve(capacity);
         }
 
+        const void* GetDataBuffer() override
+        {
+            return m_buffer.data();
+        }
+
         std::vector<ElemType> m_buffer;
     };
 
@@ -61,6 +66,11 @@ private:
         SparseInputStreamBuffer()
         {
             m_totalNnzCount = 0;
+        }
+
+        const void* GetDataBuffer() override
+        {
+            return m_buffer.data();
         }
 
         std::vector<IndexType> m_indicesBuffer;
