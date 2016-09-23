@@ -37,6 +37,14 @@ void ReaderBase::StartEpoch(const EpochConfiguration& config, const std::map<std
         m_memoryProviders.resize(streams.size());
         for (size_t i = 0; i < streams.size(); ++i)
         {
+            // TODO: In case when the network requires less inputs,
+            // we should not even have them.
+            if (m_requiredInputs.find(streams[i]->m_name) == m_requiredInputs.end())
+            {
+                m_memoryProviders[i] = std::make_shared<HeapMemoryProvider>();
+                continue;
+            }
+
             int deviceId = m_requiredInputs[streams[i]->m_name];
             if (deviceId < 0)
                 m_memoryProviders[i] = std::make_shared<HeapMemoryProvider>();
