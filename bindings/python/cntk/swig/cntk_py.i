@@ -57,6 +57,7 @@
 %eq_for(Constant, Variable_eq)
 %eq_for(Parameter, Variable_eq)
 %eq_for(NDShape, NDShape_eq)
+%eq_for(DeviceDescriptor, DeviceDescriptor_eq)
 
 
 %extend CNTK::Dictionary {
@@ -1077,11 +1078,6 @@ public:
 // are redirected to the std::hash computation of the C++ API
 //
 %define %py_hash_for(DATA_TYPE, EQ)
-
-%pythoncode %{
-DATA_TYPE.__eq__ = lambda a,b: EQ(a,b)
-%}
-
 %extend CNTK::DATA_TYPE {
     const size_t __hash__() {
         return std::hash<CNTK::DATA_TYPE>()(*$self);
@@ -1089,11 +1085,23 @@ DATA_TYPE.__eq__ = lambda a,b: EQ(a,b)
 }
 %enddef
 
+%define %py_eq_for(DATA_TYPE, EQ)
+%pythoncode %{
+DATA_TYPE.__eq__ = lambda a,b: EQ(a,b)
+%}
+%enddef
+
+%py_eq_for(Variable, Variable_eq)
+%py_eq_for(Constant, Variable_eq)
+%py_eq_for(Parameter, Variable_eq)
+%py_eq_for(NDShape, NDShape_eq)
+
 %py_hash_for(Variable, Variable_eq)
 %py_hash_for(Constant, Variable_eq)
 %py_hash_for(Parameter, Variable_eq)
 %py_hash_for(NDShape, NDShape_eq)
 
+%py_eq_for(DeviceDescriptor, DeviceDescriptor_eq)
 
 %pythoncode %{
 StreamInformation.__eq__ = lambda a,b: a.m_name==b.m_name and a.m_id==b.m_id and a.m_storage_format==b.m_storage_format and a.m_element_type==b.m_element_type and a.m_sample_layout.dimensions()==b.m_sample_layout.dimensions()

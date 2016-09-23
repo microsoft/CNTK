@@ -113,6 +113,8 @@ namespace CNTK
     ///
     class DeviceDescriptor final
     {
+        friend bool operator==(const DeviceDescriptor& first, const DeviceDescriptor& second);
+
         static std::atomic<bool> s_defaultDeviceFrozen;
         static std::shared_ptr<DeviceDescriptor> s_defaultDevice;
         static std::shared_ptr<std::vector<DeviceDescriptor>> s_allDevices;
