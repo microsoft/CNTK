@@ -423,7 +423,7 @@ do
                 mkl_path=$(find_mkl)
                 if test x$mkl_path = x
                 then
-                    echo "Cannot find CNTK custom MKL directory"
+                    echo "Cannot find CNTK custom MKL directory (version $cntk_custom_mkl_version)"
                     echo "Please specify a value for --with-mkl"
                     exit 1
                 fi
