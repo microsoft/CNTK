@@ -713,21 +713,23 @@ protected:
 // ------------------------------------------------------------------------------------------------------------------------------------------------
 // RandomSampleNode: 
 // This node is intended to be used in context off sampled softmax, noise contrastive estimation etc.
-// In runs has two basic modes to be run, both taking a weight vector as input.
+// It has two modes to run, both taking a weight vector as input:
 // * estimateInclusionProbs = false:
 //   The nodes value is a set of nSample random samples represented as a (sparse) matrix of shape nClasses * nSamples.
-//   The samples arew drawn according to the weight vector p(w_i) = w_i / sum_k(w_k)
-//   We get one set of same for per minibatch.
+//   The samples are drawn according to the weight vector p(w_i) = w_i / sum_k(w_k)
+//   We get one set of samples for per minibatch.
 //
-// * estimateInclusionProbs = false:
-//   This estimaes of how often each class will occur in the sampled set on the average. If the sampling mode allowDuplicates = true is choosen
-//   this is trivial and exact. For allowDuplicates = false we get some rough estimate.
+// * estimateInclusionProbs = true:
+//   This estimaes of how often each class will occur in the sampled set on the average. If the sampling mode 
+//        'allowDuplicates = true' is choosen
+//   this is trivial and exact. For allowDuplicates = false we get some estimate.
+//   The value is updated only when the input weights change.
 
-// Parameters
-// Input(0) Sampling weight vector: Matrix of shape (nClasses x 1) providing smapling weights >= 0.
-// nSample: Size of the sampled set.
-// allowDuplicates: controlls if sampled set is allowed to contain duplicates
-// estimateInclusionProbs: Run mode, se above.
+// Parameters:
+// * Input(0) Sampling weight vector: Matrix of shape (nClasses x 1) providing sampling weights >= 0.
+// * nSample: Size of the sampled set.
+// * allowDuplicates: controlls if sampled set is allowed to contain duplicates.
+// * estimateInclusionProbs: Run mode, see above.
 // --------------------------------------------------------------------------------------------------------------------------------------------------
 
 template <class ElemType>
@@ -783,7 +785,7 @@ public:
         fstream >> m_nSamples;
     }
 
-    // Code and comment of below is nearly a copy of some tensorflow code 
+    // Code and comment below is nearly a copy of some tensorflow code 
     // (see function 'ExpectedCountHelper' in https://github.com/tensorflow/tensorflow/blob/master/tensorflow/core/kernels/range_sampler.cc).
     // How to cite properly?
 
@@ -890,7 +892,7 @@ public:
         if (m_allowDuplicates)
             nTries = m_nSamples;
         else
-            nTries = 0; // just initialize and count how many tries we need;
+            nTries = 0; // just initialize and count how many tries we need.
 
         while (samples.size() < m_nSamples)
         {
