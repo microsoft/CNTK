@@ -153,7 +153,7 @@ cntk_module = Extension(
     )
 
 # do not include tests and examples
-packages = [x for x in find_packages() if x.startswith('cntk')]
+packages = [x for x in find_packages() if x.startswith('cntk') and not x.startswith('cntk.swig')]
 
 if IS_WINDOWS:
     # On Linux copy all runtime libs into the cntk/lib folder. 
