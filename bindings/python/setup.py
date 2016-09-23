@@ -170,11 +170,11 @@ cntk_module = Extension(
 packages = [x for x in find_packages() if x.startswith('cntk') and not x.startswith('cntk.swig')]
 
 if IS_WINDOWS:
-    # On Linux copy all runtime libs into the cntk/lib folder. 
-    kwargs = dict(package_data = { 'cntk': rt_libs })
-else:
     # On Windows copy all runtime libs to the base folder of Python
     kwargs = dict(data_files = [('.', [ os.path.join('cntk', lib) for lib in rt_libs ])])
+else:
+    # On Linux copy all runtime libs into the cntk/lib folder. 
+    kwargs = dict(package_data = { 'cntk': rt_libs })
 
 setup(name="cntk", 
       version="2.0a2",
