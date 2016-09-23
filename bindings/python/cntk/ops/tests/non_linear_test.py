@@ -234,3 +234,78 @@ def test_op_reciprocal(operand, device_id, precision):
 
     _test_unary_op(precision, device_id, reciprocal, operand,
         expected_forward, expected_backward)
+
+@pytest.mark.parametrize("operand", TENSORS)
+def test_op_relu(operand, device_id, precision):
+    t = AA(operand, dtype=PRECISION_TO_TYPE[precision])
+    expected_forward = [[np.maximum(np.zeros_like(t), t)]]
+
+    expected_backward = {
+            'arg' : [[AA(t > np.zeros_like(t), dtype = int)]]
+            }
+
+    from cntk import relu
+
+    _test_unary_op(precision, device_id, relu, operand,
+        expected_forward, expected_backward)
+
+SAMPLES = [  # 2 samples having 4 classes
+            [1, 1, 2, 3],
+            [0, 0, 0, 0],
+            [3, 3, 4, 4]
+    ]
+
+@pytest.mark.parametrize("sample", SAMPLES)
+def test_op_softmax(sample, device_id, precision):
+    t = AA(sample, dtype=PRECISION_TO_TYPE[precision])
+    assert len(t.shape) == 1
+
+    x_max = t - t.max()
+    exp_x = np.exp(x_max)
+    forward = exp_x / np.sum(exp_x)
+
+    expected_forward = [AA([forward])]
+
+    sample_length = len(forward)
+    grad = np.zeros((sample_length, sample_length), dtype=PRECISION_TO_TYPE[precision])
+
+    for i in range(sample_length):
+        for j in range(sample_length):
+            if i == j:
+                grad[i, j] = forward[i] * (1 - forward[i])
+            else:
+                grad[i, j] = -1 * forward[j] * forward[i]
+
+    backward = grad.sum(axis=0)
+
+    expected_backward = {
+            'arg' : [[backward]]
+            }
+
+    from cntk import softmax
+
+    _test_unary_op(precision, device_id, softmax, sample,
+        expected_forward, expected_backward)
+
+@pytest.mark.parametrize("sample", SAMPLES)
+def test_op_hardmax(sample, device_id, precision):
+    t = AA(sample, dtype=PRECISION_TO_TYPE[precision])
+    t_max = t.max()
+
+    forward = np.zeros_like(t, dtype=PRECISION_TO_TYPE[precision])
+
+    for i,x in enumerate(t):
+        if x == t_max:
+            forward[i] = 1
+            break
+
+    expected_forward = [AA([forward])]
+
+    expected_backward = {
+            'arg' : [[np.zeros_like(forward)]]
+            }
+
+    from cntk import hardmax
+
+    _test_unary_op(precision, device_id, hardmax, sample,
+        expected_forward, expected_backward)
