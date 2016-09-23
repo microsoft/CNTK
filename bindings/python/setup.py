@@ -1,3 +1,4 @@
+import sys
 import os
 import shutil
 from glob import glob
@@ -5,6 +6,10 @@ import platform
 from warnings import warn
 from setuptools import setup, Extension, find_packages
 import numpy
+
+if sys.version_info.major < 3:
+    print("Detected Python v2, which is not yet supported")
+    sys.exit(1)
 
 IS_WINDOWS = platform.system() == 'Windows'
 
@@ -133,10 +138,16 @@ else:
     runtime_library_dirs = ['$ORIGIN/cntk/libs']
     os.environ["CXX"] = "mpic++"
 
+swig_source = os.path.join("cntk", "swig", "cntk_py_wrap.cxx")
+
+if not os.path.exists(swig_source):
+     print("SWIG wrapper missing. Have you run SWIG already?")
+     sys.exit(1)
+
 cntk_module = Extension(
         name="_cntk_py",
 
-        sources=[os.path.join("cntk", "swig", "cntk_py_wrap.cxx")],
+        sources=[swig_source],
 
         libraries=link_libs,
         library_dirs=[CNTK_LIB_PATH],
