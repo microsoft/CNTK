@@ -45,14 +45,14 @@ FunctionPtr FullyConnectedFeedForwardClassifierNetWithSharedParameters(Variable 
 std::atomic<bool> AllThreadsReady(false);
 
 void EvaluationNewNetworkWithSharedParameters(size_t inputDim,
-                                    size_t numOutputClasses,
-                                    size_t numHiddenLayers,
-                                    const Parameter& inputTimesParam,
-                                    const Parameter& inputPlusParam,
-                                    const Parameter hiddenLayerTimesParam[],
-                                    const Parameter hiddenLayerPlusParam[],
-                                    const Parameter& outputTimesParam,
-                                    const DeviceDescriptor& computeDevice)
+                                              size_t numOutputClasses,
+                                              size_t numHiddenLayers,
+                                              const Parameter& inputTimesParam,
+                                              const Parameter& inputPlusParam,
+                                              const Parameter hiddenLayerTimesParam[],
+                                              const Parameter hiddenLayerPlusParam[],
+                                              const Parameter& outputTimesParam,
+                                              const DeviceDescriptor& computeDevice)
 {
     using namespace std::placeholders;
 
@@ -115,7 +115,7 @@ void EvaluationNewNetworkWithSharedParameters(size_t inputDim,
     }
 }
 
-void TestEvalMultiThreadsWithNewNetwork(const DeviceDescriptor& device, const int threadCount)
+void EvalMultiThreadsWithNewNetwork(const DeviceDescriptor& device, const int threadCount)
 {
     const size_t inputDim = 937;
     const size_t numOutputClasses = 9304;
