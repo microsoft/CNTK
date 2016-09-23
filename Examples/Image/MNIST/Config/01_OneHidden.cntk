@@ -22,12 +22,12 @@ trainNetwork = {
         labelDim = 10                               # number of distinct labels
         featScale = 1/256     
 
-        # Define hidden layer name. The name is used by
-        # eval examples to illustrate output of hiddlen layers.
-        model = x => {
+        # This model returns multiple nodes as a record, which
+        # can be accessed using .x syntax.
+        model(x) = {
             s1 = x * featScale
             h1 = DenseLayer {200, activation=Sigmoid} (s1)
-            outl = LinearLayer {labelDim} (h1)
+            z = LinearLayer {labelDim} (h1)
         }
 
         # inputs
@@ -38,15 +38,15 @@ trainNetwork = {
         out = model (features)
 
         # loss and error computation
-        ce   = CrossEntropyWithSoftmax (labels, out.outl)
-        errs = ClassificationError (labels, out.outl)
+        ce   = CrossEntropyWithSoftmax (labels, out.z)
+        errs = ClassificationError (labels, out.z)
 
         # declare special nodes
         featureNodes    = (features)
         labelNodes      = (labels)
         criterionNodes  = (ce)
         evaluationNodes = (errs)
-        outputNodes     = (out.outl)
+        outputNodes     = (out.z)
     }
 
     SGD = {
