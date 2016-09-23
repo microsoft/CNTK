@@ -1440,7 +1440,7 @@ def parameter(shape=None, value=None, device=None, name=''):
         :class:`cntk.Function`
     '''    
 
-    from .variables import Parameter, parameter_from_scalar   
+    from .variables import Parameter
     if not device:
         device=DeviceDescriptor.use_default_device()
 
@@ -1450,9 +1450,6 @@ def parameter(shape=None, value=None, device=None, name=''):
             data_type = str(value.dtype)
         else:
             data_type = 'float32'
-
-        #assert shape is None or shape == ()
-        #return parameter_from_scalar(value, None, device, name)   
     else:
         data_type = None
 
@@ -1473,13 +1470,19 @@ def constant(shape=None, value=None, device=None, name=''):
     Returns:
         :class:`cntk.Function`
     '''
-    from .variables import Constant, constant_from_scalar
+    from .variables import Constant
     if not device:
         device=DeviceDescriptor.use_default_device()
-    if np.isscalar(value):
-        assert shape is None or shape == ()
-        return constant_from_scalar(value, None, device, name)   
-    return Constant(shape, value, None, device, name)
+    if np.isscalar(value) and not shape:
+        shape = ()
+        if isinstance(value, np.ndarray):
+            data_type = str(value.dtype)
+        else:
+            data_type = 'float32'
+    else:
+        data_type = None
+
+    return Constant(shape, value, data_type, device, name)
 
 ################################################################################
 # normalization ops

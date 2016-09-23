@@ -7,7 +7,6 @@
 import numpy as np
 import sys
 import os
-from cntk import Constant
 from cntk.ops import *
 from cntk.utils import sanitize_dtype_cntk, get_train_eval_criterion, get_train_loss
 
@@ -90,10 +89,10 @@ def select_last(operand):
 
 def stabilize(operand):
     scalar_constant = 4.0
-    f = Constant.scalar(sanitize_dtype_cntk(np.float32), scalar_constant);
-    fInv = Constant.scalar(sanitize_dtype_cntk(np.float32), 1.0 / scalar_constant)
+    f = constant(sanitize_dtype_cntk(np.float32), scalar_constant);
+    fInv = constant(sanitize_dtype_cntk(np.float32), 1.0 / scalar_constant)
 
-    beta = element_times(fInv, log(Constant.scalar(sanitize_dtype_cntk(np.float32), 1.0) + exp(element_times(f, parameter(value=0.99537863)))))
+    beta = element_times(fInv, log(constant(sanitize_dtype_cntk(np.float32), 1.0) + exp(element_times(f, parameter(value=0.99537863)))))
     return element_times(beta, operand)
 
 def LSTMP_cell_with_self_stabilization(input, prev_output, prev_cell_state):

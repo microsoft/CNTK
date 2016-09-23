@@ -7,21 +7,19 @@
 __version__ = '2.0'
 
 import os
+import numpy as np
 
 from . import ops
 from . import cntk_py
-from .utils import *
-from .ops import *
 
 # pulling elements from the wrapper into cntk namespace that do not require
 # special wrapping
-from .cntk_py import DeviceDescriptor, Constant, StreamConfiguration, \
-    text_format_minibatch_source, momentums_per_sample, \
-    Axis
+from .cntk_py import DeviceDescriptor, momentums_per_sample
+from .utils import *
+from .ops import *
+from .io import *
+from .learner import *
 
-from .learner import sgd_learner, momentum_sgd_learner
-
-import numpy as np
 
 DATATYPE = np.float32
 

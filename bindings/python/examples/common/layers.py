@@ -7,6 +7,5 @@
 import numpy as np
 import sys
 import os
-from cntk import Constant
 from cntk.ops import *
 
