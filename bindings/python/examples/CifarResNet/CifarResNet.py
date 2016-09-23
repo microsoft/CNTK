@@ -123,7 +123,7 @@ def cifar_resnet():
 
     # Instantiate the trainer object to drive the model training
     trainer = Trainer(classifier_output, ce, pe,
-            [sgd_learner(classifier_output.owner.parameters(), lr=0.0078125)])
+            [sgd_learner(classifier_output.parameters(), lr=0.0078125)])
 
     # Get minibatches of images to train with and perform model training
     mb_size = 32
