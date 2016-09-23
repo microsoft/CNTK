@@ -21,7 +21,7 @@ def is_first(operand, name = ''):
     Returns:
         :class:`cntk.Function`
     '''    
-    from cntk import is_first
+    from cntk.cntk_py import is_first
     operand = sanitize_input(operand, get_data_type(operand))
     return is_first(operand, name)
 
@@ -37,7 +37,7 @@ def is_last(operand, name = ''):
     Returns:
         :class:`cntk.Function`
     '''    
-    from cntk import is_last
+    from cntk.cntk_py import is_last
     operand = sanitize_input(operand, get_data_type(operand))
     return is_last(operand, name)
 
@@ -53,7 +53,7 @@ def first(operand, name = ''):
     Returns:
         :class:`cntk.Function`
     '''    
-    from cntk import first
+    from cntk.cntk_py import first
     operand = sanitize_input(operand, get_data_type(operand))
     return first(operand, name)
 
@@ -69,7 +69,7 @@ def last(operand, name = ''):
     Returns:
         :class:`cntk.Function`
     '''    
-    from cntk import last
+    from cntk.cntk_py import last
     operand = sanitize_input(operand, get_data_type(operand))
     return last(operand, name)
 
@@ -85,7 +85,7 @@ def where(condition, name = ''):
     Returns:
         :class:`cntk.Function`
     '''    
-    from cntk import where
+    from cntk.cntk_py import where
     condition = sanitize_input(condition, get_data_type(condition))
     return where(condition, name)
 
@@ -102,7 +102,7 @@ def gather(operand, condition, name = ''):
     Returns:
         :class:`cntk.Function`
     '''    
-    from cntk import gather
+    from cntk.cntk_py import gather
     operand = sanitize_input(operand, get_data_type(operand))
     condition = sanitize_input(condition, get_data_type(condition))
     return gather(operand, condition, name)
@@ -120,7 +120,7 @@ def scatter(operand, condition, name = ''):
     Returns:
         :class:`cntk.Function`
     '''    
-    from cntk import scatter
+    from cntk.cntk_py import scatter
     operand = sanitize_input(operand, get_data_type(operand))
     condition = sanitize_input(condition, get_data_type(condition))
     return scatter(operand, condition, name)
@@ -138,7 +138,7 @@ def broadcast_as(operand, broadcast_as_operand, name = ''):
     Returns:
         :class:`cntk.Function`
     '''    
-    from cntk import broadcast_as
+    from cntk.cntk_py import broadcast_as
     operand = sanitize_input(operand, get_data_type(operand))
     broadcast_as_operand = sanitize_input(broadcast_as_operand, get_data_type(broadcast_as_operand))
     return broadcast_as(operand, broadcast_as_operand, name)
