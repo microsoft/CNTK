@@ -12,7 +12,7 @@ SET DISTUTILS_USE_SDK=1
 vcvarsall amd64
 
 # Generate .cxx and .py out of .i. Please check the path to the SwigWin binaries inside swig.bat
-# run siwg.bat from within siwg folder
+# run swig.bat from within swig folder
 swig.bat
 
 
@@ -44,7 +44,7 @@ swig.bat
     >>> import cntk
     
     # 6) Running examples:
-        # Clone the python examples folder form cntk repository and add its path to PYTHONPATH    
+        # Clone the python examples folder from the CNTK repository and add its path to PYTHONPATH    
         # (e.g. setx PYTHONPATH %PYTHONPATH%;C:\work\cntk\bindings\python\examples in an Admin shell,
         # or rather setx PYTHONPATH C:\work\cntk\bindings\python\examples if no PYTHONPATH defined yet).
         # Try to run any of the examples, some examples come up with s script that fetches and prepares the data,
