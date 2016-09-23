@@ -4429,20 +4429,28 @@ void Matrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const Matrix<ElemT
     {
         if (a.GetMatrixType() == MatrixType::SPARSE) // CPU, SPARSE * ANY -> ANY
         {
-            if (b.GetMatrixType() == MatrixType::DENSE && c.GetMatrixType() == MatrixType::DENSE) // CPU, SPARSE * DENSE -> DENSE
+            if ( b.GetMatrixType() == MatrixType::DENSE      && c.GetMatrixType() == MatrixType::DENSE) // CPU, SPARSE * DENSE  -> DENSE
             {
                 CPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(alpha, *a.m_CPUSparseMatrix, transposeA, *b.m_CPUMatrix, transposeB, beta, *c.m_CPUMatrix);
                 c.SetDataLocation(CPU, DENSE);
             }
-			else if (b.GetMatrixType() == MatrixType::SPARSE && c.GetMatrixType() == MatrixType::DENSE) // CPU, SPARSE * SPARSE -> DENSE
-			{
+            else if (b.GetMatrixType() == MatrixType::SPARSE && c.GetMatrixType() == MatrixType::DENSE) // CPU, SPARSE * SPARSE -> DENSE
+            {
                 NOT_IMPLEMENTED;
             }
-			else
-			{
-				NOT_IMPLEMENTED;
-			}
-		}
+            else if (b.GetMatrixType() == MatrixType::DENSE  && c.GetMatrixType() == MatrixType::SPARSE)// CPU, SPARSE * DENSE  -> SPARSE
+            {
+                NOT_IMPLEMENTED;
+            }
+            else if (b.GetMatrixType() == MatrixType::SPARSE && c.GetMatrixType() == MatrixType::SPARSE)// CPU, SPARSE * SPARSE -> SPARSE
+            {
+                NOT_IMPLEMENTED;
+            }
+            else
+            {
+                NOT_IMPLEMENTED;
+            }
+        }
         else  // CPU, DENSE  * ANY -> ANY
         {
             if (b.GetMatrixType() == MatrixType::SPARSE) // CPU, DENSE * SPARSE -> ANY

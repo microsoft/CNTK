@@ -306,7 +306,7 @@ public:
             return;
         }
 
-	    Value().SwitchToMatrixType(DENSE, MatrixFormat::matrixFormatDense, false);
+        Value().SwitchToMatrixType(DENSE, MatrixFormat::matrixFormatDense, false);
 
         // TensorView::DoMatrixProductOf() will reduce each tensor object into a 2D tensor (or fail if it cannot)
         // and recreate actual Matrix objects (in case of sparse, they must be identical to the original tensor storage object).
@@ -314,8 +314,7 @@ public:
         auto input0 = OneSampleTensorFor(0,  /*gradient=*/false, fr.AllowBroadcast());
         auto input1 = OneSampleTensorFor(1,  /*gradient=*/false, fr.AllowBroadcast());
         auto output = OneSampleTensorFor(-1, /*gradient=*/false, fr);
-
-		output.AssignMatrixProductOf(false/*transC*/, input0, m_transpose/*transA*/, input1, false/*transB*/);
+        output.AssignMatrixProductOf(false/*transC*/, input0, m_transpose/*transA*/, input1, false/*transB*/);
     }
 
     virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override

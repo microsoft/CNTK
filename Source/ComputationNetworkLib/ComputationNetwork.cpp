@@ -553,19 +553,19 @@ template <class ElemType>
 template <class ElemType>
 /* static */ void ComputationNetwork::SetRandomSampleNodeSeed(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, size_t randSeedBase)
 {
-	// BUGBUG Here we have code duplication with SetDropoutRate(...). Remove this by using SetDropRate fr the drop rate and setting random seeds for both RandomSampleNode and 
-	// DropoutNode here.
-	list<ComputationNodeBasePtr> randomSampleNodes = net->GetNodesWithType(OperationNameOf(RandomSampleNode), criterionNode);
+    // BUGBUG Here we have code duplication with SetDropoutRate(...). Remove this by using SetDropRate fr the drop rate and setting random seeds for both RandomSampleNode and 
+    // DropoutNode here.
+    list<ComputationNodeBasePtr> randomSampleNodes = net->GetNodesWithType(OperationNameOf(RandomSampleNode), criterionNode);
 
-	// Each RandomSampleNode gets a distinct seed. The actual seed for each dropout node is computed as follows:
-	// seed = (((parallelWorkerIdx * maxEpochs) + currentEpochNum) /*i.e. randSeedBase*/ * dropoutNodes.size()) + dropoutNodeIdx.
-	size_t randSeed = randSeedBase * randomSampleNodes.size();
-	for (auto& nodeIter : randomSampleNodes)
-	{
-		auto node = dynamic_pointer_cast<RandomSampleNode<ElemType>>(nodeIter);
-		node->SetRandomSeed(randSeed);
-		randSeed++;
-	}
+    // Each RandomSampleNode gets a distinct seed. The actual seed for each dropout node is computed as follows:
+    // seed = (((parallelWorkerIdx * maxEpochs) + currentEpochNum) /*i.e. randSeedBase*/ * dropoutNodes.size()) + dropoutNodeIdx.
+    size_t randSeed = randSeedBase * randomSampleNodes.size();
+    for (auto& nodeIter : randomSampleNodes)
+    {
+        auto node = dynamic_pointer_cast<RandomSampleNode<ElemType>>(nodeIter);
+        node->SetRandomSeed(randSeed);
+        randSeed++;
+    }
 }
 
 
