@@ -67,7 +67,7 @@ void TrainSequenceToSequenceTranslator(const DeviceDescriptor& device, bool useS
     auto thoughtVectorBroadcastC = Sequence::BroadcastAs(thoughtVectorC, labelEmbedding);
 
     /* Decoder */
-    auto beamSearchReorderHook = Constant({ 1, 1 }, 1.0f);
+    auto beamSearchReorderHook = Constant({ 1, 1 }, 1.0f, device);
     auto decoderHistoryFromGroundTruth = labelEmbedding;
     auto decoderInput = ElementSelect(isFirstLabel, labelSentenceStartEmbeddedScattered, PastValue(decoderHistoryFromGroundTruth));
 
