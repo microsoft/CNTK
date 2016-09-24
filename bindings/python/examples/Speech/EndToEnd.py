@@ -26,7 +26,6 @@ def create_mb_source(features_stream_name, labels_stream_name, image_height, ima
 
     features_stream_config = {"transforms": []}
     labels_stream_config = {"labelDim" : num_classes}
-
     input_streams_config = {features_stream_name: features_stream_config, labels_stream_name: labels_stream_config}
     deserializer_config = {"type" : "ImageDeserializer", "file" : map_file, "input" : input_streams_config}
 

@@ -5,7 +5,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{1a078fc2-21c0-4f42-9a5b-0e84e944bc74}</ProjectGuid>
     <ProjectHome />
-    <StartupFile>Speech\EndToEnd.py</StartupFile>
+    <StartupFile>Various\LanguageModel.py</StartupFile>
     <SearchPath />
     <WorkingDirectory>.</WorkingDirectory>
     <OutputPath>.</OutputPath>
@@ -13,7 +13,7 @@
     <LaunchProvider>Standard Python launcher</LaunchProvider>
     <InterpreterId>{9a7a9026-48c1-4688-9d5d-e5699d47d074}</InterpreterId>
     <InterpreterVersion>3.4</InterpreterVersion>
-    <EnableNativeCodeDebugging>True</EnableNativeCodeDebugging>
+    <EnableNativeCodeDebugging>False</EnableNativeCodeDebugging>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)' == 'Debug'" />
   <PropertyGroup Condition="'$(Configuration)' == 'Release'" />
@@ -33,12 +33,14 @@
     <Compile Include="Sequence2Sequence\Sequence2Sequence.py" />
     <Compile Include="SequenceClassification\SequenceClassification.py" />
     <Compile Include="Speech\EndToEnd.py" />
+    <Compile Include="Various\LanguageModel.py" />
     <Compile Include="__init__.py" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="CifarResNet" />
     <Folder Include="common" />
     <Folder Include="MNIST" />
+    <Folder Include="Various\" />
     <Folder Include="NumpyInterop" />
     <Folder Include="Sequence2Sequence" />
     <Folder Include="SequenceClassification" />
