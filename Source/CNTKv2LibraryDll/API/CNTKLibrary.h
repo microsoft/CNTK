@@ -2981,9 +2981,14 @@ namespace CNTK
 
     struct DistributedWorkerDescriptor
     {
-        size_t globalRank;
-        std::wstring hostId;
+        size_t m_globalRank;
+        std::wstring m_hostId;
     };
+
+     inline bool operator==(const DistributedWorkerDescriptor& left, const DistributedWorkerDescriptor& right)
+    {
+        return ((left.m_globalRank == right.m_globalRank) && (left.m_hostId == right.m_hostId));
+    }
 
     ///
     /// A communicator interface exposing communication primitives that serve as building blocks 
@@ -3001,26 +3006,26 @@ namespace CNTK
 
         // A collective communication API to concatenate values across each worker of this communicator. The concatenated values are only sent to the specified workers; for all others the returned Values are null
         // TODO: Add an async variant of the Concatenate method
-        CNTK_API virtual std::unordered_set<Value> Concatenate(const std::unordered_set<Value>& values, const std::unordered_set<DistributedWorkerDescriptor>& sendToWorkers, DeviceDescriptor device = DeviceDescriptor::DefaultDevice()) = 0;
+        CNTK_API virtual std::unordered_set<ValuePtr> Concatenate(const std::unordered_set<ValuePtr>& values, const std::unordered_set<DistributedWorkerDescriptor>& sendToWorkers) = 0;
 
         // A collective communication API to aggregate values across each worker of this communicator. 
         // The aggregated values are only sent to the specified workers; for all others the returned Values are null
         CNTK_API virtual void AggregateInPlace(const std::vector<ValuePtr>& values,
                        const std::unordered_set<DistributedWorkerDescriptor>& sendToWorkers) = 0;
 
-        CNTK_API virtual std::future<void> AggregateInPlaceAsync(const std::vector<ValuePtr>& values,
+        CNTK_API virtual std::vector<ValuePtr> Aggregate(const std::vector<ValuePtr>& values,
                        const std::unordered_set<DistributedWorkerDescriptor>& sendToWorkers) = 0;
 
-        CNTK_API virtual std::vector<ValuePtr> Aggregate(const std::vector<ValuePtr>& values,
+        CNTK_API virtual std::future<std::vector<ValuePtr>> AggregateAsync(const std::vector<ValuePtr>& values,
                        const std::unordered_set<DistributedWorkerDescriptor>& sendToWorkers) = 0;
 
         // A collective communication API to perform quantized aggregation of values across all workers of this communicator
         // TODO: Add an async variant of the QuantizedAggregate method
-        CNTK_API virtual void QuantizedAggregate(const std::vector<Value>& inValues,
-                                const std::unordered_set<Value>& inPreviousQuantizationResidues,
+        CNTK_API virtual void QuantizedAggregate(const std::vector<ValuePtr>& inValues,
+                                const std::unordered_set<ValuePtr>& inPreviousQuantizationResidues,
                                 const std::unordered_set<DistributedWorkerDescriptor>& sendToWorkers,
-                                const std::unordered_set<Value>& aggregatedOutputs,
-                                const std::unordered_set<Value>& newQuantizationResidues) = 0;
+                                const std::unordered_set<ValuePtr>& aggregatedOutputs,
+                                const std::unordered_set<ValuePtr>& newQuantizationResidues) = 0;
     protected:
         DistributedCommunicator() {};
     };
@@ -3029,4 +3034,15 @@ namespace CNTK
     /// Built-in MPI-based communicator.
     ///
     CNTK_API DistributedCommunicatorPtr MPICommunicator();
+}
+
+namespace std {
+
+    template <> struct hash<CNTK::DistributedWorkerDescriptor>
+    {
+        size_t operator()(const CNTK::DistributedWorkerDescriptor& x) const
+        {
+             return std::hash<size_t>()(x.m_globalRank);
+        }
+    };
 }

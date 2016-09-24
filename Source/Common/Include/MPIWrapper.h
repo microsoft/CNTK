@@ -64,6 +64,7 @@ typedef std::shared_ptr<MPIWrapper> MPIWrapperPtr;
 class MPIWrapper : public std::enable_shared_from_this<MPIWrapper>
 {
     int m_myRank;
+    std::wstring m_myName;
     int m_numMPINodes;
     size_t m_numNodesInUse;
 
@@ -135,7 +136,10 @@ public:
         MPI_Comm_rank(MPI_COMM_WORLD, &m_myRank);
         MPI_Comm_size(MPI_COMM_WORLD, &m_numMPINodes);
         m_numNodesInUse = m_numMPINodes;
-
+        char name[BUFSIZ];
+        int length;
+        MPI_Get_processor_name(name, &length);
+        m_myName = std::wstring(name, name+length);
         // Applying MPI workaround
         s_myRank = m_myRank;
         atexit(&MPIWrapper::MPIWorkaroundAtExit);
@@ -269,6 +273,10 @@ public:
     size_t CurrentNodeRank() const
     {
         return m_myRank;
+    }
+    std::wstring CurrentNodeName() const
+    {
+        return m_myName;
     }
     bool IsMainNode() const
     {

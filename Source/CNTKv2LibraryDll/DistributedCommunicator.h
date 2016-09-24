@@ -7,14 +7,14 @@
 
 #include "stdafx.h"
 #include "CNTKLibrary.h"
-#include "MPIWrapper.h"
 #include "GPUDataTransferer.h"
-#include "CUDAPageLockedMemAllocator.h"
 
 namespace CNTK
 {
+    class Microsoft::MSR::CNTK::MPIWrapper;
+    typedef std::shared_ptr<Microsoft::MSR::CNTK::MPIWrapper> MPIWrapperPtr;
 
-    class MPICommunicatorImpl final : public DistributedCommunicator, std::enable_shared_from_this<MPICommunicatorImpl>
+    class MPICommunicatorImpl final : public DistributedCommunicator, public std::enable_shared_from_this<MPICommunicatorImpl>
     {
     public:
         MPICommunicatorImpl();
@@ -28,28 +28,32 @@ namespace CNTK
 
         // A collective communication API to concatenate values across each worker of this communicator. The concatenated values are only sent to the specified workers; for all others the returned Values are null
         // TODO: Add an async variant of the Concatenate method
-        virtual std::unordered_set<Value> Concatenate(const std::unordered_set<Value>& values, const std::unordered_set<DistributedWorkerDescriptor>& sendToWorkers, DeviceDescriptor device = DeviceDescriptor::DefaultDevice()) override;
+        virtual std::unordered_set<ValuePtr> Concatenate(const std::unordered_set<ValuePtr>& values, const std::unordered_set<DistributedWorkerDescriptor>& sendToWorkers) override;
 
         // A collective communication API to aggregate values across each worker of this communicator. The aggregated values are only sent to the specified workers; for all others the returned Values are null
         virtual void AggregateInPlace(const std::vector<ValuePtr>& values,
-                                               const std::unordered_set<DistributedWorkerDescriptor>& sendToWorkers) override;
-
-        virtual std::future<void> AggregateInPlaceAsync(const std::vector<ValuePtr>& values,
-                                               const std::unordered_set<DistributedWorkerDescriptor>& sendToWorkers) override;
+                                      const std::unordered_set<DistributedWorkerDescriptor>& sendToWorkers) override;
 
         virtual std::vector<ValuePtr> Aggregate(const std::vector<ValuePtr>& inValues,
                                                 const std::unordered_set<DistributedWorkerDescriptor>& sendToWorkers) override;
 
+        virtual std::future<std::vector<ValuePtr>> AggregateAsync(const std::vector<ValuePtr>& inValues,
+                                                    const std::unordered_set<DistributedWorkerDescriptor>& sendToWorkers) override;
+
         // A collective communication API to perform quantized aggregation of values across all workers of this communicator
         // TODO: Add an async variant of the QuantizedAggregate method
-        virtual void QuantizedAggregate(const std::vector<Value>& inValues,
-                                const std::unordered_set<Value>& inPreviousQuantizationResidues,
+        virtual void QuantizedAggregate(const std::vector<ValuePtr>& inValues,
+                                const std::unordered_set<ValuePtr>& inPreviousQuantizationResidues,
                                 const std::unordered_set<DistributedWorkerDescriptor>& sendToWorkers,
-                                const std::unordered_set<Value>& aggregatedOutputs,
-                                const std::unordered_set<Value>& newQuantizationResidues) override;
+                                const std::unordered_set<ValuePtr>& aggregatedOutputs,
+                                const std::unordered_set<ValuePtr>& newQuantizationResidues) override;
     private:
 
-        std::vector<size_t> Prepare(const std::vector<ValuePtr>& values);
+        std::vector<int> Prepare(const std::vector<ValuePtr>& values);
+
+        void AggregateImpl(const std::vector<ValuePtr>& inputValues,
+                           const std::vector<ValuePtr>& outputValues,
+                           const std::unordered_set<DistributedWorkerDescriptor>& sendToWorkers);
 
         struct Buffer
         {
@@ -60,9 +64,11 @@ namespace CNTK
         static Buffer AllocateIntermediateBuffer(int deviceID, size_t totalSize);
 
         Microsoft::MSR::CNTK::MPIWrapperPtr m_mpi;
+        DistributedWorkerDescriptor m_currentWorker;
+        std::unordered_set<DistributedWorkerDescriptor> m_workers;
 
         // these two are always parallel, merge them together?
-        std::vector<std::unique_ptr<GPUDataTransferer>> m_gpuDataTransferers;
+        std::vector<std::unique_ptr<Microsoft::MSR::CNTK::GPUDataTransferer>> m_gpuDataTransferers;
         std::vector<Buffer> m_intermediateCPUBuffers;
     };
 }
