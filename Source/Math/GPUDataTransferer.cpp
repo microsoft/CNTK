@@ -217,9 +217,9 @@ template class GPUDataTransferer<double>;
 /// PrefetchGPUDataTransferer
 
 cudaStream_t PrefetchGPUDataTransferer::s_prefetchStream = nullptr;
-cudaStream_t PrefetchGPUDataTransferer::s_prefetchAssignStream = nullptr;
+cudaStream_t PrefetchGPUDataTransferer::s_gpuToCpuStream = nullptr;
 
-PrefetchGPUDataTransferer::PrefetchGPUDataTransferer(int deviceId) : GranularGPUDataTransferer(deviceId, s_prefetchStream, s_prefetchAssignStream, true)
+PrefetchGPUDataTransferer::PrefetchGPUDataTransferer(int deviceId) : GranularGPUDataTransferer(deviceId, s_prefetchStream, s_gpuToCpuStream, true)
 {
 #pragma warning(disable : 4127)
     if (s_prefetchStream == nullptr)
