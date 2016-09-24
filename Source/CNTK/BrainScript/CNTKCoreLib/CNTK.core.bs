@@ -701,10 +701,11 @@ Constants = [
     One  = ConstantTensor (1, (1))
     OnesTensor (dims) = ConstantTensor (1, dims)
     # BUGBUG: ZeroesLike() would recreate the full dimension of x. Well, no need if it considers broadcasting. But still wrong if we want to broadcast a vector of different tensor dim.
-    #ZeroesLike (x) = CastAs (x, Zero) // read: Cast<x>(Zero)
+    # TODO: ^^ This comment seems wrong? So I reenabled the CastAs() version. Need to verify whether it works correctly now.
+    ZeroesLike (x) = CastAs (x, Zero) // read: Cast<x>(Zero)
     #OnesLike (x)   = CastAs (x, One)
     # CastAs() does not implement broadcasting
-    ZeroesLike (x) = SumColumnElements (RowSlice (0, 1, x) .* Zero)  // hack: get one row of input and multiply with zero; double-hack: reduce extra tensor dims by SumCol
+    #ZeroesLike (x) = SumColumnElements (RowSlice (0, 1, x) .* Zero)  // hack: get one row of input and multiply with zero; double-hack: reduce extra tensor dims by SumCol
     ZeroSequenceLike = ZeroesLike   # TODO: this should yield a scalar sequence, while ZeroesLike should be a tensor
     ZeroesLike1 (x) = x .* Zero     # get a tensor of zeroes of same dim as x  TODO: Do this as a C++ node (will be simple)
     OnesLike (x) = ZeroesLike (x) + One
