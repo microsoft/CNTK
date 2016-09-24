@@ -28,8 +28,8 @@ struct EvalFixture
         fprintf(stderr, "Executable path: %s\n", m_parentPath.c_str());
 
 #ifdef _WIN32
-        // The executable path on Windows is e.g. <cntk>/x64/Debug/Unittests/
-        m_testDataPath = m_parentPath + "/../../../Tests/UnitTests/EvalTests";
+        // The executable path on Windows is e.g. <cntk>/x64/Debug/
+        m_testDataPath = m_parentPath + "/../../Tests/UnitTests/EvalTests";
 #else
         // The executable path on Linux is e.g. <cntk>/build/cpu/release/bin/
         m_testDataPath = m_parentPath + "/../../../../Tests/UnitTests/EvalTests";

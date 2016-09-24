@@ -164,9 +164,18 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::operator=(const CPUMatrix<ElemType>& d
 //move constructor, shallow copy
 template <class ElemType>
 CPUMatrix<ElemType>::CPUMatrix(CPUMatrix<ElemType>&& moveFrom)
+    : Base(/* shallow */ true)
 {
     ShallowCopyFrom(moveFrom);
     moveFrom.ZeroValues();
+}
+
+// Shortcut of default constructor + shallow copy, to avoid one initialization
+template <class ElemType>
+CPUMatrix<ElemType>::CPUMatrix(const CPUMatrix<ElemType>& shallowCopyFrom, bool shallow)
+    : Base(shallow)
+{
+    ShallowCopyFrom(shallowCopyFrom);
 }
 
 //move assignment operator, shallow copy
@@ -180,12 +189,6 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::operator=(CPUMatrix<ElemType>&& moveFr
         moveFrom.ZeroValues();
     }
     return *this;
-}
-
-template <class ElemType>
-CPUMatrix<ElemType>::~CPUMatrix()
-{
-    Clear();
 }
 
 template <class ElemType>
@@ -204,9 +207,7 @@ CPUMatrix<ElemType> CPUMatrix<ElemType>::ColumnSlice(size_t startColumn, size_t 
     if (startColumn + numCols > m_numCols)
         InvalidArgument("The slice (%d+%d) is out of range of the source matrix (%d).", (int) startColumn, (int) numCols, (int) m_numCols);
 
-    CPUMatrix<ElemType> slice;
-
-    slice.ShallowCopyFrom(*this);
+    CPUMatrix<ElemType> slice(*this, /* shallow= */ true);
     slice.m_numCols = numCols;
     slice.m_sliceViewOffset = m_sliceViewOffset + startColumn * m_numRows;
 
@@ -6233,7 +6234,6 @@ template CPUMatrix<char>::CPUMatrix();
 template CPUMatrix<char>::CPUMatrix(CPUMatrix<char> const&);
 template CPUMatrix<char>::CPUMatrix(CPUMatrix<char>&&);
 template size_t CPUMatrix<char>::LocateElement(size_t, size_t) const;
-template CPUMatrix<char>::~CPUMatrix();
 template CPUMatrix<char> CPUMatrix<char>::ColumnSlice(size_t startColumn, size_t numCols) const;
 template CPUMatrix<char>& CPUMatrix<char>::operator=(CPUMatrix<char>&&);
 template void CPUMatrix<char>::SetValue(const char);
@@ -6255,7 +6255,6 @@ template CPUMatrix<short>::CPUMatrix();
 template CPUMatrix<short>::CPUMatrix(CPUMatrix<short> const&);
 template CPUMatrix<short>::CPUMatrix(CPUMatrix<short>&&);
 template size_t CPUMatrix<short>::LocateElement(size_t, size_t) const;
-template CPUMatrix<short>::~CPUMatrix();
 template CPUMatrix<short> CPUMatrix<short>::ColumnSlice(size_t startColumn, size_t numCols) const;
 template CPUMatrix<short>& CPUMatrix<short>::operator=(CPUMatrix<short>&&);
 template void CPUMatrix<short>::SetValue(const short);
@@ -6271,7 +6270,6 @@ template void CPUMatrix<short>::CopySection(size_t numRows, size_t numCols, shor
 template void CPUMatrix<short>::Reshape(const size_t, const size_t);
 
 template CPUMatrix<int>::CPUMatrix(const size_t, const size_t, int*, const size_t);
-template CPUMatrix<int>::~CPUMatrix();
 
 }}}
 

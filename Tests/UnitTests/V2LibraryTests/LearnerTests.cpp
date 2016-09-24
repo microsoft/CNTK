@@ -30,12 +30,12 @@ void TestUpdate(LearnerPtr& learner, NDShape& shape, size_t numMinibatches, cons
 }
 
 template <typename ElementType>
-unordered_set<Parameter> CreateParameters(const NDShape& shape, size_t numParameters, const DeviceDescriptor& device)
+vector<Parameter> CreateParameters(const NDShape& shape, size_t numParameters, const DeviceDescriptor& device)
 {
-    unordered_set<Parameter> parameters;
+    vector<Parameter> parameters;
     for (int i = 0; i < numParameters; i++)
     {
-        parameters.insert(
+        parameters.push_back(
             Parameter(NDArrayView::RandomUniform<ElementType>(shape, -1.0, 1.0, i, device), 
                       L"parameter_" + to_wstring(i)));
     }

@@ -82,6 +82,27 @@ namespace CNTK
 
             auto& deserializerConfigDict = deserializerConfig.Value<Dictionary>();
             auto deserializerTypeName = deserializerConfigDict[L"type"].Value<std::wstring>();
+            if (deserializerTypeName == L"ImageDeserializer")
+            {
+                // Add a transpose transform since the image data in read in HWC (CWH in column major format) form while 
+                // the CNTK convolution engive supports WHC (in column-major format)
+                auto& inputStreamsConfig = deserializerConfigDict[L"input"].Value<Dictionary>();
+                auto& streamsMap = *(inputStreamsConfig.m_dictionaryData);
+                for (auto& inputStreamEntry : streamsMap)
+                {
+                    auto& inputStreamConfig = inputStreamEntry.second.Value<Dictionary>();
+                    if (inputStreamConfig.Contains(L"transforms"))
+                    {
+                        auto& transforms = inputStreamConfig[L"transforms"].Value<std::vector<DictionaryValue>>();
+
+                        // Add the transpose transform
+                        Dictionary transposeTransform;
+                        transposeTransform[L"type"] = L"Transpose";
+                        transforms.push_back(transposeTransform);
+                    }
+                }
+
+            }
             deserializerConfigDict[L"module"] = deserializerTypeNameToModuleNameMap.at(deserializerTypeName);
         }
 
@@ -127,7 +148,13 @@ namespace CNTK
             {
                 // TODO: Add support for distributed reading
                 EpochConfiguration epochConfig = { 1, 0, minibatchSizeInSamples, m_epochSize, 0, 0 };
-                m_compositeDataReader->StartEpoch(epochConfig);
+
+                std::map<std::wstring, int> requiredStreams;
+                for (const auto& s : m_streamInfos)
+                    // Allocating all on CPU for now.
+                    requiredStreams[s.m_name] = CPUDEVICE;
+
+                m_compositeDataReader->StartEpoch(epochConfig, requiredStreams);
                 m_prevMinibatchSize = minibatchSizeInSamples;
             }
 
@@ -169,7 +196,7 @@ namespace CNTK
                     size_t sampleSize = currentStreamDesc->m_sampleLayout->GetNumElements();
 
                     // TODO: Eliminate the unnecessary CPU to CPU copy
-                    ReaderShim<float>::FillMatrixFromStream(currentStreamDesc->m_storageType, dataMatrix.get(), sampleSize, currentStreamMinibatchData);
+                    ReaderShim<float>::FillMatrixFromStream(currentStreamDesc->m_storageType, dataMatrix.get(), sampleSize, currentStreamMinibatchData, nullptr);
                     minibatchValuePtr = CompositeFunction::GetValueObjectFromCNTKImplMatrixAndMBLayout<float>(sampleShape, *dataMatrix, currentStreamMinibatchData->m_layout, false);
 
                     size_t numSamples = currentStreamMinibatchData->m_layout->GetActualNumSamples();

@@ -85,8 +85,8 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
             Console.WriteLine("\n====== EvaluateModelImageInput ========");
             EvaluateImageClassificationModel();
 
-            Console.WriteLine("Press <Enter> to terminate.");
-            Console.ReadLine();
+            // This pattern is used by End2EndTests to check whether the program runs to complete.
+            Console.WriteLine("\n====== Evaluation Complete ========");
         }
 
         /// <summary>
@@ -104,6 +104,28 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
                 }
                 throw new FileNotFoundException(string.Format("File '{0}' not found.", filePath));
             }
+        }
+
+        /// <summary>
+        /// Handle CNTK exceptions.
+        /// </summary>
+        /// <param name="ex">The exception to be handled.</param>
+        private static void OnCNTKException(CNTKException ex)
+        {
+            // The pattern "Inner Exception" is used by End2EndTests to catch test failure.
+            Console.WriteLine("Error: {0}\nNative CallStack: {1}\n Inner Exception: {2}", ex.Message, ex.NativeCallStack, ex.InnerException != null ? ex.InnerException.Message : "No Inner Exception");
+            throw ex;
+        }
+
+        /// <summary>
+        /// Handle general exceptions.
+        /// </summary>
+        /// <param name="ex">The exception to be handled.</param>
+        private static void OnGeneralException(Exception ex)
+        {
+            // The pattern "Inner Exception" is used by End2EndTests to catch test failure.
+            Console.WriteLine("Error: {0}\nCallStack: {1}\n Inner Exception: {2}", ex.Message, ex.StackTrace, ex.InnerException != null ? ex.InnerException.Message : "No Inner Exception");
+            throw ex;
         }
 
         /// <summary>
@@ -147,11 +169,11 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
             }
             catch (CNTKException ex)
             {
-                Console.WriteLine("Error: {0}\nNative CallStack: {1}\n Inner Exception: {2}", ex.Message, ex.NativeCallStack, ex.InnerException != null ? ex.InnerException.Message : "No Inner Exception");
+                OnCNTKException(ex);
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Error: {0}\nCallStack: {1}\n Inner Exception: {2}", ex.Message, ex.StackTrace, ex.InnerException != null ? ex.InnerException.Message : "No Inner Exception");
+                OnGeneralException(ex);
             }
         }
 
@@ -174,8 +196,8 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
                 using (var model = new IEvaluateModelManagedF())
                 {
                     // Desired output layers
-                    const string hiddenLayerName = "h1.z";
-                    const string outputLayerName = "ol.z";
+                    const string hiddenLayerName = "out.h1";
+                    const string outputLayerName = "out.z";
 
                     // Load model
                     string modelFilePath = Path.Combine(Environment.CurrentDirectory, @"..\Output\Models\01_OneHidden");
@@ -205,11 +227,11 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
             }
             catch (CNTKException ex)
             {
-                Console.WriteLine("Error: {0}\nNative CallStack: {1}\n Inner Exception: {2}", ex.Message, ex.NativeCallStack, ex.InnerException != null ? ex.InnerException.Message : "No Inner Exception");
+                OnCNTKException(ex);
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Error: {0}\nCallStack: {1}\n Inner Exception: {2}", ex.Message, ex.StackTrace, ex.InnerException != null ? ex.InnerException.Message : "No Inner Exception");
+                OnGeneralException(ex);
             }
         }
 
@@ -252,11 +274,11 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
             }
             catch (CNTKException ex)
             {
-                Console.WriteLine("Error: {0}\nNative CallStack: {1}\n Inner Exception: {2}", ex.Message, ex.NativeCallStack, ex.InnerException != null ? ex.InnerException.Message : "No Inner Exception");
+                OnCNTKException(ex);
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Error: {0}\nCallStack: {1}\n Inner Exception: {2}", ex.Message, ex.StackTrace, ex.InnerException != null ? ex.InnerException.Message : "No Inner Exception");
+                OnGeneralException(ex);
             }
         }
 
@@ -293,11 +315,11 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
             }
             catch (CNTKException ex)
             {
-                Console.WriteLine("Error: {0}\nNative CallStack: {1}\n Inner Exception: {2}", ex.Message, ex.NativeCallStack, ex.InnerException != null ? ex.InnerException.Message : "No Inner Exception");
+                OnCNTKException(ex);
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Error: {0}\nCallStack: {1}\n Inner Exception: {2}", ex.Message, ex.StackTrace, ex.InnerException != null ? ex.InnerException.Message : "No Inner Exception");
+                OnGeneralException(ex);
             }
         }
 
@@ -343,11 +365,11 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
             }
             catch (CNTKException ex)
             {
-                Console.WriteLine("Error: {0}\nNative CallStack: {1}\n Inner Exception: {2}", ex.Message, ex.NativeCallStack, ex.InnerException != null ? ex.InnerException.Message : "No Inner Exception");
+                OnCNTKException(ex);
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Error: {0}\nCallStack: {1}\n Inner Exception: {2}", ex.Message, ex.StackTrace, ex.InnerException != null ? ex.InnerException.Message : "No Inner Exception");
+                OnGeneralException(ex);
             }
         }
 
@@ -430,11 +452,11 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
             }
             catch (CNTKException ex)
             {
-                Console.WriteLine("Error: {0}\nNative CallStack: {1}\n Inner Exception: {2}", ex.Message, ex.NativeCallStack, ex.InnerException != null ? ex.InnerException.Message : "No Inner Exception");
+                OnCNTKException(ex);
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Error: {0}\nCallStack: {1}\n Inner Exception: {2}", ex.Message, ex.StackTrace, ex.InnerException != null ? ex.InnerException.Message : "No Inner Exception");
+                OnGeneralException(ex);
             }
 
             sw.Stop();
@@ -499,11 +521,11 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
             }
             catch (CNTKException ex)
             {
-                Console.WriteLine("Error: {0}\nNative CallStack: {1}\n Inner Exception: {2}", ex.Message, ex.NativeCallStack, ex.InnerException != null ? ex.InnerException.Message : "No Inner Exception");
+                OnCNTKException(ex);
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Error: {0}\nCallStack: {1}\n Inner Exception: {2}", ex.Message, ex.StackTrace, ex.InnerException != null ? ex.InnerException.Message : "No Inner Exception");
+                OnGeneralException(ex);
             }
         }
 
