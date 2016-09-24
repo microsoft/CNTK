@@ -13,6 +13,7 @@
 #include <future>
 #include "DataReader.h"
 #include "Reader.h"
+#include "DataTransferer.h"
 
 namespace CNTK
 {

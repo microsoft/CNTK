@@ -11,9 +11,9 @@
 
 #include "GPUMatrix.h"
 #include "GPUMatrixCUDAKernels.cuh"
-//#include "GPUSparseMatrix.h"
 #include "GPUTensor.h"
 #include "CommonMatrix.h"
+#include "DataTransferer.h"
 #define TENSOR_OPS_DECL __device__ __host__
 #include "TensorOps.h"
 #include "device_launch_parameters.h"
