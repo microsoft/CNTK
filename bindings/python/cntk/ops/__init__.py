@@ -106,10 +106,10 @@ def classification_error(output_vector, target_vector, name=''):
     defined for it.
 
     Example:
-        >>> C.classification_error([1., 2., 3., 4.], [0., 0., 0., 1.]).eval()
+        >>> C.classification_error([[1., 2., 3., 4.]], [[0., 0., 0., 1.]]).eval()
         #[0.]
 
-        >>> C.classification_error([1., 2., 3., 4.], [0., 0., 1., 0.]).eval()
+        >>> C.classification_error([[1., 2., 3., 4.]], [[0., 0., 1., 0.]]).eval()
         #[1.]
 
     Args:
@@ -554,25 +554,6 @@ def times(left, right, output_rank=1, name=''):
     right = sanitize_input(right, dtype)
     return times(right, left, output_rank, name)
 
-#TODO: enable when it is exposed in c++
-def identity(x, name=''):
-    '''
-    The identity function. It returns an identical tensor to the input tensor `x`:
-
-    :math:`pass_tensor(x) = x`
-
-    Example:
-        >>> C.pass_tensor([0., 1.]).eval()
-        [array([[ 0.      ,  1.]])]
-
-    Args:
-        x: numpy array or any :class:`cntk.Function` that outputs a tensor
-        name (`str`, optional): the name of the Function instance in the network
-    Returns:
-        :class:`cntk.Function`
-    '''
-    raise NotImplementedError("identity is not implemented yet in V2")
-
 ################################################################################
 # non_diff ops
 ################################################################################
@@ -615,11 +596,11 @@ def ceil(arg, name=''):
 
     Example:
         >>> C.ceil([0.2, 1.3, 4., 5.5, 0.0]).eval()
-        [array([[ 1.,  2.,  4.,  6.,  0.]])]
+        array([ 1.,  2.,  4.,  6.,  0.], dtype=float32)
 
         >>> C.ceil([[0.6, 3.3], [1.9, 5.6]]).eval()
-        [array([[[ 1.,  4.],
-                 [ 2.,  6.]]])]
+        array([[ 1.,  4.],
+               [ 2.,  6.]], dtype=float32)
 
     Args:
         arg: input tensor
@@ -641,18 +622,18 @@ def round(arg, name=''):
 
     Example:
         >>> C.round([0.2, 1.3, 4., 5.5, 0.0]).eval()
-        [array([[ 0.,  1.,  4.,  6.,  0.]])]
+        array([ 0.,  1.,  4.,  6.,  0.], dtype=float32)
 
         >>> C.round([[0.6, 3.3], [1.9, 5.6]]).eval()
-        [array([[[ 1.,  3.],
-                 [ 2.,  6.]]])]
+        array([[ 1.,  3.],
+               [ 2.,  6.], dtype=float32])
 
         >>> C.round([-5.5, -4.2, -3., -0.7, 0]).eval()
-        [array([[-5., -4., -3., -1.,  0.]])]
+        array([-5., -4., -3., -1.,  0.], dtype=float32)
 
         >>> C.round([[-0.6, -4.3], [1.9, -3.2]]).eval()
-        [array([[[-1., -4.],
-                 [ 2., -3.]]])]
+        array([[-1., -4.],
+               [ 2., -3.]], dtype=float32)
 
     Args:
         arg: input tensor
@@ -682,10 +663,10 @@ def clip(x, min_value, max_value, name=''):
 
     Example:
         >>> C.clip([1., 2.1, 3.0, 4.1], 2., 4.).eval()
-        [array([[ 2. ,  2.1,  3. ,  4. ]])]
+        array([ 2.       ,  2.0999999,  3.       ,  4.       ], dtype=float32)
 
         >>> C.clip([-10., -5., 0., 5., 10.], [-5., -4., 0., 3., 5.], [5., 4., 1., 4., 9.]).eval()
-        [array([[-5., -4.,  0.,  4.,  9.]])]
+        array([-5., -4.,  0.,  4.,  9.], dtype=float32)
 
     Args:
         x: tensor to be clipped
@@ -712,7 +693,7 @@ def relu(x, name=''):
 
     Example:
         >>> C.relu([[-1, -0.5, 0, 1, 2]]).eval()
-        [array([[[ 0.,  0.,  0.,  1.,  2.]]])]
+        array([[ 0.,  0.,  0.,  1.,  2.]], dtype=float32)
 
     Args:
         x: numpy array or any :class:`cntk.Function` that outputs a tensor
@@ -919,7 +900,7 @@ def abs(x, name=''):
 
     Example:
         >>> C.abs([-1, 1, -2, 3]).eval()
-        [array([[ 1.,  1.,  2.,  3.]])]
+        array([ 1.,  1.,  2.,  3.], dtype=float32)
 
     Args:
         x: numpy array or any :class:`cntk.Function` that outputs a tensor
