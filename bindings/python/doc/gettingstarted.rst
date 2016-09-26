@@ -70,12 +70,13 @@ can be vastly improved. To explicitly set the device to GPU, set the target devi
 Now let's setup a network that will learn a classifier based on the example fully connected classifier network 
 (``examples.common.nn.fully_connected_classifier_net``). This is a simple task and looks like this:
 
+```
     def fully_connected_classifier_net(input, num_output_classes, hidden_layer_dim, num_hidden_layers, nonlinearity):
         r = fully_connected_layer(input, hidden_layer_dim, nonlinearity)
         for i in range(1, num_hidden_layers):
             r = fully_connected_layer(r, hidden_layer_dim, nonlinearity)
         return linear_layer(r, num_output_classes)
-
+```
 
 
 
