@@ -2,12 +2,6 @@
 
 . $TEST_ROOT_DIR/run-test-common
 
-# The following three statements are required to make the test runs deterministic
-# The OMP_NUM_THREADS=1 is required to get the SquareError computation on Linux CPU deterministic
-export MKL_NUM_THREADS=4
-export MKL_CBWR=COMPATIBLE
-export OMP_NUM_THREADS=1
-
 ConfigDir=$TEST_DIR/../../../../../../../Examples/Image/Miscellaneous/CIFAR-10
 
 # This test uses a large dataset which is not part of the CNTK repository itself
@@ -47,7 +41,7 @@ fi
 # setting the DataDir to the run dir, since the cntk config expects data and mapping files in '$dataDir$/cifar-10-batches-py/'
 DataDir=$TEST_RUN_DIR
 echo 'Starting cntk run'
-cntkrun 06_RegressionSimple.cntk "[command=TrainConvNet:Test] stderr=-"
+cntkrun 06_RegressionSimple.cntk "[command=TrainConvNet:Test] forceDeterministicAlgorithms=true stderr=-"
 ExitCode=$?
 
 # Delete the test data if copied
