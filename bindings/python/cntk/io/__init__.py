@@ -49,8 +49,44 @@ class MinibatchSource(cntk_py.MinibatchSource):
                 minibatch_size_in_sequences, device)
 
 
+def _py_dict_to_cntk_dict(py_dict):
+    '''
+    Converts a Python dictionary into a CNTK Dictionary whose values are CNTK DictionaryValue instances.
+    Args:
+        py_dict (dict): a dictionary to be converted.
+    Returns: 
+        :class:`cntk_py.Dictionary`
+    '''
+    res = cntk_py.Dictionary();
+    for k,v in py_dict.items():
+        if isinstance(v,dict):
+            res[k] = cntk_py.DictionaryValueFromDict(_py_dict_to_cntk_dict(v))
+        #TODO: add support to list of lists ?
+        elif isinstance(v,list):
+            l = list()
+            for e in v:
+                if isinstance(e,dict):
+                    l.append(cntk_py.DictionaryValueFromDict(_py_dict_to_cntk_dict(e)))
+                else:
+                    l.append(cntk_py.DictionaryValue(v))
+            res[k] = cntk_py.DictionaryValue(l)
+        else:
+            res[k] = cntk_py.DictionaryValue(v)
+    return res
+        
+def minibatch_source(config_dict):
+    '''
+    Instantiate the CNTK built-in composite minibatch source which is used to stream data into the network.    
+    Args:
+        config_dict (dict): a dictionary containing all the key-value configuration entries.
+    Returns: 
+        :class:`cntk_py.MinibatchSource`
+    '''
+    cntk_dict = _py_dict_to_cntk_dict(config_dict)
+    return cntk_py.create_composite_minibatch_source(cntk_dict)
+
     
-def create_composite_minibatch_source(configuration):
+def composite_minibatch_source(configuration):
     '''
     Instantiate the CNTK built-in composite minibatch source.
 

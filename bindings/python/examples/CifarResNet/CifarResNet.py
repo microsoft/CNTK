@@ -7,7 +7,7 @@
 import numpy as np
 import sys
 import os
-from cntk import Trainer, sgd_learner, create_minibatch_source, DeviceDescriptor
+from cntk import Trainer, sgd_learner, minibatch_source, DeviceDescriptor
 from cntk.ops import input_variable, constant, parameter, cross_entropy_with_softmax, combine, classification_error, times, pooling, AVG_POOLING
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
@@ -41,7 +41,7 @@ def create_mb_source(features_stream_name, labels_stream_name, image_height, ima
     minibatch_config = {"epochSize" : sys.maxsize, "deserializers" : [deserializer_config]}
     print(minibatch_config)
 
-    return create_minibatch_source(minibatch_config)
+    return minibatch_source(minibatch_config)
 
 def get_projection_map(out_dim, in_dim):
     if in_dim > out_dim:
