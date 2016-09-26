@@ -53,7 +53,7 @@ def _py_dict_to_cntk_dict(py_dict):
     '''
     Converts a Python dictionary into a CNTK Dictionary whose values are CNTK DictionaryValue instances.
     Args:
-        py_dict (dict): a dictionary to be converted.
+        py_dict (`dict`): a dictionary to be converted.
     Returns: 
         :class:`cntk_py.Dictionary`
     '''
@@ -74,30 +74,138 @@ def _py_dict_to_cntk_dict(py_dict):
             res[k] = cntk_py.DictionaryValue(v)
     return res
         
-def minibatch_source(config_dict):
+def minibatch_source(config):
     '''
     Instantiate the CNTK built-in composite minibatch source which is used to stream data into the network.    
     Args:
-        config_dict (dict): a dictionary containing all the key-value configuration entries.
+        config (`dict`): a dictionary containing all the key-value configuration entries.
     Returns: 
-        :class:`cntk_py.MinibatchSource`
+        :class:`cntk.io.MinibatchSource`
     '''
-    cntk_dict = _py_dict_to_cntk_dict(config_dict)
+    cntk_dict = _py_dict_to_cntk_dict(config)
     return cntk_py.create_composite_minibatch_source(cntk_dict)
 
-    
-def composite_minibatch_source(configuration):
+class ReaderConfig(dict):
     '''
-    Instantiate the CNTK built-in composite minibatch source.
+    Reader configuration.
 
     Args:
-        configuration (`dict`): dictionary of (potential dictionaries of)
-         source configurations
-
-    Returns:
-        `:class:cntk.io.MinibatchSource`
+        deserializers ('list', default is empty): list of deserializers
+         (`:class:cntk.io.ImageDeserializer` for now).
+        randomize (`bool`, default True): randomize images before every epoch
+        epoch_size (`int`): epoch size 
     '''
-    return cntk_py.create_composite_minibatch_source(configuration)
+    def __init__(self, deserializers=None, randomize=True, epoch_size=MAX_UI64):
+
+        self['epochSize'] = epoch_size
+        if not isinstance(deserializers, (list, tuple)):
+            deserializers = [deserializers]
+        self['deserializers'] = self.deserializers = deserializers or []
+        self['randomize'] = randomize;
+
+    def minibatch_source(self):
+        '''
+        Creates an instance of `:class:cntk.io.MinibatchSource` from this
+        instance, which can be used to feed data into the `eval()` methods of
+        the graph nodes or the `train_minibatch()` of `:class:cntk.Trainer`.
+
+        Returns:
+            instance of `:class:cntk.io.MinibatchSource` 
+        '''
+        return minibatch_source(self)
+
+class Deserializer(dict):
+    '''
+    Base deserializer class that can be used in the `:class:ReaderConfig`.
+
+    Args:
+        type (`str`): type of the deserializer
+    '''
+    def __init__(self, type):
+        self['type'] = type
+
+class ImageDeserializer(Deserializer):
+    '''
+    This class configures the image reader that reads images and corresponding
+    labels from a file of the form
+
+    ```
+         <full path to image><tab><numerical label (0-based class id)>
+    ```
+
+    Args:
+        filename (`str`): file name of the map file that associates images to
+         classes
+
+    See also:
+        https://github.com/microsoft/cntk/wiki/Understanding-and-Extending-Readers
+    '''
+    def __init__(self, filename):
+        super(ImageDeserializer, self).__init__('ImageDeserializer')
+        self['file'] = filename
+        self['input'] = self.input = {}
+
+    def map_features(self, node, transforms):
+        '''
+        Maps feature node (either node instance or node name) to the transforms
+        that will be applied to the images.
+
+        Args:
+            node (`str` or input node): node or its name
+            transforms (`list` of transforms): the transforms can be created by
+             the static methods `crop`, `scale`, or `mean`.
+
+        '''
+        if not isinstance(node, str):
+            node = node.name()
+        if not isinstance(transforms, list):
+            transforms = [transforms] if transforms else []
+        self.input[node] = dict(transforms=transforms)
+
+    def map_labels(self, node, num_classes):
+        '''
+        Maps label node (either node instance or node name) 
+        that will be applied to the images.
+
+        Args:
+            node (`str` or input node): node or its name
+            num_classes (`int`): number of classes
+
+        '''
+        if not isinstance(node, str):
+            node = node.name()
+        self.input[node] = dict(labelDim=num_classes)
+
+    @staticmethod
+    def crop(crop_type='center', ratio=1.0, jitter_type='uniRatio'):
+        '''
+        Crop transform that can be used to pass to `map_features`
+        '''
+        trans = {}
+        trans['type'] = 'crop'
+        trans['cropType'] = crop_type
+        trans['cropRatio'] = ratio
+        trans['jitterType'] = jitter_type
+        return trans
+
+    @staticmethod
+    def scale(width, height, channels, interpolations='linear'):
+        trans = {}
+        trans['type'] = 'scale'
+        trans['width'] = width 
+        trans['height'] = height
+        trans['channels'] = channels
+        trans['interpolations'] = interpolations
+        return trans
+
+    @staticmethod
+    def mean(filename):
+        trans = {}
+        trans['type'] = 'mean'
+        trans['meanFile'] = filename
+        return trans
+
+    # TODO color transpose
 
 #
 # CNTKTextFormatReader

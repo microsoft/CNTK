@@ -7,11 +7,11 @@
 
 import os
 import numpy as np
-from cntk.io import text_format_minibatch_source, StreamConfiguration
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
 
 def test_text_format():
+    from cntk.io import text_format_minibatch_source, StreamConfiguration
 
     # 0	|x 560:1	|y 1 0 0 0 0
     # 0	|x 0:1
@@ -52,3 +52,61 @@ def test_text_format():
                 [[ 0.,  1.,  0.,  0.,  0.]]
                 ]))
 
+def test_image():
+    from cntk.io import ReaderConfig, ImageDeserializer
+    map_file = "input.txt"
+    mean_file = "mean.txt"
+    epoch_size = 150
+
+    feature_name = "f"
+    image_width = 100
+    image_height = 200
+    num_channels = 3
+
+    label_name = "l"
+    num_classes = 7
+    
+    image = ImageDeserializer(map_file)
+    image.map_features(feature_name,
+            [ImageDeserializer.crop(crop_type='Random', ratio=0.8,
+                jitter_type='uniRatio'),
+             ImageDeserializer.scale(width=image_width, height=image_height,
+                 channels=num_channels, interpolations='linear'),
+             ImageDeserializer.mean(mean_file)])
+    image.map_labels(label_name, num_classes)
+
+    rc = ReaderConfig(image, randomize=False, epoch_size=epoch_size)
+
+    assert rc['epochSize'] == epoch_size
+    assert rc['randomize'] == False
+    assert len(rc['deserializers']) == 1
+    d = rc['deserializers'][0]
+    assert d['type'] == 'ImageDeserializer'
+    assert d['file'] == map_file
+    assert set(d['input'].keys()) == {label_name, feature_name}
+
+    l = d['input'][label_name]
+    assert l['labelDim'] == num_classes
+
+    f = d['input'][feature_name]
+    assert set(f.keys()) == { 'transforms' }
+    t0, t1, t2 = f['transforms']
+    assert t0['type'] == 'crop'
+    assert t1['type'] == 'scale'
+    assert t2['type'] == 'mean'
+    t0['cropType'] == 'Random'
+    t0['cropRatio'] == 0.8
+    t0['jitterType'] == 'uniRatio'
+    t1['width'] == image_width
+    t1['height'] == image_height
+    t1['channels'] == num_channels
+    t1['interpolations'] == 'linear'
+    t2['type'] == 'mean'
+    t2['meanFile'] == mean_file
+
+    # TODO depends on ImageReader.dll
+    ''' 
+    mbs = rc.minibatch_source()
+    sis = mbs.stream_infos()
+    assert set(sis.keys()) == { feature_name, label_name }
+    '''

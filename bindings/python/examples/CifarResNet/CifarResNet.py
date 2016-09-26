@@ -7,33 +7,38 @@
 import numpy as np
 import sys
 import os
-from cntk import Trainer, sgd_learner, minibatch_source, DeviceDescriptor
+from cntk import Trainer, sgd_learner, DeviceDescriptor
 from cntk.ops import input_variable, constant, parameter, cross_entropy_with_softmax, combine, classification_error, times, pooling, AVG_POOLING
+from cntk.io import ReaderConfig, ImageDeserializer
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(abs_path, "..", ".."))
 from examples.common.nn import conv_bn_relu_layer, conv_bn_layer, resnet_node2, resnet_node2_inc, print_training_progress
 
+TRAIN_MAP_FILENAME = 'train_map.txt'
+MEAN_FILENAME = 'CIFAR-10_mean.xml'
 
 # Instantiates the CNTK built-in minibatch source for reading images to be used for training the residual net
 # The minibatch source is configured using a hierarchical dictionary of key:value pairs
-def create_mb_source(features_stream_name, labels_stream_name, image_height, image_width, num_channels, num_classes):
-    map_file_rel_path = os.path.join(*"../../../../Examples/Image/Miscellaneous/CIFAR-10/cifar-10-batches-py/train_map.txt".split("/"))
-    map_file = os.path.normpath(os.path.join(abs_path, map_file_rel_path))
-    mean_file_rel_path = os.path.join(*"../../../../Examples/Image/Miscellaneous/CIFAR-10/cifar-10-batches-py/CIFAR-10_mean.xml".split("/"))
-    mean_file = os.path.normpath(os.path.join(abs_path, mean_file_rel_path))
+def create_mb_source(features_stream_name, labels_stream_name, image_height,
+        image_width, num_channels, num_classes, cifar_data_path):
+    map_file = os.path.join(cifar_data_path, TRAIN_MAP_FILENAME)
+    mean_file = os.path.join(cifar_data_path, MEAN_FILENAME)
 
     if not os.path.exists(map_file) or not os.path.exists(mean_file):
         cifar_py3 = "" if sys.version_info.major < 3 else "_py3" 
         raise RuntimeError("File '%s' or '%s' do not exist. Please run CifarDownload%s.py and CifarConverter%s.py from CIFAR-10 to fetch them"%(map_file, mean_file, cifar_py3, cifar_py3))
 
-    crop_transform_config = {"type" : "Crop", "cropType" : "Random", "cropRatio" : "0.8", "jitterType" : "uniRatio"}
-    scale_transform_config = {"type" : "Scale", "width" : image_width, "height" : image_height, "channels" : num_channels, "interpolations" : "linear"}
-    mean_transform_config = {"type" : "Mean", "meanFile" : mean_file}
-    all_transforms = [ crop_transform_config, scale_transform_config, mean_transform_config ]
+    image = ImageDeserializer(map_file)
+    image.map_features(feature_name,
+            [ImageDeserializer.crop(crop_type='Random', ratio=0.8,
+                jitter_type='uniRatio'),
+             ImageDeserializer.scale(width=image_width, height=image_height,
+                 channels=num_channels, interpolations='linear'),
+             ImageDeserializer.mean(mean_file)])
+    image.map_labels(label_name, num_classes)
 
-    features_stream_config = {"transforms": all_transforms}
-    labels_stream_config = {"labelDim" : num_classes}
+    rc = ReaderConfig(image, epoch_size=sys.maxsize)
 
     input_streams_config = {features_stream_name: features_stream_config, labels_stream_name: labels_stream_config}
     deserializer_config = {"type" : "ImageDeserializer", "file" : map_file, "input" : input_streams_config}
@@ -144,4 +149,7 @@ if __name__=='__main__':
     target_device = DeviceDescriptor.gpu_device(0)
     DeviceDescriptor.set_default_device(target_device)
 
-    cifar_resnet()
+    base_path = os.path.normpath(os.path.join(\
+            *"../../../../Examples/Image/Miscellaneous/CIFAR-10/cifar-10-batches-py".split("/")))
+    
+    cifar_resnet(base_path)
