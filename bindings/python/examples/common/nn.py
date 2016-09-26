@@ -37,7 +37,12 @@ def fully_connected_classifier_net(input, num_output_classes, hidden_layer_dim, 
     return linear_layer(r, num_output_classes)
 
 def conv_bn_layer(input, out_feature_map_count, kernel_width, kernel_height, h_stride, v_stride, w_scale, b_value, sc_value, bn_time_const):
-    num_in_channels = input.shape()[0]
+    try:
+        shape = input.shape()
+    except AttributeError:
+        input_var = input.output()
+        shape = input_var.shape()
+    num_in_channels = shape[0]
     #TODO: use RandomNormal to initialize, needs to be exposed in the python api
     conv_params = parameter(shape=(num_in_channels, kernel_height, kernel_width, out_feature_map_count))
     conv_func = convolution(conv_params, input, (num_in_channels, v_stride, h_stride))
@@ -60,7 +65,12 @@ def resnet_node2(input, out_feature_map_count, kernel_width, kernel_height, w_sc
     return relu(p)
 
 def proj_layer(w_proj, input, h_stride, v_stride, b_value, sc_value, bn_time_const):
-    num_in_channels = input.shape()[0]
+    try:
+        shape = input.shape()
+    except AttributeError:
+        input_var = input.output()
+        shape = input_var.shape()
+    num_in_channels = shape[0]
     conv_func = convolution(w_proj, input, (num_in_channels, v_stride, h_stride))
     out_feature_map_count = w_proj.shape()[-1];
     #TODO: initialize using b_value and sc_value, needs to be exposed in the python api

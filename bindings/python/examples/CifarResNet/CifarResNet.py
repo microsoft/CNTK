@@ -39,6 +39,7 @@ def create_mb_source(features_stream_name, labels_stream_name, image_height, ima
     deserializer_config = {"type" : "ImageDeserializer", "file" : map_file, "input" : input_streams_config}
 
     minibatch_config = {"epochSize" : sys.maxsize, "deserializers" : [deserializer_config]}
+    print(minibatch_config)
 
     return create_minibatch_source(minibatch_config)
 
