@@ -32,6 +32,48 @@ public:
         else
             LogicError("Error, elemtype is not defined for BinaryDataDeserializer.");
     }
+
+protected:
+    struct DenseInputStreamBuffer : DenseSequenceData
+    {
+        // capacity = expected number of samples * sample size
+        const void* GetDataBuffer() override
+        {
+            return m_data;
+        }
+
+        void SetDataBuffer(void* data)
+        {
+            m_data = data;
+        }
+
+        void* m_data;
+    };
+
+    // In case of sparse input, we also need a vector of
+    // indices (one index for each input value) and a vector
+    // of NNZ counts (one for each sample).
+    struct SparseInputStreamBuffer : SparseSequenceData
+    {
+        SparseInputStreamBuffer()
+        {
+            m_totalNnzCount = 0;
+        }
+
+        const void* GetDataBuffer() override
+        {
+            return m_data;
+        }
+        
+        void SetDataBuffer(void* data)
+        {
+            m_data = data;
+        }
+
+        std::vector<IndexType> m_indicesBuffer;
+        void* m_data;
+    };
+
     
 protected:
     StorageType m_matType;
@@ -72,9 +114,9 @@ public:
         result.resize(numSequences);
         for (size_t c = 0; c < numSequences; c++)
         {
-            DenseSequenceDataPtr sequence = make_shared<DenseSequenceData>();
+            shared_ptr<DenseInputStreamBuffer> sequence = make_shared<DenseInputStreamBuffer>();
             // We can't popuplate sequence->m_chunk here, so delay that for later
-            sequence->m_data            = (char*)data + c*m_numCols*elemSize;
+            sequence->SetDataBuffer( (char*)data + c*m_numCols*elemSize );
             sequence->m_id              = startIndex + c;
             sequence->m_numberOfSamples = 1;
             sequence->m_sampleLayout    = std::make_shared<TensorShape>(m_numCols);
@@ -155,7 +197,7 @@ public:
         // Now we setup some helper members to process the chunk
         for (size_t colIndex = 0; colIndex < numSequences; colIndex++)
         {
-            SparseSequenceDataPtr sequence = make_shared<SparseSequenceData>();
+            shared_ptr<SparseInputStreamBuffer> sequence = make_shared<SparseInputStreamBuffer>();
             // We can't popuplate sequence->m_chunk here, so delay that for later
             sequence->m_id              = startIndex + colIndex;
 
@@ -163,7 +205,7 @@ public:
             sequence->m_totalNnzCount = colOffsets[colIndex + 1] - colOffsets[colIndex];
 
             // The values array is already properly packed, so just use it.
-            sequence->m_data = values;
+            sequence->SetDataBuffer(values);
             
             // The indices are correct (note they MUST BE IN INCREASING ORDER), but we will have to fix them up a 
             // little bit, for now just use them

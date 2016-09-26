@@ -5,9 +5,9 @@
 
 #pragma once
 
-#include "Reader.h"
-#include "Packer.h"
-#include "SequenceEnumerator.h"
+#include "ReaderBase.h"
+//#include "Packer.h"
+//#include "SequenceEnumerator.h"
 #include "BinaryConfigHelper.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
@@ -15,12 +15,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 // Implementation of the binary reader.
 // Effectively the class represents a factory for connecting the packer,
 // transformers and the deserializer together.
-class CNTKBinaryReader : public Reader
+class CNTKBinaryReader : public ReaderBase
 {
 public:
-    CNTKBinaryReader(MemoryProviderPtr provider,
+    CNTKBinaryReader(//MemoryProviderPtr provider,
         const ConfigParameters& parameters);
 
+    /*
     // Description of streams that this reader provides.
     std::vector<StreamDescriptionPtr> GetStreamDescriptions() override;
 
@@ -29,8 +30,10 @@ public:
 
     // Reads a single minibatch.
     Minibatch ReadMinibatch() override;
+    */
 
 private:
+    /*
     IDataDeserializerPtr m_deserializer;
 
     // Randomizer.
@@ -41,6 +44,7 @@ private:
 
     // Memory provider (TODO: this will possibly change in the near future.)
     MemoryProviderPtr m_provider;
+    */
 };
 
 }}}
