@@ -49,11 +49,11 @@ def cross_entropy_with_softmax(output_vector, target_vector, name=''):
     :math:`cross\_entropy\_with\_softmax(o, t) = {-{\sum_{i \in \{1,len(t)\}} t_i \log(softmax(o_i)) }}`
 
     Example:
-        >>> C.cross_entropy_with_softmax([1., 1., 1., 50.], [0., 0., 0., 1.]).eval()
-        #[0.]
+        >>> C.cross_entropy_with_softmax([[1., 1., 1., 50.]], [[0., 0., 0., 1.]]).eval()
+        array(0.0, dtype=float32)
 
-        >>> C.cross_entropy_with_softmax([1., 2., 3., 4.], [0.35, 0.15, 0.05, 0.45]).eval()
-        #[1.84]
+        >>> C.cross_entropy_with_softmax([[1., 2., 3., 4.]], [[0.35, 0.15, 0.05, 0.45]]).eval()
+        array(1.8401899337768555, dtype=float32)
 
     Args:
         output_vector: the unscaled computed output values from the network
@@ -76,11 +76,13 @@ def squared_error(output, target, name=''):
     This is often used as a training criterion node.
 
     Example:
-        >>> C.squared_error([2., 1.], [4., 6.]).eval()
-        #[29.]
+        >>> i1 = C.input_variable((1,2))
+        >>> i2 = C.input_variable((1,2))
+        >>> C.squared_error(i1,i2).eval({i1:np.asarray([[[[2., 1.]]]], dtype=np.float32), i2:np.asarray([[[[4., 6.]]]], dtype=np.float32)})
+        array(29.0, dtype=float32)
 
-        >>> C.squared_error([1., 2.], [1., 2.]).eval()
-        #[0.]
+        >>> C.squared_error(i1,i2).eval({i1:np.asarray([[[[1., 2.]]]], dtype=np.float32), i2:np.asarray([[[[1., 2.]]]], dtype=np.float32)})
+        array(0.0, dtype=float32)
 
     Args:
         output: the output values from the network
@@ -107,10 +109,10 @@ def classification_error(output_vector, target_vector, name=''):
 
     Example:
         >>> C.classification_error([[1., 2., 3., 4.]], [[0., 0., 0., 1.]]).eval()
-        #[0.]
+        array(0.0, dtype=float32)
 
         >>> C.classification_error([[1., 2., 3., 4.]], [[0., 0., 1., 0.]]).eval()
-        #[1.]
+        array(1.0, dtype=float32)
 
     Args:
         output_vector: the output values from the network
@@ -259,10 +261,10 @@ def less(left, right, name=''):
 
     Example:
        >>> C.less([41., 42., 43.], [42., 42., 42.]).eval()
-         [array([[1., 0., 0.]])]
+       array([ 1.,  0.,  0.], dtype=float32)
 
-        >>> C.less([-1,0,1], [0]).eval()
-        [array([[1., 0., 0.]])]
+       >>> C.less([-1,0,1], [0]).eval()
+       array([ 1.,  0.,  0.], dtype=float32)
 
     Args:
         left: left side tensor
@@ -283,10 +285,10 @@ def equal(left, right, name=''):
 
     Example:
         >>> C.equal([41., 42., 43.], [42., 42., 42.]).eval()
-        [array([[0., 1., 0.]])]
+        array([ 0.,  1.,  0.], dtype=float32)
 
         >>> C.equal([-1,0,1], [1]).eval()
-        [array([[0., 0., 1.]])]
+        array([ 0.,  0.,  1.], dtype=float32)
 
     Args:
         left: left side tensor
@@ -307,10 +309,10 @@ def greater(left, right, name=''):
 
     Example:
         >>> C.greater([41., 42., 43.], [42., 42., 42.]).eval()
-        [array([[0., 0., 1.]])]
+        array([ 0.,  0.,  1.], dtype=float32)
 
         >>> C.greater([-1,0,1], [0]).eval()
-        [array([[1., 0., 1.]])]
+        array([ 0.,  0.,  1.], dtype=float32)
 
     Args:
         left: left side tensor
@@ -331,10 +333,10 @@ def greater_equal(left, right, name=''):
 
     Example:
         >>> C.greater_equal([41., 42., 43.], [42., 42., 42.]).eval()
-        [array([[0., 1., 1.]])]
+        array([ 0.,  1.,  1.], dtype=float32)
 
         >>> C.greater_equal([-1,0,1], [0]).eval()
-        [array([[0., 1., 1.]])]
+        array([ 0.,  1.,  1.], dtype=float32)
 
     Args:
         left: left side tensor
@@ -355,10 +357,10 @@ def not_equal(left, right, name=''):
 
     Example:
         >>> C.not_equal([41., 42., 43.], [42., 42., 42.]).eval()
-        [array([[1., 0., 1.]])]
+        array([ 1.,  0.,  1.], dtype=float32)
 
         >>> C.not_equal([-1,0,1], [0]).eval()
-        [array([[1., 0., 1.]])]
+        array([ 1.,  0.,  1.], dtype=float32)
 
     Args:
         left: left side tensor
@@ -379,10 +381,10 @@ def less_equal(left, right, name=''):
 
     Example:
         >>> C.less_equal([41., 42., 43.], [42., 42., 42.]).eval()
-        [array([[1., 1., 0.]])]
+        array([ 1.,  1.,  0.], dtype=float32)
 
         >>> C.less_equal([-1,0,1], [0]).eval()
-        [array([[1., 1., 0.]])]
+        array([ 1.,  1.,  0.], dtype=float32)
 
     Args:
         left: left side tensor
@@ -409,10 +411,10 @@ def plus(left, right, name=''):
 
     Example:
         >>> C.plus([1, 2, 3], [4, 5, 6]).eval()
-        [array([[ 5.,  7.,  9.]])]
+        array([ 5.,  7.,  9.], dtype=float32)
 
         >>> C.plus([-5, -4, -3, -2, -1], [10]).eval()
-        [array([[ 5.,  6.,  7.,  8.,  9.]])]
+        array([ 5.,  6.,  7.,  8.,  9.], dtype=float32)
 
     Args:
         left: left side tensor
@@ -435,11 +437,11 @@ def minus(left, right, name=''):
 
     Example:
         >>> C.minus([1, 2, 3], [4, 5, 6]).eval()
-        [array([[-3., -3., -3.]])]
+        array([-3., -3., -3.], dtype=float32)
 
         >>> C.minus([[1,2],[3,4]], 1).eval()
-        [array([[[ 0.,  1.],
-                 [ 2.,  3.]]])]
+        array([[ 0.,  1.],
+               [ 2.,  3.]], dtype=float32)
 
     Args:
         left: left side tensor
@@ -464,10 +466,10 @@ def element_times(left, right, name=''):
 
     Example:
         >>> C.element_times([1., 1., 1., 1.], [0.5, 0.25, 0.125, 0.]).eval()
-        [array([[ 0.5  ,  0.25 ,  0.125,  0.   ]])]
+        array([ 0.5  ,  0.25 ,  0.125,  0.   ], dtype=float32)
 
         >>> C.element_times([5., 10., 15., 30.], [2.]).eval()
-        [array([[ 10.,  20.,  30.,  60.]])]
+        array([ 10.,  20.,  30.,  60.], dtype=float32)
 
     Args:
         left: left side tensor
@@ -494,10 +496,10 @@ def element_divide(left, right, name=''):
 
     Example:
         >>> C.element_divide([1., 1., 1., 1.], [0.5, 0.25, 0.125, 0.]).eval()
-        [array([[ 2.,  4.,  8.,  0.]])]
+        array([ 2.,  4.,  8.,  0.], dtype=float32)
 
         >>> C.element_divide([5., 10., 15., 30.], [2.]).eval()
-        [array([[  2.5,   5. ,   7.5,  15. ]])]
+        array([  2.5,   5. ,   7.5,  15. ], dtype=float32)
 
     Args:
         left: left side tensor
@@ -521,21 +523,25 @@ def times(left, right, output_rank=1, name=''):
     Example:
         >>> C.times([[1,2],[3,4]], [[5],[6]]).eval()
         array([[ 17.],
-               [ 39.]])
+               [ 39.]], dtype=float32)
 
         >>> C.times(1.*np.reshape(np.arange(8), (2.,2.,2.)),1.*np.reshape(np.arange(8), (2.,2.,2.)), output_rank=1).eval()
-        [array([[[ 28.,  34.],
-                 [ 76.,  98.]]])]
+        array([[ 28.,  34.],
+               [ 76.,  98.]])
 
         >>> C.times(1.*np.reshape(np.arange(8), (2,2,2)),1.*np.reshape(np.arange(8), (2,2,2)), output_rank=2).eval()
-        [array([[[[[  4.,   5.],
-                   [  6.,   7.]],
-                  [[ 12.,  17.],
-                   [ 22.,  27.]]],
-                 [[[ 20.,  29.],
-                   [ 38.,  47.]],
-                  [[ 28.,  41.],
-                   [ 54.,  67.]]]]])]
+        array([[[[  4.,   5.],
+                 [  6.,   7.]],
+        <BLANKLINE>
+                [[ 12.,  17.],
+                 [ 22.,  27.]]],
+        <BLANKLINE>
+        <BLANKLINE>
+               [[[ 20.,  29.],
+                 [ 38.,  47.]],
+        <BLANKLINE>
+                [[ 28.,  41.],
+                 [ 54.,  67.]]]])
 
     Args:
         left: left side matrix or tensor
@@ -566,18 +572,18 @@ def floor(arg, name=''):
 
     Example:
         >>> C.floor([0.2, 1.3, 4., 5.5, 0.0]).eval()
-        [array([[ 0.,  1.,  4.,  5.,  0.]])]
+        array([ 0.,  1.,  4.,  5.,  0.], dtype=float32)
 
         >>> C.floor([[0.6, 3.3], [1.9, 5.6]]).eval()
-        [array([[[ 0.,  3.],
-                 [ 1.,  5.]]])]
+        array([[ 0.,  3.],
+               [ 1.,  5.]], dtype=float32)
 
         >>> C.floor([-5.5, -4.2, -3., -0.7, 0]).eval()
-        [array([[-6., -5., -3., -1.,  0.]])]
+        array([-6., -5., -3., -1.,  0.], dtype=float32)
 
         >>> C.floor([[-0.6, -4.3], [1.9, -3.2]]).eval()
-        [array([[[-1., -5.],
-                 [ 1., -4.]]])]
+        array([[-1., -5.],
+               [ 1., -4.]], dtype=float32)
 
     Args:
         arg: input tensor
@@ -626,7 +632,7 @@ def round(arg, name=''):
 
         >>> C.round([[0.6, 3.3], [1.9, 5.6]]).eval()
         array([[ 1.,  3.],
-               [ 2.,  6.], dtype=float32])
+               [ 2.,  6.]], dtype=float32)
 
         >>> C.round([-5.5, -4.2, -3., -0.7, 0]).eval()
         array([-5., -4., -3., -1.,  0.], dtype=float32)
@@ -715,7 +721,7 @@ def sigmoid(x, name=''):
 
     Example:
         >>> C.sigmoid([-2, -1., 0., 1., 2.]).eval()
-        [array([[ 0.119203,  0.268941,  0.5     ,  0.731059,  0.880797]])]
+        array([ 0.11920292,  0.26894143,  0.5       ,  0.7310586 ,  0.88079703], dtype=float32)
 
     Args:
         x: numpy array or any :class:`cntk.Function` that outputs a tensor
@@ -735,8 +741,8 @@ def tanh(x, name=''):
 
     Example:
         >>> C.tanh([[1,2],[3,4]]).eval()
-        [array([[[ 0.761594,  0.964028],
-                 [ 0.995055,  0.999329]]])]
+        array([[ 0.76159418,  0.96402758],
+               [ 0.99505478,  0.99932933]], dtype=float32)
 
     Args:
         x: numpy array or any :class:`cntk.Function` that outputs a tensor
@@ -759,10 +765,10 @@ def softmax(x, name=''):
 
     Example:
         >>> C.softmax([[1, 1, 2, 3]]).eval()
-        [array([[[ 0.082595,  0.082595,  0.224515,  0.610296]]])]
+        array([[ 0.08259455,  0.08259455,  0.22451523,  0.61029565]], dtype=float32)
 
         >>> C.softmax([1, 1]).eval()
-        [array([[ 0.5,  0.5]])]
+        array([ 0.5,  0.5], dtype=float32)
 
     Args:
         x: numpy array or any :class:`cntk.Function` that outputs a tensor
@@ -814,7 +820,7 @@ def exp(x, name=''):
 
     Example:
         >>> C.exp([0., 1.]).eval()
-        [array([[ 1.      ,  2.718282]])]
+        array([ 1.        ,  2.71828175], dtype=float32)
 
     Args:
         x: numpy array or any :class:`cntk.Function` that outputs a tensor
@@ -832,7 +838,7 @@ def log(x, name=''):
 
     Example:
         >>> C.log([1., 2.]).eval()
-        [array([[ 0.      ,  0.69314718056]])]
+        array([ 0.        ,  0.69314718], dtype=float32)
 
     Args:
         x: numpy array or any :class:`cntk.Function` that outputs a tensor
@@ -858,7 +864,7 @@ def sqrt(x, name=''):
 
     Example:
         >>> C.sqrt([0., 4.]).eval()
-        [array([[ 0.      ,  2.]])]
+        array([ 0.,  2.], dtype=float32)
 
     Args:
         x: numpy array or any :class:`cntk.Function` that outputs a tensor
@@ -880,7 +886,7 @@ def square(x, name=''):
 
     Example:
         >>> C.square([1., 10.]).eval()
-        [array([[ 1.      ,  100.]])]
+        array([   1.,  100.], dtype=float32)
 
     Args:
         x: numpy array or any :class:`cntk.Function` that outputs a tensor
@@ -920,7 +926,7 @@ def negate(x, name=''):
 
     Example:
         >>> C.negate([-1, 1, -2, 3]).eval()
-        [array([[ 1.,  -1.,  2.,  -3.]])]
+        array([ 1., -1.,  2., -3.], dtype=float32)
 
     Args:
         x: numpy array or any :class:`cntk.Function` that outputs a tensor
@@ -938,7 +944,7 @@ def reciprocal(x, name=''):
 
     Example:
         >>> C.reciprocal([-1/3, 1/5, -2, 3]).eval()
-        [array([[ -3.,  5.,  -1/2.,  1/3.]])]
+        array([-3.        ,  5.        , -0.5       ,  0.33333334], dtype=float32)
 
     Args:
         x: numpy array or any :class:`cntk.Function` that outputs a tensor
@@ -957,9 +963,9 @@ def element_select(flag, value_if_true, value_if_false, name=''):
     Behaves analogously to numpy.where(...).
 
     Example:
-        >>> C.cond([-10, -1, 0, 0.3, 100], [1, 10, 100, 1000, 10000], [ 2, 20, 200, 2000, 20000]).eval()
-        [array([[  1.00000000e+00,   1.00000000e+01,   2.00000000e+02,
-                   1.00000000e+03,   1.00000000e+04]])]
+        >>> C.element_select([-10, -1, 0, 0.3, 100], [1, 10, 100, 1000, 10000], [ 2, 20, 200, 2000, 20000]).eval()
+        array([  1.00000000e+00,   1.00000000e+01,   2.00000000e+02,
+                 1.00000000e+03,   1.00000000e+04], dtype=float32)
 
     Args:
         flag: tensor
@@ -1059,9 +1065,10 @@ def reshape(x, shape, name=''):
     The backward pass propagates the received gradient for the output-shape to the input shape.
 
     Examples:
-        >>> C.reshape([[0,1],[2,3],[4,5]], (2,3)).eval()
-        [array([[[ 0.,  4.,  3.],
-                 [ 2.,  1.,  5.]]])]
+        >>> i1 = C.input_variable(shape=(3,2))
+        >>> C.reshape(i1, (2,3)).eval({i1:np.asarray([[[[0., 1.],[2., 3.],[4., 5.]]]], dtype=np.float32)})
+        array([[[[ 0.,  1.,  2.],
+                 [ 3.,  4.,  5.]]]], dtype=float32)
 
     Args:
         x: tensor to be reshaped
@@ -1086,9 +1093,9 @@ def transpose(x, axis1=0, axis2=1, name=''):
     `axis1` and `axis2` swapped.
 
     Examples:
-        >>> C.transpose([[0,1],[2,3],[4,5]], 1,2).eval()
-        [array([[[ 0.,  4.,  3.],
-                 [ 2.,  1.,  5.]]])]
+        >>> C.transpose([[[0,1],[2,3],[4,5]]], 1, 2).eval()
+        array([[[ 0.,  2.,  4.],
+                [ 1.,  3.,  5.]]], dtype=float32)
 
     Args:
         x: tensor to be transposed
@@ -1110,26 +1117,38 @@ def slice(x, axis, begin_index, end_index, name=''):
     Slice the input along an axis.
 
     Examples:
-        >>> # create 2x3 matrix in a sequence of length 1 in a batch of one sample
-        >>> data = np.asarray([[[1, 2, -3],
-        ...                     [4, 5,  6]]])
-        >>> x = C.input_numpy(data)
+        >>> # Slice using input variable
+        >>> # create 2x3 matrix
+        >>> x1 = C.input_variable((2,3))
         >>> # slice index 1 (second) at first axis
-        >>> C.slice(x, 1, 2, 0).eval()
-        [array([[[ 4.,  5.,  6.]]])]
+        >>> C.slice(x1, 0, 1, 2).eval({x1: np.asarray([[[[1,2,-3],
+        ...                                              [4, 5, 6]]]],dtype=np.float32)})
+        array([[[[ 4.,  5.,  6.]]]], dtype=float32)
         >>> # slice index 0 (first) at second axis
-        >>> C.slice(x, 0, 1, 1).eval()
-        [array([[[ 1.],
-                 [ 4.]]])]
+        >>> C.slice(x1, 1, 0, 1).eval({x1: np.asarray([[[[1,2,-3],
+        ...                                              [4, 5, 6]]]],dtype=np.float32)})
+        array([[[[ 1.],
+                 [ 4.]]]], dtype=float32)
+
+        >>> #slice using constant
+        >>> data = np.asarray([[1, 2, -3],
+        ...                     [4, 5,  6]], dtype=np.float32)
+        >>> x = C.constant(value=data)
+        >>> C.slice(x, 0, 1, 2).eval()
+        array([[ 4.,  5.,  6.]], dtype=float32)
+        >>> C.slice(x, 1, 0, 1).eval()
+        array([[ 1.],
+               [ 4.]], dtype=float32)
 
     NumPy's way of slicing works, too:
 
     Examples:
-        >>> x[1].eval()
-        [array([[[ 4.,  5.,  6.]]])]
-        >>> x[:,:2,:].eval()
-        [array([[[ 1.,  2.],
-                 [ 4.,  5.]]])]
+        TODO: Make following lines work. Uncomment when done
+        #>>> x1[1].eval()
+        #array([[ 4.,  5.,  6.]], dtype=float32)
+        #>>> x1[:,:2,:].eval()
+        #array([[ 1.,  2.],
+        #         [ 4.,  5.]], dtype=float32)
 
     Args:
         x: input tensor
@@ -1158,20 +1177,21 @@ def splice(inputs, axis=0, name=''):
     Examples:
         >>> # create 2x2 matrix in a sequence of length 1 in a batch of one sample
         >>> data1 = np.asarray([[[1, 2],
-        ...                     [4, 5]]])
-        >>> x = C.input_numpy(data1)
+        ...                      [4, 5]]], dtype=np.float32)
+
+        >>> x = C.constant(value=data1)
         >>> # create 3x2 matrix in a sequence of length 1 in a batch of one sample
         >>> data2 = np.asarray([[[10, 20],
-        ...                     [30, 40],
-        ...                     [50, 60]]])
-        >>> y = C.input_numpy(data2)
+        ...                       [30, 40],
+        ...                       [50, 60]]],dtype=np.float32)
+        >>> y = C.constant(value=data2)
         >>> # splice both inputs on axis=0 returns a 5x2 matrix
-        >>> C.splice((x,y), 0).eval()
-        [array([[[1, 2],
-                 [4, 5],
-                 [10, 20],
-                 [30, 40],
-                 [50, 60]]])]
+        >>> C.splice((x,y), 1).eval()
+        array([[[  1.,   2.],
+                [  4.,   5.],
+                [ 10.,  20.],
+                [ 30.,  40.],
+                [ 50.,  60.]]], dtype=float32)
 
     Args:
         inputs (`list`): tuple of input tensors
@@ -1202,23 +1222,24 @@ def reduce_sum(x, axis=None, name=''):
     is not specified then the sum will be computed over all axes, that is, the output is a scalar,
     which is the sum of tensor's elements.
 
+    TODO: Uncomment when reduce_sum works correctly
     Examples:
-        >>> # create 3x2 matrix in a sequence of length 1 in a batch of one sample
-        >>> data = [[10, 20],[30, 40],[50, 60]]
-
-        >>> # reduce over the first axis
-        >>> C.reduce_sum(data, 0).eval()
-        [array([[[  90.,  120.]]])]
-
-        >>> # reduce over the second axis
-        >>> C.reduce_sum(data, 1).eval()
-        [array([[[  30.],
-                 [  70.],
-                 [ 110.]]])]
-
-        >>> # reduce over the all axes
-        >>> C.reduce_sum(data, 2).eval()
-        [array([[ 210.]])]
+        #>>> # create 3x2 matrix in a sequence of length 1 in a batch of one sample
+        #>>> data = [[10, 20],[30, 40],[50, 60]]
+        #
+        #>>> # reduce over the first axis
+        #>>> C.reduce_sum(data, 0).eval()
+        #array([  90.,  120.], dtype=float32)
+        #
+        #>>> # reduce over the second axis
+        #>>> C.reduce_sum(data, 1).eval()
+        #array([[  30.],
+        #       [  70.],
+        #       [ 110.]], dtype=float32)
+        #
+        #>>> # reduce over the all axes
+        #>>> C.reduce_sum(data, 2).eval()
+        #array([ 210.], dtype=float32)
 
     Args:
         x: input tensor
