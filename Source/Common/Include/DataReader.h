@@ -43,16 +43,47 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // TODO: Should be unified with StreamDescription from the new reader API
     struct InputStreamDescription
     {
+        InputStreamDescription(const std::wstring& name, int deviceId, MatrixType matrixType, MatrixFormat format)
+            : m_name(name), m_deviceId(deviceId), m_matrixType(matrixType), m_format(format)
+        {}
+
+        const std::wstring& GetStreamName() const
+        {
+            return m_name;
+        }
+
+        int GetDeviceId() const
+        {
+            return m_deviceId;
+        }
+
+        MatrixType GetMatrixType() const
+        {
+            return m_matrixType;
+        }
+
+        MatrixFormat GetMatrixFormat() const
+        {
+            return m_format;
+        }
+
+    private:
         // Stream name.
         std::wstring m_name;
 
         // Device identifier for the resulting matrix of this stream.
         int m_deviceId;
+
+        // Matrix type.
+        MatrixType m_matrixType;
+
+        // Matrix format.
+        MatrixFormat m_format;
     };
 
     inline bool operator == (const InputStreamDescription& a, const InputStreamDescription& b)
     {
-        return a.m_name == b.m_name && a.m_deviceId == b.m_deviceId;
+        return a.GetStreamName() == b.GetStreamName() && a.GetDeviceId() == b.GetDeviceId() && a.GetMatrixType() == b.GetMatrixType();
     };
 }}}
 
@@ -63,7 +94,7 @@ namespace std
         size_t operator()(const Microsoft::MSR::CNTK::InputStreamDescription& x) const
         {
             // Input name is unique, simply return the hash of the input stream.
-            return std::hash<std::wstring>()(x.m_name);
+            return std::hash<std::wstring>()(x.GetStreamName());
         }
     };
 }
@@ -163,7 +194,8 @@ public:
         std::unordered_set<InputStreamDescription> streamDescriptions;
         for (auto input = begin(); input != end(); ++input)
         {
-            streamDescriptions.insert(InputStreamDescription{ input->first, input->second.matrix->GetDeviceId() });
+            streamDescriptions.insert(
+                InputStreamDescription(input->first, input->second.matrix->GetDeviceId(), input->second.matrix->GetMatrixType(), input->second.matrix->GetFormat()));
         }
         return streamDescriptions;
     }

@@ -84,15 +84,15 @@ void ReaderShim<ElemType>::StartDistributedMinibatchLoop(
     // Now we can be sure, no prefetch thread is running and there are no outstanding memcopies.
     // Let's check that requested devices are ok and see whether we need to change our data transferers.
     auto device = std::find_if(inputs.begin(), inputs.end(),
-        [](const InputStreamDescription& d) { return d.m_deviceId != CPUDEVICE; });
-    auto deviceId = device != inputs.end() ? device->m_deviceId : CPUDEVICE;
+        [](const InputStreamDescription& d) { return d.GetDeviceId() != CPUDEVICE; });
+    auto deviceId = device != inputs.end() ? device->GetDeviceId() : CPUDEVICE;
 
     // Check that all devices either the same as m_deviceId or CPU.
     auto secondDevice = std::find_if(inputs.begin(), inputs.end(), 
-        [deviceId](const InputStreamDescription& d) { return d.m_deviceId != CPUDEVICE && d.m_deviceId != deviceId; });
+        [deviceId](const InputStreamDescription& d) { return d.GetDeviceId() != CPUDEVICE && d.GetDeviceId() != deviceId; });
     if (secondDevice != inputs.end())
     {
-        LogicError("Readers do not support running on several GPUs in the same process, at least two devices found '%d', '%d'", deviceId, secondDevice->m_deviceId);
+        LogicError("Readers do not support running on several GPUs in the same process, at least two devices found '%d', '%d'", deviceId, secondDevice->GetDeviceId());
     }
 
     if (m_deviceId != deviceId)
@@ -109,8 +109,12 @@ void ReaderShim<ElemType>::StartDistributedMinibatchLoop(
     std::map<std::wstring, int> inputDescriptions;
     for (const auto& i : inputs)
     {
-        inputDescriptions[i.m_name] = i.m_deviceId;
-        m_prefetchBuffers[i.m_name] = StreamPrefetchBuffer{ std::make_shared<Matrix<ElemType>>(i.m_deviceId), nullptr };
+        inputDescriptions[i.GetStreamName()] = i.GetDeviceId();
+        m_prefetchBuffers[i.GetStreamName()] = StreamPrefetchBuffer
+        {
+            std::make_shared<Matrix<ElemType>>(0, 0, i.GetDeviceId(), i.GetMatrixType(), i.GetMatrixFormat()),
+            nullptr
+        };
     }
 
     m_endOfEpoch = false;
