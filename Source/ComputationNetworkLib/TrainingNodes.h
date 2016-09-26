@@ -708,11 +708,12 @@ protected:
 };
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------
-// RandomSampleNode: 
-// This node is intended to be used in context off sampled softmax, noise contrastive estimation etc.
+// RandomSampleNode(samplingWeights, sizeOfSampledSet, allowDuplicates): 
+// Intended uses are e.g. sampled softmax, noise contrastive estimation etc.
 // It has two modes to run, both taking a weight vector as input:
 // * estimateInclusionProbs = false:
-//   The nodes value is a set of nSample random samples represented as a (sparse) matrix of shape nClasses * nSamples.
+//   The node's value is a set of sizeOfSampledSet random samples represented as a (sparse) matrix of shape [nClasses x sizeOfSampledSet] where nClasses is the number of classes (categories) to choose from.
+//   The output has no dynamic axis.
 //   The samples are drawn according to the weight vector p(w_i) = w_i / sum_k(w_k)
 //   We get one set of samples for per minibatch.
 //
@@ -724,8 +725,8 @@ protected:
 
 // Parameters:
 // * Input(0) Sampling weight vector: Matrix of shape (nClasses x 1) providing sampling weights >= 0.
-// * nSample: Size of the sampled set.
-// * allowDuplicates: controlls if sampled set is allowed to contain duplicates.
+// * sizeOfSampledSet: Size of the sampled set.
+// * allowDuplicates: controls if sampled set is allowed to contain duplicates.
 // * estimateInclusionProbs: Run mode, see above.
 // --------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -741,14 +742,14 @@ class RandomSampleNode : public ComputationNodeNonLooping<ElemType>, public NumI
     }
 
 public:
-    RandomSampleNode(DEVICEID_TYPE deviceId, const wstring& name, int nSamples = 0, bool allowDuplicates = false, bool estimateInclusionProbs = false)
-        : Base(deviceId, name), m_nSamples(nSamples), m_allowDuplicates(allowDuplicates), m_estimateInclusionProbs(estimateInclusionProbs)
+    RandomSampleNode(DEVICEID_TYPE deviceId, const wstring& name, int sizeOfSampledSet = 0, bool allowDuplicates = false, bool estimateInclusionProbs = false)
+        : Base(deviceId, name), m_sizeOfSampledSet(sizeOfSampledSet), m_allowDuplicates(allowDuplicates), m_estimateInclusionProbs(estimateInclusionProbs)
     {
         SetRandomSeed((unsigned long)CreateUniqId());
     }
 
     RandomSampleNode(const ScriptableObjects::IConfigRecordPtr configp)
-        : RandomSampleNode(CPUDEVICE, L"<placeholder>", configp->Get(L"nSamples"), configp->Get(L"allowDuplicates"), configp->Get(L"estimateInclusionProbs"))
+        : RandomSampleNode(CPUDEVICE, L"<placeholder>", configp->Get(L"sizeOfSampledSet"), configp->Get(L"allowDuplicates"), configp->Get(L"estimateInclusionProbs"))
     {
         AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
     }
@@ -761,7 +762,7 @@ public:
             auto node = dynamic_pointer_cast<RandomSampleNode<ElemType>>(nodeP);
             node->m_allowDuplicates = m_allowDuplicates;
             node->m_estimateInclusionProbs = m_estimateInclusionProbs;
-            node->m_nSamples = m_nSamples;
+            node->m_sizeOfSampledSet = m_sizeOfSampledSet;
             node->m_randomSeed = m_randomSeed;
         }
     }
@@ -771,7 +772,7 @@ public:
         Base::Save(fstream);
         fstream << m_allowDuplicates;
         fstream << m_estimateInclusionProbs;
-        fstream << m_nSamples;
+        fstream << m_sizeOfSampledSet;
     }
 
     virtual void Load(File& fstream, size_t modelVersion) override
@@ -779,9 +780,10 @@ public:
         Base::Load(fstream, modelVersion);
         fstream >> m_allowDuplicates;
         fstream >> m_estimateInclusionProbs;
-        fstream >> m_nSamples;
+        fstream >> m_sizeOfSampledSet;
     }
 
+private:
     // Code and comment below is nearly a copy of some tensorflow code 
     // (see function 'ExpectedCountHelper' in https://github.com/tensorflow/tensorflow/blob/master/tensorflow/core/kernels/range_sampler.cc).
     // How to cite properly?
@@ -789,12 +791,12 @@ public:
     // Approximates the expected number of occurences of a class in the sampled set.
     // Assuming (falsely) that the number of tries to get a sampled set with the requested number of distinct values is always estimatedNumTries
     // the probability that a specific class in in the sampled set is (1 - (1-p)^estimatedNumTries), where p is the probablity to pick the clas in one draw.
-    // The estimate can be quite a bit of but should but better than nothing. Better alternatives?
+    // The estimate can be quite a bit off but should be better than nothing. Better alternatives?
     float EstimateCountOfClass(float p, float estimatedNumTries) const
     {
         if (m_allowDuplicates)
         {
-            return p * m_nSamples;
+            return p * m_sizeOfSampledSet;
         }
         else /* No duplicates allowed. Estimated count is same as probability of inclusion. */
         {
@@ -832,7 +834,7 @@ public:
             const std::vector<int> samples = GetWeightedSamples();
 
             // Set columns of (sparse) result matrix as indicator vectors
-            for (int iSample = 0; iSample < m_nSamples; iSample++)
+            for (int iSample = 0; iSample < m_sizeOfSampledSet; iSample++)
             {
                 int sample = samples[iSample];
                 valueMatrix.SetValue(sample, iSample, 1);
@@ -863,7 +865,7 @@ public:
         return RunSampling(dummy);
     }
 
-    // Estimate the number of tries needed to find nSamples
+    // Estimate the number of tries needed to find sizeOfSampledSet samples
     float EstimateNumberOfTries()
     {
         // We estimate the average numver of tries by repeating a fixed number of experiments
@@ -887,11 +889,11 @@ public:
         // find random samples using the specified weight
 
         if (m_allowDuplicates)
-            nTries = m_nSamples;
+            nTries = m_sizeOfSampledSet;
         else
             nTries = 0; // just initialize and count how many tries we need.
 
-        while (samples.size() < m_nSamples)
+        while (samples.size() < m_sizeOfSampledSet)
         {
             double randomValue = r(cpuRNGHandle->Generator());
             // Find the first index where value[idx] >= randomValue.
@@ -921,6 +923,7 @@ public:
         return samples;
     }
 
+public:
     virtual void /*ComputationNode::*/ BackpropToNonLooping(size_t inputIndex) override
     {
         // This node does not propagate gradients.
@@ -944,7 +947,7 @@ public:
         else /* sampling mode */
         {
             // Output one vector containing the estimated inclusion probability for each class.
-            SetDims(TensorShape(nClasses, m_nSamples), false);
+            SetDims(TensorShape(nClasses, m_sizeOfSampledSet), false);
         }
     }
 
@@ -977,7 +980,7 @@ public:
 private:
     bool m_allowDuplicates;        // The node can create samples allowing for duplicates (sampling with replacement) or not (sampling without replacement).
     bool m_estimateInclusionProbs; // Control wether to create random samples or estimate inclusion probabilties.
-    int m_nSamples;                // Requested size of sample in case of run-mode = CREATE_SAMPLES.
+    int m_sizeOfSampledSet;                // Requested size of sample in case of run-mode = CREATE_SAMPLES.
     std::vector<double> m_samplingWeightsPrefixSum;
 };
 

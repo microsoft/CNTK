@@ -506,14 +506,14 @@ CNTK2 = [
     Identity = Pass
     GetRandomSample(_ ,numSamples, sampleWithReplacement, tag='') = new ComputationNode [
                                                                                         operation = 'RandomSample' ;
-                                                                                        nSamples = numSamples;
+                                                                                        sizeOfSampledSet = numSamples;
                                                                                         allowDuplicates = sampleWithReplacement;
                                                                                         estimateInclusionProbs = false;
                                                                                         inputs = _ /*plus the function args*/ ]
 
     GetInclusionProb(_ ,numSamples, sampleWithReplacement, tag='') = new ComputationNode [
                                                                                         operation = 'RandomSample' ;
-                                                                                        nSamples = numSamples;
+                                                                                        sizeOfSampledSet = numSamples;
                                                                                         allowDuplicates = sampleWithReplacement;
                                                                                         estimateInclusionProbs = true;
                                                                                         inputs = _ /*plus the function args*/ ]
