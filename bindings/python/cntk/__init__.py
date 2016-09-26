@@ -24,13 +24,17 @@ DATATYPE = np.float32
 
 class Trainer(cntk_py.Trainer):
     '''
-    Trainer to train the specified `model` with the specified `training_loss` as the training criterion,
-    the specified `evaluation_function` as the criterion for evaluating the trained model's quality, and using the specified set
-    of `parameter_learners` for updating the model's parameters using computed gradients.
+    Trainer to train the specified `model` with the specified `training_loss`
+    as the training criterion, the specified `evaluation_function` as the
+    criterion for evaluating the trained model's quality, and using the
+    specified set of `parameter_learners` for updating the model's parameters
+    using computed gradients.
 
     Args:
-       TODO
-
+       model (`:class:cntk.ops.Function`): root node of the function to train
+       loss_function (`:class:cntk.ops.Function`): loss function 
+       eval_function (`:class:cntk.ops.Function`): evaluation function
+       parameter_learners (`list`): list of learners from `:cntk:cntk.learners`
     '''
     def __init__(self, model, loss_function, eval_function, parameter_learners):
         if isinstance(model, cntk_py.Variable):
@@ -73,11 +77,11 @@ class Trainer(cntk_py.Trainer):
             arguments (dict): map from input variables to the data, data should be either numpy
              arrays or cntk.Value instances returned by a minibatch source
             device (:class:`cntk.DeviceDescriptor`): the device descriptor that
-            contains the type and id of the device on which the computation is
-            to be performed.
+             contains the type and id of the device on which the computation is
+             to be performed.
         Returns:
             `float`: the average evaluation criterion value per sample for the
-             tested minibatch.
+              tested minibatch.
         '''
         if not device:
             device=DeviceDescriptor.use_default_device()        

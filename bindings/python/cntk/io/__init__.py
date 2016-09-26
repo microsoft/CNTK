@@ -19,6 +19,9 @@ class MinibatchSource(cntk_py.MinibatchSource):
     def stream_infos(self):
         '''
         Describes the stream that this source produces.
+
+        Returns:
+            `dict` mapping input names to the stream information
         '''
         return super(MinibatchSource, self).stream_infos()
 
@@ -180,6 +183,15 @@ class ImageDeserializer(Deserializer):
     def crop(crop_type='center', ratio=1.0, jitter_type='uniRatio'):
         '''
         Crop transform that can be used to pass to `map_features`
+
+        Args:
+            crop_type (`str`, default 'center'): 'center' or 'random'
+            ratio (`float`, default 1.0): crop ratio
+            jitter_type (`str`, default 'uniRatio'): possible values are
+             'None', 'UniRatio', 'UniLength', and 'UniArea'
+
+        Returns:
+            `dict` describing the crop transform
         '''
         trans = {}
         trans['type'] = 'Crop'
@@ -190,6 +202,19 @@ class ImageDeserializer(Deserializer):
 
     @staticmethod
     def scale(width, height, channels, interpolations='linear'):
+        '''
+        Scale transform that can be used to pass to `map_features`
+
+        Args:
+            width (`int`): width of the image in pixels
+            height (`int`): height of the image in pixels
+            channels (`int`): channels of the image
+            interpolations (`str`, default 'linear'): possible values are
+             'nearest', 'linear', 'cubic', and 'lanczos'
+
+        Returns:
+            `dict` describing the scale transform
+        '''
         trans = {}
         trans['type'] = 'Scale'
         trans['width'] = width 
@@ -200,6 +225,16 @@ class ImageDeserializer(Deserializer):
 
     @staticmethod
     def mean(filename):
+        '''
+        Mean transform that can be used to pass to `map_features`
+
+        Args:
+            filename (`str`): file that stores the mean values for each pixel
+             in OpenCV matrix XML format
+
+        Returns:
+            `dict` describing the mean transform
+        '''
         trans = {}
         trans['type'] = 'Mean'
         trans['meanFile'] = filename
@@ -209,6 +244,8 @@ class ImageDeserializer(Deserializer):
 
 #
 # CNTKTextFormatReader
+# TODO get away from cntk_py.text_format_minibatch_source and set it up
+# similarly to ImageDeserializer
 #
 
 def text_format_minibatch_source(path, stream_configs, epoch_size=MAX_UI64):
@@ -239,9 +276,9 @@ class StreamConfiguration(cntk_py.StreamConfiguration):
         dim (`int`): dimensions of this stream. A text format reader reads data
         as flat arrays. If you need different shapes you can
         `:func:cntk.ops.reshape` it later.
-        is_sparse (`bool`, optional): whether the provided data is sparse
+        is_sparse (`bool`, default `False`): whether the provided data is sparse
          (`False` by default)
-        stream_alias (`str`): name of the stream in the file that is fed to the
+        stream_alias (`str`, default ''): name of the stream in the file that is fed to the
          `:func:cntk.io.text_format_minibatch_source`       
     '''
     def __init__(self, name, dim, is_sparse=False, stream_alias=''):

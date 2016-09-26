@@ -15,7 +15,8 @@ def sgd_learner(parameters, lr,
 
     Args:
         parameters (list of parameters): list of network parameters to tune.
-         These can be obtained by the '.parameters()' function of 
+         These can be obtained by the '.parameters()' method of the root
+         operator.
         lr ('float'): learning rate per sample. Currently, only float is
          allowed, but schedules will be added soon
         clipping threshold per sample ('float', optional): clipping threshold
