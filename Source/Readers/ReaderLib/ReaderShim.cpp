@@ -110,6 +110,7 @@ void ReaderShim<ElemType>::StartDistributedMinibatchLoop(
     for (const auto& i : inputs)
     {
         inputDescriptions[i.GetStreamName()] = i.GetDeviceId();
+        // Creating buffers with the same properties the network expects.
         m_prefetchBuffers[i.GetStreamName()] = StreamPrefetchBuffer
         {
             std::make_shared<Matrix<ElemType>>(0, 0, i.GetDeviceId(), i.GetMatrixType(), i.GetMatrixFormat()),

@@ -83,7 +83,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     inline bool operator == (const InputStreamDescription& a, const InputStreamDescription& b)
     {
-        return a.GetStreamName() == b.GetStreamName() && a.GetDeviceId() == b.GetDeviceId() && a.GetMatrixType() == b.GetMatrixType();
+        return a.GetStreamName() == b.GetStreamName() &&
+               a.GetDeviceId() == b.GetDeviceId() &&
+               a.GetMatrixType() == b.GetMatrixType() &&
+               a.GetMatrixFormat() == b.GetMatrixFormat();
     };
 }}}
 
