@@ -908,6 +908,7 @@ public:
                 // BUGBUG Alternative implementions, e.g:
                 // * Weighted Random Sampling with Reservoir: http://utopia.duth.gr/~pefraimi/research/data/2007EncOfAlg.pdf
                 // * Binary tree with classes as leafes and branch probs on non-leafes.
+                // * As in numpy: https://github.com/numpy/numpy/blob/master/numpy/random/mtrand/mtrand.pyx#L1440
                 nTries++;
                 if (alreadySampled.find(idx) != alreadySampled.end()) continue;
                 else

@@ -168,6 +168,8 @@ CopyFilesFromList $includePath includeFiles[@] $baseIncludePath
 # Copy Examples
 echo "Copying Examples..." >&3
 cp -r Examples $baseDropPath
+# Remove CPPEvalV2Client examples until V2 binaries are included in the binary drop
+rm -rf $baseDropPath/Examples/Evaluation/CPPEvalV2Client
 
 # Copy Scripts (Scripts folder from the root of the Repo)
 echo "Copying Scripts..." >&3
