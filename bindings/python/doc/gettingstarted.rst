@@ -34,7 +34,7 @@ You can then start using CNTK from Python right away:
     >>> cntk.minus([1, 2, 3], [4, 5, 6]).eval()
     array([-3., -3., -3.], dtype=float32)
 
-The above makes use of the CNTK `minus` node with two array constants. Every operator has an `eval()` method that can be called which runs a forward 
+The above makes use of the CNTK ``minus`` node with two array constants. Every operator has an ``eval()`` method that can be called which runs a forward 
 pass for that node using its inputs, and returns the result of the forward pass. A slightly more interesting example that uses input variables (the 
 more common case) is as follows:
 
@@ -43,9 +43,9 @@ more common case) is as follows:
     >>> cntk.squared_error(i1, i2).eval({i1:np.asarray([[[[2., 1.]]]], dtype=np.float32),  i2:np.asarray([[[[4., 6.]]]], dtype=np.float32)})
     array(29.0, dtype=float32)
 
-In the above example we are first setting up two input variables with shape `(1, 2)`. We then setup a `squared_error` node with those two variables as 
-inputs. Within the `eval()` method we can setup the mapping of the data for those two variables. In this case we pass in two numpy arrays. The squared 
-error is then of course `(2-4)**2 + (1-6)**2 = 29`.
+In the above example we are first setting up two input variables with shape ``(1, 2)``. We then setup a ``squared_error`` node with those two variables as 
+inputs. Within the ``eval()`` method we can setup the mapping of the data for those two variables. In this case we pass in two numpy arrays. The squared 
+error is then of course ``(2-4)**2 + (1-6)**2 = 29``.
 
 Overview and first run
 ----------------------
@@ -64,11 +64,13 @@ First basic use
 The first step in training or running a network in CNTK is to decide which device it should be run on. If you have access to a GPU, training time 
 can be vastly improved. To explicitly set the device to GPU, set the target device as follows:
 
->>> target_device = DeviceDescriptor.gpu_device(0)
->>> DeviceDescriptor.set_default_device(target_device)
+    >>> target_device = DeviceDescriptor.gpu_device(0)
+    >>> DeviceDescriptor.set_default_device(target_device)
 
 Now let's setup a network that will learn a classifier based on the example fully connected classifier network 
-(`examples.common.nn.fully_connected_classifier_net`). 
+(``examples.common.nn.fully_connected_classifier_net``). 
+
+
 
 
 Now that we've seen some of the basics of setting up and training a network using the CNTK Python API, 
