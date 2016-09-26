@@ -681,15 +681,12 @@ template class NoiseContrastiveEstimationNode<double>;
 
 
 // Nodes using a rsndom number generator can iherit from this class.
-class RngUser{
+class RngUser
+{
 public:
-    RngUser(){
-        this->m_randomSeed = 0;
-    }
-
     RNGHandle& GetRNGHandle(DEVICEID_TYPE deviceId)
     {
-        if (m_RNGHandle == nullptr)
+        if (!m_RNGHandle)
             m_RNGHandle = RNGHandle::Create(deviceId, m_randomSeed);
 
         return *m_RNGHandle;
@@ -702,11 +699,11 @@ public:
 
         // Upon change of the seed, reset RNGHandle to force the creation of a new RNGHandle
         // during forward propagation
-        m_RNGHandle = nullptr;
+        m_RNGHandle.reset();
     }
 
 protected:
-    unsigned long m_randomSeed;
+    unsigned long m_randomSeed = 0;
     std::shared_ptr<RNGHandle> m_RNGHandle;
 };
 

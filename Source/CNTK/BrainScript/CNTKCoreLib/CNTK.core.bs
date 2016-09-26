@@ -484,7 +484,10 @@ CNTK2 = [
                                         # To get the 'partition function' over the union of label and sampled classes
                                         # we need to LogPlus zt if the label is not among the sampled classes.
                                         labelIsInSampled = ReduceSum(TransposeTimes(labels,randomSampleSelector))
-                                        logSum = BS.Boolean.If(labelIsInSampled, zSReduced, LogPlus(zT, zSReduced))
+                                        logSum = if labelIsInSampled then 
+                                                    zSReduced 
+                                                 else 
+                                                    LogPlus(zT, zSReduced)
 
                                         ce = logSum - zT
                                        ].ce
