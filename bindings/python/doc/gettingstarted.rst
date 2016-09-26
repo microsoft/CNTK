@@ -6,130 +6,70 @@ Installation
 This page will guide you through the following three required steps:
 
 #. Make sure that all Python requirements are met
-#. Build and install CNTK
-#. Install the Python API and set it up
+#. Install CNTK2
 
 Requirements
 ~~~~~~~~~~~~
 You will need the following Python packages: 
 
-:Python: 2.7+ or 3.3+
-:NumPy: 1.10
-:Scipy: 0.17
+:Python: 3.4
+:NumPy: >= 1.11
+:Scipy: >= 0.17
 
 On Linux a simple ``pip install`` should suffice. On Windows, you will get
 everything you need from `Anaconda <https://www.continuum.io/downloads>`_.
 
+CNTK also depends on Open MPI (`Linux <https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Linux#open-mpi>`_ and `Windows <>`_) and 
+`CUDA <https://developer.nvidia.com/cuda-downloads>`_. Please see the Wiki for more information.
+
 Installing CNTK
 ~~~~~~~~~~~~~~~
-Please follow the instructions on `CNTK's GitHub page 
-<https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-your-machine>`_. 
-After you have built the CNTK binary, find the build location. It will be 
-something like ``<cntkpath>/x64/Release/cntk``. You will need this for 
-the next step.
+Installing CNTK for Python is now easy. Simply run ``pip install http://atleneu04.guest.corp.microsoft.com:8000/cntk-2.0a2-cp34-cp34m-linux_x86_64.whl``. 
+You can then start using CNTK from Python right away:
 
-Installing the Python module
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-#. Go to ``<cntkpath>/contrib/Python`` and run ``python setup.py install``
-#. Set up the environment variable ``CNTK_EXECUTABLE_PATH`` to point to the
-   CNTK executable. Make sure the executable is also included
-#. Enjoy Python's ease of use with CNTK's speed::
+    >>> import cntk
+    >>> cntk.__version__
+    '2.0'
+    
+    >>> cntk.minus([1, 2, 3], [4, 5, 6]).eval()
+    array([-3., -3., -3.], dtype=float32)
 
-    >>> import cntk as C
-    >>> C.__version__
-    1.5
-    >>> with C.LocalExecutionContext('demo', clean_up=False) as ctx:
-    ...     a = C.constant([[1,2], [3,4]])
-    ...     i = C.input_numpy([[[10,20], [30, 40]]])
-    ...     print(ctx.eval(a + i))
-    [[11.0, 22.0], [33.0, 44.0]]
+The above makes use of the CNTK `minus` node with two array constants. Every operator has an `eval()` method that can be called which runs a forward 
+pass for that node using its inputs, and returns the result of the forward pass. A slightly more interesting example that uses input variables (the 
+more common case) is as follows:
 
-In this case, we have set ``clean_up=False`` so that you can now peek into the
-folder ``_cntk_demo`` and see what has been created under the hood for you.
-
-Most likely, you will find issues or rough edges. Please help us improve CNTK
-by posting any problems to https://github.com/Microsoft/CNTK/issues. Thanks!
+    >>> i1 = cntk.input_variable((1, 2))
+    >>> i2 = cntk.input_variable((1, 2))
+    >>> cntk.squared_error(i1, i2).eval({i1:np.asarray([[[[2., 1.]]]], dtype=np.float32),  i2:np.asarray([[[[4., 6.]]]], dtype=np.float32)})
+    array(29.0, dtype=float32)
+    
+In the above example we are first setting up two input variables with shape `(1, 2)`. We then setup a `squared_error` node with those two variables as 
+inputs. Within the `eval()` method we can setup the mapping of the data for those two variables. In this case we pass in two numpy arrays. The squared 
+error is then of course `(2-4)**2 + (1-6)**2 = 29`.
 
 Overview and first run
 ----------------------
 
-CNTK is a powerful toolkit appropriate for everything from complex deep learning 
-research to distributed production environment serving of learned models. It is 
-also great for learning, however, and we will start with a basic regression example 
-to get comfortable with the API. Then, we will look at an area where CNTK shines: 
-working with sequences, where we will demonstrate state-of-the-art sequence classification 
-with an LSTM (long short term memory network).
+CNTK2 is a major overhaul of CNTK in that one now has full control over the data and how its read in, the training and testing loops, and minibatch 
+construction. The Python bindings provide direct access to the created network graph, and data can be manipulated outside of the readers not only 
+for more powerful and complex networks, but also for interactive Python sessions while a model is being created and debugged.
+
+CNTK2 also includes a number of ready-to-extend examples and a layers library. The latter allows one to simply build a powerful deep network by 
+snapping together levels of convolution layers, recurrent neural net layers (LSTMs, etc.), and fully-connected layers. To begin, we will take a 
+look at a classical feedforward classification model in our first basic use.
 
 First basic use
 ~~~~~~~~~~~~~~~
 
-The CNTK Python API allows users to easily define a computational network, define the data 
-that will pass through the network, setup how learning should be performed, and finally, train 
-and test the network. Here we will go through a simple example of using the CNTK Python API to 
-learn to separate data into two classes. Following the code, some basic CNTK concepts will be 
-explained::
+The first step in training or running a network in CNTK is to decide which device it should be run on. If you have access to a GPU, training time 
+can be vastly improved. To explicitly set the device to GPU, set the target device as follows:
 
-    import cntk as C
-    import numpy as np
+>>> target_device = DeviceDescriptor.gpu_device(0)
+>>> DeviceDescriptor.set_default_device(target_device)
 
-    # 500 samples, 250-dimensional data
-    N = 500
-    d = 250
+Now let's setup a network that will learn a classifier based on the example fully connected classifier network 
+(`examples.common.nn.fully_connected_classifier_net`). 
 
-    # create synthetic data using numpy
-    X = np.random.randn(N, d)
-    Y = np.random.randint(size=(N, 1), low=0, high=2)
-    Y = np.hstack((Y, 1-Y))
-
-    # set up the training data for CNTK
-    x = C.input_numpy(X)
-    y = C.input_numpy(Y)
-
-    # define our network parameters: a weight tensor and a bias
-    W = C.parameter((d, 2))
-    b = C.parameter((1, 2))
-
-    # create a dense 'layer' by multiplying the weight tensor and  
-    # the features and adding the bias
-    out = C.times(x, W) + b
-
-    # setup the criterion node using cross entropy with softmax
-    ce = C.cross_entropy_with_softmax(y, out, name='loss')
-    ce.tag = 'criterion'
-
-    # define our SGD parameters and train!
-    my_sgd = C.SGDParams(epoch_size=0, minibatch_size=25, learning_rates_per_mb=0.1, max_epochs=3)
-    with C.LocalExecutionContext('logreg') as ctx:
-        ctx.train(root_nodes=[ce], training_params=my_sgd)
-        print(ctx.test(root_nodes=[ce]))
-
-
-In the example above, we first create a synthetic data set of 500 samples, each with a 2-dimensional 
-one-hot vector representing 0 (``[1 0]``) or 1 (``[0 1]``). We then begin describing the topology of our network 
-by setting up the data inputs. This is typically done using the :class:`cntk.reader.CNTKTextFormatReader` by reading data 
-in from a file, but for interactive experimentation and small examples we can use the ``input_numpy`` reader to 
-access NumPy data.
-
-Next, we define our network. In this case it's a simple 1-layer network with a weight tensor and a bias. 
-We multiply our data `x` with the weight tensor `W` and add the bias `b`. We then input the model prediction 
-into the :func:`cntk.ops.cross_entropy_with_softmax` node. This node first runs the data through a `softmax` to get 
-probabilities for each class. Then the Cross Entropy loss function is applied. We tag the node `ce` with 
-"criterion" so that CNTK knows it's a node from which the learning can start flowing back through the network.
-
-Finally, we define our learning algorithm. In this case we use Stochastic Gradient Descent (SGD) and pass in 
-some basic parameters. First, `epoch_size` allows different amounts of data per epoch. When we set it to 0, 
-SGD looks at all of the training data in each epoch. Next, `minibatch_size` is the number of samples to look 
-at for each minibatch; `learning_rates_per_mb` is the learning rate that SGD will use when the parameters are 
-updated at the end of each minibatch; and `max_epochs` is the maximum number of epochs to train for.
-
-The last step is to set up an execution context. An execution context can be either `Local` or `Deferred`. In the 
-former case, as we use here, the methods (such as training and testing the network) are done locally and 
-immediately so that the result is returned interactively to python. With a `Deferred` context, the methods simply 
-set up a configuration file that can be used with CNTK at a later date. Here, with the local execution context, 
-we train the network by passing in the root node and the optimizer we are using, and finally, we test its 
-performance. Here is the output of the above example:
-
-``{'SamplesSeen': 500, 'Perplexity': 1.1140191, 'loss': 0.10797427}``
 
 Now that we've seen some of the basics of setting up and training a network using the CNTK Python API, 
 let's look at a more interesting deep learning problem in more detail.
