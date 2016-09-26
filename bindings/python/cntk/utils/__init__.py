@@ -374,6 +374,8 @@ def sanitize_batch(batch, data_type=None, device=None):
 
     # If it still is not an NumPy array, try brute force...
     if not isinstance(batch, np.ndarray):
+        if data_type is None:
+            data_type = np.float32
         batch = np.asarray(batch, dtype=data_type)
 
     '''
