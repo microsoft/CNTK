@@ -75,7 +75,6 @@ struct SequenceDataBase
     TensorShapePtr m_sampleLayout; // Sample layout, can be shared by several sequences.
     // A non-owned pointer. The actual size is provided for particular sequences,
     // i.e. see DenseSequenceData, or SparseSequenceData.
-    void* m_data;
 };
 typedef std::shared_ptr<SequenceDataBase> SequenceDataPtr;
 

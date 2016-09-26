@@ -93,9 +93,10 @@ public:
         image->m_sampleLayout = std::make_shared<TensorShape>(dimensions.AsTensorShape(HWC));
         image->m_id = sequenceId;
         image->m_numberOfSamples = 1;
+        image->m_elementType = dataType;
         result.push_back(image);
 
-        SparseSequenceDataPtr label = std::make_shared<SparseSequenceData>();
+        auto label = std::make_shared<CategorySequenceData>();
         m_parent.m_labelGenerator->CreateLabelFor(imageSequence.m_classId, *label);
         label->m_numberOfSamples = 1;
         result.push_back(label);

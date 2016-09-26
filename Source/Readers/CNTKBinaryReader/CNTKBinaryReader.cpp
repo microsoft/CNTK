@@ -19,9 +19,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 // TODO: This class should go away eventually.
 // TODO: The composition of packer + randomizer + different deserializers in a generic manner is done in the CompositeDataReader.
 // TODO: Currently preserving this for backward compatibility with current configs.
-CNTKBinaryReader::CNTKBinaryReader(MemoryProviderPtr provider,
-    const ConfigParameters& config) :
-    m_provider(provider)
+CNTKBinaryReader::CNTKBinaryReader(//MemoryProviderPtr provider,
+    const ConfigParameters& config) //:
+    //m_provider(provider)
 {
     BinaryConfigHelper configHelper(config);
 
@@ -41,19 +41,27 @@ CNTKBinaryReader::CNTKBinaryReader(MemoryProviderPtr provider,
             size_t window = configHelper.GetRandomizationWindow();
             // Verbosity is a general config parameter, not specific to the binary format reader.
             fprintf(stderr, " | randomizing with window: %d", (int)window);
-            int verbosity = config(L"verbosity", 2);
-            m_randomizer = make_shared<BlockRandomizer>(verbosity, window, m_deserializer);
+            int verbosity = config(L"verbosity", 0);
+            m_sequenceEnumerator = make_shared<BlockRandomizer>(
+                verbosity, /* verbosity */
+                window,  /* randomizationRangeInSamples */
+                m_deserializer, /* deserializer */
+                true, /* shouldPrefetch */
+                BlockRandomizer::DecimationMode::chunk, /* decimationMode */
+                false, /* useLegacyRandomization */
+                false /* multithreadedGetNextSequences */
+                );
         }
         else
         {
             fprintf(stderr, " | without randomization");
-            m_randomizer = std::make_shared<NoRandomizer>(m_deserializer);
+            m_sequenceEnumerator = std::make_shared<NoRandomizer>(m_deserializer);
         }
 
         m_packer = std::make_shared<SequencePacker>(
-            m_provider,
-            m_randomizer,
-            GetStreamDescriptions());
+            //m_provider,
+            m_sequenceEnumerator,
+            ReaderBase::GetStreamDescriptions());
     }
     catch (const std::runtime_error& e)
     {
@@ -62,6 +70,7 @@ CNTKBinaryReader::CNTKBinaryReader(MemoryProviderPtr provider,
     fprintf(stderr, "\n");
 }
 
+/*
 std::vector<StreamDescriptionPtr> CNTKBinaryReader::GetStreamDescriptions()
 {
     return m_deserializer->GetStreamDescriptions();
@@ -83,4 +92,5 @@ Minibatch CNTKBinaryReader::ReadMinibatch()
     assert(m_packer != nullptr);
     return m_packer->ReadMinibatch();
 }
+*/
 } } }
