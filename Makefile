@@ -796,16 +796,13 @@ ALL+=$(MULTIVERSO_TEST)
 
 MULTIVERSO: 
 	@echo "Build Multiverso lib and unit tests"
+	@mkdir -p $(dir $@)
 	@mkdir -p $(SOURCEDIR)/Multiverso/build
-	@sh $(SOURCEDIR)/../Tools/setup_mv.sh
+	@sh $(SOURCEDIR)/../Tools/setup_mv.sh $(BUILD_TOP)
 
 $(MULTIVERSO_LIB): MULTIVERSO
-	@mkdir -p $(dir $@)
-	@cp $(SOURCEDIR)/Multiverso/build/src/libmultiverso.so $(MULTIVERSO_LIB)
 
 $(MULTIVERSO_TEST): MULTIVERSO
-	@mkdir -p $(dir $@)
-	@cp $(SOURCEDIR)/Multiverso/build/Test/unittests/multiverso.ut $(MULTIVERSO_TEST)
 
 endif
 
