@@ -91,9 +91,9 @@ def test_image():
     f = d['input'][feature_name]
     assert set(f.keys()) == { 'transforms' }
     t0, t1, t2 = f['transforms']
-    assert t0['type'] == 'crop'
-    assert t1['type'] == 'scale'
-    assert t2['type'] == 'mean'
+    assert t0['type'] == 'Crop'
+    assert t1['type'] == 'Scale'
+    assert t2['type'] == 'Mean'
     t0['cropType'] == 'Random'
     t0['cropRatio'] == 0.8
     t0['jitterType'] == 'uniRatio'

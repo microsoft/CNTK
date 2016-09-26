@@ -182,7 +182,7 @@ class ImageDeserializer(Deserializer):
         Crop transform that can be used to pass to `map_features`
         '''
         trans = {}
-        trans['type'] = 'crop'
+        trans['type'] = 'Crop'
         trans['cropType'] = crop_type
         trans['cropRatio'] = ratio
         trans['jitterType'] = jitter_type
@@ -191,7 +191,7 @@ class ImageDeserializer(Deserializer):
     @staticmethod
     def scale(width, height, channels, interpolations='linear'):
         trans = {}
-        trans['type'] = 'scale'
+        trans['type'] = 'Scale'
         trans['width'] = width 
         trans['height'] = height
         trans['channels'] = channels
@@ -201,7 +201,7 @@ class ImageDeserializer(Deserializer):
     @staticmethod
     def mean(filename):
         trans = {}
-        trans['type'] = 'mean'
+        trans['type'] = 'Mean'
         trans['meanFile'] = filename
         return trans
 
