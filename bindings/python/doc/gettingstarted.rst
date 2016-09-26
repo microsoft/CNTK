@@ -42,7 +42,7 @@ more common case) is as follows:
     >>> i2 = cntk.input_variable((1, 2))
     >>> cntk.squared_error(i1, i2).eval({i1:np.asarray([[[[2., 1.]]]], dtype=np.float32),  i2:np.asarray([[[[4., 6.]]]], dtype=np.float32)})
     array(29.0, dtype=float32)
-    
+
 In the above example we are first setting up two input variables with shape `(1, 2)`. We then setup a `squared_error` node with those two variables as 
 inputs. Within the `eval()` method we can setup the mapping of the data for those two variables. In this case we pass in two numpy arrays. The squared 
 error is then of course `(2-4)**2 + (1-6)**2 = 29`.
