@@ -1,4 +1,5 @@
-FROM library/ubuntu:14.04
+#FROM library/ubuntu:14.04
+FROM nvidia/cuda:7.5-runtime
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
         ca-certificates \
@@ -23,4 +24,4 @@ ENV LD_LIBRARY_PATH /usr/local/mpi/lib:$LD_LIBRARY_PATH
 RUN  wget -q -O - https://cntk.ai/BinaryDrop/CNTK-1-7-Linux-64bit-GPU.tar.gz | tar -xzf -
 
 ENV PATH /cntk/cntk/bin:$PATH
-ENV LD_LIBRARY_PATH /cntk/cntk/lib:/cntk/cntk/dependencies/libexit:$LD_LIBRARY_PATH
+ENV LD_LIBRARY_PATH /cntk/cntk/lib:/cntk/cntk/dependencies/lib:$LD_LIBRARY_PATH
