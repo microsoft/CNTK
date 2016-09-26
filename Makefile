@@ -784,8 +784,6 @@ ifeq (,$(wildcard Source/Multiverso/include/multiverso/*.h))
 endif
 
 INCLUDEPATH += $(SOURCEDIR)/Multiverso/include
-LIBPATH += $(LIBDIR)
-LIBS += -lmultiverso -ldl
 COMMON_FLAGS += -DMULTIVERSO_SUPPORT
 
 MULTIVERSO_LIB:=$(LIBDIR)/libmultiverso.so
