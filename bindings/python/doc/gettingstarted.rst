@@ -68,17 +68,46 @@ can be vastly improved. To explicitly set the device to GPU, set the target devi
     >>> DeviceDescriptor.set_default_device(target_device)
 
 Now let's setup a network that will learn a classifier based on the example fully connected classifier network 
-(``examples.common.nn.fully_connected_classifier_net``). This is a simple task and looks like this:
+(``examples.common.nn.fully_connected_classifier_net``). This is defined, along with several other simple and more complex DNN building blocks in 
+``bindings/python/examples/common/nn.py``. Here is the basic code for setting up a network that uses it::
 
-```
-    def fully_connected_classifier_net(input, num_output_classes, hidden_layer_dim, num_hidden_layers, nonlinearity):
-        r = fully_connected_layer(input, hidden_layer_dim, nonlinearity)
-        for i in range(1, num_hidden_layers):
-            r = fully_connected_layer(r, hidden_layer_dim, nonlinearity)
-        return linear_layer(r, num_output_classes)
-```
+    def ffnet(debug_output=True):
+        input_dim = 2
+        num_output_classes = 2
+        num_hidden_layers = 2
+        hidden_layers_dim = 50
 
+        # Input variables denoting the features and label data
+        input = input_variable((input_dim), np.float32)
+        label = input_variable((num_output_classes), np.float32)
 
+        # Instantiate the feedforward classification model
+        netout = fully_connected_classifier_net(input, num_output_classes, hidden_layers_dim, num_hidden_layers, sigmoid)
+
+        ce = cross_entropy_with_softmax(netout, label)
+        pe = classification_error(netout, label)
+
+        # Instantiate the trainer object to drive the model training
+        trainer = Trainer(netout, ce, pe, [sgd_learner(netout.parameters(), lr=0.02)])
+
+        # Get minibatches of training data and perform model training
+        minibatch_size = 25
+        num_samples_per_sweep = 10000
+        num_sweeps_to_train_with = 2
+        num_minibatches_to_train = (num_samples_per_sweep * num_sweeps_to_train_with) / minibatch_size
+        training_progress_output_freq = 20
+
+        for i in range(0, int(num_minibatches_to_train)):
+            features, labels = generate_random_data(minibatch_size, input_dim, num_output_classes)
+            # Specify the mapping of input variables in the model to actual minibatch data to be trained with
+            trainer.train_minibatch({input : features, label : labels})
+            if debug_output:
+                print_training_progress(trainer, i, training_progress_output_freq)
+        
+        test_features, test_labels = generate_random_data(minibatch_size, input_dim, num_output_classes)
+        avg_error = trainer.test_minibatch({input : test_features, label : test_labels})
+
+The example above 
 
 
 Now that we've seen some of the basics of setting up and training a network using the CNTK Python API, 
