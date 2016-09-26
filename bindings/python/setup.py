@@ -182,8 +182,8 @@ setup(name="cntk",
       ext_modules = [cntk_module],  
       packages=packages,
       install_requires=[
-        'numpy>=0.17',
-        'scipy>=0.11'
+        'numpy>=1.11',
+        'scipy>=0.17'
       ],
       **kwargs
      )
