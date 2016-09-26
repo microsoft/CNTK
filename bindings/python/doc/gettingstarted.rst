@@ -44,7 +44,7 @@ more common case) is as follows:
     array(29.0, dtype=float32)
 
 In the above example we are first setting up two input variables with shape ``(1, 2)``. We then setup a ``squared_error`` node with those two variables as 
-inputs. Within the ``eval()`` method we can setup the mapping of the data for those two variables. In this case we pass in two numpy arrays. The squared 
+inputs. Within the ``eval()`` method we can setup the input-mapping of the data for those two variables. In this case we pass in two numpy arrays. The squared 
 error is then of course ``(2-4)**2 + (1-6)**2 = 29``.
 
 Overview and first run
@@ -68,7 +68,14 @@ can be vastly improved. To explicitly set the device to GPU, set the target devi
     >>> DeviceDescriptor.set_default_device(target_device)
 
 Now let's setup a network that will learn a classifier based on the example fully connected classifier network 
-(``examples.common.nn.fully_connected_classifier_net``). 
+(``examples.common.nn.fully_connected_classifier_net``). This is a simple task and looks like this:
+
+    def fully_connected_classifier_net(input, num_output_classes, hidden_layer_dim, num_hidden_layers, nonlinearity):
+        r = fully_connected_layer(input, hidden_layer_dim, nonlinearity)
+        for i in range(1, num_hidden_layers):
+            r = fully_connected_layer(r, hidden_layer_dim, nonlinearity)
+        return linear_layer(r, num_output_classes)
+
 
 
 
