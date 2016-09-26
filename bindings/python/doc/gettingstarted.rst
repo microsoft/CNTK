@@ -107,11 +107,22 @@ Now let's setup a network that will learn a classifier based on the example full
         test_features, test_labels = generate_random_data(minibatch_size, input_dim, num_output_classes)
         avg_error = trainer.test_minibatch({input : test_features, label : test_labels})
 
-The example above 
+The example above sets up a 2-layer fully connected deep neural network with 50 hidden dimensions per layer. We first setup two input variables, one for 
+the input data and one for the labels. We then called the fully connected classifier network model function which simply sets up the required weights, 
+biases, and activation functions for each layer.
 
+We set two root nodes in the network: ``ce`` is the cross entropy which defined our model's loss function, and ``pe`` is the classification error. We 
+set up a trainer object with the root nodes of the network and a learner. In this case we pass in the standard SGD learner with default parameters and a 
+learning rate of 0.02.
 
-Now that we've seen some of the basics of setting up and training a network using the CNTK Python API, 
-let's look at a more interesting deep learning problem in more detail.
+Finally, we manually perform the training loop. We run through the data for the specific number of epochs (``num_minibatches_to_train``), get the ``features`` 
+and ``labels`` that will be used during this training step, and call the trainer's ``train_minibatch`` function which maps the input and label variables that 
+we setup previously to the current ``features`` and ``labels`` data (numpy arrays) that we are using in this minibatch. We use the convenience function 
+``print_training_progress`` to display our loss and error every 20 steps and then finally we test our network again using the ``trainer`` object. It's 
+as easy as that!
+
+Now that we've seen some of the basics of setting up and training a network using the CNTK Python API, let's look at a more interesting deep 
+learning problem in more detail.
 
 
 Sequence classification
