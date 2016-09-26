@@ -1136,5 +1136,7 @@ for klass in [Function, Variable]:
     _add_tensor_ops(klass)
 
 _add_eval(Function)
+
+enable_reversing_tensor_shapes_in_error_messages()
 %}
 
