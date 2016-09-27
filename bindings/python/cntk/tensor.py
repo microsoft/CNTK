@@ -145,12 +145,10 @@ def _add_tensor_ops(klass):
         setattr(klass, overload_name, getattr(TensorOpsMixin, overload_name))
 
 class EvalMixin(object):
-    def eval(self, input_map=None, device=None):
+    def eval(self, input_map=None):
         from .utils import eval as utils_eval
-
-        if device is None:
-            from . import DeviceDescriptor
-            device = DeviceDescriptor.use_default_device()
+        from . import DeviceDescriptor
+        device = DeviceDescriptor.cpu_device()
 
         if len(self.outputs())!=1:
             raise ValueError('only operators with exactly one output can be evaluated')
