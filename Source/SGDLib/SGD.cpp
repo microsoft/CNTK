@@ -1087,7 +1087,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                 localEpochCriterion.Add(criterionNodes, 0, numSamplesWithLabelOfNetwork);
                 for (size_t i = 0; i < evaluationNodes.size(); i++)
                     localEpochEvalErrors.Add(evaluationNodes, i, numSamplesWithLabelOfNetwork);
-            }
+        }
         else
         {
             // distributed gradient aggregation
@@ -2754,7 +2754,7 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
             m_numGradientBits = configDataParallelSGD(L"gradientBits", defaultGradientBits);
             m_zeroThresholdFor1Bit = configDataParallelSGD(L"useZeroThresholdFor1BitQuantization", true);
             m_bufferedAsyncGradientAggregation = configDataParallelSGD(L"useBufferedAsyncGradientAggregation", false);
-                if ( m_numGradientBits < 1 || m_numGradientBits > (8 * sizeofElemType) )
+            if (m_numGradientBits < 1 || m_numGradientBits >(8 * sizeofElemType))
             {
                 InvalidArgument("gradientBits must be in the range [1, 32] when using precision=float and in range [1, 64] when using precision=double!");
             }
@@ -2776,14 +2776,14 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
 #if 1           // legacy option 
             if (configMASGD.Exists(L"syncFrequencyInFrames"))
             {
-                    if (configMASGD.Exists(L"blockSizePerWorker") || configMASGD.Exists(L"blockSize"))
-                        InvalidArgument("syncFrequencyInFrames is a deprecated alias of blockSizePerWorker. It is not allowed to specify both of them");
-                    m_modelAggregationBlockSize = configMASGD(L"syncFrequencyInFrames");
-                    m_modelAggregationBlockSize *= numMPIWorkers;
-                    fprintf(stderr, "WARNING: option syncFrequencyInFrames in ModelAveragingSGD is going to be deprecated. Please use blockSizePerWorker instead\n");
-                }
-                if (configMASGD.Exists(L"syncPeroid"))
-                {
+                if (configMASGD.Exists(L"blockSizePerWorker") || configMASGD.Exists(L"blockSize"))
+                    InvalidArgument("syncFrequencyInFrames is a deprecated alias of blockSizePerWorker. It is not allowed to specify both of them");
+                m_modelAggregationBlockSize = configMASGD(L"syncFrequencyInFrames");
+                m_modelAggregationBlockSize *= numMPIWorkers;
+                fprintf(stderr, "WARNING: option syncFrequencyInFrames in ModelAveragingSGD is going to be deprecated. Please use blockSizePerWorker instead\n");
+            }
+            if (configMASGD.Exists(L"syncPeroid"))
+            {
                     if (configMASGD.Exists(L"blockSizePerWorker") || configMASGD.Exists(L"blockSize"))
                         InvalidArgument("syncPeriod is a deprecated alias of blockSizePerWorker. It is not allowed to specify both of them");
                     m_modelAggregationBlockSize = configMASGD(L"syncPeriod");
