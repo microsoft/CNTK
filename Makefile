@@ -426,11 +426,11 @@ CNTKLIBRARY_TESTS_OBJ := $(patsubst %.cu, $(OBJDIR)/%.o, $(patsubst %.cpp, $(OBJ
 ALL+=$(CNTKLIBRARY_TESTS)
 SRC+=$(CNTKLIBRARY_TESTS_SRC)
 
-$(CNTKLIBRARY_TESTS): $(CNTKLIBRARY_TESTS_OBJ) | $(CNTKLIBRARY_LIB)
+$(CNTKLIBRARY_TESTS): $(CNTKLIBRARY_TESTS_OBJ) | $(CNTKLIBRARY_LIB) $(MULTIVERSO_LIB)
 	@echo $(SEPARATOR)
 	@mkdir -p $(dir $@)
 	@echo building output for $(ARCH) with build type $(BUILDTYPE)
-	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH)) $(patsubst %,$(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -l$(CNTKLIBRARY) -l$(CNTKMATH)
+	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH)) $(patsubst %,$(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -l$(CNTKLIBRARY) -l$(CNTKMATH) -l$(MULTIVERSO)
  
 
 
@@ -470,7 +470,7 @@ $(EVAL_LIB): $(EVAL_OBJ) | $(CNTKMATH_LIB) $(MULTIVERSO_LIB)
 	@echo $(SEPARATOR)
 	@mkdir -p $(dir $@)
 	@echo Building $(EVAL_LIB) for $(ARCH) with build type $(BUILDTYPE)
-	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -l$(CNTKMATH) -lmultiverso
+	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -l$(CNTKMATH) -l$(MULTIVERSO)
 
 ########################################
 # Eval Sample client
@@ -489,7 +489,7 @@ $(EVAL_SAMPLE_CLIENT): $(EVAL_SAMPLE_CLIENT_OBJ) | $(EVAL_LIB)
 	@echo $(SEPARATOR)
 	@mkdir -p $(dir $@)
 	@echo building $(EVAL_SAMPLE_CLIENT) for $(ARCH) with build type $(BUILDTYPE)
-	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH)) $(patsubst %,$(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -l$(EVAL) -l$(CNTKMATH)
+	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH)) $(patsubst %,$(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -l$(EVAL) -l$(CNTKMATH) -l$(MULTIVERSO)
 
 ########################################
 # BinaryReader plugin
@@ -777,11 +777,14 @@ endif
 # ASGD(multiverso) setup
 ########################################
 
+
 ifeq ("$(CNTK_ENABLE_ASGD)","true")
 
 ifeq (,$(wildcard Source/Multiverso/include/multiverso/*.h))
   $(error Build with Multiverso was requested but cannot find the code. Please check https://github.com/Microsoft/DMTK to learn more.)
 endif
+
+MULTIVERSO:=multiverso
 
 INCLUDEPATH += $(SOURCEDIR)/Multiverso/include
 COMMON_FLAGS += -DMULTIVERSO_SUPPORT
@@ -792,15 +795,15 @@ MULTIVERSO_TEST:=$(BINDIR)/multiversotests
 ALL+=$(MULTIVERSO_LIB)
 ALL+=$(MULTIVERSO_TEST)
 
-MULTIVERSO: 
+MULTIVERSO_BUILD: 
 	@echo "Build Multiverso lib and unit tests"
 	@mkdir -p $(dir $@)
 	@mkdir -p $(SOURCEDIR)/Multiverso/build
 	@sh $(SOURCEDIR)/../Tools/setup_mv.sh $(BUILD_TOP)
 
-$(MULTIVERSO_LIB): MULTIVERSO
+$(MULTIVERSO_LIB): MULTIVERSO_BUILD
 
-$(MULTIVERSO_TEST): MULTIVERSO
+$(MULTIVERSO_TEST): MULTIVERSO_BUILD
 
 endif
 
@@ -838,7 +841,7 @@ $(CNTK): $(CNTK_OBJ) | $(CNTKMATH_LIB)
 	@echo $(SEPARATOR)
 	@mkdir -p $(dir $@)
 	@echo building output for $(ARCH) with build type $(BUILDTYPE)
-	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH)) $(patsubst %,$(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -l$(CNTKMATH) -fopenmp
+	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH)) $(patsubst %,$(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -l$(CNTKMATH) -l$(MULTIVERSO) -fopenmp
 
 # deployable resources: standard library of BS
 CNTK_CORE_BS:=$(BINDIR)/cntk.core.bs
@@ -875,7 +878,7 @@ $(UNITTEST_EVAL) : $(UNITTEST_EVAL_OBJ) | $(EVAL_LIB) $(CNTKMATH_LIB)
 	@echo $(SEPARATOR)
 	@mkdir -p $(dir $@)
 	@echo building $@ for $(ARCH) with build type $(BUILDTYPE)
-	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH) $(BOOSTLIB_PATH)) $(patsubst %, $(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH) $(BOOSTLIB_PATH)) -o $@ $^ $(BOOSTLIBS) $(LIBS) -l$(EVAL) -l$(CNTKMATH) 
+	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH) $(BOOSTLIB_PATH)) $(patsubst %, $(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH) $(BOOSTLIB_PATH)) -o $@ $^ $(BOOSTLIBS) $(LIBS) -l$(EVAL) -l$(CNTKMATH) -l$(MULTIVERSO)
 
 #TODO: create project specific makefile or rules to avoid adding project specific path to the global path
 INCLUDEPATH += $(SOURCEDIR)/Readers/CNTKTextFormatReader
@@ -933,7 +936,7 @@ $(UNITTEST_NETWORK): $(UNITTEST_NETWORK_OBJ) | $(CNTKMATH_LIB) $(CNTKTEXTFORMATR
 	@echo $(SEPARATOR)
 	@mkdir -p $(dir $@)
 	@echo building $@ for $(ARCH) with build type $(BUILDTYPE)
-	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH) $(BOOSTLIB_PATH)) $(patsubst %, $(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH) $(BOOSTLIB_PATH)) -o $@ $^ $(BOOSTLIBS) $(LIBS) -l$(CNTKMATH) -fopenmp
+	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH) $(BOOSTLIB_PATH)) $(patsubst %, $(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH) $(BOOSTLIB_PATH)) -o $@ $^ $(BOOSTLIBS) $(LIBS) -l$(CNTKMATH) -l$(MULTIVERSO) -fopenmp
 
 UNITTEST_MATH_SRC = \
 	$(SOURCEDIR)/../Tests/UnitTests/MathTests/BatchNormalizationEngineTests.cpp \
