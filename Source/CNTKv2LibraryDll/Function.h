@@ -402,7 +402,7 @@ namespace CNTK
         static NDShape ReductionOpOutputShape(PrimitiveOpType op, const NDShape& operandShape, const std::vector<size_t>& reductionAxes)
         {
             if (reductionAxes.size() > operandShape.Rank())
-                RuntimeError("The number of reduction axes %d exceeds the number of axes in the operand shape %S of the reduction operation %s", (int)reductionAxes.size(), AsStringForErrorReporting(operandShape).c_str(), PrimitiveOpTypeName(op));
+                RuntimeError("The number of reduction axes %d exceeds the rank in the operand shape %S of the reduction operation %s", (int)reductionAxes.size(), AsStringForErrorReporting(operandShape).c_str(), PrimitiveOpTypeName(op));
 
             size_t numOutputAxes = operandShape.Rank() - reductionAxes.size();
             std::vector<size_t> outputDims(numOutputAxes);
@@ -464,6 +464,7 @@ namespace CNTK
         friend class Function;
         friend class Trainer;
         friend class CompositeMinibatchSource;
+        friend class PackedValue;
 
         template <typename T, typename ...CtorArgTypes>
         friend inline std::shared_ptr<T> MakeSharedObject(CtorArgTypes&& ...ctorArgs);

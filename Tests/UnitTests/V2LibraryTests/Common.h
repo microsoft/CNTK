@@ -137,11 +137,11 @@ std::pair<CNTK::FunctionPtr, CNTK::FunctionPtr> LSTMPCellWithSelfStabilization(C
 
     unsigned long seed = 1;
     auto createProjectionParam = [device, &seed](size_t outputDim, size_t inputDim) {
-        return CNTK::Parameter(CNTK::NDArrayView::RandomUniform<ElementType>({ outputDim, inputDim }, -0.5, 0.5, seed++, device));
+        return CNTK::Parameter({ outputDim, inputDim }, AsDataType<ElementType>(), UniformInitializer(1, seed++), device);
     };
 
     auto createDiagWeightParam = [device, &seed](size_t dim) {
-        return CNTK::Parameter(CNTK::NDArrayView::RandomUniform<ElementType>({ dim }, -0.5, 0.5, seed++, device));
+        return CNTK::Parameter({ dim }, AsDataType<ElementType>(), UniformInitializer(1, seed++), device);
     };
 
     auto stabilizedPrevOutput = Stabilize<ElementType>(prevOutput, device);
@@ -173,14 +173,14 @@ std::pair<CNTK::FunctionPtr, CNTK::FunctionPtr> LSTMPCellWithSelfStabilization(C
 
 template <typename ElementType>
 std::pair<CNTK::FunctionPtr, CNTK::FunctionPtr> LSTMPComponentWithSelfStabilization(CNTK::Variable input,
-                                                                                    const CNTK::NDShape& outputDim,
-                                                                                    const CNTK::NDShape& cellDim,
+                                                                                    const CNTK::NDShape& outputShape,
+                                                                                    const CNTK::NDShape& cellShape,
                                                                                     const std::function<CNTK::FunctionPtr(const CNTK::Variable&)>& recurrenceHookH,
                                                                                     const std::function<CNTK::FunctionPtr(const CNTK::Variable&)>& recurrenceHookC,
                                                                                     const CNTK::DeviceDescriptor& device)
 {
-    auto dh = CNTK::PlaceholderVariable(outputDim, input.DynamicAxes());
-    auto dc = CNTK::PlaceholderVariable(cellDim, input.DynamicAxes());
+    auto dh = CNTK::PlaceholderVariable(outputShape, input.DynamicAxes());
+    auto dc = CNTK::PlaceholderVariable(cellShape, input.DynamicAxes());
 
     auto LSTMCell = LSTMPCellWithSelfStabilization<ElementType>(input, dh, dc, device);
 

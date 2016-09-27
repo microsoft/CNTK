@@ -70,22 +70,22 @@ namespace CNTK
     static const std::wstring KernelWidthAttributeName = L"kernelWidth";
     static const std::wstring KernelHeightAttributeName = L"kernelHeight";
 
-    ParameterInitializer UniformInitializer(double scale, unsigned long seed)
-    {
-        Dictionary initConfig;
-        initConfig[InitializerTypeAttributeName] = Microsoft::MSR::CNTK::UniformInitializerTypeName;
-        initConfig[ScaleAttributeName] = scale;
-        initConfig[RandomSeedAttributeName] = (size_t)seed;
-
-        return initConfig;
-    }
-
     static ParameterInitializer CreateInitializer(const std::wstring& initializerTypeName, int outputRank, int filterRank, double scale, unsigned long seed)
     {
         Dictionary initConfig;
         initConfig[InitializerTypeAttributeName] = initializerTypeName;
         initConfig[OutputRankAttributeName] = (size_t)outputRank;
         initConfig[FilterRankAttributeName] = (size_t)filterRank;
+        initConfig[ScaleAttributeName] = scale;
+        initConfig[RandomSeedAttributeName] = (size_t)seed;
+
+        return initConfig;
+    }
+
+    ParameterInitializer UniformInitializer(double scale, unsigned long seed)
+    {
+        Dictionary initConfig;
+        initConfig[InitializerTypeAttributeName] = Microsoft::MSR::CNTK::UniformInitializerTypeName;
         initConfig[ScaleAttributeName] = scale;
         initConfig[RandomSeedAttributeName] = (size_t)seed;
 

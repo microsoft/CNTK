@@ -17,8 +17,8 @@ void TestReduceSum(const DeviceDescriptor& device)
     {
         auto testReduceSum = [&sequences, &sequenceLengths, dim, sequencesValue, device](bool reduceAll)
         {
-            size_t maxActualSequenceLength = sequencesValue->Data()->Shape()[1];
-            size_t numSequences = sequencesValue->Data()->Shape()[2];
+            size_t maxActualSequenceLength = sequencesValue->Shape()[1];
+            size_t numSequences = sequencesValue->Shape()[2];
 
             auto inputVar = InputVariable({ dim }, DataType::Float, L"input");
             FunctionPtr reduceSumFunc;
@@ -73,8 +73,8 @@ void TestReduceSum(const DeviceDescriptor& device)
             if (axis.IsStaticAxis())
                 RuntimeError("Called the dynamic axis ReduceSum test with a static axis");
 
-            size_t maxActualSequenceLength = sequencesValue->Data()->Shape()[1];
-            size_t numSequences = sequencesValue->Data()->Shape()[2];
+            size_t maxActualSequenceLength = sequencesValue->Shape()[1];
+            size_t numSequences = sequencesValue->Shape()[2];
 
             auto inputVar = InputVariable({ dim }, DataType::Float, L"input");
             FunctionPtr reduceSumFunc = ReduceSum(inputVar, axis);
@@ -130,8 +130,8 @@ void TestSlice(size_t sampleRank, const DeviceDescriptor& device)
     {
         auto testStaticAxisSlice = [&sequences, &sequenceLengths, inputShape, sequencesValue, device](size_t sliceAxis, int beginOffset, int endOffset)
         {
-            size_t maxActualSequenceLength = sequencesValue->Data()->Shape()[inputShape.Rank()];
-            size_t numSequences = sequencesValue->Data()->Shape()[inputShape.Rank() + 1];
+            size_t maxActualSequenceLength = sequencesValue->Shape()[inputShape.Rank()];
+            size_t numSequences = sequencesValue->Shape()[inputShape.Rank() + 1];
 
             auto inputVar = InputVariable(inputShape, DataType::Float, L"input");
             auto sliceFunc = Slice(inputVar, Axis(sliceAxis), beginOffset, endOffset);
@@ -189,8 +189,8 @@ void TestSlice(size_t sampleRank, const DeviceDescriptor& device)
             if (axis.IsStaticAxis())
                 RuntimeError("Called the dynamic axis slice test with a static axis");
 
-            size_t maxActualSequenceLength = sequencesValue->Data()->Shape()[inputShape.Rank()];
-            size_t numSequences = sequencesValue->Data()->Shape()[inputShape.Rank() + 1];
+            size_t maxActualSequenceLength = sequencesValue->Shape()[inputShape.Rank()];
+            size_t numSequences = sequencesValue->Shape()[inputShape.Rank() + 1];
 
             size_t sliceLength = endOffset - beginOffset;
 

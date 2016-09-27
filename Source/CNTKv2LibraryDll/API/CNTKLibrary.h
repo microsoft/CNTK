@@ -193,7 +193,7 @@ namespace CNTK
         NDShape() {}
 
         ///
-        /// Contruct a NDShape instance with the specified number of axes and dimensionality in each axis.
+        /// Contruct a NDShape instance with the specified rank and dimensionality in each axis.
         ///
         explicit NDShape(size_t numAxes, size_t dimension = InferredDimension)
             : m_shapeDims(numAxes, dimension)
@@ -219,7 +219,7 @@ namespace CNTK
         const std::vector<size_t>& Dimensions() const { return m_shapeDims; }
 
         ///
-        /// Returns the number of axes of 'this' shape.
+        /// Returns the rank of 'this' shape.
         ///
         size_t Rank() const { return m_shapeDims.size(); }
 
@@ -240,7 +240,7 @@ namespace CNTK
         {
             endAxisId = (endAxisId == SIZE_MAX) ? Rank() : endAxisId;
             if ((endAxisId < beginAxisId) || (endAxisId > Rank()))
-                InvalidArgument("NDShape::SubShape : The specified endAxisId (%d) cannot exceed the number of axes (%d) of 'this' NDShape and must be >= than the specified beginAxisId (%d)", (int)endAxisId, (int)Rank(), (int)beginAxisId);
+                InvalidArgument("NDShape::SubShape : The specified endAxisId (%d) cannot exceed the rank (%d) of 'this' NDShape and must be >= than the specified beginAxisId (%d)", (int)endAxisId, (int)Rank(), (int)beginAxisId);
 
             std::vector<size_t> subShapeDims(m_shapeDims.begin() + beginAxisId, m_shapeDims.begin() + endAxisId);
             return subShapeDims;
@@ -328,6 +328,7 @@ namespace CNTK
         friend class CompositeFunction;
         friend class LearnerBase;
         friend class Variable;
+        friend class PackedValue;
 
         template <typename T, typename ...CtorArgTypes>
         friend inline std::shared_ptr<T> MakeSharedObject(CtorArgTypes&& ...ctorArgs);
@@ -578,6 +579,13 @@ namespace CNTK
         std::shared_ptr<void> m_tensorView; // Microsoft::MSR::CNTK::TensorView<ElemType>*
     };
 
+    enum class MaskKind : char
+    {
+        Invalid = 0,
+        Valid = 1,
+        SequenceBegin = 2,
+    };
+
     ///
     /// Denotes a multi-dimensional mask used for specifying specific sections of a NDArrayView object as masked/invalid.
     /// This type denotes a view and there may be multiple simultaneous views of the data underlying a NDMask instance.
@@ -588,6 +596,7 @@ namespace CNTK
 
         template <typename T, typename ...CtorArgTypes>
         friend inline std::shared_ptr<T> MakeSharedObject(CtorArgTypes&& ...ctorArgs);
+
     public:
         ///
         /// Construct a new Mask object of specified shape
@@ -600,12 +609,32 @@ namespace CNTK
         CNTK_API ~NDMask();
 
         ///
-        /// Mask out the specified sub-section of 'this' mask
+        /// Mask out (i.e. mark Invalid) the specified sub-section of 'this' mask
         ///
-        CNTK_API void MaskSection(const std::vector<size_t>& sectionOffset, const NDShape& sectionShape);
+        void InvalidateSection(const std::vector<size_t>& sectionOffset, const NDShape& sectionShape)
+        {
+            MarkSectionAs(sectionOffset, sectionShape, MaskKind::Invalid);
+        }
 
         ///
-        /// Clear the mask; i.e. unmask all currently masked values
+        /// Mark the specified position in 'this' mask as sequence begin 
+        ///
+        void MarkSequenceBegin(const std::vector<size_t>& offset)
+        {
+            NDShape sectionShape = NDShape(Shape().Rank(), 1);
+            MarkSectionAs(offset, sectionShape, MaskKind::SequenceBegin);
+        }
+
+        ///
+        /// Mark the specified sub-section of 'this' mask as sequence begin 
+        ///
+        void MarkSequenceBegin(const std::vector<size_t>& offset, const NDShape& sectionShape)
+        {
+            MarkSectionAs(offset, sectionShape, MaskKind::SequenceBegin);
+        }
+
+        ///
+        /// Clear the mask; i.e. unmask or mark Valid all currently masked (i.e. Invalid) values
         ///
         CNTK_API void Clear();
 
@@ -627,12 +656,20 @@ namespace CNTK
         ///
         /// Returns a read-only pointer to the data buffer underlying 'this' Mask object
         /// 
-        CNTK_API const char* DataBuffer() const;
+        CNTK_API const MaskKind* DataBuffer() const;
+
+        ///
+        /// Creates a new NDArrayView with newly allocated storage on the specified device and copies 'this' view's contents into the newly allocated view.
+        ///
+        CNTK_API NDMaskPtr DeepClone(const DeviceDescriptor& device) const;
 
         ///
         /// Creates a new NDMask with newly allocated storage on the same device as 'this' mask and copies 'this' mask's contents into the newly allocated mask.
         ///
-        CNTK_API NDMaskPtr DeepClone() const;
+        NDMaskPtr DeepClone() const
+        {
+            return DeepClone(this->Device());
+        }
 
         ///
         /// Creates a new NDMask which is an alias of 'this' mask.
@@ -647,6 +684,9 @@ namespace CNTK
 
     private:
         NDMask(const NDShape& shape, Microsoft::MSR::CNTK::Matrix<char>* matrix);
+
+        CNTK_API void MarkSectionAs(const std::vector<size_t>& sectionOffset, const NDShape& sectionShape, MaskKind maskKind);
+
         Microsoft::MSR::CNTK::Matrix<char>* GetMatrix() const;
 
         // Disallow copy and move construction and assignment
@@ -698,6 +738,39 @@ namespace CNTK
         CNTK_API virtual ~Value();
 
         ///
+        /// Returns the descriptor of the device that 'this' Value resides on
+        ///
+        virtual DeviceDescriptor Device() const { return m_data->Device(); }
+
+        ///
+        /// Returns the data type of 'this' Value's contents.
+        ///
+        virtual DataType GetDataType() const { return m_data->GetDataType(); }
+
+        ///
+        /// Returns the storage format of 'this' Value.
+        ///
+        virtual StorageFormat GetStorageFormat() const { return m_data->GetStorageFormat(); }
+
+        ///
+        /// Returns the shape 'this' Value.
+        ///
+        virtual const NDShape& Shape() const { return m_data->Shape(); }
+
+        ///
+        /// Returns a boolean indicating if 'this' Value contains data in sparse storage format.
+        ///
+        bool IsSparse() const
+        {
+            return (GetStorageFormat() != StorageFormat::Dense);
+        }
+
+        ///
+        /// Returns a boolean indicating if 'this' Value is read-only.
+        ///
+        virtual bool IsReadOnly() const { return m_data->IsReadOnly(); }
+
+        ///
         /// Returns the NDArrayView object corresponding to the data contents of 'this value object.
         ///
         CNTK_API virtual NDArrayViewPtr Data() const;
@@ -727,7 +800,7 @@ namespace CNTK
         // Disallow copy and move construction and assignment
         Value(const Value&) = delete; Value& operator=(const Value&) = delete; Value(Value&&) = delete; Value& operator=(Value&&) = delete;
 
-    private:
+    protected:
         NDArrayViewPtr m_data;
         NDMaskPtr m_mask;
     };
@@ -1266,6 +1339,8 @@ namespace CNTK
         {
             return Contains(key.c_str());
         }
+
+        CNTK_API void Add(const Dictionary& other);
 
         CNTK_API bool operator==(const Dictionary& other) const;
         CNTK_API bool operator!=(const Dictionary& other) const;

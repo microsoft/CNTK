@@ -14,6 +14,7 @@ void TrainLSTMSequenceClassifer();
 void SerializationTests();
 void LearnerTests();
 void TrainSequenceToSequenceTranslator();
+void TrainTruncatedLSTMAcousticModelClassifer();
 
 int main()
 {
@@ -24,14 +25,15 @@ int main()
     FeedForwardTests();
     RecurrentFunctionTests();
 
-    TrainerTests();
     SerializationTests();
     LearnerTests();
 
+    TrainerTests();
+
     TestCifarResnet();
     TrainLSTMSequenceClassifer();
-
     TrainSequenceToSequenceTranslator();
+    TrainTruncatedLSTMAcousticModelClassifer();
 
     fprintf(stderr, "\nCNTKv2Library tests: Passed\n");
     fflush(stderr);

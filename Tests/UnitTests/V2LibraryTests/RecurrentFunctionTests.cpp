@@ -221,7 +221,10 @@ void TestSimpleRecurrence(size_t inputDim,
 
             NDMaskPtr inputMask = MakeSharedObject<NDMask>(NDShape({ maxActualSequenceLength, numSequences }), DeviceDescriptor::CPUDevice());
             for (size_t i = 0; i < numSequences; ++i)
-                inputMask->MaskSection({ sequenceLengths[i], i }, { NDShape::InferredDimension, 1 });
+            {
+                inputMask->MarkSequenceBegin({0, i});
+                inputMask->InvalidateSection({ sequenceLengths[i], i }, { NDShape::InferredDimension, 1 });
+            }
 
             inputValue = MakeSharedObject<Value>(inputValueData, inputMask);
         }

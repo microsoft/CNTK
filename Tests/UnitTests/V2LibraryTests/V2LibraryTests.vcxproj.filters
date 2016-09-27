@@ -51,6 +51,9 @@
     <ClCompile Include="Seq2Seq.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="TruncatedLSTMAcousticModel.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Common.h">

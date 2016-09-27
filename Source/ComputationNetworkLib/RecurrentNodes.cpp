@@ -11,6 +11,7 @@
 #include "RecurrentNodes.h"
 
 #include <unordered_set>
+#include <unordered_map>
 #include <map>
 #include <string>
 #include <vector>
@@ -114,6 +115,53 @@ template<class ElemType, int direction>
 /*virtual*/ void DelayedValueNodeBase<ElemType, direction>::BeginForwardProp() /*override*/
 {
     Base::BeginForwardProp();
+
+    // If the tBegin value for any of the sequences in the m_pMBLayout is std::numeric_limits<int>::min()
+    // we should determine the real tBegin value from the saved m_delayedActivationMBLayout
+
+    // Collect the trailing sequences in each parallel stream in the previous MB
+    std::unordered_map<size_t, MBLayout::SequenceInfo> trailingSequencesOfLastMB;
+    if (m_delayedActivationMBLayout)
+    {
+        const auto& prevMBSequences = m_delayedActivationMBLayout->GetAllSequences();
+        for (const auto& sequenceInfo : prevMBSequences)
+        {
+            if (sequenceInfo.seqId != GAP_SEQUENCE_ID)
+            {
+                if (trailingSequencesOfLastMB.find(sequenceInfo.s) == trailingSequencesOfLastMB.end())
+                    trailingSequencesOfLastMB[sequenceInfo.s] = sequenceInfo;
+                else
+                {
+                    if (trailingSequencesOfLastMB[sequenceInfo.s].tBegin < sequenceInfo.tBegin)
+                        trailingSequencesOfLastMB[sequenceInfo.s] = sequenceInfo;
+                }
+            }
+        }
+    }
+
+
+    std::vector<MBLayout::SequenceInfo> patchedMBSequences = m_pMBLayout->GetAllSequences();
+    for (auto& patchedSequenceInfo : patchedMBSequences)
+    {
+        if (patchedSequenceInfo.seqId != GAP_SEQUENCE_ID)
+        {
+            if (patchedSequenceInfo.tBegin == std::numeric_limits<int>::min())
+            {
+                if (trailingSequencesOfLastMB.find(patchedSequenceInfo.s) == trailingSequencesOfLastMB.end())
+                    LogicError("No matching sequence found in the saved previous MBLayout to determine the real tBegin from for a truncated sequence in the current MBLayout");
+
+                patchedSequenceInfo.tBegin = trailingSequencesOfLastMB[patchedSequenceInfo.s].tBegin - m_delayedActivationMBLayout->GetNumTimeSteps();
+            }
+        }
+    }
+
+    // Now reconstruct the MBLayout with patched sequences
+    auto newMBLayout = make_shared<MBLayout>();
+    newMBLayout->Init(m_pMBLayout->GetNumParallelSequences(), m_pMBLayout->GetNumTimeSteps());
+    for (auto sequence : patchedMBSequences)
+        newMBLayout->AddSequence(sequence);
+
+    m_pMBLayout->MoveFrom(newMBLayout);
 
     m_inputInvalidMatrix->SetValue(0);
 

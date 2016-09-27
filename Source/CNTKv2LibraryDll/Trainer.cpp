@@ -76,7 +76,7 @@ namespace CNTK
 
         auto argumentValue = argumentIter->second;
         auto argumentVar = argumentIter->first;
-        auto argumentDataShape = argumentValue->Data()->Shape();
+        auto argumentDataShape = argumentValue->Shape();
         auto mask = argumentValue->Mask();
         size_t numMaskedSamples = (mask != nullptr) ? mask->MaskedCount() : 0;
         size_t numSamplesInDataArrayView = argumentDataShape.SubShape(argumentVar.Shape().Rank()).TotalSize();
@@ -124,7 +124,7 @@ namespace CNTK
                 outputsToFetch[outputToFetch.first] = outputs[outputToFetch.first];
         }
 
-        ValuePtr rootGradientValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(m_lossFunction->Output().GetDataType(), m_prevMinibatchAggregateTrainingLossValue->Data()->Shape(), computeDevice), outputs.at(m_lossFunction)->Mask());
+        ValuePtr rootGradientValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(m_lossFunction->Output().GetDataType(), m_prevMinibatchAggregateTrainingLossValue->Shape(), computeDevice), outputs.at(m_lossFunction)->Mask());
         if (m_lossFunction->Output().GetDataType() == DataType::Float)
             rootGradientValue->Data()->SetValue(1.0f);
         else
