@@ -109,6 +109,12 @@ public:
     ComputationNodePtr Crop(const ComputationNodePtr input1, const ComputationNodePtr input2, size_t offsetX, size_t offsetY, const std::wstring nodeName = L"");
     ComputationNodePtr Crop(const ComputationNodePtr input1, const ComputationNodePtr input2, const ComputationNodePtr eqNode1, const ComputationNodePtr eqNode2, const std::wstring nodeName = L"");
 
+    // IU code
+    ComputationNodePtr TripletFastLoss(const ComputationNodePtr left, const ComputationNodePtr right,
+        const ComputationNodePtr label, double margin,
+        bool hard_negative_sample, int hard_negative_sample_num,
+        int sample_per_class, const std::wstring nodeName = L"");
+
 #ifdef COMING_SOON
     ComputationNodePtr CRF(const ComputationNodePtr label, const ComputationNodePtr postDepScore, const ComputationNodePtr transition_score, const std::wstring nodeName = L"");
 #endif

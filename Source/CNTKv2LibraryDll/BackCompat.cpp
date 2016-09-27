@@ -280,6 +280,8 @@ namespace CNTK
                     opType = PrimitiveOpType::Logistic;
                 else if (node->OperationName() == OperationNameOf(SquareErrorNode))
                     opType = PrimitiveOpType::SquaredError;
+                else if (node->OperationName() == OperationNameOf(TripletFastLossNode))
+                    opType = PrimitiveOpType::TripletFastLoss;
                 else if (node->OperationName() == OperationNameOf(CrossEntropyWithSoftmaxNode))
                     opType = PrimitiveOpType::CrossEntropyWithSoftmax;
                 else if (node->OperationName() == OperationNameOf(ClassificationErrorNode))
