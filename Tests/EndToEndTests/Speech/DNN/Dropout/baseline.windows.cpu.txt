@@ -545,7 +545,7 @@ MPI Rank 0:
 MPI Rank 0: 08/16/2016 03:02:27: Starting Epoch 2: learning rate per sample = 0.001953  effective momentum = 0.900000  momentum as time constant = 2429.8 samples
 MPI Rank 0: minibatchiterator: epoch 1: frames [20480..40960] (first utterance at frame 20480), data subset 0 of 2, with 1 datapasses
 MPI Rank 0: 
-MPI Rank 0: 08/16/2016 03:02:27: Starting minibatch loop, DataParallelSGD training (MyRank = 0, NumNodes = 2, NumGradientBits = 32), distributed reading is ENABLED.
+MPI Rank 0: 08/16/2016 03:02:27: Starting minibatch loop, DataParallelSGD training (myRank = 0, numNodes = 2, numGradientBits = 32), distributed reading is ENABLED.
 MPI Rank 0: 08/16/2016 03:02:28:  Epoch[ 2 of 5]-Minibatch[   1-  10, 12.50%]: ce = 3.94527147 * 2560; err = 0.88906250 * 2560; time = 0.9421s; samplesPerSecond = 2717.4
 MPI Rank 0: 08/16/2016 03:02:29:  Epoch[ 2 of 5]-Minibatch[  11-  20, 25.00%]: ce = 3.86277831 * 2560; err = 0.87773437 * 2560; time = 0.9084s; samplesPerSecond = 2818.2
 MPI Rank 0: 08/16/2016 03:02:30:  Epoch[ 2 of 5]-Minibatch[  21-  30, 37.50%]: ce = 3.85494012 * 2560; err = 0.89140625 * 2560; time = 0.9825s; samplesPerSecond = 2605.5
@@ -561,7 +561,7 @@ MPI Rank 0:
 MPI Rank 0: 08/16/2016 03:02:35: Starting Epoch 3: learning rate per sample = 0.001953  effective momentum = 0.900000  momentum as time constant = 2429.8 samples
 MPI Rank 0: minibatchiterator: epoch 2: frames [40960..61440] (first utterance at frame 40960), data subset 0 of 2, with 1 datapasses
 MPI Rank 0: 
-MPI Rank 0: 08/16/2016 03:02:35: Starting minibatch loop, DataParallelSGD training (MyRank = 0, NumNodes = 2, NumGradientBits = 32), distributed reading is ENABLED.
+MPI Rank 0: 08/16/2016 03:02:35: Starting minibatch loop, DataParallelSGD training (myRank = 0, numNodes = 2, numGradientBits = 32), distributed reading is ENABLED.
 MPI Rank 0: 08/16/2016 03:02:36:  Epoch[ 3 of 5]-Minibatch[   1-  10, 12.50%]: ce = 3.34316119 * 2560; err = 0.79257813 * 2560; time = 1.1723s; samplesPerSecond = 2183.7
 MPI Rank 0: 08/16/2016 03:02:37:  Epoch[ 3 of 5]-Minibatch[  11-  20, 25.00%]: ce = 3.24841775 * 2560; err = 0.79257813 * 2560; time = 0.9683s; samplesPerSecond = 2643.8
 MPI Rank 0: 08/16/2016 03:02:38:  Epoch[ 3 of 5]-Minibatch[  21-  30, 37.50%]: ce = 3.25792707 * 2560; err = 0.78632813 * 2560; time = 0.8789s; samplesPerSecond = 2912.6
@@ -576,7 +576,7 @@ MPI Rank 0:
 MPI Rank 0: 08/16/2016 03:02:42: Starting Epoch 4: learning rate per sample = 0.001953  effective momentum = 0.900000  momentum as time constant = 2429.8 samples
 MPI Rank 0: minibatchiterator: epoch 3: frames [61440..81920] (first utterance at frame 61440), data subset 0 of 2, with 1 datapasses
 MPI Rank 0: 
-MPI Rank 0: 08/16/2016 03:02:42: Starting minibatch loop, DataParallelSGD training (MyRank = 0, NumNodes = 2, NumGradientBits = 32), distributed reading is ENABLED.
+MPI Rank 0: 08/16/2016 03:02:42: Starting minibatch loop, DataParallelSGD training (myRank = 0, numNodes = 2, numGradientBits = 32), distributed reading is ENABLED.
 MPI Rank 0: 08/16/2016 03:02:43:  Epoch[ 4 of 5]-Minibatch[   1-  10, 12.50%]: ce = 2.98185381 * 2560; err = 0.73554688 * 2560; time = 1.1723s; samplesPerSecond = 2183.8
 MPI Rank 0: 08/16/2016 03:02:44:  Epoch[ 4 of 5]-Minibatch[  11-  20, 25.00%]: ce = 2.90257182 * 2560; err = 0.70781250 * 2560; time = 1.0254s; samplesPerSecond = 2496.6
 MPI Rank 0: 08/16/2016 03:02:45:  Epoch[ 4 of 5]-Minibatch[  21-  30, 37.50%]: ce = 2.87658405 * 2560; err = 0.70937500 * 2560; time = 0.6891s; samplesPerSecond = 3714.7
@@ -592,7 +592,7 @@ MPI Rank 0:
 MPI Rank 0: 08/16/2016 03:02:50: Starting Epoch 5: learning rate per sample = 0.001953  effective momentum = 0.900000  momentum as time constant = 2429.8 samples
 MPI Rank 0: minibatchiterator: epoch 4: frames [81920..102400] (first utterance at frame 81920), data subset 0 of 2, with 1 datapasses
 MPI Rank 0: 
-MPI Rank 0: 08/16/2016 03:02:50: Starting minibatch loop, DataParallelSGD training (MyRank = 0, NumNodes = 2, NumGradientBits = 32), distributed reading is ENABLED.
+MPI Rank 0: 08/16/2016 03:02:50: Starting minibatch loop, DataParallelSGD training (myRank = 0, numNodes = 2, numGradientBits = 32), distributed reading is ENABLED.
 MPI Rank 0: 08/16/2016 03:02:51:  Epoch[ 5 of 5]-Minibatch[   1-  10, 12.50%]: ce = 2.58512907 * 2560; err = 0.64375000 * 2560; time = 0.8140s; samplesPerSecond = 3144.9
 MPI Rank 0: 08/16/2016 03:02:52:  Epoch[ 5 of 5]-Minibatch[  11-  20, 25.00%]: ce = 2.58142844 * 2560; err = 0.66601563 * 2560; time = 0.7814s; samplesPerSecond = 3276.0
 MPI Rank 0: 08/16/2016 03:02:53:  Epoch[ 5 of 5]-Minibatch[  21-  30, 37.50%]: ce = 2.46930316 * 2560; err = 0.64570313 * 2560; time = 1.0202s; samplesPerSecond = 2509.4
@@ -1095,7 +1095,7 @@ MPI Rank 1:
 MPI Rank 1: 08/16/2016 03:02:27: Starting Epoch 2: learning rate per sample = 0.001953  effective momentum = 0.900000  momentum as time constant = 2429.8 samples
 MPI Rank 1: minibatchiterator: epoch 1: frames [20480..40960] (first utterance at frame 20480), data subset 1 of 2, with 1 datapasses
 MPI Rank 1: 
-MPI Rank 1: 08/16/2016 03:02:27: Starting minibatch loop, DataParallelSGD training (MyRank = 1, NumNodes = 2, NumGradientBits = 32), distributed reading is ENABLED.
+MPI Rank 1: 08/16/2016 03:02:27: Starting minibatch loop, DataParallelSGD training (myRank = 1, numNodes = 2, numGradientBits = 32), distributed reading is ENABLED.
 MPI Rank 1: 08/16/2016 03:02:28:  Epoch[ 2 of 5]-Minibatch[   1-  10, 12.50%]: ce = 3.94527147 * 2560; err = 0.88906250 * 2560; time = 0.9409s; samplesPerSecond = 2720.7
 MPI Rank 1: 08/16/2016 03:02:29:  Epoch[ 2 of 5]-Minibatch[  11-  20, 25.00%]: ce = 3.86277831 * 2560; err = 0.87773437 * 2560; time = 0.9084s; samplesPerSecond = 2818.2
 MPI Rank 1: 08/16/2016 03:02:30:  Epoch[ 2 of 5]-Minibatch[  21-  30, 37.50%]: ce = 3.85494012 * 2560; err = 0.89140625 * 2560; time = 0.9825s; samplesPerSecond = 2605.7
@@ -1110,7 +1110,7 @@ MPI Rank 1:
 MPI Rank 1: 08/16/2016 03:02:35: Starting Epoch 3: learning rate per sample = 0.001953  effective momentum = 0.900000  momentum as time constant = 2429.8 samples
 MPI Rank 1: minibatchiterator: epoch 2: frames [40960..61440] (first utterance at frame 40960), data subset 1 of 2, with 1 datapasses
 MPI Rank 1: 
-MPI Rank 1: 08/16/2016 03:02:35: Starting minibatch loop, DataParallelSGD training (MyRank = 1, NumNodes = 2, NumGradientBits = 32), distributed reading is ENABLED.
+MPI Rank 1: 08/16/2016 03:02:35: Starting minibatch loop, DataParallelSGD training (myRank = 1, numNodes = 2, numGradientBits = 32), distributed reading is ENABLED.
 MPI Rank 1: 08/16/2016 03:02:36:  Epoch[ 3 of 5]-Minibatch[   1-  10, 12.50%]: ce = 3.34316119 * 2560; err = 0.79257813 * 2560; time = 1.1725s; samplesPerSecond = 2183.3
 MPI Rank 1: 08/16/2016 03:02:37:  Epoch[ 3 of 5]-Minibatch[  11-  20, 25.00%]: ce = 3.24841775 * 2560; err = 0.79257813 * 2560; time = 0.9674s; samplesPerSecond = 2646.2
 MPI Rank 1: 08/16/2016 03:02:38:  Epoch[ 3 of 5]-Minibatch[  21-  30, 37.50%]: ce = 3.25792707 * 2560; err = 0.78632813 * 2560; time = 0.8798s; samplesPerSecond = 2909.7
@@ -1124,7 +1124,7 @@ MPI Rank 1:
 MPI Rank 1: 08/16/2016 03:02:42: Starting Epoch 4: learning rate per sample = 0.001953  effective momentum = 0.900000  momentum as time constant = 2429.8 samples
 MPI Rank 1: minibatchiterator: epoch 3: frames [61440..81920] (first utterance at frame 61440), data subset 1 of 2, with 1 datapasses
 MPI Rank 1: 
-MPI Rank 1: 08/16/2016 03:02:42: Starting minibatch loop, DataParallelSGD training (MyRank = 1, NumNodes = 2, NumGradientBits = 32), distributed reading is ENABLED.
+MPI Rank 1: 08/16/2016 03:02:42: Starting minibatch loop, DataParallelSGD training (myRank = 1, numNodes = 2, numGradientBits = 32), distributed reading is ENABLED.
 MPI Rank 1: 08/16/2016 03:02:43:  Epoch[ 4 of 5]-Minibatch[   1-  10, 12.50%]: ce = 2.98185381 * 2560; err = 0.73554688 * 2560; time = 1.1737s; samplesPerSecond = 2181.1
 MPI Rank 1: 08/16/2016 03:02:44:  Epoch[ 4 of 5]-Minibatch[  11-  20, 25.00%]: ce = 2.90257182 * 2560; err = 0.70781250 * 2560; time = 1.0242s; samplesPerSecond = 2499.4
 MPI Rank 1: 08/16/2016 03:02:45:  Epoch[ 4 of 5]-Minibatch[  21-  30, 37.50%]: ce = 2.87658405 * 2560; err = 0.70937500 * 2560; time = 0.6909s; samplesPerSecond = 3705.2
@@ -1139,7 +1139,7 @@ MPI Rank 1:
 MPI Rank 1: 08/16/2016 03:02:50: Starting Epoch 5: learning rate per sample = 0.001953  effective momentum = 0.900000  momentum as time constant = 2429.8 samples
 MPI Rank 1: minibatchiterator: epoch 4: frames [81920..102400] (first utterance at frame 81920), data subset 1 of 2, with 1 datapasses
 MPI Rank 1: 
-MPI Rank 1: 08/16/2016 03:02:50: Starting minibatch loop, DataParallelSGD training (MyRank = 1, NumNodes = 2, NumGradientBits = 32), distributed reading is ENABLED.
+MPI Rank 1: 08/16/2016 03:02:50: Starting minibatch loop, DataParallelSGD training (myRank = 1, numNodes = 2, numGradientBits = 32), distributed reading is ENABLED.
 MPI Rank 1: 08/16/2016 03:02:51:  Epoch[ 5 of 5]-Minibatch[   1-  10, 12.50%]: ce = 2.58512907 * 2560; err = 0.64375000 * 2560; time = 0.8153s; samplesPerSecond = 3140.0
 MPI Rank 1: 08/16/2016 03:02:52:  Epoch[ 5 of 5]-Minibatch[  11-  20, 25.00%]: ce = 2.58142844 * 2560; err = 0.66601563 * 2560; time = 0.7794s; samplesPerSecond = 3284.6
 MPI Rank 1: 08/16/2016 03:02:53:  Epoch[ 5 of 5]-Minibatch[  21-  30, 37.50%]: ce = 2.46930316 * 2560; err = 0.64570313 * 2560; time = 1.0223s; samplesPerSecond = 2504.2
@@ -1657,7 +1657,7 @@ MPI Rank 0: 08/16/2016 03:03:01: Starting Epoch 4: learning rate per sample = 0.
 MPI Rank 0: minibatchiterator: epoch 3: frames [61440..81920] (first utterance at frame 61440), data subset 0 of 2, with 1 datapasses
 MPI Rank 0: requiredata: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
 MPI Rank 0: 
-MPI Rank 0: 08/16/2016 03:03:01: Starting minibatch loop, DataParallelSGD training (MyRank = 0, NumNodes = 2, NumGradientBits = 32), distributed reading is ENABLED.
+MPI Rank 0: 08/16/2016 03:03:01: Starting minibatch loop, DataParallelSGD training (myRank = 0, numNodes = 2, numGradientBits = 32), distributed reading is ENABLED.
 MPI Rank 0: 08/16/2016 03:03:02:  Epoch[ 4 of 5]-Minibatch[   1-  10, 12.50%]: ce = 2.98185381 * 2560; err = 0.73554688 * 2560; time = 0.9824s; samplesPerSecond = 2605.9
 MPI Rank 0: 08/16/2016 03:03:03:  Epoch[ 4 of 5]-Minibatch[  11-  20, 25.00%]: ce = 2.90257182 * 2560; err = 0.70781250 * 2560; time = 1.0388s; samplesPerSecond = 2464.3
 MPI Rank 0: 08/16/2016 03:03:04:  Epoch[ 4 of 5]-Minibatch[  21-  30, 37.50%]: ce = 2.87658405 * 2560; err = 0.70937500 * 2560; time = 0.9608s; samplesPerSecond = 2664.4
@@ -1673,7 +1673,7 @@ MPI Rank 0:
 MPI Rank 0: 08/16/2016 03:03:09: Starting Epoch 5: learning rate per sample = 0.001953  effective momentum = 0.900000  momentum as time constant = 2429.8 samples
 MPI Rank 0: minibatchiterator: epoch 4: frames [81920..102400] (first utterance at frame 81920), data subset 0 of 2, with 1 datapasses
 MPI Rank 0: 
-MPI Rank 0: 08/16/2016 03:03:09: Starting minibatch loop, DataParallelSGD training (MyRank = 0, NumNodes = 2, NumGradientBits = 32), distributed reading is ENABLED.
+MPI Rank 0: 08/16/2016 03:03:09: Starting minibatch loop, DataParallelSGD training (myRank = 0, numNodes = 2, numGradientBits = 32), distributed reading is ENABLED.
 MPI Rank 0: 08/16/2016 03:03:10:  Epoch[ 5 of 5]-Minibatch[   1-  10, 12.50%]: ce = 2.58512907 * 2560; err = 0.64375000 * 2560; time = 0.9136s; samplesPerSecond = 2802.2
 MPI Rank 0: 08/16/2016 03:03:11:  Epoch[ 5 of 5]-Minibatch[  11-  20, 25.00%]: ce = 2.58142844 * 2560; err = 0.66601563 * 2560; time = 0.9281s; samplesPerSecond = 2758.3
 MPI Rank 0: 08/16/2016 03:03:12:  Epoch[ 5 of 5]-Minibatch[  21-  30, 37.50%]: ce = 2.46930316 * 2560; err = 0.64570313 * 2560; time = 1.0057s; samplesPerSecond = 2545.5
@@ -2135,7 +2135,7 @@ MPI Rank 1: 08/16/2016 03:03:01: Starting Epoch 4: learning rate per sample = 0.
 MPI Rank 1: minibatchiterator: epoch 3: frames [61440..81920] (first utterance at frame 61440), data subset 1 of 2, with 1 datapasses
 MPI Rank 1: requiredata: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
 MPI Rank 1: 
-MPI Rank 1: 08/16/2016 03:03:01: Starting minibatch loop, DataParallelSGD training (MyRank = 1, NumNodes = 2, NumGradientBits = 32), distributed reading is ENABLED.
+MPI Rank 1: 08/16/2016 03:03:01: Starting minibatch loop, DataParallelSGD training (myRank = 1, numNodes = 2, numGradientBits = 32), distributed reading is ENABLED.
 MPI Rank 1: 08/16/2016 03:03:02:  Epoch[ 4 of 5]-Minibatch[   1-  10, 12.50%]: ce = 2.98185381 * 2560; err = 0.73554688 * 2560; time = 1.0301s; samplesPerSecond = 2485.2
 MPI Rank 1: 08/16/2016 03:03:03:  Epoch[ 4 of 5]-Minibatch[  11-  20, 25.00%]: ce = 2.90257182 * 2560; err = 0.70781250 * 2560; time = 1.0388s; samplesPerSecond = 2464.3
 MPI Rank 1: 08/16/2016 03:03:04:  Epoch[ 4 of 5]-Minibatch[  21-  30, 37.50%]: ce = 2.87658405 * 2560; err = 0.70937500 * 2560; time = 0.9608s; samplesPerSecond = 2664.5
@@ -2150,7 +2150,7 @@ MPI Rank 1:
 MPI Rank 1: 08/16/2016 03:03:09: Starting Epoch 5: learning rate per sample = 0.001953  effective momentum = 0.900000  momentum as time constant = 2429.8 samples
 MPI Rank 1: minibatchiterator: epoch 4: frames [81920..102400] (first utterance at frame 81920), data subset 1 of 2, with 1 datapasses
 MPI Rank 1: 
-MPI Rank 1: 08/16/2016 03:03:09: Starting minibatch loop, DataParallelSGD training (MyRank = 1, NumNodes = 2, NumGradientBits = 32), distributed reading is ENABLED.
+MPI Rank 1: 08/16/2016 03:03:09: Starting minibatch loop, DataParallelSGD training (myRank = 1, numNodes = 2, numGradientBits = 32), distributed reading is ENABLED.
 MPI Rank 1: 08/16/2016 03:03:10:  Epoch[ 5 of 5]-Minibatch[   1-  10, 12.50%]: ce = 2.58512907 * 2560; err = 0.64375000 * 2560; time = 0.9148s; samplesPerSecond = 2798.3
 MPI Rank 1: 08/16/2016 03:03:11:  Epoch[ 5 of 5]-Minibatch[  11-  20, 25.00%]: ce = 2.58142844 * 2560; err = 0.66601563 * 2560; time = 0.9282s; samplesPerSecond = 2757.9
 MPI Rank 1: 08/16/2016 03:03:12:  Epoch[ 5 of 5]-Minibatch[  21-  30, 37.50%]: ce = 2.46930316 * 2560; err = 0.64570313 * 2560; time = 1.0036s; samplesPerSecond = 2550.8

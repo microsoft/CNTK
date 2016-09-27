@@ -23,7 +23,7 @@
 import sys
 import argparse
 
-def convert(dictionaryStreams, inputs, output, annotated):
+def convert(dictionaryStreams, inputs, output, unk, annotated):
     # create in memory dictionaries
     dictionaries = [{ line.rstrip('\r\n').strip():index for index, line in enumerate(dic) } for dic in dictionaryStreams]
 
@@ -36,10 +36,10 @@ def convert(dictionaryStreams, inputs, output, annotated):
             if len(columns) != len(dictionaries):
                 raise Exception("Number of dictionaries {0} does not correspond to the number of streams in line {1}:'{2}'"
                     .format(len(dictionaries), index, line))
-            _convertSequence(dictionaries, columns, sequenceId, output, annotated)
+            _convertSequence(dictionaries, columns, sequenceId, output, unk, annotated)
             sequenceId += 1
 
-def _convertSequence(dictionaries, streams, sequenceId, output, annotated):
+def _convertSequence(dictionaries, streams, sequenceId, output, unk, annotated):
     tokensPerStream = [[t for t in s.strip(' ').split(' ') if t != ""] for s in streams]
     maxLen = max(len(tokens) for tokens in tokensPerStream)
 
@@ -51,6 +51,8 @@ def _convertSequence(dictionaries, streams, sequenceId, output, annotated):
                 output.write("\t")
                 continue
             token = tokensPerStream[streamIndex][sampleIndex]
+            if unk is not None and token not in dictionaries[streamIndex]: # try unk symbol if specified
+                token = unk
             if token not in dictionaries[streamIndex]:
                 raise Exception("Token '{0}' cannot be found in the dictionary for stream {1}".format(token, streamIndex))
             value = dictionaries[streamIndex][token]
@@ -67,6 +69,7 @@ if __name__ == "__main__":
         choices=["True", "False"], default="False", required=False)
     parser.add_argument('--output', help='Name of the output file, stdout if not given', default="", required=False)
     parser.add_argument('--input', help='Name of the inputs files, stdin if not given', default="", nargs="*", required=False)
+    parser.add_argument('--unk', help='Name fallback symbol for tokens not in dictionary (same for all columns)', default=None, required=False)
     args = parser.parse_args()
 
     # creating inputs
@@ -79,7 +82,7 @@ if __name__ == "__main__":
     if args.output != "":
         output = open(args.output, "w")
 
-    convert([open(d, encoding="utf-8") for d in args.map], inputs, output, args.annotated == "True")
+    convert([open(d, encoding="utf-8") for d in args.map], inputs, output, args.unk, args.annotated == "True")
 
 
 #####################################################################################################
@@ -89,7 +92,10 @@ try:
     import StringIO
 except ImportError:
     from io import StringIO
-import pytest
+try:
+    import pytest
+except ImportError:
+    pass
 
 def test_simpleSanityCheck():
     dictionary1 = StringIO.StringIO("hello\nmy\nworld\nof\nnothing\n")
@@ -97,7 +103,7 @@ def test_simpleSanityCheck():
     input = StringIO.StringIO("hello my\tclear about\nworld of\tit let clear\n")
     output = StringIO.StringIO()
 
-    convert([dictionary1, dictionary2], [input], output, False)
+    convert([dictionary1, dictionary2], [input], output, None, False)
 
     expectedOutput = StringIO.StringIO()
     expectedOutput.write("0\t|S0 0:1\t|S1 3:1\n")
@@ -114,5 +120,5 @@ def test_nonExistingWord():
     output = StringIO.StringIO()
 
     with pytest.raises(Exception) as info:
-        convert([dictionary1], [input], output, False)
+        convert([dictionary1], [input], output, None, False)
     assert info.value.message == "Token 'nonexistent' cannot be found in the dictionary for stream 0"

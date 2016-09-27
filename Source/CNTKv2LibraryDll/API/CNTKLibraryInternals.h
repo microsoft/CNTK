@@ -193,7 +193,7 @@ namespace CNTK
         CNTK_API FunctionPtr PackedIndex(const Variable& operand, const Variable& index, const std::wstring& name = L"");
         CNTK_API FunctionPtr GatherPacked(const Variable& operand, const Variable& packedIndex, const std::wstring& name = L"");
         CNTK_API FunctionPtr ScatterPacked(const Variable& operand, const Variable& packedIndex, const Variable& condition, const std::wstring& name = L"");
-        CNTK_API FunctionPtr ZeroesLike(const Variable& operand);
+        CNTK_API FunctionPtr ZeroesWithDynamicAxesLike(const Variable& operand);
         CNTK_API FunctionPtr Where(const Variable& condition, const std::vector<Axis>& newDynamicAxes, const std::wstring& name = L"");
         CNTK_API FunctionPtr Gather(const Variable& operand, const Variable& condition, const std::vector<Axis>& newDynamicAxes, const std::wstring& name = L"");
         CNTK_API FunctionPtr Scatter(const Variable& operand, const Variable& condition, const std::vector<Axis>& newDynamicAxes, const std::wstring& name = L"");
@@ -204,5 +204,8 @@ namespace CNTK
 
         CNTK_API void EnableReversingTensorShapesInErrorMessages();
         bool IsReversingTensorShapesInErrorMessagesEnabled();
+
+        CNTK_API void AlwaysAllowSettingDefaultDevice();
+        bool IsSettingDefaultDeviceAlwaysAllowed();
     }
 }

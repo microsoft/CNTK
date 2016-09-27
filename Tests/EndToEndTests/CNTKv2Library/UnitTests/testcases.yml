@@ -1,11 +1,8 @@
 dataDir: .
 
 tags:
-    # Only run in 'gpu' mode since the test does not key off of device id and always runs on both gpu and cpu.
-    # running on every BVT job in 'E' (Examples) leg, requires 1BitSGD. 
-    - bvt-e (build_sku == '1bitsgd') and device=='gpu'
-    # running every Nightly job in 'E' (Examples) leg, requires 1BitSGD
-    - nightly-e (build_sku == '1bitsgd') and device=='gpu'
+    - bvt-e ((build_sku == '1bitsgd') and (device=='gpu')) or (build_sku == 'cpu')
+    - nightly-e ((build_sku == '1bitsgd') and (device=='gpu')) or (build_sku == 'cpu')
 
 testCases:
   Test run must be completed:

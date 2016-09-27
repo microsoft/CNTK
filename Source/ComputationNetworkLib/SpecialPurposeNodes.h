@@ -48,7 +48,7 @@ public:
     virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
 
 private:
-	void Log(const FrameRange& fr, bool logGradientInstead) const;
+    void Log(const FrameRange& fr, bool logGradientInstead) const;
 
 private:
     // configuration

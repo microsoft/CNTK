@@ -28,6 +28,7 @@
 #include "HeapMemoryProvider.h"
 #include "InputAndParamNodes.h"
 #include "latticearchive.h"
+#include <limits>
 
 // TODO: Temporary mechanism to enable memory sharing for
 // node output value matrices. This will go away when the
@@ -309,7 +310,7 @@ VariableSchema CNTKEvalExtended<ElemType>::GetInputSchema() const
 
 template<typename ElemType>
 template<template<typename> class ValueContainer>
-void CNTKEvalExtended<ElemType>::ForwardPassT(const std::vector<ValueBuffer<ElemType, ValueContainer> >& inputs, std::vector<ValueBuffer<ElemType, ValueContainer> >& outputs)
+void CNTKEvalExtended<ElemType>::ForwardPassT(const std::vector<ValueBuffer<ElemType, ValueContainer> >& inputs, std::vector<ValueBuffer<ElemType, ValueContainer> >& outputs, bool resetRNN)
 {
     if (!m_started)
         RuntimeError("ForwardPass() called before StartForwardEvaluation()");
@@ -359,7 +360,9 @@ void CNTKEvalExtended<ElemType>::ForwardPassT(const std::vector<ValueBuffer<Elem
         int numCols = type == MatrixType::DENSE ? buffer.m_buffer.size() / numRows : buffer.m_colIndices.size() - 1;
         assert(numCols >= 1);
         inputNode->GetMBLayout()->Init(1, numCols);
-        inputNode->GetMBLayout()->AddSequence(0, 0, 0, numCols);
+        
+        // INT_MIN is used to specify the lower bound of look-back step of recurrent nodes
+        inputNode->GetMBLayout()->AddSequence(0, 0, resetRNN ? 0 : INT_MIN, numCols);
 
         if (type == MatrixType::DENSE)
             matrix->SetValue(numRows, numCols, matrix->GetDeviceId(), buffer.m_buffer.data(), matrixFlagNormal);
@@ -411,13 +414,25 @@ void CNTKEvalExtended<ElemType>::ForwardPassT(const std::vector<ValueBuffer<Elem
 template<typename ElemType>
 void CNTKEvalExtended<ElemType>::ForwardPass(const Values<ElemType>& inputs, Values<ElemType>& outputs)
 {
-    ForwardPassT(inputs, outputs);
+    ForwardPassT(inputs, outputs, false);
+}
+
+template<typename ElemType>
+void CNTKEvalExtended<ElemType>::ForwardPass(const Values<ElemType>& inputs, Values<ElemType>& outputs, bool resetRNN)
+{
+    ForwardPassT(inputs, outputs, resetRNN);
 }
 
 template<typename ElemType>
 void CNTKEvalExtended<ElemType>::ForwardPass(const ValueRefs<ElemType>& inputs, ValueRefs<ElemType>& outputs)
 {
-    ForwardPassT(inputs, outputs);
+    ForwardPassT(inputs, outputs, false);
+}
+
+template<typename ElemType>
+void CNTKEvalExtended<ElemType>::ForwardPass(const ValueRefs<ElemType>& inputs, ValueRefs<ElemType>& outputs, bool resetRNN)
+{
+    ForwardPassT(inputs, outputs, resetRNN);
 }
 
 template <typename ElemType>

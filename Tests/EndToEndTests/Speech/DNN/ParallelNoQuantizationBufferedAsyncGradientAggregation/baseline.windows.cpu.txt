@@ -617,7 +617,7 @@ MPI Rank 0:
 MPI Rank 0: 08/16/2016 03:03:54: Starting Epoch 2: learning rate per sample = 0.001953  effective momentum = 0.656119  momentum as time constant = 607.5 samples
 MPI Rank 0: minibatchiterator: epoch 1: frames [20480..40960] (first utterance at frame 20480), data subset 0 of 3, with 1 datapasses
 MPI Rank 0: 
-MPI Rank 0: 08/16/2016 03:03:54: Starting minibatch loop, DataParallelSGD training (MyRank = 0, NumNodes = 3, NumGradientBits = 64), BufferedAsyncGradientAggregation is ENABLED, distributed reading is ENABLED.
+MPI Rank 0: 08/16/2016 03:03:54: Starting minibatch loop, DataParallelSGD training (myRank = 0, numNodes = 3, numGradientBits = 64), BufferedAsyncGradientAggregation is ENABLED, distributed reading is ENABLED.
 MPI Rank 0: Actual gradient aggregation time: 0.010875
 MPI Rank 0: Async gradient aggregation wait time: 0.046041
 MPI Rank 0: Actual gradient aggregation time: 0.070247
@@ -665,7 +665,7 @@ MPI Rank 0:
 MPI Rank 0: 08/16/2016 03:03:59: Starting Epoch 3: learning rate per sample = 0.000098  effective momentum = 0.656119  momentum as time constant = 2429.9 samples
 MPI Rank 0: minibatchiterator: epoch 2: frames [40960..61440] (first utterance at frame 40960), data subset 0 of 3, with 1 datapasses
 MPI Rank 0: 
-MPI Rank 0: 08/16/2016 03:03:59: Starting minibatch loop, DataParallelSGD training (MyRank = 0, NumNodes = 3, NumGradientBits = 64), BufferedAsyncGradientAggregation is ENABLED, distributed reading is ENABLED.
+MPI Rank 0: 08/16/2016 03:03:59: Starting minibatch loop, DataParallelSGD training (myRank = 0, numNodes = 3, numGradientBits = 64), BufferedAsyncGradientAggregation is ENABLED, distributed reading is ENABLED.
 MPI Rank 0: Async gradient aggregation wait time: 2e-006
 MPI Rank 0: Actual gradient aggregation time: 0.106492
 MPI Rank 0: Async gradient aggregation wait time: 2e-006
@@ -682,7 +682,7 @@ MPI Rank 0:
 MPI Rank 0: 08/16/2016 03:04:02: Starting Epoch 4: learning rate per sample = 0.000098  effective momentum = 0.656119  momentum as time constant = 2429.9 samples
 MPI Rank 0: minibatchiterator: epoch 3: frames [61440..81920] (first utterance at frame 61440), data subset 0 of 3, with 1 datapasses
 MPI Rank 0: 
-MPI Rank 0: 08/16/2016 03:04:02: Starting minibatch loop, DataParallelSGD training (MyRank = 0, NumNodes = 3, NumGradientBits = 64), BufferedAsyncGradientAggregation is ENABLED, distributed reading is ENABLED.
+MPI Rank 0: 08/16/2016 03:04:02: Starting minibatch loop, DataParallelSGD training (myRank = 0, numNodes = 3, numGradientBits = 64), BufferedAsyncGradientAggregation is ENABLED, distributed reading is ENABLED.
 MPI Rank 0: Async gradient aggregation wait time: 3e-006
 MPI Rank 0: Actual gradient aggregation time: 0.010023
 MPI Rank 0: Async gradient aggregation wait time: 3e-006
@@ -1233,7 +1233,7 @@ MPI Rank 1:
 MPI Rank 1: 08/16/2016 03:03:54: Starting Epoch 2: learning rate per sample = 0.001953  effective momentum = 0.656119  momentum as time constant = 607.5 samples
 MPI Rank 1: minibatchiterator: epoch 1: frames [20480..40960] (first utterance at frame 20480), data subset 1 of 3, with 1 datapasses
 MPI Rank 1: 
-MPI Rank 1: 08/16/2016 03:03:54: Starting minibatch loop, DataParallelSGD training (MyRank = 1, NumNodes = 3, NumGradientBits = 64), BufferedAsyncGradientAggregation is ENABLED, distributed reading is ENABLED.
+MPI Rank 1: 08/16/2016 03:03:54: Starting minibatch loop, DataParallelSGD training (myRank = 1, numNodes = 3, numGradientBits = 64), BufferedAsyncGradientAggregation is ENABLED, distributed reading is ENABLED.
 MPI Rank 1: Actual gradient aggregation time: 0.033393
 MPI Rank 1: Async gradient aggregation wait time: 0.005092
 MPI Rank 1: Actual gradient aggregation time: 0.070288
@@ -1280,7 +1280,7 @@ MPI Rank 1:
 MPI Rank 1: 08/16/2016 03:03:59: Starting Epoch 3: learning rate per sample = 0.000098  effective momentum = 0.656119  momentum as time constant = 2429.9 samples
 MPI Rank 1: minibatchiterator: epoch 2: frames [40960..61440] (first utterance at frame 40960), data subset 1 of 3, with 1 datapasses
 MPI Rank 1: 
-MPI Rank 1: 08/16/2016 03:03:59: Starting minibatch loop, DataParallelSGD training (MyRank = 1, NumNodes = 3, NumGradientBits = 64), BufferedAsyncGradientAggregation is ENABLED, distributed reading is ENABLED.
+MPI Rank 1: 08/16/2016 03:03:59: Starting minibatch loop, DataParallelSGD training (myRank = 1, numNodes = 3, numGradientBits = 64), BufferedAsyncGradientAggregation is ENABLED, distributed reading is ENABLED.
 MPI Rank 1: Async gradient aggregation wait time: 0.056538
 MPI Rank 1: Actual gradient aggregation time: 0.181181
 MPI Rank 1: Async gradient aggregation wait time: 3e-006
@@ -1296,7 +1296,7 @@ MPI Rank 1:
 MPI Rank 1: 08/16/2016 03:04:02: Starting Epoch 4: learning rate per sample = 0.000098  effective momentum = 0.656119  momentum as time constant = 2429.9 samples
 MPI Rank 1: minibatchiterator: epoch 3: frames [61440..81920] (first utterance at frame 61440), data subset 1 of 3, with 1 datapasses
 MPI Rank 1: 
-MPI Rank 1: 08/16/2016 03:04:02: Starting minibatch loop, DataParallelSGD training (MyRank = 1, NumNodes = 3, NumGradientBits = 64), BufferedAsyncGradientAggregation is ENABLED, distributed reading is ENABLED.
+MPI Rank 1: 08/16/2016 03:04:02: Starting minibatch loop, DataParallelSGD training (myRank = 1, numNodes = 3, numGradientBits = 64), BufferedAsyncGradientAggregation is ENABLED, distributed reading is ENABLED.
 MPI Rank 1: Async gradient aggregation wait time: 2e-006
 MPI Rank 1: Actual gradient aggregation time: 0.028628
 MPI Rank 1: Async gradient aggregation wait time: 0.062352
@@ -1846,7 +1846,7 @@ MPI Rank 2:
 MPI Rank 2: 08/16/2016 03:03:54: Starting Epoch 2: learning rate per sample = 0.001953  effective momentum = 0.656119  momentum as time constant = 607.5 samples
 MPI Rank 2: minibatchiterator: epoch 1: frames [20480..40960] (first utterance at frame 20480), data subset 2 of 3, with 1 datapasses
 MPI Rank 2: 
-MPI Rank 2: 08/16/2016 03:03:54: Starting minibatch loop, DataParallelSGD training (MyRank = 2, NumNodes = 3, NumGradientBits = 64), BufferedAsyncGradientAggregation is ENABLED, distributed reading is ENABLED.
+MPI Rank 2: 08/16/2016 03:03:54: Starting minibatch loop, DataParallelSGD training (myRank = 2, numNodes = 3, numGradientBits = 64), BufferedAsyncGradientAggregation is ENABLED, distributed reading is ENABLED.
 MPI Rank 2: Actual gradient aggregation time: 0.040872
 MPI Rank 2: Async gradient aggregation wait time: 0.04797
 MPI Rank 2: Actual gradient aggregation time: 0.070448
@@ -1893,7 +1893,7 @@ MPI Rank 2:
 MPI Rank 2: 08/16/2016 03:03:59: Starting Epoch 3: learning rate per sample = 0.000098  effective momentum = 0.656119  momentum as time constant = 2429.9 samples
 MPI Rank 2: minibatchiterator: epoch 2: frames [40960..61440] (first utterance at frame 40960), data subset 2 of 3, with 1 datapasses
 MPI Rank 2: 
-MPI Rank 2: 08/16/2016 03:03:59: Starting minibatch loop, DataParallelSGD training (MyRank = 2, NumNodes = 3, NumGradientBits = 64), BufferedAsyncGradientAggregation is ENABLED, distributed reading is ENABLED.
+MPI Rank 2: 08/16/2016 03:03:59: Starting minibatch loop, DataParallelSGD training (myRank = 2, numNodes = 3, numGradientBits = 64), BufferedAsyncGradientAggregation is ENABLED, distributed reading is ENABLED.
 MPI Rank 2: Async gradient aggregation wait time: 0.103418
 MPI Rank 2: Actual gradient aggregation time: 0.168332
 MPI Rank 2: Async gradient aggregation wait time: 0.014615
@@ -1909,7 +1909,7 @@ MPI Rank 2:
 MPI Rank 2: 08/16/2016 03:04:02: Starting Epoch 4: learning rate per sample = 0.000098  effective momentum = 0.656119  momentum as time constant = 2429.9 samples
 MPI Rank 2: minibatchiterator: epoch 3: frames [61440..81920] (first utterance at frame 61440), data subset 2 of 3, with 1 datapasses
 MPI Rank 2: 
-MPI Rank 2: 08/16/2016 03:04:02: Starting minibatch loop, DataParallelSGD training (MyRank = 2, NumNodes = 3, NumGradientBits = 64), BufferedAsyncGradientAggregation is ENABLED, distributed reading is ENABLED.
+MPI Rank 2: 08/16/2016 03:04:02: Starting minibatch loop, DataParallelSGD training (myRank = 2, numNodes = 3, numGradientBits = 64), BufferedAsyncGradientAggregation is ENABLED, distributed reading is ENABLED.
 MPI Rank 2: Async gradient aggregation wait time: 3e-006
 MPI Rank 2: Actual gradient aggregation time: 0.092817
 MPI Rank 2: Async gradient aggregation wait time: 0.095403

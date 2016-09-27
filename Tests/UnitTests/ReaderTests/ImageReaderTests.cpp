@@ -293,8 +293,8 @@ BOOST_AUTO_TEST_CASE(ImageReaderInvalidEmptyTransforms)
         [](const std::runtime_error& ex)
         {
             return string("Packer currently does not support samples with varying shapes."
-                "Please make sure there is a transform that unifies the shape of samples"
-                " for input stream 'features' or the deserializer provides samples with the same shape.") == ex.what();
+                "Please make sure there is a transform that unifies the shape of samples for input stream 'features' "
+                "or the deserializer provides samples with the same shape.") == ex.what();
         });
 }
 
