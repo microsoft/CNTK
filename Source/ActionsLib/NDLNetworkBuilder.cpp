@@ -529,6 +529,31 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
             nodePtr = builder.BatchNormalization(nullptr, nullptr, nullptr, nullptr, nullptr, spatial, normTimeConst, blendTimeConst, epsilon, useCntkEngine, imageLayoutKind, name);
         }
     }
+    else if (cnNodeType == OperationNameOf(TripletFastLossNode))
+    {
+      if (parameter.size() != 7)
+        RuntimeError("%ls should have 7 fixed parameters[input_feature0, input_feature1, label, margin, hard_negative_sample, hard_neg_sample_num, sample_per_class].", cnNodeType.c_str());
+
+      // setup the parameter position of children so we can hook them up later
+      nodeParamCount = 3;
+      nodeParamStart = 0;
+
+      if (pass == ndlPassInitial)
+      {
+        int id = 3; // skip Left, right, lable.
+        // evaluate only scalar parameters
+        vector<void*> params = EvaluateParameters(node, baseName, id, parameter.size() - id, pass);
+
+        id = 0; // reset counter because the params array starts at zero
+        double margin = ((NDLNode<ElemType>*) params[id++])->GetScalar();
+        bool hard_negative_sample = ((NDLNode<ElemType>*) params[id++])->GetScalar();
+        size_t hard_neg_sample_num = ((NDLNode<ElemType>*) params[id++])->GetScalar();
+        size_t sample_per_class = ((NDLNode<ElemType>*) params[id++])->GetScalar();
+        assert(id == 4);
+
+        nodePtr = builder.TripletFastLoss(NULL, NULL, NULL, margin, hard_negative_sample, hard_neg_sample_num, sample_per_class, name);
+      }
+    }
     else
     {
 

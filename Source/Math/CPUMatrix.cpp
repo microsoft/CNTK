@@ -5878,6 +5878,250 @@ int CPUMatrix<ElemType>::SetNumThreads(int numThreads)
 }
 
 // =======================================================================
+// New Matrix Function support
+// =======================================================================
+template <class ElemType>
+void CPUMatrix<ElemType>::AssignL2Distance(const CPUMatrix<ElemType>& left, const CPUMatrix<ElemType>& right)
+{
+  if (IsEmpty())
+    LogicError("L2Distance: Matrix is empty.");
+
+  auto& res = *this;
+
+  foreach_column(i, left)
+  {
+    foreach_column(j, right)
+    {
+      ElemType v = 0;
+#pragma omp parallel for
+      foreach_row(k, left)
+      {
+#pragma omp atomic
+        v += (left(k, i) - right(k, j)) * (left(k, i) - right(k, j));
+      }
+      res(i, j) = v;
+    }
+  }
+}
+
+
+template <class ElemType>
+vector<size_t>  sort_indexes(const vector<ElemType>  & v) {
+  // initialize original index locations
+  vector<size_t>  idx(v.size());
+  for (size_t i = 0; i != idx.size(); ++i) idx[i] = i;
+
+  // sort indexes based on comparing values in v
+  sort(idx.begin(), idx.end(),
+    [&v](size_t i1, size_t i2) {return v[i1] <  v[i2]; });
+
+  return idx;
+}
+
+template <class ElemType>
+void CPUMatrix<ElemType>::AssignFastTripletLoss(const CPUMatrix<ElemType>& dist_matrix, const CPUMatrix<ElemType>& label, std::map<__int64, ElemType>& triplet_sampler,
+                                                bool pairwise, double margin, bool hard_negative_sample, int hard_negative_sample_num, int sample_per_class) {
+  triplet_sampler.clear();
+  int triplet_count = 0.0;
+  ElemType loss(0.0);
+
+  auto& res = *this;
+  const size_t nums = dist_matrix.GetNumCols();
+
+  // preprocess label
+  map<int, vector<int>> label_data_map;
+  int max_label = 0;
+  foreach_column(i, label) {
+    const int label_value = static_cast<int>(label(0, i));
+    if (label_value > max_label)
+      max_label = label_value;
+    if (label_data_map.count(label_value) > 0){
+      label_data_map[label_value].push_back(i);
+    }
+    else{
+      vector<int> tmp;
+      tmp.push_back(i);
+      label_data_map[label_value] = tmp;
+    }
+  }
+
+  if (label_data_map.size() == 1)
+  {
+    std::cout << "label number is 1" << std::endl;
+    loss = ElemType(0.0);
+  }
+  else
+  {
+    int pos_count = 0;
+    for (auto const &ent1 : label_data_map)
+    {
+      if (pairwise) {
+        size_t cur_size = label_data_map[ent1.first].size();
+        for (int j = 0; j < cur_size; j++)
+        {
+          for (int k = 0; k < cur_size; k++)
+          {
+            pos_count++;
+            int anc = label_data_map[ent1.first][j];
+            int pos = label_data_map[ent1.first][k];
+            std::vector<ElemType> anc_neg_dist_vec;
+            std::vector<size_t> anc_neg_dist_index;
+            std::vector<int> anc_neg_list;
+            for (auto const &ent2 : label_data_map)
+            {
+              if (ent1.first == ent2.first) continue;
+              size_t m_size = label_data_map[ent2.first].size();
+              for (int n = 0; n < m_size; n++)
+              {
+                int neg = label_data_map[ent2.first][n];
+                anc_neg_dist_vec.push_back(dist_matrix(anc, neg));
+                anc_neg_list.push_back(neg);
+              }
+            }
+            anc_neg_dist_index = sort_indexes(anc_neg_dist_vec);
+
+            for (size_t neg_idx = 0; neg_idx < anc_neg_dist_index.size(); neg_idx++) {
+              if (neg_idx == hard_negative_sample_num && hard_negative_sample)
+                break;
+              int neg = anc_neg_list[anc_neg_dist_index[neg_idx]];
+              ElemType mdist_anc = std::max(margin + dist_matrix(anc, pos) - dist_matrix(anc, neg), double(0.0));
+              if (mdist_anc > 0) {
+                triplet_count += ElemType(1);
+                loss += (mdist_anc);
+                triplet_sampler[__int64((anc * nums + pos)) * __int64(nums) + __int64(neg)] = mdist_anc;
+              }
+            }
+          }
+        }
+      }
+      else {
+        size_t cur_size = label_data_map[ent1.first].size();
+        if (cur_size < 2)
+          continue;
+        for (int j = 0; j < cur_size; j++)
+        {
+          for (int k = 0; k < cur_size; k++)
+          {
+            pos_count = pos_count + 1;
+            int anc = label_data_map[ent1.first][j];
+            int pos = label_data_map[ent1.first][k];
+            std::vector<ElemType> anc_neg_dist_vec, pos_neg_dist_vec;
+            std::vector<size_t> anc_neg_dist_index, pos_neg_dist_index;
+            std::vector<int> anc_neg_list, pos_neg_list;
+
+            for (auto const &ent2 : label_data_map)
+            {
+              if (ent1.first == ent2.first) continue;
+              size_t m_size = label_data_map[ent2.first].size();
+              for (int n = 0; n < m_size; n++)
+              {
+                int neg = label_data_map[ent2.first][n];
+                anc_neg_dist_vec.push_back(dist_matrix(anc, neg));
+                anc_neg_list.push_back(neg);
+                pos_neg_dist_vec.push_back(dist_matrix(pos, neg));
+                pos_neg_list.push_back(neg);
+              }
+            }
+            anc_neg_dist_index = sort_indexes(anc_neg_dist_vec);
+            pos_neg_dist_index = sort_indexes(pos_neg_dist_vec);
+
+            for (size_t neg_idx = 0; neg_idx < anc_neg_dist_index.size(); neg_idx++) {
+                if (neg_idx == hard_negative_sample_num && hard_negative_sample)
+                break;
+              int neg = anc_neg_list[anc_neg_dist_index[neg_idx]];
+              ElemType mdist_anc = std::max(margin + dist_matrix(anc, pos) - dist_matrix(anc, neg), double(0.0));
+              if (mdist_anc > 0) {
+                triplet_count += ElemType(1);
+                loss += (mdist_anc);
+                triplet_sampler[__int64((anc * nums + pos)) * __int64(nums) + __int64(neg)] = mdist_anc;
+              }
+            }
+            for (size_t neg_idx = 0; neg_idx < pos_neg_dist_index.size(); neg_idx++) {
+                if (neg_idx == hard_negative_sample_num && hard_negative_sample)
+                    break;
+              int neg = pos_neg_list[pos_neg_dist_index[neg_idx]];
+              ElemType mdist_pos = std::max(margin + dist_matrix(pos, anc) - dist_matrix(pos, neg), double(0.0));
+              if (mdist_pos > 0) {
+                triplet_count += ElemType(1);
+                loss += (mdist_pos);
+                triplet_sampler[__int64((pos * nums + anc)) * __int64(nums) + __int64(neg)] = mdist_pos;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  if (triplet_count == 0) {
+    loss = 0;
+  }
+  else {
+    if (pairwise)
+        loss = loss / (2 * nums * hard_negative_sample_num);
+    else
+        loss = loss / (2 * (nums / sample_per_class) * hard_negative_sample_num);
+  }
+  res(0, 0) = loss;
+}
+
+template <class ElemType>
+void CPUMatrix<ElemType>::AssignFastTripletGradient_0(const CPUMatrix<ElemType>& left, const CPUMatrix<ElemType>& right, std::map<__int64, ElemType>& triplet_sampler,
+    bool pairwise, double margin, bool hard_negative_sample, int hard_negative_sample_num, int sample_per_class)
+{
+    const size_t nums = right.GetNumCols();
+    auto& res = *this;
+    ElemType alpha = 0;
+    if (pairwise)
+        alpha = 2 / (2 * nums * hard_negative_sample_num);
+    else
+        alpha = 2 / (2 * (nums / sample_per_class) * hard_negative_sample_num);
+
+    for (std::map<__int64, ElemType>::iterator it = triplet_sampler.begin(); it != triplet_sampler.end(); ++it) {
+        __int64 idx = it->first;
+        size_t k = idx % nums;
+        idx /= nums;
+        size_t j = idx % nums;
+        size_t i = idx / nums;
+        
+#pragma omp parallel for
+        foreach_row(r, left)
+        {
+#pragma omp atomic
+            res(r, i) += alpha * (right(r, k) - right(r, j));
+        }
+    }
+}
+
+template <class ElemType>
+void CPUMatrix<ElemType>::AssignFastTripletGradient_1(const CPUMatrix<ElemType>& left, const CPUMatrix<ElemType>& right, std::map<__int64, ElemType>& triplet_sampler,
+    bool pairwise, double margin, bool hard_negative_sample, int hard_negative_sample_num, int sample_per_class)
+{
+    const size_t nums = right.GetNumCols();
+    auto& res = *this;
+    ElemType alpha = 0;
+    if (pairwise)
+        alpha = 2 / (2 * nums * hard_negative_sample_num);
+    else
+        alpha = 2 / (2 * (nums / sample_per_class) * hard_negative_sample_num);
+
+    for (std::map<__int64, ElemType>::iterator it = triplet_sampler.begin(); it != triplet_sampler.end(); ++it) {
+        __int64 idx = it->first;
+        size_t k = idx % nums;
+        idx /= nums;
+        size_t j = idx % nums;
+        size_t i = idx / nums;
+
+#pragma omp parallel for
+        foreach_row(r, left)
+        {
+#pragma omp atomic
+            res(r, j) -= alpha * (left(r, i) - right(r, j));
+            res(r, k) += alpha * (left(r, i) - right(r, k));
+        }
+    }
+}
+
+// =======================================================================
 // TensorView support
 // =======================================================================
 

@@ -380,6 +380,15 @@ public:
     void BatchNormalizationBackward(const CPUMatrix<ElemType>& in, CPUMatrix<ElemType>& grad, const CPUMatrix<ElemType>& scale, double blendFactor, const CPUMatrix<ElemType>& saveMean, const CPUMatrix<ElemType>& saveInvStdDev,
                                     CPUMatrix<ElemType>& scaleGrad, CPUMatrix<ElemType>& biasGrad) const;
 
+    void AssignL2Distance(const CPUMatrix<ElemType>& left, const CPUMatrix<ElemType>& right);
+    void AssignFastTripletLoss(const CPUMatrix<ElemType>& dist, const CPUMatrix<ElemType>& label, std::map<__int64, ElemType>& triplet_sampler,
+                               bool pairwise, double margin, bool hard_negative_sample, int hard_negative_sample_num, int sample_per_class);
+
+    void AssignFastTripletGradient_0(const CPUMatrix<ElemType>& left, const CPUMatrix<ElemType>& right, std::map<__int64, ElemType>& triplet_sampler,
+        bool pairwise, double margin, bool hard_negative_sample, int hard_negative_sample_num, int sample_per_class);
+    void AssignFastTripletGradient_1(const CPUMatrix<ElemType>& left, const CPUMatrix<ElemType>& right, std::map<__int64, ElemType>& triplet_sampler,
+        bool pairwise, double margin, bool hard_negative_sample, int hard_negative_sample_num, int sample_per_class);
+
 public:
     static int SetNumThreads(int numThreads); // note: this does not depend on <ElemType>, i.e. you can call it on any <ElemType>
 

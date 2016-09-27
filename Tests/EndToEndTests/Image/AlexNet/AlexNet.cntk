@@ -5,7 +5,7 @@ Train=[
         # <full path to image><tab><numerical label (0-based class id)>
         # Example:
         # C:\Data\ImageNet\2012\train\n01440764\n01440764_10026.JPEG<tab>0
-        file=$ConfigDir$/train_map.txt
+        file=$ConfigDir$/amazon_train_JPGBase64_balanced10K_JPEG_nodir.list
         # Randomize images before every epoch. Possible values: None, Auto. Default: Auto.
         randomize=Auto
         features=[
@@ -30,7 +30,7 @@ Train=[
             meanFile=$ConfigDir$/ImageNet1K_mean.xml
         ]
         labels=[
-            labelDim=1000
+            labelDim=1208
         ]
     ]    
 ]
@@ -38,7 +38,7 @@ Train=[
 Test=[    
     reader=[
         readerType=ImageReader
-        file=$ConfigDir$/val_map.txt
+        file=$ConfigDir$/amazon_test_JPGBase64_balanced10K_JPEG_nodir.list
         randomize=None
         features=[
             width=224
@@ -48,7 +48,7 @@ Test=[
             meanFile=$ConfigDir$/ImageNet1K_mean.xml
         ]
         labels=[
-            labelDim=1000
+            labelDim=1208
         ]
     ]    
 ]

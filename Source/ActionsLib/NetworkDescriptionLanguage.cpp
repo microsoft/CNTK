@@ -228,6 +228,7 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
     else if (EqualInsensitive(nodeType, OperationNameOf(TimesNode))) ret = true;
     //else if (EqualInsensitive(nodeType, OperationNameOf(TransposeDimensionsNode))) ret = true; // not supported from NDL, use Transpose()
     else if (EqualInsensitive(nodeType, OperationNameOf(TransposeTimesNode))) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(TripletFastLossNode))) ret = true;
     // legacy names:
     else if (EqualInsensitive(nodeType, L"ColumnElementTimes")) ret = true;
     else if (EqualInsensitive(nodeType, L"Constant", L"Const")) ret = true;

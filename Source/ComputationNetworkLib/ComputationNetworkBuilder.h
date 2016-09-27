@@ -100,6 +100,13 @@ public:
     ComputationNodePtr AveragePooling(const ComputationNodePtr inputValues,
                                       const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample, ImageLayoutKind imageLayoutKind,
                                       const std::wstring nodeName = L"");
+
+    // IU code
+    ComputationNodePtr TripletFastLoss(const ComputationNodePtr left, const ComputationNodePtr right,
+        const ComputationNodePtr label, double margin,
+        bool hard_negative_sample, int hard_negative_sample_num,
+        int sample_per_class, const std::wstring nodeName = L"");
+
 #ifdef COMING_SOON
     ComputationNodePtr CRF(const ComputationNodePtr label, const ComputationNodePtr postDepScore, const ComputationNodePtr transition_score, const std::wstring nodeName = L"");
 #endif

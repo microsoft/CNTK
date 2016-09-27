@@ -110,6 +110,7 @@ static shared_ptr<ComputationNode<ElemType>> CreateStandardNode(const std::wstri
     else if (nodeType == OperationNameOf(SoftmaxNode))                          return New<SoftmaxNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(SqrtNode))                             return New<SqrtNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(SquareErrorNode))                      return New<SquareErrorNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(TripletFastLossNode))                  return New<TripletFastLossNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(LogisticNode))                         return New<LogisticNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(SumColumnElementsNode))                return New<SumColumnElementsNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(SumElementsNode))                      return New<SumElementsNode<ElemType>>(forward<_Types>(_Args)...);
@@ -800,6 +801,16 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Batch
 {
     return net.AddNodeToNetAndAttachInputs(New<BatchNormalizationNode<ElemType>>(net.GetDeviceId(), nodeName, spatial, normalizationTimeConstant, blendTimeConstant, epsilon, useCntkEngine, imageLayoutKind), { input, scale, bias, runMean, runVariance });
 }
+
+template <class ElemType>
+shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::TripletFastLoss(const ComputationNodePtr left, const ComputationNodePtr right,
+                                                                                           const ComputationNodePtr label, double margin,
+                                                                                           bool hard_negative_sample, int hard_negative_sample_num,
+                                                                                           int sample_per_class, const std::wstring nodeName)
+{
+    return net.AddNodeToNetAndAttachInputs(New<TripletFastLossNode<ElemType>> (net.GetDeviceId(), nodeName, margin, hard_negative_sample, hard_negative_sample_num, sample_per_class), { left, right, label });
+}
+
 
 template class ComputationNetworkBuilder<float>;
 template class ComputationNetworkBuilder<double>;

@@ -102,6 +102,90 @@ private:
 template class SquareErrorNode<float>;
 template class SquareErrorNode<double>;
 
+
+// -----------------------------------------------------------------------
+// Fast Triplet Hinge Loss (left, right, label)
+// -----------------------------------------------------------------------
+
+template <class ElemType>
+class TripletFastLossNode : public ComputationNodeNonLooping <ElemType>, public NumInputs<3>
+{
+  typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+  static const std::wstring TypeName() { return L"TripletFastLoss"; }
+public:
+  DeclareConstructorFromConfigWithNumInputs(TripletFastLossNode);
+  TripletFastLossNode(DEVICEID_TYPE deviceId, const wstring& name) : Base(deviceId, name)
+  {}
+  TripletFastLossNode(DEVICEID_TYPE deviceId, const wstring& name, double margin,
+      bool hard_negative_sample, int hard_negative_sample_num,
+      int sample_per_class)
+      : Base(deviceId, name), m_margin(margin), m_hard_negative_sample(hard_negative_sample), 
+      m_hard_negative_sample_num(hard_negative_sample_num), m_sample_per_class(sample_per_class)
+  {
+  }
+
+  virtual void UpdateFunctionMBSize() override
+  {
+      m_distanceMat->Resize(Input(0)->Value().GetNumRows(), Input(1)->Value().GetNumRows());
+  }
+
+  virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
+  {
+      ValidateBinaryReduce(isFinalValidationPass);
+  }
+
+  virtual void ForwardPropNonLooping() override
+  {
+    FrameRange fr(Input(0)->GetMBLayout());
+    // Get L2 Distance
+    m_distanceMat->AssignL2Distance(Input(0)->Value(), Input(1)->Value());
+    // decide whether it is pairwise
+    m_pairwise = Input(0)->Value().Data() != Input(1)->Value().Data();
+    // Get all triplet and sort to get loss
+    Value().VerifySize(1, 1);
+    Value().AssignFastTripletLoss(*m_distanceMat, Input(2)->Value(), m_triplet_sampler, m_pairwise, m_margin, m_hard_negative_sample, m_hard_negative_sample_num, m_sample_per_class);
+#if NANCHECK
+    Value().HasNan("SquareError");
+#endif
+  }
+
+  virtual void BackpropToNonLooping(size_t inputIndex) override
+  {
+    FrameRange fr(Input(0)->GetMBLayout());
+    auto gradient = Input(inputIndex)->GradientFor(fr);
+    gradient.AssignFastTripletGradient(Input(0)->Value(), Input(1)->Value(), inputIndex, m_triplet_sampler, m_pairwise, m_margin, m_hard_negative_sample, m_hard_negative_sample_num, m_sample_per_class);
+  }
+
+  // request matrices needed to do node function value evaluation
+  virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
+  {
+      Base::RequestMatricesBeforeForwardProp(matrixPool);
+      RequestMatrixFromPool(m_distanceMat, matrixPool);
+  }
+
+  // release gradient and temp matrices that no longer needed after all the children's gradients are computed.
+  virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
+  {
+      Base::ReleaseMatricesAfterBackprop(matrixPool);
+      ReleaseMatrixToPool(m_distanceMat, matrixPool);
+  }
+
+private:
+  shared_ptr<Matrix<ElemType>> m_distanceMat;
+  std::map<__int64, ElemType> m_triplet_sampler;
+  double m_margin;
+  bool m_pairwise;
+  bool m_hard_negative_sample; 
+  int m_hard_negative_sample_num;
+  int m_sample_per_class;
+};
+template class TripletFastLossNode<float>;
+template class TripletFastLossNode<double>;
+
+
+
+
+
 // -----------------------------------------------------------------------
 // CrossEntropyWithSoftmaxNode (labels, prediction)
 // calculates: -sum(left_i * log(softmax_i(right)))

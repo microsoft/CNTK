@@ -442,6 +442,14 @@ public:
 
     Matrix<ElemType>& AssignInnerProductOfMatrices(const Matrix<ElemType>& a, const Matrix<ElemType>& b); // this method will resize(1,1) first
 
+    Matrix<ElemType>& AssignL2Distance(const Matrix<ElemType>& a, const Matrix<ElemType>& b);
+
+    Matrix<ElemType>& AssignFastTripletLoss(const Matrix<ElemType>& dist, const Matrix<ElemType>& label, std::map<__int64, ElemType>& triplet_sampler,
+                                            bool pairwise, double margin, bool hard_negative_sample, int hard_negative_sample_num, int sample_per_class);
+
+    Matrix<ElemType>& AssignFastTripletGradient(const Matrix<ElemType>& left, const Matrix<ElemType>& right, int bottom_index, std::map<__int64, ElemType>& triplet_sampler,
+                                                bool pairwise, double margin, bool hard_negative_sample, int hard_negative_sample_num, int sample_per_class);
+
     bool HasNan(const char* name) const;
     size_t CountNanInf() const;
 

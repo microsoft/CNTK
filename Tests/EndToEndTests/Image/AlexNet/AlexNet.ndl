@@ -5,7 +5,7 @@ ndlMacros = [
     ImageW = 224
     ImageH = 224
     ImageC = 3
-    LabelDim = 1000
+    LabelDim = 1208
 
     features = ImageInput(ImageW, ImageH, ImageC, tag = feature, imageLayout = "cudnn")
     labels = Input(LabelDim, tag = label)

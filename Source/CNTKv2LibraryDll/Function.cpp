@@ -672,6 +672,9 @@ namespace CNTK
         case PrimitiveOpType::SquaredError:
             computationNodePtr = New<SquareErrorNode<ElementType>>(network->GetDeviceId(), functionName);
             break;
+        case PrimitiveOpType::TripletFastLoss:
+            computationNodePtr = New<TripletFastLossNode<ElementType>>(network->GetDeviceId(), functionName);
+            break;
         case PrimitiveOpType::CrossEntropyWithSoftmax:
             computationNodePtr = New<CrossEntropyWithSoftmaxNode<ElementType>>(network->GetDeviceId(), functionName);
             break;
