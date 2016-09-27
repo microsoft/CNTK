@@ -22,10 +22,9 @@ everything you need from `Anaconda <https://www.continuum.io/downloads>`_.
 CNTK also depends on Open MPI (`Linux <https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Linux#open-mpi>`_ and `Windows <>`_) and 
 `CUDA <https://developer.nvidia.com/cuda-downloads>`_. Please see the Wiki for more information.
 
-Installing CNTK
+Testing your installation
 ~~~~~~~~~~~~~~~
-Installing CNTK for Python is now easy. Simply run ``pip install http://atleneu04.guest.corp.microsoft.com:8000/cntk-2.0a2-cp34-cp34m-linux_x86_64.whl``. 
-You can then start using CNTK from Python right away:
+After installing the pip package, you can then start using CNTK from Python right away:
 
     >>> import cntk
     >>> cntk.__version__
