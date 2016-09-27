@@ -827,6 +827,8 @@ private:
         }
         else /* compute random samples */
         {
+
+            valueMatrix.SwitchToMatrixType(SPARSE, matrixFormatSparseCSC, false);
             valueMatrix.Reset();
 
             // Get vector with indices of randomly sampled classes
@@ -936,8 +938,8 @@ public:
         Base::Validate(isFinalValidationPass);
         m_pMBLayout = nullptr;
 
-        let shape = Input(0)->GetSampleLayout();
-        auto dims = shape.GetDims();
+        let& shape = Input(0)->GetSampleLayout();
+        let dims = shape.GetDims();
 
         size_t nClasses = dims[0];
 
@@ -949,18 +951,11 @@ public:
         else /* sampling mode */
         {
             // Output one vector containing the estimated inclusion probability for each class.
-            Matrix<ElemType>& valueMatrix = ValueAsMatrix();
-            valueMatrix.TransferToDeviceIfNotThere(CPUDEVICE, /*ismoved =*/ true/*means: BOTH state not ok */, /*emptyTransfer =*/ true, /*updatePreferredDevice =*/ false);
-            valueMatrix.SetDevice(CPUDEVICE);
-            valueMatrix.SwitchToMatrixType(SPARSE, matrixFormatSparseCSC, false);
             SetDims(TensorShape(nClasses, m_sizeOfSampledSet), false);
         }
     }
 
-    virtual bool OutputUsedInComputingInputNodesGradients() const override
-    {
-        return false;
-    }
+    virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
 
     virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override
     {
