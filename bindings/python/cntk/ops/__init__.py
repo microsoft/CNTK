@@ -1423,7 +1423,7 @@ def placeholder_variable(shape, dynamic_axes = [Axis.default_dynamic_axis(), Axi
     dynamic_axes = sanitize_dynamic_axes(dynamic_axes)
     return placeholder_variable(shape, dynamic_axes)
 
-def parameter(shape=None, value=None, device=None, name=''):
+def parameter(shape=None, value=None, initializer=None, device=None, name=''):
     '''
     It creates a parameter tensor.
 
@@ -1433,6 +1433,8 @@ def parameter(shape=None, value=None, device=None, name=''):
         value (scalar or NumPy array, optional): a scalar initial value that would be replicated
          for every element in the tensor or NumPy array.
          If `None`, the tensor will be initialized uniformly random.
+        initializer: output of one of the initializers in
+         `:module:cntk.initializers`
         device (:class:`cntk.DeviceDescriptor`): instance of DeviceDescriptor
         name (`str`, optional): the name of the Function instance in the network
 
@@ -1453,7 +1455,7 @@ def parameter(shape=None, value=None, device=None, name=''):
     else:
         data_type = None
 
-    return Parameter(shape, value, data_type, device, name)
+    return Parameter(shape, value, data_type, initializer, device, name)
 
 def constant(shape=None, value=None, device=None, name=''):
     '''
