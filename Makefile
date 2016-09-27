@@ -789,6 +789,8 @@ MULTIVERSO:=multiverso
 INCLUDEPATH += $(SOURCEDIR)/Multiverso/include
 COMMON_FLAGS += -DMULTIVERSO_SUPPORT
 
+LIBPATH += $(LIBDIR)
+
 MULTIVERSO_LIB:=$(LIBDIR)/libmultiverso.so
 MULTIVERSO_TEST:=$(BINDIR)/multiversotests
 
@@ -799,7 +801,7 @@ MULTIVERSO_BUILD:
 	@echo "Build Multiverso lib and unit tests"
 	@mkdir -p $(dir $@)
 	@mkdir -p $(SOURCEDIR)/Multiverso/build
-	@sh $(SOURCEDIR)/../Tools/setup_mv.sh $(BUILD_TOP)
+	@sh $(SOURCEDIR)/../Tools/setup_mv.sh $(LIBDIR)
 
 $(MULTIVERSO_LIB): MULTIVERSO_BUILD
 
