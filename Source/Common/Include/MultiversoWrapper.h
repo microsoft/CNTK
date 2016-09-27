@@ -19,6 +19,7 @@
 #include "MPIWrapper.h"
 #include "ComputationNetwork.h"
 #include "TimerUtility.h"
+#include "ASGDCommon.h"
 
 #include <functional>
 #include <thread>
@@ -40,13 +41,6 @@ inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort =
     }
 }
 #endif
-
-enum class AdjustLearningRateatBeginning : int
-{
-    None = 0,
-    Linearly = 1,
-    Staircase = (1 << 1),
-};
 
 template<class ElemType = float>
 class MultiversoHelper

@@ -16,6 +16,12 @@
 #include "BlockMomentumSGD.h"
 #endif
 
+#ifdef MULTIVERSO_SUPPORT
+#include "MultiversoWrapper.h"
+#else
+#include "NoMultiversoWrapper.h"
+#endif
+
 #include "SimpleDistGradAggregator.h"
 #include "ProgressTracing.h"
 

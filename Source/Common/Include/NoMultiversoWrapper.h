@@ -1,15 +1,10 @@
 #pragma once
 
+#include "ASGDCommon.h"
+
 namespace Microsoft {
 	namespace MSR {
 		namespace CNTK {
-
-			enum class AdjustLearningRateatBeginning : int
-			{
-				None = 0,
-				Linearly = 1,
-				Staircase = (1 << 1),
-			};
 
 			template<class ElemType = float>
 			class MultiversoHelper

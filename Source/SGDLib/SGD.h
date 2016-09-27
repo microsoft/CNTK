@@ -5,6 +5,7 @@
 #pragma once
 
 #include "Basics.h"
+#include "ASGDCommon.h"
 #include "ComputationNetwork.h"
 #include "SimpleEvaluator.h"
 #include "DataReader.h"
@@ -18,11 +19,6 @@
 #include <chrono>
 #include <random>
 #include "Profiler.h"
-#ifdef MULTIVERSO_SUPPORT
-#include "MultiversoWrapper.h"
-#else
-#include "NoMultiversoWrapper.h"
-#endif
 #include "MASGD.h"
 using namespace std; // ugh! TODO: get rid of this from .h files!!!
 
@@ -309,6 +305,9 @@ protected:
 
 template <class ElemType>
 class IDistGradAggregator;
+
+template <class ElemType>
+class MultiversoHelper;
 
 // -----------------------------------------------------------------------
 // class SGD
