@@ -797,15 +797,24 @@ MULTIVERSO_TEST:=$(BINDIR)/multiversotests
 ALL+=$(MULTIVERSO_LIB)
 ALL+=$(MULTIVERSO_TEST)
 
-MULTIVERSO_BUILD: 
-	@echo "Build Multiverso lib and unit tests"
-	@mkdir -p $(dir $@)
+$(MULTIVERSO_LIB): 
+	@echo "Build Multiverso lib"
+	@mkdir -p $(LIBDIR)
+	@mkdir -p $(BINDIR)
 	@mkdir -p $(SOURCEDIR)/Multiverso/build
-	@sh $(SOURCEDIR)/../Tools/setup_mv.sh $(BUILD_TOP)
+	@cmake -DBoost_NO_BOOST_CMAKE=TRUE \
+            -DBoost_NO_SYSTEM_PATHS=TRUE \
+            -DBOOST_ROOT:PATHNAME=/usr/local/boost-1.60.0 \
+            -DBOOST_LIBRARY_DIRS:FILEPATH=/usr/local/boost-1.60.0/lib \
+            -DLIBRARY_OUTPUT_PATH=$BUILD_TOP/lib \
+            -DEXECUTABLE_OUTPUT_PATH=$BUILD_TOP/bin \
+            -B./Source/Multiverso/build -H./Source/Multiverso
+	@make -f ./Source/Multiverso/build/Makefile -j multiverso
+	@make -f ./Source/Multiverso/build/Makefile -j multiversotests
 
-$(MULTIVERSO_LIB): MULTIVERSO_BUILD
-
-$(MULTIVERSO_TEST): MULTIVERSO_BUILD
+        
+$(MULTIVERSO_TEST): $(MULTIVERSO_LIB)
+	@echo "Build Multiverso unit tests"
 
 endif
 
