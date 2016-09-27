@@ -787,6 +787,7 @@ endif
 MULTIVERSO:=multiverso
 
 INCLUDEPATH += $(SOURCEDIR)/Multiverso/include
+LIBS += -lmultiverso
 COMMON_FLAGS += -DMULTIVERSO_SUPPORT
 
 MULTIVERSO_LIB:=$(LIBDIR)/libmultiverso.so
