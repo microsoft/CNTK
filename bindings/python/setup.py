@@ -136,9 +136,9 @@ setup(name="cntk",
       url="http://cntk.ai",
       ext_modules = [cntk_module],  
       packages=packages,
-      install_requires=[
-        'numpy>=1.11',
-        'scipy>=0.17'
-      ],
+      #install_requires=[
+      #  'numpy>=1.11',
+      #  'scipy>=0.17'
+      #],
       **kwargs
      )
