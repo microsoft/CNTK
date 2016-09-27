@@ -6,19 +6,15 @@ from .. import utils
 
 FLOAT_32='float32'
 
-def _sanitize_value(shape, value, dtype, device, is_param=False):
+def _sanitize_value(shape, value, dtype, device):
     np_dtype = utils.sanitize_dtype_numpy(dtype)
     cntk_dtype  = utils.sanitize_dtype_cntk(dtype)
+
     if value is None:
         if shape is None:
             raise ValueError('you need to specify at least shape or value')
         shape = utils.sanitize_shape(shape)
-
-        if is_param:
-            # TODO: expose the initialization params
-            ndav = NDArrayView.random_uniform_float(shape, -0.05, 0.05, 1, device)
-        else:
-            ndav = utils.create_NDArrayView(shape, cntk_dtype, device)
+        ndav = utils.create_NDArrayView(shape, cntk_dtype, device)
     else:
         if not isinstance(value, np.ndarray) or value.dtype!=np_dtype:
             if np.isscalar(value) and shape:
@@ -42,8 +38,8 @@ class Variable(TensorOpsMixin,Variable):
         super(Variable, self).__init__(shape, is_sparse, dtype, needs_gradient, name, dynamic_axes)
 
 class Parameter(TensorOpsMixin,Parameter):
-    def __init__(self, shape=None, value=None, data_type=None, 
-                    device=None, name=''):
+    def __init__(self, shape=None, value=None, data_type=None,
+            initializer=None, device=None, name=''):
 
         if data_type is None:
             if not isinstance(value, np.ndarray):
@@ -51,8 +47,16 @@ class Parameter(TensorOpsMixin,Parameter):
             else:
                 data_type = str(value.dtype)
 
-        ndav = _sanitize_value(shape, value, data_type, device, True)
-        super(Parameter, self).__init__(ndav, name)
+        if initializer is not None:
+            data_type  = utils.sanitize_dtype_cntk(data_type)
+            super(Parameter, self).__init__(shape, data_type, initializer,
+                    device, name)
+        else:
+            if value is None:
+                value = 0
+            ndav = _sanitize_value(shape, value, data_type, device)
+            super(Parameter, self).__init__(ndav, name)
+
 
 class Constant(TensorOpsMixin,Constant):
     def __init__(self, shape=None, value=None, data_type=None, 

@@ -16,6 +16,7 @@ from .utils import *
 from .ops import *
 from .io import *
 from .learner import *
+from .initializer import *
 
 # TODO wrap
 from .cntk_py import DeviceDescriptor, momentums_per_sample
