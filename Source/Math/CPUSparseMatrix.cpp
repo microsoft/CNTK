@@ -473,7 +473,6 @@ void CPUSparseMatrix<ElemType>::Print(const char* matrixName, ptrdiff_t /*rowSta
         }
         fprintf(stderr, "%d:%.f ", unCompressedIndex[i], dataBuffer[i]);
     }
-
     fprintf(stderr, "\n");
 }
 
