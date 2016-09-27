@@ -806,11 +806,11 @@ $(MULTIVERSO_LIB):
             -DBoost_NO_SYSTEM_PATHS=TRUE \
             -DBOOST_ROOT:PATHNAME=/usr/local/boost-1.60.0 \
             -DBOOST_LIBRARY_DIRS:FILEPATH=/usr/local/boost-1.60.0/lib \
-            -DLIBRARY_OUTPUT_PATH=$BUILD_TOP/lib \
-            -DEXECUTABLE_OUTPUT_PATH=$BUILD_TOP/bin \
+            -DLIBRARY_OUTPUT_PATH=$(LIBDIR) \
+            -DEXECUTABLE_OUTPUT_PATH=$(BINDIR) \
             -B./Source/Multiverso/build -H./Source/Multiverso
-	@make -f ./Source/Multiverso/build/Makefile -j multiverso
-	@make -f ./Source/Multiverso/build/Makefile -j multiversotests
+	@make -C ./Source/Multiverso/build/ -j multiverso
+	@make -C ./Source/Multiverso/build/ -j multiversotests
 
         
 $(MULTIVERSO_TEST): $(MULTIVERSO_LIB)
