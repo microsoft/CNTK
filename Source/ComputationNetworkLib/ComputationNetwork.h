@@ -654,7 +654,7 @@ public:
         return std::vector<ComputationNodeBasePtr>(outputNodes.begin(), outputNodes.end());
     }
 
-    std::list<ComputationNodeBasePtr> GetNodesWithType(const wstring typeName, const ComputationNodeBasePtr& rootNode = nullptr)
+    std::list<ComputationNodeBasePtr> GetNodesWhere(std::function<bool(const ComputationNodeBasePtr&)>& predicate, const ComputationNodeBasePtr& rootNode = nullptr)
     {
         std::list<ComputationNodeBasePtr> nodesWithType;
 
@@ -664,7 +664,7 @@ public:
             for (auto nodeIter = m_nameToNodeMap.begin(); nodeIter != m_nameToNodeMap.end(); nodeIter++)
             {
                 ComputationNodeBasePtr node = nodeIter->second;
-                if (node->OperationName() == typeName)
+                if (predicate(node))
                     nodesWithType.push_back(node);
             }
         }
@@ -673,12 +673,18 @@ public:
             // for calculating a specific node
             for (const auto& node : GetEvalOrder(rootNode)) // TODO: verify that no use of this requires the actual eval order, then change to GetAllNodesForRoot()
             {
-                if (node->OperationName() == typeName)
+                if (predicate(node))
                     nodesWithType.push_back(node);
             }
         }
 
         return nodesWithType;
+    }
+
+    std::list<ComputationNodeBasePtr> GetNodesWithType(const wstring typeName, const ComputationNodeBasePtr& rootNode = nullptr)
+    {
+        std::function<bool(const ComputationNodeBasePtr&)> predicate = [typeName](const ComputationNodeBasePtr& node) { return node->OperationName() == typeName; };
+        return GetNodesWhere(predicate, rootNode);
     }
 
 public:
