@@ -15,6 +15,7 @@ void SerializationTests();
 void LearnerTests();
 void TrainSequenceToSequenceTranslator();
 void TrainTruncatedLSTMAcousticModelClassifer();
+void EvalMultiThreadsWithNewNetwork(const DeviceDescriptor&, const int);
 
 int main()
 {
@@ -29,11 +30,15 @@ int main()
     LearnerTests();
 
     TrainerTests();
-
     TestCifarResnet();
     TrainLSTMSequenceClassifer();
+
     TrainSequenceToSequenceTranslator();
     TrainTruncatedLSTMAcousticModelClassifer();
+
+    // Test multi-threads evaluation
+    // Todo: Also test on GPUDevice()
+    EvalMultiThreadsWithNewNetwork(DeviceDescriptor::CPUDevice(), 2);
 
     fprintf(stderr, "\nCNTKv2Library tests: Passed\n");
     fflush(stderr);
