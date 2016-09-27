@@ -16,6 +16,7 @@ void LearnerTests();
 void TrainSequenceToSequenceTranslator();
 void TrainTruncatedLSTMAcousticModelClassifer();
 void EvalMultiThreadsWithNewNetwork(const DeviceDescriptor&, const int);
+void EvalMultiThreadsWithClone(const DeviceDescriptor&, const int);
 void DeviceSelectionTests();
 
 int main()
@@ -27,9 +28,6 @@ int main()
     NDArrayViewTests();
     TensorTests();
     FunctionTests();
-
-    FeedForwardTests();
-    RecurrentFunctionTests();
 
     SerializationTests();
     LearnerTests();
@@ -48,6 +46,10 @@ int main()
     fprintf(stderr, "Test multi-threaded evaluation on GPU\n");
     EvalMultiThreadsWithNewNetwork(DeviceDescriptor::GPUDevice(0), 2);
 #endif
+    //// Test multi-threads evaluation
+    //// Todo: Also test on GPUDevice()
+    //EvalMultiThreadsWithNewNetwork(DeviceDescriptor::CPUDevice(), 2);
+    EvalMultiThreadsWithClone(DeviceDescriptor::CPUDevice(), 1);
 
     fprintf(stderr, "Test device selection API\n");
     DeviceSelectionTests();
