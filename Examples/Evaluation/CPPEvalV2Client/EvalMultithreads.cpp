@@ -18,7 +18,7 @@ FunctionPtr SetupFullyConnectedDNNLayer(Variable, size_t, const DeviceDescriptor
 void RunEvaluation(FunctionPtr, const DeviceDescriptor&);
 
 /// <summary>
-/// Shows how to create Function whose parameters can be shared by multi threads during evaluation.
+/// Shows how to create Function whose parameters can be shared by multi evaluation threads.
 /// </summary>
 /// <description>
 /// It first creates all parameters needed for the Function, and then spawns multi threads. 
@@ -67,7 +67,7 @@ void MultiThreadsEvaluationWithNewFunction(const DeviceDescriptor& device, const
 }
 
 /// <summary>
-/// Shows how to use Clone() to create a new instance of function whose parameters are shared among all cloned functions.
+/// Shows how to use Clone() to share function parameters among multi evaluation threads.
 /// </summary>
 /// <description>
 /// It first creates a new function with parameters, then spawns multi threads. Each thread uses Clone() to create a new 
@@ -88,14 +88,18 @@ void MultiThreadsEvaluationWithClone(const DeviceDescriptor& device, const int t
     assert(numHiddenLayers >= 1);
     auto classifierRoot = SetupFullyConnectedDNNLayer(inputVar, hiddenLayersDim, device, std::bind(Sigmoid, _1, L""));
     for (size_t i = 1; i < numHiddenLayers; ++i)
+    {
         classifierRoot = SetupFullyConnectedDNNLayer(classifierRoot, hiddenLayersDim, device, std::bind(Sigmoid, _1, L""));
+    }
 
     auto outputTimesParam = Parameter(NDArrayView::RandomUniform<float>({numOutputClasses, hiddenLayersDim}, -0.5, 0.5, 1, device));
     auto classifierFunc = Times(outputTimesParam, classifierRoot, 1, L"classifierOutput");
 
     // Now test the structure
     if (classifierFunc->Parameters().size() != ((numHiddenLayers * 2) + 1))
+    {
         throw std::runtime_error("MultiThreadsEvaluationWithClone: Function does not have expected Parameter count");
+    }
 
     // Run evaluation in parallel
     std::vector<std::thread> threadList(threadCount);
@@ -112,57 +116,10 @@ void MultiThreadsEvaluationWithClone(const DeviceDescriptor& device, const int t
     }
 }
 
-
-/// <summary>
-/// Shows how to use Clone() to create a new instance of function whose parameters are shared among all cloned functions.
-/// </summary>
-/// <description>
-/// It first creates a new function with parameters, then spawns multi threads. Each thread uses Clone() to create a new 
-/// instance of function and then use this instance to do evaluation. 
-/// All cloned functions share only one single instance of parameters.
-/// </description>
-void MultiThreadsEvaluationWithClone(const DeviceDescriptor& device, const int threadCount)
-{
-    using namespace std::placeholders;
-
-    const size_t inputDim = 937;
-    const size_t numOutputClasses = 9304;
-    const size_t numHiddenLayers = 6;
-    const size_t hiddenLayersDim = 2048;
-
-    auto inputVar = InputVariable({inputDim}, DataType::Float, L"features");
-
-    assert(numHiddenLayers >= 1);
-    auto classifierRoot = SetupFullyConnectedDNNLayer(inputVar, hiddenLayersDim, device, std::bind(Sigmoid, _1, L""));
-    for (size_t i = 1; i < numHiddenLayers; ++i)
-        classifierRoot = SetupFullyConnectedDNNLayer(classifierRoot, hiddenLayersDim, device, std::bind(Sigmoid, _1, L""));
-
-    auto outputTimesParam = Parameter(NDArrayView::RandomUniform<float>({numOutputClasses, hiddenLayersDim}, -0.5, 0.5, 1, device));
-    auto classifierFunc = Times(outputTimesParam, classifierRoot, 1, L"classifierOutput");
-
-    // Now test the structure
-    if (classifierFunc->Parameters().size() != ((numHiddenLayers * 2) + 1))
-        throw std::runtime_error("MultiThreadsEvaluationWithClone: Function does not have expected Parameter count");
-
-    // Run evaluation in parallel
-    std::vector<std::thread> threadList(threadCount);
-    for (int th = 0; th < threadCount; ++th)
-    {
-        threadList[th] = std::thread(RunEvaluation, classifierFunc->Clone(), device);
-    }
-
-    for (int th = 0; th < threadCount; ++th)
-    {
-        threadList[th].join();
-        fprintf(stderr, "thread %d joined.\n", th);
-        fflush(stderr);
-    }
-}
-
-FunctionPtr FullyConnectedDNNLayerWithSharedParameters(Variable input,
-                                                       const Parameter& timesParam,
-                                                       const Parameter& plusParam,
-                                                       const std::function<FunctionPtr(const FunctionPtr&)>& nonLinearity)
+inline FunctionPtr FullyConnectedDNNLayerWithSharedParameters(Variable input,
+                                                              const Parameter& timesParam,
+                                                              const Parameter& plusParam,
+                                                              const std::function<FunctionPtr(const FunctionPtr&)>& nonLinearity)
 {
     assert(input.Shape().Rank() == 1);
 
@@ -175,20 +132,22 @@ FunctionPtr FullyConnectedDNNLayerWithSharedParameters(Variable input,
     return nonLinearity(plusFunction);
 }
 
-FunctionPtr FullyConnectedFeedForwardClassifierNetWithSharedParameters(Variable input,
-                                                                       size_t numHiddenLayers,
-                                                                       const Parameter& inputTimesParam,
-                                                                       const Parameter& inputPlusParam,
-                                                                       const Parameter hiddenLayerTimesParam[],
-                                                                       const Parameter hiddenLayerPlusParam[],
-                                                                       const Parameter& outputTimesParam,
-                                                                       const std::function<FunctionPtr(const FunctionPtr&)>& nonLinearity)
+inline FunctionPtr FullyConnectedFeedForwardClassifierNetWithSharedParameters(Variable input,
+                                                                              size_t numHiddenLayers,
+                                                                              const Parameter& inputTimesParam,
+                                                                              const Parameter& inputPlusParam,
+                                                                              const Parameter hiddenLayerTimesParam[],
+                                                                              const Parameter hiddenLayerPlusParam[],
+                                                                              const Parameter& outputTimesParam,
+                                                                              const std::function<FunctionPtr(const FunctionPtr&)>& nonLinearity)
 {
     assert(numHiddenLayers >= 1);
     auto classifierRoot = FullyConnectedDNNLayerWithSharedParameters(input, inputTimesParam, inputPlusParam, nonLinearity);
 
     for (size_t i = 1; i < numHiddenLayers; ++i)
+    {
         classifierRoot = FullyConnectedDNNLayerWithSharedParameters(classifierRoot, hiddenLayerTimesParam[i - 1], hiddenLayerPlusParam[i - 1], nonLinearity);
+    }
 
     // Todo: assume that outputTimesParam has matched output dim and hiddenLayerDim
     classifierRoot = Times(outputTimesParam, classifierRoot);
@@ -225,13 +184,19 @@ void CreateFunctionAndEvaluateWithSharedParameters(size_t inputDim,
     auto ffNet = CNTK::Combine({trainingLossFunction, predictionFunction, classifierOutputFunction}, L"ClassifierModel");
 
     if (ffNet->Parameters().size() != ((numHiddenLayers * 2) + 1))
+    {
         throw std::runtime_error("CreateFunctionAndEvaluateWithSharedParameters: Function does not have expected Parameter count");
+    }
 
     if (ffNet->Arguments().size() != 2)
+    {
         throw std::runtime_error("CreateFunctionAndEvaluateWithSharedParameters: Function does not have expected Argument count");
+    }
 
     if (ffNet->Outputs().size() != 3)
+    {
         throw std::runtime_error("CreateFunctionAndEvaluateWithSharedParameters: Function does not have expected Output count");
+    }
 
     // Evaluate the network in several runs 
     size_t iterationCount = 4;
@@ -242,14 +207,18 @@ void CreateFunctionAndEvaluateWithSharedParameters(size_t inputDim,
     {
         std::vector<float> inputData(inputDim * numSamples);
         for (size_t i = 0; i < inputData.size(); ++i)
+        {
             inputData[i] = ((float)rand()) / RAND_MAX;
+        }
 
         NDShape inputShape = {inputDim, 1, numSamples};
         ValuePtr inputValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(inputShape, inputData.data(), inputData.size(), computeDevice, true));
 
         std::vector<float> labelData(numOutputClasses * numSamples, 0);
         for (size_t i = 0; i < numSamples; ++i)
+        {
             labelData[(i*numOutputClasses) + (rand() % numOutputClasses)] = 1;
+        }
 
         NDShape labelShape = {numOutputClasses, 1, numSamples};
         ValuePtr labelValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(labelShape, labelData.data(), labelData.size(), computeDevice, true));
@@ -261,7 +230,7 @@ void CreateFunctionAndEvaluateWithSharedParameters(size_t inputDim,
 }
 
 
-FunctionPtr SetupFullyConnectedLinearLayer(Variable input, size_t outputDim, const DeviceDescriptor& device, const std::wstring& outputName = L"")
+inline FunctionPtr SetupFullyConnectedLinearLayer(Variable input, size_t outputDim, const DeviceDescriptor& device, const std::wstring& outputName = L"")
 {
     assert(input.Shape().Rank() == 1);
     size_t inputDim = input.Shape()[0];
@@ -273,7 +242,7 @@ FunctionPtr SetupFullyConnectedLinearLayer(Variable input, size_t outputDim, con
     return CNTK::Plus(plusParam, timesFunction, outputName);
 }
 
-FunctionPtr SetupFullyConnectedDNNLayer(Variable input, size_t outputDim, const DeviceDescriptor& device, const std::function<FunctionPtr(const FunctionPtr&)>& nonLinearity)
+inline FunctionPtr SetupFullyConnectedDNNLayer(Variable input, size_t outputDim, const DeviceDescriptor& device, const std::function<FunctionPtr(const FunctionPtr&)>& nonLinearity)
 {
     return nonLinearity(SetupFullyConnectedLinearLayer(input, outputDim, device));
 }
@@ -314,7 +283,9 @@ void RunEvaluation(FunctionPtr evalFunc, const DeviceDescriptor& device)
     {
         std::vector<float> inputData(inputDim * numSamples);
         for (size_t i = 0; i < inputData.size(); ++i)
+        {
             inputData[i] = ((float)rand()) / RAND_MAX;
+        }
 
         NDShape inputShape = {inputDim, 1, numSamples};
         ValuePtr inputValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(inputShape, inputData.data(), inputData.size(), device, true));
