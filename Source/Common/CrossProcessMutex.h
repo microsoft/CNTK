@@ -121,6 +121,8 @@ public:
     // Returns false if !wait and lock cannot be acquired, or in case of a system error that prevents us from acquiring the lock.
     bool Acquire(bool wait)
     {
+        mode_t mask = umask(0);
+
         assert(m_fd == -1);
         for (;;)
         {
@@ -146,6 +148,7 @@ public:
             {
                 // acquire failed
                 close(fd);
+                umask(mask);
                 return false;
             }
             // we own the exclusive lock on file descriptor, but we need to double-check
@@ -165,6 +168,7 @@ public:
             {
                 // lock acquired successfully
                 m_fd = fd;
+                umask(mask);
                 return true;
             }
         }
