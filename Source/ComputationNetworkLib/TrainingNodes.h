@@ -697,9 +697,7 @@ public:
     {
         m_randomSeed = (unsigned long)val;
 
-        // Upon change of the seed, reset RNGHandle to force the creation of a new RNGHandle
-        // during forward propagation
-        m_RNGHandle.reset();
+        m_RNGHandle.reset(); // Reset handle. New handle will be generated with next call of GetRNGHandle(...).
     }
 
 protected:
@@ -860,7 +858,7 @@ private:
         }
     }
 
-    const std::vector<int> GetWeightedSamples()
+    const std::vector<size_t> GetWeightedSamples()
     {
         long dummy; 
         // Here we are not interested in the number of sampling tries needed, which is returned in the parameter.
@@ -884,11 +882,11 @@ private:
 
     // Runs the sampling returning a vector with the id's of the samples. The parameter nTries is used to return the number of draws that was needed
     // to get the expected number of samples.
-    const std::vector<int> RunSampling(long& nTries)
+    const std::vector<size_t> RunSampling(long& nTries)
     {
         std::uniform_real_distribution<double> r(0, m_samplingWeightsPrefixSum.back());
         std::unordered_set<int> alreadySampled;
-        std::vector<int> samples;
+        std::vector<size_t> samples;
         CPURNGHandle* cpuRNGHandle = dynamic_cast<CPURNGHandle*>(&GetRNGHandle(CPUDEVICE));
         // find random samples using the specified weight
 
