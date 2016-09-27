@@ -15,6 +15,7 @@ void SerializationTests();
 void LearnerTests();
 void TrainSequenceToSequenceTranslator();
 void EvalMultiThreadsWithNewNetwork(const DeviceDescriptor&, const int);
+void DeviceSelectionTests();
 
 int main()
 {
@@ -41,6 +42,8 @@ int main()
     fprintf(stderr, "Test multi-threaded evaluation on GPU\n");
     EvalMultiThreadsWithNewNetwork(DeviceDescriptor::GPUDevice(0), 2);
 #endif
+
+    DeviceSelectionTests();
 
     fprintf(stderr, "\nCNTKv2Library tests: Passed\n");
     fflush(stderr);

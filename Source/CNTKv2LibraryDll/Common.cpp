@@ -5,6 +5,7 @@
 
 #include "stdafx.h"
 #include "CNTKLibrary.h"
+#include "Utils.h"
 #include "BestGpu.h"
 #include <mutex>
 #include <algorithm>
@@ -62,8 +63,7 @@ namespace CNTK
         auto selectedDevice = DefaultDevice();
         if (!alreadyFrozen)
         {
-            auto id = selectedDevice.Type() == DeviceKind::CPU ? CPUDEVICE : selectedDevice.Id();
-            Microsoft::MSR::CNTK::OnDeviceSelected(id);
+            Microsoft::MSR::CNTK::OnDeviceSelected(AsCNTKImplDeviceId(selectedDevice));
         }
         return selectedDevice;
     }
