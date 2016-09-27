@@ -801,7 +801,7 @@ MULTIVERSO_BUILD:
 	@echo "Build Multiverso lib and unit tests"
 	@mkdir -p $(dir $@)
 	@mkdir -p $(SOURCEDIR)/Multiverso/build
-	@sh $(SOURCEDIR)/../Tools/setup_mv.sh $(LIBDIR)
+	@sh $(SOURCEDIR)/../Tools/setup_mv.sh $(BUILD_TOP)
 
 $(MULTIVERSO_LIB): MULTIVERSO_BUILD
 
