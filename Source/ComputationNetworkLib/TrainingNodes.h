@@ -680,7 +680,9 @@ template class NoiseContrastiveEstimationNode<float>;
 template class NoiseContrastiveEstimationNode<double>;
 
 
-// Nodes using a rsndom number generator can iherit from this class.
+// Nodes using a random number generator (Randon Number Generator Users) should inherit from this class.
+// Currently this holds for DropoutNode and RandomSampleNode.
+// One purpuose of this class is to have a common interface for setting the seeds when setting up a network.
 class RngUser
 {
 public:

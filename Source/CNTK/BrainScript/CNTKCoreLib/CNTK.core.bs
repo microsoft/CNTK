@@ -463,34 +463,36 @@ CNTK2 = [
     CrossEntropyWithSoftmax_new (L, z, tag='') = Minus (ReduceLogSum (z), TransposeTimes (L,          z),  tag=tag)
     ClassificationError_new (L, z, tag='')     = Minus (BS.Constants.One, TransposeTimes (L, Hardmax (z)), tag=tag)
 
-    CrossEntropyWithSampledSoftmax(hiddenLayer                    /* Vector of dimension nHidden */,
-                                   labels                         /* One-hot for the true class (labels). Dimension: nClasses */,
-                                   randomSampleSelector           /* Sparse matrix of dimension nClasses * nSamples */,
-                                   weights                        /* nClasses * nHidden */,
-                                   bias                           /* Biases for logit computation. Dimension nClasses */,
-                                   logInclusionProb               /* Inclusion probablilities (derived from sampling weights) */
-                                      ) = [
-                                        # Getting the weights matrix wS in the subspace of samples. Dimension: nHidden * nSamples
-                                        wS = TransposeTimes(weights, randomSampleSelector)
-                                        zS = TransposeTimes(wS, hiddenLayer) + TransposeTimes(randomSampleSelector, bias - logInclusionProb) 
+    CrossEntropyWithSampledSoftmax(
+        hiddenLayer                    /* Vector of dimension nHidden */,
+        labels                         /* One-hot for the true class (labels). Dimension: nClasses */,
+        randomSampleSelector           /* Sparse matrix of dimension nClasses * nSamples */,
+        weights                        /* nClasses * nHidden */,
+        bias                           /* Biases for logit computation. Dimension nClasses */,
+        logInclusionProb               /* Inclusion probablilities (derived from sampling weights) */
+        ) = 
+    {
+        # Getting the weights matrix wS in the subspace of samples. Dimension: nHidden * nSamples
+        wS = TransposeTimes(weights, randomSampleSelector)
+        zS = TransposeTimes(wS, hiddenLayer) + TransposeTimes(randomSampleSelector, bias - logInclusionProb) 
 
-                                        # Getting the weight vector for the true label. Dimension nHidden
-                                        wT = TransposeTimes(weights, labels) 
-                                        zT = TransposeTimes(wT, hiddenLayer) +  TransposeTimes(labels, bias - logInclusionProb) 
+        # Getting the weight vector for the true label. Dimension nHidden
+        wT = TransposeTimes(weights, labels) 
+        zT = TransposeTimes(wT, hiddenLayer) +  TransposeTimes(labels, bias - logInclusionProb) 
                                         
-                                        zSReduced = ReduceLogSum(zS)
+        zSReduced = ReduceLogSum(zS)
                                         
-                                        # The label (true class), might already be among the sampled classes.
-                                        # To get the 'partition function' over the union of label and sampled classes
-                                        # we need to LogPlus zt if the label is not among the sampled classes.
-                                        labelIsInSampled = ReduceSum(TransposeTimes(labels,randomSampleSelector))
-                                        logSum = if labelIsInSampled then 
-                                                    zSReduced 
-                                                 else 
-                                                    LogPlus(zT, zSReduced)
+        # The label (true class), might already be among the sampled classes.
+        # To get the 'partition function' over the union of label and sampled classes
+        # we need to LogPlus zt if the label is not among the sampled classes.
+        labelIsInSampled = ReduceSum(TransposeTimes(labels,randomSampleSelector))
+        logSum = if labelIsInSampled then 
+                    zSReduced 
+                    else 
+                    LogPlus(zT, zSReduced)
 
-                                        ce = logSum - zT
-                                       ].ce
+        ce = logSum - zT
+    }.ce
 
 
     // 12. Comparison nodes
