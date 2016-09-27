@@ -3502,6 +3502,18 @@ int Matrix<ElemType>::GetDeviceId() const
         { return m_GPUSparseMatrix->GetComputeDeviceId(); });
 }
 
+template <class ElemType>
+MatrixType Matrix<ElemType>::GetMatrixType() const
+{
+    return m_matrixType;
+}
+
+template <class ElemType>
+MatrixFormat Matrix<ElemType>::GetFormat() const
+{
+    return m_baseMatrix->GetFormat();
+}
+
 // TODO: Comment why we need a second ElemType.
 // TODO: Move the shared core functions to the front of this source file.
 // BUGBUG: This performs a copy operation even for the output matrix that gets overwritten right away.

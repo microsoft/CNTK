@@ -17,12 +17,11 @@ setlocal enableDelayedexpansion
 :: A Vim search for [%!]\([lp]_\)\@!\w\+[%!:] should only match
 :: well-known (non-CNTK-specific) environment variables.
 set p_Configuration=%~1
-set p_CNTK_MKL=%~2
-set p_CNTK_MKL_SEQUENTIAL=%~3
-set p_CNTK_ENABLE_1BitSGD=%~4
-set p_CudaPath=%~5
-set p_CUDNN_PATH=%~6
-set p_CUB_PATH=%~7
+set p_CNTK_MKL_SEQUENTIAL=%~2
+set p_CNTK_ENABLE_1BitSGD=%~3
+set p_CudaPath=%~4
+set p_CUDNN_PATH=%~5
+set p_CUB_PATH=%~6
 
 echo #ifndef _BUILDINFO_H > buildinfo.h$$
 echo #define _BUILDINFO_H >> buildinfo.h$$
@@ -47,15 +46,11 @@ if not errorlevel 1 (
     )
 )
 
-if "%p_CNTK_MKL%" == "1" (
-  if "%p_CNTK_MKL_SEQUENTIAL%" == "1" (
-    echo #define _MATHLIB_ "mkl-sequential">> buildinfo.h$$
-  ) else (
-    echo #define _MATHLIB_ "mkl">> buildinfo.h$$
-  )
+if "%p_CNTK_MKL_SEQUENTIAL%" == "1" (
+  echo #define _MATHLIB_ "mkl-sequential">> buildinfo.h$$
+) else (
+  echo #define _MATHLIB_ "mkl">> buildinfo.h$$
 )
-
-echo #define _BUILDER_ "%USERNAME%"     >> buildinfo.h$$
 
 echo #define _BUILDER_ "%USERNAME%"     >> buildinfo.h$$
 echo #define _BUILDMACHINE_ "%HOST%"    >> buildinfo.h$$

@@ -125,7 +125,7 @@ declare -a cudnnFiles=("libcudnn.so.5")
 declare -a includeFiles=("Eval.h")
 
 # Set dependency sources paths
-mklPath="/usr/local/CNTKCustomMKL/1/x64/parallel"
+mklPath="/usr/local/CNTKCustomMKL/2/x64/parallel"
 opencvPath="/usr/local/opencv-3.1.0/lib"
 libzipPath="/usr/local/lib"
 cudaPath="/usr/local/cuda/lib64"
