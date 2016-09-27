@@ -711,13 +711,13 @@ protected:
 // RandomSampleNode(samplingWeights, sizeOfSampledSet, allowDuplicates): 
 // Intended uses are e.g. sampled softmax, noise contrastive estimation etc.
 // It has two modes to run, both taking a weight vector as input:
-// * estimateInclusionProbs = false:
+// * estimateInSampleFrequency = false:
 //   The node's value is a set of sizeOfSampledSet random samples represented as a (sparse) matrix of shape [nClasses x sizeOfSampledSet] where nClasses is the number of classes (categories) to choose from.
 //   The output has no dynamic axis.
 //   The samples are drawn according to the weight vector p(w_i) = w_i / sum_k(w_k)
 //   We get one set of samples for per minibatch.
 //
-// * estimateInclusionProbs = true:
+// * estimateInSampleFrequency = true:
 //   This estimaes of how often each class will occur in the sampled set on the average. If the sampling mode 
 //        'allowDuplicates = true' is choosen
 //   this is trivial and exact. For allowDuplicates = false we get some estimate.
@@ -727,7 +727,7 @@ protected:
 // * Input(0) Sampling weight vector: Matrix of shape (nClasses x 1) providing sampling weights >= 0.
 // * sizeOfSampledSet: Size of the sampled set.
 // * allowDuplicates: controls if sampled set is allowed to contain duplicates.
-// * estimateInclusionProbs: Run mode, see above.
+// * estimateInSampleFrequency: Run mode, see above.
 // --------------------------------------------------------------------------------------------------------------------------------------------------
 
 template <class ElemType>
@@ -742,14 +742,14 @@ class RandomSampleNode : public ComputationNodeNonLooping<ElemType>, public NumI
     }
 
 public:
-    RandomSampleNode(DEVICEID_TYPE deviceId, const wstring& name, int sizeOfSampledSet = 0, bool allowDuplicates = false, bool estimateInclusionProbs = false)
-        : Base(deviceId, name), m_sizeOfSampledSet(sizeOfSampledSet), m_allowDuplicates(allowDuplicates), m_estimateInclusionProbs(estimateInclusionProbs)
+    RandomSampleNode(DEVICEID_TYPE deviceId, const wstring& name, int sizeOfSampledSet = 0, bool allowDuplicates = false, bool estimateInSampleFrequency = false)
+        : Base(deviceId, name), m_sizeOfSampledSet(sizeOfSampledSet), m_allowDuplicates(allowDuplicates), m_estimateInSampleFrequency(estimateInSampleFrequency)
     {
         SetRandomSeed((unsigned long)CreateUniqId());
     }
 
     RandomSampleNode(const ScriptableObjects::IConfigRecordPtr configp)
-        : RandomSampleNode(CPUDEVICE, L"<placeholder>", configp->Get(L"sizeOfSampledSet"), configp->Get(L"allowDuplicates"), configp->Get(L"estimateInclusionProbs"))
+        : RandomSampleNode(CPUDEVICE, L"<placeholder>", configp->Get(L"sizeOfSampledSet"), configp->Get(L"allowDuplicates"), configp->Get(L"estimateInSampleFrequency"))
     {
         AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
     }
@@ -761,7 +761,7 @@ public:
         {
             auto node = dynamic_pointer_cast<RandomSampleNode<ElemType>>(nodeP);
             node->m_allowDuplicates = m_allowDuplicates;
-            node->m_estimateInclusionProbs = m_estimateInclusionProbs;
+            node->m_estimateInSampleFrequency = m_estimateInSampleFrequency;
             node->m_sizeOfSampledSet = m_sizeOfSampledSet;
             node->m_randomSeed = m_randomSeed;
         }
@@ -771,7 +771,7 @@ public:
     {
         Base::Save(fstream);
         fstream << m_allowDuplicates;
-        fstream << m_estimateInclusionProbs;
+        fstream << m_estimateInSampleFrequency;
         fstream << m_sizeOfSampledSet;
     }
 
@@ -779,7 +779,7 @@ public:
     {
         Base::Load(fstream, modelVersion);
         fstream >> m_allowDuplicates;
-        fstream >> m_estimateInclusionProbs;
+        fstream >> m_estimateInSampleFrequency;
         fstream >> m_sizeOfSampledSet;
     }
 
@@ -811,33 +811,34 @@ private:
         valueMatrix.TransferToDeviceIfNotThere(CPUDEVICE, /*ismoved =*/ true/*means: BOTH state not ok */, /*emptyTransfer =*/ true, /*updatePreferredDevice =*/ false);
         valueMatrix.SetDevice(CPUDEVICE);
 
-        if (m_estimateInclusionProbs)
+        if (m_estimateInSampleFrequency) // W are in the mode the estimating the expected frequency of each class in the sampled set.
         {
             valueMatrix.SwitchToMatrixType(DENSE, matrixFormatDense, false);
             float sumOfWeights = (float) m_samplingWeightsPrefixSum.back();
             const Matrix<ElemType>& samplingWeights = Input(0)->ValueAsMatrix();
 
             float estimatedNumTries = EstimateNumberOfTries();
-            for (int iSample = 0; iSample < m_samplingWeightsPrefixSum.size(); iSample++)
+
+            for (int i = 0; i < m_samplingWeightsPrefixSum.size(); i++)
             {
-                float pSample = (float)samplingWeights.GetValue(iSample, 0) / sumOfWeights;
-                float estimatedCount = EstimateCountOfClass(pSample, estimatedNumTries);
-                valueMatrix.SetValue(iSample, 0, estimatedCount);
+                // Get the sampling probablility for from the weights for i-th class.
+                float samplingProb = (float)samplingWeights.GetValue(i, 0) / sumOfWeights;
+                float estimatedCount = EstimateCountOfClass(samplingProb, estimatedNumTries);
+                valueMatrix.SetValue(i, 0, estimatedCount);
             }
         }
         else /* compute random samples */
         {
-            valueMatrix.SwitchToMatrixType(SPARSE, matrixFormatSparseCSC, false);
             valueMatrix.Reset();
 
             // Get vector with indices of randomly sampled classes
-            const std::vector<int> samples = GetWeightedSamples();
+            const std::vector<size_t> samples = GetWeightedSamples();
 
             // Set columns of (sparse) result matrix as indicator vectors
-            for (int iSample = 0; iSample < m_sizeOfSampledSet; iSample++)
+            for (size_t i = 0; i < m_sizeOfSampledSet; i++)
             {
-                int sample = samples[iSample];
-                valueMatrix.SetValue(sample, iSample, 1);
+                int sample = samples[i];
+                valueMatrix.SetValue(sample, i, 1);
             }
         }
     }
@@ -862,6 +863,7 @@ private:
     const std::vector<int> GetWeightedSamples()
     {
         long dummy; 
+        // Here we are not interested in the number of sampling tries needed, which is returned in the parameter.
         return RunSampling(dummy);
     }
 
@@ -869,7 +871,7 @@ private:
     float EstimateNumberOfTries()
     {
         // We estimate the average numver of tries by repeating a fixed number of experiments
-        int numExperiments = 10; // We choose 10 without any deep justification.
+        const size_t numExperiments = 10; // We choose 10 without any deep justification.
         long totalTries = 0;
         for (int iExperiment = 0; iExperiment < numExperiments; iExperiment++)
         {
@@ -880,6 +882,8 @@ private:
         return totalTries / (float)numExperiments;
     }
 
+    // Runs the sampling returning a vector with the id's of the samples. The parameter nTries is used to return the number of draws that was needed
+    // to get the expected number of samples.
     const std::vector<int> RunSampling(long& nTries)
     {
         std::uniform_real_distribution<double> r(0, m_samplingWeightsPrefixSum.back());
@@ -939,14 +943,18 @@ public:
 
         size_t nClasses = dims[0];
 
-        if (m_estimateInclusionProbs)
+        if (m_estimateInSampleFrequency)
         {
-            // Output one vector containing the estimated inclusion probability for each class.
+            // Output one vector containing the estimated in sample frequency for each class.
             SetDims(TensorShape(nClasses, 1), false);
         }
         else /* sampling mode */
         {
             // Output one vector containing the estimated inclusion probability for each class.
+            Matrix<ElemType>& valueMatrix = ValueAsMatrix();
+            valueMatrix.TransferToDeviceIfNotThere(CPUDEVICE, /*ismoved =*/ true/*means: BOTH state not ok */, /*emptyTransfer =*/ true, /*updatePreferredDevice =*/ false);
+            valueMatrix.SetDevice(CPUDEVICE);
+            valueMatrix.SwitchToMatrixType(SPARSE, matrixFormatSparseCSC, false);
             SetDims(TensorShape(nClasses, m_sizeOfSampledSet), false);
         }
     }
@@ -964,14 +972,14 @@ public:
     virtual bool IsOutOfDateWrtInputs() const override
     {
         // The only input is the sampling weight vector that typically will be constant. 
-        if (m_estimateInclusionProbs)
+        if (m_estimateInSampleFrequency)
         {
             // If we are in the mode to estimate the inclusion probabilties for each class we don't need to recompute as long as the input doesn't change.
             return Base::IsOutOfDateWrtInputs();
         }
         else
         {
-            // If we are in the mode to generate random samples (i.e. m_estimateInclusionProbs == false) 
+            // If we are in the mode to generate random samples (i.e. m_estimateInSampleFrequency == false) 
             // we need to recompute the result for each mini-batch even if the weight vector didn't chnage.
             return true;
         }
@@ -979,7 +987,7 @@ public:
 
 private:
     bool m_allowDuplicates;        // The node can create samples allowing for duplicates (sampling with replacement) or not (sampling without replacement).
-    bool m_estimateInclusionProbs; // Control wether to create random samples or estimate inclusion probabilties.
+    bool m_estimateInSampleFrequency; // Control wether to create random samples or estimate in sample frequencies.
     int m_sizeOfSampledSet;                // Requested size of sample in case of run-mode = CREATE_SAMPLES.
     std::vector<double> m_samplingWeightsPrefixSum;
 };

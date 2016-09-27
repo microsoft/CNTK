@@ -508,14 +508,14 @@ CNTK2 = [
                                                                                         operation = 'RandomSample' ;
                                                                                         sizeOfSampledSet = numSamples;
                                                                                         allowDuplicates = sampleWithReplacement;
-                                                                                        estimateInclusionProbs = false;
+                                                                                        estimateInSampleFrequency = false;
                                                                                         inputs = _ /*plus the function args*/ ]
 
     GetInclusionProb(_ ,numSamples, sampleWithReplacement, tag='') = new ComputationNode [
                                                                                         operation = 'RandomSample' ;
                                                                                         sizeOfSampledSet = numSamples;
                                                                                         allowDuplicates = sampleWithReplacement;
-                                                                                        estimateInclusionProbs = true;
+                                                                                        estimateInSampleFrequency = true;
                                                                                         inputs = _ /*plus the function args*/ ]
 ]
 
