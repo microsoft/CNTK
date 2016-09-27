@@ -124,7 +124,7 @@ private:
 };
 
 static DEVICEID_TYPE s_bestDeviceId = DEVICEID_NOTYETDETERMINED;
-static BestGpu* s_bestGpu = nullptr;
+static std::unique_ptr<BestGpu> s_bestGpu = nullptr;
 
 // DeviceFromConfig - Parse 'deviceId' config parameter to determine what type of behavior is desired
 //Symbol - Meaning
@@ -149,7 +149,7 @@ static DEVICEID_TYPE SelectDevice(DEVICEID_TYPE deviceId, bool bLockGPU, const i
             // GPU device to be auto-selected, so init our class
             if (s_bestGpu == nullptr)
             {
-                s_bestGpu = new BestGpu();
+                s_bestGpu = make_unique<BestGpu>();
                 for (int i = 0; i < excludedDevices.size(); ++i)
                 {
                     s_bestGpu->DisallowDevice(excludedDevices[i]);

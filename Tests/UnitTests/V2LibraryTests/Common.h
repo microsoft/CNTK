@@ -22,6 +22,21 @@ inline void FloatingPointVectorCompare(const std::vector<ElementType>& first, co
     }
 }
 
+inline void VerifyException(const std::function<void()>& functionToTest, std::string errorMessage) {
+    bool error = false;
+    try
+    {
+        functionToTest();
+    }
+    catch (const std::exception&)
+    {
+        error = true;
+    }
+
+    if (!error)
+        throw std::runtime_error(errorMessage);
+};
+
 static std::mt19937_64 rng(0);
 
 #pragma warning(push)

@@ -62,7 +62,8 @@ namespace CNTK
         auto selectedDevice = DefaultDevice();
         if (!alreadyFrozen)
         {
-            Microsoft::MSR::CNTK::OnDeviceSelected(selectedDevice.Id());
+            auto id = selectedDevice.Type() == DeviceKind::CPU ? CPUDEVICE : selectedDevice.Id();
+            Microsoft::MSR::CNTK::OnDeviceSelected(id);
         }
         return selectedDevice;
     }
@@ -73,12 +74,18 @@ namespace CNTK
         if (!Internal::IsSettingDefaultDeviceAlwaysAllowed() && s_defaultDeviceFrozen.load())
             RuntimeError("Process wide default device cannot be changed since it has been frozen by being implicitly used as the default device in a CNTK API call");
 
+        std::call_once(s_initDefaultDeviceFlag, []{
+            // do nothing. This will set the flag above, in case when DefaultDevice() was never called before.
+        });
+
         s_defaultDevice.reset(new DeviceDescriptor(newDefaultDevice));
     }
     
     /*static*/ DeviceDescriptor DeviceDescriptor::BestDevice()
     {
-        // TODO: add unit tests for this.
+        //TODO: BestDevice remains locked if UseDefaultDevice is never executed
+        // or if BestDevice() is invoked after UseDefaultDevice(). 
+        // Should we do anything about it?
         auto id = Microsoft::MSR::CNTK::GetBestDevice();
         return id >= 0 ? DeviceDescriptor::GPUDevice(id) : DeviceDescriptor::CPUDevice();
     }
