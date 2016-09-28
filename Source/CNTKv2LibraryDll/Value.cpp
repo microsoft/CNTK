@@ -4,6 +4,11 @@
 //
 
 #include "stdafx.h"
+
+#ifdef _WIN32
+#define _SCL_SECURE_NO_WARNINGS
+#endif
+
 #include "CNTKLibrary.h"
 #include "Utils.h"
 #include "Value.h"

@@ -633,11 +633,9 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
 // main() for CNTK config language (this is the current way of using CNTK)
 // ---------------------------------------------------------------------------
 
-// helper to print a little banner
-// CNTK 1.7.1 (fseide/samplebs hash, Sep 3 2016 00:17:33) on FSEIDE-GPU at 2016/09/03 00:25:30
 static void PrintBanner(int argc, wchar_t* argv[], const string& timestamp)
 {
-    fprintf(stderr, "CNTK 1.7.1 (");
+    fprintf(stderr, "CNTK 1.7.1+ (");
 #ifdef _GIT_EXIST
     fprintf(stderr, "%s %.6s, ", _BUILDBRANCH_, _BUILDSHA1_);
 #endif
