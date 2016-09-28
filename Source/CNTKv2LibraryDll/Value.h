@@ -29,13 +29,40 @@ namespace CNTK
                 m_unpackedShape = m_unpackedShape.AppendShape({ packedDataLayout->GetNumTimeSteps(), packedDataLayout->GetNumSequences() });
         }
 
-        void Unpack();
+        void Unpack() const;
 
         const NDShape& Shape() const override { return m_unpackedShape; }
         DeviceDescriptor Device() const override { return m_isPacked ? m_packedData->Device() : Value::Device(); }
         DataType GetDataType() const override { return m_isPacked ? m_packedData->GetDataType() : Value::GetDataType(); }
         StorageFormat GetStorageFormat() const override { return m_isPacked? m_packedData->GetStorageFormat() : Value::GetStorageFormat(); }
         bool IsReadOnly() const override { return m_isPacked ? m_packedData->IsReadOnly() : Value::IsReadOnly(); }
+
+        NDArrayViewPtr Data() const override
+        {
+            Unpack();
+            return Value::Data();
+        }
+
+        NDMaskPtr Mask() const override
+        {
+            Unpack();
+            return Value::Mask();
+        }
+
+        ValuePtr DeepClone(bool /*readOnly = false*/) const override
+        {
+            LogicError("DeepClone is currently unsupported for PackedValue objects");
+        }
+
+        ValuePtr Alias(bool /*readOnly = false*/) const override
+        {
+            LogicError("Alias is currently unsupported for PackedValue objects");
+        }
+
+        void CopyFrom(const Value& /*source*/) override
+        {
+            LogicError("CopyFrom is currently unsupported for PackedValue objects");
+        }
 
         template <typename ElementType>
         std::pair<std::shared_ptr<const Microsoft::MSR::CNTK::Matrix<ElementType>>, std::shared_ptr<Microsoft::MSR::CNTK::MBLayout>> PackedData()
@@ -48,10 +75,11 @@ namespace CNTK
 
     private:
         bool m_isReadOnly;
-        bool m_isPacked;
         NDShape m_sampleShape;
         NDShape m_unpackedShape;
-        NDArrayViewPtr m_packedData;
-        std::shared_ptr<Microsoft::MSR::CNTK::MBLayout> m_packedDataLayout;
+
+        mutable bool m_isPacked;
+        mutable NDArrayViewPtr m_packedData;
+        mutable std::shared_ptr<Microsoft::MSR::CNTK::MBLayout> m_packedDataLayout;
     };
 }

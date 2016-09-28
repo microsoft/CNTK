@@ -40,6 +40,17 @@ namespace CNTK
         {
             return s_alwaysAllowSettingDefaultDevice.load();
         }
+
+        std::atomic<bool> s_disableAutomaticUnpackingOfPackedValues(false);
+        void DisableAutomaticUnpackingOfPackedValues()
+        {
+            s_disableAutomaticUnpackingOfPackedValues.store(true);
+        }
+
+        bool IsAutomaticUnpackingOfPackedValuesDisabled()
+        {
+            return s_disableAutomaticUnpackingOfPackedValues.load();
+        }
     }
 
     /*static*/ std::atomic<bool> DeviceDescriptor::s_defaultDeviceFrozen(false);

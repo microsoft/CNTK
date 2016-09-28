@@ -812,8 +812,8 @@ namespace CNTK
         Value(const Value&) = delete; Value& operator=(const Value&) = delete; Value(Value&&) = delete; Value& operator=(Value&&) = delete;
 
     protected:
-        NDArrayViewPtr m_data;
-        NDMaskPtr m_mask;
+        mutable NDArrayViewPtr m_data;
+        mutable NDMaskPtr m_mask;
     };
 
     ///
@@ -1621,17 +1621,7 @@ namespace CNTK
                                                         Internal::GenerateUid(m_varKind));
             }
 
-            void SetValueInitialization(const ParameterInitializer& initializationConfig, const DeviceDescriptor& device)
-            {
-                if (m_value != nullptr)
-                    LogicError("Value initialization config cannot be set if a value already exists");
-
-                assert(!m_valueInitializer);
-                assert(!m_valueInitializationDevice);
-
-                m_valueInitializer.reset(new ParameterInitializer(initializationConfig));
-                m_valueInitializationDevice.reset(new DeviceDescriptor(device));
-            }
+            CNTK_API void SetValueInitialization(const ParameterInitializer& initializationConfig, const DeviceDescriptor& device);
 
         private:
             // Disallow copy and move construction and assignment

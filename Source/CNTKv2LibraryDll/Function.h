@@ -220,7 +220,7 @@ namespace CNTK
 
     public:
         PrimitiveFunction(PrimitiveOpType op, const std::vector<Variable>& inputs, Dictionary&& functionConfig, const std::wstring& functionName = L"")
-            : Function(inputs, GetOutputVariables(op, inputs, this, functionConfig), std::move(functionConfig), nullptr, functionName), m_op(op)
+            : Function(inputs, GetOutputVariables(op, inputs, this, functionConfig, functionName), std::move(functionConfig), nullptr, functionName), m_op(op)
         {
         }
 
@@ -436,7 +436,7 @@ namespace CNTK
         }
 
         // TODO: Reconcile this with the ComputationNode::Validate functionality in core CNTK to avoid duplication of inference logic
-        static std::vector<Variable> GetOutputVariables(PrimitiveOpType op, const std::vector<Variable>& inputs, Function* owner, const Dictionary& functionConfig);
+        static std::vector<Variable> GetOutputVariables(PrimitiveOpType op, const std::vector<Variable>& inputs, Function* owner, const Dictionary& functionConfig, const std::wstring& functionName);
 
     private:
         PrimitiveOpType m_op;

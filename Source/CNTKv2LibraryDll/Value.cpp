@@ -179,8 +179,11 @@ namespace CNTK
         }
     }
 
-    void PackedValue::Unpack()
+    void PackedValue::Unpack() const
     {
+        if (Internal::IsAutomaticUnpackingOfPackedValuesDisabled())
+            LogicError("PackedValue::Unpack: Automatic unpacking of PackedValue objects is disabled");
+
         if (m_isPacked)
         {
             ValuePtr valueObject;
