@@ -656,7 +656,7 @@ public:
 
     std::list<ComputationNodeBasePtr> GetNodesWhere(std::function<bool(const ComputationNodeBasePtr&)>& predicate, const ComputationNodeBasePtr& rootNode = nullptr)
     {
-        std::list<ComputationNodeBasePtr> nodesWithType;
+        std::list<ComputationNodeBasePtr> filteredNodes;
 
         // find nodes from all available nodes
         if (rootNode == nullptr)
@@ -665,7 +665,7 @@ public:
             {
                 ComputationNodeBasePtr node = nodeIter->second;
                 if (predicate(node))
-                    nodesWithType.push_back(node);
+                    filteredNodes.push_back(node);
             }
         }
         else
@@ -674,11 +674,11 @@ public:
             for (const auto& node : GetEvalOrder(rootNode)) // TODO: verify that no use of this requires the actual eval order, then change to GetAllNodesForRoot()
             {
                 if (predicate(node))
-                    nodesWithType.push_back(node);
+                    filteredNodes.push_back(node);
             }
         }
 
-        return nodesWithType;
+        return filteredNodes;
     }
 
     std::list<ComputationNodeBasePtr> GetNodesWithType(const wstring typeName, const ComputationNodeBasePtr& rootNode = nullptr)
