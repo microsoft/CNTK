@@ -304,16 +304,20 @@ namespace CNTK
         }
     }
 
+    static size_t const CNTKInternalIdxValueForAllStaticAxes = 0;
     inline Axis AsAxis(size_t CNTKInternalAxisIdx)
     {
-        if (CNTKInternalAxisIdx == 0)
-            LogicError("CNTK internal axis indices must be > 0");
+        if (CNTKInternalAxisIdx == CNTKInternalIdxValueForAllStaticAxes)
+            return Axis::AllStaticAxes();
 
         return Axis(CNTKInternalAxisIdx - 1);
     }
 
     inline int AsCNTKInternalAxisIdx(const Axis& axis)
     {
+        if (axis == Axis::AllStaticAxes())
+            return CNTKInternalIdxValueForAllStaticAxes;
+
         if (!axis.IsStaticAxis())
             LogicError("Only Axis that represent static indices can be converted to a CNTK internal axis index");
 

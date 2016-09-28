@@ -136,6 +136,12 @@ namespace CNTK
         return s_defaultBatchAxis;
     }
 
+    /*static*/ const Axis& Axis::AllStaticAxes()
+    {
+        static const Axis s_allStaticAxes(SentinelStaticAxisIndexValueForAllStaticAxes);
+        return s_allStaticAxes;
+    }
+
     /*static*/ Axis Axis::NewUniqueDynamicAxis(const std::wstring& axisNamePrefix, bool isOrderedDynamicAxis /*= true*/)
     {
         return Axis(s_uniqueDynamicAxisNames.NewUniqueDynamicAxisName(axisNamePrefix), isOrderedDynamicAxis);

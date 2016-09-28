@@ -320,6 +320,9 @@ inline void PrintTrainingProgress(const CNTK::Trainer& trainer, size_t minibatch
 
 inline std::vector<size_t> GetStrides(const CNTK::NDShape& shape)
 {
+    if (shape.Rank() == 0)
+        return std::vector<size_t>();
+
     std::vector<size_t> strides(shape.Rank() - 1);
     size_t totalSize = 1;
     for (size_t i = 0; i < shape.Rank() - 1; ++i)
@@ -347,6 +350,9 @@ inline CNTK::NDShape UnflattenedShape(size_t flatennedIdx, const std::vector<siz
 
 inline size_t FlattenedIndex(const CNTK::NDShape& shape, const std::vector<size_t>& strides)
 {
+    if (shape.Rank() == 0)
+        return 0;
+
     size_t flattenedIdx = shape[0];
     for (int i = 0; i < strides.size(); ++i)
         flattenedIdx += shape[i + 1] * strides[i];

@@ -827,6 +827,7 @@ namespace CNTK
     {
         CNTK_API static const std::wstring StaticAxisNamePrefix;
         static const size_t SentinelStaticAxisIndexValueForDynamicAxes = SIZE_MAX;
+        static const size_t SentinelStaticAxisIndexValueForAllStaticAxes = SIZE_MAX - 1;
 
         class UniqueDynamicAxesNames
         {
@@ -908,14 +909,19 @@ namespace CNTK
         }
 
         ///
-        /// Static Axis object representing the default dynamic axis.
+        /// Axis object representing the default dynamic axis.
         ///
         CNTK_API static const Axis& DefaultDynamicAxis();
 
         ///
-        /// Static Axis object representing the batch axis.
+        /// Axis object representing the batch axis.
         ///
         CNTK_API static const Axis& DefaultBatchAxis();
+
+        ///
+        /// Axis object representing all the static axes of an operand
+        ///
+        CNTK_API static const Axis& AllStaticAxes();
 
         ///
         /// Returns a new unique Dynamic axis
@@ -2999,7 +3005,7 @@ namespace CNTK
     };
 
     /// 
-    /// Instantiate the CNTK buil-in test format minibatch source
+    /// Instantiate the CNTK built-in test format minibatch source
     ///
     inline MinibatchSourcePtr TextFormatMinibatchSource(const std::wstring& dataFilePath, const std::vector<StreamConfiguration>& streamConfigs, size_t epochSize = SIZE_MAX)
     {

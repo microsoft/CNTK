@@ -610,7 +610,7 @@ namespace CNTK
             for (size_t i = 0; i < inputs[0].Shape().Rank(); ++i)
                 reductionAxes.push_back(i);
 
-            outputShape = ReductionOpOutputShape(op, predictionShape, reductionAxes);
+            outputShape = ReductionOpOutputShape(op, predictionShape, reductionAxes, /*preserveReductionAxes =*/ false);
             break;
         }
         case PrimitiveOpType::PastValue:
@@ -631,9 +631,13 @@ namespace CNTK
         {
             assert(inputs.size() == 1);
             auto reductionAxis = functionConfig[PrimitiveFunction::AttributeNameAxis].Value<Axis>();
-            std::vector<size_t> reductionAxes = { reductionAxis.StaticAxisIndex() };
-
-            outputShape = ReductionOpOutputShape(op, inputs[0].Shape(), reductionAxes);
+            if (reductionAxis == Axis::AllStaticAxes())
+                outputShape = {};
+            else
+            {
+                std::vector<size_t> reductionAxes = { reductionAxis.StaticAxisIndex() };
+                outputShape = ReductionOpOutputShape(op, inputs[0].Shape(), reductionAxes, /*preserveReductionAxes =*/ true);
+            }
             break;
         }
         case PrimitiveOpType::BatchNormalization:
@@ -664,9 +668,6 @@ namespace CNTK
         {
             if (inputs[0].DynamicAxes().empty() || inputs[1].DynamicAxes().empty() || inputs[2].DynamicAxes().empty())
                 InvalidArgument("ScatterPacked requires all its operands to have dynamic axes");
-
-            if (inputs[1].Shape().Rank() != 1)
-                InvalidArgument("ScatterPacked requires the packedIndex operand to be a scalar sequence");
 
             outputShape = inputs[0].Shape();
             break;
@@ -2012,7 +2013,7 @@ namespace CNTK
                 newDynamicAxes.push_back(operandAxis);
         }
 
-        return Internal::Gather(operand, flags, newDynamicAxes);
+        return Internal::Gather(operand, flags, newDynamicAxes, name);
     }
 
     FunctionPtr Dropout(const Variable& operand, double dropoutRate, const std::wstring& name /*= L""*/)
@@ -2168,7 +2169,7 @@ namespace CNTK
         Constant meanVar(mean);
         Constant invStdDevVar(invStdDev);
 
-        return ElementTimes(Minus(operand, meanVar), invStdDevVar);
+        return ElementTimes(Minus(operand, meanVar), invStdDevVar, name);
     }
 
     FunctionPtr Convolution(const Variable& convolutionMap,
@@ -2271,7 +2272,7 @@ namespace CNTK
             std::copy(currentFunctionOutputs.begin(), currentFunctionOutputs.end(), std::back_inserter(inputs));
         }
 
-        return Internal::Combine(inputs);
+        return Internal::Combine(inputs, name);
     }
 
     namespace Sequence
@@ -2286,25 +2287,25 @@ namespace CNTK
         FunctionPtr IsFirst(const Variable& operand, const std::wstring& name /*= L""*/)
         {
             VerifyIsSequence(operand);
-            return Internal::IsWithin(operand, 1);
+            return Internal::IsWithin(operand, 1, name);
         }
 
         FunctionPtr IsLast(const Variable& operand, const std::wstring& name /*= L""*/)
         {
             VerifyIsSequence(operand);
-            return Internal::IsWithin(operand, -1);
+            return Internal::IsWithin(operand, -1, name);
         }
 
         FunctionPtr First(const Variable& operand, const std::wstring& name /*= L""*/)
         {
             VerifyIsSequence(operand);
-            return Slice(operand, operand.DynamicAxes()[0], 0, 1);
+            return Slice(operand, operand.DynamicAxes()[0], 0, 1, name);
         }
 
         FunctionPtr Last(const Variable& operand, const std::wstring& name /*= L""*/)
         {
             VerifyIsSequence(operand);
-            return Slice(operand, operand.DynamicAxes()[0], -1, 0);
+            return Slice(operand, operand.DynamicAxes()[0], -1, 0, name);
         }
 
         std::vector<Axis> WhereOpDynamicAxes(const Variable& operand)
@@ -2399,14 +2400,8 @@ namespace CNTK
             }
             else
             {
-                auto rowSliceFunc = Internal::Slice(operand, Axis(0), 0, 1);
-                auto result = Minus(rowSliceFunc, rowSliceFunc);
-
-                // Reduce away all but the static axis 0
-                for (size_t i = 1; i < result->Output().Shape().Rank(); ++i)
-                    result = ReduceSum(result, Axis(i));
-
-                return result;
+                auto reduceAllStaticAxesFunc = Internal::ReduceElements(operand, PrimitiveFunction::InternalSumReductionOpName, Axis::AllStaticAxes());
+                return Minus(reduceAllStaticAxesFunc, reduceAllStaticAxesFunc);
             }
         }
 
@@ -2419,12 +2414,12 @@ namespace CNTK
 
         FunctionPtr Gather(const Variable& operand, const Variable& condition, const std::vector<Axis>& newDynamicAxes, const std::wstring& name /*= L""*/)
         {
-            return Internal::GatherPacked(operand, Internal::PackedIndex(/*layout of*/ operand, Where(condition, newDynamicAxes)));
+            return Internal::GatherPacked(operand, Internal::PackedIndex(/*layout of*/ operand, Where(condition, newDynamicAxes)), name);
         }
 
         FunctionPtr Scatter(const Variable& operand, const Variable& condition, const std::vector<Axis>& newDynamicAxes, const std::wstring& name /*= L""*/)
         {
-            return Internal::ScatterPacked(operand, Internal::PackedIndex(/*layout of*/ condition, Where(condition, newDynamicAxes)), /*layout of*/ condition);
+            return Internal::ScatterPacked(operand, Internal::PackedIndex(/*layout of*/ condition, Where(condition, newDynamicAxes)), /*layout of*/ condition, name);
         }
 
         FunctionPtr Slice(const Variable& operand, const Axis& axis, int beginIndex, int endIndex, const std::wstring& name /*= L""*/)
@@ -2441,7 +2436,7 @@ namespace CNTK
         {
             using namespace std::placeholders;
 
-            if (axis.IsStaticAxis())
+            if (axis.IsStaticAxis() || (axis == Axis::AllStaticAxes()))
             {
                 auto additionalProperties = Dictionary();
                 additionalProperties[PrimitiveFunction::AttributeNameAxis] = axis;
@@ -2465,7 +2460,7 @@ namespace CNTK
             auto cumulativeSumFunction = reductionFunctor(prevAccumulatedValuesFunction, operand);
             cumulativeSumFunction->ReplacePlaceholders({ { cumulativeSumFunctionPlaceholder, cumulativeSumFunction } });
 
-            return CNTK::Slice(cumulativeSumFunction, axis, -1, 0);
+            return CNTK::Slice(cumulativeSumFunction, axis, -1, 0, name);
         }
    }
 }

@@ -399,20 +399,23 @@ namespace CNTK
             return leftOperandShape.SubShape(0, outputRank).AppendShape(rightOperandShape.SubShape(numReductionAxes));
         }
 
-        static NDShape ReductionOpOutputShape(PrimitiveOpType op, const NDShape& operandShape, const std::vector<size_t>& reductionAxes)
+        static NDShape ReductionOpOutputShape(PrimitiveOpType op, const NDShape& operandShape, const std::vector<size_t>& reductionAxes, bool preserveReductionAxes)
         {
             if (reductionAxes.size() > operandShape.Rank())
                 RuntimeError("The number of reduction axes %d exceeds the rank in the operand shape %S of the reduction operation %s", (int)reductionAxes.size(), AsStringForErrorReporting(operandShape).c_str(), PrimitiveOpTypeName(op));
 
-            size_t numOutputAxes = operandShape.Rank() - reductionAxes.size();
+            size_t numOutputAxes = operandShape.Rank() - (preserveReductionAxes ? 0 : reductionAxes.size());
             std::vector<size_t> outputDims(numOutputAxes);
             for (size_t i = 0, j = 0; i < operandShape.Rank(); ++i)
             {
                 // Skip axes being reduced over
                 if (std::find(reductionAxes.begin(), reductionAxes.end(), i) != reductionAxes.end())
-                    continue;
-
-                outputDims[j++] = operandShape[i];
+                {
+                    if (preserveReductionAxes)
+                        outputDims[j++] = 1;
+                }
+                else
+                    outputDims[j++] = operandShape[i];
             }
 
             return NDShape(std::move(outputDims));
