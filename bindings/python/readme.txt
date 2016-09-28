@@ -18,12 +18,15 @@ swig.bat
 
 # a) If you are just building to use it locally:
     # Build -> generate .pyd
+
     # 1) go two levels up
     # 2) run the following:
     python .\setup.py build_ext -if -c msvc --plat-name=win-amd64
 
     # 3) add to PATH the path to cntk dlls (e.g. e:\CNTK\x64\Release)
-    # 4) add to PYTHONPATH the path to the python api source (e.g. e:\CNTK\bindings\python\)
+	SET PATH=%PATH%;<your CNTK release path e.g., e:\CNTK\x64\Release
+    # 4) add to PYTHONPATH the path to the python examples (e.g. e:\CNTK\bindings\python\examples)
+	SET PYTHONPATH=e:\CNTK\bindings\python\examples
     # 5) test by running any of the examples or running py.test from the inside bindings\python directory
 
 # b) If you want to package it:

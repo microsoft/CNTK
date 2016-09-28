@@ -49,6 +49,8 @@ template <class ElemType> class DeviceBoundNumber;
 struct /*interface*/ MATH_API MatrixBase
 {
     virtual int GetDeviceId() const = 0;
+    virtual MatrixType GetMatrixType() const = 0;
+    virtual MatrixFormat GetFormat() const = 0;
     // TODO: Move more generic functions such as getting dims, resizing, and getting/setting as scalars in here.
     virtual ~MatrixBase();
 };
@@ -147,8 +149,8 @@ public:
         return node;
     }
 
-    MatrixType GetMatrixType() const { return m_matrixType; }
-    MatrixFormat GetFormat() const { return m_baseMatrix->GetFormat(); }
+    MatrixType GetMatrixType() const override;
+    MatrixFormat GetFormat() const override;
     bool OwnBuffer() const { return m_baseMatrix->OwnBuffer(); }
     int GetDeviceId() const; // -1 if CPU, otherwise GPU CUDA device id
     DEVICEID_TYPE GetPreferredDeviceId() const { return m_preferredDeviceId; }; // -1 if CPU, otherwise GPU CUDA device id
