@@ -14,11 +14,13 @@
 #endif
 #pragma comment(lib, "msmpi.lib")
 
-
+#include <errno.h> 
 #include <string>
 #include <array>
 #include <vector>
 #include <memory>
+
+#define FFLUSH_SUCCESS 0
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -163,13 +165,23 @@ public:
     ~MPIWrapper()
     {
         fprintf(stderr, "~MPIWrapper\n");
-        fflush(stderr);
-        // TODO: Check for error code and throw if !std::uncaught_exception()
 
         // Do not finalize in event of an exception since calling MPI_Finalize without
         // all pending communications being finished results in a hang
+        int rc = fflush(stderr);
         if (!std::uncaught_exception())
+        {
+            if (rc != FFLUSH_SUCCESS)
+            {
+            #ifdef _WIN32
+                RuntimeError("MPIWrapper: Failed to flush stderr, %d", ::GetLastError());
+            #else
+                RuntimeError("MPIWrapper: Failed to flush stderr, %d", errno);
+            #endif
+            }
+
             MPI_Finalize();
+        }
     }
 
 private:
