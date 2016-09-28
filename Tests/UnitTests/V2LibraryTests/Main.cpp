@@ -14,6 +14,7 @@ void TrainLSTMSequenceClassifer();
 void SerializationTests();
 void LearnerTests();
 void TrainSequenceToSequenceTranslator();
+void EvalMultiThreadsWithNewNetwork(const DeviceDescriptor&, const int);
 
 int main()
 {
@@ -32,6 +33,14 @@ int main()
     TrainLSTMSequenceClassifer();
 
     TrainSequenceToSequenceTranslator();
+
+    // Test multi-threads evaluation
+    fprintf(stderr, "Test multi-threaded evaluation on CPU.\n");
+    EvalMultiThreadsWithNewNetwork(DeviceDescriptor::CPUDevice(), 2);
+#ifndef CPUONLY
+    fprintf(stderr, "Test multi-threaded evaluation on GPU\n");
+    EvalMultiThreadsWithNewNetwork(DeviceDescriptor::GPUDevice(0), 2);
+#endif
 
     fprintf(stderr, "\nCNTKv2Library tests: Passed\n");
     fflush(stderr);

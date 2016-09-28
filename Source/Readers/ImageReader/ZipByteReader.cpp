@@ -131,8 +131,7 @@ cv::Mat ZipByteReader::Read(size_t seqId, const std::string& path, bool grayscal
     });
     m_zips.push(std::move(zipFile));
 
-    cv::Mat img; 
-    img = cv::imdecode(cv::Mat(1, (int)size, CV_8UC1, contents.data()), grayscale ? cv::IMREAD_GRAYSCALE : cv::IMREAD_COLOR);
+    cv::Mat img = cv::imdecode(contents, grayscale ? cv::IMREAD_GRAYSCALE : cv::IMREAD_COLOR);
     assert(nullptr != img.data);
     m_workspace.push(std::move(contents));
     return img;

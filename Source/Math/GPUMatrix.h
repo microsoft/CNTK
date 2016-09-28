@@ -61,6 +61,8 @@ cudaStream_t MATH_API GetStream();
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+class DataTransferer;
+
 // -----------------------------------------------------------------------
 // SyncGuard -- synchronize around CUDA calls
 // -----------------------------------------------------------------------
@@ -252,7 +254,7 @@ public:
     void SetValue(const GPUMatrix<ElemType>& deepCopyFrom);
     //void SetValue(const CPUSparseMatrix<ElemType>& deepCopyFrom);
     //void SetValue(const GPUSparseMatrix<ElemType>& deepCopyFrom);
-    void SetValue(const size_t numRows, const size_t numCols, int deviceId, ElemType* pArray, size_t matrixFlags = matrixFlagNormal);
+    void SetValue(const size_t numRows, const size_t numCols, int deviceId, ElemType* pArray, size_t matrixFlags = matrixFlagNormal, DataTransferer* transferer = nullptr);
 
     void SetDiagonalValue(const ElemType v);
     void SetDiagonalValue(const GPUMatrix<ElemType>& vector);

@@ -159,8 +159,10 @@ struct GridDim
     // get device properties of current device
     static const cudaDeviceProp& GetDeviceProps()
     {
-        static std::vector<cudaDeviceProp> props = CacheDeviceProps(); // thread-safe according to C++ standard
-        return props[GetCurrentDeviceId()];
+        // Unfortunatelly, initialization of local static variables is not thread-safe in VS2013.
+        // As workaround, it is moved to the struct level. 
+        // static std::vector<cudaDeviceProp> props = CacheDeviceProps(); // thread-safe according to C++ standard
+        return s_cachedDeviceProps[GetCurrentDeviceId()];
     }
 
     // compute our location on the grid
@@ -168,6 +170,10 @@ struct GridDim
     {
         return blockDim.x * blockIdx.x + threadIdx.x;
     }
+
+private:     
+    // Todo: after upgraded to VS2015, move the satic variable into GetDeviceProps() as local static variables there.
+    static std::vector<cudaDeviceProp> s_cachedDeviceProps;
 };
 
 #define CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id, N) \

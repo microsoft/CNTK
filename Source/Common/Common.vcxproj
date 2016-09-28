@@ -67,6 +67,7 @@
     <ClCompile Include="fileutil.cpp" />
     <ClCompile Include="Globals.cpp" />
     <ClCompile Include="MPIWrapper.cpp" />
+    <ClCompile Include="Sequences.cpp" />
     <ClCompile Include="TimerUtility.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

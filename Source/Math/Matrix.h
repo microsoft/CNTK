@@ -14,6 +14,7 @@
 #include "CommonMatrix.h"
 #include "TensorShape.h" // only for SmallVector; I was hoping to keep this out
 #include "RNGHandle.h"
+#include "DataTransferer.h"
 #include <limits.h>
 #include <memory> // for shared_ptr
 #include <array>
@@ -48,6 +49,8 @@ template <class ElemType> class DeviceBoundNumber;
 struct /*interface*/ MATH_API MatrixBase
 {
     virtual int GetDeviceId() const = 0;
+    virtual MatrixType GetMatrixType() const = 0;
+    virtual MatrixFormat GetFormat() const = 0;
     // TODO: Move more generic functions such as getting dims, resizing, and getting/setting as scalars in here.
     virtual ~MatrixBase();
 };
@@ -146,8 +149,8 @@ public:
         return node;
     }
 
-    MatrixType GetMatrixType() const { return m_matrixType; }
-    MatrixFormat GetFormat() const { return m_baseMatrix->GetFormat(); }
+    MatrixType GetMatrixType() const override;
+    MatrixFormat GetFormat() const override;
     bool OwnBuffer() const { return m_baseMatrix->OwnBuffer(); }
     int GetDeviceId() const; // -1 if CPU, otherwise GPU CUDA device id
     DEVICEID_TYPE GetPreferredDeviceId() const { return m_preferredDeviceId; }; // -1 if CPU, otherwise GPU CUDA device id
@@ -245,7 +248,7 @@ public:
     void SetValue      (const Matrix<ElemType>& deepCopyFrom);
     // AssignValuesOf respects the target matrix's information. It copies the values from the target into the memory of the source.
     void AssignValuesOf(const Matrix<ElemType>& deepCopyFrom);
-    void SetValue(const size_t numRows, const size_t numCols, int deviceId, ElemType* pArray, const size_t matrixFlags = matrixFlagNormal);
+    void SetValue(const size_t numRows, const size_t numCols, int deviceId, ElemType* pArray, const size_t matrixFlags = matrixFlagNormal, DataTransferer* transferer = nullptr);
     void SetValue(const size_t rIdx, const size_t cIdx, ElemType val); // set matrix sparsely
     void SetValue(const size_t numRows, const size_t numCols, std::initializer_list<ElemType> l) // SetValue(2,3, {1,2,3,  4,5,6});
     {
@@ -259,7 +262,7 @@ public:
         SetValue(MakeNan(__LINE__));
     }
     void SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYPE* h_CSCCol, const CPUSPARSE_INDEX_TYPE* h_Row, const ElemType* h_Val,
-                                const size_t nz, const size_t numRows, const size_t numCols);
+        const size_t nz, const size_t numRows, const size_t numCols, DataTransferer* transferer = nullptr);
 
     void MaskColumnsValue(const Matrix<char>& columnsMask, ElemType val);
 

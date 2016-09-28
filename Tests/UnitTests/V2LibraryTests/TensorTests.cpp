@@ -97,8 +97,27 @@ void TestTensorPlus(size_t numAxesLeftOperand, size_t numAxesRightOperand, const
     FloatingPointVectorCompare(largerInputGradients, expectedLargerInputGradientValues, "TestTimesAndPlus: Backward prop results do not match expected results");
 }
 
+void TestInfAndNans()
+{
+    auto device = DeviceDescriptor::CPUDevice();
+
+    // Test 1/0 == INF
+    auto divideFunc = ElementDivide(Constant::Scalar(1.0f, device), Constant::Scalar(0.0f, device));
+    std::vector<float> outputData(1, 0.2f);
+    auto outputValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(NDShape(0), outputData));
+
+    std::unordered_map<Variable, ValuePtr> outputs = { { divideFunc->Output(), outputValue } };
+    divideFunc->Forward({}, outputs, device);
+
+    if (outputData[0] != std::numeric_limits<float>::infinity())
+        throw std::runtime_error("1/0 != Infinity");
+}
+
 void TensorTests()
 {
+    // TODO: Enable after the core engine reciprocal bug of 1/0 not being INF is fixed
+    //TestInfAndNans();
+
     TestTensorPlus<float>(0, 3, DeviceDescriptor::CPUDevice(), false);
 #ifndef CPUONLY
     TestTensorPlus<double>(4, 1, DeviceDescriptor::GPUDevice(0), true);

@@ -123,15 +123,18 @@ static void DoEvalBNBase(const ConfigParameters& config, IDataReader& reader)
 template <typename ElemType>
 void DoEvalBN(const ConfigParameters& config)
 {
-        // evaluate batch normalization mean and various
-        ConfigParameters readerConfig(config(L"reader"));
+    // This is actually used for re-estimating the BN node. It *should* actually randomize.
+    // TODO: rename to DoEstimateBN.
 
-        // Should trace level to zero in Post BN?
-        //readerConfig.Insert("traceLevel", config(L"traceLevel", "0"));
+    // evaluate batch normalization mean and various
+    ConfigParameters readerConfig(config(L"reader"));
 
-        DataReader evaBNDataReader(readerConfig);
+    // Should trace level to zero in Post BN?
+    //readerConfig.Insert("traceLevel", config(L"traceLevel", "0"));
 
-        DoEvalBNBase<ElemType>(config, evaBNDataReader);
+    DataReader evaBNDataReader(readerConfig);
+
+    DoEvalBNBase<ElemType>(config, evaBNDataReader);
 }
 
 template <typename ElemType>
@@ -140,9 +143,12 @@ void DoEval(const ConfigParameters& config)
     // test
     ConfigParameters readerConfig(config(L"reader"));
     readerConfig.Insert("traceLevel", config(L"traceLevel", "0"));
+    if (!readerConfig.ExistsCurrent(L"randomize"))
+    {
+        readerConfig.Insert("randomize", "None");
+    }
 
     DataReader testDataReader(readerConfig);
-
     DoEvalBase<ElemType>(config, testDataReader);
 }
 

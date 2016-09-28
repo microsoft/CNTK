@@ -39,9 +39,14 @@ void PackerBase::StartEpoch(const EpochConfiguration& config, const std::vector<
         if (memoryProviders.size() != m_outputStreamDescriptions.size())
             RuntimeError("Number of streams does not match the number of memory providers.");
 
-        m_streamBuffers.reserve(m_outputStreamDescriptions.size());
-        for (size_t i = 0; i < m_outputStreamDescriptions.size(); ++i)
-            m_streamBuffers.push_back(StreamBuffer(memoryProviders[i]));
+        m_streamBuffers.resize(m_numberOfBuffers);
+        for (size_t i = 0; i < m_numberOfBuffers; ++i)
+        {
+            auto& currentBuffer = m_streamBuffers[i];
+            currentBuffer.reserve(m_outputStreamDescriptions.size());
+            for (size_t j = 0; j < m_outputStreamDescriptions.size(); ++j)
+                currentBuffer.push_back(StreamBuffer(memoryProviders[j]));
+        }
     }
 
     m_minibatchSize = config.m_minibatchSizeInSamples;
@@ -52,11 +57,15 @@ void PackerBase::StartEpoch(const EpochConfiguration& config, const std::vector<
 }
 
 PackerBase::PackerBase(SequenceEnumeratorPtr sequenceEnumerator,
-    const std::vector<StreamDescriptionPtr>& streams) :
+    const std::vector<StreamDescriptionPtr>& streams,
+    size_t numberOfBuffers) :
     m_sequenceEnumerator(sequenceEnumerator),
     m_minibatchSize(0),
-    m_outputStreamDescriptions(streams)
+    m_outputStreamDescriptions(streams),
+    m_numberOfBuffers(numberOfBuffers),
+    m_currentBufferIndex(0)
 {
+    assert(m_numberOfBuffers >= 1);
     m_inputStreamDescriptions = sequenceEnumerator->GetStreamDescriptions();
     assert(m_inputStreamDescriptions.size() != 0);
     assert(m_inputStreamDescriptions.size() == m_outputStreamDescriptions.size());
@@ -68,6 +77,13 @@ PackerBase::PackerBase(SequenceEnumeratorPtr sequenceEnumerator,
     {
         const auto& stream = m_outputStreamDescriptions[i];
         UNUSED(stream);
+
+        // Check the input.
+        if(m_inputStreamDescriptions[i]->m_elementType != ElementType::tdouble &&
+            m_inputStreamDescriptions[i]->m_elementType != ElementType::tfloat)
+        {
+            RuntimeError("Please specify the type of the '%ls' stream. You can use 'Cast' transform for that.", m_inputStreamDescriptions[i]->m_name.c_str());
+        }
 
         // Input and output should match in everything except for sparse/dense storage type.
         assert(stream->m_elementType == ElementType::tfloat || stream->m_elementType == ElementType::tdouble);
