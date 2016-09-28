@@ -735,6 +735,7 @@ ifdef LIBZIP_PATH
   CPPFLAGS += -DUSE_ZIP
   INCLUDEPATH += $(LIBZIP_PATH)/lib/libzip/include
   IMAGE_READER_LIBS += -lzip
+  LIBPATH += $(LIBZIP_PATH)/lib
 endif
 
 IMAGEREADER_SRC =\
