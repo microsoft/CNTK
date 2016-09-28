@@ -9,7 +9,8 @@ import sys
 import os
 import math
 import time
-from cntk import momentums_per_sample, DeviceDescriptor, Trainer, momentum_sgd_learner, Axis, text_format_minibatch_source, StreamConfiguration
+from cntk import momentums_per_sample, DeviceDescriptor, Trainer, Axis, text_format_minibatch_source, StreamConfiguration
+from cntk.learner import momentum_sgd
 from cntk.ops import input_variable, cross_entropy_with_softmax, classification_error, sequence, slice, past_value, future_value, element_select
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
@@ -99,7 +100,7 @@ def train_sequence_to_sequence_translator():
     clipping_threshold_per_sample = 2.3
     gradient_clipping_with_truncation = True
 
-    trainer = Trainer(z, ce, errs, [momentum_sgd_learner(z.parameters(), lr, momentum_per_sample, clipping_threshold_per_sample, gradient_clipping_with_truncation)])                   
+    trainer = Trainer(z, ce, errs, [momentum_sgd(z.parameters(), lr, momentum_per_sample, clipping_threshold_per_sample, gradient_clipping_with_truncation)])                   
 
     # Get minibatches of sequences to train with and perform model training
     minibatch_size = 72

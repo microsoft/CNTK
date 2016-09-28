@@ -11,15 +11,15 @@ def learning_rates_per_sample(lr, units=1):
     Create a learning rate schedule.
 
     Examples:
-    >>> # Use 0.7 for all samples
-    >>> lr = learning_rates_per_sample(0.7)
-    >>> [lr[i] for i in [0,1,2,3]]
-    [0.7, 0.7, 0.7, 0.7]
+        >>> # Use 0.7 for all samples
+        >>> lr = learning_rates_per_sample(0.7)
+        >>> [lr[i] for i in [0,1,2,3]]
+        [0.7, 0.7, 0.7, 0.7]
 
-    >>> # Use 0.7 for the first 3 samples, then 0.3 for the remaining ones
-    >>> lr = learning_rates_per_sample([0.7,0.3], 3)
-    >>> [lr[i] for i in range(10)]
-    [0.7, 0.7, 0.7, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3]
+        >>> # Use 0.7 for the first 3 samples, then 0.3 for the remaining ones
+        >>> lr = learning_rates_per_sample([0.7,0.3], 3)
+        >>> [lr[i] for i in range(10)]
+        [0.7, 0.7, 0.7, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3]
 
     Args:
         lr (`float` or `list`): if `float`, it is the learning rate to be used
@@ -40,7 +40,7 @@ def learning_rates_per_sample(lr, units=1):
 
 
 # TODO figure out how to pass infty to C++ in a portable way
-def sgd_learner(parameters, lr, 
+def sgd(parameters, lr, 
         clipping_threshold_per_sample=1E10,
         gradient_clipping_with_truncation=True):
     '''
@@ -50,8 +50,7 @@ def sgd_learner(parameters, lr,
         parameters (`list` of parameters): list of network parameters to tune.
          These can be obtained by the '.parameters()' method of the root
          operator.
-        lr ('float'): learning rate per sample. Currently, only float is
-         allowed, but schedules will be added soon
+        lr ('float' or `:func:learning_rates_per_sample`): learning rate per sample. 
         clipping threshold per sample ('float', optional): clipping threshold
          per sample, defaults to infinity
         gradient_clipping_with_truncation ('bool', default `True`): gradient
@@ -66,7 +65,7 @@ def sgd_learner(parameters, lr,
     return cntk_py.sgd_learner(parameters, lr, clipping_threshold_per_sample,
             gradient_clipping_with_truncation)
 
-def momentum_sgd_learner(parameters, lr, momentums,
+def momentum_sgd(parameters, lr, momentums,
         clipping_threshold_per_sample=1E10,
         gradient_clipping_with_truncation=True):
     '''
@@ -92,7 +91,7 @@ def momentum_sgd_learner(parameters, lr, momentums,
     return cntk_py.momentum_sgd_learner(parameters, lr, momentums,
             clipping_threshold_per_sample, gradient_clipping_with_truncation)
 
-def nesterov_learner(parameters, lr, momentums,
+def nesterov(parameters, lr, momentums,
         clipping_threshold_per_sample=1E10,
         gradient_clipping_with_truncation=True):
     '''
@@ -119,7 +118,7 @@ def nesterov_learner(parameters, lr, momentums,
             clipping_threshold_per_sample, gradient_clipping_with_truncation)
 
 
-def adagrad_learner(parameters, lr, 
+def adagrad(parameters, lr, 
         need_ave_multiplier=True,
         clipping_threshold_per_sample=1E10,
         gradient_clipping_with_truncation=True):
@@ -145,7 +144,7 @@ def adagrad_learner(parameters, lr,
     return cntk_py.ada_grad_learner(parameters, lr, need_ave_multiplier,
             clipping_threshold_per_sample, gradient_clipping_with_truncation)
 
-def fsadagrad_learner(parameters, lr, momentums,
+def fsadagrad(parameters, lr, momentums,
         clipping_threshold_per_sample=1E10,
         gradient_clipping_with_truncation=True):
     '''
@@ -171,7 +170,7 @@ def fsadagrad_learner(parameters, lr, momentums,
     return cntk_py.fsada_grad_learner(parameters, lr, momentums,
             clipping_threshold_per_sample, gradient_clipping_with_truncation)
 
-def rmsprop_learner(parameters, lr, 
+def rmsprop(parameters, lr, 
         gamma, inc, dec, max, min,
         need_ave_multiplier=True,
         clipping_threshold_per_sample=1E10,

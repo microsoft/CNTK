@@ -7,7 +7,8 @@
 import numpy as np
 import sys
 import os
-from cntk import Trainer, sgd_learner, DeviceDescriptor
+from cntk import Trainer, DeviceDescriptor
+from cntk.learner import sgd
 from cntk.ops import input_variable, constant, parameter, cross_entropy_with_softmax, combine, classification_error, times, pooling, AVG_POOLING
 from cntk.io import ReaderConfig, ImageDeserializer
 
@@ -129,7 +130,7 @@ def cifar_resnet():
 
     # Instantiate the trainer object to drive the model training
     trainer = Trainer(classifier_output, ce, pe,
-            [sgd_learner(classifier_output.parameters(), lr=0.0078125)])
+            [sgd(classifier_output.parameters(), lr=0.0078125)])
 
     # Get minibatches of images to train with and perform model training
     mb_size = 32

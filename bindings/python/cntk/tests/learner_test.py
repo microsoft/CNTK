@@ -31,18 +31,18 @@ def test_learner_init():
 
     res = i*w
 
-    sgd_learner(res.parameters(), lr=0.1)
+    sgd(res.parameters(), lr=0.1)
 
     momentum_time_constant = 1100
     momentum_per_sample = momentums_per_sample(math.exp(-1.0 / momentum_time_constant))
 
-    momentum_sgd_learner(res.parameters(), lr=0.1, momentums=momentum_per_sample)
+    momentum_sgd(res.parameters(), lr=0.1, momentums=momentum_per_sample)
 
-    nesterov_learner(res.parameters(), lr=0.1, momentums=momentum_per_sample)
+    nesterov(res.parameters(), lr=0.1, momentums=momentum_per_sample)
 
-    adagrad_learner(res.parameters(), lr=0.1, need_ave_multiplier=True)
+    adagrad(res.parameters(), lr=0.1, need_ave_multiplier=True)
 
-    fsadagrad_learner(res.parameters(), lr=0.1, momentums=momentum_per_sample)
+    fsadagrad(res.parameters(), lr=0.1, momentums=momentum_per_sample)
 
     gamma, inc, dec, max, min = [0.1]*5
-    rmsprop_learner(res.parameters(), 0.1, gamma, inc, dec, max, min, True)
+    rmsprop(res.parameters(), 0.1, gamma, inc, dec, max, min, True)
