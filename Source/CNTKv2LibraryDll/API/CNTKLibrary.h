@@ -2645,7 +2645,7 @@ namespace CNTK
         ///
         /// Returns a value corresponding to the absolute sample count from the beginning of training.
         ///
-        CNTK_API const T& operator[](size_t samleCount) const;
+        CNTK_API const T& operator[](size_t sampleCount) const;
 
     private:
         std::map<size_t, T> m_schedule;

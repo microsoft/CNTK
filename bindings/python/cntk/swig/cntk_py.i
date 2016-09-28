@@ -23,6 +23,7 @@
 
 %template() std::vector<size_t>;
 %template() std::vector<bool>;
+%template() std::vector<double>;
 %template() std::vector<CNTK::Variable>;
 %template() std::vector<CNTK::Axis>;
 %template() std::vector<CNTK::StreamConfiguration>;
@@ -76,6 +77,12 @@ def dynamic_axes(self):
 
     void __setitem__(const wchar_t* key, CNTK::DictionaryValue value) {
         (*($self))[key] = value;
+    }
+}
+
+%extend CNTK::TrainingParameterSchedule<double> {
+    const double& __getitem__(size_t sampleCount) {
+        return (*($self))[sampleCount];
     }
 }
 

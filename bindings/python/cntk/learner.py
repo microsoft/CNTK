@@ -6,6 +6,39 @@
 
 from . import cntk_py
 
+def learning_rates_per_sample(lr, units=1):
+    '''
+    Create a learning rate schedule.
+
+    Examples:
+    >>> # Use 0.7 for all samples
+    >>> lr = learning_rates_per_sample(0.7)
+    >>> [lr[i] for i in [0,1,2,3]]
+    [0.7, 0.7, 0.7, 0.7]
+
+    >>> # Use 0.7 for the first 3 samples, then 0.3 for the remaining ones
+    >>> lr = learning_rates_per_sample([0.7,0.3], 3)
+    >>> [lr[i] for i in range(10)]
+    [0.7, 0.7, 0.7, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3]
+
+    Args:
+        lr (`float` or `list`): if `float`, it is the learning rate to be used
+         for all samples. In case of list, the elements are used as the
+         learning rates for `units` samples.
+        units (`int`): unit for the learning rates to have effect
+
+    Returns:
+        schedule for learning rates per sample
+    '''
+    if isinstance(lr, float):
+        return cntk_py.learning_rates_per_sample(lr)
+    
+    if not isinstance(lr, list):
+        raise ValueError('lr must be either a float or a list')
+
+    return cntk_py.learning_rates_per_sample(lr, units)
+
+
 # TODO figure out how to pass infty to C++ in a portable way
 def sgd_learner(parameters, lr, 
         clipping_threshold_per_sample=1E10,
@@ -28,7 +61,7 @@ def sgd_learner(parameters, lr,
         Instance of a learner that can be passed to the `Trainer`
     '''
     if type(lr) == float:
-        lr = cntk_py.learning_rates_per_sample(lr)
+        lr = learning_rates_per_sample(lr)
 
     return cntk_py.sgd_learner(parameters, lr, clipping_threshold_per_sample,
             gradient_clipping_with_truncation)
@@ -54,7 +87,7 @@ def momentum_sgd_learner(parameters, lr, momentums,
         Instance of a learner that can be passed to the `Trainer`
     '''
     if type(lr) == float:
-        lr = cntk_py.learning_rates_per_sample(lr)
+        lr = learning_rates_per_sample(lr)
 
     return cntk_py.momentum_sgd_learner(parameters, lr, momentums,
             clipping_threshold_per_sample, gradient_clipping_with_truncation)
@@ -80,7 +113,7 @@ def nesterov_learner(parameters, lr, momentums,
         Instance of a learner that can be passed to the `Trainer`
     '''
     if type(lr) == float:
-        lr = cntk_py.learning_rates_per_sample(lr)
+        lr = learning_rates_per_sample(lr)
 
     return cntk_py.nesterov_learner(parameters, lr, momentums,
             clipping_threshold_per_sample, gradient_clipping_with_truncation)
@@ -107,7 +140,7 @@ def adagrad_learner(parameters, lr,
         Instance of a learner that can be passed to the `Trainer`
     '''
     if type(lr) == float:
-        lr = cntk_py.learning_rates_per_sample(lr)
+        lr = learning_rates_per_sample(lr)
 
     return cntk_py.ada_grad_learner(parameters, lr, need_ave_multiplier,
             clipping_threshold_per_sample, gradient_clipping_with_truncation)
@@ -133,7 +166,7 @@ def fsadagrad_learner(parameters, lr, momentums,
         Instance of a learner that can be passed to the `Trainer`
     '''
     if type(lr) == float:
-        lr = cntk_py.learning_rates_per_sample(lr)
+        lr = learning_rates_per_sample(lr)
 
     return cntk_py.fsada_grad_learner(parameters, lr, momentums,
             clipping_threshold_per_sample, gradient_clipping_with_truncation)
@@ -165,7 +198,7 @@ def rmsprop_learner(parameters, lr,
         Instance of a learner that can be passed to the `Trainer`
     '''
     if type(lr) == float:
-        lr = cntk_py.learning_rates_per_sample(lr)
+        lr = learning_rates_per_sample(lr)
 
     return cntk_py.rmsprop_learner(parameters, lr, gamma, inc, dec, max, min,
             need_ave_multiplier, clipping_threshold_per_sample, gradient_clipping_with_truncation)
