@@ -1,6 +1,18 @@
 # CNTK
 
 ## Latest news
+*2016-09-28.* V 1.7.1 Binary release  
+Highlights of this Release:
+* Two Breaking Changes related to Layers library default initialization and ```fsAdagrad``` gradient-normalization scheme
+* Improvements in BrainScript
+* Enabling of Deterministic Algorithm enforcement
+* Improvements in Model Evaluation including the support of Evaluation for Azure Applications
+* Different Performance improvements
+* Multiple bug fixes
+
+See more in the [Release Notes](https://github.com/Microsoft/CNTK/wiki/CNTK_1_7_1_Release_Notes) (including the full list of bugs fixed)  
+Get the Release from the [CNTK Releases page](https://github.com/Microsoft/CNTK/releases)
+
 *2016-08-31.* V 1.7 Binary release  
 Highlights of this Release:
 * Improvements in BrainScript (New library of predefined common layer types, Support of cuDNN5 RNN and Common random-initialization types, improved handling of GRUs)
@@ -21,8 +33,6 @@ Get the Release from the [CNTK Releases page](https://github.com/Microsoft/CNTK/
 
 *2016-07-15.* V 1.6 Binary release  
 CNTK v.1.6 binaries are on the [CNTK Releases page](https://github.com/Microsoft/CNTK/releases)
-
-*2016-07-12.* We have further expanded Licensing options for CNTK 1bit-SGD and related components. See the details at the [Wiki page](https://github.com/microsoft/cntk/wiki/CNTK-1bit-SGD-License). These new options are an extension of the new CNTK 1bit-SGD License that we have announced on Jun 23, 2016.
 
 See [all news](https://github.com/Microsoft/CNTK/wiki/News).
 
