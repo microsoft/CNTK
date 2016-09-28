@@ -22,8 +22,8 @@ void RunEvaluation(FunctionPtr, const DeviceDescriptor&);
 /// </summary>
 /// <description>
 /// It first creates all parameters needed for the Function, and then spawns multi threads. 
-/// Althought each thread creates a new instance of function, all its parameters are shared among threads, i.e.
-/// only one single instance of parameters is used by all threads. After that, each thread runs evaluation independently.
+/// Althought each thread creates a new instance of function, all threads share the same parameters.
+/// After that, each thread runs evaluation independently.
 /// </description>
 void MultiThreadsEvaluationWithNewFunction(const DeviceDescriptor& device, const int threadCount)
 {
@@ -70,9 +70,9 @@ void MultiThreadsEvaluationWithNewFunction(const DeviceDescriptor& device, const
 /// Shows how to use Clone() to share function parameters among multi evaluation threads.
 /// </summary>
 /// <description>
-/// It first creates a new function with parameters, then spawns multi threads. Each thread uses Clone() to create a new 
-/// instance of function and then use this instance to do evaluation. 
-/// All cloned functions share only one single instance of parameters.
+/// It first creates a new function with parameters, then spawns multi threads. Each thread uses Clone() to create a new
+/// instance of function and then use this instance to do evaluation.
+/// All cloned functions share the same parameters.
 /// </description>
 void MultiThreadsEvaluationWithClone(const DeviceDescriptor& device, const int threadCount)
 {
@@ -212,7 +212,7 @@ void CreateFunctionAndEvaluateWithSharedParameters(size_t inputDim,
         }
 
         NDShape inputShape = {inputDim, 1, numSamples};
-        ValuePtr inputValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(inputShape, inputData.data(), inputData.size(), computeDevice, true));
+        ValuePtr inputValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(inputShape, inputData.data(), inputData.size(), DeviceDescriptor::CPUDevice(), true));
 
         std::vector<float> labelData(numOutputClasses * numSamples, 0);
         for (size_t i = 0; i < numSamples; ++i)
@@ -221,7 +221,7 @@ void CreateFunctionAndEvaluateWithSharedParameters(size_t inputDim,
         }
 
         NDShape labelShape = {numOutputClasses, 1, numSamples};
-        ValuePtr labelValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(labelShape, labelData.data(), labelData.size(), computeDevice, true));
+        ValuePtr labelValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(labelShape, labelData.data(), labelData.size(), DeviceDescriptor::CPUDevice(), true));
 
         ValuePtr outputValue, predictionErrorValue;
         std::unordered_map<Variable, ValuePtr> outputs = {{classifierOutputFunction->Output(), outputValue}, {predictionFunction->Output(), predictionErrorValue}};
@@ -288,7 +288,7 @@ void RunEvaluation(FunctionPtr evalFunc, const DeviceDescriptor& device)
         }
 
         NDShape inputShape = {inputDim, 1, numSamples};
-        ValuePtr inputValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(inputShape, inputData.data(), inputData.size(), device, true));
+        ValuePtr inputValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(inputShape, inputData.data(), inputData.size(), DeviceDescriptor::CPUDevice(), true));
 
         ValuePtr outputValue, predictionErrorValue;
         // Assuming only one output
@@ -296,4 +296,25 @@ void RunEvaluation(FunctionPtr evalFunc, const DeviceDescriptor& device)
         std::unordered_map<Variable, ValuePtr> outputs = {{evalFunc->Output(), outputValue}};
         evalFunc->Forward({{inputVar, inputValue}}, outputs, device);
     }
+}
+
+void MultiThreadsEvaluation()
+{
+
+    // Test multi-threads evaluation with new function
+    fprintf(stderr, "Test multi-threaded evaluation with new function on CPU.\n");
+    MultiThreadsEvaluationWithNewFunction(DeviceDescriptor::CPUDevice(), 2);
+#ifndef CPUONLY
+    fprintf(stderr, "Test multi-threaded evaluation with new function on GPU\n");
+    MultiThreadsEvaluationWithNewFunction(DeviceDescriptor::GPUDevice(0), 2);
+#endif
+
+    // Test multi-threads evaluation using clone.
+    fprintf(stderr, "Test multi-threaded evaluation using clone on CPU.\n");
+    MultiThreadsEvaluationWithClone(DeviceDescriptor::CPUDevice(), 2);
+#ifndef CPUONLY
+    fprintf(stderr, "Test multi-threaded evaluation using clone on GPU.\n");
+    MultiThreadsEvaluationWithClone(DeviceDescriptor::GPUDevice(0), 2);
+#endif
+
 }
