@@ -553,10 +553,10 @@ template <class ElemType>
 template <class ElemType>
 /* static */ void ComputationNetwork::SetRandomSampleNodeSeed(ComputationNetworkPtr net, const ComputationNodeBasePtr& node, size_t randSeedBase)
 {
-	// Predicate checking if the node is derived from RngUser
-	std::function<bool(const ComputationNodeBasePtr&)> nodeIsRngUser = [](const ComputationNodeBasePtr& node) { return dynamic_cast<RngUser*>(node.get()) != nullptr; };
+    // Predicate checking if the node is derived from RngUser
+    std::function<bool(const ComputationNodeBasePtr&)> nodeIsRngUser = [](const ComputationNodeBasePtr& node) { return dynamic_cast<RngUser*>(node.get()) != nullptr; };
 
-	list<ComputationNodeBasePtr> rngUserNodes = net->GetNodesWhere(nodeIsRngUser, node);
+    list<ComputationNodeBasePtr> rngUserNodes = net->GetNodesWhere(nodeIsRngUser, node);
 
     // Each RandomSampleNode gets a distinct seed. The actual seed for each dropout node is computed as follows:
     // seed = (((parallelWorkerIdx * maxEpochs) + currentEpochNum) /*i.e. randSeedBase*/ * dropoutNodes.size()) + dropoutNodeIdx.
