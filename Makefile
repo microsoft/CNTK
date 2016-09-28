@@ -806,8 +806,8 @@ $(MULTIVERSO_LIB):
             -DBoost_NO_SYSTEM_PATHS=TRUE \
             -DBOOST_ROOT:PATHNAME=/usr/local/boost-1.60.0 \
             -DBOOST_LIBRARY_DIRS:FILEPATH=/usr/local/boost-1.60.0/lib \
-            -DLIBRARY_OUTPUT_PATH=$(LIBDIR) \
-            -DEXECUTABLE_OUTPUT_PATH=$(BINDIR) \
+            -DLIBRARY_OUTPUT_PATH=$(shell readlink -f $(LIBDIR)) \
+            -DEXECUTABLE_OUTPUT_PATH=$(shell readlink -f $(BINDIR)) \
             -B./Source/Multiverso/build -H./Source/Multiverso
 	@make -C ./Source/Multiverso/build/ -j multiverso
 	@make -C ./Source/Multiverso/build/ -j multiversotests
@@ -851,7 +851,6 @@ SRC+=$(CNTK_SRC)
 $(CNTK): $(CNTK_OBJ) | $(CNTKMATH_LIB) $(MULTIVERSO_LIB)
 	@echo $(SEPARATOR)
 	@mkdir -p $(dir $@)
-	@ls -al $(BUILD_TOP)
 	@echo building output for $(ARCH) with build type $(BUILDTYPE)
 	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH)) $(patsubst %,$(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -l$(CNTKMATH) -l$(MULTIVERSO) -fopenmp
 
