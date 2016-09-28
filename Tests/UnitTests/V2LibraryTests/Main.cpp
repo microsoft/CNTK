@@ -43,6 +43,7 @@ int main()
     EvalMultiThreadsWithNewNetwork(DeviceDescriptor::GPUDevice(0), 2);
 #endif
 
+    fprintf(stderr, "Test device selection API\n");
     DeviceSelectionTests();
 
     fprintf(stderr, "\nCNTKv2Library tests: Passed\n");

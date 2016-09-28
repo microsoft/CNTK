@@ -6,6 +6,13 @@
 #include <fstream>
 #include <random>
 
+// enable assert in Release mode.
+#ifdef NDEBUG
+#undef NDEBUG
+#include <assert.h>
+#define NDEBUG
+#endif
+
 static const double relativeTolerance = 0.001f;
 static const double absoluteTolerance = 0.000001f;
 
