@@ -4235,8 +4235,8 @@ template<class ElemType>
 	
 	template<class ElemType>
 	GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignCTCScore_m(const GPUMatrix<ElemType>& prob, GPUMatrix<ElemType>& alpha, GPUMatrix<ElemType>& beta,
-		const GPUMatrix<ElemType> phoneseq, ElemType &totalscore, std::vector<size_t>& uttMap, std::vector<size_t> & uttBeginFrame, std::vector<size_t> & uttFrameNum,
-		std::vector<size_t> & uttPhoneNum, size_t samplesInRecurrentStep, const size_t maxframenum, const bool isColWise)
+        const GPUMatrix<ElemType> phoneseq, const GPUMatrix<ElemType> phonebound, ElemType &totalscore, std::vector<size_t>& uttMap, std::vector<size_t> & uttBeginFrame, std::vector<size_t> & uttFrameNum,
+        std::vector<size_t> & uttPhoneNum, size_t samplesInRecurrentStep, const size_t maxframenum, int delayConstraint, const bool isColWise)
 	{
 		//Resize(a.GetNumRows(), a.GetNumCols());  do resize outside
 		if (isColWise)
@@ -4275,14 +4275,14 @@ template<class ElemType>
 			for (long t = 0; t < maxframenum; t++)
 			{
 				
-				_assignAlphaScore_m << <block_tail, thread_tail, 0, t_stream >> >(prob.Data(), alpha.Data(), phoneseq.Data(), gpuuttmap,
-					gpuframenum, gpubeginframe, gpuphonenum, samplesInRecurrentStep, uttnum, t, maxphonenum, totalphonenum);
+				_assignAlphaScore_m << <block_tail, thread_tail, 0, t_stream >> >(prob.Data(), alpha.Data(), phoneseq.Data(), phonebound.Data(), gpuuttmap,
+					gpuframenum, gpubeginframe, gpuphonenum, samplesInRecurrentStep, uttnum, t, maxphonenum, totalphonenum, delayConstraint);
 				//_assignSigmoidOf << <blocksPerGrid, threadsPerBlock, 0, t_stream >> >(prob.Data(), alpha.Data(), N);
 			}
 			for (long t = maxframenum - 1; t >= 0; t--)
 			{
-				_assignBetaScore_m << <block_tail, thread_tail , 0, t_stream >> >(prob.Data(), beta.Data(), phoneseq.Data(), gpuuttmap,
-					gpuframenum, gpubeginframe, gpuphonenum, samplesInRecurrentStep, uttnum, t,  maxphonenum, totalphonenum);
+                _assignBetaScore_m << <block_tail, thread_tail, 0, t_stream >> >(prob.Data(), beta.Data(), phoneseq.Data(), phonebound.Data(), gpuuttmap,
+                    gpuframenum, gpubeginframe, gpuphonenum, samplesInRecurrentStep, uttnum, t, maxphonenum, totalphonenum, delayConstraint);
 			}
 
             _assigntotalscore_m << <uttnum, 1, 0, t_stream >> > (beta.Data(), gpuscores, uttnum, gpuuttmap, gpubeginframe, samplesInRecurrentStep, maxphonenum);

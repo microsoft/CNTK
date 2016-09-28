@@ -358,9 +358,9 @@ public:
         const Matrix<ElemType>& dnnoutput, const Matrix<ElemType>& gamma, ElemType alpha);
     Matrix<ElemType>& AssignCTCScore(const Matrix<ElemType>& prob, Matrix<ElemType>& alpha, Matrix<ElemType>& beta, const std::vector<size_t> phoneseq,
         const std::vector<size_t> phonebound, ElemType &totalscore, const size_t framenum, size_t blanknum, const bool isColWise);
-    Matrix<ElemType>& AssignCTCScore_m(const Matrix<ElemType>& prob, Matrix<ElemType>& alpha, Matrix<ElemType>& beta, Matrix<ElemType>& phoneseq, ElemType &totalscore, 
+    Matrix<ElemType>& AssignCTCScore_m(const Matrix<ElemType>& prob, Matrix<ElemType>& alpha, Matrix<ElemType>& beta, Matrix<ElemType>& phoneseq, Matrix<ElemType>& phonebound, ElemType &totalscore,
         std::vector<size_t> & extrauttmap, std::vector<size_t> & uttBeginFrame, std::vector<size_t> & uttFrameNum, std::vector<size_t> & uttPhoneNum, size_t samplesInRecurrentStep, 
-        size_t & mbsize, const bool isColWise);
+        size_t & mbsize, int& delayConstraint, const bool isColWise);
     Matrix<ElemType>& InplaceSqrt();
     Matrix<ElemType>& AssignSqrtOf(const Matrix<ElemType>& a);
 

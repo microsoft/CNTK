@@ -468,7 +468,7 @@ public:
     static void SetCTCParam(ComputationNetworkPtr net, 
                             const ComputationNodeBasePtr criterionNode, 
                             const ComputationNodeBasePtr evaluationNode, 
-                            const size_t& blanknum = 1);
+                            const size_t& blanknum = 1, const int &delayConstraint=-1);
 
     static void SetMaxTempMemSizeForCNN(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const size_t maxTempMemSizeInSamples);
 

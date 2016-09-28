@@ -291,6 +291,7 @@ protected:
     double m_seqGammarCalcbMMIFactor;
     bool m_seqGammarCalcUsesMBR;
     size_t m_blankNum;
+    int m_delayConstraint;
     bool m_disableWkInBatchNormal;
 };
 

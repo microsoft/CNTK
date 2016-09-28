@@ -908,8 +908,9 @@ public:
         m_CTCposterior->SwitchToMatrixType(m_softmaxOfRight->GetMatrixType(), m_softmaxOfRight->GetFormat(), false);
         m_CTCposterior->Resize(m_softmaxOfRight->GetNumRows(), m_softmaxOfRight->GetNumCols());
 
-        m_GammaCal.doCTC(Value(), *m_logSoftmaxOfRight, *m_CTCposterior, m_boundaries, sequenceNum, Input(0)->GetMBLayout(), m_extrauttmap, m_blanknum);
-        //m_GammaCal.doCTC_m(Value(), *m_logSoftmaxOfRight, *m_CTCposterior, m_boundaries, sequenceNum, Input(0)->GetMBLayout(), m_extrauttmap);
+        //m_GammaCal.doCTC(Value(), *m_logSoftmaxOfRight, *m_CTCposterior, m_boundaries, sequenceNum, Input(0)->GetMBLayout(), m_extrauttmap, m_blanknum);
+        //fprintf(stderr, "delay: %d\n", m_delayConstraint);
+        m_GammaCal.doCTC_m(Value(), *m_logSoftmaxOfRight, *m_CTCposterior, m_boundaries, sequenceNum, Input(0)->GetMBLayout(), m_extrauttmap, m_delayConstraint);
         //m_CTCposterior->Print("posterior");
 
 #if NANCHECK
@@ -956,6 +957,7 @@ public:
             node->m_softmaxOfRight->SetValue(*m_softmaxOfRight);
             node->m_CTCposterior->SetValue(*m_CTCposterior);
             node->m_blanknum = m_blanknum;
+            node->m_delayConstraint = m_delayConstraint;
         }
     }
 
@@ -994,6 +996,10 @@ public:
     {
         m_blanknum = blanknum;
     }
+    void SetDelayConstraint(const size_t delayConstraint)
+    {
+        m_delayConstraint = delayConstraint;
+    }    
     void gettime(unsigned long long &gammatime, unsigned long long &partialtime)
     {
         gammatime = m_gammatime;
@@ -1013,6 +1019,7 @@ protected:
     std::vector<size_t> m_boundaries;
     std::vector<size_t> m_extrauttmap;
     size_t m_blanknum = 1;
+    int m_delayConstraint = -1;
     unsigned long long m_gammatime;
     unsigned long long m_partialtime;
 

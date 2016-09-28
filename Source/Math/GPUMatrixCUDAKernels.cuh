@@ -5057,9 +5057,9 @@ __global__ void _assignAlphaScore(
 				ascore = prob[t*phonenum + phoneid];
 			else
 				ascore = 0;
-			if (phoneid < phonenum - blanknum && (t >= phonebound[id + 1]+3))
+			/*if (phoneid < phonenum - blanknum && (t < phonebound[id] || t >= phonebound[id + 1]))
 				Alphascore[t*M + id] = LZERO;
-			else
+			else*/
 				Alphascore[t*M + id] = (ElemType)x + ascore;
 			
 		}
@@ -5170,9 +5170,9 @@ __global__ void _assignBetaScore(
 				ascore = prob[t*phonenum + phoneid];
 			else
 				ascore = 0;
-			if (phoneid < phonenum - blanknum && (t >= phonebound[id+1]+3) )
+			/*if (phoneid < phonenum - blanknum && (t < phonebound[id] || t >= phonebound[id+1]) )
 				Betascore[t*M + id] = LZERO;
-			else
+			else*/
 				Betascore[t*M + id] = (ElemType)x + ascore;
 		}
 
@@ -5250,6 +5250,7 @@ __global__ void _assignAlphaScore_m(
 	const ElemType *prob,
 	ElemType *Alphascore,
 	ElemType *phoneseq,
+    ElemType *phonebound,
 	const size_t *uttmap,
 	const size_t *uttframenum,
 	const size_t *uttbeginframe,
@@ -5258,7 +5259,8 @@ __global__ void _assignAlphaScore_m(
 	const size_t uttNum,
 	const size_t  t,
 	const size_t maxphonenum,
-	const size_t totalphonenum)	
+	const size_t totalphonenum,
+    const int delayConstraint)
 {
 	LONG64 uttid = blockDim.x * blockIdx.x + threadIdx.x;
 	LONG64 phoneseqid = blockDim.y * blockIdx.y + threadIdx.y;
@@ -5270,7 +5272,9 @@ __global__ void _assignAlphaScore_m(
 	LONG64 labelid = uttid*maxphonenum + phoneseqid;
 	LONG64 labelid_1 = uttid*maxphonenum + phoneseqid - 1;
 	LONG64 labelid_2 = uttid*maxphonenum + phoneseqid - 2;
+    LONG64 labelid_p1 = uttid*maxphonenum + phoneseqid + 1;
 	LONG64 phoneid = (LONG64)(phoneseq[labelid]);
+    LONG64 phoneboundid = (LONG64)(phonebound[labelid_p1]);
 	LONG64 timeid = (t + uttbeginframe[uttid])*samplesInRecurrentStep + uttmap[uttid];
 	LONG64 timeid_1 = (t - 1 + uttbeginframe[uttid])*samplesInRecurrentStep + uttmap[uttid];
 
@@ -5318,7 +5322,12 @@ __global__ void _assignAlphaScore_m(
 				ascore = prob[probid];
 			else
 				ascore = 0;
-			Alphascore[alphaid] = (ElemType)x + ascore;
+            if (t == 2)
+                printf("bound time%d\n", phoneboundid);
+            if (delayConstraint !=-1 && t > phoneboundid + delayConstraint)
+                Alphascore[alphaid] = LZERO;
+            else
+			    Alphascore[alphaid] = (ElemType)x + ascore;
 		}
 	}
 	//__syncthreads();
@@ -5331,6 +5340,7 @@ __global__ void _assignBetaScore_m(
 	const ElemType *prob,
 	ElemType *Betascore,
 	ElemType *phoneseq,
+    ElemType *phonebound,
 	const size_t *uttmap,
 	const size_t *uttframenum,
 	const size_t *uttbeginframe,
@@ -5339,7 +5349,8 @@ __global__ void _assignBetaScore_m(
 	const size_t uttNum,
 	const long  t,	
 	const long maxphonenum,
-	const long totalphonenum)
+	const long totalphonenum,
+    const int delayConstraint)
 {
 	LONG64 uttid = blockDim.x * blockIdx.x + threadIdx.x;
 	LONG64 phoneseqid = blockDim.y * blockIdx.y + threadIdx.y;
@@ -5352,6 +5363,7 @@ __global__ void _assignBetaScore_m(
 	LONG64 labelid_1 = uttid*maxphonenum + phoneseqid + 1;
 	LONG64 labelid_2 = uttid*maxphonenum + phoneseqid + 2;
 	LONG64 phoneid = (LONG64)(phoneseq[labelid]);
+    LONG64 phoneboundid = (LONG64)(phonebound[labelid_1]);
 	LONG64 timeid = (t + uttbeginframe[uttid])*samplesInRecurrentStep + uttmap[uttid];
 	LONG64 timeid_1 = (t + 1 + uttbeginframe[uttid])*samplesInRecurrentStep + uttmap[uttid];
 
@@ -5396,7 +5408,10 @@ __global__ void _assignBetaScore_m(
 				ascore = prob[probid];
 			else
 				ascore = 0;
-			Betascore[betaid] = (ElemType)x + ascore;
+            if (delayConstraint != -1 && t > phoneboundid + delayConstraint)
+                Betascore[betaid] = LZERO;
+            else
+			    Betascore[betaid] = (ElemType)x + ascore;
 		}
 
 	}

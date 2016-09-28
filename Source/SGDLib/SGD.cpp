@@ -364,7 +364,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
 
     if (isCTCTrainingCriterion)
     {
-        ComputationNetwork::SetCTCParam<ElemType>(net, criterionNodes[0], evaluationNodes[0], m_blankNum);
+        ComputationNetwork::SetCTCParam<ElemType>(net, criterionNodes[0], evaluationNodes[0], m_blankNum, m_delayConstraint);
     }
     // --- MAIN EPOCH LOOP
     for (int i = startEpoch; i < (int) m_maxEpochs; i++) // TODO: why is this an int, and not a size_t?
@@ -2496,6 +2496,7 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
 
     //CTC parameter
     m_blankNum = configSGD(L"blankNum", (size_t)1);
+    m_delayConstraint = configSGD(L"delayConstraint", (int)(-1));
     m_dropoutRates = configSGD(L"dropoutRate", ConfigRecordType::Array(doubleargvector(vector<double>{0.0})));
     m_batchNormalizationTimeConstant = configSGD(L"batchNormalizationTimeConstant", ConfigRecordType::Array(doubleargvector(vector<double>{0})));
     m_batchNormalizationBlendTimeConstant = configSGD(L"batchNormalizationBlendTimeConstant", ConfigRecordType::Array(doubleargvector(vector<double>{0})));

@@ -1366,8 +1366,8 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignCTCScore(const GPUMatrix<ElemTyp
 
 template <class ElemType>
 GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignCTCScore_m(const GPUMatrix<ElemType>& prob, GPUMatrix<ElemType>& alpha, GPUMatrix<ElemType>& beta,
-    GPUMatrix<ElemType> phoneseq, ElemType &totalscore, std::vector<size_t>& uttMap, std::vector<size_t> & uttBeginFrame, std::vector<size_t> & uttFrameNum,
-    std::vector<size_t> & uttPhoneNum, size_t samplesInRecurrentStep, const size_t maxframenum, const bool isColWise)
+    GPUMatrix<ElemType> phoneseq, GPUMatrix<ElemType> phoneseq, ElemType &totalscore, std::vector<size_t>& uttMap, std::vector<size_t> & uttBeginFrame, std::vector<size_t> & uttFrameNum,
+    std::vector<size_t> & uttPhoneNum, size_t samplesInRecurrentStep, const size_t maxframenum, int delayConstraint, const bool isColWise)
 {
     return *this;
 }
