@@ -13,8 +13,7 @@ python -c "import scipy; print('SciPy: %s'%scipy.version.full_version)"
 python -c "import pytest; print('PyTest: %s'%pytest.__version__)"
 
 cd $PYBINDINGDIR
-py.test
-# TODO --deviceid $TEST_DEVICE
+py.test --deviceid $TEST_DEVICE
 
 if [ "$?" -eq "0" ]; then
   echo "__COMPLETED__"

@@ -117,6 +117,9 @@ const char* CudaErrString<curandStatus>(curandStatus)
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+// Todo: After upgrade to VS2015, remove it here, and put it as a local static variable in GetDeviceProps().
+std::vector<cudaDeviceProp> GridDim::s_cachedDeviceProps = GridDim::CacheDeviceProps();
+
 /*static*/ bool SyncGuard::s_isSyncEnabled = false;
 
 /*static*/ void SyncGuard::EnableSync()
