@@ -244,6 +244,9 @@ public:
     {
         return true;
     };
+    
+    // Gets current sample position on the global timeline.
+    virtual size_t GetCurrentSamplePosition() = 0;
 
     virtual void StartDistributedMinibatchLoop(size_t mbSize, size_t epoch, size_t subsetNum, size_t numSubsets, size_t requestedEpochSamples = requestDataSize)
     {
@@ -415,6 +418,8 @@ public:
     {
     }
     virtual ~DataReader();
+
+    size_t GetCurrentSamplePosition() override;
 
     // StartMinibatchLoop - Startup a minibatch loop
     // mbSize - [in] size of the minibatch (number of frames, etc.)

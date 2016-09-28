@@ -286,7 +286,10 @@ public:
 
     virtual bool DataEnd();
 
-    //int GetSentenceEndIdFromOutputLabel() { return -1; };
+    size_t GetCurrentSamplePosition() override
+    {
+        return m_mbStartSample;
+    }
 };
 
 template <class ElemType>

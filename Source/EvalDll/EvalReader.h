@@ -100,6 +100,11 @@ public:
     {
     }
 
+    size_t GetCurrentSamplePosition() override
+    {
+        NOT_IMPLEMENTED;
+    }
+
     // StartMinibatchLoop - Startup a minibatch loop
     // mbSize - [in] size of the minibatch (number of frames, etc.)
     // epoch - [in] epoch number for this loop

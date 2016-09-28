@@ -94,5 +94,12 @@ public:
         RuntimeError("GetData not supported in SparsePCReader");
     };
     virtual bool DataEnd();
+
+    size_t GetCurrentSamplePosition() override
+    {
+        // We do not support adaptive minibatch for this reader,
+        // CTF should be used instead.
+        NOT_IMPLEMENTED;
+    }
 };
 } } }

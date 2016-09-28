@@ -182,5 +182,12 @@ public:
     {
         NOT_IMPLEMENTED;
     }
+
+    size_t GetCurrentSamplePosition() override
+    {
+        // We do not support adaptive minibatch for this reader,
+        // CTF should be used instead.
+        NOT_IMPLEMENTED;
+    }
 };
 } } }

@@ -52,6 +52,11 @@ BlockRandomizer::BlockRandomizer(
     }
 }
 
+size_t BlockRandomizer::GetCurrentSamplePosition()
+{
+    return m_globalSamplePosition;
+}
+
 // Start a new epoch.
 void BlockRandomizer::StartEpoch(const EpochConfiguration& config)
 {
