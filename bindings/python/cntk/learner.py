@@ -14,17 +14,18 @@ def sgd_learner(parameters, lr,
     Creates an SGD learner instance to learn the parameters.
 
     Args:
-        parameters (list of parameters): list of network parameters to tune.
+        parameters (`list` of parameters): list of network parameters to tune.
          These can be obtained by the '.parameters()' method of the root
          operator.
         lr ('float'): learning rate per sample. Currently, only float is
          allowed, but schedules will be added soon
         clipping threshold per sample ('float', optional): clipping threshold
          per sample, defaults to infinity
-        gradient_clipping_with_truncation ('bool', optional): defaults to True
+        gradient_clipping_with_truncation ('bool', default `True`): gradient
+         glipping
 
     Returns:
-        Instance of a learner that can be pased to the `Trainer`
+        Instance of a learner that can be passed to the `Trainer`
     '''
     if type(lr) == float:
         lr = cntk_py.learning_rates_per_sample(lr)
@@ -43,14 +44,14 @@ def momentum_sgd_learner(parameters, lr, momentums,
          These can be obtained by the '.parameters()' function of 
         lr ('float'): learning rate per sample. Currently, only float is
          allowed, but schedules will be added soon.
-        momentums (instance of `MomentumsPerSample`): momentums per sample.
+        momentums (instance of `MomentumsPerSample`): momentum values per sample.
          Refer to https://github.com/Microsoft/CNTK/wiki/SGD-block#converting-learning-rate-and-momentum-parameters-from-other-toolkits
         clipping threshold per sample ('float', optional): clipping threshold
          per sample, defaults to infinity
         gradient_clipping_with_truncation ('bool', optional): defaults to True
 
     Returns:
-        Instance of a learner that can be pased to the `Trainer`
+        Instance of a learner that can be passed to the `Trainer`
     '''
     if type(lr) == float:
         lr = cntk_py.learning_rates_per_sample(lr)
@@ -69,14 +70,14 @@ def nesterov_learner(parameters, lr, momentums,
          These can be obtained by the '.parameters()' function of 
         lr ('float'): learning rate per sample. Currently, only float is
          allowed, but schedules will be added soon
-        momentums (instance of `MomentumsPerSample`): momentums per sample.
+        momentums (instance of `MomentumsPerSample`): momentum values per sample.
          Refer to https://github.com/Microsoft/CNTK/wiki/SGD-block#converting-learning-rate-and-momentum-parameters-from-other-toolkits
         clipping threshold per sample ('float', optional): clipping threshold
          per sample, defaults to infinity
         gradient_clipping_with_truncation ('bool', optional): defaults to True
 
     Returns:
-        Instance of a learner that can be pased to the `Trainer`
+        Instance of a learner that can be passed to the `Trainer`
     '''
     if type(lr) == float:
         lr = cntk_py.learning_rates_per_sample(lr)
@@ -103,7 +104,7 @@ def adagrad_learner(parameters, lr,
         gradient_clipping_with_truncation ('bool', optional): defaults to True
 
     Returns:
-        Instance of a learner that can be pased to the `Trainer`
+        Instance of a learner that can be passed to the `Trainer`
     '''
     if type(lr) == float:
         lr = cntk_py.learning_rates_per_sample(lr)
@@ -122,14 +123,14 @@ def fsadagrad_learner(parameters, lr, momentums,
          These can be obtained by the '.parameters()' function of 
         lr ('float'): learning rate per sample. Currently, only float is
          allowed, but schedules will be added soon
-        momentums (instance of `MomentumsPerSample`): momentums per sample.
+        momentums (instance of `MomentumsPerSample`): momentum values per sample.
          Refer to https://github.com/Microsoft/CNTK/wiki/SGD-block#converting-learning-rate-and-momentum-parameters-from-other-toolkits
         clipping threshold per sample ('float', optional): clipping threshold
          per sample, defaults to infinity
         gradient_clipping_with_truncation ('bool', optional): defaults to True
 
     Returns:
-        Instance of a learner that can be pased to the `Trainer`
+        Instance of a learner that can be passed to the `Trainer`
     '''
     if type(lr) == float:
         lr = cntk_py.learning_rates_per_sample(lr)
@@ -161,7 +162,7 @@ def rmsprop_learner(parameters, lr,
         gradient_clipping_with_truncation ('bool', optional): defaults to True
 
     Returns:
-        Instance of a learner that can be pased to the `Trainer`
+        Instance of a learner that can be passed to the `Trainer`
     '''
     if type(lr) == float:
         lr = cntk_py.learning_rates_per_sample(lr)
