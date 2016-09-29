@@ -8,9 +8,9 @@ python -c "import scipy; print('SciPy: %s'%scipy.version.full_version)"
 python -c "import pytest; print('PyTest: %s'%pytest.__version__)"
 
 # TODO why doesn't "py.test --pyargs cntk" work?
-MODULE_DIR="$(python -c "import cntk, os; print(os.path.dirname(os.path.abspath(cntk.__file__)))")"
+MODULE_DIR="$(python -c "import cntk, os, sys; sys.stdout.write(os.path.dirname(os.path.abspath(cntk.__file__)))")"
 [ $? -eq 0 ] || exit $?
-py.test --deviceid $TEST_DEVICE "$MODULE_DIR"
+py.test "$MODULE_DIR" --deviceid $TEST_DEVICE 
 
 if [ "$?" -eq "0" ]; then
   echo "__COMPLETED__"
