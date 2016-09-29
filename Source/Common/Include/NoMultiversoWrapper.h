@@ -20,7 +20,7 @@ public:
         void InitModel(const std::list<ComputationNodeBasePtr> & learnableNode) { }
 
         void PushAndPullModel(const std::list<ComputationNodeBasePtr> & learnableNode) { }
-			
+
         void PushModel(const std::list<ComputationNodeBasePtr> & learnableNode) { }
 
         void PullModel(const std::list<ComputationNodeBasePtr> & learnableNode) { }
