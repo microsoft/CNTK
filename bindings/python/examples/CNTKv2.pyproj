@@ -32,6 +32,7 @@
     <Compile Include="NumpyInterop\FeedForwardNet.py" />
     <Compile Include="Sequence2Sequence\Sequence2Sequence.py" />
     <Compile Include="SequenceClassification\SequenceClassification.py" />
+    <Compile Include="SLUHandsOn\SLUHandsOn.py" />
     <Compile Include="Speech\EndToEnd.py" />
     <Compile Include="Various\LanguageModel.py" />
     <Compile Include="__init__.py" />
@@ -40,6 +41,7 @@
     <Folder Include="CifarResNet" />
     <Folder Include="common" />
     <Folder Include="MNIST" />
+    <Folder Include="SLUHandsOn\" />
     <Folder Include="Various\" />
     <Folder Include="NumpyInterop" />
     <Folder Include="Sequence2Sequence" />
