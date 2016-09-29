@@ -68,7 +68,11 @@ def simple_mnist(debug_output=False):
     num_samples_per_sweep = 60000
     num_sweeps_to_train_with = 1
     num_minibatches_to_train = (num_samples_per_sweep * num_sweeps_to_train_with) / minibatch_size
-    training_progress_output_freq = 20
+    training_progress_output_freq = 80
+
+    if debug_output:
+        training_progress_output_freq = training_progress_output_freq/4
+
     for i in range(0, int(num_minibatches_to_train)):
         mb = mb_source.get_next_minibatch(minibatch_size)
 
@@ -78,8 +82,7 @@ def simple_mnist(debug_output=False):
                      label: mb[labels_si].m_data}
         trainer.train_minibatch(arguments)
 
-        if debug_output:
-            print_training_progress(trainer, i, training_progress_output_freq)
+        print_training_progress(trainer, i, training_progress_output_freq)
 
     # Load test data
     try:

@@ -116,7 +116,10 @@ def sequence_to_sequence_translator(debug_output=False):
 
     # Get minibatches of sequences to train with and perform model training
     minibatch_size = 72
-    training_progress_output_freq = 10
+    training_progress_output_freq = 30
+    if debug_output:
+        training_progress_output_freq = training_progress_output_freq/3
+
     while True:
         mb = mb_source.get_next_minibatch(minibatch_size)
         if len(mb) == 0:
@@ -128,10 +131,8 @@ def sequence_to_sequence_translator(debug_output=False):
                      raw_labels: mb[labels_si].m_data}
         trainer.train_minibatch(arguments)
 
-        if debug_output:
-            print_training_progress(trainer, i, training_progress_output_freq)
-
-            i += 1
+        print_training_progress(trainer, i, training_progress_output_freq)
+        i += 1
 
     rel_path = r"../../../../Examples/SequenceToSequence/CMUDict/Data/cmudict-0.7b.test.ctf"
     path = os.path.join(os.path.dirname(os.path.abspath(__file__)), rel_path)

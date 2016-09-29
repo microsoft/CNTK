@@ -66,6 +66,10 @@ def train_sequence_classifier(debug_output=False):
     minibatch_size = 200
     training_progress_output_freq = 10
     i = 0
+
+    if debug_output:
+        training_progress_output_freq = training_progress_output_freq/3
+
     while True:
         mb = mb_source.get_next_minibatch(minibatch_size)
 
@@ -78,10 +82,8 @@ def train_sequence_classifier(debug_output=False):
                      label: mb[labels_si].m_data}
         trainer.train_minibatch(arguments)
 
-        if debug_output:
-            print_training_progress(trainer, i, training_progress_output_freq)
-
-            i += 1
+        print_training_progress(trainer, i, training_progress_output_freq)
+        i += 1
 
     import copy
 
