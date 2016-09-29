@@ -69,10 +69,6 @@ Write-Verbose "Copying build binaries ..."
 Copy-Item $buildPath -Recurse -Destination $baseDropPath\cntk
 
 # Clean unwanted items
-If (Test-Path $baseDropPath\cntk\UnitTests)
-{
-	Remove-Item $baseDropPath\cntk\UnitTests -Recurse
-}
 Remove-Item $baseDropPath\cntk\*test*.exe
 Remove-Item $baseDropPath\cntk\*.pdb
 # Keep EvalDll.lib
@@ -111,6 +107,11 @@ Copy-Item $includeFile -Destination $baseIncludePath
 # Copy Examples
 Write-Verbose "Copying Examples ..."
 Copy-Item Examples -Recurse -Destination $baseDropPath\Examples
+# Remove CPPEvalV2Client examples, until V2 is included in the binary drop
+If (Test-Path $baseDropPath\Examples\Evaluation\CPPEvalV2Client)
+{
+	Remove-Item $baseDropPath\Examples\Evaluation\CPPEvalV2Client -Recurse
+}
 
 # Copy Scripts
 Write-Verbose "Copying Scripts ..."

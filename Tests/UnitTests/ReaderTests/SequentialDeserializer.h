@@ -15,6 +15,16 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK { namespace Test {
 
+    struct MockDenseSequenceData : DenseSequenceData
+    {
+        const void* GetDataBuffer() override
+        {
+            return m_data;
+        }
+
+        void* m_data;
+    };
+
     // A mock deserializer that produces N sequential samples
     // with value from 0 .. N-1
 
@@ -59,7 +69,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Test {
             {
                 const auto& data = m_data[sequenceId];
 
-                auto s = make_shared<DenseSequenceData>();
+                auto s = make_shared<MockDenseSequenceData>();
                 s->m_data = (void*)&data[0];
                 s->m_numberOfSamples = (uint32_t)data.size();
                 s->m_sampleLayout = m_sampleLayout;
@@ -215,7 +225,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Test {
 
             for (auto& s : sequences.m_data[0])
             {
-                float* casted = (float*)s->m_data;
+                float* casted = (float*)s->GetDataBuffer();
                 for (size_t i = 0; i < s->m_numberOfSamples; ++i)
                 {
                     epoch.push_back(casted[i]);

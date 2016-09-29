@@ -160,12 +160,12 @@ void TestLearnerSerialization(int numParameters, const DeviceDescriptor& device)
 
     NDShape shape = CreateShape(5, maxDimSize);
 
-    unordered_set<Parameter> parameters;
+    vector<Parameter> parameters;
     unordered_map<Parameter, NDArrayViewPtr> gradientValues;
     for (int i = 0; i < numParameters; i++)
     {
         Parameter parameter(NDArrayView::RandomUniform<ElementType>(shape, -0.5, 0.5, i, device), L"parameter_" + to_wstring(i));
-        parameters.insert(parameter);
+        parameters.push_back(parameter);
         gradientValues[parameter] = NDArrayView::RandomUniform<ElementType>(shape, -0.5, 0.5, numParameters + i, device);
     }
 

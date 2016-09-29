@@ -97,7 +97,6 @@ void TestFeedForwardNetworkCreation(const DeviceDescriptor& device, bool testSav
         auto allParams = ffNet->Parameters();
         for (auto iter = allParams.begin(); iter != allParams.end(); ++iter)
             paramGradients[*iter] = nullptr;
-        
         ffNet->Backward(backpropState, { { trainingLoss, rootGradientValue } }, paramGradients);
     }
 }

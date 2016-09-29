@@ -7,10 +7,11 @@
 
 #pragma once
 
-#include "Basics.h"
-#include "Matrix.h"
 #include <vector>
 #include <memory> // for shared_ptr
+#include <mutex>
+#include "Basics.h"
+#include "Matrix.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -267,8 +268,21 @@ public:
     void SetAxisName(const std::wstring& name) { m_axisName = name; }
     void SetUniqueAxisName(std::wstring name) // helper for constructing
     {
-        static std::map<std::wstring, size_t> nameIndices;
-        size_t index = nameIndices[name]++;
+        // Unfortunatelly, initialization of local static variables is not thread-safe in VS2013.
+        // As workaround, it is moved to the struct level. 
+        // Todo: when upgraded to VS2013, change back to use the local static mutex, and remove also Sequences.cpp.
+        // The mutex is need to make access to nameIndices be thread-safe.
+        // static std::mutex nameIndiciesMutex;
+        // static std::map<std::wstring, size_t> nameIndices;
+
+        size_t index;
+
+        // Use the block to make sure that nameIndiciesMutex is unlocked as soon as possible.
+        {
+            std::unique_lock<std::mutex> lock(s_nameIndiciesMutex);
+            index = s_nameIndices[name]++;
+        }
+
         if (index > 0)
             name += msra::strfun::wstrprintf(L"%d", (int)index);
         SetAxisName(name);
@@ -565,6 +579,11 @@ private:
     // The axis this MBLayout represents.
     // For now only a string meant for debugging.
     std::wstring m_axisName;
+
+    // The mutex to searilize the access to nameIndices in SetUniqueAxisName().
+    // Todo: after upgraded to VS2015, move both static variables into SetUnqiueAxisName() as local static variables there.
+    static std::mutex s_nameIndiciesMutex;
+    static std::map<std::wstring, size_t> s_nameIndices;
 
 public:
 

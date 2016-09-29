@@ -95,13 +95,13 @@ template <class ElemType>
     SetComputeDeviceId(CPUDEVICE);
 
     SetCompIndexSize(0);
-	SetColIdx(-1);
-	SetBuffer(nullptr, 0, false);
-	SetUnCompIndex(nullptr);
-	SetCompIndex(nullptr);
-	SetBlockSize(0);
-	SetBlockIdShift(0);
-	SetBlockIds(nullptr);
+    SetColIdx(-1);
+    SetBuffer(nullptr, 0, false);
+    SetUnCompIndex(nullptr);
+    SetCompIndex(nullptr);
+    SetBlockSize(0);
+    SetBlockIdShift(0);
+    SetBlockIds(nullptr);
 }
 
 //should only be used by constructors.
@@ -230,7 +230,7 @@ void CPUSparseMatrix<ElemType>::SetValue(const size_t row, const size_t col, con
         SecondaryIndexLocation()[c] = CPUSPARSE_INDEX_TYPE(nz);
         SetColIdx((int) c);
     }
-	// Note we don't have m_nz anymore. In order for the change from m_nz to
+    // Note we don't have m_nz anymore. In order for the change from m_nz to
     // NzCount to make sense, we need to propogate nz+1 to all col slices.
     for (size_t max = c + 1; max < m_numCols + 1; max++)
     {
@@ -674,9 +674,9 @@ void CPUSparseMatrix<ElemType>::Allocate(const size_t numRows, const size_t numC
             if (keepExistingValues && (NzCount() > numNZElemToReserve || GetCompIndexSize() > newCompIndexSize))
                 LogicError("Allocate: To keep values m_nz should <= numNZElemToReserve and m_compIndexSize <= newCompIndexSize");
 
-			memset(pArray, 0, sizeof(ElemType) * numNZElemToReserve);
-			memset(unCompIndex, 0, sizeof(CPUSPARSE_INDEX_TYPE) * numNZElemToReserve);
-			memset(compIndex, 0, sizeof(CPUSPARSE_INDEX_TYPE) * newCompIndexSize);
+            memset(pArray, 0, sizeof(ElemType) * numNZElemToReserve);
+            memset(unCompIndex, 0, sizeof(CPUSPARSE_INDEX_TYPE) * numNZElemToReserve);
+            memset(compIndex, 0, sizeof(CPUSPARSE_INDEX_TYPE) * newCompIndexSize);
 
             if (keepExistingValues && NzCount() > 0)
             {
@@ -764,12 +764,12 @@ void CPUSparseMatrix<ElemType>::Resize(const size_t numRows, const size_t numCol
 {
     VerifyResizable(__func__);
 
-	m_sliceViewOffset = 0;
+    m_sliceViewOffset = 0;
     m_numRows = numRows;
     m_numCols = numCols;
-	SetNumStorageRows(numRows);
-	SetNumStorageCols(numCols);
-	SetFormat(matrixFormat);
+    SetNumStorageRows(numRows);
+    SetNumStorageCols(numCols);
+    SetFormat(matrixFormat);
 
     size_t newCompIndexSize = (numCols > numRows ? numCols : numRows) + 1;
     bool reallocate = (GetCompIndexSize() < newCompIndexSize);
@@ -785,7 +785,7 @@ void CPUSparseMatrix<ElemType>::Resize(const size_t numRows, const size_t numCol
 template <class ElemType>
 void CPUSparseMatrix<ElemType>::Reset()
 {
-	// This is equivalent to setting m_nz = 0; Note we can only do this for sparse CSC/CSR because CompIndexSize is overloaded.
+    // This is equivalent to setting m_nz = 0; Note we can only do this for sparse CSC/CSR because CompIndexSize is overloaded.
     if (GetFormat() == MatrixFormat::matrixFormatSparseCSC || GetFormat() == MatrixFormat::matrixFormatSparseCSR)
         memset(GetCompIndex(), 0, sizeof(CPUSPARSE_INDEX_TYPE) * GetCompIndexSize());
     SetColIdx(-1);
@@ -1511,7 +1511,7 @@ MATH_API File& operator<<(File& stream, const CPUSparseMatrix<ElemType>& us)
 
     stream.PutMarker(fileMarkerBeginSection, std::wstring(L"BMAT"));
     stream << sizeof(ElemType);
-	stream << std::wstring(L"nnmatrix"); // Note this is needed for compatability, and could potentially be an empty string
+    stream << std::wstring(L"nnmatrix"); // Note this is needed for compatability, and could potentially be an empty string
 
     size_t nz, numRows, numCols;
     size_t compressedSize = us.SecondaryIndexCount();

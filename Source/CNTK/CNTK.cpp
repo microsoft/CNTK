@@ -103,6 +103,16 @@ size_t GetMaxEpochs(const ConfigParameters& configParams)
     return maxEpochs;
 }
 
+// Currently we force determinism by setting compatibility mode for different CPU versions
+// and limiting computation to a single CPU thread.
+// TODO: Clarify how a single thread restriction can be lifted.
+void ForceDeterministicAlgorithmsOnCPU()
+{
+    LOGPRINTF(stderr, "WARNING: forceDeterministcAlgorithms flag is specified. Using 1 CPU thread for processing.\n");
+    CPUMatrix<float /*any type will do*/>::SetNumThreads(1);
+    CPUMatrix<float /*any type will do*/>::SetCompatibleMode();
+}
+
 #ifndef CPUONLY
 // abort execution is GPU is not supported (e.g. compute capability not supported)
 void CheckSupportForGpu(DEVICEID_TYPE deviceId)
@@ -163,12 +173,17 @@ void DoCommands(const ConfigParameters& config, const shared_ptr<MPIWrapper>& mp
 {
     ConfigArray command = config(L"command", "train");
 
-    int numCPUThreads = config(L"numCPUThreads", "0");
-    numCPUThreads = CPUMatrix<ElemType>::SetNumThreads(numCPUThreads);
-
-    if (numCPUThreads > 0)
+    if (Globals::ShouldForceDeterministicAlgorithms())
+        ForceDeterministicAlgorithmsOnCPU();
+    else
     {
-        LOGPRINTF(stderr, "Using %d CPU threads.\n", numCPUThreads);
+        // Setting specified number of threads.
+        int numCPUThreads = config(L"numCPUThreads", "0");
+        numCPUThreads = CPUMatrix<ElemType>::SetNumThreads(numCPUThreads);
+        if (numCPUThreads > 0)
+        {
+            LOGPRINTF(stderr, "Using %d CPU threads.\n", numCPUThreads);
+        }
     }
 
     bool progressTracing = config(L"progressTracing", false);
@@ -567,10 +582,15 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
 
     // execute the actions
     // std::string type = config(L"precision", "float");
-    int numCPUThreads = config(L"numCPUThreads", 0);
-    numCPUThreads = CPUMatrix<float /*any will do*/>::SetNumThreads(numCPUThreads);
-    if (numCPUThreads > 0)
-        LOGPRINTF(stderr, "Using %d CPU threads.\n", numCPUThreads);
+    if (Globals::ShouldForceDeterministicAlgorithms())
+        ForceDeterministicAlgorithmsOnCPU();
+    else
+    {
+        int numCPUThreads = config(L"numCPUThreads", 0);
+        numCPUThreads = CPUMatrix<float /*any will do*/>::SetNumThreads(numCPUThreads);
+        if (numCPUThreads > 0)
+            LOGPRINTF(stderr, "Using %d CPU threads.\n", numCPUThreads);
+    }
 
     bool progressTracing = config(L"progressTracing", false);
     size_t fullTotalMaxEpochs = 1; // BUGBUG: BS does not allow me to read out the max epochs parameters, as that would instantiate and thus execute the objects
@@ -617,10 +637,10 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
 // ---------------------------------------------------------------------------
 
 // helper to print a little banner
-// CNTK 1.7+ (fseide/samplebs hash, Sep 3 2016 00:17:33) on FSEIDE-GPU at 2016/09/03 00:25:30
+// CNTK 1.7.1 (fseide/samplebs hash, Sep 3 2016 00:17:33) on FSEIDE-GPU at 2016/09/03 00:25:30
 static void PrintBanner(int argc, wchar_t* argv[], const string& timestamp)
 {
-    fprintf(stderr, "CNTK 1.7+ (");
+    fprintf(stderr, "CNTK 1.7.1 (");
 #ifdef _GIT_EXIST
     fprintf(stderr, "%s %.6s, ", _BUILDBRANCH_, _BUILDSHA1_);
 #endif
@@ -728,6 +748,8 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
     LOGPRINTF(stderr, "%s\n", config.ResolveVariables(rawConfigString).c_str());
     }
 #endif
+
+    SetMathLibTraceLevel(traceLevel);
 
     // This outputs the final value each variable/parameter is assigned to in config (so if a parameter is set multiple times, only the last
     // value it is set to will appear).

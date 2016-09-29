@@ -48,48 +48,48 @@ class MultiversoHelper
 typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;
 public:
 MultiversoHelper(const std::list<ComputationNodeBasePtr> & learnableNodes,
-    int MPINodeNum,
-    bool isAsyncBuffered = true,
-    bool isSimulatingMA = false,
-    AdjustLearningRateatBeginning adjusttype = AdjustLearningRateatBeginning::None,
-    double adjustcoef = 0.2,
-    size_t adjustnbmb = 600,
-    int traceLevel = 0,
-    int syncPerfStats = 0,
-    const MPIWrapperPtr& pMPI = nullptr)
-    : m_modelSyncCount(0), m_adjustLearningRateAtBeginningType(adjusttype),
+                 int nodeNumRanks,
+                 bool useAsyncBuffered = true,
+                 bool isSimModelAveragingSGD = false,
+                 AdjustLearningRateatBeginning adjusttype = AdjustLearningRateatBeginning::None,
+                 double adjustcoef = 0.2,
+                 size_t adjustnbmb = 600,
+                 int traceLevel = 0,
+                 int syncPerfStats = 0,
+                 const MPIWrapperPtr& pMPI = nullptr)
+    : m_parameterSyncCounter(0), m_adjustLearningRateAtBeginningType(adjusttype),
     m_adjustCoefficient(adjustcoef), m_adjustMBNumber(adjustnbmb),
-    m_totalClientNumber(MPINodeNum), m_isUseAsyncBuffered(isAsyncBuffered),
-    m_traceLevel(traceLevel), m_isAverage(isSimulatingMA), m_isSycned(false),
+    m_totalClientNumber(nodeNumRanks), m_useAsyncBuffered(useAsyncBuffered),
+    m_traceLevel(traceLevel), m_useSimModelAveragingSGD(isSimModelAveragingSGD), m_isSycned(false),
     m_pMPI(pMPI), m_syncPerfStats(syncPerfStats)
 {
-    if (m_isAverage)
+    if (m_useSimModelAveragingSGD)
     {
         m_isSycned = true;
-        m_isUseAsyncBuffered = false;
+        m_useAsyncBuffered = false;
     }
     //Pipeline releated variables
-    m_localCacheNumber = m_isUseAsyncBuffered ? 2 : 1;
-    m_cacheSwapIndex = new int[m_localCacheNumber];
+    m_localBufferNum = m_useAsyncBuffered ? 2 : 1;
+    m_bufferSwapIndex = new int[m_localBufferNum];
 
     //CPU asynchronous buffer
-    m_cpuAsyncBuffer = new ElemType*[m_localCacheNumber];
+    m_cpuAsyncBuffer = new ElemType*[m_localBufferNum];
 
     //Get option used by multiverso sparse update
-
-    m_getOptions.reserve(m_localCacheNumber);
-    m_addOptions.reserve(m_localCacheNumber);
+    m_getOptions.reserve(m_localBufferNum);
+    m_addOptions.reserve(m_localBufferNum);
+    
 #ifndef CPUONLY
     //GPU asynchronous buffer
-    m_gpuAsyncBuffer.resize(m_localCacheNumber);
+    m_gpuAsyncBuffer.resize(m_localBufferNum);
     //creat an communication stream for the data tranfer between GPU and CPU
     CudaErrorCheck(cudaStreamCreate(&_commStream));
 #endif
-    m_bufferInUse = 0;
-    for (int i = 0; i < m_localCacheNumber; i++)
-        m_cacheSwapIndex[i] = (i + 1) % m_localCacheNumber;
+    m_bufferIndexInUse = 0;
+    for (int i = 0; i < m_localBufferNum; i++)
+        m_bufferSwapIndex[i] = (i + 1) % m_localBufferNum;
 
-    m_prefetchThread = nullptr;
+    m_aysncBufferThread = nullptr;
 
     if (m_traceLevel > 5)
         multiverso::Log::ResetLogLevel(multiverso::LogLevel::Debug);
@@ -107,12 +107,12 @@ MultiversoHelper(const std::list<ComputationNodeBasePtr> & learnableNodes,
     fprintf(stderr, "~MultiversoHelper\n");
     fflush(stderr);
 
-    if (m_isUseAsyncBuffered && m_prefetchThread != nullptr && m_prefetchThread->joinable())
-        m_prefetchThread->join();
+    if (m_useAsyncBuffered && m_aysncBufferThread != nullptr && m_aysncBufferThread->joinable())
+        m_aysncBufferThread->join();
 
-    delete m_cacheSwapIndex, m_deltaArray;
+    delete m_bufferSwapIndex, m_deltaArray;
 
-    for (size_t i = 0; i < m_localCacheNumber; i++)
+    for (size_t i = 0; i < m_localBufferNum; i++)
     {
 #ifndef CPUONLY
         CudaErrorCheck(cudaFreeHost(m_cpuAsyncBuffer[i]));
@@ -139,14 +139,14 @@ void InitModel(const std::list<ComputationNodeBasePtr> & learnableNodes)
         Matrix<ElemType> &mat = node->Value();
 
 #ifndef CPUONLY
-        for (int j = 0; j < m_localCacheNumber; j++)
+        for (int j = 0; j < m_localBufferNum; j++)
             m_gpuAsyncBuffer[j].push_back(mat.DeepClone());
 #endif
         ElemType* px = m_cpuAsyncBuffer[0] + m_tableOffsets[i];
         mat.CopyToArray(px, m_tableLength[i]);
     }
 
-    for (int i = 1; i < m_localCacheNumber; i++)
+    for (int i = 1; i < m_localBufferNum; i++)
         memcpy(m_cpuAsyncBuffer[i], m_cpuAsyncBuffer[0], sizeof(ElemType) * m_totalModelSize);
 
     memcpy(m_deltaArray, m_cpuAsyncBuffer[0], sizeof(ElemType) * m_totalModelSize);
@@ -181,64 +181,67 @@ void InitModel(const std::list<ComputationNodeBasePtr> & learnableNodes)
     m_reportTimer.Start();
 }
 
-//ASGD logic
+// pushing parameters of learnableNodes to parameter servers, then get the latests model back.
 bool PushAndPullModel(const std::list<ComputationNodeBasePtr> & learnableNodes, size_t sampleSinceLastSynced = 0)
 {
-    //Note: maybe overflow.
-    m_modelSyncCount++;
+    m_parameterSyncCounter++;
 
-    Timer timer;
-    timer.Restart();
+    double CPUToGPUTime;
+    double GPUToCPUTime;
+    double networkTime;
+    double GPUSwapTime;
+    m_reportTimer.Restart();
     WaitAsyncBuffer();
-    timer.Stop();
+    m_reportTimer.Stop();
 
+    // reset statics for profiling
+    if (m_traceLevel > 2 && m_syncPerfStats > 0 && m_parameterSyncCounter % m_syncPerfStats == 0)
+    {
+        CPUToGPUTime = 0;
+        GPUToCPUTime = 0;
+        networkTime = 0;
+        GPUSwapTime = 0;
+    }
 
-    m_bufferInUse = m_cacheSwapIndex[m_bufferInUse];
+    m_bufferIndexInUse = m_bufferSwapIndex[m_bufferIndexInUse];
 
     int i = 0; // indicate the index of learnable nodes
-    if (m_isUseAsyncBuffered)
+    if (m_useAsyncBuffered)
     {
-        timer.Restart();
+        m_reportTimer.Restart();
         for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++, i++)
         {
             ComputationNodePtr node = dynamic_pointer_cast<ComputationNode<ElemType>>(*nodeIter);
             Microsoft::MSR::CNTK::Matrix<ElemType> &mat = node->Value();
 #ifndef CPUONLY
             //CNTK model -> GPU buffer
-            CudaErrorCheck(cudaMemcpy(m_gpuAsyncBuffer[m_bufferInUse][i].Data(),
-                mat.Data(),
-                mat.GetNumElements() * sizeof(ElemType),
-                cudaMemcpyDeviceToDevice));
+            CudaErrorCheck(cudaMemcpy(m_gpuAsyncBuffer[m_bufferIndexInUse][i].Data(),
+                                      mat.Data(),
+                                      mat.GetNumElements() * sizeof(ElemType),
+                                      cudaMemcpyDeviceToDevice));
 
             //GPU buffer -> CNTK model
             CudaErrorCheck(cudaMemcpy(mat.Data(),
-                m_gpuAsyncBuffer[m_cacheSwapIndex[m_bufferInUse]][i].Data(),
-                mat.GetNumElements() * sizeof(ElemType),
-                cudaMemcpyDeviceToDevice));
+                                      m_gpuAsyncBuffer[m_bufferSwapIndex[m_bufferIndexInUse]][i].Data(),
+                                      mat.GetNumElements() * sizeof(ElemType),
+                                      cudaMemcpyDeviceToDevice));
 #else
-            ElemType * px = m_cpuAsyncBuffer[m_bufferInUse] + m_tableOffsets[i];
-
+            ElemType * px = m_cpuAsyncBuffer[m_bufferIndexInUse] + m_tableOffsets[i];
             mat.CopyToArray(px, m_tableLength[i]);
-
-            ElemType * py = m_cpuAsyncBuffer[m_cacheSwapIndex[m_bufferInUse]] + m_tableOffsets[i];
-
+            ElemType * py = m_cpuAsyncBuffer[m_bufferSwapIndex[m_bufferIndexInUse]] + m_tableOffsets[i];
             mat.SetValue(mat.GetNumRows(), mat.GetNumCols(), mat.GetDeviceId(), py);
-
-
             delete px;
 #endif
         }
-        timer.Stop();
-        if (m_traceLevel > 3)
+        m_reportTimer.Stop();
+        if (m_traceLevel > 2)
         {
-            double time = timer.ElapsedSeconds();
-            fprintf(stderr, "\t\t -- pullAndRequest, GPU -> GPU time %lf \n", time);
+            GPUSwapTime = m_reportTimer.ElapsedSeconds();
         }
 #ifndef CPUONLY
-        m_prefetchThread = new thread([&](){
+        m_aysncBufferThread = new thread([&](){
             float factor = DecayCoefficient();
-            int t_cacheIdx = m_bufferInUse;
-            int deviceId = m_gpuAsyncBuffer[t_cacheIdx][0].GetDeviceId();
+            int deviceId = m_gpuAsyncBuffer[m_bufferIndexInUse][0].GetDeviceId();
 
             CudaErrorCheck(cudaSetDevice(deviceId));
 
@@ -249,14 +252,15 @@ bool PushAndPullModel(const std::list<ComputationNodeBasePtr> & learnableNodes, 
                 ElemType * px = m_deltaArray + m_tableOffsets[widx];
                 //GPU buffer -> CPU buffer
                 CudaErrorCheck(cudaMemcpyAsync(px,
-                    m_gpuAsyncBuffer[t_cacheIdx][widx].Data(),
-                    m_gpuAsyncBuffer[t_cacheIdx][widx].GetNumElements() * sizeof(ElemType),
-                    cudaMemcpyDeviceToHost,
-                    _commStream));
+                                               m_gpuAsyncBuffer[m_bufferIndexInUse][widx].Data(),
+                                               m_gpuAsyncBuffer[m_bufferIndexInUse][widx].GetNumElements() * sizeof(ElemType),
+                                               cudaMemcpyDeviceToHost,
+                                               _commStream));
             }
             // waiting copy from GPU to CPU has finished
             CudaErrorCheck(cudaStreamSynchronize(_commStream));
             threadTimer.Stop();
+
             if (m_traceLevel > 3)
             {
                 double time = threadTimer.ElapsedSeconds();
@@ -264,11 +268,17 @@ bool PushAndPullModel(const std::list<ComputationNodeBasePtr> & learnableNodes, 
             }
 
             // delta =  gradient * learning_rate
-            std::transform(m_cpuAsyncBuffer[t_cacheIdx], m_cpuAsyncBuffer[t_cacheIdx] + m_totalModelSize, m_deltaArray, m_deltaArray, std::minus<ElemType>());
+            std::transform(m_cpuAsyncBuffer[m_bufferIndexInUse], 
+                           m_cpuAsyncBuffer[m_bufferIndexInUse] + m_totalModelSize,
+                           m_deltaArray, m_deltaArray, 
+                           std::minus<ElemType>());
 
             threadTimer.Restart();
             // lr decay
-            std::transform(m_deltaArray, m_deltaArray + m_totalModelSize, m_deltaArray, std::bind1st(std::multiplies<ElemType>(), factor));
+            std::transform(m_deltaArray, 
+                           m_deltaArray + m_totalModelSize, 
+                           m_deltaArray, 
+                           std::bind1st(std::multiplies<ElemType>(), factor));
 
             for (int widx = 0; widx < m_tableCount; widx++)
             {
@@ -276,15 +286,15 @@ bool PushAndPullModel(const std::list<ComputationNodeBasePtr> & learnableNodes, 
                 {
                     auto multiversoMatrix = m_matrixMap->at(widx);
                     ElemType* px = m_deltaArray + m_tableOffsets[widx];
-                    ElemType* py = m_cpuAsyncBuffer[t_cacheIdx] + m_tableOffsets[widx];
-                    multiversoMatrix->Add(px, m_tableLength[widx], m_addOptions[t_cacheIdx]);
-                    multiversoMatrix->Get(py, m_tableLength[widx], m_getOptions[t_cacheIdx]);
+                    ElemType* py = m_cpuAsyncBuffer[m_bufferIndexInUse] + m_tableOffsets[widx];
+                    multiversoMatrix->Add(px, m_tableLength[widx], m_addOptions[m_bufferIndexInUse]);
+                    multiversoMatrix->Get(py, m_tableLength[widx], m_getOptions[m_bufferIndexInUse]);
                 }
                 else
                 {
                     auto multiversoMatrix = m_matrixMap->at(widx);
                     ElemType* px = m_deltaArray + m_tableOffsets[widx];
-                    ElemType* py = m_cpuAsyncBuffer[t_cacheIdx] + m_tableOffsets[widx];
+                    ElemType* py = m_cpuAsyncBuffer[m_bufferIndexInUse] + m_tableOffsets[widx];
                     multiversoMatrix->Add(px, m_tableLength[widx]);
                     multiversoMatrix->Get(py, m_tableLength[widx]);
                 }
@@ -300,13 +310,13 @@ bool PushAndPullModel(const std::list<ComputationNodeBasePtr> & learnableNodes, 
             // copy parameters from CPU buffer to GPU buffer
             for (int widx = 0; widx < m_tableCount; widx++)
             {
-                ElemType * py = m_cpuAsyncBuffer[t_cacheIdx] + m_tableOffsets[widx];
+                ElemType * py = m_cpuAsyncBuffer[m_bufferIndexInUse] + m_tableOffsets[widx];
 
-                CudaErrorCheck(cudaMemcpyAsync(m_gpuAsyncBuffer[t_cacheIdx][widx].Data(),
-                    py,
-                    m_gpuAsyncBuffer[t_cacheIdx][widx].GetNumElements() * sizeof(ElemType),
-                    cudaMemcpyHostToDevice,
-                    _commStream));
+                CudaErrorCheck(cudaMemcpyAsync(m_gpuAsyncBuffer[m_bufferIndexInUse][widx].Data(),
+                                               py,
+                                               m_gpuAsyncBuffer[m_bufferIndexInUse][widx].GetNumElements() * sizeof(ElemType),
+                                               cudaMemcpyHostToDevice,
+                                               _commStream));
             }
             CudaErrorCheck(cudaStreamSynchronize(_commStream));
             threadTimer.Stop();
@@ -317,9 +327,9 @@ bool PushAndPullModel(const std::list<ComputationNodeBasePtr> & learnableNodes, 
             }
         });
 #else
-        m_prefetchThread = new thread([&](){
+        m_aysncBufferThread = new thread([&](){
             float factor = DecayCoefficient();
-            int t_cacheIdx = m_bufferInUse;
+            int t_cacheIdx = m_bufferIndexInUse;
 
             std::transform(m_cpuAsyncBuffer[t_cacheIdx], m_cpuAsyncBuffer[t_cacheIdx] + m_totalModelSize, m_deltaArray, m_deltaArray, std::minus<ElemType>());
             std::transform(m_deltaArray, m_deltaArray + m_totalModelSize, m_deltaArray, std::bind1st(std::multiplies<ElemType>(), factor));
@@ -337,7 +347,7 @@ bool PushAndPullModel(const std::list<ComputationNodeBasePtr> & learnableNodes, 
     }
     else
     {
-        timer.Restart();
+        m_reportTimer.Restart();
         float factor = DecayCoefficient();
         i = 0;
         for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++, i++)
@@ -349,22 +359,22 @@ bool PushAndPullModel(const std::list<ComputationNodeBasePtr> & learnableNodes, 
             mat.CopyToArray(px, m_tableLength[i]);
         }
 
-        timer.Stop();
+        m_reportTimer.Stop();
         if (m_traceLevel > 3)
         {
-            double time = timer.ElapsedSeconds();
+            double time = m_reportTimer.ElapsedSeconds();
             fprintf(stderr, "\t\t -- pullAndRequest, GPU -> CPU time %lf \n", time);
         }
         std::transform(m_cpuAsyncBuffer[0], m_cpuAsyncBuffer[0] + m_totalModelSize, m_deltaArray, m_deltaArray, std::minus<ElemType>());
 
         // lr decay
-        if (m_isAverage)
+        if (m_useSimModelAveragingSGD)
         {
             factor = ModelAggregationCoefficient(sampleSinceLastSynced);
             std::transform(m_deltaArray, m_deltaArray + m_totalModelSize, m_deltaArray, std::bind1st(std::multiplies<ElemType>(), factor));
             if (m_traceLevel > 2 && m_syncPerfStats != 0)
             {
-                if (m_modelSyncCount % m_syncPerfStats == 0)
+                if (m_parameterSyncCounter % m_syncPerfStats == 0)
                     ReportPerfStats(m_totalClientNumber * m_sampleSinceLastReport, m_sampleSinceLastReport);
                 else
                     m_sampleSinceLastReport += sampleSinceLastSynced;
@@ -375,7 +385,7 @@ bool PushAndPullModel(const std::list<ComputationNodeBasePtr> & learnableNodes, 
         {
             std::transform(m_deltaArray, m_deltaArray + m_totalModelSize, m_deltaArray, std::bind1st(std::multiplies<ElemType>(), factor));
         }
-        timer.Restart();
+        m_reportTimer.Restart();
         for (int widx = 0; widx < m_tableCount; widx++)
         {
             if (m_isSparseArray[widx])
@@ -395,13 +405,13 @@ bool PushAndPullModel(const std::list<ComputationNodeBasePtr> & learnableNodes, 
                 multiversoMatrix->Get(py, m_tableLength[widx]);
             }
         }
-        timer.Stop();
+        m_reportTimer.Stop();
         if (m_traceLevel > 3)
         {
-            double time = timer.ElapsedSeconds();
+            double time = m_reportTimer.ElapsedSeconds();
             fprintf(stderr, "\t\t -- pullAndRequest, Worker <--> Multiverso time %lf \n", time);
         }
-        timer.Restart();
+        m_reportTimer.Restart();
         i = 0;
         for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++, i++)
         {
@@ -411,10 +421,10 @@ bool PushAndPullModel(const std::list<ComputationNodeBasePtr> & learnableNodes, 
             ElemType * px = m_cpuAsyncBuffer[0] + m_tableOffsets[i];
             mat.SetValue(mat.GetNumRows(), mat.GetNumCols(), mat.GetDeviceId(), px);
         }
-        timer.Stop();
+        m_reportTimer.Stop();
         if (m_traceLevel > 3)
         {
-            double time = timer.ElapsedSeconds();
+            double time = m_reportTimer.ElapsedSeconds();
             fprintf(stderr, "\t\t -- pullAndRequest, CPU -> GPU time %lf \n", time);
         }
     }
@@ -438,11 +448,11 @@ void WaitAll()
 
 void WaitAsyncBuffer()
 {
-    if (m_prefetchThread != nullptr && m_prefetchThread->joinable())
+    if (m_aysncBufferThread != nullptr && m_aysncBufferThread->joinable())
     {
-        m_prefetchThread->join();
-        delete m_prefetchThread;
-        m_prefetchThread = nullptr;
+        m_aysncBufferThread->join();
+        delete m_aysncBufferThread;
+        m_aysncBufferThread = nullptr;
     }
 }
 
@@ -452,16 +462,16 @@ private:
         assert(!m_isInitialized);
         m_isInitialized = true;
 
+        // parameter server offer vary of updaters, we only use the SGD updater for this simple case.
         multiverso::SetCMDFlag<std::string>(std::string("updater_type"), std::string("sgd"));
         multiverso::MV_Init();
 
-
-        for (int i = 0; i < m_localCacheNumber; i++)
+        for (int i = 0; i < m_localBufferNum; i++)
         {
             m_getOptions.push_back(new multiverso::GetOption());
-            m_getOptions.at(i)->set_worker_id(m_localCacheNumber * multiverso::MV_WorkerId() + i);
+            m_getOptions.at(i)->set_worker_id(m_localBufferNum * multiverso::MV_WorkerId() + i);
             m_addOptions.push_back(new multiverso::AddOption());
-            m_addOptions.at(i)->set_worker_id(m_localCacheNumber * multiverso::MV_WorkerId() + i);
+            m_addOptions.at(i)->set_worker_id(m_localBufferNum * multiverso::MV_WorkerId() + i);
         }
 
         m_matrixMap = new std::vector< multiverso::MatrixWorker<ElemType>*>();
@@ -481,22 +491,20 @@ private:
             auto found = nodeName.find(sparse_tag);
             m_isSparseArray.push_back(false);
 
-            fprintf(stderr, "Layer %ls, size: %d, row size: %d, col size: %d.\n", node->NodeName().c_str(), (int)layerSize, (int)layerRowSize, (int)layerColSize);
-            fflush(stderr);
             if (found != std::string::npos)
             {
                 m_isSparseArray[i] = true;
                 fprintf(stderr, "Layer %ls using sparseMatrix. row size: %d, col size: %d\n", nodeName.c_str(), (int)layerColSize, (int)layerRowSize);
                 fflush(stderr);
                 m_matrixMap->push_back(new multiverso::MatrixWorker<ElemType>(layerColSize, layerRowSize, true));
-                m_serverMap->push_back(new multiverso::MatrixServer<ElemType>(layerColSize, layerRowSize, true, m_isUseAsyncBuffered));
+                m_serverMap->push_back(new multiverso::MatrixServer<ElemType>(layerColSize, layerRowSize, true, m_useAsyncBuffered));
 
             }
             else
             {
                 m_isSparseArray[i] = false;
                 m_matrixMap->push_back(new multiverso::MatrixWorker<ElemType>(layerRowSize, layerColSize, false));
-                m_serverMap->push_back(new multiverso::MatrixServer<ElemType>(layerRowSize, layerColSize, false, m_isUseAsyncBuffered));
+                m_serverMap->push_back(new multiverso::MatrixServer<ElemType>(layerRowSize, layerColSize, false, m_useAsyncBuffered));
             }
 
             m_tableLength.push_back(layerSize);
@@ -517,16 +525,16 @@ private:
         }
 
 #ifndef CPUONLY
-        for (int i = 0; i < m_localCacheNumber; i++)
+        for (int i = 0; i < m_localBufferNum; i++)
             m_gpuAsyncBuffer[i].reserve(m_tableCount);
 
         //create pinned memory
-        for (int i = 0; i < m_localCacheNumber; ++i)
+        for (int i = 0; i < m_localBufferNum; ++i)
             CudaErrorCheck(cudaMallocHost((void **)&m_cpuAsyncBuffer[i], sizeof(ElemType) * (m_totalModelSize), cudaHostAllocPortable));
 
         CudaErrorCheck(cudaMallocHost((void **)&m_deltaArray, sizeof(ElemType) * (m_totalModelSize), cudaHostAllocPortable));
 #else
-        for (int i = 0; i < m_localCacheNumber; i++)
+        for (int i = 0; i < m_localBufferNum; i++)
             m_cpuAsyncBuffer[i] = new ElemType[m_totalModelSize];
 #endif
     }
@@ -539,10 +547,10 @@ private:
         case AdjustLearningRateatBeginning::None:
             break;
         case AdjustLearningRateatBeginning::Linearly:
-            f = min(f, max(0.f, (float)(m_adjustCoefficient + (1 - m_adjustCoefficient) / m_adjustMBNumber * m_modelSyncCount)));
+            f = min(f, max(0.f, (float)(m_adjustCoefficient + (1 - m_adjustCoefficient) / m_adjustMBNumber * m_parameterSyncCounter)));
             break;
         case AdjustLearningRateatBeginning::Staircase:
-            f = min(f, max(0.f, (float)(m_adjustCoefficient * (m_modelSyncCount / m_adjustMBNumber + 1))));
+            f = min(f, max(0.f, (float)(m_adjustCoefficient * (m_parameterSyncCounter / m_adjustMBNumber + 1))));
             break;
         default:
             break;
@@ -591,8 +599,8 @@ private:
 
         string prefix = "\t\t(sim-model aggregation stats) %d-th sync: %8.2f seconds since last report ; %d samples processed by %d workers (%d by me);\n"
             "\t\t(sim-model aggregation stats) %d-th sync: totalThroughput = %.2fk samplesPerSecond , throughputPerWorker = %.2fk samplesPerSecond\n";
-        fprintf(stderr, prefix.c_str(), (int)m_modelSyncCount, secondsSinceLastReport, (int)totalSamplesProcessedSinceLastReport, (int)m_totalClientNumber, (int)localSamplesProcessedSinceLastReport,
-            (int)m_modelSyncCount, totalThroughput, throughputPerWorker);
+        fprintf(stderr, prefix.c_str(), (int)m_parameterSyncCounter, secondsSinceLastReport, (int)totalSamplesProcessedSinceLastReport, (int)m_totalClientNumber, (int)localSamplesProcessedSinceLastReport,
+            (int)m_parameterSyncCounter, totalThroughput, throughputPerWorker);
         m_sampleSinceLastReport = 0;
 
     }
@@ -600,22 +608,22 @@ private:
     std::vector<multiverso::MatrixServer<ElemType>*>* m_serverMap;
     std::vector<bool> m_isSparseArray;
 
-    thread * m_prefetchThread;
+    thread * m_aysncBufferThread;
     bool m_isInitialized;
     bool m_isSycned;
-    bool m_isAverage;
+    bool m_useSimModelAveragingSGD;
 
     int m_totalClientNumber;
     int m_traceLevel;
     int m_syncPerfStats;
     Timer m_reportTimer;
-    size_t m_modelSyncCount;
+    size_t m_parameterSyncCounter;
     size_t m_sampleSinceLastReport;
 
-    bool m_isUseAsyncBuffered;
-    int m_localCacheNumber;
-    int * m_cacheSwapIndex;
-    int m_bufferInUse;
+    bool m_useAsyncBuffered;
+    int m_localBufferNum;
+    int * m_bufferSwapIndex;
+    int m_bufferIndexInUse;
     std::vector< multiverso::GetOption*> m_getOptions; // used by sparse table
     std::vector< multiverso::AddOption*> m_addOptions; // used by sparse table
 

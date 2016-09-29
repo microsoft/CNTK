@@ -10,7 +10,7 @@ void TestReduceSum(const DeviceDescriptor& device)
     size_t dim = 23;
 
     auto sequenceLengths = GenerateSequenceLengths(numSequences, maxAllowedSequenceLength);
-    auto sequences = GenerateSequences<float>(sequenceLengths, dim);
+    auto sequences = GenerateSequences<float>(sequenceLengths, { dim });
     ValuePtr sequencesValue = Value::Create({ dim }, sequences, device, true);
 
     // Test ReduceSum along a static axis
@@ -113,67 +113,88 @@ void TestReduceSum(const DeviceDescriptor& device)
     }
 }
 
-void TestSlice(const DeviceDescriptor& device)
+void TestSlice(size_t sampleRank, const DeviceDescriptor& device)
 {
     size_t numSequences = 7;
     size_t maxAllowedSequenceLength = 11;
-    size_t dim = 23;
+    size_t maxDimSize = 23;
+    NDShape inputShape(sampleRank);
+    for (size_t i = 0; i < sampleRank; ++i)
+        inputShape[i] = (rand() % maxDimSize) + 1;
 
     auto sequenceLengths = GenerateSequenceLengths(numSequences, maxAllowedSequenceLength);
-    auto sequences = GenerateSequences<float>(sequenceLengths, dim);
-    ValuePtr sequencesValue = Value::Create({ dim }, sequences, device, true);
+    auto sequences = GenerateSequences<float>(sequenceLengths, inputShape);
+    ValuePtr sequencesValue = Value::Create(inputShape, sequences, device, true);
 
     // Test slice along a static axis
     {
-        auto testStaticAxisSlice = [&sequences, &sequenceLengths, dim, sequencesValue, device](int beginOffset, int endOffset)
+        auto testStaticAxisSlice = [&sequences, &sequenceLengths, inputShape, sequencesValue, device](size_t sliceAxis, int beginOffset, int endOffset)
         {
-            size_t maxActualSequenceLength = sequencesValue->Data()->Shape()[1];
-            size_t numSequences = sequencesValue->Data()->Shape()[2];
+            size_t maxActualSequenceLength = sequencesValue->Data()->Shape()[inputShape.Rank()];
+            size_t numSequences = sequencesValue->Data()->Shape()[inputShape.Rank() + 1];
 
-            auto inputVar = InputVariable({ dim }, DataType::Float, L"input");
-            auto rowSliceFunc = Slice(inputVar, Axis(0), beginOffset, endOffset);
+            auto inputVar = InputVariable(inputShape, DataType::Float, L"input");
+            auto sliceFunc = Slice(inputVar, Axis(sliceAxis), beginOffset, endOffset);
 
-            NDShape outputShape = rowSliceFunc->Output().Shape().AppendShape({ maxActualSequenceLength, numSequences });
-            std::vector<float> outputData(outputShape.TotalSize());
-            ValuePtr outputValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(outputShape, outputData, false), sequencesValue->Mask()->DeepClone());
+            NDShape outputShape = sliceFunc->Output().Shape();
+            auto outputDataShape = outputShape.AppendShape({ maxActualSequenceLength, numSequences });
+            std::vector<float> outputData(outputDataShape.TotalSize());
+            ValuePtr outputValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(outputDataShape, outputData, false), sequencesValue->Mask()->DeepClone());
 
-            std::unordered_map<Variable, ValuePtr> outputs = { { rowSliceFunc->Output(), outputValue } };
-            rowSliceFunc->Forward({ { inputVar, sequencesValue } }, outputs, device);
+            std::unordered_map<Variable, ValuePtr> outputs = { { sliceFunc->Output(), outputValue } };
+            sliceFunc->Forward({ { inputVar, sequencesValue } }, outputs, device);
 
-            size_t rowSliceStartOffset = (beginOffset >= 0) ? beginOffset : (dim + beginOffset);
-            size_t sliceLength = endOffset - beginOffset;
-            std::vector<float> expectedOutputValues(sliceLength * maxActualSequenceLength * numSequences);
+            std::vector<size_t> inputShapeStrides = GetStrides(inputShape);
+            std::vector<size_t> outputShapeStrides = GetStrides(outputShape);
+
+            size_t sliceStartOffset = (beginOffset >= 0) ? beginOffset : (inputShape[sliceAxis] + beginOffset);
+            std::vector<float> expectedOutputValues(outputShape.TotalSize() * maxActualSequenceLength * numSequences);
             for (size_t i = 0; i < numSequences; ++i)
             {
                 size_t currentSequenceLength = sequenceLengths[i];
                 for (size_t j = 0; j < currentSequenceLength; ++j)
                 {
-                    for (size_t k = 0; k < sliceLength; ++k)
-                        expectedOutputValues[(((i * maxActualSequenceLength) + j) * sliceLength) + k] = sequences[i][(j * dim) + k + rowSliceStartOffset];
+                    for (size_t k = 0; k < outputShape.TotalSize(); ++k)
+                    {
+                        auto outputIdx = UnflattenedShape(k, outputShapeStrides);
+                        auto inputIdx = outputIdx;
+                        inputIdx[sliceAxis] += sliceStartOffset;
+                        auto flatInputIdx = FlattenedIndex(inputIdx, inputShapeStrides);
+                        expectedOutputValues[(((i * maxActualSequenceLength) + j) * outputShape.TotalSize()) + k] = sequences[i][(j * inputShape.TotalSize()) + flatInputIdx];
+                    }
                 }
             }
 
             FloatingPointVectorCompare(outputData, expectedOutputValues, "testStaticAxisSlice: Forward prop results do not match expected results");
         };
 
-        testStaticAxisSlice(3, 5);
-        testStaticAxisSlice(-1, 0);
-        testStaticAxisSlice(-3, -1);
+        size_t sliceAxis = 0;
+        testStaticAxisSlice(sliceAxis, 3, 5);
+
+        if (sliceAxis < (inputShape.Rank() - 1))
+            sliceAxis++;
+
+        testStaticAxisSlice(sliceAxis, -1, 0);
+
+        if (sliceAxis < (inputShape.Rank() - 1))
+            sliceAxis++;
+
+        testStaticAxisSlice(sliceAxis, - 3, -1);
     }
 
     // Test slice along a dynamic axis
     {
-        auto testDynamicAxisSlice = [&sequences, &sequenceLengths, dim, sequencesValue, device](const Axis& axis, int beginOffset, int endOffset)
+        auto testDynamicAxisSlice = [&sequences, &sequenceLengths, inputShape, sequencesValue, device](const Axis& axis, int beginOffset, int endOffset)
         {
             if (axis.IsStaticAxis())
                 RuntimeError("Called the dynamic axis slice test with a static axis");
 
-            size_t maxActualSequenceLength = sequencesValue->Data()->Shape()[1];
-            size_t numSequences = sequencesValue->Data()->Shape()[2];
+            size_t maxActualSequenceLength = sequencesValue->Data()->Shape()[inputShape.Rank()];
+            size_t numSequences = sequencesValue->Data()->Shape()[inputShape.Rank() + 1];
 
             size_t sliceLength = endOffset - beginOffset;
 
-            auto inputVar = InputVariable({ dim }, DataType::Float, L"input");
+            auto inputVar = InputVariable(inputShape, DataType::Float, L"input");
             auto sliceFunc = Slice(inputVar, axis, beginOffset, endOffset);
 
             size_t outputSequenceAxisLength = (axis == Axis::DefaultDynamicAxis()) ? sliceLength : maxActualSequenceLength;
@@ -188,7 +209,7 @@ void TestSlice(const DeviceDescriptor& device)
             size_t startSequenceIdx = (axis == Axis::DefaultBatchAxis()) ? ((beginOffset >= 0) ? beginOffset : (numSequences + beginOffset)) : 0;
             size_t endSequenceIdx = (axis == Axis::DefaultBatchAxis()) ? ((endOffset > 0) ? endOffset : (numSequences + endOffset)) : numSequences;
 
-            std::vector<float> expectedOutputValues(dim * outputSequenceAxisLength * outputBatchAxisLength);
+            std::vector<float> expectedOutputValues(inputShape.TotalSize() * outputSequenceAxisLength * outputBatchAxisLength);
             for (size_t i = startSequenceIdx; i < endSequenceIdx; ++i)
             {
                 size_t currentSequenceLength = sequenceLengths[i];
@@ -196,8 +217,8 @@ void TestSlice(const DeviceDescriptor& device)
                 size_t endFrameIdx = (axis == Axis::DefaultDynamicAxis()) ? ((endOffset > 0) ? endOffset : (currentSequenceLength + endOffset)) : currentSequenceLength;
                 for (size_t j = startFrameIdx; j < endFrameIdx; ++j)
                 {
-                    for (size_t k = 0; k < dim; ++k)
-                        expectedOutputValues[((((i - startSequenceIdx) * outputSequenceAxisLength) + (j - startFrameIdx)) * dim) + k] = sequences[i][(j * dim) + k];
+                    for (size_t k = 0; k < inputShape.TotalSize(); ++k)
+                        expectedOutputValues[((((i - startSequenceIdx) * outputSequenceAxisLength) + (j - startFrameIdx)) * inputShape.TotalSize()) + k] = sequences[i][(j * inputShape.TotalSize()) + k];
                 }
             }
 
@@ -344,13 +365,64 @@ void TestRecurrentFunctionCloning()
     CompareFunctions(clonedFunctionWithParametersShared, clonedFunctionWithParametersFrozen, ParameterCloningMethod::Freeze, cloningReplacements, visitedFunctions);
 }
 
+void TestTranspose(size_t numAxes, size_t axis1, size_t axis2, const DeviceDescriptor& device)
+{
+    srand(1);
+
+    size_t maxDimSize = 15;
+    NDShape inputShape(numAxes);
+    for (size_t i = 0; i < numAxes; ++i)
+        inputShape[i] = (rand() % maxDimSize) + 1;
+
+    auto inputVar = InputVariable(inputShape, DataType::Float, false, L"leftInput");
+    auto transposeFunc = TransposeAxes(inputVar, Axis(axis1), Axis(axis2));
+
+    std::vector<float> inputData(inputShape.TotalSize());
+    for (size_t i = 0; i < inputData.size(); ++i)
+        inputData[i] = ((float)rand()) / RAND_MAX;
+
+    auto inputValueShape = inputShape.AppendShape({ 1, 1 });
+    ValuePtr inputValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(inputValueShape, inputData, true));
+
+    NDShape outputShape = transposeFunc->Output().Shape();
+    NDShape outputValueShape = outputShape.AppendShape({ 1, 1 });
+    std::vector<float> outputData(outputValueShape.TotalSize());
+    ValuePtr outputValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(outputValueShape, outputData, false));
+
+    std::unordered_map<Variable, ValuePtr> outputs = { { transposeFunc->Output(), outputValue } };
+    transposeFunc->Forward({ { inputVar, inputValue } }, outputs, device);
+
+    std::vector<size_t> inputShapeStrides = GetStrides(inputShape);
+    std::vector<size_t> outputShapeStrides = GetStrides(outputShape);
+
+    // Verify forward prop results
+    std::vector<float> expectedOutputValues(outputShape.TotalSize());
+    for (size_t i = 0; i < expectedOutputValues.size(); ++i)
+    {
+        auto unflattenedShape = UnflattenedShape(i, outputShapeStrides);
+        std::swap(unflattenedShape[axis1], unflattenedShape[axis2]);
+        size_t flattenedIndex = FlattenedIndex(unflattenedShape, inputShapeStrides);
+        expectedOutputValues[i] = inputData[flattenedIndex];
+    }
+
+    FloatingPointVectorCompare(outputData, expectedOutputValues, "TestTimesAndPlus: Forward prop results do not match expected results");
+}
 void FunctionTests()
 {
-    TestSlice(DeviceDescriptor::CPUDevice());
-    TestSlice(DeviceDescriptor::GPUDevice(0));
+    TestSlice(2, DeviceDescriptor::CPUDevice());
+#ifndef CPUONLY
+    TestSlice(1, DeviceDescriptor::GPUDevice(0));
+#endif
 
     TestReduceSum(DeviceDescriptor::CPUDevice());
+#ifndef CPUONLY
     TestReduceSum(DeviceDescriptor::GPUDevice(0));
+#endif
 
     TestRecurrentFunctionCloning();
+
+    TestTranspose(2, 0, 1, DeviceDescriptor::CPUDevice());
+#ifndef CPUONLY
+    TestTranspose(3, 1, 2, DeviceDescriptor::GPUDevice(0));
+#endif
 }

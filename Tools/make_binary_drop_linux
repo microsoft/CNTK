@@ -125,7 +125,7 @@ declare -a cudnnFiles=("libcudnn.so.5")
 declare -a includeFiles=("Eval.h")
 
 # Set dependency sources paths
-mklPath="/usr/local/CNTKCustomMKL/1/x64/parallel"
+mklPath="/usr/local/CNTKCustomMKL/2/x64/parallel"
 opencvPath="/usr/local/opencv-3.1.0/lib"
 libzipPath="/usr/local/lib"
 cudaPath="/usr/local/cuda/lib64"
@@ -168,6 +168,8 @@ CopyFilesFromList $includePath includeFiles[@] $baseIncludePath
 # Copy Examples
 echo "Copying Examples..." >&3
 cp -r Examples $baseDropPath
+# Remove CPPEvalV2Client examples until V2 binaries are included in the binary drop
+rm -rf $baseDropPath/Examples/Evaluation/CPPEvalV2Client
 
 # Copy Scripts (Scripts folder from the root of the Repo)
 echo "Copying Scripts..." >&3

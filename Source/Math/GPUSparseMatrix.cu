@@ -670,7 +670,7 @@ void GPUSparseMatrix<ElemType>::Reshape(const size_t numRows, const size_t numCo
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::Allocate(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const bool growOnly /*= true*/, bool keepExistingValues /*= true*/)
 {
-	// BugBug: This doesn't work because allocate is called from Resize sometimes and resize expects allocate to know the old values not the new values, so this won't work.
+    // BugBug: This doesn't work because allocate is called from Resize sometimes and resize expects allocate to know the old values not the new values, so this won't work.
     if (GetNumRows() != numRows || GetNumCols() != numCols)
         LogicError("Error, calling allocate with dimensions (%d, %d), but the matrix has dimension (%d, %d).", (int)numRows, (int)numCols, (int)GetNumRows(), (int)GetNumCols());
 
@@ -679,14 +679,14 @@ void GPUSparseMatrix<ElemType>::Allocate(const size_t numRows, const size_t numC
 
     if (reallocate)
     {
-		// Note that we are allocating one buffer for all of our data structures. Thus the ElemType* nzValues array lives directly next to
-		// the GPUSPARSE_INDEX_TYPE* rowIndices/colIndices in sparseCSC/CSR formats. Thus we allocate the number of bytes, and then set the
-		// start pointer to an ElemType*.
+        // Note that we are allocating one buffer for all of our data structures. Thus the ElemType* nzValues array lives directly next to
+        // the GPUSPARSE_INDEX_TYPE* rowIndices/colIndices in sparseCSC/CSR formats. Thus we allocate the number of bytes, and then set the
+        // start pointer to an ElemType*.
         char* buf = TracingGPUMemoryAllocator::Allocate<char>(GetComputeDeviceId(), bufferSizeNeeded);
         ElemType* pArray = (ElemType*)(buf);
 
-		// Note this is required due to m_nz 
-		CUDA_CALL(cudaMemset(pArray, 0, bufferSizeNeeded));
+        // Note this is required due to m_nz 
+        CUDA_CALL(cudaMemset(pArray, 0, bufferSizeNeeded));
         if (Buffer() != nullptr)
         {
             if (keepExistingValues)
@@ -717,7 +717,7 @@ void GPUSparseMatrix<ElemType>::Allocate(const size_t numRows, const size_t numC
     else // if requested size is smaller, keeping original values does not make sense
     {
         SetSizeAllocated(ElemCountFromBufferSize(numRows, numCols, GetFormat(), BufferSizeAllocated()));
-		CUDA_CALL(cudaMemset(Buffer(), 0, BufferSizeAllocated()));
+        CUDA_CALL(cudaMemset(Buffer(), 0, BufferSizeAllocated()));
     }
 }
 
@@ -730,7 +730,7 @@ void GPUSparseMatrix<ElemType>::RequireSizeAndAllocate(const size_t numRows, con
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::RequireSizeAndAllocate(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const MatrixFormat matrixFormat, const bool growOnly /*= true*/, bool keepExistingValues /*= true*/)
 {
-	RequireSize(numRows, numCols, matrixFormat, growOnly);
+    RequireSize(numRows, numCols, matrixFormat, growOnly);
     
     size_t bufferSizeNeeded = BufferSizeNeeded(numRows, numCols, numNZElemToReserve, matrixFormat);
     bool reallocate = (BufferSizeAllocated() < bufferSizeNeeded || (!growOnly && BufferSizeAllocated() > bufferSizeNeeded));
@@ -771,8 +771,8 @@ void GPUSparseMatrix<ElemType>::Resize(const size_t numRows, const size_t numCol
     SetNumStorageCols(numCols);
     SetFormat(matrixFormat);
 
-	// If we really did resize the number of rows/columns, then we changed the number of nz elements allocated. That is, if we used to have a buffer capable of
-	// stroring 100 nz elements and 10 columns in CSC format, but we resized to 20 columns, we can no longer store 100 elements, we can only store 95. 
+    // If we really did resize the number of rows/columns, then we changed the number of nz elements allocated. That is, if we used to have a buffer capable of
+    // stroring 100 nz elements and 10 columns in CSC format, but we resized to 20 columns, we can no longer store 100 elements, we can only store 95. 
     // Thus we must reset the number of nz elements which can be stored. So let's compute it now.
     size_t newNzElem = ComputeMaxNZElemFromBufferSize(numRows, numCols, BufferSizeAllocated(), matrixFormat);
     SetSizeAllocated(newNzElem);
@@ -828,7 +828,7 @@ void GPUSparseMatrix<ElemType>::SetMatrixFromCSRFormat(const GPUSPARSE_INDEX_TYP
 
     if (sizeof(CPUSPARSE_INDEX_TYPE) == sizeof(GPUSPARSE_INDEX_TYPE))
     {
-		// ColSize doesn't work since it requires NzCount() to be usable (RowSize doesn't, since it's the fixed, compressed,
+        // ColSize doesn't work since it requires NzCount() to be usable (RowSize doesn't, since it's the fixed, compressed,
         // dimension. Since NzCount is not available (because the sparse indices which is where the NzCount is copmuted from
         // haven't been copied in yet), we just tell it how many bytes to copy. That is, nz * sizeof(GPUSPARSE_INDEX_TYPE);
         CUDA_CALL(cudaMemcpy(RowLocation(), h_CSRRow, RowSize(), kind));
@@ -894,7 +894,7 @@ void GPUSparseMatrix<ElemType>::GetMatrixFromCSRFormat(CPUSPARSE_INDEX_TYPE*& h_
 
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYPE* h_CSCCol, const CPUSPARSE_INDEX_TYPE* h_Row, const ElemType* h_Val,
-                                                       const size_t nz, const size_t numRows, const size_t numCols, const bool IsOnDevice /*= false*/, const DEVICEID_TYPE devId /*= -1*/)
+    const size_t nz, const size_t numRows, const size_t numCols, const bool IsOnDevice /*= false*/, const DEVICEID_TYPE devId /*= -1*/, DataTransferer* transferer /*= nullptr*/)
 {
     VerifyWritable(__func__);
 
@@ -905,14 +905,36 @@ void GPUSparseMatrix<ElemType>::SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYP
     SetFormat(matrixFormatSparseCSC);
     RequireSizeAndAllocate(numRows, numCols, nz, true, false);
 
-	// m_nz doesn't exist anymore. How are we going to deal with the NzSize, RowSize, and ColSize? Do it ourselves of course.
+    if (transferer && IsOnDevice)
+        RuntimeError("Currently it is prohibited to copy data asynchronous from device to device.");
+
+    // m_nz doesn't exist anymore. How are we going to deal with the NzSize, RowSize, and ColSize? Do it ourselves of course.
+
     cudaMemcpyKind kind = IsOnDevice ? cudaMemcpyDeviceToDevice : cudaMemcpyHostToDevice;
-    CUDA_CALL(cudaMemcpy(Data(), h_Val, nz * sizeof(ElemType), kind));
+    if (transferer)
+    {
+        // TODO: All RequireSizeAndAllocate should be async and use a transferer.
+        // Currently there are some memset operations that can be still executing on the default stream,
+        // Here we have to wait for them to finish.
+        transferer->RecordComputeStreamSyncPoint();
+        transferer->WaitForSyncPointOnAssignStreamAsync();
+        transferer->CopyCPUToGPUAsync(h_Val, nz, sizeof(ElemType), Data());
+    }
+    else
+        CUDA_CALL(cudaMemcpy(Data(), h_Val, nz * sizeof(ElemType), kind));
 
     if (sizeof(CPUSPARSE_INDEX_TYPE) == sizeof(GPUSPARSE_INDEX_TYPE))
     {
-        CUDA_CALL(cudaMemcpy(RowLocation(), h_Row, sizeof(GPUSPARSE_INDEX_TYPE) * nz, kind));
-        CUDA_CALL(cudaMemcpy(ColLocation(), h_CSCCol, sizeof(GPUSPARSE_INDEX_TYPE) * (numCols+1), kind));
+        if (transferer)
+        {
+            transferer->CopyCPUToGPUAsync(h_Row, nz, sizeof(GPUSPARSE_INDEX_TYPE), RowLocation());
+            transferer->CopyCPUToGPUAsync(h_CSCCol, numCols + 1, sizeof(GPUSPARSE_INDEX_TYPE), ColLocation());
+        }
+        else
+        {
+            CUDA_CALL(cudaMemcpy(RowLocation(), h_Row, sizeof(GPUSPARSE_INDEX_TYPE) * nz, kind));
+            CUDA_CALL(cudaMemcpy(ColLocation(), h_CSCCol, sizeof(GPUSPARSE_INDEX_TYPE) * (numCols + 1), kind));
+        }
     }
     else
     {
@@ -923,8 +945,16 @@ void GPUSparseMatrix<ElemType>::SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYP
         ConvertBuffer(pCol, h_CSCCol, (numCols+1));
         ConvertBuffer(pRow, h_Row, nz);
 
-        CUDA_CALL(cudaMemcpy(RowLocation(), pRow, sizeof(GPUSPARSE_INDEX_TYPE) * nz, kind));
-        CUDA_CALL(cudaMemcpy(ColLocation(), pCol, sizeof(GPUSPARSE_INDEX_TYPE) * (numCols+1), kind));
+        if (transferer)
+        {
+            transferer->CopyCPUToGPUAsync(pRow, nz, sizeof(GPUSPARSE_INDEX_TYPE), RowLocation());
+            transferer->CopyCPUToGPUAsync(pCol, numCols + 1, sizeof(GPUSPARSE_INDEX_TYPE), ColLocation());
+        }
+        else
+        {
+            CUDA_CALL(cudaMemcpy(RowLocation(), pRow, sizeof(GPUSPARSE_INDEX_TYPE) * nz, kind));
+            CUDA_CALL(cudaMemcpy(ColLocation(), pCol, sizeof(GPUSPARSE_INDEX_TYPE) * (numCols + 1), kind));
+        }
     }
 }
 
@@ -1443,7 +1473,7 @@ ElemType GPUSparseMatrix<ElemType>::Adagrad(GPUMatrix<ElemType>& c, const bool n
     if (!needAveMultiplier)
         return 1;
 
-	let nz = NzCount();
+    let nz = NzCount();
     cublasHandle_t cuHandle = GPUMatrix<ElemType>::GetCublasHandle(GetComputeDeviceId());
     if (sizeof(ElemType) == sizeof(float))
     {
@@ -2190,7 +2220,7 @@ GPUSparseMatrix<ElemType> GPUSparseMatrix<ElemType>::ColumnSlice(size_t startCol
     slice.ShallowCopyFrom(*this);
     slice.SetNumCols(numCols);
     slice.m_sliceViewOffset          = m_sliceViewOffset + startColumn; // Just shift the compressed index location to the new startColumn - that's it!
-	// Note: m_nz is missing from here because it does not exist. We must compute it every time.
+    // Note: m_nz is missing from here because it does not exist. We must compute it every time.
 
     return slice;
 }
@@ -2803,8 +2833,8 @@ MATH_API File& operator<<(File& stream, const GPUSparseMatrix<ElemType>& us)
 
     stream.PutMarker(fileMarkerBeginSection, std::wstring(L"BMAT"));
     stream << sizeof(ElemType);
-	std::wstring s(L"nnmatrix");
-	stream << s;
+    std::wstring s(L"nnmatrix");
+    stream << s;
 
     size_t nz = us.GetNumNZElements(), numElemAllocated = us.GetNumElemAllocated(), numRows = us.GetNumRows(), numCols = us.GetNumCols();
     size_t compressedSize = us.SecondaryIndexCount();

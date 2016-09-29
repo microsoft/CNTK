@@ -1,5 +1,5 @@
 1 |A 1.0 |B 1:1     |# one of the samples in each sequence has to be valid,
-1 |A 1.0 |B 11:1    |# otherwise the sequence would be empty and the reader
+1 |A 1.0 |B 10:1    |# otherwise the sequence would be empty and the reader
 1 |A 1.0 1.0 |B 1:1 |# will raise an exception
 2 |A 2.0 |B 2:2
 2 |A 2,0 |B 2:2
