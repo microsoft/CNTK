@@ -53,9 +53,8 @@ def _test_unary_op(precision, device_id, op_func,
             forward_input, expected_forward, expected_backward,
             device_id=device_id, precision=precision)
    
-def _test_binary_op(precision, device_id, op_func,
-        left_operand, right_operand, 
-        expected_forward, expected_backward_all):
+def _test_binary_op(precision, device_id, op_func, left_operand, right_operand,
+        expected_forward, expected_backward_all, only_input_variables=False):
     
     left_value = AA(left_operand, dtype=PRECISION_TO_TYPE[precision]) 
     right_value = AA(right_operand, dtype=PRECISION_TO_TYPE[precision])
@@ -84,24 +83,25 @@ def _test_binary_op(precision, device_id, op_func,
     left_value.shape = (1,1) + left_value.shape
     right_value.shape = (1,1) + right_value.shape
 
-    forward_input = {a:left_value}    
-    expected_backward = { a: expected_backward_all['left_arg'], }
-    unittest_helper(input_op_constant, 
-            forward_input, expected_forward, expected_backward,
-            device_id=device_id, precision=precision)
-
-    forward_input = {b:right_value}    
-    expected_backward = { b: expected_backward_all['right_arg'], }
-    unittest_helper(constant_op_input, 
-            forward_input, expected_forward, expected_backward,
-            device_id=device_id, precision=precision) 
-
-    forward_input = {a:left_value, b:right_value}    
+    forward_input = {a:left_value, b:right_value}
     expected_backward = { a: expected_backward_all['left_arg'], b: expected_backward_all['right_arg'], }
-    unittest_helper(input_op_input, 
+    unittest_helper(input_op_input,
         forward_input, expected_forward, expected_backward,
         device_id=device_id, precision=precision)
-    
+
+    if not only_input_variables:
+        forward_input = {a:left_value}
+        expected_backward = { a: expected_backward_all['left_arg'], }
+        unittest_helper(input_op_constant,
+                forward_input, expected_forward, expected_backward,
+                device_id=device_id, precision=precision)
+
+        forward_input = {b:right_value}
+        expected_backward = { b: expected_backward_all['right_arg'], }
+        unittest_helper(constant_op_input,
+                forward_input, expected_forward, expected_backward,
+                device_id=device_id, precision=precision)
+
 def unittest_helper(root_node, 
         forward_input, expected_forward, expected_backward,
         device_id=-1, precision="float"):
@@ -113,7 +113,9 @@ def unittest_helper(root_node,
     # for forward we always expect only one result
     assert len(forward)==1
     forward = list(forward.values())[0]
-    
+
+    forward = np.atleast_1d(forward)
+
     for res, exp in zip(forward, expected_forward):
         assert res.shape == AA(exp).shape
         assert np.allclose(res, exp, atol=TOLERANCE_ABSOLUTE)
@@ -137,7 +139,8 @@ def batch_dense_to_sparse(batch, dynamic_axis=''):
     representation that can be consumed by :func:`cntk.ops.sparse_input_numpy`.
 
     Args:
-        batch (list): list of samples. If `dynamic_axis` is given, samples are sequences of tensors. Otherwise, they are simple tensors.
+        batch (list): list of samples. If `dynamic_axis` is given, samples are sequences
+         of tensors. Otherwise, they are simple tensors.
         dynamic_axis (str or :func:`cntk.ops.dynamic_axis` instance): the dynamic axis
 
     Returns:
