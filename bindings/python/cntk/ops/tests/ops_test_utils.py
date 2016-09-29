@@ -28,10 +28,10 @@ def right_matrix_type(request):
     return request.param
 
 def _test_unary_op(precision, device_id, op_func,
-        operand, expected_forward, expected_backward_all):
-    
-    value = AA(operand, dtype=PRECISION_TO_TYPE[precision]) 
-    
+        value, expected_forward, expected_backward_all, op_param_dict=None):
+
+    value = AA(value, dtype=PRECISION_TO_TYPE[precision])
+
     a = I(shape=value.shape,
             data_type=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]),
             needs_gradient=True,
@@ -40,7 +40,13 @@ def _test_unary_op(precision, device_id, op_func,
     # create batch
     value.shape = (1,1) + value.shape    
 
-    input_op = op_func(a)
+    if (type(op_func) == str):
+        input_op = eval('%s a'%op_func)
+    elif op_param_dict:
+        input_op = op_func(a, **op_param_dict)
+    else:
+        input_op = op_func(a)
+
     forward_input = {a:value}    
     expected_backward = { a: expected_backward_all['arg'], }
     unittest_helper(input_op, 
@@ -63,16 +69,10 @@ def _test_binary_op(precision, device_id, op_func,
             data_type=sanitize_dtype_cntk(precision),
             needs_gradient=True,
             name='b')
-    
-    #TODO Enable the tests op(variable, numpy_array) with overloaded ops
-    # Since now we build variables using the factory (input_variable) we don't have
-    # access to the constructor and we cannot therefore inherit from it in order 
-    # to overload operators
-    is_op_overload = False
+
     if (type(op_func) == str):
-        #input_op_constant = eval('a %s right_operand'%op_func)
-        #constant_op_input = eval('left_operand %s b'%op_func)
-        is_op_overload = True
+        input_op_constant = eval('a %s right_operand'%op_func)
+        constant_op_input = eval('left_operand %s b'%op_func)
         input_op_input = eval('a %s b'%op_func)
     else:
         input_op_constant = op_func(a, right_value)
@@ -83,18 +83,18 @@ def _test_binary_op(precision, device_id, op_func,
     # putting it into a batch of one sample
     left_value.shape = (1,1) + left_value.shape
     right_value.shape = (1,1) + right_value.shape
-    if not is_op_overload : #see the todo above
-        forward_input = {a:left_value}    
-        expected_backward = { a: expected_backward_all['left_arg'], }
-        unittest_helper(input_op_constant, 
-                forward_input, expected_forward, expected_backward,
-                device_id=device_id, precision=precision)
-        
-        forward_input = {b:right_value}    
-        expected_backward = { b: expected_backward_all['right_arg'], }
-        unittest_helper(constant_op_input, 
-                forward_input, expected_forward, expected_backward,
-                device_id=device_id, precision=precision) 
+
+    forward_input = {a:left_value}    
+    expected_backward = { a: expected_backward_all['left_arg'], }
+    unittest_helper(input_op_constant, 
+            forward_input, expected_forward, expected_backward,
+            device_id=device_id, precision=precision)
+
+    forward_input = {b:right_value}    
+    expected_backward = { b: expected_backward_all['right_arg'], }
+    unittest_helper(constant_op_input, 
+            forward_input, expected_forward, expected_backward,
+            device_id=device_id, precision=precision) 
 
     forward_input = {a:left_value, b:right_value}    
     expected_backward = { a: expected_backward_all['left_arg'], b: expected_backward_all['right_arg'], }
@@ -107,15 +107,16 @@ def unittest_helper(root_node,
         device_id=-1, precision="float"):
     
     backward_pass = expected_backward is not None
-    forward, backward = cntk_eval(root_node, precision, cntk_device(device_id), forward_input, backward_pass)
+    forward, backward = cntk_eval(root_node, precision, cntk_device(device_id),
+            forward_input, backward_pass)
 
     # for forward we always expect only one result
     assert len(forward)==1
     forward = list(forward.values())[0]
     
-    for res, exp in zip(forward, expected_forward):               
+    for res, exp in zip(forward, expected_forward):
         assert res.shape == AA(exp).shape
-        assert np.allclose(res, exp, atol=TOLERANCE_ABSOLUTE)        
+        assert np.allclose(res, exp, atol=TOLERANCE_ABSOLUTE)
 
     if expected_backward:    
         for key in expected_backward:
@@ -124,11 +125,11 @@ def unittest_helper(root_node,
                 assert len(res) == len(exp)
                 for res_seq, exp_seq in zip (res, exp):
                     assert res_seq.shape == AA(exp_seq).shape
-                    assert np.allclose(res_seq, exp_seq, atol=TOLERANCE_ABSOLUTE)                    
+                    assert np.allclose(res_seq, exp_seq, atol=TOLERANCE_ABSOLUTE)
 
             elif isinstance(res, np.ndarray):
                 assert res.shape == AA(exp).shape
-                assert np.allclose(res, exp, atol=TOLERANCE_ABSOLUTE)                
+                assert np.allclose(res, exp, atol=TOLERANCE_ABSOLUTE)
 
 def batch_dense_to_sparse(batch, dynamic_axis=''):
     '''
@@ -188,7 +189,7 @@ def test_batch_dense_to_sparse_full():
             [10,40,20,50,30,60]
             ]
     assert s == (2,3)
-    
+
     i, v, s = batch_dense_to_sparse([[1]])
     assert i == [[0]]
     assert v == [[1]]
@@ -209,6 +210,3 @@ def test_batch_dense_to_sparse_zeros():
             [40,50,60]
             ]
     assert s == (2,3)
-    
-
-

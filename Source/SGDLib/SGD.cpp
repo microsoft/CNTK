@@ -350,6 +350,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                                                      /*out*/ totalTrainingSamplesSeen,
                                                      /*out*/ learnRatePerSample,
                                                      smoothedGradients,
+                                                     smoothedCounts,
                                                      /*out*/ prevCriterion,
                                                      /*out*/ m_prevChosenMinibatchSize);
         if (learnRateInitialized)
@@ -643,6 +644,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                                        /*out*/ totalTrainingSamplesSeen,
                                        /*out*/ learnRatePerSample,
                                        smoothedGradients,
+                                       smoothedCounts,
                                        /*out*/ prevCriterion,
                                        /*out*/ m_prevChosenMinibatchSize);
                     loadedPrevModel = true;
@@ -734,11 +736,11 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                 // Set i back to the loaded model
                 i -= m_learnRateAdjustInterval;
                 LOGPRINTF(stderr, "SGD: revoke back to and update checkpoint file for epoch %d\n", i+1); // report 1 based epoch number
-                SaveCheckPointInfo(i, totalTrainingSamplesSeen, learnRatePerSample, smoothedGradients, prevCriterion, chosenMinibatchSize);
+                SaveCheckPointInfo(i, totalTrainingSamplesSeen, learnRatePerSample, smoothedGradients, smoothedCounts, prevCriterion, chosenMinibatchSize);
             }
             else
             {
-                SaveCheckPointInfo(i, totalTrainingSamplesSeen, learnRatePerSample, smoothedGradients, prevCriterion, chosenMinibatchSize);
+                SaveCheckPointInfo(i, totalTrainingSamplesSeen, learnRatePerSample, smoothedGradients, smoothedCounts, prevCriterion, chosenMinibatchSize);
                 auto modelName = GetModelNameForEpoch(i);
                 if (m_traceLevel > 0)
                     LOGPRINTF(stderr, "SGD: Saving checkpoint model '%ls'\n", modelName.c_str());
@@ -1580,6 +1582,7 @@ double SGD<ElemType>::SearchForBestLearnRate(ComputationNetworkPtr net,
                        /*out*/ dummyTotalTrainingSamplesSeen,
                        /*out*/ learnRate,
                        smoothedGradients,
+                       smoothedCounts,
                        /*out*/ prevCriterion,
                        /*out*/ dummyMinibatchSize);
 
@@ -1949,6 +1952,7 @@ void SGD<ElemType>::TrainOneMiniEpochAndReloadModel(ComputationNetworkPtr net,
                        /*out*/ dummyTotalTrainingSamplesSeen,
                        /*out*/ dummyLearnRate,
                        smoothedGradients,
+                       smoothedCounts,
                        /*out*/ dummyPrevCriterion,
                        /*out*/ dummyMinibatchSize);
 }
@@ -2155,6 +2159,7 @@ template <class ElemType>
 void SGD<ElemType>::SaveCheckPointInfo(const size_t epoch, const size_t totalSamplesSeen,
                                        const double learnRatePerSample,
                                        const std::list<Matrix<ElemType>>& smoothedGradients,
+                                       const std::vector<double>& smoothedCounts,
                                        const double prevCriterion,
                                        const size_t minibatchSize)
 {
@@ -2192,6 +2197,13 @@ void SGD<ElemType>::SaveCheckPointInfo(const size_t epoch, const size_t totalSam
 
             fstream.PutMarker(FileMarker::fileMarkerEndSection, L"EGradient");
 
+            fstream.PutMarker(FileMarker::fileMarkerEndSection, L"BCount");
+
+            for (auto sc : smoothedCounts)
+                fstream << sc;
+
+            fstream.PutMarker(FileMarker::fileMarkerEndSection, L"ECount");
+
             fstream.PutMarker(FileMarker::fileMarkerEndSection, L"ECKP");
             if (m_pMASGDHelper)
                 m_pMASGDHelper->SaveToCheckPoint(fstream);
@@ -2209,6 +2221,7 @@ bool SGD<ElemType>::TryLoadCheckPointInfo(const size_t epochNumber,
                                           /*out*/ size_t& totalSamplesSeen,
                                           /*out*/ double& learnRatePerSample,
                                           std::list<Matrix<ElemType>>& smoothedGradients,
+                                          std::vector<double>& smoothedCounts,
                                           /*out*/ double& prevCriterion,
                                           /*out*/ size_t& minibatchSize)
 {
@@ -2228,7 +2241,7 @@ bool SGD<ElemType>::TryLoadCheckPointInfo(const size_t epochNumber,
         return false;
     }
 
-    LoadCheckPointInfo(epochNumber, totalSamplesSeen, learnRatePerSample, smoothedGradients, prevCriterion, minibatchSize);
+    LoadCheckPointInfo(epochNumber, totalSamplesSeen, learnRatePerSample, smoothedGradients, smoothedCounts, prevCriterion, minibatchSize);
     return true;
 }
 
@@ -2237,6 +2250,7 @@ void SGD<ElemType>::LoadCheckPointInfo(const size_t epochNumber,
                                        /*out*/ size_t& totalSamplesSeen,
                                        /*out*/ double& learnRatePerSample,
                                        std::list<Matrix<ElemType>>& smoothedGradients,
+                                       std::vector<double>& smoothedCounts,
                                        /*out*/ double& prevCriterion,
                                        /*out*/ size_t& minibatchSize)
 {
@@ -2277,6 +2291,15 @@ void SGD<ElemType>::LoadCheckPointInfo(const size_t epochNumber,
         fstream >> smoothedGradient;
     }
     fstream.GetMarker(FileMarker::fileMarkerEndSection, L"EGradient");
+
+    if (fstream.TryGetMarker(FileMarker::fileMarkerBeginSection, L"BCount"))
+    {
+        for (auto& sc : smoothedCounts)
+            fstream >> sc;
+        fstream.GetMarker(FileMarker::fileMarkerEndSection, L"ECount");
+    }
+    else // deal with legacy checkpoints
+        std::fill(smoothedCounts.begin(), smoothedCounts.end(), static_cast<double>(minibatchSize));
 
     fstream.GetMarker(FileMarker::fileMarkerEndSection, L"ECKP");
 
