@@ -11,7 +11,7 @@ from examples.SequenceClassification.SequenceClassification import train_sequenc
 
 TOLERANCE_ABSOLUTE = 1E-2
 
-def test_error(device_id):
+def test_seq_classification_error(device_id):
     #from cntk.utils import cntk_device
     #DeviceDescriptor.set_default_device(cntk_device(device_id))
 

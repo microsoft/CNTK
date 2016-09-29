@@ -11,7 +11,7 @@ from examples.NumpyInterop.FeedForwardNet import ffnet
 
 TOLERANCE_ABSOLUTE = 1E-03
 
-def test_error(device_id):
+def test_ffnet_error(device_id):
     #from cntk.utils import cntk_device
     #DeviceDescriptor.set_default_device(cntk_device(device_id))
 

@@ -7,16 +7,15 @@
 import numpy as np
 from cntk import DeviceDescriptor
 
-from examples.MNIST.SimpleMNIST import simple_mnist
+from examples.Sequence2Sequence.Sequence2Sequence import sequence_to_sequence_translator
 
 TOLERANCE_ABSOLUTE = 1E-1
 
-def test_simple_mnist_error(device_id):
+def test_sequence_to_sequence(device_id):
     #from cntk.utils import cntk_device
     #DeviceDescriptor.set_default_device(cntk_device(device_id))
 
-    test_error = simple_mnist()
-    expected_test_error = 0.7
+    error = sequence_to_sequence_translator()
+    expected_error = 0.758458
 
-    assert np.allclose(test_error, expected_test_error,
-                       atol=TOLERANCE_ABSOLUTE)
+    assert np.allclose(error, expected_error, atol=TOLERANCE_ABSOLUTE)

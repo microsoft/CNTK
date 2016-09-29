@@ -20,9 +20,7 @@ TRAIN_MAP_FILENAME = 'train_map.txt'
 MEAN_FILENAME = 'CIFAR-10_mean.xml'
 
 # Instantiates the CNTK built-in minibatch source for reading images to be used for training the residual net
-# The minibatch source is configured using a hierarchical dictionary of
-# key:value pairs
-
+# The minibatch source is configured using a hierarchical dictionary of key:value pairs
 
 def create_mb_source(features_stream_name, labels_stream_name, image_height,
                      image_width, num_channels, num_classes, cifar_data_path):
@@ -35,7 +33,6 @@ def create_mb_source(features_stream_name, labels_stream_name, image_height,
                            (map_file, mean_file, cifar_py3, cifar_py3))
 
     image = ImageDeserializer(map_file)
-<<<<<<< 391432ca77060ad88807339d773f288de6557c4a
     image.map_features(features_stream_name,
             [ImageDeserializer.crop(crop_type='Random', ratio=0.8,
                 jitter_type='uniRatio'),
@@ -44,25 +41,6 @@ def create_mb_source(features_stream_name, labels_stream_name, image_height,
              ImageDeserializer.mean(mean_file)])
     image.map_labels(labels_stream_name, num_classes)
 
-    rc = ReaderConfig(image, epoch_size=sys.maxsize)
-    return rc.minibatch_source()
-=======
-    image.map_features(feature_name,
-                       [ImageDeserializer.crop(crop_type='Random', ratio=0.8,
-                                               jitter_type='uniRatio'),
-                        ImageDeserializer.scale(width=image_width, height=image_height,
-                                                channels=num_channels, interpolations='linear'),
-                        ImageDeserializer.mean(mean_file)])
-    image.map_labels(label_name, num_classes)
-
-    rc = ReaderConfig(image, epoch_size=sys.maxsize)
-
-    input_streams_config = {
-        features_stream_name: features_stream_config, labels_stream_name: labels_stream_config}
-    deserializer_config = {"type": "ImageDeserializer",
-                           "file": map_file, "input": input_streams_config}
-    return rc.minibatch_source()
->>>>>>> Address comments in CR
 def get_projection_map(out_dim, in_dim):
     if in_dim > out_dim:
         raise ValueError(
@@ -124,40 +102,23 @@ def resnet_classifer(input, num_classes):
     poolh_stride = 1
     poolv_stride = 1
 
-<<<<<<< 391432ca77060ad88807339d773f288de6557c4a
     pool = pooling(rn3_3, AVG_POOLING, (1, poolh, poolw), (1, poolv_stride, poolh_stride))
     out_times_params = parameter(shape=(c_map3, 1, 1, num_classes), initializer=glorot_uniform_initializer())
     out_bias_params = parameter(shape=(num_classes), value=0)
-=======
-    pool = pooling(rn3_3, AVG_POOLING, (1, poolh, poolw),
-                   (1, poolv_stride, poolh_stride))
-    out_times_params = parameter(shape=(c_map3, 1, 1, num_classes))
-    out_bias_params = parameter(shape=(num_classes))
->>>>>>> Address comments in CR
     t = times(pool, out_times_params)
     return t + out_bias_params
 
 # Trains a residual network model on the Cifar image dataset
-<<<<<<< 391432ca77060ad88807339d773f288de6557c4a
 def cifar_resnet(base_path):
-=======
-
-    pool = pooling(rn3_3, AVG_POOLING, (1, poolh, poolw), (1, poolv_stride, poolh_stride))
-    out_times_params = parameter(shape=(c_map3, 1, 1, num_classes), initializer=glorot_uniform_initializer())
-    out_bias_params = parameter(shape=(num_classes), value=0)
     image_height = 32
     image_width = 32
     num_channels = 3
     num_classes = 10
-def cifar_resnet(base_path):
+    feats_stream_name = 'features'
     labels_stream_name = 'labels'
-<<<<<<< 391432ca77060ad88807339d773f288de6557c4a
+
     minibatch_source = create_mb_source(feats_stream_name, labels_stream_name, 
                         image_height, image_width, num_channels, num_classes, base_path)
-=======
-    minibatch_source = create_mb_source(feats_stream_name, labels_stream_name,
-                                        image_height, image_width, num_channels, num_classes)
->>>>>>> Address comments in CR
     features_si = minibatch_source.stream_info(feats_stream_name)
     labels_si = minibatch_source.stream_info(labels_stream_name)
 
