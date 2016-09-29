@@ -7,10 +7,11 @@ python -c "import numpy; print('NumPy: %s'%numpy.version.full_version)"
 python -c "import scipy; print('SciPy: %s'%scipy.version.full_version)"
 python -c "import pytest; print('PyTest: %s'%pytest.__version__)"
 
-py.test --deviceid $TEST_DEVICE -r cntk
+# TODO why doesn't "py.test --pyargs cntk" work?
+MODULE_DIR="$(python -c "import cntk, os; print(os.path.dirname(os.path.abspath(cntk.__file__)))")"
+[ $? -eq 0 ] || exit $?
+py.test --deviceid $TEST_DEVICE "$MODULE_DIR"
 
 if [ "$?" -eq "0" ]; then
   echo "__COMPLETED__"
 fi
-
-popd

@@ -7,9 +7,6 @@
 import sys
 import pytest
 
-collect_ignore = ["setup.py", "build"]
-
-# content of conftest.py
 _DEFAULT_DEVICE_ID=-1
 
 def pytest_addoption(parser):

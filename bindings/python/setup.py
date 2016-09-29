@@ -121,15 +121,19 @@ cntk_module = Extension(
         language="c++",
     )
 
-# do not include tests and examples
+# Do not include examples
 packages = [x for x in find_packages() if x.startswith('cntk') and not x.startswith('cntk.swig')]
+
+package_data = { 'cntk': ['pytest.ini'] }
 
 if IS_WINDOWS:
     # On Windows copy all runtime libs to the base folder of Python
-    kwargs = dict(data_files = [('.', [ os.path.join('cntk', lib) for lib in rt_libs ])])
+    kwargs = dict(data_files = [('.', [ os.path.join('cntk', lib) for lib in rt_libs ])],
+                  package_data = package_data)
 else:
     # On Linux copy all runtime libs into the cntk/lib folder. 
-    kwargs = dict(package_data = { 'cntk': rt_libs })
+    package_data['cntk'] += rt_libs
+    kwargs = dict(package_data = package_data)
 
 setup(name="cntk", 
       version="2.0a2",
@@ -140,5 +144,4 @@ setup(name="cntk",
       #  'numpy>=1.11',
       #  'scipy>=0.17'
       #],
-      **kwargs
-     )
+      **kwargs)
