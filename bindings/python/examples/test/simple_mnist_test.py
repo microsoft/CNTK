@@ -16,7 +16,7 @@ def test_simple_mnist_error(device_id):
     #DeviceDescriptor.set_default_device(cntk_device(device_id))
 
     test_error = simple_mnist()
-    expected_test_error = 0.7
+    expected_test_error = 0.09
 
     assert np.allclose(test_error, expected_test_error,
                        atol=TOLERANCE_ABSOLUTE)
