@@ -806,15 +806,16 @@ $(MULTIVERSO_LIB):
 	@mkdir -p $(LIBDIR)
 	@mkdir -p $(BINDIR)
 	@mkdir -p $(SOURCEDIR)/Multiverso/build
-	@cmake -DBoost_NO_BOOST_CMAKE=TRUE \
+	@cmake -DCMAKE_VERBOSE_MAKEFILE=TRUE \
+	    -DBoost_NO_BOOST_CMAKE=TRUE \
             -DBoost_NO_SYSTEM_PATHS=TRUE \
-            -DBOOST_ROOT:PATHNAME=/usr/local/boost-1.60.0 \
-            -DBOOST_LIBRARY_DIRS:FILEPATH=/usr/local/boost-1.60.0/lib \
+            -DBOOST_ROOT:PATHNAME=$(BOOST_PATH) \
+            -DBOOST_LIBRARY_DIRS:FILEPATH=$(BOOST_PATH) \
             -DLIBRARY_OUTPUT_PATH=$(shell readlink -f $(LIBDIR)) \
             -DEXECUTABLE_OUTPUT_PATH=$(shell readlink -f $(BINDIR)) \
             -B./Source/Multiverso/build -H./Source/Multiverso
-	@make -C ./Source/Multiverso/build/ -j multiverso
-	@make -C ./Source/Multiverso/build/ -j multiversotests
+	@make VERBOSE=1 -C ./Source/Multiverso/build/ -j multiverso
+	@make VERBOSE=1 -C ./Source/Multiverso/build/ -j multiversotests
 
         
 $(MULTIVERSO_TEST): $(MULTIVERSO_LIB)
