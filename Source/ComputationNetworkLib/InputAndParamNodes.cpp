@@ -7,6 +7,7 @@
 #include "InputAndParamNodes.h"
 #include "File.h"        // for LoadMatrixFromTextFile()
 #include "TensorShape.h" // for SmallVector<>
+#include "Globals.h"     // for ShouldForceConstantRandomSeed()
 
 #include <string>
 
@@ -265,8 +266,9 @@ std::tuple<size_t, size_t, ElemType> LearnableParameter<ElemType>::InitRandom(Ma
     if (range == 0)
         LogicError("InitRandom: Invalid initialization type '%ls'", type.c_str());
 
-    // the random seed offset is set via the "randomSeedOffset" parameter in config
     range *= initValueScale;
+
+    // the random seed offset is set via the "randomSeedOffset" parameter in config
     if (initOnCPUOnly)
         valueMatrix.TransferToDeviceIfNotThere(CPUDEVICE, true);
     if (isUniform)
@@ -539,7 +541,8 @@ void LearnableParameter<ElemType>::LazyInitParameters()
     }
     else if (ParseRandomizationType(m_initString).second != 0)
     {
-        InitRandom(m_initString, m_randomSeed, m_initValueScale, m_initFilterRank, m_initOutputRank, m_initOnCPUOnly);
+        let randomSeed = Globals::ShouldForceConstantRandomSeed() ? 1UL : m_randomSeed; // debugging feature to enforce identical results across NDL, BrainScript, and V2 API/Python
+        InitRandom(m_initString, randomSeed, m_initValueScale, m_initFilterRank, m_initOutputRank, m_initOnCPUOnly);
     }
     else
         LogicError("LearnableParameter: Invalid value of m_initString '%ls' for deferred initialization for %ls.", m_initString.c_str(), NodeDescription().c_str());

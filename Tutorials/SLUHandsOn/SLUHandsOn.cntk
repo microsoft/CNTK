@@ -8,6 +8,8 @@ rootDir = "." ; dataDir  = "$rootDir$" ; modelDir = "$rootDir$/Models"
 
 modelPath = "$modelDir$/slu.cmf"
 
+forceConstantRandomSeed=true
+
 vocabSize = 943 ; numLabels = 129 ; numIntents = 26    # number of words in vocab, slot labels, and intent labels
 
 # The command to train the LSTM model
