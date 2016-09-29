@@ -467,11 +467,13 @@ public:
                 if (uidsstripe[i] != 65535 && uidsstripe[i] != blankid )
                 {
                     phoneseq.push_back(blankid);
+                    phonebound.push_back(i);
                     phoneseq.push_back(uidsstripe[i]);
                     phonebound.push_back(i);
                 }
             }
             phoneseq.push_back(blankid);
+            phonebound.push_back(numframes);
             phoneseq.push_back(65535);
             phonebound.push_back(numframes);
 
@@ -507,7 +509,7 @@ public:
         }
         //matrixphoneseqs.Print("phoneseq");
         matrixphonebounds.TransferFromDeviceToDevice(CPUDEVICE, m_deviceid);
-        fprintf(stderr, "delay: %d\n", delayConstraint);
+
         functionValues.AssignCTCScore_m(prob, alpha, beta, matrixphoneseqs, matrixphonebounds, finalscore, extrauttmap, uttBeginFrame,
             uttFrameNum, uttPhoneNum, samplesInRecurrentStep, mbsize, delayConstraint, true);
         rowsum.Resize(1, samplesInRecurrentStep*mbsize);
