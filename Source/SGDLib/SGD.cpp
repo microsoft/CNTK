@@ -806,8 +806,8 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
     }
 
     delete inputMatrices;
-	if (m_parallelizationMethod == ParallelizationMethod::dataParallelASGD)
-		delete m_pMultiversoHelper;
+    if (m_parallelizationMethod == ParallelizationMethod::dataParallelASGD)
+        delete m_pMultiversoHelper;
 }
 
 // -----------------------------------------------------------------------
