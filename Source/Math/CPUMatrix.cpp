@@ -5878,6 +5878,17 @@ int CPUMatrix<ElemType>::SetNumThreads(int numThreads)
     return numThreads;
 }
 
+// To ensure Intel MKL calls return the same results on all Intel or Intel compatible CPUs,
+// the function set CBWR compatible mode.
+template <class ElemType>
+void CPUMatrix<ElemType>::SetCompatibleMode()
+{
+    #ifdef USE_MKL
+        if (mkl_cbwr_set(MKL_CBWR_COMPATIBLE) != MKL_CBWR_SUCCESS)
+            RuntimeError("Could not set MKL compatible mode.");
+    #endif
+}
+
 // =======================================================================
 // TensorView support
 // =======================================================================

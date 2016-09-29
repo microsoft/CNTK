@@ -7,13 +7,6 @@
 
 #pragma once
 
-#ifdef SWIG
-#define final
-#define explicit
-#define static_assert(condition, message)
-#endif
-
-#include "CNTKLibraryInternals.h"
 
 #include <memory>
 #include <vector>
@@ -28,6 +21,15 @@
 #include <iosfwd>
 #include<algorithm>
 #include <mutex>
+
+
+#ifdef SWIG
+#define final
+#define explicit
+#define static_assert(condition, message)
+#endif
+
+#include "CNTKLibraryInternals.h"
 
 namespace CNTK
 {
@@ -111,13 +113,16 @@ namespace CNTK
     ///
     class DeviceDescriptor final
     {
+        friend bool operator==(const DeviceDescriptor& first, const DeviceDescriptor& second);
+
         static std::atomic<bool> s_defaultDeviceFrozen;
         static std::shared_ptr<DeviceDescriptor> s_defaultDevice;
+        static std::shared_ptr<std::vector<DeviceDescriptor>> s_allDevices;
     public:
         ///
         /// Returns the Id of 'this' device.
         ///
-        int Id() const { return m_deviceId; }
+        unsigned int Id() const { return m_deviceId; }
 
         ///
         /// Returns the DeviceKind of 'this' device.
@@ -132,7 +137,7 @@ namespace CNTK
         ///
         /// Static method to get the descriptor of the GPU device on the local system with the specified CUDA device ID.
         ///
-        static DeviceDescriptor GPUDevice(unsigned int deviceId) { return{ deviceId, DeviceKind::GPU }; }
+        CNTK_API static DeviceDescriptor GPUDevice(unsigned int deviceId);
 
         ///
         /// Static method to get the descriptor of the default device for the current process.
@@ -152,6 +157,16 @@ namespace CNTK
         /// The default device can only be changed if it has not yet been implicitly used by any previous operation in the CNTK library.
         ///
         CNTK_API static void SetDefaultDevice(const DeviceDescriptor& newDefaultDevice);
+
+        ///
+        /// Static method to get the descriptor of the best available device.
+        ///
+        CNTK_API static DeviceDescriptor BestDevice();
+
+        ///
+        /// Static method to get a list of descriptors of all available/supported devices.
+        ///
+        CNTK_API static const std::vector<DeviceDescriptor>& AllDevices();
 
     private:
         DeviceDescriptor(unsigned int deviceId, DeviceKind deviceType)
@@ -2913,7 +2928,7 @@ namespace CNTK
     };
 
     /// 
-    /// Instantiate the CNTK buil-in test format minibatch source
+    /// Instantiate the CNTK built-in test format minibatch source
     ///
     inline MinibatchSourcePtr TextFormatMinibatchSource(const std::wstring& dataFilePath, const std::vector<StreamConfiguration>& streamConfigs, size_t epochSize = SIZE_MAX)
     {

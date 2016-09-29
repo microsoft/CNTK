@@ -5,6 +5,7 @@
 # ==============================================================================
 
 import sys
+import pytest
 
 collect_ignore = ["setup.py", "build"]
 
@@ -38,3 +39,10 @@ def pytest_generate_tests(metafunc):
                     "use integer values or 'auto'".format(elem))
                     
         metafunc.parametrize("device_id", devices)
+
+import numpy
+import cntk
+@pytest.fixture(autouse=True)
+def add_namespace(doctest_namespace):
+    doctest_namespace['np'] = numpy
+    doctest_namespace['C'] = cntk

@@ -815,8 +815,8 @@ Sequences = [
 
     # Gather and Scatter
     # We go through 3 nodes each to take advantage of x
-    Gather  (cond, x) =  GatherPacked (      PackedIndex (x, Where (cond)), x) # 'cond' matches 'x'
-    Scatter (cond, y) = ScatterPacked (cond, PackedIndex (y, Where (cond)), y) # 'cond' matches the result
+    Gather  (cond, x) =  GatherPacked (      PackedIndex (/*layout of*/ x, Where (cond)), x)                  # 'cond' matches 'x'
+    Scatter (cond, y) = ScatterPacked (/*layout of*/ cond, PackedIndex (/*layout of*/ cond, Where (cond)), y) # 'cond' matches the result
 
     # sequence-altering LINQ-like operators
     # These generate new data packing (MBLayouts)

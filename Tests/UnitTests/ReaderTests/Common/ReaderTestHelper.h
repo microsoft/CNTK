@@ -35,8 +35,8 @@ struct ReaderFixture
         fprintf(stderr, "Executable path: %s\n", m_parentPath.c_str());
 
 #ifdef _WIN32
-        // The executable path on Windows is e.g. <cntk>/x64/Debug/Unittests/
-        m_testDataPath = m_parentPath + "/../../../Tests/UnitTests/ReaderTests";
+        // The executable path on Windows is e.g. <cntk>/x64/Debug/
+        m_testDataPath = m_parentPath + "/../../Tests/UnitTests/ReaderTests";
 #else
         // The executable path on Linux is e.g. <cntk>/build/cpu/release/bin/
         m_testDataPath = m_parentPath + "/../../../../Tests/UnitTests/ReaderTests";
@@ -279,9 +279,15 @@ struct ReaderFixture
         // TODO: add an option to create per-input layouts (once we have test-cases with different layouts)
         MBLayoutPtr pMBLayout = make_shared<MBLayout>(1, 0, L"X");
 
+#ifdef CPUONLY
+        int deviceId = -1;
+#else
+        int deviceId = 0;
+#endif
+
         for (auto i = 0; i < numFeatureInputs; i++)
         {
-            features.push_back(make_shared<Matrix<ElemType>>(0));
+            features.push_back(make_shared<Matrix<ElemType>>(deviceId));
             if (sparseFeatures)
             {
                 features.back()->SwitchToMatrixType(MatrixType::SPARSE, MatrixFormat::matrixFormatSparseCSC, false);
@@ -296,7 +302,7 @@ struct ReaderFixture
 
         for (auto i = 0; i < numLabelInputs; i++)
         {
-            labels.push_back(make_shared<Matrix<ElemType>>(0));
+            labels.push_back(make_shared<Matrix<ElemType>>(deviceId));
             if (sparseLabels)
             {
                 labels.back()->SwitchToMatrixType(MatrixType::SPARSE, MatrixFormat::matrixFormatSparseCSC, false);
