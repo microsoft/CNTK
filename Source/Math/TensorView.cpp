@@ -349,8 +349,8 @@ shared_ptr<Matrix<ElemType>> TensorView<ElemType>::AsMatrix() const
         RuntimeError("AsMatrix: Sparse tensors are not supported unless they are 1D or 2D matrices.");
     else                                                  // dense can slice and reshape neutrally, but will also fail if output matrix needs to move devices
     {
-        shared_ptr<Matrix<ElemType>> ptr = m_sob->ColumnSlicePtr(firstColumn, numColumns)
-        ptr->Reshape(m_shape[0], m_shape[1]));
+        shared_ptr<Matrix<ElemType>> ptr = m_sob->ColumnSlicePtr(firstColumn, numColumns);
+        ptr->Reshape(m_shape[0], m_shape[1]);
         return ptr;
     }
 }

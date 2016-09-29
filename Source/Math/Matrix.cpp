@@ -531,6 +531,20 @@ void Matrix<ElemType>::ReleaseMemory()
 }
 
 template <class ElemType>
+void Matrix<ElemType>::ReleaseInternalMemory()
+{
+    // Perf: Avoid unnecessary assignments which are a superfluous swap() operation.
+    if (m_GPUMatrix.get() != nullptr)
+        m_GPUMatrix->ZeroValues();
+    if (m_CPUMatrix.get() != nullptr)
+        m_CPUMatrix->ZeroValues();
+    if (m_GPUSparseMatrix.get() != nullptr)
+        m_GPUSparseMatrix->ZeroValues();
+    if (m_CPUSparseMatrix.get() != nullptr)
+        m_CPUSparseMatrix->ZeroValues();
+}
+
+template <class ElemType>
 Matrix<ElemType>::~Matrix(void)
 {
     ReleaseMemory();
@@ -766,25 +780,13 @@ Matrix<ElemType> Matrix<ElemType>::ColumnSlice(size_t startColumn, size_t numCol
     return slice;
 }
 
-template <>
-vector<shared_ptr<Matrix<float>>>& TemporaryMatrix::GetReleasedMatrices<float>()
-{
-    return m_releasedFloatMatrices;
-}
-
-template <>
-vector<shared_ptr<Matrix<double>>>& TemporaryMatrix::GetReleasedMatrices<double>()
-{
-    return m_releasedDoubleMatrices;
-}
-
 template<typename T>
-shared_ptr<TemporaryMatrix> Matrix<T>::m_tempMatrices = make_shared<TemporaryMatrix>();
+shared_ptr<TemporaryMatrix<T>> Matrix<T>::m_tempMatrices = make_shared<TemporaryMatrix<T>>();
 
 template <class ElemType>
 shared_ptr<Matrix<ElemType>> Matrix<ElemType>::ColumnSlicePtr(size_t startColumn, size_t numCols) const
 {
-    shared_ptr<Matrix<ElemType>> slice = m_tempMatrices->MatrixFromPool<ElemType>(m_preferredDeviceId);
+    shared_ptr<Matrix<ElemType>> slice = m_tempMatrices->MatrixFromPool(m_preferredDeviceId);
     slice->AssignColumnSlice(*this, startColumn, numCols);
     return slice;
 }

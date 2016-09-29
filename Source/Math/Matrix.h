@@ -53,6 +53,7 @@ struct /*interface*/ MATH_API MatrixBase
 };
 typedef std::shared_ptr<MatrixBase> MatrixBasePtr;
 
+template <class ElemType>
 class TemporaryMatrix;
 
 // Note: To comply with BLAS libraries, matrices are stored in ColMajor. However, by default C/C++/C# use RowMajor convertion.
@@ -77,7 +78,7 @@ private:
     mutable int m_devicesTransferedTo[2]; // TODO: what is this for? Seems only diagnostics
 
     // Create space for all temporary matrices of the current type
-    static shared_ptr<TemporaryMatrix> m_tempMatrices;
+    static shared_ptr<TemporaryMatrix<ElemType>> m_tempMatrices;
 
     // Moves matrix from device id_from to device with id_to. This method doesn't change preferred device Id
     void _transferFromDeviceToDevice(int id_from, int id_to, bool isBeingMoved = true, bool emptyTransfer = false) const;
@@ -124,6 +125,7 @@ public:
     static void SetDevice(DEVICEID_TYPE deviceId); // TODO: unify with PrepareDevice()
 
     void ReleaseMemory();
+    void ReleaseInternalMemory();
     ~Matrix();
 
     // workaround to bugs in BOTH implementation: force to collapse to home location
@@ -625,31 +627,45 @@ File& operator<<(File& stream, const Matrix<ElemType>& M)
 typedef Matrix<float> SingleMatrix;
 typedef Matrix<double> DoubleMatrix;
 
+template <class ElemType>
 class TemporaryMatrix
 {
-    vector<shared_ptr<Matrix<float>>>  m_releasedFloatMatrices;
-    vector<shared_ptr<Matrix<double>>> m_releasedDoubleMatrices;
-
-    template <class ElemType>
-    vector<shared_ptr<Matrix<ElemType>>>& GetReleasedMatrices();
+    static const int32_t MAX_MATRICES = 10;
+    int32_t matricesAllocated;
+    vector<Matrix<ElemType>*> m_tempMatrices;
 
 public:
-    template <class ElemType>
+    TemporaryMatrix() : matricesAllocated(0) {};
+    
+    void Return(Matrix<ElemType>* returned)
+    {
+        if (returned)
+        {
+            returned->ReleaseInternalMemory();
+            m_tempMatrices.emplace_back(returned);
+        }
+    }
+
     shared_ptr<Matrix<ElemType>> MatrixFromPool(DEVICEID_TYPE deviceId)
     {
-        vector<shared_ptr<Matrix<ElemType>>>& releasedMatrices = GetReleasedMatrices<ElemType>();
-        shared_ptr<Matrix<ElemType>> matrixPtr;
-        for (int c = 0; c < releasedMatrices.size(); c++) {
-            if (releasedMatrices[c].unique())
-                return releasedMatrices[c];
-        }
-        matrixPtr = make_shared<Matrix<ElemType>>(deviceId);
-        if (releasedMatrices.size() < 10)
+        Matrix<ElemType>* matrix;
+        if (m_tempMatrices.empty())
         {
-            releasedMatrices.emplace_back(matrixPtr);
+            matrix = new Matrix<ElemType>(deviceId);
+            if (matricesAllocated < MAX_MATRICES)
+            {
+                matricesAllocated++;
+                return shared_ptr<Matrix<ElemType>>(matrix, std::bind(&TemporaryMatrix::Return, this, std::placeholders::_1));
+            }
+            else 
+                return shared_ptr<Matrix<ElemType>>(matrix);
         }
-
-        return matrixPtr;
+        else
+        {
+            matrix = m_tempMatrices.back();
+            m_tempMatrices.pop_back();
+            return shared_ptr<Matrix<ElemType>>(matrix, std::bind(&TemporaryMatrix::Return, this, std::placeholders::_1));
+        }
     }
 };
 
