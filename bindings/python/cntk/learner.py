@@ -1,5 +1,4 @@
 # Copyright (c) Microsoft. All rights reserved.
-
 # Licensed under the MIT license. See LICENSE.md file in the project root
 # for full license information.
 # ==============================================================================
@@ -11,12 +10,12 @@ def learning_rates_per_sample(lr, units=1):
     Create a learning rate schedule.
 
     Examples:
-        >>> # Use 0.7 for all samples
+        >>> # Use the learning rate 0.7 for all samples
         >>> lr = learning_rates_per_sample(0.7)
         >>> [lr[i] for i in [0,1,2,3]]
         [0.7, 0.7, 0.7, 0.7]
 
-        >>> # Use 0.7 for the first 3 samples, then 0.3 for the remaining ones
+        >>> # Use the learning rate 0.7 for the first 3 samples, then 0.3 for the remaining ones
         >>> lr = learning_rates_per_sample([0.7,0.3], 3)
         >>> [lr[i] for i in range(10)]
         [0.7, 0.7, 0.7, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3]
@@ -50,7 +49,8 @@ def sgd(parameters, lr,
         parameters (`list` of parameters): list of network parameters to tune.
          These can be obtained by the '.parameters()' method of the root
          operator.
-        lr ('float' or `:func:learning_rates_per_sample`): learning rate per sample. 
+        lr ('float' or list of `float`s or output of `:func:learning_rates_per_sample`): learning
+         rates per sample.  
         clipping threshold per sample ('float', optional): clipping threshold
          per sample, defaults to infinity
         gradient_clipping_with_truncation ('bool', default `True`): gradient
@@ -74,8 +74,8 @@ def momentum_sgd(parameters, lr, momentums,
     Args:
         parameters (list of parameters): list of network parameters to tune.
          These can be obtained by the '.parameters()' function of 
-        lr ('float'): learning rate per sample. Currently, only float is
-         allowed, but schedules will be added soon.
+        lr ('float' or list of `float`s or output of `:func:learning_rates_per_sample`): learning
+         rates per sample.  
         momentums (instance of `MomentumsPerSample`): momentum values per sample.
          Refer to https://github.com/Microsoft/CNTK/wiki/SGD-block#converting-learning-rate-and-momentum-parameters-from-other-toolkits
         clipping threshold per sample ('float', optional): clipping threshold
@@ -100,8 +100,8 @@ def nesterov(parameters, lr, momentums,
     Args:
         parameters (list of parameters): list of network parameters to tune.
          These can be obtained by the '.parameters()' function of 
-        lr ('float'): learning rate per sample. Currently, only float is
-         allowed, but schedules will be added soon
+        lr ('float' or list of `float`s or output of `:func:learning_rates_per_sample`): learning
+         rates per sample.  
         momentums (instance of `MomentumsPerSample`): momentum values per sample.
          Refer to https://github.com/Microsoft/CNTK/wiki/SGD-block#converting-learning-rate-and-momentum-parameters-from-other-toolkits
         clipping threshold per sample ('float', optional): clipping threshold
@@ -128,7 +128,8 @@ def adagrad(parameters, lr,
     Args:
         parameters (list of parameters): list of network parameters to tune.
          These can be obtained by the '.parameters()' function of 
-        lr ('float'): learning rate per sample. Currently, only float is
+        lr ('float' or list of `float`s or output of `:func:learning_rates_per_sample`): learning
+         rates per sample.  
          allowed, but schedules will be added soon
         need_ave_multiplier ('bool', default): 
         clipping threshold per sample ('float', optional): clipping threshold
@@ -153,8 +154,8 @@ def fsadagrad(parameters, lr, momentums,
     Args:
         parameters (list of parameters): list of network parameters to tune.
          These can be obtained by the '.parameters()' function of 
-        lr ('float'): learning rate per sample. Currently, only float is
-         allowed, but schedules will be added soon
+        lr ('float' or list of `float`s or output of `:func:learning_rates_per_sample`): learning
+         rates per sample.  
         momentums (instance of `MomentumsPerSample`): momentum values per sample.
          Refer to https://github.com/Microsoft/CNTK/wiki/SGD-block#converting-learning-rate-and-momentum-parameters-from-other-toolkits
         clipping threshold per sample ('float', optional): clipping threshold
