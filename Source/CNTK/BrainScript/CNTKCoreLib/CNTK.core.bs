@@ -469,16 +469,16 @@ CNTK2 = [
         randomSampleSelector           /* Sparse matrix of dimension nClasses * nSamples */,
         weights                        /* nClasses * nHidden */,
         bias                           /* Biases for logit computation. Dimension nClasses */,
-        logInclusionProb               /* Inclusion probablilities (derived from sampling weights) */
+        logExpectedInSampleFrequeny /* For each class logarithm of the estimated frequency the class is expected to occur in the set of random samples */
         ) = 
     {
         # Getting the weights matrix wS in the subspace of samples. Dimension: nHidden * nSamples
         wS = TransposeTimes(weights, randomSampleSelector)
-        zS = TransposeTimes(wS, hiddenLayer) + TransposeTimes(randomSampleSelector, bias - logInclusionProb) 
+        zS = TransposeTimes(wS, hiddenLayer) + TransposeTimes(randomSampleSelector, bias - logExpectedInSampleFrequeny) 
 
         # Getting the weight vector for the true label. Dimension nHidden
         wT = TransposeTimes(weights, labels) 
-        zT = TransposeTimes(wT, hiddenLayer) +  TransposeTimes(labels, bias - logInclusionProb) 
+        zT = TransposeTimes(wT, hiddenLayer) +  TransposeTimes(labels, bias - logExpectedSampleSetFrequeny) 
                                         
         zSReduced = ReduceLogSum(zS)
                                         
@@ -506,6 +506,9 @@ CNTK2 = [
     // 13. Others
     Pass(_, tag='') = new ComputationNode [ operation = 'Pass' ; inputs = _AsNodes (_) /*plus the function args*/ ]
     Identity = Pass
+
+    // The value of GetRandomSample(weights /* vector of length nClasses */, numSamples, sampleWithReplacement) randomly samples numSamples using the specified sampling weights. 
+    // The result is a sparse matrix of num samples one-hot vectors as columns.
     GetRandomSample(_ ,numSamples, sampleWithReplacement, tag='') = new ComputationNode [
                                                                                         operation = 'RandomSample' ;
                                                                                         sizeOfSampledSet = numSamples;
@@ -513,7 +516,10 @@ CNTK2 = [
                                                                                         estimateInSampleFrequency = false;
                                                                                         inputs = _ /*plus the function args*/ ]
 
-    GetInclusionProb(_ ,numSamples, sampleWithReplacement, tag='') = new ComputationNode [
+    // The value of GetInclusion(weights /* vector of length nClasses */, numSamples, sampleWithReplacement) has to be seen in cojuction to GetRandomSample(...).
+    // While GetRandomSample(...) creates a set of samples, GetInclusion(...) tells how often each class is expected to occur in the sampled sets.
+    // For sampling with replacment the relation to the sampling weights is trivial but not for sampling without replacment.
+    GetInclusionFrequency(_ ,numSamples, sampleWithReplacement, tag='') = new ComputationNode [
                                                                                         operation = 'RandomSample' ;
                                                                                         sizeOfSampledSet = numSamples;
                                                                                         allowDuplicates = sampleWithReplacement;

@@ -792,7 +792,7 @@ private:
     // Assuming (falsely) that the number of tries to get a sampled set with the requested number of distinct values is always estimatedNumTries
     // the probability that a specific class in in the sampled set is (1 - (1-p)^estimatedNumTries), where p is the probablity to pick the clas in one draw.
     // The estimate can be quite a bit off but should be better than nothing. Better alternatives?
-    float EstimateCountOfClass(float p, float estimatedNumTries) const
+    float EstimateInSampleFrequency(float p, float estimatedNumTries) const
     {
         if (m_allowDuplicates)
         {
@@ -823,7 +823,7 @@ private:
             {
                 // Get the sampling probablility for from the weights for i-th class.
                 float samplingProb = (float)samplingWeights.GetValue(i, 0) / sumOfWeights;
-                float estimatedCount = EstimateCountOfClass(samplingProb, estimatedNumTries);
+                float estimatedCount = EstimateInSampleFrequency(samplingProb, estimatedNumTries);
                 valueMatrix.SetValue(i, 0, estimatedCount);
             }
         }
