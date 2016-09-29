@@ -124,17 +124,12 @@ cntk_module = Extension(
 # do not include tests and examples
 packages = [x for x in find_packages() if x.startswith('cntk') and not x.startswith('cntk.swig')]
 
-package_data = { 'cntk': ['pytest.ini', 'conftest.py'] }
-
 if IS_WINDOWS:
     # On Windows copy all runtime libs to the base folder of Python
-    kwargs = dict(
-            data_files = [('.', [ os.path.join('cntk', lib) for lib in rt_libs ])],
-            package_data = package_data)
+    kwargs = dict(data_files = [('.', [ os.path.join('cntk', lib) for lib in rt_libs ])])
 else:
     # On Linux copy all runtime libs into the cntk/lib folder. 
-    package_data['cntk'] += rt_libs
-    kwargs = dict(package_data = package_data)
+    kwargs = dict(package_data = { 'cntk': rt_libs })
 
 setup(name="cntk", 
       version="2.0a2",
