@@ -123,4 +123,4 @@ if __name__=='__main__':
     DeviceDescriptor.set_default_device(target_device)
 
     error = simple_mnist()
-    print("test: %f" % error)
+    print("Error: %f" % error)

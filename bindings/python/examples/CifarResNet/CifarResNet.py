@@ -219,4 +219,5 @@ if __name__ == '__main__':
 
     os.chdir(os.path.join(base_path, '..'))
 
-    cifar_resnet(base_path)
+    error = cifar_resnet(base_path)
+    print("Error: %f" % error)
