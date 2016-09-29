@@ -209,29 +209,27 @@ IDataDeserializerPtr CompositeDataReader::CreateDeserializer(const ConfigParamet
 void CompositeDataReader::CreateTransforms(const ConfigParameters& deserializerConfig)
 {
     std::string defaultModule = deserializerConfig("module");
-    argvector<ConfigValue> inputs = deserializerConfig("input");
+    argvector<ConfigParameters> inputs = deserializerConfig("input");
     for (size_t i = 0; i < inputs.size(); ++i)
     {
-        ConfigParameters input = inputs[i];
-
         // Trying to find transfomers in a stream section of the config.
-        auto inputsWithTransform = TryGetSectionsWithParameter(input, "transforms");
-        if (inputsWithTransform.size() > 1)
+        auto inputSections = TryGetSectionsWithParameter(inputs[i], "transforms");
+        if (inputSections.size() > 1)
         {
             LogicError("Only a single 'transforms' config is allowed per stream.");
         }
 
         // No need to create anything for this stream, skipping.
-        if (inputsWithTransform.empty())
+        if (inputSections.empty())
         {
             continue;
         }
 
-        ConfigParameters inputWithTransforms = input(inputsWithTransform.front());
-        std::wstring inputName = msra::strfun::utf16(inputWithTransforms.ConfigName());
+        ConfigParameters input = inputs[i](inputSections.front());
+        std::wstring inputName = msra::strfun::utf16(input.ConfigName());
 
         // Read tranformers in order and appending them to the transformer pipeline.
-        argvector<ConfigValue> transforms = inputWithTransforms("transforms");
+        argvector<ConfigParameters> transforms = input("transforms");
         for (size_t j = 0; j < transforms.size(); ++j)
         {
             TransformerPtr transformer = CreateTransformer(transforms[j], defaultModule, std::wstring());
@@ -240,7 +238,7 @@ void CompositeDataReader::CreateTransforms(const ConfigParameters& deserializerC
 
         // Let's add a cast transformer by default. It is noop if the type provided by others is float
         // or double, but will do a proper cast if the type is uchar.
-        auto cast = CreateTransformer(inputWithTransforms, defaultModule, std::wstring(L"Cast"));
+        auto cast = CreateTransformer(input, defaultModule, std::wstring(L"Cast"));
         m_transforms.push_back(Transformation{ cast, inputName });
     }
 }
