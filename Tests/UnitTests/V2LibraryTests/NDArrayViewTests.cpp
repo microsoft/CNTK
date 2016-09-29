@@ -1,4 +1,5 @@
 #include "CNTKLibrary.h"
+#include "Common.h"
 #include <functional>
 #include <array>
 
@@ -103,31 +104,18 @@ void TestNDArrayView(size_t numAxes, const DeviceDescriptor& device)
         throw std::runtime_error("The buffers underlying the alias view and the view it is an alias of are different!");
 
     // Test readonliness
-    auto verifyException = [](const std::function<void()>& functionToTest) {
-        bool error = false;
-        try
-        {
-            functionToTest();
-        }
-        catch (const std::exception&)
-        {
-            error = true;
-        }
-
-        if (!error)
-            throw std::runtime_error("Was incorrectly able to get a writable buffer pointer from a readonly view");
-    };
+    auto errorMsg = "Was incorrectly able to get a writable buffer pointer from a readonly view";
 
     // Should not be able to get the WritableDataBuffer for a read-only view
-    verifyException([&aliasView]() {
+    VerifyException([&aliasView]() {
         ElementType* aliasViewBuffer = aliasView->WritableDataBuffer<ElementType>();
         aliasViewBuffer;
-    });
+    }, errorMsg);
 
     // Should not be able to copy into a read-only view
-    verifyException([&aliasView, &dataView]() {
+    VerifyException([&aliasView, &dataView]() {
         aliasView->CopyFrom(*dataView);
-    });
+    }, errorMsg);
 }
 
 template <typename ElementType>
