@@ -21,8 +21,6 @@
 #include "CorpusDescriptor.h"
 #include "ConfigUtil.h"
 #include "StringUtil.h"
-#include "CudaMemoryProvider.h"
-#include "HeapMemoryProvider.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -169,12 +167,7 @@ void CompositeDataReader::CreateDeserializers(const ConfigParameters& readerConf
     bool primary = true;  // Currently, the first deserializer becomes primary - it drives chunking.
     for (size_t i = 0; i < deserializerConfigs.size(); ++i)
     {
-        // TODO: Should go away in the future. Framing can be done on top of deserializers.
-        ConfigParameters p = deserializerConfigs[i];
-        p.Insert("frameMode", m_packingMode == PackingMode::sample ? "true" : "false");
-        p.Insert("precision", m_precision);
-
-        IDataDeserializerPtr d = CreateDeserializer(p, primary);
+        IDataDeserializerPtr d = CreateDeserializer(deserializerConfigs[i], primary);
         primary = false;
         m_deserializers.push_back(d);
     }
@@ -216,27 +209,29 @@ IDataDeserializerPtr CompositeDataReader::CreateDeserializer(const ConfigParamet
 void CompositeDataReader::CreateTransforms(const ConfigParameters& deserializerConfig)
 {
     std::string defaultModule = deserializerConfig("module");
-    argvector<ConfigParameters> inputs = deserializerConfig("input");
+    argvector<ConfigValue> inputs = deserializerConfig("input");
     for (size_t i = 0; i < inputs.size(); ++i)
     {
+        ConfigParameters input = inputs[i];
+
         // Trying to find transfomers in a stream section of the config.
-        auto inputSections = TryGetSectionsWithParameter(inputs[i], "transforms");
-        if (inputSections.size() > 1)
+        auto inputsWithTransform = TryGetSectionsWithParameter(input, "transforms");
+        if (inputsWithTransform.size() > 1)
         {
             LogicError("Only a single 'transforms' config is allowed per stream.");
         }
 
         // No need to create anything for this stream, skipping.
-        if (inputSections.empty())
+        if (inputsWithTransform.empty())
         {
             continue;
         }
 
-        ConfigParameters input = inputs[i](inputSections.front());
-        std::wstring inputName = msra::strfun::utf16(input.ConfigName());
+        ConfigParameters inputWithTransforms = input(inputsWithTransform.front());
+        std::wstring inputName = msra::strfun::utf16(inputWithTransforms.ConfigName());
 
         // Read tranformers in order and appending them to the transformer pipeline.
-        argvector<ConfigParameters> transforms = input("transforms");
+        argvector<ConfigValue> transforms = inputWithTransforms("transforms");
         for (size_t j = 0; j < transforms.size(); ++j)
         {
             TransformerPtr transformer = CreateTransformer(transforms[j], defaultModule, std::wstring());
@@ -245,7 +240,7 @@ void CompositeDataReader::CreateTransforms(const ConfigParameters& deserializerC
 
         // Let's add a cast transformer by default. It is noop if the type provided by others is float
         // or double, but will do a proper cast if the type is uchar.
-        auto cast = CreateTransformer(input, defaultModule, std::wstring(L"Cast"));
+        auto cast = CreateTransformer(inputWithTransforms, defaultModule, std::wstring(L"Cast"));
         m_transforms.push_back(Transformation{ cast, inputName });
     }
 }

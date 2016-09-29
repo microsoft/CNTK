@@ -1253,6 +1253,11 @@ public:
         m_repeatAsterisk = repeatAsterisk;
         std::string configString = configValue;
         Parse(configString);
+
+        // We need to set the parent for the contained ConfigValues, otherwise the chain of parent/child is broken.
+        // Similarly to ConfigValue, WARNING: the parent pointer use requires parent lifetimes be longer than or equal to children.
+        for (auto& e : *this)
+            e.SetParent(configValue.Parent());
     }
 
     // config aray from a string
