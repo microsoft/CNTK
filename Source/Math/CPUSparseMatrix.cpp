@@ -479,21 +479,29 @@ void CPUSparseMatrix<ElemType>::Print(const char* matrixName, ptrdiff_t /*rowSta
 template <class ElemType>
 CPUSparseMatrix<ElemType> CPUSparseMatrix<ElemType>::ColumnSlice(size_t startColumn, size_t numCols) const
 {
+    CPUSparseMatrix<ElemType> slice(GetFormat());
+    slice.AssignColumnSlice(*this, startColumn, numCols);
+
+    return slice;
+}
+
+template <class ElemType>
+CPUSparseMatrix<ElemType>& CPUSparseMatrix<ElemType>::AssignColumnSlice(const CPUSparseMatrix<ElemType>& fromMatrix, size_t startColumn, size_t numCols)
+{
     if (startColumn + numCols > m_numCols)
         InvalidArgument("The slice (%d+%d) is out of range of the source matrix (%d).", (int) startColumn, (int) numCols, (int) m_numCols);
 
     if (GetFormat() != MatrixFormat::matrixFormatSparseCSC && GetFormat() != MatrixFormat::matrixFormatSparseBlockCol)
         NOT_IMPLEMENTED;
 
-    CPUSparseMatrix<ElemType> slice(GetFormat());
-    slice.ShallowCopyFrom(*this);
+    ShallowCopyFrom(fromMatrix);
 
-    if ((startColumn != 0) || (slice.m_numCols != numCols))
+    if ((startColumn != 0) || (m_numCols != numCols))
     {
-        slice.m_numCols = numCols;
+        m_numCols = numCols;
         if (GetFormat() == MatrixFormat::matrixFormatSparseCSC)
         {
-            slice.m_sliceViewOffset = m_sliceViewOffset + startColumn;
+            m_sliceViewOffset = fromMatrix.m_sliceViewOffset + startColumn;
         }
         else if (GetFormat() == MatrixFormat::matrixFormatSparseBlockCol)
         {
@@ -503,15 +511,15 @@ CPUSparseMatrix<ElemType> CPUSparseMatrix<ElemType>::ColumnSlice(size_t startCol
             {
                 if (j > 0)
                 {
-                    assert(GetBlockIds()[j] > GetBlockIds()[j - 1]); // assume ids are increasing.Is this valid?
+                    assert(fromMatrix.GetBlockIds()[j] > fromMatrix.GetBlockIds()[j - 1]); // assume ids are increasing.Is this valid?
                 }
 
-                if (!foundStart && (long long)GetBlockIds()[j] - (long long)GetBlockIdShift() >= (long long)startColumn) // start column with values
+                if (!foundStart && (long long)fromMatrix.GetBlockIds()[j] - (long long)fromMatrix.GetBlockIdShift() >= (long long)startColumn) // start column with values
                 {
                     startColBlock = j;
                     foundStart = true;
                 }
-                else if ((long long)GetBlockIds()[j] - (long long)GetBlockIdShift() >= (long long)(startColumn + numCols)) // end column with values
+                else if ((long long)fromMatrix.GetBlockIds()[j] - (long long)fromMatrix.GetBlockIdShift() >= (long long)(startColumn + numCols)) // end column with values
                 {
                     endColBlock = j;
                     foundEnd = true;
@@ -520,22 +528,22 @@ CPUSparseMatrix<ElemType> CPUSparseMatrix<ElemType>::ColumnSlice(size_t startCol
             }
             if (!foundStart)
             {
-                startColBlock = (long long)GetBlockSize();
+                startColBlock = (long long)fromMatrix.GetBlockSize();
             }
             if (!foundEnd)
             {
-                endColBlock = (long long)GetBlockSize();
+                endColBlock = (long long)fromMatrix.GetBlockSize();
             }
 
-            slice.m_sliceViewOffset = startColBlock;
+            m_sliceViewOffset = startColBlock;
 
-            slice.SetBlockIds((size_t*)GetBlockIds() + startColBlock); // the value stored in the block id is based on the original column numbers
-            slice.SetBlockSize((size_t)max((long long)0, endColBlock - startColBlock));
-            slice.SetBlockIdShift(GetBlockIdShift() + startColumn);
+            SetBlockIds((size_t*)fromMatrix.GetBlockIds() + startColBlock); // the value stored in the block id is based on the original column numbers
+            SetBlockSize((size_t)max((long long)0, endColBlock - startColBlock));
+            SetBlockIdShift(fromMatrix.GetBlockIdShift() + startColumn);
         }
     }
 
-    return slice;
+    return *this;
 }
 
 template <class ElemType>

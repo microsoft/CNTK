@@ -56,6 +56,8 @@ struct /*interface*/ MATH_API MatrixBase
 };
 typedef std::shared_ptr<MatrixBase> MatrixBasePtr;
 
+class TemporaryMatrix;
+
 // Note: To comply with BLAS libraries, matrices are stored in ColMajor. However, by default C/C++/C# use RowMajor convertion.
 // !!!WARNING!!! This class is NOT THREAD SAFE. Test and add necessary modifications if using in multi-threaded environment
 template <class ElemType>
@@ -76,6 +78,9 @@ private:
     mutable size_t m_numTimesDeviceChanged;
     mutable size_t m_numTimesMatrixTypeChanged;
     mutable int m_devicesTransferedTo[2]; // TODO: what is this for? Seems only diagnostics
+
+    // Create space for all temporary matrices of the current type
+    static shared_ptr<TemporaryMatrix> m_tempMatrices;
 
     // Moves matrix from device id_from to device with id_to. This method doesn't change preferred device Id
     void _transferFromDeviceToDevice(int id_from, int id_to, bool isBeingMoved = true, bool emptyTransfer = false) const;
@@ -177,6 +182,7 @@ public:
     void CopySection(size_t numRows, size_t numCols, ElemType* dst, size_t colStride) const;
 
     Matrix<ElemType> ColumnSlice(size_t startColumn, size_t numCols) const; // note: 'const' is misleading here, as the returned matrix is a mutable reference
+    shared_ptr<Matrix<ElemType>> ColumnSlicePtr(size_t startColumn, size_t numCols) const;
 
     // difference between AssignColumnSlice and SetColumnSlice
     // AssignColumnSlice :      this(:, startColumn:startColumn+numCols-1) = fromMatrix(:, startColumn: startColumn+numCols-1)
@@ -631,5 +637,34 @@ File& operator<<(File& stream, const Matrix<ElemType>& M)
 
 typedef Matrix<float> SingleMatrix;
 typedef Matrix<double> DoubleMatrix;
+
+class TemporaryMatrix
+{
+    vector<shared_ptr<Matrix<float>>>  m_releasedFloatMatrices;
+    vector<shared_ptr<Matrix<double>>> m_releasedDoubleMatrices;
+
+    template <class ElemType>
+    vector<shared_ptr<Matrix<ElemType>>>& GetReleasedMatrices();
+
+public:
+    template <class ElemType>
+    shared_ptr<Matrix<ElemType>> MatrixFromPool(DEVICEID_TYPE deviceId)
+    {
+        vector<shared_ptr<Matrix<ElemType>>>& releasedMatrices = GetReleasedMatrices<ElemType>();
+        shared_ptr<Matrix<ElemType>> matrixPtr;
+        for (int c = 0; c < releasedMatrices.size(); c++) {
+            if (releasedMatrices[c].unique())
+                return releasedMatrices[c];
+        }
+        matrixPtr = make_shared<Matrix<ElemType>>(deviceId);
+        if (releasedMatrices.size() < 10)
+        {
+            releasedMatrices.emplace_back(matrixPtr);
+        }
+
+        return matrixPtr;
+    }
+};
+
 
 }}}

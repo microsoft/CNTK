@@ -2210,19 +2210,27 @@ void GPUSparseMatrix<ElemType>::InplaceTranspose()
 template <class ElemType>
 GPUSparseMatrix<ElemType> GPUSparseMatrix<ElemType>::ColumnSlice(size_t startColumn, size_t numCols) const
 {
+    GPUSparseMatrix<ElemType> slice(GetComputeDeviceId());
+    slice.AssignColumnSlice(*this, startColumn, numCols);
+
+    return slice;
+}
+
+template <class ElemType>
+GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::AssignColumnSlice(const GPUSparseMatrix<ElemType>& fromMatrix, size_t startColumn, size_t numCols)
+{
     if (startColumn + numCols > GetNumCols())
         InvalidArgument("The slice (%d+%d) is out of range of the source matrix (%d).", (int) startColumn, (int) numCols, (int) GetNumCols());
 
     if (GetFormat() != MatrixFormat::matrixFormatSparseCSC && (startColumn != 0 || numCols != GetNumCols()))
         NOT_IMPLEMENTED;
 
-    GPUSparseMatrix<ElemType> slice(GetComputeDeviceId());
-    slice.ShallowCopyFrom(*this);
-    slice.SetNumCols(numCols);
-    slice.m_sliceViewOffset          = m_sliceViewOffset + startColumn; // Just shift the compressed index location to the new startColumn - that's it!
-    // Note: m_nz is missing from here because it does not exist. We must compute it every time.
+    ShallowCopyFrom(fromMatrix);
+    SetNumCols(numCols);
+    m_sliceViewOffset          = m_sliceViewOffset + startColumn; // Just shift the compressed index location to the new startColumn - that's it!
+	// Note: m_nz is missing from here because it does not exist. We must compute it every time.
 
-    return slice;
+    return *this;
 }
     
 template <class ElemType>

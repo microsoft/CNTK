@@ -105,6 +105,7 @@ public:
     }
 
     CPUSparseMatrix<ElemType> ColumnSlice(size_t startColumn, size_t numCols) const;
+    CPUSparseMatrix<ElemType>& AssignColumnSlice(const CPUSparseMatrix<ElemType>& fromMatrix, size_t startColumn, size_t numCols);
     CPUMatrix<ElemType> CopyColumnSliceToDense(size_t startColumn, size_t numCols) const;
     void AssignColumnSliceToDense(CPUMatrix<ElemType>& slice, size_t startColumn, size_t numCols) const;
 
