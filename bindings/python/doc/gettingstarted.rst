@@ -1,4 +1,4 @@
-Getting started
+Getting started 
 ===============
 
 Installation
@@ -6,133 +6,123 @@ Installation
 This page will guide you through the following three required steps:
 
 #. Make sure that all Python requirements are met
-#. Build and install CNTK
-#. Install the Python API and set it up
+#. Install CNTK2
 
 Requirements
 ~~~~~~~~~~~~
 You will need the following Python packages: 
 
-:Python: 2.7+ or 3.3+
-:NumPy: 1.10
-:Scipy: 0.17
+:Python: 3.4
+:NumPy: >= 1.11
+:Scipy: >= 0.17
 
 On Linux a simple ``pip install`` should suffice. On Windows, you will get
 everything you need from `Anaconda <https://www.continuum.io/downloads>`_.
 
-Installing CNTK
+CNTK also depends on Open MPI (`Linux <https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Linux#open-mpi>`_ and `Windows <>`_) and 
+`CUDA <https://developer.nvidia.com/cuda-downloads>`_. Please see the Wiki for more information.
+
+Testing your installation
 ~~~~~~~~~~~~~~~
-Please follow the instructions on `CNTK's GitHub page 
-<https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-your-machine>`_. 
-After you have built the CNTK binary, find the build location. It will be 
-something like ``<cntkpath>/x64/Release/cntk``. You will need this for 
-the next step.
+After installing the pip package, you can then start using CNTK from Python right away:
 
-Installing the Python module
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-#. Go to ``<cntkpath>/contrib/Python`` and run ``python setup.py install``
-#. Set up the environment variable ``CNTK_EXECUTABLE_PATH`` to point to the
-   CNTK executable. Make sure the executable is also included
-#. Enjoy Python's ease of use with CNTK's speed::
+    >>> import cntk
+    >>> cntk.__version__
+    '2.0'
+    
+    >>> cntk.minus([1, 2, 3], [4, 5, 6]).eval()
+    array([-3., -3., -3.], dtype=float32)
 
-    >>> import cntk as C
-    >>> C.__version__
-    1.5
-    >>> with C.LocalExecutionContext('demo', clean_up=False) as ctx:
-    ...     a = C.constant([[1,2], [3,4]])
-    ...     i = C.input_numpy([[[10,20], [30, 40]]])
-    ...     print(ctx.eval(a + i))
-    [[11.0, 22.0], [33.0, 44.0]]
+The above makes use of the CNTK ``minus`` node with two array constants. Every operator has an ``eval()`` method that can be called which runs a forward 
+pass for that node using its inputs, and returns the result of the forward pass. A slightly more interesting example that uses input variables (the 
+more common case) is as follows:
 
-In this case, we have set ``clean_up=False`` so that you can now peek into the
-folder ``_cntk_demo`` and see what has been created under the hood for you.
+    >>> i1 = cntk.input_variable((1, 2))
+    >>> i2 = cntk.input_variable((1, 2))
+    >>> cntk.squared_error(i1, i2).eval({i1:np.asarray([[[[2., 1.]]]], dtype=np.float32),  i2:np.asarray([[[[4., 6.]]]], dtype=np.float32)})
+    array(29.0, dtype=float32)
 
-Most likely, you will find issues or rough edges. Please help us improve CNTK
-by posting any problems to https://github.com/Microsoft/CNTK/issues. Thanks!
+In the above example we are first setting up two input variables with shape ``(1, 2)``. We then setup a ``squared_error`` node with those two variables as 
+inputs. Within the ``eval()`` method we can setup the input-mapping of the data for those two variables. In this case we pass in two numpy arrays. The squared 
+error is then of course ``(2-4)**2 + (1-6)**2 = 29``.
 
 Overview and first run
 ----------------------
 
-CNTK is a powerful toolkit appropriate for everything from complex deep learning 
-research to distributed production environment serving of learned models. It is 
-also great for learning, however, and we will start with a basic regression example 
-to get comfortable with the API. Then, we will look at an area where CNTK shines: 
-working with sequences, where we will demonstrate state-of-the-art sequence classification 
-with an LSTM (long short term memory network).
+CNTK2 is a major overhaul of CNTK in that one now has full control over the data and how its read in, the training and testing loops, and minibatch 
+construction. The Python bindings provide direct access to the created network graph, and data can be manipulated outside of the readers not only 
+for more powerful and complex networks, but also for interactive Python sessions while a model is being created and debugged.
+
+CNTK2 also includes a number of ready-to-extend examples and a layers library. The latter allows one to simply build a powerful deep network by 
+snapping together levels of convolution layers, recurrent neural net layers (LSTMs, etc.), and fully-connected layers. To begin, we will take a 
+look at a classical feedforward classification model in our first basic use.
 
 First basic use
 ~~~~~~~~~~~~~~~
 
-The CNTK Python API allows users to easily define a computational network, define the data 
-that will pass through the network, setup how learning should be performed, and finally, train 
-and test the network. Here we will go through a simple example of using the CNTK Python API to 
-learn to separate data into two classes. Following the code, some basic CNTK concepts will be 
-explained::
+The first step in training or running a network in CNTK is to decide which device it should be run on. If you have access to a GPU, training time 
+can be vastly improved. To explicitly set the device to GPU, set the target device as follows:
 
-    import cntk as C
-    import numpy as np
+    >>> target_device = DeviceDescriptor.gpu_device(0)
+    >>> DeviceDescriptor.set_default_device(target_device)
 
-    # 500 samples, 250-dimensional data
-    N = 500
-    d = 250
+Now let's setup a network that will learn a classifier based on the example fully connected classifier network 
+(``examples.common.nn.fully_connected_classifier_net``). This is defined, along with several other simple and more complex DNN building blocks in 
+``bindings/python/examples/common/nn.py``. Here is the basic code for setting up a network that uses it::
 
-    # create synthetic data using numpy
-    X = np.random.randn(N, d)
-    Y = np.random.randint(size=(N, 1), low=0, high=2)
-    Y = np.hstack((Y, 1-Y))
+    def ffnet(debug_output=True):
+        input_dim = 2
+        num_output_classes = 2
+        num_hidden_layers = 2
+        hidden_layers_dim = 50
 
-    # set up the training data for CNTK
-    x = C.input_numpy(X)
-    y = C.input_numpy(Y)
+        # Input variables denoting the features and label data
+        input = input_variable((input_dim), np.float32)
+        label = input_variable((num_output_classes), np.float32)
 
-    # define our network parameters: a weight tensor and a bias
-    W = C.parameter((d, 2))
-    b = C.parameter((1, 2))
+        # Instantiate the feedforward classification model
+        netout = fully_connected_classifier_net(input, num_output_classes, hidden_layers_dim, num_hidden_layers, sigmoid)
 
-    # create a dense 'layer' by multiplying the weight tensor and  
-    # the features and adding the bias
-    out = C.times(x, W) + b
+        ce = cross_entropy_with_softmax(netout, label)
+        pe = classification_error(netout, label)
 
-    # setup the criterion node using cross entropy with softmax
-    ce = C.cross_entropy_with_softmax(y, out, name='loss')
-    ce.tag = 'criterion'
+        # Instantiate the trainer object to drive the model training
+        trainer = Trainer(netout, ce, pe, [sgd_learner(netout.parameters(), lr=0.02)])
 
-    # define our SGD parameters and train!
-    my_sgd = C.SGDParams(epoch_size=0, minibatch_size=25, learning_rates_per_mb=0.1, max_epochs=3)
-    with C.LocalExecutionContext('logreg') as ctx:
-        ctx.train(root_nodes=[ce], training_params=my_sgd)
-        print(ctx.test(root_nodes=[ce]))
+        # Get minibatches of training data and perform model training
+        minibatch_size = 25
+        num_samples_per_sweep = 10000
+        num_sweeps_to_train_with = 2
+        num_minibatches_to_train = (num_samples_per_sweep * num_sweeps_to_train_with) / minibatch_size
+        training_progress_output_freq = 20
 
+        for i in range(0, int(num_minibatches_to_train)):
+            features, labels = generate_random_data(minibatch_size, input_dim, num_output_classes)
+            # Specify the mapping of input variables in the model to actual minibatch data to be trained with
+            trainer.train_minibatch({input : features, label : labels})
+            if debug_output:
+                print_training_progress(trainer, i, training_progress_output_freq)
+        
+        test_features, test_labels = generate_random_data(minibatch_size, input_dim, num_output_classes)
+        avg_error = trainer.test_minibatch({input : test_features, label : test_labels})
 
-In the example above, we first create a synthetic data set of 500 samples, each with a 2-dimensional 
-one-hot vector representing 0 (``[1 0]``) or 1 (``[0 1]``). We then begin describing the topology of our network 
-by setting up the data inputs. This is typically done using the :class:`cntk.reader.CNTKTextFormatReader` by reading data 
-in from a file, but for interactive experimentation and small examples we can use the ``input_numpy`` reader to 
-access numpy data.
+The example above sets up a 2-layer fully connected deep neural network with 50 hidden dimensions per layer. We first setup two input variables, one for 
+the input data and one for the labels. We then called the fully connected classifier network model function which simply sets up the required weights, 
+biases, and activation functions for each layer.
 
-Next, we define our network. In this case it's a simple 1-layer network with a weight tensor and a bias. 
-We multiply our data `x` with the weight tensor `W` and add the bias `b`. We then input the model prediction 
-into the :func:`cntk.ops.cross_entropy_with_softmax` node. This node first runs the data through a `softmax` to get 
-probabilities for each class. Then the Cross Entropy loss function is applied. We tag the node `ce` with 
-"criterion" so that CNTK knows it's a node from which the learning can start flowing back through the network.
+We set two root nodes in the network: ``ce`` is the cross entropy which defined our model's loss function, and ``pe`` is the classification error. We 
+set up a trainer object with the root nodes of the network and a learner. In this case we pass in the standard SGD learner with default parameters and a 
+learning rate of 0.02.
 
-Finally, we define our learning algorithm. In this case we use Stochastic Gradient Descent (SGD) and pass in 
-some basic parameters. First, `epoch_size` allows different amounts of data per epoch. When we set it to 0, 
-SGD looks at all of the training data in each epoch. Next, `minibatch_size` is the number of samples to look 
-at for each minibatch; `learning_rates_per_mb` is the learning rate that SGD will use when the parameters are 
-updated at the end of each minibatch; and `max_epochs` is the maximum number of epochs to train for.
+Finally, we manually perform the training loop. We run through the data for the specific number of epochs (``num_minibatches_to_train``), get the ``features`` 
+and ``labels`` that will be used during this training step, and call the trainer's ``train_minibatch`` function which maps the input and label variables that 
+we setup previously to the current ``features`` and ``labels`` data (numpy arrays) that we are using in this minibatch. We use the convenience function 
+``print_training_progress`` to display our loss and error every 20 steps and then finally we test our network again using the ``trainer`` object. It's 
+as easy as that!
 
-The last step is to set up an execution context. An execution context can be either `Local` or `Deferred`. In the 
-former case, as we use here, the methods (such as training and testing the network) are done locally and 
-immediately so that the result is returned interactively to python. With a `Deferred` context, the methods simply 
-set up a configuration file that can be used with CNTK at a later date. Here, with the local execution context, 
-we train the network by passing in the root node and the optimizer we are using, and finally, we test its 
-performance. Here is the output of the above example:
-
-``{'SamplesSeen': 500, 'Perplexity': 1.1140191, 'loss': 0.10797427}``
-
-Now that we've seen some of the basics of setting up and training a network using the CNTK Python API, 
-let's look at a more interesting deep learning problem in more detail.
+Now that we've seen some of the basics of setting up and training a network using the CNTK Python API, let's look at a more interesting deep 
+learning problem in more detail (for the full example above along with the function to generate random data, please see 
+``bindings/python/examples/NumpyInterop/FeedForwardNet.py``).
 
 
 Sequence classification
@@ -204,114 +194,70 @@ sequence classification. We can think of the network as adding a series of layer
 2. LSTM layer (allow each word to depend on previous words)
 3. Softmax layer (an additional set of parameters and output probabilities per class)
 
-We can define this network as follows in the CNTK Python API::
+This network is defined as part of the example at ``bindings/python/examples/SequenceClassification/SequenceClassification.py``. Let's go through some 
+key parts of the code::
 
-import cntk as C
-
-def seqcla():
     # model
-    num_labels = 5
-    vocab = 2000
-    embed_dim = 50
+    input_dim = 2000
+    cell_dim = 25
+    hidden_dim = 25
+    embedding_dim = 50
+    num_output_classes = 5
 
-    # LSTM params
-    input_dim = 50
-    output_dim = 128
-    cell_dim = 128
+    # Input variables denoting the features and label data
+    features = input_variable(shape=input_dim, is_sparse=True)
+    label = input_variable(num_output_classes, dynamic_axes = [Axis.default_batch_axis()])
 
-    t = C.dynamic_axis(name='t')
-    # temporarily using cntk1 SparseInput because cntk2's input() will simply allow sparse as a parameter
-    features = cntk1.SparseInput(vocab, dynamicAxis=t, name='features')
-    labels = C.input(num_labels, name='labels')
+    # Instantiate the sequence classification model
+    classifier_output = LSTM_sequence_classifer_net(features, num_output_classes, embedding_dim, hidden_dim, cell_dim)
 
-    train_reader = C.CNTKTextFormatReader(train_file)
+    ce = cross_entropy_with_softmax(classifier_output, label)
+    pe = classification_error(classifier_output, label)
 
-    # setup embedding matrix
-    embedding = C.parameter((embed_dim, vocab),
-                             learning_rate_multiplier=0.0,
-                             init_from_file_path=embedding_file)
+    rel_path = r"../../../../Tests/EndToEndTests/Text/SequenceClassification/Data/Train.ctf"
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), rel_path)
 
-    # get the vector representing the word
-    sequence = C.times(embedding, features, name='sequence')
+    mb_source = text_format_minibatch_source(path, [
+                    StreamConfiguration( 'features', input_dim, True, 'x' ),
+                    StreamConfiguration( 'labels', num_output_classes, False, 'y')], 0)
 
-    # add an LSTM layer
-    L = lstm_layer(output_dim, cell_dim, sequence, input_dim)
+    features_si = mb_source.stream_info(features)
+    labels_si = mb_source.stream_info(label)
 
-    # add a dense layer on top
-    w = C.parameter((num_labels, output_dim), name='w')
-    b = C.parameter((num_labels), name='b')
-    z = C.plus(C.times(w, L), b, name='z')
-    z.tag = "output"
+    # Instantiate the trainer object to drive the model training
+    trainer = Trainer(classifier_output, ce, pe, [sgd_learner(classifier_output.parameters(), lr=0.0005)])
 
-    # and reconcile the shared dynamic axis
-    pred = C.reconcile_dynamic_axis(z, labels, name='pred')
+    # Get minibatches of sequences to train with and perform model training
+    minibatch_size = 200
+    training_progress_output_freq = 10
+    i = 0
+    while True:
+        mb = mb_source.get_next_minibatch(minibatch_size)
+        if  len(mb) == 0:
+            break
 
-    ce = C.cross_entropy_with_softmax(labels, pred)
-    ce.tag = "criterion"
+        # Specify the mapping of input variables in the model to actual minibatch data to be trained with
+        arguments = {features : mb[features_si].m_data, label : mb[labels_si].m_data}
+        trainer.train_minibatch(arguments)
 
+        print_training_progress(trainer, i, training_progress_output_freq)
+        i += 1
 
-Let's go through some of the intricacies of the above network definition. First, we define 
-some parameters of the data and the network. We have 5 possible classes for the sequences; 
-we're working with a vocabulary of 2000 words; and our embedding vectors have a dimension of 
-50. Because the word vectors are input to the LSTM, the `input_dim` of the LSTM is also 50. 
-We can, however, output any dimension from the LSTM; our `cell_dim` and `output_dim` are the 
-same and we output 128-dimensional tensors.
+Let's go through some of the intricacies of the network definition above. As usual, we first set the parameters of our model. In this case we 
+have a vocab (input dimension) of 2000, LSTM hidden and cell dimensions of 25, an embedding layer with dimension 50, and we have 5 possible 
+classes for our sequences. As before, we define two input variables: one for the features, and for the labels. We then instantiate our model. The 
+``LSTM_sequence_classifier_net`` is a simple function which looks up our input in an embedding matrix and returns the embedded representation, puts 
+that input through an LSTM recurrent neural network layer, and returns a fixed-size output from the LSTM by selecting the last hidden state of the 
+LSTM::
 
-We then set up our training data. First, we create a dynamic axis. The dynamic axis is a key 
-concept in CNTK that allows us to work with sequences without having to pad our data when we 
-have sequences of different lengths (which is almost always the case). We then set up our 
-features by defining a `SparseInput`. In this release, :func:`cntk.ops.input` only supports dense features 
-so we have to use the legacy `cntk1.SparseInput` until 1.5. Each word has a dimension of size 
-`vocab` and we attach the dynamic axis `t` that we created just above. Then we set up our labels 
-using the standard :func:`cntk.ops.input` where the dimension is of size `num_labels`.
+    embedding_function = embedding(input, embedding_dim)
+    LSTM_function = LSTMP_component_with_self_stabilization(embedding_function.output(), LSTM_dim, cell_dim)[0]
+    thought_vector = select_last(LSTM_function)
 
-Our final piece of setup before beginning to define the network is creating a `reader` for our 
-training data. We use the :class:`cntk.reader.CNTKTextFormatReader` and pass in the name of our 
-training data file.
+    return linear_layer(thought_vector, num_output_classes)
 
-Now we can start defining our network. The first layer is the word embedding. We define this 
-using a `parameter` of shape `(embed_dim, vocab)` that is initialized from a file where our 
-embedding matrix is stored. We set the `learning_rate_multiplier` parameter to 0.0 so that this 
-is treated as a constant.
-
-To view the input data words as vectors, we multiply the embedding matrix with the one-hot vector 
-words which results in the data being represented by vectors. An LSTM layer is then added which 
-returns the last hidden state of the unrolled network. We then add the dense layer followed by 
-the criterion node that adds a softmax and then implements the cross entropy loss function. Before 
-we add the criterion node, however, we call :func:`cntk.ops.reconcile_dynamic_axis` which will ensure 
-that the minibatch layout for the labels and the data with dynamic axes is compatible.
-
-For the full explanation of how ``lstm_layer()`` is defined, please see the full example (`seqcla.py <https://github.com/Microsoft/CNTK/blob/master/contrib/Python/cntk/examples/LSTM/seqcla.py>`_) in the 
-Examples section.
-
-How to pass Python data as train/test data
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-The Python CNTK API allows to pass training / testing data either by specifing external input files or by using Python data directly to CNTK.
-This second alternative - using internal Python data - is usefull especially if you want to do some quick experimentation with small synthetic data sets.
-In what follows you will learn in what structure these data has to be provided.
-
-Let us start with a scenario coming from one of our code examples (`logreg_numpy.py <https://github.com/Microsoft/CNTK/tree/master/contrib/Python/cntk/examples/LogReg/logreg_numpy.py>`_).
-In this example we want to classify a 250 dimensional feature vector into one of two classes. In this case whe have two *inputs*:
- - The features values for each training item. In the example these are 500 vectors each of dimension 250. 
- - The expected class. In this example the class is encoded with a two-dimensonal vector where the element for expected class is set to 1 and the other to 0.
-
-For each of these inputs we have to provide one data structure containing all training instances. 
-
-You might notice that this is conceptually different to the case where we provide the data from external files using the CNTKTextReader. 
-In the input file for CNTKTextReader we provide data for different *inputs* of one instance on the same line, so the data from different inputs are much more interwined.
-
-In Python the feature data are reprensented by a NumPy array of dimension ``number_of_instances X dimension_of_feature_space`` so in out example its a NumPy array of dimension ``500 X 250``.
-Likewise the expected output is reprensented by another NumPy array of dimension ``500 X 2``.
-
-Passing sequence data from Python
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-CNTK can handle sequences with arbitrary maximal length. This feature is also called *dynamic-axis*.
-To represent an input with a dynamic-axis in Python you have to provide each sequence as a NumPy-array where the first axis has a dimension equal to the sequence length.
-The complete dataset is then just a normal one-dimensional numpy array of these sequences.
-
-Take as an artifical example a sentence classification problem. Each sentence has a different number of words, i.e. it is a *sequence* of words. The individual words might each be represented by some lantent vector.
-So each sentence is represented by a NumPy array of dimension ``sequence_length X embedding_dimension``. The whole set of instances (sentences) is then represented by putting them into a one-dimensional array with the size equal to the number of instances.
-
- 
+That is the entire network definition. We now simply setup our criterion nodes and then setup our training loop. In the above example we use a minibatch 
+size of 200 and use basic SGD with the default parameters and a small learning rate of 0.0005. This results in a powerful state-of-the-art model for 
+sequence classification that can scale with huge amounts of training data. Note that as your training data size grows, you should give more capacity to 
+your LSTM by increasing the number of hidden dimensions. Further, you can get an even more complex network by stacking layers of LSTMs. This is also easy 
+using the LSTM layer function [coming soon].

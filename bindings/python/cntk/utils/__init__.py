@@ -6,18 +6,20 @@
 
 import os
 import sys
+import numbers
 import numpy as np
 import scipy.sparse
 from cntk import cntk_py
 
 def precision_numpy(precision):
     '''
-    Converts string precision to numpy precision 
+    Converts string precision to NumPy precision
+
     Args:
-        precision (str): string precision
+        precision (str): string precision ("float" or "double")
 
     Returns:
-        numpy precision
+        NumPy precision
     '''
     if precision == 'float':
         return np.float32
@@ -29,6 +31,7 @@ def precision_numpy(precision):
 def cntk_device(device_id):
     '''
     Converts device ID to CNTK DeviceDescriptor instance
+
     Args:
         device_id (int): device id, -1 for CPU, 0 or higher for GPU
 
@@ -45,14 +48,14 @@ def cntk_to_numpy_shape(shape):
     Removes the dynamic axis and returns a tuple representing the NumPy shape.
 
     Args:
-        shape (tuple or int): CNTK shape iterable
+        shape (`tuple` or `int`): CNTK shape iterable
 
     Returns:
-        a tuple that describes the NumPy shape of a tensor
+        NumPy shape of a tensor
     '''
 
     if np.isscalar(shape):
-        shape = (shape,)    
+        shape = (shape,)
     shape = shape[:-1]
     if not shape:
         shape = (1,)
@@ -70,7 +73,7 @@ def is_string(value):
 
 
 def with_metaclass(meta, *bases):
-    """Create a base class with a metaclass."""
+    """Creates a base class with a metaclass."""
     # This requires a bit of explanation: the basic idea is to make a dummy
     # metaclass for one level of class instantiation that replaces itself with
     # the actual metaclass.
@@ -97,7 +100,7 @@ def tensors_to_text_format(sample_idx, alias_tensor_map):
     Args:
         sample_idx (int): number of current sample
         alias_tensor_map (dict): maps alias (str) to tensor (ndarray). Tensors
-        are assumed to have dynamic axis.
+          are assumed to have dynamic axis.
 
     Returns:
         String representation in CNTKTextReader format
@@ -228,19 +231,21 @@ def sanitize_input(arg, fallback_dtype=np.float32):
 
     from cntk.ops.variables import Constant, Variable
     from cntk.ops import constant
+
+    # is it a Variable?
     if isinstance(arg, (Constant, Variable, cntk_py.Constant, cntk_py.Variable)):
         return arg
 
-    try:
-        var_output = arg.output()
-        if isinstance(var_output, (Variable, cntk_py.Variable)):
-            return var_output
-        else:
-            raise ValueError('Cannot convert argument of type "%s" to Variable'%type(arg))
-    except AttributeError:
-        # no function or function with more then one output
-        pass
-    
+    # or a Function?
+    # FIXME soon to be replaced by Function
+    #if isinstance(arg, (Function, cntk_py.Function)):
+    if isinstance(arg, cntk_py.Function):
+        try:
+            return arg.output()
+        except RuntimeError:
+            raise ValueError('the argument has more than one output, please provide the one you want')
+
+    # maybe a Python list that we can interpret as a NumPy array?
     if isinstance(arg, list) and not arg:
         raise ValueError('input is empty')
 
@@ -249,31 +254,51 @@ def sanitize_input(arg, fallback_dtype=np.float32):
 
     return constant(value=arg)
 
-def get_data_type(arg):
+def get_data_type(*args):
     """
-    Return the numpy datatype of `arg`
+    Calculates the highest precision numpy datatype of the provided parameters. If
+    the parameter is a Function instance, it calculates it based on its inputs.
+
     Args:
-        arg (number, list, NumPy array, `Variable`, or `Function`): input       
+        args (number, `list`, NumPy array, `Variable`, or `Function`): input
     Returns:
-        np.float32 or np.float64
+        `np.float32` or `np.float64`
     """
 
-    from cntk.ops.variables import Constant, Variable
-    from cntk.ops import constant    
+    dtypes = set()
+    if len(args)==1 and isinstance(args, cntk_py.Function):
+        args = [args]
 
-    if isinstance(arg, (Constant, Variable)):
-        if cntk_py.DataType_Double == arg.get_data_type():
-            return np.float64
-    try:
-        var_output = arg.output()
-        if isinstance(var_output, Variable):
+    for arg in args:
+        if isinstance(arg, (cntk_py.Variable, cntk_py.Constant, cntk_py.Parameter)):
+            if cntk_py.DataType_Double == arg.get_data_type():
+                dtypes.add(np.float64)
+            else:
+                dtypes.add(np.float32)
+        elif isinstance(arg, np.ndarray):
+            if arg.dtype not in (np.float32, np.float64):
+                raise ValueError('NumPy type "%s" is not supported'%arg.dtype)
+                dtypes.add(arg.dtype)
+        elif isinstance(arg, cntk_py.Function):
+            var_outputs = arg.outputs()
+            if len(var_outputs)>1:
+                raise ValueError('expected single output, but got %i'%len(var_outputs))
+
+            var_output = var_outputs[0]
             if cntk_py.DataType_Double == var_output.get_data_type():
-                return np.float64
-    except AttributeError:
-        # no function or function with more then one output
-        pass
-    
-    return np.float32
+                dtypes.add(np.float64)
+        else:
+            # We don't know anything so we convert everything to float32. If it
+            # works, we know the type. 
+            # TODO figure out a better/faster way.
+            np.asarray(arg, dtype=np.float32)
+            dtypes.add(np.float32)
+
+
+    if np.float64 in dtypes:
+        return np.float64
+    else:
+        return np.float32
 
 def pad_to_dense(batch):
     """Appends the minimal required amount of zeroes at the end of each sample
@@ -307,7 +332,7 @@ def pad_to_dense(batch):
         Z[idx, :len(seq)] += seq 
     return Z
 
-def sanitize_batch(batch, data_type=None, dev=None):
+def sanitize_batch(batch, data_type=None, device=None):
     """
     Convert to Value with `data_type`. If the samples in `batch` have different
     sequence lengths, pad them to max sequence length and create a mask.
@@ -323,19 +348,20 @@ def sanitize_batch(batch, data_type=None, dev=None):
     if isinstance(batch, Value):
         return batch
 
-    num_seq = len(batch)
-
     try:
-        seq_lens = [len(seq) for seq in batch]
-    except:
-        import ipdb;ipdb.set_trace()
+        num_seq = len(batch)
+    except TypeError:
+        raise ValueError('expected an object of type Value or a NumPy ' +
+        'array and not "%s"'%type(batch))
+
+    seq_lens = [len(seq) for seq in batch]
     
     use_mask = len(set(seq_lens))!=1    
     if use_mask:
         # If not all sequences are of the same length, we have to pad them to
         # the same length and create a mask over the original data.
         from cntk.cntk_py import NDMask
-        mask = NDMask((max(seq_lens), num_seq), dev)
+        mask = NDMask((max(seq_lens), num_seq), device)
         for idx, seq_len in enumerate(seq_lens):
             mask.mask_section((seq_len, idx), (cntk_py.InferredDimension, 1)) 
 
@@ -348,6 +374,8 @@ def sanitize_batch(batch, data_type=None, dev=None):
 
     # If it still is not an NumPy array, try brute force...
     if not isinstance(batch, np.ndarray):
+        if data_type is None:
+            data_type = np.float32
         batch = np.asarray(batch, dtype=data_type)
 
     '''
@@ -362,7 +390,7 @@ def sanitize_batch(batch, data_type=None, dev=None):
             raise ValueError('values should be an array of input samples')
     '''
             
-    ndav = create_NDArrayView_from_NumPy(batch, dev)
+    ndav = create_NDArrayView_from_NumPy(batch, device)
 
     if use_mask:
         value = Value(ndav, mask)
@@ -378,9 +406,9 @@ def sanitize_var_map(input_map, precision_numpy=None, device=None, add_batch_axi
 
     Args:
         input_map (`dict`): `Variable` to input (NumPy array or simple list of lists)
-        precision_numpy : np.float32 or np.float64
-        device: CNTK DeviceDescriptor
-        add_batch_axis (bool): if the data does not have the batch axis, add it before creating NDArrayView
+        precision_numpy : `np.float32`, `np.float64`, or `None`
+        device (`DeviceDescriptor` or `None`): CNTK DeviceDescriptor
+        add_batch_axis (`bool`): data in `input_map` are single instances and a batch axis has to be added
 
     Returns:
         `dict` that maps variables to sanitized batches
@@ -442,10 +470,14 @@ def create_NDArrayView(shape, data_type=cntk_py.DataType_Float, dev=None):
     return view
 
 def create_NDArrayView_from_NumPy(nd, dev=None):
+    ndav_cpu = cntk_py.NDArrayView(nd, cntk_py.DeviceDescriptor.cpu_device(), False)
+
     if not dev:
         dev = cntk_py.DeviceDescriptor.use_default_device()    
-    view = cntk_py.NDArrayView(nd, dev, False)
-    return view
+
+    ndav = ensure_dev(ndav_cpu, dev)
+
+    return ndav
 
 def create_Value_for_Variable(var, shape=None, dev=None, mask=None):
     if not dev:
@@ -490,42 +522,24 @@ def sanitize_dtype_cntk(dtype):
     else:
         raise ValueError('data type "%s" is not supported'%dtype)
 
-def _py_dict_to_cntk_dict(py_dict):
-    '''
-    Converts a Python dictionary into a CNTK Dictionary whose values are CNTK DictionaryValue instances.
-    Args:
-        py_dict (dict): a dictionary to be converted.
-    Returns: 
-        :class:`cntk_py.Dictionary`
-    '''
-    res = cntk_py.Dictionary();
-    for k,v in py_dict.items():
-        if isinstance(v,dict):
-            res[k] = cntk_py.DictionaryValueFromDict(_py_dict_to_cntk_dict(v))
-        #TODO: add support to list of lists ?
-        elif isinstance(v,list):
-            l = list()
-            for e in v:
-                if isinstance(e,dict):
-                    l.append(cntk_py.DictionaryValueFromDict(_py_dict_to_cntk_dict(e)))
-                else:
-                    l.append(cntk_py.DictionaryValue(v))
-            res[k] = cntk_py.DictionaryValue(l)
-        else:
-            res[k] = cntk_py.DictionaryValue(v)
-    return res
-        
-def create_minibatch_source(config_dict):
-    '''
-    Instantiate the CNTK built-in composite minibatch source which is used to stream data into the network.    
-    Args:
-        config_dict (dict): a dictionary containing all the key-value configuration entries.
-    Returns: 
-        :class:`cntk_py.MinibatchSource`
-    '''
-    cntk_dict = _py_dict_to_cntk_dict(config_dict)
-    return cntk_py.create_composite_minibatch_source(cntk_dict)
+def sanitize_axis(rank, axis):
+    if axis is None:
+        return axis
+    elif isinstance(axis, numbers.Integral):
+        return cntk_py.Axis(rank - 1 - axis)
+    elif axis.is_static_axis():
+        return cntk_py.Axis(rank - 1 - axis.static_axis_index())
+    else:
+        return axis
 
+def sanitize_dynamic_axes(axes):
+    if axes is not cntk_py.Axis.default_input_variable_dynamic_axes:
+        if not type(axes) in (list, tuple):
+            axes = [axes]
+        else:
+            axes = tuple(reversed(axes))
+    return axes
+     
 def get_train_loss(trainer):
     '''
     Fetch the train loss from the last minibatch and copy it to the CPU in case it is on the GPU.
@@ -550,6 +564,19 @@ def get_train_eval_criterion(trainer):
     #we copy the value so swig does not destroy it when we leave the scope
     return copy.copy(trainer.previous_minibatch_evaluation_average())
 
+def ensure_dev(ndav, dev):
+
+    if ndav.device() != dev:
+
+        ndav_on_target = create_NDArrayView(ndav.shape().dimensions(), data_type=ndav.get_data_type(), dev=dev)
+        ndav_on_target.copy_from(ndav)
+        ndav = ndav_on_target
+
+    return ndav
+
+def ensure_cpu(ndav):
+    return ensure_dev(ndav, cntk_py.DeviceDescriptor.cpu_device())
+
 def eval(op, precision, device, input_map=None, backward_pass=False):
     '''
     It evaluates `op` on the data provided by the reader. This is useful
@@ -557,55 +584,53 @@ def eval(op, precision, device, input_map=None, backward_pass=False):
     
     Args:
         op (:class:`Function`): operation to evaluate
-        input_map: describes how to map inputs to the data in a data file using a number, NumPy array or reader object
-        backward_pass (`bool`): whether a backward pass is performed 
-        precision (str): string precision
+        precision (`str` or `None`): precision being 'float32', 'float64', or `None`, in which case it will be determined by inspecting the operator (costly)
         device (:class:Cntk.DeviceDescriptor): the device the descriptor, whether it is CPU or GPU (and which one)
+        input_map (`dict`): describes how to map inputs to the data in a data file using a number, NumPy array or reader object
+        backward_pass (`bool`, optional): whether a backward pass is performed 
 
     Returns: 
         output generated by `op`. If `op` is an iterable, a dictionary
         op->result is returned. 
     '''
-    pn = precision_numpy(precision)
+    if precision is not None:
+        precision = precision_numpy(precision)
 
-    forward_in_var_map = sanitize_var_map(input_map, pn, device)
+    forward_in_var_map = sanitize_var_map(input_map, precision, device)
 
     forward_out_var_map =  {}
     forward_retain = set()
-    for v in op.owner.outputs():
+    for v in op.outputs():
         forward_out_var_map[v] = None # will be populated in Forward()
         forward_retain.add(v)
 
-    state = op.owner.forward(forward_in_var_map, forward_out_var_map, device, forward_retain)
+    state = op.forward(forward_in_var_map, forward_out_var_map, device, forward_retain)
 
     forward_output = {}
     forward_output_mask = {}
-    for v in op.owner.outputs():
+    for v in op.outputs():
         value = forward_out_var_map[v]
-        np_data = value.data().to_numpy()         
+        np_data = ensure_cpu(value.data()).to_numpy()         
         if value.mask():
-            np_data = remove_masked_elements(np_data, value.mask().to_numpy())
+            np_data = remove_masked_elements(np_data, ensure_cpu(value.mask()).to_numpy())
         forward_output[v] = np_data
         forward_output_mask[v] = value.mask()
 
-    assert backward_pass
-    
     if backward_pass:    
         root_gradients = {} 
         for v, o in forward_output.items():
-            ones_grad = ones_like(o, pn)
-            root_gradients[v] = ones_grad
-        root_gradients = sanitize_var_map(root_gradients, pn, device)
+            root_gradients[v] = ones_like(o, precision)
+        root_gradients = sanitize_var_map(root_gradients, precision, device)
 
         backward_var_map = dict((var, None) for var in forward_in_var_map)
 
-        op.owner.backward(state, root_gradients, backward_var_map)
+        op.backward(state, root_gradients, backward_var_map)
 
         backward_output = {}
         for var, value in backward_var_map.items():
-            np_data = value.data().to_numpy()             
+            np_data = ensure_cpu(value.data()).to_numpy()             
             if value.mask():
-                np_data = remove_masked_elements(np_data, value.mask().to_numpy())
+                np_data = remove_masked_elements(np_data, ensure_cpu(value.mask()).to_numpy())
             backward_output[var] = np_data
 
         return forward_output, backward_output
