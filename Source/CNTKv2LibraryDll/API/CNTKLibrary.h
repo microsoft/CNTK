@@ -7,13 +7,6 @@
 
 #pragma once
 
-#ifdef SWIG
-#define final
-#define explicit
-#define static_assert(condition, message)
-#endif
-
-#include "CNTKLibraryInternals.h"
 
 #include <memory>
 #include <vector>
@@ -28,6 +21,15 @@
 #include <iosfwd>
 #include<algorithm>
 #include <mutex>
+
+
+#ifdef SWIG
+#define final
+#define explicit
+#define static_assert(condition, message)
+#endif
+
+#include "CNTKLibraryInternals.h"
 
 namespace CNTK
 {
@@ -111,6 +113,8 @@ namespace CNTK
     ///
     class DeviceDescriptor final
     {
+        friend bool operator==(const DeviceDescriptor& first, const DeviceDescriptor& second);
+
         static std::atomic<bool> s_defaultDeviceFrozen;
         static std::shared_ptr<DeviceDescriptor> s_defaultDevice;
         static std::shared_ptr<std::vector<DeviceDescriptor>> s_allDevices;
@@ -2924,7 +2928,7 @@ namespace CNTK
     };
 
     /// 
-    /// Instantiate the CNTK buil-in test format minibatch source
+    /// Instantiate the CNTK built-in test format minibatch source
     ///
     inline MinibatchSourcePtr TextFormatMinibatchSource(const std::wstring& dataFilePath, const std::vector<StreamConfiguration>& streamConfigs, size_t epochSize = SIZE_MAX)
     {

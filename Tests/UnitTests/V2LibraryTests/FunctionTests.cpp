@@ -407,6 +407,7 @@ void TestTranspose(size_t numAxes, size_t axis1, size_t axis2, const DeviceDescr
 
     FloatingPointVectorCompare(outputData, expectedOutputValues, "TestTimesAndPlus: Forward prop results do not match expected results");
 }
+
 void FunctionTests()
 {
     TestSlice(2, DeviceDescriptor::CPUDevice());
