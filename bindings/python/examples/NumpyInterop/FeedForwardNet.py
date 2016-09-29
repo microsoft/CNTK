@@ -1,4 +1,4 @@
-﻿# Copyright (c) Microsoft. All rights reserved.
+# Copyright (c) Microsoft. All rights reserved.
 
 # Licensed under the MIT license. See LICENSE.md file in the project root
 # for full license information.
@@ -13,6 +13,8 @@ from cntk.ops import input_variable, cross_entropy_with_softmax, combine, classi
 abs_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(abs_path, "..", ".."))
 from examples.common.nn import fully_connected_classifier_net, print_training_progress
+
+TOLERANCE_ABSOLUTE=1E-03
 
 # make sure we get always the same "randomness"
 np.random.seed(0)
@@ -68,12 +70,12 @@ def ffnet(debug_output=True):
     return avg_error
 
 def test_accuracy(device_id):
-    #FIXME: need a backdor to work around the limitation of changing the default device not possible 
-    #from cntk.utils import cntk_device
-    #DeviceDescriptor.set_default_device(cntk_device(device_id))
+    from cntk.utils import cntk_device
+    DeviceDescriptor.set_default_device(cntk_device(device_id))
 
     avg_error = ffnet(debug_output=False)
-    assert avg_error == 0.12
+    expected_avg_error = 0.12
+    assert np.allclose([avg_error], [expected_avg_error], atol=TOLERANCE_ABSOLUTE)
 
 if __name__=='__main__':
     # Specify the target device to be used for computing

@@ -14,8 +14,15 @@ abs_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(abs_path, "..", ".."))
 from examples.common.nn import fully_connected_classifier_net, print_training_progress
 
+TOLERANCE_ABSOLUTE = 1E-1
+
+def check_path(path):
+    if not os.path.exists(path):
+        readme_file = os.path.normpath(os.path.join(os.path.dirname(path), "..", "README.md"))
+        raise RuntimeError("File '%s' does not exist. Please follow the instructions at %s to download and prepare it."%(path, readme_file))
+
 # Creates and trains a feedforward classification model for MNIST images
-def simple_mnist():
+def simple_mnist(debug_output=False):
     input_dim = 784
     num_output_classes = 10
     num_hidden_layers = 1
@@ -34,18 +41,18 @@ def simple_mnist():
 
     rel_path = os.path.join(*"../../../../Examples/Image/MNIST/Data/Train-28x28_cntk_text.txt".split("/"))
     path = os.path.normpath(os.path.join(abs_path, rel_path))
-    if not os.path.exists(path):
-        readme_file = os.path.normpath(os.path.join(os.path.dirname(path), "..", "README.md"))
-        raise RuntimeError("File '%s' does not exist. Please follow the instructions at %s to download and prepare it."%(path, readme_file))
+    check_path(path)
+
     feature_stream_name = 'features'
     labels_stream_name = 'labels'
-    
+
     mb_source = text_format_minibatch_source(path, [ 
-                    StreamConfiguration( feature_stream_name, input_dim ), 
+                    StreamConfiguration( feature_stream_name, input_dim ),
                     StreamConfiguration( labels_stream_name, num_output_classes) ])
     features_si = mb_source.stream_info(feature_stream_name)
     labels_si = mb_source.stream_info(labels_stream_name)
 
+<<<<<<< 7ce41912e13b71716986658b3f62e7c8cff3b728
     # Instantiate the trainer object to drive the model training
     trainer = Trainer(netout, ce, pe, [sgd_learner(netout.parameters(),
         lr=0.003125)])
@@ -63,13 +70,39 @@ def simple_mnist():
         arguments = {input : mb[features_si].m_data, label : mb[labels_si].m_data}
         trainer.train_minibatch(arguments)
 
-        print_training_progress(trainer, i, training_progress_output_freq)
+        if debug_output:
+            print_training_progress(trainer, i, training_progress_output_freq)
+
+    # Load test data
+    rel_path = os.path.join(*"../../../../Examples/Image/MNIST/Data/Test-28x28_cntk_text.txt".split("/"))
+    path = os.path.normpath(os.path.join(abs_path, rel_path))
+    check_path(path)
+
+    test_mb_source = text_format_minibatch_source(path, [
+                    StreamConfiguration( feature_stream_name, input_dim ),
+                    StreamConfiguration( labels_stream_name, num_output_classes ) ])
+    features_si = test_mb_source.stream_info(feature_stream_name)
+    labels_si = test_mb_source.stream_info(labels_stream_name)
+
+    # Test data for trained model
+    test_minibatch_size = 512
+    num_samples = 10000
+    num_minibatches_to_test = num_samples / test_minibatch_size
+    test_result = 0.0
+    for i in range(0, int(num_minibatches_to_test)):
+        mb = test_mb_source.get_next_minibatch(test_minibatch_size)
+
+        # Specify the mapping of input variables in the model to actual minibatch data to be tested with
+        arguments = {input : mb[features_si].m_data, label : mb[labels_si].m_data}
+        eval_error = trainer.test_minibatch(arguments)
+        test_result = test_result + eval_error
+
+    return test_result / num_minibatches_to_test # Average of evaluation errors of all test minibatches
 
 if __name__=='__main__':
     # Specify the target device to be used for computing
-    target_device = DeviceDescriptor.gpu_device(0)
-    # If it is crashing, probably you don't have a GPU, so try with CPU:
-    # target_device = DeviceDescriptor.cpu_device()
-    DeviceDescriptor.set_default_device(target_device)
+    #target_device = DeviceDescriptor.gpu_device(0)
+    #DeviceDescriptor.set_default_device(target_device)
 
-    simple_mnist()
+    accuracy = simple_mnist()
+    print("test: %f"%accuracy)
