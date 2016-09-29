@@ -23,6 +23,7 @@ from .cntk_py import DeviceDescriptor, momentums_per_sample
 
 DATATYPE = np.float32
 
+
 class Trainer(cntk_py.Trainer):
     '''
     Trainer to train the specified `model` with the specified `training_loss`
@@ -37,6 +38,7 @@ class Trainer(cntk_py.Trainer):
        eval_function (`:class:cntk.ops.Function`): evaluation function
        parameter_learners (`list`): list of learners from `:cntk:cntk.learners`
     '''
+
     def __init__(self, model, loss_function, eval_function, parameter_learners):
         if isinstance(model, cntk_py.Variable):
             model = model.owner
@@ -45,7 +47,7 @@ class Trainer(cntk_py.Trainer):
         if isinstance(eval_function, cntk_py.Variable):
             eval_function = eval_function.owner
         super(Trainer, self).__init__(model, loss_function, eval_function,
-                parameter_learners)
+                                      parameter_learners)
 
     def train_minibatch(self, arguments, device=None):
         '''
@@ -63,7 +65,7 @@ class Trainer(cntk_py.Trainer):
             `bool`: `True` if updates have been performed
         '''
         if not device:
-            device=DeviceDescriptor.use_default_device()        
+            device = DeviceDescriptor.use_default_device()
         arguments = sanitize_var_map(arguments, add_batch_axis=True)
 
         return super(Trainer, self).train_minibatch(arguments, device)
@@ -85,8 +87,7 @@ class Trainer(cntk_py.Trainer):
               tested minibatch.
         '''
         if not device:
-            device=DeviceDescriptor.use_default_device()        
+            device = DeviceDescriptor.use_default_device()
         arguments = sanitize_var_map(arguments, add_batch_axis=True)
 
         return super(Trainer, self).test_minibatch(arguments, device)
-
