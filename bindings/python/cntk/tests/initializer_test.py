@@ -15,7 +15,7 @@ def _check(init, name):
     assert np.allclose(np.average(p.value().to_numpy()), 0, atol=0.1), name
     assert np.var(p.value().to_numpy()) > 0.01, name
 
-def test_initializer_init():
+def _disabled_test_initializer_init():
     _check(uniform(scale=10), 'uniform')
     _check(gaussian(output_rank=1, filter_rank=2, scale=10), 'gaussian')
     _check(xavier(output_rank=1, filter_rank=2, scale=10), 'xavier')
@@ -23,6 +23,3 @@ def test_initializer_init():
     _check(glorot_normal(output_rank=1, filter_rank=2, scale=10), 'glorot_normal')
     _check(he_uniform(output_rank=1, filter_rank=2, scale=10), 'he_uniform')
     _check(he_normal(output_rank=1, filter_rank=2, scale=10), 'he_normal')
-
-
-        
