@@ -2138,7 +2138,7 @@ namespace CNTK
             std::copy(currentFunctionOutputs.begin(), currentFunctionOutputs.end(), std::back_inserter(inputs));
         }
 
-        return Internal::Combine(inputs);
+        return Internal::Combine(inputs, name);
     }
 
     namespace Sequence

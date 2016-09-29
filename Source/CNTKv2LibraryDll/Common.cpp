@@ -73,6 +73,10 @@ namespace CNTK
         if (!Internal::IsSettingDefaultDeviceAlwaysAllowed() && s_defaultDeviceFrozen.load())
             RuntimeError("Process wide default device cannot be changed since it has been frozen by being implicitly used as the default device in a CNTK API call");
 
+        std::call_once(s_initDefaultDeviceFlag, []{
+            // do nothing. This will set the flag above, in case the DefaultDevice() was never called before.
+        });
+
         s_defaultDevice.reset(new DeviceDescriptor(newDefaultDevice));
     }
     

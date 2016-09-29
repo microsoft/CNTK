@@ -23,7 +23,7 @@
 using namespace std; // ugh! TODO: get rid of this from .h files!!!
 
 #define CNTK_CHECKPOINT_VERSION_1 1     // 1 -> no version number 
-#define CNTK_CHECKPOINT_VERSION_2 2     
+#define CNTK_CHECKPOINT_VERSION_2 2      
 #define CURRENT_CNTK_CHECKPOINT_VERSION CNTK_CHECKPOINT_VERSION_2
 
 
@@ -492,6 +492,7 @@ protected:
     void SaveCheckPointInfo(const size_t epoch, const size_t totalSamplesSeen, // TODO: combine totalSamplesSeen and prevCriterion into a EpochCriterion type
                             const double learnRatePerSample,
                             const std::list<Matrix<ElemType>>& smoothedGradients,
+                            const std::vector<double>& smoothedCounts,
                             const double prevCriterion,
                             const size_t minibatchSize);
 
@@ -499,12 +500,14 @@ protected:
                                /*out*/ size_t& totalSamplesSeen,
                                /*out*/ double& learnRatePerSample,
                                std::list<Matrix<ElemType>>& smoothedGradients,
+                               std::vector<double>& smoothedCounts,
                                /*out*/ double& prevCriterion,
                                /*out*/ size_t& minibatchSize);
     void LoadCheckPointInfo(const size_t epochNumber,
                             /*out*/ size_t& totalSamplesSeen,
                             /*out*/ double& learnRatePerSample,
                             std::list<Matrix<ElemType>>& smoothedGradients,
+                            std::vector<double>& smoothedCounts,
                             /*out*/ double& prevCriterion,
                             /*out*/ size_t& minibatchSize);
 
