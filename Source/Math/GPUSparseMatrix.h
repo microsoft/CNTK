@@ -36,7 +36,6 @@ public:
     using Base::SetSizeAllocated;
     using Base::GetSizeAllocated;
     using Base::ZeroInit;
-    using Base::ZeroValues;
     using Base::m_sob;
     using Base::ShallowCopyFrom;
     using Base::GetBlockSize;
@@ -50,6 +49,7 @@ public:
     using Base::VerifyResizable;
     // without this, base members would require to use thi-> in GCC
 public:
+    using Base::ZeroValues;
     using Base::VerifyWritable;
     using Base::SetRowToIdMap;
     using Base::GetComputeDeviceId;
