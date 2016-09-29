@@ -8,7 +8,7 @@ void TensorTests();
 void FeedForwardTests();
 void RecurrentFunctionTests();
 void TrainerTests();
-void TestCifarResnet();
+void TrainCifarResnet();
 void FunctionTests();
 void TrainLSTMSequenceClassifer();
 void SerializationTests();
@@ -34,7 +34,7 @@ int main()
     LearnerTests();
 
     TrainerTests();
-    TestCifarResnet();
+    TrainCifarResnet();
     TrainLSTMSequenceClassifer();
 
     TrainSequenceToSequenceTranslator();

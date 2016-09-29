@@ -786,6 +786,14 @@ namespace CNTK
         virtual bool IsReadOnly() const { return m_data->IsReadOnly(); }
 
         ///
+        /// Returns the number of masked/invalid values
+        ///
+        virtual size_t MaskedCount() const 
+        {
+            return m_mask ? m_mask->MaskedCount() : 0;
+        }
+
+        ///
         /// Returns the NDArrayView object corresponding to the data contents of 'this value object.
         ///
         CNTK_API virtual NDArrayViewPtr Data() const;
@@ -2606,6 +2614,8 @@ namespace CNTK
     ///
     class Learner : public std::enable_shared_from_this<Learner>
     {
+        static const std::wstring LearningRateAttributeName;
+
     public:
         //
         // Method to update the parameters associated with this learner. By returning false, this method indicates that
@@ -2623,25 +2633,38 @@ namespace CNTK
         ///
         // TODO: move the following two methods into ISerializable interface, make 
         // Learner (and all other entities that need checkpointing capability) implement it.
-        CNTK_API virtual Dictionary GetCheckpointState() const { return Dictionary(); }
+        CNTK_API virtual Dictionary GetCheckpointState() const 
+        {
+            Dictionary baseCheckpointState;
+            baseCheckpointState[LearningRateAttributeName] = m_learningRate;
+
+            return baseCheckpointState;
+        }
 
         ///
         /// Optionally overridable method to restore the learner's state from a previous checkpoint.
         ///
-        CNTK_API virtual void RestoreFromCheckpoint(const Dictionary& /*checkpoint*/) {}
+        CNTK_API virtual void RestoreFromCheckpoint(const Dictionary& checkpoint) 
+        {
+            if (checkpoint.Contains(LearningRateAttributeName))
+                m_learningRate = checkpoint[LearningRateAttributeName].Value<double>();
+        }
 
         ///
         /// Destruct this Learner.
         ///
         virtual ~Learner() {}
 
+        CNTK_API virtual void ResetLearningRate(double learningRate) { m_learningRate = learningRate; }
+        CNTK_API virtual double LearningRate() const { return m_learningRate; }
+
     protected:
-        Learner(const std::vector<Parameter>& parameters)
-            : m_parameters(parameters.begin(), parameters.end())
+        Learner(const std::vector<Parameter>& parameters, double learningRate)
+            : m_parameters(parameters.begin(), parameters.end()), m_learningRate(learningRate)
         {}
 
         std::unordered_set<Parameter> m_parameters;
-
+        double m_learningRate;
     };
 
     ///
@@ -2876,7 +2899,9 @@ namespace CNTK
         FunctionPtr m_combinedTrainingFunction;
         FunctionPtr m_model;
         FunctionPtr m_lossFunction;
+        FunctionPtr m_aggregatedLossFunction;
         FunctionPtr m_evaluationFunction;
+        FunctionPtr m_aggregatedEvaluationFunction;
 
         std::unordered_set<LearnerPtr> m_parameterLearners;
 
@@ -3039,4 +3064,17 @@ namespace CNTK
     CNTK_API void ComputeInputPerDimMeansAndInvStdDevs(const MinibatchSourcePtr& minibatchSource,
                                                        std::unordered_map<StreamInformation, std::pair<NDArrayViewPtr, NDArrayViewPtr>>& computedMeanAndVariances,
                                                        const DeviceDescriptor& device = DeviceDescriptor::CPUDevice());
+
+    ///
+    /// Set the process-wide setting for maximum number of CPU threads to be used by any individual compute operation
+    /// Note that this is a per compute operation limit and if the user performs multiple compute operations concurrently
+    /// by launching multiple threads and performing a compute operation inside, it will result in each of those concurrently
+    /// executing operations to use the specified number of CPU threads limit.
+    ///
+    CNTK_API void SetMaxNumCPUThreads(size_t numCPUThreads);
+
+    ///
+    /// Returns the current process-wide setting for maximum number of CPU threads to be used by any individual compute operation
+    ///
+    CNTK_API size_t GetMaxNumCPUThreads();
 }

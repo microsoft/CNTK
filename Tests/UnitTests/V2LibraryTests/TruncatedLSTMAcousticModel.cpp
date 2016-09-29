@@ -95,21 +95,23 @@ void TrainTruncatedLSTMAcousticModelClassifer(const DeviceDescriptor& device, bo
         prediction = predictionVar;
     }
 
-    const size_t numTrainingSamples = 20480;
+    const size_t numTrainingSamples = 81920;
     const size_t truncationLength = 20;
     Dictionary truncatedModeConfig;
     truncatedModeConfig[L"truncated"] = true;
     truncatedModeConfig[L"truncationLength"] = truncationLength;
     minibatchSource = CreateMinibatchSource(baseFeaturesDim, numOutputClasses, truncatedModeConfig, numTrainingSamples);
 
-    const size_t numberParallelSequencesPerMB = 1;
+    const size_t numberParallelSequencesPerMB = 32;
     const size_t minibatchSize = truncationLength * numberParallelSequencesPerMB;
 
     featureStreamInfo = minibatchSource->StreamInfo(features);
     auto labelStreamInfo = minibatchSource->StreamInfo(labels);
 
     double learningRatePerSample = 0.000781;
-    auto learner = MomentumSGDLearner(classifierOutput->Parameters(), learningRatePerSample, 0.0);
+    size_t momentumTimeConstant = 6074;
+    double momentumPerSample = std::exp(-1.0 / momentumTimeConstant);
+    auto learner = MomentumSGDLearner(classifierOutput->Parameters(), learningRatePerSample, momentumPerSample);
     Trainer trainer(classifierOutput, trainingLoss, prediction, {learner});
 
     size_t outputFrequencyInMinibatches = 1;

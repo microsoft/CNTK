@@ -186,7 +186,7 @@ namespace CNTK
 
     void PackedValue::Unpack() const
     {
-        if (Internal::IsAutomaticUnpackingOfPackedValuesDisabled())
+        if (m_packedDataLayout && (m_packedDataLayout->GetNumTimeSteps() != 1) && (m_packedDataLayout->GetNumSequences() != 1) && Internal::IsAutomaticUnpackingOfPackedValuesDisabled())
             LogicError("PackedValue::Unpack: Automatic unpacking of PackedValue objects is disabled");
 
         if (m_isPacked)

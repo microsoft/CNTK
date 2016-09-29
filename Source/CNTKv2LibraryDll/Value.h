@@ -14,13 +14,16 @@ namespace CNTK
 {
     class PackedValue final : public Value
     {
+        template <typename T, typename ...CtorArgTypes>
+        friend inline std::shared_ptr<T> MakeSharedObject(CtorArgTypes&& ...ctorArgs);
+
     public:
         template <typename ElementType>
         PackedValue(const NDShape& sampleShape, const std::shared_ptr<Microsoft::MSR::CNTK::Matrix<ElementType>>& packedDataMatrix, const std::shared_ptr<Microsoft::MSR::CNTK::MBLayout>& packedDataLayout, bool isReadOnly)
             : Value(nullptr), m_isPacked(true), m_sampleShape(sampleShape), m_packedData(nullptr), m_packedDataLayout(packedDataLayout), m_isReadOnly(isReadOnly)
         {
             NDShape packedMatrixShape({ packedDataMatrix->GetNumRows(), packedDataMatrix->GetNumCols() });
-            auto tensorView = new TensorView<ElementType>(packedDataMatrix, AsTensorViewShape(packedMatrixShape));
+            auto tensorView = new Microsoft::MSR::CNTK::TensorView<ElementType>(packedDataMatrix, AsTensorViewShape(packedMatrixShape));
             m_packedData = MakeSharedObject<NDArrayView>(AsDataType<ElementType>(), AsDeviceDescriptor(packedDataMatrix->GetDeviceId()), AsStorageFormat(packedDataMatrix->GetFormat()), packedMatrixShape, m_isReadOnly, tensorView);
 
             // Determine unpacked shape
@@ -37,6 +40,15 @@ namespace CNTK
         StorageFormat GetStorageFormat() const override { return m_isPacked? m_packedData->GetStorageFormat() : Value::GetStorageFormat(); }
         bool IsReadOnly() const override { return m_isPacked ? m_packedData->IsReadOnly() : Value::IsReadOnly(); }
 
+        size_t MaskedCount() const override
+        {
+            if (m_isPacked)
+                // Compute the number of masked samples after the data will be unpacked
+                return m_packedDataLayout ? ((m_packedDataLayout->GetNumTimeSteps() * m_packedDataLayout->GetNumSequences()) - m_packedDataLayout->GetActualNumSamples()) : 0;
+            else
+                return Value::MaskedCount();
+        }
+
         NDArrayViewPtr Data() const override
         {
             Unpack();
@@ -51,7 +63,18 @@ namespace CNTK
 
         ValuePtr DeepClone(bool /*readOnly = false*/) const override
         {
-            LogicError("DeepClone is currently unsupported for PackedValue objects");
+            if (m_isPacked)
+            {
+                std::shared_ptr<Microsoft::MSR::CNTK::MBLayout> packedLayoutCopy;
+                if (m_packedDataLayout)
+                {
+                    packedLayoutCopy = std::make_shared<Microsoft::MSR::CNTK::MBLayout>();
+                    packedLayoutCopy->CopyFrom(m_packedDataLayout);
+                }
+                return MakeSharedObject<PackedValue>(m_sampleShape, m_packedData->DeepClone(), packedLayoutCopy, m_isReadOnly);
+            }
+            else
+                return Value::DeepClone();
         }
 
         ValuePtr Alias(bool /*readOnly = false*/) const override
@@ -71,6 +94,16 @@ namespace CNTK
                 InvalidArgument("PackedValue::PackedData called on a Value object that has already been unpacked");
 
             return { m_packedData->GetMatrix<ElementType>(), m_packedDataLayout };
+        }
+
+    private:
+        PackedValue(const NDShape& sampleShape, const NDArrayViewPtr& packedData, const std::shared_ptr<Microsoft::MSR::CNTK::MBLayout>& packedDataLayout, bool isReadOnly)
+            : Value(nullptr), m_isPacked(true), m_sampleShape(sampleShape), m_packedData(packedData), m_packedDataLayout(packedDataLayout), m_isReadOnly(isReadOnly)
+        {
+            // Determine unpacked shape
+            m_unpackedShape = sampleShape;
+            if (packedDataLayout)
+                m_unpackedShape = m_unpackedShape.AppendShape({ packedDataLayout->GetNumTimeSteps(), packedDataLayout->GetNumSequences() });
         }
 
     private:

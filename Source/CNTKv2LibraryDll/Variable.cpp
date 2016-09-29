@@ -78,10 +78,13 @@ namespace CNTK
         assert(!m_valueInitializer);
         assert(!m_valueInitializationDevice);
 
-        auto filterRank = (int)initializationConfig[FilterRankAttributeName].Value<size_t>();
-        auto outputRank = (int)initializationConfig[OutputRankAttributeName].Value<size_t>();
-        if ((filterRank + outputRank) > m_shape.Rank())
-            InvalidArgument("Sum of filter rank (%d) and output rank (%d) of the parameter initializer cannot exceed the Parameter's rank", filterRank, outputRank, (int)m_shape.Rank());
+        if (initializationConfig.Contains(FilterRankAttributeName))
+        {
+            auto filterRank = (int)initializationConfig[FilterRankAttributeName].Value<size_t>();
+            auto outputRank = (int)initializationConfig[OutputRankAttributeName].Value<size_t>();
+            if ((filterRank + outputRank) > m_shape.Rank())
+                InvalidArgument("Sum of filter rank (%d) and output rank (%d) of the parameter initializer cannot exceed the Parameter's rank(%d)", filterRank, outputRank, (int)m_shape.Rank());
+        }
 
         m_valueInitializer.reset(new ParameterInitializer(initializationConfig));
         m_valueInitializationDevice.reset(new DeviceDescriptor(device));

@@ -137,11 +137,11 @@ std::pair<CNTK::FunctionPtr, CNTK::FunctionPtr> LSTMPCellWithSelfStabilization(C
 
     unsigned long seed = 1;
     auto createProjectionParam = [device, &seed](size_t outputDim, size_t inputDim) {
-        return CNTK::Parameter({ outputDim, inputDim }, AsDataType<ElementType>(), UniformInitializer(1, seed++), device);
+        return CNTK::Parameter({ outputDim, inputDim }, CNTK::AsDataType<ElementType>(), CNTK::UniformInitializer(1, seed++), device);
     };
 
     auto createDiagWeightParam = [device, &seed](size_t dim) {
-        return CNTK::Parameter({ dim }, AsDataType<ElementType>(), UniformInitializer(1, seed++), device);
+        return CNTK::Parameter({ dim }, CNTK::AsDataType<ElementType>(), CNTK::UniformInitializer(1, seed++), device);
     };
 
     auto stabilizedPrevOutput = Stabilize<ElementType>(prevOutput, device);
@@ -156,7 +156,7 @@ std::pair<CNTK::FunctionPtr, CNTK::FunctionPtr> LSTMPCellWithSelfStabilization(C
     auto bit = CNTK::ElementTimes(it, CNTK::Tanh(projectInput() + CNTK::Times(createProjectionParam(cellDim, outputDim), stabilizedPrevOutput)));
 
     // Forget-me-not gate
-    auto ft = CNTK::Sigmoid(projectInput() + CNTK::Times(createProjectionParam(cellDim, outputDim), stabilizedPrevOutput) + ElementTimes(createDiagWeightParam(cellDim), stabilizedPrevCellState));
+    auto ft = CNTK::Sigmoid(projectInput() + CNTK::Times(createProjectionParam(cellDim, outputDim), stabilizedPrevOutput) + CNTK::ElementTimes(createDiagWeightParam(cellDim), stabilizedPrevCellState));
     auto bft = CNTK::ElementTimes(ft, prevCellState);
 
     auto ct = bft + bit;

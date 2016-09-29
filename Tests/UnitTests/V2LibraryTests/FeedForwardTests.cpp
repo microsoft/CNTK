@@ -36,8 +36,8 @@ void TestFeedForwardNetworkCreation(const DeviceDescriptor& device, bool testSav
     auto classifierOutput = FullyConnectedFeedForwardClassifierNet(inputVar, numOutputClasses, hiddenLayersDim, numHiddenLayers, device, std::bind(Sigmoid, _1, L""), L"classifierOutput");
 
     auto labelsVar = InputVariable({ numOutputClasses }, DataType::Float, L"Labels");
-    auto trainingLoss = CNTK::CrossEntropyWithSoftmax(classifierOutput, labelsVar, L"LossFunction");
-    auto prediction = CNTK::ClassificationError(classifierOutput, labelsVar, L"ClassificationError");
+    auto trainingLoss = ReduceSum(CNTK::CrossEntropyWithSoftmax(classifierOutput, labelsVar), L"LossFunction");
+    auto prediction = ReduceSum(CNTK::ClassificationError(classifierOutput, labelsVar), L"ClassificationError");
 
     auto ffNet = CNTK::Combine({ trainingLoss, prediction, classifierOutput }, L"ClassifierModel");
 

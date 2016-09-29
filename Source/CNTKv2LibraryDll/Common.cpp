@@ -8,6 +8,8 @@
 #include "BestGpu.h"
 #include <mutex>
 #include <algorithm>
+#include <CPUMatrix.h> // For CPUMatrix::SetNumThreads
+#include <thread>
 
 namespace CNTK
 {
@@ -165,5 +167,17 @@ namespace CNTK
     void Axis::RegisterAxisName(const std::wstring& axisName)
     {
         s_uniqueDynamicAxisNames.RegisterAxisName(axisName);
+    }
+
+    std::atomic<size_t> s_maxNumCPUThreads(std::thread::hardware_concurrency());
+    void SetMaxNumCPUThreads(size_t numCPUThreads)
+    {
+        s_maxNumCPUThreads.store(numCPUThreads);
+        Microsoft::MSR::CNTK::CPUMatrix<float>::SetNumThreads((int)numCPUThreads);
+    }
+
+    size_t GetMaxNumCPUThreads()
+    {
+        return s_maxNumCPUThreads.load();
     }
 }

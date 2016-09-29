@@ -1686,18 +1686,27 @@ namespace CNTK
         }
 
         ValuePtr nodeValue;
+        auto layout = computationNode->GetMBLayout();
         switch (var.GetDataType())
         {
         case DataType::Float:
-            nodeValue = GetValueObjectFromCNTKImplMatrixAndMBLayout<float>(var,
-                                                                           getGradient ? computationNode->As<ComputationNode<float>>()->Gradient() : computationNode->As<ComputationNode<float>>()->Value(),
-                                                                           computationNode->GetMBLayout());
+        {
+            auto& matrix = getGradient ? computationNode->As<ComputationNode<float>>()->Gradient() : computationNode->As<ComputationNode<float>>()->Value();
+            if (varValue == nullptr)
+                nodeValue = MakeSharedObject<PackedValue>(var.Shape(), std::make_shared<Matrix<float>>(matrix.AsReference()), layout, /*readOnly =*/ false);
+            else
+                nodeValue = GetValueObjectFromCNTKImplMatrixAndMBLayout<float>(var, matrix, layout);
             break;
+        }
         case DataType::Double:
-            nodeValue = GetValueObjectFromCNTKImplMatrixAndMBLayout<double>(var,
-                                                                            getGradient ? computationNode->As<ComputationNode<double>>()->Gradient() : computationNode->As<ComputationNode<double>>()->Value(),
-                                                                            computationNode->GetMBLayout());
+        {
+            auto& matrix = getGradient ? computationNode->As<ComputationNode<double>>()->Gradient() : computationNode->As<ComputationNode<double>>()->Value();
+            if (varValue == nullptr)
+                nodeValue = MakeSharedObject<PackedValue>(var.Shape(), std::make_shared<Matrix<double>>(matrix.AsReference()), layout, /*readOnly =*/ false);
+            else
+                nodeValue = GetValueObjectFromCNTKImplMatrixAndMBLayout<double>(var, matrix, layout);
             break;
+        }
         default:
             LogicError("Unsupported DataType %s", DataTypeName(var.GetDataType()));
             break;
@@ -2102,17 +2111,19 @@ namespace CNTK
 
     FunctionPtr SquaredError(const Variable& prediction, const Variable& targets, const std::wstring& name/* = L""*/)
     {
-        return BinaryOp(PrimitiveOpType::SquaredError, prediction, targets, Dictionary(), name);
+        auto difference = Minus(prediction, targets);
+        auto squaredDifference = ElementTimes(difference, difference);
+        return Internal::ReduceElements(squaredDifference, PrimitiveFunction::InternalSumReductionOpName, Axis::AllStaticAxes(), name);
     }
 
     FunctionPtr CrossEntropyWithSoftmax(const Variable& prediction, const Variable& labels, const std::wstring& name/* = L""*/)
     {
-        return ReduceSum(Minus(ReduceLogSum(prediction, Axis(0)), TransposeTimes(labels, prediction)), name);
+        return Minus(ReduceLogSum(prediction, Axis(0)), TransposeTimes(labels, prediction), name);
     }
 
     FunctionPtr ClassificationError(const Variable& prediction, const Variable& labels, const std::wstring& name/* = L""*/)
     {
-        return ReduceSum(Minus(Constant::Scalar(prediction.GetDataType(), 1.0), TransposeTimes(labels, Hardmax(prediction))), name);
+        return Minus(Constant::Scalar(prediction.GetDataType(), 1.0), TransposeTimes(labels, Hardmax(prediction)), name);
     }
 
     FunctionPtr PastValue(const Variable& operand, const Variable& initialState, size_t offset, const std::wstring& name)
