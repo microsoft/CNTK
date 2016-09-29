@@ -456,6 +456,12 @@ GPUSparseMatrix<ElemType> GPUSparseMatrix<ElemType>::ColumnSlice(size_t startCol
     return a;
 }
 template <class ElemType>
+GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::AssignColumnSlice(const GPUSparseMatrix<ElemType>& fromMatrix, size_t startColumn, size_t numCols)
+{
+    return *this;
+}
+
+template <class ElemType>
 void GPUSparseMatrix<ElemType>::AssignColumnSliceToDense(GPUMatrix<ElemType>& slice, size_t startColumn, size_t numCols) const
 {
 }

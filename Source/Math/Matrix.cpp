@@ -766,10 +766,32 @@ Matrix<ElemType> Matrix<ElemType>::ColumnSlice(size_t startColumn, size_t numCol
     return slice;
 }
 
+template <>
+vector<shared_ptr<Matrix<float>>>& TemporaryMatrix::GetReleasedMatrices<float>()
+{
+    return m_releasedFloatMatrices;
+}
+
+template <>
+vector<shared_ptr<Matrix<double>>>& TemporaryMatrix::GetReleasedMatrices<double>()
+{
+    return m_releasedDoubleMatrices;
+}
+
+template<typename T>
+shared_ptr<TemporaryMatrix> Matrix<T>::m_tempMatrices = make_shared<TemporaryMatrix>();
+
+template <class ElemType>
+shared_ptr<Matrix<ElemType>> Matrix<ElemType>::ColumnSlicePtr(size_t startColumn, size_t numCols) const
+{
+    shared_ptr<Matrix<ElemType>> slice = m_tempMatrices->MatrixFromPool<ElemType>(m_preferredDeviceId);
+    slice->AssignColumnSlice(*this, startColumn, numCols);
+    return slice;
+}
+
 template <class ElemType>
 Matrix<ElemType>& Matrix<ElemType>::AssignColumnSlice(const Matrix<ElemType>& fromMatrix, size_t startColumn, size_t numCols)
 {
-    ReleaseMemory();
     m_preferredDeviceId = fromMatrix.m_preferredDeviceId;
 
     DISPATCH_MATRIX_ON_FLAG(&fromMatrix,
@@ -780,9 +802,11 @@ Matrix<ElemType>& Matrix<ElemType>::AssignColumnSlice(const Matrix<ElemType>& fr
                             if (m_GPUMatrix) m_GPUMatrix->AssignColumnSlice(*fromMatrix.m_GPUMatrix, startColumn, numCols);
                             else m_GPUMatrix = make_shared<GPUMatrix<ElemType>>(fromMatrix.m_GPUMatrix->ColumnSlice(startColumn, numCols)),
 
-                            NOT_IMPLEMENTED,
+                            if (m_CPUSparseMatrix) m_CPUSparseMatrix->AssignColumnSlice(*fromMatrix.m_CPUSparseMatrix, startColumn, numCols);
+                            else m_CPUSparseMatrix = make_shared<CPUSparseMatrix<ElemType>>(fromMatrix.m_CPUSparseMatrix->ColumnSlice(startColumn, numCols)),
 
-                            NOT_IMPLEMENTED);
+                            if (m_GPUSparseMatrix) m_GPUSparseMatrix->AssignColumnSlice(*fromMatrix.m_GPUSparseMatrix, startColumn, numCols);
+                            else m_GPUSparseMatrix = make_shared<GPUSparseMatrix<ElemType>>(fromMatrix.m_GPUSparseMatrix->ColumnSlice(startColumn, numCols)));
 
     return *this;
 }

@@ -578,9 +578,7 @@ GPUMatrix<ElemType> GPUMatrix<ElemType>::ColumnSlice(size_t startColumn, size_t 
 
     GPUMatrix<ElemType> slice(GetComputeDeviceId());
 
-    slice.ShallowCopyFrom(*this);
-    slice.m_numCols = numCols;
-    slice.m_sliceViewOffset = m_sliceViewOffset + startColumn * GetNumRows();
+    slice.AssignColumnSlice(*this, startColumn, numCols);
 
     return slice;
 }
@@ -593,8 +591,6 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignColumnSlice(const GPUMatrix<Elem
 
     if (startColumn + numCols > fromMatrix.GetNumCols())
         InvalidArgument("The slice (%d+%d) is out of range of the source matrix (%d).", (int) startColumn, (int) numCols, (int) fromMatrix.GetNumCols());
-
-    Clear();
 
     ShallowCopyFrom(fromMatrix);
     m_numCols = numCols;

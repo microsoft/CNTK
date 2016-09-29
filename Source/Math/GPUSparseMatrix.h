@@ -307,6 +307,7 @@ public:
     GPUSparseMatrix<ElemType>& AssignTransposeOf(const GPUSparseMatrix<ElemType>& a);
 
     GPUSparseMatrix<ElemType> ColumnSlice(size_t startColumn, size_t numCols) const;
+    GPUSparseMatrix<ElemType>& AssignColumnSlice(const GPUSparseMatrix<ElemType>& fromMatrix, size_t startColumn, size_t numCols);
     GPUMatrix<ElemType> CopyColumnSliceToDense(size_t startColumn, size_t numCols) const;
     void AssignColumnSliceToDense(GPUMatrix<ElemType>& slice, size_t startColumn, size_t numCols) const;
 
