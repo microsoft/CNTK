@@ -24,6 +24,7 @@ class Trainer(cntk_py.Trainer):
     def __init__(self, model, loss_function, eval_function, parameter_learners):
         if isinstance(model, cntk_py.Variable):
             model = model.owner
+        self.model = model
         if isinstance(loss_function, cntk_py.Variable):
             loss_function = loss_function.owner
         if isinstance(eval_function, cntk_py.Variable):
@@ -37,8 +38,10 @@ class Trainer(cntk_py.Trainer):
         Returns false if all parameter learners indicate end of learning (through their Update method's return value).
 
         Args:
-            arguments (dict): map from input variables to the data, data should be either numpy
-             arrays or cntk.Value instances returned by a minibatch source
+            arguments (`dict` or `list`): map from input variables to the data
+             or list of inputs in the order that the function expects. Data
+             should be either NumPy arrays or cntk.Value instances returned by a
+             minibatch source.
             device (:class:`cntk.DeviceDescriptor`): the device descriptor that
              contains the type and id of the device on which the computation is
              to be performed.
@@ -48,7 +51,7 @@ class Trainer(cntk_py.Trainer):
         '''
         if not device:
             device=DeviceDescriptor.use_default_device()        
-        arguments = sanitize_var_map(arguments, add_batch_axis=True)
+        arguments = sanitize_var_map(self.model.arguments(), arguments, add_batch_axis=True)
 
         return super(Trainer, self).train_minibatch(arguments, device)
 
@@ -59,8 +62,10 @@ class Trainer(cntk_py.Trainer):
         of samples.
 
         Args:
-            arguments (dict): map from input variables to the data, data should be either numpy
-             arrays or cntk.Value instances returned by a minibatch source
+            arguments (`dict` or `list`): map from input variables to the data
+             or list of inputs in the order that the function expects. Data
+             should be either NumPy arrays or cntk.Value instances returned by a
+             minibatch source.
             device (:class:`cntk.DeviceDescriptor`): the device descriptor that
              contains the type and id of the device on which the computation is
              to be performed.
@@ -70,7 +75,7 @@ class Trainer(cntk_py.Trainer):
         '''
         if not device:
             device=DeviceDescriptor.use_default_device()        
-        arguments = sanitize_var_map(arguments, add_batch_axis=True)
+        arguments = sanitize_var_map(self.model.arguments(), arguments, add_batch_axis=True)
 
         return super(Trainer, self).test_minibatch(arguments, device)
 
