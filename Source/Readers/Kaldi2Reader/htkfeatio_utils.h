@@ -39,13 +39,13 @@ inline std::string trimmed(std::string str)
     return str;
 } 
 
-static inline std::string removeExtension(std::string const &filename)
+inline std::string removeExtension(std::string const &filename)
 {
     size_t lastindex = filename.find_first_of(".");
     return filename.substr(0, lastindex);
 }
 
-static inline std::wstring removeExtension(std::wstring const &filename)
+inline std::wstring removeExtension(std::wstring const &filename)
 {
     size_t lastindex = filename.find_first_of(L".");
     return filename.substr(0, lastindex);
