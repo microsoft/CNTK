@@ -11,7 +11,7 @@ from cntk import Trainer, DeviceDescriptor
 from cntk.learner import sgd
 from cntk.ops import input_variable, constant, parameter, cross_entropy_with_softmax, combine, classification_error, times, pooling, AVG_POOLING
 from cntk.io import ReaderConfig, ImageDeserializer
-from cntk.initializer import glorot_uniform_initializer
+from cntk.initializer import glorot_uniform
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(abs_path, "..", ".."))
@@ -94,7 +94,7 @@ def resnet_classifer(input, num_classes):
     poolv_stride = 1
 
     pool = pooling(rn3_3, AVG_POOLING, (1, poolh, poolw), (1, poolv_stride, poolh_stride))
-    out_times_params = parameter(shape=(c_map3, 1, 1, num_classes), initializer=glorot_uniform_initializer())
+    out_times_params = parameter(shape=(c_map3, 1, 1, num_classes), initializer=glorot_uniform())
     out_bias_params = parameter(shape=(num_classes), value=0)
     t = times(pool, out_times_params)
     return t + out_bias_params

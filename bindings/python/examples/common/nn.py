@@ -9,7 +9,7 @@ import sys
 import os
 from cntk.ops import *
 from cntk.utils import sanitize_dtype_cntk, get_train_eval_criterion, get_train_loss
-from cntk.initializer import glorot_uniform_initializer
+from cntk.initializer import glorot_uniform
 
 def linear_layer(input_var, output_dim):
     try:
@@ -19,7 +19,7 @@ def linear_layer(input_var, output_dim):
         shape = input_var.shape()
 
     input_dim = shape[0]
-    times_param = parameter(shape=(input_dim, output_dim), initializer=glorot_uniform_initializer())
+    times_param = parameter(shape=(input_dim, output_dim), initializer=glorot_uniform())
     bias_param = parameter(shape=(output_dim), value=0)
 
     t = times(input_var, times_param)
@@ -45,7 +45,7 @@ def conv_bn_layer(input, out_feature_map_count, kernel_width, kernel_height, h_s
         shape = input_var.shape()
     num_in_channels = shape[0]
     #TODO: use RandomNormal to initialize, needs to be exposed in the python api
-    conv_params = parameter(shape=(num_in_channels, kernel_height, kernel_width, out_feature_map_count), initializer=glorot_uniform_initializer(output_rank=-1, filter_rank=2))
+    conv_params = parameter(shape=(num_in_channels, kernel_height, kernel_width, out_feature_map_count), initializer=glorot_uniform(output_rank=-1, filter_rank=2))
     conv_func = convolution(conv_params, input, (num_in_channels, v_stride, h_stride))
 
     #TODO: initialize using b_value and sc_value, needs to be exposed in the python api
@@ -92,7 +92,7 @@ def resnet_node2_inc(input, out_feature_map_count, kernel_width, kernel_height, 
 def embedding(input, embedding_dim):
     input_dim = input.shape()[0];
 
-    embedding_parameters = parameter(shape=(input_dim, embedding_dim), initializer=glorot_uniform_initializer())
+    embedding_parameters = parameter(shape=(input_dim, embedding_dim), initializer=glorot_uniform())
     return times(input, embedding_parameters)
 
 def select_last(operand):
@@ -111,28 +111,28 @@ def LSTMP_cell_with_self_stabilization(input, prev_output, prev_cell_state):
     output_dim = prev_output.shape()[0];
     cell_dim = prev_cell_state.shape()[0];
 
-    Wxo = parameter(shape=(input_dim, cell_dim), initializer=glorot_uniform_initializer())
-    Wxi = parameter(shape=(input_dim, cell_dim), initializer=glorot_uniform_initializer())
-    Wxf = parameter(shape=(input_dim, cell_dim), initializer=glorot_uniform_initializer())
-    Wxc = parameter(shape=(input_dim, cell_dim), initializer=glorot_uniform_initializer())
+    Wxo = parameter(shape=(input_dim, cell_dim), initializer=glorot_uniform())
+    Wxi = parameter(shape=(input_dim, cell_dim), initializer=glorot_uniform())
+    Wxf = parameter(shape=(input_dim, cell_dim), initializer=glorot_uniform())
+    Wxc = parameter(shape=(input_dim, cell_dim), initializer=glorot_uniform())
 
     Bo = parameter(shape=(cell_dim), value=0)
     Bc = parameter(shape=(cell_dim), value=0)
     Bi = parameter(shape=(cell_dim), value=0)
     Bf = parameter(shape=(cell_dim), value=0)
 
-    Whi = parameter(shape=(output_dim, cell_dim), initializer=glorot_uniform_initializer())
-    Wci = parameter(shape=(cell_dim), initializer=glorot_uniform_initializer())
+    Whi = parameter(shape=(output_dim, cell_dim), initializer=glorot_uniform())
+    Wci = parameter(shape=(cell_dim), initializer=glorot_uniform())
 
-    Whf = parameter(shape=(output_dim, cell_dim), initializer=glorot_uniform_initializer())
-    Wcf = parameter(shape=(cell_dim), initializer=glorot_uniform_initializer())
+    Whf = parameter(shape=(output_dim, cell_dim), initializer=glorot_uniform())
+    Wcf = parameter(shape=(cell_dim), initializer=glorot_uniform())
 
-    Who = parameter(shape=(output_dim, cell_dim), initializer=glorot_uniform_initializer())
-    Wco = parameter(shape=(cell_dim), initializer=glorot_uniform_initializer())
+    Who = parameter(shape=(output_dim, cell_dim), initializer=glorot_uniform())
+    Wco = parameter(shape=(cell_dim), initializer=glorot_uniform())
 
-    Whc = parameter(shape=(output_dim, cell_dim), initializer=glorot_uniform_initializer())
+    Whc = parameter(shape=(output_dim, cell_dim), initializer=glorot_uniform())
 
-    Wmr = parameter(shape=(cell_dim, output_dim), initializer=glorot_uniform_initializer())
+    Wmr = parameter(shape=(cell_dim, output_dim), initializer=glorot_uniform())
 
     # Stabilization by routing input through an extra scalar parameter
     sWxo = parameter(value=0)

@@ -363,7 +363,7 @@ def sanitize_batch(batch, data_type=None, device=None):
         from cntk.cntk_py import NDMask
         mask = NDMask((max(seq_lens), num_seq), device)
         for idx, seq_len in enumerate(seq_lens):
-            mask.mask_section((seq_len, idx), (cntk_py.InferredDimension, 1)) 
+            mask.invalidate_section((seq_len, idx), (cntk_py.InferredDimension, 1)) 
 
         # Then we pad the batch to rectangular shape
         if isinstance(batch, list):
