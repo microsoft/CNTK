@@ -7,7 +7,7 @@
 #define _SCL_SECURE_NO_WARNINGS
 
 #include "PackerBase.h"
-#include "ElementTypeUtils.h"
+#include "ReaderUtil.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
