@@ -422,6 +422,8 @@ CNTKLIBRARY_TESTS_SRC =\
 	Tests/UnitTests/V2LibraryTests/FunctionTests.cpp \
 	Tests/UnitTests/V2LibraryTests/SequenceClassification.cpp \
 	Tests/UnitTests/V2LibraryTests/Seq2Seq.cpp \
+	Tests/UnitTests/V2LibraryTests/TruncatedLSTMAcousticModel.cpp \
+	Tests/UnitTests/V2LibraryTests/DeviceSelectionTests.cpp \
 	Examples/Evaluation/CPPEvalV2Client/EvalMultithreads.cpp \
 
 CNTKLIBRARY_TESTS:=$(BINDIR)/v2librarytests

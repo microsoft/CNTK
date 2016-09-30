@@ -161,7 +161,7 @@ void TrainResNetCifarClassifer(const DeviceDescriptor& device, bool testSaveAndR
     }
 }
 
-void TestCifarResnet()
+void TrainCifarResnet()
 {
 #ifndef CPUONLY
     TrainResNetCifarClassifer(DeviceDescriptor::GPUDevice(0), true /*testSaveAndReLoad*/);
