@@ -196,22 +196,17 @@ __global__ void kMaxPoolingBackward(int batchSize, const ElemType* out, const El
         int i0 = mpRowIndices[row];
         int size = indices[i0++];
         assert(size > 0);
+        ElemType g = srcGrad[row];
         ElemType m = out[row];
-        ElemType count = 0; 
         for (int i = 0; i < size; i++)
         {
             int dcol = indices[i0 + i];
             assert(0 <= colBase + dcol && colBase + dcol < dstVecSize);
             if (in[colBase + dcol] >= m)
-                count += ElemType(1); 
-        }
-        assert(count > 0); 
-        ElemType g = srcGrad[row] / count;
-        for (int i = 0; i < size; i++)
-        {
-            int dcol = indices[i0 + i];
-            if (in[colBase + dcol] >= m)
+            {
                 atomicAdd(&grad[colBase + dcol], g);
+                break;
+            }
         }
 
         in += blockDim.y * dstVecSize;
