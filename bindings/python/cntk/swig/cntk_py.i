@@ -522,7 +522,6 @@ def dynamic_axes(self):
         std::vector<CNTK::DictionaryValue>* vec = new std::vector<CNTK::DictionaryValue>();
 
         PyObject *item;
-        Py_ssize_t pos = 0;
 
         PyObject *iterator = PyObject_GetIter($input);
         if (iterator == NULL) {
@@ -577,7 +576,6 @@ def dynamic_axes(self):
         std::unordered_set<CNTK::Variable>* args_set = new std::unordered_set<CNTK::Variable>();
 
         PyObject *item;
-        Py_ssize_t pos = 0;
 
         PyObject *iterator = PyObject_GetIter($input);
         if (iterator == NULL) {
@@ -628,7 +626,6 @@ def dynamic_axes(self):
         std::unordered_set<CNTK::StreamInformation>* args_set = new std::unordered_set<CNTK::StreamInformation>();
 
         PyObject *item;
-        Py_ssize_t pos = 0;
 
         PyObject *iterator = PyObject_GetIter($input);
         if (iterator == NULL) {
@@ -679,7 +676,6 @@ def dynamic_axes(self):
         std::unordered_set<CNTK::Parameter>* args_set = new std::unordered_set<CNTK::Parameter>();
 
         PyObject *item;
-        Py_ssize_t pos = 0;
 
         PyObject *iterator = PyObject_GetIter($input);
         if (iterator == NULL) {
@@ -731,7 +727,6 @@ def dynamic_axes(self):
         std::unordered_set<CNTK::LearnerPtr>* args_set = new std::unordered_set<CNTK::LearnerPtr>();
 
         PyObject *item;
-        Py_ssize_t pos = 0;
 
         PyObject *iterator = PyObject_GetIter($input);
         if (iterator == NULL) {
@@ -828,7 +823,7 @@ def dynamic_axes(self):
 %define %unordered_set_conversion(DATA_TYPE, _SWIG_TYPE)
 
 %typemap(out) std::unordered_set<CNTK::DATA_TYPE> {
-    PyObject* container = PyList_New(NULL);
+    PyObject* container = PyList_New((*&$1)->size());
     if (container == NULL)
     {
         SWIG_exception(SWIG_RuntimeError, "error passing set to Python");
@@ -857,7 +852,7 @@ def dynamic_axes(self):
 %define %unordered_set_ref_conversion(DATA_TYPE, _SWIG_TYPE)
 
 %typemap(out) std::unordered_set<CNTK::DATA_TYPE>& {
-    PyObject* container = PyList_New(NULL);
+    PyObject* container = PyList_New((*&$1)->size());
     if (container == NULL)
     {
         SWIG_exception(SWIG_RuntimeError, "error passing set to Python");
