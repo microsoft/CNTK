@@ -37,11 +37,41 @@ def learning_rates_per_sample(lr, units=1):
 
     return cntk_py.learning_rates_per_sample(lr, units)
 
+def momentums_per_sample(momentums, units=1):
+    '''
+    Create a momentums schedule.
+
+    Examples:
+        >>> # Use the learning rate 0.7 for all samples
+        >>> lr = momentums_per_sample(0.7)
+        >>> [lr[i] for i in [0,1,2,3]]
+        [0.7, 0.7, 0.7, 0.7]
+
+        >>> # Use the learning rate 0.7 for the first 3 samples, then 0.3 for the remaining ones
+        >>> lr = momentums_per_sample([0.7,0.3], 3)
+        >>> [lr[i] for i in range(10)]
+        [0.7, 0.7, 0.7, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3]
+
+    Args:
+        momentums (`float` or `list`): if `float`, it is the momentum to be used
+         for all samples. In case of list, the elements are used as the
+         momentums for `units` samples.
+        units (`int`): unit for the momentums to have effect
+
+    Returns:
+        schedule for momentums per sample
+    '''
+    if isinstance(momentums, float):
+        return cntk_py.momentums_per_sample(momentums)
+    
+    if not isinstance(momentums, list):
+        raise ValueError('momentum must be either a float or a list')
+
+    return cntk_py.momentums_per_sample(momentums, units)
+
 
 # TODO figure out how to pass infty to C++ in a portable way
-def sgd(parameters, lr, 
-        clipping_threshold_per_sample=1E10,
-        gradient_clipping_with_truncation=True):
+def sgd(parameters, lr, clipping_threshold_per_sample=1E10, gradient_clipping_with_truncation=True):
     '''
     Creates an SGD learner instance to learn the parameters.
 
@@ -65,9 +95,7 @@ def sgd(parameters, lr,
     return cntk_py.sgd_learner(parameters, lr, clipping_threshold_per_sample,
             gradient_clipping_with_truncation)
 
-def momentum_sgd(parameters, lr, momentums,
-        clipping_threshold_per_sample=1E10,
-        gradient_clipping_with_truncation=True):
+def momentum_sgd(parameters, lr, momentums, clipping_threshold_per_sample=1E10, gradient_clipping_with_truncation=True):
     '''
     Creates a Momemtum SGD learner instance to learn the parameters.
 
@@ -76,7 +104,7 @@ def momentum_sgd(parameters, lr, momentums,
          These can be obtained by the '.parameters()' function of 
         lr ('float' or list of `float`s or output of `:func:learning_rates_per_sample`): learning
          rates per sample.  
-        momentums (instance of `MomentumsPerSample`): momentum values per sample.
+        momentums (`float` or output of `:func:momentums_per_sample`): momentum values per sample.
          Refer to https://github.com/Microsoft/CNTK/wiki/SGD-block#converting-learning-rate-and-momentum-parameters-from-other-toolkits
         clipping threshold per sample ('float', optional): clipping threshold
          per sample, defaults to infinity
@@ -88,12 +116,13 @@ def momentum_sgd(parameters, lr, momentums,
     if type(lr) == float:
         lr = learning_rates_per_sample(lr)
 
+    if type(momentums) == float:
+        momentums = momentums_per_sample(momentums)
+
     return cntk_py.momentum_sgd_learner(parameters, lr, momentums,
             clipping_threshold_per_sample, gradient_clipping_with_truncation)
 
-def nesterov(parameters, lr, momentums,
-        clipping_threshold_per_sample=1E10,
-        gradient_clipping_with_truncation=True):
+def nesterov(parameters, lr, momentums, clipping_threshold_per_sample=1E10, gradient_clipping_with_truncation=True):
     '''
     Creates a Nesterov SGD learner instance to learn the parameters.
 
@@ -102,7 +131,7 @@ def nesterov(parameters, lr, momentums,
          These can be obtained by the '.parameters()' function of 
         lr ('float' or list of `float`s or output of `:func:learning_rates_per_sample`): learning
          rates per sample.  
-        momentums (instance of `MomentumsPerSample`): momentum values per sample.
+        momentums (`float` or output of `:func:momentums_per_sample`): momentum values per sample.
          Refer to https://github.com/Microsoft/CNTK/wiki/SGD-block#converting-learning-rate-and-momentum-parameters-from-other-toolkits
         clipping threshold per sample ('float', optional): clipping threshold
          per sample, defaults to infinity
@@ -114,14 +143,14 @@ def nesterov(parameters, lr, momentums,
     if type(lr) == float:
         lr = learning_rates_per_sample(lr)
 
+    if type(momentums) == float:
+        momentums = momentums_per_sample(momentums)
+
     return cntk_py.nesterov_learner(parameters, lr, momentums,
             clipping_threshold_per_sample, gradient_clipping_with_truncation)
 
 
-def adagrad(parameters, lr, 
-        need_ave_multiplier=True,
-        clipping_threshold_per_sample=1E10,
-        gradient_clipping_with_truncation=True):
+def adagrad(parameters, lr, need_ave_multiplier=True, clipping_threshold_per_sample=1E10, gradient_clipping_with_truncation=True):
     '''
     Creates an AdaGrad learner instance to learn the parameters.
 
@@ -156,7 +185,7 @@ def fsadagrad(parameters, lr, momentums,
          These can be obtained by the '.parameters()' function of 
         lr ('float' or list of `float`s or output of `:func:learning_rates_per_sample`): learning
          rates per sample.  
-        momentums (instance of `MomentumsPerSample`): momentum values per sample.
+        momentums (`float` or output of `:func:momentums_per_sample`): momentum values per sample.
          Refer to https://github.com/Microsoft/CNTK/wiki/SGD-block#converting-learning-rate-and-momentum-parameters-from-other-toolkits
         clipping threshold per sample ('float', optional): clipping threshold
          per sample, defaults to infinity
@@ -167,6 +196,9 @@ def fsadagrad(parameters, lr, momentums,
     '''
     if type(lr) == float:
         lr = learning_rates_per_sample(lr)
+
+    if type(momentums) == float:
+        momentums = momentums_per_sample(momentums)
 
     return cntk_py.fsada_grad_learner(parameters, lr, momentums,
             clipping_threshold_per_sample, gradient_clipping_with_truncation)

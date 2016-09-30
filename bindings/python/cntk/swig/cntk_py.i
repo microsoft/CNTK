@@ -1109,8 +1109,12 @@ def dynamic_axes(self):
 %template(random_uniform_double) CNTK::NDArrayView::RandomUniform<double>;
 %template(DictionaryValueFromDict) CNTK::DictionaryValue::DictionaryValue<CNTK::Dictionary>;
 
-%template(learning_rates_per_sample) CNTK::TrainingParameterSchedule<double>;
-%template(momentums_per_sample) CNTK::TrainingParameterSchedule<double>;
+%template(training_param_schedule_double) CNTK::TrainingParameterSchedule<double>;
+
+%pythoncode %{
+learning_rates_per_sample = training_param_schedule_double
+momentums_per_sample = training_param_schedule_double
+%}
         
 // end of NDArrayView
 

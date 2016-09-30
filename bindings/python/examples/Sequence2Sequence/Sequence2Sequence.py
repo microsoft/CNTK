@@ -9,8 +9,8 @@ import sys
 import os
 import math
 import time
-from cntk import momentums_per_sample, DeviceDescriptor, Trainer, Axis, text_format_minibatch_source, StreamConfiguration
-from cntk.learner import momentum_sgd
+from cntk import DeviceDescriptor, Trainer, Axis, text_format_minibatch_source, StreamConfiguration
+from cntk.learner import momentums_per_sample, momentum_sgd
 from cntk.ops import input_variable, cross_entropy_with_softmax, classification_error, sequence, slice, past_value, future_value, element_select
 
 abs_path = os.path.dirname(os.path.abspath(__file__))

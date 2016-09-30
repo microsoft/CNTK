@@ -6,20 +6,23 @@
 
 import math
 from ..learner import *
-from .. import parameter, input_variable, momentums_per_sample
+from .. import parameter, input_variable
 
 import pytest
 
-LR_PARAMS = [
+SCHEDULE_PARAMS = [
         ((0.2,), [0.2]),
         ((0.2,), [0.2, 0.2, 0.2, 0.2]),
         (([0.2,0.4], 5), [0.2]*5+[0.4]*20),
-        # TODO does not work yet
-        # (([(1,0.2),(2,0.4),(1,0.3)], 5), [0.2]*5+[0.3]*10+[0.5]*30)
         ]
-@pytest.mark.parametrize("params, expectation", LR_PARAMS)
+@pytest.mark.parametrize("params, expectation", SCHEDULE_PARAMS)
 def test_learning_rates_per_sample(params, expectation):
     l = learning_rates_per_sample(*params)
+    assert [l[i] for i in range(len(expectation))] == expectation
+
+@pytest.mark.parametrize("params, expectation", SCHEDULE_PARAMS)
+def test_momentums_per_sample(params, expectation):
+    l = momentums_per_sample(*params)
     assert [l[i] for i in range(len(expectation))] == expectation
 
 def test_learner_init():
