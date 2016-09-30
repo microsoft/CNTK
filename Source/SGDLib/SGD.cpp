@@ -728,11 +728,16 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
             }
             else
             {
-                SaveCheckPointInfo(i, totalTrainingSamplesSeen, learnRatePerSample, smoothedGradients, smoothedCounts, prevCriterion, chosenMinibatchSize);
                 auto modelName = GetModelNameForEpoch(i);
+
+                LOGPRINTF(stderr, "SGD: Prior to SaveCheckPointInfo '%ls'\n", modelName.c_str());
+                SaveCheckPointInfo(i, totalTrainingSamplesSeen, learnRatePerSample, smoothedGradients, smoothedCounts, prevCriterion, chosenMinibatchSize);
+                LOGPRINTF(stderr, "SGD: After SaveCheckPointInfo '%ls'\n", modelName.c_str());
+                
                 if (m_traceLevel > 0)
                     LOGPRINTF(stderr, "SGD: Saving checkpoint model '%ls'\n", modelName.c_str());
                 net->Save(modelName);
+                LOGPRINTF(stderr, "SGD: After Save '%ls'\n", modelName.c_str());
                 if (!m_keepCheckPointFiles)
                 {
                     // delete previous checkpoint file to save space

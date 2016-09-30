@@ -26,6 +26,8 @@
 #include <stack>
 #include <list>
 #include <set>
+#include "ProgressTracing.h"
+
 
 using namespace std;
 
@@ -95,25 +97,35 @@ void ComputationNetwork::SaveEdited(const wstring& fileName, const FileOptions f
 void ComputationNetwork::Save(const wstring& fileName, const FileOptions fileFormat) const
 {
     VerifyIsCompiled("Save");
+    LOGPRINTF(stderr, "ComputationNetwork: Inside Save '%ls'\n", fileName.c_str());
     // Saving into temporary file and then renaming it to the requested fileName
     // This is a standard trick to avoid havign corrupted model files if process dies during writing
     wstring tmpFileName = fileName + L".tmp";
     SaveToFileImpl(tmpFileName, fileFormat);
+
+    LOGPRINTF(stderr, "ComputationNetwork: Before Rename '%ls'\n", fileName.c_str());
     renameOrDie(tmpFileName, fileName);
+
+    LOGPRINTF(stderr, "ComputationNetwork: After Rename '%ls'\n", fileName.c_str());
 }
 
 // TODO: how does the file distinguish float vs double nodes?
 void ComputationNetwork::SaveToFileImpl(const wstring& fileName, const FileOptions fileFormat) const
 {
+    LOGPRINTF(stderr, "ComputationNetwork: SaveToFileImpl 1 '%ls'\n", fileName.c_str());
     File fstream(fileName, fileFormat | FileOptions::fileOptionsWrite);
     fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BCN");
-
+    LOGPRINTF(stderr, "ComputationNetwork: SaveToFileImpl 2 '%ls'\n", fileName.c_str());
     // model version
     fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BVersion");
     fstream << (size_t) CURRENT_CNTK_MODEL_VERSION;
     fstream.PutMarker(FileMarker::fileMarkerEndSection, L"EVersion");
 
+    LOGPRINTF(stderr, "ComputationNetwork: SaveToFileImpl 3 '%ls'\n", fileName.c_str());
+
     fstream << (size_t) m_nameToNodeMap.size();
+
+    LOGPRINTF(stderr, "ComputationNetwork: SaveToFileImpl 4 '%ls'\n", fileName.c_str());
 
     // put all node info first
     fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BNodeList");
@@ -135,6 +147,7 @@ void ComputationNetwork::SaveToFileImpl(const wstring& fileName, const FileOptio
         fstream << nodePtr->NodeName();
         // content
         nodePtr->Save(fstream);
+        LOGPRINTF(stderr, "ComputationNetwork: SaveToFileImpl Node '%ls'\n", nodePtr->NodeName().c_str());
     }
 
     fstream.PutMarker(FileMarker::fileMarkerEndSection, L"ENodeList");
@@ -152,6 +165,8 @@ void ComputationNetwork::SaveToFileImpl(const wstring& fileName, const FileOptio
             else
                 fstream << nodePtr->Input(i)->NodeName();
         }
+
+        LOGPRINTF(stderr, "ComputationNetwork: SaveToFileImpl Node Relation '%ls'\n", nodePtr->NodeName().c_str());
     }
     fstream.PutMarker(FileMarker::fileMarkerEndSection, L"ERelation");
 
@@ -162,6 +177,8 @@ void ComputationNetwork::SaveToFileImpl(const wstring& fileName, const FileOptio
     for (size_t i = 0; i < m_featureNodes.size(); i++)
         fstream << m_featureNodes[i]->NodeName();
     fstream.PutMarker(FileMarker::fileMarkerEndSection, L"EFeatureNodes");
+
+    LOGPRINTF(stderr, "ComputationNetwork: SaveToFileImpl 4 '%ls'\n", fileName.c_str());
 
     fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BLabelNodes");
     fstream << m_labelNodes.size();
@@ -175,17 +192,23 @@ void ComputationNetwork::SaveToFileImpl(const wstring& fileName, const FileOptio
         fstream << m_criterionNodes[i]->NodeName();
     fstream.PutMarker(FileMarker::fileMarkerEndSection, L"ECriterionNodes");
 
+    LOGPRINTF(stderr, "ComputationNetwork: SaveToFileImpl 5 '%ls'\n", fileName.c_str());
+
     fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BEvalNodes");
     fstream << m_evaluationNodes.size();
     for (size_t i = 0; i < m_evaluationNodes.size(); i++)
         fstream << m_evaluationNodes[i]->NodeName();
     fstream.PutMarker(FileMarker::fileMarkerEndSection, L"EEvalNodes");
 
+    LOGPRINTF(stderr, "ComputationNetwork: SaveToFileImpl 6 '%ls'\n", fileName.c_str());
+
     fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BOutputNodes");
     fstream << m_outputNodes.size();
     for (size_t i = 0; i < m_outputNodes.size(); i++)
         fstream << m_outputNodes[i]->NodeName();
     fstream.PutMarker(FileMarker::fileMarkerEndSection, L"EOutputNodes");
+
+    LOGPRINTF(stderr, "ComputationNetwork: SaveToFileImpl 7 '%ls'\n", fileName.c_str());
 
     fstream.PutMarker(FileMarker::fileMarkerEndSection, L"ERootNodes");
 
