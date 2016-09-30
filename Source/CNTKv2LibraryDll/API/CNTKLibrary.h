@@ -208,21 +208,21 @@ namespace CNTK
         NDShape() {}
 
         ///
-        /// Contruct a NDShape instance with the specified rank and dimensionality in each axis.
+        /// Construct a NDShape instance with the specified rank and dimensionality in each axis.
         ///
         explicit NDShape(size_t numAxes, size_t dimension = InferredDimension)
             : m_shapeDims(numAxes, dimension)
         {}
 
         ///
-        /// Contruct a NDShape instance with specified dimensions.
+        /// Construct a NDShape instance with specified dimensions.
         ///
         NDShape(const std::vector<size_t>& dimensions)
             : m_shapeDims(dimensions)
         {}
 
         ///
-        /// Contruct a NDShape instance with specified dimensions.
+        /// Construct a NDShape instance with specified dimensions.
         ///
         NDShape(const std::initializer_list<size_t>& dimensions)
             : m_shapeDims(dimensions)
@@ -1844,7 +1844,7 @@ namespace CNTK
 
     public:
         ///
-        /// Contruct a Constant whose initial contents are a copy of the specified value
+        /// Construct a Constant whose initial contents are a copy of the specified value
         ///
         Constant(const NDArrayViewPtr& value, const std::wstring& name = L"")
             : Constant(value, name, Internal::GenerateUid(VariableKind::Constant))

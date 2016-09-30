@@ -1281,7 +1281,7 @@ namespace CNTK
         size_t maxNumTimeSteps, numSequences;
         std::tie(maxNumTimeSteps, numSequences) = getNumTimeStepsAndSequencesFunc(valueShape.SubShape(varShape.Rank()));
 
-        auto getSequenceStartsAndLengthsFunc = [&getNumTimeStepsAndSequencesFunc](const NDMaskPtr& mask, std::vector<int>& sequenceBeginIndices, std::vector<size_t>& sequenceLengths) {
+        auto getSequenceStartsAndLengthsFunc = [&getNumTimeStepsAndSequencesFunc](const NDMaskPtr& mask, std::vector<ptrdiff_t>& sequenceBeginIndices, std::vector<size_t>& sequenceLengths) {
             auto cpuMask = mask;
             if (mask->Device() != DeviceDescriptor::CPUDevice())
                 cpuMask = mask->DeepClone(DeviceDescriptor::CPUDevice());
@@ -1296,7 +1296,7 @@ namespace CNTK
                 if (firstMaskEntry == MaskKind::SequenceBegin)
                     sequenceBeginIndices[i] = 0;
                 else if (firstMaskEntry == MaskKind::Valid)
-                    sequenceBeginIndices[i] = std::numeric_limits<int>::min();
+                    sequenceBeginIndices[i] = Microsoft::MSR::CNTK::SentinelValueIndicatingUnspecifedSequenceBeginIdx;
                 else
                     LogicError("The first entry of a mask should be Valid or SequenceBegin");
 
@@ -1338,7 +1338,7 @@ namespace CNTK
             {
                 layout->Init(numSequences, maxNumTimeSteps);
 
-                std::vector<int> sequenceBeginIndices(numSequences, 0);
+                std::vector<ptrdiff_t> sequenceBeginIndices(numSequences, 0);
                 std::vector<size_t> sequenceLengths(numSequences, maxNumTimeSteps);
                 getSequenceStartsAndLengthsFunc(mask, sequenceBeginIndices, sequenceLengths);
 
@@ -1350,7 +1350,7 @@ namespace CNTK
         }
         else
         {
-            std::vector<int> sequenceBeginIndices(numSequences, 0);
+            std::vector<ptrdiff_t> sequenceBeginIndices(numSequences, 0);
             std::vector<size_t> sequenceLengths(numSequences, maxNumTimeSteps);
             if (mask != nullptr)
                 getSequenceStartsAndLengthsFunc(mask, sequenceBeginIndices, sequenceLengths);
@@ -1748,6 +1748,20 @@ namespace CNTK
         }
     }
 
+    const std::vector<Variable>& CompositeFunction::GetArgumentDependencies(const Variable& output)
+    {
+        assert(output.IsOutput());
+
+        auto iter = m_perOutputVarArgumentDependencies.find(output);
+        if (iter != m_perOutputVarArgumentDependencies.end())
+            return iter->second;
+
+        auto wrappedComposite = CompositeFunction::Create(output.Owner());
+        m_perOutputVarArgumentDependencies[output] = wrappedComposite->Arguments();
+
+        return m_perOutputVarArgumentDependencies[output];
+    }
+
     /*virtual*/ BackPropStatePtr CompositeFunction::Forward(const std::unordered_map<Variable, ValuePtr>& arguments,
                                                             std::unordered_map<Variable, ValuePtr>& outputs,
                                                             const DeviceDescriptor& computeDevice,
@@ -1784,7 +1798,30 @@ namespace CNTK
         else
             InvalidArgument("Unsupported DataType %s", DataTypeName(dataType));
 
+        std::unordered_set<Variable> functionOutputs(this->Outputs().begin(), this->Outputs().end());
+        std::vector<ComputationNodeBasePtr> outputsToEvaluate;
+        std::unordered_set<Variable> requiredArguments;
+        for (auto outputVarValuePair : outputs)
+        {
+            // Ensure that only a subset of this function's outputs are being asked to be evaluated
+            if (functionOutputs.find(outputVarValuePair.first) == functionOutputs.end())
+                InvalidArgument("Requested output is not an Ouptut of the Function");
+
+            auto& requiredArgumentsForCurrentOutput = GetArgumentDependencies(outputVarValuePair.first);
+            requiredArguments.insert(requiredArgumentsForCurrentOutput.begin(), requiredArgumentsForCurrentOutput.end());
+
+            auto outputComputationNode = m_variableToNodeMap[outputVarValuePair.first];
+            outputsToEvaluate.push_back(outputComputationNode);
+        }
+
         // TODO: Avoid copying the data when possible
+
+        // We should have argument values supplied for all required argument dependencies for the requested outputs
+        for (auto requiredArgument : requiredArguments)
+        {
+            if (arguments.find(requiredArgument) == arguments.end())
+                InvalidArgument("Function::Forward: Required argument's (%S) value that the requested output(s) depend on has not been provided", requiredArgument.Name().c_str());
+        }
 
         // Feed data into the arguments of the network
         PopulateNetworkInputs(arguments);
@@ -1795,19 +1832,6 @@ namespace CNTK
         list<ComputationNodeBasePtr> dropoutNodes = m_computationNetwork->GetNodesWithType(OperationNameOf(DropoutNode));
         for (auto& nodeIter : dropoutNodes)
             nodeIter->SetEvalTimeStampOutdatedWrtAll();
-
-        std::unordered_set<Variable> functionOutputs(this->Outputs().begin(), this->Outputs().end());
-        std::vector<ComputationNodeBasePtr> outputsToEvaluate;
-
-        for (auto outputVarValuePair : outputs)
-        {
-            // Ensure that only a subset of this function's outputs are being asked to be evaluated
-            if (functionOutputs.find(outputVarValuePair.first) == functionOutputs.end())
-                InvalidArgument("Requested output is not an Ouptut of the Function");
-
-            auto outputComputationNode = m_variableToNodeMap[outputVarValuePair.first];
-            outputsToEvaluate.push_back(outputComputationNode);
-        }
 
         // The 'outputsToRetainBackwardStateFor' nodes also need to be evaluated if not already specified in 'outputs'
         for (auto rootVarForBackprop : outputsToRetainBackwardStateFor)
