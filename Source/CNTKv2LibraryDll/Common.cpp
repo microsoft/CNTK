@@ -9,6 +9,8 @@
 #include "BestGpu.h"
 #include <mutex>
 #include <algorithm>
+#include <CPUMatrix.h> // For CPUMatrix::SetNumThreads
+#include <thread>
 
 namespace CNTK
 {
@@ -40,6 +42,17 @@ namespace CNTK
         bool IsSettingDefaultDeviceAlwaysAllowed()
         {
             return s_alwaysAllowSettingDefaultDevice.load();
+        }
+
+        std::atomic<bool> s_disableAutomaticUnpackingOfPackedValues(false);
+        void DisableAutomaticUnpackingOfPackedValues()
+        {
+            s_disableAutomaticUnpackingOfPackedValues.store(true);
+        }
+
+        bool IsAutomaticUnpackingOfPackedValuesDisabled()
+        {
+            return s_disableAutomaticUnpackingOfPackedValues.load();
         }
     }
 
@@ -143,6 +156,12 @@ namespace CNTK
         return s_defaultBatchAxis;
     }
 
+    /*static*/ const Axis& Axis::AllStaticAxes()
+    {
+        static const Axis s_allStaticAxes(SentinelStaticAxisIndexValueForAllStaticAxes);
+        return s_allStaticAxes;
+    }
+
     /*static*/ Axis Axis::NewUniqueDynamicAxis(const std::wstring& axisNamePrefix, bool isOrderedDynamicAxis /*= true*/)
     {
         return Axis(s_uniqueDynamicAxisNames.NewUniqueDynamicAxisName(axisNamePrefix), isOrderedDynamicAxis);
@@ -151,5 +170,17 @@ namespace CNTK
     void Axis::RegisterAxisName(const std::wstring& axisName)
     {
         s_uniqueDynamicAxisNames.RegisterAxisName(axisName);
+    }
+
+    std::atomic<size_t> s_maxNumCPUThreads(std::thread::hardware_concurrency());
+    void SetMaxNumCPUThreads(size_t numCPUThreads)
+    {
+        s_maxNumCPUThreads.store(numCPUThreads);
+        Microsoft::MSR::CNTK::CPUMatrix<float>::SetNumThreads((int)numCPUThreads);
+    }
+
+    size_t GetMaxNumCPUThreads()
+    {
+        return s_maxNumCPUThreads.load();
     }
 }

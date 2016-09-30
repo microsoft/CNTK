@@ -12,6 +12,7 @@
 #include "ReaderShim.h"
 #include "Function.h"
 #include <tuple>
+#include "Value.h"
 
 using namespace Microsoft::MSR::CNTK;
 
@@ -78,6 +79,8 @@ namespace CNTK
             static const std::unordered_map<std::wstring, std::wstring> deserializerTypeNameToModuleNameMap = {
                 { L"CNTKTextFormatDeserializer", L"CNTKTextFormatReader" },
                 { L"ImageDeserializer",          L"ImageReader"          },
+                { L"HTKFeatureDeserializer",     L"HTKDeserializers"     },
+                { L"HTKMLFDeserializer",         L"HTKDeserializers"     },
             };
 
             auto& deserializerConfigDict = deserializerConfig.Value<Dictionary>();
@@ -103,6 +106,10 @@ namespace CNTK
                 }
 
             }
+
+            if (deserializerTypeNameToModuleNameMap.find(deserializerTypeName) == deserializerTypeNameToModuleNameMap.end())
+                InvalidArgument("Unknown deserializer type (%S)", deserializerTypeName.c_str());
+
             deserializerConfigDict[L"module"] = deserializerTypeNameToModuleNameMap.at(deserializerTypeName);
         }
 
@@ -197,7 +204,7 @@ namespace CNTK
 
                     // TODO: Eliminate the unnecessary CPU to CPU copy
                     ReaderShim<float>::FillMatrixFromStream(currentStreamDesc->m_storageType, dataMatrix.get(), sampleSize, currentStreamMinibatchData, nullptr);
-                    minibatchValuePtr = CompositeFunction::GetValueObjectFromCNTKImplMatrixAndMBLayout<float>(sampleShape, *dataMatrix, currentStreamMinibatchData->m_layout, false);
+                    minibatchValuePtr = MakeSharedObject<PackedValue>(sampleShape, dataMatrix, currentStreamMinibatchData->m_layout, /*readOnly =*/ false);
 
                     size_t numSamples = currentStreamMinibatchData->m_layout->GetActualNumSamples();
                     size_t numSequences = currentStreamMinibatchData->m_layout->GetNumSequences();

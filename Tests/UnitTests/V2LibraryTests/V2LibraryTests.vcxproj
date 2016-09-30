@@ -123,6 +123,7 @@
     <ClCompile Include="SequenceClassification.cpp" />
     <ClCompile Include="TensorTests.cpp" />
     <ClCompile Include="TrainerTests.cpp" />
+    <ClCompile Include="TruncatedLSTMAcousticModel.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Common.h" />

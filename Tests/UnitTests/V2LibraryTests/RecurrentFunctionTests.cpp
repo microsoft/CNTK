@@ -41,8 +41,8 @@ void TestRecurrentNetworkCreation(const DeviceDescriptor& device, bool testSaveA
     auto classifierOutput = LSTMNet<ElementType>(features, cellDim, hiddenDim, numOutputClasses, numLSTMLayers, device, L"classifierOutput");
 
     auto labelsVar = InputVariable({ numOutputClasses }, AsDataType<ElementType>(), L"labels");
-    auto trainingLoss = CrossEntropyWithSoftmax(classifierOutput, labelsVar, L"lossFunction");
-    auto prediction = ClassificationError(classifierOutput, labelsVar, L"classificationError");
+    auto trainingLoss = ReduceSum(CrossEntropyWithSoftmax(classifierOutput, labelsVar), L"lossFunction");
+    auto prediction = ReduceSum(ClassificationError(classifierOutput, labelsVar), L"classificationError");
 
     auto LSTMClassifier = Combine({ trainingLoss, prediction, classifierOutput }, L"LSTMClassifier");
 
@@ -221,7 +221,10 @@ void TestSimpleRecurrence(size_t inputDim,
 
             NDMaskPtr inputMask = MakeSharedObject<NDMask>(NDShape({ maxActualSequenceLength, numSequences }), DeviceDescriptor::CPUDevice());
             for (size_t i = 0; i < numSequences; ++i)
-                inputMask->MaskSection({ sequenceLengths[i], i }, { NDShape::InferredDimension, 1 });
+            {
+                inputMask->MarkSequenceBegin({0, i});
+                inputMask->InvalidateSection({ sequenceLengths[i], i }, { NDShape::InferredDimension, 1 });
+            }
 
             inputValue = MakeSharedObject<Value>(inputValueData, inputMask);
         }

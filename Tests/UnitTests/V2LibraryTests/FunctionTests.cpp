@@ -3,54 +3,68 @@
 
 using namespace CNTK;
 
-void TestReduceSum(const DeviceDescriptor& device)
+void TestReduceSum(size_t sampleRank, const DeviceDescriptor& device)
 {
     size_t numSequences = 7;
     size_t maxAllowedSequenceLength = 11;
-    size_t dim = 23;
+    size_t maxDimSize = 23;
+    NDShape inputShape(sampleRank);
+    for (size_t i = 0; i < sampleRank; ++i)
+        inputShape[i] = (rand() % maxDimSize) + 1;
 
     auto sequenceLengths = GenerateSequenceLengths(numSequences, maxAllowedSequenceLength);
-    auto sequences = GenerateSequences<float>(sequenceLengths, { dim });
-    ValuePtr sequencesValue = Value::Create({ dim }, sequences, device, true);
+    auto sequences = GenerateSequences<float>(sequenceLengths, inputShape);
+    ValuePtr sequencesValue = Value::Create(inputShape, sequences, device, true);
 
     // Test ReduceSum along a static axis
     {
-        auto testReduceSum = [&sequences, &sequenceLengths, dim, sequencesValue, device](bool reduceAll)
+        auto testReduceSum = [&sequences, &sequenceLengths, inputShape, sequencesValue, device](int reductionAxis)
         {
-            size_t maxActualSequenceLength = sequencesValue->Data()->Shape()[1];
-            size_t numSequences = sequencesValue->Data()->Shape()[2];
+            size_t maxActualSequenceLength = sequencesValue->Shape()[inputShape.Rank()];
+            size_t numSequences = sequencesValue->Shape()[inputShape.Rank() + 1];
 
-            auto inputVar = InputVariable({ dim }, DataType::Float, L"input");
+            auto inputVar = InputVariable(inputShape, DataType::Float, L"input");
             FunctionPtr reduceSumFunc;
 
+            bool reduceAll = (reductionAxis < 0);
             if (reduceAll)
                 reduceSumFunc = ReduceSum(inputVar);
             else
-                reduceSumFunc = ReduceSum(inputVar, Axis(0));
+                reduceSumFunc = ReduceSum(inputVar, Axis(reductionAxis));
 
-            NDShape outputShape;
-            if (reduceAll)
-                outputShape = {};
-            else
-                outputShape = reduceSumFunc->Output().Shape().AppendShape({ maxActualSequenceLength, numSequences });
+            NDShape outputShape = reduceSumFunc->Output().Shape();
+            NDShape outputDataShape = outputShape;
+            if (!reduceAll)
+                outputDataShape = outputDataShape.AppendShape({ maxActualSequenceLength, numSequences });
 
-            std::vector<float> outputData(outputShape.TotalSize());
-            ValuePtr outputValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(outputShape, outputData, false), reduceAll ? nullptr : sequencesValue->Mask()->DeepClone());
+            std::vector<float> outputData(outputDataShape.TotalSize());
+            ValuePtr outputValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(outputDataShape, outputData, false), reduceAll ? nullptr : sequencesValue->Mask()->DeepClone());
 
             std::unordered_map<Variable, ValuePtr> outputs = { { reduceSumFunc->Output(), outputValue } };
             reduceSumFunc->Forward({ { inputVar, sequencesValue } }, outputs, device);
 
-            std::vector<float> expectedPerFrameTotals(maxActualSequenceLength * numSequences, 0.0f);
+            std::vector<size_t> inputShapeStrides = GetStrides(inputShape);
+            std::vector<size_t> outputShapeStrides = GetStrides(outputShape);
+
+            std::vector<float> expectedPerFrameTotals(outputShape.TotalSize() * maxActualSequenceLength * numSequences, 0.0f);
             float expectedTotal = 0.0f;
             for (size_t i = 0; i < numSequences; ++i)
             {
                 size_t currentSequenceLength = sequenceLengths[i];
                 for (size_t j = 0; j < currentSequenceLength; ++j)
                 {
-                    for (size_t k = 0; k < dim; ++k)
+                    for (size_t k = 0; k < inputShape.TotalSize(); ++k)
                     {
-                        float value = sequences[i][(j * dim) + k];
-                        expectedPerFrameTotals[(i * maxActualSequenceLength) + j] += value;
+                        auto inputIdx = UnflattenedShape(k, inputShapeStrides);
+                        auto outputIdx = inputIdx;
+                        if (!reduceAll)
+                            outputIdx[reductionAxis] = 0;
+                        else
+                            outputIdx = {};
+
+                        auto flatOutputIdx = FlattenedIndex(outputIdx, outputShapeStrides);
+                        float value = sequences[i][(j * inputShape.TotalSize()) + k];
+                        expectedPerFrameTotals[(((i * maxActualSequenceLength) + j) * outputShape.TotalSize()) + flatOutputIdx] += value;
                         expectedTotal += value;
                     }
                 }
@@ -62,46 +76,60 @@ void TestReduceSum(const DeviceDescriptor& device)
                 FloatingPointVectorCompare(outputData, expectedPerFrameTotals, "testReduceSum: Forward prop results do not match expected results");
         };
 
-        testReduceSum(true);
-        testReduceSum(false);
+        // Reduce over all axes
+        testReduceSum(-1);
+
+        int reductionAxis = 0;
+        testReduceSum(reductionAxis);
+
+        if (reductionAxis < (inputShape.Rank() - 1))
+            reductionAxis++;
+
+        testReduceSum(reductionAxis);
+
+        if (reductionAxis < (inputShape.Rank() - 1))
+            reductionAxis++;
+
+        testReduceSum(reductionAxis);
     }
 
     // Test ReduceSum along a dynamic axis
     {
-        auto testReduceSum = [&sequences, &sequenceLengths, dim, sequencesValue, device](const Axis& axis)
+        auto testReduceSum = [&sequences, &sequenceLengths, inputShape, sequencesValue, device](const Axis& axis)
         {
             if (axis.IsStaticAxis())
                 RuntimeError("Called the dynamic axis ReduceSum test with a static axis");
 
-            size_t maxActualSequenceLength = sequencesValue->Data()->Shape()[1];
-            size_t numSequences = sequencesValue->Data()->Shape()[2];
+            size_t maxActualSequenceLength = sequencesValue->Shape()[inputShape.Rank()];
+            size_t numSequences = sequencesValue->Shape()[inputShape.Rank() + 1];
 
-            auto inputVar = InputVariable({ dim }, DataType::Float, L"input");
+            auto inputVar = InputVariable({ inputShape }, DataType::Float, L"input");
             FunctionPtr reduceSumFunc = ReduceSum(inputVar, axis);
 
             NDShape maskShape = { ((axis == Axis::DefaultBatchAxis()) ? maxActualSequenceLength : 1), ((axis == Axis::DefaultBatchAxis()) ? 1 : numSequences) };
-            NDShape outputShape = reduceSumFunc->Output().Shape().AppendShape(maskShape);
+            NDShape outputShape = reduceSumFunc->Output().Shape();
+            auto outputDataShape = outputShape.AppendShape(maskShape);
 
-            std::vector<float> outputData(outputShape.TotalSize());
+            std::vector<float> outputData(outputDataShape.TotalSize());
             auto maskPtr = MakeSharedObject<NDMask>(maskShape, device);
-            ValuePtr outputValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(outputShape, outputData, false), maskPtr);
+            ValuePtr outputValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(outputDataShape, outputData, false), maskPtr);
 
             std::unordered_map<Variable, ValuePtr> outputs = { { reduceSumFunc->Output(), outputValue } };
             reduceSumFunc->Forward({ { inputVar, sequencesValue } }, outputs, device);
 
-            std::vector<float> expectedTotals(outputShape.TotalSize(), 0.0f);
+            std::vector<float> expectedTotals(outputDataShape.TotalSize(), 0.0f);
             for (size_t i = 0; i < numSequences; ++i)
             {
                 size_t currentSequenceLength = sequenceLengths[i];
                 for (size_t j = 0; j < currentSequenceLength; ++j)
                 {
-                    for (size_t k = 0; k < dim; ++k)
+                    for (size_t k = 0; k < inputShape.TotalSize(); ++k)
                     {
-                        float value = sequences[i][(j * dim) + k];
+                        float value = sequences[i][(j * inputShape.TotalSize()) + k];
                         if (axis == Axis::DefaultBatchAxis())
-                            expectedTotals[(j * dim) + k] += value;
+                            expectedTotals[(j * inputShape.TotalSize()) + k] += value;
                         else
-                            expectedTotals[(i * dim) + k] += value;;
+                            expectedTotals[(i * inputShape.TotalSize()) + k] += value;
                     }
                 }
             }
@@ -130,8 +158,8 @@ void TestSlice(size_t sampleRank, const DeviceDescriptor& device)
     {
         auto testStaticAxisSlice = [&sequences, &sequenceLengths, inputShape, sequencesValue, device](size_t sliceAxis, int beginOffset, int endOffset)
         {
-            size_t maxActualSequenceLength = sequencesValue->Data()->Shape()[inputShape.Rank()];
-            size_t numSequences = sequencesValue->Data()->Shape()[inputShape.Rank() + 1];
+            size_t maxActualSequenceLength = sequencesValue->Shape()[inputShape.Rank()];
+            size_t numSequences = sequencesValue->Shape()[inputShape.Rank() + 1];
 
             auto inputVar = InputVariable(inputShape, DataType::Float, L"input");
             auto sliceFunc = Slice(inputVar, Axis(sliceAxis), beginOffset, endOffset);
@@ -189,8 +217,8 @@ void TestSlice(size_t sampleRank, const DeviceDescriptor& device)
             if (axis.IsStaticAxis())
                 RuntimeError("Called the dynamic axis slice test with a static axis");
 
-            size_t maxActualSequenceLength = sequencesValue->Data()->Shape()[inputShape.Rank()];
-            size_t numSequences = sequencesValue->Data()->Shape()[inputShape.Rank() + 1];
+            size_t maxActualSequenceLength = sequencesValue->Shape()[inputShape.Rank()];
+            size_t numSequences = sequencesValue->Shape()[inputShape.Rank() + 1];
 
             size_t sliceLength = endOffset - beginOffset;
 
@@ -415,9 +443,9 @@ void FunctionTests()
     TestSlice(1, DeviceDescriptor::GPUDevice(0));
 #endif
 
-    TestReduceSum(DeviceDescriptor::CPUDevice());
+    TestReduceSum(1, DeviceDescriptor::CPUDevice());
 #ifndef CPUONLY
-    TestReduceSum(DeviceDescriptor::GPUDevice(0));
+    TestReduceSum(2, DeviceDescriptor::GPUDevice(0));
 #endif
 
     TestRecurrentFunctionCloning();
