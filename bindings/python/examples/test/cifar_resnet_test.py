@@ -17,9 +17,14 @@ def test_cifar_resnet_error(device_id):
     target_device = DeviceDescriptor.gpu_device(0)
     DeviceDescriptor.set_default_device(target_device)
 
-    base_path = os.path.normpath(os.path.join(
-        *"../../../../Examples/Image/Miscellaneous/CIFAR-10/cifar-10-batches-py".split("/")))
+    try:
+        base_path = os.path.join(os.environ['CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY'],
+                                *"Image/CIFAR/v0/cifar-10-batches-py".split("/"))
+    except KeyError:
+        base_path = os.path.join(
+            *"../../../../Examples/Image/Miscellaneous/CIFAR-10/cifar-10-batches-py".split("/"))
 
+    base_path = os.path.normpath(base_path)
     os.chdir(os.path.join(base_path, '..'))
 
     test_error = cifar_resnet(base_path)

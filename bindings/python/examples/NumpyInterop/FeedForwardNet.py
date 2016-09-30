@@ -75,15 +75,6 @@ def ffnet(debug_output=False):
         {input: test_features, label: test_labels})
     return avg_error
 
-def test_error_TODO(device_id):
-    #FIXME: need a backdoor to work around the limitation of changing the default device not possible 
-    #from cntk.utils import cntk_device
-    #DeviceDescriptor.set_default_device(cntk_device(device_id))
-
-    avg_error = ffnet(debug_output=False)
-    expected_avg_error = 0.12
-    assert np.allclose(avg_error, expected_avg_error, atol=TOLERANCE_ABSOLUTE)
-
 if __name__ == '__main__':
     # Specify the target device to be used for computing
     target_device = DeviceDescriptor.gpu_device(0)

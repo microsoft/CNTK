@@ -207,24 +207,11 @@ def cifar_resnet(base_path, debug_output=False):
 
     return total_error / num_mbs
 
-# Place holder for real test
-def test_TODO_remove_me(device_id):
-    #FIXME: need a backdoor to work around the limitation of changing the default device not possible 
-    #from cntk.utils import cntk_device
-    #DeviceDescriptor.set_default_device(cntk_device(device_id))
-    try:
-        base_path = os.path.join(os.environ['CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY'],
-                                *"Image/CIFAR/v0/cifar-10-batches-py".split("/"))
-        os.chdir(os.path.join(base_path, '..'))
-    except KeyError:
-        base_path = os.path.join(\
-                *"../../../../Examples/Image/Miscellaneous/CIFAR-10/cifar-10-batches-py".split("/"))
-    base_path = os.path.normpath(base_path)
-    cifar_resnet(base_path)
-
 if __name__ == '__main__':
     # Specify the target device to be used for computing
     target_device = DeviceDescriptor.gpu_device(0)
+    # If it is crashing, probably you don't have a GPU, so try with CPU:
+    # target_device = DeviceDescriptor.cpu_device()
     DeviceDescriptor.set_default_device(target_device)
 
     base_path = os.path.normpath(os.path.join(

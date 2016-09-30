@@ -82,8 +82,11 @@ def simple_mnist(debug_output=False):
             print_training_progress(trainer, i, training_progress_output_freq)
 
     # Load test data
-    rel_path = os.path.join(
-        *"../../../../Examples/Image/MNIST/Data/Test-28x28_cntk_text.txt".split("/"))
+    try:
+        rel_path = os.path.join(os.environ['CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY'],
+                                *"Image/MNIST/v0/Test-28x28_cntk_text.txt".split("/"))
+    except KeyError:
+        rel_path = os.path.join(*"../../../../Examples/Image/MNIST/Data/Test-28x28_cntk_text.txt".split("/"))
     path = os.path.normpath(os.path.join(abs_path, rel_path))
     check_path(path)
 
@@ -111,13 +114,6 @@ def simple_mnist(debug_output=False):
     # Average of evaluation errors of all test minibatches
     return test_result / num_minibatches_to_test
 
-
-# Place holder for real test
-def test_mnist(device_id):
-    #FIXME: need a backdoor to work around the limitation of changing the default device not possible 
-    #from cntk.utils import cntk_device
-    #DeviceDescriptor.set_default_device(cntk_device(device_id))
-    simple_mnist()
 
 if __name__=='__main__':
     # Specify the target device to be used for computing

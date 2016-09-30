@@ -12,8 +12,8 @@ from examples.MNIST.SimpleMNIST import simple_mnist
 TOLERANCE_ABSOLUTE = 1E-1
 
 def test_simple_mnist_error(device_id):
-    #from cntk.utils import cntk_device
-    #DeviceDescriptor.set_default_device(cntk_device(device_id))
+    from cntk.utils import cntk_device
+    DeviceDescriptor.set_default_device(cntk_device(device_id))
 
     test_error = simple_mnist()
     expected_test_error = 0.09
