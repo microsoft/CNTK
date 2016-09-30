@@ -53,7 +53,7 @@ def simple_mnist(debug_output=False):
     feature_stream_name = 'features'
     labels_stream_name = 'labels'
 
-    mb_source = text_format_minibatch_source(path, [ 
+    mb_source = text_format_minibatch_source(path, [
         StreamConfiguration(feature_stream_name, input_dim),
         StreamConfiguration(labels_stream_name, num_output_classes)])
     features_si = mb_source.stream_info(feature_stream_name)

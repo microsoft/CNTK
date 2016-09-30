@@ -1,4 +1,4 @@
-﻿# Copyright (c) Microsoft. All rights reserved.
+# Copyright (c) Microsoft. All rights reserved.
 
 # Licensed under the MIT license. See LICENSE.md file in the project root
 # for full license information.
@@ -19,8 +19,7 @@ from examples.common.nn import LSTMP_component_with_self_stabilization, stabiliz
 
 # Creates and trains a sequence to sequence translation model
 
-
-def train_sequence_to_sequence_translator():
+def sequence_to_sequence_translator(debug_output=False):
 
     input_vocab_dim = 69
     label_vocab_dim = 69
@@ -94,6 +93,16 @@ def train_sequence_to_sequence_translator():
     ce = cross_entropy_with_softmax(z, label_sequence)
     errs = classification_error(z, label_sequence)
 
+    # Instantiate the trainer object to drive the model training
+    lr = 0.007
+    momentum_time_constant = 1100
+    momentum_per_sample = momentums_per_sample(
+        math.exp(-1.0 / momentum_time_constant))
+    clipping_threshold_per_sample = 2.3
+    gradient_clipping_with_truncation = True
+
+    trainer = Trainer(z, ce, errs, [momentum_sgd(z.parameters(), lr, momentum_per_sample, clipping_threshold_per_sample, gradient_clipping_with_truncation)])                   
+
     rel_path = r"../../../../Examples/SequenceToSequence/CMUDict/Data/cmudict-0.7b.train-dev-20-21.ctf"
     path = os.path.join(os.path.dirname(os.path.abspath(__file__)), rel_path)
     feature_stream_name = 'features'
@@ -104,16 +113,6 @@ def train_sequence_to_sequence_translator():
         StreamConfiguration(labels_stream_name, label_vocab_dim, True, 'S1')], 10000)
     features_si = mb_source.stream_info(feature_stream_name)
     labels_si = mb_source.stream_info(labels_stream_name)
-
-    # Instantiate the trainer object to drive the model training
-    lr = 0.007
-    momentum_time_constant = 1100
-    momentum_per_sample = momentums_per_sample(
-        math.exp(-1.0 / momentum_time_constant))
-    clipping_threshold_per_sample = 2.3
-    gradient_clipping_with_truncation = True
-
-    trainer = Trainer(z, ce, errs, [momentum_sgd(z.parameters(), lr, momentum_per_sample, clipping_threshold_per_sample, gradient_clipping_with_truncation)])                   
 
     # Get minibatches of sequences to train with and perform model training
     minibatch_size = 72
@@ -129,13 +128,51 @@ def train_sequence_to_sequence_translator():
                      raw_labels: mb[labels_si].m_data}
         trainer.train_minibatch(arguments)
 
-        print_training_progress(trainer, i, training_progress_output_freq)
+        if debug_output:
+            print_training_progress(trainer, i, training_progress_output_freq)
+
+            i += 1
+
+    rel_path = r"../../../../Examples/SequenceToSequence/CMUDict/Data/cmudict-0.7b.test.ctf"
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), rel_path)
+
+    test_mb_source = text_format_minibatch_source(path, [
+        StreamConfiguration(feature_stream_name, input_vocab_dim, True, 'S0'),
+        StreamConfiguration(labels_stream_name, label_vocab_dim, True, 'S1')], 10000)
+    features_si = test_mb_source.stream_info(feature_stream_name)
+    labels_si = test_mb_source.stream_info(labels_stream_name)
+
+    # choose this to be big enough for the longest sentence
+    train_minibatch_size = 1024 
+
+    # Get minibatches of sequences to test and perform testing
+    i = 0
+    total_error = 0.0
+    while True:
+        mb = test_mb_source.get_next_minibatch(train_minibatch_size)
+        if len(mb) == 0:
+            break
+
+        # Specify the mapping of input variables in the model to actual
+        # minibatch data to be tested with
+        arguments = {raw_input: mb[features_si].m_data,
+                     raw_labels: mb[labels_si].m_data}
+        mb_error = trainer.test_minibatch(arguments)
+
+        total_error += mb_error
+
+        if debug_output:
+            print("Minibatch {}, Error {} ".format(i, mb_error))
 
         i += 1
+
+    # Average of evaluation errors of all test minibatches
+    return total_error / i
 
 if __name__ == '__main__':
     # Specify the target device to be used for computing
     target_device = DeviceDescriptor.cpu_device()
     DeviceDescriptor.set_default_device(target_device)
 
-    train_sequence_to_sequence_translator()
+    error = sequence_to_sequence_translator()
+    print("test: %f" % error)

@@ -15,8 +15,6 @@ abs_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(abs_path, "..", ".."))
 from examples.common.nn import fully_connected_classifier_net, print_training_progress
 
-TOLERANCE_ABSOLUTE = 1E-03
-
 # make sure we get always the same "randomness"
 np.random.seed(0)
 
@@ -35,7 +33,7 @@ def generate_random_data(sample_size, feature_dim, num_classes):
 
 # Creates and trains a feedforward classification model
 
-def ffnet(debug_output=True):
+def ffnet(debug_output=False):
     input_dim = 2
     num_output_classes = 2
     num_hidden_layers = 2
@@ -77,7 +75,7 @@ def ffnet(debug_output=True):
         {input: test_features, label: test_labels})
     return avg_error
 
-def test_error(device_id):
+def test_error_TODO(device_id):
     #FIXME: need a backdoor to work around the limitation of changing the default device not possible 
     #from cntk.utils import cntk_device
     #DeviceDescriptor.set_default_device(cntk_device(device_id))

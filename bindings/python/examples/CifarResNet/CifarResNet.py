@@ -19,16 +19,17 @@ from examples.common.nn import conv_bn_relu_layer, conv_bn_layer, resnet_node2, 
 
 TRAIN_MAP_FILENAME = 'train_map.txt'
 MEAN_FILENAME = 'CIFAR-10_mean.xml'
+TEST_MAP_FILENAME = 'test_map.txt'
 
 # Instantiates the CNTK built-in minibatch source for reading images to be used for training the residual net
-# The minibatch source is configured using a hierarchical dictionary of
-# key:value pairs
-
+# The minibatch source is configured using a hierarchical dictionary of key:value pairs
 
 def create_mb_source(features_stream_name, labels_stream_name, image_height,
                      image_width, num_channels, num_classes, cifar_data_path):
-    map_file = os.path.join(cifar_data_path, TRAIN_MAP_FILENAME)
-    mean_file = os.path.join(cifar_data_path, MEAN_FILENAME)
+
+    path = os.path.normpath(os.path.join(abs_path, cifar_data_path))
+    map_file = os.path.join(path, TRAIN_MAP_FILENAME)
+    mean_file = os.path.join(path, MEAN_FILENAME)
 
     if not os.path.exists(map_file) or not os.path.exists(mean_file):
         cifar_py3 = "" if sys.version_info.major < 3 else "_py3"
@@ -36,7 +37,6 @@ def create_mb_source(features_stream_name, labels_stream_name, image_height,
                            (map_file, mean_file, cifar_py3, cifar_py3))
 
     image = ImageDeserializer(map_file)
-<<<<<<< 391432ca77060ad88807339d773f288de6557c4a
     image.map_features(features_stream_name,
             [ImageDeserializer.crop(crop_type='Random', ratio=0.8,
                 jitter_type='uniRatio'),
@@ -47,23 +47,32 @@ def create_mb_source(features_stream_name, labels_stream_name, image_height,
 
     rc = ReaderConfig(image, epoch_size=sys.maxsize)
     return rc.minibatch_source()
-=======
-    image.map_features(feature_name,
-                       [ImageDeserializer.crop(crop_type='Random', ratio=0.8,
-                                               jitter_type='uniRatio'),
-                        ImageDeserializer.scale(width=image_width, height=image_height,
-                                                channels=num_channels, interpolations='linear'),
-                        ImageDeserializer.mean(mean_file)])
-    image.map_labels(label_name, num_classes)
+
+def create_test_mb_source(features_stream_name, labels_stream_name, image_height,
+                     image_width, num_channels, num_classes, cifar_data_path):
+
+    path = os.path.normpath(os.path.join(abs_path, cifar_data_path))
+
+    map_file = os.path.join(path, TEST_MAP_FILENAME)
+    mean_file = os.path.join(path, MEAN_FILENAME)
+
+    if not os.path.exists(map_file) or not os.path.exists(mean_file):
+        cifar_py3 = "" if sys.version_info.major < 3 else "_py3"
+        raise RuntimeError("File '%s' or '%s' do not exist. Please run CifarDownload%s.py and CifarConverter%s.py from CIFAR-10 to fetch them" %
+                           (map_file, mean_file, cifar_py3, cifar_py3))
+
+    image = ImageDeserializer(map_file)
+    image.map_features(features_stream_name,
+            [ImageDeserializer.crop(crop_type='Random', ratio=0.8,
+                jitter_type='uniRatio'),
+             ImageDeserializer.scale(width=image_width, height=image_height,
+                 channels=num_channels, interpolations='linear'),
+             ImageDeserializer.mean(mean_file)])
+    image.map_labels(labels_stream_name, num_classes)
 
     rc = ReaderConfig(image, epoch_size=sys.maxsize)
-
-    input_streams_config = {
-        features_stream_name: features_stream_config, labels_stream_name: labels_stream_config}
-    deserializer_config = {"type": "ImageDeserializer",
-                           "file": map_file, "input": input_streams_config}
     return rc.minibatch_source()
->>>>>>> Address comments in CR
+
 def get_projection_map(out_dim, in_dim):
     if in_dim > out_dim:
         raise ValueError(
@@ -125,40 +134,23 @@ def resnet_classifer(input, num_classes):
     poolh_stride = 1
     poolv_stride = 1
 
-<<<<<<< 391432ca77060ad88807339d773f288de6557c4a
     pool = pooling(rn3_3, AVG_POOLING, (1, poolh, poolw), (1, poolv_stride, poolh_stride))
     out_times_params = parameter(shape=(c_map3, 1, 1, num_classes), initializer=glorot_uniform())
     out_bias_params = parameter(shape=(num_classes), value=0)
-=======
-    pool = pooling(rn3_3, AVG_POOLING, (1, poolh, poolw),
-                   (1, poolv_stride, poolh_stride))
-    out_times_params = parameter(shape=(c_map3, 1, 1, num_classes))
-    out_bias_params = parameter(shape=(num_classes))
->>>>>>> Address comments in CR
     t = times(pool, out_times_params)
     return t + out_bias_params
 
 # Trains a residual network model on the Cifar image dataset
-<<<<<<< 391432ca77060ad88807339d773f288de6557c4a
-def cifar_resnet(base_path):
-=======
-
-    pool = pooling(rn3_3, AVG_POOLING, (1, poolh, poolw), (1, poolv_stride, poolh_stride))
-    out_times_params = parameter(shape=(c_map3, 1, 1, num_classes), initializer=glorot_uniform_initializer())
-    out_bias_params = parameter(shape=(num_classes), value=0)
+def cifar_resnet(base_path, debug_output=False):
     image_height = 32
     image_width = 32
     num_channels = 3
     num_classes = 10
-def cifar_resnet(base_path):
+    feats_stream_name = 'features'
     labels_stream_name = 'labels'
-<<<<<<< 391432ca77060ad88807339d773f288de6557c4a
+
     minibatch_source = create_mb_source(feats_stream_name, labels_stream_name, 
                         image_height, image_width, num_channels, num_classes, base_path)
-=======
-    minibatch_source = create_mb_source(feats_stream_name, labels_stream_name,
-                                        image_height, image_width, num_channels, num_classes)
->>>>>>> Address comments in CR
     features_si = minibatch_source.stream_info(feats_stream_name)
     labels_si = minibatch_source.stream_info(labels_stream_name)
 
@@ -181,6 +173,7 @@ def cifar_resnet(base_path):
     mb_size = 32
     training_progress_output_freq = 20
     num_mbs = 1000
+
     for i in range(0, num_mbs):
         mb = minibatch_source.get_next_minibatch(mb_size)
 
@@ -190,7 +183,29 @@ def cifar_resnet(base_path):
             features_si].m_data, label_var: mb[labels_si].m_data}
         trainer.train_minibatch(arguments)
 
-        print_training_progress(trainer, i, training_progress_output_freq)
+        if debug_output:
+            print_training_progress(trainer, i, training_progress_output_freq)
+
+    test_minibatch_source = create_test_mb_source(feats_stream_name, labels_stream_name,
+                    image_height, image_width, num_channels, num_classes, base_path)
+    features_si = test_minibatch_source.stream_info(feats_stream_name)
+    labels_si = test_minibatch_source.stream_info(labels_stream_name)
+
+    mb_size = 64
+    num_mbs = 300
+
+    total_error = 0.0
+    for i in range(0, num_mbs):
+        mb = test_minibatch_source.get_next_minibatch(mb_size)
+
+        # Specify the mapping of input variables in the model to actual
+        # minibatch data to be trained with
+        arguments = {image_input: mb[
+            features_si].m_data, label_var: mb[labels_si].m_data}
+        error = trainer.test_minibatch(arguments)
+        total_error += error
+
+    return total_error / num_mbs
 
 # Place holder for real test
 def test_TODO_remove_me(device_id):
@@ -214,5 +229,7 @@ if __name__ == '__main__':
 
     base_path = os.path.normpath(os.path.join(
         *"../../../../Examples/Image/Miscellaneous/CIFAR-10/cifar-10-batches-py".split("/")))
+
+    os.chdir(os.path.join(base_path, '..'))
 
     cifar_resnet(base_path)
