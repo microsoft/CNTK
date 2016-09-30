@@ -48,6 +48,7 @@ class Parameter(TensorOpsMixin,Parameter):
                 data_type = str(value.dtype)
 
         if initializer is not None:
+            shape = utils.sanitize_shape(shape)
             data_type  = utils.sanitize_dtype_cntk(data_type)
             super(Parameter, self).__init__(shape, data_type, initializer,
                     device, name)

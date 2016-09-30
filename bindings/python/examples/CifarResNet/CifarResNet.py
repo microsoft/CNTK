@@ -10,6 +10,7 @@ import os
 from cntk import Trainer, sgd_learner, DeviceDescriptor
 from cntk.ops import input_variable, constant, parameter, cross_entropy_with_softmax, combine, classification_error, times, pooling, AVG_POOLING
 from cntk.io import ReaderConfig, ImageDeserializer
+from cntk.initializer import glorot_uniform_initializer
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(abs_path, "..", ".."))
@@ -30,23 +31,16 @@ def create_mb_source(features_stream_name, labels_stream_name, image_height,
         raise RuntimeError("File '%s' or '%s' do not exist. Please run CifarDownload%s.py and CifarConverter%s.py from CIFAR-10 to fetch them"%(map_file, mean_file, cifar_py3, cifar_py3))
 
     image = ImageDeserializer(map_file)
-    image.map_features(feature_name,
+    image.map_features(features_stream_name,
             [ImageDeserializer.crop(crop_type='Random', ratio=0.8,
                 jitter_type='uniRatio'),
              ImageDeserializer.scale(width=image_width, height=image_height,
                  channels=num_channels, interpolations='linear'),
              ImageDeserializer.mean(mean_file)])
-    image.map_labels(label_name, num_classes)
+    image.map_labels(labels_stream_name, num_classes)
 
     rc = ReaderConfig(image, epoch_size=sys.maxsize)
-
-    input_streams_config = {features_stream_name: features_stream_config, labels_stream_name: labels_stream_config}
-    deserializer_config = {"type" : "ImageDeserializer", "file" : map_file, "input" : input_streams_config}
-
-    minibatch_config = {"epochSize" : sys.maxsize, "deserializers" : [deserializer_config]}
-    print(minibatch_config)
-
-    return minibatch_source(minibatch_config)
+    return rc.minibatch_source()
 
 def get_projection_map(out_dim, in_dim):
     if in_dim > out_dim:
@@ -99,13 +93,13 @@ def resnet_classifer(input, num_classes):
     poolv_stride = 1
 
     pool = pooling(rn3_3, AVG_POOLING, (1, poolh, poolw), (1, poolv_stride, poolh_stride))
-    out_times_params = parameter(shape=(c_map3, 1, 1, num_classes))
-    out_bias_params = parameter(shape=(num_classes))
+    out_times_params = parameter(shape=(c_map3, 1, 1, num_classes), initializer=glorot_uniform_initializer())
+    out_bias_params = parameter(shape=(num_classes), value=0)
     t = times(pool, out_times_params)
     return t + out_bias_params
 
 # Trains a residual network model on the Cifar image dataset
-def cifar_resnet():
+def cifar_resnet(base_path):
     image_height = 32
     image_width = 32
     num_channels = 3
@@ -113,7 +107,7 @@ def cifar_resnet():
     feats_stream_name = 'features'
     labels_stream_name = 'labels'
     minibatch_source = create_mb_source(feats_stream_name, labels_stream_name, 
-                        image_height, image_width, num_channels, num_classes)
+                        image_height, image_width, num_channels, num_classes, base_path)
     features_si = minibatch_source.stream_info(feats_stream_name)
     labels_si = minibatch_source.stream_info(labels_stream_name)
 
