@@ -139,6 +139,21 @@ def cifar_resnet(base_path):
 
         print_training_progress(trainer, i, training_progress_output_freq)
 
+# Place holder for real test
+def test_cifar(device_id):
+    #FIXME: need a backdoor to work around the limitation of changing the default device not possible 
+    #from cntk.utils import cntk_device
+    #DeviceDescriptor.set_default_device(cntk_device(device_id))
+    try:
+        base_path = os.path.join(os.environ['CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY'],
+                                *"Image/CIFAR/v0/cifar-10-batches-py".split("/"))
+        os.chdir(os.path.join(base_path, '..'))
+    except KeyError:
+        base_path = os.path.join(\
+                *"../../../../Examples/Image/Miscellaneous/CIFAR-10/cifar-10-batches-py".split("/"))
+    base_path = os.path.normpath(base_path)
+    cifar_resnet(base_path)
+
 if __name__=='__main__':
     # Specify the target device to be used for computing
     target_device = DeviceDescriptor.gpu_device(0)
@@ -146,5 +161,4 @@ if __name__=='__main__':
 
     base_path = os.path.normpath(os.path.join(\
             *"../../../../Examples/Image/Miscellaneous/CIFAR-10/cifar-10-batches-py".split("/")))
-    
     cifar_resnet(base_path)
