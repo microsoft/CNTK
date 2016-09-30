@@ -157,7 +157,7 @@ def _add_tensor_ops(klass):
 
 class EvalMixin(object):
 
-    def eval(self, input_map=None):
+    def eval(self, arguments=None):
         from .utils import eval as utils_eval
         from . import DeviceDescriptor
         device = DeviceDescriptor.cpu_device()
@@ -166,10 +166,10 @@ class EvalMixin(object):
             raise ValueError(
                 'only operators with exactly one output can be evaluated')
 
-        if input_map is None:
-            input_map = {}
+        if arguments is None:
+            arguments = {}
 
-        result, _ = utils_eval(self, None, device, input_map, False)
+        result, _ = utils_eval(self, None, device, arguments, False)
         return result.popitem()[1]
 
 
