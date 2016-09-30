@@ -929,26 +929,31 @@ def dynamic_axes(self):
         static_assert(dims.size()==2, "mask requires exactly two dimensions");
         std::vector<size_t> dimensions = {cntk_dims[1], cntk_dims[0]};
 
+        size_t num_elements = dimensions[0] * dimensions[1];
+
         npy_intp* shape = reinterpret_cast<npy_intp*>(&dimensions[0]);
 
-        NDMask* cpuView;
+        NDMask* cpuMask;
         if ((*self).Device() != DeviceDescriptor::CPUDevice())
         {
-            cpuView = new NDMask((*self).Shape(), DeviceDescriptor::CPUDevice());
-            cpuView->CopyFrom((*self));
+            cpuMask = new NDMask((*self).Shape(), DeviceDescriptor::CPUDevice());
+            cpuMask->CopyFrom((*self));
         }
         else
         {
-            cpuView = &(*self);
+            cpuMask = &(*self);
         }
 
-        void* buffer = const_cast<void*>(reinterpret_cast<const void*>(cpuView->DataBuffer()));
+        void* buffer = const_cast<void*>(reinterpret_cast<const void*>(cpuMask->DataBuffer()));
         
-        PyObject* ndarray = PyArray_SimpleNewFromData(dimensions.size(), shape, NPY_UBYTE, buffer);
+        PyObject* ndarray = PyArray_SimpleNew(dimensions.size(), shape, NPY_BYTE);
+        void *arr_data = PyArray_DATA((PyArrayObject*)ndarray);
+
+        memcpy(arr_data, buffer, PyArray_ITEMSIZE((PyArrayObject*) ndarray) * num_elements);
 
         if ((*self).Device() != DeviceDescriptor::CPUDevice())
         {
-            delete cpuView;
+            delete cpuMask;
         }
 
         return ndarray;
@@ -990,46 +995,71 @@ def dynamic_axes(self):
         
         void* buf;
 
+        NDArrayView* cpuView;
         if (typecode == NPY_FLOAT)
         {
             size_t num_bytes = num_elements * sizeof(float);
             buf = malloc(num_bytes);
             memcpy(buf, PyArray_DATA(array), num_bytes);
-            return new NDArrayView(NDShape(shape), (float*)buf, num_elements, device, readOnly);
+            cpuView = new NDArrayView(NDShape(shape), (float*)buf, num_elements, DeviceDescriptor::CPUDevice(), readOnly);
         }
+
         else if (typecode == NPY_DOUBLE)
         {
             size_t num_bytes = num_elements * sizeof(double);
             buf = malloc(num_bytes);
             memcpy(buf, PyArray_DATA(array), num_bytes);
-            return new NDArrayView(NDShape(shape), (double*)buf, num_elements, device, readOnly);
+            cpuView = new NDArrayView(NDShape(shape), (double*)buf, num_elements, DeviceDescriptor::CPUDevice(), readOnly);
         }
         else
         {
             throw std::logic_error("NumPy array of type float32 or float64 expected");
         }
+
+        NDArrayView* view;
+        if (device != DeviceDescriptor::CPUDevice())
+        {
+            DataType data_type = cpuView->GetDataType();
+            view = new NDArrayView(data_type, cpuView->Shape(), device);
+            view->CopyFrom(*cpuView);
+            delete cpuView;
+        }
+        else
+        {
+            view = cpuView;
+        }
+
+        return view;
     }
 
     PyObject* to_numpy() {
+        if ((*self).GetStorageFormat() != StorageFormat::Dense)
+            throw std::invalid_argument("only dense supported at the moment");
+
         // FIXME use not yet existing NDShape function that returns the dimensions at once
         std::vector<size_t> dimensions_cntk = (*self).Shape().Dimensions();
         std::vector<size_t> dimensions;
+
+        size_t num_elements = 0;
 
         // CNTK uses column major, thus we reverse the shape
         for (int i=dimensions_cntk.size()-1; i>=0; i--)
         {
             dimensions.push_back(dimensions_cntk[i]);            
+            if (num_elements == 0) 
+                num_elements = dimensions_cntk[i];
+            else
+                num_elements *= dimensions_cntk[i];
         }
 
         npy_intp* shape = reinterpret_cast<npy_intp*>(&dimensions[0]);
 
-        NPY_TYPES numpy_type;
-        void* buffer;
+        CNTK::DataType cntk_type = (*self).GetDataType();
 
         NDArrayView* cpuView;
         if ((*self).Device() != DeviceDescriptor::CPUDevice())
         {
-            cpuView = new NDArrayView((*self).GetDataType(), (*self).Shape(), DeviceDescriptor::CPUDevice());
+            cpuView = new NDArrayView(cntk_type, (*self).Shape(), DeviceDescriptor::CPUDevice());
             cpuView->CopyFrom((*self));
         }
         else
@@ -1037,7 +1067,9 @@ def dynamic_axes(self):
             cpuView = &(*self);
         }
 
-        CNTK::DataType cntk_type = (*self).GetDataType();
+        NPY_TYPES numpy_type;
+        void* buffer;
+
         if (cntk_type == CNTK::DataType::Float)
         {
             numpy_type = NPY_FLOAT;
@@ -1052,8 +1084,11 @@ def dynamic_axes(self):
         {
             throw std::invalid_argument("unknown CNTK data type");
         }
-        
-        PyObject* ndarray = PyArray_SimpleNewFromData(dimensions.size(), shape, numpy_type, buffer);
+
+        PyObject* ndarray = PyArray_SimpleNew(dimensions.size(), shape, numpy_type);
+        void *arr_data = PyArray_DATA((PyArrayObject*)ndarray);
+
+        memcpy(arr_data, buffer, PyArray_ITEMSIZE((PyArrayObject*) ndarray) * num_elements);
 
         if ((*self).Device() != DeviceDescriptor::CPUDevice())
         {

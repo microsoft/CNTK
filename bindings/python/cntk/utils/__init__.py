@@ -492,15 +492,11 @@ def create_NDArrayView(shape, data_type=cntk_py.DataType_Float, dev=None):
 
 
 def create_NDArrayView_from_NumPy(nd, dev=None):
-    ndav_cpu = cntk_py.NDArrayView(
-        nd, cntk_py.DeviceDescriptor.cpu_device(), False)
-
     if not dev:
         dev = cntk_py.DeviceDescriptor.use_default_device()
 
-    ndav = ensure_dev(ndav_cpu, dev)
+    return cntk_py.NDArrayView(nd, dev, False)
 
-    return ndav
 
 
 def create_Value_for_Variable(var, shape=None, dev=None, mask=None):
