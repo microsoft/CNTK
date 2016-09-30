@@ -11,49 +11,103 @@ import time
 from cntk import DeviceDescriptor, Trainer, sgd_learner, Axis, text_format_minibatch_source, StreamConfiguration
 from cntk.ops import parameter, input_variable, placeholder_variable, times, cross_entropy_with_softmax, combine, classification_error
 import itertools
-from cntk.ops.functions import Function
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(abs_path, "..", ".."))
-from examples.common.nn import LSTMP_component_with_self_stabilization, embedding, linear_layer, select_last, print_training_progress
+from examples.common.nn import slice, sigmoid, log, tanh, past_value, future_value, print_training_progress
 
 
-#### monkey-patching some missing stuff
+#### temporary layers lib, to be moved out
+from cntk.ops.functions import Function
+from cntk.ops.variables import Variable
+
+# monkey-patching some missing stuff
 def __matmul__(a,b):  # TODO: define @ once we have Python 3.5
     return times(a,b)
 Function.__matmul__ = __matmul__  # should work in Python 3.5  --Function is not defined?
 
-# apply a Function to a Variable or tuple of variables
-def _apply(function, arg):
-    if isinstance(arg, tuple):
-        # BUGBUG: How about order of function arguments?
-        # if input is a tuple then apply one arg at a time
-        # note that arg may contain nested tuples as well, which get flattened this way
-        # e.g. LSTM (x, (h, c))
-        for one_arg in list(arg):
-            function = _apply(function, one_arg)
-        return function
-    else:
-        f = function.clone()
-        inputs = f.inputs()  # TODO: This should be ordered, but it is a set (right?)
-        placeholders = [p for p in inputs if p.is_placeholder()]
-        return f.replace_placeholders({placeholders[0]: arg})  # replace first placeholder --TODO: order?
-#Function.apply = _apply  # should really be __call__
-Parameter = parameter   # these are factory methods for things with state
+# easier construction of records
+def Record(**kwargs):
+    class AsRecord(dict):
+        def __init__(self, dict):
+            super(AsRecord, self).__init__(dict)
+            for key in dict:
+                self[key] = dict[key]
+        def __getattr__(self, k):
+            return self.get(k)
+    return AsRecord(kwargs)
+
+# type-cast a shape given as a scalar into a tuple
+def _as_tuple(x):
+    return x if (isinstance(x,tuple)) else (x,)
+def _Infer(shape, axis):
+    return Record(shape=_as_tuple(shape), axis=axis, with_shape = lambda new_shape: _Infer(new_shape, axis))
+
+def _get_placeholders(f):
+    try:
+        return f.placeholders()
+    except AttributeError: # Workaround: in Python, a Placeholder cannot auto-cast to an identity function
+        return [f] # BUGBUG: only correct if not bound yet. But this problem shall go away anyway.
+
+def _apply(f, args):
+    import operator   # add()
+    import functools  # reduce()
+    # flatten args to a list. Note it may be a a tuple or even a nested tree of tuples, e.g. LSTM (x, (h, c))
+    def flatten_tuple(args):
+        if not isinstance(args, tuple): # not a tuple: singleton; create a singleton tuple
+            return (args,)
+        return functools.reduce(operator.add, [(flatten_tuple(item)) for item in args])
+    args = list(flatten_tuple(args))
+    # TODO: use clone() directly
+    f = f.clone()
+    placeholders = _get_placeholders(f)  # f parameters to fill in
+    print (len(args))
+    print (len(placeholders))
+    if len(args) != len(placeholders):
+        raise TypeError("_apply: number of arguments {} must match number of placeholders {}".format(len(args), len(placeholders)))
+    try:
+        return f.replace_placeholders(dict(zip(placeholders, args)))
+        #return f.clone(dict(zip(placeholders, args)))
+        # BUGBUG: ^^ fails with TypeError: clone() takes 1 positional argument but 2 were given
+    except AttributeError: # Workaround: a Variable object can be passed here, and it can be a placeholder itself
+        if f.is_placeholder():
+            return args[0]
+        else:
+            raise
+
+# make a Function instance callable
+# at end of each layer constructor, return _make_callable(z)
+# use this until __call__ is implemented in Function()
+# Also add the >> operator (forward function composition).
+def _make_callable(f):
+    class CallableFunction(f.__class__): 
+        def __call__(self, *args):
+            return _apply(self, _as_tuple(args))
+        def __rshift__(self, other):
+            return other(self)
+    if len(_get_placeholders(f)) != 1:
+        print("_make_callable: making a Function with >1 arg callable")
+    f.__class__ = CallableFunction
+    print ("{} placeholders".format(len(_get_placeholders(f))))
+    return f
+
+# some mappings to BS format
+def Parameter(shape, learning_rate_multiplier=1.0, init=None, init_value_scale=1, init_value=None, init_filter_rank=0, init_output_rank=1, init_from_file_path=None, init_on_cpu_only=True, random_seed=-1):
+   return parameter(shape)   # these are factory methods for things with state
 Input = input_variable
 
 # Sequential -- composite that applies a sequence of functions onto an input
 # Sequential ([F, G, H]) === F >> G >> H
-def Sequential(arrayOfFunctions, _indim):
-    r = Placeholder(_indim)
-    for f in arrayOfFunctions:
-        r = _apply(f, r)
-    return r;
+def Sequential(arrayOfFunctions, _inf):
+    import functools  # reduce()
+    return functools.reduce(lambda g, f: _make_callable(f) >> g, arrayOfFunctions)
+    #r = Placeholder(_inf=_inf)
+    #for f in arrayOfFunctions:
+    #    r = _make_callable(r) >> f
+    #return r;
 
-#### temporary layers lib, to be moved out
-def Placeholder(_indim):
-    return placeholder_variable(shape=layers._as_tuple(_indim))  # where to get the dynamic axis?
-    #placeholder_variable(shape=(_indim), dynamic_axes=input.dynamic_axes())
+def Placeholder(_inf):
+    return placeholder_variable(shape=_as_tuple(_inf.shape), dynamic_axes=_inf.axis)
 
 class layers:
     # need to define everything indented by 4
@@ -64,67 +118,154 @@ class layers:
     # Note: shape may describe a tensor as well.
     # TODO: change to new random-init descriptor
     @staticmethod
-    def Linear(shape, _indim, bias=True, init='glorot_uniform', initValueScale=1, inputRank=None, mapRank=None):
-        out_shape = layers._as_tuple(shape)
-        in_shape = layers._as_tuple(_indim)  # TODO: INFERRED
-        W = Parameter(in_shape + out_shape)
-        b = Parameter(           out_shape) if bias else None
-        x = Placeholder(_indim)
-        apply = __matmul__(x, W) + b if bias else \
-                __matmul__(x, W)
-        return apply
+    def Linear(shape, _inf, bias=True, init='glorot_uniform', init_value_scale=1, input_rank=None, map_rank=None):
+        out_shape = _as_tuple(shape)
+        W = Parameter(_inf.shape + out_shape, init=init, init_value_scale=init_value_scale)
+        b = Parameter(             out_shape, init='zero') if bias else None
+        x = Placeholder(_inf=_inf)
+        expression = __matmul__(x, W) + b if bias else \
+                     __matmul__(x, W)
+        return _make_callable(expression)
         # TODO: how to break after the else?
-
-    # type-cast a shape given as a scalar into a tuple
-    @staticmethod
-    def _as_tuple(x):
-        return x if (isinstance(x,tuple)) else (x,)
 
     # Embedding -- create a linear embedding layer
     @staticmethod
-    def Embedding(shape, _indim, init='glorot_uniform', initValueScale=1, embedding_path=None, transpose=False):
-        shape = layers._as_tuple(shape)
-        full_shape = (shape + _indim,) if transpose else ((_indim,) + shape)
+    def Embedding(shape, _inf, init='glorot_uniform', init_value_scale=1, embedding_path=None, transpose=False):
+        shape = _as_tuple(shape)
+        full_shape = (shape + _inf.shape) if transpose else (_inf.shape + shape)
         if embedding_path is None:
             # TODO: how to pass all optional args automatically in one go?
-            return layers.Linear(shape, _indim, init=init, initValueScale=initValueScale)  # learnable
+            return layers.Linear(shape, _inf=_inf, init=init, init_value_scale=init_value_scale)  # learnable
         else:
             E = Parameter(full_shape, initFromFilePath=embeddingPath, learningRateMultiplier=0)  # fixed from file
-        x = Placeholder(_indim)
-        apply = __matmul__(E, x) if transposed else \
-                __matmul__(x, E)     # x is expected to be sparse one-hot
-        return apply
+        x = Placeholder(_inf=_inf)
+        expression = __matmul__(E, x) if transposed else \
+                     __matmul__(x, E)     # x is expected to be sparse one-hot
+        return _make_callable(expression)
 
-    # TODO: We are stuck with two-argument functions
     @staticmethod
-    def LSTM(hidden_shape, _indim, cell_shape=None): # (x, (h, c))
-        if cell_shape is None:
-            cell_shape = hidden_shape
+    def Stabilizer(_inf, steepness=4):
+        # sharpened Softplus: 1/steepness ln(1+e^{steepness*beta})
+        # this behaves linear for weights around 1, yet guarantees positiveness
+
+        # parameters
+        param = Parameter((1), init_value=0.99537863)  # 1/steepness*ln (e^steepness-1) for steepness==4
+
+        # application
+        x = Placeholder(_inf=_inf)
+        beta = log (1 + exp (steepness * param)) / steepness
+        expression = beta * x
+        return _make_callable(expression)
+
+    @staticmethod
+    def Identity(_inf):
+        id_fn = Placeholder(_inf=_inf)
+        id_fn.is_identity = True  # Workaround: _apply() can recognize it this way
+        return _make_callable(id_fn)
+
+    # TODO: Fornow, shape and cell_shape can only be rank-1 vectors
+    @staticmethod
+    def LSTMBlock(shape, _inf, cell_shape=None, use_peepholes=False, init='glorot_uniform', init_value_scale=1, enable_self_stabilization=False): # (x, (h, c))
+        has_projection = cell_shape is not None
+        has_aux = False
+
+        shape = _as_tuple(shape)
+
+        cell_shape = _as_tuple(cell_shape) if cell_shape is not None else shape
+
+        stack_axis = 0  # TODO: make this -1, i.e. the fastest-changing one, to match BS
+        # determine stacking dimensions
+        cell_shape_list = list(cell_shape)
+        stacked_dim = cell_shape_list[0]
+        cell_shape_list[stack_axis] = stacked_dim*4
+        cell_shape_stacked = tuple(cell_shape_list)  # patched dims with stack_axis duplicated 4 times
+
+        # parameters
+        B  = Parameter(             cell_shape_stacked, init_value=0)       # a bias
+        W  = Parameter(_inf.shape + cell_shape_stacked, init=init, init_value_scale=init_value_scale)                             # input
+        A  = Parameter(_inf.shape + cell_shape_stacked, init=init, init_value_scale=init_value_scale) if has_aux else None        # aux input (optional)
+        H  = Parameter(shape      + cell_shape_stacked, init=init, init_value_scale=init_value_scale)                             # hidden-to-hidden
+        Ci = Parameter(             cell_shape,         init=init, init_value_scale=init_value_scale) if use_peepholes else None  # cell-to-hiddden {note: applied elementwise}
+        Cf = Parameter(             cell_shape,         init=init, init_value_scale=init_value_scale) if use_peepholes else None  # cell-to-hiddden {note: applied elementwise}
+        Co = Parameter(             cell_shape,         init=init, init_value_scale=init_value_scale) if use_peepholes else None  # cell-to-hiddden {note: applied elementwise}
+
+        Wmr = ParameterTensor (cell_shape + shape, init=init, init_value_scale=init_value_scale) if has_projection else None  # final projection
+
+        Sdh = layers.Stabilizer(_inf=_inf.with_shape(     shape)) if enable_self_stabilization else layers.Identity(_inf=_inf.with_shape(     shape))
+        Sdc = layers.Stabilizer(_inf=_inf.with_shape(cell_shape)) if enable_self_stabilization else layers.Identity(_inf=_inf.with_shape(cell_shape))
+        Sct = layers.Stabilizer(_inf=_inf.with_shape(cell_shape)) if enable_self_stabilization else layers.Identity(_inf=_inf.with_shape(cell_shape))
+        Sht = layers.Stabilizer(_inf=_inf.with_shape(     shape)) if enable_self_stabilization else layers.Identity(_inf=_inf.with_shape(     shape))
+
         def create_hc_placeholder():
-            return (Placeholder(hidden_shape), Placeholder(cell_shape)) # (h, c)
-        x = Placeholder(_indim)
+            return (Placeholder(_inf=_inf.with_shape(shape)), Placeholder(_inf=_inf.with_shape(cell_shape))) # (h, c)
+
+        # parameters to model function
+        x = Placeholder(_inf=_inf)
         prev_state = create_hc_placeholder()
-        block = layers.Linear(hidden_shape, _indim)  # for now
+
+        # formula of model function
+        dh, dc = prev_state
+
+        dhs = Sdh(dh)  # previous values, stabilized
+        dcs = Sdc(dc)
+        # note: input does not get a stabilizer here, user is meant to do that outside
+
+        # projected contribution from input(s), hidden, and bias
+        proj4 = B + times(x, W) + times(dhs, H) + times(aux, A) if has_aux else \
+                B + times(x, W) + times(dhs, H)
+
+        it_proj  = slice (proj4, stack_axis, 0*stacked_dim, 1*stacked_dim)  # split along stack_axis
+        bit_proj = slice (proj4, stack_axis, 1*stacked_dim, 2*stacked_dim)
+        ft_proj  = slice (proj4, stack_axis, 2*stacked_dim, 3*stacked_dim)
+        ot_proj  = slice (proj4, stack_axis, 3*stacked_dim, 4*stacked_dim)
+        # BUGBUG: replace_placeholders fails with TypeError: slice() got multiple values for argument 'axis'
+
+        # add peephole connection if requested
+        def peep(x, c, C):
+            return x + C * c if use_peepholes else x
+
+        it = sigmoid (peep (it_proj, dcs, Ci))        # input gate(t)
+        bit = it * tanh (bit_proj)                    # applied to tanh of input network
+
+        ft = sigmoid (peep (ft_proj, dcs, Cf))        # forget-me-not gate(t)
+        bft = ft * dc                                 # applied to cell(t-1)
+
+        ct = bft + bit                                # c(t) is sum of both
+
+        ot = sigmoid (peep (ot_proj, Sct(ct), Co))    # output gate(t)
+        ht = ot * tanh (ct)                           # applied to tanh(cell(t))
+
+        c = ct          # cell value
+        h = times(Sht(ht), Wmr) if has_projection else \
+            ht
+
         # return to caller a helper function to create placeholders for recurrence
+        block = h  # BUGBUG: must be combine(h, c), once the API works
         block.create_placeholder = create_hc_placeholder
-        return block
+        return _make_callable(block)
 
     @staticmethod
-    def Recurrence(block, _indim, go_backwards=False):
+    def Recurrence(over=None, _inf=None, go_backwards=False):
         # helper to compute previous value
+        # can take a single Variable/Function or a tuple
         def previous_hook(state):
-            if isinstance(state, tuple):  # if multiple then apply to each element
+            if isinstance(state, tuple):  # if multiple then apply to eaAntoher ch element
                 return tuple([previous_hook(s) for s in list(state)])
             else: # not a tuple: must be a 'scalar', i.e. a single element
-                return past_value(state) if not go_backwards else \
-                       future_value(state)
-        x = Placeholder(_indim)
-        prev_state_forward = block.create_placeholder() # create a placeholder or a tuple of placeholders
-        state = _apply (block, (x, prev_state_forward)) # apply the recurrent block
+                # BUGBUG: past_value throws an error requiring an explicit dynamic_axis
+                return state #past_value(state) if not go_backwards else \
+                       #future_value(state)
+        def replace_placeholders(what, with_what):
+            if isinstance(what, tuple):  # if multiple then apply to each element
+                return tuple([replace_placeholders(wh, with_wh) for wh, with_wh in list(zip(list(what),list(with_what)))])
+            else: # not a tuple: must be a 'scalar', i.e. a single element
+                what.replace_placeholders({what: with_what})
+        x = Placeholder(_inf=_inf)
+        prev_state_forward = over.create_placeholder() # create a placeholder or a tuple of placeholders
+        state = over(x, prev_state_forward) # apply the recurrent over
         prev_state = previous_hook(state) # recurrent memory. E.g. Previous or Next, with or without initial state, beam reordering etc.
-        prev_state.replace_placeholders({key: value.output() for (key, value) in list(zip(list(prev_state_forward), list(prev_state)))})
-        # TODO: Doe sthis ^^ work for tuples?
-        return state
+        replace_placeholders(prev_state, {key: value.output() for (key, value) in list(zip(list(prev_state_forward), list(prev_state)))})
+        return _make_callable(state)
 
 #### User code begins here
 
@@ -134,9 +275,9 @@ vocab_size = 943 ; num_labels = 129 ; num_intents = 26    # number of words in v
 
 def Reader(path):
     mb_source = text_format_minibatch_source(path, [
-                    StreamConfiguration('query',      dim=vocab_size, is_sparse=True, stream_alias='S0'),
-                    StreamConfiguration('slotLabels', dim=num_labels, is_sparse=True, stream_alias='S2') ], 36000)
-    # what's that 10000 at the end?
+                    StreamConfiguration('query',       dim=vocab_size, is_sparse=True, stream_alias='S0'),
+                    StreamConfiguration('slot_labels', dim=num_labels, is_sparse=True, stream_alias='S2') ], 36000)
+    # what's that 36000 at the end; is that the epoch size?
     # stream_alias -> alias
     # if the dimension is 'dim', should it be called that in the other places as well, instead of 'shape'? Or change to 'shape'?
 
@@ -145,27 +286,27 @@ emb_dim = 150
 hidden_dim = 300
 label_dim = num_labels
 
-def Model(_indim):
+def Model(_inf):
     return Sequential([
-        layers.Embedding(emb_dim, _indim=_indim),
-        layers.Recurrence(layers.LSTM(hidden_dim, _indim=emb_dim), _indim=emb_dim, go_backwards=False),
-        layers.Linear(label_dim, _indim=hidden_dim)
-    ], _indim=_indim)
+        layers.Embedding(shape=emb_dim, _inf=_inf),
+        layers.Recurrence(over=layers.LSTMBlock(shape=hidden_dim, _inf=_inf.with_shape(emb_dim)), _inf=_inf.with_shape(emb_dim), go_backwards=False),
+        layers.Linear(shape=label_dim, _inf=_inf.with_shape(hidden_dim))
+    ], _inf=_inf)
 
 def train(reader, model):
     # Input variables denoting the features and label data
-    query      = Input(input_dim)  # TODO: make sparse once it works
-    slotLabels = Input(num_labels)
+    query       = Input(input_dim)  # TODO: make sparse once it works
+    slot_labels = Input(num_labels)
 
     # apply model to input
-    z = _apply(model, query)
+    z = model(query)
 
     # loss and metric
-    ce = cross_entropy_with_softmax(z, slotLabels)
-    pe = classification_error      (z, slotLabels)
+    ce = cross_entropy_with_softmax(z, slot_labels)
+    pe = classification_error      (z, slot_labels)
 
     # training config
-    lr = 0.003  # TODO: 0.003*2:0.0015*12:0.0003
+    lr = 0.003  # TODO: [0.003]*2 + [0.0015]*12 + [0.0003]
     #gradUpdateType = "fsAdaGrad"
     #gradientClippingWithTruncation = True ; clippingThresholdPerSample = 15.0
     #first_mbs_to_show_result = 10
@@ -185,7 +326,7 @@ def train(reader, model):
         # TODO: should we use *args? Then no need for [ ]
         mb.data = lambda inputs: {input:mb[mb_source.stream_info(input)].m_data for input in inputs}
 
-        trainer.train_minibatch(mb.data([query, slotLabels]))
+        trainer.train_minibatch(mb.data([query, slot_labels]))
 
         print_training_progress(trainer, i, num_mbs_to_show_result)
 
@@ -196,6 +337,7 @@ if __name__=='__main__':
 
     os.chdir('c:/work/CNTK/Tutorials/SLUHandsOn')
 
+    _inf = _Infer(shape=input_dim, axis=[Axis.default_batch_axis()])  # inferred info
     reader = Reader(data_dir + "/atis.train.ctf")
-    model = Model(_indim=input_dim)
+    model = Model(_inf=_inf)
     train(reader, model)
