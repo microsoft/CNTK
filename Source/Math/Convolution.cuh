@@ -247,7 +247,8 @@ __global__ void kMaxUnpooling(int batchSize, const int* mpRowCol, const int* mpR
         {
             int dcol = indices[i0 + i];
             if (poolIn[colBase + dcol] >= curMax) 
-                dst[colBase + dcol] = src[row];
+                dst[colBase + dcol] = src[row];     // this should have no issue if we are unpooling features. 
+                                                    // if (*this) contains gradient, the unpooling operator with overlapped pooling is not clearly defined 
         }
 
         src    += blockIdx.y * srcVecSize;
