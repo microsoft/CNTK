@@ -1478,18 +1478,19 @@ def placeholder_variable(shape, dynamic_axes=[Axis.default_dynamic_axis(), Axis.
     return placeholder_variable(shape, dynamic_axes)
 
 
-def parameter(shape=None, value=None, initializer=None, device=None, name=''):
+def parameter(shape=None, init=None, device=None, name=''):
     '''
     It creates a parameter tensor.
 
     Args:
         shape (`tuple` or `int`, optional): the shape of the input tensor. If not provided, it
          will be inferred from ``value``.
-        value (scalar or NumPy array, optional): a scalar initial value that would be replicated
-         for every element in the tensor or NumPy array.
-         If `None`, the tensor will be initialized uniformly random.
-        initializer: output of one of the initializers in
-         `:module:cntk.initializers`
+        init (scalar or NumPy array or initializer): if init is a scalar
+         it will be replicated for every element in the tensor or
+         NumPy array. If it is the output of an initializer form
+         `:module:cntk.initializer` it will be used to initialize the tensor at
+         the first forward pass. If `None`, the tensor will be initialized
+         with 0.
         device (:class:`cntk.DeviceDescriptor`): instance of DeviceDescriptor
         name (`str`, optional): the name of the Function instance in the network
 
@@ -1501,16 +1502,16 @@ def parameter(shape=None, value=None, initializer=None, device=None, name=''):
     if not device:
         device = DeviceDescriptor.use_default_device()
 
-    if np.isscalar(value) and not shape:
+    if np.isscalar(init) and not shape:
         shape = ()
-        if isinstance(value, np.ndarray):
-            data_type = str(value.dtype)
+        if isinstance(init, np.ndarray):
+            data_type = str(init.dtype)
         else:
             data_type = 'float32'
     else:
         data_type = None
 
-    return Parameter(shape, value, data_type, initializer, device, name)
+    return Parameter(shape, init, data_type, device, name)
 
 
 def constant(shape=None, value=None, device=None, name=''):

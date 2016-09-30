@@ -12,7 +12,7 @@ from .. import parameter, input_variable, momentums_per_sample
 
 
 def _check(init, name):
-    p = parameter(shape=(10,20,5), initializer=init)
+    p = parameter(shape=(10,20,5), init=init)
     val = p.value().to_numpy()
     assert np.allclose(np.average(val), 0, atol=0.1), name
     assert np.var(val) > 0.01, name
