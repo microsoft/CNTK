@@ -41,7 +41,7 @@ def cntk_device(device_id):
     if device_id==-1:
         return cntk_py.DeviceDescriptor.cpu_device()
     else:
-        return cntk_py.DeviceDescriptor.gpu_device(device_id)        
+        return cntk_py.DeviceDescriptor.gpu_device(device_id)
 
 def cntk_to_numpy_shape(shape):
     '''
@@ -417,7 +417,7 @@ def sanitize_var_map(input_map, precision_numpy=None, device=None, add_batch_axi
     if input_map:
         for var, batch in input_map.items():
             from ..cntk_py import Value
-            if not isinstance(batch, Value):                
+            if not isinstance(batch, Value):
                 if add_batch_axis:
                     batch = [batch]
                 if isinstance(batch, np.ndarray):
@@ -544,7 +544,7 @@ def get_train_loss(trainer):
     '''
     Fetch the train loss from the last minibatch and copy it to the CPU in case it is on the GPU.
     Args:
-        trainer (:class:`Trainer`): the trainer used.        
+        trainer (:class:`Trainer`): the trainer used.
     Returns: 
         the loss value
     '''    
@@ -556,7 +556,7 @@ def get_train_eval_criterion(trainer):
     '''
     Fetch the train evaluation criterion (e.g., classification error) from the last minibatch and copy it to the CPU in case it is on the GPU.
     Args:
-        trainer (:class:`Trainer`): the trainer used.        
+        trainer (:class:`Trainer`): the trainer used.
     Returns: 
         the criterion value
     '''    
@@ -613,7 +613,7 @@ def eval(op, precision, device, input_map=None, backward_pass=False):
         forward_output[v] = np_data
         forward_output_mask[v] = value.mask()
 
-    if backward_pass:    
+    if backward_pass:
         root_gradients = {} 
         for v, o in forward_output.items():
             root_gradients[v] = ones_like(o, precision)

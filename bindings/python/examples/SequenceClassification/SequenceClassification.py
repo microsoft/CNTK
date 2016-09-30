@@ -1,4 +1,4 @@
-﻿# Copyright (c) Microsoft. All rights reserved.
+# Copyright (c) Microsoft. All rights reserved.
 
 # Licensed under the MIT license. See LICENSE.md file in the project root
 # for full license information.
@@ -15,6 +15,8 @@ from cntk.ops import input_variable, cross_entropy_with_softmax, combine, classi
 abs_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(abs_path, "..", ".."))
 from examples.common.nn import LSTMP_component_with_self_stabilization, embedding, linear_layer, select_last, print_training_progress
+
+TOLERANCE_ABSOLUTE=1E-2
 
 # Defines the LSTM model for classifying sequences
 def LSTM_sequence_classifer_net(input, num_output_classes, embedding_dim, LSTM_dim, cell_dim):
@@ -64,6 +66,7 @@ def train_sequence_classifier():
     i = 0;
     while True:
         mb = mb_source.get_next_minibatch(minibatch_size)
+
         if  len(mb) == 0:
             break
 
@@ -75,9 +78,26 @@ def train_sequence_classifier():
 
         i += 1
 
+    import copy
+
+    evaluation_average = copy.copy(trainer.previous_minibatch_evaluation_average())
+    loss_average = copy.copy(trainer.previous_minibatch_loss_average())
+
+    return evaluation_average, loss_average
+
+def test_accuracy(device_id):
+    from cntk.utils import cntk_device
+    DeviceDescriptor.set_default_device(cntk_device(device_id))
+
+    evaluation_avg, loss_avg = train_sequence_classifier()
+
+    expected_avg = [0.1595744, 0.35799171]
+    assert np.allclose([evaluation_avg, loss_avg], expected_avg, atol=TOLERANCE_ABSOLUTE)
+
 if __name__=='__main__':
     # Specify the target device to be used for computing
-    target_device = DeviceDescriptor.cpu_device()
-    DeviceDescriptor.set_default_device(target_device)
+    #target_device = DeviceDescriptor.gpu_device(0)
+    #DeviceDescriptor.set_default_device(target_device)
 
-    train_sequence_classifier()
+    accuracy, _ = train_sequence_classifier()
+    print("test: %f"%accuracy)
