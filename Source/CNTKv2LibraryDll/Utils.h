@@ -32,7 +32,7 @@ namespace CNTK
     inline DEVICEID_TYPE AsCNTKImplDeviceId(const DeviceDescriptor& device)
     {
         if (device.Type() == DeviceKind::CPU)
-            return -1;
+            return CPUDEVICE;
         else if (device.Type() == DeviceKind::GPU)
             return device.Id();
         else

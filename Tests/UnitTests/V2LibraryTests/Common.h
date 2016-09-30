@@ -6,6 +6,13 @@
 #include <fstream>
 #include <random>
 
+// enable assert in Release mode.
+#ifdef NDEBUG
+#undef NDEBUG
+#include <assert.h>
+#define NDEBUG
+#endif
+
 static const double relativeTolerance = 0.001f;
 static const double absoluteTolerance = 0.000001f;
 
@@ -21,6 +28,21 @@ inline void FloatingPointVectorCompare(const std::vector<ElementType>& first, co
             throw std::runtime_error(message);
     }
 }
+
+inline void VerifyException(const std::function<void()>& functionToTest, std::string errorMessage) {
+    bool error = false;
+    try
+    {
+        functionToTest();
+    }
+    catch (const std::exception&)
+    {
+        error = true;
+    }
+
+    if (!error)
+        throw std::runtime_error(errorMessage);
+};
 
 static std::mt19937_64 rng(0);
 

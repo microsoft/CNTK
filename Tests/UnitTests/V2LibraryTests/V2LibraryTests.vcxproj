@@ -111,6 +111,7 @@
   <ItemGroup>
     <ClCompile Include="..\..\..\Examples\Evaluation\CPPEvalV2Client\EvalMultithreads.cpp" />
     <ClCompile Include="CifarResNet.cpp" />
+    <ClCompile Include="DeviceSelectionTests.cpp" />
     <ClCompile Include="LearnerTests.cpp" />
     <ClCompile Include="Seq2Seq.cpp" />
     <ClCompile Include="SerializationTests.cpp" />
