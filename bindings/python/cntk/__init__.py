@@ -22,4 +22,3 @@ from .io import *
 from .cntk_py import DeviceDescriptor, momentums_per_sample
 
 DATATYPE = np.float32
-

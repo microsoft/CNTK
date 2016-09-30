@@ -15,25 +15,26 @@ abs_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(abs_path, "..", ".."))
 from examples.common.nn import fully_connected_classifier_net, print_training_progress
 
-TOLERANCE_ABSOLUTE=1E-03
+TOLERANCE_ABSOLUTE = 1E-03
 
 # make sure we get always the same "randomness"
 np.random.seed(0)
 
 def generate_random_data(sample_size, feature_dim, num_classes):
-    # Create synthetic data using NumPy. 
+    # Create synthetic data using NumPy.
     Y = np.random.randint(size=(sample_size, 1), low=0, high=num_classes)
 
     # Make sure that the data is separable
-    X = (np.random.randn(sample_size, feature_dim)+3) * (Y+1)
-    X = X.astype(np.float32)    
-    # converting class 0 into the vector "1 0 0", 
+    X = (np.random.randn(sample_size, feature_dim) + 3) * (Y + 1)
+    X = X.astype(np.float32)
+    # converting class 0 into the vector "1 0 0",
     # class 1 into vector "0 1 0", ...
-    class_ind = [Y==class_number for class_number in range(num_classes)]
+    class_ind = [Y == class_number for class_number in range(num_classes)]
     Y = np.asarray(np.hstack(class_ind), dtype=np.float32)
-    return X, Y          
+    return X, Y
 
 # Creates and trains a feedforward classification model
+
 def ffnet(debug_output=True):
     input_dim = 2
     num_output_classes = 2
@@ -45,7 +46,8 @@ def ffnet(debug_output=True):
     label = input_variable((num_output_classes), np.float32)
 
     # Instantiate the feedforward classification model
-    netout = fully_connected_classifier_net(input, num_output_classes, hidden_layers_dim, num_hidden_layers, sigmoid)
+    netout = fully_connected_classifier_net(
+        input, num_output_classes, hidden_layers_dim, num_hidden_layers, sigmoid)
 
     ce = cross_entropy_with_softmax(netout, label)
     pe = classification_error(netout, label)
@@ -57,32 +59,39 @@ def ffnet(debug_output=True):
     minibatch_size = 25
     num_samples_per_sweep = 10000
     num_sweeps_to_train_with = 2
-    num_minibatches_to_train = (num_samples_per_sweep * num_sweeps_to_train_with) / minibatch_size
+    num_minibatches_to_train = (
+        num_samples_per_sweep * num_sweeps_to_train_with) / minibatch_size
     training_progress_output_freq = 20
     for i in range(0, int(num_minibatches_to_train)):
-        features, labels = generate_random_data(minibatch_size, input_dim, num_output_classes)
-        # Specify the mapping of input variables in the model to actual minibatch data to be trained with
-        trainer.train_minibatch({input : features, label : labels})
+        features, labels = generate_random_data(
+            minibatch_size, input_dim, num_output_classes)
+        # Specify the mapping of input variables in the model to actual
+        # minibatch data to be trained with
+        trainer.train_minibatch({input: features, label: labels})
         if debug_output:
             print_training_progress(trainer, i, training_progress_output_freq)
 
-    test_features, test_labels = generate_random_data(minibatch_size, input_dim, num_output_classes)
-    avg_error = trainer.test_minibatch({input : test_features, label : test_labels})
+    test_features, test_labels = generate_random_data(
+        minibatch_size, input_dim, num_output_classes)
+    avg_error = trainer.test_minibatch(
+        {input: test_features, label: test_labels})
     return avg_error
 
-def test_accuracy(device_id):
+def test_error(device_id):
     #FIXME: need a backdoor to work around the limitation of changing the default device not possible 
     #from cntk.utils import cntk_device
     #DeviceDescriptor.set_default_device(cntk_device(device_id))
 
     avg_error = ffnet(debug_output=False)
     expected_avg_error = 0.12
-    assert np.allclose([avg_error], [expected_avg_error], atol=TOLERANCE_ABSOLUTE)
+    assert np.allclose(avg_error, expected_avg_error, atol=TOLERANCE_ABSOLUTE)
 
-if __name__=='__main__':
+if __name__ == '__main__':
     # Specify the target device to be used for computing
-    #target_device = DeviceDescriptor.gpu_device(0)
-    #DeviceDescriptor.set_default_device(target_device)
+    target_device = DeviceDescriptor.gpu_device(0)
+    # If it is crashing, probably you don't have a GPU, so try with CPU:
+    # target_device = DeviceDescriptor.cpu_device()
+    DeviceDescriptor.set_default_device(target_device)
 
-    accuracy = ffnet()
-    print("test: %f"%accuracy)
+    error = ffnet()
+    print("test: %f" % error)

@@ -10,6 +10,7 @@ import pytest
 from ..initializer import *
 from .. import parameter, input_variable, momentums_per_sample
 
+
 def _check(init, name):
     p = parameter(shape=(10,20,5), initializer=init)
     val = p.value().to_numpy()

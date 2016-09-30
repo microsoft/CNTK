@@ -25,16 +25,17 @@ def test_learning_rates_per_sample(params, expectation):
 def test_learner_init():
     # TODO Test functionality
     i = input_variable(shape=(1,),
-            needs_gradient=True,
-            name='a')
+                       needs_gradient=True,
+                       name='a')
     w = parameter(shape=(1,))
 
-    res = i*w
+    res = i * w
 
     sgd(res.parameters(), lr=0.1)
 
     momentum_time_constant = 1100
-    momentum_per_sample = momentums_per_sample(math.exp(-1.0 / momentum_time_constant))
+    momentum_per_sample = momentums_per_sample(
+        math.exp(-1.0 / momentum_time_constant))
 
     momentum_sgd(res.parameters(), lr=0.1, momentums=momentum_per_sample)
 
