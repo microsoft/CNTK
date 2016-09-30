@@ -754,34 +754,11 @@ public:
         AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
     }
 
-    virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
-    {
-        Base::CopyTo(nodeP, newName, flags);
-        if (flags & CopyNodeFlags::copyNodeValue)
-        {
-            auto node = dynamic_pointer_cast<RandomSampleNode<ElemType>>(nodeP);
-            node->m_allowDuplicates = m_allowDuplicates;
-            node->m_estimateInSampleFrequency = m_estimateInSampleFrequency;
-            node->m_sizeOfSampledSet = m_sizeOfSampledSet;
-            node->m_randomSeed = m_randomSeed;
-        }
-    }
+    virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override;
 
-    void Save(File& fstream) const
-    {
-        Base::Save(fstream);
-        fstream << m_allowDuplicates;
-        fstream << m_estimateInSampleFrequency;
-        fstream << m_sizeOfSampledSet;
-    }
+    void Save(File& fstream) const;
 
-    virtual void Load(File& fstream, size_t modelVersion) override
-    {
-        Base::Load(fstream, modelVersion);
-        fstream >> m_allowDuplicates;
-        fstream >> m_estimateInSampleFrequency;
-        fstream >> m_sizeOfSampledSet;
-    }
+    virtual void Load(File& fstream, size_t modelVersion) override;
 
 private:
     // Code and comment below is nearly a copy of some tensorflow code 
@@ -792,142 +769,20 @@ private:
     // Assuming (falsely) that the number of tries to get a sampled set with the requested number of distinct values is always estimatedNumTries
     // the probability that a specific class in in the sampled set is (1 - (1-p)^estimatedNumTries), where p is the probablity to pick the clas in one draw.
     // The estimate can be quite a bit off but should be better than nothing. Better alternatives?
-    float EstimateInSampleFrequency(float p, float estimatedNumTries) const
-    {
-        if (m_allowDuplicates)
-        {
-            return p * m_sizeOfSampledSet;
-        }
-        else /* No duplicates allowed. Estimated count is same as probability of inclusion. */
-        {
-            return -expm1(estimatedNumTries * log1p(-p));
-        }
-    }
+    float EstimateInSampleFrequency(float p, float estimatedNumTries) const;
 
-    virtual void /*ComputationNode::*/ ForwardPropNonLooping() override
-    {
-        UpdateWeightsPrefixSum();
-        Matrix<ElemType>& valueMatrix = ValueAsMatrix();
-        valueMatrix.TransferToDeviceIfNotThere(CPUDEVICE, /*ismoved =*/ true/*means: BOTH state not ok */, /*emptyTransfer =*/ true, /*updatePreferredDevice =*/ false);
-        valueMatrix.SetDevice(CPUDEVICE);
+    virtual void /*ComputationNode::*/ ForwardPropNonLooping() override;
 
-        if (m_estimateInSampleFrequency) // W are in the mode the estimating the expected frequency of each class in the sampled set.
-        {
-            valueMatrix.SwitchToMatrixType(DENSE, matrixFormatDense, false);
-            float sumOfWeights = (float) m_samplingWeightsPrefixSum.back();
-            const Matrix<ElemType>& samplingWeights = Input(0)->ValueAsMatrix();
+    void UpdateWeightsPrefixSum();
 
-            float estimatedNumTries = EstimateNumberOfTries();
-
-            for (int i = 0; i < m_samplingWeightsPrefixSum.size(); i++)
-            {
-                // Get the sampling probablility for from the weights for i-th class.
-                float samplingProb = (float)samplingWeights.GetValue(i, 0) / sumOfWeights;
-                float estimatedCount = EstimateInSampleFrequency(samplingProb, estimatedNumTries);
-                valueMatrix.SetValue(i, 0, estimatedCount);
-            }
-        }
-        else /* compute random samples */
-        {
-
-            valueMatrix.SwitchToMatrixType(SPARSE, matrixFormatSparseCSC, false);
-            valueMatrix.Reset();
-
-            // Get vector with indices of randomly sampled classes
-            const std::vector<size_t> samples = GetWeightedSamples();
-
-            // Set columns of (sparse) result matrix as indicator vectors
-            for (size_t i = 0; i < m_sizeOfSampledSet; i++)
-            {
-                int sample = samples[i];
-                valueMatrix.SetValue(sample, i, 1);
-            }
-        }
-    }
-
-    void UpdateWeightsPrefixSum()
-    {
-        // If sampling probabilites have changed update m_samplingWeightsPrefixSum
-        if (m_samplingWeightsPrefixSum.empty() || TimeStamp::IsOlderThan(*Input(0)))
-        {
-            const Matrix<ElemType>& samplingWeights = Input(0)->ValueAsMatrix();
-            m_samplingWeightsPrefixSum.clear();
-            double runningWeightsSum = 0;
-            for (int iClass = 0; iClass < samplingWeights.GetNumRows(); iClass++)
-            {
-                ElemType currentWeight = samplingWeights.GetValue(iClass, 0);
-                runningWeightsSum += currentWeight;
-                m_samplingWeightsPrefixSum.push_back(runningWeightsSum);
-            }
-        }
-    }
-
-    const std::vector<size_t> GetWeightedSamples()
-    {
-        long dummy; 
-        // Here we are not interested in the number of sampling tries needed, which is returned in the parameter.
-        return RunSampling(dummy);
-    }
+    const std::vector<size_t> GetWeightedSamples();
 
     // Estimate the number of tries needed to find sizeOfSampledSet samples
-    float EstimateNumberOfTries()
-    {
-        // We estimate the average numver of tries by repeating a fixed number of experiments
-        const size_t numExperiments = 10; // We choose 10 without any deep justification.
-        long totalTries = 0;
-        for (int iExperiment = 0; iExperiment < numExperiments; iExperiment++)
-        {
-            long nTries;
-            RunSampling(nTries);
-            totalTries += nTries;
-        }
-        return totalTries / (float)numExperiments;
-    }
+    float EstimateNumberOfTries();
 
     // Runs the sampling returning a vector with the id's of the samples. The parameter nTries is used to return the number of draws that was needed
     // to get the expected number of samples.
-    const std::vector<size_t> RunSampling(long& nTries)
-    {
-        std::uniform_real_distribution<double> r(0, m_samplingWeightsPrefixSum.back());
-        std::unordered_set<int> alreadySampled;
-        std::vector<size_t> samples;
-        CPURNGHandle* cpuRNGHandle = dynamic_cast<CPURNGHandle*>(&GetRNGHandle(CPUDEVICE));
-        // find random samples using the specified weight
-
-        if (m_allowDuplicates)
-            nTries = m_sizeOfSampledSet;
-        else
-            nTries = 0; // just initialize and count how many tries we need.
-
-        while (samples.size() < m_sizeOfSampledSet)
-        {
-            double randomValue = r(cpuRNGHandle->Generator());
-            // Find the first index where value[idx] >= randomValue.
-            auto lower = std::lower_bound(m_samplingWeightsPrefixSum.begin(), m_samplingWeightsPrefixSum.end(), randomValue);
-            int idx = (int)(lower - m_samplingWeightsPrefixSum.begin());
-
-            if (m_allowDuplicates)
-                samples.push_back(idx);
-            else
-            {
-                // Sampling without replacement: each value can be sampled at most once. 
-                // The implementation below using rejection sampling is problematic.
-                // E.g if first class has probability p = 0.999 we typically will have to sample 1000 times or more to hit another class.
-                // BUGBUG Alternative implementions, e.g:
-                // * Weighted Random Sampling with Reservoir: http://utopia.duth.gr/~pefraimi/research/data/2007EncOfAlg.pdf
-                // * Binary tree with classes as leafes and branch probs on non-leafes.
-                // * As in numpy: https://github.com/numpy/numpy/blob/master/numpy/random/mtrand/mtrand.pyx#L1440
-                nTries++;
-                if (alreadySampled.find(idx) != alreadySampled.end()) continue;
-                else
-                {
-                    samples.push_back(idx);
-                    alreadySampled.insert(idx);
-                }
-            }
-        }
-        return samples;
-    }
+    const std::vector<size_t> RunSampling(long& nTries);
 
 public:
     virtual void /*ComputationNode::*/ BackpropToNonLooping(size_t inputIndex) override
@@ -935,27 +790,7 @@ public:
         // This node does not propagate gradients.
     }
 
-    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
-    {
-        Base::Validate(isFinalValidationPass);
-        m_pMBLayout = nullptr;
-
-        let& shape = Input(0)->GetSampleLayout();
-        let dims = shape.GetDims();
-
-        size_t nClasses = dims[0];
-
-        if (m_estimateInSampleFrequency)
-        {
-            // Output one vector containing the estimated in sample frequency for each class.
-            SetDims(TensorShape(nClasses, 1), false);
-        }
-        else /* sampling mode */
-        {
-            // Output one vector containing the estimated inclusion probability for each class.
-            SetDims(TensorShape(nClasses, m_sizeOfSampledSet), false);
-        }
-    }
+    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override;
 
     virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
 
@@ -964,21 +799,7 @@ public:
         return false;
     }
 
-    virtual bool IsOutOfDateWrtInputs() const override
-    {
-        // The only input is the sampling weight vector that typically will be constant. 
-        if (m_estimateInSampleFrequency)
-        {
-            // If we are in the mode to estimate the inclusion probabilties for each class we don't need to recompute as long as the input doesn't change.
-            return Base::IsOutOfDateWrtInputs();
-        }
-        else
-        {
-            // If we are in the mode to generate random samples (i.e. m_estimateInSampleFrequency == false) 
-            // we need to recompute the result for each mini-batch even if the weight vector didn't chnage.
-            return true;
-        }
-    }
+    virtual bool IsOutOfDateWrtInputs() const override;
 
 private:
     bool m_allowDuplicates;        // The node can create samples allowing for duplicates (sampling with replacement) or not (sampling without replacement).
@@ -986,9 +807,6 @@ private:
     int m_sizeOfSampledSet;                // Requested size of sample in case of run-mode = CREATE_SAMPLES.
     std::vector<double> m_samplingWeightsPrefixSum;
 };
-
-template class RandomSampleNode<float>;
-template class RandomSampleNode<double>;
 
 // -----------------------------------------------------------------------
 // ClassBasedCrossEntropyWithSoftmaxNode (labeldata(.,t), inputdata(.,t), embeddingMatrix, clsProbBeforeSoftmaxData(.,t))
