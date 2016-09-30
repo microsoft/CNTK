@@ -5,6 +5,6 @@ tags:
     - nightly-l (build_sku == 'gpu') and (flavor == 'release')
 
 testCases:
-  BindingPyTest run must finish with error code 0 (outputs __COMPLETED__ in that case):
+  Run must finish with error code 0 (outputs __COMPLETED__ in that case):
     patterns:
       - __COMPLETED__

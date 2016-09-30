@@ -69,7 +69,7 @@ def ffnet(debug_output=True):
     return avg_error
 
 def test_accuracy(device_id):
-    #FIXME: need a backdor to work around the limitation of changing the default device not possible 
+    #FIXME: need a backdoor to work around the limitation of changing the default device not possible 
     #from cntk.utils import cntk_device
     #DeviceDescriptor.set_default_device(cntk_device(device_id))
 

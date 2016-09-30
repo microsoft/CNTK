@@ -36,8 +36,10 @@
 %ignore CNTK::Internal::Scatter;
 %ignore CNTK::Internal::Slice;
 
+// These aren't exported from the CNTK C++ library
 %ignore CNTK::Internal::IsReversingTensorShapesInErrorMessagesEnabled;
 %ignore CNTK::Internal::IsSettingDefaultDeviceAlwaysAllowed;
+%ignore CNTK::Internal::IsAutomaticUnpackingOfPackedValuesDisabled;
 
 %ignore CNTK::Variable::Owner;
 

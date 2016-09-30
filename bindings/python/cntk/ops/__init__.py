@@ -50,10 +50,10 @@ def cross_entropy_with_softmax(output_vector, target_vector, name=''):
 
     Example:
         >>> C.cross_entropy_with_softmax([[1., 1., 1., 50.]], [[0., 0., 0., 1.]]).eval()
-        array(0.0, dtype=float32)
+        array([[ 0.]], dtype=float32)
 
         >>> C.cross_entropy_with_softmax([[1., 2., 3., 4.]], [[0.35, 0.15, 0.05, 0.45]]).eval()
-        array(1.8401899337768555, dtype=float32)
+        array([[ 1.84018993]], dtype=float32)
 
     Args:
         output_vector: the unscaled computed output values from the network
@@ -79,10 +79,10 @@ def squared_error(output, target, name=''):
         >>> i1 = C.input_variable((1,2))
         >>> i2 = C.input_variable((1,2))
         >>> C.squared_error(i1,i2).eval({i1:np.asarray([[[[2., 1.]]]], dtype=np.float32), i2:np.asarray([[[[4., 6.]]]], dtype=np.float32)})
-        array(29.0, dtype=float32)
+        array([[ 29.]], dtype=float32)
 
         >>> C.squared_error(i1,i2).eval({i1:np.asarray([[[[1., 2.]]]], dtype=np.float32), i2:np.asarray([[[[1., 2.]]]], dtype=np.float32)})
-        array(0.0, dtype=float32)
+        array([[ 0.]], dtype=float32)
 
     Args:
         output: the output values from the network
@@ -109,10 +109,10 @@ def classification_error(output_vector, target_vector, name=''):
 
     Example:
         >>> C.classification_error([[1., 2., 3., 4.]], [[0., 0., 0., 1.]]).eval()
-        array(0.0, dtype=float32)
+        array([[ 0.]], dtype=float32)
 
         >>> C.classification_error([[1., 2., 3., 4.]], [[0., 0., 1., 0.]]).eval()
-        array(1.0, dtype=float32)
+        array([[ 1.]], dtype=float32)
 
     Args:
         output_vector: the output values from the network

@@ -33,7 +33,11 @@ def simple_mnist():
     ce = cross_entropy_with_softmax(netout, label)
     pe = classification_error(netout, label)
 
-    rel_path = os.path.join(*"../../../../Examples/Image/MNIST/Data/Train-28x28_cntk_text.txt".split("/"))
+    try:
+        rel_path = os.path.join(os.environ['CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY'],
+                                *"Image/MNIST/v0/Train-28x28_cntk_text.txt".split("/"))
+    except KeyError:
+        rel_path = os.path.join(*"../../../../Examples/Image/MNIST/Data/Train-28x28_cntk_text.txt".split("/"))
     path = os.path.normpath(os.path.join(abs_path, rel_path))
     if not os.path.exists(path):
         readme_file = os.path.normpath(os.path.join(os.path.dirname(path), "..", "README.md"))
@@ -48,7 +52,7 @@ def simple_mnist():
     labels_si = mb_source.stream_info(labels_stream_name)
 
     # Instantiate the trainer object to drive the model training
-    trainer = Trainer(netout, ce, pe, [sgd(netout.owner.parameters(),
+    trainer = Trainer(netout, ce, pe, [sgd(netout.parameters(),
         lr=0.003125)])
 
     # Get minibatches of images to train with and perform model training
@@ -65,6 +69,13 @@ def simple_mnist():
         trainer.train_minibatch(arguments)
 
         print_training_progress(trainer, i, training_progress_output_freq)
+
+# Place holder for real test
+def test_mnist(device_id):
+    #FIXME: need a backdoor to work around the limitation of changing the default device not possible 
+    #from cntk.utils import cntk_device
+    #DeviceDescriptor.set_default_device(cntk_device(device_id))
+    simple_mnist()
 
 if __name__=='__main__':
     # Specify the target device to be used for computing

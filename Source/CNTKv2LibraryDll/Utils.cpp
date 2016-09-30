@@ -527,6 +527,17 @@ namespace CNTK
         return (m_dictionaryData->find(key) != m_dictionaryData->end());
     }
 
+    void Dictionary::Add(const Dictionary& other)
+    {
+        for (auto kv : *(other.m_dictionaryData))
+        {
+            if (Contains(kv.first))
+                InvalidArgument("Dictionary::Add: This dictionary already contains an entry with key %S that is being attempted to add from the 'other' dinctionary", kv.first.c_str());
+
+            (*this)[kv.first] = kv.second;
+        }
+    }
+
     bool Dictionary::operator==(const Dictionary& other) const
     {
         if (this == &other)

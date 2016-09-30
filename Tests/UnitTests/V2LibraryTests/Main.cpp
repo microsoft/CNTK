@@ -8,16 +8,22 @@ void TensorTests();
 void FeedForwardTests();
 void RecurrentFunctionTests();
 void TrainerTests();
-void TestCifarResnet();
+void TrainCifarResnet();
 void FunctionTests();
 void TrainLSTMSequenceClassifer();
 void SerializationTests();
 void LearnerTests();
 void TrainSequenceToSequenceTranslator();
+void TrainTruncatedLSTMAcousticModelClassifer();
 void EvalMultiThreadsWithNewNetwork(const DeviceDescriptor&, const int);
+void DeviceSelectionTests();
 
 int main()
 {
+    // Lets disable automatic unpacking of PackedValue object to detect any accidental unpacking 
+    // which will have a silent performance degradation otherwise
+    Internal::DisableAutomaticUnpackingOfPackedValues();
+
     NDArrayViewTests();
     TensorTests();
     FunctionTests();
@@ -25,14 +31,15 @@ int main()
     FeedForwardTests();
     RecurrentFunctionTests();
 
-    TrainerTests();
     SerializationTests();
     LearnerTests();
 
-    TestCifarResnet();
+    TrainerTests();
+    TrainCifarResnet();
     TrainLSTMSequenceClassifer();
 
     TrainSequenceToSequenceTranslator();
+    TrainTruncatedLSTMAcousticModelClassifer();
 
     // Test multi-threads evaluation
     fprintf(stderr, "Test multi-threaded evaluation on CPU.\n");
@@ -41,6 +48,9 @@ int main()
     fprintf(stderr, "Test multi-threaded evaluation on GPU\n");
     EvalMultiThreadsWithNewNetwork(DeviceDescriptor::GPUDevice(0), 2);
 #endif
+
+    fprintf(stderr, "Test device selection API\n");
+    DeviceSelectionTests();
 
     fprintf(stderr, "\nCNTKv2Library tests: Passed\n");
     fflush(stderr);
