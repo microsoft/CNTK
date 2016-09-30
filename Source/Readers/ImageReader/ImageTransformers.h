@@ -109,46 +109,6 @@ private:
     double m_curAspectRatioRadius;
 };
 
-// This transformer pads input images to a target width and height,
-// making them all the same size. It can take a specified pad value,
-// or, if no value is specified, it replicates the border pixel values.
-class PadTransformer : public ImageTransformerBase
-{
-public:
-    explicit PadTransformer(const ConfigParameters& config);
-    StreamDescription Transform(const StreamDescription& inputStream) override;
-
-private:
-    void Apply(size_t id, cv::Mat &mat) override;
-    double m_targetH;
-    double m_targetW;
-    double m_aspectRatio;
-    double m_targetMax;
-    double m_channels;
-    cv::Scalar m_value;
-    int m_borderType;
-};
-
-// This transformer scales either the minimum or maximum side to a certain
-// target number and preserves the aspect ratio. It's good for use
-// before a Pad transform (which makes all images the same size).
-class ScaleSideTransformer : public ImageTransformerBase
-{
-public:
-    explicit ScaleSideTransformer(const ConfigParameters& config);
-
-private:
-
-    enum class Side
-    {
-        MIN = 0,
-        MAX = 1
-    };
-    void Apply(size_t id, cv::Mat &mat) override;
-    double m_target;
-    Side m_scaleSide;
-};
-
 // Scale transformation of the image.
 // Scales the image to the dimensions requested by the network.
 class ScaleTransformer : public ImageTransformerBase
@@ -159,16 +119,22 @@ public:
     StreamDescription Transform(const StreamDescription& inputStream) override;
 
 private:
+    enum class ScaleMode
+    {
+        Fill = 0,
+        Crop = 1,
+        Pad  = 2
+    };
     void Apply(size_t id, cv::Mat &mat) override;
 
-    using StrToIntMapT = std::unordered_map<std::string, int>;
-    StrToIntMapT m_interpMap;
-    std::vector<int> m_interp;
-
-    conc_stack<std::unique_ptr<std::mt19937>> m_rngs;
     size_t m_imgWidth;
     size_t m_imgHeight;
     size_t m_imgChannels;
+
+    ScaleMode m_scaleMode;
+    int m_interp;
+    int m_borderType;
+    int m_padValue;
 };
 
 // Mean transformation.

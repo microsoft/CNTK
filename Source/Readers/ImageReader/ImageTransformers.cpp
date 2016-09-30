@@ -238,122 +238,38 @@ cv::Rect CropTransformer::GetCropRect(CropType type, int viewIndex, int crow, in
     return cv::Rect(xOff, yOff, cropSizeX, cropSizeY);
 }
 
-// This transformer pads input images to a target width and height, making them all the same size.
-PadTransformer::PadTransformer(const ConfigParameters& config) : ImageTransformerBase(config)
-{
-    m_targetW = config(L"width");
-    m_targetH = config(L"height");
-    m_channels = config(L"channels");
-    int value = config(L"value", -1);
-
-    m_value = cv::Scalar(value, value, value);
-
-    double mindim = min(m_targetH, m_targetW);
-    double maxdim = max(m_targetH, m_targetW);
-
-    m_borderType = value > 0 ? cv::BORDER_CONSTANT : cv::BORDER_REPLICATE;
-
-    m_targetMax = maxdim;
-    m_aspectRatio = maxdim / mindim;
-
-}
-
-StreamDescription PadTransformer::Transform(const StreamDescription& inputStream)
-{
-    TransformBase::Transform(inputStream);
-    m_outputStream.m_sampleLayout = std::make_shared<TensorShape>(ImageDimensions((size_t)m_targetW, (size_t)m_targetH, (size_t)m_channels).AsTensorShape(HWC));
-    return m_outputStream;
-}
-
-void PadTransformer::Apply(size_t id, cv::Mat &mat)
-{
-    UNUSED(id);
-    double hdiff = round((m_targetH - mat.rows) / 2.0);
-    double wdiff = round((m_targetW - mat.cols) / 2.0);
-
-    // make sure the padded sizes are actually bigger than the input image sizes.
-    assert(hdiff >= 0);
-    assert(wdiff >= 0);
-
-    int top = (int)hdiff;
-    int bottom = (int)m_targetH - top - mat.rows;
-    int left = (int)wdiff;
-    int right = (int)m_targetW - left - mat.cols;
-    cv::copyMakeBorder(mat, mat, top, bottom, left, right, m_borderType, m_value);
-}
-
-// This transformer scales either the minimum or maximum side to a certain target number and preserves the aspect ratio.
-ScaleSideTransformer::ScaleSideTransformer(const ConfigParameters& config) : ImageTransformerBase(config)
-{
-    m_target = config(L"target");
-    string side = config(L"side", "max");
-
-    m_scaleSide = AreEqualIgnoreCase(side, "max") ? Side::MAX : Side::MIN;
-}
-
-void ScaleSideTransformer::Apply(size_t id, cv::Mat &mat)
-{
-    UNUSED(id);
-    
-    int height = mat.rows,
-        width = mat.cols;
-
-    int scaledside;
-    if (m_scaleSide == Side::MAX)
-        scaledside = max(height, width);
-    else
-        scaledside = min(height, width);
-
-    double scale_ratio = m_target / scaledside;
-
-    // which dimension is our scaled one?
-    bool scale_w = width == scaledside;
-
-    int targetW, targetH;
-
-    if (scale_w)
-    {
-        targetW = (int)m_target;
-        targetH = (int)round(height * scale_ratio);
-    }
-    else
-    {
-        targetH = (int)m_target;
-        targetW = (int)round(width * scale_ratio);
-    }
-
-    cv::resize(mat, mat, cv::Size(targetW, targetH), 0, 0, cv::INTER_LINEAR);
-}
-
+// scaleMode = "fill" (default) - warp the image to the given target size
+// scaleMode = "crop" - resize the image's shorter side to the given target size and crops the overlap
+// scaleMode = "pad"  - resize the image's larger side to the given target size, center it and pad the rest
 ScaleTransformer::ScaleTransformer(const ConfigParameters& config) : ImageTransformerBase(config)
 {
-    m_interpMap.emplace("nearest", cv::INTER_NEAREST);
-    m_interpMap.emplace("linear", cv::INTER_LINEAR);
-    m_interpMap.emplace("cubic", cv::INTER_CUBIC);
-    m_interpMap.emplace("lanczos", cv::INTER_LANCZOS4);
-
-    m_imgWidth = config(L"width");
-    m_imgHeight = config(L"height");
+    m_imgWidth    = config(L"width");
+    m_imgHeight   = config(L"height");
     m_imgChannels = config(L"channels");
 
     size_t cfeat = m_imgWidth * m_imgHeight * m_imgChannels;
-    if (cfeat == 0 || cfeat > std::numeric_limits<size_t>().max() / 2)
+    if (cfeat == 0 || cfeat > SIZE_MAX / 2)
         RuntimeError("Invalid image dimensions.");
 
-    m_interp.clear();
-    std::stringstream ss{config(L"interpolations", "")};
-    for (std::string token = ""; std::getline(ss, token, ':');)
-    {
-        // Explicit cast required for GCC.
-        std::transform(token.begin(), token.end(), token.begin(),
-                       (int (*) (int)) std::tolower);
-        StrToIntMapT::const_iterator res = m_interpMap.find(token);
-        if (res != m_interpMap.end())
-            m_interp.push_back((*res).second);
-    }
+    string scaleMode = config(L"scaleMode", "fill");
+    if      (scaleMode == "crop") m_scaleMode = ScaleMode::Crop;
+    else if (scaleMode == "pad")  m_scaleMode = ScaleMode::Pad;
+    else if (scaleMode == "fill") m_scaleMode = ScaleMode::Fill;
+    else RuntimeError("Invalid scaleMode value, must be fill, crop or pad (all lower case)");
 
-    if (m_interp.size() == 0)
-        m_interp.push_back(cv::INTER_LINEAR);
+    // the pad value used for the 'pad' mode. if set to -1 then the border will be replicated.
+    m_padValue = config(L"padValue", -1);
+    if (m_padValue >= 0)       m_borderType = cv::BORDER_CONSTANT;
+    else if (m_padValue == -1) m_borderType = cv::BORDER_REPLICATE;
+    else RuntimeError("Invalid padValue value, must be -1 (replicates border) or >= 0 (constant)");
+
+    // for old config options use case-insensitve comparison ...
+    string interpolation = config(L"interpolations", "linear");
+    if (AreEqualIgnoreCase(interpolation, "nearest"))      m_interp = cv::INTER_NEAREST;
+    else if (AreEqualIgnoreCase(interpolation, "cubic"))   m_interp = cv::INTER_CUBIC;
+    else if (AreEqualIgnoreCase(interpolation, "lanczos")) m_interp = cv::INTER_LANCZOS4;
+    else if (AreEqualIgnoreCase(interpolation, "linear"))  m_interp = cv::INTER_LINEAR;
+    else RuntimeError("Invalid interpolations value, must be nearest, cubic, lanczos or linear");
 }
 
 // The method describes how input stream is transformed to the output stream. Called once per applied stream.
@@ -369,23 +285,54 @@ void ScaleTransformer::Apply(size_t id, cv::Mat &mat)
 {
     UNUSED(id);
 
-    auto seed = GetSeed();
-    auto rng = m_rngs.pop_or_create([seed]() { return std::make_unique<std::mt19937>(seed); });
-
-    auto index = UniIntT(0, static_cast<int>(m_interp.size()) - 1)(*rng);
-    assert(m_interp.size() > 0);
-
-    // Skip cv::resize depending on interpolation only
-    // There is no point in interpolation of the image of the same size, this
-    // will only lower its sharpness.
-    if (mat.cols != m_imgWidth || mat.rows != m_imgHeight)
-    {
-        // If matrix has not been converted to the right type, do it now as rescaling requires floating point type.
-        ConvertToFloatingPointIfRequired(mat);
-        cv::resize(mat, mat, cv::Size((int)m_imgWidth, (int)m_imgHeight), 0, 0, m_interp[index]);
+    if (m_scaleMode == ScaleMode::Fill)
+    { // warp the image to the given target size
+        cv::resize(mat, mat, cv::Size((int)m_imgWidth, (int)m_imgHeight), 0, 0, m_interp);
     }
+    else
+    {
+        int height = mat.rows;
+        int width = mat.cols;
 
-    m_rngs.push(std::move(rng));
+        // which dimension is our scaled one?
+        bool scaleW;
+        if (m_scaleMode == ScaleMode::Crop)
+            scaleW = width < height; // in "crop" mode we resize the smaller side
+        else
+            scaleW = width > height; // else we resize the larger side
+
+        size_t targetW, targetH;
+        if (scaleW)
+        {
+            targetW = (size_t)m_imgWidth;
+            targetH = (size_t)round(height * m_imgWidth / (double)width);
+        }
+        else
+        {
+            targetH = (size_t)m_imgHeight;
+            targetW = (size_t)round(width * m_imgHeight / (double)height);
+        }
+
+        cv::resize(mat, mat, cv::Size((int)targetW, (int)targetH), 0, 0, m_interp);
+
+        if (m_scaleMode == ScaleMode::Crop)
+        { // crop the overlap
+            size_t xOff = max((size_t)0, (targetW - m_imgWidth) / 2);
+            size_t yOff = max((size_t)0, (targetH - m_imgHeight) / 2);
+            mat = mat(cv::Rect((int)xOff, (int)yOff, (int)m_imgWidth, (int)m_imgHeight));
+        }
+        else
+        { // ScaleMode::PAD --> center it and pad the rest
+            size_t hdiff = max((size_t)0, (m_imgHeight - mat.rows) / 2);
+            size_t wdiff = max((size_t)0, (m_imgWidth - mat.cols) / 2);
+
+            size_t top = hdiff;
+            size_t bottom = m_imgHeight - top - mat.rows;
+            size_t left = wdiff;
+            size_t right = m_imgWidth - left - mat.cols;
+            cv::copyMakeBorder(mat, mat, (int)top, (int)bottom, (int)left, (int)right, m_borderType, m_padValue);
+        }
+    }
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

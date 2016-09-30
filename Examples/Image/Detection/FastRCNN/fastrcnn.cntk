@@ -116,8 +116,7 @@ Train = {
             file = "$dataDir$/tv2012pad.txt"
             input = {
                 features = { transforms = (
-                    { type = "ScaleSide" ; target = $ImageW$ ; side = "max" }:
-                    { type = "Pad" ; width = $ImageW$ ; height = $ImageH$; channels = $ImageC$; value = 114 }:
+                    { type = "Scale" ; width = $ImageW$ ; height = $ImageW$ ; channels = $ImageC$ ; scaleMode = "pad" ; padValue = 114 }:
                     { type = "Transpose" }
                 )}
                 ignored = {labelDim = 1000}
@@ -179,8 +178,7 @@ Test = {
             file = "$dataDir$/test2007pad_all.txt"
             input = {
                 features = { transforms = (
-                    { type = "ScaleSide" ; target = $ImageW$ ; side = "max" }:
-                    { type = "Pad" ; width = $ImageW$ ; height = $ImageH$; channels = $ImageC$; value = 114 }:
+                    { type = "Scale" ; width = $ImageW$ ; height = $ImageW$ ; channels = $ImageC$ ; scaleMode = "pad" ; padValue = 114 }:
                     { type = "Transpose" }
                 )}
                 ignored = {labelDim = 1000}
