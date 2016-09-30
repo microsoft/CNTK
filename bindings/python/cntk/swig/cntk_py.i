@@ -1,4 +1,3 @@
-
 %module(directors="1") cntk_py
 
 %include "stl.i"
@@ -35,8 +34,11 @@
 %ignore CNTK::Internal::Gather;
 %ignore CNTK::Internal::Scatter;
 %ignore CNTK::Internal::Slice;
+
+// These aren't exported from the CNTK C++ library
 %ignore CNTK::Internal::IsReversingTensorShapesInErrorMessagesEnabled;
 %ignore CNTK::Internal::IsSettingDefaultDeviceAlwaysAllowed;
+%ignore CNTK::Internal::IsAutomaticUnpackingOfPackedValuesDisabled;
 
 %ignore CNTK::Variable::Owner;
 
@@ -46,6 +48,14 @@
 %include "numpy.i"
 %init %{
     import_array();
+%}
+
+//
+// Whenever a tuple of dynamic axes is returned we need to reverse it
+//
+%feature("shadow") CNTK::Variable::DynamicAxes %{
+def dynamic_axes(self):
+    return tuple(reversed($action(self)))
 %}
 
 %apply (float* OUT_ARRAY1, int DIM1) {(float* py_data, int len)}
@@ -58,6 +68,7 @@
 %eq_for(Constant, Variable_eq)
 %eq_for(Parameter, Variable_eq)
 %eq_for(NDShape, NDShape_eq)
+%eq_for(DeviceDescriptor, DeviceDescriptor_eq)
 
 
 %extend CNTK::Dictionary {
@@ -945,8 +956,6 @@
         PyArrayObject* array = (PyArrayObject*)pyobj;
 
         int rank = PyArray_NDIM(array); 
-        if (rank==0)
-            throw std::logic_error("provided array is empty");
         
         npy_intp* np_shape = PyArray_SHAPE(array); 
         std::vector<size_t> shape;
@@ -1080,11 +1089,6 @@ public:
 // are redirected to the std::hash computation of the C++ API
 //
 %define %py_hash_for(DATA_TYPE, EQ)
-
-%pythoncode %{
-DATA_TYPE.__eq__ = lambda a,b: EQ(a,b)
-%}
-
 %extend CNTK::DATA_TYPE {
     const size_t __hash__() {
         return std::hash<CNTK::DATA_TYPE>()(*$self);
@@ -1092,11 +1096,23 @@ DATA_TYPE.__eq__ = lambda a,b: EQ(a,b)
 }
 %enddef
 
+%define %py_eq_for(DATA_TYPE, EQ)
+%pythoncode %{
+DATA_TYPE.__eq__ = lambda a,b: EQ(a,b)
+%}
+%enddef
+
+%py_eq_for(Variable, Variable_eq)
+%py_eq_for(Constant, Variable_eq)
+%py_eq_for(Parameter, Variable_eq)
+%py_eq_for(NDShape, NDShape_eq)
+
 %py_hash_for(Variable, Variable_eq)
 %py_hash_for(Constant, Variable_eq)
 %py_hash_for(Parameter, Variable_eq)
 %py_hash_for(NDShape, NDShape_eq)
 
+%py_eq_for(DeviceDescriptor, DeviceDescriptor_eq)
 
 %pythoncode %{
 StreamInformation.__eq__ = lambda a,b: a.m_name==b.m_name and a.m_id==b.m_id and a.m_storage_format==b.m_storage_format and a.m_element_type==b.m_element_type and a.m_sample_layout.dimensions()==b.m_sample_layout.dimensions()
@@ -1115,33 +1131,14 @@ def get_output_and_keep_reference(self):
     variable.owner = self
     return variable
 Function.output = lambda self:get_output_and_keep_reference(self)
-Function.replace_placeholders = lambda self, ph_map: self.replace_placeholders_internal(ph_map).output()
+Function.replace_placeholders = lambda self, ph_map: self.replace_placeholders_internal(ph_map)
+
+from .tensor import _add_tensor_ops, _add_eval
+for klass in [Function, Variable]:
+    _add_tensor_ops(klass)
+
+_add_eval(Function)
+
+enable_reversing_tensor_shapes_in_error_messages()
 %}
 
-// this is a workaround to enable operators overload for Variable instances coming out of output() method. 
-// A long-term solution should add a Function class wrapper in python, such class would have a reference to 
-// the SWIG Function object, and it would override output() in order to return an instance of the class 
-//Variable of the python API (not the SWIG one).
-
-%define %operators_overload(DATA_TYPE)
-
-%pythoncode %{
-DATA_TYPE.__add__ = lambda self, other: plus(self,other).output()
-DATA_TYPE.__radd__ = lambda self, other: plus(other,self).output()
-DATA_TYPE.__sub__ = lambda self, other: minus(self,other).output()
-DATA_TYPE.__rsub__ = lambda self, other: minus(other,self).output()
-DATA_TYPE.__mul__ = lambda self, other: element_times(self,other).output()  
-DATA_TYPE.__rmul__ = lambda self, other: element_times(other,self).output()
-DATA_TYPE.__matmul__ = lambda self, other: times(self,other).output()
-DATA_TYPE.__rmatmul__ = lambda self, other: times(other,self).output()
-DATA_TYPE.__truediv__ = lambda self, other: element_divide(self,other).output()   
-DATA_TYPE.__rtruediv__ = lambda self, other: element_divide(other,self).output()
-DATA_TYPE.__div__ = DATA_TYPE.__truediv__
-DATA_TYPE.__rdiv__ = DATA_TYPE.__rtruediv__  
-%}
-%enddef
-
-%operators_overload(Variable)
-%operators_overload(Constant)
-%operators_overload(Parameter)
-%operators_overload(Parameter)
