@@ -136,7 +136,7 @@ def resnet_classifer(input, num_classes):
 
     pool = pooling(rn3_3, AVG_POOLING, (1, poolh, poolw), (1, poolv_stride, poolh_stride))
     out_times_params = parameter(shape=(c_map3, 1, 1, num_classes), init=glorot_uniform())
-    out_bias_params = parameter(shape=(num_classes), value=0)
+    out_bias_params = parameter(shape=(num_classes), init=0)
     t = times(pool, out_times_params)
     return t + out_bias_params
 
