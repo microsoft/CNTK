@@ -78,9 +78,9 @@ RUN BOOST_VERSION=1_60_0 && \
     ./b2 -d0 -j"$(nproc)" install  && \
     rm -rf /boost_${BOOST_VERSION}
 
-# Install CNTK custom MKL, version 1
+# Install CNTK custom MKL, version 2
 RUN mkdir /usr/local/CNTKCustomMKL && \
-    wget --no-verbose -O - https://www.cntk.ai/mkl/CNTKCustomMKL-Linux-1.tgz | \
+    wget --no-verbose -O - https://www.cntk.ai/mkl/CNTKCustomMKL-Linux-2.tgz | \
     tar -xzf - -C /usr/local/CNTKCustomMKL
 
 RUN mkdir -p /usr/local/cudnn/cuda/include && \
@@ -144,7 +144,7 @@ RUN git clone --depth=1 -b master https://github.com/Microsoft/CNTK.git . && \
     make -j"$(nproc)" all
 
 RUN cd Examples/Image/Miscellaneous/CIFAR-10 && \
-    python CIFAR_convert.py && \
+    python CifarDownload.py && \
     python CifarConverter.py cifar-10-batches-py && \
     cd ../../../..
 

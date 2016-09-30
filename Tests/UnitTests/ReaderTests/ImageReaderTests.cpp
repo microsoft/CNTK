@@ -127,7 +127,7 @@ BOOST_AUTO_TEST_CASE(ImageReaderLabelOutOfRange)
             0,
             1),
             std::runtime_error,
-            [](std::runtime_error const& ex) { return string("Image 'images/red.jpg' has invalid class id '10'. Expected label dimension is '4'. Line 3 in file ./ImageReaderLabelOutOfRange_map.txt.") == ex.what(); });
+            [](std::runtime_error const& ex) { return string("Image 'images/red.jpg' has invalid class id '10'. It is exceeding the label dimension of '4'. Line 3 in file ./ImageReaderLabelOutOfRange_map.txt.") == ex.what(); });
 }
 
 BOOST_AUTO_TEST_CASE(ImageReaderZip)
@@ -293,8 +293,8 @@ BOOST_AUTO_TEST_CASE(ImageReaderInvalidEmptyTransforms)
         [](const std::runtime_error& ex)
         {
             return string("Packer currently does not support samples with varying shapes."
-                "Please make sure there is a transform that unifies the shape of samples"
-                " for input stream 'features' or the deserializer provides samples with the same shape.") == ex.what();
+                "Please make sure there is a transform that unifies the shape of samples for input stream 'features' "
+                "or the deserializer provides samples with the same shape.") == ex.what();
         });
 }
 

@@ -8,10 +8,10 @@
 
 #pragma once
 
-#include <map>
+#include <unordered_map>
 #include <string>
-#include "DataReader.h"
 #include <future>
+#include "DataReader.h"
 #include "Reader.h"
 
 namespace CNTK
@@ -40,6 +40,8 @@ public:
     virtual void Destroy() override
     {
         // Make sure there are no outstanding reads.
+        // Future destructor does not wait as of 2013 so probably it is not in VS2013:
+        // More info can be found here http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2013/n3679.html.
         if (m_prefetchTask.valid())
         {
             // If there are some, give them time to finish.
@@ -49,8 +51,18 @@ public:
         delete this;
     }
 
-    virtual void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples = requestDataSize) override;
-    virtual void StartDistributedMinibatchLoop(size_t requestedMBSize, size_t epoch, size_t subsetNum, size_t numSubsets, size_t requestedEpochSamples) override;
+    virtual void StartMinibatchLoop(size_t mbSize, size_t epoch, const std::unordered_set<InputStreamDescription>& inputs, size_t requestedEpochSamples = requestDataSize) override;
+    virtual void StartDistributedMinibatchLoop(size_t requestedMBSize, size_t epoch, size_t subsetNum, size_t numSubsets, const std::unordered_set<InputStreamDescription>& inputs, size_t requestedEpochSamples) override;
+
+    virtual void StartMinibatchLoop(size_t, size_t, size_t) override
+    {
+        LogicError("Legacy StartMinibatchLoop is not implemented.");
+    }
+
+    virtual void StartDistributedMinibatchLoop(size_t, size_t, size_t, size_t, size_t) override
+    {
+        LogicError("Legacy StartDistributedMinibatchLoop is not implemented.");
+    }
 
     virtual bool SupportsDistributedMBRead() const override
     {
@@ -66,18 +78,55 @@ public:
     virtual size_t GetNumParallelSequencesForFixingBPTTMode() override;
 
 private:
-    std::future<Minibatch> m_prefetchTask;
+    struct PrefetchResult
+    {
+        bool m_isEndOfEpoch;
+        bool m_isDataAvailable;
+    };
+
+    PrefetchResult PrefetchMinibatch(size_t currentDataTransferIndex);
+
+    std::future<PrefetchResult> m_prefetchTask;
     ReaderPtr m_reader;
     ReaderFactory m_factory;
     bool m_endOfEpoch;
 
     size_t m_numParallelSequences;
 
-    std::map<std::wstring, size_t> m_nameToStreamId;
+    std::unordered_map<std::wstring, size_t> m_nameToStreamId;
     std::vector<StreamDescriptionPtr> m_streams;
     launch m_launchType;
 
-    static void FillMatrixFromStream(StorageType type, Matrix<ElemType>* matrix, size_t numRows, const StreamMinibatchPtr& stream);
+    // Data structure required for prefetch.
+    struct StreamPrefetchBuffer
+    {
+        std::shared_ptr<Matrix<ElemType>> m_matrix;
+        MBLayoutPtr m_mbLayout;
+    };
+
+    // Intermediate buffer where the prefetch thread puts its data to.
+    // When the main thread enters GetMinibatch it swaps the matrices from this buffer,
+    // triggers the next prefetch and waits if memCpy is still in progress.
+    std::unordered_map<std::wstring, StreamPrefetchBuffer> m_prefetchBuffers;
+
+    // Alternating data transfer operations. In the current version these are only two - 
+    // currently waiting on the main thread and the one that can be started by the prefetch thread 
+    // in the meantime.
+    std::vector<DataTransfererPtr> m_dataTransferers;
+
+    // Current data transfer. Flips 0 and 1.
+    // Can be changed only from the main thread with no ongoing prefetch.
+    size_t m_currentDataTransferIndex; 
+
+    // Device id.
+    int m_deviceId;
+
+    static void FillMatrixFromStream(
+        StorageType type,
+        Matrix<ElemType>* matrix,
+        size_t numRows,
+        const StreamMinibatchPtr& stream,
+        DataTransferer* transferer);
 };
 
 }}}

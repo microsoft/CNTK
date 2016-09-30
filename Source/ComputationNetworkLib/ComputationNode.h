@@ -1103,6 +1103,13 @@ protected:
         return DownCast(m_inputs[inputIndex]);
     }
 
+    // Fast downcast without runtime type check of dynamic_pointer_cast.
+    // Meant to be used in Forward and BackPropTo, assuming that Validate() has already used Input() which validated the correct types.
+    inline ComputationNode<ElemType>& InputRef(const size_t inputIndex) const
+    {
+        return static_cast<ComputationNode<ElemType>&>(*m_inputs[inputIndex].get());
+    }
+
     void /*ComputationNodeBase::*/ SetInput(const size_t childIndex, const ComputationNodeBasePtr& inode) override
     {
         ClearConfigMemberCache();
@@ -1187,7 +1194,7 @@ public:
 private:
 
     template<class E>
-    void RethrowAs(const std::exception & e, const std::string & what)
+    void RethrowAs(const std::exception & e, const std::string & what) const
     {
         const auto * pe = dynamic_cast<const ExceptionWithCallStack<E> *>(&e);
         if (pe)
@@ -1199,7 +1206,7 @@ private:
     // rethrow an exception with added node-name information
     // Use this for exceptions we may get e.g. from the Matrix library, such as VerifySize().
     __declspec_noreturn
-    void Rethrow(const std::exception & e)
+    void Rethrow(const std::exception & e) const
     {
         string what = msra::strfun::strprintf("%ls: %s", NodeDescription().c_str(), e.what());
         RethrowAs<std::runtime_error>   (e, what);
@@ -1271,7 +1278,7 @@ public:
         return GradientFor(fr);
     }
     // tensor version of the above functions
-    TensorView<ElemType> DataTensorFor(const MatrixBasePtr& data, size_t rank, const FrameRange& fr)
+    TensorView<ElemType> DataTensorFor(const MatrixBasePtr& data, size_t rank, const FrameRange& fr) const
     {
         try
         {
@@ -1878,6 +1885,10 @@ public:
     virtual void DumpNodeInfo(const bool /*printValues*/, const bool /*printMetadata*/, File& fstream) const override {}
     virtual std::set<std::pair<const MatrixBase*, std::wstring>> GetMatrixInfo() const override { NOT_IMPLEMENTED; }
 
+    virtual void ForwardProp(const FrameRange&, const ComputationNodeBasePtr, const ComputationNodeBasePtr) { NOT_IMPLEMENTED; }
+
+    std::vector<ComputationNodeBasePtr> GetNestedNodes() { return m_nestedNodes; }
+
 protected: public:                                     // needed in ComputationNetwork::FindInRecurrentLoops(), which really should be part of SEQTraversalFlowControlNode
     std::vector<ComputationNodeBasePtr> m_nestedNodes; // nodes tucked away in this node, in evaluation order
 };
@@ -1975,6 +1986,7 @@ protected:                                                                      
     using Base::GetAsMatrixNumCols;                                                                                                                      \
     using Base::GetAsMatrixNumRows;                                                                                                                      \
     using Base::GetDeviceId;                                                                                                                             \
+    using Base::GetEnvironmentPtr;                                                                                                                       \
     using Base::GetInputSampleLayout;                                                                                                                    \
     using Base::GetInputsFromConfig;                                                                                                                     \
     using Base::GetMBLayout;                                                                                                                             \
@@ -1995,6 +2007,7 @@ protected:                                                                      
     using Base::HasMBLayout;                                                                                                                             \
     using Base::InferMBLayoutFromInputsForStandardCase;                                                                                                  \
     using Base::Input;                                                                                                                                   \
+    using Base::InputRef;                                                                                                                                \
     using Base::InputUsedInComputingInputNodesGradients;                                                                                                 \
     using Base::InvalidateMissingGradientColumns;                                                                                                        \
     using Base::InvalidateMissingValueColumns;                                                                                                           \

@@ -7,10 +7,11 @@
 
 #pragma once
 
-#include "Basics.h"
-#include "Matrix.h"
 #include <vector>
 #include <memory> // for shared_ptr
+#include <mutex>
+#include "Basics.h"
+#include "Matrix.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -267,8 +268,21 @@ public:
     void SetAxisName(const std::wstring& name) { m_axisName = name; }
     void SetUniqueAxisName(std::wstring name) // helper for constructing
     {
-        static std::map<std::wstring, size_t> nameIndices;
-        size_t index = nameIndices[name]++;
+        // Unfortunatelly, initialization of local static variables is not thread-safe in VS2013.
+        // As workaround, it is moved to the struct level. 
+        // Todo: when upgraded to VS2013, change back to use the local static mutex, and remove also Sequences.cpp.
+        // The mutex is need to make access to nameIndices be thread-safe.
+        // static std::mutex nameIndiciesMutex;
+        // static std::map<std::wstring, size_t> nameIndices;
+
+        size_t index;
+
+        // Use the block to make sure that nameIndiciesMutex is unlocked as soon as possible.
+        {
+            std::unique_lock<std::mutex> lock(s_nameIndiciesMutex);
+            index = s_nameIndices[name]++;
+        }
+
         if (index > 0)
             name += msra::strfun::wstrprintf(L"%d", (int)index);
         SetAxisName(name);
@@ -449,6 +463,7 @@ public:
     // test boundary flags for a specific condition
     bool IsBeyondStartOrEnd(const FrameRange& fr) const;
     bool IsGap(const FrameRange& fr) const;
+    bool IsBeyondMinibatch(const FrameRange& fr) const;
 
     // test whether at least one sequence crosses the bounds of this minibatch
     bool HasSequenceBeyondBegin() const
@@ -565,6 +580,11 @@ private:
     // For now only a string meant for debugging.
     std::wstring m_axisName;
 
+    // The mutex to searilize the access to nameIndices in SetUniqueAxisName().
+    // Todo: after upgraded to VS2015, move both static variables into SetUnqiueAxisName() as local static variables there.
+    static std::mutex s_nameIndiciesMutex;
+    static std::map<std::wstring, size_t> s_nameIndices;
+
 public:
 
     // special accessor for sequence training  --TODO: must be replaced by a different mechanism
@@ -666,6 +686,14 @@ public:
     {
         FrameRange ret = *this;
         ret.m_timeOffset += offset;
+        return ret;
+    }
+
+    // remove a time offset from a FrameRange
+    FrameRange WithoutTimeOffset() const
+    {
+        FrameRange ret = *this;
+        ret.m_timeOffset = 0;
         return ret;
     }
 
@@ -786,7 +814,21 @@ inline bool MBLayout::IsGap(const FrameRange &fr) const
     return m_distanceToStart(s, t) < 0; // value is -1 for gaps, non-negative otherwise
 }
 
+// test whether frame is exceeding the bounds of the MB
+inline bool MBLayout::IsBeyondMinibatch(const FrameRange& fr) const
+{
+    CheckIsValid();
+
+    if (fr.IsAllFrames())
+        LogicError("MBLayout::IsBeyondStartOrEnd() cannot be applied to FrameRange that specifies more than a single time step.");
+
+    const auto beginTime = (ptrdiff_t)fr.timeIdxInSeq + fr.m_timeOffset; // we test off the frame without offset
+    const auto endTime = beginTime + (ptrdiff_t)fr.m_timeRange;
+    return beginTime < 0 || endTime > (ptrdiff_t)GetNumTimeSteps();
+}
+
 // test whether frame is exceeding the sentence boundaries
+// In case of a gap, this returns false.
 inline bool MBLayout::IsBeyondStartOrEnd(const FrameRange &fr) const
 {
     CheckIsValid();

@@ -14,6 +14,15 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+static const wchar_t* UniformInitializerTypeName =          L"uniform";
+static const wchar_t* GaussianInitializerTypeName =         L"gaussian";
+static const wchar_t* XavierInitializerTypeName =           L"xavier";
+static const wchar_t* GlorotUniformInitializerTypeName =    L"glorotUniform";
+static const wchar_t* GlorotNormalInitializerTypeName =     L"glorotNormal";
+static const wchar_t* HeUniformInitializerTypeName =        L"heUniform";
+static const wchar_t* HeNormalInitializerTypeName =         L"heNormal";
+static const wchar_t* BilinearInitializerTypeName =         L"bilinear";
+
 // -----------------------------------------------------------------------
 // LearnableParameter (/*no input*/)
 // represents weight matrices and biases
@@ -57,15 +66,46 @@ public:
                             bool initOnCPUOnly = false);
 
     // Initialize with bilinear interpolation coefficients (useful for deconvolution layer).
-    void InitBilinear(size_t kernelWidth, size_t kernelHeight);
+    void InitBilinear(size_t kernelWidth, size_t kernelHeight)
+    {
+        InitBilinear(Value(), GetSampleLayout(), kernelWidth, kernelHeight, m_deviceId);
+    }
 
     // initialize by reading a matrix from a text file
     void InitFromFile(const std::wstring& initFromFilePath);
 
-private:
+public:
     // initialize with random numbers
     // If 'initOnCPUOnly' then always init on CPU, making initialization consistent across both (for testing).
-    void InitRandom(const std::wstring& type, const unsigned long randomSeed, const ElemType initValueScale, const int initOutputRank, const bool initOnCPUOnly);
+    static std::tuple<size_t, size_t, ElemType> InitRandom(Matrix<ElemType>& valueMatrix,
+                                                           const TensorShape& sampleShape,
+                                                           const std::wstring& type,
+                                                           const unsigned long randomSeed,
+                                                           const ElemType initValueScale,
+                                                           const size_t initFilterRank,
+                                                           const int initOutputRank,
+                                                           const bool initOnCPUOnly,
+                                                           DEVICEID_TYPE deviceId);
+
+    static void InitBilinear(Matrix<ElemType>& valueMatrix, const TensorShape& sampleShape, size_t kernelWidth, size_t kernelHeight, DEVICEID_TYPE deviceId);
+
+private:
+    void InitRandom(const std::wstring& type, const unsigned long randomSeed, const ElemType initValueScale, const size_t initFilterRank, const int initOutputRank, const bool initOnCPUOnly)
+    {
+        size_t fanOut, fanIn;
+        ElemType range;
+        std::tie(fanOut, fanIn, range) = InitRandom(Value(), GetSampleLayout(), type, randomSeed, initValueScale, initFilterRank, initOutputRank, initOnCPUOnly, m_deviceId);
+        if (fanOut == 0) // Shape not yet initialized
+            return;
+
+        bool log = GetEnvironmentPtr() && Environment().traceLevel > 0; // note: this will not log before node is part of network
+        if (log)
+        {
+            fprintf(stderr, "%ls: Initializing Parameter[%s] <- %ls(seed=%d, init dims=[%d x %d], range=%f*%f, onCPU=%s.\n)",
+                    NodeDescription().c_str(), string(GetSampleLayout()).c_str(), m_initString.c_str(),
+                    (int)randomSeed, (int)fanOut, (int)fanIn, range, initValueScale, initOnCPUOnly ? "true" : "false");
+        }
+    }
 
     // helper to initialize from a matrix read from a text file or a string literal
     void InitFromArray(const std::vector<ElemType>& array, size_t numRows, size_t numCols);
@@ -106,6 +146,7 @@ private:
     std::wstring m_initString; // if non-empty then deferred initialization is needed. Gets cleared upon completion of deferred init.
     unsigned long m_randomSeed;
     ElemType m_initValueScale;
+    size_t m_initFilterRank;
     int m_initOutputRank;
     bool m_initOnCPUOnly;
     ElemType m_initValue;
@@ -512,17 +553,17 @@ public:
         if (inputIndex == 0) // left derivative (embedding matrix)
         {
             // This is a reduction operation, hence we need to mask out gaps.
-            Matrix<ElemType> sliceInput1Value = Input(1)->MaskedValueFor(t);
+            Matrix<ElemType> sliceInput1Value = InputRef(1).MaskedValueFor(t);
             Matrix<ElemType> sliceOutputGrad = MaskedGradientFor(t);
 
-            BackpropToLeft(sliceInput1Value, Input(0)->GradientAsMatrix(), sliceOutputGrad);
+            BackpropToLeft(sliceInput1Value, InputRef(0).GradientAsMatrix(), sliceOutputGrad);
         }
         else if (inputIndex == 1) // right derivative (input)
         {
-            Matrix<ElemType> sliceInput1Grad = Input(1)->GradientFor(t);
+            Matrix<ElemType> sliceInput1Grad = InputRef(1).GradientFor(t);
             Matrix<ElemType> sliceOutputGrad = GradientFor(t);
 
-            BackpropToRight(Input(0)->ValueAsMatrix(), sliceInput1Grad, sliceOutputGrad);
+            BackpropToRight(InputRef(0).ValueAsMatrix(), sliceInput1Grad, sliceOutputGrad);
         }
     }
 
@@ -560,8 +601,8 @@ public:
     {
         // input0 is the weight (each column is an embedding of one word), input 1 contains m_nbrLooked words in each column (sample)
         Matrix<ElemType> functionValues =           ValueFor(t);
-        const Matrix<ElemType>&  input0 = Input(0)->ValueAsMatrix();
-        Matrix<ElemType>         input1 = Input(1)->ValueFor(t);
+        const Matrix<ElemType>&  input0 = InputRef(0).ValueAsMatrix();
+        Matrix<ElemType>         input1 = InputRef(1).ValueFor(t);
 
         size_t rows1 = input1.GetNumRows(), cols1 = input1.GetNumCols();
         size_t cols0 = input0.GetNumCols();

@@ -106,10 +106,10 @@ struct SequenceBuffer
 };
 
 TruncatedBPTTPacker::TruncatedBPTTPacker(
-    MemoryProviderPtr memoryProvider,
     SequenceEnumeratorPtr sequenceEnumerator,
-    const vector<StreamDescriptionPtr>& streams)
-    : PackerBase(memoryProvider, sequenceEnumerator, streams),
+    const vector<StreamDescriptionPtr>& streams,
+    size_t numberOfBuffers)
+    : PackerBase(sequenceEnumerator, streams, numberOfBuffers),
     m_truncationSize(0)
 {
     auto sparseOutput = find_if(m_outputStreamDescriptions.begin(), m_outputStreamDescriptions.end(), [](const StreamDescriptionPtr& s){ return s->m_storageType == StorageType::sparse_csc; });
@@ -128,8 +128,10 @@ TruncatedBPTTPacker::TruncatedBPTTPacker(
     }
 }
 
-void TruncatedBPTTPacker::StartEpoch(const EpochConfiguration& config)
+void TruncatedBPTTPacker::StartEpoch(const EpochConfiguration& config, const std::vector<MemoryProviderPtr>& memoryProviders)
 {
+    PackerBase::StartEpoch(config, memoryProviders);
+
     if (m_minibatchSize != config.m_minibatchSizeInSamples ||
         m_truncationSize != config.m_truncationSize)
     {
@@ -160,13 +162,14 @@ void TruncatedBPTTPacker::StartEpoch(const EpochConfiguration& config)
         m_sequenceBufferPerStream.clear();
 
         // Preparing the buffers.
-        for (int i = 0; i < m_outputStreamDescriptions.size(); ++i)
-        {
-            const auto& stream = m_outputStreamDescriptions[i];
-            auto& buffer = m_streamBuffers[i];
-            buffer.Resize(m_numParallelSequences * m_truncationSize * GetSampleSize(stream));
-            m_sequenceBufferPerStream.push_back(make_shared<SequenceBuffer>(m_numParallelSequences));
-        }
+        for (int j = 0; j < m_streamBuffers.size(); ++j)
+            for (int i = 0; i < m_outputStreamDescriptions.size(); ++i)
+            {
+                const auto& stream = m_outputStreamDescriptions[i];
+                auto& buffer = m_streamBuffers[j][i];
+                buffer.Resize(m_numParallelSequences * m_truncationSize * GetSampleSize(stream));
+                m_sequenceBufferPerStream.push_back(make_shared<SequenceBuffer>(m_numParallelSequences));
+            }
     }
 
     // Filling in the initial set of sequences
@@ -199,10 +202,12 @@ Minibatch TruncatedBPTTPacker::ReadMinibatch()
         }
 
         StreamMinibatchPtr m = make_shared<StreamMinibatch>();
-        m->m_data = m_streamBuffers[streamIndex].m_data.get();
+        m->m_data = m_streamBuffers[m_currentBufferIndex][streamIndex].m_data.get();
         m->m_layout = m_currentLayouts[streamIndex];
         result.m_data.push_back(m);
     }
+
+    m_currentBufferIndex = (m_currentBufferIndex + 1) % m_numberOfBuffers;
 
     return result;
 }
@@ -261,7 +266,7 @@ void TruncatedBPTTPacker::PackSlot(size_t streamIndex, size_t slotIndex, size_t&
         // Fill in the data from the first sequence in the slot.
         auto data = slot.FrontSequence();
         // Get buffer destination for the current sample.
-        auto& buffer = m_streamBuffers[streamIndex];
+        auto& buffer = m_streamBuffers[m_currentBufferIndex][streamIndex];
         auto offset = strideSize * currentTimestep + slotIndex * sampleSize;
         assert(offset >= 0 && offset < buffer.m_size);
         char* destination = buffer.m_data.get() + offset;
