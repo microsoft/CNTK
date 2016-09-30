@@ -292,9 +292,6 @@ def dynamic_axes(self):
 
      for (auto it: *$1)
      {
-        // Convert Variable to PyObject
-        //PyObject *returned_var = SWIG_NewPointerObj(SWIG_as_voidptr(&it.first), SWIGTYPE_p_CNTK__Variable, SWIG_POINTER_NOSHADOW);
-
         // Push the ValuePtr onto the heap so that it survives
         std::shared_ptr<CNTK::Value> *smartresult = it.second ? new std::shared_ptr<CNTK::Value>(it.second) : 0;
         PyObject *returned_val = SWIG_NewPointerObj(SWIG_as_voidptr(smartresult), SWIGTYPE_p_std__shared_ptrT_CNTK__Value_t, SWIG_POINTER_OWN);
@@ -461,9 +458,6 @@ def dynamic_axes(self):
 
      for (auto it: *$1)
      {
-        // Convert StreamInformation to PyObject
-        //PyObject *returned_var = SWIG_NewPointerObj(SWIG_as_voidptr(&it.first), SWIGTYPE_p_CNTK__StreamInformation, SWIG_POINTER_NOSHADOW);
-
         // Push onto the heap so that it survives
 
         std::shared_ptr<CNTK::NDArrayView> *smartresult1 = it.second.first ? new std::shared_ptr<CNTK::NDArrayView>(it.second.first) : 0;
