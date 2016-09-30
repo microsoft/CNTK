@@ -750,7 +750,7 @@ namespace CNTK
         ///
         /// Destruct 'this' Value object.
         ///
-        CNTK_API virtual ~Value();
+        virtual ~Value();
 
         ///
         /// Returns the descriptor of the device that 'this' Value resides on
@@ -796,28 +796,28 @@ namespace CNTK
         ///
         /// Returns the NDArrayView object corresponding to the data contents of 'this value object.
         ///
-        CNTK_API virtual NDArrayViewPtr Data() const;
+        virtual NDArrayViewPtr Data() const;
 
         ///
         /// Returns the NDMask object corresponding to the mask associated with 'this value object.
         ///
-        CNTK_API virtual NDMaskPtr Mask() const;
+        virtual NDMaskPtr Mask() const;
 
         ///
         /// Creates a new Value with newly allocated storage on the same device as 'this' Value and copies 'this' Value's contents into the newly allocated Value.
         ///
-        CNTK_API virtual ValuePtr DeepClone(bool readOnly = false) const;
+        virtual ValuePtr DeepClone(bool readOnly = false) const;
 
         ///
         /// Creates a new Value which is an alias of 'this' Value.
         ///
-        CNTK_API virtual ValuePtr Alias(bool readOnly = false) const;
+        virtual ValuePtr Alias(bool readOnly = false) const;
 
         ///
         /// Copies the contents of the 'source' Value to 'this' Value.
         /// The shapes of the 'source' Value's data and mask must be identical to 'this' Value's data and mask.
         ///
-        CNTK_API virtual void CopyFrom(const Value& source);
+        virtual void CopyFrom(const Value& source);
 
     private:
         // Disallow copy and move construction and assignment
@@ -2025,10 +2025,10 @@ namespace CNTK
         /// and the user is responsible for ensuring that the contents of the inputs and outputs are unchanged until after any uses of the BackPropState instance
         /// for backpropagating gradients through this function.
         ///
-        CNTK_API virtual BackPropStatePtr Forward(const std::unordered_map<Variable, ValuePtr>& arguments,
-                                                  std::unordered_map<Variable, ValuePtr>& outputs,
-                                                  const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice(),
-                                                  const std::unordered_set<Variable>& outputsToRetainBackwardStateFor = {}) = 0;
+        virtual BackPropStatePtr Forward(const std::unordered_map<Variable, ValuePtr>& arguments,
+                                         std::unordered_map<Variable, ValuePtr>& outputs,
+                                         const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice(),
+                                         const std::unordered_set<Variable>& outputsToRetainBackwardStateFor = {}) = 0;
 
         ///
         /// Backpropagates supplied 'rootGradientValues' for one or more of the output variables of the Function, to produce gradient Values
@@ -2039,9 +2039,9 @@ namespace CNTK
         /// The 'state' parameter is an instance of an BackPropState instance obtained from a previous call to the Forward method on 'this; Function for the 
         /// computation that this gradient backpropagation corresponds to.
         ///
-        CNTK_API virtual void Backward(const BackPropStatePtr& state,
-            const std::unordered_map<Variable, ValuePtr>& rootGradientValues,
-                                       std::unordered_map<Variable, ValuePtr>& backPropagatedGradientValuesForInputs) = 0;
+        virtual void Backward(const BackPropStatePtr& state,
+                              const std::unordered_map<Variable, ValuePtr>& rootGradientValues,
+                              std::unordered_map<Variable, ValuePtr>& backPropagatedGradientValuesForInputs) = 0;
 
     public:
 
@@ -2621,7 +2621,7 @@ namespace CNTK
         // Method to update the parameters associated with this learner. By returning false, this method indicates that
         // learning has stopped for all of the parameters associated with this learner
         //
-        CNTK_API virtual bool Update(const std::unordered_map<Parameter, NDArrayViewPtr>& gradientValues, size_t trainingSampleCount) = 0;
+        virtual bool Update(const std::unordered_map<Parameter, NDArrayViewPtr>& gradientValues, size_t trainingSampleCount) = 0;
 
         ///
         /// Returns the set of parameters associated with this learner.
@@ -2633,7 +2633,7 @@ namespace CNTK
         ///
         // TODO: move the following two methods into ISerializable interface, make 
         // Learner (and all other entities that need checkpointing capability) implement it.
-        CNTK_API virtual Dictionary GetCheckpointState() const 
+        virtual Dictionary GetCheckpointState() const 
         {
             Dictionary baseCheckpointState;
             baseCheckpointState[LearningRateAttributeName] = m_learningRate;
@@ -2644,7 +2644,7 @@ namespace CNTK
         ///
         /// Optionally overridable method to restore the learner's state from a previous checkpoint.
         ///
-        CNTK_API virtual void RestoreFromCheckpoint(const Dictionary& checkpoint) 
+        virtual void RestoreFromCheckpoint(const Dictionary& checkpoint) 
         {
             if (checkpoint.Contains(LearningRateAttributeName))
                 m_learningRate = checkpoint[LearningRateAttributeName].Value<double>();
@@ -2655,8 +2655,8 @@ namespace CNTK
         ///
         virtual ~Learner() {}
 
-        CNTK_API virtual void ResetLearningRate(double learningRate) { m_learningRate = learningRate; }
-        CNTK_API virtual double LearningRate() const { return m_learningRate; }
+        virtual void ResetLearningRate(double learningRate) { m_learningRate = learningRate; }
+        virtual double LearningRate() const { return m_learningRate; }
 
     protected:
         Learner(const std::vector<Parameter>& parameters, double learningRate)

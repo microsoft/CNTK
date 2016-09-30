@@ -11,7 +11,7 @@ FunctionPtr Embedding(const Variable& input, size_t embeddingDim, const DeviceDe
     assert(input.Shape().Rank() == 1);
     size_t inputDim = input.Shape()[0];
 
-    auto embeddingParameters = Parameter(CNTK::NDArrayView::RandomUniform<float>({ embeddingDim, inputDim }, -0.05, 0.05, 1, device));
+    auto embeddingParameters = Parameter({ embeddingDim, inputDim }, DataType::Float, GlorotUniformInitializer(), device);
     return Times(embeddingParameters, input);
 }
 
