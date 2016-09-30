@@ -76,6 +76,10 @@ Remove-Item $baseDropPath\cntk\*.lib  -exclude EvalDll.lib
 Remove-Item $baseDropPath\cntk\*.exp
 Remove-Item $baseDropPath\cntk\*.metagen
 # Remove specific items
+If (Test-Path $baseDropPath\cntk\Python)
+{
+	Remove-Item $baseDropPath\cntk\Python -Recurse
+}
 If (Test-Path $baseDropPath\cntk\CNTKLibrary-2.0.dll)
 {
 	Remove-Item $baseDropPath\cntk\CNTKLibrary-2.0.dll
