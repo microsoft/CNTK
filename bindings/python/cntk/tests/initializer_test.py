@@ -12,10 +12,16 @@ from .. import parameter, input_variable, momentums_per_sample
 
 def _check(init, name):
     p = parameter(shape=(10,20,5), initializer=init)
-    assert np.allclose(np.average(p.value().to_numpy()), 0, atol=0.1), name
-    assert np.var(p.value().to_numpy()) > 0.01, name
+    val = p.value().to_numpy()
+    assert np.allclose(np.average(val), 0, atol=0.1), name
+    assert np.var(val) > 0.01, name
 
-def _disabled_test_initializer_init():
+def test_initializer_init(device_id):
+    from cntk.utils import cntk_device
+    from cntk import DeviceDescriptor, cntk_py
+    cntk_py.always_allow_setting_default_device()
+    DeviceDescriptor.set_default_device(cntk_device(device_id))
+
     _check(uniform(scale=10), 'uniform')
     _check(gaussian(output_rank=1, filter_rank=2, scale=10), 'gaussian')
     _check(xavier(output_rank=1, filter_rank=2, scale=10), 'xavier')
