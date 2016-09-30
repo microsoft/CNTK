@@ -10,7 +10,7 @@
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>
 #include "SequencePacker.h"
-#include "ElementTypeUtils.h"
+#include "ReaderUtil.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 

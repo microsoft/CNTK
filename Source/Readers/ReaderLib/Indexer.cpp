@@ -3,21 +3,24 @@
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
 
-#include "stdafx.h"
 #define __STDC_FORMAT_MACROS
+#define _CRT_SECURE_NO_WARNINGS
 #include <inttypes.h>
 #include "Indexer.h"
-#include "TextReaderConstants.h"
 
 using std::string;
 
+const static char ROW_DELIMITER = '\n';
+
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-Indexer::Indexer(FILE* file, bool isPrimary, bool skipSequenceIds, size_t chunkSize) :
+Indexer::Indexer(FILE* file, bool isPrimary, bool skipSequenceIds, char streamPrefix, size_t chunkSize, size_t bufferSize) :
+    m_streamPrefix(streamPrefix),
+    m_bufferSize(bufferSize),
     m_file(file),
     m_fileOffsetStart(0),
     m_fileOffsetEnd(0),
-    m_buffer(new char[BUFFER_SIZE + 1]),
+    m_buffer(new char[bufferSize + 1]),
     m_bufferStart(nullptr),
     m_bufferEnd(nullptr),
     m_pos(nullptr),
@@ -35,7 +38,7 @@ void Indexer::RefillBuffer()
 {
     if (!m_done)
     {
-        size_t bytesRead = fread(m_buffer.get(), 1, BUFFER_SIZE, m_file);
+        size_t bytesRead = fread(m_buffer.get(), 1, m_bufferSize, m_file);
         if (bytesRead == (size_t)-1)
             RuntimeError("Could not read from the input file.");
         if (bytesRead == 0)
@@ -116,7 +119,7 @@ void Indexer::Build(CorpusDescriptorPtr corpus)
     }
 
     // check the first byte and decide what to do next
-    if (!m_hasSequenceIds || m_bufferStart[0] == NAME_PREFIX)
+    if (!m_hasSequenceIds || m_bufferStart[0] == m_streamPrefix)
     {
         // skip sequence id parsing, treat lines as individual sequences
         BuildFromLines(corpus);
