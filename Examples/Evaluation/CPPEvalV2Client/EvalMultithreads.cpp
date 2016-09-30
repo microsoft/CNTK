@@ -15,7 +15,8 @@ FunctionPtr FullyConnectedDNNLayerWithSharedParameters(Variable, const Parameter
 void CreateFunctionAndEvaluateWithSharedParameters(size_t, size_t, size_t, const Parameter&, const Parameter&, const Parameter[], const Parameter[], const Parameter&, const DeviceDescriptor&);
 FunctionPtr SetupFullyConnectedLinearLayer(Variable, size_t, const DeviceDescriptor&, const std::wstring&);
 FunctionPtr SetupFullyConnectedDNNLayer(Variable, size_t, const DeviceDescriptor& device, const std::function<FunctionPtr(const FunctionPtr&)>& nonLinearity);
-void RunEvaluation(FunctionPtr, const DeviceDescriptor&);
+void RunEvaluationClassifier(FunctionPtr, const DeviceDescriptor&);
+void RunEvaluationOneHidden(FunctionPtr, const DeviceDescriptor&);
 
 /// <summary>
 /// Shows how to create Function whose parameters can be shared by multi evaluation threads.
@@ -105,7 +106,35 @@ void MultiThreadsEvaluationWithClone(const DeviceDescriptor& device, const int t
     std::vector<std::thread> threadList(threadCount);
     for (int th = 0; th < threadCount; ++th)
     {
-        threadList[th] = std::thread(RunEvaluation, classifierFunc->Clone(), device);
+        threadList[th] = std::thread(RunEvaluationClassifier, classifierFunc->Clone(), device);
+    }
+
+    for (int th = 0; th < threadCount; ++th)
+    {
+        threadList[th].join();
+        fprintf(stderr, "thread %d joined.\n", th);
+        fflush(stderr);
+    }
+}
+
+/// <summary>
+/// Shows how to use LoadLegacyModel() and Clone() to share function parameters among multi evaluation threads.
+/// </summary>
+/// <description>
+/// It first loads a model, then spawns multi threads. Each thread uses Clone() to create a new
+/// instance of function and then use this instance to do evaluation.
+/// All cloned functions share the same parameters.
+/// </description>
+void MultiThreadsEvaluationWithLoadModel(const DeviceDescriptor& device, const int threadCount)
+{
+    // The model file will be trained and copied to the current runtime directory first.    
+    auto modelFuncPtr = CNTK::LoadLegacyModel(DataType::Float, L"01_OneHidden", device);
+
+    // Run evaluation in parallel
+    std::vector<std::thread> threadList(threadCount);
+    for (int th = 0; th < threadCount; ++th)
+    {
+        threadList[th] = std::thread(RunEvaluationOneHidden, modelFuncPtr->Clone(), device);
     }
 
     for (int th = 0; th < threadCount; ++th)
@@ -247,21 +276,26 @@ inline FunctionPtr SetupFullyConnectedDNNLayer(Variable input, size_t outputDim,
     return nonLinearity(SetupFullyConnectedLinearLayer(input, outputDim, device));
 }
 
-void RunEvaluation(FunctionPtr evalFunc, const DeviceDescriptor& device)
+void outputFunctionInfo(FunctionPtr func)
 {
-    auto inputVariables = evalFunc->Arguments();
-
-    fprintf(stderr, "Input Variables (count=%lu)\n", inputVariables.size());
+    auto inputVariables = func->Arguments();
+    fprintf(stderr, "Function %s: Input Variables (count=%lu)\n", func->Name(), inputVariables.size());
     for_each(inputVariables.begin(), inputVariables.end(), [](const Variable v) {
         fprintf(stderr, "    name=%S, kind=%d\n", v.Name().c_str(), v.Kind());
     });
 
-    auto outputVariables = evalFunc->Outputs();
-
-    fprintf(stderr, "Output Variables (count=%lu)\n", outputVariables.size());
+    auto outputVariables = func->Outputs();
+    fprintf(stderr, "Function %s: Output Variables (count=%lu)\n", func->Name(), outputVariables.size());
     for_each(outputVariables.begin(), outputVariables.end(), [](const Variable v) {
         fprintf(stderr, "    name=%S, kind=%d\n", v.Name().c_str(), v.Kind());
     });
+
+}
+void RunEvaluationClassifier(FunctionPtr evalFunc, const DeviceDescriptor& device)
+{
+    auto inputVariables = evalFunc->Arguments();
+
+    outputFunctionInfo(evalFunc);
 
     Variable inputVar;
     for (std::vector<Variable>::iterator it = inputVariables.begin(); it != inputVariables.end(); ++it)
@@ -298,8 +332,30 @@ void RunEvaluation(FunctionPtr evalFunc, const DeviceDescriptor& device)
     }
 }
 
+
+void RunEvaluationOneHidden(FunctionPtr evalFunc, const DeviceDescriptor& device)
+{
+    auto inputVariables = evalFunc->Arguments();
+
+    outputFunctionInfo(evalFunc);
+
+    fprintf(stderr, "device=%d\n", device.Id());
+
+    /*
+Function: Input Variables(count = 3)
+    name = features, kind = 0
+    name = labels, kind = 0
+    name = labels, kind = 0
+Function : Output Variables(count = 3)
+           name = ce_output, kind = 1
+           name = errs_output, kind = 1
+           name = out.z_output, kind = 1
+           */
+}
+
 void MultiThreadsEvaluation()
 {
+    MultiThreadsEvaluationWithLoadModel(DeviceDescriptor::CPUDevice(), 1);
 
     // Test multi-threads evaluation with new function
     fprintf(stderr, "Test multi-threaded evaluation with new function on CPU.\n");
