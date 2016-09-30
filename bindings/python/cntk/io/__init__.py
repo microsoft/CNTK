@@ -32,8 +32,8 @@ class MinibatchSource(cntk_py.MinibatchSource):
         same name.
         '''
         return super(MinibatchSource, self).stream_info(name)
-        
-    def get_next_minibatch(self, minibatch_size_in_samples, device = None):
+
+    def get_next_minibatch(self, minibatch_size_in_samples, device=None):
         '''
         Reads a minibatch that contains data for all input streams.
         The minibatch size is specified terms of #samples and/or #sequences for the primary input stream; value of 0 for #samples/#sequences means unspecified.
@@ -47,9 +47,9 @@ class MinibatchSource(cntk_py.MinibatchSource):
         if device is None:
             device = cntk_py.DeviceDescriptor.use_default_device()
 
-        return super(MinibatchSource, self).get_next_minibatch(\
-                minibatch_size_in_samples,
-                minibatch_size_in_sequences, device)
+        return super(MinibatchSource, self).get_next_minibatch(
+            minibatch_size_in_samples,
+            minibatch_size_in_sequences, device)
 
 
 def _py_dict_to_cntk_dict(py_dict):
@@ -60,23 +60,25 @@ def _py_dict_to_cntk_dict(py_dict):
     Returns: 
         :class:`cntk_py.Dictionary`
     '''
-    res = cntk_py.Dictionary();
-    for k,v in py_dict.items():
-        if isinstance(v,dict):
+    res = cntk_py.Dictionary()
+    for k, v in py_dict.items():
+        if isinstance(v, dict):
             res[k] = cntk_py.DictionaryValueFromDict(_py_dict_to_cntk_dict(v))
-        #TODO: add support to list of lists ?
-        elif isinstance(v,list):
+        # TODO: add support to list of lists ?
+        elif isinstance(v, list):
             l = list()
             for e in v:
-                if isinstance(e,dict):
-                    l.append(cntk_py.DictionaryValueFromDict(_py_dict_to_cntk_dict(e)))
+                if isinstance(e, dict):
+                    l.append(cntk_py.DictionaryValueFromDict(
+                        _py_dict_to_cntk_dict(e)))
                 else:
                     l.append(cntk_py.DictionaryValue(v))
             res[k] = cntk_py.DictionaryValue(l)
         else:
             res[k] = cntk_py.DictionaryValue(v)
     return res
-        
+
+
 def minibatch_source(config):
     '''
     Instantiate the CNTK built-in composite minibatch source which is used to stream data into the network.    
@@ -88,6 +90,7 @@ def minibatch_source(config):
     cntk_dict = _py_dict_to_cntk_dict(config)
     return cntk_py.create_composite_minibatch_source(cntk_dict)
 
+
 class ReaderConfig(dict):
     '''
     Reader configuration.
@@ -98,13 +101,14 @@ class ReaderConfig(dict):
         randomize (`bool`, default True): randomize images before every epoch
         epoch_size (`int`): epoch size 
     '''
+
     def __init__(self, deserializers=None, randomize=True, epoch_size=MAX_UI64):
 
         self['epochSize'] = epoch_size
         if not isinstance(deserializers, (list, tuple)):
             deserializers = [deserializers]
         self['deserializers'] = self.deserializers = deserializers or []
-        self['randomize'] = randomize;
+        self['randomize'] = randomize
 
     def minibatch_source(self):
         '''
@@ -117,6 +121,7 @@ class ReaderConfig(dict):
         '''
         return minibatch_source(self)
 
+
 class Deserializer(dict):
     '''
     Base deserializer class that can be used in the `:class:ReaderConfig`.
@@ -124,8 +129,10 @@ class Deserializer(dict):
     Args:
         type (`str`): type of the deserializer
     '''
+
     def __init__(self, type):
         self['type'] = type
+
 
 class ImageDeserializer(Deserializer):
     '''
@@ -143,6 +150,7 @@ class ImageDeserializer(Deserializer):
     See also:
         https://github.com/microsoft/cntk/wiki/Understanding-and-Extending-Readers
     '''
+
     def __init__(self, filename):
         super(ImageDeserializer, self).__init__('ImageDeserializer')
         self['file'] = filename
@@ -217,7 +225,7 @@ class ImageDeserializer(Deserializer):
         '''
         trans = {}
         trans['type'] = 'Scale'
-        trans['width'] = width 
+        trans['width'] = width
         trans['height'] = height
         trans['channels'] = channels
         trans['interpolations'] = interpolations
@@ -248,6 +256,7 @@ class ImageDeserializer(Deserializer):
 # similarly to ImageDeserializer
 #
 
+
 def text_format_minibatch_source(path, stream_configs, epoch_size=MAX_UI64):
     '''
     Creates a minibatch source from a CNTKTextFormatReader file.
@@ -264,7 +273,8 @@ def text_format_minibatch_source(path, stream_configs, epoch_size=MAX_UI64):
         `:class:cntk.io.MinibatchSource'
     '''
     return cntk_py.text_format_minibatch_source(path, stream_configs,
-            epoch_size)
+                                                epoch_size)
+
 
 class StreamConfiguration(cntk_py.StreamConfiguration):
     '''
@@ -281,6 +291,6 @@ class StreamConfiguration(cntk_py.StreamConfiguration):
         stream_alias (`str`, default ''): name of the stream in the file that is fed to the
          `:func:cntk.io.text_format_minibatch_source`       
     '''
+
     def __init__(self, name, dim, is_sparse=False, stream_alias=''):
         return super(StreamConfiguration, self).__init__(name, dim, is_sparse, stream_alias)
-

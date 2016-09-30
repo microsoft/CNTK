@@ -23,19 +23,24 @@ else:
     if IS_WINDOWS:
         CNTK_LIB_PATH = os.path.join(CNTK_PATH, "x64", "Release")
     else:
-        CNTK_LIB_PATH = os.path.join(CNTK_PATH, "build", "gpu", "release", "lib")
+        CNTK_LIB_PATH = os.path.join(
+            CNTK_PATH, "build", "gpu", "release", "lib")
 
-print("Using CNTK sources at '%s'"%os.path.abspath(CNTK_SOURCE_PATH))
-print("Using CNTK libs at '%s'"%os.path.abspath(CNTK_LIB_PATH))
+print("Using CNTK sources at '%s'" % os.path.abspath(CNTK_SOURCE_PATH))
+print("Using CNTK libs at '%s'" % os.path.abspath(CNTK_LIB_PATH))
+
 
 def lib_path(fn):
     return os.path.normpath(os.path.join(CNTK_LIB_PATH, fn))
 
+
 def proj_lib_path(fn):
     return os.path.normpath(os.path.join(PROJ_LIB_PATH, fn))
 
+
 def strip_path(fn):
     return os.path.split(fn)[1]
+
 
 def strip_ext(fn):
     return os.path.splitext(fn)[0]
@@ -44,19 +49,20 @@ if IS_WINDOWS:
     libname_rt_ext = '.dll'
 
     link_libs = [strip_ext(strip_path(fn)) for fn in
-            glob(os.path.join(CNTK_LIB_PATH, '*.lib'))]
+                 glob(os.path.join(CNTK_LIB_PATH, '*.lib'))]
 else:
-    link_libs=[
-       "cntklibrary-2.0",
-       "cntkmath"
+    link_libs = [
+        "cntklibrary-2.0",
+        "cntkmath"
     ]
     libname_rt_ext = '.so'
 
 
 rt_libs = [strip_path(fn) for fn in glob(os.path.join(CNTK_LIB_PATH,
-    '*'+libname_rt_ext))]
+                                                      '*' + libname_rt_ext))]
 
-# copy over the libraries to the cntk base directory so that the rpath is correctly set
+# copy over the libraries to the cntk base directory so that the rpath is
+# correctly set
 if os.path.exists(PROJ_LIB_PATH):
     shutil.rmtree(PROJ_LIB_PATH)
 
@@ -71,21 +77,21 @@ for fn in rt_libs:
 rt_libs = [os.path.join('libs', fn) for fn in rt_libs]
 
 extra_compile_args = [
-	"-DSWIG",
-	"-DUNICODE"
-    ]
-	       
+    "-DSWIG",
+    "-DUNICODE"
+]
+
 if IS_WINDOWS:
     extra_compile_args += [
-	"/EHsc",
-	"/DEBUG",
-	"/Zi",
-	"/EHsc",
+        "/EHsc",
+        "/DEBUG",
+        "/Zi",
+        "/EHsc",
     ]
     runtime_library_dirs = []
 else:
     extra_compile_args += [
-	'--std=c++11',
+        '--std=c++11',
     ]
 
     # Expecting the dependent libs (libcntklibrary-2.0.so, etc.) inside
@@ -96,30 +102,30 @@ else:
 swig_source = os.path.join("cntk", "swig", "cntk_py_wrap.cxx")
 
 if not os.path.exists(swig_source):
-     print("SWIG wrapper missing. Have you run SWIG already?")
-     sys.exit(1)
+    print("SWIG wrapper missing. Have you run SWIG already?")
+    sys.exit(1)
 
 cntk_module = Extension(
-        name="_cntk_py",
+    name="_cntk_py",
 
-        sources=[swig_source],
+    sources=[swig_source],
 
-        libraries=link_libs,
-        library_dirs=[CNTK_LIB_PATH],
+    libraries=link_libs,
+    library_dirs=[CNTK_LIB_PATH],
 
-        runtime_library_dirs=runtime_library_dirs,
+    runtime_library_dirs=runtime_library_dirs,
 
-        include_dirs=[
-           os.path.join(CNTK_SOURCE_PATH, "CNTKv2LibraryDll", "API"),
-           os.path.join(CNTK_SOURCE_PATH, "Math"),
-           os.path.join(CNTK_SOURCE_PATH, "Common", "Include"),
-           numpy.get_include(),
-           ],
+    include_dirs=[
+        os.path.join(CNTK_SOURCE_PATH, "CNTKv2LibraryDll", "API"),
+        os.path.join(CNTK_SOURCE_PATH, "Math"),
+        os.path.join(CNTK_SOURCE_PATH, "Common", "Include"),
+        numpy.get_include(),
+    ],
 
-        extra_compile_args = extra_compile_args,
+    extra_compile_args=extra_compile_args,
 
-        language="c++",
-    )
+    language="c++",
+)
 
 # Do not include examples
 packages = [x for x in find_packages() if x.startswith('cntk') and not x.startswith('cntk.swig')]
@@ -135,12 +141,12 @@ else:
     package_data['cntk'] += rt_libs
     kwargs = dict(package_data = package_data)
 
-setup(name="cntk", 
+setup(name="cntk",
       version="2.0a2",
       url="http://cntk.ai",
-      ext_modules = [cntk_module],  
+      ext_modules=[cntk_module],
       packages=packages,
-      #install_requires=[
+      # install_requires=[
       #  'numpy>=1.11',
       #  'scipy>=0.17'
       #],

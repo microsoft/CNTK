@@ -7,8 +7,10 @@
 import sys
 import pytest
 
-# content of conftest.py
 _DEFAULT_DEVICE_ID=-1
+
+import cntk.cntk_py
+cntk.cntk_py.always_allow_setting_default_device()
 
 def pytest_addoption(parser):
     parser.addoption("--deviceid", action="append", default=[_DEFAULT_DEVICE_ID],

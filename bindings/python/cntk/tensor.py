@@ -68,28 +68,32 @@ class TensorOpsMixin(object):
     def __abs__(self):
         from . import ops
         return ops.abs(self)
+
     def __neg__(self):
         from . import ops
         return ops.negate(self)
 
-    # TODO __lt__, __le__, __gt__, __ge__, __and__, __rand__, __or__, __ror__, __xor__, __rxor__, __pow__, __rpow__,  __invert__
+    # TODO __lt__, __le__, __gt__, __ge__, __and__, __rand__, __or__, __ror__,
+    # __xor__, __rxor__, __pow__, __rpow__,  __invert__
 
     def __getitem__(self, key):
         from . import ops
         if isinstance(key, int):
             # Case 1: e.g. data[3] -> key=3
-            return ops.slice(self, key, key+1, axis=0)
+            return ops.slice(self, key, key + 1, axis=0)
 
         elif isinstance(key, slice):
             # Case 2: e.g. data[2:4] -> key will be a slice object
             if key.step is not None:
                 raise TypeError('step argument is not supported')
             if not isinstance(key.stop, int):
-                raise TypeError('end index has to be of type int, not "%s"'%type(key.stop))
+                raise TypeError(
+                    'end index has to be of type int, not "%s"' % type(key.stop))
 
             if isinstance(key.start, int):
-                if key.stop<=key.start:
-                    raise ValueError('end index has to be greater than start index')
+                if key.stop <= key.start:
+                    raise ValueError(
+                        'end index has to be greater than start index')
             return ops.slice(self, key.start or 0, key.stop or 0, axis=0)
 
         elif isinstance(key, (tuple, list)):
@@ -101,18 +105,20 @@ class TensorOpsMixin(object):
             for ax_counter, so in enumerate(key):
                 if isinstance(so, int):
                     # Proceed as case 1
-                    node = ops.slice(node, so, so+1, axis=ax_counter)
+                    node = ops.slice(node, so, so + 1, axis=ax_counter)
 
                 elif isinstance(so, slice):
                     # Proceed as case 2
                     if so.step is not None:
                         raise TypeError('step argument is not supported')
                     if isinstance(so.start, int) and isinstance(so.stop, int):
-                        if so.stop<=so.start:
-                            raise ValueError('end index has to be greater than start index')
+                        if so.stop <= so.start:
+                            raise ValueError(
+                                'end index has to be greater than start index')
                     if so.start is None and so.stop is None:
                         continue
-                    node = ops.slice(node, so.start or 0, so.stop or 0, axis=ax_counter)
+                    node = ops.slice(node, so.start or 0,
+                                     so.stop or 0, axis=ax_counter)
                 elif isinstance(so, list):
                     # Case 3b: e.g. data[[0],[2,3]] aka "advanced indexing" ->
                     # so = ([0], [2,3])
@@ -121,37 +127,44 @@ class TensorOpsMixin(object):
                     # we decided to have all shapes like data[0] in this case
                     for idx in so:
                         if not isinstance(idx, int):
-                            raise IndexError('indices have to be of type int and not "%s"'%type(idx))
-                        node = ops.slice(node, idx, idx+1, axis=ax_counter)
+                            raise IndexError(
+                                'indices have to be of type int and not "%s"' % type(idx))
+                        node = ops.slice(node, idx, idx + 1, axis=ax_counter)
                 else:
-                    raise IndexError('type "%s" is not supported as index'%type(so))
+                    raise IndexError(
+                        'type "%s" is not supported as index' % type(so))
 
             return node
         else:
-            raise TypeError('index must be int or slice, not {}'.format(type(key).__name__))
+            raise TypeError(
+                'index must be int or slice, not {}'.format(type(key).__name__))
 
 AVAILABLE_TENSOR_OPS = ['abs', 'add', 'div', 'getitem', 'matmul', 'mul',
-        'radd', 'rdiv', 'rmatmul', 'rmul', 'rsub', 'rtruediv', 'sub',
-        'truediv', 'neg']
+                        'radd', 'rdiv', 'rmatmul', 'rmul', 'rsub', 'rtruediv', 'sub',
+                        'truediv', 'neg']
+
 
 def _add_tensor_ops(klass):
     for op_name in AVAILABLE_TENSOR_OPS:
-        overload_name = '__%s__'%op_name
+        overload_name = '__%s__' % op_name
 
         if getattr(klass, overload_name, None):
-            raise ValueError('class "%s" already has operator overload "%s"'%\
-                    (klass, overload_name))
-        
+            raise ValueError('class "%s" already has operator overload "%s"' %
+                             (klass, overload_name))
+
         setattr(klass, overload_name, getattr(TensorOpsMixin, overload_name))
 
+
 class EvalMixin(object):
+
     def eval(self, input_map=None):
         from .utils import eval as utils_eval
         from . import DeviceDescriptor
         device = DeviceDescriptor.cpu_device()
 
-        if len(self.outputs())!=1:
-            raise ValueError('only operators with exactly one output can be evaluated')
+        if len(self.outputs()) != 1:
+            raise ValueError(
+                'only operators with exactly one output can be evaluated')
 
         if input_map is None:
             input_map = {}
@@ -164,8 +177,7 @@ def _add_eval(klass):
     overload_name = 'eval'
 
     if getattr(klass, overload_name, None):
-        raise ValueError('class "%s" already has operator overload "%s"'%\
-                (klass, overload_name))
-    
-    setattr(klass, overload_name, getattr(EvalMixin, overload_name))
+        raise ValueError('class "%s" already has operator overload "%s"' %
+                         (klass, overload_name))
 
+    setattr(klass, overload_name, getattr(EvalMixin, overload_name))
