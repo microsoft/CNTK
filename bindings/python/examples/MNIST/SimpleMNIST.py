@@ -47,7 +47,7 @@ def simple_mnist():
     labels_si = mb_source.stream_info(labels_stream_name)
 
     # Instantiate the trainer object to drive the model training
-    trainer = Trainer(netout, ce, pe, [sgd_learner(netout.owner.parameters(),
+    trainer = Trainer(netout, ce, pe, [sgd_learner(netout.parameters(),
         lr=0.003125)])
 
     # Get minibatches of images to train with and perform model training
