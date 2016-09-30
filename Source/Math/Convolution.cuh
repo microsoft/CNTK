@@ -196,8 +196,8 @@ __global__ void kMaxPoolingBackward(int batchSize, const ElemType* out, const El
         int i0 = mpRowIndices[row];
         int size = indices[i0++];
         assert(size > 0);
+        ElemType g = srcGrad[row];
         ElemType m = out[row];
-        ElemType count = 0; 
         for (int i = 0; i < size; i++)
         {
             int dcol = indices[i0 + i];

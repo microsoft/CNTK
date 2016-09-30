@@ -4261,11 +4261,11 @@ void CPUMatrix<ElemType>::MaxPoolingBackward(const CPUMatrix<ElemType>& out, con
             int i0 = mpRowIndices(row, 0);
             int size = indices(i0++, 0);
             assert(size > 0);
+            ElemType g = (*this)(row, sample);
             ElemType m = out(row, sample);
-            ElemType count = 0; 
             for (int i = 0; i < size; i++)
             {
-                int dcol = indices(i0 + i, 0);
+                const int dcol = indices(i0 + i, 0);
                 assert(0 <= colBase + dcol && colBase + dcol < grad.GetNumRows());
                 if (in(colBase + dcol, sample) >= m)
                 {
