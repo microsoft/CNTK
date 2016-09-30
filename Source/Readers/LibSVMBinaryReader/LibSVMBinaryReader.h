@@ -294,13 +294,6 @@ public:
     void SetNbrSlicesEachRecurrentIter(const size_t){};
     void SetSentenceEndInBatch(std::vector<size_t>& /*sentenceEnd*/){};
 
-    size_t GetCurrentSamplePosition() override
-    {
-        // We do not support adaptive minibatch for this reader,
-        // CTF should be used instead.
-        NOT_IMPLEMENTED;
-    }
-
 private:
 #if DEBUG
     marker_series* reader_series;

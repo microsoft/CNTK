@@ -83,11 +83,11 @@ void NoRandomizer::StartEpoch(const EpochConfiguration& config)
            numberOfSamples < sampleOffsetInsideChunk)
     {
         numberOfSamples += m_sequenceWindow[m_currentSequencePositionInChunk].m_numberOfSamples;
-        m_currentSequencePositionInChunk++;
+        MoveToNextSequence();
     }
 
     // Updating the global position
-    m_globalSamplePosition = (m_globalSamplePosition - sweepSamplePosition) + m_chunkSampleOffset[m_currentChunkPosition] + numberOfSamples;
+    m_globalSamplePosition = m_globalSamplePosition - sampleOffsetInsideChunk + numberOfSamples;
     assert(m_chunkDescriptions[m_currentChunkPosition]->m_numberOfSequences > m_currentSequencePositionInChunk);
 };
 

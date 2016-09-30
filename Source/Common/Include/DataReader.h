@@ -246,7 +246,10 @@ public:
     };
     
     // Gets current sample position on the global timeline.
-    virtual size_t GetCurrentSamplePosition() = 0;
+    virtual size_t GetCurrentSamplePosition()
+    {
+        NOT_IMPLEMENTED;
+    }
 
     virtual void StartDistributedMinibatchLoop(size_t mbSize, size_t epoch, size_t subsetNum, size_t numSubsets, size_t requestedEpochSamples = requestDataSize)
     {
