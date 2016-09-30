@@ -574,9 +574,6 @@ def ensure_dev(ndav, dev):
 
     return ndav
 
-def ensure_cpu(ndav):
-    return ensure_dev(ndav, cntk_py.DeviceDescriptor.cpu_device())
-
 def eval(op, precision, device, input_map=None, backward_pass=False):
     '''
     It evaluates `op` on the data provided by the reader. This is useful
@@ -610,9 +607,9 @@ def eval(op, precision, device, input_map=None, backward_pass=False):
     forward_output_mask = {}
     for v in op.outputs():
         value = forward_out_var_map[v]
-        np_data = ensure_cpu(value.data()).to_numpy()         
+        np_data = value.data().to_numpy()         
         if value.mask():
-            np_data = remove_masked_elements(np_data, ensure_cpu(value.mask()).to_numpy())
+            np_data = remove_masked_elements(np_data, value.mask().to_numpy())
         forward_output[v] = np_data
         forward_output_mask[v] = value.mask()
 
@@ -628,9 +625,9 @@ def eval(op, precision, device, input_map=None, backward_pass=False):
 
         backward_output = {}
         for var, value in backward_var_map.items():
-            np_data = ensure_cpu(value.data()).to_numpy()             
+            np_data = value.data().to_numpy()             
             if value.mask():
-                np_data = remove_masked_elements(np_data, ensure_cpu(value.mask()).to_numpy())
+                np_data = remove_masked_elements(np_data, value.mask().to_numpy())
             backward_output[var] = np_data
 
         return forward_output, backward_output

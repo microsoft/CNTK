@@ -122,7 +122,7 @@ def dynamic_axes(self):
      if (PyTuple_Check($input)) {
         std::vector<size_t> dimensions;
         size_t rank = PyTuple_Size($input);
-        for (int i=0; i<rank; i++)
+        for (size_t i=0; i<rank; i++)
             dimensions.push_back(PyLong_AsLong(PyTuple_GET_ITEM($input, i)));
 
         // TODO cleans this up?
@@ -139,7 +139,7 @@ def dynamic_axes(self):
 %typemap(out) CNTK::NDShape {
     size_t rank = $1.Rank();
     $result = PyTuple_New(rank);
-    for (int i=0; i<rank; i++)
+    for (size_t i=0; i<rank; i++)
     {
         size_t dim = (&$1)->operator[](i);
         PyTuple_SET_ITEM($result, i, PyInt_FromLong(dim));
@@ -162,7 +162,7 @@ def dynamic_axes(self):
         size_t rank = (*self).Rank();
         PyObject* result = PyTuple_New(rank);
         // CNTK uses column major, thus we reverse the shape
-        for (int i=0; i<rank; i++)
+        for (size_t i=0; i<rank; i++)
         {
             size_t dim = dims[i];
             PyTuple_SET_ITEM(result, rank-1-i, PyInt_FromLong(dim));                       
@@ -291,7 +291,7 @@ def dynamic_axes(self):
      for (auto it: *$1)
      {
         // Convert Variable to PyObject
-        PyObject *returned_var = SWIG_NewPointerObj(SWIG_as_voidptr(&it.first), SWIGTYPE_p_CNTK__Variable, SWIG_POINTER_NOSHADOW);
+        //PyObject *returned_var = SWIG_NewPointerObj(SWIG_as_voidptr(&it.first), SWIGTYPE_p_CNTK__Variable, SWIG_POINTER_NOSHADOW);
 
         // Push the ValuePtr onto the heap so that it survives
         std::shared_ptr<CNTK::Value> *smartresult = it.second ? new std::shared_ptr<CNTK::Value>(it.second) : 0;
@@ -460,7 +460,7 @@ def dynamic_axes(self):
      for (auto it: *$1)
      {
         // Convert StreamInformation to PyObject
-        PyObject *returned_var = SWIG_NewPointerObj(SWIG_as_voidptr(&it.first), SWIGTYPE_p_CNTK__StreamInformation, SWIG_POINTER_NOSHADOW);
+        //PyObject *returned_var = SWIG_NewPointerObj(SWIG_as_voidptr(&it.first), SWIGTYPE_p_CNTK__StreamInformation, SWIG_POINTER_NOSHADOW);
 
         // Push onto the heap so that it survives
 
@@ -522,14 +522,13 @@ def dynamic_axes(self):
         std::vector<CNTK::DictionaryValue>* vec = new std::vector<CNTK::DictionaryValue>();
 
         PyObject *item;
-        Py_ssize_t pos = 0;
 
         PyObject *iterator = PyObject_GetIter($input);
         if (iterator == NULL) {
             SWIG_exception_fail(SWIG_ValueError, "cannot convert list element to CNTK::DictionaryValue"); 
         }
 
-        while (item = PyIter_Next(iterator)) {
+        while ((item = PyIter_Next(iterator))) {
             void *raw_var = 0 ;
             int res1 = SWIG_ConvertPtr(item, &raw_var, SWIGTYPE_p_CNTK__DictionaryValue,  0);
             if (!SWIG_IsOK(res1)) {
@@ -577,14 +576,13 @@ def dynamic_axes(self):
         std::unordered_set<CNTK::Variable>* args_set = new std::unordered_set<CNTK::Variable>();
 
         PyObject *item;
-        Py_ssize_t pos = 0;
 
         PyObject *iterator = PyObject_GetIter($input);
         if (iterator == NULL) {
             SWIG_exception_fail(SWIG_ValueError, "cannot convert list element to CNTK::Variable"); 
         }
 
-        while (item = PyIter_Next(iterator)) {
+        while ((item = PyIter_Next(iterator))) {
             void *raw_var = 0 ;
             int res1 = SWIG_ConvertPtr(item, &raw_var, SWIGTYPE_p_CNTK__Variable,  0);
             if (!SWIG_IsOK(res1)) {
@@ -628,14 +626,13 @@ def dynamic_axes(self):
         std::unordered_set<CNTK::StreamInformation>* args_set = new std::unordered_set<CNTK::StreamInformation>();
 
         PyObject *item;
-        Py_ssize_t pos = 0;
 
         PyObject *iterator = PyObject_GetIter($input);
         if (iterator == NULL) {
             SWIG_exception_fail(SWIG_ValueError, "cannot convert list element to CNTK::StreamInformation"); 
         }
 
-        while (item = PyIter_Next(iterator)) {
+        while ((item = PyIter_Next(iterator))) {
             void *raw_var = 0 ;
             int res1 = SWIG_ConvertPtr(item, &raw_var, SWIGTYPE_p_CNTK__StreamInformation,  0);
             if (!SWIG_IsOK(res1)) {
@@ -679,14 +676,13 @@ def dynamic_axes(self):
         std::unordered_set<CNTK::Parameter>* args_set = new std::unordered_set<CNTK::Parameter>();
 
         PyObject *item;
-        Py_ssize_t pos = 0;
 
         PyObject *iterator = PyObject_GetIter($input);
         if (iterator == NULL) {
             SWIG_exception_fail(SWIG_ValueError, "cannot convert list element to CNTK::Parameter"); 
         }
 
-        while (item = PyIter_Next(iterator)) {
+        while ((item = PyIter_Next(iterator))) {
             void *raw_var = 0 ;
             int res1 = SWIG_ConvertPtr(item, &raw_var, SWIGTYPE_p_CNTK__Parameter,  0);
             if (!SWIG_IsOK(res1)) {
@@ -731,14 +727,13 @@ def dynamic_axes(self):
         std::unordered_set<CNTK::LearnerPtr>* args_set = new std::unordered_set<CNTK::LearnerPtr>();
 
         PyObject *item;
-        Py_ssize_t pos = 0;
 
         PyObject *iterator = PyObject_GetIter($input);
         if (iterator == NULL) {
             SWIG_exception_fail(SWIG_ValueError, "cannot convert list element to CNTK::LearnerPtr"); 
         }
 
-        while (item = PyIter_Next(iterator)) {
+        while ((item = PyIter_Next(iterator))) {
             void *raw_var = 0 ;
             int res1 = SWIG_ConvertPtr(item, &raw_var, SWIGTYPE_p_std__shared_ptrT_CNTK__Learner_t,  0);
             if (!SWIG_IsOK(res1)) {
@@ -828,7 +823,7 @@ def dynamic_axes(self):
 %define %unordered_set_conversion(DATA_TYPE, _SWIG_TYPE)
 
 %typemap(out) std::unordered_set<CNTK::DATA_TYPE> {
-    PyObject* container = PyList_New(NULL);
+    PyObject* container = PyList_New((*&$1)->size());
     if (container == NULL)
     {
         SWIG_exception(SWIG_RuntimeError, "error passing set to Python");
@@ -857,7 +852,7 @@ def dynamic_axes(self):
 %define %unordered_set_ref_conversion(DATA_TYPE, _SWIG_TYPE)
 
 %typemap(out) std::unordered_set<CNTK::DATA_TYPE>& {
-    PyObject* container = PyList_New(NULL);
+    PyObject* container = PyList_New((*&$1)->size());
     if (container == NULL)
     {
         SWIG_exception(SWIG_RuntimeError, "error passing set to Python");
@@ -934,9 +929,25 @@ def dynamic_axes(self):
 
         npy_intp* shape = reinterpret_cast<npy_intp*>(&dimensions[0]);
 
-        void* buffer = const_cast<void*>(reinterpret_cast<const void*>((*self).DataBuffer()));
+        NDMask* cpuView;
+        if ((*self).Device() != DeviceDescriptor::CPUDevice())
+        {
+            cpuView = new NDMask((*self).Shape(), DeviceDescriptor::CPUDevice());
+            cpuView->CopyFrom((*self));
+        }
+        else
+        {
+            cpuView = &(*self);
+        }
+
+        void* buffer = const_cast<void*>(reinterpret_cast<const void*>(cpuView->DataBuffer()));
         
         PyObject* ndarray = PyArray_SimpleNewFromData(dimensions.size(), shape, NPY_UBYTE, buffer);
+
+        if ((*self).Device() != DeviceDescriptor::CPUDevice())
+        {
+            delete cpuView;
+        }
 
         return ndarray;
     }
@@ -1013,16 +1024,27 @@ def dynamic_axes(self):
         NPY_TYPES numpy_type;
         void* buffer;
 
+        NDArrayView* cpuView;
+        if ((*self).Device() != DeviceDescriptor::CPUDevice())
+        {
+            cpuView = new NDArrayView((*self).GetDataType(), (*self).Shape(), DeviceDescriptor::CPUDevice());
+            cpuView->CopyFrom((*self));
+        }
+        else
+        {
+            cpuView = &(*self);
+        }
+
         CNTK::DataType cntk_type = (*self).GetDataType();
         if (cntk_type == CNTK::DataType::Float)
         {
             numpy_type = NPY_FLOAT;
-            buffer = (void*)(*self).DataBuffer<float>();
+            buffer = (void*)cpuView->DataBuffer<float>();
         }
         else if (cntk_type == CNTK::DataType::Double)
         {
             numpy_type = NPY_DOUBLE;
-            buffer = (void*)(*self).DataBuffer<double>();
+            buffer = (void*)cpuView->DataBuffer<double>();
         }
         else
         {
@@ -1030,6 +1052,11 @@ def dynamic_axes(self):
         }
         
         PyObject* ndarray = PyArray_SimpleNewFromData(dimensions.size(), shape, numpy_type, buffer);
+
+        if ((*self).Device() != DeviceDescriptor::CPUDevice())
+        {
+            delete cpuView;
+        }
 
         return ndarray;
     }
