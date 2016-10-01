@@ -157,10 +157,11 @@ def _add_tensor_ops(klass):
 
 class EvalMixin(object):
 
-    def eval(self, arguments=None):
+    def eval(self, arguments=None, device=None):
         from .utils import eval as utils_eval
-        from . import DeviceDescriptor
-        device = DeviceDescriptor.cpu_device()
+        if device is None:
+            from . import DeviceDescriptor
+            device = DeviceDescriptor.best_device()
 
         if len(self.outputs()) != 1:
             raise ValueError(
