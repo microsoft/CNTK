@@ -547,6 +547,7 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
 
             // Optional parameters
             ElemType acweight = node->GetOptionalParameter("acweight", "1.0");
+            ElemType frameDropThresh = node->GetOptionalParameter("frameDropThresh", "1e-8");
             bool usePrior = node->GetOptionalParameter("usePrior", "true");
             int alignmentWindow = node->GetOptionalParameter("alignmentWindow", "0");
             ElemType ceweight = node->GetOptionalParameter("ceweight", "0.0");
@@ -579,7 +580,7 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
                     transFilePath = transFilePath.substr(1, transFilePath.size() - 2);
             }
 
-            nodePtr = builder.LatticeFreeMMI(nullptr, nullptr, nullptr, msra::strfun::utf16(fstFilePath), msra::strfun::utf16(smapFilePath), acweight, usePrior, alignmentWindow, ceweight, l2NormFactor, useSenoneLM, msra::strfun::utf16(transFilePath), name);
+            nodePtr = builder.LatticeFreeMMI(nullptr, nullptr, nullptr, msra::strfun::utf16(fstFilePath), msra::strfun::utf16(smapFilePath), acweight, usePrior, alignmentWindow, ceweight, l2NormFactor, useSenoneLM, msra::strfun::utf16(transFilePath), frameDropThresh, name);
         }
     }
     else

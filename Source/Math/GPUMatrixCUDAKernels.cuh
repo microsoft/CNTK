@@ -4854,7 +4854,7 @@ __global__ void _DropFrame(
     {
         int idx = IDX2C(i, col_id, m_numRows);
         // printf("%u ", idx);
-        if (fabs(label[idx] - 1.0) < 0.1) // we found the 1 in the vector
+        if (fabs(label[idx] - 1.0) < 0.001) // we found the 1 in the vector
         {
             if (gamma[idx] < framedropthreshhold)
                 dropframe = true;

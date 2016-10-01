@@ -426,9 +426,9 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Cross
 }
 
 template <class ElemType>
-shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::LatticeFreeMMI(const ComputationNodePtr label, const ComputationNodePtr prediction, const ComputationNodePtr logPrior, const std::wstring fstFilePath, const std::wstring smapFilePath, ElemType acweight, bool usePrior, int alignmentWindow, ElemType ceweight, ElemType l2NormFactor, bool useSenoneLM, const std::wstring transFilePath, std::wstring nodeName)
+shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::LatticeFreeMMI(const ComputationNodePtr label, const ComputationNodePtr prediction, const ComputationNodePtr logPrior, const std::wstring fstFilePath, const std::wstring smapFilePath, ElemType acweight, bool usePrior, int alignmentWindow, ElemType ceweight, ElemType l2NormFactor, bool useSenoneLM, const std::wstring transFilePath, const ElemType frameDropThresh, std::wstring nodeName)
 {
-    return net.AddNodeToNetAndAttachInputs(New<LatticeFreeMMINode<ElemType>>(net.GetDeviceId(), nodeName, fstFilePath, smapFilePath, acweight, usePrior, alignmentWindow, ceweight, l2NormFactor, useSenoneLM, transFilePath), { label, prediction, logPrior });
+    return net.AddNodeToNetAndAttachInputs(New<LatticeFreeMMINode<ElemType>>(net.GetDeviceId(), nodeName, fstFilePath, smapFilePath, acweight, usePrior, alignmentWindow, ceweight, l2NormFactor, useSenoneLM, transFilePath, frameDropThresh), { label, prediction, logPrior });
 }
 
 template <class ElemType>
