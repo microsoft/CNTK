@@ -55,7 +55,7 @@ def cross_entropy_with_softmax(output_vector, target_vector, name=''):
         array([[ 0.]], dtype=float32)
 
         >>> C.cross_entropy_with_softmax([[1., 2., 3., 4.]], [[0.35, 0.15, 0.05, 0.45]]).eval()
-        array([[ 1.84018993]], dtype=float32)
+        array([[ 1.84019]], dtype=float32)
 
     Args:
         output_vector: the unscaled computed output values from the network
@@ -692,7 +692,7 @@ def clip(x, min_value, max_value, name=''):
 
     Example:
         >>> C.clip([1., 2.1, 3.0, 4.1], 2., 4.).eval()
-        array([ 2.       ,  2.0999999,  3.       ,  4.       ], dtype=float32)
+        array([ 2. ,  2.1,  3. ,  4. ], dtype=float32)
 
         >>> C.clip([-10., -5., 0., 5., 10.], [-5., -4., 0., 3., 5.], [5., 4., 1., 4., 9.]).eval()
         array([-5., -4.,  0.,  4.,  9.], dtype=float32)
@@ -746,7 +746,7 @@ def sigmoid(x, name=''):
 
     Example:
         >>> C.sigmoid([-2, -1., 0., 1., 2.]).eval()
-        array([ 0.11920292,  0.26894143,  0.5       ,  0.7310586 ,  0.88079703], dtype=float32)
+        array([ 0.119203,  0.268941,  0.5     ,  0.731059,  0.880797], dtype=float32)
 
     Args:
         x: numpy array or any :class:`cntk.Function` that outputs a tensor
@@ -767,8 +767,8 @@ def tanh(x, name=''):
 
     Example:
         >>> C.tanh([[1,2],[3,4]]).eval()
-        array([[ 0.76159418,  0.96402758],
-               [ 0.99505478,  0.99932933]], dtype=float32)
+        array([[ 0.761594,  0.964028],
+               [ 0.995055,  0.999329]], dtype=float32)
 
     Args:
         x: numpy array or any :class:`cntk.Function` that outputs a tensor
@@ -792,7 +792,7 @@ def softmax(x, name=''):
 
     Example:
         >>> C.softmax([[1, 1, 2, 3]]).eval()
-        array([[ 0.08259455,  0.08259455,  0.22451523,  0.61029565]], dtype=float32)
+        array([[ 0.082595,  0.082595,  0.224515,  0.610296]], dtype=float32)
 
         >>> C.softmax([1, 1]).eval()
         array([ 0.5,  0.5], dtype=float32)
@@ -850,7 +850,7 @@ def exp(x, name=''):
 
     Example:
         >>> C.exp([0., 1.]).eval()
-        array([ 1.        ,  2.71828175], dtype=float32)
+        array([ 1.      ,  2.718282], dtype=float32)
 
     Args:
         x: numpy array or any :class:`cntk.Function` that outputs a tensor
@@ -869,7 +869,7 @@ def log(x, name=''):
 
     Example:
         >>> C.log([1., 2.]).eval()
-        array([ 0.        ,  0.69314718], dtype=float32)
+        array([ 0.      ,  0.693147], dtype=float32)
 
     Args:
         x: numpy array or any :class:`cntk.Function` that outputs a tensor
@@ -980,7 +980,7 @@ def reciprocal(x, name=''):
 
     Example:
         >>> C.reciprocal([-1/3, 1/5, -2, 3]).eval()
-        array([-3.        ,  5.        , -0.5       ,  0.33333334], dtype=float32)
+        array([-3.      ,  5.      , -0.5     ,  0.333333], dtype=float32)
 
     Args:
         x: numpy array or any :class:`cntk.Function` that outputs a tensor
@@ -1001,8 +1001,7 @@ def element_select(flag, value_if_true, value_if_false, name=''):
 
     Example:
         >>> C.element_select([-10, -1, 0, 0.3, 100], [1, 10, 100, 1000, 10000], [ 2, 20, 200, 2000, 20000]).eval()
-        array([  1.00000000e+00,   1.00000000e+01,   2.00000000e+02,
-                 1.00000000e+03,   1.00000000e+04], dtype=float32)
+        array([     1.,     10.,    200.,   1000.,  10000.], dtype=float32)
 
     Args:
         flag: tensor

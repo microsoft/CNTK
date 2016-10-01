@@ -9,6 +9,7 @@ import pytest
 
 _DEFAULT_DEVICE_ID = -1
 
+
 def pytest_addoption(parser):
     parser.addoption("--deviceid", action="append", default=[_DEFAULT_DEVICE_ID],
                      help="list of device ids to pass to test functions")
@@ -38,7 +39,13 @@ def pytest_generate_tests(metafunc):
 
         metafunc.parametrize("device_id", devices)
 
+#
+# Adding the namespaces so that doctests work
+#
 import numpy
+# Because of difference in precision across platforms, we restrict the output
+# precision and don't write in scientific notation
+numpy.set_printoptions(precision=6, suppress=True)
 import cntk
 
 
