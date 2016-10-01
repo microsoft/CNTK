@@ -68,15 +68,17 @@ public:
         InitMatrixes();
     }
 
-    LatticeFreeMMINode(DEVICEID_TYPE deviceId, const wstring& name, const wstring& fstFilePath, const wstring& smapFilePath, const ElemType acweight, const bool usePrior, const int alignmentWindow, const ElemType ceweight, const ElemType l2NormFactor, const bool useSenoneLM, const wstring& transFilePath)
-        : Base(deviceId, name), m_acweight(acweight), m_usePrior(usePrior), m_alignmentWindow(alignmentWindow), m_ceweight(ceweight), m_l2NormFactor(l2NormFactor), m_totalFrameNumberOfCurrentMinibatch(0)
+    LatticeFreeMMINode(DEVICEID_TYPE deviceId, const wstring& name, const wstring& fstFilePath, const wstring& smapFilePath, const ElemType acweight, const bool usePrior, const int alignmentWindow, 
+        const ElemType ceweight, const ElemType l2NormFactor, const bool useSenoneLM, const wstring& transFilePath, const ElemType frameDropThresh)
+        : Base(deviceId, name), m_acweight(acweight), m_usePrior(usePrior), m_alignmentWindow(alignmentWindow), m_ceweight(ceweight), m_l2NormFactor(l2NormFactor), m_frameDropThresh(frameDropThresh), 
+        m_totalFrameNumberOfCurrentMinibatch(0)
     {
         InitMatrixes();
         InitializeFromTfstFiles(fstFilePath, smapFilePath, useSenoneLM, transFilePath);
     }
 
     LatticeFreeMMINode(const ScriptableObjects::IConfigRecordPtr configp)
-        : LatticeFreeMMINode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"fstFilePath"), configp->Get(L"smapFilePath"), configp->Get(L"acweight"), configp->Get(L"usePrior"), configp->Get(L"alignmentWindow"), configp->Get(L"ceweight"), configp->Get(L"l2NormFactor"), configp->Get(L"useSenoneLM"), configp->Get(L"transFilePath"))
+        : LatticeFreeMMINode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"fstFilePath"), configp->Get(L"smapFilePath"), configp->Get(L"acweight"), configp->Get(L"usePrior"), configp->Get(L"alignmentWindow"), configp->Get(L"ceweight"), configp->Get(L"l2NormFactor"), configp->Get(L"useSenoneLM"), configp->Get(L"transFilePath"), configp->Get(L"frameDropThresh"))
     {
         AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
     }
@@ -97,6 +99,11 @@ public:
 
             if (m_totalFrameNumberOfCurrentMinibatch == 0 || m_frameNumberOfCurrentMinibatch == m_totalFrameNumberOfCurrentMinibatch)
             {
+                Matrix<ElemType> posteriorNumBackup(m_posteriorsNum->GetNumRows(), m_posteriorsNum->GetNumCols(), m_posteriorsNum->GetDeviceId());
+                posteriorNumBackup.SetValue(*m_posteriorsNum);
+                Matrix<ElemType> posteriorDenBackup(m_posteriorsDen->GetNumRows(), m_posteriorsDen->GetNumCols(), m_posteriorsDen->GetDeviceId());
+                posteriorDenBackup.SetValue(*m_posteriorsDen);
+
                 // k * (1-alpha) * r_DEN + alpha * P_net - (k * (1-alpha) + alpha) * r_NUM + c * y
                 if (m_ceweight != 0)
                 {
@@ -112,11 +119,17 @@ public:
                 if (m_totalFrameNumberOfCurrentMinibatch > 0)
                 {
                     Matrix<ElemType>::AssignScaledDifference(Gradient(), *m_posteriorsDen, *m_posteriorsNum, *m_mbGradients);
-                    m_frameNumberOfCurrentMinibatch = 0;
+                    m_frameNumberOfCurrentMinibatch = 0;                    
+                    //m_mbGradients->Print("before");
+                    m_mbGradients->DropFrame(posteriorNumBackup, posteriorDenBackup, m_frameDropThresh);
+                    //m_mbGradients->Print("after");
                 }
                 else
                 {
                     Matrix<ElemType>::AddScaledDifference(Gradient(), *m_posteriorsDen, *m_posteriorsNum, gradient);
+                    //gradient.Print("before");
+                    gradient.DropFrame(posteriorNumBackup, posteriorDenBackup, m_frameDropThresh);
+                    //gradient.Print("after");
                 }
             }
 
@@ -290,6 +303,7 @@ public:
             node->m_usePrior = m_usePrior;
             node->m_alignmentWindow = m_alignmentWindow;
             node->m_ceweight = m_ceweight;
+            node->m_frameDropThresh = m_frameDropThresh;
             node->m_l2NormFactor = m_l2NormFactor;
             node->m_fsa = m_fsa;
             node->m_tmap->SetValue(*m_tmap);
@@ -522,6 +536,7 @@ protected:
     bool m_usePrior;
     int m_alignmentWindow;
     ElemType m_ceweight;
+    ElemType m_frameDropThresh;
     ElemType m_l2NormFactor;
     vector<map<int, pair<int, ElemType>>> m_fsa;
     shared_ptr<Matrix<ElemType>> m_tmap;
