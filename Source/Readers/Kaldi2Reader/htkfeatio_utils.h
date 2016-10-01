@@ -41,6 +41,16 @@ inline std::string trimmed(std::string str)
 
 } }
 
+inline std::string basename(std::string const &pathname)
+{
+    return std::string(std::find_if(pathname.rbegin(), pathname.rend(), MatchPathSeparator()).base(), pathname.end());
+}
+
+static inline std::wstring basename(std::wstring const &pathname)
+{
+    return std::wstring(std::find_if(pathname.rbegin(), pathname.rend(), MatchPathSeparator()).base(), pathname.end());
+}
+
 inline std::string removeExtension(std::string const &filename)
 {
     size_t lastindex = filename.find_first_of(".");
