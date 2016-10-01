@@ -157,7 +157,7 @@ def _add_tensor_ops(klass):
 
 class EvalMixin(object):
 
-    def eval(self, arguments=None, device=None):
+    def eval(self, arguments=None, precision='float', device=None):
         from .utils import eval as utils_eval
         if device is None:
             from . import DeviceDescriptor
@@ -170,7 +170,7 @@ class EvalMixin(object):
         if arguments is None:
             arguments = {}
 
-        result, _ = utils_eval(self, None, device, arguments, False)
+        result, _ = utils_eval(self, precision, device, arguments, False)
         return result.popitem()[1]
 
 
