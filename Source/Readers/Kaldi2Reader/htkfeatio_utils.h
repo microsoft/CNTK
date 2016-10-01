@@ -41,6 +41,14 @@ inline std::string trimmed(std::string str)
 
 } }
 
+struct MatchPathSeparator
+{
+    bool operator()(char ch) const
+    {
+        return ch == '\\' || ch == '/';
+    }
+};
+
 inline std::string basename(std::string const &pathname)
 {
     return std::string(std::find_if(pathname.rbegin(), pathname.rend(), MatchPathSeparator()).base(), pathname.end());
