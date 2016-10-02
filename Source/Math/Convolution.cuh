@@ -237,19 +237,25 @@ __global__ void kMaxUnpooling(int batchSize, const int* mpRowCol, const int* mpR
         int i0 = mpRowIndices[row];
         int size = indices[i0++];
         ElemType curMax = poolIn[colBase + indices[i0]];
+        ElemType prevMax = curMax;
+        int imax = 0;
         for (int i = 1; i < size; i++)
         {
             int dcol = indices[i0 + i];
             assert(0 <= colBase + dcol && colBase + dcol < dstVecSize);
             curMax = max(curMax, poolIn[colBase + dcol]);
+            if (curMax > prevMax)
+            {
+                prevMax = curMax;
+                imax = i;
+            }
+
         }
-        for (int i = 0; i < size; i++)
-        {
-            int dcol = indices[i0 + i];
-            if (poolIn[colBase + dcol] >= curMax) 
-                dst[colBase + dcol] = src[row];     // this should have no issue if we are unpooling features. 
-                                                    // if (*this) contains gradient, the unpooling operator with overlapped pooling is not clearly defined 
-        }
+
+        int dcol = indices[i0 + imax];
+        assert(0 <= colBase + dcol && colBase + dcol < dstVecSize);
+
+        dst[colBase + dcol] = src[row];
 
         src    += blockIdx.y * srcVecSize;
         poolIn += blockIdx.y * dstVecSize;
