@@ -54,7 +54,7 @@ inline std::string basename(std::string const &pathname)
     return std::string(std::find_if(pathname.rbegin(), pathname.rend(), MatchPathSeparator()).base(), pathname.end());
 }
 
-static inline std::wstring basename(std::wstring const &pathname)
+inline std::wstring basename(std::wstring const &pathname)
 {
     return std::wstring(std::find_if(pathname.rbegin(), pathname.rend(), MatchPathSeparator()).base(), pathname.end());
 }
