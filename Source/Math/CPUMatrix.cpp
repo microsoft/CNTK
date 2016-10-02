@@ -4265,7 +4265,7 @@ void CPUMatrix<ElemType>::MaxPoolingBackward(const CPUMatrix<ElemType>& out, con
             ElemType m = out(row, sample);
             for (int i = 0; i < size; i++)
             {
-                const int dcol = indices(i0 + i, 0);
+                int dcol = indices(i0 + i, 0);
                 assert(0 <= colBase + dcol && colBase + dcol < grad.GetNumRows());
                 if (in(colBase + dcol, sample) >= m)
                 {
@@ -4296,7 +4296,6 @@ void CPUMatrix<ElemType>::MaxUnpooling(const CPUMatrix<int>& mpRowCol, const CPU
             assert(size > 0);
 
             ElemType curMax = poolInput(colBase + indices(i0, 0), sample);
-            ElemType prevMax = curMax;
             ElemType prevMax = curMax;
             int imax = 0;
             for (int i = 1; i < size; i++)
