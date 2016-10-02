@@ -69,6 +69,11 @@ public:
         return true;
     }
 
+    virtual bool IsLegacyReader() const override
+    {
+        return false;
+    }
+
     virtual bool GetMinibatch(StreamMinibatchInputs& matrices) override;
 
     virtual bool DataEnd() override;

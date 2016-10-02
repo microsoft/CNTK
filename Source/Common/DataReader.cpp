@@ -184,6 +184,23 @@ bool DataReader::SupportsDistributedMBRead() const
     return supportsDistributedMBRead;
 }
 
+//IsLegacyReader - Returns true if one of the readers is a legacy reader, false otherwise.
+bool DataReader::IsLegacyReader() const
+{
+    for (size_t i = 0; i < m_ioNames.size(); i++)
+    {
+        auto currReaderIter = m_dataReaders.find(m_ioNames[i]);
+        assert(currReaderIter != m_dataReaders.end());
+
+        if (currReaderIter->second->IsLegacyReader())
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 //StartDistributedMinibatchLoop - Startup a distributed minibatch loop for parallel training
 // mbSize - [in] size of the minibatch (number of frames, etc.)
 // epoch - [in] epoch number for this loop
