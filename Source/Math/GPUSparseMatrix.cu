@@ -2219,10 +2219,10 @@ GPUSparseMatrix<ElemType> GPUSparseMatrix<ElemType>::ColumnSlice(size_t startCol
 template <class ElemType>
 GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::AssignColumnSlice(const GPUSparseMatrix<ElemType>& fromMatrix, size_t startColumn, size_t numCols)
 {
-    if (startColumn + numCols > GetNumCols())
-        InvalidArgument("The slice (%d+%d) is out of range of the source matrix (%d).", (int) startColumn, (int) numCols, (int) GetNumCols());
+    if (startColumn + numCols > fromMatrix.GetNumCols())
+        InvalidArgument("The slice (%d+%d) is out of range of the source matrix (%d).", (int) startColumn, (int) numCols, (int) fromMatrix.GetNumCols());
 
-    if (GetFormat() != MatrixFormat::matrixFormatSparseCSC && (startColumn != 0 || numCols != GetNumCols()))
+    if (fromMatrix.GetFormat() != MatrixFormat::matrixFormatSparseCSC && (startColumn != 0 || numCols != fromMatrix.GetNumCols()))
         NOT_IMPLEMENTED;
 
     ShallowCopyFrom(fromMatrix);
