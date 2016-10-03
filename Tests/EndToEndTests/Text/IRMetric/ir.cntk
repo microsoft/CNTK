@@ -1,0 +1,147 @@
+
+WorkingDir = D:\jiajia\ir
+DataDir = \\samaddm01\saadsrnrfs01\jiajia
+RunDir = $WorkingDir$
+ConfigDir = D:\jiajia\ir
+
+MBSize = 1024
+LRate = 0.0001
+parallelTrain = false
+DeviceId = auto
+modelPath = $RunDir$/Models/ir.net
+
+CROSSDim1 = 512
+CROSSDim2 = 512
+CROSSDIM3 = 256
+CROSSDIM4 = 128
+CROSSDIM5 = 64
+MaxEpochs = 5
+
+command = train
+precision = float
+train = [
+    action = train
+    numMBsToShowResult=500
+    deviceId = $DeviceId$
+    minibatchSize = $MBSize$
+    modelPath = $modelPath$
+    traceLevel = 3
+
+    SGD = [
+        epochSize=0
+        learningRatesPerSample = $LRate$    #run 1 to 2 epochs, check the result and adjust this value
+        momentumPerMB = 0.9
+        maxEpochs=$MaxEpochs$
+
+        gradUpdateType=none
+        gradientClippingWithTruncation=true
+        clippingThresholdPerSample=1#INF
+            
+        AutoAdjust=[
+                    autoAdjustLR=none
+                ]
+
+        syncPerfStats=20
+        ParallelTrain=[
+            parallelizationMethod=BlockMomentumSGD
+            distributedMBReading=true
+            syncPerfStats=5
+            BlockMomentumSGD=[
+                syncPeriod = 400000
+                resetSGDMomentum = true
+                useNesterovMomentum = true
+            ]
+        ]
+    ]
+]
+
+    BrainScriptNetworkBuilder = (new ComputationNetwork [
+        # Dimensions for DeepCrossing layers 
+        CROSSDim1 = 512
+        CROSSDim2 = 512
+        CROSSDim3 = 256
+        CROSSDim4 = 128
+        CROSSDim5 = 64
+
+        DeepCrossing = [
+            OneLayer(input, inputSize, outputSize, activation) = [
+               z = BFF(input, outputSize, inputSize).z
+               act = activation(z)
+            ].act
+            
+            OneLayer_NoBias(input, inputSize, outputSize) = [
+               z = BFF(input, outputSize, inputSize).z
+            ].z   
+            
+            LSTMLayer(input, inputSize, outputSize, cellSize, selector) = [ 
+               lstm = BS.RNNs.RecurrentLSTMP(outputSize, cellDim=cellSize, input, inputDim=inputSize)
+               result = selector(lstm.h)
+            ].result
+            
+            OneLayer_Relu(input, inputSize, outputSize) = [
+                z = BFF(input, outputSize, inputSize).z
+                act = RectifiedLinear(z)
+            ].act
+            
+            OneLayer_Sigmoid(input, inputSize, outputSize) = [
+                act = SBFF(input, outputSize, inputSize).Eh
+            ].act
+            
+            # residual layer light
+            ResidualUnitLayer(input, inputSize, hiddenSize) = [
+                l1 = OneLayer_Relu(input, inputSize, hiddenSize)
+                l2 = BFF(l1, inputSize, hiddenSize).z
+                act = RectifiedLinear(input + l2)
+            ].act
+        ]      
+
+        # Feature dimensions
+        QueryDim = 49293
+        TitleDim = 49293
+        NormalizedUrlDim = 49293
+        GainDim = 1
+        BingCountsDim = 36
+        GroupIdDim = 1
+        EDim = 56
+
+        # has to be 3*EDim+SDim+DenseDim
+        AllDim = 3 * EDim + BingCountsDim
+
+        // LSTM params
+        LSTMcellDim = 200 # denoted by "m" in the 2C-RNN paper
+        inputEmbDim = 200 # denoted by "n" in the 2C-RNN paper      
+
+        Query = SparseInput(QueryDim, tag="feature")
+        Title = SparseInput(TitleDim, tag="feature")
+        NormalizedUrl = SparseInput(NormalizedUrlDim, tag="feature")
+
+        // Setting up non-text inputs
+        Gain = Input(GainDim, tag="feature")
+        BingCounts = Input(BingCountsDim, tag="feature")
+        GroupId = Input(GroupIdDim, tag="feature")
+
+        Q = DeepCrossing.OneLayer_Relu(Query, QueryDim, EDim)
+        T = DeepCrossing.OneLayer_Relu(Title, TitleDim, EDim)
+        U = DeepCrossing.OneLayer_Relu(NormalizedUrl, NormalizedUrlDim, EDim)
+
+        # Deep Crossing Network
+        RS0 = Dropout(RowStack(Q : T : U))
+        R0 = RowStack(RS0 : BingCounts)
+        R1 = DeepCrossing.ResidualUnitLayer(R0, AllDim, CROSSDim1)
+        s = DeepCrossing.OneLayer_NoBias(R1, AllDim, GainDim)
+
+        // training criteria
+        irm  = NDCG(Gain, s, GroupId, tag='criterion')   // this is the training objective
+        irm1  = NDCG1(Gain, s, GroupId, tag='eval')
+        outputNodes = (s)
+
+    ])
+
+    reader = [
+    # reader to use
+    readerType = LibSVMBinaryReader
+    miniBatchMode = Partial
+    randomize = 0
+        file = $DataDir$/train.bin
+    ]
+]

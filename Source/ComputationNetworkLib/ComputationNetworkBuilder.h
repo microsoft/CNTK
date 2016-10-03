@@ -132,6 +132,8 @@ public:
     ComputationNodePtr Hardmax(const ComputationNodePtr a, const std::wstring nodeName = L"");
     ComputationNodePtr If(const ComputationNodePtr a, const ComputationNodePtr b, const ComputationNodePtr c, const std::wstring nodeName = L"");
     ComputationNodePtr InvStdDev(const ComputationNodePtr a, const std::wstring nodeName = L"");
+    ComputationNodePtr IRMetric(const ComputationNodePtr gain, const ComputationNodePtr prediction, const ComputationNodePtr queryId, const std::wstring nodeName = L"");
+    ComputationNodePtr IRMetricEval(const ComputationNodePtr gain, const ComputationNodePtr prediction, const ComputationNodePtr queryId, const std::wstring nodeName = L"");
     ComputationNodePtr KhatriRaoProduct(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"");
     ComputationNodePtr Log(const ComputationNodePtr a, const std::wstring nodeName = L"");
     ComputationNodePtr LogPlus(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"");
