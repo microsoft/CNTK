@@ -4268,7 +4268,11 @@ void CPUMatrix<ElemType>::MaxPoolingBackward(const CPUMatrix<ElemType>& out, con
                 int dcol = indices(i0 + i, 0);
                 assert(0 <= colBase + dcol && colBase + dcol < grad.GetNumRows());
                 if (in(colBase + dcol, sample) >= m)
+                {
+#pragma omp atomic 
                     grad(colBase + dcol, sample) += g;
+                    break; 
+                }
             }
         }
     }
@@ -4366,6 +4370,7 @@ void CPUMatrix<ElemType>::AveragePoolingBackward(const CPUMatrix<int>& mpRowCol,
             {
                 int dcol = indices(i0 + i, 0);
                 assert(0 <= colBase + dcol && colBase + dcol < grad.GetNumRows());
+#pragma omp atomic 
                 grad(colBase + dcol, sample) += g;
             }
         }

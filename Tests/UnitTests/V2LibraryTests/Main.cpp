@@ -1,3 +1,7 @@
+//
+// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
+//
 #include "CNTKLibrary.h"
 #include <functional>
 
@@ -8,39 +12,40 @@ void TensorTests();
 void FeedForwardTests();
 void RecurrentFunctionTests();
 void TrainerTests();
-void TestCifarResnet();
+void TrainCifarResnet();
 void FunctionTests();
 void TrainLSTMSequenceClassifer();
 void SerializationTests();
 void LearnerTests();
 void TrainSequenceToSequenceTranslator();
-void EvalMultiThreadsWithNewNetwork(const DeviceDescriptor&, const int);
+void TrainTruncatedLSTMAcousticModelClassifer();
+void DeviceSelectionTests();
+void MultiThreadsEvaluation();
 
 int main()
 {
+    // Lets disable automatic unpacking of PackedValue object to detect any accidental unpacking 
+    // which will have a silent performance degradation otherwise
+    Internal::DisableAutomaticUnpackingOfPackedValues();
+
     NDArrayViewTests();
     TensorTests();
     FunctionTests();
 
-    FeedForwardTests();
-    RecurrentFunctionTests();
-
-    TrainerTests();
     SerializationTests();
     LearnerTests();
 
-    TestCifarResnet();
+    TrainerTests();
+    TrainCifarResnet();
     TrainLSTMSequenceClassifer();
 
     TrainSequenceToSequenceTranslator();
+    TrainTruncatedLSTMAcousticModelClassifer();
 
-    // Test multi-threads evaluation
-    fprintf(stderr, "Test multi-threaded evaluation on CPU.\n");
-    EvalMultiThreadsWithNewNetwork(DeviceDescriptor::CPUDevice(), 2);
-#ifndef CPUONLY
-    fprintf(stderr, "Test multi-threaded evaluation on GPU\n");
-    EvalMultiThreadsWithNewNetwork(DeviceDescriptor::GPUDevice(0), 2);
-#endif
+    MultiThreadsEvaluation();
+
+    fprintf(stderr, "Test device selection API\n");
+    DeviceSelectionTests();
 
     fprintf(stderr, "\nCNTKv2Library tests: Passed\n");
     fflush(stderr);

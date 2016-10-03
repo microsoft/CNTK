@@ -36,19 +36,18 @@ namespace CNTK
     }
 
     NDMask::~NDMask()
-    {
-    }
+    {}
 
-    void NDMask::MaskSection(const std::vector<size_t>& sectionOffset, const NDShape& sectionShape)
+    void NDMask::MarkSectionAs(const std::vector<size_t>& sectionOffset, const NDShape& sectionShape, MaskKind maskKind)
     {
         // TODO: Implement batching of masking operation for masks residing on GPUs to avoid making
         // GPU invocations for each MaskSection call.
 
         if (sectionOffset.size() > m_maskShape.Rank())
-            LogicError("NDMask::MaskSection: The sectionOffset cannot have dimensionality higher than the number of axes of 'this' mask");
+            LogicError("NDMask::MaskSection: The sectionOffset cannot have dimensionality higher than the rank of 'this' mask");
 
         if (sectionShape.Rank() > m_maskShape.Rank())
-            LogicError("NDMask::MaskSection: The section shape cannot have an axes count higher than the number of axes of 'this' mask");
+            LogicError("NDMask::MaskSection: The section shape cannot have an axes count higher than the rank of 'this' mask");
 
         std::vector<size_t> offset(m_maskShape.Rank(), 0);
         for (size_t i = 0; i < sectionOffset.size(); ++i)
@@ -62,7 +61,7 @@ namespace CNTK
         size_t sliceRowLength = (shape[0] != NDShape::InferredDimension) ? shape[0] : (maskMatrix->GetNumRows() - rowOffset);
         size_t sliceColLength = (shape[1] != NDShape::InferredDimension) ? shape[1] : (maskMatrix->GetNumCols() - colOffset);
         if ((rowOffset == 0) && (sliceRowLength == maskMatrix->GetNumRows()))
-            maskMatrix->ColumnSlice(colOffset, sliceColLength).SetValue(0);
+            maskMatrix->ColumnSlice(colOffset, sliceColLength).SetValue((char)maskKind);
         else
         {
             // Since Matrix does not support strides in the row dimension, we will need to create separate slices for each column
@@ -70,15 +69,15 @@ namespace CNTK
             {
                 auto column = maskMatrix->ColumnSlice(i, 1);
                 column.Reshape(1, maskMatrix->GetNumRows());
-                column.ColumnSlice(rowOffset, sliceRowLength).SetValue(0);
+                column.ColumnSlice(rowOffset, sliceRowLength).SetValue((char)maskKind);
             }
         }
     }
 
     void NDMask::Clear()
     {
-        // Clear the mask by marking all samples as Valid; i.e. a value of 1
-        GetMatrix()->SetValue(1);
+        // Clear the mask by marking all samples as Valid
+        GetMatrix()->SetValue((char)MaskKind::Valid);
     }
 
     size_t NDMask::MaskedCount() const
@@ -86,17 +85,17 @@ namespace CNTK
         auto maskMatrix = GetMatrix();
         std::unique_ptr<char[]> maskData(maskMatrix->CopyToArray());
         return std::count_if(maskData.get(), maskData.get() + maskMatrix->GetNumElements(), [](const char& val) {
-            return val == 0;
+            return val == (char)MaskKind::Invalid;
         });
     }
 
     // TODO: This could actually be strided?
-    const char* NDMask::DataBuffer() const
+    const MaskKind* NDMask::DataBuffer() const
     {
         // First make sure that the underlying matrix is on the right device
         auto matrix = GetMatrix();
         matrix->TransferToDeviceIfNotThere(AsCNTKImplDeviceId(m_device), true);
-        return matrix->Data();
+        return (const MaskKind*)(matrix->Data());
     }
 
     Matrix<char>* NDMask::GetMatrix() const
@@ -112,9 +111,9 @@ namespace CNTK
         GetMatrix()->AssignValuesOf(*source.GetMatrix());
     }
 
-    NDMaskPtr NDMask::DeepClone() const
+    NDMaskPtr NDMask::DeepClone(const DeviceDescriptor& device) const
     {
-        NDMaskPtr newMask = MakeSharedObject<NDMask>(this->Shape(), this->Device());
+        NDMaskPtr newMask = MakeSharedObject<NDMask>(this->Shape(), device);
         newMask->CopyFrom(*this);
 
         return newMask;

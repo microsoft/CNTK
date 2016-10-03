@@ -4,7 +4,7 @@
 # for full license information.
 # ==============================================================================
 
-from ..graph import *
+from ..tensor import *
 #from ..ops.cntk2 import Abs, Plus, Minus, ElementTimes
 from ..ops import constant, input_variable, plus, times, past_value
 import numpy as np

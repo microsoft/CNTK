@@ -14,11 +14,13 @@
 #endif
 #pragma comment(lib, "msmpi.lib")
 
-
+#include <errno.h> 
 #include <string>
 #include <array>
 #include <vector>
 #include <memory>
+
+#define FFLUSH_SUCCESS 0
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -136,6 +138,14 @@ public:
         MPI_Comm_size(MPI_COMM_WORLD, &m_numMPINodes);
         m_numNodesInUse = m_numMPINodes;
 
+        // Verify that the environment variable used by GetTotalNumberOfMPINodes()  
+        // matches what the MPI API says. There're actually two possible cases:
+        // 1) when we're running with mpiexec both values have to match;
+        // 2) when we're running without mpiexec, the former will return 0, and
+        // the later will be set to 1.
+        assert((GetTotalNumberOfMPINodes() == 0 && m_numNodesInUse == 1) ||
+                (GetTotalNumberOfMPINodes() == m_numNodesInUse));
+
         // Applying MPI workaround
         s_myRank = m_myRank;
         atexit(&MPIWrapper::MPIWorkaroundAtExit);
@@ -158,18 +168,49 @@ public:
         ::Sleep((DWORD)(500 * CurrentNodeRank()));
     }
 
+    // Note that specifically, this function is such that it does not require
+    // MPI initialization. Moreover, it can be used without actually loading any
+    // MPI libs.
+    // TODO: Once we move to dynamic loading for MPI libs on Linux, move it to utilities.
+    static int GetTotalNumberOfMPINodes()
+    {
+#ifdef WIN32
+        const char* p = std::getenv("PMI_SIZE");
+#else
+        const char* p = std::getenv("OMPI_COMM_WORLD_SIZE");
+#endif
+        if (!p)
+        {
+            return 0;
+        }
+        else
+        {
+            return std::stoi(string(p));
+        }
+    }
+
     // Note: we don't clear the sub-communication here although we should, because in case of a crash, this prevents the EXE from terminating.
     // It's OK since this class is a singleton anyway that gets instantiated exactly once at program startup.
     ~MPIWrapper()
     {
         fprintf(stderr, "~MPIWrapper\n");
-        fflush(stderr);
-        // TODO: Check for error code and throw if !std::uncaught_exception()
 
         // Do not finalize in event of an exception since calling MPI_Finalize without
         // all pending communications being finished results in a hang
+        int rc = fflush(stderr);
         if (!std::uncaught_exception())
+        {
+            if (rc != FFLUSH_SUCCESS)
+            {
+            #ifdef _WIN32
+                RuntimeError("MPIWrapper: Failed to flush stderr, %d", ::GetLastError());
+            #else
+                RuntimeError("MPIWrapper: Failed to flush stderr, %d", errno);
+            #endif
+            }
+
             MPI_Finalize();
+        }
     }
 
 private:

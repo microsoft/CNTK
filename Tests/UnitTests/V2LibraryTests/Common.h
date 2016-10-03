@@ -6,6 +6,13 @@
 #include <fstream>
 #include <random>
 
+// enable assert in Release mode.
+#ifdef NDEBUG
+#undef NDEBUG
+#include <assert.h>
+#define NDEBUG
+#endif
+
 static const double relativeTolerance = 0.001f;
 static const double absoluteTolerance = 0.000001f;
 
@@ -21,6 +28,21 @@ inline void FloatingPointVectorCompare(const std::vector<ElementType>& first, co
             throw std::runtime_error(message);
     }
 }
+
+inline void VerifyException(const std::function<void()>& functionToTest, std::string errorMessage) {
+    bool error = false;
+    try
+    {
+        functionToTest();
+    }
+    catch (const std::exception&)
+    {
+        error = true;
+    }
+
+    if (!error)
+        throw std::runtime_error(errorMessage);
+};
 
 static std::mt19937_64 rng(0);
 
@@ -101,10 +123,10 @@ inline CNTK::FunctionPtr FullyConnectedLinearLayer(CNTK::Variable input, size_t 
     assert(input.Shape().Rank() == 1);
     size_t inputDim = input.Shape()[0];
 
-    auto timesParam = CNTK::Parameter(CNTK::NDArrayView::RandomUniform<float>({ outputDim, inputDim }, -0.05, 0.05, 1, device));
+    auto timesParam = CNTK::Parameter({ outputDim, inputDim }, CNTK::DataType::Float, CNTK::GlorotUniformInitializer(), device);
     auto timesFunction = CNTK::Times(timesParam, input);
 
-    auto plusParam = CNTK::Parameter(CNTK::NDArrayView::RandomUniform<float>({ outputDim }, -0.05, 0.05, 1, device));
+    auto plusParam = CNTK::Parameter({ outputDim }, 0.0f, device);
     return CNTK::Plus(plusParam, timesFunction, outputName);
 }
 
@@ -137,11 +159,11 @@ std::pair<CNTK::FunctionPtr, CNTK::FunctionPtr> LSTMPCellWithSelfStabilization(C
 
     unsigned long seed = 1;
     auto createProjectionParam = [device, &seed](size_t outputDim, size_t inputDim) {
-        return CNTK::Parameter(CNTK::NDArrayView::RandomUniform<ElementType>({ outputDim, inputDim }, -0.5, 0.5, seed++, device));
+        return CNTK::Parameter({ outputDim, inputDim }, CNTK::AsDataType<ElementType>(), CNTK::GlorotUniformInitializer(1, 0, 1, seed++), device);
     };
 
     auto createDiagWeightParam = [device, &seed](size_t dim) {
-        return CNTK::Parameter(CNTK::NDArrayView::RandomUniform<ElementType>({ dim }, -0.5, 0.5, seed++, device));
+        return CNTK::Parameter({ dim }, CNTK::AsDataType<ElementType>(), CNTK::GlorotUniformInitializer(1, 0, 1, seed++), device);
     };
 
     auto stabilizedPrevOutput = Stabilize<ElementType>(prevOutput, device);
@@ -156,7 +178,7 @@ std::pair<CNTK::FunctionPtr, CNTK::FunctionPtr> LSTMPCellWithSelfStabilization(C
     auto bit = CNTK::ElementTimes(it, CNTK::Tanh(projectInput() + CNTK::Times(createProjectionParam(cellDim, outputDim), stabilizedPrevOutput)));
 
     // Forget-me-not gate
-    auto ft = CNTK::Sigmoid(projectInput() + CNTK::Times(createProjectionParam(cellDim, outputDim), stabilizedPrevOutput) + ElementTimes(createDiagWeightParam(cellDim), stabilizedPrevCellState));
+    auto ft = CNTK::Sigmoid(projectInput() + CNTK::Times(createProjectionParam(cellDim, outputDim), stabilizedPrevOutput) + CNTK::ElementTimes(createDiagWeightParam(cellDim), stabilizedPrevCellState));
     auto bft = CNTK::ElementTimes(ft, prevCellState);
 
     auto ct = bft + bit;
@@ -173,14 +195,14 @@ std::pair<CNTK::FunctionPtr, CNTK::FunctionPtr> LSTMPCellWithSelfStabilization(C
 
 template <typename ElementType>
 std::pair<CNTK::FunctionPtr, CNTK::FunctionPtr> LSTMPComponentWithSelfStabilization(CNTK::Variable input,
-                                                                                    const CNTK::NDShape& outputDim,
-                                                                                    const CNTK::NDShape& cellDim,
+                                                                                    const CNTK::NDShape& outputShape,
+                                                                                    const CNTK::NDShape& cellShape,
                                                                                     const std::function<CNTK::FunctionPtr(const CNTK::Variable&)>& recurrenceHookH,
                                                                                     const std::function<CNTK::FunctionPtr(const CNTK::Variable&)>& recurrenceHookC,
                                                                                     const CNTK::DeviceDescriptor& device)
 {
-    auto dh = CNTK::PlaceholderVariable(outputDim, input.DynamicAxes());
-    auto dc = CNTK::PlaceholderVariable(cellDim, input.DynamicAxes());
+    auto dh = CNTK::PlaceholderVariable(outputShape, input.DynamicAxes());
+    auto dc = CNTK::PlaceholderVariable(cellShape, input.DynamicAxes());
 
     auto LSTMCell = LSTMPCellWithSelfStabilization<ElementType>(input, dh, dc, device);
 
@@ -320,6 +342,9 @@ inline void PrintTrainingProgress(const CNTK::Trainer& trainer, size_t minibatch
 
 inline std::vector<size_t> GetStrides(const CNTK::NDShape& shape)
 {
+    if (shape.Rank() == 0)
+        return std::vector<size_t>();
+
     std::vector<size_t> strides(shape.Rank() - 1);
     size_t totalSize = 1;
     for (size_t i = 0; i < shape.Rank() - 1; ++i)
@@ -347,6 +372,9 @@ inline CNTK::NDShape UnflattenedShape(size_t flatennedIdx, const std::vector<siz
 
 inline size_t FlattenedIndex(const CNTK::NDShape& shape, const std::vector<size_t>& strides)
 {
+    if (shape.Rank() == 0)
+        return 0;
+
     size_t flattenedIdx = shape[0];
     for (int i = 0; i < strides.size(); ++i)
         flattenedIdx += shape[i + 1] * strides[i];

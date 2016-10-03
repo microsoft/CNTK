@@ -70,14 +70,24 @@ namespace CNTK
     static const std::wstring KernelWidthAttributeName = L"kernelWidth";
     static const std::wstring KernelHeightAttributeName = L"kernelHeight";
 
-    ParameterInitializer UniformInitializer(double scale, unsigned long seed)
+    void Variable::VariableFields::SetValueInitialization(const ParameterInitializer& initializationConfig, const DeviceDescriptor& device)
     {
-        Dictionary initConfig;
-        initConfig[InitializerTypeAttributeName] = Microsoft::MSR::CNTK::UniformInitializerTypeName;
-        initConfig[ScaleAttributeName] = scale;
-        initConfig[RandomSeedAttributeName] = (size_t)seed;
+        if (m_value != nullptr)
+            LogicError("Value initialization config cannot be set if a value already exists");
 
-        return initConfig;
+        assert(!m_valueInitializer);
+        assert(!m_valueInitializationDevice);
+
+        if (initializationConfig.Contains(FilterRankAttributeName))
+        {
+            auto filterRank = (int)initializationConfig[FilterRankAttributeName].Value<size_t>();
+            auto outputRank = (int)initializationConfig[OutputRankAttributeName].Value<size_t>();
+            if ((filterRank + outputRank) > m_shape.Rank())
+                InvalidArgument("Sum of filter rank (%d) and output rank (%d) of the parameter initializer cannot exceed the Parameter's rank(%d)", filterRank, outputRank, (int)m_shape.Rank());
+        }
+
+        m_valueInitializer.reset(new ParameterInitializer(initializationConfig));
+        m_valueInitializationDevice.reset(new DeviceDescriptor(device));
     }
 
     static ParameterInitializer CreateInitializer(const std::wstring& initializerTypeName, int outputRank, int filterRank, double scale, unsigned long seed)
@@ -86,6 +96,16 @@ namespace CNTK
         initConfig[InitializerTypeAttributeName] = initializerTypeName;
         initConfig[OutputRankAttributeName] = (size_t)outputRank;
         initConfig[FilterRankAttributeName] = (size_t)filterRank;
+        initConfig[ScaleAttributeName] = scale;
+        initConfig[RandomSeedAttributeName] = (size_t)seed;
+
+        return initConfig;
+    }
+
+    ParameterInitializer UniformInitializer(double scale, unsigned long seed)
+    {
+        Dictionary initConfig;
+        initConfig[InitializerTypeAttributeName] = Microsoft::MSR::CNTK::UniformInitializerTypeName;
         initConfig[ScaleAttributeName] = scale;
         initConfig[RandomSeedAttributeName] = (size_t)seed;
 
