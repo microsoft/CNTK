@@ -34,6 +34,8 @@ extern "C" DATAREADER_API void GetReaderD(IDataReader** preader)
     *preader = new ReaderShim<double>(factory);
 }
 
+//TODO: Names of transforms and deserializers should be case insensitive.
+
 // TODO: Not safe from the ABI perspective. Will be uglified to make the interface ABI.
 // A factory method for creating image deserializers.
 extern "C" DATAREADER_API bool CreateDeserializer(IDataDeserializer** deserializer, const std::wstring& type, const ConfigParameters& deserializerConfig, CorpusDescriptorPtr corpus, bool)
@@ -63,6 +65,8 @@ extern "C" DATAREADER_API bool CreateTransformer(Transformer** transformer, cons
         *transformer = new MeanTransformer(config);
     else if (type == L"Transpose")
         *transformer = new TransposeTransformer(config);
+    else if (type == L"Cast")
+        *transformer = new CastTransformer(config);
     else
         // Unknown type.
         return false;

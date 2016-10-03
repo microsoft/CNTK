@@ -1,3 +1,7 @@
+//
+// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
+//
 #include "CNTKLibrary.h"
 #include <functional>
 #include "Common.h"
@@ -112,7 +116,7 @@ FunctionPtr ResNetClassifier(Variable input, size_t numOutputClasses, const Devi
     auto pool = Pooling(rn3_3, PoolingType::Average, { poolW, poolH, 1 }, { poolhStride, poolvStride, 1 });
 
     // Output DNN layer
-    auto outTimesParams = Parameter(NDArrayView::RandomNormal<float>({ numOutputClasses, 1, 1, cMap3 }, 0.0, fc1WScale, 1, device));
+    auto outTimesParams = Parameter({ numOutputClasses, 1, 1, cMap3 }, DataType::Float, GlorotUniformInitializer(1, 0, fc1WScale), device);
     auto outBiasParams = Parameter({ numOutputClasses }, (float)fc1BValue, device);
 
     return Plus(Times(outTimesParams, pool), outBiasParams, outputName);
@@ -124,10 +128,7 @@ void TrainResNetCifarClassifer(const DeviceDescriptor& device, bool testSaveAndR
     auto imageStreamInfo = minibatchSource->StreamInfo(L"features");
     auto labelStreamInfo = minibatchSource->StreamInfo(L"labels");
 
-    // Change the input shape [C x H x W] to [W x H x C] form
     auto inputImageShape = imageStreamInfo.m_sampleLayout;
-    inputImageShape = { inputImageShape[2], inputImageShape[1], inputImageShape[0] };
-
     const size_t numOutputClasses = labelStreamInfo.m_sampleLayout[0];
 
     auto imageInput = InputVariable(inputImageShape, imageStreamInfo.m_elementType, L"Images");
@@ -154,7 +155,7 @@ void TrainResNetCifarClassifer(const DeviceDescriptor& device, bool testSaveAndR
     Trainer trainer(classifierOutput, trainingLoss, prediction, { SGDLearner(classifierOutput->Parameters(), learningRatePerSample) });
 
     const size_t minibatchSize = 32;
-    size_t numMinibatchesToTrain = 100;
+    size_t numMinibatchesToTrain = 2000;
     size_t outputFrequencyInMinibatches = 20;
     for (size_t i = 0; i < numMinibatchesToTrain; ++i)
     {
@@ -164,7 +165,7 @@ void TrainResNetCifarClassifer(const DeviceDescriptor& device, bool testSaveAndR
     }
 }
 
-void TestCifarResnet()
+void TrainCifarResnet()
 {
 #ifndef CPUONLY
     TrainResNetCifarClassifer(DeviceDescriptor::GPUDevice(0), true /*testSaveAndReLoad*/);

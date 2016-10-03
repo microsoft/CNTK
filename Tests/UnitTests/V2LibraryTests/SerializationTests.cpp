@@ -1,3 +1,7 @@
+//
+// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
+//
 #include "CNTKLibrary.h"
 #include "Common.h"
 #include <string>
@@ -160,12 +164,12 @@ void TestLearnerSerialization(int numParameters, const DeviceDescriptor& device)
 
     NDShape shape = CreateShape(5, maxDimSize);
 
-    unordered_set<Parameter> parameters;
+    vector<Parameter> parameters;
     unordered_map<Parameter, NDArrayViewPtr> gradientValues;
     for (int i = 0; i < numParameters; i++)
     {
         Parameter parameter(NDArrayView::RandomUniform<ElementType>(shape, -0.5, 0.5, i, device), L"parameter_" + to_wstring(i));
-        parameters.insert(parameter);
+        parameters.push_back(parameter);
         gradientValues[parameter] = NDArrayView::RandomUniform<ElementType>(shape, -0.5, 0.5, numParameters + i, device);
     }
 

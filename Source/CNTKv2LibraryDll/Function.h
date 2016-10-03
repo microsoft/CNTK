@@ -77,54 +77,54 @@ namespace std
 
 namespace CNTK
 {
-    inline const char* PrimitiveOpTypeName(PrimitiveOpType opType)
+    inline const std::wstring& PrimitiveOpTypeName(PrimitiveOpType opType)
     {
-        static const std::unordered_map<PrimitiveOpType, const char*> primitiveOpNames = {
-            { PrimitiveOpType::Negate, "Negate" },
-            { PrimitiveOpType::Sigmoid, "Sigmoid" },
-            { PrimitiveOpType::Tanh, "Tanh" },
-            { PrimitiveOpType::ReLU, "ReLU" },
-            { PrimitiveOpType::Exp, "Exp" },
-            { PrimitiveOpType::Log, "Log" },
-            { PrimitiveOpType::Sqrt, "Sqrt" },
-            { PrimitiveOpType::Floor, "Floor" },
-            { PrimitiveOpType::Abs, "Abs" },
-            { PrimitiveOpType::Reciprocal, "Reciprocal" },
-            { PrimitiveOpType::Softmax, "Softmax" },
-            { PrimitiveOpType::Hardmax, "Hardmax" },
-            { PrimitiveOpType::TransposeAxes, "TransposeAxes" },
-            { PrimitiveOpType::Where, "Where" },
-            { PrimitiveOpType::Slice, "Slice" },
-            { PrimitiveOpType::Dropout, "Dropout" },
-            { PrimitiveOpType::Reshape, "Reshape" },
-            { PrimitiveOpType::Pooling, "Pooling" },
-            { PrimitiveOpType::SumAll, "SumAll" },
-            { PrimitiveOpType::Plus, "Plus" },
-            { PrimitiveOpType::Minus, "Minus" },
-            { PrimitiveOpType::ElementTimes, "ElementTimes" },
-            { PrimitiveOpType::Equal, "Equal" },
-            { PrimitiveOpType::NotEqual, "NotEqual" },
-            { PrimitiveOpType::Less, "Less" },
-            { PrimitiveOpType::LessEqual, "LessEqual" },
-            { PrimitiveOpType::Greater, "Greater" },
-            { PrimitiveOpType::GreaterEqual, "GreaterEqual" },
-            { PrimitiveOpType::PackedIndex, "PackedIndex" },
-            { PrimitiveOpType::GatherPacked, "GatherPacked" },
-            { PrimitiveOpType::ScatterPacked, "ScatterPacked" },
-            { PrimitiveOpType::Times, "Times" },
-            { PrimitiveOpType::TransposeTimes, "TransposeTimes" },
-            { PrimitiveOpType::Convolution, "Convolution" },
-            { PrimitiveOpType::SquaredError, "SquaredError" },
-            { PrimitiveOpType::CrossEntropyWithSoftmax, "CrossEntropyWithSoftmax" },
-            { PrimitiveOpType::ClassificationError, "ClassificationError" },
-            { PrimitiveOpType::PastValue, "PastValue" },
-            { PrimitiveOpType::FutureValue, "FutureValue" },
-            { PrimitiveOpType::ReduceElements, "ReduceElements" },
-            { PrimitiveOpType::BatchNormalization, "BatchNormalization" },
-            { PrimitiveOpType::Clip, "Clip" },
-            { PrimitiveOpType::Select, "Select" },
-            { PrimitiveOpType::Splice, "Splice" },
-            { PrimitiveOpType::Combine, "Combine" }
+        static const std::unordered_map<PrimitiveOpType, std::wstring> primitiveOpNames = {
+            { PrimitiveOpType::Negate, L"Negate" },
+            { PrimitiveOpType::Sigmoid, L"Sigmoid" },
+            { PrimitiveOpType::Tanh, L"Tanh" },
+            { PrimitiveOpType::ReLU, L"ReLU" },
+            { PrimitiveOpType::Exp, L"Exp" },
+            { PrimitiveOpType::Log, L"Log" },
+            { PrimitiveOpType::Sqrt, L"Sqrt" },
+            { PrimitiveOpType::Floor, L"Floor" },
+            { PrimitiveOpType::Abs, L"Abs" },
+            { PrimitiveOpType::Reciprocal, L"Reciprocal" },
+            { PrimitiveOpType::Softmax, L"Softmax" },
+            { PrimitiveOpType::Hardmax, L"Hardmax" },
+            { PrimitiveOpType::TransposeAxes, L"TransposeAxes" },
+            { PrimitiveOpType::Where, L"Where" },
+            { PrimitiveOpType::Slice, L"Slice" },
+            { PrimitiveOpType::Dropout, L"Dropout" },
+            { PrimitiveOpType::Reshape, L"Reshape" },
+            { PrimitiveOpType::Pooling, L"Pooling" },
+            { PrimitiveOpType::SumAll, L"SumAll" },
+            { PrimitiveOpType::Plus, L"Plus" },
+            { PrimitiveOpType::Minus, L"Minus" },
+            { PrimitiveOpType::ElementTimes, L"ElementTimes" },
+            { PrimitiveOpType::Equal, L"Equal" },
+            { PrimitiveOpType::NotEqual, L"NotEqual" },
+            { PrimitiveOpType::Less, L"Less" },
+            { PrimitiveOpType::LessEqual, L"LessEqual" },
+            { PrimitiveOpType::Greater, L"Greater" },
+            { PrimitiveOpType::GreaterEqual, L"GreaterEqual" },
+            { PrimitiveOpType::PackedIndex, L"PackedIndex" },
+            { PrimitiveOpType::GatherPacked, L"GatherPacked" },
+            { PrimitiveOpType::ScatterPacked, L"ScatterPacked" },
+            { PrimitiveOpType::Times, L"Times" },
+            { PrimitiveOpType::TransposeTimes, L"TransposeTimes" },
+            { PrimitiveOpType::Convolution, L"Convolution" },
+            { PrimitiveOpType::SquaredError, L"SquaredError" },
+            { PrimitiveOpType::CrossEntropyWithSoftmax, L"CrossEntropyWithSoftmax" },
+            { PrimitiveOpType::ClassificationError, L"ClassificationError" },
+            { PrimitiveOpType::PastValue, L"PastValue" },
+            { PrimitiveOpType::FutureValue, L"FutureValue" },
+            { PrimitiveOpType::ReduceElements, L"ReduceElements" },
+            { PrimitiveOpType::BatchNormalization, L"BatchNormalization" },
+            { PrimitiveOpType::Clip, L"Clip" },
+            { PrimitiveOpType::Select, L"Select" },
+            { PrimitiveOpType::Splice, L"Splice" },
+            { PrimitiveOpType::Combine, L"Combine" },
         };
 
         if (primitiveOpNames.find(opType) == primitiveOpNames.end())
@@ -220,7 +220,7 @@ namespace CNTK
 
     public:
         PrimitiveFunction(PrimitiveOpType op, const std::vector<Variable>& inputs, Dictionary&& functionConfig, const std::wstring& functionName = L"")
-            : Function(inputs, GetOutputVariables(op, inputs, this, functionConfig), std::move(functionConfig), nullptr, functionName), m_op(op)
+            : Function(inputs, GetOutputVariables(op, inputs, this, functionConfig, functionName), std::move(functionConfig), nullptr, functionName), m_op(op)
         {
         }
 
@@ -237,6 +237,11 @@ namespace CNTK
                               std::unordered_map<Variable, ValuePtr>& /*backPropagatedGradientValuesForInputs*/) override
         {
             NOT_IMPLEMENTED;
+        }
+
+        virtual const std::wstring& OpName() override
+        {
+            return PrimitiveOpTypeName(OpType());
         }
 
     public:
@@ -269,7 +274,7 @@ namespace CNTK
                 else if (inferredAxisIndex == SIZE_MAX)
                     inferredAxisIndex = k;
                 else
-                    InvalidArgument("CNTK::Reshape: More than one axis's dimension was specified as Inferred in the replacement shape (%S]", AsStringForErrorReporting(outputShape).c_str());
+                    InvalidArgument("CNTK::Reshape: More than one axis's dimension was specified as Inferred in the replacement shape %S", AsStringForErrorReporting(outputShape).c_str());
             }
             if (inferredAxisIndex != SIZE_MAX)
                 outputShape[inferredAxisIndex] = inputElementsCount / targetElementsCount;
@@ -343,7 +348,10 @@ namespace CNTK
                 else
                 {
                     if (leftOperandShape[i] != rightOperandShape[i])
-                        RuntimeError("Left operand's shape %S is not compatible with right operand's shape %S for the binary elementwise operation %s", AsStringForErrorReporting(leftOperandShape).c_str(), AsStringForErrorReporting(rightOperandShape).c_str(), PrimitiveOpTypeName(op));
+                        RuntimeError("Left operand's shape %S is not compatible with right operand's shape %S for the binary elementwise operation %S",
+                                     AsStringForErrorReporting(leftOperandShape).c_str(),
+                                     AsStringForErrorReporting(rightOperandShape).c_str(),
+                                     PrimitiveOpTypeName(op).c_str());
 
                     outputDims[i] = leftOperandShape[i];
                 }
@@ -386,7 +394,7 @@ namespace CNTK
 
             if (leftOperandShape.SubShape(outputRank) != rightOperandShape.SubShape(0, numReductionAxes))
             {
-                InvalidArgument("The %d %s dimensions of the %s operand (%S) do not match the %s operand's %s dimensions (%S)",
+                InvalidArgument("The %d %s dimensions of the %s operand with shape %S do not match the %s operand's %s dimensions with shape %S",
                                 (int)numReductionAxes,
                                 Internal::IsReversingTensorShapesInErrorMessagesEnabled() ? "leading" : "trailing",
                                 Internal::IsReversingTensorShapesInErrorMessagesEnabled() ? "right" : "left",
@@ -399,20 +407,26 @@ namespace CNTK
             return leftOperandShape.SubShape(0, outputRank).AppendShape(rightOperandShape.SubShape(numReductionAxes));
         }
 
-        static NDShape ReductionOpOutputShape(PrimitiveOpType op, const NDShape& operandShape, const std::vector<size_t>& reductionAxes)
+        static NDShape ReductionOpOutputShape(PrimitiveOpType op, const NDShape& operandShape, const std::vector<size_t>& reductionAxes, bool preserveReductionAxes)
         {
             if (reductionAxes.size() > operandShape.Rank())
-                RuntimeError("The number of reduction axes %d exceeds the number of axes in the operand shape %S of the reduction operation %s", (int)reductionAxes.size(), AsStringForErrorReporting(operandShape).c_str(), PrimitiveOpTypeName(op));
+                RuntimeError("The number of reduction axes %d exceeds the rank in the operand shape %S of the reduction operation %S",
+                             (int)reductionAxes.size(),
+                             AsStringForErrorReporting(operandShape).c_str(),
+                             PrimitiveOpTypeName(op).c_str());
 
-            size_t numOutputAxes = operandShape.Rank() - reductionAxes.size();
+            size_t numOutputAxes = operandShape.Rank() - (preserveReductionAxes ? 0 : reductionAxes.size());
             std::vector<size_t> outputDims(numOutputAxes);
             for (size_t i = 0, j = 0; i < operandShape.Rank(); ++i)
             {
                 // Skip axes being reduced over
                 if (std::find(reductionAxes.begin(), reductionAxes.end(), i) != reductionAxes.end())
-                    continue;
-
-                outputDims[j++] = operandShape[i];
+                {
+                    if (preserveReductionAxes)
+                        outputDims[j++] = 1;
+                }
+                else
+                    outputDims[j++] = operandShape[i];
             }
 
             return NDShape(std::move(outputDims));
@@ -433,7 +447,7 @@ namespace CNTK
         }
 
         // TODO: Reconcile this with the ComputationNode::Validate functionality in core CNTK to avoid duplication of inference logic
-        static std::vector<Variable> GetOutputVariables(PrimitiveOpType op, const std::vector<Variable>& inputs, Function* owner, const Dictionary& functionConfig);
+        static std::vector<Variable> GetOutputVariables(PrimitiveOpType op, const std::vector<Variable>& inputs, Function* owner, const Dictionary& functionConfig, const std::wstring& functionName);
 
     private:
         PrimitiveOpType m_op;
@@ -464,6 +478,7 @@ namespace CNTK
         friend class Function;
         friend class Trainer;
         friend class CompositeMinibatchSource;
+        friend class PackedValue;
 
         template <typename T, typename ...CtorArgTypes>
         friend inline std::shared_ptr<T> MakeSharedObject(CtorArgTypes&& ...ctorArgs);
@@ -474,15 +489,18 @@ namespace CNTK
                                                          std::unordered_map<StreamInformation, std::pair<NDArrayViewPtr, NDArrayViewPtr>>& computedMeanAndInvStdDevs,
                                                          const DeviceDescriptor& device /*= DeviceDescriptor::CPUDevice()*/);
 
+        static std::atomic<unsigned int> s_nextAutoGeneratedDynamicAxis;
+
+        static const std::wstring CompositeFunctionOpName;
+
     public:
         static const std::wstring InternalDefaultDynamicAxisName;
         static const std::wstring InternalNoSequenceAxisName;
 
         static Axis NextAutoGeneratedDynamicAxis()
         {
-            static std::atomic<unsigned int> nextAutoGeneratedDynamicAxis(0);
             static const std::wstring s_autoGeneratedDynamicAxisNamePrefix = L"autoGeneratedDynamicAxis_";
-            return Axis(s_autoGeneratedDynamicAxisNamePrefix + std::to_wstring(nextAutoGeneratedDynamicAxis++));
+            return Axis(s_autoGeneratedDynamicAxisNamePrefix + std::to_wstring(s_nextAutoGeneratedDynamicAxis++));
         }
 
     public:
@@ -504,6 +522,11 @@ namespace CNTK
         virtual void Backward(const BackPropStatePtr& state,
                               const std::unordered_map<Variable, ValuePtr>& rootGradientValues,
                               std::unordered_map<Variable, ValuePtr>& backPropagatedGradientValuesForInputs) override;
+
+        virtual const std::wstring& OpName() override
+        {
+            return CompositeFunctionOpName;
+        }
 
     public:
         bool NetworkMatricesAllocated() const 
@@ -596,6 +619,8 @@ namespace CNTK
         template <typename ElementType>
         static ValuePtr GetValueObjectFromCNTKImplMatrixAndMBLayout(Variable var, const Microsoft::MSR::CNTK::Matrix<ElementType>& matrix, const Microsoft::MSR::CNTK::MBLayoutPtr& layout, bool readOnly = true);
 
+        const std::vector<Variable>& GetArgumentDependencies(const Variable& output);
+
     private:
 
         // Set of all primitive functions in the graph underlying 'this' Function. Also keeps the primitive Function objects alive 
@@ -615,6 +640,8 @@ namespace CNTK
         // states from the previos Forward call to be able to backpropagate gradients backwards from in
         // the next 'Backward' call.
         std::unordered_set<Variable> m_currentBackpropRoots;
+
+        std::unordered_map<Variable, std::vector<Variable>> m_perOutputVarArgumentDependencies;
 
         bool m_networkMatricesAllocated;
     };

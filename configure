@@ -16,7 +16,7 @@ cuda_check=include/cuda.h
 enable_cuda=
 
 # CNTK Custom MKL Version
-cntk_custom_mkl_version=1
+cntk_custom_mkl_version=2
 
 have_mkl=no
 mkl_path=
@@ -423,7 +423,7 @@ do
                 mkl_path=$(find_mkl)
                 if test x$mkl_path = x
                 then
-                    echo "Cannot find CNTK custom MKL directory"
+                    echo "Cannot find CNTK custom MKL directory (version $cntk_custom_mkl_version)"
                     echo "Please specify a value for --with-mkl"
                     exit 1
                 fi

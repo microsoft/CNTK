@@ -38,8 +38,8 @@ void TrainSequenceToSequenceTranslator(const DeviceDescriptor& device, bool useS
     bool forceEmbedding = useSparseInputs;
 
     /* Embeddings */
-    auto inputEmbeddingWeights = Parameter(NDArrayView::RandomUniform<float>({ inputEmbeddingDim, inputVocabDim }, -0.05, 0.05, 1, device));
-    auto labelEmbeddingWeights = Parameter(NDArrayView::RandomUniform<float>({ labelEmbeddingDim, labelVocabDim }, -0.05, 0.05, 1, device));
+    auto inputEmbeddingWeights = Parameter({ inputEmbeddingDim, inputVocabDim }, DataType::Float, GlorotUniformInitializer(), device);
+    auto labelEmbeddingWeights = Parameter({ labelEmbeddingDim, labelVocabDim }, DataType::Float, GlorotUniformInitializer(), device);
 
     auto inputEmbedding = (!forceEmbedding && (inputVocabDim <= inputEmbeddingDim)) ? inputSequence : Times(inputEmbeddingWeights, inputSequence);
     auto labelEmbedding = (!forceEmbedding && (labelVocabDim <= labelEmbeddingDim)) ? labelSequence : Times(labelEmbeddingWeights, labelSequence);
@@ -67,7 +67,7 @@ void TrainSequenceToSequenceTranslator(const DeviceDescriptor& device, bool useS
     auto thoughtVectorBroadcastC = Sequence::BroadcastAs(thoughtVectorC, labelEmbedding);
 
     /* Decoder */
-    auto beamSearchReorderHook = Constant({ 1, 1 }, 1.0f);
+    auto beamSearchReorderHook = Constant({ 1, 1 }, 1.0f, device);
     auto decoderHistoryFromGroundTruth = labelEmbedding;
     auto decoderInput = ElementSelect(isFirstLabel, labelSentenceStartEmbeddedScattered, PastValue(decoderHistoryFromGroundTruth));
 
@@ -111,7 +111,7 @@ void TrainSequenceToSequenceTranslator(const DeviceDescriptor& device, bool useS
     auto decoderDim = hiddenDim;
 
     /* Softmax output layer */
-    auto outputLayerProjWeights = Parameter(NDArrayView::RandomUniform<float>({ labelVocabDim, decoderDim }, -0.05, 0.05, 1, device));
+    auto outputLayerProjWeights = Parameter({ labelVocabDim, decoderDim }, DataType::Float, GlorotUniformInitializer(), device);
     auto biasWeights = Parameter({ labelVocabDim }, 0.0f, device);
 
     auto z = Plus(Times(outputLayerProjWeights, Stabilize<float>(decoderOutput, device)), biasWeights, L"classifierOutput");

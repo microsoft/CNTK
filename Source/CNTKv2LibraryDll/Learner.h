@@ -26,6 +26,8 @@ namespace CNTK
     // and adds a few pre-/postprocessing methods (which are invoked before and after the update).
     class LearnerBase : public Learner
     {
+        static const std::wstring WasLearningRateResetAttributeName;
+
     public:
         virtual bool Update(const std::unordered_map<Parameter, NDArrayViewPtr>& gradientValues, size_t trainingSampleCount) override final;
 
@@ -33,8 +35,22 @@ namespace CNTK
 
         virtual void RestoreFromCheckpoint(const Dictionary& checkpoint) override final;
 
+        virtual void ResetLearningRate(double learningRate) override final
+        {
+            m_wasLearningRateReset = true;
+            Learner::ResetLearningRate(learningRate);
+        }
+
+        virtual double LearningRate() const override final
+        {
+            if (m_wasLearningRateReset)
+                return Learner::LearningRate();
+            else
+                return m_learningRateSchedule[m_sampleCount];
+        }
+
     protected:
-        LearnerBase(const std::unordered_set<Parameter>& parameters, 
+        LearnerBase(const std::vector<Parameter>& parameters, 
                     const LearningRatesPerSample& learningRates,
                     bool allocateSmoothGradients = true,
                     double clippingThresholdPerSample = std::numeric_limits<double>::infinity(),
@@ -44,7 +60,8 @@ namespace CNTK
 
         std::string LearnerType() const;
 
-        LearningRatesPerSample m_learningRates;
+        bool m_wasLearningRateReset;
+        LearningRatesPerSample m_learningRateSchedule;
 
         AdditionalLearningOptions m_additionalOptions;
 
@@ -104,7 +121,7 @@ namespace CNTK
     class LearnerSGD : public LearnerBase
     {
     public:
-        LearnerSGD(const std::unordered_set<Parameter>& parameters, 
+        LearnerSGD(const std::vector<Parameter>& parameters, 
                    const LearningRatesPerSample& learningRates, 
                    bool allocateSmoothGradients = true,
                    double clippingThresholdPerSample = std::numeric_limits<double>::infinity(),
@@ -130,7 +147,7 @@ namespace CNTK
     class LearnerMomentumSGD : public LearnerSGD
     {
     public:
-        LearnerMomentumSGD(const std::unordered_set<Parameter>& parameters, 
+        LearnerMomentumSGD(const std::vector<Parameter>& parameters,
                            const LearningRatesPerSample& learningRates,
                            const MomentumsPerSample& momentums,
                            bool allocateSmoothGradients = true,
@@ -147,7 +164,7 @@ namespace CNTK
     {
     public:
 
-        LearnerNesterov(const std::unordered_set<Parameter>& parameters, 
+        LearnerNesterov(const std::vector<Parameter>& parameters,
                         const LearningRatesPerSample& learningRates,
                         const MomentumsPerSample& momentums,
                         double clippingThresholdPerSample = std::numeric_limits<double>::infinity(),
@@ -162,7 +179,7 @@ namespace CNTK
     {
     public:
 
-        LearnerAdaGrad(const std::unordered_set<Parameter>& parameters, 
+        LearnerAdaGrad(const std::vector<Parameter>& parameters,
                        const LearningRatesPerSample& learningRates,
                        bool needAveMultiplier,
                        double clippingThresholdPerSample = std::numeric_limits<double>::infinity(),
@@ -181,7 +198,7 @@ namespace CNTK
     {
     public:
 
-        LearnerFSAdaGrad(const std::unordered_set<Parameter>& parameters,
+        LearnerFSAdaGrad(const std::vector<Parameter>& parameters,
                          const LearningRatesPerSample& learningRates,
                          const MomentumsPerSample& momentums,
                          double clippingThresholdPerSample = std::numeric_limits<double>::infinity(),
@@ -199,7 +216,7 @@ namespace CNTK
     {
     public:
 
-        LearnerRMSProp(const std::unordered_set<Parameter>& parameters,
+        LearnerRMSProp(const std::vector<Parameter>& parameters,
                        const LearningRatesPerSample& learningRates,
                        double gamma, double inc, double dec, double max, double min,
                        bool needAveMultiplier,

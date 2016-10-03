@@ -9,7 +9,7 @@ import xml.dom.minidom
 
 imgSize = 32
 
-def saveImage(fname, data, label, mapFile, pad, **key_parms):
+def saveImage(fname, data, label, mapFile, regrFile, pad, **key_parms):
     # data in CIFAR-10 dataset is in CHW format.
     pixData = data.reshape((3, imgSize, imgSize))
     if ('mean' in key_parms):
@@ -25,6 +25,11 @@ def saveImage(fname, data, label, mapFile, pad, **key_parms):
             pixels[x, y] = (pixData[0][y][x], pixData[1][y][x], pixData[2][y][x])
     img.save(fname)
     mapFile.write("%s\t%d\n" % (fname, label))
+
+    # compute per channel mean and store for regression example
+    channelMean = np.mean(pixData, axis=(1,2))
+    regrFile.write("|regrLabels\t%f\t%f\t%f\n" % (channelMean[0]/255.0, channelMean[1]/255.0, channelMean[2]/255.0))
+
 
 def saveMean(fname, data):
     root = et.Element('opencv_storage')
@@ -57,17 +62,19 @@ if __name__ == "__main__":
     data = {}
     dataMean = np.zeros((3, imgSize, imgSize)) # mean is in CHW format.
     with open(os.path.join(rootDir, 'train_map.txt'), 'w') as mapFile:
-        for ifile in range(1, 6):
-            with open(os.path.join(rootDir, 'data_batch_' + str(ifile)), 'rb') as f:
-                data = cp.load(f, encoding='latin1')
-                for i in range(10000):
-                    fname = os.path.join(trainDir, ('%05d.png' % (i + (ifile - 1) * 10000)))
-                    saveImage(fname, data['data'][i, :], data['labels'][i], mapFile, 4, mean=dataMean)
+        with open(os.path.join(rootDir, 'train_regrLabels.txt'), 'w') as regrFile:
+            for ifile in range(1, 6):
+                with open(os.path.join(rootDir, 'data_batch_' + str(ifile)), 'rb') as f:
+                    data = cp.load(f, encoding='latin1')
+                    for i in range(10000):
+                        fname = os.path.join(trainDir, ('%05d.png' % (i + (ifile - 1) * 10000)))
+                        saveImage(fname, data['data'][i, :], data['labels'][i], mapFile, regrFile, 4, mean=dataMean)
     dataMean = dataMean / (50 * 1000)
     saveMean(os.path.join(rootDir, 'CIFAR-10_mean.xml'), dataMean)
     with open(os.path.join(rootDir, 'test_map.txt'), 'w') as mapFile:
-        with open(os.path.join(rootDir, 'test_batch'), 'rb') as f:
-            data = cp.load(f, encoding='latin1')
-            for i in range(10000):
-                fname = os.path.join(testDir, ('%05d.png' % i))
-                saveImage(fname, data['data'][i, :], data['labels'][i], mapFile, 0)
+        with open(os.path.join(rootDir, 'test_regrLabels.txt'), 'w') as regrFile:
+            with open(os.path.join(rootDir, 'test_batch'), 'rb') as f:
+                data = cp.load(f, encoding='latin1')
+                for i in range(10000):
+                    fname = os.path.join(testDir, ('%05d.png' % i))
+                    saveImage(fname, data['data'][i, :], data['labels'][i], mapFile, regrFile, 0)

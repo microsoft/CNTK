@@ -39,6 +39,12 @@ using namespace std;
 using namespace Microsoft::MSR;
 using namespace Microsoft::MSR::CNTK;
 
+bool GetDistributedMBReadingDefaultValue(const ConfigParameters& config, const IDataReader& reader)
+{
+    // Return 'true' if we're running a parallel training with a v2 reader, 'false' otherwise.
+    return (MPIWrapper::GetInstance() != nullptr && !reader.IsLegacyReader());
+}
+
 // ===========================================================================
 // DoEvalBase() - implements CNTK "eval" command
 // ===========================================================================
@@ -62,7 +68,7 @@ static void DoEvalBase(const ConfigParameters& config, IDataReader& reader)
     size_t maxSamplesInRAM = config(L"maxSamplesInRAM", (size_t)SIZE_MAX);
     size_t numSubminiBatches = config(L"numSubminibatches", (size_t)1);
 
-    bool enableDistributedMBReading = config(L"distributedMBReading", false);
+    bool enableDistributedMBReading = config(L"distributedMBReading", GetDistributedMBReadingDefaultValue(config, reader));
 
     vector<wstring> evalNodeNamesVector;
 
@@ -104,7 +110,7 @@ static void DoEvalBNBase(const ConfigParameters& config, IDataReader& reader)
     size_t maxSamplesInRAM = config(L"maxSamplesInRAM", (size_t)SIZE_MAX);
     size_t numSubminiBatches = config(L"numSubminibatches", (size_t)1);
 
-    bool enableDistributedMBReading = config(L"distributedMBReading", false);
+    bool enableDistributedMBReading = config(L"distributedMBReading", GetDistributedMBReadingDefaultValue(config, reader));
 
     vector<wstring> evalNodeNamesVector;
 
@@ -123,15 +129,18 @@ static void DoEvalBNBase(const ConfigParameters& config, IDataReader& reader)
 template <typename ElemType>
 void DoEvalBN(const ConfigParameters& config)
 {
-        // evaluate batch normalization mean and various
-        ConfigParameters readerConfig(config(L"reader"));
+    // This is actually used for re-estimating the BN node. It *should* actually randomize.
+    // TODO: rename to DoEstimateBN.
 
-        // Should trace level to zero in Post BN?
-        //readerConfig.Insert("traceLevel", config(L"traceLevel", "0"));
+    // evaluate batch normalization mean and various
+    ConfigParameters readerConfig(config(L"reader"));
 
-        DataReader evaBNDataReader(readerConfig);
+    // Should trace level to zero in Post BN?
+    //readerConfig.Insert("traceLevel", config(L"traceLevel", "0"));
 
-        DoEvalBNBase<ElemType>(config, evaBNDataReader);
+    DataReader evaBNDataReader(readerConfig);
+
+    DoEvalBNBase<ElemType>(config, evaBNDataReader);
 }
 
 template <typename ElemType>
@@ -140,9 +149,12 @@ void DoEval(const ConfigParameters& config)
     // test
     ConfigParameters readerConfig(config(L"reader"));
     readerConfig.Insert("traceLevel", config(L"traceLevel", "0"));
+    if (!readerConfig.ExistsCurrent(L"randomize"))
+    {
+        readerConfig.Insert("randomize", "None");
+    }
 
     DataReader testDataReader(readerConfig);
-
     DoEvalBase<ElemType>(config, testDataReader);
 }
 
@@ -183,8 +195,6 @@ void DoCrossValidate(const ConfigParameters& config)
     size_t maxSamplesInRAM    = config(L"maxSamplesInRAM", (size_t)SIZE_MAX);
     size_t numSubminiBatches  = config(L"numSubminibatches", (size_t)1);
 
-    bool enableDistributedMBReading = config(L"distributedMBReading", false);
-
     ConfigArray evalNodeNames = config(L"evalNodeNames", "");
     vector<wstring> evalNodeNamesVector;
     for (int i = 0; i < evalNodeNames.size(); ++i)
@@ -196,6 +206,8 @@ void DoCrossValidate(const ConfigParameters& config)
     std::vector<std::wstring> cvModels;
 
     DataReader cvDataReader(readerConfig);
+
+    bool enableDistributedMBReading = config(L"distributedMBReading", GetDistributedMBReadingDefaultValue(config, cvDataReader));
 
     bool finalModelEvaluated = false;
     for (size_t i = cvInterval[0]; i <= cvInterval[2]; i += cvInterval[1])

@@ -12,6 +12,7 @@
 #include "ReaderShim.h"
 #include "Function.h"
 #include <tuple>
+#include "Value.h"
 
 using namespace Microsoft::MSR::CNTK;
 
@@ -78,10 +79,37 @@ namespace CNTK
             static const std::unordered_map<std::wstring, std::wstring> deserializerTypeNameToModuleNameMap = {
                 { L"CNTKTextFormatDeserializer", L"CNTKTextFormatReader" },
                 { L"ImageDeserializer",          L"ImageReader"          },
+                { L"HTKFeatureDeserializer",     L"HTKDeserializers"     },
+                { L"HTKMLFDeserializer",         L"HTKDeserializers"     },
             };
 
             auto& deserializerConfigDict = deserializerConfig.Value<Dictionary>();
             auto deserializerTypeName = deserializerConfigDict[L"type"].Value<std::wstring>();
+            if (deserializerTypeName == L"ImageDeserializer")
+            {
+                // Add a transpose transform since the image data in read in HWC (CWH in column major format) form while 
+                // the CNTK convolution engive supports WHC (in column-major format)
+                auto& inputStreamsConfig = deserializerConfigDict[L"input"].Value<Dictionary>();
+                auto& streamsMap = *(inputStreamsConfig.m_dictionaryData);
+                for (auto& inputStreamEntry : streamsMap)
+                {
+                    auto& inputStreamConfig = inputStreamEntry.second.Value<Dictionary>();
+                    if (inputStreamConfig.Contains(L"transforms"))
+                    {
+                        auto& transforms = inputStreamConfig[L"transforms"].Value<std::vector<DictionaryValue>>();
+
+                        // Add the transpose transform
+                        Dictionary transposeTransform;
+                        transposeTransform[L"type"] = L"Transpose";
+                        transforms.push_back(transposeTransform);
+                    }
+                }
+
+            }
+
+            if (deserializerTypeNameToModuleNameMap.find(deserializerTypeName) == deserializerTypeNameToModuleNameMap.end())
+                InvalidArgument("Unknown deserializer type (%S)", deserializerTypeName.c_str());
+
             deserializerConfigDict[L"module"] = deserializerTypeNameToModuleNameMap.at(deserializerTypeName);
         }
 
@@ -175,8 +203,8 @@ namespace CNTK
                     size_t sampleSize = currentStreamDesc->m_sampleLayout->GetNumElements();
 
                     // TODO: Eliminate the unnecessary CPU to CPU copy
-                    ReaderShim<float>::FillMatrixFromStream(currentStreamDesc->m_storageType, dataMatrix.get(), sampleSize, currentStreamMinibatchData);
-                    minibatchValuePtr = CompositeFunction::GetValueObjectFromCNTKImplMatrixAndMBLayout<float>(sampleShape, *dataMatrix, currentStreamMinibatchData->m_layout, false);
+                    ReaderShim<float>::FillMatrixFromStream(currentStreamDesc->m_storageType, dataMatrix.get(), sampleSize, currentStreamMinibatchData, nullptr);
+                    minibatchValuePtr = MakeSharedObject<PackedValue>(sampleShape, dataMatrix, currentStreamMinibatchData->m_layout, /*readOnly =*/ false);
 
                     size_t numSamples = currentStreamMinibatchData->m_layout->GetActualNumSamples();
                     size_t numSequences = currentStreamMinibatchData->m_layout->GetNumSequences();

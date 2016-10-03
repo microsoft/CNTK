@@ -13,7 +13,24 @@ namespace CNTK
     Trainer::Trainer(const FunctionPtr& model, const FunctionPtr& lossFunction, const FunctionPtr& evaluationFunction, const std::unordered_set<LearnerPtr>& parameterLearners)
         : m_model(model), m_lossFunction(lossFunction), m_evaluationFunction(evaluationFunction), m_parameterLearners(parameterLearners), m_prevMinibatchNumSamples(1)
     {
-        m_combinedTrainingFunction = Combine({ model, lossFunction, evaluationFunction });
+        if (m_lossFunction->Output().DynamicAxes().empty())
+            InvalidArgument("The loss function specified in the Trainer constructor must correspond to minibatch data and have dynamic axes");
+
+        if (m_evaluationFunction && m_evaluationFunction->Output().DynamicAxes().empty())
+            InvalidArgument("The evaluation function specified in the Trainer constructor must correspond to minibatch data and have dynamic axes");
+
+        m_aggregatedLossFunction = ReduceSum(lossFunction);
+        if (m_evaluationFunction)
+            m_aggregatedEvaluationFunction = ReduceSum(m_evaluationFunction);
+
+        std::vector<FunctionPtr> combinedFunctionArgs = { m_model, m_aggregatedLossFunction, m_lossFunction };
+        if (m_evaluationFunction)
+        {
+            combinedFunctionArgs.push_back(m_aggregatedEvaluationFunction);
+            combinedFunctionArgs.push_back(m_evaluationFunction);
+        }
+
+        m_combinedTrainingFunction = Combine(combinedFunctionArgs);
 
         auto modelParameters = m_combinedTrainingFunction->Parameters();
         std::unordered_set<Parameter> learnerParameters;
@@ -28,7 +45,8 @@ namespace CNTK
             }
         }
 
-        if (modelParameters != learnerParameters)
+        std::unordered_set<Parameter> modelParametersSet(modelParameters.begin(), modelParameters.end());
+        if (modelParametersSet != learnerParameters)
             InvalidArgument("Trainer ctor: Union of the parameters covered by the specified parameterLearners should match the specified model's parameters");
     }
 
@@ -65,20 +83,11 @@ namespace CNTK
         return scalar;
     }
 
-    static size_t GetSampleCountFromArguments(const Variable& evalOrLossArgument, const std::unordered_map<Variable, ValuePtr>& arguments)
+    static size_t GetSampleCount(const Variable& var, const ValuePtr& value)
     {
-        // Find the argument whose dynamic axes match the criterion operation's dynamic axes (i.e. label dynamic axes)
-        // Then we determine the actual number of samples contributing to the training loss from the argument's Value object
-        auto argumentIter = std::find_if(arguments.begin(), arguments.end(), [evalOrLossArgument](const std::pair<Variable, ValuePtr>& currentPair) {
-            return (currentPair.first.DynamicAxes() == evalOrLossArgument.DynamicAxes());
-        });
-
-        auto argumentValue = argumentIter->second;
-        auto argumentVar = argumentIter->first;
-        auto argumentDataShape = argumentValue->Data()->Shape();
-        auto mask = argumentValue->Mask();
-        size_t numMaskedSamples = (mask != nullptr) ? mask->MaskedCount() : 0;
-        size_t numSamplesInDataArrayView = argumentDataShape.SubShape(argumentVar.Shape().Rank()).TotalSize();
+        auto valueDataShape = value->Shape();
+        size_t numMaskedSamples = value->MaskedCount();
+        size_t numSamplesInDataArrayView = valueDataShape.SubShape(var.Shape().Rank()).TotalSize();
         if (numMaskedSamples > numSamplesInDataArrayView)
             LogicError("Number of masked values cannot exceed the number of samples that the Value object's Data NDArrayView can hold");
 
@@ -87,15 +96,15 @@ namespace CNTK
 
     double Trainer::TestMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, const DeviceDescriptor& computeDevice /*= DeviceDescriptor::UseDefaultDevice()*/)
     {
-        if (!m_evaluationFunction)
+        if (!m_aggregatedEvaluationFunction)
             InvalidArgument("Trainer::TestMinibatch: Cannot test when no evaluation function was specified during 'this' trainer's construction");
 
         // TODO: Should we refactor this code that is somewhat similar to the prologue of the TrainMinibatch function
-        std::unordered_map<Variable, ValuePtr> outputs = { { m_evaluationFunction, nullptr } };
+        std::unordered_map<Variable, ValuePtr> outputs = { { m_aggregatedEvaluationFunction, nullptr }, {m_evaluationFunction, nullptr} };
         m_combinedTrainingFunction->Forward(arguments, outputs, computeDevice);
 
-        auto sampleCount = GetSampleCountFromArguments(*(m_evaluationFunction->Arguments().begin()), arguments);
-        return (GetScalarValue(outputs[m_evaluationFunction]) / sampleCount);
+        auto sampleCount = GetSampleCount(m_evaluationFunction, outputs[m_evaluationFunction]);
+        return (GetScalarValue(outputs[m_aggregatedEvaluationFunction]) / sampleCount);
     }
 
     bool Trainer::TrainMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, const DeviceDescriptor& computeDevice /*= DeviceDescriptor::UseDefaultDevice()*/)
@@ -106,16 +115,16 @@ namespace CNTK
 
     bool Trainer::TrainMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, std::unordered_map<Variable, ValuePtr>& outputsToFetch, const DeviceDescriptor& computeDevice /*= DeviceDescriptor::UseDefaultDevice()*/)
     {
-        std::unordered_map<Variable, ValuePtr> outputs = { { m_lossFunction, nullptr } };
-        if (m_evaluationFunction)
-            outputs.insert({ m_evaluationFunction, nullptr });
+        std::unordered_map<Variable, ValuePtr> outputs = { { m_aggregatedLossFunction, nullptr }, { m_lossFunction, nullptr } };
+        if (m_aggregatedEvaluationFunction)
+            outputs.insert({ m_aggregatedEvaluationFunction, nullptr });
 
         outputs.insert(outputsToFetch.begin(), outputsToFetch.end());
 
-        auto backPropSate = m_combinedTrainingFunction->Forward(arguments, outputs, computeDevice, { m_lossFunction });
-        m_prevMinibatchAggregateTrainingLossValue = outputs[m_lossFunction];
-        if (m_evaluationFunction)
-            m_prevMinibatchAggregateEvalCriterionValue = outputs[m_evaluationFunction];
+        auto backPropSate = m_combinedTrainingFunction->Forward(arguments, outputs, computeDevice, { m_aggregatedLossFunction });
+        m_prevMinibatchAggregateTrainingLossValue = outputs[m_aggregatedLossFunction];
+        if (m_aggregatedEvaluationFunction)
+            m_prevMinibatchAggregateEvalCriterionValue = outputs[m_aggregatedEvaluationFunction];
 
         for (auto outputToFetch : outputsToFetch)
         {
@@ -123,8 +132,8 @@ namespace CNTK
                 outputsToFetch[outputToFetch.first] = outputs[outputToFetch.first];
         }
 
-        ValuePtr rootGradientValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(m_lossFunction->Output().GetDataType(), m_prevMinibatchAggregateTrainingLossValue->Data()->Shape(), computeDevice), outputs.at(m_lossFunction)->Mask());
-        if (m_lossFunction->Output().GetDataType() == DataType::Float)
+        ValuePtr rootGradientValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(m_aggregatedLossFunction->Output().GetDataType(), m_prevMinibatchAggregateTrainingLossValue->Shape(), computeDevice), outputs.at(m_aggregatedLossFunction)->Mask());
+        if (m_aggregatedLossFunction->Output().GetDataType() == DataType::Float)
             rootGradientValue->Data()->SetValue(1.0f);
         else
             rootGradientValue->Data()->SetValue(1.0);
@@ -134,9 +143,9 @@ namespace CNTK
         for (const auto& parameter : modelParameters)
             parameterGradients[parameter] = nullptr;
 
-        m_combinedTrainingFunction->Backward(backPropSate, { { m_lossFunction, rootGradientValue } }, parameterGradients);
+        m_combinedTrainingFunction->Backward(backPropSate, { { m_aggregatedLossFunction, rootGradientValue } }, parameterGradients);
 
-        m_prevMinibatchNumSamples = GetSampleCountFromArguments(*(m_lossFunction->Arguments().begin()), arguments);
+        m_prevMinibatchNumSamples = GetSampleCount(m_lossFunction, outputs[m_lossFunction]);
 
         bool anyUpdatesPerformed = false;
         for (auto learner : m_parameterLearners)

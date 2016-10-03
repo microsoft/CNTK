@@ -4,8 +4,15 @@
 //
 
 #include "stdafx.h"
+
+#ifdef _WIN32
+#define _SCL_SECURE_NO_WARNINGS
+#endif
+
 #include "CNTKLibrary.h"
 #include "Utils.h"
+#include "Value.h"
+#include "Function.h"
 
 namespace CNTK
 {
@@ -23,10 +30,10 @@ namespace CNTK
             auto maskShape = mask->Shape();
 
             if (maskShape.Rank() > dataShape.Rank())
-                InvalidArgument("The number of axes (%d) of the mask of a Value object cannot exceed the number of axes (%d) of the data NDArrayView object", (int)maskShape.Rank(), (int)dataShape.Rank());
+                InvalidArgument("The rank (%d) of the mask of a Value object cannot exceed the rank (%d) of the data NDArrayView object", (int)maskShape.Rank(), (int)dataShape.Rank());
 
             if (dataShape.SubShape(dataShape.Rank() - maskShape.Rank()) != maskShape)
-                InvalidArgument("Invalid Value object; the data and mask are incompatible. The trailing dimensions of the data (%S) do not match the dimensions of the mask (%S)", AsStringForErrorReporting(dataShape).c_str(), AsStringForErrorReporting(maskShape).c_str());
+                InvalidArgument("Invalid Value object; the data and mask are incompatible. The trailing dimensions of the data with shape %S do not match the dimensions of the mask with shape %S", AsStringForErrorReporting(dataShape).c_str(), AsStringForErrorReporting(maskShape).c_str());
         }
     }
 
@@ -55,7 +62,10 @@ namespace CNTK
             NDShape valueMaskShape = { maxSequenceLength, numSequences };
             deviceValueMask = MakeSharedObject<NDMask>(valueMaskShape, device);
             for (size_t i = 0; i < numSequences; ++i)
-                deviceValueMask->MaskSection({ sequenceLengths[i], i }, { NDShape::InferredDimension, 1 });
+            {
+                deviceValueMask->MarkSequenceBegin({0, i});
+                deviceValueMask->InvalidateSection({ sequenceLengths[i], i }, { NDShape::InferredDimension, 1 });
+            }
         }
 
         return deviceValueMask;
@@ -171,6 +181,39 @@ namespace CNTK
                 // Clear the mask
                 Mask()->Clear();
             }
+        }
+    }
+
+    void PackedValue::Unpack() const
+    {
+        if (m_packedDataLayout && (m_packedDataLayout->GetNumTimeSteps() != 1) && (m_packedDataLayout->GetNumSequences() != 1) && Internal::IsAutomaticUnpackingOfPackedValuesDisabled())
+            LogicError("PackedValue::Unpack: Automatic unpacking of PackedValue objects is disabled");
+
+        if (m_isPacked)
+        {
+            ValuePtr valueObject;
+            auto dataType = m_packedData->GetDataType();
+            switch (dataType)
+            {
+            case DataType::Float:
+                valueObject = CompositeFunction::GetValueObjectFromCNTKImplMatrixAndMBLayout(m_sampleShape, *(m_packedData->GetMatrix<float>()), m_packedDataLayout, m_isReadOnly);
+                break;
+            case DataType::Double:
+                valueObject = CompositeFunction::GetValueObjectFromCNTKImplMatrixAndMBLayout(m_sampleShape, *(m_packedData->GetMatrix<double>()), m_packedDataLayout, m_isReadOnly);
+                break;
+            default:
+                LogicError("Unsupported DataType %s", DataTypeName(dataType));
+            }
+
+            m_data = valueObject->Data();
+            m_mask = valueObject->Mask();
+
+            m_packedData = nullptr;
+            m_packedDataLayout = nullptr;
+            m_isPacked = false;
+
+            if (m_unpackedShape != m_data->Shape())
+                LogicError("The computed unpacked shape of the PackedValue object does not match the actual Data NDArrayView's shape after unpacking");
         }
     }
 
