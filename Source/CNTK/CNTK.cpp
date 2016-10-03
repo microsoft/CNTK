@@ -550,9 +550,14 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
     // parallel training
     shared_ptr<Microsoft::MSR::CNTK::MPIWrapper> mpi;
     auto ensureMPIWrapperCleanup = MakeScopeExit(&MPIWrapper::DeleteInstance);
-    bool paralleltrain = config(L"parallelTrain", false);
+    // when running under MPI with more than one node, use 'true' as the default value for parallelTrain,
+    // 'false' otherwise.
+    bool paralleltrain = config(L"parallelTrain", (MPIWrapper::GetTotalNumberOfMPINodes() > 1));
+
     if (paralleltrain)
+    {
         mpi = MPIWrapper::GetInstance(true /*create*/);
+    }  
 
     g_shareNodeValueMatrices = config(L"shareNodeValueMatrices", false);
 
@@ -684,9 +689,15 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
     // The top-level 'parallelTrain' is a bool, not to be confused with the parallelTrain block inside SGD.
     shared_ptr<Microsoft::MSR::CNTK::MPIWrapper> mpi;
     auto ensureMPIWrapperCleanup = MakeScopeExit(&MPIWrapper::DeleteInstance);
-    bool paralleltrain = config(L"parallelTrain", "false");
+    
+    // when running under MPI with more than one node, use 'true' as the default value for parallelTrain,
+    // 'false' otherwise.
+    bool paralleltrain = config(L"parallelTrain", (MPIWrapper::GetTotalNumberOfMPINodes() > 1));
+
     if (paralleltrain)
-        mpi = MPIWrapper::GetInstance(true /*create*/);
+    {
+       mpi = MPIWrapper::GetInstance(true /*create*/);
+    } 
 
     g_shareNodeValueMatrices = config(L"shareNodeValueMatrices", false);
 

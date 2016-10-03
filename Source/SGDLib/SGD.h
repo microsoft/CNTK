@@ -255,6 +255,13 @@ protected:
 
     ParallelizationMethod m_parallelizationMethod;
     bool m_enableDistributedMBReading;
+    // indicates if we're using default value of the m_enableDistributedMBReading flag
+    // (in which case, it can potentially be overriden).
+    // This flag is only relevant for the new (V2) readers. It exist because of
+    // a shortcoming in DecimateMinibatchInPlace, which does not yet work when inputs 
+    // in the same minibatch have different layouts, which is something only V2 readers can
+    // produce. 
+    bool m_enableDistributedMBReadingNotSpecified; 
     int m_parallelizationStartEpochNum;
 
     // decide if/how often we measure and show sync performance stats (seconds spend on sync, seconds since last sync etc.) ?

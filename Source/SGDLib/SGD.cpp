@@ -152,6 +152,19 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         }
     }
 
+    // This code is only relevant for the new (V2) readers. It exist because of
+    // a shortcoming in DecimateMinibatchInPlace, which does not yet work when inputs 
+    // in the same minibatch have different layouts, which is something only V2 readers can
+    // produce. 
+    if (m_enableDistributedMBReadingNotSpecified && m_mpi != nullptr && !trainSetDataReader->IsLegacyReader())
+    {
+        // we're running a parallel training with a v2 reader, 
+        // auto-enable distributed reading
+        if (m_traceLevel > 0)
+            LOGPRINTF(stderr, "\"distributedMBReading\" is not explicitly specified, defaulting to 'true'.\n");
+        m_enableDistributedMBReading = true;
+    }
+
     // determine evaluationNodes from GetEvalCriterionNodes(), ensuring each criterion is only logged once
     std::vector<ComputationNodeBasePtr> evaluationNodes;
     {
@@ -2710,6 +2723,7 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
         if (m_parallelizationStartEpochNum < 0 /* sic */)
             // Be explicit that user-facing epoch numbers are 1-based
             InvalidArgument("parallelizationStartEpoch must be greater or equal to 1");
+        m_enableDistributedMBReadingNotSpecified = !configParallelTrain.Exists(L"distributedMBReading");
         m_enableDistributedMBReading = configParallelTrain(L"distributedMBReading", false);
         m_syncStatsTrace = configParallelTrain(L"syncPerfStats", (int) 0);
 

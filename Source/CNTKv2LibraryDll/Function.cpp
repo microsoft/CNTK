@@ -604,7 +604,7 @@ namespace CNTK
             auto predictionShape = inputs[0].Shape();
             auto labelsShape = inputs[1].Shape();
             if (predictionShape != labelsShape)
-                RuntimeError("Prediction output operand's shape %S is incompatible with label operand's shape %S for the %s operation", AsStringForErrorReporting(predictionShape).c_str(), AsStringForErrorReporting(labelsShape).c_str(), PrimitiveOpTypeName(op));
+                RuntimeError("Prediction output operand's shape %S is incompatible with label operand's shape %S for the %S operation", AsStringForErrorReporting(predictionShape).c_str(), AsStringForErrorReporting(labelsShape).c_str(), PrimitiveOpTypeName(op).c_str());
 
             std::vector<size_t> reductionAxes;
             for (size_t i = 0; i < inputs[0].Shape().Rank(); ++i)
