@@ -1570,6 +1570,7 @@ namespace CNTK
             : m_dataFields(MakeSharedObject<VariableFields>(shape, varType, dataType, ownerFunction, value, needsGradient, dynamicAxes, isSparse, name, uid))
         {}
 
+private:
         Variable Clone() const
         {
             Variable clonedVariable;
@@ -2042,6 +2043,11 @@ namespace CNTK
         virtual void Backward(const BackPropStatePtr& state,
                               const std::unordered_map<Variable, ValuePtr>& rootGradientValues,
                               std::unordered_map<Variable, ValuePtr>& backPropagatedGradientValuesForInputs) = 0;
+
+        ///
+        /// Returns the name of the operation that this Function denotes
+        ///
+        virtual const std::wstring& OpName() = 0;
 
     public:
 

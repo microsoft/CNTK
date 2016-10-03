@@ -80,7 +80,7 @@ class TensorOpsMixin(object):
         from . import ops
         if isinstance(key, int):
             # Case 1: e.g. data[3] -> key=3
-            return ops.slice(self, key, key + 1, axis=0)
+            return ops.slice(self, 0, key, key + 1)
 
         elif isinstance(key, slice):
             # Case 2: e.g. data[2:4] -> key will be a slice object
@@ -94,7 +94,7 @@ class TensorOpsMixin(object):
                 if key.stop <= key.start:
                     raise ValueError(
                         'end index has to be greater than start index')
-            return ops.slice(self, key.start or 0, key.stop or 0, axis=0)
+            return ops.slice(self, 0, key.start or 0, key.stop or 0)
 
         elif isinstance(key, (tuple, list)):
             # Case 3: e.g. data[2:4,1:,1:7] -> key will be an iterable of ints
@@ -105,7 +105,7 @@ class TensorOpsMixin(object):
             for ax_counter, so in enumerate(key):
                 if isinstance(so, int):
                     # Proceed as case 1
-                    node = ops.slice(node, so, so + 1, axis=ax_counter)
+                    node = ops.slice(node, ax_counter, so, so + 1)
 
                 elif isinstance(so, slice):
                     # Proceed as case 2
@@ -117,8 +117,7 @@ class TensorOpsMixin(object):
                                 'end index has to be greater than start index')
                     if so.start is None and so.stop is None:
                         continue
-                    node = ops.slice(node, so.start or 0,
-                                     so.stop or 0, axis=ax_counter)
+                    node = ops.slice(node, ax_counter, so.start or 0, so.stop or 0)
                 elif isinstance(so, list):
                     # Case 3b: e.g. data[[0],[2,3]] aka "advanced indexing" ->
                     # so = ([0], [2,3])
@@ -129,7 +128,7 @@ class TensorOpsMixin(object):
                         if not isinstance(idx, int):
                             raise IndexError(
                                 'indices have to be of type int and not "%s"' % type(idx))
-                        node = ops.slice(node, idx, idx + 1, axis=ax_counter)
+                        node = ops.slice(node, ax_counter, idx, idx + 1)
                 else:
                     raise IndexError(
                         'type "%s" is not supported as index' % type(so))
