@@ -488,10 +488,10 @@ CPUSparseMatrix<ElemType> CPUSparseMatrix<ElemType>::ColumnSlice(size_t startCol
 template <class ElemType>
 CPUSparseMatrix<ElemType>& CPUSparseMatrix<ElemType>::AssignColumnSlice(const CPUSparseMatrix<ElemType>& fromMatrix, size_t startColumn, size_t numCols)
 {
-    if (startColumn + numCols > m_numCols)
+    if (startColumn + numCols > fromMatrix.m_numCols)
         InvalidArgument("The slice (%d+%d) is out of range of the source matrix (%d).", (int) startColumn, (int) numCols, (int) m_numCols);
 
-    if (GetFormat() != MatrixFormat::matrixFormatSparseCSC && GetFormat() != MatrixFormat::matrixFormatSparseBlockCol)
+    if (fromMatrix.GetFormat() != MatrixFormat::matrixFormatSparseCSC && fromMatrix.GetFormat() != MatrixFormat::matrixFormatSparseBlockCol)
         NOT_IMPLEMENTED;
 
     ShallowCopyFrom(fromMatrix);
