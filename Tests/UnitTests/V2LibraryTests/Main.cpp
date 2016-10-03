@@ -1,3 +1,7 @@
+//
+// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
+//
 #include "CNTKLibrary.h"
 #include <functional>
 
@@ -15,8 +19,8 @@ void SerializationTests();
 void LearnerTests();
 void TrainSequenceToSequenceTranslator();
 void TrainTruncatedLSTMAcousticModelClassifer();
-void EvalMultiThreadsWithNewNetwork(const DeviceDescriptor&, const int);
 void DeviceSelectionTests();
+void MultiThreadsEvaluation();
 
 int main()
 {
@@ -28,9 +32,6 @@ int main()
     TensorTests();
     FunctionTests();
 
-    FeedForwardTests();
-    RecurrentFunctionTests();
-
     SerializationTests();
     LearnerTests();
 
@@ -41,13 +42,7 @@ int main()
     TrainSequenceToSequenceTranslator();
     TrainTruncatedLSTMAcousticModelClassifer();
 
-    // Test multi-threads evaluation
-    fprintf(stderr, "Test multi-threaded evaluation on CPU.\n");
-    EvalMultiThreadsWithNewNetwork(DeviceDescriptor::CPUDevice(), 2);
-#ifndef CPUONLY
-    fprintf(stderr, "Test multi-threaded evaluation on GPU\n");
-    EvalMultiThreadsWithNewNetwork(DeviceDescriptor::GPUDevice(0), 2);
-#endif
+    MultiThreadsEvaluation();
 
     fprintf(stderr, "Test device selection API\n");
     DeviceSelectionTests();

@@ -1,6 +1,7 @@
 
 import cntk.cntk_py as cntk_py
 
+
 class PyCallback(cntk_py.Callback):
 
     def __init__(self):
@@ -8,11 +9,10 @@ class PyCallback(cntk_py.Callback):
 
     def forward(self):
         print("PyCallback.forward()")
-        1/0
+        1 / 0
 
     def backward(self):
         print("PyCallback.backward()")
-
 
 
 def callback_test():
@@ -36,7 +36,7 @@ def callback_test():
     op.delCallback()
 
 
-if __name__=='__main__':
-    import time    
+if __name__ == '__main__':
+    import time
     callback_test()
-    #cntk_py.exception_tester()
+    # cntk_py.exception_tester()

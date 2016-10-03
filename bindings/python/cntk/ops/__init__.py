@@ -8,6 +8,7 @@ from . import sequence
 from .functions import Function
 from ..utils import sanitize_input, sanitize_shape, get_data_type, sanitize_axis, sanitize_dynamic_axes
 
+
 def combine(operands, name=''):
     '''
      Create a new Function instance which just combines the outputs of the specified list of
@@ -35,9 +36,10 @@ def combine(operands, name=''):
 
     return combine(converted_operands, name)
 
-################################################################################
+##########################################################################
 # evaluation ops
-################################################################################
+##########################################################################
+
 
 def cross_entropy_with_softmax(output_vector, target_vector, name=''):
     '''
@@ -50,10 +52,10 @@ def cross_entropy_with_softmax(output_vector, target_vector, name=''):
 
     Example:
         >>> C.cross_entropy_with_softmax([[1., 1., 1., 50.]], [[0., 0., 0., 1.]]).eval()
-        array(0.0, dtype=float32)
+        array([[ 0.]], dtype=float32)
 
         >>> C.cross_entropy_with_softmax([[1., 2., 3., 4.]], [[0.35, 0.15, 0.05, 0.45]]).eval()
-        array(1.8401899337768555, dtype=float32)
+        array([[ 1.84018993]], dtype=float32)
 
     Args:
         output_vector: the unscaled computed output values from the network
@@ -69,6 +71,7 @@ def cross_entropy_with_softmax(output_vector, target_vector, name=''):
     target_vector = sanitize_input(target_vector, dtype)
     return cross_entropy_with_softmax(output_vector, target_vector, name)
 
+
 def squared_error(output, target, name=''):
     '''
     This operation computes the sum of the squared difference between elements
@@ -79,10 +82,10 @@ def squared_error(output, target, name=''):
         >>> i1 = C.input_variable((1,2))
         >>> i2 = C.input_variable((1,2))
         >>> C.squared_error(i1,i2).eval({i1:np.asarray([[[[2., 1.]]]], dtype=np.float32), i2:np.asarray([[[[4., 6.]]]], dtype=np.float32)})
-        array(29.0, dtype=float32)
+        array([[ 29.]], dtype=float32)
 
         >>> C.squared_error(i1,i2).eval({i1:np.asarray([[[[1., 2.]]]], dtype=np.float32), i2:np.asarray([[[[1., 2.]]]], dtype=np.float32)})
-        array(0.0, dtype=float32)
+        array([[ 0.]], dtype=float32)
 
     Args:
         output: the output values from the network
@@ -98,6 +101,7 @@ def squared_error(output, target, name=''):
     target = sanitize_input(target, dtype)
     return squared_error(output, target, name)
 
+
 def classification_error(output_vector, target_vector, name=''):
     '''
     This operation computes the classification_error error. It finds the index of the highest
@@ -109,10 +113,10 @@ def classification_error(output_vector, target_vector, name=''):
 
     Example:
         >>> C.classification_error([[1., 2., 3., 4.]], [[0., 0., 0., 1.]]).eval()
-        array(0.0, dtype=float32)
+        array([[ 0.]], dtype=float32)
 
         >>> C.classification_error([[1., 2., 3., 4.]], [[0., 0., 1., 0.]]).eval()
-        array(1.0, dtype=float32)
+        array([[ 1.]], dtype=float32)
 
     Args:
         output_vector: the output values from the network
@@ -127,9 +131,10 @@ def classification_error(output_vector, target_vector, name=''):
     target_vector = sanitize_input(target_vector, dtype)
     return classification_error(output_vector, target_vector, name)
 
-################################################################################
+##########################################################################
 # convolution ops
-################################################################################
+##########################################################################
+
 
 def convolution(convolution_map, operand, strides=(1,), sharing=[True],
                 auto_padding=[True], lower_pad=(0,), upper_pad=(0,), transpose=False,
@@ -176,12 +181,14 @@ def convolution(convolution_map, operand, strides=(1,), sharing=[True],
     from cntk.cntk_py import convolution
     operand = sanitize_input(operand)
     return convolution(convolution_map, operand, tuple(reversed(strides)), sharing, auto_padding,
-                        tuple(reversed(lower_pad)), tuple(reversed(upper_pad)), transpose,
-                        max_temp_mem_size_in_samples, name)
+                       tuple(reversed(lower_pad)), tuple(
+                           reversed(upper_pad)), transpose,
+                       max_temp_mem_size_in_samples, name)
 
-from cntk.cntk_py import PoolingType_Max,PoolingType_Average
-MAX_POOLING=PoolingType_Max
-AVG_POOLING=PoolingType_Average
+from cntk.cntk_py import PoolingType_Max, PoolingType_Average
+MAX_POOLING = PoolingType_Max
+AVG_POOLING = PoolingType_Average
+
 
 def pooling(operand, pooling_type, pooling_window_shape, strides=(1,), auto_padding=[False],
             lower_pad=(0,), upper_pad=(0,), name=''):
@@ -212,6 +219,7 @@ def pooling(operand, pooling_type, pooling_window_shape, strides=(1,), auto_padd
     upper_pad = sanitize_shape(upper_pad)
     return pooling(operand, pooling_type, pooling_window_shape, strides, auto_padding,
                    lower_pad, upper_pad, name)
+
 
 def batch_normalization(operand, scale, bias, running_mean, running_inv_std, spatial,
                         normalization_time_constant=0, blend_time_constant=0,
@@ -248,12 +256,13 @@ def batch_normalization(operand, scale, bias, running_mean, running_inv_std, spa
     from cntk.cntk_py import batch_normalization
     operand = sanitize_input(operand)
     return batch_normalization(operand, scale, bias, running_mean, running_inv_std, spatial,
-                                normalization_time_constant, blend_time_constant,
-                                epsilon, use_cudnn_engine, name)
+                               normalization_time_constant, blend_time_constant,
+                               epsilon, use_cudnn_engine, name)
 
-################################################################################
+##########################################################################
 # comparison ops
-################################################################################
+##########################################################################
+
 
 def less(left, right, name=''):
     '''
@@ -279,6 +288,7 @@ def less(left, right, name=''):
     right = sanitize_input(right, dtype)
     return less(left, right, name)
 
+
 def equal(left, right, name=''):
     '''
     Elementwise 'equal' comparison of two tensors. Result is 1 if values are equal 0 otherwise.
@@ -302,6 +312,7 @@ def equal(left, right, name=''):
     left = sanitize_input(left, dtype)
     right = sanitize_input(right, dtype)
     return equal(left, right, name)
+
 
 def greater(left, right, name=''):
     '''
@@ -327,6 +338,7 @@ def greater(left, right, name=''):
     right = sanitize_input(right, dtype)
     return greater(left, right, name)
 
+
 def greater_equal(left, right, name=''):
     '''
     Elementwise 'greater equal' comparison of two tensors. Result is 1 if left >= right else 0.
@@ -350,6 +362,7 @@ def greater_equal(left, right, name=''):
     left = sanitize_input(left, dtype)
     right = sanitize_input(right, dtype)
     return greater_equal(left, right, name)
+
 
 def not_equal(left, right, name=''):
     '''
@@ -375,6 +388,7 @@ def not_equal(left, right, name=''):
     right = sanitize_input(right, dtype)
     return not_equal(left, right, name)
 
+
 def less_equal(left, right, name=''):
     '''
     Elementwise 'less equal' comparison of two tensors. Result is 1 if left <= right else 0.
@@ -399,9 +413,10 @@ def less_equal(left, right, name=''):
     right = sanitize_input(right, dtype)
     return less_equal(left, right, name)
 
-################################################################################
+##########################################################################
 # linear ops
-################################################################################
+##########################################################################
+
 
 def plus(left, right, name=''):
     '''
@@ -428,6 +443,7 @@ def plus(left, right, name=''):
     left = sanitize_input(left, dtype)
     right = sanitize_input(right, dtype)
     return plus(left, right, name)
+
 
 def minus(left, right, name=''):
     '''
@@ -457,6 +473,7 @@ def minus(left, right, name=''):
     right = sanitize_input(right, dtype)
     return minus(left, right, name)
 
+
 def element_times(left, right, name=''):
     '''
     The output of this operation is the element-wise product of the two input
@@ -483,6 +500,7 @@ def element_times(left, right, name=''):
     left = sanitize_input(left, dtype)
     right = sanitize_input(right, dtype)
     return element_times(left, right, name)
+
 
 def element_divide(left, right, name=''):
     '''
@@ -513,6 +531,7 @@ def element_divide(left, right, name=''):
     left = sanitize_input(left, dtype)
     right = sanitize_input(right, dtype)
     return element_divide(left, right, name)
+
 
 def times(left, right, output_rank=1, name=''):
     '''
@@ -560,9 +579,9 @@ def times(left, right, output_rank=1, name=''):
     right = sanitize_input(right, dtype)
     return times(right, left, output_rank, name)
 
-################################################################################
+##########################################################################
 # non_diff ops
-################################################################################
+##########################################################################
 
 
 def floor(arg, name=''):
@@ -595,6 +614,7 @@ def floor(arg, name=''):
     arg = sanitize_input(arg, get_data_type(arg))
     return floor(arg, name)
 
+
 def ceil(arg, name=''):
     '''
     The output of this operation is the element wise value rounded to the smallest
@@ -617,6 +637,7 @@ def ceil(arg, name=''):
     from cntk.cntk_py import ceil
     arg = sanitize_input(arg, get_data_type(arg))
     return ceil(arg, name)
+
 
 def round(arg, name=''):
     '''
@@ -651,11 +672,13 @@ def round(arg, name=''):
     arg = sanitize_input(arg, get_data_type(arg))
     return round(arg, name)
 
-################################################################################
+##########################################################################
 # non_linear and nn ops
-################################################################################
+##########################################################################
 
-#TODO: enable when it is exposed in c++
+# TODO: enable when it is exposed in c++
+
+
 def clip(x, min_value, max_value, name=''):
     '''
     Computes a tensor with all of its values clipped to fall
@@ -690,6 +713,7 @@ def clip(x, min_value, max_value, name=''):
     max_value = sanitize_input(max_value, get_data_type(max_value))
     return clip(x, min_value, max_value, name)
 
+
 def relu(x, name=''):
     '''
     Rectified linear operation. Computes the element-wise rectified linear
@@ -710,6 +734,7 @@ def relu(x, name=''):
     from cntk.cntk_py import re_lu
     x = sanitize_input(x)
     return re_lu(x, name)
+
 
 def sigmoid(x, name=''):
     '''
@@ -733,6 +758,7 @@ def sigmoid(x, name=''):
     x = sanitize_input(x)
     return sigmoid(x, name)
 
+
 def tanh(x, name=''):
     '''
     Computes the element-wise tanh of `x`:
@@ -753,6 +779,7 @@ def tanh(x, name=''):
     from cntk.cntk_py import tanh
     x = sanitize_input(x)
     return tanh(x, name)
+
 
 def softmax(x, name=''):
     '''
@@ -780,6 +807,7 @@ def softmax(x, name=''):
     x = sanitize_input(x)
     return softmax(x)
 
+
 def hardmax(x, name=''):
     '''
     TBA
@@ -796,6 +824,7 @@ def hardmax(x, name=''):
     x = sanitize_input(x)
     return hardmax(x)
 
+
 def hardmax(x, name=''):
     '''
     TBA
@@ -811,6 +840,7 @@ def hardmax(x, name=''):
     from cntk.cntk_py import hardmax
     x = sanitize_input(x)
     return hardmax(x)
+
 
 def exp(x, name=''):
     '''
@@ -831,6 +861,7 @@ def exp(x, name=''):
     from cntk.cntk_py import exp
     x = sanitize_input(x)
     return exp(x, name)
+
 
 def log(x, name=''):
     '''
@@ -856,6 +887,7 @@ def log(x, name=''):
     x = sanitize_input(x)
     return log(x, name)
 
+
 def sqrt(x, name=''):
     '''
     Computes the element-wise square-root of `x`:
@@ -880,6 +912,7 @@ def sqrt(x, name=''):
     x = sanitize_input(x)
     return sqrt(x, name)
 
+
 def square(x, name=''):
     '''
     Computes the element-wise square of `x`:
@@ -897,6 +930,7 @@ def square(x, name=''):
     from cntk.cntk_py import square
     x = sanitize_input(x)
     return square(x, name)
+
 
 def abs(x, name=''):
     '''
@@ -918,6 +952,7 @@ def abs(x, name=''):
     x = sanitize_input(x)
     return abs(x, name)
 
+
 def negate(x, name=''):
     '''
     Computes the element-wise negation of `x`:
@@ -938,6 +973,7 @@ def negate(x, name=''):
     x = sanitize_input(x)
     return negate(x, name)
 
+
 def reciprocal(x, name=''):
     '''
     Computes the element-wise reciprocal of `x`:
@@ -955,6 +991,7 @@ def reciprocal(x, name=''):
     from cntk.cntk_py import reciprocal
     x = sanitize_input(x)
     return reciprocal(x, name)
+
 
 def element_select(flag, value_if_true, value_if_false, name=''):
     '''
@@ -981,12 +1018,13 @@ def element_select(flag, value_if_true, value_if_false, name=''):
     value_if_false = sanitize_input(value_if_false)
     return element_select(flag, value_if_true, value_if_false, name)
 
-################################################################################
+##########################################################################
 # recurrent ops
-################################################################################
+##########################################################################
 
 # TODO: add default value for initial_state. It should be a constant scalar
 # (0.0), using the default device
+
 
 def future_value(x, initial_state=None, time_step=1, name=''):
     '''
@@ -1019,6 +1057,7 @@ def future_value(x, initial_state=None, time_step=1, name=''):
     x = sanitize_input(x)
     return future_value(x, initial_state, time_step, name)
 
+
 def past_value(x, initial_state=None, time_step=1, name=''):
     '''
     This function returns the past value w.r.t. `x`. It is most often used when
@@ -1050,11 +1089,13 @@ def past_value(x, initial_state=None, time_step=1, name=''):
     x = sanitize_input(x)
     return past_value(x, initial_state, time_step, name)
 
-################################################################################
+##########################################################################
 # reshaping ops
-################################################################################
+##########################################################################
 
-#TODO: enable when it is exposed in c++
+# TODO: enable when it is exposed in c++
+
+
 def reshape(x, shape, name=''):
     '''
     Reinterpret input samples as having different tensor dimensions
@@ -1077,8 +1118,9 @@ def reshape(x, shape, name=''):
     Returns:
         :class:`cntk.Function`
     '''
-    if np.any(np.asarray(shape)<0):
-        # TODO decide on whether -1 instead of 0 should be used to infer the dimension
+    if np.any(np.asarray(shape) < 0):
+        # TODO decide on whether -1 instead of 0 should be used to infer the
+        # dimension
         raise ValueError('shape dimensions cannot be negative')
 
     from cntk.cntk_py import reshape
@@ -1086,6 +1128,7 @@ def reshape(x, shape, name=''):
     shape = sanitize_shape(shape)
 
     return reshape(x, shape, name)
+
 
 def transpose(x, axis1=0, axis2=1, name=''):
     '''
@@ -1111,6 +1154,7 @@ def transpose(x, axis1=0, axis2=1, name=''):
     axis1 = sanitize_axis(rank, axis1)
     axis2 = sanitize_axis(rank, axis2)
     return transpose_axes(x, axis1, axis2, name)
+
 
 def slice(x, axis, begin_index, end_index, name=''):
     '''
@@ -1169,7 +1213,9 @@ def slice(x, axis, begin_index, end_index, name=''):
     axis = sanitize_axis(x.shape().rank(), axis)
     return slice(x, axis, begin_index, end_index, name)
 
-#TODO: enable when it is exposed in c++
+# TODO: enable when it is exposed in c++
+
+
 def splice(inputs, axis=0, name=''):
     '''
     Concatenate the input tensors along an axis.
@@ -1212,9 +1258,10 @@ def splice(inputs, axis=0, name=''):
 
     return splice(inputs, axis, name)
 
-################################################################################
+##########################################################################
 # reduction ops
-################################################################################
+##########################################################################
+
 
 def reduce_sum(x, axis=None, name=''):
     '''
@@ -1254,6 +1301,7 @@ def reduce_sum(x, axis=None, name=''):
     axis = sanitize_axis(x.shape().rank(), axis)
     return reduce_sum(x, axis, name)
 
+
 def reduce_log_sum(x, axis, name=''):
     '''
     Computes the log sum of the input tensor's elements across the specified axis.
@@ -1273,6 +1321,7 @@ def reduce_log_sum(x, axis, name=''):
     x = sanitize_input(x)
     axis = sanitize_axis(x.shape().rank(), axis)
     return reduce_log_sum(x, axis, name)
+
 
 def reduce_mean(x, axis, name=''):
     '''
@@ -1294,6 +1343,7 @@ def reduce_mean(x, axis, name=''):
     axis = sanitize_axis(x.shape().rank(), axis)
     return reduce_mean(x, axis, name)
 
+
 def reduce_max(x, axis, name=''):
     '''
     Computes the max of the input tensor's elements across the specified axis.
@@ -1313,6 +1363,7 @@ def reduce_max(x, axis, name=''):
     x = sanitize_input(x)
     axis = sanitize_axis(x.shape().rank(), axis)
     return reduce_max(x, axis, name)
+
 
 def reduce_min(x, axis, name=''):
     '''
@@ -1334,9 +1385,10 @@ def reduce_min(x, axis, name=''):
     axis = sanitize_axis(x.shape().rank(), axis)
     return reduce_min(x, axis, name)
 
-################################################################################
+##########################################################################
 # training ops
-################################################################################
+##########################################################################
+
 
 def dropout(x, dropout_rate=0.0, name=''):
     '''
@@ -1346,7 +1398,7 @@ def dropout(x, dropout_rate=0.0, name=''):
 
     The output tensor has the same shape as `x`, but with `dropout_rate` of the
     elements set to zero (dropped out).
-            
+
 
     Args:        
         x: input tensor
@@ -1356,7 +1408,7 @@ def dropout(x, dropout_rate=0.0, name=''):
     Returns:
         FIXME also in all of the other cases :class:`cntk.Function`
     '''
-    if dropout_rate<0.0 or dropout_rate>=1.0:
+    if dropout_rate < 0.0 or dropout_rate >= 1.0:
         raise ValueError('dropout_rate must be in the interval [0,1)')
 
     from cntk.cntk_py import dropout
@@ -1364,18 +1416,20 @@ def dropout(x, dropout_rate=0.0, name=''):
 
     return dropout(x, dropout_rate, name)
 
-################################################################################
+##########################################################################
 # variables_and_parameters ops
-################################################################################
+##########################################################################
 
 from cntk.cntk_py import Axis, DeviceDescriptor
 
-#TODO: expose output_variable as well ?
+# TODO: expose output_variable as well ?
 
-#TODO: if we end up using only factory methods, we should get rid of the class Variable in variables.py
+# TODO: if we end up using only factory methods, we should get rid of the
+# class Variable in variables.py
+
 
 def input_variable(shape, data_type=np.float32, needs_gradient=True, is_sparse=False,
-            dynamic_axes = Axis.default_input_variable_dynamic_axes, name=''):
+                   dynamic_axes=Axis.default_input_variable_dynamic_axes, name=''):
     '''
     It creates an input node.
 
@@ -1406,7 +1460,7 @@ def input_variable(shape, data_type=np.float32, needs_gradient=True, is_sparse=F
     return input_variable(shape, is_sparse, dtype, needs_gradient, name, dynamic_axes)
 
 
-def placeholder_variable(shape, dynamic_axes = [Axis.default_dynamic_axis(), Axis.default_batch_axis()]):
+def placeholder_variable(shape, dynamic_axes=[Axis.default_dynamic_axis(), Axis.default_batch_axis()]):
     '''
     It creates a variable place holder for recurrence networks, when the network's dynamic axes
     are unfolded, the place holder will get assigned a variable along the correspondent dynamic axis.
@@ -1423,18 +1477,20 @@ def placeholder_variable(shape, dynamic_axes = [Axis.default_dynamic_axis(), Axi
     dynamic_axes = sanitize_dynamic_axes(dynamic_axes)
     return placeholder_variable(shape, dynamic_axes)
 
-def parameter(shape=None, value=None, initializer=None, device=None, name=''):
+
+def parameter(shape=None, init=None, device=None, name=''):
     '''
     It creates a parameter tensor.
 
     Args:
         shape (`tuple` or `int`, optional): the shape of the input tensor. If not provided, it
          will be inferred from ``value``.
-        value (scalar or NumPy array, optional): a scalar initial value that would be replicated
-         for every element in the tensor or NumPy array.
-         If `None`, the tensor will be initialized uniformly random.
-        initializer: output of one of the initializers in
-         `:module:cntk.initializers`
+        init (scalar or NumPy array or initializer): if init is a scalar
+         it will be replicated for every element in the tensor or
+         NumPy array. If it is the output of an initializer form
+         `:module:cntk.initializer` it will be used to initialize the tensor at
+         the first forward pass. If `None`, the tensor will be initialized
+         with 0.
         device (:class:`cntk.DeviceDescriptor`): instance of DeviceDescriptor
         name (`str`, optional): the name of the Function instance in the network
 
@@ -1444,18 +1500,19 @@ def parameter(shape=None, value=None, initializer=None, device=None, name=''):
 
     from .variables import Parameter
     if not device:
-        device=DeviceDescriptor.use_default_device()
+        device = DeviceDescriptor.use_default_device()
 
-    if np.isscalar(value) and not shape:
+    if np.isscalar(init) and not shape:
         shape = ()
-        if isinstance(value, np.ndarray):
-            data_type = str(value.dtype)
+        if isinstance(init, np.ndarray):
+            data_type = str(init.dtype)
         else:
             data_type = 'float32'
     else:
         data_type = None
 
-    return Parameter(shape, value, data_type, initializer, device, name)
+    return Parameter(shape, init, data_type, device, name)
+
 
 def constant(shape=None, value=None, device=None, name=''):
     '''
@@ -1474,7 +1531,7 @@ def constant(shape=None, value=None, device=None, name=''):
     '''
     from .variables import Constant
     if not device:
-        device=DeviceDescriptor.use_default_device()
+        device = DeviceDescriptor.use_default_device()
     if np.isscalar(value) and not shape:
         shape = ()
         if isinstance(value, np.ndarray):
@@ -1486,11 +1543,12 @@ def constant(shape=None, value=None, device=None, name=''):
 
     return Constant(shape, value, data_type, device, name)
 
-################################################################################
+##########################################################################
 # normalization ops
-################################################################################
+##########################################################################
 
-#TODO: ComputeInputPerDimMeansAndInvStdDevs
+# TODO: ComputeInputPerDimMeansAndInvStdDevs
+
 
 def per_dim_mean_variance_normalize(operand, mean, inv_stddev, name=''):
     '''
