@@ -2,22 +2,21 @@
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
-// CPPEvalClient.cpp : Sample application using the evaluation interface from C++
+// Visualization.cpp : Sample application using the evaluation interface from C++
 //
 
 /// <summary>
-/// Program for demonstrating how to run model evaluations using the native evaluation interface
+/// Program for demonstrating how to visualize activations of the various layers of the network
 /// </summary>
 /// <description>
-/// This program is a native C++ client using the native evaluation interface
-/// located in the <see cref="eval.h"/> file.
+/// This program uses the native evaluation interface (located in the <see cref="eval.h"/> file)
+/// to visualize network activations on example of AlexNet and MNIST networks. 
 /// The CNTK evaluation library (EvalDLL.dll on Windows, and LibEval.so on Linux), must be found through the system's path. 
-/// The other requirement is that Eval.h be included
+/// The other requirements are that Eval.h and OpenCV to be included
 /// In order to run this program the model must already exist in the example. To create the model,
 /// first run the example. Once the model file is created, you can run this client.
-/// This program demonstrates the usage of the Evaluate method requiring the input and output layers as parameters.
 
-#include "Eval.h"
+
 #include <algorithm>
 #include <iostream>
 #include <opencv2/opencv.hpp>
@@ -27,6 +26,7 @@
 #include <sys/stat.h>
 #include <boost/property_tree/xml_parser.hpp>
 #include <boost/variant.hpp>
+#include "Eval.h"
 #ifdef _WIN32
 #include "Windows.h"
 #endif
@@ -40,7 +40,10 @@ using GetEvalProc = void(*)(IEvaluateModel<ElemType>**);
 typedef std::pair<std::wstring, std::vector<float>*> MapEntry;
 typedef std::map<std::wstring, std::vector<float>*> Layer;
 
-/// <summary>Saves the provided image to a file</summary>
+// Dimensionality (in px) of the side of an input image
+#define IMGSIZE  224
+
+/// <summary>Saves the provided image to a PNG file</summary>
 /// <param name="mat">Source data</param>
 /// <param name="name">Destination filename with extension</param>
 void SaveImage(cv::Mat mat, std::string name)
@@ -48,6 +51,7 @@ void SaveImage(cv::Mat mat, std::string name)
 	// Compression parameters for OpenCV to save image
 	std::vector<int> compression_params;
 	compression_params.push_back(CV_IMWRITE_PNG_COMPRESSION);
+	// Corresponds to the highest compression level, i.e. smallest size
 	compression_params.push_back(9);
 
 	try {
@@ -130,10 +134,12 @@ void ReadMNISTInput(std::string input, std::vector<float>& array, bool display, 
 	}
 }
 
-/// <summary>Reads an RGB image from a file, crops to 224*224, and saves it to a vector in the correct order</summary>
+/// <summary>Reads an RGB image from a file, crops to IMGSIZE*IMGSIZE, saves it to a vector in the correct order,
+/// and substracts mean from each pixel value</summary>
 /// <param name="filename">Path to file</param>
 /// <param name="array">A destination array to load the data</param>
 /// <param name="display">A boolean for an option to display an image</param>
+/// <param name="save">A boolean for an option to save an image</param>
 void ReadRGBImage(std::string filename, std::vector<float>& array, bool display, bool save)
 {
 	auto testImage = cv::imread(filename, CV_LOAD_IMAGE_COLOR);
@@ -141,14 +147,14 @@ void ReadRGBImage(std::string filename, std::vector<float>& array, bool display,
 	// resize and center crop
 	auto biggerSide = (testImage.rows > testImage.cols) ? testImage.rows : testImage.cols;
 	auto smallerSide = (testImage.rows > testImage.cols) ? testImage.cols : testImage.rows;
-	if (smallerSide != 224 || biggerSide != 224)
+	if (smallerSide != IMGSIZE || biggerSide != IMGSIZE)
 	{
-		auto newCols = 224 * biggerSide / smallerSide;
-		auto newSize = (testImage.rows > testImage.cols) ? cv::Size(224, newCols) : cv::Size(newCols, 224);
+		auto newCols = IMGSIZE * biggerSide / smallerSide;
+		auto newSize = (testImage.rows > testImage.cols) ? cv::Size(IMGSIZE, newCols) : cv::Size(newCols, IMGSIZE);
 		cv::resize(testImage, testImage, newSize, 0, 0, cv::INTER_NEAREST);
-		auto cropX = (testImage.rows > testImage.cols) ? 0 : newCols / 2 - 112;
-		auto cropY = (testImage.rows < testImage.cols) ? 0 : newCols / 2 - 112;
-		testImage = testImage(cv::Rect(cropX, cropY, 224, 224));
+		auto cropX = (testImage.rows > testImage.cols) ? 0 : newCols / 2 - IMGSIZE/2;
+		auto cropY = (testImage.rows < testImage.cols) ? 0 : newCols / 2 - IMGSIZE/2;
+		testImage = testImage(cv::Rect(cropX, cropY, IMGSIZE, IMGSIZE));
 	}
 
 	if (display)
@@ -178,9 +184,13 @@ void ReadRGBImage(std::string filename, std::vector<float>& array, bool display,
 /// <param name="elems">A set of numbers</param>
 void ScaleTo01(std::vector<float>& elems)
 {
-	auto minElement = *std::min_element(std::begin(elems), std::end(elems));
-	auto maxElement = *std::max_element(std::begin(elems), std::end(elems));
-	for (int i = 0; i < elems.size(); i++) elems[i] = (elems[i] - minElement) / (maxElement - minElement);
+	auto minMaxElements = std::minmax_element(elems.begin(), elems.end());
+	auto minElement = elems[minMaxElements.first - elems.begin()];
+	auto maxElement = elems[minMaxElements.second - elems.begin()];
+	for (int i = 0; i < elems.size(); i++)
+	{
+		elems[i] = (elems[i] - minElement) / (maxElement - minElement);
+	}
 }
 
 /// <summary>Converts a set of floats in [0,1] to unsinged chars in [0,255].</summary>
@@ -188,7 +198,10 @@ void ScaleTo01(std::vector<float>& elems)
 std::vector<uchar> ConvertToUchar(std::vector<float> elems)
 {
 	std::vector<uchar> elemsChar;
-	for (int i = 0; i < elems.size(); i++) elemsChar.push_back(static_cast<uchar> (round(255 * elems[i])));
+	for (int i = 0; i < elems.size(); i++)
+	{
+		elemsChar.push_back(static_cast<uchar> (round(255 * elems[i])));
+	}
 	return elemsChar;
 }
 
@@ -220,14 +233,22 @@ void CreateImages(std::vector<uchar> layerOutput, std::vector<boost::variant<std
 	for (int i = 0; i < depth; i++)
 	{
 		imgs.push_back(cv::Mat(cv::Size(imgDimensionX, imgDimensionY), CV_8UC1, outputArrays[i], step));
-		if (imgDimensionY != 1) cv::resize(imgs[i], imgs[i], cv::Size(), scaleFactor, scaleFactor, cv::INTER_NEAREST);
+		if (imgDimensionY != 1)
+		{
+			cv::resize(imgs[i], imgs[i], cv::Size(), scaleFactor, scaleFactor, cv::INTER_NEAREST);
+		}
 	}
 }
 
 /// <summary>Displays images collected from layer activations</summary>
 /// <param name="name">Layer name</param>
 /// <param name="imgs">Images to display</param>
-/// <param name="params">{layerPrefix, depth, imgDimensionX, imgDimensionY, scaleFactor}</param>
+/// <param name="params">{layerPrefix, depth, imgDimensionX, imgDimensionY, scaleFactor} where
+/// <param name="layerPrefix">A string that defines the order of network layers</param>
+/// <param name="depth">Equals the number of kernels on the layer</param>
+/// <param name="imgDimensionX">Equals the layer output's x-dimensionality</param>
+/// <param name="imgDimensionY">Equals the layer output's y-dimensionality</param>
+/// <param name="scaleFactor">Scales an output image when visualizing layer's ativations (defined by user)</param> </param>
 void VisualizeLayer(std::string name, std::vector<cv::Mat> imgs, std::vector<boost::variant<std::string, int>> params)
 {
 	auto layerPrefix = boost::get<std::string>(params[0]);
@@ -370,6 +391,8 @@ void VisualizeNetwork(std::string modelFilePath, std::string inputImage)
 	auto inputLayerName = inDims.begin()->first;
 	std::vector<float> inputs;
 
+	// Read a corresponding input based on the network being used
+	// Decided upon the path to the network file provided
 	if (modelFilePath.find("AlexNet") != std::string::npos)
 	{
 		ReadRGBImage(inputImage, inputs, 1, 1);
@@ -417,11 +440,20 @@ int main(int argc, char* argv[])
 	std::string path;
 	size_t pos;
 
+#ifdef _WIN32
 	pos = app.rfind("\\");
 	path = (pos == std::string::npos) ? "." : app.substr(0, pos);
 
 	// This relative path assumes launching from CNTK's binary folder, e.g. x64\Release
 	std::string modelWorkingDirectory = path + "/../../";
+#else // on Linux
+	pos = app.rfind("/");
+	path = (pos == std::string::npos) ? "." : app.substr(0, pos);
+
+	// This relative path assumes launching from CNTK's binary folder, e.g. build/cpu/release/bin/
+	std::string modelWorkingDirectory = path + "/../../../../";
+#endif
+
 	std::string modelFilePath;
 	std::string customPath;
 	std::string inputImage;
@@ -434,13 +466,13 @@ int main(int argc, char* argv[])
 	switch (option)
 	{
 	case 1:
-		userPath = "Examples/Image/MNIST/Data/";
-		std::cout << "Use default model path? (y/n) (working directory \"" << userPath << "\")\n";
+		userPath = "Examples/Image/MNIST/Output/Models/02_Convolution";
+		std::cout << "Use default model path? (y/n) (assuming model file is in \"" << userPath << "\")\n";
 		std::cin >> defaultPath;
 		if (defaultPath == 'y')
 		{
-			modelWorkingDirectory += userPath;
-			modelFilePath = modelWorkingDirectory + "../Output/Models/02_Convolution";
+			//modelWorkingDirectory += userPath;
+			modelFilePath = modelWorkingDirectory + userPath; //+ "../Output/Models/02_Convolution";
 		}
 		else
 		{
@@ -452,13 +484,13 @@ int main(int argc, char* argv[])
 		inputImage = "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 5 63 197 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 20 254 230 24 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 20 254 254 48 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 20 254 255 48 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 20 254 254 57 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 20 254 254 108 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 16 239 254 143 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 178 254 143 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 178 254 143 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 178 254 162 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 178 254 240 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 113 254 240 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 83 254 245 31 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 79 254 246 38 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 214 254 150 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 144 241 8 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 144 240 2 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 144 254 82 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 230 247 40 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 168 209 31 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0";
 		break;
 	case 2:
-		userPath = "Examples/Image/Visualization/";
-		std::cout << "Use default model path? (y/n) (working directory \"" << userPath << "\")\n";
+		userPath = "Examples/Image/Miscellaneous/ImageNet/AlexNet/AlexNet.89";
+		std::cout << "Use default model path? (y/n) (assuming model file at \"" << userPath << "\")\n";
 		std::cin >> defaultPath;
 		if (defaultPath == 'y')
 		{
-			modelWorkingDirectory += userPath;
-			modelFilePath = modelWorkingDirectory + "Models/AlexNet.89";
+			//modelWorkingDirectory += userPath;
+			modelFilePath = modelWorkingDirectory + userPath;
 		}
 		else
 		{
@@ -466,8 +498,9 @@ int main(int argc, char* argv[])
 			std::cin >> userPath;
 			modelFilePath = modelWorkingDirectory + userPath;
 		}
-		std::cout << "Provide test file path relative to  \"Examples/Image/Visualization/\" \n";
+		std::cout << "Provide test file path relative to CNTK root folder \n";
 		std::cin >> inputImage;
+		inputImage = "../../../" + inputImage;
 		break;
 	default:
 		fprintf(stderr, "Cannot match the choice\n");

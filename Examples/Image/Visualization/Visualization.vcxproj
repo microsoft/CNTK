@@ -52,16 +52,7 @@
     <LinkIncremental>false</LinkIncremental>
     <TargetName>Visualization</TargetName>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <LibraryPath>$(BOOST_LIB_PATH);$(OpenCvLibPath);$(LibraryPath)</LibraryPath>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <LibraryPath>$(BOOST_LIB_PATH);$(OpenCvLibPath);$(LibraryPath)</LibraryPath>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_CpuOnly|x64'">
-    <LibraryPath>$(BOOST_LIB_PATH);$(OpenCvLibPath);$(LibraryPath)</LibraryPath>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug_CpuOnly|x64'">
+  <PropertyGroup>
     <LibraryPath>$(BOOST_LIB_PATH);$(OpenCvLibPath);$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup>
