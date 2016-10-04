@@ -467,12 +467,12 @@ int main(int argc, char* argv[])
 	{
 	case 1:
 		userPath = "Examples/Image/MNIST/Output/Models/02_Convolution";
-		std::cout << "Use default model path? (y/n) (assuming model file is in \"" << userPath << "\")\n";
+		std::cout << "Use default model path? (y/n) (assuming model file at \"" << userPath << "\")\n";
 		std::cin >> defaultPath;
 		if (defaultPath == 'y')
 		{
 			//modelWorkingDirectory += userPath;
-			modelFilePath = modelWorkingDirectory + userPath; //+ "../Output/Models/02_Convolution";
+			modelFilePath = modelWorkingDirectory + userPath; 
 		}
 		else
 		{
