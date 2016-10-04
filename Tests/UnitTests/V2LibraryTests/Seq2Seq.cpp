@@ -143,9 +143,10 @@ void TrainSequenceToSequenceTranslator(const DeviceDescriptor& device, bool useS
     double learningRatePerSample = 0.007;
     size_t momentumTimeConstant = 1100;
     double momentumPerSample = std::exp(-1.0 / momentumTimeConstant);
-    double clippingThresholdPerSample = 2.3;
-    bool gradientClippingWithTruncation = true;
-    Trainer trainer(z, ce, errs, { MomentumSGDLearner(z->Parameters(), learningRatePerSample, momentumPerSample, clippingThresholdPerSample, gradientClippingWithTruncation) });
+    AdditionalLearningOptions additionalOptions;
+    additionalOptions.gradientClippingThresholdPerSample = 2.3;
+    additionalOptions.gradientClippingWithTruncation = true;
+    Trainer trainer(z, ce, errs, { MomentumSGDLearner(z->Parameters(), learningRatePerSample, momentumPerSample, additionalOptions) });
 
     size_t outputFrequencyInMinibatches = 1;
     size_t minibatchSize = 72;

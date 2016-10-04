@@ -74,13 +74,13 @@ namespace CNTK
     inline NDShape AsNDShape(const Microsoft::MSR::CNTK::TensorShape& tensorShape, bool allowNonFlattenableTensorShapes = false)
     {
         if (!allowNonFlattenableTensorShapes)
+    {
+        // The TensorShape should be flattenable to 1D
+        for (size_t i = 1; i < tensorShape.GetRank(); ++i)
         {
-            // The TensorShape should be flattenable to 1D
-            for (size_t i = 1; i < tensorShape.GetRank(); ++i)
-            {
-                if (!tensorShape.CanFlatten(i))
-                    InvalidArgument("AsNDShape() can only be called for TensorShapes that can be flattened to 1D");
-            }
+            if (!tensorShape.CanFlatten(i))
+                InvalidArgument("AsNDShape() can only be called for TensorShapes that can be flattened to 1D");
+        }
         }
 
         return std::vector<size_t>(tensorShape.GetDims().begin(), tensorShape.GetDims().end());
@@ -338,7 +338,7 @@ namespace CNTK
         return{ paddedOutputMapCount, kernelShape };
     }
 
-    inline double MomentumPerMB(double momentumPerSample, size_t minibatchSize)
+    inline double MomentumValueForMB(double momentumPerSample, size_t minibatchSize)
     {
         return std::pow(momentumPerSample, minibatchSize);
     }
