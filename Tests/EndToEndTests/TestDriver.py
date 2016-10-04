@@ -295,7 +295,11 @@ class Test:
           line=line[:len(line)-1]
 
         if args.verbose:
-          six.print_(self.fullName + ": " + line)
+          # TODO find a better way
+          if sys.version_info.major < 3:
+            six.print_(self.fullName + ": " + line)
+          else:
+            six.print_(self.fullName + ": " + line.decode('utf-8').rstrip())
 
         if args.dry_run:
           print (line)

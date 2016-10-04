@@ -373,4 +373,12 @@ namespace CNTK
         double* castValue = Copy<float, double>(source->DataBuffer<float>(), sourceSize);
         return MakeSharedObject<NDArrayView>(sourceShape, castValue, sourceSize, DeviceDescriptor::CPUDevice(), readOnly);
     }
+
+    inline std::wstring ParanthesizedName(const std::wstring& name)
+    {
+        if (name.empty())
+            return name;
+
+        return L"(" + name + L")";
+    }
 }

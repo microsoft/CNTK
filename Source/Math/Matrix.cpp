@@ -911,7 +911,7 @@ void Matrix<ElemType>::SwitchToMatrixType(MatrixType newMatrixType, MatrixFormat
 #define NUM_MATRIXTYPE_CHANGED_WARN 20
     m_numTimesMatrixTypeChanged++;
 
-    if (m_numTimesMatrixTypeChanged == NUM_MATRIXTYPE_CHANGED_WARN)
+    if ((GetMathLibTraceLevel() > 0) && (m_numTimesMatrixTypeChanged == NUM_MATRIXTYPE_CHANGED_WARN))
         fprintf(stderr, "WARNING: The same matrix with dim [%lu, %lu] has been transferred between different devices for %d times.\n", (unsigned long) GetNumRows(), (unsigned long) GetNumCols(), NUM_MATRIXTYPE_CHANGED_WARN);
 
     if (GetDeviceId() < 0) // CPU
@@ -3643,7 +3643,7 @@ void Matrix<ElemType>::_transferFromDeviceToDevice(int from_id, int to_id, bool 
         else if (m_devicesTransferedTo[0] != to_id)
             m_devicesTransferedTo[1] = to_id;
     }
-    if (m_numTimesDeviceChanged == NUM_DEVICE_CHANGED_WARN && m_devicesTransferedTo[1] >= CPUDEVICE)
+    if ((GetMathLibTraceLevel() > 0) && (m_numTimesDeviceChanged == NUM_DEVICE_CHANGED_WARN && m_devicesTransferedTo[1] >= CPUDEVICE))
         fprintf(stderr, "WARNING: The same matrix with dim [%lu, %lu] has been transferred between different devices for %d times.\n", (unsigned long) GetNumRows(), (unsigned long) GetNumCols(), NUM_DEVICE_CHANGED_WARN);
 
     // do the transfer

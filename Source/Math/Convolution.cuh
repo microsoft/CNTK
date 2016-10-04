@@ -203,7 +203,10 @@ __global__ void kMaxPoolingBackward(int batchSize, const ElemType* out, const El
             int dcol = indices[i0 + i];
             assert(0 <= colBase + dcol && colBase + dcol < dstVecSize);
             if (in[colBase + dcol] >= m)
+            {
                 atomicAdd(&grad[colBase + dcol], g);
+                break;
+            }
         }
 
         in += blockDim.y * dstVecSize;
