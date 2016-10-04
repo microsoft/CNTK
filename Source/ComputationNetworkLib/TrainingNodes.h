@@ -685,13 +685,21 @@ template class NoiseContrastiveEstimationNode<float>;
 template class NoiseContrastiveEstimationNode<double>;
 
 
-// Nodes using a random number generator (Randon Number Generator Users) should inherit from this class.
-// Currently this holds for DropoutNode and RandomSampleNode.
-// One purpuose of this class is to have a common interface for setting the seeds when setting up a network.
-class RngUser
+
+// Nodes using a random number generators  should implement from this class.
+// One purpuose of this interface is to have a common interface for setting the seeds when setting up a network.
+class IRngUser
 {
 public:
-    RNGHandle& GetRNGHandle(DEVICEID_TYPE deviceId)
+    virtual RNGHandle& GetRNGHandle(DEVICEID_TYPE deviceId) = 0;
+    virtual void SetRandomSeed(const unsigned long val) = 0;
+};
+
+// This implements IRngUser using RNGHandle.
+class RngUser : IRngUser
+{
+public:
+    RNGHandle& GetRNGHandle(DEVICEID_TYPE deviceId) override
     {
         if (!m_RNGHandle)
             m_RNGHandle = RNGHandle::Create(deviceId, m_randomSeed);
@@ -700,7 +708,7 @@ public:
     }
 
     // E.g. called from ComputationNetwork to make sure that CNTK running on different nodes will have different seed.
-    void SetRandomSeed(const unsigned long val)
+    void SetRandomSeed(const unsigned long val) override
     {
         m_randomSeed = (unsigned long)val;
 
