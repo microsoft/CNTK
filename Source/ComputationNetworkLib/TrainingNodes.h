@@ -777,7 +777,7 @@ private:
     // Assuming (falsely) that the number of tries to get a sampled set with the requested number of distinct values is always estimatedNumTries
     // the probability that a specific class in in the sampled set is (1 - (1-p)^estimatedNumTries), where p is the probablity to pick the clas in one draw.
     // The estimate can be quite a bit off but should be better than nothing. Better alternatives?
-    double EstimateInSampleFrequency(ElemType p, double estimatedNumTries) const;
+    double EstimateInSampleFrequency(double p, double estimatedNumTries) const;
 
     virtual void /*ComputationNode::*/ ForwardPropNonLooping() override;
 
@@ -786,7 +786,7 @@ private:
     const std::vector<size_t> GetWeightedSamples();
 
     // Estimate the number of tries needed to find sizeOfSampledSet samples
-    float EstimateNumberOfTries();
+    double EstimateNumberOfTries();
 
     // Runs the sampling returning a vector with the id's of the samples. The parameter nTries is used to return the number of draws that was needed
     // to get the expected number of samples.

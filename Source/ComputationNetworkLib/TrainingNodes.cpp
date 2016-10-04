@@ -40,7 +40,7 @@ void RandomSampleNode<ElemType>::Load(File& fstream, size_t modelVersion)
 }
 
 template<class ElemType>
-double RandomSampleNode<ElemType>::EstimateInSampleFrequency(ElemType p, double estimatedNumTries) const
+double RandomSampleNode<ElemType>::EstimateInSampleFrequency(double p, double estimatedNumTries) const
  {
      if (m_allowDuplicates)
      {
@@ -63,15 +63,15 @@ void RandomSampleNode<ElemType>::ForwardPropNonLooping()
     if (m_estimateInSampleFrequency) // W are in the mode the estimating the expected frequency of each class in the sampled set.
     {
         valueMatrix.SwitchToMatrixType(DENSE, matrixFormatDense, false);
-        float sumOfWeights = (float)m_samplingWeightsPrefixSum.back();
+        double sumOfWeights = m_samplingWeightsPrefixSum.back();
         const Matrix<ElemType>& samplingWeights = Input(0)->ValueAsMatrix();
 
-        float estimatedNumTries = EstimateNumberOfTries();
+        double estimatedNumTries = EstimateNumberOfTries();
 
         for (int i = 0; i < m_samplingWeightsPrefixSum.size(); i++)
         {
             // Get the sampling probablility for from the weights for i-th class.
-            ElemType samplingProb = samplingWeights.GetValue(i, 0) / sumOfWeights;
+            double samplingProb = samplingWeights.GetValue(i, 0) / sumOfWeights;
             double estimatedCount = EstimateInSampleFrequency(samplingProb, estimatedNumTries);
             valueMatrix.SetValue(i, 0, (ElemType)estimatedCount);
         }
@@ -122,7 +122,7 @@ const std::vector<size_t> RandomSampleNode<ElemType>::GetWeightedSamples()
 
 // Estimate the number of tries needed to find sizeOfSampledSet samples
 template<class ElemType>
-float RandomSampleNode<ElemType>::EstimateNumberOfTries()
+double RandomSampleNode<ElemType>::EstimateNumberOfTries()
 {
     // We estimate the average numver of tries by repeating a fixed number of experiments
     const size_t numExperiments = 10; // We choose 10 without any deep justification.
@@ -133,7 +133,7 @@ float RandomSampleNode<ElemType>::EstimateNumberOfTries()
         RunSampling(nTries);
         totalTries += nTries;
     }
-    return totalTries / (float)numExperiments;
+    return totalTries / (double)numExperiments;
 }
 
 // Runs the sampling returning a vector with the id's of the samples. The parameter nTries is used to return the number of draws that was needed
