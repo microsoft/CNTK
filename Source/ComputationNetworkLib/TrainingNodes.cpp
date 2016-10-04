@@ -40,7 +40,7 @@ void RandomSampleNode<ElemType>::Load(File& fstream, size_t modelVersion)
 }
 
 template<class ElemType>
-float RandomSampleNode<ElemType>::EstimateInSampleFrequency(float p, float estimatedNumTries) const
+double RandomSampleNode<ElemType>::EstimateInSampleFrequency(ElemType p, double estimatedNumTries) const
  {
      if (m_allowDuplicates)
      {
@@ -71,9 +71,9 @@ void RandomSampleNode<ElemType>::ForwardPropNonLooping()
         for (int i = 0; i < m_samplingWeightsPrefixSum.size(); i++)
         {
             // Get the sampling probablility for from the weights for i-th class.
-            float samplingProb = (float)samplingWeights.GetValue(i, 0) / sumOfWeights;
-            float estimatedCount = EstimateInSampleFrequency(samplingProb, estimatedNumTries);
-            valueMatrix.SetValue(i, 0, estimatedCount);
+            ElemType samplingProb = samplingWeights.GetValue(i, 0) / sumOfWeights;
+            double estimatedCount = EstimateInSampleFrequency(samplingProb, estimatedNumTries);
+            valueMatrix.SetValue(i, 0, (ElemType)estimatedCount);
         }
     }
     else /* compute random samples */

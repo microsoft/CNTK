@@ -541,7 +541,7 @@ template <class ElemType>
 /* static */ void ComputationNetwork::SetRngUserSeed(ComputationNetworkPtr net, const ComputationNodeBasePtr& node, size_t randSeedBase)
 {
     // Predicate checking if the node is derived from RngUser
-    std::function<bool(const ComputationNodeBasePtr&)> nodeIsRngUser = [](const ComputationNodeBasePtr& node) { return dynamic_cast<RngUser*>(node.get()) != nullptr; };
+    function<bool(const ComputationNodeBasePtr&)> nodeIsRngUser = [](const ComputationNodeBasePtr& node) { return dynamic_cast<RngUser*>(node.get()) != nullptr; };
 
     list<ComputationNodeBasePtr> rngUserNodes = net->GetNodesWhere(nodeIsRngUser, node);
 

@@ -738,13 +738,8 @@ protected:
 template <class ElemType>
 class RandomSampleNode : public ComputationNodeNonLooping<ElemType>, public NumInputs<1>, public RngUser
 {
-    typedef ComputationNodeNonLooping<ElemType> Base;
-    UsingComputationNodeMembersBoilerplate;
-
-    static const std::wstring TypeName()
-    {
-        return L"RandomSample";
-    }
+    typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName(){return L"RandomSample";}
 
 public:
     RandomSampleNode(DEVICEID_TYPE deviceId, const wstring& name, int sizeOfSampledSet = 0, bool allowDuplicates = false, bool estimateInSampleFrequency = false)
@@ -774,7 +769,7 @@ private:
     // Assuming (falsely) that the number of tries to get a sampled set with the requested number of distinct values is always estimatedNumTries
     // the probability that a specific class in in the sampled set is (1 - (1-p)^estimatedNumTries), where p is the probablity to pick the clas in one draw.
     // The estimate can be quite a bit off but should be better than nothing. Better alternatives?
-    float EstimateInSampleFrequency(float p, float estimatedNumTries) const;
+    double EstimateInSampleFrequency(ElemType p, double estimatedNumTries) const;
 
     virtual void /*ComputationNode::*/ ForwardPropNonLooping() override;
 

@@ -654,11 +654,12 @@ public:
         return std::vector<ComputationNodeBasePtr>(outputNodes.begin(), outputNodes.end());
     }
 
-    std::list<ComputationNodeBasePtr> GetNodesWhere(std::function<bool(const ComputationNodeBasePtr&)>& predicate, const ComputationNodeBasePtr& rootNode = nullptr)
+    std::list<ComputationNodeBasePtr> GetNodesWhere(std::function<bool(const ComputationNodeBasePtr&)>& predicate, const ComputationNodeBasePtr& rootNode = nullptr) const
     {
         std::list<ComputationNodeBasePtr> filteredNodes;
 
         // find nodes from all available nodes
+        // TODO: This distinction should not be necessary anymore. Calling GetEvalOrder(nullptr) will have the same effect.
         if (rootNode == nullptr)
         {
             for (auto nodeIter = m_nameToNodeMap.begin(); nodeIter != m_nameToNodeMap.end(); nodeIter++)
@@ -681,7 +682,7 @@ public:
         return filteredNodes;
     }
 
-    std::list<ComputationNodeBasePtr> GetNodesWithType(const wstring typeName, const ComputationNodeBasePtr& rootNode = nullptr)
+    std::list<ComputationNodeBasePtr> GetNodesWithType(const wstring typeName, const ComputationNodeBasePtr& rootNode = nullptr) const
     {
         std::function<bool(const ComputationNodeBasePtr&)> predicate = [typeName](const ComputationNodeBasePtr& node) { return node->OperationName() == typeName; };
         return GetNodesWhere(predicate, rootNode);
