@@ -63,7 +63,7 @@ MLFDataDeserializer::MLFDataDeserializer(CorpusDescriptorPtr corpus, const Confi
         LogicError("MLFDataDeserializer supports a single input stream only.");
     }
 
-    std::wstring precision;
+    std::wstring precision = cfg(L"precision", L"float");;
     m_elementType = AreEqualIgnoreCase(precision, L"float") ? ElementType::tfloat : ElementType::tdouble;
 
     ConfigParameters input = inputs.front();
@@ -97,7 +97,7 @@ MLFDataDeserializer::MLFDataDeserializer(CorpusDescriptorPtr corpus, const Confi
             "value (%" PRIu64 ")\n", dimension, (size_t)numeric_limits<IndexType>::max());
     }
 
-    std::wstring precision;
+    std::wstring precision = labelConfig(L"precision", L"float");;
     m_elementType = AreEqualIgnoreCase(precision, L"float") ? ElementType::tfloat : ElementType::tdouble;
 
     wstring labelMappingFile = labelConfig(L"labelMappingFile", L"");
