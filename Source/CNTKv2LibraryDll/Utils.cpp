@@ -13,6 +13,7 @@ using namespace std;
 
 namespace CNTK
 {
+
     // This wrapper redefines operator<< in terms of unformatted (binary) write operation.
     struct BinaryOStreamWrapper
     {
