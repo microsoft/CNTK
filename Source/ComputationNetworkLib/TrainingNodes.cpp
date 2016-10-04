@@ -13,11 +13,11 @@ void RandomSampleNode<ElemType>::CopyTo(ComputationNodeBasePtr nodeP, const std:
     Base::CopyTo(nodeP, newName, flags);
     if (flags & CopyNodeFlags::copyNodeValue)
     {
-        auto node = dynamic_pointer_cast<RandomSampleNode<ElemType>>(nodeP);
-        node->m_allowDuplicates = m_allowDuplicates;
+        auto node                         = dynamic_pointer_cast<RandomSampleNode<ElemType>>(nodeP);
+        node->m_allowDuplicates           = m_allowDuplicates;
         node->m_estimateInSampleFrequency = m_estimateInSampleFrequency;
-        node->m_sizeOfSampledSet = m_sizeOfSampledSet;
-        node->m_randomSeed = m_randomSeed;
+        node->m_sizeOfSampledSet          = m_sizeOfSampledSet;
+        node->m_randomSeed                = m_randomSeed;
     }
 }
 
