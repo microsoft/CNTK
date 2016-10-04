@@ -97,18 +97,14 @@ void RandomSampleNode<ElemType>::ForwardPropNonLooping()
 template<class ElemType>
 void RandomSampleNode<ElemType>::UpdateWeightsPrefixSum()
 {
-    // If sampling probabilites have changed update m_samplingWeightsPrefixSum
-    if (m_samplingWeightsPrefixSum.empty() || TimeStamp::IsOlderThan(*Input(0)))
+    const Matrix<ElemType>& samplingWeights = Input(0)->ValueAsMatrix();
+    m_samplingWeightsPrefixSum.clear();
+    double runningWeightsSum = 0;
+    for (int iClass = 0; iClass < samplingWeights.GetNumRows(); iClass++)
     {
-        const Matrix<ElemType>& samplingWeights = Input(0)->ValueAsMatrix();
-        m_samplingWeightsPrefixSum.clear();
-        double runningWeightsSum = 0;
-        for (int iClass = 0; iClass < samplingWeights.GetNumRows(); iClass++)
-        {
-            ElemType currentWeight = samplingWeights.GetValue(iClass, 0);
-            runningWeightsSum += currentWeight;
-            m_samplingWeightsPrefixSum.push_back(runningWeightsSum);
-        }
+        ElemType currentWeight = samplingWeights.GetValue(iClass, 0);
+        runningWeightsSum += currentWeight;
+        m_samplingWeightsPrefixSum.push_back(runningWeightsSum);
     }
 }
 
