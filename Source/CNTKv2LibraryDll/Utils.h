@@ -381,4 +381,37 @@ namespace CNTK
 
         return L"(" + name + L")";
     }
+
+    static const std::wstring UidPrefix = L"__v2libuid__";
+    static const std::wstring NamePrefix = L"__v2libname__";
+
+    inline std::wstring CNTKInternalNodeNameFromUidAndName(const std::wstring& uid, const std::wstring& name)
+    {
+        return UidPrefix + uid + NamePrefix + name;
+    }
+
+    inline std::pair<std::wstring, std::wstring> UidAndNameFromCNTKInternalNodeName(const std::wstring& CNTKInternalNodeName, VariableKind varKind)
+    {
+        std::wstring uid, name;
+        auto uidPrefixBeginPos = CNTKInternalNodeName.find(UidPrefix);
+        if (uidPrefixBeginPos != std::wstring::npos)
+        {
+            auto uidBeginPos = uidPrefixBeginPos + UidPrefix.length();
+            auto namePrefixBeginPos = CNTKInternalNodeName.find(NamePrefix, uidBeginPos);
+            if (namePrefixBeginPos == std::wstring::npos)
+                LogicError("CNTK internal node name found to contain uid but not name!");
+
+            auto nameBeginPos = namePrefixBeginPos + NamePrefix.length();
+            uid = CNTKInternalNodeName.substr(uidBeginPos, namePrefixBeginPos - uidBeginPos);
+            name = CNTKInternalNodeName.substr(nameBeginPos);
+        }
+        else
+        {
+            name = CNTKInternalNodeName;
+            uid = Internal::GenerateUid(varKind);
+        }
+
+        return{ uid, name };
+    }
 }
+

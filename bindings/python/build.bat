@@ -15,9 +15,15 @@ python .\setup.py build_ext -if -c msvc --plat-name=win-amd64
 set PATH=%cd%\..\..\x64\Release;%PATH%
 set PYTHONPATH=%cd%;%cd%\examples;%PYTHONPATH%
 
+cd cntk\tests
+echo RUNNING cntk unit tests...
+pytest --deviceid gpu
+echo(
+cd ..\..\..
+
 cd cntk\ops\tests
 echo RUNNING cntk\ops unit tests...
-pytest
+pytest --deviceid gpu
 echo(
 cd ..\..\..
 

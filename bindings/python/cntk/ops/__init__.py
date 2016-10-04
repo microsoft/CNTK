@@ -25,8 +25,8 @@ def combine(operands, name=''):
     Returns:
         :class:`cntk.Function`
     '''
-    from cntk import combine
-    from cntk import Variable
+    from cntk.cntk_py import combine
+    from cntk.cntk_py import Variable
     converted_operands = list()
     for o in operands:
         if isinstance(o, Variable):
@@ -1459,7 +1459,7 @@ def input_variable(shape, data_type=np.float32, needs_gradient=True, is_sparse=F
     return input_variable(shape, is_sparse, dtype, needs_gradient, name, dynamic_axes)
 
 
-def placeholder_variable(shape, dynamic_axes=[Axis.default_dynamic_axis(), Axis.default_batch_axis()]):
+def placeholder_variable(shape, dynamic_axes=Axis.default_input_variable_dynamic_axes, name=''):
     '''
     It creates a variable place holder for recurrence networks, when the network's dynamic axes
     are unfolded, the place holder will get assigned a variable along the correspondent dynamic axis.
@@ -1474,7 +1474,7 @@ def placeholder_variable(shape, dynamic_axes=[Axis.default_dynamic_axis(), Axis.
     from cntk.cntk_py import placeholder_variable
     shape = sanitize_shape(shape)
     dynamic_axes = sanitize_dynamic_axes(dynamic_axes)
-    return placeholder_variable(shape, dynamic_axes)
+    return placeholder_variable(shape, name, dynamic_axes)
 
 
 def parameter(shape=None, init=None, device=None, name=''):
