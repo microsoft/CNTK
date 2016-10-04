@@ -1032,16 +1032,15 @@ def dynamic_axes(self):
         std::vector<size_t> dimensions_cntk = (*self).Shape().Dimensions();
         std::vector<size_t> dimensions;
 
-        size_t num_elements = 0;
+        // We have at least one element. In case the shape is empty (e.g.
+        // '()'), we have a scalar, which we need to copy (e.g. a constant).
+        size_t num_elements = 1;
 
         // CNTK uses column major, thus we reverse the shape
         for (int i=dimensions_cntk.size()-1; i>=0; i--)
         {
             dimensions.push_back(dimensions_cntk[i]);            
-            if (num_elements == 0) 
-                num_elements = dimensions_cntk[i];
-            else
-                num_elements *= dimensions_cntk[i];
+            num_elements *= dimensions_cntk[i];
         }
 
         npy_intp* shape = reinterpret_cast<npy_intp*>(&dimensions[0]);
