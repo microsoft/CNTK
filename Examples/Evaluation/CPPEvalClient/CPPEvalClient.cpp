@@ -9,6 +9,12 @@
 #ifdef _WIN32
 #include "Windows.h"
 #endif
+#include <time.h>
+#include <chrono>
+
+
+//Extended eval allows to pass features in batches of different size as long as each feature vector has the same dimension as the network input. 
+#define EXTENDED_EVAL
 
 using namespace Microsoft::MSR::CNTK;
 
@@ -34,10 +40,16 @@ typedef std::map<std::wstring, std::vector<float>*> Layer;
 int main(int argc, char* argv[])
 {
     // Get the binary path (current working directory)
-    argc = 0;   
+    argc = 0;
     std::string app = argv[0];
-    std::string path; 
+    std::string path;
+
+#ifdef EXTENDED_EVAL
+    IEvaluateModelExtended<float> *model;
+#else
     IEvaluateModel<float> *model;
+#endif
+
     size_t pos;
     int ret;
 
@@ -54,7 +66,7 @@ int main(int argc, char* argv[])
     // This relative path assumes launching from CNTK's binary folder, e.g. build/cpu/release/bin/
     const std::string modelWorkingDirectory = path + "/../../../../Examples/Image/MNIST/Data/";
 #endif
-    const std::string modelFilePath = modelWorkingDirectory + "../Output/Models/01_OneHidden";
+    const std::string modelFilePath = "D:/src1/private/data/dev/sr/src/AM/enu_ls4m_lstm/amv2/Tensor.sampling.se.67"; // "C:\\musor\\TFLSTM\\tflstm.model.0"; //;
 
     try
     {
@@ -65,7 +77,7 @@ int main(int argc, char* argv[])
             return(1);
         }
 
-        GetEvalF(&model);
+        GetEvalExtendedF(&model);
 
         // Load model with desired outputs
         std::string networkConfiguration;
@@ -73,12 +85,52 @@ int main(int argc, char* argv[])
         // When specifying outputNodeNames in the configuration, it will REPLACE the list of output nodes 
         // with the ones specified.
         //networkConfiguration += "outputNodeNames=\"h1.z:ol.z\"\n";
-        networkConfiguration += "modelPath=\"" + modelFilePath + "\"";
+        networkConfiguration += "modelPath=\"" + modelFilePath + "\" \n";
+        networkConfiguration += "numCPUThreads=1";
         model->CreateNetwork(networkConfiguration);
+
+#ifdef EXTENDED_EVAL
+        // Initialize start
+
+        model->StartForwardEvaluation({ model->GetOutputSchema()[0].m_name });
+        auto m_inputBuffer = model->GetInputSchema().CreateBuffers<float>({ 1 });
+        auto m_outputBuffer = model->GetOutputSchema().CreateBuffers<float>({ 1 });
+        unsigned inDim = 80; // 80;// 957;
+        bool m_resetRNN = true;
+
+        // Init input buffer:
+        for (unsigned i = 0; i < inDim; i++)
+            m_inputBuffer[0].m_buffer.push_back(0.0);
+        // Initialize end
+#else
+        GetEvalF(&model);
+#endif
 
         // get the model's layers dimensions
         std::map<std::wstring, size_t> inDims;
         std::map<std::wstring, size_t> outDims;
+
+#ifdef EXTENDED_EVAL
+        // Eval start
+        auto start_time = std::chrono::high_resolution_clock::now();
+
+        for (unsigned i = 0; i < inDim; i++)
+            m_inputBuffer[0].m_buffer[i] = (float)i; //specify actual value
+        for (int k = 0; k < 1000; k++)
+        {
+            model->ForwardPass(m_inputBuffer, m_outputBuffer, m_resetRNN);
+            m_resetRNN = false;
+        }
+
+        auto end_time = std::chrono::high_resolution_clock::now();
+        auto time = end_time - start_time;
+        auto g_fSenoneEvalTimeInSecond = std::chrono::duration_cast<std::chrono::milliseconds>(time).count();
+
+        fprintf(stderr, "Time spent '%d' output:\n", (int)g_fSenoneEvalTimeInSecond);
+
+
+        // Eval end
+#else
         model->GetNodeDimensions(inDims, NodeGroup::nodeInput);
         model->GetNodeDimensions(outDims, NodeGroup::nodeOutput);
 
@@ -109,7 +161,7 @@ int main(int argc, char* argv[])
         {
             fprintf(stderr, "%f\n", value);
         }
-
+#endif
         // This pattern is used by End2EndTests to check whether the program runs to complete.
         fprintf(stderr, "Evaluation complete.\n");
         ret = 0;
