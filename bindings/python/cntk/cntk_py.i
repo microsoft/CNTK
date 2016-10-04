@@ -46,7 +46,6 @@
 %{
 #define SWIG_FILE_WITH_INIT
 %}
-%include "numpy.i"
 %init %{
     import_array();
 %}
@@ -58,8 +57,6 @@
 def dynamic_axes(self):
     return tuple(reversed($action(self)))
 %}
-
-%apply (float* OUT_ARRAY1, int DIM1) {(float* py_data, int len)}
 
 %define %eq_for(DATA_TYPE, EQ)
 %rename(EQ) operator==(const DATA_TYPE&, const DATA_TYPE&);
@@ -91,6 +88,9 @@ def dynamic_axes(self):
 
 %{
     #include "CNTKLibrary.h"
+    #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
+    #include "numpy/ndarraytypes.h"
+    #include "numpy/arrayobject.h"
     using namespace CNTK;
 %}
 

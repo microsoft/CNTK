@@ -1,25 +1,27 @@
 setlocal
 
-set PATH=%cd%\..\..\x64\Release;%PATH%
-set PYTHONPATH=%cd%;%cd%\examples;%PYTHONPATH%
+cd "%~dp0"
 
-cd cntk\tests
+set PATH=%CD%\..\..\x64\Release;%PATH%
+set PYTHONPATH=%CD%;%CD%\examples;%PYTHONPATH%
+
+pushd cntk\tests
 echo RUNNING cntk unit tests...
 pytest --deviceid gpu
 echo(
-cd ..\..\..
+popd
 
-cd cntk\ops\tests
+pushd cntk\ops\tests
 echo RUNNING cntk\ops unit tests...
 pytest
 echo(
-cd ..\..\..
+popd
 
-cd examples\CifarResNet
+pushd examples\CifarResNet
 echo RUNNING Cifar ResNet example...
 python CifarResNet.py
 echo(
-cd ..\..
+popd
 
 echo RUNNING MNIST feed-forward classifier example...
 python examples\MNIST\SimpleMNIST.py
