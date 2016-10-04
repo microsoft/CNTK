@@ -24,9 +24,17 @@
 %template() std::vector<size_t>;
 %template() std::vector<bool>;
 %template() std::vector<double>;
+%template() std::vector<std::vector<size_t>>;
+%template() std::vector<std::vector<float>>;
+%template() std::vector<std::vector<double>>;
+
 %template() std::vector<CNTK::Variable>;
+%template() std::vector<CNTK::Parameter>;
+%template() std::vector<CNTK::Constant>;
 %template() std::vector<CNTK::Axis>;
+%template() std::vector<CNTK::DeviceDescriptor>;
 %template() std::vector<CNTK::StreamConfiguration>;
+//%template() std::vector<CNTK::DictionaryValue>;
 %template() std::vector<std::shared_ptr<CNTK::Function>>;
 
 // They are defined twice under CNTK::Internal and under CNTK namespace
