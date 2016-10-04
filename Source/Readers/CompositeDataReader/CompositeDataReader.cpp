@@ -167,7 +167,12 @@ void CompositeDataReader::CreateDeserializers(const ConfigParameters& readerConf
     bool primary = true;  // Currently, the first deserializer becomes primary - it drives chunking.
     for (size_t i = 0; i < deserializerConfigs.size(); ++i)
     {
-        IDataDeserializerPtr d = CreateDeserializer(deserializerConfigs[i], primary);
+        // TODO: Should go away in the future. Framing can be done on top of deserializers.
+        ConfigParameters p = deserializerConfigs[i];
+        p.Insert("frameMode", m_packingMode == PackingMode::sample ? "true" : "false");
+        p.Insert("precision", m_precision);
+
+        IDataDeserializerPtr d = CreateDeserializer(p, primary);
         primary = false;
         m_deserializers.push_back(d);
     }
@@ -232,7 +237,10 @@ void CompositeDataReader::CreateTransforms(const ConfigParameters& deserializerC
         argvector<ConfigParameters> transforms = input("transforms");
         for (size_t j = 0; j < transforms.size(); ++j)
         {
-            TransformerPtr transformer = CreateTransformer(transforms[j], defaultModule, std::wstring());
+            ConfigParameters p = transforms[j];
+            p.Insert("precision", deserializerConfig("precision"));
+
+            TransformerPtr transformer = CreateTransformer(p, defaultModule, std::wstring());
             m_transforms.push_back(Transformation{transformer, inputName});
         }
 

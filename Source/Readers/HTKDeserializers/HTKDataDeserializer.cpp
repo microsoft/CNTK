@@ -9,6 +9,7 @@
 #include "HTKDataDeserializer.h"
 #include "ConfigHelper.h"
 #include "Basics.h"
+#include "StringUtil.h"
 
 // TODO: This will be removed when dependency on old code is eliminated.
 // Currently this fixes the linking.
@@ -44,6 +45,7 @@ HTKDataDeserializer::HTKDataDeserializer(
 
     ConfigParameters input = inputs.front();
     auto inputName = input.GetMemberIds().front();
+    std::wstring precision = cfg(L"precision", L"float");
 
     m_expandToPrimary = cfg(L"expandToUtterance", false);
     if (m_expandToPrimary && m_primary)
@@ -56,7 +58,7 @@ HTKDataDeserializer::HTKDataDeserializer(
     ConfigHelper config(streamConfig);
     auto context = config.GetContextWindow();
 
-    m_elementType = config.GetElementType();
+    m_elementType = AreEqualIgnoreCase(precision,  L"float") ? ElementType::tfloat : ElementType::tdouble;
     m_dimension = config.GetFeatureDimension();
     m_dimension = m_dimension * (1 + context.first + context.second);
 
