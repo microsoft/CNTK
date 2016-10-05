@@ -22,12 +22,12 @@ Must train epochs in exactly same order and parameters:
 Epochs must be finished with expected results:
     patterns:
       - Finished Epoch[{{integer}} of {{integer}}]
-      - CrossEntropyWithSoftmax = {{float,tolerance=2.0%}}
-      - EvalClassificationError = {{float,tolerance=2.0%}}
+#      - CrossEntropyWithSoftmax = {{float,tolerance=2.0%}}
+#      - EvalClassificationError = {{float,tolerance=2.0%}}
       - learningRatePerSample = {{float,tolerance=0.001%}}
 
 Per-minibatch training results must match:
     patterns:
       - Epoch[{{integer}} of {{integer}}]-Minibatch[{{integer}}-{{integer}}
       - " * {{integer}}; "
-      - CrossEntropyWithSoftmax = {{float,tolerance=2.0%}}
+#      - CrossEntropyWithSoftmax = {{float,tolerance=2.0%}}
