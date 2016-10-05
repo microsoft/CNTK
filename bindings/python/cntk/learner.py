@@ -82,7 +82,7 @@ def sgd(parameters, lr,
         parameters (`list` of parameters): list of network parameters to tune.
          These can be obtained by the '.parameters()' method of the root
          operator.
-        lr ('float' or list of `float`s or output of `:func:learning_rates_per_sample`): learning
+        lr ('float' or output of `:func:learning_rates_per_sample`): learning
          rates per sample.  
         l1_regularization_weight ('float', optional): the L1 regularization weight per sample,
          defaults to 0.0
@@ -119,7 +119,7 @@ def momentum_sgd(parameters, lr, momentums,
     Args:
         parameters (list of parameters): list of network parameters to tune.
          These can be obtained by the '.parameters()' function of 
-        lr ('float' or list of `float`s or output of `:func:learning_rates_per_sample`): learning
+        lr ('float' or output of `:func:learning_rates_per_sample`): learning
          rates per sample.  
         momentums (`float` or output of `:func:momentums_per_sample`): momentum values per sample.
          Refer to https://github.com/Microsoft/CNTK/wiki/SGD-block#converting-learning-rate-and-momentum-parameters-from-other-toolkits
@@ -162,7 +162,7 @@ def nesterov(parameters, lr, momentums,
     Args:
         parameters (list of parameters): list of network parameters to tune.
          These can be obtained by the '.parameters()' function of 
-        lr ('float' or list of `float`s or output of `:func:learning_rates_per_sample`): learning
+        lr ('float' or output of `:func:learning_rates_per_sample`): learning
          rates per sample.  
         momentums (`float` or output of `:func:momentums_per_sample`): momentum values per sample.
          Refer to https://github.com/Microsoft/CNTK/wiki/SGD-block#converting-learning-rate-and-momentum-parameters-from-other-toolkits
@@ -205,7 +205,7 @@ def adagrad(parameters, lr, need_ave_multiplier=True,
     Args:
         parameters (list of parameters): list of network parameters to tune.
          These can be obtained by the '.parameters()' function of 
-        lr ('float' or list of `float`s or output of `:func:learning_rates_per_sample`): learning
+        lr ('float' or output of `:func:learning_rates_per_sample`): learning
          rates per sample.  
          allowed, but schedules will be added soon
         need_ave_multiplier ('bool', default): 
@@ -246,7 +246,7 @@ def fsadagrad(parameters, lr, momentums,
     Args:
         parameters (list of parameters): list of network parameters to tune.
          These can be obtained by the '.parameters()' function of 
-        lr ('float' or list of `float`s or output of `:func:learning_rates_per_sample`): learning
+        lr ('float' or output of `:func:learning_rates_per_sample`): learning
          rates per sample.  
         momentums (`float` or output of `:func:momentums_per_sample`): momentum values per sample.
          Refer to https://github.com/Microsoft/CNTK/wiki/SGD-block#converting-learning-rate-and-momentum-parameters-from-other-toolkits
