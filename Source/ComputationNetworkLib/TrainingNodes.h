@@ -744,20 +744,20 @@ protected:
 // --------------------------------------------------------------------------------------------------------------------------------------------------
 
 template <class ElemType>
-class RandomSampleNode : public ComputationNodeNonLooping<ElemType>, public NumInputs<1>, public RngUser
+class RandomSampleNodeBase : public ComputationNodeNonLooping<ElemType>, public NumInputs<1>, public RngUser
 {
     typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
-    static const std::wstring TypeName(){return L"RandomSample";}
+    static const std::wstring TypeName(){return L"RandomSampleNodeBase";}
 
 public:
-    RandomSampleNode(DEVICEID_TYPE deviceId, const wstring& name, int sizeOfSampledSet = 0, bool allowDuplicates = false, bool estimateInSampleFrequency = false)
-        : Base(deviceId, name), m_sizeOfSampledSet(sizeOfSampledSet), m_allowDuplicates(allowDuplicates), m_estimateInSampleFrequency(estimateInSampleFrequency)
+    RandomSampleNodeBase(DEVICEID_TYPE deviceId, const wstring& name, int sizeOfSampledSet = 0, bool allowDuplicates = false)
+        : Base(deviceId, name), m_sizeOfSampledSet(sizeOfSampledSet), m_allowDuplicates(allowDuplicates)
     {
         SetRandomSeed((unsigned long)CreateUniqId());
     }
 
-    RandomSampleNode(const ScriptableObjects::IConfigRecordPtr configp)
-        : RandomSampleNode(CPUDEVICE, L"<placeholder>", configp->Get(L"sizeOfSampledSet"), configp->Get(L"allowDuplicates"), configp->Get(L"estimateInSampleFrequency"))
+    RandomSampleNodeBase(const ScriptableObjects::IConfigRecordPtr configp)
+        : RandomSampleNodeBase(CPUDEVICE, L"<placeholder>", configp->Get(L"sizeOfSampledSet"), configp->Get(L"allowDuplicates"))
     {
         AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
     }
@@ -768,25 +768,9 @@ public:
 
     virtual void Load(File& fstream, size_t modelVersion) override;
 
-private:
-    // Code and comment below is nearly a copy of some tensorflow code 
-    // (see function 'ExpectedCountHelper' in https://github.com/tensorflow/tensorflow/blob/master/tensorflow/core/kernels/range_sampler.cc).
-    // How to cite properly?
-
-    // Approximates the expected number of occurences of a class in the sampled set.
-    // Assuming (falsely) that the number of tries to get a sampled set with the requested number of distinct values is always estimatedNumTries
-    // the probability that a specific class in in the sampled set is (1 - (1-p)^estimatedNumTries), where p is the probablity to pick the clas in one draw.
-    // The estimate can be quite a bit off but should be better than nothing. Better alternatives?
-    double EstimateInSampleFrequency(double p, double estimatedNumTries) const;
-
-    virtual void /*ComputationNode::*/ ForwardPropNonLooping() override;
+protected:
 
     void UpdateWeightsPrefixSum();
-
-    const std::vector<size_t> GetWeightedSamples();
-
-    // Estimate the number of tries needed to find sizeOfSampledSet samples
-    double EstimateNumberOfTries();
 
     // Runs the sampling returning a vector with the id's of the samples. The parameter nTries is used to return the number of draws that was needed
     // to get the expected number of samples.
@@ -798,7 +782,9 @@ public:
         // This node does not propagate gradients.
     }
 
-    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override;
+    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
+    {//dummy
+    }
 
     virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
 
@@ -806,14 +792,61 @@ public:
     {
         return false;
     }
+    virtual void /*ComputationNode::*/ ForwardPropNonLooping() override{//dummy
+    }
 
-    virtual bool IsOutOfDateWrtInputs() const override;
 
-private:
-    bool m_allowDuplicates;        // The node can create samples allowing for duplicates (sampling with replacement) or not (sampling without replacement).
-    bool m_estimateInSampleFrequency; // Control wether to create random samples or estimate in sample frequencies.
-    int m_sizeOfSampledSet;                // Requested size of sample in case of run-mode = CREATE_SAMPLES.
+protected:
+    bool m_allowDuplicates; // The node can create samples allowing for duplicates (sampling with replacement) or not (sampling without replacement).
+    int m_sizeOfSampledSet; // Requested size of sample in case of run-mode = CREATE_SAMPLES.
     std::vector<double> m_samplingWeightsPrefixSum;
+};
+
+
+template<class ElemType> 
+class RandomSampleNode : public RandomSampleNodeBase<ElemType>
+{
+    typedef RandomSampleNodeBase<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName(){ return L"RandomSampleNode"; }
+
+public:
+    RandomSampleNode(DEVICEID_TYPE deviceId, const wstring& name, int sizeOfSampledSet = 0, bool allowDuplicates = false)
+        : Base(deviceId, name, sizeOfSampledSet, allowDuplicates)
+    {}
+
+    RandomSampleNode(const ScriptableObjects::IConfigRecordPtr configp)
+        : RandomSampleNode(CPUDEVICE, L"<placeholder>", configp->Get(L"sizeOfSampledSet"), configp->Get(L"allowDuplicates"))
+    {}
+
+    virtual void /*ComputationNode::*/ ForwardPropNonLooping() override;
+    const std::vector<size_t> GetWeightedSamples();
+    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override;
+    virtual bool IsOutOfDateWrtInputs() const override;
+};
+
+template<class ElemType>
+class RandomSampleInclusionFrequencyNode : public RandomSampleNodeBase<ElemType>
+{
+    typedef RandomSampleNodeBase<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName(){ return L"RandomSampleInclusionFrequencyNode"; }
+public:
+    RandomSampleInclusionFrequencyNode(DEVICEID_TYPE deviceId, const wstring& name, int sizeOfSampledSet = 0, bool allowDuplicates = false)
+        : Base(deviceId, name, sizeOfSampledSet, allowDuplicates)
+    {}
+
+    RandomSampleInclusionFrequencyNode(const ScriptableObjects::IConfigRecordPtr configp)
+        : RandomSampleInclusionFrequencyNode(CPUDEVICE, L"<placeholder>", configp->Get(L"sizeOfSampledSet"), configp->Get(L"allowDuplicates"))
+    {}
+    virtual void /*ComputationNode::*/ ForwardPropNonLooping() override;
+    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override;
+private:
+    // Approximates the expected number of occurences of a class in the sampled set.
+    // Assuming (falsely) that the number of tries to get a sampled set with the requested number of distinct values is always estimatedNumTries
+    // the probability that a specific class in in the sampled set is (1 - (1-p)^estimatedNumTries), where p is the probablity to pick the clas in one draw.
+    // The estimate can be quite a bit off but should be better than nothing. Better alternatives?
+    double EstimateInSampleFrequency(double p, double estimatedNumTries) const;
+
+    double EstimateNumberOfTries();
 };
 
 // -----------------------------------------------------------------------
