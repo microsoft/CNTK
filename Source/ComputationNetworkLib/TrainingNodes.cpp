@@ -147,24 +147,6 @@ bool RandomSampleNode<ElemType>::IsOutOfDateWrtInputs() const
     return true;
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// Code and comment below is nearly a copy of some tensorflow code 
-// (see function 'ExpectedCountHelper' in https://github.com/tensorflow/tensorflow/blob/master/tensorflow/core/kernels/range_sampler.cc).
-// How to cite properly?
 template<class ElemType>
 double RandomSampleInclusionFrequencyNode<ElemType>::EstimateNumberOfTries()
 {
@@ -178,6 +160,22 @@ double RandomSampleInclusionFrequencyNode<ElemType>::EstimateNumberOfTries()
         totalTries += nTries;
     }
     return totalTries / (double)numExperiments;
+}
+
+// Estimates the expected number of occurences of each class in the sampled set.
+// For sampling without replacement we use estimate using average number of tries. (Inspired by TensorFlow)
+// BUGBUG: Consider to reimplement using a less biased estimate as proposed by Nikos.
+template<class ElemType>
+double RandomSampleInclusionFrequencyNode<ElemType>::EstimateInSampleFrequency(double p, double estimatedNumTries) const
+{
+    if (m_allowDuplicates)
+    {
+        return p * m_sizeOfSampledSet;
+    }
+    else /* No duplicates allowed. Estimated count is same as probability of inclusion. */
+    {
+        return -expm1(estimatedNumTries * log1p(-p));
+    }
 }
 
 template<class ElemType>
@@ -215,19 +213,6 @@ void RandomSampleInclusionFrequencyNode<ElemType>::Validate(bool isFinalValidati
 
     // Output: one vector containing the estimated in sample frequency for each class.
     SetDims(TensorShape(nClasses, 1), false);
-}
-
-template<class ElemType>
-double RandomSampleInclusionFrequencyNode<ElemType>::EstimateInSampleFrequency(double p, double estimatedNumTries) const
-{
-    if (m_allowDuplicates)
-    {
-        return p * m_sizeOfSampledSet;
-    }
-    else /* No duplicates allowed. Estimated count is same as probability of inclusion. */
-    {
-        return -expm1(estimatedNumTries * log1p(-p));
-    }
 }
 
 template class RandomSampleNode<float>;
