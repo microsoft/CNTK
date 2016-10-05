@@ -1,24 +1,30 @@
 setlocal
 
-SET PATH=%PATH%;C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC;C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\bin
-SET MSSdk=1
-SET DISTUTILS_USE_SDK=1
-call vcvarsall amd64
+cd "%~dp0"
 
-cd cntk\swig
-call "swig.bat"
+call "C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\vcvarsall" amd64
 
-cd ..\..
+set MSSdk=1
+set DISTUTILS_USE_SDK=1
 
-python .\setup.py build_ext -if -c msvc --plat-name=win-amd64
+python .\setup.py build_ext --inplace --force
+if errorlevel 1 exit /b 1
 
-set PATH=%cd%\..\..\x64\Release;%PATH%
-set PYTHONPATH=%cd%;%cd%\examples;%PYTHONPATH%
+set PATH=%CD%\..\..\x64\Release;%PATH%
+set PYTHONPATH=%CD%;%CD%\examples;%PYTHONPATH%
 
-cd cntk\ops\tests
-echo RUNNING cntk\ops unit tests...
-pytest
+pushd cntk\tests
+echo RUNNING cntk unit tests...
+pytest --deviceid gpu
+if errorlevel 1 exit /b 1
 echo(
-cd ..\..\..
+popd
+
+pushd cntk\ops\tests
+echo RUNNING cntk\ops unit tests...
+pytest --deviceid gpu
+if errorlevel 1 exit /b 1
+echo(
+popd
 
 endlocal

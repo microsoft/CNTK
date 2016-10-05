@@ -13,6 +13,7 @@
 #include "../HTKMLFReader/htkfeatio.h"
 #include "../HTKMLFReader/msra_mgram.h"
 #include "latticearchive.h"
+#include "StringUtil.h"
 
 
 #undef max // max is defined in minwindef.h
@@ -62,6 +63,9 @@ MLFDataDeserializer::MLFDataDeserializer(CorpusDescriptorPtr corpus, const Confi
         LogicError("MLFDataDeserializer supports a single input stream only.");
     }
 
+    std::wstring precision = cfg(L"precision", L"float");;
+    m_elementType = AreEqualIgnoreCase(precision, L"float") ? ElementType::tfloat : ElementType::tdouble;
+
     ConfigParameters input = inputs.front();
     auto inputName = input.GetMemberIds().front();
 
@@ -93,6 +97,9 @@ MLFDataDeserializer::MLFDataDeserializer(CorpusDescriptorPtr corpus, const Confi
             "value (%" PRIu64 ")\n", dimension, (size_t)numeric_limits<IndexType>::max());
     }
 
+    std::wstring precision = labelConfig(L"precision", L"float");;
+    m_elementType = AreEqualIgnoreCase(precision, L"float") ? ElementType::tfloat : ElementType::tdouble;
+
     wstring labelMappingFile = labelConfig(L"labelMappingFile", L"");
     InitializeChunkDescriptions(corpus, config, labelMappingFile, dimension);
     InitializeStream(name, dimension);
@@ -119,8 +126,6 @@ void MLFDataDeserializer::InitializeChunkDescriptions(CorpusDescriptorPtr corpus
         msra::asr::htkmlfreader<msra::asr::htkmlfentry,
         msra::lattices::lattice::htkmlfwordsequence >> ::value,
         "Type 'msra::asr::htkmlfreader' should be move constructible!");
-
-    m_elementType = config.GetElementType();
 
     MLFUtterance description;
     size_t numClasses = 0;

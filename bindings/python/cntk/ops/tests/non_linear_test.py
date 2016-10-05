@@ -63,7 +63,7 @@ TENSORS = [
 
 
 @pytest.mark.parametrize("operand", TENSORS)
-def _disabled_test_op_sigmoid(operand, device_id, precision):
+def test_op_sigmoid(operand, device_id, precision):
     s = 1.0 / (1.0 + np.exp(-AA(operand, dtype=PRECISION_TO_TYPE[precision])))
     expected_forward = [AA([s])]
 
@@ -272,7 +272,7 @@ SAMPLES = [  # 2 samples having 4 classes
 
 
 @pytest.mark.parametrize("sample", SAMPLES)
-def _disabled_test_op_softmax(sample, device_id, precision):
+def test_op_softmax(sample, device_id, precision):
     t = AA(sample, dtype=PRECISION_TO_TYPE[precision])
     assert len(t.shape) == 1
 

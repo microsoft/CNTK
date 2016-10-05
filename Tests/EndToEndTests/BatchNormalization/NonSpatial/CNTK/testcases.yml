@@ -1,4 +1,4 @@
-dataDir: ../../../../../Examples/Image/MNIST/Data
+dataDir: ../../../../../Examples/Image/DataSets/MNIST
 
 tags:
     # CPU training for BatchNormalization not supported.

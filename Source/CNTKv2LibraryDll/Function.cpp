@@ -419,12 +419,38 @@ namespace CNTK
         if (op == PrimitiveOpType::Combine)
             return inputs;
 
-        // TODO: We are just using the primary operand's DataType as output node's DataType. Is this always correct?
+        // We use the first non-constant input operand's DataType as the output DataType
+        // In case there are no non-constant known DataTypes, we just pick the first known operand DataType
+        // Also, all the known DataTypes of operands should match except for constants where coercion is allowed
+        DataType firstKnownInputDataType = DataType::Unknown;
         DataType outputDataType = DataType::Unknown;
         NDShape outputShape;
         size_t i = 0;
-        while ((outputDataType == DataType::Unknown) && (i < inputs.size()))
-            outputDataType = inputs[i++].GetDataType();
+        while (i < inputs.size())
+        {
+            auto input = inputs[i++];
+            auto inputDataType = input.GetDataType();
+            if (inputDataType != DataType::Unknown)
+            {
+                if (firstKnownInputDataType == DataType::Unknown)
+                    firstKnownInputDataType = inputDataType;
+
+                if (outputDataType == DataType::Unknown)
+                {
+                    if (!input.IsConstant())
+                        outputDataType = inputDataType;
+                }
+                else
+                {
+                    // The DataType of all operands should match except for Constants where we allow coercion
+                    if ((inputDataType != DataType::Unknown) && (inputDataType != outputDataType) && !input.IsConstant())
+                        InvalidArgument("Primitive function with op type %S has operands with different DataTypes %s and %s", PrimitiveOpTypeName(op).c_str(), DataTypeName(outputDataType), DataTypeName(inputDataType));
+                }
+            }
+        }
+
+        if (outputDataType == DataType::Unknown)
+            outputDataType = firstKnownInputDataType;
 
         if (outputDataType == DataType::Unknown)
             InvalidArgument("The DataType of all the input operands of primitive function with op type %S are unknown", PrimitiveOpTypeName(op).c_str());
@@ -749,9 +775,10 @@ namespace CNTK
         variableToNodeMap[variable] = nullptr;
 
         std::shared_ptr<ComputationNode<ElementType>> computationNodePtr;
+        auto internalNodeName = CNTKInternalNodeNameFromUidAndName(variable.Uid(), variable.Name());
         if (variable.IsParameter() || variable.IsConstant())
         {
-            computationNodePtr = builder.CreateLearnableParameter(variable.Uid(), AsTensorShape(variable.Shape()));
+            computationNodePtr = builder.CreateLearnableParameter(internalNodeName, AsTensorShape(variable.Shape()));
             network->InitLearnableParameters(computationNodePtr, L"fixedValue", 0); // must call this to follow protocol; can overwrite later
             if (!variable.NeedsGradient())
                 computationNodePtr->SetLearningRateMultiplier(0.0);
@@ -789,9 +816,9 @@ namespace CNTK
                 network->AddNodeToNetAndAttachInputs(New<DynamicAxisNode<ElementType>>(network->GetDeviceId(), internalDynamicAxisName), {});
 
             if (IsSparseInput(variable))
-                computationNodePtr = builder.CreateSparseInputNode(variable.Uid(), AsTensorShape(variable.Shape()), internalDynamicAxisName);
+                computationNodePtr = builder.CreateSparseInputNode(internalNodeName, AsTensorShape(variable.Shape()), internalDynamicAxisName);
             else
-                computationNodePtr = builder.CreateInputNode(variable.Uid(), AsTensorShape(variable.Shape()), internalDynamicAxisName);
+                computationNodePtr = builder.CreateInputNode(internalNodeName, AsTensorShape(variable.Shape()), internalDynamicAxisName);
 
             if (variable.NeedsGradient())
             {
@@ -2219,6 +2246,12 @@ namespace CNTK
                             size_t maxTempMemSizeInSamples,
                             const std::wstring& name)
     {
+        // Currently we require that the Convolution function's operand have a dynamic axis since otherwise
+        // the internal implementation incorrectly infers the batch axis dimension by picking up the first axis as 
+        // the sample shape and considering the rest to be part of the batch axis
+        if (operand.DynamicAxes().empty())
+            LogicError("Convolution currently requires the main operand to have dynamic axes");
+
         auto additionalProperties = Dictionary();
         additionalProperties[PrimitiveFunction::AttributeNameStrides] = strides;
         additionalProperties[PrimitiveFunction::AttributeNameSharing] = AsDictionaryValueVector(sharing);

@@ -32,6 +32,9 @@ int main()
     TensorTests();
     FunctionTests();
 
+    FeedForwardTests();
+    RecurrentFunctionTests();
+
     SerializationTests();
     LearnerTests();
 
