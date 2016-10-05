@@ -101,8 +101,11 @@ public:
             {
                 Matrix<ElemType> posteriorNumBackup(m_posteriorsNum->GetNumRows(), m_posteriorsNum->GetNumCols(), m_posteriorsNum->GetDeviceId());
                 posteriorNumBackup.SetValue(*m_posteriorsNum);
+                //m_posteriorsNum->Print("num");
                 Matrix<ElemType> posteriorDenBackup(m_posteriorsDen->GetNumRows(), m_posteriorsDen->GetNumCols(), m_posteriorsDen->GetDeviceId());
                 posteriorDenBackup.SetValue(*m_posteriorsDen);
+                //m_posteriorsDen->Print("den");
+                fprintf(stderr, "frame dropping thresh %f\n", m_frameDropThresh);
 
                 // k * (1-alpha) * r_DEN + alpha * P_net - (k * (1-alpha) + alpha) * r_NUM + c * y
                 if (m_ceweight != 0)
@@ -404,6 +407,7 @@ public:
         fstream << m_usePrior;
         fstream << m_alignmentWindow;
         fstream << m_ceweight;
+        fstream << m_frameDropThresh;
         fstream << m_l2NormFactor;
         fstream << *m_tmap;
         fstream << *m_smap;
@@ -425,6 +429,7 @@ public:
         fstream >> m_usePrior;
         fstream >> m_alignmentWindow;
         fstream >> m_ceweight;
+        fstream >> m_frameDropThresh;
         fstream >> m_l2NormFactor;
         LoadMatrix(fstream, m_tmap);
         LoadMatrix(fstream, m_smap);

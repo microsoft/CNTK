@@ -4864,7 +4864,7 @@ __global__ void _DropFrame(
 
     if (dropframe)
     {
-        // printf("frame dropped %u ", col_id);
+         printf("frame dropped %u ", col_id);
         for (long i = 0; i < m_numRows; ++i)
         {
             a[IDX2C(i, col_id, m_numRows)] = 0.0;
