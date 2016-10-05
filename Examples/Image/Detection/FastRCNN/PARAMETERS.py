@@ -8,33 +8,32 @@ print datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
 datasetName = "toy"
 # datasetName = "pascalVoc"
 # datasetName = "pascalVoc_aeroplanesOnly"
-print "PARAMETERS: datasetName = " + datasetName
 
 
 ############################
 # default parameters
 ############################
-# directories
-rootDir = "C:/src/CNTK/Examples/Image/Detection/FastRCNN/"
-imgDir = rootDir + "data/" + datasetName + "/"
-procDir = rootDir + "proc/" + datasetName + "/"
-resultsDir = rootDir + "results/" + datasetName + "/"
-roiDir = procDir + "rois/"
-cntkFilesDir = procDir + "cntkFiles/"
-cntkTemplateDir = rootDir
-
 #cntk params
-cntk_nrRois = 100  # how many ROIs to zero-pad
+cntk_nrRois = 500  # how many ROIs to zero-pad
 cntk_padWidth = 1000
 cntk_padHeight = 1000
 cntk_posOverlapThres = {"train": 0.5, "test": 0.5}  # only used for DNN training (as opposed to svm training)
 cntk_featureDimensions = {'svm': 4096}
 
+# directories
+rootDir = "C:/src/CNTK/Examples/Image/Detection/FastRCNN/"
+imgDir = rootDir + "data/" + datasetName + "/"
+procDir = rootDir + "proc/" + datasetName + "_{}/".format(cntk_nrRois)
+resultsDir = rootDir + "results/" + datasetName + "_{}/".format(cntk_nrRois)
+roiDir = procDir + "rois/"
+cntkFilesDir = procDir + "cntkFiles/"
+cntkTemplateDir = rootDir
+
 #training svm params
 svm_C = 0.001
 svm_B = 10.0            # intercept scaling
 svm_nrEpochs = 5
-svm_retrainLimit = 2000
+svm_retrainLimit = 500
 svm_evictThreshold = -1.1
 svm_posWeight = "auto" # "auto" # 2.0, else "balanced"
 svm_targetNorm = 20.0      # Magic value from traditional R-CNN
@@ -109,3 +108,6 @@ cntk_featureDimensions['nn'] = nrClasses
 assert cntk_padWidth == cntk_padHeight, "ERROR: different width and height for padding currently not supported."
 assert classifier.lower() in ['svm','nn'], "ERROR: only 'nn' or 'svm' classifier supported."
 assert not (datasetName == 'pascalVoc' and classifier == 'svm'), "ERROR: while technically possibly, writing 2nd-last layer of CNTK model for all pascalVOC images takes too much disk memory."
+
+print "PARAMETERS: datasetName = " + datasetName
+print "PARAMETERS: cntk_nrRois = {}".format(cntk_nrRois)

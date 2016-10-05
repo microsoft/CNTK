@@ -41,7 +41,7 @@ parseCntkOutput(cntkImgsListPath, cntkOutputPath, outParsedDir, cntk_nrRois, cnt
 imdb = imdbs[image_set]
 net = DummyNet(4096, imdb.num_classes, outParsedDir)
 
-#create empty directory for evaluation files
+# create empty directory for evaluation files
 if type(imdb) == imdb_data:
     evalTempDir = None
 else:
@@ -50,7 +50,7 @@ else:
     makeDirectory(evalTempDir)
     deleteAllFilesInDirectory(evalTempDir, None)
 
-#compute mAPs
+# compute mAPs
 test_net(net, imdb, evalTempDir, None, classifier, nmsThreshold, boUsePythonImpl = True)
 
 print "DONE."

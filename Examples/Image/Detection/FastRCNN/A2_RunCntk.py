@@ -8,8 +8,23 @@ locals().update(importlib.import_module("PARAMETERS").__dict__)
 ####################################
 # Parameters
 ####################################
-cntkCmdStrPattern = "cntk.exe configFile={0}configbs.cntk currentDirectory={0} "
+cntkCmdStrPattern = "cntk.exe configFile={0}configbs.cntk currentDirectory={0} {1}"
 
+# cntk arguments
+NumLabels = nrClasses
+
+NumTrainROIs = cntk_nrRois
+TrainROIDim = cntk_nrRois * 4
+TrainROILabelDim = cntk_nrRois * nrClasses
+
+NumTestROIs = cntk_nrRois
+TestROIDim = cntk_nrRois * 4
+TestROILabelDim = cntk_nrRois * nrClasses
+
+cntk_args = "NumLabels={} NumTrainROIs={}".format(NumLabels, NumTrainROIs)
+cntk_args += " TrainROIDim={} TrainROILabelDim={}".format(TrainROIDim, TrainROILabelDim)
+cntk_args += " NumTestROIs={}".format(NumTestROIs)
+cntk_args += " TestROIDim={} TestROILabelDim={}".format(TestROIDim, TestROILabelDim)
 
 ####################################
 # Main
@@ -20,7 +35,7 @@ shutil.copy(cntkTemplateDir + "configbs.cntk", cntkFilesDir)
 # run cntk
 tstart = datetime.datetime.now()
 os.environ['ACML_FMA'] = str(0)
-cmdStr = cntkCmdStrPattern.format(cntkFilesDir)
+cmdStr = cntkCmdStrPattern.format(cntkFilesDir, cntk_args)
 print cmdStr
 pid = subprocess.Popen(cmdStr, cwd = cntkFilesDir)
 pid.wait()

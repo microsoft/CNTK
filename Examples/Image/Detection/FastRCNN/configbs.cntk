@@ -30,14 +30,13 @@ ImageW = 1000
 ImageC = 3
 
 NumLabels = 22
+NumTrainROIs = 200
+NumTestROIs = 1000
 
-NumTrainROIs = 100
-TrainROIDim = 400               # $NumTrainROIs$ * 4 
-TrainROILabelDim = 2200         # $NumTrainROIs$ * $NumLabels$
-
-NumTestROIs = 100
-TestROIDim = 400
-TestROILabelDim = 2200
+TrainROIDim = 800               # $NumTrainROIs$ * 4 
+TrainROILabelDim = 4400         # $NumTrainROIs$ * $NumLabels$
+TestROIDim = 4000               # $NumTestROIs$ * 4
+TestROILabelDim = 22000         # $NumTestROIs$ * $NumLabels$
 
 # For training we load a pretrained AlexNet model (AlexNet.89) and clone three parts of it.
 # For the first part (up to pool1) we keep the weights fixed. The middle part contains the
@@ -91,12 +90,12 @@ Train = {
     SGD = {
         epochSize = 0
         minibatchSize = 2
-        maxEpochs = 3
+        maxEpochs = 20
         
-        learningRatesPerSample = 0.0000005
-        momentumAsTimeConstant = 0 
-        L2RegWeight = 0.0001
-        dropoutRate = 0.5
+        learningRatesPerSample = 0.00001
+        momentumAsTimeConstant = 0*5:10
+        #L2RegWeight = 0.0001
+        dropoutRate = 0
         
         numMBsToShowResult = 50
     }
