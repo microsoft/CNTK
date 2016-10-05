@@ -799,7 +799,7 @@ template<class ElemType>
 class RandomSampleNode : public RandomSampleNodeBase<ElemType>
 {
     typedef RandomSampleNodeBase<ElemType> Base; UsingComputationNodeMembersBoilerplate;
-    static const std::wstring TypeName(){ return L"RandomSampleNode"; }
+    static const std::wstring TypeName(){ return L"RandomSample"; }
 
 public:
     RandomSampleNode(DEVICEID_TYPE deviceId, const wstring& name, int sizeOfSampledSet = 0, bool allowDuplicates = false)
@@ -808,7 +808,9 @@ public:
 
     RandomSampleNode(const ScriptableObjects::IConfigRecordPtr configp)
         : RandomSampleNode(CPUDEVICE, L"<placeholder>", configp->Get(L"sizeOfSampledSet"), configp->Get(L"allowDuplicates"))
-    {}
+    {
+        AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
+    }
 
     virtual void /*ComputationNode::*/ ForwardPropNonLooping() override;
     const std::vector<size_t> GetWeightedSamples();
@@ -832,7 +834,7 @@ template<class ElemType>
 class RandomSampleInclusionFrequencyNode : public RandomSampleNodeBase<ElemType>
 {
     typedef RandomSampleNodeBase<ElemType> Base; UsingComputationNodeMembersBoilerplate;
-    static const std::wstring TypeName(){ return L"RandomSampleInclusionFrequencyNode"; }
+    static const std::wstring TypeName(){ return L"RandomSampleInclusionFrequency"; }
 public:
     RandomSampleInclusionFrequencyNode(DEVICEID_TYPE deviceId, const wstring& name, int sizeOfSampledSet = 0, bool allowDuplicates = false)
         : Base(deviceId, name, sizeOfSampledSet, allowDuplicates)
@@ -840,7 +842,9 @@ public:
 
     RandomSampleInclusionFrequencyNode(const ScriptableObjects::IConfigRecordPtr configp)
         : RandomSampleInclusionFrequencyNode(CPUDEVICE, L"<placeholder>", configp->Get(L"sizeOfSampledSet"), configp->Get(L"allowDuplicates"))
-    {}
+    {
+        AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
+    }
     virtual void /*ComputationNode::*/ ForwardPropNonLooping() override;
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override;
 private:

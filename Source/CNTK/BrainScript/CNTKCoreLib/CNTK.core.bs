@@ -478,7 +478,7 @@ CNTK2 = [
 
         # Getting the weight vector for the true label. Dimension nHidden
         wT = TransposeTimes(weights, labels) 
-        zT = TransposeTimes(wT, hiddenLayer) +  TransposeTimes(labels, bias - logExpectedSampleSetFrequeny) 
+        zT = TransposeTimes(wT, hiddenLayer) +  TransposeTimes(labels, bias - logExpectedInSampleFrequeny) 
                                         
         zSReduced = ReduceLogSum(zS)
                                         
