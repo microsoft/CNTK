@@ -119,16 +119,22 @@ public:
     StreamDescription Transform(const StreamDescription& inputStream) override;
 
 private:
+    enum class ScaleMode
+    {
+        Fill = 0,
+        Crop = 1,
+        Pad  = 2
+    };
     void Apply(size_t id, cv::Mat &mat) override;
 
-    using StrToIntMapT = std::unordered_map<std::string, int>;
-    StrToIntMapT m_interpMap;
-    std::vector<int> m_interp;
-
-    conc_stack<std::unique_ptr<std::mt19937>> m_rngs;
     size_t m_imgWidth;
     size_t m_imgHeight;
     size_t m_imgChannels;
+
+    ScaleMode m_scaleMode;
+    int m_interp;
+    int m_borderType;
+    int m_padValue;
 };
 
 // Mean transformation.
