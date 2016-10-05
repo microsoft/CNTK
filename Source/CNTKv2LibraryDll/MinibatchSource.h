@@ -20,8 +20,8 @@ namespace CNTK
         virtual const std::unordered_set<StreamInformation>& StreamInfos() override { return m_streamInfos; }
 
         virtual const std::unordered_map<StreamInformation, MinibatchData>& GetNextMinibatch(size_t minibatchSizeInSamples,
-                                                                                      size_t minibatchSizeInSequences,
-                                                                                      const DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice()) override;
+                                                                                             size_t minibatchSizeInSequences,
+                                                                                             const DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice()) override;
 
     private: 
         std::unordered_set<StreamInformation> m_streamInfos;

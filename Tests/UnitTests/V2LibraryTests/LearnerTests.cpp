@@ -1,3 +1,7 @@
+//
+// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
+//
 #include "CNTKLibrary.h"
 #include "Common.h"
 #include <string>
@@ -56,8 +60,8 @@ void TestMomentumSGDLearner(size_t numParameters, size_t numMinibatches, const D
 {
     NDShape shape = CreateShape(rng() % maxNumAxes + 1, maxDimSize);
     auto parameters = CreateParameters<ElementType>(shape, numParameters, device);
-    MomentumsPerSample momentums({ { 1, 1.0 }, { 3, 0.1 }, { 10, 0.01 } }, 2);
-    auto learner = MomentumSGDLearner(parameters, vector<double>{0.3, 0.2, 0.1}, momentums);
+    MomentumValuesPerSample momentumValues = { { { 1, 1.0 }, { 3, 0.1 }, { 10, 0.01 } }, 2 };
+    auto learner = MomentumSGDLearner(parameters, { { 0.3, 0.2, 0.1 } }, momentumValues);
     TestUpdate<ElementType>(learner, shape, numMinibatches, device);
 }
 
@@ -66,7 +70,8 @@ void TestNesterovLearner(size_t numParameters, size_t numMinibatches, const Devi
 {
     NDShape shape = CreateShape(rng() % maxNumAxes + 1, maxDimSize);
     auto parameters = CreateParameters<ElementType>(shape, numParameters, device);
-    auto learner = NesterovLearner(parameters, LearningRatesPerSample({ { 1, 0.5 }, { 10, 0.25 }, { 20, 0.125 } }, 3 ), 0.2);
+    MomentumValuesAsTimeConstants momentumValues = { { { 1, 1 }, { 3, 5 }, { 10, 25 } }, 100 };
+    auto learner = NesterovLearner(parameters, { { { 1, 0.5 }, { 10, 0.25 }, { 20, 0.125 } }, 3 }, momentumValues);
     TestUpdate<ElementType>(learner, shape, numMinibatches, device);
 }
 
@@ -84,7 +89,7 @@ void TestFSAdaGradLearner(size_t numParameters, size_t numMinibatches, const Dev
 {
     NDShape shape = CreateShape(rng() % maxNumAxes + 1, maxDimSize);
     auto parameters = CreateParameters<ElementType>(shape, numParameters, device);
-    auto learner = FSAdaGradLearner(parameters, vector<double>{ 0.5 }, vector<double>{0.05});
+    auto learner = FSAdaGradLearner(parameters, { { 0.5 } }, MomentumValuesAsTimeConstants({ 10, 100, 1000 }));
     TestUpdate<ElementType>(learner, shape, numMinibatches, device);
 }
 
@@ -93,33 +98,33 @@ void TestRMSPropLearner(size_t numParameters, size_t numMinibatches, const Devic
 {
     NDShape shape = CreateShape(rng() % maxNumAxes + 1, maxDimSize);
     auto parameters = CreateParameters<ElementType>(shape, numParameters, device);
-    auto learner = RMSPropLearner(parameters, { { 3, 0.7 }, { 1, 0.2 } }, 0.01, 0.02, 0.03, 0.1, 0.001 );
+    auto learner = RMSPropLearner(parameters, { { { 3, 0.7 }, { 1, 0.2 } } }, 0.01, 0.02, 0.03, 0.1, 0.001);
     TestUpdate<ElementType>(learner, shape, numMinibatches, device);
 }
 
-void TestTrainingParametersSchedule() 
+void TestTrainingParametersSchedule()
 {
     LearningRatesPerSample schedule1 = 0.5;
     assert(schedule1[0] == 0.5);
     assert(schedule1[1] == 0.5);
     assert(schedule1[100] == 0.5);
 
-    LearningRatesPerSample schedule2 = vector<double>{ 0.5 };
+    LearningRatesPerSample schedule2 = { 0.5 };
     assert(schedule2[0] == 0.5);
     assert(schedule2[10] == 0.5);
     assert(schedule2[100] == 0.5);
 
-    LearningRatesPerSample schedule3 = vector<double>{ 0.5, 0.3 };
+    LearningRatesPerSample schedule3 = { { 0.5, 0.3, 0.3 } };
     assert(schedule3[0] == 0.5);
     assert(schedule3[1] == 0.3);
     assert(schedule3[100] == 0.3);
 
-    LearningRatesPerSample schedule4 = { vector<double>{ 0.5 }, 10 };
+    LearningRatesPerSample schedule4 = { vector<double>{ 0.5 }, 10 }; // without vector<> gcc complains that conversion here is ambiguousS
     assert(schedule4[0] == 0.5);
     assert(schedule4[10] == 0.5);
     assert(schedule4[100] == 0.5);
 
-    LearningRatesPerSample schedule5 = { vector<double>{ 0.5, 0.3, 0.2 }, 10 };
+    LearningRatesPerSample schedule5 = { { 0.5, 0.3, 0.2 }, 10 };
     assert(schedule5[0] == 0.5);
     assert(schedule5[9] == 0.5);
     assert(schedule5[10] == 0.3);
@@ -127,18 +132,18 @@ void TestTrainingParametersSchedule()
     assert(schedule5[20] == 0.2);
     assert(schedule5[100] == 0.2);
 
-    LearningRatesPerSample schedule6 = { {1, 0.5} };
+    LearningRatesPerSample schedule6 = { { make_pair(1, 0.5) } }; // without make_pair this is interpreted as a vector of doubles
     assert(schedule6[0] == 0.5);
     assert(schedule6[10] == 0.5);
     assert(schedule6[100] == 0.5);
 
-    LearningRatesPerSample schedule7 = { { 1, 0.5 }, { 1, 0.3 }, {1, 0.2} };
+    LearningRatesPerSample schedule7 = { { { 1, 0.5 }, { 1, 0.3 }, { 1, 0.2 } } };
     assert(schedule7[0] == 0.5);
     assert(schedule7[1] == 0.3);
     assert(schedule7[2] == 0.2);
     assert(schedule7[100] == 0.2);
 
-    LearningRatesPerSample schedule8( { { 1, 0.5 }, { 1, 0.3 }, { 1, 0.2 } }, 10 );
+    LearningRatesPerSample schedule8 = { { { 1, 0.5 }, { 1, 0.3 }, { 1, 0.2 } }, 10 };
     assert(schedule8[0] == 0.5);
     assert(schedule8[9] == 0.5);
     assert(schedule8[10] == 0.3);
@@ -146,7 +151,7 @@ void TestTrainingParametersSchedule()
     assert(schedule8[20] == 0.2);
     assert(schedule8[100] == 0.2);
 
-    LearningRatesPerSample schedule9 = { { 3, 0.5 }, { 2, 0.3 }, {1, 0.2} };
+    LearningRatesPerSample schedule9 = { { { 3, 0.5 }, { 2, 0.3 }, { 1, 0.2 } } };
     assert(schedule9[0] == 0.5);
     assert(schedule9[2] == 0.5);
     assert(schedule9[3] == 0.3);
@@ -154,13 +159,48 @@ void TestTrainingParametersSchedule()
     assert(schedule9[5] == 0.2);
     assert(schedule9[100] == 0.2);
 
-    LearningRatesPerSample schedule10( { { 3, 0.5 }, { 2, 0.3 }, { 1, 0.2 } }, 10 );
+    LearningRatesPerSample schedule10 = { { { 3, 0.5 }, { 2, 0.3 }, { 1, 0.2 } }, 10 };
     assert(schedule10[0] == 0.5);
     assert(schedule10[29] == 0.5);
     assert(schedule10[30] == 0.3);
     assert(schedule10[49] == 0.3);
     assert(schedule10[50] == 0.2);
     assert(schedule10[100] == 0.2);
+
+    MomentumValuesAsTimeConstants schedule11 = { { 0.0, 1.0, 2.0 }, 10 };
+    assert(schedule11[0] == 0.0);
+    assert(schedule11[9] == 0.0);
+    assert(schedule11[10] == exp(-1.0 / 1.0));
+    assert(schedule11[19] == exp(-1.0 / 1.0));
+    assert(schedule11[20] == exp(-1.0 / 2.0));
+    assert(schedule11[30] == exp(-1.0 / 2.0));
+
+    MomentumValuesPerSample schedule12 = schedule11;
+    assert(schedule12[0] == 0.0);
+    assert(schedule12[9] == 0.0);
+    assert(schedule12[10] == exp(-1.0 / 1.0));
+    assert(schedule12[19] == exp(-1.0 / 1.0));
+    assert(schedule12[20] == exp(-1.0 / 2.0));
+    assert(schedule12[30] == exp(-1.0 / 2.0));
+
+    MomentumValuesAsTimeConstants schedule13 = 1;
+    assert(schedule13[0] == exp(-1.0 / 1.0));
+    assert(schedule13[1] == exp(-1.0 / 1.0));
+    assert(schedule13[100] == exp(-1.0 / 1.0));
+
+    MomentumValuesAsTimeConstants schedule14 = { { 1.0, 2.0, 3.0 } };
+    assert(schedule14[0] == exp(-1.0 / 1.0));
+    assert(schedule14[1] == exp(-1.0 / 2.0));
+    assert(schedule14[2] == exp(-1.0 / 3.0));
+    assert(schedule14[100] == exp(-1.0 / 3.0));
+    
+    MomentumValuesAsTimeConstants schedule15 = { { { 100, 7.0 }, { 10, 5.0 }, { 1, 3.0 } }, 100 };
+    assert(schedule15[0] == exp(-1.0 / 7.0));
+    assert(schedule15[9999] == exp(-1.0 / 7.0));
+    assert(schedule15[10000] == exp(-1.0 / 5.0));
+    assert(schedule15[10999] == exp(-1.0 / 5.0));
+    assert(schedule15[11000] == exp(-1.0 / 3.0));
+    assert(schedule15[99999] == exp(-1.0 / 3.0));
 }
 
 

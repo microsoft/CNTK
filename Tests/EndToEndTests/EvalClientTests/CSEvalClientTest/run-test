@@ -20,11 +20,11 @@ if [ "$OS" == "Windows_NT" ]; then
   # Copy pretrained models and data
   TestDataDir=`cygpath -au $CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY`
   ImageDir=$TEST_ROOT_DIR/../../Examples/Image
-  MnistDir=$ImageDir/MNIST
-  DataDir=$MnistDir/Data
-  ConfigDir=$MnistDir/Config
-  OutputDir=$MnistDir/Output
-  ResnetModelDir=$ImageDir/Miscellaneous/ImageNet/ResNet
+  MnistDir=$ImageDir/DataSets/MNIST
+  DataDir=$MnistDir
+  ConfigDir=$MnistDir/../../GettingStarted
+  OutputDir=$ConfigDir/Output
+  ResnetModelDir=$ImageDir/Classification/ResNet
 
   cp $TestDataDir/Image/MNIST/v0/Train-28x28_cntk_text.txt $DataDir || exit $?
   cp $TestDataDir/Image/MNIST/v0/Test-28x28_cntk_text.txt $DataDir || exit $?
@@ -35,9 +35,9 @@ if [ "$OS" == "Windows_NT" ]; then
   [ -d $OutputDir/Models ] && rm -rf $OutputDir/Models
   DeleteModelsAfterTest=0
   [ -f $ConfigDir/01_OneHidden.cntk ] || exit 1
-  [ -f $ConfigDir/02_Convolution.cntk ] || exit 1
+  [ -f $ConfigDir/02_OneConv.cntk ] || exit 1
   cntkrun 01_OneHidden.cntk "stderr=- command=trainNetwork trainNetwork=[SGD=[maxEpochs=1]]" || exit $?
-  cntkrun 02_Convolution.cntk "stderr=- command=trainNetwork trainNetwork=[SGD=[maxEpochs=1]]" || exit $?
+  cntkrun 02_OneConv.cntk "stderr=- command=trainNetwork trainNetwork=[SGD=[maxEpochs=1]]" || exit $?
 
   # Run the evaluation test
   cd $TEST_BIN_DIR

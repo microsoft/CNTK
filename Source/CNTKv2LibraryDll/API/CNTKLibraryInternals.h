@@ -202,10 +202,15 @@ namespace CNTK
 
         CNTK_API size_t NewUniqueId();
 
+        // Internal hooks for testing and higher-level bindings
+        // These should not be directly called by C++ API users
         CNTK_API void EnableReversingTensorShapesInErrorMessages();
         bool IsReversingTensorShapesInErrorMessagesEnabled();
 
         CNTK_API void AlwaysAllowSettingDefaultDevice();
         bool IsSettingDefaultDeviceAlwaysAllowed();
+
+        CNTK_API void DisableAutomaticUnpackingOfPackedValues();
+        bool IsAutomaticUnpackingOfPackedValuesDisabled();
     }
 }

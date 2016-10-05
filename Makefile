@@ -422,6 +422,8 @@ CNTKLIBRARY_TESTS_SRC =\
 	Tests/UnitTests/V2LibraryTests/FunctionTests.cpp \
 	Tests/UnitTests/V2LibraryTests/SequenceClassification.cpp \
 	Tests/UnitTests/V2LibraryTests/Seq2Seq.cpp \
+	Tests/UnitTests/V2LibraryTests/TruncatedLSTMAcousticModel.cpp \
+	Tests/UnitTests/V2LibraryTests/DeviceSelectionTests.cpp \
 	Examples/Evaluation/CPPEvalV2Client/EvalMultithreads.cpp \
 
 CNTKLIBRARY_TESTS:=$(BINDIR)/v2librarytests
@@ -731,8 +733,11 @@ IMAGE_READER_LIBS += -lopencv_core -lopencv_imgproc -lopencv_imgcodecs
 
 ifdef LIBZIP_PATH
   CPPFLAGS += -DUSE_ZIP
+  #both directories are needed for building libzip
+  INCLUDEPATH += $(LIBZIP_PATH)/include
   INCLUDEPATH += $(LIBZIP_PATH)/lib/libzip/include
   IMAGE_READER_LIBS += -lzip
+  LIBPATH += $(LIBZIP_PATH)/lib
 endif
 
 IMAGEREADER_SRC =\

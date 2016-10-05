@@ -1,4 +1,4 @@
-# This file contains step-by-step instructions on how to build the Python API for CNTK
+ This file contains step-by-step instructions on how to build the Python API for CNTK on Windows.
 
 # no support yet for python 2.7
 # recommended python version is 3.4 (with numpy & scipy)
@@ -6,33 +6,33 @@
 
 # Set up compiler and its variant
 
-SET PATH=%PATH%;C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC;C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\bin
-SET MSSdk=1
-SET DISTUTILS_USE_SDK=1
-vcvarsall amd64
+call "C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\vcvarsall" amd64
 
-# Generate .cxx and .py out of .i. Please check the path to the SwigWin binaries inside swig.bat
-# run siwg.bat from within siwg folder
-swig.bat
+set MSSdk=1
+set DISTUTILS_USE_SDK=1
 
+# Make sure swig.exe is in your path. For example, if SWIG is installed to c:\local\swigwin-3.0.10, run the following:
+
+set PATH=c:\local\swigwin-3.0.10;%PATH%
 
 # a) If you are just building to use it locally:
     # Build -> generate .pyd
-    # 1) go two levels up
-    # 2) run the following:
-    python .\setup.py build_ext -if -c msvc --plat-name=win-amd64
 
-    # 3) add to PATH the path to cntk dlls (e.g. e:\CNTK\x64\Release)
-    # 4) add to PYTHONPATH the path to the python api source (e.g. e:\CNTK\bindings\python\)
-    # 5) test by running any of the examples or running py.test from the inside bindings\python directory
+    # 1) Run the following:
+    python .\setup.py build_ext --inplace --force
+
+    # 2) add to PATH the path to CNTK dlls (e.g. in ..\..\x64\Release)
+        set PATH=%CD%\..\..\x64\Release;%PATH%
+    # 3) Add to PYTHONPATH the local path and the path to the Python examples
+        set PYTHONPATH=%CD%;%CD%\examples;%PYTHONPATH%
+    # 4) test by running any of the examples or running py.test from inside the cntk\tests or cntk\ops\tests directories.
 
 # b) If you want to package it:
     # 1) install the following:
-    pip install twine
-    pip install wheel
+    pip install twine wheel
 
-    # 2) go two levels up & run:
-    python .\setup.py build_ext -if -c msvc --plat-name=win-amd64 bdist_wheel
+    # 2) Run the following (note: --inplace not required when packaging):
+    python .\setup.py build_ext bdist_wheel
 
     # 3) put the wheel file on some http server
 
@@ -44,9 +44,9 @@ swig.bat
     >>> import cntk
     
     # 6) Running examples:
-        # Clone the python examples folder form cntk repository and add its path to PYTHONPATH    
+        # Clone the python examples folder from the CNTK repository and add its path to PYTHONPATH    
         # (e.g. setx PYTHONPATH %PYTHONPATH%;C:\work\cntk\bindings\python\examples in an Admin shell,
         # or rather setx PYTHONPATH C:\work\cntk\bindings\python\examples if no PYTHONPATH defined yet).
-        # Try to run any of the examples, some examples come up with s script that fetches and prepares the data,
+        # Try to run any of the examples, some examples come up with a script that fetches and prepares the data,
         # other examples use data files that are checked in inside the cntk repository.
     

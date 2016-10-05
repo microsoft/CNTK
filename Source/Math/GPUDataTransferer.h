@@ -110,7 +110,7 @@ public:
 private:
 #ifndef CPUONLY
     static cudaStream_t s_prefetchStream;
-    static cudaStream_t s_prefetchAssignStream;
+    static cudaStream_t s_gpuToCpuStream;
 #endif
 
     DISABLE_COPY_AND_MOVE(PrefetchGPUDataTransferer);
