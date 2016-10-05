@@ -1,0 +1,13 @@
+#--find-links wheelhouse
+#pip==8.0.2
+Pillow==2.8.1
+xmltodict==0.9.2
+wheel==0.26.0
+./numpy-1.10.1+mkl-cp27-none-win32.whl
+./opencv_python-2.4.12-cp27-none-win32.whl
+./scikit_learn-0.16.1-cp27-none-win32.whl
+./scipy-0.16.0-cp27-none-win32.whl
+matplotlib==1.4.3
+./scikit_image-0.11.3-cp27-none-win32.whl
+EasyDict
+selectivesearch

@@ -1,0 +1,266 @@
+# Fast-RCNN configuration for CNTK
+# For algorithm and details see http://arxiv.org/abs/1504.08083
+# Overview:
+# The Fast-RCNN algorithm uses a DNN that takes as inputs a set of images 
+# and for each image a set of ROIs (Regions of interest). It first computes
+# a convolutional feature map for the entire image using a series of
+# of convolutional layers (usually from a pretrained network). Then it 
+# employs ROI pooling to crop out the part of the conv feature map 
+# that corresponds to an ROI and resizes it to the input size expected
+# by the following layer (usually a set of pretrained fully connected layers).
+# Classification error and evaluation criterion are computed for each ROI.
+
+#makeMode = false
+command = Train:WriteTest:WriteTrain
+
+deviceId = "Auto"
+precision = "float"
+parallelTrain = "false"
+traceLevel = 1
+
+rootDir = "." 
+dataDir = "$rootDir$/data/"
+outputDir = "$rootDir$/Output"
+
+modelPath = "$outputDir$/Fast-RCNN"
+#stderr = "$outputDir$/Fast-RCNN.log"
+
+ImageH = 1000
+ImageW = 1000
+ImageC = 3
+
+NumLabels = 22
+
+NumTrainROIs = 100
+TrainROIDim = 400               # $NumTrainROIs$ * 4 
+TrainROILabelDim = 2200         # $NumTrainROIs$ * $NumLabels$
+
+NumTestROIs = 100
+TestROIDim = 400
+TestROILabelDim = 2200
+
+# For training we load a pretrained AlexNet model (AlexNet.89) and clone three parts of it.
+# For the first part (up to pool1) we keep the weights fixed. The middle part contains the
+# remaining convolutional and pooling layers and the last part are the FC layers. 
+# In the model we apply the first two cloned parts, then an ROI pooling layer and 
+# finally the pretrained FC layers followed by a new FC layer that maps to the new 
+# label dimensionality of 21 classes. 
+# The inputs are images (1000 x 1000 x 3), ROIs (64 ROIs x 4 coordinates (x, y, w, h))
+# and ground truht labels per ROI (64 ROIs x 21 classes).
+Train = {
+    action = "train"
+    
+    BrainScriptNetworkBuilder = {
+        imageShape = $ImageH$:$ImageW$:$ImageC$         # 1000:1000:3
+        labelShape = $NumLabels$:$NumTrainROIs$         # 21:64
+        ROIShape   = 4:$NumTrainROIs$                   # 4:64
+
+        #network     = BS.Network.Load ("AlexNet.89")
+        network     = BS.Network.Load ("../../../cntk_model/AlexNet.89")
+        pool1       = BS.Network.CloneFunction(network.features, network.pool1, parameters = "constant")
+        convLayers  = BS.Network.CloneFunction(network.pool1, network.conv5_y)
+        fcLayers    = BS.Network.CloneFunction(network.pool3, network.h2_d)
+
+        model (features, rois) = {
+            featNorm = features - 114
+            pool1Out = pool1 (featNorm)
+            conv5Out = convLayers (pool1Out)
+            roiOut   = ROIPooling (conv5Out, rois, (6:6))
+            fcOut    = fcLayers (roiOut)
+            W        = ParameterTensor{($NumLabels$:4096), init="glorotUniform"}
+            b        = ParameterTensor{$NumLabels$, init = 'zero'}
+            z        = W * fcOut + b
+        }.z
+
+        features = Input {imageShape}
+        roiLabels = Input {labelShape}
+        rois = Input {ROIShape}
+
+        z = model (features, rois)
+        
+        ce = CrossEntropyWithSoftmax(roiLabels, z, axis = 1)
+        errs = ClassificationError(roiLabels, z, axis = 1)
+        
+        featureNodes    = (features:rois)
+        labelNodes      = (roiLabels)
+        criterionNodes  = (ce)
+        evaluationNodes = (errs)
+        outputNodes     = (z)
+    }
+
+    SGD = {
+        epochSize = 0
+        minibatchSize = 2
+        maxEpochs = 3
+        
+        learningRatesPerSample = 0.0000005
+        momentumAsTimeConstant = 0 
+        L2RegWeight = 0.0001
+        dropoutRate = 0.5
+        
+        numMBsToShowResult = 50
+    }
+
+    reader = {
+        randomize = false
+        verbosity = 2
+        deserializers = ({
+            type = "CNTKTextFormatDeserializer" ; module = "CNTKTextFormatReader"
+            #file = "$dataDir$/tv2012pad.rois.txt"
+            file = train.rois.txt
+            input = { rois = { dim = $TrainROIDim$ ; format = "dense" } }
+        }:{
+            type = "CNTKTextFormatDeserializer" ; module = "CNTKTextFormatReader"
+            #file = "$dataDir$/tv2012pad.roilabels.txt"
+            file = train.roilabels.txt
+            input = { roiLabels = { dim = $TrainROILabelDim$ ; format = "dense" } }
+        }:{
+            type = "ImageDeserializer" ; module = "ImageReader"
+            #file = "$dataDir$/tv2012pad.txt"
+            file = train.txt
+            input = {
+                features = { transforms = (
+                    { type = "Scale" ; width = $ImageW$ ; height = $ImageW$ ; channels = $ImageC$ ; scaleMode = "pad" ; padValue = 114 }:
+                    { type = "Transpose" }
+                )}
+                ignored = {labelDim = 1000}
+            }
+        })
+    }
+}
+
+# Write network output for entire test data set
+WriteTest = {
+    action = "write"
+    minibatchSize = 1
+
+    # outputPath = "$OutputDir$/fastrcnnNetOutput"
+    outputPath=test
+    
+    reader = {
+        randomize = false
+        verbosity = 2
+        deserializers = ({
+            type = "CNTKTextFormatDeserializer" ; module = "CNTKTextFormatReader"
+            #file = "$dataDir$/test2007pad_all.rois.txt"
+            file = test.rois.txt
+            input = { rois = { dim = $TestROIDim$ ; format = "dense" } }
+        }:{
+            type = "CNTKTextFormatDeserializer" ; module = "CNTKTextFormatReader"
+            #file = "$dataDir$/test2007pad_all.roilabels.txt"
+            file = test.roilabels.txt
+            input = { roiLabels = { dim = $TestROILabelDim$ ; format = "dense" } }
+        }:{
+            type = "ImageDeserializer" ; module = "ImageReader"
+            #file = "$dataDir$/test2007pad_all.txt"
+            file = test.txt
+            input = {
+                features = { transforms = (
+                    { type = "Scale" ; width = $ImageW$ ; height = $ImageW$ ; channels = $ImageC$ ; scaleMode = "pad" ; padValue = 114 }:
+                    { type = "Transpose" }
+                )}
+                ignored = {labelDim = 1000}
+            }
+        })
+    }
+}
+
+# Write network output for entire train data set
+WriteTrain = {
+    action = "write"
+    minibatchSize = 1
+
+    # outputPath = "$OutputDir$/fastrcnnNetOutput"
+    outputPath=train
+    
+    reader = {
+        randomize = false
+        verbosity = 2
+        deserializers = ({
+            type = "CNTKTextFormatDeserializer" ; module = "CNTKTextFormatReader"
+            #file = "$dataDir$/test2007pad_all.rois.txt"
+            file = train.rois.txt
+            input = { rois = { dim = $TestROIDim$ ; format = "dense" } }
+        }:{
+            type = "CNTKTextFormatDeserializer" ; module = "CNTKTextFormatReader"
+            #file = "$dataDir$/test2007pad_all.roilabels.txt"
+            file = train.roilabels.txt
+            input = { roiLabels = { dim = $TestROILabelDim$ ; format = "dense" } }
+        }:{
+            type = "ImageDeserializer" ; module = "ImageReader"
+            #file = "$dataDir$/test2007pad_all.txt"
+            file = train.txt
+            input = {
+                features = { transforms = (
+                    { type = "Scale" ; width = $ImageW$ ; height = $ImageW$ ; channels = $ImageC$ ; scaleMode = "pad" ; padValue = 114 }:
+                    { type = "Transpose" }
+                )}
+                ignored = {labelDim = 1000}
+            }
+        })
+    }
+}
+
+# For testing we load the trained Fast-RCNN model and modify the input size,
+# such that the network accepts 200 ROIs per image. To this end we load and 
+# clone the entire network and define new inputs with the desired size 
+# corresponding to 200 ROIs. 
+WriteTestModify = {
+    action = "write"
+    minibatchSize = 1
+
+    # outputPath = "$OutputDir$/fastrcnnNetOutput"
+    outputPath=test
+    
+    BrainScriptNetworkBuilder = {
+        imageShape = $ImageH$:$ImageW$:$ImageC$        # 1000:1000:3
+        labelShape = $NumLabels$:$NumTestROIs$         # 21:200
+        ROIShape   = 4:$NumTestROIs$                   # 4:200
+
+        # load network
+        network = BS.Network.Load ("$modelPath$")
+        clonedNet = BS.Network.CloneFunction ((network.features:network.rois), { z = network.z }, parameters = "constant")
+
+        features = Input {imageShape}
+        roiLabels = Input {labelShape}
+        rois = Input {ROIShape}
+
+        z = clonedNet(features, rois).z
+        
+        ce = CrossEntropyWithSoftmax (roiLabels, z, axis = 1)
+        errs = ClassificationError(z, roiLabels, axis = 1)
+        
+        featureNodes    = (features:rois)
+        labelNodes      = (roiLabels)
+        criterionNodes  = (ce)
+        evaluationNodes = (errs)
+        outputNodes     = (z)
+    }
+    
+    reader = {
+        randomize = false
+        verbosity = 2
+        deserializers = ({
+            type = "CNTKTextFormatDeserializer" ; module = "CNTKTextFormatReader"
+            #file = "$dataDir$/test2007pad_all.rois.txt"
+            file = test.rois.txt
+            input = { rois = { dim = $TestROIDim$ ; format = "dense" } }
+        }:{
+            type = "CNTKTextFormatDeserializer" ; module = "CNTKTextFormatReader"
+            #file = "$dataDir$/test2007pad_all.roilabels.txt"
+            file = test.roilabels.txt
+            input = { roiLabels = { dim = $TestROILabelDim$ ; format = "dense" } }
+        }:{
+            type = "ImageDeserializer" ; module = "ImageReader"
+            #file = "$dataDir$/test2007pad_all.txt"
+            file = test.txt
+            input = {
+                features = { transforms = (
+                    { type = "Scale" ; width = $ImageW$ ; height = $ImageW$ ; channels = $ImageC$ ; scaleMode = "pad" ; padValue = 114 }:
+                    { type = "Transpose" }
+                )}
+                ignored = {labelDim = 1000}
+            }
+        })
+    }
+}
