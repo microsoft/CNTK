@@ -513,17 +513,15 @@ CNTK2 = [
                                                                                         operation = 'RandomSample' ;
                                                                                         sizeOfSampledSet = numSamples;
                                                                                         allowDuplicates = sampleWithReplacement;
-                                                                                        estimateInSampleFrequency = false;
                                                                                         inputs = _ /*plus the function args*/ ]
 
     // The value of GetInclusion(weights /* vector of length nClasses */, numSamples, sampleWithReplacement) has to be seen in cojuction to GetRandomSample(...).
     // While GetRandomSample(...) creates a set of samples, GetInclusion(...) tells how often each class is expected to occur in the sampled sets.
     // For sampling with replacment the relation to the sampling weights is trivial but not for sampling without replacment.
     GetInclusionFrequency(_ ,numSamples, sampleWithReplacement, tag='') = new ComputationNode [
-                                                                                        operation = 'RandomSample' ;
+                                                                                        operation = 'RandomSampleInclusionFrequency' ;
                                                                                         sizeOfSampledSet = numSamples;
                                                                                         allowDuplicates = sampleWithReplacement;
-                                                                                        estimateInSampleFrequency = true;
                                                                                         inputs = _ /*plus the function args*/ ]
 ]
 
