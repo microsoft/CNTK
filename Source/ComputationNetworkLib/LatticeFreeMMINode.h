@@ -124,18 +124,18 @@ public:
                     Matrix<ElemType>::AssignScaledDifference(Gradient(), *m_posteriorsDen, *m_posteriorsNum, *m_mbGradients);
                     m_frameNumberOfCurrentMinibatch = 0;                    
                     //m_mbGradients->Print("before");
-                    //m_mbGradients->DropFrame(posteriorNumBackup, posteriorDenBackup, m_frameDropThresh);
+                    m_mbGradients->DropFrame(posteriorNumBackup, posteriorDenBackup, m_frameDropThresh);
                     //m_mbGradients->Print("after");
                 }
                 else
                 {
                     Matrix<ElemType>::AddScaledDifference(Gradient(), *m_posteriorsDen, *m_posteriorsNum, gradient);
                     //gradient.Print("before");
-                    //gradient.DropFrame(posteriorNumBackup, posteriorDenBackup, m_frameDropThresh);
+                    gradient.DropFrame(posteriorNumBackup, posteriorDenBackup, m_frameDropThresh);
                     //gradient.Print("after");
                 }
-                //posteriorNumBackup.ReleaseMemory();
-                //posteriorDenBackup.ReleaseMemory();
+                posteriorNumBackup.ReleaseMemory();
+                posteriorDenBackup.ReleaseMemory();
 
             }
 
