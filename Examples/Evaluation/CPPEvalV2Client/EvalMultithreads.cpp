@@ -348,6 +348,7 @@ void RunEvaluationClassifier(FunctionPtr evalFunc, const DeviceDescriptor& devic
 
         // Create input data shape. Adding sequence length and numSamples as axes.
         // Todo: remove sequence length when only numSamples is supported.
+        // Todo: add convenience APIs to simplify data preparation here.
         NDShape inputShape = inputVar.Shape().AppendShape({1, numSamples});
         ValuePtr inputValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(inputShape, inputData, true));
 
@@ -363,6 +364,7 @@ void RunEvaluationClassifier(FunctionPtr evalFunc, const DeviceDescriptor& devic
         outputValue = outputs[outputVar];
 
         // Todo: remove sequence length when only numSamples is supported.
+        // Todo: add convenience APIs to simplify retrieval of output results.
         NDShape outputShape = outputVar.Shape().AppendShape({1, numSamples});
         std::vector<float> outputData(outputShape.TotalSize());
         NDArrayViewPtr cpuArrayOutput = MakeSharedObject<NDArrayView>(outputShape, outputData, false);
