@@ -25,7 +25,7 @@ Train=[
             jitterType=UniRatio
             # Interpolation to use when scaling image to width x height size.
             # Possible values: nearest, linear, cubic, lanczos. Default: linear.
-            interpolations=Linear
+            interpolations=linear
             # Stores mean values for each pixel in OpenCV matrix XML format.
             meanFile=$ConfigDir$/ImageNet1K_mean.xml
         ]

@@ -3142,6 +3142,36 @@ void GPUMatrix<ElemType>::MaxPoolingBackward(const GPUMatrix<ElemType>& out, con
 }
 
 template <class ElemType>
+void GPUMatrix<ElemType>::ROIPoolingForward(const size_t numRois, const size_t numImg, const size_t channels, const size_t width, const size_t height,
+                                            const size_t pooledWidth, const size_t pooledHeight, const GPUMatrix<ElemType>& roiData, GPUMatrix<ElemType>& output, 
+                                            GPUMatrix<ElemType>& argmax) const
+{
+    PrepareDevice();
+    SyncGuard syncGuard;
+
+    int count = numRois * numImg * channels * pooledHeight * pooledWidth;
+    const int blockSize = GridDim::maxThreadsPerBlock;
+    auto numThreads = dim3((int)floor((double)(count + blockSize - 1) / blockSize));
+    kROIPoolingForward<<<numThreads, blockSize, 0, t_stream>>>(count, numRois, numImg, channels, width, height, 
+                                                               pooledWidth, pooledHeight, Data(), roiData.Data(), output.Data(), argmax.Data());
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::ROIPoolingBackward(const size_t numRois, const size_t numImg, const size_t channels, const size_t width, const size_t height,
+                                             const size_t pooledWidth, const size_t pooledHeight, const GPUMatrix<ElemType>& roiData, GPUMatrix<ElemType>& grad, 
+                                             GPUMatrix<ElemType>& argmax) const
+{
+    PrepareDevice();
+    SyncGuard syncGuard;
+
+    int count = numImg * channels * height * width;
+    const int blockSize = GridDim::maxThreadsPerBlock;
+    auto numThreads = dim3((int)floor((double)(count + blockSize - 1) / blockSize));
+    kROIPoolingBackward<<<numThreads, blockSize, 0, t_stream>>>(count, numRois, numImg, channels, width, height, 
+                                                                pooledWidth, pooledHeight, Data(), roiData.Data(), grad.Data(), argmax.Data());
+}
+
+template <class ElemType>
 void GPUMatrix<ElemType>::MaxUnpooling(const GPUMatrix<int>& mpRowCol, const GPUMatrix<int>& mpRowIndices, const GPUMatrix<int>& indices, const GPUMatrix<ElemType>& poolInput, GPUMatrix<ElemType>& input) const
 {
     const int BlockSize = 128;
