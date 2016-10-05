@@ -13,13 +13,13 @@
 
 ### Getting the data
 
-we use the CIFAR-10 dataset to demonstrate how to perform regression on images. CIFAR-10 dataset is not included in the CNTK distribution but can be easily downloaded and converted by following the instructions in [DataSets/CIFAR10](../DataSets/CIFAR10). We recommend you to keep the downloaded data in the respective folder while downloading, as the configuration files in this folder assumes that by default.
+we use the CIFAR-10 dataset to demonstrate how to perform regression on images. CIFAR-10 dataset is not included in the CNTK distribution but can be easily downloaded and converted by following the instructions in [DataSets/CIFAR-10](../DataSets/CIFAR-10). We recommend you to keep the downloaded data in the respective folder while downloading, as the configuration files in this folder assumes that by default.
 
 ## Details
 
 ### RegrSimple_CIFAR10.cntk
 
-In this example, we set up a very simple task to have a neural network predict the average RGB values of images normalized to [0,1). To generate the ground truth labels for this regression task, the CIFAR-10 installation script in [DataSets/CIFAR10](../DataSets/CIFAR10) will generate two additional files, `train_regrLabels.txt` and `test_regrLabels.txt`, for train and test respectively.
+In this example, we set up a very simple task to have a neural network predict the average RGB values of images normalized to [0,1). To generate the ground truth labels for this regression task, the CIFAR-10 installation script in [DataSets/CIFAR-10](../DataSets/CIFAR-10) will generate two additional files, `train_regrLabels.txt` and `test_regrLabels.txt`, for train and test respectively.
 
 Run the example from the current folder using:
 
