@@ -438,7 +438,7 @@ def sanitize_var_map(op_arguments, arguments, precision_numpy=None, device=None,
         `dict` that maps variables to sanitized batches
     '''
 
-    if not arguments:
+    if arguments is None or isinstance(arguments, (list, tuple)) and len(arguments)==0:
         if len(op_arguments) > 0:
             raise ValueError('function expects %i arguments'%len(op_arguments))
         return {}

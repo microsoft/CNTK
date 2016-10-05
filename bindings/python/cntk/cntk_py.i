@@ -24,9 +24,17 @@
 %template() std::vector<size_t>;
 %template() std::vector<bool>;
 %template() std::vector<double>;
+%template() std::vector<std::vector<size_t>>;
+%template() std::vector<std::vector<float>>;
+%template() std::vector<std::vector<double>>;
+
 %template() std::vector<CNTK::Variable>;
+%template() std::vector<CNTK::Parameter>;
+%template() std::vector<CNTK::Constant>;
 %template() std::vector<CNTK::Axis>;
+%template() std::vector<CNTK::DeviceDescriptor>;
 %template() std::vector<CNTK::StreamConfiguration>;
+//%template() std::vector<CNTK::DictionaryValue>;
 %template() std::vector<std::shared_ptr<CNTK::Function>>;
 
 // They are defined twice under CNTK::Internal and under CNTK namespace
@@ -40,8 +48,6 @@
 %ignore CNTK::Internal::IsReversingTensorShapesInErrorMessagesEnabled;
 %ignore CNTK::Internal::IsSettingDefaultDeviceAlwaysAllowed;
 %ignore CNTK::Internal::IsAutomaticUnpackingOfPackedValuesDisabled;
-
-%ignore CNTK::Variable::Owner;
 
 %{
 #define SWIG_FILE_WITH_INIT
@@ -1034,16 +1040,15 @@ def dynamic_axes(self):
         std::vector<size_t> dimensions_cntk = (*self).Shape().Dimensions();
         std::vector<size_t> dimensions;
 
-        size_t num_elements = 0;
+        // We have at least one element. In case the shape is empty (e.g.
+        // '()'), we have a scalar, which we need to copy (e.g. a constant).
+        size_t num_elements = 1;
 
         // CNTK uses column major, thus we reverse the shape
         for (int i=dimensions_cntk.size()-1; i>=0; i--)
         {
             dimensions.push_back(dimensions_cntk[i]);            
-            if (num_elements == 0) 
-                num_elements = dimensions_cntk[i];
-            else
-                num_elements *= dimensions_cntk[i];
+            num_elements *= dimensions_cntk[i];
         }
 
         npy_intp* shape = reinterpret_cast<npy_intp*>(&dimensions[0]);

@@ -816,23 +816,6 @@ def hardmax(x, name=''):
 
     Args:
         x: numpy array or any :class:`cntk.Function` that outputs a tensor
-        name (`str`): the name of the Function instance in the network
-    Returns:
-        :class:`cntk.Function`
-    '''
-    from cntk.cntk_py import hardmax
-    x = sanitize_input(x)
-    return hardmax(x)
-
-
-def hardmax(x, name=''):
-    '''
-    TBA
-    Example:
-        TBA
-
-    Args:
-        x: numpy array or any :class:`cntk.Function` that outputs a tensor
         name (`str`): the name of the node in the network
     Returns:
         :class:`cntk.Function`
