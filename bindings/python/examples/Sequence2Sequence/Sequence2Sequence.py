@@ -72,7 +72,7 @@ def sequence_to_sequence_translator(debug_output=False):
 
     decoder_outputH = stabilize(decoder_input)
     for i in range(0, num_layers):
-        if (i == 0):
+        if (i > 0):
             recurrence_hookH = past_value
             recurrence_hookC = past_value
         else:
