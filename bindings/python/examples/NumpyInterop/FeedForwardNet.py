@@ -59,15 +59,18 @@ def ffnet(debug_output=False):
     num_sweeps_to_train_with = 2
     num_minibatches_to_train = (
         num_samples_per_sweep * num_sweeps_to_train_with) / minibatch_size
-    training_progress_output_freq = 20
+    training_progress_output_freq = 60
+
+    if debug_output:
+        training_progress_output_freq = training_progress_output_freq/3
+
     for i in range(0, int(num_minibatches_to_train)):
         features, labels = generate_random_data(
             minibatch_size, input_dim, num_output_classes)
         # Specify the mapping of input variables in the model to actual
         # minibatch data to be trained with
         trainer.train_minibatch({input: features, label: labels})
-        if debug_output:
-            print_training_progress(trainer, i, training_progress_output_freq)
+        print_training_progress(trainer, i, training_progress_output_freq)
 
     test_features, test_labels = generate_random_data(
         minibatch_size, input_dim, num_output_classes)
@@ -83,4 +86,4 @@ if __name__ == '__main__':
     DeviceDescriptor.set_default_device(target_device)
 
     error = ffnet()
-    print("test: %f" % error)
+    print("Error: %f" % error)
