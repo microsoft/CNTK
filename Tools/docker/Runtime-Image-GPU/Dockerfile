@@ -6,6 +6,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         gcc \
         g++ \
         make \
+        python-dev \
+        python-numpy \
+        python-pip \
+        python-yaml \
         wget \
         && \
     rm -rf /var/lib/apt/lists/*
