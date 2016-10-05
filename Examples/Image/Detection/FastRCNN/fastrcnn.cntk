@@ -93,7 +93,7 @@ Train = {
         maxEpochs = 15
         
         learningRatesPerSample = 0.00005
-        momentumAsTimeConstant = 0*5:1024 # was: 0.9 per MB 
+        momentumAsTimeConstant = 10 
         L2RegWeight = 0.0001
         dropoutRate = 0.5
         
