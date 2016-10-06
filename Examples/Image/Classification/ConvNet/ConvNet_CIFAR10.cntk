@@ -17,7 +17,7 @@ TrainConvNet = {
         imageShape = 32:32:3
         labelDim = 10
 
-		featMean = 128
+        featMean = 128
         featScale = 1/256
         Normalize{m,f} = x => f .* (x - m)
 

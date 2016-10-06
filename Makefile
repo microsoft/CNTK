@@ -734,8 +734,11 @@ IMAGE_READER_LIBS += -lopencv_core -lopencv_imgproc -lopencv_imgcodecs
 
 ifdef LIBZIP_PATH
   CPPFLAGS += -DUSE_ZIP
+  #both directories are needed for building libzip
+  INCLUDEPATH += $(LIBZIP_PATH)/include
   INCLUDEPATH += $(LIBZIP_PATH)/lib/libzip/include
   IMAGE_READER_LIBS += -lzip
+  LIBPATH += $(LIBZIP_PATH)/lib
 endif
 
 IMAGEREADER_SRC =\
