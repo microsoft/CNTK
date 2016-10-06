@@ -459,7 +459,7 @@ CNTK2 = [
         if axis==0 then new ComputationNode [ operation = 'CrossEntropyWithSoftmax' ; inputs = _AsNodes (labelSequence : outProbVectorSequence) /*plus the function args*/ ]
         else [ tag1 = tag; out = Minus (ReduceLogSum (outProbVectorSequence, axis=axis), ReduceSum (labelSequence .* outProbVectorSequence, axis=axis), tag=tag1) ].out
     # Classification error along a specific axis: account only for missed labels, i.e.
-    # strictly check whether at the one ‚Äú1‚Äù location in labels we find a value equal to the max
+    # strictly check whether at the one ì1îù location in labels we find a value equal to the max
     ClassificationError(labelSequence, outVectorSequence, topN=1, axis=0, tag='') =
         if axis==0 then new ComputationNode [ operation = 'ClassificationError' ; inputs = _AsNodes (if topN == 1 then (labelSequence : outVectorSequence) else  (labelSequence : outVectorSequence : Constant (topN))) /*plus the function args*/ ]
         else if topN != 1 then Fail ("ClassificationError() along a specific axis does not support topN.")
@@ -483,7 +483,8 @@ CNTK2 = [
         randomSampleSelector           /* Sparse matrix of dimension nClasses * nSamples */,
         weights                        /* nClasses * nHidden */,
         bias                           /* Biases for logit computation. Dimension nClasses */,
-        logExpectedInSampleFrequeny /* For each class logarithm of the estimated frequency the class is expected to occur in the set of random samples */
+        logExpectedInSampleFrequeny    /* For each class logarithm of the estimated frequency the class is expected to occur in the set of random samples */,
+        removeAccidentalHits           /* If true then remove occurences of the sampled class from the random samples */
         ) = 
     {
         # Getting the weights matrix wS in the subspace of samples. Dimension: nHidden * nSamples
@@ -500,10 +501,12 @@ CNTK2 = [
         # To get the 'partition function' over the union of label and sampled classes
         # we need to LogPlus zt if the label is not among the sampled classes.
         labelIsInSampled = ReduceSum(TransposeTimes(labels,randomSampleSelector))
-        logSum = if labelIsInSampled then 
+        logSum1 = if labelIsInSampled then 
                     zSReduced 
                     else 
                     LogPlus(zT, zSReduced)
+        logSum2 = zSReduced
+        logSum = if removeAccidentalHits then logSum1 else LogPlus(zT, zSReduced)
 
         ce = logSum - zT
     }.ce
@@ -515,13 +518,14 @@ CNTK2 = [
         bias                           /* Biases for logit computation. Dimension nClasses */,
         numSamples                     /* number of random samples to be used */,
         samplingWeights                /* Sparse matrix of dimension nClasses * nSamples */,
-        sampleWithReplacement = true   /* boolean parameter specifiying if sampling with replacment should be used */
+        sampleWithReplacement = true   /* boolean parameter specifiying if sampling with replacment should be used */,
+        removeAccidentalHits = true    /* If true then remove occurences of the sampled class from the random samples */
         ) = 
     {
         samples        = CNTK2.GetRandomSample (samplingWeights, numSamples, sampleWithReplacement)
         inclusionProbs = CNTK2.GetInclusionFrequency(samplingWeights, numSamples, sampleWithReplacement)
         logPrior       = Log(inclusionProbs)
-        ce = CNTK2.CrossEntropyWithSampledSoftmax(hiddenLayer, labels,  samples, weights, bias, logPrior)
+        ce = CNTK2.CrossEntropyWithSampledSoftmax(hiddenLayer, labels,  samples, weights, bias, logPrior, removeAccidentalHits)
 
     }.ce
 
