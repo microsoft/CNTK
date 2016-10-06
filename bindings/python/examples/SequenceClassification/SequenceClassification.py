@@ -27,7 +27,7 @@ def LSTM_sequence_classifer_net(input, num_output_classes, embedding_dim, LSTM_d
 
 # Creates and trains a LSTM sequence classification model
 
-def train_sequence_classifier():
+def train_sequence_classifier(debug_output=False):
     input_dim = 2000
     cell_dim = 25
     hidden_dim = 25
@@ -66,6 +66,10 @@ def train_sequence_classifier():
     minibatch_size = 200
     training_progress_output_freq = 10
     i = 0
+
+    if debug_output:
+        training_progress_output_freq = training_progress_output_freq/3
+
     while True:
         mb = mb_source.get_next_minibatch(minibatch_size)
 
@@ -79,7 +83,6 @@ def train_sequence_classifier():
         trainer.train_minibatch(arguments)
 
         print_training_progress(trainer, i, training_progress_output_freq)
-
         i += 1
 
     import copy
@@ -98,4 +101,4 @@ if __name__ == '__main__':
     DeviceDescriptor.set_default_device(target_device)
 
     error, _ = train_sequence_classifier()
-    print("test: %f" % error)
+    print("Error: %f" % error)
