@@ -1,8 +1,15 @@
 #pragma once
 
+// TODO: make this discoverable/settable during compilation, not hardcoded here
+#if !defined(HAS_OPENMPI)
+#define HAS_OPENMPI 1
+#endif
+
+#if HAS_OPENMPI
 // Please see https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Windows#ms-mpi or
 // https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Linux#open-mpi for setup instructions
 // of an MPI implementation on your platform.
+
 #ifdef _MSC_VER
 // Suppress warning for non-ASCII characters in MS-MPI headers
 #pragma warning(push)
@@ -12,14 +19,39 @@
 #else
 #include "mpi.h"
 #endif
+#else
+typedef void *MPI_Comm;
+typedef enum _MPI_Datatype { MPI_CHAR, MPI_INT, MPI_FLOAT, MPI_DOUBLE, MPI_UNSIGNED, MPI_LONG_LONG_INT } MPI_Datatype;
+
+#define MPI_COMM_WORLD        0
+#define MPI_IN_PLACE          0
+#define MPI_SUM               2
+
+#define MPI_SUCCESS           0
+#define MPI_STATUSES_IGNORE  -3
+#define MPI_STATUS_IGNORE    -2
+#define MPI_UNDEFINED        -1
+
+#define MPI_MAX_ERROR_STRING  64
+
+#define MPI_Finalize()                      MPI_SUCCESS
+#define MPI_Wait(a, b)                      a,b,MPI_UNDEFINED
+#define MPI_Waitany(a, b, c, d)             a,b,c,d,MPI_UNDEFINED
+#define MPI_Waitall(a, b, c)                a,b,c,MPI_UNDEFINED
+#define MPI_Isend(a, b, c, d, e, f, g)      a,b,c,d,e,f,MPI_UNDEFINED
+#define MPI_Recv(a, b, c, d, e, f, g)       a,b,c,d,e,f,g,MPI_UNDEFINED
+#define MPI_Irecv(a, b, c, d, e, f, g)      a,b,c,d,e,f,g,MPI_UNDEFINED
+#define MPI_Iallreduce(a, b, c, d, e, f, g) a,b,c,d,e,f,g,MPI_UNDEFINED
+
+typedef int MPI_Request;
+typedef void *MPI_Status;
+#endif
 
 #include <errno.h> 
 #include <string>
 #include <array>
 #include <vector>
 #include <memory>
-
-#define FFLUSH_SUCCESS 0
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
