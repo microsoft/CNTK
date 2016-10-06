@@ -528,17 +528,6 @@ namespace CNTK
             return CompositeFunctionOpName;
         }
 
-    public:
-        bool NetworkMatricesAllocated() const 
-        {
-            return (m_computationNetwork != nullptr) && m_networkMatricesAllocated; 
-        }
-
-        void PurgeComputationNetwork()
-        {
-            m_computationNetwork = nullptr;
-        }
-
     private:
         virtual void ReplacePlaceholdersInPlace(const std::unordered_map<Variable, Variable>& placeholderReplacements,
                                                 std::unordered_set<const Function*>& visitedFunctions,

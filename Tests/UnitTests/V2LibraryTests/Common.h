@@ -381,3 +381,23 @@ inline size_t FlattenedIndex(const CNTK::NDShape& shape, const std::vector<size_
 
     return flattenedIdx;
 };
+
+inline CNTK::FunctionPtr Embedding(const CNTK::Variable& input, size_t embeddingDim, const CNTK::DeviceDescriptor& device)
+{
+    assert(input.Shape().Rank() == 1);
+    size_t inputDim = input.Shape()[0];
+
+    auto embeddingParameters = CNTK::Parameter({ embeddingDim, inputDim }, CNTK::DataType::Float, CNTK::GlorotUniformInitializer(), device);
+    return Times(embeddingParameters, input);
+}
+
+inline CNTK::FunctionPtr LSTMSequenceClassiferNet(const CNTK::Variable& input, size_t numOutputClasses, size_t embeddingDim, size_t LSTMDim, size_t cellDim, const CNTK::DeviceDescriptor& device, const std::wstring& outputName)
+{
+    auto embeddingFunction = Embedding(input, embeddingDim, device);
+    auto pastValueRecurrenceHook = [](const CNTK::Variable& x) { return PastValue(x); };
+    auto LSTMFunction = LSTMPComponentWithSelfStabilization<float>(embeddingFunction, { LSTMDim }, { cellDim }, pastValueRecurrenceHook, pastValueRecurrenceHook, device).first;
+    auto thoughtVectorFunction = CNTK::Sequence::Last(LSTMFunction);
+
+    return FullyConnectedLinearLayer(thoughtVectorFunction, numOutputClasses, device, outputName);
+}
+

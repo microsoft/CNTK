@@ -10,25 +10,6 @@ using namespace CNTK;
 
 using namespace std::placeholders;
 
-FunctionPtr Embedding(const Variable& input, size_t embeddingDim, const DeviceDescriptor& device)
-{
-    assert(input.Shape().Rank() == 1);
-    size_t inputDim = input.Shape()[0];
-
-    auto embeddingParameters = Parameter({ embeddingDim, inputDim }, DataType::Float, GlorotUniformInitializer(), device);
-    return Times(embeddingParameters, input);
-}
-
-FunctionPtr LSTMSequenceClassiferNet(const Variable& input, size_t numOutputClasses, size_t embeddingDim, size_t LSTMDim, size_t cellDim, const DeviceDescriptor& device, const std::wstring& outputName)
-{
-    auto embeddingFunction = Embedding(input, embeddingDim, device);
-    auto pastValueRecurrenceHook = [](const Variable& x) { return PastValue(x); };
-    auto LSTMFunction = LSTMPComponentWithSelfStabilization<float>(embeddingFunction, { LSTMDim }, { cellDim }, pastValueRecurrenceHook, pastValueRecurrenceHook, device).first;
-    auto thoughtVectorFunction = Sequence::Last(LSTMFunction);
-
-    return FullyConnectedLinearLayer(thoughtVectorFunction, numOutputClasses, device, outputName);
-}
-
 void TrainLSTMSequenceClassifer(const DeviceDescriptor& device, bool testSaveAndReLoad)
 {
     const size_t inputDim = 2000;

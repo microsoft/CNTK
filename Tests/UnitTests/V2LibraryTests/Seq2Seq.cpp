@@ -80,7 +80,7 @@ void TrainSequenceToSequenceTranslator(const DeviceDescriptor& device, bool useS
     for (size_t i = 0; i < numLayers; ++i)
     {
         std::function<FunctionPtr(const Variable&)> recurrenceHookH, recurrenceHookC;
-        if (i == 0)
+        if (i > 0)
         {
             recurrenceHookH = pastValueRecurrenceHookWithBeamSearchReordering;
             recurrenceHookC = pastValueRecurrenceHookWithBeamSearchReordering;

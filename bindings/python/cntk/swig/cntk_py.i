@@ -41,8 +41,6 @@
 %ignore CNTK::Internal::IsSettingDefaultDeviceAlwaysAllowed;
 %ignore CNTK::Internal::IsAutomaticUnpackingOfPackedValuesDisabled;
 
-%ignore CNTK::Variable::Owner;
-
 %{
 #define SWIG_FILE_WITH_INIT
 %}

@@ -1158,8 +1158,8 @@ namespace CNTK
             // TODO: Support changing the device across different invocations of the forward method on a Function instance
             if (AsDeviceDescriptor(m_computationNetwork->GetDeviceId()) != device)
                 LogicError("Changing device across different Forward calls on a CNTK composite Function is currently unsupported");
-        }
 
+        }
         else
         {
             m_computationNetwork = std::make_shared<ComputationNetwork>(AsCNTKImplDeviceId(device));
@@ -1170,20 +1170,11 @@ namespace CNTK
             if (backpropRoots.size() > 1)
                 LogicError("More than one backprop roots is currently unsupported");
 
-            ComputationNodeBasePtr backpropRootNode;
-
             // Now recursively create the network in a top-down fashion
             auto rootFunction = RootFunction();
             auto rootFunctionOutputs = rootFunction->Outputs();
-            std::vector<ComputationNodeBasePtr> forwardRootNodes;
             for (auto rootOutput : rootFunctionOutputs)
-            {
-                auto currentRootNode = GetNode(rootOutput, m_computationNetwork, builder, m_variableToNodeMap, m_isVariableRootMap);
-                forwardRootNodes.push_back(currentRootNode);
-
-                if (backpropRoots.find(rootOutput) != backpropRoots.end())
-                    backpropRootNode = m_variableToNodeMap[rootOutput];
-            }
+                GetNode(rootOutput, m_computationNetwork, builder, m_variableToNodeMap, m_isVariableRootMap);
 
             // If any of the function outputs is not a root node, we need to explicitly add it to the 'output' group of the ComputationNetwork
             for (auto rootOutput : rootFunctionOutputs)
@@ -1242,8 +1233,26 @@ namespace CNTK
                     }
                 }
             }
+        }
 
-            if (allocateNetworkMatrices)
+
+        if (!m_networkMatricesAllocated && allocateNetworkMatrices)
+        {
+            ComputationNodeBasePtr backpropRootNode;
+
+            // Now recursively create the network in a top-down fashion
+            auto rootFunction = RootFunction();
+            auto rootFunctionOutputs = rootFunction->Outputs();
+            std::vector<ComputationNodeBasePtr> forwardRootNodes;
+            for (auto rootOutput : rootFunctionOutputs)
+            {
+                auto currentRootNode = m_variableToNodeMap[rootOutput];
+                forwardRootNodes.push_back(currentRootNode);
+
+                if (m_currentBackpropRoots.find(rootOutput) != m_currentBackpropRoots.end())
+                    backpropRootNode = currentRootNode;
+            }
+
             m_computationNetwork->AllocateAllMatrices(forwardRootNodes, {}, backpropRootNode);
             m_networkMatricesAllocated = allocateNetworkMatrices;
         }
