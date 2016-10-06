@@ -74,6 +74,8 @@ public:
         }
     }
 
+    void SetCurrentSamplePosition(size_t currentSamplePosition);
+
 private:
     // Load data for chunks if needed.
     void LoadDataChunks(const ClosedOpenChunkInterval& windowRange);

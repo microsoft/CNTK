@@ -224,4 +224,9 @@ Sequences NoRandomizer::GetNextSequences(size_t sampleCount)
     return result;
 }
 
+void NoRandomizer::SetCurrentSamplePosition(size_t)
+{
+    NOT_IMPLEMENTED;
+}
+
 } } }

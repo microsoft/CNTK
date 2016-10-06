@@ -60,6 +60,11 @@ public:
         m_sequenceProvider->StartEpoch(config);
     }
 
+    void SetCurrentSamplePosition(size_t currentSamplePosition) override
+    {
+        m_sequenceProvider->SetCurrentSamplePosition(currentSamplePosition);
+    }
+
     // Description of streams that the transformer provides.
     virtual std::vector<StreamDescriptionPtr> GetStreamDescriptions() const override
     {

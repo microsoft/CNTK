@@ -41,6 +41,9 @@ public:
     // Sets current epoch configuration.
     virtual void StartEpoch(const EpochConfiguration& config) = 0;
 
+    // Set current sample position
+    virtual void SetCurrentSamplePosition(size_t currentSamplePosition) = 0;
+
     // Gets next sequences up to a maximum count of samples.
     virtual Sequences GetNextSequences(size_t sampleCount) = 0;
 

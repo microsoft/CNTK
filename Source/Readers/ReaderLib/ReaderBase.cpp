@@ -68,4 +68,9 @@ size_t ReaderBase::GetCurrentSamplePosition()
     return m_sequenceEnumerator->GetCurrentSamplePosition();
 }
 
+void ReaderBase::SetCurrentSamplePosition(size_t currentSamplePosition)
+{
+    m_sequenceEnumerator->SetCurrentSamplePosition(currentSamplePosition);
+}
+
 }}}

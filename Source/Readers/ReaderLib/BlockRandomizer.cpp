@@ -382,4 +382,16 @@ void BlockRandomizer::Prefetch(ChunkIdType chunkId)
     }
 }
 
+void BlockRandomizer::SetCurrentSamplePosition(size_t currentSamplePosition)
+{
+    m_epochStartPosition = currentSamplePosition;
+    PrepareNewSweepIfNeeded(m_epochStartPosition);
+
+    // Sets sequence cursor to the sequence that corresponds to the epoch start position.
+    // If last epoch ended in the middle of a sequence, the cursor is moved to the next sequence in the sweep.
+    size_t offsetInSweep = m_epochStartPosition % m_sweepTotalNumberOfSamples;
+    size_t newOffset = m_sequenceRandomizer->Seek(offsetInSweep, m_sweep);
+    m_globalSamplePosition = m_sweep * m_sweepTotalNumberOfSamples + newOffset;
+}
+
 }}}

@@ -28,6 +28,7 @@ public:
     }
 
     size_t GetCurrentSamplePosition() override;
+    void SetCurrentSamplePosition(size_t currentSamplePosition) override;
 
 private:
     // Gets next sequence descriptions with total size less than sampleCount.
