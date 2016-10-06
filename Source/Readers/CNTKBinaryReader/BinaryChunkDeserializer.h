@@ -17,15 +17,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 class OffsetsTable {
 public:
 
-    OffsetsTable(size_t numBatches, size_t numSequences, byte* offsetsTable) : m_numBatches(numBatches), m_diskOffsetsTable(offsetsTable)
+    OffsetsTable(size_t numBatches, byte* offsetsTable) : m_numBatches(numBatches), m_diskOffsetsTable(offsetsTable)
     {
         // We will use this constantly, so let's store it instead of re-computing it.
-        m_offsetRowSize = GetOffsetRowSize(numSequences);
+        m_offsetRowSize = GetOffsetRowSize();
 
         Initialize();
     }
 
-    static int64_t GetOffsetRowSize(size_t numSequences) { return sizeof(int64_t) + (1 + numSequences) * sizeof(int32_t); }
+    static int64_t GetOffsetRowSize() { return sizeof(int64_t) + (1 + 1) * sizeof(int32_t); }
 
     void SetOffset(size_t id, int64_t newOffset) { *(int64_t*)(m_diskOffsetsTable + id*m_offsetRowSize) = newOffset; }
 
@@ -34,21 +34,14 @@ public:
 
     // The number of sequences is stored after the offset
     int32_t GetNumSequences(size_t index) { return *(int32_t*)(m_diskOffsetsTable + index*m_offsetRowSize + sizeof(int64_t)); }
-        //m_diskOffsetsTable[index].numSequences; }
 
     // The number of samples for the selected stream. Note that for ease of use, if -1 is passed in then it returns the number of
     // sequences. This allows for the calling code to be more general.
-    int32_t GetNumSamples(size_t index, int32_t stream) 
+    int32_t GetNumSamples(size_t index) 
     { 
-        if (stream < 0)
-            return GetNumSequences(index);
-        else
-        {
-            //                  base                start of the row         offset             numsequences        numSamples
-            return *(int32_t*)(m_diskOffsetsTable + index*m_offsetRowSize + sizeof(int64_t) + sizeof(int32_t) + stream*sizeof(int32_t));
-        }
+        //                  base                start of the row         offset             numsequences
+        return *(int32_t*)(m_diskOffsetsTable + index*m_offsetRowSize + sizeof(int64_t) + sizeof(int32_t));
     }
-        //return m_diskOffsetsTable[index].numSamples; }
 
     int64_t GetStartIndex(size_t index) { return m_startIndex[index]; }
 
@@ -102,8 +95,8 @@ private:
     void Initialize(const std::map<std::wstring, std::wstring>& rename);
 
     // Reads the offsets table from disk into memory
-    void ReadOffsetsTable(FILE* infile, size_t numSequences, size_t startOffset, size_t numBatches);
-    void ReadOffsetsTable(FILE* infile, size_t numSequences);
+    void ReadOffsetsTable(FILE* infile, size_t startOffset, size_t numBatches);
+    void ReadOffsetsTable(FILE* infile);
 
     // Reads a chunk from disk into buffer
     unique_ptr<byte[]> ReadChunk(ChunkIdType chunkId);

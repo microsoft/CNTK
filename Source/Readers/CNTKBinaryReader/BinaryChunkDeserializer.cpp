@@ -11,16 +11,16 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-void BinaryChunkDeserializer::ReadOffsetsTable(FILE* infile, size_t numSequences)
+void BinaryChunkDeserializer::ReadOffsetsTable(FILE* infile)
 {
-    ReadOffsetsTable(infile, numSequences, 0, m_numBatches);
+    ReadOffsetsTable(infile, 0, m_numBatches);
 }
 
-void BinaryChunkDeserializer::ReadOffsetsTable(FILE* infile, size_t numSequences, size_t startOffset, size_t numBatches)
+void BinaryChunkDeserializer::ReadOffsetsTable(FILE* infile, size_t startOffset, size_t numBatches)
 {
     assert((int64_t)(startOffset + numBatches) <= m_numBatches);
 
-    size_t offsetRowSize = OffsetsTable::GetOffsetRowSize(numSequences);
+    size_t offsetRowSize = OffsetsTable::GetOffsetRowSize();
     size_t startPos = startOffset * offsetRowSize + m_offsetStart;
 
     // Seek to the offsets table start
@@ -36,7 +36,7 @@ void BinaryChunkDeserializer::ReadOffsetsTable(FILE* infile, size_t numSequences
     if ((int64_t)(startOffset + numBatches) != m_numBatches)
         CNTKBinaryFileHelper::readOrDie(offsetsTable + numBatches, offsetRowSize, 1, infile);
 
-    m_offsetsTable = make_unique<OffsetsTable>(numBatches, numSequences, offsetsTable);
+    m_offsetsTable = make_unique<OffsetsTable>(numBatches, offsetsTable);
 
     if ((int64_t)(startOffset + numBatches) == m_numBatches)
     {
@@ -155,10 +155,6 @@ void BinaryChunkDeserializer::Initialize(const std::map<std::wstring, std::wstri
         {
             m_sequenceNum[c] = (int32_t)numSequences;
             numSequences++;
-            // This is a hack. We're in essence turning this stream off by making it's sequenceNum = - 1 if it doesn't exist in the config.
-            //  Hopefully we'll be able to remove this later. If not, this should be redone.
-            if (rename.find(wname) == rename.end())
-                m_sequenceNum[c] = -1;
         }
         else
             m_sequenceNum[c] = -1;
@@ -169,12 +165,12 @@ void BinaryChunkDeserializer::Initialize(const std::map<std::wstring, std::wstri
     m_offsetStart = CNTKBinaryFileHelper::tellOrDie(m_file);
 
     // After the header is the data start. Compute that now.
-    m_dataStart = m_offsetStart + m_numBatches * OffsetsTable::GetOffsetRowSize(numSequences);
+    m_dataStart = m_offsetStart + m_numBatches * OffsetsTable::GetOffsetRowSize();
 
     // We only have to read in the offsets table once, so do that now.
     // Note it's possible in distributed reading mode to only want to read
     // a subset of the offsets table.
-    ReadOffsetsTable(m_file, numSequences);
+    ReadOffsetsTable(m_file);
 }
 
 ChunkDescriptions BinaryChunkDeserializer::GetChunkDescriptions()
@@ -188,14 +184,10 @@ ChunkDescriptions BinaryChunkDeserializer::GetChunkDescriptions()
 
     for (ChunkIdType c = 0; c < (ChunkIdType)m_numBatches; c++ ) 
     {
-        int32_t maxNumSamples = -1;
-        for (int32_t index : m_sequenceNum)
-            maxNumSamples = max(maxNumSamples, m_offsetsTable->GetNumSamples(c, index));
-
         result.push_back(shared_ptr<ChunkDescription>(
             new ChunkDescription {
                 c,
-                (size_t)maxNumSamples,
+                (size_t)m_offsetsTable->GetNumSamples(c),
                 (size_t)m_offsetsTable->GetNumSequences(c)
         }));
     }

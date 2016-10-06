@@ -230,7 +230,7 @@ public:
             result[colIndex] = sequence;
         }
 
-        // For spares, we compute how many bytes we processed
+        // For sparse, we compute how many bytes we processed
         // From the header to this function, we see that is:
         // sizeof(int32_t) + totalNNz * sizeof(ElemType) + totalNNz * sizeof(int32_t) + numSequences * sizeof(int32_t)
         return sizeof(int32_t) + totalNNz * (elemSize + sizeof(int32_t)) + (numSequences + 1) * sizeof(int32_t);
