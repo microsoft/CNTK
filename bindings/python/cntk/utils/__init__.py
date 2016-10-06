@@ -282,8 +282,7 @@ def get_data_type(*args):
         args = [args]
 
     for arg in args:
-        if isinstance(arg, (cntk_py.Variable, cntk_py.Constant,
-            cntk_py.Parameter, cntk_py.Value, cntk_py.NDArrayView)):
+        if isinstance(arg, (cntk_py.Variable, cntk_py.Value, cntk_py.NDArrayView)):
             if cntk_py.DataType_Double == arg.get_data_type():
                 dtypes.add(np.float64)
             else:
