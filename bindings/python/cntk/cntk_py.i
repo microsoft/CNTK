@@ -1029,7 +1029,6 @@ def dynamic_axes(self):
         {
             view = cpuView;
         }
-        view->marker = 42;
 
         return view;
     }
