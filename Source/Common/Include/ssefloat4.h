@@ -11,10 +11,12 @@
 #include <intrin.h> // for intrinsics
 #endif
 #ifdef __unix__
-//#include <x86intrin.h>
-
+#if !defined(__ARM64__)
+#include <x86intrin.h>
+#else
 #define _mm_free(p) free(p)
 #define _mm_malloc(a, b) malloc(a)
+#endif
 #endif
 
 namespace msra { namespace math {
@@ -30,6 +32,7 @@ namespace msra { namespace math {
 // newer ones: (seems no single list available)
 // ===========================================================================
 
+#if defined(__ARM64__)
 typedef struct __m128_t
 {
     float f[4];
@@ -167,6 +170,7 @@ static __m128 _mm_cmple_ps(const __m128 &a, const __m128 &b)
 }
 
 #define _mm_prefetch(a, b) 
+#endif
 
 class float4
 {
