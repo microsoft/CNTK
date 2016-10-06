@@ -296,7 +296,13 @@ def dynamic_axes(self):
 // modified values and put them back into the dictionary. This is used, when
 // e.g. the user puts a variable into the dictionary, hoping that it will
 // afterwards point to the proper value.
-%typemap(argout) std::unordered_map<CNTK::Variable, CNTK::ValuePtr>& {
+%typemap(argout) 
+    // Swig would create this conversion for the 'const' variants as well, which 
+    // we do not want. Therefor, we have to explicitly tell it for which ones it should do it.
+    std::unordered_map<CNTK::Variable, CNTK::ValuePtr>& outputsToFetch, 
+    std::unordered_map<CNTK::Variable, CNTK::ValuePtr>& outputs,
+    std::unordered_map<CNTK::Variable, CNTK::ValuePtr>& backPropagatedGradientValuesForInputs
+    {
      if (!PyDict_Check($input)) {
          SWIG_exception(SWIG_TypeError, "dictionary expected");
      }
