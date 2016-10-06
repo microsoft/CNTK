@@ -282,7 +282,8 @@ def get_data_type(*args):
         args = [args]
 
     for arg in args:
-        if isinstance(arg, (cntk_py.Variable, cntk_py.Constant, cntk_py.Parameter)):
+        if isinstance(arg, (cntk_py.Variable, cntk_py.Constant,
+            cntk_py.Parameter, cntk_py.Value, cntk_py.NDArrayView)):
             if cntk_py.DataType_Double == arg.get_data_type():
                 dtypes.add(np.float64)
             else:
@@ -536,22 +537,6 @@ def create_NDArrayView_from_NumPy(nd, dev=None):
         dev = cntk_py.DeviceDescriptor.use_default_device()
 
     return cntk_py.NDArrayView(nd, dev, False)
-
-
-
-def create_Value_for_Variable(var, shape=None, dev=None, mask=None):
-    if not dev:
-        dev = cntk_py.DeviceDescriptor.cpu_device()
-
-    if shape is None:
-        shape = var.shape().dimensions()
-    view = cntk_py.NDArrayView(
-        var.get_data_type(), cntk_py.StorageFormat_Dense, shape, dev)
-    if mask:
-        value = cntk_py.Value(view, mask)
-    else:
-        value = cntk_py.Value(view)
-    return value
 
 
 def create_Value(shape, data_type, dev):
