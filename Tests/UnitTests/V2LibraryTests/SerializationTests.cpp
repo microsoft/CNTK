@@ -253,7 +253,7 @@ void TestModelSaving(const DeviceDescriptor& device)
     trainer.TrainMinibatch({ { features, minibatchData[featureStreamInfo].m_data }, { labels, minibatchData[labelStreamInfo].m_data } }, device);
     auto postRestoreMB2Loss = trainer.PreviousMinibatchLossAverage();
     if (postRestoreMB2Loss != MB2Loss)
-        throw std::runtime_error("Post checkpoint restoration training loss does not match expectation");
+        ReportFailure("Post checkpoint restoration training loss does not match expectation; Expected=%g, Actual=%g", MB2Loss, postRestoreMB2Loss);
 
     classifierOutput->RestoreFromLegacyModel(modelFile);
     SaveAsLegacyModel(classifierOutput, modelFile);
@@ -266,7 +266,7 @@ void TestModelSaving(const DeviceDescriptor& device)
     trainer.TrainMinibatch({ { features, minibatchData[featureStreamInfo].m_data }, { labels, minibatchData[labelStreamInfo].m_data } }, device);
     postRestoreMB2Loss = trainer.PreviousMinibatchLossAverage();
     if (postRestoreMB2Loss != MB2Loss)
-        throw std::runtime_error("Post checkpoint restoration training loss does not match expectation");
+        ReportFailure("Post checkpoint restoration training loss does not match expectation; Expected=%g, Actual=%g", MB2Loss, postRestoreMB2Loss);
 }
 
 void SerializationTests()

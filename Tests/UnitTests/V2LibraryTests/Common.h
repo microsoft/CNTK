@@ -401,3 +401,22 @@ inline CNTK::FunctionPtr LSTMSequenceClassiferNet(const CNTK::Variable& input, s
     return FullyConnectedLinearLayer(thoughtVectorFunction, numOutputClasses, device, outputName);
 }
 
+#pragma warning(push)
+#pragma warning(disable : 4996)
+#ifndef _MSC_VER // TODO: what is the correct trigger for gcc?
+__declspec_noreturn inline void ReportFailure(const char* format, ...) __attribute__((format(printf, 1, 2)));
+#endif
+
+__declspec_noreturn inline void ReportFailure(const char* format, ...)
+{
+    va_list args;
+    va_start(args, format);
+
+    char buffer[1024] = { 0 }; // Note: pre-VS2015 vsnprintf() is not standards-compliant and may not add a terminator
+    vsnprintf(buffer, _countof(buffer) - 1, format, args); // -1 because pre-VS2015 vsnprintf() does not always write a 0-terminator
+    if (strlen(buffer)/*written*/ >= (int)_countof(buffer) - 2)
+        sprintf(buffer + _countof(buffer) - 4, "...");
+
+    throw std::runtime_error(buffer);
+}
+#pragma warning(pop)
