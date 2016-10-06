@@ -5,8 +5,8 @@ from fastRCNN.pascal_voc import pascal_voc # as nmsPython
 print datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
 
 # dataset name
-datasetName = "toy"
-# datasetName = "pascalVoc"
+# datasetName = "toy"
+datasetName = "pascalVoc"
 # datasetName = "pascalVoc_aeroplanesOnly"
 
 
@@ -14,7 +14,7 @@ datasetName = "toy"
 # default parameters
 ############################
 #cntk params
-cntk_nrRois = 500  # how many ROIs to zero-pad
+cntk_nrRois = 100  # how many ROIs to zero-pad
 cntk_padWidth = 1000
 cntk_padHeight = 1000
 cntk_posOverlapThres = {"train": 0.5, "test": 0.5}  # only used for DNN training (as opposed to svm training)
@@ -23,6 +23,9 @@ cntk_featureDimensions = {'svm': 4096}
 # directories
 rootDir = "C:/src/CNTK/Examples/Image/Detection/FastRCNN/"
 imgDir = rootDir + "data/" + datasetName + "/"
+pascalDataDir = "C:/Temp/Pascal/"
+
+# derived directories
 procDir = rootDir + "proc/" + datasetName + "_{}/".format(cntk_nrRois)
 resultsDir = rootDir + "results/" + datasetName + "_{}/".format(cntk_nrRois)
 roiDir = procDir + "rois/"
@@ -92,7 +95,7 @@ elif datasetName.startswith("pascalVoc"):
     # database
     imdbs = dict()
     for image_set, year in zip(["train", "test"], ["2012", "2007"]):
-        imdbs[image_set] = fastRCNN.pascal_voc(lutImageSet[image_set], year, classes, cntk_nrRois, cacheDir = cntkFilesDir)
+        imdbs[image_set] = fastRCNN.pascal_voc(lutImageSet[image_set], year, classes, cntk_nrRois, cacheDir = cntkFilesDir, devkit_path=pascalDataDir)
         print "Number of {} images: {}".format(image_set, imdbs[image_set].num_images)
 
 else:
