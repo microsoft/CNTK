@@ -1003,26 +1003,25 @@ def dynamic_axes(self):
         
         void* buf;
 
-        NDArrayView* cpuView;
+        NDArrayView* view;
         if (typecode == NPY_FLOAT)
         {
-            size_t num_bytes = num_elements * sizeof(float);
-            buf = malloc(num_bytes);
-            memcpy(buf, PyArray_DATA(array), num_bytes);
-            cpuView = new NDArrayView(NDShape(shape), (float*)buf, num_elements, DeviceDescriptor::CPUDevice(), readOnly);
+            NDArrayView  tmp(NDShape(shape), (float*)PyArray_DATA(array), num_elements, DeviceDescriptor::CPUDevice(), readOnly);
+            view = new NDArrayView(DataType::Float, tmp.Shape(), device);
+            view->CopyFrom(tmp);
         }
         else if (typecode == NPY_DOUBLE)
         {
-            size_t num_bytes = num_elements * sizeof(double);
-            buf = malloc(num_bytes);
-            memcpy(buf, PyArray_DATA(array), num_bytes);
-            cpuView = new NDArrayView(NDShape(shape), (double*)buf, num_elements, DeviceDescriptor::CPUDevice(), readOnly);
+            NDArrayView  tmp(NDShape(shape), (double*)PyArray_DATA(array), num_elements, DeviceDescriptor::CPUDevice(), readOnly);
+            view = new NDArrayView(DataType::Double, tmp.Shape(), device);
+            view->CopyFrom(tmp);
         }
         else
         {
             throw std::logic_error("NumPy array of type float32 or float64 expected");
         }
 
+/*
         NDArrayView* view;
         if (device != DeviceDescriptor::CPUDevice())
         {
@@ -1035,6 +1034,7 @@ def dynamic_axes(self):
         {
             view = cpuView;
         }
+        */
 
         return view;
     }
