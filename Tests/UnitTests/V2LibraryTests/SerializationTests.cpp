@@ -252,8 +252,7 @@ void TestModelSaving(const DeviceDescriptor& device)
 
     trainer.TrainMinibatch({ { features, minibatchData[featureStreamInfo].m_data }, { labels, minibatchData[labelStreamInfo].m_data } }, device);
     auto postRestoreMB2Loss = trainer.PreviousMinibatchLossAverage();
-    if (postRestoreMB2Loss != MB2Loss)
-        ReportFailure("Post checkpoint restoration training loss does not match expectation; Expected=%g, Actual=%g", MB2Loss, postRestoreMB2Loss);
+    FloatingPointCompare(postRestoreMB2Loss, MB2Loss, "Post checkpoint restoration training loss does not match expectation");
 
     classifierOutput->RestoreFromLegacyModel(modelFile);
     SaveAsLegacyModel(classifierOutput, modelFile);
@@ -265,8 +264,7 @@ void TestModelSaving(const DeviceDescriptor& device)
 
     trainer.TrainMinibatch({ { features, minibatchData[featureStreamInfo].m_data }, { labels, minibatchData[labelStreamInfo].m_data } }, device);
     postRestoreMB2Loss = trainer.PreviousMinibatchLossAverage();
-    if (postRestoreMB2Loss != MB2Loss)
-        ReportFailure("Post checkpoint restoration training loss does not match expectation; Expected=%g, Actual=%g", MB2Loss, postRestoreMB2Loss);
+    FloatingPointCompare(postRestoreMB2Loss, MB2Loss, "Post checkpoint restoration training loss does not match expectation");
 }
 
 void SerializationTests()
