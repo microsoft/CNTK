@@ -10,10 +10,11 @@
 configure=$0
 build_top=$PWD
 
-have_cuda=no
 cuda_path=
 cuda_check=include/cuda.h
 enable_cuda=
+
+enable_python=
 
 # CNTK Custom MKL Version
 cntk_custom_mkl_version=2
@@ -63,6 +64,15 @@ have_libzip=no
 libzip_path=
 libzip_check=include/zip.h
 
+have_swig=no
+swig_path=
+swig_check=bin/swig
+swig_required_version=3.0.10
+
+py_check=bin/python
+py_versions=
+declare -A py_paths
+
 mathlib=
 
 default_use_1bitsgd=no
@@ -89,6 +99,7 @@ default_cubs="cub-1.4.1"
 default_cudnns="cudnn-5.1 cudnn-5.0"
 default_opencvs="opencv-3.1.0 opencv-3.0.0"
 default_libzips="libzip-1.1.2"
+default_swig="swig-3.0.10"
 
 function default_paths ()
 {
@@ -192,6 +203,15 @@ function is_hardlinked ()
     echo $r
 }
 
+function check_version ()
+{
+    local expected_version=$1
+    local actual_version=$2
+    [ "$actual_version" = "" ] && return 1
+    [ "$( printf "%s\n" $actual_version $expected_version | sort -V | head -1)" = "$expected_version" ]
+    return $?
+}
+
 function default_use_cuda ()
 {
     if test x$(find_cuda) = x || test x$(find_gdk_include) = x || test x$(find_gdk_nvml_lib) = x || test x$(find_cudnn) = x || test x$(find_cub) = x
@@ -202,6 +222,65 @@ function default_use_cuda ()
     fi
 }
 enable_cuda=$(default_use_cuda)
+
+# TODO allow to pick up from path?
+function check_swig ()
+{
+    local swig_dir="$1"
+    local swig_bin="$swig_dir/$swig_check"
+
+    # Check that binary is executable and we can retrieve the version
+    test -x "$swig_bin" || return $?
+    "$swig_bin" -version 2>&1 1>/dev/null || return $?
+
+    local actual_version=$("$swig_bin" -version | grep '^SWIG Version ' | head -1 | grep -o '[0-9.]*')
+    if check_version "$swig_required_version" "$actual_version"
+    then
+        echo "$swig_dir"
+        return 0
+    else
+        return 1
+    fi
+}
+
+function find_swig ()
+{
+    check_swig "$(find_dir "$default_swig" "$swig_check")"
+}
+
+function check_python ()
+{
+    # Required version: exact match against major and minor version
+    local required_version="$1"
+    local py_dir="$2"
+    local py_bin="$py_dir/$py_check"
+    [ -x "$py_bin" ] || return 1
+    local py_version=$("$py_bin" -c "import sys; sys.stdout.write('{0}{1}'.format(sys.version_info.major,sys.version_info.minor))")
+    [ "$?" = "0" ] && [ -x "$py_bin" ] && [ "$py_version" = "$required_version" ] && {
+        echo $py_dir
+        return 0
+    }
+    return 1
+}
+
+# TODO allow to pick up from path?
+function find_python ()
+{
+    local required_version="$1"
+    local py_dir=$(find_dir "" "$py_check")
+    check_python "$required_version" "$py_dir"
+}
+
+function default_use_python ()
+{
+    if test x$(find_swig) = x || test x$(find_python 34)$(find_python 35) = x
+    then
+        echo no
+    else
+        echo yes
+    fi
+}
+enable_python=$(default_use_python)
 
 function show_default ()
 {
@@ -222,6 +301,7 @@ function show_help ()
     echo "  --add directory add directory to library search path"
     echo "  --1bitsgd[=(yes|no)] use 1Bit SGD $(show_default ${default_use_1bitsgd})"
     echo "  --cuda[=(yes|no)] use cuda GPU $(show_default $(default_use_cuda))"
+    echo "  --python[=(yes|no)] with Python bindings $(show_default $(default_use_python))"
     echo "  --with-cuda[=directory] $(show_default $(find_cuda))"
     echo "  --with-cub[=directory] $(show_default $(find_cub))"
     echo "  --with-gdk-include[=directory] $(show_default $(find_gdk_include))"
@@ -236,6 +316,11 @@ function show_help ()
     echo "  --with-libzip[=directory] $(show_default $(find_libzip))"
     echo "  --with-code-coverage[=(yes|no)] $(show_default ${default_use_code_coverage})"
     echo "  --with-boost[=directory] $(show_default $(find_boost))"
+    echo "  --with-py-versions=(space-separated list of 34, 35)"
+    echo "  --with-py34-path[=directory] $(show_default $(find_python 34))"
+    echo "  --with-py35-path[=directory] $(show_default $(find_python 35))"
+    echo "  --with-swig[=directory] $(show_default $(find_swig))"
+
     echo "Libraries search path:"
     for head in $(default_paths)
     do
@@ -304,8 +389,86 @@ do
             fi
             ;;
 
+        --python*)
+            if test x$optarg = xyes || test x$optarg = xno
+            then
+                enable_python=$optarg
+            else
+                echo "Invalid value for --python $optarg"
+                show_help
+                exit
+            fi
+            ;;
+
+        --with-py-versions*)
+            if test "x$optarg" = "x"
+            then
+                echo "Mandatory parameter for --with-py-versions missing. Use '--python no' to disable Python support completely."
+                show_help
+                exit 1
+            else
+                for ver in $optarg
+                do
+                    case $ver in
+                        34 | 35)
+                            ;;
+                        *)
+                            echo "Invalid value for --with-py-versions $optarg: invalid version $ver"
+                            show_help
+                            exit
+                    esac
+                done
+                # TODO filter duplicates?
+                py_versions="$optarg"
+            fi
+            ;;
+
+        --with-py34-path*|--with-py35-path*)
+            enable_python=yes
+            py_version=${key:9:2}
+            if test x$optarg = x
+            then
+                py_paths[$py_version]=$(find_python $py_version)
+                if test x${py_paths[$py_version]} = x
+                then
+                    echo "Cannot find Python $py_version directory."
+                    echo "Please specify a value for $key"
+                    exit 1
+                fi
+            else
+                if check_python $py_version "$optarg"
+                then
+                    py_paths[$py_version]=$optarg
+                else
+                    echo "Invalid Python $py_version directory $optarg"
+                    exit 1
+                fi
+            fi
+            ;;
+
+        --with-swig*)
+            have_swig=yes
+            if test x$optarg = x
+            then
+                swig_path=$(find_swig)
+                if test x$swig_path = x
+                then
+                    echo "Cannot find SWIG directory."
+                    echo "Please specify a value for --with-swig"
+                    exit 1
+                fi
+            else
+                if check_swig "$optarg"
+                then
+                    swig_path=$optarg
+                else
+                    echo "Invalid SWIG directory $optarg"
+                    exit 1
+                fi
+            fi
+            ;;
+
         --with-cuda*)
-            have_cuda=yes
             enable_cuda=yes
             if test x$optarg = x
             then
@@ -326,6 +489,7 @@ do
                 fi
             fi
             ;;
+
         --with-cub*)
             have_cub=yes
             if test x$optarg = x
@@ -573,15 +737,15 @@ fi
 # If no math library was specified, search for mkl
 if test x$have_mkl = xno && test x$have_openblas = xno
 then
-	mkl_path=$(find_mkl)
-	if test x$mkl_path = x
-	then
-		echo "Cannot find a CPU math library."
-		echo "Please specify --with-mkl, --with-mkl-sequential, --with-openblas with a path."
-		exit 1
-	else
-		mathlib=mkl
-	fi
+    mkl_path=$(find_mkl)
+    if test x$mkl_path = x
+    then
+        echo "Cannot find a CPU math library."
+        echo "Please specify --with-mkl, --with-mkl-sequential, --with-openblas with a path."
+        exit 1
+    else
+        mathlib=mkl
+    fi
 fi
 
 # If no cuda library specified, search for one
@@ -643,6 +807,47 @@ then
     else
         echo Found cuDNN at $cudnn_path
     fi
+fi
+
+if test $enable_python = yes && test x$swig_path = x
+then
+    swig_path=$(find_swig)
+    if test x$swig_path = x
+    then
+        echo 'Cannot locate SWIG (>= 3.0.10), which is required Python support.'
+        echo Check bindings/python/swig_install.sh for build instructions.
+        exit 1
+    fi
+fi
+
+if test $enable_python = yes
+then
+    # Fill unfilled defaul paths
+    [ -z "${py_paths[34]}" ] && find_python 34 && py_paths[34]=$(find_python 34)
+    [ -z "${py_paths[35]}" ] && find_python 35 && py_paths[35]=$(find_python 35)
+
+    # Unless there's a specified order or restriction, take all configured Python versions (old to new)
+    [ -z "$py_versions" ] && py_versions=${!py_paths[@]}
+    py_versions="$py_versions "
+
+    # Make sure each requested version is configured, remove other parts
+    for ver in 34 35
+    do
+        case $py_versions in
+            *$ver\ *)
+                # Build for version is requested, check if configured
+                if [ -z "${py_paths[$ver]}" ]
+                then
+                    echo Build for Python version $ver was requested, but is not configured.
+                    exit 1
+                fi
+                ;;
+            *)
+                # Build for version is not requested, unconfigure
+                unset -v py_paths[$ver]
+                ;;
+        esac
+    done
 fi
 
 if test x$opencv_path = x
@@ -712,6 +917,17 @@ if test $enable_cuda = yes ; then
     echo CUB_PATH=$cub_path >> $config
     echo CUDNN_PATH=$cudnn_path >> $config
 fi
+if test $enable_python = yes ; then
+    echo PYTHON_SUPPORT=true >> $config
+    echo SWIG_PATH=$swig_path/bin >> $config
+    # N.B. PYTHON_VERSIONS at least needs to be parseable by bash (cf. Tools/generate_build_info)
+    echo PYTHON_VERSIONS= >> $config
+    for ver in $py_versions
+    do
+        echo PYTHON_VERSIONS+=$ver >> $config
+        echo PYTHON${ver}_PATH=${py_paths[$ver]}/$py_check >> $config
+    done
+fi
 if test x$kaldi_path != x ; then
     echo KALDI_PATH=$kaldi_path >> $config
 fi
@@ -746,5 +962,7 @@ then
     printf '\t$(MAKE) -C $(dir) BUILD_TOP=$(BUILD_TOP) $@\n' >> $makefile
 fi
 echo run
-echo '>make -j all'
+echo '>make -j $(nproc) all'
 echo to build
+
+# vim:set expandtab tabstop=4 shiftwidth=4:

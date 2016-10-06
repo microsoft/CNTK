@@ -19,6 +19,7 @@ FLAVORS="debug:release"
 TARGETS="cpu:gpu"
 MATH_LIBRARY="mkl"
 TESTTARGETS="cpu:gpu"
+EXTRA_CONFIGURE_OPTIONS=
 
 # parsing command line arguments:
 while [[ $# > 0 ]]
@@ -41,6 +42,7 @@ case $key in
     echo "  -cba|--clean-build-after - clean up the enlistment binaries after build"
     echo "  -rnd|--random-output-suffix - add random suffix to output directory"
     echo "  -o|--output-directory <output_dir> - specify output directory to use (by default those will be in <cntk_root>.run-<operating_system>)"
+    echo "  -x|--extra-configure-options <options> - extra options to pass to configure"
     echo "The root directory used to build and run CNTK is hosts the Scripts directory that contains this script"
     exit 1
     ;;
@@ -95,6 +97,10 @@ case $key in
     ;;
     -cc|--code-coverage)
     CODE_COVERAGE=yes
+    ;;
+    -x|--extra-configure-options)
+    EXTRA_CONFIGURE_OPTIONS="$2"
+    shift # past argument
     ;;
     -o|--output-directory)
     OUTPUT_DIR="$2"
@@ -243,7 +249,7 @@ if [[ $BUILD == 1 ]]; then
                         OneBitSGDOPT=yes
                     fi
                 fi
-                ./configure --with-build-top=$BUILD_DIR ${MATH_LIBRARY_OPTION} --with-buildtype=$FLAVOR --cuda=$CUDAOPT --with-code-coverage=$CODE_COVERAGE --1bitsgd=$OneBitSGDOPT
+                ./configure --with-build-top=$BUILD_DIR ${MATH_LIBRARY_OPTION} --with-buildtype=$FLAVOR --cuda=$CUDAOPT --with-code-coverage=$CODE_COVERAGE --1bitsgd=$OneBitSGDOPT $EXTRA_CONFIGURE_OPTIONS
                 if [[ $CLEAN_BEFORE == 1 ]]; then
                     make -C $BUILD_DIR -f $MAKEFILE clean 1>&6 2>&7 || exit $?
                 fi

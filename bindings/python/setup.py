@@ -7,15 +7,18 @@ from warnings import warn
 from setuptools import setup, Extension, find_packages
 import numpy
 
-if sys.version_info.major < 3:
-    print("Detected Python v2, which is not yet supported")
+IS_WINDOWS = platform.system() == 'Windows'
+
+if IS_WINDOWS and sys.version_info.major < 3:
+    print("Detected Python v2 on Windows, which is not yet supported")
     sys.exit(1)
 
-if shutil.which("swig") is None:
+
+# TODO should handle swig path specified via build_ext --swig-path
+# TODO FIXME
+if os.system('swig -version 1>/dev/null 2>/dev/null') != 0:
     print("Please install swig (>= 3.0.10) and include it in your path.\n")
     sys.exit(1)
-
-IS_WINDOWS = platform.system() == 'Windows'
 
 if IS_WINDOWS:
     if shutil.which("cl") is None:
@@ -40,6 +43,7 @@ PROJ_LIB_PATH = os.path.join(os.path.dirname(__file__), "cntk", "libs")
 if 'CNTK_LIB_PATH' in os.environ:
     CNTK_LIB_PATH = os.environ['CNTK_LIB_PATH']
 else:
+    # Assumes GPU SKU is being built
     if IS_WINDOWS:
         CNTK_LIB_PATH = os.path.join(CNTK_PATH, "x64", "Release")
     else:
@@ -92,6 +96,11 @@ for fn in rt_libs:
     src_file = lib_path(fn)
     tgt_file = proj_lib_path(fn)
     shutil.copy(src_file, tgt_file)
+
+if 'CNTK_EXTRA_LIBRARIES' in os.environ:
+    for lib in os.environ['CNTK_EXTRA_LIBRARIES'].split():
+        shutil.copy(lib, PROJ_LIB_PATH)
+        rt_libs.append(strip_path(lib))
 
 # For package_data we need to have names relative to the cntk module.
 rt_libs = [os.path.join('libs', fn) for fn in rt_libs]
