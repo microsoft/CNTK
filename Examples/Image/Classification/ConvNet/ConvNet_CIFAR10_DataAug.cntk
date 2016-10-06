@@ -4,7 +4,7 @@ command = TrainConvNet:Eval
 
 precision = "float"; traceLevel = 1 ; deviceId = "auto"
 
-rootDir = "../.." ; dataDir = "$rootDir$/DataSets/CIFAR10" ;
+rootDir = "../.." ; dataDir = "$rootDir$/DataSets/CIFAR-10" ;
 outputDir = "./Output" ;
 
 modelPath = "$outputDir$/Models/ConvNet_CIFAR10_DataAug"
