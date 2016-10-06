@@ -80,8 +80,8 @@ def get_projection_map(out_dim, in_dim):
 
     projection_map_values = np.zeros(in_dim * out_dim, dtype=np.float32)
     for i in range(0, in_dim):
-        projection_map_values[(i * out_dim) + i] = 1.0
-        shape = (in_dim, 1, 1, out_dim)
+        projection_map_values[(i * in_dim) + i] = 1.0
+        shape = (out_dim, in_dim, 1, 1)
         return constant(value=projection_map_values.reshape(shape))
 
 # Defines the residual network model for classifying images
