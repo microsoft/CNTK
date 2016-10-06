@@ -103,6 +103,8 @@ void RandomSampleNode<ElemType>::ForwardPropNonLooping()
     Matrix<ElemType>& valueMatrix = ValueAsMatrix();
     valueMatrix.TransferToDeviceIfNotThere(CPUDEVICE, /*ismoved =*/ true/*means: BOTH state not ok */, /*emptyTransfer =*/ true, /*updatePreferredDevice =*/ false);
     valueMatrix.SetDevice(CPUDEVICE);
+
+    //BUGBUG: matrix type should be configured during validation
     valueMatrix.SwitchToMatrixType(SPARSE, matrixFormatSparseCSC, false);
     valueMatrix.Reset();
 
@@ -186,6 +188,7 @@ void RandomSampleInclusionFrequencyNode<ElemType>::ForwardPropNonLooping()
     valueMatrix.TransferToDeviceIfNotThere(CPUDEVICE, /*ismoved =*/ true/*means: BOTH state not ok */, /*emptyTransfer =*/ true, /*updatePreferredDevice =*/ false);
     valueMatrix.SetDevice(CPUDEVICE);
 
+    //BUGBUG: matrix type should be configured during validation
     valueMatrix.SwitchToMatrixType(DENSE, matrixFormatDense, false);
     double sumOfWeights = m_samplingWeightsPrefixSum.back();
     const Matrix<ElemType>& samplingWeights = Input(0)->ValueAsMatrix();

@@ -508,6 +508,23 @@ CNTK2 = [
         ce = logSum - zT
     }.ce
 
+	CrossEntropyWithSampledSoftmax2(
+        hiddenLayer                    /* Vector of dimension nHidden */,
+        labels                         /* One-hot for the true class (labels). Dimension: nClasses */,
+        weights                        /* nClasses * nHidden */,
+        bias                           /* Biases for logit computation. Dimension nClasses */,
+		numSamples                     /* number of random samples to be used */,
+        samplingWeights                /* Sparse matrix of dimension nClasses * nSamples */,
+		sampleWithReplacement = true   /* boolean parameter specifiying if sampling with replacment should be used */
+        ) = 
+    {
+	    samples        = CNTK2.GetRandomSample (samplingWeights, numSamples, sampleWithReplacement)
+		inclusionProbs = CNTK2.GetInclusionFrequency(samplingWeights, numSamples, sampleWithReplacement)
+	    logPrior       = Log(inclusionProbs)
+		ce = CNTK2.CrossEntropyWithSampledSoftmax(hiddenLayer, labels,  samples, weights, bias, logPrior)
+
+    }.ce
+
 
     // 12. Comparison nodes
     Less(_, y, tag='')         = new ComputationNode [ operation = 'Less'         ; inputs = _AsNodes (_ : y) /*plus the function args*/ ]
