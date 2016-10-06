@@ -1,0 +1,591 @@
+diff --git a/Makefile b/Makefile
+index cb8d2fe..b76d83e 100644
+--- a/Makefile
++++ b/Makefile
+@@ -66,14 +66,15 @@ endif
+ 
+ # The mpic++ wrapper only adds MPI specific flags to the g++ command line.
+ # The actual compiler/linker flags added can be viewed by running 'mpic++ --showme:compile' and 'mpic++ --showme:link'
+-CXX = mpic++
++#CXX = mpic++
++CXX = aarch64-linux-gnu-g++
+ 
+ SOURCEDIR:= Source
+ INCLUDEPATH:= $(addprefix $(SOURCEDIR)/, Common/Include CNTKv2LibraryDll CNTKv2LibraryDll/API Math CNTK ActionsLib ComputationNetworkLib SGDLib SequenceTrainingLib CNTK/BrainScript Readers/ReaderLib)
+ # COMMON_FLAGS include settings that are passed both to NVCC and C++ compilers.
+ COMMON_FLAGS:= -D_POSIX_SOURCE -D_XOPEN_SOURCE=600 -D__USE_XOPEN2K -std=c++11
+ CPPFLAGS:= 
+-CXXFLAGS:= -msse4.1 -mssse3 -std=c++0x -fopenmp -fpermissive -fPIC -Werror -fcheck-new
++CXXFLAGS:= -std=c++0x -fopenmp -fpermissive -fPIC -Werror -fcheck-new
+ LIBPATH:=
+ LIBS:=
+ LDFLAGS:=
+@@ -278,7 +279,6 @@ COMMON_SRC =\
+ 
+ MATH_SRC =\
+ 	$(SOURCEDIR)/Math/BatchNormalizationEngine.cpp \
+-	$(SOURCEDIR)/Math/BlockHandlerSSE.cpp \
+ 	$(SOURCEDIR)/Math/CUDAPageLockedMemAllocator.cpp \
+ 	$(SOURCEDIR)/Math/CPUMatrix.cpp \
+ 	$(SOURCEDIR)/Math/CPURNGHandle.cpp \
+@@ -291,6 +291,7 @@ MATH_SRC =\
+ 	$(SOURCEDIR)/Math/DataTransferer.cpp \
+ 	$(SOURCEDIR)/Math/RNGHandle.cpp \
+ 	$(SOURCEDIR)/Math/TensorView.cpp \
++#	$(SOURCEDIR)/Math/BlockHandlerSSE.cpp \
+ 
+ ifdef SUPPORT_AVX2
+ MATH_SRC +=\
+@@ -348,17 +349,17 @@ COMPUTATION_NETWORK_LIB_SRC =\
+ 	$(SOURCEDIR)/ComputationNetworkLib/RecurrentNodes.cpp \
+ 	$(SOURCEDIR)/ComputationNetworkLib/ReshapingNodes.cpp \
+ 	$(SOURCEDIR)/ComputationNetworkLib/RNNNodes.cpp \
+-	$(SOURCEDIR)/ComputationNetworkLib/SpecialPurposeNodes.cpp \
+-	$(SOURCEDIR)/ComputationNetworkLib/ComputationNetwork.cpp \
+ 	$(SOURCEDIR)/ComputationNetworkLib/ComputationNetworkEvaluation.cpp \
+ 	$(SOURCEDIR)/ComputationNetworkLib/ComputationNetworkAnalysis.cpp \
+ 	$(SOURCEDIR)/ComputationNetworkLib/ComputationNetworkEditing.cpp \
+-	$(SOURCEDIR)/ComputationNetworkLib/ComputationNetworkBuilder.cpp \
+ 	$(SOURCEDIR)/ComputationNetworkLib/ComputationNetworkScripting.cpp \
++	$(SOURCEDIR)/ComputationNetworkLib/ComputationNetworkBuilder.cpp \
++	$(SOURCEDIR)/ComputationNetworkLib/ComputationNetwork.cpp \
++	$(SOURCEDIR)/ComputationNetworkLib/SpecialPurposeNodes.cpp \
+ 
+ SEQUENCE_TRAINING_LIB_SRC =\
+-	$(SOURCEDIR)/SequenceTrainingLib/latticeforwardbackward.cpp \
+ 	$(SOURCEDIR)/SequenceTrainingLib/parallelforwardbackward.cpp \
++	$(SOURCEDIR)/SequenceTrainingLib/latticeforwardbackward.cpp \
+ 
+ ifdef CUDA_PATH
+ SEQUENCE_TRAINING_LIB_SRC +=\
+@@ -373,10 +374,8 @@ SEQUENCE_TRAINING_LIB_SRC +=\
+ endif
+ 
+ CNTKLIBRARY_SRC =\
+-	$(SOURCEDIR)/CNTKv2LibraryDll/BackCompat.cpp \
+ 	$(SOURCEDIR)/CNTKv2LibraryDll/Common.cpp \
+ 	$(SOURCEDIR)/CNTKv2LibraryDll/ComputeInputStatistics.cpp \
+-	$(SOURCEDIR)/CNTKv2LibraryDll/Function.cpp \
+ 	$(SOURCEDIR)/CNTKv2LibraryDll/MinibatchSource.cpp \
+ 	$(SOURCEDIR)/CNTKv2LibraryDll/NDArrayView.cpp \
+ 	$(SOURCEDIR)/CNTKv2LibraryDll/NDMask.cpp \
+@@ -384,7 +383,9 @@ CNTKLIBRARY_SRC =\
+ 	$(SOURCEDIR)/CNTKv2LibraryDll/Utils.cpp \
+ 	$(SOURCEDIR)/CNTKv2LibraryDll/Value.cpp \
+ 	$(SOURCEDIR)/CNTKv2LibraryDll/Variable.cpp \
+-    $(SOURCEDIR)/CNTKv2LibraryDll/Learner.cpp \
++	$(SOURCEDIR)/CNTKv2LibraryDll/Learner.cpp \
++	$(SOURCEDIR)/CNTKv2LibraryDll/Function.cpp \
++	$(SOURCEDIR)/CNTKv2LibraryDll/BackCompat.cpp \
+ 
+ CNTKLIBRARY_SRC+=$(CNTK_COMMON_SRC)
+ CNTKLIBRARY_SRC+=$(COMPUTATION_NETWORK_LIB_SRC)
+@@ -427,7 +428,7 @@ CNTKLIBRARY_TESTS_SRC =\
+ CNTKLIBRARY_TESTS:=$(BINDIR)/v2librarytests
+ CNTKLIBRARY_TESTS_OBJ := $(patsubst %.cu, $(OBJDIR)/%.o, $(patsubst %.cpp, $(OBJDIR)/%.o, $(CNTKLIBRARY_TESTS_SRC)))
+ 
+-ALL+=$(CNTKLIBRARY_TESTS)
++#ALL+=$(CNTKLIBRARY_TESTS)
+ SRC+=$(CNTKLIBRARY_TESTS_SRC)
+ 
+ $(CNTKLIBRARY_TESTS): $(CNTKLIBRARY_TESTS_OBJ) | $(CNTKLIBRARY_LIB)
+@@ -447,15 +448,15 @@ SGDLIB_SRC=\
+ 	$(SOURCEDIR)/SGDLib/SGD.cpp
+ 	
+ EVAL_SRC=\
+-	$(SOURCEDIR)/EvalDll/CNTKEval.cpp \
+ 	$(SOURCEDIR)/CNTK/BrainScript/BrainScriptEvaluator.cpp \
+ 	$(SOURCEDIR)/CNTK/BrainScript/BrainScriptParser.cpp \
+ 	$(SOURCEDIR)/CNTK/ModelEditLanguage.cpp \
+-	$(SOURCEDIR)/ActionsLib/EvalActions.cpp \
+ 	$(SOURCEDIR)/ActionsLib/NetworkFactory.cpp \
+-	$(SOURCEDIR)/ActionsLib/NetworkDescriptionLanguage.cpp \
+ 	$(SOURCEDIR)/ActionsLib/SimpleNetworkBuilder.cpp \
+ 	$(SOURCEDIR)/ActionsLib/NDLNetworkBuilder.cpp \
++	$(SOURCEDIR)/ActionsLib/NetworkDescriptionLanguage.cpp \
++	$(SOURCEDIR)/ActionsLib/EvalActions.cpp \
++	$(SOURCEDIR)/EvalDll/CNTKEval.cpp \
+ 
+ EVAL_SRC+=$(SGDLIB_SRC)
+ EVAL_SRC+=$(COMPUTATION_NETWORK_LIB_SRC)
+@@ -484,7 +485,7 @@ EVAL_SAMPLE_CLIENT_SRC=\
+ 
+ EVAL_SAMPLE_CLIENT_OBJ:=$(patsubst %.cpp, $(OBJDIR)/%.o, $(EVAL_SAMPLE_CLIENT_SRC))
+ 
+-ALL+=$(EVAL_SAMPLE_CLIENT)
++#ALL+=$(EVAL_SAMPLE_CLIENT)
+ SRC+=$(EVAL_SAMPLE_CLIENT_SRC)
+ 
+ $(EVAL_SAMPLE_CLIENT): $(EVAL_SAMPLE_CLIENT_OBJ) | $(EVAL_LIB) 
+@@ -518,9 +519,9 @@ $(BINARY_READER): $(BINARYREADER_OBJ) | $(CNTKMATH_LIB)
+ ########################################
+ 
+ HTKMLFREADER_SRC =\
+-	$(SOURCEDIR)/Readers/HTKMLFReader/Exports.cpp \
+ 	$(SOURCEDIR)/Readers/HTKMLFReader/DataWriterLocal.cpp \
+ 	$(SOURCEDIR)/Readers/HTKMLFReader/HTKMLFReader.cpp \
++	$(SOURCEDIR)/Readers/HTKMLFReader/Exports.cpp \
+ 	$(SOURCEDIR)/Readers/HTKMLFReader/HTKMLFWriter.cpp \
+ 
+ HTKMLFREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(HTKMLFREADER_SRC))
+@@ -557,12 +558,12 @@ $(LIBDIR)/CompositeDataReader.so: $(COMPOSITEDATAREADER_OBJ) | $(CNTKMATH_LIB)
+ 
+ HTKDESERIALIZERS_SRC =\
+ 	$(SOURCEDIR)/Readers/HTKMLFReader/DataWriterLocal.cpp \
+-	$(SOURCEDIR)/Readers/HTKMLFReader/HTKMLFWriter.cpp \
+ 	$(SOURCEDIR)/Readers/HTKDeserializers/ConfigHelper.cpp \
+-	$(SOURCEDIR)/Readers/HTKDeserializers/Exports.cpp \
+-	$(SOURCEDIR)/Readers/HTKDeserializers/HTKDataDeserializer.cpp \
+-	$(SOURCEDIR)/Readers/HTKDeserializers/HTKMLFReader.cpp \
+ 	$(SOURCEDIR)/Readers/HTKDeserializers/MLFDataDeserializer.cpp \
++	$(SOURCEDIR)/Readers/HTKDeserializers/HTKMLFReader.cpp \
++	$(SOURCEDIR)/Readers/HTKDeserializers/HTKDataDeserializer.cpp \
++	$(SOURCEDIR)/Readers/HTKDeserializers/Exports.cpp \
++	$(SOURCEDIR)/Readers/HTKMLFReader/HTKMLFWriter.cpp \
+ 
+ HTKDESERIALIZERS_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(HTKDESERIALIZERS_SRC))
+ 
+@@ -701,10 +702,10 @@ ifdef KALDI_PATH
+ KALDI2READER_SRC = \
+ 	$(SOURCEDIR)/Readers/Kaldi2Reader/DataReader.cpp \
+ 	$(SOURCEDIR)/Readers/Kaldi2Reader/DataWriter.cpp \
+-	$(SOURCEDIR)/Readers/Kaldi2Reader/HTKMLFReader.cpp \
+ 	$(SOURCEDIR)/Readers/Kaldi2Reader/HTKMLFWriter.cpp \
+ 	$(SOURCEDIR)/Readers/Kaldi2Reader/KaldiSequenceTrainingDerivative.cpp \
+ 	$(SOURCEDIR)/Readers/Kaldi2Reader/UtteranceDerivativeBuffer.cpp \
++	$(SOURCEDIR)/Readers/Kaldi2Reader/HTKMLFReader.cpp \
+ 
+ KALDI2READER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(KALDI2READER_SRC))
+ 
+@@ -779,19 +780,19 @@ endif
+ ########################################
+ 
+ CNTK_SRC =\
+-	$(SOURCEDIR)/CNTK/CNTK.cpp \
+ 	$(SOURCEDIR)/CNTK/ModelEditLanguage.cpp \
+-	$(SOURCEDIR)/CNTK/tests.cpp \
+-	$(SOURCEDIR)/ActionsLib/TrainActions.cpp \
+-	$(SOURCEDIR)/ActionsLib/EvalActions.cpp \
+ 	$(SOURCEDIR)/ActionsLib/OtherActions.cpp \
+ 	$(SOURCEDIR)/ActionsLib/SpecialPurposeActions.cpp \
+ 	$(SOURCEDIR)/ActionsLib/NetworkFactory.cpp \
+-	$(SOURCEDIR)/ActionsLib/NetworkDescriptionLanguage.cpp \
+ 	$(SOURCEDIR)/ActionsLib/SimpleNetworkBuilder.cpp \
+ 	$(SOURCEDIR)/ActionsLib/NDLNetworkBuilder.cpp \
+ 	$(SOURCEDIR)/CNTK/BrainScript/BrainScriptEvaluator.cpp \
+ 	$(SOURCEDIR)/CNTK/BrainScript/BrainScriptParser.cpp \
++	$(SOURCEDIR)/CNTK/CNTK.cpp \
++	$(SOURCEDIR)/ActionsLib/EvalActions.cpp \
++	$(SOURCEDIR)/ActionsLib/TrainActions.cpp \
++	$(SOURCEDIR)/CNTK/tests.cpp \
++	$(SOURCEDIR)/ActionsLib/NetworkDescriptionLanguage.cpp \
+ 
+ CNTK_SRC+=$(SGDLIB_SRC)
+ CNTK_SRC+=$(CNTK_COMMON_SRC)
+@@ -881,11 +882,11 @@ UNITTEST_NETWORK_SRC = \
+ 	$(SOURCEDIR)/ActionsLib/OtherActions.cpp \
+ 	$(SOURCEDIR)/ActionsLib/SpecialPurposeActions.cpp \
+ 	$(SOURCEDIR)/ActionsLib/NetworkFactory.cpp \
+-	$(SOURCEDIR)/ActionsLib/NetworkDescriptionLanguage.cpp \
+ 	$(SOURCEDIR)/ActionsLib/SimpleNetworkBuilder.cpp \
+ 	$(SOURCEDIR)/ActionsLib/NDLNetworkBuilder.cpp \
+ 	$(SOURCEDIR)/CNTK/BrainScript/BrainScriptEvaluator.cpp \
+ 	$(SOURCEDIR)/CNTK/BrainScript/BrainScriptParser.cpp \
++	$(SOURCEDIR)/ActionsLib/NetworkDescriptionLanguage.cpp \
+ 
+ UNITTEST_NETWORK_SRC += $(COMPUTATION_NETWORK_LIB_SRC)
+ UNITTEST_NETWORK_SRC += $(CNTK_COMMON_SRC)
+@@ -982,7 +983,7 @@ DEP := $(patsubst %.o, %.d, $(OBJ))
+ # will result in the rebuild.
+ -include ${DEP}
+ 
+-BUILD_CONFIGURATION := Makefile $(BUILD_TOP)/Config.make
++BUILD_CONFIGURATION := 
+ 
+ $(OBJDIR)/%.o : %.cu $(BUILD_CONFIGURATION)
+ 	@echo $(SEPARATOR)
+diff --git a/Source/Common/Include/ssefloat4.h b/Source/Common/Include/ssefloat4.h
+index 279126a..c1431ff 100644
+--- a/Source/Common/Include/ssefloat4.h
++++ b/Source/Common/Include/ssefloat4.h
+@@ -11,7 +11,10 @@
+ #include <intrin.h> // for intrinsics
+ #endif
+ #ifdef __unix__
+-#include <x86intrin.h>
++//#include <x86intrin.h>
++
++#define _mm_free(p) free(p)
++#define _mm_malloc(a, b) malloc(a)
+ #endif
+ 
+ namespace msra { namespace math {
+@@ -27,6 +30,144 @@ namespace msra { namespace math {
+ // newer ones: (seems no single list available)
+ // ===========================================================================
+ 
++typedef struct __m128_t
++{
++    float f[4];
++}__m128;
++
++static __m128 ZERO_M128 = {0,0,0,0};
++
++static __m128 _mm_setzero_ps()               { return ZERO_M128; }
++static void _mm_store_ss(float *a, const __m128 &b) { *a = b.f[0]; }
++
++static __m128 _mm_load1_ps(const float *a)
++{
++    __m128 result = {(float)*a, (float)*a, (float)*a, (float)*a};
++    return result;
++}
++static __m128 _mm_sub_ps(const __m128 &a, const __m128 &b)
++{
++    __m128 result =  {
++      (a).f[0]-(b).f[0],
++      (a).f[1]-(b).f[1],
++      (a).f[2]-(b).f[2],
++      (a).f[3]-(b).f[3] };
++
++    return result;
++}
++static __m128 _mm_and_ps(const __m128 &a, const __m128 &b)
++{
++    __m128 result =  {
++      (float)((int)(a.f[0]) & (int)(b.f[0])),
++      (float)((int)(a.f[1]) & (int)(b.f[1])),
++      (float)((int)(a.f[2]) & (int)(b.f[2])),
++      (float)((int)(a.f[3]) & (int)(b.f[3])) };
++
++    return result;
++}
++static __m128 _mm_or_ps(const __m128 &a, const __m128 &b)
++{
++    __m128 result =  {
++      (float)((int)(a.f[0]) | (int)(b.f[0])), 
++      (float)((int)(a.f[1]) | (int)(b.f[1])), 
++      (float)((int)(a.f[2]) | (int)(b.f[2])), 
++      (float)((int)(a.f[3]) | (int)(b.f[3])) };
++
++    return result;
++}
++static __m128 _mm_add_ps(const __m128 &a, const __m128 &b)
++{
++    __m128 result =  {
++      (a).f[0]+(b).f[0], 
++      (a).f[1]+(b).f[1], 
++      (a).f[2]+(b).f[2], 
++      (a).f[3]+(b).f[3] };
++
++    return result;
++}
++static __m128 _mm_mul_ps(const __m128 &a, const __m128 &b)
++{
++    __m128 result =  {
++      (a).f[0]*(b).f[0], 
++      (a).f[1]*(b).f[1], 
++      (a).f[2]*(b).f[2], 
++      (a).f[3]*(b).f[3] };
++
++    return result;
++}
++static __m128 _mm_div_ps(const __m128 &a, const __m128 &b)
++{
++    __m128 result =  {
++      (a).f[0]/(b).f[0],
++      (a).f[1]/(b).f[1], 
++      (a).f[2]/(b).f[2], 
++      (a).f[3]/(b).f[3] };
++
++    return result;
++}
++static __m128 _mm_hadd_ps(const __m128 &a, const __m128 &b)
++{
++    __m128 result =  {
++      (a).f[0]+(a).f[1],
++      (a).f[2]+(a).f[3],
++      (b).f[0]+(b).f[1], 
++      (b).f[2]+(b).f[3] };
++
++    return result;
++}
++static __m128 _mm_cmpge_ps(const __m128 &a, const __m128 &b)
++{
++    __m128 result =  {
++      (a).f[0]>=(b).f[0] ? 1.0f : 0.0f, 
++      (a).f[1]>=(b).f[1] ? 1.0f : 0.0f, 
++      (a).f[2]>=(b).f[2] ? 1.0f : 0.0f, 
++      (a).f[3]>=(b).f[3] ? 1.0f : 0.0f };
++
++    return result;
++}
++static __m128 _mm_cmple_ps(const __m128 &a, const __m128 &b)
++{
++    __m128 result =  {
++      (a).f[0]<=(b).f[0] ? 1.0f : 0.0f,
++      (a).f[1]<=(b).f[1] ? 1.0f : 0.0f,
++      (a).f[2]<=(b).f[2] ? 1.0f : 0.0f,
++      (a).f[3]<=(b).f[3] ? 1.0f : 0.0f };
++
++    return result;
++}
++
++#define _MM_TRANSPOSE4_PS( c1, c2, c3, c4 ) \
++{ \
++    float4 t1, t2, t3, t4; \
++ \
++    t1.v.f[0] = c1.v.f[0]; \
++    t1.v.f[1] = c2.v.f[0]; \
++    t1.v.f[2] = c3.v.f[0]; \
++    t1.v.f[3] = c4.v.f[0]; \
++ \
++    t2.v.f[0] = c1.v.f[1]; \
++    t2.v.f[1] = c2.v.f[1]; \
++    t2.v.f[2] = c3.v.f[1]; \
++    t2.v.f[3] = c4.v.f[1]; \
++ \
++    t3.v.f[0] = c1.v.f[2]; \
++    t3.v.f[1] = c2.v.f[2]; \
++    t3.v.f[2] = c3.v.f[2]; \
++    t3.v.f[3] = c4.v.f[2]; \
++ \
++    t4.v.f[0] = c1.v.f[3]; \
++    t4.v.f[1] = c2.v.f[3]; \
++    t4.v.f[2] = c3.v.f[3]; \
++    t4.v.f[3] = c4.v.f[3]; \
++ \
++    c1 = t1; \
++    c2 = t2; \
++    c3 = t3; \
++    c4 = t4; \
++}
++
++#define _mm_prefetch(a, b) 
++
+ class float4
+ {
+     __m128 v; // value
+diff --git a/Source/Math/CPUSparseMatrix.cpp b/Source/Math/CPUSparseMatrix.cpp
+index 7457682..4afd3f4 100644
+--- a/Source/Math/CPUSparseMatrix.cpp
++++ b/Source/Math/CPUSparseMatrix.cpp
+@@ -347,7 +347,7 @@ CPUSparseMatrix<ElemType>& CPUSparseMatrix<ElemType>::DoGatherColumnsOf(ElemType
+     for (long j = 0; j < numCols; j++)
+     {
+         auto jInF = idx(0, j); // this is the column we need to get
+-        if (::isnan(jInF) || (jInF < 0))     // negative index means gap
++        if (std::isnan(jInF) || (jInF < 0))     // negative index means gap
+             continue;
+         size_t jIn = (size_t)jInF;
+ 
+@@ -364,7 +364,7 @@ CPUSparseMatrix<ElemType>& CPUSparseMatrix<ElemType>::DoGatherColumnsOf(ElemType
+     for (long j = 0; j < numCols; j++)
+     {
+         auto jInF = idx(0, j); // this is the column we need to get
+-        if (::isnan(jInF) || (jInF < 0))     // negative index means gap
++        if (std::isnan(jInF) || (jInF < 0))     // negative index means gap
+             continue;
+         size_t jIn = (size_t)jInF;
+ 
+@@ -411,7 +411,7 @@ CPUSparseMatrix<ElemType>& CPUSparseMatrix<ElemType>::DoScatterColumnsOf(ElemTyp
+     for (long j = 0; j < numColsToWrite; j++)
+     {
+         auto jOutF = idx(0, j); // this is the column we need to write to
+-        if (::isnan(jOutF) || (jOutF < 0))     // negative index means gap
++        if (std::isnan(jOutF) || (jOutF < 0))     // negative index means gap
+             continue;
+         size_t jOut = (size_t)jOutF;
+         columnElementCounts[jOut] = a.SecondaryIndexLocation()[j + 1] - a.SecondaryIndexLocation()[j];
+@@ -426,7 +426,7 @@ CPUSparseMatrix<ElemType>& CPUSparseMatrix<ElemType>::DoScatterColumnsOf(ElemTyp
+     for (long j = 0; j < numColsToWrite; j++)
+     {
+         auto jOutF = idx(0, j); // this is the column we need to write to
+-        if (::isnan(jOutF) || (jOutF < 0))     // negative index means gap
++        if (std::isnan(jOutF) || (jOutF < 0))     // negative index means gap
+             continue;
+         size_t jOut = (size_t)jOutF;
+ 
+diff --git a/Source/Readers/ReaderLib/ElementTypeUtils.h b/Source/Readers/ReaderLib/ElementTypeUtils.h
+index 2942986..0343d5b 100644
+--- a/Source/Readers/ReaderLib/ElementTypeUtils.h
++++ b/Source/Readers/ReaderLib/ElementTypeUtils.h
+@@ -19,7 +19,7 @@ inline size_t GetSizeByType(ElementType type)
+     case ElementType::tdouble:
+         return sizeof(double);
+     default:
+-        RuntimeError("Unsupported type '%d'", type);
++        RuntimeError("Unsupported type '%d'", (int)type);
+     }
+ }
+ 
+diff --git a/Tools/docker/CNTK-CPUOnly-Image/Dockerfile b/Tools/docker/CNTK-CPUOnly-Image/Dockerfile
+index a7f0a6c..05461b9 100644
+--- a/Tools/docker/CNTK-CPUOnly-Image/Dockerfile
++++ b/Tools/docker/CNTK-CPUOnly-Image/Dockerfile
+@@ -2,7 +2,7 @@
+ #   CPU only
+ #   No 1-bit SGD
+ 
+-FROM ubuntu:14.04
++FROM ubuntu:16.04
+ 
+ RUN apt-get update && apt-get install -y --no-install-recommends \
+         autotools-dev \
+@@ -36,6 +36,24 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
+         libapr1 libaprutil1 libltdl-dev libltdl7 libserf-1-1 libsigsegv2 libsvn1 m4 && \
+     rm -rf /var/lib/apt/lists/*
+ 
++#RUN OPENCV_VERSION=3.1.0 && \
++#    wget -q -O - https://github.com/Itseez/opencv/archive/${OPENCV_VERSION}.tar.gz | tar -xzf - && \
++#    cd opencv-${OPENCV_VERSION} && \
++#    cmake -DCMAKE_BUILD_TYPE=RELEASE -DCMAKE_INSTALL_PREFIX=/usr/local/opencv-${OPENCV_VERSION} . && \
++#    make -j"$(nproc)" install && \
++#    rm -rf /opencv-${OPENCV_VERSION}
++
++RUN OPENBLAS_VERSION=0.2.18 && \
++    wget -q -O - https://github.com/xianyi/OpenBLAS/archive/v${OPENBLAS_VERSION}.tar.gz | tar -xzf - && \
++    cd OpenBLAS-${OPENBLAS_VERSION} && \
++    make -j"$(nproc)" USE_OPENMP=1 | tee make.log && \
++    grep -qF 'OpenBLAS build complete. (BLAS CBLAS LAPACK LAPACKE)' make.log && \
++    grep -qF 'Use OpenMP in the multithreading.' make.log && \
++    make PREFIX=/usr/local/openblas install && \
++    rm -rf /OpenBLAS-${OPENBLAS_VERSION}
++
++ENV LD_LIBRARY_PATH /usr/local/openblas/lib:$LD_LIBRARY_PATH
++
+ RUN OPENMPI_VERSION=1.10.3 && \
+     wget -q -O - https://www.open-mpi.org/software/ompi/v1.10/downloads/openmpi-${OPENMPI_VERSION}.tar.gz | tar -xzf - && \
+     cd openmpi-${OPENMPI_VERSION} && \
+@@ -55,24 +73,6 @@ RUN LIBZIP_VERSION=1.1.2 && \
+ 
+ ENV LD_LIBRARY_PATH /usr/local/lib:$LD_LIBRARY_PATH
+ 
+-RUN OPENCV_VERSION=3.1.0 && \
+-    wget -q -O - https://github.com/Itseez/opencv/archive/${OPENCV_VERSION}.tar.gz | tar -xzf - && \
+-    cd opencv-${OPENCV_VERSION} && \
+-    cmake -DCMAKE_BUILD_TYPE=RELEASE -DCMAKE_INSTALL_PREFIX=/usr/local/opencv-${OPENCV_VERSION} . && \
+-    make -j"$(nproc)" install && \
+-    rm -rf /opencv-${OPENCV_VERSION}
+-
+-RUN OPENBLAS_VERSION=0.2.18 && \
+-    wget -q -O - https://github.com/xianyi/OpenBLAS/archive/v${OPENBLAS_VERSION}.tar.gz | tar -xzf - && \
+-    cd OpenBLAS-${OPENBLAS_VERSION} && \
+-    make -j"$(nproc)" USE_OPENMP=1 | tee make.log && \
+-    grep -qF 'OpenBLAS build complete. (BLAS CBLAS LAPACK LAPACKE)' make.log && \
+-    grep -qF 'Use OpenMP in the multithreading.' make.log && \
+-    make PREFIX=/usr/local/openblas install && \
+-    rm -rf /OpenBLAS-${OPENBLAS_VERSION}
+-
+-ENV LD_LIBRARY_PATH /usr/local/openblas/lib:$LD_LIBRARY_PATH
+-
+ # Install Boost
+ RUN BOOST_VERSION=1_60_0 && \
+     BOOST_DOTTED_VERSION=$(echo $BOOST_VERSION | tr _ .) && \
+@@ -83,65 +83,60 @@ RUN BOOST_VERSION=1_60_0 && \
+     rm -rf /boost_${BOOST_VERSION}
+ 
+ # Install CNTK custom MKL, version 2
+-RUN mkdir /usr/local/CNTKCustomMKL && \
+-    wget --no-verbose -O - https://www.cntk.ai/mkl/CNTKCustomMKL-Linux-2.tgz | \
+-    tar -xzf - -C /usr/local/CNTKCustomMKL
++#RUN mkdir /usr/local/CNTKCustomMKL && \
++#    wget --no-verbose -O - https://www.cntk.ai/mkl/CNTKCustomMKL-Linux-2.tgz | \
++#    tar -xzf - -C /usr/local/CNTKCustomMKL
+ 
+-RUN pip install pytest sphinx-rtd-theme Pillow
++#RUN pip install pytest sphinx-rtd-theme Pillow
+ 
+ ENV BLAS=/usr/local/openblas/lib/libopenblas.so
+ ENV LAPACK=/usr/local/openblas/lib/libopenblas.so
+ 
+-RUN SCIPY_VERSION=0.18.0 && \
+-    wget -q -O - https://github.com/scipy/scipy/releases/download/v${SCIPY_VERSION}/scipy-${SCIPY_VERSION}.tar.gz | tar -zxf - && \
+-    cd scipy-${SCIPY_VERSION} && \
+-    python setup.py build && \
+-    python setup.py install && \
+-    cd .. && \
+-    rm -rf scipy-${SCIPY_VERSION}
+-
+-# Install Kaldi
+-ENV KALDI_VERSION=c024e8aa
+-ENV KALDI_PATH /usr/local/kaldi-$KALDI_VERSION
+-
+-RUN mv /bin/sh /bin/sh.orig && \
+-   ln -s -f /bin/bash /bin/sh && \
+-   mkdir $KALDI_PATH && \
+-   wget --no-verbose -O - https://github.com/kaldi-asr/kaldi/archive/$KALDI_VERSION.tar.gz | tar -xzf - --strip-components=1 -C $KALDI_PATH && \
+-   cd $KALDI_PATH && \
+-   cd tools && \
+-   perl -pi -e 's/^# (OPENFST_VERSION = 1.4.1)$/\1/' Makefile && \
+-   ./extras/check_dependencies.sh && \
+-   make -j $(nproc) all && \
+-   cd ../src && \
+-   ./configure --openblas-root=/usr/local/openblas --shared && \
+-   make -j $(nproc) depend && \
+-   make -j $(nproc) all && \
+-# Remove some unneeded stuff in $KALDI_PATH to reduce size
+-   find $KALDI_PATH -name '*.o' -print0 | xargs -0 rm && \
+-   for dir in $KALDI_PATH/src/*bin; do make -C $dir clean; done && \
+-   mv -f /bin/sh.orig /bin/sh
++#RUN SCIPY_VERSION=0.18.0 && \
++#    wget -q -O - https://github.com/scipy/scipy/releases/download/v${SCIPY_VERSION}/scipy-${SCIPY_VERSION}.tar.gz | tar -zxf - && \
++#    cd scipy-${SCIPY_VERSION} && \
++#    python setup.py build && \
++#    python setup.py install && \
++#    cd .. && \
++#    rm -rf scipy-${SCIPY_VERSION}
++#
++## Install Kaldi
++#ENV KALDI_VERSION=c024e8aa
++#ENV KALDI_PATH /usr/local/kaldi-$KALDI_VERSION
++#
++#RUN mv /bin/sh /bin/sh.orig && \
++#   ln -s -f /bin/bash /bin/sh && \
++#   mkdir $KALDI_PATH && \
++#   wget --no-verbose -O - https://github.com/kaldi-asr/kaldi/archive/$KALDI_VERSION.tar.gz | tar -xzf - --strip-components=1 -C $KALDI_PATH && \
++#   cd $KALDI_PATH && \
++#   cd tools && \
++#   perl -pi -e 's/^# (OPENFST_VERSION = 1.4.1)$/\1/' Makefile && \
++#   ./extras/check_dependencies.sh && \
++#   make -j $(nproc) all && \
++#   cd ../src && \
++#   ./configure --openblas-root=/usr/local/openblas --shared && \
++#   make -j $(nproc) depend && \
++#   make -j $(nproc) all && \
++## Remove some unneeded stuff in $KALDI_PATH to reduce size
++#   find $KALDI_PATH -name '*.o' -print0 | xargs -0 rm && \
++#   for dir in $KALDI_PATH/src/*bin; do make -C $dir clean; done && \
++#   mv -f /bin/sh.orig /bin/sh
+ 
+ WORKDIR /cntk
+ 
+ RUN git clone --depth=1 -b master https://github.com/Microsoft/CNTK.git . && \
+     mkdir -p build/cpu/release && \
+     cd build/cpu/release && \
+-    ../../../configure --with-openblas=/usr/local/openblas --with-kaldi=${KALDI_PATH} && \
+-    make -j"$(nproc)" all && \
+-    cd ../../.. && \
+-    mkdir -p build-mkl/cpu/release && \
+-    cd build-mkl/cpu/release && \
+-    ../../../configure --with-mkl=/usr/local/CNTKCustomMKL --with-kaldi=${KALDI_PATH} && \
++    ../../../configure --with-openblas=/usr/local/openblas && \
+     make -j"$(nproc)" all
+ 
+-RUN cd Examples/Image/Miscellaneous/CIFAR-10 && \
+-    python CifarDownload.py && \
+-    python CifarConverter.py cifar-10-batches-py && \
+-    cd ../../../..
+-
+-RUN cd Examples/Image/MNIST/AdditionalFiles && \
+-    python mnist_convert.py && \
+-    cd ../../../..
++#RUN cd Examples/Image/Miscellaneous/CIFAR-10 && \
++#    python CifarDownload.py && \
++#    python CifarConverter.py cifar-10-batches-py && \
++#    cd ../../../..
++#
++#RUN cd Examples/Image/MNIST/AdditionalFiles && \
++#    python mnist_convert.py && \
++#    cd ../../../..
+ 
+ ENV PATH=/cntk/build/cpu/release/bin:$PATH
