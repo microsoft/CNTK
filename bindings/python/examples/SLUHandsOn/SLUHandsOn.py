@@ -1,5 +1,5 @@
-﻿# Copyright (c) Microsoft. All rights reserved.
-
+﻿# ==============================================================================
+# Copyright (c) Microsoft. All rights reserved.
 # Licensed under the MIT license. See LICENSE.md file in the project root
 # for full license information.
 # ==============================================================================
@@ -207,6 +207,7 @@ def _apply(f, args):
     f = f.clone(ParameterCloningMethod_Share)
     f.replace_placeholders(dict(zip(f.placeholders(), args)))
     #f = f.clone(dict(zip(placeholders, args)))
+    # BUGBUG: need to get this to work, in conjumnction with _Share
     _name_and_extend_Function(f, _function_name)
     print("{} = {} ({})".format(_node_description(f), _function_description, _arg_description))
     return f
@@ -527,5 +528,9 @@ if __name__=='__main__':
     set_gpu(0)
     reader = Reader(data_dir + "/atis.train.ctf")
     model = Model(_inf=_Infer(shape=input_dim, axis=[Axis.default_batch_axis(), Axis.default_dynamic_axis()]))
+    # train
     # BUGBUG: Currently this fails with a mismatch error if axes ^^ are given in opposite order
     train(reader, model)
+    # test (TODO)
+    reader = Reader(data_dir + "/atis.test.ctf")
+    #test(reader, model_dir + "/slu.cmf")
