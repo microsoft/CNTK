@@ -22,6 +22,52 @@ from examples.common.nn import slice, sigmoid, log, tanh, past_value, future_val
 from cntk.ops.functions import Function
 from cntk.ops.variables import Variable
 
+# "upgrade" a current Function to add additional operators and methods, as a temporary stopgap
+# at end of each layer constructor, return _extend_Function(z, 'Type (for debugging)')
+# use this until __call__ is implemented in Function()
+# Also add the >> operator (forward function composition).
+# Returns its arg to allow chaining.
+def _extend_Function(f):
+    class FunctionEx(f.__class__): 
+        def __call__(self, *args):
+            return _apply(self, _as_tuple(args))
+        def __rshift__(self, other):
+            return other(self)
+        def _name(self):  # retrieve the debug name
+            return _node_name(self)
+    if hasattr(f, '__call__'):  # already extended: don't redo
+        return f
+    f.__class__ = FunctionEx
+    print("def {}".format(_node_description(f)))
+    return f
+
+# name and extend; in this order, so that _extend_Function can print a meaningful log message
+def _name_and_extend_Function(f, name):
+    _name_node(f, name)
+    _extend_Function(f)
+
+# give a new name to a function, by wrapping it
+def _wrap_rename_Function(f, name):
+     f = combine([f]) ; _name_and_extend_Function(f, name)  # 'combine' to create a separate identity so we can reassign the debug name
+     return f
+
+# upgrade Trainer class, add new method
+def _extend_Trainer(trainer):
+    class TrainerEx(trainer.__class__):
+        # new method get_next_minibatch()
+        # TODO: make this a true static method so we can say Trainer.get_next_minibatch()
+        # TODO: is the "_next" really necessary? Trainer.get_minibatch() seems sufficient
+        @staticmethod
+        def get_next_minibatch(source, minibatch_size, input_map):
+            mb = reader.get_next_minibatch(minibatch_size)
+            if len(mb) == 0:  # TODO: return None instead?
+                return None
+            else:
+                return { key : mb[value].m_data for (key, value) in input_map.items() }
+    if hasattr(trainer, 'get_next_minibatch'):  # already extended: don't redo
+        return trainer
+    trainer.__class__ = TrainerEx
+    return trainer
 
 # helper to name nodes for printf debugging
 _auto_node_names = dict()
@@ -52,12 +98,10 @@ def _node_name(n):
         name = n.what()
     except:
         name = n.name()
-    # internal node names
+    # internal node names (not explicitly named)
     if name == '':
         if hasattr(n, 'is_placeholder') and n.is_placeholder:
             name = '_'
-        elif is_variable(n):
-            name = 'var'
         else:
             name = '_f'
     _name_node(n, name)
@@ -79,29 +123,30 @@ def _node_description(n):
 def _print_node(n):
     print (_node_description(n))
 
-def dump_graph(f):
-    visited = set()
-    def r_dump_graph(f, indent):
-        if f in visited:  # don't double-print
-            return
-        visited.add(f)
-        # print a node
-        inputs = f.root_function.inputs()
-        s = "{} ( ".format(f.name())
-        for c in inputs:
-            s += _node_name(c) + " "
-        s += ")"
-        print(s)
-        # print its children
-        for c in inputs:
-            r_dump_graph(c, indent+2)
-    r_dump_graph (f, 0)
+#def dump_graph(f):
+#    visited = set()
+#    def r_dump_graph(f, indent):
+#        if f in visited:  # don't double-print
+#            return
+#        visited.add(f)
+#        # print a node
+#        inputs = f.root_function.inputs()
+#        s = "{} ( ".format(f.name())
+#        for c in inputs:
+#            s += _node_name(c) + " "
+#        s += ")"
+#        print(s)
+#        # print its children
+#        for c in inputs:
+#            r_dump_graph(c, indent+2)
+#    r_dump_graph (f, 0)
 
 # monkey-patching some missing stuff
 def __matmul__(a,b):  # TODO: define @ once we have Python 3.5
     return times(a,b)
-Function.__matmul__ = __matmul__  # should work in Python 3.5  --Function is not defined?
+#Function.__matmul__ = __matmul__  # should work in Python 3.5  --Function is not defined?
 
+# helper to convert a dictionary into a Python class, so that the dict looks like an immutable record
 class _ClassFromDict(dict):
     def __init__(self, dict):
         super(_ClassFromDict, self).__init__(dict)
@@ -111,6 +156,7 @@ class _ClassFromDict(dict):
         return self.get(k)
 
 # easier construction of records
+# e.g. r = Record(x = 13, y = 42) ; x = r.x
 def Record(**kwargs):
     return _ClassFromDict(kwargs)
 
@@ -121,54 +167,45 @@ def _Infer(shape, axis):
     return Record(shape=_as_tuple(shape), axis=axis, with_shape = lambda new_shape: _Infer(new_shape, axis))
 
 # returns True if x is a Variable object
-def is_variable(x):
-    return hasattr(x, 'is_placeholder')
-    #return isinstance(x, cntk.cntk_py.Variable)
+#def is_variable(x):
+#    return hasattr(x, 'is_placeholder')
+#    #return isinstance(x, cntk.cntk_py.Variable)
 
 # TODO: should no longer be needed
-def _get_placeholders(f):
-    if is_variable(f):
-        return [f];
-    try:
-        return f.placeholders()
-    except AttributeError: # Workaround: in Python, a Placeholder cannot auto-cast to an identity function
-        return [f] # BUGBUG: only correct if not bound yet. But this problem shall go away anyway.
+#def _get_placeholders(f):
+#    if is_variable(f):
+#        return [f];
+#    try:
+#        return f.placeholders()
+#    except AttributeError: # Workaround: in Python, a Placeholder cannot auto-cast to an identity function
+#        return [f] # BUGBUG: only correct if not bound yet. But this problem shall go away anyway.
 
 def _apply(f, args):
     import operator   # add()
     import functools  # reduce()
+    from cntk.cntk_py import ParameterCloningMethod_Share
     # flatten args to a list. Note it may be a a tuple or even a nested tree of tuples, e.g. LSTM (x, (h, c))
     def flatten_tuple(args):
         if not isinstance(args, tuple): # not a tuple: singleton; create a singleton tuple
             return (args,)
         return functools.reduce(operator.add, [(flatten_tuple(item)) for item in args])
     args = list(flatten_tuple(args))
-    def _output_of(arg):
+    def _output_of(arg):  # helper to get the output of an arg; use arg itself if no output() method (that'd be a Variable)
         try:
             return arg.output()
         except AttributeError:
             return arg  # Variables have no output()
     args = [_output_of(arg) for arg in args]
-    # printf debugging
-    fn = _node_name(f)
-    fw = _node_description(f)
-    aw = ", ".join([_node_name(f) for f in list(args)])
-    #print('{} ({})'.format(fw, aw))
-    # end printf debugging
-    # if 'f' is a placeholder itself, it means the identity function; just return the arg
-    #if hasattr(f, 'is_placeholder') and f.is_placeholder():
-    #    if len(args) != 1:
-    #        raise TypeError("_apply: number of arguments {} must be one for identity function".format(len(args)))
-    #    else:
-    #        print("{} = {} ({})".format(_node_description(args[0]), fw, aw))
-    #        return args[0]
+    # for printf debugging
     try:
-        placeholders = _get_placeholders(f)  # f parameters to fill in
+        placeholders = f.placeholders()  # f parameters to fill in
         #print (len(args))
         #print (len(placeholders))
         if len(args) != len(placeholders):
             raise TypeError("_apply ({}): number of arguments {} must match number of placeholders {}".format(_node_description(f), len(args), len(placeholders)))
-        from cntk.cntk_py import ParameterCloningMethod_Share
+        fn = _node_name(f)
+        fw = _node_description(f)
+        aw = ", ".join([_node_name(f) for f in list(args)])
         f = f.clone(ParameterCloningMethod_Share)
         f.replace_placeholders(dict(zip(f.placeholders(), args)))
         #c = f.clone(dict(zip(placeholders, args)))
@@ -178,39 +215,10 @@ def _apply(f, args):
         #return f.clone(dict(zip(placeholders, args)))
         # BUGBUG: ^^ fails with TypeError: clone() takes 1 positional argument but 2 were given
     except AttributeError: # Workaround: a Variable object can be passed here, and it can be a placeholder itself
-        if f.is_placeholder():
-            return args[0]  # identity function
-        else:
+        #if f.is_placeholder():
+        #    return args[0]  # identity function
+        #else:
             raise
-
-# "upgrade" a current Function to add additional operators and methods, as a temporary stopgap
-# at end of each layer constructor, return _extend_Function(z, 'Type (for debugging)')
-# use this until __call__ is implemented in Function()
-# Also add the >> operator (forward function composition).
-# Returns its arg to allow chaining.
-def _extend_Function(f):
-    class FunctionEx(f.__class__): 
-        def __call__(self, *args):
-            return _apply(self, _as_tuple(args))
-        def __rshift__(self, other):
-            return other(self)
-        def _name(self):  # retrieve the debug name
-            return _node_name(self)
-    if hasattr(f, '__call__'):  # already extended: don't redo
-        return f
-    f.__class__ = FunctionEx
-    print("def {}".format(_node_description(f)))
-    return f
-
-# name and extend; in this order, so that _extend_Function can print a meaningful log message
-def _name_and_extend_Function(f, name):
-    _name_node(f, name)
-    _extend_Function(f)
-
-# give a new name to a function, by wrapping it
-def _wrap_rename_Function(f, name):
-     f = combine([f]) ; _name_and_extend_Function(f, name)  # 'combine' to create a separate identity so we can reassign the debug name
-     return f
 
 # some mappings to BS format
 def Parameter(shape, learning_rate_multiplier=1.0, init=None, init_value_scale=1, init_value=None, init_filter_rank=0, init_output_rank=1, init_from_file_path=None, init_on_cpu_only=True, random_seed=-1):
@@ -254,7 +262,7 @@ class layers:
         b = Parameter(             out_shape, init='zero') if bias else None
         x = Placeholder(_inf=_inf, name='linear_arg')
         apply_x = __matmul__(x, W) + b if bias else \
-                     __matmul__(x, W)
+                  __matmul__(x, W)
         _name_and_extend_Function(apply_x, 'Linear')
         return apply_x
         # TODO: how to break after the else?
@@ -438,28 +446,21 @@ def TextFormatMinibatchSource(path, stream_defs, epoch_size):
 StreamDef = Record
 
 def Reader(path):
-    #def Stream(name, dim, is_sparse, alias):
-    #    return StreamConfiguration(name, dim, is_sparse, stream_alias)
     return TextFormatMinibatchSource(path,
                Record(
                    query         = StreamDef(dim=vocab_size, is_sparse=True, stream_alias='S0'),
                    intent_unused = StreamDef(dim=10000,      is_sparse=True, stream_alias='S1'),  # BUGBUG: unused, and should infer dim
                    slot_labels   = StreamDef(dim=num_labels, is_sparse=True, stream_alias='S2')
                ),
-               #[
-               #    Record(name='query',         dim=vocab_size, is_sparse=True, stream_alias='S0'),
-               #    Record(name='intent_unused', dim=vocab_size, is_sparse=True, stream_alias='S1'), # unused
-               #    Record(name='slot_labels',   dim=num_labels, is_sparse=True, stream_alias='S2')
-               #],
                epoch_size=36000)  # TODO: move this up
     # what's that 36000 at the end; is that the epoch size?
     # stream_alias -> alias
     # if the dimension is 'dim', should it be called that in the other places as well, instead of 'shape'? Or change to 'shape'?
 
-input_dim = vocab_size
-emb_dim = 150
+input_dim  = vocab_size
+emb_dim    = 150
 hidden_dim = 300
-label_dim = num_labels
+label_dim  = num_labels
 
 def Model(_inf):
     return Sequential([
@@ -470,8 +471,8 @@ def Model(_inf):
 
 def train(reader, model):
     # Input variables denoting the features and label data
-    query       = Input(input_dim , is_sparse=False)  # TODO: make sparse once it works
-    slot_labels = Input(num_labels, is_sparse=False)
+    query       = Input(input_dim,  is_sparse=False)  # TODO: make sparse once it works
+    slot_labels = Input(num_labels, is_sparse=True)
 
     # apply model to input
     z = model(query)
@@ -488,44 +489,33 @@ def train(reader, model):
     minibatch_size = 70
     num_mbs_to_show_result = 10
 
-    all_params = z.parameters()
-
     # trainer object
     trainer = Trainer(z, ce, pe, [sgd(z.parameters(), lr)])
+    _extend_Trainer(trainer)
 
     # define mapping from reader streams to network inputs
+    # TODO: how to do epochs??
     input_map = {
         query       : reader.streams.query,
         slot_labels : reader.streams.slot_labels
     }
 
-    def get_data(mb):
-        return { key : mb[value].m_data for (key, value) in input_map.items() }
-
     # process minibatches and perform model training
     for i in itertools.count():
-        mb = reader.get_next_minibatch(minibatch_size)
-        if len(mb) == 0:  # return None instead?
+        data = trainer.get_next_minibatch(reader, minibatch_size, input_map)
+        if data is None:
             break
-
-        data = get_data(mb)
         trainer.train_minibatch(data)
-
         print_training_progress(trainer, i, num_mbs_to_show_result)
 
-if __name__=='__main__':
+def set_gpu(gpu_id):
     # Specify the target device to be used for computing
-    target_device = DeviceDescriptor.cpu_device()
+    target_device = DeviceDescriptor.gpu_device(gpu_id)
     DeviceDescriptor.set_default_device(target_device)
 
-    os.chdir('c:/work/CNTK/Tutorials/SLUHandsOn')
-
-    #_inf = _Infer(shape=input_dim, axis=[Axis.default_batch_axis()])  # inferred info
-    #_inf = _Infer(shape=input_dim, axis=[Axis.default_batch_axis(), Axis.default_input_variable_dynamic_axes])  # inferred info
-    #_inf = _Infer(shape=input_dim, axis=[Axis.default_dynamic_axis(), Axis.default_batch_axis()])  # BUGBUG: fails due to order mismatch; should be set compare
-    _inf = _Infer(shape=input_dim, axis=[Axis.default_batch_axis(), Axis.default_dynamic_axis()])  # BUGBUG: fails due to order mismatch; should be set compare
-    # [Axis.default_dynamic_axis(), Axis.default_batch_axis()]
-
+if __name__=='__main__':
+    set_gpu(0)
     reader = Reader(data_dir + "/atis.train.ctf")
-    model = Model(_inf=_inf)
+    model = Model(_inf=_Infer(shape=input_dim, axis=[Axis.default_batch_axis(), Axis.default_dynamic_axis()]))
+    # BUGBUG: Currently this fails with a mismatch error if axes ^^ are given in opposite order
     train(reader, model)
