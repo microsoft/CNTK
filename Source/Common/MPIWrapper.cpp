@@ -1,31 +1,10 @@
 #include "Include/Basics.h"
 #include "Include/MPIWrapper.h"
 
+#if HAS_OPENMPI
 #pragma comment(lib, "msmpi.lib")
-
-
-#if defined(__ARM64__)
-typedef void * MPI_Comm;
-typedef enum _MPI_Datatype { MPI_CHAR, MPI_INT, MPI_FLOAT, MPI_DOUBLE, MPI_UNSIGNED, MPI_LONG_LONG_INT } MPI_Datatype;
-
-#define MPI_COMM_WORLD 0
-#define MPI_IN_PLACE 0
-#define MPI_SUM 2
-
-#define MPI_STATUSES_IGNORE - 3
-#define MPI_STATUS_IGNORE - 2
-#define MPI_UNDEFINED - 1
-
-#define MPI_Wait(a, b) 1
-#define MPI_Waitany(a, b, c, d) 1
-#define MPI_Waitall(a, b, c) 1
-#define MPI_Isend(a, b, c, d, e, f, g) 1
-#define MPI_Recv(a, b, c, d, e, f, g) 1
-#define MPI_Irecv(a, b, c, d, e, f, g) 1
-#define MPI_Iallreduce(a, b, c, d, e, f, g) 1
-
-typedef void * MPI_Request;
-typedef int MPI_Status;
+#else
+#pragma warning(disable: 4100) // unreferenced formal parameter
 #endif
 
 #define FFLUSH_SUCCESS 0
@@ -58,6 +37,7 @@ int operator||(int rc, const MpiFail &what)
 	fprintf(stderr, "%s, MPI error %d\n", what.c_str(), rc);
 	fflush(stderr);
 
+#if HAS_OPENMPI
 	// (special case: we use that code to indicate a missing msmpi.dll...)
 	if (rc != MPI_ERR_INTERN)
 	{
@@ -73,6 +53,8 @@ int operator||(int rc, const MpiFail &what)
 		// TODO: or does that only signal an issue, and we should still terminate ourselves?
 		// BUGBUG: We'd also need to Abort through the other sub-set communicator
 	}
+#endif
+
 	RuntimeError("%s", what.c_str());
 }
 
@@ -82,6 +64,9 @@ std::shared_ptr<MPIWrapper> MPIWrapper::s_mpi = nullptr;
 // MPI_Init() with delay-loading the msmpi.dll (possibly causing a failure if missing; we want to catch that)
 int MPIWrapper::MPI_Init_DL()
 {
+#if !HAS_OPENMPI
+	return MPI_SUCCESS;
+#else
 #ifdef WIN32
 	__try
 #endif
@@ -108,6 +93,7 @@ int MPIWrapper::MPI_Init_DL()
 		fprintf(stderr, "mpihelper: msmpi.dll missing\n");
 		return MPI_ERR_INTERN;
 	}
+#endif
 #endif
 }
 
@@ -136,9 +122,15 @@ MPIWrapper::MPIWrapper()
 	fprintf(stderr, "MPIWrapper: initializing MPI\n");
 	fflush(stderr);
 
+#if HAS_OPENMPI
 	MPI_Init_DL() || MpiFail("mpiaggregator: MPI_Init");
 	MPI_Comm_rank(MPI_COMM_WORLD, &m_myRank);
 	MPI_Comm_size(MPI_COMM_WORLD, &m_numMPINodes);
+#else
+	m_myRank = 0;
+	m_numMPINodes = 0;
+#endif
+
 	m_numNodesInUse = m_numMPINodes;
 
 	// Verify that the environment variable used by GetTotalNumberOfMPINodes()  
@@ -177,6 +169,9 @@ MPIWrapper::MPIWrapper()
 // TODO: Once we move to dynamic loading for MPI libs on Linux, move it to utilities.
 int MPIWrapper::GetTotalNumberOfMPINodes()
 {
+#if !HAS_OPENMPI
+	return 0;
+#else
 #ifdef WIN32
 	const char* p = std::getenv("PMI_SIZE");
 #else
@@ -190,6 +185,7 @@ int MPIWrapper::GetTotalNumberOfMPINodes()
 	{
 		return std::stoi(string(p));
 	}
+#endif
 }
 
 // Note: we don't clear the sub-communication here although we should, because in case of a crash, this prevents the EXE from terminating.
@@ -218,6 +214,7 @@ MPIWrapper::~MPIWrapper()
 
 void MPIWrapper::Ping(const char *msg) const
 {
+#if HAS_OPENMPI
 #undef USE2NDCOMM
 #ifndef USE2NDCOMM
 	if (NumNodesInUse() != m_numMPINodes)
@@ -236,10 +233,12 @@ void MPIWrapper::Ping(const char *msg) const
 	AllReduce(handshake);
 	fprintf(stderr, "ping [%s]: all %d nodes responded\n", msg, handshake[0]);
 	fflush(stderr);
+#endif
 }
 
 void MPIWrapper::RequestNodes(const char *msg, size_t requestednodes /*default: all*/)
 {
+#if HAS_OPENMPI
 	Ping("requestnodes (before change)");
 
 	// undo current split
@@ -277,6 +276,7 @@ void MPIWrapper::RequestNodes(const char *msg, size_t requestednodes /*default: 
 		(int)CurrentNodeRank(), IsIdle() ? "out (idle)" : "in (participating)");
 	fflush(stderr);
 	Ping("requestnodes (after change)");
+#endif
 }
 
 MPIWrapperPtr MPIWrapper::GetInstance(bool create)
@@ -368,6 +368,7 @@ MPI_Datatype MPIWrapper::GetDataType(size_t *)
 template <typename VECTORLIKEOBJECT>
 void MPIWrapper::AllReduce(VECTORLIKEOBJECT &accumulator) const
 {
+#if HAS_OPENMPI
 	auto *dataptr = accumulator.data();
 	size_t totalnumelements = accumulator.size();
 
@@ -376,31 +377,38 @@ void MPIWrapper::AllReduce(VECTORLIKEOBJECT &accumulator) const
 	{
 		MPI_Allreduce(MPI_IN_PLACE, dataptr, (int)totalnumelements, GetDataType(dataptr), MPI_SUM, Communicator()) || MpiFail("allreduce: MPI_Allreduce");
 	}
+#endif
 }
 
 // for raw pointer
 template <class ElemType>
 void MPIWrapper::AllReduce(ElemType *pData, size_t nData)
 {
+#if HAS_OPENMPI
 	if ((NumNodesInUse() > 1 && (Communicator() != MPI_COMM_NULL)))
 	{
 		MPI_Allreduce(MPI_IN_PLACE, pData, (int)nData, GetDataType(pData), MPI_SUM, Communicator()) || MpiFail("Allreduce: MPI_Allreduce");
 	}
+#endif
 }
 
 template <class ElemType>
 void MPIWrapper::Bcast(ElemType *pData, size_t nData, size_t srcRank)
 {
+#if HAS_OPENMPI
 	if ((NumNodesInUse() > 1) && (Communicator() != MPI_COMM_NULL))
 	{
 		MPI_Bcast(pData, (int)nData, GetDataType(pData), (int)srcRank, Communicator()) || MpiFail("Bcast: MPI_Bcast");
 	}
+#endif
 }
 
 // wait for all ranks to reach here
 void MPIWrapper::WaitAll()
 {
+#if HAS_OPENMPI
 	MPI_Barrier(m_currentComm) || MpiFail("waitall: MPI_Barrier");
+#endif
 }
 
 }}}
