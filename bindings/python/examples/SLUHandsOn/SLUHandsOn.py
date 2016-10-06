@@ -35,7 +35,7 @@ def _extend_Function(f):
             return other(self)
         def _name(self):  # retrieve the debug name
             return _node_name(self)
-    if hasattr(f, '__call__'):  # already extended: don't redo
+    if hasattr(f, '__call__'):  # already extended: don't do it again
         return f
     f.__class__ = FunctionEx
     print("def {}".format(_node_description(f)))
@@ -196,29 +196,20 @@ def _apply(f, args):
         except AttributeError:
             return arg  # Variables have no output()
     args = [_output_of(arg) for arg in args]
-    # for printf debugging
-    try:
-        placeholders = f.placeholders()  # f parameters to fill in
-        #print (len(args))
-        #print (len(placeholders))
-        if len(args) != len(placeholders):
-            raise TypeError("_apply ({}): number of arguments {} must match number of placeholders {}".format(_node_description(f), len(args), len(placeholders)))
-        fn = _node_name(f)
-        fw = _node_description(f)
-        aw = ", ".join([_node_name(f) for f in list(args)])
-        f = f.clone(ParameterCloningMethod_Share)
-        f.replace_placeholders(dict(zip(f.placeholders(), args)))
-        #c = f.clone(dict(zip(placeholders, args)))
-        _name_and_extend_Function(f, fn)
-        print("{} = {} ({})".format(_node_description(f), fw, aw))
-        return f
-        #return f.clone(dict(zip(placeholders, args)))
-        # BUGBUG: ^^ fails with TypeError: clone() takes 1 positional argument but 2 were given
-    except AttributeError: # Workaround: a Variable object can be passed here, and it can be a placeholder itself
-        #if f.is_placeholder():
-        #    return args[0]  # identity function
-        #else:
-            raise
+    placeholders = f.placeholders()  # f parameters to fill in
+    #print (len(args))
+    #print (len(placeholders))
+    if len(args) != len(placeholders):
+        raise TypeError("_apply ({}): number of arguments {} must match number of placeholders {}".format(_node_description(f), len(args), len(placeholders)))
+    _function_name = _node_name(f)  # these are for logging/debugging only
+    _function_description = _node_description(f)
+    _arg_description = ", ".join([_node_name(f) for f in list(args)])
+    f = f.clone(ParameterCloningMethod_Share)
+    f.replace_placeholders(dict(zip(f.placeholders(), args)))
+    #f = f.clone(dict(zip(placeholders, args)))
+    _name_and_extend_Function(f, _function_name)
+    print("{} = {} ({})".format(_node_description(f), _function_description, _arg_description))
+    return f
 
 # some mappings to BS format
 def Parameter(shape, learning_rate_multiplier=1.0, init=None, init_value_scale=1, init_value=None, init_filter_rank=0, init_output_rank=1, init_from_file_path=None, init_on_cpu_only=True, random_seed=-1):
@@ -227,7 +218,7 @@ def Input(*args, **kwargs):
     return _name_node(input_variable(*args, **kwargs), 'input')
 
 def Placeholder(_inf, name='placeholder'):
-    # BUGBUG: does not take a name parameter
+    # BUGBUG: does not take a name parameter (but not really needed here)
     # BUGBUG: combine() does not work either
     p = placeholder_variable(shape=_as_tuple(_inf.shape), dynamic_axes=_inf.axis)
     _name_node(p, name)
@@ -292,6 +283,7 @@ class layers:
 
         # parameters
         param = Parameter((1), init_value=0.99537863)  # 1/steepness*ln (e^steepness-1) for steepness==4
+        # TODO: compute this strange value directly in Python
 
         # application
         x = Placeholder(_inf=_inf, name='stabilizer_arg')
@@ -304,11 +296,11 @@ class layers:
     def Identity(_inf):
         x = Placeholder(_inf=_inf, name='identity_arg')
         #apply_x = combine([x])  # BUGBUG: not working
-        apply_x = x + 0
+        apply_x = x + 0  # this fakes combine()
         _name_and_extend_Function(apply_x, 'Identity')
         return apply_x
 
-    # TODO: Fornow, shape and cell_shape can only be rank-1 vectors
+    # TODO: For now, shape and cell_shape can only be rank-1 vectors
     @staticmethod
     def LSTMBlock(shape, _inf, cell_shape=None, use_peepholes=False, init='glorot_uniform', init_value_scale=1, enable_self_stabilization=False): # (x, (h, c))
         has_projection = cell_shape is not None
@@ -318,7 +310,8 @@ class layers:
 
         cell_shape = _as_tuple(cell_shape) if cell_shape is not None else shape
 
-        stack_axis = 0  # TODO: make this -1, i.e. the fastest-changing one, to match BS
+        #stack_axis = -1  # 
+        stack_axis = 0  # BUGBUG: should be -1, i.e. the fastest-changing one, to match BS
         # determine stacking dimensions
         cell_shape_list = list(cell_shape)
         stacked_dim = cell_shape_list[0]
@@ -363,11 +356,6 @@ class layers:
         bit_proj = slice (proj4, stack_axis, 1*stacked_dim, 2*stacked_dim)
         ft_proj  = slice (proj4, stack_axis, 2*stacked_dim, 3*stacked_dim)
         ot_proj  = slice (proj4, stack_axis, 3*stacked_dim, 4*stacked_dim)
-        #it_proj  = proj4  #, stack_axis, 0*stacked_dim, 1*stacked_dim)  # split along stack_axis
-        #bit_proj = proj4  #, stack_axis, 1*stacked_dim, 2*stacked_dim)
-        #ft_proj  = proj4  #, stack_axis, 2*stacked_dim, 3*stacked_dim)
-        #ot_proj  = proj4  #, stack_axis, 3*stacked_dim, 4*stacked_dim)
-        # BUGBUG: replace_placeholders fails with TypeError: slice() got multiple values for argument 'axis'
 
         # add peephole connection if requested
         def peep(x, c, C):
@@ -384,7 +372,7 @@ class layers:
         ot = sigmoid (peep (ot_proj, Sct(ct), Co))    # output gate(t)
         ht = ot * tanh (ct)                           # applied to tanh(cell(t))
 
-        c = ct          # cell value
+        c = ct                                        # cell value
         h = times(Sht(ht), Wmr) if has_projection else \
             ht
 
@@ -418,8 +406,7 @@ class layers:
         _print_node(h)
         _print_node(combine([h.owner()]))#)
         prev_state = previous_hook(f_x_h_c)  # delay (h, c)
-        repl_list = {value_forward: value.output() for (value_forward, value) in list(zip(list(prev_state_forward), list(prev_state)))}
-        #repl_list = {value_forward: value for (value_forward, value) in list(zip(list(prev_state_forward), list(prev_state)))}
+        repl_list = { value_forward: value.output() for (value_forward, value) in list(zip(list(prev_state_forward), list(prev_state))) }
         f_x_h_c.replace_placeholders(repl_list)  # binds _h_c := prev_state
         apply_x = combine([h.owner()])     # the Function that yielded 'h', so we get to know its inputs
         # apply_x is a Function x -> h
@@ -427,40 +414,60 @@ class layers:
         _print_node(apply_x)
         return apply_x
 
-#### User code begins here
-
-cntk_dir = os.path.dirname(os.path.abspath(__file__)) + "/../../../.."  # CNTK root folder
-data_dir = cntk_dir + "/Tutorials/SLUHandsOn"
-
-model_dir = "./Models"
-
-vocab_size = 943 ; num_labels = 129 ; num_intents = 26    # number of words in vocab, slot labels, and intent labels
-
-def TextFormatMinibatchSource(path, stream_defs, epoch_size):
+# wrapper around text_format_minibatch_source() that attaches a record of streams
+def TextFormatMinibatchSource(path, epoch_size, stream_defs):
     # convert stream_defs into StreamConfiguration format
     stream_configs = [ StreamConfiguration(key, dim=value.dim, is_sparse=value.is_sparse, stream_alias=value.stream_alias) for (key, value) in stream_defs.items() ]
     source = text_format_minibatch_source(path, stream_configs, epoch_size)
     # attach a dictionary of the streams
     source.streams = _ClassFromDict({ name : source.stream_info(name) for name in stream_defs.keys() })
     return source
-StreamDef = Record
 
-def Reader(path):
-    return TextFormatMinibatchSource(path,
-               Record(
-                   query         = StreamDef(dim=vocab_size, is_sparse=True, stream_alias='S0'),
-                   intent_unused = StreamDef(dim=10000,      is_sparse=True, stream_alias='S1'),  # BUGBUG: unused, and should infer dim
-                   slot_labels   = StreamDef(dim=num_labels, is_sparse=True, stream_alias='S2')
-               ),
-               epoch_size=36000)  # TODO: move this up
-    # what's that 36000 at the end; is that the epoch size?
-    # stream_alias -> alias
-    # if the dimension is 'dim', should it be called that in the other places as well, instead of 'shape'? Or change to 'shape'?
+# stream definition for TextFormatMinibatchSource
+def StreamDef(shape, is_sparse, alias):
+    return Record(dim=shape, is_sparse=is_sparse, stream_alias=alias)
+    # TODO: why stream_alias and not alias?
+    # TODO: we should always use 'shape' unless it is always rank-1 or a single rank's dimension
+    # TODO: dim should be inferred from the file, at least for dense
 
+def set_gpu(gpu_id):
+    # Specify the target device to be used for computing
+    target_device = DeviceDescriptor.gpu_device(gpu_id)
+    DeviceDescriptor.set_default_device(target_device)
+
+#### User code begins here
+
+########################
+# variables and stuff  #
+########################
+
+cntk_dir = os.path.dirname(os.path.abspath(__file__)) + "/../../../.."  # data resides in the CNTK folder
+data_dir = cntk_dir + "/Tutorials/SLUHandsOn"                           # under Tutorials
+vocab_size = 943 ; num_labels = 129 ; num_intents = 26    # number of words in vocab, slot labels, and intent labels
+
+model_dir = "./Models"
+
+# model dimensions
 input_dim  = vocab_size
+label_dim  = num_labels
 emb_dim    = 150
 hidden_dim = 300
-label_dim  = num_labels
+
+########################
+# define the reader    #
+########################
+
+def Reader(path):
+    return TextFormatMinibatchSource(path, epoch_size=36000, stream_defs=Record(
+        query         = StreamDef(shape=input_dim,   is_sparse=True, alias='S0'),
+        intent_unused = StreamDef(shape=num_intents, is_sparse=True, alias='S1'),  # BUGBUG: unused, and should infer dim
+        slot_labels   = StreamDef(shape=label_dim,   is_sparse=True, alias='S2')
+    ))
+    # what's that 36000 at the end; is that the epoch size?
+
+########################
+# define the model     #
+########################
 
 def Model(_inf):
     return Sequential([
@@ -468,6 +475,10 @@ def Model(_inf):
         layers.Recurrence(over=layers.LSTMBlock(shape=hidden_dim, _inf=_inf.with_shape(emb_dim)), _inf=_inf.with_shape(emb_dim), go_backwards=False),
         layers.Linear(shape=label_dim, _inf=_inf.with_shape(hidden_dim))
     ], _inf=_inf)
+
+########################
+# train action         #
+########################
 
 def train(reader, model):
     # Input variables denoting the features and label data
@@ -508,10 +519,9 @@ def train(reader, model):
         trainer.train_minibatch(data)
         print_training_progress(trainer, i, num_mbs_to_show_result)
 
-def set_gpu(gpu_id):
-    # Specify the target device to be used for computing
-    target_device = DeviceDescriptor.gpu_device(gpu_id)
-    DeviceDescriptor.set_default_device(target_device)
+#############################
+# main function boilerplate #
+#############################
 
 if __name__=='__main__':
     set_gpu(0)
