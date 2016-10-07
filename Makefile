@@ -494,7 +494,7 @@ EVAL_SAMPLE_CLIENT_SRC=\
 
 EVAL_SAMPLE_CLIENT_OBJ:=$(patsubst %.cpp, $(OBJDIR)/%.o, $(EVAL_SAMPLE_CLIENT_SRC))
 
-#ALL+=$(EVAL_SAMPLE_CLIENT)
+ALL+=$(EVAL_SAMPLE_CLIENT)
 SRC+=$(EVAL_SAMPLE_CLIENT_SRC)
 
 $(EVAL_SAMPLE_CLIENT): $(EVAL_SAMPLE_CLIENT_OBJ) | $(EVAL_LIB) 
@@ -995,7 +995,7 @@ DEP := $(patsubst %.o, %.d, $(OBJ))
 # will result in the rebuild.
 -include ${DEP}
 
-BUILD_CONFIGURATION := 
+BUILD_CONFIGURATION := Makefile $(BUILD_TOP)/Config.make
 
 $(OBJDIR)/%.o : %.cu $(BUILD_CONFIGURATION)
 	@echo $(SEPARATOR)
