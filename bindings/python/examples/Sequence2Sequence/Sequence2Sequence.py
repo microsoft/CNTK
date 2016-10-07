@@ -139,7 +139,7 @@ def sequence_to_sequence_translator(debug_output=False):
 
     test_mb_source = text_format_minibatch_source(path, [
         StreamConfiguration(feature_stream_name, input_vocab_dim, True, 'S0'),
-        StreamConfiguration(labels_stream_name, label_vocab_dim, True, 'S1')], 10000)
+        StreamConfiguration(labels_stream_name, label_vocab_dim, True, 'S1')], 10000, False)
     features_si = test_mb_source.stream_info(feature_stream_name)
     labels_si = test_mb_source.stream_info(labels_stream_name)
 

@@ -186,9 +186,6 @@ namespace CNTK
 
     namespace Internal
     {
-        // Create a new Function instance which just passes through specified list of 'operands'.
-        CNTK_API FunctionPtr Combine(const std::vector<Variable>& operands, const std::wstring& name = L"");
-
         CNTK_API FunctionPtr IsWithin(const Variable& operand, int offset, const std::wstring& name = L"");
         CNTK_API FunctionPtr PackedIndex(const Variable& operand, const Variable& index, const std::wstring& name = L"");
         CNTK_API FunctionPtr GatherPacked(const Variable& operand, const Variable& packedIndex, const std::wstring& name = L"");

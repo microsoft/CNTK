@@ -26,11 +26,11 @@ def combine(operands, name=''):
         :class:`cntk.Function`
     '''
     from cntk.cntk_py import combine
-    from cntk.cntk_py import Variable
+    from cntk.cntk_py import Function
     converted_operands = list()
     for o in operands:
-        if isinstance(o, Variable):
-            converted_operands.append(o.owner)
+        if isinstance(o, Function):
+            converted_operands.append(o.output())
         else:
             converted_operands.append(o)
 
