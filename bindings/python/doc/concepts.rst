@@ -1,4 +1,4 @@
-﻿Concepts 
+Concepts 
 ========
 
 There is a common property in key machine learning models, such as deep neural
