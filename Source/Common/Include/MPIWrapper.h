@@ -80,7 +80,7 @@ class MPIWrapper : public std::enable_shared_from_this<MPIWrapper>
     static MPIWrapperPtr s_mpi;
 
     // MPI_Init() with delay-loading the msmpi.dll (possibly causing a failure if missing; we want to catch that)
-	int MPI_Init_DL();
+    int MPI_Init_DL();
 
     // Workaround for the issue with MPI hanging when we have non-0 exit codes from CNTK processes
     // OpenMPI has a confirmed race condition on killing child process vs. handling their non-zero exit statuses, resulting
@@ -90,64 +90,64 @@ class MPIWrapper : public std::enable_shared_from_this<MPIWrapper>
     // As a workaround, we simply sleep 50*rank miliseconds, effectively "de-synchronizing processes" at exit,
     // allowing MPI to sequentially handle terminations
     static int s_myRank;
-	static void MPIWorkaroundAtExit();
+    static void MPIWorkaroundAtExit();
 
 public:
-	MPIWrapper();
+    MPIWrapper();
 
     // Note that specifically, this function is such that it does not require
     // MPI initialization. Moreover, it can be used without actually loading any
     // MPI libs.
     // TODO: Once we move to dynamic loading for MPI libs on Linux, move it to utilities.
-	static int GetTotalNumberOfMPINodes();
+    static int GetTotalNumberOfMPINodes();
 
     // Note: we don't clear the sub-communication here although we should, because in case of a crash, this prevents the EXE from terminating.
     // It's OK since this class is a singleton anyway that gets instantiated exactly once at program startup.
-	~MPIWrapper();
+    ~MPIWrapper();
 
 private:
-	void Ping(const char *msg) const;
+    void Ping(const char *msg) const;
 
-	void RequestNodes(const char *msg, size_t requestednodes = SIZE_MAX /*default: all*/);
+    void RequestNodes(const char *msg, size_t requestednodes = SIZE_MAX /*default: all*/);
 
 public:
 
-	static MPIWrapperPtr GetInstance(bool create = false);
+    static MPIWrapperPtr GetInstance(bool create = false);
 
-	static void DeleteInstance();
+    static void DeleteInstance();
 
-	MPI_Comm Communicator() const;
+    MPI_Comm Communicator() const;
     size_t NumNodesInUse() const;
-	size_t CurrentNodeRank() const;
-	bool IsMainNode() const;
-	bool IsIdle() const;
-	bool UsingAllNodes() const;
-	size_t MainNodeRank() const;
+    size_t CurrentNodeRank() const;
+    bool IsMainNode() const;
+    bool IsIdle() const;
+    bool UsingAllNodes() const;
+    size_t MainNodeRank() const;
 
     // -----------------------------------------------------------------------
     // data-exchange functions (wrappers around MPI functions)
     // -----------------------------------------------------------------------
 
     // helpers to determine the MPI_Datatype of a pointer
-	static MPI_Datatype GetDataType(char *);
-	static MPI_Datatype GetDataType(int *);
-	static MPI_Datatype GetDataType(float *);
-	static MPI_Datatype GetDataType(double *);
-	static MPI_Datatype GetDataType(size_t *);
+    static MPI_Datatype GetDataType(char *);
+    static MPI_Datatype GetDataType(int *);
+    static MPI_Datatype GetDataType(float *);
+    static MPI_Datatype GetDataType(double *);
+    static MPI_Datatype GetDataType(size_t *);
 
     // allreduce of a vector
     template <typename VECTORLIKEOBJECT>
-	void AllReduce(VECTORLIKEOBJECT &accumulator) const;
+    void AllReduce(VECTORLIKEOBJECT &accumulator) const;
 
     // for raw pointer
     template <class ElemType>
-	void AllReduce(ElemType *pData, size_t nData);
+    void AllReduce(ElemType *pData, size_t nData);
 
     template <class ElemType>
-	void Bcast(ElemType *pData, size_t nData, size_t srcRank);
+    void Bcast(ElemType *pData, size_t nData, size_t srcRank);
 
     // wait for all ranks to reach here
-	void WaitAll();
+    void WaitAll();
 };
 
 }}}
