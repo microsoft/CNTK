@@ -148,12 +148,15 @@ def __matmul__(a,b):  # TODO: define @ once we have Python 3.5
 
 # helper to convert a dictionary into a Python class, so that the dict looks like an immutable record
 class _ClassFromDict(dict):
-    def __init__(self, dict):
-        super(_ClassFromDict, self).__init__(dict)
-        for key in dict:
-            self[key] = dict[key]
+    def __init__(self, args_dict):
+        super(_ClassFromDict, self).__init__(args_dict)
+        # TODO: try to delete __setattr__ to make it immutable
+        for key in args_dict:   # self.__dict__.update(args_dict)
+            self[key] = args_dict[key]
     def __getattr__(self, k):
         return self.get(k)
+    # can use __slot__ to hide __setattr__(), and cannot be extended
+    # cf. https://pypi.python.org/pypi/frozendict/0.4 
 
 # easier construction of records
 # e.g. r = Record(x = 13, y = 42) ; x = r.x
@@ -165,20 +168,6 @@ def _as_tuple(x):
     return x if (isinstance(x,tuple)) else (x,)
 def _Infer(shape, axis):
     return Record(shape=_as_tuple(shape), axis=axis, with_shape = lambda new_shape: _Infer(new_shape, axis))
-
-# returns True if x is a Variable object
-#def is_variable(x):
-#    return hasattr(x, 'is_placeholder')
-#    #return isinstance(x, cntk.cntk_py.Variable)
-
-# TODO: should no longer be needed
-#def _get_placeholders(f):
-#    if is_variable(f):
-#        return [f];
-#    try:
-#        return f.placeholders()
-#    except AttributeError: # Workaround: in Python, a Placeholder cannot auto-cast to an identity function
-#        return [f] # BUGBUG: only correct if not bound yet. But this problem shall go away anyway.
 
 def _apply(f, args):
     import operator   # add()
@@ -207,7 +196,7 @@ def _apply(f, args):
     f = f.clone(ParameterCloningMethod_Share)
     f.replace_placeholders(dict(zip(f.placeholders(), args)))
     #f = f.clone(dict(zip(placeholders, args)))
-    # BUGBUG: need to get this to work, in conjumnction with _Share
+    # BUGBUG: need to get this to work, in conjunction with _Share
     _name_and_extend_Function(f, _function_name)
     print("{} = {} ({})".format(_node_description(f), _function_description, _arg_description))
     return f
@@ -220,7 +209,7 @@ def Input(*args, **kwargs):
 
 def Placeholder(_inf, name='placeholder'):
     # BUGBUG: does not take a name parameter (but not really needed here)
-    # BUGBUG: combine() does not work either
+    # BUGBUG: combine() does not work either, as it generates a Function, not a Variable
     p = placeholder_variable(shape=_as_tuple(_inf.shape), dynamic_axes=_inf.axis)
     _name_node(p, name)
     print("new " + _node_description(p))
@@ -230,8 +219,7 @@ def Placeholder(_inf, name='placeholder'):
 # Sequential ([F, G, H]) === F >> G >> H
 def Sequential(arrayOfFunctions, _inf):
     #import functools  # reduce()
-    #return functools.reduce(lambda g, f: _name_and_extend_Function(f, 'Sequential element') >> g, arrayOfFunctions)
-    #r = Placeholder(_inf=_inf)
+    #return functools.reduce(lambda g, f: f >> g, arrayOfFunctions, layers.Identity(_inf=_inf))
     r = layers.Identity(_inf=_inf)
     for f in arrayOfFunctions:
         #_print_node(r)
@@ -394,7 +382,7 @@ class layers:
         def previous_hook(state):
             if hasattr(state, 'outputs'):
                outputs = state.outputs()
-               if len(outputs) > 1:  # if multiple then apply to eaAntoher ch element
+               if len(outputs) > 1:  # if multiple then apply to each element
                    return tuple([previous_hook(s) for s in outputs])
             # not a tuple: must be a 'scalar', i.e. a single element
             return past_value(state) if not go_backwards else \
@@ -405,7 +393,7 @@ class layers:
         # this returns a Function (x, (h_prev, c_prev)) -> (h, c)
         h = f_x_h_c.outputs()[0]  # 'h' is a Variable (the output of a Function that computed it)
         _print_node(h)
-        _print_node(combine([h.owner()]))#)
+        _print_node(combine([h.owner()]))
         prev_state = previous_hook(f_x_h_c)  # delay (h, c)
         repl_list = { value_forward: value.output() for (value_forward, value) in list(zip(list(prev_state_forward), list(prev_state))) }
         f_x_h_c.replace_placeholders(repl_list)  # binds _h_c := prev_state
