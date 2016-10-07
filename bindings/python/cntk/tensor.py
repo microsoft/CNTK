@@ -49,13 +49,13 @@ class TensorOpsMixin(object):
         from . import ops
         return ops.times(other, self)
 
-    # operator overload for (\) where self is the left operand
+    # operator overload for (/) where self is the left operand
     def __truediv__(self, other):
         from . import ops
         self.__div__ = self.__truediv__
         return ops.element_divide(self, other)
 
-    # operator overload for (\) where self is the right operand
+    # operator overload for (/) where self is the right operand
     def __rtruediv__(self, other):
         from . import ops
         self.__rdiv__ = self.__rtruediv__
@@ -73,8 +73,12 @@ class TensorOpsMixin(object):
         from . import ops
         return ops.negate(self)
 
-    # TODO __lt__, __le__, __gt__, __ge__, __and__, __rand__, __or__, __ror__,
-    # __xor__, __rxor__, __pow__, __rpow__,  __invert__
+    # TODO __xor__, __rxor__, __pow__, __rpow__,  __invert__
+
+    # Comparison operators are not exposed yet, because of __eq__ being
+    # required to allow comparison of Variables on C++ so that we can say 
+    # 'for var in variables'.
+    # __lt__, __le__, __gt__, __ge__, __and__, __rand__, __or__, __ror__,
 
     def __getitem__(self, key):
         from . import ops
