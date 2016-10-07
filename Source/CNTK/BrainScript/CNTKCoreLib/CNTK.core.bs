@@ -550,7 +550,7 @@ SplitDimension(x, axis, N) = ReshapeDimension(x, axis, 0:N)
 # TODO: make input the last arg!
 Transpose(x) = TransposeDimensions(x, 1, 2)
 NDCG(gain, prediction, queryId, tag='') = new ComputationNode [ operation = 'IRMetric' ; inputs = _AsNodes (gain : prediction : queryId) /*plus the function args*/ ]
-NDCG1(gain, prediction, queryId, tag='') = new ComputationNode [ operation = 'IRMetricEval' ; inputs = _AsNodes (gain : prediction : queryId) /*plus the function args*/ ]
+NDCGEval1(gain, prediction, queryId, tag='') = new ComputationNode [ operation = 'IRMetricEval' ; inputs = _AsNodes (gain : prediction : queryId) /*plus the function args*/ ]
 Logistic(label, probability, tag='') = new ComputationNode [ operation = 'Logistic' ; inputs = _AsNodes (label : probability) /*plus the function args*/ ]
 WeightedLogistic(label, probability, instanceWeight, tag='') = new ComputationNode [ operation = 'Logistic' ; inputs = _AsNodes (label : probability : instanceWeight) /*plus the function args*/ ]
 ReconcileDynamicAxis(dataInput, layoutInput, tag='') = new ComputationNode [ operation = 'ReconcileDynamicAxis' ; inputs = _AsNodes (dataInput : layoutInput) /*plus the function args*/ ]

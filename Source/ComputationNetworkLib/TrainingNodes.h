@@ -472,7 +472,7 @@ public:
         FrameRange fr(Input(0)->GetMBLayout());
 
         if (inputIndex == 1 &&  // right derivative
-            m_actualNumberOfQueryUrlPairs > 0)   // 
+            m_numberOfUrlPairs > 0)   // 
         {
             auto gradient = Input(1)->GradientFor(fr);
 
@@ -492,8 +492,8 @@ public:
             m_weightUpdate->SetValue(gradient);
             size_t pairsCount = 0;
             ElemType discountI, discountJ;
-            ElemType gainI, gainJ;
-            ElemType tmp, scoreDiff;
+            ElemType gainI;
+            ElemType lambdaIJ, scoreDiff;
             for (typename std::list<QueryUrls>::iterator itqu = m_queryUrls.begin(); itqu != m_queryUrls.end(); itqu++)
             {
                 ElemType irm0 = itqu->irm0;
@@ -508,21 +508,26 @@ public:
                     {
                         Url& UrlJ = *itUrlJ;
                         discountJ = m_logWeights[UrlJ.rk];
-                        gainJ = gainI - UrlJ.gn;
+                        if (gainI == UrlJ.gn)
+                        {
+                            continue;
+                        }
+
                         scoreDiff = abs(UrlI.sc - UrlJ.sc) + (ElemType)0.1;
 
                         // delta DCG
-                        tmp = gainJ * (discountI - discountJ) / (discountI * discountJ);
+                        lambdaIJ = (gainI - UrlJ.gn) * (discountI - discountJ) / (discountI * discountJ);
 
                         // |delta NDCG|
-                        tmp = (irm0 == 0.0 ? (ElemType) 0.0 : abs(tmp / irm0) / scoreDiff);
+                        lambdaIJ = (irm0 == 0.0 ? (ElemType) 0.0 : abs(lambdaIJ / irm0) / scoreDiff);
 
                         // Combine lambda
-                        tmp = lambdas(0, pairsCount++) * tmp;
+                        lambdaIJ = lambdas(0, pairsCount++) * lambdaIJ;
 
                         // Assign to gradient
-                        (*m_weightUpdate)(0, UrlI.id) += tmp;
-                        (*m_weightUpdate)(0, UrlJ.id) -= tmp;
+                        (*m_weightUpdate)(0, UrlI.id) += lambdaIJ;
+                        (*m_weightUpdate)(0, UrlJ.id) -= lambdaIJ;
+                        
                     }
                 }
             }
@@ -547,13 +552,13 @@ public:
         if (!m_urlSorter.empty()) m_urlSorter.clear();
         if (!m_logWeights.empty()) m_logWeights.clear();
 
-        m_pairwiseDifferences->Resize(1, m_actualNumberOfQueryUrlPairs);
-        m_lambdas->Resize(1, m_actualNumberOfQueryUrlPairs);
+        m_pairwiseDifferences->Resize(1, m_numberOfUrlPairs);
+        m_lambdas->Resize(1, m_numberOfUrlPairs);
 
-        m_urlGain0->Resize(1, m_numberOfQueryUrlPairs);
-        m_urlGain1->Resize(1, m_numberOfQueryUrlPairs);
-        m_urlDiscount0->Resize(1, m_numberOfQueryUrlPairs);
-        m_urlDiscount1->Resize(1, m_numberOfQueryUrlPairs);
+        m_urlGain0->Resize(1, m_numberOfQueryUrls);
+        m_urlGain1->Resize(1, m_numberOfQueryUrls);
+        m_urlDiscount0->Resize(1, m_numberOfQueryUrls);
+        m_urlDiscount1->Resize(1, m_numberOfQueryUrls);
 
         // keep one additional space to avoid pointer moving out
         m_urlSorter.resize(m_maxNumberOfUrlsPerQuery + 1);
@@ -779,7 +784,7 @@ protected:
         FrameRange fr(Input(0)->GetMBLayout());
         const Matrix<ElemType>& gains = Input(0)->ValueFor(fr);
         const Matrix<ElemType>& queryIds = Input(2)->ValueFor(fr);
-        const size_t numberOfQueryUrlPairs = gains.GetNumCols();
+        const size_t numberOfQueryUrls = gains.GetNumCols();
         int previousQueryId = -1;
 
         // Number of urls we have seen for the current query
@@ -787,16 +792,16 @@ protected:
 
         // Number of urls that have gains greater than 0 for the current query 
         size_t numberOfUrlsWithNonZeroGain = 0;
-        size_t actualNumberOfQueryUrlPairs = 0;
+        size_t numberOfUrlPairs = 0;
         size_t maxNumberOfUrlsPerQuery = 0;
-        for (size_t i = 0; i < numberOfQueryUrlPairs; i++)
+        for (size_t i = 0; i < numberOfQueryUrls; i++)
         {
             int queryId = (int)queryIds(0, i);
             ElemType gain = gains(0, i);
             if (queryId != previousQueryId)
             {
                 // Ignore pairs between urls with zero gains.
-                actualNumberOfQueryUrlPairs += (2 * numberOfUrls - 1 - numberOfUrlsWithNonZeroGain) * numberOfUrlsWithNonZeroGain / 2;
+                numberOfUrlPairs += (2 * numberOfUrls - 1 - numberOfUrlsWithNonZeroGain) * numberOfUrlsWithNonZeroGain / 2;
                 if (numberOfUrls > maxNumberOfUrlsPerQuery)
                 {
                     maxNumberOfUrlsPerQuery = numberOfUrls;
@@ -817,15 +822,15 @@ protected:
 
         // Add last query.
         {
-            actualNumberOfQueryUrlPairs += (2 * numberOfUrls - 1 - numberOfUrlsWithNonZeroGain) * numberOfUrlsWithNonZeroGain / 2;
+            numberOfUrlPairs += (2 * numberOfUrls - 1 - numberOfUrlsWithNonZeroGain) * numberOfUrlsWithNonZeroGain / 2;
             if (numberOfUrls > maxNumberOfUrlsPerQuery)
             {
                 maxNumberOfUrlsPerQuery = numberOfUrls;
             }
         }
 
-        m_numberOfQueryUrlPairs = numberOfQueryUrlPairs;
-        m_actualNumberOfQueryUrlPairs = actualNumberOfQueryUrlPairs;
+        m_numberOfQueryUrls = numberOfQueryUrls;
+        m_numberOfUrlPairs = numberOfUrlPairs;
         m_maxNumberOfUrlsPerQuery = maxNumberOfUrlsPerQuery;
     }
 
@@ -875,8 +880,8 @@ protected:
     // lookup table for position based weights
     std::vector<ElemType> m_logWeights;
 
-    size_t m_numberOfQueryUrlPairs;
-    size_t m_actualNumberOfQueryUrlPairs;
+    size_t m_numberOfQueryUrls;
+    size_t m_numberOfUrlPairs;
     size_t m_maxNumberOfUrlsPerQuery;
 
     ElemType m_sigma;

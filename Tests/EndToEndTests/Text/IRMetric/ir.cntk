@@ -132,7 +132,7 @@ train = [
 
         // training criteria
         irm  = NDCG(Gain, s, GroupId, tag='criterion')   // this is the training objective
-        irm1  = NDCG1(Gain, s, GroupId, tag='eval')
+        irm1  = NDCGEval1(Gain, s, GroupId, tag='eval')
         outputNodes = (s)
 
     ])

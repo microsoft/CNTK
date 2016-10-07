@@ -132,7 +132,7 @@ template class ClassificationErrorNode<double>;
 
 // -----------------------------------------------------------------------
 // IRMetricEvalNode (gain, prediction, queryId)
-// IRMetric @ 1 for ranking
+// IRMetricEval @ 1 for ranking
 // -----------------------------------------------------------------------
 
 template <class ElemType>
@@ -298,8 +298,6 @@ public:
 
     virtual void UpdateFunctionMBSize() override
     {
-        //FrameRange fr(Input(0)->GetMBLayout());
-
         UpdateCounts();
 
         // clean up first
@@ -307,10 +305,10 @@ public:
         if (!m_urlSorter.empty()) m_urlSorter.clear();
         if (!m_logWeights.empty()) m_logWeights.clear();
 
-        m_urlGain0->Resize(1, m_numberOfQueryUrlPairs);
-        m_urlGain1->Resize(1, m_numberOfQueryUrlPairs);
-        m_urlDiscount0->Resize(1, m_numberOfQueryUrlPairs);
-        m_urlDiscount1->Resize(1, m_numberOfQueryUrlPairs);
+        m_urlGain0->Resize(1, m_numberOfQueryUrls);
+        m_urlGain1->Resize(1, m_numberOfQueryUrls);
+        m_urlDiscount0->Resize(1, m_numberOfQueryUrls);
+        m_urlDiscount1->Resize(1, m_numberOfQueryUrls);
 
         // keep one additional space to avoid pointer moving out
         m_urlSorter.resize(m_maxNumberOfUrlsPerQuery + 1);
@@ -368,29 +366,22 @@ public:
 
 protected:
 
-        void UpdateCounts()
+    void UpdateCounts()
     {
         FrameRange fr(Input(0)->GetMBLayout());
         const Matrix<ElemType>& gains = Input(0)->ValueFor(fr);
         const Matrix<ElemType>& queryIds = Input(2)->ValueFor(fr);
-        const size_t numberOfQueryUrlPairs = gains.GetNumCols();
+        const size_t numberOfQueryUrls = gains.GetNumCols();
         int previousQueryId = -1;
 
         // Number of urls we have seen for the current query
         size_t numberOfUrls = 0;
-
-        // Number of urls that have gains greater than 0 for the current query 
-        size_t numberOfUrlsWithNonZeroGain = 0;
-        size_t actualNumberOfQueryUrlPairs = 0;
         size_t maxNumberOfUrlsPerQuery = 0;
-        for (size_t i = 0; i < numberOfQueryUrlPairs; i++)
+        for (size_t i = 0; i < numberOfQueryUrls; i++)
         {
             int queryId = (int)queryIds(0, i);
-            ElemType gain = gains(0, i);
             if (queryId != previousQueryId)
             {
-                // Ignore pairs between urls with zero gains.
-                actualNumberOfQueryUrlPairs += (2 * numberOfUrls - 1 - numberOfUrlsWithNonZeroGain) * numberOfUrlsWithNonZeroGain / 2;
                 if (numberOfUrls > maxNumberOfUrlsPerQuery)
                 {
                     maxNumberOfUrlsPerQuery = numberOfUrls;
@@ -398,28 +389,21 @@ protected:
 
                 // New query
                 numberOfUrls = 0;
-                numberOfUrlsWithNonZeroGain = 0;
                 previousQueryId = queryId;
             }
             
             numberOfUrls++;
-            if (gain > 0)
-            {
-                numberOfUrlsWithNonZeroGain++;
-            }
         }
 
         // Add last query.
         {
-            actualNumberOfQueryUrlPairs += (2 * numberOfUrls - 1 - numberOfUrlsWithNonZeroGain) * numberOfUrlsWithNonZeroGain / 2;
             if (numberOfUrls > maxNumberOfUrlsPerQuery)
             {
                 maxNumberOfUrlsPerQuery = numberOfUrls;
             }
         }
 
-        m_numberOfQueryUrlPairs = numberOfQueryUrlPairs;
-        m_actualNumberOfQueryUrlPairs = actualNumberOfQueryUrlPairs;
+        m_numberOfQueryUrls = numberOfQueryUrls;
         m_maxNumberOfUrlsPerQuery = maxNumberOfUrlsPerQuery;
     }
 
@@ -467,8 +451,7 @@ protected:
     // lookup table for position based weights
     std::vector<ElemType> m_logWeights;
 
-    size_t m_numberOfQueryUrlPairs;
-    size_t m_actualNumberOfQueryUrlPairs;
+    size_t m_numberOfQueryUrls;
     size_t m_maxNumberOfUrlsPerQuery;
     // store the gains and weights
     shared_ptr<Matrix<ElemType>> m_urlGain0;
