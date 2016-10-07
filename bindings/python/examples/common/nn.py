@@ -50,8 +50,7 @@ def conv_bn_layer(input, out_feature_map_count, kernel_width, kernel_height, h_s
         shape = input_var.shape()
     num_in_channels = shape[0]
     #TODO: use RandomNormal to initialize, needs to be exposed in the python api
-    conv_params = parameter(shape=(num_in_channels, kernel_height,
-        kernel_width, out_feature_map_count), init=glorot_uniform(output_rank=-1, filter_rank=2))
+    conv_params = parameter(shape=(out_feature_map_count, num_in_channels, kernel_height, kernel_width), init=glorot_uniform(output_rank=-1, filter_rank=2))
     conv_func = convolution(conv_params, input, (num_in_channels, v_stride, h_stride))
 
     #TODO: initialize using b_value and sc_value, needs to be exposed in the python api

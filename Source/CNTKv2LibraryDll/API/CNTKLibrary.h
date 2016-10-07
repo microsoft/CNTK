@@ -2168,6 +2168,11 @@ namespace CNTK
         ///
         CNTK_API FunctionPtr ReplacePlaceholder(const Variable& placeholderReplacement);
 
+        ///
+        /// Restore the models parameters from a saved model file
+        ///
+        CNTK_API void RestoreFromLegacyModel(const std::wstring& modelFilePath);
+
     private:
 
         template <typename VariableType, typename FilterFunction>
@@ -2237,9 +2242,6 @@ namespace CNTK
                 uniqueOutputs.insert(outputVar);
             }
         }
-
-    private:
-        void RestoreFromLegacyModel(const std::wstring& modelFilePath);
 
     private:
 

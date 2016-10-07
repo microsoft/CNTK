@@ -6,7 +6,7 @@ inline FunctionPtr ConvBNLayer(Variable input, size_t outFeatureMapCount, size_t
 {
     size_t numInputChannels = input.Shape()[input.Shape().Rank() - 1];
 
-    auto convParams = Parameter({ outFeatureMapCount, kernelWidth, kernelHeight, numInputChannels }, DataType::Float, GlorotUniformInitializer(-1, 2, wScale), device);
+    auto convParams = Parameter({ kernelWidth, kernelHeight, numInputChannels, outFeatureMapCount }, DataType::Float, GlorotUniformInitializer(-1, 2, wScale), device);
     auto convFunction = Convolution(convParams, input, { hStride, vStride, numInputChannels });
 
     auto biasParams = Parameter({ outFeatureMapCount }, (float)bValue, device);
