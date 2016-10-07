@@ -33,7 +33,8 @@ def precision_numpy(precision):
 
 def cntk_device(device_id):
     '''
-    Converts device ID to CNTK DeviceDescriptor instance
+    Converts the legace device ID as it was used in CNTK 1 to CNTK
+    DeviceDescriptor instance.
 
     Args:
         device_id (int): device id, -1 for CPU, 0 or higher for GPU
@@ -416,6 +417,18 @@ def sanitize_batch(batch, data_type=None, device=None):
 
     return value
 
+def sanitize_function(arg):
+    '''
+    Tries to retrieve a Function from the argument or throws an exception if
+    that's not possible.
+    '''
+    if isinstance(arg, cntk_py.Variable):
+        arg = arg.owner
+
+    if not isinstance(arg, cntk_py.Function):
+        raise "Object of type %s cannot be cast to Variable"%str(type(arg))
+
+    return arg
 
 def sanitize_var_map(op_arguments, arguments, precision_numpy=None, device=None, add_batch_axis=False):
     '''
@@ -688,3 +701,39 @@ def eval(op, precision, device, arguments=None, backward_pass=False):
 
     else:
         return forward_output, None
+
+
+def typemap(f):
+    '''
+    Upcasts Swig types to cntk types that inherit from Swig.
+    '''
+            
+    from functools import wraps
+    @wraps(f)
+    def wrapper(*args, **kwds):
+        from cntk.ops.variables import Variable, Parameter, Constant
+        from cntk.ops.functions import Function
+        from cntk.learner import Learner
+        from cntk.io import MinibatchSource, StreamConfiguration
+        typemap = { 
+                cntk_py.Variable: Variable,
+                cntk_py.Parameter: Parameter,
+                cntk_py.Constant: Constant,
+                cntk_py.Function: Function, 
+                cntk_py.Learner: Learner, 
+                cntk_py.MinibatchSource: MinibatchSource, 
+                cntk_py.StreamConfiguration: StreamConfiguration, 
+                }
+        result = f(*args, **kwds)
+        print(result)
+        if isinstance(result, (tuple, list, set)):
+            for r in result:
+                r.__class__ = typemap.get(r.__class__, r.__class__)
+        elif isinstance(result, dict):
+            for k,v in result.items():
+                k.__class__ = typemap.get(k.__class__, k.__class__)
+                v.__class__ = typemap.get(v.__class__, v.__class__)
+        else:
+            result.__class__ = typemap.get(result.__class__, result.__class__)
+        return result
+    return wrapper

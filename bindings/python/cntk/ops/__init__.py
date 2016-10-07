@@ -6,9 +6,9 @@
 import numpy as np
 from . import sequence
 from .functions import Function
-from ..utils import sanitize_input, sanitize_shape, get_data_type, sanitize_axis, sanitize_dynamic_axes
+from ..utils import sanitize_input, sanitize_shape, get_data_type, sanitize_axis, sanitize_dynamic_axes, typemap
 
-
+@typemap
 def combine(operands, name=''):
     '''
      Create a new Function instance which just combines the outputs of the specified list of
@@ -41,6 +41,7 @@ def combine(operands, name=''):
 ##########################################################################
 
 
+@typemap
 def cross_entropy_with_softmax(output_vector, target_vector, name=''):
     '''
     This operation computes the cross entropy over the softmax of the `output_vector`.
@@ -72,6 +73,7 @@ def cross_entropy_with_softmax(output_vector, target_vector, name=''):
     return cross_entropy_with_softmax(output_vector, target_vector, name)
 
 
+@typemap
 def squared_error(output, target, name=''):
     '''
     This operation computes the sum of the squared difference between elements
@@ -102,6 +104,7 @@ def squared_error(output, target, name=''):
     return squared_error(output, target, name)
 
 
+@typemap
 def classification_error(output_vector, target_vector, name=''):
     '''
     This operation computes the classification_error error. It finds the index of the highest
@@ -136,6 +139,7 @@ def classification_error(output_vector, target_vector, name=''):
 ##########################################################################
 
 
+@typemap
 def convolution(convolution_map, operand, strides=(1,), sharing=[True],
                 auto_padding=[True], lower_pad=(0,), upper_pad=(0,), transpose=False,
                 max_temp_mem_size_in_samples=0, name=''):
@@ -190,6 +194,7 @@ MAX_POOLING = PoolingType_Max
 AVG_POOLING = PoolingType_Average
 
 
+@typemap
 def pooling(operand, pooling_type, pooling_window_shape, strides=(1,), auto_padding=[False],
             lower_pad=(0,), upper_pad=(0,), name=''):
     '''
@@ -221,6 +226,7 @@ def pooling(operand, pooling_type, pooling_window_shape, strides=(1,), auto_padd
                    lower_pad, upper_pad, name)
 
 
+@typemap
 def batch_normalization(operand, scale, bias, running_mean, running_inv_std, spatial,
                         normalization_time_constant=0, blend_time_constant=0,
                         epsilon=0.00001, use_cudnn_engine=False, name=''):
@@ -264,6 +270,7 @@ def batch_normalization(operand, scale, bias, running_mean, running_inv_std, spa
 ##########################################################################
 
 
+@typemap
 def less(left, right, name=''):
     '''
     Elementwise 'less' comparison of two tensors. Result is 1 if left < right else 0.
@@ -289,6 +296,7 @@ def less(left, right, name=''):
     return less(left, right, name)
 
 
+@typemap
 def equal(left, right, name=''):
     '''
     Elementwise 'equal' comparison of two tensors. Result is 1 if values are equal 0 otherwise.
@@ -314,6 +322,7 @@ def equal(left, right, name=''):
     return equal(left, right, name)
 
 
+@typemap
 def greater(left, right, name=''):
     '''
     Elementwise 'greater' comparison of two tensors. Result is 1 if left > right else 0.
@@ -339,6 +348,7 @@ def greater(left, right, name=''):
     return greater(left, right, name)
 
 
+@typemap
 def greater_equal(left, right, name=''):
     '''
     Elementwise 'greater equal' comparison of two tensors. Result is 1 if left >= right else 0.
@@ -364,6 +374,7 @@ def greater_equal(left, right, name=''):
     return greater_equal(left, right, name)
 
 
+@typemap
 def not_equal(left, right, name=''):
     '''
     Elementwise 'not equal' comparison of two tensors. Result is 1 if left != right else 0.
@@ -389,6 +400,7 @@ def not_equal(left, right, name=''):
     return not_equal(left, right, name)
 
 
+@typemap
 def less_equal(left, right, name=''):
     '''
     Elementwise 'less equal' comparison of two tensors. Result is 1 if left <= right else 0.
@@ -418,6 +430,7 @@ def less_equal(left, right, name=''):
 ##########################################################################
 
 
+@typemap
 def plus(left, right, name=''):
     '''
     The output of this operation is the sum of the two input tensors. It supports broadcasting.
@@ -445,6 +458,7 @@ def plus(left, right, name=''):
     return plus(left, right, name)
 
 
+@typemap
 def minus(left, right, name=''):
     '''
     The output of this operation is left minus right tensor. It supports broadcasting.
@@ -474,6 +488,7 @@ def minus(left, right, name=''):
     return minus(left, right, name)
 
 
+@typemap
 def element_times(left, right, name=''):
     '''
     The output of this operation is the element-wise product of the two input
@@ -502,6 +517,7 @@ def element_times(left, right, name=''):
     return element_times(left, right, name)
 
 
+@typemap
 def element_divide(left, right, name=''):
     '''
     The output of this operation is the element-wise division of the two input
@@ -533,6 +549,7 @@ def element_divide(left, right, name=''):
     return element_divide(left, right, name)
 
 
+@typemap
 def times(left, right, output_rank=1, name=''):
     '''
     The output of this operation is the matrix product of the two input matrices.
@@ -584,6 +601,7 @@ def times(left, right, output_rank=1, name=''):
 ##########################################################################
 
 
+@typemap
 def floor(arg, name=''):
     '''
     The output of this operation is the element wise value rounded to the largest
@@ -615,6 +633,7 @@ def floor(arg, name=''):
     return floor(arg, name)
 
 
+@typemap
 def ceil(arg, name=''):
     '''
     The output of this operation is the element wise value rounded to the smallest
@@ -639,6 +658,7 @@ def ceil(arg, name=''):
     return ceil(arg, name)
 
 
+@typemap
 def round(arg, name=''):
     '''
     The output of this operation is the element wise value rounded to the nearest integer.
@@ -679,6 +699,7 @@ def round(arg, name=''):
 # TODO: enable when it is exposed in c++
 
 
+@typemap
 def clip(x, min_value, max_value, name=''):
     '''
     Computes a tensor with all of its values clipped to fall
@@ -714,6 +735,7 @@ def clip(x, min_value, max_value, name=''):
     return clip(x, min_value, max_value, name)
 
 
+@typemap
 def relu(x, name=''):
     '''
     Rectified linear operation. Computes the element-wise rectified linear
@@ -736,6 +758,7 @@ def relu(x, name=''):
     return re_lu(x, name)
 
 
+@typemap
 def sigmoid(x, name=''):
     '''
     Computes the element-wise sigmoid of `x`:
@@ -759,6 +782,7 @@ def sigmoid(x, name=''):
     return sigmoid(x, name)
 
 
+@typemap
 def tanh(x, name=''):
     '''
     Computes the element-wise tanh of `x`:
@@ -781,6 +805,7 @@ def tanh(x, name=''):
     return tanh(x, name)
 
 
+@typemap
 def softmax(x, name=''):
     '''
     Squashes the input values `x` such that they add up to 1:
@@ -808,6 +833,7 @@ def softmax(x, name=''):
     return softmax(x)
 
 
+@typemap
 def hardmax(x, name=''):
     '''
     TBA
@@ -825,6 +851,7 @@ def hardmax(x, name=''):
     return hardmax(x)
 
 
+@typemap
 def exp(x, name=''):
     '''
     Computes the element-wise exponential of `x`:
@@ -846,6 +873,7 @@ def exp(x, name=''):
     return exp(x, name)
 
 
+@typemap
 def log(x, name=''):
     '''
     Computes the element-wise the natural logarithm of `x`:
@@ -871,6 +899,7 @@ def log(x, name=''):
     return log(x, name)
 
 
+@typemap
 def sqrt(x, name=''):
     '''
     Computes the element-wise square-root of `x`:
@@ -896,6 +925,7 @@ def sqrt(x, name=''):
     return sqrt(x, name)
 
 
+@typemap
 def square(x, name=''):
     '''
     Computes the element-wise square of `x`:
@@ -915,6 +945,7 @@ def square(x, name=''):
     return square(x, name)
 
 
+@typemap
 def abs(x, name=''):
     '''
     Computes the element-wise absolute of `x`:
@@ -936,6 +967,7 @@ def abs(x, name=''):
     return abs(x, name)
 
 
+@typemap
 def negate(x, name=''):
     '''
     Computes the element-wise negation of `x`:
@@ -957,6 +989,7 @@ def negate(x, name=''):
     return negate(x, name)
 
 
+@typemap
 def reciprocal(x, name=''):
     '''
     Computes the element-wise reciprocal of `x`:
@@ -976,6 +1009,7 @@ def reciprocal(x, name=''):
     return reciprocal(x, name)
 
 
+@typemap
 def element_select(flag, value_if_true, value_if_false, name=''):
     '''
     return either value_if_true or value_if_false based on the value of flag.
@@ -1008,6 +1042,7 @@ def element_select(flag, value_if_true, value_if_false, name=''):
 # (0.0), using the default device
 
 
+@typemap
 def future_value(x, initial_state=None, time_step=1, name=''):
     '''
     This function returns the future value w.r.t. `x`. It is most often used when
@@ -1040,6 +1075,7 @@ def future_value(x, initial_state=None, time_step=1, name=''):
     return future_value(x, initial_state, time_step, name)
 
 
+@typemap
 def past_value(x, initial_state=None, time_step=1, name=''):
     '''
     This function returns the past value w.r.t. `x`. It is most often used when
@@ -1078,6 +1114,7 @@ def past_value(x, initial_state=None, time_step=1, name=''):
 # TODO: enable when it is exposed in c++
 
 
+@typemap
 def reshape(x, shape, name=''):
     '''
     Reinterpret input samples as having different tensor dimensions
@@ -1112,6 +1149,7 @@ def reshape(x, shape, name=''):
     return reshape(x, shape, name)
 
 
+@typemap
 def transpose(x, axis1=0, axis2=1, name=''):
     '''
     Reverses two axes of the tensor. The output tensor has the same data but with
@@ -1138,6 +1176,7 @@ def transpose(x, axis1=0, axis2=1, name=''):
     return transpose_axes(x, axis1, axis2, name)
 
 
+@typemap
 def slice(x, axis, begin_index, end_index, name=''):
     '''
     Slice the input along an axis.
@@ -1198,6 +1237,7 @@ def slice(x, axis, begin_index, end_index, name=''):
 # TODO: enable when it is exposed in c++
 
 
+@typemap
 def splice(inputs, axis=0, name=''):
     '''
     Concatenate the input tensors along an axis.
@@ -1245,6 +1285,7 @@ def splice(inputs, axis=0, name=''):
 ##########################################################################
 
 
+@typemap
 def reduce_sum(x, axis=None, name=''):
     '''
     Computes the sum of the input tensor's elements across one axis. If the axis parameter
@@ -1284,6 +1325,7 @@ def reduce_sum(x, axis=None, name=''):
     return reduce_sum(x, axis, name)
 
 
+@typemap
 def reduce_log_sum(x, axis, name=''):
     '''
     Computes the log sum of the input tensor's elements across the specified axis.
@@ -1305,6 +1347,7 @@ def reduce_log_sum(x, axis, name=''):
     return reduce_log_sum(x, axis, name)
 
 
+@typemap
 def reduce_mean(x, axis, name=''):
     '''
     Computes the mean of the input tensor's elements across the specified axis.
@@ -1326,6 +1369,7 @@ def reduce_mean(x, axis, name=''):
     return reduce_mean(x, axis, name)
 
 
+@typemap
 def reduce_max(x, axis, name=''):
     '''
     Computes the max of the input tensor's elements across the specified axis.
@@ -1347,6 +1391,7 @@ def reduce_max(x, axis, name=''):
     return reduce_max(x, axis, name)
 
 
+@typemap
 def reduce_min(x, axis, name=''):
     '''
     Computes the min of the input tensor's elements across the specified axis.
@@ -1372,6 +1417,7 @@ def reduce_min(x, axis, name=''):
 ##########################################################################
 
 
+@typemap
 def dropout(x, dropout_rate=0.0, name=''):
     '''
     Compute a new tensor that randomly sets `dropout_rate`*100 percent of the
@@ -1410,6 +1456,7 @@ from cntk.cntk_py import Axis, DeviceDescriptor
 # class Variable in variables.py
 
 
+@typemap
 def input_variable(shape, data_type=np.float32, needs_gradient=True, is_sparse=False,
                    dynamic_axes=Axis.default_input_variable_dynamic_axes, name=''):
     '''
@@ -1442,6 +1489,7 @@ def input_variable(shape, data_type=np.float32, needs_gradient=True, is_sparse=F
     return input_variable(shape, is_sparse, dtype, needs_gradient, name, dynamic_axes)
 
 
+@typemap
 def placeholder_variable(shape, dynamic_axes=Axis.default_input_variable_dynamic_axes, name=''):
     '''
     It creates a variable place holder for recurrence networks, when the network's dynamic axes
@@ -1460,6 +1508,7 @@ def placeholder_variable(shape, dynamic_axes=Axis.default_input_variable_dynamic
     return placeholder_variable(shape, name, dynamic_axes)
 
 
+@typemap
 def parameter(shape=None, init=None, device=None, name=''):
     '''
     It creates a parameter tensor.
@@ -1496,6 +1545,7 @@ def parameter(shape=None, init=None, device=None, name=''):
     return Parameter(shape, init, data_type, device, name)
 
 
+@typemap
 def constant(shape=None, value=None, device=None, name=''):
     '''
     It creates a constant tensor initialized from a numpy array
@@ -1532,6 +1582,7 @@ def constant(shape=None, value=None, device=None, name=''):
 # TODO: ComputeInputPerDimMeansAndInvStdDevs
 
 
+@typemap
 def per_dim_mean_variance_normalize(operand, mean, inv_stddev, name=''):
     '''
     Computes per dimension mean-variance normalization of the specified input operand.
