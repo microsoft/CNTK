@@ -2586,7 +2586,7 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
 
     // sequence-training parameters
     m_hSmoothingWeight = configSGD(L"hSmoothingWeight", 0.95);
-    m_frameDropThresh = configSGD(L"frameDropThresh", 1e-10);
+    m_frameDropThresh = configSGD(L"frameDropThresh", 0.0);
     m_doReferenceAlign = configSGD(L"doReferenceAlign", false);
     m_seqGammarCalcUsesMBR = configSGD(L"seqGammarUsesMBR", false);
     m_seqGammarCalcAMF = configSGD(L"seqGammarAMF", 14.0);
