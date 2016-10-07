@@ -11,7 +11,7 @@
 #include <intrin.h> // for intrinsics
 #endif
 #ifdef __unix__
-#if !defined(__ARM64__)
+#if !defined(__aarch64__)
 #include <x86intrin.h>
 #else
 #define _mm_free(p) free(p)
@@ -32,7 +32,7 @@ namespace msra { namespace math {
 // newer ones: (seems no single list available)
 // ===========================================================================
 
-#if defined(__ARM64__)
+#if defined(__aarch64__)
 typedef struct __m128_t
 {
     float f[4];

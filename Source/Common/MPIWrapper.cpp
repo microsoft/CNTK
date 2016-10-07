@@ -11,6 +11,10 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+// TODO: use platform agnostic types.
+#if !defined(__int64)
+#define __int64 long
+#endif
 
 // =======================================================================
 // class MPIWrapper
