@@ -1,0 +1,74 @@
+# assembly components
+## Convolution + Batch Normalization
+ConvBNLayer {outChannels, kernel, stride, bnTimeConst} = Sequential(
+    ConvolutionalLayer {outChannels, kernel, init = "heNormal", stride = stride, pad = true, bias = false} :
+    BatchNormalizationLayer {spatialRank = 2, normalizationTimeConstant = bnTimeConst, useCntkEngine = false}
+)
+
+## Convolution + Batch Normalization + Rectifier Linear
+ConvBNReLULayer {outChannels, kernelSize, stride, bnTimeConst} = Sequential(
+    ConvBNLayer {outChannels, kernelSize, stride, bnTimeConst} :
+    ReLU
+)
+
+# ResNet components
+ResNetBasicInc {outChannels, stride, bnTimeConst} = {
+    apply (x) = {
+        # Convolution 
+        b = Sequential (
+            ConvBNReLULayer {outChannels, (3:3), stride, bnTimeConst} :
+            ConvBNReLULayer {outChannels, (3:3), (1:1), bnTimeConst}) (x)
+
+        # Shortcut
+        s = ConvBNLayer {outChannels, (1:1), stride, bnTimeConst} (x)
+
+        p = Plus(b, s)
+        r = ReLU(p)
+    }.r
+}.apply
+
+
+ResNetBasic {outChannels, bnTimeConst} = {
+    apply (x) = {
+        # Convolution
+        b = Sequential (
+            ConvBNReLULayer {outChannels, (3:3), (1:1), bnTimeConst} : 
+            ConvBNLayer {outChannels, (3:3), (1:1), bnTimeConst}) (x) 
+
+        p = Plus(b, x)
+        r = ReLU(p)
+    }.r
+}.apply
+
+ResNetBottleneckInc {outChannels, interOutChannels, stride, bnTimeConst} = {
+    apply (x) = {
+        # Convolution
+        b = Sequential (
+            ConvBNReLULayer {interOutChannels, (1:1), (1:1), bnTimeConst} :
+            ConvBNReLULayer {interOutChannels, (3:3), stride, bnTimeConst} :
+            ConvBNReLULayer {outChannels, (1:1), (1:1), bnTimeConst}) (x)
+
+        # Shortcut
+        s = ConvBNReLULayer {outChannels, (1:1), stride, bnTimeConst} (x)
+
+        p = Plus(b, s)
+        r = ReLU(p)
+    }.r
+}.apply
+
+ResNetBottleneck {outChannels, interOutChannels, bnTimeConst} = {
+    apply (x) = {
+        # Convolution
+        b = Sequential (
+            ConvBNReLULayer {interOutChannels, (1:1), (1:1), bnTimeConst} :
+            ConvBNReLULayer {interOutChannels, (3:3), (1:1), bnTimeConst} :
+            ConvBNReLULayer {outChannels, (1:1), (1:1), bnTimeConst}) (x)
+
+        p = Plus(b, x)
+        r = ReLU(p)
+    }.r
+}.apply
+
+NLayerStack {n, c} = Sequential (array[0..n-1] (c))
+ResNetBasicStack {n, outChannels, bnTimeConst} = NLayerStack {numLayers, i => ResNetBasic {outChannels, bnTimeConst}}
+ResNetBottleneckStack {n, outChannels, interOutChannels, bnTimeConst} = NLayerStack {numLayers, i => ResNetBottleneck {outChannels, interOutChannels, bnTimeConst}}
