@@ -99,7 +99,7 @@ const std::vector<size_t> RandomSampleNodeBase<ElemType>::RunSampling(long& nTri
 template<class ElemType>
 void RandomSampleNode<ElemType>::ForwardPropNonLooping()
 {
-    UpdateWeightsPrefixSum();
+    Base::UpdateWeightsPrefixSum();
     Matrix<ElemType>& valueMatrix = ValueAsMatrix();
     valueMatrix.TransferToDeviceIfNotThere(CPUDEVICE, /*ismoved =*/ true/*means: BOTH state not ok */, /*emptyTransfer =*/ true, /*updatePreferredDevice =*/ false);
     valueMatrix.SetDevice(CPUDEVICE);
@@ -112,7 +112,7 @@ void RandomSampleNode<ElemType>::ForwardPropNonLooping()
     const std::vector<size_t> samples = GetWeightedSamples();
 
     // Set columns of (sparse) result matrix as indicator vectors
-    for (size_t i = 0; i < m_sizeOfSampledSet; i++)
+    for (size_t i = 0; i < Base::m_sizeOfSampledSet; i++)
     {
         int sample = samples[i];
         valueMatrix.SetValue(sample, i, 1);
@@ -138,7 +138,7 @@ void RandomSampleNode<ElemType>::Validate(bool isFinalValidationPass)
     size_t nClasses = dims[0];
 
     // Output: a (sparse) matrix containing m_sizeOfSampledSet columns of 1-hot vectors specifiying the sampled classes.
-    SetDims(TensorShape(nClasses, m_sizeOfSampledSet), false);
+    SetDims(TensorShape(nClasses, Base::m_sizeOfSampledSet), false);
 }
 
 template<class ElemType>
@@ -170,9 +170,9 @@ double RandomSampleInclusionFrequencyNode<ElemType>::EstimateNumberOfTries()
 template<class ElemType>
 double RandomSampleInclusionFrequencyNode<ElemType>::EstimateInSampleFrequency(double p, double estimatedNumTries) const
 {
-    if (m_allowDuplicates)
+    if (Base::m_allowDuplicates)
     {
-        return p * m_sizeOfSampledSet;
+        return p * Base::m_sizeOfSampledSet;
     }
     else /* No duplicates allowed. Estimated count is same as probability of inclusion. */
     {
@@ -183,19 +183,19 @@ double RandomSampleInclusionFrequencyNode<ElemType>::EstimateInSampleFrequency(d
 template<class ElemType>
 void RandomSampleInclusionFrequencyNode<ElemType>::ForwardPropNonLooping()
 {
-    UpdateWeightsPrefixSum();
+    Base::UpdateWeightsPrefixSum();
     Matrix<ElemType>& valueMatrix = ValueAsMatrix();
     valueMatrix.TransferToDeviceIfNotThere(CPUDEVICE, /*ismoved =*/ true/*means: BOTH state not ok */, /*emptyTransfer =*/ true, /*updatePreferredDevice =*/ false);
     valueMatrix.SetDevice(CPUDEVICE);
 
     //BUGBUG: matrix type should be configured during validation
     valueMatrix.SwitchToMatrixType(DENSE, matrixFormatDense, false);
-    double sumOfWeights = m_samplingWeightsPrefixSum.back();
+    double sumOfWeights = Base::m_samplingWeightsPrefixSum.back();
     const Matrix<ElemType>& samplingWeights = Input(0)->ValueAsMatrix();
 
     double estimatedNumTries = EstimateNumberOfTries();
 
-    for (int i = 0; i < m_samplingWeightsPrefixSum.size(); i++)
+    for (int i = 0; i < Base::m_samplingWeightsPrefixSum.size(); i++)
     {
         // Get the sampling probablility for from the weights for i-th class.
         double samplingProb = samplingWeights.GetValue(i, 0) / sumOfWeights;
