@@ -30,7 +30,7 @@ namespace CNTK
         if (varOwner)
             return CompositeFunction::Create(varOwner, varOwner->Name());
         else
-            return Internal::Combine({ *this });
+            return Combine({ *this });
     }
 
     NDArrayViewPtr Variable::Value() const
