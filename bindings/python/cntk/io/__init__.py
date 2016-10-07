@@ -130,7 +130,7 @@ def _py_dict_to_cntk_dict(py_dict):
             res[k] = cntk_py.DictionaryValue(v)
     return res
 
-
+@typemap
 def minibatch_source(config):
     '''
     Instantiate the CNTK built-in composite minibatch source which is used to stream data into the network.    
@@ -162,6 +162,7 @@ class ReaderConfig(dict):
         self['deserializers'] = self.deserializers = deserializers or []
         self['randomize'] = randomize
 
+    @typemap
     def minibatch_source(self):
         '''
         Creates an instance of `:class:cntk.io.MinibatchSource` from this
