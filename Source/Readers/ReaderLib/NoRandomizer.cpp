@@ -229,4 +229,7 @@ void NoRandomizer::SetCurrentSamplePosition(size_t)
     NOT_IMPLEMENTED;
 }
 
+void NoRandomizer::SetConfiguration(const ReaderConfiguration& /*config*/)
+{}
+
 } } }

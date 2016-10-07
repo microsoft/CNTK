@@ -394,4 +394,8 @@ void BlockRandomizer::SetCurrentSamplePosition(size_t currentSamplePosition)
     m_globalSamplePosition = m_sweep * m_sweepTotalNumberOfSamples + newOffset;
 }
 
+void BlockRandomizer::SetConfiguration(const ReaderConfiguration& /*config*/)
+{
+}
+
 }}}

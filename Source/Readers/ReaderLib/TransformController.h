@@ -99,6 +99,11 @@ public:
         return sequences;
     }
 
+    void SetConfiguration(const ReaderConfiguration& config) override
+    {
+        m_sequenceProvider->SetConfiguration(config);
+    }
+
 private:
     size_t GetStreamId(const std::wstring streamName, const std::vector<StreamDescriptionPtr>& streams) const
     {

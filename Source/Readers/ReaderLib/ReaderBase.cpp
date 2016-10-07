@@ -73,4 +73,9 @@ void ReaderBase::SetCurrentSamplePosition(size_t currentSamplePosition)
     m_sequenceEnumerator->SetCurrentSamplePosition(currentSamplePosition);
 }
 
+void ReaderBase::SetConfiguration(const ReaderConfiguration&, const std::map<std::wstring, int>&)
+{
+    NOT_IMPLEMENTED;
+}
+
 }}}

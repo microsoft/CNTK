@@ -163,7 +163,7 @@ void BlockRandomizerInstantiateTest(bool prefetch)
     auto randomizer = make_shared<BlockRandomizer>(0, SIZE_MAX, mockDeserializer, prefetch, BlockRandomizer::DecimationMode::chunk, false);
 }
 
-BOOST_AUTO_TEST_CASE(CheckCurrentCursorForRandomizers)
+BOOST_AUTO_TEST_CASE(CheckGetCurrentCursorForRandomizers)
 {
     size_t chunkSizeInSamples = 10000;
     size_t sweepNumberOfSamples = 500000;
@@ -192,6 +192,62 @@ BOOST_AUTO_TEST_CASE(CheckCurrentCursorForRandomizers)
         auto anotherSecondCursor = r->GetCurrentSamplePosition();
 
         BOOST_CHECK_EQUAL(anotherSecondCursor, secondCursor);
+    };
+
+    // Inside sweep
+    size_t epochSize = 50000;
+    test(blockRandomizer, epochSize);
+    test(noRandomizer, epochSize);
+
+    // Between sweeps
+    epochSize = (size_t)(sweepNumberOfSamples / 1.5);
+    test(blockRandomizer, epochSize);
+    test(noRandomizer, epochSize);
+}
+
+BOOST_AUTO_TEST_CASE(CheckSetCurrentCursorForRandomizers)
+{
+    size_t chunkSizeInSamples = 10000;
+    size_t sweepNumberOfSamples = 500000;
+    uint32_t maxSequenceLength = 300;
+    size_t randomizationWindow = chunkSizeInSamples * 5;
+    auto deserializer = make_shared<SequentialDeserializer>(0, chunkSizeInSamples, sweepNumberOfSamples, maxSequenceLength);
+
+    auto blockRandomizer = make_shared<BlockRandomizer>(0, randomizationWindow, deserializer, true, BlockRandomizer::DecimationMode::chunk, false);
+    auto noRandomizer = make_shared<NoRandomizer>(deserializer, false);
+
+    auto test = [](SequenceEnumeratorPtr r, size_t epochSize)
+    {
+        auto firstEpoch = ReadFullEpoch(r, epochSize, 0);
+        auto secondEpoch = ReadFullEpoch(r, epochSize, 1);
+        auto thirdEpoch = ReadFullEpoch(r, epochSize, 2);
+
+        // Rereading second epoch
+        r->SetCurrentSamplePosition(firstEpoch.size());
+        auto anotherSecond = ReadNextSamples(r, secondEpoch.size());
+        BOOST_CHECK_EQUAL_COLLECTIONS(
+            secondEpoch.begin(),
+            secondEpoch.end(),
+            anotherSecond.begin(),
+            anotherSecond.end());
+
+        // Rereading first epoch
+        r->SetCurrentSamplePosition(0);
+        auto anotherFirst = ReadNextSamples(r, firstEpoch.size());
+        BOOST_CHECK_EQUAL_COLLECTIONS(
+            firstEpoch.begin(),
+            firstEpoch.end(),
+            anotherFirst.begin(),
+            anotherFirst.end());
+
+        // Rereading third epoch
+        r->SetCurrentSamplePosition(firstEpoch.size() + secondEpoch.size());
+        auto anotherThird = ReadNextSamples(r, thirdEpoch.size());
+        BOOST_CHECK_EQUAL_COLLECTIONS(
+            thirdEpoch.begin(),
+            thirdEpoch.end(),
+            anotherThird.begin(),
+            anotherThird.end());
     };
 
     // Inside sweep

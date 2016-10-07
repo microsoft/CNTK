@@ -39,7 +39,11 @@ public:
     virtual std::vector<StreamDescriptionPtr> GetStreamDescriptions() const = 0;
 
     // Sets current epoch configuration.
+    // TODO: should be deprecated.
     virtual void StartEpoch(const EpochConfiguration& config) = 0;
+
+    // Sets current configuration.
+    virtual void SetConfiguration(const ReaderConfiguration& config) = 0;
 
     // Set current sample position
     virtual void SetCurrentSamplePosition(size_t currentSamplePosition) = 0;
