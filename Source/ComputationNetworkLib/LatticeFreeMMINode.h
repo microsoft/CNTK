@@ -107,17 +107,17 @@ public:
                 //m_posteriorsDen->Print("den");
                 fprintf(stderr, "frame dropping thresh %f\n", m_frameDropThresh);
 
-                // k * (1-alpha) * r_DEN + alpha * P_net - (k * (1-alpha) + alpha) * r_NUM + c * y
-                if (m_ceweight != 0)
-                {
-                    m_softmax->InplaceExp();
-                    Matrix<ElemType>::ScaleAndAdd(m_ceweight, *m_softmax, m_acweight * (1 - m_ceweight), *m_posteriorsDen);
-                    Matrix<ElemType>::Scale(m_acweight * (1 - m_ceweight) + m_ceweight, *m_posteriorsNum);
-                }
-                if (m_l2NormFactor != 0)
-                {
-                    Matrix<ElemType>::ScaleAndAdd(m_l2NormFactor, Input(1)->ValueFor(fr), *m_posteriorsDen);
-                }
+            // k * (1-alpha) * r_DEN + alpha * P_net - (k * (1-alpha) + alpha) * r_NUM + c * y
+            if (m_ceweight != 0)
+            {
+                m_softmax->InplaceExp();
+                Matrix<ElemType>::ScaleAndAdd(m_ceweight, *m_softmax, m_acweight * (1 - m_ceweight), *m_posteriorsDen);
+                Matrix<ElemType>::ScaleAndAdd(m_ceweight, *m_posteriorsCTC, m_acweight * (1 - m_ceweight), *m_posteriorsNum);
+            }
+            if (m_l2NormFactor != 0)
+            {
+                Matrix<ElemType>::ScaleAndAdd(m_l2NormFactor, Input(1)->ValueFor(fr), *m_posteriorsDen);
+            }
 
                 if (m_totalFrameNumberOfCurrentMinibatch > 0)
                 {
@@ -180,6 +180,7 @@ public:
     }
 
     double CalculateNumeratorsWithCE(const Matrix<ElemType>& labelMatrix, const size_t nf);
+    double CTCCalculation(const Matrix<ElemType>& labelMatrix, const size_t nf);
 
     double ForwardBackwardProcessForDenorminator(const size_t nf, Matrix<ElemType>& posteriors,
         const Matrix<ElemType>& tmap, const Matrix<ElemType>& tmapTranspose, const Matrix<ElemType>& smap, const Matrix<ElemType>& smapTranspose);
@@ -252,6 +253,7 @@ public:
 
         double logNumeratorWithCE = CalculateNumeratorsWithCE(*inputLabel, nf);
         double logDenominator = ForwardBackwardProcessForDenorminator(nf, *m_posteriorsDen, *m_tmap, *m_tmapTranspose, *m_smap, *m_smapTranspose);
+        double logCTC = CTCCalculation(*inputLabel, nf);
 
         double l2NormScore = 0;
         if (m_l2NormFactor != 0)
@@ -260,7 +262,7 @@ public:
         }
 
         // Got the final numbers
-        m_savedCriterionValue = (1 - m_ceweight) * logDenominator - logNumeratorWithCE + l2NormScore;
+        m_savedCriterionValue = (1 - m_ceweight) * (logDenominator - logNumeratorWithCE) - m_ceweight*logCTC + l2NormScore;
         ElemType finalValue = (ElemType)(m_savedCriterionValue);
         Value().Resize(1, 1);
         Value().SetValue(finalValue);
@@ -333,6 +335,7 @@ public:
         RequestMatrixFromPool(m_maxLabelIndexes, matrixPool);
         RequestMatrixFromPool(m_maxLabelValues, matrixPool);
         RequestMatrixFromPool(m_posteriorsNum, matrixPool);
+        RequestMatrixFromPool(m_posteriorsCTC, matrixPool);
         if (m_ceweight != 0)
             RequestMatrixFromPool(m_softmax, matrixPool);
     }
@@ -355,6 +358,7 @@ public:
         Base::ReleaseMatricesAfterBackprop(matrixPool);
         ReleaseMatrixToPool(m_posteriorsDen, matrixPool);
         ReleaseMatrixToPool(m_posteriorsNum, matrixPool);
+        ReleaseMatrixToPool(m_posteriorsCTC, matrixPool);
         if (m_ceweight != 0)
             ReleaseMatrixToPool(m_softmax, matrixPool);
     }
@@ -559,6 +563,7 @@ protected:
     shared_ptr<Matrix<ElemType>> m_maxLabelValues;
     shared_ptr<Matrix<ElemType>> m_posteriorsNum;
     shared_ptr<Matrix<ElemType>> m_posteriorsDen;
+    shared_ptr<Matrix<ElemType>> m_posteriorsCTC;
     shared_ptr<Matrix<ElemType>> m_likelihoods;
 
     shared_ptr<Matrix<ElemType>> m_mbValues;
