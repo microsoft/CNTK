@@ -13,19 +13,20 @@ from cntk import cntk_py
 from .persist import *
 
 
-def precision_numpy(precision):
+def sanitize_precision(precision):
     '''
-    Converts string precision to NumPy precision
+    Converts precision to NumPy precision
 
     Args:
-        precision (str): string precision ("float" or "double")
+        precision (`str` or `np.float32` or `np.float64`): precision, if string
+         it can be one of 'float' 'float32, 'double', or 'float64'
 
     Returns:
         NumPy precision
     '''
-    if precision == 'float':
+    if precision in ['float', 'float32', np.float32]:
         return np.float32
-    elif precision == 'double':
+    elif precision in ['double', 'float64', np.float64]:
         return np.float64
     else:
         raise ValueError('precision value: "%s" is not supported' % precision)
@@ -33,7 +34,7 @@ def precision_numpy(precision):
 
 def cntk_device(device_id):
     '''
-    Converts the legace device ID as it was used in CNTK 1 to CNTK
+    Converts the legacy device ID as it was used in CNTK 1 to CNTK
     DeviceDescriptor instance.
 
     Args:
@@ -430,7 +431,7 @@ def sanitize_function(arg):
 
     return arg
 
-def sanitize_var_map(op_arguments, arguments, precision_numpy=None, device=None, add_batch_axis=False):
+def sanitize_var_map(op_arguments, arguments, precision=None, device=None, add_batch_axis=False):
     '''
     Sanitizes a dictionary of `Variable`s to input data such that it can be
     handed off to the `Forward` method.
@@ -439,11 +440,13 @@ def sanitize_var_map(op_arguments, arguments, precision_numpy=None, device=None,
         op_arguments (`:class:Function`): arguments of the root function. In
          forward pass it is typically `op.arguments()`, in backward mode it is
          `op.outputs()`
-        arguments (`dict` or `list`): map from input variables to the data or
-         list of inputs in the order that the function expects or a single input,
-         if the function only has one argument. Data should be either NumPy
-         arrays or cntk.Value instances returned by a minibatch source.
-        precision_numpy : `np.float32`, `np.float64`, or `None`
+        arguments (`dict` or `list` or single input): 
+          * map from input variables to the data
+          * list of inputs in the order that the function expects or 
+          * a single input, if the function only has one argument. 
+          Data should be either NumPy arrays or a `:class:cntk.io.MinibatchSource`
+        precision (`str` or `np.float32` or `np.float64`): if string it can be
+         one of 'float' 'float32, 'double', 'float64', or `None` 
         device (`DeviceDescriptor` or `None`): CNTK DeviceDescriptor
         add_batch_axis (`bool`): data in `arguments` are single instances and a batch axis has to be added
 
@@ -474,6 +477,9 @@ def sanitize_var_map(op_arguments, arguments, precision_numpy=None, device=None,
     if len(arguments) < len(op_arguments):
         raise ValueError('expected %i arguments, but got %i'%(len(op_arguments), len(arguments)))
 
+    if precision is not None:
+        precision = sanitize_precision(precision)
+
     var_map = {}
     for var, batch in arguments.items():
         if isinstance(var, str):
@@ -493,22 +499,22 @@ def sanitize_var_map(op_arguments, arguments, precision_numpy=None, device=None,
                     batch = batch.astype(np.float32)
                 if batch.dtype not in (np.float32, np.float64):                        
                     raise ValueError('only float32 and float64 are supported')
-                batch = sanitize_batch(batch, precision_numpy, device)
+                batch = sanitize_batch(batch, precision, device)
             else:
                 if is_tensor(batch):
-                    if precision_numpy is None:
-                        precision_numpy = np.float32
-                    batch = np.asarray(batch, dtype=precision_numpy)
+                    if precision is None:
+                        precision = np.float32
+                    batch = np.asarray(batch, dtype=precision)
                     batch = create_Value_from_NumPy(batch, device)
                 else:
-                    batch = sanitize_batch(batch, precision_numpy, device)
+                    batch = sanitize_batch(batch, precision, device)
 
         var_map[var] = batch
 
     return var_map
 
 
-def ones_like(batch, precision_numpy):
+def ones_like(batch, precision):
     '''
     Returns a new batch, which has the same format as `batch` but all values
     set to 1.
@@ -516,7 +522,7 @@ def ones_like(batch, precision_numpy):
     Args:
         batch (list of NumPy arrays): a list of sequences, which are NumPy arrays
     '''
-    return [np.ones_like(sample, dtype=precision_numpy) for sample in batch]
+    return [np.ones_like(sample, dtype=sanitize_precision(precision)) for sample in batch]
 
 
 def create_NDArrayView(shape, data_type=cntk_py.DataType_Float, dev=None):
@@ -654,7 +660,7 @@ def eval(op, precision, device, arguments=None, backward_pass=False):
     Args:
         op (:class:`Function`): operation to evaluate
         precision (`str` or `None`): precision being 'float32', 'float64', or `None`, in which case it will be determined by inspecting the operator (costly)
-        device (:class:Cntk.DeviceDescriptor): the device the descriptor, whether it is CPU or GPU (and which one)
+        device (`:class:cntk.DeviceDescriptor`): the device the descriptor, whether it is CPU or GPU (and which one)
         arguments (`dict` or `list`): map from input variables to the data
          or list of inputs in the order that the function expects. Data
          should be either NumPy arrays or cntk.Value instances returned by a
@@ -666,7 +672,7 @@ def eval(op, precision, device, arguments=None, backward_pass=False):
         op->result is returned. 
     '''
     if precision is not None:
-        precision = precision_numpy(precision)
+        precision = sanitize_precision(precision)
 
     forward_in_var_map = sanitize_var_map(op.arguments(), arguments, precision, device)
 

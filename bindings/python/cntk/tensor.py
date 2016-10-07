@@ -157,6 +157,24 @@ def _add_tensor_ops(klass):
 class EvalMixin(object):
 
     def eval(self, arguments=None, precision='float', device=None):
+        '''
+        Evaluate the node using the specified `arguments` as input.
+
+        Args:
+            arguments (`dict` or `list` or single input): 
+              * map from input variables to the data
+              * list of inputs in the order that the function expects or 
+              * a single input, if the function only has one argument. 
+              Data should be either NumPy arrays or a `:class:cntk.io.MinibatchSource`
+            precision (`str` or `np.float32` or `np.float64`): precision, if string
+             it can be one of 'float' 'float32, 'double', 'float64', or `None`
+            device (:class:`cntk.DeviceDescriptor`): the device descriptor that
+             contains the type and id of the device on which the computation is
+             to be performed.
+
+        Returns:
+            `bool`: `True` if updates have been performed
+        '''
         from .utils import eval as utils_eval
         if device is None:
             from . import DeviceDescriptor

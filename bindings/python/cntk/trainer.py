@@ -35,10 +35,11 @@ class Trainer(cntk_py.Trainer):
         Returns false if all parameter learners indicate end of learning (through their Update method's return value).
 
         Args:
-            arguments (`dict` or `list`): map from input variables to the
-             minibatch data or list of inputs in the order that the function
-             expects. Data should be either NumPy arrays or cntk.Value
-             instances returned by a minibatch source. 
+            arguments (`dict` or `list` or single input): 
+              * map from input variables to the data
+              * list of inputs in the order that the function expects or 
+              * a single input, if the function only has one argument. 
+              Data should be either NumPy arrays or a `:class:cntk.io.MinibatchSource`
             device (:class:`cntk.DeviceDescriptor`): the device descriptor that
              contains the type and id of the device on which the computation is
              to be performed.
@@ -59,10 +60,11 @@ class Trainer(cntk_py.Trainer):
         of samples.
 
         Args:
-            arguments (`dict` or `list`): map from input variables to the
-             minibatch data or list of inputs in the order that the function
-             expects. Data should be either NumPy arrays or cntk.Value
-             instances returned by a minibatch source. 
+            arguments (`dict` or `list` or single input): 
+              * map from input variables to the data
+              * list of inputs in the order that the function expects or 
+              * a single input, if the function only has one argument. 
+              Data should be either NumPy arrays or a `:class:cntk.io.MinibatchSource`
             device (:class:`cntk.DeviceDescriptor`): the device descriptor that
              contains the type and id of the device on which the computation is
              to be performed.
