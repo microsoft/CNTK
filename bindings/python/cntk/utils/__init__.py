@@ -282,7 +282,8 @@ def get_data_type(*args):
         args = [args]
 
     for arg in args:
-        if isinstance(arg, (cntk_py.Variable, cntk_py.Constant, cntk_py.Parameter)):
+        if isinstance(arg, (cntk_py.Variable, cntk_py.Constant,
+            cntk_py.Parameter, cntk_py.Value, cntk_py.NDArrayView)):
             if cntk_py.DataType_Double == arg.get_data_type():
                 dtypes.add(np.float64)
             else:
@@ -438,7 +439,7 @@ def sanitize_var_map(op_arguments, arguments, precision_numpy=None, device=None,
         `dict` that maps variables to sanitized batches
     '''
 
-    if not arguments:
+    if arguments is None or isinstance(arguments, (list, tuple)) and len(arguments)==0:
         if len(op_arguments) > 0:
             raise ValueError('function expects %i arguments'%len(op_arguments))
         return {}
@@ -495,21 +496,6 @@ def sanitize_var_map(op_arguments, arguments, precision_numpy=None, device=None,
     return var_map
 
 
-def remove_masked_elements(batch, mask):
-    '''
-    From a zero-padded `batch`, remove those entries that have a 0 in the
-    `mask`. 
-
-    Args:
-        batch (`ndarray`): batch of samples that are variable length sequences padded by zeros to the max sequence length
-        mask (`ndarray`): 2D matrix. Every row represents one sample. The columns have a `1` if the element is valid and `0` otherwise.
-
-    Returns:
-        a list of ndarrays
-    '''
-    return [seq[mask[idx] == 1] for idx, seq in enumerate(batch)]
-
-
 def ones_like(batch, precision_numpy):
     '''
     Returns a new batch, which has the same format as `batch` but all values
@@ -536,22 +522,6 @@ def create_NDArrayView_from_NumPy(nd, dev=None):
         dev = cntk_py.DeviceDescriptor.use_default_device()
 
     return cntk_py.NDArrayView(nd, dev, False)
-
-
-
-def create_Value_for_Variable(var, shape=None, dev=None, mask=None):
-    if not dev:
-        dev = cntk_py.DeviceDescriptor.cpu_device()
-
-    if shape is None:
-        shape = var.shape().dimensions()
-    view = cntk_py.NDArrayView(
-        var.get_data_type(), cntk_py.StorageFormat_Dense, shape, dev)
-    if mask:
-        value = cntk_py.Value(view, mask)
-    else:
-        value = cntk_py.Value(view)
-    return value
 
 
 def create_Value(shape, data_type, dev):
@@ -645,6 +615,25 @@ def ensure_dev(ndav, dev):
 
     return ndav
 
+def value_to_seq(value):
+    '''
+    Convert a Value to a sequence of NumPy arrays that have their masked
+    entries removed.
+
+    Args:
+        value (`Value`): Value as it is returned by Swig
+
+    Returns:
+        a list of NumPy arrays
+    '''
+
+    np_data = value.data().to_numpy()         
+    if value.mask():
+        mask = value.mask().to_numpy()
+        np_data = [seq[mask[idx] == 1] for idx, seq in enumerate(np_data)]
+
+    return np_data
+
 def eval(op, precision, device, arguments=None, backward_pass=False):
     '''
     It evaluates `op` on the data provided by the reader. This is useful
@@ -679,14 +668,8 @@ def eval(op, precision, device, arguments=None, backward_pass=False):
                        forward_out_var_map, device, forward_retain)
 
     forward_output = {}
-    forward_output_mask = {}
     for v in op.outputs():
-        value = forward_out_var_map[v]
-        np_data = value.data().to_numpy()         
-        if value.mask():
-            np_data = remove_masked_elements(np_data, value.mask().to_numpy())
-        forward_output[v] = np_data
-        forward_output_mask[v] = value.mask()
+        forward_output[v] = value_to_seq(forward_out_var_map[v])
 
     if backward_pass:
         root_gradients = {}
@@ -700,10 +683,7 @@ def eval(op, precision, device, arguments=None, backward_pass=False):
 
         backward_output = {}
         for var, value in backward_var_map.items():
-            np_data = value.data().to_numpy()             
-            if value.mask():
-                np_data = remove_masked_elements(np_data, value.mask().to_numpy())
-            backward_output[var] = np_data
+            backward_output[var] = value_to_seq(value)
 
         return forward_output, backward_output
 

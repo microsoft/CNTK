@@ -269,6 +269,16 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
             nodePtr = builder.LegacyReshape(NULL, num_rows, ImageDimensions::AsTensorShape(img_width, img_height, img_channels, imageLayoutKind), name);
         }
     }
+    else if (cnNodeType == OperationNameOf(ReconcileDynamicAxisNode))
+    {
+        nodeParamCount = 2;
+        nodeParamStart = 0;
+
+        if (pass == ndlPassInitial)
+        {
+            nodePtr = builder.ReconcileDynamicAxis(NULL, NULL, name);
+        }
+    }
     else if (cnNodeType == OperationNameOf(PastValueNode) ||
              cnNodeType == OperationNameOf(FutureValueNode))
     {

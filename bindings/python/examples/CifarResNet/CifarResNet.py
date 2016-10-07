@@ -80,8 +80,8 @@ def get_projection_map(out_dim, in_dim):
 
     projection_map_values = np.zeros(in_dim * out_dim, dtype=np.float32)
     for i in range(0, in_dim):
-        projection_map_values[(i * out_dim) + i] = 1.0
-        shape = (in_dim, 1, 1, out_dim)
+        projection_map_values[(i * in_dim) + i] = 1.0
+        shape = (out_dim, in_dim, 1, 1)
         return constant(value=projection_map_values.reshape(shape))
 
 # Defines the residual network model for classifying images
@@ -171,8 +171,11 @@ def cifar_resnet(base_path, debug_output=False):
 
     # Get minibatches of images to train with and perform model training
     mb_size = 32
-    training_progress_output_freq = 20
+    training_progress_output_freq = 60
     num_mbs = 1000
+
+    if debug_output:
+        training_progress_output_freq = training_progress_output_freq/3
 
     for i in range(0, num_mbs):
         mb = minibatch_source.get_next_minibatch(mb_size)
@@ -183,8 +186,7 @@ def cifar_resnet(base_path, debug_output=False):
             features_si].m_data, label_var: mb[labels_si].m_data}
         trainer.train_minibatch(arguments)
 
-        if debug_output:
-            print_training_progress(trainer, i, training_progress_output_freq)
+        print_training_progress(trainer, i, training_progress_output_freq)
 
     test_minibatch_source = create_test_mb_source(feats_stream_name, labels_stream_name,
                     image_height, image_width, num_channels, num_classes, base_path)
@@ -219,4 +221,5 @@ if __name__ == '__main__':
 
     os.chdir(os.path.join(base_path, '..'))
 
-    cifar_resnet(base_path)
+    error = cifar_resnet(base_path)
+    print("Error: %f" % error)

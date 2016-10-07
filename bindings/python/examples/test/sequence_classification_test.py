@@ -9,7 +9,7 @@ from cntk import DeviceDescriptor
 
 from examples.SequenceClassification.SequenceClassification import train_sequence_classifier
 
-TOLERANCE_ABSOLUTE = 1E-2
+TOLERANCE_ABSOLUTE = 1E-1
 
 def test_seq_classification_error(device_id):
     from cntk.utils import cntk_device
@@ -17,6 +17,5 @@ def test_seq_classification_error(device_id):
 
     evaluation_avg, loss_avg = train_sequence_classifier()
 
-    # Temporarily disable the comparison against baseline as it needs to be updated
-    # expected_avg = [0.1595744, 0.35799171]
-    # assert np.allclose([evaluation_avg, loss_avg], expected_avg, atol=TOLERANCE_ABSOLUTE)
+    expected_avg = [0.55, 1.53099]
+    assert np.allclose([evaluation_avg, loss_avg], expected_avg, atol=TOLERANCE_ABSOLUTE)

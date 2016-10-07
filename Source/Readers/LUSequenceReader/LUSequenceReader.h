@@ -191,8 +191,10 @@ public:
 
     virtual bool GetData(const std::wstring& sectionName, size_t numRecords, void* data, size_t& dataBufferSize, size_t recordStart = 0);
 
-//public:
-//    int GetSentenceEndIdFromOutputLabel();
+    size_t GetCurrentSamplePosition() override
+    {
+        return m_mbStartSample;
+    }
 };
 
 template <class ElemType>

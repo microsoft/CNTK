@@ -257,7 +257,7 @@ class ImageDeserializer(Deserializer):
 #
 
 
-def text_format_minibatch_source(path, stream_configs, epoch_size=MAX_UI64):
+def text_format_minibatch_source(path, stream_configs, epoch_size=MAX_UI64, randomize=True):
     '''
     Creates a minibatch source from a CNTKTextFormatReader file.
 
@@ -268,12 +268,13 @@ def text_format_minibatch_source(path, stream_configs, epoch_size=MAX_UI64):
          file
         epoch_size (`int`, optional): size of an epoch. In case of 0 the size
          of the training set will be taken. Default is max of 64bit.
+        randomize (`bool`, optional): whether to randomize the contents of data file.
 
     Returns:
         `:class:cntk.io.MinibatchSource'
     '''
     return cntk_py.text_format_minibatch_source(path, stream_configs,
-                                                epoch_size)
+                                                epoch_size, randomize)
 
 
 class StreamConfiguration(cntk_py.StreamConfiguration):

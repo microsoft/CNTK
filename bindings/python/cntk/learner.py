@@ -71,7 +71,10 @@ def momentums_per_sample(momentums, units=1):
 
 
 # TODO figure out how to pass infty to C++ in a portable way
-def sgd(parameters, lr, clipping_threshold_per_sample=1E10, gradient_clipping_with_truncation=True):
+def sgd(parameters, lr, 
+        l1_regularization_weight=0.0, l2_regularization_weight=0.0, 
+        gaussian_noise_injection_std_dev=0.0, clipping_threshold_per_sample=1E10, 
+        gradient_clipping_with_truncation=True):
     '''
     Creates an SGD learner instance to learn the parameters.
 
@@ -79,36 +82,56 @@ def sgd(parameters, lr, clipping_threshold_per_sample=1E10, gradient_clipping_wi
         parameters (`list` of parameters): list of network parameters to tune.
          These can be obtained by the '.parameters()' method of the root
          operator.
-        lr ('float' or list of `float`s or output of `:func:learning_rates_per_sample`): learning
+        lr ('float' or output of `:func:learning_rates_per_sample`): learning
          rates per sample.  
+        l1_regularization_weight ('float', optional): the L1 regularization weight per sample,
+         defaults to 0.0
+        l2_regularization_weight ('float', optional): the L2 regularization weight per sample,
+         defaults to 0.0
+        gaussian_noise_injection_std_dev ('float', optional): the standard deviation 
+         of the Gaussian noise added to parameters post update, defaults to 0.0
         clipping threshold per sample ('float', optional): clipping threshold
          per sample, defaults to infinity
-        gradient_clipping_with_truncation ('bool', default `True`): gradient
-         glipping
+        gradient_clipping_with_truncation ('bool', default `True`): gradient clipping
 
     Returns:
         Instance of a learner that can be passed to the `Trainer`
     '''
     if type(lr) == float:
         lr = learning_rates_per_sample(lr)
+        
+    additional_options = cntk_py.AdditionalLearningOptions()
+    additional_options.l1_regularization_weight = l1_regularization_weight
+    additional_options.l2_regularization_weight = l2_regularization_weight
+    additional_options.gaussian_noise_injection_std_dev = gaussian_noise_injection_std_dev
+    additional_options.clipping_threshold_per_sample = clipping_threshold_per_sample
+    additional_options.gradient_clipping_with_truncation = gradient_clipping_with_truncation
 
-    return cntk_py.sgd_learner(parameters, lr, clipping_threshold_per_sample,
-            gradient_clipping_with_truncation)
+    return cntk_py.sgd_learner(parameters, lr, additional_options)
 
-def momentum_sgd(parameters, lr, momentums, clipping_threshold_per_sample=1E10, gradient_clipping_with_truncation=True):
+def momentum_sgd(parameters, lr, momentums, 
+        l1_regularization_weight=0.0, l2_regularization_weight=0.0, 
+        gaussian_noise_injection_std_dev=0.0, clipping_threshold_per_sample=1E10, 
+        gradient_clipping_with_truncation=True):
     '''
     Creates a Momemtum SGD learner instance to learn the parameters.
 
     Args:
         parameters (list of parameters): list of network parameters to tune.
          These can be obtained by the '.parameters()' function of 
-        lr ('float' or list of `float`s or output of `:func:learning_rates_per_sample`): learning
+        lr ('float' or output of `:func:learning_rates_per_sample`): learning
          rates per sample.  
         momentums (`float` or output of `:func:momentums_per_sample`): momentum values per sample.
          Refer to https://github.com/Microsoft/CNTK/wiki/SGD-block#converting-learning-rate-and-momentum-parameters-from-other-toolkits
+        l1_regularization_weight ('float', optional): the L1 regularization weight per sample,
+         defaults to 0.0
+        l2_regularization_weight ('float', optional): the L2 regularization weight per sample,
+         defaults to 0.0
+        gaussian_noise_injection_std_dev ('float', optional): the standard deviation 
+         of the Gaussian noise added to parameters post update, defaults to 0.0
         clipping threshold per sample ('float', optional): clipping threshold
          per sample, defaults to infinity
-        gradient_clipping_with_truncation ('bool', optional): defaults to True
+        gradient_clipping_with_truncation ('bool', default `True`): gradient clipping
 
     Returns:
         Instance of a learner that can be passed to the `Trainer`
@@ -118,24 +141,40 @@ def momentum_sgd(parameters, lr, momentums, clipping_threshold_per_sample=1E10, 
 
     if type(momentums) == float:
         momentums = momentums_per_sample(momentums)
+    
+    additional_options = cntk_py.AdditionalLearningOptions()
+    additional_options.l1_regularization_weight = l1_regularization_weight
+    additional_options.l2_regularization_weight = l2_regularization_weight
+    additional_options.gaussian_noise_injection_std_dev = gaussian_noise_injection_std_dev
+    additional_options.clipping_threshold_per_sample = clipping_threshold_per_sample
+    additional_options.gradient_clipping_with_truncation = gradient_clipping_with_truncation
 
     return cntk_py.momentum_sgd_learner(parameters, lr, momentums,
-            clipping_threshold_per_sample, gradient_clipping_with_truncation)
+            additional_options)
 
-def nesterov(parameters, lr, momentums, clipping_threshold_per_sample=1E10, gradient_clipping_with_truncation=True):
+def nesterov(parameters, lr, momentums, 
+        l1_regularization_weight=0.0, l2_regularization_weight=0.0, 
+        gaussian_noise_injection_std_dev=0.0, clipping_threshold_per_sample=1E10, 
+        gradient_clipping_with_truncation=True):
     '''
     Creates a Nesterov SGD learner instance to learn the parameters.
 
     Args:
         parameters (list of parameters): list of network parameters to tune.
          These can be obtained by the '.parameters()' function of 
-        lr ('float' or list of `float`s or output of `:func:learning_rates_per_sample`): learning
+        lr ('float' or output of `:func:learning_rates_per_sample`): learning
          rates per sample.  
         momentums (`float` or output of `:func:momentums_per_sample`): momentum values per sample.
          Refer to https://github.com/Microsoft/CNTK/wiki/SGD-block#converting-learning-rate-and-momentum-parameters-from-other-toolkits
+        l1_regularization_weight ('float', optional): the L1 regularization weight per sample,
+         defaults to 0.0
+        l2_regularization_weight ('float', optional): the L2 regularization weight per sample,
+         defaults to 0.0
+        gaussian_noise_injection_std_dev ('float', optional): the standard deviation 
+         of the Gaussian noise added to parameters post update, defaults to 0.0
         clipping threshold per sample ('float', optional): clipping threshold
          per sample, defaults to infinity
-        gradient_clipping_with_truncation ('bool', optional): defaults to True
+        gradient_clipping_with_truncation ('bool', default `True`): gradient clipping
 
     Returns:
         Instance of a learner that can be passed to the `Trainer`
@@ -146,24 +185,39 @@ def nesterov(parameters, lr, momentums, clipping_threshold_per_sample=1E10, grad
     if type(momentums) == float:
         momentums = momentums_per_sample(momentums)
 
+    additional_options = cntk_py.AdditionalLearningOptions()
+    additional_options.l1_regularization_weight = l1_regularization_weight
+    additional_options.l2_regularization_weight = l2_regularization_weight
+    additional_options.gaussian_noise_injection_std_dev = gaussian_noise_injection_std_dev
+    additional_options.clipping_threshold_per_sample = clipping_threshold_per_sample
+    additional_options.gradient_clipping_with_truncation = gradient_clipping_with_truncation
+        
     return cntk_py.nesterov_learner(parameters, lr, momentums,
-            clipping_threshold_per_sample, gradient_clipping_with_truncation)
+            additional_options)
 
-
-def adagrad(parameters, lr, need_ave_multiplier=True, clipping_threshold_per_sample=1E10, gradient_clipping_with_truncation=True):
+def adagrad(parameters, lr, need_ave_multiplier=True, 
+        l1_regularization_weight=0.0, l2_regularization_weight=0.0, 
+        gaussian_noise_injection_std_dev=0.0, clipping_threshold_per_sample=1E10, 
+        gradient_clipping_with_truncation=True):
     '''
     Creates an AdaGrad learner instance to learn the parameters.
 
     Args:
         parameters (list of parameters): list of network parameters to tune.
          These can be obtained by the '.parameters()' function of 
-        lr ('float' or list of `float`s or output of `:func:learning_rates_per_sample`): learning
+        lr ('float' or output of `:func:learning_rates_per_sample`): learning
          rates per sample.  
          allowed, but schedules will be added soon
         need_ave_multiplier ('bool', default): 
+        l1_regularization_weight ('float', optional): the L1 regularization weight per sample,
+         defaults to 0.0
+        l2_regularization_weight ('float', optional): the L2 regularization weight per sample,
+         defaults to 0.0
+        gaussian_noise_injection_std_dev ('float', optional): the standard deviation 
+         of the Gaussian noise added to parameters post update, defaults to 0.0
         clipping threshold per sample ('float', optional): clipping threshold
          per sample, defaults to infinity
-        gradient_clipping_with_truncation ('bool', optional): defaults to True
+        gradient_clipping_with_truncation ('bool', default `True`): gradient clipping
 
     Returns:
         Instance of a learner that can be passed to the `Trainer`
@@ -171,11 +225,20 @@ def adagrad(parameters, lr, need_ave_multiplier=True, clipping_threshold_per_sam
     if type(lr) == float:
         lr = learning_rates_per_sample(lr)
 
+    additional_options = cntk_py.AdditionalLearningOptions()
+    additional_options.l1_regularization_weight = l1_regularization_weight
+    additional_options.l2_regularization_weight = l2_regularization_weight
+    additional_options.gaussian_noise_injection_std_dev = gaussian_noise_injection_std_dev
+    additional_options.clipping_threshold_per_sample = clipping_threshold_per_sample
+    additional_options.gradient_clipping_with_truncation = gradient_clipping_with_truncation
+        
     return cntk_py.ada_grad_learner(parameters, lr, need_ave_multiplier,
-            clipping_threshold_per_sample, gradient_clipping_with_truncation)
+            additional_options)
 
 def fsadagrad(parameters, lr, momentums,
-        clipping_threshold_per_sample=1E10,
+        targetAdagradAvDenom = 0.0025, varianceTimeConstant = 720000,
+        l1_regularization_weight=0.0, l2_regularization_weight=0.0, 
+        gaussian_noise_injection_std_dev=0.0, clipping_threshold_per_sample=1E10, 
         gradient_clipping_with_truncation=True):
     '''
     Creates an FS AdaGrad learner instance to learn the parameters.
@@ -183,13 +246,23 @@ def fsadagrad(parameters, lr, momentums,
     Args:
         parameters (list of parameters): list of network parameters to tune.
          These can be obtained by the '.parameters()' function of 
-        lr ('float' or list of `float`s or output of `:func:learning_rates_per_sample`): learning
+        lr ('float' or output of `:func:learning_rates_per_sample`): learning
          rates per sample.  
         momentums (`float` or output of `:func:momentums_per_sample`): momentum values per sample.
          Refer to https://github.com/Microsoft/CNTK/wiki/SGD-block#converting-learning-rate-and-momentum-parameters-from-other-toolkits
+        targetAdagradAvDenom ('float', optional): FSAdaGrad magic number, 
+         defaults to 0.0025 (1/400)
+        varianceTimeConstant ('long', optional): FSAdaGrad magic number, 
+         defaults to 720000 ( 2 * 3600 * 100)
+        l1_regularization_weight ('float', optional): the L1 regularization weight per sample,
+         defaults to 0.0
+        l2_regularization_weight ('float', optional): the L2 regularization weight per sample,
+         defaults to 0.0
+        gaussian_noise_injection_std_dev ('float', optional): the standard deviation 
+         of the Gaussian noise added to parameters post update, defaults to 0.0
         clipping threshold per sample ('float', optional): clipping threshold
          per sample, defaults to infinity
-        gradient_clipping_with_truncation ('bool', optional): defaults to True
+        gradient_clipping_with_truncation ('bool', default `True`): gradient clipping
 
     Returns:
         Instance of a learner that can be passed to the `Trainer`
@@ -199,14 +272,23 @@ def fsadagrad(parameters, lr, momentums,
 
     if type(momentums) == float:
         momentums = momentums_per_sample(momentums)
+        
+    additional_options = cntk_py.AdditionalLearningOptions()
+    additional_options.l1_regularization_weight = l1_regularization_weight
+    additional_options.l2_regularization_weight = l2_regularization_weight
+    additional_options.gaussian_noise_injection_std_dev = gaussian_noise_injection_std_dev
+    additional_options.clipping_threshold_per_sample = clipping_threshold_per_sample
+    additional_options.gradient_clipping_with_truncation = gradient_clipping_with_truncation
 
-    return cntk_py.fsada_grad_learner(parameters, lr, momentums,
-            clipping_threshold_per_sample, gradient_clipping_with_truncation)
+    return cntk_py.fsada_grad_learner(parameters, lr, momentums, 
+            targetAdagradAvDenom, varianceTimeConstant,
+            additional_options)
 
 def rmsprop(parameters, lr, 
         gamma, inc, dec, max, min,
         need_ave_multiplier=True,
-        clipping_threshold_per_sample=1E10,
+        l1_regularization_weight=0.0, l2_regularization_weight=0.0, 
+        gaussian_noise_injection_std_dev=0.0, clipping_threshold_per_sample=1E10, 
         gradient_clipping_with_truncation=True):
     '''
     Creates an RMSProp learner instance to learn the parameters.
@@ -222,16 +304,29 @@ def rmsprop(parameters, lr,
         max ('float'):
         min ('float'):
         need_ave_multiplier ('bool', default): 
+        l1_regularization_weight ('float', optional): the L1 regularization weight per sample,
+         defaults to 0.0
+        l2_regularization_weight ('float', optional): the L2 regularization weight per sample,
+         defaults to 0.0
+        gaussian_noise_injection_std_dev ('float', optional): the standard deviation 
+         of the Gaussian noise added to parameters post update, defaults to 0.0
         clipping threshold per sample ('float', optional): clipping threshold
          per sample, defaults to infinity
-        gradient_clipping_with_truncation ('bool', optional): defaults to True
+        gradient_clipping_with_truncation ('bool', default `True`): gradient clipping
 
     Returns:
         Instance of a learner that can be passed to the `Trainer`
     '''
     if type(lr) == float:
         lr = learning_rates_per_sample(lr)
+        
+    additional_options = cntk_py.AdditionalLearningOptions()
+    additional_options.l1_regularization_weight = l1_regularization_weight
+    additional_options.l2_regularization_weight = l2_regularization_weight
+    additional_options.gaussian_noise_injection_std_dev = gaussian_noise_injection_std_dev
+    additional_options.clipping_threshold_per_sample = clipping_threshold_per_sample
+    additional_options.gradient_clipping_with_truncation = gradient_clipping_with_truncation
 
     return cntk_py.rmsprop_learner(parameters, lr, gamma, inc, dec, max, min,
-            need_ave_multiplier, clipping_threshold_per_sample, gradient_clipping_with_truncation)
+            need_ave_multiplier, additional_options)
 

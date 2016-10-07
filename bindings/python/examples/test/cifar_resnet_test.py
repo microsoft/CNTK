@@ -11,7 +11,7 @@ from cntk.io import ReaderConfig, ImageDeserializer
 
 from examples.CifarResNet.CifarResNet import cifar_resnet
 
-TOLERANCE_ABSOLUTE = 1E-1
+TOLERANCE_ABSOLUTE = 2E-1
 
 def test_cifar_resnet_error(device_id):
     target_device = DeviceDescriptor.gpu_device(0)

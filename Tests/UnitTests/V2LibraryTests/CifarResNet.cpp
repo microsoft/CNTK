@@ -64,12 +64,12 @@ Constant GetProjectionMap(size_t outputDim, size_t inputDim, const DeviceDescrip
     if (inputDim > outputDim)
         throw std::runtime_error("Can only project from lower to higher dimensionality");
 
-    std::vector<float> projectionMapValues(inputDim * outputDim);
+    std::vector<float> projectionMapValues(inputDim * outputDim, 0);
     for (size_t i = 0; i < inputDim; ++i)
-        projectionMapValues[(i * outputDim) + i] = 1.0f;
+        projectionMapValues[(i * inputDim) + i] = 1.0f;
 
-    auto projectionMap = MakeSharedObject<NDArrayView>(DataType::Float, NDShape({ outputDim, 1, 1, inputDim }), device);
-    projectionMap->CopyFrom(NDArrayView(NDShape({ outputDim, 1, 1, inputDim }), projectionMapValues));
+    auto projectionMap = MakeSharedObject<NDArrayView>(DataType::Float, NDShape({ 1, 1, inputDim, outputDim }), device);
+    projectionMap->CopyFrom(NDArrayView(NDShape({ 1, 1, inputDim, outputDim }), projectionMapValues));
 
     return Constant(projectionMap);
 }
@@ -131,10 +131,12 @@ void TrainResNetCifarClassifer(const DeviceDescriptor& device, bool testSaveAndR
     auto inputImageShape = imageStreamInfo.m_sampleLayout;
     const size_t numOutputClasses = labelStreamInfo.m_sampleLayout[0];
 
-    auto imageInput = InputVariable(inputImageShape, imageStreamInfo.m_elementType, L"Images");
+    auto imageInputName = L"Images";
+    auto imageInput = InputVariable(inputImageShape, imageStreamInfo.m_elementType, imageInputName);
     auto classifierOutput = ResNetClassifier(imageInput, numOutputClasses, device, L"classifierOutput");
 
-    auto labelsVar = InputVariable({ numOutputClasses }, labelStreamInfo.m_elementType, L"Labels");
+    auto labelsInputName = L"Labels";
+    auto labelsVar = InputVariable({ numOutputClasses }, labelStreamInfo.m_elementType, labelsInputName);
     auto trainingLoss = CrossEntropyWithSoftmax(classifierOutput, labelsVar, L"lossFunction");
     auto prediction = ClassificationError(classifierOutput, labelsVar, L"predictionError");
 
@@ -145,6 +147,10 @@ void TrainResNetCifarClassifer(const DeviceDescriptor& device, bool testSaveAndR
         Variable predictionVar = prediction;
         auto imageClassifier = Combine({ trainingLoss, prediction, classifierOutput }, L"ImageClassifier");
         SaveAndReloadModel<float>(imageClassifier, { &imageInput, &labelsVar, &trainingLossVar, &predictionVar, &classifierOutputVar }, device);
+
+        // Make sure that the names of the input variables were properly restored
+        if ((imageInput.Name() != imageInputName) || (labelsVar.Name() != labelsInputName))
+            throw std::runtime_error("One or more input variable names were not properly restored after save and load");
 
         trainingLoss = trainingLossVar;
         prediction = predictionVar;
