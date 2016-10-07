@@ -15,14 +15,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 // =======================================================================
 // class MPIWrapper
 // =======================================================================
-template void MPIWrapper::Bcast(unsigned long*, size_t, size_t);
+template void MPIWrapper::Bcast(size_t*, size_t, size_t);
 template void MPIWrapper::Bcast(double*, size_t, size_t);
 template void MPIWrapper::Bcast(float*, size_t, size_t);
-template void MPIWrapper::AllReduce(unsigned long*, size_t);
+template void MPIWrapper::AllReduce(size_t*, size_t);
 template void MPIWrapper::AllReduce(int*, size_t);
 template void MPIWrapper::AllReduce(double*, size_t);
 template void MPIWrapper::AllReduce(float*, size_t);
-template void MPIWrapper::AllReduce(std::vector<unsigned long>&) const;
+template void MPIWrapper::AllReduce(std::vector<size_t>&) const;
 template void MPIWrapper::AllReduce(std::vector<double>&) const;
 template void MPIWrapper::AllReduce(std::vector<float>&) const;
 
