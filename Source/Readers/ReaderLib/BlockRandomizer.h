@@ -63,6 +63,9 @@ public:
         return m_deserializer->GetStreamDescriptions();
     }
 
+    // Returns current position in the global timeline. The returned value is in samples.
+    size_t GetCurrentSamplePosition() override;
+
     ~BlockRandomizer()
     {
         if (m_prefetch.valid())

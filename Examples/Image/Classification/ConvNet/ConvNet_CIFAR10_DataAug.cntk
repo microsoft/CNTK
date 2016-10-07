@@ -4,7 +4,7 @@ command = TrainConvNet:Eval
 
 precision = "float"; traceLevel = 1 ; deviceId = "auto"
 
-rootDir = "../.." ; dataDir = "$rootDir$/DataSets/CIFAR10" ;
+rootDir = "../.." ; dataDir = "$rootDir$/DataSets/CIFAR-10" ;
 outputDir = "./Output" ;
 
 modelPath = "$outputDir$/Models/ConvNet_CIFAR10_DataAug"
@@ -75,7 +75,7 @@ TrainConvNet = {
                 features = { transforms = (
                     { type = "Crop" ; cropType = "random" ; cropRatio = 0.8 ; jitterType = "uniRatio" } :
                     { type = "Scale" ; width = 32 ; height = 32 ; channels = 3 ; interpolations = "linear" } :
-                    { type = "Mean" ; meanFile = "$dataDir$/CIFAR10_mean.xml" } : 
+                    { type = "Mean" ; meanFile = "$dataDir$/CIFAR-10_mean.xml" } : 
                     { type = "Transpose" }
                 )}
                 labels = { labelDim = 10 }
@@ -99,7 +99,7 @@ Eval = {
             input = {
                 features = { transforms = (
                    { type = "Scale" ; width = 32 ; height = 32 ; channels = 3 ; interpolations = "linear" } :
-                   { type = "Mean"; meanFile = "$dataDir$/CIFAR10_mean.xml" } : 
+                   { type = "Mean"; meanFile = "$dataDir$/CIFAR-10_mean.xml" } : 
                    { type = "Transpose" }
                 )}
                 labels = { labelDim = 10 }

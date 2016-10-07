@@ -359,8 +359,5 @@ namespace CNTK
         }
 
         computationNetwork->Save(modelFile);
-
-        if (!compositeFunction->NetworkMatricesAllocated())
-            compositeFunction->PurgeComputationNetwork();
     }
 }

@@ -1474,7 +1474,7 @@ def parameter(shape=None, init=None, device=None, name=''):
          the first forward pass. If `None`, the tensor will be initialized
          with 0.
         device (:class:`cntk.DeviceDescriptor`): instance of DeviceDescriptor
-        name (`str`, optional): the name of the Function instance in the network
+        name (`str`, optional): the name of the Parameter instance in the network
 
     Returns:
         :class:`cntk.Function`

@@ -488,12 +488,13 @@ public:
         return iter->second;
     }
 
-    inline std::vector<ComputationNodeBasePtr> CriterionNodesFrom(const wstring& criterionNodeName)
+    inline const std::vector<ComputationNodeBasePtr>& CriterionNodesFrom(const wstring& criterionNodeName)
     {
         ComputationNodeBasePtr node = GetNodeFromName(criterionNodeName);
         if (node->HasMBLayout() || node->GetSampleLayout().GetNumElements() != 1)
             InvalidArgument("%ls %ls operation is not a valid training or eval criterion node.", node->NodeName().c_str(), node->OperationName().c_str());
-        return std::vector<ComputationNodeBasePtr>{node};
+        m_namedCriterionNodes[criterionNodeName] = std::vector<ComputationNodeBasePtr>{node};
+        return m_namedCriterionNodes[criterionNodeName];
     }
 
     std::vector<ComputationNodeBasePtr> OutputNodesByName(const std::vector<std::wstring>& outputNodeNames) 
@@ -1096,6 +1097,9 @@ private:
 
     // environment information that nodes may want to inquire, e.g. to know whether we are training
     ComputationEnvironmentPtr m_environment;
+
+    std::map<std::wstring, std::vector<ComputationNodeBasePtr>> m_namedCriterionNodes;
+
 private:
     // -----------------------------------------------------------------------
     // the following members are all result of post-processing by CompileNetwork()

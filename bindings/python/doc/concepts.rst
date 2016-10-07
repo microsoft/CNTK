@@ -1,4 +1,4 @@
-﻿Concepts 
+Concepts 
 ========
 
 There is a common property in key machine learning models, such as deep neural
@@ -70,8 +70,10 @@ introduced, overloaded operators can be applied to them to form an operator grap
 
   # Create an input with the shape (2,3,*)
   >>> x = C.input_variable((2,3), name='features') 
+
   # Create a constant scalar with value 2
   >>> c = C.constant(value=2)
+
   # Create a parameter of shape (2,3), randomly initialized
   >>> w = C.parameter((2,3))         
 
