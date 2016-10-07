@@ -128,8 +128,9 @@ void TrainTruncatedLSTMAcousticModelClassifer(const DeviceDescriptor& device, bo
 
 void TrainTruncatedLSTMAcousticModelClassifer()
 {
-#ifndef CPUONLY
-    TrainTruncatedLSTMAcousticModelClassifer(DeviceDescriptor::GPUDevice(0), true);
-#endif
+    if (IsGPUAvailable())
+    {
+        TrainTruncatedLSTMAcousticModelClassifer(DeviceDescriptor::GPUDevice(0), true);
+    }
     TrainTruncatedLSTMAcousticModelClassifer(DeviceDescriptor::CPUDevice(), false);
 }
