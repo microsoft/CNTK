@@ -9,7 +9,7 @@ import sys
 import os
 import time
 from cntk import DeviceDescriptor, Trainer, Axis, text_format_minibatch_source, StreamConfiguration
-from cntk.learner import sgd
+from cntk.learner import sgd, fsadagrad, learning_rates_per_sample, momentums_per_sample
 from cntk.ops import parameter, input_variable, placeholder_variable, times, cross_entropy_with_softmax, combine, classification_error
 import itertools
 
@@ -58,13 +58,14 @@ def _extend_Trainer(trainer):
         # TODO: make this a true static method so we can say Trainer.get_next_minibatch()
         # TODO: is the "_next" really necessary? Trainer.get_minibatch() seems sufficient
         @staticmethod
-        def get_next_minibatch(source, minibatch_size, input_map):
+        def next_minibatch(source, minibatch_size, input_map):
             mb = reader.get_next_minibatch(minibatch_size)
             if len(mb) == 0:  # TODO: return None instead?
-                return None
+                return (None, 0)
             else:
-                return { key : mb[value].m_data for (key, value) in input_map.items() }
-    if hasattr(trainer, 'get_next_minibatch'):  # already extended: don't redo
+                return ({ key : mb[value].m_data        for (key, value) in input_map.items() },
+                        { key : mb[value].m_num_samples for (key, value) in input_map.items() })
+    if hasattr(trainer, 'next_minibatch'):  # already extended: don't redo
         return trainer
     trainer.__class__ = TrainerEx
     return trainer
@@ -404,15 +405,18 @@ class layers:
         return apply_x
 
 # wrapper around text_format_minibatch_source() that attaches a record of streams
-def TextFormatMinibatchSource(path, epoch_size, stream_defs):
-    # convert stream_defs into StreamConfiguration format
-    stream_configs = [ StreamConfiguration(key, dim=value.dim, is_sparse=value.is_sparse, stream_alias=value.stream_alias) for (key, value) in stream_defs.items() ]
-    source = text_format_minibatch_source(path, stream_configs, epoch_size)
+def CNTKTextFormatMinibatchSource(path, streams, epoch_size=None):
+    # convert streams into StreamConfiguration format
+    stream_configs = [ StreamConfiguration(key, dim=value.dim, is_sparse=value.is_sparse, stream_alias=value.stream_alias) for (key, value) in streams.items() ]
+    if epoch_size is not None:  # TODO: use MAX_UI64 or so (does not work)
+        source = text_format_minibatch_source(path, stream_configs, epoch_size)
+    else:
+        source = text_format_minibatch_source(path, stream_configs)
     # attach a dictionary of the streams
-    source.streams = _ClassFromDict({ name : source.stream_info(name) for name in stream_defs.keys() })
+    source.streams = _ClassFromDict({ name : source.stream_info(name) for name in streams.keys() })
     return source
 
-# stream definition for TextFormatMinibatchSource
+# stream definition for CNTKTextFormatMinibatchSource
 def StreamDef(shape, is_sparse, alias):
     return Record(dim=shape, is_sparse=is_sparse, stream_alias=alias)
     # TODO: why stream_alias and not alias?
@@ -447,12 +451,11 @@ hidden_dim = 300
 ########################
 
 def Reader(path):
-    return TextFormatMinibatchSource(path, epoch_size=36000, stream_defs=Record(
+    return CNTKTextFormatMinibatchSource(path, streams=Record(
         query         = StreamDef(shape=input_dim,   is_sparse=True, alias='S0'),
         intent_unused = StreamDef(shape=num_intents, is_sparse=True, alias='S1'),  # BUGBUG: unused, and should infer dim
         slot_labels   = StreamDef(shape=label_dim,   is_sparse=True, alias='S2')
     ))
-    # what's that 36000 at the end; is that the epoch size?
 
 ########################
 # define the model     #
@@ -482,7 +485,11 @@ def train(reader, model):
     pe = classification_error      (z, slot_labels)
 
     # training config
-    lr = 0.003  # TODO: [0.003]*2 + [0.0015]*12 + [0.0003]
+    epoch_size = 36000  # TODO: move back into train()
+    max_epochs = 8
+    lr = learning_rates_per_sample([0.003]*2+[0.0015]*12+[0.0003], units=epoch_size)
+    momentums = momentums_per_sample([0])
+    #lr = 0.003  # TODO: [0.003]*2 + [0.0015]*12 + [0.0003]
     #gradUpdateType = "fsAdaGrad"
     #gradientClippingWithTruncation = True ; clippingThresholdPerSample = 15.0
     #first_mbs_to_show_result = 10
@@ -490,7 +497,10 @@ def train(reader, model):
     num_mbs_to_show_result = 10
 
     # trainer object
-    trainer = Trainer(z, ce, pe, [sgd(z.parameters(), lr)])
+    learner = fsadagrad(z.parameters(), lr, momentums,
+        targetAdagradAvDenom = 1, clipping_threshold_per_sample=15, gradient_clipping_with_truncation=True)
+
+    trainer = Trainer(z, ce, pe, [learner])
     _extend_Trainer(trainer)
 
     # define mapping from reader streams to network inputs
@@ -501,12 +511,17 @@ def train(reader, model):
     }
 
     # process minibatches and perform model training
-    for i in itertools.count():
-        data = trainer.get_next_minibatch(reader, minibatch_size, input_map)
-        if data is None:
-            break
-        trainer.train_minibatch(data)
-        print_training_progress(trainer, i, num_mbs_to_show_result)
+    for epoch in range(max_epochs):
+        n = 0
+        while n < epoch_size:
+        #for i in itertools.count():
+            data, num_samples = trainer.next_minibatch(reader, minibatch_size, input_map)
+            if data is None:
+                break
+            trainer.train_minibatch(data)
+            print_training_progress(trainer, n, num_mbs_to_show_result)
+            n += num_samples[slot_labels]
+        print("--- ONE EPOCH DONE ---")
 
 #############################
 # main function boilerplate #
