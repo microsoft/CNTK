@@ -409,7 +409,7 @@ def sanitize_var_map(op_arguments, arguments, precision=None, device=None, add_b
           * map from input variables to the data
           * list of inputs in the order that the function expects or 
           * a single input, if the function only has one argument. 
-          Data should be either NumPy arrays or a `:class:cntk.io.MinibatchSource`
+          Data should be either NumPy arrays or a `:class:cntk.io.MinibatchData`
         precision (`str` or `np.float32` or `np.float64`): if string it can be
          one of 'float' 'float32, 'double', 'float64', or `None` 
         device (`DeviceDescriptor` or `None`): CNTK DeviceDescriptor
@@ -418,6 +418,8 @@ def sanitize_var_map(op_arguments, arguments, precision=None, device=None, add_b
     Returns:
         `dict` that maps variables to sanitized batches
     '''
+    from ..cntk_py import Value
+    from ..io import MinibatchData
 
     if arguments is None or isinstance(arguments, (list, tuple)) and len(arguments)==0:
         if len(op_arguments) > 0:
@@ -455,8 +457,9 @@ def sanitize_var_map(op_arguments, arguments, precision=None, device=None, add_b
 
             var = var_name_map[var]
 
-        from ..cntk_py import Value
-        if not isinstance(batch, Value):                
+        if isinstance(batch, MinibatchData):
+            batch = batch.data()
+        elif not isinstance(batch, Value):                
             if add_batch_axis:
                 batch = [batch]
             if isinstance(batch, np.ndarray):
@@ -685,18 +688,18 @@ def typemap(f):
         from cntk.ops.variables import Variable, Parameter, Constant
         from cntk.ops.functions import Function
         from cntk.learner import Learner
-        from cntk.io import MinibatchSource, StreamConfiguration
+        from cntk.io import MinibatchSource, MinibatchData, StreamConfiguration
         typemap = { 
                 cntk_py.Variable: Variable,
                 cntk_py.Parameter: Parameter,
                 cntk_py.Constant: Constant,
                 cntk_py.Function: Function, 
                 cntk_py.Learner: Learner, 
-                cntk_py.MinibatchSource: MinibatchSource, 
+                cntk_py.MinibatchSource: MinibatchSource,
+                cntk_py.MinibatchData: MinibatchData,
                 cntk_py.StreamConfiguration: StreamConfiguration, 
                 }
         result = f(*args, **kwds)
-        print(result)
         if isinstance(result, (tuple, list, set)):
             for r in result:
                 r.__class__ = typemap.get(r.__class__, r.__class__)

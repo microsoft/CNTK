@@ -151,8 +151,8 @@ def cifar_resnet(base_path, debug_output=False):
 
     minibatch_source = create_mb_source(feats_stream_name, labels_stream_name, 
                         image_height, image_width, num_channels, num_classes, base_path)
-    features_si = minibatch_source.stream_info(feats_stream_name)
-    labels_si = minibatch_source.stream_info(labels_stream_name)
+    features_si = minibatch_source[feats_stream_name]
+    labels_si = minibatch_source[labels_stream_name]
 
     # Input variables denoting the features and label data
     image_input = input_variable(
@@ -182,16 +182,18 @@ def cifar_resnet(base_path, debug_output=False):
 
         # Specify the mapping of input variables in the model to actual
         # minibatch data to be trained with
-        arguments = {image_input: mb[
-            features_si].m_data, label_var: mb[labels_si].m_data}
+        arguments = {
+                image_input: mb[features_si], 
+                label_var: mb[labels_si]
+                }
         trainer.train_minibatch(arguments)
 
         print_training_progress(trainer, i, training_progress_output_freq)
 
     test_minibatch_source = create_test_mb_source(feats_stream_name, labels_stream_name,
                     image_height, image_width, num_channels, num_classes, base_path)
-    features_si = test_minibatch_source.stream_info(feats_stream_name)
-    labels_si = test_minibatch_source.stream_info(labels_stream_name)
+    features_si = test_minibatch_source[feats_stream_name]
+    labels_si = test_minibatch_source[labels_stream_name]
 
     mb_size = 64
     num_mbs = 300
