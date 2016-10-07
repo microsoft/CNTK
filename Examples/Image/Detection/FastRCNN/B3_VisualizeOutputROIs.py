@@ -6,7 +6,7 @@ locals().update(importlib.import_module("PARAMETERS").__dict__)
 ####################################
 # Parameters
 ####################################
-image_set = 'test'      #'train', 'test'
+image_set = 'test'      # 'train', 'test'
 
 # no need to change these parameters
 boUseNonMaximaSurpression = True

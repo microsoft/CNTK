@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from Tkinter import *
 from PIL import ImageTk
 from cntk_helpers import *
@@ -18,16 +17,15 @@ boxWidth = 10
 boxHeight = 2
 
 
-
 ####################################
 # Main
 ####################################
-#define callback function for tk button
+# define callback function for tk button
 def buttonPressedCallback(s):
     global global_lastButtonPressed
     global_lastButtonPressed = s
 
-#create UI
+# create UI
 objectNames = np.sort(classes).tolist()
 objectNames += ["UNDECIDED", "EXCLUDE"]
 tk = Tk()
@@ -37,8 +35,7 @@ for objectIndex,objectName in enumerate(objectNames):
     b = Button(width=boxWidth, height=boxHeight, text=objectName, command=lambda s = objectName: buttonPressedCallback(s))
     b.grid(row = objectIndex, column = 0)
 
-
-#loop over all images
+# loop over all images
 imgFilenames = getFilesInDirectory(imgDir, ".jpg")
 for imgIndex, imgFilename in enumerate(imgFilenames):
     print imgIndex, imgFilename
@@ -47,18 +44,18 @@ for imgIndex, imgFilename in enumerate(imgFilenames):
         print "Skipping image {:3} ({}) since annotation file already exists: {}".format(imgIndex, imgFilename, labelsPath)
         continue
 
-    #load image and ground truth rectangles
+    # load image and ground truth rectangles
     img = imread(os.path.join(imgDir,imgFilename))
     rectsPath = os.path.join(imgDir, imgFilename[:-4] + ".bboxes.tsv")
     rects = [ToIntegers(rect) for rect in readTable(rectsPath)]
 
-    #annotate each rectangle in turn
+    # annotate each rectangle in turn
     labels = []
     for rectIndex,rect in enumerate(rects):
         imgCopy = img.copy()
         drawRectangles(imgCopy, [rect], thickness = 15)
 
-        #draw image in tk window
+        # draw image in tk window
         imgTk, _ = imresizeMaxDim(imgCopy, drawingImgSize, boUpscale = True)
         imgTk = ImageTk.PhotoImage(imconvertCv2Pil(imgTk))
         label = Label(tk, image=imgTk)
@@ -66,13 +63,13 @@ for imgIndex, imgFilename in enumerate(imgFilenames):
         tk.update_idletasks()
         tk.update()
 
-        #busy-wait until button pressed
+        # busy-wait until button pressed
         global_lastButtonPressed = None
         while not global_lastButtonPressed:
             tk.update_idletasks()
             tk.update()
 
-        #store result
+        # store result
         print "Button pressed = ", global_lastButtonPressed
         labels.append(global_lastButtonPressed)
 

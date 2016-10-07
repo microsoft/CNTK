@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import sys, os, importlib
 import PARAMETERS
 locals().update(importlib.import_module("PARAMETERS").__dict__)

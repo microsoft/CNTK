@@ -7,9 +7,8 @@ from cntk_helpers import *
 ####################################
 imgDir = "C:/Users/pabuehle/Desktop/newImgs/"
 
-#no need to change these params
+# no need to change these params
 drawingImgSize = 1000.0
-
 
 
 ####################################
@@ -20,14 +19,13 @@ def event_cv2_drawRectangles(event, x, y, flags, param):
     global global_bboxes
     global global_leftButtonDownPoint
 
-    #draw all previous bounding boxes, and the most
-    #recent box in a different color
+    # draw all previous bounding boxes, and the most recent box in a different color
     imgCopy = global_image.copy()
     drawRectangles(imgCopy, global_bboxes)
     if len(global_bboxes)>0:
         drawRectangles(imgCopy, [global_bboxes[-1]], color = (255, 0, 0))
 
-    #handle mouse events
+    # handle mouse events
     if event == cv2.EVENT_LBUTTONDOWN:
         global_leftButtonDownPoint = (x, y)
 
@@ -60,37 +58,36 @@ def scaleCropBboxes(rectsIn, scaleFactor, imgWidth, imgHeight):
         return rects
 
 
-
 ####################################
 # Main
 ####################################
 imgFilenames = [f for f in os.listdir(imgDir) if f.lower().endswith(".jpg")]
 
-#loop over each image and get annotation
+# loop over each image and get annotation
 for imgFilenameIndex,imgFilename in enumerate(imgFilenames):
     print imgFilenameIndex, imgFilename
     imgPath = os.path.join(imgDir, imgFilename)
     bBoxPath = imgPath[:-4] + ".bboxes.tsv"
 
-    #skip image if ground truth already exists
+    # skip image if ground truth already exists
     if os.path.exists(bBoxPath):
         print "Skipping image {0} since ground truth already exists".format(imgFilename)
         continue
     else:
         print "Processing image {0} of {1}: {2}".format(imgFilenameIndex, len(imgFilenames), imgPath)
 
-    #prepare image window and callback
+    # prepare image window and callback
     global_bboxes = []
     global_image, scaleFactor = imresizeMaxDim(imread(imgPath), drawingImgSize)
     cv2.namedWindow("AnnotationWindow")
     cv2.setMouseCallback("AnnotationWindow", event_cv2_drawRectangles)
     cv2.imshow("AnnotationWindow", global_image)
 
-    #process user input
+    # process user input
     while True:
         key = unichr(cv2.waitKey())
 
-        #undo/remove last rectangle
+        # undo/remove last rectangle
         if key == "u":
             if len(global_bboxes) >= 1:
                 global_bboxes = global_bboxes[:-1]
@@ -98,20 +95,20 @@ for imgFilenameIndex,imgFilename in enumerate(imgFilenames):
                 drawRectangles(imgCopy, global_bboxes)
                 cv2.imshow("AnnotationWindow", imgCopy)
 
-        #skip image
+        # skip image
         elif key == "s":
             if os.path.exists(bBoxPath):
                 print "Skipping image hence deleting existing bbox file: " + bBoxPath
                 os.remove(bBoxPath)
             break
 
-        #next image
+        # next image
         elif key == "n":
             bboxes = scaleCropBboxes(global_bboxes, scaleFactor, imWidth(imgPath), imHeight(imgPath))
             writeTable(bBoxPath, bboxes)
             break
 
-        #quit
+        # quit
         elif key == "q":
             sys.exit()
 

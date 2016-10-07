@@ -13,8 +13,8 @@ datasetName = "pascalVoc"
 ############################
 # default parameters
 ############################
-#cntk params
-cntk_nrRois = 100  # how many ROIs to zero-pad
+# cntk params
+cntk_nrRois = 2000  # how many ROIs to zero-pad
 cntk_padWidth = 1000
 cntk_padHeight = 1000
 cntk_posOverlapThres = {"train": 0.5, "test": 0.5}  # only used for DNN training (as opposed to svm training)
@@ -32,19 +32,7 @@ roiDir = procDir + "rois/"
 cntkFilesDir = procDir + "cntkFiles/"
 cntkTemplateDir = rootDir
 
-#training svm params
-svm_C = 0.001
-svm_B = 10.0            # intercept scaling
-svm_nrEpochs = 5
-svm_retrainLimit = 500
-svm_evictThreshold = -1.1
-svm_posWeight = "auto" # "auto" # 2.0, else "balanced"
-svm_targetNorm = 20.0      # Magic value from traditional R-CNN
-svm_penality = 'l2'
-svm_loss = 'l1'
-svm_rngSeed = 3
-
-#postprocessing
+# postprocessing
 nmsThreshold = 0.3
 
 

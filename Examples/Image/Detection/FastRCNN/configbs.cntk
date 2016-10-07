@@ -92,12 +92,12 @@ Train = {
         minibatchSize = 2
         maxEpochs = 20
         
-        learningRatesPerMB=0.00005*5:0.00001
-        momentumPerMB=0*5:0.9
-        L2RegWeight=0.0001 #0.0005
-        dropoutRate=0.5
-
-        numMBsToShowResult = 500
+        learningRatesPerSample = 0.00001
+        momentumAsTimeConstant = 0*5:10
+        #L2RegWeight = 0.0001
+        dropoutRate = 0
+        
+        numMBsToShowResult = 50
     }
 
     reader = {

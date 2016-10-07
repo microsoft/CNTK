@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import os, sys, importlib
 import shutil, time
 import PARAMETERS
@@ -86,7 +85,6 @@ if os.path.exists(cntkFilesDir):
         exit(-1)
     shutil.rmtree(cntkFilesDir)
     time.sleep(0.1) # avoid access problems
-
 
 # create cntk representation for each image
 for image_set in image_sets:

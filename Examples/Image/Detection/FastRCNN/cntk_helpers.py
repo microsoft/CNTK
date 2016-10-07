@@ -5,8 +5,6 @@ from easydict import EasyDict
 from fastRCNN.nms import nms as nmsPython
 
 
-
-
 ####################################
 # Region-of-interest
 ####################################
@@ -35,7 +33,7 @@ def getSelectiveSearchRois(img, ssScale, ssSigma, ssMinSize, maxDim):
     #                 },
     #                 ...
     #             ]
-    #inter_area seems to give much better results esp when upscaling image
+    # inter_area seems to give much better results esp when upscaling image
     img, scale = imresizeMaxDim(img, maxDim, boUpscale=True, interpolation = cv2.INTER_AREA)
     _, ssRois = selectivesearch.selective_search(img, scale=ssScale, sigma=ssSigma, min_size=ssMinSize)
     rects = []
@@ -47,7 +45,7 @@ def getSelectiveSearchRois(img, ssScale, ssSigma, ssMinSize, maxDim):
 
 def getGridRois(imgWidth, imgHeight, nrGridScales, aspectRatios = [1.0]):
     rects = []
-    #start adding large ROIs and then smaller ones
+    # start adding large ROIs and then smaller ones
     for iter in range(nrGridScales):
         cellWidth = 1.0 * min(imgHeight, imgWidth) / (2 ** iter)
         step = cellWidth / 2.0
@@ -75,7 +73,7 @@ def filterRois(rects, maxWidth, maxHeight, roi_minNrPixels, roi_maxNrPixels,
     filteredRects = []
     filteredRectsSet = set()
     for rect in rects:
-        if tuple(rect) in filteredRectsSet: #excluding rectangles with same co-ordinates
+        if tuple(rect) in filteredRectsSet: # excluding rectangles with same co-ordinates
             continue
 
         x, y, x2, y2 = rect
@@ -94,9 +92,9 @@ def filterRois(rects, maxWidth, maxHeight, roi_minNrPixels, roi_maxNrPixels,
         filteredRects.append(rect)
         filteredRectsSet.add(tuple(rect))
 
-    #could combine rectangles using non-maxima surpression or with similar co-ordinates
-    #groupedRectangles, weights = cv2.groupRectangles(np.asanyarray(rectsInput, np.float).tolist(), 1, 0.3)
-    #groupedRectangles = nms_python(np.asarray(rectsInput, np.float), 0.5)
+    # could combine rectangles using non-maxima surpression or with similar co-ordinates
+    # groupedRectangles, weights = cv2.groupRectangles(np.asanyarray(rectsInput, np.float).tolist(), 1, 0.3)
+    # groupedRectangles = nms_python(np.asarray(rectsInput, np.float), 0.5)
     assert(len(filteredRects) > 0)
     return filteredRects
 
@@ -107,8 +105,6 @@ def readRois(roiDir, subdir, imgFilename):
     if len(rois) == 4 and type(rois[0]) == np.int32:  # if only a single ROI in an image
         rois = [rois]
     return rois
-
-
 
 
 ####################################
@@ -122,39 +118,12 @@ def readGtAnnotation(imgPath):
     assert (len(bboxes) == len(labels))
     return bboxes, labels
 
-
-# def cropTransformRoiParams(imgWidth, imgHeight):
-#     mindim = np.min([imgWidth, imgHeight])
-#     maxdim = np.max([imgWidth, imgHeight])
-#     targetw = targeth = mindim
-#     cropOffset = 0.5 * (maxdim - mindim)
-#     boCropXDim = maxdim == w # compute if crop is horizontal or vertical
-#     return targetw, targeth, cropOffset, boCropXDim
-#
-#
-# def cropTransformRoi(rect, cropOffset, boCropXDim, targetImgDim):
-#   def offsetMinMax(val, maxVal, crop_offset):
-#       val = val - crop_offset
-#       val = max(0, val)
-#       return min(val, maxVal)
-#
-#     x, y, x2, y2 = np.asarray(rect)
-#     if boCropXDim:
-#         x  = offsetMinMax(x,  targetImgDim - 1, cropOffset)
-#         x2 = offsetMinMax(x2, targetImgDim - 1, cropOffset)
-#     else:
-#         y  = offsetMinMax(y,  targetImgDim - 1, cropOffset)
-#         y2 = offsetMinMax(y2, targetImgDim - 1, cropOffset)
-#     return [x, y, x2, y2]
-
-
 def getCntkInputPaths(cntkFilesDir, image_set):
     cntkImgsListPath = cntkFilesDir + image_set + '.txt'
     cntkRoiCoordsPath = cntkFilesDir + image_set + '.rois.txt'
     cntkRoiLabelsPath = cntkFilesDir + image_set + '.roilabels.txt'
     cntkNrRoisPath = cntkFilesDir + image_set + '.nrRois.txt'
     return cntkImgsListPath, cntkRoiCoordsPath, cntkRoiLabelsPath, cntkNrRoisPath
-
 
 def roiTransformPadScaleParams(imgWidth, imgHeight, padWidth, padHeight, boResizeImg = True):
     scale = 1.0
@@ -175,7 +144,6 @@ def roiTransformPadScaleParams(imgWidth, imgHeight, padWidth, padHeight, boResiz
         print "ERROR: at least one offset is < 0:", imgWidth, imgHeight, w_offset, h_offset, scale
     return targetw, targeth, w_offset, h_offset, scale
 
-
 def roiTransformPadScale(rect, w_offset, h_offset, scale = 1.0):
     rect = [int(round(scale * d)) for d in rect]
     rect[0] += w_offset
@@ -184,9 +152,8 @@ def roiTransformPadScale(rect, w_offset, h_offset, scale = 1.0):
     rect[3] += h_offset
     return rect
 
-
 def getCntkRoiCoordsLine(rect, targetw, targeth):
-    #convert from absolute to relative co-ordinates
+    # convert from absolute to relative co-ordinates
     x, y, x2, y2 = rect
     xrel = float(x) / (1.0 * targetw)
     yrel = float(y) / (1.0 * targeth)
@@ -198,17 +165,15 @@ def getCntkRoiCoordsLine(rect, targetw, targeth):
     assert hrel >= 0.0, "Error: hrel should be >= 0 but is " + str(hrel)
     return " {} {} {} {}".format(xrel, yrel, wrel, hrel)
 
-
 def getCntkRoiLabelsLine(overlaps, thres, nrClasses):
-    #get one hot encoding
+    # get one hot encoding
     maxgt = np.argmax(overlaps)
-    if overlaps[maxgt] < thres: #set to background label if small overlap with GT
+    if overlaps[maxgt] < thres: # set to background label if small overlap with GT
         maxgt = 0
     oneHot = np.zeros((nrClasses), dtype=int)
     oneHot[maxgt] = 1
     oneHotString = " {}".format(" ".join(str(x) for x in oneHot))
     return oneHotString
-
 
 def cntkPadInputs(currentNrRois, targetNrRois, nrClasses, boxesStr, labelsStr):
     assert currentNrRois <= targetNrRois, "Current number of rois ({}) should be <= target number of rois ({})".format(currentNrRois, targetNrRois)
@@ -218,21 +183,17 @@ def cntkPadInputs(currentNrRois, targetNrRois, nrClasses, boxesStr, labelsStr):
         currentNrRois += 1
     return boxesStr, labelsStr
 
-
 def checkCntkOutputFile(cntkImgsListPath, cntkOutputPath, cntkNrRois, outputDim):
     imgPaths = getColumn(readTable(cntkImgsListPath), 1)
-    #dnnOutputAccessor = readFileAccessor(cntkOutputPath)
     with open(cntkOutputPath) as fp:
         for imgIndex in range(len(imgPaths)):
             if imgIndex % 100 == 1:
                 print "Checking cntk output file, image %d of %d..." % (imgIndex, len(imgPaths))
             for roiIndex in range(cntkNrRois):
                 assert (fp.readline() != "")
-                #assert (dnnOutputAccessor.next() != "")
-        assert (fp.readline() == "") #test if end-of-file is reached
+        assert (fp.readline() == "") # test if end-of-file is reached
 
-
-#parse the cntk output file and save the output for each image individually
+# parse the cntk output file and save the output for each image individually
 def parseCntkOutput(cntkImgsListPath, cntkOutputPath, outParsedDir, cntkNrRois, outputDim,
                     saveCompressed = False, skipCheck = False, skip5Mod = None):
     if not skipCheck and skip5Mod == None:
@@ -268,8 +229,7 @@ def parseCntkOutput(cntkImgsListPath, cntkOutputPath, outParsedDir, cntkNrRois, 
                 np.savez(outPath, data)
         assert (fp.readline() == "")  # test if end-of-file is reached
 
-
-#parse the cntk labels file and return the labels
+# parse the cntk labels file and return the labels
 def readCntkRoiLabels(roiLabelsPath, nrRois, roiDim, stopAtImgIndex = None):
     roiLabels = []
     for imgIndex, line in enumerate(readFile(roiLabelsPath)):
@@ -286,8 +246,7 @@ def readCntkRoiLabels(roiLabelsPath, nrRois, roiDim, stopAtImgIndex = None):
             roiLabels[imgIndex].append(np.argmax(oneHotLabels))
     return roiLabels
 
-
-#parse the cntk rois file and return the co-ordinates
+# parse the cntk rois file and return the co-ordinates
 def readCntkRoiCoordinates(imgPaths, cntkRoiCoordsPath, nrRois, padWidth, padHeight, stopAtImgIndex = None):
     roiCoords = []
     for imgIndex, line in enumerate(readFile(cntkRoiCoordsPath)):
@@ -307,10 +266,9 @@ def readCntkRoiCoordinates(imgPaths, cntkRoiCoordsPath, nrRois, padWidth, padHei
             roiCoords[imgIndex].append(rect)
     return roiCoords
 
-
-#convert roi co-ordinates from CNTK file back to original image co-ordinates
+# convert roi co-ordinates from CNTK file back to original image co-ordinates
 def getAbsoluteROICoordinates(roi, imgWidth, imgHeight, padWidth, padHeight, resizeMethod = 'padScale'):
-    if roi == [0,0,0,0]: #if padded roi
+    if roi == [0,0,0,0]: # if padded roi
         return [0,0,0,0]
 
     if resizeMethod == "crop":
@@ -349,8 +307,6 @@ def getAbsoluteROICoordinates(roi, imgWidth, imgHeight, padWidth, padHeight, res
     return rect
 
 
-
-
 ####################################
 # Classifier training / scoring
 ####################################
@@ -360,7 +316,6 @@ def getSvmModelPaths(svmDir, experimentName):
     svmFeatScalePath = "{}svmfeature_scale_{}.txt".format(svmDir, experimentName)
     return svmWeightsPath, svmBiasPath, svmFeatScalePath
 
-
 def loadSvm(svmDir, experimentName):
     svmWeightsPath, svmBiasPath, svmFeatScalePath = getSvmModelPaths(svmDir, experimentName)
     svmWeights   = np.loadtxt(svmWeightsPath, np.float32)
@@ -368,20 +323,18 @@ def loadSvm(svmDir, experimentName):
     svmFeatScale = np.loadtxt(svmFeatScalePath, np.float32)
     return svmWeights, svmBias, svmFeatScale
 
-
 def saveSvm(svmDir, experimentName, svmWeights, svmBias, featureScale):
     svmWeightsPath, svmBiasPath, svmFeatScalePath = getSvmModelPaths(svmDir, experimentName)
     np.savetxt(svmWeightsPath, svmWeights)
     np.savetxt(svmBiasPath, svmBias)
     np.savetxt(svmFeatScalePath, featureScale)
 
-
 def svmPredict(imgIndex, cntkOutputIndividualFilesDir, svmWeights, svmBias, svmFeatScale, roiSize, roiDim, decisionThreshold = 0):
     cntkOutputPath = os.path.join(cntkOutputIndividualFilesDir,  str(imgIndex) + ".dat.npz")
     data = np.load(cntkOutputPath)['arr_0']
     assert(len(data) == roiSize)
 
-    #get prediction for each roi
+    # get prediction for each roi
     labels = []
     maxScores = []
     for roiIndex in range(roiSize):
@@ -396,13 +349,12 @@ def svmPredict(imgIndex, cntkOutputIndividualFilesDir, svmWeights, svmBias, svmF
         maxScores.append(maxScore)
     return labels, maxScores
 
-
 def nnPredict(imgIndex, cntkParsedOutputDir, roiSize, roiDim, decisionThreshold = None):
     cntkOutputPath = os.path.join(cntkParsedOutputDir,  str(imgIndex) + ".dat.npz")
     data = np.load(cntkOutputPath)['arr_0']
     assert(len(data) == roiSize)
 
-    #get prediction for each roi
+    # get prediction for each roi
     labels = []
     maxScores = []
     for roiIndex in range(roiSize):
@@ -416,7 +368,6 @@ def nnPredict(imgIndex, cntkParsedOutputDir, roiSize, roiDim, decisionThreshold 
         labels.append(maxArg)
         maxScores.append(maxScore)
     return labels, maxScores
-
 
 def imdbUpdateRoisWithHighGtOverlap(imdb, positivesGtOverlapThreshold):
     addedPosCounter = 0
@@ -435,14 +386,12 @@ def imdbUpdateRoisWithHighGtOverlap(imdb, positivesGtOverlapThreshold):
     return existingPosCounter, addedPosCounter
 
 
-
-
 ####################################
 # Visualize results
 ####################################
 def visualizeResults(imgPath, roiLabels, roiScores, roiRelCoords, padWidth, padHeight, classes,
                      nmsKeepIndices = None, boDrawNegativeRois = True, decisionThreshold = 0.0):
-    #read and resize image
+    # read and resize image
     imgWidth, imgHeight = imWidthHeight(imgPath)
     scale = 800.0 / max(imgWidth, imgHeight)
     imgDebug = imresize(imread(imgPath), scale)
@@ -450,7 +399,7 @@ def visualizeResults(imgPath, roiLabels, roiScores, roiRelCoords, padWidth, padH
     if roiScores:
         assert(len(roiLabels) == len(roiScores))
 
-    #draw multiple times to avoid occlusions
+    # draw multiple times to avoid occlusions
     for iter in range(0,3):
         for roiIndex in range(len(roiRelCoords)):
             label = roiLabels[roiIndex]
@@ -459,7 +408,7 @@ def visualizeResults(imgPath, roiLabels, roiScores, roiRelCoords, padWidth, padH
                 if decisionThreshold and score < decisionThreshold:
                     label = 0
 
-            #init drawing parameters
+            # init drawing parameters
             thickness = 1
             if label == 0:
                 color = (255, 0, 0)
@@ -467,7 +416,7 @@ def visualizeResults(imgPath, roiLabels, roiScores, roiRelCoords, padWidth, padH
                 color = getColorsPalette()[label]
             rect = [int(scale * i) for i in roiRelCoords[roiIndex]]
 
-            #draw in higher iterations only the detections
+            # draw in higher iterations only the detections
             if iter == 0 and boDrawNegativeRois:
                 drawRectangles(imgDebug, [rect], color=color, thickness=thickness)
             elif iter==1 and label > 0:
@@ -482,7 +431,6 @@ def visualizeResults(imgPath, roiLabels, roiScores, roiRelCoords, padWidth, padH
                         text += "(" + str(round(score, 2)) + ")"
                     imgDebug = drawText(imgDebug, (rect[0],rect[1]), text, color = (255,255,255), font = font, colorBackground=color)
     return imgDebug
-
 
 def applyNonMaximaSuppression(nmsThreshold, labels, scores, coords):
     # generate input for nms
@@ -505,11 +453,8 @@ def applyNonMaximaSuppression(nmsThreshold, labels, scores, coords):
     assert (len(nmsKeepIndices) == len(set(nmsKeepIndices)))  # check if no roi indices was added >1 times
     return nmsKeepIndices
 
-
 def apply_nms(all_boxes, thresh, boUsePythonImpl = True):
-    """Apply non-maximum suppression to all predicted boxes output by the
-    test_net method.
-    """
+    """Apply non-maximum suppression to all predicted boxes output by the test_net method."""
     num_classes = len(all_boxes)
     num_images = len(all_boxes[0])
     nms_boxes = [[[] for _ in xrange(num_images)]
@@ -531,8 +476,6 @@ def apply_nms(all_boxes, thresh, boUsePythonImpl = True):
             nms_keepIndices[cls_ind][im_ind] = keep
     return nms_boxes, nms_keepIndices
 
-
-
 ####################################
 # Wrappers for compatibility with
 # original fastRCNN code
@@ -547,13 +490,12 @@ class DummyNet(object):
             "trainers" : None,
         }
 
-
 def im_detect(net, im, boxes, feature_scale=None, bboxIndices=None, boReturnClassifierScore=True, classifier = 'svm'): # trainers=None,
     # Return:
     #     scores (ndarray): R x K array of object class scores (K includes
     #         background as object category 0)
     #     (optional) boxes (ndarray): R x (4*K) array of predicted bounding boxes
-    #load cntk output for the given image
+    # load cntk output for the given image
     cntkOutputPath = os.path.join(net.cntkParsedOutputDir, str(im) + ".dat.npz")
     cntkOutput = np.load(cntkOutputPath)['arr_0']
     if bboxIndices != None:
@@ -561,7 +503,7 @@ def im_detect(net, im, boxes, feature_scale=None, bboxIndices=None, boReturnClas
     else:
         cntkOutput = cntkOutput[:len(boxes), :] # remove zero-padded rois
 
-    #compute scores for each box and each class
+    # compute scores for each box and each class
     scores = None
     if boReturnClassifierScore:
         if classifier == 'nn':
@@ -574,8 +516,6 @@ def im_detect(net, im, boxes, feature_scale=None, bboxIndices=None, boReturnClas
         else:
             error
     return scores, None, cntkOutput
-
-
 
 
 ####################################
@@ -723,13 +663,13 @@ def rotationFromExifTag(imgPath):
     except:
         imageExifTags = None
 
-    #rotate the image if orientation exif tag is present
+    # rotate the image if orientation exif tag is present
     rotation = 0
     if imageExifTags != None and orientationExifId != None and orientationExifId in imageExifTags:
         orientation = imageExifTags[orientationExifId]
-        #print "orientation = " + str(imageExifTags[orientationExifId])
+        # print "orientation = " + str(imageExifTags[orientationExifId])
         if orientation == 1 or orientation == 0:
-            rotation = 0 #no need to do anything
+            rotation = 0 # no need to do anything
         elif orientation == 6:
             rotation = -90
         elif orientation == 8:
@@ -840,10 +780,9 @@ def imconvertCv2Pil(img):
 def ToIntegers(list1D):
     return [int(float(x)) for x in list1D]
 
-#TODO: implement numerically stable softmax
 def softmax(vec):
     expVec = np.exp(vec)
-    #hack
+    # TODO: check numerical stability
     if max(expVec) == np.inf:
         outVec = np.zeros(len(expVec))
         outVec[expVec == np.inf] = vec[expVec == np.inf]
