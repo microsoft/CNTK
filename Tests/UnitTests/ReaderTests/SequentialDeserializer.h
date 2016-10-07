@@ -204,6 +204,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Test {
         config.m_numberOfWorkers = 1;
         config.m_workerRank = 0;
         config.m_minibatchSizeInSamples = 1;
+        config.m_truncationSize = 0;
         sequenceEnumerator->SetConfiguration(config);
 
         size_t mbSize = 1;

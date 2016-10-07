@@ -72,16 +72,7 @@ void BlockRandomizer::StartEpoch(const EpochConfiguration& config)
         m_epochSize = config.m_totalEpochSizeInSamples;
     }
 
-    // Calculates starts of the epoch, prepares a new sweep if needed.
-    m_epochStartPosition = m_epochSize * config.m_epochIndex;
-    PrepareNewSweepIfNeeded(m_epochStartPosition);
-
-    // Sets sequence cursor to the sequence that corresponds to the epoch start position.
-    // If last epoch ended in the middle of a sequence, the cursor is moved to the next sequence in the sweep.
-    size_t offsetInSweep = m_epochStartPosition % m_sweepTotalNumberOfSamples;
-    size_t newOffset = m_sequenceRandomizer->Seek(offsetInSweep, m_sweep);
-    m_globalSamplePosition = m_sweep * m_sweepTotalNumberOfSamples + newOffset;
-
+    SetCurrentSamplePosition(m_epochSize * config.m_epochIndex);
     if (m_verbosity >= Notification)
     {
         size_t epochStartFrame = config.m_epochIndex * m_epochSize;
@@ -394,8 +385,14 @@ void BlockRandomizer::SetCurrentSamplePosition(size_t currentSamplePosition)
     m_globalSamplePosition = m_sweep * m_sweepTotalNumberOfSamples + newOffset;
 }
 
-void BlockRandomizer::SetConfiguration(const ReaderConfiguration& /*config*/)
+void BlockRandomizer::SetConfiguration(const ReaderConfiguration& config)
 {
+    *((ReaderConfiguration*)&m_config) = config;
+
+    // TODO: should be removed.
+    // Currently no restriction on the epoch size at all when SetConfiguration is used.
+    m_config.m_totalEpochSizeInSamples = m_epochSize = std::numeric_limits<size_t>().max() / 2; // Make sure we do not exceed size_t
+    m_config.m_epochIndex = 0;
 }
 
 }}}

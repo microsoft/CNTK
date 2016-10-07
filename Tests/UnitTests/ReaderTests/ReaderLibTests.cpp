@@ -213,18 +213,21 @@ BOOST_AUTO_TEST_CASE(CheckSetCurrentCursorForRandomizers)
     size_t randomizationWindow = chunkSizeInSamples * 5;
     auto deserializer = make_shared<SequentialDeserializer>(0, chunkSizeInSamples, sweepNumberOfSamples, maxSequenceLength);
 
-    auto blockRandomizer = make_shared<BlockRandomizer>(0, randomizationWindow, deserializer, true, BlockRandomizer::DecimationMode::chunk, false);
-    auto noRandomizer = make_shared<NoRandomizer>(deserializer, false);
+    auto expectedBlock = make_shared<BlockRandomizer>(0, randomizationWindow, deserializer, true, BlockRandomizer::DecimationMode::chunk, false);
+    auto expectedNo = make_shared<NoRandomizer>(deserializer, false);
 
-    auto test = [](SequenceEnumeratorPtr r, size_t epochSize)
+    auto underTestBlock = make_shared<BlockRandomizer>(0, randomizationWindow, deserializer, true, BlockRandomizer::DecimationMode::chunk, false);
+    auto unterTestNo = make_shared<NoRandomizer>(deserializer, false);
+
+    auto test = [](SequenceEnumeratorPtr expected, SequenceEnumeratorPtr underTest, size_t epochSize)
     {
-        auto firstEpoch = ReadFullEpoch(r, epochSize, 0);
-        auto secondEpoch = ReadFullEpoch(r, epochSize, 1);
-        auto thirdEpoch = ReadFullEpoch(r, epochSize, 2);
+        auto firstEpoch = ReadFullEpoch(expected, epochSize, 0);
+        auto secondEpoch = ReadFullEpoch(expected, epochSize, 1);
+        auto thirdEpoch = ReadFullEpoch(expected, epochSize, 2);
 
         // Rereading second epoch
-        r->SetCurrentSamplePosition(firstEpoch.size());
-        auto anotherSecond = ReadNextSamples(r, secondEpoch.size());
+        underTest->SetCurrentSamplePosition(firstEpoch.size());
+        auto anotherSecond = ReadNextSamples(underTest, secondEpoch.size());
         BOOST_CHECK_EQUAL_COLLECTIONS(
             secondEpoch.begin(),
             secondEpoch.end(),
@@ -232,8 +235,8 @@ BOOST_AUTO_TEST_CASE(CheckSetCurrentCursorForRandomizers)
             anotherSecond.end());
 
         // Rereading first epoch
-        r->SetCurrentSamplePosition(0);
-        auto anotherFirst = ReadNextSamples(r, firstEpoch.size());
+        underTest->SetCurrentSamplePosition(0);
+        auto anotherFirst = ReadNextSamples(underTest, firstEpoch.size());
         BOOST_CHECK_EQUAL_COLLECTIONS(
             firstEpoch.begin(),
             firstEpoch.end(),
@@ -241,8 +244,8 @@ BOOST_AUTO_TEST_CASE(CheckSetCurrentCursorForRandomizers)
             anotherFirst.end());
 
         // Rereading third epoch
-        r->SetCurrentSamplePosition(firstEpoch.size() + secondEpoch.size());
-        auto anotherThird = ReadNextSamples(r, thirdEpoch.size());
+        underTest->SetCurrentSamplePosition(firstEpoch.size() + secondEpoch.size());
+        auto anotherThird = ReadNextSamples(underTest, thirdEpoch.size());
         BOOST_CHECK_EQUAL_COLLECTIONS(
             thirdEpoch.begin(),
             thirdEpoch.end(),
@@ -252,13 +255,13 @@ BOOST_AUTO_TEST_CASE(CheckSetCurrentCursorForRandomizers)
 
     // Inside sweep
     size_t epochSize = 50000;
-    test(blockRandomizer, epochSize);
-    test(noRandomizer, epochSize);
+    test(expectedBlock, underTestBlock, epochSize);
+    test(expectedNo, unterTestNo, epochSize);
 
     // Between sweeps
     epochSize = (size_t)(sweepNumberOfSamples / 1.5);
-    test(blockRandomizer, epochSize);
-    test(noRandomizer, epochSize);
+    test(expectedBlock, underTestBlock, epochSize);
+    test(expectedNo, unterTestNo, epochSize);
 }
 
 BOOST_AUTO_TEST_CASE(RandRollbackToEarlierEpochBetweenSweeps)
