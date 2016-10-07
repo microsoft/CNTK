@@ -2,9 +2,6 @@
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license. See LICENSE.md file in the project root for full licence information.
 //
-// TODO: exclude from build on aarch64
-#if !defined(__aarch64__)
-
 #pragma once
 #include "BlockMultiplierPlatform.h"
 #include <emmintrin.h>
@@ -1482,5 +1479,3 @@ FORCEINLINE void BlockHandlerSSE::kernelsse128x1(
 }
 
 }}}
-
-#endif

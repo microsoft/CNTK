@@ -2,6 +2,9 @@
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license. See LICENSE.md file in the project root for full licence information.
 //
+// TODO: exclude from build on aarch64
+#if !defined(__aarch64__)
+
 #include "stdafx.h"
 #include <xmmintrin.h>
 #include <emmintrin.h>
@@ -30,3 +33,5 @@ int BlockHandlerSSE::RowToColOffsetRewrittenB(int col, int kOffset, int blockSiz
 
 
 }}}
+
+#endif
