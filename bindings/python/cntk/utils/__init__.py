@@ -49,46 +49,11 @@ def cntk_device(device_id):
         return cntk_py.DeviceDescriptor.gpu_device(device_id)
 
 
-def cntk_to_numpy_shape(shape):
-    '''
-    Removes the dynamic axis and returns a tuple representing the NumPy shape.
-
-    Args:
-        shape (`tuple` or `int`): CNTK shape iterable
-
-    Returns:
-        NumPy shape of a tensor
-    '''
-
-    if np.isscalar(shape):
-        shape = (shape,)
-    shape = shape[:-1]
-    if not shape:
-        shape = (1,)
-
-    # cntk uses column major, thus we reverse the axes
-    return tuple(reversed(shape))
-
-
 def is_string(value):
     if sys.version_info.major < 3:
         return isinstance(value, basestring)
 
     return isinstance(value, str)
-
-# Copied from six
-
-
-def with_metaclass(meta, *bases):
-    """Creates a base class with a metaclass."""
-    # This requires a bit of explanation: the basic idea is to make a dummy
-    # metaclass for one level of class instantiation that replaces itself with
-    # the actual metaclass.
-    class metaclass(meta):
-
-        def __new__(cls, name, this_bases, d):
-            return meta(name, bases, d)
-    return type.__new__(metaclass, 'temporary_class', (), {})
 
 
 def dense_to_str(data):
@@ -218,7 +183,7 @@ def get_temp_filename(directory=None):
 
 def sanitize_shape(shape):
     """
-    if shape is scalar create a tuple out of it and reverse it as cntk uses column major
+    If shape is scalar create a tuple out of it and reverse it as cntk uses column major
     """
     if np.isscalar(shape):
         shape = (shape,)
