@@ -2597,7 +2597,7 @@ namespace CNTK
     /// E.g. When creating a classification model, typically the CrossEntropy loss Function and the ClassificationError Function comprise the two roots
     /// of the computation graph which can be "Combine"d to create a single Function with 2 outputs; viz. CrossEntropy loss and ClassificationError output.
     ///
-    CNTK_API FunctionPtr Combine(const std::vector<FunctionPtr>& operands, const std::wstring& name = L"");
+    CNTK_API FunctionPtr Combine(const std::vector<Variable>& operands, const std::wstring& name = L"");
 
     namespace Sequence
     {
@@ -3059,10 +3059,13 @@ namespace CNTK
     /// 
     /// Instantiate the CNTK built-in test format minibatch source
     ///
-    inline MinibatchSourcePtr TextFormatMinibatchSource(const std::wstring& dataFilePath, const std::vector<StreamConfiguration>& streamConfigs, size_t epochSize = SIZE_MAX)
+    inline MinibatchSourcePtr TextFormatMinibatchSource(const std::wstring& dataFilePath, const std::vector<StreamConfiguration>& streamConfigs, size_t epochSize = SIZE_MAX, bool randomize = true)
     {
         CNTK::Dictionary minibatchSourceConfiguration;
         minibatchSourceConfiguration[L"epochSize"] = epochSize;
+
+        if (randomize)
+            minibatchSourceConfiguration[L"randomize"] = true;
 
         CNTK::Dictionary deserializerConfiguration;
         deserializerConfiguration[L"type"] = L"CNTKTextFormatDeserializer";
