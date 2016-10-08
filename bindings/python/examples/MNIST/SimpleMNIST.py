@@ -56,7 +56,6 @@ def simple_mnist(debug_output=False):
     mb_source = text_format_minibatch_source(path, [
         StreamConfiguration(feature_stream_name, input_dim),
         StreamConfiguration(labels_stream_name, num_output_classes)])
-
     features_si = mb_source[feature_stream_name]
     labels_si = mb_source[labels_stream_name]
 
@@ -120,5 +119,6 @@ def simple_mnist(debug_output=False):
 
 
 if __name__=='__main__':
+
     error = simple_mnist()
     print("Error: %f" % error)

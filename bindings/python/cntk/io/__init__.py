@@ -40,7 +40,6 @@ class MinibatchSource(cntk_py.MinibatchSource):
     Parent class of all minibatch sources. For most cases you will need the
     helper functions `:func:cntk.io.text_format_minibatch_source` or
     `:func:cntk.io.create_minibatch_source`.
-
     A `MinibatchSource` can be indexed by a `StreamInfo`, which will return a
     `MinibatchData` object that can be passed e.g. to the
     `:func:Trainer.train_minibatch()` function.
@@ -99,9 +98,9 @@ class MinibatchSource(cntk_py.MinibatchSource):
             return super(MinibatchSource, self).get_next_minibatch(
                 minibatch_size_in_samples, device)
         else:
-            return super(MinibatchSource, self).get_next_minibatch(
-                minibatch_size_in_samples,
-                minibatch_size_in_sequences, device)
+        return super(MinibatchSource, self).get_next_minibatch(
+            minibatch_size_in_samples,
+            minibatch_size_in_sequences, device)
 
 
 def _py_dict_to_cntk_dict(py_dict):
@@ -129,6 +128,7 @@ def _py_dict_to_cntk_dict(py_dict):
         else:
             res[k] = cntk_py.DictionaryValue(v)
     return res
+
 
 @typemap
 def minibatch_source(config):
