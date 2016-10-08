@@ -5,7 +5,7 @@
 
 from . import cntk_py
 from .cntk_py import DeviceDescriptor
-from .utils import sanitize_var_map
+from .utils import sanitize_var_map, sanitize_function, typemap
 
 class Trainer(cntk_py.Trainer):
     '''
@@ -22,13 +22,11 @@ class Trainer(cntk_py.Trainer):
        parameter_learners (`list`): list of learners from `:cntk:cntk.learner`
     '''
     def __init__(self, model, loss_function, eval_function, parameter_learners):
-        if isinstance(model, cntk_py.Variable):
-            model = model.owner
-        self.model = model
-        if isinstance(loss_function, cntk_py.Variable):
-            loss_function = loss_function.owner
-        if isinstance(eval_function, cntk_py.Variable):
-            eval_function = eval_function.owner
+        # TODO sanitizing should be removed once Swig's typemaps are in place
+        model = sanitize_function(model)
+        loss_function = sanitize_function(loss_function)
+        eval_function = sanitize_function(eval_function)
+
         super(Trainer, self).__init__(model, loss_function, eval_function,
                 parameter_learners)
 
@@ -38,10 +36,11 @@ class Trainer(cntk_py.Trainer):
         Returns false if all parameter learners indicate end of learning (through their Update method's return value).
 
         Args:
-            arguments (`dict` or `list`): map from input variables to the data
-             or list of inputs in the order that the function expects. Data
-             should be either NumPy arrays or cntk.Value instances returned by a
-             minibatch source.
+            arguments (`dict` or `list` or single input): 
+              * map from input variables to the data
+              * list of inputs in the order that the function expects or 
+              * a single input, if the function only has one argument. 
+              Data should be either NumPy arrays or a `:class:cntk.io.MinibatchSource`
             device (:class:`cntk.DeviceDescriptor`): the device descriptor that
              contains the type and id of the device on which the computation is
              to be performed.
@@ -51,7 +50,7 @@ class Trainer(cntk_py.Trainer):
         '''
         if not device:
             device=DeviceDescriptor.use_default_device()        
-        arguments = sanitize_var_map(self.model.arguments(), arguments, add_batch_axis=True)
+        arguments = sanitize_var_map(self.model().arguments(), arguments)
 
         return super(Trainer, self).train_minibatch(arguments, device)
 
@@ -62,10 +61,11 @@ class Trainer(cntk_py.Trainer):
         of samples.
 
         Args:
-            arguments (`dict` or `list`): map from input variables to the data
-             or list of inputs in the order that the function expects. Data
-             should be either NumPy arrays or cntk.Value instances returned by a
-             minibatch source.
+            arguments (`dict` or `list` or single input): 
+              * map from input variables to the data
+              * list of inputs in the order that the function expects or 
+              * a single input, if the function only has one argument. 
+              Data should be either NumPy arrays or a `:class:cntk.io.MinibatchSource`
             device (:class:`cntk.DeviceDescriptor`): the device descriptor that
              contains the type and id of the device on which the computation is
              to be performed.
@@ -75,7 +75,96 @@ class Trainer(cntk_py.Trainer):
         '''
         if not device:
             device=DeviceDescriptor.use_default_device()        
-        arguments = sanitize_var_map(self.model.arguments(), arguments, add_batch_axis=True)
+        arguments = sanitize_var_map(self.model().arguments(), arguments, add_batch_axis=True)
 
         return super(Trainer, self).test_minibatch(arguments, device)
+
+    def save_checkpoint(self, filename):
+        '''
+        Saves a checkpoint of the model and other Trainer state at the
+        specified file location.
+
+        Args:
+            filename (`str`): filename to store the checkpoint
+        '''
+
+        super(Trainer, self).save_checkpoint(filename)
+
+    def restore_from_checkpoint(self, filename):
+        '''
+        Saves a checkpoint of the model and other Trainer state at the
+        specified file location.
+
+        Args:
+            filename (`str`): filename to restore the checkpoint from
+        '''
+
+        super(Trainer, self).restore_from_checkpoint(filename)
+
+    @typemap
+    def model(self):
+        '''
+        Returns the model that the trainer is training.
+
+        Returns:
+            `:class:cntk.Function`
+        '''
+        return super(Trainer, self).model()
+        
+    @typemap
+    def loss_function(self):
+        '''
+        Returns the loss function that the trainer is using.
+
+        Returns:
+            `:class:cntk.Function`
+        '''
+        return super(Trainer, self).loss_function()
+
+    @typemap
+    def evaluation_function(self):
+        '''
+        Returns the evaluation function that the trainer is using.
+
+        Returns:
+            `:class:cntk.Function`
+        '''
+        return super(Trainer, self).evaluation_function()
+
+    @typemap
+    def parameter_learners(self):
+        '''
+        Returns the parameter learners that the trainer is using.
+
+        Returns:
+            `list` of `:class:cntk.learner.Learner`
+        '''
+        return super(Trainer, self).parameter_learners()
+
+    def previous_minibatch_loss_average(self):
+        '''
+        Returns the average training loss per sample for the last minibatch trained
+
+        Returns:
+            `double`
+        '''
+        return super(Trainer, self).previous_minibatch_loss_average()
+
+    def previous_minibatch_evaluation_average(self):
+        '''
+        Returns the average evaluation criterion value per sample for the last minibatch trained
+
+        Returns:
+            `double`
+        '''
+        return super(Trainer, self).previous_minibatch_evaluation_average()
+
+    def previous_minibatch_sample_count(self):
+        '''
+        Returns the number of samples in the last minibatch trained with
+
+        Returns:
+            `int`
+        '''
+        return super(Trainer, self).previous_minibatch_sample_count()
 

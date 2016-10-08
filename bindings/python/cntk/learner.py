@@ -4,7 +4,54 @@
 # ==============================================================================
 
 from . import cntk_py
+from .utils import typemap
 
+class Learner(cntk_py.Learner):
+    '''
+    Abstraction for learning a subset of parameters of a learnable function using first order gradient values
+    For e.g momentum, AdaGrad, RMSProp etc. are different types of learners with their own algorithms for
+    learning parameter values using first order gradients.
+    To instantiate a concreate learner, use the factory methods in this module.
+    '''
+        
+    def update(gradient_values, training_sample_count):
+        '''
+        Update the parameters associated with this learner. 
+
+        Args:
+            gradient_values (`dict`): maps `:class:cntk.variables.Parameter` to a NumPy array
+            training_sample_count (`int`): training sample count
+
+        Returns:
+            `False` to indicate that learning has stopped for all of the parameters associated with this learner
+        '''
+        return super(Learner, self).update(gradient_values, training_sample_count)
+
+    @typemap
+    def parameters(self):
+        '''
+        Returns:
+            the set of parameters associated with this learner.
+        '''
+        return super(Learner, self).parameters()
+
+
+    def reset_learning_rate(self, learning_rate):
+        '''
+        Resets the learning rate.
+
+        Args:
+            learning_rate (`float`): learning rate to reset to
+        '''
+        return super(Learner, self).reset_learning_rate()
+
+    def learning_rate(self):
+        '''
+        Returns the learning rate.
+        '''
+        return super(Learner, self).learning_rate()
+
+@typemap
 def learning_rates_per_sample(lr, units=1):
     '''
     Create a learning rate schedule.
@@ -37,6 +84,7 @@ def learning_rates_per_sample(lr, units=1):
 
     return cntk_py.learning_rates_per_sample(lr, units)
 
+@typemap
 def momentums_per_sample(momentums, units=1):
     '''
     Create a momentums schedule.
@@ -71,6 +119,7 @@ def momentums_per_sample(momentums, units=1):
 
 
 # TODO figure out how to pass infty to C++ in a portable way
+@typemap
 def sgd(parameters, lr, 
         l1_regularization_weight=0.0, l2_regularization_weight=0.0, 
         gaussian_noise_injection_std_dev=0.0, clipping_threshold_per_sample=1E10, 
@@ -95,7 +144,7 @@ def sgd(parameters, lr,
         gradient_clipping_with_truncation ('bool', default `True`): gradient clipping
 
     Returns:
-        Instance of a learner that can be passed to the `Trainer`
+        Instance of a `:class:cntk.learner.Learner` that can be passed to the `Trainer`
     '''
     if type(lr) == float:
         lr = learning_rates_per_sample(lr)
@@ -109,6 +158,7 @@ def sgd(parameters, lr,
 
     return cntk_py.sgd_learner(parameters, lr, additional_options)
 
+@typemap
 def momentum_sgd(parameters, lr, momentums, 
         l1_regularization_weight=0.0, l2_regularization_weight=0.0, 
         gaussian_noise_injection_std_dev=0.0, clipping_threshold_per_sample=1E10, 
@@ -134,7 +184,7 @@ def momentum_sgd(parameters, lr, momentums,
         gradient_clipping_with_truncation ('bool', default `True`): gradient clipping
 
     Returns:
-        Instance of a learner that can be passed to the `Trainer`
+        Instance of a `:class:cntk.learner.Learner` that can be passed to the `Trainer`
     '''
     if type(lr) == float:
         lr = learning_rates_per_sample(lr)
@@ -152,6 +202,7 @@ def momentum_sgd(parameters, lr, momentums,
     return cntk_py.momentum_sgd_learner(parameters, lr, momentums,
             additional_options)
 
+@typemap
 def nesterov(parameters, lr, momentums, 
         l1_regularization_weight=0.0, l2_regularization_weight=0.0, 
         gaussian_noise_injection_std_dev=0.0, clipping_threshold_per_sample=1E10, 
@@ -177,7 +228,7 @@ def nesterov(parameters, lr, momentums,
         gradient_clipping_with_truncation ('bool', default `True`): gradient clipping
 
     Returns:
-        Instance of a learner that can be passed to the `Trainer`
+        Instance of a `:class:cntk.learner.Learner` that can be passed to the `Trainer`
     '''
     if type(lr) == float:
         lr = learning_rates_per_sample(lr)
@@ -195,6 +246,7 @@ def nesterov(parameters, lr, momentums,
     return cntk_py.nesterov_learner(parameters, lr, momentums,
             additional_options)
 
+@typemap
 def adagrad(parameters, lr, need_ave_multiplier=True, 
         l1_regularization_weight=0.0, l2_regularization_weight=0.0, 
         gaussian_noise_injection_std_dev=0.0, clipping_threshold_per_sample=1E10, 
@@ -220,7 +272,7 @@ def adagrad(parameters, lr, need_ave_multiplier=True,
         gradient_clipping_with_truncation ('bool', default `True`): gradient clipping
 
     Returns:
-        Instance of a learner that can be passed to the `Trainer`
+        Instance of a `:class:cntk.learner.Learner` that can be passed to the `Trainer`
     '''
     if type(lr) == float:
         lr = learning_rates_per_sample(lr)
@@ -235,6 +287,7 @@ def adagrad(parameters, lr, need_ave_multiplier=True,
     return cntk_py.ada_grad_learner(parameters, lr, need_ave_multiplier,
             additional_options)
 
+@typemap
 def fsadagrad(parameters, lr, momentums,
         targetAdagradAvDenom = 0.0025, varianceTimeConstant = 720000,
         l1_regularization_weight=0.0, l2_regularization_weight=0.0, 
@@ -265,7 +318,7 @@ def fsadagrad(parameters, lr, momentums,
         gradient_clipping_with_truncation ('bool', default `True`): gradient clipping
 
     Returns:
-        Instance of a learner that can be passed to the `Trainer`
+        Instance of a `:class:cntk.learner.Learner` that can be passed to the `Trainer`
     '''
     if type(lr) == float:
         lr = learning_rates_per_sample(lr)
@@ -284,6 +337,7 @@ def fsadagrad(parameters, lr, momentums,
             targetAdagradAvDenom, varianceTimeConstant,
             additional_options)
 
+@typemap
 def rmsprop(parameters, lr, 
         gamma, inc, dec, max, min,
         need_ave_multiplier=True,
@@ -315,7 +369,7 @@ def rmsprop(parameters, lr,
         gradient_clipping_with_truncation ('bool', default `True`): gradient clipping
 
     Returns:
-        Instance of a learner that can be passed to the `Trainer`
+        Instance of a `:class:cntk.learner.Learner` that can be passed to the `Trainer`
     '''
     if type(lr) == float:
         lr = learning_rates_per_sample(lr)

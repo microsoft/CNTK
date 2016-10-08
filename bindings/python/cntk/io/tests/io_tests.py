@@ -11,7 +11,7 @@ import numpy as np
 abs_path = os.path.dirname(os.path.abspath(__file__))
 
 def test_text_format():
-    from cntk.io import text_format_minibatch_source, StreamConfiguration
+    from cntk.io import text_format_minibatch_source, StreamConfiguration, MinibatchSource
 
     # 0	|x 560:1	|y 1 0 0 0 0
     # 0	|x 0:1
@@ -28,6 +28,7 @@ def test_text_format():
     mb_source = text_format_minibatch_source(path, [
                     StreamConfiguration( 'features', input_dim, True, 'x' ),
                     StreamConfiguration( 'labels', num_output_classes, False, 'y')], 0)
+    assert isinstance(mb_source, MinibatchSource)
 
     features_si = mb_source.stream_info('features')
     labels_si = mb_source.stream_info('labels')
