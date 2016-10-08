@@ -405,11 +405,10 @@ def sanitize_var_map(op_arguments, arguments, precision=None, device=None, add_b
         op_arguments (`:class:Function`): arguments of the root function. In
          forward pass it is typically `op.arguments()`, in backward mode it is
          `op.outputs()`
-        arguments (`dict` or `list` or single input): 
+        arguments (`dict` or `list`): 
           * map from input variables to the data
           * list of inputs in the order that the function expects or 
-          * a single input, if the function only has one argument. 
-          Data should be either NumPy arrays or a `:class:cntk.io.MinibatchData`
+          Data should be either NumPy arrays or a `:class:cntk.io.MinibatchData` instance
         precision (`str` or `np.float32` or `np.float64`): if string it can be
          one of 'float' 'float32, 'double', 'float64', or `None` 
         device (`DeviceDescriptor` or `None`): CNTK DeviceDescriptor
@@ -427,13 +426,13 @@ def sanitize_var_map(op_arguments, arguments, precision=None, device=None, add_b
         return {}
 
     if len(op_arguments) == 1 and not isinstance(arguments, dict):
-        return { op_arguments[0] : arguments }
+        arguments = dict(zip(op_arguments, arguments))
 
     if isinstance(arguments, dict):
         arg_names = [var.name() for var in op_arguments]
         name_counter = collections.Counter(arg_names)
 
-        var_name_map = dict((var, var.name()) for var in op_arguments)
+        var_name_map = dict((var.name(), var) for var in op_arguments)
 
     elif isinstance(arguments, list):
         arguments = dict(zip(op_arguments, arguments))
@@ -455,7 +454,10 @@ def sanitize_var_map(op_arguments, arguments, precision=None, device=None, add_b
             elif name_counter[var] > 1:
                 raise ValueError('node name "%s" is not unique'%var)
 
-            var = var_name_map[var]
+            try:
+                var = var_name_map[var]
+            except KeyError:
+                raise KeyError("no input with the name '%s' was found.  Available: %s"%(var, ", ".join(var_name_map.keys())))
 
         if isinstance(batch, MinibatchData):
             batch = batch.data()
@@ -629,10 +631,10 @@ def eval(op, precision, device, arguments=None, backward_pass=False):
         op (:class:`Function`): operation to evaluate
         precision (`str` or `None`): precision being 'float32', 'float64', or `None`, in which case it will be determined by inspecting the operator (costly)
         device (`:class:cntk.DeviceDescriptor`): the device the descriptor, whether it is CPU or GPU (and which one)
-        arguments (`dict` or `list`): map from input variables to the data
-         or list of inputs in the order that the function expects. Data
-         should be either NumPy arrays or cntk.Value instances returned by a
-         minibatch source.
+        arguments (`dict` or `list`): 
+          * map from input variables to the data
+          * list of inputs in the order that the function expects or 
+          Data should be either NumPy arrays or a `:class:cntk.io.MinibatchData` instance
         backward_pass (`bool`, optional): whether a backward pass is performed 
 
     Returns: 
