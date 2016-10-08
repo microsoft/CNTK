@@ -253,7 +253,9 @@ public:
 
         double logNumeratorWithCE = CalculateNumeratorsWithCE(*inputLabel, nf);
         double logDenominator = ForwardBackwardProcessForDenorminator(nf, *m_posteriorsDen, *m_tmap, *m_tmapTranspose, *m_smap, *m_smapTranspose);
-        double logCTC = CTCCalculation(*inputLabel, nf);
+        double logCTC = 0;
+        if (m_ceweight != 0)
+            logCTC = CTCCalculation(*inputLabel, nf);
 
         double l2NormScore = 0;
         if (m_l2NormFactor != 0)
