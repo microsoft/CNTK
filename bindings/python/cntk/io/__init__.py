@@ -40,7 +40,6 @@ class MinibatchSource(cntk_py.MinibatchSource):
     Parent class of all minibatch sources. For most cases you will need the
     helper functions `:func:cntk.io.text_format_minibatch_source` or
     `:func:cntk.io.create_minibatch_source`.
-
     A `MinibatchSource` can be indexed by a `StreamInfo`, which will return a
     `MinibatchData` object that can be passed e.g. to the
     `:func:Trainer.train_minibatch()` function.
@@ -99,9 +98,9 @@ class MinibatchSource(cntk_py.MinibatchSource):
             return super(MinibatchSource, self).get_next_minibatch(
                 minibatch_size_in_samples, device)
         else:
-            return super(MinibatchSource, self).get_next_minibatch(
-                minibatch_size_in_samples,
-                minibatch_size_in_sequences, device)
+        return super(MinibatchSource, self).get_next_minibatch(
+            minibatch_size_in_samples,
+            minibatch_size_in_sequences, device)
 
 
 def _py_dict_to_cntk_dict(py_dict):
@@ -129,6 +128,7 @@ def _py_dict_to_cntk_dict(py_dict):
         else:
             res[k] = cntk_py.DictionaryValue(v)
     return res
+
 
 @typemap
 def minibatch_source(config):
@@ -311,7 +311,7 @@ class ImageDeserializer(Deserializer):
 
 
 @typemap
-def text_format_minibatch_source(path, stream_configs, epoch_size=MAX_UI64):
+def text_format_minibatch_source(path, stream_configs, epoch_size=MAX_UI64, randomize=True):
     '''
     Creates a minibatch source from a CNTKTextFormatReader file.
 
@@ -322,12 +322,13 @@ def text_format_minibatch_source(path, stream_configs, epoch_size=MAX_UI64):
          file
         epoch_size (`int`, optional): size of an epoch. In case of 0 the size
          of the training set will be taken. Default is max of 64bit.
+        randomize (`bool`, optional): whether to randomize the contents of data file.
 
     Returns:
         `:class:cntk.io.MinibatchSource'
     '''
     return cntk_py.text_format_minibatch_source(path, stream_configs,
-                                                epoch_size)
+                                                epoch_size, randomize)
 
 
 class StreamConfiguration(cntk_py.StreamConfiguration):

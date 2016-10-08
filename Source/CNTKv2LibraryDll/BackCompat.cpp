@@ -308,17 +308,17 @@ namespace CNTK
         std::unordered_map<ComputationNodeBasePtr, Variable> nodeToVariableMap;
         std::unordered_map<Variable, Variable> placeholderReplacements;
         std::unordered_set<FunctionPtr> allPrimitiveFunctions;
-        std::vector<FunctionPtr> rootFunctions;
+        std::vector<Variable> rootVariables;
         auto& networkRoots = net->RootNodes();
         for (auto& rootNode : networkRoots)
         {
             if (rootNode->IsLeaf())
                 continue;
 
-            rootFunctions.push_back(GetVariable<ElementType>(rootNode, nodeToVariableMap, placeholderReplacements, allPrimitiveFunctions).Owner());
+            rootVariables.push_back(GetVariable<ElementType>(rootNode, nodeToVariableMap, placeholderReplacements, allPrimitiveFunctions).Owner());
         }
 
-        auto rootComposite = Combine(rootFunctions);
+        auto rootComposite = Combine(rootVariables);
         rootComposite->ReplacePlaceholders(placeholderReplacements);
 
         return rootComposite;
