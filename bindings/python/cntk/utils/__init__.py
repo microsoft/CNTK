@@ -689,3 +689,36 @@ def eval(op, precision, device, arguments=None, backward_pass=False):
 
     else:
         return forward_output, None
+
+    
+# helper to convert a dictionary into a Python class, so that the dict looks like an immutable record
+# TODO: move to utils?
+class _ClassFromDict(dict):
+    def __init__(self, args_dict):
+        super(_ClassFromDict, self).__init__(args_dict)
+        # TODO: try to delete __setattr__ to make it immutable
+        for key in args_dict:   # self.__dict__.update(args_dict)
+            self[key] = args_dict[key]
+    def __getattr__(self, k):
+        return self.get(k)
+    # can use __slot__ to hide __setattr__(), and cannot be extended
+    # cf. https://pypi.python.org/pypi/frozendict/0.4 
+
+
+# easier construction of records
+# e.g. r = Record(x = 13, y = 42) ; x = r.x
+def Record(**kwargs):
+    return _ClassFromDict(kwargs)
+
+
+# type-cast a shape given as a scalar into a tuple
+def _as_tuple(x):
+    return x if (isinstance(x,tuple)) else (x,)
+
+
+# top-level short-hand for selecting a GPU
+def set_gpu(gpu_id):
+    from cntk import DeviceDescriptor
+    # Specify the target device to be used for computing
+    target_device = DeviceDescriptor.gpu_device(gpu_id)
+    DeviceDescriptor.set_default_device(target_device)
