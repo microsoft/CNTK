@@ -98,9 +98,9 @@ class MinibatchSource(cntk_py.MinibatchSource):
             return super(MinibatchSource, self).get_next_minibatch(
                 minibatch_size_in_samples, device)
         else:
-        return super(MinibatchSource, self).get_next_minibatch(
-            minibatch_size_in_samples,
-            minibatch_size_in_sequences, device)
+            return super(MinibatchSource, self).get_next_minibatch(
+                minibatch_size_in_samples,
+                minibatch_size_in_sequences, device)
 
 
 def _py_dict_to_cntk_dict(py_dict):
