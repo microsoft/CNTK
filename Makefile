@@ -262,7 +262,7 @@ READER_SRC =\
 	$(SOURCEDIR)/Readers/ReaderLib/PackerBase.cpp \
 	$(SOURCEDIR)/Readers/ReaderLib/FramePacker.cpp \
 	$(SOURCEDIR)/Readers/ReaderLib/ReaderBase.cpp \
-    $(SOURCEDIR)/Readers/ReaderLib/ChunkCache.cpp \
+	$(SOURCEDIR)/Readers/ReaderLib/ChunkCache.cpp \
 
 COMMON_SRC =\
 	$(SOURCEDIR)/Common/Config.cpp \
@@ -489,11 +489,11 @@ EVAL_SAMPLE_CLIENT_OBJ:=$(patsubst %.cpp, $(OBJDIR)/%.o, $(EVAL_SAMPLE_CLIENT_SR
 ALL+=$(EVAL_SAMPLE_CLIENT)
 SRC+=$(EVAL_SAMPLE_CLIENT_SRC)
 
-$(EVAL_SAMPLE_CLIENT): $(EVAL_SAMPLE_CLIENT_OBJ) | $(EVAL_LIB) 
+$(EVAL_SAMPLE_CLIENT): $(EVAL_SAMPLE_CLIENT_OBJ) | $(EVAL_LIB) $(MULTIVERSO_LIB)
 	@echo $(SEPARATOR)
 	@mkdir -p $(dir $@)
 	@echo building $(EVAL_SAMPLE_CLIENT) for $(ARCH) with build type $(BUILDTYPE)
-	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH)) $(patsubst %,$(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -l$(EVAL) -l$(CNTKMATH) 
+	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH)) $(patsubst %,$(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -l$(EVAL) -l$(CNTKMATH) -l$(MULTIVERSO)
 
 ########################################
 # BinaryReader plugin
@@ -793,32 +793,25 @@ MULTIVERSO:=multiverso
 INCLUDEPATH += $(SOURCEDIR)/Multiverso/include
 COMMON_FLAGS += -DMULTIVERSO_SUPPORT
 
-LIBPATH += $(LIBDIR)
-
 MULTIVERSO_LIB:=$(LIBDIR)/libmultiverso.so
-MULTIVERSO_TEST:=$(BINDIR)/multiversotests
 
 ALL+=$(MULTIVERSO_LIB)
-ALL+=$(MULTIVERSO_TEST)
 
 $(MULTIVERSO_LIB): 
 	@echo "Build Multiverso lib"
 	@mkdir -p $(LIBDIR)
 	@mkdir -p $(BINDIR)
 	@mkdir -p $(SOURCEDIR)/Multiverso/build
-	@cmake -DBoost_NO_BOOST_CMAKE=TRUE \
+	@cmake -DCMAKE_VERBOSE_MAKEFILE=TRUE \
+	    -DINSTALL_MULTIVERSO=FALSE \
+	    -DBoost_NO_BOOST_CMAKE=TRUE \
             -DBoost_NO_SYSTEM_PATHS=TRUE \
-            -DBOOST_ROOT:PATHNAME=/usr/local/boost-1.60.0 \
-            -DBOOST_LIBRARY_DIRS:FILEPATH=/usr/local/boost-1.60.0/lib \
+            -DBOOST_ROOT:PATHNAME=$(BOOST_PATH) \
+            -DBOOST_LIBRARY_DIRS:FILEPATH=$(BOOST_PATH) \
             -DLIBRARY_OUTPUT_PATH=$(shell readlink -f $(LIBDIR)) \
             -DEXECUTABLE_OUTPUT_PATH=$(shell readlink -f $(BINDIR)) \
             -B./Source/Multiverso/build -H./Source/Multiverso
-	@make -C ./Source/Multiverso/build/ -j multiverso
-	@make -C ./Source/Multiverso/build/ -j multiversotests
-
-        
-$(MULTIVERSO_TEST): $(MULTIVERSO_LIB)
-	@echo "Build Multiverso unit tests"
+	@make VERBOSE=1 -C ./Source/Multiverso/build/ -j multiverso
 
 endif
 
@@ -1009,6 +1002,27 @@ $(UNITTEST_BRAINSCRIPT): $(UNITTEST_BRAINSCRIPT_OBJ) | $(CNTKMATH_LIB)
 	@mkdir -p $(dir $@)
 	@echo building $@ for $(ARCH) with build type $(BUILDTYPE)
 	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH) $(BOOSTLIB_PATH)) $(patsubst %, $(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH) $(BOOSTLIB_PATH)) -o $@ $^ $(BOOSTLIBS) $(LIBS) -ldl -l$(CNTKMATH)
+
+UNITTEST_MULTIVERSO_SRC = \
+	$(SOURCEDIR)/Multiverso/Test/unittests/test_array.cpp \
+	$(SOURCEDIR)/Multiverso/Test/unittests/test_blob.cpp \
+	$(SOURCEDIR)/Multiverso/Test/unittests/test_kv.cpp \
+	$(SOURCEDIR)/Multiverso/Test/unittests/test_message.cpp \
+	$(SOURCEDIR)/Multiverso/Test/unittests/test_multiverso.cpp \
+	$(SOURCEDIR)/Multiverso/Test/unittests/test_node.cpp \
+	$(SOURCEDIR)/Multiverso/Test/unittests/test_sync.cpp \
+
+UNITTEST_MULTIVERSO_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(UNITTEST_MULTIVERSO_SRC))
+
+UNITTEST_MULTIVERSO := $(BINDIR)/multiversotests
+
+ALL += $(UNITTEST_MULTIVERSO)
+
+$(UNITTEST_MULTIVERSO): $(UNITTEST_MULTIVERSO_OBJ) | $(MULTIVERSO_LIB)
+	@echo $(SEPARATOR)
+	@mkdir -p $(dir $@)
+	@echo building $@ for $(ARCH) with build type $(BUILDTYPE)
+	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(BOOSTLIB_PATH)) $(patsubst %, $(RPATH)%, $(ORIGINLIBDIR) $(BOOSTLIB_PATH)) -o $@ $^ $(BOOSTLIBS) -l$(MULTIVERSO) -ldl
 
 unittests: $(UNITTEST_EVAL) $(UNITTEST_READER) $(UNITTEST_NETWORK) $(UNITTEST_MATH) $(UNITTEST_BRAINSCRIPT)
 

@@ -17,38 +17,21 @@ public:
         size_t adjustnbmb = 600,
         int traceLevel = 0,
         int syncPerfStats = 0,
-        const MPIWrapperPtr& pMPI = nullptr)
-				{
-				}
+        const MPIWrapperPtr& pMPI = nullptr) { }
 
-        ~MultiversoHelper()
-        {
-				}
+        ~MultiversoHelper() { }
 
-        void InitModel(const std::list<ComputationNodeBasePtr> & learnableNode)
-        {
-        }
+        void InitModel(const std::list<ComputationNodeBasePtr> & learnableNode) { }
 
-        void PushAndPullModel(const std::list<ComputationNodeBasePtr> & learnableNodes, size_t sampleSinceLastSynced = 0)
-        {
-        }
+        void PushAndPullModel(const std::list<ComputationNodeBasePtr> & learnableNodes, size_t sampleSinceLastSynced = 0) { }
 			
-        void PushModel(const std::list<ComputationNodeBasePtr> & learnableNode)
-        {
-        }
+        void PushModel(const std::list<ComputationNodeBasePtr> & learnableNode) { }
 
-        void PullModel(const std::list<ComputationNodeBasePtr> & learnableNode)
-        { 
-        }
+        void PullModel(const std::list<ComputationNodeBasePtr> & learnableNode) { }
 
-				void WaitAll()
-        { 
-        }
+				void WaitAll() { }
 
-				void WaitAsyncBuffer()
-        { 
-        }
-
+				void WaitAsyncBuffer() { }
     };
 }
 }
