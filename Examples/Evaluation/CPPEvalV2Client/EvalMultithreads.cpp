@@ -452,31 +452,47 @@ void RunEvaluationOneHidden(FunctionPtr evalFunc, const DeviceDescriptor& device
     }
 }
 
-void MultiThreadsEvaluation()
+void MultiThreadsEvaluation(bool isGPUAvailable)
 {
+#ifndef CPUONLY
+    if (isGPUAvailable)
+    {
+        fprintf(stderr, "Run evaluation on GPU device using GPU build.\n");
+    }
+    else
+    {
+        fprintf(stderr, "Run evaluation on CPU device using GPU build.\n");
+    }
+#else
+    fprintf(stderr, "Run evaluation using CPU-only build.\n");
+#endif
+
     // Test multi-threads evaluation with new function
     fprintf(stderr, "Test multi-threaded evaluation with new function on CPU.\n");
     MultiThreadsEvaluationWithNewFunction(DeviceDescriptor::CPUDevice(), 2);
-#ifndef CPUONLY
-    fprintf(stderr, "Test multi-threaded evaluation with new function on GPU\n");
-    MultiThreadsEvaluationWithNewFunction(DeviceDescriptor::GPUDevice(0), 2);
-#endif
+    if (isGPUAvailable)
+    {
+        fprintf(stderr, "Test multi-threaded evaluation with new function on GPU\n");
+        MultiThreadsEvaluationWithNewFunction(DeviceDescriptor::GPUDevice(0), 2);
+    }
 
     // Test multi-threads evaluation using clone.
     fprintf(stderr, "Test multi-threaded evaluation using clone on CPU.\n");
     MultiThreadsEvaluationWithClone(DeviceDescriptor::CPUDevice(), 2);
-#ifndef CPUONLY
-    fprintf(stderr, "Test multi-threaded evaluation using clone on GPU.\n");
-    MultiThreadsEvaluationWithClone(DeviceDescriptor::GPUDevice(0), 2);
-#endif
+    if (isGPUAvailable)
+    {
+        fprintf(stderr, "Test multi-threaded evaluation using clone on GPU.\n");
+        MultiThreadsEvaluationWithClone(DeviceDescriptor::GPUDevice(0), 2);
+    }
 
     // test multi-threads evaluation with loading existing models
     fprintf(stderr, "Test multi-threaded evaluation with loading existing models on CPU.\n");
     MultiThreadsEvaluationWithLoadModel(DeviceDescriptor::CPUDevice(), 2);
-#ifndef CPUONLY
-    fprintf(stderr, "Test multi-threaded evaluation with loading existing models on GPU.\n");
-    MultiThreadsEvaluationWithLoadModel(DeviceDescriptor::GPUDevice(0), 2);
-#endif
+    if (isGPUAvailable)
+    {
+        fprintf(stderr, "Test multi-threaded evaluation with loading existing models on GPU.\n");
+        MultiThreadsEvaluationWithLoadModel(DeviceDescriptor::GPUDevice(0), 2);
+    }
 
     fflush(stderr);
 

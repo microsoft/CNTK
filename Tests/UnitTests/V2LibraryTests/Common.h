@@ -36,6 +36,8 @@ __declspec_noreturn inline void ReportFailure(const char* format, ...)
 static const double relativeTolerance = 0.001f;
 static const double absoluteTolerance = 0.000001f;
 
+bool IsGPUAvailable();
+
 template <typename ElementType>
 inline void FloatingPointCompare(ElementType actual, ElementType expected, const char* message)
 {
