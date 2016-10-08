@@ -23,13 +23,13 @@ CIFAR-10 and ILSVRC2012 datasets are not included in the CNTK distribution. The 
 Our first example applies a relatively shallow ResNet on the CIFAR-10 dataset. We strictly follow the [ResNet paper](http://arxiv.org/abs/1512.03385) for the network architecture. That is, the network has a first layer of `3x3` convolutions, followed by `6n` layers with `3x3` convolution on the feature maps of size `{32, 16, 8}` respectively, with `2n` layers for each feature map size. Note for ResNet20, we have `n=3`. The network ends with a global average pooling, a 10-way fully-connected
 layer, and softmax. [Batch normalization](https://arxiv.org/abs/1502.03167) is applied everywhere except the last fully-connected layer.
 
-Other than the network architecture, the CIFAR-10 dataset is augmented with random translation, identical to that in [GettingStarted/ConvNet_CIFAR10_DataAug.cntk](../GettingStarted/ConvNet_CIFAR10_DataAug.cntk). Please refer to the cntk configuration file [ResNet20_CIFAR10.cntk](./ResNet20_CIFAR10.cntk) for more details.
+Other than the network architecture, the CIFAR-10 dataset is augmented with random translation, identical to that in [GettingStarted/ConvNet_CIFAR10_DataAug.cntk](../../GettingStarted/ConvNet_CIFAR10_DataAug.cntk). Please refer to the cntk configuration file [ResNet20_CIFAR10.cntk](./ResNet20_CIFAR10.cntk) for more details.
 
 Run the example from the current folder using:
 
 `cntk configFile=ResNet20_CIFAR10.cntk`
 
-The network achieves an error rate of about `8.2%`, which is slightly lower than the number reported in the original paper.
+The network achieves an error rate of about `8.1%`, which is slightly lower than the number reported in the original paper.
 
 ### ResNet110_CIFAR10.cntk
 
