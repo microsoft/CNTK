@@ -83,10 +83,6 @@ def _name_node(n, name):
             _auto_name_count[name] += 1
         #name = name + "[{}]".format(_auto_name_count[name])
         name = name + ".{}".format(_auto_name_count[name])
-        try:
-            name = name + n.uid()
-        except:
-            pass
         _auto_node_names[n] = name
     return n
 
@@ -219,19 +215,13 @@ def Placeholder(_inf, name='placeholder'):
 # Sequential -- composite that applies a sequence of functions onto an input
 # Sequential ([F, G, H]) === F >> G >> H
 def Sequential(arrayOfFunctions, _inf):
-    #import functools  # reduce()
-    #return functools.reduce(lambda g, f: f >> g, arrayOfFunctions, layers.Identity(_inf=_inf))
-    r = layers.Identity(_inf=_inf)
-    for f in arrayOfFunctions:
-        #_print_node(r)
-        r = r >> f
-    apply_x = _wrap_rename_Function(r, 'Sequential')
+    import functools  # reduce()
+    apply_x = functools.reduce(lambda f, g: f >> g, arrayOfFunctions, layers.Identity(_inf=_inf))
+    apply_x = _wrap_rename_Function(apply_x, 'Sequential')
     return apply_x;
 
 class layers:
     # need to define everything indented by 4
-
-    #_INFERRED = 0   # TODO: use the predefined name for this
 
     # Linear -- create a fully-connected linear projection layer
     # Note: shape may describe a tensor as well.
@@ -485,43 +475,45 @@ def train(reader, model):
     pe = classification_error      (z, slot_labels)
 
     # training config
-    epoch_size = 36000  # TODO: move back into train()
+    epoch_size = 36000
     max_epochs = 8
     lr = learning_rates_per_sample([0.003]*2+[0.0015]*12+[0.0003], units=epoch_size)
     momentums = momentums_per_sample([0])
-    #lr = 0.003  # TODO: [0.003]*2 + [0.0015]*12 + [0.0003]
-    #gradUpdateType = "fsAdaGrad"
-    #gradientClippingWithTruncation = True ; clippingThresholdPerSample = 15.0
-    #first_mbs_to_show_result = 10
     minibatch_size = 70
     num_mbs_to_show_result = 10
 
     # trainer object
     learner = fsadagrad(z.parameters(), lr, momentums,
-        targetAdagradAvDenom = 1, clipping_threshold_per_sample=15, gradient_clipping_with_truncation=True)
+                        targetAdagradAvDenom = 1, clipping_threshold_per_sample=15, gradient_clipping_with_truncation=True)
 
     trainer = Trainer(z, ce, pe, [learner])
     _extend_Trainer(trainer)
 
     # define mapping from reader streams to network inputs
-    # TODO: how to do epochs??
     input_map = {
         query       : reader.streams.query,
         slot_labels : reader.streams.slot_labels
     }
 
     # process minibatches and perform model training
+    t = 0
+    loss_numer = 0
+    loss_denom = 0
+    metric_numer = 0
+    metric_denom = 0
     for epoch in range(max_epochs):
-        n = 0
-        while n < epoch_size:
-        #for i in itertools.count():
+        while t < (epoch+1) * epoch_size:
             data, num_samples = trainer.next_minibatch(reader, minibatch_size, input_map)
             if data is None:
                 break
             trainer.train_minibatch(data)
-            print_training_progress(trainer, n, num_mbs_to_show_result)
-            n += num_samples[slot_labels]
-        print("--- ONE EPOCH DONE ---")
+            loss_numer += trainer.previous_minibatch_loss_average() * trainer.previous_minibatch_sample_count()
+            loss_denom +=                                             trainer.previous_minibatch_sample_count()
+            metric_numer += trainer.previous_minibatch_evaluation_average() * trainer.previous_minibatch_sample_count()
+            metric_denom +=                                                   trainer.previous_minibatch_sample_count()
+            t += num_samples[slot_labels]
+            print_training_progress(trainer, t / minibatch_size, num_mbs_to_show_result)
+        print("--- EPOCH {} DONE: loss = {:0.6f}, metric = {:0.1f}% ---".format(epoch+1, loss_numer/loss_denom, metric_numer/metric_denom*100.0))
 
 #############################
 # main function boilerplate #
