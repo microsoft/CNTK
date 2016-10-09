@@ -4270,7 +4270,7 @@ template<class ElemType>
             CUDA_CALL(cudaEventCreate(&done));
             dim3 thread_tail(DEFAULT_THREAD_PER_DIM, DEFAULT_THREAD_PER_DIM);
             dim3 block_tail((uttnum + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM, (maxphonenum + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM);
-
+            //printf("delay: %d\n", delayConstraint);
 			
 			for (long t = 0; t < maxframenum; t++)
 			{

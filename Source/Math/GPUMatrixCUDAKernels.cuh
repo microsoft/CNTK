@@ -5272,9 +5272,10 @@ __global__ void _assignAlphaScore_m(
 	LONG64 labelid = uttid*maxphonenum + phoneseqid;
 	LONG64 labelid_1 = uttid*maxphonenum + phoneseqid - 1;
 	LONG64 labelid_2 = uttid*maxphonenum + phoneseqid - 2;
-    LONG64 labelid_p1 = uttid*maxphonenum + phoneseqid + 1;
+    LONG64 labelid_r = uttid*maxphonenum + phoneseqid + 2;
 	LONG64 phoneid = (LONG64)(phoneseq[labelid]);
-    LONG64 phoneboundid = (LONG64)(phonebound[labelid_p1]);
+    LONG64 phoneboundid_l = (LONG64)(phonebound[labelid]);
+    LONG64 phoneboundid_r = (LONG64)(phonebound[labelid_r]);
 	LONG64 timeid = (t + uttbeginframe[uttid])*samplesInRecurrentStep + uttmap[uttid];
 	LONG64 timeid_1 = (t - 1 + uttbeginframe[uttid])*samplesInRecurrentStep + uttmap[uttid];
 
@@ -5322,8 +5323,13 @@ __global__ void _assignAlphaScore_m(
 				ascore = prob[probid];
 			else
 				ascore = 0;           
-            if (delayConstraint !=-1 && t > phoneboundid + delayConstraint)
-                Alphascore[alphaid] = LZERO;
+            if (delayConstraint !=-1)
+            {
+                if (phoneid == totalphonenum - 1 && (t > phoneboundid_r + delayConstraint - 1 || t < phoneboundid_l - delayConstraint - 1))
+                    Alphascore[alphaid] = LZERO;
+                else if (phoneid != totalphonenum - 1 && (t > phoneboundid_r + delayConstraint || t < phoneboundid_l - delayConstraint))
+                    Alphascore[alphaid] = LZERO;
+            }          
             else
 			    Alphascore[alphaid] = (ElemType)x + ascore;
 		}
@@ -5361,7 +5367,8 @@ __global__ void _assignBetaScore_m(
 	LONG64 labelid_1 = uttid*maxphonenum + phoneseqid + 1;
 	LONG64 labelid_2 = uttid*maxphonenum + phoneseqid + 2;
 	LONG64 phoneid = (LONG64)(phoneseq[labelid]);
-    LONG64 phoneboundid = (LONG64)(phonebound[labelid_1]);
+    LONG64 phoneboundid_l = (LONG64)(phonebound[labelid]);
+    LONG64 phoneboundid_r = (LONG64)(phonebound[labelid_2]);
 	LONG64 timeid = (t + uttbeginframe[uttid])*samplesInRecurrentStep + uttmap[uttid];
 	LONG64 timeid_1 = (t + 1 + uttbeginframe[uttid])*samplesInRecurrentStep + uttmap[uttid];
 
@@ -5406,8 +5413,13 @@ __global__ void _assignBetaScore_m(
 				ascore = prob[probid];
 			else
 				ascore = 0;
-            if (delayConstraint != -1 && t > phoneboundid + delayConstraint)
-                Betascore[betaid] = LZERO;
+            if (delayConstraint != -1)
+            {
+                if (phoneid == totalphonenum - 1 && (t > phoneboundid_r + delayConstraint - 1 || t < phoneboundid_l - delayConstraint - 1))
+                    Betascore[betaid] = LZERO;
+                else if (phoneid != totalphonenum - 1 && (t > phoneboundid_r + delayConstraint || t < phoneboundid_l - delayConstraint))
+                    Betascore[betaid] = LZERO;
+            }
             else
 			    Betascore[betaid] = (ElemType)x + ascore;
 		}
