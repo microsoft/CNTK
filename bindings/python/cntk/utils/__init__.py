@@ -214,8 +214,6 @@ def sanitize_input(arg, fallback_dtype=np.float32):
         return arg
 
     # or a Function?
-    # FIXME soon to be replaced by Function
-    # if isinstance(arg, (Function, cntk_py.Function)):
     if isinstance(arg, cntk_py.Function):
         try:
             return arg.output()
@@ -315,32 +313,35 @@ def pad_to_dense(batch):
     return Z
 
 
-def sanitize_batch(batch, data_type=None, device=None):
+def sanitize_batch(var, batch, data_type=None, device=None):
     """
-    Convert to Value with `data_type`. If the samples in `batch` have different
+    Convert to `:cntk:Value` with `data_type`. If the samples in `batch` have different
     sequence lengths, pad them to max sequence length and create a mask.
 
     Args:
-        batch (list of NumPy arrays): input
+        var (`:class:Variable`): variable node for which the `batch` is
+         meant
+        batch (`list` of NumPy arrays): input
 
     Returns:
-        converted batch
+        `:class:Value`: converted batch
     """
     from ..cntk_py import Value
 
     if isinstance(batch, Value):
         return batch
 
-    try:
-        num_seq = len(batch)
-    except TypeError:
-        raise ValueError('expected an object of type Value or a NumPy ' +
-                         'array and not "%s"' % type(batch))
-
-    seq_lens = [len(seq) for seq in batch]
-
-    use_mask = len(set(seq_lens)) != 1
+    # Use the mask, if we have additional dynamic axes besides the batch axis
+    use_mask = len(var.dynamic_axes())>1
     if use_mask:
+        seq_lens = [len(seq) for seq in batch]
+
+        try:
+            num_seq = len(batch)
+        except TypeError:
+            raise ValueError('expected an object of type Value or a NumPy ' +
+                             'array and not "%s"' % type(batch))
+
         # If not all sequences are of the same length, we have to pad them to
         # the same length and create a mask over the original data.
         from cntk.cntk_py import NDMask
@@ -361,18 +362,6 @@ def sanitize_batch(batch, data_type=None, device=None):
         if data_type is None:
             data_type = np.float32
         batch = np.asarray(batch, dtype=data_type)
-
-    '''
-    if is_tensor(values) or is_tensor_list(values):
-        values = np.asarray(values)
-        if dynamic_axis:
-            cntk_shape = values[0].shape[1:]
-        else:
-            cntk_shape = values[0].shape
-
-        if len(cntk_shape) == 0:
-            raise ValueError('values should be an array of input samples')
-    '''
 
     ndav = create_NDArrayView_from_NumPy(batch, device)
 
@@ -469,7 +458,7 @@ def sanitize_var_map(op_arguments, arguments, precision=None, device=None, add_b
                     batch = batch.astype(np.float32)
                 if batch.dtype not in (np.float32, np.float64):                        
                     raise ValueError('only float32 and float64 are supported')
-                batch = sanitize_batch(batch, precision, device)
+                batch = sanitize_batch(var, batch, precision, device)
             else:
                 if is_tensor(batch):
                     if precision is None:
@@ -477,7 +466,7 @@ def sanitize_var_map(op_arguments, arguments, precision=None, device=None, add_b
                     batch = np.asarray(batch, dtype=precision)
                     batch = create_Value_from_NumPy(batch, device)
                 else:
-                    batch = sanitize_batch(batch, precision, device)
+                    batch = sanitize_batch(var, batch, precision, device)
 
         var_map[var] = batch
 
@@ -618,7 +607,7 @@ def value_to_seq(value):
     np_data = value.data().to_numpy()         
     if value.mask():
         mask = value.mask().to_numpy()
-        np_data = [seq[mask[idx] == 1] for idx, seq in enumerate(np_data)]
+        np_data = [seq[mask[idx] != cntk_py.MaskKind_Invalid] for idx, seq in enumerate(np_data)]
 
     return np_data
 
