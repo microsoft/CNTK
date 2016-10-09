@@ -52,6 +52,7 @@
 #endif
 
 #define __out_z_cap(x) // a fake SAL annotation; this may come in handy some day if we try static code analysis, so I don't want to delete it
+#define FINDCLOSE_ERROR 0
 
 #include <errno.h>
 
@@ -1712,9 +1713,14 @@ public:
     }
     ~auto_find_handle()
     {
-        // TODO: Check for error code and throw if !std::uncaught_exception()
         if (h != INVALID_HANDLE_VALUE)
-            ::FindClose(h);
+        {
+            int rc = ::FindClose(h);
+            if ((rc == FINDCLOSE_ERROR) && !std::uncaught_exception())
+            {
+                RuntimeError("Release: Failed to close handle: %d", ::GetLastError());
+            }
+        }
     }
     operator HANDLE() const
     {

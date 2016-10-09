@@ -325,10 +325,6 @@ inline void swap(matrix<_T> &L, matrix<_T> &R) throw()
     L.swap(R);
 }
 
-// TODO: get rid of these
-typedef std::string STRING;
-typedef std::wstring WSTRING;
-typedef std::basic_string<TCHAR> TSTRING; // wide/narrow character string
 #endif
 
 // derive from this for noncopyable classes (will get you private unimplemented copy constructors)

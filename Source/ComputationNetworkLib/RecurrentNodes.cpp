@@ -11,6 +11,7 @@
 #include "RecurrentNodes.h"
 
 #include <unordered_set>
+#include <unordered_map>
 #include <map>
 #include <string>
 #include <vector>
@@ -114,6 +115,61 @@ template<class ElemType, int direction>
 /*virtual*/ void DelayedValueNodeBase<ElemType, direction>::BeginForwardProp() /*override*/
 {
     Base::BeginForwardProp();
+
+    // The following is specifically for handling of truncated sequences fed using the V2 API where
+    // the only information passed by the user is whether a given sequence starts in the current minibatch or not.
+    // The Recurrent nodes however currently require the actual begin time-index in the past to be specified
+    // which is actually not required since this info can be obtained from the saved m_delayedActivationMBLayout.
+    // So the V2 library just sets the sequence tBegin to be SentinelValueIndicatingUnspecifedSequenceBeginIdx if the sequence
+    // does not begin in the current MB and we patch the actual tBegin in by obtaining the info from the saved m_delayedActivationMBLayout.
+
+    // Collect the trailing sequences in each parallel stream in the previous MB
+    // TODO: Switch to a vector instead of an unordered_map
+    std::unordered_map<size_t, MBLayout::SequenceInfo> trailingSequencesOfLastMB;
+    if (m_delayedActivationMBLayout)
+    {
+        const auto& prevMBSequences = m_delayedActivationMBLayout->GetAllSequences();
+        for (const auto& sequenceInfo : prevMBSequences)
+        {
+            if (sequenceInfo.seqId != GAP_SEQUENCE_ID)
+            {
+                auto insertPos = trailingSequencesOfLastMB.insert({ sequenceInfo.s, sequenceInfo });
+                if (!insertPos.second)
+                {
+                    if (trailingSequencesOfLastMB[sequenceInfo.s].tBegin < sequenceInfo.tBegin)
+                        trailingSequencesOfLastMB[sequenceInfo.s] = sequenceInfo;
+                }
+            }
+        }
+    }
+
+    bool anySequencesPatched = false;
+    std::vector<MBLayout::SequenceInfo> patchedMBSequences = m_pMBLayout->GetAllSequences();
+    for (auto& patchedSequenceInfo : patchedMBSequences)
+    {
+        if (patchedSequenceInfo.seqId != GAP_SEQUENCE_ID)
+        {
+            if (patchedSequenceInfo.tBegin == SentinelValueIndicatingUnspecifedSequenceBeginIdx)
+            {
+                if (trailingSequencesOfLastMB.find(patchedSequenceInfo.s) == trailingSequencesOfLastMB.end())
+                    LogicError("No matching sequence found in the saved previous MBLayout to determine the real tBegin from for a truncated sequence in the current MBLayout");
+
+                anySequencesPatched = true;
+                patchedSequenceInfo.tBegin = trailingSequencesOfLastMB[patchedSequenceInfo.s].tBegin - m_delayedActivationMBLayout->GetNumTimeSteps();
+            }
+        }
+    }
+
+    // Now reconstruct the MBLayout with patched sequences if needed
+    if (anySequencesPatched)
+    {
+        auto newMBLayout = make_shared<MBLayout>();
+        newMBLayout->Init(m_pMBLayout->GetNumParallelSequences(), m_pMBLayout->GetNumTimeSteps());
+        for (auto sequence : patchedMBSequences)
+            newMBLayout->AddSequence(sequence);
+
+        m_pMBLayout->MoveFrom(newMBLayout);
+    }
 
     m_inputInvalidMatrix->SetValue(0);
 

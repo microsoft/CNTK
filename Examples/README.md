@@ -16,5 +16,5 @@ Please refer to the Readme file in the corresponding folder for further details.
 |:------------------------|:-------------------------------------------------|:----------------|
 |Other/Simple2d           | Synthetic 2d data                                | FF (CPU and GPU)
 |Speech/AN4               | Speech data (CMU AN4)                            | FF and LSTM
-|Image/MNIST              | Image data (MNIST handwritten digit recognition) | CNN 
+|Image/GettingStarted     | Image data (MNIST handwritten digit recognition) | CNN 
 |Text/PennTreebank        | Text data (penn treebank)                        | RNN

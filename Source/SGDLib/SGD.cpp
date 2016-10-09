@@ -158,6 +158,19 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
     }
     }
 
+    // This code is only relevant for the new (V2) readers. It exist because of
+    // a shortcoming in DecimateMinibatchInPlace, which does not yet work when inputs 
+    // in the same minibatch have different layouts, which is something only V2 readers can
+    // produce. 
+    if (m_enableDistributedMBReadingNotSpecified && m_mpi != nullptr && !trainSetDataReader->IsLegacyReader())
+    {
+        // we're running a parallel training with a v2 reader, 
+        // auto-enable distributed reading
+        if (m_traceLevel > 0)
+            LOGPRINTF(stderr, "\"distributedMBReading\" is not explicitly specified, defaulting to 'true'.\n");
+        m_enableDistributedMBReading = true;
+    }
+
     // determine evaluationNodes from GetEvalCriterionNodes(), ensuring each criterion is only logged once
     std::vector<ComputationNodeBasePtr> evaluationNodes;
     {
@@ -1437,19 +1450,12 @@ static double MomentumPerMB(double momentumPerSample, size_t minibatchSize)
     return pow(momentumPerSample, minibatchSize);
 }
 
-// Get{Train,Eval}CriterionNodes() return a reference that is, unfortunately, dependent on the network.
-// So we hold those inside here. Not very nice. Also not thread-safe. This may go away once we fix sequence-to-sequence models properly.
-// TODO: merge them into one.
-static map<ComputationNetworkPtr, vector<ComputationNodeBasePtr>> tmpCriterionNodeSets;
-// TODO: test this, then remove this comment
-
 template <class ElemType>
 const std::vector<ComputationNodeBasePtr>& SGD<ElemType>::GetTrainCriterionNodes(ComputationNetworkPtr net)
 {
     if (!m_trainCriterionNodeName.empty())
     {
-        tmpCriterionNodeSets[net] = net->CriterionNodesFrom(m_trainCriterionNodeName);
-        return tmpCriterionNodeSets[net];
+        return net->CriterionNodesFrom(m_trainCriterionNodeName);
     }
     else
         return net->FinalCriterionNodes();
@@ -1460,8 +1466,7 @@ const std::vector<ComputationNodeBasePtr>& SGD<ElemType>::GetEvalCriterionNodes(
 {
     if (!m_evalCriterionNodeName.empty())
     {
-        tmpCriterionNodeSets[net] = net->CriterionNodesFrom(m_evalCriterionNodeName);
-        return tmpCriterionNodeSets[net];
+        return net->CriterionNodesFrom(m_evalCriterionNodeName);
     }
     else
         return net->EvaluationNodes();
@@ -2782,6 +2787,7 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
         if (m_parallelizationStartEpochNum < 0 /* sic */)
             // Be explicit that user-facing epoch numbers are 1-based
             InvalidArgument("parallelizationStartEpoch must be greater or equal to 1");
+        m_enableDistributedMBReadingNotSpecified = !configParallelTrain.Exists(L"distributedMBReading");
         m_enableDistributedMBReading = configParallelTrain(L"distributedMBReading", false);
         m_syncStatsTrace = configParallelTrain(L"syncPerfStats", (int) 0);
 

@@ -120,6 +120,7 @@ void ReaderShim<ElemType>::StartDistributedMinibatchLoop(
 
     m_endOfEpoch = false;
     m_reader->StartEpoch(config, inputDescriptions);
+    m_currentSamplePosition = m_reader->GetCurrentSamplePosition();
 
     auto localCurrentDataTransferIndex = m_currentDataTransferIndex;
     // Starting the prefetch task. There is always a single async read in flight.
@@ -184,6 +185,10 @@ bool ReaderShim<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
     auto result = m_prefetchTask.get();
 
     // Ok, prefetch is done.
+
+    // Let's update our sample position.
+    m_currentSamplePosition = m_reader->GetCurrentSamplePosition();
+
     m_endOfEpoch = result.m_isEndOfEpoch;
     if (m_endOfEpoch && !result.m_isDataAvailable)
     {
@@ -337,6 +342,12 @@ size_t ReaderShim<ElemType>::GetNumParallelSequencesForFixingBPTTMode()
     // * ComputationNetwork::SetBatchNormalizationTimeConstants to compute actual mb size and momentum per sample
     // * SGD::AdaptiveMinibatchSizing  to compute learning rate per sample
     return m_numParallelSequences;
+}
+
+template <class ElemType>
+size_t ReaderShim<ElemType>::GetCurrentSamplePosition()
+{
+    return m_currentSamplePosition;
 }
 
 template class ReaderShim<float>;

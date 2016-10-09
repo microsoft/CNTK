@@ -26,6 +26,7 @@
 
 #define EPSILON 1e-5
 #define ISCLOSE(a, b, threshold) (abs(a - b) < threshold) ? true : false
+#define DLCLOSE_SUCCESS 0
 
 #define UNUSED(x) (void)(x) // for variables that are, e.g., only used in _DEBUG builds
 
@@ -705,9 +706,14 @@ public:
     }
     ~Plugin()
     {
-        // TODO: Check for error code and throw if !std::uncaught_exception()
         if (handle != NULL)
-            dlclose(handle);
+        {
+            int rc = dlclose(handle);
+            if ((rc != DLCLOSE_SUCCESS) && !std::uncaught_exception())
+            {
+                RuntimeError("Plugin: Failed to decrements the reference count.");
+            }
+        }
     }
 };
 #endif

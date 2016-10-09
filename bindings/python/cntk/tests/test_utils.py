@@ -19,7 +19,7 @@ PRECISION_TO_TYPE = {'float': np.float32, 'double': np.float64}
 
 AA = np.asarray
 
+
 @pytest.fixture(params=["float", "double"])
 def precision(request):
     return request.param
-
