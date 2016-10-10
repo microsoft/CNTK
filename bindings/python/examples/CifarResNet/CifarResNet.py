@@ -157,7 +157,7 @@ def cifar_resnet(base_path, debug_output=False):
     # Input variables denoting the features and label data
     image_input = input_variable(
         (num_channels, image_height, image_width), features_si.m_element_type)
-    label_var = input_variable((num_classes), features_si.m_element_type, is_sparse=True)
+    label_var = input_variable((num_classes), features_si.m_element_type)
 
     # Instantiate the resnet classification model
     classifier_output = resnet_classifer(image_input, num_classes)
