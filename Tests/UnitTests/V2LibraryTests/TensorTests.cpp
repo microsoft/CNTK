@@ -123,10 +123,11 @@ void TensorTests()
     //TestInfAndNans();
 
     TestTensorPlus<float>(0, 3, DeviceDescriptor::CPUDevice(), false);
-#ifndef CPUONLY
-    TestTensorPlus<double>(4, 1, DeviceDescriptor::GPUDevice(0), true);
-    TestTensorPlus<float>(1, 3, DeviceDescriptor::GPUDevice(0), false);
-    TestTensorPlus<double>(2, 0, DeviceDescriptor::GPUDevice(0), false);
-    TestTensorPlus<float>(0, 0, DeviceDescriptor::GPUDevice(0), false);
-#endif
+    if (IsGPUAvailable())
+    {
+        TestTensorPlus<double>(4, 1, DeviceDescriptor::GPUDevice(0), true);
+        TestTensorPlus<float>(1, 3, DeviceDescriptor::GPUDevice(0), false);
+        TestTensorPlus<double>(2, 0, DeviceDescriptor::GPUDevice(0), false);
+        TestTensorPlus<float>(0, 0, DeviceDescriptor::GPUDevice(0), false);
+    }
 }

@@ -23,7 +23,7 @@ namespace CNTK
         if (m_evaluationFunction)
             m_aggregatedEvaluationFunction = ReduceSum(m_evaluationFunction);
 
-        std::vector<FunctionPtr> combinedFunctionArgs = { m_model, m_aggregatedLossFunction, m_lossFunction };
+        std::vector<Variable> combinedFunctionArgs = { m_model, m_aggregatedLossFunction, m_lossFunction };
         if (m_evaluationFunction)
         {
             combinedFunctionArgs.push_back(m_aggregatedEvaluationFunction);

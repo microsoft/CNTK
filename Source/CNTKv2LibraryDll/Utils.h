@@ -326,14 +326,11 @@ namespace CNTK
 
     inline std::pair<NDShape, NDShape> GetConvolutionOutputMapCountAndKernelShape(const NDShape& convolutionMapShape, const NDShape& operandShape)
     {
-        auto outputMapCount = convolutionMapShape.SubShape(0, convolutionMapShape.Rank() - operandShape.Rank());
+        NDShape kernelShape = convolutionMapShape.SubShape(0, operandShape.Rank());
+        auto outputMapCount = convolutionMapShape.SubShape(kernelShape.Rank());
         NDShape paddedOutputMapCount(operandShape.Rank(), 1);
         for (size_t i = 0; i < outputMapCount.Rank(); ++i)
             paddedOutputMapCount[paddedOutputMapCount.Rank() - 1 - i] = outputMapCount[outputMapCount.Rank() - 1 - i];
-        //for (size_t i = 0; i < outputMapCount.Rank(); ++i)
-        //    paddedOutputMapCount[i] = outputMapCount[i];
-
-        NDShape kernelShape = convolutionMapShape.SubShape(outputMapCount.Rank());
 
         return{ paddedOutputMapCount, kernelShape };
     }

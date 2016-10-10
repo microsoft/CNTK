@@ -13,7 +13,7 @@ import numpy as np
 import pytest
 from .ops_test_utils import unittest_helper, _test_unary_op, _test_binary_op, AA, I, precision, PRECISION_TO_TYPE
 import cntk as C
-from ...utils import sanitize_dtype_cntk, precision_numpy
+from ...utils import sanitize_dtype_cntk
 
 EPS_IN_LOG = 1e-37        # 1e-37 is the highest guaranteed precision
 # the backward result returned by CNTK log() for epsilon

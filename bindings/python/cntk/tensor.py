@@ -49,13 +49,13 @@ class TensorOpsMixin(object):
         from . import ops
         return ops.times(other, self)
 
-    # operator overload for (\) where self is the left operand
+    # operator overload for (/) where self is the left operand
     def __truediv__(self, other):
         from . import ops
         self.__div__ = self.__truediv__
         return ops.element_divide(self, other)
 
-    # operator overload for (\) where self is the right operand
+    # operator overload for (/) where self is the right operand
     def __rtruediv__(self, other):
         from . import ops
         self.__rdiv__ = self.__rtruediv__
@@ -73,8 +73,12 @@ class TensorOpsMixin(object):
         from . import ops
         return ops.negate(self)
 
-    # TODO __lt__, __le__, __gt__, __ge__, __and__, __rand__, __or__, __ror__,
-    # __xor__, __rxor__, __pow__, __rpow__,  __invert__
+    # TODO __xor__, __rxor__, __pow__, __rpow__,  __invert__
+
+    # Comparison operators are not exposed yet, because of __eq__ being
+    # required to allow comparison of Variables on C++ so that we can say 
+    # 'for var in variables'.
+    # __lt__, __le__, __gt__, __ge__, __and__, __rand__, __or__, __ror__,
 
     def __getitem__(self, key):
         from . import ops
@@ -157,6 +161,23 @@ def _add_tensor_ops(klass):
 class EvalMixin(object):
 
     def eval(self, arguments=None, precision='float', device=None):
+        '''
+        Evaluate the node using the specified `arguments` as input.
+
+        Args:
+            arguments (`dict` or `list`): 
+              * map from input variables to the data
+              * list of inputs in the order that the function expects or 
+              Data should be either NumPy arrays or a `:class:cntk.io.MinibatchData` instance
+            precision (`str` or `np.float32` or `np.float64`): precision, if string
+             it can be one of 'float' 'float32, 'double', 'float64', or `None`
+            device (:class:`cntk.DeviceDescriptor`): the device descriptor that
+             contains the type and id of the device on which the computation is
+             to be performed.
+
+        Returns:
+            `bool`: `True` if updates have been performed
+        '''
         from .utils import eval as utils_eval
         if device is None:
             from . import DeviceDescriptor

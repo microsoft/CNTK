@@ -413,6 +413,7 @@ $(CNTKLIBRARY_LIB): $(CNTKLIBRARY_OBJ) | $(CNTKMATH_LIB)
 CNTKLIBRARY_TESTS_SRC =\
 	Tests/UnitTests/V2LibraryTests/FeedForwardTests.cpp \
 	Tests/UnitTests/V2LibraryTests/Main.cpp \
+	Tests/UnitTests/V2LibraryTests/Common.cpp \
 	Tests/UnitTests/V2LibraryTests/NDArrayViewTests.cpp \
 	Tests/UnitTests/V2LibraryTests/RecurrentFunctionTests.cpp \
 	Tests/UnitTests/V2LibraryTests/TensorTests.cpp \

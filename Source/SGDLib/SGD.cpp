@@ -1388,19 +1388,12 @@ static double MomentumPerMB(double momentumPerSample, size_t minibatchSize)
     return pow(momentumPerSample, minibatchSize);
 }
 
-// Get{Train,Eval}CriterionNodes() return a reference that is, unfortunately, dependent on the network.
-// So we hold those inside here. Not very nice. Also not thread-safe. This may go away once we fix sequence-to-sequence models properly.
-// TODO: merge them into one.
-static map<ComputationNetworkPtr, vector<ComputationNodeBasePtr>> tmpCriterionNodeSets;
-// TODO: test this, then remove this comment
-
 template <class ElemType>
 const std::vector<ComputationNodeBasePtr>& SGD<ElemType>::GetTrainCriterionNodes(ComputationNetworkPtr net)
 {
     if (!m_trainCriterionNodeName.empty())
     {
-        tmpCriterionNodeSets[net] = net->CriterionNodesFrom(m_trainCriterionNodeName);
-        return tmpCriterionNodeSets[net];
+        return net->CriterionNodesFrom(m_trainCriterionNodeName);
     }
     else
         return net->FinalCriterionNodes();
@@ -1411,8 +1404,7 @@ const std::vector<ComputationNodeBasePtr>& SGD<ElemType>::GetEvalCriterionNodes(
 {
     if (!m_evalCriterionNodeName.empty())
     {
-        tmpCriterionNodeSets[net] = net->CriterionNodesFrom(m_evalCriterionNodeName);
-        return tmpCriterionNodeSets[net];
+        return net->CriterionNodesFrom(m_evalCriterionNodeName);
     }
     else
         return net->EvaluationNodes();
