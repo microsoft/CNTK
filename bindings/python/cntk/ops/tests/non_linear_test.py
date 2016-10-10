@@ -147,9 +147,10 @@ def test_op_dropout(shape, dropout_rate, device_id, precision):
         forward_input = {a: value}
 
         forward, backward = eval(dropout_node,
+                                 forward_input,
+                                 None,
                                  precision,
                                  cntk_device(device_id),
-                                 forward_input,
                                  backward_pass=True)
 
         resulted_non_zeros += np.count_nonzero(forward[dropout_node.output()])
