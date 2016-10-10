@@ -48,7 +48,7 @@ public:
     }
 
     // returns evaluation node values per sample determined by evalNodeNames (which can include both training and eval criterion nodes)
-    vector<EpochCriterion> Evaluate(IDataReader* dataReader, const vector<wstring>& evalNodeNames, const size_t mbSize, const size_t testSize = requestDataSize)
+    vector<EpochCriterion> Evaluate(IDataReader* dataReader, const vector<wstring>& evalNodeNames, const size_t mbSize, const size_t testSize = requestDataSize, const bool useDataParallelASGD = false)
     {
         ScopedNetworkOperationMode modeGuard(m_net, NetworkOperationMode::inferring);
 
@@ -107,7 +107,7 @@ public:
 
         std::vector<EpochCriterion> evalResultsLastLogged(evalResults.size(), EpochCriterion(0));
 
-        bool useParallelTrain = (m_mpi != nullptr);
+        bool useParallelTrain = (m_mpi != nullptr) && !useDataParallelASGD;
         bool useDistributedMBReading = useParallelTrain && m_enableDistributedMBReading && dataReader->SupportsDistributedMBRead();
         if (useDistributedMBReading)
             dataReader->StartDistributedMinibatchLoop(mbSize, 0, m_mpi->CurrentNodeRank(), m_mpi->NumNodesInUse(), inputMatrices.GetStreamDescriptions(), testSize);
@@ -146,7 +146,7 @@ public:
                 actualMBSize = 0; // (undefined if !wasDataRead)
 
             if (actualMBSize > 0)
-        {
+            {
 
             size_t actualNumSubminibatches = numSubminibatchesNeeded <= 1 ? 1 : smbDispatcher.GetMinibatchIntoCache(*dataReader, *m_net, inputMatrices, numSubminibatchesNeeded);
             for (size_t ismb = 0; ismb < actualNumSubminibatches; ismb++)
