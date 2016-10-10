@@ -590,10 +590,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         if (validationSetDataReader != trainSetDataReader && validationSetDataReader != nullptr)
         {
             // TODO(dataASGD) making evaluator becoming nondistributed one when using asynchonized data parallel.
-            if (UsingAsyncGradientAggregation(i+1))
-                SimpleEvaluator<ElemType> evalforvalidation(net, nullptr, m_enableDistributedMBReading);
-            else
-                SimpleEvaluator<ElemType> evalforvalidation(net, m_mpi, m_enableDistributedMBReading);
+            SimpleEvaluator<ElemType> evalforvalidation(net, UsingAsyncGradientAggregation(i + 1) ?nullptr : m_mpi, m_enableDistributedMBReading);
             vector<wstring> cvSetTrainAndEvalNodes;
             if (criterionNodes.size() > 0)
             {
