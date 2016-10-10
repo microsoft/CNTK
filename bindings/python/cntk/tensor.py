@@ -160,7 +160,7 @@ def _add_tensor_ops(klass):
 
 class EvalMixin(object):
 
-    def eval(self, arguments=None, seqStarts=None, precision='float', device=None):
+    def eval(self, arguments=None, seq_starts=None, precision='float', device=None):
         '''
         Evaluate the node using the specified `arguments` as input.
 
@@ -169,7 +169,7 @@ class EvalMixin(object):
               * map from input variables to the data
               * list of inputs in the order that the function expects or 
               Data should be either NumPy arrays or a `:class:cntk.io.MinibatchData` instance
-            seqStarts (`list` of `bool`s or `None`): if `None`, every sequence is
+            seq_starts (`list` of `bool`s or `None`): if `None`, every sequence is
              treated as a new sequence. Otherwise, it is interpreted as a list of
              Booleans that tell whether a sequence is a new sequence (`True`) or a
              continuation of the previous one (`False`)
@@ -194,7 +194,7 @@ class EvalMixin(object):
         if arguments is None:
             arguments = {}
 
-        result, _ = utils_eval(self, arguments, seqStarts, precision, device, False)
+        result, _ = utils_eval(self, arguments, seq_starts, precision, device, False)
         return result.popitem()[1]
 
 
