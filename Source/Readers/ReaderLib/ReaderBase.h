@@ -27,6 +27,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // Reads a single minibatch.
         Minibatch ReadMinibatch() override;
 
+        // Returns current position in the global timeline. The returned value is in samples.
+        size_t GetCurrentSamplePosition() override;
+
         virtual ~ReaderBase() = 0;
 
     protected:

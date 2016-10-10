@@ -208,8 +208,10 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
     else if (EqualInsensitive(nodeType, OperationNameOf(PerDimMeanVarNormalizationNode), L"PerDimMVNorm")) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(PlusNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(ReciprocalNode))) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(ReconcileDynamicAxisNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(RectifiedLinearNode), L"ReLU")) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(ReshapeNode))) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(ROIPoolingNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(RowRepeatNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(RowStackNode))) ret = true;
 #ifdef COMING_SOON

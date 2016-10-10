@@ -212,6 +212,11 @@ public:
     {
         pMBLayout->CopyFrom(m_pMBLayout);
     }
+
+    size_t GetCurrentSamplePosition() override
+    {
+        return m_mbiter->currentmbstartframe();
+    }
     //bool RequireSentenceSeg() const override { return !m_framemode; };
 };
 } } }

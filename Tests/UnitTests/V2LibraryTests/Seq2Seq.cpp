@@ -38,8 +38,8 @@ void TrainSequenceToSequenceTranslator(const DeviceDescriptor& device, bool useS
     bool forceEmbedding = useSparseInputs;
 
     /* Embeddings */
-    auto inputEmbeddingWeights = Parameter(NDArrayView::RandomUniform<float>({ inputEmbeddingDim, inputVocabDim }, -0.05, 0.05, 1, device));
-    auto labelEmbeddingWeights = Parameter(NDArrayView::RandomUniform<float>({ labelEmbeddingDim, labelVocabDim }, -0.05, 0.05, 1, device));
+    auto inputEmbeddingWeights = Parameter({ inputEmbeddingDim, inputVocabDim }, DataType::Float, GlorotUniformInitializer(), device);
+    auto labelEmbeddingWeights = Parameter({ labelEmbeddingDim, labelVocabDim }, DataType::Float, GlorotUniformInitializer(), device);
 
     auto inputEmbedding = (!forceEmbedding && (inputVocabDim <= inputEmbeddingDim)) ? inputSequence : Times(inputEmbeddingWeights, inputSequence);
     auto labelEmbedding = (!forceEmbedding && (labelVocabDim <= labelEmbeddingDim)) ? labelSequence : Times(labelEmbeddingWeights, labelSequence);
@@ -80,7 +80,7 @@ void TrainSequenceToSequenceTranslator(const DeviceDescriptor& device, bool useS
     for (size_t i = 0; i < numLayers; ++i)
     {
         std::function<FunctionPtr(const Variable&)> recurrenceHookH, recurrenceHookC;
-        if (i == 0)
+        if (i > 0)
         {
             recurrenceHookH = pastValueRecurrenceHookWithBeamSearchReordering;
             recurrenceHookC = pastValueRecurrenceHookWithBeamSearchReordering;
@@ -111,7 +111,7 @@ void TrainSequenceToSequenceTranslator(const DeviceDescriptor& device, bool useS
     auto decoderDim = hiddenDim;
 
     /* Softmax output layer */
-    auto outputLayerProjWeights = Parameter(NDArrayView::RandomUniform<float>({ labelVocabDim, decoderDim }, -0.05, 0.05, 1, device));
+    auto outputLayerProjWeights = Parameter({ labelVocabDim, decoderDim }, DataType::Float, GlorotUniformInitializer(), device);
     auto biasWeights = Parameter({ labelVocabDim }, 0.0f, device);
 
     auto z = Plus(Times(outputLayerProjWeights, Stabilize<float>(decoderOutput, device)), biasWeights, L"classifierOutput");
@@ -143,9 +143,10 @@ void TrainSequenceToSequenceTranslator(const DeviceDescriptor& device, bool useS
     double learningRatePerSample = 0.007;
     size_t momentumTimeConstant = 1100;
     double momentumPerSample = std::exp(-1.0 / momentumTimeConstant);
-    double clippingThresholdPerSample = 2.3;
-    bool gradientClippingWithTruncation = true;
-    Trainer trainer(z, ce, errs, { MomentumSGDLearner(z->Parameters(), learningRatePerSample, momentumPerSample, clippingThresholdPerSample, gradientClippingWithTruncation) });
+    AdditionalLearningOptions additionalOptions;
+    additionalOptions.gradientClippingThresholdPerSample = 2.3;
+    additionalOptions.gradientClippingWithTruncation = true;
+    Trainer trainer(z, ce, errs, { MomentumSGDLearner(z->Parameters(), learningRatePerSample, momentumPerSample, additionalOptions) });
 
     size_t outputFrequencyInMinibatches = 1;
     size_t minibatchSize = 72;
@@ -181,8 +182,9 @@ void TrainSequenceToSequenceTranslator(const DeviceDescriptor& device, bool useS
 void TrainSequenceToSequenceTranslator()
 {
     // TODO: Also test with sparse input variables in the graph
-#ifndef CPUONLY
-    TrainSequenceToSequenceTranslator(DeviceDescriptor::GPUDevice(0), false, false, true, false);
-#endif
+    if (IsGPUAvailable())
+    {
+        TrainSequenceToSequenceTranslator(DeviceDescriptor::GPUDevice(0), false, false, true, false);
+    }
     TrainSequenceToSequenceTranslator(DeviceDescriptor::CPUDevice(), false, true, false, true);
 }

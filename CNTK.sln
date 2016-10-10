@@ -174,7 +174,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "DoublePrecision", "DoublePr
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Kaldi2Reader", "Kaldi2Reader", "{C70E1572-20FF-496C-A0A9-10AA6755A07C}"
 	ProjectSection(SolutionItems) = preProject
-		Source\Readers\Kaldi2Reader\basetypes.h = Source\Readers\Kaldi2Reader\basetypes.h
 		Source\Readers\Kaldi2Reader\biggrowablevectors.h = Source\Readers\Kaldi2Reader\biggrowablevectors.h
 		Source\Readers\Kaldi2Reader\chunkevalsource.h = Source\Readers\Kaldi2Reader\chunkevalsource.h
 		Source\Readers\Kaldi2Reader\DataReader.cpp = Source\Readers\Kaldi2Reader\DataReader.cpp

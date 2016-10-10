@@ -41,6 +41,12 @@ public:
         m_outputStreams = transformedStreams;
     }
 
+    // Returns current position in the global timeline. The returned value is in samples.
+    size_t GetCurrentSamplePosition() override
+    {
+        return m_sequenceProvider->GetCurrentSamplePosition();
+    }
+
     // Sets configuration for the current epoch.
     // Some transformers can change their config based on the epoch.
     virtual void StartEpoch(const EpochConfiguration &config) override

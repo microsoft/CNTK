@@ -5,7 +5,11 @@
 #include <multiverso/util/log.h>
 #include <multiverso/util/configure.h>
 
+#ifdef MULTIVERSO_USE_MATRIXTABLE
 #include <multiverso/table/matrix.h>
+#else
+#include <multiverso/table/array_table.h>
+#endif
 #include <multiverso/updater/updater.h>
 
 #pragma comment(lib, "Multiverso.lib")
@@ -154,6 +158,7 @@ void InitModel(const std::list<ComputationNodeBasePtr> & learnableNodes)
     // because the parameter server will minus the delta on the server, so that we should send the minus initial model to the server.
     std::transform(m_deltaArray, m_deltaArray + m_totalModelSize, m_deltaArray, std::bind1st(std::multiplies<ElemType>(), -factor));
 
+#ifdef MULTIVERSO_USE_MATRIXTABLE
     for (int widx = 0; widx < m_tableCount; widx++)
     {
         if (m_isSparseArray[widx])
@@ -175,6 +180,12 @@ void InitModel(const std::list<ComputationNodeBasePtr> & learnableNodes)
             multiversoMatrix->Get(px, m_tableLength[widx]);
         }
     }
+#else
+    m_workerArray->Add(m_deltaArray, m_totalModelSize);
+    m_workerArray->Get(m_deltaArray, m_totalModelSize);
+    WaitAll();
+    m_workerArray->Get(m_deltaArray, m_totalModelSize);
+#endif
 
     if (std::equal(m_deltaArray, m_deltaArray + m_totalModelSize, m_cpuAsyncBuffer[0]))
         multiverso::Log::Info("multiverso initial model loaded.\n");
@@ -280,6 +291,7 @@ bool PushAndPullModel(const std::list<ComputationNodeBasePtr> & learnableNodes, 
                            m_deltaArray, 
                            std::bind1st(std::multiplies<ElemType>(), factor));
 
+#ifdef MULTIVERSO_USE_MATRIXTABLE
             for (int widx = 0; widx < m_tableCount; widx++)
             {
                 if (m_isSparseArray[widx])
@@ -299,6 +311,13 @@ bool PushAndPullModel(const std::list<ComputationNodeBasePtr> & learnableNodes, 
                     multiversoMatrix->Get(py, m_tableLength[widx]);
                 }
             }
+#else
+           ElemType* px = m_deltaArray;
+           ElemType* py = m_cpuAsyncBuffer[m_bufferIndexInUse];
+           m_workerArray->AddAsync(px, m_totalModelSize);
+           m_workerArray->Get(py, m_totalModelSize);
+
+#endif
             threadTimer.Stop();
             if (m_traceLevel > 3)
             {
@@ -333,6 +352,7 @@ bool PushAndPullModel(const std::list<ComputationNodeBasePtr> & learnableNodes, 
 
             std::transform(m_cpuAsyncBuffer[t_cacheIdx], m_cpuAsyncBuffer[t_cacheIdx] + m_totalModelSize, m_deltaArray, m_deltaArray, std::minus<ElemType>());
             std::transform(m_deltaArray, m_deltaArray + m_totalModelSize, m_deltaArray, std::bind1st(std::multiplies<ElemType>(), factor));
+#ifdef MULTIVERSO_USE_MATRIXTABLEM
             for (int widx = 0; widx < m_tableCount; widx++)
             {
                 auto multiversoMatrix = m_matrixMap->at(widx);
@@ -341,6 +361,12 @@ bool PushAndPullModel(const std::list<ComputationNodeBasePtr> & learnableNodes, 
                 multiversoMatrix->Add(px, m_tableLength[widx], m_addOptions[t_cacheIdx]);
                 multiversoMatrix->Get(py, m_tableLength[widx], m_getOptions[t_cacheIdx]);
             }
+#else
+            ElemType* px = m_deltaArray;
+            ElemType* py = m_cpuAsyncBuffer[t_cacheIdx];
+            m_workerArray->AddAsync(px, m_totalModelSize);
+            m_workerArray->Get(py, m_totalModelSize);
+#endif
 
         });
 #endif
@@ -386,6 +412,7 @@ bool PushAndPullModel(const std::list<ComputationNodeBasePtr> & learnableNodes, 
             std::transform(m_deltaArray, m_deltaArray + m_totalModelSize, m_deltaArray, std::bind1st(std::multiplies<ElemType>(), factor));
         }
         m_reportTimer.Restart();
+#ifdef MULTIVERSO_USE_MATRIXTABLE 
         for (int widx = 0; widx < m_tableCount; widx++)
         {
             if (m_isSparseArray[widx])
@@ -405,6 +432,12 @@ bool PushAndPullModel(const std::list<ComputationNodeBasePtr> & learnableNodes, 
                 multiversoMatrix->Get(py, m_tableLength[widx]);
             }
         }
+#else
+        ElemType* px = m_deltaArray;
+        ElemType* py = m_cpuAsyncBuffer[0];
+        m_workerArray->AddAsync(px, m_totalModelSize);
+        m_workerArray->Get(py, m_totalModelSize);
+#endif
         m_reportTimer.Stop();
         if (m_traceLevel > 3)
         {
@@ -466,6 +499,7 @@ private:
         multiverso::SetCMDFlag<std::string>(std::string("updater_type"), std::string("sgd"));
         multiverso::MV_Init();
 
+#ifdef MULTIVERSO_USE_MATRIXTABLE 
         for (int i = 0; i < m_localBufferNum; i++)
         {
             m_getOptions.push_back(new multiverso::GetOption());
@@ -479,12 +513,14 @@ private:
 
         //weights
         std::wstring sparse_tag{ L"Sparse" };
+#endif
         int i = 0;
         for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++, i++)
         {
             ComputationNodePtr node = dynamic_pointer_cast<ComputationNode<ElemType>>(*nodeIter);
             Matrix<ElemType> &mat = node->Value();
             size_t layerSize = mat.GetNumElements();
+#ifdef MULTIVERSO_USE_MATRIXTABLE
             size_t layerRowSize = mat.GetNumRows();
             size_t layerColSize = mat.GetNumCols();
             std::wstring nodeName = node->NodeName();
@@ -506,6 +542,7 @@ private:
                 m_matrixMap->push_back(new multiverso::MatrixWorker<ElemType>(layerRowSize, layerColSize, false));
                 m_serverMap->push_back(new multiverso::MatrixServer<ElemType>(layerRowSize, layerColSize, false, m_useAsyncBuffered));
             }
+#endif
 
             m_tableLength.push_back(layerSize);
         }
@@ -514,6 +551,11 @@ private:
 
         // cacluate total of learnable node's size
         m_totalModelSize = accumulate(m_tableLength.begin(), m_tableLength.end(), 0);
+
+#ifndef MULTIVERSO_USE_MATRIXTABLE
+        m_serverArray = new multiverso::ArrayServer<ElemType>(m_totalModelSize);
+        m_workerArray = new multiverso::ArrayWorker<ElemType>(m_totalModelSize);
+#endif
 
         multiverso::MV_Barrier();
 
@@ -604,9 +646,16 @@ private:
         m_sampleSinceLastReport = 0;
 
     }
+
+#ifdef MULTIVERSO_USE_MATRIXTABLE
     std::vector<multiverso::MatrixWorker<ElemType>*>* m_matrixMap;
     std::vector<multiverso::MatrixServer<ElemType>*>* m_serverMap;
     std::vector<bool> m_isSparseArray;
+    //Todo(qiwye): using ArrayTable for less comunications between servers and workers.
+#else
+    multiverso::ArrayServer<ElemType>* m_serverArray;
+    multiverso::ArrayWorker<ElemType>* m_workerArray;
+#endif
 
     thread * m_aysncBufferThread;
     bool m_isInitialized;
