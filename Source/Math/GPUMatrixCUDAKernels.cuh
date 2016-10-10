@@ -5285,6 +5285,8 @@ __global__ void _assignAlphaScore_m(
 	LONG64 alphaid_1 = maxphonenum* timeid_1 + phoneseqid-1;
 	LONG64 alphaid_2 = maxphonenum* timeid_1 + phoneseqid-2;
 
+    LONG64 t_l=0;
+
 	if (t == 0)
 	{
 		if (phoneseqid >= 1 && phoneseqid < 3)
@@ -5322,16 +5324,24 @@ __global__ void _assignAlphaScore_m(
 			if (phoneid != 65535)
 				ascore = prob[probid];
 			else
-				ascore = 0;           
+				ascore = 0;       
+            Alphascore[alphaid] = (ElemType)x + ascore;
             if (delayConstraint !=-1)
             {
-                if (phoneid == totalphonenum - 1 && (t > phoneboundid_r + delayConstraint - 1 || t < phoneboundid_l - delayConstraint - 1))
-                    Alphascore[alphaid] = LZERO;
-                else if (phoneid != totalphonenum - 1 && (t > phoneboundid_r + delayConstraint || t < phoneboundid_l - delayConstraint))
-                    Alphascore[alphaid] = LZERO;
+                if (phoneid == totalphonenum - 1 )
+                {
+                    t_l = max(phoneboundid_l - delayConstraint - 1, (LONG64)0);
+                    if (t > phoneboundid_r + delayConstraint - 1 || t < t_l)
+                        Alphascore[alphaid] = LZERO;
+                }
+                else if (phoneid != totalphonenum - 1)
+                {
+                    t_l = max(phoneboundid_l - delayConstraint, (LONG64)0);
+                    if (t > phoneboundid_r + delayConstraint || t < t_l)
+                        Alphascore[alphaid] = LZERO;
+                }
             }          
-            else
-			    Alphascore[alphaid] = (ElemType)x + ascore;
+            
 		}
 	}
 	//__syncthreads();
@@ -5378,6 +5388,7 @@ __global__ void _assignBetaScore_m(
 	LONG64 betaid_1 = maxphonenum* timeid_1 + phoneseqid + 1;
 	LONG64 betaid_2 = maxphonenum* timeid_1 + phoneseqid + 2;
 
+    LONG64 t_l;
 	if (t == framenum - 1)
 	{
 		if (phoneseqid >= phonenum - 3 && phoneseqid < phonenum - 1)
@@ -5413,15 +5424,24 @@ __global__ void _assignBetaScore_m(
 				ascore = prob[probid];
 			else
 				ascore = 0;
+            Betascore[betaid] = (ElemType)x + ascore;
             if (delayConstraint != -1)
             {
-                if (phoneid == totalphonenum - 1 && (t > phoneboundid_r + delayConstraint - 1 || t < phoneboundid_l - delayConstraint - 1))
-                    Betascore[betaid] = LZERO;
-                else if (phoneid != totalphonenum - 1 && (t > phoneboundid_r + delayConstraint || t < phoneboundid_l - delayConstraint))
-                    Betascore[betaid] = LZERO;
+                if (phoneid == totalphonenum - 1)
+                {
+                    t_l = max(phoneboundid_l - delayConstraint - 1, (LONG64)0);
+                    if (t > phoneboundid_r + delayConstraint - 1 || t < t_l)
+                        Betascore[betaid] = LZERO;
+                }
+                else if (phoneid != totalphonenum - 1)
+                {
+                    t_l = max(phoneboundid_l - delayConstraint, (LONG64)0);
+                    if (t > phoneboundid_r + delayConstraint || t < t_l)
+                        Betascore[betaid] = LZERO;
+                }
             }
-            else
-			    Betascore[betaid] = (ElemType)x + ascore;
+            
+			    
 		}
 
 	}
