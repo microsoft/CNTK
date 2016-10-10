@@ -589,7 +589,11 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
 
         if (validationSetDataReader != trainSetDataReader && validationSetDataReader != nullptr)
         {
-            SimpleEvaluator<ElemType> evalforvalidation(net, m_mpi, m_enableDistributedMBReading);
+            // TODO(dataASGD) making evaluator becoming nondistributed one when using asynchonized data parallel.
+            if (UsingAsyncGradientAggregation(i+1))
+                SimpleEvaluator<ElemType> evalforvalidation(net, nullptr, m_enableDistributedMBReading);
+            else
+                SimpleEvaluator<ElemType> evalforvalidation(net, m_mpi, m_enableDistributedMBReading);
             vector<wstring> cvSetTrainAndEvalNodes;
             if (criterionNodes.size() > 0)
             {
@@ -601,8 +605,8 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
             }
 
             // BUGBUG: We should not use the training MB size. The training MB size is constrained by both convergence and memory. Eval is only constrained by memory.
-            // Todo(dataASGD) cross validating should set to nondistributed reader while using asynchonized data parallel
-            let vScore = evalforvalidation.Evaluate(validationSetDataReader, cvSetTrainAndEvalNodes, m_mbSize[i], UsingAsyncGradientAggregation(i));
+            // Todo(dataASGD) adding an options for that the cross validating should set to nondistributed reader while using asynchonized data parallel
+            let vScore = evalforvalidation.Evaluate(validationSetDataReader, cvSetTrainAndEvalNodes, m_mbSize[i]);
             LOGPRINTF(stderr, "Finished Epoch[%2d of %d]: [Validate] ", i + 1, (int)m_maxEpochs);
             for (size_t k = 0; k < vScore.size() /*&& k < 2*/; k++)
                 vScore[k].LogCriterion(cvSetTrainAndEvalNodes[k], /*addSemicolon=*/k + 1 < vScore.size());

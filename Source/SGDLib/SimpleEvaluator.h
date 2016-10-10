@@ -48,7 +48,7 @@ public:
     }
 
     // returns evaluation node values per sample determined by evalNodeNames (which can include both training and eval criterion nodes)
-    vector<EpochCriterion> Evaluate(IDataReader* dataReader, const vector<wstring>& evalNodeNames, const size_t mbSize, const size_t testSize = requestDataSize, const bool useDataParallelASGD = false)
+    vector<EpochCriterion> Evaluate(IDataReader* dataReader, const vector<wstring>& evalNodeNames, const size_t mbSize, const size_t testSize = requestDataSize)
     {
         ScopedNetworkOperationMode modeGuard(m_net, NetworkOperationMode::inferring);
 
@@ -107,7 +107,7 @@ public:
 
         std::vector<EpochCriterion> evalResultsLastLogged(evalResults.size(), EpochCriterion(0));
 
-        bool useParallelTrain = (m_mpi != nullptr) && !useDataParallelASGD;
+        bool useParallelTrain = (m_mpi != nullptr);
         bool useDistributedMBReading = useParallelTrain && m_enableDistributedMBReading && dataReader->SupportsDistributedMBRead();
         if (useDistributedMBReading)
             dataReader->StartDistributedMinibatchLoop(mbSize, 0, m_mpi->CurrentNodeRank(), m_mpi->NumNodesInUse(), inputMatrices.GetStreamDescriptions(), testSize);
