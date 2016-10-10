@@ -136,6 +136,9 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ComputationNetworkLib", "Source\ComputationNetworkLib\ComputationNetworkLib.vcxproj", "{928ABD1B-4D3B-4017-AEF1-0FA1B4467513}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SGDLib", "Source\SGDLib\SGDLib.vcxproj", "{DE3C54E5-D7D0-47AF-A783-DFDCE59E7937}"
+	ProjectSection(ProjectDependencies) = postProject
+		{16F14058-B116-49D9-8BA0-209F3AFFE849} = {16F14058-B116-49D9-8BA0-209F3AFFE849}
+	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ParallelTraining", "ParallelTraining", "{5E666C53-2D82-49C9-9127-3FDDC321C741}"
 	ProjectSection(SolutionItems) = preProject
@@ -511,9 +514,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "VGG", "VGG", "{BC0D6DFF-80C
 		Examples\Image\Miscellaneous\ImageNet\VGG\add_top5_layer.mel = Examples\Image\Miscellaneous\ImageNet\VGG\add_top5_layer.mel
 		Examples\Image\Miscellaneous\ImageNet\VGG\ImageNet1K_mean.xml = Examples\Image\Miscellaneous\ImageNet\VGG\ImageNet1K_mean.xml
 		Examples\Image\Miscellaneous\ImageNet\VGG\Macros.ndl = Examples\Image\Miscellaneous\ImageNet\VGG\Macros.ndl
-		Examples\Image\Miscellaneous\ImageNet\VGG\VGG_A_ndl_deprecated.cntk = Examples\Image\Miscellaneous\ImageNet\VGG\VGG_A_ndl_deprecated.cntk
 		Examples\Image\Miscellaneous\ImageNet\VGG\VGG_A.ndl = Examples\Image\Miscellaneous\ImageNet\VGG\VGG_A.ndl
-		Examples\Image\Miscellaneous\ImageNet\VGG\VGG_E_ndl_deprecated.cntk = Examples\Image\Miscellaneous\ImageNet\VGG\VGG_E_ndl_deprecated.cntk
+		Examples\Image\Miscellaneous\ImageNet\VGG\VGG_A_ndl_deprecated.cntk = Examples\Image\Miscellaneous\ImageNet\VGG\VGG_A_ndl_deprecated.cntk
 		Examples\Image\Miscellaneous\ImageNet\VGG\VGG_E.ndl = Examples\Image\Miscellaneous\ImageNet\VGG\VGG_E.ndl
 		Examples\Image\Miscellaneous\ImageNet\VGG\VGG_E_BN.ndl = Examples\Image\Miscellaneous\ImageNet\VGG\VGG_E_BN.ndl
 		Examples\Image\Miscellaneous\ImageNet\VGG\VGG_E_BN_ndl_deprecated.cntk = Examples\Image\Miscellaneous\ImageNet\VGG\VGG_E_BN_ndl_deprecated.cntk
@@ -1263,6 +1265,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CSEvalClientTest", "Tests\E
 EndProject
 Project("{888888A0-9F3D-457C-B088-3A5042F75D52}") = "CNTKv2", "bindings\python\examples\CNTKv2.pyproj", "{1A078FC2-21C0-4F42-9A5B-0E84E944BC74}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Multiverso", "Source\Multiverso\src\Multiverso.vcxproj", "{16F14058-B116-49D9-8BA0-209F3AFFE849}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug_CpuOnly|Any CPU = Debug_CpuOnly|Any CPU
@@ -1989,6 +1993,26 @@ Global
 		{1A078FC2-21C0-4F42-9A5B-0E84E944BC74}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1A078FC2-21C0-4F42-9A5B-0E84E944BC74}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
 		{1A078FC2-21C0-4F42-9A5B-0E84E944BC74}.Release|x64.ActiveCfg = Release|Any CPU
+		{16F14058-B116-49D9-8BA0-209F3AFFE849}.Debug_CpuOnly|Any CPU.ActiveCfg = debug|x64
+		{16F14058-B116-49D9-8BA0-209F3AFFE849}.Debug_CpuOnly|Mixed Platforms.ActiveCfg = debug|x64
+		{16F14058-B116-49D9-8BA0-209F3AFFE849}.Debug_CpuOnly|Mixed Platforms.Build.0 = debug|x64
+		{16F14058-B116-49D9-8BA0-209F3AFFE849}.Debug_CpuOnly|x64.ActiveCfg = Debug_CpuOnly|x64
+		{16F14058-B116-49D9-8BA0-209F3AFFE849}.Debug_CpuOnly|x64.Build.0 = Debug_CpuOnly|x64
+		{16F14058-B116-49D9-8BA0-209F3AFFE849}.Debug|Any CPU.ActiveCfg = debug|x64
+		{16F14058-B116-49D9-8BA0-209F3AFFE849}.Debug|Mixed Platforms.ActiveCfg = debug|x64
+		{16F14058-B116-49D9-8BA0-209F3AFFE849}.Debug|Mixed Platforms.Build.0 = debug|x64
+		{16F14058-B116-49D9-8BA0-209F3AFFE849}.Debug|x64.ActiveCfg = debug|x64
+		{16F14058-B116-49D9-8BA0-209F3AFFE849}.Debug|x64.Build.0 = debug|x64
+		{16F14058-B116-49D9-8BA0-209F3AFFE849}.Release_CpuOnly|Any CPU.ActiveCfg = Release|x64
+		{16F14058-B116-49D9-8BA0-209F3AFFE849}.Release_CpuOnly|Mixed Platforms.ActiveCfg = Release|x64
+		{16F14058-B116-49D9-8BA0-209F3AFFE849}.Release_CpuOnly|Mixed Platforms.Build.0 = Release|x64
+		{16F14058-B116-49D9-8BA0-209F3AFFE849}.Release_CpuOnly|x64.ActiveCfg = Release_CpuOnly|x64
+		{16F14058-B116-49D9-8BA0-209F3AFFE849}.Release_CpuOnly|x64.Build.0 = Release_CpuOnly|x64
+		{16F14058-B116-49D9-8BA0-209F3AFFE849}.Release|Any CPU.ActiveCfg = Release|x64
+		{16F14058-B116-49D9-8BA0-209F3AFFE849}.Release|Mixed Platforms.ActiveCfg = Release|x64
+		{16F14058-B116-49D9-8BA0-209F3AFFE849}.Release|Mixed Platforms.Build.0 = Release|x64
+		{16F14058-B116-49D9-8BA0-209F3AFFE849}.Release|x64.ActiveCfg = Release|x64
+		{16F14058-B116-49D9-8BA0-209F3AFFE849}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -2163,5 +2187,6 @@ Global
 		{CCC07E8E-F33A-4AF7-9F60-93E2AA61C75E} = {05E45AF7-C069-4057-BC16-0A532D068CE4}
 		{1C6E6C53-1AA7-4B69-913E-B97BB5A872CF} = {05E45AF7-C069-4057-BC16-0A532D068CE4}
 		{1A078FC2-21C0-4F42-9A5B-0E84E944BC74} = {47755F2E-D674-4175-9E38-8EA053455072}
+		{16F14058-B116-49D9-8BA0-209F3AFFE849} = {DD043083-71A4-409A-AA91-F9C548DCF7EC}
 	EndGlobalSection
 EndGlobal
