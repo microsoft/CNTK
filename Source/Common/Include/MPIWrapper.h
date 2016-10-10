@@ -1,9 +1,8 @@
+//
+// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.md file in the project root for full licence information.
+//
 #pragma once
-
-// TODO: make this discoverable/settable during compilation, not hardcoded here
-#if !defined(HAS_OPENMPI)
-#define HAS_OPENMPI 1
-#endif
 
 #if HAS_OPENMPI
 // Please see https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Windows#ms-mpi or
