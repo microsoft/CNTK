@@ -144,11 +144,14 @@
     <ClInclude Include="..\Common\Include\NoMultiversoWrapper.h">
       <Filter>Parallelization</Filter>
     </ClInclude>
-	<ClInclude Include="MASGD.h">
+    <ClInclude Include="MASGD.h">
       <Filter>Parallelization</Filter>
     </ClInclude>
     <ClInclude Include="Criterion.h">
       <Filter>SGD</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Common\Include\ASGDCommon.h">
+      <Filter>Parallelization</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
