@@ -136,7 +136,7 @@ void TrainResNetCifarClassifer(const DeviceDescriptor& device, bool testSaveAndR
     auto classifierOutput = ResNetClassifier(imageInput, numOutputClasses, device, L"classifierOutput");
 
     auto labelsInputName = L"Labels";
-    auto labelsVar = InputVariable({ numOutputClasses }, labelStreamInfo.m_elementType, labelsInputName);
+    auto labelsVar = InputVariable({ numOutputClasses }, true /*isSparse*/, labelStreamInfo.m_elementType, labelsInputName);
     auto trainingLoss = CrossEntropyWithSoftmax(classifierOutput, labelsVar, L"lossFunction");
     auto prediction = ClassificationError(classifierOutput, labelsVar, L"predictionError");
 

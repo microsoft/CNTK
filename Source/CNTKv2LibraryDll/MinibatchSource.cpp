@@ -136,7 +136,7 @@ namespace CNTK
         for (auto streamDesc : m_compositeDataReaderStreamDescs)
             m_streamInfos.insert({ streamDesc->m_name, streamDesc->m_id, AsStorageFormat(streamDesc->m_storageType), AsDataType(streamDesc->m_elementType), AsNDShape(*(streamDesc->m_sampleLayout)) });
 
-        m_shim = std::make_shared<ReaderShim<float>>(compositeDataReader);
+        m_shim = std::shared_ptr<ReaderShim<float>>(new ReaderShim<float>(compositeDataReader), [](ReaderShim<float>* x) { x->Destroy(); });
         m_shim->Init(config);
     }
 
@@ -159,15 +159,15 @@ namespace CNTK
             {
                 // TODO: Add support for distributed reading
                 EpochConfiguration epochConfig = { 1, 0, minibatchSizeInSamples, m_epochSize, 0, 0 };
+                m_matrices.clear();
 
                 std::unordered_set<InputStreamDescription> inputs;
-                StreamMinibatchInputs matrices;
                 for (const auto& s : m_streamInfos)
                 {
                     assert(s.m_storageFormat == StorageFormat::Dense || s.m_storageFormat == StorageFormat::SparseCSC);
                     auto inputStreamDescription = InputStreamDescription(
                         s.m_name,
-                        device.Id(),
+                        AsCNTKImplDeviceId(device),
                         s.m_storageFormat == StorageFormat::Dense ? MatrixType::DENSE : MatrixType::SPARSE,
                         s.m_storageFormat == StorageFormat::Dense ? MatrixFormat::matrixFormatDense : MatrixFormat::matrixFormatSparseCSC);
                     inputs.insert(inputStreamDescription);
@@ -179,7 +179,7 @@ namespace CNTK
                         });
                         assert(iter != m_compositeDataReaderStreamDescs.end());
 
-                        matrices.AddInput(
+                        m_matrices.AddInput(
                             s.m_name,
                             std::make_shared<Matrix<float>>(0, 0, inputStreamDescription.GetDeviceId(), inputStreamDescription.GetMatrixType(), inputStreamDescription.GetMatrixFormat()),
                             std::make_shared<MBLayout>(),

@@ -184,7 +184,7 @@ void TrainSequenceToSequenceTranslator()
     // TODO: Also test with sparse input variables in the graph
     if (IsGPUAvailable())
     {
-        TrainSequenceToSequenceTranslator(DeviceDescriptor::GPUDevice(0), false, false, true, false);
+        TrainSequenceToSequenceTranslator(DeviceDescriptor::GPUDevice(0), true, false, true, false);
     }
-    TrainSequenceToSequenceTranslator(DeviceDescriptor::CPUDevice(), false, true, false, true);
+    TrainSequenceToSequenceTranslator(DeviceDescriptor::CPUDevice(), true, true, false, true);
 }
