@@ -30,7 +30,7 @@ class Trainer(cntk_py.Trainer):
         super(Trainer, self).__init__(model, loss_function, eval_function,
                 parameter_learners)
 
-    def train_minibatch(self, arguments, device=None):
+    def train_minibatch(self, arguments, seqStarts=None, device=None):
         '''
         Optimize model parameters using the specified 'arguments' minibatch of training samples.
         Returns false if all parameter learners indicate end of learning (through their Update method's return value).
@@ -41,6 +41,10 @@ class Trainer(cntk_py.Trainer):
               * list of inputs in the order that the function expects or 
               * a single input, if the function only has one argument. 
               Data should be either NumPy arrays or a `:class:cntk.io.MinibatchSource`
+            seqStarts (`list` of `bool`s or `None`): if `None`, every sequence is
+             treated as a new sequence. Otherwise, it is interpreted as a list of
+             Booleans that tell whether a sequence is a new sequence (`True`) or a
+             continuation of the previous one (`False`)
             device (:class:`cntk.DeviceDescriptor`): the device descriptor that
              contains the type and id of the device on which the computation is
              to be performed.
@@ -50,11 +54,12 @@ class Trainer(cntk_py.Trainer):
         '''
         if not device:
             device=DeviceDescriptor.use_default_device()        
-        arguments = sanitize_var_map(self.model().arguments(), arguments)
+        arguments = sanitize_var_map(self.model().arguments(), arguments,
+                seqStarts)
 
         return super(Trainer, self).train_minibatch(arguments, device)
 
-    def test_minibatch(self, arguments, device=None):
+    def test_minibatch(self, arguments, seqStarts=None, device=None):
         '''
         Test the model on the specified batch of samples using the evaluation
         Function specified during construction of the Trainer. 
@@ -66,6 +71,10 @@ class Trainer(cntk_py.Trainer):
               * list of inputs in the order that the function expects or 
               * a single input, if the function only has one argument. 
               Data should be either NumPy arrays or a `:class:cntk.io.MinibatchSource`
+            seqStarts (`list` of `bool`s or `None`): if `None`, every sequence is
+             treated as a new sequence. Otherwise, it is interpreted as a list of
+             Booleans that tell whether a sequence is a new sequence (`True`) or a
+             continuation of the previous one (`False`)
             device (:class:`cntk.DeviceDescriptor`): the device descriptor that
              contains the type and id of the device on which the computation is
              to be performed.
@@ -75,7 +84,8 @@ class Trainer(cntk_py.Trainer):
         '''
         if not device:
             device=DeviceDescriptor.use_default_device()        
-        arguments = sanitize_var_map(self.model().arguments(), arguments, add_batch_axis=True)
+        arguments = sanitize_var_map(self.model().arguments(), arguments,
+                seqStarts)
 
         return super(Trainer, self).test_minibatch(arguments, device)
 
