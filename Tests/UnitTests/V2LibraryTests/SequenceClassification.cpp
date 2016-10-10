@@ -153,12 +153,18 @@ void TestLearningRateControl(const DeviceDescriptor& device)
 
 void TrainLSTMSequenceClassifer()
 {
-#ifndef CPUONLY
-    TestLearningRateControl(DeviceDescriptor::GPUDevice(0));
-#endif
+    if (IsGPUAvailable())
+    {
+        TestLearningRateControl(DeviceDescriptor::GPUDevice(0));
+    }
+    else
+    {
+        fprintf(stderr, "Cannot run TestLearningRateControl test on CPU device.\n");
+    }
 
-#ifndef CPUONLY
-    TrainLSTMSequenceClassifer(DeviceDescriptor::GPUDevice(0), true);
-#endif
+    if (IsGPUAvailable())
+    {
+        TrainLSTMSequenceClassifer(DeviceDescriptor::GPUDevice(0), true);
+    }
     TrainLSTMSequenceClassifer(DeviceDescriptor::CPUDevice(), false);
 }

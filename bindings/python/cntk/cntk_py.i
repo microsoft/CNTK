@@ -839,7 +839,7 @@ def dynamic_axes(self):
 %define %unordered_set_conversion(DATA_TYPE, _SWIG_TYPE)
 
 %typemap(out) std::unordered_set<CNTK::DATA_TYPE> {
-    PyObject* container = PyList_New((*&$1)->size());
+    PyObject* container = PyList_New(0);
     if (container == NULL)
     {
         SWIG_exception(SWIG_RuntimeError, "error passing set to Python");
@@ -866,7 +866,7 @@ def dynamic_axes(self):
 %define %unordered_set_ref_conversion(DATA_TYPE, _SWIG_TYPE)
 
 %typemap(out) std::unordered_set<CNTK::DATA_TYPE>& {
-    PyObject* container = PyList_New((*&$1)->size());
+    PyObject* container = PyList_New(0);
     if (container == NULL)
     {
         SWIG_exception(SWIG_RuntimeError, "error passing set to Python");
@@ -884,6 +884,8 @@ def dynamic_axes(self):
 %enddef
 
 %unordered_set_ref_conversion(StreamInformation, SWIGTYPE_p_CNTK__StreamInformation)
+%unordered_set_ref_conversion(LearnerPtr, SWIGTYPE_p_std__shared_ptrT_CNTK__Learner_t)
+%unordered_set_ref_conversion(Parameter, SWIGTYPE_p_CNTK__Parameter)
 
 // Unordered map conversion
 
@@ -1001,8 +1003,6 @@ def dynamic_axes(self):
 
         int typecode = PyArray_TYPE(array);
         
-        void* buf;
-
         NDArrayView* view;
         if (typecode == NPY_FLOAT)
         {
@@ -1020,21 +1020,6 @@ def dynamic_axes(self):
         {
             throw std::logic_error("NumPy array of type float32 or float64 expected");
         }
-
-/*
-        NDArrayView* view;
-        if (device != DeviceDescriptor::CPUDevice())
-        {
-            DataType data_type = cpuView->GetDataType();
-            view = new NDArrayView(data_type, cpuView->Shape(), device);
-            view->CopyFrom(*cpuView);
-            delete cpuView;
-        }
-        else
-        {
-            view = cpuView;
-        }
-        */
 
         return view;
     }

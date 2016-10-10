@@ -73,12 +73,14 @@ NDArrayViewPtr CreateNDArrayView()
 {
     auto numAxes = (rng() % maxNumAxes) + 1;
     auto device = DeviceDescriptor::CPUDevice();
-#ifndef CPUONLY
-    if (rng() % 2 == 0)
+
+    if (IsGPUAvailable())
     {
-        device = DeviceDescriptor::GPUDevice(0);
+        if (rng() % 2 == 0)
+        {
+            device = DeviceDescriptor::GPUDevice(0);
+        }
     }
-#endif
 
     return (rng() % 2 == 0) ? 
         CreateNDArrayView<float>(numAxes, device) : CreateNDArrayView<double>(numAxes, device);
@@ -276,11 +278,12 @@ void SerializationTests()
     TestLearnerSerialization<float>(5, DeviceDescriptor::CPUDevice());
     TestLearnerSerialization<double>(10, DeviceDescriptor::CPUDevice());
 
-#ifndef CPUONLY
-    TestLearnerSerialization<float>(5, DeviceDescriptor::GPUDevice(0));
-    TestLearnerSerialization<double>(10, DeviceDescriptor::GPUDevice(0));;
-    TestModelSaving(DeviceDescriptor::GPUDevice(0));
-#endif
+    if (IsGPUAvailable())
+    {
+        TestLearnerSerialization<float>(5, DeviceDescriptor::GPUDevice(0));
+        TestLearnerSerialization<double>(10, DeviceDescriptor::GPUDevice(0));
+        TestModelSaving(DeviceDescriptor::GPUDevice(0));
+    }
 
     TestModelSaving(DeviceDescriptor::CPUDevice());
 }
