@@ -121,7 +121,7 @@ def classification_error(output_vector, target_vector, name=''):
         >>> C.classification_error([[1., 2., 3., 4.]], [[0., 0., 1., 0.]]).eval()
         array([[ 1.]], dtype=float32)
 
-        >>> # Not that non-1 values are treated as 0
+        >>> # Note that non-1 values are treated as 0
         >>> C.classification_error([[1., 2., 3., 4.]], [[5., 0., 1., 0.]]).eval()
         array([[ 0.]], dtype=float32)
 
