@@ -163,6 +163,47 @@ void BlockRandomizerInstantiateTest(bool prefetch)
     auto randomizer = make_shared<BlockRandomizer>(0, SIZE_MAX, mockDeserializer, prefetch, BlockRandomizer::DecimationMode::chunk, false);
 }
 
+BOOST_AUTO_TEST_CASE(CheckCurrentCursorForRandomizers)
+{
+    size_t chunkSizeInSamples = 10000;
+    size_t sweepNumberOfSamples = 500000;
+    uint32_t maxSequenceLength = 300;
+    size_t randomizationWindow = chunkSizeInSamples * 5;
+    auto deserializer = make_shared<SequentialDeserializer>(0, chunkSizeInSamples, sweepNumberOfSamples, maxSequenceLength);
+
+    auto blockRandomizer = make_shared<BlockRandomizer>(0, randomizationWindow, deserializer, true, BlockRandomizer::DecimationMode::chunk, false);
+    auto noRandomizer = make_shared<NoRandomizer>(deserializer, false);
+
+    auto test = [](SequenceEnumeratorPtr r, size_t epochSize)
+    {
+        auto firstEpoch = ReadFullEpoch(r, epochSize, 0);
+        auto firstCursor = r->GetCurrentSamplePosition();
+        BOOST_CHECK_EQUAL(firstCursor, firstEpoch.size());
+
+        auto secondEpoch = ReadFullEpoch(r, epochSize, 1);
+        auto secondCursor = r->GetCurrentSamplePosition();
+        BOOST_CHECK_EQUAL(secondCursor - firstCursor, secondEpoch.size());
+
+        auto thirdEpoch = ReadFullEpoch(r, epochSize, 2);
+        auto thirdCursor = r->GetCurrentSamplePosition();
+        BOOST_CHECK_EQUAL(thirdCursor - secondCursor, thirdEpoch.size());
+
+        auto anotherSecondEpoch = ReadFullEpoch(r, epochSize, 1);
+        auto anotherSecondCursor = r->GetCurrentSamplePosition();
+
+        BOOST_CHECK_EQUAL(anotherSecondCursor, secondCursor);
+    };
+
+    // Inside sweep
+    size_t epochSize = 50000;
+    test(blockRandomizer, epochSize);
+    test(noRandomizer, epochSize);
+
+    // Between sweeps
+    epochSize = (size_t)(sweepNumberOfSamples / 1.5);
+    test(blockRandomizer, epochSize);
+    test(noRandomizer, epochSize);
+}
 
 BOOST_AUTO_TEST_CASE(RandRollbackToEarlierEpochBetweenSweeps)
 {

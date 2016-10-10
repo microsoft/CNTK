@@ -11,7 +11,27 @@ if sys.version_info.major < 3:
     print("Detected Python v2, which is not yet supported")
     sys.exit(1)
 
+if shutil.which("swig") is None:
+    print("Please install swig (>= 3.0.10) and include it in your path.\n")
+    sys.exit(1)
+
 IS_WINDOWS = platform.system() == 'Windows'
+
+if IS_WINDOWS:
+    if shutil.which("cl") is None:
+        print("Compiler was not found in path. Please run this from a Visual Studio 2013 x64 Native Tools Command Prompt,\n"
+              "e.g., by running the following command:\n"
+              "  \"C:\\Program Files (x86)\\Microsoft Visual Studio 12.0\\VC\\vcvarsall\" amd64\n")
+        sys.exit(1)
+
+    try:
+        assert(os.environ["MSSdk"] == "1");
+        assert(os.environ["DISTUTILS_USE_SDK"] == "1");
+    except (KeyError, AssertionError) as e:
+        print("Please set the environment variables MSSdk and DISTUTILS_USE_SDK to 1:\n"
+              "  set MSSdk=1\n"
+              "  set DISTUTILS_USE_SDK=1\n")
+        sys.exit(1)
 
 CNTK_PATH = os.path.join(os.path.dirname(__file__), "..", "..")
 CNTK_SOURCE_PATH = os.path.join(CNTK_PATH, "Source")
@@ -99,24 +119,20 @@ else:
     runtime_library_dirs = ['$ORIGIN/cntk/libs']
     os.environ["CXX"] = "mpic++"
 
-swig_source = os.path.join("cntk", "swig", "cntk_py_wrap.cxx")
-
-if not os.path.exists(swig_source):
-    print("SWIG wrapper missing. Have you run SWIG already?")
-    sys.exit(1)
+cntkV2LibraryInclude = os.path.join(CNTK_SOURCE_PATH, "CNTKv2LibraryDll", "API")
 
 cntk_module = Extension(
     name="_cntk_py",
 
-    sources=[swig_source],
+    sources = [os.path.join("cntk", "cntk_py.i")],
+    swig_opts = ["-c++", "-D_MSC_VER", "-I" + cntkV2LibraryInclude],
+    libraries = link_libs,
+    library_dirs = [CNTK_LIB_PATH],
 
-    libraries=link_libs,
-    library_dirs=[CNTK_LIB_PATH],
+    runtime_library_dirs = runtime_library_dirs,
 
-    runtime_library_dirs=runtime_library_dirs,
-
-    include_dirs=[
-        os.path.join(CNTK_SOURCE_PATH, "CNTKv2LibraryDll", "API"),
+    include_dirs = [
+        cntkV2LibraryInclude,
         os.path.join(CNTK_SOURCE_PATH, "Math"),
         os.path.join(CNTK_SOURCE_PATH, "Common", "Include"),
         numpy.get_include(),
@@ -142,7 +158,7 @@ else:
     kwargs = dict(package_data = package_data)
 
 setup(name="cntk",
-      version="2.0a2",
+      version="2.0a3",
       url="http://cntk.ai",
       ext_modules=[cntk_module],
       packages=packages,

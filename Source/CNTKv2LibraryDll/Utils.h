@@ -74,13 +74,13 @@ namespace CNTK
     inline NDShape AsNDShape(const Microsoft::MSR::CNTK::TensorShape& tensorShape, bool allowNonFlattenableTensorShapes = false)
     {
         if (!allowNonFlattenableTensorShapes)
+    {
+        // The TensorShape should be flattenable to 1D
+        for (size_t i = 1; i < tensorShape.GetRank(); ++i)
         {
-            // The TensorShape should be flattenable to 1D
-            for (size_t i = 1; i < tensorShape.GetRank(); ++i)
-            {
-                if (!tensorShape.CanFlatten(i))
-                    InvalidArgument("AsNDShape() can only be called for TensorShapes that can be flattened to 1D");
-            }
+            if (!tensorShape.CanFlatten(i))
+                InvalidArgument("AsNDShape() can only be called for TensorShapes that can be flattened to 1D");
+        }
         }
 
         return std::vector<size_t>(tensorShape.GetDims().begin(), tensorShape.GetDims().end());
@@ -326,19 +326,16 @@ namespace CNTK
 
     inline std::pair<NDShape, NDShape> GetConvolutionOutputMapCountAndKernelShape(const NDShape& convolutionMapShape, const NDShape& operandShape)
     {
-        auto outputMapCount = convolutionMapShape.SubShape(0, convolutionMapShape.Rank() - operandShape.Rank());
+        NDShape kernelShape = convolutionMapShape.SubShape(0, operandShape.Rank());
+        auto outputMapCount = convolutionMapShape.SubShape(kernelShape.Rank());
         NDShape paddedOutputMapCount(operandShape.Rank(), 1);
         for (size_t i = 0; i < outputMapCount.Rank(); ++i)
             paddedOutputMapCount[paddedOutputMapCount.Rank() - 1 - i] = outputMapCount[outputMapCount.Rank() - 1 - i];
-        //for (size_t i = 0; i < outputMapCount.Rank(); ++i)
-        //    paddedOutputMapCount[i] = outputMapCount[i];
-
-        NDShape kernelShape = convolutionMapShape.SubShape(outputMapCount.Rank());
 
         return{ paddedOutputMapCount, kernelShape };
     }
 
-    inline double MomentumPerMB(double momentumPerSample, size_t minibatchSize)
+    inline double MomentumValueForMB(double momentumPerSample, size_t minibatchSize)
     {
         return std::pow(momentumPerSample, minibatchSize);
     }
@@ -381,4 +378,37 @@ namespace CNTK
 
         return L"(" + name + L")";
     }
+
+    static const std::wstring UidPrefix = L"__v2libuid__";
+    static const std::wstring NamePrefix = L"__v2libname__";
+
+    inline std::wstring CNTKInternalNodeNameFromUidAndName(const std::wstring& uid, const std::wstring& name)
+    {
+        return UidPrefix + uid + NamePrefix + name;
+    }
+
+    inline std::pair<std::wstring, std::wstring> UidAndNameFromCNTKInternalNodeName(const std::wstring& CNTKInternalNodeName, VariableKind varKind)
+    {
+        std::wstring uid, name;
+        auto uidPrefixBeginPos = CNTKInternalNodeName.find(UidPrefix);
+        if (uidPrefixBeginPos != std::wstring::npos)
+        {
+            auto uidBeginPos = uidPrefixBeginPos + UidPrefix.length();
+            auto namePrefixBeginPos = CNTKInternalNodeName.find(NamePrefix, uidBeginPos);
+            if (namePrefixBeginPos == std::wstring::npos)
+                LogicError("CNTK internal node name found to contain uid but not name!");
+
+            auto nameBeginPos = namePrefixBeginPos + NamePrefix.length();
+            uid = CNTKInternalNodeName.substr(uidBeginPos, namePrefixBeginPos - uidBeginPos);
+            name = CNTKInternalNodeName.substr(nameBeginPos);
+        }
+        else
+        {
+            name = CNTKInternalNodeName;
+            uid = Internal::GenerateUid(varKind);
+        }
+
+        return{ uid, name };
+    }
 }
+

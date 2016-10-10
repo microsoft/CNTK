@@ -80,7 +80,7 @@ void TrainSequenceToSequenceTranslator(const DeviceDescriptor& device, bool useS
     for (size_t i = 0; i < numLayers; ++i)
     {
         std::function<FunctionPtr(const Variable&)> recurrenceHookH, recurrenceHookC;
-        if (i == 0)
+        if (i > 0)
         {
             recurrenceHookH = pastValueRecurrenceHookWithBeamSearchReordering;
             recurrenceHookC = pastValueRecurrenceHookWithBeamSearchReordering;
@@ -143,9 +143,10 @@ void TrainSequenceToSequenceTranslator(const DeviceDescriptor& device, bool useS
     double learningRatePerSample = 0.007;
     size_t momentumTimeConstant = 1100;
     double momentumPerSample = std::exp(-1.0 / momentumTimeConstant);
-    double clippingThresholdPerSample = 2.3;
-    bool gradientClippingWithTruncation = true;
-    Trainer trainer(z, ce, errs, { MomentumSGDLearner(z->Parameters(), learningRatePerSample, momentumPerSample, clippingThresholdPerSample, gradientClippingWithTruncation) });
+    AdditionalLearningOptions additionalOptions;
+    additionalOptions.gradientClippingThresholdPerSample = 2.3;
+    additionalOptions.gradientClippingWithTruncation = true;
+    Trainer trainer(z, ce, errs, { MomentumSGDLearner(z->Parameters(), learningRatePerSample, momentumPerSample, additionalOptions) });
 
     size_t outputFrequencyInMinibatches = 1;
     size_t minibatchSize = 72;
@@ -181,8 +182,9 @@ void TrainSequenceToSequenceTranslator(const DeviceDescriptor& device, bool useS
 void TrainSequenceToSequenceTranslator()
 {
     // TODO: Also test with sparse input variables in the graph
-#ifndef CPUONLY
-    TrainSequenceToSequenceTranslator(DeviceDescriptor::GPUDevice(0), false, false, true, false);
-#endif
+    if (IsGPUAvailable())
+    {
+        TrainSequenceToSequenceTranslator(DeviceDescriptor::GPUDevice(0), false, false, true, false);
+    }
     TrainSequenceToSequenceTranslator(DeviceDescriptor::CPUDevice(), false, true, false, true);
 }

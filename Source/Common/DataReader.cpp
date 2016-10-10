@@ -224,6 +224,13 @@ void DataReader::StartDistributedMinibatchLoop(size_t mbSize, size_t epoch, size
     }
 }
 
+size_t DataReader::GetCurrentSamplePosition()
+{
+    // BUGBUG: composition of old readers is not supported.
+    // Returning just for the last reader.
+    return m_dataReaders[m_ioNames.back()]->GetCurrentSamplePosition();
+}
+
 // GetMinibatch - Get the next minibatch (features and labels)
 // matrices - [in] a map with named matrix types (i.e. 'features', 'labels') mapped to the corresponding matrix,
 //             [out] each matrix resized if necessary containing data.

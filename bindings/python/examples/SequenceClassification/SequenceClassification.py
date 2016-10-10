@@ -27,7 +27,7 @@ def LSTM_sequence_classifer_net(input, num_output_classes, embedding_dim, LSTM_d
 
 # Creates and trains a LSTM sequence classification model
 
-def train_sequence_classifier():
+def train_sequence_classifier(debug_output=False):
     input_dim = 2000
     cell_dim = 25
     hidden_dim = 25
@@ -55,8 +55,8 @@ def train_sequence_classifier():
         StreamConfiguration(feature_stream_name, input_dim, True, 'x'),
         StreamConfiguration(labels_stream_name, num_output_classes, False, 'y')], 0)
 
-    features_si = mb_source.stream_info(features)
-    labels_si = mb_source.stream_info(label)
+    features_si = mb_source[features]
+    labels_si = mb_source[label]
 
     # Instantiate the trainer object to drive the model training
     trainer = Trainer(classifier_output, ce, pe,
@@ -66,6 +66,10 @@ def train_sequence_classifier():
     minibatch_size = 200
     training_progress_output_freq = 10
     i = 0
+
+    if debug_output:
+        training_progress_output_freq = training_progress_output_freq/3
+
     while True:
         mb = mb_source.get_next_minibatch(minibatch_size)
 
@@ -74,12 +78,11 @@ def train_sequence_classifier():
 
         # Specify the mapping of input variables in the model to actual
         # minibatch data to be trained with
-        arguments = {features: mb[features_si].m_data,
-                     label: mb[labels_si].m_data}
+        arguments = {features: mb[features_si],
+                     label: mb[labels_si]}
         trainer.train_minibatch(arguments)
 
         print_training_progress(trainer, i, training_progress_output_freq)
-
         i += 1
 
     import copy
@@ -91,11 +94,10 @@ def train_sequence_classifier():
     return evaluation_average, loss_average
 
 if __name__ == '__main__':
-    # Specify the target device to be used for computing
-    target_device = DeviceDescriptor.gpu_device(0)
-    # If it is crashing, probably you don't have a GPU, so try with CPU:
+    # Specify the target device to be used for computing, if you do not want to
+    # use the best available one, e.g.
     # target_device = DeviceDescriptor.cpu_device()
-    DeviceDescriptor.set_default_device(target_device)
+    # DeviceDescriptor.set_default_device(target_device)
 
     error, _ = train_sequence_classifier()
-    print("test: %f" % error)
+    print("Error: %f" % error)

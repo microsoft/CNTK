@@ -44,6 +44,9 @@ public:
     // Gets next sequences up to a maximum count of samples.
     virtual Sequences GetNextSequences(size_t sampleCount) = 0;
 
+    // Returns current position in the global timeline. The returned value is in samples.
+    virtual size_t GetCurrentSamplePosition() = 0;
+
     virtual ~SequenceEnumerator()
     {
     }

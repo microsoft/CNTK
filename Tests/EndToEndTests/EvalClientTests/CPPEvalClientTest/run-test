@@ -22,10 +22,10 @@ else
 fi
 
 ImageDir=$TEST_ROOT_DIR/../../Examples/Image
-MnistDir=$ImageDir/MNIST
-DataDir=$MnistDir/Data
-ConfigDir=$MnistDir/Config
-OutputDir=$MnistDir/Output
+MnistDir=$ImageDir/DataSets/MNIST
+DataDir=$MnistDir
+ConfigDir=$MnistDir/../../GettingStarted
+OutputDir=$ConfigDir/Output
 
 cp $TestDataDir/Image/MNIST/v0/Train-28x28_cntk_text.txt $DataDir || exit $?
 

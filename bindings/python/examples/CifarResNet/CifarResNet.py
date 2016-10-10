@@ -80,8 +80,8 @@ def get_projection_map(out_dim, in_dim):
 
     projection_map_values = np.zeros(in_dim * out_dim, dtype=np.float32)
     for i in range(0, in_dim):
-        projection_map_values[(i * out_dim) + i] = 1.0
-        shape = (in_dim, 1, 1, out_dim)
+        projection_map_values[(i * in_dim) + i] = 1.0
+        shape = (out_dim, in_dim, 1, 1)
         return constant(value=projection_map_values.reshape(shape))
 
 # Defines the residual network model for classifying images
@@ -151,8 +151,8 @@ def cifar_resnet(base_path, debug_output=False):
 
     minibatch_source = create_mb_source(feats_stream_name, labels_stream_name, 
                         image_height, image_width, num_channels, num_classes, base_path)
-    features_si = minibatch_source.stream_info(feats_stream_name)
-    labels_si = minibatch_source.stream_info(labels_stream_name)
+    features_si = minibatch_source[feats_stream_name]
+    labels_si = minibatch_source[labels_stream_name]
 
     # Input variables denoting the features and label data
     image_input = input_variable(
@@ -171,25 +171,29 @@ def cifar_resnet(base_path, debug_output=False):
 
     # Get minibatches of images to train with and perform model training
     mb_size = 32
-    training_progress_output_freq = 20
+    training_progress_output_freq = 60
     num_mbs = 1000
+
+    if debug_output:
+        training_progress_output_freq = training_progress_output_freq/3
 
     for i in range(0, num_mbs):
         mb = minibatch_source.get_next_minibatch(mb_size)
 
         # Specify the mapping of input variables in the model to actual
         # minibatch data to be trained with
-        arguments = {image_input: mb[
-            features_si].m_data, label_var: mb[labels_si].m_data}
+        arguments = {
+                image_input: mb[features_si], 
+                label_var: mb[labels_si]
+                }
         trainer.train_minibatch(arguments)
 
-        if debug_output:
-            print_training_progress(trainer, i, training_progress_output_freq)
+        print_training_progress(trainer, i, training_progress_output_freq)
 
     test_minibatch_source = create_test_mb_source(feats_stream_name, labels_stream_name,
                     image_height, image_width, num_channels, num_classes, base_path)
-    features_si = test_minibatch_source.stream_info(feats_stream_name)
-    labels_si = test_minibatch_source.stream_info(labels_stream_name)
+    features_si = test_minibatch_source[feats_stream_name]
+    labels_si = test_minibatch_source[labels_stream_name]
 
     mb_size = 64
     num_mbs = 300
@@ -208,15 +212,15 @@ def cifar_resnet(base_path, debug_output=False):
     return total_error / num_mbs
 
 if __name__ == '__main__':
-    # Specify the target device to be used for computing
-    target_device = DeviceDescriptor.gpu_device(0)
-    # If it is crashing, probably you don't have a GPU, so try with CPU:
+    # Specify the target device to be used for computing, if you do not want to
+    # use the best available one, e.g.
     # target_device = DeviceDescriptor.cpu_device()
-    DeviceDescriptor.set_default_device(target_device)
+    # DeviceDescriptor.set_default_device(target_device)
 
     base_path = os.path.normpath(os.path.join(
         *"../../../../Examples/Image/Miscellaneous/CIFAR-10/cifar-10-batches-py".split("/")))
 
     os.chdir(os.path.join(base_path, '..'))
 
-    cifar_resnet(base_path)
+    error = cifar_resnet(base_path)
+    print("Error: %f" % error)

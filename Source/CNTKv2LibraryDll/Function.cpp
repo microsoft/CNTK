@@ -419,12 +419,38 @@ namespace CNTK
         if (op == PrimitiveOpType::Combine)
             return inputs;
 
-        // TODO: We are just using the primary operand's DataType as output node's DataType. Is this always correct?
+        // We use the first non-constant input operand's DataType as the output DataType
+        // In case there are no non-constant known DataTypes, we just pick the first known operand DataType
+        // Also, all the known DataTypes of operands should match except for constants where coercion is allowed
+        DataType firstKnownInputDataType = DataType::Unknown;
         DataType outputDataType = DataType::Unknown;
         NDShape outputShape;
         size_t i = 0;
-        while ((outputDataType == DataType::Unknown) && (i < inputs.size()))
-            outputDataType = inputs[i++].GetDataType();
+        while (i < inputs.size())
+        {
+            auto input = inputs[i++];
+            auto inputDataType = input.GetDataType();
+            if (inputDataType != DataType::Unknown)
+            {
+                if (firstKnownInputDataType == DataType::Unknown)
+                    firstKnownInputDataType = inputDataType;
+
+                if (outputDataType == DataType::Unknown)
+                {
+                    if (!input.IsConstant())
+                        outputDataType = inputDataType;
+                }
+                else
+                {
+                    // The DataType of all operands should match except for Constants where we allow coercion
+                    if ((inputDataType != DataType::Unknown) && (inputDataType != outputDataType) && !input.IsConstant())
+                        InvalidArgument("Primitive function with op type %S has operands with different DataTypes %s and %s", PrimitiveOpTypeName(op).c_str(), DataTypeName(outputDataType), DataTypeName(inputDataType));
+                }
+            }
+        }
+
+        if (outputDataType == DataType::Unknown)
+            outputDataType = firstKnownInputDataType;
 
         if (outputDataType == DataType::Unknown)
             InvalidArgument("The DataType of all the input operands of primitive function with op type %S are unknown", PrimitiveOpTypeName(op).c_str());
@@ -749,9 +775,10 @@ namespace CNTK
         variableToNodeMap[variable] = nullptr;
 
         std::shared_ptr<ComputationNode<ElementType>> computationNodePtr;
+        auto internalNodeName = CNTKInternalNodeNameFromUidAndName(variable.Uid(), variable.Name());
         if (variable.IsParameter() || variable.IsConstant())
         {
-            computationNodePtr = builder.CreateLearnableParameter(variable.Uid(), AsTensorShape(variable.Shape()));
+            computationNodePtr = builder.CreateLearnableParameter(internalNodeName, AsTensorShape(variable.Shape()));
             network->InitLearnableParameters(computationNodePtr, L"fixedValue", 0); // must call this to follow protocol; can overwrite later
             if (!variable.NeedsGradient())
                 computationNodePtr->SetLearningRateMultiplier(0.0);
@@ -789,9 +816,9 @@ namespace CNTK
                 network->AddNodeToNetAndAttachInputs(New<DynamicAxisNode<ElementType>>(network->GetDeviceId(), internalDynamicAxisName), {});
 
             if (IsSparseInput(variable))
-                computationNodePtr = builder.CreateSparseInputNode(variable.Uid(), AsTensorShape(variable.Shape()), internalDynamicAxisName);
+                computationNodePtr = builder.CreateSparseInputNode(internalNodeName, AsTensorShape(variable.Shape()), internalDynamicAxisName);
             else
-                computationNodePtr = builder.CreateInputNode(variable.Uid(), AsTensorShape(variable.Shape()), internalDynamicAxisName);
+                computationNodePtr = builder.CreateInputNode(internalNodeName, AsTensorShape(variable.Shape()), internalDynamicAxisName);
 
             if (variable.NeedsGradient())
             {
@@ -1131,8 +1158,8 @@ namespace CNTK
             // TODO: Support changing the device across different invocations of the forward method on a Function instance
             if (AsDeviceDescriptor(m_computationNetwork->GetDeviceId()) != device)
                 LogicError("Changing device across different Forward calls on a CNTK composite Function is currently unsupported");
-        }
 
+        }
         else
         {
             m_computationNetwork = std::make_shared<ComputationNetwork>(AsCNTKImplDeviceId(device));
@@ -1143,20 +1170,11 @@ namespace CNTK
             if (backpropRoots.size() > 1)
                 LogicError("More than one backprop roots is currently unsupported");
 
-            ComputationNodeBasePtr backpropRootNode;
-
             // Now recursively create the network in a top-down fashion
             auto rootFunction = RootFunction();
             auto rootFunctionOutputs = rootFunction->Outputs();
-            std::vector<ComputationNodeBasePtr> forwardRootNodes;
             for (auto rootOutput : rootFunctionOutputs)
-            {
-                auto currentRootNode = GetNode(rootOutput, m_computationNetwork, builder, m_variableToNodeMap, m_isVariableRootMap);
-                forwardRootNodes.push_back(currentRootNode);
-
-                if (backpropRoots.find(rootOutput) != backpropRoots.end())
-                    backpropRootNode = m_variableToNodeMap[rootOutput];
-            }
+                GetNode(rootOutput, m_computationNetwork, builder, m_variableToNodeMap, m_isVariableRootMap);
 
             // If any of the function outputs is not a root node, we need to explicitly add it to the 'output' group of the ComputationNetwork
             for (auto rootOutput : rootFunctionOutputs)
@@ -1215,8 +1233,26 @@ namespace CNTK
                     }
                 }
             }
+        }
 
-            if (allocateNetworkMatrices)
+
+        if (!m_networkMatricesAllocated && allocateNetworkMatrices)
+        {
+            ComputationNodeBasePtr backpropRootNode;
+
+            // Now recursively create the network in a top-down fashion
+            auto rootFunction = RootFunction();
+            auto rootFunctionOutputs = rootFunction->Outputs();
+            std::vector<ComputationNodeBasePtr> forwardRootNodes;
+            for (auto rootOutput : rootFunctionOutputs)
+            {
+                auto currentRootNode = m_variableToNodeMap[rootOutput];
+                forwardRootNodes.push_back(currentRootNode);
+
+                if (m_currentBackpropRoots.find(rootOutput) != m_currentBackpropRoots.end())
+                    backpropRootNode = currentRootNode;
+            }
+
             m_computationNetwork->AllocateAllMatrices(forwardRootNodes, {}, backpropRootNode);
             m_networkMatricesAllocated = allocateNetworkMatrices;
         }
@@ -2219,6 +2255,12 @@ namespace CNTK
                             size_t maxTempMemSizeInSamples,
                             const std::wstring& name)
     {
+        // Currently we require that the Convolution function's operand have a dynamic axis since otherwise
+        // the internal implementation incorrectly infers the batch axis dimension by picking up the first axis as 
+        // the sample shape and considering the rest to be part of the batch axis
+        if (operand.DynamicAxes().empty())
+            LogicError("Convolution currently requires the main operand to have dynamic axes");
+
         auto additionalProperties = Dictionary();
         additionalProperties[PrimitiveFunction::AttributeNameStrides] = strides;
         additionalProperties[PrimitiveFunction::AttributeNameSharing] = AsDictionaryValueVector(sharing);
@@ -2299,16 +2341,18 @@ namespace CNTK
         return CompositeFunction::Create(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::Splice, operands, std::move(additionalProperties), name), name);
     }
 
-    FunctionPtr Combine(const std::vector<FunctionPtr>& operands, const std::wstring& name/* = L""*/)
+    FunctionPtr Combine(const std::vector<Variable>& operands, const std::wstring& name /*= L""*/)
     {
-        std::vector<Variable> inputs;
+        std::unordered_set<Variable> uniqueOperands;
         for (auto operand : operands)
         {
-            auto currentFunctionOutputs = operand->Outputs();
-            std::copy(currentFunctionOutputs.begin(), currentFunctionOutputs.end(), std::back_inserter(inputs));
+            if (uniqueOperands.find(operand) != uniqueOperands.end())
+                LogicError("All operands specified to Combine must be unique");
+
+            uniqueOperands.insert(operand);
         }
 
-        return Internal::Combine(inputs, name);
+        return CompositeFunction::Create(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::Combine, operands, Dictionary(), name), name);
     }
 
     namespace Sequence
@@ -2381,20 +2425,6 @@ namespace CNTK
 
     namespace Internal
     {
-        FunctionPtr Combine(const std::vector<Variable>& operands, const std::wstring& name /*= L""*/)
-        {
-            std::unordered_set<Variable> uniqueOperands;
-            for (auto operand : operands)
-            {
-                if (uniqueOperands.find(operand) != uniqueOperands.end())
-                    LogicError("All operands specified to Combine must be unique");
-
-                uniqueOperands.insert(operand);
-            }
-
-            return CompositeFunction::Create(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::Combine, operands, Dictionary(), name), name);
-        }
-
         FunctionPtr IsWithin(const Variable& operand, int offset, const std::wstring& name /*= L""*/)
         {
             Sequence::VerifyIsSequence(operand);

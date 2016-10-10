@@ -17,6 +17,5 @@ def test_sequence_to_sequence(device_id):
 
     error = sequence_to_sequence_translator()
 
-    # Temporarily disable the comparison against baseline as it needs to be updated
-    # expected_error = 0.758458
-    # assert np.allclose(error, expected_error, atol=TOLERANCE_ABSOLUTE)
+    expected_error = 0.8596881547969316
+    assert np.allclose(error, expected_error, atol=TOLERANCE_ABSOLUTE)
