@@ -17,12 +17,11 @@ TrainConvNet = {
         imageShape = 32:32:3
         labelDim = 10
 
-		featMean = 128
         featScale = 1/256
-        Normalize{m,f} = x => Constant(f) .* (x - Constant(m))
+        Normalize{f} = x => f .* x
 
         model = Sequential (
-            Normalize {featMean, featScale} :
+            Normalize {featScale} :
             ConvolutionalLayer {64, (3:3), pad = true} : ReLU : 
             ConvolutionalLayer {64, (3:3), pad = true} : ReLU : 
               MaxPoolingLayer {(3:3), stride = (2:2)} :

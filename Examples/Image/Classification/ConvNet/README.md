@@ -48,4 +48,4 @@ Run the example from the current folder using:
 
 `cntk configFile=ConvNet_CIFAR10_DataAug.cntk`
 
-As seen in the cntk configuration file [ConvNet_CIFAR10_DataAug.cntk](./ConvNet_CIFAR10_DataAug.cntk), we use a fix crop ratio of `0.8` and scale the image to `32x32` pixels for training. Since all training images are pre-padded to `40x40` pixels, effectively we only perfrom translation transform without scaling. The accuracy of the network on test data is `14.21%`, which is a lot better than the previous model.
+As seen in the cntk configuration file [ConvNet_CIFAR10_DataAug.cntk](./ConvNet_CIFAR10_DataAug.cntk), we use a fix crop ratio of `0.8` and scale the image to `32x32` pixels for training. Since all training images are pre-padded to `40x40` pixels, effectively we only perfrom translation transform without scaling. The accuracy of the network on test data is `14.39%`, which is a lot better than the previous model.

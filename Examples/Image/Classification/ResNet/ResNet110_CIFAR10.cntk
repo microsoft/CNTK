@@ -19,16 +19,15 @@ TrainConvNet = {
         imageShape = 32:32:3
         labelDim = 10
 
-		featMean = 128
         featScale = 1/256
-        Normalize{m,f} = x => Constant(f) .* (x - Constant(m))
+        Normalize{f} = x => f .* x
 
-        cMap = 16: 32: 64
+        cMap = 16:32:64
         bnTimeConst = 4096
         numLayers = 18
 		
         model = Sequential (
-            Normalize {featMean, featScale} :
+            Normalize {featScale} :
 
             ConvBNReLULayer {cMap[0], (3:3), (1:1), bnTimeConst} :
             ResNetBasicStack {numLayers, cMap[0], bnTimeConst} :
@@ -70,7 +69,7 @@ TrainConvNet = {
         # Note that learning rates are 10x more than in the paper due to a different 
         # momentum update rule in CNTK: v{t + 1} = lr*(1 - momentum)*g{t + 1} + momentum*v{t} 
         learningRatesPerMB = 0.1*1:1.0*80:0.1*40:0.01
-        momentumPerMB  = 0.9
+        momentumPerMB = 0.9
         maxEpochs = 160
         L2RegWeight = 0.0001
 
@@ -100,7 +99,7 @@ Eval = {
     action = "eval"
     evalNodeNames = errs:top5Errs  # also test top-5 error rate
     # Set minibatch size for testing.
-    minibatchSize = 512
+    minibatchSize = 128
 
     reader = {
         verbosity = 0 ; randomize = false
