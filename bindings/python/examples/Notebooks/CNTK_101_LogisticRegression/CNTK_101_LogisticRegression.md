@@ -1,43 +1,47 @@
 
 # CNTK 101: Logistic Regression and ML Primer
 
-This tutorial is targeted to individuals who are new to CNTK and to machine learning. At the end of this tutorial, you would have train a simple yet very powerful machine learning model that is widely used in industry for a variety of applications. The model trained below scales to handle massive data sets in the most expeditious manner by harnessing computational sclability provided by CNTK library leveraging multiple GPUs across multiple machines.
+This tutorial is targeted to individuals who are new to CNTK and to machine learning. In this tutorial, you will train a simple yet powerful machine learning model that is widely used in industry for a variety of applications. The model trained below scales to massive data sets in the most expeditious manner by harnessing computational scalability leveraging the computational resources you may have (one or more CPU cores, one or more GPUs, a cluster of CPUs or a cluster of GPUs), transparently via the CNTK library.
 
 ## Introduction
 
-**Problem** (recap from the CNTK 101):
-A cancer hospital has provided data and wants us to determine if a patient has a fatal [malignant][] cancer vs. a benign growth. This is what is known as a classification problem. To help classify each patient, we are given their age and the size of the tumor. Intuititely, one can imagine that younger patients and/or patient with small tumor size are less likely to have malignant cancer. The data set simulates this application where the each observation is a patient represented as a dot where red color indicates malignant and blue indicates a benign disease Note: This is a toy example for learning, in real life there are large number of features from different tests/examination sources and doctors'  experience that play into the treatment decision for a patient.
+**Problem**:
+A cancer hospital has provided data and wants us to determine if a patient has a fatal [malignant][] cancer vs. a benign growth. This is known as a classification problem. To help classify each patient, we are given their age and the size of the tumor. Intuitively, one can imagine that younger patients and/or patient with small tumor size are less likely to have malignant cancer. The data set simulates this application where the each observation is a patient represented as a dot (in the plot below) where red color indicates malignant and blue indicates benign disease. Note: This is a toy example for learning, in real life there are large number of features from different tests/examination sources and doctors'  experience that play into the diagnosis/treatment decision for a patient.
 
 <img src="https://www.cntk.ai/jup/cancer_data_plot.jpg", width=400, height=400>
 
 **Goal**:
-Our goal is to learn a classifier that automatically can label any patient into either benign or malignant category given two features (age, tumor size). In this tutorial, we will create a linear classifier that is fundamental to deep networks.
+Our goal is to learn a classifier that automatically can label any patient into either benign or malignant category given two features (age and tumor size). In this tutorial, we will create a linear classifier that is a fundamental building-block in deep networks.
 
 <img src="https://www.cntk.ai/jup/cancer_classify_plot.jpg", width=400, height=400>
 
-In the figure above, the green line is the model learnt from the data and separated the blue dots from the red dots. This tutorial will walk through the steps to learn the green line. Note: this classifer does make mistakes where couple of blue dots on the wrong side of the green line. However, there are ways one can model such that all cancer patients get classified correctly at the cost of classifing some of the begign ones being also incorrectly being labeled as cancer as opposed to the other way around which would leave a lot of cancer patient go un-treated. 
+In the figure above, the green line represents the learnt model from the data and separates the blue dots from the red dots. In this tutorial, we will walk you through the steps to learn the green line. Note: this classifier does make mistakes where couple of blue dots are on the wrong side of the green line. However, there are ways to fix this and we will look into some of the techniques in later tutorials. 
 
 **Approach**: 
-Any learning algorithm has typically 5 stages namely, Data Reading, Data Preprocessing, Creating a model, Learning the model parameters and Evaluation (a.k.a. testing/prediction). 
+Any learning algorithm has typically 5 stages namely, Data reading, Data preprocessing, Creating a model, Learning the model parameters and Evaluating (a.k.a. testing/prediction) the model. 
 
->1. Data reading: We are using a simulated data set that generates two features (plotted below) indicative of the age and tumor size
->2. Data preprocessing: Often the individual features such as size or age needs to be scaled to the same axis. Typically one would scale the data between 0 and 1. To keep things simple, we are not doing any scaling in this tutorial. For more details on [feature scaling][]).
->3. Model Creation: In this tutorial we introduce a basic linear model. Details later in the tutorial.
->4. Learning the model: This is also known as training. While fitting a linear model can be done in a variety of ways including [least squares fit][]. Typically we use Stocastic Gradient Descent a.k.a. sgd (See more on [SGD][])
->5. Evaluation: This is also known as testing where one takes data sets with known labels (a.k.a ground-truth) that was not used ever for training. This allows us to assess, how a model would perform in real world (previously unseen) observations.
+>1. Data reading: We generate simulated data sets with each sample having two features (plotted below) indicative of the age and tumor size.
+>2. Data preprocessing: Often the individual features such as size or age needs to be scaled. Typically one would scale the data between 0 and 1. To keep things simple, we are not doing any scaling in this tutorial (for details look here: [feature scaling][]).
+>3. Model creation: We introduce a basic linear model in this tutorial. 
+>4. Learning the model: This is also known as training. While fitting a linear model can be done in a variety of ways ([linear regression][]), in CNTK we use Stochastic Gradient Descent a.k.a. [SGD][].
+>5. Evaluation: This is also known as testing where one takes data sets with known labels (a.k.a ground-truth) that was not ever used for training. This allows us to assess how a model would perform in real world (previously unseen) observations.
 
 ## Logistic Regression
-Logistic regression is fundamental machine learning technique that uses a linear weighted combination of features and generates the probability of predicting different classes. In our case the classifer will generate a binary label (0 or 1). However, the method shown can be extended to multiple classes. 
+[Logistic regression][] is fundamental machine learning technique that uses a linear weighted combination of features and generates the probability of predicting different classes. In our case the classifer will generate a  probability in [0,1] which can then be compared with a threshold (such as 0.5) to produce a binary label (0 or 1). However, the method shown can be extended to multiple classes easily. 
 
 <img src="https://www.cntk.ai/jup/logistic_neuron.jpg", width=300, height=200>
 
-In the figure above, contribution from different input features are linearly weighted and aggregated. The resulting sum is mapped to a 0-1 range via a sigmoid function. For classifiers with more than two output labels, one can use a [softmax][] function.
+In the figure above, contributions from different input features are linearly weighted and aggregated. The resulting sum is mapped to a 0-1 range via a sigmoid function. For classifiers with more than two output labels, one can use a [softmax][] function.
+
+[malignant]: https://en.wikipedia.org/wiki/Malignancy
 
 [feature scaling]: https://en.wikipedia.org/wiki/Feature_scaling
 
 [SGD]: https://en.wikipedia.org/wiki/Stochastic_gradient_descent
 
-[least squares fit]: https://en.wikipedia.org/wiki/Least_squares
+[linear regression]: https://en.wikipedia.org/wiki/Linear_regression
+
+[logistic regression]: https://en.wikipedia.org/wiki/Logistic_regression
 
 [softmax]: https://en.wikipedia.org/wiki/Multinomial_logistic_regression
 
@@ -54,10 +58,7 @@ from cntk.ops import input_variable, cross_entropy_with_softmax, combine, classi
 from cntk.ops import *
 ```
 
-For this tutorial we use a CPU device. You may run the code on GPU by setting the target target to it. Use: `DeviceDescriptor.gpu_device(0)` instead. 
-
-Known Issue: The `eval` function does not work on GPU device with the input feature map as provided in the tutorial
-TODO: Fix eval issue
+For this tutorial we use a CPU device. You may run the code on GPU device by setting the target to  `DeviceDescriptor.gpu_device(0)` instead. 
 
 
 ```python
@@ -69,9 +70,9 @@ if not DeviceDescriptor.default_device() == target_device:
 ```
 
 ## Data Generation
-Lets generate some syntetic data emulating the cancer example using `numpy` library. We have two features (thus the data is 2 dimensional)  each either being to one of the 2 classes (benign:blue dot or malignant:red dot). 
+Let us generate some synthetic data emulating the cancer example using `numpy` library. We have two features (represented in two-dimensions)  each either being to one of the two classes (benign:blue dot or malignant:red dot). 
 
-In our example, each observation in the training data has a label (blue vs. red) corresponding to each observation (set of features - age and size). In this example, we have 2 classes represened by labels 0 or 1, thus a  binary classification task. 
+In our example, each observation in the training data has a label (blue or red) corresponding to each observation (set of features - age and size). In this example, we have two classes represened by labels 0 or 1, thus a  binary classification task. 
 
 
 ```python
@@ -82,7 +83,7 @@ num_output_classes = 2
 
 ### Input and Labels
 
-In this tutorial we are generating synthetic data using `numpy` library. In real world problems, one would put in a reader, that would read a feature matrix (`features`) where each row would represent an obeserved feature set.  Note, the each observation can reside in a higher dimension space and will be represented as a tensor. More advanced tutorials shall introduce the handling of high dimensional data.
+In this tutorial we are generating synthetic data using `numpy` library. In real world problems, one would use a reader, that would read feature values (`features`: *age* and *tumor size*) corresponding to each obeservation (patient).  Note, each observation can reside in a higher dimension space (when more features are available) and will be represented as a tensor in CNTK. More advanced tutorials shall introduce the handling of high dimensional data.
 
 
 ```python
@@ -112,13 +113,15 @@ mysamplesize = 25
 features, labels = generate_random_data(mysamplesize, input_dim, num_output_classes)
 ```
 
-Let's plot the data to see how the input data looks. 
+Let us visualize the input data. 
+
 **Caution**: If the import of `matplotlib.pyplot` fails, please run `conda install matplotlib` which will fix the `pyplot` version dependencies
 
 
 ```python
 # Plot the data 
 import matplotlib.pyplot as plt
+%matplotlib inline
 
 #given this is a 2 class 
 colors = ['r' if l == 0 else 'b' for l in labels[:,0]]
@@ -133,38 +136,39 @@ plt.show()
 
 # Model Creation
 
-A logistic regression (a.k.a LR) network is the simplest building block but has been powering hundereds of ML 
-applications in the past decade. LR is a simple linear model that takes an input feature vector ($\bf{x}$) (the blue nodes in the figure) and emits the *evidence* ($\bf{z}$) (output of the green node). Each feature in the input layer is connected with a output node by a corresponding weight w (indicated by the blue lines of varying thickness). 
+A logistic regression (a.k.a LR) network is the simplest building block but has been powering many ML 
+applications in the past decade. LR is a simple linear model that takes as input, a vector of numbers describing the properties of what we are classifying (also known as a feature vector, $\bf{x}$, the blue nodes in the figure) and emits the *evidence* ($z$) (output of the green node). Each feature in the input layer is connected with a output node by a corresponding weight w (indicated by the black lines of varying thickness). 
 
 <img src="https://www.cntk.ai/jup/logistic_neuron.jpg", width=300, height=200>
 
 The first step is to compute the evidence for an observation. 
 
-$$\bf{z} = \bf{w} \times \bf{x} + b$$ 
+$$z = \sum_{i=1}^n w_i \times x_i + b = \textbf{w} \cdot \textbf{x} + b$$ 
 
-where $\bf{w}$ is the weight vector of lenght $n$ and $b}$ is a bias. Note: we use **bold** notations to denote vectors notation. 
+where $\bf{w}$ is the weight vector of length $n$ and $b$ is a bias. Note: we use **bold** notation to denote vectors. 
 
-The computed evidence is mapped to a 0-1 scale using a `sigmoid` or a `softmax` function.
+The computed evidence is mapped to a 0-1 scale using a `sigmoid` (when the outcome can take one of two values) or a `softmax` function (when the outcome can take one of more than 2 classes value).
 
 Network input and output: 
-- an **input** variable: This is the equal to the dimension of the data, e.g., if a 3D array of depth 10, height 10  and width 5 columns are presented, then the input feature dimension will be 3. [More on data and their dimensions to appear in separate tutorials]. In this case we have two dimensions. Corresponding to each dimension we associate a category.  
+- **input** variable (a key CNTK concept): 
+>An **input** variable is a container in which we fill different observations (data point or sample, equivalent to a blue/red dot in our example) during model learning (a.k.a.training) and model evaluation (a.k.a testing). Thus, the shape of the `input_variable` must match the shape of the data that will be provided.  For example, when data are images each of  height 10 pixels  and width 5 pixels, the input feature dimension will be 2 (representing image height and width). Similarly, in our example the dimensions are age and tumor size, thus `input_dim` = 2). More on data and their dimensions to appear in separate tutorials. 
 
 
 ```python
 input = input_variable((input_dim), np.float32)
-label = input_variable((num_output_classes), np.float32)
 ```
 
 ## Network setup
 
-The `linear_layer` function is pretty straight forward and should be easy to implement. We perform two operations:
-0. multiply the weights ($\bf{w}$)  with the features ($\bf{x}$),
+The `linear_layer` function is a straight forward implementation of the equation above. We perform two operations:
+0. multiply the weights ($\bf{w}$)  with the features ($\bf{x}$) and add individual features' contribution,
 1. add the bias term $b$.
 
 
 ```python
 #QUESTION: input_var.output() construct is wierd; can we hide it
-mydict = {"w":[],"b":[]}
+mydict = {"w":[],"b":[]} #Dictionary to store the model parameters
+
 def linear_layer(input_var, output_dim):
     try:
         shape = input_var.shape()
@@ -191,30 +195,31 @@ netout = linear_layer(input, output_dim)
 
 ### Learning model parameters
 
-Now that the network is setup, we would like to learn the parameters $\bf W$ and $\bf b$ for each of the layers in our network. To do so we convert, the computed evidence ($\bf z_{final~layer}$) into a set of predicted probabilities $\bf y$ using a `softmax` function.
+Now that the network is setup, we would like to learn the parameters $\bf w$ and $b$ for our simple linear layer. To do so we convert, the computed evidence ($z$) into a set of predicted probabilities ($\textbf p$) using a `softmax` function.
 
-$$ p = softmax(~evidence~)$$ 
+$$ \textbf{p} = \mathrm{softmax}(z)$$ 
 
-One can see the `softmax` function as an activation function that maps the accummulated evidences to a probability distribution over the number of classes, in our example 2 (Details of the [softmax function][]). Other choices of activation function can be [found here][].
+The `softmax` is an activation function that maps the accumulated evidences to a probability distribution over the classes (Details of the [softmax function][]). Other choices of activation function can be [found here][].
 
 [softmax function]: http://lsstce08:8000/cntk.ops.html#cntk.ops.softmax
 
 [found here]: https://github.com/Microsoft/CNTK/wiki/Activation-Functions
 
 ## Training
-The output of the softmax is a probability of each observation (rows of $\bf x$) belonging to the respective classes. For training the classifer we need to determine what behavior the model needs to mimic. In other words, we want the generated probabilities to be as close as possible to the observed labels. This function is called the *cost* or *loss* fucntion and shows what is the difference between the learnt model vs. that generated by the training set.
+The output of the `softmax` is a probability of observations belonging to the respective classes. For training the classifier, we need to determine what behavior the model needs to mimic. In other words, we want the generated probabilities to be as close as possible to the observed labels. This function is called the *cost* or *loss* function and shows what is the difference between the learnt model vs. that generated by the training set.
 
-[`Cross-entropy`][] is a popular function to measure the loss and has been used actively in information theory. It is defined as:
+[`Cross-entropy`][] is a popular function to measure the loss. It is defined as:
 
-$$ H(y) = - \sum_j y_j \log (p_j) $$  
+$$ H(p) = - \sum_{j=1}^C y_j \log (p_j) $$  
 
-where $y$ is our predicted probability from `softmax` function and $y$ represents the ground truth or the label. Understanding the [details][] of this cross-entropy function is highly recommended.
+where $p$ is our predicted probability from `softmax` function and $y$ represents the label. This label provided with the data for training is also called the ground-truth label. In the two-class example, the `label` variable has dimensions of two (equal to the `num_output_classes` or $C$). Generally speaking, if the task in hand requires classification into $C$ different classes, the label variable will have $C$ elements with 0 everywhere except for the class represented by the data point where it will be 1.  Understanding the [details][] of this cross-entropy function is highly recommended.
 
 [`cross-entropy`]: http://lsstce08:8000/cntk.ops.html#cntk.ops.cross_entropy_with_softmax
 [details]: http://colah.github.io/posts/2015-09-Visual-Information/
 
 
 ```python
+label = input_variable((num_output_classes), np.float32)
 loss = cross_entropy_with_softmax(netout, label)
 ```
 
@@ -229,13 +234,18 @@ label_error = classification_error(netout, label)
 
 ### Configure training
 
-The trainer strives to reduce the `loss` function by different optimization approaches, [Stochastic Gradient Descent][] (`sgd`) being one of the most poplular one. Typically one would start with some random initialization of the model parameters. We would define a sub-set of the training data called the *minibatch* and update the model parameters using `sgd`. As the process is repeated over with different training samples, the model parameters are updated and the error reduces. When the incremental error rates are no longer changing significantly, we claim that our model is trained.
+The trainer strives to reduce the `loss` function by different optimization approaches, [Stochastic Gradient Descent][] (`sgd`) being one of the most popular one. Typically, one would start with random initialization of the model parameters. The `sgd` optimizer would calculate the `loss` or error between the predicted label against the corresponding ground-truth label and using [gradient-decent][] generate a new set model parameters in a single iteration. 
 
-One of the key parameter for optimization is called the *learning_rate*. For now we can think of it as a scaling factor that modulates how much we change the parameters in any iteration. We will be covering more details in later tutorial. 
+The aforementioned model parameter update using a single observation at a time is attractive since it does not require the entire data set (all observation) to be loaded in memory and also requires gradient computation over fewer datapoints, thus allowing for training on large data sets. However, the updates generated using a single observation sample at a time can vary wildly between iterations. An intermediate ground is to load a small set of observations and use an average of the `loss` or error from that set to update the model parameters. This subset is called a *minibatch*.
+
+With minibatches we often sample observation from the larger training dataset. We repeat the process of model parameters update using different combination of training samples and over a period of time minimize the `loss` (and the error). When the incremental error rates are no longer changing significantly or after a preset number of maximum minibatches to train, we claim that our model is trained.
+
+One of the key parameter for optimization is called the `learning_rate`. For now, we can think of it as a scaling factor that modulates how much we change the parameters in any iteration. We will be covering more details in later tutorial. 
 With this information, we are ready to create our trainer. 
 
 [optimization]: https://en.wikipedia.org/wiki/Category:Convex_optimization
 [Stochastic Gradient Descent]: https://en.wikipedia.org/wiki/Stochastic_gradient_descent
+[gradient-decent]: http://www.statisticsviews.com/details/feature/5722691/Getting-to-the-Bottom-of-Regression-with-Gradient-Descent.html
 
 
 ```python
@@ -244,7 +254,7 @@ learning_rate = 0.02
 trainer = Trainer(netout, loss, label_error, [sgd(netout.parameters(), lr=0.02)])
 ```
 
-First lets create some helper functions that will be needed to visualize different functions associated with training.
+First let us create some helper functions that will be needed to visualize different functions associated with training.
 
 
 ```python
@@ -272,11 +282,11 @@ def print_training_progress(trainer, mb, frequency, verbose=1):
 
 ### Run the trainer
 
-We are now ready to train our LR model. We want to decide what data we need to feed into the training engine.
+We are now ready to train our Logistic Regression model. We want to decide what data we need to feed into the training engine.
 
-In this example, each iteration of the optimizer will work on 25 samples (25 dots w.r.t. the plot above) a.k.a *minibatch_size*. We would like to train on say 20000 observations. If the number of samples in the data is 10000. Then the trainer will make multiple passes through the data. Note: In real world case, we would be given a certain amount of labeled data (in the context of this example, observation (age, size) and what they mean (benign / malignant)). We would use a large number of observations for training say 70% and set aside the remainder for evaluation of the trained model.
+In this example, each iteration of the optimizer will work on 25 samples (25 dots w.r.t. the plot above) a.k.a `minibatch_size`. We would like to train on say 20000 observations. If the number of samples in the data is 10000. Then the trainer will make multiple passes through the data. Note: In real world case, we would be given a certain amount of labeled data (in the context of this example, observation (age, size) and what they mean (benign / malignant)). We would use a large number of observations for training say 70% and set aside the remainder for evaluation of the trained model.
 
-With these parameters we can proceed withe training our simple feed forward network
+With these parameters we can proceed with training our simple feedforward network.
 
 
 ```python
@@ -384,7 +394,7 @@ plt.show()
 
 ## Evaluation / Testing 
 
-Now that we have trained the network. Lets evaluate the trained network on data that hasn't been used for training. This is often called \bf{testing}. Lets create some newdata set and evaluate the average error & loss on this set. This is done using `trainer.test_minibatch`. Note the error on this previously unseen data is comparable to training error. This is a **key** check. Should the error be larger than the training error by a large margin, it indicates that the train model will not perform well on data that it has not seen during training. This is known as [overfitting][]. There are several ways to address overfitting that is beyond the scope of this tutorial but CNTK toolkit provide the necessary components to address overfitting.
+Now that we have trained the network. Let us evaluate the trained network on data that hasn't been used for training. This is called **testing**. Let us create some new data and evaluate the average error & loss on this set. This is done using `trainer.test_minibatch`. Note the error on this previously unseen data is comparable to training error. This is a **key** check. Should the error be larger than the training error by a large margin, it indicates that the train model will not perform well on data that it has not seen during training. This is known as [overfitting][]. There are several ways to address overfitting that is beyond the scope of this tutorial but CNTK toolkit provide the necessary components to address overfitting.
 
 [overfitting]: https://en.wikipedia.org/wiki/Overfitting
 
@@ -405,7 +415,7 @@ trainer.test_minibatch({input : features, label : labels})
 
 
 ### Checking prediction / evaluation 
-For evaluation, we map the output of the network between 0-1 and convert them into probabilities. This suggests what are the chances that each observation is either malignant or benign. We use a softmax function to get the probabilities of each of the class. 
+For evaluation, we map the output of the network between 0-1 and convert them into probabilities for the two classes. This suggests the chances of each observation being malignant and benign. We use a softmax function to get the probabilities of each of the class. 
 
 
 ```python
@@ -413,9 +423,9 @@ out = softmax(netout)
 result =out.eval({input : features})
 ```
 
-Lets compare the ground truth label with the predictions. The should be in agreement.
+Lets compare the ground-truth label with the predictions. They should be in agreement.
 
-**Question:** How many predictions were mislabeled? Can you change the code below it identify which observations were misclassified? 
+**Question:** How many predictions were mislabeled? Can you change the code below to identify which observations were misclassified? 
 
 
 ```python
@@ -428,7 +438,9 @@ print("Predicted:", np.argmax(result[0,:5,:],axis=1))
     
 
 ### Visualization
-It is desirable to visualize the results. In this example, the data is conviniently in 2 dimensions and can be plotted. For data with higher dimensions, one projects the data into a lower dimensional plane.
+It is desirable to visualize the results. In this example, the data is conveniently in two dimensions and can be plotted. For data with higher dimensions, visualtion can be challenging. There are advanced dimensionality reduction techniques that allow for such visualisations [t-sne][].
+
+[t-sne]: https://en.wikipedia.org/wiki/T-distributed_stochastic_neighbor_embedding
 
 
 ```python
@@ -449,6 +461,8 @@ plt.show()
 
 ![png](output_36_0.png)
 
+
+**Exploration Suggestion** You can now explore training a multiclass logistic regression classifier.
 
 
 ```python
