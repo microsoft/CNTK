@@ -253,14 +253,14 @@ void RunEvaluation(FunctionPtr evalFunc, const DeviceDescriptor& device)
 
     fprintf(stderr, "Input Variables (count=%lu)\n", inputVariables.size());
     for_each(inputVariables.begin(), inputVariables.end(), [](const Variable v) {
-        fprintf(stderr, "    name=%S, kind=%d\n", v.Name().c_str(), (int)v.Kind());
+        fprintf(stderr, "    name=%S, kind=%d\n", v.Name().c_str(), static_cast<int>(v.Kind()));
     });
 
     auto outputVariables = evalFunc->Outputs();
 
     fprintf(stderr, "Output Variables (count=%lu)\n", outputVariables.size());
     for_each(outputVariables.begin(), outputVariables.end(), [](const Variable v) {
-        fprintf(stderr, "    name=%S, kind=%d\n", v.Name().c_str(), (int)v.Kind());
+        fprintf(stderr, "    name=%S, kind=%d\n", v.Name().c_str(), static_cast<int>(v.Kind()));
     });
 
     Variable inputVar;
