@@ -313,7 +313,7 @@ def pad_to_dense(batch):
     return Z
 
 
-def sanitize_batch(var, batch, seqStarts=None, data_type=None, device=None):
+def sanitize_batch(var, batch, seq_starts=None, data_type=None, device=None):
     """
     Convert to `:cntk:Value` with `data_type`. If the samples in `batch` have different
     sequence lengths, pad them to max sequence length and create a mask.
@@ -322,7 +322,7 @@ def sanitize_batch(var, batch, seqStarts=None, data_type=None, device=None):
         var (`:class:Variable`): variable node for which the `batch` is
          meant
         batch (`list` of NumPy arrays): input
-        seqStarts (`list` of `bool`s or `None`): if `None`, every sequence is
+        seq_starts (`list` of `bool`s or `None`): if `None`, every sequence is
          treated as a new sequence. Otherwise, it is interpreted as a list of
          Booleans that tell whether a sequence is a new sequence (`True`) or a
          continuation of the previous one (`False`)
@@ -349,9 +349,9 @@ def sanitize_batch(var, batch, seqStarts=None, data_type=None, device=None):
         from cntk.cntk_py import NDMask
         mask = NDMask((max(seq_lens), num_seq), device)
         for idx, seq_len in enumerate(seq_lens):
-            if seqStarts is None:
+            if seq_starts is None:
                 mask.mark_sequence_begin((0, idx))
-            elif seqStarts[idx]:
+            elif seq_starts[idx]:
                 mask.mark_sequence_begin((0, idx))
             mask.invalidate_section((seq_len, idx), (cntk_py.InferredDimension, 1))
 
@@ -390,7 +390,7 @@ def sanitize_function(arg):
 
     return arg
 
-def sanitize_var_map(op_arguments, arguments, seqStarts=None, precision=None, device=None, add_batch_axis=False):
+def sanitize_var_map(op_arguments, arguments, seq_starts=None, precision=None, device=None, add_batch_axis=False):
     '''
     Sanitizes a dictionary of `Variable`s to input data such that it can be
     handed off to the `Forward` method.
@@ -403,7 +403,7 @@ def sanitize_var_map(op_arguments, arguments, seqStarts=None, precision=None, de
           * map from input variables to the data
           * list of inputs in the order that the function expects or 
           Data should be either NumPy arrays or a `:class:cntk.io.MinibatchData` instance
-        seqStarts (`list` of `bool`s or `None`): if `None`, every sequence is
+        seq_starts (`list` of `bool`s or `None`): if `None`, every sequence is
          treated as a new sequence. Otherwise, it is interpreted as a list of
          Booleans that tell whether a sequence is a new sequence (`True`) or a
          continuation of the previous one (`False`)
@@ -443,14 +443,14 @@ def sanitize_var_map(op_arguments, arguments, seqStarts=None, precision=None, de
         raise ValueError('not all inputs have the same number of samples: ' +\
                 ", ".join(sample_sizes))
 
-    if seqStarts is not None:
-        if not isinstance(seqStarts, (tuple, list)):
-            raise ValueError('if you specify seqStarts, it needs to be a list')
+    if seq_starts is not None:
+        if not isinstance(seq_starts, (tuple, list)):
+            raise ValueError('if you specify seq_starts, it needs to be a list')
 
         sample_size = sample_sizes.pop()
-        if len(seqStarts) != sample_size:
-            raise ValueError('you have %i samples, but seqStarts has only %i' +
-                    'elements'%(sample_sizes, len(seqStarts)))
+        if len(seq_starts) != sample_size:
+            raise ValueError('you have %i samples, but seq_starts has only %i' +
+                    'elements'%(sample_sizes, len(seq_starts)))
 
     if precision is not None:
         precision = sanitize_precision(precision)
@@ -478,7 +478,7 @@ def sanitize_var_map(op_arguments, arguments, seqStarts=None, precision=None, de
                     batch = batch.astype(np.float32)
                 if batch.dtype not in (np.float32, np.float64):                        
                     raise ValueError('only float32 and float64 are supported')
-                batch = sanitize_batch(var, batch, seqStarts, precision, device)
+                batch = sanitize_batch(var, batch, seq_starts, precision, device)
             else:
                 if is_tensor(batch):
                     if precision is None:
@@ -486,7 +486,7 @@ def sanitize_var_map(op_arguments, arguments, seqStarts=None, precision=None, de
                     batch = np.asarray(batch, dtype=precision)
                     batch = create_Value_from_NumPy(batch, device)
                 else:
-                    batch = sanitize_batch(var, batch, seqStarts, precision, device)
+                    batch = sanitize_batch(var, batch, seq_starts, precision, device)
 
         var_map[var] = batch
 
@@ -631,7 +631,7 @@ def value_to_seq(value):
 
     return np_data
 
-def eval(op, arguments=None, seqStarts=None, precision=None, device=None, backward_pass=False):
+def eval(op, arguments=None, seq_starts=None, precision=None, device=None, backward_pass=False):
     '''
     It evaluates `op` on the data provided by the reader. This is useful
     mainly to explore the operators and for convenient unit testing. 
@@ -642,7 +642,7 @@ def eval(op, arguments=None, seqStarts=None, precision=None, device=None, backwa
           * map from input variables to the data
           * list of inputs in the order that the function expects or 
           Data should be either NumPy arrays or a `:class:cntk.io.MinibatchData` instance
-        seqStarts (`list` of `bool`s or `None`): if `None`, every sequence is
+        seq_starts (`list` of `bool`s or `None`): if `None`, every sequence is
          treated as a new sequence. Otherwise, it is interpreted as a list of
          Booleans that tell whether a sequence is a new sequence (`True`) or a
          continuation of the previous one (`False`)
@@ -660,7 +660,7 @@ def eval(op, arguments=None, seqStarts=None, precision=None, device=None, backwa
     if precision is not None:
         precision = sanitize_precision(precision)
 
-    forward_in_var_map = sanitize_var_map(op.arguments(), arguments, seqStarts, precision, device)
+    forward_in_var_map = sanitize_var_map(op.arguments(), arguments, seq_starts, precision, device)
 
     forward_out_var_map = {}
     forward_retain = set()
