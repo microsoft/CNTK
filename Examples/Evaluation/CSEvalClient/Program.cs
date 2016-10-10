@@ -30,8 +30,8 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
     /// 
     /// EvaluateModelSingleLayer and EvaluateModelMultipleLayers
     /// --------------------------------------------------------
-    /// These two cases require the 01_OneHidden model which is part of the <CNTK>/Examples/Image/MNIST example.
-    /// Refer to <see cref="https://github.com/Microsoft/CNTK/blob/master/Examples/Image/MNIST/README.md"/> for how to train
+    /// These two cases require the 01_OneHidden model which is part of the <CNTK>/Examples/Image/GettingStarted example.
+    /// Refer to <see cref="https://github.com/Microsoft/CNTK/blob/master/Examples/Image/GettingStarted/README.md"/> for how to train
     /// the model used in these examples.
     /// 
     /// EvaluateNetworkSingleLayer and EvaluateNetworkSingleLayerNoInput
@@ -41,8 +41,8 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
     /// 
     /// EvaluateMultipleModels
     /// ----------------------
-    /// This case requires the 02_Convolution model and the Test-28x28_cntk_text.txt test file which are part of the <CNTK>/Examples/Image/MNIST example.
-    /// Refer to <see cref="https://github.com/Microsoft/CNTK/blob/master/Examples/Image/MNIST/README.md"/> for how to train
+    /// This case requires the 02_Convolution model and the Test-28x28_cntk_text.txt test file which are part of the <CNTK>/Examples/Image/GettingStarted example.
+    /// Refer to <see cref="https://github.com/Microsoft/CNTK/blob/master/Examples/Image/GettingStarted/README.md"/> for how to train
     /// the model used in this example.
     /// 
     /// EvaluateImageClassificationModel
@@ -142,15 +142,15 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
 
                 // The examples assume the executable is running from the data folder
                 // We switch the current directory to the data folder (assuming the executable is in the <CNTK>/x64/Debug|Release folder
-                Environment.CurrentDirectory = Path.Combine(initialDirectory, @"..\..\Examples\Image\MNIST\Data\");
+                Environment.CurrentDirectory = Path.Combine(initialDirectory, @"..\..\Examples\Image\GettingStarted");
                 List<float> outputs;
 
                 using (var model = new IEvaluateModelManagedF())
                 {
                     // Load model
-                    string modelFilePath = Path.Combine(Environment.CurrentDirectory, @"..\Output\Models\01_OneHidden");
+                    string modelFilePath = Path.Combine(Environment.CurrentDirectory, @".\Output\Models\01_OneHidden");
                     ThrowIfFileNotExist(modelFilePath, 
-                        string.Format("Error: The model '{0}' does not exist. Please follow instructions in README.md in <CNTK>/Examples/Image/MNIST to create the model.", modelFilePath));
+                        string.Format("Error: The model '{0}' does not exist. Please follow instructions in README.md in <CNTK>/Examples/Image/GettingStarted to create the model.", modelFilePath));
 
                     model.CreateNetwork(string.Format("modelPath=\"{0}\"", modelFilePath), deviceId: -1);
 
@@ -189,7 +189,7 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
             {
                 // The examples assume the executable is running from the data folder
                 // We switch the current directory to the data folder (assuming the executable is in the <CNTK>/x64/Debug|Release folder
-                Environment.CurrentDirectory = Path.Combine(initialDirectory, @"..\..\Examples\Image\MNIST\Data\");
+                Environment.CurrentDirectory = Path.Combine(initialDirectory, @"..\..\Examples\Image\GettingStarted");
 
                 Dictionary<string, List<float>> outputs;
 
@@ -200,9 +200,9 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
                     const string outputLayerName = "out.z";
 
                     // Load model
-                    string modelFilePath = Path.Combine(Environment.CurrentDirectory, @"..\Output\Models\01_OneHidden");
+                    string modelFilePath = Path.Combine(Environment.CurrentDirectory, @".\Output\Models\01_OneHidden");
                     ThrowIfFileNotExist(modelFilePath,
-                        string.Format("Error: The model '{0}' does not exist. Please follow instructions in README.md in <CNTK>/Examples/Image/MNIST to create the model.", modelFilePath));
+                        string.Format("Error: The model '{0}' does not exist. Please follow instructions in README.md in <CNTK>/Examples/Image/GettingStarted to create the model.", modelFilePath));
 
                     var desiredOutputLayers = new List<string>() { hiddenLayerName, outputLayerName };
                     model.CreateNetwork(string.Format("modelPath=\"{0}\"", modelFilePath), deviceId: -1, outputNodeNames: desiredOutputLayers);
@@ -395,19 +395,19 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
 
             // The examples assume the executable is running from the data folder
             // We switch the current directory to the data folder (assuming the executable is in the <CNTK>/x64/Debug|Release folder
-            Environment.CurrentDirectory = Path.Combine(initialDirectory, @"..\..\Examples\Image\MNIST\Data\");
+            Environment.CurrentDirectory = Path.Combine(initialDirectory, @"..\..\Examples\Image\GettingStarted");
 
             // Load model
-            string modelFilePath = Path.Combine(Environment.CurrentDirectory, @"..\Output\Models\02_Convolution");
+            string modelFilePath = Path.Combine(Environment.CurrentDirectory, @".\Output\Models\02_OneConv");
             ThrowIfFileNotExist(modelFilePath, 
-                string.Format("Error: The model '{0}' does not exist. Please follow instructions in README.md in <CNTK>/Examples/Image/MNIST to create the model.", modelFilePath));
+                string.Format("Error: The model '{0}' does not exist. Please follow instructions in README.md in <CNTK>/Examples/Image/GettingStarted to create the model.", modelFilePath));
 
             // Initializes the model instances
             ModelEvaluator.Initialize(numConcurrentModels, modelFilePath);
 
-            string testfile = Path.Combine(Environment.CurrentDirectory, @"Test-28x28_cntk_text.txt");
+            string testfile = Path.Combine(Environment.CurrentDirectory, @"..\DataSets\MNIST\Test-28x28_cntk_text.txt");
             ThrowIfFileNotExist(testfile, 
-                string.Format("Error: The test file '{0}' does not exist. Please follow instructions in README.md in <CNTK>/Examples/Image/MNIST to download the data.", testfile));
+                string.Format("Error: The test file '{0}' does not exist. Please follow instructions in README.md in <CNTK>/Examples/Image/GettingStarted to download the data.", testfile));
 
             Stopwatch sw = new Stopwatch();
             sw.Start();
@@ -475,9 +475,9 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
             {
                 // This example requires the RestNet_18 model.
                 // The model can be downloaded from <see cref="https://www.cntk.ai/resnet/ResNet_18.model"/>
-                // The model is assumed to be located at: <CNTK>\Examples\Image\Miscellaneous\ImageNet\ResNet 
+                // The model is assumed to be located at: <CNTK>\Examples\Image\Classification\ResNet 
                 // along with a sample image file named "zebra.jpg".
-                string workingDirectory = Path.Combine(initialDirectory, @"..\..\Examples\Image\Miscellaneous\ImageNet\ResNet");
+                string workingDirectory = Path.Combine(initialDirectory, @"..\..\Examples\Image\Classification\ResNet");
                 Environment.CurrentDirectory = initialDirectory;
 
                 List<float> outputs;
@@ -486,7 +486,7 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
                 {
                     string modelFilePath = Path.Combine(workingDirectory, "ResNet_18.model");
                     ThrowIfFileNotExist(modelFilePath, 
-                        string.Format("Error: The model '{0}' does not exist. Please download the model from https://www.cntk.ai/resnet/ResNet_18.model and save it under ..\\..\\Examples\\Image\\Miscellaneous\\ImageNet\\ResNet.", modelFilePath));
+                        string.Format("Error: The model '{0}' does not exist. Please download the model from https://www.cntk.ai/resnet/ResNet_18.model and save it under ..\\..\\Examples\\Image\\Classification\\ResNet.", modelFilePath));
                         
                     model.CreateNetwork(string.Format("modelPath=\"{0}\"", modelFilePath), deviceId: -1);
 

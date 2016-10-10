@@ -5,15 +5,44 @@
 # ==============================================================================
 
 from .. import cntk_py
+from ..utils import typemap
 
 MAX_UI64 = int('0xffffffffffffffff', 16)
 
+class MinibatchData(cntk_py.MinibatchData):
+    '''
+    Holds the minibatch data of an input. 
+
+    This is never directly created, but only returned by
+    `:class:MinibatchSource` instances.
+    '''
+
+    def num_sequences(self):
+        '''
+        Returns the number of sequences in this minibatch
+        '''
+        return self.m_num_sequences
+
+    def num_samples(self):
+        '''
+        Returns the number of samples in this minibatch
+        '''
+        return self.m_num_samples
+
+    def data(self):
+        '''
+        Returns the Value object of the minibatch. 
+        '''
+        return self.m_data
 
 class MinibatchSource(cntk_py.MinibatchSource):
     '''
     Parent class of all minibatch sources. For most cases you will need the
     helper functions `:func:cntk.io.text_format_minibatch_source` or
     `:func:cntk.io.create_minibatch_source`.
+    A `MinibatchSource` can be indexed by a `StreamInfo`, which will return a
+    `MinibatchData` object that can be passed e.g. to the
+    `:func:Trainer.train_minibatch()` function.
     '''
 
     def stream_infos(self):
@@ -32,8 +61,20 @@ class MinibatchSource(cntk_py.MinibatchSource):
         same name.
         '''
         return super(MinibatchSource, self).stream_info(name)
-        
-    def get_next_minibatch(self, minibatch_size_in_samples, device = None):
+
+    def __getitem__(self, name):
+        '''
+        Return the `:class:StreamInfo` for the given stream name
+
+        Args:
+            name (`str`): stream name to fetch `:class:StreamInfo` for
+        '''
+        return self.stream_info(name)
+
+
+    @typemap
+    def get_next_minibatch(self, minibatch_size_in_samples,
+            minibatch_size_in_sequences=None, device=None):
         '''
         Reads a minibatch that contains data for all input streams.
         The minibatch size is specified terms of #samples and/or #sequences for the primary input stream; value of 0 for #samples/#sequences means unspecified.
@@ -41,13 +82,23 @@ class MinibatchSource(cntk_py.MinibatchSource):
         An empty map is returned when the MinibatchSource has no more data to return.''
 
         Args:
-            minibatch_size_in_samples (int): number of samples to retrieve for
+            minibatch_size_in_samples (`int`): number of samples to retrieve for
              the next minibatch. Must be > 0.
+            minibatch_size_in_sequences (`int`, defaults to `None`): number of
+             samples to retrieve for the next minibatch. Must be > 0. 
+            device (`DeviceDescriptor`, defaults to `None`): CNTK DeviceDescriptor
+
+        Returns:
+            `:class:MinibatchData`
         '''
         if device is None:
             device = cntk_py.DeviceDescriptor.use_default_device()
 
-        return super(MinibatchSource, self).get_next_minibatch(\
+        if minibatch_size_in_sequences is None:
+            return super(MinibatchSource, self).get_next_minibatch(
+                minibatch_size_in_samples, device)
+        else:
+            return super(MinibatchSource, self).get_next_minibatch(
                 minibatch_size_in_samples,
                 minibatch_size_in_sequences, device)
 
@@ -60,23 +111,26 @@ def _py_dict_to_cntk_dict(py_dict):
     Returns: 
         :class:`cntk_py.Dictionary`
     '''
-    res = cntk_py.Dictionary();
-    for k,v in py_dict.items():
-        if isinstance(v,dict):
+    res = cntk_py.Dictionary()
+    for k, v in py_dict.items():
+        if isinstance(v, dict):
             res[k] = cntk_py.DictionaryValueFromDict(_py_dict_to_cntk_dict(v))
-        #TODO: add support to list of lists ?
-        elif isinstance(v,list):
+        # TODO: add support to list of lists ?
+        elif isinstance(v, list):
             l = list()
             for e in v:
-                if isinstance(e,dict):
-                    l.append(cntk_py.DictionaryValueFromDict(_py_dict_to_cntk_dict(e)))
+                if isinstance(e, dict):
+                    l.append(cntk_py.DictionaryValueFromDict(
+                        _py_dict_to_cntk_dict(e)))
                 else:
                     l.append(cntk_py.DictionaryValue(v))
             res[k] = cntk_py.DictionaryValue(l)
         else:
             res[k] = cntk_py.DictionaryValue(v)
     return res
-        
+
+
+@typemap
 def minibatch_source(config):
     '''
     Instantiate the CNTK built-in composite minibatch source which is used to stream data into the network.    
@@ -88,6 +142,7 @@ def minibatch_source(config):
     cntk_dict = _py_dict_to_cntk_dict(config)
     return cntk_py.create_composite_minibatch_source(cntk_dict)
 
+
 class ReaderConfig(dict):
     '''
     Reader configuration.
@@ -98,14 +153,16 @@ class ReaderConfig(dict):
         randomize (`bool`, default True): randomize images before every epoch
         epoch_size (`int`): epoch size 
     '''
+
     def __init__(self, deserializers=None, randomize=True, epoch_size=MAX_UI64):
 
         self['epochSize'] = epoch_size
         if not isinstance(deserializers, (list, tuple)):
             deserializers = [deserializers]
         self['deserializers'] = self.deserializers = deserializers or []
-        self['randomize'] = randomize;
+        self['randomize'] = randomize
 
+    @typemap
     def minibatch_source(self):
         '''
         Creates an instance of `:class:cntk.io.MinibatchSource` from this
@@ -117,6 +174,7 @@ class ReaderConfig(dict):
         '''
         return minibatch_source(self)
 
+
 class Deserializer(dict):
     '''
     Base deserializer class that can be used in the `:class:ReaderConfig`.
@@ -124,8 +182,10 @@ class Deserializer(dict):
     Args:
         type (`str`): type of the deserializer
     '''
+
     def __init__(self, type):
         self['type'] = type
+
 
 class ImageDeserializer(Deserializer):
     '''
@@ -143,6 +203,7 @@ class ImageDeserializer(Deserializer):
     See also:
         https://github.com/microsoft/cntk/wiki/Understanding-and-Extending-Readers
     '''
+
     def __init__(self, filename):
         super(ImageDeserializer, self).__init__('ImageDeserializer')
         self['file'] = filename
@@ -217,7 +278,7 @@ class ImageDeserializer(Deserializer):
         '''
         trans = {}
         trans['type'] = 'Scale'
-        trans['width'] = width 
+        trans['width'] = width
         trans['height'] = height
         trans['channels'] = channels
         trans['interpolations'] = interpolations
@@ -248,7 +309,9 @@ class ImageDeserializer(Deserializer):
 # similarly to ImageDeserializer
 #
 
-def text_format_minibatch_source(path, stream_configs, epoch_size=MAX_UI64):
+
+@typemap
+def text_format_minibatch_source(path, stream_configs, epoch_size=MAX_UI64, randomize=True):
     '''
     Creates a minibatch source from a CNTKTextFormatReader file.
 
@@ -259,12 +322,14 @@ def text_format_minibatch_source(path, stream_configs, epoch_size=MAX_UI64):
          file
         epoch_size (`int`, optional): size of an epoch. In case of 0 the size
          of the training set will be taken. Default is max of 64bit.
+        randomize (`bool`, optional): whether to randomize the contents of data file.
 
     Returns:
         `:class:cntk.io.MinibatchSource'
     '''
     return cntk_py.text_format_minibatch_source(path, stream_configs,
-            epoch_size)
+                                                epoch_size, randomize)
+
 
 class StreamConfiguration(cntk_py.StreamConfiguration):
     '''
@@ -281,6 +346,6 @@ class StreamConfiguration(cntk_py.StreamConfiguration):
         stream_alias (`str`, default ''): name of the stream in the file that is fed to the
          `:func:cntk.io.text_format_minibatch_source`       
     '''
+
     def __init__(self, name, dim, is_sparse=False, stream_alias=''):
         return super(StreamConfiguration, self).__init__(name, dim, is_sparse, stream_alias)
-

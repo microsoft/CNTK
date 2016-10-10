@@ -13,6 +13,8 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+static const std::ptrdiff_t SentinelValueIndicatingUnspecifedSequenceBeginIdx = std::numeric_limits<std::ptrdiff_t>::min();
+
 template <class ElemType> class DelayedValueNodeState;
 
 // -----------------------------------------------------------------------

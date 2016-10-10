@@ -199,3 +199,12 @@ Tests/EndToEndTests/UnitTests/MathTests/MS.txt
 Dependencies/CNTKCustomMKL/Publish
 Dependencies/CNTKCustomMKL/CNTKCustomMKL-Linux-*.tgz
 Dependencies/CNTKCustomMKL/CNTKCustomMKL-Windows-*.zip
+
+# Python bindings
+bindings/python/_cntk_py.pyd
+bindings/python/cntk.egg-info/
+bindings/python/cntk/cntk_py.py
+bindings/python/cntk/libs/
+bindings/python/cntk/cntk_py_wrap.cpp
+bindings/python/cntk/cntk_py_wrap.h
+bindings/python/dist/

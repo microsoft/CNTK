@@ -46,22 +46,22 @@ int main(int argc, char* argv[])
     path = (pos == std::string::npos) ? "." : app.substr(0, pos);
 
     // This relative path assumes launching from CNTK's binary folder, e.g. x64\Release
-    const std::string modelWorkingDirectory = path + "/../../Examples/Image/MNIST/Data/";
+    const std::string modelWorkingDirectory = path + "/../../Examples/Image/GettingStarted";
 #else // on Linux
     pos = app.rfind("/");
     path = (pos == std::string::npos) ? "." : app.substr(0, pos);
 
     // This relative path assumes launching from CNTK's binary folder, e.g. build/cpu/release/bin/
-    const std::string modelWorkingDirectory = path + "/../../../../Examples/Image/MNIST/Data/";
+    const std::string modelWorkingDirectory = path + "/../../../../Examples/Image/GettingStarted";
 #endif
-    const std::string modelFilePath = modelWorkingDirectory + "../Output/Models/01_OneHidden";
+    const std::string modelFilePath = modelWorkingDirectory + "/Output/Models/01_OneHidden";
 
     try
     {
         struct stat statBuf;
         if (stat(modelFilePath.c_str(), &statBuf) != 0)
         {
-            fprintf(stderr, "Error: The model %s does not exist. Please follow instructions in README.md in <CNTK>/Examples/Image/MNIST to create the model.\n", modelFilePath.c_str());
+            fprintf(stderr, "Error: The model %s does not exist. Please follow instructions in README.md in <CNTK>/Examples/Image/GettingStarted to create the model.\n", modelFilePath.c_str());
             return(1);
         }
 

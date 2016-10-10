@@ -414,7 +414,7 @@ void CNTKEvalExtended<ElemType>::ForwardPassT(const std::vector<ValueBuffer<Elem
 template<typename ElemType>
 void CNTKEvalExtended<ElemType>::ForwardPass(const Values<ElemType>& inputs, Values<ElemType>& outputs)
 {
-    ForwardPassT(inputs, outputs, false);
+    ForwardPassT(inputs, outputs, true);
 }
 
 template<typename ElemType>
@@ -426,7 +426,7 @@ void CNTKEvalExtended<ElemType>::ForwardPass(const Values<ElemType>& inputs, Val
 template<typename ElemType>
 void CNTKEvalExtended<ElemType>::ForwardPass(const ValueRefs<ElemType>& inputs, ValueRefs<ElemType>& outputs)
 {
-    ForwardPassT(inputs, outputs, false);
+    ForwardPassT(inputs, outputs, true);
 }
 
 template<typename ElemType>
@@ -438,6 +438,8 @@ void CNTKEvalExtended<ElemType>::ForwardPass(const ValueRefs<ElemType>& inputs, 
 template <typename ElemType>
 void CNTKEvalExtended<ElemType>::Destroy()
 {
+    // Since m_scopeNetworkOperationMode has a reference to m_net, it has to be released first.
+    m_scopedNetworkOperationMode.reset();
     CNTKEvalBase<ElemType>::Destroy();
     delete this;
 }

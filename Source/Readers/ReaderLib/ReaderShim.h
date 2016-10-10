@@ -69,6 +69,11 @@ public:
         return true;
     }
 
+    virtual bool IsLegacyReader() const override
+    {
+        return false;
+    }
+
     virtual bool GetMinibatch(StreamMinibatchInputs& matrices) override;
 
     virtual bool DataEnd() override;
@@ -76,6 +81,8 @@ public:
     void CopyMBLayoutTo(MBLayoutPtr) override;
 
     virtual size_t GetNumParallelSequencesForFixingBPTTMode() override;
+
+    virtual size_t GetCurrentSamplePosition() override;
 
 private:
     struct PrefetchResult
@@ -120,6 +127,11 @@ private:
 
     // Device id.
     int m_deviceId;
+
+    // Current sample position of the reader on the global timeline.
+    // We have to remember the value locally before starting prefetch.
+    // The value is updated only from the main thread (in StartEpoch/GetMinibatch)
+    size_t m_currentSamplePosition;
 
     static void FillMatrixFromStream(
         StorageType type,
