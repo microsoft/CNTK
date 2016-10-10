@@ -693,9 +693,6 @@ class IRngUser
 public:
     virtual RNGHandle& GetRNGHandle(DEVICEID_TYPE deviceId) = 0;
     virtual void SetRandomSeed(const unsigned long val) = 0;
-
-    // Provide a virtual destructor so that we can use dynamic_pointer_cast<IRngUser> to check whether an object implements the interface.
-    virtual ~IRngUser(){}
 };
 
 // This implements IRngUser using RNGHandle.
