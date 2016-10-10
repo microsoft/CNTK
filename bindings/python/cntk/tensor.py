@@ -174,7 +174,7 @@ class EvalMixin(object):
              Booleans that tell whether a sequence is a new sequence (`True`) or a
              continuation of the previous one (`False`)
             precision (`str` or `np.float32` or `np.float64`): precision, if string
-             it can be one of 'float' 'float32, 'double', 'float64', or `None`
+             it can be one of 'float', 'float32', 'double', 'float64', or `None`
             device (:class:`cntk.DeviceDescriptor`): the device descriptor that
              contains the type and id of the device on which the computation is
              to be performed.
