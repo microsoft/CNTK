@@ -549,7 +549,7 @@ template <class ElemType>
 /* static */ void ComputationNetwork::SetIRngUserSeed(ComputationNetworkPtr net, const ComputationNodeBasePtr& node, size_t randSeedBase)
 {
     // Predicate checking if the node is derived from IRngUser
-    function<bool(const ComputationNodeBasePtr&)> nodeIsIRngUser = [](const ComputationNodeBasePtr& p) { return dynamic_pointer_cast<RngUser>(p) != nullptr; };
+    function<bool(const ComputationNodeBasePtr&)> nodeIsIRngUser = [](const ComputationNodeBasePtr& p) { return dynamic_pointer_cast<IRngUser>(p) != nullptr; };
 
     list<ComputationNodeBasePtr> rngUserNodes = net->GetNodesWhere(nodeIsIRngUser, node);
 
@@ -558,7 +558,7 @@ template <class ElemType>
     size_t randSeed = randSeedBase * rngUserNodes.size();
     for (auto& nodeIter : rngUserNodes)
     {
-        auto rngUser = dynamic_pointer_cast<RngUser>(nodeIter);
+        auto rngUser = dynamic_pointer_cast<IRngUser>(nodeIter);
         rngUser->SetRandomSeed(randSeed);
         randSeed++;
     }

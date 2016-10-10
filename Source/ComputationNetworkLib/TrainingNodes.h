@@ -686,13 +686,16 @@ template class NoiseContrastiveEstimationNode<double>;
 
 
 
-// Nodes using a random number generators  should implement from this class.
+// Nodes using a random number generators should derive from this interface.
 // One purpuose of this interface is to have a common interface for setting the seeds when setting up a network.
 class IRngUser
 {
 public:
     virtual RNGHandle& GetRNGHandle(DEVICEID_TYPE deviceId) = 0;
     virtual void SetRandomSeed(const unsigned long val) = 0;
+
+    // Provide a virtual destructor so that we can use dynamic_pointer_cast<IRngUser> to check whether an object implements the interface.
+    virtual ~IRngUser(){}
 };
 
 // This implements IRngUser using RNGHandle.
