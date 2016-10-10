@@ -29,7 +29,7 @@ Run the example from the current folder using:
 
 `cntk configFile=ResNet20_CIFAR10.cntk`
 
-The network achieves an error rate of about `8%`, which is lower than the number reported in the original paper.
+The network achieves an error rate of about `8.2%`, which is lower than the number reported in the original paper.
 
 ### ResNet110_CIFAR10.cntk
 
