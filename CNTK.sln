@@ -1261,6 +1261,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CSEvalClientTest", "Tests\E
 EndProject
 Project("{888888A0-9F3D-457C-B088-3A5042F75D52}") = "CNTKv2", "bindings\python\examples\CNTKv2.pyproj", "{1A078FC2-21C0-4F42-9A5B-0E84E944BC74}"
 EndProject
+Project("{888888A0-9F3D-457C-B088-3A5042F75D52}") = "PythonBindings", "bindings\python\cntk\PythonBindings.pyproj", "{19C9FBE6-FCF6-4300-988B-BE7E64822B84}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug_CpuOnly|Any CPU = Debug_CpuOnly|Any CPU
@@ -1987,6 +1989,18 @@ Global
 		{1A078FC2-21C0-4F42-9A5B-0E84E944BC74}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1A078FC2-21C0-4F42-9A5B-0E84E944BC74}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
 		{1A078FC2-21C0-4F42-9A5B-0E84E944BC74}.Release|x64.ActiveCfg = Release|Any CPU
+		{19C9FBE6-FCF6-4300-988B-BE7E64822B84}.Debug_CpuOnly|Any CPU.ActiveCfg = Debug|Any CPU
+		{19C9FBE6-FCF6-4300-988B-BE7E64822B84}.Debug_CpuOnly|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{19C9FBE6-FCF6-4300-988B-BE7E64822B84}.Debug_CpuOnly|x64.ActiveCfg = Debug|Any CPU
+		{19C9FBE6-FCF6-4300-988B-BE7E64822B84}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{19C9FBE6-FCF6-4300-988B-BE7E64822B84}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{19C9FBE6-FCF6-4300-988B-BE7E64822B84}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{19C9FBE6-FCF6-4300-988B-BE7E64822B84}.Release_CpuOnly|Any CPU.ActiveCfg = Release|Any CPU
+		{19C9FBE6-FCF6-4300-988B-BE7E64822B84}.Release_CpuOnly|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{19C9FBE6-FCF6-4300-988B-BE7E64822B84}.Release_CpuOnly|x64.ActiveCfg = Release|Any CPU
+		{19C9FBE6-FCF6-4300-988B-BE7E64822B84}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{19C9FBE6-FCF6-4300-988B-BE7E64822B84}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{19C9FBE6-FCF6-4300-988B-BE7E64822B84}.Release|x64.ActiveCfg = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -2161,5 +2175,6 @@ Global
 		{CCC07E8E-F33A-4AF7-9F60-93E2AA61C75E} = {05E45AF7-C069-4057-BC16-0A532D068CE4}
 		{1C6E6C53-1AA7-4B69-913E-B97BB5A872CF} = {05E45AF7-C069-4057-BC16-0A532D068CE4}
 		{1A078FC2-21C0-4F42-9A5B-0E84E944BC74} = {47755F2E-D674-4175-9E38-8EA053455072}
+		{19C9FBE6-FCF6-4300-988B-BE7E64822B84} = {DD043083-71A4-409A-AA91-F9C548DCF7EC}
 	EndGlobalSection
 EndGlobal

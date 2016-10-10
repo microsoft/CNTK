@@ -158,6 +158,9 @@
     <ClCompile Include="Value.cpp" />
     <ClCompile Include="Variable.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\bindings\python\cntk\PythonBindings.pyproj" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

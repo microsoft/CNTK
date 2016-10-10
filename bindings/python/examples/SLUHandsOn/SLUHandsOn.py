@@ -8,13 +8,15 @@ import numpy as np
 import sys
 import os
 import time
+from cntk.blocks import *  # non-layer like building blocks such as LSTM()
+from cntk.layers import *  # layer-like stuff such as Linear()
+from cntk.models import *  # higher abstraction level, e.g. entire standard models and also operators like Sequential()
+from cntk.utils import *
+from cntk.io import CNTKTextFormatMinibatchSource, StreamDef
 from cntk import Trainer, Axis
 from cntk.learner import sgd, fsadagrad, learning_rates_per_sample, momentums_per_sample
 from cntk.ops import parameter, input_variable, placeholder_variable, times, cross_entropy_with_softmax, combine, classification_error
-from cntk.layers import *
-from cntk.utils import *
-from cntk.io import CNTKTextFormatMinibatchSource, StreamDef
-import itertools
+#import itertools
 
 #abs_path = os.path.dirname(os.path.abspath(__file__))
 #sys.path.append(os.path.join(abs_path, "..", ".."))
