@@ -699,7 +699,7 @@ public:
 };
 
 // This implements IRngUser using RNGHandle.
-class RngUser : IRngUser
+class RngUser : public IRngUser
 {
 public:
     RNGHandle& GetRNGHandle(DEVICEID_TYPE deviceId) override
