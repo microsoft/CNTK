@@ -261,9 +261,10 @@ inline std::vector<size_t> GenerateSequenceLengths(size_t numSequences, size_t m
 {
     std::vector<size_t> sequenceLengths(numSequences);
     size_t maxActualSequenceLength = 0;
+    size_t minActualSequenceLength = 3;
     for (size_t i = 0; i < numSequences; ++i)
     {
-        sequenceLengths[i] = (rand() % maxAllowedSequenceLength) + 1;
+        sequenceLengths[i] = (rand() % maxAllowedSequenceLength) + minActualSequenceLength;
         if (sequenceLengths[i] > maxActualSequenceLength)
             maxActualSequenceLength = sequenceLengths[i];
     }

@@ -48,6 +48,7 @@
 %ignore CNTK::Internal::IsReversingTensorShapesInErrorMessagesEnabled;
 %ignore CNTK::Internal::IsSettingDefaultDeviceAlwaysAllowed;
 %ignore CNTK::Internal::IsAutomaticUnpackingOfPackedValuesDisabled;
+%ignore CNTK::Internal::GetComputationNetworkTraceLevel;
 
 %{
 #define SWIG_FILE_WITH_INIT

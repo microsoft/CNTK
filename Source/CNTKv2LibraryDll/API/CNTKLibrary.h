@@ -194,12 +194,20 @@ namespace CNTK
     class NDShape final
     {
         friend bool operator==(const NDShape& first, const NDShape& second);
+        friend class PrimitiveFunction;
+
+        static const size_t SentinelDimValueForUnknownShape = (size_t)-2;
     public:
 
         ///
         /// A placeholder value to use for an axis whose dimension is unknown and is to be inferred by the system.
         ///
         static const size_t InferredDimension = (size_t)-1;
+
+        ///
+        /// A placeholder shape to use to denote an unknown shape
+        ///
+        CNTK_API static const NDShape Unknown;
 
     public:
         ///
@@ -232,6 +240,11 @@ namespace CNTK
         /// Returns the dimensions of 'this' shape as a std::vector<size_t>
         ///
         const std::vector<size_t>& Dimensions() const { return m_shapeDims; }
+
+        ///
+        /// Returns a boolean indicating if 'this' shape is the special Unknown shape
+        ///
+        bool IsUnknown() const { return (*this == NDShape::Unknown); }
 
         ///
         /// Returns the rank of 'this' shape.
@@ -840,6 +853,7 @@ namespace CNTK
         CNTK_API static const std::wstring StaticAxisNamePrefix;
         static const size_t SentinelStaticAxisIndexValueForDynamicAxes = SIZE_MAX;
         static const size_t SentinelStaticAxisIndexValueForAllStaticAxes = SIZE_MAX - 1;
+        static const size_t SentinelStaticAxisIndexValueForUnknownAxes = SIZE_MAX - 2;
 
         class UniqueDynamicAxesNames
         {
@@ -850,7 +864,7 @@ namespace CNTK
                 return m_allKnownDynamicAxisNames.insert(axisName).second;
             }
 
-            std::wstring NewUniqueDynamicAxisName(const std::wstring& axisNamePrefix)
+            const std::wstring& NewUniqueDynamicAxisName(const std::wstring& axisNamePrefix)
             {
                 std::unique_lock<std::mutex> lock(m_mutex);
                 if (m_allKnownDynamicAxisNames.find(axisNamePrefix) == m_allKnownDynamicAxisNames.end())
@@ -865,7 +879,7 @@ namespace CNTK
                     if (m_allKnownDynamicAxisNames.find(newDynamicAxisName) == m_allKnownDynamicAxisNames.end())
                     {
                         m_allKnownDynamicAxisNames.insert(newDynamicAxisName);
-                        return newDynamicAxisName;
+                        return *m_allKnownDynamicAxisNames.find(newDynamicAxisName);
                     }
                 }
             }
@@ -879,6 +893,11 @@ namespace CNTK
 
     public:
         CNTK_API static const std::vector<Axis> DefaultInputVariableDynamicAxes;
+
+        ///
+        /// Axis object representing unknown dynamic axes
+        ///
+        CNTK_API static const std::vector<Axis> UnknownDynamicAxes;
 
     public:
         ///
@@ -938,7 +957,10 @@ namespace CNTK
         ///
         /// Returns a new unique Dynamic axis
         ///
-        CNTK_API static Axis NewUniqueDynamicAxis(const std::wstring& axisNamePrefix, bool isOrderedDynamicAxis = true);
+        static Axis NewUniqueDynamicAxis(const std::wstring& axisNamePrefix, bool isOrderedDynamicAxis = true)
+        {
+            return Axis(s_uniqueDynamicAxisNames.NewUniqueDynamicAxisName(axisNamePrefix), isOrderedDynamicAxis);
+        }
 
         ///
         /// Name of 'this' axis
@@ -1234,12 +1256,12 @@ namespace CNTK
         }
 
         template <typename T, typename std::enable_if<std::is_same<T, NDShape>::value ||
-            std::is_same<T, Axis>::value ||
-            std::is_same<T, std::wstring>::value ||
-            std::is_same<T, std::vector<DictionaryValue>>::value ||
-            std::is_same<T, Dictionary>::value ||
-            std::is_same<T, NDArrayView>::value>::type* = nullptr>
-            T& Value()
+                                                      std::is_same<T, Axis>::value ||
+                                                      std::is_same<T, std::wstring>::value ||
+                                                      std::is_same<T, std::vector<DictionaryValue>>::value ||
+                                                      std::is_same<T, Dictionary>::value ||
+                                                      std::is_same<T, NDArrayView>::value>::type* = nullptr>
+        T& Value()
         {
             VerifyType<T>();
             return *(reinterpret_cast<T*>(m_data.m_ptr));
@@ -1424,7 +1446,7 @@ namespace CNTK
     typedef Dictionary ParameterInitializer;
 
     // Forward declarations
-    inline Variable PlaceholderVariable(const NDShape& shape, const std::wstring& name, const std::vector<Axis>& dynamicAxes = Axis::DefaultInputVariableDynamicAxes);
+    inline Variable PlaceholderVariable(const NDShape& shape, const std::wstring& name, const std::vector<Axis>& dynamicAxes = Axis::UnknownDynamicAxes);
     inline Variable InputVariable(const NDShape& shape, bool isSparse, CNTK::DataType dataType, bool needsGradient, const std::wstring& name, const std::vector<Axis>& dynamicAxes = Axis::DefaultInputVariableDynamicAxes);
     inline Variable OutputVariable(const NDShape& shape, CNTK::DataType dataType, Function* ownerFunction, const std::vector<Axis>& dynamicAxes, const std::wstring& name = L"");
 
@@ -1439,6 +1461,7 @@ namespace CNTK
         friend bool operator==(const Variable& first, const Variable& second);
         friend class Function;
         friend class CompositeFunction;
+        friend class PrimitiveFunction;
 
         template <typename T>
         friend struct std::hash;
@@ -1451,7 +1474,7 @@ namespace CNTK
 
 #ifndef SWIG
     private:
-        friend inline Variable PlaceholderVariable(const NDShape& shape, const std::wstring& name, const std::vector<Axis>& dynamicAxes /*= Axis::DefaultInputVariableDynamicAxes*/);
+        friend inline Variable PlaceholderVariable(const NDShape& shape, const std::wstring& name, const std::vector<Axis>& dynamicAxes);
         friend inline Variable InputVariable(const NDShape& shape, bool isSparse, CNTK::DataType dataType, bool needsGradient, const std::wstring& name, const std::vector<Axis>& dynamicAxes /*= Axis::DefaultInputVariableDynamicAxes*/);
         friend inline Variable OutputVariable(const NDShape& shape, CNTK::DataType dataType, Function* ownerFunction, const std::vector<Axis>& dynamicAxes, const std::wstring& name /*= L""*/);
 #endif
@@ -1565,10 +1588,10 @@ namespace CNTK
             : Variable(shape, VariableKind::Input, dataType, nullptr, nullptr, needsGradient, dynamicAxes, isSparse, name, uid)
         {}
 
-
-        Variable(const NDShape& shape, VariableKind varType, CNTK::DataType dataType, Function* ownerFunction, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, bool isSparse, const std::wstring& name, const std::wstring& uid)
-            : m_dataFields(MakeSharedObject<VariableFields>(shape, varType, dataType, ownerFunction, value, needsGradient, dynamicAxes, isSparse, name, uid))
-        {}
+        // TODO: This should be a private but if not made public, the python bindings build complains about an unresolved external
+        // Probably due the above ctor being a public method in SWIG codegen
+    public:
+        CNTK_API Variable(const NDShape& shape, VariableKind varType, CNTK::DataType dataType, Function* ownerFunction, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, bool isSparse, const std::wstring& name, const std::wstring& uid);
 
 private:
         Variable Clone() const
@@ -1660,7 +1683,7 @@ private:
     /// Create a Placeholder variable to be used as a temporary/placeholder input to a Function.
     /// All placeholder inputs of a Function must be replaced with non-placeholder Variables before Forward evaluation of the Function.
     ///
-    inline Variable PlaceholderVariable(const NDShape& shape, const std::wstring& name, const std::vector<Axis>& dynamicAxes /*= Axis::DefaultInputVariableDynamicAxes*/)
+    inline Variable PlaceholderVariable(const NDShape& shape, const std::wstring& name, const std::vector<Axis>& dynamicAxes)
     {
         auto varKind = VariableKind::Placeholder;
         return Variable(shape, varKind, DataType::Unknown, nullptr, false, dynamicAxes, name, Internal::GenerateUid(varKind));
@@ -1670,9 +1693,18 @@ private:
     /// Create a Placeholder variable to be used as a temporary/placeholder input to a Function.
     /// All placeholder inputs of a Function must be replaced with non-placeholder Variables before Forward evaluation of the Function.
     ///
-    inline Variable PlaceholderVariable(const NDShape& shape, const std::vector<Axis>& dynamicAxes = Axis::DefaultInputVariableDynamicAxes)
+    inline Variable PlaceholderVariable(const NDShape& shape, const std::vector<Axis>& dynamicAxes = Axis::UnknownDynamicAxes)
     {
         return PlaceholderVariable(shape, L"", dynamicAxes);
+    }
+
+    ///
+    /// Create a Placeholder variable to be used as a temporary/placeholder input to a Function.
+    /// All placeholder inputs of a Function must be replaced with non-placeholder Variables before Forward evaluation of the Function.
+    ///
+    inline Variable PlaceholderVariable(const std::wstring& name = L"")
+    {
+        return PlaceholderVariable(NDShape::Unknown, name, Axis::UnknownDynamicAxes);
     }
 
     ///
@@ -1751,6 +1783,7 @@ private:
     static const int DefaultParamInitOutputRank = 1;
     static const int DefaultParamInitFilterRank = 0;
 
+    CNTK_API ParameterInitializer ConstantInitializer(double value = 0.0);
     CNTK_API ParameterInitializer UniformInitializer(double scale = DefaultParamInitScale, unsigned long seed = DefaultRandomSeed);
     CNTK_API ParameterInitializer GaussianInitializer(int outputRank = DefaultParamInitOutputRank, int filterRank = DefaultParamInitFilterRank, double scale = DefaultParamInitScale, unsigned long seed = DefaultRandomSeed);
     CNTK_API ParameterInitializer XavierInitializer(int outputRank = DefaultParamInitOutputRank, int filterRank = DefaultParamInitFilterRank, double scale = DefaultParamInitScale, unsigned long seed = DefaultRandomSeed);

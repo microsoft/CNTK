@@ -136,7 +136,7 @@ void TestSimpleRecurrence(size_t inputDim,
 
     auto inputVar = InputVariable({ inputDim }, useSparseInputs, AsDataType<ElementType>(), true, L"input");
 
-    auto placeholder = PlaceholderVariable({ outputDim });
+    auto placeholder = PlaceholderVariable(std::initializer_list<size_t>({ outputDim }));
     auto plusOutput = Plus(plusParam, Plus(placeholder, Times(timesParam, inputVar)), L"plusOutput");
     FunctionPtr placeholderReplacement;
     if (useFutureValue)
