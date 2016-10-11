@@ -21,7 +21,7 @@ namespace CNTK
         if (m_dataFields->m_ownerFunction != nullptr)
             return m_dataFields->m_ownerFunction->shared_from_this();
         else
-            return nullptr;
+            InvalidArgument("Variable::Owner: Cannot be called on a variable which is not of kind Output!");
     }
 
     Variable::operator FunctionPtr() const
