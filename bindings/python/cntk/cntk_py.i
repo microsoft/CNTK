@@ -1,4 +1,5 @@
 %module(directors="1") cntk_py
+%feature("autodoc", "1");
 
 %include "stl.i"
 %include "std_wstring.i" 

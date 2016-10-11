@@ -4,6 +4,7 @@ from cntk import cntk_py
 #from cntk import DATATYPE
 from cntk.tensor import TensorOpsMixin
 from cntk import utils
+from ..utils import typemap
 
 FLOAT_32 = 'float32'
 
@@ -41,18 +42,6 @@ class Variable(TensorOpsMixin, cntk_py.Variable):
        dynamic_axes(`list` of `cntk.Axis`): the dynamic axes of this variable. These
         express dimensions that can vary across examples or minibatches.
        name(`str`): an optional name for this parameter.
-
-    :ivar dynamic_axes: the dynamic axes of this variable
-    :ivar dtype: data type of the values that will be bound to this variable
-    :ivar is_sparse: whether this variable is sparse
-    :ivar is_input: whether this variable is an input in the computational network
-    :ivar is_output: whether this variable is an output of the computational network
-    :ivar is_placeholder: whether this variable is a placeholder
-    :ivar name: the name of this variable
-    :ivar needs_gradient: whether the gradient will be computed for this variable
-    :ivar owner: the function object that is the owner of this variable
-    :ivar shape: the shape of this variable
-    :ivar uid: the internally generated unique name of this variable
     '''
     def __init__(self, shape=None, data_type=None, needs_gradient=False, is_sparse=False,
                  dynamic_axes=[cntk_py.Axis.default_dynamic_axis(), cntk_py.Axis.default_batch_axis()], name=''):
@@ -64,17 +53,143 @@ class Variable(TensorOpsMixin, cntk_py.Variable):
 
         super(Variable, self).__init__(shape, is_sparse,
                                        dtype, needs_gradient, name, dynamic_axes)
-                                       
 
-    #@typemap
+    @typemap
     def dynamic_axes(self):
         '''
         Returns the dynamic axes of this variable
 
         Returns:
-            `:class:cntk.Axis`
+            `list`: list of `:class:cntk.Axis` that are the dynamic_axes of this Variable
         '''
-        return super(cntk_py.Variable, self).dynamic_axes()
+        return super(cntk.cntk_py.Variable, self).dynamic_axes()
+
+    @typemap
+    def get_data_type(self):
+        '''
+        Returns the data type of the data that this Variable symbolically represents
+
+        Returns:
+            `DataType`: the data type of the data that this Variable symbolically represents
+        '''
+        return super(cntk.cntk_py.Variable, self).get_data_type()
+
+    @typemap
+    def is_constant(self):
+        '''
+        Returns True if this variable is a constant and False otherwise
+
+        Returns:
+            `bool`: True if this variable is a Constant and False otherwise
+        '''
+        return super(cntk.cntk_py.Variable, self).is_constant()
+
+    @typemap
+    def is_input(self):
+        '''
+        Returns True if this variable is an input and False otherwise
+
+        Returns:
+            `bool`: True if this variable is an input and False otherwise
+        '''
+        return super(cntk.cntk_py.Variable, self).is_input()
+
+    @typemap
+    def is_output(self):
+        '''
+        Returns True if this variable is an output and False otherwise
+
+        Returns:
+            `bool`: True if this variable is an output and False otherwise
+        '''
+        return super(cntk.cntk_py.Variable, self).is_output()
+
+    @typemap
+    def is_parameter(self):
+        '''
+        Returns True if this variable is a parameter and False otherwise
+
+        Returns:
+            `bool`: True if this variable is a parameter and False otherwise
+        '''
+        return super(cntk.cntk_py.Variable, self).is_parameter()
+
+    @typemap
+    def is_placeholder(self):
+        '''
+        Returns True if this variable is a placeholder and False otherwise
+
+        Returns:
+            `bool`: True if this variable is a placeholder and False otherwise
+        '''
+        return super(cntk.cntk_py.Variable, self).is_placeholder()
+
+    @typemap
+    def is_sparse(self):
+        '''
+        Returns True if this variable will be bound to sparse data and False otherwise
+
+        Returns:
+            `bool`: True if this variable will be bound to sparse data
+        '''
+        return super(cntk.cntk_py.Variable, self).is_sparse()
+
+    # @typemap
+    # def kind(self):
+        # '''
+        # kind
+        
+
+        # Returns:
+            # `VariableKind`: text
+        # '''
+        # return super(cntk.cntk_py.Variable, self).kind()
+
+    @typemap
+    def name(self):
+        '''
+        Returns the name of this variable
+
+        Returns:
+            `str`: the name of this variable
+        '''
+        return super(cntk.cntk_py.Variable, self).name()
+
+    @typemap
+    def needs_gradient(self):
+        '''
+        Returns True if gradient computation is enabled for this variable and False otherwise.
+
+        Returns:
+            `bool`: True if gradient computation is enabled for this variable and False otherwise.
+        '''
+        return super(cntk.cntk_py.Variable, self).needs_gradient()
+
+    @typemap
+    def owner(self):
+        '''
+        Returns:
+            `Function`: the Function object which 'this' variable is an ouptut of.
+        '''
+        if self.is_output() == False:
+            raise RuntimeError('called owner() on a variable that is not an output variable')
+        return super(cntk.cntk_py.Variable, self).owner()
+
+    @typemap
+    def shape(self):
+        '''
+        Returns:
+            `NDShape`: the shape of the Variable
+        '''
+        return super(cntk.cntk_py.Variable, self).shape()
+
+    @typemap
+    def uid(self):
+        '''
+        Returns:
+            `str`:  the internally generated unique name of the variable
+        '''
+        return super(cntk.cntk_py.Variable, self).uid()
 
 class Parameter(TensorOpsMixin, cntk_py.Parameter):
     '''
@@ -91,7 +206,7 @@ class Parameter(TensorOpsMixin, cntk_py.Parameter):
        device (`dev`): the device on which the values should reside.
        name (`str`): an optional name for this parameter
 
-    Parameters are Variables and therefore they inherit all their attributes.
+    Parameters are Variables and therefore they inherit all their methods.
     '''
     def __init__(self, shape=None, init=None, data_type=None,
             device=None, name=''):
@@ -114,6 +229,14 @@ class Parameter(TensorOpsMixin, cntk_py.Parameter):
             super(Parameter, self).__init__(shape, data_type, init,
                     device, name)
 
+    @typemap
+    def value(self):
+        '''
+        Returns:
+            `NDArrayView`: the current value of the parameter.
+        '''
+        return super(cntk.cntk_py.Constant, self).value()
+
 class Constant(TensorOpsMixin, cntk_py.Constant):
     '''
     A constant value. It can be a scalar, vector, matrix, or tensor
@@ -125,9 +248,7 @@ class Constant(TensorOpsMixin, cntk_py.Constant):
        device (`dev`): the device on which the values should reside.
        name (`str`): an optional name for this constant.
 
-    Constants are Variables and therefore they inherit all their attributes.
-
-    :ivar value: the value of the constant
+    Constants are Variables and therefore they inherit all their methods.
     '''
     def __init__(self, value, data_type=None, device=None, name=''):
 
@@ -136,6 +257,13 @@ class Constant(TensorOpsMixin, cntk_py.Constant):
 
         ndav = _sanitize_value(value.shape, value, data_type, device)
         super(Constant, self).__init__(ndav, name)
-
         self.value = super().value()
-    #scalar
+    #TODO how to expose Scalar ?
+    
+    @typemap
+    def value(self):
+        '''
+        Returns:
+            `NDArrayView`: the value of the constant.
+        '''
+        return super(cntk.cntk_py.Constant, self).value()

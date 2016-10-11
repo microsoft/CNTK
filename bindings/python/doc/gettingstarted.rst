@@ -19,11 +19,13 @@ You will need the following Python packages:
 On Linux a simple ``pip install`` should suffice. On Windows, you will get
 everything you need from `Anaconda <https://www.continuum.io/downloads>`_.
 
-CNTK also depends on Open MPI (`Linux <https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Linux#open-mpi>`_ and `Windows <>`_) and 
-`CUDA <https://developer.nvidia.com/cuda-downloads>`_. Please see the Wiki for more information.
+CNTK also depends on MPI (`Linux <https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Linux#open-mpi>`_ and 
+`Windows <https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Windows#ms-mpi>`_) and 
+`CUDA <https://developer.nvidia.com/cuda-downloads>`_ (if you want to use GPUs). Please see the 
+`CNTK wiki <https://github.com/Microsoft/CNTK/wiki>`_ for more information on installation.
 
 Testing your installation
-~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~
 After installing the pip package, you can then start using CNTK from Python right away:
 
     >>> import cntk
@@ -37,9 +39,12 @@ The above makes use of the CNTK ``minus`` node with two array constants. Every o
 pass for that node using its inputs, and returns the result of the forward pass. A slightly more interesting example that uses input variables (the 
 more common case) is as follows:
 
-    >>> i1 = cntk.input_variable((1, 2))
-    >>> i2 = cntk.input_variable((1, 2))
-    >>> cntk.squared_error(i1, i2).eval({i1:np.asarray([[[[2., 1.]]]], dtype=np.float32),  i2:np.asarray([[[[4., 6.]]]], dtype=np.float32)})
+    >>> x = cntk.input_variable((1, 2))
+    >>> y = cntk.input_variable((1, 2))
+    >>> import numpy as np
+    >>> x0 = np.array([[2, 1]], dtype=np.float32)
+    >>> y0 = np.array([[4, 6]], dtype=np.float32)
+    >>> cntk.squared_error(x, y).eval({x:x0, y:y0}) 
     array([[ 29.]], dtype=float32)
 
 In the above example we are first setting up two input variables with shape ``(1, 2)``. We then setup a ``squared_error`` node with those two variables as 
@@ -49,13 +54,13 @@ error is then of course ``(2-4)**2 + (1-6)**2 = 29``.
 Overview and first run
 ----------------------
 
-CNTK2 is a major overhaul of CNTK in that one now has full control over the data and how its read in, the training and testing loops, and minibatch 
+CNTK2 is a major overhaul of CNTK in that one now has full control over the data and how it is read in, the training and testing loops, and minibatch 
 construction. The Python bindings provide direct access to the created network graph, and data can be manipulated outside of the readers not only 
 for more powerful and complex networks, but also for interactive Python sessions while a model is being created and debugged.
 
 CNTK2 also includes a number of ready-to-extend examples and a layers library. The latter allows one to simply build a powerful deep network by 
 snapping together levels of convolution layers, recurrent neural net layers (LSTMs, etc.), and fully-connected layers. To begin, we will take a 
-look at a classical feedforward classification model in our first basic use.
+look at a standard fully connected deep network in our first basic use.
 
 First basic use
 ~~~~~~~~~~~~~~~
@@ -63,6 +68,7 @@ First basic use
 The first step in training or running a network in CNTK is to decide which device it should be run on. If you have access to a GPU, training time 
 can be vastly improved. To explicitly set the device to GPU, set the target device as follows:
 
+    >>> import cntk
     >>> target_device = cntk.DeviceDescriptor.gpu_device(0)
     >>> cntk.DeviceDescriptor.set_default_device(target_device)
 
