@@ -17,7 +17,7 @@ def save_model(root_op, filename):
 
 def load_model(data_type, filename, device=None):
     '''
-    Load the network of `root_op` in `model_file`, that has been saved using
+    Load the network in `model_file`, that has been saved using
     `:func:save_model`.
 
     Args:

@@ -43,7 +43,7 @@ class Function(cntk_py.Function):
     @typemap
     def backward(self, state, rootGradientValues, backPropagatedGradientValuesForInputs):
         '''
-        Backpropagates supplied `rootGradientValues` for one or more of the output variables of the Function, to produce gradient Values
+        Backpropagates supplied `rootGradientValues` for one or more of the output variables of the Function, to produce gradient values
         corresponding to the specified set of input variables in `backPropagatedGradientValuesForInputs`. 
 
         Args:
@@ -51,8 +51,8 @@ class Function(cntk_py.Function):
               computation that this gradient backpropagation corresponds to
             rootGradientValues (`dict`): the gradients that will be backpropagated to the layer below
             backPropagatedGradientValuesForInputs (`dict`): a dictionary whose keys are `Variable` and whose values one of
-              * None: the implementation allocates the actual storage for storing the gradients
-              * NDArray: the gradients will be aggregated into this array
+             * None: the implementation allocates the actual storage for storing the gradients
+             * NDArray: the gradients will be aggregated into this array
 
         Returns:
             `None`: This method only has side-effects
@@ -132,8 +132,9 @@ class Function(cntk_py.Function):
              in a subsequent backward call for backpropagation.
 
         Returns:
-            `BackPropState`: an object containing all intermediate variable values needed during backpropagation of gradients from the 
-              `outputsToRetainBackwardStateFor` outputs of the function to any of the inputs of the function, in a subsequent backward call.
+            a handle needed during backpropagation of gradients from the
+             `outputsToRetainBackwardStateFor` outputs of the function to any
+             of the inputs of the function, in a subsequent backward call.
         '''
         if computeDevice is None:
             from cntk import DeviceDescriptor

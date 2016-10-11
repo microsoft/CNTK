@@ -13,5 +13,5 @@ if errorlevel 1 exit /b 1
 
 .\make.bat html
 
-start _build\html\index.html
+echo start _build\html\index.html
 
