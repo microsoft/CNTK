@@ -677,7 +677,7 @@ def value_to_seq(value):
         a list of NumPy arrays
     '''
 
-    np_data = value.data().to_numpy()
+    np_data = np.asarray(value)
     if value.mask():
         mask = value.mask().to_numpy()
         np_data = [seq[mask[idx] != cntk_py.MaskKind_Invalid]
