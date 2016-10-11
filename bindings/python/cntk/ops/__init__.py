@@ -6,6 +6,7 @@
 import numpy as np
 from . import sequence
 from .functions import Function
+from .variables import Variable, Parameter, Constant
 from ..utils import sanitize_input, sanitize_shape, get_data_type, sanitize_axis, sanitize_dynamic_axes, typemap
 
 @typemap
@@ -1428,7 +1429,7 @@ def dropout(x, dropout_rate=0.0, name=''):
     elements set to zero (dropped out).
 
 
-    Args:        
+    Args:
         x: input tensor
         dropout_rate (float, [0,1)): fraction of nodes to be set to zero
         name (`str`, optional): the name of the Function instance in the network

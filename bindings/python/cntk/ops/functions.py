@@ -1,4 +1,5 @@
 from cntk import cntk_py
+from ..utils import typemap
 
 class Function(cntk_py.Function):
     '''
@@ -54,12 +55,12 @@ class Function(cntk_py.Function):
               * NDArray: the gradients will be aggregated into this array
 
         Returns:
-            `None`: text
+            `None`: This method only has side-effects
         '''
         kwargs=dict(locals()); del kwargs['self']; return super(cntk.cntk_py.Function, self).backward(**kwargs)
 
     @typemap
-    def clone(self, parameterCloneMethod='clone', replacements=None)
+    def clone(self, parameterCloneMethod='clone', replacements=None):
         '''
         Clones the function. The parameters of the Function are either cloned, shared or frozen as specified by the 
         parameterCloneMethod argument and any variable replacements requested are applied in the cloned Function instance.
@@ -76,205 +77,221 @@ class Function(cntk_py.Function):
         '''
         if parameterCloneMethod not in set(['clone','share','freeze']):
             raise ValueError('parameterCloneMethod must be one of clone, share, or freeze')
+        method = getattr(cntk_py,'ParameterCloningMethod_'+parameterCloneMethod.capitalize())
         if replacements is None:
             replacements = dict()
-        return super(cntk.cntk_py.Function, self).clone('ParameterCloningMethod_'+parameterCloneMethod.capitalize(), replacements)
+        return super(cntk.cntk_py.Function, self).clone(method, replacements)
 
     @typemap
     def constants(self):
         '''
-        constants
-        
+        Returns a list of all `Constant` variables of this `Function`
 
         Returns:
-            `list`: text
+            `list`: all `Constant` variables of this `Function`
         '''
         return super(cntk.cntk_py.Function, self).constants()
 
     @typemap
     def eval(self, arguments=None, precision='float', device=None):
         '''
-        eval
-        
+        Evaluate the node using the specified `arguments` as input.
+
+        Args:
+            arguments (`dict` or `list` or single input): 
+              * map from input variables to the data
+              * list of inputs in the order that the function expects or 
+              * a single input, if the function only has one argument. 
+              Data should be either NumPy arrays or a `:class:cntk.io.MinibatchSource`
+            precision (`str` or `np.float32` or `np.float64`): precision, if string
+             it can be one of 'float' 'float32, 'double', 'float64', or `None`
+            device (:class:`cntk.DeviceDescriptor`): the device descriptor that
+             contains the type and id of the device on which the computation is
+             to be performed.
 
         Returns:
-            `None`: text
+            `bool`: `True` if updates have been performed
         '''
         kwargs=dict(locals()); del kwargs['self']; return super(cntk.cntk_py.Function, self).eval(**kwargs)
 
     @typemap
-    def forward(self, arguments, outputs, computeDevice=None, outputsToRetainBackwardStateFor=None)
+    def forward(self, arguments, outputs, computeDevice=None, outputsToRetainBackwardStateFor=dict()):
         '''
-        forward
-        
+        Computes and stores the values of speficied variables in `outputs`, using provided `arguments` values corresponding
+        to each leaf `Variable` of the function whose is_input() is true.
 
         Args:
-            arguments (`dict`): text
-            outputs (`dict`): text
-            computeDevice (`DeviceDescriptor`): text
-            outputsToRetainBackwardStateFor (`set`): text
-        
+            arguments (`dict`): dictionary of bindings for the input variables
+            outputs (`dict`): dictionary of bindings for (a subset of) the output variables. The values in the dictionary can be one of:
+              * None: the implementation allocates the actual storage for storing the values
+              * NDArray: the values will be written into this array
+            computeDevice (`:class:`cntk.DeviceDescriptor`): the device descriptor that
+             contains the type and id of the device on which the computation is
+             to be performed.
+            outputsToRetainBackwardStateFor (`set`): the subset of the Function's output variables for which gradients will be specified
+             in a subsequent backward call for backpropagation.
 
         Returns:
-            `BackPropStatePtr`: text
+            `BackPropState`: an object containing all intermediate variable values needed during backpropagation of gradients from the 
+              `outputsToRetainBackwardStateFor` outputs of the function to any of the inputs of the function, in a subsequent backward call.
         '''
+        if computeDevice is None:
+            from cntk import DeviceDescriptor
+            computeDevice = DeviceDescriptor.use_default_device()
+
         kwargs=dict(locals()); del kwargs['self']; return super(cntk.cntk_py.Function, self).eval(**kwargs)
 
     @typemap
     def inputs(self):
         '''
-        inputs
+        Returns all input variables of this function.
         
 
         Returns:
-            `list`: text
+            `list`: all input variables of this function.
         '''
         return super(cntk.cntk_py.Function, self).inputs()
 
     @typemap
     def name(self):
         '''
-        name
+        Returns the name of 'this' function.
         
 
         Returns:
-            `str`: text
+            `str`: the name of 'this' function.
         '''
         return super(cntk.cntk_py.Function, self).name()
 
     @typemap
     def op_name(self):
         '''
-        op_name
+        Returns the name of the operation that this Function denotes
         
 
         Returns:
-            `str`: text
+            `str`: the name of the operation that this Function denotes
         '''
         return super(cntk.cntk_py.Function, self).op_name()
 
-    @typemap
-    Function.output = lambda self:get_output_and_keep_reference(self)
-        '''
-        output
+    # @typemap
+    # Function.output = lambda self:get_output_and_keep_reference(self)
+        # '''
+        # output
         
 
-        Args:
-            self.replace_placeholders_internal(ph_map (`ph_map:`): text
+        # Args:
+            # self.replace_placeholders_internal(ph_map (`ph_map:`): text
         
 
-        Returns:
-            `None`: text
-        '''
-        kwargs=dict(locals()); del kwargs['self']; return super(cntk.cntk_py.Function, self).output(**kwargs)
+        # Returns:
+            # `None`: text
+        # '''
+        # kwargs=dict(locals()); del kwargs['self']; return super(cntk.cntk_py.Function, self).output(**kwargs)
 
-    @typemap
-    def output_internal(self):
-        '''
-        output_internal
+    # @typemap
+    # def output_internal(self):
+        # '''
+        
         
 
-        Returns:
-            `Variable`: text
-        '''
-        return super(cntk.cntk_py.Function, self).output_internal()
+        # Returns:
+            # `Variable`: text
+        # '''
+        # return super(cntk.cntk_py.Function, self).output_internal()
 
     @typemap
     def outputs(self):
         '''
-        outputs
+        Returns a list consisting of all output variables of this function.
         
 
         Returns:
-            `list`: text
+            `list`: all output variables of this function
         '''
         return super(cntk.cntk_py.Function, self).outputs()
 
     @typemap
     def parameters(self):
         '''
-        parameters
-        
+        Returns a list of all parameter variables of this function.
 
         Returns:
-            `list`: text
+            `list`: all parameter variables of this function.
         '''
         return super(cntk.cntk_py.Function, self).parameters()
 
     @typemap
     def placeholders(self):
         '''
-        placeholders
+        Returns a list of all placeholders variables of this function.
         
 
         Returns:
-            `list`: text
+            `list`: all placeholders variables of this function
         '''
         return super(cntk.cntk_py.Function, self).placeholders()
 
     @typemap
     def replace_placeholder(self, placeholderReplacement):
         '''
-        replace_placeholder
-        
+        In-place replace the only placeholder in the function graph with the specified replacement
 
         Args:
-            placeholderReplacement (`Variable`): text
-        
+            placeholderReplacement (`Variable`): the variable that will replace the placeholder
 
         Returns:
-            `FunctionPtr`: text
+            `Function`: itself
+ 
+        :raises ExceptionType: when the function has multiple placeholders.
         '''
         kwargs=dict(locals()); del kwargs['self']; return super(cntk.cntk_py.Function, self).replace_placeholder(**kwargs)
 
-    @typemap
-    Function.replace_placeholders = lambda self, ph_map: self.replace_placeholders_internal(ph_map)
-        '''
-        replace_placeholders
+    # @typemap
+    # Function.replace_placeholders = lambda self, ph_map: self.replace_placeholders_internal(ph_map)
+        # '''
+        # replace_placeholders
         
 
-        Returns:
-            `None`: text
-        '''
-        kwargs=dict(locals()); del kwargs['self']; return super(cntk.cntk_py.Function, self).replace_placeholders(**kwargs)
+        # Returns:
+            # `None`: text
+        # '''
+        # kwargs=dict(locals()); del kwargs['self']; return super(cntk.cntk_py.Function, self).replace_placeholders(**kwargs)
 
-    @typemap
-    def replace_placeholders_internal(self, placeholderReplacements):
-        '''
-        replace_placeholders_internal
+    # @typemap
+    # def replace_placeholders_internal(self, placeholderReplacements):
+        # '''
+        # replace_placeholders_internal
         
 
-        Args:
-            placeholderReplacements (`dict`): text
+        # Args:
+            # placeholderReplacements (`dict`): text
         
 
-        Returns:
-            `FunctionPtr`: text
-        '''
-        kwargs=dict(locals()); del kwargs['self']; return super(cntk.cntk_py.Function, self).replace_placeholders_internal(**kwargs)
+        # Returns:
+            # `FunctionPtr`: text
+        # '''
+        # kwargs=dict(locals()); del kwargs['self']; return super(cntk.cntk_py.Function, self).replace_placeholders_internal(**kwargs)
 
     @typemap
     def restore_from_legacy_model(self, modelFilePath):
         '''
-        restore_from_legacy_model
-        
+        Restore the models parameters from a saved model file
 
         Args:
-            modelFilePath (`str`): text
-        
+            modelFilePath (`str`): saved model path 
 
         Returns:
-            `None`: text
+            `None`: this method only has the side-effect of loading the model parameters from the file
         '''
         kwargs=dict(locals()); del kwargs['self']; return super(cntk.cntk_py.Function, self).restore_from_legacy_model(**kwargs)
 
     @typemap
     def root_function(self):
         '''
-        root_function
-        
+        Returns the primitive function at the root of the graph of functions underlying this function.
 
         Returns:
-            `FunctionPtr`: text
+            `Function`: the primitive function at the root of the graph of functions underlying this function
         '''
         return super(cntk.cntk_py.Function, self).root_function()
