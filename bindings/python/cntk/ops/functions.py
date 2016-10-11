@@ -115,7 +115,7 @@ class Function(cntk_py.Function):
         kwargs=dict(locals()); del kwargs['self']; return super(cntk.cntk_py.Function, self).eval(**kwargs)
 
     @typemap
-    def forward(self, arguments, outputs, computeDevice=None, outputsToRetainBackwardStateFor=dict()):
+    def forward(self, arguments, outputs, computeDevice=None, outputsToRetainBackwardStateFor=None):
         '''
         Computes and stores the values of speficied variables in `outputs`, using provided `arguments` values corresponding
         to each leaf `Variable` of the function whose is_input() is true.
@@ -138,6 +138,8 @@ class Function(cntk_py.Function):
         if computeDevice is None:
             from cntk import DeviceDescriptor
             computeDevice = DeviceDescriptor.use_default_device()
+        if outputsToRetainBackwardStateFor is None:
+            outputsToRetainBackwardStateFor = dict()
 
         kwargs=dict(locals()); del kwargs['self']; return super(cntk.cntk_py.Function, self).eval(**kwargs)
 
