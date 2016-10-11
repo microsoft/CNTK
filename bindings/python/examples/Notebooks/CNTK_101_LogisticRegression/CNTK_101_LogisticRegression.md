@@ -52,7 +52,7 @@ In the figure above, contributions from different input features are linearly we
 import numpy as np
 import sys
 import os
-from cntk.learner import sgd
+from cntk.learner import sgd, fsadagrad
 from cntk import DeviceDescriptor, Trainer, cntk_device, StreamConfiguration, text_format_minibatch_source
 from cntk.ops import input_variable, cross_entropy_with_softmax, combine, classification_error, sigmoid
 from cntk.ops import *
@@ -63,6 +63,7 @@ For this tutorial we use a CPU device. You may run the code on GPU device by set
 
 ```python
 # Specify the target device to be used for computing (this example is showing for CPU usage)
+# Note we need to set the device only once during the session.
 target_device = DeviceDescriptor.cpu_device()  
 
 if not DeviceDescriptor.default_device() == target_device:
@@ -87,17 +88,20 @@ In this tutorial we are generating synthetic data using `numpy` library. In real
 
 
 ```python
-#Ensure we always get the same amount of randomness
+# Ensure we always get the same amount of randomness
 np.random.seed(0)
 
-#Helper function to generate a random data sample
-def generate_random_data(sample_size, feature_dim, num_classes):
+# Helper function to generate a random data sample
+def generate_random_data_sample(sample_size, feature_dim, num_classes):
     # Create synthetic data using NumPy. 
     Y = np.random.randint(size=(sample_size, 1), low=0, high=num_classes)
 
-    # Make sure that the data is separable
+    # Make sure that the data is separable 
     X = (np.random.randn(sample_size, feature_dim)+3) * (Y+1)
+    
+    # Specify the data type to match the input variable used later in the tutorial (default type is double)
     X = X.astype(np.float32)    
+    
     # converting class 0 into the vector "1 0 0", 
     # class 1 into vector "0 1 0", ...
     class_ind = [Y==class_number for class_number in range(num_classes)]
@@ -108,9 +112,9 @@ def generate_random_data(sample_size, feature_dim, num_classes):
 
 ```python
 # Create the input variables denoting the features and the label data. Note: the input_variable does not need 
-# additional info on number of observations (Samples) since CNTK first create only the network tooplogy first 
+# additional info on number of observations (Samples) since CNTK first create only the network topology first 
 mysamplesize = 25
-features, labels = generate_random_data(mysamplesize, input_dim, num_output_classes)
+features, labels = generate_random_data_sample(mysamplesize, input_dim, num_output_classes)
 ```
 
 Let us visualize the input data. 
@@ -151,11 +155,11 @@ The computed evidence is mapped to a 0-1 scale using a `sigmoid` (when the outco
 
 Network input and output: 
 - **input** variable (a key CNTK concept): 
->An **input** variable is a container in which we fill different observations (data point or sample, equivalent to a blue/red dot in our example) during model learning (a.k.a.training) and model evaluation (a.k.a testing). Thus, the shape of the `input_variable` must match the shape of the data that will be provided.  For example, when data are images each of  height 10 pixels  and width 5 pixels, the input feature dimension will be 2 (representing image height and width). Similarly, in our example the dimensions are age and tumor size, thus `input_dim` = 2). More on data and their dimensions to appear in separate tutorials. 
+>An **input** variable is a user-code facing container where user-provided code fills in different observations (data point or sample, equivalent to a blue/red dot in our example) as inputs to the model function during model learning (a.k.a.training) and model evaluation (a.k.a testing). Thus, the shape of the `input_variable` must match the shape of the data that will be provided.  For example, when data are images each of  height 10 pixels  and width 5 pixels, the input feature dimension will be 2 (representing image height and width). Similarly, in our example the dimensions are age and tumor size, thus `input_dim` = 2). More on data and their dimensions to appear in separate tutorials. 
 
 
 ```python
-input = input_variable((input_dim), np.float32)
+input = input_variable(input_dim, np.float32)
 ```
 
 ## Network setup
@@ -166,31 +170,27 @@ The `linear_layer` function is a straight forward implementation of the equation
 
 
 ```python
-#QUESTION: input_var.output() construct is wierd; can we hide it
-mydict = {"w":[],"b":[]} #Dictionary to store the model parameters
+# Define a dictionary to store the model parameters
+mydict = {"w":[],"b":[]} 
 
 def linear_layer(input_var, output_dim):
-    try:
-        shape = input_var.shape()
-    except AttributeError:
-        input_var = input_var.output()
-        shape = input_var.shape()
-
+    
+    shape = input_var.shape()
     input_dim = shape[0]
     weight_param = parameter(shape=(input_dim, output_dim))
     bias_param = parameter(shape=(output_dim))
     
-    mydict['w'] = weight_param
-    mydict['b'] = bias_param
+    mydict['w'], mydict['b'] = weight_param, bias_param
 
-    t = times(input_var, weight_param)
-    return bias_param + t
+    return times(input_var, weight_param) + bias_param
 ```
+
+Network output: `z` will be used to represent the output of a network across.
 
 
 ```python
 output_dim = num_output_classes
-netout = linear_layer(input, output_dim)
+z = linear_layer(input, output_dim)
 ```
 
 ### Learning model parameters
@@ -220,7 +220,7 @@ where $p$ is our predicted probability from `softmax` function and $y$ represent
 
 ```python
 label = input_variable((num_output_classes), np.float32)
-loss = cross_entropy_with_softmax(netout, label)
+loss = cross_entropy_with_softmax(z, label)
 ```
 
 #### Evaluation
@@ -229,7 +229,7 @@ In order to evaluate the classification, one can compare the output of the netwo
 
 
 ```python
-label_error = classification_error(netout, label)
+label_error = classification_error(z, label)
 ```
 
 ### Configure training
@@ -251,10 +251,11 @@ With this information, we are ready to create our trainer.
 ```python
 # Instantiate the trainer object to drive the model training
 learning_rate = 0.02
-trainer = Trainer(netout, loss, label_error, [sgd(netout.parameters(), lr=0.02)])
+learner = sgd(z.parameters(), lr=learning_rate)
+trainer = Trainer(z, loss, label_error, [learner])
 ```
 
-First let us create some helper functions that will be needed to visualize different functions associated with training.
+First let us create some helper functions that will be needed to visualize different functions associated with training. Note these convinience functions are for understanding what goes under the hood.
 
 
 ```python
@@ -264,7 +265,7 @@ from cntk.utils import get_train_eval_criterion, get_train_loss
 # More efficient implementation is possible with np.cumsum() function
 def moving_average(a, w=10) :
     if len(a) < w: 
-        return a[:]    #Need to send a copy of the array
+        return a[:]    
     return [val if idx < w else sum(a[(idx-w):idx])/w for idx, val in enumerate(a)]
 
 
@@ -275,7 +276,7 @@ def print_training_progress(trainer, mb, frequency, verbose=1):
     if mb%frequency == 0:
         training_loss = get_train_loss(trainer)
         eval_error = get_train_eval_criterion(trainer)
-        if verbose: print ("Minibatch: {}, Train Loss: {}, Train Error: {}".format(mb, training_loss, eval_error))
+        if verbose: print ("Minibatch: {0}, Loss: {1:.4f}, Error: {2:.2f}".format(mb, training_loss, eval_error))
         
     return mb, training_loss, eval_error
 ```
@@ -290,21 +291,22 @@ With these parameters we can proceed with training our simple feedforward networ
 
 
 ```python
-#Initialize the parameters for the trainer
+# Initialize the parameters for the trainer
 minibatch_size = 25
 num_samples_to_train = 20000
-num_minibatches_to_train = num_samples_to_train  / minibatch_size
+num_minibatches_to_train = int(num_samples_to_train  / minibatch_size)
 ```
 
 
 ```python
-#Run the trainer on and perform model training
+# Run the trainer on and perform model training
 training_progress_output_freq = 20
 
 plotdata = {"batchsize":[], "loss":[], "error":[]}
 
-for i in range(0, int(num_minibatches_to_train)):
-    features, labels = generate_random_data(minibatch_size, input_dim, num_output_classes)
+for i in range(0, num_minibatches_to_train):
+    features, labels = generate_random_data_sample(minibatch_size, input_dim, num_output_classes)
+    
     # Specify the mapping of input variables in the model to actual minibatch data to be trained with
     trainer.train_minibatch({input : features, label : labels})
     batchsize, loss, error = print_training_progress(trainer, i, training_progress_output_freq, verbose=1)
@@ -315,51 +317,51 @@ for i in range(0, int(num_minibatches_to_train)):
         plotdata["error"].append(error)
 ```
 
-    Minibatch: 0, Train Loss: 0.693147201538086, Train Error: 0.52
-    Minibatch: 20, Train Loss: 5.301351318359375, Train Error: 0.6
-    Minibatch: 40, Train Loss: 13.784532470703125, Train Error: 0.84
-    Minibatch: 60, Train Loss: 4.681844787597656, Train Error: 0.64
-    Minibatch: 80, Train Loss: 0.9043153381347656, Train Error: 0.32
-    Minibatch: 100, Train Loss: 0.5508702850341797, Train Error: 0.24
-    Minibatch: 120, Train Loss: 0.24632339477539061, Train Error: 0.08
-    Minibatch: 140, Train Loss: 0.2562468719482422, Train Error: 0.16
-    Minibatch: 160, Train Loss: 0.1664549255371094, Train Error: 0.08
-    Minibatch: 180, Train Loss: 0.4681434631347656, Train Error: 0.16
-    Minibatch: 200, Train Loss: 1.1755970764160155, Train Error: 0.32
-    Minibatch: 220, Train Loss: 0.20667490005493164, Train Error: 0.12
-    Minibatch: 240, Train Loss: 0.5005390167236328, Train Error: 0.16
-    Minibatch: 260, Train Loss: 0.18562889099121094, Train Error: 0.12
-    Minibatch: 280, Train Loss: 0.265356502532959, Train Error: 0.08
-    Minibatch: 300, Train Loss: 0.1420402145385742, Train Error: 0.04
-    Minibatch: 320, Train Loss: 0.1713204002380371, Train Error: 0.04
-    Minibatch: 340, Train Loss: 0.17454261779785157, Train Error: 0.08
-    Minibatch: 360, Train Loss: 0.5601414489746094, Train Error: 0.16
-    Minibatch: 380, Train Loss: 0.19852914810180664, Train Error: 0.08
-    Minibatch: 400, Train Loss: 0.2572595405578613, Train Error: 0.12
-    Minibatch: 420, Train Loss: 0.05600847244262695, Train Error: 0.0
-    Minibatch: 440, Train Loss: 0.5610065078735351, Train Error: 0.2
-    Minibatch: 460, Train Loss: 0.24877582550048827, Train Error: 0.12
-    Minibatch: 480, Train Loss: 0.046818904876708985, Train Error: 0.04
-    Minibatch: 500, Train Loss: 0.3920000076293945, Train Error: 0.12
-    Minibatch: 520, Train Loss: 0.027437171936035155, Train Error: 0.0
-    Minibatch: 540, Train Loss: 0.0810181999206543, Train Error: 0.04
-    Minibatch: 560, Train Loss: 0.43833831787109373, Train Error: 0.08
-    Minibatch: 580, Train Loss: 0.3859831619262695, Train Error: 0.08
-    Minibatch: 600, Train Loss: 0.45353504180908205, Train Error: 0.2
-    Minibatch: 620, Train Loss: 0.41453697204589846, Train Error: 0.16
-    Minibatch: 640, Train Loss: 0.08718055725097656, Train Error: 0.04
-    Minibatch: 660, Train Loss: 0.11666389465332032, Train Error: 0.04
-    Minibatch: 680, Train Loss: 0.2673243522644043, Train Error: 0.16
-    Minibatch: 700, Train Loss: 1.0112106323242187, Train Error: 0.28
-    Minibatch: 720, Train Loss: 0.4615753555297852, Train Error: 0.16
-    Minibatch: 740, Train Loss: 0.055942535400390625, Train Error: 0.0
-    Minibatch: 760, Train Loss: 0.3342399597167969, Train Error: 0.12
-    Minibatch: 780, Train Loss: 0.4965230560302734, Train Error: 0.08
+    Minibatch: 0, Loss: 0.6931, Error: 0.52
+    Minibatch: 20, Loss: 5.3014, Error: 0.60
+    Minibatch: 40, Loss: 13.7845, Error: 0.84
+    Minibatch: 60, Loss: 4.6818, Error: 0.64
+    Minibatch: 80, Loss: 0.9043, Error: 0.32
+    Minibatch: 100, Loss: 0.5509, Error: 0.24
+    Minibatch: 120, Loss: 0.2463, Error: 0.08
+    Minibatch: 140, Loss: 0.2562, Error: 0.16
+    Minibatch: 160, Loss: 0.1665, Error: 0.08
+    Minibatch: 180, Loss: 0.4681, Error: 0.16
+    Minibatch: 200, Loss: 1.1756, Error: 0.32
+    Minibatch: 220, Loss: 0.2067, Error: 0.12
+    Minibatch: 240, Loss: 0.5005, Error: 0.16
+    Minibatch: 260, Loss: 0.1856, Error: 0.12
+    Minibatch: 280, Loss: 0.2654, Error: 0.08
+    Minibatch: 300, Loss: 0.1420, Error: 0.04
+    Minibatch: 320, Loss: 0.1713, Error: 0.04
+    Minibatch: 340, Loss: 0.1745, Error: 0.08
+    Minibatch: 360, Loss: 0.5601, Error: 0.16
+    Minibatch: 380, Loss: 0.1985, Error: 0.08
+    Minibatch: 400, Loss: 0.2573, Error: 0.12
+    Minibatch: 420, Loss: 0.0560, Error: 0.00
+    Minibatch: 440, Loss: 0.5610, Error: 0.20
+    Minibatch: 460, Loss: 0.2488, Error: 0.12
+    Minibatch: 480, Loss: 0.0468, Error: 0.04
+    Minibatch: 500, Loss: 0.3920, Error: 0.12
+    Minibatch: 520, Loss: 0.0274, Error: 0.00
+    Minibatch: 540, Loss: 0.0810, Error: 0.04
+    Minibatch: 560, Loss: 0.4383, Error: 0.08
+    Minibatch: 580, Loss: 0.3860, Error: 0.08
+    Minibatch: 600, Loss: 0.4535, Error: 0.20
+    Minibatch: 620, Loss: 0.4145, Error: 0.16
+    Minibatch: 640, Loss: 0.0872, Error: 0.04
+    Minibatch: 660, Loss: 0.1167, Error: 0.04
+    Minibatch: 680, Loss: 0.2673, Error: 0.16
+    Minibatch: 700, Loss: 1.0112, Error: 0.28
+    Minibatch: 720, Loss: 0.4616, Error: 0.16
+    Minibatch: 740, Loss: 0.0559, Error: 0.00
+    Minibatch: 760, Loss: 0.3342, Error: 0.12
+    Minibatch: 780, Loss: 0.4965, Error: 0.08
     
 
 
 ```python
-#Compute the moving average loss to smooth out the noise in SGD    
+# Compute the moving average loss to smooth out the noise in SGD    
 
 plotdata["avgloss"] = moving_average(plotdata["loss"])
 plotdata["avgerror"] = moving_average(plotdata["error"])
@@ -385,24 +387,30 @@ plt.show()
 ```
 
 
-![png](output_28_0.png)
+![png](output_29_0.png)
 
 
 
-![png](output_28_1.png)
+![png](output_29_1.png)
 
 
 ## Evaluation / Testing 
 
 Now that we have trained the network. Let us evaluate the trained network on data that hasn't been used for training. This is called **testing**. Let us create some new data and evaluate the average error & loss on this set. This is done using `trainer.test_minibatch`. Note the error on this previously unseen data is comparable to training error. This is a **key** check. Should the error be larger than the training error by a large margin, it indicates that the train model will not perform well on data that it has not seen during training. This is known as [overfitting][]. There are several ways to address overfitting that is beyond the scope of this tutorial but CNTK toolkit provide the necessary components to address overfitting.
 
+Note: We are testing on a single minibatch for illustrative purposes. In practice one runs several minibatches of test data and reports the average. 
+
+**Question** Why is this suggested? Try plotting the test error over several set of generated data sample and plot using plotting functions used for training. Do you see a pattern?
+
 [overfitting]: https://en.wikipedia.org/wiki/Overfitting
 
 
 
 ```python
-#Generate new data
-features, labels = generate_random_data(minibatch_size, input_dim, num_output_classes)
+# Run the trained model on newly generated dataset
+# 
+test_minibatch_size = 25
+features, labels = generate_random_data_sample(test_minibatch_size, input_dim, num_output_classes)
 
 trainer.test_minibatch({input : features, label : labels}) 
 ```
@@ -419,13 +427,14 @@ For evaluation, we map the output of the network between 0-1 and convert them in
 
 
 ```python
-out = softmax(netout)
-result =out.eval({input : features})
+out = softmax(z)
+result = out.eval({input : features})
 ```
 
 Lets compare the ground-truth label with the predictions. They should be in agreement.
 
-**Question:** How many predictions were mislabeled? Can you change the code below to identify which observations were misclassified? 
+**Question:** 
+- How many predictions were mislabeled? Can you change the code below to identify which observations were misclassified? 
 
 
 ```python
@@ -444,8 +453,8 @@ It is desirable to visualize the results. In this example, the data is convenien
 
 
 ```python
-#Model parameters
-bias_vector = mydict['b'].value().to_numpy()
+# Model parameters
+bias_vector   = mydict['b'].value().to_numpy()
 weight_matrix = mydict['w'].value().to_numpy()
 
 # Plot the data 
@@ -454,15 +463,20 @@ import matplotlib.pyplot as plt
 #given this is a 2 class 
 colors = ['r' if l == 0 else 'b' for l in labels[:,0]]
 plt.scatter(features[:,0], features[:,1], c=colors)
-plt.plot([0,bias_vector[0]/weight_matrix[0][1]], [ bias_vector[1]/weight_matrix[0][0], 0], c = 'g', lw=3)
+plt.plot([0, bias_vector[0]/weight_matrix[0][1]], [ bias_vector[1]/weight_matrix[0][0], 0], c = 'g', lw = 3)
 plt.show()
 ```
 
 
-![png](output_36_0.png)
+![png](output_37_0.png)
 
 
-**Exploration Suggestion** You can now explore training a multiclass logistic regression classifier.
+**Exploration Suggestion** 
+- Try exploring how the classifier behaves with different data distributions - suggest changing the `minibatch_size` parameter from 25 to say 64. Why is the error increasing?
+- Try exploring different optimizers such as Adam (`fsadagrad`). 
+    learner = fsadagrad(z.parameters(), 0.02, 0, targetAdagradAvDenom=1)
+
+- You can now explore training a multiclass logistic regression classifier.
 
 
 ```python

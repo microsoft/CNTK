@@ -46,13 +46,13 @@ import sys
 import os
 from cntk import DeviceDescriptor, Trainer, cntk_device, StreamConfiguration, text_format_minibatch_source
 from cntk.learner import sgd
-from cntk.ops import input_variable, cross_entropy_with_softmax, combine, classification_error, sigmoid
 from cntk.ops import *
 ```
 
 
 ```python
 # Specify the target device to be used for computing (this example is showing for CPU usage)
+# Note we need to set the device only once during the session.
 target_device = DeviceDescriptor.cpu_device()
 
 if not DeviceDescriptor.default_device() == target_device:
@@ -84,7 +84,7 @@ In this tutorial we are generating synthetic data using `numpy` library. In real
 
 ```python
 #Helper function to generate a random data sample
-def generate_random_data(sample_size, feature_dim, num_classes):
+def generate_random_data_sample(sample_size, feature_dim, num_classes):
     # Create synthetic data using NumPy. 
     Y = np.random.randint(size=(sample_size, 1), low=0, high=num_classes)
 
@@ -102,8 +102,8 @@ def generate_random_data(sample_size, feature_dim, num_classes):
 ```python
 # Create the input variables denoting the features and the label data. Note: the input_variable does not need 
 # additional info on number of observations (Samples) since CNTK first create only the network tooplogy first 
-mysamplesize = 25
-features, labels = generate_random_data(mysamplesize, input_dim, num_output_classes)
+mysamplesize = 64
+features, labels = generate_random_data_sample(mysamplesize, input_dim, num_output_classes)
 
 ```
 
@@ -133,7 +133,7 @@ plt.show()
 
 Our feed forward network will be relatively simple with 2 hidden layers (`num_hidden_layers`) with each layer having 50 hidden nodes (`hidden_layers_dim`). 
 
-<img src="https://upload.wikimedia.org/wikipedia/en/5/54/Feed_forward_neural_net.gif",width=200, height=200>
+<img src="http://cntk.ai/jup/feedforward_network.jpg",width=200, height=200>
 
 TODO: Update the picture to better illustrate the two hidden layer.
 
@@ -202,26 +202,27 @@ The next step is to convert the *evidence* (the output of the linear layer) thro
 
 
 ```python
-def fully_connected_layer(input, output_dim, nonlinearity):
-    p = linear_layer(input, output_dim)
-    return nonlinearity(p);
+def dense_layer(input, output_dim, nonlinearity):
+    r = linear_layer(input, output_dim)
+    r = nonlinearity(r)
+    return r;
 ```
 
 Now that we have created one hidden layer, we need to iterate through the layers to create a fully connected classifier. Output of the first layer $\bf{h_1}$ becomes the input to the next layer.
 
 In this example we have only 2 layers, hence one could conceivably write the code as:
 
->`h1 = fully_connected_layer(input, hidden_layer_dim, nonlinearity)`
+>`h1 = fully_connected_layer(input, hidden_layer_dim, sigmoid)`
 
->`h2 = fully_connected_layer(h1, hidden_layer_dim, nonlinearity)`
+>`h2 = fully_connected_layer(h1, hidden_layer_dim, sigmoid)`
 
 However, this code becomes very quickly difficult to read and update when the number of layers or blocks (in convolutional or recurrent networks) that we will see in later tutorials. CNTK provides a programming construct shown below that greatly eases the burden on the programmer. 
 
->`h = fully_connected_layer(input, hidden_layer_dim, nonlinearity)`
+>`h = fully_connected_layer(input, hidden_layer_dim, sigmoid)`
 
 >`for i in range(1, num_hidden_layers):`
        
->>`    h = fully_connected_layer(h, hidden_layer_dim, nonlinearity)`
+>>`    h = fully_connected_layer(h, hidden_layer_dim, sigmoid)`
 
 This construct is very attractive to write compact representation of large repetitive network components and will be used in many of the subsequent tutorials. 
 
@@ -229,17 +230,19 @@ This construct is very attractive to write compact representation of large repet
 ```python
 # Define a multilayer feedforward classification model
 def fully_connected_classifier_net(input, num_output_classes, hidden_layer_dim, num_hidden_layers, nonlinearity):
-    h = fully_connected_layer(input, hidden_layer_dim, nonlinearity)
+    h = dense_layer(input, hidden_layer_dim, nonlinearity)
     for i in range(1, num_hidden_layers):
-        h = fully_connected_layer(h, hidden_layer_dim, nonlinearity)
-
-    return linear_layer(h, num_output_classes)
+        h = dense_layer(h, hidden_layer_dim, nonlinearity)
+    r = linear_layer(h, num_output_classes)
+    return r
 ```
+
+Network output: `z` will be used to represent the output of a network across.
 
 
 ```python
 # Create the fully connected classfier
-netout = fully_connected_classifier_net(input, num_output_classes, hidden_layers_dim, num_hidden_layers, sigmoid)
+z = fully_connected_classifier_net(input, num_output_classes, hidden_layers_dim, num_hidden_layers, sigmoid)
 ```
 
 ### Learning model parameters
@@ -270,7 +273,7 @@ where $p$ is our predicted probability from `softmax` function and $y$ represent
 
 
 ```python
-loss = cross_entropy_with_softmax(netout, label)
+loss = cross_entropy_with_softmax(z, label)
 ```
 
 #### Evaluation
@@ -279,7 +282,7 @@ In order to evaluate the classification, one can compare the output of the netwo
 
 
 ```python
-label_error = classification_error(netout, label)
+label_error = classification_error(z, label)
 ```
 
 ### Configure training
@@ -300,8 +303,9 @@ With this information, we are ready to create our trainer.
 
 ```python
 # Instantiate the trainer object to drive the model training
-learning_rate = 0.02
-trainer = Trainer(netout, loss, label_error, [sgd(netout.parameters(), lr=0.02)])
+learning_rate_per_sample = 0.02
+learner = sgd(z.parameters(), lr=learning_rate_per_sample)
+trainer = Trainer(z, loss, label_error, [learner])
 ```
 
 First lets create some helper functions that will be needed to visualize different functions associated with training.
@@ -358,7 +362,7 @@ training_progress_output_freq = 20
 plotdata = {"batchsize":[], "loss":[], "error":[]}
 
 for i in range(0, int(num_minibatches_to_train)):
-    features, labels = generate_random_data(minibatch_size, input_dim, num_output_classes)
+    features, labels = generate_random_data_sample(minibatch_size, input_dim, num_output_classes)
     # Specify the mapping of input variables in the model to actual minibatch data to be trained with
     trainer.train_minibatch({input : features, label : labels})
     batchsize, loss, error = print_training_progress(trainer, i, training_progress_output_freq, verbose=0)
@@ -404,11 +408,11 @@ plt.show()
 ```
 
 
-![png](output_34_0.png)
+![png](output_35_0.png)
 
 
 
-![png](output_34_1.png)
+![png](output_35_1.png)
 
 
 ## Evaluation / Testing 
@@ -418,7 +422,8 @@ Now that we have trained the network, let us evaluate the trained network on dat
 
 ```python
 #Generate new data
-features, labels = generate_random_data(minibatch_size, input_dim, num_output_classes)
+test_minibatch_size = 25
+features, labels = generate_random_data_sample(test_minibatch_size, input_dim, num_output_classes)
 
 trainer.test_minibatch({input : features, label : labels})  
 ```
@@ -426,7 +431,7 @@ trainer.test_minibatch({input : features, label : labels})
 
 
 
-    0.24
+    0.12
 
 
 
@@ -444,7 +449,7 @@ The way we have configured the network includes the output of all the activation
 
 
 ```python
-out = softmax(netout)
+out = softmax(z)
 ```
 
 Lets test on previously unseen data.
@@ -460,11 +465,15 @@ print("Label    :", np.argmax(labels[:25],axis=1))
 print("Predicted:", np.argmax(predicted_label_prob[0,:25,:],axis=1))
 ```
 
-    Label    : [1 1 0 0 0 0 1 0 1 1 0 0 1 1 1 0 0 1 0 1 0 1 1 0 0]
-    Predicted: [1 1 1 0 0 1 1 0 1 1 0 1 1 1 1 1 0 1 1 1 0 1 1 1 0]
+    Label    : [0 1 0 0 0 1 1 0 0 1 1 0 0 0 0 1 0 1 1 1 1 1 1 0 1]
+    Predicted: [0 1 0 0 0 1 1 0 0 1 1 0 0 0 0 1 0 1 1 1 1 1 0 0 1]
     
 
-**Exploration Suggestion** Can you change the network to reduce the training error rate? When do you see *overfitting* happening?
+**Exploration Suggestion**
+-  Try exploring how the classifier behaves with different data distributions - suggest changing the `minibatch_size` parameter from 25 to say 64. What happens to the error rate? How does the error compare to the logistic regression classifier?
+- Try exploring different optimizers such as Adam (`fsadagrad`). 
+    learner = fsadagrad(z.parameters(), 0.02, 0, targetAdagradAvDenom=1)
+- Can you change the network to reduce the training error rate? When do you see *overfitting* happening?
 
 
 ```python
