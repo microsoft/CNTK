@@ -160,7 +160,6 @@ def convolution(convolution_map, operand, strides=(1,), sharing=[True],
     filter, and the last one must be equal to inChannels. There are outChannels filters. I.e. for each output position, a vector of
     dimension outChannels is computed. Hence, the total number of filter parameters is (M1*M2*...*Mn) * inChannels * outChannels.
 
-    TODO: Review and example!
     Args:
         convolution_map: convolution filter weights, stored as a matrix of dimensions [outChannels, (M1*M2*...*Mn)],
          where (M1*M2*...*Mn) must be the product of the kernel dimensions, e.g. 75 for a [5 x 5]-sized filter on 3
@@ -207,7 +206,6 @@ def pooling(operand, pooling_type, pooling_window_shape, strides=(1,), auto_padd
 
     N-dimensional pooling allows to create max or average pooling of any dimensions, stride or padding.
 
-    TODO: Review and example!
     Args:
         operand: pooling input
         pooling_type(str): "max" or "average"
@@ -237,8 +235,6 @@ def batch_normalization(operand, scale, bias, running_mean, running_inv_std, spa
     '''
     Normalizes layer outputs for every minibatch for each output (feature) independently
     and applies affine transformation to preserve representation of the layer.
-
-    TODO: Review and Example
 
     Args:
         operand: input of the batch normalization node
@@ -700,9 +696,6 @@ def round(arg, name=''):
 # non_linear and nn ops
 ##########################################################################
 
-# TODO: enable when it is exposed in c++
-
-
 @typemap
 def clip(x, min_value, max_value, name=''):
     '''
@@ -840,9 +833,15 @@ def softmax(x, name=''):
 @typemap
 def hardmax(x, name=''):
     '''
-    TBA
+    Creates a tensor with the same shape as the input tensor, with zeros everywhere and a 1.0 where the
+    maximum value of the input tensor is located. If the maximum value is repeated, 1.0 is placed in the first location found.
+
     Example:
-        TBA
+        >>> C.hardmax([1., 1., 2., 3.]).eval()
+        array([ 0.,  0.,  0.,  1.], dtype=float32)
+
+        >>> C.hardmax([1., 3., 2., 3.]).eval()
+        array([ 0.,  1.,  0.,  0.], dtype=float32)
 
     Args:
         x: numpy array or any :class:`cntk.Function` that outputs a tensor
@@ -1044,7 +1043,6 @@ def element_select(flag, value_if_true, value_if_false, name=''):
 
 # TODO: add default value for initial_state. It should be a constant scalar
 # (0.0), using the default device
-
 
 @typemap
 def future_value(x, initial_state=None, time_step=1, name=''):
@@ -1296,7 +1294,6 @@ def reduce_sum(x, axis=None, name=''):
     is not specified then the sum will be computed over all axes, that is, the output is a scalar,
     which is the sum of tensor's elements.
 
-    TODO: Uncomment when reduce_sum works correctly
     Examples:
         >>> # create 3x2 matrix in a sequence of length 1 in a batch of one sample
         >>> data = [[10, 20],[30, 40],[50, 60]]
