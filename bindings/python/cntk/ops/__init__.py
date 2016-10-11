@@ -1298,22 +1298,33 @@ def reduce_sum(x, axis=None, name=''):
 
     TODO: Uncomment when reduce_sum works correctly
     Examples:
-        #>>> # create 3x2 matrix in a sequence of length 1 in a batch of one sample
-        #>>> data = [[10, 20],[30, 40],[50, 60]]
-        #
-        #>>> # reduce over the first axis
-        #>>> C.reduce_sum(data, 0).eval()
-        #array([  90.,  120.], dtype=float32)
-        #
-        #>>> # reduce over the second axis
-        #>>> C.reduce_sum(data, 1).eval()
-        #array([[  30.],
-        #       [  70.],
-        #       [ 110.]], dtype=float32)
-        #
-        #>>> # reduce over the all axes
-        #>>> C.reduce_sum(data, 2).eval()
-        #array([ 210.], dtype=float32)
+        >>> # create 3x2 matrix in a sequence of length 1 in a batch of one sample
+        >>> data = [[10, 20],[30, 40],[50, 60]]
+        
+        >>> # reduce over the first axis
+        >>> C.reduce_sum(data, 0).eval()
+        array([[  90.,  120.]], dtype=float32)
+        
+        >>> # reduce over the second axis
+        >>> C.reduce_sum(data, 1).eval()
+        array([[  30.],
+               [  70.],
+               [ 110.]], dtype=float32)
+        
+        >>> # Negative axis is counted from last to first. So -1 retrieves same
+        >>> # result as 1 on a matrix of rank 2.
+        >>> C.reduce_sum(data, -1).eval()
+        array([[  30.],
+               [  70.],
+               [ 110.]], dtype=float32)
+        
+        >>> # And -2 retrieves the same result as 0 on a matrix of rank 2.
+        >>> C.reduce_sum(data, -2).eval()
+        array([[  90.,  120.]], dtype=float32)
+        
+        >>> # reduce over the all axes
+        >>> C.reduce_sum(data).eval()
+        array(210.0, dtype=float32)
 
     Args:
         x: input tensor
@@ -1330,7 +1341,7 @@ def reduce_sum(x, axis=None, name=''):
 
 
 @typemap
-def reduce_log_sum(x, axis, name=''):
+def reduce_log_sum(x, axis=None, name=''):
     '''
     Computes the log sum of the input tensor's elements across the specified axis.
 
@@ -1352,7 +1363,7 @@ def reduce_log_sum(x, axis, name=''):
 
 
 @typemap
-def reduce_mean(x, axis, name=''):
+def reduce_mean(x, axis=None, name=''):
     '''
     Computes the mean of the input tensor's elements across the specified axis.
 
@@ -1374,7 +1385,7 @@ def reduce_mean(x, axis, name=''):
 
 
 @typemap
-def reduce_max(x, axis, name=''):
+def reduce_max(x, axis=None, name=''):
     '''
     Computes the max of the input tensor's elements across the specified axis.
 
@@ -1396,7 +1407,7 @@ def reduce_max(x, axis, name=''):
 
 
 @typemap
-def reduce_min(x, axis, name=''):
+def reduce_min(x, axis=None, name=''):
     '''
     Computes the min of the input tensor's elements across the specified axis.
 

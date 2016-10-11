@@ -556,10 +556,25 @@ def sanitize_dtype_cntk(dtype):
 
 
 def sanitize_axis(rank, axis):
+    '''
+    Sanitizes the axis.
+
+    Args:
+        rank (`int`): rank of the tensor on which `axis` is to be used
+        axis (`:class:Axis` or `int` or `None`): the axis to be used. 
+          * `:class:Axis`: use axis instance directly (will convert row- to
+             col-major in case of static axis.
+          * `int`: if positive, use it as static axis. If negative, count from
+            last to first axis
+          * `None`: denote all available axes
+    '''
     if axis is None:
-        return axis
+        return cntk_py.Axis.all_static_axes()
     elif isinstance(axis, numbers.Integral):
-        return cntk_py.Axis(rank - 1 - axis)
+        if axis<0:
+            return cntk_py.Axis(-axis - 1)
+        else:
+            return cntk_py.Axis(rank - 1 - axis)
     elif axis.is_static_axis():
         return cntk_py.Axis(rank - 1 - axis.static_axis_index())
     else:
