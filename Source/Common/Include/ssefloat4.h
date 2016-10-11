@@ -32,6 +32,10 @@ namespace msra { namespace math {
 // newer ones: (seems no single list available)
 // ===========================================================================
 
+// This class implements a float4 vector based on the SSE intrinsics available on intel platforms.
+// Since we don't have SSE on ARM64 (NEON has similar functionality but is not identical) we cannot
+// use the SSE implementation no ARM64.
+// TODO: In the future, we should provide a NEON based implementation instead.
 #if defined(__aarch64__)
 typedef struct __m128_t
 {
@@ -40,9 +44,14 @@ typedef struct __m128_t
 
 static __m128 ZERO_M128 = {0,0,0,0};
 
-static __m128 _mm_setzero_ps()               { return ZERO_M128; }
-static void _mm_store_ss(float *a, const __m128 &b) { *a = b.f[0]; }
-
+static __m128 _mm_setzero_ps()
+{
+	return ZERO_M128;
+}
+static void _mm_store_ss(float *a, const __m128 &b)
+{
+	*a = b.f[0];
+}
 static __m128 _mm_load1_ps(const float *a)
 {
     __m128 result = {(float)*a, (float)*a, (float)*a, (float)*a};
@@ -71,9 +80,9 @@ static __m128 _mm_and_ps(const __m128 &a, const __m128 &b)
 static __m128 _mm_or_ps(const __m128 &a, const __m128 &b)
 {
     __m128 result =  {
-      (float)((int)(a.f[0]) | (int)(b.f[0])), 
-      (float)((int)(a.f[1]) | (int)(b.f[1])), 
-      (float)((int)(a.f[2]) | (int)(b.f[2])), 
+      (float)((int)(a.f[0]) | (int)(b.f[0])),
+      (float)((int)(a.f[1]) | (int)(b.f[1])),
+      (float)((int)(a.f[2]) | (int)(b.f[2])),
       (float)((int)(a.f[3]) | (int)(b.f[3])) };
 
     return result;
@@ -81,60 +90,60 @@ static __m128 _mm_or_ps(const __m128 &a, const __m128 &b)
 static __m128 _mm_add_ps(const __m128 &a, const __m128 &b)
 {
     __m128 result =  {
-      (a).f[0]+(b).f[0], 
-      (a).f[1]+(b).f[1], 
-      (a).f[2]+(b).f[2], 
-      (a).f[3]+(b).f[3] };
+      a.f[0] + b.f[0],
+      a.f[1] + b.f[1],
+      a.f[2] + b.f[2],
+      a.f[3] + b.f[3] };
 
     return result;
 }
 static __m128 _mm_mul_ps(const __m128 &a, const __m128 &b)
 {
     __m128 result =  {
-      (a).f[0]*(b).f[0], 
-      (a).f[1]*(b).f[1], 
-      (a).f[2]*(b).f[2], 
-      (a).f[3]*(b).f[3] };
+      a.f[0] * b.f[0],
+      a.f[1] * b.f[1],
+      a.f[2] * b.f[2],
+      a.f[3] * b.f[3] };
 
     return result;
 }
 static __m128 _mm_div_ps(const __m128 &a, const __m128 &b)
 {
     __m128 result =  {
-      (a).f[0]/(b).f[0],
-      (a).f[1]/(b).f[1], 
-      (a).f[2]/(b).f[2], 
-      (a).f[3]/(b).f[3] };
+      a.f[0] / b.f[0],
+      a.f[1] / b.f[1],
+      a.f[2] / b.f[2],
+      a.f[3] / b.f[3] };
 
     return result;
 }
 static __m128 _mm_hadd_ps(const __m128 &a, const __m128 &b)
 {
     __m128 result =  {
-      (a).f[0]+(a).f[1],
-      (a).f[2]+(a).f[3],
-      (b).f[0]+(b).f[1], 
-      (b).f[2]+(b).f[3] };
+      a.f[0] + a.f[1],
+      a.f[2] + a.f[3],
+      b.f[0] + b.f[1],
+      b.f[2] + b.f[3] };
 
     return result;
 }
 static __m128 _mm_cmpge_ps(const __m128 &a, const __m128 &b)
 {
     __m128 result =  {
-      (a).f[0]>=(b).f[0] ? 1.0f : 0.0f, 
-      (a).f[1]>=(b).f[1] ? 1.0f : 0.0f, 
-      (a).f[2]>=(b).f[2] ? 1.0f : 0.0f, 
-      (a).f[3]>=(b).f[3] ? 1.0f : 0.0f };
+      a.f[0] >= b.f[0] ? 1.0f : 0.0f,
+      a.f[1] >= b.f[1] ? 1.0f : 0.0f,
+      a.f[2] >= b.f[2] ? 1.0f : 0.0f,
+      a.f[3] >= b.f[3] ? 1.0f : 0.0f };
 
     return result;
 }
 static __m128 _mm_cmple_ps(const __m128 &a, const __m128 &b)
 {
     __m128 result =  {
-      (a).f[0]<=(b).f[0] ? 1.0f : 0.0f,
-      (a).f[1]<=(b).f[1] ? 1.0f : 0.0f,
-      (a).f[2]<=(b).f[2] ? 1.0f : 0.0f,
-      (a).f[3]<=(b).f[3] ? 1.0f : 0.0f };
+      a.f[0] <= b.f[0] ? 1.0f : 0.0f,
+      a.f[1] <= b.f[1] ? 1.0f : 0.0f,
+      a.f[2] <= b.f[2] ? 1.0f : 0.0f,
+      a.f[3] <= b.f[3] ? 1.0f : 0.0f };
 
     return result;
 }
