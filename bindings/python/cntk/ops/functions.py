@@ -139,6 +139,8 @@ class Function(cntk_py.Function):
         if device is None:
             from cntk import DeviceDescriptor
             computeDevice = DeviceDescriptor.use_default_device()
+        if outputsToRetainBackwardStateFor is None:
+            outputsToRetainBackwardStateFor = dict()
 
         from ..utils import sanitize_var_map
         forward_in_var_map = sanitize_var_map(self.arguments(), arguments,
