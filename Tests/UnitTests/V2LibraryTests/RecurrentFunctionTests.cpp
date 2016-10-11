@@ -381,18 +381,23 @@ void TestSimpleRecurrence(size_t inputDim,
 void RecurrentFunctionTests()
 {
     TestSimpleRecurrence<float>(2, 1, 4, 1, DeviceDescriptor::CPUDevice(), true, 3, false, false);
-#ifndef CPUONLY
-    TestSimpleRecurrence<double>(11, 9, 16, 7, DeviceDescriptor::GPUDevice(0), true, 5, true, false);
-#endif
+    if (IsGPUAvailable())
+    {
+        TestSimpleRecurrence<double>(11, 9, 16, 7, DeviceDescriptor::GPUDevice(0), true, 5, true, false);
+    }
+
     TestSimpleRecurrence<double>(1000, 9, 16, 3, DeviceDescriptor::CPUDevice(), false, 2, true, true);
-#ifndef CPUONLY
-    TestSimpleRecurrence<float>(5000, 200, 19, 6, DeviceDescriptor::GPUDevice(0), false, 3, false, true);
-    TestSimpleRecurrence<double>(1000, 9, 16, 3, DeviceDescriptor::GPUDevice(0), true, 3, true, true, true);
-#endif
+    if (IsGPUAvailable())
+    {
+        TestSimpleRecurrence<float>(5000, 200, 19, 6, DeviceDescriptor::GPUDevice(0), false, 3, false, true);
+        TestSimpleRecurrence<double>(1000, 9, 16, 3, DeviceDescriptor::GPUDevice(0), true, 3, true, true, true);
+    }
+
     TestSimpleRecurrence<float>(5000, 200, 19, 6, DeviceDescriptor::CPUDevice(), true, 2, false, true, true);
 
-#ifndef CPUONLY
-    TestRecurrentNetworkCreation<float>(DeviceDescriptor::GPUDevice(0), true);
-#endif
+    if (IsGPUAvailable())
+    {
+        TestRecurrentNetworkCreation<float>(DeviceDescriptor::GPUDevice(0), true);
+    }
     TestRecurrentNetworkCreation<double>(DeviceDescriptor::CPUDevice(), false);
 }
