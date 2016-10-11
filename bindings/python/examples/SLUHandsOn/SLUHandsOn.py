@@ -105,13 +105,13 @@ def train(reader, model):
     epoch_size = 36000
     max_epochs = 8
     minibatch_size = 70
-    lr = learning_rates_per_sample([0.03]*2+[0.0015]*12+[0.0003], units=epoch_size)
-    #momentums = momentums_per_sample([0.9**(1/minibatch_size)])
-    momentums = momentums_per_sample([0])
     num_mbs_to_show_result = 100
 
+    lr = [0.003]*2+[0.0015]*12+[0.0003]
+    momentum = 0.9**(1/minibatch_size)  # TODO: need a better way of giving traditional momentum per MB
+
     # trainer object
-    learner = fsadagrad(z.parameters(), lr, momentums,
+    learner = fsadagrad(z.parameters(), learning_rates_per_sample(lr, units=epoch_size), momentum,
                         targetAdagradAvDenom=1, clipping_threshold_per_sample=15, gradient_clipping_with_truncation=True)
 
     trainer = Trainer(z, ce, pe, [learner])
@@ -153,8 +153,8 @@ if __name__=='__main__':
     set_gpu(0)
     reader = Reader(data_dir + "/atis.train.ctf")
     model = Model(_inf=_Infer(shape=input_dim, axis=[Axis.default_batch_axis(), Axis.default_dynamic_axis()]))
-    # train
     # BUGBUG: Currently this fails with a mismatch error if axes ^^ are given in opposite order
+    # train
     train(reader, model)
     # test (TODO)
     reader = Reader(data_dir + "/atis.test.ctf")

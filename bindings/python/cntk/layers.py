@@ -20,6 +20,7 @@ from cntk.utils.debughelpers import _name_node, _node_name, _node_description, _
 from utils import Record, _as_tuple
 from blocks import *
 from blocks import _name_and_extend_Function, _wrap_rename_Function  # (debugging)
+from cntk.initializer import glorot_uniform
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(abs_path, "..", ".."))
@@ -29,13 +30,38 @@ from examples.common.nn import slice, sigmoid, log, tanh, past_value, future_val
 from cntk.ops.functions import Function
 from cntk.ops.variables import Variable
 
+# this is what we initialize weight matrices from by default
+_default_initializer = glorot_uniform()
+#_default_initializer = None
+
 # Linear -- create a fully-connected linear projection layer
 # Note: shape may describe a tensor as well.
 # TODO: change to new random-init descriptor
-def Linear(shape, _inf, bias=True, init='glorot_uniform', init_value_scale=1, input_rank=None, map_rank=None):
+# inputRank given: number of zeroes to add to W (mapRank must not be given)
+# mapRank   given: expand W to leave exactly mapRank axes (inputRank must not be given)
+# none      given: expand W to all (same as mapRank=0)
+def Linear(shape, _inf, bias=True, init=_default_initializer, init_bias=None, input_rank=None, map_rank=None):
     out_shape = _as_tuple(shape)
-    W = Parameter(_inf.shape + out_shape, init=init, init_value_scale=init_value_scale)
-    b = Parameter(             out_shape, init='zero') if bias else None
+
+    # TODO: implement the full semantics of the BrainScript code
+    #inputShape =
+    #    if       BS.Constants.IsNone (inputRank) then Inferred  # not given: one Inferred, which will get expanded
+    #    else if !BS.Constants.IsNone (mapRank)   then Fail ("'inputRank' and 'mapRank' cannot be specified at the same time.")
+    #    else Repeat (inputRank, Inferred)
+    #W = ParameterTensor {_ConcatArrays (outDim, inputShape), init=init, initValueScale=initValueScale}
+    #b = ParameterTensor {outDim, initValue=0}
+    #outputRank = Length (_AsArray (outDim)) # support outputs with tensor layouts
+    #inferInputRankToMap =
+    #    if      !BS.Constants.IsNone (inputRank) then -1  # means not specified
+    #    else if  BS.Constants.IsNone (mapRank)   then 0   # default to 'use all input dims'
+    #    else mapRank
+    #apply (x) =
+    #    if bias
+    #    then Times (W, x, outputRank=outputRank, inferInputRankToMap=inferInputRankToMap) + b
+    #    else Times (W, x, outputRank=outputRank, inferInputRankToMap=inferInputRankToMap)
+
+    W = Parameter(_inf.shape + out_shape, init=init)
+    b = Parameter(             out_shape, init=init_bias) if bias else None
     x = Placeholder(_inf=_inf, name='linear_arg')
     apply_x = Function.__matmul__(x, W) + b if bias else \
               Function.__matmul__(x, W)
@@ -44,20 +70,17 @@ def Linear(shape, _inf, bias=True, init='glorot_uniform', init_value_scale=1, in
     # TODO: how to break after the else?
 
 # Embedding -- create a linear embedding layer
-# TODO: replace embedding_path with a numpy array, and pass it as the "init" parameter
-def Embedding(shape, _inf, init='glorot_uniform', init_value_scale=1, embedding_path=None, transpose=False):
+# TODO: after removing loading from file, now we have two similar params, weight and init which seems redundant.
+def Embedding(shape, _inf, weights=None, init=_default_initializer, transpose=False):
     shape = _as_tuple(shape)
     full_shape = (shape + _inf.shape) if transpose else (_inf.shape + shape)
-    if embedding_path is None:
-        # TODO: how to pass all optional args automatically in one go?
-        f = Linear(shape, _inf=_inf, init=init, init_value_scale=init_value_scale)
-        _wrap_rename_Function(f, 'Embedding')
-        return f
-    else:
-        E = Parameter(full_shape, initFromFilePath=embeddingPath, learningRateMultiplier=0)  # fixed from file
+    if weights is None:  # no weights given: learn the embedding
+        E = Parameter(full_shape, init=init)
+    else:                # weights given: use them as constant
+        E = Constant(full_shape, init=weights)  # TODO: can 'weights' be a CNTK object already? Then how to do this?
     x = Placeholder(_inf=_inf, name='embedding_arg')
-    apply_x = __matmul__(E, x) if transposed else \
-              __matmul__(x, E)     # x is expected to be sparse one-hot
+    apply_x = Function.__matmul__(E, x) if transpose else \
+              Function.__matmul__(x, E)     # x is expected to be sparse one-hot
     _name_and_extend_Function(apply_x, 'Embedding')
     return apply_x
 
@@ -66,7 +89,7 @@ def Stabilizer(_inf, steepness=4):
     # this behaves linear for weights around 1, yet guarantees positiveness
 
     # parameters
-    param = Parameter((1), init_value=0.99537863)  # 1/steepness*ln (e^steepness-1) for steepness==4
+    param = Parameter((1), init=0.99537863)  # 1/steepness*ln (e^steepness-1) for steepness==4
     # TODO: compute this strange value directly in Python
 
     # application

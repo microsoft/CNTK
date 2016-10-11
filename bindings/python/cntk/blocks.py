@@ -18,6 +18,7 @@ from cntk.ops import parameter, input_variable, placeholder_variable, times, cro
 import itertools
 from cntk.utils.debughelpers import _name_node, _node_name, _node_description, _print_node
 from utils import Record, _as_tuple
+from cntk.initializer import glorot_uniform
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(abs_path, "..", ".."))
@@ -87,17 +88,19 @@ def _apply(f, args):
     _function_name = _node_name(f)  # these are for logging/debugging only
     _function_description = _node_description(f)
     _arg_description = ", ".join([_node_name(f) for f in list(args)])
-    f = f.clone(ParameterCloningMethod_Share)
-    f.replace_placeholders(dict(zip(f.placeholders(), args)))
-    #f = f.clone(dict(zip(placeholders, args)))
-    # BUGBUG: need to get this to work, in conjunction with _Share
+    f = f.clone(ParameterCloningMethod_Share, dict(zip(f.placeholders(), args)))
     _name_and_extend_Function(f, _function_name)
     print("{} = {} ({})".format(_node_description(f), _function_description, _arg_description))
     return f
 
 # some mappings to BS format
-def Parameter(shape, learning_rate_multiplier=1.0, init=None, init_value_scale=1, init_value=None, init_filter_rank=0, init_output_rank=1, init_from_file_path=None, init_on_cpu_only=True, random_seed=-1):
-    return _name_node(parameter(shape), 'parameter')   # these are factory methods for things with state
+# TODO: random init parameters: init_filter_rank=0, init_output_rank=1, init_on_cpu_only=True, random_seed=-1
+# init=None means zero
+def Parameter(shape, learning_rate_multiplier=1.0, init=None):
+    return _name_node(parameter(shape, init=init if init is not None else 0), 'parameter')   # these are factory methods for things with state
+
+def Constant(shape, init):
+    return Parameter(shape, learning_rate_multiplier=0, init=init)
 
 def Input(*args, **kwargs):
     return _name_node(input_variable(*args, **kwargs), 'input')
@@ -118,7 +121,7 @@ def Identity(_inf):
     return apply_x
 
 # TODO: For now, shape and cell_shape can only be rank-1 vectors
-def LSTM(shape, _inf, cell_shape=None, use_peepholes=False, init='glorot_uniform', init_value_scale=1, enable_self_stabilization=False): # (x, (h, c))
+def LSTM(shape, _inf, cell_shape=None, use_peepholes=False, init=None, enable_self_stabilization=False): # (x, (h, c))
     has_projection = cell_shape is not None
     has_aux = False
 
@@ -135,13 +138,13 @@ def LSTM(shape, _inf, cell_shape=None, use_peepholes=False, init='glorot_uniform
     cell_shape_stacked = tuple(cell_shape_list)  # patched dims with stack_axis duplicated 4 times
 
     # parameters
-    B  = Parameter(             cell_shape_stacked, init_value=0)       # a bias
-    W  = Parameter(_inf.shape + cell_shape_stacked, init=init, init_value_scale=init_value_scale)                             # input
-    A  = Parameter(_inf.shape + cell_shape_stacked, init=init, init_value_scale=init_value_scale) if has_aux else None        # aux input (optional)
-    H  = Parameter(shape      + cell_shape_stacked, init=init, init_value_scale=init_value_scale)                             # hidden-to-hidden
-    Ci = Parameter(             cell_shape,         init=init, init_value_scale=init_value_scale) if use_peepholes else None  # cell-to-hiddden {note: applied elementwise}
-    Cf = Parameter(             cell_shape,         init=init, init_value_scale=init_value_scale) if use_peepholes else None  # cell-to-hiddden {note: applied elementwise}
-    Co = Parameter(             cell_shape,         init=init, init_value_scale=init_value_scale) if use_peepholes else None  # cell-to-hiddden {note: applied elementwise}
+    b  = Parameter(             cell_shape_stacked, init=init)                             # a bias
+    W  = Parameter(_inf.shape + cell_shape_stacked, init=init)                             # input
+    A  = Parameter(_inf.shape + cell_shape_stacked, init=init) if has_aux else None        # aux input (optional)
+    H  = Parameter(shape      + cell_shape_stacked, init=init)                             # hidden-to-hidden
+    Ci = Parameter(             cell_shape,         init=init) if use_peepholes else None  # cell-to-hiddden {note: applied elementwise}
+    Cf = Parameter(             cell_shape,         init=init) if use_peepholes else None  # cell-to-hiddden {note: applied elementwise}
+    Co = Parameter(             cell_shape,         init=init) if use_peepholes else None  # cell-to-hiddden {note: applied elementwise}
 
     Wmr = ParameterTensor (cell_shape + shape, init=init, init_value_scale=init_value_scale) if has_projection else None  # final projection
 
@@ -165,8 +168,8 @@ def LSTM(shape, _inf, cell_shape=None, use_peepholes=False, init='glorot_uniform
     # note: input does not get a stabilizer here, user is meant to do that outside
 
     # projected contribution from input(s), hidden, and bias
-    proj4 = B + times(x, W) + times(dhs, H) + times(aux, A) if has_aux else \
-            B + times(x, W) + times(dhs, H)
+    proj4 = b + times(x, W) + times(dhs, H) + times(aux, A) if has_aux else \
+            b + times(x, W) + times(dhs, H)
 
     it_proj  = slice (proj4, stack_axis, 0*stacked_dim, 1*stacked_dim)  # split along stack_axis
     bit_proj = slice (proj4, stack_axis, 1*stacked_dim, 2*stacked_dim)
@@ -196,8 +199,9 @@ def LSTM(shape, _inf, cell_shape=None, use_peepholes=False, init='glorot_uniform
     _print_node(h)  # this looks right
     _name_node(c, 'c')
 
-    # return to caller a helper function to create placeholders for recurrence
+    # TODO: figure out how to do scoping, and also rename all the apply... to expression
     apply_x_h_c = combine ([h, c])
+    # return to caller a helper function to create placeholders for recurrence
     apply_x_h_c.create_placeholder = create_hc_placeholder
     _name_and_extend_Function(apply_x_h_c, 'LSTM')
     return apply_x_h_c

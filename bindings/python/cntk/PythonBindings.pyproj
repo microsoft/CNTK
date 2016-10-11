@@ -26,6 +26,7 @@
     <Content Include="pytest.ini" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="blocks.py" />
     <Compile Include="cntk_py.py" />
     <Compile Include="conftest.py" />
     <Compile Include="initializer.py" />
