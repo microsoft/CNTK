@@ -368,6 +368,12 @@ def sanitize_batch(var, batch, seq_starts=None, data_type=None, device=None):
             data_type = np.float32
         batch = np.asarray(batch, dtype=data_type)
 
+    # Maybe a NumPy dtype was given, but with lower accuracy than float32, then
+    # convert it to float32
+    if np.issubdtype(batch.dtype, int):
+        print(batch.dtypepyt)
+        batch = batch.astype(np.float32)
+
     ndav = create_NDArrayView_from_NumPy(batch, device)
 
     if use_mask:
