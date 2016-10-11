@@ -19,6 +19,10 @@
 #include "mpi.h"
 #endif
 #else
+// Note: the following macros define some of the MPI related functions and constants such that code
+//       using these functionality will compile cleanly - but will not actually perform the MPI operation.
+//       The clean way to go is to move any code related to mpi into the mpiwrapper class implementation and decide
+//       in this class if to use mpi.h or not.
 typedef void *MPI_Comm;
 typedef enum _MPI_Datatype { MPI_CHAR, MPI_INT, MPI_FLOAT, MPI_DOUBLE, MPI_UNSIGNED, MPI_LONG_LONG_INT } MPI_Datatype;
 
@@ -34,13 +38,13 @@ typedef enum _MPI_Datatype { MPI_CHAR, MPI_INT, MPI_FLOAT, MPI_DOUBLE, MPI_UNSIG
 #define MPI_MAX_ERROR_STRING  64
 
 #define MPI_Finalize()                      MPI_SUCCESS
-#define MPI_Wait(a, b)                      a,b,MPI_UNDEFINED
-#define MPI_Waitany(a, b, c, d)             a,b,c,d,MPI_UNDEFINED
-#define MPI_Waitall(a, b, c)                a,b,c,MPI_UNDEFINED
-#define MPI_Isend(a, b, c, d, e, f, g)      a,b,c,d,e,f,MPI_UNDEFINED
-#define MPI_Recv(a, b, c, d, e, f, g)       a,b,c,d,e,f,g,MPI_UNDEFINED
-#define MPI_Irecv(a, b, c, d, e, f, g)      a,b,c,d,e,f,g,MPI_UNDEFINED
-#define MPI_Iallreduce(a, b, c, d, e, f, g) a,b,c,d,e,f,g,MPI_UNDEFINED
+#define MPI_Wait(a, b)                      (a), (b), MPI_UNDEFINED
+#define MPI_Waitany(a, b, c, d)             (a), (b), (c), (d), MPI_UNDEFINED
+#define MPI_Waitall(a, b, c)                (a), (b), (c), MPI_UNDEFINED
+#define MPI_Isend(a, b, c, d, e, f, g)      (a), (b), (c), (d), (e), (f), MPI_UNDEFINED
+#define MPI_Recv(a, b, c, d, e, f, g)       (a), (b), (c), (d), (e), (f), (g), MPI_UNDEFINED
+#define MPI_Irecv(a, b, c, d, e, f, g)      (a), (b), (c), (d), (e), (f), (g), MPI_UNDEFINED
+#define MPI_Iallreduce(a, b, c, d, e, f, g) (a), (b), (c), (d), (e), (f), (g), MPI_UNDEFINED
 
 typedef int MPI_Request;
 typedef void *MPI_Status;
