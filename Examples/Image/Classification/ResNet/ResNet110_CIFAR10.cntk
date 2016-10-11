@@ -4,32 +4,42 @@ command = TrainConvNet:Eval
 
 precision = "float"; traceLevel = 1 ; deviceId = "auto"
 
-rootDir = "../.." ; dataDir = "$rootDir$/DataSets/CIFAR-10" ;
+rootDir = "../.." ; configDir = "./" ; dataDir = "$rootDir$/DataSets/CIFAR-10" ;
 outputDir = "./Output" ;
 
-modelPath = "$outputDir$/Models/ConvNet_CIFAR10_DataAug"
-#stderr = "$outputDir$/ConvNet_CIFAR10_DataAug_bs_out"
+modelPath = "$outputDir$/Models/ResNet110_CIFAR10_DataAug"
+#stderr = "$outputDir$/ResNet110_CIFAR10_DataAug_bs_out"
 
 TrainConvNet = {
     action = "train"
 
     BrainScriptNetworkBuilder = {
+        include "$configDir$/Macros.bs"
+	
         imageShape = 32:32:3
         labelDim = 10
 
         featScale = 1/256
         Normalize{f} = x => f .* x
 
+        cMap = 16:32:64
+        bnTimeConst = 4096
+        numLayers = 18
+		
         model = Sequential (
             Normalize {featScale} :
-            ConvolutionalLayer {64, (3:3), pad = true} : ReLU : 
-            ConvolutionalLayer {64, (3:3), pad = true} : ReLU : 
-              MaxPoolingLayer {(3:3), stride = (2:2)} :
-            ConvolutionalLayer {64, (3:3), pad = true} : ReLU : 
-            ConvolutionalLayer {64, (3:3), pad = true} : ReLU : 
-              MaxPoolingLayer {(3:3), stride = (2:2)} :
-            DenseLayer {256} : Dropout : ReLU : 
-            DenseLayer {128} : Dropout : ReLU : 
+
+            ConvBNReLULayer {cMap[0], (3:3), (1:1), bnTimeConst} :
+            ResNetBasicStack {numLayers, cMap[0], bnTimeConst} :
+
+            ResNetBasicInc {cMap[1], (2:2), bnTimeConst} :
+            ResNetBasicStack {numLayers-1, cMap[1], bnTimeConst} :
+		
+            ResNetBasicInc {cMap[2], (2:2), bnTimeConst} :
+            ResNetBasicStack {numLayers-1, cMap[2], bnTimeConst} :
+			
+            # avg pooling
+            AveragePoolingLayer {(8: 8), stride = 1} :
             LinearLayer {labelDim}
         )
 
@@ -54,13 +64,14 @@ TrainConvNet = {
 
     SGD = {
         epochSize = 0
-        minibatchSize = 64
+        minibatchSize = 128
 
-        learningRatesPerSample = 0.0015625*20:0.00046875*20:0.00015625*20:0.000046875*10:0.000015625
-        momentumAsTimeConstant = 0*20:600*20:6400
-        maxEpochs = 80
-        L2RegWeight = 0.002
-        dropoutRate = 0*5:0.5
+        # Note that learning rates are 10x more than in the paper due to a different 
+        # momentum update rule in CNTK: v{t + 1} = lr*(1 - momentum)*g{t + 1} + momentum*v{t} 
+        learningRatesPerMB = 0.1*1:1.0*80:0.1*40:0.01
+        momentumPerMB = 0.9
+        maxEpochs = 160
+        L2RegWeight = 0.0001
 
         numMBsToShowResult = 100
     }
@@ -88,7 +99,7 @@ Eval = {
     action = "eval"
     evalNodeNames = errs:top5Errs  # also test top-5 error rate
     # Set minibatch size for testing.
-    minibatchSize = 512
+    minibatchSize = 128
 
     reader = {
         verbosity = 0 ; randomize = false

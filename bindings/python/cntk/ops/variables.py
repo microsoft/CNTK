@@ -1,11 +1,12 @@
 import numpy as np
-from cntk.cntk_py import NDArrayView, DeviceDescriptor, Variable, Parameter, ConstantFloat, ConstantDouble, Constant, DataType_Float, DataType_Double, ParameterFloat, ParameterDouble, Axis
-from cntk import DATATYPE
+from cntk import cntk_py
+#from cntk.cntk_py import NDArrayView, DeviceDescriptor, Variable, Parameter, ConstantFloat, ConstantDouble, Constant, DataType_Float, DataType_Double, ParameterFloat, ParameterDouble, Axis
+#from cntk import DATATYPE
 from cntk.tensor import TensorOpsMixin
-from .. import utils
+from cntk import utils
+from ..utils import typemap
 
 FLOAT_32 = 'float32'
-
 
 def _sanitize_value(shape, value, dtype, device):
     np_dtype = utils.sanitize_dtype_numpy(dtype)
@@ -27,11 +28,23 @@ def _sanitize_value(shape, value, dtype, device):
 
     return ndav
 
+class Variable(TensorOpsMixin, cntk_py.Variable):
+    '''
+    Denotes a symbolic entity corresponding to the inputs and outputs of a Function.
 
-class Variable(TensorOpsMixin, Variable):
-
+    Args:
+       shape (`tuple`): the shape of this variable.
+       data_type (`np.float32 or np.float64`): data type of the values that will be bound to this variable.
+        Default is np.float32
+       needs_gradient (`bool`): if set to True any expression that contains this variable
+        will also be differentiated with respect to this variable.
+       is_sparse(`bool`): whether this is a sparse or dense input (or output)
+       dynamic_axes(`list` of `cntk.Axis`): the dynamic axes of this variable. These
+        express dimensions that can vary across examples or minibatches.
+       name(`str`): an optional name for this parameter.
+    '''
     def __init__(self, shape=None, data_type=None, needs_gradient=False, is_sparse=False,
-                 dynamic_axes=[Axis.default_dynamic_axis(), Axis.default_batch_axis()], name=''):
+                 dynamic_axes=[cntk_py.Axis.default_dynamic_axis(), cntk_py.Axis.default_batch_axis()], name=''):
         shape = utils.sanitize_shape(shape)
 
         if data_type is None:
@@ -41,9 +54,160 @@ class Variable(TensorOpsMixin, Variable):
         super(Variable, self).__init__(shape, is_sparse,
                                        dtype, needs_gradient, name, dynamic_axes)
 
+    @typemap
+    def dynamic_axes(self):
+        '''
+        Returns the dynamic axes of this variable
 
-class Parameter(TensorOpsMixin, Parameter):
+        Returns:
+            `list`: list of `:class:cntk.Axis` that are the dynamic_axes of this Variable
+        '''
+        return super(cntk.cntk_py.Variable, self).dynamic_axes()
 
+    @typemap
+    def get_data_type(self):
+        '''
+        Returns the data type of the data that this Variable symbolically represents
+
+        Returns:
+            `DataType`: the data type of the data that this Variable symbolically represents
+        '''
+        return super(cntk.cntk_py.Variable, self).get_data_type()
+
+    @typemap
+    def is_constant(self):
+        '''
+        Returns True if this variable is a constant and False otherwise
+
+        Returns:
+            `bool`: True if this variable is a Constant and False otherwise
+        '''
+        return super(cntk.cntk_py.Variable, self).is_constant()
+
+    @typemap
+    def is_input(self):
+        '''
+        Returns True if this variable is an input and False otherwise
+
+        Returns:
+            `bool`: True if this variable is an input and False otherwise
+        '''
+        return super(cntk.cntk_py.Variable, self).is_input()
+
+    @typemap
+    def is_output(self):
+        '''
+        Returns True if this variable is an output and False otherwise
+
+        Returns:
+            `bool`: True if this variable is an output and False otherwise
+        '''
+        return super(cntk.cntk_py.Variable, self).is_output()
+
+    @typemap
+    def is_parameter(self):
+        '''
+        Returns True if this variable is a parameter and False otherwise
+
+        Returns:
+            `bool`: True if this variable is a parameter and False otherwise
+        '''
+        return super(cntk.cntk_py.Variable, self).is_parameter()
+
+    @typemap
+    def is_placeholder(self):
+        '''
+        Returns True if this variable is a placeholder and False otherwise
+
+        Returns:
+            `bool`: True if this variable is a placeholder and False otherwise
+        '''
+        return super(cntk.cntk_py.Variable, self).is_placeholder()
+
+    @typemap
+    def is_sparse(self):
+        '''
+        Returns True if this variable will be bound to sparse data and False otherwise
+
+        Returns:
+            `bool`: True if this variable will be bound to sparse data
+        '''
+        return super(cntk.cntk_py.Variable, self).is_sparse()
+
+    # @typemap
+    # def kind(self):
+        # '''
+        # kind
+        
+
+        # Returns:
+            # `VariableKind`: text
+        # '''
+        # return super(cntk.cntk_py.Variable, self).kind()
+
+    @typemap
+    def name(self):
+        '''
+        Returns the name of this variable
+
+        Returns:
+            `str`: the name of this variable
+        '''
+        return super(cntk.cntk_py.Variable, self).name()
+
+    @typemap
+    def needs_gradient(self):
+        '''
+        Returns True if gradient computation is enabled for this variable and False otherwise.
+
+        Returns:
+            `bool`: True if gradient computation is enabled for this variable and False otherwise.
+        '''
+        return super(cntk.cntk_py.Variable, self).needs_gradient()
+
+    @typemap
+    def owner(self):
+        '''
+        Returns:
+            `Function`: the Function object which 'this' variable is an ouptut of.
+        '''
+        if self.is_output() == False:
+            raise RuntimeError('called owner() on a variable that is not an output variable')
+        return super(cntk.cntk_py.Variable, self).owner()
+
+    @typemap
+    def shape(self):
+        '''
+        Returns:
+            `NDShape`: the shape of the Variable
+        '''
+        return super(cntk.cntk_py.Variable, self).shape()
+
+    @typemap
+    def uid(self):
+        '''
+        Returns:
+            `str`:  the internally generated unique name of the variable
+        '''
+        return super(cntk.cntk_py.Variable, self).uid()
+
+class Parameter(TensorOpsMixin, cntk_py.Parameter):
+    '''
+    A trainable parameter. It can be a scalar, vector, matrix, or tensor
+    of floating point numbers that can be modified by a training
+    procedure.
+
+    Args:
+       shape (`tuple`): the shape of the tensor holding the parameters
+       init (`np.ndarray` or `list` or `float` or `int`): Initial value.
+        If a numpy array is specified the shape argument is ignored and
+        the tensor gets the shape of this argument.
+       data_type (`np.float32 or np.float64`): data type of the values stored.
+       device (`dev`): the device on which the values should reside.
+       name (`str`): an optional name for this parameter
+
+    Parameters are Variables and therefore they inherit all their methods.
+    '''
     def __init__(self, shape=None, init=None, data_type=None,
             device=None, name=''):
 
@@ -59,23 +223,47 @@ class Parameter(TensorOpsMixin, Parameter):
         if isinstance(init, (np.ndarray, list, float, int)):
             ndav = _sanitize_value(shape, init, data_type, device)
             super(Parameter, self).__init__(ndav, name)
-
         else:
             shape = utils.sanitize_shape(shape)
             data_type  = utils.sanitize_dtype_cntk(data_type)
             super(Parameter, self).__init__(shape, data_type, init,
                     device, name)
 
-class Constant(TensorOpsMixin, Constant):
+    @typemap
+    def value(self):
+        '''
+        Returns:
+            `NDArrayView`: the current value of the parameter.
+        '''
+        return super(cntk.cntk_py.Constant, self).value()
 
-    def __init__(self, shape=None, value=None, data_type=None, 
-                    device=None, name=''):
+class Constant(TensorOpsMixin, cntk_py.Constant):
+    '''
+    A constant value. It can be a scalar, vector, matrix, or tensor
+    of floating point numbers that cannot be modified.
+
+    Args:
+       value (`np.ndarray` or `list` or `float` or `int`): Initial value.
+       data_type (`np.float32 or np.float64`): data type to store the values as.
+       device (`dev`): the device on which the values should reside.
+       name (`str`): an optional name for this constant.
+
+    Constants are Variables and therefore they inherit all their methods.
+    '''
+    def __init__(self, value, data_type=None, device=None, name=''):
 
         if data_type is None:
-            if not isinstance(value, np.ndarray):
-                data_type = FLOAT_32
-            else:
-                data_type = str(value.dtype)
+            data_type = str(value.dtype)
 
-        ndav = _sanitize_value(shape, value, data_type, device)
+        ndav = _sanitize_value(value.shape, value, data_type, device)
         super(Constant, self).__init__(ndav, name)
+        self.value = super().value()
+    #TODO how to expose Scalar ?
+    
+    @typemap
+    def value(self):
+        '''
+        Returns:
+            `NDArrayView`: the value of the constant.
+        '''
+        return super(cntk.cntk_py.Constant, self).value()
