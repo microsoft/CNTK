@@ -196,7 +196,7 @@ def sanitize_input(arg, fallback_dtype=np.float32):
     Convert to Variable so that it can be passed as Variable to the
     CNTK operators.
      * If `arg` is a NumPy array and its type is neither `np.float32` nor
-      `np.float64`, it sets it to `np.float32`.
+    `np.float64`, it sets it to `np.float32`.
      * If `arg` is an op, it is assumed that it has only one output, which will
        be returned.
 
@@ -205,7 +205,7 @@ def sanitize_input(arg, fallback_dtype=np.float32):
          :class:`cntk.ops.functions.Function`): input
         fallback_dtype (NumPy dtype): fallback dtype in case `arg` is a list
 
-    Returns: 
+    Returns:
       Leave Constant, Parameter, and Variable as is. Return Constant, if
       `arg` was a number or NumPy array. Variable otherwise. 
     """
@@ -506,7 +506,7 @@ def sanitize_var_map(op_arguments, arguments, precision=None,
 
     if len(arguments) < len(op_arguments):
         raise ValueError('your graph has %i inputs, but you specified %i' %
-                         (len(op_arguments), len(arguments)))
+                        (len(op_arguments), len(arguments)))
 
     if isinstance(arguments, tuple):
         arguments, seq_starts = arguments
@@ -766,3 +766,44 @@ def eval(op, arguments=None, precision=None, device=None, backward_pass=False):
 
     else:
         return forward_output, None
+
+
+def typemap(f):
+    '''
+    Upcasts Swig types to cntk types that inherit from Swig.
+    '''
+
+    from functools import wraps
+    @wraps(f)
+    def wrapper(*args, **kwds):
+        from cntk.ops.variables import Variable, Parameter, Constant
+        from cntk.ops.functions import Function
+        from cntk.learner import Learner
+        from cntk.io import MinibatchSource, MinibatchData, StreamConfiguration
+        from cntk.axis import Axis
+        typemap = {
+                cntk_py.Variable: Variable,
+                cntk_py.Parameter: Parameter,
+                cntk_py.Constant: Constant,
+                cntk_py.Function: Function,
+                cntk_py.Learner: Learner,
+                cntk_py.MinibatchSource: MinibatchSource,
+                cntk_py.MinibatchData: MinibatchData,
+                cntk_py.StreamConfiguration: StreamConfiguration,
+                cntk_py.Axis: Axis,
+                }
+        result = f(*args, **kwds)
+        if isinstance(result, (tuple, list, set)):
+            for r in result:
+                r.__class__ = typemap.get(r.__class__, r.__class__)
+        elif isinstance(result, dict):
+            for k,v in result.items():
+                k.__class__ = typemap.get(k.__class__, k.__class__)
+                v.__class__ = typemap.get(v.__class__, v.__class__)
+        else:
+            try:
+                result.__class__ = typemap.get(result.__class__, result.__class__)
+            except TypeError:
+                pass
+        return result
+    return wrapper
