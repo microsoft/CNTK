@@ -59,7 +59,8 @@ def _test_unary_op(precision, device_id, op_func,
 
 
 def _test_binary_op(precision, device_id, op_func, left_operand, right_operand,
-                    expected_forward, expected_backward_all, only_input_variables=False):
+                    expected_forward, expected_backward_all,
+                    only_input_variables=False, wrap_batch_seq=True):
 
     left_value = AA(left_operand, dtype=PRECISION_TO_TYPE[precision])
     right_value = AA(right_operand, dtype=PRECISION_TO_TYPE[precision])
@@ -85,8 +86,9 @@ def _test_binary_op(precision, device_id, op_func, left_operand, right_operand,
 
     # create batch by wrapping the data point into a sequence of length one and
     # putting it into a batch of one sample
-    left_value.shape = (1, 1) + left_value.shape
-    right_value.shape = (1, 1) + right_value.shape
+    if wrap_batch_seq:
+        left_value.shape = (1, 1) + left_value.shape
+        right_value.shape = (1, 1) + right_value.shape
 
     forward_input = {a: left_value, b: right_value}
     expected_backward = {a: expected_backward_all[
@@ -115,8 +117,8 @@ def unittest_helper(root_node,
 
     assert isinstance(root_node, Function) 
     backward_pass = expected_backward is not None
-    forward, backward = cntk_eval(root_node, precision, cntk_device(device_id),
-                                  forward_input, backward_pass)
+    forward, backward = cntk_eval(root_node, forward_input, None, precision,
+            cntk_device(device_id), backward_pass)
 
     # for forward we always expect only one result
     assert len(forward) == 1

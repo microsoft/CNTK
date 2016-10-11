@@ -12,7 +12,6 @@
 %include <std_shared_ptr.i>
 
 %rename(output_internal) CNTK::Function::Output;
-%rename(replace_placeholders_internal) CNTK::Function::ReplacePlaceholders;
 %rename(sgd_learner) CNTK::SGDLearner;
 %rename(momentum_sgd_learner) CNTK::MomentumSGDLearner;
 %rename(gpu_device) CNTK::DeviceDescriptor::GPUDevice;
@@ -1196,7 +1195,6 @@ def get_output_and_keep_reference(self):
     variable.owner = self
     return variable
 Function.output = lambda self:get_output_and_keep_reference(self)
-Function.replace_placeholders = lambda self, ph_map: self.replace_placeholders_internal(ph_map)
 
 from .tensor import _add_tensor_ops, _add_eval
 for klass in [Function, Variable]:
