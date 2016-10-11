@@ -135,18 +135,17 @@ struct GridDim
         assert(m_blocksPerGrid * m_threadsPerBlock >= N);
     }
 
-    static std::vector<cudaDeviceProp> CacheDeviceProps()
+    static const std::vector<cudaDeviceProp>& GetCachedDeviceProps()
     {
-        int numDevices;
-        CUDA_CALL(cudaGetDeviceCount(&numDevices));
-        std::vector<cudaDeviceProp> props(numDevices);
-        for (int i = 0; i < numDevices; i++)
-            CUDA_CALL(cudaGetDeviceProperties(&props[i], i));
-#if 0 // on Linux, maxGridSize[0] gets reported as 0
-        for (int i = 0; i < numDevices; i++)
-            fprintf(stderr, "%d procs  %d warps  %d %d %d max grid  on  %s\n", (int)props[i].multiProcessorCount, (int)props[i].warpSize, (int)props[i].maxGridSize[0], (int)props[i].maxGridSize[1], (int)props[i].maxGridSize[2], props[i].name);
-#endif
-        return props;
+        std::call_once(s_cachedDevicePropsInitFlag, [=]{
+            int numDevices;
+            CUDA_CALL(cudaGetDeviceCount(&numDevices));
+            s_cachedDeviceProps.resize(numDevices);
+            for (int i = 0; i < numDevices; i++)
+                CUDA_CALL(cudaGetDeviceProperties(&s_cachedDeviceProps[i], i));
+        });
+       
+        return s_cachedDeviceProps;
     }
 
     static size_t GetCurrentDeviceId()
@@ -156,13 +155,12 @@ struct GridDim
         return (size_t)deviceId;
     }
 
+
     // get device properties of current device
     static const cudaDeviceProp& GetDeviceProps()
     {
-        // Unfortunatelly, initialization of local static variables is not thread-safe in VS2013.
-        // As workaround, it is moved to the struct level. 
-        // static std::vector<cudaDeviceProp> props = CacheDeviceProps(); // thread-safe according to C++ standard
-        return s_cachedDeviceProps[GetCurrentDeviceId()];
+        const auto& cachedDevicesProps = GetCachedDeviceProps();
+        return cachedDevicesProps[GetCurrentDeviceId()];
     }
 
     // compute our location on the grid
@@ -171,9 +169,10 @@ struct GridDim
         return blockDim.x * blockIdx.x + threadIdx.x;
     }
 
-private:     
-    // Todo: after upgraded to VS2015, move the satic variable into GetDeviceProps() as local static variables there.
+private: 
+    // TODO: drop call_once and co. and make cached devices a local static, once we're on VS2015.
     static std::vector<cudaDeviceProp> s_cachedDeviceProps;
+    static std::once_flag s_cachedDevicePropsInitFlag;
 };
 
 #define CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id, N) \

@@ -47,7 +47,7 @@ MinibatchSourcePtr CreateMinibatchSource(size_t featureDim, size_t numOutputClas
     return CreateCompositeMinibatchSource(minibatchSourceConfiguration);
 }
 
-static FunctionPtr LSTMSequenceClassiferNet(const Variable& input, size_t numOutputClasses, size_t LSTMDim, size_t cellDim, size_t numLSTMs, const DeviceDescriptor& device, const std::wstring& outputName)
+static FunctionPtr LSTMAcousticSequenceClassiferNet(const Variable& input, size_t numOutputClasses, size_t LSTMDim, size_t cellDim, size_t numLSTMs, const DeviceDescriptor& device, const std::wstring& outputName)
 {
     auto pastValueRecurrenceHook = [](const Variable& x) { return PastValue(x); };
     FunctionPtr r = input;
@@ -77,7 +77,7 @@ void TrainTruncatedLSTMAcousticModelClassifer(const DeviceDescriptor& device, bo
     ComputeInputPerDimMeansAndInvStdDevs(minibatchSource, featureMeansAndInvStdDevs);
 
     auto normalizedFeatures = PerDimMeanVarianceNormalize(features, featureMeansAndInvStdDevs[featureStreamInfo].first, featureMeansAndInvStdDevs[featureStreamInfo].second);
-    auto classifierOutput = LSTMSequenceClassiferNet(normalizedFeatures, numOutputClasses, hiddenDim, cellDim, numLSTMLayers, device, L"classifierOutput");
+    auto classifierOutput = LSTMAcousticSequenceClassiferNet(normalizedFeatures, numOutputClasses, hiddenDim, cellDim, numLSTMLayers, device, L"classifierOutput");
 
     auto trainingLoss = CNTK::CrossEntropyWithSoftmax(classifierOutput, labels, L"lossFunction");
     auto prediction = CNTK::ClassificationError(classifierOutput, labels, L"classificationError");
@@ -128,8 +128,9 @@ void TrainTruncatedLSTMAcousticModelClassifer(const DeviceDescriptor& device, bo
 
 void TrainTruncatedLSTMAcousticModelClassifer()
 {
-#ifndef CPUONLY
-    TrainTruncatedLSTMAcousticModelClassifer(DeviceDescriptor::GPUDevice(0), true);
-#endif
+    if (IsGPUAvailable())
+    {
+        TrainTruncatedLSTMAcousticModelClassifer(DeviceDescriptor::GPUDevice(0), true);
+    }
     TrainTruncatedLSTMAcousticModelClassifer(DeviceDescriptor::CPUDevice(), false);
 }

@@ -40,7 +40,7 @@ more common case) is as follows:
     >>> i1 = cntk.input_variable((1, 2))
     >>> i2 = cntk.input_variable((1, 2))
     >>> cntk.squared_error(i1, i2).eval({i1:np.asarray([[[[2., 1.]]]], dtype=np.float32),  i2:np.asarray([[[[4., 6.]]]], dtype=np.float32)})
-    array(29.0, dtype=float32)
+    array([[ 29.]], dtype=float32)
 
 In the above example we are first setting up two input variables with shape ``(1, 2)``. We then setup a ``squared_error`` node with those two variables as 
 inputs. Within the ``eval()`` method we can setup the input-mapping of the data for those two variables. In this case we pass in two numpy arrays. The squared 
@@ -63,8 +63,8 @@ First basic use
 The first step in training or running a network in CNTK is to decide which device it should be run on. If you have access to a GPU, training time 
 can be vastly improved. To explicitly set the device to GPU, set the target device as follows:
 
-    >>> target_device = DeviceDescriptor.gpu_device(0)
-    >>> DeviceDescriptor.set_default_device(target_device)
+    >>> target_device = cntk.DeviceDescriptor.gpu_device(0)
+    >>> cntk.DeviceDescriptor.set_default_device(target_device)
 
 Now let's setup a network that will learn a classifier based on the example fully connected classifier network 
 (``examples.common.nn.fully_connected_classifier_net``). This is defined, along with several other simple and more complex DNN building blocks in 

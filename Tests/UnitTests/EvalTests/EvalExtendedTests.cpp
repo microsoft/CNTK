@@ -284,5 +284,141 @@ BOOST_AUTO_TEST_CASE(EvalSparseTimesTest)
     eval->Destroy();
 }
 
+BOOST_AUTO_TEST_CASE(EvalRNNTest)
+{
+    std::string modelDefinition =
+        "deviceId = -1 \n"
+        "precision = \"float\" \n"
+        "traceLevel = 1 \n"
+        "run=NDLNetworkBuilder \n"
+        "NDLNetworkBuilder = [ \n"
+        "LSTMComponent(inputDim, outputDim, cellDim, inputx, cellDimX2, cellDimX3, cellDimX4) = [ \n"
+        "   wx = Parameter(cellDimX4, 0, init = \"uniform\", initValueScale = 1); \n"
+        "   b = Parameter(cellDimX4, 1, init = \"fixedValue\", value = 0.0);\n"
+        "   Wh = Parameter(cellDimX4, 0, init = \"uniform\", initValueScale = 1);\n"
+        
+        "   Wci = Parameter(cellDim, init = \"uniform\", initValueScale = 1);\n"
+        "   Wcf = Parameter(cellDim, init = \"uniform\", initValueScale = 1);\n"
+        "    Wco = Parameter(cellDim, init = \"uniform\", initValueScale = 1);\n"
+
+        "   dh = PastValue(outputDim, output, timeStep = 1);\n"
+        "   dc = PastValue(cellDim, ct, timeStep = 1);\n"
+
+        "   wxx = Times(wx, inputx);\n"
+        "   wxxpb = Plus(wxx, b);\n"
+
+        "   whh = Times(wh, dh);\n"
+
+        "   wxxpbpwhh = Plus(wxxpb, whh)\n"
+
+        "       G1 = RowSlice(0, cellDim, wxxpbpwhh)\n"
+        "       G2 = RowSlice(cellDim, cellDim, wxxpbpwhh)\n"
+        "       G3 = RowSlice(cellDimX2, cellDim, wxxpbpwhh);\n"
+        "   G4 = RowSlice(cellDimX3, cellDim, wxxpbpwhh);\n"
+
+        "   Wcidc = DiagTimes(Wci, dc);\n"
+        "   it = Sigmoid(Plus(G1, Wcidc));\n"
+
+        "   bit = ElementTimes(it, Tanh(G2));\n"
+
+        "   Wcfdc = DiagTimes(Wcf, dc);\n"
+        "   ft = Sigmoid(Plus(G3, Wcfdc));\n"
+
+        "   bft = ElementTimes(ft, dc);\n"
+
+        "   ct = Plus(bft, bit);\n"
+
+        "   Wcoct = DiagTimes(Wco, ct);\n"
+        "   ot = Sigmoid(Plus(G4, Wcoct));\n"
+
+        "   mt = ElementTimes(ot, Tanh(ct));\n"
+
+        "   Wmr = Parameter(outputDim, cellDim, init = \"uniform\", initValueScale = 1);\n"
+        "   output = Times(Wmr, mt); \n"
+        "]\n"
+
+        "i1 = Input(4) \n"
+            "o1 = LSTMComponent(4, 4, 1, i1, 2, 3, 4) \n"
+            "FeatureNodes = (i1) \n"
+            "outputNodes = (o1) \n"
+         "] \n";
+
+    VariableSchema inputLayouts;
+    VariableSchema outputLayouts;
+    IEvaluateModelExtended<float> *eval;
+    size_t featDim = 4;
+    size_t labelDim = 4;
+    eval = SetupNetworkAndGetLayouts(modelDefinition, inputLayouts, outputLayouts);
+
+    // Allocate the output values layer
+    Values<float> outputBuffer = outputLayouts.CreateBuffers<float>({ 1 });
+
+    Values<float> inputBuffer(1);
+    for (size_t i = 0; i < featDim;i++)
+        inputBuffer[0].m_buffer.push_back((float)i);
+
+    // the first pass with reset
+    eval->ForwardPass(inputBuffer, outputBuffer);
+
+    // the result is different on GCC. The root cause is in the model initialization (default_random_engine class), which is platform specific.
+#ifdef _WIN32
+    std::vector<int> expected = { -67, 135, -58, 178 };
+#else
+    std::vector<int> expected = { 0, 0, 0, 0 };
+#endif
+
+    int scaler = 100000;
+    std::vector<int> result;
+    for (size_t i = 0; i < labelDim; i++)
+        result.push_back((int)(outputBuffer[0].m_buffer[i] * scaler));
+   
+    BOOST_CHECK_EQUAL_COLLECTIONS(result.begin(), result.end(), expected.begin(), expected.end());
+
+    // the second pass with reset
+    eval->ForwardPass(inputBuffer, outputBuffer);
+
+    for (size_t i = 0; i < labelDim; i++)
+        result[i] = (int)(outputBuffer[0].m_buffer[i] * scaler);
+
+    BOOST_CHECK_EQUAL_COLLECTIONS(result.begin(), result.end(), expected.begin(), expected.end());
+
+    // another pass with reset
+    eval->ForwardPass(inputBuffer, outputBuffer, true);
+
+    for (size_t i = 0; i < labelDim; i++)
+        result[i] = (int)(outputBuffer[0].m_buffer[i] * scaler);
+
+    BOOST_CHECK_EQUAL_COLLECTIONS(result.begin(), result.end(), expected.begin(), expected.end());
+
+    // pass w/o reset
+    eval->ForwardPass(inputBuffer, outputBuffer, false);
+    for (size_t i = 0; i < labelDim; i++)
+        result[i] = (int)(outputBuffer[0].m_buffer[i] * scaler);
+
+#ifdef _WIN32
+    expected = { -63, 126, -54, 166 };
+#else
+    expected = { 109, -63, -7, -55 };
+#endif
+
+    BOOST_CHECK_EQUAL_COLLECTIONS(result.begin(), result.end(), expected.begin(), expected.end());
+
+    // another pass w/o reset
+    eval->ForwardPass(inputBuffer, outputBuffer, false);
+    for (size_t i = 0; i < labelDim; i++)
+        result[i] = (int)(outputBuffer[0].m_buffer[i] * scaler);
+
+#ifdef _WIN32
+    expected = { -61, 122, -52, 161 };
+#else
+    expected = { 158, -91, -10, -79 };
+#endif
+
+    
+    BOOST_CHECK_EQUAL_COLLECTIONS(result.begin(), result.end(), expected.begin(), expected.end());
+
+    eval->Destroy();
+}
+
 BOOST_AUTO_TEST_SUITE_END()
 }}}}

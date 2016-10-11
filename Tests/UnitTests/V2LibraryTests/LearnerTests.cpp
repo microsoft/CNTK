@@ -210,13 +210,16 @@ void LearnerTests()
 
     TestSGDLearner<double>(5, 3, DeviceDescriptor::CPUDevice());
 
-#ifndef CPUONLY
-    TestMomentumSGDLearner<float>(3, 11, DeviceDescriptor::GPUDevice(0));
-    TestNesterovLearner<float>(1, 20, DeviceDescriptor::GPUDevice(0));
-#else
-    TestMomentumSGDLearner<float>(3, 11, DeviceDescriptor::CPUDevice());
-    TestNesterovLearner<float>(1, 20, DeviceDescriptor::CPUDevice());
-#endif
+    if (IsGPUAvailable())
+    {
+        TestMomentumSGDLearner<float>(3, 11, DeviceDescriptor::GPUDevice(0));
+        TestNesterovLearner<float>(1, 20, DeviceDescriptor::GPUDevice(0));
+    }
+    else
+    {
+        TestMomentumSGDLearner<float>(3, 11, DeviceDescriptor::CPUDevice());
+        TestNesterovLearner<float>(1, 20, DeviceDescriptor::CPUDevice());
+    }
     
     TestAdaGradLearner<double>(2, 10, DeviceDescriptor::CPUDevice());
     
