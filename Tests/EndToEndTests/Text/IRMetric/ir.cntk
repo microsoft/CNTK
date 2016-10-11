@@ -2,25 +2,18 @@
 WorkingDir = D:\jiajia\ir
 DataDir = \\samaddm01\saadsrnrfs01\jiajia
 RunDir = $WorkingDir$
-ConfigDir = D:\jiajia\ir
+ConfigDir = $WorkingDir$
 
 MBSize = 1024
 LRate = 0.0001
-parallelTrain = false
-DeviceId = auto
+DeviceId = "auto"
 modelPath = $RunDir$/Models/ir.net
-
-CROSSDim1 = 512
-CROSSDim2 = 512
-CROSSDIM3 = 256
-CROSSDIM4 = 128
-CROSSDIM5 = 64
 MaxEpochs = 5
 
 command = train
 precision = float
 train = [
-    action = train
+    action = "train"
     numMBsToShowResult=500
     deviceId = $DeviceId$
     minibatchSize = $MBSize$
@@ -32,37 +25,15 @@ train = [
         learningRatesPerSample = $LRate$    #run 1 to 2 epochs, check the result and adjust this value
         momentumPerMB = 0.9
         maxEpochs=$MaxEpochs$
-
-        gradUpdateType=none
         gradientClippingWithTruncation=true
-        clippingThresholdPerSample=1#INF
-            
-        AutoAdjust=[
-                    autoAdjustLR=none
-                ]
-
-        syncPerfStats=20
-        ParallelTrain=[
-            parallelizationMethod=BlockMomentumSGD
-            distributedMBReading=true
-            syncPerfStats=5
-            BlockMomentumSGD=[
-                syncPeriod = 400000
-                resetSGDMomentum = true
-                useNesterovMomentum = true
-            ]
-        ]
+        clippingThresholdPerSample=1e10
     ]
 ]
 
     BrainScriptNetworkBuilder = (new ComputationNetwork [
-        # Dimensions for DeepCrossing layers 
-        CROSSDim1 = 512
-        CROSSDim2 = 512
-        CROSSDim3 = 256
-        CROSSDim4 = 128
-        CROSSDim5 = 64
+        CROSSDim = 512:512:256:128:64
 
+        # Dimensions for DeepCrossing layers 
         DeepCrossing = [
             OneLayer(input, inputSize, outputSize, activation) = [
                z = BFF(input, outputSize, inputSize).z
@@ -107,10 +78,6 @@ train = [
         # has to be 3*EDim+SDim+DenseDim
         AllDim = 3 * EDim + BingCountsDim
 
-        // LSTM params
-        LSTMcellDim = 200 # denoted by "m" in the 2C-RNN paper
-        inputEmbDim = 200 # denoted by "n" in the 2C-RNN paper      
-
         Query = SparseInput(QueryDim, tag="feature")
         Title = SparseInput(TitleDim, tag="feature")
         NormalizedUrl = SparseInput(NormalizedUrlDim, tag="feature")
@@ -125,9 +92,9 @@ train = [
         U = DeepCrossing.OneLayer_Relu(NormalizedUrl, NormalizedUrlDim, EDim)
 
         # Deep Crossing Network
-        RS0 = Dropout(RowStack(Q : T : U))
-        R0 = RowStack(RS0 : BingCounts)
-        R1 = DeepCrossing.ResidualUnitLayer(R0, AllDim, CROSSDim1)
+        RS0 = Dropout(Splice(Q : T : U))
+        R0 = Splice(RS0 : BingCounts)
+        R1 = DeepCrossing.ResidualUnitLayer(R0, AllDim, CROSSDim[0])
         s = DeepCrossing.OneLayer_NoBias(R1, AllDim, GainDim)
 
         // training criteria

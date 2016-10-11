@@ -156,35 +156,33 @@ Memory Sharing: Out of 75 matrices, 44 are shared as 19, and 31 are not shared.
 
 09/29/2016 21:50:17: Starting Epoch 1: learning rate per sample = 0.000100  effective momentum = 0.900000  momentum as time constant = 9719.0 samples
 
-09/29/2016 21:50:17: Starting minibatch loop.
-09/29/2016 21:50:18: Finished Epoch[ 1 of 5]: [Training] irm = 60.48883536 * 3976; irm1 = 14.64040788 * 3976; totalSamplesSeen = 3976; learningRatePerSample = 9.9999997e-005; epochTime=1.26077s
-09/29/2016 21:50:20: SGD: Saving checkpoint model 'C:\cygwin64\tmp\cntk-test-20160929135008.377590\Text_IRMetric@debug_gpu/Models/ir.net.1'
+10/08/2016 05:51:31: Starting minibatch loop.
+10/08/2016 05:51:31: Finished Epoch[ 1 of 5]: [Training] irm = 60.47065597 * 3976; irm1 = 14.64040788 * 3976; totalSamplesSeen = 3976; learningRatePerSample = 9.9999997e-005; epochTime=0.219075s
+10/08/2016 05:51:32: SGD: Saving checkpoint model 'C:\cygwin64\tmp\cntk-test-20161007215126.256640\Text_IRMetric@release_gpu/Models/ir.net.1'
 
-09/29/2016 21:50:21: Starting Epoch 2: learning rate per sample = 0.000100  effective momentum = 0.900000  momentum as time constant = 9719.0 samples
+10/08/2016 05:51:33: Starting Epoch 2: learning rate per sample = 0.000100  effective momentum = 0.900000  momentum as time constant = 9719.0 samples
 
-09/29/2016 21:50:21: Starting minibatch loop.
-09/29/2016 21:50:23: Finished Epoch[ 2 of 5]: [Training] irm = 57.50477867 * 3976; irm1 = 19.77497799 * 3976; totalSamplesSeen = 7952; learningRatePerSample = 9.9999997e-005; epochTime=1.20753s
-09/29/2016 21:50:24: SGD: Saving checkpoint model 'C:\cygwin64\tmp\cntk-test-20160929135008.377590\Text_IRMetric@debug_gpu/Models/ir.net.2'
+10/08/2016 05:51:33: Starting minibatch loop.
+10/08/2016 05:51:33: Finished Epoch[ 2 of 5]: [Training] irm = 57.57556275 * 3976; irm1 = 19.59360853 * 3976; totalSamplesSeen = 7952; learningRatePerSample = 9.9999997e-005; epochTime=0.036205s
+10/08/2016 05:51:33: SGD: Saving checkpoint model 'C:\cygwin64\tmp\cntk-test-20161007215126.256640\Text_IRMetric@release_gpu/Models/ir.net.2'
 
-09/29/2016 21:50:26: Starting Epoch 3: learning rate per sample = 0.000100  effective momentum = 0.900000  momentum as time constant = 9719.0 samples
+10/08/2016 05:51:34: Starting Epoch 3: learning rate per sample = 0.000100  effective momentum = 0.900000  momentum as time constant = 9719.0 samples
 
-09/29/2016 21:50:26: Starting minibatch loop.
-09/29/2016 21:50:26: Finished Epoch[ 3 of 5]: [Training] irm = 55.44539503 * 3976; irm1 = 22.36390020 * 3976; totalSamplesSeen = 11928; learningRatePerSample = 9.9999997e-005; epochTime=0.455586s
-09/29/2016 21:50:28: SGD: Saving checkpoint model 'C:\cygwin64\tmp\cntk-test-20160929135008.377590\Text_IRMetric@debug_gpu/Models/ir.net.3'
+10/08/2016 05:51:34: Starting minibatch loop.
+10/08/2016 05:51:34: Finished Epoch[ 3 of 5]: [Training] irm = 55.40328691 * 3976; irm1 = 22.55139430 * 3976; totalSamplesSeen = 11928; learningRatePerSample = 9.9999997e-005; epochTime=0.037264s
+10/08/2016 05:51:35: SGD: Saving checkpoint model 'C:\cygwin64\tmp\cntk-test-20161007215126.256640\Text_IRMetric@release_gpu/Models/ir.net.3'
 
-09/29/2016 21:50:30: Starting Epoch 4: learning rate per sample = 0.000100  effective momentum = 0.900000  momentum as time constant = 9719.0 samples
+10/08/2016 05:51:35: Starting Epoch 4: learning rate per sample = 0.000100  effective momentum = 0.900000  momentum as time constant = 9719.0 samples
 
-09/29/2016 21:50:30: Starting minibatch loop.
-WARNING: The same matrix with dim [1, 1071] has been transferred between different devices for 20 times.
-WARNING: The same matrix with dim [1, 1024] has been transferred between different devices for 20 times.
-09/29/2016 21:50:30: Finished Epoch[ 4 of 5]: [Training] irm = 54.48344363 * 3976; irm1 = 22.93816021 * 3976; totalSamplesSeen = 15904; learningRatePerSample = 9.9999997e-005; epochTime=0.422106s
-09/29/2016 21:50:32: SGD: Saving checkpoint model 'C:\cygwin64\tmp\cntk-test-20160929135008.377590\Text_IRMetric@debug_gpu/Models/ir.net.4'
+10/08/2016 05:51:35: Starting minibatch loop.
+10/08/2016 05:51:35: Finished Epoch[ 4 of 5]: [Training] irm = 54.35041499 * 3976; irm1 = 23.45830648 * 3976; totalSamplesSeen = 15904; learningRatePerSample = 9.9999997e-005; epochTime=0.038715s
+10/08/2016 05:51:36: SGD: Saving checkpoint model 'C:\cygwin64\tmp\cntk-test-20161007215126.256640\Text_IRMetric@release_gpu/Models/ir.net.4'
 
-09/29/2016 21:50:34: Starting Epoch 5: learning rate per sample = 0.000100  effective momentum = 0.900000  momentum as time constant = 9719.0 samples
+10/08/2016 05:51:37: Starting Epoch 5: learning rate per sample = 0.000100  effective momentum = 0.900000  momentum as time constant = 9719.0 samples
 
-09/29/2016 21:50:34: Starting minibatch loop.
-09/29/2016 21:50:34: Finished Epoch[ 5 of 5]: [Training] irm = 54.14534865 * 3976; irm1 = 23.14740788 * 3976; totalSamplesSeen = 19880; learningRatePerSample = 9.9999997e-005; epochTime=0.431591s
-09/29/2016 21:50:36: SGD: Saving checkpoint model 'C:\cygwin64\tmp\cntk-test-20160929135008.377590\Text_IRMetric@debug_gpu/Models/ir.net'
+10/08/2016 05:51:37: Starting minibatch loop.
+10/08/2016 05:51:37: Finished Epoch[ 5 of 5]: [Training] irm = 54.08719898 * 3976; irm1 = 23.45398563 * 3976; totalSamplesSeen = 19880; learningRatePerSample = 9.9999997e-005; epochTime=0.039823s
+10/08/2016 05:51:37: SGD: Saving checkpoint model 'C:\cygwin64\tmp\cntk-test-20161007215126.256640\Text_IRMetric@release_gpu/Models/ir.net'
 
 09/29/2016 21:50:38: Action "train" complete.
 

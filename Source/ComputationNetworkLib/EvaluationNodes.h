@@ -229,15 +229,15 @@ public:
 
         // calculate IRMetrics
         size_t sampleCount = 0;
-        for (typename std::list<QueryUrls>::iterator itqu = m_queryUrls.begin(); itqu != m_queryUrls.end(); itqu++)
+        for (auto qu: m_queryUrls)
         {
-            for (typename std::vector<Url>::iterator iturl = itqu->urls.begin(); iturl != itqu->urls.end(); iturl++, sampleCount++)
+            for (auto url : qu.urls)
             {
-                Url& aUrl = *iturl;
-                (*m_urlGain0)(0, sampleCount) = aUrl.gn;
-                (*m_urlGain1)(0, sampleCount) = aUrl.gn;
-                (*m_urlDiscount0)(0, sampleCount) = (ElemType)aUrl.rk0;
-                (*m_urlDiscount1)(0, sampleCount) = (ElemType)aUrl.rk;
+                (*m_urlGain0)(0, sampleCount) = url.gn;
+                (*m_urlGain1)(0, sampleCount) = url.gn;
+                (*m_urlDiscount0)(0, sampleCount) = (ElemType)url.rk0;
+                (*m_urlDiscount1)(0, sampleCount) = (ElemType)url.rk;
+                sampleCount++;
             }
         }
 

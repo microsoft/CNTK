@@ -494,10 +494,10 @@ public:
             ElemType discountI, discountJ;
             ElemType gainI;
             ElemType lambdaIJ, scoreDiff;
-            for (typename std::list<QueryUrls>::iterator itqu = m_queryUrls.begin(); itqu != m_queryUrls.end(); itqu++)
+            for (auto qu : m_queryUrls)
             {
-                ElemType irm0 = itqu->irm0;
-                for (typename std::vector<Url>::iterator itUrlI = itqu->urls.begin(); itUrlI != itqu->urls.end(); itUrlI++)
+                ElemType irm0 = qu.irm0;
+                for (typename std::vector<Url>::iterator itUrlI = qu.urls.begin(); itUrlI != qu.urls.end(); itUrlI++)
                 {
                     Url& UrlI = *itUrlI;
                     size_t k = UrlI.K;
@@ -508,7 +508,7 @@ public:
                     {
                         Url& UrlJ = *itUrlJ;
                         discountJ = m_logWeights[UrlJ.rk];
-                        if (gainI == UrlJ.gn)
+                        if (abs(gainI - UrlJ.gn) < 0.0000001)
                         {
                             continue;
                         }
@@ -543,8 +543,6 @@ public:
 
     virtual void UpdateFunctionMBSize() override
     {
-        //FrameRange fr(Input(0)->GetMBLayout());
-
         UpdateCounts();
 
         // clean up first
@@ -661,15 +659,15 @@ public:
 
         // Compute ir metric.
         size_t sampleCount = 0;
-        for (typename std::list<QueryUrls>::iterator itqu = m_queryUrls.begin(); itqu != m_queryUrls.end(); itqu++)
+        for (auto qu: m_queryUrls)
         {
-            for (typename std::vector<Url>::iterator iturl = itqu->urls.begin(); iturl != itqu->urls.end(); iturl++, sampleCount++)
+            for (auto url: qu.urls)
             {
-                Url& aUrl = *iturl;
-                (*m_urlGain0)(0, sampleCount) = aUrl.gn;
-                (*m_urlGain1)(0, sampleCount) = aUrl.gn;
-                (*m_urlDiscount0)(0, sampleCount) = (ElemType)aUrl.rk0;
-                (*m_urlDiscount1)(0, sampleCount) = (ElemType)aUrl.rk;
+                (*m_urlGain0)(0, sampleCount) = url.gn;
+                (*m_urlGain1)(0, sampleCount) = url.gn;
+                (*m_urlDiscount0)(0, sampleCount) = (ElemType)url.rk0;
+                (*m_urlDiscount1)(0, sampleCount) = (ElemType)url.rk;
+                sampleCount++;
             }
         }
         
