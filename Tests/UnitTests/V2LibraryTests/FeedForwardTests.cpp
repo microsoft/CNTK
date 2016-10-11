@@ -264,13 +264,15 @@ void TestTimesAndPlus(size_t inputDim,
 void FeedForwardTests()
 {
     TestTimesAndPlus<double>(4, 2, 5, DeviceDescriptor::CPUDevice(), 3, true, true, true);
-#ifndef CPUONLY
-    TestTimesAndPlus<float>(145, 32, 2, DeviceDescriptor::GPUDevice(0), 10, true, false, true);
-    TestTimesAndPlus<double>(145, 15, 200, DeviceDescriptor::GPUDevice(0), 21, false, false, false);
+    if (IsGPUAvailable())
+    {
+        TestTimesAndPlus<float>(145, 32, 2, DeviceDescriptor::GPUDevice(0), 10, true, false, true);
+        TestTimesAndPlus<double>(145, 15, 200, DeviceDescriptor::GPUDevice(0), 21, false, false, false);
 
-    TestFeedForwardNetworkCreation(DeviceDescriptor::GPUDevice(0), true);
-    TestFeedForwardNetworkCreation(DeviceDescriptor::GPUDevice(0), false);
-#endif
+        TestFeedForwardNetworkCreation(DeviceDescriptor::GPUDevice(0), true);
+        TestFeedForwardNetworkCreation(DeviceDescriptor::GPUDevice(0), false);
+    }
+
     TestFeedForwardNetworkCreation(DeviceDescriptor::CPUDevice(), false);
     TestFeedForwardNetworkCreation(DeviceDescriptor::CPUDevice(), true);
 }

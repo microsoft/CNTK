@@ -4,13 +4,14 @@
 # ==============================================================================
 
 import numpy as np
-from ...utils import sanitize_input, sanitize_shape, get_data_type
+from ...utils import sanitize_input, sanitize_shape, get_data_type, typemap
 
 ##########################################################################
 # sequence ops
 ##########################################################################
 
 
+@typemap
 def is_first(operand, name=''):
     '''
     TBA
@@ -28,6 +29,7 @@ def is_first(operand, name=''):
     return is_first(operand, name)
 
 
+@typemap
 def is_last(operand, name=''):
     '''
     TBA
@@ -45,6 +47,7 @@ def is_last(operand, name=''):
     return is_last(operand, name)
 
 
+@typemap
 def first(operand, name=''):
     '''
     TBA
@@ -62,6 +65,7 @@ def first(operand, name=''):
     return first(operand, name)
 
 
+@typemap
 def last(operand, name=''):
     '''
     TBA
@@ -79,6 +83,7 @@ def last(operand, name=''):
     return last(operand, name)
 
 
+@typemap
 def where(condition, name=''):
     '''
     TBA
@@ -96,6 +101,7 @@ def where(condition, name=''):
     return where(condition, name)
 
 
+@typemap
 def gather(operand, condition, name=''):
     '''
     TBA
@@ -115,6 +121,7 @@ def gather(operand, condition, name=''):
     return gather(operand, condition, name)
 
 
+@typemap
 def scatter(operand, condition, name=''):
     '''
     TBA
@@ -134,6 +141,7 @@ def scatter(operand, condition, name=''):
     return scatter(operand, condition, name)
 
 
+@typemap
 def broadcast_as(operand, broadcast_as_operand, name=''):
     '''
     TBA

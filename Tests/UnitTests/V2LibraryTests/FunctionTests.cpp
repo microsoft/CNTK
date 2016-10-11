@@ -443,19 +443,22 @@ void TestTranspose(size_t numAxes, size_t axis1, size_t axis2, const DeviceDescr
 void FunctionTests()
 {
     TestSlice(2, DeviceDescriptor::CPUDevice());
-#ifndef CPUONLY
-    TestSlice(1, DeviceDescriptor::GPUDevice(0));
-#endif
+    if (IsGPUAvailable())
+    {
+        TestSlice(1, DeviceDescriptor::GPUDevice(0));
+    }
 
     TestReduceSum(1, DeviceDescriptor::CPUDevice());
-#ifndef CPUONLY
-    TestReduceSum(2, DeviceDescriptor::GPUDevice(0));
-#endif
+    if (IsGPUAvailable())
+    {
+        TestReduceSum(2, DeviceDescriptor::GPUDevice(0));
+    }
 
     TestRecurrentFunctionCloning();
 
     TestTranspose(2, 0, 1, DeviceDescriptor::CPUDevice());
-#ifndef CPUONLY
-    TestTranspose(3, 1, 2, DeviceDescriptor::GPUDevice(0));
-#endif
+    if (IsGPUAvailable())
+    {
+        TestTranspose(3, 1, 2, DeviceDescriptor::GPUDevice(0));
+    }
 }

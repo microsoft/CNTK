@@ -13,11 +13,7 @@ from cntk.initializer import glorot_uniform
 
 
 def linear_layer(input_var, output_dim):
-    try:
-        shape = input_var.shape()
-    except AttributeError:
-        input_var = input_var.output()
-        shape = input_var.shape()
+    shape = input_var.shape()
 
     input_dim = shape[0]
     times_param = parameter(shape=(input_dim, output_dim), init=glorot_uniform())
@@ -43,11 +39,7 @@ def fully_connected_classifier_net(input, num_output_classes, hidden_layer_dim, 
 
 
 def conv_bn_layer(input, out_feature_map_count, kernel_width, kernel_height, h_stride, v_stride, w_scale, b_value, sc_value, bn_time_const):
-    try:
-        shape = input.shape()
-    except AttributeError:
-        input_var = input.output()
-        shape = input_var.shape()
+    shape = input.shape()
     num_in_channels = shape[0]
     #TODO: use RandomNormal to initialize, needs to be exposed in the python api
     conv_params = parameter(shape=(out_feature_map_count, num_in_channels, kernel_height, kernel_width), init=glorot_uniform(output_rank=-1, filter_rank=2))
@@ -77,11 +69,7 @@ def resnet_node2(input, out_feature_map_count, kernel_width, kernel_height, w_sc
 
 
 def proj_layer(w_proj, input, h_stride, v_stride, b_value, sc_value, bn_time_const):
-    try:
-        shape = input.shape()
-    except AttributeError:
-        input_var = input.output()
-        shape = input_var.shape()
+    shape = input.shape()
     num_in_channels = shape[0]
     conv_func = convolution(w_proj, input, (num_in_channels, v_stride, h_stride))
     out_feature_map_count = w_proj.shape()[-1];
@@ -227,6 +215,7 @@ def LSTMP_component_with_self_stabilization(input, output_dim, cell_dim, recurre
     # the actualDh and actualDc
     LSTMCell[0].replace_placeholders(
         {dh: actualDh.output(), dc: actualDc.output()})
+    
     return (LSTMCell[0], LSTMCell[1])
 
 

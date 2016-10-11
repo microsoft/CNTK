@@ -13,19 +13,20 @@ from cntk import cntk_py
 from .persist import *
 
 
-def precision_numpy(precision):
+def sanitize_precision(precision):
     '''
-    Converts string precision to NumPy precision
+    Converts precision to NumPy precision
 
     Args:
-        precision (str): string precision ("float" or "double")
+        precision (`str` or `np.float32` or `np.float64`): precision, if string
+         it can be one of 'float' 'float32, 'double', or 'float64'
 
     Returns:
         NumPy precision
     '''
-    if precision == 'float':
+    if precision in ['float', 'float32', np.float32]:
         return np.float32
-    elif precision == 'double':
+    elif precision in ['double', 'float64', np.float64]:
         return np.float64
     else:
         raise ValueError('precision value: "%s" is not supported' % precision)
@@ -33,7 +34,8 @@ def precision_numpy(precision):
 
 def cntk_device(device_id):
     '''
-    Converts device ID to CNTK DeviceDescriptor instance
+    Converts the legacy device ID as it was used in CNTK 1 to CNTK
+    DeviceDescriptor instance.
 
     Args:
         device_id (int): device id, -1 for CPU, 0 or higher for GPU
@@ -47,46 +49,11 @@ def cntk_device(device_id):
         return cntk_py.DeviceDescriptor.gpu_device(device_id)
 
 
-def cntk_to_numpy_shape(shape):
-    '''
-    Removes the dynamic axis and returns a tuple representing the NumPy shape.
-
-    Args:
-        shape (`tuple` or `int`): CNTK shape iterable
-
-    Returns:
-        NumPy shape of a tensor
-    '''
-
-    if np.isscalar(shape):
-        shape = (shape,)
-    shape = shape[:-1]
-    if not shape:
-        shape = (1,)
-
-    # cntk uses column major, thus we reverse the axes
-    return tuple(reversed(shape))
-
-
 def is_string(value):
     if sys.version_info.major < 3:
         return isinstance(value, basestring)
 
     return isinstance(value, str)
-
-# Copied from six
-
-
-def with_metaclass(meta, *bases):
-    """Creates a base class with a metaclass."""
-    # This requires a bit of explanation: the basic idea is to make a dummy
-    # metaclass for one level of class instantiation that replaces itself with
-    # the actual metaclass.
-    class metaclass(meta):
-
-        def __new__(cls, name, this_bases, d):
-            return meta(name, bases, d)
-    return type.__new__(metaclass, 'temporary_class', (), {})
 
 
 def dense_to_str(data):
@@ -216,7 +183,7 @@ def get_temp_filename(directory=None):
 
 def sanitize_shape(shape):
     """
-    if shape is scalar create a tuple out of it and reverse it as cntk uses column major
+    If shape is scalar create a tuple out of it and reverse it as cntk uses column major
     """
     if np.isscalar(shape):
         shape = (shape,)
@@ -282,8 +249,7 @@ def get_data_type(*args):
         args = [args]
 
     for arg in args:
-        if isinstance(arg, (cntk_py.Variable, cntk_py.Constant,
-            cntk_py.Parameter, cntk_py.Value, cntk_py.NDArrayView)):
+        if isinstance(arg, (cntk_py.Variable, cntk_py.Value, cntk_py.NDArrayView)):
             if cntk_py.DataType_Double == arg.get_data_type():
                 dtypes.add(np.float64)
             else:
@@ -417,8 +383,20 @@ def sanitize_batch(batch, data_type=None, device=None):
 
     return value
 
+def sanitize_function(arg):
+    '''
+    Tries to retrieve a Function from the argument or throws an exception if
+    that's not possible.
+    '''
+    if isinstance(arg, cntk_py.Variable):
+        arg = arg.owner
 
-def sanitize_var_map(op_arguments, arguments, precision_numpy=None, device=None, add_batch_axis=False):
+    if not isinstance(arg, cntk_py.Function):
+        raise "Object of type %s cannot be cast to Variable"%str(type(arg))
+
+    return arg
+
+def sanitize_var_map(op_arguments, arguments, precision=None, device=None, add_batch_axis=False):
     '''
     Sanitizes a dictionary of `Variable`s to input data such that it can be
     handed off to the `Forward` method.
@@ -427,17 +405,20 @@ def sanitize_var_map(op_arguments, arguments, precision_numpy=None, device=None,
         op_arguments (`:class:Function`): arguments of the root function. In
          forward pass it is typically `op.arguments()`, in backward mode it is
          `op.outputs()`
-        arguments (`dict` or `list`): map from input variables to the data or
-         list of inputs in the order that the function expects or a single input,
-         if the function only has one argument. Data should be either NumPy
-         arrays or cntk.Value instances returned by a minibatch source.
-        precision_numpy : `np.float32`, `np.float64`, or `None`
+        arguments (`dict` or `list`): 
+          * map from input variables to the data
+          * list of inputs in the order that the function expects or 
+          Data should be either NumPy arrays or a `:class:cntk.io.MinibatchData` instance
+        precision (`str` or `np.float32` or `np.float64`): if string it can be
+         one of 'float' 'float32, 'double', 'float64', or `None` 
         device (`DeviceDescriptor` or `None`): CNTK DeviceDescriptor
         add_batch_axis (`bool`): data in `arguments` are single instances and a batch axis has to be added
 
     Returns:
         `dict` that maps variables to sanitized batches
     '''
+    from ..cntk_py import Value
+    from ..io import MinibatchData
 
     if arguments is None or isinstance(arguments, (list, tuple)) and len(arguments)==0:
         if len(op_arguments) > 0:
@@ -445,13 +426,13 @@ def sanitize_var_map(op_arguments, arguments, precision_numpy=None, device=None,
         return {}
 
     if len(op_arguments) == 1 and not isinstance(arguments, dict):
-        return { op_arguments[0] : arguments }
+        arguments = dict(zip(op_arguments, arguments))
 
     if isinstance(arguments, dict):
         arg_names = [var.name() for var in op_arguments]
         name_counter = collections.Counter(arg_names)
 
-        var_name_map = dict((var, var.name()) for var in op_arguments)
+        var_name_map = dict((var.name(), var) for var in op_arguments)
 
     elif isinstance(arguments, list):
         arguments = dict(zip(op_arguments, arguments))
@@ -462,6 +443,9 @@ def sanitize_var_map(op_arguments, arguments, precision_numpy=None, device=None,
     if len(arguments) < len(op_arguments):
         raise ValueError('expected %i arguments, but got %i'%(len(op_arguments), len(arguments)))
 
+    if precision is not None:
+        precision = sanitize_precision(precision)
+
     var_map = {}
     for var, batch in arguments.items():
         if isinstance(var, str):
@@ -470,10 +454,14 @@ def sanitize_var_map(op_arguments, arguments, precision_numpy=None, device=None,
             elif name_counter[var] > 1:
                 raise ValueError('node name "%s" is not unique'%var)
 
-            var = var_name_map[var]
+            try:
+                var = var_name_map[var]
+            except KeyError:
+                raise KeyError("no input with the name '%s' was found.  Available: %s"%(var, ", ".join(var_name_map.keys())))
 
-        from ..cntk_py import Value
-        if not isinstance(batch, Value):                
+        if isinstance(batch, MinibatchData):
+            batch = batch.data()
+        elif not isinstance(batch, Value):                
             if add_batch_axis:
                 batch = [batch]
             if isinstance(batch, np.ndarray):
@@ -481,22 +469,22 @@ def sanitize_var_map(op_arguments, arguments, precision_numpy=None, device=None,
                     batch = batch.astype(np.float32)
                 if batch.dtype not in (np.float32, np.float64):                        
                     raise ValueError('only float32 and float64 are supported')
-                batch = sanitize_batch(batch, precision_numpy, device)
+                batch = sanitize_batch(batch, precision, device)
             else:
                 if is_tensor(batch):
-                    if precision_numpy is None:
-                        precision_numpy = np.float32
-                    batch = np.asarray(batch, dtype=precision_numpy)
+                    if precision is None:
+                        precision = np.float32
+                    batch = np.asarray(batch, dtype=precision)
                     batch = create_Value_from_NumPy(batch, device)
                 else:
-                    batch = sanitize_batch(batch, precision_numpy, device)
+                    batch = sanitize_batch(batch, precision, device)
 
         var_map[var] = batch
 
     return var_map
 
 
-def ones_like(batch, precision_numpy):
+def ones_like(batch, precision):
     '''
     Returns a new batch, which has the same format as `batch` but all values
     set to 1.
@@ -504,7 +492,7 @@ def ones_like(batch, precision_numpy):
     Args:
         batch (list of NumPy arrays): a list of sequences, which are NumPy arrays
     '''
-    return [np.ones_like(sample, dtype=precision_numpy) for sample in batch]
+    return [np.ones_like(sample, dtype=sanitize_precision(precision)) for sample in batch]
 
 
 def create_NDArrayView(shape, data_type=cntk_py.DataType_Float, dev=None):
@@ -642,11 +630,11 @@ def eval(op, precision, device, arguments=None, backward_pass=False):
     Args:
         op (:class:`Function`): operation to evaluate
         precision (`str` or `None`): precision being 'float32', 'float64', or `None`, in which case it will be determined by inspecting the operator (costly)
-        device (:class:Cntk.DeviceDescriptor): the device the descriptor, whether it is CPU or GPU (and which one)
-        arguments (`dict` or `list`): map from input variables to the data
-         or list of inputs in the order that the function expects. Data
-         should be either NumPy arrays or cntk.Value instances returned by a
-         minibatch source.
+        device (`:class:cntk.DeviceDescriptor`): the device the descriptor, whether it is CPU or GPU (and which one)
+        arguments (`dict` or `list`): 
+          * map from input variables to the data
+          * list of inputs in the order that the function expects or 
+          Data should be either NumPy arrays or a `:class:cntk.io.MinibatchData` instance
         backward_pass (`bool`, optional): whether a backward pass is performed 
 
     Returns: 
@@ -654,7 +642,7 @@ def eval(op, precision, device, arguments=None, backward_pass=False):
         op->result is returned. 
     '''
     if precision is not None:
-        precision = precision_numpy(precision)
+        precision = sanitize_precision(precision)
 
     forward_in_var_map = sanitize_var_map(op.arguments(), arguments, precision, device)
 
@@ -689,3 +677,39 @@ def eval(op, precision, device, arguments=None, backward_pass=False):
 
     else:
         return forward_output, None
+
+
+def typemap(f):
+    '''
+    Upcasts Swig types to cntk types that inherit from Swig.
+    '''
+            
+    from functools import wraps
+    @wraps(f)
+    def wrapper(*args, **kwds):
+        from cntk.ops.variables import Variable, Parameter, Constant
+        from cntk.ops.functions import Function
+        from cntk.learner import Learner
+        from cntk.io import MinibatchSource, MinibatchData, StreamConfiguration
+        typemap = { 
+                cntk_py.Variable: Variable,
+                cntk_py.Parameter: Parameter,
+                cntk_py.Constant: Constant,
+                cntk_py.Function: Function, 
+                cntk_py.Learner: Learner, 
+                cntk_py.MinibatchSource: MinibatchSource,
+                cntk_py.MinibatchData: MinibatchData,
+                cntk_py.StreamConfiguration: StreamConfiguration, 
+                }
+        result = f(*args, **kwds)
+        if isinstance(result, (tuple, list, set)):
+            for r in result:
+                r.__class__ = typemap.get(r.__class__, r.__class__)
+        elif isinstance(result, dict):
+            for k,v in result.items():
+                k.__class__ = typemap.get(k.__class__, k.__class__)
+                v.__class__ = typemap.get(v.__class__, v.__class__)
+        else:
+            result.__class__ = typemap.get(result.__class__, result.__class__)
+        return result
+    return wrapper

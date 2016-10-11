@@ -34,7 +34,12 @@ def test_learner_init():
 
     res = i * w
 
-    sgd(res.parameters(), lr=0.1)
+    learner = sgd(res.parameters(), lr=0.1)
+
+    learner_parameter = learner.parameters()
+    from ..ops.variables import Parameter
+    param = learner_parameter.pop()
+    assert isinstance(param, Parameter)
 
     momentum_time_constant = 1100
     momentum_per_sample = momentums_per_sample(
