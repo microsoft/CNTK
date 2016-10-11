@@ -19,7 +19,7 @@ inline size_t GetSizeByType(ElementType type)
     case ElementType::tdouble:
         return sizeof(double);
     default:
-        RuntimeError("Unsupported type '%d'", type);
+        RuntimeError("Unsupported type '%d'", static_cast<int>(type));
     }
 }
 
