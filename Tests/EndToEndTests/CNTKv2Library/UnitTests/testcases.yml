@@ -1,8 +1,8 @@
 dataDir: .
 
 tags:
-    - bvt-e (((build_sku == '1bitsgd') and (device=='gpu')) or (build_sku == 'cpu')) and (flavor=='release')
-    - nightly-e ((build_sku == '1bitsgd') or (build_sku == 'cpu'))
+    - bvt-e ((build_sku == '1bitsgd') or (build_sku == 'cpu')) and ((flavor=='debug') ^ (device=='cpu'))
+    - nightly-e ((build_sku == '1bitsgd') or (build_sku == 'cpu')) and ((device=='gpu') or (flavor== 'release'))
 
 testCases:
   Test run must be completed:

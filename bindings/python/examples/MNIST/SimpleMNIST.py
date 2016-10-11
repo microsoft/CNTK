@@ -56,7 +56,6 @@ def simple_mnist(debug_output=False):
     mb_source = text_format_minibatch_source(path, [
         StreamConfiguration(feature_stream_name, input_dim),
         StreamConfiguration(labels_stream_name, num_output_classes)])
-
     features_si = mb_source[feature_stream_name]
     labels_si = mb_source[labels_stream_name]
 
@@ -96,7 +95,7 @@ def simple_mnist(debug_output=False):
 
     test_mb_source = text_format_minibatch_source(path, [
         StreamConfiguration(feature_stream_name, input_dim),
-        StreamConfiguration(labels_stream_name, num_output_classes)])
+        StreamConfiguration(labels_stream_name, num_output_classes)], randomize=False)
     features_si = test_mb_source[feature_stream_name]
     labels_si = test_mb_source[labels_stream_name]
 
@@ -120,5 +119,10 @@ def simple_mnist(debug_output=False):
 
 
 if __name__=='__main__':
+    # Specify the target device to be used for computing, if you do not want to
+    # use the best available one, e.g.
+    # target_device = DeviceDescriptor.cpu_device()
+    # DeviceDescriptor.set_default_device(target_device)
+
     error = simple_mnist()
     print("Error: %f" % error)

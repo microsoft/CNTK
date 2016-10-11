@@ -72,7 +72,7 @@ def sequence_to_sequence_translator(debug_output=False):
 
     decoder_outputH = stabilize(decoder_input)
     for i in range(0, num_layers):
-        if (i == 0):
+        if (i > 0):
             recurrence_hookH = past_value
             recurrence_hookC = past_value
         else:
@@ -139,7 +139,7 @@ def sequence_to_sequence_translator(debug_output=False):
 
     test_mb_source = text_format_minibatch_source(path, [
         StreamConfiguration(feature_stream_name, input_vocab_dim, True, 'S0'),
-        StreamConfiguration(labels_stream_name, label_vocab_dim, True, 'S1')], 10000)
+        StreamConfiguration(labels_stream_name, label_vocab_dim, True, 'S1')], 10000, False)
     features_si = test_mb_source[feature_stream_name]
     labels_si = test_mb_source[labels_stream_name]
 
@@ -171,11 +171,10 @@ def sequence_to_sequence_translator(debug_output=False):
     return total_error / i
 
 if __name__ == '__main__':
-    # Specify the target device to be used for computing
-    target_device = DeviceDescriptor.gpu_device(0)
-    # If it is crashing, probably you don't have a GPU, so try with CPU:
+    # Specify the target device to be used for computing, if you do not want to
+    # use the best available one, e.g.
     # target_device = DeviceDescriptor.cpu_device()
-    DeviceDescriptor.set_default_device(target_device)
+    # DeviceDescriptor.set_default_device(target_device)
 
     error = sequence_to_sequence_translator()
     print("Error: %f" % error)

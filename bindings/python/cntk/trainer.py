@@ -22,6 +22,7 @@ class Trainer(cntk_py.Trainer):
        parameter_learners (`list`): list of learners from `:cntk:cntk.learner`
     '''
     def __init__(self, model, loss_function, eval_function, parameter_learners):
+        # TODO sanitizing should be removed once Swig's typemaps are in place
         model = sanitize_function(model)
         loss_function = sanitize_function(loss_function)
         eval_function = sanitize_function(eval_function)

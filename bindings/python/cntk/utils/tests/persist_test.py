@@ -40,7 +40,7 @@ def test_load_save_input():
     loaded_node = load_model('float', filename)
 
     # Test spefying the input node names by order
-    loaded_result = loaded_node.eval(input1)
+    loaded_result = loaded_node.eval([input1])
     assert np.allclose(loaded_result, expected)
     
 def test_load_save_inputs():
@@ -54,15 +54,14 @@ def test_load_save_inputs():
     expected = [[[[2,3],[3,4]]]]
     assert np.allclose(result, expected)
 
-    filename = 'i_plus_c_1.mod'
+    filename = 'i_plus_i_0.mod'
     save_model(root_node, filename)
 
     loaded_node = load_model('float', filename)
 
-    if False:
-        # Test specifying the input nodes by name
-        loaded_result = loaded_node.eval({'i1': input1, 'i2': input2})
-        assert np.allclose(loaded_result, expected)
+    # Test specifying the input nodes by name
+    loaded_result = loaded_node.eval({'i1': input1, 'i2': input2})
+    assert np.allclose(loaded_result, expected)
 
     # Test spefying the input node names by order
     loaded_result = loaded_node.eval([input1, input2])

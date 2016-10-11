@@ -2341,16 +2341,18 @@ namespace CNTK
         return CompositeFunction::Create(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::Splice, operands, std::move(additionalProperties), name), name);
     }
 
-    FunctionPtr Combine(const std::vector<FunctionPtr>& operands, const std::wstring& name/* = L""*/)
+    FunctionPtr Combine(const std::vector<Variable>& operands, const std::wstring& name /*= L""*/)
     {
-        std::vector<Variable> inputs;
+        std::unordered_set<Variable> uniqueOperands;
         for (auto operand : operands)
         {
-            auto currentFunctionOutputs = operand->Outputs();
-            std::copy(currentFunctionOutputs.begin(), currentFunctionOutputs.end(), std::back_inserter(inputs));
+            if (uniqueOperands.find(operand) != uniqueOperands.end())
+                LogicError("All operands specified to Combine must be unique");
+
+            uniqueOperands.insert(operand);
         }
 
-        return Internal::Combine(inputs, name);
+        return CompositeFunction::Create(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::Combine, operands, Dictionary(), name), name);
     }
 
     namespace Sequence
@@ -2423,20 +2425,6 @@ namespace CNTK
 
     namespace Internal
     {
-        FunctionPtr Combine(const std::vector<Variable>& operands, const std::wstring& name /*= L""*/)
-        {
-            std::unordered_set<Variable> uniqueOperands;
-            for (auto operand : operands)
-            {
-                if (uniqueOperands.find(operand) != uniqueOperands.end())
-                    LogicError("All operands specified to Combine must be unique");
-
-                uniqueOperands.insert(operand);
-            }
-
-            return CompositeFunction::Create(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::Combine, operands, Dictionary(), name), name);
-        }
-
         FunctionPtr IsWithin(const Variable& operand, int offset, const std::wstring& name /*= L""*/)
         {
             Sequence::VerifyIsSequence(operand);

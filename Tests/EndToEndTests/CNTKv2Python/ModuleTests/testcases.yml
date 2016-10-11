@@ -1,8 +1,8 @@
 dataDir: .
 
 tags:
-    - bvt-l (build_sku == 'gpu') and (flavor == 'release')
-    - nightly-l (build_sku == 'gpu') and (flavor == 'release')
+    - bvt-l (build_sku == 'gpu') and (flavor == 'release')  and ((os == 'linux') or (device=='cpu'))
+    - nightly-l (build_sku == 'gpu') and (flavor == 'release')  and ((os == 'linux') or (device=='cpu'))
 
 testCases:
   Run must finish with error code 0 (outputs __COMPLETED__ in that case):
