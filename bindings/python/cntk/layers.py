@@ -44,6 +44,7 @@ def Linear(shape, _inf, bias=True, init='glorot_uniform', init_value_scale=1, in
     # TODO: how to break after the else?
 
 # Embedding -- create a linear embedding layer
+# TODO: replace embedding_path with a numpy array, and pass it as the "init" parameter
 def Embedding(shape, _inf, init='glorot_uniform', init_value_scale=1, embedding_path=None, transpose=False):
     shape = _as_tuple(shape)
     full_shape = (shape + _inf.shape) if transpose else (_inf.shape + shape)
@@ -54,9 +55,9 @@ def Embedding(shape, _inf, init='glorot_uniform', init_value_scale=1, embedding_
         return f
     else:
         E = Parameter(full_shape, initFromFilePath=embeddingPath, learningRateMultiplier=0)  # fixed from file
-    _ = Placeholder(_inf=_inf, name='embedding_arg')
-    apply_x = __matmul__(E, _) if transposed else \
-            __matmul__(_, E)     # x is expected to be sparse one-hot
+    x = Placeholder(_inf=_inf, name='embedding_arg')
+    apply_x = __matmul__(E, x) if transposed else \
+              __matmul__(x, E)     # x is expected to be sparse one-hot
     _name_and_extend_Function(apply_x, 'Embedding')
     return apply_x
 
@@ -75,7 +76,7 @@ def Stabilizer(_inf, steepness=4):
     _name_and_extend_Function(apply_x, 'Stabilizer')
     return apply_x
 
-def Recurrence(over=None, _inf=None, go_backwards=False):
+def Recurrence(over, _inf=None, go_backwards=False):
     # helper to compute previous value
     # can take a single Variable/Function or a tuple
     def previous_hook(state):
@@ -94,8 +95,8 @@ def Recurrence(over=None, _inf=None, go_backwards=False):
     _print_node(h)
     _print_node(combine([h.owner()]))
     prev_state = previous_hook(f_x_h_c)  # delay (h, c)
-    repl_list = { value_forward: value.output() for (value_forward, value) in list(zip(list(prev_state_forward), list(prev_state))) }
-    f_x_h_c.replace_placeholders(repl_list)  # binds _h_c := prev_state
+    replacements = { value_forward: value.output() for (value_forward, value) in zip(list(prev_state_forward), list(prev_state)) }
+    f_x_h_c.replace_placeholders(replacements)  # binds _h_c := prev_state
     apply_x = combine([h.owner()])     # the Function that yielded 'h', so we get to know its inputs
     # apply_x is a Function x -> h
     _name_and_extend_Function(apply_x, 'Recurrence')

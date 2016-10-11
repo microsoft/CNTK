@@ -24,6 +24,9 @@ sys.path.append(os.path.join(abs_path, "..", ".."))
 # TODO: move these out from examples
 from examples.common.nn import slice, sigmoid, log, tanh, past_value, future_value, print_training_progress, negate
 
+# TODO: As you are on the level of cntk here, you could use relative imports:
+# from .ops.functions import Function
+# No -> SystemError: Parent module '' not loaded, cannot perform relative import
 from cntk.ops.functions import Function
 from cntk.ops.variables import Variable
 
@@ -115,7 +118,7 @@ def Identity(_inf):
     return apply_x
 
 # TODO: For now, shape and cell_shape can only be rank-1 vectors
-def LSTMBlock(shape, _inf, cell_shape=None, use_peepholes=False, init='glorot_uniform', init_value_scale=1, enable_self_stabilization=False): # (x, (h, c))
+def LSTM(shape, _inf, cell_shape=None, use_peepholes=False, init='glorot_uniform', init_value_scale=1, enable_self_stabilization=False): # (x, (h, c))
     has_projection = cell_shape is not None
     has_aux = False
 
@@ -196,5 +199,5 @@ def LSTMBlock(shape, _inf, cell_shape=None, use_peepholes=False, init='glorot_un
     # return to caller a helper function to create placeholders for recurrence
     apply_x_h_c = combine ([h, c])
     apply_x_h_c.create_placeholder = create_hc_placeholder
-    _name_and_extend_Function(apply_x_h_c, 'LSTMBlock')
+    _name_and_extend_Function(apply_x_h_c, 'LSTM')
     return apply_x_h_c

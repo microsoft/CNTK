@@ -455,7 +455,7 @@ def sanitize_var_map(op_arguments, arguments, precision=None, device=None, add_b
                 raise ValueError('node name "%s" is not unique'%var)
 
             try:
-            var = var_name_map[var]
+                var = var_name_map[var]
             except KeyError:
                 raise KeyError("no input with the name '%s' was found.  Available: %s"%(var, ", ".join(var_name_map.keys())))
 
