@@ -46,11 +46,11 @@ static __m128 ZERO_M128 = {0,0,0,0};
 
 static __m128 _mm_setzero_ps()
 {
-	return ZERO_M128;
+    return ZERO_M128;
 }
 static void _mm_store_ss(float *a, const __m128 &b)
 {
-	*a = b.f[0];
+    *a = b.f[0];
 }
 static __m128 _mm_load1_ps(const float *a)
 {
