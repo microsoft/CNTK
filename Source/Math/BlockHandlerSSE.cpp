@@ -2,6 +2,7 @@
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license. See LICENSE.md file in the project root for full licence information.
 //
+#include "stdafx.h"
 
 // This class implements a block handler based on the SSE intrinsics available on intel platforms.
 // Since we don't have SSE on ARM64 (NEON has similar functionality but is not identical) we cannot
@@ -10,7 +11,6 @@
 // TODO: In the future, we should provide a NEON based implementation instead.
 #if !defined(__aarch64__)
 
-#include "stdafx.h"
 #include <xmmintrin.h>
 #include <emmintrin.h>
 #include <tmmintrin.h>
