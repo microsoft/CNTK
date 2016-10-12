@@ -2179,12 +2179,12 @@ namespace CNTK
 
     FunctionPtr CrossEntropyWithSoftmax(const Variable& prediction, const Variable& labels, const std::wstring& name/* = L""*/)
     {
-        return Minus(ReduceLogSum(prediction, Axis(0)), ReduceSum(ElementTimes(labels, prediction), Axis(0)), name);
+        return Minus(ReduceLogSum(prediction, Axis(0)), TransposeTimes(labels, prediction), name);
     }
 
     FunctionPtr ClassificationError(const Variable& prediction, const Variable& labels, const std::wstring& name/* = L""*/)
     {
-        return Minus(Constant::Scalar(prediction.GetDataType(), 1.0), ReduceSum(ElementTimes(labels, Hardmax(prediction)), Axis(0)), name);
+        return Minus(Constant::Scalar(prediction.GetDataType(), 1.0), TransposeTimes(labels, Hardmax(prediction)), name);
     }
 
     FunctionPtr PastValue(const Variable& operand, const Variable& initialState, size_t offset, const std::wstring& name)
