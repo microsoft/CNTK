@@ -10,7 +10,6 @@
 #include "ComputationNetwork.h"
 #include "RecurrentNodes.h"
 #include "InputAndParamNodes.h"
-#include "ReshapingNodes.h"
 #include <string>
 #include <vector>
 #include <list>
@@ -609,10 +608,7 @@ void ComputationNetwork::ResetMBLayouts()
         node->LinkToMBLayout(make_shared<MBLayout>(1, 0, node->GetName()));
 
     // This is now initialized inside of the Input nodes, with the proper connections.
-    std::list<ComputationNodeBasePtr> allInputNodesAndWhereNodes(InputNodes(nullptr));
-    list<ComputationNodeBasePtr> whereNodes = GetNodesWithType(OperationNameOf(WhereNode));
-    allInputNodesAndWhereNodes.insert(allInputNodesAndWhereNodes.end(), whereNodes.begin(), whereNodes.end());
-    for (auto node : allInputNodesAndWhereNodes)
+    for (auto node : InputNodes(nullptr))
     {
         // TODO: use if (!Is<ITakesDynamicAxis>(node))...
         auto n = dynamic_pointer_cast<ITakesDynamicAxis>(node);
@@ -626,8 +622,6 @@ void ComputationNetwork::ResetMBLayouts()
             // TODO Remove m_pMBLayoutOfNetwork altogether. See issue 358.
             node->LinkToMBLayout(m_pMBLayoutOfNetwork);
         }
-        else if (axisName == WhereNode<float>::DefaultWhereNodeDynamicAxisName())
-            ; // The WhereNode will create a unique fresh MBLayout during validation
         else
         {
             auto axisNode = GetNodeFromName(axisName);

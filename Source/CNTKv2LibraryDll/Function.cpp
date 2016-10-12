@@ -968,9 +968,6 @@ namespace CNTK
         {
             auto dynamicAxes = variable.DynamicAxes();
             auto internalCNTKWhereNodeDynamicAxisName = InternalDynamicAxisNameFromDynamicAxes(dynamicAxes);
-            if (!internalCNTKWhereNodeDynamicAxisName.empty() && !network->NodeNameExists(internalCNTKWhereNodeDynamicAxisName))
-                network->AddNodeToNetAndAttachInputs(New<DynamicAxisNode<ElementType>>(network->GetDeviceId(), internalCNTKWhereNodeDynamicAxisName), {});
-
             computationNodePtr = New<WhereNode<ElementType>>(network->GetDeviceId(), functionName, internalCNTKWhereNodeDynamicAxisName);
             break;
         }
@@ -1280,7 +1277,9 @@ namespace CNTK
                 }
             }
 
-            m_computationNetwork->SetTraceLevel(Internal::GetComputationNetworkTraceLevel());
+#ifdef _DEBUG
+            m_computationNetwork->SetTraceLevel(1);
+#endif
             m_computationNetwork->CompileNetwork();
 
             // Verify that the shapes of the output Variables that we computed match the corresponding nodes in the ComputationNetwork

@@ -1555,7 +1555,7 @@ namespace CNTK
 
         ///
         /// Returns the Function object which 'this' variable is an ouptut of.
-        /// Throws an exception when called for a Variable that is not of 'Output' VariableKind.
+        /// Returns null when called for a Variable that is not of 'Output' VariableKind.
         ///
         CNTK_API FunctionPtr Owner() const;
 

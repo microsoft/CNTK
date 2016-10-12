@@ -656,14 +656,12 @@ and Scatter().
 */
 
 template <class ElemType>
-class WhereNode : public ComputationNodeNonLooping<ElemType>, public NumInputs<1>, public ITakesDynamicAxis
+class WhereNode : public ComputationNodeNonLooping<ElemType>, public NumInputs<1>
 {
     typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
     static const std::wstring TypeName() { return L"Where"; }
 
-public:
     static const std::wstring DefaultWhereNodeDynamicAxisName() { return L"WhereNodeAxis"; }
-
 public:
     DeclareConstructorFromConfigWithNumInputs(WhereNode);
     WhereNode(DEVICEID_TYPE deviceId, const wstring& name, const wstring& dynamicAxisName = DefaultWhereNodeDynamicAxisName()) :
@@ -693,7 +691,7 @@ public:
         fstream << m_dynamicAxisName;
     }
 
-    virtual const std::wstring GetRequestedDynamicAxis() const { return m_dynamicAxisName; }
+    std::wstring DynamicAxisName() const { return m_dynamicAxisName; }
 
 private:
     // buffers for creating the result sequences (kept as object state to avoid memory allocations)
