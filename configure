@@ -65,6 +65,9 @@ libzip_check=include/zip.h
 
 mathlib=
 
+have_mpi=yes
+default_use_mpi=$have_mpi
+
 default_use_1bitsgd=no
 enable_1bitsgd=$default_use_1bitsgd
 
@@ -236,6 +239,7 @@ function show_help ()
     echo "  --with-libzip[=directory] $(show_default $(find_libzip))"
     echo "  --with-code-coverage[=(yes|no)] $(show_default ${default_use_code_coverage})"
     echo "  --with-boost[=directory] $(show_default $(find_boost))"
+    echo "  --mpi[=(yes|no)] use mpi communication $(show_default ${default_use_mpi})"
     echo "Libraries search path:"
     for head in $(default_paths)
     do
@@ -299,6 +303,17 @@ do
                 enable_cuda=$optarg
             else
                 echo "Invalid value for --cuda $optarg"
+                show_help
+                exit
+            fi
+            ;;
+
+        --mpi*)
+            if test x$optarg = xyes || test x$optarg = xno
+            then
+                have_mpi=$optarg
+            else
+                echo "Invalid value for --mpi $optarg"
                 show_help
                 exit
             fi
@@ -705,6 +720,11 @@ case $mathlib in
         echo OPENBLAS_PATH=$openblas_path >> $config
         ;;
 esac
+if test $have_mpi = yes ; then
+    echo HAS_MPI=1 >> $config
+else
+    echo HAS_MPI=0 >> $config
+fi
 if test $enable_cuda = yes ; then
     echo CUDA_PATH=$cuda_path >> $config
     echo GDK_INCLUDE_PATH=$gdk_include_path >> $config

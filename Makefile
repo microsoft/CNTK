@@ -67,13 +67,11 @@ endif
 # The mpic++ wrapper only adds MPI specific flags to the g++ command line.
 # The actual compiler/linker flags added can be viewed by running 'mpic++ --showme:compile' and 'mpic++ --showme:link'
 CXX = mpic++
-HAS_MPI = 1
 SSE_FLAGS = -msse4.1 -mssse3
 
 # Settings for ARM64 architectures that use a crosscompiler on a host machine.
 # Assumption is these nodes don't use MPI.
 #CXX = aarch64-linux-gnu-g++
-#HAS_MPI = 0
 #SSE_FLAGS =
 
 SOURCEDIR:= Source
