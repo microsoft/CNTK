@@ -573,8 +573,13 @@ private:
         size_t dim = H.sampsize / bytesPerValue;
         if (specifieddim > 0)
         {
-            if (specifieddimisshort && dim != specifieddim)
-                RuntimeError("htkfeatreader:specifieddim passed in, although is short, is different from dim read from header.");
+            if (specifieddimisshort)
+            {
+                //ideally we should check whether dim == specifieddim to make sure they are consistent. to make backward compatibility
+                //where specifieddim can be multiples of dim we check for specifieddim%dim == 0 
+                if (specifieddim % dim != 0)
+                    RuntimeError("htkfeatreader:specifieddim passed in, although is short, is not multiples of dim read from header.");
+            }
             else   //use specifieddim if specifieddim can not be represented as short
                 dim = specifieddim;
         }
