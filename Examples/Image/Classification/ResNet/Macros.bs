@@ -64,7 +64,7 @@ ResNetBottleneck {outChannels, interOutChannels, bnTimeConst} = {
 # a block to reduce the feature map resolution using bottleneck. One can reduce the size 
 # either at the first 1x1 convolution by specifying "stride1x1=(2:2)" (original paper), 
 # or at the 3x3 convolution by specifying "stride3x3=(2:2)" (Facebook re-implementation). 
-ResNetBottleneckInc {outChannels, interOutChannels, stride1x1, stride3x3, bnTimeConst} = {
+ResNetBottleneckInc {outChannels, interOutChannels, stride, stride1x1, stride3x3, bnTimeConst} = {
     apply (x) = {
         # Convolution
         b = Sequential (
@@ -73,8 +73,7 @@ ResNetBottleneckInc {outChannels, interOutChannels, stride1x1, stride3x3, bnTime
             ConvBNLayer {outChannels, (1:1), (1:1), bnTimeConst}) (x)
 
         # Shortcut
-        stride = stride1x1.*stride3x3
-        s = ConvBNReLULayer {outChannels, (1:1), stride, bnTimeConst} (x)
+        s = ConvBNLayer {outChannels, (1:1), stride, bnTimeConst} (x)
 
         p = Plus(b, s)
         r = ReLU(p)
