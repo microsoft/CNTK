@@ -113,7 +113,7 @@ declare -a mklFiles=("libmkl_cntk_p.so" "libiomp5.so")
 declare -a opencvFiles=("libopencv_core.so.3.1" "libopencv_imgproc.so.3.1" "libopencv_imgproc.so.3.1" "libopencv_imgcodecs.so.3.1")
 
 # libzip
-declare -a libzipFiles=("libzip.so" "libzip.so.4")
+declare -a libzipFiles=("libzip.so.4")
 
 # CUDA
 declare -a cudaFiles=("libcudart.so.7.5" "libcublas.so.7.5" "libcurand.so.7.5" "libcusparse.so.7.5")
