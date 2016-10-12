@@ -14,7 +14,7 @@ datasetName = "pascalVoc"
 # default parameters
 ############################
 # cntk params
-cntk_nrRois = 2000  # how many ROIs to zero-pad
+cntk_nrRois = 4000  # how many ROIs to zero-pad
 cntk_padWidth = 1000
 cntk_padHeight = 1000
 cntk_posOverlapThres = {"train": 0.5, "test": 0.5}  # only used for DNN training (as opposed to svm training)

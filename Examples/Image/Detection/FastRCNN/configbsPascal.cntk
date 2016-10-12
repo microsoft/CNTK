@@ -54,7 +54,7 @@ Train = {
         labelShape = $NumLabels$:$NumTrainROIs$         # 21:64
         ROIShape   = 4:$NumTrainROIs$                   # 4:64
 
-        #network     = BS.Network.Load ("AlexNet.89")
+        # load pretrained model ("AlexNet.89")
         network     = BS.Network.Load ("../../../cntk_model/AlexNet.89")
         convLayers  = BS.Network.CloneFunction(network.features, network.conv5_y, parameters = "constant")
         fcLayers    = BS.Network.CloneFunction(network.pool3, network.h2_d)

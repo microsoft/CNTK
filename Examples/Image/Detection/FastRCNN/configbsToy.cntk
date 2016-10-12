@@ -56,22 +56,24 @@ Train = {
 
         #network     = BS.Network.Load ("AlexNet.89")
         network     = BS.Network.Load ("../../../cntk_model/AlexNet.89")
-        convLayers  = BS.Network.CloneFunction(network.features, network.conv5_y, parameters = "constant")
+        pool1       = BS.Network.CloneFunction(network.features, network.pool1, parameters = "constant")
+        convLayers  = BS.Network.CloneFunction(network.pool1, network.conv5_y)
         fcLayers    = BS.Network.CloneFunction(network.pool3, network.h2_d)
 
         model (features, rois) = {
             featNorm = features - 114
-            convOut  = convLayers (featNorm)
-            roiOut   = ROIPooling (convOut, rois, (6:6))
+            pool1Out = pool1 (featNorm)
+            conv5Out = convLayers (pool1Out)
+            roiOut   = ROIPooling (conv5Out, rois, (6:6))
             fcOut    = fcLayers (roiOut)
             W        = ParameterTensor{($NumLabels$:4096), init="glorotUniform"}
             b        = ParameterTensor{$NumLabels$, init = 'zero'}
             z        = W * fcOut + b
         }.z
 
-        features  = Input {imageShape}
+        features = Input {imageShape}
         roiLabels = Input {labelShape}
-        rois      = Input {ROIShape}
+        rois = Input {ROIShape}
 
         z = model (features, rois)
         
@@ -90,12 +92,12 @@ Train = {
         minibatchSize = 2
         maxEpochs = 20
         
-        learningRatesPerMB = 0.00001    #0.00002*5:0.00001
-        momentumPerMB = 0*5:0.9
-        L2RegWeight = 0.0005
-        dropoutRate = 0.5
-
-        numMBsToShowResult = 500
+        learningRatesPerSample = 0.00001
+        momentumAsTimeConstant = 0*5:10
+        #L2RegWeight = 0.0001
+        dropoutRate = 0
+        
+        numMBsToShowResult = 50
     }
 
     reader = {
