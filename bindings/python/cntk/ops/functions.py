@@ -1,7 +1,9 @@
 from cntk import cntk_py
 from ..utils import typemap, sanitize_var_map, value_to_seq
 
+
 class Function(cntk_py.Function):
+
     '''
     Base class of all operators.
 
@@ -16,9 +18,8 @@ class Function(cntk_py.Function):
         if len(self.outputs()) == 1:
             return getattr(self.output(), name)
 
-        raise AttributeError("'%s' object has no attribute '%s'"%\
-                (type(self), name))
-
+        raise AttributeError("'%s' object has no attribute '%s'" %
+                             (type(self), name))
 
     @typemap
     def arguments(self):
@@ -56,9 +57,11 @@ class Function(cntk_py.Function):
         Returns:
             `Function`: the cloned Function
         '''
-        if parameterCloneMethod not in set(['clone','share','freeze']):
-            raise ValueError('parameterCloneMethod must be one of clone, share, or freeze')
-        method = getattr(cntk_py,'ParameterCloningMethod_'+parameterCloneMethod.capitalize())
+        if parameterCloneMethod not in set(['clone', 'share', 'freeze']):
+            raise ValueError(
+                'parameterCloneMethod must be one of clone, share, or freeze')
+        method = getattr(
+            cntk_py, 'ParameterCloningMethod_' + parameterCloneMethod.capitalize())
         if replacements is None:
             replacements = dict()
         return super(Function, self).clone(method, replacements)
@@ -95,17 +98,15 @@ class Function(cntk_py.Function):
             `bool`: `True` if updates have been performed
         '''
         _, output_map = self.forward(arguments or {}, self.outputs(),
-                seq_starts, device)
+                                     seq_starts, device=device)
 
-        if len(output_map)>1:
+        if len(output_map) > 1:
             return output_map
         else:
             return list(output_map.values())[0]
-    
 
     @typemap
-    def forward(self, arguments, outputs, seq_starts=None, device=None,
-            forward_retain=None):
+    def forward(self, arguments, outputs, seq_starts=None, forward_retain=None, device=None):
         '''
         Computes and stores the values of speficied variables in `outputs`,
         using provided `arguments` values corresponding to each leaf `Variable`
@@ -118,12 +119,12 @@ class Function(cntk_py.Function):
              treated as a new sequence. Otherwise, it is interpreted as a list of
              Booleans that tell whether a sequence is a new sequence (`True`) or a
              continuation of the previous one (`False`)
-            device (:class:`cntk.DeviceDescriptor`): the device descriptor that
-             contains the type and id of the device on which the computation is
-             to be performed.
             forward_retain (`set`): the subset of the Function's output variables
              for which gradients will be specified in a subsequent backward call
              for backpropagation.
+            device (:class:`cntk.DeviceDescriptor`): the device descriptor that
+             contains the type and id of the device on which the computation is
+             to be performed.
 
         Returns: a tuple (`BackpropState`, `map` of outputs to NumPy arrays).
             The BackpropState is a handle taken by :func:`backward`. 
@@ -133,13 +134,13 @@ class Function(cntk_py.Function):
             device = DeviceDescriptor.use_default_device()
 
         in_var_map = sanitize_var_map(self.arguments(), arguments,
-                seq_starts, None, device)
+                                      seq_starts, None, device)
 
         forward_retain = set(forward_retain or self.outputs())
-        output_map = {v:None for v in forward_retain}
+        output_map = {v: None for v in forward_retain}
 
         res = super(Function, self)._forward(in_var_map, output_map, device,
-                forward_retain)
+                                             forward_retain)
 
         for k in output_map:
             output_map[k] = value_to_seq(output_map[k])
@@ -165,7 +166,7 @@ class Function(cntk_py.Function):
             `dict`: mapping of `variables` to NumPy arrays
         '''
         root_gradients = sanitize_var_map(self.outputs(), root_gradients,
-                None, None, None)
+                                          None, None, None)
 
         var_gradients = dict((var, None) for var in variables)
 
@@ -181,7 +182,7 @@ class Function(cntk_py.Function):
     def inputs(self):
         '''
         Returns all input variables of this function.
-        
+
 
         Returns:
             `list`: all input variables of this function.
@@ -192,7 +193,7 @@ class Function(cntk_py.Function):
     def name(self):
         '''
         Returns the name of 'this' function.
-        
+
 
         Returns:
             `str`: the name of 'this' function.
@@ -203,7 +204,7 @@ class Function(cntk_py.Function):
     def op_name(self):
         '''
         Returns the name of the operation that this Function denotes
-        
+
 
         Returns:
             `str`: the name of the operation that this Function denotes
@@ -214,25 +215,22 @@ class Function(cntk_py.Function):
     # Function.output = lambda self:get_output_and_keep_reference(self)
         # '''
         # output
-        
 
         # Args:
-            # self.replace_placeholders_internal(ph_map (`ph_map:`): text
-        
+        # self.replace_placeholders_internal(ph_map (`ph_map:`): text
 
         # Returns:
-            # `None`: text
+        # `None`: text
         # '''
-        # kwargs=dict(locals()); del kwargs['self']; return super(Function, self).output(**kwargs)
+        # kwargs=dict(locals()); del kwargs['self']; return super(Function,
+        # self).output(**kwargs)
 
     # @typemap
     # def output_internal(self):
         # '''
-        
-        
 
         # Returns:
-            # `Variable`: text
+        # `Variable`: text
         # '''
         # return super(Function, self).output_internal()
 
@@ -240,7 +238,7 @@ class Function(cntk_py.Function):
     def outputs(self):
         '''
         Returns a list consisting of all output variables of this function.
-        
+
 
         Returns:
             `list`: all output variables of this function
@@ -261,7 +259,7 @@ class Function(cntk_py.Function):
     def placeholders(self):
         '''
         Returns a list of all placeholders variables of this function.
-        
+
 
         Returns:
             `list`: all placeholders variables of this function
@@ -278,36 +276,37 @@ class Function(cntk_py.Function):
 
         Returns:
             `Function`: itself
- 
+
         :raises ExceptionType: when the function has multiple placeholders.
         '''
-        kwargs=dict(locals()); del kwargs['self']; return super(Function, self).replace_placeholder(**kwargs)
+        kwargs = dict(locals())
+        del kwargs['self']
+        return super(Function, self).replace_placeholder(**kwargs)
 
     # @typemap
     # Function.replace_placeholders = lambda self, ph_map: self.replace_placeholders_internal(ph_map)
         # '''
         # replace_placeholders
-        
 
         # Returns:
-            # `None`: text
+        # `None`: text
         # '''
-        # kwargs=dict(locals()); del kwargs['self']; return super(Function, self).replace_placeholders(**kwargs)
+        # kwargs=dict(locals()); del kwargs['self']; return super(Function,
+        # self).replace_placeholders(**kwargs)
 
     # @typemap
     # def replace_placeholders_internal(self, placeholderReplacements):
         # '''
         # replace_placeholders_internal
-        
 
         # Args:
-            # placeholderReplacements (`dict`): text
-        
+        # placeholderReplacements (`dict`): text
 
         # Returns:
-            # `FunctionPtr`: text
+        # `FunctionPtr`: text
         # '''
-        # kwargs=dict(locals()); del kwargs['self']; return super(Function, self).replace_placeholders_internal(**kwargs)
+        # kwargs=dict(locals()); del kwargs['self']; return super(Function,
+        # self).replace_placeholders_internal(**kwargs)
 
     @typemap
     def restore_from_legacy_model(self, modelFilePath):
@@ -320,7 +319,9 @@ class Function(cntk_py.Function):
         Returns:
             `None`: this method only has the side-effect of loading the model parameters from the file
         '''
-        kwargs=dict(locals()); del kwargs['self']; return super(Function, self).restore_from_legacy_model(**kwargs)
+        kwargs = dict(locals())
+        del kwargs['self']
+        return super(Function, self).restore_from_legacy_model(**kwargs)
 
     @typemap
     def root_function(self):
