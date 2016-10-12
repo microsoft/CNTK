@@ -81,7 +81,9 @@ def Reader(path):
 def Model(_inf):  # TODO: all the _inf stuff will go away once dimension inference works
     return Sequential([
         Embedding(shape=emb_dim, _inf=_inf),
-        Recurrence(over=LSTM(shape=hidden_dim, _inf=_inf.with_shape(emb_dim)), _inf=_inf.with_shape(emb_dim), go_backwards=False),
+        Recurrence(over=LSTM(shape=hidden_dim, _inf=_inf.with_shape(emb_dim)), _inf=_inf.with_shape(emb_dim), go_backwards=False,
+                   #),
+                   initial_state=Constant(0.1, shape=(1))),   # (this last option mimics a default in BS to recreate identical results)
         Linear(shape=label_dim, _inf=_inf.with_shape(hidden_dim))
     ], _inf=_inf)
 
@@ -140,8 +142,9 @@ def train(reader, model):
             loss_denom +=                                             trainer.previous_minibatch_sample_count()
             metric_numer += trainer.previous_minibatch_evaluation_average() * trainer.previous_minibatch_sample_count()
             metric_denom +=                                                   trainer.previous_minibatch_sample_count()
-            #print_training_progress(trainer, mbs if mbs > 10 else 0, num_mbs_to_show_result)
+            print_training_progress(trainer, mbs if mbs > 10 else 0, num_mbs_to_show_result)
             t += num_samples[slot_labels]
+            #print (num_samples[slot_labels], t)
             mbs += 1
         print("--- EPOCH {} DONE: loss = {:0.6f} * {}, metric = {:0.1f}% * {} ---".format(epoch+1, loss_numer/loss_denom, loss_denom, metric_numer/metric_denom*100.0, metric_denom))
 
@@ -151,6 +154,7 @@ def train(reader, model):
 
 if __name__=='__main__':
     set_gpu(0)
+    #set_computation_network_trace_level(1)  # TODO: currently in Amit's branch only
     reader = Reader(data_dir + "/atis.train.ctf")
     model = Model(_inf=_Infer(shape=input_dim, axis=[Axis.default_batch_axis(), Axis.default_dynamic_axis()]))
     # BUGBUG: Currently this fails with a mismatch error if axes ^^ are given in opposite order

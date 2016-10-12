@@ -31,8 +31,7 @@ from cntk.ops.functions import Function
 from cntk.ops.variables import Variable
 
 # this is what we initialize weight matrices from by default
-_default_initializer = glorot_uniform()
-#_default_initializer = None
+from blocks import _default_initializer
 
 # Linear -- create a fully-connected linear projection layer
 # Note: shape may describe a tensor as well.
@@ -40,7 +39,7 @@ _default_initializer = glorot_uniform()
 # inputRank given: number of zeroes to add to W (mapRank must not be given)
 # mapRank   given: expand W to leave exactly mapRank axes (inputRank must not be given)
 # none      given: expand W to all (same as mapRank=0)
-def Linear(shape, _inf, bias=True, init=_default_initializer, init_bias=None, input_rank=None, map_rank=None):
+def Linear(shape, _inf, bias=True, init=_default_initializer, init_bias=0, input_rank=None, map_rank=None):
     out_shape = _as_tuple(shape)
 
     # TODO: implement the full semantics of the BrainScript code
@@ -60,8 +59,8 @@ def Linear(shape, _inf, bias=True, init=_default_initializer, init_bias=None, in
     #    then Times (W, x, outputRank=outputRank, inferInputRankToMap=inferInputRankToMap) + b
     #    else Times (W, x, outputRank=outputRank, inferInputRankToMap=inferInputRankToMap)
 
-    W = Parameter(_inf.shape + out_shape, init=init)
-    b = Parameter(             out_shape, init=init_bias) if bias else None
+    W = Parameter(_inf.shape + out_shape, init=init     , name='W')
+    b = Parameter(             out_shape, init=init_bias, name='b') if bias else None
     x = Placeholder(_inf=_inf, name='linear_arg')
     apply_x = Function.__matmul__(x, W) + b if bias else \
               Function.__matmul__(x, W)
@@ -75,9 +74,9 @@ def Embedding(shape, _inf, weights=None, init=_default_initializer, transpose=Fa
     shape = _as_tuple(shape)
     full_shape = (shape + _inf.shape) if transpose else (_inf.shape + shape)
     if weights is None:  # no weights given: learn the embedding
-        E = Parameter(full_shape, init=init)
+        E = Parameter(full_shape, init=init, name='E')
     else:                # weights given: use them as constant
-        E = Constant(full_shape, init=weights)  # TODO: can 'weights' be a CNTK object already? Then how to do this?
+        E = Constant(full_shape, init=weights, name='E')  # TODO: can 'weights' be a CNTK object already? Then how to do this?
     x = Placeholder(_inf=_inf, name='embedding_arg')
     apply_x = Function.__matmul__(E, x) if transpose else \
               Function.__matmul__(x, E)     # x is expected to be sparse one-hot
@@ -89,7 +88,7 @@ def Stabilizer(_inf, steepness=4):
     # this behaves linear for weights around 1, yet guarantees positiveness
 
     # parameters
-    param = Parameter((1), init=0.99537863)  # 1/steepness*ln (e^steepness-1) for steepness==4
+    param = Parameter((1), init=0.99537863, name='stabilizer_param')  # 1/steepness*ln (e^steepness-1) for steepness==4
     # TODO: compute this strange value directly in Python
 
     # application
@@ -99,7 +98,7 @@ def Stabilizer(_inf, steepness=4):
     _name_and_extend_Function(apply_x, 'Stabilizer')
     return apply_x
 
-def Recurrence(over, _inf=None, go_backwards=False):
+def Recurrence(over, _inf=None, go_backwards=False, initial_state=None):
     # helper to compute previous value
     # can take a single Variable/Function or a tuple
     def previous_hook(state):
@@ -108,8 +107,8 @@ def Recurrence(over, _inf=None, go_backwards=False):
            if len(outputs) > 1:  # if multiple then apply to each element
                return tuple([previous_hook(s) for s in outputs])
         # not a tuple: must be a 'scalar', i.e. a single element
-        return past_value(state) if not go_backwards else \
-               future_value(state)
+        return past_value  (state, initial_state) if not go_backwards else \
+               future_value(state, initial_state)
     x = Placeholder(_inf=_inf, name='recurrence_arg')
     prev_state_forward = over.create_placeholder() # create a placeholder or a tuple of placeholders
     f_x_h_c = over(x, prev_state_forward) # apply the recurrent over

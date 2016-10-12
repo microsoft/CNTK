@@ -14,7 +14,7 @@ import os
 import time
 from cntk import DeviceDescriptor, Trainer, Axis, text_format_minibatch_source, StreamConfiguration
 from cntk.learner import sgd, fsadagrad, learning_rates_per_sample, momentums_per_sample
-from cntk.ops import parameter, input_variable, placeholder_variable, times, cross_entropy_with_softmax, combine, classification_error
+from cntk.ops import parameter, constant, input_variable, placeholder_variable, times, cross_entropy_with_softmax, combine, classification_error
 import itertools
 from cntk.utils.debughelpers import _name_node, _node_name, _node_description, _print_node
 from utils import Record, _as_tuple
@@ -30,6 +30,9 @@ from examples.common.nn import slice, sigmoid, log, tanh, past_value, future_val
 # No -> SystemError: Parent module '' not loaded, cannot perform relative import
 from cntk.ops.functions import Function
 from cntk.ops.variables import Variable
+
+_default_initializer = glorot_uniform()
+#_default_initializer = None
 
 # "upgrade" a current Function to add additional operators and methods, as a temporary stopgap
 # at end of each layer constructor, return _extend_Function(z, 'Type (for debugging)')
@@ -95,12 +98,21 @@ def _apply(f, args):
 
 # some mappings to BS format
 # TODO: random init parameters: init_filter_rank=0, init_output_rank=1, init_on_cpu_only=True, random_seed=-1
-# init=None means zero
-def Parameter(shape, learning_rate_multiplier=1.0, init=None):
-    return _name_node(parameter(shape, init=init if init is not None else 0), 'parameter')   # these are factory methods for things with state
+# init must be given
+def Parameter(shape, init, learning_rate_multiplier=1.0, name=''):
+    if init is None:
+        raise "Parameter: init cannot be None"
+    # TODO: learning_rate_multiplier parameter missing
+    if learning_rate_multiplier != 1.0 and learning_rate_multiplier != 0.0:
+        raise "Parameter: learning_rate_multiplier cannot be anything else but 1 or 0 at present"
+    #p = parameter(shape, init=init if init is not None else 0, learning_rate_multiplier=learning_rate_multiplier, name=name) if learning_rate_multiplier != 0 else \
+    p = parameter(shape, init=init, name=name) if learning_rate_multiplier != 0 else \
+        constant (shape,      init,                                                    name=name)
+    return _name_node(p, 'parameter')   # these are factory methods for things with state
 
-def Constant(shape, init):
-    return Parameter(shape, learning_rate_multiplier=0, init=init)
+# TODO: parameter order; shape should be optional (only for filling a tensor with a scalar--rare case)
+def Constant(init, shape=None, name=''):
+    return Parameter(shape, init, learning_rate_multiplier=0, name=name)
 
 def Input(*args, **kwargs):
     return _name_node(input_variable(*args, **kwargs), 'input')
@@ -108,7 +120,7 @@ def Input(*args, **kwargs):
 def Placeholder(_inf, name='placeholder'):
     # BUGBUG: does not take a name parameter (but not really needed here)
     # BUGBUG: combine() does not work either, as it generates a Function, not a Variable
-    p = placeholder_variable(shape=_as_tuple(_inf.shape), dynamic_axes=_inf.axis)
+    p = placeholder_variable(shape=_as_tuple(_inf.shape), dynamic_axes=_inf.axis, name=name)
     _name_node(p, name)
     print("new " + _node_description(p))
     return p
@@ -116,12 +128,12 @@ def Placeholder(_inf, name='placeholder'):
 def Identity(_inf):
     x = Placeholder(_inf=_inf, name='identity_arg')
     #apply_x = combine([x])  # BUGBUG: not working
-    apply_x = x + 0  # this fakes combine()
+    apply_x = x + Constant(0, name='Identity0')  # this fakes combine()
     _name_and_extend_Function(apply_x, 'Identity')
     return apply_x
 
 # TODO: For now, shape and cell_shape can only be rank-1 vectors
-def LSTM(shape, _inf, cell_shape=None, use_peepholes=False, init=None, enable_self_stabilization=False): # (x, (h, c))
+def LSTM(shape, _inf, cell_shape=None, use_peepholes=False, init=_default_initializer, init_bias=0, enable_self_stabilization=False): # (x, (h, c))
     has_projection = cell_shape is not None
     has_aux = False
 
@@ -138,13 +150,13 @@ def LSTM(shape, _inf, cell_shape=None, use_peepholes=False, init=None, enable_se
     cell_shape_stacked = tuple(cell_shape_list)  # patched dims with stack_axis duplicated 4 times
 
     # parameters
-    b  = Parameter(             cell_shape_stacked, init=init)                             # a bias
-    W  = Parameter(_inf.shape + cell_shape_stacked, init=init)                             # input
-    A  = Parameter(_inf.shape + cell_shape_stacked, init=init) if has_aux else None        # aux input (optional)
-    H  = Parameter(shape      + cell_shape_stacked, init=init)                             # hidden-to-hidden
-    Ci = Parameter(             cell_shape,         init=init) if use_peepholes else None  # cell-to-hiddden {note: applied elementwise}
-    Cf = Parameter(             cell_shape,         init=init) if use_peepholes else None  # cell-to-hiddden {note: applied elementwise}
-    Co = Parameter(             cell_shape,         init=init) if use_peepholes else None  # cell-to-hiddden {note: applied elementwise}
+    b  = Parameter(             cell_shape_stacked, init=init_bias, name='b')                        # a bias
+    W  = Parameter(_inf.shape + cell_shape_stacked, init=init,      name='W')                             # input
+    A  = Parameter(_inf.shape + cell_shape_stacked, init=init,      name='A') if has_aux else None        # aux input (optional)
+    H  = Parameter(shape      + cell_shape_stacked, init=init,      name='H')                             # hidden-to-hidden
+    Ci = Parameter(             cell_shape,         init=init,      name='Ci') if use_peepholes else None  # cell-to-hiddden {note: applied elementwise}
+    Cf = Parameter(             cell_shape,         init=init,      name='Cf') if use_peepholes else None  # cell-to-hiddden {note: applied elementwise}
+    Co = Parameter(             cell_shape,         init=init,      name='Co') if use_peepholes else None  # cell-to-hiddden {note: applied elementwise}
 
     Wmr = ParameterTensor (cell_shape + shape, init=init, init_value_scale=init_value_scale) if has_projection else None  # final projection
 
