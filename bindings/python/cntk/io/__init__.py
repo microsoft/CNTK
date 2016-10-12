@@ -35,6 +35,9 @@ class MinibatchData(cntk_py.MinibatchData):
         '''
         return self.m_data
 
+    def __len__(self):
+        return self.num_sequences()
+
 class MinibatchSource(cntk_py.MinibatchSource):
     '''
     Parent class of all minibatch sources. For most cases you will need the

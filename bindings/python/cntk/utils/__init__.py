@@ -268,9 +268,13 @@ def get_data_type(*args):
                 raise ValueError(
                     'expected single output, but got %i' % len(var_outputs))
 
-            var_output = var_outputs[0]
-            if cntk_py.DataType_Double == var_output.get_data_type():
+            var_type = var_outputs[0].get_data_type()
+            if cntk_py.DataType_Double == var_type:
                 dtypes.add(np.float64)
+            elif cntk_py.DataType_Float == var_type:
+                dtypes.add(np.float32)
+            else:
+                raise ValueError('type %s is not supported'%var_type)
         else:
             # We don't know anything so we convert everything to float32. If it
             # works, we know the type.
@@ -462,7 +466,7 @@ def sanitize_var_map(op_arguments, arguments, seq_starts=None, precision=None,
     sample_sizes = [len(v) for v in arguments.values()]
     if len(set(sample_sizes)) != 1:
         raise ValueError('not all inputs have the same number of samples: ' +
-                         ", ".join(sample_sizes))
+                         ", ".join([str(s) for s in sample_sizes]))
 
     if seq_starts is not None:
         if not isinstance(seq_starts, (tuple, list)):
