@@ -1282,28 +1282,28 @@ def reduce_sum(x, axis=None, name=''):
     Examples:
         >>> # create 3x2 matrix in a sequence of length 1 in a batch of one sample
         >>> data = [[10, 20],[30, 40],[50, 60]]
-        
+
         >>> # reduce over the first axis
         >>> C.reduce_sum(data, 0).eval()
         array([[  90.,  120.]], dtype=float32)
-        
+
         >>> # reduce over the second axis
         >>> C.reduce_sum(data, 1).eval()
         array([[  30.],
                [  70.],
                [ 110.]], dtype=float32)
-        
+
         >>> # Negative axis is counted from last to first. So -1 retrieves same
         >>> # result as 1 on a matrix of rank 2.
         >>> C.reduce_sum(data, -1).eval()
         array([[  30.],
                [  70.],
                [ 110.]], dtype=float32)
-        
+
         >>> # And -2 retrieves the same result as 0 on a matrix of rank 2.
         >>> C.reduce_sum(data, -2).eval()
         array([[  90.,  120.]], dtype=float32)
-        
+
         >>> # reduce over the all axes
         >>> C.reduce_sum(data).eval()
         array(210.0, dtype=float32)
@@ -1350,7 +1350,16 @@ def reduce_mean(x, axis=None, name=''):
     Computes the mean of the input tensor's elements across the specified axis.
 
     Examples:
-        TBA
+        >>> # create 3x2 matrix in a sequence of length 1 in a batch of one sample
+        >>> data = [[10, 20],[30, 40],[50, 60]]
+
+        >>>C.reduce_mean(data, 0).eval()
+        array([[ 30.,  40.]], dtype=float32)
+
+        >>>C.reduce_mean(data, 0).eval()
+        array([[ 15.],
+               [ 35.],
+               [ 55.]], dtype=float32)
 
     Args:
         x: input tensor
@@ -1372,7 +1381,16 @@ def reduce_max(x, axis=None, name=''):
     Computes the max of the input tensor's elements across the specified axis.
 
     Examples:
-        TBA
+        >>> # create 3x2 matrix in a sequence of length 1 in a batch of one sample
+        >>> data = [[10, 20],[30, 40],[50, 60]]
+
+        >>> C.reduce_max(data, 0).eval()
+        array([[ 50.,  60.]], dtype=float32)
+
+        >>> C.reduce_max(data, 1).eval()
+        array([[ 20.],
+               [ 40.],
+               [ 60.]], dtype=float32)
 
     Args:
         x: input tensor
@@ -1394,7 +1412,16 @@ def reduce_min(x, axis=None, name=''):
     Computes the min of the input tensor's elements across the specified axis.
 
     Examples:
-        TBA
+        >>> # create 3x2 matrix in a sequence of length 1 in a batch of one sample
+        >>> data = [[10, 20],[30, 40],[50, 60]]
+
+        >>> C.reduce_min(data, 0).eval()
+        array([[ 10.,  20.]], dtype=float32)
+
+        >>> C.reduce_min(data, 1).eval()
+        array([[ 10.],
+               [ 30.],
+               [ 50.]], dtype=float32)
 
     Args:
         x: input tensor
@@ -1417,13 +1444,27 @@ def reduce_min(x, axis=None, name=''):
 @typemap
 def dropout(x, dropout_rate=0.0, name=''):
     '''
-    Compute a new tensor that randomly sets `dropout_rate`*100 percent of the
-    nodes to zero. This is commonly used to prevent overfitting during the training
-    process.
+    Randomly selects elements of the input with a given probability called the `dropout_rate`, and sets
+    them to 0. This has been shown to improve generalizability of models.
 
-    The output tensor has the same shape as `x`, but with `dropout_rate` of the
-    elements set to zero (dropped out).
+    In CNTK's implementation, the remaining values that are not set to 0 will instead be multiplied
+    with (1 / (1 - `dropout_rate`)). This way, the model parameters learned with dropout are directly
+    applicable in inference. (If this was not done, the user would have to manually scale them before
+    inference.)
 
+    Examples:
+        >>> # create 3x2 matrix in a sequence of length 1 in a batch of one sample
+        >>> data = [[10, 20],[30, 40],[50, 60]]
+
+        >>> C.dropout(data, 0.5).eval()
+        array([[  0.,  40.],
+               [  0.,  80.],
+               [  0.,   0.]], dtype=float32)
+
+        >>> C.dropout(reduce_data, 0.75).eval()
+        array([[   0.,    0.],
+               [   0.,  160.],
+               [   0.,  240.]], dtype=float32)
 
     Args:
         x: input tensor
@@ -1431,7 +1472,7 @@ def dropout(x, dropout_rate=0.0, name=''):
         name (`str`, optional): the name of the Function instance in the network
 
     Returns:
-        FIXME also in all of the other cases :class:`cntk.ops.functions.Function`
+        :class:`cntk.ops.functions.Function`
     '''
     if dropout_rate < 0.0 or dropout_rate >= 1.0:
         raise ValueError('dropout_rate must be in the interval [0,1)')
@@ -1510,6 +1551,13 @@ def parameter(shape=None, init=None, device=None, name=''):
     '''
     It creates a parameter tensor.
 
+    Examples:
+        >>> init_parameter = C.parameter(shape=(3,4), init=2)
+        >>> np.asarray(init_parameter)
+        array([[ 2.,  2.,  2.,  2.],
+               [ 2.,  2.,  2.,  2.],
+               [ 2.,  2.,  2.,  2.]], dtype=float32)
+
     Args:
         shape (`tuple` or `int`, optional): the shape of the input tensor. If not provided, it
          will be inferred from ``value``.
@@ -1523,7 +1571,7 @@ def parameter(shape=None, init=None, device=None, name=''):
         name (`str`, optional): the name of the Parameter instance in the network
 
     Returns:
-        :class:`cntk.ops.functions.Function`
+        :class:`cntk.ops.variables.Parameter`
     '''
 
     from .variables import Parameter
@@ -1547,6 +1595,12 @@ def constant(shape=None, value=None, device=None, name=''):
     '''
     It creates a constant tensor initialized from a numpy array
 
+    Examples
+        >>> constant_data = C.constant(value=[[1., 2.], [3., 4.], [5., 6.]])
+        >>> np.asarray(constant_data)
+        array([[ 1.,  2.],
+               [ 3.,  4.],
+               [ 5.,  6.]], dtype=float32)
     Args:
         shape (`tuple` or `int`, optional): the shape of the input tensor. If not provided, it will
          be inferred from ``value``.
@@ -1556,7 +1610,7 @@ def constant(shape=None, value=None, device=None, name=''):
         device (:class:`cntk.DeviceDescriptor`): instance of DeviceDescriptor
         name (`str`, optional): the name of the Function instance in the network
     Returns:
-        :class:`cntk.ops.functions.Function`
+        :class:`cntk.ops.variables.Constant`
     '''
     from .variables import Constant
     if not device:
