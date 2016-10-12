@@ -681,7 +681,7 @@ def eval(op, arguments=None, seq_starts=None, precision=None, device=None, backw
         mapping of output variables to their values.
     '''
 
-    forward_output = { v:None for v in self.outputs() }  # will be populated in Forward()
+    forward_output = { v:None for v in op.outputs() }  # will be populated in Forward()
 
     state = op.forward(arguments, forward_output, seq_starts, device)
 
