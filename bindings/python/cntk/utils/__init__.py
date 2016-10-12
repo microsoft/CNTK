@@ -335,6 +335,9 @@ def sanitize_batch(var, batch, seq_starts=None, data_type=None, device=None):
     if isinstance(batch, Value):
         return batch
 
+    if device is None:
+        device = cntk_py.DeviceDescriptor.use_default_device()
+
     # Use the mask, if we have additional dynamic axes besides the batch axis
     use_mask = len(var.dynamic_axes())>1
     if use_mask:
@@ -746,6 +749,9 @@ def typemap(f):
                 k.__class__ = typemap.get(k.__class__, k.__class__)
                 v.__class__ = typemap.get(v.__class__, v.__class__)
         else:
-            result.__class__ = typemap.get(result.__class__, result.__class__)
+            try:
+                result.__class__ = typemap.get(result.__class__, result.__class__)
+            except TypeError:
+                pass
         return result
     return wrapper
