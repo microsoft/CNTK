@@ -446,23 +446,23 @@ template class MatrixL1RegNode<float>;
 template class MatrixL1RegNode<double>;
 
 // -----------------------------------------------------------------------
-// IRMetricNode (gain, prediction, queryId)
-// IRMetric for ranking
+// LambdaRankNode (gain, prediction, queryId)
+// Check "From RankNet to LambdaRank to LambdaMART: An Overview" for details.
 // -----------------------------------------------------------------------
 
 template <class ElemType>
-class IRMetricNode : public ComputationNodeNonLooping /*ComputationNode*/<ElemType>, public NumInputs<3>
+class LambdaRankNode : public ComputationNodeNonLooping /*ComputationNode*/<ElemType>, public NumInputs<3>
 {
     typedef ComputationNodeNonLooping<ElemType> Base;
     UsingComputationNodeMembersBoilerplate;
     static const std::wstring TypeName()
     {
-        return L"IRMetric";
+        return L"LambdaRank";
     }
 
 public:
-    DeclareConstructorFromConfigWithNumInputs(IRMetricNode);
-    IRMetricNode(DEVICEID_TYPE deviceId, const wstring& name)
+    DeclareConstructorFromConfigWithNumInputs(LambdaRankNode);
+    LambdaRankNode(DEVICEID_TYPE deviceId, const wstring& name)
         : Base(deviceId, name), m_sigma(1.0)
     {
     }
@@ -496,27 +496,27 @@ public:
             ElemType lambdaIJ, scoreDiff;
             for (auto qu : m_queryUrls)
             {
-                ElemType irm0 = qu.irm0;
-                for (typename std::vector<Url>::iterator itUrlI = qu.urls.begin(); itUrlI != qu.urls.end(); itUrlI++)
+                ElemType irm0 = qu.m_irm0;
+                for (typename std::vector<Url>::iterator itUrlI = qu.m_urls.begin(); itUrlI != qu.m_urls.end(); itUrlI++)
                 {
                     Url& UrlI = *itUrlI;
-                    size_t k = UrlI.K;
-                    discountI = m_logWeights[UrlI.rk];
-                    gainI = UrlI.gn;
+                    size_t k = UrlI.m_K;
+                    discountI = m_logWeights[UrlI.m_rk];
+                    gainI = UrlI.m_gn;
                     if (k == 0) continue;
                     for (typename std::vector<Url>::iterator itUrlJ = itUrlI + 1; itUrlJ <= itUrlI + k; itUrlJ++)
                     {
                         Url& UrlJ = *itUrlJ;
-                        discountJ = m_logWeights[UrlJ.rk];
-                        if (abs(gainI - UrlJ.gn) < 0.0000001)
+                        discountJ = m_logWeights[UrlJ.m_rk];
+                        if (abs(gainI - UrlJ.m_gn) < 0.0000001)
                         {
                             continue;
                         }
 
-                        scoreDiff = abs(UrlI.sc - UrlJ.sc) + (ElemType)0.1;
+                        scoreDiff = abs(UrlI.m_sc - UrlJ.m_sc) + (ElemType)0.1;
 
                         // delta DCG
-                        lambdaIJ = (gainI - UrlJ.gn) * (discountI - discountJ) / (discountI * discountJ);
+                        lambdaIJ = (gainI - UrlJ.m_gn) * (discountI - discountJ) / (discountI * discountJ);
 
                         // |delta NDCG|
                         lambdaIJ = (irm0 == 0.0 ? (ElemType) 0.0 : abs(lambdaIJ / irm0) / scoreDiff);
@@ -525,8 +525,8 @@ public:
                         lambdaIJ = lambdas(0, pairsCount++) * lambdaIJ;
 
                         // Assign to gradient
-                        (*m_weightUpdate)(0, UrlI.id) += lambdaIJ;
-                        (*m_weightUpdate)(0, UrlJ.id) -= lambdaIJ;
+                        (*m_weightUpdate)(0, UrlI.m_id) += lambdaIJ;
+                        (*m_weightUpdate)(0, UrlJ.m_id) -= lambdaIJ;
                         
                     }
                 }
@@ -574,8 +574,16 @@ public:
     {
         // Inputs:
         //      0. gain
-        //      1. pred
-        //      2. query id
+        //      1. predicted score
+        //      2. query id (used to separate urls belonging to different queries)
+        // 
+        // Following is an example: two queries (0 and 1) and 6 urls (three for each).
+        // 31,  0.9,    0
+        // 7,   0.3,    0
+        // 0,   0.0,    0
+        // 3,   0.4,    1
+        // 0,   0.5,    1
+        // 0,   0.3,    1
         FrameRange fr(Input(0)->GetMBLayout());
 
         // Construct matrices for further computation.
@@ -603,40 +611,39 @@ public:
             }
 
             // Get the last QueryUrls and add the Url.
-            QueryUrls& qub = m_queryUrls.back();
-            Url u(i, qub.urls.size(), preds(0, i), gains(0, i));
-            qub.urls.push_back(u);
+            QueryUrls& qu = m_queryUrls.back();
+            Url u(i, qu.m_urls.size(), preds(0, i), gains(0, i));
+            qu.m_urls.push_back(u);
         }
 
         // Update K (number of url pairs that have smaller or equal gain), rk (rank of 
         // score in descending order) and and m_pairwiseDifferences (save for gradient 
         // computation).
         size_t pairCount = 0;
-        for (typename std::list<QueryUrls>::iterator qit = m_queryUrls.begin(); qit != m_queryUrls.end(); ++qit)
+        for (auto &qu : m_queryUrls)
         {
-            QueryUrls& qub = *qit;
-            std::vector<Url>& urls = qub.urls;
+            std::vector<Url>& urls = qu.m_urls;
             size_t numberOfUrls = urls.size();
             // Urls are pre-sorted in descending order of gains.
-            ElemType minGain = urls[numberOfUrls - 1].gn;
+            ElemType minGain = urls[numberOfUrls - 1].m_gn;
             for (size_t j = 0; j < urls.size(); j++)
             {
-                if (urls[j].gn > minGain)
+                if (urls[j].m_gn > minGain)
                 {
                     size_t numberOfPairs = numberOfUrls - j - 1;
-                    urls[j].K = numberOfPairs;
+                    urls[j].m_K = numberOfPairs;
                     if (numberOfPairs > 0)
                     {
                         for (size_t k = 0; k < numberOfPairs; k++)
                         {
-                            (*m_pairwiseDifferences)(0, pairCount++) = urls[j].sc - urls[j + 1 + k].sc;
+                            (*m_pairwiseDifferences)(0, pairCount++) = urls[j].m_sc - urls[j + 1 + k].m_sc;
                         }
                     }
                 }
                 // Skip urls with gain equal to min (0).
                 else 
                 {
-                    urls[j].K = 0;
+                    urls[j].m_K = 0;
                 }
             }
 
@@ -653,20 +660,20 @@ public:
             int rk = 0;
             for (it = its0; it != its; it++)
             {
-                urls[it->rk0].rk = rk++;
+                urls[it->m_rk0].m_rk = rk++;
             }
         }
 
         // Compute ir metric.
         size_t sampleCount = 0;
-        for (auto qu: m_queryUrls)
+        for (const auto &qu: m_queryUrls)
         {
-            for (auto url: qu.urls)
+            for (const auto &url : qu.m_urls)
             {
-                (*m_urlGain0)(0, sampleCount) = url.gn;
-                (*m_urlGain1)(0, sampleCount) = url.gn;
-                (*m_urlDiscount0)(0, sampleCount) = (ElemType)url.rk0;
-                (*m_urlDiscount1)(0, sampleCount) = (ElemType)url.rk;
+                (*m_urlGain0)(0, sampleCount) = url.m_gn;
+                (*m_urlGain1)(0, sampleCount) = url.m_gn;
+                (*m_urlDiscount0)(0, sampleCount) = (ElemType)url.m_rk0;
+                (*m_urlDiscount1)(0, sampleCount) = (ElemType)url.m_rk;
                 sampleCount++;
             }
         }
@@ -684,22 +691,20 @@ public:
         const Matrix<ElemType>& urlDiscountedGain0 = *m_urlGain0;
         const Matrix<ElemType>& urlDiscountedGain1 = *m_urlGain1;
         ElemType irMetricValue = 0.0;
-        for (typename std::list<QueryUrls>::iterator itqu = m_queryUrls.begin(); itqu != m_queryUrls.end(); itqu++)
+        for (auto &qu : m_queryUrls)
         {
-            QueryUrls& qu = *itqu;
-            qu.irm0 = 0.0;
-            qu.irm = 0.0;
+            qu.m_irm0 = 0.0;
+            qu.m_irm = 0.0;
 
-            for (typename std::vector<Url>::iterator iturl = itqu->urls.begin(); iturl != itqu->urls.end(); iturl++)
+            for (const auto &url : qu.m_urls)
             {
-                Url& url = *iturl;
-                qu.irm0 += urlDiscountedGain0(0, url.id);
-                qu.irm += urlDiscountedGain1(0, url.id);
+                qu.m_irm0 += urlDiscountedGain0(0, url.m_id);
+                qu.m_irm += urlDiscountedGain1(0, url.m_id);
             }
 
-            if (qu.irm0 != 0.0)
+            if (qu.m_irm0 != 0.0)
             {
-                irMetricValue += (qu.irm / qu.irm0);
+                irMetricValue += (qu.m_irm / qu.m_irm0);
             }
         }
 
@@ -716,10 +721,13 @@ public:
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
     {
         if (m_inputs.size() != 3)
-            InvalidArgument("%ls %ls operation requires three inputs.", NodeName().c_str(), OperationName().c_str());
+            InvalidArgument("%ls operation requires three inputs instead of %d.", NodeDescription().c_str(), (int)m_inputs.size());
 
-        if (Input(0)->NeedsGradient() == true || Input(2)->NeedsGradient() == true)
-            InvalidArgument("%ls %ls operation needs input type (no gradient) for the 1st and 3rd inputs.", NodeName().c_str(), OperationName().c_str());
+        if (Input(0)->NeedsGradient() == true)
+            InvalidArgument("%ls %ls operation needs input type (no gradient) for the 1st input.", NodeName().c_str(), OperationName().c_str());
+
+        if (Input(2)->NeedsGradient() == true)
+            InvalidArgument("%ls %ls operation needs input type (no gradient) for the 3rd input.", NodeName().c_str(), OperationName().c_str());
 
         ValidateBinaryReduce(isFinalValidationPass);
     }
@@ -729,7 +737,7 @@ public:
         Base::CopyTo(nodeP, newName, flags);
         if (flags & CopyNodeFlags::copyNodeValue)
         {
-            auto node = dynamic_pointer_cast<IRMetricNode<ElemType>>(nodeP);
+            auto node = dynamic_pointer_cast<LambdaRankNode<ElemType>>(nodeP);
             node->m_pairwiseDifferences->SetValue(*m_pairwiseDifferences);
             node->m_lambdas->SetValue(*m_lambdas);
             node->m_weightUpdate->SetValue(*m_weightUpdate);
@@ -836,39 +844,39 @@ protected:
     {
         Url()
         {
-            id = 0;
-            rk0 = 0;
-            rk = 0;
-            sc = (ElemType)0;
-            gn = (ElemType)0;
-            K = 0;
+            m_id = 0;
+            m_rk0 = 0;
+            m_rk = 0;
+            m_sc = (ElemType)0;
+            m_gn = (ElemType)0;
+            m_K = 0;
         }
 
-        Url(int _id, int _rk0, ElemType _sc, ElemType _gn) : id(_id), rk0(_rk0), rk(0), sc(_sc), gn(_gn), K(0) {}
+        Url(int id, int rk0, ElemType sc, ElemType gn) : m_id(id), m_rk0(rk0), m_rk(0), m_sc(sc), m_gn(gn), m_K(0) {}
 
-        int id;         // sample id
-        int rk0;        // original rank based on label
-        int rk;         // rank based on s in the associated query
-        ElemType sc;    // score
-        ElemType gn;    // gain
-        int K;          // the pair index
+        int m_id;         // sample id
+        int m_rk0;        // original rank based on label
+        int m_rk;         // rank based on s in the associated query
+        ElemType m_sc;    // score
+        ElemType m_gn;    // gain
+        int m_K;          // the pair index
         bool operator < (const Url &url) const{
             // tie breaking
-            if (sc == url.sc || std::isnan(sc) || std::isnan(url.sc))
+            if (m_sc == url.m_sc || std::isnan(m_sc) || std::isnan(url.m_sc))
             {
-                return gn < url.gn;
+                return m_gn < url.m_gn;
             }
 
-            return sc > url.sc;
+            return m_sc > url.m_sc;
         }
     };
 
     struct QueryUrls
     {
-        ElemType irm0;  // the ideal IR Metric
-        ElemType irm;   // IR metric based on the current scores
+        ElemType m_irm0;  // the ideal IR Metric
+        ElemType m_irm;   // IR metric based on the current scores
 
-        std::vector<Url> urls;
+        std::vector<Url> m_urls;
     };
 
     // master data structure
@@ -898,8 +906,8 @@ protected:
     shared_ptr<Matrix<ElemType>> m_urlDiscount1;
 };
 
-template class IRMetricNode<float>;
-template class IRMetricNode<double>;
+template class LambdaRankNode<float>;
+template class LambdaRankNode<double>;
 
 // -----------------------------------------------------------------------
 // MatrixL2RegNode (input)

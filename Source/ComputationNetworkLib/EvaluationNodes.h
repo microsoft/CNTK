@@ -131,23 +131,23 @@ template class ClassificationErrorNode<float>;
 template class ClassificationErrorNode<double>;
 
 // -----------------------------------------------------------------------
-// IRMetricEvalNode (gain, prediction, queryId)
-// IRMetricEval @ 1 for ranking
+// NDCG1EvalNode (gain, prediction, queryId)
+// NDCG @ 1 
 // -----------------------------------------------------------------------
 
 template <class ElemType>
-class IRMetricEvalNode : public ComputationNodeNonLooping /*ComputationNode*/<ElemType>, public NumInputs<3>
+class NDCG1EvalNode : public ComputationNodeNonLooping /*ComputationNode*/<ElemType>, public NumInputs<3>
 {
     typedef ComputationNodeNonLooping<ElemType> Base;
     UsingComputationNodeMembersBoilerplate;
     static const std::wstring TypeName()
     {
-        return L"IRMetricEval";
+        return L"NDCG1Eval";
     }
 
 public:
-    DeclareConstructorFromConfig(IRMetricEvalNode);
-    IRMetricEvalNode(DEVICEID_TYPE deviceId, const wstring& name)
+    DeclareConstructorFromConfig(NDCG1EvalNode);
+    NDCG1EvalNode(DEVICEID_TYPE deviceId, const wstring& name)
         : Base(deviceId, name)
     {
     }
@@ -204,10 +204,11 @@ public:
             qub.urls.push_back(u);
         }
 
-        for (typename std::list<QueryUrls>::iterator qit = m_queryUrls.begin(); qit != m_queryUrls.end(); ++qit)
+        //for (typename std::list<QueryUrls>::iterator qit = m_queryUrls.begin(); qit != m_queryUrls.end(); ++qit)
+        for (auto &qu : m_queryUrls)
         {
-            QueryUrls& qub = *qit;
-            std::vector<Url>& urls = qub.urls;
+            //QueryUrls& qub = *qit;
+            std::vector<Url>& urls = qu.urls;
             // Urls are pre-sorted in descending order of gains.
             typename std::vector<Url>::iterator its = m_urlSorter.begin(), it = urls.begin();
             typename std::vector<Url>::iterator its0 = its;
@@ -229,9 +230,9 @@ public:
 
         // calculate IRMetrics
         size_t sampleCount = 0;
-        for (auto qu: m_queryUrls)
+        for (const auto &qu: m_queryUrls)
         {
-            for (auto url : qu.urls)
+            for (const auto &url : qu.urls)
             {
                 (*m_urlGain0)(0, sampleCount) = url.gn;
                 (*m_urlGain1)(0, sampleCount) = url.gn;
@@ -257,15 +258,13 @@ public:
         ElemType irm0 = 0.0, irm1 = 0.0;
 
         // IRMetric @ 1
-        for (typename std::list<QueryUrls>::iterator itqu = m_queryUrls.begin(); itqu != m_queryUrls.end(); itqu++)
+        for (auto &qu : m_queryUrls)
         {
-            QueryUrls& qu = *itqu;
             irm0 = urlDiscountedGain0(0, qu.urls.begin()->id);
             if (irm0 == 0.0) continue;
 
-            for (typename std::vector<Url>::iterator iturl = itqu->urls.begin(); iturl != itqu->urls.end(); iturl++)
+            for (auto &url : qu.urls)
             {
-                Url& url = *iturl;
                 if (url.rk == 0)
                 {
                     irm1 = urlDiscountedGain1(0, url.id);
@@ -288,10 +287,13 @@ public:
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
     {
         if (m_inputs.size() != 3)
-            InvalidArgument("%ls %ls operation requires three inputs.", NodeName().c_str(), OperationName().c_str());
+            InvalidArgument("%ls %ls operation requires three inputs instead of %d.", NodeName().c_str(), OperationName().c_str(), (int)m_inputs.size());
 
-        if (Input(0)->NeedsGradient() == true || Input(2)->NeedsGradient() == true)
-            InvalidArgument("%ls %ls operation needs input type (no gradient) for the 1st and 3rd inputs.", NodeName().c_str(), OperationName().c_str());
+        if (Input(0)->NeedsGradient() == true)
+            InvalidArgument("%ls %ls operation needs input type (no gradient) for the 1st input.", NodeName().c_str(), OperationName().c_str());
+
+        if (Input(2)->NeedsGradient() == true)
+            InvalidArgument("%ls %ls operation needs input type (no gradient) for the 3rd input.", NodeName().c_str(), OperationName().c_str());
 
         ValidateBinaryReduce(isFinalValidationPass);
     }
@@ -327,7 +329,7 @@ public:
         Base::CopyTo(nodeP, newName, flags);
         if (flags & CopyNodeFlags::copyNodeValue)
         {
-            auto node = dynamic_pointer_cast<IRMetricEvalNode<ElemType>>(nodeP);
+            auto node = dynamic_pointer_cast<NDCG1EvalNode<ElemType>>(nodeP);
             node->m_urlGain0->SetValue(*m_urlGain0);
             node->m_urlGain1->SetValue(*m_urlGain1);
             node->m_urlDiscount0->SetValue(*m_urlDiscount0);
@@ -438,9 +440,6 @@ protected:
 
     struct QueryUrls
     {
-        ElemType irm0;  // the ideal IR Metric
-        ElemType irm;   // IR metric based on the current scores
-
         std::vector<Url> urls;
     };
 
@@ -460,8 +459,8 @@ protected:
     shared_ptr<Matrix<ElemType>> m_urlDiscount1;
 };
 
-template class IRMetricEvalNode<float>;
-template class IRMetricEvalNode<double>;
+template class NDCG1EvalNode<float>;
+template class NDCG1EvalNode<double>;
 
 #ifdef COMING_SOON
 

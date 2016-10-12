@@ -68,8 +68,8 @@ static shared_ptr<ComputationNode<ElemType>> CreateStandardNode(const std::wstri
     else if (nodeType == OperationNameOf(HardmaxNode))                          return New<HardmaxNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(IfNode))                               return New<IfNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(InvStdDevNode))                        return New<InvStdDevNode<ElemType>>(forward<_Types>(_Args)...);
-    else if (nodeType == OperationNameOf(IRMetricNode))                         return New<IRMetricNode<ElemType>>(forward<_Types>(_Args)...);
-    else if (nodeType == OperationNameOf(IRMetricEvalNode))                     return New<IRMetricEvalNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(LambdaRankNode))                       return New<LambdaRankNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(NDCG1EvalNode))                        return New<NDCG1EvalNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(KhatriRaoProductNode))                 return New<KhatriRaoProductNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(LessEqualNode))                        return New<LessEqualNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(LessNode))                             return New<LessNode<ElemType>>(forward<_Types>(_Args)...);
@@ -451,15 +451,15 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Cross
 }
 
 template <class ElemType>
-shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::IRMetric(const ComputationNodePtr gain, const ComputationNodePtr prediction, const ComputationNodePtr queryId, const std::wstring nodeName)
+shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::LambdaRank(const ComputationNodePtr gain, const ComputationNodePtr prediction, const ComputationNodePtr queryId, const std::wstring nodeName)
 {
-    return net.AddNodeToNetAndAttachInputs(New<IRMetricNode<ElemType>>(net.GetDeviceId(), nodeName), { gain, prediction, queryId });
+    return net.AddNodeToNetAndAttachInputs(New<LambdaRankNode<ElemType>>(net.GetDeviceId(), nodeName), { gain, prediction, queryId });
 }
 
 template <class ElemType>
-shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::IRMetricEval(const ComputationNodePtr gain, const ComputationNodePtr prediction, const ComputationNodePtr queryId, const std::wstring nodeName)
+shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::NDCG1Eval(const ComputationNodePtr gain, const ComputationNodePtr prediction, const ComputationNodePtr queryId, const std::wstring nodeName)
 {
-    return net.AddNodeToNetAndAttachInputs(New<IRMetricEvalNode<ElemType>>(net.GetDeviceId(), nodeName), { gain, prediction, queryId });
+    return net.AddNodeToNetAndAttachInputs(New<NDCG1EvalNode<ElemType>>(net.GetDeviceId(), nodeName), { gain, prediction, queryId });
 }
 
 template <class ElemType>

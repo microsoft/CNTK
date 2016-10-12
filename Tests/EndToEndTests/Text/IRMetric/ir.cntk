@@ -1,6 +1,6 @@
 
-WorkingDir = D:\jiajia\ir
-DataDir = \\samaddm01\saadsrnrfs01\jiajia
+WorkingDir = C:\temp
+DataDir = \\storage.ccp.philly.selfhost.corp.microsoft.com\public\CNTKTestData\Text\IRMetric
 RunDir = $WorkingDir$
 ConfigDir = $WorkingDir$
 
@@ -28,7 +28,6 @@ train = [
         gradientClippingWithTruncation=true
         clippingThresholdPerSample=1e10
     ]
-]
 
     BrainScriptNetworkBuilder = (new ComputationNetwork [
         CROSSDim = 512:512:256:128:64
@@ -98,17 +97,48 @@ train = [
         s = DeepCrossing.OneLayer_NoBias(R1, AllDim, GainDim)
 
         // training criteria
-        irm  = NDCG(Gain, s, GroupId, tag='criterion')   // this is the training objective
-        irm1  = NDCGEval1(Gain, s, GroupId, tag='eval')
+        irm = LambdaRank(Gain, s, GroupId, tag='criterion')   // this is the training objective
+        irm1 = NDCG1Eval(Gain, s, GroupId, tag='eval')
         outputNodes = (s)
 
     ])
 
     reader = [
     # reader to use
-    readerType = LibSVMBinaryReader
-    miniBatchMode = Partial
-    randomize = 0
-        file = $DataDir$/train.bin
+        readerType = "CNTKTextFormatReader"
+        randomize=false
+        file = $DataDir$/train.tsv
+        input = [
+            Query = [
+                alias = "Query"
+                dim = 49293 
+                format = "sparse"
+            ]
+            Title = [
+                alias = "Title"
+                dim = 49293 
+                format = "sparse"
+            ]
+            NormalizedUrl = [
+                alias = "NormalizedUrl"
+                dim = 49293 
+                format = "sparse"
+            ]
+            Gain = [
+                alias = "Gain"
+                dim = 1 
+                format = "dense"
+            ]
+            BingCounts = [
+                alias = "BingCounts"
+                dim = 36 
+                format = "dense"
+            ]
+            GroupId = [
+                alias = "GroupId"
+                dim = 1 
+                format = "dense"
+            ]
+        ]
     ]
 ]
