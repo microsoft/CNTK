@@ -215,10 +215,11 @@ namespace CNTK
                 {
                     auto matrixType = (s.m_storageFormat == StorageFormat::Dense) ? DENSE : SPARSE;
                     auto matrixFormat = (s.m_storageFormat == StorageFormat::Dense) ? matrixFormatDense : matrixFormatSparseCSC;
-                    // Can we reuse this, not allocating it each time?
                     auto dataMatrix = std::make_shared<Matrix<float>>(0, 0, input.GetMatrix<float>().GetDeviceId(), matrixType, matrixFormat);
 
+                    // Why is this copy needed?
                     std::swap(*dataMatrix, input.GetMatrix<float>());
+
                     minibatchValuePtr = MakeSharedObject<PackedValue>(s.m_sampleLayout, dataMatrix, input.pMBLayout, /*readOnly =*/ false);
 
                     size_t numSamples = input.pMBLayout->GetActualNumSamples();
