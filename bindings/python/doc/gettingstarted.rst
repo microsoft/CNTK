@@ -39,13 +39,10 @@ The above makes use of the CNTK ``minus`` node with two array constants. Every o
 pass for that node using its inputs, and returns the result of the forward pass. A slightly more interesting example that uses input variables (the 
 more common case) is as follows:
 
-    >>> x = cntk.input_variable((1, 2))
-    >>> y = cntk.input_variable((1, 2))
-    >>> import numpy as np
-    >>> x0 = np.array([[2, 1]], dtype=np.float32)
-    >>> y0 = np.array([[4, 6]], dtype=np.float32)
-    >>> cntk.squared_error(x, y).eval({x:x0, y:y0}) 
-    array([[ 29.]], dtype=float32)
+    >>> i1 = cntk.input_variable((1, 2))
+    >>> i2 = cntk.input_variable((1, 2))
+    >>> cntk.squared_error(i1, i2).eval({i1:np.asarray([[[[2., 1.]]]], dtype=np.float32),  i2:np.asarray([[[[4., 6.]]]], dtype=np.float32)})
+    array(29.0, dtype=float32)
 
 In the above example we are first setting up two input variables with shape ``(1, 2)``. We then setup a ``squared_error`` node with those two variables as 
 inputs. Within the ``eval()`` method we can setup the input-mapping of the data for those two variables. In this case we pass in two numpy arrays. The squared 
