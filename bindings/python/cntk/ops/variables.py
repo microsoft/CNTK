@@ -1,9 +1,6 @@
 import numpy as np
-from cntk import cntk_py
-#from cntk_py import NDArrayView, DeviceDescriptor, Variable, Parameter, ConstantFloat, ConstantDouble, Constant, DataType_Float, DataType_Double, ParameterFloat, ParameterDouble, Axis
-#from cntk import DATATYPE
+from cntk import cntk_py, utils
 from cntk.tensor import TensorOpsMixin
-from cntk import utils
 from ..utils import typemap
 
 FLOAT_32 = 'float32'
@@ -138,7 +135,7 @@ class Variable(TensorOpsMixin, cntk_py.Variable):
     # def kind(self):
         # '''
         # kind
-        
+
 
         # Returns:
             # `VariableKind`: text
@@ -235,31 +232,34 @@ class Parameter(TensorOpsMixin, cntk_py.Parameter):
         Returns:
             `NDArrayView`: the current value of the parameter.
         '''
-        return super(Constant, self).value()
+        return super(Parameter, self).value()
 
 class Constant(TensorOpsMixin, cntk_py.Constant):
     '''
     A constant value. It can be a scalar, vector, matrix, or tensor
     of floating point numbers that cannot be modified.
 
+    Constants are :class:`cntk.ops.Variable`s and therefore they inherit all their methods.
+
     Args:
        value (`np.ndarray` or `list` or `float` or `int`): Initial value.
        data_type (`np.float32 or np.float64`): data type to store the values as.
        device (`dev`): the device on which the values should reside.
        name (`str`): an optional name for this constant.
-
-    Constants are Variables and therefore they inherit all their methods.
     '''
-    def __init__(self, value, data_type=None, device=None, name=''):
+    def __init__(self, shape=None, value=None, data_type=None, device=None, name=''):
 
         if data_type is None:
-            data_type = str(value.dtype)
+            if isinstance(value, np.ndarray):
+                data_type = str(value.dtype)
+            else:
+                data_type = FLOAT_32
 
-        ndav = _sanitize_value(value.shape, value, data_type, device)
+        ndav = _sanitize_value(shape, value, data_type, device)
         super(Constant, self).__init__(ndav, name)
-        self.value = super().value()
+
     #TODO how to expose Scalar ?
-    
+
     @typemap
     def value(self):
         '''

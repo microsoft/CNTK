@@ -9,8 +9,9 @@ import numbers
 import collections
 import numpy as np
 import scipy.sparse
-from cntk import cntk_py
+from .. import cntk_py
 from .persist import *
+from .swig_helper import typemap
 
 
 def sanitize_precision(precision):
@@ -167,7 +168,7 @@ def get_temp_filename(directory=None):
         be created
 
     Returns:
-        Filename of the temporary file 
+        Filename of the temporary file
     '''
     import tempfile
 
@@ -193,9 +194,9 @@ def sanitize_shape(shape):
 def sanitize_input(arg, fallback_dtype=np.float32):
     """
     Convert to Variable or Constant so that it can be passed as Variable to the CNTK
-    operators. 
+    operators.
      * If `arg` is a NumPy array and its type is neither `np.float32` nor
-    `np.float64`, it sets it to `np.float32`. 
+    `np.float64`, it sets it to `np.float32`.
      * If `arg` is an op, it is assumed that it has only one output, which will be returned.
 
     Args:
@@ -256,7 +257,7 @@ def get_data_type(*args):
             if arg.dtype not in (np.float32, np.float64):
                 raise ValueError(
                     'NumPy type "%s" is not supported' % arg.dtype)
-                dtypes.add(arg.dtype)
+            dtypes.add(arg.dtype.type)
         elif isinstance(arg, cntk_py.Function):
             var_outputs = arg.outputs()
             if len(var_outputs) > 1:
@@ -275,8 +276,10 @@ def get_data_type(*args):
 
     if np.float64 in dtypes:
         return np.float64
-    else:
+    elif np.float32 in dtypes:
         return np.float32
+    else:
+        raise ValueError('could not determine data type')
 
 
 def pad_to_dense(batch):
@@ -368,7 +371,7 @@ def sanitize_batch(var, batch, seq_starts=None, data_type=None, device=None):
     # If it still is not an NumPy array, try brute force...
     if not isinstance(batch, np.ndarray):
         if data_type is None:
-            data_type = np.float32
+            data_type = get_data_type(var)
         batch = np.asarray(batch, dtype=data_type)
 
     # Maybe a NumPy dtype was given, but with lower accuracy than float32, then
@@ -408,16 +411,16 @@ def sanitize_var_map(op_arguments, arguments, seq_starts=None, precision=None, d
         op_arguments (`:class:Function`): arguments of the root function. In
          forward pass it is typically `op.arguments()`, in backward mode it is
          `op.outputs()`
-        arguments (`dict` or `list`): 
+        arguments (`dict` or `list`):
           * map from input variables to the data
-          * list of inputs in the order that the function expects or 
+          * list of inputs in the order that the function expects or
           Data should be either NumPy arrays or a `:class:cntk.io.MinibatchData` instance
         seq_starts (`list` of `bool`s or `None`): if `None`, every sequence is
          treated as a new sequence. Otherwise, it is interpreted as a list of
          Booleans that tell whether a sequence is a new sequence (`True`) or a
          continuation of the previous one (`False`)
         precision (`str` or `np.float32` or `np.float64`): if string it can be
-         one of 'float' 'float32, 'double', 'float64', or `None` 
+         one of 'float' 'float32, 'double', 'float64', or `None`
         device (`DeviceDescriptor` or `None`): CNTK DeviceDescriptor
         add_batch_axis (`bool`): data in `arguments` are single instances and a batch axis has to be added
 
@@ -479,13 +482,13 @@ def sanitize_var_map(op_arguments, arguments, seq_starts=None, precision=None, d
 
         if isinstance(batch, MinibatchData):
             batch = batch.data()
-        elif not isinstance(batch, Value):                
+        elif not isinstance(batch, Value):
             if add_batch_axis:
                 batch = [batch]
             if isinstance(batch, np.ndarray):
                 if batch.dtype == np.int:
                     batch = batch.astype(np.float32)
-                if batch.dtype not in (np.float32, np.float64):                        
+                if batch.dtype not in (np.float32, np.float64):
                     raise ValueError('only float32 and float64 are supported')
                 batch = sanitize_batch(var, batch, seq_starts, precision, device)
             else:
@@ -570,7 +573,7 @@ def sanitize_axis(rank, axis):
 
     Args:
         rank (`int`): rank of the tensor on which `axis` is to be used
-        axis (`:class:Axis` or `int` or `None`): the axis to be used. 
+        axis (`:class:Axis` or `int` or `None`): the axis to be used.
           * `:class:Axis`: use axis instance directly (will convert row- to
              col-major in case of static axis.
           * `int`: if positive, use it as static axis. If negative, count from
@@ -604,7 +607,7 @@ def get_train_loss(trainer):
     Fetch the train loss from the last minibatch and copy it to the CPU in case it is on the GPU.
     Args:
         trainer (:class:`Trainer`): the trainer used.
-    Returns: 
+    Returns:
         the loss value
     '''
     import copy
@@ -617,7 +620,7 @@ def get_train_eval_criterion(trainer):
     Fetch the train evaluation criterion (e.g., classification error) from the last minibatch and copy it to the CPU in case it is on the GPU.
     Args:
         trainer (:class:`Trainer`): the trainer used.
-    Returns: 
+    Returns:
         the criterion value
     '''
     import copy
@@ -648,7 +651,7 @@ def value_to_seq(value):
         a list of NumPy arrays
     '''
 
-    np_data = value.data().to_numpy()         
+    np_data = value.data().to_numpy()
     if value.mask():
         mask = value.mask().to_numpy()
         np_data = [seq[mask[idx] != cntk_py.MaskKind_Invalid] for idx, seq in enumerate(np_data)]
@@ -658,13 +661,13 @@ def value_to_seq(value):
 def eval(op, arguments=None, seq_starts=None, precision=None, device=None, backward_pass=False):
     '''
     It evaluates `op` on the data provided by the reader. This is useful
-    mainly to explore the operators and for convenient unit testing. 
+    mainly to explore the operators and for convenient unit testing.
 
     Args:
         op (:class:`Function`): operation to evaluate
-        arguments (`dict` or `list`): 
+        arguments (`dict` or `list`):
           * map from input variables to the data
-          * list of inputs in the order that the function expects or 
+          * list of inputs in the order that the function expects or
           Data should be either NumPy arrays or a `:class:cntk.io.MinibatchData` instance
         seq_starts (`list` of `bool`s or `None`): if `None`, every sequence is
          treated as a new sequence. Otherwise, it is interpreted as a list of
@@ -675,42 +678,20 @@ def eval(op, arguments=None, seq_starts=None, precision=None, device=None, backw
          (costly)
         device (`:class:cntk.DeviceDescriptor`): the device the descriptor,
          whether it is CPU or GPU (and which one)
-        backward_pass (`bool`, optional): whether a backward pass is performed 
+        backward_pass (`bool`, optional): whether a backward pass is performed
 
-    Returns: 
+    Returns:
         mapping of output variables to their values.
     '''
-    if precision is not None:
-        precision = sanitize_precision(precision)
 
-    forward_in_var_map = sanitize_var_map(op.arguments(), arguments, seq_starts, precision, device)
-
-    forward_out_var_map = {}
-    forward_retain = set()
-    for v in op.outputs():
-        forward_out_var_map[v] = None  # will be populated in Forward()
-        forward_retain.add(v)
-
-    state = op.forward(forward_in_var_map,
-                       forward_out_var_map, device, forward_retain)
-
-    forward_output = {}
-    for v in op.outputs():
-        forward_output[v] = value_to_seq(forward_out_var_map[v])
+    state, forward_output = op.forward(arguments, op.outputs(), seq_starts,
+            device)
 
     if backward_pass:
-        root_gradients = {}
-        for v, o in forward_output.items():
-            root_gradients[v] = ones_like(o, precision)
-        root_gradients = sanitize_var_map(op.outputs(), root_gradients, None, precision, device)
+        root_gradients = {v:ones_like(o, precision) for v,o in
+                forward_output.items()}
 
-        backward_var_map = dict((var, None) for var in forward_in_var_map)
-
-        op.backward(state, root_gradients, backward_var_map)
-
-        backward_output = {}
-        for var, value in backward_var_map.items():
-            backward_output[var] = value_to_seq(value)
+        backward_output = op.backward(state, root_gradients, arguments)
 
         return forward_output, backward_output
 
@@ -718,40 +699,3 @@ def eval(op, arguments=None, seq_starts=None, precision=None, device=None, backw
         return forward_output, None
 
 
-def typemap(f):
-    '''
-    Upcasts Swig types to cntk types that inherit from Swig.
-    '''
-            
-    from functools import wraps
-    @wraps(f)
-    def wrapper(*args, **kwds):
-        from cntk.ops.variables import Variable, Parameter, Constant
-        from cntk.ops.functions import Function
-        from cntk.learner import Learner
-        from cntk.io import MinibatchSource, MinibatchData, StreamConfiguration
-        typemap = { 
-                cntk_py.Variable: Variable,
-                cntk_py.Parameter: Parameter,
-                cntk_py.Constant: Constant,
-                cntk_py.Function: Function, 
-                cntk_py.Learner: Learner, 
-                cntk_py.MinibatchSource: MinibatchSource,
-                cntk_py.MinibatchData: MinibatchData,
-                cntk_py.StreamConfiguration: StreamConfiguration, 
-                }
-        result = f(*args, **kwds)
-        if isinstance(result, (tuple, list, set)):
-            for r in result:
-                r.__class__ = typemap.get(r.__class__, r.__class__)
-        elif isinstance(result, dict):
-            for k,v in result.items():
-                k.__class__ = typemap.get(k.__class__, k.__class__)
-                v.__class__ = typemap.get(v.__class__, v.__class__)
-        else:
-            try:
-                result.__class__ = typemap.get(result.__class__, result.__class__)
-            except TypeError:
-                pass
-        return result
-    return wrapper
