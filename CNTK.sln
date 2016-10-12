@@ -1263,7 +1263,7 @@ Project("{888888A0-9F3D-457C-B088-3A5042F75D52}") = "CNTKv2", "bindings\python\e
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "IRMetric", "IRMetric", "{E844AB9A-A48F-4A99-9625-F528C5C46D83}"
 	ProjectSection(SolutionItems) = preProject
-		Tests\EndToEndTests\Text\IRMetric\baseline.gpu.txt = Tests\EndToEndTests\Text\IRMetric\baseline.gpu.txt
+		Tests\EndToEndTests\Text\IRMetric\baseline.txt = Tests\EndToEndTests\Text\IRMetric\baseline.txt
 		Tests\EndToEndTests\Text\IRMetric\ir.cntk = Tests\EndToEndTests\Text\IRMetric\ir.cntk
 		Tests\EndToEndTests\Text\IRMetric\run-test = Tests\EndToEndTests\Text\IRMetric\run-test
 		Tests\EndToEndTests\Text\IRMetric\testcases.yml = Tests\EndToEndTests\Text\IRMetric\testcases.yml

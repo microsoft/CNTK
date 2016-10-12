@@ -496,30 +496,30 @@ public:
             ElemType lambdaIJ, scoreDiff;
             for (auto qu : m_queryUrls)
             {
-                ElemType irm0 = qu.m_irm0;
+                ElemType idealMetric = qu.m_idealMetric;
                 for (typename std::vector<Url>::iterator itUrlI = qu.m_urls.begin(); itUrlI != qu.m_urls.end(); itUrlI++)
                 {
                     Url& UrlI = *itUrlI;
                     size_t k = UrlI.m_K;
-                    discountI = m_logWeights[UrlI.m_rk];
-                    gainI = UrlI.m_gn;
+                    discountI = m_logWeights[UrlI.m_rank];
+                    gainI = UrlI.m_gain;
                     if (k == 0) continue;
                     for (typename std::vector<Url>::iterator itUrlJ = itUrlI + 1; itUrlJ <= itUrlI + k; itUrlJ++)
                     {
                         Url& UrlJ = *itUrlJ;
-                        discountJ = m_logWeights[UrlJ.m_rk];
-                        if (abs(gainI - UrlJ.m_gn) < 0.0000001)
+                        discountJ = m_logWeights[UrlJ.m_rank];
+                        if (abs(gainI - UrlJ.m_gain) < 0.0000001)
                         {
                             continue;
                         }
 
-                        scoreDiff = abs(UrlI.m_sc - UrlJ.m_sc) + (ElemType)0.1;
+                        scoreDiff = abs(UrlI.m_score - UrlJ.m_score) + (ElemType)0.1;
 
                         // delta DCG
-                        lambdaIJ = (gainI - UrlJ.m_gn) * (discountI - discountJ) / (discountI * discountJ);
+                        lambdaIJ = (gainI - UrlJ.m_gain) * (discountI - discountJ) / (discountI * discountJ);
 
                         // |delta NDCG|
-                        lambdaIJ = (irm0 == 0.0 ? (ElemType) 0.0 : abs(lambdaIJ / irm0) / scoreDiff);
+                        lambdaIJ = (idealMetric == 0.0 ? (ElemType) 0.0 : abs(lambdaIJ / idealMetric) / scoreDiff);
 
                         // Combine lambda
                         lambdaIJ = lambdas(0, pairsCount++) * lambdaIJ;
@@ -625,10 +625,10 @@ public:
             std::vector<Url>& urls = qu.m_urls;
             size_t numberOfUrls = urls.size();
             // Urls are pre-sorted in descending order of gains.
-            ElemType minGain = urls[numberOfUrls - 1].m_gn;
+            ElemType minGain = urls[numberOfUrls - 1].m_gain;
             for (size_t j = 0; j < urls.size(); j++)
             {
-                if (urls[j].m_gn > minGain)
+                if (urls[j].m_gain > minGain)
                 {
                     size_t numberOfPairs = numberOfUrls - j - 1;
                     urls[j].m_K = numberOfPairs;
@@ -636,7 +636,7 @@ public:
                     {
                         for (size_t k = 0; k < numberOfPairs; k++)
                         {
-                            (*m_pairwiseDifferences)(0, pairCount++) = urls[j].m_sc - urls[j + 1 + k].m_sc;
+                            (*m_pairwiseDifferences)(0, pairCount++) = urls[j].m_score - urls[j + 1 + k].m_score;
                         }
                     }
                 }
@@ -649,18 +649,14 @@ public:
 
             typename std::vector<Url>::iterator its = m_urlSorter.begin(), it = urls.begin();
             typename std::vector<Url>::iterator its0 = its;
-            for (; it != urls.end(); it++)
-            {
-                *its++ = *it;
-            }
-
+            its = std::copy(it, urls.end(), its);
             std::sort(its0, its);
             // Set the sorted rk order to each url and 
             // the urls are still in the original order
             int rk = 0;
             for (it = its0; it != its; it++)
             {
-                urls[it->m_rk0].m_rk = rk++;
+                urls[it->m_rank0].m_rank = rk++;
             }
         }
 
@@ -670,10 +666,10 @@ public:
         {
             for (const auto &url : qu.m_urls)
             {
-                (*m_urlGain0)(0, sampleCount) = url.m_gn;
-                (*m_urlGain1)(0, sampleCount) = url.m_gn;
-                (*m_urlDiscount0)(0, sampleCount) = (ElemType)url.m_rk0;
-                (*m_urlDiscount1)(0, sampleCount) = (ElemType)url.m_rk;
+                (*m_urlGain0)(0, sampleCount) = url.m_gain;
+                (*m_urlGain1)(0, sampleCount) = url.m_gain;
+                (*m_urlDiscount0)(0, sampleCount) = (ElemType)url.m_rank0;
+                (*m_urlDiscount1)(0, sampleCount) = (ElemType)url.m_rank;
                 sampleCount++;
             }
         }
@@ -693,18 +689,18 @@ public:
         ElemType irMetricValue = 0.0;
         for (auto &qu : m_queryUrls)
         {
-            qu.m_irm0 = 0.0;
-            qu.m_irm = 0.0;
+            qu.m_idealMetric = 0.0;
+            qu.m_metric = 0.0;
 
             for (const auto &url : qu.m_urls)
             {
-                qu.m_irm0 += urlDiscountedGain0(0, url.m_id);
-                qu.m_irm += urlDiscountedGain1(0, url.m_id);
+                qu.m_idealMetric += urlDiscountedGain0(0, url.m_id);
+                qu.m_metric += urlDiscountedGain1(0, url.m_id);
             }
 
-            if (qu.m_irm0 != 0.0)
+            if (qu.m_idealMetric != 0.0)
             {
-                irMetricValue += (qu.m_irm / qu.m_irm0);
+                irMetricValue += (qu.m_metric / qu.m_idealMetric);
             }
         }
 
@@ -845,36 +841,36 @@ protected:
         Url()
         {
             m_id = 0;
-            m_rk0 = 0;
-            m_rk = 0;
-            m_sc = (ElemType)0;
-            m_gn = (ElemType)0;
+            m_rank0 = 0;
+            m_rank = 0;
+            m_score = (ElemType)0;
+            m_gain = (ElemType)0;
             m_K = 0;
         }
 
-        Url(int id, int rk0, ElemType sc, ElemType gn) : m_id(id), m_rk0(rk0), m_rk(0), m_sc(sc), m_gn(gn), m_K(0) {}
+        Url(int id, int rk0, ElemType sc, ElemType gn) : m_id(id), m_rank0(rk0), m_rank(0), m_score(sc), m_gain(gn), m_K(0) {}
 
-        int m_id;         // sample id
-        int m_rk0;        // original rank based on label
-        int m_rk;         // rank based on s in the associated query
-        ElemType m_sc;    // score
-        ElemType m_gn;    // gain
-        int m_K;          // the pair index
-        bool operator < (const Url &url) const{
+        int m_id;           // sample id
+        int m_rank0;        // original rank based on label
+        int m_rank;         // rank based on s in the associated query
+        ElemType m_score;   // score
+        ElemType m_gain;    // gain
+        int m_K;            // the pair index
+        bool operator < (const Url &url) const {
             // tie breaking
-            if (m_sc == url.m_sc || std::isnan(m_sc) || std::isnan(url.m_sc))
+            if (m_score == url.m_score || std::isnan(m_score) || std::isnan(url.m_score))
             {
-                return m_gn < url.m_gn;
+                return m_gain < url.m_gain;
             }
 
-            return m_sc > url.m_sc;
+            return m_score > url.m_score;
         }
     };
 
     struct QueryUrls
     {
-        ElemType m_irm0;  // the ideal IR Metric
-        ElemType m_irm;   // IR metric based on the current scores
+        ElemType m_idealMetric;  // the ideal NDCG
+        ElemType m_metric;   // NDCG based on the current scores
 
         std::vector<Url> m_urls;
     };

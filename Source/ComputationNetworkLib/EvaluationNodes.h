@@ -200,23 +200,17 @@ public:
 
             // Get the last QueryUrls and add the Url.
             QueryUrls& qub = m_queryUrls.back();
-            Url u(i, qub.urls.size(), preds(0, i), gains(0, i));
-            qub.urls.push_back(u);
+            Url u(i, qub.m_urls.size(), preds(0, i), gains(0, i));
+            qub.m_urls.push_back(u);
         }
 
-        //for (typename std::list<QueryUrls>::iterator qit = m_queryUrls.begin(); qit != m_queryUrls.end(); ++qit)
         for (auto &qu : m_queryUrls)
         {
-            //QueryUrls& qub = *qit;
-            std::vector<Url>& urls = qu.urls;
+            std::vector<Url>& urls = qu.m_urls;
             // Urls are pre-sorted in descending order of gains.
             typename std::vector<Url>::iterator its = m_urlSorter.begin(), it = urls.begin();
             typename std::vector<Url>::iterator its0 = its;
-            for (; it != urls.end(); it++)
-            {
-                *its++ = *it;
-            }
-
+            its = std::copy(it, urls.end(), its);
             std::sort(its0, its);
 
             // Set the sorted rk order to each url and 
@@ -224,7 +218,7 @@ public:
             int rk = 0;
             for (it = its0; it != its; it++)
             {
-                urls[it->rk0].rk = rk++;
+                urls[it->m_rank0].m_rank = rk++;
             }
         }
 
@@ -232,12 +226,12 @@ public:
         size_t sampleCount = 0;
         for (const auto &qu: m_queryUrls)
         {
-            for (const auto &url : qu.urls)
+            for (const auto &url : qu.m_urls)
             {
-                (*m_urlGain0)(0, sampleCount) = url.gn;
-                (*m_urlGain1)(0, sampleCount) = url.gn;
-                (*m_urlDiscount0)(0, sampleCount) = (ElemType)url.rk0;
-                (*m_urlDiscount1)(0, sampleCount) = (ElemType)url.rk;
+                (*m_urlGain0)(0, sampleCount) = url.m_gain;
+                (*m_urlGain1)(0, sampleCount) = url.m_gain;
+                (*m_urlDiscount0)(0, sampleCount) = (ElemType)url.m_rank0;
+                (*m_urlDiscount1)(0, sampleCount) = (ElemType)url.m_rank;
                 sampleCount++;
             }
         }
@@ -255,24 +249,24 @@ public:
         const Matrix<ElemType>& urlDiscountedGain0 = *m_urlGain0;
         const Matrix<ElemType>& urlDiscountedGain1 = *m_urlGain1;
         ElemType irMetricValue = 0.0;
-        ElemType irm0 = 0.0, irm1 = 0.0;
+        ElemType idealMetric = 0.0, metric = 0.0;
 
         // IRMetric @ 1
         for (auto &qu : m_queryUrls)
         {
-            irm0 = urlDiscountedGain0(0, qu.urls.begin()->id);
-            if (irm0 == 0.0) continue;
+            idealMetric = urlDiscountedGain0(0, qu.m_urls.begin()->m_id);
+            if (idealMetric == 0.0) continue;
 
-            for (auto &url : qu.urls)
+            for (auto &url : qu.m_urls)
             {
-                if (url.rk == 0)
+                if (url.m_rank == 0)
                 {
-                    irm1 = urlDiscountedGain1(0, url.id);
+                    metric = urlDiscountedGain1(0, url.m_id);
                     break;
                 }
             }
 
-            irMetricValue += (irm1 / irm0);
+            irMetricValue += (metric / idealMetric);
         }
 
         if (numberOfQueries == 0)
@@ -287,7 +281,7 @@ public:
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
     {
         if (m_inputs.size() != 3)
-            InvalidArgument("%ls %ls operation requires three inputs instead of %d.", NodeName().c_str(), OperationName().c_str(), (int)m_inputs.size());
+            InvalidArgument("%ls operation requires three inputs instead of %d.", NodeDescription().c_str(), (int)m_inputs.size());
 
         if (Input(0)->NeedsGradient() == true)
             InvalidArgument("%ls %ls operation needs input type (no gradient) for the 1st input.", NodeName().c_str(), OperationName().c_str());
@@ -413,34 +407,34 @@ protected:
     {
         Url()
         {
-            id = 0;
-            rk0 = 0;
-            rk = 0;
-            sc = (ElemType)0;
-            gn = (ElemType)0;
+            m_id = 0;
+            m_rank0 = 0;
+            m_rank = 0;
+            m_score = (ElemType)0;
+            m_gain = (ElemType)0;
         }
 
-        Url(int _id, int _rk0, ElemType _sc, ElemType _gn) : id(_id), rk0(_rk0), rk(0), sc(_sc), gn(_gn) {}
+        Url(int _id, int _rk0, ElemType _sc, ElemType _gn) : m_id(_id), m_rank0(_rk0), m_rank(0), m_score(_sc), m_gain(_gn) {}
 
-        int id;         // sample id
-        int rk0;        // original rank based on label
-        int rk;         // rank based on s in the associated query
-        ElemType sc;    // score
-        ElemType gn;    // gain
+        int m_id;         // sample id
+        int m_rank0;        // original rank based on label
+        int m_rank;         // rank based on s in the associated query
+        ElemType m_score;    // score
+        ElemType m_gain;    // gain
         bool operator < (const Url &url) const{
             // tie breaking
-            if (sc == url.sc || std::isnan(sc) || std::isnan(url.sc))
+            if (m_score == url.m_score || std::isnan(m_score) || std::isnan(url.m_score))
             {
-                return gn < url.gn;
+                return m_gain < url.m_gain;
             }
 
-            return sc > url.sc;
+            return m_score > url.m_score;
         }
     };
 
     struct QueryUrls
     {
-        std::vector<Url> urls;
+        std::vector<Url> m_urls;
     };
 
     // master data structure
