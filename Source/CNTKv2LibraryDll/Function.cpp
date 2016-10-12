@@ -2179,28 +2179,12 @@ namespace CNTK
 
     FunctionPtr CrossEntropyWithSoftmax(const Variable& prediction, const Variable& labels, const std::wstring& name/* = L""*/)
     {
-        if (!prediction.IsSparse() && !labels.IsSparse())
-        {
-            // workaround TransposeTimes slowness for mini batch in V2
-            return Minus(ReduceLogSum(prediction, Axis(0)), ReduceSum(ElementTimes(labels, prediction), Axis(0)), name);
-        }
-        else
-        {
-            return Minus(ReduceLogSum(prediction, Axis(0)), TransposeTimes(labels, prediction), name);
-        }
+        return Minus(ReduceLogSum(prediction, Axis(0)), ReduceSum(ElementTimes(labels, prediction), Axis(0)), name);
     }
 
     FunctionPtr ClassificationError(const Variable& prediction, const Variable& labels, const std::wstring& name/* = L""*/)
     {
-        if (!prediction.IsSparse() && !labels.IsSparse())
-        {
-            // workaround TransposeTimes slowness for mini batch in V2
-            return Minus(Constant::Scalar(prediction.GetDataType(), 1.0), ReduceSum(ElementTimes(labels, Hardmax(prediction)), Axis(0)), name);
-        }
-        else
-        {
-            return Minus(Constant::Scalar(prediction.GetDataType(), 1.0), TransposeTimes(labels, Hardmax(prediction)), name);
-        }
+        return Minus(Constant::Scalar(prediction.GetDataType(), 1.0), ReduceSum(ElementTimes(labels, Hardmax(prediction)), Axis(0)), name);
     }
 
     FunctionPtr PastValue(const Variable& operand, const Variable& initialState, size_t offset, const std::wstring& name)
