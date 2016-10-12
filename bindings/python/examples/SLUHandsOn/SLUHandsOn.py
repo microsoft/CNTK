@@ -140,10 +140,10 @@ def train(reader, model):
             loss_denom +=                                             trainer.previous_minibatch_sample_count()
             metric_numer += trainer.previous_minibatch_evaluation_average() * trainer.previous_minibatch_sample_count()
             metric_denom +=                                                   trainer.previous_minibatch_sample_count()
-            print_training_progress(trainer, mbs if mbs > 10 else 0, num_mbs_to_show_result)
+            #print_training_progress(trainer, mbs if mbs > 10 else 0, num_mbs_to_show_result)
             t += num_samples[slot_labels]
             mbs += 1
-        print("--- EPOCH {} DONE: loss = {:0.6f}, metric = {:0.1f}% ---".format(epoch+1, loss_numer/loss_denom, metric_numer/metric_denom*100.0))
+        print("--- EPOCH {} DONE: loss = {:0.6f} * {}, metric = {:0.1f}% * {} ---".format(epoch+1, loss_numer/loss_denom, loss_denom, metric_numer/metric_denom*100.0, metric_denom))
 
 #############################
 # main function boilerplate #
