@@ -347,11 +347,22 @@ def sanitize_batch(var, batch, seq_starts=None, data_type=None, device=None):
     if isinstance(batch, Value):
         return batch
 
+    use_mask = False
+
+    if isinstance(batch, np.ndarray):
+        if batch.dtype == np.int:
+            batch = batch.astype(np.float32)
+        elif batch.dtype not in (np.float32, np.float64):
+            raise ValueError('only float32 and float64 are supported')
+    elif isinstance(batch, list):
+        if is_tensor_list(batch):
+            use_mask =  len(var.dynamic_axes()) > 1
+
     if device is None:
         device = cntk_py.DeviceDescriptor.use_default_device()
 
     # Use the mask, if we have additional dynamic axes besides the batch axis
-    use_mask = len(var.dynamic_axes()) > 1
+    
     if use_mask:
         seq_lens = [len(seq) for seq in batch]
 
@@ -501,22 +512,8 @@ def sanitize_var_map(op_arguments, arguments, seq_starts=None, precision=None,
         elif not isinstance(batch, Value):
             if add_batch_axis:
                 batch = [batch]
-            if isinstance(batch, np.ndarray):
-                if batch.dtype == np.int:
-                    batch = batch.astype(np.float32)
-                if batch.dtype not in (np.float32, np.float64):
-                    raise ValueError('only float32 and float64 are supported')
-                batch = sanitize_batch(
-                    var, batch, seq_starts, precision, device)
-            else:
-                if is_tensor(batch):
-                    if precision is None:
-                        precision = np.float32
-                    batch = np.asarray(batch, dtype=precision)
-                    batch = create_Value_from_NumPy(batch, device)
-                else:
-                    batch = sanitize_batch(
-                        var, batch, seq_starts, precision, device)
+            batch = sanitize_batch(
+                var, batch, seq_starts, precision, device)
 
         var_map[var] = batch
 
