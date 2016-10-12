@@ -5,7 +5,7 @@ setlocal
 cd "%~dp0"
 set PYTHONPATH=%CD%\..
 echo PYTHONPATH=%PYTHONPATH%
-set PATH=%CD%\..;%CD%\..\..\..\x64\Release;%PATH%
+set PATH=%CD%\..;%CD%\..\..\..\x64\Release_CpuOnly;%PATH%
 echo PATH=%PATH%
 
 sphinx-apidoc.exe ..\cntk -o . -f

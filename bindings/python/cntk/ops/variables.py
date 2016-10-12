@@ -242,22 +242,25 @@ class Constant(TensorOpsMixin, cntk_py.Constant):
     A constant value. It can be a scalar, vector, matrix, or tensor
     of floating point numbers that cannot be modified.
 
+    Constants are :class:`cntk.ops.Variable`s and therefore they inherit all their methods.
+
     Args:
        value (`np.ndarray` or `list` or `float` or `int`): Initial value.
        data_type (`np.float32 or np.float64`): data type to store the values as.
        device (`dev`): the device on which the values should reside.
        name (`str`): an optional name for this constant.
-
-    Constants are Variables and therefore they inherit all their methods.
     '''
-    def __init__(self, value, data_type=None, device=None, name=''):
+    def __init__(self, shape=None, value=None, data_type=None, device=None, name=''):
 
         if data_type is None:
-            data_type = str(value.dtype)
-
-        ndav = _sanitize_value(value.shape, value, data_type, device)
+            if isinstance(value, np.ndarray):
+                data_type = str(value.dtype)
+            else:
+                data_type = FLOAT_32
+                
+        ndav = _sanitize_value(shape, value, data_type, device)
         super(Constant, self).__init__(ndav, name)
-        self.value = super().value()
+
     #TODO how to expose Scalar ?
     
     @typemap
