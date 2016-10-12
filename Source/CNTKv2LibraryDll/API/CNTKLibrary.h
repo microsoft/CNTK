@@ -2355,6 +2355,18 @@ namespace CNTK
     /// Create an instance of the dropout operation on specified tensor input operand
     ///
     // TODO: The initial random seed should be specifiable
+    CNTK_API FunctionPtr RandomSample(const Variable& operand, double dropoutRate, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the dropout operation on specified tensor input operand
+    ///
+    // TODO: The initial random seed should be specifiable
+    CNTK_API FunctionPtr RandomSampleInclusionFrequency(const Variable& operand, double dropoutRate, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the dropout operation on specified tensor input operand
+    ///
+    // TODO: The initial random seed should be specifiable
     CNTK_API FunctionPtr Dropout(const Variable& operand, double dropoutRate, const std::wstring& name = L"");
 
     ///

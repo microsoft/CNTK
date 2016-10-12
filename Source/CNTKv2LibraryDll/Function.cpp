@@ -391,6 +391,8 @@ namespace CNTK
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameAxis = L"axis";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameAxis1 = L"axis1";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameAxis2 = L"axis2";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameAllowDuplicates = L"allowDuplicates";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameNumSamples = L"numSamples";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameDropoutRate = L"dropoutRate";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameNewShape = L"newShape";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameOutputRank = L"outputRank";
@@ -495,6 +497,8 @@ namespace CNTK
         case PrimitiveOpType::Reciprocal:
         case PrimitiveOpType::Softmax:
         case PrimitiveOpType::Hardmax:
+        case PrimitiveOpType::RandomSample:
+        case PrimitiveOpType::RandomSampleInclusionFrequency:
         case PrimitiveOpType::Dropout:
         case PrimitiveOpType::Where:
             assert(inputs.size() == 1);
@@ -914,6 +918,20 @@ namespace CNTK
 
             // Internal CNTK SliceNode takes 1 based axis indices instead of 0 based
             computationNodePtr = New<SliceNode<ElementType>>(network->GetDeviceId(), functionName, beginIndex, endIndex, AsCNTKInternalAxisIdx(axis));
+            break;
+        }
+        case PrimitiveOpType::RandomSample:
+        {
+            auto numSamples = functionConfig[PrimitiveFunction::AttributeNameNumSamples].Value<size_t>();
+            auto allowDuplicates = functionConfig[PrimitiveFunction::AttributeNameAllowDuplicates].Value<bool>();
+            computationNodePtr = New<RandomSampleNode<ElementType>>(network->GetDeviceId(), functionName, numSamples, allowDuplicates);
+            break;
+        }
+        case PrimitiveOpType::RandomSampleInclusionFrequency:
+        {
+            auto numSamples = functionConfig[PrimitiveFunction::AttributeNameNumSamples].Value<size_t>();
+            auto allowDuplicates = functionConfig[PrimitiveFunction::AttributeNameAllowDuplicates].Value<bool>();
+            computationNodePtr = New<RandomSampleInclusionFrequencyNode<ElementType>>(network->GetDeviceId(), functionName, numSamples, allowDuplicates);
             break;
         }
         case PrimitiveOpType::Dropout:
@@ -2084,6 +2102,24 @@ namespace CNTK
         }
 
         return Internal::Gather(operand, flags, newDynamicAxes, name);
+    }
+
+    FunctionPtr RandomSample(const Variable& operand, size_t numSamples, bool allowDuplicates, const std::wstring& name /*= L""*/)
+    {
+        auto additionalProperties = Dictionary();
+        additionalProperties[PrimitiveFunction::AttributeNameNumSamples] = numSamples;
+        additionalProperties[PrimitiveFunction::AttributeNameAllowDuplicates] = allowDuplicates;
+
+        return UnaryOp(PrimitiveOpType::RandomSample, operand, std::move(additionalProperties), name);
+    }
+
+    FunctionPtr RandomSampleInclusionFrequency(const Variable& operand, size_t numSamples, bool allowDuplicates, const std::wstring& name /*= L""*/)
+    {
+        auto additionalProperties = Dictionary();
+        additionalProperties[PrimitiveFunction::AttributeNameNumSamples] = numSamples;
+        additionalProperties[PrimitiveFunction::AttributeNameAllowDuplicates] = allowDuplicates;
+
+        return UnaryOp(PrimitiveOpType::RandomSampleInclusionFrequency, operand, std::move(additionalProperties), name);
     }
 
     FunctionPtr Dropout(const Variable& operand, double dropoutRate, const std::wstring& name /*= L""*/)

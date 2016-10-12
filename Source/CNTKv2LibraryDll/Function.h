@@ -31,6 +31,8 @@ namespace CNTK
         TransposeAxes,
         Where,
         Slice,
+        RandomSample,
+        RandomSampleInclusionFrequency,
         Dropout,
         Reshape,
         Pooling,
@@ -195,6 +197,8 @@ namespace CNTK
         static const std::wstring AttributeNameAxis;
         static const std::wstring AttributeNameAxis1;
         static const std::wstring AttributeNameAxis2;
+        static const std::wstring AttributeNameAllowDuplicates;
+        static const std::wstring AttributeNameNumSamples;
         static const std::wstring AttributeNameDropoutRate;
         static const std::wstring AttributeNameNewShape;
         static const std::wstring AttributeNameOutputRank;
