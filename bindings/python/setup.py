@@ -15,8 +15,7 @@ if IS_WINDOWS and sys.version_info.major < 3:
 
 
 # TODO should handle swig path specified via build_ext --swig-path
-# TODO FIXME
-if os.system('swig -version 1>/dev/null 2>/dev/null') != 0:
+if os.system('swig -version 1>%s 2>%s' % (os.devnull, os.devnull)) != 0:
     print("Please install swig (>= 3.0.10) and include it in your path.\n")
     sys.exit(1)
 

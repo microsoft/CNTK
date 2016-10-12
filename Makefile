@@ -774,7 +774,7 @@ LIBPATH += $(OPENCV_PATH)/lib $(OPENCV_PATH)/release/lib
 
 $(IMAGEREADER): $(IMAGEREADER_OBJ) | $(CNTKMATH_LIB)
 	@echo $(SEPARATOR)
-	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH) $(IMAGEREADER_LIBS)
+	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH) $(IMAGEREADER_LIBS)
 endif
 endif
 
@@ -986,7 +986,8 @@ unittests: $(UNITTEST_EVAL) $(UNITTEST_READER) $(UNITTEST_NETWORK) $(UNITTEST_MA
 
 endif
 
-ifeq ("$(PYTHON_SUPPORT)","true")
+# For now only build Release.
+ifeq ("$(PYTHON_SUPPORT) $(BUILDTYPE)","true release")
 
 # Libraries needed for the run-time (i.e., excluding test binaries)
 # TODO MPI doesn't appear explicitly here, hidden by mpic++ usage (but currently, it should be user installed)
@@ -1016,7 +1017,7 @@ python: $(ALL_LIBS)
             do \
                 test -x $${py_paths[$$ver]}; \
                 $${py_paths[$$ver]} setup.py \
-                    build \
+                    build_ext \
                     bdist_wheel \
                         --dist-dir $$PYTHONDIR || exit $$?; \
             done'

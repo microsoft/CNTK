@@ -207,7 +207,7 @@ function check_version ()
 {
     local expected_version=$1
     local actual_version=$2
-    [ "$actual_version" = "" ] && return 1
+    [ -z "$actual_version" ] && return 1
     [ "$( printf "%s\n" $actual_version $expected_version | sort -V | head -1)" = "$expected_version" ]
     return $?
 }
@@ -273,12 +273,13 @@ function find_python ()
 
 function default_use_python ()
 {
-    if test x$(find_swig) = x || test x$(find_python 34)$(find_python 35) = x
-    then
+# Keeping it default "no" for a little while:
+#    if test x$(find_swig) = x || test x$(find_python 34)$(find_python 35) = x
+#    then
         echo no
-    else
-        echo yes
-    fi
+#    else
+#        echo yes
+#    fi
 }
 enable_python=$(default_use_python)
 
@@ -401,6 +402,7 @@ do
             ;;
 
         --with-py-versions*)
+            enable_python=yes
             if test "x$optarg" = "x"
             then
                 echo "Mandatory parameter for --with-py-versions missing. Use '--python no' to disable Python support completely."
@@ -822,7 +824,7 @@ fi
 
 if test $enable_python = yes
 then
-    # Fill unfilled defaul paths
+    # Fill unfilled default paths
     [ -z "${py_paths[34]}" ] && find_python 34 && py_paths[34]=$(find_python 34)
     [ -z "${py_paths[35]}" ] && find_python 35 && py_paths[35]=$(find_python 35)
 
