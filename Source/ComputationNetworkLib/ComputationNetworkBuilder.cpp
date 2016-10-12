@@ -89,6 +89,8 @@ static shared_ptr<ComputationNode<ElemType>> CreateStandardNode(const std::wstri
     else if (nodeType == OperationNameOf(PerDimMeanVarDeNormalizationNode))     return New<PerDimMeanVarDeNormalizationNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(PassNode))                             return New<PassNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(PlusNode))                             return New<PlusNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(RandomSampleNode))                     return New<RandomSampleNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(RandomSampleInclusionFrequencyNode))   return New<RandomSampleInclusionFrequencyNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(ReconcileDynamicAxisNode))             return New<ReconcileDynamicAxisNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(ReciprocalNode))                       return New<ReciprocalNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(RectifiedLinearNode))                  return New<RectifiedLinearNode<ElemType>>(forward<_Types>(_Args)...);
@@ -796,6 +798,18 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::RowSt
     for (size_t i = 0; i < inputs.size(); i++)
         inputs[i] = pinputs[i]; // convert to ComputationNodeBasePtr
     return net.AddNodeToNetAndAttachInputs(New<RowStackNode<ElemType>>(net.GetDeviceId(), nodeName), { inputs });
+}
+
+template <class ElemType>
+shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::RandomSample(const ComputationNodePtr a, const std::wstring nodeName)
+{
+    return net.AddNodeToNetAndAttachInputs(New<RandomSampleNode<ElemType>>(net.GetDeviceId(), nodeName), { a });
+}
+
+template <class ElemType>
+shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::RandomSampleInclusionFrequency(const ComputationNodePtr a, const std::wstring nodeName)
+{
+    return net.AddNodeToNetAndAttachInputs(New<RandomSampleInclusionFrequencyNode<ElemType>>(net.GetDeviceId(), nodeName), { a });
 }
 
 #ifdef COMING_SOON
