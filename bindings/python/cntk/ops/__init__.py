@@ -1353,10 +1353,10 @@ def reduce_mean(x, axis=None, name=''):
         >>> # create 3x2 matrix in a sequence of length 1 in a batch of one sample
         >>> data = [[10, 20],[30, 40],[50, 60]]
 
-        >>>C.reduce_mean(data, 0).eval()
+        >>> C.reduce_mean(data, 0).eval()
         array([[ 30.,  40.]], dtype=float32)
 
-        >>>C.reduce_mean(data, 0).eval()
+        >>> C.reduce_mean(data, 0).eval()
         array([[ 15.],
                [ 35.],
                [ 55.]], dtype=float32)
@@ -1453,15 +1453,13 @@ def dropout(x, dropout_rate=0.0, name=''):
     inference.)
 
     Examples:
-        >>> # create 3x2 matrix in a sequence of length 1 in a batch of one sample
         >>> data = [[10, 20],[30, 40],[50, 60]]
-
-        >>> C.dropout(data, 0.5).eval()
+        >>> C.dropout(data, 0.5).eval() # doctest: +SKIP
         array([[  0.,  40.],
                [  0.,  80.],
                [  0.,   0.]], dtype=float32)
 
-        >>> C.dropout(reduce_data, 0.75).eval()
+        >>> C.dropout(reduce_data, 0.75).eval() # doctest: +SKIP
         array([[   0.,    0.],
                [   0.,  160.],
                [   0.,  240.]], dtype=float32)
@@ -1601,6 +1599,7 @@ def constant(shape=None, value=None, device=None, name=''):
         array([[ 1.,  2.],
                [ 3.,  4.],
                [ 5.,  6.]], dtype=float32)
+
     Args:
         shape (`tuple` or `int`, optional): the shape of the input tensor. If not provided, it will
          be inferred from ``value``.
