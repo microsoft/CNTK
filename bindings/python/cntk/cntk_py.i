@@ -11,7 +11,9 @@
 %include <attribute.i>
 %include <std_shared_ptr.i>
 
-%rename(output_internal) CNTK::Function::Output;
+%rename(_output) CNTK::Function::Output;
+%rename(_forward) CNTK::Function::Forward;
+%rename(_backward) CNTK::Function::Backward;
 %rename(sgd_learner) CNTK::SGDLearner;
 %rename(momentum_sgd_learner) CNTK::MomentumSGDLearner;
 %rename(gpu_device) CNTK::DeviceDescriptor::GPUDevice;
@@ -1191,7 +1193,7 @@ StreamInformation.__eq__ = lambda a,b: a.m_name==b.m_name and a.m_id==b.m_id and
 %pythoncode %{
 # in case of multiple outputs return the function, not the variable
 def get_output_and_keep_reference(self):
-    variable = self.output_internal()    
+    variable = self._output()    
     variable.owner = self
     return variable
 Function.output = lambda self:get_output_and_keep_reference(self)

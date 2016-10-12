@@ -289,13 +289,13 @@ void OutputFunctionInfo(FunctionPtr func)
     auto inputVariables = func->Arguments();
     fprintf(stderr, "Function %S: Input Variables (count=%lu)\n", func->Name().c_str(), inputVariables.size());
     for_each(inputVariables.begin(), inputVariables.end(), [](const Variable v) {
-        fprintf(stderr, "    name=%S, kind=%d\n", v.Name().c_str(), v.Kind());
+        fprintf(stderr, "    name=%S, kind=%d\n", v.Name().c_str(), static_cast<int>(v.Kind()));
     });
 
     auto outputVariables = func->Outputs();
     fprintf(stderr, "Function %S: Output Variables (count=%lu)\n", func->Name().c_str(), outputVariables.size());
     for_each(outputVariables.begin(), outputVariables.end(), [](const Variable v) {
-        fprintf(stderr, "    name=%S, kind=%d\n", v.Name().c_str(), v.Kind());
+        fprintf(stderr, "    name=%S, kind=%d\n", v.Name().c_str(), static_cast<int>(v.Kind()));
     });
 }
 

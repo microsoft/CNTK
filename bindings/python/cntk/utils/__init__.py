@@ -335,6 +335,9 @@ def sanitize_batch(var, batch, seq_starts=None, data_type=None, device=None):
     if isinstance(batch, Value):
         return batch
 
+    if device is None:
+        device = cntk_py.DeviceDescriptor.use_default_device()
+
     # Use the mask, if we have additional dynamic axes besides the batch axis
     use_mask = len(var.dynamic_axes())>1
     if use_mask:
@@ -677,37 +680,19 @@ def eval(op, arguments=None, seq_starts=None, precision=None, device=None, backw
     Returns: 
         mapping of output variables to their values.
     '''
-    if precision is not None:
-        precision = sanitize_precision(precision)
 
-    forward_in_var_map = sanitize_var_map(op.arguments(), arguments, seq_starts, precision, device)
+    forward_output = { v:None for v in self.outputs() }  # will be populated in Forward()
 
-    forward_out_var_map = {}
-    forward_retain = set()
-    for v in op.outputs():
-        forward_out_var_map[v] = None  # will be populated in Forward()
-        forward_retain.add(v)
-
-    state = op.forward(forward_in_var_map,
-                       forward_out_var_map, device, forward_retain)
-
-    forward_output = {}
-    for v in op.outputs():
-        forward_output[v] = value_to_seq(forward_out_var_map[v])
+    state = op.forward(arguments, forward_output, seq_starts, device)
 
     if backward_pass:
-        root_gradients = {}
-        for v, o in forward_output.items():
-            root_gradients[v] = ones_like(o, precision)
+        root_gradients = {(v, ones_like(o, precision)) for v,o in
+                forward_outptu.items()}
         root_gradients = sanitize_var_map(op.outputs(), root_gradients, None, precision, device)
 
-        backward_var_map = dict((var, None) for var in forward_in_var_map)
-
-        op.backward(state, root_gradients, backward_var_map)
-
-        backward_output = {}
-        for var, value in backward_var_map.items():
-            backward_output[var] = value_to_seq(value)
+        backward_output = op.backward(state, 
+                root_gradients,
+                forward_in_var_map.keys())
 
         return forward_output, backward_output
 
@@ -746,6 +731,9 @@ def typemap(f):
                 k.__class__ = typemap.get(k.__class__, k.__class__)
                 v.__class__ = typemap.get(v.__class__, v.__class__)
         else:
-            result.__class__ = typemap.get(result.__class__, result.__class__)
+            try:
+                result.__class__ = typemap.get(result.__class__, result.__class__)
+            except TypeError:
+                pass
         return result
     return wrapper

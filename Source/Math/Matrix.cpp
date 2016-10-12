@@ -1247,7 +1247,7 @@ void Matrix<ElemType>::AssignValuesOf(const Matrix<ElemType>& deepCopyFrom)
                     deepCopyFrom.m_CPUSparseMatrix->AssignColumnSliceToDense(tempCPUDenseMatrix, 0, deepCopyFrom.GetNumCols());
                     m_GPUMatrix->SetValue(deepCopyFrom.GetNumRows(), deepCopyFrom.GetNumCols(), this->GetDeviceId(), tempCPUDenseMatrix.Data());
                 },//{ m_GPUMatrix->SetValue(*deepCopyFrom.m_CPUSparseMatrix); },
-                { LogicError("AssignValuesOf: Assigning a GPUSparseMatrix to a GPUMatrix is not yet implemented."); });//{ m_GPUMatrix->SetValue(*deepCopyFrom.m_GPUSparseMatrix); });
+                { deepCopyFrom.m_GPUSparseMatrix->AssignColumnSliceToDense(*m_GPUMatrix, 0, deepCopyFrom.GetNumCols()); });
         },
         { 
             // Set CPUSparseMatrix from:
