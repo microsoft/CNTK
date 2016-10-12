@@ -3,14 +3,13 @@
 # for full license information.
 # ==============================================================================
 
-import os
 import sys
 import numbers
 import collections
 import numpy as np
 import scipy.sparse
 from .. import cntk_py
-from .persist import *
+from .persist import load_model, save_model
 from .swig_helper import typemap
 
 
@@ -67,8 +66,8 @@ def sparse_to_str(data):
 
 def tensors_to_text_format(sample_idx, alias_tensor_map):
     '''
-    Converts a list of NumPy arrays representing tensors of inputs into a format that
-    is readable by `CNTKTextReader`.
+    Converts a list of NumPy arrays representing tensors of inputs into a
+    format that is readable by `CNTKTextReader`.
 
     Args:
         sample_idx (int): number of current sample
@@ -168,7 +167,7 @@ def get_temp_filename(directory=None):
         be created
 
     Returns:
-        Filename of the temporary file 
+        Filename of the temporary file
     '''
     import tempfile
 
@@ -184,7 +183,8 @@ def get_temp_filename(directory=None):
 
 def sanitize_shape(shape):
     """
-    If shape is scalar create a tuple out of it and reverse it as cntk uses column major
+    If shape is scalar, it creates a tuple out of it and reverse it as cntk uses
+    column major.
     """
     if np.isscalar(shape):
         shape = (shape,)
@@ -193,11 +193,12 @@ def sanitize_shape(shape):
 
 def sanitize_input(arg, fallback_dtype=np.float32):
     """
-    Convert to Variable or Constant so that it can be passed as Variable to the CNTK
-    operators. 
+    Convert to Variable or Constant so that it can be passed as Variable to the
+    CNTK operators.
      * If `arg` is a NumPy array and its type is neither `np.float32` nor
-    `np.float64`, it sets it to `np.float32`. 
-     * If `arg` is an op, it is assumed that it has only one output, which will be returned.
+      `np.float64`, it sets it to `np.float32`.
+     * If `arg` is an op, it is assumed that it has only one output, which will
+       be returned.
 
     Args:
         arg (number, NumPy array, `Variable`, or `Function`): input
@@ -211,7 +212,8 @@ def sanitize_input(arg, fallback_dtype=np.float32):
     from cntk.ops import constant
 
     # is it a Variable?
-    if isinstance(arg, (Constant, Variable, cntk_py.Constant, cntk_py.Variable)):
+    if isinstance(arg,
+                  (Constant, Variable, cntk_py.Constant, cntk_py.Variable)):
         return arg
 
     # or a Function?
@@ -234,8 +236,9 @@ def sanitize_input(arg, fallback_dtype=np.float32):
 
 def get_data_type(*args):
     """
-    Calculates the highest precision numpy datatype of the provided parameters. If
-    the parameter is a Function instance, it calculates it based on its inputs.
+    Calculates the highest precision numpy datatype of the provided parameters.
+    If the parameter is a Function instance, it calculates it based on its
+    inputs.
 
     Args:
         args (number, `list`, NumPy array, `Variable`, or `Function`): input
@@ -248,7 +251,8 @@ def get_data_type(*args):
         args = [args]
 
     for arg in args:
-        if isinstance(arg, (cntk_py.Variable, cntk_py.Value, cntk_py.NDArrayView)):
+        if isinstance(arg,
+                      (cntk_py.Variable, cntk_py.Value, cntk_py.NDArrayView)):
             if cntk_py.DataType_Double == arg.get_data_type():
                 dtypes.add(np.float64)
             else:
@@ -285,8 +289,8 @@ def get_data_type(*args):
 def pad_to_dense(batch):
     """Appends the minimal required amount of zeroes at the end of each sample
     in the batch so that it becomes rectangular. `batch` is assumed to be
-    row-major: first index is batch item, second is sequence item, then comes that
-    actual sample. The sequence length is assumed to be the only varying
+    row-major: first index is batch item, second is sequence item, then comes
+    that actual sample. The sequence length is assumed to be the only varying
     dimension.
 
     Args:
@@ -310,16 +314,17 @@ def pad_to_dense(batch):
                  (data_point.shape), dtype=data_point.dtype)
     for idx, seq in enumerate(batch):
         if seq[0].shape != data_point.shape:
-            raise ValueError('shape mismatch: expected %s but got '
-                             ' %s' % (str(data_point.shape), str(seq[0].shape)))
+            raise ValueError('shape mismatch: expected %s but got %s'
+                             % (str(data_point.shape), str(seq[0].shape)))
         Z[idx, :len(seq)] += seq
     return Z
 
 
 def sanitize_batch(var, batch, seq_starts=None, data_type=None, device=None):
     """
-    Convert to `:cntk:Value` with `data_type`. If the samples in `batch` have different
-    sequence lengths, pad them to max sequence length and create a mask.
+    Convert to `:cntk:Value` with `data_type`. If the samples in `batch` have
+    different sequence lengths, pad them to max sequence length and create a
+    mask.
 
     Args:
         var (`:class:Variable`): variable node for which the `batch` is
@@ -342,7 +347,7 @@ def sanitize_batch(var, batch, seq_starts=None, data_type=None, device=None):
         device = cntk_py.DeviceDescriptor.use_default_device()
 
     # Use the mask, if we have additional dynamic axes besides the batch axis
-    use_mask = len(var.dynamic_axes())>1
+    use_mask = len(var.dynamic_axes()) > 1
     if use_mask:
         seq_lens = [len(seq) for seq in batch]
 
@@ -350,7 +355,7 @@ def sanitize_batch(var, batch, seq_starts=None, data_type=None, device=None):
             num_seq = len(batch)
         except TypeError:
             raise ValueError('expected an object of type Value or a NumPy ' +
-                    'array and not "%s"' % type(batch))
+                             'array and not "%s"' % type(batch))
 
         from cntk.cntk_py import NDMask
         mask = NDMask((max(seq_lens), num_seq), device)
@@ -359,7 +364,8 @@ def sanitize_batch(var, batch, seq_starts=None, data_type=None, device=None):
                 mask.mark_sequence_begin((0, idx))
             elif seq_starts[idx]:
                 mask.mark_sequence_begin((0, idx))
-            mask.invalidate_section((seq_len, idx), (cntk_py.InferredDimension, 1))
+            mask.invalidate_section((seq_len, idx),
+                                    (cntk_py.InferredDimension, 1))
 
         # Then we pad the batch to rectangular shape
         if isinstance(batch, list):
@@ -389,6 +395,7 @@ def sanitize_batch(var, batch, seq_starts=None, data_type=None, device=None):
 
     return value
 
+
 def sanitize_function(arg):
     '''
     Tries to retrieve a Function from the argument or throws an exception if
@@ -398,11 +405,13 @@ def sanitize_function(arg):
         arg = arg.owner
 
     if not isinstance(arg, cntk_py.Function):
-        raise "Object of type %s cannot be cast to Variable"%str(type(arg))
+        raise "Object of type %s cannot be cast to Variable" % str(type(arg))
 
     return arg
 
-def sanitize_var_map(op_arguments, arguments, seq_starts=None, precision=None, device=None, add_batch_axis=False):
+
+def sanitize_var_map(op_arguments, arguments, seq_starts=None, precision=None,
+                     device=None, add_batch_axis=False):
     '''
     Sanitizes a dictionary of `Variable`s to input data such that it can be
     handed off to the `Forward` method.
@@ -411,16 +420,16 @@ def sanitize_var_map(op_arguments, arguments, seq_starts=None, precision=None, d
         op_arguments (`:class:Function`): arguments of the root function. In
          forward pass it is typically `op.arguments()`, in backward mode it is
          `op.outputs()`
-        arguments (`dict` or `list`): 
+        arguments (`dict` or `list`):
           * map from input variables to the data
-          * list of inputs in the order that the function expects or 
+          * list of inputs in the order that the function expects or
           Data should be either NumPy arrays or a `:class:cntk.io.MinibatchData` instance
         seq_starts (`list` of `bool`s or `None`): if `None`, every sequence is
          treated as a new sequence. Otherwise, it is interpreted as a list of
          Booleans that tell whether a sequence is a new sequence (`True`) or a
          continuation of the previous one (`False`)
         precision (`str` or `np.float32` or `np.float64`): if string it can be
-         one of 'float' 'float32, 'double', 'float64', or `None` 
+         one of 'float' 'float32, 'double', 'float64', or `None`
         device (`DeviceDescriptor` or `None`): CNTK DeviceDescriptor
         add_batch_axis (`bool`): data in `arguments` are single instances and a batch axis has to be added
 
@@ -430,14 +439,15 @@ def sanitize_var_map(op_arguments, arguments, seq_starts=None, precision=None, d
     from ..cntk_py import Value
     from ..io import MinibatchData
 
-    if arguments is None or isinstance(arguments, (dict, list, tuple)) and len(arguments)==0:
+    if arguments is None or isinstance(arguments, (dict, list, tuple)) and len(arguments) == 0:
         if len(op_arguments) > 0:
-            raise ValueError('function expects %i arguments'%len(op_arguments))
+            raise ValueError('function expects %i arguments' %
+                             len(op_arguments))
         return {}
 
     if len(arguments) < len(op_arguments):
-        raise ValueError('your graph has %i inputs, but you specified %i'%\
-                (len(op_arguments), len(arguments)))
+        raise ValueError('your graph has %i inputs, but you specified %i' %
+                         (len(op_arguments), len(arguments)))
 
     if isinstance(arguments, (tuple, list)):
         arguments = dict(zip(op_arguments, arguments))
@@ -448,21 +458,22 @@ def sanitize_var_map(op_arguments, arguments, seq_starts=None, precision=None, d
 
         var_name_map = dict((var.name(), var) for var in op_arguments)
     else:
-        raise ValueError('type "%s" is not supported'%type(arguments))
+        raise ValueError('type "%s" is not supported' % type(arguments))
 
     sample_sizes = [len(v) for v in arguments.values()]
     if len(set(sample_sizes)) != 1:
-        raise ValueError('not all inputs have the same number of samples: ' +\
-                ", ".join(sample_sizes))
+        raise ValueError('not all inputs have the same number of samples: ' +
+                         ", ".join(sample_sizes))
 
     if seq_starts is not None:
         if not isinstance(seq_starts, (tuple, list)):
-            raise ValueError('if you specify seq_starts, it needs to be a list')
+            raise ValueError(
+                'if you specify seq_starts, it needs to be a list')
 
         sample_size = sample_sizes.pop()
         if len(seq_starts) != sample_size:
             raise ValueError('you have %i samples, but seq_starts has only %i' +
-                    'elements'%(sample_sizes, len(seq_starts)))
+                             'elements' % (sample_sizes, len(seq_starts)))
 
     if precision is not None:
         precision = sanitize_precision(precision)
@@ -471,26 +482,29 @@ def sanitize_var_map(op_arguments, arguments, seq_starts=None, precision=None, d
     for var, batch in arguments.items():
         if isinstance(var, str):
             if name_counter[var] == 0:
-                raise ValueError('variable with name "%s" does not exist in the network. Available variable names: %s'%(var, ", ".join(var_name_map)))
+                raise ValueError('variable with name "%s" does not exist in the network. Available variable names: %s' % (
+                    var, ", ".join(var_name_map)))
             elif name_counter[var] > 1:
-                raise ValueError('node name "%s" is not unique'%var)
+                raise ValueError('node name "%s" is not unique' % var)
 
             try:
                 var = var_name_map[var]
             except KeyError:
-                raise KeyError("no input with the name '%s' was found.  Available: %s"%(var, ", ".join(var_name_map.keys())))
+                raise KeyError("no input with the name '%s' was found.  Available: %s" % (
+                    var, ", ".join(var_name_map.keys())))
 
         if isinstance(batch, MinibatchData):
             batch = batch.data()
-        elif not isinstance(batch, Value):                
+        elif not isinstance(batch, Value):
             if add_batch_axis:
                 batch = [batch]
             if isinstance(batch, np.ndarray):
                 if batch.dtype == np.int:
                     batch = batch.astype(np.float32)
-                if batch.dtype not in (np.float32, np.float64):                        
+                if batch.dtype not in (np.float32, np.float64):
                     raise ValueError('only float32 and float64 are supported')
-                batch = sanitize_batch(var, batch, seq_starts, precision, device)
+                batch = sanitize_batch(
+                    var, batch, seq_starts, precision, device)
             else:
                 if is_tensor(batch):
                     if precision is None:
@@ -498,7 +512,8 @@ def sanitize_var_map(op_arguments, arguments, seq_starts=None, precision=None, d
                     batch = np.asarray(batch, dtype=precision)
                     batch = create_Value_from_NumPy(batch, device)
                 else:
-                    batch = sanitize_batch(var, batch, seq_starts, precision, device)
+                    batch = sanitize_batch(
+                        var, batch, seq_starts, precision, device)
 
         var_map[var] = batch
 
@@ -573,7 +588,7 @@ def sanitize_axis(rank, axis):
 
     Args:
         rank (`int`): rank of the tensor on which `axis` is to be used
-        axis (`:class:Axis` or `int` or `None`): the axis to be used. 
+        axis (`:class:Axis` or `int` or `None`): the axis to be used.
           * `:class:Axis`: use axis instance directly (will convert row- to
              col-major in case of static axis.
           * `int`: if positive, use it as static axis. If negative, count from
@@ -583,7 +598,7 @@ def sanitize_axis(rank, axis):
     if axis is None:
         return cntk_py.Axis.all_static_axes()
     elif isinstance(axis, numbers.Integral):
-        if axis<0:
+        if axis < 0:
             return cntk_py.Axis(-axis - 1)
         else:
             return cntk_py.Axis(rank - 1 - axis)
@@ -607,7 +622,7 @@ def get_train_loss(trainer):
     Fetch the train loss from the last minibatch and copy it to the CPU in case it is on the GPU.
     Args:
         trainer (:class:`Trainer`): the trainer used.
-    Returns: 
+    Returns:
         the loss value
     '''
     import copy
@@ -620,7 +635,7 @@ def get_train_eval_criterion(trainer):
     Fetch the train evaluation criterion (e.g., classification error) from the last minibatch and copy it to the CPU in case it is on the GPU.
     Args:
         trainer (:class:`Trainer`): the trainer used.
-    Returns: 
+    Returns:
         the criterion value
     '''
     import copy
@@ -639,6 +654,7 @@ def ensure_dev(ndav, dev):
 
     return ndav
 
+
 def value_to_seq(value):
     '''
     Convert a Value to a sequence of NumPy arrays that have their masked
@@ -651,23 +667,25 @@ def value_to_seq(value):
         a list of NumPy arrays
     '''
 
-    np_data = value.data().to_numpy()         
+    np_data = value.data().to_numpy()
     if value.mask():
         mask = value.mask().to_numpy()
-        np_data = [seq[mask[idx] != cntk_py.MaskKind_Invalid] for idx, seq in enumerate(np_data)]
+        np_data = [seq[mask[idx] != cntk_py.MaskKind_Invalid]
+                   for idx, seq in enumerate(np_data)]
 
     return np_data
+
 
 def eval(op, arguments=None, seq_starts=None, precision=None, device=None, backward_pass=False):
     '''
     It evaluates `op` on the data provided by the reader. This is useful
-    mainly to explore the operators and for convenient unit testing. 
+    mainly to explore the operators and for convenient unit testing.
 
     Args:
         op (:class:`Function`): operation to evaluate
-        arguments (`dict` or `list`): 
+        arguments (`dict` or `list`):
           * map from input variables to the data
-          * list of inputs in the order that the function expects or 
+          * list of inputs in the order that the function expects or
           Data should be either NumPy arrays or a `:class:cntk.io.MinibatchData` instance
         seq_starts (`list` of `bool`s or `None`): if `None`, every sequence is
          treated as a new sequence. Otherwise, it is interpreted as a list of
@@ -678,18 +696,18 @@ def eval(op, arguments=None, seq_starts=None, precision=None, device=None, backw
          (costly)
         device (`:class:cntk.DeviceDescriptor`): the device the descriptor,
          whether it is CPU or GPU (and which one)
-        backward_pass (`bool`, optional): whether a backward pass is performed 
+        backward_pass (`bool`, optional): whether a backward pass is performed
 
-    Returns: 
+    Returns:
         mapping of output variables to their values.
     '''
 
     state, forward_output = op.forward(arguments, op.outputs(), seq_starts,
-            device)
+                                       device=device)
 
     if backward_pass:
-        root_gradients = {v:ones_like(o, precision) for v,o in
-                forward_output.items()}
+        root_gradients = {v: ones_like(o, precision) for v, o in
+                          forward_output.items()}
 
         backward_output = op.backward(state, root_gradients, arguments)
 
@@ -697,5 +715,3 @@ def eval(op, arguments=None, seq_starts=None, precision=None, device=None, backw
 
     else:
         return forward_output, None
-
-
