@@ -1,3 +1,7 @@
+//
+// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
+//
 #include "CNTKLibrary.h"
 #include <functional>
 #include "Common.h"
@@ -32,12 +36,14 @@ void TestFeedForwardNetworkCreation(const DeviceDescriptor& device, bool testSav
     const size_t numHiddenLayers = 6;
     const size_t hiddenLayersDim = 2048;
 
-    auto inputVar = InputVariable({ inputDim }, DataType::Float, L"features");
+    auto inputVarName = L"features";
+    auto inputVar = InputVariable({ inputDim }, DataType::Float, inputVarName);
     auto classifierOutput = FullyConnectedFeedForwardClassifierNet(inputVar, numOutputClasses, hiddenLayersDim, numHiddenLayers, device, std::bind(Sigmoid, _1, L""), L"classifierOutput");
 
-    auto labelsVar = InputVariable({ numOutputClasses }, DataType::Float, L"Labels");
-    auto trainingLoss = CNTK::CrossEntropyWithSoftmax(classifierOutput, labelsVar, L"LossFunction");
-    auto prediction = CNTK::ClassificationError(classifierOutput, labelsVar, L"ClassificationError");
+    auto labelsVarName = L"Labels";
+    auto labelsVar = InputVariable({ numOutputClasses }, DataType::Float, labelsVarName);
+    auto trainingLoss = ReduceSum(CNTK::CrossEntropyWithSoftmax(classifierOutput, labelsVar), L"LossFunction");
+    auto prediction = ReduceSum(CNTK::ClassificationError(classifierOutput, labelsVar), L"ClassificationError");
 
     auto ffNet = CNTK::Combine({ trainingLoss, prediction, classifierOutput }, L"ClassifierModel");
 
@@ -58,6 +64,10 @@ void TestFeedForwardNetworkCreation(const DeviceDescriptor& device, bool testSav
         Variable predictionVar = prediction;
 
         SaveAndReloadModel<float>(ffNet, { &inputVar, &labelsVar, &trainingLossVar, &predictionVar, &classifierOutputVar }, device);
+
+        // Make sure that the names of the input variables were properly restored
+        if ((inputVar.Name() != inputVarName) || (labelsVar.Name() != labelsVarName))
+            throw std::runtime_error("One or more input variable names were not properly restored after save and load");
 
         classifierOutput = classifierOutputVar;
         trainingLoss = trainingLossVar;
@@ -112,14 +122,23 @@ void TestTimesAndPlus(size_t inputDim,
                       bool testSaveAndReLoad,
                       unsigned int seed = 1)
 {
-    Parameter timesParam(MakeSharedObject<NDArrayView>((ElementType)0.5, NDShape({ outputDim, inputDim }), device), L"timesParameters");
-    Parameter plusParam(MakeSharedObject<NDArrayView>((ElementType)1.2, std::initializer_list<size_t>({ outputDim }), device), L"plusParameters");
+    auto timesParamName = L"timesParameters";
+    auto plusParamName = L"plusParameters";
+    Parameter timesParam(MakeSharedObject<NDArrayView>((ElementType)0.5, NDShape({ outputDim, inputDim }), device), timesParamName);
+    Parameter plusParam(MakeSharedObject<NDArrayView>((ElementType)1.2, std::initializer_list<size_t>({ outputDim }), device), plusParamName);
 
-    auto inputVar = InputVariable({ inputDim }, AsDataType<ElementType>(), L"input");
+    auto inputVarName = L"input";
+    auto inputVar = InputVariable({ inputDim }, AsDataType<ElementType>(), inputVarName);
     auto timesAndPlusFunc = Plus(plusParam, Times(timesParam, inputVar));
 
     if (testSaveAndReLoad)
+    {
         SaveAndReloadModel<ElementType>(timesAndPlusFunc, { &inputVar, &timesParam, &plusParam }, device);
+
+        // Make sure that the names of the input variables were properly restored
+        if ((inputVar.Name() != inputVarName) || (timesParam.Name() != timesParamName) || (plusParam.Name() != plusParamName))
+            throw std::runtime_error("One or more input variable names were not properly restored after save and load");
+    }
 
     srand(seed);
     for (size_t iterIdx = 0; iterIdx < numIterations; ++iterIdx)
@@ -245,13 +264,15 @@ void TestTimesAndPlus(size_t inputDim,
 void FeedForwardTests()
 {
     TestTimesAndPlus<double>(4, 2, 5, DeviceDescriptor::CPUDevice(), 3, true, true, true);
-#ifndef CPUONLY
-    TestTimesAndPlus<float>(145, 32, 2, DeviceDescriptor::GPUDevice(0), 10, true, false, true);
-    TestTimesAndPlus<double>(145, 15, 200, DeviceDescriptor::GPUDevice(0), 21, false, false, false);
+    if (IsGPUAvailable())
+    {
+        TestTimesAndPlus<float>(145, 32, 2, DeviceDescriptor::GPUDevice(0), 10, true, false, true);
+        TestTimesAndPlus<double>(145, 15, 200, DeviceDescriptor::GPUDevice(0), 21, false, false, false);
 
-    TestFeedForwardNetworkCreation(DeviceDescriptor::GPUDevice(0), true);
-    TestFeedForwardNetworkCreation(DeviceDescriptor::GPUDevice(0), false);
-#endif
+        TestFeedForwardNetworkCreation(DeviceDescriptor::GPUDevice(0), true);
+        TestFeedForwardNetworkCreation(DeviceDescriptor::GPUDevice(0), false);
+    }
+
     TestFeedForwardNetworkCreation(DeviceDescriptor::CPUDevice(), false);
     TestFeedForwardNetworkCreation(DeviceDescriptor::CPUDevice(), true);
 }

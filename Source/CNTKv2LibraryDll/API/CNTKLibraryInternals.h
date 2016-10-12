@@ -186,9 +186,6 @@ namespace CNTK
 
     namespace Internal
     {
-        // Create a new Function instance which just passes through specified list of 'operands'.
-        CNTK_API FunctionPtr Combine(const std::vector<Variable>& operands, const std::wstring& name = L"");
-
         CNTK_API FunctionPtr IsWithin(const Variable& operand, int offset, const std::wstring& name = L"");
         CNTK_API FunctionPtr PackedIndex(const Variable& operand, const Variable& index, const std::wstring& name = L"");
         CNTK_API FunctionPtr GatherPacked(const Variable& operand, const Variable& packedIndex, const std::wstring& name = L"");
@@ -202,10 +199,15 @@ namespace CNTK
 
         CNTK_API size_t NewUniqueId();
 
+        // Internal hooks for testing and higher-level bindings
+        // These should not be directly called by C++ API users
         CNTK_API void EnableReversingTensorShapesInErrorMessages();
         bool IsReversingTensorShapesInErrorMessagesEnabled();
 
         CNTK_API void AlwaysAllowSettingDefaultDevice();
         bool IsSettingDefaultDeviceAlwaysAllowed();
+
+        CNTK_API void DisableAutomaticUnpackingOfPackedValues();
+        bool IsAutomaticUnpackingOfPackedValuesDisabled();
     }
 }

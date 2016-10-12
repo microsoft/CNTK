@@ -98,7 +98,6 @@ struct Minibatch
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
 // Main Reader interface. The border interface between the CNTK and reader libraries.
-// TODO: Expect to change in a little bit: stream matrices provided by the network as input.
 //////////////////////////////////////////////////////////////////////////////////////////////////
 class Reader
 {
@@ -108,6 +107,12 @@ public:
 
     // Starts a new epoch with the provided configuration
     virtual void StartEpoch(const EpochConfiguration& config, const std::map<std::wstring, int>& inputDescriptions) = 0;
+
+    // Returns current position in the global timeline. The returned value is in samples.
+    // TODO: Currently in case of sequence to sequence training, 
+    // TODO: the logical sequence size in samples = max(constitutuing sequences among all streams)
+    // TODO: This will change in the future.
+    virtual size_t GetCurrentSamplePosition() = 0;
 
     // Reads a minibatch that contains data across all streams.
     virtual Minibatch ReadMinibatch() = 0;

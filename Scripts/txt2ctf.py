@@ -90,22 +90,24 @@ if __name__ == "__main__":
 #####################################################################################################
 try:
     import StringIO
+    stringio = StringIO.StringIO
 except ImportError:
     from io import StringIO
+    stringio = StringIO
 try:
     import pytest
 except ImportError:
     pass
 
 def test_simpleSanityCheck():
-    dictionary1 = StringIO.StringIO("hello\nmy\nworld\nof\nnothing\n")
-    dictionary2 = StringIO.StringIO("let\nme\nbe\nclear\nabout\nit\n")
-    input = StringIO.StringIO("hello my\tclear about\nworld of\tit let clear\n")
-    output = StringIO.StringIO()
+    dictionary1 = stringio("hello\nmy\nworld\nof\nnothing\n")
+    dictionary2 = stringio("let\nme\nbe\nclear\nabout\nit\n")
+    input = stringio("hello my\tclear about\nworld of\tit let clear\n")
+    output = stringio()
 
     convert([dictionary1, dictionary2], [input], output, None, False)
 
-    expectedOutput = StringIO.StringIO()
+    expectedOutput = stringio()
     expectedOutput.write("0\t|S0 0:1\t|S1 3:1\n")
     expectedOutput.write("0\t|S0 1:1\t|S1 4:1\n")
     expectedOutput.write("1\t|S0 2:1\t|S1 5:1\n")
@@ -115,10 +117,10 @@ def test_simpleSanityCheck():
     assert expectedOutput.getvalue() == output.getvalue()
 
 def test_nonExistingWord():
-    dictionary1 = StringIO.StringIO("hello\nmy\nworld\nof\nnothing\n")
-    input = StringIO.StringIO("hello my\nworld of nonexistent\n")
-    output = StringIO.StringIO()
+    dictionary1 = stringio("hello\nmy\nworld\nof\nnothing\n")
+    input = stringio("hello my\nworld of nonexistent\n")
+    output = stringio()
 
     with pytest.raises(Exception) as info:
         convert([dictionary1], [input], output, None, False)
-    assert info.value.message == "Token 'nonexistent' cannot be found in the dictionary for stream 0"
+    assert str(info.value) == "Token 'nonexistent' cannot be found in the dictionary for stream 0"

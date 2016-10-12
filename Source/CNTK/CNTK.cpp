@@ -550,9 +550,14 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
     // parallel training
     shared_ptr<Microsoft::MSR::CNTK::MPIWrapper> mpi;
     auto ensureMPIWrapperCleanup = MakeScopeExit(&MPIWrapper::DeleteInstance);
-    bool paralleltrain = config(L"parallelTrain", false);
+    // when running under MPI with more than one node, use 'true' as the default value for parallelTrain,
+    // 'false' otherwise.
+    bool paralleltrain = config(L"parallelTrain", (MPIWrapper::GetTotalNumberOfMPINodes() > 1));
+
     if (paralleltrain)
+    {
         mpi = MPIWrapper::GetInstance(true /*create*/);
+    }  
 
     g_shareNodeValueMatrices = config(L"shareNodeValueMatrices", false);
 
@@ -633,11 +638,9 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
 // main() for CNTK config language (this is the current way of using CNTK)
 // ---------------------------------------------------------------------------
 
-// helper to print a little banner
-// CNTK 1.7.1 (fseide/samplebs hash, Sep 3 2016 00:17:33) on FSEIDE-GPU at 2016/09/03 00:25:30
 static void PrintBanner(int argc, wchar_t* argv[], const string& timestamp)
 {
-    fprintf(stderr, "CNTK 1.7.1 (");
+    fprintf(stderr, "CNTK 1.7.2+ (");
 #ifdef _GIT_EXIST
     fprintf(stderr, "%s %.6s, ", _BUILDBRANCH_, _BUILDSHA1_);
 #endif
@@ -686,9 +689,15 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
     // The top-level 'parallelTrain' is a bool, not to be confused with the parallelTrain block inside SGD.
     shared_ptr<Microsoft::MSR::CNTK::MPIWrapper> mpi;
     auto ensureMPIWrapperCleanup = MakeScopeExit(&MPIWrapper::DeleteInstance);
-    bool paralleltrain = config(L"parallelTrain", "false");
+    
+    // when running under MPI with more than one node, use 'true' as the default value for parallelTrain,
+    // 'false' otherwise.
+    bool paralleltrain = config(L"parallelTrain", (MPIWrapper::GetTotalNumberOfMPINodes() > 1));
+
     if (paralleltrain)
-        mpi = MPIWrapper::GetInstance(true /*create*/);
+    {
+       mpi = MPIWrapper::GetInstance(true /*create*/);
+    } 
 
     g_shareNodeValueMatrices = config(L"shareNodeValueMatrices", false);
 
