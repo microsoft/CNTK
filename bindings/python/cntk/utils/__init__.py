@@ -9,8 +9,9 @@ import numbers
 import collections
 import numpy as np
 import scipy.sparse
-from cntk import cntk_py
+from .. import cntk_py
 from .persist import *
+from .swig_helper import typemap
 
 
 def sanitize_precision(precision):
@@ -256,7 +257,7 @@ def get_data_type(*args):
             if arg.dtype not in (np.float32, np.float64):
                 raise ValueError(
                     'NumPy type "%s" is not supported' % arg.dtype)
-                dtypes.add(arg.dtype)
+            dtypes.add(arg.dtype.type)
         elif isinstance(arg, cntk_py.Function):
             var_outputs = arg.outputs()
             if len(var_outputs) > 1:
@@ -275,8 +276,10 @@ def get_data_type(*args):
 
     if np.float64 in dtypes:
         return np.float64
-    else:
+    elif np.float32 in dtypes:
         return np.float32
+    else:
+        raise ValueError('could not determine data type')
 
 
 def pad_to_dense(batch):
@@ -368,7 +371,7 @@ def sanitize_batch(var, batch, seq_starts=None, data_type=None, device=None):
     # If it still is not an NumPy array, try brute force...
     if not isinstance(batch, np.ndarray):
         if data_type is None:
-            data_type = np.float32
+            data_type = get_data_type(var)
         batch = np.asarray(batch, dtype=data_type)
 
     # Maybe a NumPy dtype was given, but with lower accuracy than float32, then
@@ -681,18 +684,14 @@ def eval(op, arguments=None, seq_starts=None, precision=None, device=None, backw
         mapping of output variables to their values.
     '''
 
-    forward_output = { v:None for v in op.outputs() }  # will be populated in Forward()
-
-    state = op.forward(arguments, forward_output, seq_starts, device)
+    state, forward_output = op.forward(arguments, op.outputs(), seq_starts,
+            device)
 
     if backward_pass:
-        root_gradients = {(v, ones_like(o, precision)) for v,o in
-                forward_outptu.items()}
-        root_gradients = sanitize_var_map(op.outputs(), root_gradients, None, precision, device)
+        root_gradients = {v:ones_like(o, precision) for v,o in
+                forward_output.items()}
 
-        backward_output = op.backward(state, 
-                root_gradients,
-                forward_in_var_map.keys())
+        backward_output = op.backward(state, root_gradients, arguments)
 
         return forward_output, backward_output
 
@@ -700,40 +699,3 @@ def eval(op, arguments=None, seq_starts=None, precision=None, device=None, backw
         return forward_output, None
 
 
-def typemap(f):
-    '''
-    Upcasts Swig types to cntk types that inherit from Swig.
-    '''
-            
-    from functools import wraps
-    @wraps(f)
-    def wrapper(*args, **kwds):
-        from cntk.ops.variables import Variable, Parameter, Constant
-        from cntk.ops.functions import Function
-        from cntk.learner import Learner
-        from cntk.io import MinibatchSource, MinibatchData, StreamConfiguration
-        typemap = { 
-                cntk_py.Variable: Variable,
-                cntk_py.Parameter: Parameter,
-                cntk_py.Constant: Constant,
-                cntk_py.Function: Function, 
-                cntk_py.Learner: Learner, 
-                cntk_py.MinibatchSource: MinibatchSource,
-                cntk_py.MinibatchData: MinibatchData,
-                cntk_py.StreamConfiguration: StreamConfiguration, 
-                }
-        result = f(*args, **kwds)
-        if isinstance(result, (tuple, list, set)):
-            for r in result:
-                r.__class__ = typemap.get(r.__class__, r.__class__)
-        elif isinstance(result, dict):
-            for k,v in result.items():
-                k.__class__ = typemap.get(k.__class__, k.__class__)
-                v.__class__ = typemap.get(v.__class__, v.__class__)
-        else:
-            try:
-                result.__class__ = typemap.get(result.__class__, result.__class__)
-            except TypeError:
-                pass
-        return result
-    return wrapper

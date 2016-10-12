@@ -232,7 +232,7 @@ class Parameter(TensorOpsMixin, cntk_py.Parameter):
         Returns:
             `NDArrayView`: the current value of the parameter.
         '''
-        return super(Constant, self).value()
+        return super(Parameter, self).value()
 
 class Constant(TensorOpsMixin, cntk_py.Constant):
     '''

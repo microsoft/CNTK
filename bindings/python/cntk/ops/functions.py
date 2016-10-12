@@ -1,5 +1,5 @@
 from cntk import cntk_py
-from ..utils import typemap
+from ..utils import typemap, sanitize_var_map, value_to_seq
 
 class Function(cntk_py.Function):
     '''
@@ -41,42 +41,6 @@ class Function(cntk_py.Function):
         return super(Function, self).attributes()
 
     @typemap
-    def backward(self, state, root_gradients, variables):
-        '''
-        Backpropagates supplied `root_gradients` for one or more of the output
-        variables of the Function, to calculate gradients with respect to
-        `variables`.
-
-        Args:
-            state (`BackPropState`): state obtained from a previous call to the
-             func:`cntk.ops.Function.forward` method on this Function for the
-             computation that this gradient backpropagation corresponds to. 
-            root_gradients (`dict`): the gradients that will be backpropagated
-            variables (`set`): a list of input variables with respect to which
-             the gradients have to be computed.
-
-        Returns:
-            `dict`: mapping of `variables` to NumPy arrays
-        '''
-        if device is None:
-            from cntk import DeviceDescriptor
-            device = DeviceDescriptor.use_default_device()
-
-        from ..utils import sanitize_var_map
-        root_gradients = sanitize_var_map(self.outputs(), root_gradients,
-                None, None, device)
-
-        backward_var_map = dict((var, None) for var in forward_in_var_map)
-
-        self._backward(state, root_gradients, var_gradients)
-
-        backward_output = {}
-        for var, value in backward_var_map.items():
-            backward_output[var] = value_to_seq(value)
-
-        return backward_output
-
-    @typemap
     def clone(self, parameterCloneMethod='clone', replacements=None):
         '''
         Clones the function. The parameters of the Function are either cloned, shared or frozen as specified by the 
@@ -109,7 +73,6 @@ class Function(cntk_py.Function):
         '''
         return super(Function, self).constants()
 
-    @typemap
     def eval(self, arguments=None, seq_starts=None, device=None):
         '''
         Evaluate the node using the specified `arguments` as input.
@@ -131,17 +94,13 @@ class Function(cntk_py.Function):
         Returns:
             `bool`: `True` if updates have been performed
         '''
-        if len(self.outputs()) != 1:
-            raise ValueError(
-                'only operators with exactly one output can be evaluated')
+        _, output_map = self.forward(arguments or {}, self.outputs(),
+                seq_starts, device)
 
-        if arguments is None:
-            arguments = {}
-
-        outputs = { v: None for v in self.outputs()}
-        self.forward(arguments, outputs, seq_starts, device)
-
-        return outputs
+        if len(output_map)>1:
+            return output_map
+        else:
+            return list(output_map.values())[0]
     
 
     @typemap
@@ -154,9 +113,7 @@ class Function(cntk_py.Function):
 
         Args:
             arguments (`dict`): dictionary of bindings for the input variables
-            outputs (`dict`): dictionary of bindings for (a subset of) the
-             output variables to `None`. After the call the values will be
-             populated as NumPy arrays.
+            outputs (`list` or `tuple`): outputs to fetch values for.
             seq_starts (`list` of `bool`s or `None`): if `None`, every sequence is
              treated as a new sequence. Otherwise, it is interpreted as a list of
              Booleans that tell whether a sequence is a new sequence (`True`) or a
@@ -168,27 +125,57 @@ class Function(cntk_py.Function):
              for which gradients will be specified in a subsequent backward call
              for backpropagation.
 
-        Returns:
-            a handle needed during backpropagation of gradients from the
-             `forward_retain` outputs of the function to any of the inputs of the
-             function, in a subsequent backward call. 
+        Returns: a tuple (`BackpropState`, `map` of outputs to NumPy arrays).
+            The BackpropState is a handle taken by :func:`backward`. 
         '''
         if device is None:
             from cntk import DeviceDescriptor
             device = DeviceDescriptor.use_default_device()
 
-        from ..utils import sanitize_var_map
         in_var_map = sanitize_var_map(self.arguments(), arguments,
                 seq_starts, None, device)
 
         forward_retain = set(forward_retain or self.outputs())
+        output_map = {v:None for v in forward_retain}
 
-        res = super(Function, self)._forward(in_var_map, outputs, device, forward_retain)
+        res = super(Function, self)._forward(in_var_map, output_map, device,
+                forward_retain)
 
-        for k in out_var_map:
-            outputs[k] = value_to_seq(outputs[k])
+        for k in output_map:
+            output_map[k] = value_to_seq(output_map[k])
 
-        return res
+        return res, output_map
+
+    @typemap
+    def backward(self, state, root_gradients, variables):
+        '''
+        Backpropagates supplied `root_gradients` for one or more of the output
+        variables of the Function, to calculate gradients with respect to
+        `variables`.
+
+        Args:
+            state (`BackPropState`): state obtained from a previous call to the
+             func:`cntk.ops.Function.forward` method on this Function for the
+             computation that this gradient backpropagation corresponds to. 
+            root_gradients (`dict`): the gradients that will be backpropagated
+            variables (`set`): a list of input variables with respect to which
+             the gradients have to be computed.
+
+        Returns:
+            `dict`: mapping of `variables` to NumPy arrays
+        '''
+        root_gradients = sanitize_var_map(self.outputs(), root_gradients,
+                None, None, None)
+
+        var_gradients = dict((var, None) for var in variables)
+
+        self._backward(state, root_gradients, var_gradients)
+
+        backward_output = {}
+        for var, value in var_gradients.items():
+            var_gradients[var] = value_to_seq(value)
+
+        return var_gradients
 
     @typemap
     def inputs(self):
