@@ -13,6 +13,7 @@ from . import cntk_py
 
 from .trainer import *
 from .learner import *
+from .axis import *
 from .initializer import *
 from .utils import *
 from .ops import *
