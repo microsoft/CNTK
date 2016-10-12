@@ -29,6 +29,8 @@ class ReaderShim : public IDataReader
     friend class ::CNTK::CompositeMinibatchSource;
 public:
     explicit ReaderShim(ReaderFactory factory);
+    explicit ReaderShim(ReaderPtr reader);
+
     virtual ~ReaderShim() { }
 
     virtual void Init(const ScriptableObjects::IConfigRecord& /*config*/) override
@@ -53,6 +55,8 @@ public:
 
     virtual void StartMinibatchLoop(size_t mbSize, size_t epoch, const std::unordered_set<InputStreamDescription>& inputs, size_t requestedEpochSamples = requestDataSize) override;
     virtual void StartDistributedMinibatchLoop(size_t requestedMBSize, size_t epoch, size_t subsetNum, size_t numSubsets, const std::unordered_set<InputStreamDescription>& inputs, size_t requestedEpochSamples) override;
+
+    void StartEpoch(const EpochConfiguration& epoch, const std::unordered_set<InputStreamDescription>& inputs);
 
     virtual void StartMinibatchLoop(size_t, size_t, size_t) override
     {
@@ -83,6 +87,11 @@ public:
     virtual size_t GetNumParallelSequencesForFixingBPTTMode() override;
 
     virtual size_t GetCurrentSamplePosition() override;
+
+    bool IsEndOfEpoch() const
+    {
+        return m_endOfEpoch;
+    }
 
 private:
     struct PrefetchResult
