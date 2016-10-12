@@ -115,7 +115,7 @@ class Function(cntk_py.Function):
         kwargs=dict(locals()); del kwargs['self']; return super(cntk.cntk_py.Function, self).eval(**kwargs)
 
     @typemap
-    def forward(self, arguments, outputs, computeDevice=None, outputsToRetainBackwardStateFor=dict()):
+    def forward(self, arguments, outputs, device=None, eval_outputs=None):
         '''
         Computes and stores the values of speficied variables in `outputs`, using provided `arguments` values corresponding
         to each leaf `Variable` of the function whose is_input() is true.
@@ -125,10 +125,10 @@ class Function(cntk_py.Function):
             outputs (`dict`): dictionary of bindings for (a subset of) the output variables. The values in the dictionary can be one of:
               * None: the implementation allocates the actual storage for storing the values
               * NDArray: the values will be written into this array
-            computeDevice (`:class:`cntk.DeviceDescriptor`): the device descriptor that
+            device (`:class:`cntk.DeviceDescriptor`): the device descriptor that
              contains the type and id of the device on which the computation is
              to be performed.
-            outputsToRetainBackwardStateFor (`set`): the subset of the Function's output variables for which gradients will be specified
+            eval_outputs (`set`): the subset of the Function's output variables for which gradients will be specified
              in a subsequent backward call for backpropagation.
 
         Returns:
@@ -136,11 +136,26 @@ class Function(cntk_py.Function):
              `outputsToRetainBackwardStateFor` outputs of the function to any
              of the inputs of the function, in a subsequent backward call.
         '''
-        if computeDevice is None:
+        if device is None:
             from cntk import DeviceDescriptor
             computeDevice = DeviceDescriptor.use_default_device()
 
-        kwargs=dict(locals()); del kwargs['self']; return super(cntk.cntk_py.Function, self).eval(**kwargs)
+        from ..utils import sanitize_var_map
+        forward_in_var_map = sanitize_var_map(self.arguments(), arguments,
+                seq_starts, None, device)
+
+        forward_out_var_map = {}
+        if eval_outputs is not None
+            forward_retain = eval_outputs.copy()
+        else:
+            forward_retain = set()
+
+        for v in self.outputs():
+            forward_out_var_map[v] = None  # will be populated in Forward()
+            forward_retain.add(v)
+
+        return super(cntk.cntk_py.Function, self)._forward(forward_in_var_map,
+                forward_out_var_map, device, forward_retain)
 
     @typemap
     def inputs(self):
