@@ -181,8 +181,9 @@ class Function(cntk_py.Function):
         in_var_map = sanitize_var_map(self.arguments(), arguments,
                 seq_starts, None, device)
 
-        res = self._forward(in_var_map, outputs, device, 
-                forward_retain or self.outputs())
+        forward_retain = set(forward_retain or self.outputs())
+
+        res = super(Function, self)._forward(in_var_map, outputs, device, forward_retain)
 
         for k in out_var_map:
             outputs[k] = value_to_seq(outputs[k])
